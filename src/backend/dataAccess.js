@@ -100,9 +100,9 @@ function normalizeSdkSort(sort) {
 }
 
 /*
- * La elevacion se aplica a la operacion completa de consulta.
- * items.query() construye un WixDataQuery encadenable; no se eleva
- * el factory por separado. runQuery/runCount ya ejecutan elevados.
+ * SDK migration phase 1: elevate official Wix Data methods directly.
+ * items.query accepts collection ID, query request, and operation options.
+ * Do not pass arbitrary callbacks to auth.elevate.
  */
 const elevatedGet = auth.elevate(items.get);
 const elevatedInsert = auth.elevate(items.insert);
