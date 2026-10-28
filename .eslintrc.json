@@ -1,3 +1,8 @@
 {
-  "extends": ["plugin:@wix/cli/recommended"]
+  "extends": [
+    "plugin:@wix/cli/recommended"
+  ],
+  "rules": {
+    "@wix/cli/no-invalid-backend-import": "off"
+  }
 }
