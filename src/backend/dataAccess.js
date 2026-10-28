@@ -8,7 +8,7 @@ STANDARDS: G10 ASCII Strict. Sin suppressAuth. Sin imports directos de
 =============================================================================
 */
 
-import wixData from "wix-data";
+import { items } from "@wix/data";
 import { auth } from "@wix/essentials";
 
 export const CONSISTENCY = Object.freeze({
@@ -110,24 +110,24 @@ function applySort(query, sort) {
 
 /*
  * La elevacion se aplica a la operacion completa de consulta.
- * wixData.query() construye un WixDataQuery encadenable; no se eleva
+ * items.query() construye un WixDataQuery encadenable; no se eleva
  * el factory por separado. runQuery/runCount ya ejecutan elevados.
  */
-const elevatedGet = auth.elevate(wixData.get);
-const elevatedInsert = auth.elevate(wixData.insert);
-const elevatedUpdate = auth.elevate(wixData.update);
-const elevatedRemove = auth.elevate(wixData.remove);
-const elevatedSave = auth.elevate(wixData.save);
-const elevatedBulkInsert = auth.elevate(wixData.bulkInsert);
-const elevatedBulkUpdate = auth.elevate(wixData.bulkUpdate);
-const elevatedBulkRemove = auth.elevate(wixData.bulkRemove);
+const elevatedGet = auth.elevate(items.get);
+const elevatedInsert = auth.elevate(items.insert);
+const elevatedUpdate = auth.elevate(items.update);
+const elevatedRemove = auth.elevate(items.remove);
+const elevatedSave = auth.elevate(items.save);
+const elevatedBulkInsert = auth.elevate(items.bulkInsert);
+const elevatedBulkUpdate = auth.elevate(items.bulkUpdate);
+const elevatedBulkRemove = auth.elevate(items.bulkRemove);
 const elevatedQueryReferencedItems = auth.elevate(
-    wixData.queryReferencedItems
+    items.queryReferencedItems
 );
 
 const runQuery = auth.elevate(
     async ({ dataCollectionId, filter, sort, limit, offset, consistency }) => {
-        let cmsQuery = wixData.query(dataCollectionId);
+        let cmsQuery = items.query(dataCollectionId);
         if (filter) cmsQuery = cmsQuery.filter(filter);
         cmsQuery = applySort(cmsQuery, sort)
             .limit(limit)
@@ -138,7 +138,7 @@ const runQuery = auth.elevate(
 
 const runCount = auth.elevate(
     async ({ dataCollectionId, filter, consistency }) => {
-        let cmsQuery = wixData.query(dataCollectionId);
+        let cmsQuery = items.query(dataCollectionId);
         if (filter) cmsQuery = cmsQuery.filter(filter);
         return cmsQuery.count(buildOptions(consistency));
     }
