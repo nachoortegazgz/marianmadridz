@@ -29,7 +29,7 @@ FIXES APLICADOS v5009-FISCAL-V20.1 (heredados):
 */
 
 import { webMethod, Permissions } from "wix-web-module";
-import { getSecret } from "wix-secrets-backend";
+import { getSecretValue } from "backend/secretAccess";
 
 import {
   query as dalQuery,
@@ -361,8 +361,8 @@ export const emailManagerPackageVersion = webMethod(Permissions.SiteMember, asyn
       };
     }
 
-    const apiKey = await getSecret(SECRETS.RESEND_API_KEY).catch(() => "");
-    const fromEmail = (await getSecret(SECRETS.RESEND_FROM_EMAIL).catch(() => "")) || DEFAULT_MANAGER_EMAIL;
+    const apiKey = await getSecretValue(SECRETS.RESEND_API_KEY).catch(() => "");
+    const fromEmail = (await getSecretValue(SECRETS.RESEND_FROM_EMAIL).catch(() => "")) || DEFAULT_MANAGER_EMAIL;
 
     if (!apiKey) {
       return {
