@@ -9,7 +9,7 @@
     "@wix/essentials": "1.0.15",
     "@wix/data": "1.0.527",
     "@wix/bookings": "1.0.1704",
-    "@wix/ecom": "1.0.2542",
+    "@wix/ecom": "1.0.2539",
     "@wix/members": "1.0.519",
     "@wix/crm": "1.0.1636",
     "@wix/secrets": "1.0.75",
@@ -25,9 +25,5 @@
     "test": "node --no-warnings --loader ./src/backend/tests/loader.mjs ./src/backend/tests/run-all.mjs",
     "test:layer1": "node --no-warnings --loader ./src/backend/tests/loader.mjs ./src/backend/tests/run-layer1.mjs",
     "test:layer2": "node --no-warnings --loader ./src/backend/tests/loader.mjs ./src/backend/tests/run-layer2.mjs"
-  },
-  "overrides": {
-    "node-gyp": "13.1.0",
-    "tar": "7.5.22"
   }
 }
