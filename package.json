@@ -5,7 +5,7 @@
     "react": "16.14.0"
   },
   "dependencies": {
-    "@wix/sdk": "1.0.0",
+    "@wix/sdk": "1.21.17",
     "@wix/essentials": "1.0.15",
     "@wix/data": "1.0.527",
     "@wix/bookings": "1.0.1704",
