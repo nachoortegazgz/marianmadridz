@@ -41,7 +41,7 @@ FIXES APLICADOS v5009-FISCAL (heredados):
 */
 
 import { createClient } from "@wix/sdk";
-import { getSecret } from "wix-secrets-backend";
+import { getSecretValue } from "backend/secretAccess";
 
 import {
     query as dalQuery,
@@ -189,7 +189,7 @@ let _emisorCache = null;
 async function _getEmisorFiscal() {
     if (_emisorCache) return _emisorCache;
     try {
-        const nif = await getSecret(SECRETS.FISCAL_NIF_EMISOR).catch(() => "");
+        const nif = await getSecretValue(SECRETS.FISCAL_NIF_EMISOR).catch(() => "");
         // SSOT-KEYFIELD (Matriz MovimientosCaja, Apartado 2): claves canonicas
         // AEAT; el motor promueve aliases legacy, pero los writers entregan
         // directamente el canon — cero aliases en src/.
