@@ -9,7 +9,7 @@ test("getSecretValue returns the secret value from the official SDK response", a
   delete state._map.MIGRATION_TEST_SECRET;
 });
 
-test("getSecretValue safely handles missing names and unavailable secrets", async () => {
+test("getSecretValue rejects an empty name and returns the configured test default for unknown names", async () => {
   assert.equal(await getSecretValue(""), "");
   assert.equal(await getSecretValue("UNCONFIGURED_SECRET"), "mock-secret");
 });
