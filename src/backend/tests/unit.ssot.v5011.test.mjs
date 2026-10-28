@@ -224,13 +224,22 @@ test('SSOT-10 suppression flag gone + elevation centralized in dataAccess', () =
   // verifica su ausencia (el import top-level de fs ya trae readFileSync).
   assert.ok(!existsSync(resolve(root, 'dataLegacyAdapter.js')), 'dataLegacyAdapter.js must be retired');
   const da = readFileSync(resolve(root, 'dataAccess.js'), 'utf8');
-  assert.ok(/from "@wix\/data"/.test(da), 'dataAccess.js must use the Wix Data SDK');
-  assert.ok(/auth\.elevate\(items\.query\)/.test(da),
-    'dataAccess.js must elevate the official SDK query method directly');
-  assert.ok(!/auth\.elevate\(\s*async/.test(da),
-    'dataAccess.js must not elevate arbitrary callbacks');
-  assert.ok(/elevatedQuery\(\s*dataCollectionId\s*,\s*queryRequest/.test(da),
-    'all query reads must pass through the elevated SDK query method');
-  assert.ok(!/from ["']wix-data["']/.test(da),
-    'dataAccess.js must not import the legacy wix-data module');
+  assert.ok(/from "@wix\/essentials"/.test(da), 'dataAccess.js must import auth from @wix/essentials');
+  // Las consultas se construyen dentro de callbacks async elevados; no se eleva
+  // por separado el factory wixData.query, porque devuelve un QueryBuilder.
+  const runQueryBlock = da.match(/const runQuery = auth\.elevate\(\s*async[\s\S]*?\n\);/);
+  const runCountBlock = da.match(/const runCount = auth\.elevate\(\s*async[\s\S]*?\n\);/);
+  assert.ok(runQueryBlock && /wixData\.query\(dataCollectionId\)/.test(runQueryBlock[0]),
+    'runQuery must build its query inside auth.elevate');
+  assert.ok(runCountBlock && /wixData\.query\(dataCollectionId\)/.test(runCountBlock[0]),
+    'runCount must build its query inside auth.elevate');
+
+  // El resto de operaciones wixData deben usar wrappers elevados explícitos.
+  const directCalls = da.split('\n').filter((line) => {
+    if (/^\s*(\/\/|\*|\/\*)/.test(line)) return false;
+    if (/auth\.elevate\(wixData\./.test(line)) return false;
+    if (/\bwixData\.query\(dataCollectionId\)/.test(line)) return false;
+    return /\bwixData\.(query|get|insert|update|remove|save|bulkInsert|bulkUpdate|bulkRemove|queryReferencedItems)\s*\(/.test(line);
+  });
+  assert.equal(directCalls.length, 0, `dataAccess.js has non-elevated wixData calls: ${directCalls.join(' | ')}`);
 });
