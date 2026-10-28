@@ -33,6 +33,7 @@ import {
     FISCAL_ROLE,
     CONTROL_TYPE,
     BOOKING_FIELDS,
+    EVENT_TYPE,
     MOVEMENT_LEGACY_READ_ALIASES,
 } from "backend/internalConfig";
 
@@ -532,6 +533,13 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
         const transactionId = _safeTrim(payload?.transactionId) || null;
 
         const inDto = normalizeMovementKeys({ ...(payload || {}) });
+        const eventType = _safeTrim(inDto.eventType).toUpperCase() || (
+            [MOVEMENT_TYPE.REEMBOLSO, MOVEMENT_TYPE.DEVOLUCION, MOVEMENT_TYPE.DEVOLUCION_SERVICIO].includes(movementType)
+                ? EVENT_TYPE.RECTIFICATIVA
+                : movementType === MOVEMENT_TYPE.AJUSTE
+                    ? EVENT_TYPE.AJUSTE
+                    : EVENT_TYPE.VENTA_LINEA
+        );
 
         const nifDestinatario = _safeTrim(inDto.nifDestinatario) || null;
         const recipientLegalName = _cleanText(inDto.recipientLegalName || "", 200) || null;
@@ -644,6 +652,7 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
             fechaOperacion: operationDate,
             fiscalPeriod: operationDate.slice(0, 7),
             movementType,
+            eventType,
             paymentMethod,
             amount: taxableBaseOrNonSubjectAmount,
             totalAmount: amount,
