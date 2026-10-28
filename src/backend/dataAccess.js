@@ -109,13 +109,10 @@ function applySort(query, sort) {
 }
 
 /*
- * DA-ELEV-02 (SSOT-10): la elevacion envuelve la OPERACION COMPLETA.
- * wixData.query() es un factory sincrono que NO puede envolverse con
- * auth.elevate() (el wrapper elevado devuelve una Promise y romperia la
- * cadena .filter()). Solucion: factories declarados UNA sola vez en la
- * cabecera elevada; runQuery/runCount consumen elevatedQuery.
+ * La elevacion se aplica a la operacion completa de consulta.
+ * wixData.query() construye un WixDataQuery encadenable; no se eleva
+ * el factory por separado. runQuery/runCount ya ejecutan elevados.
  */
-const elevatedQuery = auth.elevate(wixData.query);
 const elevatedGet = auth.elevate(wixData.get);
 const elevatedInsert = auth.elevate(wixData.insert);
 const elevatedUpdate = auth.elevate(wixData.update);
@@ -130,7 +127,7 @@ const elevatedQueryReferencedItems = auth.elevate(
 
 const runQuery = auth.elevate(
     async ({ dataCollectionId, filter, sort, limit, offset, consistency }) => {
-        let cmsQuery = elevatedQuery(dataCollectionId);
+        let cmsQuery = wixData.query(dataCollectionId);
         if (filter) cmsQuery = cmsQuery.filter(filter);
         cmsQuery = applySort(cmsQuery, sort)
             .limit(limit)
@@ -141,7 +138,7 @@ const runQuery = auth.elevate(
 
 const runCount = auth.elevate(
     async ({ dataCollectionId, filter, consistency }) => {
-        let cmsQuery = elevatedQuery(dataCollectionId);
+        let cmsQuery = wixData.query(dataCollectionId);
         if (filter) cmsQuery = cmsQuery.filter(filter);
         return cmsQuery.count(buildOptions(consistency));
     }
