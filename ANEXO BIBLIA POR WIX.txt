@@ -1,0 +1,1440 @@
+# Informe técnico — Wix/Velo  
+## Proyecto: Marian Madrid Peluquería y Estética
+
+> Documento listo para incorporar a la “Biblia del proyecto”.  
+> Por seguridad, los identificadores sensibles se representan como variables.
+
+---
+
+## 1. Identificación del proyecto
+
+| Propiedad | Valor |
+|---|---|
+| Sitio | Marian Madrid Peluquería y Estética |
+| Dominio principal | `https://www.marianmadrid.es` |
+| ID del sitio | `<WIX_SITE_ID>` |
+| Estado | Publicado |
+| Plan | Premium |
+| Dominio personalizado | Sí |
+| Editor | Wix Editor |
+| Velo | Activado |
+| Idioma principal | Español (`es`) |
+| País / región | España (`ES`) |
+| Zona horaria | `Europe/Madrid` |
+| Moneda | EUR |
+| Email empresarial | `hola@marianmadrid.es` |
+| Teléfono | `+34 876 538 870` |
+
+### Regla de identificación
+
+El ID del sitio debe almacenarse localmente como variable, nunca escrito directamente en código público:
+
+```powershell
+$env:WIX_SITE_ID = "<WIX_SITE_ID>"
+```
+
+No debe incluirse en repositorios públicos, documentación externa ni archivos `.env` versionados.
+
+---
+
+## 2. Aplicaciones Wix instaladas
+
+| Aplicación | Uso previsto |
+|---|---|
+| Wix Bookings | Servicios, disponibilidad, personal y reservas |
+| Wix Stores — Catálogo V1 | Productos físicos y catálogo de tienda |
+| Wix Blog | Artículos y contenidos SEO |
+| Wix Forms & Payments | Formularios y captación |
+| Wix Gift Cards | Tarjetas regalo |
+| Wix Invoices — V1 | Facturación |
+| Wix Members Area | Área privada y miembros |
+| Wix Hotels | Aplicación instalada; validar si sigue siendo necesaria |
+| Promote SEO | Configuración y optimización SEO |
+
+### Restricciones importantes
+
+- El sitio utiliza **Wix Stores Catálogo V1**.
+- No deben utilizarse endpoints ni estructuras de Catálogo V3.
+- El sistema de facturación está identificado como **Invoices V1**.
+- Los servicios, productos y planes deben permanecer conceptualmente separados.
+- Las etiquetas visibles deben estar en español.
+- Los nombres técnicos, identificadores y campos internos deben permanecer en inglés.
+
+---
+
+## 3. Arquitectura técnica prevista
+
+### Capas del sistema
+
+```text
+Frontend Wix Editor
+        │
+        ├── Páginas dinámicas y páginas de servicio
+        ├── HTML Components
+        ├── Wix Bookings nativo
+        └── Formularios / UI de reservas
+                │
+Backend Velo
+        │
+        ├── Validación de negocio
+        ├── Resolución de servicios
+        ├── Comprobación de disponibilidad
+        ├── Selección de personal
+        ├── Creación de reservas
+        ├── Integración con checkout/pagos
+        └── Gestión de estados
+                │
+Wix APIs / CMS / Bookings / Stores / Members
+```
+
+### Principios de arquitectura
+
+1. El frontend no decide la disponibilidad definitiva.
+2. El backend valida siempre la disponibilidad antes de crear una reserva.
+3. La disponibilidad y la creación de la reserva son operaciones separadas.
+4. La reserva no se considera confirmada únicamente porque exista un checkout.
+5. Todas las operaciones críticas deben devolver estados explícitos.
+6. Las operaciones de doble fase deben tratarse como dos reservas simples coordinadas.
+7. Las lecturas y escrituras deben conservar los identificadores nativos de Wix.
+
+---
+
+## 4. Conexión mediante Wix CLI
+
+### Requisitos locales
+
+- Node.js LTS
+- npm
+- PowerShell 7
+- Git
+- Cuenta Wix con permisos sobre el sitio
+- Velo activado
+- Repositorio Git local
+
+### Instalación o actualización
+
+```powershell
+node --version
+npm --version
+npm install -g @wix/cli
+wix --version
+```
+
+Si el comando global no estuviera disponible:
+
+```powershell
+npx @wix/cli --version
+```
+
+### Inicio de sesión
+
+```powershell
+wix login
+```
+
+La autenticación debe realizarse mediante el navegador. No deben guardarse tokens manualmente en el proyecto.
+
+### Selección del sitio
+
+```powershell
+wix site list
+wix site select
+```
+
+Seleccionar el sitio cuyo dominio sea:
+
+```text
+www.marianmadrid.es
+```
+
+No seleccionar sitios de pruebas como `Marian Madrid Pelu 5`, `Marian Madrid Pelu 6`, `Rise Account` u otros duplicados.
+
+### Comprobación de conexión
+
+```powershell
+wix site current
+wix status
+```
+
+La conexión correcta debe verificar:
+
+- Sitio seleccionado correcto.
+- Dominio coincidente.
+- Velo activado.
+- Proyecto local vinculado.
+- Sin cambios pendientes inesperados.
+
+### Sincronización del proyecto
+
+Según el flujo utilizado:
+
+```powershell
+wix pull
+```
+
+o:
+
+```powershell
+wix sync
+```
+
+Antes de sincronizar:
+
+```powershell
+git status
+git branch --show-current
+```
+
+Después:
+
+```powershell
+git diff
+git status
+```
+
+> La conexión CLI local no puede confirmarse desde el panel de Wix. Debe validarse ejecutando estos comandos en el equipo de desarrollo.
+
+---
+
+## 5. Estructura Git recomendada
+
+```text
+marianmadrid/
+├── backend/
+│   ├── bookings/
+│   ├── catalog/
+│   ├── reservations/
+│   ├── payments/
+│   └── validation/
+├── public/
+│   ├── constants.js
+│   ├── formatters.js
+│   └── uiHelpers.js
+├── pages/
+├── wix-data/
+├── tests/
+├── docs/
+│   └── biblia-proyecto.md
+├── .env.example
+├── .gitignore
+├── package.json
+└── README.md
+```
+
+### Ramas
+
+```text
+main        Producción
+develop     Integración
+feature/*   Nuevas funcionalidades
+fix/*       Correcciones
+hotfix/*    Correcciones urgentes
+```
+
+### Flujo recomendado
+
+```powershell
+git checkout develop
+git pull
+git checkout -b feature/nombre-funcionalidad
+```
+
+Antes de fusionar:
+
+```powershell
+git diff main...feature/nombre-funcionalidad
+git status
+```
+
+---
+
+## 6. Variables y secretos
+
+### `.env.example`
+
+```env
+WIX_SITE_ID=<WIX_SITE_ID>
+WIX_ENVIRONMENT=development
+WIX_DEFAULT_TIMEZONE=Europe/Madrid
+WIX_DEFAULT_CURRENCY=EUR
+```
+
+### `.gitignore`
+
+```gitignore
+.env
+.env.*
+!.env.example
+node_modules/
+.wix/
+dist/
+*.log
+```
+
+No deben almacenarse:
+
+- Tokens de Wix.
+- Credenciales de pago.
+- Claves privadas.
+- Contraseñas.
+- Secretos de terceros.
+- Datos completos de clientes.
+
+---
+
+## 7. Modelo de reservas
+
+### Estados funcionales
+
+```text
+PENDING
+CONFIRMED
+CONFLICT
+FAILED
+RESERVED
+PAID
+COMPENSATED
+```
+
+### Flujo normal
+
+```text
+REQUESTED
+   ↓
+VALIDATE_SERVICE
+   ↓
+CHECK_AVAILABILITY
+   ↓
+REVALIDATE_AVAILABILITY
+   ↓
+CREATE_RESERVATION
+   ↓
+RESERVED
+   ↓
+PAYMENT / CHECKOUT
+   ↓
+PAID
+   ↓
+CONFIRMED
+```
+
+### Reglas obligatorias
+
+- Comprobación de disponibilidad con `locationType: "BUSINESS"`.
+- Creación de reserva con `locationType: "OWNER_BUSINESS"`.
+- Si el cliente selecciona profesional, debe utilizarse exactamente ese profesional.
+- Si no selecciona profesional, el backend debe elegir el profesional con menos horas reservadas ese día.
+- El desempate debe utilizar rotación.
+- El frontend nunca debe seleccionar definitivamente al profesional.
+- El backend debe volver a validar antes de crear la reserva.
+
+---
+
+## 8. Servicios de doble fase
+
+Para tratamientos con dos fases:
+
+```text
+Fase 1 → exposición → Fase 2
+```
+
+La duración total se calcula como:
+
+```text
+phase1Duration
++ exposureDuration
++ phase2Duration
+```
+
+### Validaciones
+
+- Respetar `allowCombine`.
+- Respetar `linkedPhases`.
+- Validar el intervalo entre fases.
+- Mantener ambas reservas coordinadas.
+- Compensar la primera si la segunda falla.
+- No marcar el proceso como confirmado hasta validar las dos fases.
+
+---
+
+## 9. Contratos de datos principales
+
+### Servicio
+
+Campos técnicos recomendados:
+
+```text
+id
+name
+title
+slug
+description
+duration
+price
+mainMedia
+recomendaciones
+clientHidden
+addonId
+addOnIds
+```
+
+Reglas:
+
+- `addonId` identifica cada complemento.
+- `addOnIds` se utiliza únicamente como array de transporte hacia Wix Bookings.
+- `addOnIds` debe contener valores de `addonId`.
+- No duplicar `name` y `title` sin una finalidad clara.
+- El HTML debe mantenerse alineado con `mainMedia`, `recomendaciones` y `clientHidden`.
+
+### CMS `ServiciosCatalogo`
+
+La página de servicio debe:
+
+1. Leer el slug de la URL.
+2. Buscar la coincidencia exacta en `ServiciosCatalogo`.
+3. Cargar el servicio correspondiente.
+4. Resolver sus datos de Bookings.
+5. Mostrar precio, duración, imágenes, recomendaciones y complementos.
+6. Utilizar esos datos para iniciar el flujo de reserva.
+
+---
+
+## 10. Página de servicio
+
+### Comportamiento esperado
+
+```text
+URL con slug
+   ↓
+Resolución en ServiciosCatalogo
+   ↓
+Carga del servicio
+   ↓
+Carga de disponibilidad
+   ↓
+Selección de fecha/hora
+   ↓
+Selección opcional de profesional
+   ↓
+Validación backend
+   ↓
+Reserva
+```
+
+El enlace superior de retorno debe dirigir a la página nativa del catálogo de Wix Bookings, no a una URL inventada.
+
+---
+
+## 11. Wix Stores
+
+El sitio utiliza:
+
+```text
+Catálogo V1
+```
+
+Por tanto:
+
+- Mantener estructuras de producto compatibles con V1.
+- No mezclar objetos V1 y V3.
+- No utilizar rutas `/stores/v3/`.
+- Validar siempre la versión del catálogo antes de cualquier cambio de producto.
+- Mantener productos, servicios y planes separados.
+
+---
+
+## 12. Seguridad y calidad
+
+### Reglas de seguridad
+
+- Validar todos los datos recibidos desde el navegador.
+- No confiar en precios, duración, profesional ni estado enviados por el cliente.
+- Resolver nuevamente el servicio en backend.
+- Evitar exponer datos de clientes.
+- Registrar errores sin incluir datos sensibles.
+- Aplicar control de permisos para operaciones administrativas.
+- No usar identificadores escritos manualmente para actualizaciones.
+
+### Regla de resolución
+
+Antes de modificar cualquier entidad:
+
+```text
+Buscar → comparar coincidencia exacta → confirmar un único resultado → modificar
+```
+
+Nunca debe utilizarse:
+
+```javascript
+items[0]
+```
+
+como sustituto de una coincidencia exacta.
+
+---
+
+## 13. Checklist de conexión técnica
+
+```text
+[ ] Node.js instalado
+[ ] npm instalado
+[ ] Wix CLI instalado
+[ ] Usuario autenticado con wix login
+[ ] Sitio correcto seleccionado
+[ ] Dominio comprobado
+[ ] Velo confirmado
+[ ] Repositorio Git conectado
+[ ] Rama develop creada
+[ ] .env excluido de Git
+[ ] .env.example creado
+[ ] wix status ejecutado
+[ ] wix pull/sync ejecutado
+[ ] Cambios revisados con git diff
+[ ] Entorno de pruebas separado de producción
+```
+
+---
+
+## 14. Estado actual conocido
+
+Confirmado:
+
+- Sitio publicado.
+- Dominio personalizado activo.
+- Plan Premium.
+- Wix Editor.
+- Velo activado.
+- Wix Bookings instalado.
+- Wix Stores Catálogo V1 instalado.
+- Wix Invoices V1 instalado.
+- Zona horaria `Europe/Madrid`.
+- Moneda EUR.
+- Idioma español.
+
+Pendiente de confirmar localmente:
+
+- Estado exacto de la vinculación del repositorio Git.
+- Rama activa.
+- Versión instalada de Wix CLI.
+- Último commit sincronizado.
+- Existencia de variables de entorno locales.
+- Diferencias entre código local y código publicado.
+- Estado de despliegues pendientes.
+- Configuración exacta de permisos y secretos.
+
+---
+
+## 15. Comandos de diagnóstico rápido
+
+```powershell
+node --version
+npm --version
+wix --version
+wix login
+wix site current
+wix status
+git status
+git branch --show-current
+git remote -v
+```
+
+Para guardar el diagnóstico sin incluir secretos:
+
+```powershell
+wix status > wix-status.txt
+git status > git-status.txt
+```
+
+No incluir en la documentación:
+
+- Tokens.
+- Cookies.
+- Archivos `.env`.
+- Credenciales.
+- Claves privadas.
+- Exportaciones con datos personales de clientes.
+
+Sí. Añadiría esta sección a la Biblia del proyecto:
+
+## 16. Permisos, autenticación y secretos pendientes
+
+### 16.1 Estado actual
+
+Confirmado:
+
+- El sitio tiene **Velo activado**.
+- El sitio está publicado y dispone de plan Premium.
+- El desarrollo utiliza Wix Editor y código Velo.
+- No se ha verificado todavía la configuración local de CLI, GitHub ni los secretos del proyecto.
+- No deben asumirse permisos adicionales solo por disponer de Velo o plan Premium.
+
+Pendiente de comprobar:
+
+- Usuario Wix utilizado para la conexión CLI.
+- Rol efectivo sobre el sitio.
+- Permisos para editar código, publicar y administrar aplicaciones.
+- Vinculación Git/GitHub.
+- Variables de entorno locales.
+- Secretos almacenados en Wix Secrets Manager.
+- Permisos de las funciones backend.
+- Acceso a Bookings, Stores V1, CMS, pagos e invoices.
+- Existencia de credenciales de terceros.
+
+---
+
+### 16.2 Matriz mínima de permisos
+
+| Área | Permiso necesario | Estado |
+|---|---|---|
+| Editor | Editar páginas y elementos | Pendiente |
+| Velo | Editar frontend y backend | Confirmado Velo activo |
+| Publicación | Publicar cambios | Pendiente |
+| CMS | Leer y modificar colecciones | Pendiente |
+| Bookings | Consultar servicios y disponibilidad | Pendiente |
+| Bookings | Crear o gestionar reservas | Pendiente |
+| Stores V1 | Consultar productos | Pendiente |
+| Pagos | Crear checkout o enlaces de pago | Pendiente |
+| Invoices V1 | Crear y consultar facturas | Pendiente |
+| Members | Consultar miembros autorizados | Pendiente |
+| GitHub | Leer y escribir repositorio | Pendiente |
+| CLI | Vincular y sincronizar el sitio | Pendiente |
+
+Los permisos deben otorgarse con el principio de **mínimo privilegio**: cada colaborador, aplicación o proceso solo debe disponer de lo necesario para su función.
+
+---
+
+### 16.3 Roles recomendados
+
+#### Desarrollo
+
+Acceso a:
+
+- Código frontend y backend.
+- CMS de desarrollo.
+- Logs y herramientas de diagnóstico.
+- Entorno de pruebas.
+
+Sin acceso directo a:
+
+- Secretos de producción.
+- Datos completos de clientes.
+- Configuración bancaria.
+- Eliminación permanente de contenido.
+
+#### Administrador del sitio
+
+Acceso a:
+
+- Publicación.
+- Aplicaciones.
+- Reservas.
+- Productos.
+- Pagos.
+- Configuración general.
+
+Debe ser un acceso restringido y auditado.
+
+#### Contenido / negocio
+
+Acceso a:
+
+- Servicios.
+- Productos.
+- Blog.
+- CMS autorizado.
+- Reservas operativas.
+
+Sin permiso para:
+
+- Modificar código.
+- Gestionar secretos.
+- Cambiar pagos.
+- Alterar la configuración técnica.
+
+---
+
+### 16.4 Secretos que deben revisarse
+
+Debe comprobarse si el proyecto necesita alguno de estos valores:
+
+```text
+WIX_SITE_ID
+WIX_ENVIRONMENT
+WIX_API_CLIENT_ID
+WIX_API_CLIENT_SECRET
+GITHUB_TOKEN
+GOOGLE_CLIENT_ID
+GOOGLE_CLIENT_SECRET
+PAYMENT_PROVIDER_SECRET
+WEBHOOK_SIGNING_SECRET
+THIRD_PARTY_API_KEY
+```
+
+No todos son necesariamente necesarios. Solo deben crearse los que correspondan a integraciones realmente activas.
+
+### Regla fundamental
+
+El ID del sitio no es un secreto, pero debe mantenerse como configuración y no duplicarse manualmente en múltiples archivos. Los tokens, claves privadas y credenciales sí son secretos.
+
+---
+
+### 16.5 Almacenamiento recomendado
+
+#### Local
+
+Usar un archivo `.env` no versionado:
+
+```env
+WIX_SITE_ID=<WIX_SITE_ID>
+WIX_ENVIRONMENT=development
+```
+
+#### Producción
+
+Usar el gestor de secretos de Wix para credenciales utilizadas por Velo:
+
+- No escribir secretos directamente en archivos backend.
+- No enviarlos al frontend.
+- No incluirlos en respuestas HTTP.
+- No registrarlos en logs.
+- No copiarlos en GitHub.
+- No compartirlos por correo o chat.
+
+#### GitHub
+
+Configurar los secretos del repositorio mediante:
+
+```text
+Repository Settings
+└── Secrets and variables
+    └── Actions
+```
+
+Separar:
+
+```text
+Development
+Staging
+Production
+```
+
+Nunca reutilizar automáticamente un secreto de producción en desarrollo.
+
+---
+
+### 16.6 Variables públicas y privadas
+
+#### Pueden ser públicas
+
+```text
+PUBLIC_SITE_URL
+PUBLIC_LOCALE
+PUBLIC_TIMEZONE
+PUBLIC_CURRENCY
+PUBLIC_BOOKING_CATALOG_URL
+```
+
+#### Deben ser privadas
+
+```text
+API keys
+OAuth client secrets
+Webhook secrets
+Payment credentials
+Access tokens
+Private repository tokens
+```
+
+El frontend solo debe recibir datos estrictamente necesarios para mostrar la interfaz.
+
+---
+
+### 16.7 Verificación de permisos pendiente
+
+Ejecutar con una cuenta autorizada:
+
+```powershell
+wix login
+wix site current
+wix status
+```
+
+Después comprobar manualmente:
+
+1. Abrir **Herramientas de desarrollador → Velo**.
+2. Confirmar que el código backend puede editarse.
+3. Ejecutar una lectura segura de una colección de prueba.
+4. Revisar los logs sin exponer información sensible.
+5. Confirmar que el usuario puede publicar una modificación controlada.
+6. Verificar que la modificación puede revertirse.
+
+No se debe probar el acceso mediante operaciones destructivas.
+
+---
+
+### 16.8 Criterio de aceptación
+
+La configuración se considerará completa cuando:
+
+```text
+[ ] La cuenta CLI esté autenticada
+[ ] El sitio seleccionado sea marianmadrid.es
+[ ] El rol permita editar Velo
+[ ] El rol permita publicar, si corresponde
+[ ] GitHub esté conectado sin tokens expuestos
+[ ] El archivo .env esté excluido de Git
+[ ] Los secretos de producción estén fuera del código
+[ ] El backend pueda leer los secretos necesarios
+[ ] El frontend no exponga credenciales
+[ ] Los permisos de Bookings estén comprobados
+[ ] Los permisos de CMS estén comprobados
+[ ] Los permisos de pagos estén comprobados
+[ ] Se haya realizado una lectura segura
+[ ] Se haya realizado una prueba reversible
+[ ] Se haya documentado quién puede publicar
+```
+
+### Nota de control
+
+Los permisos y secretos deben verificarse antes de implementar reservas, pagos, webhooks o integraciones externas. Hasta completar esa verificación, cualquier conexión de producción debe considerarse **pendiente y no confirmada**.
+
+## Configuración detallada de permisos: Bookings y CMS
+
+### 1. Wix Bookings
+
+#### 1.1 Acceso de colaboradores
+
+En **Configuración → Roles y permisos**, revisar qué colaboradores pueden:
+
+- Ver el calendario de reservas.
+- Gestionar reservas.
+- Crear, modificar o cancelar reservas.
+- Administrar servicios.
+- Gestionar personal.
+- Configurar horarios y disponibilidad.
+- Acceder a pagos relacionados con reservas.
+- Consultar datos de clientes.
+
+Recomendación:
+
+| Perfil | Permisos |
+|---|---|
+| Administrador | Todos los permisos de Bookings |
+| Responsable de reservas | Calendario, clientes y reservas |
+| Profesional | Ver sus propias reservas y disponibilidad |
+| Desarrollador | Código y pruebas; no necesariamente datos operativos |
+| Contenido | Sin acceso a reservas salvo necesidad expresa |
+
+No conviene asignar permisos de administrador a todo el equipo.
+
+#### 1.2 Permisos de servicios
+
+Comprobar que los servicios usados por el desarrollo:
+
+- Están publicados o visibles cuando corresponda.
+- Permiten reservas online.
+- Tienen duración y precio definidos.
+- Tienen personal asignado.
+- Tienen horarios de trabajo configurados.
+- Tienen ubicación válida.
+- No están archivados, ocultos o limitados a miembros.
+
+Para cada servicio debe documentarse:
+
+```text
+serviceId
+serviceName
+serviceType
+duration
+staffIds
+location
+onlineBookingEnabled
+visibility
+```
+
+#### 1.3 Permisos de personal
+
+Cada profesional debe tener:
+
+- Perfil activo.
+- Servicio asignado.
+- Horario de trabajo.
+- Ubicación compatible.
+- Capacidad de recibir reservas.
+- Disponibilidad no bloqueada por vacaciones, eventos o ausencias.
+
+La asignación final del profesional debe realizarse en backend. El navegador puede mostrar opciones, pero no debe imponer una reserva sin validación del servidor.
+
+#### 1.4 Permisos del código Velo
+
+El código backend debe ser el único responsable de:
+
+- Consultar disponibilidad definitiva.
+- Validar servicio y profesional.
+- Comprobar conflictos.
+- Crear la reserva.
+- Confirmar o compensar reservas coordinadas.
+- Registrar estados como `PENDING`, `RESERVED`, `CONFIRMED`, `CONFLICT` y `FAILED`.
+
+El frontend no debe recibir credenciales administrativas ni ejecutar operaciones privilegiadas directamente.
+
+#### 1.5 Pruebas recomendadas
+
+Realizar pruebas no destructivas:
+
+1. Consultar un servicio activo.
+2. Consultar disponibilidad futura.
+3. Probar un horario libre.
+4. Probar un horario ocupado.
+5. Probar un profesional concreto.
+6. Probar selección automática de profesional.
+7. Probar un servicio de dos fases.
+8. Confirmar que una reserva fallida no queda marcada como confirmada.
+9. Verificar los registros sin datos sensibles.
+
+---
+
+## 2. Wix CMS
+
+### 2.1 Permisos por colección
+
+Cada colección debe revisarse individualmente en:
+
+**CMS → Colecciones → Permisos y privacidad**
+
+Para `ServiciosCatalogo`, una configuración habitual sería:
+
+| Operación | Recomendación |
+|---|---|
+| Lectura | Visitantes, si la página pública necesita mostrar servicios |
+| Creación | Solo administradores o backend |
+| Actualización | Solo administradores o backend |
+| Eliminación | Solo administradores |
+| Lectura de campos sensibles | Nunca pública |
+
+Si la colección contiene datos internos, la lectura pública debe desactivarse.
+
+### 2.2 Separación de colecciones
+
+Recomendación:
+
+```text
+ServiciosCatalogoPublico
+ServiciosCatalogoPrivado
+ServiciosConfiguracion
+ReservasInternas
+LogsTecnicos
+```
+
+La colección pública debe contener únicamente información apta para visitantes:
+
+```text
+name
+title
+slug
+description
+duration
+price
+mainMedia
+recomendaciones
+clientHidden
+```
+
+No debe incluir:
+
+- Costes internos.
+- Márgenes.
+- Notas privadas.
+- Identificadores de proveedores.
+- Datos de clientes.
+- Tokens.
+- Secretos.
+- Información operativa innecesaria.
+
+### 2.3 Backend frente a frontend
+
+#### Frontend
+
+Puede leer:
+
+- Nombre.
+- Descripción.
+- Precio.
+- Duración.
+- Imagen.
+- Recomendaciones.
+- Estado de visibilidad pública.
+
+#### Backend
+
+Debe manejar:
+
+- Resolución definitiva del servicio.
+- Identificadores internos de Bookings.
+- Validación de precios y duración.
+- Reglas de complementos.
+- Relaciones entre fases.
+- Operaciones de escritura.
+- Datos privados.
+
+### 2.4 Permisos de campos
+
+Los permisos de colección no sustituyen a la filtración de datos. Aunque una colección sea legible públicamente, el código debe devolver solo los campos necesarios:
+
+```javascript
+return {
+  name: item.name,
+  title: item.title,
+  slug: item.slug,
+  duration: item.duration,
+  price: item.price,
+  mainMedia: item.mainMedia,
+  recomendaciones: item.recomendaciones
+};
+```
+
+No devolver el objeto CMS completo por defecto.
+
+### 2.5 Colecciones con reservas o clientes
+
+Las colecciones que contengan:
+
+- Nombre de cliente.
+- Teléfono.
+- Email.
+- Historial de reservas.
+- Notas internas.
+- Información de pago.
+
+deben tener lectura restringida a administradores o backend. Nunca deben exponerse mediante una consulta pública o un dataset abierto.
+
+---
+
+## 3. Matriz de control recomendada
+
+| Recurso | Público | Backend | Administrador |
+|---|---:|---:|---:|
+| Servicios publicados | Lectura limitada | Lectura y validación | Completo |
+| Disponibilidad | Consulta controlada | Consulta completa | Completo |
+| Reservas | No | Crear y consultar según necesidad | Completo |
+| Clientes | No | Acceso mínimo | Completo |
+| Servicios internos | No | Sí | Sí |
+| Configuración | No | Sí | Sí |
+| Logs | No | Escritura controlada | Lectura restringida |
+
+---
+
+## 4. Criterios de aceptación
+
+La configuración se considerará correcta cuando:
+
+```text
+[ ] Los visitantes solo leen servicios públicos
+[ ] Las reservas no pueden crearse desde una colección pública
+[ ] El backend valida servicio, profesional y horario
+[ ] Las colecciones privadas no son accesibles desde el frontend
+[ ] Los profesionales no tienen permisos administrativos innecesarios
+[ ] Los datos de clientes no aparecen en respuestas públicas
+[ ] Los servicios ocultos no se muestran ni pueden reservarse
+[ ] La disponibilidad se revalida antes de crear la reserva
+[ ] Las operaciones fallidas no se presentan como confirmadas
+[ ] Las pruebas se ejecutan sin datos reales innecesarios
+```
+
+La configuración exacta debe verificarse en el panel de roles, en cada servicio de Bookings y en los permisos individuales de cada colección CMS; no basta con confirmar que Velo está activado.
+
+## Permisos de profesionales en Wix Bookings
+
+### 1. Diferenciar dos conceptos
+
+En Bookings existen dos tipos de acceso:
+
+1. **Profesional de Bookings**  
+   Persona que presta servicios y puede recibir reservas.
+
+2. **Colaborador del sitio**  
+   Persona con acceso al panel Wix para gestionar reservas, calendario, clientes o configuración.
+
+Un profesional puede recibir reservas sin tener acceso administrativo al sitio. Solo debe añadirse como colaborador si necesita entrar al panel.
+
+---
+
+## 2. Configurar el profesional como miembro del personal
+
+Ruta habitual:
+
+**Panel de Wix → Reservas → Personal**
+
+Para cada profesional comprobar:
+
+- Nombre visible.
+- Email.
+- Teléfono, si procede.
+- Servicios que puede prestar.
+- Ubicación.
+- Horario de trabajo.
+- Estado activo.
+- Reservas online habilitadas.
+- Ausencias, vacaciones o bloqueos.
+- Visibilidad en la página de reservas.
+
+Debe existir una asignación explícita entre el profesional y cada servicio que presta.
+
+### Información técnica que debe conservarse
+
+```text
+staffMemberId
+resourceId
+eventsScheduleId
+name
+email
+assignedServiceIds
+usesDefaultWorkingHours
+```
+
+No deben confundirse:
+
+- `staffMemberId`: gestión del profesional.
+- `resourceId`: relación con servicios y eventos.
+- `eventsScheduleId`: calendario de horarios personalizados.
+
+---
+
+## 3. Horarios personalizados
+
+Los profesionales pueden utilizar:
+
+### Horario empresarial
+
+El profesional hereda el horario general del negocio al crearse.
+
+### Horario personalizado
+
+Se configura un calendario independiente para ese profesional.
+
+Importante: el horario empresarial se copia en el momento de crear el profesional. Si posteriormente cambia el horario general, el profesional existente no se actualiza automáticamente.
+
+Para un horario personalizado:
+
+1. Obtener el detalle actual del profesional.
+2. Obtener su calendario de eventos.
+3. Separarlo del horario empresarial.
+4. Asignar su horario personalizado.
+5. Crear eventos `WORKING_HOURS`.
+6. Verificar que `usesDefaultWorkingHours` sea `false`.
+7. Comprobar la disponibilidad final.
+
+Cada día de trabajo debe configurarse como un evento separado. No debe mezclarse el ID del profesional con el ID de su calendario.
+
+---
+
+## 4. Acceso del profesional al panel
+
+Solo añadirlo como colaborador si debe gestionar información desde Wix.
+
+### Permisos recomendados para un profesional
+
+Puede tener:
+
+- Ver sus propias reservas.
+- Ver su calendario.
+- Consultar clientes relacionados con sus citas.
+- Marcar asistencia o gestionar el estado operativo de una cita, si procede.
+
+No debería tener, salvo necesidad:
+
+- Acceso a pagos.
+- Gestión de facturas.
+- Edición de servicios.
+- Gestión de otros profesionales.
+- Configuración general de Bookings.
+- Modificación de horarios empresariales.
+- Acceso al código Velo.
+- Acceso al CMS.
+- Publicación del sitio.
+- Gestión de secretos.
+
+### Perfiles sugeridos
+
+| Perfil | Acceso recomendado |
+|---|---|
+| Administrador | Configuración completa |
+| Coordinador de reservas | Calendario, reservas y clientes |
+| Profesional | Sus reservas y calendario |
+| Recepción | Todas las reservas operativas, sin código |
+| Desarrollador | Velo y pruebas; sin datos operativos innecesarios |
+
+Los nombres exactos de los roles disponibles deben comprobarse en el panel porque pueden variar según la configuración del sitio.
+
+---
+
+## 5. Reglas de asignación de reservas
+
+El backend debe aplicar estas reglas:
+
+1. Si el cliente selecciona un profesional, utilizar exactamente ese profesional.
+2. Si el profesional no presta ese servicio, rechazar la solicitud.
+3. Si no se selecciona profesional, elegir el que tenga menos horas reservadas ese día.
+4. En empate, aplicar rotación.
+5. Volver a consultar disponibilidad antes de crear la reserva.
+6. No confiar en la selección final enviada por el navegador.
+7. No considerar confirmada una reserva solo porque se haya creado un checkout.
+
+Estados recomendados:
+
+```text
+PENDING
+RESERVED
+PAID
+CONFIRMED
+CONFLICT
+FAILED
+COMPENSATED
+```
+
+---
+
+## 6. Servicios de dos fases
+
+Para tratamientos con dos reservas coordinadas:
+
+- Ambas fases deben utilizar profesionales compatibles.
+- Debe validarse el intervalo entre fases.
+- Deben respetarse `allowCombine` y `linkedPhases`.
+- Si falla la segunda reserva, la primera debe compensarse.
+- El estado final solo puede ser `CONFIRMED` cuando las dos fases estén correctamente reservadas.
+
+---
+
+## 7. Checklist de auditoría
+
+```text
+[ ] Cada profesional tiene un perfil activo
+[ ] Cada profesional está vinculado a sus servicios
+[ ] Cada profesional tiene ubicación válida
+[ ] El horario está correctamente configurado
+[ ] Se ha comprobado si usa horario empresarial o personalizado
+[ ] Los horarios personalizados tienen eventos WORKING_HOURS
+[ ] No se han mezclado los identificadores técnicos
+[ ] Los colaboradores tienen solo los permisos necesarios
+[ ] Los profesionales no tienen acceso innecesario a pagos o código
+[ ] El backend valida profesional y servicio
+[ ] La disponibilidad se revalida antes de reservar
+[ ] Las pruebas se han realizado con horarios controlados
+```
+
+La configuración de un profesional como personal de Bookings no le concede automáticamente acceso administrativo al sitio; ese acceso debe concederse por separado y con permisos mínimos.
+
+## Horarios personalizados para profesionales en Wix Bookings
+
+### 1. Elegir la estrategia
+
+#### Opción A — Horario empresarial
+
+Usar cuando todos los profesionales trabajan con el mismo horario.
+
+1. Configurar primero el horario general del negocio.
+2. Crear después los profesionales.
+3. Los nuevos profesionales heredarán ese horario.
+
+**Importante:** los cambios posteriores del horario empresarial no actualizan automáticamente a los profesionales ya creados.
+
+#### Opción B — Horario individual
+
+Usar cuando cada profesional tiene jornadas distintas, descansos o disponibilidad propia.
+
+1. Crear o localizar el profesional.
+2. Obtener su información de calendario.
+3. Desvincularlo del horario empresarial.
+4. Crear su horario personalizado.
+5. Verificar la disponibilidad resultante.
+
+---
+
+## 2. Datos técnicos necesarios
+
+Para cada profesional hay que distinguir tres identificadores:
+
+```text
+staffMemberId       → gestiona el profesional
+resourceId          → identifica el recurso de Bookings
+eventsScheduleId    → calendario donde se crean sus horarios
+```
+
+El calendario personalizado utiliza `eventsScheduleId`, no `staffMemberId`.
+
+La información completa del calendario debe obtenerse leyendo el profesional con los detalles de recursos activados. No debe suponerse que todos los identificadores aparecen en la respuesta inicial de creación.
+
+---
+
+## 3. Configuración de un horario personalizado
+
+### Paso 1: Revisar el horario actual
+
+Antes de modificar nada, documentar:
+
+```text
+usesDefaultWorkingHours
+Horario empresarial heredado
+Servicios asignados
+Ubicación
+Ausencias o bloqueos
+```
+
+Si `usesDefaultWorkingHours` es `true`, el profesional continúa utilizando el horario empresarial.
+
+### Paso 2: Desvincular del horario empresarial
+
+Asignar al profesional su calendario de trabajo personalizado.
+
+El resultado esperado es:
+
+```text
+usesDefaultWorkingHours = false
+```
+
+Si la desvinculación se realiza correctamente pero no se crean franjas horarias, el profesional puede quedar sin disponibilidad.
+
+### Paso 3: Crear los bloques de trabajo
+
+Los bloques se crean como eventos de tipo:
+
+```text
+WORKING_HOURS
+```
+
+Cada evento debe contener:
+
+- Calendario del profesional.
+- Fecha inicial.
+- Fecha final.
+- Hora de inicio.
+- Hora de finalización.
+- Regla de repetición semanal.
+- Un único día de la semana.
+
+Ejemplo conceptual para un lunes:
+
+```json
+{
+  "type": "WORKING_HOURS",
+  "scheduleId": "<EVENTS_SCHEDULE_ID>",
+  "start": {
+    "localDate": "2026-09-07T09:00:00"
+  },
+  "end": {
+    "localDate": "2026-09-07T15:00:00"
+  },
+  "recurrenceRule": {
+    "frequency": "WEEKLY",
+    "interval": 1,
+    "days": ["MONDAY"]
+  }
+}
+```
+
+Para martes, miércoles, etc., se crea otro evento independiente.
+
+---
+
+## 4. Ejemplo de jornada semanal
+
+Horario de Laura:
+
+| Día | Horario |
+|---|---|
+| Lunes | 09:00–15:00 |
+| Martes | 12:00–20:00 |
+| Miércoles | No trabaja |
+| Jueves | 09:00–15:00 |
+| Viernes | 10:00–18:00 |
+| Sábado | 09:00–14:00 |
+| Domingo | No trabaja |
+
+Debe representarse como cinco eventos separados:
+
+```text
+Lunes    → 09:00–15:00
+Martes   → 12:00–20:00
+Jueves   → 09:00–15:00
+Viernes  → 10:00–18:00
+Sábado   → 09:00–14:00
+```
+
+No debe utilizarse un único evento con todos los días en la misma lista.
+
+---
+
+## 5. Reglas de formato
+
+- Utilizar fechas y horas locales.
+- Formato recomendado: `YYYY-MM-DDTHH:mm:ss`.
+- No añadir indicadores de zona horaria en esos campos.
+- Los días deben escribirse completos y en mayúsculas:
+  - `MONDAY`
+  - `TUESDAY`
+  - `WEDNESDAY`
+  - `THURSDAY`
+  - `FRIDAY`
+  - `SATURDAY`
+  - `SUNDAY`
+- Las fechas de inicio de recurrencia deben ser actuales o futuras.
+- La zona operativa del sitio es `Europe/Madrid`.
+
+---
+
+## 6. Descansos y pausas
+
+Para una jornada partida, por ejemplo:
+
+```text
+09:00–13:00
+16:00–20:00
+```
+
+se crean dos bloques el mismo día:
+
+```text
+Bloque 1 → 09:00–13:00
+Bloque 2 → 16:00–20:00
+```
+
+No se debe crear un bloque continuo de 09:00 a 20:00, porque permitiría reservas durante la pausa.
+
+---
+
+## 7. Vacaciones y ausencias
+
+Las vacaciones, bajas o días puntuales sin disponibilidad deben gestionarse como bloqueos o eventos de ausencia, no modificando necesariamente el horario semanal permanente.
+
+Diferenciar:
+
+```text
+Horario recurrente → jornada habitual
+Ausencia puntual   → día no disponible
+Bloqueo             → intervalo excepcional
+```
+
+Así se conserva el horario normal y se evita reconstruirlo cada vez que existe una excepción.
+
+---
+
+## 8. Verificación obligatoria
+
+Después de configurar el horario:
+
+```text
+[ ] El profesional no usa el horario empresarial si debe tener uno propio
+[ ] Cada día laborable tiene su bloque correspondiente
+[ ] Las horas de inicio y fin son correctas
+[ ] Las pausas no contienen disponibilidad
+[ ] El profesional está asociado al servicio correcto
+[ ] La ubicación coincide con la del servicio
+[ ] No existen eventos duplicados
+[ ] La disponibilidad muestra las horas esperadas
+[ ] Un horario ocupado deja de aparecer como disponible
+[ ] La zona horaria corresponde a Europe/Madrid
+```
+
+La comprobación definitiva debe realizarse consultando disponibilidad para el servicio, fecha y profesional concretos. Tener creados los eventos `WORKING_HOURS` demuestra que existe una configuración de horario, pero no garantiza por sí solo que el servicio sea reservable.
+
