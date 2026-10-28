@@ -1030,7 +1030,7 @@ async function _countMovementsOfDay(diaKey) {
 // ============================================================================
 
 async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) {
-    const { traceId } = options;
+    const traceId = _safeTrim(options?.traceId) || makeTraceId("z-close");
     try {
         if (authorizeCashier) await requireCajero(traceId);
         await validateFiscalConfig(traceId);
