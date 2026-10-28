@@ -26,6 +26,10 @@ No se ejecuta `wix sync-types` en `postinstall`: ese comando falló con el CLI d
 
 Las pruebas offline usan mocks del entorno Wix; **no prueban** CMS, Bookings ni pagos reales.
 
+## Limitación temporal de ESLint
+
+La regla `@wix/cli/no-invalid-backend-import` está desactivada temporalmente porque el plugin falla al cargar cuando falta el manifiesto generado `src/velo.dependencies.json`. **Esto no valida los imports de backend**: antes de retirar esta excepción hay que regenerar el manifiesto con el Wix CLI for Sites compatible con el Editor clásico y volver a ejecutar lint. No publicar mientras siga pendiente.
+
 ## Preview y publicación
 
 1. Ejecuta lint y pruebas, y resuelve todos los fallos.
