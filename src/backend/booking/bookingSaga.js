@@ -1523,7 +1523,7 @@ export async function executeBookingSaga(unsafePayload) {
                     if (appointmentNote) bookingBodyF2.internalBusinessNote = appointmentNote;
                     const f2Options = Object.freeze({
                         flowControlSettings: Object.freeze({
-                            skipAvailabilityValidation: true,
+                            skipAvailabilityValidation: SKIP_AVAILABILITY_VALIDATION,
                             skipSelectedPaymentOptionValidation: true,
                         }),
                     });
