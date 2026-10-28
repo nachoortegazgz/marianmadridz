@@ -1,45 +1,36 @@
-# Git Integration & Wix CLI <img align="left" src="https://user-images.githubusercontent.com/89579857/185785022-cab37bf5-26be-4f11-85f0-1fac63c07d3b.png">
+# Marian Madrid — Wix Editor + Velo
 
-This repo is part of Git Integration & Wix CLI, a set of tools that allows you to write, test, and publish code for your Wix site locally on your computer. 
+Repositorio conectado al sitio Wix **Marian Madrid Peluquería y Estética**. El sitio sigue la rama predeterminada del repositorio; los cambios de otras ramas no se sincronizan automáticamente con producción.
 
-Connect your site to GitHub, develop in your favorite IDE, test your code in real time, and publish your site from the command line.
+## Requisitos
 
-## Set up this repository in your IDE
-This repo is connected to a Wix site. That site tracks this repo's default branch. Any code committed and pushed to that branch from your local IDE appears on the site.
+- Git
+- Node.js **v24.22.1 o superior**, según la documentación actual de Wix
+- npm
+- Clave SSH añadida a GitHub y acceso al repositorio
+- Wix CLI para Sites instalado y sesión iniciada en Wix
 
-Before getting started, make sure you have the following things installed:
-* [Git](https://git-scm.com/download)
-* [Node](https://nodejs.org/en/download/), version 14.8 or later.
-* [npm](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm) or [yarn](https://yarnpkg.com/getting-started/install)
-* An SSH key [added to your GitHub account](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account).
+## Preparación local
 
-To set up your local environment and start coding locally, do the following:
+1. Clona este repositorio y entra en su carpeta.
+2. Instala dependencias con `npm install`.
+3. Instala el CLI de Wix si aún no está disponible: `npm install -g @wix/cli`.
+4. Comprueba la cuenta activa con `wix whoami`.
+5. Abre el Editor local conectado al sitio con `wix dev`.
 
-1. Open your terminal and navigate to where you want to store the repo.
-1. Clone the repo by running `git clone <your-repository-url>`.
-1. Navigate to the repo's directory by running `cd <directory-name>`.
-1. Install the repo's dependencies by running `npm install` or `yarn install`.
-1. Install the Wix CLI by running `npm install -g @wix/cli` or `yarn global add @wix/cli`.  
-   Once you've installed the CLI globally, you can use it with any Wix site's repo.
+El proyecto ejecuta `wix sync-types` durante `postinstall`. Si la instalación falla, conserva el error exacto y no lo eludas publicando.
 
-For more information, see [Setting up Git Integration & Wix CLI](https://support.wix.com/en/article/velo-setting-up-git-integration-wix-cli-beta).
+## Validación y publicación
 
-## Write Velo code in your IDE
-Once your repo is set up, you can write code in it as you would in any other non-Wix project. The repo's file structure matches the [public](https://support.wix.com/en/article/velo-working-with-the-velo-sidebar#public), [backend](https://support.wix.com/en/article/velo-working-with-the-velo-sidebar#backend), and [page code](https://support.wix.com/en/article/velo-working-with-the-velo-sidebar#page-code) sections in Editor X.
+1. Ejecuta `npm run lint`.
+2. Abre el Editor local con `wix dev` y prueba los cambios.
+3. Genera una vista previa con `wix preview` cuando el sitio ya se haya publicado previamente.
+4. Publica con `wix publish` únicamente después de validar los cambios y seleccionar conscientemente el origen correcto.
 
-Learn more about [this repo's file structure](https://support.wix.com/en/article/velo-understanding-your-sites-github-repository-beta).
+**Importante:** `wix publish` permite elegir entre el último commit de la rama predeterminada y el código local. Publicar código local sin haberlo sincronizado puede dejar producción y GitHub desalineados. No se debe publicar una rama de auditoría como si estuviera validada.
 
-## Test your code with the Local Editor
-The Local Editor allows you test changes made to your site in real time. The code in your local IDE is synced with the Local Editor, so you can test your changes before committing them to your repo. You can also change the site design in the Local Editor and sync it with your IDE.
+## Documentación oficial
 
-Start the Local Editor by navigating to this repo's directory in your terminal and running `wix dev`.
-
-For more information, see [Working with the Local Editor](https://support.wix.com/en/article/velo-working-with-the-local-editor-beta).
-
-## Preview and publish with the Wix CLI
-The Wix CLI is a tool that allows you to work with your site locally from your computer's terminal. You can use it to build a preview version of your site and publish it. You can also use the CLI to install [approved npm packages](https://support.wix.com/en/article/velo-working-with-npm-packages) to your site.
-
-Learn more about [working with the Wix CLI](https://support.wix.com/en/article/velo-working-with-the-wix-cli-beta).
-
-## Invite contributors to work with you
-Git Integration & Wix CLI extends Editor X's [concurrent editing](https://support.wix.com/en/article/editor-x-about-concurrent-editing) capabilities. Invite other developers as collaborators on your [site](https://support.wix.com/en/article/inviting-people-to-contribute-to-your-site) and your [GitHub repo](https://docs.github.com/en/account-and-profile/setting-up-and-managing-your-personal-account-on-github/managing-access-to-your-personal-repositories/inviting-collaborators-to-a-personal-repository). Multiple developers can work on a site's code at once.
+- [Configurar Git Integration y Wix CLI](https://dev.wix.com/docs/develop-websites/articles/workspace-tools/developer-tools/git-integration-wix-cli-for-sites/setting-up-git-integration-wix-cli-for-sites)
+- [Comandos del Wix CLI para Sites](https://dev.wix.com/docs/develop-websites/articles/workspace-tools/developer-tools/git-integration-wix-cli-for-sites/wix-cli-for-sites-commands)
+- [Acerca de Git Integration y Wix CLI](https://dev.wix.com/docs/develop-websites/articles/workspace-tools/developer-tools/git-integration-wix-cli-for-sites/about-git-integration-wix-cli-for-sites)
