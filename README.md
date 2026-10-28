@@ -1,33 +1,44 @@
 # Marian Madrid — Wix Editor + Velo
 
-Repositorio conectado al sitio Wix **Marian Madrid Peluquería y Estética**. El sitio sigue la rama predeterminada del repositorio; los cambios de otras ramas no se sincronizan automáticamente con producción.
+Repositorio canónico de código del sitio **Marian Madrid Peluquería y Estética**. Las ramas de trabajo no se publican automáticamente en Wix ni equivalen a producción.
 
 ## Requisitos
 
-- Git
-- Node.js **v24.22.1 o superior**, según la documentación actual de Wix
-- npm
-- Clave SSH añadida a GitHub y acceso al repositorio
-- Wix CLI para Sites instalado y sesión iniciada en Wix
+- Git y Node.js compatible con la versión del Wix CLI para Sites instalada.
+- npm.
+- Acceso al repositorio y sesión autenticada en Wix.
 
 ## Preparación local
 
-1. Clona este repositorio y entra en su carpeta.
-2. Instala dependencias con `npm install`.
-3. Instala el CLI de Wix si aún no está disponible: `npm install -g @wix/cli`.
-4. Comprueba la cuenta activa con `wix whoami`.
-5. Abre el Editor local conectado al sitio con `wix dev`.
+1. Clona el repositorio y entra en la raíz.
+2. Instala las dependencias del proyecto con `npm install`.
+3. Comprueba la cuenta activa con `wix whoami`.
+4. Ejecuta `npm run dev` para abrir el Editor local asociado al sitio configurado en `wix.config.json`.
 
-El proyecto ejecuta `wix sync-types` durante `postinstall`. Si la instalación falla, conserva el error exacto y no lo eludas publicando.
+No se ejecuta `wix sync-types` en `postinstall`: ese comando falló con el CLI disponible y no debe bloquear la instalación. La sincronización de tipos debe realizarse mediante el flujo compatible con la versión instalada del Wix CLI para Sites.
 
-## Validación y publicación
+## Validación
 
-1. Ejecuta `npm run lint`.
-2. Abre el Editor local con `wix dev` y prueba los cambios.
-3. Genera una vista previa con `wix preview` cuando el sitio ya se haya publicado previamente.
-4. Publica con `wix publish` únicamente después de validar los cambios y seleccionar conscientemente el origen correcto.
+- `npm run lint`: análisis estático.
+- `npm test`: todas las suites offline registradas por el runner canónico.
+- `npm run test:layer1`: contratos de reservas, disponibilidad y concurrencia.
+- `npm run test:layer2`: flujos operativos, datos y fiscalidad.
 
-**Importante:** `wix publish` permite elegir entre el último commit de la rama predeterminada y el código local. Publicar código local sin haberlo sincronizado puede dejar producción y GitHub desalineados. No se debe publicar una rama de auditoría como si estuviera validada.
+Las pruebas offline usan mocks del entorno Wix; **no prueban** CMS, Bookings ni pagos reales.
+
+## Limitación temporal de ESLint
+
+La regla `@wix/cli/no-invalid-backend-import` está desactivada temporalmente porque el plugin falla al cargar cuando falta el manifiesto generado `src/velo.dependencies.json`. **Esto no valida los imports de backend**: antes de retirar esta excepción hay que regenerar el manifiesto con el Wix CLI for Sites compatible con el Editor clásico y volver a ejecutar lint. No publicar mientras siga pendiente.
+
+## Preview y publicación
+
+1. Ejecuta lint y pruebas, y resuelve todos los fallos.
+2. Abre el Editor local con `npm run dev` y valida los cambios en el sitio correcto.
+3. Usa Preview cuando el flujo de Wix lo permita y verifica reservas, logs y datos.
+4. Publica solo el commit validado, seleccionando conscientemente el origen en Wix CLI for Sites.
+5. Tras publicar, verifica el dominio y el flujo real de reservas.
+
+No se debe publicar una rama de auditoría sin validar ni asumir que GitHub y el sitio publicado están sincronizados.
 
 ## Documentación oficial
 
