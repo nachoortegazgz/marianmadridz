@@ -2,14 +2,12 @@
 =============================================================================
 MODULE: backend/data.js
 VERSION: v5016-ZERO-LEGACY
-REPO: https://github.com/nachoortegazgz/marianmadridXXXXX.git
+REPO: https://github.com/nachoortegazgz/marianmadridz.git
 RESPONSIBILITY: Hooks de inmutabilidad, protecciones append-only y
                 validacion estricta de esquemas CMS.
 STANDARDS: G10 ASCII Strict. Cero suppressAuth. Cero alias. Cero legacy.
 =============================================================================
 */
-
-import { query as dalQuery } from "backend/dataAccess";
 
 import {
     BUSINESS_COLLECTIONS,
