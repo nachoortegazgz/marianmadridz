@@ -1,6 +1,5 @@
 {
   "devDependencies": {
-    "@wix/cli": "1.1.263",
     "@wix/eslint-plugin-cli": "1.0.0",
     "eslint": "8.25.0",
     "react": "16.14.0"
@@ -21,7 +20,6 @@
     "@wix/auto_sdk_bookings_extended-bookings": "1.0.135"
   },
   "scripts": {
-    "postinstall": "wix sync-types",
     "dev": "wix dev",
     "lint": "eslint ."
   },
