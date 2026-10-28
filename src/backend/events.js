@@ -189,7 +189,7 @@ let _emisorCache = null;
 async function _getEmisorFiscal() {
     if (_emisorCache) return _emisorCache;
     try {
-        const nif = await getSecretValue(SECRETS.FISCAL_NIF_EMISOR).catch(() => "");
+        const nif = await getSecretValue(SECRETS.FISCAL_NIF_EMISOR);
         // SSOT-KEYFIELD (Matriz MovimientosCaja, Apartado 2): claves canonicas
         // AEAT; el motor promueve aliases legacy, pero los writers entregan
         // directamente el canon — cero aliases en src/.
