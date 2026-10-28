@@ -10,7 +10,7 @@ STANDARDS: G10 ASCII Strict. Cero suppressAuth. Cero alias. Cero legacy.
 */
 
 import { webMethod, Permissions } from "wix-web-module";
-import { getSecret } from "wix-secrets-backend";
+import { getSecretValue } from "backend/secretAccess";
 
 import {
     query as dalQuery,
@@ -152,7 +152,7 @@ async function _getCachedSecret(name) {
     if (entry && (now - entry.at) < SECRET_CACHE_TTL_MS) {
         return entry.value;
     }
-    const value = await getSecret(name).catch(() => "");
+    const value = await getSecretValue(name).catch(() => "");
     _secretCache.set(name, { value, at: now });
     return value;
 }
