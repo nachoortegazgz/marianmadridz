@@ -361,8 +361,8 @@ export const emailManagerPackageVersion = webMethod(Permissions.SiteMember, asyn
       };
     }
 
-    const apiKey = await getSecretValue(SECRETS.RESEND_API_KEY).catch(() => "");
-    const fromEmail = (await getSecretValue(SECRETS.RESEND_FROM_EMAIL).catch(() => "")) || DEFAULT_MANAGER_EMAIL;
+    const apiKey = await getSecretValue(SECRETS.RESEND_API_KEY);
+    const fromEmail = (await getSecretValue(SECRETS.RESEND_FROM_EMAIL)) || DEFAULT_MANAGER_EMAIL;
 
     if (!apiKey) {
       return {
