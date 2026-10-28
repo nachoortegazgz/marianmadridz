@@ -1,3 +1,32 @@
+# REVALIDACION PRIORITARIA — MIGRACION SDK (2026-10-29)
+
+Esta sección prevalece sobre el inventario histórico que aparece más abajo.
+
+## Repositorio y estado real
+
+- Repositorio de trabajo: https://github.com/nachoortegazgz/marianmadridz
+- Rama de migración: `migration/secrets-sdk-2026-10-29`
+- PR de trabajo: https://github.com/nachoortegazgz/marianmadridz/pull/5
+- Sitio destino: `www.marianmadrid.es`
+- Plataforma: Wix Editor clásico + Velo; no se ha publicado este PR en Wix.
+
+## Cambios realizados en esta tanda
+
+- **Wix Data:** `backend/dataAccess.js` pasa de importar `wix-data` a usar `items` de `@wix/data`; la elevación permanece centralizada en el adaptador. El mock offline se ajustó para usar el builder de consultas.
+- **Wix Secrets:** se creó `backend/secretAccess.js`, que usa `@wix/secrets` + `auth.elevate` y devuelve `response.value` como string. Se migraron caja, inventario, webhooks, documentos fiscales, seguridad criptográfica y asistente IA. El código productivo ya no necesita `wix-secrets-backend`.
+- **Bookings y Members:** el inventario del código actual ya utiliza `@wix/bookings` y `@wix/members`; no se ha encontrado un import productivo de `wix-bookings.v2` ni `wix-members-backend` en los módulos revisados.
+- **Integridad fiscal:** la validación de hooks habilitada en el mock reveló que la caja no persistía `eventType` y que el cierre Z podía carecer de `traceId`. Ambos productores se han corregido en la rama. Los tests de ventas de mostrador declaran explícitamente `F2` cuando no aportan datos del destinatario.
+- **Validación CI:** la suite offline del commit `0e8163a608aaf4a7aaf0596291d10d3e0572c16b` pasó; el gate de lint estaba todavía ejecutándose al redactar esta nota. Verificar el resultado final en la acción asociada al PR antes de fusionar.
+
+## Migración pendiente por decisión de compatibilidad
+
+- **Stores Catálogo V1 e Invoices V1:** mantener las versiones instaladas. No migrar a V3/V2 sin plan independiente, equivalencia funcional y pruebas de catálogo, inventario, checkout e impuestos.
+- **APIs nativas de frontend Velo** (`wix-location-frontend`, `wix-window-frontend`, `wix-members-frontend`, `wix-pricing-plans-frontend`): no son deuda automáticamente; conservar mientras sean la API apropiada para Wix Editor.
+- **Resend, OpenAI y servicio fiscal externo:** son integraciones externas, no APIs Wix que deban reemplazarse por el SDK de Wix. Mantenerlas en backend y bajo Secrets.
+- **Cierre de migración total:** requiere completar la auditoría de todos los módulos, confirmar el gate CI verde en el commit final y ejecutar QA funcional en Wix (reservas simples/duales, permisos, caja y cierres). Ningún resultado offline certifica por sí solo el sitio publicado.
+
+---
+
 # Informe de migraciones pendientes al SDK JavaScript
 
 > **AVISO DE VIGENCIA — 2026-10-28:** este documento conserva análisis y checklists históricos redactados antes de inspeccionar el estado actual del repositorio. No usar sus frases de “pendiente”, ejemplos de imports ni casillas como diagnóstico actual. El corte vigente es [docs/MIGRACION-ESTADO-CANONICO-2026-10-26.md](MIGRACION-ESTADO-CANONICO-2026-10-26.md), actualizado con evidencia del 2026-10-28. Allí constan el commit verificado, el inventario de búsqueda, las pruebas CI y los bloqueos de validación Wix. Las decisiones de mantener Stores Catálogo V1 e Invoices V1 siguen vigentes; la presencia de SDK modernos no demuestra por sí sola equivalencia funcional ni certificación real.

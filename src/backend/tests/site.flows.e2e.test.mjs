@@ -305,6 +305,7 @@ test('FLOW-CAJA-01 flujo continuo: venta EFECTIVO -> caja incrementada -> cierre
   // Paso 1: alta manual con payload canonic (v5010.7: totalAmount/operationDescription)
   const tx = await cajas.registerManualTransaction({
     totalAmount: 50.0,
+    tipoFactura: 'F2',
     operationDescription: 'Venta mostrador e2e',
     paymentMethod: 'EFECTIVO',
     movementType: 'VENTA',
@@ -324,7 +325,7 @@ test('FLOW-CAJA-01 flujo continuo: venta EFECTIVO -> caja incrementada -> cierre
 
   // Paso 1b: idempotencia - mismo transactionId devuelve el registro original
   const dup = await cajas.registerManualTransaction({
-    totalAmount: 50.0, operationDescription: 'repeat', paymentMethod: 'EFECTIVO',
+    totalAmount: 50.0, tipoFactura: 'F2', operationDescription: 'repeat', paymentMethod: 'EFECTIVO',
     transactionId: 'e2e-tx-0001',
   });
   assert.strictEqual(dup.status, 'SUCCESS');
@@ -365,7 +366,7 @@ test('FLOW-CAJA-01 flujo continuo: venta EFECTIVO -> caja incrementada -> cierre
   // registro original (SUCCESS) antes de evaluar PERIOD_CLOSED, enmascarando el
   // invariante que se queria probar.
   const txAfterZ = await cajas.registerManualTransaction({
-    totalAmount: 10, operationDescription: 'venta post-cierre', paymentMethod: 'EFECTIVO',
+    totalAmount: 10, tipoFactura: 'F2', operationDescription: 'venta post-cierre', paymentMethod: 'EFECTIVO',
     transactionId: 'e2e-tx-postz-' + Date.now(),
   });
   assert.strictEqual(txAfterZ.status, 'ERROR', 'periodo cerrado debe bloquear: ' + JSON.stringify(txAfterZ));
@@ -389,7 +390,7 @@ test('FLOW-CAJA-02 payload incorrecto => rechazos deterministas sin contaminar l
   assert.strictEqual(neg.status, 'ERROR');
   assert.strictEqual(neg.error.code, 'INVALID_AMOUNT');
 
-  const badMethod = await cajas.registerManualTransaction({ totalAmount: 10, paymentMethod: 'ONLINE-CRYPTO' });
+  const badMethod = await cajas.registerManualTransaction({ totalAmount: 10, tipoFactura: 'F2', paymentMethod: 'ONLINE-CRYPTO' });
   assert.strictEqual(badMethod.status, 'ERROR');
   assert.strictEqual(badMethod.error.code, 'INVALID_PAYMENT_METHOD');
 
@@ -422,7 +423,7 @@ test('FLOW-CAJA-03 traducion legacy ONLINE -> WIX_PAYMENTS en la frontera (CAJA-
   wixDataMock._store.delete('HistoricoCierresZ');
   try {
     const tx = await cajas.registerManualTransaction({
-      totalAmount: 30, operationDescription: 'Pago online legado',
+      totalAmount: 30, tipoFactura: 'F2', operationDescription: 'Pago online legado',
       paymentMethod: 'ONLINE', transactionId: 'e2e-tx-legacy-online-' + Date.now(),
     });
     if (tx.status === 'SUCCESS') {
@@ -448,6 +449,7 @@ test('FLOW-CAJA-04 transactionId concurrente no crea movimientos duplicados', as
   const transactionId = 'e2e-concurrent-ledger-' + Date.now();
   const payload = {
     totalAmount: 30,
+    tipoFactura: 'F2',
     operationDescription: 'Prueba idempotencia concurrente',
     paymentMethod: 'EFECTIVO',
     transactionId,
