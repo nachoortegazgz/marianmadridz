@@ -2,7 +2,7 @@
 =============================================================================
 MODULE: backend/cajas.web.js
 VERSION: v5016-ZERO-LEGACY
-REPO: https://github.com/nachoortegazgz/marianmadridXXXXX.git
+REPO: https://github.com/nachoortegazgz/marianmadridz.git
 RESPONSIBILITY: TPV cashier ledger, daily closures, Veri*factu SHA-256
                 chain integrity, fiscal persistence and PGC projection.
 STANDARDS: G10 ASCII Strict. Cero suppressAuth. Cero alias. Cero legacy.
@@ -153,7 +153,7 @@ async function _getCachedSecret(name) {
     if (entry && (now - entry.at) < SECRET_CACHE_TTL_MS) {
         return entry.value;
     }
-    const value = await getSecretValue(name).catch(() => "");
+    const value = await getSecretValue(name);
     _secretCache.set(name, { value, at: now });
     return value;
 }
