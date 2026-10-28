@@ -2,7 +2,7 @@
 =============================================================================
 MODULE: backend/cajas.web.js
 VERSION: v5016-ZERO-LEGACY
-REPO: https://github.com/nachoortegazgz/marianmadridXXXXX.git
+REPO: https://github.com/nachoortegazgz/marianmadridz.git
 RESPONSIBILITY: TPV cashier ledger, daily closures, Veri*factu SHA-256
                 chain integrity, fiscal persistence and PGC projection.
 STANDARDS: G10 ASCII Strict. Cero suppressAuth. Cero alias. Cero legacy.
@@ -10,7 +10,7 @@ STANDARDS: G10 ASCII Strict. Cero suppressAuth. Cero alias. Cero legacy.
 */
 
 import { webMethod, Permissions } from "wix-web-module";
-import { getSecret } from "wix-secrets-backend";
+import { getSecretValue } from "backend/secretAccess";
 
 import {
     query as dalQuery,
@@ -33,6 +33,7 @@ import {
     FISCAL_ROLE,
     CONTROL_TYPE,
     BOOKING_FIELDS,
+    EVENT_TYPE,
     MOVEMENT_LEGACY_READ_ALIASES,
 } from "backend/internalConfig";
 
@@ -152,7 +153,7 @@ async function _getCachedSecret(name) {
     if (entry && (now - entry.at) < SECRET_CACHE_TTL_MS) {
         return entry.value;
     }
-    const value = await getSecret(name).catch(() => "");
+    const value = await getSecretValue(name);
     _secretCache.set(name, { value, at: now });
     return value;
 }
@@ -532,6 +533,13 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
         const transactionId = _safeTrim(payload?.transactionId) || null;
 
         const inDto = normalizeMovementKeys({ ...(payload || {}) });
+        const eventType = _safeTrim(inDto.eventType).toUpperCase() || (
+            [MOVEMENT_TYPE.REEMBOLSO, MOVEMENT_TYPE.DEVOLUCION, MOVEMENT_TYPE.DEVOLUCION_SERVICIO].includes(movementType)
+                ? EVENT_TYPE.RECTIFICATIVA
+                : movementType === MOVEMENT_TYPE.AJUSTE
+                    ? EVENT_TYPE.AJUSTE
+                    : EVENT_TYPE.VENTA_LINEA
+        );
 
         const nifDestinatario = _safeTrim(inDto.nifDestinatario) || null;
         const recipientLegalName = _cleanText(inDto.recipientLegalName || "", 200) || null;
@@ -644,6 +652,7 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
             fechaOperacion: operationDate,
             fiscalPeriod: operationDate.slice(0, 7),
             movementType,
+            eventType,
             paymentMethod,
             amount: taxableBaseOrNonSubjectAmount,
             totalAmount: amount,
@@ -1021,7 +1030,7 @@ async function _countMovementsOfDay(diaKey) {
 // ============================================================================
 
 async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) {
-    const { traceId } = options;
+    const traceId = _safeTrim(options?.traceId) || makeTraceId("z-close");
     try {
         if (authorizeCashier) await requireCajero(traceId);
         await validateFiscalConfig(traceId);

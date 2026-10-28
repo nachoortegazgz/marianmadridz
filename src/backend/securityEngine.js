@@ -14,7 +14,7 @@ HISTORIAL CERO-DEUDA:
 =============================================================================
 */
 
-import { getSecret } from "wix-secrets-backend";
+import { getSecretValue } from "backend/secretAccess";
 import { SECRETS } from "backend/mmSecrets";
 
 import { logger } from "backend/logger";
@@ -202,7 +202,7 @@ function _timeclockCanonicalPayload(record) {
 
 export async function signTimeclockRecord(record, key = null) {
     try {
-        const keyValue = key || (await getSecret(SECRETS.FISCAL_KEY));
+        const keyValue = key || (await getSecretValue(SECRETS.FISCAL_KEY));
         if (!keyValue) {
             throw new Error("CONFIGURACION_FISCAL_INVALIDA");
         }
