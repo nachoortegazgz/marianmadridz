@@ -49,12 +49,12 @@ Los tests de caja que representan ventas de mostrador sin datos del destinatario
 
 ## 4. Imports antiguos
 
-En los módulos productivos revisados se retiraron los imports de:
+No se detectan imports productivos activos de:
 
-- `wix-data` en el adaptador CMS.
-- `wix-secrets-backend` en consumidores de secretos.
-- `wix-bookings.v2`.
-- `wix-members-backend`.
+- `wix-data` en el adaptador CMS, que ahora importa `@wix/data`.
+- `wix-secrets-backend` en los consumidores de secretos, que ahora usan `backend/secretAccess.js`.
+- `wix-bookings.v2`; el motor usa `@wix/bookings`.
+- `wix-members-backend`; el backend usa `@wix/members`.
 
 Los mocks de pruebas pueden conservar adaptadores para simular APIs, pero no deben ser importados por código productivo.
 
