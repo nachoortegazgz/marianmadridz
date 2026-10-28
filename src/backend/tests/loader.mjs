@@ -776,7 +776,22 @@ export const items = {
     await _runHook(_hookName(col, 'beforeRemove'), row);
     return m.remove(col, idOrObj);
   },
-  query: (col) => m.query(col),
+  query: async (col, queryRequest, options) => {
+    const q = m.query(col);
+    if (!queryRequest) return q;
+    if (queryRequest.filter) q.filter(queryRequest.filter);
+    for (const spec of (queryRequest.sort || [])) {
+      const field = spec.fieldName || spec.field || '';
+      if (!field) continue;
+      if (String(spec.order || spec.direction || 'ASC').toUpperCase() === 'DESC') q.descending(field);
+      else q.ascending(field);
+    }
+    const paging = queryRequest.paging || {};
+    if (Number.isFinite(Number(paging.limit))) q.limit(Number(paging.limit));
+    if (Number.isFinite(Number(paging.offset)) && Number(paging.offset) > 0) q.skip(Number(paging.offset));
+    const result = await q.find(options || {});
+    return { ...result, totalCount: result.totalCount ?? result.total };
+  },
   bulkInsert: (col, rows, opts) => m.bulkInsert(col, rows, opts),
   bulkUpdate: (col, rows, opts) => m.bulkUpdate(col, rows, opts),
   bulkRemove: (col, ids, opts) => m.bulkRemove(col, ids, opts),
