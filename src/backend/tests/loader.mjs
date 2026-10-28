@@ -625,13 +625,9 @@ const mod = new Proxy({ default: fnProxy }, handler);
 export default mod.default;
 `;
 
-/* LH-01 (fix derivado de tests 2026-10-13): dataAccess.js usa la API v2
-   ({ query(dataCollectionId, { filter, sort }, opts) }) mientras el builder
-   legacy usa la v1 (query(col).eq().find()). Ambos confluyen en el mismo
-   store del mock. Este adaptador v2 traduce filtros MongoQL ($eq/$ne/$gt/
-   $gte/$lt/$lte/$in/$nin/$hasSome/$startsWith y composicion $and) al motor
-   de filtrado ya verificado del mock, para que los purga-crons (que van por
-   dataLegacyAdapter -> dataAccess) operen offline con las mismas filas. */
+/* SDK @wix/data mock. Its query() uses the chainable Velo-compatible builder
+   implemented by wixDataMock, so offline tests exercise the same query/filter/
+   sort/pagination contract as the production adapter. */
 const WIX_DATA_V2_SOURCE = `
 import { wixDataMock as m } from ${JSON.stringify(p2u(path.join(BACKEND_DIR, 'tests/loader.mjs')).href.replace(/\\\\/g, '/'))};
 
@@ -780,30 +776,10 @@ export const items = {
     await _runHook(_hookName(col, 'beforeRemove'), row);
     return m.remove(col, idOrObj);
   },
-  async query(col, request = {}, opts = {}) {
-    m._calls.push({ op: 'query_v2', collection: col });
-    const all = m._store.get(col) || [];
-    let its = applyV2Filter(all, request.filter);
-    its = applyV2Sort(its, request.sort);
-    const offset = Number(request.offset) || 0;
-    const limit = Number(request.limit ?? opts.limit ?? 30);
-    const page = its.slice(offset, offset + limit);
-    // LH-20: resultado v2 fiel al SDK — items + pagingMetadata Y los
-    // helpers de paginacion v1 (hasNext()/next()) que usan los callers
-    // legacy como el batch ledger de cajas (cierre Z). next() re-ejecuta
-    // la consulta con offset desplazado, igual que el SDK real.
-    const mkPage = (off) => {
-      const pg = its.slice(off, off + limit);
-      return {
-        items: pg,
-        pagingMetadata: { count: pg.length, total: its.length, offset: off, hasNext: off + pg.length < its.length },
-        hasNext: () => off + pg.length < its.length,
-        next: async () => mkPage(off + pg.length),
-      };
-    };
-    void all;
-    return mkPage(offset);
-  },
+  query: (col) => m.query(col),
+  bulkInsert: (col, rows, opts) => m.bulkInsert(col, rows, opts),
+  bulkUpdate: (col, rows, opts) => m.bulkUpdate(col, rows, opts),
+  bulkRemove: (col, ids, opts) => m.bulkRemove(col, ids, opts),
   queryReferencedItems: (col, id, field) => m.queryReferencedItems(col, id, field),
 };
 export default m;
@@ -870,21 +846,6 @@ export async function resolve(specifier, context, nextResolve) {
 }
 
 export async function load(url, context, nextLoad) {
-  if (url === 'mock:wix-secrets-backend') {
-    // LH-26: self-contained stub (NO importa loader.mjs: el specifier se
-    // resolveria contra la URL del stub -> autoimport recursiva, ver nota
-    // @wix/essentials). Delega en globalThis.__mmSecretsState, la misma
-    // referencia mutable que usan @wix/secrets y los tests E2E.
-    return {
-      format: 'module',
-      source: [
-        "const state = globalThis.__mmSecretsState || (globalThis.__mmSecretsState = { _map: {}, _default: 'mock-secret' });",
-        "export const getSecret = async (name) => (state._map[name] !== undefined ? state._map[name] : state._default);",
-        "export default { getSecret };",
-      ].join('\n'),
-      shortCircuit: true,
-    };
-  }
   if (url.startsWith('mock:wix-data') || url === 'mock:@wix/data' || url === 'mock:@wix/essentials') {
     // @wix/data (API v2, usado por dataAccess.js) -> adaptador v2 sobre el
     // mismo store del mock. 'wix-data' (builder legacy v1) -> mock clasico.
