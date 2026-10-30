@@ -40,7 +40,7 @@ CORRECTIONS (heredadas v5007.4):
 import { webMethod, Permissions } from "wix-web-module";
 import { query as dalQuery, insertItem as insert, updateItem as update, removeById } from "backend/dataAccess";
 import { getStoresCatalogVersion, getDefaultStoresLocationId, getStoresCatalogVariants } from "backend/storesCatalog";
-import { CATALOG_VERSION, normalizeStoreOrderLineItem, buildInventoryMovementToken } from "backend/storesCatalogMapper";
+import { CATALOG_VERSION, createVariantStockKey, normalizeStoreOrderLineItem, buildInventoryMovementToken } from "backend/storesCatalogMapper";
 
 import {
   BUSINESS_COLLECTIONS, OPERATIONAL_COLLECTIONS, CONTROL_TYPE,
@@ -341,6 +341,20 @@ export async function recordInventoryMovementSafe(identity, movementType, quanti
   if (!stockKey || !productId || !variantId || !catalogVersion) {
     return { status: "ERROR", data: null, error: { code: "INCOMPLETE_VARIANT_IDENTITY", message: "Se requiere stockKey, productId, variantId y catalogVersion." } };
   }
+  let expectedStockKey;
+  try {
+    expectedStockKey = createVariantStockKey({
+      catalogVersion,
+      productId,
+      variantId,
+      locationId,
+    });
+  } catch (error) {
+    return { status: "ERROR", data: null, error: { code: error?.message || "INVALID_VARIANT_IDENTITY", message: "La identidad de variante/ubicacion no es valida." } };
+  }
+  if (stockKey !== expectedStockKey) {
+    return { status: "ERROR", data: null, error: { code: "STOCK_KEY_IDENTITY_MISMATCH", message: "stockKey no corresponde a productId, variantId, catalogVersion y locationId." } };
+  }
   if (catalogVersion === CATALOG_VERSION.V3 && !locationId) {
     return { status: "ERROR", data: null, error: { code: "V3_LOCATION_ID_REQUIRED", message: "Catalog V3 requiere locationId." } };
   }
@@ -378,6 +392,25 @@ export async function recordInventoryMovementSafe(identity, movementType, quanti
   }
 
   const stockItem = stockRows[0];
+  const mappedProductId = _safeTrim(stockItem.wixProductId || stockItem.productId);
+  const mappedVariantId = _safeTrim(stockItem.wixVariantId || stockItem.variantId);
+  const mappedCatalogVersion = _safeTrim(stockItem.catalogVersion);
+  const mappedLocationId = _safeTrim(stockItem.locationId) || null;
+
+  if ((mappedProductId && mappedProductId !== productId) ||
+      (mappedVariantId && mappedVariantId !== variantId) ||
+      (mappedCatalogVersion && mappedCatalogVersion !== catalogVersion) ||
+      (mappedLocationId && mappedLocationId !== locationId)) {
+    return {
+      status: "ERROR",
+      data: null,
+      error: {
+        code: "STOCK_VARIANT_MAPPING_MISMATCH",
+        message: "La identidad ya vinculada al registro CMS no coincide con la variante/ubicacion del pedido.",
+      },
+    };
+  }
+
   const lock = await acquireInventoryVariantLock(stockItem, stockKey, traceId);
   if (!lock) {
     return {
@@ -428,6 +461,12 @@ export async function recordInventoryMovementSafe(identity, movementType, quanti
 
     stockItem.stockOnHand = targetStock;
     stockItem.stockAvailable = targetStock - reservedStock;
+    stockItem.wixProductId = productId;
+    stockItem.wixVariantId = variantId;
+    stockItem.productId = productId;
+    stockItem.variantId = variantId;
+    stockItem.catalogVersion = catalogVersion;
+    stockItem.locationId = locationId;
     stockItem.lastInventoryMovementAt = new Date();
     stockItem.lastInventoryMovementId = existingMovement._id;
     if (existingMovement.requiresWixReconciliation === true) stockItem.needsWixReconciliation = true;
@@ -493,6 +532,10 @@ export async function recordInventoryMovementSafe(identity, movementType, quanti
 
   stockItem.stockOnHand = stockAfter;
   stockItem.stockAvailable = stockAvailable;
+  stockItem.wixProductId = productId;
+  stockItem.wixVariantId = variantId;
+  stockItem.productId = productId;
+  stockItem.variantId = variantId;
   stockItem.lastInventoryMovementAt = new Date();
   stockItem.lastInventoryMovementId = savedMovement._id;
   stockItem.catalogVersion = catalogVersion;
