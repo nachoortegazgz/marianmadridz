@@ -124,7 +124,7 @@ La revisión se ha realizado sobre el repositorio canónico `nachoortegazgz/mari
 
 Rama: `migration/catalog-v3-adapter-2026-10-30`  
 PR: https://github.com/nachoortegazgz/marianmadridz/pull/13  
-Último commit de esta actualización: `684f8b9239e44df4c74fedc1f8fc5d49a08f487c`.
+Último commit de esta actualización: `b3d78e1aff7fb7b57bb82f1c55db56119910ead7`.
 
 - Añadido `@wix/stores@1.0.960`, versión indicada en la documentación SDK oficial consultada el 30-10-2026.
 - El proyecto usa `catalogVersioning.getCatalogVersion()` antes de operaciones Stores y ramifica estrictamente entre `V1_CATALOG`, `V3_CATALOG` y `STORES_NOT_INSTALLED`.
@@ -140,7 +140,7 @@ PR: https://github.com/nachoortegazgz/marianmadridz/pull/13
 ### CMS vivo comprobado
 
 - `InventarioStockVenta`: campos opcionales `stockKey`, `locationId`, `catalogVersion`; índice único `stockKey_unique` = ACTIVE.
-- `MovimientosInventario`: campos `stockKey`, `locationId`, `catalogVersion`, `lineItemId`, `stockApplied`.
+- `MovimientosInventario`: campos `stockKey`, `locationId`, `catalogVersion`, `lineItemId`, `stockApplied`; índice único `movementToken_unique` = ACTIVE.
 - `ControlOperativo`: ya dispone de `alertType`, `dedupeKey`, `expiresAt`, `payload`, `attempts`, `status` y `traceId`; no se ha creado otra colección de locks.
 - Catálogo V1 vivo: 30 variantes y 24 elementos de inventario en la consulta realizada.
 - CMS propio: un único registro, explícitamente ficticio de QA, sin `productId`, `variantId`, `wixProductId`, `wixVariantId`, `stockKey`, `catalogVersion` ni `locationId`. No se ha convertido en stock comercial ni se han creado correspondencias inventadas.
@@ -155,7 +155,7 @@ PR: https://github.com/nachoortegazgz/marianmadridz/pull/13
   - `wix install @wix/stores`
   Revisar el diff generado por Wix CLI; no editar `wix.lock` manualmente.
 - Antes de activar V3, confirmar permisos `SCOPE.STORES.CATALOG_READ_LIMITED`, `SCOPE.STORES.PRODUCT_READ`, `SCOPE.STORES.INVENTORY_ITEM_READ` y `SCOPE.STORES.LOCATION_READ_LIMITED` en el contexto de ejecución real.
-- La cola de conciliación tiene replay administrativo; no se ha activado todavía un cron automático de reintentos.
+- La cola de conciliación tiene replay administrativo; errores de identidad sin resolver permanecen OPEN tras el replay. No se ha activado todavía un cron automático de reintentos.
 - Los webhooks de pedidos y reembolsos eCommerce se mantienen (no cambian entre Catalog V1/V3). **No están implementados todavía los webhooks de cambios de producto/variantes del catálogo**. Wix documenta eventos V1 y V3 diferenciados; los eventos V3 de Velo están en Developer Preview, por lo que no se activan para producción sin aceptación expresa y QA. Su registro y deduplicación quedan pendientes.
 - No se ha sincronizado ni publicado ningún cambio en Wix. No se ha cambiado la versión de catálogo del sitio.
 
