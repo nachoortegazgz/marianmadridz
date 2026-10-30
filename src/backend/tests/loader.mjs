@@ -761,6 +761,11 @@ async function _runHook(name, ...args) {
 
 export const items = {
   get: (col, id) => m.get(col, id),
+  async count(col, options = {}) {
+    const q = m.query(col);
+    if (options.filter) q.filter(options.filter);
+    return q.count();
+  },
   async insert(col, entity) {
     await _runHook(_hookName(col, 'beforeInsert'), entity);
     return m.insert(col, entity);
