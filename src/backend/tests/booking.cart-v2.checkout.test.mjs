@@ -128,3 +128,25 @@ test('CARTV2-04 rejects incomplete or mismatched calculation responses', async (
     (error) => error && error.code === 'CHECKOUT_FAILED'
   );
 });
+
+test('CARTV2-05 accepts a valid calculation when optional violations are omitted', async () => {
+  setCartV2Mock({
+    createCart: async () => ({ cart: { _id: CART_ID } }),
+    calculateCart: async () => ({
+      cart: {
+        _id: CART_ID,
+        businessInfo: { currencyCode: 'EUR' },
+      },
+      summary: {
+        priceSummary: { total: { amount: '48.50' } },
+      },
+    }),
+    getCheckoutUrl: async () => ({
+      checkoutUrl: 'https://checkout.wix.com/cart/abc123',
+    }),
+  });
+
+  const result = await core.createBookingCartCheckout(BOOKING_ID, 'trace-cart-5');
+  assert.equal(result.cartId, CART_ID);
+  assert.equal(result.checkoutUrl, 'https://checkout.wix.com/cart/abc123');
+});
