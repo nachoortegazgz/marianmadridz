@@ -1,14 +1,14 @@
 /*
 =============================================================================
 MODULE: backend/dataAccess.js
-VERSION: v3.0-WIX-DATA-SDK
+VERSION: v2.4-SDK-QUERY-ELEVATION
 RESPONSIBILITY: Capa unica de acceso elevado a colecciones CMS.
 STANDARDS: G10 ASCII Strict. Sin suppressAuth. Acceso CMS centralizado
   exclusivamente mediante @wix/data.
 =============================================================================
 */
 
-import { items as wixDataItems } from "@wix/data";
+import { items } from "@wix/data";
 import { auth } from "@wix/essentials";
 
 export const CONSISTENCY = Object.freeze({
@@ -76,84 +76,85 @@ function normalizeOffset(value) {
         : 0;
 }
 
-/*
- * CMS Data Items SDK (@wix/data). Elevacion por metodo oficial:
- * auth.elevate(items.<operation>), no sobre factories ni callbacks locales.
- */
-const elevatedGet = auth.elevate(wixDataItems.get);
-const elevatedInsert = auth.elevate(wixDataItems.insert);
-const elevatedUpdate = auth.elevate(wixDataItems.update);
-const elevatedRemove = auth.elevate(wixDataItems.remove);
-const elevatedSave = auth.elevate(wixDataItems.save);
-const elevatedBulkInsert = auth.elevate(wixDataItems.bulkInsert);
-const elevatedBulkUpdate = auth.elevate(wixDataItems.bulkUpdate);
-const elevatedBulkRemove = auth.elevate(wixDataItems.bulkRemove);
-const elevatedQuery = auth.elevate(wixDataItems.query);
-const elevatedCount = auth.elevate(wixDataItems.count);
-const elevatedQueryReferencedItems = auth.elevate(
-    wixDataItems.queryReferencedItems
-);
-
-function toSdkSort(sort) {
+function normalizeSdkSort(sort) {
     if (!Array.isArray(sort)) return [];
-    return sort.map((entry) => {
+    const normalized = [];
+    for (const entry of sort) {
+        let fieldName = "";
+        let direction = "ASC";
         if (typeof entry === "string") {
-            const [fieldName, direction = "ASC"] = entry.trim().split(/\s+/);
-            return fieldName
-                ? { fieldName, order: direction.toUpperCase() === "DESC" ? "DESC" : "ASC" }
-                : null;
+            const parts = entry.trim().split(/\s+/);
+            fieldName = parts[0] || "";
+            direction = parts[1] || "ASC";
+        } else if (entry && typeof entry === "object") {
+            fieldName = String(entry.fieldName || "");
+            direction = String(entry.direction || entry.order || "ASC");
         }
-        if (!entry || !entry.fieldName) return null;
-        return {
-            fieldName: entry.fieldName,
-            order: String(entry.direction || "ASC").toUpperCase() === "DESC" ? "DESC" : "ASC",
-        };
-    }).filter(Boolean);
+        if (!fieldName) continue;
+        normalized.push({
+            fieldName,
+            order: direction.toUpperCase() === "DESC" ? "DESC" : "ASC",
+        });
+    }
+    return normalized;
 }
 
-// SDK query contract: WQL filter + offset paging; total is read from pagingMetadata.
-async function runQuery({
-    dataCollectionId,
-    filter,
-    sort,
-    limit,
-    offset,
-    consistency,
-}) {
-    const sdkSort = toSdkSort(sort);
+/*
+ * SDK migration phase 1: elevate official Wix Data methods directly.
+ * items.query accepts collection ID, query request, and operation options.
+ * Do not pass arbitrary callbacks to auth.elevate.
+ */
+const elevatedGet = auth.elevate(items.get);
+const elevatedInsert = auth.elevate(items.insert);
+const elevatedUpdate = auth.elevate(items.update);
+const elevatedRemove = auth.elevate(items.remove);
+const elevatedSave = auth.elevate(items.save);
+const elevatedBulkInsert = auth.elevate(items.bulkInsert);
+const elevatedBulkUpdate = auth.elevate(items.bulkUpdate);
+const elevatedBulkRemove = auth.elevate(items.bulkRemove);
+const elevatedQueryReferencedItems = auth.elevate(
+    items.queryReferencedItems
+);
+
+const elevatedQuery = auth.elevate(items.query);
+
+async function runQuery({ dataCollectionId, filter, sort, limit, offset, consistency }) {
     const queryRequest = {
-        ...(filter ? { filter } : {}),
-        ...(sdkSort.length ? { sort: sdkSort } : {}),
         paging: {
             limit: normalizeLimit(limit),
             offset: normalizeOffset(offset),
         },
     };
-    const options = {
-        ...buildOptions(consistency),
-        returnTotalCount: true,
-    };
-    const response = await elevatedQuery(dataCollectionId, queryRequest, options);
-    const items = Array.isArray(response?.items) ? response.items : [];
-    const totalCount = Number.isFinite(response?.pagingMetadata?.total)
-        ? response.pagingMetadata.total
-        : Number.isFinite(response?.totalCount)
-        ? response.totalCount
-        : normalizeOffset(offset) + items.length;
-    return {
-        items,
-        totalCount,
-        hasNext: response?.pagingMetadata?.hasNext === true ||
-            normalizeOffset(offset) + items.length < totalCount,
-    };
+    if (filter) queryRequest.filter = filter;
+    const normalizedSort = normalizeSdkSort(sort);
+    if (normalizedSort.length > 0) queryRequest.sort = normalizedSort;
+
+    const response = await elevatedQuery(
+        dataCollectionId,
+        queryRequest,
+        { ...buildOptions(consistency), returnTotalCount: true }
+    );
+    const resultItems = Array.isArray(response?.items) ? response.items : [];
+    const totalCount = Number(response?.totalCount ?? response?.pagingMetadata?.total);
+    if (!Number.isFinite(totalCount)) {
+        throw new Error("WIX_DATA_QUERY_COUNT_MISSING: SDK response omitted totalCount");
+    }
+    return { ...response, items: resultItems, totalCount };
 }
 
 async function runCount({ dataCollectionId, filter, consistency }) {
-    const options = {
-        ...buildOptions(consistency),
-        ...(filter ? { filter } : {}),
-    };
-    return elevatedCount(dataCollectionId, options);
+    const queryRequest = { paging: { limit: 1, offset: 0 } };
+    if (filter) queryRequest.filter = filter;
+    const response = await elevatedQuery(
+        dataCollectionId,
+        queryRequest,
+        { ...buildOptions(consistency), returnTotalCount: true }
+    );
+    const count = Number(response?.totalCount ?? response?.pagingMetadata?.total);
+    if (!Number.isFinite(count)) {
+        throw new Error("WIX_DATA_COUNT_MISSING: SDK response omitted totalCount");
+    }
+    return count;
 }
 
 export async function queryReferencedItems(

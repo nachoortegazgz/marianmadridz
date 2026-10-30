@@ -1,12 +1,12 @@
 /**
  * MODULE: pages/servicio-2.js
  * VERSION: v5017-CLEAN
- * APIS: wix-location-frontend; backend/reservas.web.js; public/mmUtils; public/widgetBridge.
- * DOC: https://www.wix.com/velo/reference/wix-location-frontend
+ * APIS: @wix/site-location; backend/reservas.web.js; public/mmUtils; public/widgetBridge.
+ * DOC: https://www.wix.com/velo/reference/@wix/site-location
  *      https://dev.wix.com/docs/rest/business-solutions/bookings/services/introduction
  */
-import wixLocation from "wix-location-frontend";
-import { checkout } from "wix-pricing-plans-frontend";
+import { location } from "@wix/site-location";
+import { checkout } from "@wix/site-pricing-plans";
 import { getServiceBySlugOrId } from "backend/reservas.web.js";
 import {
     MESSAGE_TYPES, URLS, BOOKINGS_ADDON_CONFIG, makeTraceId,
@@ -128,13 +128,13 @@ function normalizeCatalogEntry(data) {
     };
 }
 
-function resolveServiceLookup() {
-    const query = wixLocation.query || {};
+async function resolveServiceLookup() {
+    const query = await location.query();
     for (const candidate of [query.slug, query.serviceId]) {
         const value = _safeSlugOrId(candidate);
         if (value) return value;
     }
-    const path = Array.isArray(wixLocation.path) ? wixLocation.path : [];
+    const path = await location.path();
     const value = _safeSlugOrId(path[path.length - 1] || "");
     if (!value || EXCLUDED_PATHS.has(value.toLowerCase())) return null;
     return value;
@@ -179,14 +179,14 @@ async function loadService(lookupValue, traceId) {
     return service;
 }
 
-$w.onReady(() => {
+$w.onReady(async () => {
     const traceId = makeTraceId("servicio");
     let widget;
     try { widget = $w("#htmlWidgetCustomService"); } catch (_) { showError("El widget del servicio no esta disponible."); return; }
     if (!widget || typeof widget.postMessage !== "function" || typeof widget.onMessage !== "function") {
         showError("El widget del servicio no esta disponible."); return;
     }
-    const lookupValue = resolveServiceLookup();
+    const lookupValue = await resolveServiceLookup();
     if (!lookupValue) { showError("No se pudo localizar el servicio en la URL."); return; }
     try {
         bridge = createWidgetBridge(widget, {
@@ -235,12 +235,12 @@ $w.onReady(() => {
                         }
                         return;
                     }
-                    wixLocation.to(buildBookingUrl(resolvedService, payload));
+                    location.to(buildBookingUrl(resolvedService, payload));
                     return;
                 }
                 if (type === MESSAGE_TYPES.NAV) {
                     const target = text(payload.target).toUpperCase();
-                    if (!target || target === "SERVICIOS") wixLocation.to(getServicesUrl());
+                    if (!target || target === "SERVICIOS") location.to(getServicesUrl());
                 }
             },
             onError: (error, detail) => bridgeError(error && error.code, error && error.message, traceId, detail)

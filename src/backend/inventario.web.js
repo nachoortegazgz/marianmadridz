@@ -62,7 +62,7 @@ import { normalizeError } from "backend/booking/bookingCore";
 import { logAuditEvent } from "backend/audit";
 
 import { hashSHA256, hmacSha256Hex } from "backend/securityEngine";
-import { secrets } from "@wix/secrets";
+import { getSecretValue } from "backend/secretAccess";
 import { SECRETS } from "backend/mmSecrets";
 
 const log = logger;
@@ -412,7 +412,7 @@ export const generateInventoryClosing = webMethod(Permissions.Admin, async (opti
     }
 
     // FIX-53: fallo explicito si no hay fiscal key activa.
-    const fiscalKey = await secrets.getSecretValue(SECRETS.FISCAL_KEY).catch(() => "");
+    const fiscalKey = await getSecretValue(SECRETS.FISCAL_KEY).catch(() => "");
     if (!fiscalKey) {
       return {
         status: "ERROR",

@@ -13,7 +13,7 @@ FIXES APLICADOS v5009-FISCAL-V20.1:
 */
 
 import { webMethod, Permissions } from "wix-web-module";
-import { secrets } from "@wix/secrets";
+import { getSecretValue } from "backend/secretAccess";
 import { SECRETS } from "backend/mmSecrets";
 import { makeTraceId, _safeTrim, withTimeout } from "public/mmUtils";
 import { requireMarianManager } from "backend/security";
@@ -34,7 +34,7 @@ export const askMarianAssistant = webMethod(Permissions.SiteMember, async (paylo
         const cleanMessage = _safeTrim(payload.message).slice(0, MAX_MESSAGE_CHARS);
         if (!cleanMessage) throw new Error("Message required");
 
-        const apiKey = await secrets.getSecretValue(SECRETS.MARIAN_ASSISTANT_OPENAI_KEY).catch(() => null);
+        const apiKey = (await getSecretValue(SECRETS.MARIAN_ASSISTANT_OPENAI_KEY)) || null;
         if (!apiKey) {
             return {
                 status: "SUCCESS",
