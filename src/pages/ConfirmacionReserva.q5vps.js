@@ -33,14 +33,14 @@ $w.onReady(async function () {
     // Bridge con el HTML embebido #html2: contrato de mensaje explícito.
     const htmlWidget = $w("#html2");
     if (htmlWidget && typeof htmlWidget.onMessage === "function") {
-        htmlWidget.onMessage(async (event) => {
+        htmlWidget.onMessage((event) => {
             const message = event && event.data;
             if (message && message.type === "MM_CONFIRMATION_READY" &&
                 confirmationWidgetPayload && typeof htmlWidget.postMessage === "function") {
                 htmlWidget.postMessage({ version: "1.0", type: "MM_CONFIRMATION_CONTEXT", payload: confirmationWidgetPayload });
             } else if (message && message.type === "MM_NAV" && message.payload &&
                 ["/", "/mis-reservas"].includes(message.payload.url)) {
-                await location.to(message.payload.url);
+                location.to(message.payload.url);
             }
         });
     }
@@ -206,10 +206,10 @@ function showError(message) {
 // EVENT HANDLERS
 // =============================================================================
 
-export async function homeButton_click(event) {
-    await location.to("/");
+export function homeButton_click(event) {
+    location.to("/");
 }
 
-export async function calendarButton_click(event) {
-    await location.to("/reserva-online");
+export function calendarButton_click(event) {
+    location.to("/reserva-online");
 }
