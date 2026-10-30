@@ -83,7 +83,7 @@ function _normalizeStaffMember(staff) {
         ? staff.resource
         : {};
     const identity = staff.associatedWixIdentity || {};
-    const identityStatus = _safeTrim(identity.connectionStatus || identity.connection?.status || "").toUpperCase();
+    const identityStatus = _safeTrim(identity.connection?.status || "").toUpperCase();
     const identificationData = identity.identificationData || {};
     const contactId = identityStatus === "CONNECTED"
         ? _safeTrim(identificationData.contactId || "")
@@ -91,18 +91,16 @@ function _normalizeStaffMember(staff) {
     const workingHours = Array.isArray(resource.workingHoursSchedules)
         ? resource.workingHoursSchedules[0]
         : null;
-    const resourceId = _safeTrim(staff.resourceId || resource.id || resource._id || "");
+    const resourceId = _safeTrim(staff.resourceId || "");
 
     const normalized = {
-        staffMemberId: _safeTrim(staff.id || staff._id || ""),
+        staffMemberId: _safeTrim(staff._id || ""),
         resourceId,
         contactId,
         displayName: _safeTrim(staff.name || ""),
         roleWebsite: _safeTrim(STAFF.WEBSITE_ROLE_BY_RESOURCE_ID[resourceId] || ""),
         scheduleId: _safeTrim(
-            workingHours?.id ||
             workingHours?._id ||
-            resource.eventsSchedule?.id ||
             resource.eventsSchedule?._id ||
             ""
         ),
