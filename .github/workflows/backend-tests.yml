@@ -39,6 +39,8 @@ jobs:
           node-version: "24"
       - name: Install declared dependencies without lifecycle scripts
         run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Verify installed Wix Cart V2 SDK exports
+        run: npm run verify:wix-ecom-cart-v2
       - name: Run ESLint
         run: npm run lint
   windows-node-compatibility:
@@ -58,6 +60,8 @@ jobs:
           node-version: ${{ matrix.node-version }}
       - name: Install declared dependencies without lifecycle scripts
         run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Verify installed Wix Cart V2 SDK exports
+        run: npm run verify:wix-ecom-cart-v2
       - name: Run complete backend regression suite
         run: npm test
       - name: Run layer 1 regression suite
