@@ -249,7 +249,7 @@ test("EVENT-BOOKING-05 order cancellation matches the Bookings catalog GUID and 
   const rows = wixDataMock._store.get("CitasF2") || [];
   assert.equal(rows.length, 2);
   for (const row of rows) {
-    assert.equal(row.bookingStatus, "CANCELED");
+    assert.equal(row.bookingStatus, "CANCELLED");
     assert.equal(row.pairToken, PAIR_TOKEN);
   }
 });
