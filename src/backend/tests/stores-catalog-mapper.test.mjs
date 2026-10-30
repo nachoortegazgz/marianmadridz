@@ -60,7 +60,9 @@ test("official V1 eCommerce order line item resolves product, variant and physic
             catalogItemId: PRODUCT_ID,
             options: { options: { Size: "M" }, variantId: VARIANT_A },
         },
-    }, 0, CATALOG_VERSION.V1);
+    }, 0, CATALOG_VERSION.V1, null, [
+        { productId: PRODUCT_ID, variantId: VARIANT_A },
+    ]);
 
     assert.equal(item.kind, "STORE_ITEM");
     assert.equal(item.productId, PRODUCT_ID);
