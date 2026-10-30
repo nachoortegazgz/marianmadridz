@@ -38,7 +38,7 @@ CORRECTIONS (heredadas v5007.4):
 */
 
 import { webMethod, Permissions } from "wix-web-module";
-import { query as dalQuery, insertItem as insert, updateItem as update } from "backend/dataAccess";
+import { query as dalQuery, insertItem as insert, updateItem as update, removeById } from "backend/dataAccess";
 import { getStoresCatalogVersion, getDefaultStoresLocationId, getStoresCatalogVariants } from "backend/storesCatalog";
 import { CATALOG_VERSION, normalizeStoreOrderLineItem, buildInventoryMovementToken } from "backend/storesCatalogMapper";
 
@@ -270,6 +270,58 @@ async function queueInventoryReconciliation({
   return { queueId, alreadyResolved: false };
 }
 
+async function acquireInventoryVariantLock(stockItem, stockKey, traceId) {
+  const lockId = _safeTrim(stockItem?._id);
+  if (!lockId) throw new Error("INVENTORY_STOCK_RECORD_ID_REQUIRED");
+
+  const existingRes = await dalQuery(CONTROL_COL)
+    .eq("_id", lockId)
+    .limit(1)
+    .find({ consistencyMode: "strong" });
+  const existing = existingRes?.items?.[0] || null;
+
+  if (existing) {
+    const expiresAt = new Date(existing.expiresAt).getTime();
+    if (!Number.isFinite(expiresAt) || expiresAt > Date.now()) return null;
+    await removeById(CONTROL_COL, lockId).catch(() => null);
+  }
+
+  const lock = {
+    _id: lockId,
+    controlType: CONTROL_TYPE.ALERT,
+    alertType: "INVENTORY_VARIANT_LOCK",
+    dedupeKey: stockKey,
+    status: "LOCKED",
+    severity: "INFO",
+    message: "Bloqueo temporal de variante de inventario",
+    traceId,
+    expiresAt: new Date(Date.now() + 120000),
+  };
+
+  try {
+    return await insert(CONTROL_COL, lock);
+  } catch (error) {
+    const currentRes = await dalQuery(CONTROL_COL)
+      .eq("_id", lockId)
+      .limit(1)
+      .find({ consistencyMode: "strong" });
+    if (currentRes?.items?.length) return null;
+    throw error;
+  }
+}
+
+async function releaseInventoryVariantLock(lockId, traceId) {
+  const currentRes = await dalQuery(CONTROL_COL)
+    .eq("_id", lockId)
+    .limit(1)
+    .find({ consistencyMode: "strong" });
+  const current = currentRes?.items?.[0] || null;
+
+  if (current?.alertType === "INVENTORY_VARIANT_LOCK" && current.traceId === traceId) {
+    await removeById(CONTROL_COL, lockId);
+  }
+}
+
 export async function recordInventoryMovementSafe(identity, movementType, quantityDelta, meta = {}) {
   const traceId = meta.traceId || makeTraceId("inv-mov");
   const cleanType = _safeTrim(movementType).toUpperCase();
@@ -308,12 +360,6 @@ export async function recordInventoryMovementSafe(identity, movementType, quanti
     return { status: "ERROR", data: null, error: { code: "MOVEMENT_TOKEN_REQUIRED", message: "movementToken obligatorio para idempotencia." } };
   }
 
-  const existingRes = await dalQuery(MOVIMIENTOS_INV_COL)
-    .eq("movementToken", movementToken)
-    .limit(1)
-    .find({ consistencyMode: "strong" });
-  const existingMovement = existingRes?.items?.[0] || null;
-
   const stockRes = await dalQuery(INVENTARIO_COL)
     .eq("stockKey", stockKey)
     .limit(2)
@@ -334,11 +380,30 @@ export async function recordInventoryMovementSafe(identity, movementType, quanti
   }
 
   const stockItem = stockRows[0];
-  if (cleanSku && _safeTrim(stockItem.sku) && cleanSku !== _safeTrim(stockItem.sku)) {
-    return { status: "ERROR", data: null, error: { code: "SKU_VARIANT_MISMATCH", message: "El SKU del pedido no coincide con la variante inventariada." } };
+  const lock = await acquireInventoryVariantLock(stockItem, stockKey, traceId);
+  if (!lock) {
+    return {
+      status: "ERROR",
+      data: null,
+      error: {
+        code: "INVENTORY_VARIANT_BUSY",
+        message: "La variante esta siendo actualizada por otra operacion; se requiere reintento.",
+      },
+    };
   }
 
-  if (existingMovement) {
+  try {
+    if (cleanSku && _safeTrim(stockItem.sku) && cleanSku !== _safeTrim(stockItem.sku)) {
+      return { status: "ERROR", data: null, error: { code: "SKU_VARIANT_MISMATCH", message: "El SKU del pedido no coincide con la variante inventariada." } };
+    }
+
+    const existingRes = await dalQuery(MOVIMIENTOS_INV_COL)
+      .eq("movementToken", movementToken)
+      .limit(1)
+      .find({ consistencyMode: "strong" });
+    const existingMovement = existingRes?.items?.[0] || null;
+
+    if (existingMovement) {
     if (existingMovement.stockApplied === true) {
       return { status: "SUCCESS", data: existingMovement, error: null, idempotent: true };
     }
@@ -462,6 +527,15 @@ export async function recordInventoryMovementSafe(identity, movementType, quanti
       data: savedMovement,
       error: { code: "INVENTORY_APPLY_FAILED", message: error?.message || String(error) },
     };
+  }
+  } finally {
+    await releaseInventoryVariantLock(stockItem._id, traceId).catch((releaseError) => {
+      log.error("Inventory variant lock release failed", {
+        stockKey,
+        traceId,
+        error: releaseError?.message || String(releaseError),
+      });
+    });
   }
 }
 
