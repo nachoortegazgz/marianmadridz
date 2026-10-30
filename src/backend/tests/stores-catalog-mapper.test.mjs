@@ -94,6 +94,7 @@ test("ambiguous multi-variant order line without variantId fails closed", () => 
     const item = normalizeStoreOrderLineItem({
         _id: "line-ambiguous",
         quantity: 1,
+        physicalProperties: { sku: "SKU-AMBIGUOUS" },
         catalogReference: {
             appId: APP_IDS.STORES,
             catalogItemId: PRODUCT_ID,
