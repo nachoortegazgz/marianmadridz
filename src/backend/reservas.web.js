@@ -763,18 +763,25 @@ export async function revalidateExactAvailabilitySlot({
                 slot?.bookable === true
             ) || null;
         } else {
-            const getPayload = {
-                serviceId: String(resolvedServiceId),
-                localStartDate: start,
-                localEndDate: end,
-                location,
-                timeZone: SDK_CONFIG.TZ,
+            const getOptions = {
+                includeResourceTypeIds: [STAFF_RESOURCE_TYPE_ID],
             };
             if (requiredResourceId) {
-                getPayload.resourceTypes = [{ resourceTypeId: STAFF_RESOURCE_TYPE_ID, resourceIds: [requiredResourceId] }];
+                getOptions.resourceTypes = [{ resourceTypeId: STAFF_RESOURCE_TYPE_ID, resourceIds: [requiredResourceId] }];
             }
             const result = await _executeWithRetry(
-                () => withTimeout(availabilityTimeSlots.getAvailabilityTimeSlot(getPayload), WATCHDOG_TIMEOUT_MS, "getAvailabilityTimeSlot"),
+                () => withTimeout(
+                    availabilityTimeSlots.getAvailabilityTimeSlot(
+                        String(resolvedServiceId),
+                        start,
+                        end,
+                        SDK_CONFIG.TZ,
+                        location,
+                        getOptions
+                    ),
+                    WATCHDOG_TIMEOUT_MS,
+                    "getAvailabilityTimeSlot"
+                ),
                 2, 300
             );
             rawSlot = result?.timeSlot || null;
