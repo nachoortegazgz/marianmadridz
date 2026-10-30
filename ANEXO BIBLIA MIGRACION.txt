@@ -1,9 +1,9 @@
 # Auditoría de migración SDK — Marian Madrid
 
-**Actualizado:** 2026-10-29  
+**Actualizado:** 2026-10-30  
 **Repositorio canónico:** https://github.com/nachoortegazgz/marianmadridz  
 **Rama de referencia:** `main`  
-**Commit auditado:** `ba1a32f29b5b04e3f11fb1781e53752ef77fc5f6`  
+**Commit base auditado:** `de12377b16b8b115bd9878762228c26e884b2416`  
 **Sitio:** https://www.marianmadrid.es/  
 **Site ID:** `188bed94-177c-4bc9-a9f0-35080d874f3e`  
 **Entorno:** Wix Editor clásico + Velo.
@@ -73,3 +73,40 @@ No se ha publicado el commit `ba1a32f` en Wix desde esta migración. El estado "
 ## 6. Regla de decisión
 
 Migrar únicamente cuando la API SDK oficial cubra la operación actual y exista equivalencia verificable. No actualizar Stores V1 ni Invoices V1, ni retirar APIs nativas de frontend, sin una migración específica probada. No declarar la fase completa basándose únicamente en instalación de dependencias o tests offline.
+
+
+## 7. Cierre de auditoría SDK — 2026-10-30
+
+La revisión se ha realizado sobre el repositorio canónico `nachoortegazgz/marianmadridz`, rama `main`, y el árbol completo de código de backend, páginas y módulos públicos.
+
+### Cambios integrados
+
+- PR #10 integrado en `main`: retirada de `@wix/auto_sdk_bookings_extended-bookings`, sin consumidores; la implementación activa de reservas utiliza `@wix/bookings`.
+- Se ha confirmado que los adaptadores CMS y Secrets usan `@wix/data` y `@wix/secrets` con elevación centralizada en backend.
+- Bookings, Members, CRM y eCommerce ya usan los SDK oficiales correspondientes donde existe uso funcional.
+- Se han retirado de las dependencias directas `@wix/site-location`, `@wix/site-storage`, `@wix/site-window` y `@wix/user-management`: no hay imports en los módulos productivos, páginas, código público ni suites de pruebas revisadas. No se ha editado `wix.lock`, que es generado automáticamente.
+
+### Matriz final de decisión
+
+| Dominio | Estado | Acción |
+|---|---|---|
+| CMS/Data | SDK `@wix/data` activo en `dataAccess.js` | Migración completada; mantener hooks Velo de integridad en `data.js`. |
+| Bookings | SDK `@wix/bookings` activo | Migración completada; eliminar dependencias generadas sin consumidor. Mantener saga dual F1/F2 y compensación. |
+| Members | SDK `@wix/members` activo | Migración completada; mantener APIs frontend Velo para la sesión/UI. |
+| Secrets | SDK `@wix/secrets` activo en `secretAccess.js` | Migración completada; acceso elevado exclusivamente backend. |
+| CRM | SDK `@wix/crm` activo en `staff.js` | Migración aplicada donde se usa CRM. |
+| eCommerce | SDK `@wix/ecom` activo para checkout/pedidos | Mantener separado de Bookings y Stores. |
+| Stores | Catálogo V1 confirmado en la documentación del sitio | No convertir a Catalog V3 en esta tanda; requiere migración funcional independiente. |
+| Invoices | Invoices V1 confirmado en la documentación del sitio | No convertir a V2 sin plan fiscal y pruebas específicas. |
+| Frontend Wix Editor | APIs `wix-*-frontend` y `wix-pricing-plans-frontend` | Mantener; no son equivalentes a SDK backend ni deuda por sí mismas. |
+| Web methods y hooks | `wix-web-module` y hooks Velo | Mantener como integración nativa del runtime Wix Editor. |
+| Integraciones externas | HTTP desde backend (Resend, OpenAI y servicio fiscal) | Mantener; no son APIs Wix y no se sustituyen por SDK Wix. |
+
+### Validación y límites
+
+- PR #10: GitHub Actions completó correctamente la suite offline y la instalación limpia con lint.
+- La retirada adicional de dependencias directas debe validarse con los mismos gates de CI en la rama de migración antes de integrar.
+- Las pruebas offline no certifican disponibilidad, permisos, pagos ni reservas reales en el sitio publicado.
+- No se ha sincronizado ni publicado código en Wix durante esta tanda.
+
+**Conclusión:** la migración aplicable a los módulos de código identificados está completada. Stores Catálogo V1 e Invoices V1 quedan expresamente fuera de esta migración por incompatibilidad de alcance/versión y riesgo de regresión. El cierre de producción sigue condicionado a QA real en Preview y al procedimiento de publicación Wix documentado.
