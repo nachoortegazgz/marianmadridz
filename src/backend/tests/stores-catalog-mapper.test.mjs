@@ -108,6 +108,49 @@ test("ambiguous multi-variant order line without variantId fails closed", () => 
     assert.equal(item.code, "INCOMPLETE_ORDER_VARIANT_IDENTITY");
 });
 
+test("digital and service Stores line items are not added to physical stock", () => {
+    const digital = normalizeStoreOrderLineItem({
+        _id: "line-digital",
+        quantity: 1,
+        itemType: "DIGITAL",
+        catalogReference: {
+            appId: APP_IDS.STORES,
+            catalogItemId: PRODUCT_ID,
+            options: {},
+        },
+    }, 0, CATALOG_VERSION.V1);
+
+    const service = normalizeStoreOrderLineItem({
+        _id: "line-service",
+        quantity: 1,
+        itemType: { preset: "SERVICE" },
+        catalogReference: {
+            appId: APP_IDS.STORES,
+            catalogItemId: PRODUCT_ID,
+            options: {},
+        },
+    }, 1, CATALOG_VERSION.V1);
+
+    assert.equal(digital.kind, "IGNORE");
+    assert.equal(service.kind, "IGNORE");
+});
+
+test("physical Stores line item without physicalProperties fails closed", () => {
+    const item = normalizeStoreOrderLineItem({
+        _id: "line-physical-no-properties",
+        quantity: 1,
+        itemType: "PHYSICAL",
+        catalogReference: {
+            appId: APP_IDS.STORES,
+            catalogItemId: PRODUCT_ID,
+            options: {},
+        },
+    }, 0, CATALOG_VERSION.V1);
+
+    assert.equal(item.kind, "ERROR");
+    assert.equal(item.code, "PHYSICAL_PROPERTIES_MISSING");
+});
+
 test("non-Stores order lines are ignored", () => {
     const item = normalizeStoreOrderLineItem({
         _id: "booking-line",
@@ -126,6 +169,7 @@ test("Store order lines without a variant identity fail closed", () => {
     const item = normalizeStoreOrderLineItem({
         _id: "line-item-2",
         quantity: 1,
+        physicalProperties: { sku: "SKU-001" },
         catalogReference: {
             appId: APP_IDS.STORES,
             catalogItemId: PRODUCT_ID,
@@ -141,6 +185,7 @@ test("order line item rejects a variant ID that does not belong to the product",
     const item = normalizeStoreOrderLineItem({
         _id: "line-wrong-variant",
         quantity: 1,
+        physicalProperties: { sku: "SKU-001" },
         catalogReference: {
             appId: APP_IDS.STORES,
             catalogItemId: PRODUCT_ID,
