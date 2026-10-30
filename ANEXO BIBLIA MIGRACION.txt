@@ -68,7 +68,7 @@ La migración SDK del código revisado está fusionada y los gates offline está
 4. Probar permisos CMS, caja, cierre Z, webhook y checkout con datos controlados.
 5. Publicar solo tras superar esas pruebas y comprobar el comportamiento del sitio.
 
-No se ha publicado el commit `ba1a32f` en Wix desde esta migración. El estado "Published" del sitio no demuestra que contenga este commit.
+No se ha verificado que el commit de esta migración esté publicado en Wix. El estado "Published" del sitio no demuestra que contenga el commit auditado.
 
 ## 6. Regla de decisión
 
@@ -77,7 +77,7 @@ Migrar únicamente cuando la API SDK oficial cubra la operación actual y exista
 
 ## 7. Cierre de auditoría SDK — 2026-10-30
 
-La revisión se ha realizado sobre el repositorio canónico `nachoortegazgz/marianmadridz`, rama `main`, y el árbol completo de código de backend, páginas y módulos públicos.
+La revisión se ha realizado sobre el repositorio canónico `nachoortegazgz/marianmadridz`, tomando como base `main` en `de12377b16b8b115bd9878762228c26e884b2416`, y revisando el código de backend, páginas, módulos públicos y suites de pruebas.
 
 ### Cambios integrados
 
@@ -105,7 +105,7 @@ La revisión se ha realizado sobre el repositorio canónico `nachoortegazgz/mari
 ### Validación y límites
 
 - PR #10: GitHub Actions completó correctamente la suite offline y la instalación limpia con lint.
-- La retirada adicional de dependencias directas debe validarse con los mismos gates de CI en la rama de migración antes de integrar.
+- La retirada adicional de dependencias directas queda pendiente de los gates CI de la rama `migration/sdk-v2-final-cleanup-2026-10-30` antes de integrar.
 - Las pruebas offline no certifican disponibilidad, permisos, pagos ni reservas reales en el sitio publicado.
 - No se ha sincronizado ni publicado código en Wix durante esta tanda.
 
