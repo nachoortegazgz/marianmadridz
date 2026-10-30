@@ -63,7 +63,6 @@ import {
     OPERATIONAL_COLLECTIONS,
     CONTROL_TYPE,
     CONTROL_STATUS,
-    APP_IDS,
     WIX_CATALOG_APP_IDS,
     MOVEMENT_TYPE,
     PAYMENT_METHOD,
@@ -1664,7 +1663,7 @@ export async function wixEcom_onOrderCanceled(rawBody) {
         const lineItems = Array.isArray(order.lineItems)
             ? order.lineItems
             : [];
-        const bookingsAppId = APP_IDS.BOOKINGS;
+        const bookingsAppId = WIX_CATALOG_APP_IDS.BOOKINGS;
         const bookingIds = _normalizeBookingIds(
             lineItems
                 .filter(
@@ -1672,8 +1671,11 @@ export async function wixEcom_onOrderCanceled(rawBody) {
                 )
                 .map((item) => item?.catalogReference?.catalogItemId)
         );
+        const { allIds: relatedBookingIds } =
+            await _expandBookingIdsWithPair(bookingIds);
 
-        for (const bId of bookingIds) {
+        for (const bId of relatedBookingIds) {
+            // Order cancellation applies to the complete dual booking pair.
             // ALN-03: enum Wix es CANCELED (una L).
             await _updateCitaStatus(bId, BOOKING_STATUS.CANCELED, traceId);
         }
