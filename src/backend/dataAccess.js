@@ -4,7 +4,7 @@ MODULE: backend/dataAccess.js
 VERSION: v2.3-LAYER1-RESTORED
 RESPONSIBILITY: Capa unica de acceso elevado a colecciones CMS.
 STANDARDS: G10 ASCII Strict. Sin suppressAuth. Sin imports directos de
-  wix-data fuera de esta capa, excepto backend/data.js para hooks.
+  @wix/data como unica capa de acceso CMS.
 =============================================================================
 */
 
@@ -76,38 +76,6 @@ function normalizeOffset(value) {
         : 0;
 }
 
-function applySort(query, sort) {
-    if (!Array.isArray(sort) || sort.length === 0) return query;
-
-    const ascending = [];
-    const descending = [];
-
-    for (const entry of sort) {
-        if (typeof entry === "string") {
-            const [fieldName, direction = "ASC"] = entry.trim().split(/\s+/);
-            if (!fieldName) continue;
-            if (direction.toUpperCase() === "DESC") {
-                descending.push(fieldName);
-            } else {
-                ascending.push(fieldName);
-            }
-            continue;
-        }
-
-        if (!entry || !entry.fieldName) continue;
-        if (String(entry.direction || "ASC").toUpperCase() === "DESC") {
-            descending.push(entry.fieldName);
-        } else {
-            ascending.push(entry.fieldName);
-        }
-    }
-
-    let sorted = query;
-    if (ascending.length > 0) sorted = sorted.ascending(...ascending);
-    if (descending.length > 0) sorted = sorted.descending(...descending);
-    return sorted;
-}
-
 /*
  * CMS Data Items SDK (@wix/data). Elevacion por metodo oficial:
  * auth.elevate(items.<operation>), no sobre factories ni callbacks locales.
@@ -130,7 +98,7 @@ function toSdkSort(sort) {
     if (!Array.isArray(sort)) return [];
     return sort.map((entry) => {
         if (typeof entry === "string") {
-            const [fieldName, direction = "ASC"] = entry.trim().split(/\\s+/);
+            const [fieldName, direction = "ASC"] = entry.trim().split(/\s+/);
             return fieldName
                 ? { fieldName, order: direction.toUpperCase() === "DESC" ? "DESC" : "ASC" }
                 : null;
@@ -151,9 +119,10 @@ async function runQuery({
     offset,
     consistency,
 }) {
+    const sdkSort = toSdkSort(sort);
     const queryRequest = {
         ...(filter ? { filter } : {}),
-        ...(toSdkSort(sort).length ? { sort: toSdkSort(sort) } : {}),
+        ...(sdkSort.length ? { sort: sdkSort } : {}),
         paging: {
             limit: normalizeLimit(limit),
             offset: normalizeOffset(offset),
