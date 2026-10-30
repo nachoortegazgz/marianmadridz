@@ -8,7 +8,7 @@ STANDARDS: G10 ASCII Strict. Sin suppressAuth. Sin imports directos de
 =============================================================================
 */
 
-import wixData from "wix-data";
+import { items as wixDataItems } from "@wix/data";
 import { auth } from "@wix/essentials";
 
 export const CONSISTENCY = Object.freeze({
@@ -109,40 +109,82 @@ function applySort(query, sort) {
 }
 
 /*
- * La elevacion se aplica a la operacion completa de consulta.
- * wixData.query() construye un WixDataQuery encadenable; no se eleva
- * el factory por separado. runQuery/runCount ya ejecutan elevados.
+ * CMS Data Items SDK (@wix/data). Elevacion por metodo oficial:
+ * auth.elevate(items.<operation>), no sobre factories ni callbacks locales.
  */
-const elevatedGet = auth.elevate(wixData.get);
-const elevatedInsert = auth.elevate(wixData.insert);
-const elevatedUpdate = auth.elevate(wixData.update);
-const elevatedRemove = auth.elevate(wixData.remove);
-const elevatedSave = auth.elevate(wixData.save);
-const elevatedBulkInsert = auth.elevate(wixData.bulkInsert);
-const elevatedBulkUpdate = auth.elevate(wixData.bulkUpdate);
-const elevatedBulkRemove = auth.elevate(wixData.bulkRemove);
+const elevatedGet = auth.elevate(wixDataItems.get);
+const elevatedInsert = auth.elevate(wixDataItems.insert);
+const elevatedUpdate = auth.elevate(wixDataItems.update);
+const elevatedRemove = auth.elevate(wixDataItems.remove);
+const elevatedSave = auth.elevate(wixDataItems.save);
+const elevatedBulkInsert = auth.elevate(wixDataItems.bulkInsert);
+const elevatedBulkUpdate = auth.elevate(wixDataItems.bulkUpdate);
+const elevatedBulkRemove = auth.elevate(wixDataItems.bulkRemove);
+const elevatedQuery = auth.elevate(wixDataItems.query);
+const elevatedCount = auth.elevate(wixDataItems.count);
 const elevatedQueryReferencedItems = auth.elevate(
-    wixData.queryReferencedItems
+    wixDataItems.queryReferencedItems
 );
 
-const runQuery = auth.elevate(
-    async ({ dataCollectionId, filter, sort, limit, offset, consistency }) => {
-        let cmsQuery = wixData.query(dataCollectionId);
-        if (filter) cmsQuery = cmsQuery.filter(filter);
-        cmsQuery = applySort(cmsQuery, sort)
-            .limit(limit)
-            .skip(offset);
-        return cmsQuery.find(buildOptions(consistency));
-    }
-);
+function toSdkSort(sort) {
+    if (!Array.isArray(sort)) return [];
+    return sort.map((entry) => {
+        if (typeof entry === "string") {
+            const [fieldName, direction = "ASC"] = entry.trim().split(/\\s+/);
+            return fieldName
+                ? { fieldName, order: direction.toUpperCase() === "DESC" ? "DESC" : "ASC" }
+                : null;
+        }
+        if (!entry || !entry.fieldName) return null;
+        return {
+            fieldName: entry.fieldName,
+            order: String(entry.direction || "ASC").toUpperCase() === "DESC" ? "DESC" : "ASC",
+        };
+    }).filter(Boolean);
+}
 
-const runCount = auth.elevate(
-    async ({ dataCollectionId, filter, consistency }) => {
-        let cmsQuery = wixData.query(dataCollectionId);
-        if (filter) cmsQuery = cmsQuery.filter(filter);
-        return cmsQuery.count(buildOptions(consistency));
-    }
-);
+async function runQuery({
+    dataCollectionId,
+    filter,
+    sort,
+    limit,
+    offset,
+    consistency,
+}) {
+    const queryRequest = {
+        ...(filter ? { filter } : {}),
+        ...(toSdkSort(sort).length ? { sort: toSdkSort(sort) } : {}),
+        paging: {
+            limit: normalizeLimit(limit),
+            offset: normalizeOffset(offset),
+        },
+    };
+    const options = {
+        ...buildOptions(consistency),
+        returnTotalCount: true,
+    };
+    const response = await elevatedQuery(dataCollectionId, queryRequest, options);
+    const items = Array.isArray(response?.items) ? response.items : [];
+    const totalCount = Number.isFinite(response?.pagingMetadata?.total)
+        ? response.pagingMetadata.total
+        : Number.isFinite(response?.totalCount)
+        ? response.totalCount
+        : normalizeOffset(offset) + items.length;
+    return {
+        items,
+        totalCount,
+        hasNext: response?.pagingMetadata?.hasNext === true ||
+            normalizeOffset(offset) + items.length < totalCount,
+    };
+}
+
+async function runCount({ dataCollectionId, filter, consistency }) {
+    const options = {
+        ...buildOptions(consistency),
+        ...(filter ? { filter } : {}),
+    };
+    return elevatedCount(dataCollectionId, options);
+}
 
 export async function queryReferencedItems(
     collection,
@@ -156,7 +198,13 @@ export async function queryReferencedItems(
         fieldName,
         buildOptions(consistency)
     );
-    return Array.isArray(result) ? result : result?.items || [];
+    if (Array.isArray(result?.items)) return result.items;
+    if (Array.isArray(result?.results)) {
+        return result.results
+            .map((entry) => entry?.item || entry?.dataItem?.data || entry?.dataItem)
+            .filter(Boolean);
+    }
+    return [];
 }
 
 export async function queryFirstItem({
