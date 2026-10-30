@@ -70,6 +70,42 @@ test("official V1 eCommerce order line item resolves product, variant and physic
     assert.equal(item.stockKey, `V1:${PRODUCT_ID}:${VARIANT_A}`);
 });
 
+test("single un-managed Wix product resolves its sole catalog variant when options.variantId is absent", () => {
+    const item = normalizeStoreOrderLineItem({
+        _id: "line-unmanaged",
+        quantity: 1,
+        physicalProperties: { sku: "SKU-SINGLE" },
+        catalogReference: {
+            appId: APP_IDS.STORES,
+            catalogItemId: PRODUCT_ID,
+            options: {},
+        },
+    }, 0, CATALOG_VERSION.V1, null, [
+        { productId: PRODUCT_ID, variantId: "00000000-0000-0000-0000-000000000000" },
+    ]);
+
+    assert.equal(item.kind, "STORE_ITEM");
+    assert.equal(item.variantId, "00000000-0000-0000-0000-000000000000");
+});
+
+test("ambiguous multi-variant order line without variantId fails closed", () => {
+    const item = normalizeStoreOrderLineItem({
+        _id: "line-ambiguous",
+        quantity: 1,
+        catalogReference: {
+            appId: APP_IDS.STORES,
+            catalogItemId: PRODUCT_ID,
+            options: { options: { Size: "M" } },
+        },
+    }, 0, CATALOG_VERSION.V1, null, [
+        { productId: PRODUCT_ID, variantId: VARIANT_A },
+        { productId: PRODUCT_ID, variantId: VARIANT_B },
+    ]);
+
+    assert.equal(item.kind, "ERROR");
+    assert.equal(item.code, "INCOMPLETE_ORDER_VARIANT_IDENTITY");
+});
+
 test("non-Stores order lines are ignored", () => {
     const item = normalizeStoreOrderLineItem({
         _id: "booking-line",
