@@ -181,6 +181,54 @@ function _normalizeBookingIds(value) {
     );
 }
 
+async function _expandBookingIdsWithPair(bookingIds) {
+    const directIds = _normalizeBookingIds(bookingIds);
+    const pairTokens = new Set();
+
+    const directRows = await Promise.all(
+        directIds.map(async (bookingId) => {
+            const result = await dalQuery(CITAS_COL)
+                .eq(BOOKING_FIELDS.BOOKING_ID, bookingId)
+                .limit(1)
+                .find(STRONG_READ);
+            return (result && result.items && result.items[0]) || null;
+        })
+    );
+
+    for (const cita of directRows) {
+        const pairToken = _safeTrim(
+            cita && (cita[BOOKING_FIELDS.PAIR_TOKEN] ||
+                (cita.meta && cita.meta.pairToken))
+        );
+        if (pairToken) pairTokens.add(pairToken);
+    }
+
+    const pairedRows = await Promise.all(
+        Array.from(pairTokens).map(async (pairToken) => {
+            const result = await dalQuery(CITAS_COL)
+                .eq(BOOKING_FIELDS.PAIR_TOKEN, pairToken)
+                .limit(10)
+                .find(STRONG_READ);
+            return (result && result.items) || [];
+        })
+    );
+
+    const allIds = new Set(directIds);
+    for (const rows of pairedRows) {
+        for (const cita of rows) {
+            const bookingId = _safeTrim(
+                cita && (cita[BOOKING_FIELDS.BOOKING_ID] || cita.bookingId)
+            );
+            if (bookingId) allIds.add(bookingId);
+        }
+    }
+
+    return {
+        directIds,
+        allIds: Array.from(allIds),
+    };
+}
+
 // ============================================================================
 // EMISOR FISCAL CACHE
 // ============================================================================
@@ -537,7 +585,7 @@ async function _markCitasRefundedByBookingIds(
     fullyRefunded,
     traceId
 ) {
-    const ids = _normalizeBookingIds(bookingIds);
+    const { directIds, allIds: ids } = await _expandBookingIdsWithPair(bookingIds);
     const results = await Promise.allSettled(
         ids.map((bookingId) =>
             _updateCitaSafe(
@@ -549,7 +597,7 @@ async function _markCitasRefundedByBookingIds(
                         : PAYMENT_STATUS.PARTIALLY_REFUNDED;
                     return {
                         ...cita,
-                        ...(fullyRefunded
+                        ...(fullyRefunded && directIds.includes(bookingId)
                             ? { [BOOKING_FIELDS.STATUS]: BOOKING_STATUS.REFUNDED }
                             : {}),
                         [BOOKING_FIELDS.PAYMENT_STATUS]: paymentState,
@@ -580,7 +628,7 @@ async function _markCitasRefundedByBookingIds(
 }
 
 async function _markCitasPaidByBookingIds(bookingIds, orderId, traceId) {
-    const ids = _normalizeBookingIds(bookingIds);
+    const { allIds: ids } = await _expandBookingIdsWithPair(bookingIds);
     const results = await Promise.allSettled(
         ids.map((bookingId) =>
             _updateCitaSafe(
@@ -624,7 +672,7 @@ async function _markCitasPaidByBookingIds(bookingIds, orderId, traceId) {
 }
 
 async function _markCitasPendingLedgerByBookingIds(bookingIds, orderId, traceId) {
-    const ids = _normalizeBookingIds(bookingIds);
+    const { allIds: ids } = await _expandBookingIdsWithPair(bookingIds);
     const results = await Promise.allSettled(
         ids.map((bookingId) =>
             _updateCitaSafe(
