@@ -1086,7 +1086,7 @@ test('RES-BAL-03 native Wix bookings count once with custom ledger deduplication
       paymentStatus: 'UNDEFINED',
       startDate: '2026-10-22T08:00:00.000Z',
       endDate: '2026-10-22T09:00:00.000Z',
-      bookedEntity: { slot: { resource: { id: stA } } },
+      bookedEntity: { slot: { resource: { _id: stA } } },
     },
     {
       id: 'native-only-b',
@@ -1094,7 +1094,7 @@ test('RES-BAL-03 native Wix bookings count once with custom ledger deduplication
       paymentStatus: 'UNDEFINED',
       startDate: '2026-10-22T08:00:00.000Z',
       endDate: '2026-10-22T09:30:00.000Z',
-      bookedEntity: { slot: { resource: { id: stB } } },
+      bookedEntity: { slot: { resource: { _id: stB } } },
     },
   ];
   slotsState.responses.set(row.serviceId, [
