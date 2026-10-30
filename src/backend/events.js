@@ -64,6 +64,7 @@ import {
     CONTROL_TYPE,
     CONTROL_STATUS,
     APP_IDS,
+    WIX_CATALOG_APP_IDS,
     MOVEMENT_TYPE,
     PAYMENT_METHOD,
     BOOKING_STATUS,
@@ -972,7 +973,7 @@ export async function wixEcom_onOrderPaymentStatusUpdated(rawBody) {
             ? order.lineItems
             : [];
 
-        const bookingsAppId = APP_IDS.BOOKINGS;
+        const bookingsAppId = WIX_CATALOG_APP_IDS.BOOKINGS;
         const bookingLineItems = lineItems.filter(
             (item) => item?.catalogReference?.appId === bookingsAppId
         );
