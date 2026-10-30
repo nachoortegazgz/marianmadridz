@@ -829,6 +829,22 @@ export function MovimientosInventario_beforeInsert(item) {
     if (!movementType || !VALID_MOV_INVENTARIO_TYPES.has(movementType)) _schemaError("movementType obligatorio y valido");
     if (movementType === "AJUSTE" && !_safeTrim(item.reason)) _schemaError("reason obligatorio cuando movementType=AJUSTE");
     if (item.quantity === undefined || !Number.isFinite(Number(item.quantity))) _schemaError("quantity obligatorio y numerico");
+    const catalogVersion = _safeTrim(item.catalogVersion);
+    if (catalogVersion) {
+        if (!["V1_CATALOG", "V3_CATALOG"].includes(catalogVersion)) _schemaError("catalogVersion invalido en MovimientosInventario");
+        if (!_safeTrim(item.stockKey) || !_safeTrim(item.wixProductId) || !_safeTrim(item.wixVariantId)) {
+            _schemaError("Identidad de variante Wix incompleta en MovimientosInventario");
+        }
+        if (catalogVersion === "V3_CATALOG" && !_safeTrim(item.locationId)) {
+            _schemaError("locationId obligatorio en movimientos Catalog V3");
+        }
+        if (catalogVersion === "V1_CATALOG" && _safeTrim(item.locationId)) {
+            _schemaError("locationId no se utiliza en movimientos Catalog V1");
+        }
+    }
+    if (item.stockApplied !== undefined && typeof item.stockApplied !== "boolean") {
+        _schemaError("stockApplied debe ser booleano");
+    }
 
     return item;
 }
@@ -846,6 +862,22 @@ export function InventarioStockVenta_beforeInsert(item) { return _validateInvent
 
 function _validateInventarioStockVenta(item) {
     if (!item || typeof item !== "object") return item;
+
+    const catalogVersion = _safeTrim(item.catalogVersion);
+    if (catalogVersion) {
+        if (!["V1_CATALOG", "V3_CATALOG"].includes(catalogVersion)) {
+            _schemaError("catalogVersion debe ser V1_CATALOG o V3_CATALOG");
+        }
+        if (!_safeTrim(item.stockKey) || !_safeTrim(item.wixProductId) || !_safeTrim(item.wixVariantId)) {
+            _schemaError("stockKey, wixProductId y wixVariantId son obligatorios para inventario vinculado a Wix Stores");
+        }
+        if (catalogVersion === "V3_CATALOG" && !_safeTrim(item.locationId)) {
+            _schemaError("locationId obligatorio para inventario Catalog V3");
+        }
+        if (catalogVersion === "V1_CATALOG" && _safeTrim(item.locationId)) {
+            _schemaError("locationId no se utiliza en Catalog V1");
+        }
+    }
 
     const onHand = Number(item.stockOnHand) || 0;
     const reserved = Number(item.stockReserved) || 0;
