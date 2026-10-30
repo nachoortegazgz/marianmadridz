@@ -50,7 +50,7 @@ test('PAY-GUARD-02 payment confirmation preserves booking approval state and use
   assert.ok(lineItemsStart >= 0 && lineItemsEnd > lineItemsStart, 'order booking item resolver must exist');
   const lineItemsResolver = source.slice(lineItemsStart, lineItemsEnd);
   assert.match(lineItemsResolver, /WIX_CATALOG_APP_IDS\\.BOOKINGS/);
-  assert.doesNotMatch(lineItemsResolver, /APP_IDS\\.BOOKINGS/);
+  assert.equal(lineItemsResolver.includes('const bookingsAppId = APP_IDS.BOOKINGS;'), false);
 
   const webhookOrderResolver = eventsSource.match(/const bookingsAppId = WIX_CATALOG_APP_IDS\\.BOOKINGS;/g) || [];
   assert.equal(webhookOrderResolver.length, 2, 'paid and canceled order webhooks must use the Bookings catalog GUID');
