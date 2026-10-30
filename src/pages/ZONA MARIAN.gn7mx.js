@@ -8,7 +8,7 @@ STANDARDS: G10 ASCII Strict, Velo V3 SDK.
 */
 
 import wixMembersFrontend from "wix-members-frontend";
-import wixLocation from "wix-location-frontend";
+import { location } from "@wix/site-location";
 
 import { checkStaffCollaboratorAccess } from "backend/security.web.js";
 import {
@@ -129,7 +129,7 @@ $w.onReady(async () => {
         null;
 
     if (!access || access.isMarianManager !== true) {
-        wixLocation.to(
+        await location.to(
             URLS?.SERVICIOS || "/reserva-online"
         );
         return;
