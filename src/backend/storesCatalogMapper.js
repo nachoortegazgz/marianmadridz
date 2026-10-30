@@ -13,6 +13,7 @@ export const CATALOG_VERSION = Object.freeze({
 });
 
 const text = (value) => String(value ?? "").trim();
+const numericValue = (value) => value !== null && value !== undefined && value !== "" && Number.isFinite(Number(value));
 
 export function createVariantStockKey({
     catalogVersion,
@@ -157,7 +158,7 @@ export function normalizeV1InventoryItem(item) {
                 variantId,
             }),
             trackQuantity: item.trackQuantity === true,
-            quantity: Number.isFinite(Number(variant?.quantity))
+            quantity: numericValue(variant?.quantity)
                 ? Number(variant.quantity)
                 : null,
             inStock: typeof variant?.inStock === "boolean"
@@ -210,7 +211,7 @@ export function normalizeV3InventoryItem(item) {
             locationId,
         }),
         trackQuantity: item.trackQuantity === true,
-        quantity: Number.isFinite(Number(item.quantity))
+        quantity: numericValue(item.quantity)
             ? Number(item.quantity)
             : null,
         inStock: typeof item.inStock === "boolean" ? item.inStock : null,
