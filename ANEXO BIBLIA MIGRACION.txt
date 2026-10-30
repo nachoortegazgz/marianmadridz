@@ -150,9 +150,12 @@ PR: https://github.com/nachoortegazgz/marianmadridz/pull/13
 - CI run `41057996125`: tests offline SUCCESS; instalación limpia y ESLint SUCCESS; incluye pruebas específicas del adaptador V3.
 - Último commit de código `b3d78e1aff7fb7b57bb82f1c55db56119910ead7`: CI run `41058519263`; tests offline SUCCESS, instalación limpia SUCCESS y ESLint SUCCESS.
 - Los tests offline no verifican scopes ni el SDK dentro del runtime Velo real.
-- El paquete está en `package.json`, pero `wix.lock` todavía no lo refleja. También sigue pendiente la regeneración local del lock de `@wix/site-pricing-plans`. Ejecutar en el clon autenticado, desde la raíz:
+- El paquete está en `package.json`, pero `wix.lock` todavía no lo refleja. También sigue pendiente la regeneración local del lock de `@wix/site-pricing-plans`. Wix anunció que su CLI requiere Node.js `24.22.1` o superior desde el 22-10-2026 ([changelog oficial](https://dev.wix.com/changelog?featureType=Velo)). En el clon autenticado, desde la raíz:
+  - `node -v` (confirmar `v24.22.1` o superior)
+  - `wix --version`
   - `wix install @wix/site-pricing-plans`
   - `wix install @wix/stores`
+  - `git diff -- package.json wix.lock`
   Revisar el diff generado por Wix CLI; no editar `wix.lock` manualmente.
 - Antes de activar V3, confirmar permisos `SCOPE.STORES.CATALOG_READ_LIMITED`, `SCOPE.STORES.PRODUCT_READ`, `SCOPE.STORES.INVENTORY_ITEM_READ` y `SCOPE.STORES.LOCATION_READ_LIMITED` en el contexto de ejecución real.
 - La cola de conciliación tiene replay administrativo; errores de identidad sin resolver permanecen OPEN tras el replay. No se ha activado todavía un cron automático de reintentos.
