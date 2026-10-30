@@ -61,7 +61,7 @@ export function normalizeStoreOrderLineItem(
 
     const productId = text(catalogReference?.catalogItemId);
     const variantId = text(catalogReference?.options?.variantId);
-    const lineItemId = text(item.id);
+    const lineItemId = text(item._id);
     const sku = text(item.physicalProperties?.sku);
     const quantity = Number(item.quantity);
 
