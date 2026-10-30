@@ -45,7 +45,7 @@ $w.onReady(async function () {
         });
     }
     // 1. Obtener contexto del Lightbox
-    const context = window.lightbox.getContext();
+    const context = await window.lightbox.getContext();
     
     if (!context || !context.bookingId) {
         showError("No se pudo cargar la información de la reserva.");
