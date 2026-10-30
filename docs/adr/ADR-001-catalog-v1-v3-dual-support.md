@@ -77,3 +77,8 @@ Estado real:
 - El replay de conciliación es administrativo; aún no existe cron de reintentos automáticos.
 
 La migración del catálogo publicado permanece aplazada. No publicar ni sincronizar esta rama hasta completar el lock Wix y QA real.
+
+
+## Restricción adicional de webhooks — 2026-10-30
+
+Wix documenta los eventos de catálogo V1 y V3 como familias separadas. Los eventos backend Velo de Stores Catalog V3 aparecen actualmente como **Developer Preview**. Por criterio de producción, esta PR no los registra ni los trata como contrato estable. La compatibilidad de lectura/escritura del catálogo V3 y la recepción de sus eventos son validaciones distintas: el cambio del catálogo del sitio no se autoriza hasta disponer de eventos V3 estables o aceptar expresamente el riesgo de Preview y probarlo en QA.
