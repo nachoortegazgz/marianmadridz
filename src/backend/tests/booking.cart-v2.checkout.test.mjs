@@ -17,7 +17,7 @@ test('CARTV2-01 creates a visitor WEB cart from the Bookings booking ID and retu
   setCartV2Mock({
     createCart: async (options) => {
       calls.push({ method: 'createCart', options });
-      return { cart: { _id: CART_ID } };
+      return { _id: CART_ID };
     },
     calculateCart: async (cartId, options) => {
       calls.push({ method: 'calculateCart', cartId, options });
@@ -73,7 +73,7 @@ test('CARTV2-01 creates a visitor WEB cart from the Bookings booking ID and retu
 test('CARTV2-02 refuses to return a checkout URL when cart calculation has violations', async () => {
   let checkoutUrlCalls = 0;
   setCartV2Mock({
-    createCart: async () => ({ cart: { _id: CART_ID } }),
+    createCart: async () => ({ _id: CART_ID }),
     calculateCart: async () => ({
       cart: { _id: CART_ID, businessInfo: { currencyCode: 'EUR' } },
       summary: {
