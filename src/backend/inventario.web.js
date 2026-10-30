@@ -395,6 +395,7 @@ export async function recordInventoryMovementSafe(identity, movementType, quanti
 
   const movement = {
     movementToken,
+    recordTimestamp: new Date(),
     stockKey,
     sku: _safeTrim(stockItem.sku) || cleanSku,
     productName: _safeTrim(stockItem.name),
