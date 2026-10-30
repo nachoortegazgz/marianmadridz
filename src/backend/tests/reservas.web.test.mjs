@@ -627,15 +627,17 @@ test('RES-DTO-01 _toPublicService uses explicit public allowlist and strips inte
     Object.keys(pub).sort(),
     [
       'addOnOptions', 'allowCombine', 'catalogEntryType', 'clientHidden',
-      'currency', 'description', 'exposureDuration', 'linkedPhases',
-      'location', 'mainMedia', 'phase1Duration', 'phase2Duration',
-      'price', 'primaryActionLabel', 'recommendations',
-      'serviceId', 'slug', 'tagLine', 'title', 'totalDuration',
+      'currency', 'description', 'exposureDuration', 'inPersonPayment',
+      'linkedPhases', 'location', 'mainMedia', 'onlinePayment',
+      'phase1Duration', 'phase2Duration', 'price', 'primaryActionLabel',
+      'recommendations', 'serviceId', 'slug', 'tagLine', 'title', 'totalDuration',
     ].sort()
   );
   assert.strictEqual(pub.linkedPhases, null);
   assert.strictEqual(pub.clientHidden, true);
   assert.strictEqual(pub.serviceId, GID);
+  assert.strictEqual(pub.onlinePayment, true);
+  assert.strictEqual(pub.inPersonPayment, true);
   assert.deepStrictEqual(pub.addOnOptions, [{ addonId, name: 'Mascarilla', price: 5 }]);
   assert.deepStrictEqual(pub.recommendations, ['Public tip']);
   for (const key of ['margin', 'precioCosteBase', 'internalNotes', 'ownerEmail', 'arbitraryPrivateField', 'availableStaff', 'staffOptions', 'status']) {
@@ -647,6 +649,8 @@ test('RES-DTO-01 _toPublicService uses explicit public allowlist and strips inte
   });
   assert.strictEqual(dual.linkedPhases, GID);
   assert.strictEqual(dual.clientHidden, false);
+  assert.strictEqual(dual.onlinePayment, true);
+  assert.strictEqual(dual.inPersonPayment, true);
   assert.ok(!('staffOptions' in dual), 'staffOptions must be stripped');
 
   assert.strictEqual(RW._toPublicService(null), null);
