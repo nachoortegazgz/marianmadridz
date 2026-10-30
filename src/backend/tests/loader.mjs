@@ -587,7 +587,6 @@ export const contactsV5 = new Proxy({}, {
     return _contactsV5Methods.get(name);
   },
 });
-export const checkout = fnProxy;
 const _cartV2Methods = new Map();
 const _currentCartV2Mock = () => {
   const keys = [MODULE_KEY + '::cartV2', '@wix/ecom::cartV2', 'ecom::cartV2', 'cartV2'];
