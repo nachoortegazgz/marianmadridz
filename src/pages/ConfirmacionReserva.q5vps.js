@@ -5,10 +5,10 @@ VERSION: v1.1-PRIVATE-STAFF
 BASE: v0.9-BROKEN + correcciones auditoría P0 (CONF-01..CONF-05)
 RESPONSIBILITY: Mostrar confirmación de reserva tras éxito presencial o online.
 STANDARDS: G10 ASCII Strict. Uso estricto de APIs Velo actuales.
-CONTRATO: Recibe datos via window.lightbox.getContext(): { booking, bookingId, service, traceId }.
+CONTRATO: Recibe datos via lightbox.getContext(): { booking, bookingId, service, traceId }.
 =============================================================================
 */
-import { window } from '@wix/site-window';
+import { lightbox } from '@wix/site-window';
 import { location } from '@wix/site-location';
 import { getConfirmedBookingForDisplay } from 'backend/reservas.web.js';
 import { _safeTrim, _toDateSafe, getMadridLocalStringNoZ } from 'public/mmUtils';
@@ -45,7 +45,7 @@ $w.onReady(async function () {
         });
     }
     // 1. Obtener contexto del Lightbox
-    const context = await window.lightbox.getContext();
+    const context = await lightbox.getContext();
     
     if (!context || !context.bookingId) {
         showError("No se pudo cargar la información de la reserva.");
