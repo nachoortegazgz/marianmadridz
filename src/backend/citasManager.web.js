@@ -467,6 +467,34 @@ await _assertBookingOwner(cita, traceId);
 citas.push(cita);
 }
 
+// A single paid F1 line item represents the complete dual appointment.
+// Include its paired F2 row for payment validation and persistence, while
+// keeping order-membership validation scoped to the actual purchased F1 IDs.
+const expandedCitas = new Map(
+citas.map(cita => [
+_safeTrim(cita?.[FIELD_BOOKING_ID] || cita?.bookingId || ""),
+cita,
+])
+);
+for (const cita of citas) {
+const meta = _getCitaMeta(cita);
+const pairToken = _safeTrim(
+cita?.[FIELD_PAIR_TOKEN] || meta.pairToken || ""
+);
+if (!pairToken) continue;
+
+const pairedCitas = await _findCitasByPairToken(pairToken);
+for (const pairedCita of pairedCitas) {
+const pairedBookingId = _safeTrim(
+pairedCita?.[FIELD_BOOKING_ID] || pairedCita?.bookingId || ""
+);
+if (!pairedBookingId || expandedCitas.has(pairedBookingId)) continue;
+await _assertBookingOwner(pairedCita, traceId);
+expandedCitas.set(pairedBookingId, pairedCita);
+}
+}
+citas.splice(0, citas.length, ...expandedCitas.values());
+
 await _validatePaymentCitaSet(citas, orderId, traceId);
 await _validatePaymentIdempotency(citas, orderId, traceId);
 
@@ -513,7 +541,7 @@ requestedAmount,
 traceId
 );
 
-const linkedBookingIds = bookingIds.join(",");
+const linkedBookingIds = citas.map(cita => _safeTrim(cita?.[FIELD_BOOKING_ID] || cita?.bookingId || "")).filter(Boolean).join(",");
 
 /* CM5-05: WIX_PAYMENTS + channelType ONLINE. Cero literales. */
 const ledgerResult = await registerBookingPayment(
