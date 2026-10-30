@@ -1,6 +1,6 @@
 /*
 MODULE: backend/booking/bookingSaga.js
-VERSION: v5017-STRONG-QUERY
+VERSION: v5018-SDK-BOOKED-SLOT-SHAPE
 BASE: v5016-CMS-CANCELLED + correccion de consistencia de lectura
 RESPONSIBILITY: Orquestador transaccional de reservas (simple y dual con gap).
 
@@ -873,10 +873,10 @@ function _resolveBookingLocation(params) {
 
     const resolvedId =
         _isGuidOrNull(
-            validatedSlotF1 && validatedSlotF1.location && validatedSlotF1.location.id
+            validatedSlotF1 && validatedSlotF1.location && validatedSlotF1.location._id
         ) ||
         _isGuidOrNull(
-            validatedSlotF2 && validatedSlotF2.location && validatedSlotF2.location.id
+            validatedSlotF2 && validatedSlotF2.location && validatedSlotF2.location._id
         ) ||
         _isGuidOrNull(serviceConfig && serviceConfig.locationId) ||
         _isGuidOrNull(params.parentLocationId);
@@ -904,7 +904,7 @@ function _resolveBookingLocation(params) {
         });
     }
 
-    return Object.freeze({ id: resolvedId, locationType: "OWNER_BUSINESS" });
+    return Object.freeze({ _id: resolvedId, locationType: "OWNER_BUSINESS" });
 }
 
 function _assertPristineSlotContract(pristineSlot, phase, traceId) {
@@ -926,13 +926,13 @@ function _assertPristineSlotContract(pristineSlot, phase, traceId) {
     if (!endIso) missing.push("endDate");
     else if (!/Z$/.test(endIso)) missing.push("endDate must be ISO UTC with Z");
     if (
-        !_isGuidOrNull(pristineSlot && pristineSlot.resource && pristineSlot.resource.id)
+        !_isGuidOrNull(pristineSlot && pristineSlot.resource && pristineSlot.resource._id)
     )
-        missing.push("resource.id");
+        missing.push("resource._id");
     if (
-        !_isGuidOrNull(pristineSlot && pristineSlot.location && pristineSlot.location.id)
+        !_isGuidOrNull(pristineSlot && pristineSlot.location && pristineSlot.location._id)
     )
-        missing.push("location.id");
+        missing.push("location._id");
     if (locationType !== "OWNER_BUSINESS")
         missing.push("location.locationType must be OWNER_BUSINESS");
 
