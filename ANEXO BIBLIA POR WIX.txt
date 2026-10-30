@@ -466,7 +466,7 @@ como sustituto de una coincidencia exacta.
 [ ] Dominio comprobado
 [ ] Velo confirmado
 [ ] Repositorio Git conectado
-[ ] Rama develop creada
+[ ] Rama de trabajo separada de main creada
 [ ] .env excluido de Git
 [ ] .env.example creado
 [ ] Cuenta CLI confirmada con wix whoami
@@ -511,7 +511,7 @@ Pendiente de confirmar localmente:
 ```powershell
 node --version
 npm --version
-wix --version
+npm list -g @wix/cli
 wix login
 wix whoami
 npm list -g @wix/cli
