@@ -4,16 +4,16 @@
  * BASE: v5014 + asignación automática de profesional.
  *
  * APIS:
- *   - wix-location-frontend
- *   - wix-window-frontend
+ *   - @wix/site-location
+ *   - @wix/site-window
  *   - backend/reservas.web.js
  *   - backend/citasManager.web.js
  *   - public/mmUtils v5012.1
  *   - public/widgetBridge v5012.1
  *
  * DOC OFICIAL:
- *   - wix-location-frontend: https://www.wix.com/velo/reference/wix-location-frontend
- *   - wix-window-frontend: https://www.wix.com/velo/reference/wix-window-frontend
+ *   - @wix/site-location: https://www.wix.com/velo/reference/@wix/site-location
+ *   - @wix/site-window: https://www.wix.com/velo/reference/@wix/site-window
  *
  * FIXES v5015-AUTO-STAFF:
  *   CAL-20 (P0): el cliente elige horario, no profesional. El backend asigna
@@ -25,8 +25,8 @@
  * FIXES HEREDADOS v5010: CLEAN-10..CLEAN-14.
  * FIXES HEREDADOS v5009: CAL-15..CAL-17 (D1/D2/D3).
  */
-import wixLocation from "wix-location-frontend";
-import wixWindowFrontend from "wix-window-frontend";
+import { location } from "@wix/site-location";
+import { window } from "@wix/site-window";
 import {
     getServiceBySlugOrId,
     getAvailableDays,
@@ -92,8 +92,8 @@ function bridgeLogError(traceId, error) {
 /* =============================================================================
  * SERVICE CONTEXT
  * ==========================================================================*/
-function parseUrlParams() {
-    const query = wixLocation.query || {};
+async function parseUrlParams() {
+    const query = await location.query();
     return {
         serviceId: _safeTrim(query.serviceId || ""),
         slug: _safeSlugOrId(query.slug || ""),
@@ -131,14 +131,14 @@ async function loadServiceContext(params) {
 /* =============================================================================
  * HELPERS DE MENSAJE
  * ==========================================================================*/
-function handleNavigation(payload) {
+async function handleNavigation(payload) {
     const target = _safeTrim((payload && payload.target) || "").toUpperCase();
     if (target === "SERVICIOS") {
-        wixLocation.to((URLS && URLS.SERVICIOS) || "/reserva-online");
+        await location.to((URLS && URLS.SERVICIOS) || "/reserva-online");
         return true;
     }
     if (target === "PRIVACY") {
-        wixLocation.to((URLS && URLS.PRIVACY_POLICY) || "/politica-de-privacidad");
+        await location.to((URLS && URLS.PRIVACY_POLICY) || "/politica-de-privacidad");
         return true;
     }
     return false;
@@ -370,11 +370,11 @@ async function handleBooking(message, reply, traceId) {
             bookingResult.data.bookingId
         ) {
             if (bookingResult.data.requiresPayment && bookingResult.data.checkoutUrl) {
-                wixLocation.to(bookingResult.data.checkoutUrl);
+                await location.to(bookingResult.data.checkoutUrl);
                 return;
             }
             try {
-                await wixWindowFrontend.openLightbox("ConfirmacionReserva", {
+                await window.openLightbox("ConfirmacionReserva", {
                     booking: bookingResult.data || null,
                     bookingId: bookingResult.data.bookingId,
                     service: currentService,
@@ -404,7 +404,7 @@ async function handleBooking(message, reply, traceId) {
  * ==========================================================================*/
 $w.onReady(async () => {
     const traceId = makeTraceId("calendario");
-    const params = parseUrlParams();
+    const params = await parseUrlParams();
     const resolved = resolveServiceFromParams(params);
     if (!resolved) {
         console.error("[calendario-2] Servicio no valido", { traceId });
@@ -426,7 +426,7 @@ $w.onReady(async () => {
                 const type = _getMessageType(message);
                 const payload = _getPayload(message);
                 if (type === MESSAGE_TYPES.NAV) {
-                    if (!handleNavigation(payload)) {
+                    if (!(await handleNavigation(payload))) {
                         reply(MESSAGE_TYPES.NAV, resultError("INVALID_NAV_TARGET"));
                     }
                     return;
