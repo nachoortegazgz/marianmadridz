@@ -149,3 +149,39 @@ test("EVENT-BOOKING-03 repairs a processed webhook whose CitasF2 row is missing"
   const markers = wixDataMock._store.get("ControlOperativo") || [];
   assert.equal(markers.filter(row => row.dedupeKey === "WEBHOOK_evt-native-confirm-003").length, 1);
 });
+
+test("EVENT-BOOKING-04 payment webhook updates payment without confirming a pending booking", async () => {
+  wixDataMock._reset();
+  wixDataMock._store.set("CitasF2", [seedCita({
+    bookingStatus: "PENDING",
+    paymentStatus: "PENDING_PAYMENT",
+    meta: { pairToken: PAIR_TOKEN, customSaga: true, paymentStatus: "PENDING_PAYMENT" },
+  })]);
+
+  const result = await events.wixEcom_onOrderPaymentStatusUpdated({
+    id: "evt-order-paid-pending-004",
+    order: {
+      _id: "order-paid-pending-004",
+      paymentStatus: "PAID",
+      priceSummary: { total: { amount: "0.00" } },
+      lineItems: [{
+        catalogReference: {
+          appId: "13d21c63-b5ec-5912-8397-c3a5ddb27a97",
+          catalogItemId: BOOKING_ID,
+        },
+        quantity: 1,
+        price: { amount: "0.00" },
+      }],
+    },
+  });
+
+  assert.equal(result.status, "OK");
+  const rows = wixDataMock._store.get("CitasF2") || [];
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].bookingStatus, "PENDING");
+  assert.equal(rows[0].paymentStatus, "PAID");
+  assert.equal(rows[0].meta.paymentStatus, "PAID");
+  assert.equal(rows[0].meta.orderId, "order-paid-pending-004");
+  assert.equal(rows[0].bookingType, "DUAL_F1");
+  assert.equal(rows[0].pairToken, PAIR_TOKEN);
+});
