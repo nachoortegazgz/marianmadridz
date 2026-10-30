@@ -593,7 +593,9 @@ async function _markCitasPaidByBookingIds(bookingIds, orderId, traceId) {
                     if (alreadyPaid) return null;
                     return {
                         ...cita,
-                        [BOOKING_FIELDS.STATUS]: BOOKING_STATUS.CONFIRMED,
+                        // Payment status and booking approval are independent.
+                        // Only the native BOOKING_CONFIRMED webhook may confirm
+                        // an appointment; receiving payment must preserve PENDING.
                         [BOOKING_FIELDS.PAYMENT_STATUS]: PAYMENT_STATUS.PAID,
                         meta: {
                             ...meta,
