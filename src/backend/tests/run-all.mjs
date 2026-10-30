@@ -4,10 +4,13 @@ import { parseTapSummary } from "./tapSummary.mjs";
 import { execFileSync } from 'node:child_process';
 import { readdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, '..', '..', '..');
+// Node interpreta --loader como URL. Convertir rutas absolutas evita que
+// Windows trate "C:\\..." como un esquema URL (ERR_UNSUPPORTED_ESM_URL_SCHEME).
+const loaderUrl = pathToFileURL(join(here, 'loader.mjs')).href;
 // ZC-08: incluye *.test.mjs y runners E2E *.runner.mjs (audit.e2e.runner);
 // el filtro anterior dejaba la auditoria heredada fuera del gate canonico.
 const suites = readdirSync(here)
@@ -26,7 +29,7 @@ for (const suite of suites) {
   try {
     output = execFileSync(
       process.execPath,
-      ['--no-warnings', '--loader', join(here, 'loader.mjs'), join(here, suite)],
+      ['--no-warnings', '--loader', loaderUrl, join(here, suite)],
       { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] },
     );
   } catch (error) {
@@ -47,7 +50,7 @@ for (const suite of suites) {
   });
 }
 
-console.log('\n=== RESUMEN SUITES (run-all) ===');
+console.log('\\n=== RESUMEN SUITES (run-all) ===');
 for (const result of report) {
   console.log(`${result.status.padEnd(4)} ${result.suite.padEnd(42)} tests=${result.tests} pass=${result.pass} fail=${result.fail} exit=${result.exitCode}`);
   if (result.status !== 'OK' && result.diagnostics) {

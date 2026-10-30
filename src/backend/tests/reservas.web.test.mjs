@@ -101,7 +101,9 @@ function guid() {
 // Slots API mock state (LH-09 override, mutable per test)
 const slotsState = {
   responses: new Map(), // serviceId -> array of raw timeSlots
-  calls: [],            // payload audit trail
+  calls: [],            // listAvailabilityTimeSlots payload audit trail
+  getCalls: [],         // getAvailabilityTimeSlot positional argument audit trail
+  getResponse: null,
 };
 
 const nativeBookingsState = { bookings: [], error: null, calls: [] };
@@ -119,7 +121,7 @@ async function listAvailability(payload) {
     slots = slots.filter((s) => {
       const groups = (s.availableResources || []).filter((g) => g.resourceTypeId === STAFF_TYPE);
       if (groups.length === 0) return true;
-      const ids = groups.flatMap((g) => (g.resources || []).map((r) => String(r.id ?? r)));
+      const ids = groups.flatMap((g) => (g.resources || []).map((r) => String(r.id ?? r._id ?? r)));
       return reqRes.some((rid) => ids.includes(String(rid)));
     });
   }
@@ -132,7 +134,7 @@ function availSlot(startLocal, endLocal, staffIds) {
     localEndDate: endLocal,
     bookable: true,
     availableResources: [
-      { resourceTypeId: STAFF_TYPE, resources: staffIds.map((id) => ({ id })) },
+      { resourceTypeId: STAFF_TYPE, resources: staffIds.map((id) => ({ _id: id })) },
     ],
   };
 }
@@ -142,6 +144,11 @@ function availSlot(startLocal, endLocal, staffIds) {
 // stub's availabilityTimeSlots Proxy delegates to the live test function.
 mocks.webMethods.register('@wix/bookings', 'availabilityTimeSlots::listAvailabilityTimeSlots',
   async (payload) => listAvailability(payload));
+mocks.webMethods.register('@wix/bookings', 'availabilityTimeSlots::getAvailabilityTimeSlot',
+  async (...args) => {
+    slotsState.getCalls.push(args);
+    return slotsState.getResponse;
+  });
 mocks.webMethods.register('@wix/bookings', 'extendedBookings::queryExtendedBookings',
   async (query, options) => {
     nativeBookingsState.calls.push({ query, options });
@@ -158,6 +165,8 @@ function resetState() {
   wixDataMock._reset();
   slotsState.responses.clear();
   slotsState.calls.length = 0;
+  slotsState.getCalls.length = 0;
+  slotsState.getResponse = null;
   nativeBookingsState.bookings = [];
   nativeBookingsState.error = null;
   nativeBookingsState.calls.length = 0;
@@ -1422,6 +1431,38 @@ test('RES-DISPLAY-07 expired token -> TOKEN_EXPIRED', async () => {
   const res = await RW.getConfirmedBookingForDisplay({ displayToken: token });
   assert.strictEqual(res.ok, false);
   assert.strictEqual(res.error, 'TOKEN_EXPIRED');
+});
+
+test('RES-RECHECK-01 getAvailabilityTimeSlot uses the official positional SDK signature and returns staff resources', async () => {
+  resetState();
+  const row = baseServiceRow();
+  const staffResourceId = guid();
+  seedService(row);
+  slotsState.getResponse = {
+    timeSlot: availSlot('2026-10-20T12:00:00', '2026-10-20T13:00:00', [staffResourceId]),
+  };
+
+  const result = await RW.revalidateExactAvailabilitySlot({
+    serviceId: row.serviceId,
+    localStartDate: '2026-10-20T12:00:00',
+    localEndDate: '2026-10-20T13:00:00',
+    resourceId: staffResourceId,
+  });
+
+  assert.strictEqual(result.status, 'SUCCESS');
+  assert.strictEqual(result.data.resourceId, staffResourceId);
+  assert.strictEqual(slotsState.getCalls.length, 1);
+  const [serviceId, start, end, timeZone, location, options] = slotsState.getCalls[0];
+  assert.strictEqual(serviceId, row.serviceId);
+  assert.strictEqual(start, '2026-10-20T12:00:00');
+  assert.strictEqual(end, '2026-10-20T13:00:00');
+  assert.strictEqual(timeZone, 'Europe/Madrid');
+  assert.strictEqual(location._id, row.locationId);
+  assert.strictEqual(location.locationType, 'BUSINESS');
+  assert.deepStrictEqual(options, {
+    includeResourceTypeIds: [STAFF_TYPE],
+    resourceTypes: [{ resourceTypeId: STAFF_TYPE, resourceIds: [staffResourceId] }],
+  });
 });
 
 // ---------------------------------------------------------------------------

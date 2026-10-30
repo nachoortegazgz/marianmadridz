@@ -3,10 +3,11 @@ import { parseTapSummary } from "./tapSummary.mjs";
 // Kept separate from caja/fiscal suites so layer 1 can be evaluated before layer 2.
 import { execFileSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, '..', '..', '..');
+const loaderUrl = pathToFileURL(join(here, 'loader.mjs')).href;
 const suites = [
   'citasManager.rate-limit-contract.test.mjs',
   'booking.availability.saga.test.mjs',
@@ -26,7 +27,7 @@ for (const suite of suites) {
   try {
     output = execFileSync(
       process.execPath,
-      ['--no-warnings', '--loader', join(here, 'loader.mjs'), join(here, suite)],
+      ['--no-warnings', '--loader', loaderUrl, join(here, suite)],
       { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] },
     );
   } catch (error) {
@@ -40,7 +41,7 @@ for (const suite of suites) {
   failTotal += fail;
   if (!ok) failed += 1;
   console.log(`${ok ? 'OK' : 'FAIL'} ${suite.padEnd(42)} tests=${tests} pass=${pass} fail=${fail} exit=${exitCode}`);
-  if (!ok) console.error('\n--- Diagnostics: ' + suite + ' ---\n' + output.slice(-18000) + '\n--- End diagnostics ---');
+  if (!ok) console.error('\\n--- Diagnostics: ' + suite + ' ---\\n' + output.slice(-18000) + '\\n--- End diagnostics ---');
 }
 
 console.log(`LAYER 1 TOTAL: suites=${suites.length} pass=${passTotal} fail=${failTotal} failedSuites=${failed}`);
