@@ -17,7 +17,7 @@ test('CARTV2-01 creates a visitor WEB cart from the Bookings booking ID and retu
   setCartV2Mock({
     createCart: async (options) => {
       calls.push({ method: 'createCart', options });
-      return { _id: CART_ID };
+      return { cart: { _id: CART_ID } };
     },
     calculateCart: async (cartId, options) => {
       calls.push({ method: 'calculateCart', cartId, options });
@@ -73,7 +73,7 @@ test('CARTV2-01 creates a visitor WEB cart from the Bookings booking ID and retu
 test('CARTV2-02 refuses to return a checkout URL when cart calculation has violations', async () => {
   let checkoutUrlCalls = 0;
   setCartV2Mock({
-    createCart: async () => ({ _id: CART_ID }),
+    createCart: async () => ({ cart: { _id: CART_ID } }),
     calculateCart: async () => ({
       cart: { _id: CART_ID, businessInfo: { currencyCode: 'EUR' } },
       summary: {
@@ -99,7 +99,7 @@ test('CARTV2-03 rejects an invalid booking ID before creating a cart', async () 
   setCartV2Mock({
     createCart: async () => {
       createCartCalls += 1;
-      return { _id: CART_ID };
+      return { cart: { _id: CART_ID } };
     },
   });
 
@@ -112,7 +112,7 @@ test('CARTV2-03 rejects an invalid booking ID before creating a cart', async () 
 
 test('CARTV2-04 rejects incomplete or mismatched calculation responses', async () => {
   setCartV2Mock({
-    createCart: async () => ({ _id: CART_ID }),
+    createCart: async () => ({ cart: { _id: CART_ID } }),
     calculateCart: async () => ({
       cart: { _id: '33333333-3333-4333-8333-333333333333', businessInfo: { currencyCode: 'EUR' } },
       summary: {
