@@ -156,6 +156,7 @@ PR: https://github.com/nachoortegazgz/marianmadridz/pull/13
   Revisar el diff generado por Wix CLI; no editar `wix.lock` manualmente.
 - Antes de activar V3, confirmar permisos `SCOPE.STORES.CATALOG_READ_LIMITED`, `SCOPE.STORES.PRODUCT_READ`, `SCOPE.STORES.INVENTORY_ITEM_READ` y `SCOPE.STORES.LOCATION_READ_LIMITED` en el contexto de ejecución real.
 - La cola de conciliación tiene replay administrativo; no se ha activado todavía un cron automático de reintentos.
+- Los webhooks de pedidos y reembolsos eCommerce se mantienen (no cambian entre Catalog V1/V3). **No están implementados todavía los webhooks de cambios de producto/variantes del catálogo**: V1 `products.onProductChanged` / `onProductVariantsChanged` y V3 `productsV3.onProductCreated` / `onProductUpdated` / `onProductDeleted`. Su registro y deduplicación quedan pendientes de validar en el entorno Wix real.
 - No se ha sincronizado ni publicado ningún cambio en Wix. No se ha cambiado la versión de catálogo del sitio.
 
 **Estado:** PR #13 abierta; no fusionar hasta completar Wix CLI/lock y revisar CI final. No habilitar el flujo de inventario comercial hasta poblar y conciliar registros propios por variante.
