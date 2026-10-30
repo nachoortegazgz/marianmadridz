@@ -35,7 +35,7 @@ Estas pruebas son offline; no certifican el comportamiento del sitio Wix publica
 | Wix Stores | La configuración del sitio corresponde a Stores Catálogo V1. | **No migrar automáticamente a V3**. Requiere plan independiente y pruebas de productos, variantes, stock y checkout. |
 | Wix Invoices | El sitio tiene Invoices V1. | **No migrar automáticamente a V2**. Requiere estrategia y validación fiscal independiente. |
 | Frontend APIs | Las páginas usan `@wix/site-location`, `@wix/site-window` y `@wix/site-pricing-plans` donde existe equivalencia estable. `wix-members-frontend` permanece en la página de administración. | Migrar location/window/pricing plans; conservar Members frontend porque `@wix/site-members` está en Developer Preview y no es apto para producción. |
-| Web methods | Los módulos backend usan `wix-web-module`. | Mantener: la Biblia SSOT v10.0, §19.3, lo declara API permanente de Velo para este Wix Editor. No sustituir sin ADR que revoque esa decisión. |
+| Web methods | Los módulos backend usan `wix-web-module`. | Mantener: la Biblia SSOT v10.0, §16.3, lo declara API permanente de Velo para este Wix Editor. No sustituir sin ADR que revoque esa decisión. |
 | Integraciones externas | Resend, OpenAI y el servicio fiscal se llaman desde backend mediante HTTP. | No son APIs Wix; mantenerlas tras Secrets, validación, límites y control de errores. |
 
 ## 3. Correcciones adicionales de integridad
@@ -87,7 +87,7 @@ La revisión se ha realizado sobre el repositorio canónico `nachoortegazgz/mari
 - Se han retirado de las dependencias directas `@wix/site-storage` y `@wix/user-management`: no hay imports en los módulos productivos, páginas, código público ni suites de pruebas revisadas.
 - Se han mantenido/restaurado `@wix/site-location` y `@wix/site-window` porque sustituyen APIs frontend que sí consumía el sitio. Se ha añadido `@wix/site-pricing-plans` para sustituir `wix-pricing-plans-frontend`.
 - `wix-members-frontend` se conserva: el SDK frontend `@wix/site-members` está en Developer Preview y Wix advierte que no está destinado a producción.
-- `wix-web-module` se conserva por decisión explícita de la Biblia SSOT v10.0, §19.3 (API permanente en Velo). No se ha editado `wix.lock`, generado automáticamente.
+- `wix-web-module` se conserva por decisión explícita de la Biblia SSOT v10.0, §16.3 (API permanente en Velo). No se ha editado `wix.lock`, generado automáticamente.
 
 ### Matriz final de decisión
 
@@ -102,7 +102,7 @@ La revisión se ha realizado sobre el repositorio canónico `nachoortegazgz/mari
 | Stores | El contexto vivo de Wix confirma Catalog V1. El anexo aclaratorio SSOT revoca la permanencia indefinida en V1 y declara V3 como migración prioritaria. | Pendiente: implementar detección `getCatalogVersion`, compatibilidad V1/V3, adaptar inventario al modelo variante-ubicación y suscribir webhooks de ambas versiones. No cambiar la versión del sitio sin pruebas y plan de reversión operativa. |
 | Invoices | El contexto vivo de Wix confirma Invoices V1. El código revisado mantiene su ledger fiscal propio y no consume directamente la API de Wix Invoices. | Fuera de esta tanda; auditar por separado la compatibilidad V2 y el impacto fiscal antes de cualquier cambio. |
 | Frontend Wix Editor | `@wix/site-location`, `@wix/site-window`, `@wix/site-pricing-plans`; `wix-members-frontend` como excepción. | Migración aplicada en páginas de calendario, servicio, confirmación, administración y staff. Mantener Members frontend por Developer Preview del SDK equivalente. |
-| Web methods y hooks | `wix-web-module` y hooks Velo | Mantener conforme a SSOT §19.3; los hooks de integridad siguen en Velo. |
+| Web methods y hooks | `wix-web-module` y hooks Velo | Mantener conforme a SSOT §16.3; los hooks de integridad siguen en Velo. |
 | Integraciones externas | HTTP desde backend (Resend, OpenAI y servicio fiscal) | Mantener; no son APIs Wix y no se sustituyen por SDK Wix. |
 
 ### Validación y límites
@@ -115,4 +115,4 @@ La revisión se ha realizado sobre el repositorio canónico `nachoortegazgz/mari
 - `wix.lock` todavía no refleja `@wix/site-pricing-plans`; contiene además referencias a `@wix/site-storage` y `@wix/user-management`, cuyo carácter directo o transitivo debe confirmar el gestor Wix. No se ha editado manualmente porque Wix lo genera. En el clon local del proyecto, ejecutar desde la raíz `wix install @wix/site-pricing-plans` y revisar el diff de `package.json` y `wix.lock`; no retirar del lock ninguna entrada sin confirmar antes que no sea dependencia transitiva.
 - Se ha creado `docs/adr/ADR-001-catalog-v1-v3-dual-support.md`: acepta la preparación de compatibilidad dual V1/V3, pero aplaza el cambio irreversible de versión del catálogo hasta completar la migración de inventario y QA.
 
-**Conclusión:** la migración a SDK de las APIs estables con equivalencia funcional identificadas en el código está fusionada en `main` y validada por los dos gates de CI. Excepciones deliberadas: `wix-members-frontend` (el SDK equivalente está en Developer Preview) y `wix-web-module` (retenido por SSOT §19.3). Catalog V1 sigue activo en el sitio y su migración dual a V3 queda como siguiente prioridad técnica; Invoices V1 requiere una auditoría independiente. El cierre de producción sigue condicionado a CI verde, QA real en Preview y validación del sitio Wix; no se ha publicado.
+**Conclusión:** la migración a SDK de las APIs estables con equivalencia funcional identificadas en el código está fusionada en `main` y validada por los dos gates de CI. Excepciones deliberadas: `wix-members-frontend` (el SDK equivalente está en Developer Preview) y `wix-web-module` (retenido por SSOT §16.3). Catalog V1 sigue activo en el sitio y su migración dual a V3 queda como siguiente prioridad técnica; Invoices V1 requiere una auditoría independiente. El cierre de producción sigue condicionado a CI verde, QA real en Preview y validación del sitio Wix; no se ha publicado.
