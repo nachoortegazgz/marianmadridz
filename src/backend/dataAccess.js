@@ -111,6 +111,7 @@ function toSdkSort(sort) {
     }).filter(Boolean);
 }
 
+// SDK query contract: WQL filter + offset paging; total is read from pagingMetadata.
 async function runQuery({
     dataCollectionId,
     filter,
