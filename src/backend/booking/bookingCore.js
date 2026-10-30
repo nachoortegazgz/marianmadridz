@@ -1,10 +1,10 @@
 /*
 MODULE: backend/booking/bookingCore.js
-VERSION: v5018-SDK-BOOKED-SLOT-SHAPE
-BASE: v5016-CMS-CANCELLED + correccion de consistencia de lectura
-RESPONSIBILITY: Primitivas atomicas de reserva (simple y dual con gap) sobre
-Bookings Writer V2: locks, idempotencia, persistencia CitasF2,
-proyeccion de slots y traduccion de enums en frontera.
+VERSION: v5019-CART-V2-CHECKOUT-CONTRACT
+BASE: v5018-SDK-BOOKED-SLOT-SHAPE + Cart V2 checkout
+RESPONSIBILITY: Primitivas atomicas de reserva (simple y dual con gap),
+Bookings Writer V2, checkout Cart V2 de F1, locks, idempotencia,
+persistencia CitasF2, proyeccion de slots y traduccion de enums en frontera.
 
 CORRECCIONES v5017-STRONG-QUERY:
   CORE-52 (P0): elevatedQueryFind llamaba q.find() sin consistencyMode,
