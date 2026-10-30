@@ -5,7 +5,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const source = readFileSync(join(here, '..', 'booking', 'bookingSaga.js'), 'utf8');
+const source = readFileSync(join(here, '..', 'booking', 'bookingSaga.js'), 'utf8').replace(/\r\n/g, '\n');
 
 test('BOOKING-DOUBLE-01 aborts saga when Wix flags a double-booked slot', () => {
   const guardStart = source.indexOf('function _checkDoubleBookingFlag(');
@@ -40,7 +40,7 @@ test('BOOKING-DOUBLE-01 aborts saga when Wix flags a double-booked slot', () => 
 
 
 test('COMPENSATION-QUEUE-01 producer matches cron query and lifecycle contract', () => {
-  const cron = readFileSync(join(here, '..', 'crons.js'), 'utf8');
+  const cron = readFileSync(join(here, '..', 'crons.js'), 'utf8').replace(/\r\n/g, '\n');
   const producerStart = source.indexOf('await elevatedInsert(COMPENSACIONES_COL, {');
   const producerEnd = source.indexOf('\n                });', producerStart);
   assert.ok(producerStart >= 0 && producerEnd > producerStart, 'compensation producer must exist');
