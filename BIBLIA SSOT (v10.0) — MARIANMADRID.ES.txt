@@ -1801,7 +1801,7 @@ Existen 4 aspectos del modelo de catálogo con inconsistencias históricas que r
 
 #### **17.3 Riesgos de Integración y Entorno**
 * **`MapaStaff.thirdPartyId` Vacío:** Permanece intencionadamente vacío hasta que se vinculen las fichas fiscales en `DatosFiscales`. Prohibido rellenar por inferencia.
-* **Exigencia de GUIDs en Bookings V2:** La API Bookings Writer V2 exige pasar `resource.id` y `scheduleId` explícitos. El backend debe consultar siempre la disponibilidad antes de invocar la reserva.
+* **Exigencia de GUIDs en Bookings V2:** En el SDK JavaScript `@wix/bookings`, los objetos Bookings V2 usan `resource._id` y `location._id`; la forma REST usa `resource.id` y `location.id`. El filtro de profesional conserva `resourceTypes[].resourceIds`. El backend debe pasar el `scheduleId` explícito. El backend debe consultar siempre la disponibilidad antes de invocar la reserva.
 * **Horarios de Trabajo (*Working Hours*):** El personal debe tener configurados sus horarios de trabajo en Wix Bookings para trimestres futuros; de lo contrario, el sistema retorna un falso estado de "Sin disponibilidad".
 * **Enrutamiento de Dominio:** Garantizar que el dominio canónico `marianmadrid.es` resuelve correctamente hacia los servidores de Wix sin perder cabeceras HTTPS.
 
@@ -2056,7 +2056,7 @@ El modelo del catálogo propio de servicios contiene 4 aspectos que requieren re
 
 #### **20.3 Riesgos de Integración y Entorno**
 * **`MapaStaff.thirdPartyId` Vacío:** Permanece intencionadamente vacío hasta que se vinculen formalmente las fichas fiscales en `DatosFiscales`. Queda prohibido rellenar por inferencia.
-* **Exigencia de GUIDs en Bookings V2:** La API Bookings Writer V2 exige incluir `resource.id` y `scheduleId` de forma explícita. El backend debe consultar siempre la disponibilidad antes de invocar la reserva.
+* **Exigencia de GUIDs en Bookings V2:** En el SDK JavaScript `@wix/bookings`, los objetos Bookings V2 usan `resource._id` y `location._id`; la forma REST usa `resource.id` y `location.id`. El filtro de profesional conserva `resourceTypes[].resourceIds`. El backend debe pasar el `scheduleId` explícito. El backend debe consultar siempre la disponibilidad antes de invocar la reserva.
 * **Horarios de Trabajo (*Working Hours*):** El personal debe tener configurados sus horarios de trabajo en Wix Bookings para trimestres futuros; de lo contrario, la API devuelve un falso estado de "Sin disponibilidad".
 * **Enrutamiento de Dominio:** Garantizar que el dominio canónico `marianmadrid.es` resuelve correctamente hacia los servidores de Wix.
 

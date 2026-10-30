@@ -208,13 +208,19 @@ La distinción está confirmada en los esquemas SDK oficiales de:
 
 ### Estado de validación
 
-El esquema oficial confirma la forma de los objetos. La PR todavía necesita CI y QA real en Local Editor; no se declara validada la creación de reservas en el runtime publicado. No se ha publicado código.
+- PR #15 está fusionada en `main` mediante el commit `b118e8aaa698ce15f2e5b77ed16c30d053986f68`.
+- GitHub Actions run `41099599389`: `Backend offline regression suite` = SUCCESS y `Clean dependency install and lint` = SUCCESS.
+- La CI confirma las pruebas offline y el lint del repositorio; no valida el runtime Wix, la disponibilidad real ni la creación de reservas en el sitio publicado.
+- No se ha ejecutado QA real en Local Editor ni se ha publicado código.
+- La SSOT versionada en el repositorio corrige en esta tanda las dos referencias REST/SDK de §17.3 y §20.3.
 
 ## 10. Estado de lockfile y CLI local — 2026-10-30
 
 - `main/package.json` fija `react@18.3.1`, `@wix/sdk@1.21.17`, `@wix/stores@1.0.960` y `@wix/site-pricing-plans@1.35.0`, además de los SDK usados por backend y frontend.
 - `main/wix.lock` no contiene `@wix/stores` ni `@wix/site-pricing-plans`. El bloqueo de dependencias sigue abierto.
+- `src/velo.dependencies.json` tampoco está presente en `main`; por eso la regla `@wix/cli/no-invalid-backend-import` sigue desactivada en ESLint. La documentación oficial de la estructura del repositorio indica que Wix crea este archivo automáticamente al instalar el primer paquete npm y lo actualiza con Wix CLI for Sites; no debe editarse manualmente. Hay que generarlo mediante el flujo de instalación de paquetes del sitio y volver a ejecutar lint.
 - El `wix -h` del entorno local mostrado el 30-10-2026 no lista el comando `wix update`, aunque la documentación vigente de Wix CLI for Sites sí lo documenta. Es necesario actualizar/confirmar la versión global de `@wix/cli` antes de usar ese comando.
+- Wix exige Node.js `v24.22.1` o superior para la configuración actual de Git Integration & Wix CLI for Sites. Instalar/actualizar globalmente `@wix/cli` y confirmar `wix whoami` antes de ejecutar `wix install`; la CLI de Apps/Headless no sustituye la CLI for Sites.
 - El equipo local contiene dos repositorios Git anidados que apuntan al mismo remoto: el repositorio exterior está en la rama de respaldo `backup/provisional-2026-10-30`; el directorio interior `marianmadridz/` contiene el proyecto Wix (`.wix`, `wix.config.json`, `src`) y estaba en el commit inicial `54b897b`. No ejecutar instalaciones ni sincronizaciones hasta actualizar el clon interior desde `origin/main` y verificar que el estado local no contiene cambios que deban conservarse.
 - No editar manualmente `wix.lock`, no usar `npm install --force` ni `--legacy-peer-deps`, no eliminar el backup local y no publicar.
 
