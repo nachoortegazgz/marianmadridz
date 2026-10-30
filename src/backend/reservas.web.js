@@ -1,6 +1,6 @@
 /**
  * MODULE: backend/reservas.web.js
- * VERSION: v10.11-LOCATION-SCHEDULE-ALIGNED
+ * VERSION: v10.12-SDK-LOCATION-SHAPE
  * BASE: v10.10-SELECTED-STAFF + alineación con documentación oficial Wix Bookings V2.
  *
  * APIS:
@@ -35,6 +35,8 @@
  *   RES-54 (P2): _normalizeAddon solo acepta addonId (SSOT CMS KEY FIELDS).
  *   RES-55 (P2): ranking de carga delegado en bookingUtils (un solo origen).
  *
+ * RES-56 (P0): usar Location._id en las llamadas SDK de Time Slots V2.
+ *   El contrato SDK no acepta Location.id como identificador de ubicacion.
  * FIXES HEREDADOS v10.10: RES-46..RES-48 (staff seleccionado, F2 filtrado).
  * FIXES HEREDADOS v10.9: RES-40..RES-45.
  * FIXES HEREDADOS v10.7: RES-32..RES-34.
@@ -329,7 +331,7 @@ function _resolveAvailabilityLocation(service) {
         });
         return null;
     }
-    return Object.freeze({ id: locationId, locationType: "BUSINESS" });
+    return Object.freeze({ _id: locationId, locationType: "BUSINESS" });
 }
 
 /* =============================================================================
@@ -835,7 +837,7 @@ async function _listTimeSlotsV2({ serviceId, fromLocalDate, toLocalDate, resourc
     )).sort();
     const resourceKey = normalizedResourceIds.slice().sort().join(",");
     const addonKey = normalizedNativeAddonIds.join(",");
-    const locationKey = location.id;
+    const locationKey = location._id;
     const cacheKey = `${String(resolvedServiceId)}__${locationKey}__${resourceKey}__${addonKey}__${fromKey}__${toKey}__ts:${timeSlotsPerDay || 0}`;
 
     if (!skipCache) {
