@@ -3,8 +3,8 @@
 MODULE: backend/dataAccess.js
 VERSION: v2.4-SDK-QUERY-ELEVATION
 RESPONSIBILITY: Capa unica de acceso elevado a colecciones CMS.
-STANDARDS: G10 ASCII Strict. Sin suppressAuth. Sin imports directos de
-  wix-data fuera de esta capa, excepto backend/data.js para hooks.
+STANDARDS: G10 ASCII Strict. Sin suppressAuth. Acceso CMS centralizado
+  exclusivamente mediante @wix/data.
 =============================================================================
 */
 
@@ -169,7 +169,13 @@ export async function queryReferencedItems(
         fieldName,
         buildOptions(consistency)
     );
-    return Array.isArray(result) ? result : result?.items || [];
+    if (Array.isArray(result?.items)) return result.items;
+    if (Array.isArray(result?.results)) {
+        return result.results
+            .map((entry) => entry?.item || entry?.dataItem?.data || entry?.dataItem)
+            .filter(Boolean);
+    }
+    return [];
 }
 
 export async function queryFirstItem({
