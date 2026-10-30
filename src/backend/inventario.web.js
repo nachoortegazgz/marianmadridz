@@ -107,9 +107,7 @@ export const getInventoryDashboard = webMethod(Permissions.SiteMember, async (op
     const items = res?.items || [];
     const stockValue = (item) => {
       const onHand = Number(item.stockOnHand);
-      if (Number.isFinite(onHand)) return onHand;
-      const historical = Number(item.stockExpected);
-      return Number.isFinite(historical) ? historical : 0;
+      return Number.isFinite(onHand) ? onHand : 0;
     };
     const threshold = (item) => {
       const minimum = Number(item.stockMinimo);
