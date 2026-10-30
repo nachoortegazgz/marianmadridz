@@ -52,6 +52,6 @@ test('PAY-GUARD-02 payment confirmation preserves booking approval state and use
   assert.match(lineItemsResolver, /WIX_CATALOG_APP_IDS\.BOOKINGS/);
   assert.equal(lineItemsResolver.includes('const bookingsAppId = APP_IDS.BOOKINGS;'), false);
 
-  const webhookOrderResolver = eventsSource.match(/const bookingsAppId = WIX_CATALOG_APP_IDS\\.BOOKINGS;/g) || [];
+  const webhookOrderResolver = eventsSource.match(/const bookingsAppId = WIX_CATALOG_APP_IDS\.BOOKINGS;/g) || [];
   assert.equal(webhookOrderResolver.length, 2, 'paid and canceled order webhooks must use the Bookings catalog GUID');
 });
