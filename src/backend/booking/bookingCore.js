@@ -291,7 +291,7 @@ export async function createBookingCartCheckout(bookingId, traceId) {
         "createCartV2"
     );
 
-    const cartId = _safeTrim(createdCart && createdCart._id);
+    const cartId = _safeTrim(createdCart && createdCart.cart && createdCart.cart._id);
     if (!_looksLikeGuid(cartId)) {
         throw createBookingError(
             ERROR_CODES.CHECKOUT_FAILED,
