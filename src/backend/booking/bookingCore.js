@@ -328,8 +328,8 @@ export async function createBookingCartCheckout(bookingId, traceId) {
 
     if (
         calculatedCartId !== cartId ||
-        !Array.isArray(violations) ||
-        violations.length > 0 ||
+        (violations != null &&
+            (!Array.isArray(violations) || violations.length > 0)) ||
         !totalAmount ||
         !Number.isFinite(Number(totalAmount)) ||
         Number(totalAmount) < 0 ||
