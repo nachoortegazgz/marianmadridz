@@ -99,100 +99,82 @@ Wix APIs / CMS / Bookings / Stores / Members
 
 ---
 
-## 4. Conexión mediante Wix CLI
+## 4. Conexión mediante Wix CLI for Sites
 
 ### Requisitos locales
 
-- Node.js LTS
-- npm
-- PowerShell 7
-- Git
-- Cuenta Wix con permisos sobre el sitio
-- Velo activado
-- Repositorio Git local
+- Node.js **v24.22.1 o superior**.
+- npm y Git.
+- Acceso SSH al repositorio conectado al sitio.
+- Cuenta Wix con permisos sobre el sitio y Velo activado.
+- PowerShell 7 recomendado en Windows.
 
-### Instalación o actualización
+### Instalación de la CLI
 
 ```powershell
 node --version
 npm --version
 npm install -g @wix/cli
-wix --version
+npm list -g @wix/cli
 ```
 
-Si el comando global no estuviera disponible:
+El requisito actual de Node.js y la instalación global están descritos en la guía oficial de Git Integration & Wix CLI for Sites. No confundir esta herramienta con el Wix CLI genérico para Apps/Headless.
 
-```powershell
-npx @wix/cli --version
-```
-
-### Inicio de sesión
+### Autenticación
 
 ```powershell
 wix login
+wix whoami
 ```
 
-La autenticación debe realizarse mediante el navegador. No deben guardarse tokens manualmente en el proyecto.
+La autenticación se realiza mediante el navegador. No guardar tokens ni cookies en el repositorio.
 
-### Selección del sitio
+### Vinculación del sitio
+
+El repositorio identifica el sitio mediante `wix.config.json`. Verificar que `siteId` coincide exactamente con el sitio objetivo `188bed94-177c-4bc9-a9f0-35080d874f3e` y que la raíz de trabajo contiene ese archivo.
+
+La referencia oficial actual de Wix CLI for Sites no documenta subcomandos de selección del sitio ni de sincronización remota. El sitio queda asociado por `wix.config.json`; el repositorio se actualiza mediante Git.
+
+### Preparación y apertura del Local Editor
+
+Desde la raíz del repositorio:
 
 ```powershell
-wix site list
-wix site select
+git status --short
+npm install
+wix dev
 ```
 
-Seleccionar el sitio cuyo dominio sea:
+`wix dev` abre el Local Editor del sitio asociado al proyecto. No continuar si hay cambios locales no identificados o si `wix.config.json` apunta a otro sitio.
 
-```text
-www.marianmadrid.es
-```
+### Gestión de paquetes npm
 
-No seleccionar sitios de pruebas como `Marian Madrid Pelu 5`, `Marian Madrid Pelu 6`, `Rise Account` u otros duplicados.
-
-### Comprobación de conexión
+Los paquetes de sitio se instalan y actualizan con Wix CLI for Sites:
 
 ```powershell
-wix site current
-wix status
+wix install @wix/stores
+wix install @wix/site-pricing-plans
 ```
 
-La conexión correcta debe verificar:
-
-- Sitio seleccionado correcto.
-- Dominio coincidente.
-- Velo activado.
-- Proyecto local vinculado.
-- Sin cambios pendientes inesperados.
-
-### Sincronización del proyecto
-
-Según el flujo utilizado:
+Ejecutar cada instalación por separado y revisar inmediatamente:
 
 ```powershell
-wix pull
+git diff -- package.json wix.lock src/velo.dependencies.json
 ```
 
-o:
+Conservar las versiones compatibles fijadas en `package.json`; detenerse si la CLI propone una actualización no aprobada. `wix.lock` y `src/velo.dependencies.json` son artefactos generados por Wix: no editarlos manualmente. Wix crea `src/velo.dependencies.json` al instalar el primer paquete npm y lo actualiza mediante Wix CLI for Sites.
 
-```powershell
-wix sync
-```
+### Preview y publicación
 
-Antes de sincronizar:
+- `wix preview` genera una versión de previsualización; validar allí los cambios cuando el flujo lo permita.
+- `wix publish` publica el sitio. No ejecutarlo durante auditoría o migración sin autorización específica y validación completa.
 
-```powershell
-git status
-git branch --show-current
-```
+Documentación oficial:
 
-Después:
-
-```powershell
-git diff
-git status
-```
-
-> La conexión CLI local no puede confirmarse desde el panel de Wix. Debe validarse ejecutando estos comandos en el equipo de desarrollo.
+- https://dev.wix.com/docs/develop-websites/articles/workspace-tools/developer-tools/git-integration-wix-cli-for-sites/setting-up-git-integration-wix-cli-for-sites
+- https://dev.wix.com/docs/develop-websites/articles/workspace-tools/developer-tools/git-integration-wix-cli-for-sites/wix-cli-for-sites-commands
+- https://dev.wix.com/docs/develop-websites/articles/workspace-tools/developer-tools/git-integration-wix-cli-for-sites/git-hub-repository-file-structure
+- https://dev.wix.com/docs/develop-websites/articles/coding-with-velo/packages/work-with-npm-packages-with-the-wix-cli
 
 ---
 
@@ -480,15 +462,15 @@ como sustituto de una coincidencia exacta.
 [ ] npm instalado
 [ ] Wix CLI instalado
 [ ] Usuario autenticado con wix login
-[ ] Sitio correcto seleccionado
+[ ] siteId de wix.config.json coincide con el sitio objetivo
 [ ] Dominio comprobado
 [ ] Velo confirmado
 [ ] Repositorio Git conectado
 [ ] Rama develop creada
 [ ] .env excluido de Git
 [ ] .env.example creado
-[ ] wix status ejecutado
-[ ] wix pull/sync ejecutado
+[ ] Cuenta CLI confirmada con wix whoami
+[ ] npm install y wix dev ejecutados
 [ ] Cambios revisados con git diff
 [ ] Entorno de pruebas separado de producción
 ```
@@ -531,8 +513,8 @@ node --version
 npm --version
 wix --version
 wix login
-wix site current
-wix status
+wix whoami
+npm list -g @wix/cli
 git status
 git branch --show-current
 git remote -v
@@ -541,7 +523,7 @@ git remote -v
 Para guardar el diagnóstico sin incluir secretos:
 
 ```powershell
-wix status > wix-status.txt
+npm list -g @wix/cli > wix-cli-version.txt
 git status > git-status.txt
 ```
 
@@ -755,8 +737,8 @@ Ejecutar con una cuenta autorizada:
 
 ```powershell
 wix login
-wix site current
-wix status
+wix whoami
+npm list -g @wix/cli
 ```
 
 Después comprobar manualmente:
