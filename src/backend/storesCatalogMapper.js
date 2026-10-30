@@ -65,9 +65,12 @@ export function normalizeStoreOrderLineItem(
     const productVariants = Array.isArray(catalogVariants)
         ? catalogVariants.filter((variant) => variant.productId === productId)
         : [];
-    const resolvedVariantId = explicitVariantId || (
-        productVariants.length === 1 ? text(productVariants[0].variantId) : ""
-    );
+    const explicitVariantExists = explicitVariantId
+        ? productVariants.some((variant) => variant.variantId === explicitVariantId)
+        : false;
+    const resolvedVariantId = explicitVariantId
+        ? (explicitVariantExists ? explicitVariantId : "")
+        : (productVariants.length === 1 ? text(productVariants[0].variantId) : "");
     const lineItemId = text(item._id);
     const sku = text(item.physicalProperties?.sku);
     const quantity = Number(item.quantity);
