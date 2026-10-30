@@ -135,6 +135,23 @@ test("Store order lines without a variant identity fail closed", () => {
     assert.equal(item.code, "INCOMPLETE_ORDER_VARIANT_IDENTITY");
 });
 
+test("order line item rejects a variant ID that does not belong to the product", () => {
+    const item = normalizeStoreOrderLineItem({
+        _id: "line-wrong-variant",
+        quantity: 1,
+        catalogReference: {
+            appId: APP_IDS.STORES,
+            catalogItemId: PRODUCT_ID,
+            options: { variantId: VARIANT_B },
+        },
+    }, 0, CATALOG_VERSION.V1, null, [
+        { productId: PRODUCT_ID, variantId: VARIANT_A },
+    ]);
+
+    assert.equal(item.kind, "ERROR");
+    assert.equal(item.code, "INCOMPLETE_ORDER_VARIANT_IDENTITY");
+});
+
 test("V1 inventory is flattened by product and variant, retaining absent quantity", () => {
     const rows = normalizeV1InventoryItem({
         productId: PRODUCT_ID,
