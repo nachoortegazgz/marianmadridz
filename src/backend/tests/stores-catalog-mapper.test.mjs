@@ -52,7 +52,7 @@ test("V3 stock key includes the inventory location", () => {
 
 test("official V1 eCommerce order line item resolves product, variant and physical SKU", () => {
     const item = normalizeStoreOrderLineItem({
-        id: "line-item-1",
+        _id: "line-item-1",
         quantity: 2,
         physicalProperties: { sku: "SKU-SHARED" },
         catalogReference: {
@@ -72,7 +72,7 @@ test("official V1 eCommerce order line item resolves product, variant and physic
 
 test("non-Stores order lines are ignored", () => {
     const item = normalizeStoreOrderLineItem({
-        id: "booking-line",
+        _id: "booking-line",
         quantity: 1,
         catalogReference: {
             appId: APP_IDS.BOOKINGS,
@@ -86,7 +86,7 @@ test("non-Stores order lines are ignored", () => {
 
 test("Store order lines without a variant identity fail closed", () => {
     const item = normalizeStoreOrderLineItem({
-        id: "line-item-2",
+        _id: "line-item-2",
         quantity: 1,
         catalogReference: {
             appId: APP_IDS.STORES,
