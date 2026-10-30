@@ -1,10 +1,10 @@
 /*
 =============================================================================
 MODULE: backend/dataAccess.js
-VERSION: v2.3-LAYER1-RESTORED
+VERSION: v3.0-WIX-DATA-SDK
 RESPONSIBILITY: Capa unica de acceso elevado a colecciones CMS.
-STANDARDS: G10 ASCII Strict. Sin suppressAuth. Sin imports directos de
-  @wix/data como unica capa de acceso CMS.
+STANDARDS: G10 ASCII Strict. Sin suppressAuth. Acceso CMS centralizado
+  exclusivamente mediante @wix/data.
 =============================================================================
 */
 
