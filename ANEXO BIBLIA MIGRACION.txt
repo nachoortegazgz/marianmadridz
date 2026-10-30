@@ -176,3 +176,46 @@ La comprobación del `package.json` y `wix.lock` de `main` confirma que el manif
 Siguiente fase: crear una rama desde `main`, actualizar las dependencias Wix con `wix update <paquete>`, revisar `package.json`/`wix.lock`, ejecutar regresión offline, instalación limpia y ESLint. Mantener `react@18.3.1` hasta comprobar el peer contract de Stores y no cambiar `@wix/stores` ni `@wix/site-pricing-plans` sin resolver primero el lock.
 
 No publicar ni sincronizar en Wix hasta superar CI y QA real. No habilitar inventario comercial hasta poblar y conciliar registros propios por variante.
+
+## 9. Corrección de contrato Bookings V2 SDK — 2026-10-30
+
+Se ha resuelto una contradicción entre la SSOT v10.0 (§17.3 y §20.3) y los tipos oficiales del SDK JavaScript.
+
+**Regla correcta para este repositorio:** los módulos importan `@wix/bookings`; por tanto, deben usar los nombres de propiedades del SDK, que no siempre coinciden con los de REST.
+
+| Contexto | SDK JavaScript | REST |
+|---|---|---|
+| `BookedSlot.resource` | `resource._id` | `resource.id` |
+| `BookedSlot.location` | `location._id` | `location.id` |
+| Ubicación en Time Slots V2 | `locations[]._id` | `locations[].id` |
+| Recurso disponible en Time Slots V2 | `resources[]._id` | `resources[].id` |
+| Filtro de profesional | `resourceTypes[].resourceIds` | `resourceTypes[].resourceIds` |
+
+La distinción está confirmada en los esquemas SDK oficiales de:
+- [Create Booking V2](https://dev.wix.com/docs/api-reference/business-solutions/bookings/bookings/bookings-writer-v2/create-booking?apiView=SDK)
+- [List Availability Time Slots V2](https://dev.wix.com/docs/api-reference/business-solutions/bookings/time-slots/time-slots-v2/list-availability-time-slots?apiView=SDK)
+- [Query Extended Bookings V2](https://dev.wix.com/docs/api-reference/business-solutions/bookings/bookings/bookings-reader-v2/query-extended-bookings?apiView=SDK)
+
+### Correcciones aplicadas en PR #15
+
+- `reservas.web.js`: las consultas de disponibilidad usan `Location._id`; la carga de profesionales desde Query Extended Bookings lee `booking.bookedEntity.slot.resource._id`.
+- `bookingCore.js`: el payload de escritura usa `BookedResource._id` y `Location._id`.
+- `bookingSaga.js`: la validación estricta de slots comprueba `resource._id` y `location._id`.
+- `reservas.web.test.mjs`: las fixtures del lector nativo representan el objeto SDK con `resource._id`.
+- ADR-002 documenta la diferencia REST/SDK y exige no ocultarla mediante alias.
+
+**Corrección documental pendiente en la SSOT fuente:** sustituir la regla genérica `resource.id` de §17.3 y §20.3 por la distinción REST/SDK descrita en `docs/adr/ADR-002-bookings-v2-sdk-field-names.md`. La SSOT está disponible como documento de proyecto y no se ha modificado desde la integración GitHub.
+
+### Estado de validación
+
+El esquema oficial confirma la forma de los objetos. La PR todavía necesita CI y QA real en Local Editor; no se declara validada la creación de reservas en el runtime publicado. No se ha publicado código.
+
+## 10. Estado de lockfile y CLI local — 2026-10-30
+
+- `main/package.json` fija `react@18.3.1`, `@wix/sdk@1.21.17`, `@wix/stores@1.0.960` y `@wix/site-pricing-plans@1.35.0`, además de los SDK usados por backend y frontend.
+- `main/wix.lock` no contiene `@wix/stores` ni `@wix/site-pricing-plans`. El bloqueo de dependencias sigue abierto.
+- El `wix -h` del entorno local mostrado el 30-10-2026 no lista el comando `wix update`, aunque la documentación vigente de Wix CLI for Sites sí lo documenta. Es necesario actualizar/confirmar la versión global de `@wix/cli` antes de usar ese comando.
+- El equipo local contiene dos repositorios Git anidados que apuntan al mismo remoto: el repositorio exterior está en la rama de respaldo `backup/provisional-2026-10-30`; el directorio interior `marianmadridz/` contiene el proyecto Wix (`.wix`, `wix.config.json`, `src`) y estaba en el commit inicial `54b897b`. No ejecutar instalaciones ni sincronizaciones hasta actualizar el clon interior desde `origin/main` y verificar que el estado local no contiene cambios que deban conservarse.
+- No editar manualmente `wix.lock`, no usar `npm install --force` ni `--legacy-peer-deps`, no eliminar el backup local y no publicar.
+
+**Bloqueo operativo pendiente:** el conector GitHub permite revisar y actualizar archivos y ramas, y el conector Wix permite consultar el contexto del sitio; ninguno ejecuta el CLI en el ordenador local ni regenera su lockfile. La reconciliación final exige ejecutar Wix CLI for Sites actualizado desde el directorio interior del proyecto, revisar el diff generado y devolver el resultado para auditarlo.
