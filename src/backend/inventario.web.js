@@ -271,7 +271,7 @@ async function queueInventoryReconciliation({
 }
 
 async function acquireInventoryVariantLock(stockItem, stockKey, traceId) {
-  const lockId = _safeTrim(stockItem?._id);
+  const lockId = `INV_LOCK_${_safeTrim(stockItem?._id)}`;
   if (!lockId) throw new Error("INVENTORY_STOCK_RECORD_ID_REQUIRED");
 
   const existingRes = await dalQuery(CONTROL_COL)
