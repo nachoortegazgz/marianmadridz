@@ -1067,14 +1067,6 @@ export async function executeBookingSaga(unsafePayload) {
             );
         }
 
-        const requestedChannel = _safeTrim(
-            (unsafePayload && unsafePayload.channelType) ||
-                (unsafePayload && unsafePayload.paymentMethod) ||
-                metaCita.channelType ||
-                CHANNEL_PRESENCIAL
-        ).toUpperCase();
-        const isOnline = requestedChannel === CHANNEL_ONLINE;
-
         const rawServiceId = _safeTrim(
             (unsafePayload && unsafePayload.serviceId) || metaCita.serviceId || ""
         );
@@ -1089,6 +1081,37 @@ export async function executeBookingSaga(unsafePayload) {
 
         const serviceRes = await _getServiceBySlugOrIdInternal(serviceId, traceId);
         const serviceConfig = (serviceRes && serviceRes.data) || {};
+
+        const requestedChannel = _safeTrim(
+            (unsafePayload && unsafePayload.channelType) ||
+                metaCita.channelType ||
+                CHANNEL_PRESENCIAL
+        ).toUpperCase();
+        if (requestedChannel !== CHANNEL_ONLINE && requestedChannel !== CHANNEL_PRESENCIAL) {
+            throw createBookingError(
+                ERROR_CODES.INVALID_PAYLOAD,
+                "Invalid payment channel.",
+                { traceId: traceId, channelType: requestedChannel }
+            );
+        }
+
+        const onlinePaymentAllowed = serviceConfig.onlinePayment !== false;
+        const inPersonPaymentAllowed = serviceConfig.inPersonPayment !== false;
+        if (requestedChannel === CHANNEL_ONLINE && !onlinePaymentAllowed) {
+            throw createBookingError(
+                ERROR_CODES.INVALID_PAYLOAD,
+                "Online payment is disabled for this service.",
+                { traceId: traceId, channelType: requestedChannel }
+            );
+        }
+        if (requestedChannel === CHANNEL_PRESENCIAL && !inPersonPaymentAllowed) {
+            throw createBookingError(
+                ERROR_CODES.INVALID_PAYLOAD,
+                "In-person payment is disabled for this service.",
+                { traceId: traceId, channelType: requestedChannel }
+            );
+        }
+        const isOnline = requestedChannel === CHANNEL_ONLINE;
 
         const isDual =
             serviceConfig.allowCombine === true &&

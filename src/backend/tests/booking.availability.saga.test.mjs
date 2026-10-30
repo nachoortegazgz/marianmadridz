@@ -232,6 +232,34 @@ test('BCORE-ADDONBODY-01 _buildBookedAddOns emits root-level addOn array', () =>
 
 const RESERVAS_SPEC = 'backend/reservas.web.js';
 
+function seedPaymentTestService(serviceId, overrides = {}) {
+  const row = {
+    _id: serviceId,
+    serviceId,
+    slug: null,
+    title: 'Servicio de prueba',
+    description: null,
+    tagLine: null,
+    price: 50,
+    currency: 'EUR',
+    location: 'Zaragoza',
+    locationId: GUID_2,
+    mainMedia: null,
+    totalDuration: 60,
+    phase1Duration: 60,
+    phase2Duration: 0,
+    exposureDuration: 0,
+    allowCombine: false,
+    linkedPhases: null,
+    clientHidden: false,
+    addOnOptions: [],
+    onlinePayment: true,
+    inPersonPayment: true,
+    ...overrides,
+  };
+  wixDataMock._store.set('ServiciosCatalogo', [row]);
+}
+
 async function sagaEnvelope(payload) {
   // Devuelve el envelope retornado por la saga; falla el test si la
   // produccion cambia a throw sin actualizar este contrato.
@@ -306,6 +334,63 @@ test('BSAGA-VAL-05 contract freeze: saga returns envelope, never throws', async 
   assert.ok(!threw, 'executeBookingSaga no debe lanzar (contrato envelope)');
   assert.strictEqual(env.status, 'ERROR');
   assert.ok(env.error && env.error.code, 'error.code presente');
+});
+
+test('BSAGA-PAY-01 online channel is rejected when service disables online payment', async () => {
+  wixDataMock._reset();
+  const serviceId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa01';
+  seedPaymentTestService(serviceId, { onlinePayment: false });
+  try {
+    const env = await sagaEnvelope({
+      email: 'client@example.com',
+      rgpdConsent: true,
+      serviceId,
+      channelType: IC.CHANNEL_TYPE.ONLINE,
+      slotF1: { localStartDate: '2026-10-15T09:00:00', localEndDate: '2026-10-15T10:00:00' },
+      traceId: 'tr-pay-1',
+    });
+    assertRejected(env, 'INVALID_PAYLOAD|online payment is disabled', 'online desactivado debe rechazarse');
+  } finally {
+    mocks.webMethods.clear();
+  }
+});
+
+test('BSAGA-PAY-02 in-person channel is rejected when service disables in-person payment', async () => {
+  wixDataMock._reset();
+  const serviceId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa02';
+  seedPaymentTestService(serviceId, { inPersonPayment: false });
+  try {
+    const env = await sagaEnvelope({
+      email: 'client@example.com',
+      rgpdConsent: true,
+      serviceId,
+      channelType: IC.CHANNEL_TYPE.PRESENCIAL,
+      slotF1: { localStartDate: '2026-10-15T09:00:00', localEndDate: '2026-10-15T10:00:00' },
+      traceId: 'tr-pay-2',
+    });
+    assertRejected(env, 'INVALID_PAYLOAD|in-person payment is disabled', 'presencial desactivado debe rechazarse');
+  } finally {
+    mocks.webMethods.clear();
+  }
+});
+
+test('BSAGA-PAY-03 rejects unknown channel values instead of treating them as in-person', async () => {
+  wixDataMock._reset();
+  const serviceId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa03';
+  seedPaymentTestService(serviceId);
+  try {
+    const env = await sagaEnvelope({
+      email: 'client@example.com',
+      rgpdConsent: true,
+      serviceId,
+      channelType: 'WIX_PAYMENTS',
+      slotF1: { localStartDate: '2026-10-15T09:00:00', localEndDate: '2026-10-15T10:00:00' },
+      traceId: 'tr-pay-3',
+    });
+    assertRejected(env, 'INVALID_PAYLOAD|invalid payment channel', 'canal desconocido debe rechazarse');
+  } finally {
+    mocks.webMethods.clear();
+  }
 });
 
 // ---------------------------------------------------------------------------

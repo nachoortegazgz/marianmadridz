@@ -38,34 +38,30 @@ const CONTROL_COL = 'ControlOperativo';
 // Staff fixtures follow the native Wix Bookings Staff Members response.
 const _apiStaff = new Map(); // resourceId -> seed record
 function _toStaffMember(record) {
-  const resourceId = String(record.resourceId || record.id || '');
+  const resourceId = String(record.resourceId || '');
   const scheduleId = String(record.scheduleId || '');
-  const memberId = String(record.memberId || record.userId || '');
+  const contactId = String(record.contactId || '');
   const resource = {
-    id: resourceId,
-    workingHoursSchedules: scheduleId ? [{ id: scheduleId }] : [],
-    ...(scheduleId ? { eventsSchedule: { id: scheduleId } } : {}),
+    _id: resourceId,
+    workingHoursSchedules: scheduleId ? [{ _id: scheduleId }] : [],
+    ...(scheduleId ? { eventsSchedule: { _id: scheduleId } } : {}),
   };
-  const identityId = {};
-  if (memberId) identityId.memberId = memberId;
-  if (record.wixUserId) identityId.wixUserId = String(record.wixUserId);
   return {
-    id: String(record.staffMemberId || guid()),
+    _id: String(record.staffMemberId || guid()),
     resourceId,
-    name: String(record.name || record.displayName || ''),
+    name: String(record.name || ''),
     email: String(record.email || ''),
     serviceProvider: true,
     resource,
     associatedWixIdentity: {
-      identificationData: { id: identityId },
-      connection: { status: memberId ? 'CONNECTED' : 'UNKNOWN' },
+      identificationData: { contactId },
+      connection: { status: contactId ? 'CONNECTED' : 'UNKNOWN' },
     },
-    role: String(record.role || ''), // Test-only field for role consumers outside Layer 1.
   };
 }
 function seedStaffApi(records) {
   for (const record of records) {
-    _apiStaff.set(String(record.resourceId || record.id), record);
+    _apiStaff.set(String(record.resourceId), record);
   }
   mocks.sdk['bookings::staffMembers'] = {
     queryStaffMembers: async (query = {}) => {
@@ -631,15 +627,17 @@ test('RES-DTO-01 _toPublicService uses explicit public allowlist and strips inte
     Object.keys(pub).sort(),
     [
       'addOnOptions', 'allowCombine', 'catalogEntryType', 'clientHidden',
-      'currency', 'description', 'exposureDuration', 'linkedPhases',
-      'location', 'mainMedia', 'phase1Duration', 'phase2Duration',
-      'price', 'primaryActionLabel', 'recommendations',
-      'serviceId', 'slug', 'tagLine', 'title', 'totalDuration',
+      'currency', 'description', 'exposureDuration', 'inPersonPayment',
+      'linkedPhases', 'location', 'mainMedia', 'onlinePayment',
+      'phase1Duration', 'phase2Duration', 'price', 'primaryActionLabel',
+      'recommendations', 'serviceId', 'slug', 'tagLine', 'title', 'totalDuration',
     ].sort()
   );
   assert.strictEqual(pub.linkedPhases, null);
   assert.strictEqual(pub.clientHidden, true);
   assert.strictEqual(pub.serviceId, GID);
+  assert.strictEqual(pub.onlinePayment, true);
+  assert.strictEqual(pub.inPersonPayment, true);
   assert.deepStrictEqual(pub.addOnOptions, [{ addonId, name: 'Mascarilla', price: 5 }]);
   assert.deepStrictEqual(pub.recommendations, ['Public tip']);
   for (const key of ['margin', 'precioCosteBase', 'internalNotes', 'ownerEmail', 'arbitraryPrivateField', 'availableStaff', 'staffOptions', 'status']) {
@@ -651,6 +649,8 @@ test('RES-DTO-01 _toPublicService uses explicit public allowlist and strips inte
   });
   assert.strictEqual(dual.linkedPhases, GID);
   assert.strictEqual(dual.clientHidden, false);
+  assert.strictEqual(dual.onlinePayment, true);
+  assert.strictEqual(dual.inPersonPayment, true);
   assert.ok(!('staffOptions' in dual), 'staffOptions must be stripped');
 
   assert.strictEqual(RW._toPublicService(null), null);
@@ -683,7 +683,7 @@ test('RES-STAFF-01 MapaStaff displayName resolved; non-GUID falls back default',
   resetState();
   await invalidateStaffCache();
   const st = guid();
-  seedStaffApi([{ id: st, name: 'Marta', role: 'STYLIST' }]);
+  seedStaffApi([{ resourceId: st, name: 'Marta', role: 'STYLIST' }]);
   assert.strictEqual(await RW._getStaffDisplayNamePublic(st), 'Marta');
   // SSOT internalConfig.STAFF_DEFAULT_NAME (RES-24/PEND-06): no 'Equipo'.
   // El fallback generico es la constante SSOT ("STAFF"), no una identidad
@@ -721,7 +721,7 @@ test('RES-DUAL-03 simple service -> slotF2 null entries with candidates + pairTo
   const st1 = guid();
   const row = baseServiceRow({ });
   seedService(row);
-  seedStaffApi([{ id: st1, name: 'Ana', role: 'STYLIST' }]);
+  seedStaffApi([{ resourceId: st1, name: 'Ana', role: 'STYLIST' }]);
   slotsState.responses.set(row.serviceId, [availSlot('2026-10-20T09:00:00', '2026-10-20T10:00:00', [st1])]);
   const res = await RW._getCertifiedDualSlotsInternal(row.serviceId, '', '2026-10-20');
   assert.strictEqual(res.status, 'SUCCESS');
@@ -745,7 +745,7 @@ test('RES-DUAL-04 dual pair: exact exposure gap, same staff, DUAL_CACHE persiste
   });
   seedService(row);
   seedService(baseServiceRow({ serviceId: f2, clientHidden: true }));
-  seedStaffApi([{ id: st1, name: 'Ana', role: 'STYLIST' }]);
+  seedStaffApi([{ resourceId: st1, name: 'Ana', role: 'STYLIST' }]);
   slotsState.responses.set(row.serviceId, [availSlot('2026-10-20T09:00:00', '2026-10-20T10:00:00', [st1])]);
   slotsState.responses.set(f2, [availSlot('2026-10-20T10:10:00', '2026-10-20T10:40:00', [st1])]);
   const res = await RW._getCertifiedDualSlotsInternal(row.serviceId, '', '2026-10-20');
@@ -773,7 +773,7 @@ test('RES-DUAL-05 gap below exposure -> no pair (fail-closed empty)', async () =
   });
   seedService(row);
   seedService(baseServiceRow({ serviceId: f2, clientHidden: true }));
-  seedStaffApi([{ id: st1, name: 'Ana', role: 'STYLIST' }]);
+  seedStaffApi([{ resourceId: st1, name: 'Ana', role: 'STYLIST' }]);
   slotsState.responses.set(row.serviceId, [availSlot('2026-10-20T09:00:00', '2026-10-20T10:00:00', [st1])]);
   slotsState.responses.set(f2, [availSlot('2026-10-20T10:10:00', '2026-10-20T10:40:00', [st1])]);
   const res = await RW._getCertifiedDualSlotsInternal(row.serviceId, '', '2026-10-20');
@@ -848,7 +848,7 @@ test('RES-RSF-03 exact F1 match success with slotF1 injected serviceId', async (
   const st1 = guid();
   const row = baseServiceRow({ });
   seedService(row);
-  seedStaffApi([{ id: st1, name: 'Ana', role: 'STYLIST' }]);
+  seedStaffApi([{ resourceId: st1, name: 'Ana', role: 'STYLIST' }]);
   slotsState.responses.set(row.serviceId, [
     availSlot('2026-10-20T09:00:00', '2026-10-20T10:00:00', [st1]),
     availSlot('2026-10-20T12:00:00', '2026-10-20T13:00:00', [st1]),
@@ -927,7 +927,7 @@ test('RES-RSF-07 dual exact match success: both slots normalized, same staff', a
   });
   seedService(row);
   seedService(baseServiceRow({ serviceId: f2svc, clientHidden: true }));
-  seedStaffApi([{ id: st1, name: 'Ana', role: 'STYLIST' }]);
+  seedStaffApi([{ resourceId: st1, name: 'Ana', role: 'STYLIST' }]);
   slotsState.responses.set(row.serviceId, [availSlot('2026-10-20T09:00:00', '2026-10-20T10:00:00', [st1])]);
   slotsState.responses.set(f2svc, [availSlot('2026-10-20T10:10:00', '2026-10-20T10:40:00', [st1])]);
   const res = await RW._resolveStaffForSlotInternal({
@@ -1032,8 +1032,8 @@ test('RES-BAL-01 least-loaded staff chosen (PENDING counts, Date slotStart/slotE
     slotStart: new Date('2026-10-22T08:00:00Z'), slotEnd: new Date('2026-10-22T09:00:00Z'),
   }]);
   seedStaffApi([
-    { id: stBusy, name: 'Zoe Busy', role: 'STYLIST' },
-    { id: stFree, name: 'Aaron Free', role: 'STYLIST' },
+    { resourceId: stBusy, name: 'Zoe Busy', role: 'STYLIST' },
+    { resourceId: stFree, name: 'Aaron Free', role: 'STYLIST' },
   ]);
   slotsState.responses.set(row.serviceId, [
     availSlot('2026-10-22T10:00:00', '2026-10-22T11:00:00', [stBusy, stFree]),
@@ -1056,8 +1056,8 @@ test('RES-BAL-02 CANCELED bookings ignored in load computation', async () => {
     slotStart: new Date('2026-10-23T08:00:00Z'), slotEnd: new Date('2026-10-23T18:00:00Z'),
   }]);
   seedStaffApi([
-    { id: stA, name: 'AAA', role: 'STYLIST' },
-    { id: stB, name: 'BBB', role: 'STYLIST' },
+    { resourceId: stA, name: 'AAA', role: 'STYLIST' },
+    { resourceId: stB, name: 'BBB', role: 'STYLIST' },
   ]);
   slotsState.responses.set(row.serviceId, [
     availSlot('2026-10-23T10:00:00', '2026-10-23T11:00:00', [stA, stB]),
@@ -1085,8 +1085,8 @@ test('RES-BAL-03 native Wix bookings count once with custom ledger deduplication
     slotEnd: new Date('2026-10-22T09:00:00Z'),
   }]);
   seedStaffApi([
-    { id: stA, name: 'Ana', role: 'STYLIST' },
-    { id: stB, name: 'Bea', role: 'STYLIST' },
+    { resourceId: stA, name: 'Ana', role: 'STYLIST' },
+    { resourceId: stB, name: 'Bea', role: 'STYLIST' },
   ]);
   nativeBookingsState.bookings = [
     {
@@ -1138,8 +1138,8 @@ test('RES-BAL-04 native reader failure refuses assignment with incomplete daily 
     slotEnd: new Date('2026-10-23T09:00:00Z'),
   }]);
   seedStaffApi([
-    { id: stBusy, name: 'Zoe Busy', role: 'STYLIST' },
-    { id: stFree, name: 'Aaron Free', role: 'STYLIST' },
+    { resourceId: stBusy, name: 'Zoe Busy', role: 'STYLIST' },
+    { resourceId: stFree, name: 'Aaron Free', role: 'STYLIST' },
   ]);
   nativeBookingsState.error = new Error('native reader unavailable');
   slotsState.responses.set(row.serviceId, [
@@ -1498,8 +1498,8 @@ test('RES-STAFF-01 explicit staff selection is preserved for a simple slot', asy
   const row = baseServiceRow();
   seedService(row);
   seedStaffApi([
-    { id: selected, name: 'Zoe', role: 'STYLIST' },
-    { id: other, name: 'Ana', role: 'STYLIST' },
+    { resourceId: selected, name: 'Zoe', role: 'STYLIST' },
+    { resourceId: other, name: 'Ana', role: 'STYLIST' },
   ]);
   slotsState.responses.set(row.serviceId, [
     availSlot('2026-10-20T12:00:00', '2026-10-20T13:00:00', [other, selected]),
@@ -1544,8 +1544,8 @@ test('RES-STAFF-02 explicit staff selection is preserved for both dual phases', 
     locationId: row.locationId,
   }));
   seedStaffApi([
-    { id: selected, name: 'Zoe', role: 'STYLIST' },
-    { id: other, name: 'Ana', role: 'STYLIST' },
+    { resourceId: selected, name: 'Zoe', role: 'STYLIST' },
+    { resourceId: other, name: 'Ana', role: 'STYLIST' },
   ]);
   slotsState.responses.set(row.serviceId, [
     availSlot('2026-10-20T09:00:00', '2026-10-20T09:30:00', [other, selected]),
@@ -1598,8 +1598,8 @@ test('RES-STAFF-03 selected staff unavailable in F2 is rejected, never auto-swit
     locationId: row.locationId,
   }));
   seedStaffApi([
-    { id: selected, name: 'Zoe', role: 'STYLIST' },
-    { id: other, name: 'Ana', role: 'STYLIST' },
+    { resourceId: selected, name: 'Zoe', role: 'STYLIST' },
+    { resourceId: other, name: 'Ana', role: 'STYLIST' },
   ]);
   slotsState.responses.set(row.serviceId, [
     availSlot('2026-10-20T09:00:00', '2026-10-20T09:30:00', [selected, other]),
@@ -1630,8 +1630,8 @@ test('RES-RANK-01 unselected staff is balanced by booked minutes, not API order'
   const row = baseServiceRow();
   seedService(row);
   seedStaffApi([
-    { id: heavilyBooked, name: 'Ana', role: 'STYLIST' },
-    { id: freeStaff, name: 'Zoe', role: 'STYLIST' },
+    { resourceId: heavilyBooked, name: 'Ana', role: 'STYLIST' },
+    { resourceId: freeStaff, name: 'Zoe', role: 'STYLIST' },
   ]);
   slotsState.responses.set(row.serviceId, [
     availSlot('2026-10-20T12:00:00', '2026-10-20T13:00:00', [heavilyBooked, freeStaff]),
@@ -1664,8 +1664,8 @@ test('RES-RANK-02 failed workload read returns UPSTREAM_UNAVAILABLE, not fake ze
   const row = baseServiceRow();
   seedService(row);
   seedStaffApi([
-    { id: staffA, name: 'Ana', role: 'STYLIST' },
-    { id: staffB, name: 'Zoe', role: 'STYLIST' },
+    { resourceId: staffA, name: 'Ana', role: 'STYLIST' },
+    { resourceId: staffB, name: 'Zoe', role: 'STYLIST' },
   ]);
   slotsState.responses.set(row.serviceId, [
     availSlot('2026-10-20T12:00:00', '2026-10-20T13:00:00', [staffA, staffB]),
@@ -1719,7 +1719,7 @@ test('RES-GAP-01 another simple service can use a slot inside the dual exposure 
   seedService(dual);
   seedService(f2);
   seedService(simple);
-  seedStaffApi([{ id: staff, name: 'Marian', role: 'STYLIST' }]);
+  seedStaffApi([{ resourceId: staff, name: 'Marian', role: 'STYLIST' }]);
   slotsState.responses.set(dual.serviceId, [
     availSlot('2026-10-20T09:00:00', '2026-10-20T09:30:00', [staff]),
   ]);
@@ -1753,8 +1753,8 @@ test('RES-RANK-03 completed appointments count toward daily load balancing', asy
   const row = baseServiceRow();
   seedService(row);
   seedStaffApi([
-    { id: completedStaff, name: 'Ana', role: 'STYLIST' },
-    { id: freeStaff, name: 'Zoe', role: 'STYLIST' },
+    { resourceId: completedStaff, name: 'Ana', role: 'STYLIST' },
+    { resourceId: freeStaff, name: 'Zoe', role: 'STYLIST' },
   ]);
   slotsState.responses.set(row.serviceId, [
     availSlot('2026-10-20T12:00:00', '2026-10-20T12:30:00', [completedStaff, freeStaff]),
