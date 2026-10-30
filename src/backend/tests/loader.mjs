@@ -588,6 +588,33 @@ export const contactsV5 = new Proxy({}, {
   },
 });
 export const checkout = fnProxy;
+const _cartV2Methods = new Map();
+const _currentCartV2Mock = () => {
+  const keys = [MODULE_KEY + '::cartV2', '@wix/ecom::cartV2', 'ecom::cartV2', 'cartV2'];
+  for (const key of keys) {
+    if (key in sdkNamespaceState) return sdkNamespaceState[key];
+  }
+  return null;
+};
+export const cartV2 = new Proxy({}, {
+  get: (_target, property) => {
+    if (property === 'then') return undefined;
+    const name = String(property);
+    if (!_cartV2Methods.has(name)) {
+      _cartV2Methods.set(name, (...args) => {
+        const namespace = _currentCartV2Mock();
+        const method = namespace && namespace[name];
+        if (typeof method !== 'function') {
+          const error = new Error('Missing @wix/ecom cartV2 mock: ' + name);
+          error.code = 'MISSING_ECOM_CART_V2_MOCK';
+          throw error;
+        }
+        return method(...args);
+      });
+    }
+    return _cartV2Methods.get(name);
+  },
+});
 export const orders = fnProxy;
 export const elevate = fnProxy;
 export const createClient = () => fnProxy;
