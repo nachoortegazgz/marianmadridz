@@ -220,6 +220,7 @@ async function queueInventoryReconciliation({
   refundId = null,
   workItems = [],
   errors = [],
+  unresolvedErrors = [],
   traceId,
 }) {
   const normalizedId = _safeTrim(recordId);
@@ -239,6 +240,7 @@ async function queueInventoryReconciliation({
   const payload = {
     items: workItems,
     errors,
+    unresolvedErrors,
     catalogVersion: workItems[0]?.identity?.catalogVersion || null,
     lastAttemptAt: null,
   };
@@ -639,25 +641,39 @@ export const replayInventoryReconciliation = webMethod(Permissions.Admin, async 
     }
 
     const failed = results.filter((item) => item.status !== "SUCCESS");
+    const unresolvedErrors = Array.isArray(payload.unresolvedErrors)
+      ? payload.unresolvedErrors
+      : [];
+    const remainsOpen = failed.length > 0 || unresolvedErrors.length > 0;
     const attempts = Number(queueItem.attempts || 0) + 1;
     const nextPayload = {
       ...payload,
       lastAttemptAt: new Date().toISOString(),
       lastResults: results,
     };
+    const lastError = [
+      ...unresolvedErrors.map((item) => item.code || "UNRESOLVED_NORMALIZATION_ERROR"),
+      ...failed.map((item) => item.error || "INVENTORY_ERROR"),
+    ].join("; ").slice(0, 1000);
     await update(CONTROL_COL, {
       ...queueItem,
-      status: failed.length ? "OPEN" : "RESOLVED",
+      status: remainsOpen ? "OPEN" : "RESOLVED",
       attempts,
-      lastError: failed.map((item) => item.error || "INVENTORY_ERROR").join("; ").slice(0, 1000),
-      processedAt: failed.length ? null : new Date(),
+      lastError,
+      processedAt: remainsOpen ? null : new Date(),
       payload: nextPayload,
       _updatedDate: new Date(),
     });
 
     return {
-      status: failed.length ? "PENDING_RECONCILIATION" : "SUCCESS",
-      data: { queueId, processed: results.length, failed: failed.length, results },
+      status: remainsOpen ? "PENDING_RECONCILIATION" : "SUCCESS",
+      data: {
+        queueId,
+        processed: results.length,
+        failed: failed.length,
+        unresolved: unresolvedErrors.length,
+        results,
+      },
       error: null,
     };
   } catch (err) {
@@ -753,6 +769,7 @@ export async function recordOnlineInventoryOrderInternal(order, traceId) {
         lineItemId: item.lineItemId,
         code: item.error || "INVENTORY_MOVEMENT_FAILED",
       }))],
+      unresolvedErrors: normalizationErrors,
       traceId,
     });
     return {
