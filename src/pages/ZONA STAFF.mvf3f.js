@@ -95,12 +95,12 @@ $w.onReady(async () => {
             const target = _safeTrim(payload.target || "");
 
             if (target === "ADMIN_PANEL") {
-                await location.to("/administracion");
+                location.to("/administracion");
                 return;
             }
 
             if (target === "HOME") {
-                await location.to(URLS.SERVICIOS);
+                location.to(URLS.SERVICIOS);
             }
         },
 
