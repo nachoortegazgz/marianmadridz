@@ -129,7 +129,7 @@ $w.onReady(async () => {
         null;
 
     if (!access || access.isMarianManager !== true) {
-        await location.to(
+        location.to(
             URLS?.SERVICIOS || "/reserva-online"
         );
         return;
