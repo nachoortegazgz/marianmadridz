@@ -124,14 +124,14 @@ La revisión se ha realizado sobre el repositorio canónico `nachoortegazgz/mari
 
 Rama: `migration/catalog-v3-adapter-2026-10-30`  
 PR: https://github.com/nachoortegazgz/marianmadridz/pull/13  
-Último commit de esta actualización: `b3d78e1aff7fb7b57bb82f1c55db56119910ead7`.
+Último commit de esta actualización: `7d3fd5fe10b617e104c97519cb522adfec44ab50`.
 
 - Añadido `@wix/stores@1.0.960`, versión indicada en la documentación SDK oficial consultada el 30-10-2026.
 - El proyecto usa `catalogVersioning.getCatalogVersion()` antes de operaciones Stores y ramifica estrictamente entre `V1_CATALOG`, `V3_CATALOG` y `STORES_NOT_INSTALLED`.
 - V1: `products.queryStoreVariants` e `inventory.queryInventory`.
 - V3: `productsV3.queryProducts`, `readOnlyVariantsV3.queryVariants`, `inventoryItemsV3.queryInventoryItems` y `storesLocationsV3.queryStoresLocations`.
 - La clave interna de stock es `V1:productId:variantId` o `V3:productId:variantId:locationId`; no utiliza SKU como identidad.
-- Pedidos: la línea se identifica por `lineItems._id`; el producto por `catalogReference.catalogItemId`; la app por el App ID oficial Stores; la variante por `catalogReference.options.variantId` o, solo si el catálogo devuelve una única variante para ese producto, por esa variante única.
+- Pedidos: la línea se identifica por `lineItems._id`; el producto por `catalogReference.catalogItemId`; la app por el App ID oficial Stores; la variante por `catalogReference.options.variantId` o, solo si el catálogo devuelve una única variante para ese producto, por esa variante única. Solo se contabilizan líneas físicas; artículos digitales/servicios se ignoran y las líneas físicas sin `physicalProperties` fallan cerradas.
 - Reembolsos: solo registra devolución cuando el evento confirma `sideEffects.restock.lineItems`; token por refund y line item.
 - Movimientos idempotentes por pedido/reembolso y línea; ledger append-only con estado `stockApplied`; recuperación comprobable y cola `ControlOperativo`.
 - Bloqueo por variante con ID de registro CMS y expiración de 120 segundos para evitar actualizaciones simultáneas perdidas.
