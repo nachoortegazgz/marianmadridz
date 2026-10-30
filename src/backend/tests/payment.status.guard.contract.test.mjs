@@ -36,7 +36,7 @@ test('PAY-GUARD-01 rejects noncanonical booking states before ledger registratio
 
 test('PAY-GUARD-02 payment confirmation preserves booking approval state and uses the catalog GUID', () => {
   const writerStart = source.indexOf('async function _setCitasPaymentState(');
-  const writerEnd = source.indexOf('// =============================================================================\n// BLOQUE 5', writerStart);
+  const writerEnd = source.indexOf('async function _assertBookingOwner(', writerStart);
   assert.ok(writerStart >= 0 && writerEnd > writerStart, 'payment state writer must exist');
   const writer = source.slice(writerStart, writerEnd);
   assert.doesNotMatch(
@@ -52,6 +52,6 @@ test('PAY-GUARD-02 payment confirmation preserves booking approval state and use
   assert.match(lineItemsResolver, /WIX_CATALOG_APP_IDS\.BOOKINGS/);
   assert.equal(lineItemsResolver.includes('const bookingsAppId = APP_IDS.BOOKINGS;'), false);
 
-  const webhookOrderResolver = eventsSource.match(/const bookingsAppId = WIX_CATALOG_APP_IDS\.BOOKINGS;/g) || [];
+  const webhookOrderResolver = eventsSource.split('\n').filter(line => line.trim() === 'const bookingsAppId = WIX_CATALOG_APP_IDS.BOOKINGS;');
   assert.equal(webhookOrderResolver.length, 2, 'paid and canceled order webhooks must use the Bookings catalog GUID');
 });
