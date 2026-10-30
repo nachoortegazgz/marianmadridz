@@ -34,8 +34,8 @@ Estas pruebas son offline; no certifican el comportamiento del sitio Wix publica
 | eCommerce | `@wix/ecom` se usa donde corresponde en checkout/pedidos. | Mantener separado de Bookings y del catálogo de tienda. |
 | Wix Stores | La configuración del sitio corresponde a Stores Catálogo V1. | **No migrar automáticamente a V3**. Requiere plan independiente y pruebas de productos, variantes, stock y checkout. |
 | Wix Invoices | El sitio tiene Invoices V1. | **No migrar automáticamente a V2**. Requiere estrategia y validación fiscal independiente. |
-| Frontend Velo | Persisten APIs nativas como `wix-location-frontend`, `wix-window-frontend`, `wix-members-frontend` y `wix-pricing-plans-frontend` en páginas que las consumen. | Mantener cuando sean las APIs adecuadas para Wix Editor; no son deuda por sí solas. |
-| Web methods | Los módulos backend usan `wix-web-module`. | Mantener para el entorno Wix Editor/Velo. |
+| Frontend APIs | Las páginas usan `@wix/site-location`, `@wix/site-window` y `@wix/site-pricing-plans` donde existe equivalencia estable. `wix-members-frontend` permanece en la página de administración. | Migrar location/window/pricing plans; conservar Members frontend porque `@wix/site-members` está en Developer Preview y no es apto para producción. |
+| Web methods | Los módulos backend usan `wix-web-module`. | Mantener: la Biblia SSOT v10.0, §19.3, lo declara API permanente de Velo para este Wix Editor. No sustituir sin ADR que revoque esa decisión. |
 | Integraciones externas | Resend, OpenAI y el servicio fiscal se llaman desde backend mediante HTTP. | No son APIs Wix; mantenerlas tras Secrets, validación, límites y control de errores. |
 
 ## 3. Correcciones adicionales de integridad
@@ -84,7 +84,10 @@ La revisión se ha realizado sobre el repositorio canónico `nachoortegazgz/mari
 - PR #10 integrado en `main`: retirada de `@wix/auto_sdk_bookings_extended-bookings`, sin consumidores; la implementación activa de reservas utiliza `@wix/bookings`.
 - Se ha confirmado que los adaptadores CMS y Secrets usan `@wix/data` y `@wix/secrets` con elevación centralizada en backend.
 - Bookings, Members, CRM y eCommerce ya usan los SDK oficiales correspondientes donde existe uso funcional.
-- Se han retirado de las dependencias directas `@wix/site-location`, `@wix/site-storage`, `@wix/site-window` y `@wix/user-management`: no hay imports en los módulos productivos, páginas, código público ni suites de pruebas revisadas. No se ha editado `wix.lock`, que es generado automáticamente.
+- Se han retirado de las dependencias directas `@wix/site-storage` y `@wix/user-management`: no hay imports en los módulos productivos, páginas, código público ni suites de pruebas revisadas.
+- Se han mantenido/restaurado `@wix/site-location` y `@wix/site-window` porque sustituyen APIs frontend que sí consumía el sitio. Se ha añadido `@wix/site-pricing-plans` para sustituir `wix-pricing-plans-frontend`.
+- `wix-members-frontend` se conserva: el SDK frontend `@wix/site-members` está en Developer Preview y Wix advierte que no está destinado a producción.
+- `wix-web-module` se conserva por decisión explícita de la Biblia SSOT v10.0, §19.3 (API permanente en Velo). No se ha editado `wix.lock`, generado automáticamente.
 
 ### Matriz final de decisión
 
@@ -98,8 +101,8 @@ La revisión se ha realizado sobre el repositorio canónico `nachoortegazgz/mari
 | eCommerce | SDK `@wix/ecom` activo para checkout/pedidos | Mantener separado de Bookings y Stores. |
 | Stores | Catálogo V1 confirmado en la documentación del sitio | No convertir a Catalog V3 en esta tanda; requiere migración funcional independiente. |
 | Invoices | Invoices V1 confirmado en la documentación del sitio | No convertir a V2 sin plan fiscal y pruebas específicas. |
-| Frontend Wix Editor | APIs `wix-*-frontend` y `wix-pricing-plans-frontend` | Mantener; no son equivalentes a SDK backend ni deuda por sí mismas. |
-| Web methods y hooks | `wix-web-module` y hooks Velo | Mantener como integración nativa del runtime Wix Editor. |
+| Frontend Wix Editor | `@wix/site-location`, `@wix/site-window`, `@wix/site-pricing-plans`; `wix-members-frontend` como excepción. | Migración aplicada en páginas de calendario, servicio, confirmación, administración y staff. Mantener Members frontend por Developer Preview del SDK equivalente. |
+| Web methods y hooks | `wix-web-module` y hooks Velo | Mantener conforme a SSOT §19.3; los hooks de integridad siguen en Velo. |
 | Integraciones externas | HTTP desde backend (Resend, OpenAI y servicio fiscal) | Mantener; no son APIs Wix y no se sustituyen por SDK Wix. |
 
 ### Validación y límites
@@ -109,4 +112,4 @@ La revisión se ha realizado sobre el repositorio canónico `nachoortegazgz/mari
 - Las pruebas offline no certifican disponibilidad, permisos, pagos ni reservas reales en el sitio publicado.
 - No se ha sincronizado ni publicado código en Wix durante esta tanda.
 
-**Conclusión:** la migración aplicable a los módulos de código identificados está completada. Stores Catálogo V1 e Invoices V1 quedan expresamente fuera de esta migración por incompatibilidad de alcance/versión y riesgo de regresión. El cierre de producción sigue condicionado a QA real en Preview y al procedimiento de publicación Wix documentado.
+**Conclusión:** la migración a SDK de las APIs estables con equivalencia funcional identificadas en el código está aplicada en esta rama. Excepciones deliberadas: `wix-members-frontend` (el SDK equivalente está en Developer Preview) y `wix-web-module` (retenido por SSOT §19.3). Stores Catálogo V1 e Invoices V1 quedan fuera de esta migración y requieren proyectos independientes. El cierre de producción sigue condicionado a CI verde, QA real en Preview y validación del sitio Wix; no se ha publicado.
