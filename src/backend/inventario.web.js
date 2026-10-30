@@ -643,7 +643,9 @@ export const replayInventoryReconciliation = webMethod(Permissions.Admin, async 
     const failed = results.filter((item) => item.status !== "SUCCESS");
     const unresolvedErrors = Array.isArray(payload.unresolvedErrors)
       ? payload.unresolvedErrors
-      : [];
+      : Array.isArray(payload.errors)
+        ? payload.errors
+        : [];
     const remainsOpen = failed.length > 0 || unresolvedErrors.length > 0;
     const attempts = Number(queueItem.attempts || 0) + 1;
     const nextPayload = {
