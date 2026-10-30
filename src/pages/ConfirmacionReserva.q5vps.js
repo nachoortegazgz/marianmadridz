@@ -5,11 +5,11 @@ VERSION: v1.1-PRIVATE-STAFF
 BASE: v0.9-BROKEN + correcciones auditoría P0 (CONF-01..CONF-05)
 RESPONSIBILITY: Mostrar confirmación de reserva tras éxito presencial o online.
 STANDARDS: G10 ASCII Strict. Uso estricto de APIs Velo actuales.
-CONTRATO: Recibe datos via lightBox.getContext(): { booking, bookingId, service, traceId }.
+CONTRATO: Recibe datos via lightbox.getContext(): { booking, bookingId, service, traceId }.
 =============================================================================
 */
-import wixWindow from 'wix-window-frontend';
-import wixLocation from 'wix-location-frontend';
+import { lightbox } from '@wix/site-window';
+import { location } from '@wix/site-location';
 import { getConfirmedBookingForDisplay } from 'backend/reservas.web.js';
 import { _safeTrim, _toDateSafe, getMadridLocalStringNoZ } from 'public/mmUtils';
 
@@ -40,12 +40,12 @@ $w.onReady(async function () {
                 htmlWidget.postMessage({ version: "1.0", type: "MM_CONFIRMATION_CONTEXT", payload: confirmationWidgetPayload });
             } else if (message && message.type === "MM_NAV" && message.payload &&
                 ["/", "/mis-reservas"].includes(message.payload.url)) {
-                wixLocation.to(message.payload.url);
+                location.to(message.payload.url);
             }
         });
     }
     // 1. Obtener contexto del Lightbox
-    const context = wixWindow.lightBox.getContext();
+    const context = await lightbox.getContext();
     
     if (!context || !context.bookingId) {
         showError("No se pudo cargar la información de la reserva.");
@@ -207,9 +207,9 @@ function showError(message) {
 // =============================================================================
 
 export function homeButton_click(event) {
-    wixLocation.to("/");
+    location.to("/");
 }
 
 export function calendarButton_click(event) {
-    wixLocation.to("/reserva-online");
+    location.to("/reserva-online");
 }
