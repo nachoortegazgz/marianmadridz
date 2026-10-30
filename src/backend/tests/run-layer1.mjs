@@ -11,6 +11,7 @@ const loaderUrl = pathToFileURL(join(here, 'loader.mjs')).href;
 const suites = [
   'citasManager.rate-limit-contract.test.mjs',
   'security.rateLimiter.test.mjs',
+  'staff.identity.contract.test.mjs',
   'booking.availability.saga.test.mjs',
   'booking.core.concurrency.test.mjs',
   'controlOperativo.hooks.test.mjs',
