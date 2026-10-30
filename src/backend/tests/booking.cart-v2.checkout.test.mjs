@@ -99,7 +99,7 @@ test('CARTV2-03 rejects an invalid booking ID before creating a cart', async () 
   setCartV2Mock({
     createCart: async () => {
       createCartCalls += 1;
-      return { cart: { _id: CART_ID } };
+      return { _id: CART_ID };
     },
   });
 
@@ -112,7 +112,7 @@ test('CARTV2-03 rejects an invalid booking ID before creating a cart', async () 
 
 test('CARTV2-04 rejects incomplete or mismatched calculation responses', async () => {
   setCartV2Mock({
-    createCart: async () => ({ cart: { _id: CART_ID } }),
+    createCart: async () => ({ _id: CART_ID }),
     calculateCart: async () => ({
       cart: { _id: '33333333-3333-4333-8333-333333333333', businessInfo: { currencyCode: 'EUR' } },
       summary: {
@@ -131,7 +131,7 @@ test('CARTV2-04 rejects incomplete or mismatched calculation responses', async (
 
 test('CARTV2-05 accepts a valid calculation when optional violations are omitted', async () => {
   setCartV2Mock({
-    createCart: async () => ({ cart: { _id: CART_ID } }),
+    createCart: async () => ({ _id: CART_ID }),
     calculateCart: async () => ({
       cart: {
         _id: CART_ID,
