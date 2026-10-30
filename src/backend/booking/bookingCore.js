@@ -242,9 +242,14 @@ function _deriveCmsBookingStatus(cmsPaymentStatus) {
 // BLOQUE 3 - ELEVATED PROXIES
 // =============================================================================
 export const cancelBookingElevated = auth.elevate(bookings.cancelBooking);
-export const createCartV2Elevated = auth.elevate(cartV2.createCart);
-export const calculateCartV2Elevated = auth.elevate(cartV2.calculateCart);
-export const getCartV2CheckoutUrlElevated = auth.elevate(cartV2.getCheckoutUrl);
+
+// Keep Cart V2 calls on the active visitor/member identity. Wix's appointment
+// flow requires the same customer identity for cart creation, calculation,
+// and checkout URL retrieval; these customer-scoped methods do not need
+// administrative elevation.
+export const createCartV2 = cartV2.createCart;
+export const calculateCartV2 = cartV2.calculateCart;
+export const getCartV2CheckoutUrl = cartV2.getCheckoutUrl;
 
 const _confirmOrDeclineElevatedRaw = auth.elevate(
     bookings.confirmOrDeclineBooking
@@ -269,7 +274,7 @@ export async function createBookingCartCheckout(bookingId, traceId) {
 
     const createdCart = await withTimeout(
         function () {
-            return createCartV2Elevated({
+            return createCartV2({
                 cart: { source: { channelType: "WEB" } },
                 catalogItems: [
                     {
@@ -297,7 +302,7 @@ export async function createBookingCartCheckout(bookingId, traceId) {
 
     const calculation = await withTimeout(
         function () {
-            return calculateCartV2Elevated(cartId, { refreshCart: true });
+            return calculateCartV2(cartId, { refreshCart: true });
         },
         checkoutTimeoutMs,
         "calculateCartV2"
@@ -345,7 +350,7 @@ export async function createBookingCartCheckout(bookingId, traceId) {
         function () {
             return withTimeout(
                 function () {
-                    return getCartV2CheckoutUrlElevated(cartId);
+                    return getCartV2CheckoutUrl(cartId);
                 },
                 apiTimeoutMs,
                 "getCartV2CheckoutUrl"
