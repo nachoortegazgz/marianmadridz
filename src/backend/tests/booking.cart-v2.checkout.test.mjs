@@ -150,3 +150,76 @@ test('CARTV2-05 accepts a valid calculation when optional violations are omitted
   assert.equal(result.cartId, CART_ID);
   assert.equal(result.checkoutUrl, 'https://checkout.wix.com/cart/abc123');
 });
+
+test('CARTV2-06 rejects malformed violations instead of treating them as absent', async () => {
+  setCartV2Mock({
+    createCart: async () => ({ _id: CART_ID }),
+    calculateCart: async () => ({
+      cart: { _id: CART_ID, businessInfo: { currencyCode: 'EUR' } },
+      summary: {
+        violations: { code: 'INVALID_SHAPE' },
+        priceSummary: { total: { amount: '48.50' } },
+      },
+    }),
+    getCheckoutUrl: async () => ({ checkoutUrl: 'https://checkout.wix.com/cart/abc123' }),
+  });
+
+  await assert.rejects(
+    core.createBookingCartCheckout(BOOKING_ID, 'trace-cart-6'),
+    (error) => error && error.code === 'CHECKOUT_FAILED'
+  );
+});
+
+test('CARTV2-07 rejects invalid totals and currency before checkout URL retrieval', async (t) => {
+  const invalidCases = [
+    { total: '-1.00', currency: 'EUR' },
+    { total: 'not-a-number', currency: 'EUR' },
+    { total: '48.50', currency: 'EURO' },
+  ];
+
+  for (const [index, item] of invalidCases.entries()) {
+    await t.test('invalid case ' + (index + 1), async () => {
+      let checkoutUrlCalls = 0;
+      setCartV2Mock({
+        createCart: async () => ({ _id: CART_ID }),
+        calculateCart: async () => ({
+          cart: { _id: CART_ID, businessInfo: { currencyCode: item.currency } },
+          summary: {
+            violations: [],
+            priceSummary: { total: { amount: item.total } },
+          },
+        }),
+        getCheckoutUrl: async () => {
+          checkoutUrlCalls += 1;
+          return { checkoutUrl: 'https://checkout.wix.com/cart/abc123' };
+        },
+      });
+
+      await assert.rejects(
+        core.createBookingCartCheckout(BOOKING_ID, 'trace-cart-7-' + index),
+        (error) => error && error.code === 'CHECKOUT_FAILED'
+      );
+      assert.equal(checkoutUrlCalls, 0);
+    });
+  }
+});
+
+test('CARTV2-08 rejects a non-HTTPS checkout URL', async () => {
+  setCartV2Mock({
+    createCart: async () => ({ _id: CART_ID }),
+    calculateCart: async () => ({
+      cart: { _id: CART_ID, businessInfo: { currencyCode: 'EUR' } },
+      summary: {
+        violations: [],
+        priceSummary: { total: { amount: '48.50' } },
+      },
+    }),
+    getCheckoutUrl: async () => ({ checkoutUrl: 'http://checkout.wix.com/cart/abc123' }),
+  });
+
+  await assert.rejects(
+    core.createBookingCartCheckout(BOOKING_ID, 'trace-cart-8'),
+    (error) => error && error.code === 'CHECKOUT_FAILED'
+  );
+});
+
