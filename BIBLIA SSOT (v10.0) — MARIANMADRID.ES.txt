@@ -597,8 +597,7 @@ Etiqueta de colección: CAJA_ACTUAL. Revisión: 45. Campo de visualización: sin
 | operationDate | operacionFecha | DATE | No | — | 2026-10-25 | Campo de operation date; confirmar significado exacto con consumidores del backend antes de modificarlo. | Personalizado Marian Madrid | — |
 | cashRegisterStatus | cajonRegistroEstado | TEXT | No | No declaradas en CMS; validar enum backend si aplica | <valor canónico backend> | Campo de cash register status; confirmar significado exacto con consumidores del backend antes de modificarlo. | Personalizado Marian Madrid | — |
 | singletonKey | singletonClave | TEXT | No | No declaradas en CMS; validar enum backend si aplica | <valor de ejemplo> | Campo de singleton key; confirmar significado exacto con consumidores del backend antes de modificarlo. | Personalizado Marian Madrid | — |
-| isOpen | estaAbierta | BOOLEAN | No | true / false | true | Campo de is open; confirmar significado exacto con consumidores del backend antes de modificarlo. | Personalizado Marian Madrid | — |
-| id | idCaja | TEXT | No | No declaradas en CMS; validar enum backend si aplica | <valor de ejemplo> | Campo de id; confirmar significado exacto con consumidores del backend antes de modificarlo. | Personalizado Marian Madrid | — |
+| isOpen | estaAbierta | BOOLEAN | No | true / false | true | Campo de is open; confirmar significado exacto con consumidores del backend antes de modificarlo. | Personalizado Marian Madrid | — || id | idCaja | TEXT | No | No declaradas en CMS; validar enum backend si aplica | <valor de ejemplo> | Campo de id; confirmar significado exacto con consumidores del backend antes de modificarlo. | Personalizado Marian Madrid | — |
 | currentSequence | actualSecuencia | NUMBER | No | — | 1 | Campo de current sequence; confirmar significado exacto con consumidores del backend antes de modificarlo. | Personalizado Marian Madrid | — |
 | fiscalPeriod | fiscalPeriodo | TEXT | No | No declaradas en CMS; validar enum backend si aplica | <valor de ejemplo> | Periodo fiscal, normalmente YYYY-MM. | Concepto fiscal/AEAT; key propio | — |
 | _id | ID | TEXT | No | No declaradas en CMS; validar enum backend si aplica | cms_demo_001 | ID único del registro CMS; no equivale a un ID externo. | Wix nativo | — |
@@ -1198,7 +1197,6 @@ export const PAYMENT_STATUS_WIX = Object.freeze({
 
 #### **8.2 Enums CMS (Persistidos en `CitasF2`)**
 Valores normalizados para el seguimiento interno de la cita en el CMS propio:
-
 ```javascript
 // CitasF2.bookingStatus (Persistido en CMS)
 export const BOOKING_STATUS_CMS = Object.freeze({
@@ -1798,10 +1796,9 @@ Existen 4 aspectos del modelo de catálogo con inconsistencias históricas que r
 2. **Campo `mainMedia`:** Existen registros almacenados como objeto `Image` y otros como `string` (URL). *Solución:* Normalizar a `string` (URL de texto) en todas las filas.
 3. **Campos `category` vs `categoryId`:** `category` almacena texto libre y `categoryId` almacena el GUID oficial de Wix Bookings. Se reafirma que **no son equiparables**.
 4. **Campo `description`:** Contenido en revisión para asegurar que la información comercial cumple la normativa de consumo sin promesas no verificadas.
-
 #### **17.3 Riesgos de Integración y Entorno**
 * **`MapaStaff.thirdPartyId` Vacío:** Permanece intencionadamente vacío hasta que se vinculen las fichas fiscales en `DatosFiscales`. Prohibido rellenar por inferencia.
-* **Exigencia de GUIDs en Bookings V2:** La API Bookings Writer V2 exige pasar `resource.id` y `scheduleId` explícitos. El backend debe consultar siempre la disponibilidad antes de invocar la reserva.
+* **Exigencia de GUIDs en Bookings V2:** En el SDK JavaScript `@wix/bookings`, los objetos Bookings V2 usan `resource._id` y `location._id`; la forma REST usa `resource.id` y `location.id`. El filtro de profesional conserva `resourceTypes[].resourceIds`. El backend debe pasar el `scheduleId` explícito y consultar disponibilidad antes de reservar. El backend debe consultar siempre la disponibilidad antes de invocar la reserva.
 * **Horarios de Trabajo (*Working Hours*):** El personal debe tener configurados sus horarios de trabajo en Wix Bookings para trimestres futuros; de lo contrario, el sistema retorna un falso estado de "Sin disponibilidad".
 * **Enrutamiento de Dominio:** Garantizar que el dominio canónico `marianmadrid.es` resuelve correctamente hacia los servidores de Wix sin perder cabeceras HTTPS.
 
@@ -2056,7 +2053,7 @@ El modelo del catálogo propio de servicios contiene 4 aspectos que requieren re
 
 #### **20.3 Riesgos de Integración y Entorno**
 * **`MapaStaff.thirdPartyId` Vacío:** Permanece intencionadamente vacío hasta que se vinculen formalmente las fichas fiscales en `DatosFiscales`. Queda prohibido rellenar por inferencia.
-* **Exigencia de GUIDs en Bookings V2:** La API Bookings Writer V2 exige incluir `resource.id` y `scheduleId` de forma explícita. El backend debe consultar siempre la disponibilidad antes de invocar la reserva.
+* **Exigencia de GUIDs en Bookings V2:** En el SDK JavaScript `@wix/bookings`, los objetos Bookings V2 usan `resource._id` y `location._id`; la forma REST usa `resource.id` y `location.id`. El filtro de profesional conserva `resourceTypes[].resourceIds`. El backend debe pasar el `scheduleId` explícito y consultar disponibilidad antes de reservar. El backend debe consultar siempre la disponibilidad antes de invocar la reserva.
 * **Horarios de Trabajo (*Working Hours*):** El personal debe tener configurados sus horarios de trabajo en Wix Bookings para trimestres futuros; de lo contrario, la API devuelve un falso estado de "Sin disponibilidad".
 * **Enrutamiento de Dominio:** Garantizar que el dominio canónico `marianmadrid.es` resuelve correctamente hacia los servidores de Wix.
 
