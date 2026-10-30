@@ -999,6 +999,23 @@ export async function wixEcom_onOrderPaymentStatusUpdated(rawBody) {
         ).catch(() => ({ items: [] }));
 
         if (existingLedgerRes?.items?.length > 0) {
+            const inventoryRetry = await recordOnlineInventoryOrderInternal(order, traceId);
+            if (inventoryRetry?.status === "PENDING_RECONCILIATION") {
+                await logAuditEventWithTimeout(
+                    "INVENTORY_ORDER_RECONCILIATION_QUEUED",
+                    "ERROR",
+                    `Inventario pendiente de conciliacion para pedido ${orderId}`,
+                    {
+                        orderId,
+                        queueId: inventoryRetry.queueId || null,
+                        results: inventoryRetry.data || [],
+                        traceId,
+                    },
+                    traceId,
+                    orderId,
+                    "backend/events.js"
+                );
+            }
             if (bookingIds.length) {
                 await _executeWithRetry(async () => {
                     await _markCitasPaidByBookingIds(
@@ -1132,24 +1149,37 @@ export async function wixEcom_onOrderPaymentStatusUpdated(rawBody) {
 
         if (ledgerOk) {
             try {
-                await recordOnlineInventoryOrderInternal(order, traceId);
+                const inventoryResult = await recordOnlineInventoryOrderInternal(order, traceId);
+                if (inventoryResult?.status === "PENDING_RECONCILIATION") {
+                    await logAuditEventWithTimeout(
+                        "INVENTORY_ORDER_RECONCILIATION_QUEUED",
+                        "ERROR",
+                        `Inventario pendiente de conciliacion para pedido ${orderId}`,
+                        {
+                            orderId,
+                            queueId: inventoryResult.queueId || null,
+                            results: inventoryResult.data || [],
+                            traceId,
+                        },
+                        traceId,
+                        orderId,
+                        "backend/events.js"
+                    );
+                }
             } catch (inventoryError) {
                 log.error("Online inventory mirror failed", {
                     orderId,
                     traceId,
-                    error:
-                        inventoryError?.message || String(inventoryError),
+                    error: inventoryError?.message || String(inventoryError),
                 });
                 await logAuditEventWithTimeout(
                     "INVENTORY_MIRROR_FAILED",
                     "ERROR",
-                    `Inventario no descontado para orden ${orderId} tras ledger OK`,
+                    `Inventario no sincronizado para orden ${orderId} tras ledger OK`,
                     {
                         orderId,
                         traceId,
-                        error:
-                            inventoryError?.message ||
-                            String(inventoryError),
+                        error: inventoryError?.message || String(inventoryError),
                     },
                     traceId,
                     orderId,
@@ -1354,6 +1384,23 @@ export async function wixEcom_onOrderRefunded(rawBody) {
                 refundRestockInfo,
                 traceId
             );
+            if (inventoryRefund?.status === "PENDING_RECONCILIATION") {
+                await logAuditEventWithTimeout(
+                    "REFUND_INVENTORY_RECONCILIATION_QUEUED",
+                    "ERROR",
+                    `Inventario pendiente de conciliacion para reembolso ${refundId}`,
+                    {
+                        orderId,
+                        refundId,
+                        queueId: inventoryRefund.queueId || null,
+                        results: inventoryRefund.data || [],
+                        traceId,
+                    },
+                    traceId,
+                    orderId,
+                    "backend/events.js"
+                );
+            }
             if (
                 inventoryRefund?.status === "SKIPPED" &&
                 inventoryRefund?.reason !== "NO_CONFIRMED_RESTOCK"
