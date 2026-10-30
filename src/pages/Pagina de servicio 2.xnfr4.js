@@ -235,12 +235,12 @@ $w.onReady(async () => {
                         }
                         return;
                     }
-                    await location.to(buildBookingUrl(resolvedService, payload));
+                    location.to(buildBookingUrl(resolvedService, payload));
                     return;
                 }
                 if (type === MESSAGE_TYPES.NAV) {
                     const target = text(payload.target).toUpperCase();
-                    if (!target || target === "SERVICIOS") await location.to(getServicesUrl());
+                    if (!target || target === "SERVICIOS") location.to(getServicesUrl());
                 }
             },
             onError: (error, detail) => bridgeError(error && error.code, error && error.message, traceId, detail)
