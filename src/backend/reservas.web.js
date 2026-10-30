@@ -694,6 +694,8 @@ export function _toPublicService(service) {
         linkedPhases: _looksLikeGuid(service.linkedPhases)
             ? _safeTrim(service.linkedPhases)
             : null,
+        onlinePayment: service.onlinePayment !== false,
+        inPersonPayment: service.inPersonPayment !== false,
     };
 }
 
