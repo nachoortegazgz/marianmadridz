@@ -179,16 +179,19 @@ function filterAllowedAddonIds(ids, service) {
 }
 
 function resolveChannelType(bookingData) {
-    const raw = _safeTrim(
-        (bookingData && bookingData.channelType) ||
-        (bookingData && bookingData.paymentMethod) ||
-        ""
-    ).toUpperCase();
+    const raw = _safeTrim(bookingData && bookingData.channelType).toUpperCase();
     if (raw === CHANNEL_TYPE.ONLINE || raw === CHANNEL_TYPE.PRESENCIAL) return raw;
     if (raw) {
-        console.warn("[calendario-2] channelType/paymentMethod no reconocido", { raw });
+        console.warn("[calendario-2] channelType no reconocido", { raw });
     }
     return null;
+}
+
+function isPaymentChannelAllowed(channelType, service) {
+    if (!service || typeof service !== "object") return false;
+    if (channelType === CHANNEL_TYPE.ONLINE) return service.onlinePayment !== false;
+    if (channelType === CHANNEL_TYPE.PRESENCIAL) return service.inPersonPayment !== false;
+    return false;
 }
 
 function normalizeSlot(slot) {
@@ -329,6 +332,10 @@ async function handleBooking(message, reply, traceId) {
 
     if (!requestPayload.channelType) {
         reply(MESSAGE_TYPES.BOOK, resultError("INVALID_CHANNEL_TYPE"));
+        return;
+    }
+    if (!isPaymentChannelAllowed(requestPayload.channelType, currentService)) {
+        reply(MESSAGE_TYPES.BOOK, resultError("PAYMENT_CHANNEL_NOT_ALLOWED"));
         return;
     }
     if (!requestPayload.serviceId && !requestPayload.slug) {
