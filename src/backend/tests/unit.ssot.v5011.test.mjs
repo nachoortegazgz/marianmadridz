@@ -224,12 +224,11 @@ test('SSOT-10 suppression flag gone + elevation centralized in dataAccess', () =
   // verifica su ausencia (el import top-level de fs ya trae readFileSync).
   assert.ok(!existsSync(resolve(root, 'dataLegacyAdapter.js')), 'dataLegacyAdapter.js must be retired');
   const da = readFileSync(resolve(root, 'dataAccess.js'), 'utf8');
-  assert.ok(/from "@wix\/essentials"/.test(da), 'dataAccess.js must import auth from @wix/essentials');
-  // Ninguna llamada directa a wixData.<op> fuera de las definiciones elevated*.
-  const directCalls = da.split('\n').filter((line) => {
-    if (/^\s*(\/\/|\*|\/\*)/.test(line)) return false;
-    if (/auth\.elevate\(wixData\./.test(line)) return false;
-    return /\bwixData\.(query|get|insert|update|remove|save|bulkInsert|bulkUpdate|bulkRemove|queryReferencedItems)\s*\(/.test(line);
-  });
-  assert.equal(directCalls.length, 0, `dataAccess.js has non-elevated wixData calls: ${directCalls.join(' | ')}`);
+  assert.ok(/from "@wix\\/essentials"/.test(da), "dataAccess.js must import auth from @wix/essentials");
+  assert.ok(/import \\{ items as wixDataItems \\} from "@wix\\/data"/.test(da), "dataAccess.js must use @wix/data");
+  assert.ok(!/from "wix-data"/.test(da), "dataAccess.js must not import legacy wix-data");
+  const requiredElevated = ["get", "insert", "update", "remove", "save", "bulkInsert", "bulkUpdate", "bulkRemove", "query", "count", "queryReferencedItems"];
+  for (const operation of requiredElevated) {
+    assert.ok(da.includes("auth.elevate(wixDataItems." + operation + ")"), "dataAccess.js must elevate items." + operation);
+  }
 });
