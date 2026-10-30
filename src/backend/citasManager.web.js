@@ -16,7 +16,7 @@ import { currentMember } from "@wix/members";
 import { queryFirstItem, queryItems, wql, CONSISTENCY, insertItem as dalInsert } from "backend/dataAccess";
 import {
     BUSINESS_COLLECTIONS, OPERATIONAL_COLLECTIONS, CONTROL_TYPE, SDK_CONFIG,
-    APP_IDS, BOOKING_STATUS, CITAS_BOOKING_STATUS, PAYMENT_STATUS, PAYMENT_METHOD, CHANNEL_TYPE,
+    WIX_CATALOG_APP_IDS, BOOKING_STATUS, CITAS_BOOKING_STATUS, PAYMENT_STATUS, PAYMENT_METHOD, CHANNEL_TYPE,
     MOVEMENT_TYPE, BOOKING_TYPE, BOOKING_FIELDS, ROL_WEBSITE
 } from "backend/internalConfig";
 import {
@@ -180,7 +180,7 @@ return ["PAID", "FULLY_PAID", "PAID_FULL"].includes(status);
 
 function _getOrderBookingLineItems(order) {
 const lineItems = Array.isArray(order?.lineItems) ? order.lineItems : [];
-const bookingsAppId = APP_IDS.BOOKINGS;
+const bookingsAppId = WIX_CATALOG_APP_IDS.BOOKINGS;
 return lineItems.filter(
 (item) => item?.catalogReference?.appId === bookingsAppId
 );
@@ -192,27 +192,6 @@ const amount = Number(item?.price?.amount ?? item?.price ?? 0) || 0;
 const quantity = Number(item?.quantity) || 1;
 return sum + amount * quantity;
 }, 0);
-}
-
-function _resolveBookingStatusAfterPayment(cita, traceId) {
-const current = _safeTrim(
-cita?.[FIELD_STATUS] || cita?.bookingStatus || ""
-).toUpperCase();
-if (BLOCKED_PAYMENT_STATES.has(current)) {
-throw createBookingError(
-ERROR_CODES.INVALID_PAYLOAD,
-"Booking cannot be paid in its current state.",
-{ traceId, bookingStatus: current }
-);
-}
-if (current && !ALLOWED_PAYMENT_CONFIRMATION_STATES.has(current)) {
-throw createBookingError(
-ERROR_CODES.INVALID_PAYLOAD,
-"Booking has an invalid payment transition.",
-{ traceId, bookingStatus: current }
-);
-}
-return BOOKING_STATUS.CONFIRMED;
 }
 
 /* CM5-03: canal online determinado por meta.channelType o meta.checkoutUrl.
@@ -871,13 +850,9 @@ await _updateCitaSafe(
 bookingId,
 (currentCita) => {
 const meta = _getCitaMeta(currentCita);
-const nextBookingStatus = _resolveBookingStatusAfterPayment(
-currentCita,
-traceId
-);
 return {
 ...currentCita,
-[FIELD_STATUS]: nextBookingStatus,
+// Payment confirmation never changes the native booking approval state.
 [FIELD_PAYMENT_STATUS]: paymentState,
 [FIELD_CASH_MOVEMENT_ID]: cashMovementId || null,
 [FIELD_TRACE_ID]: traceId,
