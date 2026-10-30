@@ -1598,7 +1598,7 @@ export async function executeBookingSaga(unsafePayload) {
 
         // STEP 3
         saga.addStep(
-            isOnline ? "CreateCheckout" : "ConfirmPresencial",
+            isOnline ? "CreateCartV2Checkout" : "ConfirmPresencial",
             async function () {
                 if (heartbeatMonitor) heartbeatMonitor.assertHealthy();
 
