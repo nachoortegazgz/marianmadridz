@@ -147,8 +147,8 @@ PR: https://github.com/nachoortegazgz/marianmadridz/pull/13
 
 ### Validación
 
-- CI anterior a la serialización por variante: run `41057200082`, tests offline SUCCESS y npm install + ESLint SUCCESS.
-- Último commit con lock por variante: run `41057380889`; tests offline SUCCESS; instalación limpia/lint en ejecución al actualizar este documento.
+- CI run `41057996125`: tests offline SUCCESS; instalación limpia y ESLint SUCCESS; incluye pruebas específicas del adaptador V3.
+- Último commit de código `b3d78e1aff7fb7b57bb82f1c55db56119910ead7`: CI run `41058519263`; tests offline SUCCESS, instalación limpia SUCCESS y ESLint SUCCESS.
 - Los tests offline no verifican scopes ni el SDK dentro del runtime Velo real.
 - El paquete está en `package.json`, pero `wix.lock` todavía no lo refleja. También sigue pendiente la regeneración local del lock de `@wix/site-pricing-plans`. Ejecutar en el clon autenticado, desde la raíz:
   - `wix install @wix/site-pricing-plans`
