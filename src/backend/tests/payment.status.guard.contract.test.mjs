@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const source = readFileSync(join(here, '..', 'citasManager.web.js'), 'utf8').replace(/\r\n/g, '\n');
+const eventsSource = readFileSync(join(here, '..', 'events.js'), 'utf8').replace(/\r\n/g, '\n');
 
 test('PAY-GUARD-01 rejects noncanonical booking states before ledger registration', () => {
   const validateStart = source.indexOf('async function _validatePaymentCitaSet(');
@@ -30,4 +31,27 @@ test('PAY-GUARD-01 rejects noncanonical booking states before ledger registratio
   assert.ok(validationIndex >= 0, 'payment state validation must be called');
   assert.ok(orderIndex > validationIndex, 'state validation must precede paid-order processing');
   assert.ok(ledgerIndex > validationIndex, 'state validation must precede ledger registration');
+});
+
+
+test('PAY-GUARD-02 payment confirmation preserves booking approval state and uses the catalog GUID', () => {
+  const writerStart = source.indexOf('async function _setCitasPaymentState(');
+  const writerEnd = source.indexOf('// =============================================================================\\n// BLOQUE 5', writerStart);
+  assert.ok(writerStart >= 0 && writerEnd > writerStart, 'payment state writer must exist');
+  const writer = source.slice(writerStart, writerEnd);
+  assert.doesNotMatch(
+    writer,
+    /\\[FIELD_STATUS\\]\\s*:/,
+    'payment confirmation must not write bookingStatus',
+  );
+
+  const lineItemsStart = source.indexOf('function _getOrderBookingLineItems(');
+  const lineItemsEnd = source.indexOf('function _getBookingLineItemsTotal(', lineItemsStart);
+  assert.ok(lineItemsStart >= 0 && lineItemsEnd > lineItemsStart, 'order booking item resolver must exist');
+  const lineItemsResolver = source.slice(lineItemsStart, lineItemsEnd);
+  assert.match(lineItemsResolver, /WIX_CATALOG_APP_IDS\\.BOOKINGS/);
+  assert.doesNotMatch(lineItemsResolver, /APP_IDS\\.BOOKINGS/);
+
+  const webhookOrderResolver = eventsSource.match(/const bookingsAppId = WIX_CATALOG_APP_IDS\\.BOOKINGS;/g) || [];
+  assert.equal(webhookOrderResolver.length, 2, 'paid and canceled order webhooks must use the Bookings catalog GUID');
 });
