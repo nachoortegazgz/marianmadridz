@@ -54,4 +54,14 @@ test('PAY-GUARD-02 payment confirmation preserves booking approval state and use
 
   const webhookOrderResolver = eventsSource.split('\n').filter(line => line.trim() === 'const bookingsAppId = WIX_CATALOG_APP_IDS.BOOKINGS;');
   assert.equal(webhookOrderResolver.length, 2, 'paid and canceled order webhooks must use the Bookings catalog GUID');
+
+  const confirmStart = source.indexOf('export const confirmPayment = webMethod(');
+  const confirmEnd = source.indexOf('// =============================================================================\\n// BLOQUE 4 - ORDER VALIDATION', confirmStart);
+  assert.ok(confirmStart >= 0 && confirmEnd > confirmStart, 'staff payment method must exist');
+  const confirmFlow = source.slice(confirmStart, confirmEnd);
+  const pairExpansionIndex = confirmFlow.indexOf('const pairedCitas = await _findCitasByPairToken(pairToken)');
+  const paymentValidationIndex = confirmFlow.indexOf('await _validatePaymentCitaSet(citas, orderId, traceId)');
+  assert.ok(pairExpansionIndex >= 0, 'staff payment reconciliation must expand the dual pair');
+  assert.ok(paymentValidationIndex > pairExpansionIndex, 'paired F2 must be included before payment validation');
+  assert.match(confirmFlow, /const linkedBookingIds = citas\.map/);
 });
