@@ -11,7 +11,7 @@
 1. El contexto vivo de Wix indica que Marian Madrid utiliza actualmente Catalog V1 e Invoices V1.
 2. El anexo aclaratorio de la Biblia SSOT revoca la permanencia indefinida en Catalog V1 y establece Catalog V3 como migración prioritaria. Exige detección de versión, adaptación del inventario al modelo variante-ubicación y soporte de webhooks de ambas versiones.
 3. `src/backend/inventario.web.js` declara conciliación con Stores V1 y procesa líneas de pedido usando `sku || productId`. El movimiento propio se vincula a `wixProductId` y `wixVariantId`.
-4. El esquema documentado de `InventarioStockVenta` contiene `sku`, `wixProductId`, `wixVariantId`, `productId`, `variantId` y `location`; no se ha confirmado un campo canónico `locationId` ni un índice único compuesto variante-ubicación.
+4. El esquema inicial no tenía un campo canónico `locationId` ni un índice único de identidad de variante. En la preparación PR #13 se añadieron `stockKey`, `locationId` y `catalogVersion`, y se verificó el índice único `stockKey_unique` en estado ACTIVE.
 5. Wix documenta que Catalog V1 y V3 no son compatibles entre sí en el mismo sitio. V3 mueve precio y SKU al nivel de variante y gestiona inventario por combinación `variantId + locationId`.
 
 ## Decisión
@@ -37,10 +37,10 @@ Implementar una capa de compatibilidad dual, seleccionada por la Catalog Version
 
 ## Secuencia de implementación
 
-1. Instalar `@wix/stores` mediante Wix CLI for Sites y regenerar `wix.lock`; fijar la versión exacta resuelta por el gestor Wix.
+1. `@wix/stores@1.0.960` ya está declarado en package.json. Ejecutar Wix CLI local para regenerar `wix.lock` y verificar la resolución exacta; no editar el lock manualmente.
 2. Implementar el resolver de versión con `auth.elevate(catalogVersioning.getCatalogVersion)` en backend.
 3. Definir DTO canónico de inventario que incluya `productId`, `variantId`, `locationId`, `sku` y `catalogVersion`, sin aliases ambiguos.
-4. Añadir/validar `locationId` y el índice compuesto de inventario en CMS mediante migración aprobada.
+4. Añadir/validar `stockKey`, `locationId`, `catalogVersion` y el índice único de stock en CMS. La estructura ya está preparada en el sitio; falta poblar y conciliar las filas comerciales reales.
 5. Implementar adaptadores V1/V3 y adaptar pedidos/reembolsos/webhooks con fixtures reales anonimizados.
 6. Suscribir/procesar eventos V1 y V3, con deduplicación común por eventId.
 7. Ejecutar regresión offline y QA real en Preview/entorno de prueba.
@@ -54,3 +54,26 @@ Implementar una capa de compatibilidad dual, seleccionada por la Catalog Version
 - V1 to V3 Migration Guide: https://dev.wix.com/docs/api-reference/business-solutions/stores/catalog-v3/catalog-v1-to-v3-migration-guide
 - Inventory Items V3: https://dev.wix.com/docs/api-reference/business-solutions/stores/catalog-v3/inventory-items-v3/introduction
 - Inventory Management: https://dev.wix.com/docs/api-reference/business-solutions/stores/catalog-v3/about-inventory-management
+
+
+## Estado de ejecución — 2026-10-30
+
+PR #13: https://github.com/nachoortegazgz/marianmadridz/pull/13
+
+Implementado en la rama:
+- `src/backend/storesCatalog.js`: resolución de versión y adaptadores SDK V1/V3.
+- `src/backend/storesCatalogMapper.js`: DTO canónico, identidad por variante y normalización de líneas de pedido.
+- `src/backend/inventario.web.js`: movimientos por variante, stockKey, ubicación V3, idempotencia, bloqueo temporal por registro de stock y cola de conciliación.
+- `src/backend/events.js`: registro de venta/reembolso online y trazabilidad de conciliación.
+- Tests offline específicos del mapper y del adaptador V1.
+
+Estado real:
+- Catálogo del sitio: V1; no se ha cambiado.
+- CMS: `stockKey_unique` está ACTIVE. Solo existe un registro de inventario ficticio de QA, sin vínculo con producto/variante Wix. No se han creado registros comerciales.
+- Wix SDK: `@wix/stores@1.0.960` declarado; falta ejecutar `wix install @wix/stores` en el clon local para generar el lock oficial.
+- CI run `41057200082`: tests offline SUCCESS; instalación limpia y ESLint SUCCESS.
+- CI run `41057380889`: tests offline SUCCESS; instalación limpia y ESLint pendiente al registrar este estado.
+- La compatibilidad V3 requiere verificar scopes y ejecutar QA real; no se certifica con el mock offline.
+- El replay de conciliación es administrativo; aún no existe cron de reintentos automáticos.
+
+La migración del catálogo publicado permanece aplazada. No publicar ni sincronizar esta rama hasta completar el lock Wix y QA real.
