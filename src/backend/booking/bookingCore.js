@@ -687,15 +687,6 @@ export async function _forceStaffInPristineSlot(
 // =============================================================================
 // BLOQUE 8 - CHECKOUT URL HELPER
 // =============================================================================
-export function _extractCheckoutId(checkoutSession) {
-    if (!checkoutSession || typeof checkoutSession !== "object") return null;
-    const nested =
-        checkoutSession.checkout && typeof checkoutSession.checkout === "object"
-            ? checkoutSession.checkout
-            : {};
-    return _safeTrim(nested._id) || _safeTrim(checkoutSession._id) || null;
-}
-
 // =============================================================================
 // BLOQUE 9 - SLOT KEYS
 // =============================================================================
