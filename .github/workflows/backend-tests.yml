@@ -39,7 +39,5 @@ jobs:
           node-version: "24"
       - name: Install declared dependencies without lifecycle scripts
         run: npm install --ignore-scripts --no-audit --no-fund
-      - name: Resolve Wix web methods package version
-        run: node -e "const v = require('./node_modules/@wix/web-methods/package.json').version; console.log('Resolved @wix/web-methods:', v); require('fs').appendFileSync(process.env.GITHUB_STEP_SUMMARY, '@wix/web-methods: ' + v + '\\n')"
       - name: Run ESLint
         run: npm run lint
