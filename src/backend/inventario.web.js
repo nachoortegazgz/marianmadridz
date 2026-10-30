@@ -39,7 +39,7 @@ CORRECTIONS (heredadas v5007.4):
 
 import { webMethod, Permissions } from "wix-web-module";
 import { query as dalQuery, insertItem as insert, updateItem as update } from "backend/dataAccess";
-import { getStoresCatalogVersion, getDefaultStoresLocationId } from "backend/storesCatalog";
+import { getStoresCatalogVersion, getDefaultStoresLocationId, getStoresCatalogVariants } from "backend/storesCatalog";
 import { CATALOG_VERSION, normalizeStoreOrderLineItem, buildInventoryMovementToken } from "backend/storesCatalogMapper";
 
 import {
@@ -562,9 +562,10 @@ export async function recordOnlineInventoryOrderInternal(order, traceId) {
   const locationId = catalogVersion === CATALOG_VERSION.V3
     ? await getDefaultStoresLocationId()
     : null;
+  const catalogVariants = await getStoresCatalogVariants();
 
   const normalized = lineItems.map((item, index) => (
-    normalizeStoreOrderLineItem(item, index, catalogVersion, locationId)
+    normalizeStoreOrderLineItem(item, index, catalogVersion, locationId, catalogVariants)
   ));
   const storeItems = normalized.filter((item) => item.kind === "STORE_ITEM");
   const normalizationErrors = normalized
@@ -678,6 +679,7 @@ export async function recordOnlineInventoryRefundInternal(order, refundObj, rest
   const locationId = catalogVersion === CATALOG_VERSION.V3
     ? await getDefaultStoresLocationId()
     : null;
+  const catalogVariants = await getStoresCatalogVariants();
 
   const workItems = [];
   const normalizationErrors = [];
@@ -701,6 +703,7 @@ export async function recordOnlineInventoryRefundInternal(order, refundObj, rest
       index,
       catalogVersion,
       locationId,
+      catalogVariants,
     );
     if (normalized.kind !== "STORE_ITEM") {
       if (normalized.kind === "ERROR") {
