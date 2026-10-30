@@ -121,7 +121,7 @@ async function listAvailability(payload) {
     slots = slots.filter((s) => {
       const groups = (s.availableResources || []).filter((g) => g.resourceTypeId === STAFF_TYPE);
       if (groups.length === 0) return true;
-      const ids = groups.flatMap((g) => (g.resources || []).map((r) => String(r.id ?? r)));
+      const ids = groups.flatMap((g) => (g.resources || []).map((r) => String(r.id ?? r._id ?? r)));
       return reqRes.some((rid) => ids.includes(String(rid)));
     });
   }
@@ -134,7 +134,7 @@ function availSlot(startLocal, endLocal, staffIds) {
     localEndDate: endLocal,
     bookable: true,
     availableResources: [
-      { resourceTypeId: STAFF_TYPE, resources: staffIds.map((id) => ({ id })) },
+      { resourceTypeId: STAFF_TYPE, resources: staffIds.map((id) => ({ _id: id })) },
     ],
   };
 }
