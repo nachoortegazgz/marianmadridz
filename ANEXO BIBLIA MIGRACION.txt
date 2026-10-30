@@ -72,7 +72,7 @@ No se ha verificado que el commit de esta migración esté publicado en Wix. El 
 
 ## 6. Regla de decisión
 
-Migrar únicamente cuando la API SDK oficial cubra la operación actual y exista equivalencia verificable. No actualizar Stores V1 ni Invoices V1, ni retirar APIs nativas de frontend, sin una migración específica probada. No declarar la fase completa basándose únicamente en instalación de dependencias o tests offline.
+Migrar únicamente cuando la API SDK oficial cubra la operación actual y exista equivalencia verificable. Las APIs frontend estables con equivalencia probada se migran de forma explícita; mantener las APIs nativas restantes cuando no exista sustituto estable o la migración no esté justificada. No actualizar Stores V1 ni Invoices V1 sin una migración específica probada. No declarar la fase de producción completa basándose únicamente en instalación de dependencias o tests offline.
 
 
 ## 7. Cierre de auditoría SDK — 2026-10-30
@@ -108,8 +108,9 @@ La revisión se ha realizado sobre el repositorio canónico `nachoortegazgz/mari
 ### Validación y límites
 
 - PR #10: GitHub Actions completó correctamente la suite offline y la instalación limpia con lint.
-- La retirada adicional de dependencias directas queda pendiente de los gates CI de la rama `migration/sdk-v2-final-cleanup-2026-10-30` antes de integrar.
+- PR #12 fusionado en `main` mediante merge commit `7ca16e9fa97ed3fdf5b48a0bad3c05a983c1087f`.
+- GitHub Actions del commit fusionado: `Backend offline regression suite` = SUCCESS y `Clean dependency install and lint` = SUCCESS (run `41053070852`).
 - Las pruebas offline no certifican disponibilidad, permisos, pagos ni reservas reales en el sitio publicado.
 - No se ha sincronizado ni publicado código en Wix durante esta tanda.
 
-**Conclusión:** la migración a SDK de las APIs estables con equivalencia funcional identificadas en el código está aplicada en esta rama. Excepciones deliberadas: `wix-members-frontend` (el SDK equivalente está en Developer Preview) y `wix-web-module` (retenido por SSOT §19.3). Stores Catálogo V1 e Invoices V1 quedan fuera de esta migración y requieren proyectos independientes. El cierre de producción sigue condicionado a CI verde, QA real en Preview y validación del sitio Wix; no se ha publicado.
+**Conclusión:** la migración a SDK de las APIs estables con equivalencia funcional identificadas en el código está fusionada en `main` y validada por los dos gates de CI. Excepciones deliberadas: `wix-members-frontend` (el SDK equivalente está en Developer Preview) y `wix-web-module` (retenido por SSOT §19.3). Stores Catálogo V1 e Invoices V1 quedan fuera de esta migración y requieren proyectos independientes. El cierre de producción sigue condicionado a CI verde, QA real en Preview y validación del sitio Wix; no se ha publicado.
