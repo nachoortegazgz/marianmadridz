@@ -172,6 +172,27 @@ async function getV3DefaultLocationId() {
     return String(defaults[0].id).trim();
 }
 
+export async function getStoresCatalogVariants() {
+    const version = await getStoresCatalogVersion();
+    if (version === CATALOG_VERSION.NOT_INSTALLED) return [];
+    if (version === CATALOG_VERSION.V1) {
+        const rawVariants = await collectOffsetPages(
+            (query) => elevatedQueryStoreVariants(query),
+            "variants",
+        );
+        return rawVariants.map(normalizeV1StoreVariant);
+    }
+    if (version === CATALOG_VERSION.V3) {
+        const rawVariants = await collectCursorPages(
+            (query) => elevatedQueryVariantsV3(query, { fields: [] }),
+            "variants",
+            V3_ENTITY_PAGE_SIZE,
+        );
+        return rawVariants.map(normalizeV3Variant);
+    }
+    throw new Error("STORES_CATALOG_VERSION_UNSUPPORTED");
+}
+
 export async function getDefaultStoresLocationId() {
     const version = await getStoresCatalogVersion();
     if (version === CATALOG_VERSION.V1) return null;
