@@ -210,3 +210,46 @@ test("EVENT-BOOKING-04 payment webhook updates payment without confirming a pend
   assert.equal(f2.bookingType, "DUAL_F2");
   assert.equal(f2.meta.noFee, true);
 });
+
+
+test("EVENT-BOOKING-05 order cancellation matches the Bookings catalog GUID and cancels both dual rows", async () => {
+  wixDataMock._reset();
+  wixDataMock._store.set("CitasF2", [
+    seedCita({
+      bookingStatus: "PENDING",
+      meta: { pairToken: PAIR_TOKEN, customSaga: true },
+    }),
+    seedCita({
+      _id: "cita-row-f2-cancel",
+      bookingId: F2_BOOKING_ID,
+      bookingType: "DUAL_F2",
+      bookingStatus: "PENDING",
+      meta: {
+        pairToken: PAIR_TOKEN,
+        customSaga: true,
+        linkedF1BookingId: BOOKING_ID,
+        noFee: true,
+      },
+    }),
+  ]);
+
+  const result = await events.wixEcom_onOrderCanceled({
+    order: {
+      _id: "order-canceled-dual-005",
+      lineItems: [{
+        catalogReference: {
+          appId: "13d21c63-b5ec-5912-8397-c3a5ddb27a97",
+          catalogItemId: BOOKING_ID,
+        },
+      }],
+    },
+  });
+
+  assert.equal(result.status, "OK");
+  const rows = wixDataMock._store.get("CitasF2") || [];
+  assert.equal(rows.length, 2);
+  for (const row of rows) {
+    assert.equal(row.bookingStatus, "CANCELED");
+    assert.equal(row.pairToken, PAIR_TOKEN);
+  }
+});
