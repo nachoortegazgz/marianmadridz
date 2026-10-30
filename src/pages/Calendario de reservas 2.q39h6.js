@@ -131,14 +131,14 @@ async function loadServiceContext(params) {
 /* =============================================================================
  * HELPERS DE MENSAJE
  * ==========================================================================*/
-async function handleNavigation(payload) {
+function handleNavigation(payload) {
     const target = _safeTrim((payload && payload.target) || "").toUpperCase();
     if (target === "SERVICIOS") {
-        await location.to((URLS && URLS.SERVICIOS) || "/reserva-online");
+        location.to((URLS && URLS.SERVICIOS) || "/reserva-online");
         return true;
     }
     if (target === "PRIVACY") {
-        await location.to((URLS && URLS.PRIVACY_POLICY) || "/politica-de-privacidad");
+        location.to((URLS && URLS.PRIVACY_POLICY) || "/politica-de-privacidad");
         return true;
     }
     return false;
@@ -370,7 +370,7 @@ async function handleBooking(message, reply, traceId) {
             bookingResult.data.bookingId
         ) {
             if (bookingResult.data.requiresPayment && bookingResult.data.checkoutUrl) {
-                await location.to(bookingResult.data.checkoutUrl);
+                location.to(bookingResult.data.checkoutUrl);
                 return;
             }
             try {
@@ -426,7 +426,7 @@ $w.onReady(async () => {
                 const type = _getMessageType(message);
                 const payload = _getPayload(message);
                 if (type === MESSAGE_TYPES.NAV) {
-                    if (!(await handleNavigation(payload))) {
+                    if (!handleNavigation(payload)) {
                         reply(MESSAGE_TYPES.NAV, resultError("INVALID_NAV_TARGET"));
                     }
                     return;
