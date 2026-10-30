@@ -3,7 +3,7 @@
 **Actualizado:** 2026-10-30  
 **Repositorio canónico:** https://github.com/nachoortegazgz/marianmadridz  
 **Rama de referencia:** `main`  
-**Commit base auditado:** `de12377b16b8b115bd9878762228c26e884b2416`  
+**Commit base auditado:** `d1bc08917466daa1b7d41c0a2b5f4a49f752e897`  
 **Sitio:** https://www.marianmadrid.es/  
 **Site ID:** `188bed94-177c-4bc9-a9f0-35080d874f3e`  
 **Entorno:** Wix Editor clásico + Velo.
@@ -108,7 +108,9 @@ La revisión se ha realizado sobre el repositorio canónico `nachoortegazgz/mari
 ### Validación y límites
 
 - PR #10: GitHub Actions completó correctamente la suite offline y la instalación limpia con lint.
+- PR #11 fusionado en `main` mediante merge commit `6fea79c9aa783d0ad4116542636549e1df8b73ea`.
 - PR #12 fusionado en `main` mediante merge commit `7ca16e9fa97ed3fdf5b48a0bad3c05a983c1087f`.
+- PR #13 fusionado en `main` mediante merge commit `d1bc08917466daa1b7d41c0a2b5f4a49f752e897`.
 - GitHub Actions del commit fusionado: `Backend offline regression suite` = SUCCESS y `Clean dependency install and lint` = SUCCESS (run `41053070852`).
 - Las pruebas offline no certifican disponibilidad, permisos, pagos ni reservas reales en el sitio publicado.
 - No se ha sincronizado ni publicado código en Wix durante esta tanda.
@@ -122,9 +124,9 @@ La revisión se ha realizado sobre el repositorio canónico `nachoortegazgz/mari
 
 ### Código preparado
 
-Rama: `migration/catalog-v3-adapter-2026-10-30`  
-PR: https://github.com/nachoortegazgz/marianmadridz/pull/13  
-Último commit de esta actualización: `7d3fd5fe10b617e104c97519cb522adfec44ab50`.
+Rama de implementación: `migration/catalog-v3-adapter-2026-10-30`  
+PR #13: https://github.com/nachoortegazgz/marianmadridz/pull/13  
+Integrada en `main` mediante `d1bc08917466daa1b7d41c0a2b5f4a49f752e897`.
 
 - Añadido `@wix/stores@1.0.960`, versión indicada en la documentación SDK oficial consultada el 30-10-2026.
 - El proyecto usa `catalogVersioning.getCatalogVersion()` antes de operaciones Stores y ramifica estrictamente entre `V1_CATALOG`, `V3_CATALOG` y `STORES_NOT_INSTALLED`.
@@ -162,4 +164,15 @@ PR: https://github.com/nachoortegazgz/marianmadridz/pull/13
 - Los webhooks de pedidos y reembolsos eCommerce se mantienen (no cambian entre Catalog V1/V3). **No están implementados todavía los webhooks de cambios de producto/variantes del catálogo**. Wix documenta eventos V1 y V3 diferenciados; los eventos V3 de Velo están en Developer Preview, por lo que no se activan para producción sin aceptación expresa y QA. Su registro y deduplicación quedan pendientes.
 - No se ha sincronizado ni publicado ningún cambio en Wix. No se ha cambiado la versión de catálogo del sitio.
 
-**Estado:** PR #13 abierta; no fusionar hasta completar Wix CLI/lock y revisar CI final. No habilitar el flujo de inventario comercial hasta poblar y conciliar registros propios por variante.
+**Estado tras la fusión:** PR #11 y PR #13 están integradas en `main`. La migración de código está integrada, pero no cerrada para producción.
+
+### Bloqueo actual de dependencias
+
+La comprobación del `package.json` y `wix.lock` de `main` confirma que el manifiesto y el lock están desincronizados:
+- `package.json` declara `@wix/stores@1.0.960` y `@wix/site-pricing-plans@1.35.0`.
+- `wix.lock` no contiene ninguno de esos dos paquetes.
+- También hay actualizaciones disponibles verificadas en npm para `@wix/sdk`, `@wix/data`, `@wix/bookings`, `@wix/ecom` y `@wix/members`; deben resolverse mediante Wix CLI, no editando el lock manualmente.
+
+Siguiente fase: crear una rama desde `main`, actualizar las dependencias Wix con `wix update <paquete>`, revisar `package.json`/`wix.lock`, ejecutar regresión offline, instalación limpia y ESLint. Mantener `react@18.3.1` hasta comprobar el peer contract de Stores y no cambiar `@wix/stores` ni `@wix/site-pricing-plans` sin resolver primero el lock.
+
+No publicar ni sincronizar en Wix hasta superar CI y QA real. No habilitar inventario comercial hasta poblar y conciliar registros propios por variante.
