@@ -22,7 +22,7 @@ FIXES HEREDADOS v5013: CORE-30..CORE-38.
 */
 
 import { bookings } from "@wix/bookings";
-import { checkout } from "@wix/ecom";
+import { cartV2 } from "@wix/ecom";
 import { auth } from "@wix/essentials";
 import {
     query as dalQuery,
@@ -50,6 +50,7 @@ import {
     BOOKING_FIELDS,
     CITAS_BOOKING_STATUS,
     CITAS_PAYMENT_STATUS,
+    WIX_CATALOG_APP_IDS,
 } from "backend/internalConfig";
 import {
     _safeTrim,
@@ -62,6 +63,8 @@ import {
     _hashKey,
     _normalizeLocalIsoStr,
     _generateUUID,
+    _executeWithRetry,
+    withTimeout,
 } from "public/mmUtils";
 import {
     computeGapMinutes,
@@ -239,12 +242,135 @@ function _deriveCmsBookingStatus(cmsPaymentStatus) {
 // BLOQUE 3 - ELEVATED PROXIES
 // =============================================================================
 export const cancelBookingElevated = auth.elevate(bookings.cancelBooking);
-export const createCheckoutElevated = auth.elevate(checkout.createCheckout);
-export const getCheckoutUrlElevated = auth.elevate(checkout.getCheckoutUrl);
+export const createCartV2Elevated = auth.elevate(cartV2.createCart);
+export const calculateCartV2Elevated = auth.elevate(cartV2.calculateCart);
+export const getCartV2CheckoutUrlElevated = auth.elevate(cartV2.getCheckoutUrl);
 
 const _confirmOrDeclineElevatedRaw = auth.elevate(
     bookings.confirmOrDeclineBooking
 );
+
+export async function createBookingCartCheckout(bookingId, traceId) {
+    const normalizedBookingId = _safeTrim(bookingId);
+    if (!_looksLikeGuid(normalizedBookingId)) {
+        throw createBookingError(
+            ERROR_CODES.CHECKOUT_FAILED,
+            "A valid Wix Bookings booking ID is required for Cart V2 checkout.",
+            { traceId: _safeTrim(traceId) }
+        );
+    }
+
+    const checkoutTimeoutMs =
+        Number(SDK_CONFIG && SDK_CONFIG.TIMEOUTS && SDK_CONFIG.TIMEOUTS.CHECKOUT_MS) ||
+        20000;
+    const apiTimeoutMs =
+        Number(SDK_CONFIG && SDK_CONFIG.TIMEOUTS && SDK_CONFIG.TIMEOUTS.API_MS) ||
+        15000;
+
+    const createdCart = await withTimeout(
+        function () {
+            return createCartV2Elevated({
+                cart: { source: { channelType: "WEB" } },
+                catalogItems: [
+                    {
+                        catalogReference: {
+                            appId: WIX_CATALOG_APP_IDS.BOOKINGS,
+                            catalogItemId: normalizedBookingId,
+                        },
+                        quantity: 1,
+                    },
+                ],
+            });
+        },
+        checkoutTimeoutMs,
+        "createCartV2"
+    );
+
+    const cartId = _safeTrim(createdCart && createdCart._id);
+    if (!_looksLikeGuid(cartId)) {
+        throw createBookingError(
+            ERROR_CODES.CHECKOUT_FAILED,
+            "Cart V2 did not return a valid cart ID.",
+            { traceId: _safeTrim(traceId) }
+        );
+    }
+
+    const calculation = await withTimeout(
+        function () {
+            return calculateCartV2Elevated(cartId, { refreshCart: true });
+        },
+        checkoutTimeoutMs,
+        "calculateCartV2"
+    );
+
+    const summary = calculation && calculation.summary;
+    const calculatedCartId = _safeTrim(
+        calculation && calculation.cart && calculation.cart._id
+    );
+    const violations = summary && summary.violations;
+    const totalAmount = _safeTrim(
+        summary &&
+            summary.priceSummary &&
+            summary.priceSummary.total &&
+            summary.priceSummary.total.amount
+    );
+    const currencyCode = _safeTrim(
+        calculation &&
+            calculation.cart &&
+            calculation.cart.businessInfo &&
+            calculation.cart.businessInfo.currencyCode
+    );
+
+    if (
+        calculatedCartId !== cartId ||
+        !Array.isArray(violations) ||
+        violations.length > 0 ||
+        !totalAmount ||
+        !Number.isFinite(Number(totalAmount)) ||
+        Number(totalAmount) < 0 ||
+        !/^[A-Z]{3}$/.test(currencyCode)
+    ) {
+        throw createBookingError(
+            ERROR_CODES.CHECKOUT_FAILED,
+            "Cart V2 calculation is incomplete or contains violations.",
+            {
+                traceId: _safeTrim(traceId),
+                cartId: cartId,
+                violationCount: Array.isArray(violations) ? violations.length : null,
+            }
+        );
+    }
+
+    const checkoutResult = await _executeWithRetry(
+        function () {
+            return withTimeout(
+                function () {
+                    return getCartV2CheckoutUrlElevated(cartId);
+                },
+                apiTimeoutMs,
+                "getCartV2CheckoutUrl"
+            );
+        },
+        2,
+        300
+    );
+
+    const checkoutUrl = _safeTrim(checkoutResult && checkoutResult.checkoutUrl);
+    if (!/^https:\/\//i.test(checkoutUrl)) {
+        throw createBookingError(
+            ERROR_CODES.CHECKOUT_FAILED,
+            "Cart V2 did not return a valid HTTPS checkout URL.",
+            { traceId: _safeTrim(traceId), cartId: cartId }
+        );
+    }
+
+    return {
+        cartId: cartId,
+        checkoutUrl: checkoutUrl,
+        totalAmount: totalAmount,
+        currencyCode: currencyCode,
+    };
+}
 
 export async function confirmOrDeclineBookingElevated(bookingId, options) {
     let normalizedOptions = options;
