@@ -49,6 +49,7 @@ export function normalizeStoreOrderLineItem(
     index,
     catalogVersion,
     locationId = null,
+    catalogVariants = [],
 ) {
     if (!item || typeof item !== "object") {
         return { kind: "ERROR", code: "INVALID_ORDER_LINE_ITEM", index };
@@ -60,19 +61,25 @@ export function normalizeStoreOrderLineItem(
     }
 
     const productId = text(catalogReference?.catalogItemId);
-    const variantId = text(catalogReference?.options?.variantId);
+    const explicitVariantId = text(catalogReference?.options?.variantId);
+    const productVariants = Array.isArray(catalogVariants)
+        ? catalogVariants.filter((variant) => variant.productId === productId)
+        : [];
+    const resolvedVariantId = explicitVariantId || (
+        productVariants.length === 1 ? text(productVariants[0].variantId) : ""
+    );
     const lineItemId = text(item._id);
     const sku = text(item.physicalProperties?.sku);
     const quantity = Number(item.quantity);
 
-    if (!productId || !variantId || !lineItemId) {
+    if (!productId || !resolvedVariantId || !lineItemId) {
         return {
             kind: "ERROR",
             code: "INCOMPLETE_ORDER_VARIANT_IDENTITY",
             index,
             lineItemId: lineItemId || null,
             productId: productId || null,
-            variantId: variantId || null,
+            variantId: resolvedVariantId || null,
         };
     }
     if (!Number.isFinite(quantity) || quantity <= 0) {
@@ -89,7 +96,7 @@ export function normalizeStoreOrderLineItem(
         stockKey = createVariantStockKey({
             catalogVersion,
             productId,
-            variantId,
+            variantId: resolvedVariantId,
             locationId,
         });
     } catch (error) {
@@ -106,7 +113,7 @@ export function normalizeStoreOrderLineItem(
         index,
         lineItemId,
         productId,
-        variantId,
+        variantId: resolvedVariantId,
         locationId: locationId || null,
         catalogVersion,
         stockKey,
@@ -133,6 +140,7 @@ export function normalizeV1StoreVariant(variant) {
         }),
         productName: text(variant?.productName),
         variantName: text(variant?.variantName),
+        managedVariant: variant?.managedVariant === true,
         sku: text(variant?.sku) || null,
         choices: variant?.choices || {},
         stock: variant?.stock || null,
