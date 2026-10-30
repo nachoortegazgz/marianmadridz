@@ -15,15 +15,15 @@ import test from 'node:test';
 import assert from 'node:assert';
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const { wixDataMock } = await import('./loader.mjs');
 const CR = await import('backend/crons.js');
 const IC = await import('backend/internalConfig');
 
-const JOBS_CONFIG_PATH = path.resolve(
-  path.dirname(new URL(import.meta.url).pathname),
-  '..', 'jobs.config'
-);
+const here = path.dirname(fileURLToPath(import.meta.url));
+const backendPath = (name) => path.resolve(here, '..', name);
+const JOBS_CONFIG_PATH = backendPath('jobs.config');
 
 test('CRON-PARITY-01 every jobs.config functionName is exported by crons.js', () => {
   const cfg = JSON.parse(fs.readFileSync(JOBS_CONFIG_PATH, 'utf8'));
@@ -40,8 +40,8 @@ test('CRON-PARITY-02 crons.js exports cover the two previously-missing jobs', ()
 });
 
 test('CRON-Z-ENTRY-01 cron uses a backend-only internal closing entry point', () => {
-  const cronSource = fs.readFileSync(path.resolve(path.dirname(new URL(import.meta.url).pathname), '..', 'crons.js'), 'utf8');
-  const cashSource = fs.readFileSync(path.resolve(path.dirname(new URL(import.meta.url).pathname), '..', 'cajas.web.js'), 'utf8');
+  const cronSource = fs.readFileSync(backendPath('crons.js'), 'utf8').replace(/\r\n/g, '\n');
+  const cashSource = fs.readFileSync(backendPath('cajas.web.js'), 'utf8').replace(/\r\n/g, '\n');
   assert.match(cronSource, /registerZClosingInternal/);
   assert.match(cashSource, /export async function registerZClosingInternal/);
   assert.match(cashSource, /export const registerZClosing = webMethod/);
