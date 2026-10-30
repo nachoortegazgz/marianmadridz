@@ -32,7 +32,6 @@ import {
     CHANNEL_TYPE,
     COMPENSATION_KIND,
     COMPENSATION_STATUS,
-    APP_IDS,
     BOOKING_FIELDS,
 } from "backend/internalConfig";
 import {
@@ -54,8 +53,7 @@ import { logger } from "backend/logger";
 import {
     cancelBookingElevated,
     confirmOrDeclineBookingElevated,
-    createCheckoutElevated,
-    getCheckoutUrlElevated,
+    createBookingCartCheckout,
     _lockSlotKeyOrFail,
     _unlockSlotKey,
     _renewLock,
@@ -71,11 +69,9 @@ import {
     createBookingError,
     normalizeError,
     ERROR_CODES,
-    _extractCheckoutId,
     _buildPairFingerprint,
     _buildPairTokenDeterministic,
 } from "backend/booking/bookingCore";
-export { _extractCheckoutId };
 import {
     _resolveServiceIdInternal,
     _invalidateCachesInternal,
@@ -1622,45 +1618,17 @@ export async function executeBookingSaga(unsafePayload) {
                         );
                     }
 
-                    const checkoutPayload = {
-                        lineItems: [
-                            {
-                                catalogReference: {
-                                    appId: APP_IDS.BOOKINGS,
-                                    catalogItemId: bookingF1Id,
-                                    options: {},
-                                },
-                                quantity: 1,
-                            },
-                        ],
-                        channelType: "WEB",
-                    };
-
-                    const checkoutRes = await withTimeout(
-                        function () {
-                            return createCheckoutElevated(checkoutPayload);
-                        },
-                        CHECKOUT_TIMEOUT_MS,
-                        "createCheckout"
-                    );
-
-                    const checkoutUrl = await _executeWithRetry(
-                        function () {
-                            return withTimeout(
-                                function () {
-                                    return getCheckoutUrlElevated(_extractCheckoutId(checkoutRes));
-                                },
-                                API_TIMEOUT_MS,
-                                "getCheckoutUrl"
-                            );
-                        },
-                        2,
-                        300
+                    const checkout = await createBookingCartCheckout(
+                        bookingF1Id,
+                        traceId
                     );
 
                     return {
                         requiresPayment: true,
-                        checkoutUrl: checkoutUrl,
+                        checkoutUrl: checkout.checkoutUrl,
+                        cartId: checkout.cartId,
+                        checkoutTotalAmount: checkout.totalAmount,
+                        checkoutCurrencyCode: checkout.currencyCode,
                         bookingIds: [bookingF1Id],
                     };
                 }
@@ -1721,7 +1689,7 @@ export async function executeBookingSaga(unsafePayload) {
                 if (heartbeatMonitor) heartbeatMonitor.assertHealthy();
 
                 const checkoutStepName = isOnline
-                    ? "CreateCheckout"
+                    ? "CreateCartV2Checkout"
                     : "ConfirmPresencial";
                 let checkoutStepResult = null;
                 let createBookingsResult = {};
