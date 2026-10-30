@@ -11,7 +11,7 @@ FIXES:
 =============================================================================
 */
 
-import wixLocation from "wix-location-frontend";
+import { location } from "@wix/site-location";
 import {
     MESSAGE_TYPES,
     URLS,
@@ -95,12 +95,12 @@ $w.onReady(async () => {
             const target = _safeTrim(payload.target || "");
 
             if (target === "ADMIN_PANEL") {
-                wixLocation.to("/administracion");
+                await location.to("/administracion");
                 return;
             }
 
             if (target === "HOME") {
-                wixLocation.to(URLS.SERVICIOS);
+                await location.to(URLS.SERVICIOS);
             }
         },
 
