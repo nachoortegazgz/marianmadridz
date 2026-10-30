@@ -156,6 +156,7 @@ export const PAYMENT_STATUS = Object.freeze({
 // bookingSaga.js al filtrar webhooks y crear bookings.
 export const APP_IDS = Object.freeze({
   BOOKINGS: "bookings",
+  STORES: "215238eb-22a5-4c36-9e7b-e7c08025e04e",
 });
 
 // CERO-DEUDA ZC-07: export JWT eliminado (generateJWT/verifyJWT ya no
