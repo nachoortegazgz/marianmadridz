@@ -26,7 +26,7 @@
  * FIXES HEREDADOS v5009: CAL-15..CAL-17 (D1/D2/D3).
  */
 import { location } from "@wix/site-location";
-import { window } from "@wix/site-window";
+import { lightbox } from "@wix/site-window";
 import {
     getServiceBySlugOrId,
     getAvailableDays,
@@ -374,7 +374,7 @@ async function handleBooking(message, reply, traceId) {
                 return;
             }
             try {
-                await window.openLightbox("ConfirmacionReserva", {
+                await lightbox.openLightbox("ConfirmacionReserva", {
                     booking: bookingResult.data || null,
                     bookingId: bookingResult.data.bookingId,
                     service: currentService,
