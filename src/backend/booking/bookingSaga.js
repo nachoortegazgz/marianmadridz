@@ -104,6 +104,8 @@ const API_TIMEOUT_MS =
     Number(SDK_CONFIG && SDK_CONFIG.TIMEOUTS && SDK_CONFIG.TIMEOUTS.API_MS) ||
     15000;
 
+const SAGA_STEP_CREATE_CART_V2_CHECKOUT = "CreateCartV2Checkout";
+
 const MAX_ADDONS_PER_BOOKING = 5;
 const SKIP_AVAILABILITY_VALIDATION = false;
 
@@ -1598,7 +1600,7 @@ export async function executeBookingSaga(unsafePayload) {
 
         // STEP 3
         saga.addStep(
-            isOnline ? "CreateCartV2Checkout" : "ConfirmPresencial",
+            isOnline ? SAGA_STEP_CREATE_CART_V2_CHECKOUT : "ConfirmPresencial",
             async function () {
                 if (heartbeatMonitor) heartbeatMonitor.assertHealthy();
 
@@ -1689,7 +1691,7 @@ export async function executeBookingSaga(unsafePayload) {
                 if (heartbeatMonitor) heartbeatMonitor.assertHealthy();
 
                 const checkoutStepName = isOnline
-                    ? "CreateCartV2Checkout"
+                    ? SAGA_STEP_CREATE_CART_V2_CHECKOUT
                     : "ConfirmPresencial";
                 let checkoutStepResult = null;
                 let createBookingsResult = {};
