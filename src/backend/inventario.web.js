@@ -392,13 +392,19 @@ export async function recordInventoryMovementSafe(identity, movementType, quanti
   }
 
   const stockItem = stockRows[0];
-  const mappedProductId = _safeTrim(stockItem.wixProductId || stockItem.productId);
-  const mappedVariantId = _safeTrim(stockItem.wixVariantId || stockItem.variantId);
+  const mappedProductIds = [
+    _safeTrim(stockItem.wixProductId),
+    _safeTrim(stockItem.productId),
+  ].filter(Boolean);
+  const mappedVariantIds = [
+    _safeTrim(stockItem.wixVariantId),
+    _safeTrim(stockItem.variantId),
+  ].filter(Boolean);
   const mappedCatalogVersion = _safeTrim(stockItem.catalogVersion);
   const mappedLocationId = _safeTrim(stockItem.locationId) || null;
 
-  if ((mappedProductId && mappedProductId !== productId) ||
-      (mappedVariantId && mappedVariantId !== variantId) ||
+  if (mappedProductIds.some((value) => value !== productId) ||
+      mappedVariantIds.some((value) => value !== variantId) ||
       (mappedCatalogVersion && mappedCatalogVersion !== catalogVersion) ||
       (mappedLocationId && mappedLocationId !== locationId)) {
     return {
