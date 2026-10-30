@@ -60,6 +60,17 @@ export function normalizeStoreOrderLineItem(
         return { kind: "IGNORE", reason: "NON_STORES_CATALOG_ITEM", index };
     }
 
+    const itemType = text(item.itemType?.preset ?? item.itemType).toUpperCase();
+    if (itemType === "DIGITAL" || itemType === "SERVICE") {
+        return { kind: "IGNORE", reason: "NON_PHYSICAL_STORES_ITEM", index };
+    }
+    if (itemType && itemType !== "PHYSICAL") {
+        return { kind: "ERROR", code: "UNSUPPORTED_STORES_ITEM_TYPE", index };
+    }
+    if (!item.physicalProperties || typeof item.physicalProperties !== "object") {
+        return { kind: "ERROR", code: "PHYSICAL_PROPERTIES_MISSING", index };
+    }
+
     const productId = text(catalogReference?.catalogItemId);
     const explicitVariantId = text(catalogReference?.options?.variantId);
     const productVariants = Array.isArray(catalogVariants)
