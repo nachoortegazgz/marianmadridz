@@ -628,6 +628,34 @@ export default mod.default;
 /* SDK @wix/data mock. Its query() uses the chainable Velo-compatible builder
    implemented by wixDataMock, so offline tests exercise the same query/filter/
    sort/pagination contract as the production adapter. */
+
+// Dedicated offline @wix/stores namespace mocks for Catalog V1/V3 adapters.
+const WIX_STORES_SOURCE = `
+const mocks = globalThis.__mmStoresMocks || (globalThis.__mmStoresMocks = {});
+const namespace = (name) => new Proxy({}, {
+  get: (_target, property) => {
+    if (property === 'then') return undefined;
+    return (...args) => {
+      const method = mocks[name + '.' + String(property)];
+      if (typeof method !== 'function') {
+        const error = new Error('Missing @wix/stores mock: ' + name + '.' + String(property));
+        error.code = 'MISSING_STORES_SDK_MOCK';
+        throw error;
+      }
+      return method(...args);
+    };
+  },
+});
+export const catalogVersioning = namespace('catalogVersioning');
+export const products = namespace('products');
+export const inventory = namespace('inventory');
+export const productsV3 = namespace('productsV3');
+export const readOnlyVariantsV3 = namespace('readOnlyVariantsV3');
+export const inventoryItemsV3 = namespace('inventoryItemsV3');
+export const storesLocationsV3 = namespace('storesLocationsV3');
+export default {};
+`;
+
 const WIX_DATA_V2_SOURCE = `
 import { wixDataMock as m } from ${JSON.stringify(p2u(path.join(BACKEND_DIR, 'tests/loader.mjs')).href.replace(/\\\\/g, '/'))};
 
@@ -861,6 +889,9 @@ export async function resolve(specifier, context, nextResolve) {
 }
 
 export async function load(url, context, nextLoad) {
+  if (url === 'mock:@wix/stores') {
+    return { format: 'module', source: WIX_STORES_SOURCE, shortCircuit: true };
+  }
   if (url.startsWith('mock:wix-data') || url === 'mock:@wix/data' || url === 'mock:@wix/essentials') {
     // @wix/data (API v2, usado por dataAccess.js) -> adaptador v2 sobre el
     // mismo store del mock. 'wix-data' (builder legacy v1) -> mock clasico.

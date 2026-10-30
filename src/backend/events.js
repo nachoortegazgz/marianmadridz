@@ -918,7 +918,7 @@ export async function wixEcom_onOrderPaymentStatusUpdated(rawBody) {
         );
         if (!event) return { status: "REJECTED", reason: "JWT_VERIFICATION_FAILED" };
 
-        const eventId = event?.eventId || event?._id;
+        const eventId = event?.id || event?.eventId || event?._id;
         if (eventId) {
             const alreadyProcessed = await isEventProcessed(eventId);
             if (alreadyProcessed) {
@@ -930,13 +930,25 @@ export async function wixEcom_onOrderPaymentStatusUpdated(rawBody) {
             }
         }
 
-        const order =
+        const orderSource =
+            event?.actionEvent?.body?.order ||
             event?.order ||
             event?.data?.order ||
             event?.entity ||
             event ||
             {};
-        const orderId = String(order?._id || order?.id || "").trim();
+        const orderId = String(
+            orderSource?._id ||
+            orderSource?.id ||
+            event?.entityId ||
+            event?.data?.entityId ||
+            event?.actionEvent?.body?.orderId ||
+            ""
+        ).trim();
+        const order = {
+            ...orderSource,
+            _id: orderSource?._id || orderSource?.id || orderId,
+        };
         if (!orderId || orderId === "unknown") {
             log.warn("PAYMENT_WEBHOOK_MISSING_ORDER_ID", {
                 traceId,
@@ -999,6 +1011,23 @@ export async function wixEcom_onOrderPaymentStatusUpdated(rawBody) {
         ).catch(() => ({ items: [] }));
 
         if (existingLedgerRes?.items?.length > 0) {
+            const inventoryRetry = await recordOnlineInventoryOrderInternal(order, traceId);
+            if (inventoryRetry?.status === "PENDING_RECONCILIATION") {
+                await logAuditEventWithTimeout(
+                    "INVENTORY_ORDER_RECONCILIATION_QUEUED",
+                    "ERROR",
+                    `Inventario pendiente de conciliacion para pedido ${orderId}`,
+                    {
+                        orderId,
+                        queueId: inventoryRetry.queueId || null,
+                        results: inventoryRetry.data || [],
+                        traceId,
+                    },
+                    traceId,
+                    orderId,
+                    "backend/events.js"
+                );
+            }
             if (bookingIds.length) {
                 await _executeWithRetry(async () => {
                     await _markCitasPaidByBookingIds(
@@ -1132,24 +1161,37 @@ export async function wixEcom_onOrderPaymentStatusUpdated(rawBody) {
 
         if (ledgerOk) {
             try {
-                await recordOnlineInventoryOrderInternal(order, traceId);
+                const inventoryResult = await recordOnlineInventoryOrderInternal(order, traceId);
+                if (inventoryResult?.status === "PENDING_RECONCILIATION") {
+                    await logAuditEventWithTimeout(
+                        "INVENTORY_ORDER_RECONCILIATION_QUEUED",
+                        "ERROR",
+                        `Inventario pendiente de conciliacion para pedido ${orderId}`,
+                        {
+                            orderId,
+                            queueId: inventoryResult.queueId || null,
+                            results: inventoryResult.data || [],
+                            traceId,
+                        },
+                        traceId,
+                        orderId,
+                        "backend/events.js"
+                    );
+                }
             } catch (inventoryError) {
                 log.error("Online inventory mirror failed", {
                     orderId,
                     traceId,
-                    error:
-                        inventoryError?.message || String(inventoryError),
+                    error: inventoryError?.message || String(inventoryError),
                 });
                 await logAuditEventWithTimeout(
                     "INVENTORY_MIRROR_FAILED",
                     "ERROR",
-                    `Inventario no descontado para orden ${orderId} tras ledger OK`,
+                    `Inventario no sincronizado para orden ${orderId} tras ledger OK`,
                     {
                         orderId,
                         traceId,
-                        error:
-                            inventoryError?.message ||
-                            String(inventoryError),
+                        error: inventoryError?.message || String(inventoryError),
                     },
                     traceId,
                     orderId,
@@ -1238,10 +1280,19 @@ export async function wixEcom_onOrderRefunded(rawBody) {
         const event = await _verifyAndDecodeWebhook(rawBody, "ORDER_REFUNDED");
         if (!event) return { status: "REJECTED", reason: "JWT_VERIFICATION_FAILED" };
 
-        const orderId =
-            String(event?.orderId || event?.order?._id || "").trim() ||
-            "unknown";
-        const refundObj = event?.refund || event?.data?.refund || null;
+        const orderId = String(
+            event?.orderId ||
+            event?.entityId ||
+            event?.actionEvent?.body?.orderId ||
+            event?.order?._id ||
+            event?.data?.order?._id ||
+            ""
+        ).trim() || "unknown";
+        const refundObj =
+            event?.actionEvent?.body?.refund ||
+            event?.refund ||
+            event?.data?.refund ||
+            null;
         if (!refundObj || orderId === "unknown") return { status: "OK" };
 
         // WIX-BOUNDARY: contrato oficial eCom Refund.money = { amount, currency }.
@@ -1314,38 +1365,25 @@ export async function wixEcom_onOrderRefunded(rawBody) {
             originalMovement.linkedBookingIds
         );
 
-        let refundRestockInfo = event?.sideEffects?.restockInfo || null;
-        if (!refundRestockInfo) {
-            const fallbackPath =
-                (event?.data?.sideEffects?.restockInfo &&
-                    "event.data.sideEffects") ||
-                (refundObj?.sideEffects?.restockInfo &&
-                    "refund.sideEffects") ||
-                null;
+        const refundRestockInfo =
+            event?.actionEvent?.body?.sideEffects?.restock ||
+            event?.sideEffects?.restock ||
+            event?.data?.sideEffects?.restock ||
+            refundObj?.sideEffects?.restock ||
+            null;
 
-            if (fallbackPath) {
-                log.warn("REFUND_RESTOCK_INFO_FALLBACK_PATH", {
-                    orderId,
-                    refundId,
-                    fallbackPath,
-                    hint: "Path canonico: event.sideEffects.restockInfo",
-                    traceId,
-                });
-                refundRestockInfo =
-                    (fallbackPath === "event.data.sideEffects" &&
-                        event.data.sideEffects.restockInfo) ||
-                    (fallbackPath === "refund.sideEffects" &&
-                        refundObj.sideEffects.restockInfo) ||
-                    null;
-            }
-        }
-
-        const refundOrder =
+        const refundOrderSource =
+            event?.actionEvent?.body?.order ||
             event?.order ||
-            event?.data?.order || {
-                _id: orderId,
-                lineItems: event?.lineItems || event?.data?.lineItems || [],
-            };
+            event?.data?.order ||
+            {};
+        const refundOrder = {
+            ...refundOrderSource,
+            _id: refundOrderSource?._id || refundOrderSource?.id || orderId,
+            lineItems: Array.isArray(refundOrderSource?.lineItems)
+                ? refundOrderSource.lineItems
+                : event?.lineItems || event?.data?.lineItems || [],
+        };
 
         try {
             const inventoryRefund = await recordOnlineInventoryRefundInternal(
@@ -1354,6 +1392,23 @@ export async function wixEcom_onOrderRefunded(rawBody) {
                 refundRestockInfo,
                 traceId
             );
+            if (inventoryRefund?.status === "PENDING_RECONCILIATION") {
+                await logAuditEventWithTimeout(
+                    "REFUND_INVENTORY_RECONCILIATION_QUEUED",
+                    "ERROR",
+                    `Inventario pendiente de conciliacion para reembolso ${refundId}`,
+                    {
+                        orderId,
+                        refundId,
+                        queueId: inventoryRefund.queueId || null,
+                        results: inventoryRefund.data || [],
+                        traceId,
+                    },
+                    traceId,
+                    orderId,
+                    "backend/events.js"
+                );
+            }
             if (
                 inventoryRefund?.status === "SKIPPED" &&
                 inventoryRefund?.reason !== "NO_CONFIRMED_RESTOCK"

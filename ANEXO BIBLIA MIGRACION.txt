@@ -99,7 +99,7 @@ La revisión se ha realizado sobre el repositorio canónico `nachoortegazgz/mari
 | Secrets | SDK `@wix/secrets` activo en `secretAccess.js` | Migración completada; acceso elevado exclusivamente backend. |
 | CRM | SDK `@wix/crm` activo en `staff.js` | Migración aplicada donde se usa CRM. |
 | eCommerce | SDK `@wix/ecom` activo para checkout/pedidos | Mantener separado de Bookings y Stores. |
-| Stores | El contexto vivo de Wix confirma Catalog V1. El anexo aclaratorio SSOT revoca la permanencia indefinida en V1 y declara V3 como migración prioritaria. | Pendiente: implementar detección `getCatalogVersion`, compatibilidad V1/V3, adaptar inventario al modelo variante-ubicación y suscribir webhooks de ambas versiones. No cambiar la versión del sitio sin pruebas y plan de reversión operativa. |
+| Stores | PR #13 prepara compatibilidad V1/V3 con `@wix/stores`; el sitio sigue en V1. El adaptador consulta versión, variantes e inventario; el CMS tiene identidad `stockKey`/`locationId`/`catalogVersion`. | En validación: completar lock Wix local, verificar scopes V3, mapear registros comerciales y probar QA. No cambiar el catálogo publicado ni publicar código. |
 | Invoices | El contexto vivo de Wix confirma Invoices V1. El código revisado mantiene su ledger fiscal propio y no consume directamente la API de Wix Invoices. | Fuera de esta tanda; auditar por separado la compatibilidad V2 y el impacto fiscal antes de cualquier cambio. |
 | Frontend Wix Editor | `@wix/site-location`, `@wix/site-window`, `@wix/site-pricing-plans`; `wix-members-frontend` como excepción. | Migración aplicada en páginas de calendario, servicio, confirmación, administración y staff. Mantener Members frontend por Developer Preview del SDK equivalente. |
 | Web methods y hooks | `wix-web-module` y hooks Velo | Mantener conforme a SSOT §16.3; los hooks de integridad siguen en Velo. |
@@ -116,3 +116,50 @@ La revisión se ha realizado sobre el repositorio canónico `nachoortegazgz/mari
 - Se ha creado `docs/adr/ADR-001-catalog-v1-v3-dual-support.md`: acepta la preparación de compatibilidad dual V1/V3, pero aplaza el cambio irreversible de versión del catálogo hasta completar la migración de inventario y QA.
 
 **Conclusión:** la migración a SDK de las APIs estables con equivalencia funcional identificadas en el código está fusionada en `main` y validada por los dos gates de CI. Excepciones deliberadas: `wix-members-frontend` (el SDK equivalente está en Developer Preview) y `wix-web-module` (retenido por SSOT §16.3). Catalog V1 sigue activo en el sitio y su migración dual a V3 queda como siguiente prioridad técnica; Invoices V1 requiere una auditoría independiente. El cierre de producción sigue condicionado a CI verde, QA real en Preview y validación del sitio Wix; no se ha publicado.
+
+
+## 8. Actualización de Catalog V1/V3 — PR #13 (2026-10-30)
+
+### Código preparado
+
+Rama: `migration/catalog-v3-adapter-2026-10-30`  
+PR: https://github.com/nachoortegazgz/marianmadridz/pull/13  
+Último commit de esta actualización: `7d3fd5fe10b617e104c97519cb522adfec44ab50`.
+
+- Añadido `@wix/stores@1.0.960`, versión indicada en la documentación SDK oficial consultada el 30-10-2026.
+- El proyecto usa `catalogVersioning.getCatalogVersion()` antes de operaciones Stores y ramifica estrictamente entre `V1_CATALOG`, `V3_CATALOG` y `STORES_NOT_INSTALLED`.
+- V1: `products.queryStoreVariants` e `inventory.queryInventory`.
+- V3: `productsV3.queryProducts`, `readOnlyVariantsV3.queryVariants`, `inventoryItemsV3.queryInventoryItems` y `storesLocationsV3.queryStoresLocations`.
+- La clave interna de stock es `V1:productId:variantId` o `V3:productId:variantId:locationId`; no utiliza SKU como identidad.
+- Pedidos: la línea se identifica por `lineItems._id`; el producto por `catalogReference.catalogItemId`; la app por el App ID oficial Stores; la variante por `catalogReference.options.variantId` o, solo si el catálogo devuelve una única variante para ese producto, por esa variante única. Solo se contabilizan líneas físicas; artículos digitales/servicios se ignoran y las líneas físicas sin `physicalProperties` fallan cerradas.
+- Reembolsos: solo registra devolución cuando el evento confirma `sideEffects.restock.lineItems`; token por refund y line item.
+- Movimientos idempotentes por pedido/reembolso y línea; ledger append-only con estado `stockApplied`; recuperación comprobable y cola `ControlOperativo`.
+- Bloqueo por variante con ID de registro CMS y expiración de 120 segundos para evitar actualizaciones simultáneas perdidas.
+- No se realizan escrituras de inventario en Wix; el checkout nativo sigue siendo responsable del descuento del stock de Stores.
+
+### CMS vivo comprobado
+
+- `InventarioStockVenta`: campos opcionales `stockKey`, `locationId`, `catalogVersion`; índice único `stockKey_unique` = ACTIVE.
+- `MovimientosInventario`: campos `stockKey`, `locationId`, `catalogVersion`, `lineItemId`, `stockApplied`; índice único `movementToken_unique` = ACTIVE.
+- `ControlOperativo`: ya dispone de `alertType`, `dedupeKey`, `expiresAt`, `payload`, `attempts`, `status` y `traceId`; no se ha creado otra colección de locks.
+- Catálogo V1 vivo: 30 variantes y 24 elementos de inventario en la consulta realizada.
+- CMS propio: un único registro, explícitamente ficticio de QA, sin `productId`, `variantId`, `wixProductId`, `wixVariantId`, `stockKey`, `catalogVersion` ni `locationId`. No se ha convertido en stock comercial ni se han creado correspondencias inventadas.
+
+### Validación
+
+- CI run `41057996125`: tests offline SUCCESS; instalación limpia y ESLint SUCCESS; incluye pruebas específicas del adaptador V3.
+- Último commit de código `b3d78e1aff7fb7b57bb82f1c55db56119910ead7`: CI run `41058519263`; tests offline SUCCESS, instalación limpia SUCCESS y ESLint SUCCESS.
+- Los tests offline no verifican scopes ni el SDK dentro del runtime Velo real.
+- El paquete está en `package.json`, pero `wix.lock` todavía no lo refleja. También sigue pendiente la regeneración local del lock de `@wix/site-pricing-plans`. Wix anunció que su CLI requiere Node.js `24.22.1` o superior desde el 22-10-2026 ([changelog oficial](https://dev.wix.com/changelog?featureType=Velo)). En el clon autenticado, desde la raíz:
+  - `node -v` (confirmar `v24.22.1` o superior)
+  - `wix --version`
+  - `wix install @wix/site-pricing-plans`
+  - `wix install @wix/stores`
+  - `git diff -- package.json wix.lock`
+  Revisar el diff generado por Wix CLI; no editar `wix.lock` manualmente.
+- Antes de activar V3, confirmar permisos `SCOPE.STORES.CATALOG_READ_LIMITED`, `SCOPE.STORES.PRODUCT_READ`, `SCOPE.STORES.INVENTORY_ITEM_READ` y `SCOPE.STORES.LOCATION_READ_LIMITED` en el contexto de ejecución real.
+- La cola de conciliación tiene replay administrativo; errores de identidad sin resolver permanecen OPEN tras el replay. No se ha activado todavía un cron automático de reintentos.
+- Los webhooks de pedidos y reembolsos eCommerce se mantienen (no cambian entre Catalog V1/V3). **No están implementados todavía los webhooks de cambios de producto/variantes del catálogo**. Wix documenta eventos V1 y V3 diferenciados; los eventos V3 de Velo están en Developer Preview, por lo que no se activan para producción sin aceptación expresa y QA. Su registro y deduplicación quedan pendientes.
+- No se ha sincronizado ni publicado ningún cambio en Wix. No se ha cambiado la versión de catálogo del sitio.
+
+**Estado:** PR #13 abierta; no fusionar hasta completar Wix CLI/lock y revisar CI final. No habilitar el flujo de inventario comercial hasta poblar y conciliar registros propios por variante.
