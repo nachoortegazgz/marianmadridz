@@ -21,7 +21,7 @@ test('PAY-GUARD-01 rejects noncanonical booking states before ledger registratio
   );
 
   const confirmStart = source.indexOf('export const confirmPayment = webMethod(');
-  const confirmEnd = source.indexOf('// =============================================================================\n// BLOQUE 4 - ORDER VALIDATION', confirmStart);
+  const confirmEnd = source.indexOf('async function _getValidatedPaidOrder(', confirmStart);
   assert.ok(confirmStart >= 0 && confirmEnd > confirmStart, 'confirmPayment method must exist');
   const confirmFlow = source.slice(confirmStart, confirmEnd);
 
@@ -56,7 +56,7 @@ test('PAY-GUARD-02 payment confirmation preserves booking approval state and use
   assert.equal(webhookOrderResolver.length, 2, 'paid and canceled order webhooks must use the Bookings catalog GUID');
 
   const confirmStart = source.indexOf('export const confirmPayment = webMethod(');
-  const confirmEnd = source.indexOf('// =============================================================================\\n// BLOQUE 4 - ORDER VALIDATION', confirmStart);
+  const confirmEnd = source.indexOf('async function _getValidatedPaidOrder(', confirmStart);
   assert.ok(confirmStart >= 0 && confirmEnd > confirmStart, 'staff payment method must exist');
   const confirmFlow = source.slice(confirmStart, confirmEnd);
   const pairExpansionIndex = confirmFlow.indexOf('const pairedCitas = await _findCitasByPairToken(pairToken)');
