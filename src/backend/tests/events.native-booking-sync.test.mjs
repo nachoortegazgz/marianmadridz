@@ -253,3 +253,36 @@ test("EVENT-BOOKING-05 order cancellation matches the Bookings catalog GUID and 
     assert.equal(row.pairToken, PAIR_TOKEN);
   }
 });
+
+
+test("EVENT-BOOKING-06 native Bookings V2 cancellation consumes metadata.id + data.booking._id", async () => {
+  wixDataMock._reset();
+  wixDataMock._store.set("CitasF2", [
+    seedCita({
+      bookingStatus: "CONFIRMED",
+      paymentStatus: "NOT_PAID",
+      meta: { pairToken: PAIR_TOKEN, customSaga: true },
+    }),
+  ]);
+
+  const result = await events.wixBookingsV2_onBookingCanceled({
+    metadata: { id: "evt-native-cancel-006" },
+    data: {
+      booking: {
+        _id: BOOKING_ID,
+        status: "CANCELED",
+      },
+    },
+  });
+
+  assert.equal(result.status, "OK");
+  assert.equal(result.eventId, "evt-native-cancel-006");
+
+  const rows = wixDataMock._store.get("CitasF2") || [];
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].bookingId, BOOKING_ID);
+  assert.equal(rows[0].bookingStatus, "CANCELED");
+
+  const markers = wixDataMock._store.get("ControlOperativo") || [];
+  assert.equal(markers.filter(row => row.dedupeKey === "WEBHOOK_evt-native-cancel-006").length, 1);
+});
