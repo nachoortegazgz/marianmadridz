@@ -241,6 +241,7 @@ export async function rateLimiter(
 
             if (!record) {
                 // Expiry cleanup may race with a request; recreate and retry.
+                const recreateNow = Date.now();
                 try {
                     await insertItem(RATE_LIMIT_COLLECTION, {
                         _id: recordId,
@@ -251,12 +252,12 @@ export async function rateLimiter(
                         surface: normalizedSurface,
                         requesterKey: requesterHash,
                         requestCount: 0,
-                        windowStart: new Date(now),
-                        expiresAt: new Date(now + window * 2),
+                        windowStart: new Date(recreateNow),
+                        expiresAt: new Date(recreateNow + window * 2),
                         version: 0,
                         payload: {
                             algorithm: "GCRA_V1",
-                            tat: now,
+                            tat: recreateNow * 1000,
                         },
                     });
                 } catch (insertError) {
