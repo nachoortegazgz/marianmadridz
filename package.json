@@ -23,6 +23,7 @@
     "lint": "eslint .",
     "test": "node --no-warnings --loader ./src/backend/tests/loader.mjs ./src/backend/tests/run-all.mjs",
     "test:layer1": "node --no-warnings --loader ./src/backend/tests/loader.mjs ./src/backend/tests/run-layer1.mjs",
-    "test:layer2": "node --no-warnings --loader ./src/backend/tests/loader.mjs ./src/backend/tests/run-layer2.mjs"
+    "test:layer2": "node --no-warnings --loader ./src/backend/tests/loader.mjs ./src/backend/tests/run-layer2.mjs",
+    "verify:wix-ecom-cart-v2": "node scripts/verify-wix-ecom-cart-v2.mjs"
   }
 }

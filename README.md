@@ -27,6 +27,10 @@ Las dependencias instaladas para el sitio se gestionan con Wix CLI for Sites (`w
 
 Para resolver dependencias ausentes del lock, ejecutar desde la raíz del proyecto, una por una, `wix install @wix/stores` y `wix install @wix/site-pricing-plans`. Revisar inmediatamente `git diff -- package.json wix.lock src/velo.dependencies.json`: conservar las versiones compatibles fijadas en `package.json` y detenerse si el CLI propone una actualización no aprobada. No publicar en esta fase.
 
+## Estado y traspaso de sesión
+
+El estado técnico consolidado, los cambios verificados, los bloqueos de QA y la secuencia de reanudación están en [docs/SESSION-STATUS-2026-10-31.md](docs/SESSION-STATUS-2026-10-31.md). Este informe distingue código en GitHub, CI, QA runtime y publicación Wix; no asumir que una rama feature está desplegada.
+
 ## Validación
 
 - `npm run lint`: análisis estático.

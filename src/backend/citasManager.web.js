@@ -16,7 +16,7 @@ import { currentMember } from "@wix/members";
 import { queryFirstItem, queryItems, wql, CONSISTENCY, insertItem as dalInsert } from "backend/dataAccess";
 import {
     BUSINESS_COLLECTIONS, OPERATIONAL_COLLECTIONS, CONTROL_TYPE, SDK_CONFIG,
-    APP_IDS, BOOKING_STATUS, CITAS_BOOKING_STATUS, PAYMENT_STATUS, PAYMENT_METHOD, CHANNEL_TYPE,
+    WIX_CATALOG_APP_IDS, BOOKING_STATUS, CITAS_BOOKING_STATUS, PAYMENT_STATUS, PAYMENT_METHOD, CHANNEL_TYPE,
     MOVEMENT_TYPE, BOOKING_TYPE, BOOKING_FIELDS, ROL_WEBSITE
 } from "backend/internalConfig";
 import {
@@ -75,8 +75,8 @@ const rescheduleBookingElevated = auth.elevate(bookings.rescheduleBooking);
 const getBookingElevated = auth.elevate(bookings.getBooking);
 
 /** Enforce the shared rate limiter before public booking/payment operations. */
-function _rateLimitOrThrow(surface, key, traceId) {
-    const result = rateLimiter({ surface, key });
+async function _rateLimitOrThrow(surface, key, traceId) {
+    const result = await rateLimiter({ surface, key });
     if (result?.allowed) return;
 
     const error = new Error(`RATE_LIMITED: retryAfter=${result?.retryAfter ?? 1}`);
@@ -180,7 +180,7 @@ return ["PAID", "FULLY_PAID", "PAID_FULL"].includes(status);
 
 function _getOrderBookingLineItems(order) {
 const lineItems = Array.isArray(order?.lineItems) ? order.lineItems : [];
-const bookingsAppId = APP_IDS.BOOKINGS;
+const bookingsAppId = WIX_CATALOG_APP_IDS.BOOKINGS;
 return lineItems.filter(
 (item) => item?.catalogReference?.appId === bookingsAppId
 );
@@ -192,27 +192,6 @@ const amount = Number(item?.price?.amount ?? item?.price ?? 0) || 0;
 const quantity = Number(item?.quantity) || 1;
 return sum + amount * quantity;
 }, 0);
-}
-
-function _resolveBookingStatusAfterPayment(cita, traceId) {
-const current = _safeTrim(
-cita?.[FIELD_STATUS] || cita?.bookingStatus || ""
-).toUpperCase();
-if (BLOCKED_PAYMENT_STATES.has(current)) {
-throw createBookingError(
-ERROR_CODES.INVALID_PAYLOAD,
-"Booking cannot be paid in its current state.",
-{ traceId, bookingStatus: current }
-);
-}
-if (current && !ALLOWED_PAYMENT_CONFIRMATION_STATES.has(current)) {
-throw createBookingError(
-ERROR_CODES.INVALID_PAYLOAD,
-"Booking has an invalid payment transition.",
-{ traceId, bookingStatus: current }
-);
-}
-return BOOKING_STATUS.CONFIRMED;
 }
 
 /* CM5-03: canal online determinado por meta.channelType o meta.checkoutUrl.
@@ -402,8 +381,8 @@ traceId,
 sessionMemberId
 );
 
-_rateLimitOrThrow(
-"citasManager.processDualBooking",
+await _rateLimitOrThrow(
+"public-booking",
 sessionMemberId || _safeTrim(unsafePayload?.email) || "anon",
 traceId
 );
@@ -438,7 +417,7 @@ Permissions.SiteMember,
 async (payload) => {
 const traceId = payload?.traceId || makeTraceId("confirm-pay");
 try {
-_rateLimitOrThrow(
+await _rateLimitOrThrow(
 "citasManager.confirmPayment",
 _safeTrim(payload?.orderId) || "anon",
 traceId
@@ -488,6 +467,34 @@ await _assertBookingOwner(cita, traceId);
 citas.push(cita);
 }
 
+// A single paid F1 line item represents the complete dual appointment.
+// Include its paired F2 row for payment validation and persistence, while
+// keeping order-membership validation scoped to the actual purchased F1 IDs.
+const expandedCitas = new Map(
+citas.map(cita => [
+_safeTrim(cita?.[FIELD_BOOKING_ID] || cita?.bookingId || ""),
+cita,
+])
+);
+for (const cita of citas) {
+const meta = _getCitaMeta(cita);
+const pairToken = _safeTrim(
+cita?.[FIELD_PAIR_TOKEN] || meta.pairToken || ""
+);
+if (!pairToken) continue;
+
+const pairedCitas = await _findCitasByPairToken(pairToken);
+for (const pairedCita of pairedCitas) {
+const pairedBookingId = _safeTrim(
+pairedCita?.[FIELD_BOOKING_ID] || pairedCita?.bookingId || ""
+);
+if (!pairedBookingId || expandedCitas.has(pairedBookingId)) continue;
+await _assertBookingOwner(pairedCita, traceId);
+expandedCitas.set(pairedBookingId, pairedCita);
+}
+}
+citas.splice(0, citas.length, ...expandedCitas.values());
+
 await _validatePaymentCitaSet(citas, orderId, traceId);
 await _validatePaymentIdempotency(citas, orderId, traceId);
 
@@ -534,7 +541,7 @@ requestedAmount,
 traceId
 );
 
-const linkedBookingIds = bookingIds.join(",");
+const linkedBookingIds = citas.map(cita => _safeTrim(cita?.[FIELD_BOOKING_ID] || cita?.bookingId || "")).filter(Boolean).join(",");
 
 /* CM5-05: WIX_PAYMENTS + channelType ONLINE. Cero literales. */
 const ledgerResult = await registerBookingPayment(
@@ -871,13 +878,9 @@ await _updateCitaSafe(
 bookingId,
 (currentCita) => {
 const meta = _getCitaMeta(currentCita);
-const nextBookingStatus = _resolveBookingStatusAfterPayment(
-currentCita,
-traceId
-);
 return {
 ...currentCita,
-[FIELD_STATUS]: nextBookingStatus,
+// Payment confirmation never changes the native booking approval state.
 [FIELD_PAYMENT_STATUS]: paymentState,
 [FIELD_CASH_MOVEMENT_ID]: cashMovementId || null,
 [FIELD_TRACE_ID]: traceId,
@@ -1533,7 +1536,7 @@ Permissions.SiteMember,
 async (payload) => {
 const traceId = payload?.traceId || makeTraceId("resched");
 try {
-_rateLimitOrThrow(
+await _rateLimitOrThrow(
 "citasManager.rescheduleExistingBooking",
 _safeTrim(payload?.bookingId) || "anon",
 traceId
@@ -1668,7 +1671,7 @@ Permissions.SiteMember,
 async (payload) => {
 const traceId = payload?.traceId || makeTraceId("resched-dual");
 try {
-_rateLimitOrThrow(
+await _rateLimitOrThrow(
 "citasManager.rescheduleDualBookings",
 _safeTrim(payload?.pairToken) || "anon",
 traceId

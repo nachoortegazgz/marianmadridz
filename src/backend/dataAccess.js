@@ -110,6 +110,7 @@ const elevatedUpdate = auth.elevate(items.update);
 const elevatedRemove = auth.elevate(items.remove);
 const elevatedSave = auth.elevate(items.save);
 const elevatedBulkInsert = auth.elevate(items.bulkInsert);
+const elevatedBulkPatch = auth.elevate(items.bulkPatch);
 const elevatedBulkUpdate = auth.elevate(items.bulkUpdate);
 const elevatedBulkRemove = auth.elevate(items.bulkRemove);
 const elevatedQueryReferencedItems = auth.elevate(
@@ -430,10 +431,14 @@ export function bulkInsert(collection, items) {
     return elevatedBulkInsert(collection, items);
 }
 
+export function bulkPatchItems(collection, itemIds, fieldModifications, options) {
+    return elevatedBulkPatch(collection, itemIds, fieldModifications, options);
+}
+
 export function bulkUpdate(collection, items) {
     return elevatedBulkUpdate(collection, items);
 }
 
-export function bulkRemove(collection, ids) {
-    return elevatedBulkRemove(collection, ids);
+export function bulkRemove(collection, ids, options) {
+    return elevatedBulkRemove(collection, ids, options);
 }

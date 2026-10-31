@@ -3,7 +3,7 @@
 MODULE: backend/crons.js
 VERSION: v5011-CRON-PARITY
 BASE: v5010-TELEMETRY-ATOMIC + correcciones auditoria P0 (jobs huerfanos)
-RESPONSIBILITY: Jobs programados (cron). 8 jobs wired en jobs.config + 2 de
+RESPONSIBILITY: Jobs programados (cron). 9 jobs wired en jobs.config + 2 de
 reconciliacion interna (reconcileUnknownTransactions / InconsistentDualPairs).
 STANDARDS: G10 ASCII Strict. Cero suppressAuth. Cero COLLECTIONS alias.
 
@@ -38,11 +38,11 @@ CRON-14 (P2): Eliminación de referencia a COLLECTIONS.ALERTAS_OPERATIVAS
 
 FIXES HEREDADOS v5009-FISCAL-V20.1: CRON-01..CRON-06.
 PENDIENTES:
-- Actualizar jobs.config con los 3 nuevos jobs.
-- Verificar que dataAccess soporta todas las operaciones necesarias.
+- Mantener paridad crons.js/jobs.config mediante CRON-PARITY-01.
+- Verificar operaciones de dataAccess en CI y runtime QA.
 =============================================================================
 */
-import { query as dalQuery, getItem as dalGet, insertItem as dalInsert, updateItem as dalUpdate, removeById as dalRemove } from "backend/dataAccess";
+import { query as dalQuery, getItem as dalGet, insertItem as dalInsert, updateItem as dalUpdate, removeById as dalRemove, bulkRemove as dalBulkRemove } from "backend/dataAccess";
 import { _completeTransaction } from "backend/booking/bookingCore";
 import { bookings } from "@wix/bookings";
 import { auth } from "@wix/essentials";
@@ -136,6 +136,61 @@ traceId,
 } catch (err) {
 log.error("cleanExpiredLocks failed", { error: err?.message, traceId });
 result.errors.push({ query: "main", error: err?.message });
+}
+
+return result;
+}
+
+// =============================================================================
+// CRON: cleanExpiredRateLimits - every 5 minutes
+// =============================================================================
+/**
+ * Purges only expired RATE_LIMIT rows. The server-side condition is repeated
+ * on bulkRemove so a row renewed by a concurrent request is not deleted.
+ */
+export async function cleanExpiredRateLimits() {
+const traceId = makeTraceId("cron-rate-limits");
+const result = { removed: 0, skipped: 0, failed: 0, errors: [] };
+
+try {
+const now = new Date();
+const collection = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
+const res = await dalQuery(collection)
+.eq("controlType", CONTROL_TYPE.RATE_LIMIT)
+.lt("expiresAt", now)
+.limit(500)
+.find({ consistencyMode: "strong" });
+
+const ids = (res?.items || []).map((item) => item._id).filter(Boolean);
+if (ids.length > 0) {
+const removal = await dalBulkRemove(collection, ids, {
+condition: {
+filter: {
+controlType: { $eq: CONTROL_TYPE.RATE_LIMIT },
+expiresAt: { $lt: now },
+},
+},
+});
+result.removed = Number(removal?.removed) || 0;
+result.skipped = Number(removal?.skipped) || 0;
+result.failed = Array.isArray(removal?.errors) ? removal.errors.length : 0;
+result.errors = (removal?.errors || []).slice(0, 5).map((error) => ({
+id: error?.item || null,
+code: error?.code || "REMOVE_FAILED",
+error: error?.message || "UNKNOWN",
+}));
+}
+
+log.info("cleanExpiredRateLimits completed", {
+removed: result.removed,
+skipped: result.skipped,
+failed: result.failed,
+traceId,
+});
+} catch (err) {
+log.error("cleanExpiredRateLimits failed", { error: err?.message, traceId });
+result.failed += 1;
+result.errors.push({ query: "main", error: err?.message || "UNKNOWN" });
 }
 
 return result;
