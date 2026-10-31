@@ -17,7 +17,6 @@ import {
 
 import {
     findStaffByContactId,
-    invalidateStaffCache as _invalidateStaffCache,
 } from "backend/staff";
 
 import { makeTraceId } from "public/mmUtils";
@@ -64,8 +63,6 @@ const RATE_LIMIT_COLLECTION = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
 const GUID_PATTERN =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-
-let lastCleanupTime = Date.now();
 
 // =============================================================================
 // BLOQUE 2 - HELPERS INTERNOS
