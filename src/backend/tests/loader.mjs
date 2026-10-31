@@ -915,7 +915,31 @@ export const items = {
   },
   bulkInsert: (col, rows, opts) => m.bulkInsert(col, rows, opts),
   bulkUpdate: (col, rows, opts) => m.bulkUpdate(col, rows, opts),
-  bulkRemove: (col, ids, opts) => m.bulkRemove(col, ids, opts),
+  async bulkRemove(col, ids, options = {}) {
+    const itemIds = Array.isArray(ids) ? ids : [ids];
+    const removedItemIds = [];
+    const errors = [];
+    let skipped = 0;
+    for (const id of itemIds) {
+      const item = await m.get(col, id);
+      if (!item) {
+        skipped += 1;
+        continue;
+      }
+      if (options?.condition?.filter && !matchOne(item, options.condition.filter)) {
+        skipped += 1;
+        continue;
+      }
+      try {
+        await _runHook(_hookName(col, 'beforeRemove'), item);
+        await m.remove(col, id);
+        removedItemIds.push(id);
+      } catch (error) {
+        errors.push({ code: error?.code || 'REMOVE_FAILED', item: id, message: error?.message || String(error) });
+      }
+    }
+    return { removed: removedItemIds.length, skipped, errors, removedItemIds };
+  },
   queryReferencedItems: (col, id, field) => m.queryReferencedItems(col, id, field),
 };
 export default m;
