@@ -851,6 +851,68 @@ export const items = {
     const result = await q.find(options || {});
     return { ...result, totalCount: result.totalCount ?? result.total };
   },
+  async bulkPatch(col, itemIds, fieldModifications, options = {}) {
+    const ids = Array.isArray(itemIds) ? itemIds : [itemIds];
+    const groups = Array.isArray(fieldModifications?.[0])
+      ? fieldModifications
+      : ids.map(() => fieldModifications || []);
+    const updatedItemIds = [];
+    const errors = [];
+    let skipped = 0;
+
+    for (let index = 0; index < ids.length; index += 1) {
+      const id = ids[index];
+      const item = await m.get(col, id);
+      if (!item) {
+        errors.push({ code: 'WDE0073', item: id, message: 'Item not found.' });
+        continue;
+      }
+      if (options?.condition?.filter && !matchOne(item, options.condition.filter)) {
+        skipped += 1;
+        continue;
+      }
+
+      const patched = {
+        ...item,
+        ...(item.payload && typeof item.payload === 'object'
+          ? { payload: { ...item.payload } }
+          : {}),
+      };
+      for (const modification of (groups[index] || [])) {
+        const field = String(modification?.fieldPath || '');
+        if (!field || field.includes('.')) {
+          errors.push({ code: 'INVALID_FIELD_PATH', item: id, message: 'Mock supports root field paths only.' });
+          continue;
+        }
+        if (modification.action === 'INCREMENT_FIELD') {
+          patched[field] = Number(patched[field] || 0) + Number(modification.value || 0);
+        } else if (modification.action === 'SET_FIELD') {
+          patched[field] = modification.value;
+        } else if (modification.action === 'REMOVE_FIELD') {
+          delete patched[field];
+        } else {
+          errors.push({ code: 'UNSUPPORTED_PATCH_ACTION', item: id, message: modification.action });
+        }
+      }
+      if (errors.length) continue;
+
+      const hookName = _hookName(col, 'beforeUpdate');
+      const hook = hookName ? DATA_HOOKS[hookName] : null;
+      if (typeof hook === 'function') {
+        const hookResult = hook(patched, { original: item });
+        if (hookResult && typeof hookResult.then === 'function') await hookResult;
+      }
+      Object.assign(item, patched);
+      updatedItemIds.push(id);
+    }
+
+    return {
+      updated: updatedItemIds.length,
+      skipped,
+      errors,
+      updatedItemIds,
+    };
+  },
   bulkInsert: (col, rows, opts) => m.bulkInsert(col, rows, opts),
   bulkUpdate: (col, rows, opts) => m.bulkUpdate(col, rows, opts),
   bulkRemove: (col, ids, opts) => m.bulkRemove(col, ids, opts),
