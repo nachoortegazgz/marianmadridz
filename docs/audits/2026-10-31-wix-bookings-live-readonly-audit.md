@@ -103,6 +103,19 @@ Los 94 servicios consultados tienen asignados exactamente los tres `staffMemberI
 4. Confirmar checkout Cart V2, importe en EUR, pago de F1 y ausencia de cobro separado de F2.
 5. Verificar que el evento nativo de Bookings confirma la reserva y que el evento de pago no la confirma por sí solo.
 
+## 4. Persistencia real de reservas duales: CitasF2
+
+La colección `CitasF2` existe en producción, revisión 19, con permisos de lectura/escritura restringidos a `ADMIN`.
+
+Campos requeridos confirmados: `slotStart`, `slotEnd`, `totalAmount`, `bookingId`, `traceId`, `bookingType`, `bookingStatus`, `paymentStatus`, `serviceId`, `resourceId` y `dateYmd`. También existen `pairToken`, `scheduleId`, `meta`, `contactDetails` y campos de trazabilidad/fiscalidad.
+
+Índices activos:
+- `bookingId_unique`: índice único sobre `bookingId`.
+- `idx_citasf2_resourceId`: índice regular sobre `resourceId`.
+- `Índice regular de CitasF2 1`: índice regular sobre `pairToken`.
+
+La unicidad de `bookingId` evita duplicar la proyección de una reserva nativa. `pairToken` no es único, como corresponde a una pareja F1/F2 que comparte el mismo token. El esquema y los índices observados son compatibles con el modelo de persistencia dual del proyecto.
+
 ## 5. Fuentes oficiales Wix consultadas
 
 - Services V2 — Query Services: https://dev.wix.com/docs/api-reference/business-solutions/bookings/services/services-v2/query-services
