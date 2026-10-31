@@ -55,6 +55,24 @@ Se cruzaron los 94 servicios nativos con sus 94 registros de servicio en `Servic
 
 **Conclusión:** no se detectan divergencias de precio o duración que alteren el importe nativo del checkout para los 70 servicios visibles. El checkout Cart V2 sigue pendiente de validación real de extremo a extremo.
 
+## 1.3 Disponibilidad futura y gap dual
+
+Consulta de solo lectura de Time Slots V2 para el intervalo local 2026-11-01 a 2026-11-08, zona Europe/Madrid, ubicación de negocio canónica y slots reservables.
+
+Se encontraron combinaciones F1/F2 con el mismo resourceId y con inicio F2 exactamente igual a fin F1 más el tiempo de exposición configurado:
+
+| Servicio | F1 | Exposición | F2 |
+|---|---|---:|---|
+| Coloración Raíces Perfectas | 09:00–09:30 | 30 min | 10:00–10:40 |
+| Babylights: Mechas Naturales | 09:00–09:50 | 40 min | 10:30–11:30 |
+| Terapia de Alisado Espejo Premium | 09:00–09:45 | 20 min | 10:05–11:00 |
+
+Se encontraron 505, 455 y 485 combinaciones compatibles respectivamente en la ventana consultada. Los ejemplos corresponden al 3 de noviembre de 2026.
+
+Esto confirma disponibilidad nativa compatible con el gap para estos tres pares. No demuestra creación de reservas, bloqueo concurrente, checkout, confirmación ni compensación; esas pruebas siguen pendientes en QA.
+
+También se comprobó que schedule.lastSessionEnd en la respuesta de servicios no debe interpretarse como fecha límite de disponibilidad: servicios cuyo valor estaba en el pasado devolvieron slots reservables posteriores.
+
 ## 2. Profesionales y recursos de Bookings
 
 La consulta de Staff Members V2 devolvió tres profesionales activos de servicio. Los identificadores se contrastaron con los registros CMS de `MapaStaff`.
