@@ -1,7 +1,7 @@
 /*
 =============================================================================
 MODULE: backend/events.js
-VERSION: v5015-ALIGNED
+VERSION: v5016-ORDER-AMOUNT-ZERO-SAFE
 BASE: v5009-FISCAL-V20.1 + alineacion con internalConfig v12.0-SSOT-FINAL
       y dataAccess v2.1-UNIFIED
 RESPONSIBILITY: Server-to-server native webhooks for Wix Bookings V2 and
@@ -32,6 +32,9 @@ CAMBIOS DE ALINEACION v5015-ALIGNED (respecto a v5009-FISCAL-V20.1):
           ELEMENTOS_SEGURIDAD, CAMBIOS_BASE_IMPONIBLE, CUOTA_ERRONEA,
           EXENTA_NO_SUJETA_REPETIDA, SIMPLIFICADA_REPETIDA, OTRAS).
           Se usa CORRECTION_REASON.OTRAS.
+  FISCAL-ORDER-01: El importe explicito de pedido, incluido 0, prevalece
+          sobre el precio unitario. Si falta, se usan importes de linea
+          despues de descuentos antes de recurrir al precio unitario.
 
 FIXES APLICADOS v5009-FISCAL-V20.1 (heredados):
   - V20-01..V20-06.
