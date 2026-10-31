@@ -94,6 +94,14 @@ Se ha corregido en la rama de trabajo la selección de límites por superficie:
 
 Esta corrección elimina el desajuste de configuración detectado, pero **no convierte el limitador en distribuido**: el contador sigue siendo un `Map` local a cada instancia y no persiste tras reinicios. No satisface todavía el requisito de persistencia de la Biblia v10.0 ni los criterios de aceptación de concurrencia multi-instancia. No se debe considerar desbloqueado para producción.
 
+## Automatización del manifiesto Velo — 2026-10-31
+
+Se ha añadido `.github/workflows/wix-cli-manifest.yml` para generar `src/velo.dependencies.json` mediante el Wix CLI for Sites en GitHub Actions, sin ejecutar `wix publish` ni modificar el sitio publicado.
+
+Requisito de autenticación pendiente: crear una API key Wix con el permiso **Wix CLI for Sites - Git Integration** y guardarla en GitHub como secreto de repositorio `WIX_CLI_API_KEY`. La integración de GitHub no permite leer ni crear secretos; por eso no se puede completar ese paso desde esta sesión. El workflow valida que la versión instalada de `@wix/data` siga siendo `1.0.527`, limita el commit a metadatos generados y conserva un artefacto de auditoría.
+
+Tras generar el manifiesto se reactivará `@wix/cli/no-invalid-backend-import` y se ejecutará CI sobre el nuevo HEAD. Hasta entonces, la regla continúa desactivada. No se usa la CLI para publicar ni para desplegar cambios.
+
 ## Decisiones pendientes
 
 1. Obtener y aprobar la SSOT v13.0 o una decisión formal que determine si v10.0 sigue siendo vinculante para rate limiting.
