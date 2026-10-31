@@ -75,8 +75,8 @@ const rescheduleBookingElevated = auth.elevate(bookings.rescheduleBooking);
 const getBookingElevated = auth.elevate(bookings.getBooking);
 
 /** Enforce the shared rate limiter before public booking/payment operations. */
-function _rateLimitOrThrow(surface, key, traceId) {
-    const result = rateLimiter({ surface, key });
+async function _rateLimitOrThrow(surface, key, traceId) {
+    const result = await rateLimiter({ surface, key });
     if (result?.allowed) return;
 
     const error = new Error(`RATE_LIMITED: retryAfter=${result?.retryAfter ?? 1}`);
@@ -381,7 +381,7 @@ traceId,
 sessionMemberId
 );
 
-_rateLimitOrThrow(
+await _rateLimitOrThrow(
 "public-booking",
 sessionMemberId || _safeTrim(unsafePayload?.email) || "anon",
 traceId
@@ -417,7 +417,7 @@ Permissions.SiteMember,
 async (payload) => {
 const traceId = payload?.traceId || makeTraceId("confirm-pay");
 try {
-_rateLimitOrThrow(
+await _rateLimitOrThrow(
 "citasManager.confirmPayment",
 _safeTrim(payload?.orderId) || "anon",
 traceId
@@ -1536,7 +1536,7 @@ Permissions.SiteMember,
 async (payload) => {
 const traceId = payload?.traceId || makeTraceId("resched");
 try {
-_rateLimitOrThrow(
+await _rateLimitOrThrow(
 "citasManager.rescheduleExistingBooking",
 _safeTrim(payload?.bookingId) || "anon",
 traceId
@@ -1671,7 +1671,7 @@ Permissions.SiteMember,
 async (payload) => {
 const traceId = payload?.traceId || makeTraceId("resched-dual");
 try {
-_rateLimitOrThrow(
+await _rateLimitOrThrow(
 "citasManager.rescheduleDualBookings",
 _safeTrim(payload?.pairToken) || "anon",
 traceId
