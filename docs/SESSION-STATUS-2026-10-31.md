@@ -1,19 +1,19 @@
 # Marian Madrid — Estado consolidado de sesión
 
-**Fecha:** 2026-10-31  
+**Fecha de actualización:** 2026-11-01  
 **Repositorio canónico:** https://github.com/nachoortegazgz/marianmadridz  
-**Rama de trabajo:** `feat/bookings-cart-v2-checkout-2026-10-30`  
-**Commit auditado:** `be55b725578056e3e021cc61041d3faf62cc31c3`  
-**PR:** [#19 — Bookings Cart V2 checkout](https://github.com/nachoortegazgz/marianmadridz/pull/19)  
+**Rama de documentación actual:** `docs/canonical-repository-reference-2026-11-01`  
+**HEAD de `main` verificado:** `1c1165d32795fa1fc8b646f4a3e249af8e58e228`  
+**Último cambio funcional integrado:** [PR #22 — Bookings V2 cancellation event contract](https://github.com/nachoortegazgz/marianmadridz/pull/22)  
 **Wix Site ID:** `188bed94-177c-4bc9-a9f0-35080d874f3e`  
 **Dominio:** https://www.marianmadrid.es/
 
 ## 1. Estado verificado
 
-- GitHub Actions, workflow **Backend quality gates**, run **#310**: `completed / success`.
-- El run #310 corresponde al commit `be55b725`; cuatro jobs completados correctamente según la comprobación previa de la sesión.
-- Rama de trabajo: `feat/bookings-cart-v2-checkout-2026-10-30`.
-- PR #19 sigue abierta y en Draft; no está fusionada.
+- La PR #19 (checkout Cart V2) está **fusionada** en `main` mediante `ff16a703856b3f997ff73e1a56932e185f72a66a`.
+- La PR #22 (contrato de evento de cancelación Bookings V2) está **fusionada** en `main`; su merge commit es el HEAD verificado `1c1165d32795fa1fc8b646f4a3e249af8e58e228`.
+- La PR #23 (envoltorio webhook REST) está **cerrada sin merge**; no se incorpora su implementación.
+- El run #310 de **Backend quality gates** fue `completed / success` para `be55b725`, pero no demuestra CI del HEAD actual. La consulta de checks y runs asociada al HEAD `1c1165d` no devolvió resultados; CI actual queda **sin verificar**.
 - Wix identifica el Site ID anterior como **Published**, plan Premium, dominio personalizado, Editor clásico y Velo habilitado.
 - Wix Apps observadas: Bookings, Stores **Catalog V1**, Invoices **V1**, Members, Forms & Payments y Gift Cards.
 - No se ha realizado publicación Wix ni mutación de CMS durante esta consolidación.
@@ -39,7 +39,7 @@
 
 - Workflow `.github/workflows/wix-cli-manifest.yml` usa el secreto GitHub `CLI_API_KEY` como `WIX_CLI_API_KEY`.
 - El workflow instala Wix CLI for Sites, ejecuta `wix install --npm @wix/data` y comprueba la versión esperada de `@wix/data`.
-- **Pendiente:** no se ha verificado la presencia de `src/velo.dependencies.json` en la rama consultada. La regla ESLint `@wix/cli/no-invalid-backend-import` sigue desactivada temporalmente por esta razón.
+- **Verificado en `main` (2026-11-01):** `src/velo.dependencies.json` no existe (consulta GitHub Contents: 404). La regla ESLint `@wix/cli/no-invalid-backend-import` sigue desactivada temporalmente por esta razón.
 
 ## 3. Entorno Wix y QA
 
@@ -97,6 +97,14 @@ Esta confirmación permite planificar pruebas persistentes controladas. No obsta
 7. Revisar PR #19; mantener Draft si persiste cualquier fallo o falta evidencia runtime.
 8. Solo tras aprobación: fusionar y desplegar el commit validado a Wix.
 
-## 7. Regla de integridad de este informe
+## 7. Actualización de repositorio y documentación (2026-11-01)
+
+- Repositorio canónico único: `nachoortegazgz/marianmadridz`.
+- Corregidas en esta rama las referencias obsoletas del repositorio en `BIBLIA SSOT (v10.0) — MARIANMADRID.ES.txt` y `CMS KEYFIELDS.md`.
+- Verificación posterior de ambos archivos: cero coincidencias con `marianmadridXXXXX` y `marianmadridX.git`.
+- La búsqueda de código de GitHub no devolvió coincidencias indexadas; la verificación de referencias se hizo leyendo directamente los documentos versionados identificados en el árbol Git.
+- Esta actualización solo cambia documentación. No altera código, CMS, reservas ni publicación Wix.
+
+## 8. Regla de integridad de este informe
 
 Este documento separa hechos verificados, cambios existentes en GitHub y tareas pendientes. No afirma que se hayan creado reservas, escrito resultados en CMS, sincronizado el código con Wix ni publicado cambios, porque esas acciones no se han ejecutado en esta sesión.
