@@ -40,11 +40,25 @@ const ALLOWED_STAFF_ROLES = Object.freeze([
 
 const RATE_LIMIT_CACHE = new Map();
 
-const RATE_LIMIT_MAX_REQUESTS =
-    Number(SDK_CONFIG?.RATE_LIMIT?.MAX_REQUESTS) || 20;
+const DEFAULT_RATE_LIMIT = Object.freeze({
+    maxRequests: 20,
+    windowMs: 5000,
+});
 
-const RATE_LIMIT_WINDOW_MS =
-    Number(SDK_CONFIG?.RATE_LIMIT?.WINDOW_MS) || 5000;
+const RATE_LIMIT_POLICIES = Object.freeze({
+    "public-booking": Object.freeze({
+        maxRequests: 5,
+        windowMs: 10000,
+    }),
+    reservas: Object.freeze({
+        maxRequests: 20,
+        windowMs: 5000,
+    }),
+    availability: Object.freeze({
+        maxRequests: 12,
+        windowMs: 5000,
+    }),
+});
 
 const RATE_LIMIT_CLEANUP_TTL_MS =
     Number(SDK_CONFIG?.SECURITY?.RATE_LIMIT_CACHE_CLEANUP_TTL_MS) || 60000;
@@ -193,15 +207,16 @@ export async function getMyStaffContext(traceId = null) {
 
 export function rateLimiter(
     { surface, key } = {},
-    maxRequests = RATE_LIMIT_MAX_REQUESTS,
-    windowMs = RATE_LIMIT_WINDOW_MS
+    maxRequests = null,
+    windowMs = null
 ) {
     _cleanupRateLimitCache();
 
     const normalizedSurface = _normalizeRateLimitPart(surface);
     const normalizedKey = _normalizeRateLimitPart(key);
-    const max = Math.max(1, Number(maxRequests) || RATE_LIMIT_MAX_REQUESTS);
-    const window = Math.max(1, Number(windowMs) || RATE_LIMIT_WINDOW_MS);
+    const policy = RATE_LIMIT_POLICIES[normalizedSurface] || DEFAULT_RATE_LIMIT;
+    const max = Math.max(1, Number(maxRequests) || policy.maxRequests);
+    const window = Math.max(1, Number(windowMs) || policy.windowMs);
     const cacheKey = _buildRateLimitCacheKey(normalizedSurface, normalizedKey);
     const now = Date.now();
 
