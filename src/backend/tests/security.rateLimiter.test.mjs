@@ -33,3 +33,41 @@ test('SEC-RL-03 test reset clears the in-memory limiter state', () => {
   _resetRateLimitCacheForTests();
   assert.equal(rateLimiter(key, 1, 10000).allowed, true);
 });
+
+
+test('SEC-RL-04 applies the canonical SSOT default policy per public surface', () => {
+  _resetRateLimitCacheForTests();
+
+  const publicBooking = { surface: 'public-booking', key: 'public-a' };
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    assert.equal(rateLimiter(publicBooking).allowed, true);
+  }
+  assert.equal(rateLimiter(publicBooking).allowed, false);
+
+  _resetRateLimitCacheForTests();
+  const reservas = { surface: 'reservas', key: 'reservas-a' };
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    assert.equal(rateLimiter(reservas).allowed, true);
+  }
+  assert.equal(rateLimiter(reservas).allowed, false);
+
+  _resetRateLimitCacheForTests();
+  const availability = { surface: 'availability', key: 'availability-a' };
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    assert.equal(rateLimiter(availability).allowed, true);
+  }
+  assert.equal(rateLimiter(availability).allowed, false);
+});
+
+test('SEC-RL-05 canonical surface policies remain isolated by surface and requester', () => {
+  _resetRateLimitCacheForTests();
+
+  const requesterA = { surface: 'availability', key: 'shared-requester' };
+  const requesterB = { surface: 'reservas', key: 'shared-requester' };
+
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    assert.equal(rateLimiter(requesterA).allowed, true);
+  }
+  assert.equal(rateLimiter(requesterA).allowed, false);
+  assert.equal(rateLimiter(requesterB).allowed, true);
+});
