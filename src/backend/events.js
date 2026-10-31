@@ -80,6 +80,7 @@ import {
 
 import { SECRETS } from "backend/mmSecrets";
 import { logger } from "backend/logger";
+import { resolveOrderLedgerAmount } from "backend/fiscal/orderAmounts";
 import { normalizeError, _updateCitaSafe, _persistBooking } from "backend/booking/bookingCore";
 import { queueFiscalRecovery } from "backend/cajas.web";
 import { registrarEventoEconomico } from "backend/eventLog";
@@ -1031,24 +1032,7 @@ export async function wixEcom_onOrderPaymentStatusUpdated(rawBody) {
         );
         const linkedBookingIds = bookingIds.join(",");
 
-        const orderTotal =
-            Number(
-                order?.priceSummary?.total?.amount ??
-                    order?.totals?.total?.amount ??
-                    0
-            ) || 0;
-        const lineItemsTotal = lineItems.reduce((sum, item) => {
-            const itemPrice =
-                Number(
-                    item?.price?.amount ??
-                        item?.price ??
-                        item?.totalPrice?.amount ??
-                        0
-                ) || 0;
-            return sum + itemPrice * (Number(item?.quantity) || 1);
-        }, 0);
-        const finalLedgerAmount =
-            orderTotal > 0 ? orderTotal : lineItemsTotal;
+        const finalLedgerAmount = resolveOrderLedgerAmount(order);
         const transactionId = `ORDER-${orderId}`;
 
         const existingLedgerRes = await withTimeout(
