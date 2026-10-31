@@ -439,6 +439,6 @@ export function bulkUpdate(collection, items) {
     return elevatedBulkUpdate(collection, items);
 }
 
-export function bulkRemove(collection, ids) {
-    return elevatedBulkRemove(collection, ids);
+export function bulkRemove(collection, ids, options) {
+    return elevatedBulkRemove(collection, ids, options);
 }
