@@ -1,6 +1,6 @@
 /*
 MODULE: backend/booking/bookingCore.js
-VERSION: v5019-CART-V2-CHECKOUT-CONTRACT
+VERSION: v5020-CART-V2-ITEM-VALIDATION
 BASE: v5018-SDK-BOOKED-SLOT-SHAPE + Cart V2 checkout
 RESPONSIBILITY: Primitivas atomicas de reserva (simple y dual con gap),
 Bookings Writer V2, checkout Cart V2 de F1, locks, idempotencia,
@@ -14,6 +14,8 @@ CORRECCIONES v5017-STRONG-QUERY:
     obsoletos), _getTransactionById/_writeTransaction (idempotencia),
     _getLock (locks). Ahora find({consistencyMode:"strong"}).
 
+CART-01: Cart V2 solo entrega checkout si el carrito calculado contiene
+    exactamente la reserva F1 esperada y no declara el item como no disponible.
 FIXES HEREDADOS v5016: CORE-50/51 (CANCELLED dos L).
 FIXES HEREDADOS v5015: CORE-46..CORE-49.
 FIXES HEREDADOS v5014: CORE-39..CORE-45.
