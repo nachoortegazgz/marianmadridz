@@ -197,7 +197,16 @@ export async function rateLimiter(
         const requesterHash = await hashSHA256(
             `${normalizedSurface}|${normalizedKey}`
         );
-        const recordId = `RL_${policyHash}`;
+        const idHex = policyHash.slice(0, 32).split("");
+        idHex[12] = "5";
+        idHex[16] = "a";
+        const recordId = [
+            idHex.slice(0, 8).join(""),
+            idHex.slice(8, 12).join(""),
+            idHex.slice(12, 16).join(""),
+            idHex.slice(16, 20).join(""),
+            idHex.slice(20, 32).join(""),
+        ].join("-");
         const now = Date.now();
 
         // Insert-once bootstrap. Duplicate-ID contention is expected and safe.
