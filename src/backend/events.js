@@ -857,33 +857,29 @@ export async function wixBookingsV2_onBookingCanceled(rawBody) {
         const event = await _verifyAndDecodeWebhook(rawBody, "BOOKING_CANCELED");
         if (!event) return { status: "REJECTED", reason: "JWT_VERIFICATION_FAILED" };
 
-        const eventId =
-            event?.eventId ||
-            event?._id ||
-            `cancel-${event?.booking?.id || Date.now()}`;
-        const alreadyProcessed = await isEventProcessed(eventId);
-        if (alreadyProcessed) {
-            log.info("EVENT_DUPLICATE_IGNORED", {
-                eventId,
-                eventType: "BOOKING_CANCELED",
-            });
-            return { status: "OK", duplicate: true };
-        }
-
-        const valid = validateEventStructure(event, ["booking.id"]);
+        // Canonical Wix Bookings V2 event contract:
+        // metadata.id identifies the event; data.booking._id identifies the booking.
+        const eventId = _safeTrim(event?.metadata?.id || "");
+        const booking = event?.data?.booking || {};
+        const bookingId = _safeTrim(booking?._id || "");
+        const valid = Boolean(eventId) && validateEventStructure(event, [
+            "metadata.id",
+            "data.booking._id",
+        ]);
         if (!valid) {
             log.warn("EVENT_INVALID_STRUCTURE_REJECTED", { eventId });
-            await markEventAsProcessed(
-                eventId,
-                "BOOKING_CANCELED_INVALID",
-                traceId,
-                { rejected: true }
-            );
-            return { status: "OK", rejected: true };
+            return { status: "RETRY_REQUIRED", reason: "INVALID_BOOKING_CANCELED_EVENT" };
         }
 
-        const booking = event?.booking || event?.entity || {};
-        const bookingId = booking?.id || booking?._id || "unknown";
+        const alreadyProcessed = await isEventProcessed(eventId);
+        if (alreadyProcessed) {
+            // Do not silently skip a replay when CMS status is stale.
+            // Reconcile status below; fiscal writes remain idempotent by transactionId.
+            log.info("BOOKING_CANCELED_REPLAY_RECONCILIATION", {
+                eventId,
+                bookingId,
+            });
+        }
 
         // Si la cita previa estaba PAID, generar rectificativa
         const previousCita = await dalQuery(CITAS_COL)
