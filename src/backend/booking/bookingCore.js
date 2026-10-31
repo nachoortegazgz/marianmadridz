@@ -312,6 +312,21 @@ export async function createBookingCartCheckout(bookingId, traceId) {
     const calculatedCartId = _safeTrim(
         calculation && calculation.cart && calculation.cart._id
     );
+    const cartLineItems = Array.isArray(calculation?.cart?.lineItems)
+        ? calculation.cart.lineItems
+        : null;
+    const matchingBookingItems = cartLineItems
+        ? cartLineItems.filter((item) => {
+              const reference = item?.source?.catalogReference;
+              return (
+                  reference?.appId === WIX_CATALOG_APP_IDS.BOOKINGS &&
+                  reference?.catalogItemId === normalizedBookingId
+              );
+          })
+        : [];
+    const bookingItemUnavailable = matchingBookingItems.some(
+        (item) => item?.status != null && item.status !== "IN_STOCK"
+    );
     const violations = summary && summary.violations;
     const totalAmount = _safeTrim(
         summary &&
@@ -328,6 +343,10 @@ export async function createBookingCartCheckout(bookingId, traceId) {
 
     if (
         calculatedCartId !== cartId ||
+        !cartLineItems ||
+        cartLineItems.length !== 1 ||
+        matchingBookingItems.length !== 1 ||
+        bookingItemUnavailable ||
         (violations != null &&
             (!Array.isArray(violations) || violations.length > 0)) ||
         !totalAmount ||
