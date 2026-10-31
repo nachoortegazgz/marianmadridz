@@ -1,128 +1,94 @@
 # ADR-004 — Rate limiting persistente en ControlOperativo
 
-- **Estado:** INVESTIGACIÓN ABIERTA — bloqueante; no aprobado para producción.
-- **Fecha:** 2026-10-30
-- **Ámbito:** backend Velo, superficies públicas de reservas y disponibilidad.
-- **Fuentes documentales del proyecto:** BIBLIA SSOT v10.0, CMS KEYFIELDS.md revisión 15, ANEXO BIBLIA POR WIX y código de la rama auditada.
-- **Fuentes técnicas externas:** documentación oficial Wix Data SDK, Patch Data Item.
+- **Estado:** IMPLEMENTADO EN RAMA; pendiente de validación en runtime Wix antes de producción.
+- **Fecha:** 2026-10-31
+- **Ámbito:** backend Velo, reservas, disponibilidad, caja y agregación fiscal.
+- **Fuente normativa aplicada:** BIBLIA SSOT v10.0 entregada y versionada en este repositorio.
+- **Sitio de producción:** solo auditado en lectura; no se han escrito contadores ni cambiado CMS.
 
-## Contexto verificado
+## 1. Decisión documental
 
-La BIBLIA SSOT v10.0 exige persistir el rate limiting en `ControlOperativo`, con `controlType = "RATE_LIMIT"`. Define estos límites:
+La SSOT v10.0 exige persistencia del rate limiter en `ControlOperativo` con `controlType = "RATE_LIMIT"`. El código contenía comentarios que atribuían su retirada a una SSOT v13.0 (2026-10-19), pero no existe un documento v13.0 versionado en el repositorio ni entre las fuentes normativas aportadas para este trabajo.
 
-| Surface | Máximo | Ventana |
+Por tanto, y aplicando la única SSOT aprobada disponible, se restaura `CONTROL_TYPE.RATE_LIMIT`. No se ha cambiado el esquema CMS: `controlType` es TEXT y el inventario de producción ya contiene los campos necesarios.
+
+## 2. Políticas
+
+| Surface | Máximo de ráfaga | Ventana de recarga |
 |---|---:|---:|
-| `public-booking` | 5 | 10 segundos |
-| `reservas` | 20 | 5 segundos |
-| `availability` | 12 | 5 segundos |
+| `public-booking` | 5 | 10 s |
+| `reservas` | 20 | 5 s |
+| `availability` | 12 | 5 s |
+| Otras superficies internas | 20 | 5 s |
 
-El esquema CMS observado de `ControlOperativo` (revisión 15) contiene `controlType`, `dedupeKey`, `traceId`, `status`, `expiresAt`, `surface`, `requesterKey`, `requestCount`, `windowStart`, `retryAfter`, `payload`, `version` y `processedAt`. No consta índice único para `dedupeKey`.
+Se aplica GCRA (Generic Cell Rate Algorithm): permite la ráfaga indicada y repone capacidad a razón de `windowMs / maxRequests`. Los tiempos internos se guardan como microsegundos enteros para evitar errores de redondeo.
 
-## Auditoría CMS en vivo — 2026-10-31 (solo lectura)
+## 3. Persistencia y concurrencia
 
-Se consultó el sitio Wix publicado `188bed94-177c-4bc9-a9f0-35080d874f3e` mediante los endpoints oficiales de lectura de Data Collections, Data Permissions e Indexes. No se realizaron mutaciones.
+Cada combinación de superficie, clave de solicitante y política tiene un único registro determinista en `ControlOperativo`:
 
-Resultados de `ControlOperativo`:
+- `_id`: hash SHA-256 de superficie, clave y política; no contiene PII.
+- `controlType`: `RATE_LIMIT`.
+- `surface`, `requesterKey`: superficie y hash del solicitante.
+- `requestCount`: contador de solicitudes admitidas.
+- `payload.algorithm`: `GCRA_V1`.
+- `payload.tat`: theoretical arrival time, en microsegundos.
+- `version`: versión de compare-and-set.
+- `expiresAt`: expiración del registro tras inactividad.
+- `traceId`, `dedupeKey`, `status`, `windowStart`: trazabilidad y estado.
 
-- La colección existe; `id = ControlOperativo`, `collectionType = NATIVE`, revisión `15`.
-- Están presentes los campos necesarios para el diseño de rate limit: `controlType`, `dedupeKey`, `traceId`, `status`, `expiresAt`, `surface`, `requesterKey`, `requestCount`, `windowStart`, `retryAfter`, `payload`, `version` y `processedAt`.
-- Tipos relevantes confirmados: `requestCount`, `retryAfter` y `version` = NUMBER; `windowStart` y `expiresAt` = DATETIME; `surface`, `requesterKey`, `dedupeKey`, `traceId` y `controlType` = TEXT.
-- Permisos de lectura, inserción, actualización y eliminación: `CMS_EDITOR`; no es una colección abierta al visitante.
-- Índices activos: tres índices regulares personalizados (`controlType + expiresAt`, `controlType + nextRetryAt`, `controlType + status`) y dos índices de sistema. No existe índice único personalizado, ni índice por `dedupeKey` o `requesterKey`.
-- La API de colección declara capacidad para un índice único de un solo campo y tres índices regulares. Los tres índices regulares ya están ocupados; queda disponible el único índice único, pero Wix limita ese índice a un solo campo y no puede imponer unicidad compuesta de `surface + requesterKey + windowStart`.
+El alta inicial usa `items.insert`; la colisión de ID se trata como concurrencia esperada. Cada admisión lee el registro con consistencia fuerte y ejecuta `items.bulkPatch` con:
 
-El hook `ControlOperativo_beforeInsert` de la rama es passthrough salvo la protección append-only de `WEBHOOK_EVENT`; el test `controlOperativo.hooks.test.mjs` confirma expresamente que un `controlType` desconocido no es rechazado por ese hook. Por tanto, el impedimento actual no es una validación de enum del hook CMS: es la decisión de contrato en `CONTROL_TYPE`/consumidores y la falta de un patrón de concurrencia demostrado.
+1. condición `version == versionLeída`;
+2. actualización de `payload.tat`;
+3. `INCREMENT_FIELD` atómico de `requestCount` y `version`;
+4. renovación de `expiresAt`.
 
-### Auditoría del uso actual del limiter
+Solo se admite la petición si la respuesta incluye el ID en `updatedItemIds`. Si otro escritor gana la condición, se vuelve a leer y reintentar (máximo 12 intentos). Contención agotada o error de persistencia: **fail-closed**, sin volver a un contador local.
 
-La inspección del código de esta rama confirma además que:
+Los WebMethods que consumen el limiter ahora esperan su resultado asíncrono en `reservas.web.js`, `citasManager.web.js`, `cajas.web.js` y `fiscalAggregator.web.js`.
 
-- `security.js` usa `RATE_LIMIT_MAX_REQUESTS = 20` y `RATE_LIMIT_WINDOW_MS = 5000` como fallback global; `internalConfig.js` no aporta una tabla `RATE_LIMIT` efectiva en esta rama.
-- `reservas.web.js` invoca `rateLimiter({ surface, key })` sin pasar límites específicos. Por tanto, `reservas` y `availability` quedan ambas en 20/5 s, aunque v10.0 exige 20/5 s y 12/5 s respectivamente.
-- `citasManager.web.js` también invoca el limiter sin límites específicos. El endpoint `processDualBooking` usa como superficie el literal `citasManager.processDualBooking`, no la superficie canónica `public-booking` (5/10 s).
-- El resto de operaciones de gestión de citas también usan el fallback 20/5 s.
+## 4. Retención segura
 
-**Efecto:** incluso antes de resolver la persistencia, la política de límites por superficie de v10.0 no está implementada. El limiter actual es defensa local de mejor esfuerzo, no un control distribuido ni un cumplimiento del contrato SSOT. No debe presentarse como protección suficiente para producción.
+El job `cleanExpiredRateLimits` se ejecuta cada 5 minutos. Consulta registros RATE_LIMIT expirados y usa `items.bulkRemove` con un segundo filtro servidor (`controlType = RATE_LIMIT` y `expiresAt < now`). Así, un registro renovado entre la consulta y el borrado no coincide con la condición de eliminación.
 
-**Conclusión:** el esquema vivo contiene los campos requeridos por v10.0 y no contradice su uso por tipo de control. La ausencia de índice único compuesto no impide usar un `_id` determinista por clave/ventana, pero esa estrategia y la carrera de inserción deben probarse. Esta lectura no acredita atomicidad del flujo completo ni autoriza activar rate limiting persistente en producción.
+No se purgan otros subtipos de `ControlOperativo`; `WEBHOOK_EVENT` mantiene su protección append-only.
 
-Fuentes oficiales consultadas:
-- Get Data Collection: https://dev.wix.com/docs/api-reference/business-solutions/cms/collection-management/data-collections/get-data-collection
-- Get Permissions: https://dev.wix.com/docs/api-reference/business-solutions/cms/collection-management/data-permissions/get-permissions
-- List Indexes: https://dev.wix.com/docs/api-reference/business-solutions/cms/collection-management/indexes/list-indexes
-- Index Types: https://dev.wix.com/docs/api-reference/business-solutions/cms/collection-management/indexes/index-types
+## 5. Estado de CMS
 
-## Hallazgo de auditoría
+Auditoría de solo lectura realizada el 2026-10-31 sobre el sitio `188bed94-177c-4bc9-a9f0-35080d874f3e`:
 
-La implementación de PR #19 usa un `Map` en memoria. La rama `main` también conserva conteo local y registra bloqueos prolongados en `RateLimitBlocks`, no el 100% del conteo en `ControlOperativo`.
+- `ControlOperativo` existe como colección de usuario (`collectionType = NATIVE`), revisión 15.
+- Están presentes `controlType`, `dedupeKey`, `traceId`, `status`, `expiresAt`, `surface`, `requesterKey`, `requestCount`, `windowStart`, `retryAfter`, `payload` y `version`.
+- Los tipos de datos necesarios son compatibles: contadores/version NUMBER, expiraciones DATETIME, claves TEXT y payload OBJECT.
+- Permisos de colección: CMS_EDITOR; las escrituras se ejecutan desde backend elevado.
+- No se requiere índice único compuesto: la unicidad operativa se obtiene con el `_id` determinista del contador.
 
-Existe una divergencia documental que impide declarar sin reservas que v10.0 sea la última autoridad: `internalConfig.js` de PR #19 atribuye la retirada de `CONTROL_TYPE.RATE_LIMIT` a una SSOT v13.0 (2026-10-19), pero esa versión no está entre los documentos canónicos entregados para esta auditoría. Los documentos entregados incluyen la BIBLIA v10.0 y anexos, no una aprobación formal de v13.0 ni una matriz de precedencia. Por tanto, la decisión de restaurar o mantener retirado `RATE_LIMIT` debe reconciliarse documentalmente antes de cambiar el contrato CMS.
+No se ha insertado ningún registro RATE_LIMIT en producción durante esta auditoría.
 
-## Investigación de Wix Data — actualización 2026-10-30
+## 6. Limitaciones y pruebas pendientes
 
-La primera inspección no detectó una operación atómica porque la capa `backend/dataAccess.js` no expone Patch Data Item. La documentación oficial vigente sí confirma una primitiva relevante:
+1. **Runtime Wix:** la suite offline simula la condición y el incremento atómico; aún falta una prueba de concurrencia real contra Wix Data en un entorno QA. La documentación oficial confirma incrementos atómicos en Bulk Patch y soporte de `condition.filter`, pero el mock no sustituye esa validación real.
+2. **Identidad anónima:** `reservas.web.js` no dispone actualmente de una IP verificable dentro de estos WebMethods; las peticiones anónimas usan una clave común `anon:noip`. Esto puede hacer que visitantes distintos compartan el límite. `processDualBooking` usa miembro/email/anon; el email recibido del cliente no es una identidad fuerte. No se debe presentar este componente como protección anti-bot por IP.
+3. **Manifiesto Velo:** `src/velo.dependencies.json` sigue pendiente de generación por Wix CLI. El workflow requiere el secreto GitHub `WIX_CLI_API_KEY`, que el conector no puede crear ni leer.
+4. **ESLint:** `@wix/cli/no-invalid-backend-import` permanece temporalmente desactivada hasta que el manifiesto exista.
+5. **Producción:** no fusionar ni publicar hasta ejecutar pruebas simples/duales, concurrencia, checkout, cancelación y compensación en Wix QA.
 
-- SDK: `import { items } from "@wix/data"`.
-- Firma: `items.patch(dataCollectionId, itemId, fieldModifications, options)`.
-- Acción `INCREMENT_FIELD`: Wix documenta que el incremento se realiza atómicamente en el servidor y evita lost updates entre escritores concurrentes.
-- `options.condition.filter`: permite aplicar el patch sólo si el elemento satisface un filtro.
-- El campo `traceId` existe en el esquema CMS y podría recibir un token único de intento en la misma operación que incrementa `requestCount`.
+## 7. Fuentes oficiales Wix
 
-Referencia oficial: https://dev.wix.com/docs/api-reference/business-solutions/cms/data-items/patch-data-item?apiView=SDK
+- [Bulk Patch Data Items](https://dev.wix.com/docs/api-reference/business-solutions/cms/data-items/bulk-patch-data-items?apiView=SDK) — incrementos atómicos, condición y resultado.
+- [Bulk Remove Data Items](https://dev.wix.com/docs/api-reference/business-solutions/cms/data-items/bulk-remove-data-items?apiView=SDK) — borrado condicionado y resultado.
+- [Patch Data Item](https://dev.wix.com/docs/api-reference/business-solutions/cms/data-items/patch-data-item?apiView=SDK).
+- [Wix Data error codes](https://dev.wix.com/docs/rest/business-solutions/cms/wix-data-error-codes).
 
-Esto corrige el hallazgo preliminar: **Wix Data sí dispone de incremento atómico**. No demuestra todavía, por sí solo, que el patrón completo de admisión sea seguro. La documentación consultada describe el incremento como atómico, pero no declara expresamente la semántica de serialización de `condition.filter` bajo concurrencia ni el resultado exacto de una condición que no coincide.
+## 8. Criterios de aceptación restantes
 
-### Diseño candidato a validar
+- [x] Límites diferenciados por superficie y nombre canónico `public-booking`.
+- [x] Estado persistente en `ControlOperativo` según SSOT v10.0.
+- [x] Compare-and-set por `version` con Bulk Patch y fail-closed.
+- [x] Limpieza con filtro de borrado repetido en servidor.
+- [x] Pruebas offline de políticas, refill, aislamiento y concurrencia simulada.
+- [ ] Concurrencia real multi-instancia en Wix QA.
+- [ ] Resolver una clave de identidad anónima que no sea global ni controlada libremente por el cliente.
+- [ ] Manifiesto Velo, ESLint completo y pruebas de runtime Wix.
 
-1. Ventana fija por `surface + requesterKey + windowStart`, con un identificador determinista del registro dentro de `ControlOperativo`.
-2. Primer intento: insertar el registro con `requestCount = 1` y `traceId` único. El ID determinista evita crear dos contadores independientes para la misma clave/ventana; los duplicados deben resolverse mediante patch.
-3. Intentos siguientes: `items.patch` con `INCREMENT_FIELD` sobre `requestCount`, `SET_FIELD` sobre `traceId` y `condition.filter` que limite el incremento a `requestCount < maxRequests`.
-4. Permitir la petición sólo si la respuesta del patch demuestra que se aplicó el incremento de ese intento (por ejemplo, devolviendo su `traceId`). Si no se puede distinguir con certeza un patch aplicado de una condición no satisfecha, no se acepta este diseño.
-5. Ejecutar pruebas de concurrencia reales en Wix QA, con múltiples instancias y ráfagas simultáneas, además de reinicio de contenedor, expiración de ventana y fallo CMS.
-
-El paso 4 es una condición crítica: no debe inferirse que un patch fue aplicado simplemente porque la llamada no lanzó una excepción. Debe verificarse el contrato de respuesta de la condición y probarse en el runtime real.
-
-## Corrección parcial de política — 2026-10-31
-
-Se ha corregido en la rama de trabajo la selección de límites por superficie:
-
-- `public-booking`: 5 peticiones / 10 segundos.
-- `reservas`: 20 peticiones / 5 segundos.
-- `availability`: 12 peticiones / 5 segundos.
-- `processDualBooking` utiliza ahora el identificador canónico `public-booking`.
-- Se han añadido pruebas offline para los tres límites y su aislamiento por superficie/solicitante.
-
-Esta corrección elimina el desajuste de configuración detectado, pero **no convierte el limitador en distribuido**: el contador sigue siendo un `Map` local a cada instancia y no persiste tras reinicios. No satisface todavía el requisito de persistencia de la Biblia v10.0 ni los criterios de aceptación de concurrencia multi-instancia. No se debe considerar desbloqueado para producción.
-
-## Automatización del manifiesto Velo — 2026-10-31
-
-Se ha añadido `.github/workflows/wix-cli-manifest.yml` para generar `src/velo.dependencies.json` mediante el Wix CLI for Sites en GitHub Actions, sin ejecutar `wix publish` ni modificar el sitio publicado.
-
-Requisito de autenticación pendiente: crear una API key Wix con el permiso **Wix CLI for Sites - Git Integration** y guardarla en GitHub como secreto de repositorio `WIX_CLI_API_KEY`. La integración de GitHub no permite leer ni crear secretos; por eso no se puede completar ese paso desde esta sesión. El workflow valida que la versión instalada de `@wix/data` siga siendo `1.0.527`, limita el commit a metadatos generados y conserva un artefacto de auditoría.
-
-Tras generar el manifiesto se reactivará `@wix/cli/no-invalid-backend-import` y se ejecutará CI sobre el nuevo HEAD. Hasta entonces, la regla continúa desactivada. No se usa la CLI para publicar ni para desplegar cambios.
-
-## Decisiones pendientes
-
-1. Obtener y aprobar la SSOT v13.0 o una decisión formal que determine si v10.0 sigue siendo vinculante para rate limiting.
-2. Confirmar que el hook de `ControlOperativo` admite `RATE_LIMIT` y los campos propuestos; el enum actual de PR #19 no lo admite.
-3. Implementar el adaptador `items.patch` en la capa central `dataAccess.js`, sin dispersar acceso CMS.
-4. Probar el resultado de `condition.filter` cuando no se cumple y su comportamiento bajo concurrencia.
-5. Confirmar si los límites v10.0 siguen vigentes y si son por ventana fija o deslizante; v10.0 define los máximos y ventanas, pero el algoritmo debe quedar explícito.
-6. No introducir una colección alternativa ni un almacén externo antes de completar estas verificaciones.
-
-## Criterios de aceptación
-
-1. Precedencia documental resuelta y aprobada.
-2. Todo intento requerido persiste en `ControlOperativo` con el tipo y los campos canónicos aprobados, sin PII innecesaria.
-3. Clave normalizada y aislada por superficie.
-4. Límites y ventanas exactos de la SSOT vigente.
-5. Pruebas concurrentes en Wix QA demuestran que no se excede el máximo entre instancias.
-6. Estado conservado tras reinicio de instancia.
-7. Fallos CMS no degradan silenciosamente a un límite local presentado como global.
-8. Limpieza de registros expirados sin borrar controles activos.
-9. Manifiesto Wix generado por Wix CLI y regla ESLint de imports backend reactivada.
-
-## Impacto sobre PR #19
-
-PR #19 permanece bloqueada para merge y despliegue hasta resolver la precedencia documental, validar el patrón atómico en Wix QA y completar los controles de integración. El CI offline no acredita estas garantías.
