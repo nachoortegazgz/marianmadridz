@@ -88,14 +88,15 @@ Esta confirmación permite planificar pruebas persistentes controladas. No obsta
 
 ## 6. Secuencia recomendada para la próxima sesión
 
-1. Recuperar este documento y verificar HEAD/PR/CI antes de cambiar código.
-2. Verificar manifiesto Wix CLI y cerrar el bloqueo ESLint.
-3. Inventariar servicios/recursos/horarios de Bookings mediante lectura.
-4. Ejecutar la batería QA E2E autorizada con los datos de prueba anteriores, semana próxima, pago presencial.
-5. Anotar resultados en agenda y colección QA identificada; adjuntar IDs de reserva y traceId, minimizando PII y sin copiar teléfono/email al repositorio.
-6. Ejecutar tests offline + lint + CI.
-7. Revisar PR #19; mantener Draft si persiste cualquier fallo o falta evidencia runtime.
-8. Solo tras aprobación: fusionar y desplegar el commit validado a Wix.
+1. Verificar el HEAD de `main`, las PR y los checks del commit antes de cada cambio. Último HEAD observado: `1c1165d`.
+2. Generar `src/velo.dependencies.json` mediante Wix CLI for Sites; no crear ni editar manualmente el manifiesto. El workflow existente solo se activa con `push` a ramas `feat/**` o `workflow_dispatch`; el conector disponible no expone dispatch.
+3. Reactivar `@wix/cli/no-invalid-backend-import` únicamente después de generar el manifiesto y confirmar que el lint completo pasa.
+4. Ejecutar regresión offline, instalación limpia y lint sobre el HEAD candidato; exigir CI verde del commit exacto.
+5. Inventariar servicios, recursos y horarios Bookings mediante lecturas en QA.
+6. Ejecutar la batería E2E autorizada (reserva simple y dual, gap, pago presencial, cancelación, compensación y notificaciones controladas).
+7. Documentar evidencia y limpiar solo registros QA creados por estas pruebas, usando flujos soportados.
+8. Revisar y fusionar PR #24 (documentación) tras revisión; después abordar los bloqueos funcionales en ramas separadas.
+9. No publicar Wix hasta disponer de Preview/E2E runtime satisfactorios y aprobación explícita del commit de despliegue.
 
 ## 7. Actualización de repositorio y documentación (2026-11-01)
 
