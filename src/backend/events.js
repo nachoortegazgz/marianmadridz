@@ -104,15 +104,18 @@ import {
  * An explicit zero is valid and must not fall back to undiscounted prices.
  */
 export function resolveOrderLedgerAmount(order) {
-    const rawOrderTotal =
-        order?.priceSummary?.total?.amount ??
-        order?.totals?.total?.amount;
-
-    if (
-        rawOrderTotal !== undefined &&
-        rawOrderTotal !== null &&
-        String(rawOrderTotal).trim() !== ""
-    ) {
+    const orderTotalCandidates = [
+        order?.priceSummary?.total?.amount,
+        order?.totals?.total?.amount,
+    ];
+    for (const rawOrderTotal of orderTotalCandidates) {
+        if (
+            rawOrderTotal === undefined ||
+            rawOrderTotal === null ||
+            String(rawOrderTotal).trim() === ""
+        ) {
+            continue;
+        }
         const orderTotal = Number(rawOrderTotal);
         if (Number.isFinite(orderTotal) && orderTotal >= 0) {
             return orderTotal;
@@ -121,16 +124,19 @@ export function resolveOrderLedgerAmount(order) {
 
     const lineItems = Array.isArray(order?.lineItems) ? order.lineItems : [];
     return lineItems.reduce((sum, item) => {
-        const rawLineTotal =
-            item?.totalPriceAfterTax?.amount ??
-            item?.totalPriceBeforeTax?.amount ??
-            item?.totalPrice?.amount;
-
-        if (
-            rawLineTotal !== undefined &&
-            rawLineTotal !== null &&
-            String(rawLineTotal).trim() !== ""
-        ) {
+        const lineTotalCandidates = [
+            item?.totalPriceAfterTax?.amount,
+            item?.totalPriceBeforeTax?.amount,
+            item?.totalPrice?.amount,
+        ];
+        for (const rawLineTotal of lineTotalCandidates) {
+            if (
+                rawLineTotal === undefined ||
+                rawLineTotal === null ||
+                String(rawLineTotal).trim() === ""
+            ) {
+                continue;
+            }
             const lineTotal = Number(rawLineTotal);
             if (Number.isFinite(lineTotal) && lineTotal >= 0) {
                 return sum + lineTotal;
