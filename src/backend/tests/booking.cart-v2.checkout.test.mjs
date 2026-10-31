@@ -127,7 +127,7 @@ test('CARTV2-04 rejects incomplete or mismatched calculation responses', async (
   setCartV2Mock({
     createCart: async () => ({ _id: CART_ID }),
     calculateCart: async () => ({
-      cart: { _id: '33333333-3333-4333-8333-333333333333', businessInfo: { currencyCode: 'EUR' } },
+      cart: { _id: '33333333-3333-4333-8333-333333333333', businessInfo: { currencyCode: 'EUR' }, lineItems: validBookingLineItems() },
       summary: {
         violations: [],
         priceSummary: { total: { amount: '48.50' } },
@@ -222,7 +222,7 @@ test('CARTV2-08 rejects a non-HTTPS checkout URL', async () => {
   setCartV2Mock({
     createCart: async () => ({ _id: CART_ID }),
     calculateCart: async () => ({
-      cart: { _id: CART_ID, businessInfo: { currencyCode: 'EUR' } },
+      cart: { _id: CART_ID, businessInfo: { currencyCode: 'EUR' }, lineItems: validBookingLineItems() },
       summary: {
         violations: [],
         priceSummary: { total: { amount: '48.50' } },
