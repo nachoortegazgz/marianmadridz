@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { resolveOrderLedgerAmount } from "../fiscal/orderAmounts.js";
+import { resolveOrderLedgerAmount } from "../events.js";
 
 test("FISCAL-ORDER-01 preserves an explicit zero order total", () => {
     assert.equal(
