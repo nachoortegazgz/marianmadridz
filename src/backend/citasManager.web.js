@@ -382,7 +382,7 @@ sessionMemberId
 );
 
 _rateLimitOrThrow(
-"citasManager.processDualBooking",
+"public-booking",
 sessionMemberId || _safeTrim(unsafePayload?.email) || "anon",
 traceId
 );
