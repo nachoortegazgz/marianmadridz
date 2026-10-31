@@ -87,8 +87,8 @@ const _readPreviousInvoiceId = (m) => _safeTrim(readMovementField(m, "previousIn
 // BLOQUE 1 - HELPERS
 // =============================================================================
 
-function _rateLimitOrThrow(surface, key, traceId) {
-  const rl = rateLimiter({ surface, key });
+async function _rateLimitOrThrow(surface, key, traceId) {
+  const rl = await rateLimiter({ surface, key });
   if (!rl.allowed) {
     const e = new Error(`RATE_LIMITED: retryAfter=${rl.retryAfter}`);
     e.code = "RATE_LIMITED";
@@ -430,7 +430,7 @@ async function _getBusinessTaxId(traceId) {
 export const getQuarterlyTaxSummary = webMethod(Permissions.SiteMember, async (year, quarter, options = {}) => {
   const traceId = options.traceId || makeTraceId("tax-303");
   try {
-    _rateLimitOrThrow("fiscal.getQuarterlyTaxSummary", "staff", traceId);
+    await _rateLimitOrThrow("fiscal.getQuarterlyTaxSummary", "staff", traceId);
     await requireCajero(traceId);
     return await getQuarterlyTaxSummaryInternal(year, quarter, { ...options, traceId });
   } catch (err) {
@@ -442,7 +442,7 @@ export const getQuarterlyTaxSummary = webMethod(Permissions.SiteMember, async (y
 export const getLibroRegistroFacturasExpedidas = webMethod(Permissions.Admin, async (year, quarter, options = {}) => {
   const traceId = options.traceId || makeTraceId("libro-registro");
   try {
-    _rateLimitOrThrow("fiscal.getLibroRegistroFacturasExpedidas", "admin", traceId);
+    await _rateLimitOrThrow("fiscal.getLibroRegistroFacturasExpedidas", "admin", traceId);
     await requireAdmin(traceId);
     return await getLibroRegistroFacturasExpedidasInternal(year, quarter, { ...options, traceId, rateLimitKey: "admin" });
   } catch (err) {
