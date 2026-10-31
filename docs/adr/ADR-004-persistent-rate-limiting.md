@@ -18,6 +18,29 @@ La BIBLIA SSOT v10.0 exige persistir el rate limiting en `ControlOperativo`, con
 
 El esquema CMS observado de `ControlOperativo` (revisión 15) contiene `controlType`, `dedupeKey`, `traceId`, `status`, `expiresAt`, `surface`, `requesterKey`, `requestCount`, `windowStart`, `retryAfter`, `payload`, `version` y `processedAt`. No consta índice único para `dedupeKey`.
 
+## Auditoría CMS en vivo — 2026-10-31 (solo lectura)
+
+Se consultó el sitio Wix publicado `188bed94-177c-4bc9-a9f0-35080d874f3e` mediante los endpoints oficiales de lectura de Data Collections, Data Permissions e Indexes. No se realizaron mutaciones.
+
+Resultados de `ControlOperativo`:
+
+- La colección existe; `id = ControlOperativo`, `collectionType = NATIVE`, revisión `15`.
+- Están presentes los campos necesarios para el diseño de rate limit: `controlType`, `dedupeKey`, `traceId`, `status`, `expiresAt`, `surface`, `requesterKey`, `requestCount`, `windowStart`, `retryAfter`, `payload`, `version` y `processedAt`.
+- Tipos relevantes confirmados: `requestCount`, `retryAfter` y `version` = NUMBER; `windowStart` y `expiresAt` = DATETIME; `surface`, `requesterKey`, `dedupeKey`, `traceId` y `controlType` = TEXT.
+- Permisos de lectura, inserción, actualización y eliminación: `CMS_EDITOR`; no es una colección abierta al visitante.
+- Índices activos: tres índices regulares personalizados (`controlType + expiresAt`, `controlType + nextRetryAt`, `controlType + status`) y dos índices de sistema. No existe índice único personalizado, ni índice por `dedupeKey` o `requesterKey`.
+- La API de colección declara capacidad para un índice único de un solo campo y tres índices regulares. Los tres índices regulares ya están ocupados; queda disponible el único índice único, pero Wix limita ese índice a un solo campo y no puede imponer unicidad compuesta de `surface + requesterKey + windowStart`.
+
+El hook `ControlOperativo_beforeInsert` de la rama es passthrough salvo la protección append-only de `WEBHOOK_EVENT`; el test `controlOperativo.hooks.test.mjs` confirma expresamente que un `controlType` desconocido no es rechazado por ese hook. Por tanto, el impedimento actual no es una validación de enum del hook CMS: es la decisión de contrato en `CONTROL_TYPE`/consumidores y la falta de un patrón de concurrencia demostrado.
+
+**Conclusión:** el esquema vivo contiene los campos requeridos por v10.0 y no contradice su uso por tipo de control. La ausencia de índice único compuesto no impide usar un `_id` determinista por clave/ventana, pero esa estrategia y la carrera de inserción deben probarse. Esta lectura no acredita atomicidad del flujo completo ni autoriza activar rate limiting persistente en producción.
+
+Fuentes oficiales consultadas:
+- Get Data Collection: https://dev.wix.com/docs/api-reference/business-solutions/cms/collection-management/data-collections/get-data-collection
+- Get Permissions: https://dev.wix.com/docs/api-reference/business-solutions/cms/collection-management/data-permissions/get-permissions
+- List Indexes: https://dev.wix.com/docs/api-reference/business-solutions/cms/collection-management/indexes/list-indexes
+- Index Types: https://dev.wix.com/docs/api-reference/business-solutions/cms/collection-management/indexes/index-types
+
 ## Hallazgo de auditoría
 
 La implementación de PR #19 usa un `Map` en memoria. La rama `main` también conserva conteo local y registra bloqueos prolongados en `RateLimitBlocks`, no el 100% del conteo en `ControlOperativo`.
