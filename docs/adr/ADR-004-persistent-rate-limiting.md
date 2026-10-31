@@ -33,6 +33,17 @@ Resultados de `ControlOperativo`:
 
 El hook `ControlOperativo_beforeInsert` de la rama es passthrough salvo la protección append-only de `WEBHOOK_EVENT`; el test `controlOperativo.hooks.test.mjs` confirma expresamente que un `controlType` desconocido no es rechazado por ese hook. Por tanto, el impedimento actual no es una validación de enum del hook CMS: es la decisión de contrato en `CONTROL_TYPE`/consumidores y la falta de un patrón de concurrencia demostrado.
 
+### Auditoría del uso actual del limiter
+
+La inspección del código de esta rama confirma además que:
+
+- `security.js` usa `RATE_LIMIT_MAX_REQUESTS = 20` y `RATE_LIMIT_WINDOW_MS = 5000` como fallback global; `internalConfig.js` no aporta una tabla `RATE_LIMIT` efectiva en esta rama.
+- `reservas.web.js` invoca `rateLimiter({ surface, key })` sin pasar límites específicos. Por tanto, `reservas` y `availability` quedan ambas en 20/5 s, aunque v10.0 exige 20/5 s y 12/5 s respectivamente.
+- `citasManager.web.js` también invoca el limiter sin límites específicos. El endpoint `processDualBooking` usa como superficie el literal `citasManager.processDualBooking`, no la superficie canónica `public-booking` (5/10 s).
+- El resto de operaciones de gestión de citas también usan el fallback 20/5 s.
+
+**Efecto:** incluso antes de resolver la persistencia, la política de límites por superficie de v10.0 no está implementada. El limiter actual es defensa local de mejor esfuerzo, no un control distribuido ni un cumplimiento del contrato SSOT. No debe presentarse como protección suficiente para producción.
+
 **Conclusión:** el esquema vivo contiene los campos requeridos por v10.0 y no contradice su uso por tipo de control. La ausencia de índice único compuesto no impide usar un `_id` determinista por clave/ventana, pero esa estrategia y la carrera de inserción deben probarse. Esta lectura no acredita atomicidad del flujo completo ni autoriza activar rate limiting persistente en producción.
 
 Fuentes oficiales consultadas:
