@@ -38,6 +38,8 @@ test("SEC-RL-01 persists a burst-capable GCRA counter and enforces retryAfter", 
     assert.equal(rows[0].requestCount, 2);
     assert.equal(rows[0].version, 2);
     assert.equal(rows[0].payload.algorithm, "GCRA_V1");
+    assert.match(rows[0]._id, /^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-a[0-9a-f]{3}-[0-9a-f]{12}$/i);
+    assert.match(rows[0].requesterKey, /^[0-9a-f]{64}$/i);
 });
 
 test("SEC-RL-02 refills at the configured interval after the burst", async () => {
