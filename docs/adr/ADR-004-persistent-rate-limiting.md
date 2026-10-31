@@ -61,7 +61,7 @@ Auditoría de solo lectura realizada el 2026-10-31 sobre el sitio `188bed94-177c
 - `ControlOperativo` existe como colección de usuario (`collectionType = NATIVE`), revisión 15.
 - Están presentes `controlType`, `dedupeKey`, `traceId`, `status`, `expiresAt`, `surface`, `requesterKey`, `requestCount`, `windowStart`, `retryAfter`, `payload` y `version`.
 - Los tipos de datos necesarios son compatibles: contadores/version NUMBER, expiraciones DATETIME, claves TEXT y payload OBJECT.
-- Permisos de colección: CMS_EDITOR; las escrituras se ejecutan desde backend elevado.
+- Permisos efectivos de colección: `insert=ADMIN, update=ADMIN, remove=ADMIN, read=ADMIN`, conforme a la SSOT v10.0 y al inventario CMS. Las escrituras de backend se ejecutan mediante la capa de acceso elevada.
 - No se requiere índice único compuesto: la unicidad operativa se obtiene con el `_id` determinista del contador.
 
 No se ha insertado ningún registro RATE_LIMIT en producción durante esta auditoría.
@@ -91,4 +91,3 @@ No se ha insertado ningún registro RATE_LIMIT en producción durante esta audit
 - [ ] Concurrencia real multi-instancia en Wix QA.
 - [ ] Resolver una clave de identidad anónima que no sea global ni controlada libremente por el cliente.
 - [ ] Manifiesto Velo, ESLint completo y pruebas de runtime Wix.
-
