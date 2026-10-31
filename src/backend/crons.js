@@ -3,7 +3,7 @@
 MODULE: backend/crons.js
 VERSION: v5011-CRON-PARITY
 BASE: v5010-TELEMETRY-ATOMIC + correcciones auditoria P0 (jobs huerfanos)
-RESPONSIBILITY: Jobs programados (cron). 8 jobs wired en jobs.config + 2 de
+RESPONSIBILITY: Jobs programados (cron). 9 jobs wired en jobs.config + 2 de
 reconciliacion interna (reconcileUnknownTransactions / InconsistentDualPairs).
 STANDARDS: G10 ASCII Strict. Cero suppressAuth. Cero COLLECTIONS alias.
 
@@ -38,8 +38,8 @@ CRON-14 (P2): Eliminación de referencia a COLLECTIONS.ALERTAS_OPERATIVAS
 
 FIXES HEREDADOS v5009-FISCAL-V20.1: CRON-01..CRON-06.
 PENDIENTES:
-- Actualizar jobs.config con los 3 nuevos jobs.
-- Verificar que dataAccess soporta todas las operaciones necesarias.
+- Mantener paridad crons.js/jobs.config mediante CRON-PARITY-01.
+- Verificar operaciones de dataAccess en CI y runtime QA.
 =============================================================================
 */
 import { query as dalQuery, getItem as dalGet, insertItem as dalInsert, updateItem as dalUpdate, removeById as dalRemove, bulkRemove as dalBulkRemove } from "backend/dataAccess";
