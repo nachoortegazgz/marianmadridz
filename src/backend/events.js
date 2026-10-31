@@ -782,11 +782,11 @@ export async function wixBookingsV2_onBookingConfirmed(rawBody) {
         );
         if (!event) return { status: "REJECTED", reason: "JWT_VERIFICATION_FAILED" };
 
-        // Wix Bookings V2 Velo envelope: metadata.id + data.booking.
-        // Keep the canonical shape strict; do not silently accept legacy payloads.
-        const eventId = _safeTrim(event?.metadata?.id || "");
-        const booking = event?.data?.booking || {};
-        const bookingId = _safeTrim(booking?._id || "");
+        // Official Wix Bookings V2 webhook envelope:
+        // event.id + event.entityId + event.actionEvent.body.booking.
+        const eventId = _safeTrim(event?.id || "");
+        const booking = event?.actionEvent?.body?.booking || {};
+        const bookingId = _safeTrim(booking?.id || event?.entityId || "");
         const alreadyProcessed = await isEventProcessed(eventId);
         if (alreadyProcessed && bookingId && bookingId !== "unknown") {
             const existingLedger = await dalQuery(CITAS_COL)
@@ -806,11 +806,13 @@ export async function wixBookingsV2_onBookingConfirmed(rawBody) {
             log.warn("BOOKING_CONFIRMED_LEDGER_REPAIR", { eventId, bookingId, traceId });
         }
 
-        const valid = Boolean(eventId) && validateEventStructure(event, [
-            "metadata.id",
-            "data.booking._id",
-            "data.booking.status",
-        ]);
+        const valid = Boolean(eventId && bookingId) &&
+            validateEventStructure(event, [
+                "id",
+                "entityId",
+                "actionEvent.body.booking.id",
+                "actionEvent.body.booking.status",
+            ]);
         if (!valid) {
             log.warn("EVENT_INVALID_STRUCTURE_REJECTED", { eventId });
             await markEventAsProcessed(
@@ -857,15 +859,17 @@ export async function wixBookingsV2_onBookingCanceled(rawBody) {
         const event = await _verifyAndDecodeWebhook(rawBody, "BOOKING_CANCELED");
         if (!event) return { status: "REJECTED", reason: "JWT_VERIFICATION_FAILED" };
 
-        // Canonical Wix Bookings V2 event contract:
-        // metadata.id identifies the event; data.booking._id identifies the booking.
-        const eventId = _safeTrim(event?.metadata?.id || "");
-        const booking = event?.data?.booking || {};
-        const bookingId = _safeTrim(booking?._id || "");
-        const valid = Boolean(eventId) && validateEventStructure(event, [
-            "metadata.id",
-            "data.booking._id",
-        ]);
+        // Official Wix Bookings V2 webhook envelope:
+        // event.id + event.entityId + event.actionEvent.body.booking.
+        const eventId = _safeTrim(event?.id || "");
+        const booking = event?.actionEvent?.body?.booking || {};
+        const bookingId = _safeTrim(booking?.id || event?.entityId || "");
+        const valid = Boolean(eventId && bookingId) &&
+            validateEventStructure(event, [
+                "id",
+                "entityId",
+                "actionEvent.body.booking.id",
+            ]);
         if (!valid) {
             log.warn("EVENT_INVALID_STRUCTURE_REJECTED", { eventId });
             return { status: "RETRY_REQUIRED", reason: "INVALID_BOOKING_CANCELED_EVENT" };
