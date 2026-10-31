@@ -12,6 +12,18 @@ function setCartV2Mock(namespace) {
   mocks.sdk['@wix/ecom::cartV2'] = namespace;
 }
 
+function validBookingLineItems(bookingId = BOOKING_ID, status = 'IN_STOCK') {
+  return [{
+    source: {
+      catalogReference: {
+        appId: BOOKINGS_CATALOG_APP_ID,
+        catalogItemId: bookingId,
+      },
+    },
+    status,
+  }];
+}
+
 test('CARTV2-01 creates a visitor WEB cart from the Bookings booking ID and returns a calculated checkout URL', async () => {
   const calls = [];
   setCartV2Mock({
@@ -25,6 +37,7 @@ test('CARTV2-01 creates a visitor WEB cart from the Bookings booking ID and retu
         cart: {
           _id: CART_ID,
           businessInfo: { currencyCode: 'EUR' },
+          lineItems: validBookingLineItems(),
         },
         summary: {
           violations: [],
@@ -75,7 +88,7 @@ test('CARTV2-02 refuses to return a checkout URL when cart calculation has viola
   setCartV2Mock({
     createCart: async () => ({ _id: CART_ID }),
     calculateCart: async () => ({
-      cart: { _id: CART_ID, businessInfo: { currencyCode: 'EUR' } },
+      cart: { _id: CART_ID, businessInfo: { currencyCode: 'EUR' }, lineItems: validBookingLineItems() },
       summary: {
         violations: [{ code: 'BOOKING_ITEM_UNAVAILABLE' }],
         priceSummary: { total: { amount: '48.50' } },
@@ -136,6 +149,7 @@ test('CARTV2-05 accepts a valid calculation when optional violations are omitted
       cart: {
         _id: CART_ID,
         businessInfo: { currencyCode: 'EUR' },
+        lineItems: validBookingLineItems(),
       },
       summary: {
         priceSummary: { total: { amount: '48.50' } },
@@ -155,7 +169,7 @@ test('CARTV2-06 rejects malformed violations instead of treating them as absent'
   setCartV2Mock({
     createCart: async () => ({ _id: CART_ID }),
     calculateCart: async () => ({
-      cart: { _id: CART_ID, businessInfo: { currencyCode: 'EUR' } },
+      cart: { _id: CART_ID, businessInfo: { currencyCode: 'EUR' }, lineItems: validBookingLineItems() },
       summary: {
         violations: { code: 'INVALID_SHAPE' },
         priceSummary: { total: { amount: '48.50' } },
@@ -183,7 +197,7 @@ test('CARTV2-07 rejects invalid totals and currency before checkout URL retrieva
       setCartV2Mock({
         createCart: async () => ({ _id: CART_ID }),
         calculateCart: async () => ({
-          cart: { _id: CART_ID, businessInfo: { currencyCode: item.currency } },
+          cart: { _id: CART_ID, businessInfo: { currencyCode: item.currency }, lineItems: validBookingLineItems() },
           summary: {
             violations: [],
             priceSummary: { total: { amount: item.total } },
@@ -223,3 +237,86 @@ test('CARTV2-08 rejects a non-HTTPS checkout URL', async () => {
   );
 });
 
+test('CARTV2-09 rejects an empty calculated cart before returning checkout URL', async () => {
+  let checkoutUrlCalls = 0;
+  setCartV2Mock({
+    createCart: async () => ({ _id: CART_ID }),
+    calculateCart: async () => ({
+      cart: {
+        _id: CART_ID,
+        businessInfo: { currencyCode: 'EUR' },
+        lineItems: [],
+      },
+      summary: {
+        violations: [],
+        priceSummary: { total: { amount: '0.00' } },
+      },
+    }),
+    getCheckoutUrl: async () => {
+      checkoutUrlCalls += 1;
+      return { checkoutUrl: 'https://checkout.wix.com/cart/empty' };
+    },
+  });
+
+  await assert.rejects(
+    core.createBookingCartCheckout(BOOKING_ID, 'trace-cart-9'),
+    (error) => error && error.code === 'CHECKOUT_FAILED'
+  );
+  assert.equal(checkoutUrlCalls, 0);
+});
+
+test('CARTV2-10 rejects a calculated cart containing a different booking ID', async () => {
+  let checkoutUrlCalls = 0;
+  setCartV2Mock({
+    createCart: async () => ({ _id: CART_ID }),
+    calculateCart: async () => ({
+      cart: {
+        _id: CART_ID,
+        businessInfo: { currencyCode: 'EUR' },
+        lineItems: validBookingLineItems('33333333-3333-4333-8333-333333333333'),
+      },
+      summary: {
+        violations: [],
+        priceSummary: { total: { amount: '48.50' } },
+      },
+    }),
+    getCheckoutUrl: async () => {
+      checkoutUrlCalls += 1;
+      return { checkoutUrl: 'https://checkout.wix.com/cart/mismatch' };
+    },
+  });
+
+  await assert.rejects(
+    core.createBookingCartCheckout(BOOKING_ID, 'trace-cart-10'),
+    (error) => error && error.code === 'CHECKOUT_FAILED'
+  );
+  assert.equal(checkoutUrlCalls, 0);
+});
+
+test('CARTV2-11 rejects an unavailable Bookings line item', async () => {
+  let checkoutUrlCalls = 0;
+  setCartV2Mock({
+    createCart: async () => ({ _id: CART_ID }),
+    calculateCart: async () => ({
+      cart: {
+        _id: CART_ID,
+        businessInfo: { currencyCode: 'EUR' },
+        lineItems: validBookingLineItems(BOOKING_ID, 'OUT_OF_STOCK'),
+      },
+      summary: {
+        violations: [],
+        priceSummary: { total: { amount: '48.50' } },
+      },
+    }),
+    getCheckoutUrl: async () => {
+      checkoutUrlCalls += 1;
+      return { checkoutUrl: 'https://checkout.wix.com/cart/unavailable' };
+    },
+  });
+
+  await assert.rejects(
+    core.createBookingCartCheckout(BOOKING_ID, 'trace-cart-11'),
+    (error) => error && error.code === 'CHECKOUT_FAILED'
+  );
+  assert.equal(checkoutUrlCalls, 0);
+});
