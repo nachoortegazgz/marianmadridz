@@ -30,6 +30,19 @@ Consulta de solo lectura de los servicios mediante Services V2, con paginación 
 
 **Conclusión:** la configuración observada es coherente con el patrón de dos fases del proyecto: los 24 servicios cuyo nombre empieza por `F2-` están ocultos y no permiten pago online; los 70 servicios restantes son visibles y permiten pago online. Todos mantienen el pago presencial habilitado. Esta observación no demuestra todavía el flujo de reserva ni la lógica de asociación F1/F2 del backend.
 
+## 1.1 Catálogo CMS y relaciones duales
+
+La colección `ServiciosCatalogo` (revisión 193) contiene 95 filas: 94 registros de servicios con `serviceId` y un registro `PRICING_PLAN` sin `serviceId`, que no es un servicio Bookings. Los 94 `serviceId` de servicio coinciden con los 94 servicios de Bookings; no hay IDs de servicio huérfanos ni duplicados.
+
+- 24 registros de catálogo tienen `allowCombine = true`.
+- Los 24 `linkedPhases` apuntan a un servicio Bookings existente.
+- Los 24 servicios F2 enlazados están ocultos y tienen el pago online nativo desactivado.
+- No se detectaron relaciones F1/F2 rotas ni F2 visibles.
+- La invariante de duración `totalDuration = phase1Duration + exposureDuration + phase2Duration` se cumple en los 24 registros duales.
+- El único registro sin `serviceId` es `Rayos V — Plan 5 sesiones`, con `catalogEntryType = PRICING_PLAN` y `sessionCount = 5`; debe tratarse como plan, no como servicio Bookings.
+
+**Inconsistencia de metadatos F2:** 16 de los 24 registros F2 tienen `onlinePayment = true` en `ServiciosCatalogo`, mientras que el servicio nativo de Bookings tiene `payment.options.online = false`. Los otros 8 registros F2 coinciden. Los 24 F2 están ocultos. La revisión del flujo de `bookingSaga.js` muestra que la autorización del canal de pago se evalúa sobre la configuración del servicio principal F1; F2 se valida como fase enlazada y se crea con la validación de opción de pago omitida. Por tanto, no se ha demostrado que esta discrepancia altere el checkout F1 actual, pero sí es una inconsistencia de datos que debe corregirse de forma controlada en QA y mantenerse como bloqueo de higiene antes de cerrar el contrato de catálogo. No se ha cambiado ningún registro de producción.
+
 ## 2. Profesionales y recursos de Bookings
 
 La consulta de Staff Members V2 devolvió tres profesionales activos de servicio. Los identificadores se contrastaron con los registros CMS de `MapaStaff`.
