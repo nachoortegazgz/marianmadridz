@@ -315,6 +315,10 @@ export async function rateLimiter(
             );
 
             if (Array.isArray(result?.errors) && result.errors.length > 0) {
+                const missingDuringCleanup = result.errors.every(
+                    (entry) => entry?.code === "WDE0073"
+                );
+                if (missingDuringCleanup) continue;
                 throw new Error(
                     result.errors[0]?.message ||
                     result.errors[0]?.code ||
