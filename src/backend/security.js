@@ -186,7 +186,7 @@ export async function rateLimiter(
     const policy = RATE_LIMIT_POLICIES[normalizedSurface] || DEFAULT_RATE_LIMIT;
     const max = Math.max(1, Math.floor(Number(maxRequests) || policy.maxRequests));
     const window = Math.max(1, Math.floor(Number(windowMs) || policy.windowMs));
-    const intervalMs = Math.ceil(window / max);
+    const intervalMs = window / max;
     const burstToleranceMs = Math.max(0, window - intervalMs);
     const traceId = makeTraceId("rate-limit");
 
@@ -216,7 +216,7 @@ export async function rateLimiter(
                 version: 0,
                 payload: {
                     algorithm: "GCRA_V1",
-                    tat: new Date(now).toISOString(),
+                    tat: now,
                 },
             });
         } catch (insertError) {
@@ -247,7 +247,7 @@ export async function rateLimiter(
                         version: 0,
                         payload: {
                             algorithm: "GCRA_V1",
-                            tat: new Date(now).toISOString(),
+                            tat: now,
                         },
                     });
                 } catch (insertError) {
@@ -257,7 +257,7 @@ export async function rateLimiter(
             }
 
             const version = Number(record.version);
-            const tatMs = Date.parse(record.payload?.tat);
+            const tatMs = Number(record.payload?.tat);
             if (!Number.isInteger(version) || version < 0 || !Number.isFinite(tatMs)) {
                 throw new Error("RATE_LIMIT_RECORD_INVALID");
             }
@@ -277,7 +277,7 @@ export async function rateLimiter(
                     ? record.payload
                     : {}),
                 algorithm: "GCRA_V1",
-                tat: new Date(nextTatMs).toISOString(),
+                tat: nextTatMs,
             };
 
             const result = await bulkPatchItems(
