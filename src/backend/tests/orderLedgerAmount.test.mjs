@@ -23,7 +23,18 @@ test("FISCAL-ORDER-02 prefers the explicit order total over line items", () => {
     );
 });
 
-test("FISCAL-ORDER-03 uses discounted line totals when the order total is absent", () => {
+test("FISCAL-ORDER-03 uses a valid secondary total when the primary amount is empty", () => {
+    assert.equal(
+        resolveOrderLedgerAmount({
+            priceSummary: { total: { amount: "" } },
+            totals: { total: { amount: "25.00" } },
+            lineItems: [{ price: { amount: "120.00" }, quantity: 1 }],
+        }),
+        25
+    );
+});
+
+test("FISCAL-ORDER-04 uses discounted line totals when the order total is absent", () => {
     assert.equal(
         resolveOrderLedgerAmount({
             lineItems: [
@@ -43,7 +54,7 @@ test("FISCAL-ORDER-03 uses discounted line totals when the order total is absent
     );
 });
 
-test("FISCAL-ORDER-04 falls back to unit price times quantity only when line totals are absent", () => {
+test("FISCAL-ORDER-05 falls back to unit price times quantity only when line totals are absent", () => {
     assert.equal(
         resolveOrderLedgerAmount({
             lineItems: [{ price: { amount: "12.50" }, quantity: 3 }],
@@ -52,7 +63,7 @@ test("FISCAL-ORDER-04 falls back to unit price times quantity only when line tot
     );
 });
 
-test("FISCAL-ORDER-05 treats a zero discounted line total as authoritative", () => {
+test("FISCAL-ORDER-06 treats a zero discounted line total as authoritative", () => {
     assert.equal(
         resolveOrderLedgerAmount({
             lineItems: [{
