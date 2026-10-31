@@ -43,6 +43,18 @@ La colección `ServiciosCatalogo` (revisión 193) contiene 95 filas: 94 registro
 
 **Inconsistencia de metadatos F2:** 16 de los 24 registros F2 tienen `onlinePayment = true` en `ServiciosCatalogo`, mientras que el servicio nativo de Bookings tiene `payment.options.online = false`. Los otros 8 registros F2 coinciden. Los 24 F2 están ocultos. La revisión del flujo de `bookingSaga.js` muestra que la autorización del canal de pago se evalúa sobre la configuración del servicio principal F1; F2 se valida como fase enlazada y se crea con la validación de opción de pago omitida. Por tanto, no se ha demostrado que esta discrepancia altere el checkout F1 actual, pero sí es una inconsistencia de datos que debe corregirse de forma controlada en QA y mantenerse como bloqueo de higiene antes de cerrar el contrato de catálogo. No se ha cambiado ningún registro de producción.
 
+## 1.2 Coherencia de precios y duraciones nativas
+
+Se cruzaron los 94 servicios nativos con sus 94 registros de servicio en `ServiciosCatalogo`:
+
+- Los 70 servicios visibles tienen precio fijo en Bookings; los 70 precios coinciden exactamente con el precio del CMS.
+- Las 70 monedas comparables coinciden: EUR.
+- Los 24 servicios F2 no tienen precio fijo nativo; son las fases sin cobro online separado.
+- No hay discrepancias de moneda.
+- Las duraciones nativas de Bookings coinciden con `phase1Duration` en F1 y `phase2Duration` en los F2 correspondientes; no se detectaron discrepancias en los 94 servicios.
+
+**Conclusión:** no se detectan divergencias de precio o duración que alteren el importe nativo del checkout para los 70 servicios visibles. El checkout Cart V2 sigue pendiente de validación real de extremo a extremo.
+
 ## 2. Profesionales y recursos de Bookings
 
 La consulta de Staff Members V2 devolvió tres profesionales activos de servicio. Los identificadores se contrastaron con los registros CMS de `MapaStaff`.
