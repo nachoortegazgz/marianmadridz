@@ -1,15 +1,17 @@
 /*
 MODULE: backend/security.js
 RESPONSIBILITY: resolve authenticated Wix Members identity against the
-Bookings Staff API and enforce a process-local sliding-window rate limiter.
-LIMITATION: rate limiting is local to each runtime instance; it is not a
-distributed/global limit. No persistent rate-limit collection is used.
+Bookings Staff API and enforce a distributed GCRA rate limiter backed by atomic Wix Data conditional bulk patches.
+RATE LIMITING: persistent per-requester state in ControlOperativo (RATE_LIMIT),
+using atomic conditional bulkPatch compare-and-set. Fail closed on storage errors.
 */
 
 import { currentMember } from "@wix/members";
 
 import {
-    SDK_CONFIG,
+    CONTROL_STATUS,
+    CONTROL_TYPE,
+    OPERATIONAL_COLLECTIONS,
     ROL_WEBSITE,
 } from "backend/internalConfig";
 
@@ -19,6 +21,13 @@ import {
 } from "backend/staff";
 
 import { makeTraceId } from "public/mmUtils";
+import {
+    CONSISTENCY,
+    getItem,
+    insertItem,
+    bulkPatchItems,
+} from "backend/dataAccess";
+import { hashSHA256 } from "backend/securityEngine";
 import { logger } from "backend/logger";
 
 const log = logger;
@@ -38,34 +47,19 @@ const ALLOWED_STAFF_ROLES = Object.freeze([
     ROL_WEBSITE.ESTILISTA,
 ]);
 
-const RATE_LIMIT_CACHE = new Map();
-
 const DEFAULT_RATE_LIMIT = Object.freeze({
     maxRequests: 20,
     windowMs: 5000,
 });
 
 const RATE_LIMIT_POLICIES = Object.freeze({
-    "public-booking": Object.freeze({
-        maxRequests: 5,
-        windowMs: 10000,
-    }),
-    reservas: Object.freeze({
-        maxRequests: 20,
-        windowMs: 5000,
-    }),
-    availability: Object.freeze({
-        maxRequests: 12,
-        windowMs: 5000,
-    }),
+    "public-booking": Object.freeze({ maxRequests: 5, windowMs: 10000 }),
+    reservas: Object.freeze({ maxRequests: 20, windowMs: 5000 }),
+    availability: Object.freeze({ maxRequests: 12, windowMs: 5000 }),
 });
 
-const RATE_LIMIT_CLEANUP_TTL_MS =
-    Number(SDK_CONFIG?.SECURITY?.RATE_LIMIT_CACHE_CLEANUP_TTL_MS) || 60000;
-
-const RATE_LIMIT_CACHE_MAX_ENTRIES =
-    Number(SDK_CONFIG?.SECURITY?.RATE_LIMIT_CACHE_MAX_ENTRIES) || 5000;
-
+const RATE_LIMIT_CAS_ATTEMPTS = 12;
+const RATE_LIMIT_COLLECTION = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
 
 const GUID_PATTERN =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -98,48 +92,16 @@ function _normalizeRateLimitPart(value, fallback = "unknown") {
     return normalized.slice(0, 200);
 }
 
-function _buildRateLimitCacheKey(surface, key) {
-    return `${_normalizeRateLimitPart(surface)}:${_normalizeRateLimitPart(key)}`;
+function _isDuplicateRateLimitRecord(error) {
+    return error?.code === "WDE0023" ||
+        /WDE0023|already exists/i.test(_safeString(error?.message));
 }
 
-function _cleanupRateLimitCache() {
-    const now = Date.now();
-
-    if (now - lastCleanupTime < RATE_LIMIT_CLEANUP_TTL_MS) {
-        return;
-    }
-
-    lastCleanupTime = now;
-
-    for (const [cacheKey, entry] of RATE_LIMIT_CACHE.entries()) {
-        const windowStart = now - entry.windowMs;
-
-        entry.timestamps = (entry.timestamps || []).filter(
-            (timestamp) => timestamp > windowStart
-        );
-
-        if (entry.timestamps.length === 0) {
-            RATE_LIMIT_CACHE.delete(cacheKey);
-        }
-    }
-
-    if (RATE_LIMIT_CACHE.size <= RATE_LIMIT_CACHE_MAX_ENTRIES) {
-        return;
-    }
-
-    const entriesToDelete =
-        RATE_LIMIT_CACHE.size - RATE_LIMIT_CACHE_MAX_ENTRIES;
-
-    let deleted = 0;
-
-    for (const cacheKey of RATE_LIMIT_CACHE.keys()) {
-        if (deleted >= entriesToDelete) {
-            break;
-        }
-
-        RATE_LIMIT_CACHE.delete(cacheKey);
-        deleted += 1;
-    }
+function _createRateLimitStorageError(cause) {
+    const error = new Error("Rate limit storage is unavailable.");
+    error.code = "RATE_LIMIT_STORAGE_UNAVAILABLE";
+    error.cause = cause;
+    return error;
 }
 
 function _createAccessDeniedError(requiredRole) {
@@ -202,46 +164,185 @@ export async function getMyStaffContext(traceId = null) {
 }
 
 // =============================================================================
-// BLOQUE 3 - RATE LIMITER LOCAL
+// BLOQUE 3 - RATE LIMITER DISTRIBUIDO (GCRA + CMS ATOMICO)
 // =============================================================================
 
-export function rateLimiter(
+/**
+ * GCRA (Generic Cell Rate Algorithm) persisted in ControlOperativo.
+ *
+ * Each requester/surface has one row. A conditional bulkPatch compares the
+ * current version and atomically advances the theoretical arrival time (TAT).
+ * Concurrent requests that read the same version race on the server-side
+ * condition: only one update wins; losers reread and retry.
+ *
+ * This is a burst-capable token/leaky-bucket policy: maxRequests requests can
+ * pass immediately, then capacity refills at windowMs / maxRequests.
+ * Storage failures are fail-closed; no per-instance Map fallback is allowed.
+ */
+export async function rateLimiter(
     { surface, key } = {},
     maxRequests = null,
     windowMs = null
 ) {
-    _cleanupRateLimitCache();
-
     const normalizedSurface = _normalizeRateLimitPart(surface);
-    const normalizedKey = _normalizeRateLimitPart(key);
+    const normalizedKey = _normalizeRateLimitPart(key, "anonymous");
     const policy = RATE_LIMIT_POLICIES[normalizedSurface] || DEFAULT_RATE_LIMIT;
-    const max = Math.max(1, Number(maxRequests) || policy.maxRequests);
-    const window = Math.max(1, Number(windowMs) || policy.windowMs);
-    const cacheKey = _buildRateLimitCacheKey(normalizedSurface, normalizedKey);
-    const now = Date.now();
+    const max = Math.max(1, Math.floor(Number(maxRequests) || policy.maxRequests));
+    const window = Math.max(1, Math.floor(Number(windowMs) || policy.windowMs));
+    const intervalMs = Math.ceil(window / max);
+    const burstToleranceMs = Math.max(0, window - intervalMs);
+    const traceId = makeTraceId("rate-limit");
 
-    let entry = RATE_LIMIT_CACHE.get(cacheKey);
-    if (!entry) {
-        entry = { timestamps: [], maxRequests: max, windowMs: window };
-        RATE_LIMIT_CACHE.set(cacheKey, entry);
+    try {
+        const policyHash = await hashSHA256(
+            `${normalizedSurface}|${normalizedKey}|${max}|${window}`
+        );
+        const requesterHash = await hashSHA256(
+            `${normalizedSurface}|${normalizedKey}`
+        );
+        const recordId = `RL_${policyHash}`;
+        const now = Date.now();
+
+        // Insert-once bootstrap. Duplicate-ID contention is expected and safe.
+        try {
+            await insertItem(RATE_LIMIT_COLLECTION, {
+                _id: recordId,
+                controlType: CONTROL_TYPE.RATE_LIMIT,
+                dedupeKey: `RATE_LIMIT:${policyHash}`,
+                traceId,
+                status: CONTROL_STATUS.ACTIVE,
+                surface: normalizedSurface,
+                requesterKey: requesterHash,
+                requestCount: 0,
+                windowStart: new Date(now),
+                expiresAt: new Date(now + window * 2),
+                version: 0,
+                payload: {
+                    algorithm: "GCRA_V1",
+                    tat: new Date(now).toISOString(),
+                },
+            });
+        } catch (insertError) {
+            if (!_isDuplicateRateLimitRecord(insertError)) throw insertError;
+        }
+
+        for (let attempt = 0; attempt < RATE_LIMIT_CAS_ATTEMPTS; attempt += 1) {
+            const record = await getItem(
+                RATE_LIMIT_COLLECTION,
+                recordId,
+                CONSISTENCY.STRONG
+            );
+
+            if (!record) {
+                // Expiry cleanup may race with a request; recreate and retry.
+                try {
+                    await insertItem(RATE_LIMIT_COLLECTION, {
+                        _id: recordId,
+                        controlType: CONTROL_TYPE.RATE_LIMIT,
+                        dedupeKey: `RATE_LIMIT:${policyHash}`,
+                        traceId,
+                        status: CONTROL_STATUS.ACTIVE,
+                        surface: normalizedSurface,
+                        requesterKey: requesterHash,
+                        requestCount: 0,
+                        windowStart: new Date(now),
+                        expiresAt: new Date(now + window * 2),
+                        version: 0,
+                        payload: {
+                            algorithm: "GCRA_V1",
+                            tat: new Date(now).toISOString(),
+                        },
+                    });
+                } catch (insertError) {
+                    if (!_isDuplicateRateLimitRecord(insertError)) throw insertError;
+                }
+                continue;
+            }
+
+            const version = Number(record.version);
+            const tatMs = Date.parse(record.payload?.tat);
+            if (!Number.isInteger(version) || version < 0 || !Number.isFinite(tatMs)) {
+                throw new Error("RATE_LIMIT_RECORD_INVALID");
+            }
+
+            const requestNow = Date.now();
+            const allowAt = tatMs - burstToleranceMs;
+            if (requestNow < allowAt) {
+                return {
+                    allowed: false,
+                    retryAfter: Math.max(1, Math.ceil((allowAt - requestNow) / 1000)),
+                };
+            }
+
+            const nextTatMs = Math.max(requestNow, tatMs) + intervalMs;
+            const nextPayload = {
+                ...(record.payload && typeof record.payload === "object"
+                    ? record.payload
+                    : {}),
+                algorithm: "GCRA_V1",
+                tat: new Date(nextTatMs).toISOString(),
+            };
+
+            const result = await bulkPatchItems(
+                RATE_LIMIT_COLLECTION,
+                [recordId],
+                [[
+                    {
+                        fieldPath: "payload",
+                        action: "SET_FIELD",
+                        value: nextPayload,
+                    },
+                    {
+                        fieldPath: "requestCount",
+                        action: "INCREMENT_FIELD",
+                        value: 1,
+                    },
+                    {
+                        fieldPath: "version",
+                        action: "INCREMENT_FIELD",
+                        value: 1,
+                    },
+                    {
+                        fieldPath: "expiresAt",
+                        action: "SET_FIELD",
+                        value: new Date(nextTatMs + window),
+                    },
+                ]],
+                {
+                    condition: {
+                        filter: {
+                            version: { $eq: version },
+                        },
+                    },
+                }
+            );
+
+            if (Array.isArray(result?.errors) && result.errors.length > 0) {
+                throw new Error(
+                    result.errors[0]?.message ||
+                    result.errors[0]?.code ||
+                    "RATE_LIMIT_PATCH_FAILED"
+                );
+            }
+
+            if (Array.isArray(result?.updatedItemIds) &&
+                result.updatedItemIds.includes(recordId)) {
+                return { allowed: true, retryAfter: 0 };
+            }
+
+            // Conditional update lost a concurrent race; reread the new version.
+        }
+
+        // Excessive contention is denied rather than bypassing the limiter.
+        return { allowed: false, retryAfter: 1 };
+    } catch (error) {
+        log.error("Distributed rate limiter storage failure", {
+            surface: normalizedSurface,
+            traceId,
+            message: error?.message || String(error),
+        });
+        throw _createRateLimitStorageError(error);
     }
-
-    entry.maxRequests = max;
-    entry.windowMs = window;
-    const windowStart = now - window;
-    entry.timestamps = entry.timestamps.filter((timestamp) => timestamp > windowStart);
-
-    if (entry.timestamps.length >= max) {
-        const oldestTimestamp = entry.timestamps[0] || now;
-        const retryAfterMs = oldestTimestamp + window - now;
-        return {
-            allowed: false,
-            retryAfter: Math.max(1, Math.ceil(retryAfterMs / 1000)),
-        };
-    }
-
-    entry.timestamps.push(now);
-    return { allowed: true, retryAfter: 0 };
 }
 
 // =============================================================================
@@ -361,18 +462,7 @@ export async function requireCajero(traceId = null) {
     return true;
 }
 
-/**
- * Test-harness API (offline suites only). Clears the in-memory rate-limit cache.
- * Never invoked by production webMethods; safe because RATE_LIMIT_CACHE is
- * module-scoped and rebuilt lazily on next request.
- */
-export function _resetRateLimitCacheForTests() {
-    RATE_LIMIT_CACHE.clear();
-    // SEC-R3-04: el cache LRU de staff.js persista entre requests del
-    // harness; debe invalidarse junto al rate-limit para tests deterministas.
-    _invalidateStaffCache();
-}
-
+// Test harness resets the mocked ControlOperativo store directly.
 export async function requireMarianManager(traceId = null) {
     const authorized = await isAdmin(traceId);
 
