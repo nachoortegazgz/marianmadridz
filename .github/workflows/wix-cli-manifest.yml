@@ -1,0 +1,69 @@
+name: Wix Velo dependency manifest
+
+on:
+  push:
+    branches:
+      - "feat/**"
+
+permissions:
+  contents: write
+
+jobs:
+  generate-velo-manifest:
+    name: Generate Wix CLI manifest
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+          persist-credentials: true
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24.22.1"
+
+      - name: Authenticate Wix CLI for Sites
+        env:
+          WIX_CLI_API_KEY: ${{ secrets.WIX_CLI_API_KEY }}
+        run: |
+          if [ -z "${WIX_CLI_API_KEY}" ]; then
+            echo "::error::Missing repository secret WIX_CLI_API_KEY. Create a Wix API key with the 'Wix CLI for Sites - Git Integration' permission and save it as this GitHub secret."
+            exit 1
+          fi
+          npm install --global @wix/cli
+          wix login --api-key "${WIX_CLI_API_KEY}"
+
+      - name: Generate the Velo dependency manifest
+        run: |
+          wix install @wix/data
+          test -s src/velo.dependencies.json
+          node --input-type=commonjs -e "const p=require('./package.json'); if (p.dependencies?.['@wix/data'] !== '1.0.527') { console.error('Unexpected @wix/data version; refusing to commit CLI changes.'); process.exit(1); }"
+          git diff --exit-code -- package.json
+
+      - name: Commit only generated Wix metadata
+        run: |
+          git add -- src/velo.dependencies.json dependencies-metadata.json
+          if git diff --cached --quiet; then
+            echo "Velo manifest already current; no commit required."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore(wix): generate Velo dependency manifest"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
+
+      - name: Preserve CLI output for audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wix-velo-manifest-${{ github.run_id }}
+          if-no-files-found: ignore
+          path: |
+            src/velo.dependencies.json
+            dependencies-metadata.json
+            package.json
+            package-lock.json
+            wix.lock
