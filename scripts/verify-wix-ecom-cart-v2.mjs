@@ -17,6 +17,12 @@ assert.equal(
     "@wix/data items.patch must be exported by the installed SDK"
 );
 
+assert.equal(
+    typeof items?.bulkPatch,
+    "function",
+    "@wix/data items.bulkPatch must be exported by the installed SDK"
+);
+
 process.stdout.write(
-    `Wix SDK contracts OK: @wix/ecom cartV2.${requiredCartMethods.join(", cartV2.")}; @wix/data items.patch\n`
+    `Wix SDK contracts OK: @wix/ecom cartV2.${requiredCartMethods.join(", cartV2.")}; @wix/data items.patch, items.bulkPatch\n`
 );
