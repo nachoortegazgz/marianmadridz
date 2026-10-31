@@ -281,7 +281,7 @@ test("EVENT-BOOKING-06 native Bookings V2 cancellation consumes metadata.id + da
   const rows = wixDataMock._store.get("CitasF2") || [];
   assert.equal(rows.length, 1);
   assert.equal(rows[0].bookingId, BOOKING_ID);
-  assert.equal(rows[0].bookingStatus, "CANCELED");
+  assert.equal(rows[0].bookingStatus, "CANCELLED");
 
   const markers = wixDataMock._store.get("ControlOperativo") || [];
   assert.equal(markers.filter(row => row.dedupeKey === "WEBHOOK_evt-native-cancel-006").length, 1);
