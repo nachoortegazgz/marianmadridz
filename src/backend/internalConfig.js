@@ -159,6 +159,11 @@ export const APP_IDS = Object.freeze({
   STORES: "215238eb-22a5-4c36-9e7b-e7c08025e04e",
 });
 
+// Wix eCommerce catalog IDs are GUIDs and are distinct from webhook app IDs.
+export const WIX_CATALOG_APP_IDS = Object.freeze({
+  BOOKINGS: "13d21c63-b5ec-5912-8397-c3a5ddb27a97",
+});
+
 // CERO-DEUDA ZC-07: export JWT eliminado (generateJWT/verifyJWT ya no
 // existen en securityEngine.js; no hay consumidores de config JWT).
 
@@ -322,16 +327,12 @@ export const CONTROL_STATUS = Object.freeze({
   FAILED: "FAILED",
 });
 
-// Tipos de registro de ControlOperativo (colecciones absorbidas FASE3).
-// SSOT v13.0 (2026-10-19): se erradican los miembros sin productores activos
-// verificados por grep en codigo fuente:
-//   - RATE_LIMIT: seguridad vive en memoria de security.js, nunca en CMS.
-//   - DEDUPE_KEY: deduplicacion real usa los tipos especificos (IDEMPOTENCY,
-//     WEBHOOK_EVENT, COMPENSATION...), no un subtipo generico.
-//   - BOOKING_TX: retirado previamente (sin productores ni consumidores).
-// DISPLAY_TOKEN se conserva: tiene productor/consumidor activo en
-// reservas.web.js (tokens de visualizacion efimeros de reserva).
-// El contrato canonico queda alineado con controlOperativo.hooks.test.mjs.
+// Tipos de registro de ControlOperativo.
+// La Biblia SSOT v10.0 entregada exige RATE_LIMIT persistido en esta coleccion.
+// Las referencias a una supuesta v13.0 en comentarios historicos no tienen
+// un documento normativo v13.0 en el repositorio ni entre las fuentes aportadas;
+// por tanto no prevalecen sobre la SSOT aprobada disponible.
+// DISPLAY_TOKEN se conserva por su productor activo en reservas.web.js.
 export const CONTROL_TYPE = Object.freeze({
   ALERT: "ALERT",
   COMPENSATION: "COMPENSATION",
@@ -340,6 +341,7 @@ export const CONTROL_TYPE = Object.freeze({
   DUAL_CACHE: "DUAL_CACHE",
   IDEMPOTENCY: "IDEMPOTENCY",
   SLOT_LOCK: "SLOT_LOCK",
+  RATE_LIMIT: "RATE_LIMIT",
   SYSTEM_FLAG: "SYSTEM_FLAG",
   WEBHOOK_EVENT: "WEBHOOK_EVENT",
 });

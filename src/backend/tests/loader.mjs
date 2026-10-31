@@ -587,7 +587,33 @@ export const contactsV5 = new Proxy({}, {
     return _contactsV5Methods.get(name);
   },
 });
-export const checkout = fnProxy;
+const _cartV2Methods = new Map();
+const _currentCartV2Mock = () => {
+  const keys = [MODULE_KEY + '::cartV2', '@wix/ecom::cartV2', 'ecom::cartV2', 'cartV2'];
+  for (const key of keys) {
+    if (key in sdkNamespaceState) return sdkNamespaceState[key];
+  }
+  return null;
+};
+export const cartV2 = new Proxy({}, {
+  get: (_target, property) => {
+    if (property === 'then') return undefined;
+    const name = String(property);
+    if (!_cartV2Methods.has(name)) {
+      _cartV2Methods.set(name, (...args) => {
+        const namespace = _currentCartV2Mock();
+        const method = namespace && namespace[name];
+        if (typeof method !== 'function') {
+          const error = new Error('Missing @wix/ecom cartV2 mock: ' + name);
+          error.code = 'MISSING_ECOM_CART_V2_MOCK';
+          throw error;
+        }
+        return method(...args);
+      });
+    }
+    return _cartV2Methods.get(name);
+  },
+});
 export const orders = fnProxy;
 export const elevate = fnProxy;
 export const createClient = () => fnProxy;
@@ -825,9 +851,95 @@ export const items = {
     const result = await q.find(options || {});
     return { ...result, totalCount: result.totalCount ?? result.total };
   },
+  async bulkPatch(col, itemIds, fieldModifications, options = {}) {
+    const ids = Array.isArray(itemIds) ? itemIds : [itemIds];
+    const groups = Array.isArray(fieldModifications?.[0])
+      ? fieldModifications
+      : ids.map(() => fieldModifications || []);
+    const updatedItemIds = [];
+    const errors = [];
+    let skipped = 0;
+
+    for (let index = 0; index < ids.length; index += 1) {
+      const id = ids[index];
+      const item = await m.get(col, id);
+      if (!item) {
+        errors.push({ code: 'WDE0073', item: id, message: 'Item not found.' });
+        continue;
+      }
+      if (options?.condition?.filter && !matchOne(item, options.condition.filter)) {
+        skipped += 1;
+        continue;
+      }
+
+      const patched = {
+        ...item,
+        ...(item.payload && typeof item.payload === 'object'
+          ? { payload: { ...item.payload } }
+          : {}),
+      };
+      for (const modification of (groups[index] || [])) {
+        const field = String(modification?.fieldPath || '');
+        if (!field || field.includes('.')) {
+          errors.push({ code: 'INVALID_FIELD_PATH', item: id, message: 'Mock supports root field paths only.' });
+          continue;
+        }
+        if (modification.action === 'INCREMENT_FIELD') {
+          patched[field] = Number(patched[field] || 0) + Number(modification.value || 0);
+        } else if (modification.action === 'SET_FIELD') {
+          patched[field] = modification.value;
+        } else if (modification.action === 'REMOVE_FIELD') {
+          delete patched[field];
+        } else {
+          errors.push({ code: 'UNSUPPORTED_PATCH_ACTION', item: id, message: modification.action });
+        }
+      }
+      if (errors.length) continue;
+
+      const hookName = _hookName(col, 'beforeUpdate');
+      const hook = hookName ? DATA_HOOKS[hookName] : null;
+      if (typeof hook === 'function') {
+        const hookResult = hook(patched, { original: item });
+        if (hookResult && typeof hookResult.then === 'function') await hookResult;
+      }
+      Object.assign(item, patched);
+      updatedItemIds.push(id);
+    }
+
+    return {
+      updated: updatedItemIds.length,
+      skipped,
+      errors,
+      updatedItemIds,
+    };
+  },
   bulkInsert: (col, rows, opts) => m.bulkInsert(col, rows, opts),
   bulkUpdate: (col, rows, opts) => m.bulkUpdate(col, rows, opts),
-  bulkRemove: (col, ids, opts) => m.bulkRemove(col, ids, opts),
+  async bulkRemove(col, ids, options = {}) {
+    const itemIds = Array.isArray(ids) ? ids : [ids];
+    const removedItemIds = [];
+    const errors = [];
+    let skipped = 0;
+    for (const id of itemIds) {
+      const item = await m.get(col, id);
+      if (!item) {
+        skipped += 1;
+        continue;
+      }
+      if (options?.condition?.filter && !matchOne(item, options.condition.filter)) {
+        skipped += 1;
+        continue;
+      }
+      try {
+        await _runHook(_hookName(col, 'beforeRemove'), item);
+        await m.remove(col, id);
+        removedItemIds.push(id);
+      } catch (error) {
+        errors.push({ code: error?.code || 'REMOVE_FAILED', item: id, message: error?.message || String(error) });
+      }
+    }
+    return { removed: removedItemIds.length, skipped, errors, removedItemIds };
+  },
   queryReferencedItems: (col, id, field) => m.queryReferencedItems(col, id, field),
 };
 export default m;

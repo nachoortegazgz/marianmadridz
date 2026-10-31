@@ -14,6 +14,7 @@ const suites = [
   'dto.whitelist.test.mjs',
   'fiscalAggregator.read.test.mjs',
   'site.flows.e2e.test.mjs',
+  'orderLedgerAmount.test.mjs',
   'unit.ssot.v5011.test.mjs',
 ];
 

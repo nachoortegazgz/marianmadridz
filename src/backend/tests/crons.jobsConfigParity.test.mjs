@@ -39,6 +39,43 @@ test('CRON-PARITY-02 crons.js exports cover the two previously-missing jobs', ()
   assert.strictEqual(typeof CR.cleanAuditLogs, 'function');
 });
 
+test('CRON-RL-01 cleanExpiredRateLimits removes only expired RATE_LIMIT rows', async () => {
+  wixDataMock._reset();
+  const C = IC.OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
+  const now = new Date();
+  wixDataMock._seed(C, [
+    {
+      _id: 'rl-expired',
+      controlType: IC.CONTROL_TYPE.RATE_LIMIT,
+      status: IC.CONTROL_STATUS.ACTIVE,
+      expiresAt: new Date(now.getTime() - 1000),
+      version: 2,
+    },
+    {
+      _id: 'rl-active',
+      controlType: IC.CONTROL_TYPE.RATE_LIMIT,
+      status: IC.CONTROL_STATUS.ACTIVE,
+      expiresAt: new Date(now.getTime() + 60000),
+      version: 4,
+    },
+    {
+      _id: 'webhook-old',
+      controlType: IC.CONTROL_TYPE.WEBHOOK_EVENT,
+      status: IC.CONTROL_STATUS.CLOSED,
+      expiresAt: new Date(now.getTime() - 60000),
+      version: 1,
+    },
+  ]);
+
+  const result = await CR.cleanExpiredRateLimits();
+  assert.equal(result.removed, 1);
+  assert.equal(result.failed, 0);
+
+  const remaining = (wixDataMock._store.get(C) || []).map((row) => row._id).sort();
+  assert.deepStrictEqual(remaining, ['rl-active', 'webhook-old']);
+});
+
+
 test('CRON-Z-ENTRY-01 cron uses a backend-only internal closing entry point', () => {
   const cronSource = fs.readFileSync(backendPath('crons.js'), 'utf8').replace(/\r\n/g, '\n');
   const cashSource = fs.readFileSync(backendPath('cajas.web.js'), 'utf8').replace(/\r\n/g, '\n');

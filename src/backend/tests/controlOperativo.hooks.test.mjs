@@ -61,11 +61,10 @@ describe("ControlOperativo hooks (ADR-05)", () => {
        no tiene productores ni consumidores activos). Se verifican ademas los
        tres subtipos con productores reales en codigo activo: IDEMPOTENCY
        (bookingCore v5013), SYSTEM_FLAG (bookingSaga v5013) y DEDUPE_KEY. */
-    /* SSOT v13.0 (2026-10-19): RATE_LIMIT y DEDUPE_KEY erradicados del enum
-       (sin productores verificados). DISPLAY_TOKEN anadido: productor activo
-       en reservas.web.js. Contrato canonico = 9 subtipos. */
+    /* La SSOT v10.0 entregada exige RATE_LIMIT persistido en ControlOperativo.
+       DISPLAY_TOKEN se conserva por su productor activo en reservas.web.js. */
     const expected = [
-      "SLOT_LOCK", "WEBHOOK_EVENT", "IDEMPOTENCY",
+      "SLOT_LOCK", "WEBHOOK_EVENT", "IDEMPOTENCY", "RATE_LIMIT",
       "SYSTEM_FLAG",
       "COMPENSATION", "ALERT", "DAYS_CACHE", "DUAL_CACHE",
       "DISPLAY_TOKEN",

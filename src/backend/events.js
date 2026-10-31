@@ -1,7 +1,7 @@
 /*
 =============================================================================
 MODULE: backend/events.js
-VERSION: v5015-ALIGNED
+VERSION: v5016-ORDER-AMOUNT-ZERO-SAFE
 BASE: v5009-FISCAL-V20.1 + alineacion con internalConfig v12.0-SSOT-FINAL
       y dataAccess v2.1-UNIFIED
 RESPONSIBILITY: Server-to-server native webhooks for Wix Bookings V2 and
@@ -32,6 +32,9 @@ CAMBIOS DE ALINEACION v5015-ALIGNED (respecto a v5009-FISCAL-V20.1):
           ELEMENTOS_SEGURIDAD, CAMBIOS_BASE_IMPONIBLE, CUOTA_ERRONEA,
           EXENTA_NO_SUJETA_REPETIDA, SIMPLIFICADA_REPETIDA, OTRAS).
           Se usa CORRECTION_REASON.OTRAS.
+  FISCAL-ORDER-01: El importe explicito de pedido, incluido 0, prevalece
+          sobre el precio unitario. Si falta, se usan importes de linea
+          despues de descuentos antes de recurrir al precio unitario.
 
 FIXES APLICADOS v5009-FISCAL-V20.1 (heredados):
   - V20-01..V20-06.
@@ -63,7 +66,7 @@ import {
     OPERATIONAL_COLLECTIONS,
     CONTROL_TYPE,
     CONTROL_STATUS,
-    APP_IDS,
+    WIX_CATALOG_APP_IDS,
     MOVEMENT_TYPE,
     PAYMENT_METHOD,
     BOOKING_STATUS,
@@ -98,6 +101,61 @@ import {
     readRecipientTaxId,
     readMovementField,
 } from "backend/data";
+
+/**
+ * Resolve the authoritative Wix order amount for the fiscal ledger.
+ * An explicit zero is valid and must not fall back to undiscounted prices.
+ */
+export function resolveOrderLedgerAmount(order) {
+    const orderTotalCandidates = [
+        order?.priceSummary?.total?.amount,
+        order?.totals?.total?.amount,
+    ];
+    for (const rawOrderTotal of orderTotalCandidates) {
+        if (
+            rawOrderTotal === undefined ||
+            rawOrderTotal === null ||
+            String(rawOrderTotal).trim() === ""
+        ) {
+            continue;
+        }
+        const orderTotal = Number(rawOrderTotal);
+        if (Number.isFinite(orderTotal) && orderTotal >= 0) {
+            return orderTotal;
+        }
+    }
+
+    const lineItems = Array.isArray(order?.lineItems) ? order.lineItems : [];
+    return lineItems.reduce((sum, item) => {
+        const lineTotalCandidates = [
+            item?.totalPriceAfterTax?.amount,
+            item?.totalPriceBeforeTax?.amount,
+            item?.totalPrice?.amount,
+        ];
+        for (const rawLineTotal of lineTotalCandidates) {
+            if (
+                rawLineTotal === undefined ||
+                rawLineTotal === null ||
+                String(rawLineTotal).trim() === ""
+            ) {
+                continue;
+            }
+            const lineTotal = Number(rawLineTotal);
+            if (Number.isFinite(lineTotal) && lineTotal >= 0) {
+                return sum + lineTotal;
+            }
+        }
+
+        const rawUnitPrice = item?.price?.amount ?? item?.price;
+        const unitPrice = Number(rawUnitPrice);
+        const quantity = Number(item?.quantity) || 1;
+        return sum + (
+            Number.isFinite(unitPrice) && unitPrice >= 0
+                ? unitPrice * quantity
+                : 0
+        );
+    }, 0);
+}
 
 const log = logger;
 
@@ -178,6 +236,54 @@ function _normalizeBookingIds(value) {
     return Array.from(
         new Set(values.map((id) => String(id || "").trim()).filter(Boolean))
     );
+}
+
+async function _expandBookingIdsWithPair(bookingIds) {
+    const directIds = _normalizeBookingIds(bookingIds);
+    const pairTokens = new Set();
+
+    const directRows = await Promise.all(
+        directIds.map(async (bookingId) => {
+            const result = await dalQuery(CITAS_COL)
+                .eq(BOOKING_FIELDS.BOOKING_ID, bookingId)
+                .limit(1)
+                .find(STRONG_READ);
+            return (result && result.items && result.items[0]) || null;
+        })
+    );
+
+    for (const cita of directRows) {
+        const pairToken = _safeTrim(
+            cita && (cita[BOOKING_FIELDS.PAIR_TOKEN] ||
+                (cita.meta && cita.meta.pairToken))
+        );
+        if (pairToken) pairTokens.add(pairToken);
+    }
+
+    const pairedRows = await Promise.all(
+        Array.from(pairTokens).map(async (pairToken) => {
+            const result = await dalQuery(CITAS_COL)
+                .eq(BOOKING_FIELDS.PAIR_TOKEN, pairToken)
+                .limit(10)
+                .find(STRONG_READ);
+            return (result && result.items) || [];
+        })
+    );
+
+    const allIds = new Set(directIds);
+    for (const rows of pairedRows) {
+        for (const cita of rows) {
+            const bookingId = _safeTrim(
+                cita && (cita[BOOKING_FIELDS.BOOKING_ID] || cita.bookingId)
+            );
+            if (bookingId) allIds.add(bookingId);
+        }
+    }
+
+    return {
+        directIds,
+        allIds: Array.from(allIds),
+    };
 }
 
 // ============================================================================
@@ -536,7 +642,7 @@ async function _markCitasRefundedByBookingIds(
     fullyRefunded,
     traceId
 ) {
-    const ids = _normalizeBookingIds(bookingIds);
+    const { directIds, allIds: ids } = await _expandBookingIdsWithPair(bookingIds);
     const results = await Promise.allSettled(
         ids.map((bookingId) =>
             _updateCitaSafe(
@@ -548,7 +654,7 @@ async function _markCitasRefundedByBookingIds(
                         : PAYMENT_STATUS.PARTIALLY_REFUNDED;
                     return {
                         ...cita,
-                        ...(fullyRefunded
+                        ...(fullyRefunded && directIds.includes(bookingId)
                             ? { [BOOKING_FIELDS.STATUS]: BOOKING_STATUS.REFUNDED }
                             : {}),
                         [BOOKING_FIELDS.PAYMENT_STATUS]: paymentState,
@@ -579,7 +685,7 @@ async function _markCitasRefundedByBookingIds(
 }
 
 async function _markCitasPaidByBookingIds(bookingIds, orderId, traceId) {
-    const ids = _normalizeBookingIds(bookingIds);
+    const { allIds: ids } = await _expandBookingIdsWithPair(bookingIds);
     const results = await Promise.allSettled(
         ids.map((bookingId) =>
             _updateCitaSafe(
@@ -593,7 +699,9 @@ async function _markCitasPaidByBookingIds(bookingIds, orderId, traceId) {
                     if (alreadyPaid) return null;
                     return {
                         ...cita,
-                        [BOOKING_FIELDS.STATUS]: BOOKING_STATUS.CONFIRMED,
+                        // Payment status and booking approval are independent.
+                        // Only the native BOOKING_CONFIRMED webhook may confirm
+                        // an appointment; receiving payment must preserve PENDING.
                         [BOOKING_FIELDS.PAYMENT_STATUS]: PAYMENT_STATUS.PAID,
                         meta: {
                             ...meta,
@@ -621,7 +729,7 @@ async function _markCitasPaidByBookingIds(bookingIds, orderId, traceId) {
 }
 
 async function _markCitasPendingLedgerByBookingIds(bookingIds, orderId, traceId) {
-    const ids = _normalizeBookingIds(bookingIds);
+    const { allIds: ids } = await _expandBookingIdsWithPair(bookingIds);
     const results = await Promise.allSettled(
         ids.map((bookingId) =>
             _updateCitaSafe(
@@ -970,7 +1078,7 @@ export async function wixEcom_onOrderPaymentStatusUpdated(rawBody) {
             ? order.lineItems
             : [];
 
-        const bookingsAppId = APP_IDS.BOOKINGS;
+        const bookingsAppId = WIX_CATALOG_APP_IDS.BOOKINGS;
         const bookingLineItems = lineItems.filter(
             (item) => item?.catalogReference?.appId === bookingsAppId
         );
@@ -981,24 +1089,7 @@ export async function wixEcom_onOrderPaymentStatusUpdated(rawBody) {
         );
         const linkedBookingIds = bookingIds.join(",");
 
-        const orderTotal =
-            Number(
-                order?.priceSummary?.total?.amount ??
-                    order?.totals?.total?.amount ??
-                    0
-            ) || 0;
-        const lineItemsTotal = lineItems.reduce((sum, item) => {
-            const itemPrice =
-                Number(
-                    item?.price?.amount ??
-                        item?.price ??
-                        item?.totalPrice?.amount ??
-                        0
-                ) || 0;
-            return sum + itemPrice * (Number(item?.quantity) || 1);
-        }, 0);
-        const finalLedgerAmount =
-            orderTotal > 0 ? orderTotal : lineItemsTotal;
+        const finalLedgerAmount = resolveOrderLedgerAmount(order);
         const transactionId = `ORDER-${orderId}`;
 
         const existingLedgerRes = await withTimeout(
@@ -1613,7 +1704,7 @@ export async function wixEcom_onOrderCanceled(rawBody) {
         const lineItems = Array.isArray(order.lineItems)
             ? order.lineItems
             : [];
-        const bookingsAppId = APP_IDS.BOOKINGS;
+        const bookingsAppId = WIX_CATALOG_APP_IDS.BOOKINGS;
         const bookingIds = _normalizeBookingIds(
             lineItems
                 .filter(
@@ -1621,8 +1712,11 @@ export async function wixEcom_onOrderCanceled(rawBody) {
                 )
                 .map((item) => item?.catalogReference?.catalogItemId)
         );
+        const { allIds: relatedBookingIds } =
+            await _expandBookingIdsWithPair(bookingIds);
 
-        for (const bId of bookingIds) {
+        for (const bId of relatedBookingIds) {
+            // Order cancellation applies to the complete dual booking pair.
             // ALN-03: enum Wix es CANCELED (una L).
             await _updateCitaStatus(bId, BOOKING_STATUS.CANCELED, traceId);
         }

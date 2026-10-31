@@ -137,8 +137,8 @@ function _linkedBookingValue(value) {
     return _normalizeLinkedBookingIds(value).join(",") || null;
 }
 
-function _rateLimitOrThrow(surface, key, traceId) {
-    const rl = rateLimiter({ surface, key });
+async function _rateLimitOrThrow(surface, key, traceId) {
+    const rl = await rateLimiter({ surface, key });
     if (!rl.allowed) {
         const e = new Error(`RATE_LIMITED: retryAfter=${rl.retryAfter}`);
         e.code = "RATE_LIMITED";
@@ -507,7 +507,7 @@ async function _projectToAccountingLedger(movement, traceId) {
 export const registerManualTransaction = webMethod(Permissions.SiteMember, async (payload) => {
     const traceId = payload?.traceId || makeTraceId("manual-tx");
     try {
-        _rateLimitOrThrow(
+        await _rateLimitOrThrow(
             "cajas.registerManualTransaction",
             _safeTrim(payload?.resourceId) || "CAJA_LOCAL",
             traceId
