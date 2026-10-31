@@ -13,10 +13,18 @@ invocan directamente (semantica Velo equivalente).
 =============================================================================
 */
 
-import { test } from 'node:test';
+import { test, beforeEach } from 'node:test';
 import assert from 'node:assert';
 
 import { wixDataMock, mocks } from './loader.mjs';
+
+beforeEach(() => {
+  const rows = wixDataMock._store.get('ControlOperativo') || [];
+  wixDataMock._store.set(
+    'ControlOperativo',
+    rows.filter((row) => row.controlType !== 'RATE_LIMIT'),
+  );
+});
 
 // ---------------------------------------------------------------------------
 // Helpers de seed/identidad
