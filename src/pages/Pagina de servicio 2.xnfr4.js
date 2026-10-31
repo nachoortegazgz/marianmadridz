@@ -1,11 +1,12 @@
 /**
  * MODULE: pages/servicio-2.js
- * VERSION: v5018-HARDENED
+ * VERSION: v5019-HARDENED-UNICODE-SLUG
  */
 
 import { location } from "@wix/site-location";
 import { checkout } from "@wix/site-pricing-plans";
 import { getServiceBySlugOrId } from "backend/reservas.web.js";
+
 import {
     MESSAGE_TYPES,
     URLS,
@@ -18,13 +19,15 @@ import {
     _getMessageType,
     _getPayload
 } from "public/mmUtils";
+
 import { createWidgetBridge } from "public/widgetBridge";
 
 const EXCLUDED_PATHS = new Set([
     "servicios",
     "service",
     "servicio",
-    "servicio-2"
+    "servicio-2",
+    "service-page"
 ]);
 
 const MAX_ADDONS_PER_BOOKING =
@@ -38,15 +41,43 @@ function text(value, fallback = "") {
     return _safeTrim(value) || fallback;
 }
 
+function decodeUrlValue(value) {
+    const raw = _safeTrim(value || "");
+
+    if (!raw) {
+        return "";
+    }
+
+    try {
+        return decodeURIComponent(raw).normalize("NFC");
+    } catch (error) {
+        console.warn("[servicio-2] Valor URL inválido", {
+            value: raw,
+            message: error?.message
+        });
+
+        return raw.normalize("NFC");
+    }
+}
+
+function normalizeLookupValue(value) {
+    return decodeUrlValue(value);
+}
+
 function showError(message) {
-    const safeMessage = text(message, "No se pudo cargar el servicio.");
+    const safeMessage = text(
+        message,
+        "No se pudo cargar el servicio."
+    );
 
     console.error("[servicio-2] Error:", safeMessage);
 
     try {
         const banner = $w("#errorBanner");
 
-        if (!banner) return;
+        if (!banner) {
+            return;
+        }
 
         banner.text = `Error: ${safeMessage}`;
 
@@ -61,7 +92,12 @@ function showError(message) {
     }
 }
 
-function bridgeError(code, message, traceId, detail = null) {
+function bridgeError(
+    code,
+    message,
+    traceId,
+    detail = null
+) {
     console.error("[servicio-2] Error del bridge", {
         traceId,
         code,
@@ -73,19 +109,27 @@ function bridgeError(code, message, traceId, detail = null) {
         code === "WIDGET_ORIGIN_OPAQUE_REJECTED" ||
         code === "WIDGET_ORIGIN_REJECTED"
     ) {
-        showError("No se pudo conectar el componente de reserva. Recarga la página.");
+        showError(
+            "No se pudo conectar el componente de reserva. Recarga la página."
+        );
         return;
     }
 
-    showError(detail?.cause?.message || message);
+    showError(
+        detail?.cause?.message ||
+        message ||
+        "No se pudo cargar el servicio."
+    );
 }
 
 function serviceLookupError(result) {
     const code =
-        result?.error?.code || "SERVICE_LOOKUP_FAILED";
+        result?.error?.code ||
+        "SERVICE_LOOKUP_FAILED";
 
     const message =
-        result?.error?.message || "Servicio no encontrado.";
+        result?.error?.message ||
+        "Servicio no encontrado.";
 
     const error = new Error(message);
     error.code = code;
@@ -98,7 +142,9 @@ function getServiceId(service) {
 }
 
 function getServiceSlug(service) {
-    return _safeSlugOrId(service?.slug || "");
+    return normalizeLookupValue(
+        service?.slug || ""
+    );
 }
 
 function getAddonId(item) {
@@ -119,7 +165,9 @@ function normalizeCatalogEntry(data) {
         typeof data !== "object" ||
         Array.isArray(data)
     ) {
-        throw new Error("La entrada de catálogo recibida no es válida.");
+        throw new Error(
+            "La entrada de catálogo recibida no es válida."
+        );
     }
 
     const catalogEntryType = text(
@@ -130,11 +178,19 @@ function normalizeCatalogEntry(data) {
     const slug = getServiceSlug(data);
 
     if (!slug) {
-        throw new Error("La entrada de catálogo no tiene un slug válido.");
+        throw new Error(
+            "La entrada de catálogo no tiene un slug válido."
+        );
     }
 
-    if (!["SERVICE", "PRICING_PLAN"].includes(catalogEntryType)) {
-        throw new Error("Tipo de catálogo no compatible.");
+    if (
+        !["SERVICE", "PRICING_PLAN"].includes(
+            catalogEntryType
+        )
+    ) {
+        throw new Error(
+            "Tipo de catálogo no compatible."
+        );
     }
 
     const common = {
@@ -144,22 +200,34 @@ function normalizeCatalogEntry(data) {
         description: text(data.description),
         tagLine: text(data.tagLine),
         location: text(data.location),
-        price: Math.max(0, toFiniteNumber(data.price)),
+        price: Math.max(
+            0,
+            toFiniteNumber(data.price)
+        ),
         currency: /^[A-Z]{3}$/.test(
             text(data.currency, "EUR").toUpperCase()
         )
             ? text(data.currency, "EUR").toUpperCase()
             : "EUR",
         mainMedia: data.mainMedia || "",
-        recommendations: Array.isArray(data.recommendations)
+        recommendations: Array.isArray(
+            data.recommendations
+        )
             ? data.recommendations
             : [],
         clientHidden: data.clientHidden === true
     };
 
-    if (catalogEntryType === "PRICING_PLAN") {
-        const pricingPlanId = text(data.pricingPlanId);
-        const sessionCount = Number(data.sessionCount);
+    if (
+        catalogEntryType === "PRICING_PLAN"
+    ) {
+        const pricingPlanId = text(
+            data.pricingPlanId
+        );
+
+        const sessionCount = Number(
+            data.sessionCount
+        );
 
         if (!_looksLikeGuid(pricingPlanId)) {
             throw new Error(
@@ -212,7 +280,9 @@ function normalizeCatalogEntry(data) {
             0,
             toFiniteNumber(data.totalDuration)
         ),
-        addOnOptions: Array.isArray(data.addOnOptions)
+        addOnOptions: Array.isArray(
+            data.addOnOptions
+        )
             ? data.addOnOptions
             : [],
         allowCombine: data.allowCombine === true,
@@ -239,33 +309,54 @@ function normalizeCatalogEntry(data) {
 async function resolveServiceLookup() {
     const query = await location.query();
 
-    for (const candidate of [
-        query?.slug,
-        query?.serviceId
-    ]) {
-        const value = _safeSlugOrId(candidate);
+    const querySlug = normalizeLookupValue(
+        query?.slug
+    );
 
-        if (value) {
-            return value;
-        }
+    if (querySlug) {
+        return querySlug;
+    }
+
+    const queryServiceId = text(
+        query?.serviceId
+    );
+
+    if (
+        queryServiceId &&
+        _looksLikeGuid(queryServiceId)
+    ) {
+        return queryServiceId;
     }
 
     const path = await location.path();
-    const lastPathValue = path?.[path.length - 1] || "";
-    const value = _safeSlugOrId(lastPathValue);
 
-    if (
-        !value ||
-        EXCLUDED_PATHS.has(value.toLowerCase())
-    ) {
+    const segments = Array.isArray(path)
+        ? path
+        : [];
+
+    const lastSegment = normalizeLookupValue(
+        segments[segments.length - 1]
+    );
+
+    if (!lastSegment) {
         return null;
     }
 
-    return value;
+    const excludedValue = lastSegment
+        .toLowerCase()
+        .trim();
+
+    if (EXCLUDED_PATHS.has(excludedValue)) {
+        return null;
+    }
+
+    return lastSegment;
 }
 
 function getAllowedAddOnIds(service) {
-    const options = Array.isArray(service?.addOnOptions)
+    const options = Array.isArray(
+        service?.addOnOptions
+    )
         ? service.addOnOptions
         : [];
 
@@ -276,7 +367,10 @@ function getAllowedAddOnIds(service) {
     );
 }
 
-function getValidatedAddOnIds(payload, service) {
+function getValidatedAddOnIds(
+    payload,
+    service
+) {
     if (!Array.isArray(payload?.addOnIds)) {
         return [];
     }
@@ -289,7 +383,20 @@ function getValidatedAddOnIds(payload, service) {
         )
     );
 
-    const allowedIds = getAllowedAddOnIds(service);
+    if (
+        requestedIds.length >
+        MAX_ADDONS_PER_BOOKING
+    ) {
+        const error = new Error(
+            "Se ha superado el número máximo de complementos."
+        );
+
+        error.code = "TOO_MANY_ADDONS";
+        throw error;
+    }
+
+    const allowedIds =
+        getAllowedAddOnIds(service);
 
     const invalidIds = requestedIds.filter(
         (id) => !allowedIds.has(id)
@@ -304,22 +411,15 @@ function getValidatedAddOnIds(payload, service) {
         throw error;
     }
 
-    if (requestedIds.length > MAX_ADDONS_PER_BOOKING) {
-        const error = new Error(
-            "Se ha superado el número máximo de complementos."
-        );
-
-        error.code = "TOO_MANY_ADDONS";
-        throw error;
-    }
-
     return requestedIds;
 }
 
 function buildBookingUrl(service, payload) {
     if (
         service.catalogEntryType !== "SERVICE" ||
-        !_looksLikeGuid(getServiceId(service))
+        !_looksLikeGuid(
+            getServiceId(service)
+        )
     ) {
         throw new Error(
             "Solo los servicios reservables pueden abrir el calendario de citas."
@@ -337,13 +437,17 @@ function buildBookingUrl(service, payload) {
         referral: "servicio-2"
     });
 
-    const addOnIds = getValidatedAddOnIds(
-        payload,
-        service
-    );
+    const addOnIds =
+        getValidatedAddOnIds(
+            payload,
+            service
+        );
 
     if (addOnIds.length > 0) {
-        query.set("addOnIds", addOnIds.join(","));
+        query.set(
+            "addOnIds",
+            addOnIds.join(",")
+        );
     }
 
     return `${base}?${query.toString()}`;
@@ -356,8 +460,29 @@ function getServicesUrl() {
     );
 }
 
-async function loadService(lookupValue, traceId) {
-    const result = await getServiceBySlugOrId(lookupValue);
+async function loadService(
+    lookupValue,
+    traceId
+) {
+    const normalizedLookup =
+        normalizeLookupValue(
+            lookupValue
+        );
+
+    if (!normalizedLookup) {
+        throw serviceLookupError({
+            error: {
+                code: "EMPTY_SERVICE_LOOKUP",
+                message:
+                    "No se recibió el identificador del servicio."
+            }
+        });
+    }
+
+    const result =
+        await getServiceBySlugOrId(
+            normalizedLookup
+        );
 
     if (
         !result ||
@@ -368,14 +493,22 @@ async function loadService(lookupValue, traceId) {
         throw serviceLookupError(result);
     }
 
-    const service = normalizeCatalogEntry(result.data);
+    const service =
+        normalizeCatalogEntry(
+            result.data
+        );
 
-    console.info("[servicio-2] Servicio cargado", {
-        traceId,
-        serviceId: service.serviceId,
-        slug: service.slug,
-        catalogEntryType: service.catalogEntryType
-    });
+    console.info(
+        "[servicio-2] Servicio cargado",
+        {
+            traceId,
+            lookupValue: normalizedLookup,
+            serviceId: service.serviceId,
+            slug: service.slug,
+            catalogEntryType:
+                service.catalogEntryType
+        }
+    );
 
     return service;
 }
@@ -390,7 +523,8 @@ async function handlePricingPlanPurchase(
             status: "ERROR",
             error: {
                 code: "PURCHASE_IN_PROGRESS",
-                message: "Ya hay una compra en curso."
+                message:
+                    "Ya hay una compra en curso."
             }
         });
 
@@ -406,7 +540,8 @@ async function handlePricingPlanPurchase(
             );
 
         const orderId = text(
-            purchase?.order?._id || purchase?._id
+            purchase?.order?._id ||
+            purchase?._id
         );
 
         if (!purchase || !orderId) {
@@ -415,27 +550,34 @@ async function handlePricingPlanPurchase(
             );
         }
 
-        console.info("[servicio-2] Compra de plan iniciada", {
-            traceId,
-            pricingPlanId: service.pricingPlanId,
-            orderId
-        });
+        console.info(
+            "[servicio-2] Compra de plan iniciada",
+            {
+                traceId,
+                pricingPlanId:
+                    service.pricingPlanId,
+                orderId
+            }
+        );
 
         reply(MESSAGE_TYPES.BOOK, {
             status: "SUCCESS",
             data: {
-                catalogEntryType: "PRICING_PLAN",
+                catalogEntryType:
+                    "PRICING_PLAN",
                 title: service.title,
-                sessionCount: service.sessionCount,
+                sessionCount:
+                    service.sessionCount,
                 orderId
             }
         });
     } catch (error) {
         console.warn(
-            "[servicio-2] No se pudo completar la compra del plan",
+            "[servicio-2] Fallo en compra de plan",
             {
                 traceId,
-                pricingPlanId: service.pricingPlanId,
+                pricingPlanId:
+                    service.pricingPlanId,
                 code: text(
                     error?.code,
                     "PRICING_PLAN_PURCHASE_FAILED"
@@ -446,7 +588,8 @@ async function handlePricingPlanPurchase(
         reply(MESSAGE_TYPES.BOOK, {
             status: "ERROR",
             error: {
-                code: "PRICING_PLAN_PURCHASE_FAILED",
+                code:
+                    "PRICING_PLAN_PURCHASE_FAILED",
                 message:
                     "No se ha podido completar la compra. Inténtalo de nuevo."
             }
@@ -461,30 +604,41 @@ async function handlePricingPlanPurchase(
 }
 
 $w.onReady(async () => {
-    const traceId = makeTraceId("servicio");
+    const traceId = makeTraceId(
+        "servicio"
+    );
 
     let widget;
 
     try {
-        widget = $w("#htmlWidgetCustomService");
+        widget = $w(
+            "#htmlWidgetCustomService"
+        );
     } catch (error) {
-        showError("El widget del servicio no está disponible.");
+        showError(
+            "El widget del servicio no está disponible."
+        );
         return;
     }
 
     if (
         !widget ||
-        typeof widget.postMessage !== "function" ||
-        typeof widget.onMessage !== "function"
+        typeof widget.postMessage !==
+            "function" ||
+        typeof widget.onMessage !==
+            "function"
     ) {
-        showError("El widget del servicio no está disponible.");
+        showError(
+            "El widget del servicio no está disponible."
+        );
         return;
     }
 
     let lookupValue;
 
     try {
-        lookupValue = await resolveServiceLookup();
+        lookupValue =
+            await resolveServiceLookup();
     } catch (error) {
         console.error(
             "[servicio-2] Error resolviendo la URL",
@@ -506,123 +660,164 @@ $w.onReady(async () => {
         showError(
             "No se pudo localizar el servicio en la URL."
         );
-
         return;
     }
 
     try {
-        bridge = createWidgetBridge(widget, {
-            traceId,
-            allowOpaqueOrigin: true,
+        bridge = createWidgetBridge(
+            widget,
+            {
+                traceId,
+                allowOpaqueOrigin: true,
 
-            onContextReady: async () => {
-                resolvedService = await loadService(
-                    lookupValue,
-                    traceId
-                );
+                onContextReady: async () => {
+                    resolvedService =
+                        await loadService(
+                            lookupValue,
+                            traceId
+                        );
 
-                return resolvedService;
-            },
+                    return resolvedService;
+                },
 
-            onWidgetMessage: async (message, reply) => {
-                const type = _getMessageType(message);
+                onWidgetMessage: async (
+                    message,
+                    reply
+                ) => {
+                    const type =
+                        _getMessageType(
+                            message
+                        );
 
-                if (
-                    type === MESSAGE_TYPES.READY ||
-                    type === MESSAGE_TYPES.CONTEXT
-                ) {
-                    return;
-                }
-
-                const payload = _getPayload(message);
-
-                if (!resolvedService) {
-                    if (type === MESSAGE_TYPES.BOOK) {
-                        reply(MESSAGE_TYPES.BOOK, {
-                            status: "ERROR",
-                            error: {
-                                code: "SERVICE_NOT_READY",
-                                message:
-                                    "El servicio aún se está cargando."
-                            }
-                        });
+                    if (
+                        type ===
+                            MESSAGE_TYPES.READY ||
+                        type ===
+                            MESSAGE_TYPES.CONTEXT
+                    ) {
+                        return;
                     }
 
-                    return;
-                }
-
-                if (type === MESSAGE_TYPES.BOOK) {
-                    if (
-                        resolvedService.catalogEntryType ===
-                        "PRICING_PLAN"
-                    ) {
-                        await handlePricingPlanPurchase(
-                            resolvedService,
-                            traceId,
-                            reply
+                    const payload =
+                        _getPayload(
+                            message
                         );
+
+                    if (!resolvedService) {
+                        if (
+                            type ===
+                            MESSAGE_TYPES.BOOK
+                        ) {
+                            reply(
+                                MESSAGE_TYPES.BOOK,
+                                {
+                                    status:
+                                        "ERROR",
+                                    error: {
+                                        code:
+                                            "SERVICE_NOT_READY",
+                                        message:
+                                            "El servicio aún se está cargando."
+                                    }
+                                }
+                            );
+                        }
 
                         return;
                     }
 
-                    try {
-                        const bookingUrl =
-                            buildBookingUrl(
+                    if (
+                        type ===
+                        MESSAGE_TYPES.BOOK
+                    ) {
+                        if (
+                            resolvedService.catalogEntryType ===
+                            "PRICING_PLAN"
+                        ) {
+                            await handlePricingPlanPurchase(
                                 resolvedService,
-                                payload
+                                traceId,
+                                reply
                             );
 
-                        await location.to(bookingUrl);
-                    } catch (error) {
-                        console.warn(
-                            "[servicio-2] Selección de reserva inválida",
-                            {
-                                traceId,
-                                code: error?.code,
-                                message: error?.message
-                            }
-                        );
+                            return;
+                        }
 
-                        reply(MESSAGE_TYPES.BOOK, {
-                            status: "ERROR",
-                            error: {
-                                code:
-                                    error?.code ||
-                                    "BOOKING_NAVIGATION_FAILED",
-                                message:
-                                    "No se pudo abrir la reserva."
-                            }
-                        });
+                        try {
+                            const bookingUrl =
+                                buildBookingUrl(
+                                    resolvedService,
+                                    payload
+                                );
+
+                            await location.to(
+                                bookingUrl
+                            );
+                        } catch (error) {
+                            console.warn(
+                                "[servicio-2] Reserva inválida",
+                                {
+                                    traceId,
+                                    code:
+                                        error?.code,
+                                    message:
+                                        error?.message
+                                }
+                            );
+
+                            reply(
+                                MESSAGE_TYPES.BOOK,
+                                {
+                                    status:
+                                        "ERROR",
+                                    error: {
+                                        code:
+                                            error?.code ||
+                                            "BOOKING_NAVIGATION_FAILED",
+                                        message:
+                                            "No se pudo abrir la reserva."
+                                    }
+                                }
+                            );
+                        }
+
+                        return;
                     }
-
-                    return;
-                }
-
-                if (type === MESSAGE_TYPES.NAV) {
-                    const target = text(
-                        payload?.target
-                    ).toUpperCase();
 
                     if (
-                        !target ||
-                        target === "SERVICIOS"
+                        type ===
+                        MESSAGE_TYPES.NAV
                     ) {
-                        await location.to(
-                            getServicesUrl()
-                        );
-                    }
-                }
-            },
+                        const target =
+                            text(
+                                payload?.target
+                            ).toUpperCase();
 
-            onError: (error, detail) => {
-                bridgeError(
-                    error?.code,
-                    error?.message,
-                    traceId,
+                        if (
+                            !target ||
+                            target ===
+                                "SERVICIOS"
+                        ) {
+                            await location.to(
+                                getServicesUrl()
+                            );
+                        }
+                    }
+                },
+
+                onError: (
+                    error,
                     detail
-                );
+                ) => {
+                    bridgeError(
+                        error?.code,
+                        error?.message,
+                        traceId,
+                        detail
+                    );
+                }
             }
-        });
+        );
 
         if (!bridge) {
             showError(
