@@ -82,6 +82,18 @@ Esto corrige el hallazgo preliminar: **Wix Data sí dispone de incremento atómi
 
 El paso 4 es una condición crítica: no debe inferirse que un patch fue aplicado simplemente porque la llamada no lanzó una excepción. Debe verificarse el contrato de respuesta de la condición y probarse en el runtime real.
 
+## Corrección parcial de política — 2026-10-31
+
+Se ha corregido en la rama de trabajo la selección de límites por superficie:
+
+- `public-booking`: 5 peticiones / 10 segundos.
+- `reservas`: 20 peticiones / 5 segundos.
+- `availability`: 12 peticiones / 5 segundos.
+- `processDualBooking` utiliza ahora el identificador canónico `public-booking`.
+- Se han añadido pruebas offline para los tres límites y su aislamiento por superficie/solicitante.
+
+Esta corrección elimina el desajuste de configuración detectado, pero **no convierte el limitador en distribuido**: el contador sigue siendo un `Map` local a cada instancia y no persiste tras reinicios. No satisface todavía el requisito de persistencia de la Biblia v10.0 ni los criterios de aceptación de concurrencia multi-instancia. No se debe considerar desbloqueado para producción.
+
 ## Decisiones pendientes
 
 1. Obtener y aprobar la SSOT v13.0 o una decisión formal que determine si v10.0 sigue siendo vinculante para rate limiting.
