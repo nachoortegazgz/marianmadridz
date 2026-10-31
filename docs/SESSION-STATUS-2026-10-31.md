@@ -49,10 +49,8 @@ Esta confirmación permite planificar pruebas persistentes controladas. No obsta
 
 ### Datos de prueba autorizados por el usuario
 
-- Cliente: Nacho Ortega
-- Teléfono: 666724634
-- Email: nachoortegazgz@gmail.com
-- Método de pago: presencial / en el establecimiento
+- Identidad y contacto: datos de prueba facilitados por el usuario en la conversación; no replicar teléfono ni email en documentación versionada.
+- Método de pago: presencial / en el establecimiento.
 - Ventana solicitada: semana próxima respecto a la fecha de ejecución de cada prueba.
 - No realizar cobros online ni emitir documentos fiscales reales durante pruebas.
 
@@ -94,7 +92,7 @@ Esta confirmación permite planificar pruebas persistentes controladas. No obsta
 2. Verificar manifiesto Wix CLI y cerrar el bloqueo ESLint.
 3. Inventariar servicios/recursos/horarios de Bookings mediante lectura.
 4. Ejecutar la batería QA E2E autorizada con los datos de prueba anteriores, semana próxima, pago presencial.
-5. Anotar resultados en agenda y colección QA identificada; adjuntar IDs de reserva y traceId, minimizando PII.
+5. Anotar resultados en agenda y colección QA identificada; adjuntar IDs de reserva y traceId, minimizando PII y sin copiar teléfono/email al repositorio.
 6. Ejecutar tests offline + lint + CI.
 7. Revisar PR #19; mantener Draft si persiste cualquier fallo o falta evidencia runtime.
 8. Solo tras aprobación: fusionar y desplegar el commit validado a Wix.
