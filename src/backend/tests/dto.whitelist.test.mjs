@@ -33,6 +33,12 @@ const FORBIDDEN_KEYS = [
 // sesion via __mmMembersState (contrato loader LH-24).
 const OWNER_MEMBER_ID = 'member-owner-dto-0001';
 
+function resetRateLimitRows() {
+  const collection = IC.OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
+  const rows = wixDataMock._store.get(collection) || [];
+  wixDataMock._store.set(collection, rows.filter((row) => row.controlType !== 'RATE_LIMIT'));
+}
+
 function mockVisitor(memberId) {
   globalThis.__mmMembersState._current = memberId
     ? { _id: memberId }
@@ -40,9 +46,8 @@ function mockVisitor(memberId) {
 }
 
 async function issueToken(bookingId, { ownerId = OWNER_MEMBER_ID } = {}) {
-  // SEC-RATE-RESET: ventana deslizante compartida entre suites -> reset por emision.
-  const SEC = await import('backend/security');
-  SEC._resetRateLimitCacheForTests();
+  // Reset only the persistent RATE_LIMIT test rows; preserve booking fixtures.
+  resetRateLimitRows();
   // Semilla de propiedad fail-closed: la reserva debe tener dueno conocido.
   const rows = wixDataMock._store.get(IC.BUSINESS_COLLECTIONS.CITAS_F2) || [];
   const rec = rows.find((r) => r.bookingId === bookingId);
@@ -54,7 +59,7 @@ async function issueToken(bookingId, { ownerId = OWNER_MEMBER_ID } = {}) {
     return gen.token;
   } finally {
     mockVisitor(null);
-    SEC._resetRateLimitCacheForTests();
+    resetRateLimitRows();
   }
 }
 
