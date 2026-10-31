@@ -5,17 +5,17 @@
     "react": "18.3.1"
   },
   "dependencies": {
-    "@wix/sdk": "1.21.17",
-    "@wix/essentials": "1.0.15",
-    "@wix/data": "1.0.527",
     "@wix/bookings": "1.0.1704",
-    "@wix/ecom": "1.0.2539",
-    "@wix/members": "1.0.519",
     "@wix/crm": "1.0.1636",
+    "@wix/data": "1.0.527",
+    "@wix/ecom": "1.0.2539",
+    "@wix/essentials": "1.0.15",
+    "@wix/members": "1.0.519",
+    "@wix/sdk": "1.21.17",
     "@wix/secrets": "1.0.75",
     "@wix/site-location": "1.34.0",
-    "@wix/site-window": "1.59.0",
     "@wix/site-pricing-plans": "1.35.0",
+    "@wix/site-window": "1.59.0",
     "@wix/stores": "1.0.960"
   },
   "scripts": {
