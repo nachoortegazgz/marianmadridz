@@ -13,7 +13,8 @@
 - La PR #19 (checkout Cart V2) está **fusionada** en `main` mediante `ff16a703856b3f997ff73e1a56932e185f72a66a`.
 - La PR #22 (contrato de evento de cancelación Bookings V2) está **fusionada** en `main`; su merge commit es el HEAD verificado `1c1165d32795fa1fc8b646f4a3e249af8e58e228`.
 - La PR #23 (envoltorio webhook REST) está **cerrada sin merge**; no se incorpora su implementación.
-- El run #310 de **Backend quality gates** fue `completed / success` para `be55b725`, pero no demuestra CI del HEAD actual. La consulta de checks y runs asociada al HEAD `1c1165d` no devolvió resultados; CI actual queda **sin verificar**.
+- GitHub Actions para el HEAD actual `1c1165d`: runs **41251109442** y **41250779345**, ambos `completed / success`. En ambos pasan los cuatro jobs: instalación limpia + lint, regresión Windows Node.js 24.22.1, regresión Windows Node.js 26.12.1 y suite backend offline.
+- La aprobación de lint no cubre la regla `@wix/cli/no-invalid-backend-import`, porque permanece desactivada en `.eslintrc.json` hasta generar el manifiesto Velo.
 - Wix identifica el Site ID anterior como **Published**, plan Premium, dominio personalizado, Editor clásico y Velo habilitado.
 - Wix Apps observadas: Bookings, Stores **Catalog V1**, Invoices **V1**, Members, Forms & Payments y Gift Cards.
 - No se ha realizado publicación Wix ni mutación de CMS durante esta consolidación.
