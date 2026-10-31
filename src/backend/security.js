@@ -186,8 +186,8 @@ export async function rateLimiter(
     const policy = RATE_LIMIT_POLICIES[normalizedSurface] || DEFAULT_RATE_LIMIT;
     const max = Math.max(1, Math.floor(Number(maxRequests) || policy.maxRequests));
     const window = Math.max(1, Math.floor(Number(windowMs) || policy.windowMs));
-    const intervalMs = window / max;
-    const burstToleranceMs = Math.max(0, window - intervalMs);
+    const intervalMicros = Math.floor((window * 1000) / max);
+    const burstToleranceMicros = Math.max(0, window * 1000 - intervalMicros);
     const traceId = makeTraceId("rate-limit");
 
     try {
@@ -216,7 +216,7 @@ export async function rateLimiter(
                 version: 0,
                 payload: {
                     algorithm: "GCRA_V1",
-                    tat: now,
+                    tat: now * 1000,
                 },
             });
         } catch (insertError) {
@@ -257,27 +257,27 @@ export async function rateLimiter(
             }
 
             const version = Number(record.version);
-            const tatMs = Number(record.payload?.tat);
-            if (!Number.isInteger(version) || version < 0 || !Number.isFinite(tatMs)) {
+            const tatMicros = Number(record.payload?.tat);
+            if (!Number.isInteger(version) || version < 0 || !Number.isFinite(tatMicros)) {
                 throw new Error("RATE_LIMIT_RECORD_INVALID");
             }
 
-            const requestNow = Date.now();
-            const allowAt = tatMs - burstToleranceMs;
-            if (requestNow < allowAt) {
+            const requestNowMicros = Date.now() * 1000;
+            const allowAtMicros = tatMicros - burstToleranceMicros;
+            if (requestNowMicros < allowAtMicros) {
                 return {
                     allowed: false,
-                    retryAfter: Math.max(1, Math.ceil((allowAt - requestNow) / 1000)),
+                    retryAfter: Math.max(1, Math.ceil((allowAtMicros - requestNowMicros) / 1000000)),
                 };
             }
 
-            const nextTatMs = Math.max(requestNow, tatMs) + intervalMs;
+            const nextTatMicros = Math.max(requestNowMicros, tatMicros) + intervalMicros;
             const nextPayload = {
                 ...(record.payload && typeof record.payload === "object"
                     ? record.payload
                     : {}),
                 algorithm: "GCRA_V1",
-                tat: nextTatMs,
+                tat: nextTatMicros,
             };
 
             const result = await bulkPatchItems(
@@ -302,7 +302,7 @@ export async function rateLimiter(
                     {
                         fieldPath: "expiresAt",
                         action: "SET_FIELD",
-                        value: new Date(nextTatMs + window),
+                        value: new Date(Math.ceil(nextTatMicros / 1000 + window)),
                     },
                 ]],
                 {
