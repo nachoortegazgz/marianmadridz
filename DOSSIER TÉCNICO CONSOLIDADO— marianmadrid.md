@@ -2803,7 +2803,7 @@ Reglas: `concurrencyPolicy: "Forbid"`, `maxRetries: 3` con backoff exponencial, 
 
 ---
 
-## 13. Migración SDK v2 — estado real (2026-10-30)
+## 13. Migración SDK v2 javascript — estado real (2026-10-30)
 
 > **Actualiza §0 (estado) y §2.5 (dependencias).** La migración de las APIs estables está **fusionada en `main`** y validada por CI offline. **No publicada en Wix.**
 
@@ -2869,7 +2869,7 @@ Los tests de caja para ventas de mostrador sin datos del destinatario declaran `
 
 ---
 
-## 14. Wix Stores Catalog V1/V3
+## 14. Wix Stores Catalog V1/V3. Conservar v1 hasta que lo diga el usuario.
 
 ### 14.1 Estado actual
 
