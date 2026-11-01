@@ -56,7 +56,7 @@ jobs:
       - name: Create Wix preview (never publish)
         run: |
           set -o pipefail
-          wix preview --source remote 2>&1 | tee wix-preview.log
+          wix preview 2>&1 | tee wix-preview.log
 
       - name: Preserve preview output
         if: always()
