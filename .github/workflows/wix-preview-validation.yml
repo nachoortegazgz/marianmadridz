@@ -95,22 +95,22 @@ jobs:
                           chunk = os.read(fd, 8192)
                       except OSError as exc:
                           if exc.errno == errno.EIO:
-                              break
-                          raise
-                      if not chunk:
-                          break
-                      sys.stdout.buffer.write(chunk)
-                      sys.stdout.buffer.flush()
-                      output.extend(chunk)
+                              chunk = None
+                          else:
+                              raise
+                      if chunk:
+                          sys.stdout.buffer.write(chunk)
+                          sys.stdout.buffer.flush()
+                          output.extend(chunk)
 
-                      clean = ansi.sub(b"", output)
-                      if (not sent_selection and
-                              b"What would you like to preview" in clean):
-                          # On PRs preview the checked-out branch; on main,
-                          # accept the default latest commit from origin/main.
-                          key = b"\x1b[B\r" if os.getenv("GITHUB_EVENT_NAME") == "pull_request" else b"\r"
-                          os.write(fd, key)
-                          sent_selection = True
+                          clean = ansi.sub(b"", output)
+                          if (not sent_selection and
+                                  b"What would you like to preview" in clean):
+                              # On PRs preview the checked-out branch; on main,
+                              # accept the default latest commit from origin/main.
+                              key = b"\x1b[B\r" if os.getenv("GITHUB_EVENT_NAME") == "pull_request" else b"\r"
+                              os.write(fd, key)
+                              sent_selection = True
 
                   waited, status = os.waitpid(pid, os.WNOHANG)
                   if waited:
@@ -131,6 +131,8 @@ jobs:
               with open("wix-preview-url.txt", "w", encoding="utf-8") as handle:
                   handle.write(match.group(0).decode("ascii"))
           finally:
+              with open("wix-preview.log", "wb") as handle:
+                  handle.write(output)
               try:
                   os.close(fd)
               except OSError:
@@ -148,4 +150,5 @@ jobs:
           name: wix-preview-log-${{ github.run_id }}
           if-no-files-found: warn
           path: |
-            wix-preview.log\n            wix-preview-url.txt
+            wix-preview.log
+            wix-preview-url.txt
