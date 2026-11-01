@@ -19,6 +19,13 @@
 - **Pendiente confirmado:** `src/velo.dependencies.json` no existe en el árbol de `main` consultado. Por tanto, no se puede afirmar que la regla Wix `@wix/cli/no-invalid-backend-import` esté activa; la documentación de sesión anterior indica que permanece deshabilitada.
 - El workflow de manifiesto debe generar el archivo con Wix CLI; no crear el manifiesto manualmente.
 
+### Resultado adicional: workflow del manifiesto Velo
+- Revisadas las ejecuciones del workflow `Wix Velo dependency manifest` de la rama `feat/wix-cli-manifest-bootstrap-2026-11-01`.
+- La autenticación de Wix CLI funciona; `wix install --npm @wix/data` termina indicando que la dependencia se instaló correctamente.
+- El paso de generación falla después de la instalación, antes de `Commit only generated Wix metadata`. La ejecución `41256102498` conserva el artefacto de auditoría [wix-velo-manifest-41256102498](https://github.com/nachoortegazgz/marianmadridz/actions/runs/41256102498/artifacts/13063061228).
+- El log termina con exit code 1 sin una explicación textual útil tras el spinner. No inferir una causa no demostrada.
+- Resultado: el manifiesto **sigue ausente** de `main`; la PR #26 disparó el proceso, pero no resolvió el bloqueo. Siguiente diagnóstico: inspeccionar el artefacto y el workflow CLI, sin añadir metadatos no verificados.
+
 ### Incidencia: Página de servicio 2 no muestra el servicio elegido
 **Síntoma reportado:** `WIDGET_CONTEXT_FAILED`, con causa `RATE_LIMIT_STORAGE_UNAVAILABLE` en la superficie `reservas`.
 
