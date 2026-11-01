@@ -431,8 +431,85 @@ export function bulkInsert(collection, items) {
     return elevatedBulkInsert(collection, items);
 }
 
-export function bulkPatchItems(collection, itemIds, fieldModifications, options) {
-    return elevatedBulkPatch(collection, itemIds, fieldModifications, options);
+function buildBulkPatchCondition(filter) {
+    if (!filter || typeof filter !== "object" || Array.isArray(filter)) {
+        throw new TypeError("BULK_PATCH_CONDITION_INVALID");
+    }
+
+    const condition = items.filter();
+    for (const [field, operators] of Object.entries(filter)) {
+        if (!operators || typeof operators !== "object" || Array.isArray(operators)) {
+            throw new TypeError("BULK_PATCH_CONDITION_OPERATOR_INVALID");
+        }
+        const entries = Object.entries(operators);
+        if (entries.length !== 1 || entries[0][0] !== "$eq") {
+            throw new TypeError("BULK_PATCH_CONDITION_UNSUPPORTED");
+        }
+        condition.eq(field, entries[0][1]);
+    }
+    return condition;
+}
+
+/**
+ * Wix Data SDK bulkPatch is a fluent operation:
+ * bulkPatch(collection, ids).setField(...).incrementField(...).run(options).
+ * Keep the repository adapter contract stable while translating the
+ * internal field-modification DTO to the official SDK builder.
+ */
+export async function bulkPatchItems(collection, itemIds, fieldModifications, options = {}) {
+    const ids = Array.isArray(itemIds) ? itemIds : [itemIds];
+    if (ids.length === 0 || ids.some((id) => typeof id !== "string" || !id)) {
+        throw new TypeError("BULK_PATCH_ITEM_IDS_INVALID");
+    }
+
+    const groups = Array.isArray(fieldModifications?.[0])
+        ? fieldModifications
+        : ids.map(() => fieldModifications || []);
+    if (groups.length !== ids.length) {
+        throw new TypeError("BULK_PATCH_MODIFICATION_GROUPS_MISMATCH");
+    }
+
+    const modifications = groups[0] || [];
+    const canonicalGroup = JSON.stringify(modifications);
+    if (groups.some((group) => JSON.stringify(group || []) !== canonicalGroup)) {
+        throw new TypeError("BULK_PATCH_PER_ITEM_MODIFICATIONS_UNSUPPORTED");
+    }
+
+    let operation = elevatedBulkPatch(collection, ids);
+    for (const modification of modifications) {
+        const field = String(modification?.fieldPath || "");
+        if (!field) throw new TypeError("BULK_PATCH_FIELD_REQUIRED");
+
+        switch (modification.action) {
+        case "SET_FIELD":
+            operation = operation.setField(field, modification.value);
+            break;
+        case "INCREMENT_FIELD":
+            operation = operation.incrementField(field, Number(modification.value));
+            break;
+        case "REMOVE_FIELD":
+            operation = operation.removeField(field);
+            break;
+        case "APPEND_TO_ARRAY":
+            operation = operation.appendToArray(field, modification.value);
+            break;
+        case "REMOVE_FROM_ARRAY":
+            operation = operation.removeFromArray(field, modification.value);
+            break;
+        default:
+            throw new TypeError("BULK_PATCH_ACTION_UNSUPPORTED");
+        }
+    }
+
+    const runOptions = {};
+    if (options.condition?.filter) {
+        runOptions.condition = buildBulkPatchCondition(options.condition.filter);
+    }
+    if (typeof options.suppressHooks === "boolean") {
+        runOptions.suppressHooks = options.suppressHooks;
+    }
+
+    return operation.run(runOptions);
 }
 
 export function bulkUpdate(collection, items) {
