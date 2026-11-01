@@ -53,13 +53,10 @@ jobs:
           fi
           wix login --api-key "${WIX_CLI_API_KEY}"
 
-      - name: Inspect supported non-interactive Preview flags
-        run: wix preview --help | tee wix-preview-help.log
-
       - name: Create Wix preview (never publish)
         run: |
           set -o pipefail
-          wix preview 2>&1 | tee wix-preview.log
+          wix preview --source local 2>&1 | tee wix-preview.log
 
       - name: Preserve preview output
         if: always()
@@ -69,4 +66,3 @@ jobs:
           if-no-files-found: warn
           path: |
             wix-preview.log
-            wix-preview-help.log
