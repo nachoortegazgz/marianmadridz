@@ -47,13 +47,7 @@ button{transition:background-color .18s ease,border-color .18s ease,color .18s e
 <script>
 "use strict";
 
-/* SEC-01 (v5023): CONFIG solo contiene constantes inmutables de sesión.
-   El origen del padre se calcula en runtime y vive en `parentOrigin`
-   (variable separada, fuera del objeto) para no mutar CONFIG.
-   - bookingTimeoutMs: 90 s.
-   - contextTimeoutMs: 120 s (watchdog de MM_CONTEXT).
-   - handshakeDelays: backoff exponencial capado a 8 s.
-   - allowAnyOriginFallback: false → fail-closed si no hay parentOrigin. */
+/* CONFIG contiene solo constantes inmutables de sesión. El origen del padre se resuelve en runtime. */
 const CONFIG={
   version:1,
   maxAddOns:5,
@@ -64,7 +58,6 @@ const CONFIG={
   currency:"EUR",
   location:"Marian Madrid",
   allowedOriginSuffixes:["marianmadrid.es",".wixsite.com",".parastorage.com",".wix.com",".editorx.com"],
-  allowAnyOriginFallback:false,
   defaultImage:"https://static.wixstatic.com/media/ab7708_588ab0ed2d7f42f4a63edb9e9c76da1c~mv2.jpg"
 };
 
@@ -90,41 +83,28 @@ let handshakeTimer=null,handshakeCount=0,bookingTimer=null,contextTimer=null;
 
 const el=id=>document.getElementById(id);const text=(v,f="")=>String(v??"").trim()||f;const num=(v,f=0)=>{if(v===null||v===undefined||v==="")return f;const n=Number(v);return Number.isFinite(n)?n:f};const makeMessageId=p=>`${p}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
 
-/* SEC-01: cálculo del origen del padre y validación de mensajes entrantes. */
-function resolveParentOrigin(){
-  try{
-    if(window.location.ancestorOrigins&&window.location.ancestorOrigins.length>0){
-      const o=text(window.location.ancestorOrigins[0]);
-      if(o&&o!=="null")return o
-    }
-  }catch(_){}
-  try{
-    if(document.referrer){const u=new URL(document.referrer);if(u.origin&&u.origin!=="null")return u.origin}
-  }catch(_){}
-  return ""
-}
 function hostMatchesSuffix(host,suffix){
   if(!host||!suffix)return false;
   const s=suffix.startsWith(".")?suffix.slice(1):suffix;
   return host===s||host.endsWith(`.${s}`)
 }
-function isTrustedOrigin(origin){
-  const v=text(origin).toLowerCase();
-  if(!v||v==="null")return false;
-  if(v.startsWith("blob:")||v.startsWith("data:")||v.startsWith("filesystem:"))return false;
-  if(parentOrigin&&v===parentOrigin.toLowerCase())return true;
-  let host="";
-  try{host=new URL(v).hostname.toLowerCase()}catch(_){return false}
-  return CONFIG.allowedOriginSuffixes.some(s=>hostMatchesSuffix(host,s))
+function isTrustedParentEvent(event){
+  if(!event||!window.parent||window.parent===window||event.source!==window.parent)return false;
+  const origin=text(event.origin).toLowerCase();
+  if(!origin||origin==="null"||origin.startsWith("blob:")||origin.startsWith("data:")||origin.startsWith("filesystem:"))return false;
+  if(parentOrigin)return origin===parentOrigin.toLowerCase();
+  let parsed;
+  try{parsed=new URL(origin)}catch(_){return false}
+  if(parsed.protocol!=="https:"&&parsed.protocol!=="http:")return false;
+  return CONFIG.allowedOriginSuffixes.some(s=>hostMatchesSuffix(parsed.hostname.toLowerCase(),s))
 }
 
-/* post(): targetOrigin específico. Fail-closed si no hay parentOrigin y el
-   fallback está deshabilitado. */
+/* Solo MM_READY puede usar "*" antes de conocer el origen; no transporta datos.
+   El primer MM_CONTEXT fija el origen exacto para todo el tráfico posterior. */
 function post(type,payload={}){
   if(!window.parent||window.parent===window)return false;
-  const target=parentOrigin||(CONFIG.allowAnyOriginFallback?"*":"");
-  if(!target){console.error("[calendario] SEC: origen del padre desconocido; envío cancelado",{type});return false}
-  if(target==="*")console.warn("[calendario] SEC: enviando con targetOrigin='*' (fallback habilitado)");
+  const target=parentOrigin||(type===MESSAGE_TYPES.READY?"*":"");
+  if(!target){console.error("[calendario] SEC: origen del padre no verificado; envío bloqueado",{type});return false}
   try{
     window.parent.postMessage({version:CONFIG.version,type,messageId:makeMessageId(type.toLowerCase()),bridgeId:state.bridgeId,payload},target);
     return true
@@ -178,23 +158,25 @@ function buildBookingPayload(){const s=state.selectedSlot,a=normalizePhaseSlot(s
 function confirmBooking(){if(state.processing||state.completed||!state.selectedSlot)return showError("Selecciona un día y una hora.");const p=buildBookingPayload(),email=el("inputEmail");if(!p||!p.firstName||!p.email||!email.checkValidity()||!p.phone||p.phone.replace(/\D/g,"").length<8||!p.rgpdConsent)return showError("Revisa el nombre, el correo, el teléfono y la aceptación de privacidad.");state.processing=true;showStatus("Enviando la solicitud de reserva...");el("btnConfirm").disabled=true;post(MESSAGE_TYPES.BOOK,p);bookingTimer=setTimeout(()=>{state.processing=false;showError("No ha llegado confirmación. Comprueba la agenda o contacta con el salón.")},CONFIG.bookingTimeoutMs)}
 
 function handleMessage(e){
-  /* SEC-01: valida origin antes de procesar. Rechaza orígenes opacos y hosts
-     fuera de la allowlist. isTrustedOrigin consulta `parentOrigin` (runtime)
-     y `CONFIG.allowedOriginSuffixes`. */
-  if(!e||!isTrustedOrigin(e.origin)){
-    try{console.warn("[calendario] SEC: mensaje de origen no confiable ignorado",{origin:e&&e.origin})}catch(_){}
+  if(!e||!isTrustedParentEvent(e)){
+    try{console.warn("[calendario] SEC: mensaje del padre no verificado ignorado",{origin:e&&e.origin,sourceIsParent:e?.source===window.parent})}catch(_){}
     return
   }
   const m=e.data;
-  if(!m||m.version!==CONFIG.version)return;
-  if(m.bridgeId)state.bridgeId=text(m.bridgeId);
+  if(!m||m.version!==CONFIG.version||!m.bridgeId)return;
+  if(state.bridgeId&&text(m.bridgeId)!==state.bridgeId)return;
+  if(!state.bridgeId&&m.type!==MESSAGE_TYPES.CONTEXT)return;
+  if(!parentOrigin){
+    try{parentOrigin=new URL(e.origin).origin}catch(_){return}
+  }
+  state.bridgeId=text(m.bridgeId);
   const p=m.payload&&typeof m.payload==="object"?m.payload:{};
   if(m.type===MESSAGE_TYPES.CONTEXT){
-    /* CAL-22: cancela el watchdog y procesa payload.error si existe. */
+    state.connected=true;
+    clearTimeout(handshakeTimer);handshakeTimer=null;
     clearTimeout(contextTimer);
     if(p.error&&typeof p.error==="object"){
       showError(p.error.message||"No se pudo cargar el servicio.");
-      state.connected=true;
       return
     }
     state.service=p;renderService();requestDays()
@@ -225,15 +207,21 @@ function handleMessage(e){
     }
   }
 }
-function startHandshake(){const a=()=>{if(state.connected||handshakeCount>=CONFIG.maxHandshake)return;handshakeCount++;post(MESSAGE_TYPES.READY,{status:"INIT",attempt:handshakeCount});handshakeTimer=setTimeout(a,CONFIG.handshakeDelays[handshakeCount-1]||8000)};a()}
+function startHandshake(){
+  const sendReady=()=>{
+    if(state.connected||handshakeCount>=CONFIG.maxHandshake)return;
+    handshakeCount++;
+    post(MESSAGE_TYPES.READY,{status:"INIT",attempt:handshakeCount});
+    if(!state.connected&&handshakeCount<CONFIG.maxHandshake){
+      handshakeTimer=setTimeout(sendReady,CONFIG.handshakeDelays[handshakeCount-1]||8000)
+    }
+  };
+  sendReady()
+}
 function nav(t){post(MESSAGE_TYPES.NAV,{target:t})}
 
 function init(){
-  /* SEC-01: resuelve origen del padre antes de cualquier envío. Se asigna
-     la variable `parentOrigin` (runtime), no CONFIG. */
-  parentOrigin=resolveParentOrigin();
-  if(parentOrigin)console.info("[calendario] SEC: origen del padre =",parentOrigin);
-  else console.warn("[calendario] SEC: no se pudo determinar el origen del padre; los envíos se rechazarán salvo allowAnyOriginFallback=true");
+  console.info("[calendario] SEC: el origen exacto se fijará al recibir MM_CONTEXT del padre directo.");
   el("btnBack").onclick=()=>nav("SERVICIOS");
   el("btnPrivacy").onclick=()=>nav("PRIVACY");
   el("btnPrevMonth").onclick=()=>{state.month--;if(state.month<1){state.month=12;state.year--}state.selectedDay="";clearSlots();renderCalendar();requestDays()};
