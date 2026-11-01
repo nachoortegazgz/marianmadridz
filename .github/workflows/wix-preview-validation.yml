@@ -69,7 +69,7 @@ jobs:
           # Wix CLI for Sites prompts for the source. The newline accepts its
           # documented default ("Latest commit from origin/main"). Keep a PTY:
           # running the CLI as a background non-interactive process causes TTY errors.
-          if ! printf '\\n' | timeout 8m script -q -e -c "wix preview" /dev/null > wix-preview.log 2>&1; then
+          if ! printf '\n' | timeout 8m script -q -e -c "wix preview" /dev/null > wix-preview.log 2>&1; then
             echo "::error::Wix preview command failed or timed out."
             cat wix-preview.log || true
             exit 1
@@ -84,14 +84,14 @@ jobs:
             exit 1
           fi
 
-          preview_url="$(grep -Eo 'https?://wix\\.to/[[:alnum:]]+' wix-preview.log | head -n 1 || true)"
+          preview_url="$(grep -Eo 'https?://wix\.to/[[:alnum:]]+' wix-preview.log | head -n 1 || true)"
           if [ -z "${preview_url}" ]; then
             echo "::error::Wix confirmed no extractable wix.to Preview URL."
             cat wix-preview.log || true
             exit 1
           fi
 
-          printf '%s\\n' "${preview_url}" > wix-preview-url.txt
+          printf '%s\n' "${preview_url}" > wix-preview-url.txt
           echo "Wix Preview deployment confirmed: ${preview_url}"
 
       - name: Preserve preview output
@@ -102,3 +102,4 @@ jobs:
           if-no-files-found: warn
           path: |
             wix-preview.log
+            wix-preview-url.txt
