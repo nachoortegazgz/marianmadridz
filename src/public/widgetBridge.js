@@ -35,7 +35,7 @@ const MAX_TYPE_LENGTH = 40;
 const MAX_MESSAGE_ID_LENGTH = 120;
 const MAX_MESSAGE_BYTES = 100000;
 const MAX_PAYLOAD_KEYS = 400;
-const DEFAULT_ALLOWED_ORIGIN_SUFFIXES = Object.freeze([".parastorage.com", ".wix.com", ".wixsite.com", ".editorx.com"]);
+const DEFAULT_ALLOWED_ORIGIN_SUFFIXES = Object.freeze([".parastorage.com", ".wix.com", ".wixsite.com", ".editorx.com", ".marianmadrid.es"]);
 const OPAQUE_ORIGIN_PREFIXES = Object.freeze(["blob:", "data:", "filesystem:"]);
 export const WIDGET_ERROR_CODE = Object.freeze({
     INVALID_WIDGET: "WIDGET_INVALID_HTML_COMPONENT",
@@ -293,7 +293,11 @@ export function createWidgetBridge(widgetElement, options = {}) {
             const normalized = normalizeMessage(extracted);
             if (!normalized.message) { reportError(normalized.code || WIDGET_ERROR_CODE.MESSAGE_REJECTED, { receivedType: extracted.type ?? null, receivedVersion: extracted.version ?? null }); return; }
             const message = normalized.message;
-            if (message.type === MESSAGE_TYPES.READY) { handshakeCompleted = true; if (handshakeTimer !== null) { clearTimeout(handshakeTimer); timers.delete(handshakeTimer); handshakeTimer = null; } }
+            if (message.type === MESSAGE_TYPES.READY) {
+                if (handshakeCompleted) return;
+                handshakeCompleted = true;
+                if (handshakeTimer !== null) { clearTimeout(handshakeTimer); timers.delete(handshakeTimer); handshakeTimer = null; }
+            }
             notifyListeners(message);
             if (onWidgetMessage) {
                 const replyToMessage = (responseType, payload = {}, requestMessage = message) => {
