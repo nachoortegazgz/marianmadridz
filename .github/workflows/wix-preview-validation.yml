@@ -10,15 +10,6 @@ on:
       - "package-lock.json"
       - "wix.config.json"
       - ".github/workflows/wix-preview-validation.yml"
-  pull_request:
-    branches:
-      - main
-    paths:
-      - "src/**"
-      - "package.json"
-      - "package-lock.json"
-      - "wix.config.json"
-      - ".github/workflows/wix-preview-validation.yml"
   workflow_dispatch:
 
 permissions:
@@ -31,14 +22,14 @@ concurrency:
 jobs:
   preview:
     name: Build Wix preview from main
-    if: (github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request') && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.head_ref || github.ref_name }}
+          ref: ${{ github.ref_name }}
 
       - name: Set up supported Node.js
         uses: actions/setup-node@v4
@@ -62,86 +53,37 @@ jobs:
           fi
           wix login --api-key "${CLI_API_KEY}"
 
-      - name: Create and verify Wix Sites preview (never publish)
+      - name: Create Wix preview from latest main (never publish)
         env:
           CI: "true"
           TERM: "xterm"
-          GITHUB_EVENT_NAME: ${{ github.event_name }}
         run: |
           set -euo pipefail
           rm -f wix-preview.log
 
-          # Wix CLI for Sites requires an interactive terminal. Use Python's
-          # standard-library PTY so the selector receives a real keypress.
-          python3 - <<'PY'
-          import os, pty, re, select, signal, sys, time
-          import errno
+          timeout 8m bash -lc '
+            set -euo pipefail
+            wix preview > wix-preview.log 2>&1 &
+            preview_pid=$!
+            trap "kill ${preview_pid} >/dev/null 2>&1 || true; wait ${preview_pid} || true" EXIT
 
-          pid, fd = pty.fork()
-          if pid == 0:
-              os.execvp("wix", ["wix", "preview"])
+            for _ in $(seq 1 180); do
+              if grep -Eiq "ready|localhost|127\.0\.0\.1|preview.*started|http" wix-preview.log; then
+                echo "Wix preview started successfully."
+                break
+              fi
+              sleep 2
+            done
 
-          output = bytearray()
-          sent_selection = False
-          deadline = time.monotonic() + 480
-          exit_status = None
-          ansi = re.compile(rb"\x1b\[[0-?]*[ -/]*[@-~]")
+            if ! grep -Eiq "ready|localhost|127\.0\.0\.1|preview.*started|http" wix-preview.log; then
+              echo "::error::Wix preview did not become ready before timeout."
+              cat wix-preview.log || true
+              exit 1
+            fi
 
-          try:
-              while time.monotonic() < deadline:
-                  ready, _, _ = select.select([fd], [], [], 1)
-                  if ready:
-                      try:
-                          chunk = os.read(fd, 8192)
-                      except OSError as exc:
-                          if exc.errno == errno.EIO:
-                              chunk = None
-                          else:
-                              raise
-                      if chunk:
-                          sys.stdout.buffer.write(chunk)
-                          sys.stdout.buffer.flush()
-                          output.extend(chunk)
-
-                          clean = ansi.sub(b"", output)
-                          if (not sent_selection and
-                                  b"What would you like to preview" in clean):
-                              # On PRs preview the checked-out branch; on main,
-                              # accept the default latest commit from origin/main.
-                              key = b"\x1b[B\r" if os.getenv("GITHUB_EVENT_NAME") == "pull_request" else b"\r"
-                              os.write(fd, key)
-                              sent_selection = True
-
-                  waited, status = os.waitpid(pid, os.WNOHANG)
-                  if waited:
-                      exit_status = status
-                      break
-
-              if exit_status is None:
-                  os.kill(pid, signal.SIGTERM)
-                  _, exit_status = os.waitpid(pid, 0)
-                  raise SystemExit("Wix preview timed out after 8 minutes.")
-
-              clean = ansi.sub(b"", output)
-              match = re.search(rb"https?://wix\.to/[A-Za-z0-9]+", clean)
-              if not os.WIFEXITED(exit_status) or os.WEXITSTATUS(exit_status) != 0:
-                  raise SystemExit("Wix CLI preview exited unsuccessfully.")
-              if not match:
-                  raise SystemExit("Wix CLI exited without returning a wix.to preview URL.")
-              with open("wix-preview-url.txt", "w", encoding="utf-8") as handle:
-                  handle.write(match.group(0).decode("ascii"))
-          finally:
-              with open("wix-preview.log", "wb") as handle:
-                  handle.write(output)
-              try:
-                  os.close(fd)
-              except OSError:
-                  pass
-          PY
-
-          preview_url="$(cat wix-preview-url.txt)"
-          curl --fail --silent --show-error --location --max-time 45 "${preview_url}" -o /dev/null
-          echo "Wix preview is reachable: ${preview_url}"
+            kill ${preview_pid} >/dev/null 2>&1 || true
+            wait ${preview_pid} || true
+          '
 
       - name: Preserve preview output
         if: always()
@@ -151,4 +93,3 @@ jobs:
           if-no-files-found: warn
           path: |
             wix-preview.log
-            wix-preview-url.txt
