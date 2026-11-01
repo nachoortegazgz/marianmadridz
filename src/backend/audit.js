@@ -13,15 +13,11 @@ CAMBIOS DE ALINEACION v5015-ALIGNED (respecto a v5009-FISCAL-V20.1):
           de auditoria (eventType, level, message, data, source, loggedAt)
           viajan dentro de payload (objeto canonico).
   ALN-03: wixData.insert(..., { suppressAuth: true }) -> dalInsert.
-  ALN-04: El registro se mapea a la forma canonica de ControlOperativo:
-          - _id: AUDIT_<event>_<entity>_<trace> (<=190 chars, igual que antes)
-          - controlType: CONTROL_TYPE.ALERT
-          - dedupeKey: mismo _id
-          - resourceId: entityId
-          - status: OPEN (ERROR/CRITICAL) | COMPLETED (INFO/WARNING)
-          - payload: { eventType, level, message, data, source, loggedAt }
-  ALN-05: logAuditEventWithTimeout usa withTimeout() de mmUtils (elimina
-          el Promise.race manual duplicado).
+  ALN-04: El registro se mapea a ControlOperativo. Auditoria general conserva
+          eventType/level/message/data/source en payload; avisos operativos
+          usan campos indexables alertType/severity/message y status OPEN.
+  ALN-05: Unico notifyOperationalAlert con deduplicacion por clave estable.
+  ALN-06: logAuditEvent y logAuditEventWithTimeout comparten persistencia.
 =============================================================================
 */
 
