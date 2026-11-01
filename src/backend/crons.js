@@ -60,6 +60,7 @@ BOOKING_TYPE,
 import { makeTraceId, _safeTrim, _looksLikeGuid, withTimeout } from "public/mmUtils";
 import { readControlPayload } from "backend/data";
 import { logger } from "backend/logger";
+import { notifyOperationalAlert } from "backend/audit";
 import { verifyFiscalHashChainIntegrity } from "backend/cajas.web";
 import { cancelBookingElevated } from "backend/booking/bookingCore";
 import { reconcileUnknownTransaction } from "backend/events";
@@ -906,29 +907,18 @@ result.errors.push({ stage: "autoClose", error: closeErr?.message || "UNKNOWN" }
 
 // 3) Dia sin cerrar y sin posibilidad de cierre automatico => ALERT
 //    deduplicada (una por fecha) en ControlOperativo.
-const C = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
-const priorAlerts = await dalQuery(C)
-.eq("controlType", CONTROL_TYPE.ALERT)
-.eq("alertType", "NIGHTLY_Z_CLOSING_MANUAL_REQUIRED")
-.eq("operationDate", ymd)
-.limit(1)
-.find({ consistencyMode: "strong" });
-
-if (!(priorAlerts?.items || []).length) {
-await dalInsert(C, {
-_id: `ALERT_NZ_${ymd}`,
-controlType: CONTROL_TYPE.ALERT,
+const alert = await notifyOperationalAlert({
 alertType: "NIGHTLY_Z_CLOSING_MANUAL_REQUIRED",
-operationDate: ymd,
-status: "OPEN",
 severity: "WARN",
-payload: {
-reason: "Z missing for date and automated close denied/failed",
-attempts: result.errors,
-},
+message: "Cierre diario pendiente de revisión manual.",
+data: { operationDate: ymd, actionRequired: "CREATE_OR_REVIEW_Z_CLOSING" },
+traceId,
+entityId: ymd,
+source: "backend/crons.js",
+dedupeKey: `NIGHTLY_Z_CLOSING_${ymd}`,
+operationDate: ymd,
 });
-result.alerted = true;
-}
+result.alerted = Boolean(alert?.created);
 
 log.warn("verifyNightlyZClosing: manual Z required", {
 checkedDate: ymd,
