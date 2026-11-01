@@ -66,7 +66,7 @@ const RETRYABLE_READ_CODES = new Set([
 
 function isRetryableReadError(error) {
     const code = _safeTrim(error?.code || "").toUpperCase();
-    return RETRYABLE_READ_CODES.has(code) || /^(429|5\\d{2})$/.test(code);
+    return RETRYABLE_READ_CODES.has(code) || /^(429|5\d{2})$/.test(code);
 }
 
 async function runAvailabilityWithRetry(factory, label) {
