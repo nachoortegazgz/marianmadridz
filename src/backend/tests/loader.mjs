@@ -851,67 +851,102 @@ export const items = {
     const result = await q.find(options || {});
     return { ...result, totalCount: result.totalCount ?? result.total };
   },
-  async bulkPatch(col, itemIds, fieldModifications, options = {}) {
-    const ids = Array.isArray(itemIds) ? itemIds : [itemIds];
-    const groups = Array.isArray(fieldModifications?.[0])
-      ? fieldModifications
-      : ids.map(() => fieldModifications || []);
-    const updatedItemIds = [];
-    const errors = [];
-    let skipped = 0;
-
-    for (let index = 0; index < ids.length; index += 1) {
-      const id = ids[index];
-      const item = await m.get(col, id);
-      if (!item) {
-        errors.push({ code: 'WDE0073', item: id, message: 'Item not found.' });
-        continue;
-      }
-      if (options?.condition?.filter && !matchOne(item, options.condition.filter)) {
-        skipped += 1;
-        continue;
-      }
-
-      const patched = {
-        ...item,
-        ...(item.payload && typeof item.payload === 'object'
-          ? { payload: { ...item.payload } }
-          : {}),
-      };
-      for (const modification of (groups[index] || [])) {
-        const field = String(modification?.fieldPath || '');
-        if (!field || field.includes('.')) {
-          errors.push({ code: 'INVALID_FIELD_PATH', item: id, message: 'Mock supports root field paths only.' });
-          continue;
-        }
-        if (modification.action === 'INCREMENT_FIELD') {
-          patched[field] = Number(patched[field] || 0) + Number(modification.value || 0);
-        } else if (modification.action === 'SET_FIELD') {
-          patched[field] = modification.value;
-        } else if (modification.action === 'REMOVE_FIELD') {
-          delete patched[field];
-        } else {
-          errors.push({ code: 'UNSUPPORTED_PATCH_ACTION', item: id, message: modification.action });
-        }
-      }
-      if (errors.length) continue;
-
-      const hookName = _hookName(col, 'beforeUpdate');
-      const hook = hookName ? DATA_HOOKS[hookName] : null;
-      if (typeof hook === 'function') {
-        const hookResult = hook(patched, { original: item });
-        if (hookResult && typeof hookResult.then === 'function') await hookResult;
-      }
-      Object.assign(item, patched);
-      updatedItemIds.push(id);
-    }
-
-    return {
-      updated: updatedItemIds.length,
-      skipped,
-      errors,
-      updatedItemIds,
+  filter() {
+    const builder = {
+      _condition: {},
+      eq(field, value) {
+        this._condition[field] = { $eq: value };
+        return this;
+      },
     };
+    return builder;
+  },
+  bulkPatch(col, itemIds) {
+    const ids = Array.isArray(itemIds) ? itemIds : [itemIds];
+    const modifications = [];
+    const operation = {
+      setField(field, value) {
+        modifications.push({ action: "SET_FIELD", fieldPath: field, value });
+        return operation;
+      },
+      incrementField(field, by) {
+        modifications.push({ action: "INCREMENT_FIELD", fieldPath: field, value: by });
+        return operation;
+      },
+      removeField(field) {
+        modifications.push({ action: "REMOVE_FIELD", fieldPath: field });
+        return operation;
+      },
+      appendToArray(field, value) {
+        modifications.push({ action: "APPEND_TO_ARRAY", fieldPath: field, value });
+        return operation;
+      },
+      removeFromArray(field, value) {
+        modifications.push({ action: "REMOVE_FROM_ARRAY", fieldPath: field, value });
+        return operation;
+      },
+      async run(options = {}) {
+        const updatedItemIds = [];
+        const errors = [];
+        let skipped = 0;
+        const condition = options.condition?._condition || options.condition?.filter || null;
+
+        for (const id of ids) {
+          const item = await m.get(col, id);
+          if (!item) {
+            errors.push({ code: "WDE0073", item: id, message: "Item not found." });
+            continue;
+          }
+          if (condition && !matchOne(item, condition)) {
+            skipped += 1;
+            continue;
+          }
+
+          const patched = {
+            ...item,
+            ...(item.payload && typeof item.payload === "object"
+              ? { payload: { ...item.payload } }
+              : {}),
+          };
+          for (const modification of modifications) {
+            const field = String(modification.fieldPath || "");
+            if (!field || field.includes(".")) {
+              errors.push({ code: "INVALID_FIELD_PATH", item: id, message: "Mock supports root field paths only." });
+              continue;
+            }
+            if (modification.action === "INCREMENT_FIELD") {
+              patched[field] = Number(patched[field] || 0) + Number(modification.value || 0);
+            } else if (modification.action === "SET_FIELD") {
+              patched[field] = modification.value;
+            } else if (modification.action === "REMOVE_FIELD") {
+              delete patched[field];
+            } else if (modification.action === "APPEND_TO_ARRAY") {
+              patched[field] = [...(Array.isArray(patched[field]) ? patched[field] : []), modification.value];
+            } else if (modification.action === "REMOVE_FROM_ARRAY") {
+              const values = Array.isArray(patched[field]) ? patched[field] : [];
+              const index = values.indexOf(modification.value);
+              if (index >= 0) values.splice(index, 1);
+              patched[field] = values;
+            } else {
+              errors.push({ code: "UNSUPPORTED_PATCH_ACTION", item: id, message: modification.action });
+            }
+          }
+          if (errors.some((entry) => entry.item === id)) continue;
+
+          const hookName = _hookName(col, "beforeUpdate");
+          const hook = hookName ? DATA_HOOKS[hookName] : null;
+          if (typeof hook === "function") {
+            const hookResult = hook(patched, { original: item });
+            if (hookResult && typeof hookResult.then === "function") await hookResult;
+          }
+          Object.assign(item, patched);
+          updatedItemIds.push(id);
+        }
+
+        return { updated: updatedItemIds.length, skipped, errors, updatedItemIds };
+      },
+    };
+    return operation;
   },
   bulkInsert: (col, rows, opts) => m.bulkInsert(col, rows, opts),
   bulkUpdate: (col, rows, opts) => m.bulkUpdate(col, rows, opts),

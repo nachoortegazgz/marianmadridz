@@ -1,19 +1,20 @@
 # Marian Madrid — Estado consolidado de sesión
 
-**Fecha:** 2026-10-31  
+**Fecha de actualización:** 2026-11-01  
 **Repositorio canónico:** https://github.com/nachoortegazgz/marianmadridz  
-**Rama de trabajo:** `feat/bookings-cart-v2-checkout-2026-10-30`  
-**Commit auditado:** `be55b725578056e3e021cc61041d3faf62cc31c3`  
-**PR:** [#19 — Bookings Cart V2 checkout](https://github.com/nachoortegazgz/marianmadridz/pull/19)  
+**Rama de documentación actual:** `docs/canonical-repository-reference-2026-11-01`  
+**HEAD de `main` verificado:** `1c1165d32795fa1fc8b646f4a3e249af8e58e228`  
+**Último cambio funcional integrado:** [PR #22 — Bookings V2 cancellation event contract](https://github.com/nachoortegazgz/marianmadridz/pull/22)  
 **Wix Site ID:** `188bed94-177c-4bc9-a9f0-35080d874f3e`  
 **Dominio:** https://www.marianmadrid.es/
 
 ## 1. Estado verificado
 
-- GitHub Actions, workflow **Backend quality gates**, run **#310**: `completed / success`.
-- El run #310 corresponde al commit `be55b725`; cuatro jobs completados correctamente según la comprobación previa de la sesión.
-- Rama de trabajo: `feat/bookings-cart-v2-checkout-2026-10-30`.
-- PR #19 sigue abierta y en Draft; no está fusionada.
+- La PR #19 (checkout Cart V2) está **fusionada** en `main` mediante `ff16a703856b3f997ff73e1a56932e185f72a66a`.
+- La PR #22 (contrato de evento de cancelación Bookings V2) está **fusionada** en `main`; su merge commit es el HEAD verificado `1c1165d32795fa1fc8b646f4a3e249af8e58e228`.
+- La PR #23 (envoltorio webhook REST) está **cerrada sin merge**; no se incorpora su implementación.
+- GitHub Actions para el HEAD actual `1c1165d`: runs **41251109442** y **41250779345**, ambos `completed / success`. En ambos pasan los cuatro jobs: instalación limpia + lint, regresión Windows Node.js 24.22.1, regresión Windows Node.js 26.12.1 y suite backend offline.
+- La aprobación de lint no cubre la regla `@wix/cli/no-invalid-backend-import`, porque permanece desactivada en `.eslintrc.json` hasta generar el manifiesto Velo.
 - Wix identifica el Site ID anterior como **Published**, plan Premium, dominio personalizado, Editor clásico y Velo habilitado.
 - Wix Apps observadas: Bookings, Stores **Catalog V1**, Invoices **V1**, Members, Forms & Payments y Gift Cards.
 - No se ha realizado publicación Wix ni mutación de CMS durante esta consolidación.
@@ -39,7 +40,7 @@
 
 - Workflow `.github/workflows/wix-cli-manifest.yml` usa el secreto GitHub `CLI_API_KEY` como `WIX_CLI_API_KEY`.
 - El workflow instala Wix CLI for Sites, ejecuta `wix install --npm @wix/data` y comprueba la versión esperada de `@wix/data`.
-- **Pendiente:** no se ha verificado la presencia de `src/velo.dependencies.json` en la rama consultada. La regla ESLint `@wix/cli/no-invalid-backend-import` sigue desactivada temporalmente por esta razón.
+- **Verificado en `main` (2026-11-01):** `src/velo.dependencies.json` no existe (consulta GitHub Contents: 404). La regla ESLint `@wix/cli/no-invalid-backend-import` sigue desactivada temporalmente por esta razón.
 
 ## 3. Entorno Wix y QA
 
@@ -88,15 +89,24 @@ Esta confirmación permite planificar pruebas persistentes controladas. No obsta
 
 ## 6. Secuencia recomendada para la próxima sesión
 
-1. Recuperar este documento y verificar HEAD/PR/CI antes de cambiar código.
-2. Verificar manifiesto Wix CLI y cerrar el bloqueo ESLint.
-3. Inventariar servicios/recursos/horarios de Bookings mediante lectura.
-4. Ejecutar la batería QA E2E autorizada con los datos de prueba anteriores, semana próxima, pago presencial.
-5. Anotar resultados en agenda y colección QA identificada; adjuntar IDs de reserva y traceId, minimizando PII y sin copiar teléfono/email al repositorio.
-6. Ejecutar tests offline + lint + CI.
-7. Revisar PR #19; mantener Draft si persiste cualquier fallo o falta evidencia runtime.
-8. Solo tras aprobación: fusionar y desplegar el commit validado a Wix.
+1. Verificar el HEAD de `main`, las PR y los checks del commit antes de cada cambio. Último HEAD observado: `1c1165d`.
+2. Generar `src/velo.dependencies.json` mediante Wix CLI for Sites; no crear ni editar manualmente el manifiesto. El workflow existente solo se activa con `push` a ramas `feat/**` o `workflow_dispatch`; el conector disponible no expone dispatch.
+3. Reactivar `@wix/cli/no-invalid-backend-import` únicamente después de generar el manifiesto y confirmar que el lint completo pasa.
+4. Ejecutar regresión offline, instalación limpia y lint sobre el HEAD candidato; exigir CI verde del commit exacto.
+5. Inventariar servicios, recursos y horarios Bookings mediante lecturas en QA.
+6. Ejecutar la batería E2E autorizada (reserva simple y dual, gap, pago presencial, cancelación, compensación y notificaciones controladas).
+7. Documentar evidencia y limpiar solo registros QA creados por estas pruebas, usando flujos soportados.
+8. Revisar y fusionar PR #24 (documentación) tras revisión; después abordar los bloqueos funcionales en ramas separadas.
+9. No publicar Wix hasta disponer de Preview/E2E runtime satisfactorios y aprobación explícita del commit de despliegue.
 
-## 7. Regla de integridad de este informe
+## 7. Actualización de repositorio y documentación (2026-11-01)
+
+- Repositorio canónico único: `nachoortegazgz/marianmadridz`.
+- Corregidas en esta rama las referencias obsoletas del repositorio en `BIBLIA SSOT (v10.0) — MARIANMADRID.ES.txt` y `CMS KEYFIELDS.md`.
+- Verificación posterior de ambos archivos: cero coincidencias con `marianmadridXXXXX` y `marianmadridX.git`.
+- La búsqueda de código de GitHub no devolvió coincidencias indexadas; la verificación de referencias se hizo leyendo directamente los documentos versionados identificados en el árbol Git.
+- Esta actualización solo cambia documentación. No altera código, CMS, reservas ni publicación Wix.
+
+## 8. Regla de integridad de este informe
 
 Este documento separa hechos verificados, cambios existentes en GitHub y tareas pendientes. No afirma que se hayan creado reservas, escrito resultados en CMS, sincronizado el código con Wix ni publicado cambios, porque esas acciones no se han ejecutado en esta sesión.
