@@ -339,16 +339,29 @@ export async function logAuditEventWithTimeout(
     const normalizedLevel = _normalizeLevel(level);
     if (normalizedLevel === "ERROR" || normalizedLevel === "CRITICAL") {
         const alertTraceId = traceId || makeTraceId("audit-error");
-        return notifyOperationalAlert({
-            alertType: eventType,
-            severity: normalizedLevel,
-            message,
-            data,
-            traceId: alertTraceId,
-            entityId,
-            source,
-            dedupeKey: _buildAuditId(eventType, entityId, alertTraceId),
-        });
+        try {
+            return await withTimeout(
+                () => notifyOperationalAlert({
+                    alertType: eventType,
+                    severity: normalizedLevel,
+                    message,
+                    data,
+                    traceId: alertTraceId,
+                    entityId,
+                    source,
+                    dedupeKey: _buildAuditId(eventType, entityId, alertTraceId),
+                }),
+                API_TIMEOUT_MS,
+                "audit_alert"
+            );
+        } catch (error) {
+            log.error("audit alert timed out", {
+                eventType,
+                traceId: alertTraceId,
+                errorCode: error?.code || null,
+            });
+            return { created: false, failed: true };
+        }
     }
     const record = _buildControlOperativoRecord({
         eventType, level: normalizedLevel, message, data, traceId, entityId, source,
