@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reserva Marian Madrid</title>
+<style>
+:root{--bg:#fafafa;--panel:#fff;--text:#2d2d2d;--muted:#666;--accent:#b08d57;--accent-hover:#967845;--border:#e5e5e5;--soft:#f4f4f4;--danger:#d9534f;--success:#2e7d32;--radius:12px;--shadow:0 18px 42px rgba(45,38,29,.08)}
+*{box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+body{margin:0;background:var(--bg);color:var(--text);padding:clamp(12px,3vw,28px);font-size:14px}.widget-container{max-width:1120px;margin:auto}h1{font:500 clamp(30px,4vw,46px)/1.02 Georgia,serif;letter-spacing:-.04em;color:#111;margin:0}
+.booking-hero{display:grid;grid-template-columns:190px minmax(0,1fr);gap:22px;align-items:stretch;margin-bottom:22px;overflow:hidden;border:1px solid var(--border);border-radius:20px;background:var(--panel);box-shadow:var(--shadow)}.booking-hero-image{width:100%;height:100%;min-height:190px;object-fit:cover;background:#e9e2d9}.booking-hero-copy{display:flex;flex-direction:column;justify-content:center;padding:26px 28px 26px 0;min-width:0}.hero-kicker{margin:0 0 10px;color:var(--accent-hover);font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}.hero-summary{max-width:680px;margin:14px 0 0;color:#514d48;font-size:15px;line-height:1.6;white-space:pre-line}.service-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}.service-chip{display:inline-flex;padding:8px 10px;border-radius:999px;background:var(--soft);color:#50493f;font-size:12px;font-weight:700}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 310px;gap:22px;align-items:start}.panel{min-width:0;background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:clamp(16px,2.4vw,24px);margin-bottom:16px;box-shadow:0 8px 24px rgba(45,38,29,.025)}.panel.soft{background:var(--soft);border:0}.row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}.control-group{display:flex;flex-direction:column;margin-bottom:12px;min-width:0}.control-label{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:6px}input,textarea,select{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:6px;font-size:14px;background:#fff;outline:none}input{min-height:42px}textarea{min-height:112px;resize:vertical;line-height:1.5}input:focus,textarea:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(176,141,87,.12)}.hint{font-size:11px;color:var(--muted);line-height:1.5}.calendar-wrap{display:flex;flex-direction:column;gap:12px}.calendar-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}.month-title{font-weight:600;font-size:16px;text-transform:capitalize}.nav-btns{display:flex;gap:6px}.nav-btn{width:36px;height:36px;border:1px solid var(--border);background:#fff;border-radius:6px;cursor:pointer}.calendar-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;text-align:center}.day-header{font-size:11px;font-weight:600;color:var(--muted);padding:6px 0;text-transform:uppercase}.day-cell{appearance:none;width:100%;min-height:40px;padding:8px 0;font-size:13px;border-radius:6px;cursor:pointer;border:1px solid transparent;background:transparent;color:var(--text)}.day-cell.empty{pointer-events:none}.day-cell:disabled{color:#c6c6c6;cursor:not-allowed}.day-cell.available{font-weight:600;background:#fff;border-color:#e8e1d7}.day-cell.selected,.slot-btn.selected{background:var(--accent)!important;color:#fff!important;border-color:var(--accent)!important}.slots-title{font-size:13px;font-weight:600;margin-bottom:10px;color:var(--muted)}.slots-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(105px,1fr));gap:8px;max-height:260px;overflow:auto}.slot-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:48px;padding:8px 5px;border:1px solid var(--border);background:#fff;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer}.slot-subtime{font-size:10px;font-weight:500;opacity:.85}.addon-item{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:6px;background:#fff;cursor:pointer;margin:6px 0}.addon-item input{width:auto;min-height:0;margin-top:3px}.radio-group{display:flex;flex-direction:column;gap:8px;margin-top:6px}.radio-option{display:flex;align-items:flex-start;gap:8px;font-size:13px;line-height:1.4}.radio-option input,.checkbox-group input{width:auto;min-height:0;margin-top:2px}.checkbox-group{display:flex;align-items:flex-start;gap:8px}.summary-image{display:block;width:100%;height:150px;object-fit:cover;border-radius:9px;margin-bottom:14px;background:#e9e2d9}.summary-service-copy{color:var(--muted);font-size:12px;line-height:1.55;white-space:pre-line}.summary-label{font-size:11px;color:var(--muted);text-transform:uppercase;margin-top:14px}.summary-value{font-weight:600;font-size:14px;line-height:1.45;margin-top:3px;overflow-wrap:anywhere}.price-val{font-size:20px;font-weight:700;color:var(--accent);margin-top:4px}.action-btn{width:100%;min-height:48px;padding:14px;background:var(--accent);color:#fff;border:0;border-radius:6px;font-size:15px;font-weight:600;cursor:pointer}.action-btn:disabled{background:#ccc;color:#555;cursor:not-allowed}.btn-back,.inline-link{background:none;border:0;color:var(--muted);cursor:pointer}.btn-back{font-size:13px;margin:0 0 12px;padding:4px 0}.inline-link{text-decoration:underline;color:var(--accent-hover);padding:0;font:inherit}.error-banner,.status-banner{padding:12px;border-radius:6px;font-size:13px;line-height:1.45;margin-bottom:16px}.error-banner{background:#fdeded;border:1px solid #f5c2c7;color:var(--danger);display:none}.status-banner{background:#edf7ee;border:1px solid #b8ddbc;color:var(--success)}[hidden]{display:none!important}@media(max-width:768px){body{padding:12px}.booking-hero,.layout{grid-template-columns:1fr}.booking-hero{gap:0}.booking-hero-image{height:220px;min-height:0}.booking-hero-copy{padding:24px}}@media(max-width:480px){.row{grid-template-columns:1fr;gap:0}.booking-hero-copy{padding:20px}.slots-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+</style>
+</head>
+<body>
+<div class="widget-container" id="root">
+<button class="btn-back" id="btnBack" type="button">&larr; Volver a servicios</button>
+<section class="booking-hero" aria-labelledby="heroServiceTitle"><img class="booking-hero-image" id="heroImage" alt="Imagen del servicio"><div class="booking-hero-copy"><p class="hero-kicker">Reserva online</p><h1 id="heroServiceTitle">Cargando servicio...</h1><p class="hero-summary" id="heroSummary">Estamos preparando los detalles de tu cita.</p><div class="service-chips"><span class="service-chip" id="heroLocation">Ubicación pendiente</span><span class="service-chip" id="heroDuration">Duración pendiente</span><span class="service-chip" id="heroPrice">Precio pendiente</span></div></div></section>
+<div class="error-banner" id="errorBanner" role="alert"></div><div class="status-banner" id="bookingStatus" role="status" hidden></div>
+<div class="layout"><div>
+<section class="panel" aria-label="Preferencias de la reserva">
+<div class="control-group"><label class="control-label" for="inputPreferences">Preferencias e información relevante (opcional)</label><textarea id="inputPreferences" maxlength="200" placeholder="Anota tus preferencias (profesional preferido, alergias, gustos...)"></textarea><div class="hint">Máximo 200 caracteres. Esta información ayudará al salón a preparar mejor tu cita.</div></div>
+<div class="control-group"><div class="control-label" id="addonsLabel">Complementos (opcional)</div><div id="addonsTopContainer"><div class="hint">Cargando complementos...</div></div></div>
+</section>
+<section class="calendar-wrap" aria-label="Calendario de citas"><div class="panel"><div class="calendar-head"><div class="month-title" id="monthTitle">Cargando calendario...</div><div class="nav-btns"><button class="nav-btn" id="btnPrevMonth" type="button">&lt;</button><button class="nav-btn" id="btnNextMonth" type="button">&gt;</button></div></div><div class="calendar-grid" id="calendarGrid"></div></div><div class="panel soft"><div class="slots-title">Horas disponibles</div><div class="slots-grid" id="slotsContainer"><div class="hint">Selecciona un día para ver las horas.</div></div></div></section>
+<section class="panel" aria-label="Datos de contacto y pago"><div class="row"><div class="control-group"><label class="control-label" for="inputName">Nombre completo *</label><input id="inputName" type="text" autocomplete="name" maxlength="120" required></div><div class="control-group"><label class="control-label" for="inputEmail">Correo electrónico *</label><input id="inputEmail" type="email" autocomplete="email" maxlength="254" required></div></div><div class="row"><div class="control-group"><label class="control-label" for="inputPhone">Teléfono móvil *</label><input id="inputPhone" type="tel" autocomplete="tel" maxlength="30" required></div><fieldset class="control-group" style="border:0;padding:0"><legend class="control-label">Método de pago *</legend><div class="radio-group"><label class="radio-option"><input type="radio" name="channelType" value="PRESENCIAL" checked> Pagar en el salón (presencial)</label><label class="radio-option"><input type="radio" name="channelType" value="ONLINE"> Pagar ahora online</label></div></fieldset></div><div class="checkbox-group"><input id="inputRGPD" type="checkbox" required><label class="hint" for="inputRGPD">Consiento el tratamiento de mis datos para gestionar la reserva. *</label></div><div class="hint" style="margin-top:8px">Consulta la <button class="inline-link" id="btnPrivacy" type="button">política de privacidad</button>.</div></section>
+<section class="panel"><button class="action-btn" id="btnConfirm" type="button" disabled>Confirmar cita</button><p class="hint">La cita no queda reservada hasta que el sistema confirme el resultado.</p></section>
+</div><aside class="panel soft" aria-label="Resumen de reserva"><img id="sumImage" class="summary-image" alt="Imagen del servicio" hidden><div class="summary-label">Servicio</div><div class="summary-value" id="sumService">Cargando...</div><div class="summary-value" id="sumLocation">--</div><p class="summary-service-copy" id="sumDescription"></p><div class="summary-label">Duración</div><div class="summary-value" id="sumDuration">--</div><div class="summary-label">Preferencias</div><div class="summary-value" id="sumPreferences">No indicadas</div><div class="summary-label">Fecha y hora</div><div class="summary-value" id="sumDate">Selecciona un día y una hora</div><div class="summary-label">Precio base</div><div class="summary-value" id="sumBase">--</div><div class="summary-label">Complementos</div><div class="summary-value" id="sumExtras">--</div><div class="summary-label">Total</div><div class="price-val" id="sumTotal">--</div></aside></div></div>
+<script>
+"use strict";
+
+/* SEC-01 (v5023): CONFIG solo contiene constantes inmutables de sesión.
+   El origen del padre se calcula en runtime y vive en `parentOrigin`
+   (variable separada, fuera del objeto) para no mutar CONFIG.
+   - bookingTimeoutMs: 90 s.
+   - contextTimeoutMs: 30 s (watchdog de MM_CONTEXT).
+   - handshakeDelays: backoff exponencial capado a 8 s.
+   - allowAnyOriginFallback: false → fail-closed si no hay parentOrigin. */
+const CONFIG={
+  version:1,
+  maxAddOns:5,
+  maxHandshake:6,
+  handshakeDelays:[500,1000,2000,4000,8000,8000],
+  bookingTimeoutMs:90000,
+  contextTimeoutMs:30000,
+  currency:"EUR",
+  location:"Marian Madrid",
+  allowedOriginSuffixes:["marianmadrid.es",".wixsite.com",".parastorage.com",".wix.com",".editorx.com"],
+  allowAnyOriginFallback:false,
+  defaultImage:"data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 600 400'%3E%3Crect width='600' height='400' fill='%23e9e2d9'/%3E%3Ctext x='300' y='205' text-anchor='middle' fill='%23342b24' font-family='Georgia' font-size='36'%3EMARIAN MADRID%3C/text%3E%3C/svg%3E"
+};
+
+// SEC-01 (v5023): origen del padre resuelto en runtime. Vive fuera de
+// CONFIG para no tocar el objeto de configuración (evita la tentación de
+// mutarlo). Se asigna una sola vez en init().
+let parentOrigin = "";
+
+function madridDateParts(){const p=new Intl.DateTimeFormat("en-GB",{timeZone:"Europe/Madrid",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date());const v=Object.fromEntries(p.map(x=>[x.type,x.value]));return{year:+v.year,month:+v.month,day:+v.day}}const todayMadrid=madridDateParts();
+
+const state={service:null,year:todayMadrid.year,month:todayMadrid.month,days:[],slots:[],selectedDay:"",selectedSlot:null,addons:new Set(),requestSequence:0,latestAvailability:0,bridgeId:"",connected:false,processing:false,completed:false,bookingTimedOut:false};
+let handshakeTimer=null,handshakeCount=0,bookingTimer=null,contextTimer=null;
+
+const el=id=>document.getElementById(id);const text=(v,f="")=>String(v??"").trim()||f;const num=(v,f=0)=>{if(v===null||v===undefined||v==="")return f;const n=Number(v);return Number.isFinite(n)?n:f};const makeMessageId=p=>`${p}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+
+/* SEC-01: cálculo del origen del padre y validación de mensajes entrantes. */
+function resolveParentOrigin(){
+  try{
+    if(window.location.ancestorOrigins&&window.location.ancestorOrigins.length>0){
+      const o=text(window.location.ancestorOrigins[0]);
+      if(o&&o!=="null")return o
+    }
+  }catch(_){}
+  try{
+    if(document.referrer){const u=new URL(document.referrer);if(u.origin&&u.origin!=="null")return u.origin}
+  }catch(_){}
+  return ""
+}
+function hostMatchesSuffix(host,suffix){
+  if(!host||!suffix)return false;
+  const s=suffix.startsWith(".")?suffix.slice(1):suffix;
+  return host===s||host.endsWith(`.${s}`)
+}
+function isTrustedOrigin(origin){
+  const v=text(origin).toLowerCase();
+  if(!v||v==="null")return false;
+  if(v.startsWith("blob:")||v.startsWith("data:")||v.startsWith("filesystem:"))return false;
+  if(parentOrigin&&v===parentOrigin.toLowerCase())return true;
+  let host="";
+  try{host=new URL(v).hostname.toLowerCase()}catch(_){return false}
+  return CONFIG.allowedOriginSuffixes.some(s=>hostMatchesSuffix(host,s))
+}
+
+/* post(): targetOrigin específico. Fail-closed si no hay parentOrigin y el
+   fallback está deshabilitado. */
+function post(type,payload={}){
+  if(!window.parent||window.parent===window)return false;
+  const target=parentOrigin||(CONFIG.allowAnyOriginFallback?"*":"");
+  if(!target){console.error("[calendario] SEC: origen del padre desconocido; envío cancelado",{type});return false}
+  if(target==="*")console.warn("[calendario] SEC: enviando con targetOrigin='*' (fallback habilitado)");
+  try{
+    window.parent.postMessage({version:CONFIG.version,type,messageId:makeMessageId(type.toLowerCase()),bridgeId:state.bridgeId,payload},target);
+    return true
+  }catch(e){console.error("[calendario] postMessage failed",e);return false}
+}
+function showError(m){const n=el("errorBanner");n.textContent=text(m,"Se produjo un error.");n.style.display="block"}
+function hideError(){const n=el("errorBanner");n.textContent="";n.style.display="none"}
+function showStatus(m){const n=el("bookingStatus");n.textContent=text(m);n.hidden=!n.textContent}
+function money(v){try{return new Intl.NumberFormat("es-ES",{style:"currency",currency:text(state.service?.currency,CONFIG.currency)}).format(num(v))}catch(_){return `${num(v).toFixed(2).replace(".",",")} €`}}
+function normalizeResourceId(v){const s=text(v);return/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s)?s:null}
+function addonIdOf(v){return typeof v==="string"?text(v):text(v?.addonId||v?.addOnId||v?.id)}
+function addonOptions(){return(Array.isArray(state.service?.addOnOptions)?state.service.addOnOptions:[]).slice(0,CONFIG.maxAddOns).map(x=>{const id=addonIdOf(x);return id?{id,name:text(x.name||x.title,"Complemento"),price:Math.max(0,num(x.price))}:null}).filter(Boolean)}
+function normalizeAddOnIds(v){const a=new Set(addonOptions().map(x=>x.id));return Array.from(new Set((Array.isArray(v)?v:[]).map(addonIdOf).filter(x=>a.has(x)))).slice(0,CONFIG.maxAddOns)}
+function safeImage(v){let s=text(v);const m=s.match(/^wix:image:\/\/v1\/([^/#]+)/i);if(m)s=`https://static.wixstatic.com/media/${m[1]}`;return/^https:\/\/(static\.(?:wixstatic|parastorage)\.com|.*\.wixstatic\.com)\//i.test(s)||/^data:image\//i.test(s)?s:""}
+function renderImages(src,title){const u=safeImage(src)||CONFIG.defaultImage;["heroImage","sumImage"].forEach(id=>{const n=el(id);n.alt=`Imagen de ${text(title,"servicio")}`;n.hidden=false;n.onerror=()=>{n.onerror=null;n.src=CONFIG.defaultImage};n.src=u})}
+function normalizePhaseSlot(r){if(!r||typeof r!=="object")return null;const ref=r.slotRef&&typeof r.slotRef==="object"?r.slotRef:r.slot&&typeof r.slot==="object"?r.slot:null;const s=text(r.localStartDate||ref?.localStartDate||ref?.startDate),e=text(r.localEndDate||ref?.localEndDate||ref?.endDate);return s&&e&&ref?{localStartDate:s,localEndDate:e,slotRef:ref}:null}
+function normalizeSlot(r){if(!r||typeof r!=="object")return null;if(r.slotF1){const a=normalizePhaseSlot(r.slotF1),b=r.slotF2?normalizePhaseSlot(r.slotF2):null;return a&&(!r.slotF2||b)?{localStartDate:a.localStartDate,localEndDate:a.localEndDate,slotRef:a.slotRef,slotF1:a,slotF2:b,resourceId:normalizeResourceId(r.resourceId||r.slotF1.resourceId),pairToken:text(r.pairToken),candidateResourceIds:r.candidateResourceIds||[],serviceId:text(r.serviceId)}:null}const a=normalizePhaseSlot(r);return a?{...a,slotF1:a,slotF2:null,resourceId:normalizeResourceId(r.resourceId)}:null}
+const slotStart=s=>text(s?.slotF1?.localStartDate||s?.localStartDate||s?.slotRef?.localStartDate||s?.slotRef?.startDate);
+const slotTime=v=>v.includes("T")?v.split("T")[1].slice(0,5):v;
+const sameSlot=(a,b)=>Boolean(a&&b)&&slotStart(a)===slotStart(b)&&text(a?.slotF2?.localStartDate)===text(b?.slotF2?.localStartDate);
+const selectedAddons=()=>addonOptions().filter(x=>state.addons.has(x.id));
+
+function renderService(){
+  const s=state.service;
+  if(!s||!normalizeResourceId(s.serviceId)||s.clientHidden===true){
+    showError("El servicio no está disponible para reserva.");
+    state.connected=true; // corta el watchdog de contexto y evita retries
+    return
+  }
+  const d=Math.max(0,num(s.totalDuration||s.phase1Duration)),t=text(s.title,"Servicio"),desc=text(s.description,"Elige fecha y hora para completar tu reserva."),loc=text(s.location,CONFIG.location);
+  el("heroServiceTitle").textContent=t;el("heroSummary").textContent=text(s.tagLine,desc);el("heroLocation").textContent=loc;el("heroDuration").textContent=d?`${d} min aprox.`:"Consultar duración";el("heroPrice").textContent=`Desde ${money(s.price)}`;
+  el("sumService").textContent=t;el("sumLocation").textContent=loc;el("sumDescription").textContent=desc;el("sumDuration").textContent=d?`${d} min`:"Consultar";el("sumBase").textContent=money(s.price);
+  renderImages(s.mainMedia,t);renderAddons();updateSummary();renderCalendar();
+  state.connected=true;clearTimeout(handshakeTimer);hideError();el("btnConfirm").disabled=false
+}
+function renderAddons(){
+  const c=el("addonsTopContainer");c.replaceChildren();
+  const o=addonOptions();
+  /* Solo resetea si está vacío para no perder selección en re-context. */
+  if(state.addons.size===0)state.addons=new Set(normalizeAddOnIds(state.service?.addOnIds));
+  if(!o.length){c.innerHTML='<div class="hint">No hay complementos adicionales para este servicio.</div>';return}
+  o.forEach(x=>{const l=document.createElement("label"),i=document.createElement("input"),s=document.createElement("span");l.className="addon-item";i.type="checkbox";i.value=x.id;i.checked=state.addons.has(x.id);s.textContent=`${x.name} (+${money(x.price)})`;i.onchange=()=>{i.checked?state.addons.add(x.id):state.addons.delete(x.id);state.selectedDay="";clearSlots("Los complementos han cambiado. Selecciona un día.");renderCalendar();updateSummary();requestDays()};l.append(i,s);c.appendChild(l)})
+}
+function updateSummary(){const e=selectedAddons().reduce((a,x)=>a+x.price,0);el("sumExtras").textContent=e?money(e):"Sin complementos";el("sumTotal").textContent=money(num(state.service?.price)+e);const p=text(el("inputPreferences")?.value);el("sumPreferences").textContent=p||"No indicadas";el("sumDate").textContent=state.selectedDay&&state.selectedSlot?`${state.selectedDay}, ${slotTime(slotStart(state.selectedSlot))}`:"Selecciona un día y una hora"}
+function clearSlots(m="Selecciona un día para ver las horas disponibles."){state.slots=[];state.selectedSlot=null;el("slotsContainer").innerHTML=`<div class="hint">${m}</div>`;updateSummary()}
+function requestDays(){if(!state.service||!state.connected)return;const q=++state.requestSequence;state.latestAvailability=q;post(MESSAGE_TYPES.AVAIL,{action:"days",serviceId:text(state.service.serviceId),resourceId:null,year:state.year,month:state.month,addOnIds:normalizeAddOnIds([...state.addons]),requestSequence:q})}
+function requestSlots(dateYmd){const q=++state.requestSequence;state.latestAvailability=q;post(MESSAGE_TYPES.AVAIL,{action:"slots",serviceId:text(state.service?.serviceId),resourceId:null,dateYmd,addOnIds:normalizeAddOnIds([...state.addons]),requestSequence:q})}
+function renderCalendar(){const g=el("calendarGrid");g.replaceChildren();["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"].forEach(x=>{const n=document.createElement("div");n.className="day-header";n.textContent=x;g.appendChild(n)});el("monthTitle").textContent=new Intl.DateTimeFormat("es-ES",{month:"long",year:"numeric"}).format(new Date(state.year,state.month-1,15));const first=new Date(state.year,state.month-1,1).getDay(),off=first===0?6:first-1,count=new Date(state.year,state.month,0).getDate();for(let i=0;i<off;i++)g.appendChild(Object.assign(document.createElement("div"),{className:"day-cell empty"}));for(let d=1;d<=count;d++){const date=`${state.year}-${String(state.month).padStart(2,"0")}-${String(d).padStart(2,"0")}`,b=document.createElement("button");b.type="button";b.className="day-cell";b.textContent=d;b.disabled=!state.days.includes(date);if(!b.disabled){b.classList.add("available");if(state.selectedDay===date)b.classList.add("selected");b.onclick=()=>{state.selectedDay=date;clearSlots("Consultando las horas disponibles...");renderCalendar();requestSlots(date)}}g.appendChild(b)}}
+function renderSlots(raw){const c=el("slotsContainer");c.replaceChildren();state.slots=(Array.isArray(raw)?raw:[]).map(normalizeSlot).filter(Boolean);if(!state.slots.length){c.innerHTML='<div class="hint">No hay horas disponibles para este día.</div>';return}state.slots.forEach(s=>{const b=document.createElement("button"),p=document.createElement("span");b.className="slot-btn";p.textContent=slotTime(slotStart(s));b.appendChild(p);if(s.slotF2){const q=document.createElement("span");q.className="slot-subtime";q.textContent=`F2 ${slotTime(s.slotF2.localStartDate)}`;b.appendChild(q)}b.classList.toggle("selected",sameSlot(state.selectedSlot,s));b.onclick=()=>{state.selectedSlot=s;renderSlots(state.slots);updateSummary()};c.appendChild(b)})}
+function buildBookingPayload(){const s=state.selectedSlot,a=normalizePhaseSlot(s?.slotF1||s),b=s?.slotF2?normalizePhaseSlot(s.slotF2):null;if(!a)return null;const full=text(el("inputName").value),parts=full.split(/\s+/).filter(Boolean);return{serviceId:text(state.service?.serviceId),slug:text(state.service?.slug),slotF1:a,slotF2:b,resourceId:null,addOnIds:normalizeAddOnIds([...state.addons]),preferences:text(el("inputPreferences").value),email:text(el("inputEmail").value),firstName:parts.shift()||"",lastName:parts.join(" "),phone:text(el("inputPhone").value),channelType:document.querySelector("input[name='channelType']:checked")?.value==="ONLINE"?"ONLINE":"PRESENCIAL",rgpdConsent:el("inputRGPD").checked,traceId:makeMessageId("booking-trace")}}
+function confirmBooking(){if(state.processing||state.completed||!state.selectedSlot)return showError("Selecciona un día y una hora.");const p=buildBookingPayload(),email=el("inputEmail");if(!p||!p.firstName||!p.email||!email.checkValidity()||!p.phone||p.phone.replace(/\D/g,"").length<8||!p.rgpdConsent)return showError("Revisa el nombre, el correo, el teléfono y la aceptación de privacidad.");state.processing=true;showStatus("Enviando la solicitud de reserva...");el("btnConfirm").disabled=true;post(MESSAGE_TYPES.BOOK,p);bookingTimer=setTimeout(()=>{state.processing=false;showError("No ha llegado confirmación. Comprueba la agenda o contacta con el salón.")},CONFIG.bookingTimeoutMs)}
+
+function handleMessage(e){
+  /* SEC-01: valida origin antes de procesar. Rechaza orígenes opacos y hosts
+     fuera de la allowlist. isTrustedOrigin consulta `parentOrigin` (runtime)
+     y `CONFIG.allowedOriginSuffixes`. */
+  if(!e||!isTrustedOrigin(e.origin)){
+    try{console.warn("[calendario] SEC: mensaje de origen no confiable ignorado",{origin:e&&e.origin})}catch(_){}
+    return
+  }
+  const m=e.data;
+  if(!m||m.version!==CONFIG.version)return;
+  if(m.bridgeId)state.bridgeId=text(m.bridgeId);
+  const p=m.payload&&typeof m.payload==="object"?m.payload:{};
+  if(m.type===MESSAGE_TYPES.CONTEXT){
+    /* CAL-22: cancela el watchdog y procesa payload.error si existe. */
+    clearTimeout(contextTimer);
+    if(p.error&&typeof p.error==="object"){
+      showError(p.error.message||"No se pudo cargar el servicio.");
+      state.connected=true;
+      return
+    }
+    state.service=p;renderService();requestDays()
+  }
+  else if(m.type===MESSAGE_TYPES.AVAIL){
+    if(Number(p.requestSequence)&&Number(p.requestSequence)!==state.latestAvailability)return;
+    /* CAL-26: errores de disponibilidad visibles. */
+    if(p.status==="ERROR"){
+      showError(p.error?.message||"No se pudo cargar la disponibilidad. Inténtalo de nuevo.");
+      if(p.action==="days"){state.days=[];renderCalendar()}
+      else if(p.action==="slots"){state.slots=[];clearSlots("No se pudo consultar este día.")}
+      return
+    }
+    if(p.action==="days"){state.days=(Array.isArray(p.data)?p.data:[]).map(x=>text(x?.dateYMD||x?.dateYmd||x)).filter(x=>/^\d{4}-\d{2}-\d{2}$/.test(x));renderCalendar()}
+    else if(p.action==="slots")renderSlots(Array.isArray(p.data)?p.data:p.data?.slots||[])
+  }
+  else if(m.type===MESSAGE_TYPES.BOOK){
+    clearTimeout(bookingTimer);
+    if(p.status==="SUCCESS"){
+      state.completed=true;state.processing=false;
+      /* CAL-23: mensaje diferenciado cuando la reserva va a pasar por checkout. */
+      const paymentPending=p.data?.paymentPending===true;
+      showStatus(paymentPending?"Reserva creada. Redirigiendo al pago...":"La reserva se ha confirmado.");
+      el("btnConfirm").textContent=paymentPending?"Redirigiendo...":"Cita confirmada"
+    }else{
+      state.processing=false;el("btnConfirm").disabled=false;
+      showError(p.error?.message||"No se pudo completar la reserva.")
+    }
+  }
+}
+function startHandshake(){const a=()=>{if(state.connected||handshakeCount>=CONFIG.maxHandshake)return;handshakeCount++;post(MESSAGE_TYPES.READY,{status:"INIT",attempt:handshakeCount});handshakeTimer=setTimeout(a,CONFIG.handshakeDelays[handshakeCount-1]||8000)};a()}
+function nav(t){post(MESSAGE_TYPES.NAV,{target:t})}
+
+function init(){
+  /* SEC-01: resuelve origen del padre antes de cualquier envío. Se asigna
+     la variable `parentOrigin` (runtime), no CONFIG. */
+  parentOrigin=resolveParentOrigin();
+  if(parentOrigin)console.info("[calendario] SEC: origen del padre =",parentOrigin);
+  else console.warn("[calendario] SEC: no se pudo determinar el origen del padre; los envíos se rechazarán salvo allowAnyOriginFallback=true");
+  el("btnBack").onclick=()=>nav("SERVICIOS");
+  el("btnPrivacy").onclick=()=>nav("PRIVACY");
+  el("btnPrevMonth").onclick=()=>{state.month--;if(state.month<1){state.month=12;state.year--}state.selectedDay="";clearSlots();renderCalendar();requestDays()};
+  el("btnNextMonth").onclick=()=>{state.month++;if(state.month>12){state.month=1;state.year++}state.selectedDay="";clearSlots();renderCalendar();requestDays()};
+  el("btnConfirm").onclick=confirmBooking;
+  el("inputPreferences").oninput=updateSummary;
+  window.addEventListener("message",handleMessage);
+  renderCalendar();
+  /* B6: watchdog de contexto. Si no llega MM_CONTEXT ni siquiera con error,
+     avisa al usuario tras 30 s. */
+  contextTimer=setTimeout(()=>{
+    if(!state.connected)showError("No llegaron los datos del servicio. Recarga la página.");
+  },CONFIG.contextTimeoutMs);
+  startHandshake()
+}
+document.readyState==="loading"?document.addEventListener("DOMContentLoaded",init,{once:true}):init();
+</script>
+</body>
+</html>
