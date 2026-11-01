@@ -33,7 +33,7 @@ export const CURRENCY_CONFIG = Object.freeze({
 });
 
 export const SLOT_SEARCH = Object.freeze({
-    DIAS_LIMITE: 14,
+    DIAS_LIMITE: 15,
     MINUTOS_TOLERANCIA: 120,
     MINUTOS_MAX_HUECO_DUAL: 120
 });
