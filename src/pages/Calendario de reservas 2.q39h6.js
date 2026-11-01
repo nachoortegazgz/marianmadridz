@@ -1090,186 +1090,110 @@ async function handleBooking(
  * INICIALIZACIÓN
  * ========================================================================== */
 
-$w.onReady(async () => {
+$w.onReady(() => {
     const traceId = makeTraceId("calendario");
+    const widget = $w("#html1");
+
+    // Attach the message listener synchronously before awaiting URL/CMS work.
+    // The HTML component can emit MM_READY as soon as it loads; if we wait
+    // for parseUrlParams()/location.path() first, READY can be lost and the
+    // widget will never receive MM_CONTEXT.
+    if (
+        !widget ||
+        typeof widget.postMessage !== "function" ||
+        typeof widget.onMessage !== "function"
+    ) {
+        console.error("[calendario-2] Widget HTML no disponible", { traceId });
+        return;
+    }
 
     try {
-        let params;
+        bridge = createWidgetBridge(widget, {
+            traceId,
+            allowOpaqueOrigin: true,
+            handshakeTimeoutMs: 20000,
+            contextTimeoutMs: 45000,
 
-        try {
-            params = await parseUrlParams();
-        } catch (error) {
-            console.error(
-                "[calendario-2] Error leyendo parámetros",
-                {
-                    traceId,
-                    code: error?.code,
-                    message: error?.message
+            onContextReady: async () => {
+                const params = await parseUrlParams();
+                const resolved = await resolveServiceFromParams(params);
+
+                if (!resolved) {
+                    const error = new Error("No se pudo resolver el servicio desde la URL.");
+                    error.code = "SERVICE_IDENTIFIER_MISSING";
+                    throw error;
                 }
-            );
 
-            return;
-        }
+                const contextParams = {
+                    ...params,
+                    serviceId: resolved.serviceId || params.serviceId || "",
+                    slug: resolved.slug || params.slug || ""
+                };
 
-        const resolved =
-            await resolveServiceFromParams(params);
+                currentServiceId = contextParams.serviceId || null;
+                currentSlug = contextParams.slug || null;
 
-        if (!resolved) {
-            console.error(
-                "[calendario-2] Servicio no válido",
-                {
+                console.info("[calendario-2] Identificador de servicio resuelto", {
                     traceId,
-                    hasServiceId: Boolean(params?.serviceId),
-                    hasSlug: Boolean(params?.slug),
-                    pathAvailable: true
+                    source: resolved.source,
+                    hasServiceId: Boolean(contextParams.serviceId),
+                    hasSlug: Boolean(contextParams.slug),
+                    slug: contextParams.slug || null
+                });
+
+                return loadServiceContext(contextParams, traceId);
+            },
+
+            onWidgetMessage: async (message, reply) => {
+                const type = _getMessageType(message);
+                const payload = _getPayload(message);
+
+                if (type === MESSAGE_TYPES.NAV) {
+                    const handled = await handleNavigation(payload);
+                    if (!handled) {
+                        reply(MESSAGE_TYPES.NAV, resultError("INVALID_NAV_TARGET"));
+                    }
+                    return;
                 }
-            );
 
-            return;
-        }
-
-        // Preserve the identifier selected by the resolver for the later
-        // READY -> CONTEXT handshake. In particular, route fallback must not
-        // be lost when the URL query is empty.
-        const contextParams = {
-            ...params,
-            serviceId: resolved.serviceId || params.serviceId || "",
-            slug: resolved.slug || params.slug || ""
-        };
-
-        currentServiceId = contextParams.serviceId || null;
-        currentSlug = contextParams.slug || null;
-
-        console.info(
-            "[calendario-2] Identificador de servicio resuelto",
-            {
-                traceId,
-                source: resolved.source,
-                hasServiceId: Boolean(contextParams.serviceId),
-                slug: contextParams.slug || null
-            }
-        );
-
-        const widget = $w("#html1");
-
-        if (
-            !widget ||
-            typeof widget.postMessage !==
-                "function" ||
-            typeof widget.onMessage !==
-                "function"
-        ) {
-            console.error(
-                "[calendario-2] Widget HTML no disponible",
-                { traceId }
-            );
-
-            return;
-        }
-
-        bridge = createWidgetBridge(
-            widget,
-            {
-                traceId,
-                allowOpaqueOrigin: true,
-                handshakeTimeoutMs: 20000,
-                contextTimeoutMs: 45000,
-
-                onContextReady: async () =>
-                    loadServiceContext(contextParams, traceId),
-
-                onWidgetMessage: async (
-                    message,
-                    reply
-                ) => {
-                    const type =
-                        _getMessageType(
-                            message
-                        );
-
-                    const payload =
-                        _getPayload(message);
-
-                    if (
-                        type === MESSAGE_TYPES.NAV
-                    ) {
-                        const handled =
-                            await handleNavigation(
-                                payload
-                            );
-
-                        if (!handled) {
-                            reply(
-                                MESSAGE_TYPES.NAV,
-                                resultError(
-                                    "INVALID_NAV_TARGET"
-                                )
-                            );
-                        }
-
+                if (type === MESSAGE_TYPES.AVAIL) {
+                    if (!currentServiceId || !currentService) {
+                        reply(MESSAGE_TYPES.AVAIL, {
+                            ...resultError("SERVICE_NOT_READY"),
+                            action: _safeTrim(payload?.action || "").toLowerCase(),
+                            requestSequence: Number(payload?.requestSequence) || 0
+                        });
                         return;
                     }
 
-                    if (
-                        type === MESSAGE_TYPES.AVAIL
-                    ) {
-                        await handleAvailability(
-                            payload,
-                            reply
-                        );
+                    await handleAvailability(payload, reply);
+                    return;
+                }
 
-                        return;
-                    }
+                if (type === MESSAGE_TYPES.BOOK) {
+                    await handleBooking(message, reply, traceId);
+                    return;
+                }
 
-                    if (
-                        type === MESSAGE_TYPES.BOOK
-                    ) {
-                        await handleBooking(
-                            message,
-                            reply,
-                            traceId
-                        );
-
-                        return;
-                    }
-
-                    if (
-                        type !==
-                            MESSAGE_TYPES.READY &&
-                        type !==
-                            MESSAGE_TYPES.CONTEXT
-                    ) {
-                        console.warn(
-                            "[calendario-2] Mensaje no soportado",
-                            {
-                                traceId,
-                                type
-                            }
-                        );
-                    }
-                },
-
-                onError: (error) =>
-                    bridgeLogError(
+                if (type !== MESSAGE_TYPES.READY && type !== MESSAGE_TYPES.CONTEXT) {
+                    console.warn("[calendario-2] Mensaje no soportado", {
                         traceId,
-                        error
-                    )
-            }
-        );
+                        type
+                    });
+                }
+            },
+
+            onError: (error) => bridgeLogError(traceId, error)
+        });
 
         if (!bridge) {
-            throw new Error(
-                "No se pudo inicializar el bridge."
-            );
+            throw new Error("No se pudo inicializar el bridge.");
         }
     } catch (error) {
-        console.error(
-            "[calendario-2] Error de inicialización",
-            {
-                traceId,
-                code: error?.code,
-                message: error?.message
-            }
-        );
+        console.error("[calendario-2] Error de inicialización", {
+            traceId,
+            code: error?.code,
+            message: error?.message
+        });
     }
 });
