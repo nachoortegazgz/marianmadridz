@@ -65,3 +65,32 @@
 - **Pruebas pendientes / limitaciones:**
 - **Decisiones y riesgos:**
 - **Siguiente paso exacto:**
+
+
+## Continuación de sesión 2026-11-01 — PR #28, manifiesto Velo y comprobaciones Wix
+
+### Baseline y sincronización
+- PR #28, cambio del comando de instalación: fusionada por GitHub con merge commit `e32a869f22aed97e1e0c253c7ccde47435738525`. El usuario confirma que #28 quedó sincronizada y publicada en Wix Editor.
+- Contexto Wix consultado: sitio `Marian Madrid Peluquería y Estética`, ID `188bed94-177c-4bc9-a9f0-35080d874f3e`, URL `https://www.marianmadrid.es/`, estado Published, Editor clásico, Velo habilitado. Wix informa actualización el 2026-11-01 a las 04:35.
+- La rama principal avanzó después a `e947850884ab4de5d5c0431f9f79aa140ad66232` por una actualización del dossier. No sobrescribir ni revertir ese cambio ajeno al workflow.
+
+### Diagnóstico reproducible del manifiesto
+- Documentación oficial Wix: `wix install [options] <package-name>`; `--npm` es una opción documentada. Referencia: https://dev.wix.com/docs/develop-websites/articles/workspace-tools/developer-tools/git-integration-wix-cli-for-sites/wix-cli-for-sites-commands.
+- La CLI autenticada en GitHub Actions es Wix CLI `1.2.6`; `wix.config.json` apunta al siteId canónico anterior.
+- Run `41273964758` (artefacto `13070531198`) y run `41274060051` (artefacto `13070417036`): `wix install --npm @wix/data` termina con éxito, pero no genera `src/velo.dependencies.json`; la validación falla y el commit automático queda omitido.
+- En el árbol temporal tras la instalación aparecen cambios en `dependencies-metadata.json`, `package.json`, `package-lock.json` y `wix.lock`; no aparece el manifiesto. La instalación modifica temporalmente `@wix/data` de `1.0.527` a `^1.0.527`, por lo que no se debe incorporar esa alteración incidental.
+- Se creó PR #29 en Draft para registrar la versión/ayuda de CLI, enumerar archivos generados y conservar artefactos sin modificar código de producción: https://github.com/nachoortegazgz/marianmadridz/pull/29.
+- CI de backend en el commit de diagnóstico `67107efb6a57cbff7997657909f498c4d8697c97`: 4/4 jobs completados con éxito (instalación limpia/ESLint, regresión offline, Windows Node 24 y Windows Node 26). Esto no valida la generación del manifiesto ni el runtime Wix.
+- No crear manualmente `src/velo.dependencies.json` ni reactivar `@wix/cli/no-invalid-backend-import` hasta resolver la discrepancia con el CLI y validar el manifiesto generado por Wix.
+
+### Comprobaciones de solo lectura en el sitio publicado
+- Consulta de `ControlOperativo`: 5 registros en total, ninguno con `controlType=RATE_LIMIT` en el momento de la consulta. Esto **no demuestra por sí solo** un fallo del limitador: puede no haberse ejecutado el flujo después de publicar. Sí significa que todavía no se ha observado evidencia de persistencia runtime.
+- Consulta de `ServiciosCatalogo`: 95 registros; el catálogo devuelve datos y contiene el servicio de prueba `rayos-v` con `serviceId` válido y `clientHidden=false`.
+- No se han creado, actualizado ni eliminado registros CMS. Estas lecturas no ejecutan directamente el webMethod `getServiceBySlugOrId` ni sustituyen la prueba de la página en Preview/producción.
+
+### Siguiente paso exacto
+1. Revisar el log completo del run `41274060051` y el artefacto `13070417036` para capturar la versión y ayuda de CLI; determinar por qué la CLI 1.2.6 instala el paquete pero no crea el manifiesto esperado.
+2. Mantener PR #29 en Draft hasta que la causa quede identificada y los checks sean coherentes; no fusionar un diagnóstico que siga fallando.
+3. Validar la página Servicio 2 en Wix Preview o mediante una prueba runtime autorizada: confirmar lookup de slug/ID, respuesta pública del servicio y escritura/lectura del rate limiter. Registrar traceId/error real si falla.
+4. Mantener fail-closed; no añadir bypass ni debilitar el limitador para ocultar `RATE_LIMIT_STORAGE_UNAVAILABLE`.
+5. Actualizar esta bitácora al cierre de la siguiente sesión con resultado definitivo, SHA, CI y evidencia runtime.
