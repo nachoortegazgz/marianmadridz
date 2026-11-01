@@ -2660,7 +2660,7 @@ Cualquier intento de lectura/escritura sobre legacy es interceptado en `backend/
 | `staffMemberId` | `personalMiembroId` | TEXT | ID del perfil Staff de Bookings. El campo existe en el CMS, pero el resolver actual de `backend/staff.js` obtiene este ID de `staff._id` mediante Bookings Staff API y no consulta esta colección. Mantener/retirar su espejo CMS requiere ADR y auditoría de consumidores. |
 | `staffName` | `personalNombreCanonico` | TEXT | Nombre canónico. |
 | `displayName` | `nombreVisiblePersonal` | TEXT | Nombre visible. |
-| `scheduleId` | `calendarioId` | TEXT | En `MapaStaff`, ID de calendario si se mantiene el espejo; en `CitasF2`, conservar el `scheduleId` del slot nativo devuelto por Bookings. En ningún caso identifica al profesional ni sustituye a `resourceId`. |
+| `scheduleId` | `calendarioId` | TEXT | En `MapaStaff`, ID de calendario normalizado desde `resource.workingHoursSchedules[0]._id` (prioridad) o `resource.eventsSchedule._id`; en `CitasF2`, conservar el `scheduleId` del slot nativo devuelto por Bookings. En ningún caso identifica al profesional ni sustituye a `resourceId`. |
 | `thirdPartyId` | `terceraParteId` | TEXT | Referencia a `DatosFiscales`. **Vacío por diseño**; prohibido rellenar por inferencia. |
 | `rolBookings` | `rolReservasNativo` | TEXT | `STAFF` (rol nativo de Bookings). |
 | `rolWebsite` | `rolWebNegocio` | TEXT | `ADMIN` \| `GESTION` \| `ESTILISTA` (RBAC SSOT). |
@@ -3264,7 +3264,7 @@ Roles recomendados: **Desarrollo** (código, CMS dev, logs; sin secretos prod ni
 
 Diferenciar **profesional de Bookings** (recibe reservas) de **colaborador del sitio** (acceso al panel). Un profesional no necesita acceso administrativo.
 
-Tres identificadores distintos por profesional: `staffMemberId` (ID del perfil Staff de Bookings), `resourceId` (ID del recurso Bookings usado para filtrar disponibilidad/asignar profesional) y `MapaStaff.scheduleId` (ID del calendario del profesional derivado de `eventsSchedule._id` o del horario laboral). No confundir este último con `CitasF2.scheduleId`, que almacena el `scheduleId` del slot nativo seleccionado. **No intercambiar IDs entre colecciones ni contratos.**
+Tres identificadores distintos por profesional: `staffMemberId` (ID del perfil Staff de Bookings), `resourceId` (ID del recurso Bookings usado para filtrar disponibilidad/asignar profesional) y `MapaStaff.scheduleId` (ID de calendario normalizado por el resolver desde `resource.workingHoursSchedules[0]._id` y, si no está presente, `resource.eventsSchedule._id`). No confundirlo con `CitasF2.scheduleId`, que conserva el `scheduleId` del slot nativo seleccionado. **No intercambiar IDs entre colecciones ni contratos.**
 
 - El horario empresarial se copia al crear el profesional; cambios posteriores **no** se propagan.
 - Horario personalizado: desvincular (`usesDefaultWorkingHours = false`) y crear eventos `WORKING_HOURS` independientes por día (nunca un único evento con varios días).
@@ -4008,20 +4008,17 @@ export default defineWixConfig({
 
 ### 24.2 Secretos
 
-- GitHub Actions usa `secrets.CLI_API_KEY`; el workflow asigna ese secreto a `CLI_API_KEY` y lo entrega a `wix login --api-key`. El alias antiguo `WIX_CLI_API_KEY` queda eliminado de la documentación.
-- El repositorio no debe contener valores de credenciales. La búsqueda indexada de código no devolvió coincidencias para esos nombres en el momento de la revisión; esto no equivale a un escaneo completo de secretos ni a una garantía sobre el historial Git. El contenido del secreto GitHub no es legible por API.
-- Los valores de secretos de backend residen en Wix Secrets Manager; `mmSecrets.js` mantiene nombres canónicos.
+- Contrato consolidado en §G.11.3 y §F.21.6. En la revisión del workflow activo se confirmó `secrets.CLI_API_KEY`; no se leyó ni se puede revelar su valor. No se ha ejecutado un escaneo histórico completo de secretos.
 
 ### 24.3 Workflow Wix Preview
 
-- Se conserva el workflow operativo actual: timeout de 8 minutos, terminación del proceso hijo, log como artefacto y sin paso de publicación.
-- El usuario confirma que la versión desplegada evita el bloqueo y es funcional; el run `41285908135` registró `success`. No se modifica el workflow por motivos cosméticos ni se sustituye por una implementación no probada.
-- El run verde no certifica por sí solo que las reservas simples/duales, pagos, HTTP functions o frontend estén validados end-to-end.
+- El workflow operativo descrito en §B.8.2 se conserva sin cambios: el usuario confirma que evita el bloqueo y es funcional; el run `41285908135` registró `success`. No se modifica por motivos cosméticos.
+- Su éxito no certifica por sí solo reservas simples/duales, pagos, HTTP functions ni frontend end-to-end.
 
 ### 24.4 Criterios pendientes
 
-1. Smoke test de `node:crypto` en runtime Wix real, sin mutaciones de datos.
-2. Generación oficial de `src/velo.dependencies.json` y evaluación de la regla ESLint correspondiente.
-3. QA E2E de reserva simple y dual: selección profesional por `resourceId`, conservación del `scheduleId` del slot, gap, rollback F2, pagos y cancelaciones.
+1. Smoke test de `node:crypto` en runtime Wix real, sin mutaciones de datos (§G.11.3).
+2. Generación oficial de `src/velo.dependencies.json` y evaluación de la regla ESLint correspondiente (§J.6).
+3. QA E2E de reserva simple y dual: selección por `resourceId`, conservación del `scheduleId` nativo del slot, gap, rollback F2, pagos y cancelaciones (§G.9 y §G.16).
 4. Resolver la cifra histórica de tests (182 frente a 158) con output reproducible; no usarla como métrica actual.
 
