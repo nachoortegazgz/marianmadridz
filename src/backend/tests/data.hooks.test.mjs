@@ -38,25 +38,43 @@ test('HOOK-SVC-DUAL-01 requires explicit numeric exposureDuration', () => {
 });
 
 // -----------------------------------------------------------------------------
-// DATA-04: CitasF2 enum/pairToken hooks RETIRED (validated in bookingCore /
-// bookingSaga at point of use; CMS hook only duplicated work and broke admin
-// manual edits). This test seals the removal so it cannot silently return.
+// SSOT 15.2: CitasF2 schema guard is retained at the CMS boundary.
 // -----------------------------------------------------------------------------
 
-test('HOOK-DATA04 CitasF2 enum/pairToken hooks retired', () => {
-  assert.strictEqual(H.CitasF2_beforeInsert, undefined);
-  assert.strictEqual(H.CitasF2_beforeUpdate, undefined);
+test('HOOK-CITAS-01 validates canonical enums, traceId and pairToken', () => {
+  const valid = {
+    bookingId: '11111111-1111-4111-8111-111111111111',
+    bookingType: 'SIMPLE',
+    bookingStatus: 'PENDING',
+    paymentStatus: 'NOT_PAID',
+    traceId: 'trace-citas-001',
+  };
+  assert.doesNotThrow(() => H.CitasF2_beforeInsert({ ...valid }));
+  assert.doesNotThrow(() => H.CitasF2_beforeUpdate({ ...valid }));
+  assert.throws(() => H.CitasF2_beforeInsert({ ...valid, bookingStatus: 'INVALID' }), /bookingStatus/);
+  assert.throws(() => H.CitasF2_beforeInsert({ ...valid, bookingType: 'DUAL_F1' }), /pairToken/);
+  assert.throws(() => H.CitasF2_beforeInsert({ ...valid, traceId: '' }), /traceId/);
+  assert.throws(() => H.CitasF2_beforeInsert({ ...valid, bookingId: 'not-a-guid' }), /GUID/);
+  assert.throws(() => H.CitasF2_beforeRemove({}), /cancelacion formal/);
 });
 
 // -----------------------------------------------------------------------------
-// DATA-01: InventarioStockVenta / MovimientosInventario hooks RETIRED
-// (no compliance value; reconciliation handled by cron job).
+// SSOT 5.13 / 15.1: inventory movements are append-only; stock projection
+// updates remain allowed only when the stock invariant is satisfied.
 // -----------------------------------------------------------------------------
 
-test('HOOK-DATA01 inventory hooks retired', () => {
-  assert.strictEqual(H.MovimientosInventario_beforeUpdate, undefined);
-  assert.strictEqual(H.MovimientosInventario_beforeRemove, undefined);
-  assert.strictEqual(H.InventarioStockVenta_beforeUpdate, undefined);
+test('HOOK-INVENTORY-01 movements ledger blocks update/remove', () => {
+  assert.throws(() => H.MovimientosInventario_beforeUpdate({}), /append-only/);
+  assert.throws(() => H.MovimientosInventario_beforeRemove({}), /append-only/);
+});
+
+test('HOOK-INVENTORY-02 stock projection update enforces invariant', () => {
+  assert.doesNotThrow(() => H.InventarioStockVenta_beforeUpdate({
+    stockOnHand: 10, stockReserved: 3, stockAvailable: 7,
+  }));
+  assert.throws(() => H.InventarioStockVenta_beforeUpdate({
+    stockOnHand: 10, stockReserved: 3, stockAvailable: 8,
+  }), /Invariante de stock/);
 });
 
 test('HOOK-APPEND-02 retired blocked-collection hooks are gone (ADR-02)', () => {
