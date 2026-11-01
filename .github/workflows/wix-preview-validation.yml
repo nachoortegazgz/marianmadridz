@@ -71,7 +71,7 @@ jobs:
           # Keep the CLI attached to a PTY, but supervise it in its own process
           # group. Wix may keep the interactive process alive after printing the
           # shareable Preview URL, so stop it only after the explicit success signal.
-          setsid bash -c 'set -euo pipefail; printf "\\n" | script -q -e -c "wix preview" /dev/null' > wix-preview.log 2>&1 &
+          setsid bash -c 'set -euo pipefail; printf "\n" | script -q -e -c "wix preview" /dev/null' > wix-preview.log 2>&1 &
           preview_pid=$!
 
           cleanup_preview() {
@@ -91,7 +91,7 @@ jobs:
           preview_url=""
           for _ in $(seq 1 240); do
             if grep -Fq "Your preview deployment is now available at" wix-preview.log; then
-              preview_url="$(grep -Eo 'https?://wix\\.to/[[:alnum:]]+' wix-preview.log | head -n 1 || true)"
+              preview_url="$(grep -Eo 'https?://wix\.to/[[:alnum:]]+' wix-preview.log | head -n 1 || true)"
               if [ -n "${preview_url}" ]; then
                 preview_ready=true
                 break
@@ -110,7 +110,7 @@ jobs:
             exit 1
           fi
 
-          printf '%s\\n' "${preview_url}" > wix-preview-url.txt
+          printf '%s\n' "${preview_url}" > wix-preview-url.txt
           echo "Wix Preview deployment confirmed: ${preview_url}"
 
           cleanup_preview
