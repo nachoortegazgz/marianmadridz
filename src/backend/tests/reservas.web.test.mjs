@@ -463,16 +463,16 @@ test('RES-LOOK-01F ambiguous normalized title lookup fails closed', async () => 
   await invalidateStaffCache();
   const first = baseServiceRow({
     slug: 'servicio-a-' + seq,
-    title: 'Corte de Pelo Ni\u00f1os (R\u00e1pido y Divertido)',
+    title: 'Corte de Pelo Ni\u00f1os (R\u00e1pido y Divertido) Ambiguo',
   });
   const second = baseServiceRow({
     slug: 'servicio-b-' + seq,
-    title: 'Corte de Pelo Ni\u00f1os (R\u00e1pido y Divertido)',
+    title: 'Corte de Pelo Ni\u00f1os (R\u00e1pido y Divertido) Ambiguo',
   });
   seedService(first);
   seedService(second);
 
-  const result = await RW._getServiceBySlugOrIdInternal('corte-de-pelo-ninos-rapido-y-divertido');
+  const result = await RW._getServiceBySlugOrIdInternal('corte-de-pelo-ninos-rapido-y-divertido-ambiguo');
   assert.strictEqual(result.status, 'ERROR');
   assert.strictEqual(result.error.code, 'SERVICE_LOOKUP_AMBIGUOUS');
 });
