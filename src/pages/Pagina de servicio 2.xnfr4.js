@@ -306,16 +306,51 @@ function normalizeCatalogEntry(data) {
 }
 
 async function resolveServiceLookup() {
-    const query = await location.query();
+    let query =
+        typeof location.query === "function"
+            ? await location.query()
+            : location.query;
 
-    // Prefer the immutable Wix service GUID when both query params exist.
-    // The slug is SEO/navigation metadata and may be stale after catalog edits.
+    if (
+        !query ||
+        typeof query !== "object" ||
+        Array.isArray(query)
+    ) {
+        query = {};
+    }
+
+    if (
+        !query.serviceId &&
+        !query.slug &&
+        typeof location.url === "string"
+    ) {
+        try {
+            query = Object.fromEntries(
+                new URL(location.url).searchParams.entries()
+            );
+        } catch (error) {
+            console.warn(
+                "[servicio-2] No se pudo leer la query de la URL",
+                {
+                    message: error?.message
+                }
+            );
+        }
+    }
+
     const queryServiceId = text(query?.serviceId);
-    if (queryServiceId && _looksLikeGuid(queryServiceId)) {
+
+    if (
+        queryServiceId &&
+        _looksLikeGuid(queryServiceId)
+    ) {
         return queryServiceId.toLowerCase();
     }
 
-    const querySlug = normalizeLookupValue(query?.slug);
+    const querySlug = normalizeLookupValue(
+        query?.slug
+    );
+
     if (querySlug) {
         return querySlug;
     }
@@ -334,9 +369,8 @@ async function resolveServiceLookup() {
         return null;
     }
 
-    const excludedValue = lastSegment
-        .toLowerCase()
-        .trim();
+    const excludedValue =
+        lastSegment.toLowerCase().trim();
 
     if (EXCLUDED_PATHS.has(excludedValue)) {
         return null;
@@ -344,7 +378,6 @@ async function resolveServiceLookup() {
 
     return lastSegment;
 }
-
 function getAllowedAddOnIds(service) {
     const options = Array.isArray(
         service?.addOnOptions
@@ -409,33 +442,34 @@ function getValidatedAddOnIds(
 function buildBookingUrl(service, payload) {
     if (
         service.catalogEntryType !== "SERVICE" ||
-        !_looksLikeGuid(
-            getServiceId(service)
-        )
+        !_looksLikeGuid(getServiceId(service))
     ) {
         throw new Error(
             "Solo los servicios reservables pueden abrir el calendario de citas."
         );
     }
 
-    // La página Calendario de reservas 2 usa la ruta fija /calendario-2.
-    // El servicio se resuelve mediante el parámetro slug contra ServiciosCatalogo.
+    const serviceId = getServiceId(service);
     const slug = getServiceSlug(service);
+
     if (!slug) {
-        throw new Error("El servicio no tiene un slug válido.");
+        throw new Error(
+            "El servicio no tiene un slug público válido."
+        );
     }
 
     const base = "/calendario-2";
+
     const query = new URLSearchParams({
+        serviceId,
         slug,
         referral: "service_list_widget"
     });
 
-    const addOnIds =
-        getValidatedAddOnIds(
-            payload,
-            service
-        );
+    const addOnIds = getValidatedAddOnIds(
+        payload,
+        service
+    );
 
     if (addOnIds.length > 0) {
         query.set(
