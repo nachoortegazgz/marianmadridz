@@ -36,6 +36,7 @@ import {
 } from "backend/internalConfig";
 
 import {
+    makeTraceId,
     _cloneDeep,
     _cleanText,
     _normalizeIdPart,
@@ -249,7 +250,8 @@ function _buildOperationalAlertRecord({
 export async function notifyOperationalAlert(options = {}) {
     let record;
     try {
-        record = _buildOperationalAlertRecord(options);
+        const alertTraceId = options?.traceId || makeTraceId("operational-alert");
+        record = _buildOperationalAlertRecord({ ...options, traceId: alertTraceId });
         const existing = await withTimeout(
             () => dalGet(CONTROL_OPERATIVO_COL, record._id, { consistentRead: true }),
             API_TIMEOUT_MS,
@@ -303,15 +305,16 @@ export async function logAuditEvent(
 ) {
     const normalizedLevel = _normalizeLevel(level);
     if (normalizedLevel === "ERROR" || normalizedLevel === "CRITICAL") {
+        const alertTraceId = traceId || makeTraceId("audit-error");
         return notifyOperationalAlert({
             alertType: eventType,
             severity: normalizedLevel,
             message,
             data,
-            traceId,
+            traceId: alertTraceId,
             entityId,
             source,
-            dedupeKey: _buildAuditId(eventType, entityId, traceId),
+            dedupeKey: _buildAuditId(eventType, entityId, alertTraceId),
         });
     }
     const record = _buildControlOperativoRecord({
