@@ -583,29 +583,6 @@ J.6  Posibles datos faltantes en el dossier (7 filas)
 
 ---
 
-## K. MATRIZ DE FUENTES CANÓNICAS Y DUPLICIDADES
-
-**Función:** índice de localización. No crea reglas técnicas nuevas; identifica dónde vive cada contrato y qué apartados deben remitir a él.
-
-| Materia | Fuente canónica | Tratamiento de las secciones relacionadas |
-|---|---|---|
-| Matriz de personal | §F.22.1 / cuerpo §22.1 | §D.4.2 elimina la tabla y remite a la matriz canónica. |
-| Wix App IDs | §F.22.2 / cuerpo §22.2 | §D.3.1 conserva funciones y roles; los IDs se consultan solo en §22.2. |
-| Identificadores transversales | §F.7.3 / cuerpo §7.3 | §D.4.3 remite a §7.3; la semántica `resourceId`/`scheduleId` se conserva en §F.16. |
-| Bookings V2 — SDK vs REST | §F.16 (ADR-002) | §E.1 remite al contrato; no repetir la tabla `_id` vs `id`. |
-| Stores Catalog V1/V3 | §F.14 | §E.5 conserva la regla de detección de versión y remite para módulos, estado PR #13, CMS, ADR-001 y gates. |
-| Inventario CMS | §F.5.1 + §G.1–G.14 | §F.5.1 mantiene el inventario agregado; §G contiene el detalle por colección. Los resúmenes remiten a §G. |
-| Invariantes de integridad | §G.14.1 | §F.5.4 remite; §F.10.2 conserva controles adicionales de hooks, sin duplicar invariantes. |
-| Enums canónicos | §F.6 | §G.14 no redefine enums; remite a §F.6 para definiciones y a §F.10.2 para validación runtime. |
-| Normativa estatal | §F.18 (técnica) + §H.5.1 (negocio) | §F.18 enumera normas y controles; §H.5.1 conserva su aplicación operativa al salón. |
-| Riesgos | §C.4 (transversales) + §F.17 (técnicos) | Son complementarios por alcance; no consolidar ni eliminar ninguno. |
-| Wix CLI for Sites | §J.2 | §B.4 y §F.21.1 remiten; no duplicar el catálogo de comandos. |
-| Wix MCP | §J.1 | §B.5 remite; no duplicar configuración ni herramientas. |
-| Autenticación | §B.3 (CLI) + §J.1.3 (MCP) | Se mantienen separadas: son mecanismos y credenciales de contexto distintos. |
-| GitHub Actions — Preview | §J.2.2 | §B.8 y el anexo CLI remiten; no duplicar YAML ni el flujo. |
-
----
-
 ## L. ESTADO GLOBAL DEL DOCUMENTO
 
 | Bloque | Estado | Completitud | ADR pendientes |
