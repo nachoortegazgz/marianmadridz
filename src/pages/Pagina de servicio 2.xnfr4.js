@@ -306,16 +306,51 @@ function normalizeCatalogEntry(data) {
 }
 
 async function resolveServiceLookup() {
-    const query = await location.query();
+    let query =
+        typeof location.query === "function"
+            ? await location.query()
+            : location.query;
 
-    // Prefer the immutable Wix service GUID when both query params exist.
-    // The slug is SEO/navigation metadata and may be stale after catalog edits.
+    if (
+        !query ||
+        typeof query !== "object" ||
+        Array.isArray(query)
+    ) {
+        query = {};
+    }
+
+    if (
+        !query.serviceId &&
+        !query.slug &&
+        typeof location.url === "string"
+    ) {
+        try {
+            query = Object.fromEntries(
+                new URL(location.url).searchParams.entries()
+            );
+        } catch (error) {
+            console.warn(
+                "[servicio-2] No se pudo leer la query de la URL",
+                {
+                    message: error?.message
+                }
+            );
+        }
+    }
+
     const queryServiceId = text(query?.serviceId);
-    if (queryServiceId && _looksLikeGuid(queryServiceId)) {
+
+    if (
+        queryServiceId &&
+        _looksLikeGuid(queryServiceId)
+    ) {
         return queryServiceId.toLowerCase();
     }
 
-    const querySlug = normalizeLookupValue(query?.slug);
+    const querySlug = normalizeLookupValue(
+        query?.slug
+    );
+
     if (querySlug) {
         return querySlug;
     }
@@ -334,9 +369,8 @@ async function resolveServiceLookup() {
         return null;
     }
 
-    const excludedValue = lastSegment
-        .toLowerCase()
-        .trim();
+    const excludedValue =
+        lastSegment.toLowerCase().trim();
 
     if (EXCLUDED_PATHS.has(excludedValue)) {
         return null;
@@ -344,7 +378,6 @@ async function resolveServiceLookup() {
 
     return lastSegment;
 }
-
 function getAllowedAddOnIds(service) {
     const options = Array.isArray(
         service?.addOnOptions
