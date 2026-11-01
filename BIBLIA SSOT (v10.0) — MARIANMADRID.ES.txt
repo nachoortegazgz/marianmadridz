@@ -221,7 +221,7 @@ Para aprobar cualquier cambio técnico se debe responder afirmativamente a: ¿Es
 * **Location ID (`LOCATION_ID`):** `7a12abfd-bf30-4847-bcdf-00dc573d4802`
 * **Staff Resource Type ID (`STAFF_RESOURCE_TYPE_ID`):** `1cd44cf8-756f-41c3-bd90-3e2ffcaf1155`
 * **Parámetros Regionales:** Zona horaria `Europe/Madrid`, Moneda `EUR` (2 decimales), Idioma `es-ES`.
-* **Repositorio y Datos Operativos:** `https://github.com/nachoortegazgz/marianmadridX.git`, dirección en C/ Maurice Ravel 35, Local, 50012 Zaragoza.
+* **Repositorio y Datos Operativos:** `https://github.com/nachoortegazgz/marianmadridz.git`, dirección en C/ Maurice Ravel 35, Local, 50012 Zaragoza.
 
 #### **1.2 El Negocio y el Objetivo Técnico**
 Marian Madrid ópera como punto de venta físico y virtual completo (agenda de citas online, cobro presencial con efectivo, tarjeta y Bizum, facturación legal, control horario de personal y stock). 
@@ -388,7 +388,7 @@ Toda transacción que atraviesa el backend debe portar sus claves de trazabilida
 
 # Diccionario de colecciones CMS — Marian Madrid
 
-**Extracción del esquema vivo:** 25-10-2026. **Sitio:** MarianMadrid.es. **Repositorio de referencia:** nachoortegazgz/marianmadridXXXXX.
+**Extracción del esquema vivo:** 25-10-2026. **Sitio:** MarianMadrid.es. **Repositorio de referencia:** nachoortegazgz/marianmadridz.
 
 > Keyfields, etiquetas visibles, tipos, obligatoriedad, referencias, permisos y revisión proceden de la API oficial Wix CMS en modo lectura. Ejemplos sintéticos; no son datos reales de clientes. Wix no declara opciones para los campos TEXT en el esquema consultado; los enums citados proceden de la matriz documental y deben verificarse en validadores/runtime.
 
