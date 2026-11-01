@@ -7,10 +7,16 @@ on:
       - main
     paths:
       - ".github/workflows/wix-cli-manifest.yml"
+      - "package.json"
+      - "package-lock.json"
   workflow_dispatch:
 
 permissions:
   contents: write
+
+concurrency:
+  group: wix-velo-manifest-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   generate-velo-manifest:
@@ -47,11 +53,12 @@ jobs:
           echo "Configured Wix site:"
           cat wix.config.json
           echo "Pre-install package declaration:"
-          node --input-type=commonjs -e "console.log(require('./package.json').dependencies?.['@wix/data'] || 'not declared')"
+          node --input-type=commonjs -e "const version=require('./package.json').dependencies?.['@wix/data']; console.log(version || 'not declared'); if (version !== '1.0.527') { console.error('Expected pinned @wix/data 1.0.527; refusing to alter Wix dependencies.'); process.exit(1); }"
 
       - name: Install package and capture generated files
         run: |
           wix install --npm @wix/data
+          git diff --exit-code -- package.json package-lock.json
           echo "Generated dependency-related files:"
           find . -maxdepth 4 -type f \( -name 'velo.dependencies.json' -o -name 'dependencies-metadata.json' -o -name 'wix.lock' \) -print
           echo "Working tree after Wix CLI installation:"
