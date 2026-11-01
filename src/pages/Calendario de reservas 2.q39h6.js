@@ -1149,8 +1149,8 @@ $w.onReady(() => {
             traceId,
             allowOpaqueOrigin: true,
             handshakeTimeoutMs: 30000,
-            contextTimeoutMs: 120000,
-            contextAttemptTimeoutMs: 30000,
+            contextTimeoutMs: 27000,
+            contextAttemptTimeoutMs: 8000,
 
             onContextReady: async () => {
                 const params = await parseUrlParams();
