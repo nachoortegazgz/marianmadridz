@@ -2,6 +2,7 @@ import test, { beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 
 import { rateLimiter } from "../security.js";
+import { hashSHA256, hmacSha256Hex } from "../securityEngine.js";
 import { wixDataMock } from "./loader.mjs";
 
 const originalDateNow = Date.now;
@@ -142,4 +143,19 @@ test("SEC-RL-07 denies the request when ControlOperativo read storage fails", as
     } finally {
         wixDataMock.get = originalGet;
     }
+});
+
+
+test("SEC-CRYPTO-01 computes standard SHA-256 vectors without Web Crypto", async () => {
+    assert.equal(
+        await hashSHA256("abc"),
+        "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+    );
+});
+
+test("SEC-CRYPTO-02 computes standard HMAC-SHA256 vectors", async () => {
+    assert.equal(
+        await hmacSha256Hex("key", "The quick brown fox jumps over the lazy dog"),
+        "f7bc83f430538424b13298e6aa6fb143ef4d59a14946175997479dbc2d1a3cd8"
+    );
 });
