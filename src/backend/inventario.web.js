@@ -70,7 +70,7 @@ const log = logger;
 const INVENTARIO_COL = BUSINESS_COLLECTIONS.INVENTARIO_STOCK_VENTA;
 const MOVIMIENTOS_INV_COL = OPERATIONAL_COLLECTIONS.MOVIMIENTOS_INVENTARIO;
 const CIERRE_INV_COL = BUSINESS_COLLECTIONS.HISTORICO_CIERRES_Z;
-const CONTROL_COL = BUSINESS_COLLECTIONS.CONTROL_OPERATIVO;
+const CONTROL_COL = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
 
 // =============================================================================
 // BLOQUE 1 - GET INVENTORY DASHBOARD
@@ -289,11 +289,8 @@ async function acquireInventoryVariantLock(stockItem, stockKey, traceId) {
   const lock = {
     _id: lockId,
     controlType: CONTROL_TYPE.SLOT_LOCK,
-    alertType: "INVENTORY_VARIANT_LOCK",
     dedupeKey: stockKey,
     status: "LOCKED",
-    severity: "INFO",
-    message: "Bloqueo temporal de variante de inventario",
     traceId,
     expiresAt: new Date(Date.now() + 120000),
   };
