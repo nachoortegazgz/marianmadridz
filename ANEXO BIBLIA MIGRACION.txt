@@ -3,12 +3,9 @@
 **Actualizado:** 2026-10-30  
 **Repositorio canónico:** https://github.com/nachoortegazgz/marianmadridz  
 **Rama de referencia:** `main`  
-**Commit base auditado:** `d1bc08917466daa1b7d41c0a2b5f4a49f752e897`  
 **Sitio:** https://www.marianmadrid.es/  
 **Site ID:** `188bed94-177c-4bc9-a9f0-35080d874f3e`  
 **Entorno:** Wix Editor clásico + Velo.
-
-Este documento sustituye los informes anteriores de migración que hacían referencia a otros nombres de repositorio, commits y módulos no presentes en el árbol actual.
 
 ## 1. Resultado de la tanda SDK
 
