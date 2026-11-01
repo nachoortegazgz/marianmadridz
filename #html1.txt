@@ -68,6 +68,16 @@ const CONFIG={
   defaultImage:"https://static.wixstatic.com/media/ab7708_588ab0ed2d7f42f4a63edb9e9c76da1c~mv2.jpg"
 };
 
+// Contrato de mensajes compartido con #htmlWidgetCustomService y widgetBridge.js.
+const MESSAGE_TYPES=Object.freeze({
+  READY:"MM_READY",
+  CONTEXT:"MM_CONTEXT",
+  AVAIL:"MM_AVAIL",
+  SELECT:"MM_SELECT",
+  BOOK:"MM_BOOK",
+  NAV:"MM_NAV"
+});
+
 // SEC-01 (v5023): origen del padre resuelto en runtime. Vive fuera de
 // CONFIG para no tocar el objeto de configuración (evita la tentación de
 // mutarlo). Se asigna una sola vez en init().
