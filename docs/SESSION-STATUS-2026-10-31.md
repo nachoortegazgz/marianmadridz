@@ -118,7 +118,8 @@ Esta confirmación permite planificar pruebas persistentes controladas. No obsta
 - CI de la PR #32 pasó en Node.js 24.22.1 y 26.12.1 y en la suite offline. Esto no equivale a validar el runtime Wix.
 - PR #33 añade `.github/workflows/wix-preview-validation.yml`, ejecutado en `main` con Wix CLI for Sites y el secreto `CLI_API_KEY`. Solo ejecuta `wix preview`; no ejecuta `wix publish`.
 - Run de Preview **41277316511** completó con `failure`: `wix preview` lanzó `NonInteractiveTerminal` porque Ink requiere TTY. No se generó URL de Preview y no se ha probado `node:crypto` en Wix.
-- PR #35 añade captura de `wix preview --help`; tras su merge, run **41277461940** está generando esa ayuda para identificar el modo no interactivo soportado.
+- PR #35 añadió captura de `wix preview --help`; run **41277461940** volvió a fallar en la ejecución interactiva, pero la ayuda confirmó la opción oficial `--source <local|remote>`.
+- PR #36 cambia el comando a `wix preview --source local` para usar el commit exacto del checkout de `main`; CI de la PR pendiente.
 - El entorno de ejecución disponible aquí no tiene acceso de red a GitHub ni CLI Wix autenticado; la validación Preview se delega al workflow de GitHub Actions.
 - No publicar hasta que el Preview compile y la ruta real de lookup supere `HASH_POLICY_KEY`, `HASH_REQUESTER_KEY`, bootstrap/lectura y escritura atómica, verificando logs de Wix.
 
