@@ -4313,3 +4313,50 @@ Los resultados históricos de §27.2 (289 tests, 28 suites) pertenecen a los com
 - No cerrar Layer 1 ni Layer 2 hasta cumplir §26 y §25.7, incluyendo evidencias runtime aplicables.
 
 **Fuentes:** src/backend/events.js (HEAD inspeccionado en esta auditoría); consultas de solo lectura de CitasF2 y ControlOperativo; respuestas de Bookings API para los bookingId de QA; protocolo de §25 y reglas de cierre §26. Esta actualización no altera datos CMS.
+
+---
+
+## 30. PUNTO DE REINICIO OPERATIVO — 2026-11-01
+
+**Finalidad:** permitir continuar el desarrollo en una sesión nueva sin repetir auditorías ni asumir avances no demostrados. Esta sección resume el estado de §27–§29 y fija la siguiente acción.
+
+### 30.1 Estado de referencia
+
+- **Repositorio canónico:** `nachoortegazgz/marianmadridz`, rama `main`.
+- **HEAD de referencia al consolidar este punto:** `d879307319f6d69aba0293e858a9f49ef632b9a1` (actualización documental §29).
+- **Dossier:** este archivo, raíz del repositorio. Prevalece la jerarquía de fuentes definida en §4; consultar especialmente §25–§26 y §27–§29.
+- **Layer 1 — reservas simples:** PARCIAL. Hay pruebas offline históricas y comprobaciones de Bookings API nativa; falta demostrar el flujo completo widget/frontend → WebMethod Velo → Bookings/CMS en Preview/runtime.
+- **Layer 2 — caja y seguridad:** BLOQUEADA. Existe discrepancia entre estados de cancelación en Bookings y CitasF2 (§29.3) y un riesgo estático en el webhook de cancelación (§29.4). Faltan además las pruebas persistentes de RBAC, atomicidad/concurrencia, cierre Z y hash-chain en QA aislado.
+- **No se acredita CI verde del HEAD actual** por el mero hecho de que existan ejecuciones históricas correctas en §27–§28.
+
+### 30.2 Bloqueo técnico prioritario
+
+En `src/backend/events.js`, el flujo de cancelación puede marcar un evento como procesado sin demostrar que la actualización CMS se haya guardado; además, el catch exterior puede devolver ACK `OK` ante una excepción. Es un riesgo estático documentado, no una causalidad demostrada en runtime.
+
+**Siguiente trabajo:** corregir este flujo de forma mínima, en rama de trabajo/PR, después de comprobar el contrato oficial de reintentos/ACK de los webhooks Wix. La corrección debe:
+1. Propagar y comprobar el resultado real de persistencia CMS.
+2. No marcar el evento como procesado si no se ha reconciliado el estado.
+3. Responder según el contrato oficial de Wix ante fallos reintentables; nunca convertir un fallo en ACK exitoso.
+4. Mantener idempotencia para reservas simples y ambas fases de reservas duales.
+5. Añadir pruebas focalizadas: NOT_FOUND, ERROR, fallo transitorio, replay y estado ya cancelado.
+
+### 30.3 Secuencia de continuación
+
+1. Leer únicamente el código actual de `src/backend/events.js`, sus helpers inmediatos y tests relacionados; no repetir la auditoría general.
+2. Consultar documentación oficial Wix solo para resolver la semántica exacta de ACK/reintentos.
+3. Implementar la corrección mínima y sus tests en una rama/PR.
+4. Ejecutar los tests afectados y CI de ese commit; registrar SHA y run real.
+5. Reconciliar la muestra de seis registros Bookings=CANCELED / CitasF2=CONFIRMED sin modificar registros manualmente.
+6. Retomar Layer 1 runtime y después los criterios pendientes de Layer 2, en entorno QA técnicamente aislado y con las autorizaciones requeridas.
+
+### 30.4 Límites y reglas para la próxima sesión
+
+- Evitar comprobaciones redundantes: reutilizar evidencias de §27–§29 mientras sigan siendo válidas y no haya cambios que las invaliden.
+- No repetir lecturas generales del CMS ni auditorías globales salvo que el cambio lo requiera.
+- No modificar ni borrar ledger/CMS histórico para “hacer cuadrar” estados sin diagnóstico y procedimiento aprobado.
+- No ejecutar cobros, checkout real, emisión fiscal, notificaciones a clientes ni publicación.
+- No usar `createMultiServiceBooking` para reservas duales con intervalo.
+- No declarar cerrada una capa sin las evidencias de aceptación de §25–§26 y runtime aplicable.
+- Mantener separados los hechos, inferencias y pendientes; no presentar tests históricos como actuales.
+
+**Punto exacto de reentrada:** revisión focalizada de `src/backend/events.js` + documentación oficial Wix sobre respuesta/reintento de webhooks de Bookings; después, corrección y tests de sincronización de cancelaciones. No iniciar una nueva auditoría general.
