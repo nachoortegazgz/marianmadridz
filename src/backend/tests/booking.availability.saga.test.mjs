@@ -18,11 +18,17 @@ const BU = await import('backend/booking/bookingUtils.js');
 const BC = await import('backend/booking/bookingCore.js');
 const BS = await import('backend/booking/bookingSaga.js');
 const IC = await import('backend/internalConfig');
+const MU = await import('public/mmUtils');
 
 const STAFF_TYPE = IC.API.STAFF_RESOURCE_TYPE_ID;
 const GUID_1 = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const GUID_2 = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 const GUID_3 = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+test('BAVAIL-WINDOW-01 backend and frontend expose the same 15-day booking window', () => {
+  assert.strictEqual(IC.SLOT_SEARCH.DIAS_LIMITE, 15);
+  assert.strictEqual(MU.SLOT_SEARCH.DIAS_LIMITE, 15);
+});
+
 
 // ---------------------------------------------------------------------------
 // SLOT SHAPE NORMALIZATION (Wix Bookings Writer V2 devuelve ambas formas)
