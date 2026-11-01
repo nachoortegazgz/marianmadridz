@@ -11,7 +11,7 @@ Runs offline via tests/loader.mjs mocks. G10 ASCII strict.
 import test from 'node:test';
 import assert from 'node:assert';
 
-const { wixDataMock } = await import('./loader.mjs');
+const { wixDataMock, mocks } = await import('./loader.mjs');
 // ADR-06 Etapa A: convencion unica backend/<modulo>.web.js (incl. tests)
 const RW = await import('backend/reservas.web.js');
 const CW = await import('backend/cajas.web.js');
@@ -310,7 +310,42 @@ test('DTO-04 getMovimientoByBooking exposes only receipt-safe fields', async () 
     internalNotes: 'no publico',
   }];
   wixDataMock._seed(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA, seed);
-  const res = await mod.getMovimientoByBooking({ bookingId: 'BK-80' });
+
+  // SiteMember is not sufficient for fiscal-ledger access. Resolve a real
+  // authorized cashier/admin identity through the same Bookings staff contract.
+  const STAFF_CONTACT_ID = '33333333-3333-4333-8333-333333333333';
+  const MARIAN_RESOURCE_ID = 'e556070a-6d6a-402e-8422-11133033ea76';
+  globalThis.__mmMembersState._current = {
+    _id: 'member-admin-dto-0001',
+    contactId: STAFF_CONTACT_ID,
+  };
+  mocks.sdk['bookings::staffMembers'] = {
+    queryStaffMembers: async () => ({
+      staffMembers: [{
+        _id: '22222222-2222-4222-8222-222222222222',
+        resourceId: MARIAN_RESOURCE_ID,
+        name: 'Marian',
+        serviceProvider: true,
+        resource: { workingHoursSchedules: [] },
+        associatedWixIdentity: {
+          identificationData: { contactId: STAFF_CONTACT_ID },
+          connection: { status: 'CONNECTED' },
+        },
+      }],
+      pagingMetadata: { hasNext: false, cursors: {} },
+    }),
+  };
+  const staffModule = await import('../staff.js');
+  staffModule.invalidateStaffCache();
+
+  let res;
+  try {
+    res = await mod.getMovimientoByBooking({ bookingId: 'BK-80' });
+  } finally {
+    globalThis.__mmMembersState._current = null;
+    staffModule.invalidateStaffCache();
+  }
+
   // Envelope canónico de cajas.web.js: {status:'SUCCESS'|'ERROR', meta, data,
   // error:{code,message}}. El test lee el contrato real del módulo (sin alias
   // ok en producción: cero legacy).
