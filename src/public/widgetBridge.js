@@ -20,9 +20,13 @@ export const PROTOCOL_URLS = Object.freeze({
     PRIVACY_POLICY: "/politica-de-privacidad"
 });
 export const PROTOCOL_UI = Object.freeze({
-    FRONTEND_API_TIMEOUT_MS: 190000,
-    HANDSHAKE_TIMEOUT_MS: 15000,
-    CONTEXT_TIMEOUT_MS: 30000
+    FRONTEND_API_TIMEOUT_MS: 210000,
+    HANDSHAKE_TIMEOUT_MS: 30000,
+    CONTEXT_TIMEOUT_MS: 120000,
+    CONTEXT_ATTEMPT_TIMEOUT_MS: 30000,
+    CONTEXT_ATTEMPTS: 3,
+    RETRY_BASE_DELAY_MS: 500,
+    RETRY_MAX_DELAY_MS: 4000
 });
 const RESPONSE_TYPE_SUFFIX = "_RES";
 const RESPONSE_TYPE_PATTERN = /^[A-Z][A-Z0-9_]{0,38}_RES$/;
@@ -150,6 +154,7 @@ export function createWidgetBridge(widgetElement, options = {}) {
     );
     const handshakeTimeoutMs = Number(settings.handshakeTimeoutMs) > 0 ? Number(settings.handshakeTimeoutMs) : PROTOCOL_UI.HANDSHAKE_TIMEOUT_MS;
     const contextTimeoutMs = Number(settings.contextTimeoutMs) > 0 ? Number(settings.contextTimeoutMs) : PROTOCOL_UI.CONTEXT_TIMEOUT_MS;
+    const contextAttemptTimeoutMs = Number(settings.contextAttemptTimeoutMs) > 0 ? Number(settings.contextAttemptTimeoutMs) : PROTOCOL_UI.CONTEXT_ATTEMPT_TIMEOUT_MS;
     const onWidgetMessage = typeof settings.onWidgetMessage === "function" ? settings.onWidgetMessage : null;
     const onContextReady = typeof settings.onContextReady === "function" ? settings.onContextReady : null;
     const onError = typeof settings.onError === "function" ? settings.onError : () => {};
@@ -221,7 +226,50 @@ export function createWidgetBridge(widgetElement, options = {}) {
         if (!onContextReady || contextInFlight || destroyed) return;
         contextInFlight = true;
         try {
-            const context = await withManagedTimeout(Promise.resolve().then(() => onContextReady(message, bridge)), contextTimeoutMs, WIDGET_ERROR_CODE.CONTEXT_TIMEOUT, timers);
+            const loadContextWithRetry = async () => {
+                let lastError = null;
+                for (let attempt = 1; attempt <= PROTOCOL_UI.CONTEXT_ATTEMPTS; attempt += 1) {
+                    if (destroyed) return null;
+                    try {
+                        const context = await withManagedTimeout(
+                            Promise.resolve().then(() => onContextReady(message, bridge)),
+                            contextAttemptTimeoutMs,
+                            WIDGET_ERROR_CODE.CONTEXT_TIMEOUT,
+                            timers
+                        );
+                        if (context === undefined || context === null) {
+                            const error = new Error(WIDGET_ERROR_CODE.CONTEXT_FAILED);
+                            error.code = WIDGET_ERROR_CODE.CONTEXT_FAILED;
+                            throw error;
+                        }
+                        return context;
+                    } catch (cause) {
+                        lastError = cause;
+                        if (attempt >= PROTOCOL_UI.CONTEXT_ATTEMPTS || destroyed) throw cause;
+                        const delayMs = Math.min(
+                            PROTOCOL_UI.RETRY_BASE_DELAY_MS * (2 ** (attempt - 1)),
+                            PROTOCOL_UI.RETRY_MAX_DELAY_MS
+                        );
+                        try {
+                            onError(Object.assign(new Error("WIDGET_CONTEXT_RETRY"), {
+                                code: "WIDGET_CONTEXT_RETRY",
+                                attempt,
+                                nextAttempt: attempt + 1,
+                                delayMs,
+                                cause
+                            }));
+                        } catch (_) { /* el log no debe bloquear el reintento */ }
+                        await new Promise((resolve) => setTimeout(resolve, delayMs));
+                    }
+                }
+                throw lastError || new Error(WIDGET_ERROR_CODE.CONTEXT_FAILED);
+            };
+            const context = await withManagedTimeout(
+                loadContextWithRetry(),
+                contextTimeoutMs,
+                WIDGET_ERROR_CODE.CONTEXT_TIMEOUT,
+                timers
+            );
             if (destroyed || context === undefined || context === null) return;
             send(MESSAGE_TYPES.CONTEXT, context, message.messageId || null);
         } catch (cause) {
