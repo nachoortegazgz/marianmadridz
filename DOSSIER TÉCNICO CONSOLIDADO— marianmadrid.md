@@ -1,4 +1,4 @@
-# DOSSIER TÉCNICO CONSOLIDADO — marianmadrid.es (SSOT v10.0 + anexos reconciliados)
+# DOSSIER TÉCNICO CONSOLIDADO — marianmadrid.es (SSOT versión.z + anexos reconciliados)
 
 **Proyecto:** Marian Madrid Peluquería y Estética · **Fecha:** 2026-11-01 · **Versión SSOT base:** v10.0 **Version consolidada redactada usando como fuentes el resto de documentos de este repositorio**
 
