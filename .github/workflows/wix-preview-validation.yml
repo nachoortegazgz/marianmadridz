@@ -59,9 +59,9 @@ jobs:
           TERM: "xterm"
         run: |
           set -euo pipefail
-          rm -f wix-preview.log wix-preview-url.txt
+          rm -f wix-preview.log wix-preview-wrapper.log wix-preview-url.txt
 
-          for required_command in script setsid grep; do
+          for required_command in script setsid grep ps; do
             if ! command -v "${required_command}" >/dev/null 2>&1; then
               echo "::error::Required command not found: ${required_command}"
               exit 1
@@ -101,12 +101,17 @@ jobs:
             if ! kill -0 "${preview_pid}" >/dev/null 2>&1; then
               break
             fi
+            process_state="$(ps -o stat= -p "${preview_pid}" 2>/dev/null || true)"
+            case "${process_state}" in
+              Z*) break ;;
+            esac
             sleep 2
           done
 
           if [ "${preview_ready}" != "true" ]; then
             echo "::error::Wix Preview did not produce its explicit deployment confirmation and wix.to URL within 8 minutes."
             cat wix-preview.log || true
+            cat wix-preview-wrapper.log || true
             exit 1
           fi
 
@@ -124,5 +129,6 @@ jobs:
           if-no-files-found: warn
           path: |
             wix-preview.log
+            wix-preview-wrapper.log
             wix-preview-url.txt
             wix-preview-url.txt
