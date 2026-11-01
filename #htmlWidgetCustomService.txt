@@ -5,7 +5,25 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Servicio | Marian Madrid</title>
 <style>
+@import url("https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Montserrat:wght@400;500;600;700&display=swap");
+
 :root{--paper:#fbfaf8;--surface:#fff;--ink:#20201f;--muted:#6c6a66;--line:#e8e3dc;--accent:#aa8756;--accent-dark:#80623c;--danger:#a2362a;--danger-bg:#fff2ef}*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font-family:Inter,Arial,sans-serif}button{font:inherit}.widget{width:100%;max-width:1120px;margin:auto;padding:clamp(16px,4vw,40px)}.error-banner{display:none;margin-bottom:18px;padding:13px 16px;border:1px solid #f0b9b0;border-radius:10px;background:var(--danger-bg);color:var(--danger);font-weight:700}.back-button{margin-bottom:22px;padding:0;border:0;background:transparent;color:var(--muted);cursor:pointer;font-size:13px;font-weight:800;text-transform:uppercase}.hero{display:grid;grid-template-columns:1.05fr .95fr;overflow:hidden;border:1px solid var(--line);border-radius:24px;background:var(--surface);box-shadow:0 20px 50px rgba(45,38,28,.08)}.hero-media{position:relative;min-height:360px;background:#e9e2d9}.hero-image{display:block;width:100%;height:100%;min-height:360px;object-fit:cover}.media-overlay{position:absolute;inset:0;background:linear-gradient(180deg,transparent 50%,rgba(20,17,13,.42));pointer-events:none}.media-badge{position:absolute;top:18px;left:18px;padding:8px 10px;border-radius:999px;background:rgba(255,255,255,.92);font-size:10px;font-weight:900;letter-spacing:.12em}.hero-content{display:flex;flex-direction:column;justify-content:center;padding:clamp(26px,5vw,56px)}.eyebrow,.card-kicker{margin:0 0 12px;color:var(--accent-dark);font-size:11px;font-weight:900;letter-spacing:.13em;text-transform:uppercase}h1,h2{margin:0;font-family:Georgia,serif;font-weight:500}h1{font-size:clamp(34px,5vw,58px);line-height:.98}h2{font-size:30px}.summary{margin:20px 0 0;color:#45423e;font-size:17px;line-height:1.65}.meta-list{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:28px}.meta-item{padding:13px 0;border-top:1px solid var(--line)}.meta-label{display:block;color:var(--muted);font-size:10px;font-weight:900;text-transform:uppercase}.meta-value{display:block;margin-top:5px;font-size:13px;font-weight:700}.service-grid{display:grid;grid-template-columns:1fr 330px;gap:40px;margin-top:40px;align-items:start}.content-stack{display:grid;gap:18px}.card{padding:30px;border:1px solid var(--line);border-radius:16px;background:var(--surface)}.description{margin:16px 0 0;color:#47433f;line-height:1.8;white-space:pre-line}.addons-list,.recommendations{display:grid;gap:10px;margin-top:16px}.addon{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:14px;border:1px solid var(--line);border-radius:10px;background:#fffdfb;cursor:pointer}.addon-name{font-size:14px;font-weight:800}.addon-price{color:var(--accent-dark);font-size:13px;font-weight:900}.recommendation{padding:13px 15px;border-left:3px solid var(--accent);background:#fcf8f2;color:#4e4130;font-size:14px;line-height:1.5}.booking-card{position:sticky;top:16px;padding:24px;border-radius:16px;background:#27231f;color:#fff}.booking-label{margin:0;color:#d9c4a4;font-size:10px;font-weight:900;text-transform:uppercase}.booking-price{margin:9px 0 4px;font-family:Georgia,serif;font-size:42px}.booking-note{color:#ded8cf;font-size:13px;line-height:1.55}.total-extras{display:none;margin-top:18px;padding:11px 0;border-top:1px solid rgba(255,255,255,.16);color:#e8dfd1;font-size:13px}.booking-button{width:100%;min-height:54px;margin-top:22px;padding:14px 18px;border:0;border-radius:10px;background:#f1e1c8;color:#292018;cursor:pointer;font-size:13px;font-weight:900;text-transform:uppercase}.booking-button:disabled{background:#8b8379;color:#d6d1cb;cursor:not-allowed}.booking-assurance{color:#c9c0b5;font-size:11px;line-height:1.55;text-align:center;margin-top:16px}@media(max-width:820px){.hero,.service-grid{grid-template-columns:1fr}.booking-card{position:static}}@media(max-width:480px){.meta-list{grid-template-columns:1fr}}
+
+/* MM BRAND SYSTEM — shared by service and calendar widgets */
+:root{
+  --mm-paper:#fbfaf8;--mm-surface:#ffffff;--mm-ink:#292724;
+  --mm-muted:#77716a;--mm-line:#e8e3dc;--mm-accent:#aa8756;
+  --mm-accent-dark:#80623c;--mm-soft:#f5f1eb;--mm-danger:#a2362a;
+  --mm-radius:16px;--mm-shadow:0 16px 42px rgba(45,38,28,.07);
+}
+html,body{background:var(--mm-paper);color:var(--mm-ink);
+  font-family:"Brandon Grotesque","Montserrat","Avenir Next",Arial,sans-serif;
+  font-size:14px;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+button,input,textarea,select{font:inherit}
+h1,h2,.booking-price{font-family:"Libre Baskerville",Georgia,serif;font-weight:400;letter-spacing:-.035em}
+button{transition:background-color .18s ease,border-color .18s ease,color .18s ease,box-shadow .18s ease}
+:focus-visible{outline:2px solid var(--mm-accent);outline-offset:3px}
+
 </style>
 </head>
 <body>
@@ -38,7 +56,7 @@ const CONFIG = Object.freeze({
   DEFAULT_CURRENCY: "EUR",
   DEFAULT_LOCATION: "Marian Madrid",
   MAX_ADDONS: 5,
-  DEFAULT_IMAGE: "data:image/svg+xml;charset=UTF-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 800'><rect width='1200' height='800' fill='%23e9e2d9'/><text x='600' y='390' text-anchor='middle' fill='%23342b24' font-family='Georgia' font-size='68'>MARIAN MADRID</text><text x='600' y='455' text-anchor='middle' fill='%2380623c' font-family='Arial' font-size='24'>SERVICIO DE BELLEZA</text></svg>",
+  DEFAULT_IMAGE: "https://static.wixstatic.com/media/ab7708_588ab0ed2d7f42f4a63edb9e9c76da1c~mv2.jpg",
 
   ALLOWED_ORIGIN_SUFFIXES: Object.freeze([
     "marianmadrid.es",

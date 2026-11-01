@@ -22,6 +22,18 @@ test("BOOK-FLOW-CONTRACT-01 protocol exposes expanded time windows and exactly t
   assert.equal(PROTOCOL_UI.RETRY_MAX_DELAY_MS, 4000);
 });
 
+
+test("BOOK-FLOW-WIDGET-BRAND-01 both widgets share the approved image, typography and protocol", () => {
+  const sharedImage = "https://static.wixstatic.com/media/ab7708_588ab0ed2d7f42f4a63edb9e9c76da1c~mv2.jpg";
+  for (const source of [calendarWidgetSource, serviceWidgetSource]) {
+    assert.ok(source.includes(sharedImage));
+    assert.match(source, /Libre\+Baskerville|Libre Baskerville/);
+    assert.match(source, /Brandon Grotesque/);
+    for (const type of ["MM_READY", "MM_CONTEXT", "MM_AVAIL", "MM_SELECT", "MM_BOOK", "MM_NAV"]) {
+      assert.ok(source.includes(type), `missing protocol message: ${type}`);
+    }
+  }
+});
 test("BOOK-FLOW-TIMING-01 module deadlines fit the configured widget watchdogs", () => {
   assert.match(calendarWidgetSource, /contextTimeoutMs:120000/);
   assert.match(calendarWidgetSource, /bookingTimeoutMs:90000/);
