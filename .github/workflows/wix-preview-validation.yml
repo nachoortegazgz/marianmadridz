@@ -54,9 +54,12 @@ jobs:
           wix login --api-key "${CLI_API_KEY}"
 
       - name: Create Wix preview (never publish)
+        env:
+          CI: "true"
+          TERM: "xterm"
         run: |
           set -o pipefail
-          wix preview 2>&1 | tee wix-preview.log
+          script -q -e -c "wix preview" /dev/null 2>&1 | tee wix-preview.log
 
       - name: Preserve preview output
         if: always()
