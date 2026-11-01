@@ -121,7 +121,7 @@ B.3  Autenticación: login interactivo y API keys
 B.4  Comandos CLI for Sites (referencia operativa)
      └─ `wix dev` · `install` · `update` · `uninstall` · `publish` · `preview` · `login` · `whoami` · `-h`
      [DUP parcial: §F.21.1 repite `wix login`/`whoami`/`dev`]
-     [REF: §J.2 para comandos no documentados: `wix build`, `wix release`, `wix connect`, `wix env pull/set`, `wix translation pull`]
+     [REF: §J.2 para comandos no documentados: comandos de otros tipos de proyecto/CLI (no aplicables al Wix Editor clásico de este sitio)]
 
 B.5  Wix MCP (Model Context Protocol)
      ├─ B.5.1 Qué es
@@ -566,7 +566,7 @@ J.1  Wix MCP — Configuración avanzada y herramientas expuestas
      ⚠️ Wix Site MCP (`/_api/mcp`) — capa por sitio, no cubierta en §B.5
 
 J.2  CLI for Sites — Comandos y flags no documentados en §B.4
-     └─ `wix build`, `wix release`, `wix connect`, `wix env pull/set`, `wix translation pull`, `npm create @wix/new app/headless`
+     └─ comandos de Wix CLI unified para apps/headless (no aplicables a este sitio) y comandos no confirmados para CLI for Sites
      └─ Advertencia: `wix publish` desde local desincroniza repo y sitio vivo
      └─ GitHub Actions YAML exacto con `wix login --api-key`
      [REF: §B.8 workflow mínimo]
@@ -720,7 +720,7 @@ Se aplican en **orden estricto**. Si dos entran en conflicto, prevalece el de me
 
 ### 3.3 Métricas y verificación
 
-- **D9 — Métrica con contexto.** Toda cifra (tests, versiones, IDs, importes, plazos) se presenta como: **valor + fuente + fecha + estado** (`verificado` / `declarado`). Ejemplo: `182 pass / 0 fail · [FUENTE: dossier §0, 2026-11-01] · declarado, no verificado en esta sesión`.
+- **D9 — Métrica con contexto.** Toda cifra (tests, versiones, IDs, importes, plazos) se presenta como: **valor + fuente + fecha + estado** (`verificado` / `declarado`). Ejemplo: `dato histórico de tests · fuente/fecha/estado obligatorios · no presentar como medición actual`.
 - **D10 — Prohibido “verde” sin run.** "CI verde" exige `run ID` y commit. "Publicado" exige confirmación en Wix, no el estado del sitio.
 - **D11 — Discrepancias explícitas.** Si dos fuentes discrepan (p. ej. 182 vs 158 tests; `resource.id` vs `resource._id`), se muestran **ambas**, se aplica la **precedencia** (§4) y se registra la corrección.
 - **D12 — Verificación reproducible.** Cuando se afirma algo verificable, se indica **cómo reproducirlo** (comando, consulta, endpoint, test).
@@ -812,7 +812,7 @@ Toda métrica se entrega como tabla:
 
 | Métrica | Valor | Fuente | Fecha | Estado |
 |---|---|---|---|---|
-| Tests Vitest | 182 pass / 0 fail · 11 suites | dossier §0 | 2026-11-01 | `[DECLARADO]` |
+| Tests Vitest | 182 pass / 0 fail · 11 suites (dato histórico declarado; no es una medición actual verificada) | dossier §0 | 2026-11-01 | `[DECLARADO]` |
 | Tests Vitest (SSOT) | 158/158 | SSOT §0.8 | 2026-10-30 | `[DECLARADO]` — discrepancia abierta |
 | CI `main` | run `41053070852` SUCCESS | auditoría §7 | 2026-10-30 | `[HECHO]` |
 | Publicado en Wix | — | — | — | `[PENDIENTE]` |
@@ -1062,14 +1062,14 @@ claude mcp add --transport http wix-mcp-remote https://mcp.wix.com/mcp
 
 ---
 
-## 8. CI/CD con GitHub Actions (publicación automatizada)
+## 8. CI/CD con GitHub Actions (referencia; no es el workflow activo de este proyecto)
 
 ### 8.1 Requisitos
 
 1. Sitio ya integrado con GitHub.
 2. API key con permiso **“Wix CLI for Sites – Git Integration”**, guardada como secret `CLI_API_KEY`.
 
-### 8.2 Workflow mínimo
+### 8.2 Ejemplo de autenticación y Preview (no publicar automáticamente)
 
 ```yaml
 name: Wix Publish
@@ -3897,15 +3897,15 @@ claude mcp add --transport http wix-mcp-remote https://mcp.wix.com/mcp
 | Comando / Flag | Función | Referencia |
 |---|---|---|
 | `wix dev --tunnel` | Local Editor desde IDE en cloud (GitHub Codespaces) |  |
-| `wix build` | Construye assets del proyecto |  |
+| `wix build` | No forma parte de los comandos documentados de Wix CLI for Sites; pertenece a flujos de otros tipos de proyecto. No usar en este sitio. | Wix CLI for Sites Commands |
 | `wix preview` | Crea versión compartible antes de publicar |  |
-| `wix release` | Guía el proceso de release (headless/apps) |  |
-| `wix connect` | Conecta proyecto a Wix Vibe (edición visual IA) |  |
-| `wix env pull` | Descarga variables de entorno a `.env.local` |  |
-| `wix env set` | Establece variable de entorno en servidores Wix |  |
-| `wix translation pull` | Descarga traducciones del dashboard Multilingual |  |
-| `npm create @wix/new app` | Scaffolding de app (CLI unified, no Sites) |  |
-| `npm create @wix/new headless` | Scaffolding de proyecto headless |  |
+| `wix release` | No forma parte de los comandos documentados de Wix CLI for Sites; se utiliza en flujos de apps/headless. No usar en este sitio. | Wix CLI Reference (unified) |
+| `wix connect` | No aparece en la referencia oficial consultada de CLI for Sites; no tratarlo como comando disponible en este repositorio. | No confirmado |
+| `wix env pull` | Comando de otros tipos de proyecto Wix CLI; no aplicable al sitio Editor clásico. | Wix CLI Reference (unified) |
+| `wix env set` | Comando de otros tipos de proyecto Wix CLI; no aplicable al sitio Editor clásico. | Wix CLI Reference (unified) |
+| `wix translation pull` | Comando de otros tipos de proyecto Wix CLI; no aplicable al sitio Editor clásico. | Wix CLI Reference (unified) |
+| `npm create @wix/new app` | Scaffolding de apps; no es parte del flujo CLI for Sites. | Wix CLI Reference (unified) |
+| `npm create @wix/new headless` | Scaffolding headless; no es parte del flujo CLI for Sites. | Wix CLI Reference (unified) |
 
 **Advertencia**: publicar desde código local con `wix publish` **desincroniza el sitio vivo del repositorio de GitHub**. En este proyecto, seleccionar el commit de la rama por defecto tras revisión. Los comandos `build`, `release`, `env pull/set` y `translation pull` pertenecen a otros tipos de proyecto/CLI y **no forman parte del catálogo documentado de Wix CLI for Sites**; `connect` tampoco se considera comando confirmado para este sitio.
 
@@ -3996,7 +3996,7 @@ export default defineWixConfig({
 
 | Dato ausente | Impacto | Cómo obtenerlo |
 |---|---|---|
-| Versión exacta de `@wix/cli` instalada (`wix --version`) | Determina si soporta `wix token --site`, `wix env pull`, `wix connect` | `wix --version` en clon local |
+| Versión exacta de `@wix/cli` instalada (`wix --version`) | Determina la versión CLI instalada; no inferir disponibilidad de comandos no documentados para CLI for Sites | `wix --version` en clon local |
 | Existencia de `src/velo.dependencies.json` | Regla ESLint `@wix/cli/no-invalid-backend-import` desactivada si falta | `ls src/velo.dependencies.json` |
 | Configuración de `wix.config.mjs` / `wix.config.json` | Determina si el plugin de diagnóstico está activo | Revisar archivo en raíz del proyecto |
 | Variables `WIX_CODE_DIAGNOSTICS_*` definidas | Sin ellas, el plugin es inerte | Revisar `.env` / Secrets Manager |
@@ -4007,6 +4007,7 @@ export default defineWixConfig({
 ---
 
 **[PENDIENTE]**
+- La SSOT v10.0 y la hoja de necesidades se citan como fuentes del proyecto, pero no figuran como archivos en la raíz de `main` consultada; conservarlas como fuentes externas adjuntas hasta incorporarlas de forma controlada al repositorio.
 - Confirmar si el proyecto usa `wix.config.mjs` (nuevo formato) o `wix.config.json` (legacy); el plugin de diagnóstico requiere `wix.config.mjs`.
 - Verificar si `WIX_CODE_DIAGNOSTICS_ENDPOINT` y `WIX_CODE_DIAGNOSTICS_TOKEN` están definidos en el entorno de desarrollo.
 - Decidir si se habilita el **Wix Site MCP** (endpoint `/_api/mcp`) para agentes de visitantes; hoy no está en el alcance.
@@ -4049,6 +4050,8 @@ Esta actualización corrige afirmaciones heredadas y registra el estado observad
 ## Manifiesto Velo
 
 - En la consulta del árbol de `main`, `src/velo.dependencies.json` no existe. No crearlo ni editarlo manualmente; seguir el procedimiento oficial Wix CLI for Sites.
+
+- La BIBLIA SSOT v10.0 y la hoja de necesidades se citan en el dossier, pero no aparecen como archivos en la raíz del repositorio `main` consultada el 2026-11-01. No afirmar que están versionadas en GitHub; mantener su versión y custodia documental explícitas.
 - La regla ESLint `@wix/cli/no-invalid-backend-import` permanece desactivada hasta que Wix genere el manifiesto auténtico y el lint pueda validarse con él.
 
 ## Identificadores Bookings y personal
