@@ -232,7 +232,7 @@ D.2  Stack Técnico y Runtime Velo
      [DUP: §F.13.4 detalla PR #10–#13 con cambios de dependencias]
 
 D.3  Aplicaciones Wix Instaladas
-     ├─ D.3.1 Inventario de Apps (8 apps con App IDs, rol y restricción)
+     ├─ D.3.1 Inventario de Apps y funciones (IDs canónicos en §F.22.2)
      ├─ D.3.2 Reglas de convivencia WIX_APP (solo lectura; mutación vía SDK oficial)
      ├─ D.3.3 Reserva dual — prohibición multiservice (DUAL F1+F2 con pairToken)
      ├─ D.3.4 Tipos y categorías (APPOINTMENT, CLASS, COURSE; 8 categorías por GUID)
@@ -241,10 +241,8 @@ D.3  Aplicaciones Wix Instaladas
 
 D.4  Identidades Canónicas
      ├─ D.4.1 Parámetros de ubicación (LOCATION_ID, STAFF_RESOURCE_TYPE_ID, LOCATION_TYPE, TZ, moneda)
-     ├─ D.4.2 Matriz de personal (Marian ADMIN, Andrea/Alba ESTILISTA, resourceIds)
-     └─ D.4.3 Identificadores transversales (9 IDs: traceId, pairToken, dedupeKey, movementToken, transactionId, bookingId, eventId, sequenceNumber, numSerieFactura)
-     [DUP: §F.7.3 amplía la tabla de identificadores transversales]
-     [DUP: §F.22.1 repite matriz de personal; §F.22.2 repite App IDs]
+     ├─ D.4.2 Matriz de personal [REF: §F.22.1]
+     └─ D.4.3 Identificadores transversales [REF: §F.7.3]
 ```
 
 ---
@@ -282,11 +280,8 @@ E.4  eCommerce (@wix/ecom@1.0.2539 → Cart V2, plazo 1-feb-2027)
      └─ Errores a evitar (4)
 
 E.5  Stores (@wix/stores@1.0.960, Catalog V1/V3)
-     ├─ getCatalogVersion() obligatorio
-     ├─ Módulos por versión (V1 vs V3)
-     ├─ Diferencias estructurales (precios por variante, default variant, inventario variante-ubicación)
-     └─ Errores a evitar (5)
-     [REF: §F.14 adaptador dual PR #13 y estado real]
+     ├─ Detección de versión obligatoria con getCatalogVersion()
+     └─ [REF: §F.14 para módulos V1/V3, diferencias, adaptador PR #13, estado real y gates]
 
 E.6  Essentials (@wix/essentials@1.0.15)
      ├─ auth.elevate(method) solo backend
@@ -365,7 +360,7 @@ F.9  Flujos de negocio
 
 F.10 Hooks e integridad CMS (backend/data.js)
      ├─ F.10.1 Ledgers append-only (4)
-     ├─ F.10.2 Validaciones por colección (11)
+     ├─ F.10.2 Validaciones adicionales por colección (sin duplicar invariantes §G.14.1)
      └─ F.10.3 Principios (3)
 
 F.11 Permisos, elevación y seguridad
@@ -392,20 +387,20 @@ F.14 Wix Stores Catalog V1/V3
      ├─ F.14.4 Decisión ADR-001 (dual, cambio irreversible aplazado)
      └─ F.14.5 Pendientes antes de V3 (5)
      [FUENTE CANÓNICA de módulos y estado real; §E.5 remite aquí.]
-     [DUP parcial: §E.5 módulos por versión]
+     [REF: §E.5 conserva solo la detección de versión; §F.14 es la fuente canónica de módulos y estado del proyecto.]
 
 F.15 Wix Invoices V1
      └─ V1 activo; no consume API Wix Invoices; no migrar a V2 sin auditoría
 
 F.16 Contrato Bookings V2 — SDK vs REST (PR #15; fuente canónica)
-     └─ resource._id vs resource.id; location._id vs location.id; filtro resourceTypes[].resourceIds
+     └─ `_id` SDK vs `id` REST; `resourceId` para filtrar profesional y `scheduleId` nativo para el slot
      [REF: §E.1.2 estrategias Bookings]
 
 F.17 Deuda técnica y matriz de riesgos (16 riesgos técnicos con impacto y mitigación)
      [COMPLEMENTARIO, no duplicado: §C.4 conserva riesgos transversales de gobernanza/planificación.]
 
 F.18 Normativa aplicable (8 ámbitos; referencia técnica estatal)
-     [REF: §H.5 normativa estatal + autonómica/municipal]
+     [REF: §H.5.1 para implicaciones de negocio y §H.5.2 para normativa autonómica/municipal]
 
 F.19 Criterios de aceptación SSOT (12 puntos)
      └─ Punto 11: discrepancia 182 vs 158 tests
@@ -416,7 +411,7 @@ F.20 Necesidades funcionales del negocio (RF/RL/RT)
      └─ F.20.3 Discrepancias a resolver (repo URL, colecciones citadas no existentes)
 
 F.21 Operativa Wix CLI, permisos y profesionales
-     ├─ F.21.1 Requisitos locales
+     ├─ F.21.1 Requisitos locales [REF: §B.3 autenticación CLI y §J.2 comandos/workflow]
      ├─ F.21.2 Matriz de permisos (12 áreas)
      ├─ F.21.3 Profesionales en Wix Bookings (3 IDs, WORKING_HOURS)
      ├─ F.21.4 Permisos de profesionales en el panel
@@ -2528,7 +2523,7 @@ Cualquier intento de lectura/escritura sobre legacy es interceptado en `backend/
 | `MovimientosInventario` | `reason` obligatorio si `movementType === "AJUSTE"` | Hook |
 | `LibroAsientosContablesDetalle` | `debitAmount` y `creditAmount` cuadran por asiento | Proyección contable |
 | `LibroAsientosContablesDetalle` | `recordHash`/`previousRecordHash` encadenados | Cadena contable |
-| `CitasF2` | `traceId` presente y `pairToken` coherente en parejas `DUAL_F1`/`DUAL_F2` | Hook/escritor; QA de coherencia según §16 |
+| `CitasF2` | `traceId` presente y `pairToken` coherente en parejas `DUAL_F1`/`DUAL_F2` | Hook/escritor; flujo dual descrito en §9.2 |
 
 Esta es la única tabla normativa de invariantes CMS. §5.4 y §10.2 remiten aquí; no mantener copias parciales en esos apartados.
 
