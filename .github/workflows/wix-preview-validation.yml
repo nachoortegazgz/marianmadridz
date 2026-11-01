@@ -53,6 +53,11 @@ jobs:
           fi
           wix login --api-key "${WIX_CLI_API_KEY}"
 
+      - name: Build Wix project
+        run: |
+          set -o pipefail
+          wix build 2>&1 | tee wix-build.log
+
       - name: Create Wix preview (never publish)
         run: |
           set -o pipefail
