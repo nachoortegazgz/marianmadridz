@@ -4233,14 +4233,14 @@ La reserva simple sí ha recorrido el código real de `executeBookingSaga`, pero
 5. `audit.e2e.runner.mjs` valida estructuras y controles sintéticos; no realiza ocho transacciones Wix.
 6. No se han validado notificaciones reales, permisos de visitante/miembro en sitio publicado, webhooks, cron, HTTP Functions ni conciliación de pagos.
 7. No se ha ejecutado reserva dual E2E real; sigue expresamente excluida en §24.6 y §25.
-8. El workflow Wix Preview corregido sigue pendiente de ejecución en `main`; PR #66 permanece sin integrar en el momento de este corte.
+8. PR #66 ya está integrada en `main` (commit `7d872e447ff35ee8eeaa25dd858a429d50b6a933`). El run Wix Preview #26 (`41305113237`) está ejecutando la nueva validación; todavía no se declara correcto hasta obtener URL y artefacto.
 
 **Estado QA resultante:** 289 tests offline superados. Reserva simple `executeBookingSaga` → Writer V2 mock → CitasF2 → replay idempotente superada. Jornada funcional modular simulada. **Integración runtime Wix y jornada completa compartida en un sitio QA: NO EJECUTADAS / PENDIENTES.**
 
 ### 27.6 Próxima secuencia segura
 
-1. Revisar e integrar PR #66 (Wix Preview fail-closed) y PR #68 (corrección de replay idempotente), con sus checks verdes.
-2. Esperar el nuevo run Wix Preview de `main`; comprobar frase exacta, URL `wix.to`, artefacto y apertura manual.
+1. Verificar el run Wix Preview #26 (`41305113237`) de PR #66 ya integrada: mensaje exacto, URL `wix.to`, artefacto y apertura manual.
+2. Si Preview queda validado, integrar PR #68 (corrección de replay idempotente) con CI verde; su cambio en `src/**` disparará un nuevo Preview que también debe verificarse.
 3. Crear/confirmar un sitio Wix QA realmente separado, con sandbox y datos aislados. No considerar Wix Preview equivalente a ese sitio.
 4. Antes de cualquier escritura QA, comprobar que Bookings, CMS, HTTP Functions, notificaciones y pagos apuntan al entorno QA y no a producción.
 5. Ejecutar una reserva simple runtime solo con autorización expresa, buzón QA controlado, sin cobro y con plan de cancelación/notificaciones aprobado.
