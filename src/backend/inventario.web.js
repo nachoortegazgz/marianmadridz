@@ -288,7 +288,7 @@ async function acquireInventoryVariantLock(stockItem, stockKey, traceId) {
 
   const lock = {
     _id: lockId,
-    controlType: CONTROL_TYPE.ALERT,
+    controlType: CONTROL_TYPE.SLOT_LOCK,
     alertType: "INVENTORY_VARIANT_LOCK",
     dedupeKey: stockKey,
     status: "LOCKED",
