@@ -66,7 +66,7 @@ jobs:
             exit 1
           fi
 
-          if ! printf '\\n' | timeout 8m script -q -e -c "wix preview" /dev/null > wix-preview.log 2>&1; then
+          if ! printf '\n' | timeout 8m script -q -e -c "wix preview" /dev/null > wix-preview.log 2>&1; then
             echo "::error::Wix preview command failed."
             cat wix-preview.log || true
             exit 1
