@@ -358,7 +358,59 @@ test('DTO-04 getMovimientoByBooking exposes only receipt-safe fields', async () 
   assert.strictEqual(res.data.recordHash, 'HASH1'); // AEAT QR field projected from canonical ledger hash
 });
 
-test('DTO-05 missing bookingId rejected without CMS call', async () => {
+test('DTO-05 non-cashier staff cannot read fiscal movement by bookingId', async () => {
+  wixDataMock._reset();
+  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA, [{
+    _id: 'm2',
+    linkedBookingIds: 'BK-81',
+    numSerieFactura: 'EM-2026-10-00000002',
+    nifEmisor: 'B99999999',
+    totalAmount: 25,
+  }]);
+
+  const STYLIST_CONTACT_ID = '55555555-5555-4555-8555-555555555555';
+  const ANDREA_RESOURCE_ID = '07f7344f-e7e4-4c53-854b-47fd82ac8d40';
+  globalThis.__mmMembersState._current = {
+    _id: 'member-stylist-dto-0001',
+    contactId: STYLIST_CONTACT_ID,
+  };
+  mocks.sdk['bookings::staffMembers'] = {
+    queryStaffMembers: async () => ({
+      staffMembers: [{
+        _id: '66666666-6666-4666-8666-666666666666',
+        resourceId: ANDREA_RESOURCE_ID,
+        name: 'Andrea',
+        serviceProvider: true,
+        resource: { workingHoursSchedules: [] },
+        associatedWixIdentity: {
+          identificationData: { contactId: STYLIST_CONTACT_ID },
+          connection: { status: 'CONNECTED' },
+        },
+      }],
+      pagingMetadata: { hasNext: false, cursors: {} },
+    }),
+  };
+  const staffModule = await import('../staff.js');
+  staffModule.invalidateStaffCache();
+
+  let result;
+  try {
+    result = await CW.getMovimientoByBooking({ bookingId: 'BK-81' });
+  } finally {
+    globalThis.__mmMembersState._current = null;
+    staffModule.invalidateStaffCache();
+  }
+
+  assert.strictEqual(result.status, 'ERROR');
+  assert.strictEqual(result.data, null);
+  assert.strictEqual(
+    wixDataMock._calls.some((call) => call.collection === IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA),
+    false,
+    'non-cashier must be denied before querying fiscal ledger'
+  );
+});
+
+test('DTO-06 missing bookingId rejected without CMS call', async () => {
   wixDataMock._reset();
   const before = wixDataMock._calls.length;
   const a = await RW.getConfirmedBookingForDisplay({});
