@@ -1078,7 +1078,7 @@ Duplicar validaciones frontend/backend · crear flags o campos sin consumidor ·
 
 **Alcance:**
 - Bookings **V2** (`@wix/bookings@1.0.1704`): `listAvailabilityTimeSlots` (`timeZone` mayúscula, `locationType: "BUSINESS"`), `createBooking` (`timezone` minúscula en `bookedEntity.slot`, `locationType: "OWNER_BUSINESS"`), `Query Extended Bookings V2`.
-- **DUAL F1+F2** con `pairToken` (UUID v4); dos llamadas independientes; **prohibido** `createMultiServiceBooking`.
+- **DUAL F1+F2** con `pairToken` determinista compartido; dos llamadas independientes; **prohibido** `createMultiServiceBooking`.
 - Mutex `SLOT_LOCK` en `ControlOperativo` + revalidación exacta en servidor.
 - Saga de compensación: si F2 falla, cancelar F1 y registrar en `ControlOperativo`; cron `runPendingCompensationsJob` (min 30 de cada hora).
 - Asignación de profesional: si el cliente elige, se respeta exactamente; si no, backend elige por menos horas reservadas del día con rotación en empate.
@@ -1418,7 +1418,7 @@ Los identificadores oficiales de las aplicaciones se mantienen exclusivamente en
 
 La API nativa `createMultiServiceBooking` exige servicios **sin ningún hueco intermedio**. Por ello está **explícitamente prohibida**.
 
-Se usa en su lugar la arquitectura **DUAL F1+F2** con dos llamadas independientes a `bookings.createBooking()`, vinculadas por `pairToken` (UUID v4). Si F2 falla, la saga de compensación cancela F1 de inmediato.
+Se usa en su lugar la arquitectura **DUAL F1+F2** con dos llamadas independientes a `bookings.createBooking()`, vinculadas por `pairToken` determinista compartido. Si F2 falla, la saga de compensación cancela F1 de inmediato.
 
 ### 3.4 Tipos y categorías de servicio
 
@@ -1896,7 +1896,7 @@ Cualquier intento de lectura/escritura sobre legacy es interceptado en `backend/
 | `paymentStatus` | `pagoEstado` | TEXT | Enum CMS: `UNPAID` \| `PARTIAL` \| `PAID` \| `REFUNDED`. ⚠️ Validar runtime. |
 | `serviceId` | `servicioId` | TEXT | GUID del servicio en Wix Bookings. **Distinto** de `catalogId`. |
 | `resourceId` | `recursoId` | TEXT | GUID del recurso (profesional) en Wix Bookings. **Índice** `idx_citasf2_resourceId`. |
-| `pairToken` | `parejaToken` | TEXT | UUID v4 que vincula F1 y F2 en reservas duales. **Índice** regular. |
+| `pairToken` | `parejaToken` | TEXT | Token de idempotencia: SIMPLE usa `pt` + 16 hex; DUAL usa fingerprint determinista `_hashKey` de 16 hex compartido F1/F2. **Índice** regular. |
 | `dateYmd` | `fechaYmd` | TEXT | Fecha operativa normalizada `YYYY-MM-DD`. |
 | `scheduleId` | `calendarioId` | TEXT | ID de calendario **del slot nativo** (`bookedEntity.slot.scheduleId`). **No** sustituir por `eventsSchedule.id` del profesional. |
 | `contactDetails` | `contactoDetalles` | OBJECT | Datos mínimos de contacto (ej. `{email}`). Minimizar PII. |
@@ -2048,7 +2048,7 @@ Cualquier intento de lectura/escritura sobre legacy es interceptado en `backend/
 | `orderId` | `pedidoId` | TEXT | ID de pedido Wix (si aplica). |
 | `refundId` | `reembolsoId` | TEXT | ID de reembolso Wix (si aplica). |
 | `catalogId` | `catalogoId` | TEXT | `_id` de `ServiciosCatalogo` (si aplica). |
-| `pairToken` | `parejaToken` | TEXT | UUID v4 de reserva dual. |
+| `pairToken` | `parejaToken` | TEXT | Token de idempotencia; en DUAL vincula F1/F2. |
 | `resourceId` / `staffResourceId` | `recursoId` / `personalRecursoId` | TEXT | `resourceId` del profesional. |
 | `thirdPartyId` | `terceraParteId` | TEXT | ID de tercero fiscal. |
 | `sourceEventId` | — | TEXT | `eventId` del webhook de origen. |
@@ -2404,7 +2404,7 @@ Cualquier intento de lectura/escritura sobre legacy es interceptado en `backend/
 | `eventId` | `eventoId` | TEXT | `eventId` del webhook (obligatorio si `WEBHOOK_EVENT`). |
 | `expiresAt` | `expiraEn` | DATETIME | Caducidad del lock (obligatorio si `SLOT_LOCK`). |
 | `bookingId` | `reservaId` | TEXT | GUID de reserva. |
-| `pairToken` | `parejaToken` | TEXT | UUID v4 de reserva dual. |
+| `pairToken` | `parejaToken` | TEXT | Token de idempotencia; SIMPLE usa token estable y DUAL comparte fingerprint determinista F1/F2. |
 | `resourceId` | `recursoId` | TEXT | `resourceId` del profesional. |
 | `serviceId` | `servicioId` | TEXT | GUID de servicio. |
 | `slotStart` | `franjaInicio` | DATETIME | Inicio del slot. |
@@ -2600,7 +2600,7 @@ API = { STAFF_RESOURCE_TYPE_ID: "1cd44cf8-756f-41c3-bd90-3e2ffcaf1155" }
 | ID | Generación | Alcance |
 |---|---|---|
 | `traceId` | `makeTraceId()` / `_generateUUID()` (UUID v4) | Obligatorio en toda mutación transaccional |
-| `pairToken` | UUID v4 | `CitasF2`, `ControlOperativo` |
+| `pairToken` | TEXT token determinista (SIMPLE `pt` + 16 hex; DUAL `_hashKey` de 16 hex) | `CitasF2`, `ControlOperativo` |
 | `dedupeKey` | Hash determinista | `ControlOperativo` (indexado) |
 | `movementToken` | UUID v4 | `MovimientosInventario` (único) |
 | `transactionId` | UUID v4 | `MovimientosCaja` (único) |
@@ -2689,7 +2689,7 @@ backend/
 
 ### 9.2 Reserva dual F1+F2 con gap
 
-1. Cliente selecciona F1 → 2. `ServiciosCatalogo.linkedPhases` resuelve F2 → 3. mutex `SLOT_LOCK` en `ControlOperativo` (`resourceId`, `expiresAt`) → 4. `pairToken` (UUID v4) → 5. `createBooking()` F1 → 6. cálculo `InicioF2 = InicioF1 + phase1Duration + exposureDuration` → 7. `createBooking()` F2 con `skipAvailabilityValidation: true` y `skipSelectedPaymentOptionValidation: true` / `NO_FEE` → 8. dos registros `CitasF2`: `DUAL_F1` (importe global, `pairToken`, `bookingId` F1) y `DUAL_F2` (`totalAmount = 0`, mismo `pairToken`, `bookingId` F2) → 9. si F2 falla: saga compensa cancelando F1 (`cancelBooking`) y registra en `ControlOperativo` → 10. libera mutex.
+1. Cliente selecciona F1 → 2. `ServiciosCatalogo.linkedPhases` resuelve F2 → 3. mutex `SLOT_LOCK` en `ControlOperativo` (`resourceId`, `expiresAt`) → 4. `pairToken` determinista → 5. `createBooking()` F1 → 6. cálculo `InicioF2 = InicioF1 + phase1Duration + exposureDuration` → 7. `createBooking()` F2 con `skipAvailabilityValidation: true` y `skipSelectedPaymentOptionValidation: true` / `NO_FEE` → 8. dos registros `CitasF2`: `DUAL_F1` (importe global, `pairToken`, `bookingId` F1) y `DUAL_F2` (`totalAmount = 0`, mismo `pairToken`, `bookingId` F2) → 9. si F2 falla: saga compensa cancelando F1 (`cancelBooking`) y registra en `ControlOperativo` → 10. libera mutex.
 
 > ⚠️ La combinación `skipSelectedPaymentOptionValidation: true` + `NO_FEE` para F2 **no está garantizada explícitamente** por la documentación de `flowControlSettings`. **Requiere validación en entorno real Wix Bookings V2** antes de fijarla como contrato.
 
@@ -4012,7 +4012,7 @@ El dominio `.test` está reservado para pruebas y no debe utilizarse para espera
     "oneBooking": true,
     "oneCitasF2Record": true,
     "bookingType": "SIMPLE",
-    "pairToken": null,
+    "pairToken": "STABLE_TOKEN_PT_PLUS_16_HEX",
     "noFiscalMovement": true
   }
 }
@@ -4057,7 +4057,7 @@ Esta fixture solo comprueba cálculo, vínculo, validaciones y compensación sim
 - `resourceId`: GUID del recurso/profesional de Bookings.
 - `scheduleId`: identificador de agenda/slot devuelto por Bookings; no es sinónimo de `resourceId`.
 - `bookingId`: solo el GUID devuelto por Wix al crear/consultar una reserva real; no se inventa.
-- `pairToken`: UUID v4 generado por el motor para vincular F1/F2; no se crea para reservas simples.
+- `pairToken`: token TEXT de idempotencia. En SIMPLE el código actual genera `pt` + 16 caracteres hexadecimales estables (servicio/recurso/inicio/email); no representa una pareja F1/F2. En DUAL con `resourceId` válido el código aplica `_hashKey` al fingerprint y obtiene 16 caracteres hexadecimales compartidos por F1/F2. `_hashKey` no es SHA-256 ni un hash criptográfico. No asumir UUID v4.
 - Fechas y horas se interpretan en `Europe/Madrid`; almacenar y comparar timestamps con conversión explícita UTC/local.
 - Toda ejecución automatizada lleva `scenarioId`, `traceId`, timestamp, versión/commit, entorno, resultado y evidencia no sensible.
 - No guardar PII real en logs, fixtures, capturas o artefactos CI. Enmascarar email/teléfono y excluir tokens, cookies, API keys y secretos.
@@ -4099,7 +4099,7 @@ La prueba solo se declara superada si se conserva evidencia de todos los puntos:
 - Slot ofrecido y slot reservado coinciden en fecha, hora, zona horaria, profesional/recurso y sede.
 - El backend revalida disponibilidad antes de crear.
 - Wix devuelve un `bookingId` válido y el registro `CitasF2` queda vinculado a ese ID con `bookingType = SIMPLE`.
-- No se crea una segunda reserva ni `pairToken`.
+- No se crea una segunda reserva ni Fase 2. El token estable `pairToken` puede existir para idempotencia, pero `bookingType` sigue siendo `SIMPLE` y solo se persiste una cita.
 - No se produce cobro ni movimiento fiscal.
 - Las notificaciones previstas llegan solo a buzones/dispositivos de QA autorizados.
 - La cancelación, si fue autorizada, deja el estado esperado y no rompe registros append-only.
@@ -4157,3 +4157,111 @@ Si un solo punto no se verifica, el resultado es **PARCIAL** o **FALLIDO**, nunc
 8. No ejecutar reserva dual E2E real, pagos reales ni escrituras fiscales como parte de QA sin una nueva autorización expresa.
 
 **Fuentes de estado:** repositorio `nachoortegazgz/marianmadridz` (HEAD `847a9d2`), PR #51–#63, workflow Backend quality gates run `41300896674`, Wix Preview run `41300896658` y auditoría CMS de solo lectura de 2026-11-01. Las evidencias y su alcance se describen arriba; los pendientes no se presentan como hechos completados.
+
+
+---
+
+
+## 27. Ejecución de simulación QA — corte 2026-11-01
+
+> **Naturaleza de la prueba:** regresión automatizada offline sobre el backend real del repositorio, con mocks en memoria de Wix SDK y datos sintéticos. No es un sitio Wix QA publicado ni una réplica persistente del CMS. No se escribieron datos en el sitio real.
+
+### 27.1 Identificación de ejecuciones
+
+| Campo | Primera simulación amplia | Prueba Writer V2 + corrección idempotencia |
+|---|---|---|
+| PR | #66 Wix Preview fail-closed | #68 reserva simple Writer V2 E2E offline |
+| Commit probado | `2fdd100d4252c984c28f7deabe84c0170b78218c` | `5173b68b7220a5019fd476e7da61fde745a577c0` |
+| Workflow | Backend quality gates | Backend quality gates |
+| Run | `41304182695` (#557) | `41304910924` (#571) |
+| Resultado | SUCCESS 4/4 jobs | **SUCCESS 4/4 jobs** |
+| Node | 24.22.1 y 26.12.1 | 24.22.1 y 26.12.1 |
+| Wix Preview real | No ejecutado | No ejecutado |
+| Escrituras Wix/CMS/Bookings/pagos | Ninguna | Ninguna; solo `wixDataMock` |
+
+### 27.2 Resultados medidos más recientes
+
+| Gate | Resultado |
+|---|---:|
+| Instalación limpia + ESLint | SUCCESS |
+| Regresión backend completa | **28 suites · 289 pass · 0 fail** |
+| Layer 1 | **9 suites · 183 pass · 0 fail** |
+| Layer 2 | **8 suites · 86 pass · 0 fail** |
+| Windows Node 24.22.1 — regresión + Layer 1 + Layer 2 + ESLint | SUCCESS |
+| Windows Node 26.12.1 — regresión + Layer 1 + Layer 2 + ESLint | SUCCESS |
+
+Los contadores de Layer 1 y Layer 2 se solapan con la regresión general; **no se suman** a las 289 pruebas.
+
+### 27.3 Actividad de negocio simulada
+
+Las suites ejecutaron código real de backend con respuestas Wix simuladas. Los escenarios se ejecutan en procesos y stores de mock independientes, excepto el escenario simple Writer V2, que ejecuta una secuencia completa dentro de su propio store en memoria.
+
+| Área | Escenarios ejecutados | Evidencia principal |
+|---|---|---|
+| Catálogo | Resolución GUID/slug, servicio simple/dual, ocultos, complementos, precios y DTO | `reservas.web.test.mjs`, `qa.simple-booking.writer.e2e.test.mjs` |
+| Agenda | Ventana 15 días, slots, recursos staff, balance de carga y revalidación de disponibilidad | `booking.availability.saga.test.mjs`, `reservas.web.test.mjs`, `qa.simple-booking.writer.e2e.test.mjs` |
+| Reserva simple — flujo integrado offline | Cliente ficticio → catálogo → slot → profesional/recurso → `executeBookingSaga` → Bookings Writer V2 mock → confirmación mock → persistencia única `CitasF2` → repetición idempotente sin segundo booking | `qa.simple-booking.writer.e2e.test.mjs` |
+| Motor de reservas | Locks, concurrencia, idempotencia, token, persistencia CitasF2 simple/dual, revision, scheduleId y compensaciones | `booking.core.concurrency.test.mjs`, `compensation.contract.test.mjs`, `completion-retry.contract.test.mjs` |
+| Checkout | Creación/cálculo de carrito, línea Bookings, violaciones, importe, moneda y URL checkout con SDK mock | `booking.cart-v2.checkout.test.mjs` |
+| Identidad y permisos | Resolución miembro/contacto/staff, denegación de acceso y guardas de cajero | `site.flows.e2e.test.mjs`, `staff.identity.contract.test.mjs` |
+| Jornada de personal | Contexto, fichaje, estado de jornada, historial, firma, payload inválido y ajuste autorizado | `site.flows.e2e.test.mjs` |
+| Caja | Venta en efectivo, incremento de caja, cierre Z, hash-chain, rechazo de payload y deduplicación concurrente por transactionId | `site.flows.e2e.test.mjs` |
+| Ledger/fiscal | Hooks append-only, whitelists, lectura agregada, importes y controles de estado fiscal | `data.hooks.test.mjs`, `dto.whitelist.test.mjs`, `fiscalAggregator.read.test.mjs`, `orderLedgerAmount.test.mjs` |
+| Stores | Adaptadores/mappers Catalog V1/V3 bajo mocks | `stores-catalog-*.test.mjs` |
+| Auditoría | Controles sintéticos de flujo e integridad del auditor offline | `audit.e2e.runner.mjs` |
+
+### 27.4 Datos ficticios y aislamiento
+
+- Cliente sintético de reserva: `Cliente QA Simple`, `qa.simple@example.test`.
+- Servicio: `QA Corte Simple`, 60 minutos, 50 EUR (fixture; no es una tarifa real publicada).
+- Profesional: `Profesional QA`; `resourceId`, `scheduleId`, `serviceId`, `locationId` y `bookingId` son GUID sintéticos reservados para el test.
+- Fecha/hora simulada: 2026-11-04 10:00–11:00, zona `Europe/Madrid`.
+- Los tests crean datos en `wixDataMock` y mocks SDK; se destruyen/resetearon dentro de sus procesos.
+- Otros fixtures históricos incluyen `client@example.com` y `marta@test.local`; no son cuentas reales ni deben usarse para enviar comunicaciones.
+- No se crearon contactos, miembros, servicios, reservas, carritos, movimientos ni cierres en el CMS Wix.
+- No se enviaron correos/SMS, no se generaron cobros, no se emitieron facturas ni se ejecutaron operaciones AEAT.
+- No se usó `marianmadrid.es` como sitio de pruebas.
+
+### 27.5 Límites de la simulación
+
+La reserva simple sí ha recorrido el código real de `executeBookingSaga`, pero con los adaptadores Wix sustituidos por mocks. Esto demuestra la lógica interna y persistencia simulada, no la integración remota Wix.
+
+1. No se ha creado una reserva en un sitio Wix QA real mediante Bookings Writer V2.
+2. La prueba simple usa respuestas mock para disponibilidad, staff, creación y confirmación; no prueba autenticación, permisos ni comportamiento real de Bookings.
+3. Cart V2 sustituye las funciones SDK por mocks: no crea un carrito remoto ni cobra.
+4. La jornada de fichaje/caja se ejecuta como flujo continuo en su propio mock, pero no está enlazada a la reserva simple en un único escenario compartido.
+5. `audit.e2e.runner.mjs` valida estructuras y controles sintéticos; no realiza ocho transacciones Wix.
+6. No se han validado notificaciones reales, permisos de visitante/miembro en sitio publicado, webhooks, cron, HTTP Functions ni conciliación de pagos.
+7. No se ha ejecutado reserva dual E2E real; sigue expresamente excluida en §24.6 y §25.
+8. PR #66 ya está integrada en `main` (commit `7d872e447ff35ee8eeaa25dd858a429d50b6a933`). El run Wix Preview #26 (`41305113237`) está ejecutando la nueva validación; todavía no se declara correcto hasta obtener URL y artefacto.
+
+**Estado QA resultante:** 289 tests offline superados. Reserva simple `executeBookingSaga` → Writer V2 mock → CitasF2 → replay idempotente superada. Jornada funcional modular simulada. **Integración runtime Wix y jornada completa compartida en un sitio QA: NO EJECUTADAS / PENDIENTES.**
+
+### 27.6 Próxima secuencia segura
+
+1. Verificar el run Wix Preview #26 (`41305113237`) de PR #66 ya integrada: mensaje exacto, URL `wix.to`, artefacto y apertura manual.
+2. Si Preview queda validado, integrar PR #68 (corrección de replay idempotente) con CI verde; su cambio en `src/**` disparará un nuevo Preview que también debe verificarse.
+3. Crear/confirmar un sitio Wix QA realmente separado, con sandbox y datos aislados. No considerar Wix Preview equivalente a ese sitio.
+4. Antes de cualquier escritura QA, comprobar que Bookings, CMS, HTTP Functions, notificaciones y pagos apuntan al entorno QA y no a producción.
+5. Ejecutar una reserva simple runtime solo con autorización expresa, buzón QA controlado, sin cobro y con plan de cancelación/notificaciones aprobado.
+6. Encadenar en una misma simulación persistente: cliente sintético → reserva simple → lectura de cita → fichaje staff → movimiento de caja simulado → cierre Z de prueba; comprobar idempotencia, conciliación y no duplicidad.
+7. Mantener reserva dual E2E real, pagos reales y emisión fiscal fuera del plan salvo nueva autorización expresa.
+
+**Fuentes de evidencia:** GitHub Actions runs `41304182695` (#557) y `41304910924` (#571), logs de backend offline y Windows Node 24/26; `src/backend/tests/qa.simple-booking.writer.e2e.test.mjs` y suites citadas en §27.3.
+
+---
+
+## 28. Hallazgo QA — semántica de `pairToken` y replay idempotente
+
+La prueba `QA-SIMPLE-BOOKING-01` observó que una reserva **SIMPLE** también persiste un `pairToken` estable. No representa una pareja F1/F2: la saga lo utiliza como clave de idempotencia.
+
+**Formato observado en código:**
+- SIMPLE (y DUAL degradado sin `resourceId`): `_resolveStablePairToken()` devuelve `pt` + 16 caracteres hexadecimales (`_hashKey`).
+- DUAL con `resourceId` válido: `_buildPairTokenDeterministic()` aplica `_hashKey` al fingerprint y devuelve 16 caracteres hexadecimales compartidos por F1/F2.
+- `_hashKey` devuelve 16 caracteres hexadecimales; no es SHA-256 ni un hash criptográfico. El campo CMS es TEXT; no es UUID v4.
+
+**Decisión pendiente:** reconciliar SSOT/CMS docs/consumidores con el formato implementado. No migrar ni renombrar el campo ni cambiar el algoritmo sin revisar registros, índices, hooks, idempotencia, conciliación y rollback. Hasta esa decisión, tratar `pairToken` como token opaco TEXT.
+
+**Bug detectado y corrección:** el test de replay demostró que `_initTransaction` devolvía `success: true, isNew: false` para una transacción COMPLETED, pero `executeBookingSaga` continuaba hacia Writer V2 y podía crear una segunda reserva. PR #68 añade un guard que devuelve el resultado almacenado con `idempotent: true` antes de ejecutar la saga de nuevo. La regresión comprueba que una segunda llamada idéntica no crea otro booking, no confirma de nuevo y no duplica `CitasF2`.
+
+**Evidencia:** PR #68, commit `5173b68b7220a5019fd476e7da61fde745a577c0`, CI run `41304910924` (#571), 28 suites / 289 tests / 0 fallos, Windows Node 24 y 26 correctos.
