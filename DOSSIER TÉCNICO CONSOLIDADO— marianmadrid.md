@@ -2404,7 +2404,7 @@ Cualquier intento de lectura/escritura sobre legacy es interceptado en `backend/
 | `eventId` | `eventoId` | TEXT | `eventId` del webhook (obligatorio si `WEBHOOK_EVENT`). |
 | `expiresAt` | `expiraEn` | DATETIME | Caducidad del lock (obligatorio si `SLOT_LOCK`). |
 | `bookingId` | `reservaId` | TEXT | GUID de reserva. |
-| `pairToken` | `parejaToken` | TEXT | UUID v4 de reserva dual. |
+| `pairToken` | `parejaToken` | TEXT | Token de idempotencia; SIMPLE usa token estable y DUAL comparte fingerprint F1/F2. |
 | `resourceId` | `recursoId` | TEXT | `resourceId` del profesional. |
 | `serviceId` | `servicioId` | TEXT | GUID de servicio. |
 | `slotStart` | `franjaInicio` | DATETIME | Inicio del slot. |
@@ -2689,7 +2689,7 @@ backend/
 
 ### 9.2 Reserva dual F1+F2 con gap
 
-1. Cliente selecciona F1 → 2. `ServiciosCatalogo.linkedPhases` resuelve F2 → 3. mutex `SLOT_LOCK` en `ControlOperativo` (`resourceId`, `expiresAt`) → 4. `pairToken` (UUID v4) → 5. `createBooking()` F1 → 6. cálculo `InicioF2 = InicioF1 + phase1Duration + exposureDuration` → 7. `createBooking()` F2 con `skipAvailabilityValidation: true` y `skipSelectedPaymentOptionValidation: true` / `NO_FEE` → 8. dos registros `CitasF2`: `DUAL_F1` (importe global, `pairToken`, `bookingId` F1) y `DUAL_F2` (`totalAmount = 0`, mismo `pairToken`, `bookingId` F2) → 9. si F2 falla: saga compensa cancelando F1 (`cancelBooking`) y registra en `ControlOperativo` → 10. libera mutex.
+1. Cliente selecciona F1 → 2. `ServiciosCatalogo.linkedPhases` resuelve F2 → 3. mutex `SLOT_LOCK` en `ControlOperativo` (`resourceId`, `expiresAt`) → 4. `pairToken` determinista → 5. `createBooking()` F1 → 6. cálculo `InicioF2 = InicioF1 + phase1Duration + exposureDuration` → 7. `createBooking()` F2 con `skipAvailabilityValidation: true` y `skipSelectedPaymentOptionValidation: true` / `NO_FEE` → 8. dos registros `CitasF2`: `DUAL_F1` (importe global, `pairToken`, `bookingId` F1) y `DUAL_F2` (`totalAmount = 0`, mismo `pairToken`, `bookingId` F2) → 9. si F2 falla: saga compensa cancelando F1 (`cancelBooking`) y registra en `ControlOperativo` → 10. libera mutex.
 
 > ⚠️ La combinación `skipSelectedPaymentOptionValidation: true` + `NO_FEE` para F2 **no está garantizada explícitamente** por la documentación de `flowControlSettings`. **Requiere validación en entorno real Wix Bookings V2** antes de fijarla como contrato.
 
