@@ -59,7 +59,7 @@ jobs:
           TERM: "xterm"
         run: |
           set -o pipefail
-          printf '\n' | script -q -e -c "wix preview" /dev/null 2>&1 | tee wix-preview.log
+          timeout 8m bash -lc 'printf "\n" | script -q -e -c "wix preview" /dev/null 2>&1 | tee wix-preview.log'
 
       - name: Preserve preview output
         if: always()
