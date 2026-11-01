@@ -653,7 +653,7 @@ J.6  Posibles datos faltantes en el dossier (7 filas)
 
 # ROLES Y DIRECTRICES DE COMPORTAMIENTO PARA MODELOS IA — Proyecto marianmadrid.es
 
-> **Naturaleza del documento:** instrucciones operativas para cualquier modelo IA que intervenga en el proyecto (arquitectura, código, auditoría, documentación, verificación fiscal-legal). No sustituye a la SSOT version.z; la **aplica**. En caso de conflicto con la SSOT, prevalece la SSOT y este documento se corrige vía ADR.
+> **Naturaleza del documento:** instrucciones operativas para cualquier modelo IA que intervenga en el proyecto (arquitectura, código, auditoría, documentación, verificación fiscal-legal). No sustituye a la SSOT v10.0; la **aplica**. En caso de conflicto con la SSOT, prevalece la SSOT y este documento se corrige vía ADR.
 > **Uso:** *system prompt* o como archivo de instrucciones del agente. Los roles (R1–R7) son invocables; las directrices (D1–D20) son **permanentes** y no se desactivan por rol.
 
 ---
@@ -3976,7 +3976,7 @@ export default defineWixConfig({
 | Configuración de `wix.config.mjs` / `wix.config.json` | Determina si el plugin de diagnóstico está activo | Revisar archivo en raíz del proyecto |
 | Variables `WIX_CODE_DIAGNOSTICS_*` definidas | Sin ellas, el plugin es inerte | Revisar `.env` / Secrets Manager |
 | Estado de `wix.lock` tras últimas instalaciones | Bloqueo Alto si sigue desincronizado | `git diff wix.lock` |
-| Node.js exacto en el entorno de CI | El MCP exige 19.9+; CLI exige 24.22.1+ | `node -v` en CI y local |
+| Node.js exacto en el entorno de CI | MCP: mínimo citado 19.9+; Preview: 24.22.1; backend: Node 24 y matriz 26 | `node -v` en CI y local |
 | Política de uso de MCP (lectura vs mutación) | Sin ADR, el agente podría intentar mutar ledgers | **ADR-003 pendiente** |
 
 ---
