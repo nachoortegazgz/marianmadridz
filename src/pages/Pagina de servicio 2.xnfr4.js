@@ -418,15 +418,16 @@ function buildBookingUrl(service, payload) {
         );
     }
 
-    // La ruta nativa de Bookings identifica el servicio por su slug público.
-    // No usar la página fija "calendario-2" ni duplicar slug/serviceId en query.
+    // La página Calendario de reservas 2 usa la ruta fija /calendario-2.
+    // El servicio se resuelve mediante el parámetro slug contra ServiciosCatalogo.
     const slug = getServiceSlug(service);
     if (!slug) {
-        throw new Error("El servicio no tiene un slug público válido.");
+        throw new Error("El servicio no tiene un slug válido.");
     }
 
-    const base = `/booking-calendar/${encodeURIComponent(slug)}`;
+    const base = "/calendario-2";
     const query = new URLSearchParams({
+        slug,
         referral: "service_list_widget"
     });
 
