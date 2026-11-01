@@ -440,6 +440,43 @@ test('RES-LOOK-01D slug lookup trims URL delimiters without changing the slug', 
   assert.strictEqual(result.data.title, row.title);
 });
 
+test('RES-LOOK-01E strict ASCII title slug resolves the canonical CMS service slug', async () => {
+  resetState();
+  await invalidateStaffCache();
+  const row = baseServiceRow({
+    slug: 'corte-pelo-ninos-rapido-divertido',
+    title: 'Corte de Pelo Ni\u00f1os (R\u00e1pido y Divertido)',
+  });
+  seedService(row);
+
+  const asciiLookup = await RW._getServiceBySlugOrIdInternal('corte-de-pelo-ninos-rapido-y-divertido');
+  assert.strictEqual(asciiLookup.status, 'SUCCESS');
+  assert.strictEqual(asciiLookup.data.serviceId, row.serviceId);
+
+  const unicodeInput = await RW._getServiceBySlugOrIdInternal('corte-de-pelo-ni\u00f1os-r\u00e1pido-y-divertido');
+  assert.strictEqual(unicodeInput.status, 'SUCCESS');
+  assert.strictEqual(unicodeInput.data.serviceId, row.serviceId);
+});
+
+test('RES-LOOK-01F ambiguous normalized title lookup fails closed', async () => {
+  resetState();
+  await invalidateStaffCache();
+  const first = baseServiceRow({
+    slug: 'servicio-a-' + seq,
+    title: 'Corte de Pelo Ni\u00f1os (R\u00e1pido y Divertido) Ambiguo',
+  });
+  const second = baseServiceRow({
+    slug: 'servicio-b-' + seq,
+    title: 'Corte de Pelo Ni\u00f1os (R\u00e1pido y Divertido) Ambiguo',
+  });
+  seedService(first);
+  seedService(second);
+
+  const result = await RW._getServiceBySlugOrIdInternal('corte-de-pelo-ninos-rapido-y-divertido-ambiguo');
+  assert.strictEqual(result.status, 'ERROR');
+  assert.strictEqual(result.error.code, 'SERVICE_LOOKUP_AMBIGUOUS');
+});
+
 test('RES-LOOK-01B dual service: linkedPhases GUID preserved end-to-end (v10.6)', async () => {
   resetState();
   await invalidateStaffCache();

@@ -119,6 +119,23 @@ const DISPLAY_TOKEN_MAX_ATTEMPTS = 5;
 
 const DIAS_LIMITE = Number(SLOT_SEARCH?.DIAS_LIMITE) || 14;
 const CACHE_MAX_SIZE = Number(SDK_CONFIG?.CACHE?.MAX_ENTRIES) || 500;
+
+/**
+ * Strict ASCII key for matching service slugs and human-readable titles.
+ * Diacritics are folded; every non-ASCII/non-alphanumeric run becomes "-".
+ * This key is for lookup only; the canonical CMS slug remains unchanged.
+ */
+function _normalizeServiceLookupKey(value) {
+    const raw = _safeTrim(value, 200);
+    if (!raw) return "";
+    return raw
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+}
+
 const DAYS_CACHE_VERSION = String(SDK_CONFIG?.CACHE?.DAYS_CACHE_VERSION || "v1");
 const STAFF_RESOURCE_TYPE_ID = API.STAFF_RESOURCE_TYPE_ID;
 
@@ -346,9 +363,14 @@ export async function _getServiceBySlugOrIdInternal(slugOrId, externalTraceId = 
         ? raw.split("?")[0].split("#")[0].replace(/^\/+/, "").replace(/\/+$/, "")
         : "";
     const isGuid = _looksLikeGuid(lookupValue);
-    // Wix GUIDs are canonicalized to lowercase before querying serviceId.
-    // Slugs remain literal (case-sensitive) CMS keys; do not silently rewrite them.
-    const clean = isGuid ? lookupValue.toLowerCase() : lookupValue;
+    // Wix GUIDs are canonicalized; all slug lookups are strict ASCII.
+    const clean = isGuid ? lookupValue.toLowerCase() : _safeSlugOrId(lookupValue);
+    if (!clean) {
+        return {
+            status: "ERROR", data: null,
+            error: { code: "INVALID_SERVICE_LOOKUP", message: "Invalid service slug or ID." },
+        };
+    }
     const cycleKey = clean.toLowerCase();
     if (visited.has(cycleKey)) {
         return {
@@ -382,12 +404,52 @@ export async function _getServiceBySlugOrIdInternal(slugOrId, externalTraceId = 
                 );
             }
         }
-        const service = result?.items?.[0] || null;
+        let service = result?.items?.[0] || null;
+
+        // Legacy/dynamic URLs may be generated from the service title rather
+        // than the shorter canonical CMS slug. Match only an exact normalized
+        // ASCII title/slug key; reject collisions instead of guessing.
+        if (!service && !isGuid) {
+            const catalog = await withTimeout(
+                dalQuery(SERVICIOS_COL).limit(1000).find(CONSISTENT_READ),
+                WATCHDOG_TIMEOUT_MS,
+                "getServiceBySlugOrId:titleFallback"
+            );
+            const matches = (catalog?.items || []).filter((row) => {
+                const slugKey = _normalizeServiceLookupKey(_readField(row, "slug"));
+                const titleKey = _normalizeServiceLookupKey(_readField(row, "title"));
+                return slugKey === clean || titleKey === clean;
+            });
+            const uniqueMatches = new Map(
+                matches.map((row) => [
+                    _safeTrim(_readField(row, "serviceId") || row._id),
+                    row,
+                ])
+            );
+            if (uniqueMatches.size === 1) {
+                service = uniqueMatches.values().next().value;
+                log.info("Service resolved by normalized ASCII title/slug", {
+                    traceId,
+                    key: clean,
+                });
+            } else if (uniqueMatches.size > 1) {
+                log.warn("Ambiguous service lookup rejected", {
+                    traceId,
+                    key: clean,
+                    matches: uniqueMatches.size,
+                });
+                return {
+                    status: "ERROR", data: null,
+                    error: { code: "SERVICE_LOOKUP_AMBIGUOUS", message: "Service lookup is ambiguous." },
+                };
+            }
+        }
+
         if (!service) {
             log.error("Service not found in ServiciosCatalogo", { key: clean, traceId });
             return {
                 status: "ERROR", data: null,
-                error: { code: "SERVICE_NOT_FOUND", message: `Servicio "${slugOrId}" no encontrado.` },
+                error: { code: "SERVICE_NOT_FOUND", message: "Service not found." },
             };
         }
         const nextVisited = new Set(visited);
