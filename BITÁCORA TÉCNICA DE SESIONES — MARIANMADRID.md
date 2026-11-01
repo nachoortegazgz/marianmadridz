@@ -94,3 +94,21 @@
 3. Validar la página Servicio 2 en Wix Preview o mediante una prueba runtime autorizada: confirmar lookup de slug/ID, respuesta pública del servicio y escritura/lectura del rate limiter. Registrar traceId/error real si falla.
 4. Mantener fail-closed; no añadir bypass ni debilitar el limitador para ocultar `RATE_LIMIT_STORAGE_UNAVAILABLE`.
 5. Actualizar esta bitácora al cierre de la siguiente sesión con resultado definitivo, SHA, CI y evidencia runtime.
+
+
+## Continuación de sesión 2026-11-01 — Verificación de CLI y CI
+
+### Evidencia adicional revisada
+- Log completo del run de manifiesto [41274171651](https://github.com/nachoortegazgz/marianmadridz/actions/runs/41274171651), job 124752854256: `wix --version` devuelve `1.2.6`; `wix install --help` confirma `--npm` como opción válida. La autenticación y la instalación terminan en éxito; el fallo ocurre únicamente al validar la ausencia de `src/velo.dependencies.json`.
+- La configuración apunta al siteId correcto (`188bed94-177c-4bc9-a9f0-35080d874f3e`) y `@wix/data` ya figura en el `package.json` de entrada como `1.0.527`. Tras el comando, Wix CLI cambia metadatos y manifiestos npm, pero no crea el archivo Velo esperado.
+- Documentación oficial Wix confirma que `src/velo.dependencies.json` se crea automáticamente al instalar el primer paquete npm, que Wix CLI lo actualiza al instalar paquetes y que no debe editarse manualmente: https://dev.wix.com/docs/develop-websites/articles/workspace-tools/developer-tools/git-integration-wix-cli-for-sites/git-hub-repository-file-structure (apartado `velo.dependencies.json`).
+- Conclusión acotada: **la causa exacta aún no está identificada**. Se ha descartado que sea un simple error de sintaxis `--npm` o una autenticación fallida. El log no demuestra si la causa es estado previo del paquete, comportamiento del CLI 1.2.6 o discrepancia de sincronización del sitio; no atribuirla sin una prueba que la distinga.
+
+### CI de backend actualizado
+- Revisadas las ejecuciones `41274162990`, `41274165587`, `41274171605` y `41274174419`: las cuatro tienen los cuatro jobs completados con éxito (instalación limpia/ESLint, regresión backend offline, Windows Node.js 24.22.1 y 26.12.1).
+- Esto respalda la estabilidad de los tests offline de backend en esos commits, pero no prueba el manifiesto ni la ejecución runtime en Wix.
+
+### Decisión y próximo experimento
+- PR #29 permanece en Draft. No se fusiona el workflow de manifiesto mientras su validación falle.
+- Próxima comprobación: usar el flujo soportado de Wix Editor/sincronización para comprobar si el manifiesto está presente en el entorno del sitio y si la sincronización lo incorpora al repositorio; si no, aislar en una rama temporal una instalación CLI de paquete que no esté ya declarado, sin publicar el sitio y sin incorporar cambios incidentales de dependencias. No escribir el manifiesto manualmente.
+- En paralelo, la página Servicio 2 sigue pendiente de prueba E2E real en Wix Preview/QA. No declarar resuelto `RATE_LIMIT_STORAGE_UNAVAILABLE` por los tests offline.
