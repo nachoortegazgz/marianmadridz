@@ -115,7 +115,34 @@ function normalizeLookupValue(value) {
 }
 
 async function parseUrlParams() {
-    const query = await location.query();
+    // Wix Location exposes `query` as a read-only object in the current SDK.
+    // Keep method support for compatibility with older injected wrappers.
+    let query = typeof location.query === "function"
+        ? await location.query()
+        : location.query;
+
+    if (!query || typeof query !== "object" || Array.isArray(query)) {
+        query = {};
+    }
+
+    // Some Wix page contexts can expose an empty query object despite a URL
+    // containing parameters. Recover only from the current page URL.
+    if (
+        !query.serviceId &&
+        !query.slug &&
+        typeof location.url === "string"
+    ) {
+        try {
+            query = Object.fromEntries(
+                new URL(location.url).searchParams.entries()
+            );
+        } catch (error) {
+            console.warn("[calendario-2] No se pudo leer la query de la URL", {
+                message: error?.message
+            });
+        }
+    }
+
     const rawServiceId = decodeUrlValue(query?.serviceId);
     const rawSlug = decodeUrlValue(query?.slug);
     const rawAddOnIds = decodeUrlValue(query?.addOnIds);
@@ -133,21 +160,48 @@ async function parseUrlParams() {
     };
 }
 
-function resolveServiceFromParams(params) {
+async function resolveServiceFromParams(params) {
     if (
         params?.serviceId &&
         _looksLikeGuid(params.serviceId)
     ) {
         return {
             serviceId: params.serviceId.toLowerCase(),
-            slug: params.slug || null
+            slug: params.slug || null,
+            source: "query.serviceId"
         };
     }
 
     if (params?.slug) {
         return {
             serviceId: null,
-            slug: params.slug
+            slug: params.slug,
+            source: "query.slug"
+        };
+    }
+
+    // Same fallback strategy as Pagina de servicio 2: resolve the service
+    // from the route when query parameters are unavailable.
+    const path = await location.path();
+    const segments = Array.isArray(path) ? path : [];
+    const normalizedSegments = segments
+        .map(normalizeLookupValue)
+        .filter(Boolean);
+    const routeSegments = new Set([
+        "booking-calendar",
+        "calendario-2",
+        "calendario-de-reservas-2"
+    ]);
+
+    const serviceSlug = [...normalizedSegments]
+        .reverse()
+        .find((segment) => !routeSegments.has(segment));
+
+    if (serviceSlug) {
+        return {
+            serviceId: null,
+            slug: serviceSlug,
+            source: "location.path"
         };
     }
 
@@ -964,12 +1018,17 @@ $w.onReady(async () => {
         }
 
         const resolved =
-            resolveServiceFromParams(params);
+            await resolveServiceFromParams(params);
 
         if (!resolved) {
             console.error(
                 "[calendario-2] Servicio no válido",
-                { traceId }
+                {
+                    traceId,
+                    hasServiceId: Boolean(params?.serviceId),
+                    hasSlug: Boolean(params?.slug),
+                    pathAvailable: true
+                }
             );
 
             return;
@@ -980,6 +1039,16 @@ $w.onReady(async () => {
 
         currentSlug =
             resolved.slug;
+
+        console.info(
+            "[calendario-2] Identificador de servicio resuelto",
+            {
+                traceId,
+                source: resolved.source,
+                hasServiceId: Boolean(resolved.serviceId),
+                slug: resolved.slug || null
+            }
+        );
 
         const widget = $w("#html1");
 
