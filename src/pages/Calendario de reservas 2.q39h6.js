@@ -27,7 +27,8 @@ import {
     isDateYmd,
     withTimeout,
     _getMessageType,
-    _getPayload
+    _getPayload,
+    _executeWithRetry
 } from "public/mmUtils";
 
 import { createWidgetBridge } from "public/widgetBridge";
@@ -49,6 +50,45 @@ const VALID_PAYMENT_METHODS = Object.freeze(
 
 const PUBLIC_ERROR_MESSAGE =
     "No se ha podido completar la operación. Inténtalo de nuevo.";
+
+const AVAILABILITY_ATTEMPT_TIMEOUT_MS = 45000;
+const RETRYABLE_READ_CODES = new Set([
+    "TIMEOUT",
+    "RATE_LIMITED",
+    "NETWORK_ERROR",
+    "ECONNRESET",
+    "ETIMEDOUT",
+    "SERVICE_UNAVAILABLE",
+    "INTERNAL_ERROR",
+    "AVAILABILITY_FAILED",
+    "WIX_API_UNAVAILABLE"
+]);
+
+function isRetryableReadError(error) {
+    const code = _safeTrim(error?.code || "").toUpperCase();
+    return RETRYABLE_READ_CODES.has(code) || /^(429|5\\d{2})$/.test(code);
+}
+
+async function runAvailabilityWithRetry(factory, label) {
+    return _executeWithRetry(async () => {
+        const result = await withTimeout(
+            factory,
+            AVAILABILITY_ATTEMPT_TIMEOUT_MS,
+            label
+        );
+
+        if (result?.status === "ERROR") {
+            const code = _safeTrim(result?.error?.code || "").toUpperCase();
+            if (isRetryableReadError({ code })) {
+                const error = new Error(code || label);
+                error.code = code || label;
+                throw error;
+            }
+        }
+
+        return result;
+    }, 2, 500, isRetryableReadError);
+}
 
 function resultError(code) {
     return {
@@ -749,16 +789,17 @@ async function handleAvailability(
                 );
             } else {
                 result = await withTimeout(
-                    getAvailableDays(
-                        currentServiceId ||
-                            currentSlug,
-                        null,
-                        year,
-                        month,
-                        addOnIds
+                    () => runAvailabilityWithRetry(
+                        () => getAvailableDays(
+                            currentServiceId || currentSlug,
+                            null,
+                            year,
+                            month,
+                            addOnIds
+                        ),
+                        "getAvailableDays"
                     ),
-                    UI?.FRONTEND_API_TIMEOUT_MS ||
-                        60000,
+                    UI?.FRONTEND_API_TIMEOUT_MS || 210000,
                     "getAvailableDays"
                 );
             }
@@ -772,27 +813,23 @@ async function handleAvailability(
                     "INVALID_DATE"
                 );
             } else {
-                const availabilityPromise =
-                    currentService?.allowCombine === true
-                        ? getCertifiedDualSlots(
-                              currentServiceId ||
-                                  currentSlug,
-                              null,
-                              dateYmd,
-                              addOnIds
-                          )
-                        : getAvailableSlots(
-                              currentServiceId ||
-                                  currentSlug,
-                              null,
-                              dateYmd,
-                              addOnIds
-                          );
+                const loadSlots = () => currentService?.allowCombine === true
+                    ? getCertifiedDualSlots(
+                        currentServiceId || currentSlug,
+                        null,
+                        dateYmd,
+                        addOnIds
+                    )
+                    : getAvailableSlots(
+                        currentServiceId || currentSlug,
+                        null,
+                        dateYmd,
+                        addOnIds
+                    );
 
                 result = await withTimeout(
-                    availabilityPromise,
-                    UI?.FRONTEND_API_TIMEOUT_MS ||
-                        60000,
+                    () => runAvailabilityWithRetry(loadSlots, "getAvailableSlots"),
+                    UI?.FRONTEND_API_TIMEOUT_MS || 210000,
                     "getAvailableSlots"
                 );
             }
@@ -1111,8 +1148,9 @@ $w.onReady(() => {
         bridge = createWidgetBridge(widget, {
             traceId,
             allowOpaqueOrigin: true,
-            handshakeTimeoutMs: 20000,
-            contextTimeoutMs: 45000,
+            handshakeTimeoutMs: 30000,
+            contextTimeoutMs: 120000,
+            contextAttemptTimeoutMs: 30000,
 
             onContextReady: async () => {
                 const params = await parseUrlParams();
