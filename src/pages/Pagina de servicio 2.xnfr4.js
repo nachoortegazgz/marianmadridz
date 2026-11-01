@@ -425,10 +425,14 @@ function buildBookingUrl(service, payload) {
         throw new Error("El servicio no tiene un slug público válido.");
     }
 
-    const base = `/booking-calendar/${encodeURIComponent(slug)}`;
-    const query = new URLSearchParams({
-        referral: "service_list_widget"
-    });
+    const base = "/calendario-2";
+
+const query = new URLSearchParams({
+    slug,
+    referral: "service_list_widget"
+});
+
+return `${base}?${query.toString()}`;
 
     const addOnIds =
         getValidatedAddOnIds(
