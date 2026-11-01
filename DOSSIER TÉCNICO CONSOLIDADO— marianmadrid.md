@@ -2600,7 +2600,7 @@ API = { STAFF_RESOURCE_TYPE_ID: "1cd44cf8-756f-41c3-bd90-3e2ffcaf1155" }
 | ID | Generación | Alcance |
 |---|---|---|
 | `traceId` | `makeTraceId()` / `_generateUUID()` (UUID v4) | Obligatorio en toda mutación transaccional |
-| `pairToken` | TEXT token determinista (SIMPLE `pt` + 32 hex; DUAL SHA-256) | `CitasF2`, `ControlOperativo` |
+| `pairToken` | TEXT token determinista (SIMPLE `pt` + 16 hex; DUAL `_hashKey` de 16 hex) | `CitasF2`, `ControlOperativo` |
 | `dedupeKey` | Hash determinista | `ControlOperativo` (indexado) |
 | `movementToken` | UUID v4 | `MovimientosInventario` (único) |
 | `transactionId` | UUID v4 | `MovimientosCaja` (único) |
@@ -4251,10 +4251,10 @@ El resultado **no certifica** todavía una jornada integral de cliente en Wix. E
 La nueva prueba `QA-SIMPLE-BOOKING-01` ejecutó con éxito los pasos internos de `executeBookingSaga` hasta Writer V2 mock, confirmación y persistencia `CitasF2`. En esa ruta se observó que una reserva **SIMPLE** también persiste un `pairToken` estable y lo reutiliza como clave de idempotencia. Por tanto, la regla documental previa “pairToken nulo en SIMPLE” era incorrecta para el código actual.
 
 **Implementación observada en código:**
-- SIMPLE (y DUAL degradado sin resourceId): `_resolveStablePairToken()` devuelve `pt` + 32 caracteres hexadecimales de hash.
-- DUAL con resourceId válido: `_buildPairTokenDeterministic()` devuelve el fingerprint SHA-256 hexadecimal, compartido por F1 y F2.
-- El campo CMS es TEXT; el token no es UUID v4 ni SHA-256 en ninguna de esas dos rutas.
+- SIMPLE (y DUAL degradado sin resourceId): `_resolveStablePairToken()` devuelve `pt` + 16 caracteres hexadecimales (`_hashKey`).
+- DUAL con resourceId válido: `_buildPairTokenDeterministic()` aplica `_hashKey` al fingerprint y devuelve 16 caracteres hexadecimales compartidos por F1 y F2.
+- `_hashKey` devuelve 16 caracteres hexadecimales y no es SHA-256 ni un hash criptográfico. El campo CMS es TEXT; el token no es UUID v4 en ninguna de esas dos rutas.
 
 **Decisión pendiente (no corregida en esta PR):** reconciliar SSOT/CMS docs/consumidores con el formato implementado. No migrar ni renombrar el campo, ni cambiar el algoritmo, sin revisar registros existentes, índices, hooks, idempotencia, conciliación y rollback. Hasta esa decisión, tratar `pairToken` como token opaco TEXT; no validarlo como UUID v4.
 
-La prueba de reserva simple añadida en PR #68 comprueba: una sola llamada `createBooking`, una sola confirmación, un solo registro `CitasF2`, tipo `SIMPLE`, token estable `pt` + 32 hex y replay idempotente sin crear una segunda reserva. Su resultado CI está pendiente en el momento de esta actualización.
+La prueba de reserva simple añadida en PR #68 comprueba: una sola llamada `createBooking`, una sola confirmación, un solo registro `CitasF2`, tipo `SIMPLE`, token estable `pt` + 16 hex y replay idempotente sin crear una segunda reserva. Su resultado CI está pendiente en el momento de esta actualización.
