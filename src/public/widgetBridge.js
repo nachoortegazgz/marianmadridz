@@ -174,9 +174,9 @@ export function createWidgetBridge(widgetElement, options = {}) {
         const classified = classifyOrigin(event?.origin);
         if (classified.opaque) {
             if (!originPolicy.allowOpaqueOrigin) { reportError(WIDGET_ERROR_CODE.ORIGIN_OPAQUE_REJECTED, { origin: classified.value }); return null; }
-            if (typeof console !== "undefined" && typeof console.warn === "function") {
-                try { console.warn("[widgetBridge] Opaque origin accepted", { bridgeId, origin: classified.value || "(empty)" }); } catch (_) {}
-            }
+            // Opaque origins are expected for sandboxed Wix HTML Components.
+            // Keep the explicit opt-in and message validation, but avoid noisy
+            // warnings for this accepted, expected runtime condition.
         } else if (originPolicy.mode !== "off" && !isOriginAllowed(classified.value, originPolicy)) {
             reportError(WIDGET_ERROR_CODE.ORIGIN_REJECTED, { origin: classified.value }); return null;
         }
