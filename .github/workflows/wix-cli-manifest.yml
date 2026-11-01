@@ -39,7 +39,7 @@ jobs:
 
       - name: Generate the Velo dependency manifest
         run: |
-          wix install --npm @wix/data
+          wix install @wix/data
           test -s src/velo.dependencies.json
           node --input-type=commonjs -e "const p=require('./package.json'); if (p.dependencies?.['@wix/data'] !== '1.0.527') { console.error('Unexpected @wix/data version; refusing to commit CLI changes.'); process.exit(1); }"
           git diff --exit-code -- package.json
