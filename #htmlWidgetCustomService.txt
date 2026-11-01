@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Servicio | Marian Madrid</title>
+<style>
+:root{--paper:#fbfaf8;--surface:#fff;--ink:#20201f;--muted:#6c6a66;--line:#e8e3dc;--accent:#aa8756;--accent-dark:#80623c;--danger:#a2362a;--danger-bg:#fff2ef}*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font-family:Inter,Arial,sans-serif}button{font:inherit}.widget{width:100%;max-width:1120px;margin:auto;padding:clamp(16px,4vw,40px)}.error-banner{display:none;margin-bottom:18px;padding:13px 16px;border:1px solid #f0b9b0;border-radius:10px;background:var(--danger-bg);color:var(--danger);font-weight:700}.back-button{margin-bottom:22px;padding:0;border:0;background:transparent;color:var(--muted);cursor:pointer;font-size:13px;font-weight:800;text-transform:uppercase}.hero{display:grid;grid-template-columns:1.05fr .95fr;overflow:hidden;border:1px solid var(--line);border-radius:24px;background:var(--surface);box-shadow:0 20px 50px rgba(45,38,28,.08)}.hero-media{position:relative;min-height:360px;background:#e9e2d9}.hero-image{display:block;width:100%;height:100%;min-height:360px;object-fit:cover}.media-overlay{position:absolute;inset:0;background:linear-gradient(180deg,transparent 50%,rgba(20,17,13,.42));pointer-events:none}.media-badge{position:absolute;top:18px;left:18px;padding:8px 10px;border-radius:999px;background:rgba(255,255,255,.92);font-size:10px;font-weight:900;letter-spacing:.12em}.hero-content{display:flex;flex-direction:column;justify-content:center;padding:clamp(26px,5vw,56px)}.eyebrow,.card-kicker{margin:0 0 12px;color:var(--accent-dark);font-size:11px;font-weight:900;letter-spacing:.13em;text-transform:uppercase}h1,h2{margin:0;font-family:Georgia,serif;font-weight:500}h1{font-size:clamp(34px,5vw,58px);line-height:.98}h2{font-size:30px}.summary{margin:20px 0 0;color:#45423e;font-size:17px;line-height:1.65}.meta-list{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:28px}.meta-item{padding:13px 0;border-top:1px solid var(--line)}.meta-label{display:block;color:var(--muted);font-size:10px;font-weight:900;text-transform:uppercase}.meta-value{display:block;margin-top:5px;font-size:13px;font-weight:700}.service-grid{display:grid;grid-template-columns:1fr 330px;gap:40px;margin-top:40px;align-items:start}.content-stack{display:grid;gap:18px}.card{padding:30px;border:1px solid var(--line);border-radius:16px;background:var(--surface)}.description{margin:16px 0 0;color:#47433f;line-height:1.8;white-space:pre-line}.addons-list,.recommendations{display:grid;gap:10px;margin-top:16px}.addon{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:14px;border:1px solid var(--line);border-radius:10px;background:#fffdfb;cursor:pointer}.addon-name{font-size:14px;font-weight:800}.addon-price{color:var(--accent-dark);font-size:13px;font-weight:900}.recommendation{padding:13px 15px;border-left:3px solid var(--accent);background:#fcf8f2;color:#4e4130;font-size:14px;line-height:1.5}.booking-card{position:sticky;top:16px;padding:24px;border-radius:16px;background:#27231f;color:#fff}.booking-label{margin:0;color:#d9c4a4;font-size:10px;font-weight:900;text-transform:uppercase}.booking-price{margin:9px 0 4px;font-family:Georgia,serif;font-size:42px}.booking-note{color:#ded8cf;font-size:13px;line-height:1.55}.total-extras{display:none;margin-top:18px;padding:11px 0;border-top:1px solid rgba(255,255,255,.16);color:#e8dfd1;font-size:13px}.booking-button{width:100%;min-height:54px;margin-top:22px;padding:14px 18px;border:0;border-radius:10px;background:#f1e1c8;color:#292018;cursor:pointer;font-size:13px;font-weight:900;text-transform:uppercase}.booking-button:disabled{background:#8b8379;color:#d6d1cb;cursor:not-allowed}.booking-assurance{color:#c9c0b5;font-size:11px;line-height:1.55;text-align:center;margin-top:16px}@media(max-width:820px){.hero,.service-grid{grid-template-columns:1fr}.booking-card{position:static}}@media(max-width:480px){.meta-list{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main class="widget">
+<button id="btnBack" class="back-button" type="button">&larr; Volver a servicios</button>
+<div id="errorBanner" class="error-banner" role="alert" aria-live="polite"></div>
+<section class="hero"><div class="hero-media"><img id="serviceImage" class="hero-image" alt="Imagen del servicio"><div class="media-overlay"></div><span class="media-badge">MARIAN MADRID</span></div><div class="hero-content"><p class="eyebrow">Reserva online</p><h1 id="serviceTitle">Cargando servicio...</h1><p id="serviceSummary" class="summary">Estamos preparando los detalles de tu cita.</p><div class="meta-list"><div class="meta-item"><span class="meta-label">Localización</span><span id="serviceLocation" class="meta-value">-</span></div><div class="meta-item"><span class="meta-label">Duración aprox.</span><span id="serviceDuration" class="meta-value">-</span></div></div></div></section>
+<section class="service-grid"><div class="content-stack"><article class="card"><p class="card-kicker">El servicio</p><h2>Detalles y cuidado</h2><p id="serviceDescription" class="description">Cargando descripción detallada...</p></article><article id="addonsSection" class="card" hidden><p class="card-kicker">Personaliza tu reserva</p><h2>Complementos</h2><div id="addonsContainer" class="addons-list"></div></article><article id="recommendationsSection" class="card" hidden><p class="card-kicker">Recomendación profesional</p><h2>Para prolongar el resultado</h2><div id="recommendationsContainer" class="recommendations"></div></article></div><aside class="booking-card"><p class="booking-label">Precio desde</p><div id="servicePrice" class="booking-price">-</div><p id="bookingDuration" class="booking-note">Duración aproximada: -</p><div id="extrasSummary" class="total-extras"></div><button id="btnBookNow" class="booking-button" type="button" disabled>Continuar reserva</button><p class="booking-assurance">Cancelación sin coste hasta 24 h antes.</p></aside></section>
+</main>
+
+<script>
+"use strict";
+
+const MESSAGE_TYPES = Object.freeze({
+  READY: "MM_READY",
+  CONTEXT: "MM_CONTEXT",
+  AVAIL: "MM_AVAIL",
+  SELECT: "MM_SELECT",
+  BOOK: "MM_BOOK",
+  NAV: "MM_NAV"
+});
+
+const CONFIG = Object.freeze({
+  PROTOCOL_VERSION: 1,
+  HANDSHAKE_ATTEMPTS: 9,
+  HANDSHAKE_BASE_BACKOFF_MS: 500,
+  HANDSHAKE_MAX_BACKOFF_MS: 8000,
+  CONTEXT_TIMEOUT_MS: 155000,
+  BOOK_NOTICE_TIMEOUT_MS: 60000,
+  DEFAULT_CURRENCY: "EUR",
+  DEFAULT_LOCATION: "Marian Madrid",
+  MAX_ADDONS: 5,
+  DEFAULT_IMAGE: "data:image/svg+xml;charset=UTF-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 800'><rect width='1200' height='800' fill='%23e9e2d9'/><text x='600' y='390' text-anchor='middle' fill='%23342b24' font-family='Georgia' font-size='68'>MARIAN MADRID</text><text x='600' y='455' text-anchor='middle' fill='%2380623c' font-family='Arial' font-size='24'>SERVICIO DE BELLEZA</text></svg>",
+
+  ALLOWED_ORIGIN_SUFFIXES: Object.freeze([
+    "marianmadrid.es",
+    ".parastorage.com",
+    ".wix.com",
+    ".wixsite.com",
+    ".editorx.com"
+  ])
+});
+
+// SEC-01: origen del padre calculado en tiempo de ejecución. Vive FUERA
+// de CONFIG (que está congelado) para poder asignarse tras la carga.
+// Se usa como targetOrigin en postMessage y se contrasta en la recepción.
+let parentOrigin = "";
+
+const state = {
+  bridgeId: "",
+  serviceId: "",
+  pricingPlanId: "",
+  catalogEntryType: "SERVICE",
+  slug: "",
+  currency: CONFIG.DEFAULT_CURRENCY,
+  price: 0,
+  addOnOptions: [],
+  selectedAddonIds: new Set(),
+  selectedAddOns: [],
+  contextReceived: false,
+  bookingStarted: false
+};
+
+let contextTimer = null;
+let handshakeTimer = null;
+let bookTimer = null;
+let handshakeAttempt = 0;
+let sequence = 0;
+
+const el = (id) => document.getElementById(id);
+const clean = (value, fallback = "") => String(value ?? "").trim() || fallback;
+const number = (value, fallback = 0) => {
+  if (value === null || value === undefined || value === "") return fallback;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+/* -------------------------------------------------------------------------
+ * SEC-01: utilidades de origen
+ * ---------------------------------------------------------------------- */
+
+function normalizeOrigin(value) {
+  const raw = clean(value).toLowerCase();
+
+  if (!raw || raw === "null") {
+    return "";
+  }
+
+  try {
+    const url = new URL(raw);
+
+    if (url.protocol !== "https:") {
+      return "";
+    }
+
+    return url.origin.toLowerCase();
+  } catch (_) {
+    return "";
+  }
+}
+
+function hostMatchesSuffix(host, suffix) {
+  if (!host || !suffix) {
+    return false;
+  }
+
+  const normalizedSuffix = suffix
+    .replace(/^\.+/, "")
+    .toLowerCase();
+
+  return (
+    host === normalizedSuffix ||
+    host.endsWith(`.${normalizedSuffix}`)
+  );
+}
+
+function isTrustedOrigin(origin) {
+  const normalizedOrigin = normalizeOrigin(origin);
+
+  if (!normalizedOrigin) {
+    return false;
+  }
+
+  try {
+    const host = new URL(normalizedOrigin).hostname.toLowerCase();
+
+    return CONFIG.ALLOWED_ORIGIN_SUFFIXES.some((suffix) =>
+      hostMatchesSuffix(host, suffix)
+    );
+  } catch (_) {
+    return false;
+  }
+}
+
+function resolveParentOrigin() {
+  try {
+    if (
+      window.location.ancestorOrigins &&
+      window.location.ancestorOrigins.length
+    ) {
+      const origin = normalizeOrigin(
+        window.location.ancestorOrigins[0]
+      );
+
+      if (origin && isTrustedOrigin(origin)) {
+        return origin;
+      }
+    }
+  } catch (_) {
+    // Continuar con document.referrer.
+  }
+
+  try {
+    const origin = normalizeOrigin(document.referrer);
+
+    if (origin && isTrustedOrigin(origin)) {
+      return origin;
+    }
+  } catch (_) {
+    // Origen no válido.
+  }
+
+  return "";
+}
+
+function refId(value) {
+  if (typeof value === "string" || typeof value === "number") return clean(value);
+  if (!value || typeof value !== "object") return "";
+  return clean(value.addonId || value._id || value.id || value.referenceId || value.value);
+}
+
+// Devuelve el primer identificador válido de la lista de candidatos.
+// Importante: se evalúa cada candidato por separado, para que un objeto
+// Wix sin claves reconocidas no impida probar los siguientes candidatos.
+function firstRefId() {
+  for (let i = 0; i < arguments.length; i += 1) {
+    const resolved = refId(arguments[i]);
+    if (resolved) return resolved;
+  }
+  return "";
+}
+
+function showError(message) {
+  const banner = el("errorBanner");
+  if (!banner) return;
+  banner.textContent = clean(message, "Se produjo un error.");
+  banner.style.display = "block";
+}
+
+function hideError() {
+  const banner = el("errorBanner");
+  if (!banner) return;
+  banner.textContent = "";
+  banner.style.display = "none";
+}
+
+function formatPrice(value) {
+  try {
+    return new Intl.NumberFormat("es-ES", {
+      style: "currency", currency: state.currency, minimumFractionDigits: 2, maximumFractionDigits: 2
+    }).format(number(value));
+  } catch (_) {
+    return `${number(value).toFixed(2).replace(".", ",")} ${state.currency}`;
+  }
+}
+
+function normalizeImage(value) {
+  let image = "";
+  if (typeof value === "string") image = value.trim();
+  else if (value && typeof value === "object") {
+    image = clean(value.url || value.src || value.fileUrl || value.uri || value.imageUrl);
+  }
+  if (!image) return CONFIG.DEFAULT_IMAGE;
+
+  // Las colecciones Wix suelen devolver wix:image://v1/{mediaId}/...; convertirlo a CDN.
+  if (/^wix:image:\/\/v1\//i.test(image)) {
+    const path = image.replace(/^wix:image:\/\/v1\//i, "").split(/[?#]/, 1)[0];
+    const mediaId = path.split("/")[0];
+    if (mediaId && /^[a-z0-9._~%-]+$/i.test(mediaId)) {
+      return `https://static.wixstatic.com/media/${mediaId}`;
+    }
+    return CONFIG.DEFAULT_IMAGE;
+  }
+  if (/^https:\/\/static\.(wixstatic|parastorage)\.com\//i.test(image)) return image;
+  if (/^data:image\/(svg\+xml|png|jpe?g|webp|gif);/i.test(image)) return image;
+  return CONFIG.DEFAULT_IMAGE;
+}
+
+function applyImage(value, title) {
+  const image = el("serviceImage");
+  if (!image) return;
+  image.alt = `Imagen de ${clean(title, "servicio")}`;
+  image.onerror = () => {
+    image.onerror = null;
+    image.src = CONFIG.DEFAULT_IMAGE;
+  };
+  image.src = normalizeImage(value);
+}
+
+function normalizeAddOn(addon) {
+  if (!addon || typeof addon !== "object") return null;
+  const addonId = refId(addon.addonId || addon._id || addon.id);
+  if (!addonId) return null;
+  // PATCH C: ComplementosCatalogo.description es RICH_TEXT en CMS.
+  // Strip defensivo de tags bien formados (<p>, </p>, <br/>, <!---->) y
+  // colapso de espacios residuales. El regex excluye comparaciones
+  // literales tipo "5 < 10 y > 3" (no empiezan por letra, "/" ni "!").
+  const rawDescription = clean(addon.description);
+  const cleanDescription = rawDescription
+    .replace(/<[a-zA-Z\/!][^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return {
+    addonId,
+    name: clean(addon.name || addon.nombreComplemento, "Complemento"),
+    description: cleanDescription,
+    durationMinutes: Math.max(0, number(addon.durationMinutes)),
+    price: Math.max(0, number(addon.price)),
+    taxIncluded: addon.taxIncluded === true,
+    tipoImpositivo: number(addon.tipoImpositivo)
+  };
+}
+
+function normalizeRecommendation(value) {
+  if (value && typeof value === "object") {
+    return clean(value.name || value.title || value.text || value.description, "Producto recomendado");
+  }
+  return clean(value, "Producto recomendado");
+}
+
+function updatePrice() {
+  const extras = state.selectedAddOns.reduce((total, addon) => total + addon.price, 0);
+  el("servicePrice").textContent = formatPrice(state.price + extras);
+  const summary = el("extrasSummary");
+  if (!state.selectedAddOns.length) {
+    summary.textContent = "";
+    summary.style.display = "none";
+    return;
+  }
+  summary.textContent = `Complementos seleccionados: +${formatPrice(extras)}`;
+  summary.style.display = "block";
+}
+
+function renderAddOns() {
+  const section = el("addonsSection");
+  const container = el("addonsContainer");
+  container.replaceChildren();
+  state.selectedAddonIds.clear();
+  state.selectedAddOns = [];
+  section.hidden = !state.addOnOptions.length;
+  if (section.hidden) {
+    updatePrice();
+    return;
+  }
+
+  state.addOnOptions.forEach((addon) => {
+    const row = document.createElement("label");
+    const checkbox = document.createElement("input");
+    const name = document.createElement("span");
+    const price = document.createElement("span");
+    row.className = "addon";
+    checkbox.type = "checkbox";
+    checkbox.value = addon.addonId;
+    checkbox.setAttribute("aria-label", `Añadir ${addon.name}`);
+    name.className = "addon-name";
+    name.textContent = addon.name;
+    price.className = "addon-price";
+    price.textContent = `+${formatPrice(addon.price)}`;
+    checkbox.addEventListener("change", () => {
+      if (checkbox.checked) state.selectedAddonIds.add(addon.addonId);
+      else state.selectedAddonIds.delete(addon.addonId);
+      state.selectedAddOns = state.addOnOptions.filter((item) => state.selectedAddonIds.has(item.addonId));
+      updatePrice();
+    });
+    row.append(checkbox, name, price);
+    container.appendChild(row);
+  });
+}
+
+function renderRecommendations(items) {
+  const section = el("recommendationsSection");
+  const container = el("recommendationsContainer");
+  container.replaceChildren();
+  const recommendations = Array.isArray(items) ? items : [];
+  section.hidden = recommendations.length === 0;
+  recommendations.forEach((item) => {
+    const recommendation = document.createElement("div");
+    recommendation.className = "recommendation";
+    recommendation.textContent = normalizeRecommendation(item);
+    container.appendChild(recommendation);
+  });
+}
+
+function renderService(service) {
+  if (!service || typeof service !== "object" || Array.isArray(service)) {
+    showError("El servicio recibido no es válido.");
+    return false;
+  }
+
+  // Trazas para diagnosticar por qué se rechaza un contexto en el editor de Wix.
+  console.log("[service-widget] renderService input:", {
+    serviceId: service.serviceId,
+    id: service.id,
+    _id: service._id,
+    referenceId: service.referenceId,
+    pricingPlanId: service.pricingPlanId,
+    catalogEntryType: service.catalogEntryType,
+    slug: service.slug,
+    serviceSlug: service.serviceSlug,
+    urlSlug: service.urlSlug,
+    clientHidden: service.clientHidden
+  });
+
+  // El backend puede entregar dos tipos de entrada de catálogo:
+  //  - SERVICE: servicio normal, con serviceId.
+  //  - PRICING_PLAN: plan de precios, con serviceId vacío y pricingPlanId.
+  const catalogEntryType = clean(service.catalogEntryType, "SERVICE").toUpperCase();
+
+  // Aceptar los distintos nombres con los que Wix puede exponer los
+  // identificadores del servicio y de su slug.
+  const serviceId = firstRefId(
+    service.serviceId,
+    service.id,
+    service._id,
+    service.referenceId
+  );
+
+  const pricingPlanId = firstRefId(
+    service.pricingPlanId
+  );
+
+  const slug = clean(
+    service.slug || service.serviceSlug || service.urlSlug
+  );
+
+  // El identificador válido depende del tipo de entrada: los planes
+  // deliberadamente no llevan serviceId.
+  const validReference =
+    catalogEntryType === "PRICING_PLAN"
+      ? pricingPlanId
+      : serviceId;
+
+  if (!validReference || !slug || service.clientHidden === true) {
+    console.warn("[service-widget] contexto rechazado:", {
+      catalogEntryType,
+      serviceId,
+      pricingPlanId,
+      slug,
+      clientHidden: service.clientHidden
+    });
+    showError("El servicio no está disponible para reserva.");
+    return false;
+  }
+
+  const title = clean(service.title, "Servicio");
+  const duration = Math.max(0, number(service.totalDuration));
+  const currency = clean(service.currency, CONFIG.DEFAULT_CURRENCY).toUpperCase();
+
+  // El DTO público de reservas.web.js devuelve recommendations, no recomendaciones.
+  const recommendations = Array.isArray(service.recommendations)
+    ? service.recommendations
+    : (Array.isArray(service.recomendaciones) ? service.recomendaciones : []);
+
+  state.catalogEntryType = catalogEntryType;
+  state.serviceId = serviceId;
+  state.pricingPlanId = pricingPlanId;
+  state.slug = slug;
+  state.currency = /^[A-Z]{3}$/.test(currency) ? currency : CONFIG.DEFAULT_CURRENCY;
+  state.price = Math.max(0, number(service.price));
+  state.addOnOptions = (Array.isArray(service.addOnOptions) ? service.addOnOptions : [])
+    .slice(0, CONFIG.MAX_ADDONS)
+    .map(normalizeAddOn)
+    .filter(Boolean);
+
+  el("serviceTitle").textContent = title;
+  el("serviceSummary").textContent = clean(service.tagLine, "Descubre una experiencia personalizada en Marian Madrid.");
+  el("serviceDescription").textContent = clean(service.description, "Detalles del servicio no disponibles.");
+  el("serviceLocation").textContent = clean(service.location, CONFIG.DEFAULT_LOCATION);
+  const durationLabel = duration > 0 ? `${duration} min` : "Consultar";
+  el("serviceDuration").textContent = durationLabel;
+  el("bookingDuration").textContent = `Duración aproximada: ${durationLabel}`;
+
+  // El backend lee ServiciosCatalogo.mainMedia y normalmente lo proyecta a URL.
+  // normalizeImage también resuelve el formato wix:image://v1/... cuando llega sin convertir.
+  applyImage(service.mainMedia, title);
+  renderAddOns();
+  renderRecommendations(recommendations);
+  updatePrice();
+
+  state.contextReceived = true;
+  state.bookingStarted = false;
+  clearTimeout(contextTimer);
+  clearTimeout(handshakeTimer);
+  handshakeTimer = null;
+  contextTimer = null;
+
+  const button = el("btnBookNow");
+  button.disabled = false;
+  button.textContent = "Continuar reserva";
+  hideError();
+  return true;
+}
+
+function createMessageId() {
+  sequence += 1;
+  return `service-${Date.now().toString(36)}-${sequence.toString(36)}`;
+}
+
+function sendMessage(type, payload = {}) {
+  if (!window.parent || window.parent === window) {
+    return false;
+  }
+
+  const normalizedType = clean(type).toUpperCase();
+
+  if (!Object.values(MESSAGE_TYPES).includes(normalizedType)) {
+    return false;
+  }
+
+  if (!parentOrigin) {
+    console.warn(
+      "[service-widget] Origen del padre desconocido"
+    );
+    return false;
+  }
+
+  try {
+    const message = {
+      version: CONFIG.PROTOCOL_VERSION,
+      type: normalizedType,
+      payload: payload && typeof payload === "object"
+        ? payload
+        : {},
+      messageId: createMessageId()
+    };
+
+    if (state.bridgeId) {
+      message.bridgeId = state.bridgeId;
+    }
+
+    window.parent.postMessage(message, parentOrigin);
+    return true;
+  } catch (error) {
+    console.error(
+      "[service-widget] Error enviando mensaje",
+      error
+    );
+    return false;
+  }
+}
+
+function sendReady() {
+  return sendMessage(MESSAGE_TYPES.READY, { status: "INIT" });
+}
+
+function startHandshake() {
+  clearTimeout(handshakeTimer);
+  clearTimeout(contextTimer);
+
+  handshakeAttempt = 0;
+  state.contextReceived = false;
+
+  function retry() {
+    if (
+      state.contextReceived ||
+      handshakeAttempt >= CONFIG.HANDSHAKE_ATTEMPTS
+    ) {
+      return;
+    }
+
+    handshakeAttempt += 1;
+    sendReady();
+
+    const delay = Math.min(
+      CONFIG.HANDSHAKE_BASE_BACKOFF_MS *
+        2 ** (handshakeAttempt - 1),
+      CONFIG.HANDSHAKE_MAX_BACKOFF_MS
+    );
+
+    handshakeTimer = setTimeout(retry, delay);
+  }
+
+  retry();
+
+  contextTimer = setTimeout(() => {
+    if (!state.contextReceived) {
+      showError(
+        "No llegaron los datos del servicio. Recarga la página."
+      );
+    }
+  }, CONFIG.CONTEXT_TIMEOUT_MS);
+}
+
+// Gestiona la respuesta del frontend a un MM_BOOK.
+// servicio-2.js SIEMPRE responde (SUCCESS al comprar un plan o al navegar a
+// la URL de reserva; ERROR si algo falla, incluido PRICING_PLAN_PURCHASE_FAILED,
+// BOOKING_URL_FAILED y SERVICE_NOT_READY). Si no se procesa, el usuario ve el
+// mensaje genérico de timeout a los 60 s en lugar del error real del backend.
+function handleBookReply(payload) {
+  const button = el("btnBookNow");
+  const data = (payload && typeof payload === "object") ? payload : {};
+  const status = clean(data.status).toUpperCase();
+  const error = data.error && typeof data.error === "object" ? data.error : {};
+
+  if (status === "SUCCESS") {
+    // El frontend ya está navegando (checkout o wixLocation.to). Mantener el
+    // botón bloqueado y el texto "Abriendo calendario..." para no duplicar.
+    clearTimeout(bookTimer);
+    bookTimer = null;
+    return;
+  }
+
+  if (status === "ERROR") {
+    clearTimeout(bookTimer);
+    bookTimer = null;
+    state.bookingStarted = false;
+    if (button) {
+      button.disabled = false;
+      button.textContent = "Continuar reserva";
+    }
+    console.warn("[service-widget] MM_BOOK respondido con error:", error);
+    showError(clean(error.message, "No se pudo iniciar la reserva. Inténtalo de nuevo."));
+  }
+}
+
+function handleIncomingMessage(event) {
+  // SEC-01 (P0): validar origin ANTES de procesar nada. Rechaza orígenes
+  // opacos, orígenes fuera de la allowlist y, cuando se conoce, cualquier
+  // origen distinto del documento padre real.
+  const eventOrigin = normalizeOrigin(event?.origin);
+
+  if (
+    !event ||
+    !eventOrigin ||
+    !isTrustedOrigin(eventOrigin) ||
+    (parentOrigin && eventOrigin !== parentOrigin)
+  ) {
+    try {
+      console.warn(
+        "[service-widget] SEC: mensaje de origen no confiable ignorado",
+        { origin: event && event.origin }
+      );
+    } catch (_) { /* no-op */ }
+    return;
+  }
+
+  const message = event.data;
+
+  if (
+    !message ||
+    typeof message !== "object" ||
+    Array.isArray(message)
+  ) {
+    return;
+  }
+
+  if (Number(message.version) !== CONFIG.PROTOCOL_VERSION) {
+    return;
+  }
+
+  const type = clean(message.type).toUpperCase();
+
+  if (type === MESSAGE_TYPES.CONTEXT) {
+    console.log("[service-widget] mensaje recibido:", {
+      type: message.type,
+      version: message.version,
+      bridgeId: message.bridgeId,
+      payload: message.payload
+    });
+
+    // Al recibir un MM_CONTEXT, se detienen los timers de handshake y
+    // contexto: ya no tiene sentido seguir esperando ni mostrar el
+    // mensaje genérico de timeout.
+    clearTimeout(handshakeTimer);
+    clearTimeout(contextTimer);
+    handshakeTimer = null;
+    contextTimer = null;
+
+    state.bridgeId = clean(message.bridgeId);
+    const context = message.payload;
+
+    // servicio-2.js puede enviar un MM_CONTEXT con { error: { code, message } }
+    // si loadService() falla, para que no se espere al timeout y se muestre
+    // el mensaje real de inmediato.
+    const ctxError =
+      context && typeof context === "object" ? context.error : null;
+
+    if (ctxError && typeof ctxError === "object") {
+      console.warn("[service-widget] MM_CONTEXT con error:", ctxError);
+      showError(clean(ctxError.message, "No se pudo cargar el servicio."));
+      return;
+    }
+
+    renderService(context);
+    return;
+  }
+
+  if (type === MESSAGE_TYPES.BOOK) {
+    handleBookReply(message.payload);
+    return;
+  }
+}
+
+function initialize() {
+  parentOrigin = resolveParentOrigin();
+
+  if (!parentOrigin) {
+    console.warn(
+      "[service-widget] No se pudo determinar el origen del padre."
+    );
+  }
+
+  applyImage("", "servicio");
+
+  el("btnBack").addEventListener("click", () => {
+    sendMessage(MESSAGE_TYPES.NAV, {
+      target: "SERVICIOS"
+    });
+  });
+
+  el("btnBookNow").addEventListener("click", () => {
+    if (!state.contextReceived) {
+      showError(
+        "Conectando con la página. Espera un momento."
+      );
+      return;
+    }
+
+    if (state.bookingStarted) {
+      return;
+    }
+
+    state.bookingStarted = true;
+
+    const button = el("btnBookNow");
+    button.disabled = true;
+    button.textContent = "Abriendo calendario...";
+    hideError();
+
+    const bookPayload = {
+      serviceId: state.serviceId,
+      slug: state.slug,
+      addOnIds: Array.from(state.selectedAddonIds)
+        .slice(0, CONFIG.MAX_ADDONS)
+    };
+
+    if (
+      state.catalogEntryType === "PRICING_PLAN" &&
+      state.pricingPlanId
+    ) {
+      bookPayload.pricingPlanId = state.pricingPlanId;
+    }
+
+    if (!sendMessage(MESSAGE_TYPES.BOOK, bookPayload)) {
+      state.bookingStarted = false;
+      button.disabled = false;
+      button.textContent = "Continuar reserva";
+      showError(
+        "No se pudo iniciar la reserva. Recarga la página."
+      );
+      return;
+    }
+
+    clearTimeout(bookTimer);
+
+    bookTimer = setTimeout(() => {
+      if (
+        state.bookingStarted &&
+        document.visibilityState === "visible"
+      ) {
+        showError(
+          "La reserva sigue pendiente. No pulses de nuevo."
+        );
+      }
+    }, CONFIG.BOOK_NOTICE_TIMEOUT_MS);
+  });
+
+  window.addEventListener(
+    "message",
+    handleIncomingMessage
+  );
+
+  startHandshake();
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initialize, { once: true });
+} else {
+  initialize();
+}
+</script>
+</body>
+</html>
