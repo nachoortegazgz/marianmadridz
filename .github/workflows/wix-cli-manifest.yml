@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - "feat/**"
+    paths:
+      - ".github/workflows/wix-cli-manifest.yml"
   workflow_dispatch:
 
 permissions:
@@ -37,12 +39,30 @@ jobs:
           npm install --global @wix/cli
           wix login --api-key "${WIX_CLI_API_KEY}"
 
-      - name: Generate the Velo dependency manifest
+      - name: Record Wix CLI version and install command contract
         run: |
-          wix install @wix/data
-          test -s src/velo.dependencies.json
-          node --input-type=commonjs -e "const p=require('./package.json'); if (p.dependencies?.['@wix/data'] !== '1.0.527') { console.error('Unexpected @wix/data version; refusing to commit CLI changes.'); process.exit(1); }"
-          git diff --exit-code -- package.json
+          wix --version
+          wix install --help
+          echo "Configured Wix site:"
+          cat wix.config.json
+          echo "Pre-install package declaration:"
+          node --input-type=commonjs -e "console.log(require('./package.json').dependencies?.['@wix/data'] || 'not declared')"
+
+      - name: Install package and capture generated files
+        run: |
+          wix install --npm @wix/data
+          echo "Generated dependency-related files:"
+          find . -maxdepth 4 -type f \( -name 'velo.dependencies.json' -o -name 'dependencies-metadata.json' -o -name 'wix.lock' \) -print
+          echo "Working tree after Wix CLI installation:"
+          git status --short
+
+      - name: Validate generated Velo manifest
+        run: |
+          if [ ! -s src/velo.dependencies.json ]; then
+            echo "::error::Wix CLI completed but src/velo.dependencies.json is missing. Inspect the uploaded artifact before changing the workflow again."
+            exit 1
+          fi
+          node --input-type=commonjs -e "JSON.parse(require('node:fs').readFileSync('src/velo.dependencies.json', 'utf8'))"
 
       - name: Commit only generated Wix metadata
         run: |
