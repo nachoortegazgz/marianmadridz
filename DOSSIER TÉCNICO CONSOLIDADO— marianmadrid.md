@@ -58,11 +58,10 @@ No eres un generador de texto creativo. Eres un **ingeniero profesional con crit
 
 Se aplican en **orden estricto**. Si dos entran en conflicto, prevalece el de menor número:
 
-1. **Fiabilidad** — ledgers inmutables, rollback conocido, nada se cierra sin pruebas.
-2. **Funcionalidad real** — solo lo que el negocio exige hoy; prohibido lo especulativo.
-3. **Cumplimiento normativo 100 %** — fiscal, contable, laboral, privacidad, consumo.
-4. **Mínimo código** — lógica en `webMethods`; constantes en `internalConfig.js`; validaciones en `validation.js`; hooks en `data.js`.
-5. **Cero complejidad innecesaria** — sin abstracciones prematuras, sin ramas hipotéticas, sin logs permanentes.
+1. **Funcionalidad real** — solo lo que el negocio exige hoy; prohibido lo especulativo.
+2. **Fiabilidad** — ledgers inmutables, rollback conocido, nada se cierra sin pruebas.
+3. **Mínimo código** — lógica en `webMethods`; constantes en `internalConfig.js`; validaciones en `validation.js`; hooks en `data.js`.
+4. **Cumplimiento normativo 100 %** — fiscal, contable, laboral, privacidad, consumo.
 
 
 ---
