@@ -1,0 +1,67 @@
+name: Wix Preview validation
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "src/backend/securityEngine.js"
+      - "src/backend/tests/security.rateLimiter.test.mjs"
+      - ".github/workflows/wix-preview-validation.yml"
+  workflow_dispatch:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wix-preview-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  preview:
+    name: Build Wix preview from main
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout main commit
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Set up supported Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24.22.1"
+          cache: npm
+
+      - name: Install project dependencies
+        run: npm ci
+
+      - name: Install Wix CLI for Sites
+        run: npm install --global @wix/cli
+
+      - name: Authenticate Wix CLI
+        env:
+          WIX_CLI_API_KEY: ${{ secrets.CLI_API_KEY }}
+        run: |
+          if [ -z "${WIX_CLI_API_KEY}" ]; then
+            echo "::error::Missing repository secret CLI_API_KEY."
+            exit 1
+          fi
+          wix login --api-key "${WIX_CLI_API_KEY}"
+
+      - name: Create Wix preview (never publish)
+        run: |
+          set -o pipefail
+          wix preview 2>&1 | tee wix-preview.log
+
+      - name: Preserve preview output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wix-preview-log-${{ github.run_id }}
+          if-no-files-found: warn
+          path: wix-preview.log
