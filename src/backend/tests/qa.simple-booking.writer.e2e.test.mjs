@@ -145,7 +145,9 @@ test('QA-SIMPLE-BOOKING-01 resolves real catalogue and staff mocks, creates one 
   assert.equal(citas[0].scheduleId, SCHEDULE_ID);
   assert.equal(citas[0].bookingType, IC.BOOKING_TYPE.SIMPLE);
   assert.equal(citas[0].status, undefined, 'legacy status alias must not be persisted');
-  assert.equal(citas[0].pairToken, null, 'simple booking must not persist a dual pair token');
+  assert.equal(typeof citas[0].pairToken, 'string', 'simple booking uses a stable idempotency token');
+  assert.ok(citas[0].pairToken.length > 0);
+  assert.equal(citas[0].bookingType, IC.BOOKING_TYPE.SIMPLE, 'stable token must not turn a simple booking into a dual booking');
   assert.equal(citas[0].contactDetails.email, 'qa.simple@example.test');
 });
 
