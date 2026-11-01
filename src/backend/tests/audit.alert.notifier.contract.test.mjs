@@ -28,5 +28,14 @@ test("audit write paths share one persistence implementation", () => {
 
 test("inventory reconciliation remains a work queue; variant mutex is a lock", () => {
   assert.match(inventorySource, /controlType: CONTROL_TYPE\.ALERT,[\s\S]{0,100}alertType,/);
-  assert.match(inventorySource, /controlType: CONTROL_TYPE\.SLOT_LOCK,[\s\S]{0,100}alertType: "INVENTORY_VARIANT_LOCK"/);
+  assert.match(inventorySource, /controlType: CONTROL_TYPE\.SLOT_LOCK,[\s\S]{0,100}dedupeKey: stockKey/);
+  assert.doesNotMatch(
+    inventorySource.slice(
+      inventorySource.indexOf("async function acquireInventoryVariantLock"),
+      inventorySource.indexOf("async function releaseInventoryVariantLock"),
+    ),
+    /alertType:|severity:|message:/,
+    "a mutex must not carry alert presentation fields",
+  );
+  assert.match(inventorySource, /const CONTROL_COL = OPERATIONAL_COLLECTIONS\.CONTROL_OPERATIVO/);
 });
