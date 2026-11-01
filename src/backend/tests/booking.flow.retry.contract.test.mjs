@@ -29,6 +29,7 @@ test("BOOK-FLOW-TIMING-01 module deadlines fit the existing widget watchdogs wit
   assert.match(serviceWidgetSource, /BOOK_NOTICE_TIMEOUT_MS:\s*60000/);
   assert.match(calendarSource, /contextTimeoutMs:\s*27000/);
   assert.match(calendarSource, /contextAttemptTimeoutMs:\s*8000/);
+  assert.match(serviceSource, /handshakeTimeoutMs:\s*45000/);
   assert.match(serviceSource, /contextTimeoutMs:\s*120000/);
   assert.match(serviceSource, /contextAttemptTimeoutMs:\s*30000/);
 });
