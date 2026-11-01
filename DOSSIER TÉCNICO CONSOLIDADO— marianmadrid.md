@@ -1078,7 +1078,7 @@ Duplicar validaciones frontend/backend · crear flags o campos sin consumidor ·
 
 **Alcance:**
 - Bookings **V2** (`@wix/bookings@1.0.1704`): `listAvailabilityTimeSlots` (`timeZone` mayúscula, `locationType: "BUSINESS"`), `createBooking` (`timezone` minúscula en `bookedEntity.slot`, `locationType: "OWNER_BUSINESS"`), `Query Extended Bookings V2`.
-- **DUAL F1+F2** con `pairToken` (UUID v4); dos llamadas independientes; **prohibido** `createMultiServiceBooking`.
+- **DUAL F1+F2** con `pairToken` determinista compartido; dos llamadas independientes; **prohibido** `createMultiServiceBooking`.
 - Mutex `SLOT_LOCK` en `ControlOperativo` + revalidación exacta en servidor.
 - Saga de compensación: si F2 falla, cancelar F1 y registrar en `ControlOperativo`; cron `runPendingCompensationsJob` (min 30 de cada hora).
 - Asignación de profesional: si el cliente elige, se respeta exactamente; si no, backend elige por menos horas reservadas del día con rotación en empate.
@@ -1418,7 +1418,7 @@ Los identificadores oficiales de las aplicaciones se mantienen exclusivamente en
 
 La API nativa `createMultiServiceBooking` exige servicios **sin ningún hueco intermedio**. Por ello está **explícitamente prohibida**.
 
-Se usa en su lugar la arquitectura **DUAL F1+F2** con dos llamadas independientes a `bookings.createBooking()`, vinculadas por `pairToken` (UUID v4). Si F2 falla, la saga de compensación cancela F1 de inmediato.
+Se usa en su lugar la arquitectura **DUAL F1+F2** con dos llamadas independientes a `bookings.createBooking()`, vinculadas por `pairToken` determinista compartido. Si F2 falla, la saga de compensación cancela F1 de inmediato.
 
 ### 3.4 Tipos y categorías de servicio
 
@@ -1896,7 +1896,7 @@ Cualquier intento de lectura/escritura sobre legacy es interceptado en `backend/
 | `paymentStatus` | `pagoEstado` | TEXT | Enum CMS: `UNPAID` \| `PARTIAL` \| `PAID` \| `REFUNDED`. ⚠️ Validar runtime. |
 | `serviceId` | `servicioId` | TEXT | GUID del servicio en Wix Bookings. **Distinto** de `catalogId`. |
 | `resourceId` | `recursoId` | TEXT | GUID del recurso (profesional) en Wix Bookings. **Índice** `idx_citasf2_resourceId`. |
-| `pairToken` | `parejaToken` | TEXT | UUID v4 que vincula F1 y F2 en reservas duales. **Índice** regular. |
+| `pairToken` | `parejaToken` | TEXT | Token de idempotencia: SIMPLE usa `pt` + 32 hex; DUAL usa fingerprint SHA-256 compartido F1/F2. **Índice** regular. |
 | `dateYmd` | `fechaYmd` | TEXT | Fecha operativa normalizada `YYYY-MM-DD`. |
 | `scheduleId` | `calendarioId` | TEXT | ID de calendario **del slot nativo** (`bookedEntity.slot.scheduleId`). **No** sustituir por `eventsSchedule.id` del profesional. |
 | `contactDetails` | `contactoDetalles` | OBJECT | Datos mínimos de contacto (ej. `{email}`). Minimizar PII. |
@@ -2048,7 +2048,7 @@ Cualquier intento de lectura/escritura sobre legacy es interceptado en `backend/
 | `orderId` | `pedidoId` | TEXT | ID de pedido Wix (si aplica). |
 | `refundId` | `reembolsoId` | TEXT | ID de reembolso Wix (si aplica). |
 | `catalogId` | `catalogoId` | TEXT | `_id` de `ServiciosCatalogo` (si aplica). |
-| `pairToken` | `parejaToken` | TEXT | UUID v4 de reserva dual. |
+| `pairToken` | `parejaToken` | TEXT | Token de idempotencia; en DUAL vincula F1/F2. |
 | `resourceId` / `staffResourceId` | `recursoId` / `personalRecursoId` | TEXT | `resourceId` del profesional. |
 | `thirdPartyId` | `terceraParteId` | TEXT | ID de tercero fiscal. |
 | `sourceEventId` | — | TEXT | `eventId` del webhook de origen. |
@@ -2600,7 +2600,7 @@ API = { STAFF_RESOURCE_TYPE_ID: "1cd44cf8-756f-41c3-bd90-3e2ffcaf1155" }
 | ID | Generación | Alcance |
 |---|---|---|
 | `traceId` | `makeTraceId()` / `_generateUUID()` (UUID v4) | Obligatorio en toda mutación transaccional |
-| `pairToken` | UUID v4 | `CitasF2`, `ControlOperativo` |
+| `pairToken` | TEXT token determinista (SIMPLE `pt` + 32 hex; DUAL SHA-256) | `CitasF2`, `ControlOperativo` |
 | `dedupeKey` | Hash determinista | `ControlOperativo` (indexado) |
 | `movementToken` | UUID v4 | `MovimientosInventario` (único) |
 | `transactionId` | UUID v4 | `MovimientosCaja` (único) |
@@ -4012,7 +4012,7 @@ El dominio `.test` está reservado para pruebas y no debe utilizarse para espera
     "oneBooking": true,
     "oneCitasF2Record": true,
     "bookingType": "SIMPLE",
-    "pairToken": null,
+    "pairToken": "STABLE_TOKEN_PT_PLUS_32_HEX",
     "noFiscalMovement": true
   }
 }
@@ -4057,7 +4057,7 @@ Esta fixture solo comprueba cálculo, vínculo, validaciones y compensación sim
 - `resourceId`: GUID del recurso/profesional de Bookings.
 - `scheduleId`: identificador de agenda/slot devuelto por Bookings; no es sinónimo de `resourceId`.
 - `bookingId`: solo el GUID devuelto por Wix al crear/consultar una reserva real; no se inventa.
-- `pairToken`: UUID v4 generado por el motor para vincular F1/F2; no se crea para reservas simples.
+- `pairToken`: token TEXT de idempotencia. En SIMPLE el código actual genera `pt` + 32 caracteres hexadecimales estables (servicio/recurso/inicio/email); no representa una pareja F1/F2. En DUAL con `resourceId` el código actual genera un fingerprint SHA-256 hexadecimal compartido por F1/F2. No asumir UUID v4.
 - Fechas y horas se interpretan en `Europe/Madrid`; almacenar y comparar timestamps con conversión explícita UTC/local.
 - Toda ejecución automatizada lleva `scenarioId`, `traceId`, timestamp, versión/commit, entorno, resultado y evidencia no sensible.
 - No guardar PII real en logs, fixtures, capturas o artefactos CI. Enmascarar email/teléfono y excluir tokens, cookies, API keys y secretos.
@@ -4099,7 +4099,7 @@ La prueba solo se declara superada si se conserva evidencia de todos los puntos:
 - Slot ofrecido y slot reservado coinciden en fecha, hora, zona horaria, profesional/recurso y sede.
 - El backend revalida disponibilidad antes de crear.
 - Wix devuelve un `bookingId` válido y el registro `CitasF2` queda vinculado a ese ID con `bookingType = SIMPLE`.
-- No se crea una segunda reserva ni `pairToken`.
+- No se crea una segunda reserva ni Fase 2. El token estable `pairToken` puede existir para idempotencia, pero `bookingType` sigue siendo `SIMPLE` y solo se persiste una cita.
 - No se produce cobro ni movimiento fiscal.
 - Las notificaciones previstas llegan solo a buzones/dispositivos de QA autorizados.
 - La cancelación, si fue autorizada, deja el estado esperado y no rompe registros append-only.
@@ -4244,3 +4244,17 @@ El resultado **no certifica** todavía una jornada integral de cliente en Wix. E
 7. Mantener las reservas duales E2E reales, pagos reales y emisión fiscal fuera del plan, salvo nueva autorización expresa.
 
 **Fuentes de evidencia:** GitHub Actions run `41304182695` (#557), logs del job `Backend offline regression suite` y `Windows Node.js 24.22.1 regression`; archivos de tests citados en §27.3. Esta sección describe exclusivamente los resultados observados en esos logs.
+
+
+## 28. Hallazgo QA — semántica y formato real de `pairToken`
+
+La nueva prueba `QA-SIMPLE-BOOKING-01` ejecutó con éxito los pasos internos de `executeBookingSaga` hasta Writer V2 mock, confirmación y persistencia `CitasF2`. En esa ruta se observó que una reserva **SIMPLE** también persiste un `pairToken` estable y lo reutiliza como clave de idempotencia. Por tanto, la regla documental previa “pairToken nulo en SIMPLE” era incorrecta para el código actual.
+
+**Implementación observada en código:**
+- SIMPLE (y DUAL degradado sin resourceId): `_resolveStablePairToken()` devuelve `pt` + 32 caracteres hexadecimales de hash.
+- DUAL con resourceId válido: `_buildPairTokenDeterministic()` devuelve el fingerprint SHA-256 hexadecimal, compartido por F1 y F2.
+- El campo CMS es TEXT; el token no es UUID v4 en ninguna de esas dos rutas.
+
+**Decisión pendiente (no corregida en esta PR):** reconciliar SSOT/CMS docs/consumidores con el formato implementado. No migrar ni renombrar el campo, ni cambiar el algoritmo, sin revisar registros existentes, índices, hooks, idempotencia, conciliación y rollback. Hasta esa decisión, tratar `pairToken` como token opaco TEXT; no validarlo como UUID v4.
+
+La prueba de reserva simple añadida en PR #68 comprueba: una sola llamada `createBooking`, una sola confirmación, un solo registro `CitasF2`, tipo `SIMPLE`, token estable `pt` + 32 hex y replay idempotente sin crear una segunda reserva. Su resultado CI está pendiente en el momento de esta actualización.
