@@ -3700,6 +3700,11 @@ claude mcp add --transport http wix-mcp-remote https://mcp.wix.com/mcp
 
 **Cursor** sin API key: instalación desde la librería MCP integrada.
 
+### J.1.3 Autenticación MCP
+
+- **OAuth:** flujo interactivo de la cuenta Wix en clientes compatibles.
+- **API key:** para entornos no interactivos, usar `Authorization: <API_KEY>` y `wix-account-id: <ACCOUNT_ID>`. No confundir con la API key CLI de §B.3.2 (`CLI_API_KEY`). No incluir valores secretos en el dossier ni en logs.
+
 ### J.1.4 Herramientas expuestas por el MCP
 
 | Herramienta | Función |
@@ -3716,13 +3721,6 @@ claude mcp add --transport http wix-mcp-remote https://mcp.wix.com/mcp
 | `CallWixSiteAPI` | Ejecuta acción/consulta sobre un sitio |
 | `ManageWixSite` | Acción a nivel de sitio (crear, publicar) |
 | `SupportAndFeedback` | Envía feedback a Wix |
-
-### J.1.3 Autenticación MCP
-
-- **OAuth:** flujo interactivo de la cuenta Wix en clientes compatibles.
-- **API key:** para entornos no interactivos, usar `Authorization: <API_KEY>` y `wix-account-id: <ACCOUNT_ID>`. No confundir con la API key CLI de §B.3.2 (`CLI_API_KEY`). No incluir valores secretos en el dossier ni en logs.
-- **Claude Code:** `claude mcp add --transport http wix-mcp-remote https://mcp.wix.com/mcp`.
-- **Cursor:** conexión desde la librería MCP integrada cuando esté disponible.
 
 ### J.1.5 Wix Site MCP y WebMCP
 
