@@ -115,7 +115,34 @@ function normalizeLookupValue(value) {
 }
 
 async function parseUrlParams() {
-    const query = await location.query();
+    // Wix Location exposes `query` as a read-only object in the current SDK.
+    // Keep method support for compatibility with older injected wrappers.
+    let query = typeof location.query === "function"
+        ? await location.query()
+        : location.query;
+
+    if (!query || typeof query !== "object" || Array.isArray(query)) {
+        query = {};
+    }
+
+    // Some Wix page contexts can expose an empty query object despite a URL
+    // containing parameters. Recover only from the current page URL.
+    if (
+        !query.serviceId &&
+        !query.slug &&
+        typeof location.url === "string"
+    ) {
+        try {
+            query = Object.fromEntries(
+                new URL(location.url).searchParams.entries()
+            );
+        } catch (error) {
+            console.warn("[calendario-2] No se pudo leer la query de la URL", {
+                message: error?.message
+            });
+        }
+    }
+
     const rawServiceId = decodeUrlValue(query?.serviceId);
     const rawSlug = decodeUrlValue(query?.slug);
     const rawAddOnIds = decodeUrlValue(query?.addOnIds);
