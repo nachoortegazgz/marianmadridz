@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - "feat/**"
+    paths:
+      - ".github/workflows/wix-cli-manifest.yml"
   workflow_dispatch:
 
 permissions:
