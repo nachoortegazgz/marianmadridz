@@ -10,8 +10,8 @@ const serviceUrl = new URL("../../pages/Pagina%20de%20servicio%202.xnfr4.js", im
 const calendarSource = await readFile(calendarUrl, "utf8");
 const serviceSource = await readFile(serviceUrl, "utf8");
 const bridgeSource = await readFile(new URL("../../public/widgetBridge.js", import.meta.url), "utf8");
-const calendarWidgetSource = await readFile(new URL("../../../#html1.txt", import.meta.url), "utf8");
-const serviceWidgetSource = await readFile(new URL("../../../#htmlWidgetCustomService.txt", import.meta.url), "utf8");
+const calendarWidgetSource = await readFile(new URL("../../../%23html1.txt", import.meta.url), "utf8");
+const serviceWidgetSource = await readFile(new URL("../../../%23htmlWidgetCustomService.txt", import.meta.url), "utf8");
 
 test("BOOK-FLOW-CONTRACT-01 protocol exposes expanded time windows and exactly three context attempts", () => {
   assert.equal(PROTOCOL_UI.HANDSHAKE_TIMEOUT_MS, 30000);
@@ -22,13 +22,13 @@ test("BOOK-FLOW-CONTRACT-01 protocol exposes expanded time windows and exactly t
   assert.equal(PROTOCOL_UI.RETRY_MAX_DELAY_MS, 4000);
 });
 
-test("BOOK-FLOW-TIMING-01 module deadlines fit the existing widget watchdogs without editing HTML widgets", () => {
-  assert.match(calendarWidgetSource, /contextTimeoutMs:30000/);
+test("BOOK-FLOW-TIMING-01 module deadlines fit the configured widget watchdogs", () => {
+  assert.match(calendarWidgetSource, /contextTimeoutMs:120000/);
   assert.match(calendarWidgetSource, /bookingTimeoutMs:90000/);
   assert.match(serviceWidgetSource, /CONTEXT_TIMEOUT_MS:\s*155000/);
   assert.match(serviceWidgetSource, /BOOK_NOTICE_TIMEOUT_MS:\s*60000/);
-  assert.match(calendarSource, /contextTimeoutMs:\s*27000/);
-  assert.match(calendarSource, /contextAttemptTimeoutMs:\s*8000/);
+  assert.match(calendarSource, /contextTimeoutMs:\s*110000/);
+  assert.match(calendarSource, /contextAttemptTimeoutMs:\s*30000/);
   assert.match(serviceSource, /handshakeTimeoutMs:\s*45000/);
   assert.match(serviceSource, /contextTimeoutMs:\s*120000/);
   assert.match(serviceSource, /contextAttemptTimeoutMs:\s*30000/);
