@@ -4428,3 +4428,28 @@ Se confirma en documentación oficial que este proyecto usa **Wix CLI for Sites*
 5. Completar Layer 2 runtime: permisos efectivos, concurrencia/atomicidad persistente, cierre Z, hash-chain, writer contable y reconciliación de cancelaciones/rectificativas.
 
 **No cerrar Layer 1 ni Layer 2 por el resultado de CI offline.** Mantener PR #80 sin merge hasta completar la validación Preview y revisión de código.
+
+
+### 31.6 Reconciliación viva de Bookings y CMS — lectura de 2026-11-01
+
+Consulta de solo lectura en el sitio Wix vinculado al proyecto. No se han escrito ni corregido registros.
+
+- Colección `CitasF2`: 11 elementos; 10 con `bookingId` y estado CMS `CONFIRMED`.
+- Cruce por ID con Bookings Reader V2: 10 reservas nativas encontradas.
+- Ocho de esas reservas nativas están en `CANCELED` mientras su CitasF2 permanece `CONFIRMED`.
+- Los ocho bookings tienen `createdBy.identityType = WIX_USER` y el mismo `wixUserId` interno. La API no identifica en esta respuesta el motivo de cancelación ni prueba por sí sola quién inició cada acción.
+- Los cinco casos QA (fechas de servicio 03/11 y 04/11) presentan `paymentStatus=NOT_PAID` en Bookings.
+- Los tres casos históricos de 21/10 presentan `paymentStatus=UNDEFINED` en Bookings, mientras CMS conserva `NOT_PAID`. No equiparar `UNDEFINED` con pago o impago confirmado sin más evidencia.
+- Consulta de `MovimientosCaja` por los ocho bookingIds: cero movimientos vinculados.
+- Consulta de `ControlOperativo`: cuatro eventos `BOOKING_CANCELED` en estado `COMPLETED`, pero ninguno contiene como bookingId los ocho IDs discrepantes. Por tanto, no hay evidencia de que esos ocho eventos estén representados en el conjunto de eventos consultado.
+
+**Clasificación provisional:**
+- Cinco registros QA: cancelaciones nativas confirmadas, con CMS desincronizado; candidatos a reconciliación técnica una vez validado el alcance QA y la política de conservación.
+- Tres registros históricos: cancelaciones nativas confirmadas, CMS desincronizado, con estado de pago nativo indefinido; requieren revisión histórica individual antes de cualquier cambio.
+- No hay evidencia en MovimientosCaja de movimientos vinculados a estos IDs. Esto no sustituye una auditoría de todos los sistemas externos ni prueba ausencia absoluta de efectos fuera de esa colección.
+
+**Acción deliberadamente no ejecutada:** no se actualizaron estados de CitasF2 ni se eliminaron registros, ni se generaron rectificativas. La sincronización se realizará solo tras aprobar la política de reconciliación y conservar evidencia de auditoría.
+
+### 31.7 Estado del workflow Preview al corte
+
+El run `41337069118` ha superado checkout, instalación de dependencias, instalación y autenticación del Wix CLI for Sites. El paso `Create and verify Wix Sites preview` seguía en ejecución al último sondeo; no se declara Preview válido hasta que el proceso termine y la URL devuelta responda correctamente.
