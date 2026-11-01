@@ -445,7 +445,7 @@ test('RES-LOOK-01E strict ASCII title slug resolves the canonical CMS service sl
   await invalidateStaffCache();
   const row = baseServiceRow({
     slug: 'corte-pelo-ninos-rapido-divertido',
-    title: 'Corte de Pelo Niños (Rápido y Divertido)',
+    title: 'Corte de Pelo Ni\u00f1os (R\u00e1pido y Divertido)',
   });
   seedService(row);
 
@@ -453,7 +453,7 @@ test('RES-LOOK-01E strict ASCII title slug resolves the canonical CMS service sl
   assert.strictEqual(asciiLookup.status, 'SUCCESS');
   assert.strictEqual(asciiLookup.data.serviceId, row.serviceId);
 
-  const unicodeInput = await RW._getServiceBySlugOrIdInternal('corte-de-pelo-niños-rápido-y-divertido');
+  const unicodeInput = await RW._getServiceBySlugOrIdInternal('corte-de-pelo-ni\u00f1os-r\u00e1pido-y-divertido');
   assert.strictEqual(unicodeInput.status, 'SUCCESS');
   assert.strictEqual(unicodeInput.data.serviceId, row.serviceId);
 });
@@ -463,11 +463,11 @@ test('RES-LOOK-01F ambiguous normalized title lookup fails closed', async () => 
   await invalidateStaffCache();
   const first = baseServiceRow({
     slug: 'servicio-a-' + seq,
-    title: 'Corte de Pelo Niños (Rápido y Divertido)',
+    title: 'Corte de Pelo Ni\u00f1os (R\u00e1pido y Divertido)',
   });
   const second = baseServiceRow({
     slug: 'servicio-b-' + seq,
-    title: 'Corte de Pelo Niños (Rápido y Divertido)',
+    title: 'Corte de Pelo Ni\u00f1os (R\u00e1pido y Divertido)',
   });
   seedService(first);
   seedService(second);
