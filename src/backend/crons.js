@@ -10,8 +10,9 @@ STANDARDS: G10 ASCII Strict. Cero suppressAuth. Cero COLLECTIONS alias.
 CORRECCIONES v5011-CRON-PARITY:
 AUDIT-NZ-01 (P0): verifyNightlyZClosing implementado (declurado en
 jobs.config sin export -> fallo PARITY-01/02). Idempotente por lectura Z_<dia>,
-intento de cierre automatico via SSOT cajas.web, ALERT deduplicada si se
-requiere accion humana. No lanza al scheduler (condicion no recuperable).
+intento de cierre automatico via SSOT cajas.web, aviso ALERT deduplicado por
+el notificador central backend/audit.js si se requiere accion humana. No lanza
+al scheduler (condicion no recuperable).
 AUDIT-WEBHOOK-01 (P0): cleanAuditLogs implementado (declurado sin export).
 Purga solo ALERT terminales (CLOSED/RESOLVED) y COMPENSATION terminales
 (EXECUTED/FAILED/CLOSED) pasados AUDIT_RETENTION_DAYS. WEBHOOK_EVENT JAMAS
