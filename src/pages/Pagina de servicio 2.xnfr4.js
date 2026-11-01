@@ -409,36 +409,34 @@ function getValidatedAddOnIds(
 function buildBookingUrl(service, payload) {
     if (
         service.catalogEntryType !== "SERVICE" ||
-        !_looksLikeGuid(
-            getServiceId(service)
-        )
+        !_looksLikeGuid(getServiceId(service))
     ) {
         throw new Error(
             "Solo los servicios reservables pueden abrir el calendario de citas."
         );
     }
 
-    // La ruta nativa de Bookings identifica el servicio por su slug público.
-    // No usar la página fija "calendario-2" ni duplicar slug/serviceId en query.
+    const serviceId = getServiceId(service);
     const slug = getServiceSlug(service);
+
     if (!slug) {
-        throw new Error("El servicio no tiene un slug público válido.");
+        throw new Error(
+            "El servicio no tiene un slug público válido."
+        );
     }
 
     const base = "/calendario-2";
 
-const query = new URLSearchParams({
-    slug,
-    referral: "service_list_widget"
-});
+    const query = new URLSearchParams({
+        serviceId,
+        slug,
+        referral: "service_list_widget"
+    });
 
-return `${base}?${query.toString()}`;
-
-    const addOnIds =
-        getValidatedAddOnIds(
-            payload,
-            service
-        );
+    const addOnIds = getValidatedAddOnIds(
+        payload,
+        service
+    );
 
     if (addOnIds.length > 0) {
         query.set(
