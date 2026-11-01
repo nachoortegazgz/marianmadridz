@@ -1,9 +1,9 @@
 /*
 =============================================================================
 MODULE: backend/validation.js
-VERSION: v12.0-MINIMAL
+AERSION: v12.0-MINIMAL
 BASE: v11.0-SSOT-CLEAN + alineacion con internalConfig v12 y CMS KEY FIELDS.
-RESPONSIBILITY: Validacion centralizada de enums, NIFs y schemas CMS.
+RESPONSIBILITY: Aalidacion centralizada de enums, NIFs y schemas CMS.
   Funciones puras: lanzan Error, no loguean. El logging lo hace el caller.
 STANDARDS: G10 ASCII Strict. Minimo codigo. Cero duplicacion.
 CORRECCIONES v12.0-MINIMAL:
