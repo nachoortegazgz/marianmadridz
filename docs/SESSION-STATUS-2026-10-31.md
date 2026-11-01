@@ -130,3 +130,11 @@ Esta confirmación permite planificar pruebas persistentes controladas. No obsta
 ## 10. Regla de integridad de este informe
 
 Este documento separa hechos verificados, cambios existentes en GitHub y tareas pendientes. No afirma que se hayan creado reservas, escrito resultados en CMS, sincronizado el código con Wix ni publicado cambios, porque esas acciones no se han ejecutado en esta sesión.
+
+
+## 11. Correcciones de configuración preparadas (2026-11-01)
+
+- Se amplía el workflow oficial Wix CLI for Sites de generación de manifiesto para ejecutarse también tras cambios en `main`, conservando la ejecución en ramas `feat/**` y el disparador manual.
+- La generación sigue delegada a `wix install --npm @wix/data`; no se crea ni edita manualmente `src/velo.dependencies.json`.
+- Se fija `@wix/site-pricing-plans` a `1.35.0` en `package.json` y en la raíz de `package-lock.json`. La resolución instalada ya era exactamente `1.35.0`; el cambio elimina el rango caret sin cambiar el paquete efectivo.
+- La PR debe superar la suite, instalación limpia y lint antes de integrar. Tras el merge, el workflow generará el manifiesto en `main`; no se activa publicación Wix.
