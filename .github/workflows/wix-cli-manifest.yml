@@ -37,6 +37,15 @@ jobs:
           npm install --global @wix/cli
           wix login --api-key "${WIX_CLI_API_KEY}"
 
+      - name: Record Wix CLI version and install command contract
+        run: |
+          wix --version
+          wix install --help
+          echo "Configured Wix site:"
+          cat wix.config.json
+          echo "Pre-install package declaration:"
+          node --input-type=commonjs -e "console.log(require('./package.json').dependencies?.['@wix/data'] || 'not declared')"
+
       - name: Install package and capture generated files
         run: |
           wix install --npm @wix/data
