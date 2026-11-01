@@ -66,23 +66,78 @@ jobs:
         env:
           CI: "true"
           TERM: "xterm"
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
         run: |
           set -euo pipefail
           rm -f wix-preview.log
 
-          # Wix CLI for Sites presents an interactive source selector.
-          # Select "Local code" (second option) so this PR branch is previewed.
-          printf '\033[B\r' | timeout 8m script -q -e -c "wix preview" wix-preview.log
+          # Wix CLI for Sites requires an interactive terminal. Use Python's
+          # standard-library PTY so the selector receives a real keypress.
+          python3 - <<'PY'
+          import os, pty, re, select, signal, sys, time
+          import errno
 
-          # The official CLI for Sites emits a shareable http(s)://wix.to URL.
-          # Require the command to exit successfully and verify that exact URL.
-          preview_url="$(grep -Eo 'https?://wix\.to/[A-Za-z0-9]+' wix-preview.log | tail -n 1 || true)"
-          if [ -z "${preview_url}" ]; then
-            echo "::error::Wix preview completed without an explicit wix.to URL."
-            cat wix-preview.log || true
-            exit 1
-          fi
+          pid, fd = pty.fork()
+          if pid == 0:
+              os.execvp("wix", ["wix", "preview"])
 
+          output = bytearray()
+          sent_selection = False
+          deadline = time.monotonic() + 480
+          exit_status = None
+          ansi = re.compile(rb"\\x1b\\[[0-?]*[ -/]*[@-~]")
+
+          try:
+              while time.monotonic() < deadline:
+                  ready, _, _ = select.select([fd], [], [], 1)
+                  if ready:
+                      try:
+                          chunk = os.read(fd, 8192)
+                      except OSError as exc:
+                          if exc.errno == errno.EIO:
+                              break
+                          raise
+                      if not chunk:
+                          break
+                      sys.stdout.buffer.write(chunk)
+                      sys.stdout.buffer.flush()
+                      output.extend(chunk)
+
+                      clean = ansi.sub(b"", output)
+                      if (not sent_selection and
+                              b"What would you like to preview" in clean):
+                          # On PRs preview the checked-out branch; on main,
+                          # accept the default latest commit from origin/main.
+                          key = b"\\x1b[B\\r" if os.getenv("GITHUB_EVENT_NAME") == "pull_request" else b"\\r"
+                          os.write(fd, key)
+                          sent_selection = True
+
+                  waited, status = os.waitpid(pid, os.WNOHANG)
+                  if waited:
+                      exit_status = status
+                      break
+
+              if exit_status is None:
+                  os.kill(pid, signal.SIGTERM)
+                  _, exit_status = os.waitpid(pid, 0)
+                  raise SystemExit("Wix preview timed out after 8 minutes.")
+
+              clean = ansi.sub(b"", output)
+              match = re.search(rb"https?://wix\\.to/[A-Za-z0-9]+", clean)
+              if not os.WIFEXITED(exit_status) or os.WEXITSTATUS(exit_status) != 0:
+                  raise SystemExit("Wix CLI preview exited unsuccessfully.")
+              if not match:
+                  raise SystemExit("Wix CLI exited without returning a wix.to preview URL.")
+              with open("wix-preview-url.txt", "w", encoding="utf-8") as handle:
+                  handle.write(match.group(0).decode("ascii"))
+          finally:
+              try:
+                  os.close(fd)
+              except OSError:
+                  pass
+          PY
+
+          preview_url="$(cat wix-preview-url.txt)"
           curl --fail --silent --show-error --location --max-time 45 "${preview_url}" -o /dev/null
           echo "Wix preview is reachable: ${preview_url}"
 
@@ -93,4 +148,4 @@ jobs:
           name: wix-preview-log-${{ github.run_id }}
           if-no-files-found: warn
           path: |
-            wix-preview.log
+            wix-preview.log\n            wix-preview-url.txt
