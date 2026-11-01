@@ -2990,7 +2990,7 @@ Acepta preparación de compatibilidad dual; **aplaza el cambio irreversible** de
 
 ## 19. Criterios de aceptación SSOT (12 puntos)
 
-1. 13 NATIVE con consumidor confirmado y roles.
+1. 13 NATIVE operativas con consumidor confirmado y roles; +2 auxiliares QA/Integración (consumo runtime no verificado).
 2. Sin referencias legacy (`COLLECTIONS` global) en código nuevo.
 3. `assertValidEnum()` en 100% de inserciones enum.
 4. `MapaStaff` con `memberId`, `rolBookings`, `rolWebsite` (sin `staffRole`; `staffMemberId` pendiente ADR).
@@ -3042,7 +3042,7 @@ Acepta preparación de compatibilidad dual; **aplaza el cambio irreversible** de
 
 - Repositorio correcto URL: dossier `marianmadridz.git`; auditoría `marianmadridz` (canónico); hoja `marianmadridz`. **Fijar el canónico** en la SSOT.
 - `NECESIDADES` cita `Bookings/Services` como colección; recordar que es WIX_APP (solo lectura).
-- `NECESIDADES` cita `PaidTransactions`, `GiftCards`, `ClientHealthAndConsent` como colecciones; **no figuran en el inventario CMS vivo** (13 NATIVE). Si se requieren, deben pasar por ADR y alta formal.
+- `NECESIDADES` cita `PaidTransactions`, `GiftCards`, `ClientHealthAndConsent` como colecciones; **no figuran en el inventario CMS vivo** (15 NATIVE). Si se requieren, deben pasar por ADR y alta formal.
 
 ---
 
@@ -3864,6 +3864,6 @@ export default defineWixConfig({
 
 1. Smoke test de `node:crypto` en runtime Wix real, sin mutaciones de datos (§G.11.3).
 2. Generación oficial de `src/velo.dependencies.json` y evaluación de la regla ESLint correspondiente (§J.6).
-3. QA E2E de reserva simple y dual: selección por `resourceId`, conservación del `scheduleId` nativo del slot, gap, rollback F2, pagos y cancelaciones (§G.9 y §G.16).
+3. QA E2E de reserva simple y dual: selección por `resourceId`, conservación del `scheduleId` nativo del slot, gap, rollback F2, pagos y cancelaciones (§9.1–§9.2 y §F.16).
 4. Resolver la cifra histórica de tests (182 frente a 158) con output reproducible; no usarla como métrica actual.
 
