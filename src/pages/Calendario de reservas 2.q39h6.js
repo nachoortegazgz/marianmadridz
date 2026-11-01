@@ -208,53 +208,147 @@ async function resolveServiceFromParams(params) {
     return null;
 }
 
-async function loadServiceContext(params) {
-    const lookup = currentServiceId || currentSlug;
+const SERVICE_LOOKUP_ATTEMPT_TIMEOUT_MS = 18000;
 
-    if (!lookup) {
-        throw new Error("No se encontró el servicio.");
+async function loadServiceContext(params, traceId = "") {
+    // Only use identifiers supplied by the service-page URL. Never replace
+    // an explicit slug with a guessed route segment on a retry.
+    const candidates = [];
+    if (_looksLikeGuid(params?.serviceId)) {
+        candidates.push({
+            kind: "serviceId",
+            value: params.serviceId.toLowerCase()
+        });
+    }
+    if (params?.slug) {
+        candidates.push({
+            kind: "slug",
+            value: normalizeLookupValue(params.slug)
+        });
     }
 
-    const result = await getServiceBySlugOrId(lookup);
+    const uniqueCandidates = candidates.filter((candidate, index, all) =>
+        candidate.value &&
+        all.findIndex((item) =>
+            item.kind === candidate.kind && item.value === candidate.value
+        ) === index
+    );
 
-    if (
-        !result ||
-        result.status !== "SUCCESS" ||
-        !result.data ||
-        typeof result.data !== "object"
-    ) {
-        throw new Error(
-            result?.error?.message ||
-            "No se pudo cargar el servicio."
-        );
+    if (uniqueCandidates.length === 0) {
+        throw new Error("No se recibió un identificador válido del servicio.");
     }
 
-    const service = result.data;
+    const failures = [];
+    let service = null;
+
+    for (let index = 0; index < uniqueCandidates.length; index += 1) {
+        const candidate = uniqueCandidates[index];
+        const attempt = index + 1;
+
+        console.info("[calendario-2] Consulta de servicio", {
+            traceId,
+            attempt,
+            attemptsAvailable: uniqueCandidates.length,
+            lookupKind: candidate.kind,
+            lookupValue: candidate.value
+        });
+
+        try {
+            const result = await withTimeout(
+                () => getServiceBySlugOrId(candidate.value),
+                SERVICE_LOOKUP_ATTEMPT_TIMEOUT_MS,
+                "SERVICE_LOOKUP_TIMEOUT"
+            );
+
+            if (
+                !result ||
+                result.status !== "SUCCESS" ||
+                !result.data ||
+                typeof result.data !== "object"
+            ) {
+                const error = new Error(
+                    result?.error?.message || "No se encontró el servicio."
+                );
+                error.code = result?.error?.code || "SERVICE_LOOKUP_FAILED";
+                throw error;
+            }
+
+            const candidateService = result.data;
+            const returnedServiceId = _safeTrim(candidateService.serviceId || "");
+            const returnedSlug = normalizeLookupValue(candidateService.slug || "");
+
+            if (!_looksLikeGuid(returnedServiceId)) {
+                const error = new Error("El servicio devuelto no tiene un GUID válido.");
+                error.code = "INVALID_SERVICE_ID";
+                throw error;
+            }
+
+            // A GUID lookup must return that exact service. A slug lookup must
+            // return the exact canonical slug; title-based fuzzy matches are not
+            // accepted here because they can silently load a different service.
+            if (
+                candidate.kind === "serviceId" &&
+                returnedServiceId.toLowerCase() !== candidate.value
+            ) {
+                const error = new Error("El GUID devuelto no coincide con el solicitado.");
+                error.code = "SERVICE_ID_MISMATCH";
+                throw error;
+            }
+            if (
+                candidate.kind === "slug" &&
+                returnedSlug !== candidate.value
+            ) {
+                const error = new Error("El slug devuelto no coincide con el solicitado.");
+                error.code = "SERVICE_SLUG_MISMATCH";
+                throw error;
+            }
+
+            service = candidateService;
+            console.info("[calendario-2] Servicio localizado", {
+                traceId,
+                attempt,
+                lookupKind: candidate.kind,
+                serviceId: returnedServiceId,
+                slug: returnedSlug
+            });
+            break;
+        } catch (error) {
+            failures.push({
+                attempt,
+                lookupKind: candidate.kind,
+                code: error?.code || "SERVICE_LOOKUP_FAILED",
+                message: error?.message || String(error)
+            });
+            console.warn("[calendario-2] Falló consulta de servicio", {
+                traceId,
+                attempt,
+                lookupKind: candidate.kind,
+                lookupValue: candidate.value,
+                code: error?.code || "SERVICE_LOOKUP_FAILED",
+                message: error?.message || String(error),
+                willRetry: index + 1 < uniqueCandidates.length
+            });
+        }
+    }
+
+    if (!service) {
+        const error = new Error("No se pudo localizar el servicio por GUID ni por el slug explícito.");
+        error.code = "SERVICE_LOOKUP_EXHAUSTED";
+        error.detail = failures;
+        throw error;
+    }
 
     const catalogEntryType = _safeTrim(
         service.catalogEntryType || "SERVICE"
     ).toUpperCase();
 
     if (catalogEntryType !== "SERVICE") {
-        throw new Error(
-            "La entrada seleccionada no es un servicio reservable."
-        );
-    }
-
-    const serviceId = _safeTrim(service.serviceId || "");
-
-    if (!_looksLikeGuid(serviceId)) {
-        throw new Error(
-            "El servicio no tiene un identificador válido."
-        );
+        throw new Error("La entrada seleccionada no es un servicio reservable.");
     }
 
     currentService = service;
-    currentServiceId = serviceId;
-    currentSlug =
-        normalizeLookupValue(service.slug || "") ||
-        currentSlug ||
-        null;
+    currentServiceId = _safeTrim(service.serviceId);
+    currentSlug = normalizeLookupValue(service.slug || "") || null;
 
     return {
         ...service,
@@ -1072,9 +1166,11 @@ $w.onReady(async () => {
             {
                 traceId,
                 allowOpaqueOrigin: true,
+                handshakeTimeoutMs: 20000,
+                contextTimeoutMs: 45000,
 
                 onContextReady: async () =>
-                    loadServiceContext(params),
+                    loadServiceContext(params, traceId),
 
                 onWidgetMessage: async (
                     message,
