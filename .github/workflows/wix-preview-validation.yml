@@ -11,8 +11,6 @@ on:
       - "wix.config.json"
       - ".github/workflows/wix-preview-validation.yml"
   workflow_dispatch:
-    branches:
-      - main
 
 permissions:
   contents: read
@@ -24,14 +22,14 @@ concurrency:
 jobs:
   preview:
     name: Build Wix preview from main
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - name: Checkout main commit
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          ref: main
+          ref: ${{ github.ref_name }}
 
       - name: Set up supported Node.js
         uses: actions/setup-node@v4
