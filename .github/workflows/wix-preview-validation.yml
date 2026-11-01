@@ -72,11 +72,11 @@ jobs:
 
           # Wix CLI for Sites presents an interactive source selector.
           # Select "Local code" (second option) so this PR branch is previewed.
-          printf '\\033[B\\r' | timeout 8m script -q -e -c "wix preview" wix-preview.log
+          printf '\033[B\r' | timeout 8m script -q -e -c "wix preview" wix-preview.log
 
           # The official CLI for Sites emits a shareable http(s)://wix.to URL.
           # Require the command to exit successfully and verify that exact URL.
-          preview_url="$(grep -Eo 'https?://wix\\.to/[A-Za-z0-9]+' wix-preview.log | tail -n 1 || true)"
+          preview_url="$(grep -Eo 'https?://wix\.to/[A-Za-z0-9]+' wix-preview.log | tail -n 1 || true)"
           if [ -z "${preview_url}" ]; then
             echo "::error::Wix preview completed without an explicit wix.to URL."
             cat wix-preview.log || true
