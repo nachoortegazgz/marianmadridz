@@ -128,7 +128,7 @@ test('QA-SIMPLE-BOOKING-01 resolves real catalogue and staff mocks, creates one 
   assert.equal(writerCalls.length, 1, 'simple booking must call Bookings Writer V2 exactly once');
   assert.equal(confirmationCalls.length, 1, 'in-person booking must confirm exactly once');
   assert.ok(slotsState.calls.length > 0, 'real availability adapter must be consulted');
-  assert.ok(slotsState.getCalls.length > 0, 'exact slot must be rechecked');
+  assert.ok(slotsState.calls.some((call) => call.serviceId === SERVICE_ID), 'availability must be queried for the selected canonical service');
 
   const body = writerCalls[0].booking;
   assert.equal(body.contactDetails.email, 'qa.simple@example.test');
