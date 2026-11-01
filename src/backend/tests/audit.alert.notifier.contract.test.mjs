@@ -11,6 +11,9 @@ test("operational alerts have one centralized, deduplicated writer", () => {
   assert.match(auditSource, /getItem as dalGet/);
   assert.match(auditSource, /dedupeKey: id/);
   assert.match(auditSource, /consistentRead: true/);
+  assert.match(auditSource, /_summarizeAlertData\(data\)/);
+  assert.match(auditSource, /normalizedLevel === "ERROR" \|\| normalizedLevel === "CRITICAL"/);
+  assert.match(auditSource, /makeTraceId\("audit-error"\)/);
   assert.match(cronSource, /import \{ notifyOperationalAlert \} from "backend\/audit"/);
   assert.match(cronSource, /await notifyOperationalAlert\(\{/);
   const nightlyJob = cronSource.slice(
