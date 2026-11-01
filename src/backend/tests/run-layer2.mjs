@@ -15,6 +15,7 @@ const suites = [
   'fiscalAggregator.read.test.mjs',
   'site.flows.e2e.test.mjs',
   'orderLedgerAmount.test.mjs',
+  'events.booking-canceled.integrity.test.mjs',
   'unit.ssot.v5011.test.mjs',
 ];
 
