@@ -593,25 +593,6 @@ J.6  Posibles datos faltantes en el dossier (7 filas)
 
 ---
 
-## K. TABLA DE DUPLICIDADES (para consolidación futura)
-
-| Contenido | Aparece en | Fuente canónica recomendada |
-|---|---|---|
-| Matriz de personal | §D.4.2 · §F.22.1 | §F.22.1 (más completa) |
-| App IDs | §D.3.1 · §F.22.2 | §F.22.2 |
-| Identificadores transversales | §D.4.3 · §F.7.3 | §F.7.3 |
-| Contrato Bookings V2 SDK vs REST | §E.1 · §F.16 · §D.3.2 (parcial) | **§F.16** (ADR-002) |
-| Módulos por versión Stores | §E.5 · §F.14 | §F.14 (incluye estado real PR #13) |
-| Inventario de colecciones CMS | §F.5.1 · §F.5.2 · §G | **§G** (detalle) + §F.5.1 (inventario) |
-| Invariantes de integridad | §F.5.4 · §F.10.2 · §G.14.1 | §G.14.1 (consolidado) |
-| Enums canónicos | §F.6 · §G.14 (transversal) | §F.6 |
-| Normativa estatal | §F.18 · §H.5.1 | §F.18 (técnica) + §H.5.1 (negocio) |
-| Riesgos | §C.4 (transversales) · §F.17 (técnicos) | Ambas son complementarias |
-| Wix CLI comandos | §B.4 · §F.21.1 · §J.2 | §J.2 (más completo) |
-| Wix MCP | §B.5 · §J.1 | §J.1 (más completo) |
-| Autenticación | §B.3 · §J.1.3 | Ambas (CLI vs MCP) |
-| Workflow GitHub Actions | §B.8 · §J.2 · anexo CLI | §J.2 describe el workflow activo; §B.8 y el anexo remiten a él, sin duplicar YAML. |
-
 ---
 
 ## L. ESTADO GLOBAL DEL DOCUMENTO
