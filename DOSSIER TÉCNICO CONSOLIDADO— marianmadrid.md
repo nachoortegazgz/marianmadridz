@@ -4359,3 +4359,72 @@ En `src/backend/events.js`, el flujo de cancelación puede marcar un evento como
 - Mantener separados los hechos, inferencias y pendientes; no presentar tests históricos como actuales.
 
 **Punto exacto de reentrada:** revisión focalizada de `src/backend/events.js` + documentación oficial Wix sobre respuesta/reintento de webhooks de Bookings; después, corrección y tests de sincronización de cancelaciones. No iniciar una nueva auditoría general.
+
+
+---
+
+## 31. Intervención de integridad y validación Preview — 2026-11-01
+
+**Estado de la intervención:** cambios aislados en PR #80; no integrados en `main`, no publicados y sin escrituras en CMS/Bookings.
+
+### 31.1 Corrección Layer 2 — cancelación Bookings
+
+En la rama `fix/layer2-booking-cancel-integrity` se aplican estos cambios:
+
+1. `isEventProcessed` propaga errores de lectura en lugar de tratarlos como evento nuevo.
+2. `markEventAsProcessed` solo interpreta un error de inserción como duplicado cuando una lectura fuerte confirma la clave exacta ya persistida; en otro caso propaga el error.
+3. `_updateCitaStatus` devuelve el resultado de `_updateCitaSafe`.
+4. El webhook de cancelación solo marca el evento como procesado si CitasF2 se actualizó o ya estaba en el estado deseado (`NO_CHANGE`).
+5. Se propagan errores al leer CitasF2 y MovimientosCaja; no se confunden fallos de lectura con ausencia de registros.
+6. `queueFiscalRecovery` devuelve confirmación de cola; el webhook no continúa si la cola falla.
+7. El catch de cancelación deja de responder `OK` ante excepciones y las propaga.
+
+**Límite importante:** la propagación del error evita el falso ACK dentro del código, pero no demuestra por sí misma que Wix reentregue automáticamente el evento. La documentación SDK consultada describe `bookings.onBookingCanceled((event) => ...)`, sin establecer una señal de reintento por objeto de retorno ni una política de redelivery por excepción. La recuperación durable y reconciliación de eventos fallidos sigue pendiente de una solución explícita y verificada.
+
+### 31.2 Regresiones y CI
+
+Se añade `src/backend/tests/events.booking-canceled.integrity.test.mjs` y se incorpora a `run-layer2.mjs`. Cubre:
+- Cancelación persistida antes de marcar evento procesado.
+- CitasF2 inexistente: fallo y evento no marcado.
+- Error de lectura CitasF2: propagación y evento no marcado.
+
+**Evidencia CI del commit de PR:** run Backend quality gates `41336830448`, asociado al merge-ref de PR #80:
+- 31 suites / 302 tests / 0 fallos.
+- Layer 1: 9 suites / 183 tests / 0 fallos.
+- Layer 2: 9 suites / 89 tests / 0 fallos.
+- Node.js 24.22.1 y 26.12.1: correcto.
+- ESLint y clean dependency install: correcto.
+
+Estas son pruebas offline con adaptadores/mock; no certifican runtime Wix, navegador, webhooks desplegados, RBAC efectivo ni integridad de los ledgers en datos reales.
+
+### 31.3 Corrección del workflow Wix Preview
+
+El artefacto del run `41327247012`, que anteriormente se había presentado como correcto, contiene `NonInteractiveTerminal`; el detector anterior lo aceptaba por encontrar texto genérico como `http`. Se corrige el diagnóstico: ese run no acredita un Preview generado.
+
+Se confirma en documentación oficial que este proyecto usa **Wix CLI for Sites** (Wix Editor/Velo), no el Wix CLI para proyectos Headless:
+- No existe el comando `wix build` en Wix CLI for Sites; su incorporación inicial falló con `unknown command 'build'` y se retiró.
+- `wix preview` exige que el sitio se haya publicado previamente y presenta un selector entre el último commit de `origin/main` y el código local.
+- El workflow actualizado asigna pseudo-terminal, selecciona código local, exige URL `http(s)://wix.to` y comprueba su accesibilidad HTTP.
+- El workflow se habilita para PRs de la misma repo, sin exponer secretos a forks.
+
+**Limitación de Preview según Wix:** no es un test site y utiliza las versiones publicadas de HTTP Functions; por tanto, no valida cambios de HTTP Functions ni sustituye pruebas runtime funcionales del sitio.
+
+**Runs de Preview:** `41336641530` falló correctamente al detectar el comando no soportado `wix build`. El run corregido `41336830436` está pendiente de resultado en este corte.
+
+### 31.4 Estado de PR y seguridad
+
+- PR: https://github.com/nachoortegazgz/marianmadridz/pull/80
+- Rama: `fix/layer2-booking-cancel-integrity`
+- HEAD de rama en este corte: `7941bc34831912f04ceabf618413fa7ea2ef0f56`
+- Estado: abierta, no fusionada.
+- No se modificó `main`, datos CMS, reservas, políticas Bookings, pagos, caja, ledgers, fiscalidad, secretos ni publicación.
+
+### 31.5 Próximos bloqueos para cerrar las capas
+
+1. Obtener Preview válido del run `41336830436` y revisar manualmente la URL generada.
+2. Revisar el diff y la semántica runtime del webhook; decidir e implementar recuperación durable/reconciliación si Wix no garantiza redelivery.
+3. Clasificar individualmente las seis discrepancias Bookings=CANCELED / CitasF2=CONFIRMED de §29.3, sin mutaciones manuales.
+4. Ejecutar QA de Layer 1 en navegador/entorno publicado aislado: widget → WebMethod → Bookings/CMS; Preview no cubre HTTP Functions.
+5. Completar Layer 2 runtime: permisos efectivos, concurrencia/atomicidad persistente, cierre Z, hash-chain, writer contable y reconciliación de cancelaciones/rectificativas.
+
+**No cerrar Layer 1 ni Layer 2 por el resultado de CI offline.** Mantener PR #80 sin merge hasta completar la validación Preview y revisión de código.
