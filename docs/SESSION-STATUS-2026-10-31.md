@@ -119,7 +119,11 @@ Esta confirmación permite planificar pruebas persistentes controladas. No obsta
 - PR #33 añade `.github/workflows/wix-preview-validation.yml`, ejecutado en `main` con Wix CLI for Sites y el secreto `CLI_API_KEY`. Solo ejecuta `wix preview`; no ejecuta `wix publish`.
 - Run de Preview **41277316511** completó con `failure`: `wix preview` lanzó `NonInteractiveTerminal` porque Ink requiere TTY. No se generó URL de Preview y no se ha probado `node:crypto` en Wix.
 - PR #35 añadió captura de `wix preview --help`; run **41277461940** volvió a fallar en la ejecución interactiva, pero la ayuda confirmó la opción oficial `--source <local|remote>`.
-- PR #36 cambia el comando a `wix preview --source local` para usar el commit exacto del checkout de `main`; CI de la PR pendiente.
+- PR #36 probó `wix preview --source local`; tras autenticación correcta, Wix devolvió HTTP 404 `PUBLISH_PIPELINE_TASK_NOT_FOUND` al consultar el pipeline de despliegue. Reintento idéntico también falló.
+- PR #38 probó `wix preview --source remote` (último commit de `origin/main`); devolvió el mismo HTTP 404. No se generó URL de Preview.
+- PR #37 se cerró sin merge: la documentación específica de Wix CLI for Sites no incluye `wix build`; no se mezcló un comando de otra modalidad de CLI.
+- Request IDs Wix para soporte: `1793511405.3286114731421492`, `1793511448.6149380596631488`, `1793511623.3689750535521483`.
+- Wix CLI autenticó correctamente la cuenta `nachoortegazgz`; el error se produce en el pipeline remoto de Preview, antes de ejecutar el backend. `node:crypto` aún no está validado en runtime Wix.
 - El entorno de ejecución disponible aquí no tiene acceso de red a GitHub ni CLI Wix autenticado; la validación Preview se delega al workflow de GitHub Actions.
 - No publicar hasta que el Preview compile y la ruta real de lookup supere `HASH_POLICY_KEY`, `HASH_REQUESTER_KEY`, bootstrap/lectura y escritura atómica, verificando logs de Wix.
 
