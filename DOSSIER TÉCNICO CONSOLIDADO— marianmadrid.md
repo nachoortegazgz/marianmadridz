@@ -4244,3 +4244,72 @@ La prueba `QA-SIMPLE-BOOKING-01` observó que una reserva **SIMPLE** también pe
 ### M.3 Límites y reglas de precedencia
 
 Las lecturas API no demuestran el estado del proveedor de pago, el onboarding, el bloqueo real de scripts por consentimiento, los horarios individuales efectivos, los destinatarios finales de automatizaciones, la publicación de formularios ni los permisos visuales de cada app. Esos puntos permanecen `[PENDIENTE]` hasta verificación en panel/QA. Este snapshot no autoriza cambios en producción. Prevalece la jerarquía de fuentes de §A.4 y la evidencia más reciente debe sustituir este estado cuando se repita la auditoría.
+
+
+---
+
+## 29. Actualización de auditoría — corte 2026-11-01 (reconciliación de evidencias)
+
+**Motivo:** incorporar comprobaciones posteriores al corte de §27–§28 y corregir afirmaciones que ya no representan toda la evidencia disponible. Esta sección no sustituye la precedencia de §4 ni convierte pruebas parciales en aceptación de capa.
+
+### 29.1 Corrección del alcance del sitio de QA
+
+§27.4 afirma que marianmadrid.es no se utilizó como sitio de pruebas. Esa afirmación queda **en conflicto con la instrucción operativa posterior del titular**, que identifica www.marianmadrid.es como entorno QA y autoriza pruebas controladas con datos desechables, sujetos a las salvaguardas de §25.5. Por tanto:
+
+- El dominio se trata como **QA según instrucción del titular**, no como evidencia de producción operativa.
+- La afirmación histórica de §27.4 se conserva como descripción de la simulación offline concreta documentada en §27, no como descripción de todas las pruebas posteriores.
+- Antes de cualquier escritura, pago, notificación o emisión fiscal se debe verificar el destino efectivo de cada integración y respetar §25.5–§25.7. La etiqueta “QA” por sí sola no prueba aislamiento técnico.
+
+### 29.2 Pruebas Wix Bookings API posteriores a §27
+
+**[HECHO — operaciones API documentadas en el registro de QA de esta sesión; no equivale a E2E de la web publicada]**
+
+- Se consultó disponibilidad nativa para servicios Bookings y se identificaron servicios F1, F2 y simple, junto con sus scheduleId y resourceId concretos.
+- Se crearon, confirmaron y cancelaron reservas de prueba mediante API nativa. Una segunda reserva sobre un slot ya ocupado fue rechazada como SLOT_NOT_AVAILABLE.
+- En una prueba F1, el slot F2 posterior permaneció disponible durante el intervalo de exposición; al cancelar F1, el slot volvió a estar disponible.
+- Los bookingId de esa batería constan cancelados al verificar su estado final.
+- Estas operaciones prueban aspectos del motor nativo y la disponibilidad; **no** prueban la invocación del WebMethod personalizado, el widget, el navegador, el webhook completo ni la saga Velo desplegada.
+- No se ejecutó checkout con cobro ni se emitieron documentos fiscales.
+
+### 29.3 Discrepancia detectada entre Bookings y CitasF2
+
+**[HECHO — consulta de solo lectura]** En la muestra consultada se encontraron seis registros con CitasF2.bookingStatus = CONFIRMED cuyo booking nativo de Wix figuraba como CANCELED. Se observaron además dos registros de una pareja cuyo estado nativo y CMS era CONFIRMED. La muestra incluía datos de QA/históricos; no se ha determinado aún si los seis casos proceden exclusivamente de cancelaciones de pruebas anteriores o de un fallo reproducible de sincronización.
+
+**No corregir manualmente esos registros ni borrar ledger.** Primero clasificar cada booking por fecha, origen, pairToken, traceId, eventos recibidos y trazas de cancelación. La discrepancia se considera un defecto de integridad pendiente de resolución hasta reconciliar todos los casos.
+
+### 29.4 Hallazgo de revisión estática en webhook de cancelación
+
+**[HECHO — código en main inspeccionado; no es prueba runtime]** En src/backend/events.js:
+
+1. _updateCitaStatus() llama a _updateCitaSafe() pero no devuelve ni comprueba su resultado.
+2. wixBookingsV2_onBookingCanceled() continúa con markEventAsProcessed() después de esa llamada, aunque la actualización CMS pudiera devolver updated: false.
+3. El catch exterior devuelve { status: "OK" } incluso si se produce una excepción no recuperada.
+
+**Riesgo:** el webhook puede confirmar al emisor que el evento se procesó sin haber demostrado que el espejo CMS quedó actualizado. Esto es un mecanismo plausible para producir la discrepancia §29.3, pero todavía no se ha demostrado causalidad en runtime.
+
+**Corrección requerida antes de cerrar Layer 2:**
+- Propagar el resultado de _updateCitaSafe y no marcar el evento como procesado si el estado CMS no se ha reconciliado.
+- Devolver un resultado reintentable conforme al contrato real de webhooks Wix cuando falle la persistencia; verificar el contrato oficial antes de cambiar el código.
+- Hacer la reconciliación idempotente y cubrir booking simple y las dos fases de una reserva dual.
+- Añadir tests para NOT_FOUND, ERROR, fallo transitorio, replay de evento y estado ya cancelado.
+- Comprobar que un fallo de escritura no se convierte en ACK exitoso.
+
+No se ha aplicado aún esta corrección en este corte.
+
+### 29.5 Estado actualizado de Layer 1 y Layer 2
+
+| Capa | Evidencia disponible | Estado |
+|---|---|---|
+| Layer 1 — reservas simples | Simulación offline §27; reserva simple API/Bookings y pruebas de disponibilidad nativa posteriores | **PARCIAL** — falta QA de widget/frontend y flujo Velo completo en Preview/runtime |
+| Layer 2 — caja y seguridad | Suites offline §27; auditoría CMS/Bookings de solo lectura; discrepancia de cancelaciones §29.3 y riesgo de webhook §29.4 | **BLOQUEADA** — integridad de estados sin reconciliar; faltan runtime RBAC, atomicidad/concurrencia persistente, cierre Z y hash-chain en entorno QA aislado |
+
+Los resultados históricos de §27.2 (289 tests, 28 suites) pertenecen a los commits/runs allí identificados. **No son una medición del HEAD actual ni deben citarse como CI actual.** Para declarar CI verde se requiere un run asociado al commit exacto evaluado, conforme a D9–D12.
+
+### 29.6 Restricciones de ejecución
+
+- La API de Wix disponible para esta auditoría permite consultar/operar recursos REST de Wix, pero no invocar directamente los WebMethods Velo desplegados ni conducir el navegador del sitio.
+- Las pruebas API de Bookings no sustituyen la prueba de la saga personalizada, los webhooks ni los widgets.
+- No se ha hecho checkout, cobro real, emisión fiscal, borrado de ledger ni publicación.
+- No cerrar Layer 1 ni Layer 2 hasta cumplir §26 y §25.7, incluyendo evidencias runtime aplicables.
+
+**Fuentes:** src/backend/events.js (HEAD inspeccionado en esta auditoría); consultas de solo lectura de CitasF2 y ControlOperativo; respuestas de Bookings API para los bookingId de QA; protocolo de §25 y reglas de cierre §26. Esta actualización no altera datos CMS.
