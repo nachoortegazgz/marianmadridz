@@ -1,6 +1,6 @@
 # DOSSIER TÉCNICO — marianmadrid.es v10.0
 
-**Proyecto:** Marian Madrid Peluquería y Estética · **Fecha:** 2026-11-01 · **Versión SSOT:** version.z
+**Proyecto:** Marian Madrid Peluquería y Estética · **Fecha:** 2026-11-01 · **Versión SSOT:** version.z **Version consolidada redactada usando como fuentes el resto de documentos de este repositorio**
 
 # MAPA DEL DOCUMENTO — DOSSIER TÉCNICO CONSOLIDADO marianmadrid.es
 
