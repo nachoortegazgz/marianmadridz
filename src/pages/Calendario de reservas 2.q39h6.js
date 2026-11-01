@@ -92,16 +92,43 @@ function bridgeLogError(traceId, error) {
  * CONTEXTO DEL SERVICIO
  * ========================================================================== */
 
+function decodeUrlValue(value) {
+    const raw = _safeTrim(value || "");
+
+    if (!raw) {
+        return "";
+    }
+
+    try {
+        return decodeURIComponent(raw).normalize("NFC");
+    } catch (error) {
+        console.warn("[calendario-2] Valor URL inválido", {
+            message: error?.message
+        });
+
+        return raw.normalize("NFC");
+    }
+}
+
+function normalizeLookupValue(value) {
+    return _safeSlugOrId(decodeUrlValue(value));
+}
+
 async function parseUrlParams() {
     const query = await location.query();
+    const rawServiceId = decodeUrlValue(query?.serviceId);
+    const rawSlug = decodeUrlValue(query?.slug);
+    const rawAddOnIds = decodeUrlValue(query?.addOnIds);
 
     return {
-        serviceId: _safeTrim(query?.serviceId || ""),
-        slug: _safeSlugOrId(query?.slug || ""),
-        referral: _safeTrim(query?.referral || ""),
-        addOnIds: _safeTrim(query?.addOnIds || "")
+        serviceId: _looksLikeGuid(rawServiceId)
+            ? rawServiceId.toLowerCase()
+            : "",
+        slug: normalizeLookupValue(rawSlug),
+        referral: _safeTrim(decodeUrlValue(query?.referral)),
+        addOnIds: rawAddOnIds
             .split(",")
-            .map(_safeTrim)
+            .map((value) => _safeTrim(decodeUrlValue(value)))
             .filter(Boolean)
     };
 }
@@ -112,7 +139,7 @@ function resolveServiceFromParams(params) {
         _looksLikeGuid(params.serviceId)
     ) {
         return {
-            serviceId: params.serviceId,
+            serviceId: params.serviceId.toLowerCase(),
             slug: params.slug || null
         };
     }
@@ -171,7 +198,7 @@ async function loadServiceContext(params) {
     currentService = service;
     currentServiceId = serviceId;
     currentSlug =
-        _safeSlugOrId(service.slug || "") ||
+        normalizeLookupValue(service.slug || "") ||
         currentSlug ||
         null;
 
