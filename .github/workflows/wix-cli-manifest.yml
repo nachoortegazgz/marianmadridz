@@ -31,14 +31,14 @@ jobs:
 
       - name: Install and authenticate Wix CLI for Sites
         env:
-          WIX_CLI_API_KEY: ${{ secrets.CLI_API_KEY }}
+          CLI_API_KEY: ${{ secrets.CLI_API_KEY }}
         run: |
-          if [ -z "${WIX_CLI_API_KEY}" ]; then
+          if [ -z "${CLI_API_KEY}" ]; then
             echo "::error::Missing repository secret CLI_API_KEY. Create a Wix API key with the 'Wix CLI for Sites - Git Integration' permission and save it as this GitHub secret."
             exit 1
           fi
           npm install --global @wix/cli
-          wix login --api-key "${WIX_CLI_API_KEY}"
+          wix login --api-key "${CLI_API_KEY}"
 
       - name: Record Wix CLI version and install command contract
         run: |
