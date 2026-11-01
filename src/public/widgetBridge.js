@@ -174,9 +174,7 @@ export function createWidgetBridge(widgetElement, options = {}) {
         const classified = classifyOrigin(event?.origin);
         if (classified.opaque) {
             if (!originPolicy.allowOpaqueOrigin) { reportError(WIDGET_ERROR_CODE.ORIGIN_OPAQUE_REJECTED, { origin: classified.value }); return null; }
-            if (typeof console !== "undefined" && typeof console.warn === "function") {
-                try { console.warn("[widgetBridge] Opaque origin accepted", { bridgeId, origin: classified.value || "(empty)" }); } catch (_) {}
-            }
+            // Expected for opted-in sandboxed Wix HTML Components; keep all message validation.
         } else if (originPolicy.mode !== "off" && !isOriginAllowed(classified.value, originPolicy)) {
             reportError(WIDGET_ERROR_CODE.ORIGIN_REJECTED, { origin: classified.value }); return null;
         }
