@@ -10,7 +10,7 @@
 
 ---
 
-## 0. Vista de pájaro (11 bloques)
+## 0. Vista de pájaro (11 bloques técnicos + control de estado y auditoría)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
@@ -25,6 +25,7 @@
 │  I. CAPA 3 — REGISTRO EXTERNO SHAREPOINT ............ §I.0–I.8     │
 │  J. ANEXO TÉCNICO MCP/CLI/DIAGNÓSTICO/IA ............ §J.1–J.6     │
 │  K. MATRIZ DE FUENTES CANÓNICAS Y DUPLICIDADES ...... §K.1          │
+│  M. AUDITORÍA LIVE DE AJUSTES WIX Y APPS ............ §M.1          │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -601,6 +602,7 @@ J.6  Posibles datos faltantes en el dossier (7 filas)
 | H. Realidad física | mixto | 85 % (6 lagunas) | ADR-003 |
 | I. Capa 3 SharePoint | `[HECHO]`/`[DECLARADO]` | 90 % | ADR-003 |
 | J. Anexo MCP/CLI/IA | `[HECHO]` | 100 % | ADR política MCP |
+| M. Auditoría live de ajustes Wix y apps | `[HECHO]` snapshot 2026-11-01 | Auditoría API de solo lectura completa; revisión manual de panel pendiente | Reconciliación Bookings, pagos, formularios y automatizaciones |
 
 **Discrepancias abiertas:** recuento histórico no recalculado; consultar §K, §F.23 y estados `[PENDIENTE]` por apartado.
 **Lagunas de datos:** 13 (6 en §H.7 + 7 en §J.6).
@@ -4265,3 +4267,37 @@ La prueba `QA-SIMPLE-BOOKING-01` observó que una reserva **SIMPLE** también pe
 **Bug detectado y corrección:** el test de replay demostró que `_initTransaction` devolvía `success: true, isNew: false` para una transacción COMPLETED, pero `executeBookingSaga` continuaba hacia Writer V2 y podía crear una segunda reserva. PR #68 añade un guard que devuelve el resultado almacenado con `idempotent: true` antes de ejecutar la saga de nuevo. La regresión comprueba que una segunda llamada idéntica no crea otro booking, no confirma de nuevo y no duplica `CitasF2`.
 
 **Evidencia:** PR #68, commit `5173b68b7220a5019fd476e7da61fde745a577c0`, CI run `41304910924` (#571), 28 suites / 289 tests / 0 fallos, Windows Node 24 y 26 correctos.
+
+---
+
+## M. AUDITORÍA LIVE DE AJUSTES WIX Y APPS — 2026-11-01
+
+**Propósito:** registrar el estado observado de los ajustes generales del sitio y de los paneles/API de Wix Apps, y fijar las reglas de convivencia con los módulos backend. **Estado:** `[HECHO]` para las lecturas API; `[PENDIENTE]` para los puntos que solo pueden certificarse desde los paneles visuales o mediante QA.
+
+- **Informe completo y evidencia:** [docs/audits/2026-11-01-wix-site-app-settings-readonly-audit.md](docs/audits/2026-11-01-wix-site-app-settings-readonly-audit.md).
+- **Alcance:** Site Properties, App Instances, Bookings Services V2, Staff Members V2, Booking Policies, Checkout Settings, Invoices Settings, Automations V2, Forms V4, SEO tags y Stores Catalog Version.
+- **Seguridad:** solo lectura; no se modificó configuración, reserva, pago, permiso, CMS ni publicación.
+
+### M.1 Conclusiones que afectan al backend
+
+1. **Bookings:** política nativa limita antelación a 14 días (20.160 minutos), mientras calendario/backend se han ampliado a 15. Debe unificarse antes de certificar disponibilidad y reserva.
+2. **Cancelación:** política efectiva 12 horas (720 minutos), mientras el texto público anuncia 24 horas. La reprogramación sí está en 24 horas (1.440 minutos). El texto también alude a depósitos/cargos, pero el cargo automático nativo está desactivado.
+3. **Profesionales:** los 94 servicios nativos tienen asignados los tres profesionales. La identidad Bookings, el recurso y el calendario deben mantenerse separados: staffMemberId, resourceId, scheduleId.
+4. **Servicios duales:** 70 servicios visibles y 24 F2 ocultos. Los 24 F2 no admiten pago online nativo y permanecen con pago presencial; el backend debe mantener el cobro en F1 y no usar Multi-Service Booking. Se conserva la discrepancia ya detectada en 16/24 metadatos onlinePayment de ServiciosCatalogo; ver informe de auditoría Bookings 2026-10-31.
+5. **Checkout:** modo real (testMode=DISABLED); la casilla de aceptación de políticas está marcada por defecto. Los pagos de QA no se deben ejecutar en producción. Revisar la casilla con asesoría legal.
+6. **Formularios:** cuatro esquemas nativos están habilitados (caja manual, Control X, contacto y fichaje). No se ha demostrado su destino de escritura ni su conexión con los WebMethods. Los formularios administrativos no pueden escribir directamente en ledgers.
+7. **Automations:** existen reglas nativas de Bookings activas que envían confirmaciones y avisos. No duplicar notificaciones desde backend sin una matriz evento→acción→destinatario. Dos reglas activas notifican al personal con el mismo trigger sessions_booked; verificar destinatarios antes de intervenir.
+8. **Apps:** Stores está en Catalog V1; Invoices V1 no es consumido por el backend documentado; Blog y Promote SEO están instaladas. Actualizar el inventario App IDs y resolver Events.
+9. **SEO:** no se observa directiva global noindex/none en los tags globales devueltos; esto no prueba indexación de buscadores ni estado de cada página.
+10. **Pagos:** los tipos de pago disponibles en ES/EUR no acreditan proveedor conectado ni onboarding completado; verificar en el panel Aceptar pagos.
+11. **Legal:** las políticas de checkout contienen referencias a la plataforma ODR europea, cerrada el 20-07-2025 por Reglamento (UE) 2024/3228. Revisar y actualizar el texto y enlaces.
+
+### M.2 Orden de corrección
+
+- **P0:** alinear 14/15 días; alinear 12/24 horas; revisar checkbox de aceptación; retirar/reemplazar enlace ODR obsoleto tras revisión legal.
+- **P1:** validar asignación y horarios de profesionales; auditar destino y publicación de formularios; revisar automatizaciones activas y duplicidades; comprobar cookie banner y proveedor de pago en el panel; realizar QA en un sitio aislado.
+- **P2:** reconciliar App IDs, identificar instancias no mapeadas, mantener Catalog V1 e Invoices V1 dentro de sus límites hasta ADR.
+
+### M.3 Límites y reglas de precedencia
+
+Las lecturas API no demuestran el estado del proveedor de pago, el onboarding, el bloqueo real de scripts por consentimiento, los horarios individuales efectivos, los destinatarios finales de automatizaciones, la publicación de formularios ni los permisos visuales de cada app. Esos puntos permanecen `[PENDIENTE]` hasta verificación en panel/QA. Este snapshot no autoriza cambios en producción. Prevalece la jerarquía de fuentes de §A.4 y la evidencia más reciente debe sustituir este estado cuando se repita la auditoría.
