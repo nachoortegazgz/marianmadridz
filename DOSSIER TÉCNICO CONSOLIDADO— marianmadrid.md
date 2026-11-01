@@ -457,7 +457,7 @@ G.14 Notas transversales
      ├─ G.14.1 Invariantes de integridad consolidadas (12) [FUENTE CANÓNICA]
      ├─ G.14.2 Ledgers append-only (4)
      ├─ G.14.3 Campos PII/sensibles
-     └─ G.14.4 Estado de implementación (15 colecciones NATIVE; hooks activos; escritor contable pendiente; V3 preparado). QA live 2026-11-01: 10/10 referencias GUID de CitasF2 existen en Bookings V2; 4/4 parejas duales confirmadas con mismo resourceId, F2 enlazada, scheduleId distinto y gap exacto; 2 reservas simples confirmadas. La creación/cancelación/compensación E2E no se ha repetido en esta auditoría.
+     └─ G.14.4 Estado de implementación (15 colecciones NATIVE; hooks activos; escritor contable pendiente; V3 preparado). Reconciliación de solo lectura 2026-11-01 sobre registros ya existentes: 10/10 referencias GUID de CitasF2 localizadas en Bookings V2; 4/4 parejas duales persistidas coherentes (mismo resourceId, F2 enlazada, scheduleId independiente y gap esperado); 2 reservas simples persistidas confirmadas. Esto no acredita que se haya creado una reserva durante la prueba ni constituye E2E; no se crearon ni cancelaron reservas en esa auditoría. Ver §24.6 para la exclusión expresa de nuevas pruebas duales reales.
      [REF: §F.5.4 y §F.10.2 remiten a estas invariantes; F.10.2 conserva controles adicionales y mecanismos de hook.]
 
 G.15 QAE2ESimulaciones (12 campos totales; revisión 1) → scenarioId, traceId, status, scenario, bookingId, startedAt, finishedAt, evidenceJson; permisos ADMIN×4. Colección auxiliar de evidencias de escenarios QA; consumo runtime no verificado.
