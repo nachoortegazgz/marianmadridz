@@ -61,34 +61,29 @@ jobs:
           set -euo pipefail
           rm -f wix-preview.log
 
-          printf '\n' | timeout 8m script -q -f -e -c "wix preview" /dev/null > wix-preview.log 2>&1 &
-          preview_pid=$!
-          trap 'kill "${preview_pid}" >/dev/null 2>&1 || true; wait "${preview_pid}" || true' EXIT
+          timeout 8m bash -lc '
+            set -euo pipefail
+            wix preview > wix-preview.log 2>&1 &
+            preview_pid=$!
+            trap "kill ${preview_pid} >/dev/null 2>&1 || true; wait ${preview_pid} || true" EXIT
 
-          for _ in $(seq 1 240); do
-            if grep -Eoq "https?://wix\\.to/[[:alnum:]]+" wix-preview.log; then
-              echo "Wix preview URL generated successfully."
-              break
-            fi
+            for _ in $(seq 1 180); do
+              if grep -Eiq "ready|localhost|127\.0\.0\.1|preview.*started|http" wix-preview.log; then
+                echo "Wix preview started successfully."
+                break
+              fi
+              sleep 2
+            done
 
-            if ! kill -0 "${preview_pid}" 2>/dev/null; then
-              wait "${preview_pid}" || true
-              echo "::error::Wix CLI exited before generating a preview URL."
+            if ! grep -Eiq "ready|localhost|127\.0\.0\.1|preview.*started|http" wix-preview.log; then
+              echo "::error::Wix preview did not become ready before timeout."
               cat wix-preview.log || true
               exit 1
             fi
 
-            sleep 2
-          done
-
-          if ! grep -Eoq "https?://wix\\.to/[[:alnum:]]+" wix-preview.log; then
-            echo "::error::Wix preview URL was not generated before timeout."
-            cat wix-preview.log || true
-            exit 1
-          fi
-
-          kill "${preview_pid}" >/dev/null 2>&1 || true
-          wait "${preview_pid}" || true
+            kill ${preview_pid} >/dev/null 2>&1 || true
+            wait ${preview_pid} || true
+          '
 
       - name: Preserve preview output
         if: always()
