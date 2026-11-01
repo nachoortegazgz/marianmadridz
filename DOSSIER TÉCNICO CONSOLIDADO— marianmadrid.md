@@ -4057,7 +4057,7 @@ Esta fixture solo comprueba cálculo, vínculo, validaciones y compensación sim
 - `resourceId`: GUID del recurso/profesional de Bookings.
 - `scheduleId`: identificador de agenda/slot devuelto por Bookings; no es sinónimo de `resourceId`.
 - `bookingId`: solo el GUID devuelto por Wix al crear/consultar una reserva real; no se inventa.
-- `pairToken`: token TEXT de idempotencia. En SIMPLE el código actual genera `pt` + 32 caracteres hexadecimales estables (servicio/recurso/inicio/email); no representa una pareja F1/F2. En DUAL con `resourceId` el código actual genera un fingerprint SHA-256 hexadecimal compartido por F1/F2. No asumir UUID v4.
+- `pairToken`: token TEXT de idempotencia. En SIMPLE el código actual genera `pt` + 16 caracteres hexadecimales estables (servicio/recurso/inicio/email); no representa una pareja F1/F2. En DUAL con `resourceId` válido el código aplica `_hashKey` al fingerprint y obtiene 16 caracteres hexadecimales compartidos por F1/F2. `_hashKey` no es SHA-256 ni un hash criptográfico. No asumir UUID v4.
 - Fechas y horas se interpretan en `Europe/Madrid`; almacenar y comparar timestamps con conversión explícita UTC/local.
 - Toda ejecución automatizada lleva `scenarioId`, `traceId`, timestamp, versión/commit, entorno, resultado y evidencia no sensible.
 - No guardar PII real en logs, fixtures, capturas o artefactos CI. Enmascarar email/teléfono y excluir tokens, cookies, API keys y secretos.
