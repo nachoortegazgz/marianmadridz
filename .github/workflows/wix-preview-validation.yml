@@ -85,7 +85,7 @@ jobs:
           sent_selection = False
           deadline = time.monotonic() + 480
           exit_status = None
-          ansi = re.compile(rb"\\x1b\\[[0-?]*[ -/]*[@-~]")
+          ansi = re.compile(rb"\x1b\[[0-?]*[ -/]*[@-~]")
 
           try:
               while time.monotonic() < deadline:
@@ -108,7 +108,7 @@ jobs:
                               b"What would you like to preview" in clean):
                           # On PRs preview the checked-out branch; on main,
                           # accept the default latest commit from origin/main.
-                          key = b"\\x1b[B\\r" if os.getenv("GITHUB_EVENT_NAME") == "pull_request" else b"\\r"
+                          key = b"\x1b[B\r" if os.getenv("GITHUB_EVENT_NAME") == "pull_request" else b"\r"
                           os.write(fd, key)
                           sent_selection = True
 
@@ -123,7 +123,7 @@ jobs:
                   raise SystemExit("Wix preview timed out after 8 minutes.")
 
               clean = ansi.sub(b"", output)
-              match = re.search(rb"https?://wix\\.to/[A-Za-z0-9]+", clean)
+              match = re.search(rb"https?://wix\.to/[A-Za-z0-9]+", clean)
               if not os.WIFEXITED(exit_status) or os.WEXITSTATUS(exit_status) != 0:
                   raise SystemExit("Wix CLI preview exited unsuccessfully.")
               if not match:
