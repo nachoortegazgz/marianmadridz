@@ -1896,7 +1896,7 @@ Cualquier intento de lectura/escritura sobre legacy es interceptado en `backend/
 | `paymentStatus` | `pagoEstado` | TEXT | Enum CMS: `UNPAID` \| `PARTIAL` \| `PAID` \| `REFUNDED`. ⚠️ Validar runtime. |
 | `serviceId` | `servicioId` | TEXT | GUID del servicio en Wix Bookings. **Distinto** de `catalogId`. |
 | `resourceId` | `recursoId` | TEXT | GUID del recurso (profesional) en Wix Bookings. **Índice** `idx_citasf2_resourceId`. |
-| `pairToken` | `parejaToken` | TEXT | Token de idempotencia: SIMPLE usa `pt` + 32 hex; DUAL usa fingerprint SHA-256 compartido F1/F2. **Índice** regular. |
+| `pairToken` | `parejaToken` | TEXT | Token de idempotencia: SIMPLE usa `pt` + 16 hex; DUAL usa fingerprint determinista `_hashKey` de 16 hex compartido F1/F2. **Índice** regular. |
 | `dateYmd` | `fechaYmd` | TEXT | Fecha operativa normalizada `YYYY-MM-DD`. |
 | `scheduleId` | `calendarioId` | TEXT | ID de calendario **del slot nativo** (`bookedEntity.slot.scheduleId`). **No** sustituir por `eventsSchedule.id` del profesional. |
 | `contactDetails` | `contactoDetalles` | OBJECT | Datos mínimos de contacto (ej. `{email}`). Minimizar PII. |
@@ -2404,7 +2404,7 @@ Cualquier intento de lectura/escritura sobre legacy es interceptado en `backend/
 | `eventId` | `eventoId` | TEXT | `eventId` del webhook (obligatorio si `WEBHOOK_EVENT`). |
 | `expiresAt` | `expiraEn` | DATETIME | Caducidad del lock (obligatorio si `SLOT_LOCK`). |
 | `bookingId` | `reservaId` | TEXT | GUID de reserva. |
-| `pairToken` | `parejaToken` | TEXT | Token de idempotencia; SIMPLE usa token estable y DUAL comparte fingerprint F1/F2. |
+| `pairToken` | `parejaToken` | TEXT | Token de idempotencia; SIMPLE usa token estable y DUAL comparte fingerprint determinista F1/F2. |
 | `resourceId` | `recursoId` | TEXT | `resourceId` del profesional. |
 | `serviceId` | `servicioId` | TEXT | GUID de servicio. |
 | `slotStart` | `franjaInicio` | DATETIME | Inicio del slot. |
@@ -4012,7 +4012,7 @@ El dominio `.test` está reservado para pruebas y no debe utilizarse para espera
     "oneBooking": true,
     "oneCitasF2Record": true,
     "bookingType": "SIMPLE",
-    "pairToken": "STABLE_TOKEN_PT_PLUS_32_HEX",
+    "pairToken": "STABLE_TOKEN_PT_PLUS_16_HEX",
     "noFiscalMovement": true
   }
 }
@@ -4253,7 +4253,7 @@ La nueva prueba `QA-SIMPLE-BOOKING-01` ejecutó con éxito los pasos internos de
 **Implementación observada en código:**
 - SIMPLE (y DUAL degradado sin resourceId): `_resolveStablePairToken()` devuelve `pt` + 32 caracteres hexadecimales de hash.
 - DUAL con resourceId válido: `_buildPairTokenDeterministic()` devuelve el fingerprint SHA-256 hexadecimal, compartido por F1 y F2.
-- El campo CMS es TEXT; el token no es UUID v4 en ninguna de esas dos rutas.
+- El campo CMS es TEXT; el token no es UUID v4 ni SHA-256 en ninguna de esas dos rutas.
 
 **Decisión pendiente (no corregida en esta PR):** reconciliar SSOT/CMS docs/consumidores con el formato implementado. No migrar ni renombrar el campo, ni cambiar el algoritmo, sin revisar registros existentes, índices, hooks, idempotencia, conciliación y rollback. Hasta esa decisión, tratar `pairToken` como token opaco TEXT; no validarlo como UUID v4.
 
