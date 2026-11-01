@@ -945,7 +945,7 @@ export async function registerBookingPayment(bookingIds, totalAmount, method, me
 export async function queueFiscalRecovery(recoveryData) {
     const traceId = recoveryData.traceId || makeTraceId("fiscal-rec");
     try {
-        await _queueCompensation({
+        const queued = await _queueCompensation({
             kind: recoveryData.kind || "FISCAL_LEDGER",
             transactionId: recoveryData.transactionId,
             bookingIds: recoveryData.bookingIds,
@@ -961,8 +961,10 @@ export async function queueFiscalRecovery(recoveryData) {
             lastError: recoveryData.lastError,
             alertRequired: false,
         });
+        return { queued: queued !== false, traceId };
     } catch (err) {
         log.error("queueFiscalRecovery failed", { traceId, error: err?.message });
+        return { queued: false, traceId, error: err?.message || "QUEUE_FAILED" };
     }
 }
 
