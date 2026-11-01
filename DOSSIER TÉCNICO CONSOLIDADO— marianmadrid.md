@@ -26,6 +26,7 @@
 │  J. ANEXO TÉCNICO MCP/CLI/DIAGNÓSTICO/IA ............ §J.1–J.6     │
 │  K. MATRIZ DE FUENTES CANÓNICAS Y DUPLICIDADES ...... §K.1          │
 │  M. AUDITORÍA LIVE DE AJUSTES WIX Y APPS ............ §M.1          │
+│  N. CHECKPOINT CONSOLIDADO Y PLAN DE CONTINUIDAD ... §32           │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -3789,6 +3790,8 @@ export default defineWixConfig({
 
 ## 24. Estado consolidado del repositorio, Wix y validaciones (corte 2026-11-01)
 
+> **Nota de vigencia:** este corte es histórico. El estado actual del repositorio, PRs, CI y plan unificado queda actualizado por §32 (2026-11-02), que prevalece en esos aspectos sin borrar la evidencia histórica de esta sección.
+
 > **Esta sección sustituye cualquier estado anterior de repositorio, CI, Preview o QA que figure en apartados históricos.** Las secciones técnicas anteriores describen arquitectura y decisiones; esta sección fija el estado temporal más reciente verificado. No convertir evidencia histórica en prueba actual.
 
 ### 24.1 Identidad y punto de control
@@ -4054,6 +4057,8 @@ Si un solo punto no se verifica, el resultado es **PARCIAL** o **FALLIDO**, nunc
 ---
 
 ## 26. Plan de trabajo priorizado y reglas de cierre
+
+> **Vigencia:** la lista de §26 se conserva como plan histórico de origen. Su unión, depuración de tareas completadas y ampliación con la auditoría técnica se consolidan en §32; consultar §32 para la próxima sesión.
 
 ### P0 — Corregir y demostrar Wix Preview
 
@@ -4451,3 +4456,163 @@ Se confirma en documentación oficial que este proyecto usa **Wix CLI for Sites*
 **Integración:** PR #80 se ha fusionado en `main` con merge commit `d0d14e0e40a622ecbf912d6a2d44efaecd428208`. Esto integra la corrección de integridad y las pruebas offline, pero no publica ni despliega el sitio Wix. La rama `fix/wix-preview-ci-pty` mantiene aislada la corrección adicional del workflow y la evidencia de auditoría.
 
 **Seguridad:** no se han actualizado las ocho citas ni se han alterado movimientos/ledgers. Se mantiene pendiente aprobar reconciliación explícita tras confirmar el origen de las cancelaciones.
+
+
+---
+
+## 32. CHECKPOINT CONSOLIDADO Y PLAN UNIFICADO DE CONTINUIDAD — 2026-11-02
+
+**Propósito:** fijar el punto de partida real de la próxima sesión, integrar el informe de auditoría compartido, actualizar el estado de integración/CI y reunir en una única lista las tareas anteriores aún abiertas con los nuevos hallazgos. Esta sección prevalece sobre estados temporales anteriores de repositorio, PR, CI y planificación (§24, §26 y §30–§31), sin borrar su evidencia histórica.
+
+### 32.1 Punto de control verificable
+
+| Elemento | Estado actual |
+|---|---|
+| Repositorio canónico | `nachoortegazgz/marianmadridz` |
+| Rama principal | `main` |
+| HEAD de `main` | `5d978ce4b562d8086752de00c20734da4971cb1a` |
+| Último merge | PR #87 — hooks de integridad CMS exigidos por SSOT |
+| Sitio indicado para QA | `https://www.marianmadrid.es` |
+| Zona horaria / moneda | `Europe/Madrid` / EUR |
+| Cambios Wix live en esta actualización | Ninguno |
+| Publicación Wix en esta actualización | Ninguna |
+
+**PRs integradas y estado:**
+
+| PR | Resultado | Evidencia / límite |
+|---|---|---|
+| #80 | MERGED | Corrección de integridad del webhook de cancelación y tests offline. No demuestra redelivery automático Wix ni resuelve por sí sola las discrepancias históricas. |
+| #81 | MERGED | Workflow Preview con PTY real y validación estricta de URL. El merge del workflow no demuestra que se haya generado y revisado una URL Preview válida. |
+| #82 | MERGED | Enrutamiento de página de servicio al calendario con slug. El titular comunicó su publicación; no se repitió verificación runtime en este corte. |
+| #84 | MERGED | Corrección del handshake del widget/calendario. El titular comunicó su publicación; no se repitió verificación runtime en este corte. |
+| #85 | MERGED | Eliminación de seis imports demostrablemente no usados. No se atribuye un CI autónomo no verificado; queda incorporado en la base actual. |
+| #86 | MERGED | Centralización de avisos operativos y persistencia de auditoría. CI del HEAD de PR: run `41357785865`, 4/4 jobs SUCCESS. Se conserva `queueInventoryReconciliation()` como cola de trabajo, no como alerta. |
+| #87 | MERGED | Restauración de hooks CMS de `CitasF2` e inventario. CI del HEAD de PR: run `41361873562`, 4/4 jobs SUCCESS. Merge commit incluido en HEAD actual de `main`. |
+
+**PR #87 — correcciones ya integradas:**
+- `CitasF2_beforeInsert` y `CitasF2_beforeUpdate` vuelven a ejecutar `assertCitasF2()` en la frontera CMS.
+- `MovimientosInventario_beforeUpdate` y `beforeRemove` bloquean la modificación/borrado del ledger append-only.
+- `InventarioStockVenta_beforeUpdate` vuelve a validar la invariante de stock.
+- Los tests sustituyen las aserciones que sellaban la retirada de hooks por regresiones positivas y negativas.
+- Se corrigieron fixtures de tests para usar GUID válidos; no se debilitó el validador.
+- Los cambios son código y tests. No se modificaron registros CMS, reservas, pagos, permisos, configuración Wix ni publicación.
+
+**Alcance de CI:** el run #87 acredita los cuatro gates automatizados del commit de la PR (regresión backend offline, Node Windows 24.22.1, Node Windows 26.12.1, instalación limpia/lint). No acredita runtime Wix, Preview funcional, navegador, HTTP Functions desplegadas, permisos efectivos, pagos ni escrituras CMS reales.
+
+### 32.2 Reconciliación de la auditoría compartida
+
+| Hallazgo de auditoría | Estado a este corte | Tratamiento |
+|---|---|---|
+| H-1 — `MapaStaff` ausente de `BUSINESS_COLLECTIONS` | ABIERTO / DECISIÓN ARQUITECTÓNICA | La colección y campos constan en CMS KEYFIELDS; el backend vigente resuelve identidad por Bookings Staff API. No reintroducir la colección como autoridad de roles sin ADR, inventario de consumidores, decisión de autoridad y migración/rollback. |
+| H-2 — hooks de `CitasF2` retirados | CORREGIDO / MERGED #87 | Hooks de insert/update restaurados con validador central. Mantener tests y verificar que todos los escritores legítimos cumplen el contrato. |
+| H-3 — Stores Catalog V1/V3 | ABIERTO / ADR | El informe identifica adaptadores V1+V3 y una prohibición SSOT de V3. No cambiar versión ni autodetección hasta resolver la contradicción documental con ADR y confirmar APIs/consumidores efectivos. V1 sigue siendo la referencia de configuración viva documentada en §24/M. |
+| H-4 — `@wix/site-pricing-plans` | ABIERTO / USO NO CONFIRMADO | Inventariar imports, llamadas, páginas y dependencias transitivas antes de mantener o retirar el paquete. No eliminarlo por no aparecer en la SSOT. |
+| H-5 — `secretAccess.js` frente a `secretVault.js` | DOCUMENTACIÓN PENDIENTE | Alinear SSOT, anexo de migración, imports y dossier con el nombre/ruta real; comprobar referencias antiguas y compatibilidad antes de retirar alias. |
+| H-6 — hooks de `MovimientosInventario` retirados | CORREGIDO PARCIALMENTE / MERGED #87 | Update/remove del ledger restaurados como append-only y hook de actualización de proyección de stock restaurado. Completar auditoría de escritores, reconciliación y pruebas de reparación. |
+
+**Observaciones adicionales de auditoría:**
+- `SKIP_AVAILABILITY_VALIDATION = false` es una decisión conservadora; no cambiarla para optimizar sin demostrar que los locks, heartbeat y validación de Wix cubren todos los casos.
+- La validación de `CitasF2` ahora dispone de doble barrera: validación de saga/punto de uso y hook CMS. No retirar ninguna sin ADR y pruebas de equivalencia.
+- No se considera que la presencia de un test V3 demuestre autorización SSOT para activar Catalog V3.
+- El informe indica 36 suites y determinados recuentos históricos. No se elevan esos números a estado actual: el dato vigente verificable aquí es CI #87 4/4 jobs SUCCESS, sin publicar un recuento de tests no extraído de sus logs.
+- La auditoría de código estático no equivale a certificación fiscal, laboral, RGPD ni aceptación de QA runtime.
+
+### 32.3 Lista unificada de tareas pendientes — próxima sesión
+
+La lista agrupa pendientes de §26, §24, §29–§31, la revisión previa de módulos y los nuevos H-1–H-6. Las tareas ya completadas por PRs #80–#87 se retiran como acciones abiertas; se mantienen únicamente verificaciones residuales.
+
+#### P0 — Integridad de reservas y recuperación
+
+- [ ] **Reconciliar las ocho discrepancias conocidas** Bookings V2 `CANCELED` / `CitasF2.CONFIRMED` de §31.8. Clasificar cada booking por fecha, origen, `pairToken`, `traceId`, eventos, actor técnico y trazas. No atribuirlas a un único defecto sin evidencia.
+- [ ] Confirmar si la corrección del webhook integrada en PR #80 cubre todos los estados y resultados de persistencia. Mantener la regla: no marcar evento procesado si CMS no está reconciliado.
+- [ ] Diseñar/verificar **recuperación durable y reconciliación periódica** de eventos de cancelación fallidos. La propagación de excepciones no prueba redelivery automático de Wix; comprobar contrato oficial vigente y no inventar ACK/reintentos.
+- [ ] Añadir o completar pruebas para NOT_FOUND, ERROR, fallo transitorio, replay, estado ya cancelado y cancelación de F1/F2, preservando idempotencia.
+- [ ] Verificar la consistencia entre Bookings, CitasF2, `ControlOperativo` y cualquier cola de recuperación sin modificar manualmente las ocho reservas ni borrar/editar ledgers.
+- [ ] **Wix Preview:** aunque PR #81 está integrada, obtener un run posterior que genere URL Preview Wix válida, revisar el artefacto/log y abrir el Preview. Hasta entonces, Preview continúa NO VALIDADO. Recordar que Preview no valida cambios de HTTP Functions ni sustituye runtime.
+- [ ] **Alinear políticas de reserva:** configuración nativa limita antelación a 14 días mientras calendario/backend permiten 15; cancelación nativa 12 h frente a texto público de 24 h. Definir una única política aprobada y coordinar panel, frontend, backend y texto público antes de modificar.
+- [ ] Revisar legalmente checkbox de aceptación de políticas marcado por defecto y retirar/actualizar referencias ODR obsoletas según §M; no editar textos legales sin validación del responsable.
+
+#### P1 — Layer 1: reservas simples y frontend runtime
+
+- [ ] Ejecutar QA controlado de flujo SIMPLE completo: widget/calendario → WebMethod Velo → Bookings Writer/API → CitasF2. Capturar commit, entorno, IDs reales de QA, `traceId` y evidencia redactada.
+- [ ] Verificar fecha inicial, cambio de fecha, ventana de 15 días y coherencia de `serviceId`, `resourceId`, `scheduleId`, ubicación y profesional.
+- [ ] Verificar consulta, reprogramación y cancelación de reserva SIMPLE, incluyendo sincronización de estados y notificaciones.
+- [ ] Revisar asignación de los tres profesionales, horarios efectivos, recursos y calendarios; mantener separados `staffMemberId`, `resourceId` y `scheduleId`.
+- [ ] Comprobar Checkout Cart V2 / Bookings Writer V2 en entorno de prueba autorizado y sin capturar fondos.
+- [ ] Mantener excluida la creación E2E real de pareja dual F1+F2. Continuar únicamente con análisis estático, tests offline y lecturas autorizadas, conforme a §24–§25.
+
+#### P1 — Layer 2: caja, seguridad y fiscalidad
+
+- [ ] Verificar permisos CMS efectivos y RBAC de cada WebMethod fiscal/operativo en runtime.
+- [ ] Probar atomicidad/compare-and-set, concurrencia e idempotencia persistente de `transactionId`, `eventId` y tokens de control.
+- [ ] Verificar cierre Z, reintentos y recuperación sin duplicidad; conservar `SYSTEM_FLAG`, compensaciones y trazabilidad.
+- [ ] Verificar continuidad SHA-256/hash-chain en registros QA autorizados.
+- [ ] Determinar si existe escritor activo para `LibroAsientosContablesDetalle`; no activarlo sin origen, cuadre, idempotencia y reversión probados.
+- [ ] Auditar rate limiting persistente en `ControlOperativo`, incluido el caso anónimo sin IP estable.
+- [ ] Verificar cancelaciones, devoluciones y rectificaciones como nuevos movimientos; no actualizar ni borrar ledgers append-only.
+- [ ] Revisar integración fiscal/Veri*Factu con procedimiento autorizado. No emitir documentos fiscales reales en QA.
+
+#### P1 — CMS, inventario, reconciliación y alertas
+
+- [ ] Auditar escritores de `MovimientosInventario` y `InventarioStockVenta`; verificar que los hooks restaurados no rompen flujos legítimos y que las reparaciones se realizan mediante movimientos rectificativos.
+- [ ] Revisar el ciclo completo de `queueInventoryReconciliation()`: payload, reintentos, idempotencia, recuperación, dead-letter/alerta final y trazabilidad. No sustituir la cola por una alerta simple.
+- [ ] Revisar reconciliación de reservas e inventario después de compensaciones, cancelaciones y fallos parciales.
+- [ ] Inventariar todos los puntos de creación de avisos `ControlOperativo` y verificar que los avisos operativos pasan por `notifyOperationalAlert()` cuando corresponda, sin convertir locks, flags o colas de trabajo en alertas.
+- [ ] Mantener deduplicación, `traceId`, auditoría y separación entre log técnico, alerta visible, lock, flag y cola de trabajo.
+- [ ] Auditar formularios Wix nativos: destino real de escritura, permisos y relación con WebMethods. Ningún formulario administrativo debe escribir directamente en ledgers.
+
+#### P1 — Apps nativas Wix y automatizaciones
+
+- [ ] Crear matriz de capacidades nativas Wix (Bookings, Stores, CRM, Members, Forms, Invoices, Automations) frente a código propio: función, fuente de verdad, consumidor, permisos, duplicidad y plan de retirada. Eliminar código solo con equivalencia demostrada.
+- [ ] Revisar las automatizaciones nativas de Bookings: dos reglas activas con trigger `sessions_booked` notifican al personal. Identificar destinatarios, eventos y solapamiento antes de desactivar o duplicar notificaciones backend.
+- [ ] Verificar proveedor de pagos y onboarding desde panel; la disponibilidad de métodos ES/EUR no prueba que exista conexión operativa. No ejecutar cobros reales.
+- [ ] Verificar cookie banner/consentimiento y bloqueo real de scripts; no inferirlo de configuración API.
+- [ ] Conciliar inventario de App IDs/instancias instaladas y resolver apps no mapeadas (incluidos Events, Invoices V1, Blog y Promote SEO).
+- [ ] Verificar formularios publicados, permisos y destinos de datos.
+
+#### P2 — Decisiones SSOT, documentación y deuda técnica
+
+- [ ] **ADR MapaStaff:** decidir si la autoridad de roles seguirá en mapa de `resourceId`/Bookings Staff API o volverá a CMS. Inventariar `staffMemberId`, `active`, `rolWebsite`, referencias en servicios y consumers; definir migración, compatibilidad y rollback. No reintroducir `MapaStaff` en `BUSINESS_COLLECTIONS` por simple consistencia nominal.
+- [ ] **ADR Stores V1/V3:** resolver la contradicción entre la prohibición SSOT reportada y los adaptadores V1/V3 existentes. Confirmar contrato Wix, versión activa, pruebas, consumidores y estrategia de migración; mantener configuración V1 mientras no exista decisión aprobada.
+- [ ] Auditar consumidores reales de `@wix/site-pricing-plans`; decidir mantener/retirar solo con referencias comprobadas.
+- [ ] Alinear el nombre `secretAccess.js` frente a `secretVault.js` en SSOT, anexo de migración, documentación y comentarios. Confirmar que no queden imports/rutas antiguas.
+- [ ] Alinear el contrato documental de `pairToken` (TEXT opaco; formatos SIMPLE/DUAL descritos en §25.4 y §28) entre SSOT, CMS KEYFIELDS, tests y consumidores. No cambiar algoritmo ni datos sin plan.
+- [ ] Continuar auditoría global de exports/imports, funciones y ficheros muertos; comprobar referencias de todo el repositorio antes de eliminar. PR #85 solo retiró seis imports demostrablemente no usados; no equivale a auditoría completa.
+- [ ] Revisar compatibilidad y duplicidad de helpers de lectura/escritura CMS, aliases legacy y secretos. Preservar compatibilidad histórica hasta migración verificada.
+- [ ] Revisar versiones Node/Wix CLI y avisos npm; no ejecutar actualizaciones forzadas ni editar manualmente `wix.lock`.
+- [ ] Generar `src/velo.dependencies.json` únicamente mediante Wix CLI for Sites y workflow soportado; no crear manualmente.
+- [ ] Retomar integración Microsoft 365/SharePoint únicamente con ADR, permisos, trazabilidad y pruebas de sincronización.
+- [ ] Alinear Biblia SSOT, anexos de migración, CMS KEYFIELDS, DIRECTRICES y este dossier con decisiones aprobadas y cambios ya integrados.
+
+### 32.4 Orden de ejecución recomendado para la próxima sesión
+
+1. Leer HEAD actual y este §32; confirmar que `main` sigue en el SHA registrado.
+2. Comprobar Preview y estado del workflow; si no hay URL válida, inspeccionar logs/artefactos del run y corregir el workflow sin tocar Wix live.
+3. Priorizar reconciliación de las ocho cancelaciones y completar recuperación durable de webhooks; empezar por lectura y trazas, sin mutaciones.
+4. Auditar cola/reconciliación de inventario y reservas, compensaciones y avisos operativos.
+5. Ejecutar la matriz de capacidades Wix nativas frente a código propio y resolver los ADR de MapaStaff y Stores V1/V3.
+6. Continuar QA SIMPLE runtime y Layer 2 solo bajo §25.5–§25.7, con autorización por operación.
+7. Cerrar la documentación SSOT/anexos tras las decisiones; no documentar como decidido lo que siga abierto.
+
+### 32.5 Restricciones no negociables
+
+- No fusionar ni publicar cambios de código/configuración sin revisión y autorización aplicable.
+- No modificar datos CMS, reservas, pagos, permisos, fiscalidad ni configuración live como parte de una auditoría documental.
+- No limpiar discrepancias editando CitasF2 o ledgers manualmente.
+- No ejecutar pagos, emitir documentos fiscales ni enviar notificaciones reales en QA ordinario.
+- No crear reservas duales E2E reales.
+- No confundir CI offline, lectura API, Preview, runtime ni publicación.
+- Preservar append-only, idempotencia, locks/heartbeat, compensaciones, retries, auditoría, `traceId` y recuperación durable.
+- Toda tarea cerrada debe apuntar a evidencia verificable: archivo/commit/PR/run, consulta API o resultado QA autorizado.
+
+### 32.6 Evidencias de este checkpoint
+
+- `main` HEAD: `5d978ce4b562d8086752de00c20734da4971cb1a`.
+- PR #87 mergeado; merge commit `5d978ce4b562d8086752de00c20734da4971cb1a`; CI PR head run `41361873562`, 4/4 jobs SUCCESS.
+- PR #86 mergeado; CI PR head run `41357785865`, 4/4 jobs SUCCESS.
+- PR #85 mergeado; su cambio está incluido en la base probada por CI posterior #87; no se declara un run autónomo de #85 en este checkpoint.
+- PR #80 y #81 mergeados; la integración no demuestra por sí sola reconciliación de las ocho discrepancias ni Preview generado.
+- PR #82 y #84 mergeados; la publicación/runtime fue comunicada por el titular, no revalidada en este corte.
+- Auditoría de ajustes Wix y Apps §M y revisión compartida de módulos/H-1–H-6, incorporadas como tareas y decisiones abiertas en §32.2–§32.3.
+
+**Punto exacto de reentrada:** comprobar Preview; después, reconciliar las ocho cancelaciones Bookings/CitasF2 y verificar recuperación durable del webhook. No repetir una auditoría general ni realizar escrituras hasta que el diagnóstico y la autorización lo permitan.
