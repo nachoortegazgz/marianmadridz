@@ -4157,3 +4157,90 @@ Si un solo punto no se verifica, el resultado es **PARCIAL** o **FALLIDO**, nunc
 8. No ejecutar reserva dual E2E real, pagos reales ni escrituras fiscales como parte de QA sin una nueva autorización expresa.
 
 **Fuentes de estado:** repositorio `nachoortegazgz/marianmadridz` (HEAD `847a9d2`), PR #51–#63, workflow Backend quality gates run `41300896674`, Wix Preview run `41300896658` y auditoría CMS de solo lectura de 2026-11-01. Las evidencias y su alcance se describen arriba; los pendientes no se presentan como hechos completados.
+
+
+---
+
+## 27. Ejecución de simulación QA — corte 2026-11-01
+
+> **Naturaleza de la prueba:** regresión automatizada offline sobre el backend real del repositorio, con mocks en memoria de los módulos Wix. No es un sitio Wix QA publicado ni una réplica persistente del CMS. No se escribieron datos en el sitio real.
+
+### 27.1 Identificación de ejecución
+
+| Campo | Valor |
+|---|---|
+| PR que solicitó los gates | #66 — Wix Preview fail-closed |
+| Rama probada | `fix/wix-preview-fail-closed-2026-11-01` |
+| Commit de la PR | `2fdd100d4252c984c28f7deabe84c0170b78218c` |
+| Commit sintético de merge usado por CI | `8858aeee84a59ea40b48852eaa0aa311aa6f586c` |
+| Workflow | Backend quality gates |
+| Run | `41304182695` (#557) |
+| Resultado | **SUCCESS — 4/4 jobs** |
+| Node | 24.22.1 y 26.12.1 |
+| Sistema | Ubuntu 24.04 + Windows (matrices de regresión) |
+| Wix Preview real | No ejecutado; el workflow está limitado a `main` |
+| Escrituras Wix/CMS/Bookings/pagos | Ninguna |
+
+### 27.2 Resultados medidos
+
+| Gate | Resultado |
+|---|---:|
+| Instalación limpia + ESLint | SUCCESS |
+| Regresión backend completa | **27 suites · 288 pass · 0 fail** |
+| Layer 1 | **9 suites · 183 pass · 0 fail** |
+| Layer 2 | **8 suites · 86 pass · 0 fail** |
+| Regresión Node 24.22.1 Windows | SUCCESS |
+| Regresión Node 26.12.1 Windows | SUCCESS |
+
+Los contadores de Layer 1 y Layer 2 son subconjuntos/ejecuciones repetidas de suites incluidas en la regresión completa; **no se suman** a las 288 pruebas generales.
+
+### 27.3 Actividad de negocio simulada
+
+Las suites ejecutaron código real de backend con respuestas Wix simuladas. Los escenarios se ejecutan en procesos y stores de mock independientes; no comparten una única transacción ni representan una jornada completa persistida en un solo sitio.
+
+| Área | Escenarios ejecutados | Evidencia principal |
+|---|---|---|
+| Catálogo de servicios | GUID/slug, servicio simple/dual, servicios ocultos, complementos, precios y DTO público | `reservas.web.test.mjs` |
+| Agenda/disponibilidad | Ventana 15 días, normalización de slots, recursos de tipo staff, balance de carga, revalidación de slot, selección explícita de profesional | `booking.availability.saga.test.mjs`, `reservas.web.test.mjs` |
+| Motor de reservas | Locks, concurrencia, idempotencia, pairToken, persistencia CitasF2 simple/dual, revision, scheduleId y compensaciones | `booking.core.concurrency.test.mjs`, `compensation.contract.test.mjs`, `completion-retry.contract.test.mjs` |
+| Checkout | Creación/cálculo de carrito, validación de línea Bookings, violaciones, importe, moneda y URL checkout | `booking.cart-v2.checkout.test.mjs` |
+| Identidad y permisos | Resolución miembro/contacto/staff, denegación de acceso y guardas de cajero | `site.flows.e2e.test.mjs`, `staff.identity.contract.test.mjs` |
+| Jornada de personal | Contexto, fichaje de entrada, estado de jornada, historial y firma; payload inválido y ajuste autorizado | `site.flows.e2e.test.mjs` |
+| Caja | Venta en efectivo, incremento de caja, cierre Z, integridad hash-chain, rechazo de payload y deduplicación concurrente por transactionId | `site.flows.e2e.test.mjs` |
+| Ledger/fiscal | Hooks append-only, whitelists, lectura agregada, importes y controles de estado fiscal | `data.hooks.test.mjs`, `dto.whitelist.test.mjs`, `fiscalAggregator.read.test.mjs`, `orderLedgerAmount.test.mjs` |
+| Stores | Adaptadores/mappers Catalog V1/V3 bajo mocks | `stores-catalog-*.test.mjs` |
+| Auditoría | Ocho o más controles de flujo y verificaciones de integridad del auditor offline | `audit.e2e.runner.mjs` |
+
+### 27.4 Datos ficticios y aislamiento
+
+- Los tests crean datos de forma programática en `wixDataMock` y mocks SDK; se destruyen/resetearon dentro de sus procesos.
+- Se usan GUID de prueba, clientes sintéticos, servicios y staff de fixture. Ejemplos visibles en pruebas: `client@example.com`, `marta@test.local`; no son cuentas reales ni deben reutilizarse para envío de comunicaciones.
+- No se crearon contactos, miembros, servicios, reservas, carritos, movimientos ni cierres en el CMS Wix.
+- No se enviaron correos/SMS, no se generaron cobros, no se emitieron facturas ni se ejecutaron operaciones AEAT.
+- No se usó el dominio `marianmadrid.es` como sitio de pruebas.
+
+### 27.5 Límites que impiden declarar E2E completo
+
+El resultado **no certifica** todavía una jornada integral de cliente en Wix. En concreto:
+
+1. No se ha demostrado en runtime Wix una ejecución satisfactoria de `executeBookingSaga` que cree una reserva simple real mediante Bookings Writer V2 y persista el resultado real en `CitasF2`.
+2. Las pruebas de `booking.availability.saga` cubren validaciones, normalización, políticas de pago y compensación del orquestador; no equivalen a una creación exitosa real de reserva.
+3. Los tests Cart V2 sustituyen las funciones SDK por mocks: no crean un carrito remoto ni cobran.
+4. La jornada de fichaje/caja se ejecuta como flujo continuo en el mock, pero no está enlazada a una reserva creada en el mismo escenario.
+5. La auditoría `audit.e2e.runner.mjs` valida estructuras y controles de escenarios sintéticos; no realiza ocho transacciones Wix.
+6. No se han validado notificaciones reales, permisos de visitante/miembro en sitio publicado, webhooks, cron, HTTP Functions ni conciliación de pagos.
+7. No se ha ejecutado reserva dual E2E real; sigue expresamente excluida en §24.6 y §25.
+
+**Estado QA resultante:** regresión backend offline superada. Simulación funcional de módulos y subflujos superada. **Jornada de cliente completa E2E en Wix: NO EJECUTADA / PENDIENTE.**
+
+### 27.6 Próxima secuencia segura
+
+1. Revisar y, si procede, integrar PR #66. No fusionar si el diff cambia el origen de Preview o introduce escrituras.
+2. Esperar el nuevo run Wix Preview de `main`; comprobar frase exacta, URL `wix.to`, artefacto y apertura manual.
+3. Crear/confirmar un sitio Wix QA realmente separado, con sandbox y datos de prueba aislados. No considerar Wix Preview equivalente a ese sitio.
+4. Antes de ejecutar una escritura QA, comprobar que Bookings, CMS, HTTP Functions, notificaciones y pagos apuntan al entorno QA y no a producción.
+5. En PR separada, añadir una prueba de éxito de reserva simple mediante Booking Writer V2 mockeado, enlazando `bookingId` con `CitasF2`; después realizar la prueba runtime autorizada en QA.
+6. Encadenar en una misma simulación simple: cliente sintético → consulta de servicio/slot → reserva simple → lectura de cita → fichaje staff → cobro simulado/no-charge → movimiento caja → cierre de caja; comprobar idempotencia y no duplicidad.
+7. Mantener las reservas duales E2E reales, pagos reales y emisión fiscal fuera del plan, salvo nueva autorización expresa.
+
+**Fuentes de evidencia:** GitHub Actions run `41304182695` (#557), logs del job `Backend offline regression suite` y `Windows Node.js 24.22.1 regression`; archivos de tests citados en §27.3. Esta sección describe exclusivamente los resultados observados en esos logs.
