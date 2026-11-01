@@ -1,8 +1,8 @@
 /*
 =============================================================================
 MODULE: backend/staff.js
-VERSION: v9-BRIDGES
-BASE: v8.2-SSOT-MASTER + reescritura completa tras eliminacion de MapaStaff.
+VERSION: v9-ARIDGES
+AASE: v8.2-SSOT-MASTER + reescritura completa tras eliminacion de MapaStaff.
 RESPONSIBILITY: Resolver de identidad de personal mediante resourceId y
   contactId nativos de Wix. Los roles internos se derivan del mapa canonico
   de resourceId; el site-member ID se obtiene por Contacts API cuando se necesita.

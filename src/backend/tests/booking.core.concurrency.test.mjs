@@ -32,7 +32,7 @@ function guidFromSlotKey(key) {
 
 function baseParams(over = {}) {
   return Object.assign({
-    bookingId: 'BK-' + Math.random().toString(36).slice(2, 8),
+    bookingId: 'aaaaaaaa-aaaa-4aaa-8aaa-' + Math.random().toString(16).slice(2, 14).padEnd(12, '0'),
     serviceId: SVC,
     resourceId: RES_A,
     scheduleId: RES_B,
@@ -326,13 +326,14 @@ test('BCORE-PER-04 non-GUID scheduleId rejected before write', async () => {
 
 test('BCORE-PER-05 same bookingId upsert keeps single row; lower revision rejected', async () => {
   wixDataMock._reset();
-  const p = baseParams({ bookingId: 'BK-DUP' });
+  const duplicateBookingId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+  const p = baseParams({ bookingId: duplicateBookingId });
   const first = await BC._persistBooking(p, 'tr-a');
   assert.strictEqual(first.created, true);
   const second = await BC._persistBooking(Object.assign({}, p, { revision: 2, totalAmount: 50 }), 'tr-b');
   assert.strictEqual(second.created, false, 'update, no insert nuevo');
   const rows = wixDataMock._store.get(CITAS) || [];
-  assert.strictEqual(rows.filter((r) => r.bookingId === 'BK-DUP').length, 1);
+  assert.strictEqual(rows.filter((r) => r.bookingId === duplicateBookingId).length, 1);
   await assert.rejects(
     () => BC._persistBooking(Object.assign({}, p, { revision: 1 }), 'tr-c'),
     (e) => /revision conflict/i.test(e.message)
@@ -410,7 +411,7 @@ test('BCORE-DUAL-PER-01 F1 and F2 persist independently with shared pair identit
   wixDataMock._reset();
   const pairToken = 'pair-test-persistence-01';
   const f1 = await BC._persistBooking(baseParams({
-    bookingId: 'BK-DUAL-F1',
+    bookingId: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
     bookingType: 'DUAL_F1',
     pairToken,
     traceId: 'tr-dual-f1',
@@ -426,7 +427,7 @@ test('BCORE-DUAL-PER-01 F1 and F2 persist independently with shared pair identit
     },
   }), 'tr-dual-f1');
   const f2 = await BC._persistBooking(baseParams({
-    bookingId: 'BK-DUAL-F2',
+    bookingId: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
     serviceId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
     bookingType: 'DUAL_F2',
     pairToken,
@@ -435,7 +436,7 @@ test('BCORE-DUAL-PER-01 F1 and F2 persist independently with shared pair identit
     endDate: new Date('2026-10-15T10:15:00Z'),
     meta: {
       pairToken,
-      linkedF1BookingId: 'BK-DUAL-F1',
+      linkedF1BookingId: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
       noFee: true,
     },
   }), 'tr-dual-f2');
@@ -444,8 +445,8 @@ test('BCORE-DUAL-PER-01 F1 and F2 persist independently with shared pair identit
   assert.strictEqual(f2.created, true);
   const rows = wixDataMock._store.get(CITAS) || [];
   assert.strictEqual(rows.length, 2);
-  const persistedF1 = rows.find((row) => row.bookingId === 'BK-DUAL-F1');
-  const persistedF2 = rows.find((row) => row.bookingId === 'BK-DUAL-F2');
+  const persistedF1 = rows.find((row) => row.bookingId === 'cccccccc-cccc-4ccc-8ccc-cccccccccccc');
+  const persistedF2 = rows.find((row) => row.bookingId === 'dddddddd-dddd-4ddd-8ddd-dddddddddddd');
   assert.ok(persistedF1 && persistedF2);
   assert.strictEqual(persistedF1.bookingType, 'DUAL_F1');
   assert.strictEqual(persistedF2.bookingType, 'DUAL_F2');
@@ -455,7 +456,7 @@ test('BCORE-DUAL-PER-01 F1 and F2 persist independently with shared pair identit
   assert.strictEqual(persistedF2.traceId, 'tr-dual-f2');
   assert.strictEqual(persistedF1.meta.f1Start, '2026-10-15T10:00:00');
   assert.deepStrictEqual(persistedF1.meta.addOnIds, ['addon-1']);
-  assert.strictEqual(persistedF2.meta.linkedF1BookingId, 'BK-DUAL-F1');
+  assert.strictEqual(persistedF2.meta.linkedF1BookingId, 'cccccccc-cccc-4ccc-8ccc-cccccccccccc');
   assert.strictEqual(persistedF2.meta.noFee, true);
   assert.ok(persistedF1.slotStart instanceof Date);
   assert.ok(persistedF2.slotStart instanceof Date);

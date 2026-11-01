@@ -14,6 +14,7 @@ import {
     MOVEMENT_LEGACY_READ_ALIASES,
     normalizeMovementKeys,
 } from "backend/internalConfig";
+import { assertCitasF2 } from "backend/validation";
 
 import { logger } from "backend/logger";
 
@@ -848,16 +849,20 @@ export function MovimientosInventario_beforeInsert(item) {
     return item;
 }
 
-// DATA-01 (2026-10-20): update/remove hooks intentionally retired. Inventory
-// reconciliation is performed by the canonical inventory workflow and cron;
-// keeping these Velo hooks duplicated point-of-use controls and blocked repairs.
+export function MovimientosInventario_beforeUpdate() {
+    _fiscalError("Modificacion de MovimientosInventario prohibida: ledger append-only. Use un movimiento rectificativo.");
+}
+
+export function MovimientosInventario_beforeRemove() {
+    _fiscalError("Borrado de MovimientosInventario prohibido: ledger append-only.");
+}
 
 // =============================================================================
 // BLOQUE 16 - INVENTARIO STOCK VENTA (INVARIANTE DE ALMACEN)
 // =============================================================================
 
 export function InventarioStockVenta_beforeInsert(item) { return _validateInventarioStockVenta(item); }
-// DATA-01: no beforeUpdate hook; stock projections are reconciled by the inventory workflow.
+export function InventarioStockVenta_beforeUpdate(item) { return _validateInventarioStockVenta(item); }
 
 function _validateInventarioStockVenta(item) {
     if (!item || typeof item !== "object") return item;
@@ -898,9 +903,18 @@ function _validateInventarioStockVenta(item) {
 // BLOQUE 17 - CITAS F2 (INTEGRIDAD DE RESERVAS)
 // =============================================================================
 
-// DATA-04 (2026-10-20): CitasF2 insert/update schema hooks retired. The
-// booking saga validates status, payment and pair contracts at point of use.
-// Keep beforeRemove below: direct deletion must still require formal cancellation.
+// CitasF2 is a mutable booking projection, not an append-only ledger.
+// Keep the SSOT structural guard at the CMS boundary as a second barrier to
+// the booking saga's point-of-use validation.
+export function CitasF2_beforeInsert(item) {
+    assertCitasF2(item);
+    return item;
+}
+
+export function CitasF2_beforeUpdate(item) {
+    assertCitasF2(item);
+    return item;
+}
 
 export function CitasF2_beforeRemove() {
     _fiscalError("Borrado directo de CitasF2 bloqueado: use cancelacion formal de reserva");
