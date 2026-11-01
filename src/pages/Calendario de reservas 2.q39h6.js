@@ -1128,19 +1128,25 @@ $w.onReady(async () => {
             return;
         }
 
-        currentServiceId =
-            resolved.serviceId;
+        // Preserve the identifier selected by the resolver for the later
+        // READY -> CONTEXT handshake. In particular, route fallback must not
+        // be lost when the URL query is empty.
+        const contextParams = {
+            ...params,
+            serviceId: resolved.serviceId || params.serviceId || "",
+            slug: resolved.slug || params.slug || ""
+        };
 
-        currentSlug =
-            resolved.slug;
+        currentServiceId = contextParams.serviceId || null;
+        currentSlug = contextParams.slug || null;
 
         console.info(
             "[calendario-2] Identificador de servicio resuelto",
             {
                 traceId,
                 source: resolved.source,
-                hasServiceId: Boolean(resolved.serviceId),
-                slug: resolved.slug || null
+                hasServiceId: Boolean(contextParams.serviceId),
+                slug: contextParams.slug || null
             }
         );
 
@@ -1170,7 +1176,7 @@ $w.onReady(async () => {
                 contextTimeoutMs: 45000,
 
                 onContextReady: async () =>
-                    loadServiceContext(params, traceId),
+                    loadServiceContext(contextParams, traceId),
 
                 onWidgetMessage: async (
                     message,
