@@ -26,6 +26,7 @@ CAMBIOS DE ALINEACION v5015-ALIGNED (respecto a v5009-FISCAL-V20.1):
 */
 
 import {
+    getItem as dalGet,
     insertItem as dalInsert,
 } from "backend/dataAccess";
 
@@ -166,6 +167,110 @@ function _buildControlOperativoRecord({
 }
 
 // =============================================================================
+// PERSISTENCIA COMPARTIDA
+// =============================================================================
+
+async function _persistAuditRecord(record, timeoutLabel = null) {
+    try {
+        const write = () => dalInsert(CONTROL_OPERATIVO_COL, record);
+        if (timeoutLabel) {
+            await withTimeout(write, API_TIMEOUT_MS, timeoutLabel);
+        } else {
+            await write();
+        }
+    } catch (error) {
+        log.error("audit record persistence failed", {
+            operation: timeoutLabel || "insert",
+            eventType: record?.payload?.eventType || "UNKNOWN_EVENT",
+            traceId: record?.traceId || null,
+            errorCode: error?.code || null,
+        });
+    }
+}
+
+function _buildOperationalAlertRecord({
+    alertType,
+    severity = "ERROR",
+    message,
+    data = {},
+    traceId = null,
+    entityId = DEFAULT_ENTITY_ID,
+    source = DEFAULT_SOURCE,
+    dedupeKey,
+    operationDate = null,
+}) {
+    const safeKey = _normalizeIdPart(dedupeKey, 150);
+    if (!safeKey) throw new Error("ALERT_DEDUPE_KEY_REQUIRED");
+
+    const safeSeverity = _normalizeLevel(
+        String(severity).toUpperCase() === "WARN" ? "WARNING" : severity
+    );
+    const record = _buildControlOperativoRecord({
+        eventType: alertType,
+        level: safeSeverity,
+        message,
+        data,
+        traceId,
+        entityId,
+        source,
+    });
+    const id = `ALERT_${safeKey}`.slice(0, 190);
+
+    return {
+        ...record,
+        _id: id,
+        dedupeKey: id,
+        status: CONTROL_STATUS.OPEN,
+        alertType: record.payload.eventType,
+        severity: safeSeverity === "WARNING" ? "WARN" : safeSeverity,
+        message: record.payload.message,
+        ...(operationDate ? { operationDate: String(operationDate) } : {}),
+    };
+}
+
+/**
+ * Único punto de creación de avisos operativos.
+ * Deduplica por clave estable; el detalle técnico permanece en logs internos.
+ */
+export async function notifyOperationalAlert(options = {}) {
+    let record;
+    try {
+        record = _buildOperationalAlertRecord(options);
+        const existing = await dalGet(
+            CONTROL_OPERATIVO_COL,
+            record._id,
+            { consistentRead: true }
+        );
+        if (existing) return { created: false, duplicate: true, id: record._id };
+
+        await dalInsert(CONTROL_OPERATIVO_COL, record);
+        return { created: true, duplicate: false, id: record._id };
+    } catch (error) {
+        // Si dos ejecuciones compiten, la segunda reconoce el registro creado.
+        if (record?._id) {
+            try {
+                const existing = await dalGet(
+                    CONTROL_OPERATIVO_COL,
+                    record._id,
+                    { consistentRead: true }
+                );
+                if (existing) {
+                    return { created: false, duplicate: true, id: record._id };
+                }
+            } catch (_) {
+                // No ocultar el fallo original si tampoco puede verificarse.
+            }
+        }
+        log.error("notifyOperationalAlert failed", {
+            alertType: options?.alertType || "UNKNOWN",
+            traceId: record?.traceId || options?.traceId || null,
+            errorCode: error?.code || null,
+        });
+        return { created: false, duplicate: false, failed: true, id: record?._id || null };
+    }
+}
+
+// =============================================================================
 // REGISTRO SINCRONO NO BLOQUEANTE
 // =============================================================================
 
@@ -179,24 +284,9 @@ export async function logAuditEvent(
     source = DEFAULT_SOURCE
 ) {
     const record = _buildControlOperativoRecord({
-        eventType,
-        level,
-        message,
-        data,
-        traceId,
-        entityId,
-        source,
+        eventType, level, message, data, traceId, entityId, source,
     });
-
-    try {
-        await dalInsert(CONTROL_OPERATIVO_COL, record);
-    } catch (error) {
-        log.error("logAuditEvent failed (non-blocking)", {
-            message: error?.message || String(error),
-            traceId: record.traceId,
-            eventType: eventType,
-        });
-    }
+    await _persistAuditRecord(record);
 }
 
 // =============================================================================
@@ -213,26 +303,7 @@ export async function logAuditEventWithTimeout(
     source = DEFAULT_SOURCE
 ) {
     const record = _buildControlOperativoRecord({
-        eventType,
-        level,
-        message,
-        data,
-        traceId,
-        entityId,
-        source,
+        eventType, level, message, data, traceId, entityId, source,
     });
-
-    try {
-        await withTimeout(
-            () => dalInsert(CONTROL_OPERATIVO_COL, record),
-            API_TIMEOUT_MS,
-            "audit_insert"
-        );
-    } catch (error) {
-        log.error("logAuditEventWithTimeout failed (non-blocking)", {
-            message: error?.message || String(error),
-            traceId: record.traceId,
-            eventType: eventType,
-        });
-    }
+    await _persistAuditRecord(record, "audit_insert");
 }
