@@ -53,7 +53,10 @@ jobs:
           fi
           wix login --api-key "${CLI_API_KEY}"
 
-      - name: Create Wix preview from latest main (never publish)
+      - name: Build Wix project before preview
+        run: wix build
+
+      - name: Create and verify Wix preview (never publish)
         env:
           CI: "true"
           TERM: "xterm"
@@ -61,29 +64,20 @@ jobs:
           set -euo pipefail
           rm -f wix-preview.log
 
-          timeout 8m bash -lc '
-            set -euo pipefail
-            wix preview > wix-preview.log 2>&1 &
-            preview_pid=$!
-            trap "kill ${preview_pid} >/dev/null 2>&1 || true; wait ${preview_pid} || true" EXIT
+          # Wix CLI renders its interactive UI; allocate a real pseudo-terminal
+          # in CI instead of redirecting stdin from a non-TTY background process.
+          timeout 8m script -q -e -c "wix preview" wix-preview.log
 
-            for _ in $(seq 1 180); do
-              if grep -Eiq "ready|localhost|127\.0\.0\.1|preview.*started|http" wix-preview.log; then
-                echo "Wix preview started successfully."
-                break
-              fi
-              sleep 2
-            done
+          # Require a successful process exit and an explicit HTTPS link.
+          # Generic words such as "http", "ready" or "preview" are not evidence.
+          if ! grep -Eoq 'https://[^[:space:]"]+' wix-preview.log; then
+            echo "::error::Wix CLI exited without returning a preview link."
+            cat wix-preview.log || true
+            exit 1
+          fi
 
-            if ! grep -Eiq "ready|localhost|127\.0\.0\.1|preview.*started|http" wix-preview.log; then
-              echo "::error::Wix preview did not become ready before timeout."
-              cat wix-preview.log || true
-              exit 1
-            fi
-
-            kill ${preview_pid} >/dev/null 2>&1 || true
-            wait ${preview_pid} || true
-          '
+          echo "Wix preview command completed and returned an HTTPS link."
+          grep -Eo 'https://[^[:space:]"]+' wix-preview.log | sort -u
 
       - name: Preserve preview output
         if: always()
