@@ -149,6 +149,25 @@ test('QA-SIMPLE-BOOKING-01 resolves real catalogue and staff mocks, creates one 
   assert.ok(citas[0].pairToken.length > 0);
   assert.equal(citas[0].bookingType, IC.BOOKING_TYPE.SIMPLE, 'stable token must not turn a simple booking into a dual booking');
   assert.equal(citas[0].contactDetails.email, 'qa.simple@example.test');
+
+  const replay = await executeBookingSaga({
+    traceId: 'trace-qa-simple-001-replay',
+    firstName: 'Cliente',
+    lastName: 'QA Simple',
+    email: 'qa.simple@example.test',
+    rgpdConsent: true,
+    serviceId: SERVICE_ID,
+    channelType: IC.CHANNEL_TYPE.PRESENCIAL,
+    slotF1: {
+      localStartDate: SLOT_START,
+      localEndDate: SLOT_END,
+    },
+  });
+  assert.equal(replay.status, 'SUCCESS', JSON.stringify(replay));
+  assert.equal(replay.idempotent, true, 'same simple booking payload must replay the completed transaction');
+  assert.equal(writerCalls.length, 1, 'idempotent replay must not create a second Wix booking');
+  assert.equal(confirmationCalls.length, 1, 'idempotent replay must not confirm a second booking');
+  assert.equal((wixDataMock._store.get('CitasF2') || []).length, 1, 'idempotent replay must not duplicate CitasF2');
 });
 
 test.after(() => {
