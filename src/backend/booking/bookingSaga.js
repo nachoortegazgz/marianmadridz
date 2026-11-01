@@ -1293,6 +1293,26 @@ export async function executeBookingSaga(unsafePayload) {
             lockOwnerId
         );
 
+        // SAGA-IDEMPOTENCY-01: _initTransaction returns success:true/isNew:false
+        // for a completed transaction. Replaying that result must stop here;
+        // continuing would create a second native Wix booking for the same
+        // stable token and payload.
+        if (txResult && txResult.success && txResult.isNew === false) {
+            if (txResult.existing && txResult.existing.status === "COMPLETED") {
+                return {
+                    status: "SUCCESS",
+                    data: txResult.existing.result || null,
+                    error: null,
+                    idempotent: true,
+                };
+            }
+            throw createBookingError(
+                ERROR_CODES.TOKEN_BUSY,
+                "Transaction already exists and is not available for a new execution",
+                { traceId: traceId }
+            );
+        }
+
         if (!txResult || !txResult.success) {
             const txError = txResult && txResult.error;
             if (txError === ERROR_CODES.PAIR_TOKEN_PAYLOAD_MISMATCH) {
