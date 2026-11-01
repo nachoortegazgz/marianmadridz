@@ -1,6 +1,6 @@
-# DOSSIER TÉCNICO — marianmadrid.es versión.z
+# DOSSIER TÉCNICO CONSOLIDADO — marianmadrid.es (SSOT v10.0 + anexos reconciliados)
 
-**Proyecto:** Marian Madrid Peluquería y Estética · **Fecha:** 2026-11-01 · **Versión SSOT:** version.z **Version consolidada redactada usando como fuentes el resto de documentos de este repositorio**
+**Proyecto:** Marian Madrid Peluquería y Estética · **Fecha:** 2026-11-01 · **Versión SSOT base:** v10.0 **Version consolidada redactada usando como fuentes el resto de documentos de este repositorio**
 
 # MAPA DEL DOCUMENTO — DOSSIER TÉCNICO CONSOLIDADO marianmadrid.es
 
@@ -68,7 +68,7 @@ A.3  Directrices D1–D20 (permanentes, no desactivables)
 
 A.4  Precedencia de fuentes ante discrepancia
      └─ 1 APIs/SDK Wix → 2 CMS vivo → 3 SSOT + anexo → 4 Auditoría/CI/repo → 5 Hoja de necesidades
-     ⚠️ Nota: esta sección lista 5 fuentes; el §0.2 del índice consolidado lista 6 (incluye "dossier de proyecto"). [REF: §A.4 vs §C.0]
+     A.4 es la jerarquía vinculante. El dossier y sus anexos son documentos subordinados; no constituyen una fuente adicional ni pueden invertir el orden.
 
 A.5  Formato de respuesta
      ├─ Cabecera obligatoria [ROL][ALCANCE][FUENTES]
@@ -121,7 +121,7 @@ B.3  Autenticación: login interactivo y API keys
 B.4  Comandos CLI for Sites (referencia operativa)
      └─ `wix dev` · `install` · `update` · `uninstall` · `publish` · `preview` · `login` · `whoami` · `-h`
      [DUP parcial: §F.21.1 repite `wix login`/`whoami`/`dev`]
-     [REF: §J.2 para comandos no documentados: `wix build`, `wix release`, `wix connect`, `wix env pull/set`, `wix translation pull`]
+     [REF: §J.2 para comandos no documentados: comandos de otros tipos de proyecto/CLI (no aplicables al Wix Editor clásico de este sitio)]
 
 B.5  Wix MCP (Model Context Protocol)
      ├─ B.5.1 Qué es
@@ -438,9 +438,9 @@ F.22 Glosario y anexos
      └─ F.22.5 Fuentes oficiales
      [REF: §J.5 enlaces oficiales adicionales para MCP/CLI/IA]
 
-F.23 Correcciones del anexo aclaratorio (prevalece sobre el resto)
+F.23 Correcciones del anexo aclaratorio (aclaraciones subordinadas a §A.4)
      └─ 6 correcciones: Catalog V1/V3 (consultar usuario), MapaStaff #13, UPDATED, NO_FEE F2, CANCELED, resource._id/location._id
-     ⚠️ Esta sección **prevalece** sobre §F.5–§F.16 cuando hay contradicción.
+     Esta sección aclara §F.5–§F.16, pero no prevalece sobre APIs/SDK oficiales Wix ni sobre el esquema CMS vivo; si hay conflicto, se aplica §A.4.
 ```
 
 ---
@@ -463,7 +463,7 @@ G.9  InventarioStockVenta (26)  → stockKey (V1:/V3:), invariante stock
 G.10 MovimientosInventario (31) → movementToken_unique, lineItemId, stockApplied
 G.11 ControlOperativo (38)      → 6 controlTypes; locks + dedupe + rate limit + alertas
 G.12 RegistrosHorariosStaff (21) → ledger laboral append-only; deviceIpAddress PII
-G.13 MapaStaff (15+4)           → staffMemberId/active pendientes ADR
+G.13 MapaStaff (14+4)           → staffMemberId/active pendientes ADR
 G.14 Notas transversales
      ├─ G.14.1 Invariantes de integridad (8)
      ├─ G.14.2 Ledgers append-only (4)
@@ -566,7 +566,7 @@ J.1  Wix MCP — Configuración avanzada y herramientas expuestas
      ⚠️ Wix Site MCP (`/_api/mcp`) — capa por sitio, no cubierta en §B.5
 
 J.2  CLI for Sites — Comandos y flags no documentados en §B.4
-     └─ `wix build`, `wix release`, `wix connect`, `wix env pull/set`, `wix translation pull`, `npm create @wix/new app/headless`
+     └─ comandos de Wix CLI unified para apps/headless (no aplicables a este sitio) y comandos no confirmados para CLI for Sites
      └─ Advertencia: `wix publish` desde local desincroniza repo y sitio vivo
      └─ GitHub Actions YAML exacto con `wix login --api-key`
      [REF: §B.8 workflow mínimo]
@@ -610,7 +610,7 @@ J.6  Posibles datos faltantes en el dossier (7 filas)
 | Wix CLI comandos | §B.4 · §F.21.1 · §J.2 | §J.2 (más completo) |
 | Wix MCP | §B.5 · §J.1 | §J.1 (más completo) |
 | Autenticación | §B.3 · §J.1.3 | Ambas (CLI vs MCP) |
-| Workflow GitHub Actions | §B.8 · §J.2 | §J.2 (YAML exacto) |
+| Workflow GitHub Actions | §B.8 · §J.2 · anexo CLI | §J.2 describe el workflow activo; §B.8 y el anexo remiten a él, sin duplicar YAML. |
 
 ---
 
@@ -629,21 +629,21 @@ J.6  Posibles datos faltantes en el dossier (7 filas)
 | I. Capa 3 SharePoint | `[HECHO]`/`[DECLARADO]` | 90 % | ADR-003 |
 | J. Anexo MCP/CLI/IA | `[HECHO]` | 100 % | ADR política MCP |
 
-**Discrepancias abiertas:** 9 (registradas en §K y en §F.23).
+**Discrepancias abiertas:** recuento histórico no recalculado; consultar §K, §F.23 y estados `[PENDIENTE]` por apartado.
 **Lagunas de datos:** 13 (6 en §H.7 + 7 en §J.6).
 **ADRs pendientes:** 6 (ADR-001 Catalog, ADR-002 Bookings SDK/REST, ADR-003 Capa 3, ADR MapaStaff, ADR status ServiciosCatalogo, ADR política MCP).
 
 ---
 
 **[PENDIENTE]**
-- Consolidar duplicidades de §K en una revisión documental futura (R5).
-- Corregir el orden de las 5 prioridades del Anexo Resumen Ejecutivo (alinear con §A.1).
-- Fijar URL canónica del repositorio (`marianmadridX` vs `marianmadridz` vs `marianmadridXXXXX`).
+- Duplicidades documentales consolidadas en esta revisión: §K fija una única ubicación canónica por materia; las demás secciones remiten a ella.
+- Orden de prioridades del Anexo Resumen Ejecutivo alineado con §A.1.
+- URL canónica del repositorio: `https://github.com/nachoortegazgz/marianmadridz`.
 - Resolver discrepancia 182 vs 158 tests.
 - Aprobar los 6 ADRs pendientes antes de avanzar en producción.
 
 **[VERIFICACIÓN]**
-- El mapa cubre los 10 bloques (A–J) + tabla de duplicidades (K) + estado global (L). Se ha incorporado el anexo J al final tal como se solicitó. Las referencias cruzadas se han validado contra el contenido del documento consolidado. No se ha añadido información nueva fuera del anexo J y las tablas de síntesis.
+- Los contenidos ampliados se integran en sus apartados temáticos. §K es el índice de localización, no una segunda especificación. Los estados de CI/Preview se documentan en §B.8 y §J.2; la criptografía en §G.11.3; secretos en §G.11.3 y §F.21.6; identificadores Bookings en §D.4.2, §D.4.3, §G.7.3 y §G.16. El anexo final conserva solo información singular que no duplica esos contratos.
 
 **[ADR-REQUERIDO]** Sí, para consolidar el mapa como **índice oficial del proyecto** y para los 6 ADRs listados en §L.
 
@@ -653,7 +653,7 @@ J.6  Posibles datos faltantes en el dossier (7 filas)
 
 # ROLES Y DIRECTRICES DE COMPORTAMIENTO PARA MODELOS IA — Proyecto marianmadrid.es
 
-> **Naturaleza del documento:** instrucciones operativas para cualquier modelo IA que intervenga en el proyecto (arquitectura, código, auditoría, documentación, verificación fiscal-legal). No sustituye a la SSOT version.z; la **aplica**. En caso de conflicto con la SSOT, prevalece la SSOT y este documento se corrige vía ADR.
+> **Naturaleza del documento:** instrucciones operativas para cualquier modelo IA que intervenga en el proyecto (arquitectura, código, auditoría, documentación, verificación fiscal-legal). No sustituye a la SSOT v10.0; la **aplica**. En caso de conflicto con la SSOT, prevalece la SSOT y este documento se corrige vía ADR.
 > **Uso:** *system prompt* o como archivo de instrucciones del agente. Los roles (R1–R7) son invocables; las directrices (D1–D20) son **permanentes** y no se desactivan por rol.
 
 ---
@@ -720,7 +720,7 @@ Se aplican en **orden estricto**. Si dos entran en conflicto, prevalece el de me
 
 ### 3.3 Métricas y verificación
 
-- **D9 — Métrica con contexto.** Toda cifra (tests, versiones, IDs, importes, plazos) se presenta como: **valor + fuente + fecha + estado** (`verificado` / `declarado`). Ejemplo: `182 pass / 0 fail · [FUENTE: dossier §0, 2026-11-01] · declarado, no verificado en esta sesión`.
+- **D9 — Métrica con contexto.** Toda cifra (tests, versiones, IDs, importes, plazos) se presenta como: **valor + fuente + fecha + estado** (`verificado` / `declarado`). Ejemplo: `dato histórico de tests · fuente/fecha/estado obligatorios · no presentar como medición actual`.
 - **D10 — Prohibido “verde” sin run.** "CI verde" exige `run ID` y commit. "Publicado" exige confirmación en Wix, no el estado del sitio.
 - **D11 — Discrepancias explícitas.** Si dos fuentes discrepan (p. ej. 182 vs 158 tests; `resource.id` vs `resource._id`), se muestran **ambas**, se aplica la **precedencia** (§4) y se registra la corrección.
 - **D12 — Verificación reproducible.** Cuando se afirma algo verificable, se indica **cómo reproducirlo** (comando, consulta, endpoint, test).
@@ -758,7 +758,7 @@ Orden **estricto** (ya fijado en la SSOT; el modelo lo aplica sin reinterpretarl
 
 1. **APIs y SDK oficiales de Wix** (comportamiento real de la plataforma).
 2. **Esquema y registros del CMS vivo** (fuente de lo persistido).
-3. **BIBLIA version.z + anexo aclaratorio** (doctrina y correcciones vigentes).
+3. **BIBLIA SSOT v10.0 + anexo aclaratorio vigente** (doctrina y correcciones vigentes).
 4. **Auditoría de migración / CI / repo `main`** (hechos verificados a fecha).
 5. **Hoja de necesidades** (deseado).
 
@@ -812,7 +812,7 @@ Toda métrica se entrega como tabla:
 
 | Métrica | Valor | Fuente | Fecha | Estado |
 |---|---|---|---|---|
-| Tests Vitest | 182 pass / 0 fail · 11 suites | dossier §0 | 2026-11-01 | `[DECLARADO]` |
+| Tests Vitest | 182 pass / 0 fail · 11 suites (dato histórico declarado; no es una medición actual verificada) | dossier §0 | 2026-11-01 | `[DECLARADO]` |
 | Tests Vitest (SSOT) | 158/158 | SSOT §0.8 | 2026-10-30 | `[DECLARADO]` — discrepancia abierta |
 | CI `main` | run `41053070852` SUCCESS | auditoría §7 | 2026-10-30 | `[HECHO]` |
 | Publicado en Wix | — | — | — | `[PENDIENTE]` |
@@ -953,10 +953,10 @@ El token OAuth se guarda localmente (habitualmente en `~/.wix/auth/account.json`
 Para **GitHub Actions** u otros entornos no interactivos:
 
 1. Generar la API key en **API Keys Manager** (`manage.wix.com/account/api-keys`) con el permiso **“Wix CLI for Sites – Git Integration”**.
-2. Guardarla como **secret del repositorio** en GitHub (`WIX_CLI_API_KEY`).
+2. Guardarla como **secret del repositorio** en GitHub (`CLI_API_KEY`).
 3. Autenticar en el workflow:
    ```bash
-   npm run wix login -- --api-key ${{ secrets.WIX_CLI_API_KEY }}
+   wix login --api-key "${CLI_API_KEY}"
    ```
    
 
@@ -1062,34 +1062,16 @@ claude mcp add --transport http wix-mcp-remote https://mcp.wix.com/mcp
 
 ---
 
-## 8. CI/CD con GitHub Actions (publicación automatizada)
+## 8. CI/CD con GitHub Actions (referencia; no es el workflow activo de este proyecto)
 
 ### 8.1 Requisitos
 
 1. Sitio ya integrado con GitHub.
-2. API key con permiso **“Wix CLI for Sites – Git Integration”**, guardada como secret `WIX_CLI_API_KEY`.
+2. API key con permiso **“Wix CLI for Sites – Git Integration”**, guardada como secret `CLI_API_KEY`.
 
-### 8.2 Workflow mínimo
+### 8.2 Workflow activo de Preview (no publicar)
 
-```yaml
-name: Wix Publish
-on:
-  push:
-    branches: [main]
-jobs:
-  publish:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24.22.1
-      - run: npm install -g @wix/cli
-      - run: wix login --api-key ${{ secrets.WIX_CLI_API_KEY }}
-      - run: npm test && npm run lint   # gates del proyecto
-      - run: wix publish                # publica desde default branch
-```
-> **Regla del proyecto:** el workflow **no publica** si `npm test` o `npm run lint` fallan. El estado “Published” del sitio no demuestra que contenga el commit auditado; la única evidencia válida es el **run ID** de GitHub Actions + confirmación de `wix publish` sobre el commit esperado.
+El workflow activo está en `.github/workflows/wix-preview-validation.yml`; no copiar una segunda versión YAML al dossier. Consume `secrets.CLI_API_KEY`, instala CLI for Sites, autentica y ejecuta `wix preview` bajo timeout y supervisión de proceso, conservando el log como artefacto. No contiene `wix publish`. Su comportamiento actual evita dejar el job bloqueado indefinidamente; se conserva sin cambios mientras siga completando el Preview funcionalmente. El éxito del job acredita la condición que comprueba el script, no sustituye QA de reservas en Wix Editor.
 
 ---
 
@@ -1171,7 +1153,7 @@ No se añaden prioridades nuevas que rompan el orden SSOT. Se **materializan** a
 4. **Aislamiento frontend-backend:** la interfaz solo invoca `webMethods`; nunca toca el CMS directamente.
 5. **Validación en runtime:** todo enum persistido pasa por `assertValidEnum()`; se rechazan alias.
 6. **Seguridad por diseño:** `elevate()` acotado a la llamada específica; HMAC-SHA256 con ventana ±60 s; rate limiting persistido en `ControlOperativo`; PII minimizada y enmascarada.
-7. **Precedencia de fuentes ante discrepancia:** APIs oficiales Wix → esquema CMS vivo → SSOT → código.
+7. **Precedencia de fuentes ante discrepancia:** aplicar exactamente §A.4 / §4: (1) APIs y SDK oficiales Wix; (2) esquema y registros CMS vivos; (3) SSOT v10.0 y anexo aclaratorio vigente; (4) auditoría, CI y repositorio `main` como evidencia de implementación; (5) hoja de necesidades como objetivo deseado. Ningún resumen, anexo del dossier ni código puede invertir esta jerarquía.
 
 ### 1.4 Anti-patrones prohibidos (política de PR)
 
@@ -1362,7 +1344,7 @@ CAPA 1 ──► CAPA 2 ──► ADR-003 ──► CAPA 3
 
 ---
 
-**Cierre:** este resumen es la referencia ejecutiva del proyecto. En caso de conflicto con cualquier otro documento, prevalece junto con el anexo aclaratorio de la SSOT v10.0. La Capa 3 queda expresamente **condicionada a ADR-003** y no se considera parte del alcance comprometido hasta su aprobación.
+**Cierre:** este resumen es una vista ejecutiva y no una fuente de precedencia superior. Ante conflictos se aplica §A.4 / §4 y prevalece la fuente de mayor rango. La Capa 3 queda expresamente **condicionada a ADR-003** y no se considera parte del alcance comprometido hasta su aprobación.
 
 ## Anexo Resumen Ejecutivo
 
@@ -1370,13 +1352,14 @@ CAPA 1 ──► CAPA 2 ──► ADR-003 ──► CAPA 3
 
 El negocio cuenta con 3 profesionales: Marian (ADMIN), Andrea (ESTILISTA) y Alba (ESTILISTA). El sitio opera como punto de venta físico y virtual completo: agenda 24/7, cobro presencial (efectivo, tarjeta, Bizum vía MONEI), facturación legal simplificada, control horario y gestión de stock.
 
-### 5 Prioridades SSOT en orden estricto
+### Prioridades SSOT (orden vinculante de §A.1)
 
-1. **Funcionalidad real** — Solo lo que el negocio requiere hoy. Prohibido el código especulativo.
+El orden de este anexo se alinea con §A.1 y §C.1.1. No establece una jerarquía alternativa:
 
-2. **Mínimo código** — Lógica en webMethods, constantes en `backend/internalConfig.js`, validaciones en `backend/validation.js`, hooks en `backend/data.js`.
-3. **Fiabilidad** — Ledgers inmutables append-only, rollback conocido, tests en preview antes de desplegar. Ninguna fase cierra con pruebas fallidas.
-4. **Cumplimiento normativo 100%** — Fiscal (Veri\*Factu/Ley 11/2021, RD 1007/2023, RD 1619/2012, Ley 37/1992), contable (PGC RD 1514/2007), laboral (RD 8/2019), privacidad (RGPD/LOPDGDD 3/2018). Cero excepciones.
+1. **Fiabilidad** — Ledgers íntegros, rollback conocido y ninguna fase cerrada sin pruebas suficientes.
+2. **Funcionalidad real** — Solo lo que el negocio requiere hoy; prohibido el código especulativo.
+3. **Cumplimiento normativo 100%** — Fiscal, contable, laboral, privacidad y consumo, dentro del alcance y con validación profesional cuando proceda.
+4. **Mínimo código** — Lógica en webMethods, constantes en `backend/internalConfig.js`, validaciones en `backend/validation.js`, hooks en `backend/data.js`.
 5. **Cero complejidad innecesaria** — Sin abstracciones prematuras, verificaciones redundantes, logs permanentes ni código comentado.
 
 ### Checklist a cumplir
@@ -1388,7 +1371,7 @@ El negocio cuenta con 3 profesionales: Marian (ADMIN), Andrea (ESTILISTA) y Alba
 | Ledger fiscal Veri\*Factu (CMS + hooks) | 
 | Cierre Z automatizado (cron 01:20 AM) | 
 | Fichajes laborales RD 8/2019 | 
-| Tests Vitest (182 pass / 0 fail, 11 suites) | 
+| Tests Vitest — recuento histórico: 182 pass / 0 fail, 11 suites; no es una medición actual verificada | 
 | Migración SDK v2 `@wix/data` | 
 | Módulo contabilidad (`LibroAsientosContablesDetalle`) | 
 | Veri\*Factu certificado AEAT | 
@@ -1410,7 +1393,7 @@ El negocio cuenta con 3 profesionales: Marian (ADMIN), Andrea (ESTILISTA) y Alba
 | **Dirección** | C/ Maurice Ravel 35, Local, 50012 Zaragoza (Rosales del Canal) |
 | **IAE / CNAE** | 972.1 / 9602 |
 | **Régimen fiscal** | Estimación Directa |
-| **Repositorio Git** | `https://github.com/nachoortegazgz/marianmadridX.git` |
+| **Repositorio Git** | `https://github.com/nachoortegazgz/marianmadridz` |
 | **Editor** | Wix Editor / Wix Studio |
 | **Plan** | Premium |
 | **Velo** | Activado |
@@ -1448,22 +1431,23 @@ El negocio cuenta con 3 profesionales: Marian (ADMIN), Andrea (ESTILISTA) y Alba
 | Runtime backend | Node.js en sandbox Velo / Wix JavaScript SDK v2 |
 | Capa de datos | Wix CMS (MongoDB internamente) |
 | Frontend / UI | Selector `$w` client-side + widgets HTML embebidos vía `postMessage` coordinados por `public/widgetBridge.js` |
-| Tests | Vitest con mocks de Wix APIs (182 pass / 0 fail, 11 suites) |
-| Control de código | Git + Wix CLI (`wix dev`) |
-| Sincronización | `wix sync-types`, `wix pull/sync` |
+| Tests | Vitest con mocks de Wix APIs; recuento histórico declarado: 182 pass / 0 fail, 11 suites (no es medición actual) |
+| Control de código | Git + Wix CLI for Sites (`wix dev`) |
+| Sincronización | `wix dev` sincroniza cambios locales con Local Editor. No usar `wix sync-types` ni `wix pull/sync` como comandos CLI for Sites sin confirmación documental específica. |
 | Soporte remoto | RustDesk (contraseña en Wix Secrets Manager) |
 | Análisis comportamiento | Microsoft Clarity (mapas de calor) |
 | Correo transaccional | Resend API (clave en Wix Secrets) |
 | Asistente IA | OpenAI API (clave en Wix Secrets, AbortController 9s) |
 
-### 2.2 Restricciones técnicas del runtime Velo
+### 2.2 Restricciones técnicas del runtime Velo y módulos Node
 
-**Módulos permitidos:** exclusivamente `wix-*` / `@wix/*` y librerías npm dentro de la whitelist de compatibilidad Velo.
+**Módulos permitidos:** APIs `wix-*` / `@wix/*` y paquetes npm compatibles con el runtime Velo. Los módulos integrados de Node.js deben evaluarse individualmente; no se presume compatibilidad ni incompatibilidad sin evidencia del runtime concreto.
 
 **Prohibiciones explícitas:**
 
 - `process.env` — no existe en Velo (produce ReferenceError)
-- `fs`, `path`, `crypto` nativo de Node.js (acceso directo a sistema de archivos)
+- `fs` y `path` para acceso directo al sistema de archivos; no forman parte del entorno Velo documentado.
+- `node:crypto`: **elección técnica recomendada para SHA-256 y HMAC-SHA256**. El código actual importa `createHash` y `createHmac` desde `node:crypto`, usa API nativa estable de Node.js y no necesita dependencia npm externa. Mantener esta implementación; no migrar a Web Crypto ni añadir librerías de hashing por moda. La compatibilidad concreta del import en el runtime Velo del sitio sigue siendo gate de validación real; los tests Node offline no bastan.
 - Comandos de terminal
 - Llamadas fetch salientes fuera de la whitelist de red Velo (usar `wix-fetch`)
 
@@ -1562,7 +1546,7 @@ Flujo seguro: JWT firmado → verificar firma clave pública Wix → extraer `ev
 | `TZ` | `Europe/Madrid` |
 | Moneda | `EUR` (2 decimales con `_roundMoney()`) |
 
-### 4.2 Matriz de personal (MapaStaff)
+### 4.2 Matriz de personal (Bookings Staff API; MapaStaff es espejo CMS no consumido por el resolver actual)
 
 | Nombre | `resourceId` (Wix Bookings) | `rolBookings` | `rolWebsite` |
 | --- | --- | --- | --- |
@@ -1571,6 +1555,9 @@ Flujo seguro: JWT firmado → verificar firma clave pública Wix → extraer `ev
 | **Alba Staff** | `9b905bfd-1a09-485d-9273-a24a20dfe648` | `STAFF` | `ESTILISTA` |
 
 ### 4.3 Identificadores transversales del sistema
+
+**Contrato Bookings:** `resourceId` identifica el recurso/profesional y es el valor usado para filtrar disponibilidad en Time Slots V2 (`resourceTypes[].resourceIds`) y para asociar el recurso a la reserva. `scheduleId` identifica el calendario/schedule devuelto por Bookings para el slot y debe conservarse desde el slot nativo cuando el contrato de reserva lo requiera. No sustituir `resourceId` por `scheduleId` al consultar disponibilidad ni al seleccionar profesional. `staffMemberId` es el ID del perfil Staff y tampoco sustituye a `resourceId`.
+
 
 | ID | Descripción | Generación | Alcance |
 | --- | --- | --- | --- |
@@ -1956,7 +1943,7 @@ export const getPublicCatalog = webMethod(
 
 > **Nota de integración:** Este bloque completa el dossier a partir del §4.3. Se han incorporado los datos de `ANEXO BIBLIA MIGRACION.txt` (estado real del repositorio a 30-10-2026), `ANEXO BIBLIA POR WIX.txt` (operativa CLI/permisos), `CMS KEYFIELDS.md` (esquema vivo a 25-10-2026), `NECESIDADES WEB MARIAN.txt` (hoja de cumplimiento funcional) y `BIBLIA SSOT (v10.0)`.
 >
-> **Regla de precedencia aplicada ante contradicciones:** (1) Anexo aclaratorio de la SSOT > (2) auditoría de migración 30-10-2026 (hechos verificados en repo) > (3) narrativa SSOT > (4) hoja de necesidades. Las discrepancias se señalan explícitamente.
+> **Regla de precedencia:** se aplica §A.4 / §4 sin excepciones: (1) APIs y SDK oficiales Wix; (2) CMS vivo; (3) SSOT v10.0 y anexo aclaratorio vigente; (4) auditoría/CI/repositorio como evidencia de implementación; (5) hoja de necesidades. La auditoría o el código pueden demostrar qué está implementado, pero no modificar el contrato oficial de Wix ni el esquema CMS. Las discrepancias se señalan y se corrigen en el documento subordinado.
 
 ---
 
@@ -2662,28 +2649,28 @@ Cualquier intento de lectura/escritura sobre legacy es interceptado en `backend/
 
 ---
 
-## 13. MapaStaff — `MAPA_STAFF` (Rev. 11 · 15 + 4 campos)
+## 13. MapaStaff — `MAPA_STAFF` (CMS vivo: Rev. 13 · 14 + 4 campos)
 
-> Identidad del personal y correlación `resourceId` ↔ `memberId` ↔ `thirdPartyId`. Campo de visualización: no declarado en la consulta remitida.
+> Identidad del personal y correlación `resourceId` ↔ `memberId` ↔ `thirdPartyId`. Consulta CMS de solo lectura 2026-11-01: colección `NATIVE`, revisión 13, etiqueta `MAPA_STAFF`, 14 campos de negocio + 4 de sistema; permisos ADMIN para insert/update/remove/read. Existe en Wix, aunque el resolver `src/backend/staff.js` actual no la consume.
 
 | Keyfield | Etiqueta visible | Tipo | Explicación / rango / opciones |
 |---|---|---|---|
 | `resourceId` | `recursoId` | TEXT | `resourceId` de Wix Bookings. **Distinto** de `memberId` y `staffMemberId`. |
 | `memberId` | `miembroId` | TEXT | `memberId` de Wix Members. **Distinto** de `resourceId`. |
-| `staffMemberId` | `personalMiembroId` | TEXT | ⚠️ ID del perfil de personal de Bookings. **Legacy tolerado**; pendiente ADR. |
+| `staffMemberId` | `personalMiembroId` | TEXT | ID del perfil Staff de Bookings. El campo existe en el CMS, pero el resolver actual de `backend/staff.js` obtiene este ID de `staff._id` mediante Bookings Staff API y no consulta esta colección. Mantener/retirar su espejo CMS requiere ADR y auditoría de consumidores. |
 | `staffName` | `personalNombreCanonico` | TEXT | Nombre canónico. |
 | `displayName` | `nombreVisiblePersonal` | TEXT | Nombre visible. |
-| `scheduleId` | `calendarioId` | TEXT | ID de calendario (`eventsScheduleId`). |
+| `scheduleId` | `calendarioId` | TEXT | En `MapaStaff`, ID de calendario normalizado desde `resource.workingHoursSchedules[0]._id` (prioridad) o `resource.eventsSchedule._id`; en `CitasF2`, conservar el `scheduleId` del slot nativo devuelto por Bookings. En ningún caso identifica al profesional ni sustituye a `resourceId`. |
 | `thirdPartyId` | `terceraParteId` | TEXT | Referencia a `DatosFiscales`. **Vacío por diseño**; prohibido rellenar por inferencia. |
 | `rolBookings` | `rolReservasNativo` | TEXT | `STAFF` (rol nativo de Bookings). |
 | `rolWebsite` | `rolWebNegocio` | TEXT | `ADMIN` \| `GESTION` \| `ESTILISTA` (RBAC SSOT). |
-| `active` | `personalActivo` | BOOLEAN | ⚠️ Indicador operativo. **No deseado como estado operacional** (SSOT); pendiente ADR. |
+| `active` | `personalActivo` | BOOLEAN | Campo presente en el esquema CMS vivo. El resolver actual de `backend/staff.js` no lee este campo ni consulta MapaStaff; su semántica operativa y eventual retirada requieren ADR. No afirmar que el runtime exige `active === true` sin consumidor verificado. |
 | `sortOrder` | `ordenPersonal` | NUMBER | Orden de presentación. Entero. |
 | `sourceSystem` | `origenSistemaMaestro` | TEXT | Sistema de origen (enum backend). |
 | `schemaVersion` | `esquemaVersion` | NUMBER | Versión del esquema. Entero. |
 | `ServiciosCatalogo_staffMembers` | `serviciosCatalogoPersonalMiembros` | MULTI_REFERENCE | Relación con `ServiciosCatalogo`. |
 
-**Pendiente ADR:** `staffMemberId` y `active` figuran en el esquema vivo pero los criterios SSOT (§19.4–19.5) los marcan como no deseados. La mera existencia en CMS no los hace canónicos.
+**Pendiente ADR:** `staffMemberId` y `active` figuran en el esquema vivo pero los criterios SSOT (§19.4–19.5) los marcan como no deseados. La mera existencia en CMS no los hace canónicos. No usar `MapaStaff.scheduleId` como ID de recurso; el profesional se identifica por `resourceId`.
 
 ---
 
@@ -2963,10 +2950,13 @@ Autorizado solo para:
 
 Prohibido como atajo generalizado para evitar diseñar permisos. Cada llamada se acota a la API específica.
 
-### 11.3 Secretos, HMAC, rate limiting y PII
+### 11.3 Secretos, criptografía, HMAC, rate limiting y PII
 
-- **Secretos**: `backend/mmSecrets.js` declara nombres; valores en Wix Secrets Manager. Nunca al frontend. Consumidores: caja, inventario, webhooks, documentos fiscales, seguridad criptográfica, asistente IA.
-- **HMAC-SHA256**: cabecera `X-MM-Signature`; `X-MM-Timestamp` con ventana ±60 s.
+- **Secretos Wix**: `src/backend/mmSecrets.js` contiene exclusivamente nombres canónicos de secretos; los valores residen en Wix Secrets Manager y se recuperan desde backend mediante el módulo de acceso a secretos. Nunca se incluyen valores en frontend, respuestas, logs, commits o ficheros `.env` versionados.
+- **GitHub Actions**: el workflow activo `.github/workflows/wix-preview-validation.yml` consume exclusivamente `${{ secrets.CLI_API_KEY }}` mediante la variable `CLI_API_KEY`. No usar el alias `WIX_CLI_API_KEY`. El secreto debe configurarse en Repository Settings → Secrets and variables → Actions. GitHub no permite verificar el valor del secreto mediante la API de repositorio; su existencia/validez se confirma solo por el paso de autenticación del workflow.
+- **Credenciales**: nunca incluir tokens, API keys, contraseñas, secretos de terceros o valores reales en el dossier, código, issues, logs o artefactos. Si un secreto se expuso alguna vez, revocarlo/rotarlo en su proveedor y revisar el historial Git; borrar el texto del último commit no invalida el secreto ni elimina el historial.
+- **SHA-256/HMAC-SHA256**: mantener `node:crypto` (`createHash`/`createHmac`) en `securityEngine.js`; es una API nativa de Node, estable y sin dependencia externa. Node 24 LTS es la base de ejecución de producción/CI; Node 26 se conserva como matriz de compatibilidad. La aceptación final requiere smoke test en runtime Wix real. Mantener fail-closed.
+- **HMAC**: cabecera `X-MM-Signature`; `X-MM-Timestamp` con ventana ±60 s.
 - **Rate limiting** persistido en `ControlOperativo` (`RATE_LIMIT`):
 
 | Surface | Límite |
@@ -3231,7 +3221,7 @@ Acepta preparación de compatibilidad dual; **aplaza el cambio irreversible** de
 
 ---
 
-## 21. Operativa Wix CLI, permisos y profesionales
+## 21. Operativa Wix CLI, permisos, secretos y profesionales
 
 ### 21.1 Requisitos locales
 
@@ -3274,7 +3264,7 @@ Roles recomendados: **Desarrollo** (código, CMS dev, logs; sin secretos prod ni
 
 Diferenciar **profesional de Bookings** (recibe reservas) de **colaborador del sitio** (acceso al panel). Un profesional no necesita acceso administrativo.
 
-Tres IDs distintos por profesional: `staffMemberId` (gestión), `resourceId` (relación con servicios/eventos), `eventsScheduleId` (calendario de horarios). **No mezclar.**
+Tres identificadores distintos por profesional: `staffMemberId` (ID del perfil Staff de Bookings), `resourceId` (ID del recurso Bookings usado para filtrar disponibilidad/asignar profesional) y `MapaStaff.scheduleId` (ID de calendario normalizado por el resolver desde `resource.workingHoursSchedules[0]._id` y, si no está presente, `resource.eventsSchedule._id`). No confundirlo con `CitasF2.scheduleId`, que conserva el `scheduleId` del slot nativo seleccionado. **No intercambiar IDs entre colecciones ni contratos.**
 
 - El horario empresarial se copia al crear el profesional; cambios posteriores **no** se propagan.
 - Horario personalizado: desvincular (`usesDefaultWorkingHours = false`) y crear eventos `WORKING_HOURS` independientes por día (nunca un único evento con varios días).
@@ -3290,7 +3280,12 @@ Puede: ver sus reservas/calendario, clientes de sus citas, marcar asistencia. No
 
 `ServiciosCatalogoPublico` / `ServiciosCatalogoPrivado` / `ServiciosConfiguracion` / `ReservasInternas` / `LogsTecnicos`. La colección pública solo expone `name`, `title`, `slug`, `description`, `duration`, `price`, `mainMedia`, `recomendaciones`, `clientHidden`. No devolver el objeto CMS completo; filtrar campos en backend.
 
-### 21.6 Secretos a revisar
+### 21.6 Secretos y credenciales
+
+- La API key usada por GitHub Actions se referencia como `CLI_API_KEY` (`secrets.CLI_API_KEY`), no `WIX_CLI_API_KEY`.
+- El valor de `CLI_API_KEY` no se almacena en el repositorio. Configuración y rotación desde GitHub Repository Settings → Secrets and variables → Actions.
+- Los secretos consumidos por backend se gestionan en Wix Secrets Manager; `mmSecrets.js` solo declara nombres.
+- No se puede confirmar desde el repositorio que los secretos existan ni leer sus valores. El login satisfactorio de un run prueba que la credencial utilizada por ese run fue aceptada, no revela su valor.
 
 `WIX_SITE_ID`, `WIX_ENVIRONMENT`, `WIX_API_CLIENT_ID`, `WIX_API_CLIENT_SECRET`, `GITHUB_TOKEN`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `PAYMENT_PROVIDER_SECRET`, `WEBHOOK_SIGNING_SECRET`, `THIRD_PARTY_API_KEY`. Solo crear los de integraciones activas. `.env` no versionado; producción en Wix Secrets Manager; GitHub Secrets por entorno (dev/staging/prod) sin reutilizar prod en dev.
 
@@ -3343,7 +3338,7 @@ Puede: ver sus reservas/calendario, clientes de sus citas, marcar asistencia. No
 
 ---
 
-## 23. Correcciones del anexo aclaratorio (prevalece sobre el resto)
+## 23. Correcciones del anexo aclaratorio (subordinadas a la precedencia §A.4)
 
 | Punto | Afirmación anterior | Resolución vigente |
 |---|---|---|
@@ -3354,7 +3349,7 @@ Puede: ver sus reservas/calendario, clientes de sus citas, marcar asistencia. No
 | `CANCELED` | Comentario "doble L" | **Corregido:** una sola L (valor oficial Wix) |
 | Bookings `resource.id`/`location.id` | Regla genérica REST | **Distinción REST/SDK** (§16); SDK usa `_id` |
 
-**Vigencia:** este bloque forma parte integrante del dossier v10.0 desde 2026-11-01. Cualquier afirmación en sentido contrario en documentos previos se entiende tácitamente corregida. Las modificaciones de código derivadas (Catalog V3, `MapaStaff`, limpieza de enums, `NO_FEE` F2) deben canalizarse mediante ADR antes de su implementación.
+**Vigencia:** este bloque registra aclaraciones del dossier a fecha 2026-11-01. Está subordinado a la jerarquía §A.4; no puede prevalecer sobre APIs/SDK Wix ni sobre el CMS vivo. Las modificaciones de código derivadas (Catalog V3, `MapaStaff`, limpieza de enums, `NO_FEE` F2) deben canalizarse mediante ADR antes de su implementación.
 
 **[ROL]** R1 — Arquitecto SSOT / R7 — Orquestador (multi-rol declarado)
 **[ALCANCE]** Realidad física del negocio: localización, titularidad, personal, gestoría, perfil de cliente, normativa aplicable e infraestructura digital (Wix, Microsoft, IONOS). **No** cubre la lógica técnica interna (reservas, ledgers), ya documentada en el dossier.
@@ -3524,7 +3519,7 @@ El negocio opera con **3 profesionales** (1 ADMIN + 2 ESTILISTAS). No consta per
 | **Microsoft Clarity** | Mapas de calor | `[HECHO]` dossier §2.1 |
 | **RustDesk** | Soporte remoto (contraseña en Secrets) | `[HECHO]` dossier §2.1 |
 | **Wix CLI for Sites** | `dev`, `install`, `update`, `publish`, `preview` | `[HECHO]` bloque técnico |
-| **Vitest** | Tests offline (182 pass / 0 fail, 11 suites) | `[DECLARADO]` dossier §0 |
+| **Vitest** | Tests offline; recuento histórico declarado: 182 pass / 0 fail, 11 suites (no es medición actual) | `[DECLARADO]` dossier §0 |
 
 ---
 
@@ -3890,29 +3885,11 @@ claude mcp add --transport http wix-mcp-remote https://mcp.wix.com/mcp
 
 ---
 
-## 2. CLI for Sites — Comandos y flags no documentados en el dossier
+## 2. CLI for Sites — referencia al catálogo canónico
 
-| Comando / Flag | Función | Referencia |
-|---|---|---|
-| `wix dev --tunnel` | Local Editor desde IDE en cloud (GitHub Codespaces) |  |
-| `wix build` | Construye assets del proyecto |  |
-| `wix preview` | Crea versión compartible antes de publicar |  |
-| `wix release` | Guía el proceso de release (headless/apps) |  |
-| `wix connect` | Conecta proyecto a Wix Vibe (edición visual IA) |  |
-| `wix env pull` | Descarga variables de entorno a `.env.local` |  |
-| `wix env set` | Establece variable de entorno en servidores Wix |  |
-| `wix translation pull` | Descarga traducciones del dashboard Multilingual |  |
-| `npm create @wix/new app` | Scaffolding de app (CLI unified, no Sites) |  |
-| `npm create @wix/new headless` | Scaffolding de proyecto headless |  |
+El catálogo de comandos aplicable a este sitio es el de Wix CLI for Sites (no el CLI unificado para Apps/Headless). Véase §J.2 para comandos y restricciones. No duplicar aquí la tabla completa.
 
-**Advertencia no incluida en el dossier**: publicar desde código local con `wix publish` **desincroniza el sitio vivo del repositorio de GitHub**; Wix recomienda publicar desde la rama por defecto tras revisión.
-
-**GitHub Actions — configuración exacta**:
-```yaml
-- run: npm install
-- run: npm run wix login -- --api-key ${{ secrets.WIX_CLI_API_KEY }}
-- run: npm run wix publish
-```
+**Regla de publicación:** `wix preview` crea un despliegue de prueba y no publica producción. `wix publish` publica y solo se ejecutará tras validación y autorización específica.
 
 
 ---
@@ -3956,7 +3933,7 @@ export default defineWixConfig({
 
 | Vía | Qué permite | Requisito |
 |---|---|---|
-| **MCP** | Buscar docs, escribir código para la plataforma, llamar APIs reales sobre el sitio | Node ≥ 19.9.0 |
+| **MCP** | Buscar docs, escribir código para la plataforma, llamar APIs reales sobre el sitio | Node ≥ 19.9.0 (mínimo citado en este anexo; pendiente de revalidación oficial) |
 | **Git Integration + CLI for Sites** | Editar código del sitio en local; `wix dev` (Local Editor), `wix preview`, `wix publish` | Node ≥ 24.22.1; repo conectado |
 
 ### 4.2 Regla de seguridad para agentes
@@ -3994,17 +3971,18 @@ export default defineWixConfig({
 
 | Dato ausente | Impacto | Cómo obtenerlo |
 |---|---|---|
-| Versión exacta de `@wix/cli` instalada (`wix --version`) | Determina si soporta `wix token --site`, `wix env pull`, `wix connect` | `wix --version` en clon local |
+| Versión exacta de `@wix/cli` instalada (`wix --version`) | Determina la versión CLI instalada; no inferir disponibilidad de comandos no documentados para CLI for Sites | `wix --version` en clon local |
 | Existencia de `src/velo.dependencies.json` | Regla ESLint `@wix/cli/no-invalid-backend-import` desactivada si falta | `ls src/velo.dependencies.json` |
 | Configuración de `wix.config.mjs` / `wix.config.json` | Determina si el plugin de diagnóstico está activo | Revisar archivo en raíz del proyecto |
 | Variables `WIX_CODE_DIAGNOSTICS_*` definidas | Sin ellas, el plugin es inerte | Revisar `.env` / Secrets Manager |
 | Estado de `wix.lock` tras últimas instalaciones | Bloqueo Alto si sigue desincronizado | `git diff wix.lock` |
-| Node.js exacto en el entorno de CI | El MCP exige 19.9+; CLI exige 24.22.1+ | `node -v` en CI y local |
+| Node.js exacto en el entorno de CI | MCP: mínimo citado 19.9+; Preview: 24.22.1; backend: Node 24 y matriz 26 | `node -v` en CI y local |
 | Política de uso de MCP (lectura vs mutación) | Sin ADR, el agente podría intentar mutar ledgers | **ADR-003 pendiente** |
 
 ---
 
 **[PENDIENTE]**
+- La SSOT v10.0 y la hoja de necesidades se citan como fuentes del proyecto, pero no figuran como archivos en la raíz de `main` consultada; conservarlas como fuentes externas adjuntas hasta incorporarlas de forma controlada al repositorio.
 - Confirmar si el proyecto usa `wix.config.mjs` (nuevo formato) o `wix.config.json` (legacy); el plugin de diagnóstico requiere `wix.config.mjs`.
 - Verificar si `WIX_CODE_DIAGNOSTICS_ENDPOINT` y `WIX_CODE_DIAGNOSTICS_TOKEN` están definidos en el entorno de desarrollo.
 - Decidir si se habilita el **Wix Site MCP** (endpoint `/_api/mcp`) para agentes de visitantes; hoy no está en el alcance.
@@ -4014,4 +3992,33 @@ export default defineWixConfig({
 - Las URLs y comandos se han extraído de la documentación oficial de Wix Developers y del repositorio público `wix/wix-mcp`. Los datos de configuración del plugin de diagnóstico provienen del paquete npm oficial. No se ha ejecutado ningún comando en esta sesión: los estados son `[DECLARADO]` por documentación, no `[HECHO]` en el entorno del proyecto.
 
 **[ADR-REQUERIDO]** Sí, para ADR-003 (Capa 3) y para un **ADR específico de política MCP** que defina: (a) qué herramientas del MCP pueden ejecutarse sin confirmación humana, (b) prohibición explícita de mutar ledgers append-only, (c) obligación de publicar solo desde rama por defecto tras CI verde.
+
+
+---
+
+
+
+## 24. Estado de repositorio, workflows y validaciones (2026-11-01)
+
+### 24.1 Repositorio y CI
+
+- Repositorio: `nachoortegazgz/marianmadridz`; rama `main`; commit auditado: `4b0ba7bad5225ec5c8984293572a6abe0713d823`.
+- PR #47 integrada. Run backend quality gates `41285908197` terminó `success`; esto acredita únicamente los gates de ese workflow.
+- `.github/workflows/backend-tests.yml` conserva íntegramente el workflow acordado por el usuario, incluido `npm install --ignore-scripts --no-audit --no-fund`, jobs y matriz Windows Node 24.22.1/26.12.1. No sustituir por `npm ci` ni reformatear su lógica.
+
+### 24.2 Secretos
+
+- Contrato consolidado en §G.11.3 y §F.21.6. En la revisión del workflow activo se confirmó `secrets.CLI_API_KEY`; no se leyó ni se puede revelar su valor. No se ha ejecutado un escaneo histórico completo de secretos.
+
+### 24.3 Workflow Wix Preview
+
+- El workflow operativo descrito en §B.8.2 se conserva sin cambios: el usuario confirma que evita el bloqueo y es funcional; el run `41285908135` registró `success`. No se modifica por motivos cosméticos.
+- Su éxito no certifica por sí solo reservas simples/duales, pagos, HTTP functions ni frontend end-to-end.
+
+### 24.4 Criterios pendientes
+
+1. Smoke test de `node:crypto` en runtime Wix real, sin mutaciones de datos (§G.11.3).
+2. Generación oficial de `src/velo.dependencies.json` y evaluación de la regla ESLint correspondiente (§J.6).
+3. QA E2E de reserva simple y dual: selección por `resourceId`, conservación del `scheduleId` nativo del slot, gap, rollback F2, pagos y cancelaciones (§G.9 y §G.16).
+4. Resolver la cifra histórica de tests (182 frente a 158) con output reproducible; no usarla como métrica actual.
 
