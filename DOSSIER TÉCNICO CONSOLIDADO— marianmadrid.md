@@ -10,7 +10,7 @@
 
 ---
 
-## 0. Vista de pájaro (10 bloques)
+## 0. Vista de pájaro (11 bloques)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
@@ -24,6 +24,7 @@
 │  H. REALIDAD FÍSICA DEL NEGOCIO ..................... §H.1–H.7     │
 │  I. CAPA 3 — REGISTRO EXTERNO SHAREPOINT ............ §I.0–I.8     │
 │  J. ANEXO TÉCNICO MCP/CLI/DIAGNÓSTICO/IA ............ §J.1–J.6     │
+│  K. MATRIZ DE FUENTES CANÓNICAS Y DUPLICIDADES ...... §K.1          │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -118,18 +119,11 @@ B.3  Autenticación: login interactivo y API keys
      └─ B.3.3 `wix token --site` (verificar soporte)
      [REF: §J.1.2 para API key + account ID en MCP]
 
-B.4  Comandos CLI for Sites (referencia operativa)
-     └─ `wix dev` · `install` · `update` · `uninstall` · `publish` · `preview` · `login` · `whoami` · `-h`
-     [DUP parcial: §F.21.1 repite `wix login`/`whoami`/`dev`]
-     [REF: §J.2 para comandos no documentados: comandos de otros tipos de proyecto/CLI (no aplicables al Wix Editor clásico de este sitio)]
+B.4  Comandos CLI for Sites
+     └─ [REF: §J.2 — catálogo canónico de comandos, flags, restricciones y workflow activo. No duplicar aquí.]
 
 B.5  Wix MCP (Model Context Protocol)
-     ├─ B.5.1 Qué es
-     ├─ B.5.2 Configuración remota (HTTP)
-     ├─ B.5.3 Autenticación (OAuth / API key)
-     ├─ B.5.4 Herramientas expuestas
-     └─ B.5.5 Depuración del MCP
-     [REF: §J.1 para configuración avanzada, herramientas exactas y Wix Site MCP no cubierto aquí]
+     └─ [REF: §J.1 — configuración, autenticación MCP, herramientas, Wix Site MCP y depuración. La autenticación CLI permanece en §B.3.]
 
 B.6  Wix Skills y Wix Plugin
      └─ `npx skills add wix/skills` · `/plugin install wix@wix`
@@ -142,8 +136,7 @@ B.7  Depuración, diagnóstico y refactorización
      [REF: §J.3 para plugin `@wix/wix-code-diagnostics-plugin`, WebSocket y variables de entorno]
 
 B.8  CI/CD con GitHub Actions
-     └─ Workflow mínimo; gate `npm test && npm run lint` antes de `wix publish`
-     [DUP parcial: §J.2 incluye el YAML exacto con `wix login --api-key`]
+     └─ [REF: §J.2.2 — workflow activo de Preview. Sin YAML duplicado; no equivale a autorización para publicar.]
 
 B.9  Matriz de referencia rápida (comando → propósito → fuente)
      └─ 14 filas de comando/configuración
@@ -196,6 +189,7 @@ C.3  Secuencia, gates y criterios de cierre
 
 C.4  Riesgos transversales (9)
      └─ Lockfile · velo.dependencies.json · repos anidados · escritor contable · rate limiter · NO_FEE F2 · Catalog V1/V3 · MapaStaff · Capa 3 sin ADR
+     [REF: §F.17 para riesgos técnicos detallados; ambos inventarios son complementarios.]
 
 C.5  Gobernanza
      ├─ ADR obligatorio para decisiones estructurales
@@ -336,13 +330,12 @@ E.12 Errores transversales a evitar (15)
 ```
 F.5  Modelo CMS (SSOT)
      ├─ F.5.1 Inventario consolidado (13 NATIVE, 20 WIX_APP, 8 legacy, 6 huérfanas, efímeras absorbidas)
-     ├─ F.5.2 Resumen de las 13 NATIVE (etiqueta, revisión, campos, permisos, índices)
-     ├─ F.5.3 Campos críticos por colección (keyfields canónicos)
-     ├─ F.5.4 Invariantes de integridad (11)
+     ├─ F.5.2 Metadatos operativos resumidos (revisión, permisos e índices no repetidos)
+     ├─ F.5.3 [REF: §G.1–G.13 para keyfields y tipos completos]
+     ├─ F.5.4 [REF: §G.14.1 para invariantes canónicas]
      ├─ F.5.5 Matriz de sustitución legacy → SSOT (8)
      └─ F.5.6 Colecciones WIX_APP (solo lectura)
-     [DUP: §G detalla campo a campo cada colección — G es la fuente para tipos/rangos]
-     [DUP: §F.5.2 y §F.5.3 resumen lo que §G detalla]
+     [REF: §G.1–G.14 para esquema detallado; §F.5.1 conserva el inventario agregado.]
 
 F.6  Enums canónicos
      ├─ F.6.1 Wix nativos (BOOKING_STATUS_WIX sin UPDATED; PAYMENT_STATUS_WIX)
@@ -350,12 +343,12 @@ F.6  Enums canónicos
      ├─ F.6.3 Negocio (8 enums: MOVEMENT_TYPE, CHANNEL_TYPE, PAYMENT_METHOD, TIPO_IMPOSITIVO, CLOCK_EVENT_TYPE, MOV_INVENTARIO, ROL_WEBSITE, CONTROL_TYPE)
      ├─ F.6.4 Pendientes de ADR (status, staffMemberId, active)
      └─ F.6.5 Validación runtime (assertValidEnum)
-     ⚠️ [DUP parcial] con §G.14 (transversal) y con §F.5.4 (invariantes que referencian enums)
+     [REF: §G.14.4 para estado de implementación; las definiciones de enums prevalecen únicamente aquí.]
 
 F.7  Nomenclatura y constantes canónicas
      ├─ F.7.1 Reglas N1–N5
      ├─ F.7.2 Constantes en internalConfig.js (BUSINESS_COLLECTIONS, SDK_CONFIG, API)
-     └─ F.7.3 Identificadores transversales (9)   [DUP parcial con §D.4.3]
+     └─ F.7.3 Identificadores transversales (9)   [FUENTE CANÓNICA; §D.4.3 remite aquí]
 
 F.8  Arquitectura backend
      ├─ F.8.1 Estructura de directorios (árbol completo)
@@ -394,23 +387,24 @@ F.13 Migración SDK v2 — estado real (2026-10-30)
 
 F.14 Wix Stores Catalog V1/V3
      ├─ F.14.1 Estado actual (V1; 30 variantes; 24 elementos)
-     ├─ F.14.2 Adaptador dual PR #13 (stockKey, pedidos, reembolsos)
+     ├─ F.14.2 Módulos V1/V3 y adaptador dual PR #13 (stockKey, pedidos, reembolsos)
      ├─ F.14.3 CMS vivo (stockKey, catalogVersion, lineItemId, stockApplied)
      ├─ F.14.4 Decisión ADR-001 (dual, cambio irreversible aplazado)
      └─ F.14.5 Pendientes antes de V3 (5)
+     [FUENTE CANÓNICA de módulos y estado real; §E.5 remite aquí.]
      [DUP parcial: §E.5 módulos por versión]
 
 F.15 Wix Invoices V1
      └─ V1 activo; no consume API Wix Invoices; no migrar a V2 sin auditoría
 
-F.16 Contrato Bookings V2 — SDK vs REST (PR #15)
+F.16 Contrato Bookings V2 — SDK vs REST (PR #15; fuente canónica)
      └─ resource._id vs resource.id; location._id vs location.id; filtro resourceTypes[].resourceIds
      [REF: §E.1.2 estrategias Bookings]
 
-F.17 Deuda técnica y matriz de riesgos (16 riesgos con impacto y mitigación)
-     [DUP parcial: §C.4 riesgos transversales (9)]
+F.17 Deuda técnica y matriz de riesgos (16 riesgos técnicos con impacto y mitigación)
+     [COMPLEMENTARIO, no duplicado: §C.4 conserva riesgos transversales de gobernanza/planificación.]
 
-F.18 Normativa aplicable (8 ámbitos)
+F.18 Normativa aplicable (8 ámbitos; referencia técnica estatal)
      [REF: §H.5 normativa estatal + autonómica/municipal]
 
 F.19 Criterios de aceptación SSOT (12 puntos)
@@ -431,8 +425,8 @@ F.21 Operativa Wix CLI, permisos y profesionales
      [DUP parcial: §B.3 autenticación; §B.4 comandos]
 
 F.22 Glosario y anexos
-     ├─ F.22.1 Identificadores de sitio y personal   [DUP con §D.1 y §D.4.2]
-     ├─ F.22.2 Wix App IDs                            [DUP con §D.3.1]
+     ├─ F.22.1 Identificadores de sitio y matriz de personal   [FUENTE CANÓNICA; §D.4.2 remite aquí]
+     ├─ F.22.2 Wix App IDs                            [FUENTE CANÓNICA; §D.3.1 remite aquí]
      ├─ F.22.3 Librerías de helpers (4 módulos)
      ├─ F.22.4 Códigos de error estandarizados (21)
      └─ F.22.5 Fuentes oficiales
@@ -465,11 +459,11 @@ G.11 ControlOperativo (38)      → 6 controlTypes; locks + dedupe + rate limit 
 G.12 RegistrosHorariosStaff (21) → ledger laboral append-only; deviceIpAddress PII
 G.13 MapaStaff (14+4)           → staffMemberId/active pendientes ADR
 G.14 Notas transversales
-     ├─ G.14.1 Invariantes de integridad (8)
+     ├─ G.14.1 Invariantes de integridad consolidadas (12) [FUENTE CANÓNICA]
      ├─ G.14.2 Ledgers append-only (4)
      ├─ G.14.3 Campos PII/sensibles
      └─ G.14.4 Estado de implementación (CMS listo, hooks activos, escritor contable pendiente, V3 preparado, QA pendiente)
-     [DUP parcial: §F.5.4 invariantes; §F.10.2 validaciones por colección]
+     [REF: §F.5.4 y §F.10.2 remiten a estas invariantes; F.10.2 conserva controles adicionales y mecanismos de hook.]
 ```
 
 ---
@@ -498,7 +492,7 @@ H.4  Perfil de cliente (por sexo, edad, localización)
      └─ [INFERENCIA] desde demografía + catálogo
 
 H.5  Normativa aplicable
-     ├─ H.5.1 Estatal (8 ámbitos)                    [DUP parcial con §F.18]
+     ├─ H.5.1 Estatal — implicaciones para el negocio [REF: §F.18 para normativa técnica; conserva particularidades operativas]
      └─ H.5.2 Autonómica/municipal (Ley 11/2014 <750 m², apertura, CNAE 2025 96.21/96.22, IAE 841/842)
 
 H.6  Infraestructura digital
@@ -558,18 +552,17 @@ I.8  Criterios de aceptación (8)
 **Aplicabilidad:** al configurar agentes IA (Claude Code, Cursor) o depurar en tiempo real.
 
 ```
-J.1  Wix MCP — Configuración avanzada y herramientas expuestas
-     ├─ J.1.1 Requisito de entorno (Node ≥ 19.9.0)
-     ├─ J.1.2 Configuraciones de conexión (3 variantes: HTTP remota, proxy npx, API key + account ID)
-     ├─ J.1.3 Claude Code / Cursor (instalación exacta)
-     └─ J.1.4 Herramientas expuestas (12: SearchWixWDSDocumentation, SearchWixRESTDocumentation, SearchWixSDKDocumentation, SearchBuildAppsDocumentation, SearchWixHeadlessDocumentation, WixBusinessFlowsDocumentation, ReadFullDocsArticle, ReadFullDocsMethodSchema, ListWixSites, CallWixSiteAPI, ManageWixSite, SupportAndFeedback)
-     ⚠️ Wix Site MCP (`/_api/mcp`) — capa por sitio, no cubierta en §B.5
+J.1  Wix MCP — configuración y capacidades (fuente canónica)
+     ├─ J.1.1 Requisito de entorno
+     ├─ J.1.2 Configuraciones de conexión
+     ├─ J.1.3 Autenticación MCP (separada de autenticación CLI §B.3)
+     ├─ J.1.4 Herramientas expuestas
+     └─ J.1.5 Wix Site MCP (`/_api/mcp`) y WebMCP
 
-J.2  CLI for Sites — Comandos y flags no documentados en §B.4
-     └─ comandos de Wix CLI unified para apps/headless (no aplicables a este sitio) y comandos no confirmados para CLI for Sites
-     └─ Advertencia: `wix publish` desde local desincroniza repo y sitio vivo
-     └─ GitHub Actions YAML exacto con `wix login --api-key`
-     [REF: §B.8 workflow mínimo]
+J.2  CLI for Sites — catálogo operativo canónico
+     ├─ J.2.1 Comandos y flags aplicables a este sitio
+     ├─ J.2.2 Workflow GitHub Actions activo de Preview (sin publicación)
+     └─ Restricciones de publicación y referencia a CLI unified (no aplicable)
 
 J.3  Diagnóstico en tiempo real — Plugin `@wix/wix-code-diagnostics-plugin`
      ├─ Funcionamiento (HTTP + WebSocket local en ws://127.0.0.1:52415/runtime-errors)
@@ -595,6 +588,29 @@ J.6  Posibles datos faltantes en el dossier (7 filas)
 
 ---
 
+## K. MATRIZ DE FUENTES CANÓNICAS Y DUPLICIDADES
+
+**Función:** índice de localización. No crea reglas técnicas nuevas; identifica dónde vive cada contrato y qué apartados deben remitir a él.
+
+| Materia | Fuente canónica | Tratamiento de las secciones relacionadas |
+|---|---|---|
+| Matriz de personal | §F.22.1 / cuerpo §22.1 | §D.4.2 elimina la tabla y remite a la matriz canónica. |
+| Wix App IDs | §F.22.2 / cuerpo §22.2 | §D.3.1 conserva funciones y roles; los IDs se consultan solo en §22.2. |
+| Identificadores transversales | §F.7.3 / cuerpo §7.3 | §D.4.3 remite a §7.3; la semántica `resourceId`/`scheduleId` se conserva en §F.16. |
+| Bookings V2 — SDK vs REST | §F.16 (ADR-002) | §E.1 remite al contrato; no repetir la tabla `_id` vs `id`. |
+| Stores Catalog V1/V3 | §F.14 | §E.5 conserva la regla de detección de versión y remite para módulos, estado PR #13, CMS, ADR-001 y gates. |
+| Inventario CMS | §F.5.1 + §G.1–G.14 | §F.5.1 mantiene el inventario agregado; §G contiene el detalle por colección. Los resúmenes remiten a §G. |
+| Invariantes de integridad | §G.14.1 | §F.5.4 remite; §F.10.2 conserva controles adicionales de hooks, sin duplicar invariantes. |
+| Enums canónicos | §F.6 | §G.14 no redefine enums; remite a §F.6 para definiciones y a §F.10.2 para validación runtime. |
+| Normativa estatal | §F.18 (técnica) + §H.5.1 (negocio) | §F.18 enumera normas y controles; §H.5.1 conserva su aplicación operativa al salón. |
+| Riesgos | §C.4 (transversales) + §F.17 (técnicos) | Son complementarios por alcance; no consolidar ni eliminar ninguno. |
+| Wix CLI for Sites | §J.2 | §B.4 y §F.21.1 remiten; no duplicar el catálogo de comandos. |
+| Wix MCP | §J.1 | §B.5 remite; no duplicar configuración ni herramientas. |
+| Autenticación | §B.3 (CLI) + §J.1.3 (MCP) | Se mantienen separadas: son mecanismos y credenciales de contexto distintos. |
+| GitHub Actions — Preview | §J.2.2 | §B.8 y el anexo CLI remiten; no duplicar YAML ni el flujo. |
+
+---
+
 ## L. ESTADO GLOBAL DEL DOCUMENTO
 
 | Bloque | Estado | Completitud | ADR pendientes |
@@ -617,14 +633,14 @@ J.6  Posibles datos faltantes en el dossier (7 filas)
 ---
 
 **[PENDIENTE]**
-- Duplicidades documentales consolidadas en esta revisión: §K fija una única ubicación canónica por materia; las demás secciones remiten a ella.
+- Duplicidades documentales: §K funciona como índice de fuentes canónicas y remisiones; no sustituye el contenido técnico de las secciones fuente.
 - Orden de prioridades del Anexo Resumen Ejecutivo alineado con §A.1.
 - URL canónica del repositorio: `https://github.com/nachoortegazgz/marianmadridz`.
 - Resolver discrepancia 182 vs 158 tests.
 - Aprobar los 6 ADRs pendientes antes de avanzar en producción.
 
 **[VERIFICACIÓN]**
-- Los contenidos ampliados se integran en sus apartados temáticos. §K es el índice de localización, no una segunda especificación. Los estados de CI/Preview se documentan en §B.8 y §J.2; la criptografía en §G.11.3; secretos en §G.11.3 y §F.21.6; identificadores Bookings en §D.4.2, §D.4.3, §G.7.3 y §G.16. El anexo final conserva solo información singular que no duplica esos contratos.
+- Los contenidos se mantienen en sus fuentes canónicas indicadas en §K. CI/Preview y CLI: §J.2; MCP: §J.1; criptografía: §G.11.3; secretos: §G.11.3 y §F.21.6; matriz personal: §F.22.1; App IDs: §F.22.2; identificadores transversales: §F.7.3; contrato Bookings SDK/REST: §F.16. El anexo J conserva únicamente información singular y remisiones.
 
 **[ADR-REQUERIDO]** Sí, para consolidar el mapa como **índice oficial del proyecto** y para los 6 ADRs listados en §L.
 
@@ -949,63 +965,15 @@ Existe el comando `npx @wix/cli token --site "$SITE_ID"` para emitir un token de
 
 ---
 
-## 4. Comandos CLI for Sites (referencia operativa)
+## 4. Comandos CLI for Sites (referencia)
 
-| Comando | Función | Flags / notas |
-|---|---|---|
-| `wix dev` | Abre el **Local Editor** con sincronización en tiempo real desde el IDE local. | `--tunnel` para IDE en **cloud** (GitHub Codespaces, etc.). |
-| `wix install <pkg>` | Instala un paquete npm en el repo del sitio. Detecta `yarn.lock`; por defecto npm. | `--npm` / `--yarn` para forzar gestor. |
-| `wix update <pkg>` | Actualiza un paquete instalado en el repo. | Usar en lugar de `npm update`. |
-| `wix uninstall <pkg>` | Desinstala un paquete del repo. | — |
-| `wix publish` | Publica el sitio. **Elige** fuente: código del **default branch** del repo o código **local** del IDE. | ⚠️ Publicar código local **desincroniza** sitio vivo y repo; si después se publica desde repo sin push, el código local **se sobrescribe y puede perderse**. |
-| `wix preview` | Crea una versión compartible **antes** de publicar. | — |
-| `wix login` / `wix whoami` / `wix logout` | Autenticación y estado de sesión. | — |
-| `wix -h` / `wix <cmd> -h` | Ayuda general o detallada por comando. | — |
-
-> **Prohibición del proyecto:** editar `wix.lock` o `src/velo.dependencies.json` manualmente; usar `wix install`/`wix update` para que Wix regenere los artefactos. El lockfile desincronizado (`@wix/stores`, `@wix/site-pricing-plans`) es un bloqueo **Alto** documentado en la auditoría.
+El catálogo operativo completo de CLI for Sites, sus flags, restricciones de publicación y workflow de Preview se mantiene exclusivamente en §J.2. Esta sección no replica la tabla de comandos.
 
 ---
 
 ## 5. Wix MCP (Model Context Protocol)
 
-### 5.1 Qué es
-
-Servidor MCP que conecta agentes IA (Claude, Cursor, GitHub Copilot, Windsurf, Claude Code, n8n, etc.) a Wix para: buscar documentación, escribir código para la plataforma, **llamar APIs reales sobre sitios** y gestionar sitios/apps/proyectos a nivel de cuenta.
-
-### 5.2 Configuración remota (recomendada para agentes modernos)
-
-```json
-{
-  "mcpServers": {
-    "wix-mcp-remote": {
-      "type": "http",
-      "url": "https://mcp.wix.com/mcp"
-    }
-  }
-}
-```
-Para **Claude Code**:
-```bash
-claude mcp add --transport http wix-mcp-remote https://mcp.wix.com/mcp
-```
-
-
-### 5.3 Autenticación
-
-- **Por defecto:** OAuth de la cuenta Wix del usuario.
-- **Entornos sin login interactivo (n8n, CI):** API key + account ID en headers.
-- Requisito local: **Node.js 19.9.0+** (el proyecto exige 24.22.1+ por otras dependencias).
-
-### 5.4 Herramientas expuestas (capacidades)
-
-- Búsqueda de documentación Wix (SDK, REST, Build Apps, Headless).
-- Generación de código REST/SDK.
-- Ejecución de acciones reales sobre sitios (descuentos, staff de Bookings, emails).
-- Gestión de cuenta (crear/publicar sitio, instalar solución, scaffolding headless).
-
-### 5.5 Depuración del MCP
-
-- Revisar logs del agente/IDE; confirmar versión de Node; revisar argumentos `npx` (`-y`, registro correcto); reiniciar agente; logout/login en ajustes MCP; ejecutar el servidor directamente: `npx -y @wix/mcp-remote@latest https://mcp.wix.com/mcp`. Si la conexión cae tras inactividad o cambio de cuenta, borrar `~/.mcp-auth` (Mac) o `C:\Users\<user>\.mcp-auth` (Windows) y reconectar.
+La configuración, autenticación MCP, herramientas expuestas, Wix Site MCP y depuración se documentan de forma canónica en §J.1. La autenticación CLI de `wix login` y `wix login --api-key` permanece en §B.3 y no se fusiona con la autenticación MCP.
 
 ---
 
@@ -1043,39 +1011,21 @@ claude mcp add --transport http wix-mcp-remote https://mcp.wix.com/mcp
 
 ---
 
-## 8. CI/CD con GitHub Actions (referencia; no es el workflow activo de este proyecto)
+## 8. CI/CD con GitHub Actions
 
-### 8.1 Requisitos
-
-1. Sitio ya integrado con GitHub.
-2. API key con permiso **“Wix CLI for Sites – Git Integration”**, guardada como secret `CLI_API_KEY`.
-
-### 8.2 Workflow activo de Preview (no publicar)
-
-El workflow activo está en `.github/workflows/wix-preview-validation.yml`; no copiar una segunda versión YAML al dossier. Consume `secrets.CLI_API_KEY`, instala CLI for Sites, autentica y ejecuta `wix preview` bajo timeout y supervisión de proceso, conservando el log como artefacto. No contiene `wix publish`. Su comportamiento actual evita dejar el job bloqueado indefinidamente; se conserva sin cambios mientras siga completando el Preview funcionalmente. El éxito del job acredita la condición que comprueba el script, no sustituye QA de reservas en Wix Editor.
+El workflow activo de Preview, sus controles y sus evidencias se describen una sola vez en §J.2.2. Este apartado remite a esa sección; no duplica YAML ni pasos de autenticación. `wix publish` sigue sujeto a autorización expresa.
 
 ---
 
-## 9. Matriz de referencia rápida (comando → propósito → fuente)
+## 9. Matriz de referencia rápida
 
-| Necesidad | Comando / configuración | Fuente |
-|---|---|---|
-| Clonar repo y preparar entorno | `git clone` + `npm install` + `npm i -g @wix/cli` |  |
-| Autenticación local | `wix login` / `wix whoami` |  |
-| Autenticación CI | API key + `wix login --api-key` |  |
-| Desarrollo con recarga en vivo | `wix dev` |  |
-| Desarrollo en cloud IDE | `wix dev --tunnel` |  |
-| Instalar paquete en el sitio | `wix install <pkg>` (`--npm`/`--yarn`) |  |
-| Actualizar paquete | `wix update <pkg>` |  |
-| Preview antes de publicar | `wix preview` |  |
-| Publicar | `wix publish` (repo o local) |  |
-| Sincronizar UI ↔ IDE | Push a default branch / sync UI version |  |
-| MCP remoto | `https://mcp.wix.com/mcp` (`type: http`) |  |
-| MCP con API key | `Authorization` + `wix-account-id` |  |
-| Skills/Plugin | `npx skills add wix/skills` / `/plugin install wix@wix` |  |
-| Diagnóstico runtime | `@wix/wix-code-diagnostics-plugin` (WebSocket en `dev`) |  |
-
----
+| Necesidad | Fuente canónica |
+|---|---|
+| Autenticación CLI (OAuth/API key) | §B.3 |
+| Comandos CLI for Sites, flags y workflow Preview | §J.2 |
+| Wix MCP, autenticación MCP y herramientas | §J.1 |
+| Diagnóstico runtime y plugin | §J.3 |
+| Skills, agentes y flujo seguro | §J.4 |
 
 ## 10. Límites y advertencias para el agente IA
 
@@ -1465,18 +1415,20 @@ Todo código backend libre de caracteres no-ASCII.Acepta el caracter "ñ". Cabec
 
 ## 3. Aplicaciones Wix Instaladas
 
-### 3.1 Inventario de Apps (App IDs canónicos)
+### 3.1 Inventario de Apps y función
 
-| App | App ID | Rol en Marian Madrid | API objetivo | Restricción |
-| --- | --- | --- | --- | --- |
-| **Bookings** | `13d21c63-b5ec-5912-8397-c3a5ddb27a97` | SSOT de servicios, slots, recursos y reservas | Bookings **V2** (sin V1) | Solo APIs oficiales |
-| **Stores** | `215238eb-22a5-4c36-9e7b-e7c08025e04e` | SSOT de catálogo público y stock comercial | **Catalog V1** | ❌ Catalog V3 prohibido |
-| **eCom** | *(nativo)* | SSOT de checkout, pedidos y webhooks de pago | ecom **V2** | Migrar a Cart V2 feb-2027 |
-| **Members** | `14cc59bc-f0b7-15b8-e1c7-89ce41d0e0c9` | Identidad autenticada de clientes y personal | `@wix/members` | — |
-| **Forms & Payments** | `14ce1214-b278-a7e4-1373-00cebd1bef7c` | Formularios de reserva y cobro | Uso declarativo | — |
-| **Invoices** | `13ee94c1-b635-8505-3391-97919052c16f` | Facturas nativas Wix (separado del ledger propio) | Invoices **V1** | ❌ V2 no autorizado |
-| **Gift Cards** | `d80111c5-a0f4-47a8-b63a-65b54d774a27` | Tarjetas regalo | Integración nativa | — |
-| **Events** | `140603ad-af8d-84fb-9004-ee174e35054d` | Sin uso operativo confirmado | — | No tratar como dependencia |
+| App | Rol en Marian Madrid | API objetivo | Restricción |
+|---|---|---|---|
+| **Bookings** | SSOT de servicios, slots, recursos y reservas | Bookings **V2** (sin V1) | Solo APIs oficiales |
+| **Stores** | SSOT de catálogo público y stock comercial | **Catalog V1** | V3 no activado; véase §14 |
+| **eCom** | SSOT de checkout, pedidos y webhooks de pago | eCommerce **V2** | Migración a Cart V2 según §E.4 |
+| **Members** | Identidad autenticada de clientes y personal | `@wix/members` | — |
+| **Forms & Payments** | Formularios de reserva y cobro | Uso declarativo | — |
+| **Invoices** | Facturas nativas Wix (separado del ledger propio) | Invoices **V1** | V2 no autorizado |
+| **Gift Cards** | Tarjetas regalo | Integración nativa | — |
+| **Events** | Sin uso operativo confirmado | — | No tratar como dependencia |
+
+Los identificadores oficiales de las aplicaciones se mantienen exclusivamente en §22.2. `eCom` no tiene un App ID individual consignado en esa tabla.
 
 ### 3.2 Reglas de convivencia (inviolables)
 
@@ -1527,30 +1479,14 @@ Flujo seguro: JWT firmado → verificar firma clave pública Wix → extraer `ev
 | `TZ` | `Europe/Madrid` |
 | Moneda | `EUR` (2 decimales con `_roundMoney()`) |
 
-### 4.2 Matriz de personal (Bookings Staff API; MapaStaff es espejo CMS no consumido por el resolver actual)
+### 4.2 Matriz de personal
 
-| Nombre | `resourceId` (Wix Bookings) | `rolBookings` | `rolWebsite` |
-| --- | --- | --- | --- |
-| **Marian Madrid** | `e556070a-6d6a-402e-8422-11133033ea76` | `STAFF` | `ADMIN` |
-| **Andrea Staff** | `07f7344f-e7e4-4c53-854b-47fd82ac8d40` | `STAFF` | `ESTILISTA` |
-| **Alba Staff** | `9b905bfd-1a09-485d-9273-a24a20dfe648` | `STAFF` | `ESTILISTA` |
+La matriz única de profesionales (nombre, `resourceId`, `rolBookings` y `rolWebsite`) se mantiene en §22.1. Esa tabla refleja los recursos de Wix Bookings; `MapaStaff` es un espejo CMS y no lo consume el resolver actual. No replicar aquí los GUIDs.
 
 ### 4.3 Identificadores transversales del sistema
 
-**Contrato Bookings:** `resourceId` identifica el recurso/profesional y es el valor usado para filtrar disponibilidad en Time Slots V2 (`resourceTypes[].resourceIds`) y para asociar el recurso a la reserva. `scheduleId` identifica el calendario/schedule devuelto por Bookings para el slot y debe conservarse desde el slot nativo cuando el contrato de reserva lo requiera. No sustituir `resourceId` por `scheduleId` al consultar disponibilidad ni al seleccionar profesional. `staffMemberId` es el ID del perfil Staff y tampoco sustituye a `resourceId`.
+La tabla canónica de `traceId`, `pairToken`, `dedupeKey`, `movementToken`, `transactionId`, `bookingId`, `eventId`, `sequenceNumber` y `numSerieFactura` está en §7.3. No duplicar la tabla aquí.
 
-
-| ID | Descripción | Generación | Alcance |
-| --- | --- | --- | --- |
-| `traceId` | UUID v4 de trazabilidad end-to-end | `makeTraceId()` / `_generateUUID()` | **Obligatorio** en toda mutación transaccional |
-| `pairToken` | Vincula cita F1 (`DUAL_F1`) y F2 (`DUAL_F2`) | UUID v4 | `CitasF2`, `ControlOperativo` |
-| `dedupeKey` | Deduplicación atómica | Hash determinista | `ControlOperativo` (indexado) |
-| `movementToken` | Idempotencia de movimientos de stock | UUID v4 | `MovimientosInventario` (único) |
-| `transactionId` | Idempotencia de cobros | UUID v4 | `MovimientosCaja` (índice único) |
-| `bookingId` | GUID reserva oficial | API Wix Bookings | `CitasF2`, `ControlOperativo` |
-| `eventId` | ID evento webhook Wix | API Wix | `ControlOperativo` (deduplicación) |
-| `sequenceNumber` | Secuencia monótona fiscal | `CAJA_SEQ` (atómica) | `MovimientosCaja` |
-| `numSerieFactura` | Número de ticket/factura correlativo | `sequenceNumber` | `MovimientosCaja` (sin saltos) |
 
 # Recopilación estructurada de documentación oficial — Wix Apps y APIs (versiones recomendadas)
 
@@ -1604,7 +1540,7 @@ const booking = await bookings.createBooking({
 ```
 
 ### 1.2 Estrategias recomendadas
-- **Contrato SDK vs REST (ADR-002):** en SDK se usa `resource._id` y `location._id`; en REST, `resource.id` y `location.id`. **No ocultar la diferencia con alias**.
+- **Contrato SDK vs REST (ADR-002):** fuente canónica y tabla comparativa en §16. No ocultar la diferencia entre `_id` (SDK) e `id` (REST).
 - **Dual F1+F2:** dos `createBooking()` independientes unidos por `pairToken`; **prohibido** `createMultiServiceBooking` (exige servicios sin gap).
 - **`flowControlSettings` con `elevate()`:** `skipAvailabilityValidation` solo tras mutex `SLOT_LOCK` + revalidación exacta; `skipBusinessConfirmation` para pago online validado; `skipSelectedPaymentOptionValidation` para F2 `NO_FEE` — **combinación a validar en entorno real**.
 - **Zona horaria:** Wix usa IANA Time Zone Database. Con `timeZone`/`timezone` definido, Wix **ignora cualquier offset UTC** en `localDate`.
@@ -1730,45 +1666,9 @@ Cart V2 **unifica carrito y checkout** en una sola entidad `Cart`. Desaparece el
 
 ## 5. Stores — `@wix/stores@1.0.960` (Catalog V1/V3)
 
-### 5.1 Regla de oro: detectar versión antes de operar
+Antes de cualquier operación, consultar `catalogVersioning.getCatalogVersion()` y ramificar según `V1_CATALOG`, `V3_CATALOG` o `STORES_NOT_INSTALLED`. La tabla de módulos por versión, diferencias estructurales, adaptador dual PR #13, estado real del sitio, ADR-001 y gates de activación se mantienen exclusivamente en §14. No duplicar aquí esas tablas ni el estado del proyecto.
 
-```js
-import { catalogVersioning, products, productsV3 } from "@wix/stores";
-
-const { catalogVersion } = await catalogVersioning.getCatalogVersion();
-
-if (catalogVersion === "STORES_NOT_INSTALLED") return [];
-if (catalogVersion === "V3_CATALOG") {
-  const res = await productsV3.queryProducts().limit(10).find();
-  return res.items;
-}
-const res = await products.queryProducts().limit(10).find();
-return res.items;
-```
-**Fuente:** patrón oficial de versionado.
-
-### 5.2 Módulos por versión
-
-| Operación | V1 (`V1_CATALOG`) | V3 (`V3_CATALOG`) |
-|---|---|---|
-| Productos | `products.queryProducts()` | `productsV3.queryProducts()` |
-| Variantes | `products.queryStoreVariants()` | `readOnlyVariantsV3.queryVariants()` |
-| Inventario | `inventory.queryInventory()` | `inventoryItemsV3.queryInventoryItems()` |
-| Ubicaciones | — | `storesLocationsV3.queryStoresLocations()` |
-| Versión | `catalogVersioning.getCatalogVersion()` | igual |
-
-### 5.3 Diferencias estructurales V1 vs V3
-- **V3 no es retrocompatible con V1.** La versión es **permanente por sitio**; no se puede volver de V3 a V1.
-- **V3:** precios a nivel de variante; desaparece `manageVariants`; todo producto tiene al menos una variante (`default variant`); inventario a nivel **variante-ubicación**.
-- **Query Products en V3 no devuelve datos de variante**; para detalles de variante usar `queryVariants` o `getProduct`.
-- **Webhooks versionados:** durante la transición hay que suscribirse a eventos V1 **y** V3.
-
-### 5.4 Errores a evitar
-- Llamar `products.queryProducts()` en un sitio V3 (falla o devuelve estructura distinta).
-- Usar SKU como identidad de stock (V3 usa `productId:variantId:locationId`).
-- Asumir que `queryProducts` V3 devuelve variantes.
-- No comprobar `getCatalogVersion()` al inicio de cada flujo.
-- Mezclar payloads V1 y V3.
+**Fuente:** documentación oficial del módulo `@wix/stores`; el contrato específico de Marian Madrid prevalece según §A.4.
 
 ---
 
@@ -1940,77 +1840,33 @@ export const getPublicCatalog = webMethod(
 | **Huérfanas bloqueadas** | 6 | `ComprasProveedores`, `LineasCompraProveedor`, `ProductosCatalogo`, `ProductosVariantes`, `UbicacionesInventario`, `ProveedoresLista` |
 | **Efímeras absorbidas** | — | `SlotLocks`, `ProcessedWebhookEvents`, `CompradorDatos`, `RateLimiters` → unificadas en `ControlOperativo` |
 
-### 5.2 Resumen de las 13 colecciones NATIVE
+### 5.2 Metadatos operativos resumidos
 
-| Colección | Etiqueta Wix | Rev. | Campos | Permisos I/U/D/R | Índices únicos relevantes |
-|---|---|---:|---:|---|---|
-| `CitasF2` | CITAS_F2 | 19 | 26 | ADMIN×4 | `bookingId_unique` |
-| `ServiciosCatalogo` | SERVICIOS_CATALOGO | 193 | 42 | ADMIN×4 | — |
-| `ComplementosCatalogo` | COMPLEMENTOS_CATALOGO | 137 | 18 | ADMIN×4 | `addonId_unique` |
-| `CajaActual` | CAJA_ACTUAL | 45 | 38 | ADMIN×4 | — (índice `cashRegisterStatus_operationDate`) |
-| `MovimientosCaja` | MOVIMIENTOS_CAJA | 60 | 88 | ADMIN×4 | `transactionId_unique` |
-| `DatosFiscales` | DATOS FISCALES | 8 | 21 | ADMIN×4 | `taxId_unique` |
-| `HistoricoCierresZ` | HISTORICO_CIERRES_Z | 32 | 62 | ADMIN×4 | — |
-| `LibroAsientosContablesDetalle` | LIBRO_ASIENTOS_CONTABLES_DETALLE | 24 | 27 | ADMIN×4 | — |
-| `InventarioStockVenta` | INVENTARIO_STOCK_VENTA | 16 | 26 | ADMIN×4 | `stockKey_unique` (tras PR #13) |
-| `MovimientosInventario` | MOVIMIENTOS_INVENTARIO | 21 | 31 | ADMIN×4 | `movementToken_unique` |
-| `ControlOperativo` | CONTROL_OPERATIVO | 15 | 38 | ADMIN×4 | — (índices `idxcontrolexpires`, `idxcontrolretry`, `idxcontrolstatus`) |
-| `RegistrosHorariosStaff` | REGISTROS_HORARIOS_STAFF | 9 | 21 | ADMIN×4 | — (índices `idxresourceday`, `idxtypetimestamp`, `idx_monthKey`) |
-| `MapaStaff` | MAPA_STAFF | 11 | 15+4 | ADMIN×4 | Pendiente de verificación |
+| Colección | Rev. | Permisos I/U/D/R | Índices únicos relevantes |
+|---|---:|---|---|
+| `CitasF2` | 19 | ADMIN×4 | `bookingId_unique` |
+| `ServiciosCatalogo` | 193 | ADMIN×4 | — |
+| `ComplementosCatalogo` | 137 | ADMIN×4 | `addonId_unique` |
+| `CajaActual` | 45 | ADMIN×4 | — (`cashRegisterStatus_operationDate`) |
+| `MovimientosCaja` | 60 | ADMIN×4 | `transactionId_unique` |
+| `DatosFiscales` | 8 | ADMIN×4 | `taxId_unique` |
+| `HistoricoCierresZ` | 32 | ADMIN×4 | — |
+| `LibroAsientosContablesDetalle` | 24 | ADMIN×4 | — |
+| `InventarioStockVenta` | 16 | ADMIN×4 | `stockKey_unique` (tras PR #13) |
+| `MovimientosInventario` | 21 | ADMIN×4 | `movementToken_unique` |
+| `ControlOperativo` | 15 | ADMIN×4 | índices `idxcontrolexpires`, `idxcontrolretry`, `idxcontrolstatus` |
+| `RegistrosHorariosStaff` | 9 | ADMIN×4 | índices `idxresourceday`, `idxtypetimestamp`, `idx_monthKey` |
+| `MapaStaff` | 11 | ADMIN×4 | Pendiente de verificación |
 
-> **Hallazgo de integridad (2026-10-26):** en `CitasF2`, 3 de 4 registros tenían `catalogId === serviceId` en lugar del `_id` de `ServiciosCatalogo`. Corregido el escritor y actualizados condicionalmente solo los 3 `catalogId` de reservas nativas confirmadas; `serviceId`, `resourceId`, `scheduleId` y `bookingStatus` intactos. `scheduleId` conserva el valor del slot nativo (`bookedEntity.slot.scheduleId`), **no** se sustituye por `eventsSchedule.id` actual del profesional.
+La revisión, etiqueta, número de campos y tipos completos de cada colección se consultan en el esquema detallado §G.1–G.13.
 
-### 5.3 Campos críticos por colección (keyfields canónicos)
+### 5.3 Keyfields canónicos
 
-**CitasF2** — `slotStart`, `slotEnd`, `totalAmount`, `bookingId`, `traceId`, `bookingType` (`SIMPLE`/`DUAL_F1`/`DUAL_F2`), `bookingStatus`, `paymentStatus`, `serviceId`, `resourceId`, `pairToken`, `dateYmd`, `scheduleId`, `contactDetails`, `thirdPartyId`, `catalogId`, `cashMovementId`, `fiscalData`, `invoicingDate`, `sourceEventId`, `revision`, `meta`.
-
-**ServiciosCatalogo** — `serviceId`, `slug`, `title`, `description`, `tagLine`, `categoryId` (GUID Wix), `category` (texto libre, **no equivalente**), `itemNature`, `sku`, `price`, `currency`, `taxIncluded`, `tipoImpositivo`, `calificacionOperacion`, `totalDuration`, `phase1Duration`, `exposureDuration`, `phase2Duration`, `allowCombine`, `linkedPhases`, `locationId`, `location`, `clientHidden`, `onlinePayment`, `inPersonPayment`, `pricingModel`, `depositType`, `depositAmount`, `margin`, `internalNotes`, `precioCosteBase`, `mainMedia`, `recomendaciones`, `staffMembers` (MULTI_REFERENCE → `MapaStaff`), `name` (MULTI_REFERENCE → `ComplementosCatalogo`), `pricingPlanId`, `catalogEntryType`, `sessionCount`.
-
-**ComplementosCatalogo** — `addonId`, `sku`, `name`, `description`, `price`, `taxIncluded`, `tipoImpositivo`, `durationMinutes`, `itemNature`, `codigoImpuesto`, `claveRegimen`, `cuentaContableIngreso`, `traceId`.
-
-**CajaActual** — `singletonKey` (`CAJA_PRINCIPAL` / `CAJA_SEQ`), `currentSequence`, `sequenceCounters`, `isOpen`, `cashRegisterStatus`, `operationDate`, `openingAmount`, `countedCash`, `expectedCash`, `difference`, `differenceReason`, `openedAt`, `openedBy`, `closedAt`, importes por medio (`cashAmount`, `cardAmount`, `voucherAmount`, `otherAmount`), totales (`totalInAmount`, `totalOutAmount`, `salesAmount`, `refundAmount`, `paymentAmount`, `netAmount`), `stateHash`, `versionState`, `fiscalPeriod`, `staffResourceId`, `traceId`.
-
-**MovimientosCaja** — agrupado por función:
-- *Identificación*: `transactionId`, `sequenceNumber`, `numSerieFactura`, `bookingId`, `orderId`, `refundId`, `catalogId`, `pairToken`, `resourceId`/`staffResourceId`, `traceId`.
-- *Importes*: `amount`, `totalAmount`, `taxBase`, `taxAmount`, `accountingAmount`, `baseImponibleOImporteNoSujeto`, `accountingSign`.
-- *Fiscales*: `tipoFactura`, `fechaExpedicionFactura`, `fechaOperacion`, `tipoImpositivo`, `NIFEmisor`, `NIFDestinatario`, `recipientLegalName`, `recipientAddress`, `claveRegimen`, `calificacionOperacion`, `operacionExenta`, `inversionSujetoPasivo`, `IRPFWithholdingRate`/`Amount`, `withholdingBase`, `surchargeRate`/`Amount`, `fiscalRole`, `fiscalPeriod`, `isB2B`, `issuerLegalName`/`ThirdPartyTaxId`, `thirdPartyLegalName`, `issuedByThirdPartyOrRecipient`, `article20Exempt`, `cashBasisRegime`, `nonSubjectReason`, `vatAccrualStatus`, `linkedAdvanceId`.
-- *Veri\*Factu*: `hash`, `previousRecordHash`, `hashAlgorithm`, `signatureAlgorithm`, `digitalSignature`, `verificationQR`, `payloadAEAT`, `sistemaInformatico`, `payloadFiscal`, `generationTimestamp`, `recordTimestamp`, `schemaVersion`, `estadoEnvioAEAT`, `csvAEAT`, `fechaEnvioAEAT`.
-- *Rectificativas*: `tipoRectificativa`, `previousInvoiceId`, `previousInvoiceNumber`, `previousInvoiceIssueDate`, `correctionReason`, `correctionAmount`.
-- *Clasificación*: `movementType`, `paymentMethod`, `channelType`, `operationDescription`, `recordSource`, `eventType`, `projectionStatus`, `lineItems`, `desgloseDetallado`, `bankReconciliationReference`, `linkedBookingIds`, `giftCardId`/`giftCardOperation`, `serviceIdRedeemed`, `thirdPartyId`.
-
-**DatosFiscales** — `taxId`, `recordType` (`TERCERO` / `CONFIG_SISTEMA`), `thirdPartyType`, `legalName`, `commercialName`, `address`, `postalCode`, `province`, `country`, `email`, `phone`, `taxRegime`, `verifactuEnabled`, `verifactuVersion`, `tipoUsoPosibleMultiOT`, `indicadorMultiplesOT`, `fechaInicioVerifactu`.
-
-**HistoricoCierresZ** — `recordDomain`, `closeDate`, `operationDate`, `fiscalPeriod`, `fiscalYear`, `closedAt`, `closedBy`, `closingStatus`, `closingType`, `closingSource`, `closingSchemaVersion`, `timeZone`, totales (`totalCash`, `totalCard`, `totalBizum`, `totalOnline`, `totalTaxBase`, `totalTaxAmount`, `totalRefunds`, `totalOperations`, `totalAdjustments`, `totalTips`, `grossSalesTotal`, `netTaxableAmount`, `netTaxAmount`, `consolidatedTotalAmount`), desgloses (`taxTypeBreakdown`, `movementTypeBreakdown`, `totalesMedioPago`), secuencia y hash (`startSequence`, `endSequence`, `startTicketNumber`, `endTicketNumber`, `startRecordHash`, `endRecordHash`, `closingHash`, `closingSignature`, `closingSignatureStatus`, `isIntegrityVerified`, `verifiedAt`, `approverUser`), snapshot (`snapshotJSON`, `summaryData`, `invoiceData`), envío (`estadoEnvioAEAT`, `sentTo`, `sentAt`, `packageStatus`, `packageVersion`), `auditedRecordsCount`, `inventoryClosingId`, `traceId`, `cuentaContable`.
-
-**LibroAsientosContablesDetalle** — `entryId`, `lineNumber`, `entryDate`, `recordTimestamp`, `fiscalPeriod`, `accountCode` (6 dígitos PGC), `debitAmount`, `creditAmount`, `accountingAmount`, `concept`, `origenTipo`, `origenRegistro`, `sourceMovementId`, `cashMovementId`, `bookingId`, `orderId`, `resourceId`, `payloadFiscal`, `recordHash`, `previousRecordHash`, `idSistemaInformatico`, `desgloseDetallado`, `traceId`.
-
-**InventarioStockVenta** — `sku`, `name`, `price`, `taxIncluded`, `tipoImpositivo`, `stockOnHand`, `stockReserved`, `stockAvailable`, `stockMinimo`, `reorderPoint`, `reorderQuantity`, `wixProductId`, `wixVariantId`, `productId`, `variantId`, `stockId`, `stockKey`, `locationId`, `catalogVersion`, `location`, `needsWixReconciliation`, `lastSyncAt`, `lastInventoryMovementId`, `lastInventoryMovementAt`, `traceId`.
-
-**MovimientosInventario** — `movementToken`, `movementType`, `sku`, `quantity`, `quantityDelta`, `direction`, `magnitude`, `stockBefore`, `stockAfter`, `stockKey`, `locationId`, `catalogVersion`, `lineItemId`, `stockApplied`, `orderId`, `refundId`, `referenceId`, `catalogId`, `productName`, `wixProductId`, `wixVariantId`, `movementId`, `actorMemberId`, `actorEmail`, `reason`, `operationDescription`, `sourceEventId`, `thirdPartyId`, `nativeCommercialMovement`, `requiresWixReconciliation`, `recordTimestamp`, `traceId`.
-
-**ControlOperativo** — `controlType` (`SLOT_LOCK`/`WEBHOOK_EVENT`/`DEDUPE_KEY`/`IDEMPOTENCY`/`RATE_LIMIT`/`SYSTEM_FLAG`), `dedupeKey`, `traceId`, `status`, `eventId`, `expiresAt`, `bookingId`, `pairToken`, `resourceId`, `serviceId`, `slotStart`, `slotEnd`, `dateYmd`, `transactionId`, `orderId`, `refundId`, `kind`, `attempts`, `maxAttempts`, `nextRetryAt`, `lastError`, `totalAmount`, `operationDescription`, `severity`, `alertType`, `message`, `surface`, `requesterKey`, `requestCount`, `windowStart`, `retryAfter`, `payload`, `version`, `processedAt`.
-
-**RegistrosHorariosStaff** — `resourceId`, `memberId`, `recordedAt`, `clockEventType`, `recordType`, `traceId`, `dayKey`, `monthKey`, `staffName`, `notes`, `adjustmentReason`, `signature`, `recordedTime`, `registeredBy`, `registeredByMemberId`, `deviceIpAddress`, `meta`.
-
-**MapaStaff** — `displayName`, `staffMemberId` ⚠️, `scheduleId`, `thirdPartyId` (vacío por diseño), `staffName`, `rolWebsite`, `rolBookings`, `memberId`, `resourceId`, `active` ⚠️, `sortOrder`, `sourceSystem`, `schemaVersion`, `ServiciosCatalogo_staffMembers` (MULTI_REFERENCE).
-
-> ⚠️ `staffMemberId` y `active` figuran en el esquema vivo pero los criterios SSOT (§19.4–19.5) los marcan como no deseados. Requiere **ADR** para migrar/mantener/eliminar. La mera existencia en CMS no los hace canónicos.
+Los nombres, tipos, referencias y valores de los campos por colección se documentan una sola vez en §G.1–G.13. Este apartado no replica listas de campos; para trazabilidad transversal véanse §7.3 (identificadores) y §6 (enums).
 
 ### 5.4 Invariantes de integridad
 
-| Invariante | Colección | Validación |
-|---|---|---|
-| `stockAvailable === stockOnHand − stockReserved` | `InventarioStockVenta` | Hook `beforeInsert`/`beforeUpdate`; rechazo de negativos |
-| `totalDuration === phase1Duration + exposureDuration + phase2Duration` | `ServiciosCatalogo` | Hook |
-| `taxBase + taxAmount ≈ amount` (redondeo `_roundMoney()` a 2 dec.) | `MovimientosCaja` | Hook |
-| `debitAmount` y `creditAmount` cuadran por asiento | `LibroAsientosContablesDetalle` | Proyección contable |
-| `hash = SHA256(previousRecordHash + payload)` | `MovimientosCaja` | Cadena Veri\*Factu |
-| `recordHash`/`previousRecordHash` encadenados | `LibroAsientosContablesDetalle` | Cadena contable |
-| `singletonKey ∈ {CAJA_PRINCIPAL, CAJA_SEQ}` | `CajaActual` | Hook |
-| `notes` obligatorio si `recordType === "AJUSTE"` | `RegistrosHorariosStaff` | Hook |
-| `eventId` obligatorio si `controlType === "WEBHOOK_EVENT"` | `ControlOperativo` | Hook |
-| `resourceId` + `expiresAt` obligatorios si `controlType === "SLOT_LOCK"` | `ControlOperativo` | Hook |
-| `reason` obligatorio si `movementType === "AJUSTE"` | `MovimientosInventario` | Hook |
+Fuente canónica única: §14.1. Allí se consolida la lista completa de invariantes y su colección asociada. Este apartado remite a esa tabla; no mantiene una segunda lista.
 
 ### 5.5 Matriz de sustitución legacy → SSOT
 
@@ -2657,18 +2513,24 @@ Cualquier intento de lectura/escritura sobre legacy es interceptado en `backend/
 
 ## 14. Notas transversales
 
-### 14.1 Invariantes de integridad (hooks en `backend/data.js`)
+### 14.1 Invariantes de integridad consolidadas (hooks en `backend/data.js`)
 
-| Colección | Invariante |
-|---|---|
-| `ServiciosCatalogo` | `totalDuration === phase1Duration + exposureDuration + phase2Duration` |
-| `MovimientosCaja` | `taxBase + taxAmount ≈ amount` (redondeo `_roundMoney()` a 2 dec.) |
-| `CajaActual` | `singletonKey ∈ {CAJA_PRINCIPAL, CAJA_SEQ}` |
-| `RegistrosHorariosStaff` | `notes` obligatorio si `recordType = AJUSTE` |
-| `ControlOperativo` | `eventId` si `WEBHOOK_EVENT`; `resourceId` + `expiresAt` si `SLOT_LOCK` |
-| `InventarioStockVenta` | `stockAvailable === stockOnHand − stockReserved`; rechazo de negativos |
-| `MovimientosInventario` | unicidad `movementToken`; `reason` obligatorio si `AJUSTE` |
-| `LibroAsientosContablesDetalle` | `debitAmount === creditAmount` por asiento |
+| Colección | Invariante | Aplicación |
+|---|---|---|
+| `ServiciosCatalogo` | `totalDuration === phase1Duration + exposureDuration + phase2Duration` | Hook `beforeInsert`/`beforeUpdate` |
+| `MovimientosCaja` | `taxBase + taxAmount ≈ amount` (redondeo `_roundMoney()` a 2 dec.) | Hook |
+| `MovimientosCaja` | `hash = SHA256(previousRecordHash + payload)` | Cadena Veri*Factu |
+| `CajaActual` | `singletonKey ∈ {CAJA_PRINCIPAL, CAJA_SEQ}` | Hook |
+| `RegistrosHorariosStaff` | `notes` obligatorio si `recordType === "AJUSTE"` | Hook |
+| `ControlOperativo` | `eventId` obligatorio si `controlType === "WEBHOOK_EVENT"` | Hook |
+| `ControlOperativo` | `resourceId` + `expiresAt` obligatorios si `controlType === "SLOT_LOCK"` | Hook |
+| `InventarioStockVenta` | `stockAvailable === stockOnHand − stockReserved`; no admite negativos | Hook |
+| `MovimientosInventario` | `reason` obligatorio si `movementType === "AJUSTE"` | Hook |
+| `LibroAsientosContablesDetalle` | `debitAmount` y `creditAmount` cuadran por asiento | Proyección contable |
+| `LibroAsientosContablesDetalle` | `recordHash`/`previousRecordHash` encadenados | Cadena contable |
+| `CitasF2` | `traceId` presente y `pairToken` coherente en parejas `DUAL_F1`/`DUAL_F2` | Hook/escritor; QA de coherencia según §16 |
+
+Esta es la única tabla normativa de invariantes CMS. §5.4 y §10.2 remiten aquí; no mantener copias parciales en esos apartados.
 
 ### 14.2 Ledgers append-only (protegidos por `beforeUpdate`/`beforeRemove`)
 
@@ -2682,6 +2544,7 @@ Cualquier intento de lectura/escritura sobre legacy es interceptado en `backend/
 
 - **Estructura CMS:** lista en las 13 colecciones.
 - **Hooks de integridad:** activos en `backend/data.js`.
+- **Enums:** definiciones canónicas exclusivamente en §6; validación runtime en §10.2.
 - **Escritor contable (`LibroAsientosContablesDetalle`):** **pendiente** (deuda Alta).
 - **Catalog V1/V3:** `stockKey`, `locationId`, `catalogVersion`, `lineItemId`, `stockApplied` añadidos en PR #13; V1 activo, V3 preparado sin publicar.
 - **QA real en Preview:** **pendiente** en todas las colecciones.
@@ -2888,21 +2751,22 @@ export function MovimientosCaja_beforeRemove(itemId, context) {
 
 Corrección: nuevo registro rectificativo enlazado al original.
 
-### 10.2 Validaciones por colección
+### 10.2 Validaciones adicionales por colección
 
-| Colección | Validaciones `beforeInsert`/`beforeUpdate` |
+Las invariantes y expresiones de integridad se definen exclusivamente en §14.1. Esta tabla conserva solo controles adicionales de hooks que no duplican esas invariantes.
+
+| Colección | Controles adicionales `beforeInsert`/`beforeUpdate` |
 |---|---|
-| `DatosFiscales` | `isValidNifOrEuVat()`; `CONFIG_SISTEMA_FISCAL` exige params Veri\*Factu; `beforeRemove` bloquea el singleton |
-| `CajaActual` | `singletonKey ∈ {CAJA_PRINCIPAL, CAJA_SEQ}`; edición de contadores solo en `CAJA_SEQ`; `beforeRemove` bloqueado |
-| `MovimientosCaja` | `hash`, `schemaVersion`, `traceId`, enums; `taxBase + taxAmount ≈ amount` |
-| `CitasF2` | enums, `traceId`, coherencia `pairToken`; `beforeRemove` bloqueado |
-| `ServiciosCatalogo` | unicidad `serviceId`/`sku`/`slug`; cuadre de duraciones; `tipoImpositivo ∈ {0, 0.04, 0.10, 0.21}` |
-| `ComplementosCatalogo` | unicidad `addonId`/`sku` |
-| `MapaStaff` | unicidad `resourceId`/`memberId`; enums de roles |
-| `RegistrosHorariosStaff` | `clockEventType`; `notes` obligatorio si `recordType = AJUSTE` |
-| `ControlOperativo` | `controlType`/`dedupeKey`/`traceId`; `eventId` si `WEBHOOK_EVENT`; `resourceId`+`expiresAt` si `SLOT_LOCK` |
-| `InventarioStockVenta` | invariante stock; rechazo de negativos |
-| `MovimientosInventario` | unicidad `movementToken`; `reason` si `AJUSTE` |
+| `DatosFiscales` | `isValidNifOrEuVat()`; `CONFIG_SISTEMA_FISCAL` exige parámetros Veri*Factu; `beforeRemove` bloquea el singleton |
+| `CajaActual` | Edición de contadores solo en `CAJA_SEQ`; `beforeRemove` bloqueado |
+| `MovimientosCaja` | `schemaVersion`, `traceId` y enums obligatorios/validados |
+| `CitasF2` | Enums `bookingStatus`, `paymentStatus` y `bookingType` |
+| `ServiciosCatalogo` | Unicidad `serviceId`/`sku`/`slug`; enum `tipoImpositivo` |
+| `ComplementosCatalogo` | Unicidad `addonId`/`sku` |
+| `MapaStaff` | Unicidad cruzada `resourceId`/`memberId`; enums de roles |
+| `RegistrosHorariosStaff` | Validación del enum `clockEventType` |
+| `ControlOperativo` | Validación de `controlType`, `dedupeKey` y `traceId` |
+| `MovimientosInventario` | Unicidad de `movementToken` |
 
 ### 10.3 Principios
 
@@ -3102,6 +2966,8 @@ Acepta preparación de compatibilidad dual; **aplaza el cambio irreversible** de
 - `reservas.web.test.mjs`: fixtures con `resource._id`.
 - **No se oculta con alias** (ADR-002).
 
+**Regla de selección del recurso y calendario:** `resourceId` identifica el recurso/profesional y se usa en `resourceTypes[].resourceIds` para filtrar disponibilidad y asociar el recurso a la reserva. `scheduleId` identifica el calendario del slot y debe conservarse desde el slot nativo cuando el contrato lo requiera. No sustituir `resourceId` por `scheduleId`; `staffMemberId` identifica el perfil Staff y tampoco sustituye a `resourceId`.
+
 **Pendiente documental en SSOT fuente:** sustituir `resource.id` de §17.3 y §20.3 por la distinción REST/SDK. La SSOT versionada en repo ya corrige ambas referencias.
 
 ---
@@ -3214,13 +3080,9 @@ Acepta preparación de compatibilidad dual; **aplaza el cambio irreversible** de
 ```powershell
 node --version
 npm --version
-npm install -g @wix/cli
-wix login
-wix whoami
-wix dev
 ```
 
-`wix.config.json` debe apuntar a `siteId = 188bed94-177c-4bc9-a9f0-35080d874f3e`. No continuar si hay cambios locales no identificados. `wix.lock` y `src/velo.dependencies.json` son artefactos generados: **no editar manualmente**.
+`wix.config.json` debe apuntar a `siteId = 188bed94-177c-4bc9-a9f0-35080d874f3e`. No continuar si hay cambios locales no identificados. `wix.lock` y `src/velo.dependencies.json` son artefactos generados: **no editar manualmente**. Para comandos CLI, remitir a §B.3 y §J.2; no duplicar el catálogo.
 
 ### 21.2 Matriz de permisos (mínimo privilegio)
 
@@ -3435,18 +3297,16 @@ El negocio opera con **3 profesionales** (1 ADMIN + 2 ESTILISTAS). No consta per
 
 ## 5. Normativa aplicable (realidad física del negocio)
 
-### 5.1 Normativa estatal (ya recogida en SSOT §21)
+### 5.1 Implicaciones estatales para la operativa del negocio
 
-| Ámbito | Norma | Implicación operativa |
-|---|---|---|
-| Fiscal / Veri\*Factu | Ley 11/2021 · RD 1007/2023 | Ledgers inmutables, SHA-256, QR AEAT |
-| Facturación | RD 1619/2012 | Facturas simplificadas (F2) y completas (F1) correlativas |
-| IVA | Ley 37/1992 | Tipos 0 / 4 / 10 / **21 %** (peluquería y cosmética) |
-| Contabilidad | PGC RD 1514/2007 | Doble partida, cuentas 6 dígitos |
-| Laboral | RD 8/2019 (art. 34.9 ET) | Registro de jornada inalterable, retención 4 años |
-| Privacidad | RGPD 2016/679 · LOPDGDD 3/2018 | Consentimiento salud/imagen; minimización |
-| Consumo | LSSI-CE 34/2002 · TRLGDCU | Precios con IVA, desistimiento 14 días (excepción art. 103) |
-| Conservación | LGT 58/2003 · C. Comercio art. 30 | 4–6 años |
+La relación técnica de normas, obligaciones y controles se mantiene en §18. Este apartado conserva únicamente su traducción a la operativa del salón:
+
+- **IVA:** aplicar el tipo correspondiente a cada operación; el catálogo de peluquería/cosmética contempla el 21 % como tipo general de referencia, sin sustituir la clasificación fiscal de cada servicio o producto.
+- **Facturación:** mantener la distinción operativa entre facturas simplificadas (F2) y completas (F1), con numeración y trazabilidad según §18.
+- **Personal:** conservar los registros de jornada y sus ajustes documentados conforme al control laboral descrito en §18.
+- **Privacidad:** separar consentimientos y datos de salud/imagen; minimizar los datos personales y restringir su acceso.
+- **Consumo:** mostrar precios con impuestos incluidos y facilitar la información precontractual y de desistimiento que corresponda a cada tipo de venta.
+- **Conservación:** aplicar los plazos fiscales, contables y laborales según la naturaleza documental; la matriz técnica se recoge en §18 y la arquitectura documental en §I.
 
 ### 5.2 Normativa autonómica y municipal (Aragón / Zaragoza)
 
@@ -3820,16 +3680,16 @@ Cada biblioteca de SharePoint expone estas columnas; la etiqueta de retención s
 
 ---
 
-# ANEXO — DATOS TÉCNICOS AUSENTES Y FUENTES DE CONSULTA PARA DESARROLLO/DEPURACIÓN CON IA EN WIX
+# ANEXO J — DATOS TÉCNICOS Y FUENTES DE CONSULTA PARA DESARROLLO/DEPURACIÓN CON IA EN WIX
 
-## 1. Wix MCP — Configuración avanzada y herramientas expuestas
+## J.1 Wix MCP — configuración y capacidades (fuente canónica)
 
 El dossier menciona el MCP pero no detalla su configuración operativa ni las herramientas que expone. Los datos faltantes son:
 
-### 1.1 Requisito de entorno
+### J.1.1 Requisito de entorno
 Node.js **19.9.0 o superior** es obligatorio para el MCP. El dossier fija Node ≥ 24.22.1 para CLI, pero no especifica el mínimo del MCP.
 
-### 1.2 Configuraciones de conexión (3 variantes)
+### J.1.2 Configuraciones de conexión
 
 | Variante | JSON / Comando | Cuándo usarla |
 |---|---|---|
@@ -3845,7 +3705,7 @@ claude mcp add --transport http wix-mcp-remote https://mcp.wix.com/mcp
 
 **Cursor** sin API key: instalación desde la librería MCP integrada.
 
-### 1.3 Herramientas expuestas por el MCP (todas habilitadas por defecto)
+### J.1.4 Herramientas expuestas por el MCP
 
 | Herramienta | Función |
 |---|---|
@@ -3862,24 +3722,52 @@ claude mcp add --transport http wix-mcp-remote https://mcp.wix.com/mcp
 | `ManageWixSite` | Acción a nivel de sitio (crear, publicar) |
 | `SupportAndFeedback` | Envía feedback a Wix |
 
-**Diferencia clave no documentada en el dossier**: existe un **Wix Site MCP** (por sitio, endpoint `https://<dominio>/_api/mcp`) que conecta agentes de visitantes al sitio como *visitante anónimo*; no accede a páginas protegidas ni datos privados. El **WebMCP** es la capa in-browser sobre Site MCP. El dossier solo menciona el MCP de cuenta, no el de sitio.
+### J.1.3 Autenticación MCP
+
+- **OAuth:** flujo interactivo de la cuenta Wix en clientes compatibles.
+- **API key:** para entornos no interactivos, usar `Authorization: <API_KEY>` y `wix-account-id: <ACCOUNT_ID>`. No confundir con la API key CLI de §B.3.2 (`CLI_API_KEY`). No incluir valores secretos en el dossier ni en logs.
+- **Claude Code:** `claude mcp add --transport http wix-mcp-remote https://mcp.wix.com/mcp`.
+- **Cursor:** conexión desde la librería MCP integrada cuando esté disponible.
+
+### J.1.5 Wix Site MCP y WebMCP
+
+El **Wix Site MCP** (endpoint `https://<dominio>/_api/mcp`) conecta agentes de visitantes al sitio como *visitante anónimo*; no accede a páginas protegidas ni datos privados. **WebMCP** es la capa in-browser sobre Site MCP. Se trata de una capacidad distinta del MCP de cuenta descrito en este apartado.
 
 ---
 
-## 2. CLI for Sites — referencia al catálogo canónico
+## J.2 CLI for Sites — catálogo operativo y workflow activo
 
-El catálogo de comandos aplicable a este sitio es el de Wix CLI for Sites (no el CLI unificado para Apps/Headless). Véase §J.2 para comandos y restricciones. No duplicar aquí la tabla completa.
+El catálogo aplicable es **Wix CLI for Sites**, no el CLI unificado de Apps/Headless. Esta es la única tabla operativa del dossier.
 
-**Regla de publicación:** `wix preview` crea un despliegue de prueba y no publica producción. `wix publish` publica y solo se ejecutará tras validación y autorización específica.
+### J.2.1 Comandos y restricciones
+
+| Comando | Función | Flags / notas |
+|---|---|---|
+| `wix dev` | Abre Local Editor y sincroniza cambios locales en tiempo real. | `--tunnel` para IDE cloud cuando esté soportado. |
+| `wix install <pkg>` | Instala un paquete npm en el repo del sitio. | `--npm` / `--yarn` para forzar gestor. |
+| `wix update <pkg>` | Actualiza un paquete instalado. | Usar en lugar de `npm update`. |
+| `wix uninstall <pkg>` | Desinstala un paquete del repo. | — |
+| `wix preview` | Crea una versión compartible de prueba; no publica producción. | QA previo a publicación. |
+| `wix publish` | Publica desde el default branch o desde el código local. | Publicación local puede desincronizar repo y sitio vivo; requiere autorización expresa. |
+| `wix login` / `wix whoami` / `wix logout` | Autenticación y estado de sesión. | Detalle de credenciales CLI en §B.3. |
+| `wix -h` / `wix <cmd> -h` | Ayuda general o por comando. | — |
+
+No se consideran aplicables al Wix Editor clásico los comandos del CLI unified para Apps/Headless (`release`, `dev-site`, `generate`) ni los comandos no confirmados para CLI for Sites. No editar `wix.lock` ni `src/velo.dependencies.json`: son artefactos generados.
+
+### J.2.2 Workflow GitHub Actions activo de Preview (no publicar)
+
+El workflow operativo está en `.github/workflows/wix-preview-validation.yml`. Consume `secrets.CLI_API_KEY`, instala CLI for Sites, autentica y ejecuta `wix preview` bajo timeout y supervisión de proceso, conservando el log como artefacto. No contiene `wix publish`. Su comportamiento actual evita dejar el job bloqueado indefinidamente; el usuario confirma que evita el bloqueo y es funcional. El run `41285908135` registró `success`. El éxito acredita únicamente los controles del workflow; no sustituye QA de reservas en Wix Editor ni autoriza publicación.
+
+**Regla de publicación:** `wix publish` solo se ejecutará tras validación y autorización específica.
 
 
 ---
 
-## 3. Diagnóstico en tiempo real — Plugin `@wix/wix-code-diagnostics-plugin`
+## J.3 Diagnóstico en tiempo real — Plugin `@wix/wix-code-diagnostics-plugin`
 
 El dossier menciona `wix dev` pero no detalla el mecanismo de captura de errores en runtime.
 
-### 3.1 Funcionamiento
+### J.3.1 Funcionamiento
 - Reenvía diagnósticos de `build`/`preview`/`dev` por HTTP al orquestador de proyecto.
 - En modo `dev`, inicia un **WebSocket local** en `ws://127.0.0.1:52415/runtime-errors` para mostrar errores de runtime en el editor.
 - Los errores se transmiten como frames JSON: `{type: "runtime-error", error: {id, name, message, file, line, column, stack, timestamp}}`.
@@ -3887,14 +3775,14 @@ El dossier menciona `wix dev` pero no detalla el mecanismo de captura de errores
 - Heartbeat cada ~25 s.
 - **Slow clients**: un socket con >1 MB pendiente se termina para no consumir memoria del proceso `dev`.
 
-### 3.2 Variables de entorno requeridas
+### J.3.2 Variables de entorno requeridas
 ```
 WIX_CODE_DIAGNOSTICS_ENDPOINT   # URL del endpoint ReportCodeDiagnostic
 WIX_CODE_DIAGNOSTICS_TOKEN      # Token de autorización (header Authorization)
 ```
 
 
-### 3.3 Registro en `wix.config.mjs`
+### J.3.3 Registro en `wix.config.mjs`
 ```js
 import { defineWixConfig } from '@wix/cli/config';
 import { wixCodeDiagnosticsPlugin } from '@wix/wix-code-diagnostics-plugin';
@@ -3908,28 +3796,28 @@ export default defineWixConfig({
 
 ---
 
-## 4. Flujo de trabajo recomendado con agentes IA (Claude Code / Cursor)
+## J.4 Flujo de trabajo recomendado con agentes IA (Claude Code / Cursor)
 
-### 4.1 Dos vías de intervención
+### J.4.1 Dos vías de intervención
 
 | Vía | Qué permite | Requisito |
 |---|---|---|
 | **MCP** | Buscar docs, escribir código para la plataforma, llamar APIs reales sobre el sitio | Node ≥ 19.9.0 (mínimo citado en este anexo; pendiente de revalidación oficial) |
 | **Git Integration + CLI for Sites** | Editar código del sitio en local; `wix dev` (Local Editor), `wix preview`, `wix publish` | Node ≥ 24.22.1; repo conectado |
 
-### 4.2 Regla de seguridad para agentes
+### J.4.2 Regla de seguridad para agentes
 - **No publicar directamente** desde el agente sin revisión humana: `wix publish` desde código local desincroniza repo y sitio vivo.
 - **No mutar ledgers** (`MovimientosCaja`, etc.) vía MCP: son append-only por SSOT.
 - **No confiar en el estado "Published"** como evidencia de despliegue: exigir run ID de CI + commit.
 
-### 4.3 Wix Skills y Wix Plugin (no detallados en el dossier)
+### J.4.3 Wix Skills y Wix Plugin
 - **Wix Skills**: `npx skills add wix/skills` — instrucciones estructuradas para agentes que enseñan patrones específicos de Wix.
 - **Wix Plugin**: instala Skills + MCP en un solo paso; disponible para Claude Code, Cursor, VS Code, Codex.
 - **Headless AI Toolkit**: combinación de Headless skill + Wix plugin + MCP para proyectos headless.
 
 ---
 
-## 5. Enlaces oficiales de consulta (no incluidos en el dossier)
+## J.5 Enlaces oficiales de consulta
 
 | Recurso | URL |
 |---|---|
@@ -3948,7 +3836,7 @@ export default defineWixConfig({
 
 ---
 
-## 6. Posibles datos faltantes en el dossier (lista de verificación)
+## J.6 Posibles datos faltantes en el dossier
 
 | Dato ausente | Impacto | Cómo obtenerlo |
 |---|---|---|
@@ -3993,7 +3881,7 @@ export default defineWixConfig({
 
 ### 24.3 Workflow Wix Preview
 
-- El workflow operativo descrito en §B.8.2 se conserva sin cambios: el usuario confirma que evita el bloqueo y es funcional; el run `41285908135` registró `success`. No se modifica por motivos cosméticos.
+- El workflow operativo descrito en §J.2.2 se conserva sin cambios: el usuario confirma que evita el bloqueo y es funcional; el run `41285908135` registró `success`. No se modifica por motivos cosméticos.
 - Su éxito no certifica por sí solo reservas simples/duales, pagos, HTTP functions ni frontend end-to-end.
 
 ### 24.4 Criterios pendientes
