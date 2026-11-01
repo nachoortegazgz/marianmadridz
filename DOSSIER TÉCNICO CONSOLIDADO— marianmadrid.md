@@ -1,6 +1,6 @@
 # DOSSIER TÉCNICO CONSOLIDADO — marianmadrid.es versión.z
 
-**Proyecto:** Marian Madrid Peluquería y Estética · **Fecha:** 2026-11-01 · **Versión SSOT base:** v10.0 **Version consolidada redactada usando como fuentes el resto de documentos de este repositorio**
+**Proyecto:** Marian Madrid Peluquería y Estética · **Fecha de consolidación:** 2026-11-01 · **SSOT base:** v10.0 · **Repositorio canónico:** `nachoortegazgz/marianmadridz` · **Documento consolidado:** arquitectura, estado, evidencias y protocolo de QA. Los estados operativos se rigen por §24; los datos de prueba y condiciones de validación por §25; el plan por §26.
 
 # MAPA DEL DOCUMENTO — DOSSIER TÉCNICO CONSOLIDADO marianmadrid.es
 
@@ -20,7 +20,7 @@
 │  D. DOSSIER TÉCNICO — FUNDAMENTOS ................... §D.1–D.4     │
 │  E. DOCUMENTACIÓN OFICIAL WIX APPS Y APIS ........... §E.1–E.12    │
 │  F. DOSSIER — MODELO CMS Y ARQUITECTURA ............. §F.5–F.23    │
-│  G. ESQUEMA DETALLADO 13 COLECCIONES NATIVE ......... §G.1–G.14    │
+│  G. ESQUEMA DETALLADO 15 COLECCIONES NATIVE ......... §G.1–G.16    │
 │  H. REALIDAD FÍSICA DEL NEGOCIO ..................... §H.1–H.7     │
 │  I. CAPA 3 — REGISTRO EXTERNO SHAREPOINT ............ §I.0–I.8     │
 │  J. ANEXO TÉCNICO MCP/CLI/DIAGNÓSTICO/IA ............ §J.1–J.6     │
@@ -3843,27 +3843,317 @@ export default defineWixConfig({
 
 
 
-## 24. Estado de repositorio, workflows y validaciones (2026-11-01)
+## 24. Estado consolidado del repositorio, Wix y validaciones (corte 2026-11-01)
 
-### 24.1 Repositorio y CI
+> **Esta sección sustituye cualquier estado anterior de repositorio, CI, Preview o QA que figure en apartados históricos.** Las secciones técnicas anteriores describen arquitectura y decisiones; esta sección fija el estado temporal más reciente verificado. No convertir evidencia histórica en prueba actual.
 
-- Repositorio: `nachoortegazgz/marianmadridz`; rama `main`; commit auditado: `4b0ba7bad5225ec5c8984293572a6abe0713d823`.
-- PR #47 integrada. Run backend quality gates `41285908197` terminó `success`; esto acredita únicamente los gates de ese workflow.
-- `.github/workflows/backend-tests.yml` conserva íntegramente el workflow acordado por el usuario, incluido `npm install --ignore-scripts --no-audit --no-fund`, jobs y matriz Windows Node 24.22.1/26.12.1. No sustituir por `npm ci` ni reformatear su lógica.
+### 24.1 Identidad y punto de control
 
-### 24.2 Secretos
+| Elemento | Estado verificado |
+|---|---|
+| Repositorio canónico | `nachoortegazgz/marianmadridz` |
+| Rama de referencia | `main` |
+| HEAD auditado | `847a9d2481494c5ba804300c4ef9547e910eb220` (`847a9d2`) |
+| Último cambio integrado en ese HEAD | PR #63 — ventana de disponibilidad de 15 días |
+| Sitio de QA indicado por el titular | `https://www.marianmadrid.es` |
+| Zona horaria operativa | `Europe/Madrid` |
+| Moneda | EUR |
+| PR #64 | Checkpoint Phase 0 documental; abierta y no integrada en el momento de este corte |
+| Alcance de publicación | No se ha ejecutado `wix publish` como parte de esta consolidación |
 
-- Contrato consolidado en §G.11.3 y §F.21.6. En la revisión del workflow activo se confirmó `secrets.CLI_API_KEY`; no se leyó ni se puede revelar su valor. No se ha ejecutado un escaneo histórico completo de secretos.
+**Regla de identidad:** no usar repositorios históricos o copias locales anidadas como fuente de verdad. El repositorio canónico es exclusivamente `nachoortegazgz/marianmadridz`. Antes de cada cambio se debe registrar el HEAD real de `main` y crear rama desde ese SHA.
 
-### 24.3 Workflow Wix Preview
+### 24.2 Cambios funcionales y de seguridad integrados
 
-- El workflow operativo descrito en §J.2.2 se conserva sin cambios: el usuario confirma que evita el bloqueo y es funcional; el run `41285908135` registró `success`. No se modifica por motivos cosméticos.
-- Su éxito no certifica por sí solo reservas simples/duales, pagos, HTTP functions ni frontend end-to-end.
+- **PR #51:** resolución estricta de servicio por GUID/slug, prioridad GUID, normalización ASCII del slug y rechazo de ambigüedad.
+- **PR #52–#57:** correcciones del contexto y resolución de servicio del calendario, manteniendo la selección inequívoca; los cambios deben seguir verificándose en runtime.
+- **PR #61:** la consulta fiscal de movimiento por reserva exige `requireCajero(traceId)` antes de consultar el ledger.
+- **PR #62:** regresión negativa para comprobar que personal no cajero queda denegado antes de cualquier consulta de ledger.
+- **PR #63:** ventana de disponibilidad ampliada de 14 a 15 días, con configuración frontend/backend alineada y test offline de paridad.
 
-### 24.4 Criterios pendientes
+No deducir de estas integraciones que toda la experiencia de reservas esté certificada en Wix publicado. CI valida código y fixtures; no sustituye Preview, pruebas runtime ni pruebas de negocio.
 
-1. Smoke test de `node:crypto` en runtime Wix real, sin mutaciones de datos (§G.11.3).
-2. Generación oficial de `src/velo.dependencies.json` y evaluación de la regla ESLint correspondiente (§J.6).
-3. QA E2E de reserva simple y dual: selección por `resourceId`, conservación del `scheduleId` nativo del slot, gap, rollback F2, pagos y cancelaciones (§9.1–§9.2 y §F.16).
-4. Resolver la cifra histórica de tests (182 frente a 158) con output reproducible; no usarla como métrica actual.
+### 24.3 CI backend y límites de la evidencia
 
+- Workflow Backend quality gates: run `41300896674`, estado `success`, 4/4 jobs completados.
+- Incluye regresión offline en Node 24.22.1 y 26.12.1, instalación/lint y suites Layer 1 y Layer 2.
+- Resultado: **gates automatizados offline superados en ese commit**.
+- No acredita por sí solo: autenticación real Wix, permisos efectivos de CMS, creación de reservas, pagos, notificaciones, comportamiento del calendario HTML, concurrencia real, cumplimiento fiscal ni funcionamiento del sitio publicado.
+
+### 24.4 Wix Preview: bloqueo P0 no cerrado
+
+En el HEAD auditado, el archivo `.github/workflows/wix-preview-validation.yml` todavía contiene el patrón:
+
+```bash
+grep -Eiq "ready|localhost|127\\.0\\.1|preview.*started|http"
+```
+
+El run #25 (`41300896658`) se marcó SUCCESS, pero el artefacto de log contiene `NonInteractiveTerminal`, `Raw mode is not supported` y `This command is not supported in non-interactive terminals`. La coincidencia genérica `http` puede aceptar una URL de documentación del stacktrace; por tanto, ese SUCCESS es un **falso positivo** y no demuestra que Wix Preview se haya creado.
+
+**Estado correcto: PREVIEW NO VALIDADO.** No afirmar que el workflow crea un Preview funcional hasta que un run posterior:
+1. ejecute el comando Wix CLI sin error;
+2. obtenga una URL de Preview real con el patrón de dominio esperado por Wix (no cualquier URL HTTP);
+3. falle si el proceso termina antes de generar esa URL o vence el timeout;
+4. conserve el log como artefacto;
+5. permita abrir y revisar el Preview generado.
+
+La corrección debe hacerse en rama/PR separada, con fallo cerrado. No basta con que el job aparezca verde. No cambiar el workflow por una solución supuesta: comprobar antes el comando y el comportamiento con la documentación oficial vigente de Wix CLI for Sites. Este bloqueo precede a la certificación de frontend.
+
+### 24.5 CMS vivo y Stores
+
+Auditoría de solo lectura documentada el 2026-11-01:
+- Data Collections API respondió HTTP 200.
+- Se observaron 35 colecciones: 15 NATIVE de negocio y 20 WIX_APP.
+- Las 15 colecciones NATIVE documentadas en SSOT fueron localizadas.
+- `MapaStaff` contiene, entre otros, `staffMemberId` y `active`. No eliminar ni renombrar esos campos hasta inventariar consumidores y preparar migración.
+- La presencia de una colección/campo no prueba permisos efectivos, hooks, integridad de registros ni consumo runtime.
+- Wix Stores continúa en Catalog V1. Catalog V3 no está migrado ni activado.
+- Cart V2 tiene evidencia de SDK/tests offline; no equivale a compra real en runtime.
+
+No ejecutar escrituras CMS para “completar” el inventario. Toda reconciliación destructiva requiere comparación de datos, consumidores y plan de reversión.
+
+### 24.6 Layer 1 — Reservas: estado y pendientes
+
+**Confirmado**
+- Tests offline Layer 1 superados en el run indicado.
+- Ventana de disponibilidad frontend/backend alineada a 15 días.
+- Consulta Wix Bookings de solo lectura realizada para el servicio probado entre 2026-11-02 y 2026-11-16: se observaron fechas con slots en 11 días; el 2026-11-02 no ofrecía slots.
+- La lectura de slots no creó ni canceló reservas.
+- Resolución de servicio por GUID/slug y protección de consulta fiscal están integradas según las PR citadas.
+
+**Pendiente de validar en Wix runtime**
+1. Comportamiento del calendario HTML: fecha inicial seleccionada, cambio de fecha y sincronización con la ventana de 15 días.
+2. Consulta de slots con los identificadores reales del slot: `serviceId`, `resourceId`, `scheduleId` y ubicación, respetando el contrato SDK/REST de §16.
+3. Reserva simple controlada en QA, solo bajo las condiciones de §25.
+4. Persistencia de profesional/recurso y correspondencia con el slot nativo.
+5. Consulta, reprogramación y cancelación controlada de una reserva simple.
+6. Webhooks/notificaciones y consistencia de estados, sin cobros reales.
+7. Checkout Cart V2 / Bookings Writer V2 en entorno de prueba autorizado, sin confundir mocks con runtime.
+
+**Exclusión expresa del titular:** no ejecutar ni presentar como requisito pendiente una prueba E2E real de reserva dual F1+F2. La reserva dual puede analizarse mediante tests offline, inspección de registros existentes y lecturas de solo lectura; queda excluida la creación real de una pareja dual como prueba de extremo a extremo hasta nueva instrucción expresa.
+
+### 24.7 Layer 2 — Caja, ledger y fiscalidad: estado y pendientes
+
+**Confirmado**
+- Tests offline Layer 2 superados en el run indicado.
+- Consulta fiscal por booking protegida con autorización de cajero.
+- Test negativo comprueba denegación a personal no cajero antes de consultar el ledger.
+- Se observaron en CMS las colecciones `MovimientosCaja`, `CajaActual`, `HistoricoCierresZ`, `LibroAsientosContablesDetalle`, `ControlOperativo` y `RegistrosHorariosStaff`.
+
+**Pendiente de validación controlada**
+1. Permisos efectivos de CMS y autorización por cada WebMethod fiscal/operativo.
+2. Atomicidad/compare-and-set de movimiento y saldo bajo concurrencia.
+3. Unicidad/idempotencia de `transactionId`, `eventId` y tokens de control.
+4. Continuidad SHA-256 en registros QA expresamente autorizados.
+5. Ejecución/reintento/recuperación de cierre Z sin duplicidad.
+6. Existencia de escritor activo para `LibroAsientosContablesDetalle`; no activar proyecciones contables sin validar origen, cuadre y reversión.
+7. Cancelaciones, devoluciones y rectificaciones como nuevos registros; nunca editar/borrar ledgers append-only.
+8. Persistencia real del rate limiting en `ControlOperativo`, incluyendo el caso de identidad anónima sin IP estable.
+9. Integración fiscal y Veri*Factu con entorno y procedimiento autorizados. No emitir documentos fiscales reales durante QA.
+
+**No acreditado:** CI verde no constituye certificación AEAT, Veri*Factu, contable ni fiscal.
+
+### 24.8 Dependencias y tooling
+
+- Revisar avisos de dependencias deprecated y vulnerabilidades npm observados en logs; no ejecutar `npm audit fix --force` sin análisis de ruptura.
+- Generar `src/velo.dependencies.json` únicamente mediante Wix CLI for Sites y el workflow oficial del repositorio; nunca crear el manifiesto manualmente.
+- Mantener desactivada cualquier regla ESLint que dependa de ese manifiesto hasta que el archivo se genere y valide oficialmente.
+- No editar manualmente `wix.lock`; cambios de dependencias requieren instalación soportada, diff y CI.
+- Verificar Node y versión CLI realmente instalados en cada entorno antes de reproducir fallos.
+
+### 24.9 PR y documentación de continuidad
+
+- PR #64 añade `docs/CHECKPOINT-2026-11-01-PHASE0.md` con evidencia y pendientes Layer 1/2. En este corte está abierta y no integrada; no citarla como parte de `main`.
+- Este dossier es el documento de síntesis del proyecto. El checkpoint conserva el detalle de la auditoría Phase 0 y no sustituye las fuentes técnicas ni el estado del código.
+- La actualización de este dossier debe hacerse mediante rama y PR; no editar directamente `main`.
+
+---
+
+## 25. Datos de prueba y protocolo de validación de reservas
+
+**Objetivo:** proporcionar fixtures reutilizables y reglas inequívocas para tests offline, QA Wix y pruebas reales controladas. Los datos de esta sección son sintéticos; no identifican a clientes reales y no deben incorporarse a la base de clientes de producción.
+
+### 25.1 Cliente sintético — fixtures offline
+
+| Campo | Fixture SIMPLE | Fixture DUAL (solo simulación) |
+|---|---|---|
+| Alias interno | `QA-CLIENT-SIMPLE-001` | `QA-CLIENT-DUAL-001` |
+| Nombre | Cliente | Cliente |
+| Apellidos | Prueba Simple | Prueba Dual |
+| Email | `qa.simple@example.test` | `qa.dual@example.test` |
+| Teléfono | Omitido | Omitido |
+| NIF/NIE | No asignar | No asignar |
+| Consentimiento comercial | `false` | `false` |
+| Uso permitido | Fixtures, validadores, mocks y pruebas offline | Fixtures, simulación de saga y tests unitarios/offline |
+| Uso prohibido | No enviar email/SMS; no usar como identidad de cliente real | No crear reservas duales reales ni enviar comunicaciones |
+
+El dominio `.test` está reservado para pruebas y no debe utilizarse para esperar entregabilidad de correo. No inventar teléfonos españoles, NIF/NIE, GUID de cliente, `bookingId`, `resourceId`, `scheduleId` ni IDs de servicio. En tests, usar valores sintéticos claramente etiquetados que no puedan confundirse con identificadores Wix reales.
+
+### 25.2 Fixture técnica de reserva simple
+
+```json
+{
+  "scenarioId": "QA-BOOKING-SIMPLE-001",
+  "traceId": "trace_qa_simple_001",
+  "customerAlias": "QA-CLIENT-SIMPLE-001",
+  "customer": {
+    "firstName": "Cliente",
+    "lastName": "Prueba Simple",
+    "email": "qa.simple@example.test"
+  },
+  "bookingType": "SIMPLE",
+  "serviceId": "WIX_SERVICE_GUID_REAL_SOLO_EN_QA",
+  "resourceId": "WIX_RESOURCE_GUID_REAL_SOLO_EN_QA",
+  "scheduleId": "WIX_SLOT_SCHEDULE_ID_REAL_SOLO_EN_QA",
+  "dateYmd": "YYYY-MM-DD",
+  "timeZone": "Europe/Madrid",
+  "paymentMode": "NO_CHARGE_TEST_ONLY",
+  "expected": {
+    "oneBooking": true,
+    "oneCitasF2Record": true,
+    "bookingType": "SIMPLE",
+    "pairToken": null,
+    "noFiscalMovement": true
+  }
+}
+```
+
+Los valores `WIX_*_REAL_SOLO_EN_QA` y `YYYY-MM-DD` son marcadores, no IDs utilizables. El test runner debe sustituirlos por IDs recuperados en tiempo de ejecución desde Wix QA y por una fecha/slot que siga disponible. Nunca copiar estos marcadores a CMS.
+
+### 25.3 Fixture técnica dual — exclusivamente offline
+
+```json
+{
+  "scenarioId": "QA-BOOKING-DUAL-SIM-001",
+  "traceId": "trace_qa_dual_sim_001",
+  "customerAlias": "QA-CLIENT-DUAL-001",
+  "bookingType": "DUAL_F1_F2_SIMULATION",
+  "primaryServiceGuid": "SYNTHETIC_SERVICE_F1",
+  "secondaryServiceGuid": "SYNTHETIC_SERVICE_F2",
+  "resourceId": "SYNTHETIC_RESOURCE",
+  "scheduleId": "SYNTHETIC_SLOT_SCHEDULE",
+  "phase1DurationMinutes": 30,
+  "exposureDurationMinutes": 20,
+  "phase2DurationMinutes": 25,
+  "expectedGapMinutes": 20,
+  "expected": {
+    "phase2StartOffsetMinutes": 50,
+    "sameResource": true,
+    "pairTokenLinksBothPhases": true,
+    "realWixBookingsCalls": false,
+    "realNotifications": false,
+    "realPayments": false
+  }
+}
+```
+
+Esta fixture solo comprueba cálculo, vínculo, validaciones y compensación simulada. No habilita una prueba real dual. La exclusión del titular en §24.6 prevalece.
+
+### 25.4 Reglas de identificación e invariantes de test
+
+- `serviceId`: ID del servicio nativo Wix Bookings usado en consulta de slots.
+- `primaryServiceGuid`: servicio simple o Fase 1 definido por el catálogo/contrato del motor.
+- `secondaryServiceGuid`: servicio Fase 2 únicamente para simulación dual o flujos duales autorizados.
+- `resourceId`: GUID del recurso/profesional de Bookings.
+- `scheduleId`: identificador de agenda/slot devuelto por Bookings; no es sinónimo de `resourceId`.
+- `bookingId`: solo el GUID devuelto por Wix al crear/consultar una reserva real; no se inventa.
+- `pairToken`: UUID v4 generado por el motor para vincular F1/F2; no se crea para reservas simples.
+- Fechas y horas se interpretan en `Europe/Madrid`; almacenar y comparar timestamps con conversión explícita UTC/local.
+- Toda ejecución automatizada lleva `scenarioId`, `traceId`, timestamp, versión/commit, entorno, resultado y evidencia no sensible.
+- No guardar PII real en logs, fixtures, capturas o artefactos CI. Enmascarar email/teléfono y excluir tokens, cookies, API keys y secretos.
+
+### 25.5 Condiciones obligatorias antes de una prueba real en Wix
+
+Una prueba se considera **real** si consulta o modifica datos del sitio Wix, Bookings, CMS, eCommerce o envía comunicaciones. Antes de iniciar:
+1. Confirmar por escrito el entorno y alcance: Preview, QA publicado o producción. `marianmadrid.es` es el sitio indicado por el titular para QA; no asumir que exista una réplica aislada.
+2. Registrar commit SHA, rama, versión CLI/Node, fecha/hora `Europe/Madrid`, escenario y responsable.
+3. Obtener autorización explícita del titular para cada operación de escritura. La autorización para leer slots no autoriza a crear/cancelar reservas ni a cobrar.
+4. Usar un cliente de prueba controlado por el titular. Para probar entrega real, sustituir el email `.test` por un buzón de QA controlado y usar un teléfono únicamente si el titular facilita uno controlado; nunca usar datos de terceros.
+5. Usar servicio, profesional/recurso, sede y slot reales recuperados del entorno. No fabricar GUIDs ni modificar disponibilidad laboral para forzar el test.
+6. Confirmar que el slot sigue disponible inmediatamente antes de reservar; el backend debe revalidarlo en el momento de la escritura.
+7. No iniciar checkout ni pagos reales. Si Wix exige pago, depósito o método de pago que pueda capturar fondos, detener el test hasta disponer de un modo de prueba oficialmente soportado y verificado.
+8. Revisar destinatarios y plantillas de email/SMS antes de la operación. Las notificaciones pueden enviarse a clientes y personal reales.
+9. Acordar previamente la cancelación/limpieza permitida, su responsable y el impacto de notificaciones. No borrar registros append-only ni intentar “limpiar” ledgers.
+10. Guardar evidencia mínima redactada/enmascarada y comprobar el estado final en Bookings y CMS.
+
+### 25.6 Matriz de operaciones permitidas
+
+| Operación | Offline | Wix solo lectura | Wix con escritura |
+|---|---:|---:|---:|
+| Resolver servicio por GUID/slug | Sí | Sí | No requiere escritura |
+| Consultar disponibilidad | Mock | Sí | No requiere escritura |
+| Simular reserva simple | Sí | No | No |
+| Crear reserva simple real | No | No | Solo autorización explícita + condiciones §25.5 |
+| Cancelar reserva simple de QA | Mock | No | Solo autorización explícita y plan de notificaciones |
+| Crear reserva dual F1+F2 real | No | No | **Excluido por instrucción del titular** |
+| Simular dual/gap/rollback | Sí | No | No |
+| Crear/cobrar pedido o pago | Mock | Lectura si procede | **No en QA ordinario** |
+| Emitir ticket/factura o asiento fiscal | Mock | Lectura si procede | **No en QA ordinario** |
+| Escribir/eliminar ledger | No | No | **Prohibido como limpieza de test** |
+| Verificar permisos CMS | Sí, mocks | Lectura de configuración | No cambiar permisos sin aprobación |
+
+### 25.7 Criterio de aceptación de una prueba simple real
+
+La prueba solo se declara superada si se conserva evidencia de todos los puntos:
+- Servicio mostrado y GUID resuelto corresponden exactamente.
+- Slot ofrecido y slot reservado coinciden en fecha, hora, zona horaria, profesional/recurso y sede.
+- El backend revalida disponibilidad antes de crear.
+- Wix devuelve un `bookingId` válido y el registro `CitasF2` queda vinculado a ese ID con `bookingType = SIMPLE`.
+- No se crea una segunda reserva ni `pairToken`.
+- No se produce cobro ni movimiento fiscal.
+- Las notificaciones previstas llegan solo a buzones/dispositivos de QA autorizados.
+- La cancelación, si fue autorizada, deja el estado esperado y no rompe registros append-only.
+- El resultado se registra con commit, `traceId`, `scenarioId`, hora y evidencia redactada.
+
+Si un solo punto no se verifica, el resultado es **PARCIAL** o **FALLIDO**, nunca “correcto por CI”.
+
+---
+
+## 26. Plan de trabajo priorizado y reglas de cierre
+
+### P0 — Corregir y demostrar Wix Preview
+
+- [ ] Corregir el falso positivo de `.github/workflows/wix-preview-validation.yml` en rama separada.
+- [ ] Exigir URL de Preview real, no coincidencias genéricas `http`/localhost/ready.
+- [ ] Confirmar fallo por error de CLI, terminación prematura y timeout.
+- [ ] Conservar logs y revisar un run nuevo.
+- [ ] Abrir el Preview y verificar carga real del sitio.
+
+### P1 — Layer 1: reservas simples
+
+- [ ] Verificar widget HTML/calendario y fecha inicial.
+- [ ] Verificar consulta real de slots y asociación `serviceId`/`resourceId`/`scheduleId`.
+- [ ] Ejecutar prueba simple controlada solo bajo §25.5.
+- [ ] Verificar lectura, reprogramación y cancelación simple.
+- [ ] Verificar notificaciones y estado sin pagos reales.
+
+### P1 — Layer 2: caja y seguridad
+
+- [ ] Verificar permisos CMS efectivos y RBAC en runtime.
+- [ ] Probar atomicidad, idempotencia y concurrencia en QA aislado/controlado.
+- [ ] Verificar cierre Z, continuidad de hash y recuperación sin duplicidad.
+- [ ] Auditar persistencia de rate limit.
+- [ ] Determinar estado real del escritor contable.
+- [ ] Revisar cancelaciones/rectificaciones sin modificar ledgers.
+
+### P2 — Dependencias, CMS y ecosistema
+
+- [ ] Generar `src/velo.dependencies.json` con Wix CLI.
+- [ ] Evaluar dependencias y vulnerabilidades sin actualizaciones forzadas.
+- [ ] Reconciliar consumidores de `MapaStaff.staffMemberId` y `active`.
+- [ ] Mantener Catalog V1 hasta decisión explícita sobre V3.
+- [ ] Verificar Cart V2/Bookings Writer V2 en runtime cuando exista entorno de prueba sin cobro.
+- [ ] Cerrar integración Microsoft 365/SharePoint solo tras ADR, permisos y pruebas de sincronización.
+
+### Reglas de cierre
+
+1. Un cambio de código se integra mediante PR, CI verde y revisión del diff.
+2. Un cambio de configuración Wix requiere evidencia runtime y plan de reversión.
+3. Una prueba de solo lectura no se describe como E2E.
+4. Un test offline no se describe como validación Wix.
+5. Un Preview creado no se describe como sitio publicado.
+6. Un sitio publicado no se describe como negocio operativo sin probar los flujos reales.
+7. No marcar Layer 1 o Layer 2 como cerrada hasta cumplir sus criterios de aceptación y evidencias.
+8. No ejecutar reserva dual E2E real, pagos reales ni escrituras fiscales como parte de QA sin una nueva autorización expresa.
+
+**Fuentes de estado:** repositorio `nachoortegazgz/marianmadridz` (HEAD `847a9d2`), PR #51–#63, workflow Backend quality gates run `41300896674`, Wix Preview run `41300896658` y auditoría CMS de solo lectura de 2026-11-01. Las evidencias y su alcance se describen arriba; los pendientes no se presentan como hechos completados.
