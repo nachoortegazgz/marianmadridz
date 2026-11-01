@@ -1,6 +1,6 @@
 /**
  * MODULE: pages/servicio-2.js
- * VERSION: v5019-HARDENED-UNICODE-SLUG
+ * VERSION: v5020-STRICT-ASCII-SERVICE-LOOKUP
  */
 
 import { location } from "@wix/site-location";
@@ -61,7 +61,8 @@ function decodeUrlValue(value) {
 }
 
 function normalizeLookupValue(value) {
-    return decodeUrlValue(value);
+    const decoded = decodeUrlValue(value);
+    return _safeSlugOrId(decoded);
 }
 
 function showError(message) {
@@ -142,9 +143,7 @@ function getServiceId(service) {
 }
 
 function getServiceSlug(service) {
-    return normalizeLookupValue(
-        service?.slug || ""
-    );
+    return normalizeLookupValue(service?.slug || "");
 }
 
 function getAddonId(item) {
@@ -309,23 +308,16 @@ function normalizeCatalogEntry(data) {
 async function resolveServiceLookup() {
     const query = await location.query();
 
-    const querySlug = normalizeLookupValue(
-        query?.slug
-    );
-
-    if (querySlug) {
-        return querySlug;
+    // Prefer the immutable Wix service GUID when both query params exist.
+    // The slug is SEO/navigation metadata and may be stale after catalog edits.
+    const queryServiceId = text(query?.serviceId);
+    if (queryServiceId && _looksLikeGuid(queryServiceId)) {
+        return queryServiceId.toLowerCase();
     }
 
-    const queryServiceId = text(
-        query?.serviceId
-    );
-
-    if (
-        queryServiceId &&
-        _looksLikeGuid(queryServiceId)
-    ) {
-        return queryServiceId;
+    const querySlug = normalizeLookupValue(query?.slug);
+    if (querySlug) {
+        return querySlug;
     }
 
     const path = await location.path();
