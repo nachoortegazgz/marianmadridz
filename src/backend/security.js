@@ -190,10 +190,12 @@ export async function rateLimiter(
     const burstToleranceMicros = Math.max(0, window * 1000 - intervalMicros);
     const traceId = makeTraceId("rate-limit");
 
+    let storageStage = "HASH_POLICY_KEY";
     try {
         const policyHash = await hashSHA256(
             `${normalizedSurface}|${normalizedKey}|${max}|${window}`
         );
+        storageStage = "HASH_REQUESTER_KEY";
         const requesterHash = await hashSHA256(
             `${normalizedSurface}|${normalizedKey}`
         );
@@ -210,6 +212,7 @@ export async function rateLimiter(
         const now = Date.now();
 
         // Insert-once bootstrap. Duplicate-ID contention is expected and safe.
+        storageStage = "INSERT_BOOTSTRAP";
         try {
             await insertItem(RATE_LIMIT_COLLECTION, {
                 _id: recordId,
@@ -233,6 +236,7 @@ export async function rateLimiter(
         }
 
         for (let attempt = 0; attempt < RATE_LIMIT_CAS_ATTEMPTS; attempt += 1) {
+            storageStage = "READ_RECORD";
             const record = await getItem(
                 RATE_LIMIT_COLLECTION,
                 recordId,
@@ -242,6 +246,7 @@ export async function rateLimiter(
             if (!record) {
                 // Expiry cleanup may race with a request; recreate and retry.
                 const recreateNow = Date.now();
+                storageStage = "INSERT_RECREATE";
                 try {
                     await insertItem(RATE_LIMIT_COLLECTION, {
                         _id: recordId,
@@ -290,6 +295,7 @@ export async function rateLimiter(
                 tat: nextTatMicros,
             };
 
+            storageStage = "ATOMIC_BULK_PATCH";
             const result = await bulkPatchItems(
                 RATE_LIMIT_COLLECTION,
                 [recordId],
@@ -350,9 +356,16 @@ export async function rateLimiter(
         log.error("Distributed rate limiter storage failure", {
             surface: normalizedSurface,
             traceId,
-            message: error?.message || String(error),
+            stage: storageStage,
+            errorName: error?.name || "Error",
+            errorCode: error?.code || null,
+            errorMessage: error?.message || String(error),
+            errorStack: error?.stack || null,
+            details: error?.details || error?.details?.applicationError || null,
         });
-        throw _createRateLimitStorageError(error);
+        const wrapped = _createRateLimitStorageError(error);
+        wrapped.stage = storageStage;
+        throw wrapped;
     }
 }
 

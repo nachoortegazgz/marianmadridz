@@ -342,10 +342,13 @@ function _resolveAvailabilityLocation(service) {
 export async function _getServiceBySlugOrIdInternal(slugOrId, externalTraceId = null, visited = new Set()) {
     const traceId = externalTraceId || makeTraceId("service");
     const raw = _safeTrim(slugOrId);
-    const isGuid = _looksLikeGuid(raw);
-    const clean = isGuid ? raw : raw
-        ? String(raw).split("?")[0].split("#")[0].replace(/^\//, "").replace(/\/$/, "")
+    const lookupValue = raw
+        ? raw.split("?")[0].split("#")[0].replace(/^\/+/, "").replace(/\/+$/, "")
         : "";
+    const isGuid = _looksLikeGuid(lookupValue);
+    // Wix GUIDs are canonicalized to lowercase before querying serviceId.
+    // Slugs remain literal (case-sensitive) CMS keys; do not silently rewrite them.
+    const clean = isGuid ? lookupValue.toLowerCase() : lookupValue;
     const cycleKey = clean.toLowerCase();
     if (visited.has(cycleKey)) {
         return {

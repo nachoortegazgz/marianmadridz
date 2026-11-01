@@ -418,6 +418,28 @@ test('RES-LOOK-01 slug lookup SUCCESS + DTO contract v10.6 (RES-23 + RES-P1-02)'
   assert.strictEqual(res.data.serviceId, row.serviceId);
 });
 
+test('RES-LOOK-01C GUID lookup resolves by canonical serviceId (case-insensitive)', async () => {
+  resetState();
+  await invalidateStaffCache();
+  const row = baseServiceRow({ slug: 'guid-lookup-' + seq });
+  seedService(row);
+  const result = await RW._getServiceBySlugOrIdInternal(row.serviceId.toUpperCase());
+  assert.strictEqual(result.status, 'SUCCESS');
+  assert.strictEqual(result.data.serviceId, row.serviceId);
+  assert.strictEqual(result.data.title, row.title);
+});
+
+test('RES-LOOK-01D slug lookup trims URL delimiters without changing the slug', async () => {
+  resetState();
+  await invalidateStaffCache();
+  const row = baseServiceRow({ slug: 'slug-normalization-' + seq });
+  seedService(row);
+  const result = await RW._getServiceBySlugOrIdInternal('/' + row.slug + '/?source=booking#details');
+  assert.strictEqual(result.status, 'SUCCESS');
+  assert.strictEqual(result.data.serviceId, row.serviceId);
+  assert.strictEqual(result.data.title, row.title);
+});
+
 test('RES-LOOK-01B dual service: linkedPhases GUID preserved end-to-end (v10.6)', async () => {
   resetState();
   await invalidateStaffCache();
