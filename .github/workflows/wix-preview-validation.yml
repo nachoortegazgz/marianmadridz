@@ -61,24 +61,34 @@ jobs:
           set -euo pipefail
           rm -f wix-preview.log
 
-          if ! command -v script >/dev/null 2>&1; then
-            echo "::error::The script utility is required to provide a pseudo-terminal to Wix CLI."
-            exit 1
-          fi
+          printf '\n' | timeout 8m script -q -f -e -c "wix preview" /dev/null > wix-preview.log 2>&1 &
+          preview_pid=$!
+          trap 'kill "${preview_pid}" >/dev/null 2>&1 || true; wait "${preview_pid}" || true' EXIT
 
-          if ! printf '\n' | timeout 8m script -q -e -c "wix preview" /dev/null > wix-preview.log 2>&1; then
-            echo "::error::Wix preview command failed."
-            cat wix-preview.log || true
-            exit 1
-          fi
+          for _ in $(seq 1 240); do
+            if grep -Eoq "https?://wix\\.to/[[:alnum:]]+" wix-preview.log; then
+              echo "Wix preview URL generated successfully."
+              break
+            fi
+
+            if ! kill -0 "${preview_pid}" 2>/dev/null; then
+              wait "${preview_pid}" || true
+              echo "::error::Wix CLI exited before generating a preview URL."
+              cat wix-preview.log || true
+              exit 1
+            fi
+
+            sleep 2
+          done
 
           if ! grep -Eoq "https?://wix\\.to/[[:alnum:]]+" wix-preview.log; then
-            echo "::error::Wix preview exited without producing a verifiable preview URL."
+            echo "::error::Wix preview URL was not generated before timeout."
             cat wix-preview.log || true
             exit 1
           fi
 
-          echo "Wix preview URL generated successfully."
+          kill "${preview_pid}" >/dev/null 2>&1 || true
+          wait "${preview_pid}" || true
 
       - name: Preserve preview output
         if: always()
