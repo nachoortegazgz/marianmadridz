@@ -1585,6 +1585,10 @@ export const getMovimientoByBooking = webMethod(
         }
 
         try {
+            // SiteMember only proves authentication. Fiscal ledger details are
+            // restricted to authorized cashier/admin staff, not every member.
+            await requireCajero(traceId);
+
             const candidates = await dalQuery(MOVIMIENTOS_CAJA_COL)
                 .eq("linkedBookingIds", cleanId)
                 .limit(5)
