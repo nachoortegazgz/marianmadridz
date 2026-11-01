@@ -99,3 +99,47 @@ test("SEC-RL-05 atomic compare-and-set admits no more than the configured burst 
     assert.equal(rows[0].requestCount, 5);
     assert.equal(rows[0].version, 5);
 });
+
+test("SEC-RL-06 denies the request when ControlOperativo bootstrap storage fails", async () => {
+    const originalInsert = wixDataMock.insert;
+    wixDataMock.insert = async () => {
+        const error = new Error("simulated CMS insert outage");
+        error.code = "TEST_STORAGE_OUTAGE";
+        throw error;
+    };
+
+    try {
+        await assert.rejects(
+            rateLimiter({ surface: "security.test", key: "insert-outage" }),
+            (error) => {
+                assert.equal(error.code, "RATE_LIMIT_STORAGE_UNAVAILABLE");
+                assert.equal(error.stage, "INSERT_BOOTSTRAP");
+                return true;
+            }
+        );
+    } finally {
+        wixDataMock.insert = originalInsert;
+    }
+});
+
+test("SEC-RL-07 denies the request when ControlOperativo read storage fails", async () => {
+    const originalGet = wixDataMock.get;
+    wixDataMock.get = async () => {
+        const error = new Error("simulated CMS read outage");
+        error.code = "TEST_STORAGE_OUTAGE";
+        throw error;
+    };
+
+    try {
+        await assert.rejects(
+            rateLimiter({ surface: "security.test", key: "read-outage" }),
+            (error) => {
+                assert.equal(error.code, "RATE_LIMIT_STORAGE_UNAVAILABLE");
+                assert.equal(error.stage, "READ_RECORD");
+                return true;
+            }
+        );
+    } finally {
+        wixDataMock.get = originalGet;
+    }
+});
