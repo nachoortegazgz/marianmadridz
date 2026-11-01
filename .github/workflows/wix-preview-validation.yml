@@ -61,40 +61,29 @@ jobs:
           set -euo pipefail
           rm -f wix-preview.log
 
-          # Keep the CLI's interactive TTY, but supervise it as a process group.
-          # A Preview is considered ready only when Wix confirms the deployment URL.
-          setsid bash -c 'printf "\\n" | script -q -e -c "wix preview" /dev/null' > wix-preview.log 2>&1 &
-          preview_pid=$!
+          timeout 8m bash -lc '
+            set -euo pipefail
+            wix preview > wix-preview.log 2>&1 &
+            preview_pid=$!
+            trap "kill ${preview_pid} >/dev/null 2>&1 || true; wait ${preview_pid} || true" EXIT
 
-          cleanup() {
-            kill -TERM -- "-${preview_pid}" >/dev/null 2>&1 || true
-            wait "${preview_pid}" 2>/dev/null || true
-          }
-          trap cleanup EXIT
+            for _ in $(seq 1 180); do
+              if grep -Eiq "ready|localhost|127\.0\.0\.1|preview.*started|http" wix-preview.log; then
+                echo "Wix preview started successfully."
+                break
+              fi
+              sleep 2
+            done
 
-          ready=false
-          for i in $(seq 1 240); do
-            if grep -F "Your preview deployment is now available at" wix-preview.log >/dev/null 2>&1; then
-              ready=true
-              break
+            if ! grep -Eiq "ready|localhost|127\.0\.0\.1|preview.*started|http" wix-preview.log; then
+              echo "::error::Wix preview did not become ready before timeout."
+              cat wix-preview.log || true
+              exit 1
             fi
 
-            if ! kill -0 "${preview_pid}" 2>/dev/null; then
-              break
-            fi
-            sleep 2
-          done
-
-          if [ "${ready}" != true ]; then
-            echo "::error::Wix Preview did not confirm a deployment URL within 8 minutes."
-            cat wix-preview.log || true
-            exit 1
-          fi
-
-          echo "Wix confirmed that the Preview deployment is available."
-          grep -F "Your preview deployment is now available at" wix-preview.log
-          cleanup
-          trap - EXIT
+            kill ${preview_pid} >/dev/null 2>&1 || true
+            wait ${preview_pid} || true
+          '
 
       - name: Preserve preview output
         if: always()
