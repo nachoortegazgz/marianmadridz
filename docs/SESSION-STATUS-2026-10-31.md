@@ -2,18 +2,22 @@
 
 **Fecha de actualización:** 2026-11-01  
 **Repositorio canónico:** https://github.com/nachoortegazgz/marianmadridz  
-**Rama de documentación actual:** `docs/canonical-repository-reference-2026-11-01`  
-**HEAD de `main` verificado:** `1c1165d32795fa1fc8b646f4a3e249af8e58e228`  
-**Último cambio funcional integrado:** [PR #22 — Bookings V2 cancellation event contract](https://github.com/nachoortegazgz/marianmadridz/pull/22)  
+**Rama de trabajo:** `main`  
+**HEAD de `main` verificado:** `98274f90cf4a61c9c3c34046a3bb19c8b8c89430`  
+**Último cambio funcional integrado:** [PR #32 — Fix backend hashing with Node.js crypto](https://github.com/nachoortegazgz/marianmadridz/pull/32)  
 **Wix Site ID:** `188bed94-177c-4bc9-a9f0-35080d874f3e`  
 **Dominio:** https://www.marianmadrid.es/
 
 ## 1. Estado verificado
 
 - La PR #19 (checkout Cart V2) está **fusionada** en `main` mediante `ff16a703856b3f997ff73e1a56932e185f72a66a`.
-- La PR #22 (contrato de evento de cancelación Bookings V2) está **fusionada** en `main`; su merge commit es el HEAD verificado `1c1165d32795fa1fc8b646f4a3e249af8e58e228`.
+- La PR #22 (contrato de evento de cancelación Bookings V2) permanece **fusionada** en `main`; su merge commit ya no es el HEAD actual.
+- La PR #32 (SHA-256/HMAC mediante `node:crypto`) está **fusionada** en `main`; merge commit `0ba3cb6d59c434218d87f0c8aba8974ab3833488`.
+- La PR #33 (workflow de Preview Wix) está **fusionada** en `main`; commit `98274f90cf4a61c9c3c34046a3bb19c8b8c89430`.
 - La PR #23 (envoltorio webhook REST) está **cerrada sin merge**; no se incorpora su implementación.
-- GitHub Actions para el HEAD actual `1c1165d`: runs **41251109442** y **41250779345**, ambos `completed / success`. En ambos pasan los cuatro jobs: instalación limpia + lint, regresión Windows Node.js 24.22.1, regresión Windows Node.js 26.12.1 y suite backend offline.
+- CI de PR #32: run **41276853970**, `completed / success`; cuatro jobs correctos (offline, Windows Node.js 24.22.1, Windows Node.js 26.12.1, instalación limpia + lint).
+- CI de PR #33: run **41277237501**, `completed / success`; los mismos cuatro jobs correctos.
+- Preview Wix tras merge de PR #33: run **41277316511**; comprobar resultado y artefacto antes de declarar compatibilidad runtime.
 - La aprobación de lint no cubre la regla `@wix/cli/no-invalid-backend-import`, porque permanece desactivada en `.eslintrc.json` hasta generar el manifiesto Velo.
 - Wix identifica el Site ID anterior como **Published**, plan Premium, dominio personalizado, Editor clásico y Velo habilitado.
 - Wix Apps observadas: Bookings, Stores **Catalog V1**, Invoices **V1**, Members, Forms & Payments y Gift Cards.
@@ -83,14 +87,14 @@ Esta confirmación permite planificar pruebas persistentes controladas. No obsta
 ## 5. Publicación y sincronización
 
 - **GitHub:** el estado se consolida en este documento y en la descripción de PR #19.
-- **Wix:** no se ha ejecutado `wix publish`, ni una publicación de Editor, ni una mutación CMS. El contexto Wix disponible identifica el sitio y sus aplicaciones, pero no proporciona evidencia de que el código de la rama feature esté sincronizado con el Editor ni de que sea seguro publicarlo.
+- **Wix:** no se ha ejecutado `wix publish`, publicación desde Editor ni mutación CMS. La documentación oficial indica que un commit en la rama predeterminada sincroniza el código con el Editor (puede existir demora). Tras el merge de PR #32 y #33, el contexto Wix consultado aún muestra `Updated: Nov 01, 2026, 05:21`; por tanto, la sincronización efectiva del Editor no está confirmada.
 - No publicar una rama Draft/no fusionada con manifiesto Velo pendiente y E2E runtime sin completar.
 - La publicación queda bloqueada hasta completar QA, revisar el diff contra `main`, validar en el Editor vinculado y aprobar explícitamente el commit de despliegue.
 
 ## 6. Secuencia recomendada para la próxima sesión
 
-1. Verificar el HEAD de `main`, las PR y los checks del commit antes de cada cambio. Último HEAD observado: `1c1165d`.
-2. Generar `src/velo.dependencies.json` mediante Wix CLI for Sites; no crear ni editar manualmente el manifiesto. El workflow existente solo se activa con `push` a ramas `feat/**` o `workflow_dispatch`; el conector disponible no expone dispatch.
+1. Verificar el HEAD de `main`, las PR y los checks del commit antes de cada cambio. Último HEAD observado: `98274f90cf4a61c9c3c34046a3bb19c8b8c89430`.
+2. Generar `src/velo.dependencies.json` mediante Wix CLI for Sites; no crear ni editar manualmente el manifiesto. El workflow de manifiesto solo se activa con `push` a ramas `feat/**` o `workflow_dispatch`. El nuevo workflow Wix Preview se ejecuta en `main` tras cambios relevantes y nunca publica.
 3. Reactivar `@wix/cli/no-invalid-backend-import` únicamente después de generar el manifiesto y confirmar que el lint completo pasa.
 4. Ejecutar regresión offline, instalación limpia y lint sobre el HEAD candidato; exigir CI verde del commit exacto.
 5. Inventariar servicios, recursos y horarios Bookings mediante lecturas en QA.
@@ -107,6 +111,22 @@ Esta confirmación permite planificar pruebas persistentes controladas. No obsta
 - La búsqueda de código de GitHub no devolvió coincidencias indexadas; la verificación de referencias se hizo leyendo directamente los documentos versionados identificados en el árbol Git.
 - Esta actualización solo cambia documentación. No altera código, CMS, reservas ni publicación Wix.
 
-## 8. Regla de integridad de este informe
+## 9. Actualización tras PR #32 y PR #33 (2026-11-01)
+
+- PR #32 reemplaza Web Crypto global no disponible en el Preview observado por `node:crypto` (`createHash` y `createHmac`). Añade vectores conocidos SHA-256 y HMAC-SHA256.
+- Se mantiene la API async, UTF-8, hex minúscula y comportamiento de entradas vacías. El rate limiter distribuido conserva el modo fail-closed; no se añadió fallback en memoria ni bypass.
+- CI de la PR #32 pasó en Node.js 24.22.1 y 26.12.1 y en la suite offline. Esto no equivale a validar el runtime Wix.
+- PR #33 añade `.github/workflows/wix-preview-validation.yml`, ejecutado en `main` con Wix CLI for Sites y el secreto `CLI_API_KEY`. Solo ejecuta `wix preview`; no ejecuta `wix publish`.
+- Run de Preview **41277316511** completó con `failure`: `wix preview` lanzó `NonInteractiveTerminal` porque Ink requiere TTY. No se generó URL de Preview y no se ha probado `node:crypto` en Wix.
+- PR #35 añadió captura de `wix preview --help`; run **41277461940** volvió a fallar en la ejecución interactiva, pero la ayuda confirmó la opción oficial `--source <local|remote>`.
+- PR #36 probó `wix preview --source local`; tras autenticación correcta, Wix devolvió HTTP 404 `PUBLISH_PIPELINE_TASK_NOT_FOUND` al consultar el pipeline de despliegue. Reintento idéntico también falló.
+- PR #38 probó `wix preview --source remote` (último commit de `origin/main`); devolvió el mismo HTTP 404. No se generó URL de Preview.
+- PR #37 se cerró sin merge: la documentación específica de Wix CLI for Sites no incluye `wix build`; no se mezcló un comando de otra modalidad de CLI.
+- Request IDs Wix para soporte: `1793511405.3286114731421492`, `1793511448.6149380596631488`, `1793511623.3689750535521483`.
+- Wix CLI autenticó correctamente la cuenta `nachoortegazgz`; el error se produce en el pipeline remoto de Preview, antes de ejecutar el backend. `node:crypto` aún no está validado en runtime Wix.
+- El entorno de ejecución disponible aquí no tiene acceso de red a GitHub ni CLI Wix autenticado; la validación Preview se delega al workflow de GitHub Actions.
+- No publicar hasta que el Preview compile y la ruta real de lookup supere `HASH_POLICY_KEY`, `HASH_REQUESTER_KEY`, bootstrap/lectura y escritura atómica, verificando logs de Wix.
+
+## 10. Regla de integridad de este informe
 
 Este documento separa hechos verificados, cambios existentes en GitHub y tareas pendientes. No afirma que se hayan creado reservas, escrito resultados en CMS, sincronizado el código con Wix ni publicado cambios, porque esas acciones no se han ejecutado en esta sesión.

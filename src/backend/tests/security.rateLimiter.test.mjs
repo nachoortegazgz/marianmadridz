@@ -2,6 +2,7 @@ import test, { beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 
 import { rateLimiter } from "../security.js";
+import { hashSHA256, hmacSha256Hex } from "../securityEngine.js";
 import { wixDataMock } from "./loader.mjs";
 
 const originalDateNow = Date.now;
@@ -98,4 +99,63 @@ test("SEC-RL-05 atomic compare-and-set admits no more than the configured burst 
     assert.equal(rows.length, 1);
     assert.equal(rows[0].requestCount, 5);
     assert.equal(rows[0].version, 5);
+});
+
+test("SEC-RL-06 denies the request when ControlOperativo bootstrap storage fails", async () => {
+    const originalInsert = wixDataMock.insert;
+    wixDataMock.insert = async () => {
+        const error = new Error("simulated CMS insert outage");
+        error.code = "TEST_STORAGE_OUTAGE";
+        throw error;
+    };
+
+    try {
+        await assert.rejects(
+            rateLimiter({ surface: "security.test", key: "insert-outage" }),
+            (error) => {
+                assert.equal(error.code, "RATE_LIMIT_STORAGE_UNAVAILABLE");
+                assert.equal(error.stage, "INSERT_BOOTSTRAP");
+                return true;
+            }
+        );
+    } finally {
+        wixDataMock.insert = originalInsert;
+    }
+});
+
+test("SEC-RL-07 denies the request when ControlOperativo read storage fails", async () => {
+    const originalGet = wixDataMock.get;
+    wixDataMock.get = async () => {
+        const error = new Error("simulated CMS read outage");
+        error.code = "TEST_STORAGE_OUTAGE";
+        throw error;
+    };
+
+    try {
+        await assert.rejects(
+            rateLimiter({ surface: "security.test", key: "read-outage" }),
+            (error) => {
+                assert.equal(error.code, "RATE_LIMIT_STORAGE_UNAVAILABLE");
+                assert.equal(error.stage, "READ_RECORD");
+                return true;
+            }
+        );
+    } finally {
+        wixDataMock.get = originalGet;
+    }
+});
+
+
+test("SEC-CRYPTO-01 computes standard SHA-256 vectors without Web Crypto", async () => {
+    assert.equal(
+        await hashSHA256("abc"),
+        "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+    );
+});
+
+test("SEC-CRYPTO-02 computes standard HMAC-SHA256 vectors", async () => {
+    assert.equal(
+        await hmacSha256Hex("key", "The quick brown fox jumps over the lazy dog"),
+        "f7bc83f430538424b13298e6aa6fb143ef4d59a14946175997479dbc2d1a3cd8"
+    );
 });

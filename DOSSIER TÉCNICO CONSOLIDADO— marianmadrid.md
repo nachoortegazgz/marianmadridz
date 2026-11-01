@@ -1,4 +1,4 @@
-# DOSSIER TÉCNICO — marianmadrid.es v10.0
+# DOSSIER TÉCNICO — marianmadrid.es versión.z
 
 **Proyecto:** Marian Madrid Peluquería y Estética · **Fecha:** 2026-11-01 · **Versión SSOT:** version.z **Version consolidada redactada usando como fuentes el resto de documentos de este repositorio**
 
@@ -597,7 +597,6 @@ J.6  Posibles datos faltantes en el dossier (7 filas)
 
 | Contenido | Aparece en | Fuente canónica recomendada |
 |---|---|---|
-| 5 prioridades en orden estricto | §A.1 · §C.1.1 · Anexo Resumen Ejecutivo | **§A.1** (el anexo está desordenado) |
 | Matriz de personal | §D.4.2 · §F.22.1 | §F.22.1 (más completa) |
 | App IDs | §D.3.1 · §F.22.2 | §F.22.2 |
 | Identificadores transversales | §D.4.3 · §F.7.3 | §F.7.3 |
