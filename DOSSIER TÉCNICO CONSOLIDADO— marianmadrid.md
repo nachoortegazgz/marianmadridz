@@ -1,6 +1,6 @@
 # DOSSIER TÉCNICO CONSOLIDADO — marianmadrid.es versión.z
 
-**Proyecto:** Marian Madrid Peluquería y Estética · **Fecha de consolidación:** 2026-11-01 · **SSOT base:** v10.0 · **Repositorio canónico:** `nachoortegazgz/marianmadridz` · **Documento consolidado:** arquitectura, estado, evidencias y protocolo de QA. Los estados operativos se rigen por §24; los datos de prueba y condiciones de validación por §25; el plan por §26.
+**Proyecto:** Marian Madrid Peluquería y Estética · **Repositorio canónico:** `nachoortegazgz/marianmadridz` · **www.marianmadrid.es:** arquitectura, estado, evidencias y protocolo para su uso como QA. Los estados operativos se rigen por §24; los datos de prueba y condiciones de validación por §25; el plan por §26.
 
 # MAPA DEL DOCUMENTO — DOSSIER TÉCNICO CONSOLIDADO marianmadrid.es
 
