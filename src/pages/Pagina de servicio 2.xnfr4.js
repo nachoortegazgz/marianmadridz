@@ -626,49 +626,33 @@ $w.onReady(async () => {
         return;
     }
 
-    let lookupValue;
-
     try {
-        lookupValue =
-            await resolveServiceLookup();
-    } catch (error) {
-        console.error(
-            "[servicio-2] Error resolviendo la URL",
-            {
-                traceId,
-                code: error?.code,
-                message: error?.message
-            }
-        );
-
-        showError(
-            "No se pudo interpretar la dirección del servicio."
-        );
-
-        return;
-    }
-
-    if (!lookupValue) {
-        showError(
-            "No se pudo localizar el servicio en la URL."
-        );
-        return;
-    }
-
-    try {
+        // Instalar el listener antes de resolver URL/CMS evita perder MM_READY.
         bridge = createWidgetBridge(
             widget,
             {
                 traceId,
                 allowOpaqueOrigin: true,
+                handshakeTimeoutMs: 30000,
+                contextTimeoutMs: 120000,
+                contextAttemptTimeoutMs: 30000,
 
                 onContextReady: async () => {
-                    resolvedService =
-                        await loadService(
-                            lookupValue,
-                            traceId
-                        );
+                    let lookupValue;
+                    try {
+                        lookupValue = await resolveServiceLookup();
+                    } catch (error) {
+                        error.code = error.code || "SERVICE_URL_RESOLUTION_FAILED";
+                        throw error;
+                    }
 
+                    if (!lookupValue) {
+                        const error = new Error("No se pudo localizar el servicio en la URL.");
+                        error.code = "SERVICE_IDENTIFIER_MISSING";
+                        throw error;
+                    }
+
+                    resolvedService = await loadService(lookupValue, traceId);
                     return resolvedService;
                 },
 
