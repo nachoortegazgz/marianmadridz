@@ -61,29 +61,24 @@ jobs:
           set -euo pipefail
           rm -f wix-preview.log
 
-          timeout 8m bash -lc '
-            set -euo pipefail
-            wix preview > wix-preview.log 2>&1 &
-            preview_pid=$!
-            trap "kill ${preview_pid} >/dev/null 2>&1 || true; wait ${preview_pid} || true" EXIT
+          if ! command -v script >/dev/null 2>&1; then
+            echo "::error::The script utility is required to provide a pseudo-terminal to Wix CLI."
+            exit 1
+          fi
 
-            for _ in $(seq 1 180); do
-              if grep -Eiq "ready|localhost|127\.0\.0\.1|preview.*started|http" wix-preview.log; then
-                echo "Wix preview started successfully."
-                break
-              fi
-              sleep 2
-            done
+          if ! printf '\n' | timeout 8m script -q -e -c "wix preview" /dev/null > wix-preview.log 2>&1; then
+            echo "::error::Wix preview command failed."
+            cat wix-preview.log || true
+            exit 1
+          fi
 
-            if ! grep -Eiq "ready|localhost|127\.0\.0\.1|preview.*started|http" wix-preview.log; then
-              echo "::error::Wix preview did not become ready before timeout."
-              cat wix-preview.log || true
-              exit 1
-            fi
+          if ! grep -Eoq "https?://wix\\.to/[[:alnum:]]+" wix-preview.log; then
+            echo "::error::Wix preview exited without producing a verifiable preview URL."
+            cat wix-preview.log || true
+            exit 1
+          fi
 
-            kill ${preview_pid} >/dev/null 2>&1 || true
-            wait ${preview_pid} || true
-          '
+          echo "Wix preview URL generated successfully."
 
       - name: Preserve preview output
         if: always()
