@@ -10,6 +10,8 @@ const serviceUrl = new URL("../../pages/Pagina%20de%20servicio%202.xnfr4.js", im
 const calendarSource = await readFile(calendarUrl, "utf8");
 const serviceSource = await readFile(serviceUrl, "utf8");
 const bridgeSource = await readFile(new URL("../../public/widgetBridge.js", import.meta.url), "utf8");
+const calendarWidgetSource = await readFile(new URL("../../../%23html1.txt", import.meta.url), "utf8");
+const serviceWidgetSource = await readFile(new URL("../../../%23htmlWidgetCustomService.txt", import.meta.url), "utf8");
 
 test("BOOK-FLOW-CONTRACT-01 protocol exposes expanded time windows and exactly three context attempts", () => {
   assert.equal(PROTOCOL_UI.HANDSHAKE_TIMEOUT_MS, 30000);
@@ -18,6 +20,18 @@ test("BOOK-FLOW-CONTRACT-01 protocol exposes expanded time windows and exactly t
   assert.equal(PROTOCOL_UI.CONTEXT_ATTEMPTS, 3);
   assert.equal(PROTOCOL_UI.RETRY_BASE_DELAY_MS, 500);
   assert.equal(PROTOCOL_UI.RETRY_MAX_DELAY_MS, 4000);
+});
+
+test("BOOK-FLOW-TIMING-01 module deadlines fit the configured widget watchdogs", () => {
+  assert.match(calendarWidgetSource, /contextTimeoutMs:120000/);
+  assert.match(calendarWidgetSource, /bookingTimeoutMs:90000/);
+  assert.match(serviceWidgetSource, /CONTEXT_TIMEOUT_MS:\s*155000/);
+  assert.match(serviceWidgetSource, /BOOK_NOTICE_TIMEOUT_MS:\s*60000/);
+  assert.match(calendarSource, /contextTimeoutMs:\s*110000/);
+  assert.match(calendarSource, /contextAttemptTimeoutMs:\s*30000/);
+  assert.match(serviceSource, /handshakeTimeoutMs:\s*45000/);
+  assert.match(serviceSource, /contextTimeoutMs:\s*120000/);
+  assert.match(serviceSource, /contextAttemptTimeoutMs:\s*30000/);
 });
 
 test("BOOK-FLOW-RETRY-01 shared retry helper performs three total attempts with exponential backoff enabled", async () => {
@@ -118,7 +132,8 @@ test("BOOK-FLOW-AVAIL-01 availability reads use three attempts while booking sid
   assert.match(calendarSource, /AVAILABILITY_ATTEMPT_TIMEOUT_MS\s*=\s*45000/);
   assert.match(calendarSource, /_executeWithRetry\(async \(\) =>/);
   assert.match(calendarSource, /}, 2, 500, isRetryableReadError\)/);
-  assert.match(calendarSource, /contextTimeoutMs:\s*120000/);
+  assert.match(calendarSource, /contextTimeoutMs:\s*110000/);
+  assert.match(calendarSource, /contextAttemptTimeoutMs:\s*30000/);
   assert.match(calendarSource, /processDualBooking\(requestPayload\)/);
   assert.doesNotMatch(calendarSource.slice(calendarSource.indexOf("async function runAvailabilityWithRetry"), calendarSource.indexOf("function resultError")), /processDualBooking/);
   assert.match(bridgeSource, /PROTOCOL_UI\.CONTEXT_ATTEMPTS/);

@@ -33,7 +33,7 @@ body{margin:0;background:var(--bg);color:var(--text);padding:clamp(12px,3vw,28px
    El origen del padre se calcula en runtime y vive en `parentOrigin`
    (variable separada, fuera del objeto) para no mutar CONFIG.
    - bookingTimeoutMs: 90 s.
-   - contextTimeoutMs: 30 s (watchdog de MM_CONTEXT).
+   - contextTimeoutMs: 120 s (watchdog de MM_CONTEXT).
    - handshakeDelays: backoff exponencial capado a 8 s.
    - allowAnyOriginFallback: false → fail-closed si no hay parentOrigin. */
 const CONFIG={
@@ -42,7 +42,7 @@ const CONFIG={
   maxHandshake:6,
   handshakeDelays:[500,1000,2000,4000,8000,8000],
   bookingTimeoutMs:90000,
-  contextTimeoutMs:30000,
+  contextTimeoutMs:120000,
   currency:"EUR",
   location:"Marian Madrid",
   allowedOriginSuffixes:["marianmadrid.es",".wixsite.com",".parastorage.com",".wix.com",".editorx.com"],
@@ -215,7 +215,7 @@ function init(){
   window.addEventListener("message",handleMessage);
   renderCalendar();
   /* B6: watchdog de contexto. Si no llega MM_CONTEXT ni siquiera con error,
-     avisa al usuario tras 30 s. */
+     avisa al usuario tras 120 s. */
   contextTimer=setTimeout(()=>{
     if(!state.connected)showError("No llegaron los datos del servicio. Recarga la página.");
   },CONFIG.contextTimeoutMs);

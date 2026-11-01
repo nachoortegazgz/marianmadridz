@@ -1149,7 +1149,7 @@ $w.onReady(() => {
             traceId,
             allowOpaqueOrigin: true,
             handshakeTimeoutMs: 30000,
-            contextTimeoutMs: 120000,
+            contextTimeoutMs: 110000,
             contextAttemptTimeoutMs: 30000,
 
             onContextReady: async () => {
