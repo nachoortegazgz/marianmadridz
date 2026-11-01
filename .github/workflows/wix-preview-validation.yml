@@ -5,8 +5,10 @@ on:
     branches:
       - main
     paths:
-      - "src/backend/securityEngine.js"
-      - "src/backend/tests/security.rateLimiter.test.mjs"
+      - "src/**"
+      - "package.json"
+      - "package-lock.json"
+      - "wix.config.json"
       - ".github/workflows/wix-preview-validation.yml"
   workflow_dispatch:
     branches:
