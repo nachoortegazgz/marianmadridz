@@ -4428,3 +4428,26 @@ Se confirma en documentación oficial que este proyecto usa **Wix CLI for Sites*
 5. Completar Layer 2 runtime: permisos efectivos, concurrencia/atomicidad persistente, cierre Z, hash-chain, writer contable y reconciliación de cancelaciones/rectificativas.
 
 **No cerrar Layer 1 ni Layer 2 por el resultado de CI offline.** Mantener PR #80 sin merge hasta completar la validación Preview y revisión de código.
+
+
+### 31.8 Cierre de la auditoría viva y corrección de PTY — 2026-11-01
+
+**Resultado de la consulta de datos:**
+- Se confirman ocho discrepancias Bookings V2 `CANCELED` / CitasF2 `CONFIRMED`.
+- Las ocho reservas indican `createdBy.identityType=WIX_USER` y el mismo identificador interno de usuario. Este dato no identifica por sí solo el motivo ni la persona física que inició la cancelación.
+- Cinco reservas QA tienen estado nativo `paymentStatus=NOT_PAID`.
+- Tres reservas históricas tienen `paymentStatus=UNDEFINED`; no se debe inferir pago ni impago definitivo.
+- `MovimientosCaja` devuelve cero registros vinculados a esos ocho bookingIds.
+- `ControlOperativo` contiene cuatro eventos de cancelación, pero ninguno corresponde a esos ocho bookingIds.
+- No hay evidencia suficiente para atribuir las ocho divergencias a un único defecto del webhook; podrían ser cancelaciones nativas realizadas fuera del flujo propio. La causa sigue sin probarse.
+
+**Preview CI — diagnóstico adicional:**
+- El run `41337069118` terminó fallido, no generó URL.
+- El artefacto muestra que el pseudo-terminal anterior no entregó el selector interactivo a Wix CLI; el comando agotó el timeout. Por tanto, no es un fallo de código del sitio ni una validación funcional.
+- La documentación oficial de Wix CLI for Sites confirma que `wix preview` exige selector interactivo y que la URL se muestra al completar el despliegue. El Preview requiere que el sitio se haya publicado previamente y no valida cambios en HTTP Functions.
+- Se crea rama `fix/wix-preview-ci-pty` para reemplazar la tubería de entrada por un PTY real de Python estándar, detectar el selector, elegir Local code en PR y aceptar Latest commit from origin/main en main, guardar log y exigir URL más comprobación HTTP.
+- La nueva ejecución debe confirmar si el sitio ya cumple el prerrequisito de publicación y si Wix genera el Preview. Hasta entonces, Preview permanece NO VALIDADO.
+
+**Integración:** PR #80 se ha fusionado en `main` con merge commit `d0d14e0e40a622ecbf912d6a2d44efaecd428208`. Esto integra la corrección de integridad y las pruebas offline, pero no publica ni despliega el sitio Wix. La rama `fix/wix-preview-ci-pty` mantiene aislada la corrección adicional del workflow y la evidencia de auditoría.
+
+**Seguridad:** no se han actualizado las ocho citas ni se han alterado movimientos/ledgers. Se mantiene pendiente aprobar reconciliación explícita tras confirmar el origen de las cancelaciones.
