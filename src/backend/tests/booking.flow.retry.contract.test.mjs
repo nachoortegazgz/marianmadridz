@@ -118,7 +118,8 @@ test("BOOK-FLOW-AVAIL-01 availability reads use three attempts while booking sid
   assert.match(calendarSource, /AVAILABILITY_ATTEMPT_TIMEOUT_MS\s*=\s*45000/);
   assert.match(calendarSource, /_executeWithRetry\(async \(\) =>/);
   assert.match(calendarSource, /}, 2, 500, isRetryableReadError\)/);
-  assert.match(calendarSource, /contextTimeoutMs:\s*120000/);
+  assert.match(calendarSource, /contextTimeoutMs:\s*27000/);
+  assert.match(calendarSource, /contextAttemptTimeoutMs:\s*8000/);
   assert.match(calendarSource, /processDualBooking\(requestPayload\)/);
   assert.doesNotMatch(calendarSource.slice(calendarSource.indexOf("async function runAvailabilityWithRetry"), calendarSource.indexOf("function resultError")), /processDualBooking/);
   assert.match(bridgeSource, /PROTOCOL_UI\.CONTEXT_ATTEMPTS/);
