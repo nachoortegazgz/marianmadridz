@@ -324,13 +324,13 @@ E.12 Errores transversales a evitar (15)
 
 ```
 F.5  Modelo CMS (SSOT)
-     ├─ F.5.1 Inventario consolidado (13 NATIVE, 20 WIX_APP, 8 legacy, 6 huérfanas, efímeras absorbidas)
+     ├─ F.5.1 Inventario consolidado (15 NATIVE, 20 WIX_APP, 8 legacy, 6 huérfanas, efímeras absorbidas)
      ├─ F.5.2 Metadatos operativos resumidos (revisión, permisos e índices no repetidos)
-     ├─ F.5.3 [REF: §G.1–G.13 para keyfields y tipos completos]
+     ├─ F.5.3 [REF: §G.1–G.16 para keyfields y tipos completos]
      ├─ F.5.4 [REF: §G.14.1 para invariantes canónicas]
      ├─ F.5.5 Matriz de sustitución legacy → SSOT (8)
      └─ F.5.6 Colecciones WIX_APP (solo lectura)
-     [REF: §G.1–G.14 para esquema detallado; §F.5.1 conserva el inventario agregado.]
+     [REF: §G.1–G.16 para esquema detallado; §F.5.1 conserva el inventario agregado.]
 
 F.6  Enums canónicos
      ├─ F.6.1 Wix nativos (BOOKING_STATUS_WIX sin UPDATED; PAYMENT_STATUS_WIX)
@@ -383,7 +383,7 @@ F.13 Migración SDK v2 — estado real (2026-10-30)
 F.14 Wix Stores Catalog V1/V3
      ├─ F.14.1 Estado actual (V1; 30 variantes; 24 elementos)
      ├─ F.14.2 Módulos V1/V3 y adaptador dual PR #13 (stockKey, pedidos, reembolsos)
-     ├─ F.14.3 CMS vivo (stockKey, catalogVersion, lineItemId, stockApplied)
+     ├─ F.14.3 CMS vivo (stockKey, catalogVersion, locationId, lineItemId, stockApplied)
      ├─ F.14.4 Decisión ADR-001 (dual, cambio irreversible aplazado)
      └─ F.14.5 Pendientes antes de V3 (5)
      [FUENTE CANÓNICA de módulos y estado real; §E.5 remite aquí.]
@@ -434,9 +434,9 @@ F.23 Correcciones del anexo aclaratorio (aclaraciones subordinadas a §A.4)
 
 ---
 
-## G. ESQUEMA DETALLADO 13 COLECCIONES NATIVE
+## G. ESQUEMA DETALLADO 15 COLECCIONES NATIVE
 
-**Propósito:** campo a campo (keyfield, etiqueta, tipo, explicación/rango). **Estado dominante:** `[HECHO]` (esquema vivo 25-10-2026).
+**Propósito:** campo a campo (keyfield, etiqueta, tipo, explicación/rango). **Estado dominante:** `[HECHO]` (reconciliación CMS de solo lectura 2026-11-01; índices no reconsultados).
 **Aplicabilidad:** fuente canónica para tipos, rangos y validaciones.
 
 ```
@@ -448,8 +448,8 @@ G.5  MovimientosCaja (88)       → ledger append-only; 6 grupos: identificació
 G.6  DatosFiscales (21)         → taxId_unique, recordType TERCERO/CONFIG_SISTEMA, singleton no eliminable
 G.7  HistoricoCierresZ (62)     → consolidado diario; 6 grupos: periodo, totales por medio, totales fiscales, secuencia, cadena/firma, desgloses
 G.8  LibroAsientosContablesDetalle (27) → ledger append-only; escritor pendiente (deuda Alta)
-G.9  InventarioStockVenta (26)  → stockKey (V1:/V3:), invariante stock
-G.10 MovimientosInventario (31) → movementToken_unique, lineItemId, stockApplied
+G.9  InventarioStockVenta (29)  → stockKey, catalogVersion, locationId; invariante stock
+G.10 MovimientosInventario (36) → movementToken_unique, stockKey, catalogVersion, locationId, lineItemId, stockApplied
 G.11 ControlOperativo (38)      → 6 controlTypes; locks + dedupe + rate limit + alertas
 G.12 RegistrosHorariosStaff (21) → ledger laboral append-only; deviceIpAddress PII
 G.13 MapaStaff (14+4)           → staffMemberId/active pendientes ADR
@@ -457,8 +457,12 @@ G.14 Notas transversales
      ├─ G.14.1 Invariantes de integridad consolidadas (12) [FUENTE CANÓNICA]
      ├─ G.14.2 Ledgers append-only (4)
      ├─ G.14.3 Campos PII/sensibles
-     └─ G.14.4 Estado de implementación (CMS listo, hooks activos, escritor contable pendiente, V3 preparado, QA pendiente)
+     └─ G.14.4 Estado de implementación (15 colecciones NATIVE; hooks activos; escritor contable pendiente; V3 preparado). QA live 2026-11-01: 10/10 referencias GUID de CitasF2 existen en Bookings V2; 4/4 parejas duales confirmadas con mismo resourceId, F2 enlazada, scheduleId distinto y gap exacto; 2 reservas simples confirmadas. La creación/cancelación/compensación E2E no se ha repetido en esta auditoría.
      [REF: §F.5.4 y §F.10.2 remiten a estas invariantes; F.10.2 conserva controles adicionales y mecanismos de hook.]
+
+G.15 QAE2ESimulaciones (12 campos totales; revisión 1) → scenarioId, traceId, status, scenario, bookingId, startedAt, finishedAt, evidenceJson; permisos ADMIN×4. Colección auxiliar de evidencias de escenarios QA; consumo runtime no verificado.
+G.16 RegistroIntegracion (21 campos totales; revisión 1) → eventId, eventType, sourceModule, sourceCollection, sourceItemId, occurredAt, traceId, correlationId, idempotencyKey, schemaVersion, payload, payloadHash, deliveryStatus, deliveryAttempts, nextAttemptAt, deliveredAt, lastDeliveryError; permisos ADMIN×4. Esquema auxiliar de registro/outbox; consumo runtime e índices no verificados.
+
 ```
 
 ---
@@ -1820,17 +1824,19 @@ export const getPublicCatalog = webMethod(
 | `ServiciosCatalogo` | 193 | ADMIN×4 | — |
 | `ComplementosCatalogo` | 137 | ADMIN×4 | `addonId_unique` |
 | `CajaActual` | 45 | ADMIN×4 | — (`cashRegisterStatus_operationDate`) |
-| `MovimientosCaja` | 60 | ADMIN×4 | `transactionId_unique` |
+| `MovimientosCaja` | 75 | ADMIN×4 | `transactionId_unique` |
 | `DatosFiscales` | 8 | ADMIN×4 | `taxId_unique` |
-| `HistoricoCierresZ` | 32 | ADMIN×4 | — |
+| `HistoricoCierresZ` | 35 | ADMIN×4 | — |
 | `LibroAsientosContablesDetalle` | 24 | ADMIN×4 | — |
-| `InventarioStockVenta` | 16 | ADMIN×4 | `stockKey_unique` (tras PR #13) |
-| `MovimientosInventario` | 21 | ADMIN×4 | `movementToken_unique` |
+| `InventarioStockVenta` | 19 | ADMIN×4 | `stockKey_unique` (tras PR #13; índice no reconsultado 2026-11-01) |
+| `MovimientosInventario` | 26 | ADMIN×4 | `movementToken_unique` |
 | `ControlOperativo` | 15 | ADMIN×4 | índices `idxcontrolexpires`, `idxcontrolretry`, `idxcontrolstatus` |
 | `RegistrosHorariosStaff` | 9 | ADMIN×4 | índices `idxresourceday`, `idxtypetimestamp`, `idx_monthKey` |
-| `MapaStaff` | 11 | ADMIN×4 | Pendiente de verificación |
+| `MapaStaff` | 13 | ADMIN×4 | Pendiente de verificación |
+| `QAE2ESimulaciones` | 1 | ADMIN×4 | No verificado |
+| `RegistroIntegracion` | 1 | ADMIN×4 | No verificado |
 
-La revisión, etiqueta, número de campos y tipos completos de cada colección se consultan en el esquema detallado §G.1–G.13.
+La revisión, etiqueta, número de campos y tipos completos de cada colección se consultan en el esquema detallado §G.1–G.16. Los índices de las dos colecciones auxiliares nuevas no se han verificado en esta lectura.
 
 ### 5.3 Keyfields canónicos
 
@@ -3811,7 +3817,7 @@ export default defineWixConfig({
 | Dato ausente | Impacto | Cómo obtenerlo |
 |---|---|---|
 | Versión exacta de `@wix/cli` instalada (`wix --version`) | Determina la versión CLI instalada; no inferir disponibilidad de comandos no documentados para CLI for Sites | `wix --version` en clon local |
-| Existencia de `src/velo.dependencies.json` | Regla ESLint `@wix/cli/no-invalid-backend-import` desactivada si falta | `ls src/velo.dependencies.json` |
+| Existencia de `src/velo.dependencies.json` | **Ausente en `main` en la lectura 2026-11-01**; la regla `@wix/cli/no-invalid-backend-import` sigue desactivada hasta generar y validar el manifiesto. | Ejecutar el workflow `Wix Velo dependency manifest`; verificar el artefacto y el archivo generado por Wix CLI (no crearlo manualmente). |
 | Configuración de `wix.config.mjs` / `wix.config.json` | Determina si el plugin de diagnóstico está activo | Revisar archivo en raíz del proyecto |
 | Variables `WIX_CODE_DIAGNOSTICS_*` definidas | Sin ellas, el plugin es inerte | Revisar `.env` / Secrets Manager |
 | Estado de `wix.lock` tras últimas instalaciones | Bloqueo Alto si sigue desincronizado | `git diff wix.lock` |
