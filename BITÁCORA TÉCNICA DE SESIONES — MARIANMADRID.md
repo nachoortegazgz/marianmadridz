@@ -94,3 +94,23 @@
 3. Validar la página Servicio 2 en Wix Preview o mediante una prueba runtime autorizada: confirmar lookup de slug/ID, respuesta pública del servicio y escritura/lectura del rate limiter. Registrar traceId/error real si falla.
 4. Mantener fail-closed; no añadir bypass ni debilitar el limitador para ocultar `RATE_LIMIT_STORAGE_UNAVAILABLE`.
 5. Actualizar esta bitácora al cierre de la siguiente sesión con resultado definitivo, SHA, CI y evidencia runtime.
+
+
+## Continuación de sesión 2026-11-01 — Verificación posterior a PR #29
+
+### Estado verificado en GitHub
+- PR #29 quedó fusionada por GitHub a las 04:53:21 UTC, merge commit `6a8c45728319e0a6faca1dab1ab505dabe07d017`. La PR se fusionó después de haber sido descrita inicialmente como Draft; este registro refleja el estado actual observado.
+- `main` sigue sin contener `src/velo.dependencies.json` (consulta de Contents API: 404 para esa ruta). Por tanto, la fusión del workflow diagnóstico **no resolvió** la ausencia del manifiesto.
+- Log del run `41274171651`, job `124752854256`: CLI `1.2.6`; `wix install --help` documenta `--npm`; login y `wix install --npm @wix/data` concluyen con éxito. Falla la validación porque el manifiesto no existe. `@wix/data` ya estaba declarado en `package.json` como `1.0.527` antes de la ejecución.
+- Documentación oficial: Wix describe el manifiesto como generado automáticamente tras instalar el primer paquete y actualizado por Wix CLI; prohíbe editarlo manualmente. https://dev.wix.com/docs/develop-websites/articles/workspace-tools/developer-tools/git-integration-wix-cli-for-sites/git-hub-repository-file-structure.
+- No se puede atribuir la causa a autenticación ni a sintaxis. Sigue sin demostrarse si interviene el estado previo de dependencias, un comportamiento del CLI `1.2.6` o una discrepancia de sincronización. No fabricar el archivo.
+
+### Regresión offline
+- Runs `41274162990`, `41274165587`, `41274171605` y `41274174419`: los cuatro jobs de cada ejecución terminaron en éxito (instalación limpia/ESLint, backend offline, Windows Node.js 24.22.1 y 26.12.1).
+- Resultado: CI offline verde; no equivale a una prueba runtime del sitio ni del manifiesto.
+
+### Próximas acciones seguras
+1. No publicar cambios ni tocar reservas/CMS para investigar el manifiesto.
+2. Verificar desde Wix Editor clásico, en la sección de paquetes npm, el estado real de los paquetes del sitio y la sincronización Git asociada. Si el manifiesto no aparece, elegir una prueba de instalación/reinstalación controlada con respaldo y sin publicar, solo después de confirmar impacto y reversibilidad.
+3. Mantener deshabilitada la regla `@wix/cli/no-invalid-backend-import` hasta disponer del manifiesto auténtico y pasar lint.
+4. Ejecutar prueba E2E en Wix Preview para Servicio 2 y rate limiter persistente. El catálogo CMS tiene datos, pero la prueba del webMethod y la escritura/lectura de `ControlOperativo` siguen pendientes.
