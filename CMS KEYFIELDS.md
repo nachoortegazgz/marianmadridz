@@ -520,9 +520,9 @@ Etiqueta de colección: INVENTARIO_STOCK_VENTA. Revisión: 19. Campo de visualiz
 | reorderQuantity | reposicionCantidad | NUMBER | No | — | 1 | Campo de reorder quantity; confirmar significado exacto con consumidores del backend antes de modificarlo. | Personalizado Marian Madrid | — |
 | needsWixReconciliation | necesitaWixConciliacion | BOOLEAN | No | true / false | true | Campo de needs wix reconciliation; confirmar significado exacto con consumidores del backend antes de modificarlo. | Personalizado Marian Madrid | — |
 | lastSyncAt | ultimoSincronizacionEn | DATETIME | No | — | 2026-10-25T10:30:00.000Z | Campo de last sync at; confirmar significado exacto con consumidores del backend antes de modificarlo. | Personalizado Marian Madrid | — |
-| catalogVersion | catalogoVersion | TEXT | Sí (backend) | V1_CATALOG; V3_CATALOG | V1_CATALOG | Versión del catálogo Wix que determina la identidad y la forma de stock. | Integración Wix: Stores Catalog | — |
-| locationId | ubicacionId | TEXT | Condicional (V3) | Obligatorio en V3; no admitido en V1 | <ID ubicación Wix> | Ubicación del inventario; el adaptador exige locationId en V3 y lo rechaza en V1. | Integración Wix: Stores Catalog | — |
-| stockKey | stockKey | TEXT | Sí (backend) | V1:<productId>:<variantId>; V3:<productId>:<variantId>:<locationId> | V1:prod_demo:var_demo | Clave canónica compuesta de variante; fórmula dependiente de catalogVersion y locationId. | Personalizado Marian Madrid + Wix Catalog | — |
+| catalogVersion | No remitido | TEXT | Sí (backend) | V1_CATALOG; V3_CATALOG | V1_CATALOG | Versión del catálogo Wix que determina la identidad y la forma de stock. | Integración Wix: Stores Catalog | — |
+| locationId | No remitido | TEXT | Condicional (V3) | Obligatorio en V3; no admitido en V1 | <ID ubicación Wix> | Ubicación del inventario; el adaptador exige locationId en V3 y lo rechaza en V1. | Integración Wix: Stores Catalog | — |
+| stockKey | No remitido | TEXT | Sí (backend) | V1:<productId>:<variantId>; V3:<productId>:<variantId>:<locationId> | V1:prod_demo:var_demo | Clave canónica compuesta de variante; fórmula dependiente de catalogVersion y locationId. | Personalizado Marian Madrid + Wix Catalog | — |
 | _id | ID | TEXT | No | No declaradas en CMS; validar enum backend si aplica | cms_demo_001 | ID único del registro CMS; no equivale a un ID externo. | Wix nativo | — |
 | _createdDate | Created Date | DATETIME | No | — | 2026-10-25T10:30:00.000Z | Fecha de creación gestionada por Wix. | Wix nativo | — |
 | _updatedDate | Updated Date | DATETIME | No | — | 2026-10-25T10:30:00.000Z | Fecha de actualización gestionada por Wix. | Wix nativo | — |
@@ -568,11 +568,11 @@ Etiqueta de colección: MOVIMIENTOS_INVENTARIO. Revisión: 26. Campo de visualiz
 | wixProductId | wixProductoId | TEXT | No | No declaradas en CMS; validar enum backend si aplica | <valor de ejemplo> | Campo de wix product id; confirmar significado exacto con consumidores del backend antes de modificarlo. | Integración Wix: ID externo | — |
 | wixVariantId | varianteWixId | TEXT | No | No declaradas en CMS; validar enum backend si aplica | <valor de ejemplo> | Campo de wix variant id; confirmar significado exacto con consumidores del backend antes de modificarlo. | Integración Wix: ID externo | — |
 | movementId | movimientoId | TEXT | No | No declaradas en CMS; validar enum backend si aplica | <valor de ejemplo> | Campo de movement id; confirmar significado exacto con consumidores del backend antes de modificarlo. | Personalizado Marian Madrid | — |
-| stockApplied | stockAplicado | BOOLEAN | Sí (flujo de aplicación) | true / false | false → true | Marca si la variación de stock ya se aplicó; permite reintentos idempotentes y recuperación. | Personalizado Marian Madrid | — |
-| lineItemId | lineaPedidoId | TEXT | Condicional (venta/reembolso) | ID de línea de pedido Wix | <ID línea pedido Wix> | ID de la línea de pedido eCommerce vinculada al movimiento. | Integración Wix: eCommerce | — |
-| catalogVersion | catalogoVersion | TEXT | Sí (backend) | V1_CATALOG; V3_CATALOG | V1_CATALOG | Versión del catálogo que determina la identidad de stock del movimiento. | Integración Wix: Stores Catalog | — |
-| locationId | ubicacionId | TEXT | Condicional (V3) | Obligatorio en V3; no admitido en V1 | <ID ubicación Wix> | Ubicación de stock; V3 requiere locationId y V1 no lo admite. | Integración Wix: Stores Catalog | — |
-| stockKey | stockKey | TEXT | Sí (backend) | V1:<productId>:<variantId>; V3:<productId>:<variantId>:<locationId> | V1:prod_demo:var_demo | Identidad canónica de variante/ubicación afectada. | Personalizado Marian Madrid + Wix Catalog | — |
+| stockApplied | No remitido | BOOLEAN | Sí (flujo de aplicación) | true / false | false → true | Marca si la variación de stock ya se aplicó; permite reintentos idempotentes y recuperación. | Personalizado Marian Madrid | — |
+| lineItemId | No remitido | TEXT | Condicional (venta/reembolso) | ID de línea de pedido Wix | <ID línea pedido Wix> | ID de la línea de pedido eCommerce vinculada al movimiento. | Integración Wix: eCommerce | — |
+| catalogVersion | No remitido | TEXT | Sí (backend) | V1_CATALOG; V3_CATALOG | V1_CATALOG | Versión del catálogo que determina la identidad de stock del movimiento. | Integración Wix: Stores Catalog | — |
+| locationId | No remitido | TEXT | Condicional (V3) | Obligatorio en V3; no admitido en V1 | <ID ubicación Wix> | Ubicación de stock; V3 requiere locationId y V1 no lo admite. | Integración Wix: Stores Catalog | — |
+| stockKey | No remitido | TEXT | Sí (backend) | V1:<productId>:<variantId>; V3:<productId>:<variantId>:<locationId> | V1:prod_demo:var_demo | Identidad canónica de variante/ubicación afectada. | Personalizado Marian Madrid + Wix Catalog | — |
 | _id | ID | TEXT | No | No declaradas en CMS; validar enum backend si aplica | cms_demo_001 | ID único del registro CMS; no equivale a un ID externo. | Wix nativo | — |
 | _createdDate | Created Date | DATETIME | No | — | 2026-10-25T10:30:00.000Z | Fecha de creación gestionada por Wix. | Wix nativo | — |
 | _updatedDate | Updated Date | DATETIME | No | — | 2026-10-25T10:30:00.000Z | Fecha de actualización gestionada por Wix. | Wix nativo | — |
@@ -721,14 +721,14 @@ Etiqueta de colección: `QAE2ESimulaciones`. Revisión: `1`. Campo de visualizac
 
 | Keyfield / ID | Etiqueta visible | Tipo | Obligatorio | Opciones / valores | Ejemplo sintético | Función del campo | Origen nomenclatura | Alias / legacy |
 |---|---|---|---|---|---|---|---|---|
-| scenarioId | escenarioId | TEXT | No verificado | — | qa_dual_gap_001 | Identificador del escenario QA. | Personalizado Marian Madrid | — |
-| traceId | trazabilidadId | TEXT | No verificado | — | trace_qa_demo | Correlación del escenario. | Personalizado Marian Madrid | — |
-| status | estado | TEXT | No verificado | No declaradas en CMS | PENDING | Estado del escenario QA; valores runtime no verificados. | Personalizado Marian Madrid | — |
-| scenario | escenario | TEXT | No verificado | — | dual_gap_40 | Descripción o código del escenario ejecutado. | Personalizado Marian Madrid | — |
-| bookingId | reservaId | TEXT | No verificado | — | <ID reserva de prueba> | Referencia opcional a una reserva creada por el escenario. | Integración Wix: Bookings | — |
-| startedAt | inicio | DATE | No verificado | — | 2026-11-01 | Fecha de inicio del escenario. | Personalizado Marian Madrid | — |
-| finishedAt | fin | DATE | No verificado | — | 2026-11-01 | Fecha de finalización del escenario. | Personalizado Marian Madrid | — |
-| evidenceJson | evidenciasJson | TEXT | No verificado | JSON serializado | {"assertions":[]} | Evidencia serializada del escenario; el tipo CMS es TEXT, no OBJECT. | Personalizado Marian Madrid | — |
+| scenarioId | No remitido | TEXT | No verificado | — | qa_dual_gap_001 | Identificador del escenario QA. | Personalizado Marian Madrid | — |
+| traceId | No remitido | TEXT | No verificado | — | trace_qa_demo | Correlación del escenario. | Personalizado Marian Madrid | — |
+| status | No remitido | TEXT | No verificado | No declaradas en CMS | PENDING | Estado del escenario QA; valores runtime no verificados. | Personalizado Marian Madrid | — |
+| scenario | No remitido | TEXT | No verificado | — | dual_gap_40 | Descripción o código del escenario ejecutado. | Personalizado Marian Madrid | — |
+| bookingId | No remitido | TEXT | No verificado | — | <ID reserva de prueba> | Referencia opcional a una reserva creada por el escenario. | Integración Wix: Bookings | — |
+| startedAt | No remitido | DATE | No verificado | — | 2026-11-01 | Fecha de inicio del escenario. | Personalizado Marian Madrid | — |
+| finishedAt | No remitido | DATE | No verificado | — | 2026-11-01 | Fecha de finalización del escenario. | Personalizado Marian Madrid | — |
+| evidenceJson | No remitido | TEXT | No verificado | JSON serializado | {"assertions":[]} | Evidencia serializada del escenario; el tipo CMS es TEXT, no OBJECT. | Personalizado Marian Madrid | — |
 | _id | ID | TEXT | Sistema Wix | — | <ID CMS> | Identificador CMS. | Wix nativo | — |
 | _createdDate | Created Date | DATETIME | Sistema Wix | — | 2026-11-01T10:00:00.000Z | Fecha de creación gestionada por Wix. | Wix nativo | — |
 | _updatedDate | Updated Date | DATETIME | Sistema Wix | — | 2026-11-01T10:00:00.000Z | Fecha de actualización gestionada por Wix. | Wix nativo | — |
@@ -744,23 +744,23 @@ Etiqueta de colección: `RegistroIntegracion`. Revisión: `1`. Campo de visualiz
 
 | Keyfield / ID | Etiqueta visible | Tipo | Obligatorio | Opciones / valores | Ejemplo sintético | Función del campo | Origen nomenclatura | Alias / legacy |
 |---|---|---|---|---|---|---|---|---|
-| eventId | eventoId | TEXT | No verificado | — | <ID evento> | Identificador del evento de integración. | Personalizado Marian Madrid | — |
-| eventType | eventoTipo | TEXT | No verificado | — | BOOKING_CONFIRMED | Tipo de evento; enum runtime no verificado. | Personalizado Marian Madrid | — |
-| sourceModule | moduloOrigen | TEXT | No verificado | — | backend/citasManager.web.js | Módulo que origina el evento. | Personalizado Marian Madrid | — |
-| sourceCollection | coleccionOrigen | TEXT | No verificado | — | CitasF2 | Colección de origen. | Personalizado Marian Madrid | — |
-| sourceItemId | origenItemId | TEXT | No verificado | — | <ID registro origen> | ID del elemento de origen. | Personalizado Marian Madrid | — |
-| occurredAt | ocurridoEn | DATETIME | No verificado | — | 2026-11-01T10:00:00.000Z | Instante del evento. | Personalizado Marian Madrid | — |
-| traceId | trazabilidadId | TEXT | No verificado | — | trace_demo_001 | Correlación end-to-end. | Personalizado Marian Madrid | — |
-| correlationId | correlacionId | TEXT | No verificado | — | <ID correlación> | Correlación entre eventos relacionados. | Personalizado Marian Madrid | — |
-| idempotencyKey | claveIdempotencia | TEXT | No verificado | — | <clave idempotente> | Clave para evitar procesar dos veces un mismo evento. | Personalizado Marian Madrid | — |
-| schemaVersion | esquemaVersion | TEXT | No verificado | — | 1 | Versión del esquema del payload. | Personalizado Marian Madrid | — |
-| payload | cargaUtil | OBJECT | No verificado | — | {"type":"demo"} | Payload estructurado del evento. | Personalizado Marian Madrid | — |
-| payloadHash | cargaUtilHash | TEXT | No verificado | — | <sha256> | Huella del payload. | Personalizado Marian Madrid | — |
-| deliveryStatus | entregaEstado | TEXT | No verificado | No declaradas en CMS | PENDING | Estado de entrega; enum runtime no verificado. | Personalizado Marian Madrid | — |
-| deliveryAttempts | entregaIntentos | NUMBER | No verificado | — | 0 | Número de intentos de entrega. | Personalizado Marian Madrid | — |
-| nextAttemptAt | siguienteIntentoEn | DATETIME | No verificado | — | 2026-11-01T10:05:00.000Z | Fecha del siguiente intento. | Personalizado Marian Madrid | — |
-| deliveredAt | entregadoEn | DATETIME | No verificado | — | 2026-11-01T10:01:00.000Z | Fecha de entrega completada. | Personalizado Marian Madrid | — |
-| lastDeliveryError | ultimoErrorEntrega | TEXT | No verificado | — | <error resumido> | Último error de entrega registrado. | Personalizado Marian Madrid | — |
+| eventId | No remitido | TEXT | No verificado | — | <ID evento> | Identificador del evento de integración. | Personalizado Marian Madrid | — |
+| eventType | No remitido | TEXT | No verificado | — | BOOKING_CONFIRMED | Tipo de evento; enum runtime no verificado. | Personalizado Marian Madrid | — |
+| sourceModule | No remitido | TEXT | No verificado | — | backend/citasManager.web.js | Módulo que origina el evento. | Personalizado Marian Madrid | — |
+| sourceCollection | No remitido | TEXT | No verificado | — | CitasF2 | Colección de origen. | Personalizado Marian Madrid | — |
+| sourceItemId | No remitido | TEXT | No verificado | — | <ID registro origen> | ID del elemento de origen. | Personalizado Marian Madrid | — |
+| occurredAt | No remitido | DATETIME | No verificado | — | 2026-11-01T10:00:00.000Z | Instante del evento. | Personalizado Marian Madrid | — |
+| traceId | No remitido | TEXT | No verificado | — | trace_demo_001 | Correlación end-to-end. | Personalizado Marian Madrid | — |
+| correlationId | No remitido | TEXT | No verificado | — | <ID correlación> | Correlación entre eventos relacionados. | Personalizado Marian Madrid | — |
+| idempotencyKey | No remitido | TEXT | No verificado | — | <clave idempotente> | Clave para evitar procesar dos veces un mismo evento. | Personalizado Marian Madrid | — |
+| schemaVersion | No remitido | TEXT | No verificado | — | 1 | Versión del esquema del payload. | Personalizado Marian Madrid | — |
+| payload | No remitido | OBJECT | No verificado | — | {"type":"demo"} | Payload estructurado del evento. | Personalizado Marian Madrid | — |
+| payloadHash | No remitido | TEXT | No verificado | — | <sha256> | Huella del payload. | Personalizado Marian Madrid | — |
+| deliveryStatus | No remitido | TEXT | No verificado | No declaradas en CMS | PENDING | Estado de entrega; enum runtime no verificado. | Personalizado Marian Madrid | — |
+| deliveryAttempts | No remitido | NUMBER | No verificado | — | 0 | Número de intentos de entrega. | Personalizado Marian Madrid | — |
+| nextAttemptAt | No remitido | DATETIME | No verificado | — | 2026-11-01T10:05:00.000Z | Fecha del siguiente intento. | Personalizado Marian Madrid | — |
+| deliveredAt | No remitido | DATETIME | No verificado | — | 2026-11-01T10:01:00.000Z | Fecha de entrega completada. | Personalizado Marian Madrid | — |
+| lastDeliveryError | No remitido | TEXT | No verificado | — | <error resumido> | Último error de entrega registrado. | Personalizado Marian Madrid | — |
 | _id | ID | TEXT | Sistema Wix | — | <ID CMS> | Identificador CMS. | Wix nativo | — |
 | _createdDate | Created Date | DATETIME | Sistema Wix | — | 2026-11-01T10:00:00.000Z | Fecha de creación gestionada por Wix. | Wix nativo | — |
 | _updatedDate | Updated Date | DATETIME | Sistema Wix | — | 2026-11-01T10:00:00.000Z | Fecha de actualización gestionada por Wix. | Wix nativo | — |
