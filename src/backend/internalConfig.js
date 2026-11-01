@@ -170,7 +170,7 @@ export const WIX_CATALOG_APP_IDS = Object.freeze({
 // Timeout de busqueda de slots (espejo fiel de public/mmUtils.js SLOT_SEARCH,
 // BIBLIA 3.2; MINUTOS_TOLERANCIA citado literalmente por bookingCore.js).
 export const SLOT_SEARCH = Object.freeze({
-  DIAS_LIMITE: 14,
+  DIAS_LIMITE: 15,
   MINUTOS_TOLERANCIA: 120,
   MINUTOS_MAX_HUECO_DUAL: 120,
 });
