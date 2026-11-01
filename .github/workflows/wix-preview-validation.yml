@@ -71,7 +71,7 @@ jobs:
           # Keep the CLI attached to a PTY, but supervise it in its own process
           # group. Wix may keep the interactive process alive after printing the
           # shareable Preview URL, so stop it only after the explicit success signal.
-          setsid bash -c 'set -euo pipefail; printf "\n" | script -q -e -c "wix preview" /dev/null' > wix-preview.log 2>&1 &
+          setsid bash -c 'set -euo pipefail; printf "\n" | script -q -f -e -c "wix preview" /dev/null' > wix-preview.log 2>&1 &
           preview_pid=$!
 
           cleanup_preview() {
