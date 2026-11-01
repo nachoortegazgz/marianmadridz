@@ -1,6 +1,6 @@
 # DOSSIER TÉCNICO — marianmadrid.es versión.z
 
-**Proyecto:** Marian Madrid Peluquería y Estética · **Fecha:** 2026-11-01 · **Versión SSOT:** version.z **Version consolidada redactada usando como fuentes el resto de documentos de este repositorio**
+**Proyecto:** Marian Madrid Peluquería y Estética · **Fecha:** 2026-11-01 · **Versión SSOT base:** v10.0 **Version consolidada redactada usando como fuentes el resto de documentos de este repositorio**
 
 # MAPA DEL DOCUMENTO — DOSSIER TÉCNICO CONSOLIDADO marianmadrid.es
 
@@ -463,7 +463,7 @@ G.9  InventarioStockVenta (26)  → stockKey (V1:/V3:), invariante stock
 G.10 MovimientosInventario (31) → movementToken_unique, lineItemId, stockApplied
 G.11 ControlOperativo (38)      → 6 controlTypes; locks + dedupe + rate limit + alertas
 G.12 RegistrosHorariosStaff (21) → ledger laboral append-only; deviceIpAddress PII
-G.13 MapaStaff (15+4)           → staffMemberId/active pendientes ADR
+G.13 MapaStaff (14+4)           → staffMemberId/active pendientes ADR
 G.14 Notas transversales
      ├─ G.14.1 Invariantes de integridad (8)
      ├─ G.14.2 Ledgers append-only (4)
@@ -758,7 +758,7 @@ Orden **estricto** (ya fijado en la SSOT; el modelo lo aplica sin reinterpretarl
 
 1. **APIs y SDK oficiales de Wix** (comportamiento real de la plataforma).
 2. **Esquema y registros del CMS vivo** (fuente de lo persistido).
-3. **BIBLIA version.z + anexo aclaratorio** (doctrina y correcciones vigentes).
+3. **BIBLIA SSOT v10.0 + anexo aclaratorio vigente** (doctrina y correcciones vigentes).
 4. **Auditoría de migración / CI / repo `main`** (hechos verificados a fecha).
 5. **Hoja de necesidades** (deseado).
 
@@ -1072,24 +1072,15 @@ claude mcp add --transport http wix-mcp-remote https://mcp.wix.com/mcp
 ### 8.2 Ejemplo de autenticación y Preview (no publicar automáticamente)
 
 ```yaml
-name: Wix Publish
-on:
-  push:
-    branches: [main]
-jobs:
-  publish:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24.22.1
-      - run: npm install -g @wix/cli
-      - run: wix login --api-key ${{ secrets.CLI_API_KEY }}
-      - run: npm test && npm run lint   # gates del proyecto
-      - run: wix publish                # publica desde default branch
+- name: Authenticate Wix CLI
+  env:
+    CLI_API_KEY: ${{ secrets.CLI_API_KEY }}
+  run: wix login --api-key "${CLI_API_KEY}"
+
+- name: Create Wix Preview (never publish)
+  run: wix preview
 ```
-> **Regla del proyecto:** el workflow **no publica** si `npm test` o `npm run lint` fallan. El estado “Published” del sitio no demuestra que contenga el commit auditado; la única evidencia válida es el **run ID** de GitHub Actions + confirmación de `wix publish` sobre el commit esperado.
+> **Estado real:** ejemplo ilustrativo de autenticación y Preview, no workflow activo ni autorización para publicar. El workflow de backend se mantiene independiente y conserva su contenido aprobado. El workflow de Preview actual no contiene `wix publish`; su criterio de éxito debe validar la URL real que devuelve Wix.
 
 ---
 
@@ -1389,7 +1380,7 @@ El orden de este anexo se alinea con §A.1 y §C.1.1. No establece una jerarquí
 | Ledger fiscal Veri\*Factu (CMS + hooks) | 
 | Cierre Z automatizado (cron 01:20 AM) | 
 | Fichajes laborales RD 8/2019 | 
-| Tests Vitest (182 pass / 0 fail, 11 suites (dato histórico declarado; no es una medición actual verificada)) | 
+| Tests Vitest — recuento histórico: 182 pass / 0 fail, 11 suites; no es una medición actual verificada | 
 | Migración SDK v2 `@wix/data` | 
 | Módulo contabilidad (`LibroAsientosContablesDetalle`) | 
 | Veri\*Factu certificado AEAT | 
@@ -1449,7 +1440,7 @@ El orden de este anexo se alinea con §A.1 y §C.1.1. No establece una jerarquí
 | Runtime backend | Node.js en sandbox Velo / Wix JavaScript SDK v2 |
 | Capa de datos | Wix CMS (MongoDB internamente) |
 | Frontend / UI | Selector `$w` client-side + widgets HTML embebidos vía `postMessage` coordinados por `public/widgetBridge.js` |
-| Tests | Vitest con mocks de Wix APIs (182 pass / 0 fail, 11 suites (dato histórico declarado; no es una medición actual verificada)) |
+| Tests | Vitest con mocks de Wix APIs; recuento histórico declarado: 182 pass / 0 fail, 11 suites (no es medición actual) |
 | Control de código | Git + Wix CLI (`wix dev`) |
 | Sincronización | `wix dev` sincroniza cambios locales con Local Editor; `wix sync-types` y `wix pull/sync` no se consideran comandos CLI for Sites confirmados en la referencia oficial consultada. |
 | Soporte remoto | RustDesk (contraseña en Wix Secrets Manager) |
@@ -2672,14 +2663,14 @@ Cualquier intento de lectura/escritura sobre legacy es interceptado en `backend/
 |---|---|---|---|
 | `resourceId` | `recursoId` | TEXT | `resourceId` de Wix Bookings. **Distinto** de `memberId` y `staffMemberId`. |
 | `memberId` | `miembroId` | TEXT | `memberId` de Wix Members. **Distinto** de `resourceId`. |
-| `staffMemberId` | `personalMiembroId` | TEXT | ⚠️ ID del perfil de personal de Bookings. **Legacy tolerado**; pendiente ADR. |
+| `staffMemberId` | `personalMiembroId` | TEXT | ID del perfil Staff de Bookings. El campo existe en el CMS, pero el resolver actual de `backend/staff.js` obtiene este ID de `staff._id` mediante Bookings Staff API y no consulta esta colección. Mantener/retirar su espejo CMS requiere ADR y auditoría de consumidores. |
 | `staffName` | `personalNombreCanonico` | TEXT | Nombre canónico. |
 | `displayName` | `nombreVisiblePersonal` | TEXT | Nombre visible. |
 | `scheduleId` | `calendarioId` | TEXT | En `MapaStaff`, ID del calendario del profesional derivado de `resource.eventsSchedule._id` (o del primer `workingHoursSchedules[0]._id` cuando está presente). No confundir con `CitasF2.scheduleId`, que conserva el `scheduleId` del slot nativo de Bookings. |
 | `thirdPartyId` | `terceraParteId` | TEXT | Referencia a `DatosFiscales`. **Vacío por diseño**; prohibido rellenar por inferencia. |
 | `rolBookings` | `rolReservasNativo` | TEXT | `STAFF` (rol nativo de Bookings). |
 | `rolWebsite` | `rolWebNegocio` | TEXT | `ADMIN` \| `GESTION` \| `ESTILISTA` (RBAC SSOT). |
-| `active` | `personalActivo` | BOOLEAN | ⚠️ Indicador operativo. **No deseado como estado operacional** (SSOT); pendiente ADR. |
+| `active` | `personalActivo` | BOOLEAN | Campo presente en el esquema CMS vivo. El resolver actual de `backend/staff.js` no lee este campo ni consulta MapaStaff; su semántica operativa y eventual retirada requieren ADR. No afirmar que el runtime exige `active === true` sin consumidor verificado. |
 | `sortOrder` | `ordenPersonal` | NUMBER | Orden de presentación. Entero. |
 | `sourceSystem` | `origenSistemaMaestro` | TEXT | Sistema de origen (enum backend). |
 | `schemaVersion` | `esquemaVersion` | NUMBER | Versión del esquema. Entero. |
@@ -3526,7 +3517,7 @@ El negocio opera con **3 profesionales** (1 ADMIN + 2 ESTILISTAS). No consta per
 | **Microsoft Clarity** | Mapas de calor | `[HECHO]` dossier §2.1 |
 | **RustDesk** | Soporte remoto (contraseña en Secrets) | `[HECHO]` dossier §2.1 |
 | **Wix CLI for Sites** | `dev`, `install`, `update`, `publish`, `preview` | `[HECHO]` bloque técnico |
-| **Vitest** | Tests offline (182 pass / 0 fail, 11 suites (dato histórico declarado; no es una medición actual verificada)) | `[DECLARADO]` dossier §0 |
+| **Vitest** | Tests offline; recuento histórico declarado: 182 pass / 0 fail, 11 suites (no es medición actual) | `[DECLARADO]` dossier §0 |
 
 ---
 
@@ -3909,12 +3900,7 @@ claude mcp add --transport http wix-mcp-remote https://mcp.wix.com/mcp
 
 **Advertencia**: publicar desde código local con `wix publish` **desincroniza el sitio vivo del repositorio de GitHub**. En este proyecto, seleccionar el commit de la rama por defecto tras revisión. Los comandos `build`, `release`, `env pull/set` y `translation pull` pertenecen a otros tipos de proyecto/CLI y **no forman parte del catálogo documentado de Wix CLI for Sites**; `connect` tampoco se considera comando confirmado para este sitio.
 
-**GitHub Actions — configuración exacta**:
-```yaml
-- run: npm install
-- run: wix login --api-key "${CLI_API_KEY}"
-- run: npm run wix publish
-```
+**GitHub Actions:** no se presenta aquí un YAML como configuración exacta. Los workflows activos y su contenido deben leerse directamente desde `.github/workflows/`; el workflow backend y el de Preview tienen propósitos y comandos diferentes.
 
 
 ---
@@ -4053,6 +4039,14 @@ Esta actualización corrige afirmaciones heredadas y registra el estado observad
 
 - La BIBLIA SSOT v10.0 y la hoja de necesidades se citan en el dossier, pero no aparecen como archivos en la raíz del repositorio `main` consultada el 2026-11-01. No afirmar que están versionadas en GitHub; mantener su versión y custodia documental explícitas.
 - La regla ESLint `@wix/cli/no-invalid-backend-import` permanece desactivada hasta que Wix genere el manifiesto auténtico y el lint pueda validarse con él.
+
+## MapaStaff: esquema CMS vivo frente al runtime
+
+- Consulta de solo lectura al sitio Wix `188bed94-177c-4bc9-a9f0-35080d874f3e`, 2026-11-01: `MapaStaff` existe como colección `NATIVE`, etiqueta `MAPA_STAFF`, revisión `13`, permisos ADMIN para insert/update/remove/read. La definición devuelve 14 campos de negocio y 4 campos de sistema.
+- Campos de negocio confirmados: `displayName`, `staffMemberId`, `scheduleId`, `thirdPartyId`, `staffName`, `rolWebsite`, `rolBookings`, `memberId`, `resourceId`, `active`, `sortOrder`, `sourceSystem`, `schemaVersion` y `ServiciosCatalogo_staffMembers`.
+- El módulo actual `src/backend/staff.js` resuelve identidades mediante `@wix/bookings` (`staffMembers.queryStaffMembers`) y normaliza `staff._id`, `staff.resourceId` y el ID de calendario. No consulta la colección CMS `MapaStaff`. Por tanto, el comentario del encabezado de ese módulo que afirma que MapaStaff «no existe» es incorrecto respecto al CMS vivo; lo correcto es que **existe, pero el resolver actual no la consume**.
+- No se debe confundir la existencia de la colección con su uso por el runtime. No se debe borrar ni poblar la colección, ni cambiar el resolver, sin ADR y auditoría de consumidores.
+- El campo `active` existe en el esquema, pero el código actual consultado no lo lee. No afirmar que el resolver requiere `active === true`.
 
 ## Identificadores Bookings y personal
 
