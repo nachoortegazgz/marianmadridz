@@ -49,8 +49,6 @@ import {
     removeById,
     saveItem,
     insertItem as dalInsert,
-    getItem as dalGet,
-    updateItem as dalUpdate
 } from "backend/dataAccess";
 import { availabilityTimeSlots, extendedBookings } from "@wix/bookings";
 import { auth } from "@wix/essentials";

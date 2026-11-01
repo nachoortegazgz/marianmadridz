@@ -10,7 +10,6 @@ STANDARDS: G10 ASCII Strict. Cero suppressAuth. Cero alias. Cero legacy.
 */
 
 import {
-    BUSINESS_COLLECTIONS,
     FISCAL_ROLE,
     MOVEMENT_LEGACY_READ_ALIASES,
     normalizeMovementKeys,
