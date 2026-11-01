@@ -3690,7 +3690,7 @@ Node.js **19.9.0 o superior** es obligatorio para el MCP. El dossier fija Node �
 |---|---|---|
 | **Remota (HTTP)** | `{"mcpServers":{"wix-mcp-remote":{"type":"http","url":"https://mcp.wix.com/mcp"}}}` | Claude, Cursor, GitHub Copilot, Windsurf, Claude Code |
 | **Proxy local (npx)** | `{"mcpServers":{"wix-mcp-remote":{"command":"npx","args":["-y","@wix/mcp-remote@latest","https://mcp.wix.com/mcp"]}}}` | Clientes sin soporte remoto MCP |
-| **API Key + Account ID** | Headers `Authorization: <API_KEY>` y `wix-account-id: <ACCOUNT_ID>` | n8n, A2A, entornos no interactivos |
+| **API Key + Account ID** | Conexión no interactiva; headers y autenticación en §J.1.3 | n8n, A2A, entornos no interactivos |
 
 **Claude Code específicamente**:
 ```bash
