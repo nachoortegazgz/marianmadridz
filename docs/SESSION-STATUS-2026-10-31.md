@@ -138,3 +138,14 @@ Este documento separa hechos verificados, cambios existentes en GitHub y tareas 
 - La generación sigue delegada a `wix install --npm @wix/data`; no se crea ni edita manualmente `src/velo.dependencies.json`.
 - Se fija `@wix/site-pricing-plans` a `1.35.0` en `package.json` y en la raíz de `package-lock.json`. La resolución instalada ya era exactamente `1.35.0`; el cambio elimina el rango caret sin cambiar el paquete efectivo.
 - La PR debe superar la suite, instalación limpia y lint antes de integrar. Tras el merge, el workflow generará el manifiesto en `main`; no se activa publicación Wix.
+
+
+## Addendum — 2026-11-01 live reconciliation
+
+- Current main HEAD independently verified: `9ba400008aa6d795591371b2db7417b93cb66632`. The previous HEAD recorded in this session note is stale and must not be used as the current baseline.
+- Automated CI results for the later verified commit: 286/286 backend regression tests passed across Node.js 24.22.1 and 26.12.1; lint and clean dependency install passed. See workflow run evidence in the conversation audit.
+- Wix CMS Data Collections API returned HTTP 200 and 35 collections. All 13 business NATIVE collections named in SSOT exist. Live schema revisions and key findings are recorded in `docs/audits/2026-11-01-live-cms-reconciliation.md`.
+- `MapaStaff` live schema still contains `staffMemberId` and `active`. They are retained until all consumers and data migration are audited; no destructive CMS change was made.
+- Wix Stores remains Catalog V1. ADR-001 already requires V1/V3 compatibility and postpones the published-site switch. Catalog V3 migration is not complete.
+- The owner explicitly excludes the real dual-booking test. It is not a pass and is not part of remaining execution.
+- No CMS, booking, payment, fiscal-ledger, inventory, staff or clock-in data was mutated during this reconciliation.
