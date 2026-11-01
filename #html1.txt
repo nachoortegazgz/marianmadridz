@@ -83,19 +83,6 @@ let handshakeTimer=null,handshakeCount=0,bookingTimer=null,contextTimer=null;
 
 const el=id=>document.getElementById(id);const text=(v,f="")=>String(v??"").trim()||f;const num=(v,f=0)=>{if(v===null||v===undefined||v==="")return f;const n=Number(v);return Number.isFinite(n)?n:f};const makeMessageId=p=>`${p}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
 
-/* SEC-01: cálculo del origen del padre y validación de mensajes entrantes. */
-function resolveParentOrigin(){
-  try{
-    if(window.location.ancestorOrigins&&window.location.ancestorOrigins.length>0){
-      const o=text(window.location.ancestorOrigins[0]);
-      if(o&&o!=="null")return o
-    }
-  }catch(_){}
-  try{
-    if(document.referrer){const u=new URL(document.referrer);if(u.origin&&u.origin!=="null")return u.origin}
-  }catch(_){}
-  return ""
-}
 function hostMatchesSuffix(host,suffix){
   if(!host||!suffix)return false;
   const s=suffix.startsWith(".")?suffix.slice(1):suffix;
@@ -234,11 +221,7 @@ function startHandshake(){
 function nav(t){post(MESSAGE_TYPES.NAV,{target:t})}
 
 function init(){
-  /* SEC-01: resuelve origen del padre antes de cualquier envío. Se asigna
-     la variable `parentOrigin` (runtime), no CONFIG. */
-  parentOrigin=resolveParentOrigin();
-  if(parentOrigin)console.info("[calendario] SEC: origen del padre =",parentOrigin);
-  else console.warn("[calendario] SEC: origen inicial desconocido; MM_READY se enviará solo al padre directo y el primer contexto fijará el origen exacto.");
+  console.info("[calendario] SEC: el origen exacto se fijará al recibir MM_CONTEXT del padre directo.");
   el("btnBack").onclick=()=>nav("SERVICIOS");
   el("btnPrivacy").onclick=()=>nav("PRIVACY");
   el("btnPrevMonth").onclick=()=>{state.month--;if(state.month<1){state.month=12;state.year--}state.selectedDay="";clearSlots();renderCalendar();requestDays()};
