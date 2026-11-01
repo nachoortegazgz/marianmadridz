@@ -10,6 +10,15 @@ on:
       - "package-lock.json"
       - "wix.config.json"
       - ".github/workflows/wix-preview-validation.yml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "src/**"
+      - "package.json"
+      - "package-lock.json"
+      - "wix.config.json"
+      - ".github/workflows/wix-preview-validation.yml"
   workflow_dispatch:
 
 permissions:
@@ -22,14 +31,14 @@ concurrency:
 jobs:
   preview:
     name: Build Wix preview from main
-    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    if: (github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request') && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.ref_name }}
+          ref: ${{ github.head_ref || github.ref_name }}
 
       - name: Set up supported Node.js
         uses: actions/setup-node@v4
@@ -53,7 +62,7 @@ jobs:
           fi
           wix login --api-key "${CLI_API_KEY}"
 
-      - name: Create Wix preview from latest main (never publish)
+      - name: Create and verify Wix Sites preview (never publish)
         env:
           CI: "true"
           TERM: "xterm"
@@ -61,29 +70,21 @@ jobs:
           set -euo pipefail
           rm -f wix-preview.log
 
-          timeout 8m bash -lc '
-            set -euo pipefail
-            wix preview > wix-preview.log 2>&1 &
-            preview_pid=$!
-            trap "kill ${preview_pid} >/dev/null 2>&1 || true; wait ${preview_pid} || true" EXIT
+          # Wix CLI for Sites presents an interactive source selector.
+          # Select "Local code" (second option) so this PR branch is previewed.
+          printf '\033[B\r' | timeout 8m script -q -e -c "wix preview" wix-preview.log
 
-            for _ in $(seq 1 180); do
-              if grep -Eiq "ready|localhost|127\.0\.0\.1|preview.*started|http" wix-preview.log; then
-                echo "Wix preview started successfully."
-                break
-              fi
-              sleep 2
-            done
+          # The official CLI for Sites emits a shareable http(s)://wix.to URL.
+          # Require the command to exit successfully and verify that exact URL.
+          preview_url="$(grep -Eo 'https?://wix\.to/[A-Za-z0-9]+' wix-preview.log | tail -n 1 || true)"
+          if [ -z "${preview_url}" ]; then
+            echo "::error::Wix preview completed without an explicit wix.to URL."
+            cat wix-preview.log || true
+            exit 1
+          fi
 
-            if ! grep -Eiq "ready|localhost|127\.0\.0\.1|preview.*started|http" wix-preview.log; then
-              echo "::error::Wix preview did not become ready before timeout."
-              cat wix-preview.log || true
-              exit 1
-            fi
-
-            kill ${preview_pid} >/dev/null 2>&1 || true
-            wait ${preview_pid} || true
-          '
+          curl --fail --silent --show-error --location --max-time 45 "${preview_url}" -o /dev/null
+          echo "Wix preview is reachable: ${preview_url}"
 
       - name: Preserve preview output
         if: always()

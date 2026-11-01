@@ -347,8 +347,7 @@ async function isEventProcessed(eventId) {
         .eq("controlType", CONTROL_TYPE.WEBHOOK_EVENT)
         .eq("dedupeKey", webhookKey)
         .limit(1)
-        .find(STRONG_READ)
-        .catch(() => null);
+        .find(STRONG_READ);
 
     return Boolean(existing?.items?.length);
 }
@@ -376,9 +375,20 @@ async function markEventAsProcessed(eventId, eventType, traceId, metadata = {}) 
             _createdDate: new Date(),
         });
         log.debug("EVENT_MARKED_PROCESSED", { eventId, eventType });
+        return true;
     } catch (err) {
-        // Colision de dedupeKey (evento ya marcado por otro proceso): OK.
-        log.debug("EVENT_INSERT_CONFLICT", { eventId, error: err.message });
+        // A failed insert is treated as a duplicate only when the exact key
+        // can be read back. Otherwise propagate the persistence failure.
+        const existing = await dalQuery(CONTROL_OPERATIVO_COL)
+            .eq("controlType", CONTROL_TYPE.WEBHOOK_EVENT)
+            .eq("dedupeKey", webhookKey)
+            .limit(1)
+            .find(STRONG_READ);
+        if (existing?.items?.length) {
+            log.debug("EVENT_INSERT_CONFLICT_CONFIRMED", { eventId, eventType });
+            return true;
+        }
+        throw err;
     }
 }
 
@@ -614,7 +624,7 @@ async function _syncNativeBookingToCitas(booking, eventId, traceId) {
 // ============================================================================
 
 async function _updateCitaStatus(bookingId, newStatus, traceId) {
-    await _updateCitaSafe(
+    return _updateCitaSafe(
         bookingId,
         (cita) => {
             if (
@@ -886,8 +896,7 @@ export async function wixBookingsV2_onBookingCanceled(rawBody) {
             .eq("bookingId", bookingId)
             .limit(1)
             .find(STRONG_READ)
-            .then((r) => r?.items?.[0] || null)
-            .catch(() => null);
+            .then((r) => r?.items?.[0] || null);
 
         if (
             previousCita &&
@@ -898,8 +907,7 @@ export async function wixBookingsV2_onBookingCanceled(rawBody) {
                 .eq("linkedBookingIds", bookingId)
                 .eq("movementType", MOVEMENT_TYPE.VENTA_ONLINE)
                 .limit(1)
-                .find(STRONG_READ)
-                .catch(() => ({ items: [] }));
+                .find(STRONG_READ);
 
             const originalMovement = originalMovementRes?.items?.[0];
 
@@ -976,7 +984,8 @@ export async function wixBookingsV2_onBookingCanceled(rawBody) {
                             error: rectErr?.message,
                         }
                     );
-                    await queueFiscalRecovery({
+                    const recovery = await queueFiscalRecovery({
+                        kind: "FISCAL_LEDGER",
                         bookingIds: bookingId,
                         totalAmount: -Math.abs(
                             Number(originalMovement.totalAmount || 0)
@@ -993,19 +1002,25 @@ export async function wixBookingsV2_onBookingCanceled(rawBody) {
                         traceId,
                         lastError: rectErr?.message || "RECT_FAIL",
                     });
+                    if (!recovery?.queued) {
+                        throw new Error("FISCAL_RECOVERY_QUEUE_FAILED");
+                    }
                 }
             }
         }
 
         // ALN-03: enum Wix nativo es CANCELED (una L).
-        await _updateCitaStatus(bookingId, BOOKING_STATUS.CANCELED, traceId);
+        const statusUpdate = await _updateCitaStatus(bookingId, BOOKING_STATUS.CANCELED, traceId);
+        if (!statusUpdate?.updated && statusUpdate?.reason !== "NO_CHANGE") {
+            throw new Error("CITASF2_CANCEL_SYNC_FAILED:" + (statusUpdate?.reason || "UNKNOWN"));
+        }
         await markEventAsProcessed(eventId, "BOOKING_CANCELED", traceId, {
             bookingId,
         });
         return { status: "OK", eventId };
     } catch (error) {
         _handleError(error, "wixBookingsV2_onBookingCanceled", traceId);
-        return { status: "OK" };
+        throw error;
     }
 }
 
