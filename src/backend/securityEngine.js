@@ -14,6 +14,7 @@ HISTORIAL CERO-DEUDA:
 =============================================================================
 */
 
+import { createHash, createHmac } from "node:crypto";
 import { getSecretValue } from "backend/secretAccess";
 import { SECRETS } from "backend/mmSecrets";
 
@@ -57,34 +58,19 @@ export async function hashSHA256(input) {
         return ZERO_HASH;
     }
 
-    if (
-        typeof crypto !== "undefined" &&
-        crypto?.subtle &&
-        typeof TextEncoder === "function"
-    ) {
-        try {
-            const digest = await crypto.subtle.digest(
-                "SHA-256",
-                new TextEncoder().encode(value)
-            );
-
-            return _bytesToHex(new Uint8Array(digest));
-        } catch (error) {
-            log.error("hashSHA256 failed", {
-                message: error?.message || String(error),
-            });
-
-            throw new Error("HASH_UNAVAILABLE");
-        }
+    try {
+        return createHash("sha256").update(value, "utf8").digest("hex");
+    } catch (error) {
+        log.error("hashSHA256 failed", {
+            message: error?.message || String(error),
+        });
+        throw new Error("HASH_UNAVAILABLE");
     }
-
-    throw new Error("WEB_CRYPTO_UNAVAILABLE");
 }
 
 // =============================================================================
 // BLOQUE 3 - HMAC-SHA256
 // =============================================================================
-
 export async function hmacSha256Hex(key, payload) {
     const keyValue = _toString(key);
     const payloadValue = _toString(payload);
@@ -93,42 +79,16 @@ export async function hmacSha256Hex(key, payload) {
         return ZERO_HASH;
     }
 
-    if (
-        typeof crypto !== "undefined" &&
-        crypto?.subtle &&
-        typeof TextEncoder === "function"
-    ) {
-        try {
-            const encoder = new TextEncoder();
-
-            const cryptoKey = await crypto.subtle.importKey(
-                "raw",
-                encoder.encode(keyValue),
-                {
-                    name: "HMAC",
-                    hash: "SHA-256",
-                },
-                false,
-                ["sign"]
-            );
-
-            const signature = await crypto.subtle.sign(
-                "HMAC",
-                cryptoKey,
-                encoder.encode(payloadValue)
-            );
-
-            return _bytesToHex(new Uint8Array(signature));
-        } catch (error) {
-            log.error("hmacSha256Hex failed", {
-                message: error?.message || String(error),
-            });
-
-            throw new Error("HMAC_UNAVAILABLE");
-        }
+    try {
+        return createHmac("sha256", keyValue)
+            .update(payloadValue, "utf8")
+            .digest("hex");
+    } catch (error) {
+        log.error("hmacSha256Hex failed", {
+            message: error?.message || String(error),
+        });
+        throw new Error("HMAC_UNAVAILABLE");
     }
-
-    throw new Error("WEB_CRYPTO_UNAVAILABLE");
 }
 
 // =============================================================================
