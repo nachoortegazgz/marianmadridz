@@ -62,10 +62,7 @@ jobs:
           fi
           wix login --api-key "${CLI_API_KEY}"
 
-      - name: Build Wix project before preview
-        run: wix build
-
-      - name: Create and verify Wix preview (never publish)
+      - name: Create and verify Wix Sites preview (never publish)
         env:
           CI: "true"
           TERM: "xterm"
@@ -73,20 +70,21 @@ jobs:
           set -euo pipefail
           rm -f wix-preview.log
 
-          # Wix CLI renders its interactive UI; allocate a real pseudo-terminal
-          # in CI instead of redirecting stdin from a non-TTY background process.
-          timeout 8m script -q -e -c "wix preview" wix-preview.log
+          # Wix CLI for Sites presents an interactive source selector.
+          # Select "Local code" (second option) so this PR branch is previewed.
+          printf '\\033[B\\r' | timeout 8m script -q -e -c "wix preview" wix-preview.log
 
-          # Require a successful process exit and an explicit HTTPS link.
-          # Generic words such as "http", "ready" or "preview" are not evidence.
-          if ! grep -Eoq 'https://[^[:space:]"]+' wix-preview.log; then
-            echo "::error::Wix CLI exited without returning a preview link."
+          # The official CLI for Sites emits a shareable http(s)://wix.to URL.
+          # Require the command to exit successfully and verify that exact URL.
+          preview_url="$(grep -Eo 'https?://wix\\.to/[A-Za-z0-9]+' wix-preview.log | tail -n 1 || true)"
+          if [ -z "${preview_url}" ]; then
+            echo "::error::Wix preview completed without an explicit wix.to URL."
             cat wix-preview.log || true
             exit 1
           fi
 
-          echo "Wix preview command completed and returned an HTTPS link."
-          grep -Eo 'https://[^[:space:]"]+' wix-preview.log | sort -u
+          curl --fail --silent --show-error --location --max-time 45 "${preview_url}" -o /dev/null
+          echo "Wix preview is reachable: ${preview_url}"
 
       - name: Preserve preview output
         if: always()
