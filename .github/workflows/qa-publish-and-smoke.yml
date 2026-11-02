@@ -1,0 +1,95 @@
+name: QA publish and smoke test
+
+on:
+  push:
+    branches:
+      - "feat/qa-functional-layers-1-2"
+    paths:
+      - "src/**"
+      - "package.json"
+      - "package-lock.json"
+      - "wix.config.json"
+      - ".github/workflows/qa-publish-and-smoke.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: marianmadrid-qa-publish
+  cancel-in-progress: false
+
+jobs:
+  publish-qa:
+    name: Test and publish only to the isolated QA site
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.22.1"
+          cache: npm
+      - name: Run complete offline gates before publication
+        run: |
+          npm ci
+          npm run verify:wix-ecom-cart-v2
+          npm test
+          npm run test:layer1
+          npm run test:layer2
+          npm run lint
+      - name: Install and authenticate Wix CLI for Sites
+        env:
+          CLI_API_KEY: ${{ secrets.CLI_API_KEY }}
+        run: |
+          test -n "$CLI_API_KEY" || { echo "::error::Missing CLI_API_KEY"; exit 1; }
+          npm install --global @wix/cli
+          wix login --api-key "$CLI_API_KEY"
+          wix whoami
+      - name: Verify exact QA site target
+        run: |
+          node --input-type=module -e '
+            import fs from "node:fs";
+            const config = JSON.parse(fs.readFileSync("wix.config.json", "utf8"));
+            if (config.siteId !== "188bed94-177c-4bc9-a9f0-35080d874f3e") {
+              throw new Error("Refusing publish: wix.config.json is not the authorized QA site.");
+            }
+            console.log("Verified QA siteId:", config.siteId);
+          '
+      - name: Publish the tested local branch code to QA
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y expect
+          expect <<'EXPECT'
+          log_user 1
+          set selected 0
+          set confirmed 0
+          set timeout 600
+          spawn wix publish
+          expect {
+            -re {What would you like to publish} {
+              send "\033\[B"
+              send "\r"
+              set selected 1
+              exp_continue
+            }
+            -re {press y} {
+              send "y\r"
+              set confirmed 1
+              exp_continue
+            }
+            eof {}
+            timeout { exit 124 }
+          }
+          if {!$selected || !$confirmed} {
+            puts stderr "Refusing success: CLI did not confirm Local code selection and publish."
+            exit 1
+          }
+          set result [wait]
+          exit [lindex $result 3]
+          EXPECT
+      - name: Verify published QA homepage responds
+        run: |
+          status="$(curl --silent --show-error --location --output /tmp/marianmadrid-qa.html --write-out '%{http_code}' https://www.marianmadrid.es/)"
+          test "$status" = "200"
+          grep -qi "marianmadrid" /tmp/marianmadrid-qa.html
+          echo "QA homepage HTTP status: $status"
