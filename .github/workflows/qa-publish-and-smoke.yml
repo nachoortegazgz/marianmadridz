@@ -68,8 +68,13 @@ jobs:
           expect {
             -re {What would you like to publish} {
               send "\033\[B"
-              send "\r"
-              set selected 1
+              expect {
+                -re {❯\s+Local code} {
+                  send "\r"
+                  set selected 1
+                }
+                timeout { exit 1 }
+              }
               exp_continue
             }
             -re {press y} {
