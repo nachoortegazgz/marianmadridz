@@ -314,7 +314,7 @@ async function releaseInventoryVariantLock(lockId, traceId) {
     .find({ consistencyMode: "strong" });
   const current = currentRes?.items?.[0] || null;
 
-  if (current?.alertType === "INVENTORY_VARIANT_LOCK" && current.traceId === traceId) {
+  if (current?.controlType === CONTROL_TYPE.SLOT_LOCK && current.traceId === traceId) {
     await removeById(CONTROL_COL, lockId);
   }
 }
@@ -575,7 +575,7 @@ export async function recordInventoryMovementSafe(identity, movementType, quanti
     };
   }
   } finally {
-    await releaseInventoryVariantLock(stockItem._id, traceId).catch((releaseError) => {
+    await releaseInventoryVariantLock(lock._id, traceId).catch((releaseError) => {
       log.error("Inventory variant lock release failed", {
         stockKey,
         traceId,
