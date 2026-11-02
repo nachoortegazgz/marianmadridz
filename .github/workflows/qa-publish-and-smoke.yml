@@ -67,14 +67,11 @@ jobs:
           spawn wix publish
           expect {
             -re {What would you like to publish} {
+              expect -re {Latest commit from origin/main}
+              expect -re {Local code}
               send "\033\[B"
-              expect {
-                -re {❯\s+Local code} {
-                  send "\r"
-                  set selected 1
-                }
-                timeout { exit 1 }
-              }
+              send "\r"
+              set selected 1
               exp_continue
             }
             -re {press y} {
