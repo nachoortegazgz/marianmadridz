@@ -629,7 +629,7 @@ export function _validateDualGap(f1LocalEnd, f2LocalStart, traceId, minimumGapMi
 // =============================================================================
 // BLOCK 9 - VALIDACION SERVICIO F2
 // =============================================================================
-async export async function _validateLinkedPhaseService(linkedPhases, parentLocationId, traceId) {
+export async function _validateLinkedPhaseService(linkedPhases, parentLocationId, traceId) {
     const linkedServiceId = _safeTrim(linkedPhases);
     if (!linkedServiceId || !_looksLikeGuid(linkedServiceId)) {
         throw createBookingError(
