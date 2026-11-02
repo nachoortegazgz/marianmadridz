@@ -16,7 +16,7 @@ permissions:
 
 concurrency:
   group: marianmadrid-qa-publish
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   publish-qa:
