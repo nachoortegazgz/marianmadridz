@@ -560,7 +560,7 @@ function _checkDoubleBookingFlag(booking, phase, traceId) {
 // =============================================================================
 // BLOCK 8 - GAP VALIDACION
 // =============================================================================
-export function _validateDualGap(f1LocalEnd, f2LocalStart, traceId, minimumGapMinutes) {
+function _validateDualGap(f1LocalEnd, f2LocalStart, traceId, minimumGapMinutes) {
     const f1EndLocal = _normalizeLocalIsoStr(f1LocalEnd);
     const f2StartLocal = _normalizeLocalIsoStr(f2LocalStart);
     if (!f1EndLocal || !f2StartLocal) {
@@ -629,7 +629,7 @@ export function _validateDualGap(f1LocalEnd, f2LocalStart, traceId, minimumGapMi
 // =============================================================================
 // BLOCK 9 - VALIDACION SERVICIO F2
 // =============================================================================
-async function _validateLinkedPhaseService(linkedPhases, parentLocationId, traceId) {
+async export async function _validateLinkedPhaseService(linkedPhases, parentLocationId, traceId) {
     const linkedServiceId = _safeTrim(linkedPhases);
     if (!linkedServiceId || !_looksLikeGuid(linkedServiceId)) {
         throw createBookingError(
@@ -639,10 +639,11 @@ async function _validateLinkedPhaseService(linkedPhases, parentLocationId, trace
         );
     }
 
+    // A transient CMS read failure must remain retryable. Treating it as an
+    // empty result misreports an outage as SERVICE_NOT_FOUND and breaks dual
+    // booking recovery.
     const res = await elevatedQueryFind(SERVICIOS_COL, function (q) {
         return q.eq("serviceId", linkedServiceId).limit(1);
-    }).catch(function () {
-        return { items: [] };
     });
 
     const service = (res && res.items && res.items[0]) || null;
