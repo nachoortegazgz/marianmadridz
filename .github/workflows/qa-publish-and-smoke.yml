@@ -74,7 +74,7 @@ jobs:
               set selected 1
               exp_continue
             }
-            -re {(?i)(press\\s+['\"]?y|are you sure.*publish|confirm.*publish)} {
+            -re {(?i)(press[[:space:]]+['"]?y|are you sure.*publish|confirm.*publish)} {(?i)(press\\s+['\"]?y|are you sure.*publish|confirm.*publish)} {
               send "y\r"
               set confirmed 1
               exp_continue
