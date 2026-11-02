@@ -63,18 +63,18 @@ jobs:
           log_user 1
           set selected 0
           set confirmed 0
-          set timeout 600
+          set timeout 300
           spawn wix publish
           expect {
-            -re {What would you like to publish} {
-              expect -re {Latest commit from origin/main}
-              expect -re {Local code}
+            -re {(?i)what would you like to publish} {
+              expect -re {(?i)latest commit from origin/main}
+              expect -re {(?i)local code}
               send "\033\[B"
               send "\r"
               set selected 1
               exp_continue
             }
-            -re {press y} {
+            -re {(?i)(press\\s+['\"]?y|are you sure.*publish|confirm.*publish)} {
               send "y\r"
               set confirmed 1
               exp_continue
