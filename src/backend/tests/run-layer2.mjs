@@ -16,6 +16,8 @@ const suites = [
   'site.flows.e2e.test.mjs',
   'orderLedgerAmount.test.mjs',
   'events.booking-canceled.integrity.test.mjs',
+  'compensation.contract.test.mjs',
+  'completion-retry.contract.test.mjs',
   'unit.ssot.v5011.test.mjs',
 ];
 

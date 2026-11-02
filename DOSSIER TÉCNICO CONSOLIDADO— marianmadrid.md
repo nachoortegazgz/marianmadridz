@@ -4616,3 +4616,22 @@ La lista agrupa pendientes de §26, §24, §29–§31, la revisión previa de m�
 - Auditoría de ajustes Wix y Apps §M y revisión compartida de módulos/H-1–H-6, incorporadas como tareas y decisiones abiertas en §32.2–§32.3.
 
 **Punto exacto de reentrada:** comprobar Preview; después, reconciliar las ocho cancelaciones Bookings/CitasF2 y verificar recuperación durable del webhook. No repetir una auditoría general ni realizar escrituras hasta que el diagnóstico y la autorización lo permitan.
+
+
+### 32.5 Repriorización funcional QA — 2026-11-02
+
+El titular confirma que `https://www.marianmadrid.es` es un sitio QA aislado, sin actividad comercial real, y autoriza publicar antes de cada batería de pruebas simuladas, corregir y repetir. Esta declaración actualiza el alcance de pruebas del proyecto, pero no convierte pagos, facturas ni operaciones fiscales reales en simulaciones.
+
+**Objetivo de entrega urgente:** conseguir flujos operativos verificables para:
+- Reservas SIMPLE: servicio, disponibilidad, asignación profesional/recurso, Bookings Writer V2, persistencia CitasF2, idempotencia, consulta, reprogramación y cancelación.
+- Reservas DUALES: F1 y F2 como dos reservas vinculadas (no multiservice), mismo profesional/recurso cuando la regla del catálogo lo exige, duración de cada fase, `exposureDuration` exacto entre F1 y F2, pairToken, locks, compensación y persistencia de ambas fases.
+- Flujos propios del sitio: calendario/widget, páginas Velo, webMethods, workflows programados y notificaciones de QA.
+- Capa 2: movimientos transaccionales, registros append-only, caja, cierre Z, conciliación, trazabilidad, recuperación e integridad de hash.
+
+**Orden de ejecución:** primero smoke/flujo de reserva SIMPLE y dual simulada; después cancelaciones y recuperación; después caja/ledger/controles; por último optimización no bloqueante. Cada batería de runtime se precede de publicación explícita en el sitio QA correcto, verificando `wix.config.json` (`siteId=188bed94-177c-4bc9-a9f0-35080d874f3e`) y evitando producción.
+
+**Límites:** usar datos sintéticos y canales de notificación controlados; no realizar pagos/capturas/reembolsos reales ni emitir documentos fiscales reales. No reescribir reservas o ledgers históricos para ocultar discrepancias. Las ocho divergencias §31.8 requieren diagnóstico por registro y resolución explícita; la nueva autorización QA no permite maquillarlas. Los tests offline/mock no equivalen a runtime QA. Las pruebas duales autorizadas son simulaciones QA; no se convierten en actividad comercial real.
+
+**Brecha de automatización:** el workflow `wix-preview-validation.yml` solo genera Preview, no publica el sitio. Wix documenta `wix publish` como publicación del sitio y requiere elegir fuente de código y confirmar el publish. No debe sustituirse por `wix preview` ni confundirse con un deploy headless. La publicación QA automatizada requiere una sesión CLI autenticada, PTY que seleccione Local code o la rama QA validada, y verificación estricta del siteId antes de confirmar.
+
+**Base técnica actual:** `main` observado en esta sesión: `0ce20bdfe7f6e42a64212617d66d41f782c4ff21`; §32.1 conservaba un SHA histórico anterior y debe reconciliarse al cierre. Rama de trabajo: `feat/qa-functional-layers-1-2`.
