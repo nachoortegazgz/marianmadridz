@@ -560,7 +560,7 @@ function _checkDoubleBookingFlag(booking, phase, traceId) {
 // =============================================================================
 // BLOCK 8 - GAP VALIDACION
 // =============================================================================
-function _validateDualGap(f1LocalEnd, f2LocalStart, traceId, minimumGapMinutes) {
+export function _validateDualGap(f1LocalEnd, f2LocalStart, traceId, minimumGapMinutes) {
     const f1EndLocal = _normalizeLocalIsoStr(f1LocalEnd);
     const f2StartLocal = _normalizeLocalIsoStr(f2LocalStart);
     if (!f1EndLocal || !f2StartLocal) {
