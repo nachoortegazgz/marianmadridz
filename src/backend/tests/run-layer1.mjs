@@ -17,6 +17,7 @@ const suites = [
   'booking.core.concurrency.test.mjs',
   'booking.saga.dual-gap-zero.test.mjs',
   'qa.simple-booking.writer.e2e.test.mjs',
+  'qa.dual-booking.writer.e2e.test.mjs',
   'booking.flow.retry.contract.test.mjs',
   'controlOperativo.hooks.test.mjs',
   'reservas.web.test.mjs',
