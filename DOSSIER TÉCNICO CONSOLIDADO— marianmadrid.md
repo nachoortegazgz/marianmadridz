@@ -1831,7 +1831,7 @@ Cualquier intento de lectura/escritura sobre legacy es interceptado en `backend/
 | `paymentStatus` | `pagoEstado` | TEXT | CMS KEYFIELDS 2026-11-01 documenta `NOT_PAID` / `PAID` / `PENDING_PAYMENT` / `PENDING_LEDGER` / `REFUNDED` / `PARTIALLY_REFUNDED`; el código añade `PARTIALLY_PAID`, `EXEMPT` y `UNDEFINED`. La tabla antigua `UNPAID` / `PARTIAL` queda obsoleta; confirmar consumidores y runtime antes de retirar compatibilidad. |
 | `serviceId` | `servicioId` | TEXT | GUID del servicio en Wix Bookings. **Distinto** de `catalogId`. |
 | `resourceId` | `recursoId` | TEXT | GUID del recurso (profesional) en Wix Bookings. **Índice** `idx_citasf2_resourceId`. |
-| `pairToken` | `parejaToken` | TEXT | Token compartido para correlacionar/idempotentizar fases. Código actual: SIMPLE y fallback dual usan `pt` + primeros 32 caracteres de `_hashKey` sobre payload estable y hash de email; DUAL con `resourceId` GUID usa `_buildPairTokenDeterministic()` sobre fingerprint validado. No asumir igual formato ni longitud entre ramas. **Índice** regular. |
+| `pairToken` | `parejaToken` | TEXT | Token compartido para correlacionar/idempotentizar fases. Código actual: SIMPLE y fallback dual usan `pt` + `_hashKey` (16 caracteres hex) sobre payload estable y hash de email; DUAL con `resourceId` GUID usa `_buildPairTokenDeterministic()` y devuelve el `_hashKey` (16 hex) del fingerprint validado. SIMPLE/fallback llevan prefijo `pt`; DUAL con GUID no. **Índice** regular. |
 | `dateYmd` | `fechaYmd` | TEXT | Fecha operativa normalizada `YYYY-MM-DD`. |
 | `scheduleId` | `calendarioId` | TEXT | ID de calendario **del slot nativo** (`bookedEntity.slot.scheduleId`). **No** sustituir por `eventsSchedule.id` del profesional. |
 | `contactDetails` | `contactoDetalles` | OBJECT | Datos mínimos de contacto (ej. `{email}`). Minimizar PII. |
@@ -2536,7 +2536,7 @@ API = { STAFF_RESOURCE_TYPE_ID: "1cd44cf8-756f-41c3-bd90-3e2ffcaf1155" }
 | ID | Generación | Alcance |
 |---|---|---|
 | `traceId` | `makeTraceId()` / `_generateUUID()` (UUID v4) | Obligatorio en toda mutación transaccional |
-| `pairToken` | TEXT; SIMPLE/fallback: `pt` + primeros 32 caracteres de `_hashKey(payload + "|" + emailHash)`; DUAL con `resourceId` GUID: `_buildPairTokenDeterministic(_buildPairFingerprint(...))`. No fijar longitud/forma del resultado DUAL sin validar `_hashKey` y fixtures. | `CitasF2`, `ControlOperativo` |
+| `pairToken` | SIMPLE/fallback: `pt` + `_hashKey` de 16 hex sobre payload estable y hash de email; DUAL con `resourceId` GUID: `_buildPairTokenDeterministic()` devuelve `_hashKey` de 16 hex del fingerprint validado. El prefijo `pt` solo se aplica a SIMPLE/fallback. | `CitasF2`, `ControlOperativo` |
 | `dedupeKey` | Hash determinista | `ControlOperativo` (indexado) |
 | `movementToken` | UUID v4 | `MovimientosInventario` (único) |
 | `transactionId` | UUID v4 | `MovimientosCaja` (único) |
@@ -4558,7 +4558,7 @@ La lista agrupa pendientes de §26, §24, §29–§31, la revisión previa de m�
 
 - El inventario CMS del 2026-11-01 declara **35 colecciones: 15 NATIVE y 20 WIX_APP**.
 - De las 15 NATIVE, **13 son colecciones de negocio** y **2 auxiliares**: `QAE2ESimulaciones` y `RegistroIntegracion`. Esto concilia el inventario funcional §5.1 con el resumen de CMS KEYFIELDS; no deben sumarse las auxiliares a las 13 colecciones de negocio.
-- `BUSINESS_COLLECTIONS` en `src/backend/internalConfig.js` contiene 11 colecciones; `OPERATIONAL_COLLECTIONS` contiene 2 (incluye `ControlOperativo` compartida). `MapaStaff` no está en esos grupos canónicos. Mantener la discrepancia como decisión de arquitectura pendiente; no añadirla por simetría.
+- `BUSINESS_COLLECTIONS` en `src/backend/internalConfig.js` contiene 11 entradas; `OPERATIONAL_COLLECTIONS` contiene 2 y comparte `ControlOperativo` con el primer grupo. La unión representa 12 colecciones distintas; `MapaStaff` no está en esos grupos canónicos. Mantener la discrepancia como decisión de arquitectura pendiente; no añadirla por simetría.
 - Las tablas G.1–G.13 conservan parte de la descripción de campos del corte 25-10-2026. Las revisiones actuales del resumen CMS (por ejemplo, MovimientosCaja 75, HistoricoCierresZ 35, InventarioStockVenta 19 y MovimientosInventario 26) prevalecen sobre las revisiones antiguas de los encabezados G. El diccionario CMS es la fuente de esquema; el código acredita solo la implementación.
 
 ### 33.2 Estados de CitasF2: discrepancia no resuelta
@@ -4573,17 +4573,17 @@ La tabla histórica G.1 y §6.2 ya no deben presentar `UNPAID`/`PARTIAL` como en
 
 ### 33.3 pairToken: formato real de las ramas de generación
 
-El texto histórico que asignaba 16 caracteres hexadecimales a SIMPLE y DUAL no coincide con la implementación observada:
+El tamaño documentado (16 caracteres hexadecimales) coincide con el helper actual; se precisa aquí la diferencia entre ramas y los datos que intervienen:
 
-- SIMPLE y fallback dual: `_resolveStablePairToken()` serializa `serviceId`, `resourceId`, `f1Start`, `f2Start`, calcula `emailHash` y devuelve `pt` + los primeros 32 caracteres del hash resultante.
-- DUAL con `resourceId` GUID: `_resolveUnifiedPairToken()` delega en `_buildPairTokenDeterministic()`, que aplica `_hashKey()` al fingerprint validado de ambas fases. No añadir prefijo ni longitud supuesta.
-- La longitud/representación final de la rama DUAL depende de la implementación de `_hashKey` en `public/mmUtils.js`; no se fija aquí sin inspeccionar esa fuente y sus fixtures.
+- SIMPLE y fallback dual: `_resolveStablePairToken()` serializa `serviceId`, `resourceId`, `f1Start`, `f2Start`, calcula `emailHash` y devuelve `pt` + `_hashKey(...)`. `public/mmUtils.js` devuelve 16 caracteres hexadecimales; el `slice(0, 32)` de la saga no amplía ese valor.
+- DUAL con `resourceId` GUID: `_resolveUnifiedPairToken()` delega en `_buildPairTokenDeterministic()`, que aplica `_hashKey()` al fingerprint validado de `serviceId`, `linkedPhases`, `dateYmd`, inicio/fin de F1 y F2 y `resourceId`. Devuelve 16 caracteres hexadecimales, sin prefijo `pt`.
+- `public/mmUtils.js` implementa `_hashKey()` como concatenación de dos enteros de 32 bits en hexadecimal con padding: 16 caracteres hexadecimales. La longitud queda verificada en el código; la compatibilidad de valores históricos debe comprobarse con fixtures/datos antes de cambiar nada.
 
 **Regla:** `pairToken` es opaco para los consumidores. No regenerar tokens históricos ni cambiar algoritmo/formato sin ADR, análisis de colisiones/compatibilidad, drenaje de locks, migración/reconciliación y pruebas.
 
 ### 33.4 Pendientes de cierre
 
-1. Inspeccionar `public/mmUtils.js` y fixtures para fijar la representación exacta de `_hashKey` en la rama DUAL.
+1. Añadir/confirmar fixtures de regresión para ambas ramas de `pairToken` y comprobar compatibilidad con tokens ya persistidos, sin regenerarlos.
 2. Inventariar valores reales de `CitasF2.bookingStatus` y `paymentStatus` mediante lectura autorizada; contrastarlos con todos los lectores/escritores y tests.
 3. Aprobar ADR para la grafía/semántica de estados y actualizar conjuntamente CMS KEYFIELDS, SSOT, validadores, escritores, lectores y fixtures.
 4. Resolver mediante ADR el papel de `MapaStaff` respecto a `BUSINESS_COLLECTIONS`, `OPERATIONAL_COLLECTIONS` y las fuentes de identidad de Bookings.
