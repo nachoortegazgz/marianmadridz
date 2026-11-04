@@ -1,6 +1,6 @@
 # DOSSIER TÉCNICO CONSOLIDADO — marianmadrid.es versión.z
 
-**Proyecto:** Marian Madrid Peluquería y Estética · **Repositorio canónico en GITHUB:** `nachoortegazgz/marianmadridz` · **QA: www.marianmadrid.es:** arquitectura, estado, evidencias y protocolo para su uso como QA. Los estados operativos se rigen por §24; los datos de prueba y condiciones de validación por §25; el plan por §26.
+**Proyecto:** Marian Madrid Peluquería y Estética · **Repositorio canónico en GITHUB:** `nachoortegazgz/marianmadridz` · **QA: www.marianmadrid.es** arquitectura, estado, evidencias y protocolo para su uso como QA. Los estados operativos se rigen por §24; los datos de prueba y condiciones de validación por §25; el plan por §26.
 
 # MAPA DEL DOCUMENTO — DOSSIER TÉCNICO CONSOLIDADO marianmadrid.es
 
