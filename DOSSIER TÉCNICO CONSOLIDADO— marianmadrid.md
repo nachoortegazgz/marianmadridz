@@ -11,9 +11,7 @@
 
 ---
 
-## 0. Identidad y misión del modelo
-
-## ROL Y EXPERTISES.
+## 0. Identidad, rol y misión del modelo
 
 ### Definición compacta reutilizable
 
@@ -45,7 +43,7 @@
 
 ---
 
-## CONTEXTO REAL, ALCANCE Y ENTORNO DEL PROYECTO
+## 2. Contexto real, alcance y entorno del proyecto
 
 ### 2.1 Negocio y necesidad
 
@@ -70,46 +68,13 @@ La necesidad principal es gestionar el negocio desde Wix y cubrir las carencias 
 4. No publicar, ejecutar cobros, mutar datos reales ni modificar ledgers protegidos sin autorización explícita y procedimiento de validación.
 5. Separar **hecho verificado**, **dato declarado**, **propuesta** y **pendiente**. El dossier no sustituye la comprobación de cuentas, licencias, permisos ni secretos en sus paneles de origen.
 
-### 2.4 Ecosistema y componentes
+### 2.4 Ecosistema, cuentas y stack — resumen
 
-| Componente | Función / estado documentado |
-|---|---|
-| Wix Editor / Velo | Sitio, frontend, backend y runtime principal. |
-| Wix Bookings V2 | Servicios, disponibilidad, recursos y reservas; contratos concretos en §E y §16. |
-| Wix CMS | Colecciones de negocio; esquema e invariantes en §F–§G. |
-| Wix Stores Catalog V1 | Catálogo vigente según el dossier; Catalog V3 no activado sin decisión ADR-001. |
-| Wix eCommerce V2 | Checkout, pedidos y eventos de pago; migración Cart V2 sujeta a los gates documentados. |
-| Wix Members, Forms & Payments, Invoices V1, Gift Cards | Apps enumeradas en el inventario §3; uso y restricciones según cada apartado. |
-| GitHub `nachoortegazgz/marianmadridz` | Código, documentación, ADRs y workflow de validación Preview. |
-| Wix CLI for Sites | Desarrollo/sincronización local y Preview; no confundir con el CLI unificado para Apps/Headless. |
-| GitHub Actions | Workflow `.github/workflows/wix-preview-validation.yml`; usa `CLI_API_KEY` y ejecuta Preview, no publicación. |
-| IONOS | DNS y correo corporativo Plan Base5, según la ficha técnica. |
-| Resend API | Correo transaccional; clave referenciada en Wix Secrets Manager. |
-| OpenAI API | Asistente IA; clave referenciada en Wix Secrets Manager. |
-| WIX PAYMENTS | Pasarela de pago; validar la configuración activa antes de depender de ella. |
-| Microsoft 365 / SharePoint / Power Automate / Purview | Capa externa propuesta; requiere ADR-003, presupuesto y validación de retención antes de implementarse. |
-| Microsoft Clarity / RustDesk | Analítica de comportamiento y soporte remoto declarados; revisar permisos y datos tratados. |
+**Ecosistema declarado:** Wix Editor/Velo, Bookings V2, CMS, Stores Catalog V1, eCommerce V2, Members, Forms & Payments, Invoices V1 y Gift Cards; GitHub y Wix CLI for Sites; IONOS; Resend, OpenAI API, WIX PAYMENTS, Microsoft Clarity y RustDesk. Microsoft 365, SharePoint, Power Automate y Purview son una propuesta condicionada a ADR-003, no una implementación aprobada.
 
-### 2.5 Cuentas y servicios contratados o declarados
+**Stack de referencia:** JavaScript/Velo; SDK v2 solo con módulo y contrato verificados; frontend `$w` y widgets HTML comunicados mediante `public/widgetBridge.js`; Wix CMS, Vitest, ESLint y GitHub Actions. Las menciones anteriores no prueban que cuentas, licencias, versiones, permisos o integraciones sigan vigentes.
 
-| Servicio / cuenta | Situación que consta | Límite de verificación |
-|---|---|---|
-| Wix Premium | Plan declarado para el sitio. | Confirmar plan, titular y permisos en la cuenta Wix. |
-| IONOS Plan Base5 | Correo corporativo; DNS gestionado en IONOS. | Confirmar vigencia y titularidad en IONOS. |
-| GitHub | Repositorio canónico y workflow CI/Preview. | Los permisos se verifican en la organización/cuenta; los valores de secrets no son legibles por la API del repo. |
-| OpenAI API y Resend | Integraciones declaradas; claves en Wix Secrets Manager. | No consta aquí saldo, plan contratado, límites ni validez actual de las claves. |
-| Microsoft 365 Estandar / Kit Digital | Herramientas y buzones declarados en apartados de negocio. | No inferir licencias, SKU ni disponibilidad de Purview, Entra ID, Defender o Power Automate sin revisar el tenant. |
-| RustDesk / Microsoft Clarity | Herramientas declaradas. | Confirmar licencias, configuración, consentimiento y permisos actuales. |
-
-### 2.6 Stack técnico e integraciones
-
-- **Código:** JavaScript para Velo, Wix JavaScript SDK v2 donde el módulo y contrato estén verificados; APIs Velo permanentes solo donde la arquitectura las retenga expresamente.
-- **Backend:** `backend/`, web modules, validaciones, configuración, acceso centralizado a secretos y hooks CMS. La estructura y los contratos se detallan en §8, §10 y §11 del dossier técnico.
-- **Frontend:** Wix `$w` y widgets HTML embebidos comunicados mediante `postMessage` a través de `public/widgetBridge.js`.
-- **Datos:** Wix CMS; las colecciones `WIX_APP` son de lectura y las mutaciones de apps nativas se realizan mediante sus SDK/API oficiales.
-- **Calidad:** Vitest, ESLint, instalación limpia y workflow GitHub Actions de Preview. El recuento actual de tests no se considera verificado si no está publicado en logs.
-- **Entorno local:** Node/npm y Wix CLI for Sites; versión y lockfiles deben comprobarse en el clon actual. No editar manualmente artefactos generados por Wix CLI.
-- **Integraciones salientes:** `wix-fetch` y módulos backend, con credenciales obtenidas del gestor de secretos. No asumir que una integración está operativa solo porque figure en el dossier.
+**Detalle canónico:** inventario de Apps y stack en el Anexo de ficha técnica; APIs y versiones en §E y §§13–16; GitHub/CLI/MCP en §B y Anexo J; estado operativo en §32. Evitar mantener aquí una segunda copia de esos inventarios.
 
 ### 2.7 Identificadores y configuración de referencia
 
@@ -142,6 +107,25 @@ Los identificadores anteriores son referencias del dossier y deben contrastarse 
 | Cuenta de recuperación del dominio | `marianarizos@gmail.com`, identificada en la ficha WHOIS como contacto de rescate. | Verificar MFA y acceso desde el proveedor; no almacenar contraseña ni códigos de recuperación aquí. |
 
 **No consta en el repositorio** una lectura fiable de valores secretos, saldos/planes contratados ni una auditoría actual de permisos de cada cuenta. No inventar nombres de secretos ausentes ni dar por existentes las variables genéricas de ejemplos. Antes de ejecutar una integración, inspeccionar `mmSecrets.js`, `secretAccess.js`, el workflow correspondiente y la configuración del proveedor; si hay discrepancia, detenerse y documentarla.
+
+---
+
+### Mapa de autoridad y navegación del dossier
+
+El dossier combina directrices, contratos, inventarios y checkpoints fechados. Para evitar que un resumen se interprete como fuente de verdad paralela, aplicar esta tabla:
+
+| Necesidad | Referencia canónica | Regla |
+|---|---|---|
+| Conducta del agente, fuentes y límites | Bloque inicial y §§1, 3–9 | Directrices de trabajo; no acreditan el estado del sistema. |
+| Prioridades y gates | Resumen ejecutivo y §§19–20, 25–26 | Contrastar con SSOT y evidencia primaria. |
+| Contratos Wix, APIs y versiones | §E, documentación Wix y §§13–16 | Verificar vigencia oficial antes de implementar. |
+| CMS, keyfields, enums e invariantes | §§F–G, §§5–7 y CMS KEYFIELDS | No duplicar esquemas; resolver contradicciones con evidencia/ADR. |
+| Backend, permisos, secretos y jobs | §§8, 10–12 y 21 | Código/configuración actuales prevalecen sobre descripciones históricas. |
+| IDs y credenciales de referencia | §§2.7–2.8 y ficha técnica | Inventario declarado; no demuestra acceso ni vigencia. |
+| Estado operativo y pendientes | **§32** | Checkpoint más reciente de este dossier; confirmar HEAD y CI antes de actuar. |
+| Evidencia anterior | §§24–31 y anexos fechados | Trazabilidad histórica; no reutilizar como estado actual si §32 la sustituye. |
+
+**Regla de consolidación:** una sola descripción canónica por contrato, inventario o estado. En los demás apartados, usar referencias cruzadas y conservar solo el contexto diferencial. No borrar evidencia histórica si su eliminación rompe la trazabilidad; marcar explícitamente lo sustituido.
 
 ---
 
@@ -4308,50 +4292,9 @@ Los resultados históricos de §27.2 (289 tests, 28 suites) pertenecen a los com
 
 ---
 
-## 30. PUNTO DE REINICIO OPERATIVO — 2026-11-01
+## 30. HISTÓRICO — punto de reinicio operativo (2026-11-01)
 
-**Finalidad:** permitir continuar el desarrollo en una sesión nueva sin repetir auditorías ni asumir avances no demostrados. Esta sección resume el estado de §27–§29 y fija la siguiente acción.
-
-### 30.1 Estado de referencia
-
-- **Repositorio canónico:** `nachoortegazgz/marianmadridz`, rama `main`.
-- **HEAD de referencia al consolidar este punto:** `d879307319f6d69aba0293e858a9f49ef632b9a1` (actualización documental §29).
-- **Dossier:** este archivo, raíz del repositorio. Prevalece la jerarquía de fuentes definida en §4; consultar especialmente §25–§26 y §27–§29.
-- **Layer 1 — reservas simples:** PARCIAL. Hay pruebas offline históricas y comprobaciones de Bookings API nativa; falta demostrar el flujo completo widget/frontend → WebMethod Velo → Bookings/CMS en Preview/runtime.
-- **Layer 2 — caja y seguridad:** BLOQUEADA. Existe discrepancia entre estados de cancelación en Bookings y CitasF2 (§29.3) y un riesgo estático en el webhook de cancelación (§29.4). Faltan además las pruebas persistentes de RBAC, atomicidad/concurrencia, cierre Z y hash-chain en QA aislado.
-- **No se acredita CI verde del HEAD actual** por el mero hecho de que existan ejecuciones históricas correctas en §27–§28.
-
-### 30.2 Bloqueo técnico prioritario
-
-En `src/backend/events.js`, el flujo de cancelación puede marcar un evento como procesado sin demostrar que la actualización CMS se haya guardado; además, el catch exterior puede devolver ACK `OK` ante una excepción. Es un riesgo estático documentado, no una causalidad demostrada en runtime.
-
-**Siguiente trabajo:** corregir este flujo de forma mínima, en rama de trabajo/PR, después de comprobar el contrato oficial de reintentos/ACK de los webhooks Wix. La corrección debe:
-1. Propagar y comprobar el resultado real de persistencia CMS.
-2. No marcar el evento como procesado si no se ha reconciliado el estado.
-3. Responder según el contrato oficial de Wix ante fallos reintentables; nunca convertir un fallo en ACK exitoso.
-4. Mantener idempotencia para reservas simples y ambas fases de reservas duales.
-5. Añadir pruebas focalizadas: NOT_FOUND, ERROR, fallo transitorio, replay y estado ya cancelado.
-
-### 30.3 Secuencia de continuación
-
-1. Leer únicamente el código actual de `src/backend/events.js`, sus helpers inmediatos y tests relacionados; no repetir la auditoría general.
-2. Consultar documentación oficial Wix solo para resolver la semántica exacta de ACK/reintentos.
-3. Implementar la corrección mínima y sus tests en una rama/PR.
-4. Ejecutar los tests afectados y CI de ese commit; registrar SHA y run real.
-5. Reconciliar la muestra de seis registros Bookings=CANCELED / CitasF2=CONFIRMED sin modificar registros manualmente.
-6. Retomar Layer 1 runtime y después los criterios pendientes de Layer 2, en entorno QA técnicamente aislado y con las autorizaciones requeridas.
-
-### 30.4 Límites y reglas para la próxima sesión
-
-- Evitar comprobaciones redundantes: reutilizar evidencias de §27–§29 mientras sigan siendo válidas y no haya cambios que las invaliden.
-- No repetir lecturas generales del CMS ni auditorías globales salvo que el cambio lo requiera.
-- No modificar ni borrar ledger/CMS histórico para “hacer cuadrar” estados sin diagnóstico y procedimiento aprobado.
-- No ejecutar cobros, checkout real, emisión fiscal, notificaciones a clientes ni publicación.
-- No usar `createMultiServiceBooking` para reservas duales con intervalo.
-- No declarar cerrada una capa sin las evidencias de aceptación de §25–§26 y runtime aplicable.
-- Mantener separados los hechos, inferencias y pendientes; no presentar tests históricos como actuales.
-
-**Punto exacto de reentrada:** revisión focalizada de `src/backend/events.js` + documentación oficial Wix sobre respuesta/reintento de webhooks de Bookings; después, corrección y tests de sincronización de cancelaciones. No iniciar una nueva auditoría general.
+Este checkpoint quedó superado por las intervenciones documentadas en §31 y por el estado consolidado de §32. Se conserva la fecha y la posición cronológica para trazabilidad, pero no debe usarse como plan operativo vigente ni como prueba del estado actual. Para reanudar trabajo, consultar §32 y volver a verificar el HEAD, CI y Preview antes de actuar.
 
 ---
 
