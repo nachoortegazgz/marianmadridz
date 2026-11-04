@@ -55,41 +55,36 @@ jobs:
 
       - name: Create Wix preview from latest main (never publish)
         env:
-          CI: "true"
           TERM: "xterm"
         run: |
           set -euo pipefail
           rm -f wix-preview.log
 
-          timeout 8m bash -lc '
-            set -euo pipefail
-            wix preview > wix-preview.log 2>&1 &
-            preview_pid=$!
-            trap "kill ${preview_pid} >/dev/null 2>&1 || true; wait ${preview_pid} || true" EXIT
+          if ! command -v script >/dev/null 2>&1; then
+            echo "::error::util-linux script command is required to provide the TTY expected by Wix CLI."
+            exit 1
+          fi
 
-            for _ in $(seq 1 180); do
-              if grep -Eiq "ready|localhost|127\.0\.0\.1|preview.*started|http" wix-preview.log; then
-                echo "Wix preview started successfully."
-                break
-              fi
-              sleep 2
-            done
+          # Wix CLI for Sites is interactive. Give it a real pseudo-terminal and
+          # accept its documented default: Latest commit from origin/main.
+          # Unset CI only for this TTY-backed command; GitHub remains the runner.
+          timeout 8m script -q -e -c 'env -u CI wix preview' wix-preview.log <<<''
+          cat wix-preview.log
 
-            if ! grep -Eiq "ready|localhost|127\.0\.0\.1|preview.*started|http" wix-preview.log; then
-              echo "::error::Wix preview did not become ready before timeout."
-              cat wix-preview.log || true
-              exit 1
-            fi
+          PREVIEW_URL="$(grep -Eo 'https?://wix\.to/[[:alnum:]]+' wix-preview.log | tail -n 1 || true)"
+          if [ -z "${PREVIEW_URL}" ]; then
+            echo "::error::Wix CLI exited without publishing a verifiable wix.to preview URL."
+            exit 1
+          fi
 
-            kill ${preview_pid} >/dev/null 2>&1 || true
-            wait ${preview_pid} || true
-          '
+          echo "url=${PREVIEW_URL}" >> "${GITHUB_OUTPUT}"
+          echo "Wix Preview created: ${PREVIEW_URL}" >> "${GITHUB_STEP_SUMMARY}"
 
       - name: Preserve preview output
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: wix-preview-log-${{ github.run_id }}
-          if-no-files-found: warn
+          if-no-files-found: error
           path: |
             wix-preview.log
