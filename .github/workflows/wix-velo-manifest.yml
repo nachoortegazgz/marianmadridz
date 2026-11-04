@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - ".github/workflows/wix-cli-manifest.yml"
+      - ".github/workflows/wix-velo-manifest.yml"
       - "package.json"
       - "package-lock.json"
   workflow_dispatch:

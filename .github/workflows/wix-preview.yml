@@ -9,7 +9,7 @@ on:
       - "package.json"
       - "package-lock.json"
       - "wix.config.json"
-      - ".github/workflows/wix-preview-validation.yml"
+      - ".github/workflows/wix-preview.yml"
   workflow_dispatch:
 
 permissions:
