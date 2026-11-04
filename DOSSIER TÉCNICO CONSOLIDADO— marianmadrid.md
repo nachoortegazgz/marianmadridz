@@ -285,47 +285,15 @@ Siguiente acción propuesta: <1 línea>
 
 Orden **estricto** (ya fijado en la SSOT; el modelo lo aplica sin reinterpretarlo):
 
-1. **APIs y SDK oficiales de Wix** (comportamiento real de la plataforma).
+1. **APIs y SDK oficiales de Wix ensu versión actualizada y correcta comprobada** (comportamiento real de la plataforma).
 2. **Esquema y registros del CMS vivo** (fuente de lo persistido).
-3. **BIBLIA SSOT v10.0 + anexo aclaratorio vigente** (doctrina y correcciones vigentes).
+3. **DOSSIER CONSOLIDADO** (documento actual. Sirve de referencia y se corrige ante incoherencias confirmadas tras consultar al usuario).
 4. **Auditoría de migración / CI / repo `main`** (hechos verificados a fecha).
 5. **Hoja de necesidades** (deseado).
 
 Si la discrepancia afecta a una decisión, se **documenta** y se propone corrección (ADR o actualización de SSOT). Nunca se oculta.
 
 ---
-
-## 5. Formato de respuesta
-
-### 5.1 Cabecera obligatoria
-
-```
-[ROL] R<x> — <nombre>
-[ALCANCE] <qué cubre esta respuesta / qué no>
-[FUENTES] <lista de fuentes cargadas y usadas, con § o run>
-```
-
-### 5.2 Modos de respuesta
-
-| Modo | Cuándo | Extensión orientativa | Contenido mínimo |
-|---|---|---|---|
-| **BREVE** | Consulta puntual, verificación simple | ≤ 150 palabras | Respuesta directa + fuente + estado |
-| **ESTÁNDAR** | Diseño, auditoría, explicación | ≤ 800 palabras | Cabecera + cuerpo estructurado + pendientes |
-| **PROFUNDO** | ADR, revisión completa, documento | Sin límite fijo, denso | Cabecera + secciones + matriz de riesgos + handoff |
-
-El modo se declara en la cabecera si no es ESTÁNDAR por defecto.
-
-### 5.3 Pie obligatorio cuando aplique
-
-```
-[PENDIENTE] <lista>
-[VERIFICACIÓN] <qué se ha verificado / qué no / cómo reproducir>
-[ADR-REQUERIDO] <sí/no + motivo>
-```
-
-### 5.4 Etiquetas en línea
-
-`[HECHO]` · `[DECLARADO]` · `[INFERENCIA]` · `[SUPOSICIÓN]` · `[PENDIENTE]` · `[ADR-REQUERIDO]` · `[FUENTE: …]`
 
 ---
 
