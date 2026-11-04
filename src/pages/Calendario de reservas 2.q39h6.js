@@ -1,26 +1,31 @@
 /**
  * MODULE: pages/calendario-2.js
- * VERSION: v5024-HARDENED-AUTO-STAFF-DTO-AUTOSEL
- * BASE: v5023-HARDENED-AUTO-STAFF-DTO-AUTOSEL
+ * VERSION: v5026-HARDENED-AUTO-STAFF-DTO-AUTOSEL
+ * BASE: v5025-HARDENED-AUTO-STAFF-DTO-AUTOSEL
  *
- * CORRECCIONES v5024:
- *   - DAYS-02 (P1): el bloque `days` calculaba los días filtrados al mes
- *     solicitado pero NO los asignaba a `result.data`, por lo que el widget
- *     seguía recibiendo días de otros meses si el backend los mezclaba.
- *     Ahora `result.data = days` es la única verdad enviada al widget.
- *     Si `days.length === 0`, se eliminan `recommendedDay`/`recommendedSlots`
- *     para no conservar recomendaciones de una respuesta previa. Si la
- *     precarga de slots falla, `recommendedSlots = []` (array vacío) en
- *     lugar de `undefined`.
+ * CORRECCIONES v5026:
+ *   - LIGHTBOX-02 (P0): el import de @wix/site-window era incorrecto.
+ *     `lightbox` es el contexto del lightbox actual (close/getContext),
+ *     NO la API de la pagina. `openLightbox` vive en `window`, no en
+ *     `lightbox`. El import se cambia a `{ window as wixWindow }` y la
+ *     llamada a `wixWindow.openLightbox`. Eliminaba el error runtime
+ *     "dist_cjs.Dn.openLightbox is not a function".
+ *
+ * FIXES HEREDADOS v5025:
+ *   LIGHTBOX-01: payload del lightbox enriquecido (slotStart/End,
+ *                contacto, add-ons legibles, duracion, precio, channel).
+ *
+ * FIXES HEREDADOS v5024:
+ *   DAYS-02: result.data = days; limpieza de recomendaciones vacias.
  *
  * FIXES HEREDADOS v5023:
  *   ISO-02: isLocalIso valida calendario real (rechaza 2026-02-30).
- *   BOOK-02: buildBookingRequestPayload valida slotF1/slotF2 antes.
- *   PAIR-02: pairToken solo se incluye si existe.
+ *   BOOK-02: buildBookingRequestPayload valida slotF1/slotF2.
+ *   PAIR-02: pairToken solo si existe.
  *
  * FIXES HEREDADOS v5022:
  *   DTO-07: _toWidgetSlotDto valida ISO y orden temporal.
- *   COMB-01: serviceAllowsCombine() acepta true / "true".
+ *   COMB-01: serviceAllowsCombine().
  *
  * FIXES HEREDADOS v5021:
  *   DTO-06: _sanitizeSlotsForWidget rechaza pares con DTO null.
@@ -29,22 +34,18 @@
  *   DAYS-01: days filtrados al mes solicitado.
  *
  * FIXES HEREDADOS v5020:
- *   A3: _toWidgetSlotDto / _sanitizeSlotsForWidget sin resourceId.
- *   A4: normalizeSlot sin resourceId.
- *   A5: isValidBookingSlot valida ISO antes de comparar fechas.
+ *   A3/A4/A5: sin resourceId en DTO/slot/payload; ISO estricto.
  *
  * FIXES HEREDADOS v5019:
- *   DTO-05: sanitizeAvailabilityResponse recibe action.
+ *   DTO-05: sanitizeAvailabilityResponse(action).
  *
  * FIXES HEREDADOS v5018:
- *   DATE-01: getMadridYmdOffset con Intl "en-CA" + Date.UTC a mediodía.
- *   DTO-03: sanitizeAvailabilityResponse aplicado antes de reply().
- *   DTO-04: normalizeSlot devuelve slotRef y slot.
+ *   DATE-01: getMadridYmdOffset robusto (Intl en-CA + Date.UTC mediodia).
+ *   DTO-03/DTO-04: sanitize distingue days/slots + slotRef/slot.
  *
  * FIXES HEREDADOS v5017:
- *   AUTOSEL-01: recommendedDay / recommendedSlots en action "days".
- *   DTO-01: _sanitizeSlotsForWidget antes de reply().
- *   DTO-02: normalizeSlot/isValidBookingSlot aceptan slot como fallback.
+ *   AUTOSEL-01: recommendedDay / recommendedSlots.
+ *   DTO-01/DTO-02: sanitize antes de reply + slot fallback.
  *   LOG-01: handleAvailability recibe traceId.
  */
 
@@ -179,12 +180,6 @@ function bridgeLogError(traceId, error) {
 
 /**
  * DATE-01: devuelve YYYY-MM-DD (Europe/Madrid) desplazado `days` días.
- *
- * Implementación robusta:
- *   1) Extrae el Y-M-D actual en Europe/Madrid vía Intl (en-CA = ISO).
- *   2) Construye un Date UTC a MEDIODÍA con el offset aplicado. A mediodía
- *      no hay borde de cambio de día por TZ ni por DST.
- *   3) Formatea a YYYY-MM-DD con toISOString.
  */
 function getMadridYmdOffset(days) {
     const formatter = new Intl.DateTimeFormat("en-CA", {
@@ -213,12 +208,6 @@ function getMadridYmdOffset(days) {
 
 /**
  * ISO-02: validación estricta de fechas reales.
- *
- * Acepta YYYY-MM-DDTHH:MM (con segundos y/o Z opcionales) y comprueba:
- *   - mes 1-12, hora 0-23, minuto 0-59, segundo 0-59;
- *   - día dentro de los días reales del mes (rechaza 2026-02-30,
- *     2026-04-31, etc.);
- *   - Date(v).getTime() finito (defensa en profundidad).
  */
 function isLocalIso(value) {
     const v = _safeTrim(value);
@@ -265,8 +254,7 @@ function isLocalIso(value) {
 }
 
 /**
- * COMB-01: normaliza `allowCombine` desde CMS (puede llegar como
- * boolean true o como string "true" si la columna es texto).
+ * COMB-01: normaliza `allowCombine` (true o "true").
  */
 function serviceAllowsCombine(service) {
     return (
@@ -277,8 +265,6 @@ function serviceAllowsCombine(service) {
 
 /**
  * A3 + DTO-07: DTO mínimo de slot para el widget.
- * - Sin `resourceId` (auto-staff).
- * - Rechaza ISO inválido (ISO-02) y start >= end.
  */
 function _toWidgetSlotDto(slot) {
     if (!slot || typeof slot !== "object") {
@@ -322,9 +308,6 @@ function _toWidgetSlotDto(slot) {
 
 /**
  * DTO-06: reduce cada par a DTO mínimo.
- * - Rechaza el par si f1Dto es null (o si slotF2 existe y f2Dto es null).
- * - Elimina resourceId en todos los niveles.
- * - Conserva pairToken (de par o de f1/f2) para processDualBooking.
  */
 function _sanitizeSlotsForWidget(pairs) {
     if (!Array.isArray(pairs)) return [];
@@ -341,7 +324,6 @@ function _sanitizeSlotsForWidget(pairs) {
             const f1Dto = _toWidgetSlotDto(f1Src);
             const f2Dto = f2Src ? _toWidgetSlotDto(f2Src) : null;
 
-            /* DTO-06 + DTO-07: rechazar el par si algún DTO es inválido. */
             if (!f1Dto || (f2 && !f2Dto)) return null;
 
             const pairToken = _safeTrim(
@@ -375,11 +357,7 @@ function _sanitizeSlotsForWidget(pairs) {
 }
 
 /**
- * DTO-03 (v5019):
- * - `data` se sanea únicamente cuando la acción devuelve slots
- *   (action === "slots").
- * - `data` de "days" conserva fechas YYYY-MM-DD.
- * - `recommendedSlots` siempre se sanea como DTO mínimo.
+ * DTO-03: sanea data solo en "slots"; recommendedSlots siempre.
  */
 function sanitizeAvailabilityResponse(result, action = "") {
     if (!result || typeof result !== "object") return result;
@@ -836,10 +814,7 @@ function isPaymentChannelAllowed(
 }
 
 /**
- * PAIR-01: acepta `slot` (DTO mínimo) como fallback de `slotRef`, devuelve
- * AMBOS alias apuntando al mismo objeto y preserva `pairToken`.
- *
- * Sin `resourceId`: contrato auto-staff.
+ * PAIR-01: acepta `slot` como fallback de `slotRef`; preserva pairToken.
  */
 function normalizeSlot(slot) {
     if (
@@ -893,9 +868,7 @@ function normalizeSlot(slot) {
 }
 
 /**
- * ISO-01 + ISO-02: acepta `slot` como fallback y valida isLocalIso(start/end)
- * antes de comparar. isLocalIso rechaza fechas no reales
- * ("2026-02-30T10:00", "2026-04-31T10:00", "2026-99-99T99:99").
+ * ISO-01 + ISO-02: isValidBookingSlot valida isLocalIso(start/end).
  */
 function isValidBookingSlot(slot) {
     if (
@@ -941,11 +914,8 @@ function isValidBookingSlot(slot) {
  * ========================================================================== */
 
 /**
- * BOOK-02: valida slotF1/slotF2 con isValidBookingSlot ANTES de construir
- * el payload y lanza INVALID_SLOT_F1 / INVALID_SLOT_F2 si no son válidos.
- * handleBooking captura esos códigos en el try/catch ya existente.
- *
- * PAIR-02: pairToken solo se añade al payload si no está vacío.
+ * BOOK-02: valida slotF1/slotF2 antes de construir el payload.
+ * PAIR-02: pairToken solo si existe.
  */
 function buildBookingRequestPayload(
     bookingData,
@@ -1050,7 +1020,6 @@ function buildBookingRequestPayload(
             makeTraceId("calendario-book")
     };
 
-    /* PAIR-02: solo si existe. */
     if (pairToken) {
         payload.pairToken = pairToken;
     }
@@ -1147,11 +1116,7 @@ async function handleAvailability(
                     "getAvailableDays"
                 );
 
-                /* DAYS-01 + DAYS-02:
-                 * - filtra y conserva únicamente días del mes solicitado;
-                 * - asigna el resultado filtrado a result.data para que el
-                 *   widget nunca reciba días de otros meses;
-                 * - elimina recomendaciones si no quedan días válidos. */
+                /* DAYS-01 + DAYS-02: filtro al mes + asignación a data. */
                 if (
                     result?.status === "SUCCESS" &&
                     Array.isArray(result.data) &&
@@ -1174,15 +1139,9 @@ async function handleAvailability(
                                 d.startsWith(expectedPrefix)
                             );
 
-                        /* DAYS-02: los días filtrados son la única
-                           verdad enviada al widget. Sin esta asignación
-                           el widget seguía recibiendo días de otros
-                           meses si el backend los mezclaba. */
                         result.data = days;
 
                         if (days.length === 0) {
-                            /* Sin días válidos: limpiar cualquier
-                               recomendación previa. */
                             delete result.recommendedDay;
                             delete result.recommendedSlots;
                         } else {
@@ -1193,7 +1152,6 @@ async function handleAvailability(
 
                             result.recommendedDay = recommendedDay;
 
-                            /* COMB-01: serviceAllowsCombine(). */
                             const loadRecommended = () =>
                                 serviceAllowsCombine(currentService)
                                     ? getCertifiedDualSlots(
@@ -1227,10 +1185,6 @@ async function handleAvailability(
                                         slotsResult.data
                                     );
                             } else {
-                                /* DAYS-02: sin precarga válida, enviar
-                                   array vacío para que el widget muestre
-                                   "sin slots" en lugar de quedarse
-                                   colgado. */
                                 result.recommendedSlots = [];
                             }
                         }
@@ -1256,7 +1210,6 @@ async function handleAvailability(
                     "INVALID_DATE"
                 );
             } else {
-                /* COMB-01: serviceAllowsCombine(). */
                 const loadSlots = () => serviceAllowsCombine(currentService)
                     ? getCertifiedDualSlots(
                         currentServiceId || currentSlug,
@@ -1302,10 +1255,6 @@ async function handleAvailability(
     const normalizedResult =
         normalizeAvailabilityResult(result);
 
-    /* DTO-03 + DTO-05 + DTO-06 + DTO-07: sanitizeAvailabilityResponse
-       distingue "days" de "slots". En "days" NO toca data. En "slots"
-       reduce cada par a DTO mínimo y descarta pares con DTO inválido.
-       recommendedSlots se sanea siempre. */
     const safeResult = sanitizeAvailabilityResponse(
         normalizedResult,
         action
@@ -1387,8 +1336,6 @@ async function handleBooking(
                 bookingData.traceId || traceId
             );
     } catch (error) {
-        /* BOOK-02: buildBookingRequestPayload lanza INVALID_SLOT_F1 o
-           INVALID_SLOT_F2 cuando los slots no pasan isValidBookingSlot. */
         reply(
             MESSAGE_TYPES.BOOK,
             resultError(
@@ -1464,7 +1411,6 @@ async function handleBooking(
         return;
     }
 
-    /* COMB-01: serviceAllowsCombine(). */
     if (
         requestPayload.slotF2 &&
         !serviceAllowsCombine(currentService)
@@ -1536,13 +1482,96 @@ async function handleBooking(
             return;
         }
 
+        /* LIGHTBOX-01: enriquecer el payload del lightbox.
+           finalResult NO contiene fechas, contacto ni add-ons legibles.
+           Los tomamos del requestPayload (MM_BOOK original) y del
+           catálogo del servicio, y los fusionamos en una copia
+           enriquecida de bookingResult.data. */
+        const addOnsRich = (Array.isArray(requestPayload.addOnIds)
+            ? requestPayload.addOnIds
+            : []
+        ).map((id) => {
+            const fromCatalog = (currentService?.addOnOptions || []).find(
+                (a) => a.addonId === id
+            );
+            return {
+                addonId: id,
+                name: fromCatalog?.name || id,
+                price: Number(fromCatalog?.price) || 0,
+            };
+        });
+
+        const extrasText =
+            addOnsRich.length > 0
+                ? addOnsRich
+                      .map((a) =>
+                          a.price > 0
+                              ? `${a.name} (+${a.price.toFixed(2)} €)`
+                              : a.name
+                      )
+                      .join(", ")
+                : "Ninguno";
+
+        const bookingIdsArr = Array.isArray(
+            bookingResult.data.bookingIds
+        )
+            ? bookingResult.data.bookingIds
+            : [];
+
+        const bookingIdF1 =
+            bookingResult.data.bookingId ||
+            bookingIdsArr[0] ||
+            "";
+        const bookingIdF2 =
+            bookingResult.data.isDual === true &&
+            bookingIdsArr.length > 1
+                ? bookingIdsArr[1]
+                : "";
+
+        const lightboxBooking = {
+            ...bookingResult.data,
+            bookingIdF1,
+            bookingIdF2,
+            slotStart:
+                requestPayload.slotF1?.localStartDate || null,
+            slotEnd:
+                requestPayload.slotF1?.localEndDate || null,
+            slotF2Start:
+                requestPayload.slotF2?.localStartDate || null,
+            slotF2End:
+                requestPayload.slotF2?.localEndDate || null,
+            firstName: requestPayload.firstName || "",
+            lastName: requestPayload.lastName || "",
+            email: requestPayload.email || "",
+            phone: requestPayload.phone || "",
+            appointmentNote:
+                requestPayload.appointmentNote || "",
+            addOns: addOnsRich,
+            extrasText,
+            duracion:
+                currentService?.totalDuration ||
+                currentService?.phase1Duration ||
+                null,
+            total: Number(currentService?.price) || 0,
+            currency:
+                currentService?.currency || "EUR",
+            isCombined: bookingResult.data.isDual === true,
+            channelLabel:
+                requestPayload.channelType === "ONLINE"
+                    ? "Pago online"
+                    : "Pago en el salón",
+        };
+
         try {
-            await wixWindow.openLightbox("ConfirmacionReserva", {
-                booking: bookingResult.data,
-                bookingId: bookingResult.data.bookingId,
-                service: currentService,
-                traceId,
-            });
+            await wixWindow.openLightbox(
+                "ConfirmacionReserva",
+                {
+                    booking: lightboxBooking,
+                    bookingId: bookingIdF1,
+                    service: currentService,
+                    traceId
+                }
+            );
         } catch (error) {
             console.error(
                 "[calendario-2] No se pudo abrir ConfirmacionReserva",
