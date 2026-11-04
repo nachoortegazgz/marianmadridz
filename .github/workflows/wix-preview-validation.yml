@@ -60,32 +60,119 @@ jobs:
         env:
           TERM: xterm
         shell: bash
-        timeout-minutes: 10
+        timeout-minutes: 8
         run: |
           set -euo pipefail
-
           : > wix-preview.log
 
-          if ! command -v script >/dev/null 2>&1; then
-            echo "::error::The script command is required to provide a TTY to Wix CLI."
-            exit 1
-          fi
+          # Wix CLI for Sites requires a TTY and presents a commit selector.
+          # Wait for the documented default option before accepting it; an
+          # immediate newline can arrive before the prompt and leave the CLI
+          # blocked indefinitely.
+          python3 - <<'PY' | tee wix-preview.log
+          import os
+          import pty
+          import select
+          import signal
+          import subprocess
+          import sys
+          import time
 
-          set +e
-          timeout --signal=TERM --kill-after=15s 6m \
-            script -q -e -c 'env -u CI wix preview' /dev/null 2>&1 \
-            | tee wix-preview.log
-          preview_status=${PIPESTATUS[0]}
-          set -e
+          env = os.environ.copy()
+          env.pop("CI", None)
+          env["TERM"] = env.get("TERM", "xterm")
 
-          if [ "${preview_status}" -ne 0 ]; then
-            if [ "${preview_status}" -eq 124 ] || [ "${preview_status}" -eq 137 ]; then
-              echo "::error::Wix preview did not finish within 6 minutes. See wix-preview.log for details."
-            else
-              echo "::error::Wix preview exited with status ${preview_status}. See wix-preview.log for details."
-            fi
-            exit 1
-          fi
+          master, slave = pty.openpty()
+          process = subprocess.Popen(
+              ["wix", "preview"],
+              stdin=slave,
+              stdout=slave,
+              stderr=slave,
+              env=env,
+              close_fds=True,
+              start_new_session=True,
+          )
+          os.close(slave)
+
+          started = time.monotonic()
+          prompt_deadline = started + 60
+          overall_deadline = started + 420
+          output = bytearray()
+          selection_sent = False
+          failure = None
+
+          try:
+              while True:
+                  now = time.monotonic()
+                  if now >= overall_deadline:
+                      failure = "Wix preview exceeded the 7-minute execution limit."
+                      break
+
+                  ready, _, _ = select.select([master], [], [], 0.25)
+                  if ready:
+                      try:
+                          chunk = os.read(master, 4096)
+                      except OSError:
+                          chunk = b""
+                      if chunk:
+                          sys.stdout.buffer.write(chunk)
+                          sys.stdout.buffer.flush()
+                          output.extend(chunk)
+                          if len(output) > 65536:
+                              del output[:-8192]
+
+                          if (not selection_sent
+                                  and b"Latest commit from origin/main" in output):
+                              os.write(master, b"\r")
+                              selection_sent = True
+                              print(
+                                  "\n[automation] Accepted Wix documented default: "
+                                  "Latest commit from origin/main",
+                                  flush=True,
+                              )
+                      elif process.poll() is not None:
+                          break
+
+                  status = process.poll()
+                  if status is not None:
+                      break
+
+                  if not selection_sent and now >= prompt_deadline:
+                      failure = (
+                          "Wix CLI did not show the expected commit selector "
+                          "within 60 seconds; no selection was sent."
+                      )
+                      break
+
+              if failure:
+                  try:
+                      os.killpg(process.pid, signal.SIGTERM)
+                  except ProcessLookupError:
+                      pass
+                  try:
+                      process.wait(timeout=5)
+                  except subprocess.TimeoutExpired:
+                      try:
+                          os.killpg(process.pid, signal.SIGKILL)
+                      except ProcessLookupError:
+                          pass
+                      process.wait()
+                  print(f"::error::{failure}", file=sys.stderr, flush=True)
+                  sys.exit(1)
+
+              status = process.wait()
+              if not selection_sent:
+                  print(
+                      "::error::Wix CLI exited before presenting its expected "
+                      "commit selector; preview was not created.",
+                      file=sys.stderr,
+                      flush=True,
+                  )
+                  sys.exit(1)
+              sys.exit(status)
+          finally:
+              os.close(master)
+          PY
 
           preview_url="$(grep -Eo 'https?://wix\.to/[[:alnum:]]+' wix-preview.log | tail -n 1 || true)"
           if [ -z "${preview_url}" ]; then
