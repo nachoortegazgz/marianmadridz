@@ -1,25 +1,31 @@
 /**
  * MODULE: pages/calendario-2.js
- * VERSION: v5026-HARDENED-AUTO-STAFF-DTO-AUTOSEL
- * BASE: v5025-HARDENED-AUTO-STAFF-DTO-AUTOSEL
+ * VERSION: v5027-HARDENED-AUTO-STAFF-DTO-AUTOSEL
+ * BASE: v5026-HARDENED-AUTO-STAFF-DTO-AUTOSEL
  *
- * CORRECCIONES v5026:
- *   - LIGHTBOX-02 (P0): el import de @wix/site-window era incorrecto.
- *     `lightbox` es el contexto del lightbox actual (close/getContext),
- *     NO la API de la pagina. `openLightbox` vive en `window`, no en
- *     `lightbox`. El import se cambia a `{ window as wixWindow }` y la
- *     llamada a `wixWindow.openLightbox`. Eliminaba el error runtime
- *     "dist_cjs.Dn.openLightbox is not a function".
+ * CORRECCIONES v5027:
+ *   - LIGHTBOX-03 (P2): lightboxBooking incluye `fecha`, `hora` y `horaF2`
+ *     ya formateadas (DD/MM/YYYY y HH:MM). Antes el Velo tenía que parsear
+ *     `slotStart` (Madrid local sin Z) con `_toDateSafe`, lo que podía
+ *     producir un desfase si el navegador no estaba en Europe/Madrid o si
+ *     `_toDateSafe` no era timezone-safe. Al pre-formatear, el Velo usa
+ *     `booking.fecha` / `booking.hora` directamente sin tocar `slotStart`.
+ *   - DTO-08 (P2): result.recommendedSlots = [] garantizado en el catch
+ *     del prefetch (timeout de withTimeout o excepción de red). Antes el
+ *     campo podía quedar `undefined` si la precarga lanzaba en lugar de
+ *     devolver status !== SUCCESS.
+ *
+ * FIXES HEREDADOS v5026:
+ *   LIGHTBOX-02: import { window as wixWindow }.
  *
  * FIXES HEREDADOS v5025:
- *   LIGHTBOX-01: payload del lightbox enriquecido (slotStart/End,
- *                contacto, add-ons legibles, duracion, precio, channel).
+ *   LIGHTBOX-01: payload del lightbox enriquecido.
  *
  * FIXES HEREDADOS v5024:
- *   DAYS-02: result.data = days; limpieza de recomendaciones vacias.
+ *   DAYS-02: result.data = days; limpieza de recomendaciones vacías.
  *
  * FIXES HEREDADOS v5023:
- *   ISO-02: isLocalIso valida calendario real (rechaza 2026-02-30).
+ *   ISO-02: isLocalIso valida calendario real.
  *   BOOK-02: buildBookingRequestPayload valida slotF1/slotF2.
  *   PAIR-02: pairToken solo si existe.
  *
@@ -40,7 +46,7 @@
  *   DTO-05: sanitizeAvailabilityResponse(action).
  *
  * FIXES HEREDADOS v5018:
- *   DATE-01: getMadridYmdOffset robusto (Intl en-CA + Date.UTC mediodia).
+ *   DATE-01: getMadridYmdOffset robusto (Intl en-CA + Date.UTC mediodía).
  *   DTO-03/DTO-04: sanitize distingue days/slots + slotRef/slot.
  *
  * FIXES HEREDADOS v5017:
@@ -261,6 +267,25 @@ function serviceAllowsCombine(service) {
         service?.allowCombine === true ||
         service?.allowCombine === "true"
     );
+}
+
+/**
+ * LIGHTBOX-03: extrae { fecha: "DD/MM/YYYY", hora: "HH:MM" } de un
+ * localStartDate ISO ("YYYY-MM-DDTHH:MM:SS"). Sin new Date(), sin TZ.
+ * Devuelve "" en los campos si el formato no encaja.
+ */
+function _splitLocalIsoDateTime(localIso) {
+    const v = _safeTrim(localIso);
+    const match = v.match(
+        /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/
+    );
+    if (!match) {
+        return { fecha: "", hora: "" };
+    }
+    return {
+        fecha: `${match[3]}/${match[2]}/${match[1]}`,
+        hora: `${match[4]}:${match[5]}`,
+    };
 }
 
 /**
@@ -1197,6 +1222,14 @@ async function handleAvailability(
                                 message: prefetchError?.message
                             }
                         );
+                        /* DTO-08: garantizar recommendedSlots = [] incluso
+                           cuando el prefetch lanza (timeout de withTimeout
+                           o excepción de red). Antes el campo podía quedar
+                           undefined si withTimeout lanzaba en lugar de
+                           devolver status !== SUCCESS. */
+                        if (!Array.isArray(result.recommendedSlots)) {
+                            result.recommendedSlots = [];
+                        }
                     }
                 }
             }
@@ -1482,11 +1515,12 @@ async function handleBooking(
             return;
         }
 
-        /* LIGHTBOX-01: enriquecer el payload del lightbox.
-           finalResult NO contiene fechas, contacto ni add-ons legibles.
-           Los tomamos del requestPayload (MM_BOOK original) y del
-           catálogo del servicio, y los fusionamos en una copia
-           enriquecida de bookingResult.data. */
+        /* LIGHTBOX-01 + LIGHTBOX-03: enriquecer el payload del lightbox.
+           - LIGHTBOX-01: fechas (slotStart/End), contacto, add-ons
+             legibles, duracion, precio, channel.
+           - LIGHTBOX-03: también `fecha`/`hora`/`horaF2` ya formateadas
+             (DD/MM/YYYY, HH:MM) para que el Velo no tenga que parsear
+             slotStart con new Date() (posible desfase de TZ). */
         const addOnsRich = (Array.isArray(requestPayload.addOnIds)
             ? requestPayload.addOnIds
             : []
@@ -1528,6 +1562,15 @@ async function handleBooking(
                 ? bookingIdsArr[1]
                 : "";
 
+        /* LIGHTBOX-03: fecha y hora formateadas a partir de los ISO
+           locales (sin new Date(), sin TZ). */
+        const slotF1Parts = _splitLocalIsoDateTime(
+            requestPayload.slotF1?.localStartDate
+        );
+        const slotF2Parts = _splitLocalIsoDateTime(
+            requestPayload.slotF2?.localStartDate
+        );
+
         const lightboxBooking = {
             ...bookingResult.data,
             bookingIdF1,
@@ -1540,6 +1583,10 @@ async function handleBooking(
                 requestPayload.slotF2?.localStartDate || null,
             slotF2End:
                 requestPayload.slotF2?.localEndDate || null,
+            /* Pre-formateados: el Velo los usará sin tocar slotStart. */
+            fecha: slotF1Parts.fecha,
+            hora: slotF1Parts.hora,
+            horaF2: slotF2Parts.hora,
             firstName: requestPayload.firstName || "",
             lastName: requestPayload.lastName || "",
             email: requestPayload.email || "",
