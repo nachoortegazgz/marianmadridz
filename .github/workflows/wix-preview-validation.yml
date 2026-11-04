@@ -15,6 +15,8 @@ on:
 permissions:
   contents: read
 
+# A newer main commit supersedes an older preview request. This keeps only the
+# newest deployment attempt running instead of queuing stale previews.
 concurrency:
   group: wix-preview-${{ github.ref }}
   cancel-in-progress: true
@@ -22,7 +24,7 @@ concurrency:
 jobs:
   preview:
     name: Build Wix preview from main
-    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -30,19 +32,27 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.ref_name }}
+          ref: main
+        timeout-minutes: 3
 
       - name: Set up supported Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "24.22.1"
           cache: npm
+        timeout-minutes: 3
 
       - name: Install project dependencies
-        run: npm ci
+        run: |
+          npm config set fetch-retries 5
+          npm config set fetch-retry-mintimeout 20000
+          npm config set fetch-retry-maxtimeout 120000
+          npm ci --no-audit --no-fund
+        timeout-minutes: 7
 
       - name: Install Wix CLI for Sites
-        run: npm install --global @wix/cli
+        run: npm install --global @wix/cli --no-audit --no-fund
+        timeout-minutes: 5
 
       - name: Authenticate Wix CLI
         env:
@@ -53,36 +63,47 @@ jobs:
             echo "::error::Missing repository secret CLI_API_KEY."
             exit 1
           fi
-
+          wix --version
           wix login --api-key "${CLI_API_KEY}"
+        timeout-minutes: 3
 
       - name: Create Wix preview
         env:
-          TERM: xterm
+          TERM: xterm-256color
+          COLUMNS: "160"
+          LINES: "40"
+          FORCE_COLOR: "1"
         shell: bash
-        timeout-minutes: 8
+        timeout-minutes: 10
         run: |
           set -euo pipefail
           : > wix-preview.log
 
-          # Wix CLI for Sites requires a TTY and presents a commit selector.
-          # Wait for the documented default option before accepting it; an
-          # immediate newline can arrive before the prompt and leave the CLI
-          # blocked indefinitely.
+          # Wix CLI for Sites uses an interactive selector. A zero-sized PTY
+          # suppresses the selector, so set a real terminal size before spawn.
+          # Strip ANSI styling only for prompt detection; preserve raw output
+          # in the log artifact.
           python3 - <<'PY' | tee wix-preview.log
+          import fcntl
           import os
           import pty
+          import re
           import select
           import signal
+          import struct
           import subprocess
           import sys
+          import termios
           import time
 
           env = os.environ.copy()
           env.pop("CI", None)
-          env["TERM"] = env.get("TERM", "xterm")
+          env["TERM"] = "xterm-256color"
+          env["COLUMNS"] = "160"
+          env["LINES"] = "40"
 
           master, slave = pty.openpty()
+          fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack("HHHH", 40, 160, 0, 0))
           process = subprocess.Popen(
               ["wix", "preview"],
               stdin=slave,
@@ -95,17 +116,23 @@ jobs:
           os.close(slave)
 
           started = time.monotonic()
-          prompt_deadline = started + 60
-          overall_deadline = started + 420
+          prompt_deadline = started + 90
+          overall_deadline = started + 540
           output = bytearray()
           selection_sent = False
           failure = None
+
+          def visible_text(data):
+              text = data.decode("utf-8", errors="replace")
+              text = re.sub(r"\x1b\\[[0-?]*[ -/]*[@-~]", "", text)
+              text = re.sub(r"\x1b\\][^\x07]*(?:\x07|\x1b\\\\)", "", text)
+              return re.sub(r"\\s+", " ", text)
 
           try:
               while True:
                   now = time.monotonic()
                   if now >= overall_deadline:
-                      failure = "Wix preview exceeded the 7-minute execution limit."
+                      failure = "Wix preview exceeded the 9-minute execution limit."
                       break
 
                   ready, _, _ = select.select([master], [], [], 0.25)
@@ -121,12 +148,18 @@ jobs:
                           if len(output) > 65536:
                               del output[:-8192]
 
-                          if (not selection_sent
-                                  and b"Latest commit from origin/main" in output):
+                          prompt_text = visible_text(output)
+                          prompt_visible = (
+                              "What would you like to preview?" in prompt_text
+                              and "Latest commit from origin/main" in prompt_text
+                          )
+                          if not selection_sent and prompt_visible:
+                              # Enter accepts only the documented default:
+                              # the latest commit from origin/main.
                               os.write(master, b"\r")
                               selection_sent = True
                               print(
-                                  "\n[automation] Accepted Wix documented default: "
+                                  "\\n[automation] Selected documented default: "
                                   "Latest commit from origin/main",
                                   flush=True,
                               )
@@ -139,8 +172,8 @@ jobs:
 
                   if not selection_sent and now >= prompt_deadline:
                       failure = (
-                          "Wix CLI did not show the expected commit selector "
-                          "within 60 seconds; no selection was sent."
+                          "Wix CLI did not render the documented preview selector "
+                          "within 90 seconds. No input was sent."
                       )
                       break
 
@@ -158,13 +191,15 @@ jobs:
                           pass
                       process.wait()
                   print(f"::error::{failure}", file=sys.stderr, flush=True)
+                  print("Captured Wix CLI output:", file=sys.stderr, flush=True)
+                  print(visible_text(output), file=sys.stderr, flush=True)
                   sys.exit(1)
 
               status = process.wait()
               if not selection_sent:
                   print(
-                      "::error::Wix CLI exited before presenting its expected "
-                      "commit selector; preview was not created.",
+                      "::error::Wix CLI exited before rendering its documented "
+                      "preview selector; preview was not created.",
                       file=sys.stderr,
                       flush=True,
                   )
