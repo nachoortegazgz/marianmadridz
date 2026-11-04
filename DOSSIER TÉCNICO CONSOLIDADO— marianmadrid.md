@@ -86,7 +86,7 @@ La necesidad principal es gestionar el negocio desde Wix y cubrir las carencias 
 | IONOS | DNS y correo corporativo Plan Base5, según la ficha técnica. |
 | Resend API | Correo transaccional; clave referenciada en Wix Secrets Manager. |
 | OpenAI API | Asistente IA; clave referenciada en Wix Secrets Manager. |
-| MONEI | Proveedor de pago declarado para Bizum; validar la configuración activa antes de depender de ella. |
+| WIX PAYMENTS | Pasarela de pago; validar la configuración activa antes de depender de ella. |
 | Microsoft 365 / SharePoint / Power Automate / Purview | Capa externa propuesta; requiere ADR-003, presupuesto y validación de retención antes de implementarse. |
 | Microsoft Clarity / RustDesk | Analítica de comportamiento y soporte remoto declarados; revisar permisos y datos tratados. |
 
@@ -98,8 +98,7 @@ La necesidad principal es gestionar el negocio desde Wix y cubrir las carencias 
 | IONOS Plan Base5 | Correo corporativo; DNS gestionado en IONOS. | Confirmar vigencia y titularidad en IONOS. |
 | GitHub | Repositorio canónico y workflow CI/Preview. | Los permisos se verifican en la organización/cuenta; los valores de secrets no son legibles por la API del repo. |
 | OpenAI API y Resend | Integraciones declaradas; claves en Wix Secrets Manager. | No consta aquí saldo, plan contratado, límites ni validez actual de las claves. |
-| MONEI | Integración de pagos declarada. | No consta en este dossier el plan contractual ni una prueba actual de cobro. |
-| Microsoft 365 / Kit Digital | Herramientas y buzones declarados en apartados de negocio. | No inferir licencias, SKU ni disponibilidad de Purview, Entra ID, Defender o Power Automate sin revisar el tenant. |
+| Microsoft 365 Estandar / Kit Digital | Herramientas y buzones declarados en apartados de negocio. | No inferir licencias, SKU ni disponibilidad de Purview, Entra ID, Defender o Power Automate sin revisar el tenant. |
 | RustDesk / Microsoft Clarity | Herramientas declaradas. | Confirmar licencias, configuración, consentimiento y permisos actuales. |
 
 ### 2.6 Stack técnico e integraciones
