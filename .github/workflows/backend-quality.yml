@@ -2,16 +2,34 @@ name: Backend quality gates
 
 on:
   pull_request:
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "test/**"
+      - "scripts/**"
+      - "package.json"
+      - "package-lock.json"
+      - "eslint.config.*"
+      - ".eslintrc*"
+      - ".github/workflows/backend-quality.yml"
   push:
     branches:
       - main
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "test/**"
+      - "scripts/**"
+      - "package.json"
+      - "package-lock.json"
+      - "eslint.config.*"
+      - ".eslintrc*"
+      - ".github/workflows/backend-quality.yml"
+  workflow_dispatch:
 
 permissions:
   contents: read
 
-# PR runs supersede older commits from the same PR/branch, but unrelated work
-# continues. Feature branches are validated by pull_request to avoid duplicate
-# push + pull_request runs.
 concurrency:
   group: backend-quality-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
@@ -64,6 +82,7 @@ jobs:
 
   windows-node-compatibility:
     name: Windows Node.js ${{ matrix.node-version }} regression
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: windows-latest
     timeout-minutes: 20
     strategy:
