@@ -118,7 +118,7 @@ jobs:
           output = bytearray()
           selection_sent = False
           failure = None
-          ansi_csi = re.compile(bytes([27]) + b"\\\\[[0-?]*[ -/]*[@-~]")
+          ansi_csi = re.compile(bytes([27]) + b"\\[[0-?]*[ -/]*[@-~]")
 
           def visible_text(data):
               text = ansi_csi.sub(b"", data).decode("utf-8", errors="replace")
