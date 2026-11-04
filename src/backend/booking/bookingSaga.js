@@ -452,10 +452,18 @@ async function _compensateCreatedBookings(createdBookings, traceId) {
 // BLOCK 5 - SELECTIVE ELEVATION
 // =============================================================================
 async function _createBookingWithSelectiveElevation(booking, options, traceId) {
+    // El SDK V2 de Wix muta booking y options in-place. Un clone
+    // profundo garantiza que nunca recibe un objeto frozen/proxy,
+    // ahora o si una regresión futura vuelve a congelar algo.
+    const safeBooking = JSON.parse(JSON.stringify(booking));
+    const safeOptions = options
+        ? JSON.parse(JSON.stringify(options))
+        : options;
+
     try {
         return await withTimeout(
             function () {
-                return bookings.createBooking(booking, options);
+                return bookings.createBooking(safeBooking, safeOptions);
             },
             BOOKING_CREATION_TIMEOUT_MS,
             "createBooking"
@@ -479,7 +487,7 @@ async function _createBookingWithSelectiveElevation(booking, options, traceId) {
         });
         return await withTimeout(
             function () {
-                return auth.elevate(bookings.createBooking)(booking, options);
+                return auth.elevate(bookings.createBooking)(safeBooking, safeOptions);
             },
             BOOKING_CREATION_TIMEOUT_MS,
             "createBooking:elevated"
