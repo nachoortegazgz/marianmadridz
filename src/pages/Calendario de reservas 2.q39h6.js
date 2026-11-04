@@ -49,7 +49,7 @@
  */
 
 import { location } from "@wix/site-location";
-import { lightbox } from "@wix/site-window";
+import { window as wixWindow } from "@wix/site-window";
 
 import {
     getServiceBySlugOrId,
@@ -1537,17 +1537,12 @@ async function handleBooking(
         }
 
         try {
-            await lightbox.openLightbox(
-                "ConfirmacionReserva",
-                {
-                    booking:
-                        bookingResult.data,
-                    bookingId:
-                        bookingResult.data.bookingId,
-                    service: currentService,
-                    traceId
-                }
-            );
+            await wixWindow.openLightbox("ConfirmacionReserva", {
+                booking: bookingResult.data,
+                bookingId: bookingResult.data.bookingId,
+                service: currentService,
+                traceId,
+            });
         } catch (error) {
             console.error(
                 "[calendario-2] No se pudo abrir ConfirmacionReserva",
