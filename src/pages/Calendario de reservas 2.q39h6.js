@@ -1,6 +1,48 @@
 /**
  * MODULE: pages/calendario-2.js
- * VERSION: v5016-HARDENED-AUTO-STAFF
+ * VERSION: v5023-HARDENED-AUTO-STAFF-DTO-AUTOSEL
+ * BASE: v5022-HARDENED-AUTO-STAFF-DTO-AUTOSEL
+ *
+ * CORRECCIONES v5023:
+ *   - ISO-02 (P1): isLocalIso valida calendario real (mes 1-12, día según
+ *     díasDelMes, hora 0-23, minuto 0-59, segundo 0-59). Rechaza
+ *     "2026-02-30T10:00" y "2026-04-31T10:00" aunque el regex de forma
+ *     pase. _toWidgetSlotDto refuerza start < end con Number.isFinite.
+ *   - BOOK-02 (P1): buildBookingRequestPayload valida slotF1 y slotF2 con
+ *     isValidBookingSlot antes de construir el payload y lanza
+ *     INVALID_SLOT_F1 / INVALID_SLOT_F2. handleBooking los captura en el
+ *     try/catch ya existente y responde con el código correcto.
+ *   - PAIR-02 (P1): pairToken solo se añade al payload si no está vacío.
+ *     Evita enviar pairToken:"" a processDualBooking.
+ *
+ * FIXES HEREDADOS v5022:
+ *   DTO-07: _toWidgetSlotDto valida ISO y orden temporal.
+ *   COMB-01: serviceAllowsCombine() acepta true / "true".
+ *
+ * FIXES HEREDADOS v5021:
+ *   DTO-06: _sanitizeSlotsForWidget rechaza pares con DTO null.
+ *   PAIR-01: normalizeSlot + buildBookingRequestPayload propagan pairToken.
+ *   ISO-01: isLocalIso valida fecha real.
+ *   DAYS-01: days filtrados al mes solicitado.
+ *
+ * FIXES HEREDADOS v5020:
+ *   A3: _toWidgetSlotDto / _sanitizeSlotsForWidget sin resourceId.
+ *   A4: normalizeSlot sin resourceId.
+ *   A5: isValidBookingSlot valida ISO antes de comparar fechas.
+ *
+ * FIXES HEREDADOS v5019:
+ *   DTO-05: sanitizeAvailabilityResponse recibe action.
+ *
+ * FIXES HEREDADOS v5018:
+ *   DATE-01: getMadridYmdOffset con Intl "en-CA" + Date.UTC a mediodía.
+ *   DTO-03: sanitizeAvailabilityResponse aplicado antes de reply().
+ *   DTO-04: normalizeSlot devuelve slotRef y slot.
+ *
+ * FIXES HEREDADOS v5017:
+ *   AUTOSEL-01: recommendedDay / recommendedSlots en action "days".
+ *   DTO-01: _sanitizeSlotsForWidget antes de reply().
+ *   DTO-02: normalizeSlot/isValidBookingSlot aceptan slot como fallback.
+ *   LOG-01: handleAvailability recibe traceId.
  */
 
 import { location } from "@wix/site-location";
@@ -129,6 +171,235 @@ function bridgeLogError(traceId, error) {
 }
 
 /* ============================================================================
+ * AUTOSEL-01 + DATE-01: helpers de fecha Madrid y DTO mínimo de slots.
+ * ========================================================================== */
+
+/**
+ * DATE-01: devuelve YYYY-MM-DD (Europe/Madrid) desplazado `days` días.
+ *
+ * Implementación robusta:
+ *   1) Extrae el Y-M-D actual en Europe/Madrid vía Intl (en-CA = ISO).
+ *   2) Construye un Date UTC a MEDIODÍA con el offset aplicado. A mediodía
+ *      no hay borde de cambio de día por TZ ni por DST.
+ *   3) Formatea a YYYY-MM-DD con toISOString.
+ */
+function getMadridYmdOffset(days) {
+    const formatter = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Europe/Madrid",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+    });
+
+    const parts = Object.fromEntries(
+        formatter
+            .formatToParts(new Date())
+            .filter(({ type }) => type !== "literal")
+            .map(({ type, value }) => [type, Number(value)])
+    );
+
+    const date = new Date(Date.UTC(
+        parts.year,
+        parts.month - 1,
+        parts.day + Number(days || 0),
+        12, 0, 0
+    ));
+
+    return date.toISOString().slice(0, 10);
+}
+
+/**
+ * ISO-02: validación estricta de fechas reales.
+ *
+ * Acepta YYYY-MM-DDTHH:MM (con segundos y/o Z opcionales) y comprueba:
+ *   - mes 1-12, hora 0-23, minuto 0-59, segundo 0-59;
+ *   - día dentro de los días reales del mes (rechaza 2026-02-30,
+ *     2026-04-31, etc.);
+ *   - Date(v).getTime() finito (defensa en profundidad).
+ */
+function isLocalIso(value) {
+    const v = _safeTrim(value);
+
+    const match = v.match(
+        /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.\d{1,3})?)?(Z)?$/
+    );
+
+    if (!match) {
+        return false;
+    }
+
+    const year = Number(match[1]);
+    const month = Number(match[2]);
+    const day = Number(match[3]);
+    const hour = Number(match[4]);
+    const minute = Number(match[5]);
+    const second = Number(match[6] || 0);
+
+    if (
+        month < 1 ||
+        month > 12 ||
+        hour < 0 ||
+        hour > 23 ||
+        minute < 0 ||
+        minute > 59 ||
+        second < 0 ||
+        second > 59
+    ) {
+        return false;
+    }
+
+    const daysInMonth = new Date(
+        Date.UTC(year, month, 0)
+    ).getUTCDate();
+
+    if (day < 1 || day > daysInMonth) {
+        return false;
+    }
+
+    return Number.isFinite(
+        new Date(v).getTime()
+    );
+}
+
+/**
+ * COMB-01: normaliza `allowCombine` desde CMS (puede llegar como
+ * boolean true o como string "true" si la columna es texto).
+ */
+function serviceAllowsCombine(service) {
+    return (
+        service?.allowCombine === true ||
+        service?.allowCombine === "true"
+    );
+}
+
+/**
+ * A3 + DTO-07: DTO mínimo de slot para el widget.
+ * - Sin `resourceId` (auto-staff).
+ * - Rechaza ISO inválido (ISO-02) y start >= end.
+ */
+function _toWidgetSlotDto(slot) {
+    if (!slot || typeof slot !== "object") {
+        return null;
+    }
+
+    const start = _safeTrim(
+        slot.localStartDate || slot.startDate || ""
+    );
+
+    const end = _safeTrim(
+        slot.localEndDate || slot.endDate || ""
+    );
+
+    if (
+        !isLocalIso(start) ||
+        !isLocalIso(end)
+    ) {
+        return null;
+    }
+
+    const startTime = new Date(start).getTime();
+    const endTime = new Date(end).getTime();
+
+    if (
+        !Number.isFinite(startTime) ||
+        !Number.isFinite(endTime) ||
+        startTime >= endTime
+    ) {
+        return null;
+    }
+
+    return {
+        localStartDate: start,
+        localEndDate: end,
+        serviceId: _safeTrim(
+            slot.serviceId || ""
+        ) || null
+    };
+}
+
+/**
+ * DTO-06: reduce cada par a DTO mínimo.
+ * - Rechaza el par si f1Dto es null (o si slotF2 existe y f2Dto es null).
+ * - Elimina resourceId en todos los niveles.
+ * - Conserva pairToken (de par o de f1/f2) para processDualBooking.
+ */
+function _sanitizeSlotsForWidget(pairs) {
+    if (!Array.isArray(pairs)) return [];
+    return pairs
+        .map((pair) => {
+            if (!pair || typeof pair !== "object") return null;
+            const f1 = pair.slotF1 && typeof pair.slotF1 === "object" ? pair.slotF1 : null;
+            const f2 = pair.slotF2 && typeof pair.slotF2 === "object" ? pair.slotF2 : null;
+            if (!f1) return null;
+
+            const f1Src = f1.slot || f1.slotRef || f1;
+            const f2Src = f2 ? (f2.slot || f2.slotRef || f2) : null;
+
+            const f1Dto = _toWidgetSlotDto(f1Src);
+            const f2Dto = f2Src ? _toWidgetSlotDto(f2Src) : null;
+
+            /* DTO-06 + DTO-07: rechazar el par si algún DTO es inválido. */
+            if (!f1Dto || (f2 && !f2Dto)) return null;
+
+            const pairToken = _safeTrim(
+                pair.pairToken ||
+                f1.pairToken ||
+                f1Src.pairToken ||
+                f2?.pairToken ||
+                f2Src?.pairToken ||
+                ""
+            );
+
+            return {
+                slotF1: {
+                    ...f1Dto,
+                    slot: f1Dto,
+                    ...(pairToken ? { pairToken } : {}),
+                },
+                slotF2: f2
+                    ? {
+                        ...f2Dto,
+                        slot: f2Dto,
+                        ...(pairToken ? { pairToken } : {}),
+                    }
+                    : null,
+                pairToken,
+                serviceId: _safeTrim(pair.serviceId || "") || null,
+                dateYMD: _safeTrim(pair.dateYMD || ""),
+            };
+        })
+        .filter(Boolean);
+}
+
+/**
+ * DTO-03 (v5019):
+ * - `data` se sanea únicamente cuando la acción devuelve slots
+ *   (action === "slots").
+ * - `data` de "days" conserva fechas YYYY-MM-DD.
+ * - `recommendedSlots` siempre se sanea como DTO mínimo.
+ */
+function sanitizeAvailabilityResponse(result, action = "") {
+    if (!result || typeof result !== "object") return result;
+
+    const sanitized = { ...result };
+
+    if (
+        action === "slots" &&
+        Array.isArray(sanitized.data)
+    ) {
+        sanitized.data = _sanitizeSlotsForWidget(sanitized.data);
+    }
+
+    if (Array.isArray(sanitized.recommendedSlots)) {
+        sanitized.recommendedSlots = _sanitizeSlotsForWidget(
+            sanitized.recommendedSlots
+        );
+    }
+
+    return sanitized;
+}
+
+/* ============================================================================
  * CONTEXTO DEL SERVICIO
  * ========================================================================== */
 
@@ -155,8 +426,6 @@ function normalizeLookupValue(value) {
 }
 
 async function parseUrlParams() {
-    // Wix Location exposes `query` as a read-only object in the current SDK.
-    // Keep method support for compatibility with older injected wrappers.
     let query = typeof location.query === "function"
         ? await location.query()
         : location.query;
@@ -165,8 +434,6 @@ async function parseUrlParams() {
         query = {};
     }
 
-    // Some Wix page contexts can expose an empty query object despite a URL
-    // containing parameters. Recover only from the current page URL.
     if (
         !query.serviceId &&
         !query.slug &&
@@ -220,8 +487,6 @@ async function resolveServiceFromParams(params) {
         };
     }
 
-    // Same fallback strategy as Pagina de servicio 2: resolve the service
-    // from the route when query parameters are unavailable.
     const path = await location.path();
     const segments = Array.isArray(path) ? path : [];
     const normalizedSegments = segments
@@ -251,8 +516,6 @@ async function resolveServiceFromParams(params) {
 const SERVICE_LOOKUP_ATTEMPT_TIMEOUT_MS = 18000;
 
 async function loadServiceContext(params, traceId = "") {
-    // Only use identifiers supplied by the service-page URL. Never replace
-    // an explicit slug with a guessed route segment on a retry.
     const candidates = [];
     if (_looksLikeGuid(params?.serviceId)) {
         candidates.push({
@@ -323,9 +586,6 @@ async function loadServiceContext(params, traceId = "") {
                 throw error;
             }
 
-            // A GUID lookup must return that exact service. A slug lookup must
-            // return the exact canonical slug; title-based fuzzy matches are not
-            // accepted here because they can silently load a different service.
             if (
                 candidate.kind === "serviceId" &&
                 returnedServiceId.toLowerCase() !== candidate.value
@@ -572,6 +832,12 @@ function isPaymentChannelAllowed(
     return false;
 }
 
+/**
+ * PAIR-01: acepta `slot` (DTO mínimo) como fallback de `slotRef`, devuelve
+ * AMBOS alias apuntando al mismo objeto y preserva `pairToken`.
+ *
+ * Sin `resourceId`: contrato auto-staff.
+ */
 function normalizeSlot(slot) {
     if (
         !slot ||
@@ -594,6 +860,10 @@ function normalizeSlot(slot) {
         typeof slot.slotRef === "object" &&
         !Array.isArray(slot.slotRef)
             ? slot.slotRef
+            : slot.slot &&
+              typeof slot.slot === "object" &&
+              !Array.isArray(slot.slot)
+            ? slot.slot
             : null;
 
     if (
@@ -604,21 +874,47 @@ function normalizeSlot(slot) {
         return null;
     }
 
+    const pairToken = _safeTrim(
+        slot.pairToken ||
+        slotRef.pairToken ||
+        ""
+    );
+
     return {
         localStartDate,
         localEndDate,
-        slotRef
+        slotRef,
+        slot: slotRef,
+        ...(pairToken ? { pairToken } : {}),
     };
 }
 
+/**
+ * ISO-01 + ISO-02: acepta `slot` como fallback y valida isLocalIso(start/end)
+ * antes de comparar. isLocalIso rechaza fechas no reales
+ * ("2026-02-30T10:00", "2026-04-31T10:00", "2026-99-99T99:99").
+ */
 function isValidBookingSlot(slot) {
     if (
         !slot ||
         typeof slot !== "object" ||
-        Array.isArray(slot) ||
-        !slot.slotRef ||
-        typeof slot.slotRef !== "object"
+        Array.isArray(slot)
     ) {
+        return false;
+    }
+
+    const ref =
+        slot.slotRef &&
+        typeof slot.slotRef === "object" &&
+        !Array.isArray(slot.slotRef)
+            ? slot.slotRef
+            : slot.slot &&
+              typeof slot.slot === "object" &&
+              !Array.isArray(slot.slot)
+            ? slot.slot
+            : null;
+
+    if (!ref) {
         return false;
     }
 
@@ -630,24 +926,24 @@ function isValidBookingSlot(slot) {
         slot.localEndDate || ""
     );
 
-    if (!start || !end) {
+    if (!isLocalIso(start) || !isLocalIso(end)) {
         return false;
     }
 
-    const startDate = new Date(start);
-    const endDate = new Date(end);
-
-    return (
-        !Number.isNaN(startDate.getTime()) &&
-        !Number.isNaN(endDate.getTime()) &&
-        startDate < endDate
-    );
+    return new Date(start).getTime() < new Date(end).getTime();
 }
 
 /* ============================================================================
  * PAYLOAD DE RESERVA
  * ========================================================================== */
 
+/**
+ * BOOK-02: valida slotF1/slotF2 con isValidBookingSlot ANTES de construir
+ * el payload y lanza INVALID_SLOT_F1 / INVALID_SLOT_F2 si no son válidos.
+ * handleBooking captura esos códigos en el try/catch ya existente.
+ *
+ * PAIR-02: pairToken solo se añade al payload si no está vacío.
+ */
 function buildBookingRequestPayload(
     bookingData,
     fallbackTraceId
@@ -660,8 +956,46 @@ function buildBookingRequestPayload(
         ? normalizeSlot(bookingData.slotF2)
         : null;
 
+    if (
+        !slotF1 ||
+        !isValidBookingSlot(slotF1)
+    ) {
+        const error = new Error(
+            "Slot F1 inválido."
+        );
+
+        error.code = "INVALID_SLOT_F1";
+        throw error;
+    }
+
+    if (
+        bookingData.slotF2 &&
+        (
+            !slotF2 ||
+            !isValidBookingSlot(slotF2)
+        )
+    ) {
+        const error = new Error(
+            "Slot F2 inválido."
+        );
+
+        error.code = "INVALID_SLOT_F2";
+        throw error;
+    }
+
+    const pairToken = _safeTrim(
+        bookingData.pairToken ||
+        bookingData.slotF1?.pairToken ||
+        bookingData.slotF2?.pairToken ||
+        slotF1.pairToken ||
+        slotF2?.pairToken ||
+        ""
+    );
+
     const addOnIds = validateAllowedAddonIds(
-        normalizeAddOnIds(bookingData.addOnIds),
+        normalizeAddOnIds(
+            bookingData.addOnIds
+        ),
         currentService
     );
 
@@ -709,8 +1043,14 @@ function buildBookingRequestPayload(
         traceId:
             _safeTrim(
                 fallbackTraceId || ""
-            ) || makeTraceId("calendario-book")
+            ) ||
+            makeTraceId("calendario-book")
     };
+
+    /* PAIR-02: solo si existe. */
+    if (pairToken) {
+        payload.pairToken = pairToken;
+    }
 
     if (paymentMethod) {
         payload.paymentMethod =
@@ -726,7 +1066,8 @@ function buildBookingRequestPayload(
 
 async function handleAvailability(
     payload,
-    reply
+    reply,
+    traceId = ""
 ) {
     if (
         !payload ||
@@ -802,6 +1143,87 @@ async function handleAvailability(
                     UI?.FRONTEND_API_TIMEOUT_MS || 210000,
                     "getAvailableDays"
                 );
+
+                /* AUTOSEL-01 + DAYS-01 + COMB-01: filtrar `days` al mes
+                   solicitado (YYYY-MM-), calcular recommendedDay y
+                   precargar slots si serviceAllowsCombine(). Si la
+                   precarga falla, la respuesta sigue con sólo los días. */
+                if (
+                    result?.status === "SUCCESS" &&
+                    Array.isArray(result.data) &&
+                    result.data.length > 0
+                ) {
+                    try {
+                        const expectedPrefix =
+                            `${year}-${String(month).padStart(2, "0")}-`;
+
+                        const days = result.data
+                            .map((d) =>
+                                _safeTrim(
+                                    typeof d === "string"
+                                        ? d
+                                        : d?.dateYMD || d?.dateYmd || ""
+                                )
+                            )
+                            .filter((d) =>
+                                /^\d{4}-\d{2}-\d{2}$/.test(d) &&
+                                d.startsWith(expectedPrefix)
+                            );
+
+                        if (days.length > 0) {
+                            const tomorrowYmd = getMadridYmdOffset(1);
+                            const recommendedDay = days.includes(tomorrowYmd)
+                                ? tomorrowYmd
+                                : days[0];
+
+                            result.recommendedDay = recommendedDay;
+
+                            /* COMB-01: serviceAllowsCombine(). */
+                            const loadRecommended = () =>
+                                serviceAllowsCombine(currentService)
+                                    ? getCertifiedDualSlots(
+                                          currentServiceId || currentSlug,
+                                          null,
+                                          recommendedDay,
+                                          addOnIds
+                                      )
+                                    : getAvailableSlots(
+                                          currentServiceId || currentSlug,
+                                          null,
+                                          recommendedDay,
+                                          addOnIds
+                                      );
+
+                            const slotsResult = await withTimeout(
+                                () => runAvailabilityWithRetry(
+                                    loadRecommended,
+                                    "getRecommendedSlots"
+                                ),
+                                UI?.FRONTEND_API_TIMEOUT_MS || 210000,
+                                "getRecommendedSlots"
+                            );
+
+                            if (
+                                slotsResult?.status === "SUCCESS" &&
+                                Array.isArray(slotsResult.data)
+                            ) {
+                                result.recommendedSlots =
+                                    _sanitizeSlotsForWidget(
+                                        slotsResult.data
+                                    );
+                            }
+                        }
+                    } catch (prefetchError) {
+                        console.warn(
+                            "[calendario-2] Prefetch de slots recomendados falló (no bloqueante)",
+                            {
+                                traceId,
+                                code: prefetchError?.code,
+                                message: prefetchError?.message
+                            }
+                        );
+                    }
+                }
             }
         } else if (action === "slots") {
             const dateYmd = _safeTrim(
@@ -813,7 +1235,8 @@ async function handleAvailability(
                     "INVALID_DATE"
                 );
             } else {
-                const loadSlots = () => currentService?.allowCombine === true
+                /* COMB-01: serviceAllowsCombine(). */
+                const loadSlots = () => serviceAllowsCombine(currentService)
                     ? getCertifiedDualSlots(
                         currentServiceId || currentSlug,
                         null,
@@ -842,6 +1265,7 @@ async function handleAvailability(
         console.error(
             "[calendario-2] Error de disponibilidad",
             {
+                traceId,
                 code: error?.code,
                 message: error?.message
             }
@@ -857,8 +1281,17 @@ async function handleAvailability(
     const normalizedResult =
         normalizeAvailabilityResult(result);
 
+    /* DTO-03 + DTO-05 + DTO-06 + DTO-07: sanitizeAvailabilityResponse
+       distingue "days" de "slots". En "days" NO toca data. En "slots"
+       reduce cada par a DTO mínimo y descarta pares con DTO inválido.
+       recommendedSlots se sanea siempre. */
+    const safeResult = sanitizeAvailabilityResponse(
+        normalizedResult,
+        action
+    );
+
     reply(MESSAGE_TYPES.AVAIL, {
-        ...normalizedResult,
+        ...safeResult,
         action,
         requestSequence
     });
@@ -933,6 +1366,8 @@ async function handleBooking(
                 bookingData.traceId || traceId
             );
     } catch (error) {
+        /* BOOK-02: buildBookingRequestPayload lanza INVALID_SLOT_F1 o
+           INVALID_SLOT_F2 cuando los slots no pasan isValidBookingSlot. */
         reply(
             MESSAGE_TYPES.BOOK,
             resultError(
@@ -1008,9 +1443,10 @@ async function handleBooking(
         return;
     }
 
+    /* COMB-01: serviceAllowsCombine(). */
     if (
         requestPayload.slotF2 &&
-        currentService?.allowCombine !== true
+        !serviceAllowsCombine(currentService)
     ) {
         reply(
             MESSAGE_TYPES.BOOK,
@@ -1131,10 +1567,6 @@ $w.onReady(() => {
     const traceId = makeTraceId("calendario");
     const widget = $w("#html1");
 
-    // Attach the message listener synchronously before awaiting URL/CMS work.
-    // The HTML component can emit MM_READY as soon as it loads; if we wait
-    // for parseUrlParams()/location.path() first, READY can be lost and the
-    // widget will never receive MM_CONTEXT.
     if (
         !widget ||
         typeof widget.postMessage !== "function" ||
@@ -1204,7 +1636,7 @@ $w.onReady(() => {
                         return;
                     }
 
-                    await handleAvailability(payload, reply);
+                    await handleAvailability(payload, reply, traceId);
                     return;
                 }
 
