@@ -15,8 +15,6 @@ on:
 permissions:
   contents: read
 
-# A newer main commit supersedes an older preview request. This keeps only the
-# newest deployment attempt running instead of queuing stale previews.
 concurrency:
   group: wix-preview-${{ github.ref }}
   cancel-in-progress: true
@@ -81,8 +79,7 @@ jobs:
 
           # Wix CLI for Sites uses an interactive selector. A zero-sized PTY
           # suppresses the selector, so set a real terminal size before spawn.
-          # Strip ANSI styling only for prompt detection; preserve raw output
-          # in the log artifact.
+          # Strip ANSI CSI styling only for prompt detection; preserve raw output.
           python3 - <<'PY' | tee wix-preview.log
           import fcntl
           import os
@@ -121,12 +118,11 @@ jobs:
           output = bytearray()
           selection_sent = False
           failure = None
+          ansi_csi = re.compile(bytes([27]) + b"\\\\[[0-?]*[ -/]*[@-~]")
 
           def visible_text(data):
-              text = data.decode("utf-8", errors="replace")
-              text = re.sub(r"\x1b\\[[0-?]*[ -/]*[@-~]", "", text)
-              text = re.sub(r"\x1b\\][^\x07]*(?:\x07|\x1b\\\\)", "", text)
-              return re.sub(r"\\s+", " ", text)
+              text = ansi_csi.sub(b"", data).decode("utf-8", errors="replace")
+              return " ".join(text.split())
 
           try:
               while True:
@@ -154,8 +150,6 @@ jobs:
                               and "Latest commit from origin/main" in prompt_text
                           )
                           if not selection_sent and prompt_visible:
-                              # Enter accepts only the documented default:
-                              # the latest commit from origin/main.
                               os.write(master, b"\r")
                               selection_sent = True
                               print(
