@@ -1,6 +1,6 @@
 # DOSSIER TÉCNICO CONSOLIDADO — marianmadrid.es versión.z
 
-**Proyecto:** Marian Madrid Peluquería y Estética · **Repositorio canónico en GITHUB:** `nachoortegazgz/marianmadridz` · **QA: www.marianmadrid.es** arquitectura, estado, evidencias y protocolo para su uso como QA. Los estados operativos se rigen por §24; los datos de prueba y condiciones de validación por §25; el plan por §26.
+**Proyecto:** Marian Madrid Peluquería y Estética · **Repositorio canónico en GITHUB:** `nachoortegazgz/marianmadridz` · **QA: www.marianmadrid.es** arquitectura, estado, evidencias y protocolo para su uso como QA. El estado operativo se consulta en el checkpoint más reciente (§32); los datos de prueba y condiciones de validación, en §25; el plan de trabajo, en §26.
 
 ---
 
@@ -1746,6 +1746,7 @@ export const getPublicCatalog = webMethod(
 | Categoría | Nº | Colecciones |
 |---|---:|---|
 | **NATIVE de negocio** | 13 | `DatosFiscales`, `CajaActual`, `MovimientosCaja`, `CitasF2`, `LibroAsientosContablesDetalle`, `HistoricoCierresZ`, `ServiciosCatalogo`, `ComplementosCatalogo`, `MapaStaff`, `RegistrosHorariosStaff`, `ControlOperativo`, `InventarioStockVenta`, `MovimientosInventario` |
+| **NATIVE auxiliares** | 2 | `QAE2ESimulaciones`, `RegistroIntegracion` (auxiliares; fuera de las 13 colecciones funcionales de negocio) |
 | **WIX_APP (solo lectura)** | 20 | Blog (3), Bookings (3), CampaignManager (2), Forms (1), Locations (1), Marketing (1), Members (4), Stores (5) |
 | **Legacy prohibidas** | 8 | `AsientosContables`, `EventosSistemaFacturacion`, `FacturasRecibidas`, `ConfiguracionFiscal`, `LibroRegistroFacturasRecibidas`, `PlanCuentasContables`, `CategoriasServicio`, `LibroRegistroFacturasExpedidas` |
 | **Huérfanas bloqueadas** | 6 | `ComprasProveedores`, `LineasCompraProveedor`, `ProductosCatalogo`, `ProductosVariantes`, `UbicacionesInventario`, `ProveedoresLista` |
@@ -1771,11 +1772,11 @@ export const getPublicCatalog = webMethod(
 | `QAE2ESimulaciones` | 1 | ADMIN×4 | No verificado |
 | `RegistroIntegracion` | 1 | ADMIN×4 | No verificado |
 
-La revisión, etiqueta, número de campos y tipos completos de cada colección se consultan en el esquema detallado §G.1–G.16. Los índices de las dos colecciones auxiliares nuevas no se han verificado en esta lectura.
+El detalle de las 13 colecciones NATIVE de negocio se encuentra en §G.1–§G.13; §G.15–§G.16 describen las 2 colecciones auxiliares y §G.14 reúne notas transversales. Para revisiones, recuentos y permisos vigentes prevalece `CMS KEYFIELDS.md` en `main` (reconciliación de solo lectura 2026-11-01), no los metadatos históricos de las tablas descriptivas.
 
 ### 5.3 Keyfields canónicos
 
-Los nombres, tipos, referencias y valores de los campos por colección se documentan una sola vez en §G.1–G.13. Este apartado no replica listas de campos; para trazabilidad transversal véanse §7.3 (identificadores) y §6 (enums).
+Los nombres, tipos y referencias de las 13 colecciones de negocio se detallan en §G.1–§G.13; las auxiliares, en §G.15–§G.16. Este apartado no replica listas de campos; para trazabilidad transversal véanse §7.3 (identificadores) y §6 (enums). `CMS KEYFIELDS.md` en `main` es la referencia de esquema más reciente disponible (reconciliación 2026-11-01).
 
 ### 5.4 Invariantes de integridad
 
@@ -1827,11 +1828,11 @@ Cualquier intento de lectura/escritura sobre legacy es interceptado en `backend/
 | `bookingId` | `reservaId` | TEXT | GUID oficial devuelto por Wix Bookings. **Índice único** `bookingId_unique`. |
 | `traceId` | `trazabilidadId` | TEXT | UUID v4 de correlación end-to-end. **Obligatorio**. |
 | `bookingType` | `reservaTipo` | TEXT | Enum: `SIMPLE` \| `DUAL_F1` \| `DUAL_F2`. |
-| `bookingStatus` | `reservaEstado` | TEXT | Enum CMS: `PENDING` \| `CONFIRMED` \| `COMPLETED` \| `CANCELED` \| `NO_SHOW`. ⚠️ Validar runtime. |
-| `paymentStatus` | `pagoEstado` | TEXT | Enum CMS: `UNPAID` \| `PARTIAL` \| `PAID` \| `REFUNDED`. ⚠️ Validar runtime. |
+| `bookingStatus` | `reservaEstado` | TEXT | CMS KEYFIELDS 2026-11-01 documenta `PENDING` / `CONFIRMED` / `CANCELED`; el código `CITAS_BOOKING_STATUS` escribe `PENDING` / `CONFIRMED` / `COMPLETED` / `CANCELLED` / `REFUNDED` / `NO_SHOW`. Discrepancia `CANCELED` vs `CANCELLED`; el campo TEXT no impone enum. Resolver con ADR y fixtures antes de migrar/escribir estados nuevos. |
+| `paymentStatus` | `pagoEstado` | TEXT | CMS KEYFIELDS 2026-11-01 documenta `NOT_PAID` / `PAID` / `PENDING_PAYMENT` / `PENDING_LEDGER` / `REFUNDED` / `PARTIALLY_REFUNDED`; el código añade `PARTIALLY_PAID`, `EXEMPT` y `UNDEFINED`. La tabla antigua `UNPAID` / `PARTIAL` queda obsoleta; confirmar consumidores y runtime antes de retirar compatibilidad. |
 | `serviceId` | `servicioId` | TEXT | GUID del servicio en Wix Bookings. **Distinto** de `catalogId`. |
 | `resourceId` | `recursoId` | TEXT | GUID del recurso (profesional) en Wix Bookings. **Índice** `idx_citasf2_resourceId`. |
-| `pairToken` | `parejaToken` | TEXT | Token de idempotencia: SIMPLE usa `pt` + 16 hex; DUAL usa fingerprint determinista `_hashKey` de 16 hex compartido F1/F2. **Índice** regular. |
+| `pairToken` | `parejaToken` | TEXT | Token compartido para correlacionar/idempotentizar fases. Código actual: SIMPLE y fallback dual usan `pt` + `_hashKey` (16 caracteres hex) sobre payload estable y hash de email; DUAL con `resourceId` GUID usa `_buildPairTokenDeterministic()` y devuelve el `_hashKey` (16 hex) del fingerprint validado. SIMPLE/fallback llevan prefijo `pt`; DUAL con GUID no. **Índice** regular. |
 | `dateYmd` | `fechaYmd` | TEXT | Fecha operativa normalizada `YYYY-MM-DD`. |
 | `scheduleId` | `calendarioId` | TEXT | ID de calendario **del slot nativo** (`bookedEntity.slot.scheduleId`). **No** sustituir por `eventsSchedule.id` del profesional. |
 | `contactDetails` | `contactoDetalles` | OBJECT | Datos mínimos de contacto (ej. `{email}`). Minimizar PII. |
@@ -2453,7 +2454,7 @@ Esta es la única tabla normativa de invariantes CMS. §5.4 y §10.2 remiten aqu
 
 ### 14.4 Estado de implementación
 
-- **Estructura CMS:** lista en las 13 colecciones.
+- **Estructura CMS:** 13 colecciones NATIVE de negocio y 2 auxiliares (15 NATIVE en la reconciliación CMS 2026-11-01); las auxiliares no forman parte de `BUSINESS_COLLECTIONS`.
 - **Hooks de integridad:** activos en `backend/data.js`.
 - **Enums:** definiciones canónicas exclusivamente en §6; validación runtime en §10.2.
 - **Escritor contable (`LibroAsientosContablesDetalle`):** **pendiente** (deuda Alta).
@@ -2473,9 +2474,13 @@ PAYMENT_STATUS_WIX = { UNDEFINED, NOT_PAID, PENDING_PAYMENT, PENDING_LEDGER, PAI
 ### 6.2 CMS (`CitasF2`)
 
 ```js
-BOOKING_STATUS_CMS = { PENDING, CONFIRMED, COMPLETED, CANCELED, NO_SHOW }  // CANCELED: una sola L (corregido)
-PAYMENT_STATUS_CMS = { UNPAID, PARTIAL, PAID, REFUNDED }
-bookingType        = { SIMPLE, DUAL_F1, DUAL_F2 }
+// Contrato de escritura actual según src/backend/internalConfig.js:
+CITAS_BOOKING_STATUS = { PENDING, CONFIRMED, COMPLETED, CANCELLED, REFUNDED, NO_SHOW }
+CITAS_PAYMENT_STATUS = { NOT_PAID, PENDING_PAYMENT, PENDING_LEDGER, PAID, PARTIALLY_PAID, REFUNDED, PARTIALLY_REFUNDED, EXEMPT, UNDEFINED }
+bookingType         = { SIMPLE, DUAL_F1, DUAL_F2 }
+// DISCREPANCIAS ABIERTAS: CMS KEYFIELDS.md documenta CANCELED (una L) y un conjunto
+// de paymentStatus distinto. El esquema CMS declara TEXT sin enums; no cambiar
+// valores persistidos ni validadores hasta contrastar consumidores, fixtures y runtime.
 ```
 
 ### 6.3 Negocio (español)
@@ -2532,7 +2537,7 @@ API = { STAFF_RESOURCE_TYPE_ID: "1cd44cf8-756f-41c3-bd90-3e2ffcaf1155" }
 | ID | Generación | Alcance |
 |---|---|---|
 | `traceId` | `makeTraceId()` / `_generateUUID()` (UUID v4) | Obligatorio en toda mutación transaccional |
-| `pairToken` | TEXT token determinista (SIMPLE `pt` + 16 hex; DUAL `_hashKey` de 16 hex) | `CitasF2`, `ControlOperativo` |
+| `pairToken` | SIMPLE/fallback: `pt` + `_hashKey` de 16 hex sobre payload estable y hash de email; DUAL con `resourceId` GUID: `_buildPairTokenDeterministic()` devuelve `_hashKey` de 16 hex del fingerprint validado. El prefijo `pt` solo se aplica a SIMPLE/fallback. | `CitasF2`, `ControlOperativo` |
 | `dedupeKey` | Hash determinista | `ControlOperativo` (indexado) |
 | `movementToken` | UUID v4 | `MovimientosInventario` (único) |
 | `transactionId` | UUID v4 | `MovimientosCaja` (único) |
@@ -2617,7 +2622,7 @@ backend/
 
 ### 9.1 Reserva simple
 
-1. Selección cliente → 2. `reservas.web.js` → `listAvailabilityTimeSlots` (`locationType: "BUSINESS"`, `timeZone: "Europe/Madrid"`) → 3. `bookingSaga.js` revalida slot exacto → 4. `staff.js` asigna `resourceId` y `scheduleId` → 5. `bookings.createBooking()` (`locationType: "OWNER_BUSINESS"`, `timezone` minúsculas dentro de `slot`) → 6. `bookingCore.js` inserta `CitasF2` (`PENDING`/`UNPAID`/`SIMPLE` + `traceId`) → 7. checkout eCom → webhook → `CONFIRMED`/`PAID`.
+1. Selección cliente → 2. `reservas.web.js` → `listAvailabilityTimeSlots` (`locationType: "BUSINESS"`, `timeZone: "Europe/Madrid"`) → 3. `bookingSaga.js` revalida slot exacto → 4. `staff.js` asigna `resourceId` y `scheduleId` → 5. `bookings.createBooking()` (`locationType: "OWNER_BUSINESS"`, `timezone` minúsculas dentro de `slot`) → 6. `bookingCore.js` inserta `CitasF2` (`PENDING`/`NOT_PAID`/`SIMPLE` + `traceId`) → 7. checkout eCom → webhook → `CONFIRMED`/`PAID`.
 
 ### 9.2 Reserva dual F1+F2 con gap
 
@@ -4543,3 +4548,46 @@ La lista agrupa pendientes de §26, §24, §29–§31, la revisión previa de m�
 - Auditoría de ajustes Wix y Apps §M y revisión compartida de módulos/H-1–H-6, incorporadas como tareas y decisiones abiertas en §32.2–§32.3.
 
 **Punto exacto de reentrada:** comprobar Preview; después, reconciliar las ocho cancelaciones Bookings/CitasF2 y verificar recuperación durable del webhook. No repetir una auditoría general ni realizar escrituras hasta que el diagnóstico y la autorización lo permitan.
+
+---
+
+## 33. RECONCILIACIÓN DE CONTRATOS CMS ↔ CÓDIGO — corte 2026-11-04
+
+**Alcance:** contraste documental entre `CMS KEYFIELDS.md` de `main` (reconciliación de solo lectura 2026-11-01), `src/backend/internalConfig.js`, `src/backend/booking/bookingSaga.js` y `src/backend/booking/bookingUtils.js`. No se consultó el CMS en vivo durante esta actualización ni se ejecutaron escrituras o pruebas runtime. Este apartado registra divergencias; no las resuelve por inferencia.
+
+### 33.1 Recuento y autoridad del inventario CMS
+
+- El inventario CMS del 2026-11-01 declara **35 colecciones: 15 NATIVE y 20 WIX_APP**.
+- De las 15 NATIVE, **13 son colecciones de negocio** y **2 auxiliares**: `QAE2ESimulaciones` y `RegistroIntegracion`. Esto concilia el inventario funcional §5.1 con el resumen de CMS KEYFIELDS; no deben sumarse las auxiliares a las 13 colecciones de negocio.
+- `BUSINESS_COLLECTIONS` en `src/backend/internalConfig.js` contiene 11 entradas; `OPERATIONAL_COLLECTIONS` contiene 2 y comparte `ControlOperativo` con el primer grupo. La unión representa 12 colecciones distintas; `MapaStaff` no está en esos grupos canónicos. Mantener la discrepancia como decisión de arquitectura pendiente; no añadirla por simetría.
+- Las tablas G.1–G.13 conservan parte de la descripción de campos del corte 25-10-2026. Las revisiones actuales del resumen CMS (por ejemplo, MovimientosCaja 75, HistoricoCierresZ 35, InventarioStockVenta 19 y MovimientosInventario 26) prevalecen sobre las revisiones antiguas de los encabezados G. El diccionario CMS es la fuente de esquema; el código acredita solo la implementación.
+
+### 33.2 Estados de CitasF2: discrepancia no resuelta
+
+| Campo | CMS KEYFIELDS (2026-11-01) | Código `internalConfig.js` | Estado |
+|---|---|---|---|
+| `bookingStatus` | Documenta `CANCELED` (una L) | `CITAS_BOOKING_STATUS` declara `CANCELLED` (dos L), además de `PENDING`, `CONFIRMED`, `COMPLETED`, `REFUNDED`, `NO_SHOW` | **Conflicto documental/código.** CMS es TEXT y no restringe opciones; falta validar escrituras, lectores, datos persistidos y fixtures. |
+| `paymentStatus` | Documenta `NOT_PAID`, `PAID`, `PENDING_PAYMENT`, `PENDING_LEDGER`, `REFUNDED`, `PARTIALLY_REFUNDED` | `CITAS_PAYMENT_STATUS` añade `PARTIALLY_PAID`, `EXEMPT`, `UNDEFINED` | **Diferencia de cobertura.** No asumir que los valores extra se usan ni retirar valores sin revisar consumers. |
+| `bookingType` | `SIMPLE`, `DUAL_F1`, `DUAL_F2` | Mismos valores canónicos en `BOOKING_TYPE` | Coincidencia documental. |
+
+La tabla histórica G.1 y §6.2 ya no deben presentar `UNPAID`/`PARTIAL` como enums vigentes. No hacer migración de datos ni cambiar el escritor hasta un ADR respaldado por inventario de valores reales, consumidores, pruebas de regresión y QA autorizado.
+
+### 33.3 pairToken: formato real de las ramas de generación
+
+El tamaño documentado (16 caracteres hexadecimales) coincide con el helper actual; se precisa aquí la diferencia entre ramas y los datos que intervienen:
+
+- SIMPLE y fallback dual: `_resolveStablePairToken()` serializa `serviceId`, `resourceId`, `f1Start`, `f2Start`, calcula `emailHash` y devuelve `pt` + `_hashKey(...)`. `public/mmUtils.js` devuelve 16 caracteres hexadecimales; el `slice(0, 32)` de la saga no amplía ese valor.
+- DUAL con `resourceId` GUID: `_resolveUnifiedPairToken()` delega en `_buildPairTokenDeterministic()`, que aplica `_hashKey()` al fingerprint validado de `serviceId`, `linkedPhases`, `dateYmd`, inicio/fin de F1 y F2 y `resourceId`. Devuelve 16 caracteres hexadecimales, sin prefijo `pt`.
+- `public/mmUtils.js` implementa `_hashKey()` como concatenación de dos enteros de 32 bits en hexadecimal con padding: 16 caracteres hexadecimales. La longitud queda verificada en el código; la compatibilidad de valores históricos debe comprobarse con fixtures/datos antes de cambiar nada.
+
+**Regla:** `pairToken` es opaco para los consumidores. No regenerar tokens históricos ni cambiar algoritmo/formato sin ADR, análisis de colisiones/compatibilidad, drenaje de locks, migración/reconciliación y pruebas.
+
+### 33.4 Pendientes de cierre
+
+1. Añadir/confirmar fixtures de regresión para ambas ramas de `pairToken` y comprobar compatibilidad con tokens ya persistidos, sin regenerarlos.
+2. Inventariar valores reales de `CitasF2.bookingStatus` y `paymentStatus` mediante lectura autorizada; contrastarlos con todos los lectores/escritores y tests.
+3. Aprobar ADR para la grafía/semántica de estados y actualizar conjuntamente CMS KEYFIELDS, SSOT, validadores, escritores, lectores y fixtures.
+4. Resolver mediante ADR el papel de `MapaStaff` respecto a `BUSINESS_COLLECTIONS`, `OPERATIONAL_COLLECTIONS` y las fuentes de identidad de Bookings.
+5. Actualizar las tablas históricas de §G solo a partir de una nueva exportación CMS de solo lectura; no inferir campos, obligatoriedad ni índices de la revisión.
+
+**Criterio de cierre:** cada divergencia queda resuelta por decisión aprobada y evidencia de esquema/código/tests/QA, o permanece marcada como pendiente. Esta consolidación no declara el CMS ni el runtime validados en vivo.
