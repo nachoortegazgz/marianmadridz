@@ -54,7 +54,7 @@ jobs:
             exit 1
           fi
 
-          wix login --api-key "${CLI_API_KEY}"
+          npm run wix login -- --api-key "${CLI_API_KEY}"
 
       - name: Create Wix preview (non-interactive)
         shell: bash
