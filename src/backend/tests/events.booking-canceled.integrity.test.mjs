@@ -81,5 +81,5 @@ test('BOOKING_CANCELED replay reconciles a stale CitasF2 row even when the event
 
   assert.equal(result.status, 'OK');
   const cita = wixDataMock._store.get(CITA_COLLECTION).find((row) => row.bookingId === BOOKING_ID);
-  assert.equal(cita.bookingStatus, 'CANCELED');
+  assert.equal(cita.bookingStatus, IC.CITAS_BOOKING_STATUS.CANCELLED || IC.CITAS_BOOKING_STATUS.CANCELED);
 });
