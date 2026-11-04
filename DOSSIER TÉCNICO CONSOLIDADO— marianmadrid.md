@@ -4640,4 +4640,4 @@ La lectura de `ControlOperativo` devolvió cuatro registros (tres ALERT y uno RA
 
 **Pendiente:** reconciliar las dos filas históricas sin alterar datos por inferencia; validar visualmente el flujo de calendario/widget y la respuesta de WebMethod en un entorno QA autorizado; ejecutar una reserva SIMPLE de extremo a extremo solo en un sitio de pruebas o con autorización explícita para crear y cancelar una reserva de prueba. El Preview #55 sigue pendiente de resultado en este corte.
 
-**Restricción:** no crear ni cancelar reservas reales, no actualizar CitasF2 manualmente y no cambiar la política de estados mientras siga abierto el ADR CMS/backend.
+La búsqueda de sitios Wix por nombre que contenga `QA` no devolvió un sitio separado. Por tanto, no se ha demostrado que exista un entorno Wix aislado para ejecutar el E2E; crear/cancelar una reserva en el sitio seleccionado podría afectar Bookings y notificaciones, y requiere autorización explícita.\n\n**Restricción:** no crear ni cancelar reservas reales, no actualizar CitasF2 manualmente y no cambiar la política de estados mientras siga abierto el ADR CMS/backend.
