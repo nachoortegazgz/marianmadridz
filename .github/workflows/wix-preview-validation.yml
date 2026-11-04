@@ -60,9 +60,10 @@ jobs:
         env:
           TERM: xterm
         shell: bash
-        timeout-minutes: 5
+        timeout-minutes: 10
         run: |
           set -euo pipefail
+
           : > wix-preview.log
 
           if ! command -v script >/dev/null 2>&1; then
@@ -70,9 +71,8 @@ jobs:
             exit 1
           fi
 
-          # Keep the pseudo-terminal Wix may require, but bound execution time.
           set +e
-          timeout --signal=TERM --kill-after=15s 4m \
+          timeout --signal=TERM --kill-after=15s 6m \
             script -q -e -c 'env -u CI wix preview' /dev/null 2>&1 \
             | tee wix-preview.log
           preview_status=${PIPESTATUS[0]}
@@ -80,21 +80,22 @@ jobs:
 
           if [ "${preview_status}" -ne 0 ]; then
             if [ "${preview_status}" -eq 124 ] || [ "${preview_status}" -eq 137 ]; then
-              echo "::error::Wix preview did not finish within 4 minutes; see the uploaded log."
+              echo "::error::Wix preview did not finish within 6 minutes. See wix-preview.log for details."
             else
-              echo "::error::Wix preview exited with status ${preview_status}; see the uploaded log."
+              echo "::error::Wix preview exited with status ${preview_status}. See wix-preview.log for details."
             fi
             exit 1
           fi
 
           preview_url="$(grep -Eo 'https?://wix\.to/[[:alnum:]]+' wix-preview.log | tail -n 1 || true)"
           if [ -z "${preview_url}" ]; then
-            echo "::error::Wix CLI finished without a verifiable wix.to preview URL; see the uploaded log."
+            echo "::error::Wix CLI finished without a verifiable wix.to preview URL."
+            cat wix-preview.log || true
             exit 1
           fi
 
           echo "url=${preview_url}" >> "${GITHUB_OUTPUT}"
-          echo "Wix Preview created: ${preview_url}" >> "${GITHUB_STEP_SUMMARY}"
+          echo "Wix preview created: ${preview_url}" >> "${GITHUB_STEP_SUMMARY}"
 
       - name: Preserve preview output
         if: always()
