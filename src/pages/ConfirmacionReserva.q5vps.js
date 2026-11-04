@@ -1,73 +1,171 @@
 /*
 =============================================================================
 MODULE: pages/ConfirmacionReserva.q5vps.js
-VERSION: v1.1-PRIVATE-STAFF
-BASE: v0.9-BROKEN + correcciones auditoría P0 (CONF-01..CONF-05)
-RESPONSIBILITY: Mostrar confirmación de reserva tras éxito presencial o online.
+VERSION: v1.3-HANDSHAKE-RACE-SAFE
+BASE: v1.2-SAFE-COLLAPSE-RICH-PAYLOAD
+RESPONSIBILITY: Mostrar confirmación de reserva tras éxito presencial u online.
 STANDARDS: G10 ASCII Strict. Uso estricto de APIs Velo actuales.
 CONTRATO: Recibe datos via lightbox.getContext(): { booking, bookingId, service, traceId }.
 =============================================================================
-*/
-import { lightbox } from '@wix/site-window';
-import { location } from '@wix/site-location';
-import { getConfirmedBookingForDisplay } from 'backend/reservas.web.js';
-import { _safeTrim, _toDateSafe, getMadridLocalStringNoZ } from 'public/mmUtils';
 
-// Element IDs (Deben coincidir con los IDs en el Editor de Wix)
+CORRECCIONES v1.3:
+  - CONF-08 (P0): race en el handshake HTML↔Velo. Si el HTML enviaba
+    MM_CONFIRMATION_READY antes de que el Velo terminara de construir
+    confirmationWidgetPayload, el payload se descartaba y nunca se reenviaba
+    (los 4 READY del HTML podian llegar durante un context fetch lento).
+    Ahora se rastrea widgetReady y se reenvía el payload al construirlo si
+    el widget ya se habia declarado listo. Ademas se elimina el
+    postMessage incondicional que podia perderse si el HTML no estaba listo.
+  - CONF-09 (P1): $w("#html2") envuelto en try/catch. Si el elemento no
+    existe, el bridge se desactiva silenciosamente sin romper la pagina.
+  - CONF-10 (P1): mapBackendResultToUI y renderConfirmation sanean
+    data.totalAmount a un Number finito. Cualquier undefined/NaN produce
+    "0,00 €" en lugar de "NaN €".
+=============================================================================
+*/
+import { lightbox } from "@wix/site-window";
+import { location } from "@wix/site-location";
+import { getConfirmedBookingForDisplay } from "backend/reservas.web.js";
+import { _safeTrim, _toDateSafe, getMadridLocalStringNoZ } from "public/mmUtils";
+
 const ELEMENTS = {
-    TITLE: '#titleText',
-    BOOKING_ID: '#bookingIdText',
-    SERVICE_NAME: '#serviceNameText',
-    DATE_TIME: '#dateTimeText',
-    STAFF_NAME: '#staffNameText',
-    TOTAL_AMOUNT: '#totalAmountText',
-    STATUS: '#statusText',
-    BTN_HOME: '#homeButton',
-    BTN_CALENDAR: '#calendarButton',
-    ERROR_MSG: '#errorMessage'
+    TITLE: "#titleText",
+    BOOKING_ID: "#bookingIdText",
+    SERVICE_NAME: "#serviceNameText",
+    DATE_TIME: "#dateTimeText",
+    STAFF_NAME: "#staffNameText",
+    TOTAL_AMOUNT: "#totalAmountText",
+    STATUS: "#statusText",
+    BTN_HOME: "#homeButton",
+    BTN_CALENDAR: "#calendarButton",
+    ERROR_MSG: "#errorMessage",
 };
 
+/* Estado del handshake HTML↔Velo (CONF-08).
+ * - widgetReady: el HTML envio MM_CONFIRMATION_READY al menos una vez.
+ * - confirmationWidgetPayload: payload a enviar al HTML.
+ * - htmlWidget: referencia al HtmlComponent (o null si no existe). */
+let widgetReady = false;
 let confirmationWidgetPayload = null;
+let htmlWidget = null;
+
+/* CONF-06: helpers seguros para collapse/expand. Algunos elementos
+ * (HtmlComponent, Image en ciertos temas, Slider) no exponen collapse/expand.
+ * Si el elemento no existe, $w lanza al acceder. Aqui probamos collapse y,
+ * si no existe, caemos a hide. Idem expand -> show. */
+function _safeCollapse(selector) {
+    try {
+        const el = $w(selector);
+        if (!el) return;
+        if (typeof el.collapse === "function") {
+            el.collapse();
+        } else if (typeof el.hide === "function") {
+            el.hide();
+        }
+    } catch (_) {
+        /* elemento inexistente o no colapsable: ignorar */
+    }
+}
+
+function _safeExpand(selector) {
+    try {
+        const el = $w(selector);
+        if (!el) return;
+        if (typeof el.expand === "function") {
+            el.expand();
+        } else if (typeof el.show === "function") {
+            el.show();
+        }
+    } catch (_) {
+        /* elemento inexistente o no expandible: ignorar */
+    }
+}
+
+function _safeSetText(selector, value) {
+    try {
+        const el = $w(selector);
+        if (el && typeof el.text !== "undefined") {
+            el.text = String(value ?? "");
+        }
+    } catch (_) {
+        /* elemento inexistente: ignorar */
+    }
+}
+
+/* CONF-08: envio centralizado del payload al HTML. Solo se llama cuando
+ * ambos lados estan listos (widgetReady && confirmationWidgetPayload). */
+function _sendPayloadToWidget() {
+    if (!htmlWidget || !confirmationWidgetPayload) return;
+    try {
+        if (typeof htmlWidget.postMessage === "function") {
+            htmlWidget.postMessage({
+                version: "1.0",
+                type: "MM_CONFIRMATION_CONTEXT",
+                payload: confirmationWidgetPayload,
+            });
+        }
+    } catch (_) {
+        /* postMessage puede lanzar si el widget aun no acepta mensajes */
+    }
+}
 
 $w.onReady(async function () {
-    // Bridge con el HTML embebido #html2: contrato de mensaje explícito.
-    const htmlWidget = $w("#html2");
-    if (htmlWidget && typeof htmlWidget.onMessage === "function") {
-        htmlWidget.onMessage((event) => {
-            const message = event && event.data;
-            if (message && message.type === "MM_CONFIRMATION_READY" &&
-                confirmationWidgetPayload && typeof htmlWidget.postMessage === "function") {
-                htmlWidget.postMessage({ version: "1.0", type: "MM_CONFIRMATION_CONTEXT", payload: confirmationWidgetPayload });
-            } else if (message && message.type === "MM_NAV" && message.payload &&
-                ["/", "/mis-reservas"].includes(message.payload.url)) {
-                location.to(message.payload.url);
-            }
-        });
+    /* CONF-09: adquirir #html2 de forma defensiva. Si no existe,
+     * htmlWidget queda null y los envios se saltan silenciosamente. */
+    try {
+        htmlWidget = $w("#html2");
+    } catch (_) {
+        htmlWidget = null;
     }
-    // 1. Obtener contexto del Lightbox
+
+    if (htmlWidget && typeof htmlWidget.onMessage === "function") {
+        try {
+            htmlWidget.onMessage((event) => {
+                const message = event && event.data;
+                if (!message || typeof message !== "object" || !message.type) {
+                    return;
+                }
+
+                /* CONF-08: el HTML se declara listo. Marcamos widgetReady y,
+                 * si el payload ya esta construido, lo enviamos de inmediato.
+                 * Si no, el bloque de abajo lo enviara tras construirlo. */
+                if (message.type === "MM_CONFIRMATION_READY") {
+                    widgetReady = true;
+                    _sendPayloadToWidget();
+                    return;
+                }
+
+                /* MM_NAV desde el HTML: navegacion delegada al Velo. */
+                if (
+                    message.type === "MM_NAV" &&
+                    message.payload &&
+                    typeof message.payload.url === "string" &&
+                    ["/", "/mis-reservas"].includes(message.payload.url)
+                ) {
+                    location.to(message.payload.url);
+                }
+            });
+        } catch (_) {
+            /* onMessage no registrable: bridge desactivado, seguimos con
+             * el render local de los elementos Velo. */
+        }
+    }
+
     const context = await lightbox.getContext();
-    
+
     if (!context || !context.bookingId) {
         showError("No se pudo cargar la información de la reserva.");
         return;
     }
 
-    const { bookingId, traceId } = context;
+    const { bookingId } = context;
 
     try {
-        // 2. Consultar backend para obtener datos seguros y whitelisted
-        // Nota: Si el usuario NO está autenticado, esto fallará a menos que 
-        // se implemente el token opaco (FASE 5 pendiente en frontend).
-        // Por ahora, asumimos que el lightbox solo se abre tras éxito interno
-        // o que el usuario tiene sesión activa.
-        
         let displayData;
-        
-        // Intentamos usar los datos pasados directamente si existen (para evitar latencia)
+
         if (context.booking && context.service) {
             displayData = mapContextToUI(context.booking, context.service);
         } else {
-            // Fallback: consultar backend si no hay datos en contexto
             const result = await getConfirmedBookingForDisplay({ bookingId });
             if (!result.ok) {
                 throw new Error(result.error || "Reserva no encontrada");
@@ -75,131 +173,217 @@ $w.onReady(async function () {
             displayData = mapBackendResultToUI(result.data);
         }
 
-        // 3. Renderizar datos en la UI
-        confirmationWidgetPayload = buildConfirmationWidgetPayload(context, displayData);
+        confirmationWidgetPayload = buildConfirmationWidgetPayload(
+            context,
+            displayData
+        );
         renderConfirmation(displayData);
-        if (htmlWidget && typeof htmlWidget.postMessage === "function") {
-            htmlWidget.postMessage({ version: "1.0", type: "MM_CONFIRMATION_CONTEXT", payload: confirmationWidgetPayload });
-        }
 
+        /* CONF-08: si el HTML ya se declaro listo (READY recibido antes de
+         * terminar de construir el payload), enviamos ahora. Si no, el
+         * proximo READY lo hara. Esto elimina la race de handshake. */
+        if (widgetReady) {
+            _sendPayloadToWidget();
+        }
     } catch (error) {
         console.error("[ConfirmacionReserva] Error:", error);
-        showError("Ocurrió un error al cargar la confirmación. Por favor, contacte con soporte.");
+        showError(
+            "Ocurrió un error al cargar la confirmación. Por favor, contacte con soporte."
+        );
     }
 });
 
 /**
- * Contrato público de #html2. Solo campos de presentación permitidos.
- * No propagar el objeto Wix original ni datos de asignación del personal.
+ * CONF-07: buildConfirmationWidgetPayload lee primero los campos
+ * enriquecidos por calendario-2.js (slotStart, firstName, addOns, etc.)
+ * y cae a bookingIds[], slotStart normalizado y addOns[] si los campos
+ * directos no existen. Resultado: payload plano y completo que el
+ * HTML #html2 puede renderizar sin transformaciones adicionales.
  */
 function buildConfirmationWidgetPayload(context, displayData) {
-    const booking = context && context.booking && typeof context.booking === "object" ? context.booking : {};
-    const service = context && context.service && typeof context.service === "object" ? context.service : {};
-    const dateTime = _safeTrim(displayData.dateTime, 100);
-    const match = dateTime.match(/^(\d{2}\/\d{2}\/\d{4}) a las (\d{2}:\d{2})$/);
+    const booking =
+        context && context.booking && typeof context.booking === "object"
+            ? context.booking
+            : {};
+    const service =
+        context && context.service && typeof context.service === "object"
+            ? context.service
+            : {};
     const safeText = (value, max = 200) => _safeTrim(value, max);
-    const amount = booking.total ?? booking.totalAmount ?? displayData.totalAmount;
+
+    const bookingIdsArr = Array.isArray(booking.bookingIds)
+        ? booking.bookingIds
+        : [];
+
+    const bookingIdF1 = safeText(
+        booking.bookingIdF1 ||
+            booking.bookingId ||
+            booking.id ||
+            bookingIdsArr[0] ||
+            context.bookingId,
+        120
+    );
+    const bookingIdF2 = safeText(
+        booking.bookingIdF2 ||
+            (bookingIdsArr.length > 1 ? bookingIdsArr[1] : ""),
+        120
+    );
+
+    let fecha = safeText(booking.fecha || context.fecha || "", 80);
+    let hora = safeText(booking.hora || context.hora || "", 20);
+    let horaF2 = safeText(booking.horaF2 || context.horaF2 || "", 20);
+
+    if (!fecha && booking.slotStart) {
+        const startStr = getMadridLocalStringNoZ(
+            _toDateSafe(booking.slotStart)
+        );
+        if (startStr) {
+            const parts = startStr.split("T");
+            const d = parts[0].split("-");
+            fecha = `${d[2]}/${d[1]}/${d[0]}`;
+            hora = (parts[1] || "").substring(0, 5) || hora;
+        }
+    }
+    if (!horaF2 && booking.slotF2Start) {
+        const startStr = getMadridLocalStringNoZ(
+            _toDateSafe(booking.slotF2Start)
+        );
+        if (startStr) {
+            horaF2 = (startStr.split("T")[1] || "").substring(0, 5);
+        }
+    }
+
+    let extrasText = safeText(
+        booking.extrasText || booking.extras || context.extras || "",
+        300
+    );
+    if (!extrasText && Array.isArray(booking.addOns)) {
+        extrasText = booking.addOns
+            .map((a) => a.name || a.addonId || "")
+            .filter(Boolean)
+            .join(", ");
+    }
+    if (!extrasText) extrasText = "Ninguno";
+
+    const duracion = safeText(
+        booking.duracion ||
+            booking.durationMinutes ||
+            service.totalDuration ||
+            context.duracion ||
+            "",
+        40
+    );
+
+    const amount =
+        booking.total ??
+        booking.totalAmount ??
+        displayData.totalAmount ??
+        0;
+
     return {
-        bookingIdF1: safeText(booking.bookingIdF1 || booking.bookingId || booking.id || context.bookingId, 120),
-        bookingIdF2: safeText(booking.bookingIdF2, 120),
+        bookingIdF1,
+        bookingIdF2,
         serviceId: safeText(booking.serviceId || service.serviceId, 120),
-        tituloServicio: safeText(service.title || displayData.serviceName || "Servicio reservado", 160),
-        fecha: safeText(booking.fecha || context.fecha || (match && match[1]) || dateTime, 80),
-        hora: safeText(booking.hora || context.hora || (match && match[2]), 20),
-        horaF2: safeText(booking.horaF2 || context.horaF2, 20),
-        duracion: safeText(booking.duracion || booking.durationMinutes || context.duracion, 40),
-        extras: safeText(booking.extras || context.extras || "Ninguno", 300),
+        tituloServicio: safeText(
+            service.title || displayData.serviceName || "Servicio reservado",
+            160
+        ),
+        fecha,
+        hora,
+        horaF2,
+        duracion,
+        extras: extrasText,
         total: Number.isFinite(Number(amount)) ? Number(amount) : 0,
-        appointmentNote: safeText(booking.appointmentNote || booking.preferences || context.appointmentNote || context.nota, 200),
-        isCombined: booking.isCombined === true || Boolean(booking.bookingIdF2),
-        serviceName: safeText(displayData.serviceName, 160),
-        dateTime,
-        status: safeText(displayData.status || "CONFIRMED", 40)
+        appointmentNote: safeText(
+            booking.appointmentNote ||
+                context.appointmentNote ||
+                context.nota,
+            200
+        ),
+        isCombined:
+            booking.isCombined === true ||
+            booking.isDual === true ||
+            Boolean(bookingIdF2),
+        serviceName: safeText(
+            displayData.serviceName || service.title,
+            160
+        ),
+        dateTime: safeText(displayData.dateTime, 100),
+        status: safeText(displayData.status || "CONFIRMED", 40),
     };
 }
 
-/**
- * Mapea los datos crudos del contexto a un formato limpio para la UI.
- */
 function mapContextToUI(booking, service) {
+    const slotStart =
+        booking.slotStart || booking.startDate || booking.slotF1?.localStartDate;
     return {
         bookingId: booking.bookingId || booking.id,
         serviceName: service?.title || "Servicio Reservado",
-        // Asumimos que el slot viene normalizado en el objeto booking o service
-        dateTime: formatDateTime(booking.slotStart || booking.startDate),
-        totalAmount: booking.totalAmount || service?.price || 0,
-        status: "CONFIRMED"
+        dateTime: formatDateTime(slotStart),
+        totalAmount: booking.total ?? booking.totalAmount ?? service?.price ?? 0,
+        status: "CONFIRMED",
     };
 }
 
-/**
- * Mapea el resultado del backend (whitelisted) a la UI.
- */
 function mapBackendResultToUI(data) {
+    /* CONF-10: saneo defensivo. El backend puede no devolver totalAmount. */
+    const safeAmount = Number.isFinite(Number(data && data.totalAmount))
+        ? Number(data.totalAmount)
+        : 0;
     return {
-        bookingId: data.bookingId,
-        serviceName: "Servicio Confirmado", // El backend no devuelve nombre completo por seguridad/whitelist
-        dateTime: formatDateTime(data.slotStart),
-        totalAmount: data.totalAmount,
-        status: data.bookingStatus
+        bookingId: (data && data.bookingId) || "",
+        serviceName: "Servicio Confirmado",
+        dateTime: formatDateTime(data && data.slotStart),
+        totalAmount: safeAmount,
+        status: (data && data.bookingStatus) || "CONFIRMED",
     };
 }
 
-/**
- * Renderiza los datos en los elementos de la página.
- */
 function renderConfirmation(data) {
-    $w(ELEMENTS.TITLE).text = "¡Reserva Confirmada!";
-    $w(ELEMENTS.BOOKING_ID).text = `ID: ${_safeTrim(data.bookingId)}`;
-    $w(ELEMENTS.SERVICE_NAME).text = data.serviceName;
-    $w(ELEMENTS.DATE_TIME).text = data.dateTime;
-    // La asignación de profesional es información interna: nunca mostrarla al cliente.
-    $w(ELEMENTS.STAFF_NAME).collapse();
-    
-    // Formateo de moneda
-    const formatter = new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' });
-    $w(ELEMENTS.TOTAL_AMOUNT).text = formatter.format(data.totalAmount);
-    
-    $w(ELEMENTS.STATUS).text = "Estado: Confirmado";
-    
-    // Ocultar mensaje de error si estaba visible
-    $w(ELEMENTS.ERROR_MSG).collapse();
+    _safeSetText(ELEMENTS.TITLE, "¡Reserva Confirmada!");
+    _safeSetText(
+        ELEMENTS.BOOKING_ID,
+        `ID: ${_safeTrim(data && data.bookingId)}`
+    );
+    _safeSetText(ELEMENTS.SERVICE_NAME, data && data.serviceName);
+    _safeSetText(ELEMENTS.DATE_TIME, data && data.dateTime);
+    /* La asignación de profesional es información interna: nunca mostrarla. */
+    _safeCollapse(ELEMENTS.STAFF_NAME);
+
+    /* CONF-10: formateo de moneda tolerante a undefined/NaN. */
+    const rawAmount = Number(data && data.totalAmount);
+    const safeAmount = Number.isFinite(rawAmount) ? rawAmount : 0;
+    const formatter = new Intl.NumberFormat("es-ES", {
+        style: "currency",
+        currency: "EUR",
+    });
+    _safeSetText(ELEMENTS.TOTAL_AMOUNT, formatter.format(safeAmount));
+    _safeSetText(ELEMENTS.STATUS, "Estado: Confirmado");
+
+    _safeCollapse(ELEMENTS.ERROR_MSG);
 }
 
-/**
- * Formatea una fecha ISO o Date object a string legible en Madrid.
- */
 function formatDateTime(dateInput) {
     if (!dateInput) return "Fecha por confirmar";
-    
     const date = _toDateSafe(dateInput);
     if (!date) return "Fecha inválida";
-    
-    // Convertir a hora local de Madrid
-    const madridString = getMadridLocalStringNoZ(date); // YYYY-MM-DDTHH:mm:ss
-    
-    // Parsear para formateo bonito
-    const [datePart, timePart] = madridString.split('T');
-    const [year, month, day] = datePart.split('-');
-    
-    return `${day}/${month}/${year} a las ${timePart.substring(0, 5)}`;
+    const madridString = getMadridLocalStringNoZ(date);
+    const [datePart, timePart] = madridString.split("T");
+    const [year, month, day] = datePart.split("-");
+    return `${day}/${month}/${year} a las ${(timePart || "").substring(0, 5)}`;
 }
 
-/**
- * Muestra un mensaje de error en la UI.
- */
 function showError(message) {
-    $w(ELEMENTS.TITLE).text = "Error";
-    $w(ELEMENTS.ERROR_MSG).text = message;
-    $w(ELEMENTS.ERROR_MSG).expand();
-    
-    // Colapsar elementos de éxito
-    $w(ELEMENTS.BOOKING_ID).collapse();
-    $w(ELEMENTS.SERVICE_NAME).collapse();
-    $w(ELEMENTS.DATE_TIME).collapse();
-    $w(ELEMENTS.STAFF_NAME).collapse();
-    $w(ELEMENTS.TOTAL_AMOUNT).collapse();
-    $w(ELEMENTS.STATUS).collapse();
+    _safeSetText(ELEMENTS.TITLE, "Error");
+    _safeSetText(ELEMENTS.ERROR_MSG, message);
+    _safeExpand(ELEMENTS.ERROR_MSG);
+
+    _safeCollapse(ELEMENTS.BOOKING_ID);
+    _safeCollapse(ELEMENTS.SERVICE_NAME);
+    _safeCollapse(ELEMENTS.DATE_TIME);
+    _safeCollapse(ELEMENTS.STAFF_NAME);
+    _safeCollapse(ELEMENTS.TOTAL_AMOUNT);
+    _safeCollapse(ELEMENTS.STATUS);
 }
 
 // =============================================================================
