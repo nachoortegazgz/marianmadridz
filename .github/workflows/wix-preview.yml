@@ -9,7 +9,7 @@ on:
       - "package.json"
       - "package-lock.json"
       - "wix.config.json"
-      - ".github/workflows/wix-preview-validation.yml"
+      - ".github/workflows/wix-preview.yml"
   workflow_dispatch:
 
 permissions:
@@ -56,41 +56,31 @@ jobs:
 
           wix login --api-key "${CLI_API_KEY}"
 
-      - name: Create Wix preview
-        env:
-          TERM: xterm
+      - name: Create Wix preview (non-interactive)
         shell: bash
         run: |
-          set -uo pipefail
+          set -euo pipefail
           : > wix-preview.log
 
-          if ! command -v script >/dev/null 2>&1; then
-            echo "::error::util-linux script command is required to provide a TTY to Wix CLI."
-            exit 1
-          fi
-
-          # Run once in a pseudo-terminal. Do not send a guessed response
-          # to an interactive prompt; the timeout prevents an indefinite hang.
+          # Run the Wix-documented GitHub Actions command without allocating a TTY.
           set +e
           timeout --signal=TERM --kill-after=30s 15m \
-            script -q -e -c 'env -u CI wix preview' wix-preview.log
-          PREVIEW_EXIT=$?
+            npm run wix preview 2>&1 | tee wix-preview.log
+          PREVIEW_EXIT=${PIPESTATUS[0]}
           set -e
-
-          cat wix-preview.log || true
 
           if [ "${PREVIEW_EXIT}" -ne 0 ]; then
             if [ "${PREVIEW_EXIT}" -eq 124 ] || [ "${PREVIEW_EXIT}" -eq 137 ]; then
-              echo "::error::Wix CLI did not finish within 15 minutes. Check wix-preview.log for an interactive prompt or other stalled operation."
+              echo "::error::Wix Preview exceeded the 15-minute limit."
             else
-              echo "::error::Wix CLI exited with status ${PREVIEW_EXIT}."
+              echo "::error::Wix CLI preview failed with exit code ${PREVIEW_EXIT}."
             fi
             exit "${PREVIEW_EXIT}"
           fi
 
-          PREVIEW_URL="$(grep -Eo 'https?://wix\.to/[[:alnum:]]+' wix-preview.log | tail -n 1 || true)"
+          PREVIEW_URL="$(grep -Eo 'https?://wix\\.to/[[:alnum:]]+' wix-preview.log | tail -n 1 || true)"
           if [ -z "${PREVIEW_URL}" ]; then
-            echo "::error::Wix CLI finished without a verifiable wix.to preview URL."
+            echo "::error::Wix CLI completed without a verifiable wix.to preview URL."
             exit 1
           fi
 
