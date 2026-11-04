@@ -453,10 +453,9 @@ C.5  Gobernanza
      └─ Capa 3 no altera SSOT
 
 Anexo Resumen Ejecutivo
-     ├─ 5 Prioridades SSOT (ORDEN DISTINTO al de §A.1/§C.1.1 — DISCREPANCIA ABIERTA)
-     │   1 Funcionalidad · 2 Mínimo código · 3 Fiabilidad · 4 Cumplimiento · 5 Cero complejidad
+     ├─ 5 Prioridades SSOT (mismo orden vinculante que §A.1/§C.1.1)
+     │   1 Funcionalidad real · 2 Fiabilidad · 3 Mínimo código · 4 Cumplimiento normativo · 5 Cero complejidad innecesaria
      └─ Checklist de 10 dimensiones (reservas, duales, ledger, cierre Z, fichajes, tests, migración, contabilidad, Veri*Factu, Cart V2)
-     ⚠️ [DUP] con §A.1 — reordena prioridades. Prevalece §A.1; el anexo debe corregirse.
 ```
 
 ---
@@ -497,8 +496,7 @@ D.3  Aplicaciones Wix Instaladas
 D.4  Identidades Canónicas
      ├─ D.4.1 Parámetros de ubicación (LOCATION_ID, STAFF_RESOURCE_TYPE_ID, LOCATION_TYPE, TZ, moneda)
      ├─ D.4.2 Matriz de personal [REF: §F.22.1]
-     └─ D.4.3 Identificadores transversales [REF: §F.7.3]
-```
+     └─ D.4.3 Identificadores transversales [REF: §F.7.3]```
 
 ---
 
@@ -997,8 +995,7 @@ La configuración, autenticación MCP, herramientas expuestas, Wix Site MCP y de
 |---|---|---|
 | `REVISION_NOT_FOUND` al arrancar `wix dev` | Desincronización de revisión / versión CLI | Actualizar `@wix/cli`, limpiar caché, verificar login, revisar `wix.config.json`. |
 | Fallo al cargar IDs/tipos de extensión | Configuración de proyecto o red | Autocompletado deshabilitado parcialmente; revisar `wix.config.json` y conexión. |
-| `wix.config.json` inválido (`appId`/`projectId` requeridos) | Mezcla de configuración CLI for Sites vs unified | Usar el esquema correcto para **Site**: `projectType`, `siteId`, `uiVersion`, `site.outputDirectory`. No añadir `appId`/`projectId` si no aplica. |
-| `Cannot find module 'wix-web-module'` | Tipos no generados | Ejecutar `wix dev`/sincronizar tipos; no editar `tsconfig` a mano. |
+| `wix.config.json` inválido (`appId`/`projectId` requeridos) | Mezcla de configuración CLI for Sites vs unified | Usar el esquema correcto para **Site**: `projectType`, `siteId`, `uiVersion`, `site.outputDirectory`. No añadir `appId`/`projectId` si no aplica. || `Cannot find module 'wix-web-module'` | Tipos no generados | Ejecutar `wix dev`/sincronizar tipos; no editar `tsconfig` a mano. |
 
 ---
 
@@ -1276,12 +1273,12 @@ El negocio cuenta con 3 profesionales: Marian (ADMIN), Andrea (ESTILISTA) y Alba
 
 ### Prioridades SSOT (orden vinculante de §A.1)
 
-El orden de este anexo se alinea con §A.1 y §C.1.1. No establece una jerarquía alternativa:
+El orden de este anexo reproduce exactamente el orden vinculante de §A.1 y §C.1.1. No establece una jerarquía alternativa:
 
-1. **Fiabilidad** — Ledgers íntegros, rollback conocido y ninguna fase cerrada sin pruebas suficientes.
-2. **Funcionalidad real** — Solo lo que el negocio requiere hoy; prohibido el código especulativo.
-3. **Cumplimiento normativo 100%** — Fiscal, contable, laboral, privacidad y consumo, dentro del alcance y con validación profesional cuando proceda.
-4. **Mínimo código** — Lógica en webMethods, constantes en `backend/internalConfig.js`, validaciones en `backend/validation.js`, hooks en `backend/data.js`.
+1. **Funcionalidad real** — Solo lo que el negocio requiere hoy; prohibido el código especulativo.
+2. **Fiabilidad** — Ledgers íntegros, rollback conocido y ninguna fase cerrada sin pruebas suficientes.
+3. **Mínimo código** — Lógica en webMethods, constantes en `backend/internalConfig.js`, validaciones en `backend/validation.js`, hooks en `backend/data.js`.
+4. **Cumplimiento normativo 100%** — Fiscal, contable, laboral, privacidad y consumo, dentro del alcance y con validación profesional cuando proceda.
 5. **Cero complejidad innecesaria** — Sin abstracciones prematuras, verificaciones redundantes, logs permanentes ni código comentado.
 
 ### Checklist a cumplir
@@ -1293,7 +1290,7 @@ El orden de este anexo se alinea con §A.1 y §C.1.1. No establece una jerarquí
 | Ledger fiscal Veri\*Factu (CMS + hooks) | 
 | Cierre Z automatizado (cron 01:20 AM) | 
 | Fichajes laborales RD 8/2019 | 
-| Tests Vitest — recuento histórico: 182 pass / 0 fail, 11 suites; no es una medición actual verificada | 
+| Tests Vitest — CI #87: 4/4 jobs SUCCESS; el recuento actual de tests no está publicado ni verificado en los logs disponibles | 
 | Migración SDK v2 `@wix/data` | 
 | Módulo contabilidad (`LibroAsientosContablesDetalle`) | 
 | Veri\*Factu certificado AEAT | 
@@ -1313,7 +1310,7 @@ El orden de este anexo se alinea con §A.1 y §C.1.1. No establece una jerarquí
 | **Email empresarial** | `hola@marianmadrid.es` |
 | **Teléfono** | `+34 876 538 870` |
 | **Dirección** | C/ Maurice Ravel 35, Local, 50012 Zaragoza (Rosales del Canal) |
-| **IAE / CNAE** | 972.1 / 9602 |
+| **IAE / CNAE** | Datos históricos declarados: IAE 972.1 / CNAE 9602. Pendiente verificar/regularizar CNAE 2025 96.21/96.22 e IAE 841/842 con gestoría; no consta evidencia de comunicación. |
 | **Régimen fiscal** | Estimación Directa |
 | **Repositorio Git** | `https://github.com/nachoortegazgz/marianmadridz` |
 | **Editor** | Wix Editor / Wix Studio |
@@ -1497,8 +1494,7 @@ La tabla canónica de `traceId`, `pairToken`, `dedupeKey`, `movementToken`, `tra
 | `extendedBookings` | `queryExtendedBookings()` | Leer reservas con datos extendidos (para `resource._id`) |
 
 **Flujo canónico (reserva simple):**
-1. `queryServices({ type: "APPOINTMENT" })` → elegir `serviceId`.
-2. `listAvailabilityTimeSlots({ serviceId, fromLocalDate, toLocalDate, timeZone: "Europe/Madrid", locationType: "BUSINESS" })`.
+1. `queryServices({ type: "APPOINTMENT" })` → elegir `serviceId`.2. `listAvailabilityTimeSlots({ serviceId, fromLocalDate, toLocalDate, timeZone: "Europe/Madrid", locationType: "BUSINESS" })`.
 3. El cliente elige un slot; el backend **revalida** el slot exacto antes de crear.
 4. `createBooking({ bookedEntity: { slot: { startDate, endDate, timezone, resource, location } }, contactDetails })` con `locationType: "OWNER_BUSINESS"`.
 5. Estado devuelto: `CREATED`; el pago se gestiona con eCommerce.
@@ -1998,7 +1994,6 @@ Cualquier intento de lectura/escritura sobre legacy es interceptado en `backend/
 
 **Índices activos:** `addonId_unique` (único), índice regular `name ASC, sku ASC`.
 **Invariante de hook:** unicidad `addonId` y `sku`.
-
 ---
 
 ## 4. CajaActual — `CAJA_ACTUAL` (Rev. 45 · 38 campos)
@@ -2497,8 +2492,7 @@ Cualquier intento de lectura/escritura sobre legacy es interceptado en `backend/
 | `active` | `personalActivo` | BOOLEAN | Campo presente en el esquema CMS vivo. El resolver actual de `backend/staff.js` no lee este campo ni consulta MapaStaff; su semántica operativa y eventual retirada requieren ADR. No afirmar que el runtime exige `active === true` sin consumidor verificado. |
 | `sortOrder` | `ordenPersonal` | NUMBER | Orden de presentación. Entero. |
 | `sourceSystem` | `origenSistemaMaestro` | TEXT | Sistema de origen (enum backend). |
-| `schemaVersion` | `esquemaVersion` | NUMBER | Versión del esquema. Entero. |
-| `ServiciosCatalogo_staffMembers` | `serviciosCatalogoPersonalMiembros` | MULTI_REFERENCE | Relación con `ServiciosCatalogo`. |
+| `schemaVersion` | `esquemaVersion` | NUMBER | Versión del esquema. Entero. || `ServiciosCatalogo_staffMembers` | `serviciosCatalogoPersonalMiembros` | MULTI_REFERENCE | Relación con `ServiciosCatalogo`. |
 
 **Pendiente ADR:** `staffMemberId` y `active` figuran en el esquema vivo pero los criterios SSOT (§19.4–19.5) los marcan como no deseados. La mera existencia en CMS no los hace canónicos. No usar `MapaStaff.scheduleId` como ID de recurso; el profesional se identifica por `resourceId`.
 
@@ -2997,8 +2991,7 @@ Acepta preparación de compatibilidad dual; **aplaza el cambio irreversible** de
 | IVA | Ley 37/1992 | Tipos 0/4/10/21, base y cuota |
 | Contabilidad | PGC RD 1514/2007 | Doble partida, cuentas 6 dígitos |
 | Laboral | RD 8/2019 | Fichajes inalterables, retención 4 años |
-| Privacidad | RGPD 2016/679 · LOPDGDD 3/2018 | Minimización PII, masking, exclusión tarjeta |
-| Mercantil / Tributario | Código de Comercio art. 30 · LGT 58/2003 | Retención 4–6 años |
+| Privacidad | RGPD 2016/679 · LOPDGDD 3/2018 | Minimización PII, masking, exclusión tarjeta || Mercantil / Tributario | Código de Comercio art. 30 · LGT 58/2003 | Retención 4–6 años |
 | Consumo | LSSI-CE 34/2002 · TRLGDCU | Precios con IVA incl., información previa |
 
 ---
@@ -3015,7 +3008,7 @@ Acepta preparación de compatibilidad dual; **aplaza el cambio irreversible** de
 8. Stores Catalog V1 → V3 (adapter listo; cambio irreversible aplazado).
 9. `traceId` en toda transacción.
 10. Webhooks con verificación JWT/HMAC y deduplicación `eventId`.
-11. Tests Vitest verdes. *(Discrepancia documental: dossier 01-11-2026 = 182/182 en 11 suites; SSOT = 158/158. Prevalecen los del dossier por fecha; el anexo de migración confirma CI verde en `main` a 30-10-2026.)*
+11. Tests Vitest verdes. *(Los recuentos 182/182 y 158/158 son históricos y discrepantes; no se resuelven por fecha. El dato vigente verificable es CI #87: 4/4 jobs SUCCESS. No se declara un recuento actual de tests sin extraerlo de los logs del run.)*
 12. 8 flujos E2E verdes (reserva simple, dual con gap, pago presencial, pago online, cancelación, reembolso, cierre Z, fichaje).
 
 ---
@@ -3497,8 +3490,7 @@ La retención en SharePoint se fija por **naturaleza documental**, no por capric
 - **01_FISCAL_CONTABLE:** agrupa lo que la gestoría necesita para el cierre trimestral; la separación emitidas/recibidas/tickets/extractos sigue la práctica estándar de gestoría.
 - **02_LABORAL:** separa nóminas/TC de registro de jornada; el registro de jornada va en carpeta propia porque su plazo (4 años) y su destinatario (Inspección de Trabajo) difieren del resto.
 - **03_RGPD_PRIVACIDAD:** las fichas de salud capilar (`ClientHealthAndConsent`, hoy no creada en el CMS; si se crea, requiere ADR) tienen acceso **restringido** y no se mezclan con facturación.
-- **04_NEGOCIO_SOCIETARIO:** escrituras, licencias, seguros y contratos de proveedores; documentación mercantil que también cae bajo el art. 30 CC.
-- **05_SSOT_WIX_EXPORTES:** capa de **evidencia técnica** de los ledgers de Wix. Aquí viven los CSV firmados que permiten reconstruir `MovimientosCaja`, `HistoricoCierresZ`, `RegistrosHorariosStaff` y `LibroAsientosContablesDetalle` sin depender de que Wix siga activo. **Es la carpeta que materializa la Capa 3.**
+- **04_NEGOCIO_SOCIETARIO:** escrituras, licencias, seguros y contratos de proveedores; documentación mercantil que también cae bajo el art. 30 CC.- **05_SSOT_WIX_EXPORTES:** capa de **evidencia técnica** de los ledgers de Wix. Aquí viven los CSV firmados que permiten reconstruir `MovimientosCaja`, `HistoricoCierresZ`, `RegistrosHorariosStaff` y `LibroAsientosContablesDetalle` sin depender de que Wix siga activo. **Es la carpeta que materializa la Capa 3.**
 - **06_GESTORIA_INTERCAMBIO:** bandeja de entrada/salida con la gestoría. Evita que los documentos de intercambio se mezclen con el archivo maestro.
 
 ---
@@ -3997,8 +3989,7 @@ No ejecutar escrituras CMS para “completar” el inventario. Toda reconciliaci
 | Alias interno | `QA-CLIENT-SIMPLE-001` | `QA-CLIENT-DUAL-001` |
 | Nombre | Cliente | Cliente |
 | Apellidos | Prueba Simple | Prueba Dual |
-| Email | `qa.simple@example.test` | `qa.dual@example.test` |
-| Teléfono | Omitido | Omitido |
+| Email | `qa.simple@example.test` | `qa.dual@example.test` || Teléfono | Omitido | Omitido |
 | NIF/NIE | No asignar | No asignar |
 | Consentimiento comercial | `false` | `false` |
 | Uso permitido | Fixtures, validadores, mocks y pruebas offline | Fixtures, simulación de saga y tests unitarios/offline |
@@ -4497,8 +4488,7 @@ Se confirma en documentación oficial que este proyecto usa **Wix CLI for Sites*
 ### 31.5 Próximos bloqueos para cerrar las capas
 
 1. Obtener Preview válido del run `41336830436` y revisar manualmente la URL generada.
-2. Revisar el diff y la semántica runtime del webhook; decidir e implementar recuperación durable/reconciliación si Wix no garantiza redelivery.
-3. Clasificar individualmente las seis discrepancias Bookings=CANCELED / CitasF2=CONFIRMED de §29.3, sin mutaciones manuales.
+2. Revisar el diff y la semántica runtime del webhook; decidir e implementar recuperación durable/reconciliación si Wix no garantiza redelivery.3. Clasificar individualmente las seis discrepancias Bookings=CANCELED / CitasF2=CONFIRMED de §29.3, sin mutaciones manuales.
 4. Ejecutar QA de Layer 1 en navegador/entorno publicado aislado: widget → WebMethod → Bookings/CMS; Preview no cubre HTTP Functions.
 5. Completar Layer 2 runtime: permisos efectivos, concurrencia/atomicidad persistente, cierre Z, hash-chain, writer contable y reconciliación de cancelaciones/rectificativas.
 
@@ -4577,7 +4567,7 @@ Se confirma en documentación oficial que este proyecto usa **Wix CLI for Sites*
 | H-2 — hooks de `CitasF2` retirados | CORREGIDO / MERGED #87 | Hooks de insert/update restaurados con validador central. Mantener tests y verificar que todos los escritores legítimos cumplen el contrato. |
 | H-3 — Stores Catalog V1/V3 | ABIERTO / ADR | El informe identifica adaptadores V1+V3 y una prohibición SSOT de V3. No cambiar versión ni autodetección hasta resolver la contradicción documental con ADR y confirmar APIs/consumidores efectivos. V1 sigue siendo la referencia de configuración viva documentada en §24/M. |
 | H-4 — `@wix/site-pricing-plans` | ABIERTO / USO NO CONFIRMADO | Inventariar imports, llamadas, páginas y dependencias transitivas antes de mantener o retirar el paquete. No eliminarlo por no aparecer en la SSOT. |
-| H-5 — `secretAccess.js` frente a `secretVault.js` | DOCUMENTACIÓN PENDIENTE | Alinear SSOT, anexo de migración, imports y dossier con el nombre/ruta real; comprobar referencias antiguas y compatibilidad antes de retirar alias. |
+| H-5 — `secretAccess.js` frente a `secretVault.js` | PARCIALMENTE ACLARADO | El dossier identifica `backend/secretAccess.js` como ruta canónica; queda por contrastar SSOT, anexo de migración e imports. No retirar alias ni renombrar archivos sin inventario de consumidores. |
 | H-6 — hooks de `MovimientosInventario` retirados | CORREGIDO PARCIALMENTE / MERGED #87 | Update/remove del ledger restaurados como append-only y hook de actualización de proyección de stock restaurado. Completar auditoría de escritores, reconciliación y pruebas de reparación. |
 
 **Observaciones adicionales de auditoría:**
@@ -4645,7 +4635,7 @@ La lista agrupa pendientes de §26, §24, §29–§31, la revisión previa de m�
 - [ ] **ADR MapaStaff:** decidir si la autoridad de roles seguirá en mapa de `resourceId`/Bookings Staff API o volverá a CMS. Inventariar `staffMemberId`, `active`, `rolWebsite`, referencias en servicios y consumers; definir migración, compatibilidad y rollback. No reintroducir `MapaStaff` en `BUSINESS_COLLECTIONS` por simple consistencia nominal.
 - [ ] **ADR Stores V1/V3:** resolver la contradicción entre la prohibición SSOT reportada y los adaptadores V1/V3 existentes. Confirmar contrato Wix, versión activa, pruebas, consumidores y estrategia de migración; mantener configuración V1 mientras no exista decisión aprobada.
 - [ ] Auditar consumidores reales de `@wix/site-pricing-plans`; decidir mantener/retirar solo con referencias comprobadas.
-- [ ] Alinear el nombre `secretAccess.js` frente a `secretVault.js` en SSOT, anexo de migración, documentación y comentarios. Confirmar que no queden imports/rutas antiguas.
+- [ ] Contrastar SSOT, anexo de migración, imports y comentarios con la ruta canónica documentada `backend/secretAccess.js`. Confirmar si existe algún alias `secretVault.js`; no renombrar ni retirar rutas sin inventario de consumidores.
 - [ ] Alinear el contrato documental de `pairToken` (TEXT opaco; formatos SIMPLE/DUAL descritos en §25.4 y §28) entre SSOT, CMS KEYFIELDS, tests y consumidores. No cambiar algoritmo ni datos sin plan.
 - [ ] Continuar auditoría global de exports/imports, funciones y ficheros muertos; comprobar referencias de todo el repositorio antes de eliminar. PR #85 solo retiró seis imports demostrablemente no usados; no equivale a auditoría completa.
 - [ ] Revisar compatibilidad y duplicidad de helpers de lectura/escritura CMS, aliases legacy y secretos. Preservar compatibilidad histórica hasta migración verificada.
