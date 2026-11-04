@@ -1,32 +1,55 @@
 /*
 =============================================================================
 MODULE: pages/ConfirmacionReserva.q5vps.js
-VERSION: v1.3-HANDSHAKE-RACE-SAFE
-BASE: v1.2-SAFE-COLLAPSE-RICH-PAYLOAD
+VERSION: v1.4-NAV-TARGETS-MY-BOOKINGS
+BASE: v1.3-HANDSHAKE-RACE-SAFE
 RESPONSIBILITY: Mostrar confirmación de reserva tras éxito presencial u online.
 STANDARDS: G10 ASCII Strict. Uso estricto de APIs Velo actuales.
 CONTRATO: Recibe datos via lightbox.getContext(): { booking, bookingId, service, traceId }.
 =============================================================================
 
+CORRECCIONES v1.4:
+  - CONF-11 (P0): navegación desde el HTML vía MM_NAV. El HTML envía
+    { target: "MIS_RESERVAS" | "HOME" | "RESERVA_ONLINE" } (simbólico)
+    y el Velo traduce a URL real usando URLS.* de mmUtils con fallback
+    local /my-bookings (ruta real del sitio). Se conserva compatibilidad
+    legacy con { url: "/..." } limitada a rutas conocidas. Elimina el
+    fallback roto window.top.location.href del HTML.
+
 CORRECCIONES v1.3:
   - CONF-08 (P0): race en el handshake HTML↔Velo. Si el HTML enviaba
     MM_CONFIRMATION_READY antes de que el Velo terminara de construir
-    confirmationWidgetPayload, el payload se descartaba y nunca se reenviaba
-    (los 4 READY del HTML podian llegar durante un context fetch lento).
-    Ahora se rastrea widgetReady y se reenvía el payload al construirlo si
-    el widget ya se habia declarado listo. Ademas se elimina el
-    postMessage incondicional que podia perderse si el HTML no estaba listo.
-  - CONF-09 (P1): $w("#html2") envuelto en try/catch. Si el elemento no
-    existe, el bridge se desactiva silenciosamente sin romper la pagina.
+    confirmationWidgetPayload, el payload se descartaba y nunca se
+    reenviaba. Ahora se rastrea widgetReady y se reenvía el payload
+    al construirlo si el widget ya se había declarado listo. Se elimina
+    el postMessage incondicional del final de onReady.
+  - CONF-09 (P1): $w("#html2") envuelto en try/catch. Si el elemento
+    no existe, el bridge se desactiva silenciosamente sin romper la
+    página.
   - CONF-10 (P1): mapBackendResultToUI y renderConfirmation sanean
-    data.totalAmount a un Number finito. Cualquier undefined/NaN produce
-    "0,00 €" en lugar de "NaN €".
+    data.totalAmount a un Number finito. Cualquier undefined/NaN
+    produce "0,00 €" en lugar de "NaN €".
+
+CORRECCIONES v1.2:
+  - CONF-06: helpers seguros _safeCollapse / _safeExpand / _safeSetText.
+    Algunos elementos (HtmlComponent, Image en ciertos temas, Slider)
+    no exponen collapse/expand. Si el elemento no existe, $w lanza al
+    acceder. Probamos collapse y caemos a hide; expand y caemos a show.
+  - CONF-07: buildConfirmationWidgetPayload lee primero los campos
+    enriquecidos por calendario-2.js (slotStart, firstName, addOns,
+    etc.) y cae a bookingIds[], slotStart normalizado y addOns[] si los
+    campos directos no existen.
 =============================================================================
 */
 import { lightbox } from "@wix/site-window";
 import { location } from "@wix/site-location";
 import { getConfirmedBookingForDisplay } from "backend/reservas.web.js";
-import { _safeTrim, _toDateSafe, getMadridLocalStringNoZ } from "public/mmUtils";
+import {
+    _safeTrim,
+    _toDateSafe,
+    getMadridLocalStringNoZ,
+    URLS,
+} from "public/mmUtils";
 
 const ELEMENTS = {
     TITLE: "#titleText",
@@ -42,17 +65,14 @@ const ELEMENTS = {
 };
 
 /* Estado del handshake HTML↔Velo (CONF-08).
- * - widgetReady: el HTML envio MM_CONFIRMATION_READY al menos una vez.
+ * - widgetReady: el HTML envió MM_CONFIRMATION_READY al menos una vez.
  * - confirmationWidgetPayload: payload a enviar al HTML.
  * - htmlWidget: referencia al HtmlComponent (o null si no existe). */
 let widgetReady = false;
 let confirmationWidgetPayload = null;
 let htmlWidget = null;
 
-/* CONF-06: helpers seguros para collapse/expand. Algunos elementos
- * (HtmlComponent, Image en ciertos temas, Slider) no exponen collapse/expand.
- * Si el elemento no existe, $w lanza al acceder. Aqui probamos collapse y,
- * si no existe, caemos a hide. Idem expand -> show. */
+/* CONF-06: helpers seguros para collapse/expand. */
 function _safeCollapse(selector) {
     try {
         const el = $w(selector);
@@ -92,8 +112,8 @@ function _safeSetText(selector, value) {
     }
 }
 
-/* CONF-08: envio centralizado del payload al HTML. Solo se llama cuando
- * ambos lados estan listos (widgetReady && confirmationWidgetPayload). */
+/* CONF-08: envío centralizado del payload al HTML. Solo se llama cuando
+ * ambos lados están listos (widgetReady && confirmationWidgetPayload). */
 function _sendPayloadToWidget() {
     if (!htmlWidget || !confirmationWidgetPayload) return;
     try {
@@ -105,13 +125,43 @@ function _sendPayloadToWidget() {
             });
         }
     } catch (_) {
-        /* postMessage puede lanzar si el widget aun no acepta mensajes */
+        /* postMessage puede lanzar si el widget aún no acepta mensajes */
     }
+}
+
+/* CONF-11: resuelve el target simbólico del HTML a URL real.
+ * - MIS_RESERVAS  → URLS.MIS_RESERVAS  || "/my-bookings"
+ * - HOME          → URLS.HOME          || "/"
+ * - RESERVA_ONLINE→ URLS.SERVICIOS     || "/reserva-online"
+ * Legacy: acepta { url: "..." } limitado a rutas conocidas. */
+function _resolveNavTarget(payload) {
+    if (!payload || typeof payload !== "object") return "";
+
+    if (typeof payload.target === "string") {
+        const t = payload.target.toUpperCase();
+        if (t === "MIS_RESERVAS") {
+            return URLS?.MIS_RESERVAS || "/my-bookings";
+        }
+        if (t === "HOME") {
+            return URLS?.HOME || "/";
+        }
+        if (t === "RESERVA_ONLINE") {
+            return URLS?.SERVICIOS || "/reserva-online";
+        }
+        return "";
+    }
+
+    if (typeof payload.url === "string") {
+        const legacyAllowed = ["/", "/my-bookings", "/reserva-online"];
+        return legacyAllowed.includes(payload.url) ? payload.url : "";
+    }
+
+    return "";
 }
 
 $w.onReady(async function () {
     /* CONF-09: adquirir #html2 de forma defensiva. Si no existe,
-     * htmlWidget queda null y los envios se saltan silenciosamente. */
+     * htmlWidget queda null y los envíos se saltan silenciosamente. */
     try {
         htmlWidget = $w("#html2");
     } catch (_) {
@@ -127,22 +177,39 @@ $w.onReady(async function () {
                 }
 
                 /* CONF-08: el HTML se declara listo. Marcamos widgetReady y,
-                 * si el payload ya esta construido, lo enviamos de inmediato.
-                 * Si no, el bloque de abajo lo enviara tras construirlo. */
+                 * si el payload ya está construido, lo enviamos de inmediato.
+                 * Si no, el bloque de abajo lo enviará tras construirlo. */
                 if (message.type === "MM_CONFIRMATION_READY") {
                     widgetReady = true;
                     _sendPayloadToWidget();
                     return;
                 }
 
-                /* MM_NAV desde el HTML: navegacion delegada al Velo. */
-                if (
-                    message.type === "MM_NAV" &&
-                    message.payload &&
-                    typeof message.payload.url === "string" &&
-                    ["/", "/mis-reservas"].includes(message.payload.url)
-                ) {
-                    location.to(message.payload.url);
+                /* CONF-11: navegación desde el HTML. */
+                if (message.type === "MM_NAV" && message.payload) {
+                    const targetUrl = _resolveNavTarget(message.payload);
+                    if (targetUrl) {
+                        try {
+                            console.info(
+                                "[ConfirmacionReserva] NAV →",
+                                targetUrl
+                            );
+                            location.to(targetUrl);
+                        } catch (err) {
+                            console.error(
+                                "[ConfirmacionReserva] location.to failed",
+                                {
+                                    targetUrl,
+                                    error: err && err.message,
+                                }
+                            );
+                        }
+                    } else {
+                        console.warn(
+                            "[ConfirmacionReserva] MM_NAV sin target válido",
+                            { payload: message.payload }
+                        );
+                    }
                 }
             });
         } catch (_) {
@@ -179,9 +246,9 @@ $w.onReady(async function () {
         );
         renderConfirmation(displayData);
 
-        /* CONF-08: si el HTML ya se declaro listo (READY recibido antes de
+        /* CONF-08: si el HTML ya se declaró listo (READY recibido antes de
          * terminar de construir el payload), enviamos ahora. Si no, el
-         * proximo READY lo hara. Esto elimina la race de handshake. */
+         * próximo READY lo hará. Esto elimina la race de handshake. */
         if (widgetReady) {
             _sendPayloadToWidget();
         }
