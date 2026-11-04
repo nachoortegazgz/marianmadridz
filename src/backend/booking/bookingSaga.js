@@ -897,7 +897,7 @@ function _resolveBookingLocation(params) {
         });
     }
 
-    return Object.freeze({ _id: resolvedId, locationType: "OWNER_BUSINESS" });
+    return { _id: resolvedId, locationType: "OWNER_BUSINESS" };
 }
 
 function _assertPristineSlotContract(pristineSlot, phase, traceId) {
