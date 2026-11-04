@@ -284,7 +284,7 @@ Siguiente acción propuesta: <1 línea>
 
 Orden **estricto** (ya fijado en la SSOT; el modelo lo aplica sin reinterpretarlo):
 
-1. **APIs y SDK oficiales de Wix ensu versión actualizada y correcta comprobada** (comportamiento real de la plataforma).
+1. **APIs y SDK oficiales de Wix en su versión actualizada y correcta comprobada** (comportamiento real de la plataforma).
 2. **Esquema y registros del CMS vivo** (fuente de lo persistido).
 3. **DOSSIER CONSOLIDADO** (documento actual. Sirve de referencia y se corrige ante incoherencias confirmadas tras consultar al usuario).
 4. **Auditoría de migración / CI / repo `main`** (hechos verificados a fecha).
