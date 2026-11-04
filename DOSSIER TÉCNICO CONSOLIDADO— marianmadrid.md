@@ -48,6 +48,107 @@ No eres un generador de texto creativo. Eres un **ingeniero profesional con crit
 
 ---
 
+## 2. Contexto real, alcance y entorno del proyecto
+
+### 2.1 Negocio y necesidad
+
+**[DECLARADO EN EL DOSSIER; contrastar con la fuente primaria cuando afecte a una decisión]** Marian Madrid es un negocio físico de peluquería y estética en Zaragoza, con atención presencial y reservas online. El sitio web es `https://www.marianmadrid.es` y el repositorio técnico canónico es `https://github.com/nachoortegazgz/marianmadridz`. El sitio se usa como entorno QA; no asumir que una prueba o un cambio documental equivale a validación de producción.
+
+La necesidad principal es gestionar el negocio desde Wix y cubrir las carencias de la plataforma nativa con una capa Velo propia, manteniendo Wix/CMS como autoridad operativa. La prioridad inmediata es cerrar y demostrar la fiabilidad de las reservas; caja, fiscalidad, control horario e inventario dependen de datos transaccionales correctos. La integración externa con Microsoft 365/SharePoint es una propuesta condicionada a ADR-003, no una implementación aprobada.
+
+### 2.2 Proyecto y objetivos
+
+- **Reservas:** citas simples y reservas duales F1+F2 con intervalo de exposición (*gap*). La reserva dual se compone de dos reservas Bookings independientes unidas por `pairToken`; no usar `createMultiServiceBooking`. Si F2 falla, aplicar compensación de F1.
+- **Integridad y seguridad:** disponibilidad revalidada en servidor, idempotencia, permisos mínimos, validación de webhooks, secretos solo en backend y ledgers append-only.
+- **Operativa comercial:** catálogo/stock, checkout y pagos conforme a las integraciones realmente activas.
+- **Capa contable-fiscal y laboral:** ledger, cierres Z, trazabilidad y registros horarios; el estado de implementación y las validaciones pendientes constan en §24–§32.
+- **Criterio de cierre:** CI identificada por run y commit, QA real en Wix Preview, comprobación de efectos y rollback conocido. Un test offline o el estado «Published» no demuestra por sí solo el comportamiento desplegado.
+- **Cumplimiento:** no declarar conformidad fiscal, laboral o de privacidad sin evidencia técnica y validación profesional donde corresponda.
+
+### 2.3 Directrices de ejecución
+
+1. Aplicar la precedencia documental y técnica definida en este dossier; ante conflicto, registrar las fuentes y no resolverlo por antigüedad sin evidencia.
+2. Verificar el estado actual en el repositorio, CMS/API Wix, CI y entorno de QA antes de cambiar contratos o afirmar resultados.
+3. Implementar el mínimo código necesario; no introducir nuevas colecciones, proveedores, licencias o arquitecturas sin ADR cuando corresponda.
+4. No publicar, ejecutar cobros, mutar datos reales ni modificar ledgers protegidos sin autorización explícita y procedimiento de validación.
+5. Separar **hecho verificado**, **dato declarado**, **propuesta** y **pendiente**. El dossier no sustituye la comprobación de cuentas, licencias, permisos ni secretos en sus paneles de origen.
+
+### 2.4 Ecosistema y componentes
+
+| Componente | Función / estado documentado |
+|---|---|
+| Wix Editor / Velo | Sitio, frontend, backend y runtime principal. |
+| Wix Bookings V2 | Servicios, disponibilidad, recursos y reservas; contratos concretos en §E y §16. |
+| Wix CMS | Colecciones de negocio; esquema e invariantes en §F–§G. |
+| Wix Stores Catalog V1 | Catálogo vigente según el dossier; Catalog V3 no activado sin decisión ADR-001. |
+| Wix eCommerce V2 | Checkout, pedidos y eventos de pago; migración Cart V2 sujeta a los gates documentados. |
+| Wix Members, Forms & Payments, Invoices V1, Gift Cards | Apps enumeradas en el inventario §3; uso y restricciones según cada apartado. |
+| GitHub `nachoortegazgz/marianmadridz` | Código, documentación, ADRs y workflow de validación Preview. |
+| Wix CLI for Sites | Desarrollo/sincronización local y Preview; no confundir con el CLI unificado para Apps/Headless. |
+| GitHub Actions | Workflow `.github/workflows/wix-preview-validation.yml`; usa `CLI_API_KEY` y ejecuta Preview, no publicación. |
+| IONOS | DNS y correo corporativo Plan Base5, según la ficha técnica. |
+| Resend API | Correo transaccional; clave referenciada en Wix Secrets Manager. |
+| OpenAI API | Asistente IA; clave referenciada en Wix Secrets Manager. |
+| MONEI | Proveedor de pago declarado para Bizum; validar la configuración activa antes de depender de ella. |
+| Microsoft 365 / SharePoint / Power Automate / Purview | Capa externa propuesta; requiere ADR-003, presupuesto y validación de retención antes de implementarse. |
+| Microsoft Clarity / RustDesk | Analítica de comportamiento y soporte remoto declarados; revisar permisos y datos tratados. |
+
+### 2.5 Cuentas y servicios contratados o declarados
+
+| Servicio / cuenta | Situación que consta | Límite de verificación |
+|---|---|---|
+| Wix Premium | Plan declarado para el sitio. | Confirmar plan, titular y permisos en la cuenta Wix. |
+| IONOS Plan Base5 | Correo corporativo; DNS gestionado en IONOS. | Confirmar vigencia y titularidad en IONOS. |
+| GitHub | Repositorio canónico y workflow CI/Preview. | Los permisos se verifican en la organización/cuenta; los valores de secrets no son legibles por la API del repo. |
+| OpenAI API y Resend | Integraciones declaradas; claves en Wix Secrets Manager. | No consta aquí saldo, plan contratado, límites ni validez actual de las claves. |
+| MONEI | Integración de pagos declarada. | No consta en este dossier el plan contractual ni una prueba actual de cobro. |
+| Microsoft 365 / Kit Digital | Herramientas y buzones declarados en apartados de negocio. | No inferir licencias, SKU ni disponibilidad de Purview, Entra ID, Defender o Power Automate sin revisar el tenant. |
+| RustDesk / Microsoft Clarity | Herramientas declaradas. | Confirmar licencias, configuración, consentimiento y permisos actuales. |
+
+### 2.6 Stack técnico e integraciones
+
+- **Código:** JavaScript para Velo, Wix JavaScript SDK v2 donde el módulo y contrato estén verificados; APIs Velo permanentes solo donde la arquitectura las retenga expresamente.
+- **Backend:** `backend/`, web modules, validaciones, configuración, acceso centralizado a secretos y hooks CMS. La estructura y los contratos se detallan en §8, §10 y §11 del dossier técnico.
+- **Frontend:** Wix `$w` y widgets HTML embebidos comunicados mediante `postMessage` a través de `public/widgetBridge.js`.
+- **Datos:** Wix CMS; las colecciones `WIX_APP` son de lectura y las mutaciones de apps nativas se realizan mediante sus SDK/API oficiales.
+- **Calidad:** Vitest, ESLint, instalación limpia y workflow GitHub Actions de Preview. El recuento actual de tests no se considera verificado si no está publicado en logs.
+- **Entorno local:** Node/npm y Wix CLI for Sites; versión y lockfiles deben comprobarse en el clon actual. No editar manualmente artefactos generados por Wix CLI.
+- **Integraciones salientes:** `wix-fetch` y módulos backend, con credenciales obtenidas del gestor de secretos. No asumir que una integración está operativa solo porque figure en el dossier.
+
+### 2.7 Identificadores y configuración de referencia
+
+| Elemento | Valor de referencia |
+|---|---|
+| Wix Site ID | `188bed94-177c-4bc9-a9f0-35080d874f3e` |
+| Wix Location ID | `7a12abfd-bf30-4847-bcdf-00dc573d4802` |
+| Staff Resource Type ID | `1cd44cf8-756f-41c3-bd90-3e2ffcaf1155` |
+| Dominio | `https://www.marianmadrid.es` |
+| Zona horaria | `Europe/Madrid` |
+| Moneda / idioma | `EUR` / `es-ES` |
+| Repositorio | `nachoortegazgz/marianmadridz`, rama principal `main` |
+| Workflow Preview | `.github/workflows/wix-preview-validation.yml` |
+| Secreto de GitHub Actions | Nombre `CLI_API_KEY`; valor solo en GitHub Actions Secrets. |
+| Secretos backend | Nombres canónicos en `src/backend/mmSecrets.js`; valores en Wix Secrets Manager; acceso centralizado mediante `backend/secretAccess.js` según el contrato documentado. |
+
+Los identificadores anteriores son referencias del dossier y deben contrastarse con Wix cuando una operación dependa de ellos. Los IDs de recursos profesionales, App IDs, claves de idempotencia y demás constantes se mantienen en sus tablas canónicas enlazadas desde §4.3, §7.3 y §22; no duplicarlas aquí.
+
+### 2.8 Claves, secretos y credenciales — inventario seguro
+
+**No almacenar ni copiar valores secretos en este documento, código, commits, issues, logs ni respuestas.** Esta sección registra únicamente el nombre lógico y el lugar de gestión.
+
+| Credencial / secreto | Ubicación declarada | Comprobación permitida |
+|---|---|---|
+| `CLI_API_KEY` | GitHub → Repository Settings → Secrets and variables → Actions. | Verificar ejecución de autenticación en un run; GitHub no revela el valor guardado. |
+| Claves de OpenAI y Resend | Wix Secrets Manager; catálogo de nombres en `src/backend/mmSecrets.js`. | Verificar existencia/uso desde backend sin imprimir el valor. |
+| Credenciales de RustDesk | Wix Secrets Manager, según el dossier. | Confirmar que la integración sigue activa y revisar el acceso autorizado. |
+| Credenciales de pagos/webhooks | Proveedor y gestor de secretos correspondiente, si la integración está activa. | Identificar el nombre real en configuración/código; no crear secretos genéricos sin uso confirmado. |
+| OAuth/API key de Wix MCP o CLI | Gestor de credenciales del cliente o secreto de CI, según el flujo. | No confundir autenticación MCP con `CLI_API_KEY`; nunca incluir tokens en el dossier. |
+| Cuenta de recuperación del dominio | `marianarizos@gmail.com`, identificada en la ficha WHOIS como contacto de rescate. | Verificar MFA y acceso desde el proveedor; no almacenar contraseña ni códigos de recuperación aquí. |
+
+**No consta en el repositorio** una lectura fiable de valores secretos, saldos/planes contratados ni una auditoría actual de permisos de cada cuenta. No inventar nombres de secretos ausentes ni dar por existentes las variables genéricas de ejemplos. Antes de ejecutar una integración, inspeccionar `mmSecrets.js`, `secretAccess.js`, el workflow correspondiente y la configuración del proveedor; si hay discrepancia, detenerse y documentarla.
+
+---
+
 ### Entradas obligatorias
 
 | Entrada | Uso |
@@ -1156,21 +1257,7 @@ CAPA 1 ──► CAPA 2 ──► ADR-003 ──► CAPA 3
 
 **Cierre:** este resumen es una vista ejecutiva y no una fuente de precedencia superior. Ante conflictos se aplica §A.4 / §4 y prevalece la fuente de mayor rango. La Capa 3 queda expresamente **condicionada a ADR-003** y no se considera parte del alcance comprometido hasta su aprobación.
 
-## Anexo Resumen Ejecutivo
-
-**marianmadrid.es** es el sistema integral de gestión digital de Marian Madrid Peluquería y Estética (C/ Maurice Ravel 35, 50012 Zaragoza). El proyecto implementa una capa propia Velo/Wix sobre Wix Editor para cubrir requerimientos de negocio no nativos: reservas duales con gap de exposición (F1+F2), ledger fiscal encadenado SHA-256 (Veri\*Factu), cierre Z diario, control horario RD 8/2019 e inventario espejo.
-
-El negocio cuenta con 3 profesionales: Marian (ADMIN), Andrea (ESTILISTA) y Alba (ESTILISTA). El sitio opera como punto de venta físico y virtual completo: agenda 24/7, cobro presencial (efectivo, tarjeta, Bizum vía MONEI), facturación legal simplificada, control horario y gestión de stock.
-
-### Prioridades SSOT (orden vinculante de §A.1)
-
-El orden de este anexo reproduce exactamente el orden vinculante de §A.1 y §C.1.1. No establece una jerarquía alternativa:
-
-1. **Funcionalidad real** — Solo lo que el negocio requiere hoy; prohibido el código especulativo.
-2. **Fiabilidad** — Ledgers íntegros, rollback conocido y ninguna fase cerrada sin pruebas suficientes.
-3. **Mínimo código** — Lógica en webMethods, constantes en `backend/internalConfig.js`, validaciones en `backend/validation.js`, hooks en `backend/data.js`.
-4. **Cumplimiento normativo 100%** — Fiscal, contable, laboral, privacidad y consumo, dentro del alcance y con validación profesional cuando proceda.
-5. **Cero complejidad innecesaria** — Sin abstracciones prematuras, verificaciones redundantes, logs permanentes ni código comentado.
+## Anexo de ficha técnica y checklist
 
 ### Checklist a cumplir
 
@@ -1241,7 +1328,7 @@ El orden de este anexo reproduce exactamente el orden vinculante de §A.1 y §C.
 | Runtime backend | Node.js en sandbox Velo / Wix JavaScript SDK v2 |
 | Capa de datos | Wix CMS (MongoDB internamente) |
 | Frontend / UI | Selector `$w` client-side + widgets HTML embebidos vía `postMessage` coordinados por `public/widgetBridge.js` |
-| Tests | Vitest con mocks de Wix APIs; recuento histórico declarado: 182 pass / 0 fail, 11 suites (no es medición actual) |
+| Tests | Vitest con mocks de Wix APIs; el recuento actual no está verificado sin logs actuales de CI |
 | Control de código | Git + Wix CLI for Sites (`wix dev`) |
 | Sincronización | `wix dev` sincroniza cambios locales con Local Editor. No usar `wix sync-types` ni `wix pull/sync` como comandos CLI for Sites sin confirmación documental específica. |
 | Soporte remoto | RustDesk (contraseña en Wix Secrets Manager) |
