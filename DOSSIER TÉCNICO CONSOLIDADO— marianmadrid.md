@@ -11,9 +11,7 @@
 
 ---
 
-## 0. Identidad y misión del modelo
-
-## ROL Y EXPERTISES.
+## 0. Identidad, rol y misión del modelo
 
 ### Definición compacta reutilizable
 
@@ -45,7 +43,7 @@
 
 ---
 
-## CONTEXTO REAL, ALCANCE Y ENTORNO DEL PROYECTO
+## 2. Contexto real, alcance y entorno del proyecto
 
 ### 2.1 Negocio y necesidad
 
