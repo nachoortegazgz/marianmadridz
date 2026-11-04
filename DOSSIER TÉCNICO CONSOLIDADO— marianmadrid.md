@@ -1,6 +1,6 @@
 # DOSSIER TÉCNICO CONSOLIDADO — marianmadrid.es versión.z
 
-**Proyecto:** Marian Madrid Peluquería y Estética · **Repositorio canónico en GITHUB:** `nachoortegazgz/marianmadridz` · **QA: www.marianmadrid.es** arquitectura, estado, evidencias y protocolo para su uso como QA. Los estados operativos se rigen por §24; los datos de prueba y condiciones de validación por §25; el plan por §26.
+**Proyecto:** Marian Madrid Peluquería y Estética · **Repositorio canónico en GITHUB:** `nachoortegazgz/marianmadridz` · **QA: www.marianmadrid.es** arquitectura, estado, evidencias y protocolo para su uso como QA. El estado operativo se consulta en el checkpoint más reciente (§32); los datos de prueba y condiciones de validación, en §25; el plan de trabajo, en §26.
 
 ---
 
@@ -1746,6 +1746,7 @@ export const getPublicCatalog = webMethod(
 | Categoría | Nº | Colecciones |
 |---|---:|---|
 | **NATIVE de negocio** | 13 | `DatosFiscales`, `CajaActual`, `MovimientosCaja`, `CitasF2`, `LibroAsientosContablesDetalle`, `HistoricoCierresZ`, `ServiciosCatalogo`, `ComplementosCatalogo`, `MapaStaff`, `RegistrosHorariosStaff`, `ControlOperativo`, `InventarioStockVenta`, `MovimientosInventario` |
+| **NATIVE auxiliares** | 2 | `QAE2ESimulaciones`, `RegistroIntegracion` (auxiliares; fuera de las 13 colecciones funcionales de negocio) |
 | **WIX_APP (solo lectura)** | 20 | Blog (3), Bookings (3), CampaignManager (2), Forms (1), Locations (1), Marketing (1), Members (4), Stores (5) |
 | **Legacy prohibidas** | 8 | `AsientosContables`, `EventosSistemaFacturacion`, `FacturasRecibidas`, `ConfiguracionFiscal`, `LibroRegistroFacturasRecibidas`, `PlanCuentasContables`, `CategoriasServicio`, `LibroRegistroFacturasExpedidas` |
 | **Huérfanas bloqueadas** | 6 | `ComprasProveedores`, `LineasCompraProveedor`, `ProductosCatalogo`, `ProductosVariantes`, `UbicacionesInventario`, `ProveedoresLista` |
@@ -1771,7 +1772,7 @@ export const getPublicCatalog = webMethod(
 | `QAE2ESimulaciones` | 1 | ADMIN×4 | No verificado |
 | `RegistroIntegracion` | 1 | ADMIN×4 | No verificado |
 
-La revisión, etiqueta, número de campos y tipos completos de cada colección se consultan en el esquema detallado §G.1–G.16. Los índices de las dos colecciones auxiliares nuevas no se han verificado en esta lectura.
+El detalle de las 13 colecciones NATIVE de negocio se encuentra en §G.1–§G.13; §G.15–§G.16 describen las 2 colecciones auxiliares y §G.14 reúne notas transversales. Para revisiones, recuentos y permisos vigentes prevalece `CMS KEYFIELDS.md` en `main` (reconciliación de solo lectura 2026-11-01), no los metadatos históricos de las tablas descriptivas.
 
 ### 5.3 Keyfields canónicos
 
