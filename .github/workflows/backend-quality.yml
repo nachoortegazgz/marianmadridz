@@ -2,29 +2,9 @@ name: Backend quality gates
 
 on:
   pull_request:
-    paths:
-      - "src/**"
-      - "tests/**"
-      - "test/**"
-      - "scripts/**"
-      - "package.json"
-      - "package-lock.json"
-      - "eslint.config.*"
-      - ".eslintrc*"
-      - ".github/workflows/backend-quality.yml"
   push:
     branches:
       - main
-    paths:
-      - "src/**"
-      - "tests/**"
-      - "test/**"
-      - "scripts/**"
-      - "package.json"
-      - "package-lock.json"
-      - "eslint.config.*"
-      - ".eslintrc*"
-      - ".github/workflows/backend-quality.yml"
   workflow_dispatch:
 
 permissions:
