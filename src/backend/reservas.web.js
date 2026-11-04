@@ -1,47 +1,35 @@
 /**
  * MODULE: backend/reservas.web.js
- * VERSION: v10.13-SDK-BOOKING-IDENTIFIERS
- * BASE: v10.10-SELECTED-STAFF + alineación con documentación oficial Wix Bookings V2.
+ * VERSION: v10.17-DAYS-CACHE-LOCATION-STABLE-INVALIDATION
+ * BASE: v10.16-SDK-LOCATION-ID-STRUCTURED-ERROR-PAGED-CACHE
  *
- * APIS:
- *   - wix-web-module (webMethod, Permissions)
- *   - @wix/bookings (availabilityTimeSlots)
- *   - @wix/members (currentMember)
- *   - backend/dataAccess.js (CMS con consistentRead)
- *   - backend/internalConfig.js (SSOT)
- *   - backend/booking/bookingUtils.js (utilidades puras + ranking)
+ * CORRECCIONES v10.17:
+ *   - CACHE-04 (P1): la invalidación de la caché de días acumula los _id
+ *     en un array y borra al final, en lugar de borrar mientras pagina.
+ *     Borrar durante la paginación desplaza el cursor de Wix Data y puede
+ *     saltarse entradas.
+ *   - CACHE-05 (P1): daysCacheKey incluye locationId (location._id del SDK).
+ *     Antes, si la sede del servicio cambiaba, la caché antigua seguía
+ *     sirviéndose. La ubicación se resuelve antes de construir la clave;
+ *     si falta, se devuelve LOCATION_NOT_CONFIGURED sin tocar la caché.
+ *     El prefijo de invalidación (DAYSCACHE_<ver>__<serviceId>__) sigue
+ *     coincidiendo porque locationKey va después del serviceId.
  *
- * DOC OFICIAL:
- *   - List Availability Time Slots: https://dev.wix.com/docs/api-reference/business-solutions/bookings/time-slots/time-slots-v2/list-availability-time-slots
- *     "Use bookingPolicyViolations to filter slots based on booking restrictions.
- *      Default: all slots are returned regardless of their booking policy status."
- *   - Availability Calendar Filters: https://dev.wix.com/docs/api-reference/business-solutions/bookings/availability-calendar/supported-filters
- *   - Create Booking: https://dev.wix.com/docs/api-reference/business-solutions/bookings/bookings/bookings-writer-v2/create-booking
- *     "Specify the slot's startDate, endDate, resource, and location."
- *   - Wix Data eventual consistency: https://dev.wix.com/docs/api-reference/business-solutions/cms/eventual-consistency
+ * FIXES HEREDADOS v10.16:
+ *   SDK-01: locations[]._id (no id) en las llamadas del SDK.
+ *   ERR-01: _timeSlotsError conserva message/code/traceId/httpStatus/details.
+ *   CACHE-03: invalidación paginada de días.
+ *   NORM-01: resourceIds normalizados (GUIDs únicos y ordenados).
  *
- * CORRECCIONES v10.11-LOCATION-SCHEDULE-ALIGNED:
- *   RES-49 (P0): _resolveAvailabilityLocation resuelve locationId desde
- *     ServiciosCatalogo.locationId (DTO). Fallback a SDK_CONFIG.LOCATION_ID.
- *     Elimina el hardcode que forzaba todas las consultas a una única sede.
- *   RES-50 (P0): bookingPolicyViolations en _listTimeSlotsV2 con filtros
- *     bookOnlineDisabled, tooEarlyToBook, tooLateToBook. Sin este filtro,
- *     Wix devuelve slots no reservables.
- *   RES-51 (P1): bookingPolicyViolations también en
- *     revalidateExactAvailabilitySlot (revalidación coherente con listado).
- *   RES-52 (P1): consistentRead: true en todas las lecturas CMS.
- *     Sustituye STRONG_READ / consistencyMode.
- *   RES-53 (P1): _toPublicService preserva linkedPhases y clientHidden.
- *   RES-54 (P2): _normalizeAddon solo acepta addonId (SSOT CMS KEY FIELDS).
- *   RES-55 (P2): ranking de carga delegado en bookingUtils (un solo origen).
+ * FIXES HEREDADOS v10.15:
+ *   CACHE-01: daysCacheKey incluye addonKey.
+ *   CACHE-02: invalidación de días por prefijo del servicio.
+ *   DIAG-01: _listTimeSlotsV2 lanza error estructurado, no [].
+ *   DTO-01: _toPublicService incluye locationId.
  *
- * RES-56 (P0): usar Location._id en las llamadas SDK de Time Slots V2.
- * RES-57 (P0): Query Extended Bookings SDK V2 devuelve resource._id; se
- *   usa ese campo para calcular la carga real de profesionales.
- *   El contrato SDK no acepta Location.id como identificador de ubicacion.
- * FIXES HEREDADOS v10.10: RES-46..RES-48 (staff seleccionado, F2 filtrado).
- * FIXES HEREDADOS v10.9: RES-40..RES-45.
- * FIXES HEREDADOS v10.7: RES-32..RES-34.
+ * FIXES HEREDADOS v10.13:
+ *   RES-56/57: SDK Booking identifiers (Location._id, resource._id).
+ *   RES-46..RES-48, RES-40..RES-45, RES-32..RES-34.
  */
 import { webMethod, Permissions } from "wix-web-module";
 import {
@@ -105,7 +93,6 @@ const CT_DUAL_CACHE = (CONTROL_TYPE && CONTROL_TYPE.DUAL_CACHE) || "DUAL_CACHE";
 const CT_DAYS_CACHE = (CONTROL_TYPE && CONTROL_TYPE.DAYS_CACHE) || "DAYS_CACHE";
 const CT_DISPLAY_TOKEN = (CONTROL_TYPE && CONTROL_TYPE.DISPLAY_TOKEN) || "DISPLAY_TOKEN";
 
-/** RES-52: lectura consistente (primaria). Wix Data es eventualmente consistente. */
 const CONSISTENT_READ = Object.freeze({ consistentRead: true });
 
 const WATCHDOG_TIMEOUT_MS = Number(SDK_CONFIG?.TIMEOUTS?.WATCHDOG_MS) || 15000;
@@ -118,11 +105,6 @@ const DISPLAY_TOKEN_MAX_ATTEMPTS = 5;
 const DIAS_LIMITE = Number(SLOT_SEARCH?.DIAS_LIMITE) || 14;
 const CACHE_MAX_SIZE = Number(SDK_CONFIG?.CACHE?.MAX_ENTRIES) || 500;
 
-/**
- * Strict ASCII key for matching service slugs and human-readable titles.
- * Diacritics are folded; every non-ASCII/non-alphanumeric run becomes "-".
- * This key is for lookup only; the canonical CMS slug remains unchanged.
- */
 function _normalizeServiceLookupKey(value) {
     const raw = _safeTrim(value, 200);
     if (!raw) return "";
@@ -150,6 +132,26 @@ function _rateLimitError(surface, retryAfter) {
     error.code = "RATE_LIMITED";
     error.meta = { retryAfter, surface };
     return error;
+}
+
+/**
+ * ERR-01: envuelve un error de Time Slots V2 conservando el diagnóstico real.
+ * No pierde `message`, `code`, `httpStatus` ni `details`.
+ */
+function _timeSlotsError(error, traceId) {
+    const wrapped = new Error(
+        error?.message || "No se pudo consultar la disponibilidad."
+    );
+    wrapped.code = error?.code || "TIME_SLOTS_QUERY_FAILED";
+    wrapped.traceId = traceId;
+    wrapped.httpStatus = Number(
+        error?.httpStatus ||
+        error?.statusCode ||
+        error?.response?.status ||
+        0
+    ) || null;
+    wrapped.details = error?.details || null;
+    return wrapped;
 }
 
 /* =============================================================================
@@ -186,7 +188,6 @@ function _extractFirstRelationId(value) {
     return "";
 }
 
-/** RES-54: solo addonId (SSOT CMS KEY FIELDS). */
 function _normalizeAddon(addon) {
     if (!addon || typeof addon !== "object") return null;
     const addonId = _safeTrim(addon.addonId || "");
@@ -329,9 +330,13 @@ function _isValidSlotRange(startLocal, endLocal) {
 }
 
 /**
- * RES-49: resuelve la ubicación para consultas de disponibilidad.
+ * SDK-01: resuelve la ubicación para consultas de disponibilidad.
  * Prioridad: service.locationId (CMS) → SDK_CONFIG.LOCATION_ID (fallback).
- * El tipo para consultas es siempre "BUSINESS".
+ *
+ * CONTRATO SDK (confirmado en @wix/auto_sdk_bookings_availability-time-slots):
+ *   locations: z.array(z.object({ _id: GUID, locationType: "BUSINESS" | ... }))
+ * La API REST documenta `locations[].id`, pero el SDK usa `_id` y renombra
+ * internamente. NO usar `id` con el SDK.
  */
 function _resolveAvailabilityLocation(service) {
     const fromCms = _safeTrim(service && service.locationId);
@@ -361,7 +366,6 @@ export async function _getServiceBySlugOrIdInternal(slugOrId, externalTraceId = 
         ? raw.split("?")[0].split("#")[0].replace(/^\/+/, "").replace(/\/+$/, "")
         : "";
     const isGuid = _looksLikeGuid(lookupValue);
-    // Wix GUIDs are canonicalized; all slug lookups are strict ASCII.
     const clean = isGuid ? lookupValue.toLowerCase() : _safeSlugOrId(lookupValue);
     if (!clean) {
         return {
@@ -404,9 +408,6 @@ export async function _getServiceBySlugOrIdInternal(slugOrId, externalTraceId = 
         }
         let service = result?.items?.[0] || null;
 
-        // Legacy/dynamic URLs may be generated from the service title rather
-        // than the shorter canonical CMS slug. Match only an exact normalized
-        // ASCII title/slug key; reject collisions instead of guessing.
         if (!service && !isGuid) {
             const catalog = await withTimeout(
                 dalQuery(SERVICIOS_COL).limit(1000).find(CONSISTENT_READ),
@@ -688,7 +689,7 @@ export const resolveServiceId = webMethod(
     }
 );
 
-/** RES-56: explicit public DTO allowlist; never spread CMS records. */
+/** DTO allowlist explícito; nunca spread del registro CMS. */
 export function _toPublicService(service) {
     if (!service || typeof service !== "object" || Array.isArray(service)) return null;
 
@@ -725,6 +726,9 @@ export function _toPublicService(service) {
         description: text(service.description),
         tagLine: text(service.tagLine),
         location: text(service.location),
+        locationId: _looksLikeGuid(service.locationId)
+            ? _safeTrim(service.locationId)
+            : "",
         price: finiteNonNegative(service.price),
         currency: /^[A-Z]{3}$/.test(text(service.currency).toUpperCase())
             ? text(service.currency).toUpperCase()
@@ -771,7 +775,7 @@ export async function _getStaffDisplayNamePublic(resourceId) {
 }
 
 /* =============================================================================
- * REVALIDACIÓN EXACTA DE SLOT (RES-51)
+ * REVALIDACIÓN EXACTA DE SLOT
  * ==========================================================================*/
 export async function revalidateExactAvailabilitySlot({
     serviceId, localStartDate, localEndDate, resourceId, nativeAddonIds = [], traceId,
@@ -889,28 +893,48 @@ export async function revalidateExactAvailabilitySlot({
 }
 
 /* =============================================================================
- * LISTADO DE SLOTS (RES-50: bookingPolicyViolations + locationId del CMS)
+ * LISTADO DE SLOTS
  * ==========================================================================*/
 async function _listTimeSlotsV2({ serviceId, fromLocalDate, toLocalDate, resourceIds, nativeAddonIds = [] }, options = {}) {
     const { skipCache = false, timeSlotsPerDay } = options;
     const traceId = makeTraceId("slots");
     const fromKey = _normalizeLocalIsoStr(fromLocalDate);
     const toKey = _normalizeLocalIsoStr(toLocalDate);
-    if (!fromKey || !toKey) return [];
+    if (!fromKey || !toKey) {
+        const error = new Error("INVALID_DATE_RANGE");
+        error.code = "INVALID_DATE_RANGE";
+        throw error;
+    }
     const resolvedServiceId = await _resolveServiceIdInternal(serviceId);
-    if (!resolvedServiceId) return [];
+    if (!resolvedServiceId) {
+        const error = new Error("SERVICE_NOT_FOUND");
+        error.code = "SERVICE_NOT_FOUND";
+        throw error;
+    }
 
     const serviceRes = await _getServiceBySlugOrIdInternal(resolvedServiceId, traceId);
     const service = serviceRes?.data;
     const location = _resolveAvailabilityLocation(service);
-    if (!location) return [];
+    if (!location) {
+        const error = new Error("LOCATION_NOT_CONFIGURED");
+        error.code = "LOCATION_NOT_CONFIGURED";
+        throw error;
+    }
 
-    const normalizedResourceIds = Array.isArray(resourceIds) ? resourceIds.map(String).filter(Boolean) : [];
+    /* NORM-01: normalizar resourceIds (solo GUIDs únicos y ordenados). */
+    const normalizedResourceIds = Array.isArray(resourceIds)
+        ? Array.from(new Set(
+            resourceIds
+                .map((id) => _safeTrim(id))
+                .filter((id) => _looksLikeGuid(id))
+        )).sort()
+        : [];
     const normalizedNativeAddonIds = Array.from(new Set(
         (Array.isArray(nativeAddonIds) ? nativeAddonIds : []).map((id) => _safeTrim(id)).filter((id) => _looksLikeGuid(id))
     )).sort();
     const resourceKey = normalizedResourceIds.slice().sort().join(",");
     const addonKey = normalizedNativeAddonIds.join(",");
+    /* SDK-01: la ubicación en el SDK usa `_id`, no `id`. */
     const locationKey = location._id;
     const cacheKey = `${String(resolvedServiceId)}__${locationKey}__${resourceKey}__${addonKey}__${fromKey}__${toKey}__ts:${timeSlotsPerDay || 0}`;
 
@@ -965,8 +989,16 @@ async function _listTimeSlotsV2({ serviceId, fromLocalDate, toLocalDate, resourc
             if (!skipCache) _cacheSetBounded(availabilityCache, cacheKey, { data: slots, timestamp: Date.now() }, CACHE_MAX_SIZE);
             return slots;
         } catch (e) {
-            log.error("_listTimeSlotsV2 failed", { traceId, message: e?.message });
-            return [];
+            /* ERR-01: no ocultar el fallo real; conservar message/code/details. */
+            log.error("_listTimeSlotsV2 failed", {
+                traceId,
+                code: e?.code,
+                message: e?.message,
+                details: e?.details,
+                response: e?.response,
+                stack: e?.stack,
+            });
+            throw _timeSlotsError(e, traceId);
         }
     })();
 
@@ -978,7 +1010,7 @@ async function _listTimeSlotsV2({ serviceId, fromLocalDate, toLocalDate, resourc
 }
 
 /* =============================================================================
- * BALANCEO POR CARGA (RES-55: delegado en bookingUtils)
+ * BALANCEO POR CARGA
  * ==========================================================================*/
 async function _rankResourcesByLoad(candidateResourceIds, dateYMD, traceId) {
     const ids = Array.from(new Set(
@@ -1071,9 +1103,6 @@ async function _getBookedMinutesByResourceForDay(dateYMD, resourceIds, traceId) 
         minutes[resourceId] += _minutesBetweenUtcDates(start, end);
     }
 
-    // Native Wix Bookings is also a source of truth. Some appointments are
-    // created directly in Wix and therefore have no CitasF2 ledger row.
-    // Merge by booking ID so custom-engine bookings are never counted twice.
     try {
         const startUtc = getUtcDateFromMadridLocal(`${ymd}T00:00:00`);
         const nextDayDate = new Date(`${ymd}T12:00:00.000Z`);
@@ -1152,9 +1181,6 @@ async function _getBookedMinutesByResourceForDay(dateYMD, resourceIds, traceId) 
             }
         } while (cursor);
     } catch (e) {
-        // Staff balancing is a booking invariant: without the native source,
-        // the daily workload is incomplete and assigning by partial data would
-        // silently violate the least-booked-minutes rule.
         log.error("_getBookedMinutesByResourceForDay native booking query failed; refusing incomplete load ranking", {
             traceId,
             dateYMD: ymd,
@@ -1215,7 +1241,7 @@ async function _findNextSlotForServiceInternal(serviceId, fromLocalDateTime, req
 }
 
 /* =============================================================================
- * RESOLUCIÓN DE STAFF PARA SLOT EXACTO (RES-46)
+ * RESOLUCIÓN DE STAFF PARA SLOT EXACTO
  * ==========================================================================*/
 export async function _resolveStaffForSlotInternal(params) {
     const traceId = _safeTrim(params?.traceId) || makeTraceId("staff-internal");
@@ -1307,7 +1333,6 @@ export async function _resolveStaffForSlotInternal(params) {
             }
             const f2End = _normalizeLocalIsoStr(params?.f2End || "");
 
-            // RES-46: si el cliente eligió staff, F2 solo busca slots de ESE staff.
             const slotsF2 = await _listTimeSlotsV2(
                 {
                     serviceId: linkedServiceId,
@@ -1423,7 +1448,7 @@ export async function _resolveStaffForSlotInternal(params) {
             error: null,
         };
     } catch (err) {
-        log.error("_resolveStaffForSlotInternal failed", { traceId, error: err?.message });
+        log.error("_resolveStaffForSlotInternal failed", { traceId, error: err?.message, code: err?.code });
         return { status: "ERROR", data: null, error: _toPublicError(err, "STAFF_RESOLVE_FAILED") };
     }
 }
@@ -1474,8 +1499,6 @@ export async function _getCertifiedDualSlotsInternal(serviceId, resourceId, date
     const isDual = service.allowCombine === true && _looksLikeGuid(linkedServiceId);
     const rankedCandidateCache = new Map();
 
-    // REGLA DE NEGOCIO: si el cliente eligió staff, ese mismo staff
-    // debe estar disponible en F1 Y F2. Nunca se cambia la elección.
     const selectedResourceId = _safeTrim(resourceId) && _looksLikeGuid(resourceId) ? _safeTrim(resourceId) : null;
 
     async function _rankCandidates(candidateResourceIds) {
@@ -1653,22 +1676,50 @@ export async function _invalidateCachesInternal(serviceId, dateYMD, resourceId, 
     if (!resolvedServiceId || !_isValidMadridYmd(ymd)) {
         return { ok: true, traceId: tId, skipped: true };
     }
+
     const prefix = `${String(resolvedServiceId)}__`;
     for (const k of availabilityCache.keys()) {
         if (String(k).startsWith(prefix)) availabilityCache.delete(k);
     }
-    const yearMonth = String(ymd).slice(0, 7);
-    const resourceIds = (_normalizeResourceIdsStrict(resourceId, tId) || []).sort().join(",");
-    const daysCacheKey = `DAYSCACHE_${DAYS_CACHE_VERSION}__${String(resolvedServiceId)}__${_hashKey(resourceIds)}__${String(yearMonth)}`;
+
+    /* CACHE-03 + CACHE-04: recolectar IDs durante la paginación y borrar
+       SOLO al final. Borrar en mitad de la paginación desplaza el cursor
+       de Wix Data y puede saltarse entradas. */
+    const daysPrefix = `DAYSCACHE_${DAYS_CACHE_VERSION}__${String(resolvedServiceId)}__`;
     try {
-        const daysPage = await withTimeout(
-            dalQuery(CONTROL_COL).eq("controlType", CT_DAYS_CACHE).eq("dedupeKey", daysCacheKey).limit(10).find(CONSISTENT_READ),
+        const idsToRemove = [];
+
+        let page = await withTimeout(
+            dalQuery(CONTROL_COL)
+                .eq("controlType", CT_DAYS_CACHE)
+                .limit(1000)
+                .find(CONSISTENT_READ),
             WATCHDOG_TIMEOUT_MS,
             "invalidateDaysCache"
         );
-        await Promise.allSettled((daysPage?.items || []).map((item) => removeById(CONTROL_COL, item._id).catch(() => null)));
+
+        while (page) {
+            for (const item of page.items || []) {
+                if (String(item.dedupeKey || "").startsWith(daysPrefix)) {
+                    idsToRemove.push(item._id);
+                }
+            }
+            if (!page.hasNext || !page.hasNext()) break;
+            page = await withTimeout(
+                page.next(),
+                WATCHDOG_TIMEOUT_MS,
+                "invalidateDaysCache.next"
+            );
+        }
+
+        await Promise.allSettled(
+            idsToRemove.map((id) => removeById(CONTROL_COL, id).catch(() => null))
+        );
     } catch (e) {
-        log.warn("_invalidateCachesInternal: days cache cleanup skipped", { traceId: tId, message: e?.message });
+        log.warn("_invalidateCachesInternal: days cache cleanup skipped", {
+            traceId: tId,
+            message: e?.message,
+        });
     }
     try {
         const removed = await _removeDualCacheForDay(resolvedServiceId, ymd, resourceId, tId);
@@ -1745,9 +1796,6 @@ async function _readDaysCacheWindow(daysCacheKey) {
         }
         const parsed = readControlPayload(item);
         if (!parsed || !Array.isArray(parsed.availableDaysYmds)) return null;
-
-        // readControlPayload is the canonical adapter for both current payload
-        // objects and stored payloadJson. Do not parse the legacy field again.
         return parsed;
     } catch (e) {
         log.warn("_readDaysCacheWindow failed", { message: e?.message });
@@ -1794,6 +1842,22 @@ export async function _getAvailableDaysInternal({ serviceId, resourceId, year, m
         return { status: "ERROR", data: null, error: { code: "SERVICE_NOT_AVAILABLE", message: "Service is not available for booking." } };
     }
     const addonContext = _resolveAddonContext(service, addonIds);
+
+    /* CACHE-05: resolver la ubicación antes de construir la clave.
+       Si la sede del servicio cambia, la caché antigua ya no se sirve. */
+    const location = _resolveAvailabilityLocation(service);
+    if (!location) {
+        return {
+            status: "ERROR",
+            data: null,
+            error: {
+                code: "LOCATION_NOT_CONFIGURED",
+                message: "Service has no valid locationId.",
+            },
+        };
+    }
+    const locationKey = _safeTrim(location._id);
+
     const y = Number(year);
     const m = Number(month);
     if (!Number.isFinite(y) || !Number.isFinite(m) || m < 1 || m > 12) {
@@ -1810,7 +1874,15 @@ export async function _getAvailableDaysInternal({ serviceId, resourceId, year, m
     const toLocal = maxDateStr < lastDay ? maxDateStr : lastDay;
     if (fromLocal > toLocal) return { status: "SUCCESS", data: [], error: null };
 
-    const daysCacheKey = `DAYSCACHE_${DAYS_CACHE_VERSION}__${String(resolved)}__${_hashKey(resourceIds.slice().sort().join(","))}__${yearMonth}`;
+    /* CACHE-01 + CACHE-05: la clave incluye serviceId, locationId,
+       resourceIds, addonIds y yearMonth. */
+    const addonKey = addonContext.nativeAddonIds.slice().sort().join(",");
+    const daysCacheKey =
+        `DAYSCACHE_${DAYS_CACHE_VERSION}__${String(resolved)}__` +
+        `${locationKey}__` +
+        `${_hashKey(resourceIds.slice().sort().join(","))}__` +
+        `${_hashKey(addonKey)}__${yearMonth}`;
+
     const cachedWindow = await _readDaysCacheWindow(daysCacheKey);
     if (cachedWindow) {
         const emptySet = new Set(cachedWindow.emptyDaysYmds || []);
@@ -1832,6 +1904,7 @@ export async function _getAvailableDaysInternal({ serviceId, resourceId, year, m
     }
     await _writeDaysCacheWindow(daysCacheKey, {
         serviceId: resolved,
+        locationId: locationKey,
         yearMonth,
         fromLocal,
         toLocal,
@@ -1935,9 +2008,6 @@ async function _validateAndConsumeDisplayToken(token, traceId) {
         if (!Number.isFinite(expiresAtMs) || expiresAtMs <= Date.now()) return { valid: false, reason: "TOKEN_EXPIRED" };
         if (record.consumedAt) return { valid: false, reason: "TOKEN_ALREADY_CONSUMED" };
         if (record.attempts >= record.maxAttempts) return { valid: false, reason: "TOKEN_MAX_ATTEMPTS_EXCEEDED" };
-        // Consumption itself is the authoritative single-use operation.
-        // Updating attempts first races with a concurrent request and can
-        // resurrect a deleted token on APIs/mocks with upsert-like semantics.
         const consumed = await _consumeDisplayToken(tokenId, traceId);
         if (!consumed) return { valid: false, reason: "TOKEN_ALREADY_CONSUMED" };
         return { valid: true, bookingId: record.bookingId, tokenId };
@@ -1949,8 +2019,6 @@ async function _validateAndConsumeDisplayToken(token, traceId) {
 
 async function _consumeDisplayToken(tokenId, traceId) {
     try {
-        // CMS removal is atomic by _id: only one concurrent request can delete
-        // the row. Replays and competing consumers fail closed.
         await removeById(CONTROL_COL, tokenId);
         return true;
     } catch (e) {
@@ -1975,9 +2043,6 @@ export const getConfirmedBookingForDisplay = webMethod(
         if (typeof displayToken === "string" && displayToken.length > 0) {
             const tokenValidation = await _validateAndConsumeDisplayToken(displayToken, traceId);
             if (!tokenValidation.valid) {
-                // Replay/max-attempt failures must not disclose whether the
-                // bearer token existed. Keep expiry distinct per the existing
-                // public contract; normalize consumed/unknown to TOKEN_NOT_FOUND.
                 const publicReason = ["TOKEN_ALREADY_CONSUMED", "TOKEN_MAX_ATTEMPTS_EXCEEDED"].includes(tokenValidation.reason)
                     ? "TOKEN_NOT_FOUND"
                     : tokenValidation.reason;
