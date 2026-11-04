@@ -1,10 +1,10 @@
 # DOSSIER TÉCNICO CONSOLIDADO — marianmadrid.es versión.z
 
-**Proyecto:** Marian Madrid Peluquería y Estética · **Repositorio canónico:** `nachoortegazgz/marianmadridz` · **www.marianmadrid.es:** arquitectura, estado, evidencias y protocolo para su uso como QA. Los estados operativos se rigen por §24; los datos de prueba y condiciones de validación por §25; el plan por §26.
+**Proyecto:** Marian Madrid Peluquería y Estética · **Repositorio canónico en GITHUB:** `nachoortegazgz/marianmadridz` · **QA: www.marianmadrid.es:** arquitectura, estado, evidencias y protocolo para su uso como QA. Los estados operativos se rigen por §24; los datos de prueba y condiciones de validación por §25; el plan por §26.
 
 # MAPA DEL DOCUMENTO — DOSSIER TÉCNICO CONSOLIDADO marianmadrid.es
 
-> **Función:** representación jerárquica y navegable del documento consolidado + anexo final. Permite localizar en segundos cualquier sección, detectar duplicidades y conocer el estado de cada bloque.
+> **Función:** Permite localizar en segundos cualquier sección, detectar duplicidades y conocer el estado de cada bloque.
 > **Criterio:** se numera por **bloques (A–J)** y, dentro de cada bloque, por **sección original**. Se respeta la numeración del documento; donde hay duplicidad se marca `[DUP]`.
 > **Convenciones:** `[DUP]` contenido repetido en otro bloque · `[REF]` remite a otra sección · `[ADR]` pendiente de ADR · `[PEND]` laguna de dato · `[HECHO]`/`[DECLARADO]` estado epistémico dominante.
 
