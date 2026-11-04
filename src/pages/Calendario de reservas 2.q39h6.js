@@ -1,19 +1,22 @@
 /**
  * MODULE: pages/calendario-2.js
- * VERSION: v5023-HARDENED-AUTO-STAFF-DTO-AUTOSEL
- * BASE: v5022-HARDENED-AUTO-STAFF-DTO-AUTOSEL
+ * VERSION: v5024-HARDENED-AUTO-STAFF-DTO-AUTOSEL
+ * BASE: v5023-HARDENED-AUTO-STAFF-DTO-AUTOSEL
  *
- * CORRECCIONES v5023:
- *   - ISO-02 (P1): isLocalIso valida calendario real (mes 1-12, día según
- *     díasDelMes, hora 0-23, minuto 0-59, segundo 0-59). Rechaza
- *     "2026-02-30T10:00" y "2026-04-31T10:00" aunque el regex de forma
- *     pase. _toWidgetSlotDto refuerza start < end con Number.isFinite.
- *   - BOOK-02 (P1): buildBookingRequestPayload valida slotF1 y slotF2 con
- *     isValidBookingSlot antes de construir el payload y lanza
- *     INVALID_SLOT_F1 / INVALID_SLOT_F2. handleBooking los captura en el
- *     try/catch ya existente y responde con el código correcto.
- *   - PAIR-02 (P1): pairToken solo se añade al payload si no está vacío.
- *     Evita enviar pairToken:"" a processDualBooking.
+ * CORRECCIONES v5024:
+ *   - DAYS-02 (P1): el bloque `days` calculaba los días filtrados al mes
+ *     solicitado pero NO los asignaba a `result.data`, por lo que el widget
+ *     seguía recibiendo días de otros meses si el backend los mezclaba.
+ *     Ahora `result.data = days` es la única verdad enviada al widget.
+ *     Si `days.length === 0`, se eliminan `recommendedDay`/`recommendedSlots`
+ *     para no conservar recomendaciones de una respuesta previa. Si la
+ *     precarga de slots falla, `recommendedSlots = []` (array vacío) en
+ *     lugar de `undefined`.
+ *
+ * FIXES HEREDADOS v5023:
+ *   ISO-02: isLocalIso valida calendario real (rechaza 2026-02-30).
+ *   BOOK-02: buildBookingRequestPayload valida slotF1/slotF2 antes.
+ *   PAIR-02: pairToken solo se incluye si existe.
  *
  * FIXES HEREDADOS v5022:
  *   DTO-07: _toWidgetSlotDto valida ISO y orden temporal.
@@ -1144,10 +1147,11 @@ async function handleAvailability(
                     "getAvailableDays"
                 );
 
-                /* AUTOSEL-01 + DAYS-01 + COMB-01: filtrar `days` al mes
-                   solicitado (YYYY-MM-), calcular recommendedDay y
-                   precargar slots si serviceAllowsCombine(). Si la
-                   precarga falla, la respuesta sigue con sólo los días. */
+                /* DAYS-01 + DAYS-02:
+                 * - filtra y conserva únicamente días del mes solicitado;
+                 * - asigna el resultado filtrado a result.data para que el
+                 *   widget nunca reciba días de otros meses;
+                 * - elimina recomendaciones si no quedan días válidos. */
                 if (
                     result?.status === "SUCCESS" &&
                     Array.isArray(result.data) &&
@@ -1170,7 +1174,18 @@ async function handleAvailability(
                                 d.startsWith(expectedPrefix)
                             );
 
-                        if (days.length > 0) {
+                        /* DAYS-02: los días filtrados son la única
+                           verdad enviada al widget. Sin esta asignación
+                           el widget seguía recibiendo días de otros
+                           meses si el backend los mezclaba. */
+                        result.data = days;
+
+                        if (days.length === 0) {
+                            /* Sin días válidos: limpiar cualquier
+                               recomendación previa. */
+                            delete result.recommendedDay;
+                            delete result.recommendedSlots;
+                        } else {
                             const tomorrowYmd = getMadridYmdOffset(1);
                             const recommendedDay = days.includes(tomorrowYmd)
                                 ? tomorrowYmd
@@ -1211,6 +1226,12 @@ async function handleAvailability(
                                     _sanitizeSlotsForWidget(
                                         slotsResult.data
                                     );
+                            } else {
+                                /* DAYS-02: sin precarga válida, enviar
+                                   array vacío para que el widget muestre
+                                   "sin slots" en lugar de quedarse
+                                   colgado. */
+                                result.recommendedSlots = [];
                             }
                         }
                     } catch (prefetchError) {
