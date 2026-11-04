@@ -1,19 +1,20 @@
 /**
  * MODULE: backend/reservas.web.js
- * VERSION: v10.17-DAYS-CACHE-LOCATION-STABLE-INVALIDATION
- * BASE: v10.16-SDK-LOCATION-ID-STRUCTURED-ERROR-PAGED-CACHE
+ * VERSION: v10.18-WIDGET-DTO-MINIMAL
+ * BASE: v10.17-DAYS-CACHE-LOCATION-STABLE-INVALIDATION
  *
- * CORRECCIONES v10.17:
- *   - CACHE-04 (P1): la invalidación de la caché de días acumula los _id
- *     en un array y borra al final, en lugar de borrar mientras pagina.
- *     Borrar durante la paginación desplaza el cursor de Wix Data y puede
- *     saltarse entradas.
- *   - CACHE-05 (P1): daysCacheKey incluye locationId (location._id del SDK).
- *     Antes, si la sede del servicio cambiaba, la caché antigua seguía
- *     sirviéndose. La ubicación se resuelve antes de construir la clave;
- *     si falta, se devuelve LOCATION_NOT_CONFIGURED sin tocar la caché.
- *     El prefijo de invalidación (DAYSCACHE_<ver>__<serviceId>__) sigue
- *     coincidiendo porque locationKey va después del serviceId.
+ * CORRECCIONES v10.18:
+ *   - WIDGET-DTO-01 (P0): los slots devueltos por _getCertifiedDualSlotsInternal
+ *     ya NO incluyen `slotRef: forcedSlot` (objeto completo del SDK con
+ *     startDate, endDate, bookable, resourceTypes, candidateResources,
+ *     bookingPolicyViolations, etc.). Se sustituye por `slot: _toWidgetSlot(...)`,
+ *     un DTO mínimo de 4 campos. Esto elimina WIDGET_MESSAGE_TOO_LARGE.
+ *     No se envían al widget: slotRef, bookable, resourceTypes,
+ *     candidateResources, bookingPolicyViolations, location ni anidados.
+ *
+ * FIXES HEREDADOS v10.17:
+ *   CACHE-04: invalidación de días paginada con borrado al final.
+ *   CACHE-05: daysCacheKey incluye locationId (location._id del SDK).
  *
  * FIXES HEREDADOS v10.16:
  *   SDK-01: locations[]._id (no id) en las llamadas del SDK.
@@ -357,6 +358,28 @@ return {
     _id: locationId,
     locationType: "BUSINESS",
 };
+}
+
+/**
+ * WIDGET-DTO-01 (v10.18): convierte un slot interno (con toda la metadata
+ * del SDK: startDate, endDate, bookable, resourceTypes, candidateResources,
+ * bookingPolicyViolations, location…) en un DTO mínimo apto para postMessage.
+ * Evita WIDGET_MESSAGE_TOO_LARGE.
+ *
+ * No incluye: slotRef, bookable, resourceTypes, candidateResources,
+ * bookingPolicyViolations, location, ni ningún campo anidado del SDK.
+ */
+function _toWidgetSlot(slot, chosenResourceId = null) {
+    if (!slot || typeof slot !== "object") return null;
+    const start = _normalizeLocalIsoStr(slot.localStartDate || slot.startDate || "");
+    const end = _normalizeLocalIsoStr(slot.localEndDate || slot.endDate || "");
+    if (!start || !end) return null;
+    return {
+        localStartDate: start,
+        localEndDate: end,
+        resourceId: _safeTrim(chosenResourceId || slot.resourceId || "") || null,
+        serviceId: _safeTrim(slot.serviceId || "") || null,
+    };
 }
 
 /* =============================================================================
@@ -1541,8 +1564,15 @@ export async function _getCertifiedDualSlotsInternal(serviceId, resourceId, date
             const localEndDate = _normalizeLocalIsoStr(forcedSlot.localEndDate);
             if (!localStartDate || !localEndDate) continue;
             if (!_isValidSlotRange(localStartDate, localEndDate)) continue;
+            /* WIDGET-DTO-01: en lugar de `slotRef: forcedSlot` (objeto SDK completo),
+               se envía un DTO mínimo. */
             out.push({
-                slotF1: { localStartDate, localEndDate, slotRef: forcedSlot, resourceId: chosen || null },
+                slotF1: {
+                    localStartDate,
+                    localEndDate,
+                    slot: _toWidgetSlot(forcedSlot, chosen),
+                    resourceId: chosen || null,
+                },
                 slotF2: null,
                 resourceId: chosen || null,
                 pairToken,
@@ -1605,8 +1635,19 @@ export async function _getCertifiedDualSlotsInternal(serviceId, resourceId, date
         if (!f1LocalStart || !f1LocalEnd || !f2LocalStart || !f2LocalEnd) continue;
         if (!_isValidSlotRange(f1LocalStart, f1LocalEnd) || !_isValidSlotRange(f2LocalStart, f2LocalEnd)) continue;
 
-        const slotF1 = { localStartDate: f1LocalStart, localEndDate: f1LocalEnd, slotRef: forcedF1, resourceId: chosenResourceId };
-        const slotF2 = { localStartDate: f2LocalStart, localEndDate: f2LocalEnd, slotRef: forcedF2, resourceId: chosenResourceId };
+        /* WIDGET-DTO-01: slotRef eliminado; DTO mínimo en `slot`. */
+        const slotF1 = {
+            localStartDate: f1LocalStart,
+            localEndDate: f1LocalEnd,
+            slot: _toWidgetSlot(forcedF1, chosenResourceId),
+            resourceId: chosenResourceId,
+        };
+        const slotF2 = {
+            localStartDate: f2LocalStart,
+            localEndDate: f2LocalEnd,
+            slot: _toWidgetSlot(forcedF2, chosenResourceId),
+            resourceId: chosenResourceId,
+        };
         pairs.push({
             slotF1,
             slotF2,
