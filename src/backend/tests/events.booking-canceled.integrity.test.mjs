@@ -64,3 +64,22 @@ test('BOOKING_CANCELED propagates CitasF2 read failures instead of treating them
   );
   assert.equal((wixDataMock._store.get(CONTROL_COLLECTION) || []).some((row) => row.eventId === EVENT_ID), false);
 });
+
+
+test('BOOKING_CANCELED replay reconciles a stale CitasF2 row even when the event marker already exists', async () => {
+  seedCita();
+  wixDataMock._store.set(CONTROL_COLLECTION, [{
+    _id: 'existing-webhook-marker',
+    controlType: IC.CONTROL_TYPE.WEBHOOK_EVENT,
+    dedupeKey: `WEBHOOK_${EVENT_ID}`,
+    eventId: EVENT_ID,
+    status: IC.CONTROL_STATUS.COMPLETED,
+    payload: { eventType: 'BOOKING_CANCELED' },
+  }]);
+
+  const result = await wixBookingsV2_onBookingCanceled(canceledEvent());
+
+  assert.equal(result.status, 'OK');
+  const cita = wixDataMock._store.get(CITA_COLLECTION).find((row) => row.bookingId === BOOKING_ID);
+  assert.equal(cita.bookingStatus, IC.CITAS_BOOKING_STATUS.CANCELLED || IC.CITAS_BOOKING_STATUS.CANCELED);
+});
