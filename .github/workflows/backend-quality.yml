@@ -1,0 +1,94 @@
+name: Backend quality gates
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+# PR runs supersede older commits from the same PR/branch, but unrelated work
+# continues. Feature branches are validated by pull_request to avoid duplicate
+# push + pull_request runs.
+concurrency:
+  group: backend-quality-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend-offline-tests:
+    name: Backend offline regression suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        timeout-minutes: 2
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+        timeout-minutes: 3
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+        timeout-minutes: 5
+      - name: Run complete offline backend regression suite
+        run: npm test
+        timeout-minutes: 10
+
+  clean-install-and-lint:
+    name: Clean dependency install and lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        timeout-minutes: 2
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+        timeout-minutes: 3
+      - name: Install locked dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts --no-audit --no-fund
+        timeout-minutes: 5
+      - name: Verify installed Wix Cart V2 SDK exports
+        run: npm run verify:wix-ecom-cart-v2
+        timeout-minutes: 3
+      - name: Run ESLint
+        run: npm run lint
+        timeout-minutes: 5
+
+  windows-node-compatibility:
+    name: Windows Node.js ${{ matrix.node-version }} regression
+    runs-on: windows-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ["24.22.1", "26.12.1"]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        timeout-minutes: 2
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+        timeout-minutes: 3
+      - name: Install locked dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts --no-audit --no-fund
+        timeout-minutes: 7
+      - name: Verify installed Wix Cart V2 SDK exports
+        run: npm run verify:wix-ecom-cart-v2
+        timeout-minutes: 3
+      - name: Run complete backend regression suite
+        run: npm test
+        timeout-minutes: 12
+      - name: Run ESLint
+        run: npm run lint
+        timeout-minutes: 5
