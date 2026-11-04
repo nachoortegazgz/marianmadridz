@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>Reserva Confirmada — Marian Madrid</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg: #ffffff; --text: #000000; --muted: #666666; --line: #eaeaea;
+            --soft: #fafafa; --accent: #000000;
+            --font-serif: 'Playfair Display', Georgia, serif;
+            --font-sans: 'Plus Jakarta Sans', Arial, sans-serif;
+            --radius: 6px; --shadow: 0 4px 30px rgba(0, 0, 0, 0.03);
+            --container-max: 500px; --spacing: clamp(1.25rem, 4vw, 2.5rem);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: var(--font-sans); background-color: var(--soft); color: var(--text);
+            margin: 0; padding: 0; display: flex; justify-content: center; align-items: center;
+            min-height: 100vh; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+        }
+        .container {
+            width: 100%; max-width: var(--container-max); margin: var(--spacing);
+            padding: clamp(2rem, 6vw, 3rem) clamp(1.25rem, 4vw, 2.5rem);
+            background: var(--bg); border: 1px solid var(--line); box-shadow: var(--shadow);
+            text-align: center; transition: padding 0.2s ease;
+        }
+        .success-icon {
+            width: clamp(56px, 12vw, 72px); height: clamp(56px, 12vw, 72px);
+            border: 1px solid var(--accent); border-radius: 50%; color: var(--accent);
+            font-size: clamp(24px, 5vw, 32px); line-height: clamp(54px, 12vw, 70px);
+            margin: 0 auto clamp(1rem, 3vw, 1.75rem); font-weight: 300; transition: all 0.2s ease;
+        }
+        h1 {
+            font-family: var(--font-serif); font-size: clamp(1.6rem, 5vw, 2.2rem);
+            font-weight: 400; margin-bottom: 0.5rem; letter-spacing: -0.02em; line-height: 1.2;
+        }
+        .subtitle {
+            font-size: clamp(0.8rem, 1.8vw, 0.95rem); color: var(--muted);
+            line-height: 1.6; margin-bottom: 1.5rem; padding: 0 0.5rem;
+        }
+        .divider { border: none; border-top: 1.1px solid var(--line); margin: 1.75rem auto; width: 100%; }
+        .detail-card {
+            background: var(--soft); border: 1px solid var(--line);
+            padding: clamp(1rem, 3vw, 1.75rem); text-align: left;
+            margin-bottom: 1.5rem; border-radius: var(--radius);
+        }
+        .detail-row {
+            display: flex; justify-content: space-between; align-items: flex-start;
+            font-size: clamp(0.75rem, 1.6vw, 0.9rem); margin-bottom: 0.75rem;
+            padding-bottom: 0.75rem; border-bottom: 1px dashed var(--line); gap: 1rem;
+        }
+        .detail-row:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+        .detail-label {
+            font-weight: 600; color: var(--muted); text-transform: uppercase;
+            font-size: clamp(0.6rem, 1.2vw, 0.7rem); letter-spacing: 0.04em;
+            white-space: nowrap; flex-shrink: 0;
+        }
+        .detail-value {
+            font-weight: 600; color: var(--text); text-align: right;
+            word-break: break-word; flex: 1; min-width: 0;
+        }
+        .dual-badge-container { margin-bottom: 1.25rem; text-align: center; }
+        .dual-badge {
+            background: var(--accent); color: #fff; padding: 0.4rem 1rem;
+            font-size: clamp(0.55rem, 1.2vw, 0.7rem); font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.08em;
+            display: inline-block; border-radius: 2px;
+        }
+        .dual-info-box {
+            font-size: clamp(0.7rem, 1.4vw, 0.85rem); color: var(--muted);
+            line-height: 1.6; background: #fff; border: 1px solid var(--line);
+            padding: 0.9rem 1rem; margin-top: 0.75rem; text-align: left;
+            border-radius: var(--radius);
+        }
+        .comments-box {
+            background: #fff; border: 1px solid var(--line);
+            padding: 0.9rem 1rem; margin-bottom: 1.5rem; text-align: left;
+            border-radius: var(--radius); font-size: clamp(0.7rem, 1.4vw, 0.85rem); line-height: 1.6;
+        }
+        .comments-label {
+            font-weight: 600; text-transform: uppercase;
+            font-size: clamp(0.6rem, 1.2vw, 0.7rem); letter-spacing: 0.04em;
+            margin-bottom: 0.3rem; color: var(--muted);
+        }
+        .comments-text {
+            color: var(--text); font-weight: 500;
+            white-space: pre-wrap; word-break: break-word;
+        }
+        .button-group { display: flex; flex-direction: column; gap: 0.75rem; margin-top: 1.75rem; }
+        .button-group .btn {
+            width: 100%; height: clamp(2.6rem, 6vw, 3.2rem); border: none;
+            font-family: var(--font-sans); font-size: clamp(0.6rem, 1.4vw, 0.75rem);
+            font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+            cursor: pointer; transition: all 0.15s ease; border-radius: var(--radius);
+            display: inline-flex; align-items: center; justify-content: center; text-decoration: none;
+        }
+        .btn-primary { background: var(--accent); color: #fff; }
+        .btn-primary:hover { background: #222; transform: translateY(-1px); }
+        .btn-primary:active { transform: translateY(0); }
+        .btn-secondary { background: #fff; color: var(--text); border: 1px solid var(--accent); }
+        .btn-secondary:hover { background: var(--soft); }
+        .downloader-group {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin: 1.25rem 0 0;
+        }
+        .btn-download {
+            height: clamp(2.4rem, 5vw, 2.8rem); font-size: clamp(0.55rem, 1.2vw, 0.65rem);
+            font-weight: 600; background: #f0f0f0; color: #333; border: 1px solid var(--line);
+            border-radius: var(--radius); cursor: pointer; transition: all 0.15s ease;
+            display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;
+        }
+        .btn-download:hover { background: #e6e6e6; color: #000; border-color: #bbb; }
+        .btn-download:disabled { opacity: 0.5; cursor: not-allowed; }
+        @media (max-width: 480px) {
+            .container { margin: 1rem; padding: 1.5rem 1rem; }
+            .detail-row { flex-wrap: wrap; gap: 0.4rem; }
+            .detail-label { white-space: normal; flex: 1 1 100%; text-align: left; }
+            .detail-value { text-align: left; flex: 1 1 100%; padding-left: 0.2rem; }
+            .downloader-group { grid-template-columns: 1fr; gap: 0.6rem; }
+            .button-group .btn { height: 2.8rem; font-size: 0.7rem; }
+            .dual-info-box { font-size: 0.75rem; padding: 0.7rem; }
+            .comments-box { font-size: 0.75rem; padding: 0.7rem; }
+        }
+        @media (min-width: 481px) and (max-width: 768px) {
+            .container { max-width: 90%; padding: 2rem 1.75rem; }
+            .downloader-group { grid-template-columns: 1fr 1fr; }
+            .detail-row { flex-wrap: nowrap; }
+        }
+        @media (min-width: 769px) {
+            .container { padding: 3rem 2.8rem; }
+            .detail-card { padding: 1.8rem 2rem; }
+            .button-group .btn { height: 3.2rem; }
+        }
+        .sr-only {
+            position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+            overflow: hidden; clip: rect(0, 0, 0, 0); border: 0;
+        }
+        .btn-download .icon { font-size: 1.1em; line-height: 1; pointer-events: none; }
+    </style>
+</head>
+<body>
+
+    <div class="container" role="main" aria-labelledby="confirm-title">
+        <div class="success-icon" aria-hidden="true">✓</div>
+
+        <h1 id="confirm-title">¡Cita Confirmada!</h1>
+        <p class="subtitle" id="subtitleText">
+            Tu cita ha quedado registrada en nuestro sistema de agenda de manera exitosa.
+            Hemos enviado un correo electrónico con los detalles.
+        </p>
+
+        <div id="badgeDual" style="display:none;" class="dual-badge-container">
+            <span class="dual-badge">🎯 Servicio Dual Sincronizado</span>
+            <div id="txtDualInfo" class="dual-info-box"></div>
+        </div>
+
+        <div class="detail-card">
+            <div class="detail-row">
+                <span class="detail-label">Servicio Reservado:</span>
+                <span id="txtServiceTitle" class="detail-value">---</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Fecha:</span>
+                <span id="modalFecha" class="detail-value">---</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Hora de Inicio:</span>
+                <span id="modalHora" class="detail-value">---</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Duración aprox:</span>
+                <span id="modalDuracion" class="detail-value">---</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Precio estimado:</span>
+                <span id="txtPrecio" class="detail-value">---</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Complementos:</span>
+                <span id="modalExtras" class="detail-value">Ninguno</span>
+            </div>
+        </div>
+
+        <div id="commentsBox" class="comments-box" style="display:none;">
+            <div class="comments-label">Comentarios y notas:</div>
+            <div id="commentsText" class="comments-text">---</div>
+        </div>
+
+        <div class="downloader-group">
+            <button class="btn-download" id="btnTicket" type="button" disabled>
+                <span class="icon" aria-hidden="true">💾</span> Guardar Ticket (.TXT)
+            </button>
+            <button class="btn-download" id="btnICS" type="button" disabled>
+                <span class="icon" aria-hidden="true">📅</span> Agenda (.ICS)
+            </button>
+        </div>
+
+        <hr class="divider">
+
+        <div class="button-group">
+            <button id="btnMisReservas" class="btn btn-primary" type="button">
+                Ver mis reservas
+            </button>
+            <button id="btnInicio" class="btn btn-secondary" type="button">
+                Volver al Inicio
+            </button>
+        </div>
+    </div>
+
+    <script>
+    "use strict";
+
+    /* ================================================================
+     * MM_CONFIRMATION_CONTEXT — contrato con Velo ConfirmacionReserva
+     *
+     *   1) HTML envía MM_CONFIRMATION_READY con setInterval (1s) hasta
+     *      recibir MM_CONFIRMATION_CONTEXT o agotar 30s (safety cap).
+     *   2) Velo responde con MM_CONFIRMATION_CONTEXT (payload plano,
+     *      o { error: "..." } si el Velo falla antes de construir payload).
+     *   3) HTML renderiza campos, guarda window.bookingData, HABILITA
+     *      los botones de descarga y DETIENE el handshake.
+     *   4) Botones de navegación envían MM_NAV con target lógico
+     *      ("MIS_RESERVAS" | "HOME"); el Velo traduce a URLS reales.
+     * ================================================================ */
+
+    var MM_CONFIRMATION_READY   = "MM_CONFIRMATION_READY";
+    var MM_CONFIRMATION_CONTEXT = "MM_CONFIRMATION_CONTEXT";
+    var MM_NAV                  = "MM_NAV";
+
+    var HANDSHAKE_INTERVAL_MS = 1000;
+    var HANDSHAKE_MAX_MS      = 30000;
+
+    window.bookingData = null;
+
+    var handshakeTimer = null;
+    var handshakeStopTime = 0;
+    var handshakeAttempt = 0;
+
+    function sendToParent(type, payload) {
+        try {
+            if (window.parent && window.parent !== window) {
+                window.parent.postMessage(
+                    { version: "1.0", type: type, payload: payload || {} },
+                    "*"
+                );
+            }
+        } catch (e) {
+            try { console.warn("[ConfirmacionReserva-HTML] postMessage failed", e); } catch (_) {}
+        }
+    }
+
+    function safeText(v) {
+        return v == null ? "" : String(v).trim();
+    }
+
+    function getQueryParam(name) {
+        try {
+            return new URLSearchParams(window.location.search).get(name);
+        } catch (_) {
+            return null;
+        }
+    }
+
+    /* P2-1: escape de caracteres especiales para iCal (RFC 5545 §3.3.11).
+       Aplica a SUMMARY y DESCRIPTION. LOCATION ya se construye con \\, explícito. */
+    function escapeICalText(text) {
+        return String(text || "")
+            .replace(/\\/g, "\\\\")
+            .replace(/;/g, "\\;")
+            .replace(/,/g, "\\,")
+            .replace(/\r?\n/g, "\\n");
+    }
+
+    /* ----------------------------------------------------------------
+     * Render desde el payload plano del Velo
+     * Acepta { error: "..." } para mostrar fallo si el Velo no pudo
+     * construir el payload (P3-2).
+     * ---------------------------------------------------------------- */
+    function renderConfirmation(payload) {
+        var p = payload && typeof payload === "object" ? payload : {};
+
+        /* P3-2: el Velo puede enviar { error: "..." } si falla antes de
+           construir el payload. Mostramos mensaje y salimos. */
+        if (p.error) {
+            var subtitleEl = document.getElementById("subtitleText");
+            if (subtitleEl) subtitleEl.innerText = p.error;
+            document.getElementById("txtServiceTitle").innerText = "Error";
+            try { console.warn("[ConfirmacionReserva-HTML] Error del Velo:", p.error); } catch (_) {}
+            return;
+        }
+
+        var nested = p.booking && typeof p.booking === "object" ? p.booking : {};
+
+        var bookingIdF1 = safeText(p.bookingIdF1 || nested.bookingIdF1 || nested.bookingId || p.bookingId) || "---";
+        var bookingIdF2 = safeText(p.bookingIdF2 || nested.bookingIdF2 || "");
+        var serviceId = safeText(p.serviceId || nested.serviceId || "---");
+        var tituloServicio = safeText(p.tituloServicio || p.serviceName || nested.tituloServicio || "---");
+
+        var fecha = safeText(p.fecha || nested.fecha || "---");
+        var hora = safeText(p.hora || nested.hora || "---");
+        var horaF2 = safeText(p.horaF2 || nested.horaF2 || "");
+        var duracion = safeText(p.duracion || nested.duracion || "");
+        var extras = safeText(p.extras || nested.extras || p.extrasText || "Ninguno");
+        var appointmentNote = safeText(p.appointmentNote || nested.appointmentNote || p.nota || "");
+
+        var rawPrecio = Number(
+            p.total != null ? p.total :
+            nested.total != null ? nested.total :
+            nested.totalAmount != null ? nested.totalAmount : 0
+        ) || 0;
+
+        var esDual = p.isCombined === true || nested.isCombined === true || Boolean(bookingIdF2);
+        var servicio = safeText(p.serviceName || tituloServicio);
+        var estilistaDisplay = safeText(
+            nested.staffName || nested.resourceName || p.staffName || ""
+        ) || "ASIGNACIÓN AUTOMÁTICA";
+
+        document.getElementById("txtServiceTitle").innerText = tituloServicio;
+        document.getElementById("modalFecha").innerText = fecha;
+        document.getElementById("modalHora").innerText =
+            hora + (horaF2 ? " (Fase 2: " + horaF2 + ")" : "");
+        document.getElementById("modalDuracion").innerText = duracion ? duracion + " min" : "---";
+        document.getElementById("modalExtras").innerText = extras || "Ninguno";
+
+        var txtPrecio = document.getElementById("txtPrecio");
+        txtPrecio.innerText = rawPrecio > 0 ? rawPrecio.toFixed(2) + " €" : "Precio en salón";
+
+        var commentsBox = document.getElementById("commentsBox");
+        var commentsText = document.getElementById("commentsText");
+        if (appointmentNote) {
+            commentsText.innerText = appointmentNote;
+            commentsBox.style.display = "block";
+        } else {
+            commentsBox.style.display = "none";
+        }
+
+        var badgeDual = document.getElementById("badgeDual");
+        var txtDualInfo = document.getElementById("txtDualInfo");
+        if (esDual) {
+            badgeDual.style.display = "block";
+            txtDualInfo.innerHTML =
+                "Este servicio técnico requiere dos bloques de agenda sincronizados:<br><br>" +
+                "• <strong>Fase 1 (Aplicación):</strong> " + hora + "<br>" +
+                "• <strong>Fase 2 (Lavado/Peinado):</strong> " + (horaF2 || "Siguiente bloque") + "<br><br>" +
+                '<span style="font-size:10.5px; display:block;">Durante la exposición intermedia de los productos podrá descansar cómodamente en las instalaciones del salón.</span>';
+        } else {
+            badgeDual.style.display = "none";
+        }
+
+        /* Guardar para los botones de descarga */
+        window.bookingData = {
+            id: bookingIdF1,
+            idF2: bookingIdF2 || null,
+            serviceId: serviceId,
+            tituloServicio: tituloServicio,
+            esDual: esDual,
+            servicio: servicio,
+            precio: rawPrecio,
+            fecha: fecha,
+            hora: hora,
+            horaF2: horaF2,
+            estilistaDisplay: estilistaDisplay,
+            extras: extras,
+            duracion: duracion,
+            appointmentNote: appointmentNote
+        };
+
+        /* Habilitar botones de descarga ahora que los datos están listos */
+        var btnTicket = document.getElementById("btnTicket");
+        var btnICS = document.getElementById("btnICS");
+        if (btnTicket) btnTicket.disabled = false;
+        if (btnICS) btnICS.disabled = false;
+
+        try { console.info("[ConfirmacionReserva-HTML] Payload renderizado", window.bookingData); } catch (_) {}
+    }
+
+    /* ----------------------------------------------------------------
+     * Navegación — targets lógicos (Velo traduce a URLS reales)
+     * ---------------------------------------------------------------- */
+    function navegarA(target) {
+        try { console.info("[ConfirmacionReserva-HTML] NAV target=" + target); } catch (_) {}
+        sendToParent(MM_NAV, { target: target });
+    }
+
+    /* ----------------------------------------------------------------
+     * Descargas
+     * ---------------------------------------------------------------- */
+    function parseHourMinute(hora) {
+        var parts = String(hora || "00:00").split(":");
+        var h = parseInt(parts[0], 10);
+        var m = parseInt(parts[1], 10);
+        if (!Number.isFinite(h)) h = 0;
+        if (!Number.isFinite(m)) m = 0;
+        return { h: h, m: m };
+    }
+
+    function fmtIcalTime(h, m) {
+        return String(h).padStart(2, "0") + String(m).padStart(2, "0") + "00";
+    }
+
+    function descargarTicket() {
+        var d = window.bookingData;
+        if (!d) {
+            try { console.warn("[ConfirmacionReserva-HTML] bookingData no disponible aún"); } catch (_) {}
+            return;
+        }
+
+        var sep = "==================================================\n";
+        var txt = "";
+        txt += sep;
+        txt += "              MARIAN MADRID SALÓN                 \n";
+        txt += "         Peluquería, Estética y Belleza           \n";
+        txt += "             Calle Jorge Juan, Madrid             \n";
+        txt += sep;
+        txt += "            TICKET DE CONFIRMACIÓN DE CITA        \n";
+        txt += sep + "\n";
+        txt += "SERVICIO:        " + d.tituloServicio + "\n";
+        txt += "ID Servicio CMS: " + d.serviceId + "\n";
+        txt += "ID Reserva F1:   " + d.id + "\n";
+        if (d.idF2) txt += "ID Reserva F2:   " + d.idF2 + "\n";
+        txt += "Emisión Ticket:  " + new Date().toLocaleDateString("es-ES") + " " + new Date().toLocaleTimeString("es-ES") + "\n\n";
+        txt += sep;
+        txt += "               DETALLES DEL SERVICIO              \n";
+        txt += sep;
+        txt += "Servicio:        " + d.servicio + "\n";
+        if (d.esDual) {
+            txt += "Modalidad:       Servicio Dual (Sincronizado)\n";
+            txt += "Fase 1:          " + d.fecha + " a las " + d.hora + "\n";
+            txt += "Fase 2:          " + d.fecha + " a las " + (d.horaF2 || "Siguiente bloque") + "\n";
+        } else {
+            txt += "Cita:            " + d.fecha + " a las " + d.hora + "\n";
+        }
+        /* P3-1: no mostrar "ASIGNACIÓN AUTOMÁTICA" como si fuera nombre.
+           Si hay profesional concreto, mostrarlo; si no, indicar asignación. */
+        if (d.estilistaDisplay && d.estilistaDisplay !== "ASIGNACIÓN AUTOMÁTICA") {
+            txt += "Profesional:     " + d.estilistaDisplay + "\n";
+        } else {
+            txt += "Asignación:      Profesional asignado por el salón\n";
+        }
+        txt += "Complementos:    " + d.extras + "\n";
+        if (d.duracion) txt += "Duración:        " + d.duracion + " min\n";
+        if (d.appointmentNote) txt += "Comentarios:     " + d.appointmentNote + "\n";
+        txt += sep;
+        txt += "               INFORMACIÓN DE COBRO               \n";
+        txt += sep;
+        if (d.precio > 0) {
+            var base = d.precio / 1.21;
+            var iva = d.precio - base;
+            txt += "Base Imponible:  " + base.toFixed(2) + " €\n";
+            txt += "I.V.A. (21%):    " + iva.toFixed(2) + " €\n";
+            txt += "Total Estimado:  " + d.precio.toFixed(2) + " €\n";
+        } else {
+            txt += "Precio final calculado según tratamiento en salón\n";
+        }
+        txt += sep + "\n";
+        txt += "               NOTAS IMPORTANTES                  \n";
+        txt += "• Cancelaciones y modificaciones hasta 24h antes.\n";
+        txt += "• Agradecemos que acuda 5 minutos antes de su cita.\n";
+        txt += "• En servicios técnicos duales, el tiempo intermedio\n";
+        txt += "  es estrictamente necesario para el correcto proceso.\n\n";
+        txt += "         ¡Gracias por confiar en Marian Madrid!   \n";
+        txt += sep;
+
+        var blob = new Blob([txt], { type: "text/plain;charset=utf-8" });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement("a");
+        var cleanDate = String(d.fecha).replace(/\//g, "-");
+        a.href = url;
+        a.download = "MarianMadrid_Ticket_" + d.tituloServicio + "_" + cleanDate + ".txt";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        try { console.info("[ConfirmacionReserva-HTML] Ticket .txt descargado"); } catch (_) {}
+    }
+
+    function descargarCalendario() {
+        var d = window.bookingData;
+        if (!d) {
+            try { console.warn("[ConfirmacionReserva-HTML] bookingData no disponible aún"); } catch (_) {}
+            return;
+        }
+
+        /* 1) Parsear fecha — acepta DD/MM/YYYY o YYYY-MM-DD */
+        var rawDate = String(d.fecha || "");
+        var year, month, day;
+        if (rawDate.indexOf("/") >= 0) {
+            var p1 = rawDate.split("/");
+            if (p1.length < 3) return;
+            day   = String(p1[0]).padStart(2, "0");
+            month = String(p1[1]).padStart(2, "0");
+            year  = String(p1[2]);
+        } else if (rawDate.indexOf("-") >= 0) {
+            var p2 = rawDate.split("-");
+            if (p2.length < 3) return;
+            year  = String(p2[0]);
+            month = String(p2[1]).padStart(2, "0");
+            day   = String(p2[2]).padStart(2, "0");
+        } else {
+            try { console.warn("[ConfirmacionReserva-HTML] fecha no parseable:", rawDate); } catch (_) {}
+            return;
+        }
+
+        /* 2) Parsear hora (HH:MM o HH:MM:SS) — sin bug de medianoche */
+        var start = parseHourMinute(d.hora);
+        var durationMin = parseInt(String(d.duracion), 10);
+        if (!Number.isFinite(durationMin) || durationMin <= 0) durationMin = 60;
+
+        /* 3) Calcular fin con rollover de día */
+        var startTotal = start.h * 60 + start.m;
+        var endTotal = startTotal + durationMin;
+        var dayRollover = Math.floor(endTotal / (24 * 60));
+        var endMinutesInDay = endTotal % (24 * 60);
+        var endH = Math.floor(endMinutesInDay / 60);
+        var endM = endMinutesInDay % 60;
+
+        var endDay = day, endMonth = month, endYear = year;
+        if (dayRollover > 0) {
+            var dt = new Date(Date.UTC(parseInt(year, 10), parseInt(month, 10) - 1, parseInt(day, 10) + dayRollover));
+            endYear  = String(dt.getUTCFullYear());
+            endMonth = String(dt.getUTCMonth() + 1).padStart(2, "0");
+            endDay   = String(dt.getUTCDate()).padStart(2, "0");
+        }
+
+        var startStamp = year + month + day + "T" + fmtIcalTime(start.h, start.m);
+        var endStamp   = endYear + endMonth + endDay + "T" + fmtIcalTime(endH, endM);
+
+        /* 4) Construir líneas con saltos REALES (\n en JS) y dejar que
+              escapeICalText convierta a escape iCal (\n literal). */
+        var summaryLines = ["Marian Madrid — " + d.tituloServicio];
+
+        var descriptionLines = [
+            "Cita: " + d.servicio + " (" + d.estilistaDisplay + "). Servicio ID: " +
+                d.tituloServicio + " (F1: " + d.id + ")" +
+                (d.esDual ? " F2: " + (d.idF2 || "siguiente") : ""),
+            "Complementos: " + d.extras
+        ];
+        if (d.duracion) descriptionLines.push("Duración: " + d.duracion + " min");
+        if (d.appointmentNote) descriptionLines.push("Comentarios: " + d.appointmentNote);
+
+        var summary = escapeICalText(summaryLines.join("\n"));
+        var description = escapeICalText(descriptionLines.join("\n"));
+
+        /* P2-2: LOCATION también pasa por escape (comas + potenciales
+           caracteres especiales si cambia la dirección). */
+        var location = escapeICalText("Calle Jorge Juan, Peluquería Marian Madrid, Madrid");
+
+        var icsMsg =
+            "BEGIN:VCALENDAR\n" +
+            "VERSION:2.0\n" +
+            "PRODID:-//Marian Madrid//Booking Calendar//ES\n" +
+            "BEGIN:VEVENT\n" +
+            "UID:" + d.id + "@marianmadrid.es\n" +
+            "DTSTAMP:" + startStamp + "\n" +
+            "DTSTART:" + startStamp + "\n" +
+            "DTEND:" + endStamp + "\n" +
+            "SUMMARY:" + summary + "\n" +
+            "DESCRIPTION:" + description + "\n" +
+            "LOCATION:" + location + "\n" +
+            "END:VEVENT\n" +
+            "END:VCALENDAR";
+
+        var blob = new Blob([icsMsg], { type: "text/calendar;charset=utf-8" });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement("a");
+        a.href = url;
+        a.download = "MarianMadrid_" + d.tituloServicio + "_" + year + month + day + ".ics";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        try { console.info("[ConfirmacionReserva-HTML] Agenda .ics descargada"); } catch (_) {}
+    }
+
+    /* ----------------------------------------------------------------
+     * Handshake P2-1: setInterval(1s) hasta recibir CONTEXT o agotar 30s
+     * ---------------------------------------------------------------- */
+    function sendReady(attempt) {
+        try { console.info("[ConfirmacionReserva-HTML] READY attempt=" + attempt); } catch (_) {}
+        sendToParent(MM_CONFIRMATION_READY, { attempt: attempt || 1 });
+    }
+
+    function startHandshake() {
+        handshakeAttempt = 1;
+        sendReady(handshakeAttempt);
+        handshakeStopTime = Date.now() + HANDSHAKE_MAX_MS;
+        handshakeTimer = setInterval(function () {
+            if (Date.now() > handshakeStopTime) {
+                stopHandshake();
+                try { console.warn("[ConfirmacionReserva-HTML] handshake timeout 30s"); } catch (_) {}
+                return;
+            }
+            handshakeAttempt += 1;
+            sendReady(handshakeAttempt);
+        }, HANDSHAKE_INTERVAL_MS);
+    }
+
+    function stopHandshake() {
+        if (handshakeTimer) {
+            clearInterval(handshakeTimer);
+            handshakeTimer = null;
+        }
+    }
+
+    /* ----------------------------------------------------------------
+     * Listener de mensajes del Velo
+     * ---------------------------------------------------------------- */
+    window.addEventListener("message", function (event) {
+        var msg = event && event.data;
+        if (!msg || typeof msg !== "object") return;
+        if (msg.type === MM_CONFIRMATION_CONTEXT) {
+            /* P2-1: paramos el handshake en cuanto llega el payload
+               (éxito o error), ya no hace falta seguir reintentando. */
+            stopHandshake();
+            renderConfirmation(msg.payload);
+        }
+    });
+
+    /* ----------------------------------------------------------------
+     * Init
+     * ---------------------------------------------------------------- */
+    function init() {
+        try { console.info("[ConfirmacionReserva-HTML] init"); } catch (_) {}
+
+        /* P3-3: el fallback de query params SOLO se activa con un flag
+           explícito para evitar falsos positivos si el sitio añade
+           ?tituloServicio=... por tracking/marketing. */
+        if (getQueryParam("__debug_standalone") === "1") {
+            renderConfirmation({
+                bookingIdF1: getQueryParam("bookingIdF1"),
+                bookingIdF2: getQueryParam("bookingIdF2"),
+                serviceId: getQueryParam("serviceId"),
+                tituloServicio: getQueryParam("tituloServicio"),
+                fecha: getQueryParam("fecha"),
+                hora: getQueryParam("hora"),
+                horaF2: getQueryParam("horaF2"),
+                duracion: getQueryParam("duracion"),
+                extras: getQueryParam("extras"),
+                total: getQueryParam("precio"),
+                appointmentNote: getQueryParam("appointmentNote"),
+                isCombined: getQueryParam("esDual") === "true"
+            });
+            return; /* No hace falta handshake en modo debug */
+        }
+
+        /* Listeners de botones */
+        var btnTicket = document.getElementById("btnTicket");
+        var btnICS = document.getElementById("btnICS");
+        var btnMis = document.getElementById("btnMisReservas");
+        var btnInicio = document.getElementById("btnInicio");
+
+        if (btnTicket) btnTicket.addEventListener("click", descargarTicket);
+        if (btnICS) btnICS.addEventListener("click", descargarCalendario);
+        if (btnMis) btnMis.addEventListener("click", function () { navegarA("MIS_RESERVAS"); });
+        if (btnInicio) btnInicio.addEventListener("click", function () { navegarA("HOME"); });
+
+        startHandshake();
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", init, { once: true });
+    } else {
+        init();
+    }
+    </script>
+</body>
+</html>
