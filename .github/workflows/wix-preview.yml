@@ -84,7 +84,7 @@ jobs:
             exit "${PREVIEW_EXIT}"
           fi
 
-          PREVIEW_URL="$(grep -Eo 'https?://wix\\.to/[[:alnum:]]+' wix-preview.log | tail -n 1 || true)"
+          PREVIEW_URL="$(grep -Eo 'https?://wix\.to/[[:alnum:]]+' wix-preview.log | tail -n 1 || true)"
           if [ -z "${PREVIEW_URL}" ]; then
             echo "::error::Wix CLI completed without a verifiable wix.to preview URL."
             exit 1
