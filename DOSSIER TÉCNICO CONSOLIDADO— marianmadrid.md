@@ -4591,3 +4591,54 @@ El tamaño documentado (16 caracteres hexadecimales) coincide con el helper actu
 5. Actualizar las tablas históricas de §G solo a partir de una nueva exportación CMS de solo lectura; no inferir campos, obligatoriedad ni índices de la revisión.
 
 **Criterio de cierre:** cada divergencia queda resuelta por decisión aprobada y evidencia de esquema/código/tests/QA, o permanece marcada como pendiente. Esta consolidación no declara el CMS ni el runtime validados en vivo.
+
+## 34. VALIDACIÓN LAYER 1 — CORTE 2026-11-04
+
+**Alcance:** comprobaciones selectivas de CI y lecturas Wix de solo lectura para los servicios SIMPLE identificados en CitasF2. No se crearon, cancelaron ni reprogramaron reservas. No se modificaron colecciones CMS, permisos, servicios, horarios, pagos ni publicación.
+
+### 34.1 Quality gates y regresión offline
+
+- PR #93 corrigió el workflow Wix Preview para ejecutar Wix CLI for Sites con pseudo-terminal y exigir una URL real `http(s)://wix.to/...`; la condición anterior podía dar SUCCESS tras un crash `NonInteractiveTerminal`.
+- Merge PR #93: `cd5fa248a34963e1d578b5dcfbc6b71e9a0eebd6`.
+- CI #779 en el merge de PR #93: 4/4 jobs SUCCESS.
+- PR #94 añade una regresión de replay de `BOOKING_CANCELED`: aunque el marcador del evento exista, una fila CitasF2 obsoleta debe reconciliarse. CI de PR #94: 4/4 jobs SUCCESS; suite offline: 34 suites, 311 tests, 0 fallos.
+- La suite Layer 1 y Layer 2 terminó correctamente en Windows Node.js 24.22.1 y 26.12.1.
+- Merge PR #94: `54d31326da1c83f656e7e27b0b8d50005d04df67`.
+
+### 34.2 Wix Bookings: servicios SIMPLE y disponibilidad
+
+Lecturas REST de Bookings V2 y Service Availability V2, zona `Europe/Madrid`:
+
+- `Corte Clásico`: servicio APPOINTMENT visible y habilitado para reserva online, duración 30 minutos, con tres profesionales asociados. La consulta de slots para la ventana solicitada devolvió 1.000 slots; todos los devueltos estaban marcados como reservables y sin violaciones de política.
+- `Barba Perfecta: Arreglo y Perfilado`: servicio APPOINTMENT visible y habilitado para reserva online, duración 20 minutos, con los mismos tres profesionales asociados. La consulta de slots devolvió 1.000 slots; todos los devueltos estaban marcados como reservables y sin violaciones de política.
+- En ambos servicios, los primeros slots devueltos comenzaban el 2026-11-05 a las 09:00 hora local y mostraban disponibilidad para los tres recursos.
+
+**Límite:** el recuento de 1.000 es el número devuelto por cada consulta, no una afirmación de que el total de slots del periodo sea exactamente 1.000. Esta lectura valida configuración y disponibilidad API, no el recorrido visual completo del widget ni el envío de una reserva.
+
+### 34.3 Reconciliación read-only de filas SIMPLE
+
+La consulta de CitasF2 devolvió dos filas `bookingType=SIMPLE`. Al contrastar sus `bookingId` con Wix Bookings V2:
+
+- Ambas filas CMS figuraban `bookingStatus=CONFIRMED`, mientras Bookings devolvía `status=CANCELED`.
+- En una fila, `paymentStatus` coincidía como `NOT_PAID`; en la otra, CMS indicaba `NOT_PAID` y Bookings `UNDEFINED`.
+- En una fila, fecha/hora CMS y Bookings coincidían. En la otra, el intervalo CMS era 09:00–09:20 UTC y el de Bookings 07:30–07:50 UTC: diferencia de 90 minutos.
+- Las dos reservas nativas consultadas eran históricas y estaban canceladas; no se deduce de ello un fallo de disponibilidad futura.
+
+La discrepancia de estado no debe corregirse manualmente. El handler Velo `wixBookingsV2_onBookingCanceled` es el nombre oficial vigente del evento Bookings V2 y está presente en `events.js`. El handler pasa el estado Wix `CANCELED` por `_toCmsBookingStatus()`, que lo convierte al enum CMS `CITAS_BOOKING_STATUS.CANCELLED` cuando ese valor está disponible. Esto mantiene abierta la divergencia ya documentada entre CMS KEYFIELDS (`CANCELED`) y el enum backend (`CANCELLED`); no cambiar grafía ni datos sin ADR.
+
+La lectura de `ControlOperativo` devolvió cuatro registros (tres ALERT y uno RATE_LIMIT), sin marcadores `WEBHOOK_EVENT` visibles en ese corte. El TTL de esos marcadores es limitado; por tanto, su ausencia actual no demuestra que el webhook nunca se ejecutara.
+
+### 34.4 Wix Preview: estado de validación
+
+- El artefacto del Preview anterior #54 contiene un crash `NonInteractiveTerminal`; no se considera una validación válida aunque el workflow antiguo lo marcara SUCCESS.
+- PR #93 sustituyó la detección genérica por una ejecución TTY y validación explícita de URL `wix.to`.
+- La ejecución posterior #55 (`41869970475`) quedó lanzada tras el merge de PR #93. Su resultado y URL deben registrarse únicamente cuando el job termine y el artefacto confirme una URL válida.
+- Wix documenta que los backend events no se disparan en Preview; el Preview sirve para comprobar el frontend, no para certificar webhooks.
+
+### 34.5 Estado de cierre de Layer 1
+
+**Validado:** CI offline, clean install/lint, regresiones Windows Node 24/26, replay offline de cancelación, lectura de configuración de los dos servicios SIMPLE y disponibilidad API de los slots consultados.
+
+**Pendiente:** reconciliar las dos filas históricas sin alterar datos por inferencia; validar visualmente el flujo de calendario/widget y la respuesta de WebMethod en un entorno QA autorizado; ejecutar una reserva SIMPLE de extremo a extremo solo en un sitio de pruebas o con autorización explícita para crear y cancelar una reserva de prueba. El Preview #55 sigue pendiente de resultado en este corte.
+
+**Restricción:** no crear ni cancelar reservas reales, no actualizar CitasF2 manualmente y no cambiar la política de estados mientras siga abierto el ADR CMS/backend.
