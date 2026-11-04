@@ -25,6 +25,7 @@ jobs:
     if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 20
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -46,20 +47,55 @@ jobs:
       - name: Authenticate Wix CLI
         env:
           CLI_API_KEY: ${{ secrets.CLI_API_KEY }}
+        shell: bash
         run: |
           if [ -z "${CLI_API_KEY}" ]; then
             echo "::error::Missing repository secret CLI_API_KEY."
             exit 1
           fi
+
           wix login --api-key "${CLI_API_KEY}"
 
-      - name: Create Wix preview from latest main (never publish)
+      - name: Create Wix preview
         env:
-          CI: "true"
-          TERM: "xterm"
+          TERM: xterm
+        shell: bash
         run: |
-          set -o pipefail
-          printf '\n' | script -q -e -c "wix preview" /dev/null 2>&1 | tee wix-preview.log
+          set -uo pipefail
+          : > wix-preview.log
+
+          if ! command -v script >/dev/null 2>&1; then
+            echo "::error::util-linux script command is required to provide a TTY to Wix CLI."
+            exit 1
+          fi
+
+          # Run once in a pseudo-terminal. Do not send a guessed response
+          # to an interactive prompt; the timeout prevents an indefinite hang.
+          set +e
+          timeout --signal=TERM --kill-after=30s 15m \
+            script -q -e -c 'env -u CI wix preview' wix-preview.log
+          PREVIEW_EXIT=$?
+          set -e
+
+          cat wix-preview.log || true
+
+          if [ "${PREVIEW_EXIT}" -ne 0 ]; then
+            if [ "${PREVIEW_EXIT}" -eq 124 ] || [ "${PREVIEW_EXIT}" -eq 137 ]; then
+              echo "::error::Wix CLI did not finish within 15 minutes. Check wix-preview.log for an interactive prompt or other stalled operation."
+            else
+              echo "::error::Wix CLI exited with status ${PREVIEW_EXIT}."
+            fi
+            exit "${PREVIEW_EXIT}"
+          fi
+
+          PREVIEW_URL="$(grep -Eo 'https?://wix\.to/[[:alnum:]]+' wix-preview.log | tail -n 1 || true)"
+          if [ -z "${PREVIEW_URL}" ]; then
+            echo "::error::Wix CLI finished without a verifiable wix.to preview URL."
+            exit 1
+          fi
+
+          echo "url=${PREVIEW_URL}" >> "${GITHUB_OUTPUT}"
+          echo "Wix Preview created: ${PREVIEW_URL}" >> "${GITHUB_STEP_SUMMARY}"
 
       - name: Preserve preview output
         if: always()
@@ -67,5 +103,4 @@ jobs:
         with:
           name: wix-preview-log-${{ github.run_id }}
           if-no-files-found: warn
-          path: |
-            wix-preview.log
+          path: wix-preview.log
