@@ -1456,11 +1456,11 @@ export async function executeBookingSaga(unsafePayload) {
                  * miembro cuando contactDetails.memberId esta presente. */
                 if (sessionMemberId) contactDetails.memberId = sessionMemberId;
 
-                const bookingOptions = Object.freeze({
-                    flowControlSettings: Object.freeze({
-                        skipAvailabilityValidation: SKIP_AVAILABILITY_VALIDATION,
-                    }),
-                });
+                const bookingOptions = {
+                    flowControlSettings: {
+                    skipAvailabilityValidation: SKIP_AVAILABILITY_VALIDATION,
+                      },
+                };
 
                 const bookedAddOns = _buildBookedAddOns(detectedAddonIds);
 
@@ -1557,12 +1557,12 @@ export async function executeBookingSaga(unsafePayload) {
                         totalParticipants: 1,
                     };
                     if (appointmentNote) bookingBodyF2.internalBusinessNote = appointmentNote;
-                    const f2Options = Object.freeze({
-                        flowControlSettings: Object.freeze({
-                            skipAvailabilityValidation: SKIP_AVAILABILITY_VALIDATION,
-                            skipSelectedPaymentOptionValidation: true,
-                        }),
-                    });
+                    const f2Options = {
+                        flowControlSettings: {
+                        skipAvailabilityValidation: SKIP_AVAILABILITY_VALIDATION,
+                        skipSelectedPaymentOptionValidation: true,
+                        },
+                    };
 
                     let resF2;
                     try {
