@@ -29,7 +29,7 @@ concurrency:
 
 jobs:
   preview:
-    name: Build Wix preview from main
+    name: Build Wix preview
     if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -37,8 +37,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.ref_name }}
 
       - name: Set up supported Node.js
         uses: actions/setup-node@v4
