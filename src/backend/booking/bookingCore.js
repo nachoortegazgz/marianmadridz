@@ -615,18 +615,22 @@ const CONFIGURED_LOCATION_ID = _safeTrim(SDK_CONFIG && SDK_CONFIG.LOCATION_ID);
 export function _resolveWriteLocation(slotLocation, serviceConfig) {
     const incoming = _safeTrim(slotLocation && slotLocation._id);
     const fromCms = _safeTrim(serviceConfig && serviceConfig.locationId);
+    // NOTA: NO usar Object.freeze. El SDK de Wix Bookings V2 muta
+    // este objeto al normalizar el payload (renombra _id → id internamente).
+    // Congelarlo produce "Cannot add property id, object is not extensible"
+    // dentro de createBooking.
     if (incoming) {
         return _looksLikeGuid(incoming)
-            ? Object.freeze({ _id: incoming, locationType: "OWNER_BUSINESS" })
+            ? { _id: incoming, locationType: "OWNER_BUSINESS" }
             : null;
     }
     if (fromCms) {
         return _looksLikeGuid(fromCms)
-            ? Object.freeze({ _id: fromCms, locationType: "OWNER_BUSINESS" })
+            ? { _id: fromCms, locationType: "OWNER_BUSINESS" }
             : null;
     }
     return _looksLikeGuid(CONFIGURED_LOCATION_ID)
-        ? Object.freeze({ _id: CONFIGURED_LOCATION_ID, locationType: "OWNER_BUSINESS" })
+        ? { _id: CONFIGURED_LOCATION_ID, locationType: "OWNER_BUSINESS" }
         : null;
 }
 
