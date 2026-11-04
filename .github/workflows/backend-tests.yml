@@ -5,12 +5,16 @@ on:
   push:
     branches:
       - main
-      - "chore/**"
-      - "fix/**"
-      - "feat/**"
 
 permissions:
   contents: read
+
+# PR runs supersede older commits from the same PR/branch, but unrelated work
+# continues. Feature branches are validated by pull_request to avoid duplicate
+# push + pull_request runs.
+concurrency:
+  group: backend-quality-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   backend-offline-tests:
@@ -20,12 +24,19 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        timeout-minutes: 2
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "24"
-      - name: Run offline backend regression tests
+          cache: npm
+        timeout-minutes: 3
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+        timeout-minutes: 5
+      - name: Run complete offline backend regression suite
         run: npm test
+        timeout-minutes: 10
 
   clean-install-and-lint:
     name: Clean dependency install and lint
@@ -34,16 +45,23 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        timeout-minutes: 2
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "24"
-      - name: Install declared dependencies without lifecycle scripts
-        run: npm install --ignore-scripts --no-audit --no-fund
+          cache: npm
+        timeout-minutes: 3
+      - name: Install locked dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts --no-audit --no-fund
+        timeout-minutes: 5
       - name: Verify installed Wix Cart V2 SDK exports
         run: npm run verify:wix-ecom-cart-v2
+        timeout-minutes: 3
       - name: Run ESLint
         run: npm run lint
+        timeout-minutes: 5
+
   windows-node-compatibility:
     name: Windows Node.js ${{ matrix.node-version }} regression
     runs-on: windows-latest
@@ -55,19 +73,22 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        timeout-minutes: 2
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-      - name: Install declared dependencies without lifecycle scripts
-        run: npm install --ignore-scripts --no-audit --no-fund
+          cache: npm
+        timeout-minutes: 3
+      - name: Install locked dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts --no-audit --no-fund
+        timeout-minutes: 7
       - name: Verify installed Wix Cart V2 SDK exports
         run: npm run verify:wix-ecom-cart-v2
+        timeout-minutes: 3
       - name: Run complete backend regression suite
         run: npm test
-      - name: Run layer 1 regression suite
-        run: npm run test:layer1
-      - name: Run layer 2 regression suite
-        run: npm run test:layer2
+        timeout-minutes: 12
       - name: Run ESLint
         run: npm run lint
+        timeout-minutes: 5
