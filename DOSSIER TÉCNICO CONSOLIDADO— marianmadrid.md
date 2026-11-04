@@ -83,7 +83,7 @@ La necesidad principal es gestionar el negocio desde Wix y cubrir las carencias 
 | Wix Site ID | `188bed94-177c-4bc9-a9f0-35080d874f3e` |
 | Wix Location ID | `7a12abfd-bf30-4847-bcdf-00dc573d4802` |
 | Staff Resource Type ID | `1cd44cf8-756f-41c3-bd90-3e2ffcaf1155` |
-| Dominio | `https://www.marianmadrid.es` |
+| Dominio QA | `https://www.marianmadrid.es` |
 | Zona horaria | `Europe/Madrid` |
 | Moneda / idioma | `EUR` / `es-ES` |
 | Repositorio | `nachoortegazgz/marianmadridz`, rama principal `main` |
