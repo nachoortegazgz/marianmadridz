@@ -28,10 +28,9 @@ Se aplican en **orden estricto**. Si dos entran en conflicto, prevalece el de me
 3. **Mínimo código para alcanzar objetivos cumpliendo directrices 1 y 2** — lógica en `webMethods`; constantes en `internalConfig.js`; validaciones en `validation.js`; hooks en `data.js`.
 4. **Cumplimiento normativo 100 %** — fiscal, contable, laboral, privacidad, consumo.
 
-
 ---
 
-## R0 — Ingeniero Integral SSOT  
+## R0 — Ingeniero Integral SSOT
 ### Rol único multiexperto: Arquitectura, Auditoría, Implementación, Fiscal-legal, Documentación, Revisión adversarial y Orquestación
 
 | Campo | Definición consolidada |
@@ -106,25 +105,25 @@ Se aplican en **orden estricto**. Si dos entran en conflicto, prevalece el de me
 
 ### Reglas de decisión de R0
 
-1. **Precedencia estricta:**  
+1. **Precedencia estricta:**
    APIs/SDK oficiales Wix → CMS vivo → SSOT vigente → auditoría/CI/repo → hoja de necesidades.
 
-2. **Honestidad epistémica:**  
+2. **Honestidad epistémica:**
    Etiquetar `[HECHO]`, `[DECLARADO]`, `[INFERENCIA]`, `[SUPOSICIÓN]`, `[PENDIENTE]` cuando aplique.
 
-3. **Preguntas antes de asumir:**  
+3. **Preguntas antes de asumir:**
    Si la ambigüedad afecta a contrato, cifra, alcance o normativa, preguntar antes. Máximo 3 preguntas concretas.
 
-4. **Escalado obligatorio:**  
+4. **Escalado obligatorio:**
    Interpretación normativa dudosa, cambio irreversible, modificación de ledger, publicación, gasto/licencia o datos personales.
 
-5. **Mínimo código:**  
+5. **Mínimo código:**
    Solo lo que el negocio exige hoy; prohibido lo especulativo.
 
-6. **Fiabilidad:**  
+6. **Fiabilidad:**
    Ledgers inmutables, rollback conocido, nada cerrado sin pruebas.
 
-7. **Trazabilidad:**  
+7. **Trazabilidad:**
    Toda salida debe poder verificarse contra fuente, commit, run, consulta, ADR o evidencia QA.
 
 ---
@@ -146,11 +145,11 @@ Se aplican en **orden estricto**. Si dos entran en conflicto, prevalece el de me
 
 ---
 
-[PENDIENTE]  
+[PENDIENTE]
 - Confirmar si R0 se usará solo como síntesis puntual o como sustituto permanente del catálogo R1–R7.
 
-[VERIFICACIÓN]  
-- La consolidación se basa exclusivamente en la tabla de roles proporcionada.  
+[VERIFICACIÓN]
+- La consolidación se basa exclusivamente en la tabla de roles proporcionada.
 - No se han inventado misiones, salidas ni criterios de rechazo; se han fusionado los siete roles en una única estructura.
 
 [ADR-REQUERIDO] Sí, si R0 sustituye de forma permanente al catálogo R1–R7 como modelo de gobernanza. No, si se usa únicamente como resumen operativo puntual.
@@ -262,7 +261,7 @@ El modo se declara en la cabecera si no es ESTÁNDAR por defecto.
 
 ### 6.1 Protocolo de honestidad (antes de enviar)
 
-El modelo se auto-audita comprobando que la fiabilidad y veracidad comprobada contra fuentes aceptadas. cero inventar. cero falsos positivos. si duda pregunta al usuario. 
+El modelo se auto-audita comprobando que la fiabilidad y veracidad comprobada contra fuentes aceptadas. cero inventar. cero falsos positivos. si duda pregunta al usuario.
 
 ### 6.2 Protocolo de métricas
 
@@ -343,7 +342,6 @@ Una respuesta es aceptable solo si cumple **los 6**:
 ---
 
 **Vigencia:** estas directrices rigen toda interacción con el proyecto. Cualquier excepción debe justificarse en la propia respuesta y, si es estructural, canalizarse vía **ADR**. El modelo que no pueda cumplirlas debe **declararlo** antes de responder, no simular cumplimiento.
-
 
 **[ROL]** R1 — Arquitecto SSOT / R3 — Implementador Velo/SDK (multi-rol declarado)
 **[ALCANCE]** Bloque técnico de integración Wix ↔ GitHub, CLI for Sites, autenticación, MCP, Skills, depuración y refactorización. **No** cubre la lógica de negocio del proyecto (reservas, fiscalidad), que se rige por la SSOT y el dossier.
@@ -798,86 +796,7 @@ I.8  Criterios de aceptación (8)
 
 ---
 
-## J. ANEXO TÉCNICO MCP/CLI/DIAGNÓSTICO/IA *(incorporado al final)*
-
-**Propósito:** cubrir lagunas del dossier sobre MCP, CLI, diagnóstico en tiempo real y flujos con agentes IA. **Estado dominante:** `[HECHO]` por docs oficiales; `[PENDIENTE]` datos del entorno.
-**Aplicabilidad:** al configurar agentes IA (Claude Code, Cursor) o depurar en tiempo real.
-
-```
-J.1  Wix MCP — configuración y capacidades (fuente canónica)
-     ├─ J.1.1 Requisito de entorno
-     ├─ J.1.2 Configuraciones de conexión
-     ├─ J.1.3 Autenticación MCP (separada de autenticación CLI §B.3)
-     ├─ J.1.4 Herramientas expuestas
-     └─ J.1.5 Wix Site MCP (`/_api/mcp`) y WebMCP
-
-J.2  CLI for Sites — catálogo operativo canónico
-     ├─ J.2.1 Comandos y flags aplicables a este sitio
-     ├─ J.2.2 Workflow GitHub Actions activo de Preview (sin publicación)
-     └─ Restricciones de publicación y referencia a CLI unified (no aplicable)
-
-J.3  Diagnóstico en tiempo real — Plugin `@wix/wix-code-diagnostics-plugin`
-     ├─ Funcionamiento (HTTP + WebSocket local en ws://127.0.0.1:52415/runtime-errors)
-     ├─ Variables de entorno requeridas (WIX_CODE_DIAGNOSTICS_ENDPOINT, WIX_CODE_DIAGNOSTICS_TOKEN)
-     └─ Registro en wix.config.mjs
-     [REF: §B.7.1 mención inicial del plugin]
-
-J.4  Flujo de trabajo recomendado con agentes IA
-     ├─ J.4.1 Dos vías (MCP vs Git+CLI)
-     ├─ J.4.2 Regla de seguridad para agentes (no publicar, no mutar ledgers, no confiar en "Published")
-     └─ J.4.3 Wix Skills y Wix Plugin + Headless AI Toolkit
-
-J.5  Enlaces oficiales de consulta (11 URLs)
-     └─ Wix MCP overview/config/repo, Wix Site MCP, CLI commands/reference, GitHub Actions, Diagnostics npm, AI Assistants, Wix Skills, Headless AI Toolkit, API Keys Manager
-
-J.6  Posibles datos faltantes en el dossier (7 filas)
-     └─ Versión @wix/cli, velo.dependencies.json, wix.config.mjs, WIX_CODE_DIAGNOSTICS_*, wix.lock, Node CI, política MCP
-
-[REF: §B.5, §B.6, §B.7, §B.8 — el anexo J amplía cada uno]
-```
-
----
-
----
-
-## L. ESTADO GLOBAL DEL DOCUMENTO
-
-| Bloque | Estado | Completitud | ADR pendientes |
-|---|---|---|---|
-| A. Gobernanza IA | `[HECHO]` | 100 % | — |
-| B. Integración Wix↔GitHub | `[DECLARADO]` | 90 % (ampliado por J) | ADR política MCP |
-| C. Resumen por capas | `[HECHO]`/`[DECLARADO]` | 100 % | ADR-003 (Capa 3) |
-| D. Fundamentos | `[HECHO]` | 100 % | — |
-| E. Docs Wix Apps | `[HECHO]` | 100 % | — |
-| F. CMS y arquitectura | `[HECHO]`/`[DECLARADO]` | 95 % | ADR-001, ADR-002, ADR MapaStaff, ADR status |
-| G. Esquema 13 colecciones | `[HECHO]` | 100 % | — |
-| H. Realidad física | mixto | 85 % (6 lagunas) | ADR-003 |
-| I. Capa 3 SharePoint | `[HECHO]`/`[DECLARADO]` | 90 % | ADR-003 |
-| J. Anexo MCP/CLI/IA | `[HECHO]` | 100 % | ADR política MCP |
-| M. Auditoría live de ajustes Wix y apps | `[HECHO]` snapshot 2026-11-01 | Auditoría API de solo lectura completa; revisión manual de panel pendiente | Reconciliación Bookings, pagos, formularios y automatizaciones |
-
-**Discrepancias abiertas:** recuento histórico no recalculado; consultar §K, §F.23 y estados `[PENDIENTE]` por apartado.
-**Lagunas de datos:** 13 (6 en §H.7 + 7 en §J.6).
-**ADRs pendientes:** 6 (ADR-001 Catalog, ADR-002 Bookings SDK/REST, ADR-003 Capa 3, ADR MapaStaff, ADR status ServiciosCatalogo, ADR política MCP).
-
----
-
-**[PENDIENTE]**
-- Duplicidades documentales: §K funciona como índice de fuentes canónicas y remisiones; no sustituye el contenido técnico de las secciones fuente.
-- Orden de prioridades del Anexo Resumen Ejecutivo alineado con §A.1.
-- URL canónica del repositorio: `https://github.com/nachoortegazgz/marianmadridz`.
-- Resolver discrepancia 182 vs 158 tests.
-- Aprobar los 6 ADRs pendientes antes de avanzar en producción.
-
-**[VERIFICACIÓN]**
-- Los contenidos se mantienen en sus fuentes canónicas indicadas en §K. CI/Preview y CLI: §J.2; MCP: §J.1; criptografía: §G.11.3; secretos: §G.11.3 y §F.21.6; matriz personal: §F.22.1; App IDs: §F.22.2; identificadores transversales: §F.7.3; contrato Bookings SDK/REST: §F.16. El anexo J conserva únicamente información singular y remisiones.
-
-**[ADR-REQUERIDO]** Sí, para consolidar el mapa como **índice oficial del proyecto** y para los 6 ADRs listados en §L.
-
-
-
----
-
+<!-- El detalle operativo canónico de MCP/CLI/diagnóstico está en «ANEXO J»; el estado vigente y el plan de continuidad, en §32. -->
 
 ## 1. Ecosistema de herramientas: dos CLIs distintos (no confundir)
 
@@ -944,7 +863,6 @@ Para **GitHub Actions** u otros entornos no interactivos:
    ```bash
    wix login --api-key "${CLI_API_KEY}"
    ```
-   
 
 > Para MCP con autenticación por API key se usa el header `Authorization: <API KEY>` + `wix-account-id: <ACCOUNT ID>`.
 
@@ -1052,7 +970,6 @@ Fijar la **doctrina única** que gobierna toda acción y decisión del proyecto 
 ---
 
 ## 1. Directrices generales (doctrina inviolable)
-
 
 ### 1.2 Mapeo de "profesional" y "100 % buenas prácticas"
 
@@ -1283,18 +1200,18 @@ El orden de este anexo reproduce exactamente el orden vinculante de §A.1 y §C.
 
 ### Checklist a cumplir
 
-| Dimensión |  
+| Dimensión |
 | --- |
-| Reservas simples online | 
-| Reservas duales F1+F2 con gap de tiempo| 
-| Ledger fiscal Veri\*Factu (CMS + hooks) | 
-| Cierre Z automatizado (cron 01:20 AM) | 
-| Fichajes laborales RD 8/2019 | 
-| Tests Vitest — CI #87: 4/4 jobs SUCCESS; el recuento actual de tests no está publicado ni verificado en los logs disponibles | 
-| Migración SDK v2 `@wix/data` | 
-| Módulo contabilidad (`LibroAsientosContablesDetalle`) | 
-| Veri\*Factu certificado AEAT | 
-| Migración eCommerce Cart V2 | 
+| Reservas simples online |
+| Reservas duales F1+F2 con gap de tiempo|
+| Ledger fiscal Veri\*Factu (CMS + hooks) |
+| Cierre Z automatizado (cron 01:20 AM) |
+| Fichajes laborales RD 8/2019 |
+| Tests Vitest — CI #87: 4/4 jobs SUCCESS; el recuento actual de tests no está publicado ni verificado en los logs disponibles |
+| Migración SDK v2 `@wix/data` |
+| Módulo contabilidad (`LibroAsientosContablesDetalle`) |
+| Veri\*Factu certificado AEAT |
+| Migración eCommerce Cart V2 |
 
 ## 1. Ficha Técnica Canónica
 
@@ -1474,7 +1391,6 @@ La matriz única de profesionales (nombre, `resourceId`, `rolBookings` y `rolWeb
 ### 4.3 Identificadores transversales del sistema
 
 La tabla canónica de `traceId`, `pairToken`, `dedupeKey`, `movementToken`, `transactionId`, `bookingId`, `eventId`, `sequenceNumber` y `numSerieFactura` está en §7.3. No duplicar la tabla aquí.
-
 
 # Recopilación estructurada de documentación oficial — Wix Apps y APIs (versiones recomendadas)
 
@@ -1805,7 +1721,6 @@ export const getPublicCatalog = webMethod(
 13. **Publicar sin QA real en Preview** (el estado “Published” no demuestra el commit auditado).
 14. **No validar `NO_FEE` en F2** en entorno real antes de fijarlo como contrato.
 15. **Declarar una fase cerrada** solo por tener CI offline verde o dependencias instaladas.
-
 
 # DOSSIER TÉCNICO — marianmadrid.es (continuación)
 
@@ -2536,7 +2451,6 @@ Esta es la única tabla normativa de invariantes CMS. §5.4 y §10.2 remiten aqu
 - **Catalog V1/V3:** `stockKey`, `locationId`, `catalogVersion`, `lineItemId`, `stockApplied` añadidos en PR #13; V1 activo, V3 preparado sin publicar.
 - **QA real en Preview:** **pendiente** en todas las colecciones.
 
-
 ## 6. Enums canónicos
 
 ### 6.1 Wix nativos (inglés, tal cual API)
@@ -2722,8 +2636,6 @@ backend/
 ## 10. Hooks e integridad CMS (`backend/data.js`)
 
 ### 10.1 Ledgers append-only
-
-`MovimientosCaja`, `LibroAsientosContablesDetalle`, `RegistrosHorariosStaff`, `MovimientosInventario`.
 
 `beforeUpdate` y `beforeRemove` lanzan `FISCAL_VIOLATION`:
 
@@ -3687,7 +3599,6 @@ Node.js **19.9.0 o superior** es obligatorio para el MCP. El dossier fija Node �
 claude mcp add --transport http wix-mcp-remote https://mcp.wix.com/mcp
 ```
 
-
 **Cursor** sin API key: instalación desde la librería MCP integrada.
 
 ### J.1.3 Autenticación MCP
@@ -3743,7 +3654,6 @@ El workflow operativo está en `.github/workflows/wix-preview-validation.yml`. C
 
 **Regla de publicación:** `wix publish` solo se ejecutará tras validación y autorización específica.
 
-
 ---
 
 ## J.3 Diagnóstico en tiempo real — Plugin `@wix/wix-code-diagnostics-plugin`
@@ -3764,7 +3674,6 @@ WIX_CODE_DIAGNOSTICS_ENDPOINT   # URL del endpoint ReportCodeDiagnostic
 WIX_CODE_DIAGNOSTICS_TOKEN      # Token de autorización (header Authorization)
 ```
 
-
 ### J.3.3 Registro en `wix.config.mjs`
 ```js
 import { defineWixConfig } from '@wix/cli/config';
@@ -3775,7 +3684,6 @@ export default defineWixConfig({
   plugins: [wixCodeDiagnosticsPlugin()],
 });
 ```
-
 
 ---
 
@@ -3845,10 +3753,7 @@ export default defineWixConfig({
 
 **[ADR-REQUERIDO]** Sí, para ADR-003 (Capa 3) y para un **ADR específico de política MCP** que defina: (a) qué herramientas del MCP pueden ejecutarse sin confirmación humana, (b) prohibición explícita de mutar ledgers append-only, (c) obligación de publicar solo desde rama por defecto tras CI verde.
 
-
 ---
-
-
 
 ## 24. Estado consolidado del repositorio, Wix y validaciones (corte 2026-11-01)
 
@@ -4168,9 +4073,7 @@ Si un solo punto no se verifica, el resultado es **PARCIAL** o **FALLIDO**, nunc
 
 **Fuentes de estado:** repositorio `nachoortegazgz/marianmadridz` (HEAD `847a9d2`), PR #51–#63, workflow Backend quality gates run `41300896674`, Wix Preview run `41300896658` y auditoría CMS de solo lectura de 2026-11-01. Las evidencias y su alcance se describen arriba; los pendientes no se presentan como hechos completados.
 
-
 ---
-
 
 ## 27. Ejecución de simulación QA — corte 2026-11-01
 
@@ -4310,7 +4213,6 @@ La prueba `QA-SIMPLE-BOOKING-01` observó que una reserva **SIMPLE** también pe
 
 Las lecturas API no demuestran el estado del proveedor de pago, el onboarding, el bloqueo real de scripts por consentimiento, los horarios individuales efectivos, los destinatarios finales de automatizaciones, la publicación de formularios ni los permisos visuales de cada app. Esos puntos permanecen `[PENDIENTE]` hasta verificación en panel/QA. Este snapshot no autoriza cambios en producción. Prevalece la jerarquía de fuentes de §A.4 y la evidencia más reciente debe sustituir este estado cuando se repita la auditoría.
 
-
 ---
 
 ## 29. Actualización de auditoría — corte 2026-11-01 (reconciliación de evidencias)
@@ -4426,7 +4328,6 @@ En `src/backend/events.js`, el flujo de cancelación puede marcar un evento como
 
 **Punto exacto de reentrada:** revisión focalizada de `src/backend/events.js` + documentación oficial Wix sobre respuesta/reintento de webhooks de Bookings; después, corrección y tests de sincronización de cancelaciones. No iniciar una nueva auditoría general.
 
-
 ---
 
 ## 31. Intervención de integridad y validación Preview — 2026-11-01
@@ -4494,7 +4395,6 @@ Se confirma en documentación oficial que este proyecto usa **Wix CLI for Sites*
 
 **No cerrar Layer 1 ni Layer 2 por el resultado de CI offline.** Mantener PR #80 sin merge hasta completar la validación Preview y revisión de código.
 
-
 ### 31.8 Cierre de la auditoría viva y corrección de PTY — 2026-11-01
 
 **Resultado de la consulta de datos:**
@@ -4516,7 +4416,6 @@ Se confirma en documentación oficial que este proyecto usa **Wix CLI for Sites*
 **Integración:** PR #80 se ha fusionado en `main` con merge commit `d0d14e0e40a622ecbf912d6a2d44efaecd428208`. Esto integra la corrección de integridad y las pruebas offline, pero no publica ni despliega el sitio Wix. La rama `fix/wix-preview-ci-pty` mantiene aislada la corrección adicional del workflow y la evidencia de auditoría.
 
 **Seguridad:** no se han actualizado las ocho citas ni se han alterado movimientos/ledgers. Se mantiene pendiente aprobar reconciliación explícita tras confirmar el origen de las cancelaciones.
-
 
 ---
 
