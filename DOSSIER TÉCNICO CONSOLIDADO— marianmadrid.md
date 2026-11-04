@@ -4609,11 +4609,10 @@ El tamaño documentado (16 caracteres hexadecimales) coincide con el helper actu
 
 Lecturas REST de Bookings V2 y Service Availability V2, zona `Europe/Madrid`:
 
-- `Corte Clásico`: servicio APPOINTMENT visible y habilitado para reserva online, duración 30 minutos, con tres profesionales asociados. La consulta de slots para la ventana solicitada devolvió 1.000 slots; todos los devueltos estaban marcados como reservables y sin violaciones de política.
-- `Barba Perfecta: Arreglo y Perfilado`: servicio APPOINTMENT visible y habilitado para reserva online, duración 20 minutos, con los mismos tres profesionales asociados. La consulta de slots devolvió 1.000 slots; todos los devueltos estaban marcados como reservables y sin violaciones de política.
-- En ambos servicios, los primeros slots devueltos comenzaban el 2026-11-05 a las 09:00 hora local y mostraban disponibilidad para los tres recursos.
+- `Corte Clásico`: servicio APPOINTMENT visible y habilitado para reserva online, con tres profesionales asociados. En una consulta acotada del 2026-11-05 al 2026-11-06 se devolvieron 254 slots; los tres primeros eran reservables, sin violaciones de política, con disponibilidad para los tres recursos. Los intervalos muestreados eran de 30 minutos y el primero comenzaba a las 09:00 hora local.
+- `Barba Perfecta: Arreglo y Perfilado`: servicio APPOINTMENT visible y habilitado para reserva online, con los mismos tres profesionales asociados. La consulta amplia devolvió 1.000 slots; los cinco primeros eran reservables, sin violaciones de política, con disponibilidad para los tres recursos. Los intervalos muestreados eran de 20 minutos y el primero comenzaba a las 09:00 hora local.
 
-**Límite:** el recuento de 1.000 es el número devuelto por cada consulta, no una afirmación de que el total de slots del periodo sea exactamente 1.000. Esta lectura valida configuración y disponibilidad API, no el recorrido visual completo del widget ni el envío de una reserva.
+**Límite:** 1.000 es el número máximo observado en la respuesta amplia, no una afirmación de que el total de slots del periodo sea exactamente 1.000. La consulta acotada de Corte Clásico devolvió 254. Esta lectura valida configuración y disponibilidad API, no el recorrido visual completo del widget ni el envío de una reserva.
 
 ### 34.3 Reconciliación read-only de filas SIMPLE
 
