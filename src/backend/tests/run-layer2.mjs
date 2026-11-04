@@ -9,6 +9,7 @@ const root = join(here, '..', '..', '..');
 const loaderUrl = pathToFileURL(join(here, 'loader.mjs')).href;
 const suites = [
   'controlOperativo.hooks.test.mjs',
+  'inventory.lock.release.test.mjs',
   'crons.jobsConfigParity.test.mjs',
   'data.hooks.test.mjs',
   'dto.whitelist.test.mjs',
