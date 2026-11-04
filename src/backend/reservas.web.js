@@ -353,9 +353,8 @@ function _resolveAvailabilityLocation(service) {
         });
         return null;
     }
-    return {
-    _id: locationId, locationType: "BUSINESS",
-};
+    return Object.freeze({ _id: locationId, locationType: "BUSINESS" });
+}
 
 /* =============================================================================
  * CATÁLOGO DE SERVICIOS
