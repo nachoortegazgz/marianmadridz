@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      WIX_CLI_API_KEY: ${{ secrets.CLI_API_KEY }}
+      CLI_API_KEY: ${{ secrets.CLI_API_KEY }}
     steps:
       - name: Checkout candidate code
         uses: actions/checkout@v4
@@ -40,13 +40,13 @@ jobs:
       - name: Validate Wix API key secret
         shell: bash
         run: |
-          if [[ -z "${WIX_CLI_API_KEY}" ]]; then
+          if [[ -z "${CLI_API_KEY}" ]]; then
             echo "::error::GitHub secret CLI_API_KEY is missing."
             exit 1
           fi
 
       - name: Authenticate Wix CLI for Sites
-        run: npm run wix login -- --api-key "${WIX_CLI_API_KEY}"
+        run: npm run wix login -- --api-key "${CLI_API_KEY}"
 
       - name: Create preview from this PR branch
         shell: bash
