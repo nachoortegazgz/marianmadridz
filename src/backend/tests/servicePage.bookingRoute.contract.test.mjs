@@ -24,7 +24,7 @@ test('SERVICE-ROUTE-01 service page uses the published calendar page path', () =
   );
   assert.doesNotMatch(
     pageSource,
-    /const base = ["']["']/,
+    /const base = ["']/,
     'service page must not hardcode a stale calendar route',
   );
 });
