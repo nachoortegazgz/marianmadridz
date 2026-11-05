@@ -816,21 +816,25 @@ export function _buildSlotLockControl(slotClave, lockOwnerId, ttlMs, existing, s
     const resolvedServiceId = _safeTrim(serviceId || (existing && existing.serviceId));
     const ttl = Number(ttlMs);
     const now = new Date();
+    const existingPayload = _readControlPayload(existing);
+    const lockToken = _safeTrim(existingPayload.lockToken || existing?.lockToken) || _generateUUID();
     const doc = {
         _id: safeLockId(slotClave),
         controlType: CONTROL_TYPE.SLOT_LOCK,
         dedupeKey: String(slotClave),
         serviceId: resolvedServiceId,
         resourceId: resourceId,
-        lockOwnerId: String(lockOwnerId || ""),
-        lockToken: existing && existing.lockToken ? existing.lockToken : _generateUUID(),
         expiresAt: new Date(
             now.getTime() + (Number.isFinite(ttl) && ttl > 0 ? ttl : MUTEX_TTL_MS)
         ),
-        acquiredAt: now,
         heartbeatAt: now,
+        // lockOwnerId, lockToken and acquiredAt are not physical columns in
+        // ControlOperativo; keep lock-specific state inside its OBJECT payload.
         payload: {
+            ...existingPayload,
             lockOwnerId: String(lockOwnerId || ""),
+            lockToken,
+            acquiredAt: existingPayload.acquiredAt || existing?.acquiredAt || now,
             lockStatus: "ACTIVE",
         },
         traceId: _safeTrim(existing && existing.traceId) || makeTraceId("lock"),
@@ -854,9 +858,14 @@ async function _getLock(slotClave) {
 
 function _getLockOwnerId(lock) {
     if (!lock || typeof lock !== "object") return "";
-    if (lock.lockOwnerId) return _safeTrim(lock.lockOwnerId);
     const payload = _readControlPayload(lock);
-    return _safeTrim(payload.lockOwnerId) || "";
+    return _safeTrim(payload.lockOwnerId || lock.lockOwnerId) || "";
+}
+
+function _getLockToken(lock) {
+    if (!lock || typeof lock !== "object") return "";
+    const payload = _readControlPayload(lock);
+    return _safeTrim(payload.lockToken || lock.lockToken);
 }
 
 export async function _lockSlotKeyOrFail(slotClave, lockOwnerId, ttlMs, serviceId) {
@@ -882,7 +891,7 @@ export async function _lockSlotKeyOrFail(slotClave, lockOwnerId, ttlMs, serviceI
             ok: true,
             acquired: true,
             revision: newLock._revision,
-            lockToken: newLock.lockToken,
+            lockToken: _getLockToken(newLock),
         };
     } catch (error) {
         if (!_isDuplicateItemError(error)) {
@@ -904,7 +913,7 @@ export async function _lockSlotKeyOrFail(slotClave, lockOwnerId, ttlMs, serviceI
                     ok: true,
                     renewed: true,
                     revision: renewed.newRevision,
-                    lockToken: existing.lockToken,
+                    lockToken: _getLockToken(existing),
                 }
                 : { ok: false, message: ERROR_CODES.LOCK_RENEWAL_FAILED };
         }
@@ -928,7 +937,7 @@ export async function _lockSlotKeyOrFail(slotClave, lockOwnerId, ttlMs, serviceI
                     acquired: true,
                     reclaimed: true,
                     revision: updated._revision,
-                    lockToken: updated.lockToken,
+                    lockToken: _getLockToken(updated),
                 };
             } catch (updateError) {
                 if (_isRevisionConflictError(updateError)) {
@@ -1037,19 +1046,15 @@ function _readTransaction(doc) {
     return {
         doc: doc,
         status: _safeTrim(payload.status || doc.status),
-        payloadHash: _safeTrim(payload.payloadHash || doc.payloadHash),
-        ownerTraceId: _safeTrim(payload.ownerTraceId || doc.ownerTraceId),
-        ownerExecutionId: _safeTrim(
-            payload.ownerExecutionId || doc.ownerExecutionId
-        ),
-        error: _safeTrim(payload.error || doc.error),
+        payloadHash: _safeTrim(payload.payloadHash),
+        ownerTraceId: _safeTrim(payload.ownerTraceId),
+        ownerExecutionId: _safeTrim(payload.ownerExecutionId),
+        error: _safeTrim(payload.error),
         bookingId: _safeTrim(payload.bookingId || doc.bookingId),
-        result: payload.result !== undefined ? payload.result : doc.result,
-        leaseExpiresAt: _toDateSafe(
-            payload.leaseExpiresAt || doc.leaseExpiresAt
-        ),
+        result: payload.result,
+        expiresAt: _toDateSafe(payload.expiresAt || doc.expiresAt),
         heartbeatAt: _toDateSafe(payload.heartbeatAt || doc.heartbeatAt),
-        attempt: Number(payload.attempt || doc.attempt || 0),
+        attempts: Number(payload.attempts || doc.attempts || 0),
         serviceId: _safeTrim(payload.serviceId || doc.serviceId),
     };
 }
@@ -1078,15 +1083,15 @@ function _buildTransactionControl(pairToken, state, existingDoc) {
         serviceId: serviceId,
         dedupeKey: TX_DEDUPE_PREFIX + String(pairToken),
         payload: payload,
-        leaseExpiresAt:
-            payload.leaseExpiresAt ||
-            (existingDoc && existingDoc.leaseExpiresAt) ||
+        expiresAt:
+            payload.expiresAt ||
+            (existingDoc && existingDoc.expiresAt) ||
             null,
         heartbeatAt:
             payload.heartbeatAt ||
             (existingDoc && existingDoc.heartbeatAt) ||
             now,
-        attempt: payload.attempt || (existingDoc && existingDoc.attempt) || 1,
+        attempts: payload.attempts || (existingDoc && existingDoc.attempts) || 1,
         traceId:
             _safeTrim(existingDoc && existingDoc.traceId) ||
             _safeTrim(state.ownerTraceId) ||
@@ -1183,9 +1188,9 @@ export async function _initTransaction(
         payloadHash: String(payloadHash || ""),
         ownerTraceId: String(traceId || ""),
         ownerExecutionId: String(ownerExecutionId || traceId || ""),
-        leaseExpiresAt: new Date(now.getTime() + TRANSACTION_LEASE_MS),
+        expiresAt: new Date(now.getTime() + TRANSACTION_LEASE_MS),
         heartbeatAt: now,
-        attempt: 1,
+        attempts: 1,
     };
     try {
         await elevatedInsert(
@@ -1253,8 +1258,8 @@ export async function claimTransaction(
         return { ok: false, reason: "ALREADY_COMPLETED" };
     }
 
-    const leaseExpiresAt = tx.leaseExpiresAt;
-    if (leaseExpiresAt && leaseExpiresAt.getTime() > Date.now()) {
+    const expiresAt = tx.expiresAt;
+    if (expiresAt && expiresAt.getTime() > Date.now()) {
         return { ok: false, reason: "LEASE_NOT_EXPIRED" };
     }
 
@@ -1264,9 +1269,9 @@ export async function claimTransaction(
         payloadHash: tx.payloadHash,
         ownerTraceId: String(newTraceId || ""),
         ownerExecutionId: String(newOwnerExecutionId || ""),
-        leaseExpiresAt: new Date(now.getTime() + TRANSACTION_LEASE_MS),
+        expiresAt: new Date(now.getTime() + TRANSACTION_LEASE_MS),
         heartbeatAt: now,
-        attempt: tx.attempt + 1,
+        attempts: tx.attempts + 1,
         bookingId: tx.bookingId,
         serviceId: tx.serviceId,
     };

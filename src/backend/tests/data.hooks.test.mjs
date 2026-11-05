@@ -189,6 +189,58 @@ test('HOOK-CAJA-06 normalizes legacy recordHash alias to canonical hash', () => 
 });
 
 // -----------------------------------------------------------------------------
+// DatosFiscales — schema físico CMS (rev. 10)
+// -----------------------------------------------------------------------------
+
+test('HOOK-FISCAL-CONFIG-01 accepts physical CMS fields and BOOLEAN flags', () => {
+  const config = {
+    recordType: IC.RECORD_TYPE.CONFIG_SISTEMA,
+    taxId: 'B12345678',
+    legalName: 'Marian Madrid',
+    thirdPartyType: 'EMISOR',
+    verifactuEnabled: true,
+    verifactuVersion: '1.0',
+    tipoUsoPosibleMultiOT: true,
+    indicadorMultiplesOT: false,
+    fechaInicioVerifactu: '2026-01-01',
+  };
+  assert.doesNotThrow(() => H.DatosFiscales_beforeInsert({ ...config }));
+  assert.throws(
+    () => H.DatosFiscales_beforeInsert({ ...config, tipoUsoPosibleMultiOT: 'S' }),
+    /BOOLEAN/
+  );
+  assert.throws(
+    () => H.DatosFiscales_beforeInsert({ ...config, nifProductor: 'B12345678' }),
+    /no existe en el esquema físico/
+  );
+});
+
+test('HOOK-FISCAL-CONFIG-02 staff fiscal master does not require absent identity columns', () => {
+  assert.doesNotThrow(() => H.DatosFiscales_beforeInsert({
+    recordType: IC.RECORD_TYPE.TERCERO,
+    taxId: 'B12345678',
+    legalName: 'Staff fiscal identity',
+    thirdPartyType: 'STAFF',
+  }));
+});
+
+test('HOOK-FISCAL-CONFIG-03 legacy aliases are normalized and removed before persistence', () => {
+  const item = {
+    recordType: IC.RECORD_TYPE.TERCERO,
+    nifCif: 'B12345678',
+    razonSocial: 'Proveedor',
+    tipoTercero: 'PROVEEDOR',
+  };
+  assert.doesNotThrow(() => H.DatosFiscales_beforeInsert(item));
+  assert.equal(item.taxId, 'B12345678');
+  assert.equal(item.legalName, 'Proveedor');
+  assert.equal(item.thirdPartyType, 'PROVEEDOR');
+  assert.ok(!('nifCif' in item));
+  assert.ok(!('razonSocial' in item));
+  assert.ok(!('tipoTercero' in item));
+});
+
+// -----------------------------------------------------------------------------
 // LibroAsientosContablesDetalle (PGC partida doble minima) — CONSERVED
 // -----------------------------------------------------------------------------
 

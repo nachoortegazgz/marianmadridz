@@ -220,11 +220,12 @@ export const createManagerPackageVersion = webMethod(Permissions.SiteMember, asy
       _id: documentId,
       inventoryClosingId: documentId,
       fiscalYear: year,
-      closingDate: new Date(),
+      closeDate: new Date(),
       closingType: "PAQUETE_GESTORIA",
       summaryData: summaryRes?.data || {},
       invoiceData: bookRes?.data?.filas || [],
-      status: "PREPARED",
+      packageStatus: "PREPARED",
+      packageVersion: nextVersion,
       traceId,
       _createdDate: new Date(),
     };
@@ -325,7 +326,7 @@ export const downloadManagerPackageVersion = webMethod(Permissions.SiteMember, a
         summaryText,
         summary: doc.summaryData || {},
         invoiceCount: invoices.length,
-        createdAt: doc._createdDate || doc.closingDate,
+        createdAt: doc._createdDate || doc.closeDate,
       },
       error: null,
     };

@@ -404,22 +404,22 @@ async function _getBusinessTaxId(traceId) {
     "getBusinessTaxId"
   );
   const item = config?.items?.[0];
-  const taxId = _safeTrim(item?.nifProductor);
+  const taxId = _safeTrim(item?.taxId);
   if (taxId) return taxId.toUpperCase();
   // Fallback adapter legacy: filas historicas thirdPartyType=EMISOR con
   // campo "taxId". Emiten warn para trazar la migracion a CONFIG_SISTEMA.
   const legacy = await withTimeout(
-    dalQuery(DATOS_FISCALES_COL).eq("thirdPartyType", "EMISOR").eq("active", true).limit(1).find(),
+    dalQuery(DATOS_FISCALES_COL).eq("thirdPartyType", "EMISOR").limit(1).find(),
     CMS_TIMEOUT_MS,
     "getBusinessTaxIdLegacy"
   );
   const legacyTaxId = _safeTrim(legacy?.items?.[0]?.taxId);
   if (legacyTaxId) {
-    log.warn("legacy-read: DatosFiscales EMISOR.taxId en uso; migrar a CONFIG_SISTEMA.nifProductor", { traceId });
+    log.warn("legacy-read: DatosFiscales EMISOR.taxId en uso; normalizar a recordType=CONFIG_SISTEMA", { traceId });
     return legacyTaxId.toUpperCase();
   }
   throw new Error(
-    "FISCAL_CONFIG_MISSING: no existe singleton DatosFiscales recordType=CONFIG_SISTEMA con nifProductor"
+    "FISCAL_CONFIG_MISSING: no existe DatosFiscales recordType=CONFIG_SISTEMA con taxId"
   );
 }
 
