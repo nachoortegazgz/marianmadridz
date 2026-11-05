@@ -144,6 +144,61 @@ return result;
 }
 
 // =============================================================================
+// CRON: cleanCompletedBookingControl - every hour
+// =============================================================================
+export async function cleanCompletedBookingControl() {
+const traceId = makeTraceId("cron-booking-control-retention");
+const result = { scanned: 0, removed: 0, skipped: 0, failed: 0, errors: [] };
+try {
+const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+const collection = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
+const types = [CONTROL_TYPE.IDEMPOTENCY, CONTROL_TYPE.SYSTEM_FLAG];
+const batches = await Promise.all(types.map((type) =>
+dalQuery(collection).eq("controlType", type).limit(500)
+.find({ consistencyMode: "strong" })
+));
+const candidates = batches.flatMap((batch) => batch?.items || []);
+result.scanned = candidates.length;
+for (const candidate of candidates) {
+try {
+const type = candidate.controlType;
+const payload = readControlPayload(candidate);
+const status = _safeTrim(payload.status || candidate.status).toUpperCase();
+const terminal =
+(type === CONTROL_TYPE.IDEMPOTENCY && ["COMPLETED", "FAILED_FINAL"].includes(status)) ||
+(type === CONTROL_TYPE.SYSTEM_FLAG && ["COMPLETED", "RECONCILED"].includes(status));
+if (!terminal || !candidate._id) { result.skipped++; continue; }
+const terminalAt = payload.terminalAt || payload.completedAt || payload.reconciledAt || candidate._updatedDate;
+const terminalTime = new Date(terminalAt).getTime();
+if (!Number.isFinite(terminalTime) || terminalTime > cutoff) { result.skipped++; continue; }
+const latest = await dalGet(collection, candidate._id);
+if (!latest || latest.controlType !== type) { result.skipped++; continue; }
+const latestPayload = readControlPayload(latest);
+const latestStatus = _safeTrim(latestPayload.status || latest.status).toUpperCase();
+const stillTerminal =
+(type === CONTROL_TYPE.IDEMPOTENCY && ["COMPLETED", "FAILED_FINAL"].includes(latestStatus)) ||
+(type === CONTROL_TYPE.SYSTEM_FLAG && ["COMPLETED", "RECONCILED"].includes(latestStatus));
+const latestAt = latestPayload.terminalAt || latestPayload.completedAt || latestPayload.reconciledAt || latest._updatedDate;
+const latestTime = new Date(latestAt).getTime();
+if (!stillTerminal || !Number.isFinite(latestTime) || latestTime > cutoff) { result.skipped++; continue; }
+await dalRemove(collection, latest._id);
+result.removed++;
+} catch (error) {
+result.failed++;
+if (result.errors.length < 10) result.errors.push({ id: candidate?._id || null, error: error?.message || "UNKNOWN" });
+log.warn("cleanCompletedBookingControl: remove failed", { id: candidate?._id || null, error: error?.message, traceId });
+}
+}
+log.info("cleanCompletedBookingControl completed", { ...result, retentionHours: 24, traceId });
+} catch (error) {
+result.failed++;
+result.errors.push({ query: "main", error: error?.message || "UNKNOWN" });
+log.error("cleanCompletedBookingControl failed", { error: error?.message, traceId });
+}
+return result;
+}
+
+// =============================================================================
 // CRON: cleanExpiredRateLimits - every 5 minutes
 // =============================================================================
 /**
