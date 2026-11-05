@@ -77,6 +77,7 @@ import {
     _renewLock,
     _initTransaction,
     _inspectTransactionReplay,
+    _findExistingCitasForSlot,
     _completeTransaction,
     _failTransaction,
     _persistBooking,
@@ -1352,6 +1353,34 @@ export async function executeBookingSaga(unsafePayload) {
             );
         }
 
+        const legacyMatches = await _findExistingCitasForSlot({
+            serviceId: serviceId,
+            dateYmd: f1LocalStart.slice(0, 10),
+            startDate: getUtcDateFromMadridLocal(f1LocalStart),
+            endDate: getUtcDateFromMadridLocal(f1LocalEnd),
+            email: email,
+            memberId: sessionMemberId,
+            contactId: sessionContactId,
+        });
+        if (legacyMatches.length > 0) {
+            log.warn("SAGA-LEGACY-BOOKING-FOUND: blocking duplicate slot before staff resolution", {
+                traceId: traceId,
+                serviceId: serviceId,
+                dateYmd: f1LocalStart.slice(0, 10),
+                bookingIds: legacyMatches.map((item) => item.bookingId).filter(Boolean),
+                pairTokens: legacyMatches.map((item) => item.pairToken).filter(Boolean),
+                resourceIds: legacyMatches.map((item) => item.resourceId).filter(Boolean),
+            });
+            throw createBookingError(
+                "EXISTING_BOOKING_REQUIRES_RECONCILIATION",
+                "Ya existe una reserva para este cliente y horario. No se ha creado otra; contacta con el salón antes de volver a intentarlo.",
+                {
+                    traceId: traceId,
+                    existingBookingIds: legacyMatches.map((item) => item.bookingId).filter(Boolean),
+                }
+            );
+        }
+
         // ---------------- PHASE 1 ----------------
         let resourceValidation = null;
         let staffResolutionError = null;
@@ -1941,6 +1970,9 @@ export async function executeBookingSaga(unsafePayload) {
                     ),
                 };
                 if (sessionMemberId) persistedContactDetails.memberId = sessionMemberId;
+                if (sessionContactId && _looksLikeGuid(sessionContactId)) {
+                    persistedContactDetails.contactId = sessionContactId;
+                }
 
                 const persistedF1 = await _persistBooking(
                     {

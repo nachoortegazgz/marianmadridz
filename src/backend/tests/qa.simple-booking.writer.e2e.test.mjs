@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 const { wixDataMock, mocks } = await import('./loader.mjs');
 const IC = await import('backend/internalConfig.js');
+const MU = await import('public/mmUtils.js');
 
 const SERVICE_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa11';
 const RESOURCE_ID = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
@@ -118,6 +119,8 @@ test('QA-SIMPLE-BOOKING-01 resolves real catalogue and staff mocks, creates one 
     firstName: 'Cliente',
     lastName: 'QA Simple',
     email: 'qa.simple@example.test',
+    memberId: '11111111-1111-4111-8111-111111111111',
+    contactId: '22222222-2222-4222-8222-222222222222',
     rgpdConsent: true,
     serviceId: SERVICE_ID,
     channelType: IC.CHANNEL_TYPE.PRESENCIAL,
@@ -155,6 +158,8 @@ test('QA-SIMPLE-BOOKING-01 resolves real catalogue and staff mocks, creates one 
   assert.match(citas[0].pairToken, /^pt[a-f0-9]{16}$/, 'simple booking uses the stable idempotency token, not a dual F1/F2 pair UUID');
   assert.equal(citas[0].bookingType, IC.BOOKING_TYPE.SIMPLE, 'stable token must not turn a simple booking into a dual booking');
   assert.equal(citas[0].contactDetails.email, 'qa.simple@example.test');
+  assert.equal(citas[0].contactDetails.memberId, '11111111-1111-4111-8111-111111111111');
+  assert.equal(citas[0].contactDetails.contactId, '22222222-2222-4222-8222-222222222222');
 
   slotsState.failAvailability = true;
   const replay = await executeBookingSaga({
@@ -162,6 +167,8 @@ test('QA-SIMPLE-BOOKING-01 resolves real catalogue and staff mocks, creates one 
     firstName: 'Cliente',
     lastName: 'QA Simple',
     email: 'qa.simple@example.test',
+    memberId: '11111111-1111-4111-8111-111111111111',
+    contactId: '22222222-2222-4222-8222-222222222222',
     rgpdConsent: true,
     serviceId: SERVICE_ID,
     channelType: IC.CHANNEL_TYPE.PRESENCIAL,
@@ -175,6 +182,70 @@ test('QA-SIMPLE-BOOKING-01 resolves real catalogue and staff mocks, creates one 
   assert.equal(writerCalls.length, 1, 'idempotent replay must not create a second Wix booking');
   assert.equal(confirmationCalls.length, 1, 'idempotent replay must not confirm a second booking');
   assert.equal((wixDataMock._store.get('CitasF2') || []).length, 1, 'idempotent replay must not duplicate CitasF2');
+});
+
+
+test('QA-LEGACY-BOOKING-01 blocks a prior same-customer slot before querying staff or creating another booking', async () => {
+  wixDataMock._reset();
+  writerCalls.length = 0;
+  confirmationCalls.length = 0;
+  slotsState.calls.length = 0;
+  slotsState.getCalls.length = 0;
+  slotsState.failAvailability = true;
+
+  wixDataMock._seed('ServiciosCatalogo', [{
+    _id: SERVICE_ID,
+    serviceId: SERVICE_ID,
+    slug: 'qa-corte-simple',
+    title: 'QA Corte Simple',
+    price: 50,
+    currency: 'EUR',
+    location: 'QA Salon',
+    locationId: LOCATION_ID,
+    totalDuration: 60,
+    phase1Duration: 60,
+    phase2Duration: 0,
+    exposureDuration: 0,
+    allowCombine: false,
+    linkedPhases: null,
+    clientHidden: false,
+    addOnOptions: [],
+    onlinePayment: true,
+    inPersonPayment: true,
+  }]);
+  wixDataMock._seed('CitasF2', [{
+    _id: '99999999-9999-4999-8999-999999999999',
+    bookingId: '99999999-9999-4999-8999-999999999999',
+    serviceId: SERVICE_ID,
+    resourceId: RESOURCE_ID,
+    scheduleId: SCHEDULE_ID,
+    dateYmd: SLOT_START.slice(0, 10),
+    slotStart: MU.getUtcDateFromMadridLocal(SLOT_START),
+    slotEnd: MU.getUtcDateFromMadridLocal(SLOT_END),
+    bookingType: IC.BOOKING_TYPE.SIMPLE,
+    bookingStatus: IC.CITAS_BOOKING_STATUS.CONFIRMED,
+    paymentStatus: IC.CITAS_PAYMENT_STATUS.NOT_PAID,
+    pairToken: 'legacy-resource-dependent-token',
+    contactDetails: { email: 'qa.simple@example.test' },
+    meta: { channelType: IC.CHANNEL_TYPE.PRESENCIAL },
+  }]);
+
+  const result = await executeBookingSaga({
+    traceId: 'trace-qa-legacy-slot-001',
+    firstName: 'Cliente',
+    lastName: 'QA Simple',
+    email: 'qa.simple@example.test',
+    rgpdConsent: true,
+    serviceId: SERVICE_ID,
+    channelType: IC.CHANNEL_TYPE.PRESENCIAL,
+    slotF1: { localStartDate: SLOT_START, localEndDate: SLOT_END },
+  });
+
+  assert.equal(result.status, 'ERROR', JSON.stringify(result));
+  assert.equal(result.error.code, 'EXISTING_BOOKING_REQUIRES_RECONCILIATION');
+  assert.equal(slotsState.calls.length, 0, 'legacy duplicate must be detected before staff availability');
+  assert.equal(writerCalls.length, 0, 'legacy duplicate must not create another Wix booking');
+  assert.equal(confirmationCalls.length, 0, 'legacy duplicate must not confirm another booking');
 });
 
 test.after(() => {

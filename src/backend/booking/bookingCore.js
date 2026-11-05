@@ -1344,11 +1344,13 @@ function _minimizeContactDetails(contactDetails) {
     const email = _safeTrim(cd.email);
     const phone = _safeTrim(cd.phone || cd.phoneNumber);
     const memberId = _safeTrim(cd.memberId);
+    const contactId = _safeTrim(cd.contactId);
     if (firstName) out.firstName = firstName;
     if (lastName) out.lastName = lastName;
     if (email) out.email = email;
     if (phone) out.phone = phone;
     if (memberId) out.memberId = memberId;
+    if (contactId && _looksLikeGuid(contactId)) out.contactId = contactId;
     return out;
 }
 
@@ -1521,6 +1523,65 @@ export async function _persistBooking(params, traceId) {
     }
     const item = await elevatedInsert(CITAS_COL, doc);
     return { created: true, item: item };
+}
+
+export async function _findExistingCitasForSlot(params) {
+    const p = params || {};
+    const serviceId = _safeTrim(p.serviceId);
+    const dateYmd = _safeTrim(p.dateYmd);
+    const startDate = _toDateSafe(p.startDate);
+    const endDate = _toDateSafe(p.endDate);
+    const email = _safeTrim(p.email).toLowerCase();
+    const memberId = _safeTrim(p.memberId);
+    const contactId = _safeTrim(p.contactId);
+
+    if (!serviceId || !dateYmd || !startDate || !endDate || (!email && !memberId && !contactId)) {
+        return [];
+    }
+
+    const result = await elevatedQueryFind(CITAS_COL, function (q) {
+        return q
+            .eq(BOOKING_FIELDS.SERVICE_ID, serviceId)
+            .eq(BOOKING_FIELDS.DATE_YMD, dateYmd)
+            .limit(100);
+    });
+    const items = Array.isArray(result?.items) ? result.items : [];
+    const totalCount = Number(result?.totalCount ?? items.length);
+    if (totalCount > items.length) {
+        throw new Error("LEGACY_SLOT_SCAN_INCOMPLETE: CitasF2 query exceeded the bounded scan");
+    }
+
+    return items.filter(function (item) {
+        const rowStart = _toDateSafe(item && item[BOOKING_FIELDS.SLOT_START]);
+        const rowEnd = _toDateSafe(item && item[BOOKING_FIELDS.SLOT_END]);
+        if (!rowStart || !rowEnd ||
+            rowStart.getTime() !== startDate.getTime() ||
+            rowEnd.getTime() !== endDate.getTime()) return false;
+
+        const status = _safeTrim(
+            item[BOOKING_FIELDS.STATUS] || item.bookingStatus || ""
+        ).toUpperCase();
+        if (["CANCELED", "CANCELLED", "DECLINED"].includes(status)) return false;
+
+        const details = item[BOOKING_FIELDS.CONTACT_DETAILS] || {};
+        const rowMemberId = _safeTrim(details.memberId);
+        const rowContactId = _safeTrim(details.contactId);
+        const rowEmail = _safeTrim(details.email).toLowerCase();
+        const identityMatch =
+            (!!memberId && !!rowMemberId && memberId === rowMemberId) ||
+            (!!contactId && !!rowContactId && contactId === rowContactId) ||
+            (!!email && rowEmail === email &&
+                ((!memberId && !contactId) || (!rowMemberId && !rowContactId)));
+        return identityMatch;
+    }).map(function (item) {
+        return {
+            bookingId: _safeTrim(item[BOOKING_FIELDS.BOOKING_ID]),
+            bookingType: _safeTrim(item[BOOKING_FIELDS.BOOKING_TYPE]),
+            bookingStatus: _safeTrim(item[BOOKING_FIELDS.STATUS] || item.bookingStatus),
+            resourceId: _safeTrim(item[BOOKING_FIELDS.RESOURCE_ID]),
+            pairToken: _safeTrim(item[BOOKING_FIELDS.PAIR_TOKEN]),
+        };
+    });
 }
 
 // =============================================================================
