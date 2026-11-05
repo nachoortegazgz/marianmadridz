@@ -142,25 +142,56 @@ test('HOOK-CAJA-06 normalizes legacy recordHash alias to canonical hash', () => 
 // LibroAsientosContablesDetalle (PGC partida doble minima) — CONSERVED
 // -----------------------------------------------------------------------------
 
-test('HOOK-LIBRO-01 requires traceId/debitAmount/creditAmount and blocks update/remove', () => {
-  assert.throws(
-    () => H.LibroAsientosContablesDetalle_beforeInsert({ debitAmount: 1, creditAmount: 1 }),
-    /traceId/,
-  );
-  assert.throws(
-    () => H.LibroAsientosContablesDetalle_beforeInsert({ traceId: 't1', creditAmount: 1 }),
-    /debitAmount/,
-  );
-  // MATRIZ v15: debit/credit erradicados por duplicidad -> escritura prohibida
-  assert.throws(
-    () => H.LibroAsientosContablesDetalle_beforeInsert({ traceId: 't1', debit: 10, credit: 10 }),
-    /legacy/,
-  );
-  assert.doesNotThrow(() => H.LibroAsientosContablesDetalle_beforeInsert({
-    traceId: 't1', debitAmount: 10, creditAmount: 10,
-  }));
+function validLibroEntry() {
+  return {
+    entryId: 'ASIENTO_11111111-1111-4111-8111-111111111111',
+    recordTimestamp: new Date('2026-11-05T10:00:00.000Z'),
+    concept: 'Venta mostrador',
+    lineNumber: 1,
+    origenTipo: 'MOVIMIENTOCAJA',
+    origenRegistro: 'MovimientosCaja',
+    sourceMovementId: '11111111-1111-4111-8111-111111111111',
+    entryDate: '2026-11-05',
+    fiscalPeriod: '2026-11',
+    accountCode: '572000',
+    debitAmount: 10,
+    creditAmount: 10,
+    recordHash: 'a'.repeat(64),
+    previousRecordHash: 'b'.repeat(64),
+    traceId: 't1',
+  };
+}
+
+test('HOOK-LIBRO-01 enforces the full CMS provenance contract and blocks update/remove', () => {
+  const missingTrace = validLibroEntry();
+  delete missingTrace.traceId;
+  assert.throws(() => H.LibroAsientosContablesDetalle_beforeInsert(missingTrace), /traceId/);
+
+  const missingSource = validLibroEntry();
+  delete missingSource.sourceMovementId;
+  assert.throws(() => H.LibroAsientosContablesDetalle_beforeInsert(missingSource), /sourceMovementId/);
+
+  const missingPreviousHash = validLibroEntry();
+  delete missingPreviousHash.previousRecordHash;
+  assert.throws(() => H.LibroAsientosContablesDetalle_beforeInsert(missingPreviousHash), /previousRecordHash/);
+
+  const legacy = validLibroEntry();
+  legacy.debit = 10;
+  assert.throws(() => H.LibroAsientosContablesDetalle_beforeInsert(legacy), /legacy/);
+
+  assert.doesNotThrow(() => H.LibroAsientosContablesDetalle_beforeInsert(validLibroEntry()));
   assert.throws(() => H.LibroAsientosContablesDetalle_beforeUpdate({}), /append-only/);
   assert.throws(() => H.LibroAsientosContablesDetalle_beforeRemove({}), /append-only/);
+});
+
+test('HOOK-LIBRO-02 AEAT snapshot requires fiscal system identity only when a snapshot is written', () => {
+  const withSnapshot = { ...validLibroEntry(), payloadFiscal: {
+    numSerieFactura: 'FAC-2026-00001',
+    descripcionOperacion: 'Venta mostrador',
+  } };
+  assert.throws(() => H.LibroAsientosContablesDetalle_beforeInsert(withSnapshot), /idSistemaInformatico/);
+  withSnapshot.idSistemaInformatico = 'WIX-MARIAN-01';
+  assert.doesNotThrow(() => H.LibroAsientosContablesDetalle_beforeInsert(withSnapshot));
 });
 
 // -----------------------------------------------------------------------------
