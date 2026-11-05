@@ -535,7 +535,7 @@ async function _resolveStaffResourceFromMapaStaff(staffMemberId) {
     if (!_looksLikeGuid(resourceId)) {
         return { ok: false, reason: "MAPA_STAFF_RESOURCE_ID_INVALID" };
     }
-    if (scheduleId && !_looksLikeGuid(scheduleId)) {
+    if (!_looksLikeGuid(scheduleId)) {
         return { ok: false, reason: "MAPA_STAFF_SCHEDULE_ID_INVALID" };
     }
     return { ok: true, resourceId, scheduleId };
@@ -590,7 +590,7 @@ async function _syncNativeBookingToCitas(booking, eventId, traceId) {
                 return { ok: false, reason: mapping.reason, missing: ["resourceId", "scheduleId"] };
             }
             if (!_looksLikeGuid(resourceId)) resourceId = mapping.resourceId;
-            if (!scheduleId) scheduleId = mapping.scheduleId;
+            if (!_looksLikeGuid(scheduleId)) scheduleId = mapping.scheduleId;
         }
         const resolvedResourceId = _looksLikeGuid(existingResourceId) ? existingResourceId : resourceId;
         const resolvedScheduleId = _looksLikeGuid(existingScheduleId) ? existingScheduleId : scheduleId;
