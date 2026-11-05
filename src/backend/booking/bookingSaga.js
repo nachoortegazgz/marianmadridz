@@ -37,6 +37,7 @@ FIXES HEREDADOS v5014: SAGA-36..SAGA-45.
 
 import { bookings } from "@wix/bookings";
 import { auth } from "@wix/essentials";
+import { currentMember } from "@wix/members";
 import { query as dalQuery, insertItem as dalInsert } from "backend/dataAccess";
 import {
     BUSINESS_COLLECTIONS,
@@ -1120,9 +1121,17 @@ export async function executeBookingSaga(unsafePayload) {
             );
         }
 
-        const sessionMemberId = _safeTrim(
-            (unsafePayload && unsafePayload.memberId) || ""
-        ).slice(0, 100);
+        /* La identidad se obtiene en backend; nunca confiar en memberId del navegador. */
+        let sessionMemberId = "";
+        let sessionContactId = "";
+        try {
+            const memberResponse = await currentMember.getMember({ fieldsets: ["EXTENDED"] });
+            const member = memberResponse && (memberResponse.member || memberResponse);
+            sessionMemberId = _safeTrim(member && (member._id || member.id || member.memberId)).slice(0, 100);
+            sessionContactId = _safeTrim(member && member.contactId).slice(0, 100);
+        } catch (_) {
+            /* Reserva como invitado: no hay identidad de miembro activa. */
+        }
 
         const rgpdConsent =
             (unsafePayload && unsafePayload.rgpdConsent === true) ||
@@ -1522,7 +1531,7 @@ export async function executeBookingSaga(unsafePayload) {
                             ""
                     ),
                 };
-                if (sessionMemberId) contactDetails.memberId = sessionMemberId;
+                if (sessionContactId) contactDetails.contactId = sessionContactId;
 
                 const bookedAddOns = _buildBookedAddOns(detectedAddonIds);
 
