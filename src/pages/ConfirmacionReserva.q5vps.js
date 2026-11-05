@@ -140,19 +140,19 @@ function _resolveNavTarget(payload) {
     if (typeof payload.target === "string") {
         const t = payload.target.toUpperCase();
         if (t === "MIS_RESERVAS") {
-            return URLS?.MIS_RESERVAS || "/my-bookings";
+            return URLS.MIS_RESERVAS;
         }
         if (t === "HOME") {
-            return URLS?.HOME || "/";
+            return URLS.HOME;
         }
         if (t === "RESERVA_ONLINE") {
-            return URLS?.SERVICIOS || "/reserva-online";
+            return URLS.SERVICIOS;
         }
         return "";
     }
 
     if (typeof payload.url === "string") {
-        const legacyAllowed = ["/", "/my-bookings", "/reserva-online"];
+        const legacyAllowed = [URLS.HOME, URLS.MIS_RESERVAS, URLS.SERVICIOS];
         return legacyAllowed.includes(payload.url) ? payload.url : "";
     }
 
@@ -458,9 +458,9 @@ function showError(message) {
 // =============================================================================
 
 export function homeButton_click(event) {
-    location.to("/");
+    location.to(URLS.HOME);
 }
 
 export function calendarButton_click(event) {
-    location.to("/reserva-online");
+    location.to(URLS.SERVICIOS);
 }
