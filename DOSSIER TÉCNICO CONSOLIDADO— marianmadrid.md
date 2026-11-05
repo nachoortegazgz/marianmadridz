@@ -4220,13 +4220,14 @@ La búsqueda de sitios Wix por nombre que contenga `QA` no devolvió un sitio se
 - Hay 8 divergencias reales de estado: CMS `CONFIRMED` frente a Bookings `CANCELED`. Son reservas históricas con fechas 21-10 (3 filas), 03-11 (3 filas) y 04-11 (2 filas); las cancelaciones nativas se actualizaron el 31-10 entre 18:08 y 18:11 UTC.
 - Otras 2 filas del 05-11 muestran CMS `CANCELLED` frente a Bookings `CANCELED`: diferencia de grafía, no de estado semántico. En las dos filas del 21-10 también difiere `paymentStatus` (`NOT_PAID` en CMS frente a `UNDEFINED` en Bookings).
 - `ControlOperativo` devuelve dos marcadores `WEBHOOK_EVENT` actuales de cancelación del 05-11, coherentes con las dos filas cuyo CMS ya refleja `CANCELLED`. No hay marcadores actuales para las ocho filas históricas. Como las cancelaciones nativas se actualizaron el 31-10 y los marcadores tienen TTL de 72 horas, su ausencia actual no permite concluir si el evento se procesó y expiró o si no llegó a procesarse. No actualizar estados históricos por inferencia.
+- El handler `wixBookingsV2_onBookingCanceled` valida `metadata.id` y `data.booking._id`, actualiza por `bookingId` mediante `_updateCitaStatus()` y solo marca el evento como procesado tras una actualización correcta. En un replay vuelve a reconciliar el estado; no descarta silenciosamente el evento por estar marcado. La implementación actual es coherente con los dos marcadores del 05-11.
 
 ### 35.5 Pares duplicados históricos
 
-- Se mantienen dos pares F1/F2 para el mismo cliente y los mismos intervalos del 12-11: F1 09:30–10:10 y F2 10:50–11:40 (`Europe/Madrid`). El primer par está asignado a ALBA y el segundo a ANDREA.
+- Se mantienen dos pares F1/F2 para el mismo cliente/email de contacto y los mismos intervalos del 12-11: F1 09:30–10:10 y F2 10:50–11:40 (`Europe/Madrid`). El primer par (`bf4c396a47ea3ac7`) está asignado a ALBA y se creó 01:27 UTC; el segundo (`36de8a86e1e9d0e6`) está asignado a ANDREA y se creó 01:28 UTC.
 - Los cuatro bookings siguen `CONFIRMED` y `NOT_PAID`, sin `doubleBooked`. En los cuatro `selectedPaymentOption` es `UNDEFINED`; las filas históricas no contienen `memberId` ni `contactId`.
 - Se crearon entre 01:27 y 01:28 UTC, antes del merge de #108 a las 03:02 UTC. No son causados por el código integrado en #108. Hay otro par separado del 13-11, no coincidente en horario y no incluido en este duplicado.
-- No cancelar ni reasignar automáticamente. La elección del par que se conserva requiere reconciliación manual del propietario.
+- Recomendación técnica: conservar ALBA (primera escritura) y considerar ANDREA (segundo intento/reintento) como el par duplicado a cancelar. Esta conclusión se basa en el orden de creación y en el diagnóstico de PR #108; requiere aprobación expresa del propietario antes de cancelar. No se ha ejecutado ninguna cancelación ni reasignación.
 - El flujo #108 consulta `_findExistingCitasForSlot()` antes de resolver el profesional: busca por servicio F1, fecha, inicio/fin exactos e identidad (memberId/contactId, con email como fallback); no incluye `resourceId` y excluye estados cancelados/declinados. Por tanto, estos pares legacy activos deben bloquear un tercer intento aunque el balanceador elija otro profesional. Es una garantía de código/contrato, no una prueba runtime posterior a la publicación.
 
 ### 35.6 Cobertura runtime y pendientes
