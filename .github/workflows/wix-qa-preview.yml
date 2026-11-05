@@ -3,27 +3,32 @@ name: Wix QA preview
 on:
   pull_request:
     branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
 
 permissions:
   contents: read
 
+# No cancelar una preview en curso por cada nuevo push a la PR.
 concurrency:
   group: wix-qa-preview-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   preview:
-    # API keys are not available to forked PRs. Same-repository PRs and manual
-    # runs are supported; fork PRs remain covered by the offline CI workflow.
+    # Los secretos no están disponibles en PRs de forks.
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
       CLI_API_KEY: ${{ secrets.CLI_API_KEY }}
+
     steps:
       - name: Checkout candidate code
         uses: actions/checkout@v4
+        with:
+          # Prueba el código enviado a la PR, no el merge commit generado por GitHub.
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -34,65 +39,50 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Install Wix CLI for Sites
+      - name: Install Wix CLI
         run: npm install --global @wix/cli
 
-      - name: Validate Wix API key secret
+      - name: Validate Wix API key
         shell: bash
         run: |
           if [[ -z "${CLI_API_KEY}" ]]; then
-            echo "::error::GitHub secret CLI_API_KEY is missing."
+            echo "::error::Falta el secreto CLI_API_KEY en GitHub Actions."
             exit 1
           fi
 
-      - name: Authenticate Wix CLI for Sites
+      - name: Authenticate Wix CLI
         run: npm run wix login -- --api-key "${CLI_API_KEY}"
 
-      - name: Create preview from this PR branch
+      - name: Create local preview without interactive prompts
         shell: bash
         run: |
-          set -euo pipefail
-          command -v script >/dev/null || {
-            echo "::error::util-linux script is required to provide the CLI with a TTY."
-            exit 1
-          }
-          # Wix CLI for Sites opens an Ink selector. Wait until the prompt is
-          # actually rendered before sending Down + Enter; sending it immediately
-          # can race CLI startup and leave CI blocked in the interactive prompt.
-          (
-            for attempt in $(seq 1 60); do
-              if grep -Fq "Latest commit from origin/main" wix-preview.log 2>/dev/null; then
-                printf '\033[B\r'
-                exit 0
-              fi
-              sleep 1
-            done
-            echo "::error::Wix preview source selector did not appear within 60 seconds."
-            exit 1
-          ) | timeout 600s script --quiet --return --command "npm run wix preview" /dev/null 2>&1 | tee wix-preview.log
+          set -o pipefail
+          timeout 600s npm run wix preview -- --source local 2>&1 | tee wix-preview.log
 
-      - name: Require Wix's explicit preview URL
+      - name: Require Wix preview URL
         id: preview
         shell: bash
         run: |
           set -euo pipefail
+
           preview_url="$(grep -Eo 'https?://wix\.to/[A-Za-z0-9]+' wix-preview.log | tail -n 1 || true)"
           if [[ -z "${preview_url}" ]]; then
-            echo "::error::Wix CLI exited without the documented preview deployment URL. This is not a Preview PASS."
+            echo "::error::Wix CLI terminó sin proporcionar una URL de preview válida."
             exit 1
           fi
+
           echo "url=${preview_url}" >> "$GITHUB_OUTPUT"
           echo "### Wix Preview" >> "$GITHUB_STEP_SUMMARY"
           echo "${preview_url}" >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Smoke-test the generated preview URL
+      - name: Smoke-test preview URL
         env:
           PREVIEW_URL: ${{ steps.preview.outputs.url }}
         run: |
           curl --fail --location --silent --show-error --max-time 60 \
             --output /dev/null "${PREVIEW_URL}"
 
-      - name: Preserve Wix Preview diagnostics
+      - name: Preserve Wix diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
