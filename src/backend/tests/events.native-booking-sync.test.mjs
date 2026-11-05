@@ -48,7 +48,10 @@ function nativeBooking(overrides = {}) {
 }
 
 function bookingConfirmedEvent(eventId, booking) {
-  return { metadata: { id: eventId }, entity: booking };
+  return {
+    metadata: { id: eventId },
+    data: { booking: { ...booking, _id: booking.id } },
+  };
 }
 
 function seedCita(overrides = {}) {
@@ -327,9 +330,12 @@ test("EVENT-BOOKING-06 native Bookings V2 cancellation consumes metadata.id + da
 
   const result = await events.wixBookingsV2_onBookingCanceled({
     metadata: { id: "evt-native-cancel-006" },
-    entity: {
-      id: BOOKING_ID,
-      status: "CANCELED",
+    data: {
+      booking: {
+        id: BOOKING_ID,
+        _id: BOOKING_ID,
+        status: "CANCELED",
+      },
     },
   });
 
