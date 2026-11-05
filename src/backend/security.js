@@ -209,8 +209,6 @@ export async function rateLimiter(
             idHex.slice(16, 20).join(""),
             idHex.slice(20, 32).join(""),
         ].join("-");
-        const now = Date.now();
-
         // Read first: existing requester state must not trigger a duplicate CMS insert.
         const createRecord = (createdAt) => ({
             _id: recordId,
