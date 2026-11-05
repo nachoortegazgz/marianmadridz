@@ -634,6 +634,8 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
 
             if (existingRes?.items?.length > 0) {
                 log.info("Ledger idempotent duplicate detected", { transactionId, traceId });
+                // Retry projection if the fiscal movement survived a prior partial attempt.
+                await _projectToAccountingLedger(existingRes.items[0], traceId);
                 return { status: "SUCCESS", data: existingRes.items[0], error: null, idempotent: true };
             }
         }
@@ -1427,8 +1429,8 @@ export const registerGiftCardSale = webMethod(Permissions.SiteMember, async (pay
         };
 
         const saved = await dalInsert(MOVIMIENTOS_CAJA_COL, movement);
-        await _updateCajaActual(movement, traceId);
-        await _projectToAccountingLedger(movement, traceId);
+        await _updateCajaActual(saved, traceId);
+        await _projectToAccountingLedger(saved, traceId);
 
         await logAuditEvent("GIFT_CARD_SOLD", "INFO", `Tarjeta regalo vendida: ${giftCardId}`, { giftCardId, totalAmount, traceId }, traceId, giftCardId, "backend/cajas.web.js");
 
@@ -1472,6 +1474,7 @@ export const registerGiftCardRedemption = webMethod(Permissions.SiteMember, asyn
 
         if (existingRedemption?.items?.length > 0) {
             log.info("Gift card redemption idempotent duplicate detected", { redemptionId, giftCardId, traceId });
+            await _projectToAccountingLedger(existingRedemption.items[0], traceId);
             return { status: "SUCCESS", data: existingRedemption.items[0], error: null, idempotent: true };
         }
 
@@ -1578,8 +1581,8 @@ export const registerGiftCardRedemption = webMethod(Permissions.SiteMember, asyn
         };
 
         const saved = await dalInsert(MOVIMIENTOS_CAJA_COL, movement);
-        await _updateCajaActual(movement, traceId);
-        await _projectToAccountingLedger(movement, traceId);
+        await _updateCajaActual(saved, traceId);
+        await _projectToAccountingLedger(saved, traceId);
 
         await logAuditEvent("GIFT_CARD_REDEEMED", "INFO", `Tarjeta regalo canjeada: ${giftCardId}`, { giftCardId, totalAmount, serviceId, traceId }, traceId, giftCardId, "backend/cajas.web.js");
 
