@@ -136,12 +136,12 @@ El dossier combina directrices, contratos, inventarios y checkpoints fechados. P
 
 | Necesidad | Referencia canónica | Regla |
 |---|---|---|
-| Conducta del agente, fuentes y límites | Bloque inicial y §§1, 3–9 | Directrices de trabajo; no acreditan el estado del sistema. |
+| Conducta del agente, fuentes y límites | Bloque A y §§1–9 | Directrices de trabajo; no acreditan el estado del sistema. |
 | Prioridades y gates | Resumen ejecutivo y §§19–20, 25–26 | Contrastar con SSOT y evidencia primaria. |
 | Contratos Wix, APIs y versiones | §E, documentación Wix y §§13–16 | Verificar vigencia oficial antes de implementar. |
 | CMS, keyfields, enums e invariantes | §§F–G, §§5–7 y CMS KEYFIELDS | No duplicar esquemas; resolver contradicciones con evidencia/ADR. |
 | Backend, permisos, secretos y jobs | §§8, 10–12 y 21 | Código/configuración actuales prevalecen sobre descripciones históricas. |
-| IDs y credenciales de referencia | §§2.7–2.8 y ficha técnica | Inventario declarado; no demuestra acceso ni vigencia. |
+| IDs y credenciales de referencia | §§2.5–2.6 y ficha técnica | Inventario declarado; no demuestra acceso ni vigencia. |
 | Estado operativo y pendientes | **§32** | Checkpoint más reciente de este dossier; confirmar HEAD y CI antes de actuar. |
 | Evidencia anterior | §§24–31 y anexos fechados | Trazabilidad histórica; no reutilizar como estado actual si §32 la sustituye. |
 
@@ -320,7 +320,7 @@ Si no hay dato: `No consta` + cómo obtenerlo.
 ### 6.3 Protocolo de discrepancia
 
 1. Mostrar ambas versiones con fuente y fecha.
-2. Aplicar precedencia (§4).
+2. Aplicar precedencia (§5).
 3. Declarar la resolución y su impacto.
 4. Proponer corrección (ADR o actualización documental) con responsable.
 
