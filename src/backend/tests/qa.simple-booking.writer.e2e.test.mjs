@@ -139,7 +139,7 @@ test('QA-SIMPLE-BOOKING-01 resolves real catalogue and staff mocks, creates one 
   assert.equal(body.contactDetails.email, 'qa.simple@example.test');
   assert.equal(body.bookedEntity.slot.serviceId, SERVICE_ID);
   assert.equal(body.bookedEntity.slot.scheduleId, SCHEDULE_ID);
-  assert.equal(body.bookedEntity.slot.resource._id, RESOURCE_ID);
+  assert.equal(body.bookedEntity.slot.resource.id, RESOURCE_ID);
   assert.equal(body.totalParticipants, 1);
 
   const citas = wixDataMock._store.get('CitasF2') || [];
