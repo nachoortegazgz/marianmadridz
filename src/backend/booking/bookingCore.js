@@ -80,7 +80,6 @@ import {
     withTimeout,
 } from "public/mmUtils";
 import {
-    computeGapMinutes,
     getResourceIdsFromSlot,
     normalizeAvailabilitySlot,
     _normalizeGuidForComparison,
