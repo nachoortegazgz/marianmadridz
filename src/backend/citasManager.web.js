@@ -344,6 +344,7 @@ function _validateProcessBookingPayload(payload, traceId, sessionMemberId = "") 
         addOnIds: _normalizeBookingAddOnIds(payload.addOnIds),
         traceId: _safeTrim(payload.traceId || ""),
         memberId: _safeTrim(sessionMemberId),
+        contactId: _safeTrim(sessionMember?.contactId || ""),
     };
 }
 

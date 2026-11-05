@@ -8,6 +8,8 @@ import { _executeWithRetry } from "../../public/mmUtils.js";
 const calendarUrl = new URL("../../pages/Calendario%20de%20reservas%202.q39h6.js", import.meta.url);
 const serviceUrl = new URL("../../pages/Pagina%20de%20servicio%202.xnfr4.js", import.meta.url);
 const calendarSource = await readFile(calendarUrl, "utf8");
+const sagaSource = await readFile(new URL("../booking/bookingSaga.js", import.meta.url), "utf8");
+const bookingUtilsSource = await readFile(new URL("../booking/bookingUtils.js", import.meta.url), "utf8");
 const serviceSource = await readFile(serviceUrl, "utf8");
 const bridgeSource = await readFile(new URL("../../public/widgetBridge.js", import.meta.url), "utf8");
 const calendarWidgetSource = await readFile(new URL("../../../%23html1.txt", import.meta.url), "utf8");
@@ -44,6 +46,37 @@ test("BOOK-FLOW-TIMING-01 module deadlines fit the configured widget watchdogs",
   assert.match(serviceSource, /handshakeTimeoutMs:\s*45000/);
   assert.match(serviceSource, /contextTimeoutMs:\s*120000/);
   assert.match(serviceSource, /contextAttemptTimeoutMs:\s*30000/);
+  assert.match(calendarSource, /processDualBooking\(requestPayload\)[\s\S]{0,100}120000/);
+  assert.match(calendarWidgetSource, /bookingTimeoutMs:150000/);
+});
+
+test("BOOK-FLOW-FAIL-CLOSED-01 confirmation requires matching staff, confirmed status and complete persistence", () => {
+  assert.match(sagaSource, /_assertBookingResourceMatches\(bookingF1, "F1", finalResourceId/);
+  assert.match(sagaSource, /_assertBookingResourceMatches\(bookingF2, "F2", finalResourceId/);
+  assert.match(sagaSource, /confirmedStatus !== BOOKING_STATUS_CONFIRMED/);
+  assert.match(sagaSource, /CITA_PERSIST_FAILED/);
+  assert.match(sagaSource, /BOOKING_RECONCILIATION_PENDING/);
+  assert.match(calendarSource, /validateBookingResultForConfirmation/);
+  assert.match(calendarSource, /CHECKOUT_ASSOCIATION_FAILED/);
+  assert.match(calendarSource, /BOOKING_NOT_CONFIRMED/);
+});
+
+test("BOOK-FLOW-IDEMPOTENCY-01 pair fingerprint and payload hash exclude auto-balanced resourceId", () => {
+  const fingerprintBlock = bookingUtilsSource.slice(
+    bookingUtilsSource.indexOf("const EXPECTED_PAIR_FINGERPRINT_FIELDS"),
+    bookingUtilsSource.indexOf("const DATE_YMD_LOCAL"),
+  );
+  assert.doesNotMatch(fingerprintBlock, /resourceId/);
+  const tokenBlock = sagaSource.slice(
+    sagaSource.indexOf("function _resolveStablePairToken"),
+    sagaSource.indexOf("function _resolveUnifiedPairToken"),
+  );
+  assert.doesNotMatch(tokenBlock, /resourceId/);
+  const payloadHashBlock = sagaSource.slice(
+    sagaSource.indexOf("const payloadHash"),
+    sagaSource.indexOf("const txResult"),
+  );
+  assert.doesNotMatch(payloadHashBlock, /resourceId/);
 });
 
 test("BOOK-FLOW-RETRY-01 shared retry helper performs three total attempts with exponential backoff enabled", async () => {

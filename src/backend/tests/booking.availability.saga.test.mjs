@@ -447,6 +447,25 @@ test('BSAGA-META-01 _normalizePersistedMeta accepts JSON string, object, garbage
 // LOAD RANKING AND GAP LOCK CONTRACT
 // ---------------------------------------------------------------------------
 
+test('PAIR-IDEMPOTENCY-01 auto-balanced staff changes do not change the dual pair fingerprint', () => {
+  const base = {
+    serviceId: GUID_1,
+    linkedPhases: GUID_2,
+    dateYmd: '2026-10-20',
+    f1Start: '2026-10-20T09:00:00',
+    f1End: '2026-10-20T09:30:00',
+    f2Start: '2026-10-20T10:00:00',
+    f2End: '2026-10-20T10:40:00',
+  };
+  const first = BU._buildPairFingerprint({ ...base, resourceId: GUID_1 });
+  const retry = BU._buildPairFingerprint({ ...base, resourceId: GUID_2 });
+  assert.strictEqual(first, retry, 'automatic staff balancing must not fork idempotency');
+  assert.strictEqual(
+    BU._buildPairTokenDeterministic({ ...base, resourceId: GUID_1 }),
+    BU._buildPairTokenDeterministic({ ...base, resourceId: GUID_2 }),
+  );
+});
+
 test('BUTIL-RANK-01 shared ranking sorts by booked minutes then stable staff name', () => {
   const ranked = BU._rankResourcesByLoad(
     [GUID_1, GUID_2, GUID_3],

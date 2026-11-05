@@ -131,6 +131,7 @@ const BOOKING_STATUS_PENDING_PAYMENT = _safeTrim(
 const CHANNEL_ONLINE = _safeTrim(CHANNEL_TYPE.ONLINE).toUpperCase();
 const CHANNEL_PRESENCIAL = _safeTrim(CHANNEL_TYPE.PRESENCIAL).toUpperCase();
 const BOOKING_PAYMENT_OPTION_ONLINE = "ONLINE";
+const BOOKING_PAYMENT_OPTION_OFFLINE = "OFFLINE";
 
 const NON_CANCELABLE_STATUSES = new Set(
     [
@@ -250,7 +251,6 @@ function _resolveStablePairToken(params) {
     const emailHash = _hashKey(_safeTrim(params.email).toLowerCase());
     const payload = _stableSerialize({
         serviceId: _safeTrim(params.serviceId),
-        resourceId: _safeTrim(params.resourceId),
         f1Start: _safeTrim(params.f1Start),
         f2Start: _safeTrim(params.f2Start || ""),
     });
@@ -259,7 +259,7 @@ function _resolveStablePairToken(params) {
 }
 
 function _resolveUnifiedPairToken(params) {
-    if (params.isDual && _looksLikeGuid(params.resourceId)) {
+    if (params.isDual) {
         let pairToken;
         try {
             pairToken = _buildPairTokenDeterministic({
@@ -270,7 +270,6 @@ function _resolveUnifiedPairToken(params) {
                 f1End: params.f1End,
                 f2Start: params.f2Start,
                 f2End: params.f2End,
-                resourceId: params.resourceId,
             });
         } catch (error) {
             log.error("SAGA-19: pair fingerprint rejected the dual payload", {
@@ -288,22 +287,14 @@ function _resolveUnifiedPairToken(params) {
         return { pairToken: pairToken, source: "FINGERPRINT" };
     }
 
-    if (params.isDual) {
-        log.warn("R0-06: dual without resourceId. Falling back to STABLE token.", {
-            traceId: params.traceId,
-            serviceId: params.serviceId,
-        });
-    }
-
     return {
         pairToken: _resolveStablePairToken({
             serviceId: params.serviceId,
-            resourceId: params.resourceId,
             f1Start: params.f1Start,
             f2Start: params.f2Start,
             email: params.email,
         }),
-        source: params.isDual ? "STABLE_DEGRADED" : "STABLE",
+        source: "STABLE",
     };
 }
 
@@ -555,6 +546,29 @@ function _validateCreateBookingResponse(booking, phase, traceId) {
             _safeTrim(booking && booking.status) ||
             null,
     };
+}
+
+function _assertBookingResourceMatches(booking, phase, expectedResourceId, traceId) {
+    const expected = _safeTrim(expectedResourceId);
+    const actual = _safeTrim(
+        booking?.bookedEntity?.slot?.resource?.id ||
+        booking?.bookedEntity?.slot?.resource?._id ||
+        ""
+    );
+    if (!expected || !actual || actual !== expected) {
+        log.error("BOOKING_STAFF_ASSIGNMENT_MISMATCH", {
+            traceId: traceId,
+            phase: phase,
+            expectedResourceId: expected || null,
+            actualResourceId: actual || null,
+            bookingId: _safeTrim(booking?.id || booking?._id) || null,
+        });
+        throw createBookingError(
+            "STAFF_ASSIGNMENT_MISMATCH",
+            "Wix booking resource does not match the validated staff member.",
+            { traceId: traceId, phase: phase, expectedResourceId: expected, actualResourceId: actual }
+        );
+    }
 }
 
 // =============================================================================
@@ -1122,6 +1136,9 @@ export async function executeBookingSaga(unsafePayload) {
         const sessionMemberId = _safeTrim(
             (unsafePayload && unsafePayload.memberId) || ""
         ).slice(0, 100);
+        const sessionContactId = _safeTrim(
+            (unsafePayload && unsafePayload.contactId) || ""
+        );
 
         const rgpdConsent =
             (unsafePayload && unsafePayload.rgpdConsent === true) ||
@@ -1318,7 +1335,6 @@ export async function executeBookingSaga(unsafePayload) {
             f1End: f1LocalEnd,
             f2Start: f2LocalStart,
             f2End: f2LocalEnd,
-            resourceId: finalResourceId,
             email: email,
             traceId: traceId,
         });
@@ -1348,7 +1364,6 @@ export async function executeBookingSaga(unsafePayload) {
         const payloadHash = _hashKey(
             _stableSerialize({
                 serviceId: serviceId,
-                resourceId: finalResourceId,
                 f1LocalStart: f1LocalStart,
                 f1LocalEnd: f1LocalEnd,
                 f2LocalStart: f2LocalStart,
@@ -1521,7 +1536,9 @@ export async function executeBookingSaga(unsafePayload) {
                             ""
                     ),
                 };
-                if (sessionMemberId) contactDetails.memberId = sessionMemberId;
+                if (sessionContactId && _looksLikeGuid(sessionContactId)) {
+                    contactDetails.contactId = sessionContactId;
+                }
 
                 const bookedAddOns = _buildBookedAddOns(detectedAddonIds);
 
@@ -1551,7 +1568,9 @@ export async function executeBookingSaga(unsafePayload) {
                 };
                 if (appointmentNote) bookingBodyF1.internalBusinessNote = appointmentNote;
                 if (bookedAddOns.length > 0) bookingBodyF1.bookedAddOns = bookedAddOns;
-                if (isOnline) bookingBodyF1.selectedPaymentOption = BOOKING_PAYMENT_OPTION_ONLINE;
+                bookingBodyF1.selectedPaymentOption = isOnline
+                    ? BOOKING_PAYMENT_OPTION_ONLINE
+                    : BOOKING_PAYMENT_OPTION_OFFLINE;
 
                 let resF1;
                 try {
@@ -1585,6 +1604,7 @@ export async function executeBookingSaga(unsafePayload) {
                     phase: "F1",
                 });
                 _checkDoubleBookingFlag(bookingF1, "F1", traceId);
+                _assertBookingResourceMatches(bookingF1, "F1", finalResourceId, traceId);
 
                 let bookingF2 = null;
                 let f2Meta = null;
@@ -1616,6 +1636,7 @@ export async function executeBookingSaga(unsafePayload) {
                         bookedEntity: { slot: pristineF2 },
                         contactDetails: contactDetails,
                         totalParticipants: 1,
+                        selectedPaymentOption: BOOKING_PAYMENT_OPTION_OFFLINE,
                     };
                     if (appointmentNote) bookingBodyF2.internalBusinessNote = appointmentNote;
                     let resF2;
@@ -1650,6 +1671,7 @@ export async function executeBookingSaga(unsafePayload) {
                         phase: "F2",
                     });
                     _checkDoubleBookingFlag(bookingF2, "F2", traceId);
+                    _assertBookingResourceMatches(bookingF2, "F2", finalResourceId, traceId);
                 }
 
                 return {
@@ -1722,22 +1744,20 @@ export async function executeBookingSaga(unsafePayload) {
                         300
                     );
 
-                    _checkDoubleBookingFlag(confirmResult, "CONFIRM_" + booking.phase, traceId);
-
-                    booking.status =
-                        _safeTrim(
-                            confirmResult &&
-                                confirmResult.booking &&
-                                confirmResult.booking.bookingStatus
-                        ) ||
-                        _safeTrim(
-                            confirmResult &&
-                                confirmResult.booking &&
-                                confirmResult.booking.status
-                        ) ||
-                        _safeTrim(confirmResult && confirmResult.bookingStatus) ||
-                        _safeTrim(confirmResult && confirmResult.status) ||
-                        BOOKING_STATUS_CONFIRMED;
+                    const confirmedBooking = (confirmResult && confirmResult.booking) || confirmResult;
+                    _checkDoubleBookingFlag(confirmedBooking, "CONFIRM_" + booking.phase, traceId);
+                    _assertBookingResourceMatches(confirmedBooking, "CONFIRM_" + booking.phase, finalResourceId, traceId);
+                    const confirmedStatus = _safeTrim(
+                        confirmedBooking && (confirmedBooking.status || confirmedBooking.bookingStatus)
+                    ).toUpperCase();
+                    if (confirmedStatus !== BOOKING_STATUS_CONFIRMED.toUpperCase()) {
+                        throw createBookingError(
+                            "BOOKING_NOT_CONFIRMED",
+                            "Wix did not confirm booking " + booking.phase + ".",
+                            { traceId: traceId, phase: booking.phase, bookingId: booking.bookingId, status: confirmedStatus || null }
+                        );
+                    }
+                    booking.status = confirmedStatus;
                 }
 
                 return {
@@ -1773,6 +1793,8 @@ export async function executeBookingSaga(unsafePayload) {
 
                 const resolvedCheckoutUrl =
                     (checkoutStepResult && checkoutStepResult.checkoutUrl) || null;
+                const resolvedCartId =
+                    (checkoutStepResult && checkoutStepResult.cartId) || null;
 
                 let bookingF1Id = null;
                 let bookingF2Id = null;
@@ -1834,7 +1856,7 @@ export async function executeBookingSaga(unsafePayload) {
                 };
                 if (sessionMemberId) persistedContactDetails.memberId = sessionMemberId;
 
-                await _persistBooking(
+                const persistedF1 = await _persistBooking(
                     {
                         bookingId: bookingF1Id,
                         revision: revisionF1,
@@ -1871,6 +1893,18 @@ export async function executeBookingSaga(unsafePayload) {
                     },
                     traceId
                 );
+                if (
+                    !persistedF1?.item ||
+                    _safeTrim(persistedF1.item.bookingId) !== bookingF1Id ||
+                    _safeTrim(persistedF1.item.pairToken) !== pairToken ||
+                    _safeTrim(persistedF1.item.resourceId) !== finalResourceId
+                ) {
+                    throw createBookingError(
+                        "CITA_PERSIST_FAILED",
+                        "F1 booking record was not persisted with the expected booking, pair and staff identifiers.",
+                        { traceId: traceId, bookingId: bookingF1Id }
+                    );
+                }
 
                 if (isDual && bookingF2Id) {
                     let scheduleIdF2 = _isGuidOrNull(createBookingsResult.scheduleIdF2);
@@ -1888,7 +1922,7 @@ export async function executeBookingSaga(unsafePayload) {
                         );
                     }
 
-                    await _persistBooking(
+                    const persistedF2 = await _persistBooking(
                         {
                             bookingId: bookingF2Id,
                             revision: revisionF2,
@@ -1921,12 +1955,25 @@ export async function executeBookingSaga(unsafePayload) {
                         },
                         traceId
                     );
+                    if (
+                        !persistedF2?.item ||
+                        _safeTrim(persistedF2.item.bookingId) !== bookingF2Id ||
+                        _safeTrim(persistedF2.item.pairToken) !== pairToken ||
+                        _safeTrim(persistedF2.item.resourceId) !== finalResourceId
+                    ) {
+                        throw createBookingError(
+                            "CITA_PERSIST_FAILED",
+                            "F2 booking record was not persisted with the expected booking, pair and staff identifiers.",
+                            { traceId: traceId, bookingId: bookingF2Id }
+                        );
+                    }
                 }
 
                 return {
                     bookingF1Id: bookingF1Id,
                     bookingF2Id: bookingF2Id || null,
                     resolvedCheckoutUrl: resolvedCheckoutUrl,
+                    resolvedCartId: resolvedCartId,
                     citaStatus: citaStatus,
                     isOnline: isOnline,
                     revisionF1: revisionF1,
@@ -1963,6 +2010,8 @@ export async function executeBookingSaga(unsafePayload) {
                 requiresPayment: isOnline,
                 checkoutUrl:
                     (persistStepResult && persistStepResult.resolvedCheckoutUrl) || null,
+                cartId:
+                    (persistStepResult && persistStepResult.resolvedCartId) || null,
                 status: (persistStepResult && persistStepResult.citaStatus) || citaStatus,
                 paymentStatus: paymentStatus,
                 channelType: isOnline ? CHANNEL_ONLINE : CHANNEL_PRESENCIAL,
@@ -2017,11 +2066,12 @@ export async function executeBookingSaga(unsafePayload) {
                 }
 
                 return {
-                    status: "SUCCESS",
-                    data: Object.assign({}, finalResult, {
-                        reconciliationPending: true,
-                    }),
-                    error: null,
+                    status: "ERROR",
+                    data: null,
+                    error: {
+                        code: "BOOKING_RECONCILIATION_PENDING",
+                        message: "La reserva se ha creado, pero su cierre interno está pendiente de verificación. No repitas la operación.",
+                    },
                 };
             }
 

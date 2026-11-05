@@ -96,8 +96,7 @@ const EXPECTED_PAIR_FINGERPRINT_FIELDS = Object.freeze([
     "f1Start",
     "f1End",
     "f2Start",
-    "f2End",
-    "resourceId"
+    "f2End"
 ]);
 
 const PAIR_FINGERPRINT_FIELDS = EXPECTED_PAIR_FINGERPRINT_FIELDS;
@@ -197,8 +196,7 @@ export function _buildPairFingerprint(input) {
         f1Start: f1Start,
         f1End: f1End,
         f2Start: f2Start,
-        f2End: f2End,
-        resourceId: _safeTrim(src.resourceId)
+        f2End: f2End
     };
 
     const canonical = {};
