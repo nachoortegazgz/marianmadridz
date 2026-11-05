@@ -868,6 +868,7 @@ const VALID_MOV_INVENTARIO_TYPES = new Set([
 
 export function MovimientosInventario_beforeInsert(item) {
     if (!item || typeof item !== "object") return item;
+    _normalizeCmsDateTime(item, "recordTimestamp");
 
     if (!_safeTrim(item.traceId)) _schemaError("traceId obligatorio en MovimientosInventario (trazabilidad)");
     if (!_safeTrim(item.movementToken)) _schemaError("movementToken obligatorio (clave de idempotencia)");
