@@ -32,26 +32,28 @@
 | ID | Incoherencia detectada | Localización/evidencia | Decisión pendiente |
 |---|---|---|---|
 | D-01 | El dossier aparecía como prioridad 3 en la jerarquía de discrepancias, por encima de auditorías/CI/repositorio, pese a declararse subordinado a la SSOT y a fuentes primarias. | Antiguo §5, lista de precedencia; matriz de referencias; entradas obligatorias. | **EDITADO en esta revisión** para dejarlo en último lugar y solo como consulta. Confirmar que la jerarquía resultante coincide con la SSOT vigente. |
-| D-02 | La SSOT v10.0 se cita como fuente superior y como documento aplicado, pero el propio dossier indica que no estaba en la raíz del repositorio consultada. No queda identificada aquí su ubicación controlada ni la versión vigente posterior. | Bloque A, §5 y Anexo J, pendiente sobre SSOT v10.0 y hoja de necesidades. | ¿CONSERVAR como fuente externa controlada, EDITAR la referencia con su ubicación/versión, o incorporar el documento canónico al proyecto? No asumir que v10.0 sigue siendo la última. |
-| D-03 | Hay dos métricas históricas de tests que no coinciden: 182 pass/0 fail (11 suites) y 158/158. El texto las etiqueta como declaradas, pero no resuelve si son universos/fechas distintos o un error. | §6.2, filas “Tests Vitest” y “Tests Vitest (SSOT)”. | ¿CONSERVAR ambas con fecha/commit y alcance, EDITAR tras verificar los informes originales o ELIMINAR una cifra si carece de evidencia? |
-| D-04 | Los checkpoints §24 y §32 contienen frases de “estado más reciente/prevalece” que quedaron superadas por §§33–36. Son útiles como histórico, pero sus encabezados/notas pueden inducir a tratarlos como vigentes. | §§24.1–24.2; §32 y sus notas de vigencia; §§33–36 posteriores. | ¿CONSERVAR como histórico con aviso visible, EDITAR sus notas para señalar que §36 es el último snapshot del dossier, o ELIMINAR solo frases de vigencia obsoletas? Recomiendo conservar la evidencia. |
-| D-05 | Persisten referencias internas heredadas que pueden estar desfasadas por cambios de numeración o por referencias a §0/§A.4, mientras la estructura actual usa otra numeración. | Ejemplos: §6.2 cita “dossier §0”; §23 y otros apartados citan §A.4; varias referencias del bloque F/G. | ¿Autorizar una auditoría integral de referencias y su edición, o conservar las referencias históricas cuando identifiquen el documento/versión de origen? No corregir automáticamente las ambiguas. |
-| D-06 | El Anexo L mezcla una extracción CMS base del 25-10, revisiones reconciliadas el 01-11 y datos de cortes posteriores en §35.2. La nota advierte del desfase, pero el resumen de L puede leerse como inventario actual. | Anexo L, “Extracción detallada base” y tabla Resumen; §35.2. | ¿CONSERVAR L como snapshot histórico y añadir una advertencia destacada, EDITAR su resumen a la última extracción comprobada o mantenerlo como histórico separado del inventario vivo? |
-| D-07 | En §35.1 se afirma que el workflow no tenía trigger push y que se añade; §36 ya confirma que el trigger quedó integrado y ejecutó correctamente. La secuencia es cronológica, pero la frase anterior queda obsoleta si se consulta aislada. | §§35.1 y 36.1. | ¿CONSERVAR ambas como trazabilidad temporal, o EDITAR §35.1 con una nota “situación previa a PR #109, superada por §36.1”? Recomiendo conservar y aclarar, no borrar. |
-| D-08 | El Bloque A se define como instrucciones operativas para cualquier modelo IA y el Resumen Ejecutivo afirma fijar la “doctrina única” que gobierna toda acción. Estas formulaciones chocan con el estatus consultivo y no vinculante que el propietario acaba de establecer para el dossier. | Naturaleza del Anexo A; propósito del Anexo C; reglas de activación y gobernanza. | ¿EDITAR esas formulaciones para convertirlas en recomendaciones subordinadas, ELIMINARlas si duplican la SSOT o CONSERVARlas solo como texto histórico claramente no vinculante? Pendiente de decisión expresa.
+| D-02 | La SSOT v10.0 se cita como referencia normativa, pero su documento canónico no se ha podido localizar en la raíz ni mediante la ruta histórica citada en el repositorio consultado. Un ADR la describe como entregada/versionada, sin aportar una ruta recuperable en esta revisión. No se ha verificado si existe una versión posterior. | Bloque A, §5; ADR-002/ADR-004 y referencias de código a SSOT v10.0. | **CONSERVAR provisionalmente la referencia**, sin atribuirle una ruta ni confirmar que v10.0 sea la última. Pendiente: localizar el archivo canónico, registrar ruta/versión/fecha y comprobar aprobación. No incorporar ni sustituir documentos por inferencia. |
+| D-03 | Las métricas 182 pass/0 fail (11 suites) y 158/158 son históricas y no incluyen informes originales suficientes para reconciliarlas. Hay mediciones posteriores con alcance explícito: §28 registra 289 tests/28 suites/0 fallos (run 41304910924); §35.1 registra 317 tests/34 suites/0 fallos en el head de PR #108 (run 41957173395). No deben sumarse ni compararse como si fueran el mismo universo. | §6.2; §§28, 35.1 y 36.1. | **CONSERVAR las dos cifras antiguas solo como histórico no reconciliado**; identificarlas como no vigentes y usar el recuento de cada run con su commit/alcance. No eliminar datos sin evidencia de error. |
+| D-04 | Los checkpoints §24 y §32 contienen afirmaciones de vigencia superadas por los cortes posteriores. Son evidencia histórica útil, pero no deben prevalecer ni interpretarse como estado actual. | Notas introductorias de §§24 y 32; actualizaciones §§33–36. | **CONSERVAR como histórico y EDITAR sus notas**: §24 queda superado por §32 y ambos por los cortes posteriores; §36 es el último checkpoint cronológico de este dossier, no una garantía de estado vivo. Verificar HEAD/CI/Wix antes de actuar. |
+| D-05 | Auditoría de las referencias señaladas: §A.4 sí existe como apartado 4 del Anexo A y es una referencia interna válida; no se corrige. Las menciones a “dossier (referencia histórica a §0 de una versión anterior)” son referencias heredadas a una sección de estado de una versión anterior y no a una sección numerada actual. Otras referencias a §0.8 pertenecen a la SSOT citada, no al dossier. | §6.2; §§23 y 29–36; referencias de los bloques A/F/G. | **CONSERVAR las referencias §A.4 válidas**. EDITAR las menciones locales a “dossier (referencia histórica a §0 de una versión anterior)” para identificarlas como procedencia histórica; conservar las referencias a §0.8 de la SSOT hasta localizar el documento y validar su numeración. No renumerar referencias externas. |
+| D-06 | El Anexo L combina extracción base 25-10 y reconciliación de esquema 01-11; §35.2 aporta revisiones posteriores del CMS vivo. El resumen del Anexo L no es inventario vigente. | Encabezado y resumen del Anexo L; §§33.1 y 35.2; auditoría `docs/audits/2026-11-01-live-cms-reconciliation.md`. | **CONSERVAR L como snapshot histórico** y añadir aviso destacado; para el estado actual consultar auditoría CMS y lecturas Wix posteriores. No reescribir el snapshot con datos vivos nuevos. |
+| D-07 | §35.1 describe correctamente la configuración anterior a PR #109, pero aislada queda obsoleta: PR #109 integró el trigger `push` y §36.1 acredita la ejecución post-merge. | §§35.1 y 36.1; PR #109; run 41963267447. | **CONSERVAR ambas evidencias y EDITAR §35.1** con una nota temporal que indique “situación previa a PR #109; superada por §36.1”. |
+| D-08 | El Anexo A y el Anexo C contienen lenguaje imperativo (“instrucciones operativas”, “system prompt”, “doctrina única/inviolable”) incompatible con el estatus consultivo del dossier. | Naturaleza y uso del Anexo A; §§1–2 del Anexo C. | **EDITAR como material orientativo no vinculante**. Conservar el contenido útil, pero dejar claro que no se carga como instrucciones del agente ni sustituye SSOT, ADR o instrucciones vigentes. |
 
-**Estado del registro:** D-01 ajustado para reflejar la instrucción del propietario; D-02 a D-08 pendientes de decisión. La presencia de un punto en esta tabla no autoriza su eliminación ni modificación. Registrar la decisión del propietario antes de tocar esos contenidos.
+**Estado del registro:** D-01 ajustado por instrucción del propietario. D-02 a D-08 aplicados en esta revisión según las recomendaciones conservadoras descritas; se conserva la trazabilidad y no se elimina evidencia histórica.
 
 ---
 
 # ANEXO A — ROLES Y DIRECTRICES DE COMPORTAMIENTO PARA MODELOS IA
 
-> **Naturaleza del documento:** instrucciones operativas para cualquier modelo IA que intervenga en el proyecto (arquitectura, código, auditoría, documentación, verificación fiscal-legal). No sustituye a la SSOT v10.0; la **aplica**. En caso de conflicto con la SSOT, prevalece la SSOT y este documento se corrige vía ADR.
-> **Uso:** *system prompt* o como archivo de instrucciones del agente. Los roles (R1–R7) son invocables; las directrices (D1–D20) son **permanentes** y no se desactivan por rol.
+> **Naturaleza del documento:** propuesta de roles y directrices de referencia para evaluación humana. No constituye instrucciones operativas ni aplica por sí misma la SSOT. Cualquier adopción requiere validación del propietario y alineación con las fuentes vigentes.
+> **Uso:** material de consulta para diseñar instrucciones separadas y aprobadas. No copiar directamente como *system prompt* ni cargar como archivo de instrucciones. Los roles (R1–R7) y directrices (D1–D20) son propuestas orientativas, no mandatos permanentes.
 
 ---
 
 ## 1. Identidad, rol y misión del modelo
+
+> **Carácter consultivo:** este anexo es material de referencia, no instrucciones activas del agente. No debe copiarse como *system prompt* ni prevalecer sobre instrucciones del proyecto, SSOT vigente, ADR aprobados o fuentes primarias. Sus roles y directrices son propuestas que requieren validación del propietario antes de adoptarse.
 
 ### Definición compacta reutilizable
 
@@ -323,7 +325,7 @@ Si la discrepancia afecta a una decisión, se **documenta** y se eleva al usuari
 
 ### 6.1 Protocolo de honestidad (antes de enviar)
 
-El modelo se auto-audita comprobando que la fiabilidad y veracidad comprobada contra fuentes aceptadas. cero inventar. cero falsos positivos. si duda pregunta al usuario.
+**Nota de referencias heredadas:** las menciones a “dossier (referencia histórica a §0 de una versión anterior)” identifican la sección de estado de una versión anterior del documento; no apuntan a una sección vigente de este dossier. La referencia §A.4, en cambio, sí corresponde al apartado 4 del Anexo A.
 
 ### 6.2 Protocolo de métricas
 
@@ -331,7 +333,7 @@ Toda métrica se entrega como tabla:
 
 | Métrica | Valor | Fuente | Fecha | Estado |
 |---|---|---|---|---|
-| Tests Vitest | 182 pass / 0 fail · 11 suites (dato histórico declarado; no es una medición actual verificada) | dossier §0 | 2026-11-01 | `[DECLARADO]` |
+| Tests Vitest | 182 pass / 0 fail · 11 suites (dato histórico declarado; no es una medición actual verificada) | dossier (referencia histórica a §0 de una versión anterior) | 2026-11-01 | `[DECLARADO]` |
 | Tests Vitest (SSOT) | 158/158 | SSOT §0.8 | 2026-10-30 | `[DECLARADO]` — discrepancia abierta |
 | CI `main` | run `41053070852` SUCCESS | auditoría §7 | 2026-10-30 | `[HECHO]` |
 | Publicado en Wix | — | — | — | `[PENDIENTE]` |
@@ -574,13 +576,13 @@ El workflow activo de Preview, sus controles y sus evidencias se describen una s
 
 ## 1. Propósito de este documento
 
-Fijar la **doctrina única** que gobierna toda acción y decisión del proyecto (código, datos, permisos, integraciones, documentación y operación) y establecer los **tres objetivos sucesivos** que deben cerrarse en orden estricto: **Capa 1** (reservas), **Capa 2** (fiscal-contable-legal) y **Capa 3** (registro externo de seguridad en Microsoft 365). Ninguna capa se declara cerrada sin superar sus criterios de aceptación y sin ADR cuando corresponda.
+Documentar un **marco orientativo** para analizar las decisiones del proyecto (código, datos, permisos, integraciones, documentación y operación) y describir los **tres objetivos sucesivos** propuestos: **Capa 1** (reservas), **Capa 2** (fiscal-contable-legal) y **Capa 3** (registro externo de seguridad en Microsoft 365). Ninguna capa se declara cerrada sin superar sus criterios de aceptación y sin ADR cuando corresponda.
 
 > **Regla de honestidad documental:** la Capa 3 **no figura en la SSOT v10.0** ni en la auditoría de migración. Se incorpora aquí como objetivo **pendiente de ADR-003**. Hasta su aprobación, no se implementa código, no se contrata licencia adicional ni se sincroniza dato alguno con Microsoft.
 
 ---
 
-## 2. Directrices generales (doctrina inviolable)
+## 2. Principios orientativos (no vinculantes)
 
 ### 2.2 Mapeo de "profesional" y "100 % buenas prácticas"
 
@@ -1895,7 +1897,7 @@ Puede: ver sus reservas/calendario, clientes de sus citas, marcar asistencia. No
 
 | Dato | Valor | Estado |
 |---|---|---|
-| **Nombre comercial** | Marian Madrid Peluquería y Estética | `[HECHO]` dossier §0 |
+| **Nombre comercial** | Marian Madrid Peluquería y Estética | `[HECHO]` dossier (referencia histórica a §0 de una versión anterior) |
 | **Titular** | Marian Madrid Casado (propietaria y directora) | `[HECHO]` dossier §1 |
 | **Dirección** | C/ Maurice Ravel 35, Local, **50012 Zaragoza** (barrio **Rosales del Canal**, Distrito Sur) | `[HECHO]` dossier §1 |
 | **Teléfono** | +34 876 538 870 | `[HECHO]` dossier §1 |
@@ -1903,7 +1905,7 @@ Puede: ver sus reservas/calendario, clientes de sus citas, marcar asistencia. No
 | **Dominio** | `https://www.marianmadrid.es` | `[HECHO]` dossier §1 |
 | **Actividad (IAE / CNAE)** | IAE **972.1** / CNAE **9602** (Peluquería y otros tratamientos de belleza) | `[HECHO]` dossier §1 |
 | **Régimen fiscal** | Estimación Directa | `[HECHO]` dossier §1 |
-| **Modelo de negocio** | Punto de venta físico + virtual: agenda 24/7, cobro presencial (efectivo, tarjeta, Bizum vía MONEI), facturación legal, control horario y stock | `[HECHO]` dossier §0 |
+| **Modelo de negocio** | Punto de venta físico + virtual: agenda 24/7, cobro presencial (efectivo, tarjeta, Bizum vía MONEI), facturación legal, control horario y stock | `[HECHO]` dossier (referencia histórica a §0 de una versión anterior) |
 
 ### 1.1 Contexto demográfico del barrio (input para el perfil de cliente)
 
@@ -1950,7 +1952,7 @@ El local está en el **Distrito Sur** de Zaragoza, que agrupa Arcosur, Valdespar
 
 ### 2.3 Estructura de personal
 
-El negocio opera con **3 profesionales** (1 ADMIN + 2 ESTILISTAS). No consta personal de recepción ni administración adicional `[HECHO]` dossier §0.
+El negocio opera con **3 profesionales** (1 ADMIN + 2 ESTILISTAS). No consta personal de recepción ni administración adicional `[HECHO]` dossier (referencia histórica a §0 de una versión anterior).
 
 ---
 
@@ -2047,11 +2049,11 @@ La relación técnica de normas, obligaciones y controles se mantiene en §18. E
 |---|---|---|
 | **Resend API** | Correo transaccional (clave en Secrets) | `[HECHO]` dossier §2.1 |
 | **OpenAI API** | Asistente IA capilar (AbortController 9 s) | `[HECHO]` dossier §2.1 |
-| **MONEI** | Bizum (cobro presencial) | `[HECHO]` dossier §0 |
+| **MONEI** | Bizum (cobro presencial) | `[HECHO]` dossier (referencia histórica a §0 de una versión anterior) |
 | **Microsoft Clarity** | Mapas de calor | `[HECHO]` dossier §2.1 |
 | **RustDesk** | Soporte remoto (contraseña en Secrets) | `[HECHO]` dossier §2.1 |
 | **Wix CLI for Sites** | `dev`, `install`, `update`, `publish`, `preview` | `[HECHO]` bloque técnico |
-| **Vitest** | Tests offline; recuento histórico declarado: 182 pass / 0 fail, 11 suites (no es medición actual) | `[DECLARADO]` dossier §0 |
+| **Vitest** | Tests offline; recuento histórico declarado: 182 pass / 0 fail, 11 suites (no es medición actual) | `[DECLARADO]` dossier (referencia histórica a §0 de una versión anterior) |
 
 ---
 
@@ -2554,9 +2556,7 @@ export default defineWixConfig({
 
 ## 24. Estado consolidado del repositorio, Wix y validaciones (corte 2026-11-01)
 
-> **Nota de vigencia:** este corte es histórico. El estado actual del repositorio, PRs, CI y plan unificado queda actualizado por §32 (2026-11-02), que prevalece en esos aspectos sin borrar la evidencia histórica de esta sección.
-
-> **Esta sección sustituye cualquier estado anterior de repositorio, CI, Preview o QA que figure en apartados históricos.** Las secciones técnicas anteriores describen arquitectura y decisiones; esta sección fija el estado temporal más reciente verificado. No convertir evidencia histórica en prueba actual.
+> **Nota histórica:** este corte corresponde al 2026-11-01. Fue seguido por §32 y por los checkpoints §§33–36. No prevalece sobre ellos ni sobre la evidencia viva. Se conserva únicamente para trazabilidad; verificar HEAD, CI, Preview y Wix antes de actuar.
 
 ### 24.1 Identidad y punto de control
 
@@ -3177,7 +3177,7 @@ Se confirma en documentación oficial que este proyecto usa **Wix CLI for Sites*
 
 ## 32. CHECKPOINT CONSOLIDADO Y PLAN UNIFICADO DE CONTINUIDAD — 2026-11-02
 
-**Propósito:** fijar el punto de partida real de la próxima sesión, integrar el informe de auditoría compartido, actualizar el estado de integración/CI y reunir en una única lista las tareas anteriores aún abiertas con los nuevos hallazgos. Esta sección prevalece sobre estados temporales anteriores de repositorio, PR, CI y planificación (§24, §26 y §30–§31), sin borrar su evidencia histórica.
+**Propósito:** fijar el punto de partida real de la próxima sesión, integrar el informe de auditoría compartido, actualizar el estado de integración/CI y reunir en una única lista las tareas anteriores aún abiertas con los nuevos hallazgos. Este checkpoint resume la situación observada el 2026-11-02. No tiene autoridad sobre los checkpoints posteriores (§§33–36) ni sobre el estado vivo del repositorio/Wix; se conserva como evidencia histórica y plan de trabajo de aquella fecha.
 
 ### 32.1 Punto de control verificable
 
@@ -3432,6 +3432,9 @@ La búsqueda de sitios Wix por nombre que contenga `QA` no devolvió un sitio se
 
 ### 35.1 Publicación y CI
 
+> **Nota temporal:** los párrafos que describen la ausencia del trigger `push` reflejan la situación anterior a PR #109; quedaron superados por la integración y ejecución post-merge documentadas en §36.1.
+
+
 - PR #108 está integrado en `main`: merge `a43604ded068c9c0830fb4626d1f493f3a48c4d9` (05-11-2026 03:02 UTC).
 - El propietario confirma que #108 está publicado en Wix. `GetSiteContext` devuelve el sitio `188bed94-177c-4bc9-a9f0-35080d874f3e` como `Published` y última actualización 03:16 UTC. El contexto Wix no expone el SHA desplegado; por tanto, el estado publicado y la actualización posterior al merge están confirmados, pero no se certifica una igualdad de hash entre Editor/producción y `a43604d`.
 - La ejecución CI `41957173395` pasó sobre el head de PR `52438b1750329e5ade8eff370e1e94006a512281`: 317 pruebas, 34 suites, 0 fallos; ESLint correcto. Es el código que se integró, pero no hubo ejecución separada sobre el merge commit.
@@ -3503,7 +3506,7 @@ ANEXO IMPORTANTE. BIBLIA DE COLECCIONES Y KEYFIELDS EN CMS
 
 # ANEXO L — DICCIONARIO DE COLECCIONES CMS — MARIAN MADRID
 
-**Extracción detallada base:** 25-10-2026. **Reconciliación de revisiones, keyfields, tipos y permisos:** 2026-11-01 (solo lectura). **Sitio:** MarianMadrid.es. **Repositorio de referencia:** nachoortegazgz/marianmadridz.
+**SNAPSHOT HISTÓRICO — NO INVENTARIO VIVO.** **Extracción detallada base:** 25-10-2026. **Reconciliación de revisiones, keyfields, tipos y permisos:** 2026-11-01 (solo lectura). Los cortes CMS posteriores se documentan en §§33.1/35.2 y en la auditoría enlazada; no sobrescribir este snapshot con revisiones actuales. **Sitio:** MarianMadrid.es. **Repositorio de referencia:** nachoortegazgz/marianmadridz.
 
 > Keyfields, etiquetas visibles, tipos, obligatoriedad, referencias, permisos y revisión proceden de la API oficial Wix CMS en modo lectura. Ejemplos sintéticos; no son datos reales de clientes. Wix no declara opciones para los campos TEXT en el esquema consultado; los enums citados proceden de la matriz documental y deben verificarse en validadores/runtime.
 
