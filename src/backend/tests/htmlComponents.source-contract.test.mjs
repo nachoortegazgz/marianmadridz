@@ -14,7 +14,7 @@ function extractInlineScripts(html, label) {
     html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi),
     (match) => match[1],
   );
-  assert.ok(scripts.length > 0, \`\${label} must contain an inline script\`);
+  assert.ok(scripts.length > 0, \`${label} must contain an inline script\`);
   return scripts;
 }
 
@@ -29,8 +29,8 @@ test("HTML component snapshots contain syntactically valid JavaScript", () => {
   ]) {
     for (const [index, source] of extractInlineScripts(html, label).entries()) {
       assert.doesNotThrow(
-        () => new vm.Script(source, { filename: \`\${label}-\${index}.js\` }),
-        \`\${label} inline script \${index + 1} must parse\`,
+        () => new vm.Script(source, { filename: \`${label}-${index}.js\` }),
+        \`${label} inline script ${index + 1} must parse\`,
       );
     }
   }
@@ -43,17 +43,17 @@ test("service and calendar HTML widgets use the Velo bridge protocol version", (
     ["booking calendar", calendarHtml],
   ]) {
     assert.match(html, /PROTOCOL_VERSION:\s*1|version:\s*1/,
-      \`\${label} must use protocol version 1\`);
+      \`${label} must use protocol version 1\`);
     for (const type of ["READY", "CONTEXT", "AVAIL", "BOOK", "NAV"]) {
-      const mapping = \`\${type}:"MM_\${type}"\`;
-      const spacedMapping = \`\${type}: "MM_\${type}"\`;
+      const mapping = \`${type}:"MM_${type}"\`;
+      const spacedMapping = \`${type}: "MM_${type}"\`;
       assert.ok(
         html.includes(mapping) || html.includes(spacedMapping),
-        \`\${label} must implement MM_\${type}\`,
+        \`${label} must implement MM_${type}\`,
       );
       assert.ok(
         bridge.includes(mapping) || bridge.includes(spacedMapping),
-        \`Velo bridge must implement MM_\${type}\`,
+        \`Velo bridge must implement MM_${type}\`,
       );
     }
   }
