@@ -37,6 +37,7 @@ test('CRON-PARITY-01 every jobs.config functionName is exported by crons.js', ()
 test('CRON-PARITY-02 crons.js exports cover the two previously-missing jobs', () => {
   assert.strictEqual(typeof CR.verifyNightlyZClosing, 'function');
   assert.strictEqual(typeof CR.cleanAuditLogs, 'function');
+  assert.strictEqual(typeof CR.cleanExpiredIdempotencyTransactions, 'function');
 });
 
 test('CRON-DUAL-CACHE-01 cleanupExpiredDualCache drains expired rows only', async () => {
@@ -141,6 +142,36 @@ test('CRON-Z-02 verifyNightlyZClosing raises MANUAL_REQUIRED alert when no close
   const alerts = (wixDataMock._store.get(IC.OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO) || [])
     .filter((r) => r.alertType === 'NIGHTLY_Z_CLOSING_MANUAL_REQUIRED');
   assert.strictEqual(alerts.length, 1, 'exactly one deduped manual-required alert expected');
+});
+
+test('CRON-IDEMPOTENCY-01 purges only terminal transactions after 24 hours', async () => {
+  wixDataMock._reset();
+  const C = IC.OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
+  const old = new Date(Date.now() - 25 * 60 * 60 * 1000);
+  const recent = new Date(Date.now() - 23 * 60 * 60 * 1000);
+  wixDataMock._seed(C, [
+    { _id: 'tx-completed-old', controlType: IC.CONTROL_TYPE.IDEMPOTENCY, status: 'COMPLETED', _updatedDate: old },
+    { _id: 'tx-failed-final-old', controlType: IC.CONTROL_TYPE.IDEMPOTENCY, payload: { status: 'FAILED_FINAL' }, _updatedDate: old },
+    { _id: 'tx-completed-recent', controlType: IC.CONTROL_TYPE.IDEMPOTENCY, status: 'COMPLETED', _updatedDate: recent },
+    { _id: 'tx-in-progress-old', controlType: IC.CONTROL_TYPE.IDEMPOTENCY, status: 'IN_PROGRESS', _updatedDate: old },
+    { _id: 'tx-retryable-old', controlType: IC.CONTROL_TYPE.IDEMPOTENCY, status: 'FAILED_RETRYABLE', _updatedDate: old },
+    { _id: 'tx-unknown-old', controlType: IC.CONTROL_TYPE.IDEMPOTENCY, status: 'RESULT_UNKNOWN', _updatedDate: old },
+    { _id: 'webhook-old', controlType: IC.CONTROL_TYPE.WEBHOOK_EVENT, status: 'CLOSED', _updatedDate: old },
+    { _id: 'compensation-old', controlType: IC.CONTROL_TYPE.COMPENSATION, status: 'EXECUTED', _updatedDate: old },
+  ]);
+
+  const result = await CR.cleanExpiredIdempotencyTransactions();
+  assert.equal(result.removed, 2);
+  assert.equal(result.failed, 0);
+  const remaining = (wixDataMock._store.get(C) || []).map((row) => row._id).sort();
+  assert.deepStrictEqual(remaining, [
+    'compensation-old',
+    'tx-completed-recent',
+    'tx-in-progress-old',
+    'tx-retryable-old',
+    'tx-unknown-old',
+    'webhook-old',
+  ]);
 });
 
 test('CRON-AUDIT-01 cleanAuditLogs purges only terminal rows past retention', async () => {
