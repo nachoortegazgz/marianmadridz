@@ -1,37 +1,49 @@
 /**
  * MODULE: backend/reservas.web.js
- * VERSION: v10.18-WIDGET-DTO-MINIMAL
- * BASE: v10.17-DAYS-CACHE-LOCATION-STABLE-INVALIDATION
+ * VERSION: v10.19-DUAL-EXACT-GAP
+ * BASE: v10.18-WIDGET-DTO-MINIMAL
  *
- * CORRECCIONES v10.18:
- *   - WIDGET-DTO-01 (P0): los slots devueltos por _getCertifiedDualSlotsInternal
- *     ya NO incluyen `slotRef: forcedSlot` (objeto completo del SDK con
- *     startDate, endDate, bookable, resourceTypes, candidateResources,
- *     bookingPolicyViolations, etc.). Se sustituye por `slot: _toWidgetSlot(...)`,
- *     un DTO mínimo de 4 campos. Esto elimina WIDGET_MESSAGE_TOO_LARGE.
- *     No se envían al widget: slotRef, bookable, resourceTypes,
- *     candidateResources, bookingPolicyViolations, location ni anidados.
+ * CORRECCIONES v10.19 (alineadas con la documentación oficial de Wix Bookings V2):
+ *   - DUAL-GAP-01 (P0): _findNextSlotForServiceInternal devolvía el primer slot
+ *     >= earliestF2, no el que cumple el gap exacto. Si el primero no encajaba,
+ *     el par se descartaba sin probar el siguiente. Ahora acepta
+ *     `targetLocalStart` y busca el slot con localStartDate === target.
+ *     Ref: la documentación oficial exige que el gap coincida exactamente con
+ *     ServiciosCatalogo.exposureDuration (no hay auto-cálculo; ver
+ *     https://dev.wix.com/docs/api-reference/business-solutions/bookings/bookings/bookings-writer-v2/create-multi-service-booking).
+ *   - DUAL-GAP-02 (P0): _getCertifiedDualSlotsInternal calcula el target exacto
+ *     (F1.end + exposureDuration) y lo pasa a _findNextSlotForServiceInternal.
+ *     Añade log de diagnóstico cuando no se forma ningún par.
+ *   - ALLOW-COMBINE-01 (P1): allowCombine acepta true y "true" (string) en
+ *     _mapServiceToDTO y _toPublicService. Si el CMS devuelve "true" como texto,
+ *     isDual se evaluaba como false y getCertifiedDualSlots devolvía slots de
+ *     F1 como si fuera simple.
+ *   - LOAD-RANK-01 (P1): _getBookedMinutesByResourceForDay lee
+ *     booking.bookedEntity.slot.resource.id (no _id). El Extended Booking
+ *     Object usa `id` para el resource; leer `_id` dejaba el ranking de carga a 0
+ *     y el balanceo por staff no funcionaba.
+ *     Ref: https://dev.wix.com/docs/api-reference/business-solutions/bookings/bookings/bookings-reader-v2/supported-filters
+ *
+ * FIXES HEREDADOS v10.18:
+ *   WIDGET-DTO-01: slots devueltos con DTO mínimo (sin slotRef).
  *
  * FIXES HEREDADOS v10.17:
  *   CACHE-04: invalidación de días paginada con borrado al final.
- *   CACHE-05: daysCacheKey incluye locationId (location._id del SDK).
+ *   CACHE-05: daysCacheKey incluye locationId.
  *
  * FIXES HEREDADOS v10.16:
  *   SDK-01: locations[]._id (no id) en las llamadas del SDK.
  *   ERR-01: _timeSlotsError conserva message/code/traceId/httpStatus/details.
  *   CACHE-03: invalidación paginada de días.
- *   NORM-01: resourceIds normalizados (GUIDs únicos y ordenados).
+ *   NORM-01: resourceIds normalizados.
  *
  * FIXES HEREDADOS v10.15:
  *   CACHE-01: daysCacheKey incluye addonKey.
  *   CACHE-02: invalidación de días por prefijo del servicio.
  *   DIAG-01: _listTimeSlotsV2 lanza error estructurado, no [].
  *   DTO-01: _toPublicService incluye locationId.
- *
- * FIXES HEREDADOS v10.13:
- *   RES-56/57: SDK Booking identifiers (Location._id, resource._id).
- *   RES-46..RES-48, RES-40..RES-45, RES-32..RES-34.
  */
+
 import { webMethod, Permissions } from "wix-web-module";
 import {
     query as dalQuery,
@@ -137,7 +149,6 @@ function _rateLimitError(surface, retryAfter) {
 
 /**
  * ERR-01: envuelve un error de Time Slots V2 conservando el diagnóstico real.
- * No pierde `message`, `code`, `httpStatus` ni `details`.
  */
 function _timeSlotsError(error, traceId) {
     const wrapped = new Error(
@@ -332,12 +343,8 @@ function _isValidSlotRange(startLocal, endLocal) {
 
 /**
  * SDK-01: resuelve la ubicación para consultas de disponibilidad.
- * Prioridad: service.locationId (CMS) → SDK_CONFIG.LOCATION_ID (fallback).
- *
- * CONTRATO SDK (confirmado en @wix/auto_sdk_bookings_availability-time-slots):
- *   locations: z.array(z.object({ _id: GUID, locationType: "BUSINESS" | ... }))
- * La API REST documenta `locations[].id`, pero el SDK usa `_id` y renombra
- * internamente. NO usar `id` con el SDK.
+ * El contrato del SDK para `locations` usa `_id` (TimeSlotLocation), no `id`.
+ * Ref: @wix/auto_sdk_bookings_availability-time-slots (meta.d.mts).
  */
 function _resolveAvailabilityLocation(service) {
     const fromCms = _safeTrim(service && service.locationId);
@@ -354,20 +361,16 @@ function _resolveAvailabilityLocation(service) {
         });
         return null;
     }
-return {
-    _id: locationId,
-    locationType: "BUSINESS",
-};
+    return {
+        _id: locationId,
+        locationType: "BUSINESS",
+    };
 }
 
 /**
- * WIDGET-DTO-01 (v10.18): convierte un slot interno (con toda la metadata
- * del SDK: startDate, endDate, bookable, resourceTypes, candidateResources,
- * bookingPolicyViolations, location…) en un DTO mínimo apto para postMessage.
- * Evita WIDGET_MESSAGE_TOO_LARGE.
- *
- * No incluye: slotRef, bookable, resourceTypes, candidateResources,
- * bookingPolicyViolations, location, ni ningún campo anidado del SDK.
+ * WIDGET-DTO-01 (v10.18): DTO mínimo de slot para el widget.
+ * No incluye slotRef, bookable, resourceTypes, candidateResources,
+ * bookingPolicyViolations, location, ni campos anidados del SDK.
  */
 function _toWidgetSlot(slot, chosenResourceId = null) {
     if (!slot || typeof slot !== "object") return null;
@@ -516,7 +519,12 @@ export async function _mapServiceToDTO(service, traceId, visited = new Set()) {
         throw new Error("ServiciosCatalogo invalid: serviceId missing or not a GUID");
     }
     const clientHidden = _readField(service, "clientHidden") === true;
-    const rawAllowCombine = _readField(service, "allowCombine") === true;
+    /* ALLOW-COMBINE-01: el CMS puede devolver "true" (string) si la columna
+       es texto. Aceptamos ambos formatos para no desactivar el dual. */
+    const rawAllowCombineValue = _readField(service, "allowCombine");
+    const rawAllowCombine =
+        rawAllowCombineValue === true ||
+        rawAllowCombineValue === "true";
     const allowCombine = !clientHidden && rawAllowCombine;
     const linkedPhases = _safeTrim(_readField(service, "linkedPhases"));
     if (rawAllowCombine && !_looksLikeGuid(linkedPhases)) {
@@ -780,7 +788,10 @@ export function _toPublicService(service) {
         serviceId: _looksLikeGuid(service.serviceId) ? _safeTrim(service.serviceId) : "",
         totalDuration: finiteNonNegative(service.totalDuration),
         addOnOptions,
-        allowCombine: service.allowCombine === true,
+        /* ALLOW-COMBINE-01: normalizar el DTO público igual que el interno. */
+        allowCombine:
+            service.allowCombine === true ||
+            service.allowCombine === "true",
         phase1Duration: finiteNonNegative(service.phase1Duration),
         exposureDuration: finiteNonNegative(service.exposureDuration),
         phase2Duration: finiteNonNegative(service.phase2Duration),
@@ -1185,7 +1196,12 @@ async function _getBookedMinutesByResourceForDay(dateYMD, resourceIds, traceId) 
                 if (!["CREATED", "PENDING", "CONFIRMED", "COMPLETED"].includes(status)) continue;
                 if (String(booking.paymentStatus || "").trim().toUpperCase() === "REFUNDED") continue;
 
-                const resourceId = _safeTrim(booking?.bookedEntity?.slot?.resource?._id);
+                /* LOAD-RANK-01: el Extended Booking Object usa `resource.id`,
+                   no `resource._id`. Leer `_id` dejaba el ranking de carga a 0. */
+                const resourceId = _safeTrim(
+                    booking?.bookedEntity?.slot?.resource?.id ||
+                    booking?.bookedEntity?.slot?.resource?._id
+                );
                 if (!resourceId || minutes[resourceId] === undefined) continue;
                 const start = _toDateSafe(booking.startDate);
                 const end = _toDateSafe(booking.endDate);
@@ -1223,7 +1239,22 @@ async function _getBookedMinutesByResourceForDay(dateYMD, resourceIds, traceId) 
 /* =============================================================================
  * BÚSQUEDA DE SIGUIENTE SLOT (para dual F2)
  * ==========================================================================*/
-async function _findNextSlotForServiceInternal(serviceId, fromLocalDateTime, requiredResourceId, traceId, sameDayOnly = false) {
+/**
+ * DUAL-GAP-01: si se pasa `targetLocalStart`, busca el slot con
+ * localStartDate EXACTAMENTE igual al target (F1.end + exposureDuration).
+ * Esto es lo que exige el contrato de negocio: el gap debe coincidir
+ * exactamente con ServiciosCatalogo.exposureDuration.
+ *
+ * Si no se pasa, mantiene el comportamiento anterior (primer slot >= from).
+ */
+async function _findNextSlotForServiceInternal(
+    serviceId,
+    fromLocalDateTime,
+    requiredResourceId,
+    traceId,
+    sameDayOnly = false,
+    targetLocalStart = ""
+) {
     const resolvedServiceId = await _resolveServiceIdInternal(serviceId);
     if (!resolvedServiceId) {
         return { status: "ERROR", data: null, error: { code: "SERVICE_NOT_FOUND", message: "Service ID not found" } };
@@ -1232,6 +1263,7 @@ async function _findNextSlotForServiceInternal(serviceId, fromLocalDateTime, req
     if (!fromLocal) {
         return { status: "ERROR", data: null, error: { code: "INVALID_DATES", message: "fromLocalDateTime invalid" } };
     }
+    const targetNorm = _normalizeLocalIsoStr(targetLocalStart);
     const strictRequiredResourceId = _safeTrim(requiredResourceId || "");
     if (strictRequiredResourceId && !["all", "any"].includes(strictRequiredResourceId.toLowerCase()) && !_looksLikeGuid(strictRequiredResourceId)) {
         return { status: "ERROR", data: null, error: { code: "INVALID_RESOURCE_ID", message: "Invalid staff identifier." } };
@@ -1249,6 +1281,28 @@ async function _findNextSlotForServiceInternal(serviceId, fromLocalDateTime, req
             { serviceId: resolvedServiceId, fromLocalDate: dayFrom, toLocalDate: dayTo, resourceIds },
             { skipCache: true }
         );
+
+        /* DUAL-GAP-01: búsqueda exacta del target. */
+        if (targetNorm) {
+            const exact = (slots || []).find(
+                (s) => _normalizeLocalIsoStr(s.localStartDate) === targetNorm
+            );
+            if (!exact) {
+                /* Si es sameDayOnly y no está en el día, no hay nada que buscar. */
+                if (sameDayOnly) break;
+                continue;
+            }
+            if (mustHaveStaff) {
+                const required = String(strictRequiredResourceId);
+                if (!_getResourceIdsFromSlot(exact).includes(required)) {
+                    if (sameDayOnly) break;
+                    continue;
+                }
+            }
+            return { status: "SUCCESS", data: { slot: exact, dayYMD: ymd }, error: null };
+        }
+
+        /* Fallback legacy: primer slot >= fromLocal (solo si no hay target). */
         const normFrom = _normalizeLocalIsoStr(dayFrom);
         const candidates = (slots || [])
             .filter((s) => _normalizeLocalIsoStr(s.localStartDate) >= normFrom)
@@ -1522,7 +1576,12 @@ export async function _getCertifiedDualSlotsInternal(serviceId, resourceId, date
     }
     const addonContext = _resolveAddonContext(service, requestedAddonIds);
     const linkedServiceId = _safeTrim(service.linkedPhases || "");
-    const isDual = service.allowCombine === true && _looksLikeGuid(linkedServiceId);
+    /* ALLOW-COMBINE-01: normalización defensiva por si el DTO no pasó por
+       _mapServiceToDTO (por ejemplo, cache antigua). */
+    const allowCombine =
+        service.allowCombine === true ||
+        service.allowCombine === "true";
+    const isDual = allowCombine && _looksLikeGuid(linkedServiceId);
     const rankedCandidateCache = new Map();
 
     const selectedResourceId = _safeTrim(resourceId) && _looksLikeGuid(resourceId) ? _safeTrim(resourceId) : null;
@@ -1564,8 +1623,6 @@ export async function _getCertifiedDualSlotsInternal(serviceId, resourceId, date
             const localEndDate = _normalizeLocalIsoStr(forcedSlot.localEndDate);
             if (!localStartDate || !localEndDate) continue;
             if (!_isValidSlotRange(localStartDate, localEndDate)) continue;
-            /* WIDGET-DTO-01: en lugar de `slotRef: forcedSlot` (objeto SDK completo),
-               se envía un DTO mínimo. */
             out.push({
                 slotF1: {
                     localStartDate,
@@ -1588,15 +1645,27 @@ export async function _getCertifiedDualSlotsInternal(serviceId, resourceId, date
     const exposureMs = Math.max(0, exposureMinutes) * 60 * 1000;
     const pairs = [];
 
+    /* DUAL-GAP-02: diagnóstico de por qué no se forman pares. */
+    let discardedForNoResources = 0;
+    let discardedForNoF2 = 0;
+
     for (const s1 of slotsF1 || []) {
         const s1EndLocal = _normalizeLocalIsoStr(s1.localEndDate);
         if (!s1EndLocal) continue;
         const s1EndUtc = getUtcDateFromMadridLocal(s1EndLocal);
         if (!s1EndUtc) continue;
-        const earliestF2Utc = new Date(s1EndUtc.getTime() + exposureMs);
-        const earliestF2Local = getMadridLocalStringNoZ(earliestF2Utc);
+
+        /* Target EXACTO del F2: start = F1.end + exposureDuration. */
+        const targetF2Utc = new Date(s1EndUtc.getTime() + exposureMs);
+        const targetF2Local = _normalizeLocalIsoStr(
+            getMadridLocalStringNoZ(targetF2Utc)
+        );
+
         const candidateResourceIds = _getResourceIdsFromSlot(s1);
-        if (!candidateResourceIds.length) continue;
+        if (!candidateResourceIds.length) {
+            discardedForNoResources++;
+            continue;
+        }
         if (selectedResourceId && !candidateResourceIds.includes(selectedResourceId)) continue;
         const rankedCandidates = await _rankCandidates(candidateResourceIds);
         const candidatesToTry = selectedResourceId ? [selectedResourceId] : rankedCandidates;
@@ -1604,7 +1673,15 @@ export async function _getCertifiedDualSlotsInternal(serviceId, resourceId, date
         let s2 = null;
 
         for (const candidateResourceId of candidatesToTry) {
-            const nextF2 = await _findNextSlotForServiceInternal(linkedServiceId, earliestF2Local, candidateResourceId, traceId, true);
+            /* DUAL-GAP-01: búsqueda exacta en el instante target. */
+            const nextF2 = await _findNextSlotForServiceInternal(
+                linkedServiceId,
+                targetF2Local,
+                candidateResourceId,
+                traceId,
+                true,
+                targetF2Local
+            );
             if (nextF2?.status !== "SUCCESS" || !nextF2?.data?.slot) continue;
             const candidateF2 = nextF2.data.slot;
             const s2StartLocal = _normalizeLocalIsoStr(candidateF2.localStartDate);
@@ -1621,7 +1698,10 @@ export async function _getCertifiedDualSlotsInternal(serviceId, resourceId, date
             s2 = candidateF2;
             break;
         }
-        if (!chosenResourceId || !s2) continue;
+        if (!chosenResourceId || !s2) {
+            discardedForNoF2++;
+            continue;
+        }
 
         const pairToken = _generateUUID();
         const forcedF1 = _attachServiceId({ ...s1 }, resolvedServiceId, traceId, "dual:F1");
@@ -1635,7 +1715,6 @@ export async function _getCertifiedDualSlotsInternal(serviceId, resourceId, date
         if (!f1LocalStart || !f1LocalEnd || !f2LocalStart || !f2LocalEnd) continue;
         if (!_isValidSlotRange(f1LocalStart, f1LocalEnd) || !_isValidSlotRange(f2LocalStart, f2LocalEnd)) continue;
 
-        /* WIDGET-DTO-01: slotRef eliminado; DTO mínimo en `slot`. */
         const slotF1 = {
             localStartDate: f1LocalStart,
             localEndDate: f1LocalEnd,
@@ -1656,6 +1735,21 @@ export async function _getCertifiedDualSlotsInternal(serviceId, resourceId, date
             candidateResourceIds,
             serviceId: resolvedServiceId,
             dateYMD,
+        });
+    }
+
+    /* DUAL-GAP-02: log de diagnóstico si no se formó ningún par. */
+    if (pairs.length === 0 && (slotsF1 || []).length > 0) {
+        log.warn("[dual] no se pudieron formar pares F1+F2", {
+            traceId,
+            serviceId: resolvedServiceId,
+            dateYMD,
+            totalSlotsF1: (slotsF1 || []).length,
+            discardedForNoResources,
+            discardedForNoF2,
+            exposureMinutes,
+            linkedServiceId,
+            note: "Si discardedForNoResources > 0, los slots no traen availableResources (verificar includeResourceTypeIds). Si discardedForNoF2 > 0, no existe un slot F2 exactamente en F1.end + exposureDuration.",
         });
     }
 
@@ -1887,8 +1981,7 @@ export async function _getAvailableDaysInternal({ serviceId, resourceId, year, m
     }
     const addonContext = _resolveAddonContext(service, addonIds);
 
-    /* CACHE-05: resolver la ubicación antes de construir la clave.
-       Si la sede del servicio cambia, la caché antigua ya no se sirve. */
+    /* CACHE-05: resolver la ubicación antes de construir la clave. */
     const location = _resolveAvailabilityLocation(service);
     if (!location) {
         return {
