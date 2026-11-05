@@ -15,7 +15,9 @@ export const MESSAGE_TYPES = Object.freeze({
     SELECT: "MM_SELECT", BOOK: "MM_BOOK", NAV: "MM_NAV"
 });
 export const PROTOCOL_URLS = Object.freeze({
+    HOME: "/",
     SERVICIOS: "/reserva-online",
+    MIS_RESERVAS: "/my-bookings",
     CALENDARIO_2: "/booking-calendar",
     PRIVACY_POLICY: "/politica-de-privacidad"
 });
