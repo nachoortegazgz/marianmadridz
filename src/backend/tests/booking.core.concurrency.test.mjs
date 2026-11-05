@@ -90,7 +90,7 @@ test('BCORE-SLOT-04 _parseResourceIdFromSlotKey roundtrip + tamper rejection', (
 test('BCORE-LOCK-01 acquire fresh lock writes SLOT_LOCK row with TTL expiry', async () => {
   wixDataMock._reset();
   const key = BC.generateSlotKey(SVC, RES_A, new Date('2026-10-15T08:00:00Z'), new Date('2026-10-15T09:00:00Z'));
-  const res = await BC._lockSlotKeyOrFail(key, 'owner-1', 60000);
+  const res = await BC._lockSlotKeyOrFail(key, 'owner-1', 60000, SVC);
   // CORE-39/CORE-45 (v5014): el contrato del lock exitoso es ahora
   // { ok, acquired, revision, lockToken } — la saga necesita el lockToken y
   // la _revision para unlock/renew atomicos con optimismo. deepStrictEqual
@@ -113,8 +113,8 @@ test('BCORE-LOCK-01 acquire fresh lock writes SLOT_LOCK row with TTL expiry', as
 test('BCORE-LOCK-02 second owner is refused while lock active (HELD_BY_ANOTHER)', async () => {
   wixDataMock._reset();
   const key = BC.generateSlotKey(SVC, RES_A, new Date('2026-10-15T08:00:00Z'), new Date('2026-10-15T09:00:00Z'));
-  await BC._lockSlotKeyOrFail(key, 'owner-1', 60000);
-  const busy = await BC._lockSlotKeyOrFail(key, 'owner-2', 60000);
+  await BC._lockSlotKeyOrFail(key, 'owner-1', 60000, SVC);
+  const busy = await BC._lockSlotKeyOrFail(key, 'owner-2', 60000, SVC);
   assert.strictEqual(busy.ok, false);
   assert.strictEqual(busy.message, BC.ERROR_CODES.LOCK_HELD_BY_ANOTHER_OWNER);
 });
@@ -122,8 +122,8 @@ test('BCORE-LOCK-02 second owner is refused while lock active (HELD_BY_ANOTHER)'
 test('BCORE-LOCK-03 same owner re-acquire renews instead of duplicating', async () => {
   wixDataMock._reset();
   const key = BC.generateSlotKey(SVC, RES_A, new Date('2026-10-15T08:00:00Z'), new Date('2026-10-15T09:00:00Z'));
-  await BC._lockSlotKeyOrFail(key, 'owner-1', 60000);
-  const again = await BC._lockSlotKeyOrFail(key, 'owner-1', 60000);
+  await BC._lockSlotKeyOrFail(key, 'owner-1', 60000, SVC);
+  const again = await BC._lockSlotKeyOrFail(key, 'owner-1', 60000, SVC);
   assert.strictEqual(again.ok, true);
   assert.strictEqual(again.renewed, true);
   const rows = wixDataMock._store.get(CONTROL) || [];
@@ -133,11 +133,11 @@ test('BCORE-LOCK-03 same owner re-acquire renews instead of duplicating', async 
 test('BCORE-LOCK-04 expired lock is reclaimed by next owner', async () => {
   wixDataMock._reset();
   const key = BC.generateSlotKey(SVC, RES_A, new Date('2026-10-15T08:00:00Z'), new Date('2026-10-15T09:00:00Z'));
-  await BC._lockSlotKeyOrFail(key, 'owner-1', 60000);
+  await BC._lockSlotKeyOrFail(key, 'owner-1', 60000, SVC);
   // forzar expiracion en el store (el mock revive fechas ISO a Date)
   const rows = wixDataMock._store.get(CONTROL);
   rows[0].expiresAt = new Date(Date.now() - 1000);
-  const taken = await BC._lockSlotKeyOrFail(key, 'owner-2', 60000);
+  const taken = await BC._lockSlotKeyOrFail(key, 'owner-2', 60000, SVC);
   assert.strictEqual(taken.ok, true);
   assert.strictEqual(taken.acquired, true);
   assert.strictEqual(taken.reclaimed, true);
@@ -158,7 +158,7 @@ test('BCORE-LOCK-05 invalid slot key or empty owner rejected without DB touch', 
 test('BCORE-LOCK-06 unlock only by owner; foreign unlock skipped, missing ok', async () => {
   wixDataMock._reset();
   const key = BC.generateSlotKey(SVC, RES_A, new Date('2026-10-15T08:00:00Z'), new Date('2026-10-15T09:00:00Z'));
-  await BC._lockSlotKeyOrFail(key, 'owner-1', 60000);
+  await BC._lockSlotKeyOrFail(key, 'owner-1', 60000, SVC);
   const foreign = await BC._unlockSlotKey(key, 'owner-x');
   assert.strictEqual(foreign.ok, false);
   assert.strictEqual(foreign.skipped, true);
@@ -185,12 +185,12 @@ test('BCORE-GAP-01 same professional can be locked for a simple booking inside a
   const f2Key = BC.generateSlotKey(f2ServiceId, RES_A, f2Start, f2End);
   const gapKey = BC.generateSlotKey(SVC, RES_A, gapStart, gapEnd);
 
-  const f1Lock = await BC._lockSlotKeyOrFail(f1Key, 'dual-booking', 60000);
-  const f2Lock = await BC._lockSlotKeyOrFail(f2Key, 'dual-booking', 60000);
+  const f1Lock = await BC._lockSlotKeyOrFail(f1Key, 'dual-booking', 60000, SVC);
+  const f2Lock = await BC._lockSlotKeyOrFail(f2Key, 'dual-booking', 60000, f2ServiceId);
   assert.strictEqual(f1Lock.ok, true, 'F1 slot lock acquired');
   assert.strictEqual(f2Lock.ok, true, 'F2 slot lock acquired');
 
-  const gapLock = await BC._lockSlotKeyOrFail(gapKey, 'simple-booking', 60000);
+  const gapLock = await BC._lockSlotKeyOrFail(gapKey, 'simple-booking', 60000, SVC);
   assert.strictEqual(gapLock.ok, true, 'gap slot remains independently bookable');
   assert.strictEqual(gapLock.acquired, true);
 
