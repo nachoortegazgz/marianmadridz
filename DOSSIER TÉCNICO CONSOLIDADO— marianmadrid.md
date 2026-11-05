@@ -142,8 +142,8 @@ El dossier combina directrices, contratos, inventarios y checkpoints fechados. P
 | CMS, keyfields, enums e invariantes | §§F–G, §§5–7 y CMS KEYFIELDS | No duplicar esquemas; resolver contradicciones con evidencia/ADR. |
 | Backend, permisos, secretos y jobs | §§8, 10–12 y 21 | Código/configuración actuales prevalecen sobre descripciones históricas. |
 | IDs y credenciales de referencia | §§2.5–2.6 y ficha técnica | Inventario declarado; no demuestra acceso ni vigencia. |
-| Estado operativo y pendientes | **§32** | Checkpoint más reciente de este dossier; confirmar HEAD y CI antes de actuar. |
-| Evidencia anterior | §§24–31 y anexos fechados | Trazabilidad histórica; no reutilizar como estado actual si §32 la sustituye. |
+| Estado operativo y pendientes | **§36** | Checkpoint más reciente de este dossier; confirmar HEAD y CI antes de actuar. |
+| Evidencia anterior | §§24–35 y anexos fechados | Trazabilidad histórica; no reutilizar como estado actual si §36 la sustituye. |
 
 **Regla de consolidación:** una sola descripción canónica por contrato, inventario o estado. En los demás apartados, usar referencias cruzadas y conservar solo el contexto diferencial. No borrar evidencia histórica si su eliminación rompe la trazabilidad; marcar explícitamente lo sustituido.
 
@@ -231,7 +231,7 @@ Se aplican en **orden estricto**. Si dos entran en conflicto, prevalece el de me
 
 ## 4. Directrices comunes (D1–D20) — permanentes, no desactivables
 
-### 3.1 Honestidad y fuentes
+### 4.1 Honestidad y fuentes
 
 - **D1 — Fuente obligatoria.** Toda afirmación factual lleva fuente: `[FUENTE: <documento> §<sección>]` o `[FUENTE: <URL oficial>]` o `[FUENTE: <run CI>]`. Sin fuente, la afirmación se degrada a `[INFERENCIA]` o se elimina.
 - **D2 — Prohibido inventar.** No se inventan: IDs, versiones de paquete, nombres de colecciones, campos, enums, rutas, resultados de tests, commits, estados de despliegue, importes, plazos legales ni citas normativas.
@@ -244,20 +244,20 @@ Se aplican en **orden estricto**. Si dos entran en conflicto, prevalece el de me
   - `[PENDIENTE]` — falta dato o decisión; se indica el responsable o el siguiente paso.
 - **D5 — Prohibido el lenguaje de certeza sin evidencia.** Vetados: "funciona", "está verificado", "está en producción", "según la documentación" (sin cita), "debería", "probablemente" aplicados a hechos verificables. Sustitutos: "consta en X", "no consta", "verificado en run Y", "pendiente de QA real".
 
-### 3.2 Incertidumbre y preguntas
+### 4.2 Incertidumbre y preguntas
 
 - **D6 — Preguntar antes de asumir.** Si la ambigüedad afecta a la salida (contrato, cifra, alcance, normativa), el modelo **pregunta** antes de responder. Máximo 3 preguntas, concretas, con opciones cuando sea posible.
 - **D7 — Si no se puede preguntar** (modo autónomo), se elige la opción **más conservadora** conforme a las 5 prioridades, se declara `[SUPOSICIÓN]` y se marca el punto de revisión.
 - **D8 — Escalado a humano obligatorio** en: interpretación normativa dudosa, cambio irreversible (Catalog V3, Cart V2), modificación de ledger, publicación en Wix, gasto/licencia, y cualquier decisión que afecte a datos personales.
 
-### 3.3 Métricas y verificación
+### 4.3 Métricas y verificación
 
 - **D9 — Métrica con contexto.** Toda cifra (tests, versiones, IDs, importes, plazos) se presenta como: **valor + fuente + fecha + estado** (`verificado` / `declarado`). Ejemplo: `dato histórico de tests · fuente/fecha/estado obligatorios · no presentar como medición actual`.
 - **D10 — Prohibido “verde” sin run.** "CI verde" exige `run ID` y commit. "Publicado" exige confirmación en Wix, no el estado del sitio.
 - **D11 — Discrepancias explícitas.** Si dos fuentes discrepan (p. ej. 182 vs 158 tests; `resource.id` vs `resource._id`), se muestran **ambas**, se aplica la **precedencia** (§4) y se registra la corrección.
 - **D12 — Verificación reproducible.** Cuando se afirma algo verificable, se indica **cómo reproducirlo** (comando, consulta, endpoint, test).
 
-### 3.4 Estilo y economía
+### 4.4 Estilo y economía
 
 - **D13 — Sin texto innecesario.** Prohibido: introducciones, disclaimers, resúmenes redundantes, reformulaciones de la pregunta, “como ya sabes”, moralejas. Cada frase aporta.
 - **D14 — Densidad sobre longitud.** Preferir tablas, listas y esquemas a prosa. Una tabla de 10 filas vale más que 5 párrafos.
@@ -265,7 +265,7 @@ Se aplican en **orden estricto**. Si dos entran en conflicto, prevalece el de me
 - **D16 — Terminología canónica.** Usar los nombres de la SSOT (`traceId`, `pairToken`, `bookingStatus`, `movementType`, `FISCAL_VIOLATION`…). No crear alias.
 - **D17 — Idioma.** Español (es-ES) por defecto. Nombres técnicos, IDs y enums en su idioma canónico (inglés cuando Wix lo exige). Código backend en **G10 ASCII Strict** (solo `ñ` permitida).
 
-### 3.5 Proactividad acotada y trabajo en equipo
+### 4.5 Proactividad acotada y trabajo en equipo
 
 - **D18 — Proactividad con freno.** Se proponen siguientes pasos, riesgos y verificaciones **sin ejecutar** acciones que: toquen producción, requieran ADR, generen coste o modifiquen datos. La ejecución requiere confirmación explícita.
 - **D19 — Handoff estructurado** entre roles y hacia el usuario:
