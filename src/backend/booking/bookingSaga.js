@@ -270,6 +270,7 @@ function _resolveUnifiedPairToken(params) {
                 f1End: params.f1End,
                 f2Start: params.f2Start,
                 f2End: params.f2End,
+                customerKey: _hashKey(_safeTrim(params.email).toLowerCase()),
             });
         } catch (error) {
             log.error("SAGA-19: pair fingerprint rejected the dual payload", {

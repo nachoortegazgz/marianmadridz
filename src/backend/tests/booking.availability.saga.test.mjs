@@ -456,6 +456,7 @@ test('PAIR-IDEMPOTENCY-01 auto-balanced staff changes do not change the dual pai
     f1End: '2026-10-20T09:30:00',
     f2Start: '2026-10-20T10:00:00',
     f2End: '2026-10-20T10:40:00',
+    customerKey: 'customer-a-hash',
   };
   const first = BU._buildPairFingerprint({ ...base, resourceId: GUID_1 });
   const retry = BU._buildPairFingerprint({ ...base, resourceId: GUID_2 });
@@ -463,6 +464,11 @@ test('PAIR-IDEMPOTENCY-01 auto-balanced staff changes do not change the dual pai
   assert.strictEqual(
     BU._buildPairTokenDeterministic({ ...base, resourceId: GUID_1 }),
     BU._buildPairTokenDeterministic({ ...base, resourceId: GUID_2 }),
+  );
+  assert.notStrictEqual(
+    BU._buildPairTokenDeterministic({ ...base, customerKey: 'customer-b-hash' }),
+    BU._buildPairTokenDeterministic({ ...base, customerKey: 'customer-a-hash' }),
+    'different customers must not share an idempotency token',
   );
 });
 

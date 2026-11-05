@@ -77,11 +77,13 @@ test("BOOK-FLOW-IDEMPOTENCY-01 pair fingerprint and payload hash exclude auto-ba
     bookingUtilsSource.indexOf("const DATE_YMD_LOCAL"),
   );
   assert.doesNotMatch(fingerprintBlock, /resourceId/);
+  assert.match(fingerprintBlock, /customerKey/);
   const tokenBlock = sagaSource.slice(
     sagaSource.indexOf("function _resolveStablePairToken"),
     sagaSource.indexOf("function _resolveUnifiedPairToken"),
   );
   assert.doesNotMatch(tokenBlock, /resourceId/);
+  assert.match(tokenBlock, /customerKey/);
   const payloadHashBlock = sagaSource.slice(
     sagaSource.indexOf("const payloadHash"),
     sagaSource.indexOf("const txResult"),
