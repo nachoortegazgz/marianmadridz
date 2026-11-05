@@ -37,7 +37,7 @@ test('CRON-PARITY-01 every jobs.config functionName is exported by crons.js', ()
 test('CRON-PARITY-02 crons.js exports cover the two previously-missing jobs', () => {
   assert.strictEqual(typeof CR.verifyNightlyZClosing, 'function');
   assert.strictEqual(typeof CR.cleanAuditLogs, 'function');
-  assert.strictEqual(typeof CR.cleanExpiredIdempotencyTransactions, 'function');
+  assert.strictEqual(typeof CR.cleanExpiredBookingControl, 'function');
 });
 
 test('CRON-DUAL-CACHE-01 cleanupExpiredDualCache drains expired rows only', async () => {
@@ -144,7 +144,7 @@ test('CRON-Z-02 verifyNightlyZClosing raises MANUAL_REQUIRED alert when no close
   assert.strictEqual(alerts.length, 1, 'exactly one deduped manual-required alert expected');
 });
 
-test('CRON-IDEMPOTENCY-01 purges only terminal transactions after 24 hours', async () => {
+test('CRON-CONTROL-01 purges only terminal transactions and resolved flags after 24 hours', async () => {
   wixDataMock._reset();
   const C = IC.OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
   const old = new Date(Date.now() - 25 * 60 * 60 * 1000);
@@ -157,15 +157,21 @@ test('CRON-IDEMPOTENCY-01 purges only terminal transactions after 24 hours', asy
     { _id: 'tx-retryable-old', controlType: IC.CONTROL_TYPE.IDEMPOTENCY, status: 'FAILED_RETRYABLE', _updatedDate: old },
     { _id: 'tx-unknown-old', controlType: IC.CONTROL_TYPE.IDEMPOTENCY, status: 'RESULT_UNKNOWN', _updatedDate: old },
     { _id: 'webhook-old', controlType: IC.CONTROL_TYPE.WEBHOOK_EVENT, status: 'CLOSED', _updatedDate: old },
+    { _id: 'flag-completed-old', controlType: IC.CONTROL_TYPE.SYSTEM_FLAG, payload: { status: 'COMPLETED' }, _updatedDate: old },
+    { _id: 'flag-reconciled-old', controlType: IC.CONTROL_TYPE.SYSTEM_FLAG, payload: { status: 'RECONCILED' }, _updatedDate: old },
+    { _id: 'flag-repair-old', controlType: IC.CONTROL_TYPE.SYSTEM_FLAG, payload: { status: 'REPAIR_REQUIRED' }, _updatedDate: old },
+    { _id: 'flag-completion-retry-old', controlType: IC.CONTROL_TYPE.SYSTEM_FLAG, payload: { status: 'COMPLETION_RETRY_REQUIRED' }, _updatedDate: old },
     { _id: 'compensation-old', controlType: IC.CONTROL_TYPE.COMPENSATION, status: 'EXECUTED', _updatedDate: old },
   ]);
 
-  const result = await CR.cleanExpiredIdempotencyTransactions();
-  assert.equal(result.removed, 2);
+  const result = await CR.cleanExpiredBookingControl();
+  assert.equal(result.removed, 4);
   assert.equal(result.failed, 0);
   const remaining = (wixDataMock._store.get(C) || []).map((row) => row._id).sort();
   assert.deepStrictEqual(remaining, [
     'compensation-old',
+    'flag-completion-retry-old',
+    'flag-repair-old',
     'tx-completed-recent',
     'tx-in-progress-old',
     'tx-retryable-old',

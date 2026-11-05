@@ -1066,38 +1066,49 @@ return result;
 }
 
 // =============================================================================
-// CRON: cleanExpiredIdempotencyTransactions - every 15 minutes
+// CRON: cleanExpiredBookingControl - every 15 minutes
 // =============================================================================
 /**
- * Keeps terminal booking idempotency records for 24 hours after their last
- * update, then removes them. The CMS _updatedDate is used as the terminal
- * timestamp because _completeTransaction/_failTransaction update the row.
+ * Keeps terminal booking idempotency records and resolved recovery flags for
+ * 24 hours after their last update, then removes them. CMS _updatedDate is the
+ * terminal timestamp because the terminal state transition updates the row.
  *
- * Strict allow-list: COMPLETED and FAILED_FINAL only. IN_PROGRESS,
- * FAILED_RETRYABLE, RESULT_UNKNOWN and all other states remain available to
- * retries/reconciliation. WEBHOOK_EVENT is a separate immutable ledger.
+ * Strict allow-list:
+ * - IDEMPOTENCY: COMPLETED, FAILED_FINAL.
+ * - SYSTEM_FLAG: COMPLETED, RECONCILED.
+ * IN_PROGRESS, FAILED_RETRYABLE, RESULT_UNKNOWN, COMPLETION_RETRY_REQUIRED,
+ * REPAIR_REQUIRED and all other states remain available to recovery.
+ * WEBHOOK_EVENT is a separate immutable ledger.
  */
-export async function cleanExpiredIdempotencyTransactions() {
+export async function cleanExpiredBookingControl() {
     const traceId = makeTraceId("cron-idempotency-purge");
     const result = { removed: 0, skipped: 0, failed: 0, errors: [] };
 
     try {
         const cutoff = new Date(Date.now() - IDEMPOTENCY_RETENTION_MS);
         const C = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
-        const res = await dalQuery(C)
-            .eq("controlType", CONTROL_TYPE.IDEMPOTENCY)
-            .lt("_updatedDate", cutoff)
-            .limit(100)
-            .find({ consistencyMode: "strong" });
+        const types = [CONTROL_TYPE.IDEMPOTENCY, CONTROL_TYPE.SYSTEM_FLAG];
+        const batches = await Promise.all(types.map((type) =>
+            dalQuery(C)
+                .eq("controlType", type)
+                .lt("_updatedDate", cutoff)
+                .limit(100)
+                .find({ consistencyMode: "strong" })
+        ));
 
-        for (const tx of res?.items || []) {
+        for (const tx of batches.flatMap((batch) => batch?.items || [])) {
             const payload = readControlPayload(tx);
             const status = _safeTrim(payload.status || tx.status).toUpperCase();
+            const eligible =
+                (tx.controlType === CONTROL_TYPE.IDEMPOTENCY &&
+                    ["COMPLETED", "FAILED_FINAL"].includes(status)) ||
+                (tx.controlType === CONTROL_TYPE.SYSTEM_FLAG &&
+                    ["COMPLETED", "RECONCILED"].includes(status));
             const updatedAt = tx._updatedDate instanceof Date
                 ? tx._updatedDate
                 : new Date(tx._updatedDate || "");
             if (
-                !["COMPLETED", "FAILED_FINAL"].includes(status) ||
+                !eligible ||
                 !Number.isFinite(updatedAt.getTime()) ||
                 updatedAt.getTime() > cutoff.getTime()
             ) {
@@ -1116,7 +1127,7 @@ export async function cleanExpiredIdempotencyTransactions() {
                         error: removeError?.message || "UNKNOWN",
                     });
                 }
-                log.warn("cleanExpiredIdempotencyTransactions: remove failed", {
+                log.warn("cleanExpiredBookingControl: remove failed", {
                     id: tx._id,
                     error: removeError?.message,
                     traceId,
@@ -1124,7 +1135,7 @@ export async function cleanExpiredIdempotencyTransactions() {
             }
         }
 
-        log.info("cleanExpiredIdempotencyTransactions completed", {
+        log.info("cleanExpiredBookingControl completed", {
             removed: result.removed,
             skipped: result.skipped,
             failed: result.failed,
@@ -1134,7 +1145,7 @@ export async function cleanExpiredIdempotencyTransactions() {
     } catch (err) {
         result.failed++;
         result.errors.push({ query: "main", error: err?.message || "UNKNOWN" });
-        log.error("cleanExpiredIdempotencyTransactions failed", {
+        log.error("cleanExpiredBookingControl failed", {
             error: err?.message,
             traceId,
         });
