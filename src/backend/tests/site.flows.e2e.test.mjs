@@ -447,6 +447,34 @@ test('FLOW-CAJA-03 traducion legacy ONLINE -> WIX_PAYMENTS en la frontera (CAJA-
 });
 
 
+test('FLOW-CAJA-05 CajaActual applies each persisted movement exactly once', async () => {
+  wixDataMock._reset();
+  const { cajas } = await freshImports();
+  const movement = {
+    _id: '11111111-1111-4111-8111-111111111111',
+    transactionId: 'cash-projection-once-001',
+    accountingAmount: 35,
+    paymentMethod: 'WIX_PAYMENTS',
+    resourceId: 'online',
+    staffResourceId: 'online',
+    traceId: 'trace-caja-projection-001',
+  };
+
+  const first = await cajas.updateCajaActualFromMovement(movement, movement.traceId);
+  const replay = await cajas.updateCajaActualFromMovement(movement, movement.traceId);
+  const rows = wixDataMock._store.get('CajaActual') || [];
+  const register = rows.find((row) => row._id === 'CAJA_PRINCIPAL');
+
+  assert.strictEqual(first.status, 'SUCCESS');
+  assert.strictEqual(replay.status, 'SUCCESS');
+  assert.strictEqual(replay.idempotent, true);
+  assert.ok(register, 'CajaActual principal debe quedar persistida');
+  assert.strictEqual(register.otherAmount, 35, 'un cobro online se proyecta una sola vez');
+  assert.strictEqual(register.netAmount, 35);
+  assert.strictEqual(register.salesCount, 1);
+  assert.deepStrictEqual(register.sequenceCounters.appliedMovementIds, [movement._id]);
+});
+
 test('FLOW-CAJA-04 transactionId concurrente no crea movimientos duplicados', async () => {
   wixDataMock._reset();
   const { cajas } = await freshImports();

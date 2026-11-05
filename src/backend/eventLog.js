@@ -45,6 +45,7 @@ FIXES APLICADOS v5009-FISCAL (heredados):
 */
 
 import { webMethod, Permissions } from "wix-web-module";
+import { updateCajaActualFromMovement } from "backend/cajas.web";
 
 import {
     query as dalQuery,
@@ -630,7 +631,12 @@ export async function registrarEventoEconomico(input) {
         bankReconciliationReference: _safeTrim(input.bankReconciliationReference) || null,
 
         resourceId: _safeTrim(input.resourceId) || null,
-        staffResourceId: _safeTrim(input.staffResourceId) || null,
+        // MovimientosCaja.staffResourceId is required by the live CMS schema.
+        // Online sales have no salon employee resource; persist their channel
+        // resource ("online") instead of a null value.
+        staffResourceId: _safeTrim(
+            input.staffResourceId || input.resourceId || "CAJA_LOCAL"
+        ),
         linkedBookingIds: linkedBookingIdsArr,
         transactionId: _safeTrim(input.transactionId) || `TX_${seq.sequenceNumber}`,
         orderId: _safeTrim(input.orderId) || null,
@@ -693,6 +699,10 @@ export async function registrarEventoEconomico(input) {
             },
         };
     }
+
+    // Update the operational cash-register projection as part of the online
+    // payment flow. The helper is idempotent by persisted movement ID.
+    await updateCajaActualFromMovement(cabecera, traceId);
 
     // 9. Proyeccion secundaria - NUNCA propaga errores al caller
     const detailIds = [];

@@ -505,8 +505,13 @@ test('PERSIST-03 accounting projection uses canonical debit/credit fields and ac
   assert.match(projection, /debitAmount:\s*totalAmount/);
   assert.match(projection, /creditAmount:\s*totalAmount/);
   assert.doesNotMatch(projection, /\bdebit:\s*totalAmount|\bcredit:\s*totalAmount/);
-  assert.match(projection, /cashMovementId:\s*movement\._id/);
-  assert.doesNotMatch(projection, /origenTipo:/);
+  assert.match(projection, /cashMovementId:\s*movementId/);
+  assert.match(projection, /sourceMovementId:\s*movementId/);
+  assert.match(projection, /origenTipo:\s*"MOVIMIENTOCAJA"/);
+  assert.match(projection, /origenRegistro:\s*MOVIMIENTOS_CAJA_COL/);
+  assert.match(projection, /recordHash:\s*movement\.hash/);
+  assert.match(projection, /previousRecordHash:\s*movement\.previousRecordHash/);
+  assert.match(projection, /_id:\s*entryId/);
   assert.match(source, /_projectToAccountingLedger\(saved,\s*traceId\)/);
 });
 
@@ -515,6 +520,27 @@ test('PERSIST-04 inventory workflow never updates its append-only movement ledge
   assert.doesNotMatch(source, /update\(MOVIMIENTOS_INV_COL/);
   assert.match(source, /lastInventoryMovementId\s*===\s*existingMovement\._id/);
   assert.match(source, /applicationConfirmed:\s*true/);
+});
+
+test('PERSIST-06 online fiscal events populate required staffResourceId from the channel resource', async () => {
+  const source = await readFile(new URL('../eventLog.js', import.meta.url), 'utf8');
+  assert.match(source, /staffResourceId:\s*_safeTrim\([\s\S]{0,160}input\.staffResourceId\s*\|\|\s*input\.resourceId\s*\|\|\s*"CAJA_LOCAL"/);
+});
+
+test('PERSIST-08 online payment flow projects CajaActual and retries idempotently', async () => {
+  const eventLog = await readFile(new URL('../eventLog.js', import.meta.url), 'utf8');
+  const events = await readFile(new URL('../events.js', import.meta.url), 'utf8');
+  assert.match(eventLog, /updateCajaActualFromMovement\(cabecera,\s*traceId\)/);
+  assert.match(events, /updateCajaActualFromMovement\(existingLedgerRes\.items\[0\],\s*traceId\)/);
+  const caja = await readFile(new URL('../cajas.web.js', import.meta.url), 'utf8');
+  assert.match(caja, /appliedMovementIds\.includes\(movementKey\)/);
+  assert.match(caja, /dalUpdate\(CAJA_ACTUAL_COL,\s*cashRegister\)/);
+});
+
+test('PERSIST-07 booking frontend sends the version of the displayed privacy notice', async () => {
+  const source = await readFile(new URL('../../pages/Calendario de reservas 2.q39h6.js', import.meta.url), 'utf8');
+  assert.match(source, /BOOKING_PRIVACY_NOTICE_VERSION\s*=\s*"RESERVAS_PRIVACIDAD_2026-11-05_V1"/);
+  assert.match(source, /privacyNoticeVersion:\s*BOOKING_PRIVACY_NOTICE_VERSION/);
 });
 
 test('PERSIST-05 booking privacy metadata reaches the CitasF2 writer', async () => {
