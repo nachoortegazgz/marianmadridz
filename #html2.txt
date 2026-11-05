@@ -448,15 +448,12 @@
         txt += sep;
         txt += "               INFORMACIÓN DE COBRO               \n";
         txt += sep;
-        if (d.precio > 0) {
-            var base = d.precio / 1.21;
-            var iva = d.precio - base;
-            txt += "Base Imponible:  " + base.toFixed(2) + " €\n";
-            txt += "I.V.A. (21%):    " + iva.toFixed(2) + " €\n";
-            txt += "Total Estimado:  " + d.precio.toFixed(2) + " €\n";
+        if (Number.isFinite(Number(d.precio)) && Number(d.precio) > 0) {
+            txt += "Importe total estimado: " + Number(d.precio).toFixed(2) + " €\\n";
         } else {
-            txt += "Precio final calculado según tratamiento en salón\n";
+            txt += "Importe total estimado: Pendiente de valoración en salón\\n";
         }
+        txt += "Importe aproximado. El precio definitivo dependerá del servicio y tratamiento finalmente realizado en el salón.\\n";
         txt += sep + "\n";
         txt += "               NOTAS IMPORTANTES                  \n";
         txt += "• Cancelaciones y modificaciones hasta 24h antes.\n";
