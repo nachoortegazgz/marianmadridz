@@ -912,8 +912,8 @@ export function MovimientosInventario_beforeInsert(item) {
     const catalogVersion = _safeTrim(item.catalogVersion);
     if (catalogVersion) {
         if (!["V1_CATALOG", "V3_CATALOG"].includes(catalogVersion)) _schemaError("catalogVersion invalido en MovimientosInventario");
-        if (!_safeTrim(item.stockKey) || !_safeTrim(item.wixProductId) || !_safeTrim(item.wixVariantId)) {
-            _schemaError("Identidad de variante Wix incompleta en MovimientosInventario");
+        if (!_safeTrim(item.stockKey) || !_safeTrim(item.productId) || !_safeTrim(item.variantId)) {
+            _schemaError("Identidad de variante Wix incompleta: productId/variantId son las claves oficiales de Wix Stores");
         }
         if (catalogVersion === "V3_CATALOG" && !_safeTrim(item.locationId)) {
             _schemaError("locationId obligatorio en movimientos Catalog V3");
@@ -953,8 +953,8 @@ function _validateInventarioStockVenta(item) {
         if (!["V1_CATALOG", "V3_CATALOG"].includes(catalogVersion)) {
             _schemaError("catalogVersion debe ser V1_CATALOG o V3_CATALOG");
         }
-        if (!_safeTrim(item.stockKey) || !_safeTrim(item.wixProductId) || !_safeTrim(item.wixVariantId)) {
-            _schemaError("stockKey, wixProductId y wixVariantId son obligatorios para inventario vinculado a Wix Stores");
+        if (!_safeTrim(item.stockKey) || !_safeTrim(item.productId) || !_safeTrim(item.variantId)) {
+            _schemaError("stockKey, productId y variantId son obligatorios para inventario vinculado a Wix Stores");
         }
         if (catalogVersion === "V3_CATALOG" && !_safeTrim(item.locationId)) {
             _schemaError("locationId obligatorio para inventario Catalog V3");
