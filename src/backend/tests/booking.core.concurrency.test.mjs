@@ -285,7 +285,12 @@ test('BCORE-TX-06 oversized result is dropped but state preserved (TX_PAYLOAD ca
 
 test('BCORE-PER-01 valid simple booking persists canonical CitasF2 doc', async () => {
   wixDataMock._reset();
-  const out = await BC._persistBooking(baseParams(), 'tr-persist-1');
+  const acceptedAt = new Date('2026-11-05T10:30:00.000Z');
+  const out = await BC._persistBooking(baseParams({
+    privacyNoticeVersion: 'notice-test-v1',
+    privacyNoticeAcceptedAt: acceptedAt,
+    privacyNoticePurpose: 'GESTION_RESERVA',
+  }), 'tr-persist-1');
   assert.strictEqual(out.created, true);
   const doc = out.item;
   assert.strictEqual(doc.serviceId, SVC);
@@ -303,6 +308,9 @@ test('BCORE-PER-01 valid simple booking persists canonical CitasF2 doc', async (
   assert.strictEqual(doc.status, undefined);
   assert.ok(Object.values(IC.CITAS_PAYMENT_STATUS).includes(doc.paymentStatus));
   assert.deepStrictEqual(doc.contactDetails, { firstName: 'Ana', email: 'ana@example.com' });
+  assert.strictEqual(doc.privacyNoticeVersion, 'notice-test-v1');
+  assert.strictEqual(doc.privacyNoticeAcceptedAt.toISOString(), acceptedAt.toISOString());
+  assert.strictEqual(doc.privacyNoticePurpose, 'GESTION_RESERVA');
   assert.ok(doc.meta && typeof doc.meta === 'object');
 });
 
