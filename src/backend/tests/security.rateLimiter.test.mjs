@@ -39,6 +39,11 @@ test("SEC-RL-01 persists a burst-capable GCRA counter and enforces retryAfter", 
     assert.equal(rows[0].requestCount, 2);
     assert.equal(rows[0].version, 2);
     assert.equal(rows[0].payload.algorithm, "GCRA_V1");
+    assert.equal(
+        wixDataMock._calls.filter((call) => call.op === "insert").length,
+        1,
+        "bootstrap must insert once, not issue a duplicate write per request"
+    );
     assert.match(rows[0]._id, /^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-a[0-9a-f]{3}-[0-9a-f]{12}$/i);
     assert.match(rows[0].requesterKey, /^[0-9a-f]{64}$/i);
 });
@@ -145,6 +150,48 @@ test("SEC-RL-07 denies the request when ControlOperativo read storage fails", as
     }
 });
 
+
+
+test("SEC-RL-08 reuses the persisted row without another bootstrap insert", async () => {
+    const key = { surface: "security.test", key: "warm-requester" };
+
+    assert.equal((await rateLimiter(key, 5, 10000)).allowed, true);
+    wixDataMock._calls.length = 0;
+
+    assert.equal((await rateLimiter(key, 5, 10000)).allowed, true);
+    assert.equal(
+        wixDataMock._calls.filter((call) => call.op === "insert").length,
+        0
+    );
+    assert.equal(
+        wixDataMock._calls.filter((call) => call.op === "get").length,
+        2,
+        "one explicit state read plus the mocked bulkPatch item lookup"
+    );
+});
+
+
+test("SEC-RL-09 treats Wix Data quota exhaustion as a temporary fail-closed denial", async () => {
+    const originalGet = wixDataMock.get;
+    wixDataMock.get = async () => {
+        const error = new Error("WDE0014: Requests per minute quota exceeded.");
+        error.details = { applicationError: { code: "WDE0014" } };
+        throw error;
+    };
+
+    try {
+        assert.deepEqual(
+            await rateLimiter({ surface: "security.test", key: "quota-exhausted" }),
+            {
+                allowed: false,
+                retryAfter: 60,
+                reason: "DATA_QUOTA_EXCEEDED",
+            }
+        );
+    } finally {
+        wixDataMock.get = originalGet;
+    }
+});
 
 test("SEC-CRYPTO-01 computes standard SHA-256 vectors without Web Crypto", async () => {
     assert.equal(

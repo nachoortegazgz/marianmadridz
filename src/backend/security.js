@@ -209,66 +209,70 @@ export async function rateLimiter(
             idHex.slice(16, 20).join(""),
             idHex.slice(20, 32).join(""),
         ].join("-");
-        const now = Date.now();
+        // Read first: existing requester state must not trigger a duplicate CMS insert.
+        const createRecord = (createdAt) => ({
+            _id: recordId,
+            controlType: CONTROL_TYPE.RATE_LIMIT,
+            dedupeKey: `RATE_LIMIT:${policyHash}`,
+            traceId,
+            status: CONTROL_STATUS.ACTIVE,
+            surface: normalizedSurface,
+            requesterKey: requesterHash,
+            requestCount: 0,
+            windowStart: new Date(createdAt),
+            expiresAt: new Date(createdAt + window * 2),
+            version: 0,
+            payload: {
+                algorithm: "GCRA_V1",
+                tat: createdAt * 1000,
+            },
+        });
 
-        // Insert-once bootstrap. Duplicate-ID contention is expected and safe.
-        storageStage = "INSERT_BOOTSTRAP";
-        try {
-            await insertItem(RATE_LIMIT_COLLECTION, {
-                _id: recordId,
-                controlType: CONTROL_TYPE.RATE_LIMIT,
-                dedupeKey: `RATE_LIMIT:${policyHash}`,
-                traceId,
-                status: CONTROL_STATUS.ACTIVE,
-                surface: normalizedSurface,
-                requesterKey: requesterHash,
-                requestCount: 0,
-                windowStart: new Date(now),
-                expiresAt: new Date(now + window * 2),
-                version: 0,
-                payload: {
-                    algorithm: "GCRA_V1",
-                    tat: now * 1000,
-                },
-            });
-        } catch (insertError) {
-            if (!_isDuplicateRateLimitRecord(insertError)) throw insertError;
+        storageStage = "READ_RECORD";
+        let record = await getItem(
+            RATE_LIMIT_COLLECTION,
+            recordId,
+            CONSISTENCY.STRONG
+        );
+
+        if (!record) {
+            const createdAt = Date.now();
+            const initialRecord = createRecord(createdAt);
+            storageStage = "INSERT_BOOTSTRAP";
+            try {
+                await insertItem(RATE_LIMIT_COLLECTION, initialRecord);
+                record = initialRecord;
+            } catch (insertError) {
+                if (!_isDuplicateRateLimitRecord(insertError)) throw insertError;
+                // Another request created the deterministic row concurrently.
+                storageStage = "READ_RECORD";
+                record = await getItem(
+                    RATE_LIMIT_COLLECTION,
+                    recordId,
+                    CONSISTENCY.STRONG
+                );
+            }
         }
 
         for (let attempt = 0; attempt < RATE_LIMIT_CAS_ATTEMPTS; attempt += 1) {
-            storageStage = "READ_RECORD";
-            const record = await getItem(
-                RATE_LIMIT_COLLECTION,
-                recordId,
-                CONSISTENCY.STRONG
-            );
-
             if (!record) {
-                // Expiry cleanup may race with a request; recreate and retry.
-                const recreateNow = Date.now();
+                // Cleanup can remove an expired row between the initial read and CAS.
+                const createdAt = Date.now();
+                const replacementRecord = createRecord(createdAt);
                 storageStage = "INSERT_RECREATE";
                 try {
-                    await insertItem(RATE_LIMIT_COLLECTION, {
-                        _id: recordId,
-                        controlType: CONTROL_TYPE.RATE_LIMIT,
-                        dedupeKey: `RATE_LIMIT:${policyHash}`,
-                        traceId,
-                        status: CONTROL_STATUS.ACTIVE,
-                        surface: normalizedSurface,
-                        requesterKey: requesterHash,
-                        requestCount: 0,
-                        windowStart: new Date(recreateNow),
-                        expiresAt: new Date(recreateNow + window * 2),
-                        version: 0,
-                        payload: {
-                            algorithm: "GCRA_V1",
-                            tat: recreateNow * 1000,
-                        },
-                    });
+                    await insertItem(RATE_LIMIT_COLLECTION, replacementRecord);
+                    record = replacementRecord;
                 } catch (insertError) {
                     if (!_isDuplicateRateLimitRecord(insertError)) throw insertError;
+                    storageStage = "READ_RECORD";
+                    record = await getItem(
+                        RATE_LIMIT_COLLECTION,
+                        recordId,
+                        CONSISTENCY.STRONG
+                    );
                 }
-                continue;
+                if (!record) continue;
             }
 
             const version = Number(record.version);
@@ -334,7 +338,10 @@ export async function rateLimiter(
                 const missingDuringCleanup = result.errors.every(
                     (entry) => entry?.code === "WDE0073"
                 );
-                if (missingDuringCleanup) continue;
+                if (missingDuringCleanup) {
+                    record = null;
+                    continue;
+                }
                 throw new Error(
                     result.errors[0]?.message ||
                     result.errors[0]?.code ||
@@ -348,11 +355,37 @@ export async function rateLimiter(
             }
 
             // Conditional update lost a concurrent race; reread the new version.
+            storageStage = "READ_RECORD";
+            record = await getItem(
+                RATE_LIMIT_COLLECTION,
+                recordId,
+                CONSISTENCY.STRONG
+            );
         }
 
         // Excessive contention is denied rather than bypassing the limiter.
         return { allowed: false, retryAfter: 1 };
     } catch (error) {
+        const storageErrorCode = error?.code ||
+            error?.details?.applicationError?.code ||
+            "";
+        const isDataQuotaExceeded = storageErrorCode === "WDE0014" ||
+            /WDE0014/.test(_safeString(error?.message));
+
+        if (isDataQuotaExceeded) {
+            log.warn("Wix Data request quota reached; rate limit denied", {
+                surface: normalizedSurface,
+                traceId,
+                stage: storageStage,
+                errorCode: "WDE0014",
+            });
+            return {
+                allowed: false,
+                retryAfter: 60,
+                reason: "DATA_QUOTA_EXCEEDED",
+            };
+        }
+
         log.error("Distributed rate limiter storage failure", {
             surface: normalizedSurface,
             traceId,
