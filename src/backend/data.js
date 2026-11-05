@@ -683,7 +683,7 @@ export function LibroAsientosContablesDetalle_beforeInsert(item) {
         _schemaError("origenTipo obligatorio y valido (ASIENTOCONTABLE, EVENTOSISTEMAFACTURACION, MOVIMIENTOCAJA, CIERREZ, RECTIFICATIVA)");
     }
     if (!_safeTrim(item.origenRegistro)) _schemaError("origenRegistro obligatorio");
-    if (!_isGuid(item.sourceMovementId)) _schemaError("sourceMovementId obligatorio y debe ser GUID");
+    if (!_safeTrim(item.sourceMovementId)) _schemaError("sourceMovementId obligatorio");
     if (!/^[a-f0-9]{64}$/i.test(_safeTrim(item.recordHash))) {
         _schemaError("recordHash obligatorio (SHA-256 de 64 caracteres hexadecimales)");
     }
