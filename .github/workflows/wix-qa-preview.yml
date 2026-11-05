@@ -58,7 +58,7 @@ jobs:
           }
           # Wix CLI for Sites opens an Ink selector: first option is origin/main,
           # second is Local code. Send Down + Enter through a pseudo-terminal.
-          printf '\\033[B\\r' | script --quiet --return --command "npm run wix preview" /dev/null 2>&1 | tee wix-preview.log
+          printf '\033[B\r' | script --quiet --return --command "npm run wix preview" /dev/null 2>&1 | tee wix-preview.log
 
       - name: Require Wix's explicit preview URL
         id: preview
