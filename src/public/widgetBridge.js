@@ -1,6 +1,6 @@
 /**
  * MODULE: public/widgetBridge.js
- * VERSION: v5013-CLEAN
+ * VERSION: v5014-LIVE-CALENDAR-ROUTE
  * APIS: TextEncoder, URL.
  * DOC: https://developer.mozilla.org/en-US/docs/Web/API/TextEncoder
  *      https://developer.mozilla.org/en-US/docs/Web/API/URL
@@ -16,7 +16,7 @@ export const MESSAGE_TYPES = Object.freeze({
 });
 export const PROTOCOL_URLS = Object.freeze({
     SERVICIOS: "/reserva-online",
-    CALENDARIO_2: "/booking-calendar/calendario-2",
+    CALENDARIO_2: "/booking-calendar",
     PRIVACY_POLICY: "/politica-de-privacidad"
 });
 export const PROTOCOL_UI = Object.freeze({

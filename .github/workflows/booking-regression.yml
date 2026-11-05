@@ -30,6 +30,12 @@ jobs:
         run: npm ci
       - name: Run offline regression suite
         run: npm test
+      - name: Run Layer 1 gate (booking and availability)
+        if: always()
+        run: npm run test:layer1
+      - name: Run Layer 2 gate (cash, fiscal and operations)
+        if: always()
+        run: npm run test:layer2
       - name: Run ESLint
         if: always()
         run: npm run lint
