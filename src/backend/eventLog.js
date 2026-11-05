@@ -674,7 +674,8 @@ export async function registrarEventoEconomico(input) {
 
         schemaVersion: LEDGER_SCHEMA_VERSION,
         recordSource: _safeTrim(input.recordSource) || "INTERNAL",
-        lineItems: Array.isArray(input.lineItems) ? input.lineItems : [],
+        // CMS declares lineItems as OBJECT; retain its rows under an explicit items key.
+        lineItems: { items: Array.isArray(input.lineItems) ? input.lineItems : [] },
     };
 
     // 6. AEAT payload + huella
@@ -787,26 +788,65 @@ async function _proyectarMovimientoInventario(cabecera, traceId) {
         const mod = await import("backend/inventario.web");
         const fn = mod?.recordInventoryMovementSafe;
         if (typeof fn !== "function") {
-            log.warn("inventario.recordInventoryMovementSafe no disponible", { traceId });
-            return;
+            throw new Error("INVENTORY_MOVEMENT_WRITER_UNAVAILABLE");
         }
-        // SSOT Apartado 5 (MovimientosCaja): payloadFiscal es la clave
-        // canonica del snapshot fiscal; fiscalPayload era alias legacy ya
-        // eliminado por HOOK-CAJA-06. Leer el canon evita nulos silenciosos.
-        const snapshot = readFiscalPayload(cabecera) || {};
-        await fn({
-            productId: snapshot.wixProductId || null,
-            sku: snapshot.sku || null,
-            orderId: cabecera.orderId || null,
-            refundId: snapshot.refundId || null,
-            sourceEventId: cabecera._id,
-            catalogId: cabecera.catalogId,
-            magnitude: snapshot.magnitude || 1,
-            thirdPartyId: cabecera.thirdPartyId,
-            traceId,
-        });
+
+        // lineItems is an OBJECT in CMS. Legacy rows may still be arrays,
+        // so read both shapes, but every new write uses { items: [...] }.
+        const storedLineItems = cabecera.lineItems;
+        const lineItems = Array.isArray(storedLineItems)
+            ? storedLineItems
+            : Array.isArray(storedLineItems?.items)
+                ? storedLineItems.items
+                : [];
+
+        if (lineItems.length === 0) {
+            throw new Error("MOV_STOCK_REQUIRES_VARIANT_LINE_ITEMS");
+        }
+
+        for (const [index, line] of lineItems.entries()) {
+            const identity = {
+                stockKey: _safeTrim(line?.stockKey),
+                productId: _safeTrim(line?.productId),
+                variantId: _safeTrim(line?.variantId),
+                catalogVersion: _safeTrim(line?.catalogVersion),
+                locationId: _safeTrim(line?.locationId) || null,
+                sku: _safeTrim(line?.sku) || null,
+            };
+            const movementType = _safeTrim(line?.movementType).toUpperCase();
+            const quantityDelta = Number(line?.quantityDelta);
+            const movementToken = _safeTrim(line?.movementToken);
+
+            if (!identity.stockKey || !identity.productId || !identity.variantId ||
+                !identity.catalogVersion || !movementType ||
+                !Number.isFinite(quantityDelta) || quantityDelta === 0 || !movementToken) {
+                throw new Error(`MOV_STOCK_LINE_${index}_INCOMPLETE_CANONICAL_IDENTITY`);
+            }
+
+            const result = await fn(identity, movementType, quantityDelta, {
+                traceId,
+                movementToken,
+                orderId: _safeTrim(line?.orderId || cabecera.orderId) || null,
+                refundId: _safeTrim(line?.refundId || cabecera.refundId) || null,
+                lineItemId: _safeTrim(line?.lineItemId) || null,
+                reason: _safeTrim(line?.reason || cabecera.operationDescription),
+                sourceEventId: cabecera._id,
+                catalogId: cabecera.catalogId || null,
+                thirdPartyId: cabecera.thirdPartyId || null,
+                requiresWixReconciliation: line?.requiresWixReconciliation === true,
+                nativeCommercialMovement: line?.nativeCommercialMovement === true,
+            });
+
+            if (result?.status !== "SUCCESS") {
+                throw new Error(result?.error?.code || `MOV_STOCK_LINE_${index}_FAILED`);
+            }
+        }
     } catch (err) {
-        log.warn("Proyeccion inventario fallo", { traceId, eventoId: cabecera._id, message: err?.message });
+        log.warn("Proyeccion inventario fallo", {
+            traceId,
+            eventoId: cabecera._id,
+            message: err?.message,
+        });
         throw err;
     }
 }
