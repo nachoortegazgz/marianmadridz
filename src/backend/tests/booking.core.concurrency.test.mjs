@@ -22,7 +22,7 @@ const IC = await import('backend/internalConfig');
 // GUID valido segun mmUtils._looksLikeGuid (forma estandar v4-like)
 const RES_A = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee';
 const RES_B = '11111111-2222-4333-8444-555555555555';
-const SVC = 'svc9f8e7d6c';
+const SVC = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 const CONTROL = IC.OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
 const CITAS = IC.BUSINESS_COLLECTIONS.CITAS_F2;
 
@@ -90,7 +90,7 @@ test('BCORE-SLOT-04 _parseResourceIdFromSlotKey roundtrip + tamper rejection', (
 test('BCORE-LOCK-01 acquire fresh lock writes SLOT_LOCK row with TTL expiry', async () => {
   wixDataMock._reset();
   const key = BC.generateSlotKey(SVC, RES_A, new Date('2026-10-15T08:00:00Z'), new Date('2026-10-15T09:00:00Z'));
-  const res = await BC._lockSlotKeyOrFail(key, 'owner-1', 60000);
+  const res = await BC._lockSlotKeyOrFail(key, 'owner-1', 60000, SVC);
   // CORE-39/CORE-45 (v5014): el contrato del lock exitoso es ahora
   // { ok, acquired, revision, lockToken } — la saga necesita el lockToken y
   // la _revision para unlock/renew atomicos con optimismo. deepStrictEqual
@@ -104,6 +104,7 @@ test('BCORE-LOCK-01 acquire fresh lock writes SLOT_LOCK row with TTL expiry', as
   assert.strictEqual(row.controlType, IC.CONTROL_TYPE.SLOT_LOCK);
   assert.strictEqual(row.dedupeKey, key);
   assert.strictEqual(row.resourceId, RES_A);
+  assert.strictEqual(row.serviceId, SVC, 'SLOT_LOCK debe guardar el serviceId de la fase bloqueada');
   assert.ok(row.expiresAt instanceof Date);
   const ttl = row.expiresAt.getTime() - Date.now();
   assert.ok(ttl > 0 && ttl <= 60000 + 5000, 'TTL aplicado dentro de tolerancia');
@@ -112,8 +113,8 @@ test('BCORE-LOCK-01 acquire fresh lock writes SLOT_LOCK row with TTL expiry', as
 test('BCORE-LOCK-02 second owner is refused while lock active (HELD_BY_ANOTHER)', async () => {
   wixDataMock._reset();
   const key = BC.generateSlotKey(SVC, RES_A, new Date('2026-10-15T08:00:00Z'), new Date('2026-10-15T09:00:00Z'));
-  await BC._lockSlotKeyOrFail(key, 'owner-1', 60000);
-  const busy = await BC._lockSlotKeyOrFail(key, 'owner-2', 60000);
+  await BC._lockSlotKeyOrFail(key, 'owner-1', 60000, SVC);
+  const busy = await BC._lockSlotKeyOrFail(key, 'owner-2', 60000, SVC);
   assert.strictEqual(busy.ok, false);
   assert.strictEqual(busy.message, BC.ERROR_CODES.LOCK_HELD_BY_ANOTHER_OWNER);
 });
@@ -121,8 +122,8 @@ test('BCORE-LOCK-02 second owner is refused while lock active (HELD_BY_ANOTHER)'
 test('BCORE-LOCK-03 same owner re-acquire renews instead of duplicating', async () => {
   wixDataMock._reset();
   const key = BC.generateSlotKey(SVC, RES_A, new Date('2026-10-15T08:00:00Z'), new Date('2026-10-15T09:00:00Z'));
-  await BC._lockSlotKeyOrFail(key, 'owner-1', 60000);
-  const again = await BC._lockSlotKeyOrFail(key, 'owner-1', 60000);
+  await BC._lockSlotKeyOrFail(key, 'owner-1', 60000, SVC);
+  const again = await BC._lockSlotKeyOrFail(key, 'owner-1', 60000, SVC);
   assert.strictEqual(again.ok, true);
   assert.strictEqual(again.renewed, true);
   const rows = wixDataMock._store.get(CONTROL) || [];
@@ -132,11 +133,11 @@ test('BCORE-LOCK-03 same owner re-acquire renews instead of duplicating', async 
 test('BCORE-LOCK-04 expired lock is reclaimed by next owner', async () => {
   wixDataMock._reset();
   const key = BC.generateSlotKey(SVC, RES_A, new Date('2026-10-15T08:00:00Z'), new Date('2026-10-15T09:00:00Z'));
-  await BC._lockSlotKeyOrFail(key, 'owner-1', 60000);
+  await BC._lockSlotKeyOrFail(key, 'owner-1', 60000, SVC);
   // forzar expiracion en el store (el mock revive fechas ISO a Date)
   const rows = wixDataMock._store.get(CONTROL);
   rows[0].expiresAt = new Date(Date.now() - 1000);
-  const taken = await BC._lockSlotKeyOrFail(key, 'owner-2', 60000);
+  const taken = await BC._lockSlotKeyOrFail(key, 'owner-2', 60000, SVC);
   assert.strictEqual(taken.ok, true);
   assert.strictEqual(taken.acquired, true);
   assert.strictEqual(taken.reclaimed, true);
@@ -157,7 +158,7 @@ test('BCORE-LOCK-05 invalid slot key or empty owner rejected without DB touch', 
 test('BCORE-LOCK-06 unlock only by owner; foreign unlock skipped, missing ok', async () => {
   wixDataMock._reset();
   const key = BC.generateSlotKey(SVC, RES_A, new Date('2026-10-15T08:00:00Z'), new Date('2026-10-15T09:00:00Z'));
-  await BC._lockSlotKeyOrFail(key, 'owner-1', 60000);
+  await BC._lockSlotKeyOrFail(key, 'owner-1', 60000, SVC);
   const foreign = await BC._unlockSlotKey(key, 'owner-x');
   assert.strictEqual(foreign.ok, false);
   assert.strictEqual(foreign.skipped, true);
@@ -178,18 +179,18 @@ test('BCORE-GAP-01 same professional can be locked for a simple booking inside a
   const gapEnd = new Date('2026-10-22T08:55:00Z');
   const f2Start = new Date('2026-10-22T09:00:00Z');
   const f2End = new Date('2026-10-22T09:40:00Z');
-  const f2ServiceId = 'svc2f8e7d6c';
+  const f2ServiceId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
 
   const f1Key = BC.generateSlotKey(SVC, RES_A, f1Start, f1End);
   const f2Key = BC.generateSlotKey(f2ServiceId, RES_A, f2Start, f2End);
   const gapKey = BC.generateSlotKey(SVC, RES_A, gapStart, gapEnd);
 
-  const f1Lock = await BC._lockSlotKeyOrFail(f1Key, 'dual-booking', 60000);
-  const f2Lock = await BC._lockSlotKeyOrFail(f2Key, 'dual-booking', 60000);
+  const f1Lock = await BC._lockSlotKeyOrFail(f1Key, 'dual-booking', 60000, SVC);
+  const f2Lock = await BC._lockSlotKeyOrFail(f2Key, 'dual-booking', 60000, f2ServiceId);
   assert.strictEqual(f1Lock.ok, true, 'F1 slot lock acquired');
   assert.strictEqual(f2Lock.ok, true, 'F2 slot lock acquired');
 
-  const gapLock = await BC._lockSlotKeyOrFail(gapKey, 'simple-booking', 60000);
+  const gapLock = await BC._lockSlotKeyOrFail(gapKey, 'simple-booking', 60000, SVC);
   assert.strictEqual(gapLock.ok, true, 'gap slot remains independently bookable');
   assert.strictEqual(gapLock.acquired, true);
 
@@ -201,6 +202,9 @@ test('BCORE-GAP-01 same professional can be locked for a simple booking inside a
     'the exposure interval itself is not a lock and does not collide with the gap booking'
   );
   assert.ok(rows.every((row) => row.resourceId === RES_A), 'all three slots belong to the same professional');
+  assert.strictEqual(rows.find((row) => row.dedupeKey === f1Key).serviceId, SVC);
+  assert.strictEqual(rows.find((row) => row.dedupeKey === f2Key).serviceId, f2ServiceId);
+  assert.strictEqual(rows.find((row) => row.dedupeKey === gapKey).serviceId, SVC);
 });
 
 // ---------------------------------------------------------------------------
@@ -209,7 +213,7 @@ test('BCORE-GAP-01 same professional can be locked for a simple booking inside a
 
 test('BCORE-TX-01 first init creates IN_PROGRESS transaction (isNew)', async () => {
   wixDataMock._reset();
-  const res = await BC._initTransaction('pt-new-1', 'hashA', 'tr-1');
+  const res = await BC._initTransaction('pt-new-1', 'hashA', 'tr-1', SVC);
   assert.strictEqual(res.success, true);
   assert.strictEqual(res.isNew, true);
   const row = (wixDataMock._store.get(CONTROL) || []).find((r) => r._id === 'pt-new-1');
@@ -221,47 +225,50 @@ test('BCORE-TX-01 first init creates IN_PROGRESS transaction (isNew)', async () 
   // claimTransaction puede reclamar; PENDING no expresaba propiedad activa.
   assert.strictEqual(payload.status, 'IN_PROGRESS');
   assert.strictEqual(payload.payloadHash, 'hashA');
+  assert.strictEqual(row.serviceId, SVC);
+  assert.strictEqual(payload.serviceId, SVC);
 });
 
 test('BCORE-TX-02 completed tx replays without re-execution (isNew false)', async () => {
   wixDataMock._reset();
-  await BC._initTransaction('pt-done', 'hashA', 'tr-1');
+  await BC._initTransaction('pt-done', 'hashA', 'tr-1', SVC);
   await BC._completeTransaction('pt-done', { bookingId: 'BK-1' }, 'tr-1');
-  const replay = await BC._initTransaction('pt-done', 'hashA', 'tr-2');
+  const replay = await BC._initTransaction('pt-done', 'hashA', 'tr-2', SVC);
   assert.strictEqual(replay.success, true);
   assert.strictEqual(replay.isNew, false);
   assert.strictEqual(replay.existing.status, 'COMPLETED');
   assert.strictEqual(replay.existing.bookingId, 'BK-1');
+  assert.strictEqual(replay.existing.serviceId, SVC);
 });
 
 test('BCORE-TX-03 same pairToken different payloadHash -> PAYLOAD_MISMATCH', async () => {
   wixDataMock._reset();
-  await BC._initTransaction('pt-mis', 'hashA', 'tr-1');
+  await BC._initTransaction('pt-mis', 'hashA', 'tr-1', SVC);
   await BC._completeTransaction('pt-mis', { bookingId: 'BK-2' }, 'tr-1');
-  const clash = await BC._initTransaction('pt-mis', 'hashB', 'tr-2');
+  const clash = await BC._initTransaction('pt-mis', 'hashB', 'tr-2', SVC);
   assert.strictEqual(clash.success, false);
   assert.strictEqual(clash.error, BC.ERROR_CODES.PAIR_TOKEN_PAYLOAD_MISMATCH);
 });
 
 test('BCORE-TX-04 previously FAILED tx precludes silent retry', async () => {
   wixDataMock._reset();
-  await BC._initTransaction('pt-fail', 'hashA', 'tr-1');
+  await BC._initTransaction('pt-fail', 'hashA', 'tr-1', SVC);
   await BC._failTransaction('pt-fail', 'boom');
-  const retry = await BC._initTransaction('pt-fail', 'hashA', 'tr-2');
+  const retry = await BC._initTransaction('pt-fail', 'hashA', 'tr-2', SVC);
   assert.strictEqual(retry.success, false);
   assert.strictEqual(retry.error, BC.ERROR_CODES.TRANSACTION_PREVIOUSLY_FAILED);
 });
 
 test('BCORE-TX-05 empty pairToken rejected immediately', async () => {
   wixDataMock._reset();
-  const res = await BC._initTransaction('', 'hashA', 'tr-1');
+  const res = await BC._initTransaction('', 'hashA', 'tr-1', SVC);
   assert.strictEqual(res.success, false);
   assert.strictEqual(res.error, 'INVALID_PAIR_TOKEN');
 });
 
 test('BCORE-TX-06 oversized result is dropped but state preserved (TX_PAYLOAD cap)', async () => {
   wixDataMock._reset();
-  await BC._initTransaction('pt-big', 'hashA', 'tr-1');
+  await BC._initTransaction('pt-big', 'hashA', 'tr-1', SVC);
   const fat = { bookingId: 'BK-9', blob: 'x'.repeat(2000) };
   await BC._completeTransaction('pt-big', fat, 'tr-1');
   const row = (wixDataMock._store.get(CONTROL) || []).find((r) => r._id === 'pt-big');
@@ -269,6 +276,7 @@ test('BCORE-TX-06 oversized result is dropped but state preserved (TX_PAYLOAD ca
   assert.strictEqual(payload.status, 'COMPLETED');
   assert.strictEqual(payload.resultDropped, true);
   assert.strictEqual(payload.bookingId, 'BK-9');
+  assert.strictEqual(row.serviceId, SVC);
 });
 
 // ---------------------------------------------------------------------------

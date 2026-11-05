@@ -1,6 +1,6 @@
 /*
 MODULE: backend/booking/bookingSaga.js
-VERSION: v5019-WIX-V2-ID-CONTRACT
+VERSION: v5020-CONTROL-SERVICE-ID
 BASE: v5018-SDK-BOOKED-SLOT-SHAPE
 RESPONSIBILITY: Orquestador transaccional de reservas (simple y dual con gap).
 
@@ -85,6 +85,7 @@ import {
     _forceStaffInPristineSlot,
     _resolveScheduleIdForResource,
     _buildLockKeys,
+    generateSlotKey,
     _buildBookedAddOns,
     createBookingError,
     normalizeError,
@@ -430,12 +431,14 @@ async function _compensateCreatedBookings(createdBookings, traceId) {
                     controlType: CONTROL_TYPE.COMPENSATION,
                     dedupeKey: compDedupeKey,
                     bookingId: String(bookingId),
+                    serviceId: _safeTrim(booking && booking.serviceId),
                     compensationKind: COMPENSATION_KIND.CANCEL_BOOKING,
                     status: "PENDING",
                     attempts: 0,
                     revision: hasValidRevision ? revision : null,
                     payload: {
                         compensationKind: COMPENSATION_KIND.CANCEL_BOOKING,
+                        serviceId: _safeTrim(booking && booking.serviceId),
                         phase: (booking && booking.phase) || "UNKNOWN",
                         status: "PENDING",
                         compensationStatus: COMPENSATION_STATUS.PENDING,
@@ -1488,6 +1491,7 @@ export async function executeBookingSaga(unsafePayload) {
             pairToken,
             payloadHash,
             traceId,
+            serviceId,
             lockOwnerId
         );
 
@@ -1561,6 +1565,17 @@ export async function executeBookingSaga(unsafePayload) {
                 localEnd: f2LocalEnd,
             });
         }
+        const lockServiceIds = new Map();
+        for (const phase of phases) {
+            const phaseServiceId = _safeTrim(phase.rawSlot && phase.rawSlot.serviceId);
+            const phaseKey = generateSlotKey(
+                phaseServiceId,
+                finalResourceId,
+                phase.localStart,
+                phase.localEnd
+            );
+            lockServiceIds.set(phaseKey, phaseServiceId);
+        }
         lockKeys = _buildLockKeys(phases, finalResourceId);
 
         const saga = new BookingSagaOrchestrator(traceId);
@@ -1573,7 +1588,8 @@ export async function executeBookingSaga(unsafePayload) {
                     const lockResult = await _lockSlotKeyOrFail(
                         lockKeys[li],
                         lockOwnerId,
-                        LOCK_TTL_MS
+                        LOCK_TTL_MS,
+                        lockServiceIds.get(lockKeys[li])
                     );
                     if (!lockResult || !lockResult.ok) {
                         throw createBookingError(
@@ -1714,6 +1730,7 @@ export async function executeBookingSaga(unsafePayload) {
 
                 createdBookings.push({
                     bookingId: f1Meta.bookingId,
+                    serviceId: serviceId,
                     revision: f1Meta.revision,
                     status: f1Meta.status,
                     phase: "F1",
@@ -1781,6 +1798,7 @@ export async function executeBookingSaga(unsafePayload) {
 
                     createdBookings.push({
                         bookingId: f2Meta.bookingId,
+                        serviceId: linkedPhases,
                         revision: f2Meta.revision,
                         status: f2Meta.status,
                         phase: "F2",
@@ -2165,6 +2183,7 @@ export async function executeBookingSaga(unsafePayload) {
                         controlType: CONTROL_TYPE.SYSTEM_FLAG,
                         dedupeKey: "COMPLETION_RETRY_" + pairToken,
                         bookingId: finalResult.bookingId || "",
+                        serviceId: serviceId,
                         payload: {
                             compensationKind: "COMPLETION_RETRY",
                             pairToken: pairToken,

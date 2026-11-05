@@ -39,6 +39,40 @@ test('CRON-PARITY-02 crons.js exports cover the two previously-missing jobs', ()
   assert.strictEqual(typeof CR.cleanAuditLogs, 'function');
 });
 
+test('CRON-DUAL-CACHE-01 cleanupExpiredDualCache drains expired rows only', async () => {
+  wixDataMock._reset();
+  const C = IC.OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
+  const now = new Date();
+  wixDataMock._seed(C, [
+    { _id: 'dual-expired-1', controlType: IC.CONTROL_TYPE.DUAL_CACHE, expiresAt: new Date(now.getTime() - 2000) },
+    { _id: 'dual-expired-2', controlType: IC.CONTROL_TYPE.DUAL_CACHE, expiresAt: new Date(now.getTime() - 1000) },
+    { _id: 'dual-active', controlType: IC.CONTROL_TYPE.DUAL_CACHE, expiresAt: new Date(now.getTime() + 60000) },
+    { _id: 'tx-preserve', controlType: IC.CONTROL_TYPE.IDEMPOTENCY, expiresAt: new Date(now.getTime() - 60000) },
+    { _id: 'webhook-preserve', controlType: IC.CONTROL_TYPE.WEBHOOK_EVENT, expiresAt: new Date(now.getTime() - 60000) },
+  ]);
+  const result = await CR.cleanupExpiredDualCache();
+  assert.equal(result.removed, 2);
+  assert.equal(result.failed, 0);
+  const remaining = (wixDataMock._store.get(C) || []).map((row) => row._id).sort();
+  assert.deepStrictEqual(remaining, ['dual-active', 'tx-preserve', 'webhook-preserve']);
+});
+
+test('CRON-DISPLAY-01 cleanExpiredDisplayTokens removes only expired display tokens', async () => {
+  wixDataMock._reset();
+  const C = IC.OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
+  const now = new Date();
+  wixDataMock._seed(C, [
+    { _id: 'display-expired', controlType: IC.CONTROL_TYPE.DISPLAY_TOKEN, expiresAt: new Date(now.getTime() - 1000) },
+    { _id: 'display-active', controlType: IC.CONTROL_TYPE.DISPLAY_TOKEN, expiresAt: new Date(now.getTime() + 60000) },
+    { _id: 'webhook-preserve', controlType: IC.CONTROL_TYPE.WEBHOOK_EVENT, expiresAt: new Date(now.getTime() - 60000) },
+  ]);
+  const result = await CR.cleanExpiredDisplayTokens();
+  assert.equal(result.removed, 1);
+  assert.equal(result.failed, 0);
+  const remaining = (wixDataMock._store.get(C) || []).map((row) => row._id).sort();
+  assert.deepStrictEqual(remaining, ['display-active', 'webhook-preserve']);
+});
+
 test('CRON-RL-01 cleanExpiredRateLimits removes only expired RATE_LIMIT rows', async () => {
   wixDataMock._reset();
   const C = IC.OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
