@@ -99,6 +99,29 @@ export function readMovementHash(item) {
 }
 
 /** @deprecated Alias de dominio contable; para MovimientosCaja usa readMovementHash. */
+/**
+ * Normalize a CMS DATETIME field at the data-hook boundary.
+ * Wix Data stores date-time values as Date objects; accepting ISO strings
+ * from older callers without conversion can persist the wrong CMS type.
+ * Missing optional fields remain untouched; invalid supplied values fail fast.
+ */
+function _normalizeCmsDateTime(item, fieldName) {
+    if (!item || typeof item !== "object") return item;
+    const value = item[fieldName];
+    if (value === undefined || value === null || value === "") return item;
+
+    let dateValue = value;
+    if (value && typeof value === "object" && !(value instanceof Date) && value.$date) {
+        dateValue = value.$date;
+    }
+    const normalized = dateValue instanceof Date ? dateValue : new Date(dateValue);
+    if (Number.isNaN(normalized.getTime())) {
+        _schemaError(`${fieldName} debe ser una fecha/hora válida (DATETIME)`);
+    }
+    item[fieldName] = normalized;
+    return item;
+}
+
 export const readRecordHash = readMovementHash;
 
 export function readRecipientLegalName(item) {
