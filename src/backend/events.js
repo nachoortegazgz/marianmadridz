@@ -337,20 +337,16 @@ function validateEventStructure(event, requiredFields) {
 }
 
 /**
- * Normalize the two documented Wix Bookings event envelopes:
- * - Velo/SDK backend events: metadata + entity.
- * - REST webhook events: id + actionEvent.body.booking.
- * Keep the former as the primary contract for backend/events.js handlers.
+ * Normalize the Wix Bookings V2 Velo/SDK backend event contract.
+ * Wix invokes backend/events.js handlers with event.metadata + event.entity.
+ * REST webhook JWT envelopes belong to a separate HTTP webhook receiver and
+ * are deliberately not accepted here as unverified plain objects.
  */
 function _normalizeBookingsEvent(event) {
-    const booking =
-        event?.entity ||
-        event?.actionEvent?.body?.booking ||
-        event?.data?.booking ||
-        {};
+    const booking = event?.entity || {};
     const bookingId = _safeTrim(booking?.id || booking?._id || "");
     return {
-        eventId: _safeTrim(event?.metadata?.id || event?.id || event?.eventId || ""),
+        eventId: _safeTrim(event?.metadata?.id || ""),
         bookingId,
         booking: bookingId
             ? { ...booking, id: bookingId }
