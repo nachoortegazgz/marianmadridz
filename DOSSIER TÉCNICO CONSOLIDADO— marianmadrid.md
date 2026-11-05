@@ -350,6 +350,40 @@ Los hooks de `backend/data.js` y las funciones de acceso deben proteger, según 
 
 No utilizar una operación de reemplazo completo cuando se necesita una actualización parcial. Verificar siempre el contrato exacto del SDK utilizado.
 
+## 6.6 Campos CMS verificados y contratos canónicos
+
+El esquema CMS se debe contrastar con la colección viva de Wix antes de cualquier mutación. Los siguientes campos forman parte del esquema verificado de las colecciones indicadas y deben tratarse como campos canónicos:
+
+| Colección | Campo | Tipo CMS | Uso / semántica |
+|---|---|---|---|
+| `CajaActual` | `closedBy` | TEXT | Identidad del usuario/operador que realiza el cierre de caja. |
+| `CitasF2` | `privacyNoticeVersion` | TEXT | Versión del aviso de privacidad mostrado al cliente. |
+| `CitasF2` | `privacyNoticeAcceptedAt` | DATETIME | Fecha/hora de aceptación o constancia de recepción del aviso, según el flujo. No equivale por sí sola a consentimiento RGPD para tratamientos opcionales ni marketing. |
+| `CitasF2` | `privacyNoticePurpose` | TEXT | Finalidad informativa asociada al aviso presentado en la reserva. |
+| `CitasF2` | `canceledAt` | DATETIME | Fecha/hora de cancelación de la reserva propia. |
+| `CitasF2` | `cancellationReason` | TEXT | Motivo de cancelación, cuando se capture. |
+| `CitasF2` | `changeLog` | OBJECT | Estructura de trazabilidad de cambios; definir y validar su contrato antes de escribir objetos. |
+| `CitasF2` | `noShowAt` | DATETIME | Fecha/hora en que se registra la incomparecencia. |
+| `CitasF2` | `noShowReason` | TEXT | Motivo o anotación de incomparecencia, cuando proceda. |
+| `CitasF2` | `timeZone` | TEXT | Zona horaria IANA aplicable a los horarios de la reserva, por ejemplo `Europe/Madrid`. |
+| `MovimientosInventario` | `productId` | TEXT | Identificador de producto relacionado con el movimiento. |
+| `MovimientosInventario` | `variantId` | TEXT | Identificador de variante relacionada con el movimiento, si aplica. |
+
+**Regla de escritura:** la existencia de un campo en CMS no implica que el backend ya lo esté rellenando. Antes de usarlo funcionalmente, localizar y adaptar escritores, lectores, DTOs, validaciones, hooks y pruebas. No rellenar retroactivamente evidencia de privacidad, cancelación o incomparecencia si no existe una fuente verificable.
+
+### 6.6.1 Nombres canónicos frente a nombres descriptivos de matrices
+
+- En `MovimientosCaja`, el campo existente/canónico es `payloadAEAT`; no crear un alias `aeatPayload`. Respetar también los nombres existentes `estadoEnvioAEAT`, `fechaEnvioAEAT` y `csvAEAT`, incluidas sus mayúsculas/minúsculas.
+- En `LibroAsientosContablesDetalle`, los importes existentes se denominan `debitAmount` y `creditAmount`; no crear alias `debit` ni `credit`. Verificar el mapeo de los escritores antes de cambiarlo.
+- Las matrices pueden contener nombres funcionales o propuestas. El esquema vivo de Wix y el código escritor/lector son las fuentes para resolver discrepancias; no añadir campos duplicados solo para hacer coincidir una etiqueta documental.
+
+### 6.6.2 Límites del modelo CMS
+
+- Estos campos de evidencia de privacidad no sustituyen un registro separado de consentimientos opcionales, solicitudes de derechos, retención/bloqueo o entregas documentales cuando el análisis de tratamientos requiera esos registros.
+- No se crean automáticamente colecciones como `ConsentimientosTratamiento`, `SolicitudesDerechos`, `RegistroRetencion` o `RegistroEntregas`. Su diseño, permisos, base jurídica, minimización y retención deben aprobarse antes de crearlas.
+- No asumir que los campos nuevos contienen datos históricos: hasta que los escritores se adapten, pueden permanecer vacíos.
+- Los cambios de esquema CMS no implican cambios de código, permisos de colección, datos existentes, publicación del sitio ni activación de procesos.
+
 # 7. Seguridad, identidad y permisos
 
 ## 7.1 Principios
