@@ -70,6 +70,8 @@ test("BOOK-FLOW-FAIL-CLOSED-01 confirmation requires matching staff, confirmed s
   assert.match(calendarSource, /validateBookingResultForConfirmation/);
   assert.match(calendarSource, /CHECKOUT_ASSOCIATION_FAILED/);
   assert.match(calendarSource, /BOOKING_NOT_CONFIRMED/);
+  assert.match(calendarSource, /EXISTING_BOOKING_REQUIRES_RECONCILIATION/);
+  assert.match(calendarSource, /No vuelvas a intentarlo; contacta con el salón/);
 });
 
 test("BOOK-FLOW-STAFF-BALANCE-01 dual phases use the common available staff pool and one selected resource", () => {
