@@ -343,7 +343,10 @@ function validateEventStructure(event, requiredFields) {
  * are deliberately not accepted here as unverified plain objects.
  */
 function _normalizeBookingsEvent(event) {
-    const booking = event?.entity || {};
+    // Wix Editor Velo backend events use metadata + data.booking.
+    // SDK event handlers use metadata + entity; retain entity as a compatible
+    // shape, but do not confuse REST webhook actionEvent envelopes with Velo events.
+    const booking = event?.data?.booking || event?.entity || {};
     const bookingId = _safeTrim(booking?.id || booking?._id || "");
     return {
         eventId: _safeTrim(event?.metadata?.id || ""),
@@ -916,8 +919,8 @@ export async function wixBookingsV2_onBookingConfirmed(rawBody) {
         );
         if (!event) return { status: "REJECTED", reason: "JWT_VERIFICATION_FAILED" };
 
-        // Wix Velo SDK backend events expose metadata + entity.
-        // REST webhook envelopes are normalized as a compatibility path.
+        // Wix Editor Velo Bookings V2 backend events expose metadata + data.booking.
+        // SDK event callback payloads may expose metadata + entity.
         const { eventId, bookingId, booking } = _normalizeBookingsEvent(event);
         const valid = Boolean(eventId && bookingId && _safeTrim(booking?.status || ""));
         if (!valid) {
@@ -982,8 +985,8 @@ export async function wixBookingsV2_onBookingCanceled(rawBody) {
         const event = await _verifyAndDecodeWebhook(rawBody, "BOOKING_CANCELED");
         if (!event) return { status: "REJECTED", reason: "JWT_VERIFICATION_FAILED" };
 
-        // Wix Velo SDK backend events expose metadata + entity.
-        // REST webhook envelopes are normalized as a compatibility path.
+        // Wix Editor Velo Bookings V2 backend events expose metadata + data.booking.
+        // SDK event callback payloads may expose metadata + entity.
         const { eventId, bookingId, booking } = _normalizeBookingsEvent(event);
         let serviceId = _safeTrim(booking?.bookedEntity?.slot?.serviceId || booking?.serviceId || "");
         const valid = Boolean(eventId && bookingId);
