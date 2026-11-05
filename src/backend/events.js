@@ -629,7 +629,7 @@ async function _syncNativeBookingToCitas(booking, eventId, traceId) {
             return { ok: false, reason: mapping.reason, missing: ["resourceId", "scheduleId"] };
         }
         if (!_looksLikeGuid(resourceId)) resourceId = mapping.resourceId;
-        if (!scheduleId) scheduleId = mapping.scheduleId;
+        if (!_looksLikeGuid(scheduleId)) scheduleId = mapping.scheduleId;
     }
 
     const missing = [];
