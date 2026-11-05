@@ -1353,17 +1353,56 @@ export async function executeBookingSaga(unsafePayload) {
         }
 
         // ---------------- PHASE 1 ----------------
-        const resourceValidation = await _resolveStaffForSlotInternal({
-            serviceId: serviceId,
-            f1Start: f1LocalStart,
-            f1End: f1LocalEnd,
-            f2Start: isDual ? f2LocalStart : null,
-            f2End: isDual ? f2LocalEnd : null,
-            addOnIds: detectedAddonIds,
-            traceId: traceId,
-        });
+        let resourceValidation = null;
+        let staffResolutionError = null;
+        try {
+            resourceValidation = await _resolveStaffForSlotInternal({
+                serviceId: serviceId,
+                f1Start: f1LocalStart,
+                f1End: f1LocalEnd,
+                f2Start: isDual ? f2LocalStart : null,
+                f2End: isDual ? f2LocalEnd : null,
+                addOnIds: detectedAddonIds,
+                traceId: traceId,
+            });
+        } catch (error) {
+            staffResolutionError = error;
+        }
 
-        if (!resourceValidation || resourceValidation.status !== "SUCCESS") {
+        if (staffResolutionError || !resourceValidation || resourceValidation.status !== "SUCCESS") {
+            // Close the race where another identical request completed after the
+            // first replay check but consumed the last available staff/slot.
+            const lateReplay = await _inspectTransactionReplay(candidatePairToken, payloadHash);
+            if (lateReplay.state === "COMPLETED") {
+                return {
+                    status: "SUCCESS",
+                    data: lateReplay.result,
+                    error: null,
+                    idempotent: true,
+                };
+            }
+            if (lateReplay.state === "PAYLOAD_MISMATCH") {
+                throw createBookingError(
+                    ERROR_CODES.INVALID_PAYLOAD,
+                    "Payload mismatch for existing pairToken",
+                    { traceId: traceId }
+                );
+            }
+            if (lateReplay.state === "FAILED") {
+                throw createBookingError(
+                    ERROR_CODES.BOOKING_CREATION_FAILED,
+                    "Previous transaction failed",
+                    { traceId: traceId }
+                );
+            }
+            if (lateReplay.state === "IN_PROGRESS") {
+                throw createBookingError(
+                    ERROR_CODES.TOKEN_BUSY,
+                    "A booking request for these same slots is already in progress.",
+                    { traceId: traceId }
+                );
+            }
+            if (staffResolutionError) throw staffResolutionError;
             throw createBookingError(
                 (resourceValidation && resourceValidation.error && resourceValidation.error.code) ||
                     ERROR_CODES.SLOT_UNAVAILABLE,
