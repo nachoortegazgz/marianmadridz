@@ -559,6 +559,13 @@ export function ServiciosCatalogo_beforeUpdate(item) {
 }
 
 function _validateServiciosCatalogoSchema(item = {}) {
+    // Normalize legacy caller aliases into the physical CMS keys and remove
+    // the aliases before the document reaches Wix Data.
+    if (!item.itemNature && item.naturalezaItem) item.itemNature = item.naturalezaItem;
+    if (!item.codigoImpuesto && item.taxCode) item.codigoImpuesto = item.taxCode;
+    delete item.naturalezaItem;
+    delete item.taxCode;
+
     const serviceId = _safeTrim(item.serviceId || item._id);
     const linkedPhases = _safeTrim(item.linkedPhases);
     const allowCombine = item.allowCombine === true;
@@ -568,11 +575,11 @@ function _validateServiciosCatalogoSchema(item = {}) {
     if (linkedPhases && !_isGuid(linkedPhases)) _schemaError("linkedPhases debe ser un GUID valido");
     if (linkedPhases && linkedPhases === serviceId) _schemaError("linkedPhases no puede referenciar al propio servicio");
 
-    const itemNature = _safeTrim(item.itemNature || item.naturalezaItem).toUpperCase();
+    const itemNature = _safeTrim(item.itemNature).toUpperCase();
     if (itemNature && !VALID_ITEM_NATURES.has(itemNature)) _schemaError("itemNature invalido");
 
-    const taxCode = _safeTrim(item.taxCode || item.codigoImpuesto).toUpperCase();
-    if (taxCode && !VALID_TAX_CODES.has(taxCode)) _schemaError("taxCode invalido");
+    const taxCode = _safeTrim(item.codigoImpuesto).toUpperCase();
+    if (taxCode && !VALID_TAX_CODES.has(taxCode)) _schemaError("codigoImpuesto invalido");
 
     if (allowCombine && (typeof item.exposureDuration !== "number" || !_isFiniteNonNegative(item.exposureDuration))) {
         _schemaError("Servicio dual requiere exposureDuration explicito como numero no negativo");
