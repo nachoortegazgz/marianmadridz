@@ -5,7 +5,7 @@ Repositorio canónico de código del sitio **Marian Madrid Peluquería y Estéti
 ## Requisitos
 
 - Git.
-- Node.js **mínimo v26.x.x** (requisito oficial actual de Wix CLI for Sites).
+- Node.js **v24.22.1 o superior** (requisito oficial de Wix CLI for Sites; CI puede validar también versiones posteriores).
 - npm.
 - Acceso SSH al repositorio y cuenta Wix con permisos sobre el sitio.
 
