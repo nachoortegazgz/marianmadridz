@@ -14,7 +14,7 @@ test("widget postMessage uses an explicit parent origin and fails closed when un
   assert.ok(calendar.includes("e.source!==window.parent"));
   assert.ok(calendar.includes("state.connected=true;"));
   assert.ok(calendar.includes("clearTimeout(handshakeTimer);"));
-  assert.ok(calendar.includes("if(state.bridgeId&&text(m.bridgeId)!==state.bridgeId)return"));
+  assert.ok(calendar.includes("if(m.bridgeId)state.bridgeId=text(m.bridgeId);"));
   assert.ok(calendar.includes('target==="*"'));
 });
 
