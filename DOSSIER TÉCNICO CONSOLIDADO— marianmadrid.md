@@ -2,6 +2,26 @@
 
 **Proyecto:** Marian Madrid Peluquería y Estética · **Repositorio canónico en GITHUB:** `nachoortegazgz/marianmadridz` · **QA: www.marianmadrid.es** arquitectura, estado, evidencias y protocolo para su uso como QA. El estado operativo se consulta en el checkpoint más reciente (§32); los datos de prueba y condiciones de validación, en §25; el plan de trabajo, en §26.
 
+## MAPA DE CONTENIDOS
+
+| Bloque | Dónde localizar la información | Contenido y uso |
+|---|---|---|
+| A. Roles y gobierno de IA | **Roles y directrices**, §§1–9 | Misión, límites, principios, precedencia de fuentes, protocolos y criterios de calidad. |
+| B. Wix CLI y herramientas | **Guía operativa Wix CLI**, §§1–10 | Git Integration, autenticación, CLI for Sites, Wix MCP, Skills, diagnóstico y CI/CD. |
+| C. Resumen ejecutivo | **Resumen ejecutivo**, §§0–5 | Objetivos por capas, secuencia, gates, riesgos y gobernanza. |
+| D. Ficha técnica | **Anexo de ficha técnica**, §§1–4 | Identidad del negocio, stack/runtime, Apps Wix e identificadores canónicos. |
+| E. APIs Wix | **Recopilación de documentación oficial**, §§1–12 | Contratos y versiones de Bookings, Data, Secrets, eCommerce, Stores, Members, CRM y módulos Velo. Verificar vigencia oficial antes de implementar. |
+| F. Arquitectura y operación | **Dossier técnico (continuación)**, §§8–23 | Backend, flujos, CMS, permisos, jobs, SDK v2, Stores, Invoices, Bookings, riesgos, normativa y necesidades. |
+| G. Contexto del negocio | **Anexo aclaratorio**, §23 y §§1–7 subordinados | Localización, titularidad, personal, gestoría, perfil de cliente, normativa y lagunas contextuales. |
+| H. Archivo y cumplimiento documental | **Anexo SharePoint**, principio rector y §§1–8 | Retención, carpetas, nomenclatura, metadatos, integración Wix–SharePoint, permisos y trazabilidad. Es una arquitectura propuesta sujeta a ADR-003. |
+| J. Desarrollo asistido por IA | **Anexo J**, §§J.1–J.6 | Wix MCP, CLI, diagnóstico, agentes IA, enlaces oficiales y datos faltantes. |
+| K. Estado, evidencias y continuidad | **Actualizaciones y checkpoints**, §§24–36 | Auditorías fechadas, QA, contratos CMS↔código, PR, CI, Preview, decisiones y pendientes. El último checkpoint no sustituye la comprobación en vivo. |
+| L. Diccionario CMS | **Diccionario de colecciones CMS**, por nombre de colección | Keyfields, tipos, obligatoriedad, ejemplos, permisos e índices observados. Para el inventario complementario, consultar CMS KEYFIELDS.md. |
+
+**Ruta rápida:** estado actual → §36 (y después confirmar HEAD/CI); reservas y pruebas → §§25, 27–28 y 33–35; plan → §26 y §32.6; arquitectura → §§8–16; contratos de API → bloque E; esquema de datos → bloque L y CMS KEYFIELDS.md.
+
+**Convención de numeración:** los bloques A–L son documentos/anexos independientes y conservan su numeración interna. Las secciones 24–36 forman la serie cronológica de checkpoints. No interpretar el mismo número de dos bloques distintos como una referencia equivalente.
+
 ---
 
 # ROLES Y DIRECTRICES DE COMPORTAMIENTO PARA MODELOS IA — Proyecto marianmadrid.es
@@ -11,7 +31,7 @@
 
 ---
 
-## 0. Identidad, rol y misión del modelo
+## 1. Identidad, rol y misión del modelo
 
 ### Definición compacta reutilizable
 
@@ -76,7 +96,7 @@ La necesidad principal es gestionar el negocio desde Wix y cubrir las carencias 
 
 **Detalle canónico:** inventario de Apps y stack en el Anexo de ficha técnica; APIs y versiones en §E y §§13–16; GitHub/CLI/MCP en §B y Anexo J; estado operativo en §32. Evitar mantener aquí una segunda copia de esos inventarios.
 
-### 2.7 Identificadores y configuración de referencia
+### 2.5 Identificadores y configuración de referencia
 
 | Elemento | Valor de referencia |
 |---|---|
@@ -93,7 +113,7 @@ La necesidad principal es gestionar el negocio desde Wix y cubrir las carencias 
 
 Los identificadores anteriores son referencias del dossier y deben contrastarse con Wix cuando una operación dependa de ellos. Los IDs de recursos profesionales, App IDs, claves de idempotencia y demás constantes se mantienen en sus tablas canónicas enlazadas desde §4.3, §7.3 y §22; no duplicarlas aquí.
 
-### 2.8 Claves, secretos y credenciales — inventario seguro
+### 2.6 Claves, secretos y credenciales — inventario seguro
 
 **No almacenar ni copiar valores secretos en este documento, código, commits, issues, logs ni respuestas.** Esta sección registra únicamente el nombre lógico y el lugar de gestión.
 
@@ -110,7 +130,7 @@ Los identificadores anteriores son referencias del dossier y deben contrastarse 
 
 ---
 
-### Mapa de autoridad y navegación del dossier
+### Matriz de autoridad documental
 
 El dossier combina directrices, contratos, inventarios y checkpoints fechados. Para evitar que un resumen se interprete como fuente de verdad paralela, aplicar esta tabla:
 
@@ -198,7 +218,7 @@ El dossier combina directrices, contratos, inventarios y checkpoints fechados. P
 
 ---
 
-## 1. Principios rectores (heredados de la SSOT, no nuevos)
+## 3. Principios rectores (heredados de la SSOT, no nuevos)
 
 Se aplican en **orden estricto**. Si dos entran en conflicto, prevalece el de menor número:
 
@@ -209,7 +229,7 @@ Se aplican en **orden estricto**. Si dos entran en conflicto, prevalece el de me
 
 ---
 
-## 3. Directrices comunes (D1–D20) — permanentes, no desactivables
+## 4. Directrices comunes (D1–D20) — permanentes, no desactivables
 
 ### 3.1 Honestidad y fuentes
 
@@ -264,7 +284,7 @@ Siguiente acción propuesta: <1 línea>
 
 ---
 
-## 4. Precedencia de fuentes ante discrepancia
+## 5. Precedencia de fuentes ante discrepancia
 
 Orden **estricto** (ya fijado en la SSOT; el modelo lo aplica sin reinterpretarlo):
 
@@ -365,6 +385,8 @@ Una respuesta es aceptable solo si cumple **los 6**:
 **Vigencia:** estas directrices rigen toda interacción con el proyecto. Cualquier excepción debe justificarse en la propia respuesta y, si es estructural, canalizarse vía **ADR**. El modelo que no pueda cumplirlas debe **declararlo** antes de responder, no simular cumplimiento.
 
 ---
+
+# GUÍA OPERATIVA WIX CLI Y HERRAMIENTAS
 
 ## 1. Ecosistema de herramientas: dos CLIs distintos (no confundir)
 
@@ -749,6 +771,8 @@ CAPA 1 ──► CAPA 2 ──► ADR-003 ──► CAPA 3
 ---
 
 **Cierre:** este resumen es una vista ejecutiva y no una fuente de precedencia superior. Ante conflictos se aplica §A.4 / §4 y prevalece la fuente de mayor rango. La Capa 3 queda expresamente **condicionada a ADR-003** y no se considera parte del alcance comprometido hasta su aprobación.
+
+# ANEXO D — FICHA TÉCNICA Y CHECKLIST
 
 ## Anexo de ficha técnica y checklist
 
@@ -2045,6 +2069,8 @@ La relación técnica de normas, obligaciones y controles se mantiene en §18. E
 
 ---
 
+# ANEXO H — ARQUITECTURA DOCUMENTAL SHAREPOINT
+
 ## Principio rector: Wix es SSOT, SharePoint es evidencia
 
 La arquitectura **no replica la base de datos de Wix** en carpetas. Eso crearía una segunda autoridad y violaría la SSOT. SharePoint recibe **exportaciones unidireccionales, firmadas y fechadas** de los ledgers de Wix, organizadas por **naturaleza documental y periodo legal**, con metadatos que activan las etiquetas de retención de Purview. El flujo es:
@@ -2500,6 +2526,8 @@ export default defineWixConfig({
 **[ADR-REQUERIDO]** Sí, para ADR-003 (Capa 3) y para un **ADR específico de política MCP** que defina: (a) qué herramientas del MCP pueden ejecutarse sin confirmación humana, (b) prohibición explícita de mutar ledgers append-only, (c) obligación de publicar solo desde rama por defecto tras CI verde.
 
 ---
+
+# ACTUALIZACIONES, AUDITORÍAS Y CHECKPOINTS
 
 ## 24. Estado consolidado del repositorio, Wix y validaciones (corte 2026-11-01)
 
