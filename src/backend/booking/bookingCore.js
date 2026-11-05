@@ -1499,6 +1499,11 @@ export async function _persistBooking(params, traceId) {
         [BOOKING_FIELDS.CONTACT_DETAILS]: _minimizeContactDetails(
             p.contactDetails
         ),
+        privacyNoticeVersion: _safeTrim(p.privacyNoticeVersion || "") || null,
+        privacyNoticeAcceptedAt: p.privacyNoticeAcceptedAt
+            ? _toDateSafe(p.privacyNoticeAcceptedAt)
+            : null,
+        privacyNoticePurpose: _safeTrim(p.privacyNoticePurpose || "") || null,
         [BOOKING_FIELDS.META]: _normalizeMeta(p.meta, {
             bookingStatus: bookingStatus,
             paymentStatus: paymentStatus,

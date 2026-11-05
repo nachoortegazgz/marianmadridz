@@ -341,6 +341,11 @@ function _validateProcessBookingPayload(payload, traceId, sessionMemberId = "", 
         channelType: channelRaw,
         paymentMethod: pmRaw || null,
         rgpdConsent: true,
+        // Timestamp is generated server-side only after explicit checkbox acceptance.
+        // This records booking-management processing, not optional marketing consent.
+        privacyNoticeVersion: _safeTrim(payload.privacyNoticeVersion || "") || null,
+        privacyNoticeAcceptedAt: new Date(),
+        privacyNoticePurpose: "GESTION_RESERVA",
         addOnIds: _normalizeBookingAddOnIds(payload.addOnIds),
         traceId: _safeTrim(payload.traceId || ""),
         memberId: _safeTrim(sessionMemberId),

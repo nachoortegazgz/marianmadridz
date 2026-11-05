@@ -375,6 +375,7 @@ export const THIRD_PARTY_TYPE = Object.freeze({
   CLIENTE: "CLIENTE",
   STAFF: "STAFF",
   PROVEEDOR: "PROVEEDOR",
+  EMISOR: "EMISOR",
 });
 
 // Tipos de factura SII (events.js usa F1/F2/R1; audit.e2e admite serie completa).

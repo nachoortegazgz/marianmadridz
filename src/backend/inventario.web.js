@@ -445,9 +445,15 @@ export async function recordInventoryMovementSafe(identity, movementType, quanti
     }
 
     if (stockItem.lastInventoryMovementId === existingMovement._id) {
-      const recovered = { ...existingMovement, stockApplied: true, _updatedDate: new Date() };
-      await update(MOVIMIENTOS_INV_COL, recovered);
-      return { status: "SUCCESS", data: recovered, error: null, idempotent: true, recovered: true };
+      // The stock document is the application receipt. The movement ledger
+      // remains append-only; never rewrite its stockApplied intent flag.
+      return {
+        status: "SUCCESS",
+        data: { ...existingMovement, applicationConfirmed: true },
+        error: null,
+        idempotent: true,
+        recovered: true,
+      };
     }
 
     if (existingMovement.stockApplied !== false) {
@@ -478,8 +484,8 @@ export async function recordInventoryMovementSafe(identity, movementType, quanti
     stockItem._updatedDate = new Date();
     await update(INVENTARIO_COL, stockItem);
 
-    const recovered = { ...existingMovement, stockApplied: true, _updatedDate: new Date() };
-    await update(MOVIMIENTOS_INV_COL, recovered);
+    // Stock state now carries the durable receipt; keep the movement row immutable.
+    const recovered = { ...existingMovement, applicationConfirmed: true };
     return { status: "SUCCESS", data: recovered, error: null, idempotent: true, recovered: true };
   }
 
@@ -550,8 +556,9 @@ export async function recordInventoryMovementSafe(identity, movementType, quanti
 
   try {
     await update(INVENTARIO_COL, stockItem);
-    const appliedMovement = { ...savedMovement, stockApplied: true, _updatedDate: new Date() };
-    await update(MOVIMIENTOS_INV_COL, appliedMovement);
+    // lastInventoryMovementId is the durable receipt that stock was applied.
+    // MovimientosInventario is append-only and is intentionally not updated.
+    const appliedMovement = { ...savedMovement, applicationConfirmed: true };
     log.info("Inventory movement recorded", {
       stockKey,
       movementType: cleanType,

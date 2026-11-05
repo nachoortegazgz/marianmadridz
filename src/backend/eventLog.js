@@ -401,9 +401,10 @@ async function _upsertDatosFiscales({ taxId, legalName, thirdPartyType, address 
     // coleccion es `address` (direccion del tercero); `contactData` no existe
     // en el SSOT y se erradica de la escritura.
     return await dalInsert(DATOS_FISCALES_COL, {
+        recordType: RECORD_TYPE.TERCERO,
         taxId: normalizedTaxId,
         legalName: _safeTrim(legalName).toUpperCase() || "SIN NOMBRE",
-        thirdPartyType: thirdPartyType || THIRD_PARTY_TYPE.CLIENTE,
+        thirdPartyType: thirdPartyType || (taxId ? THIRD_PARTY_TYPE.CLIENTE : THIRD_PARTY_TYPE.EMISOR),
         address: address || null,
         registrationTraceId: traceId,
         _createdDate: new Date(),
@@ -502,7 +503,9 @@ export async function registrarEventoEconomico(input) {
     const thirdParty = await _upsertDatosFiscales({
         taxId: input.nifDestinatario || input.nifEmisor,
         legalName: input.recipientLegalName || input.issuerLegalName,
-        thirdPartyType: input.thirdPartyType || THIRD_PARTY_TYPE.CLIENTE,
+        thirdPartyType: input.thirdPartyType || (
+            input.nifDestinatario ? THIRD_PARTY_TYPE.CLIENTE : THIRD_PARTY_TYPE.EMISOR
+        ),
         // SSOT-KEYFIELD (Matriz DatosFiscales): clave fisica `address`.
         address: input.recipientAddress || null,
     }, traceId);
