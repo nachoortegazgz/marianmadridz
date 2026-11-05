@@ -91,3 +91,21 @@ test("confirmation ticket shows one estimated total without tax breakdown", () =
   assert.match(confirmationHtml, /precio definitivo dependerá del servicio y tratamiento finalmente realizado/i);
   assert.doesNotMatch(confirmationHtml, /Base Imponible|I\.V\.A\.|21%/);
 });
+
+
+test("confirmation navigation uses canonical URL constants re-exported by mmUtils", () => {
+  const utils = read("src/public/mmUtils.js");
+  const confirmation = read("src/pages/ConfirmacionReserva.q5vps.js");
+
+  assert.ok(bridge.includes('HOME: "/"'), "widget bridge must declare the home URL");
+  assert.ok(bridge.includes('MIS_RESERVAS: "/my-bookings"'), "widget bridge must declare My Bookings URL");
+  assert.ok(bridge.includes('SERVICIOS: "/reserva-online"'), "widget bridge must declare services URL");
+  assert.ok(utils.includes("PROTOCOL_URLS as URLS"), "mmUtils must re-export protocol URLs");
+
+  assert.ok(confirmation.includes("return URLS.MIS_RESERVAS;"));
+  assert.ok(confirmation.includes("return URLS.HOME;"));
+  assert.ok(confirmation.includes("return URLS.SERVICIOS;"));
+  assert.ok(confirmation.includes("const legacyAllowed = [URLS.HOME, URLS.MIS_RESERVAS, URLS.SERVICIOS];"));
+  assert.ok(!confirmation.includes('return URLS.MIS_RESERVAS || "/my-bookings";'));
+  assert.ok(!confirmation.includes('return URLS.HOME || "/";'));
+});
