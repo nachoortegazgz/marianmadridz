@@ -61,6 +61,7 @@
 import { webMethod, Permissions } from "wix-web-module";
 import {
     query as dalQuery,
+    getItem as dalGet,
     removeById,
     saveItem,
     insertItem as dalInsert,
