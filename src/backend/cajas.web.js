@@ -32,9 +32,9 @@ import {
     TIPO_FACTURA,
     FISCAL_ROLE,
     CONTROL_TYPE,
-    BOOKING_FIELDS,
     EVENT_TYPE,
     MOVEMENT_LEGACY_READ_ALIASES,
+    normalizeMovementKeys,
 } from "backend/internalConfig";
 
 import {
@@ -49,7 +49,6 @@ import {
     readTaxAmount,
 } from "backend/data";
 
-import { normalizeMovementKeys } from "backend/internalConfig";
 
 export { readInvoiceNumber, readInvoiceIssueDate };
 

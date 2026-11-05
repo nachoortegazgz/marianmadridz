@@ -50,7 +50,6 @@ import {
 import {
   makeTraceId,
   _safeTrim,
-  _generateUUID,
   _roundMoney,
   _readDate,
   _stableSerialize,
