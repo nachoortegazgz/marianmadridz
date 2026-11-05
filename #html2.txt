@@ -273,7 +273,7 @@
             .replace(/\\/g, "\\\\")
             .replace(/;/g, "\\;")
             .replace(/,/g, "\\,")
-            .replace(/\r?\n/g, "\\n");
+            .replace(/\r?\n/g, "\n");
     }
 
     /* ----------------------------------------------------------------
@@ -449,11 +449,11 @@
         txt += "               INFORMACIÓN DE COBRO               \n";
         txt += sep;
         if (Number.isFinite(Number(d.precio)) && Number(d.precio) > 0) {
-            txt += "Importe total estimado: " + Number(d.precio).toFixed(2) + " €\\n";
+            txt += "Importe total estimado: " + Number(d.precio).toFixed(2) + " €\n";
         } else {
-            txt += "Importe total estimado: Pendiente de valoración en salón\\n";
+            txt += "Importe total estimado: Pendiente de valoración en salón\n";
         }
-        txt += "Importe aproximado. El precio definitivo dependerá del servicio y tratamiento finalmente realizado en el salón.\\n";
+        txt += "Importe aproximado. El precio definitivo dependerá del servicio y tratamiento finalmente realizado en el salón.\n";
         txt += sep + "\n";
         txt += "               NOTAS IMPORTANTES                  \n";
         txt += "• Cancelaciones y modificaciones hasta 24h antes.\n";
