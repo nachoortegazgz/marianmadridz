@@ -45,6 +45,7 @@ FIXES APLICADOS v5009-FISCAL (heredados):
 */
 
 import { webMethod, Permissions } from "wix-web-module";
+import { updateCajaActualFromMovement } from "backend/cajas.web";
 
 import {
     query as dalQuery,
@@ -698,6 +699,10 @@ export async function registrarEventoEconomico(input) {
             },
         };
     }
+
+    // Update the operational cash-register projection as part of the online
+    // payment flow. The helper is idempotent by persisted movement ID.
+    await updateCajaActualFromMovement(cabecera, traceId);
 
     // 9. Proyeccion secundaria - NUNCA propaga errores al caller
     const detailIds = [];
