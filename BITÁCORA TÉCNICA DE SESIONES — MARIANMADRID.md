@@ -114,3 +114,43 @@
 2. Verificar desde Wix Editor clásico, en la sección de paquetes npm, el estado real de los paquetes del sitio y la sincronización Git asociada. Si el manifiesto no aparece, elegir una prueba de instalación/reinstalación controlada con respaldo y sin publicar, solo después de confirmar impacto y reversibilidad.
 3. Mantener deshabilitada la regla `@wix/cli/no-invalid-backend-import` hasta disponer del manifiesto auténtico y pasar lint.
 4. Ejecutar prueba E2E en Wix Preview para Servicio 2 y rate limiter persistente. El catálogo CMS tiene datos, pero la prueba del webMethod y la escritura/lectura de `ControlOperativo` siguen pendientes.
+
+
+## Sesión 2026-11-05 — Cierre verificable de Capa 1 y Capa 2
+
+### Baseline
+- Rama principal consultada: `main` @ `1007a35e5a3257a947cd026650637fe0d203fe44` (merge PR #119).
+- El dossier consolidado se trata como referencia consultiva; el código, los ADR, la configuración Wix y la evidencia CI/runtime conservan su autoridad.
+- Sitio Wix consultado en modo lectura: `188bed94-177c-4bc9-a9f0-35080d874f3e`, Published, Editor clásico, Velo habilitado, Bookings instalado; última actualización informada por Wix: 2026-11-05 07:03.
+
+### Capa 1 y Capa 2 — evidencia automatizada
+- PR #118 integró la ruta canónica de calendario `/booking-calendar`, el contrato de navegación desde la página de servicio y las puertas explícitas `test:layer1` y `test:layer2`.
+- CI run **41977669571**, job **127080451912**, completado con `success`. El job ejecutó `npm ci`, `npm test`, `npm run test:layer1`, `npm run test:layer2` y `npm run lint`; todos los pasos finalizaron correctamente.
+- Capa 1: **189/189** pruebas, 11 suites, 0 fallos.
+- Capa 2: **94/94** pruebas, 10 suites, 0 fallos.
+- Suite offline completa: **324/324** pruebas, 36 suites, 0 fallos (según resumen del run).
+- Node usado por el job: **26.13.0**.
+- El checkout del run corresponde al merge ref de PR #118. El árbol de código de ese merge se mantiene en `main`: la comparación entre `7c0012cfd4f9e38634ba21e762f888a7cbfe8499` y `1007a35e5a3257a947cd026650637fe0d203fe44` muestra únicamente cambios en el dossier y la matriz de auditoría; no hay cambios de código entre ambos.
+- La prueba `htmlComponents.source-contract` valida los snapshots HTML versionados. No demuestra que el HTML Component actualmente desplegado en Wix coincida con esos snapshots.
+
+### Resultado funcional y límites
+- **Capa 1 (contrato frontend/ruta/bridge):** validación automatizada cerrada; ruta confirmada contra la página Wix publicada en la verificación anterior y el contrato de página del repo.
+- **Capa 2 (backend/operación):** validación automatizada cerrada mediante mocks y pruebas de contrato; no equivale a una transacción real Bookings/CMS.
+- No se ha ejecutado E2E de navegador real en esta sesión. No se ha creado ni cancelado ninguna reserva, no se han realizado pagos, no se han mutado colecciones CMS ni se ha publicado código Wix.
+- El estado Published del sitio y la actualización reciente que informa Wix no demuestran que el código de `main` esté sincronizado ni que el flujo completo funcione en runtime.
+- La validación de Preview sigue separada: el histórico documenta errores `PUBLISH_PIPELINE_TASK_NOT_FOUND`; no declarar Preview funcional sin una URL y evidencia de ejecución.
+
+### Corrección documental
+- El README tenía una contradicción: declaraba Node.js mínimo 26.x.x y, en la preparación local, aceptaba 24.22.1 o superior.
+- La documentación oficial vigente de Wix CLI for Sites establece Node.js **24.22.1 o superior**. Se corrige el requisito mínimo; CI puede seguir usando Node 26 como matriz de validación.
+
+### Pendientes que bloquean certificación E2E/publicación
+1. Recuperar una ruta de Preview Wix válida y probar los HTML Components reales, no solo sus snapshots.
+2. Validar lookup de servicio, rate limiter persistente, navegación calendario, consulta de slots y confirmación de reserva en QA.
+3. Ejecutar el flujo simple autorizado con pago presencial, sin cobro online ni emisión fiscal; no ejecutar dual real mientras siga excluido por el propietario.
+4. Verificar persistencia Bookings↔`CitasF2`, identidad/recurso, webhooks, cancelación y limpieza de los registros de prueba creados.
+5. Mantener sin publicar hasta disponer de Preview/E2E y aprobación explícita del commit.
+
+### Cambios de esta sesión
+- Corrección de documentación Node.js en `README.md`.
+- Este registro de evidencia y límites. No se modifican módulos de negocio ni configuración Wix.
