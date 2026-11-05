@@ -13,6 +13,7 @@ const suites = [
   'security.rateLimiter.test.mjs',
   'booking.cart-v2.checkout.test.mjs',
   'staff.identity.contract.test.mjs',
+  'qa.simulation-manifest.test.mjs',
   'booking.availability.saga.test.mjs',
   'booking.core.concurrency.test.mjs',
   'controlOperativo.hooks.test.mjs',
