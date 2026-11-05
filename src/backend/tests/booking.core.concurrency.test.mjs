@@ -13,6 +13,7 @@ Runs offline via tests/loader.mjs mocks (wix-data legacy builder). G10 ASCII.
 */
 import test from 'node:test';
 import assert from 'node:assert';
+import { readFile } from 'node:fs/promises';
 
 const { wixDataMock } = await import('./loader.mjs');
 const BC = await import('backend/booking/bookingCore.js');
@@ -478,4 +479,49 @@ test('BCORE-DUAL-PER-01 F1 and F2 persist independently with shared pair identit
   assert.ok(persistedF2.slotStart instanceof Date);
   assert.strictEqual(persistedF1.status, undefined);
   assert.strictEqual(persistedF2.status, undefined);
+});
+
+
+// ---------------------------------------------------------------------------
+// END-TO-END PERSISTENCE CONTRACT REGRESSIONS
+// ---------------------------------------------------------------------------
+test('PERSIST-01 fiscal third-party writer uses the canonical TERCERO record type and EMISOR fallback', async () => {
+  const source = await readFile(new URL('../eventLog.js', import.meta.url), 'utf8');
+  assert.match(source, /recordType:\s*RECORD_TYPE\.TERCERO/);
+  assert.match(source, /input\.nifDestinatario\s*\?\s*THIRD_PARTY_TYPE\.CLIENTE\s*:\s*THIRD_PARTY_TYPE\.EMISOR/);
+});
+
+test('PERSIST-02 cash ledger idempotency claim writes required dedupeKey', async () => {
+  const source = await readFile(new URL('../cajas.web.js', import.meta.url), 'utf8');
+  assert.match(source, /controlType:\s*"LEDGER_IDEMPOTENCY",[\s\S]{0,180}dedupeKey:\s*transactionId/);
+});
+
+test('PERSIST-03 accounting projection uses canonical debit/credit fields and actual cash movement id', async () => {
+  const source = await readFile(new URL('../cajas.web.js', import.meta.url), 'utf8');
+  const start = source.indexOf('async function _projectToAccountingLedger');
+  const end = source.indexOf('// REGISTER MANUAL TRANSACTION', start);
+  assert.ok(start >= 0 && end > start);
+  const projection = source.slice(start, end);
+  assert.match(projection, /debitAmount:\s*totalAmount/);
+  assert.match(projection, /creditAmount:\s*totalAmount/);
+  assert.doesNotMatch(projection, /\bdebit:\s*totalAmount|\bcredit:\s*totalAmount/);
+  assert.match(projection, /cashMovementId:\s*movement\._id/);
+  assert.doesNotMatch(projection, /origenTipo:/);
+  assert.match(source, /_projectToAccountingLedger\(saved,\s*traceId\)/);
+});
+
+test('PERSIST-04 inventory workflow never updates its append-only movement ledger', async () => {
+  const source = await readFile(new URL('../inventario.web.js', import.meta.url), 'utf8');
+  assert.doesNotMatch(source, /update\(MOVIMIENTOS_INV_COL/);
+  assert.match(source, /lastInventoryMovementId\s*===\s*existingMovement\._id/);
+  assert.match(source, /applicationConfirmed:\s*true/);
+});
+
+test('PERSIST-05 booking privacy metadata reaches the CitasF2 writer', async () => {
+  const source = await readFile(new URL('../booking/bookingSaga.js', import.meta.url), 'utf8');
+  assert.match(source, /privacyNoticeVersion:\s*unsafePayload\?\.privacyNoticeVersion/);
+  assert.match(source, /privacyNoticeAcceptedAt:\s*unsafePayload\?\.privacyNoticeAcceptedAt/);
+  assert.match(source, /privacyNoticePurpose:\s*unsafePayload\?\.privacyNoticePurpose/);
+  const core = await readFile(new URL('../booking/bookingCore.js', import.meta.url), 'utf8');
+  assert.match(core, /privacyNoticeAcceptedAt:\s*p\.privacyNoticeAcceptedAt/);
 });
