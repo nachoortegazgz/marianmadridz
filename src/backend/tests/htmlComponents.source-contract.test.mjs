@@ -11,7 +11,7 @@ const read = (name) => readFileSync(join(root, name), "utf8");
 
 function extractInlineScripts(html, label) {
   const scripts = Array.from(
-    html.matchAll(/<script\\b[^>]*>([\\s\\S]*?)<\\/script>/gi),
+    html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi),
     (match) => match[1],
   );
   assert.ok(scripts.length > 0, `${label} must contain an inline script`);
@@ -42,12 +42,12 @@ test("service and calendar HTML widgets use the Velo bridge protocol version", (
     ["service widget", serviceHtml],
     ["booking calendar", calendarHtml],
   ]) {
-    assert.match(html, /PROTOCOL_VERSION:\\s*1|version:\\s*1/,
+    assert.match(html, /PROTOCOL_VERSION:\s*1|version:\s*1/,
       `${label} must use protocol version 1`);
     for (const type of ["READY", "CONTEXT", "AVAIL", "BOOK", "NAV"]) {
-      assert.match(html, new RegExp(`${type}:\\s*["']MM_${type}["']`),
+      assert.match(html, new RegExp(`${type}:\s*["']MM_${type}["']`),
         `${label} must implement MM_${type}`);
-      assert.match(bridge, new RegExp(`${type}:\\s*["']MM_${type}["']`),
+      assert.match(bridge, new RegExp(`${type}:\s*["']MM_${type}["']`),
         `Velo bridge must implement MM_${type}`);
     }
   }
@@ -59,12 +59,12 @@ test("calendar boot renders the current month before waiting for service context
   assert.notEqual(renderStart, -1, "calendar renderer must exist");
   assert.notEqual(initStart, -1, "calendar initializer must exist");
 
-  const renderer = calendarHtml.slice(renderStart, calendarHtml.indexOf("\\nfunction ", renderStart + 10));
-  const initializer = calendarHtml.slice(initStart, calendarHtml.indexOf("\\ndocument.readyState", initStart));
+  const renderer = calendarHtml.slice(renderStart, calendarHtml.indexOf("\nfunction ", renderStart + 10));
+  const initializer = calendarHtml.slice(initStart, calendarHtml.indexOf("\ndocument.readyState", initStart));
 
   assert.match(renderer, /monthTitle/);
-  assert.match(initializer, /renderCalendar\\(\\)/);
-  assert.match(initializer, /startHandshake\\(\\)/);
+  assert.match(initializer, /renderCalendar\(\)/);
+  assert.match(initializer, /startHandshake\(\)/);
   assert.ok(
     initializer.indexOf("renderCalendar()") < initializer.indexOf("startHandshake()"),
     "calendar shell must render before the MM_READY handshake",
