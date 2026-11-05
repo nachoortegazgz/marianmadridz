@@ -1419,6 +1419,8 @@ export async function _resolveStaffForSlotInternal(params) {
             return { status: "ERROR", data: null, error: { code: "SLOT_UNAVAILABLE", message: "F1 slot could not be normalized." } };
         }
         let candidateResourceIds = _getResourceIdsFromSlot(slotF1);
+        const f1CandidateResourceIds = candidateResourceIds.slice();
+        let f2CandidateResourceIds = [];
         let slotF2 = null;
 
         if (isDual) {
@@ -1505,6 +1507,7 @@ export async function _resolveStaffForSlotInternal(params) {
                 };
             }
             const candidatesF2 = _getResourceIdsFromSlot(attachedF2);
+            f2CandidateResourceIds = candidatesF2.slice();
             candidateResourceIds = candidateResourceIds.filter((id) => candidatesF2.includes(id));
             slotF2 = attachedF2;
         }
@@ -1543,6 +1546,22 @@ export async function _resolveStaffForSlotInternal(params) {
             return { status: "ERROR", data: null, error: { code: "STAFF_NOT_AVAILABLE", message: "No staff could be assigned." } };
         }
         const resourceName = (await _getStaffDisplayName(finalResourceId).catch(() => "")) || STAFF_DEFAULT_NAME;
+        log.info("STAFF-BALANCE-02: common staff assigned to requested phases", {
+            traceId,
+            dateYMD,
+            serviceId: resolvedServiceId,
+            linkedServiceId: isDual ? linkedServiceId : null,
+            isDual,
+            f1CandidateResourceIds,
+            f2CandidateResourceIds,
+            commonCandidateResourceIds: candidateResourceIds,
+            selectedResourceId: finalResourceId,
+            resourceName,
+            sameStaffForBothPhases: !isDual || (
+                f1CandidateResourceIds.includes(finalResourceId) &&
+                f2CandidateResourceIds.includes(finalResourceId)
+            ),
+        });
         return {
             status: "SUCCESS",
             data: {

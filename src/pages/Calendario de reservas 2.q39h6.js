@@ -102,6 +102,26 @@ const VALID_PAYMENT_METHODS = Object.freeze(
 
 const PUBLIC_ERROR_MESSAGE =
     "No se ha podido completar la operación. Inténtalo de nuevo.";
+const NON_RETRYABLE_PUBLIC_CODES = new Set([
+    "BOOKING_STATUS_UNCERTAIN",
+    "BOOKING_RECONCILIATION_PENDING",
+    "BOOKING_RESULT_INCOMPLETE",
+    "STAFF_ASSIGNMENT_MISMATCH",
+    "BOOKING_NOT_CONFIRMED",
+    "CHECKOUT_ASSOCIATION_FAILED",
+    "CITA_PERSIST_FAILED",
+    "EXISTING_BOOKING_REQUIRES_RECONCILIATION",
+]);
+
+function getPublicErrorMessage(code) {
+    const normalized = _safeTrim(code).toUpperCase();
+    if (normalized === "EXISTING_BOOKING_REQUIRES_RECONCILIATION") {
+        return "Ya existe una reserva para este horario. No vuelvas a intentarlo; contacta con el salón para revisar las reservas existentes.";
+    }
+    return NON_RETRYABLE_PUBLIC_CODES.has(normalized)
+        ? "No hemos podido verificar la reserva. No vuelvas a intentarlo todavía; contacta con el salón para comprobar su estado."
+        : PUBLIC_ERROR_MESSAGE;
+}
 
 const AVAILABILITY_ATTEMPT_TIMEOUT_MS = 45000;
 const RETRYABLE_READ_CODES = new Set([
@@ -148,9 +168,48 @@ function resultError(code) {
         data: null,
         error: {
             code,
-            message: PUBLIC_ERROR_MESSAGE
+            message: getPublicErrorMessage(code)
         }
     };
+}
+
+function validateBookingResultForConfirmation(result, requestPayload) {
+    if (!result || result.status !== "SUCCESS" || !result.data) {
+        return { ok: false, code: result?.error?.code || "BOOKING_FAILED" };
+    }
+    const data = result.data;
+    const expectedDual = Boolean(requestPayload?.slotF2);
+    const bookingIds = Array.isArray(data.bookingIds) ? data.bookingIds : [];
+    const expectedChannel = _safeTrim(requestPayload?.channelType).toUpperCase();
+    if (
+        data.reconciliationPending === true ||
+        !_looksLikeGuid(data.bookingId) ||
+        !_looksLikeGuid(data.resourceId) ||
+        !_safeTrim(data.pairToken) ||
+        data.isDual !== expectedDual ||
+        bookingIds.length !== (expectedDual ? 2 : 1) ||
+        bookingIds.some((id) => !_looksLikeGuid(id)) ||
+        bookingIds[0] !== data.bookingId ||
+        (expectedDual && bookingIds[0] === bookingIds[1])
+    ) {
+        return { ok: false, code: "BOOKING_RESULT_INCOMPLETE" };
+    }
+    if (expectedChannel === "ONLINE") {
+        if (
+            data.channelType !== "ONLINE" ||
+            data.requiresPayment !== true ||
+            !_looksLikeGuid(data.cartId) ||
+            !/^https:\/\//i.test(_safeTrim(data.checkoutUrl))
+        ) return { ok: false, code: "CHECKOUT_ASSOCIATION_FAILED" };
+    } else if (
+        expectedChannel !== "PRESENCIAL" ||
+        data.channelType !== "PRESENCIAL" ||
+        data.requiresPayment !== false ||
+        _safeTrim(data.status).toUpperCase() !== "CONFIRMED"
+    ) {
+        return { ok: false, code: "BOOKING_NOT_CONFIRMED" };
+    }
+    return { ok: true, code: null };
 }
 
 function normalizePublicError(result) {
@@ -166,7 +225,7 @@ function normalizePublicError(result) {
         ...result,
         error: {
             ...result.error,
-            message: PUBLIC_ERROR_MESSAGE
+            message: getPublicErrorMessage(result.error.code)
         }
     };
 }
@@ -1478,8 +1537,7 @@ async function handleBooking(
     try {
         const result = await withTimeout(
             processDualBooking(requestPayload),
-            UI?.FRONTEND_API_TIMEOUT_MS ||
-                60000,
+            120000,
             "processDualBooking"
         );
 
@@ -1491,23 +1549,21 @@ async function handleBooking(
                 )
             );
 
-        reply(
-            MESSAGE_TYPES.BOOK,
-            bookingResult
+        const bookingValidation = validateBookingResultForConfirmation(
+            bookingResult,
+            requestPayload
         );
-
-        if (
-            bookingResult.status !== "SUCCESS" ||
-            !bookingResult.data ||
-            !bookingResult.data.bookingId
-        ) {
+        if (!bookingValidation.ok) {
+            reply(
+                MESSAGE_TYPES.BOOK,
+                resultError(bookingValidation.code)
+            );
             return;
         }
 
-        if (
-            bookingResult.data.requiresPayment &&
-            bookingResult.data.checkoutUrl
-        ) {
+        reply(MESSAGE_TYPES.BOOK, bookingResult);
+
+        if (bookingResult.data.requiresPayment === true) {
             await location.to(
                 bookingResult.data.checkoutUrl
             );

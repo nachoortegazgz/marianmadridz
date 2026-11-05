@@ -8,6 +8,9 @@ import { _executeWithRetry } from "../../public/mmUtils.js";
 const calendarUrl = new URL("../../pages/Calendario%20de%20reservas%202.q39h6.js", import.meta.url);
 const serviceUrl = new URL("../../pages/Pagina%20de%20servicio%202.xnfr4.js", import.meta.url);
 const calendarSource = await readFile(calendarUrl, "utf8");
+const sagaSource = await readFile(new URL("../booking/bookingSaga.js", import.meta.url), "utf8");
+const availabilitySource = await readFile(new URL("../reservas.web.js", import.meta.url), "utf8");
+const bookingUtilsSource = await readFile(new URL("../booking/bookingUtils.js", import.meta.url), "utf8");
 const serviceSource = await readFile(serviceUrl, "utf8");
 const bridgeSource = await readFile(new URL("../../public/widgetBridge.js", import.meta.url), "utf8");
 const calendarWidgetSource = await readFile(new URL("../../../%23html1.txt", import.meta.url), "utf8");
@@ -29,14 +32,17 @@ test("BOOK-FLOW-WIDGET-BRAND-01 both widgets share the approved image, typograph
     assert.ok(source.includes(sharedImage));
     assert.match(source, /Libre\+Baskerville|Libre Baskerville/);
     assert.match(source, /Brandon Grotesque/);
-    for (const type of ["MM_READY", "MM_CONTEXT", "MM_AVAIL", "MM_SELECT", "MM_BOOK", "MM_NAV"]) {
-      assert.ok(source.includes(type), `missing protocol message: ${type}`);
-    }
+  }
+  for (const type of ["MM_READY", "MM_CONTEXT", "MM_AVAIL", "MM_BOOK", "MM_NAV"]) {
+    assert.ok(calendarWidgetSource.includes(type), `calendar widget missing protocol message: ${type}`);
+  }
+  for (const type of ["MM_READY", "MM_CONTEXT", "MM_AVAIL", "MM_SELECT", "MM_BOOK", "MM_NAV"]) {
+    assert.ok(serviceWidgetSource.includes(type), `service widget missing protocol message: ${type}`);
   }
 });
 test("BOOK-FLOW-TIMING-01 module deadlines fit the configured widget watchdogs", () => {
   assert.match(calendarWidgetSource, /contextTimeoutMs:120000/);
-  assert.match(calendarWidgetSource, /bookingTimeoutMs:90000/);
+  assert.match(calendarWidgetSource, /bookingTimeoutMs:150000/);
   assert.match(serviceWidgetSource, /CONTEXT_TIMEOUT_MS:\s*155000/);
   assert.match(serviceWidgetSource, /BOOK_NOTICE_TIMEOUT_MS:\s*60000/);
   assert.match(calendarSource, /contextTimeoutMs:\s*110000/);
@@ -44,6 +50,62 @@ test("BOOK-FLOW-TIMING-01 module deadlines fit the configured widget watchdogs",
   assert.match(serviceSource, /handshakeTimeoutMs:\s*45000/);
   assert.match(serviceSource, /contextTimeoutMs:\s*120000/);
   assert.match(serviceSource, /contextAttemptTimeoutMs:\s*30000/);
+  assert.match(calendarSource, /processDualBooking\(requestPayload\)[\s\S]{0,100}120000/);
+  assert.match(calendarWidgetSource, /bookingTimeoutMs:150000/);
+});
+
+test("BOOK-FLOW-IDEMPOTENCY-02 completed replay is checked before staff availability", () => {
+  const replayIndex = sagaSource.indexOf("_inspectTransactionReplay(candidatePairToken, payloadHash)");
+  const staffIndex = sagaSource.indexOf("_resolveStaffForSlotInternal({");
+  assert.ok(replayIndex > 0 && staffIndex > replayIndex, "completed replay must bypass current staff availability");
+  assert.match(sagaSource, /transactionStarted && pairToken/);
+});
+
+test("BOOK-FLOW-FAIL-CLOSED-01 confirmation requires matching staff, confirmed status and complete persistence", () => {
+  assert.match(sagaSource, /_assertBookingResourceMatches\(bookingF1, "F1", finalResourceId/);
+  assert.match(sagaSource, /_assertBookingResourceMatches\(bookingF2, "F2", finalResourceId/);
+  assert.match(sagaSource, /confirmedStatus !== BOOKING_STATUS_CONFIRMED/);
+  assert.match(sagaSource, /CITA_PERSIST_FAILED/);
+  assert.match(sagaSource, /BOOKING_RECONCILIATION_PENDING/);
+  assert.match(calendarSource, /validateBookingResultForConfirmation/);
+  assert.match(calendarSource, /CHECKOUT_ASSOCIATION_FAILED/);
+  assert.match(calendarSource, /BOOKING_NOT_CONFIRMED/);
+  assert.match(calendarSource, /EXISTING_BOOKING_REQUIRES_RECONCILIATION/);
+  assert.match(calendarSource, /No vuelvas a intentarlo; contacta con el salón/);
+});
+
+test("BOOK-FLOW-STAFF-BALANCE-01 dual phases use the common available staff pool and one selected resource", () => {
+  assert.match(availabilitySource, /candidateResourceIds = candidateResourceIds\.filter\(\(id\) => candidatesF2\.includes\(id\)\)/);
+  assert.match(availabilitySource, /_pickLeastLoadedResource\(candidateResourceIds, dateYMD, traceId\)/);
+  assert.match(availabilitySource, /STAFF-BALANCE-02: common staff assigned to requested phases/);
+  assert.match(sagaSource, /_forceStaffInPristineSlot\([\s\S]{0,300}finalResourceId[\s\S]{0,150}linkedPhases/);
+  assert.match(sagaSource, /selectedPaymentOption: BOOKING_PAYMENT_OPTION_OFFLINE/);
+  assert.match(sagaSource, /bookingBodyF1\.selectedPaymentOption = isOnline/);
+});
+
+test("BOOK-FLOW-IDEMPOTENCY-01 pair fingerprint and payload hash exclude auto-balanced resourceId", () => {
+  const fingerprintBlock = bookingUtilsSource.slice(
+    bookingUtilsSource.indexOf("const EXPECTED_PAIR_FINGERPRINT_FIELDS"),
+    bookingUtilsSource.indexOf("const DATE_YMD_LOCAL"),
+  );
+  assert.doesNotMatch(fingerprintBlock, /resourceId/);
+  assert.match(fingerprintBlock, /customerKey/);
+  const tokenBlock = sagaSource.slice(
+    sagaSource.indexOf("function _resolveStablePairToken"),
+    sagaSource.indexOf("function _resolveUnifiedPairToken"),
+  );
+  const unifiedTokenBlock = sagaSource.slice(
+    sagaSource.indexOf("function _resolveUnifiedPairToken"),
+    sagaSource.indexOf("// BLOCK 2 - META"),
+  );
+  assert.doesNotMatch(tokenBlock, /resourceId/);
+  assert.match(unifiedTokenBlock, /customerKey/);
+  const payloadHashStart = sagaSource.indexOf("const payloadHash =");
+  const payloadHashBlock = sagaSource.slice(
+    payloadHashStart,
+    sagaSource.indexOf("const replay =", payloadHashStart),
+  );
+  assert.doesNotMatch(payloadHashBlock, /resourceId/);
 });
 
 test("BOOK-FLOW-RETRY-01 shared retry helper performs three total attempts with exponential backoff enabled", async () => {
