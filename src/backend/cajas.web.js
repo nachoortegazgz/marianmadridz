@@ -461,8 +461,8 @@ async function _projectToAccountingLedger(movement, traceId) {
     if (!LIBRO_ASIENTOS_CONTABLES_DETALLE_COL) return null;
 
     const movementId = _safeTrim(movement?._id);
-    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(movementId)) {
-        throw new Error("ACCOUNTING_SOURCE_MOVEMENT_ID_INVALID");
+    if (!movementId) {
+        throw new Error("ACCOUNTING_SOURCE_MOVEMENT_ID_REQUIRED");
     }
 
     const totalAmount = Math.abs(Number(movement.accountingAmount || movement.totalAmount) || 0);
