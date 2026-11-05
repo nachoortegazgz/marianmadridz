@@ -913,6 +913,15 @@ export function normalizeControlKeys(item) {
             }
         }
     }
+    // Consolidate duplicate physical columns on the selected canonical keys.
+    for (const [legacy, canonical] of [["attempt", "attempts"], ["leaseExpiresAt", "expiresAt"]]) {
+        if (legacy in item) {
+            if (item[canonical] === undefined || item[canonical] === null) {
+                item[canonical] = item[legacy];
+            }
+            delete item[legacy];
+        }
+    }
     // createdAt/updatedAt duplicaban los nativos Wix; se erradican del doc.
     delete item.createdAt;
     delete item.updatedAt;
