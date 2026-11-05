@@ -226,7 +226,7 @@ function confirmBooking(){
 
 function handleMessage(e){
   /* SEC-01: valida origin antes de procesar. */
-  if(!e||!isTrustedOrigin(e.origin)){
+  if(!e||e.source!==window.parent||!isTrustedOrigin(e.origin)){
     try{console.warn("[calendario] SEC: mensaje de origen no confiable ignorado",{origin:e&&e.origin})}catch(_){}
     return
   }

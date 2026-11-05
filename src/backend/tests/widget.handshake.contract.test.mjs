@@ -11,7 +11,7 @@ test("widget postMessage uses an explicit parent origin and fails closed when un
   assert.ok(calendar.includes('const target=parentOrigin||(CONFIG.allowAnyOriginFallback?"*":"")'));
   assert.ok(calendar.includes('if(!target)'));
   assert.ok(calendar.includes('window.parent.postMessage({version:CONFIG.version,type,messageId:makeMessageId(type.toLowerCase()),bridgeId:state.bridgeId,payload},target)'));
-  assert.ok(calendar.includes("event.source!==window.parent"));
+  assert.ok(calendar.includes("e.source!==window.parent"));
   assert.ok(calendar.includes("state.connected=true;"));
   assert.ok(calendar.includes("clearTimeout(handshakeTimer);handshakeTimer=null;"));
   assert.ok(calendar.includes("if(state.bridgeId&&text(m.bridgeId)!==state.bridgeId)return"));
