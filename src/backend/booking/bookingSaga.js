@@ -648,7 +648,7 @@ function _validateDualGap(f1LocalEnd, f2LocalStart, traceId, minimumGapMinutes) 
 // =============================================================================
 // BLOCK 9 - VALIDACION SERVICIO F2
 // =============================================================================
-async function _validateLinkedPhaseService(linkedPhases, parentLocationId, traceId) {
+async function _validateLinkedPhaseService(linkedPhases, parentServiceConfig, parentLocationId, traceId) {
     const linkedServiceId = _safeTrim(linkedPhases);
     if (!linkedServiceId || !_looksLikeGuid(linkedServiceId)) {
         throw createBookingError(
@@ -693,16 +693,23 @@ async function _validateLinkedPhaseService(linkedPhases, parentLocationId, trace
         );
     }
 
-    const phase2Duration = Number(service.phase2Duration);
+    // La duración de F2 pertenece al registro visible/configurable de F1.
+    // linkedPhases identifica el servicio Wix que se reserva en la segunda fase;
+    // NO es la fuente de configuración de phase2Duration.
+    const phase2Duration = Number(parentServiceConfig && parentServiceConfig.phase2Duration);
     if (!Number.isFinite(phase2Duration) || phase2Duration <= 0) {
         throw createBookingError(
             ERROR_CODES.INVALID_PAYLOAD,
-            "Linked phase service " +
-                linkedServiceId +
-                " has invalid duration (" +
+            "Parent service " +
+                _safeTrim(parentServiceConfig && parentServiceConfig.serviceId) +
+                " has invalid phase2Duration (" +
                 phase2Duration +
                 ")",
-            { traceId: traceId }
+            {
+                traceId: traceId,
+                serviceId: _safeTrim(parentServiceConfig && parentServiceConfig.serviceId),
+                linkedServiceId: linkedServiceId,
+            }
         );
     }
 
@@ -1228,6 +1235,7 @@ export async function executeBookingSaga(unsafePayload) {
 
             const linkedValidation = await _validateLinkedPhaseService(
                 linkedPhases,
+                serviceConfig,
                 parentLocationId,
                 traceId
             );
