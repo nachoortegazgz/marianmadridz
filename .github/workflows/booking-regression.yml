@@ -1,6 +1,8 @@
 name: Booking regression checks
 
 on:
+  push:
+    branches: [main]
   pull_request:
     branches: [main]
   workflow_dispatch:
