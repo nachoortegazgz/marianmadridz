@@ -98,9 +98,10 @@ test("BOOK-FLOW-IDEMPOTENCY-01 pair fingerprint and payload hash exclude auto-ba
   );
   assert.doesNotMatch(tokenBlock, /resourceId/);
   assert.match(unifiedTokenBlock, /customerKey/);
+  const payloadHashStart = sagaSource.indexOf("const payloadHash =");
   const payloadHashBlock = sagaSource.slice(
-    sagaSource.indexOf("const payloadHash"),
-    sagaSource.indexOf("const txResult"),
+    payloadHashStart,
+    sagaSource.indexOf("const replay =", payloadHashStart),
   );
   assert.doesNotMatch(payloadHashBlock, /resourceId/);
 });
