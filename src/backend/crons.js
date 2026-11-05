@@ -17,9 +17,9 @@ AUDIT-WEBHOOK-01 (P0): cleanAuditLogs implementado (declurado sin export).
 Purga solo ALERT terminales (CLOSED/RESOLVED) y COMPENSATION terminales
 (EXECUTED/FAILED/CLOSED) pasados AUDIT_RETENTION_DAYS. WEBHOOK_EVENT JAMAS
 (ADR-05 append-only, doble filtro defensivo).
-CRON-P2-01 (P1): systemHealthCheck referenciaba
-BUSINESS_COLLECTIONS.MAPA_STAFF (clave inexistente en internalConfig v12 ->
-undefined -> query a coleccion fantasma). Sustituido por HISTORICO_CIERRES_Z.
+CRON-P2-01 (P1): systemHealthCheck no incluye MapaStaff porque la
+comprobacion de salud se limita a colecciones criticas del ledger y agenda;
+MapaStaff permanece como coleccion de negocio para resolver identidad staff.
 
 CORRECCIONES v5010-TELEMETRY-ATOMIC:
 CRON-07 (P0): Reemplazo COLLECTIONS por BUSINESS_COLLECTIONS y

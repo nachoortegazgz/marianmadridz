@@ -2,14 +2,14 @@
 =============================================================================
 MODULE: backend/staff.js
 VERSION: v9-ARIDGES
-AASE: v8.2-SSOT-MASTER + reescritura completa tras eliminacion de MapaStaff.
-RESPONSIBILITY: Resolver de identidad de personal mediante resourceId y
-  contactId nativos de Wix. Los roles internos se derivan del mapa canonico
-  de resourceId; el site-member ID se obtiene por Contacts API cuando se necesita.
+BASE: v8.2-SSOT-MASTER.
+RESPONSIBILITY: Resolver perfiles nativos de personal mediante Bookings Staff
+  API y Contacts API. MapaStaff conserva el cruce CMS staffMemberId ->
+  resourceId/scheduleId para proyecciones operativas; no sustituye los perfiles
+  nativos ni la resolucion de contactId.
 STANDARDS: G10 ASCII Strict. Minimo codigo.
-DECISION CLAVE: MapaStaff NO existe en CMS KEY FIELDS. Toda identidad
-  staff se resuelve via APIs nativas de Wix. Este modulo es el UNICO
-  punto de acceso a identidad staff en todo el backend.
+IDENTITY: staffMemberId identifica al profesional Bookings; resourceId
+  identifica el recurso de agenda; scheduleId identifica su calendario.
 =============================================================================
 */
 import { staffMembers } from "@wix/bookings";
