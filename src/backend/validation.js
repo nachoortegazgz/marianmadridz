@@ -142,14 +142,8 @@ export function assertDatosFiscales(item) {
 
     assertValidEnum(item.thirdPartyType, THIRD_PARTY_TYPE, "thirdPartyType");
 
-    if (item.thirdPartyType === THIRD_PARTY_TYPE.STAFF) {
-        if (!isValidGuid(item.bookingsResourceId)) {
-            throw new Error("SCHEMA_VIOLATION: STAFF requires bookingsResourceId GUID");
-        }
-        if (!item.memberId || !String(item.memberId).trim()) {
-            throw new Error("SCHEMA_VIOLATION: STAFF requires memberId");
-        }
-    }
+    // DatosFiscales has no bookingsResourceId/memberId columns. Staff identity
+    // is resolved through Bookings Staff API, not persisted in this fiscal master.
 
     // Campo 'active' prohibido en DatosFiscales
     if ("active" in item) {
