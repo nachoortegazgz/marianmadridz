@@ -41,24 +41,16 @@ import { CATALOG_VERSION, createVariantStockKey, normalizeStoreOrderLineItem, bu
 
 import {
   BUSINESS_COLLECTIONS, OPERATIONAL_COLLECTIONS, CONTROL_TYPE,
-  SDK_CONFIG,
 } from "backend/internalConfig";
 
 import {
   makeTraceId,
   _safeTrim,
-  _roundMoney,
 } from "public/mmUtils";
 
 import { logger } from "backend/logger";
 import { requireAdmin, requireCajero } from "backend/security";
 import { _toPublicError } from "backend/responseUtils";
-
-
-
-
-
-
 
 const log = logger;
 const INVENTARIO_COL = BUSINESS_COLLECTIONS.INVENTARIO_STOCK_VENTA;
