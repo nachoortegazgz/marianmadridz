@@ -20,6 +20,26 @@ const BS = await import('backend/booking/bookingSaga.js');
 const IC = await import('backend/internalConfig');
 const MU = await import('public/mmUtils');
 
+test('CMS-CONTROL-01 slot lock persists only physical ControlOperativo columns', () => {
+  const lock = BC._buildSlotLockControl(
+    `slot_svc_${GUID_1}_100_110`,
+    'execution-owner',
+    60000,
+    null,
+    GUID_2
+  );
+  assert.equal(lock.controlType, IC.CONTROL_TYPE.SLOT_LOCK);
+  assert.equal(lock.resourceId, GUID_1);
+  assert.ok(lock.expiresAt instanceof Date);
+  assert.ok(lock.heartbeatAt instanceof Date);
+  assert.equal(lock.payload.lockOwnerId, 'execution-owner');
+  assert.ok(lock.payload.lockToken);
+  assert.ok(lock.payload.acquiredAt instanceof Date);
+  for (const field of ['lockOwnerId', 'lockToken', 'acquiredAt']) {
+    assert.ok(!(field in lock), `${field} is not a physical ControlOperativo column`);
+  }
+});
+
 const STAFF_TYPE = IC.API.STAFF_RESOURCE_TYPE_ID;
 const GUID_1 = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const GUID_2 = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
