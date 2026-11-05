@@ -133,6 +133,15 @@ let _fiscalSystemCacheAt = 0;
 const FISCAL_SYSTEM_CACHE_TTL_MS =
     Number(SDK_CONFIG?.SECURITY?.SECRET_CACHE_TTL_MS) || 300000;
 
+// DatosFiscales stores BOOLEAN flags; AEAT payloads represent them as S/N.
+function _toAeatFlag(value, fallback) {
+    if (typeof value === "boolean") return value ? "S" : "N";
+    const normalized = _safeTrim(value).toUpperCase();
+    if (["S", "SI", "TRUE", "1"].includes(normalized)) return "S";
+    if (["N", "NO", "FALSE", "0"].includes(normalized)) return "N";
+    return fallback;
+}
+
 async function _getFiscalSystemConfig(traceId) {
     const now = Date.now();
     if (_fiscalSystemCache && now - _fiscalSystemCacheAt < FISCAL_SYSTEM_CACHE_TTL_MS) {
@@ -151,32 +160,25 @@ async function _getFiscalSystemConfig(traceId) {
         });
     }
     _fiscalSystemCache = Object.freeze({
-        sistemaInformaticoNombre:
-            _safeTrim(config?.sistemaInformaticoNombre) ||
-            _safeTrim(config?.nombreSistemaInformatico) ||
-            COMPUTER_SYSTEM_FALLBACK.sistemaInformaticoNombre,
-        idSistemaInformatico:
-            _safeTrim(config?.idSistemaInformatico) ||
-            COMPUTER_SYSTEM_FALLBACK.idSistemaInformatico,
-        version:
-            _safeTrim(config?.version) || COMPUTER_SYSTEM_FALLBACK.version,
-        numeroInstalacion:
-            _safeTrim(config?.numeroInstalacion) ||
-            COMPUTER_SYSTEM_FALLBACK.numeroInstalacion,
-        tipoUsoPosibleSoloVerifactu:
-            _safeTrim(config?.tipoUsoPosibleSoloVerifactu) ||
-            COMPUTER_SYSTEM_FALLBACK.tipoUsoPosibleSoloVerifactu,
-        tipoUsoPosibleMultiOT:
-            _safeTrim(config?.tipoUsoPosibleMultiOT) ||
-            COMPUTER_SYSTEM_FALLBACK.tipoUsoPosibleMultiOT,
-        indicadorMultiplesOT:
-            _safeTrim(config?.indicadorMultiplesOT) ||
-            COMPUTER_SYSTEM_FALLBACK.indicadorMultiplesOT,
-        nifProductor: _safeTrim(config?.nifProductor),
+        // DatosFiscales no declara columnas para nombre/id del sistema ni
+        // numeroInstalacion; esos valores proceden solo del fallback tecnico.
+        sistemaInformaticoNombre: COMPUTER_SYSTEM_FALLBACK.sistemaInformaticoNombre,
+        idSistemaInformatico: COMPUTER_SYSTEM_FALLBACK.idSistemaInformatico,
+        version: _safeTrim(config?.verifactuVersion) || COMPUTER_SYSTEM_FALLBACK.version,
+        numeroInstalacion: COMPUTER_SYSTEM_FALLBACK.numeroInstalacion,
+        tipoUsoPosibleSoloVerifactu: COMPUTER_SYSTEM_FALLBACK.tipoUsoPosibleSoloVerifactu,
+        tipoUsoPosibleMultiOT: _toAeatFlag(
+            config?.tipoUsoPosibleMultiOT,
+            COMPUTER_SYSTEM_FALLBACK.tipoUsoPosibleMultiOT
+        ),
+        indicadorMultiplesOT: _toAeatFlag(
+            config?.indicadorMultiplesOT,
+            COMPUTER_SYSTEM_FALLBACK.indicadorMultiplesOT
+        ),
+        nifProductor: _safeTrim(config?.taxId),
         nombreRazonProductor:
-            _safeTrim(config?.nombreRazonProductor) ||
-            COMPUTER_SYSTEM_FALLBACK.nombreRazonProductor,
-        fechaInicioVerifactu: _safeTrim(config?.fechaInicioVerifactu) || null,
+            _safeTrim(config?.legalName) || COMPUTER_SYSTEM_FALLBACK.nombreRazonProductor,
+        fechaInicioVerifactu: config?.fechaInicioVerifactu || null,
     });
     _fiscalSystemCacheAt = now;
     return _fiscalSystemCache;
@@ -406,8 +408,9 @@ async function _upsertDatosFiscales({ taxId, legalName, thirdPartyType, address 
         taxId: normalizedTaxId,
         legalName: _safeTrim(legalName).toUpperCase() || "SIN NOMBRE",
         thirdPartyType: thirdPartyType || (taxId ? THIRD_PARTY_TYPE.CLIENTE : THIRD_PARTY_TYPE.EMISOR),
-        address: address || null,
-        registrationTraceId: traceId,
+        address: address == null ? null : (
+            typeof address === "string" ? address : JSON.stringify(address)
+        ),
         _createdDate: new Date(),
         _updatedDate: new Date(),
     });
@@ -786,29 +789,29 @@ async function _proyectarMovimientoInventario(cabecera, traceId) {
 }
 
 async function _proyectarCierreZ(cabecera, traceId) {
-    // NOTA: la proyeccion usa un subconjunto de campos no presentes en el
-    // schema BIBLIA de HistoricoCierresZ (balancesByMethod, breakdownByRegime,
-    // etc.). El CMS de Wix acepta campos arbitrarios, pero la BIBLIA define
-    // totalCash/totalCard/totalBizum/totalOnline/snapshotJson. Se mantiene
-    // este comportamiento por compatibilidad con el cierre Z legacy de
-    // cajas.web.js (que escribe el schema BIBLIA). ADR pendiente para
-    // unificar la forma del documento.
+    // Persist only fields declared in the physical HistoricoCierresZ schema.
+    // Fiscal detail not represented by dedicated columns stays in OBJECT fields.
     try {
-        // SSOT Apartado 7 (HistoricoCierresZ): closeDate es la clave canonica
-        // del cierre; operationDate/estadoEnvioAEAT son los canones de fecha
-        // de operacion y estado de envio. invoiceIssueDate era alias muerto
-        // (nunca existio en el doc cabecera MovimientosCaja).
         const zCloseDate = readInvoiceIssueDate(cabecera);
+        const fiscalPayload = readFiscalPayload(cabecera) || {};
         await dalInsert(HISTORICO_CIERRES_Z_COL, {
             _id: `Z_${zCloseDate}`,
             closeDate: zCloseDate,
             operationDate: zCloseDate,
-            totalesMedioPago: cabecera.payloadFiscal?.saldosPorMetodo || {},
-            sourceEventId: cabecera._id,
-            breakdownByRegime: cabecera.payloadFiscal?.desglosePorRegimen || [],
-            breakdownByOperationType: cabecera.payloadFiscal?.desglosePorTipoOperacion || [],
-            breakdownByTaxRate: cabecera.payloadFiscal?.desglosePorTipoImpositivo || [],
-            verifactuSummary: cabecera.payloadFiscal?.resumenVerifactu || {},
+            closingSource: "MOVIMIENTOS_CAJA_EVENT",
+            totalesMedioPago: fiscalPayload.saldosPorMetodo || {},
+            taxTypeBreakdown: fiscalPayload.desglosePorTipoImpositivo || [],
+            movementTypeBreakdown: fiscalPayload.desglosePorTipoOperacion || [],
+            summaryData: {
+                sourceEventId: cabecera._id,
+                breakdownByRegime: fiscalPayload.desglosePorRegimen || [],
+                verifactuSummary: fiscalPayload.resumenVerifactu || {},
+            },
+            invoiceData: {
+                numSerieFactura: readInvoiceNumber(cabecera),
+                tipoFactura: readInvoiceType(cabecera),
+                fechaExpedicionFactura: zCloseDate,
+            },
             estadoEnvioAEAT: "PENDIENTE",
             traceId,
             _createdDate: new Date(),
@@ -822,7 +825,6 @@ async function _proyectarCierreZ(cabecera, traceId) {
         throw err;
     }
 }
-
 // ============================================================================
 // SECCION 7 - CONSULTAS DE EVENTOS
 // ============================================================================
