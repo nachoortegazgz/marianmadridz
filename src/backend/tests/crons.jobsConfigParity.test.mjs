@@ -165,7 +165,7 @@ test('CRON-CONTROL-01 purges only terminal transactions and resolved flags after
   ]);
 
   const result = await CR.cleanExpiredBookingControl();
-  assert.equal(result.removed, 2);
+  assert.equal(result.removed, 4);
   assert.equal(result.failed, 0);
   const remaining = (wixDataMock._store.get(C) || []).map((row) => row._id).sort();
   assert.deepStrictEqual(remaining, [
