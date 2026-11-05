@@ -435,6 +435,29 @@ async function _getServicioCatalogo(catalogId, traceId) {
 // fisicas de coleccion, por lo que no estan sujetas a HOOK-CAJA-06.
 // ============================================================================
 
+// DatosFiscales.address is TEXT while MovimientosCaja.recipientAddress is
+// OBJECT. Parse only previously serialized object addresses; never pass TEXT
+// directly into the OBJECT CMS field.
+function _normalizeRecipientAddress(storedAddress, suppliedAddress) {
+    const candidates = [storedAddress, suppliedAddress];
+    for (const candidate of candidates) {
+        if (candidate && typeof candidate === "object" && !Array.isArray(candidate)) {
+            return candidate;
+        }
+        if (typeof candidate === "string" && candidate.trim()) {
+            try {
+                const parsed = JSON.parse(candidate);
+                if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+                    return parsed;
+                }
+            } catch (_) {
+                // A plain-text address cannot satisfy the structured CMS contract.
+            }
+        }
+    }
+    return null;
+}
+
 // SSOT-KEYFIELD-02: registrarEventoEconomico aplica normalizeMovementKeys a
 // TODA entrada antes de construir el snapshot; por tanto `input` solo contiene
 // claves canonicas. La lectura del snapshot es directa (cero doble lectura).
@@ -446,7 +469,7 @@ function _buildFiscalPayloadSnapshot({
         nombreRazonEmisor: _safeTrim(input.issuerLegalName),
         nifDestinatario: _safeTrim(thirdParty?.taxId || input.nifDestinatario),
         nombreRazonDestinatario: _safeTrim(thirdParty?.legalName || input.recipientLegalName),
-        domicilioDestinatario: thirdParty?.address || input.recipientAddress || null,
+        domicilioDestinatario: _normalizeRecipientAddress(thirdParty?.address, input.recipientAddress),
         emitidaPorTerceroODestinatario: _safeTrim(input.issuedByThirdPartyOrRecipient) || "E",
         nombreRazonTercero: _safeTrim(input.thirdPartyLegalName) || null,
         nifTerceroExpedidor: _safeTrim(input.issuerThirdPartyTaxId) || null,
@@ -611,7 +634,7 @@ export async function registrarEventoEconomico(input) {
         issuerLegalName: _safeTrim(input.issuerLegalName),
         nifDestinatario: _safeTrim(thirdParty?.taxId || input.nifDestinatario),
         recipientLegalName: _safeTrim(thirdParty?.legalName || input.recipientLegalName),
-        recipientAddress: thirdParty?.address || input.recipientAddress || null,
+        recipientAddress: _normalizeRecipientAddress(thirdParty?.address, input.recipientAddress),
         isB2B: input.isB2B === true,
 
         issuedByThirdPartyOrRecipient: _safeTrim(input.issuedByThirdPartyOrRecipient) || "E",
