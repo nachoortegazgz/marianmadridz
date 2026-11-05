@@ -19,6 +19,7 @@ function extractInlineScripts(html, label) {
 }
 
 const serviceHtml = read("#htmlWidgetCustomService.txt");
+const confirmationHtml = read("#html2.txt");
 const calendarHtml = read("#html1.txt");
 const bridge = read("src/public/widgetBridge.js");
 
@@ -75,4 +76,18 @@ test("calendar boot renders the current month before waiting for service context
     initializer.indexOf("renderCalendar()") < initializer.indexOf("startHandshake()"),
     "calendar shell must render before the MM_READY handshake",
   );
+});
+
+test("confirmation ticket shows one estimated total without tax breakdown", () => {
+  const scripts = extractInlineScripts(confirmationHtml, "confirmation widget");
+  for (const [index, source] of scripts.entries()) {
+    assert.doesNotThrow(
+      () => new vm.Script(source, { filename: "confirmation-widget-" + index + ".js" }),
+      "confirmation inline script " + (index + 1) + " must parse",
+    );
+  }
+  assert.match(confirmationHtml, /Importe total estimado:/);
+  assert.match(confirmationHtml, /Importe aproximado/);
+  assert.match(confirmationHtml, /precio definitivo dependerá del servicio y tratamiento finalmente realizado/i);
+  assert.doesNotMatch(confirmationHtml, /Base Imponible|I\.V\.A\.|21%/);
 });
