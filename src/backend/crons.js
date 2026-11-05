@@ -44,7 +44,6 @@ PENDIENTES:
 =============================================================================
 */
 import { query as dalQuery, getItem as dalGet, insertItem as dalInsert, updateItem as dalUpdate, removeById as dalRemove, bulkRemove as dalBulkRemove } from "backend/dataAccess";
-import { _completeTransaction } from "backend/booking/bookingCore";
 import { bookings } from "@wix/bookings";
 import { auth } from "@wix/essentials";
 import {
@@ -63,7 +62,7 @@ import { readControlPayload } from "backend/data";
 import { logger } from "backend/logger";
 import { notifyOperationalAlert } from "backend/audit";
 import { verifyFiscalHashChainIntegrity } from "backend/cajas.web";
-import { cancelBookingElevated } from "backend/booking/bookingCore";
+import { _completeTransaction, cancelBookingElevated } from "backend/booking/bookingCore";
 import { reconcileUnknownTransaction } from "backend/events";
 
 const log = logger;
