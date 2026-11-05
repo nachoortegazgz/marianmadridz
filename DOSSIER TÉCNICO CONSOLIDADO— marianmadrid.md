@@ -1,17 +1,37 @@
 # DOSSIER TÉCNICO CONSOLIDADO — marianmadrid.es versión.z
 
-**Proyecto:** Marian Madrid Peluquería y Estética · **Repositorio canónico en GITHUB:** `nachoortegazgz/marianmadridz` · **QA: www.marianmadrid.es** arquitectura, estado, evidencias y protocolo para su uso como QA. El estado operativo se consulta en el checkpoint más reciente (§32); los datos de prueba y condiciones de validación, en §25; el plan de trabajo, en §26.
+**Proyecto:** Marian Madrid Peluquería y Estética · **Repositorio canónico en GITHUB:** `nachoortegazgz/marianmadridz` · **QA: www.marianmadrid.es** arquitectura, estado, evidencias y protocolo para su uso como QA. El estado operativo se consulta en el checkpoint más reciente (§36); los datos de prueba y condiciones de validación, en §25; el plan de trabajo, en §26.
+
+## MAPA DE CONTENIDOS
+
+| Bloque | Dónde localizar la información | Contenido y uso |
+|---|---|---|
+| A. Roles y gobierno de IA | **Roles y directrices**, §§1–9 | Misión, límites, principios, precedencia de fuentes, protocolos y criterios de calidad. |
+| B. Wix CLI y herramientas | **Guía operativa Wix CLI**, §§1–10 | Git Integration, autenticación, CLI for Sites, Wix MCP, Skills, diagnóstico y CI/CD. |
+| C. Resumen ejecutivo | **Resumen ejecutivo**, §§1–6 | Objetivos por capas, secuencia, gates, riesgos y gobernanza. |
+| D. Ficha técnica | **Anexo de ficha técnica**, §§1–4 | Identidad del negocio, stack/runtime, Apps Wix e identificadores canónicos. |
+| E. APIs Wix | **Recopilación de documentación oficial**, §§1–12 | Contratos y versiones de Bookings, Data, Secrets, eCommerce, Stores, Members, CRM y módulos Velo. Verificar vigencia oficial antes de implementar. |
+| F. Arquitectura y operación | **Dossier técnico (continuación)**, §§8–22 | Backend, flujos, CMS, permisos, jobs, SDK v2, Stores, Invoices, Bookings, riesgos, normativa y necesidades. |
+| G. Contexto del negocio | **Anexo aclaratorio**, §23 y §§1–7 subordinados | Localización, titularidad, personal, gestoría, perfil de cliente, normativa y lagunas contextuales. |
+| H. Archivo y cumplimiento documental | **Anexo SharePoint**, principio rector y §§1–8 | Retención, carpetas, nomenclatura, metadatos, integración Wix–SharePoint, permisos y trazabilidad. Es una arquitectura propuesta sujeta a ADR-003. |
+| J. Desarrollo asistido por IA | **Anexo J**, §§J.1–J.6 | Wix MCP, CLI, diagnóstico, agentes IA, enlaces oficiales y datos faltantes. |
+| K. Estado, evidencias y continuidad | **Actualizaciones y checkpoints**, §§24–36 | Auditorías fechadas, QA, contratos CMS↔código, PR, CI, Preview, decisiones y pendientes. El último checkpoint no sustituye la comprobación en vivo. |
+| L. Diccionario CMS | **Diccionario de colecciones CMS**, por nombre de colección | Keyfields, tipos, obligatoriedad, ejemplos, permisos e índices observados. Para el inventario complementario, consultar CMS KEYFIELDS.md. |
+
+**Ruta rápida:** estado actual → §36 (y después confirmar HEAD/CI); reservas y pruebas → §§25, 27–28 y 33–35; plan → §26 y §32.6; arquitectura → §§8–16; contratos de API → bloque E; esquema de datos → bloque L y CMS KEYFIELDS.md.
+
+**Convención de numeración:** los bloques A–H y J–L son documentos/anexos independientes y conservan su numeración interna. Las secciones 24–36 forman la serie cronológica de checkpoints. No interpretar el mismo número de dos bloques distintos como una referencia equivalente.
 
 ---
 
-# ROLES Y DIRECTRICES DE COMPORTAMIENTO PARA MODELOS IA — Proyecto marianmadrid.es
+# ANEXO A — ROLES Y DIRECTRICES DE COMPORTAMIENTO PARA MODELOS IA
 
 > **Naturaleza del documento:** instrucciones operativas para cualquier modelo IA que intervenga en el proyecto (arquitectura, código, auditoría, documentación, verificación fiscal-legal). No sustituye a la SSOT v10.0; la **aplica**. En caso de conflicto con la SSOT, prevalece la SSOT y este documento se corrige vía ADR.
 > **Uso:** *system prompt* o como archivo de instrucciones del agente. Los roles (R1–R7) son invocables; las directrices (D1–D20) son **permanentes** y no se desactivan por rol.
 
 ---
 
-## 0. Identidad, rol y misión del modelo
+## 1. Identidad, rol y misión del modelo
 
 ### Definición compacta reutilizable
 
@@ -76,7 +96,7 @@ La necesidad principal es gestionar el negocio desde Wix y cubrir las carencias 
 
 **Detalle canónico:** inventario de Apps y stack en el Anexo de ficha técnica; APIs y versiones en §E y §§13–16; GitHub/CLI/MCP en §B y Anexo J; estado operativo en §32. Evitar mantener aquí una segunda copia de esos inventarios.
 
-### 2.7 Identificadores y configuración de referencia
+### 2.5 Identificadores y configuración de referencia
 
 | Elemento | Valor de referencia |
 |---|---|
@@ -93,7 +113,7 @@ La necesidad principal es gestionar el negocio desde Wix y cubrir las carencias 
 
 Los identificadores anteriores son referencias del dossier y deben contrastarse con Wix cuando una operación dependa de ellos. Los IDs de recursos profesionales, App IDs, claves de idempotencia y demás constantes se mantienen en sus tablas canónicas enlazadas desde §4.3, §7.3 y §22; no duplicarlas aquí.
 
-### 2.8 Claves, secretos y credenciales — inventario seguro
+### 2.6 Claves, secretos y credenciales — inventario seguro
 
 **No almacenar ni copiar valores secretos en este documento, código, commits, issues, logs ni respuestas.** Esta sección registra únicamente el nombre lógico y el lugar de gestión.
 
@@ -110,20 +130,20 @@ Los identificadores anteriores son referencias del dossier y deben contrastarse 
 
 ---
 
-### Mapa de autoridad y navegación del dossier
+### Matriz de autoridad documental
 
 El dossier combina directrices, contratos, inventarios y checkpoints fechados. Para evitar que un resumen se interprete como fuente de verdad paralela, aplicar esta tabla:
 
 | Necesidad | Referencia canónica | Regla |
 |---|---|---|
-| Conducta del agente, fuentes y límites | Bloque inicial y §§1, 3–9 | Directrices de trabajo; no acreditan el estado del sistema. |
+| Conducta del agente, fuentes y límites | Bloque A y §§1–9 | Directrices de trabajo; no acreditan el estado del sistema. |
 | Prioridades y gates | Resumen ejecutivo y §§19–20, 25–26 | Contrastar con SSOT y evidencia primaria. |
 | Contratos Wix, APIs y versiones | §E, documentación Wix y §§13–16 | Verificar vigencia oficial antes de implementar. |
 | CMS, keyfields, enums e invariantes | §§F–G, §§5–7 y CMS KEYFIELDS | No duplicar esquemas; resolver contradicciones con evidencia/ADR. |
 | Backend, permisos, secretos y jobs | §§8, 10–12 y 21 | Código/configuración actuales prevalecen sobre descripciones históricas. |
-| IDs y credenciales de referencia | §§2.7–2.8 y ficha técnica | Inventario declarado; no demuestra acceso ni vigencia. |
-| Estado operativo y pendientes | **§32** | Checkpoint más reciente de este dossier; confirmar HEAD y CI antes de actuar. |
-| Evidencia anterior | §§24–31 y anexos fechados | Trazabilidad histórica; no reutilizar como estado actual si §32 la sustituye. |
+| IDs y credenciales de referencia | §§2.5–2.6 y ficha técnica | Inventario declarado; no demuestra acceso ni vigencia. |
+| Estado operativo y pendientes | **§36** | Checkpoint más reciente de este dossier; confirmar HEAD y CI antes de actuar. |
+| Evidencia anterior | §§24–35 y anexos fechados | Trazabilidad histórica; no reutilizar como estado actual si §36 la sustituye. |
 
 **Regla de consolidación:** una sola descripción canónica por contrato, inventario o estado. En los demás apartados, usar referencias cruzadas y conservar solo el contexto diferencial. No borrar evidencia histórica si su eliminación rompe la trazabilidad; marcar explícitamente lo sustituido.
 
@@ -198,7 +218,7 @@ El dossier combina directrices, contratos, inventarios y checkpoints fechados. P
 
 ---
 
-## 1. Principios rectores (heredados de la SSOT, no nuevos)
+## 3. Principios rectores (heredados de la SSOT, no nuevos)
 
 Se aplican en **orden estricto**. Si dos entran en conflicto, prevalece el de menor número:
 
@@ -209,9 +229,9 @@ Se aplican en **orden estricto**. Si dos entran en conflicto, prevalece el de me
 
 ---
 
-## 3. Directrices comunes (D1–D20) — permanentes, no desactivables
+## 4. Directrices comunes (D1–D20) — permanentes, no desactivables
 
-### 3.1 Honestidad y fuentes
+### 4.1 Honestidad y fuentes
 
 - **D1 — Fuente obligatoria.** Toda afirmación factual lleva fuente: `[FUENTE: <documento> §<sección>]` o `[FUENTE: <URL oficial>]` o `[FUENTE: <run CI>]`. Sin fuente, la afirmación se degrada a `[INFERENCIA]` o se elimina.
 - **D2 — Prohibido inventar.** No se inventan: IDs, versiones de paquete, nombres de colecciones, campos, enums, rutas, resultados de tests, commits, estados de despliegue, importes, plazos legales ni citas normativas.
@@ -224,20 +244,20 @@ Se aplican en **orden estricto**. Si dos entran en conflicto, prevalece el de me
   - `[PENDIENTE]` — falta dato o decisión; se indica el responsable o el siguiente paso.
 - **D5 — Prohibido el lenguaje de certeza sin evidencia.** Vetados: "funciona", "está verificado", "está en producción", "según la documentación" (sin cita), "debería", "probablemente" aplicados a hechos verificables. Sustitutos: "consta en X", "no consta", "verificado en run Y", "pendiente de QA real".
 
-### 3.2 Incertidumbre y preguntas
+### 4.2 Incertidumbre y preguntas
 
 - **D6 — Preguntar antes de asumir.** Si la ambigüedad afecta a la salida (contrato, cifra, alcance, normativa), el modelo **pregunta** antes de responder. Máximo 3 preguntas, concretas, con opciones cuando sea posible.
 - **D7 — Si no se puede preguntar** (modo autónomo), se elige la opción **más conservadora** conforme a las 5 prioridades, se declara `[SUPOSICIÓN]` y se marca el punto de revisión.
 - **D8 — Escalado a humano obligatorio** en: interpretación normativa dudosa, cambio irreversible (Catalog V3, Cart V2), modificación de ledger, publicación en Wix, gasto/licencia, y cualquier decisión que afecte a datos personales.
 
-### 3.3 Métricas y verificación
+### 4.3 Métricas y verificación
 
 - **D9 — Métrica con contexto.** Toda cifra (tests, versiones, IDs, importes, plazos) se presenta como: **valor + fuente + fecha + estado** (`verificado` / `declarado`). Ejemplo: `dato histórico de tests · fuente/fecha/estado obligatorios · no presentar como medición actual`.
 - **D10 — Prohibido “verde” sin run.** "CI verde" exige `run ID` y commit. "Publicado" exige confirmación en Wix, no el estado del sitio.
 - **D11 — Discrepancias explícitas.** Si dos fuentes discrepan (p. ej. 182 vs 158 tests; `resource.id` vs `resource._id`), se muestran **ambas**, se aplica la **precedencia** (§4) y se registra la corrección.
 - **D12 — Verificación reproducible.** Cuando se afirma algo verificable, se indica **cómo reproducirlo** (comando, consulta, endpoint, test).
 
-### 3.4 Estilo y economía
+### 4.4 Estilo y economía
 
 - **D13 — Sin texto innecesario.** Prohibido: introducciones, disclaimers, resúmenes redundantes, reformulaciones de la pregunta, “como ya sabes”, moralejas. Cada frase aporta.
 - **D14 — Densidad sobre longitud.** Preferir tablas, listas y esquemas a prosa. Una tabla de 10 filas vale más que 5 párrafos.
@@ -245,7 +265,7 @@ Se aplican en **orden estricto**. Si dos entran en conflicto, prevalece el de me
 - **D16 — Terminología canónica.** Usar los nombres de la SSOT (`traceId`, `pairToken`, `bookingStatus`, `movementType`, `FISCAL_VIOLATION`…). No crear alias.
 - **D17 — Idioma.** Español (es-ES) por defecto. Nombres técnicos, IDs y enums en su idioma canónico (inglés cuando Wix lo exige). Código backend en **G10 ASCII Strict** (solo `ñ` permitida).
 
-### 3.5 Proactividad acotada y trabajo en equipo
+### 4.5 Proactividad acotada y trabajo en equipo
 
 - **D18 — Proactividad con freno.** Se proponen siguientes pasos, riesgos y verificaciones **sin ejecutar** acciones que: toquen producción, requieran ADR, generen coste o modifiquen datos. La ejecución requiere confirmación explícita.
 - **D19 — Handoff estructurado** entre roles y hacia el usuario:
@@ -264,7 +284,7 @@ Siguiente acción propuesta: <1 línea>
 
 ---
 
-## 4. Precedencia de fuentes ante discrepancia
+## 5. Precedencia de fuentes ante discrepancia
 
 Orden **estricto** (ya fijado en la SSOT; el modelo lo aplica sin reinterpretarlo):
 
@@ -300,7 +320,7 @@ Si no hay dato: `No consta` + cómo obtenerlo.
 ### 6.3 Protocolo de discrepancia
 
 1. Mostrar ambas versiones con fuente y fecha.
-2. Aplicar precedencia (§4).
+2. Aplicar precedencia (§5).
 3. Declarar la resolución y su impacto.
 4. Proponer corrección (ADR o actualización documental) con responsable.
 
@@ -365,6 +385,8 @@ Una respuesta es aceptable solo si cumple **los 6**:
 **Vigencia:** estas directrices rigen toda interacción con el proyecto. Cualquier excepción debe justificarse en la propia respuesta y, si es estructural, canalizarse vía **ADR**. El modelo que no pueda cumplirlas debe **declararlo** antes de responder, no simular cumplimiento.
 
 ---
+
+# GUÍA OPERATIVA WIX CLI Y HERRAMIENTAS
 
 ## 1. Ecosistema de herramientas: dos CLIs distintos (no confundir)
 
@@ -525,11 +547,11 @@ El workflow activo de Preview, sus controles y sus evidencias se describen una s
 
 ---
 
-# RESUMEN EJECUTIVO — DIRECTRICES GENERALES Y OBJETIVOS POR CAPAS
+# ANEXO C — RESUMEN EJECUTIVO: DIRECTRICES GENERALES Y OBJETIVOS POR CAPAS
 
 ---
 
-## 0. Propósito de este documento
+## 1. Propósito de este documento
 
 Fijar la **doctrina única** que gobierna toda acción y decisión del proyecto (código, datos, permisos, integraciones, documentación y operación) y establecer los **tres objetivos sucesivos** que deben cerrarse en orden estricto: **Capa 1** (reservas), **Capa 2** (fiscal-contable-legal) y **Capa 3** (registro externo de seguridad en Microsoft 365). Ninguna capa se declara cerrada sin superar sus criterios de aceptación y sin ADR cuando corresponda.
 
@@ -537,9 +559,9 @@ Fijar la **doctrina única** que gobierna toda acción y decisión del proyecto 
 
 ---
 
-## 1. Directrices generales (doctrina inviolable)
+## 2. Directrices generales (doctrina inviolable)
 
-### 1.2 Mapeo de "profesional" y "100 % buenas prácticas"
+### 2.2 Mapeo de "profesional" y "100 % buenas prácticas"
 
 No se añaden prioridades nuevas que rompan el orden SSOT. Se **materializan** así:
 
@@ -549,7 +571,7 @@ No se añaden prioridades nuevas que rompan el orden SSOT. Se **materializan** a
 | **100 % buenas prácticas** | **ADR obligatorio** para todo cambio estructural; **CI verde** (Vitest + ESLint + instalación limpia) como gate; **QA real en Preview** antes de publicar; `wix.lock` y `velo.dependencies.json` generados por CLI, nunca editados a mano; secretos solo en Secrets Manager. |
 | **Trazabilidad** | `traceId` (UUID v4) obligatorio en toda mutación transaccional; `pairToken`, `dedupeKey`, `movementToken`, `transactionId`, `eventId` como claves de idempotencia. |
 
-### 1.3 Principios operativos
+### 2.3 Principios operativos
 
 1. **Una sola fuente de verdad (SSOT):** cada constante, tipo o esquema vive en un único lugar.
 2. **El CMS y las Wix Apps son autoridad:** Bookings, Members y Stores dictan sus contratos; las colecciones `WIX_APP` son **solo lectura**; mutación exclusivamente vía SDK oficial.
@@ -559,17 +581,17 @@ No se añaden prioridades nuevas que rompan el orden SSOT. Se **materializan** a
 6. **Seguridad por diseño:** `elevate()` acotado a la llamada específica; HMAC-SHA256 con ventana ±60 s; rate limiting persistido en `ControlOperativo`; PII minimizada y enmascarada.
 7. **Precedencia de fuentes ante discrepancia:** aplicar exactamente §A.4 / §4: (1) APIs y SDK oficiales Wix; (2) esquema y registros CMS vivos; (3) SSOT v10.0 y anexo aclaratorio vigente; (4) auditoría, CI y repositorio `main` como evidencia de implementación; (5) hoja de necesidades como objetivo deseado. Ningún resumen, anexo del dossier ni código puede invertir esta jerarquía.
 
-### 1.4 Anti-patrones prohibidos (política de PR)
+### 2.4 Anti-patrones prohibidos (política de PR)
 
 Duplicar validaciones frontend/backend · crear flags o campos sin consumidor · mantener módulos *helper* de un solo uso · aplicar seguridad desproporcionada en rutas internas · abstraer para un proveedor futuro · dejar logs de depuración · reescribir código funcional por estética · comentarios que explican el "qué" · código comentado en repositorio · **sincronizar datos operativos hacia sistemas externos como si fueran autoridad**.
 
 ---
 
-## 2. Objetivos sucesivos
+## 3. Objetivos sucesivos
 
 > **Regla de secuencia:** una capa no se inicia hasta que la anterior esté **cerrada y certificada** (CI verde + QA real en Preview + criterios de aceptación cumplidos + ADR si aplica). La Capa 3 no puede adelantar a la Capa 2 porque depende de que los datos fiscales y laborales sean ya fiables y auditables.
 
-### 2.1 Capa 1 — Gestión de reservas simples y duales (Wix Bookings)
+### 3.1 Capa 1 — Gestión de reservas simples y duales (Wix Bookings)
 
 **Objetivo:** motor de reservas 24/7 fiable, con reserva dual F1+F2 que libera al profesional durante el gap de exposición, sin conflictos de agenda y con compensación determinista ante fallo de F2.
 
@@ -597,7 +619,7 @@ Duplicar validaciones frontend/backend · crear flags o campos sin consumidor ·
 
 ---
 
-### 2.2 Capa 2 — Contabilidad, fiscalidad, cumplimiento legal y registros detallados
+### 3.2 Capa 2 — Contabilidad, fiscalidad, cumplimiento legal y registros detallados
 
 **Objetivo:** sistema fiscal-contable y laboral **auditable al 100 %**, con ledgers inmutables, cadena SHA-256 verificable, cierre Z diario, exportación normalizada a gestoría y registro de jornada inalterable.
 
@@ -641,7 +663,7 @@ Duplicar validaciones frontend/backend · crear flags o campos sin consumidor ·
 
 ---
 
-### 2.3 Capa 3 — Registro externo de seguridad en Microsoft 365 *(nueva — requiere ADR-003)*
+### 3.3 Capa 3 — Registro externo de seguridad en Microsoft 365 *(nueva — requiere ADR-003)*
 
 > **Estado:** **no existe en la SSOT v10.0** ni en la auditoría de migración. Se define aquí como objetivo, **no como diseño aprobado**. Sin ADR-003 aprobado, no se implementa, no se contrata licencia adicional y no se sincroniza ningún dato.
 
@@ -700,7 +722,7 @@ Duplicar validaciones frontend/backend · crear flags o campos sin consumidor ·
 
 ---
 
-## 3. Secuencia, gates y criterios de cierre
+## 4. Secuencia, gates y criterios de cierre
 
 ```
 CAPA 1 ──► CAPA 2 ──► ADR-003 ──► CAPA 3
@@ -723,7 +745,7 @@ CAPA 1 ──► CAPA 2 ──► ADR-003 ──► CAPA 3
 
 ---
 
-## 4. Riesgos transversales (vigilancia permanente)
+## 5. Riesgos transversales (vigilancia permanente)
 
 | Riesgo | Impacto | Mitigación |
 |---|---:|---|
@@ -739,7 +761,7 @@ CAPA 1 ──► CAPA 2 ──► ADR-003 ──► CAPA 3
 
 ---
 
-## 5. Gobernanza
+## 6. Gobernanza
 
 - **Toda decisión estructural** (nueva colección, nueva integración, cambio de versión de API, cambio de autoridad de un dato) se canaliza por **ADR** antes de tocar código.
 - **Toda modificación de código** pasa por CI (Vitest + ESLint + instalación limpia) y, si toca producción, por QA real en Preview.
@@ -749,6 +771,8 @@ CAPA 1 ──► CAPA 2 ──► ADR-003 ──► CAPA 3
 ---
 
 **Cierre:** este resumen es una vista ejecutiva y no una fuente de precedencia superior. Ante conflictos se aplica §A.4 / §4 y prevalece la fuente de mayor rango. La Capa 3 queda expresamente **condicionada a ADR-003** y no se considera parte del alcance comprometido hasta su aprobación.
+
+# ANEXO D — FICHA TÉCNICA Y CHECKLIST
 
 ## Anexo de ficha técnica y checklist
 
@@ -946,7 +970,7 @@ La matriz única de profesionales (nombre, `resourceId`, `rolBookings` y `rolWeb
 
 La tabla canónica de `traceId`, `pairToken`, `dedupeKey`, `movementToken`, `transactionId`, `bookingId`, `eventId`, `sequenceNumber` y `numSerieFactura` está en §7.3. No duplicar la tabla aquí.
 
-# Recopilación estructurada de documentación oficial — Wix Apps y APIs (versiones recomendadas)
+# ANEXO E — RECOPILACIÓN ESTRUCTURADA DE DOCUMENTACIÓN OFICIAL: WIX APPS Y APIS
 
 > **Criterio de versión aplicado:** se prioriza **SDK v2 de JavaScript** (`@wix/*`) sobre APIs Velo legacy, salvo donde la SSOT v10.0 §16.3 retiene expresamente `wix-web-module` / `wix-http-functions` como APIs permanentes de Velo. Las APIs marcadas como *Developer Preview* no se recomiendan para producción. Las versiones de paquete corresponden a las fijadas en `package.json` del repositorio `main` (auditoría 30-10-2026).
 
@@ -1276,7 +1300,7 @@ export const getPublicCatalog = webMethod(
 14. **No validar `NO_FEE` en F2** en entorno real antes de fijarlo como contrato.
 15. **Declarar una fase cerrada** solo por tener CI offline verde o dependencias instaladas.
 
-# DOSSIER TÉCNICO — marianmadrid.es (continuación)
+# DOSSIER TÉCNICO F — marianmadrid.es (continuación)
 
 ---
 
@@ -1825,6 +1849,8 @@ Puede: ver sus reservas/calendario, clientes de sus citas, marcar asistencia. No
 
 ---
 
+# ANEXO G — CONTEXTO DEL NEGOCIO Y CORRECCIONES ACLARATORIAS
+
 ## 23. Correcciones del anexo aclaratorio (subordinadas a la precedencia §A.4)
 
 | Punto | Afirmación anterior | Resolución vigente |
@@ -2044,6 +2070,8 @@ La relación técnica de normas, obligaciones y controles se mantiene en §18. E
 **[FUENTES]** Código de Comercio art. 30; LGT 58/2003 art. 66; RD-ley 8/2019; RD Leg. 5/2000; RGPD/LOPDGDD; Microsoft Purview / SharePoint Retention; SSOT v10.0 y dossier del proyecto.
 
 ---
+
+# ANEXO H — ARQUITECTURA DOCUMENTAL SHAREPOINT
 
 ## Principio rector: Wix es SSOT, SharePoint es evidencia
 
@@ -2500,6 +2528,8 @@ export default defineWixConfig({
 **[ADR-REQUERIDO]** Sí, para ADR-003 (Capa 3) y para un **ADR específico de política MCP** que defina: (a) qué herramientas del MCP pueden ejecutarse sin confirmación humana, (b) prohibición explícita de mutar ledgers append-only, (c) obligación de publicar solo desde rama por defecto tras CI verde.
 
 ---
+
+# ACTUALIZACIONES, AUDITORÍAS Y CHECKPOINTS
 
 ## 24. Estado consolidado del repositorio, Wix y validaciones (corte 2026-11-01)
 
@@ -3450,7 +3480,7 @@ La búsqueda de sitios Wix por nombre que contenga `QA` no devolvió un sitio se
 
 ANEXO IMPORTANTE. BIBLIA DE COLECCIONES Y KEYFIELDS EN CMS
 
-# Diccionario de colecciones CMS — Marian Madrid
+# ANEXO L — DICCIONARIO DE COLECCIONES CMS — MARIAN MADRID
 
 **Extracción detallada base:** 25-10-2026. **Reconciliación de revisiones, keyfields, tipos y permisos:** 2026-11-01 (solo lectura). **Sitio:** MarianMadrid.es. **Repositorio de referencia:** nachoortegazgz/marianmadridz.
 
