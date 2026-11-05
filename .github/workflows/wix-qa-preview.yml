@@ -1,22 +1,20 @@
 name: Wix QA preview
 
+# Intentionally manual-only. Pull requests must never create Wix Previews.
 on:
-  pull_request:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: wix-qa-preview-${{ github.event.pull_request.number || github.ref }}
+  group: wix-qa-preview-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   preview:
-    # API keys are not available to forked PRs. Same-repository PRs and manual
-    # runs are supported; fork PRs remain covered by the offline CI workflow.
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    # This workflow is only available through an explicit manual dispatch.
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
