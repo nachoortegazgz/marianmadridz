@@ -1567,11 +1567,12 @@ export async function _findExistingCitasForSlot(params) {
         const rowMemberId = _safeTrim(details.memberId);
         const rowContactId = _safeTrim(details.contactId);
         const rowEmail = _safeTrim(details.email).toLowerCase();
+        const hasComparableIdentity =
+            (!!memberId && !!rowMemberId) || (!!contactId && !!rowContactId);
         const identityMatch =
             (!!memberId && !!rowMemberId && memberId === rowMemberId) ||
             (!!contactId && !!rowContactId && contactId === rowContactId) ||
-            (!!email && rowEmail === email &&
-                ((!memberId && !contactId) || (!rowMemberId && !rowContactId)));
+            (!hasComparableIdentity && !!email && rowEmail === email);
         return identityMatch;
     }).map(function (item) {
         return {
