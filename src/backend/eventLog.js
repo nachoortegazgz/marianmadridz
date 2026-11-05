@@ -503,7 +503,9 @@ export async function registrarEventoEconomico(input) {
     const thirdParty = await _upsertDatosFiscales({
         taxId: input.nifDestinatario || input.nifEmisor,
         legalName: input.recipientLegalName || input.issuerLegalName,
-        thirdPartyType: input.thirdPartyType || THIRD_PARTY_TYPE.CLIENTE,
+        thirdPartyType: input.thirdPartyType || (
+            input.nifDestinatario ? THIRD_PARTY_TYPE.CLIENTE : THIRD_PARTY_TYPE.EMISOR
+        ),
         // SSOT-KEYFIELD (Matriz DatosFiscales): clave fisica `address`.
         address: input.recipientAddress || null,
     }, traceId);
