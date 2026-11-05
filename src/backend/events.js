@@ -58,6 +58,7 @@ import {
     _executeWithRetry,
     _normalizeIdPart,
     _safeTrim,
+    _looksLikeGuid,
     withTimeout,
 } from "public/mmUtils";
 
