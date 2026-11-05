@@ -1311,6 +1311,7 @@ export async function _completeTransaction(pairToken, result, traceId) {
                     _safeTrim(traceId) || (current ? current.ownerTraceId : ""),
                 bookingId: _extractBookingIdFromResult(result),
                 result: result === undefined ? null : result,
+                terminalAt: new Date().toISOString(),
             },
             current ? current.doc : null,
             true
@@ -1339,6 +1340,7 @@ export async function _failTransaction(pairToken, errorMessage, retryable) {
             payloadHash: current ? current.payloadHash : "",
             ownerTraceId: current ? current.ownerTraceId : "",
             error: String(errorMessage || ERROR_CODES.UNKNOWN_ERROR),
+            terminalAt: isRetryable ? null : new Date().toISOString(),
         },
         current ? current.doc : null
     );
