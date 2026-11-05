@@ -675,7 +675,9 @@ export async function registrarEventoEconomico(input) {
         schemaVersion: LEDGER_SCHEMA_VERSION,
         recordSource: _safeTrim(input.recordSource) || "INTERNAL",
         // CMS declares lineItems as OBJECT; retain its rows under an explicit items key.
-        lineItems: { items: Array.isArray(input.lineItems) ? input.lineItems : [] },
+        lineItems: Array.isArray(input.lineItems)
+            ? { items: input.lineItems }
+            : (input.lineItems && typeof input.lineItems === "object" ? input.lineItems : { items: [] }),
     };
 
     // 6. AEAT payload + huella
