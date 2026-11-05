@@ -217,6 +217,27 @@ test('HOOK-CAJA-07 persists exact CMS field IDs and OBJECT payloads', () => {
   assert.equal(H.readRecipientTaxId(item), '12345678Z');
 });
 
+test('HOOK-CONTROL-01 canonicalizes duplicate ControlOperativo columns', () => {
+  const expiresAt = new Date('2026-11-05T12:00:00.000Z');
+  const item = {
+    controlType: 'IDEMPOTENCY',
+    attempt: 2,
+    leaseExpiresAt: expiresAt,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    payloadJson: JSON.stringify({ lockOwnerId: 'qa-owner' }),
+  };
+  H.ControlOperativo_beforeInsert(item);
+  assert.equal(item.attempts, 2);
+  assert.equal(item.expiresAt, expiresAt);
+  assert.ok(!('attempt' in item));
+  assert.ok(!('leaseExpiresAt' in item));
+  assert.ok(!('createdAt' in item));
+  assert.ok(!('updatedAt' in item));
+  assert.deepEqual(item.payload, { lockOwnerId: 'qa-owner' });
+  assert.ok(!('payloadJson' in item));
+});
+
 // -----------------------------------------------------------------------------
 // DatosFiscales — schema físico CMS (rev. 10)
 // -----------------------------------------------------------------------------
