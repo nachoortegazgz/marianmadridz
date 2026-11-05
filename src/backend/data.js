@@ -669,37 +669,54 @@ export function LibroAsientosContablesDetalle_beforeInsert(item) {
         _schemaError(`Partida descuadrada: debitAmount (${debit}) != creditAmount (${credit}) (PGC cuadre estricto)`);
     }
 
-    const hasAeatExtension = _safeTrim(item.origenTipo) || item.payloadFiscal || item.desgloseDetallado;
-    if (hasAeatExtension) {
-        for (const legacyField of LIBRO_LEGACY_WRITE_FIELDS) {
-            if (item[legacyField] !== undefined && item[legacyField] !== null) {
-                _schemaError(`Campo legacy "${legacyField}" prohibido en escrituras nuevas; use su equivalente canonico SSOT V2`);
-            }
+    // CMS requires the origin and source hashes for every accounting row.
+    // These are accounting provenance fields, not proof that an AEAT snapshot
+    // was attached. Fiscal snapshot validation is conditional on its presence.
+    for (const legacyField of LIBRO_LEGACY_WRITE_FIELDS) {
+        if (item[legacyField] !== undefined && item[legacyField] !== null) {
+            _schemaError(`Campo legacy "${legacyField}" prohibido en escrituras nuevas; use su equivalente canonico SSOT V2`);
         }
+    }
 
-        const origenTipo = _safeTrim(item.origenTipo);
-        if (!origenTipo || !VALID_LIBRO_ORIGEN_TIPOS.has(origenTipo)) {
-            _schemaError("origenTipo obligatorio y valido (ASIENTOCONTABLE, EVENTOSISTEMAFACTURACION, MOVIMIENTOCAJA, CIERREZ, RECTIFICATIVA)");
+    const origenTipo = _safeTrim(item.origenTipo);
+    if (!origenTipo || !VALID_LIBRO_ORIGEN_TIPOS.has(origenTipo)) {
+        _schemaError("origenTipo obligatorio y valido (ASIENTOCONTABLE, EVENTOSISTEMAFACTURACION, MOVIMIENTOCAJA, CIERREZ, RECTIFICATIVA)");
+    }
+    if (!_safeTrim(item.origenRegistro)) _schemaError("origenRegistro obligatorio");
+    if (!_isGuid(item.sourceMovementId)) _schemaError("sourceMovementId obligatorio y debe ser GUID");
+    if (!/^[a-f0-9]{64}$/i.test(_safeTrim(item.recordHash))) {
+        _schemaError("recordHash obligatorio (SHA-256 de 64 caracteres hexadecimales)");
+    }
+    if (!/^[a-f0-9]{64}$/i.test(_safeTrim(item.previousRecordHash))) {
+        _schemaError("previousRecordHash obligatorio (SHA-256 de 64 caracteres hexadecimales)");
+    }
+    for (const requiredField of ["entryId", "entryDate", "fiscalPeriod", "accountCode", "concept"]) {
+        if (!_safeTrim(item[requiredField])) {
+            _schemaError(`${requiredField} obligatorio en LibroAsientosContablesDetalle`);
         }
-        if (!_safeTrim(item.origenRegistro)) _schemaError("origenRegistro obligatorio");
-        if (!_safeTrim(item.recordHash)) _schemaError("recordHash obligatorio (cadena SHA-256)");
+    }
+    if (!Number.isInteger(Number(item.lineNumber)) || Number(item.lineNumber) < 1) {
+        _schemaError("lineNumber obligatorio y debe ser entero positivo");
+    }
+    if (!item.recordTimestamp) _schemaError("recordTimestamp obligatorio");
 
+    const hasFiscalSnapshot = item.payloadFiscal !== undefined && item.payloadFiscal !== null;
+    if (hasFiscalSnapshot || item.desgloseDetallado !== undefined && item.desgloseDetallado !== null) {
         const pf = item.payloadFiscal;
-        if (!pf || typeof pf !== "object") {
-            _schemaError("payloadFiscal obligatorio (snapshot AEAT)");
-        } else {
-            if (_safeTrim(pf.numSerieFactura) === "" && _safeTrim(pf.descripcionOperacion) === "") {
-                _schemaError("payloadFiscal exige al menos numSerieFactura o descripcionOperacion");
-            }
+        if (!pf || typeof pf !== "object" || Array.isArray(pf)) {
+            _schemaError("payloadFiscal obligatorio cuando se incluye desglose AEAT");
+        }
+        if (_safeTrim(pf.numSerieFactura) === "" && _safeTrim(pf.descripcionOperacion) === "") {
+            _schemaError("payloadFiscal exige al menos numSerieFactura o descripcionOperacion");
         }
 
-        const breakdown = item.desgloseDetallado ?? pf?.desgloseDetallado;
+        const breakdown = item.desgloseDetallado ?? pf.desgloseDetallado;
         if (breakdown !== undefined && breakdown !== null && !Array.isArray(breakdown)) {
             _schemaError("desgloseDetallado debe ser un array (claves AEAT en espanol)");
         }
 
-        if (_safeTrim(item.idSistemaInformatico) === "" && _safeTrim(pf?.sistemaInformatico?.idSistemaInformatico) === "") {
-            _schemaError("idSistemaInformatico obligatorio");
+        if (_safeTrim(item.idSistemaInformatico) === "" && _safeTrim(pf.sistemaInformatico?.idSistemaInformatico) === "") {
+            _schemaError("idSistemaInformatico obligatorio cuando se incluye payloadFiscal");
         }
     }
 
