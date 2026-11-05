@@ -23,7 +23,7 @@ El análisis y cualquier intervención posterior deben regirse estrictamente por
 ### 1.3 Metodología de Trabajo y Restricciones Críticas
 *   **Arquitectura:** Unidireccional (Frontend → WebMethods → Dominio/Sagas → Seguridad/Validación → Datos/CMS).
 *   **Runtime:** Wix Velo Sandbox (Node.js). Prohibido `fs`, `path`, `process.env`. Solo módulos `wix-*` / `@wix/*` y npm whitelist.
-*   **Seguridad:** RBAC doble capa (Velo Permissions + `MapaStaff.rolWebsite`). Secretos en Wix Secrets Manager. Firma HMAC-SHA256 en webhooks.
+*   **Seguridad:** RBAC doble capa (Velo Permissions + `STAFF.WEBSITE_ROLE_BY_RESOURCE_ID`). Secretos en Wix Secrets Manager. Firma HMAC-SHA256 en webhooks.
 *   **Estado Actual del Catálogo:** Wix Stores **Catalog V1** activo. Migración a V3 preparada en código (PR #13) pero **no activada en producción**. Requiere ADR y QA real.
 *   **Bookings V2 SDK:** Uso estricto de `resource._id` y `location._id` (SDK JS), no `resource.id` (REST). Documentado en ADR-002.
 *   **Colecciones Legacy:** 8 colecciones prohibidas. Cualquier acceso lanza `FISCAL_VIOLATION`.
@@ -113,7 +113,7 @@ Este mapa permite la navegación semántica y técnica precisa por las 4 capas d
 
 | Capítulo | Título | Contenido Clave y Datos de Búsqueda Rápida |
 | :--- | :--- | :--- |
-| **8** | Seguridad y Permisos | • RBAC doble capa: Velo Permissions + `MapaStaff.rolWebsite`<br>• Roles: ADMIN / GESTION / ESTILISTA<br>• Secretos en Wix Secrets Manager (`mmSecrets.js`)<br>• Firma HMAC-SHA256 + ventana ±60s anti-replay<br>• Rate limiting por surface (public-booking, reservas, availability)<br>• Minimización PII: enmascaramiento en logs, exclusión datos tarjeta<br>• Webhooks Bookings: verificación JWT + deduplicación `eventId` |
+| **8** | Seguridad y Permisos | • RBAC doble capa: Velo Permissions + `STAFF.WEBSITE_ROLE_BY_RESOURCE_ID`<br>• Roles: ADMIN / GESTION / ESTILISTA<br>• Secretos en Wix Secrets Manager (`mmSecrets.js`)<br>• Firma HMAC-SHA256 + ventana ±60s anti-replay<br>• Rate limiting por surface (public-booking, reservas, availability)<br>• Minimización PII: enmascaramiento en logs, exclusión datos tarjeta<br>• Webhooks Bookings: verificación JWT + deduplicación `eventId` |
 | **9** | Integraciones | • Apps Wix nativas: reglas por app (Bookings V2, Stores V1, eCom Cart V2)<br>• Externas: Resend (email), OpenAI (IA), MONEI (Bizum BdE 6911), IONOS (DNS/correo), M365 (custodia)<br>• Gestión colecciones WIX_APP: solo lectura, mutación vía SDK oficial<br>• Prohibición de llamadas externas desde frontend |
 | **10** | Backend: Módulos y Hooks | • Catálogo completo de 18 WebMethods con permisos Velo y rol negocio<br>• Flujos críticos: venta online, cancelaciones, cierre Z nocturno<br>• Hooks CMS por colección (`data.js`): validaciones beforeInsert/beforeUpdate<br>• Helpers: `mmUtils.js`, `securityEngine.js`, `validation.js`, `widgetBridge.js` |
 | **11** | Jobs y Webhooks | • 8 crons en `jobs.config` (tabla con frecuencia, dominio y operación)<br>• Webhooks Bookings V2: 5 eventos + procesamiento seguro idempotente<br>• Webhooks eCommerce: independientes de V1/V3<br>• Catalog V3 webhooks: pendientes (Developer Preview, no activar sin ADR)<br>• Reglas invariables: jobs nunca escriben directo en append-only |
@@ -446,7 +446,7 @@ PAYMENT_STATUS_WIX = { UNDEFINED, NOT_PAID, PENDING_PAYMENT,
 ```javascript
 // CitasF2.bookingStatus
 BOOKING_STATUS_CMS = { PENDING, CONFIRMED, COMPLETED,
-  CANCELLED, NO_SHOW }  // CANCELLED con doble L
+  CANCELED, NO_SHOW }  // CANCELED con una sola L
 
 // CitasF2.paymentStatus
 PAYMENT_STATUS_CMS = { UNPAID, PARTIAL, PAID, REFUNDED }
@@ -481,7 +481,7 @@ CLOCK_EVENT_TYPE = { ENTRADA, SALIDA, PAUSA_INICIO,
 MOV_INVENTARIO = { VENTA, DEVOLUCION, AJUSTE, ENTRADA_STOCK,
   SALIDA_STOCK, TRANSFERENCIA }
 
-// MapaStaff.rolWebsite
+// STAFF.WEBSITE_ROLE_BY_RESOURCE_ID
 ROL_WEBSITE = { ADMIN, GESTION, ESTILISTA }
 
 // ControlOperativo.controlType
@@ -503,7 +503,7 @@ La seguridad opera en dos capas:
 1. **Barrera de plataforma (Velo Permissions):** el permiso del `webMethod` aplica el primer filtro de invocación.
 2. **Rol de negocio:** `backend/security.js` resuelve el miembro autenticado mediante su `contactId` y `backend/staff.js` consulta Bookings Staff API. El rol web canónico se obtiene de `STAFF.WEBSITE_ROLE_BY_RESOURCE_ID` en `internalConfig.js`, asociado al `resourceId`.
 
-**Importante:** `MapaStaff` existe físicamente en CMS y conserva campos como `rolWebsite`, `rolBookings`, `staffMemberId`, `resourceId` y `active`; sin embargo, el resolver actual `staff.js` no usa esa colección para resolver identidad ni rol. No documentar `MapaStaff.rolWebsite` como fuente activa de autorización. La decisión de conservar sus campos físicos es no destructiva y no implica que sean el SSOT del runtime.
+**Importante:** `MapaStaff` existe físicamente en CMS y conserva campos como `rolWebsite`, `rolBookings`, `staffMemberId`, `resourceId` y `active`; sin embargo, el resolver actual `staff.js` no usa esa colección para resolver identidad ni rol. No documentar `MapaStaff.rolWebsite` como fuente activa de autorización; la fuente activa es `STAFF.WEBSITE_ROLE_BY_RESOURCE_ID`. La decisión de conservar sus campos físicos es no destructiva y no implica que sean el SSOT del runtime.
 
 | Rol | Acceso |
 | --- | --- |
@@ -653,7 +653,7 @@ Nunca mutar estas colecciones directamente desde código propio.
 **Cancelaciones y reembolsos**:
 
 1. Webhook `booking_canceled` deduplicado.
-2. `CitasF2` actualizado a `bookingStatus = "CANCELLED"`, `paymentStatus = "REFUNDED"`.
+2. `CitasF2` actualizado a `bookingStatus = "CANCELED"`, `paymentStatus = "REFUNDED"`.
 3. Registro rectificativo append-only en `MovimientosCaja` con `movementType = "DEVOLUCION"` y hash encadenado.
 4. Si hay devolución de stock: registro en `MovimientosInventario` con `movementType = "DEVOLUCION"`.
 
@@ -856,7 +856,7 @@ El sistema garantiza el cumplimiento estricto del marco legal español y europeo
 
 | Norma | Exigencia | Implementación |
 | :--- | :--- | :--- |
-| **RD 8/2019** (Art. 34.9 ET) | Registro diario de jornada, inalterable, conservación 4 años. | `RegistrosHorariosStaff` *append-only* con `clockEventType` (`ENTRADA`, `SALIDA`, `PAUSA_INICIO`, `PAUSA_FIN`, `AJUSTE`); `notes` obligatorio en `AJUSTE`; retención legal garantizada por el CMS. |
+| **RD 8/2019** (Art. 34.9 ET) | Registro diario de jornada, inalterable, conservación 4 años. | `RegistrosHorariosStaff` *append-only* con `clockEventType` (`ENTRADA`, `SALIDA`, `PAUSA_INICIO`, `PAUSA_FIN`, `AJUSTE`); `adjustmentReason` obligatorio cuando `recordType = AJUSTE`; el CMS no garantiza por sí mismo la conservación legal. |
 
 ### 13.4 Privacidad y conservación
 
