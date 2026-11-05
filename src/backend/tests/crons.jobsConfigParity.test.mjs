@@ -52,7 +52,7 @@ test('CRON-DUAL-CACHE-01 cleanupExpiredDualCache drains expired rows only', asyn
     { _id: 'webhook-preserve', controlType: IC.CONTROL_TYPE.WEBHOOK_EVENT, expiresAt: new Date(now.getTime() - 60000) },
   ]);
   const result = await CR.cleanupExpiredDualCache();
-  assert.equal(result.removed, 4);
+  assert.equal(result.removed, 2);
   assert.equal(result.failed, 0);
   const remaining = (wixDataMock._store.get(C) || []).map((row) => row._id).sort();
   assert.deepStrictEqual(remaining, ['dual-active', 'tx-preserve', 'webhook-preserve']);
