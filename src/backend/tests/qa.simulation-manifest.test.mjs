@@ -40,9 +40,9 @@ test('QA-MANIFEST-03 every automated test reference exists in the repository', (
 
 test('QA-MANIFEST-04 fixtures contain no real customer contact details or live-payment flag', () => {
   const serialized = JSON.stringify(manifest);
-  assert.doesNotMatch(serialized, /@(gmail|hotmail|outlook|yahoo)\\./i);
-  assert.doesNotMatch(serialized, /"paymentExecution"\\s*:\\s*true/i);
-  assert.doesNotMatch(serialized, /"sendExternalMessage"\\s*:\\s*true/i);
+  assert.doesNotMatch(serialized, /@(gmail|hotmail|outlook|yahoo)\./i);
+  assert.doesNotMatch(serialized, /"paymentExecution"\s*:\s*true/i);
+  assert.doesNotMatch(serialized, /"sendExternalMessage"\s*:\s*true/i);
   assert.ok(manifest.scenarios.every((item) => item.fixture && typeof item.fixture === 'object'));
 });
 
