@@ -336,6 +336,28 @@ function validateEventStructure(event, requiredFields) {
     return true;
 }
 
+/**
+ * Normalize the two documented Wix Bookings event envelopes:
+ * - Velo/SDK backend events: metadata + entity.
+ * - REST webhook events: id + actionEvent.body.booking.
+ * Keep the former as the primary contract for backend/events.js handlers.
+ */
+function _normalizeBookingsEvent(event) {
+    const booking =
+        event?.entity ||
+        event?.actionEvent?.body?.booking ||
+        event?.data?.booking ||
+        {};
+    const bookingId = _safeTrim(booking?.id || booking?._id || "");
+    return {
+        eventId: _safeTrim(event?.metadata?.id || event?.id || event?.eventId || ""),
+        bookingId,
+        booking: bookingId
+            ? { ...booking, id: bookingId }
+            : booking,
+    };
+}
+
 // ============================================================================
 // IDEMPOTENCY (ALN-02: ControlOperativo con controlType=WEBHOOK_EVENT)
 // ============================================================================
@@ -898,13 +920,17 @@ export async function wixBookingsV2_onBookingConfirmed(rawBody) {
         );
         if (!event) return { status: "REJECTED", reason: "JWT_VERIFICATION_FAILED" };
 
-        // Wix Bookings V2 Velo envelope: metadata.id + data.booking.
-        // Keep the canonical shape strict; do not silently accept legacy payloads.
-        const eventId = _safeTrim(event?.metadata?.id || "");
-        const booking = event?.data?.booking || {};
-        const bookingId = _safeTrim(booking?._id || "");
+        // Wix Velo SDK backend events expose metadata + entity.
+        // REST webhook envelopes are normalized as a compatibility path.
+        const { eventId, bookingId, booking } = _normalizeBookingsEvent(event);
+        const valid = Boolean(eventId && bookingId && _safeTrim(booking?.status || ""));
+        if (!valid) {
+            log.warn("EVENT_INVALID_STRUCTURE_REJECTED", { eventId, bookingId });
+            return { status: "RETRY_REQUIRED", reason: "INVALID_BOOKING_CONFIRMED_EVENT" };
+        }
+
         const alreadyProcessed = await isEventProcessed(eventId);
-        if (alreadyProcessed && bookingId && bookingId !== "unknown") {
+        if (alreadyProcessed && bookingId !== "unknown") {
             const existingLedger = await dalQuery(CITAS_COL)
                 .eq(BOOKING_FIELDS.BOOKING_ID, bookingId)
                 .limit(1)
@@ -920,22 +946,6 @@ export async function wixBookingsV2_onBookingConfirmed(rawBody) {
             // Older handler versions could mark an event processed even when
             // its CitasF2 row was missing. A replay now repairs that gap.
             log.warn("BOOKING_CONFIRMED_LEDGER_REPAIR", { eventId, bookingId, traceId });
-        }
-
-        const valid = Boolean(eventId) && validateEventStructure(event, [
-            "metadata.id",
-            "data.booking._id",
-            "data.booking.status",
-        ]);
-        if (!valid) {
-            log.warn("EVENT_INVALID_STRUCTURE_REJECTED", { eventId });
-            await markEventAsProcessed(
-                eventId,
-                "BOOKING_CONFIRMED_INVALID",
-                traceId,
-                { rejected: true }
-            );
-            return { status: "OK", rejected: true };
         }
 
         const syncResult = await _syncNativeBookingToCitas(booking, eventId, traceId);
@@ -976,16 +986,11 @@ export async function wixBookingsV2_onBookingCanceled(rawBody) {
         const event = await _verifyAndDecodeWebhook(rawBody, "BOOKING_CANCELED");
         if (!event) return { status: "REJECTED", reason: "JWT_VERIFICATION_FAILED" };
 
-        // Canonical Wix Bookings V2 event contract:
-        // metadata.id identifies the event; data.booking._id identifies the booking.
-        const eventId = _safeTrim(event?.metadata?.id || "");
-        const booking = event?.data?.booking || {};
-        const bookingId = _safeTrim(booking?._id || "");
+        // Wix Velo SDK backend events expose metadata + entity.
+        // REST webhook envelopes are normalized as a compatibility path.
+        const { eventId, bookingId, booking } = _normalizeBookingsEvent(event);
         let serviceId = _safeTrim(booking?.bookedEntity?.slot?.serviceId || booking?.serviceId || "");
-        const valid = Boolean(eventId) && validateEventStructure(event, [
-            "metadata.id",
-            "data.booking._id",
-        ]);
+        const valid = Boolean(eventId && bookingId);
         if (!valid) {
             log.warn("EVENT_INVALID_STRUCTURE_REJECTED", { eventId });
             return { status: "RETRY_REQUIRED", reason: "INVALID_BOOKING_CANCELED_EVENT" };
