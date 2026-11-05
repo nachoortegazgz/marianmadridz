@@ -130,9 +130,9 @@ function _sendPayloadToWidget() {
 }
 
 /* CONF-11: resuelve el target simbólico del HTML a URL real.
- * - MIS_RESERVAS  → URLS.MIS_RESERVAS  || "/my-bookings"
- * - HOME          → URLS.HOME          || "/"
- * - RESERVA_ONLINE→ URLS.SERVICIOS     || "/reserva-online"
+ * - MIS_RESERVAS  → URLS.MIS_RESERVAS
+ * - HOME          → URLS.HOME
+ * - RESERVA_ONLINE→ URLS.SERVICIOS
  * Legacy: acepta { url: "..." } limitado a rutas conocidas. */
 function _resolveNavTarget(payload) {
     if (!payload || typeof payload !== "object") return "";
