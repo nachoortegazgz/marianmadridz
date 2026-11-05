@@ -1001,6 +1001,9 @@ function isValidBookingSlot(slot) {
  * BOOK-02: valida slotF1/slotF2 antes de construir el payload.
  * PAIR-02: pairToken solo si existe.
  */
+// Increment this identifier whenever the booking privacy notice/copy changes.
+const BOOKING_PRIVACY_NOTICE_VERSION = "RESERVAS_PRIVACIDAD_2026-11-05_V1";
+
 function buildBookingRequestPayload(
     bookingData,
     fallbackTraceId
@@ -1097,6 +1100,7 @@ function buildBookingRequestPayload(
         channelType,
         rgpdConsent:
             bookingData.rgpdConsent === true,
+        privacyNoticeVersion: BOOKING_PRIVACY_NOTICE_VERSION,
         traceId:
             _safeTrim(
                 fallbackTraceId || ""
