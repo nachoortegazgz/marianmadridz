@@ -23,9 +23,9 @@ const calendarHtml = read("#html1.txt");
 const bridge = read("src/public/widgetBridge.js");
 
 test("HTML component snapshots contain syntactically valid JavaScript", () => {
-  for (const [label, html] of [
-    ["service widget", serviceHtml],
-    ["booking calendar", calendarHtml],
+  for (const [label, html, types] of [
+    ["service widget", serviceHtml, ["READY", "CONTEXT", "BOOK", "NAV"]],
+    ["booking calendar", calendarHtml, ["READY", "CONTEXT", "AVAIL", "BOOK", "NAV"]],
   ]) {
     for (const [index, source] of extractInlineScripts(html, label).entries()) {
       assert.doesNotThrow(
@@ -44,7 +44,7 @@ test("service and calendar HTML widgets use the Velo bridge protocol version", (
   ]) {
     assert.match(html, /PROTOCOL_VERSION:\s*1|version:\s*1/,
       label + " must use protocol version 1");
-    for (const type of ["READY", "CONTEXT", "AVAIL", "BOOK", "NAV"]) {
+    for (const type of types) {
       const mapping = type + ':"MM_' + type + '"';
       const spacedMapping = type + ': "MM_' + type + '"';
       assert.ok(
