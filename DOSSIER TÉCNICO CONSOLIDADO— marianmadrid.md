@@ -276,7 +276,7 @@ Se aplican en **orden estricto**. Si dos entran en conflicto, prevalece el de me
 
 - **D9 — Métrica con contexto.** Toda cifra (tests, versiones, IDs, importes, plazos) se presenta como: **valor + fuente + fecha + estado** (`verificado` / `declarado`). Ejemplo: `dato histórico de tests · fuente/fecha/estado obligatorios · no presentar como medición actual`.
 - **D10 — Prohibido “verde” sin run.** "CI verde" exige `run ID` y commit. "Publicado" exige confirmación en Wix, no el estado del sitio.
-- **D11 — Discrepancias explícitas.** Si dos fuentes discrepan (p. ej. 182 vs 158 tests; `resource.id` vs `resource._id`), se muestran **ambas**, se aplica la **precedencia** (§4) y se registra la corrección.
+- **D11 — Discrepancias explícitas.** Si dos fuentes discrepan (p. ej. los recuentos históricos 182 vs 158 tests; `resource.id` vs `resource._id`), se muestran **ambas**, se aplica la **precedencia** (§4) y se registra la corrección.
 - **D12 — Verificación reproducible.** Cuando se afirma algo verificable, se indica **cómo reproducirlo** (comando, consulta, endpoint, test).
 
 ### 4.4 Estilo y economía
@@ -334,7 +334,7 @@ Toda métrica se entrega como tabla:
 | Métrica | Valor | Fuente | Fecha | Estado |
 |---|---|---|---|---|
 | Tests Vitest | 182 pass / 0 fail · 11 suites (dato histórico declarado; no es una medición actual verificada) | dossier (legacy §0; versión anterior) | 2026-11-01 | `[DECLARADO]` |
-| Tests Vitest (SSOT) | 158/158 | SSOT §0.8 | 2026-10-30 | `[DECLARADO]` — discrepancia abierta |
+| Tests Vitest (SSOT) | 158/158 (cifra histórica declarada; no medición actual) | SSOT §0.8 | 2026-10-30 | `[DECLARADO]` — discrepancia histórica no reconciliada |
 | CI `main` | run `41053070852` SUCCESS | auditoría §7 | 2026-10-30 | `[HECHO]` |
 | Publicado en Wix | — | — | — | `[PENDIENTE]` |
 
