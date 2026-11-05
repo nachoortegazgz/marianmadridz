@@ -314,7 +314,7 @@ test('FLOW-CAJA-01 flujo continuo: venta EFECTIVO -> caja incrementada -> cierre
   const tx = await cajas.registerManualTransaction({
     totalAmount: 50.0,
     tipoFactura: 'F2',
-    operationDescription: 'Venta mostrador e2e',
+    operationDescription: 'Venta mostrador e2e (SIMULACION PREVIA A DESPLIEGUE REAL)',
     paymentMethod: 'EFECTIVO',
     movementType: 'VENTA',
     tipoImpositivo: 21,
@@ -330,10 +330,11 @@ test('FLOW-CAJA-01 flujo continuo: venta EFECTIVO -> caja incrementada -> cierre
       JSON.stringify({ hash: mov.hash, prh: mov.previousRecordHash, sig: mov.digitalSignature }));
   assert.strictEqual(mov.recordHash, undefined, 'legacy recordHash must not persist on MovimientosCaja');
   assert.strictEqual(mov.paymentMethod, 'EFECTIVO');
+  assert.ok(mov.operationDescription.includes('(SIMULACION PREVIA A DESPLIEGUE REAL)'), 'concepto claramente identificado como simulación');
 
   // Paso 1b: idempotencia - mismo transactionId devuelve el registro original
   const dup = await cajas.registerManualTransaction({
-    totalAmount: 50.0, tipoFactura: 'F2', operationDescription: 'repeat', paymentMethod: 'EFECTIVO',
+    totalAmount: 50.0, tipoFactura: 'F2', operationDescription: 'Reintento idempotente (SIMULACION PREVIA A DESPLIEGUE REAL)', paymentMethod: 'EFECTIVO',
     transactionId: 'e2e-tx-0001',
   });
   assert.strictEqual(dup.status, 'SUCCESS');
@@ -365,7 +366,20 @@ test('FLOW-CAJA-01 flujo continuo: venta EFECTIVO -> caja incrementada -> cierre
   const diaCerrado = '2020-01-01';
   // Sembrar ANTES del cierre: el cierre Z exige movimientos del dia (NO_MOVEMENTS).
   const movCol = wixDataMock._store.get('MovimientosCaja') || [];
-  movCol.push({ _id: 'mov-hist-2020', invoiceIssueDate: diaCerrado, sequenceNumber: 999998 });
+  movCol.push({
+    _id: 'mov-hist-2020',
+    transactionId: 'qa-historic-close-fixture-2020',
+    invoiceIssueDate: diaCerrado,
+    sequenceNumber: 999998,
+    movementType: 'VENTA',
+    paymentMethod: 'EFECTIVO',
+    totalAmount: 24.50,
+    accountingAmount: 24.50,
+    operationDescription: 'Venta histórica de prueba (SIMULACION PREVIA A DESPLIEGUE REAL)',
+    currency: 'EUR',
+    staffResourceId: GUID_ADMIN_RESOURCE,
+    traceId: 'trace-qa-historic-close-2020',
+  });
   wixDataMock._store.set('MovimientosCaja', movCol);
   const zOld = await cajas.registerZClosing(diaCerrado, {});
   assert.strictEqual(zOld.status, 'SUCCESS', JSON.stringify(zOld.error));
@@ -374,7 +388,7 @@ test('FLOW-CAJA-01 flujo continuo: venta EFECTIVO -> caja incrementada -> cierre
   // registro original (SUCCESS) antes de evaluar PERIOD_CLOSED, enmascarando el
   // invariante que se queria probar.
   const txAfterZ = await cajas.registerManualTransaction({
-    totalAmount: 10, tipoFactura: 'F2', operationDescription: 'venta post-cierre', paymentMethod: 'EFECTIVO',
+    totalAmount: 10, tipoFactura: 'F2', operationDescription: 'Venta posterior a cierre (SIMULACION PREVIA A DESPLIEGUE REAL)', paymentMethod: 'EFECTIVO',
     transactionId: 'e2e-tx-postz-' + Date.now(),
   });
   assert.strictEqual(txAfterZ.status, 'ERROR', 'periodo cerrado debe bloquear: ' + JSON.stringify(txAfterZ));
@@ -431,7 +445,7 @@ test('FLOW-CAJA-03 traducion legacy ONLINE -> WIX_PAYMENTS en la frontera (CAJA-
   wixDataMock._store.delete('HistoricoCierresZ');
   try {
     const tx = await cajas.registerManualTransaction({
-      totalAmount: 30, tipoFactura: 'F2', operationDescription: 'Pago online legado',
+      totalAmount: 30, tipoFactura: 'F2', operationDescription: 'Pago online legado (SIMULACION PREVIA A DESPLIEGUE REAL)',
       paymentMethod: 'ONLINE', transactionId: 'e2e-tx-legacy-online-' + Date.now(),
     });
     if (tx.status === 'SUCCESS') {
@@ -455,6 +469,11 @@ test('FLOW-CAJA-05 CajaActual applies each persisted movement exactly once', asy
     transactionId: 'cash-projection-once-001',
     accountingAmount: 35,
     paymentMethod: 'WIX_PAYMENTS',
+    movementType: 'VENTA',
+    totalAmount: 35,
+    accountingAmount: 35,
+    operationDescription: 'Cobro online de prueba (SIMULACION PREVIA A DESPLIEGUE REAL)',
+    currency: 'EUR',
     resourceId: 'online',
     staffResourceId: 'online',
     traceId: 'trace-caja-projection-001',
@@ -472,6 +491,7 @@ test('FLOW-CAJA-05 CajaActual applies each persisted movement exactly once', asy
   assert.strictEqual(register.otherAmount, 35, 'un cobro online se proyecta una sola vez');
   assert.strictEqual(register.netAmount, 35);
   assert.strictEqual(register.salesCount, 1);
+  assert.ok(register.sequenceCounters.appliedMovementIds.includes(movement._id));
   assert.deepStrictEqual(register.sequenceCounters.appliedMovementIds, [movement._id]);
 });
 
