@@ -1523,12 +1523,6 @@ export async function executeBookingSaga(unsafePayload) {
                 };
                 if (sessionMemberId) contactDetails.memberId = sessionMemberId;
 
-                const bookingOptions = {
-                    flowControlSettings: {
-                        skipAvailabilityValidation: SKIP_AVAILABILITY_VALIDATION,
-                    },
-                };
-
                 const bookedAddOns = _buildBookedAddOns(detectedAddonIds);
 
                 const pristineF1 = await _forceStaffInPristineSlot(
@@ -1563,7 +1557,7 @@ export async function executeBookingSaga(unsafePayload) {
                 try {
                     resF1 = await _createBookingWithSelectiveElevation(
                         bookingBodyF1,
-                        bookingOptions,
+                        undefined,
                         traceId
                     );
                 } catch (timeoutErr) {
@@ -1624,18 +1618,11 @@ export async function executeBookingSaga(unsafePayload) {
                         totalParticipants: 1,
                     };
                     if (appointmentNote) bookingBodyF2.internalBusinessNote = appointmentNote;
-                    const f2Options = {
-                        flowControlSettings: {
-                            skipAvailabilityValidation: SKIP_AVAILABILITY_VALIDATION,
-                            skipSelectedPaymentOptionValidation: true,
-                        },
-                    };
-
                     let resF2;
                     try {
                         resF2 = await _createBookingWithSelectiveElevation(
                             bookingBodyF2,
-                            f2Options,
+                            undefined,
                             traceId
                         );
                     } catch (timeoutErr) {
