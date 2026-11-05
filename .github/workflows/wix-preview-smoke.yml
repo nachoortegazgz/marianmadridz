@@ -1,0 +1,178 @@
+name: Wix Preview smoke (isolated)
+
+on:
+  push:
+    branches:
+      - automation/wix-preview-smoke-20261105
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wix-preview-smoke
+  cancel-in-progress: true
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - name: Checkout main snapshot
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24.22.1"
+          cache: npm
+
+      - name: Install project dependencies
+        run: npm ci
+
+      - name: Install Wix CLI for Sites
+        run: npm install --global @wix/cli
+
+      - name: Authenticate Wix CLI
+        env:
+          CLI_API_KEY: ${{ secrets.CLI_API_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${CLI_API_KEY}" || { echo "::error::Missing CLI_API_KEY"; exit 1; }
+          wix login --api-key "${CLI_API_KEY}"
+          wix whoami
+
+      - name: Create preview from latest origin/main using a sized PTY
+        shell: bash
+        timeout-minutes: 10
+        run: |
+          set -euo pipefail
+          python3 - <<'PY' | tee wix-preview.log
+          import fcntl
+          import os
+          import pty
+          import select
+          import signal
+          import struct
+          import subprocess
+          import sys
+          import termios
+          import time
+
+          env = os.environ.copy()
+          env.pop("CI", None)
+          env["TERM"] = "xterm-256color"
+
+          master, slave = pty.openpty()
+          window = struct.pack("HHHH", 24, 120, 0, 0)
+          fcntl.ioctl(master, termios.TIOCSWINSZ, window)
+          fcntl.ioctl(slave, termios.TIOCSWINSZ, window)
+
+          process = subprocess.Popen(
+              ["wix", "preview"],
+              stdin=slave,
+              stdout=slave,
+              stderr=slave,
+              env=env,
+              close_fds=True,
+              start_new_session=True,
+          )
+          os.close(slave)
+
+          started = time.monotonic()
+          prompt_deadline = started + 90
+          overall_deadline = started + 540
+          output = bytearray()
+          selection_sent = False
+          failure = None
+
+          try:
+              while True:
+                  now = time.monotonic()
+                  if now >= overall_deadline:
+                      failure = "Wix preview exceeded the 9-minute limit."
+                      break
+
+                  ready, _, _ = select.select([master], [], [], 0.25)
+                  if ready:
+                      try:
+                          chunk = os.read(master, 4096)
+                      except OSError:
+                          chunk = b""
+                      if chunk:
+                          sys.stdout.buffer.write(chunk)
+                          sys.stdout.buffer.flush()
+                          output.extend(chunk)
+                          if len(output) > 65536:
+                              del output[:-8192]
+
+                          if (
+                              not selection_sent
+                              and b"Latest commit from origin/main" in output
+                          ):
+                              os.write(master, b"\r")
+                              selection_sent = True
+                              print(
+                                  "\n[automation] Selected documented source: "
+                                  "Latest commit from origin/main",
+                                  flush=True,
+                              )
+                      elif process.poll() is not None:
+                          break
+
+                  if process.poll() is not None:
+                      break
+
+                  if not selection_sent and now >= prompt_deadline:
+                      failure = (
+                          "Wix CLI did not render the origin/main selector "
+                          "in the sized PTY; no selection was sent."
+                      )
+                      break
+
+              if failure:
+                  try:
+                      os.killpg(process.pid, signal.SIGTERM)
+                  except ProcessLookupError:
+                      pass
+                  try:
+                      process.wait(timeout=5)
+                  except subprocess.TimeoutExpired:
+                      try:
+                          os.killpg(process.pid, signal.SIGKILL)
+                      except ProcessLookupError:
+                          pass
+                      process.wait()
+                  print("::error::" + failure, file=sys.stderr, flush=True)
+                  sys.exit(1)
+
+              status = process.wait()
+              if not selection_sent:
+                  print(
+                      "::error::Wix CLI exited before the origin/main selector.",
+                      file=sys.stderr,
+                      flush=True,
+                  )
+                  sys.exit(1)
+              sys.exit(status)
+          finally:
+              os.close(master)
+          PY
+
+          preview_url="$(grep -Eo 'https?://wix\.to/[[:alnum:]]+' wix-preview.log | tail -n 1 || true)"
+          if [ -z "${preview_url}" ]; then
+            echo "::error::No verifiable wix.to preview URL was produced."
+            exit 1
+          fi
+          echo "Wix Preview: ${preview_url}" >> "${GITHUB_STEP_SUMMARY}"
+
+      - name: Preserve preview log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wix-preview-smoke-${{ github.run_id }}
+          if-no-files-found: warn
+          path: wix-preview.log
