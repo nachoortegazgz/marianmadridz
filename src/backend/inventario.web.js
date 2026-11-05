@@ -390,19 +390,12 @@ export async function recordInventoryMovementSafe(identity, movementType, quanti
   }
 
   const stockItem = stockRows[0];
-  const mappedProductIds = [
-    _safeTrim(stockItem.wixProductId),
-    _safeTrim(stockItem.productId),
-  ].filter(Boolean);
-  const mappedVariantIds = [
-    _safeTrim(stockItem.wixVariantId),
-    _safeTrim(stockItem.variantId),
-  ].filter(Boolean);
+  const mappedProductId = _safeTrim(stockItem.productId);
+  const mappedVariantId = _safeTrim(stockItem.variantId);
   const mappedCatalogVersion = _safeTrim(stockItem.catalogVersion);
   const mappedLocationId = _safeTrim(stockItem.locationId) || null;
 
-  if (mappedProductIds.some((value) => value !== productId) ||
-      mappedVariantIds.some((value) => value !== variantId) ||
+  if (mappedProductId !== productId || mappedVariantId !== variantId ||
       (mappedCatalogVersion && mappedCatalogVersion !== catalogVersion) ||
       (mappedLocationId && mappedLocationId !== locationId)) {
     return {
@@ -471,8 +464,6 @@ export async function recordInventoryMovementSafe(identity, movementType, quanti
 
     stockItem.stockOnHand = targetStock;
     stockItem.stockAvailable = targetStock - reservedStock;
-    stockItem.wixProductId = productId;
-    stockItem.wixVariantId = variantId;
     stockItem.productId = productId;
     stockItem.variantId = variantId;
     stockItem.catalogVersion = catalogVersion;
@@ -526,8 +517,8 @@ export async function recordInventoryMovementSafe(identity, movementType, quanti
     actorMemberId: meta.actorMemberId || null,
     requiresWixReconciliation: meta.requiresWixReconciliation === true,
     nativeCommercialMovement: meta.nativeCommercialMovement === true,
-    wixProductId: productId,
-    wixVariantId: variantId,
+    productId,
+    variantId,
     catalogVersion,
     locationId,
     sourceEventId: _safeTrim(meta.sourceEventId) || null,
@@ -542,8 +533,6 @@ export async function recordInventoryMovementSafe(identity, movementType, quanti
 
   stockItem.stockOnHand = stockAfter;
   stockItem.stockAvailable = stockAvailable;
-  stockItem.wixProductId = productId;
-  stockItem.wixVariantId = variantId;
   stockItem.productId = productId;
   stockItem.variantId = variantId;
   stockItem.lastInventoryMovementAt = new Date();
