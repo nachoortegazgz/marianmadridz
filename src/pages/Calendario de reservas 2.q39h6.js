@@ -110,10 +110,15 @@ const NON_RETRYABLE_PUBLIC_CODES = new Set([
     "BOOKING_NOT_CONFIRMED",
     "CHECKOUT_ASSOCIATION_FAILED",
     "CITA_PERSIST_FAILED",
+    "EXISTING_BOOKING_REQUIRES_RECONCILIATION",
 ]);
 
 function getPublicErrorMessage(code) {
-    return NON_RETRYABLE_PUBLIC_CODES.has(_safeTrim(code).toUpperCase())
+    const normalized = _safeTrim(code).toUpperCase();
+    if (normalized === "EXISTING_BOOKING_REQUIRES_RECONCILIATION") {
+        return "Ya existe una reserva para este horario. No vuelvas a intentarlo; contacta con el salón para revisar las reservas existentes.";
+    }
+    return NON_RETRYABLE_PUBLIC_CODES.has(normalized)
         ? "No hemos podido verificar la reserva. No vuelvas a intentarlo todavía; contacta con el salón para comprobar su estado."
         : PUBLIC_ERROR_MESSAGE;
 }
