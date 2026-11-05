@@ -67,7 +67,7 @@ Este mapa permite la navegación semántica y técnica precisa por las 4 capas d
 
 | Capítulo | Título | Contenido Clave y Datos de Búsqueda Rápida |
 | :--- | :--- | :--- |
-| **8** | Seguridad y Permisos | • RBAC doble capa: Velo Permissions + `MapaStaff.rolWebsite`<br>• Roles: ADMIN / GESTION / ESTILISTA<br>• Secretos en Wix Secrets Manager (`mmSecrets.js`)<br>• Firma HMAC-SHA256 + ventana ±60s anti-replay<br>• Rate limiting por surface (public-booking, reservas, availability)<br>• Minimización PII: enmascaramiento en logs, exclusión datos tarjeta<br>• Webhooks Bookings: verificación JWT + deduplicación `eventId` |
+| **8** | Seguridad y Permisos | • RBAC: Velo Permissions + rol `STAFF.WEBSITE_ROLE_BY_RESOURCE_ID` resuelto tras consultar Bookings Staff API<br>• Roles: ADMIN / GESTION / ESTILISTA<br>• Secretos en Wix Secrets Manager (`mmSecrets.js`)<br>• Firma HMAC-SHA256 + ventana ±60s anti-replay<br>• Rate limiting por surface (public-booking, reservas, availability)<br>• Minimización PII: enmascaramiento en logs, exclusión datos tarjeta<br>• Webhooks Bookings: verificación JWT + deduplicación `eventId` |
 | **9** | Integraciones | • Apps Wix nativas: reglas por app (Bookings V2, Stores V1, eCom Cart V2)<br>• Externas: Resend (email), OpenAI (IA), MONEI (Bizum BdE 6911), IONOS (DNS/correo), M365 (custodia)<br>• Gestión colecciones WIX_APP: solo lectura, mutación vía SDK oficial<br>• Prohibición de llamadas externas desde frontend |
 | **10** | Backend: Módulos y Hooks | • Catálogo completo de 18 WebMethods con permisos Velo y rol negocio<br>• Flujos críticos: venta online, cancelaciones, cierre Z nocturno<br>• Hooks CMS por colección (`data.js`): validaciones beforeInsert/beforeUpdate<br>• Helpers: `mmUtils.js`, `securityEngine.js`, `validation.js`, `widgetBridge.js` |
 | **11** | Jobs y Webhooks | • 8 crons en `jobs.config` (tabla con frecuencia, dominio y operación)<br>• Webhooks Bookings V2: 5 eventos + procesamiento seguro idempotente<br>• Webhooks eCommerce: independientes de V1/V3<br>• Catalog V3 webhooks: pendientes (Developer Preview, no activar sin ADR)<br>• Reglas invariables: jobs nunca escriben directo en append-only |
@@ -381,76 +381,48 @@ InicioF2 = InicioF1 + phase1Duration + exposureDuration
 
 ## 6. Modelo CMS: colecciones, keyfields e integridad
 
-El CMS propio tiene **13 colecciones NATIVE** activas. Las 20 colecciones `WIX_APP` son de estricta lectura. Las 8 colecciones legacy están prohibidas; cualquier acceso a ellas lanza `FISCAL_VIOLATION`.
+**Snapshot físico verificado en Wix CMS el 2026-11-05:** 36 colecciones en el sitio. Las 13 colecciones de negocio enumeradas abajo existen y son de tipo `NATIVE`. La revisión de cada definición se recoge en §14.4.1. Este recuento es una lectura del CMS en esa fecha; no equivale a un inventario exhaustivo de permisos, registros, índices ni colecciones de aplicaciones.
 
-### Colecciones NATIVE (autoridad del negocio)
+### Colecciones de negocio NATIVE
 
-| Colección | Tipo | Rol |
+| Colección | Naturaleza funcional | Autoridad / uso |
 | --- | --- | --- |
-| `DatosFiscales` | MASTER mutable | Maestro de terceros + singleton `CONFIG_SISTEMA` Veri\*Factu |
-| `CajaActual` | SINGLETON mutable | Estado en tiempo real del cajón físico |
-| `MovimientosCaja` | LEDGER append-only | Registro fiscal inalterable (Veri\*Factu) |
-| `CitasF2` | LEDGER con updates controlados | Proyección interna de reservas |
-| `LibroAsientosContablesDetalle` | LEDGER append-only | Contabilidad de doble partida (PGC) |
-| `HistoricoCierresZ` | LEDGER append-only | Cierre Z diario de caja |
-| `ServiciosCatalogo` | CATALOG mutable | Maestro de servicios, duraciones, precios e impuestos |
-| `ComplementosCatalogo` | CATALOG mutable | Maestro de add-ons y suplementos |
-| `MapaStaff` | MASTER mutable | Identidad del personal y correlación de IDs |
-| `RegistrosHorariosStaff` | LEDGER append-only | Fichajes laborales (RD 8/2019) |
-| `ControlOperativo` | CONTROL mixto | Locks, deduplicación webhooks, rate limiting |
-| `InventarioStockVenta` | MASTER mutable | Snapshot de stock comercial |
-| `MovimientosInventario` | LEDGER append-only | Variaciones de stock con idempotencia |
+| `ServiciosCatalogo` | Maestro mutable | Metadatos del servicio, precio, impuestos, visibilidad y fases; el servicio reservable nativo sigue siendo Wix Bookings V2. |
+| `ComplementosCatalogo` | Maestro mutable | Complementos, precio, duración, fiscalidad y relación multi-reference con servicios. |
+| `CitasF2` | Proyección transaccional mutable | Copia operativa de referencias/estado de reservas Bookings; no es un ledger fiscal ni sustituye a Bookings. |
+| `ControlOperativo` | Control mixto mutable | Locks, deduplicación, idempotencia, rate limits, reintentos y alertas. |
+| `CajaActual` | Singleton/proyección mutable | Estado de caja y contadores; admite `CAJA_PRINCIPAL` y `CAJA_SEQ`. No es el historial de operaciones. |
+| `MovimientosCaja` | Ledger append-only | Hechos económicos y fiscales; nuevas rectificaciones mediante nuevos registros. |
+| `HistoricoCierresZ` | Historial de cierres con recuperación limitada | Snapshot y evidencia de cierre. El hook permite cambios limitados a campos de firma/verificación; no describirlo como absolutamente inmutable en todas sus columnas. |
+| `LibroAsientosContablesDetalle` | Ledger append-only | Líneas de proyección contable vinculadas al evento/documento de origen. |
+| `DatosFiscales` | Maestro/configuración fiscal | Terceros y configuración fiscal del emisor/sistema según `recordType`. |
+| `RegistrosHorariosStaff` | Ledger append-only | Eventos de jornada y ajustes trazables. |
+| `InventarioStockVenta` | Maestro/proyección mutable | Estado de stock por producto/variante y catálogo/ubicación. |
+| `MovimientosInventario` | Ledger append-only | Entradas, salidas, ventas, devoluciones y ajustes de existencias. |
+| `MapaStaff` | Colección física conservada, uso transitorio | Existe en CMS, pero el resolver actual de personal no la usa como fuente de identidad/rol; véase §8 y §14.2. |
 
-### Protecciones append-only (backend/data.js)
+### Clasificación de colecciones no pertenecientes a este grupo
 
-Los hooks `beforeUpdate` y `beforeRemove` en `MovimientosCaja`, `LibroAsientosContablesDetalle`, `RegistrosHorariosStaff` y `MovimientosInventario` interceptan cualquier intento de modificación y retornan `FISCAL_VIOLATION`. La corrección se realiza siempre insertando un nuevo registro rectificativo que enlaza al original.
+- El listado CMS devolvió 36 colecciones; 13 son las colecciones NATIVE de negocio anteriores. Las otras 23 no se clasifican aquí como `WIX_APP` sin revisar individualmente `collectionType`, `ownerAppId` y permisos.
+- Las ocho colecciones de `FORBIDDEN_COLLECTIONS` en `internalConfig.js` son nombres bloqueados por política de código. No afirmar que las ocho existan físicamente en el CMS actual.
+- Las colecciones de aplicaciones Wix se consultan conforme al contrato de cada app. No escribir directamente en colecciones `WIX_APP`; utilizar sus APIs/SDK oficiales.
 
-### Invariantes de integridad obligatorias
+### Integridad y persistencia
 
-- **MovimientosCaja**: `taxBase + taxAmount ≈ amount` (redondeo a 2 decimales con `_roundMoney()`). Cadena SHA-256: `hash = SHA256(previousRecordHash + numSerieFactura + amount + timestamp)`.
-- **ServiciosCatalogo**: `totalDuration === phase1Duration + exposureDuration + phase2Duration`.
-- **InventarioStockVenta**: `stockAvailable === stockOnHand - stockReserved` y ningún valor negativo.
-- **LibroAsientosContablesDetalle**: para un mismo `entryId`, `SUM(debit) === SUM(credit)`.
-- **CajaActual**: solo dos documentos: `CAJA_PRINCIPAL` y `CAJA_SEQ`. Eliminación bloqueada.
+- `MovimientosCaja`: append-only. El hook exige `traceId`, `schemaVersion` y `hash`; valida consistencia fiscal con base, cuota, recargo, retención y total. No simplificar la ecuación a `taxBase + taxAmount = amount`: el código distingue `amount`, `taxBase` y `totalAmount`.
+- `LibroAsientosContablesDetalle`: append-only; conservar `debitAmount` y `creditAmount` como nombres físicos, no `debit`/`credit`.
+- `RegistrosHorariosStaff`: append-only; los ajustes se registran con `adjustmentReason`, no con un campo genérico `notes`.
+- `MovimientosInventario`: append-only; el contrato utiliza `movementToken` y referencias de producto/variante/línea.
+- `CitasF2`: proyección mutable con validación de enums y fechas; no es append-only.
+- `CajaActual`: protege los documentos singleton; su estado agregado puede cambiar mediante operaciones backend.
+- `HistoricoCierresZ`: inserción trazable; las actualizaciones posteriores se limitan a campos explícitos de firma/verificación.
+- `InventarioStockVenta`: `stockAvailable = stockOnHand - stockReserved`; el campo disponible es una proyección calculada que se persiste y valida.
+- `ServiciosCatalogo`: para servicios duales `allowCombine=true`, exige `linkedPhases` y `exposureDuration` numérico explícito. `totalDuration` debe ser coherente con la suma de fases e intervalo.
+- `MapaStaff`: su presencia física no la convierte en autoridad del resolver de personal actual.
 
-### Campos canónicos transversales
+### ControlOperativo — controles multiplexados
 
-| Campo | Tipo | Función |
-| --- | --- | --- |
-| `traceId` | TEXT UUID v4 | Trazabilidad end-to-end. Obligatorio en toda escritura. |
-| `pairToken` | TEXT UUID v4 | Vincula citas DUAL\_F1 y DUAL\_F2. |
-| `bookingId` | TEXT | GUID de Wix Bookings. No equivale a `_id` CMS. |
-| `serviceId` | TEXT | GUID del servicio en Wix Bookings. Distinto de `catalogId`. |
-| `resourceId` | TEXT | GUID del recurso en Wix Bookings. Distinto de `memberId`. |
-| `memberId` | TEXT | GUID de usuario en Wix Members. Distinto de `resourceId`. |
-| `catalogId` | TEXT | `_id` del registro en `ServiciosCatalogo`. |
-| `transactionId` | TEXT | Clave de idempotencia única de la transacción. |
-| `dedupeKey` | TEXT | Clave indexada para deduplicación atómica. |
-| `movementToken` | TEXT | Clave de idempotencia en `MovimientosInventario`. |
-| `hash` | TEXT | Huella SHA-256 en `MovimientosCaja`. |
-| `previousRecordHash` | TEXT | Enlace al registro fiscal anterior. |
-| `recordHash` | TEXT | Huella en `LibroAsientosContablesDetalle`. |
-| `sequenceNumber` | NUMBER | Secuencia monótona asignada desde `CAJA_SEQ`. |
-| `numSerieFactura` | TEXT | Número de ticket/factura correlativo sin saltos. |
-
-### Nomenclatura de keyfields (reglas N1–N5)
-
-- N1: convención única compartida por CMS, backend, frontend y webhooks.
-- N2: IDs técnicos nativos de Wix se conservan en inglés (`bookingId`, `serviceId`, `resourceId`, `slug`).
-- N3: si no existe ID nativo, se adoptan estándares AEAT y PGC en español (`numSerieFactura`, `taxBase`, `tipoImpositivo`).
-- N4: campos y variables en `camelCase`; etiqueta visible en español camelCase.
-- N5: enums cualificados por dominio (`bookingStatus`, `movementType`, `clockEventType`).
-
-### ControlOperativo — tipos de control
-
-| `controlType` | Uso |
-| --- | --- |
-| `SLOT_LOCK` | Bloqueo temporal de slot durante saga dual |
-| `WEBHOOK_EVENT` | Deduplicación de eventos webhook (append-only) |
-| `DEDUPE_KEY` | Idempotencia de operaciones |
-| `RATE_LIMIT` | Control de frecuencia por surface/IP |
-| `SYSTEM_FLAG` | Alertas y flags de sistema |
-| `IDEMPOTENCY` | Control transaccional genérico |
+`ControlOperativo` concentra varios tipos de registro en una única colección. El significado del documento se determina por `controlType`, `dedupeKey` y los campos específicos del tipo. No asumir que todos los campos son obligatorios para todos los documentos. En particular, el esquema conserva simultáneamente `attempts`/`attempt` y `expiresAt`/`leaseExpiresAt`; los consumidores deben usar el campo correspondiente a su contrato, sin crear nuevos alias.
 
 ## 7. Enums canónicos
 
@@ -526,18 +498,20 @@ CONTROL_TYPE = { SLOT_LOCK, WEBHOOK_EVENT, DEDUPE_KEY,
 
 ### Modelo de autorización RBAC
 
-La seguridad opera en dos capas superpuestas:
+La seguridad opera en dos capas:
 
-1. **Barrera de plataforma (Velo Permissions)**: el decorador del webMethod (`Permissions.Anyone`, `Permissions.SiteMember`, `Permissions.Admin`) aplica el primer filtro de red.
-2. **Control de roles de negocio (RBAC SSOT)**: `backend/security.js` evalúa la identidad del usuario contra `MapaStaff.rolWebsite`.
+1. **Barrera de plataforma (Velo Permissions):** el permiso del `webMethod` aplica el primer filtro de invocación.
+2. **Rol de negocio:** `backend/security.js` resuelve el miembro autenticado mediante su `contactId` y `backend/staff.js` consulta Bookings Staff API. El rol web canónico se obtiene de `STAFF.WEBSITE_ROLE_BY_RESOURCE_ID` en `internalConfig.js`, asociado al `resourceId`.
 
-Un miembro registrado en el sitio que no tenga registro activo en `MapaStaff` es rechazado devolviendo `ACCESS_DENIED`.
+**Importante:** `MapaStaff` existe físicamente en CMS y conserva campos como `rolWebsite`, `rolBookings`, `staffMemberId`, `resourceId` y `active`; sin embargo, el resolver actual `staff.js` no usa esa colección para resolver identidad ni rol. No documentar `MapaStaff.rolWebsite` como fuente activa de autorización. La decisión de conservar sus campos físicos es no destructiva y no implica que sean el SSOT del runtime.
 
 | Rol | Acceso |
 | --- | --- |
 | `ADMIN` | Configuración fiscal, cierre Z, catálogo, auditoría e inventario completo |
-| `GESTION` | Operación de caja, cobros presenciales, arqueos X, gestión de stock |
-| `ESTILISTA` | Solo propia agenda y fichajes laborales propios |
+| `GESTION` | Operación de caja, cobros presenciales, arqueos y gestión de stock |
+| `ESTILISTA` | Agenda y fichajes propios, según permisos del método |
+
+Un miembro sin correspondencia activa en Bookings Staff API o sin rol canónico autorizado es rechazado con `ACCESS_DENIED`.
 
 ### Uso estricto de elevate()
 
@@ -630,7 +604,7 @@ Las colecciones `WIX_APP` son de **estricta lectura**. Prohibido ejecutar `wixDa
 
 Todas las llamadas externas se ejecutan únicamente desde backend. El frontend nunca recibe claves de API ni credenciales de servicios externos.
 
-### Gestión de colecciones WIX\_APP (20 colecciones)
+### Gestión de colecciones WIX\_APP (inventario dinámico)
 
 Ejemplos de colecciones nativas reservadas para lectura:
 
@@ -689,19 +663,25 @@ Nunca mutar estas colecciones directamente desde código propio.
 2. Se verifica la continuidad de la cadena de hashes SHA-256.
 3. Se inserta un documento inmutable en `HistoricoCierresZ` con totales por medio de pago, resumen impositivo y firma criptográfica del periodo.
 
-### Hooks CMS (backend/data.js)
+### Hooks CMS (`src/backend/data.js`)
 
-Validaciones `beforeInsert` / `beforeUpdate` por colección:
+Inventario de hooks exportados en el código actual. El hecho de que exista un campo en CMS no implica que el hook lo exija; las reglas siguientes describen validaciones de backend, no el esquema físico completo.
 
-- **MovimientosCaja**: presencia de `hash`, `schemaVersion`, `traceId`; cuadre `taxBase + taxAmount ≈ amount`.
-- **CitasF2**: enums válidos via `assertValidEnum()`, `traceId` presente, coherencia `pairToken` en duales. `beforeRemove` bloqueado.
-- **ServiciosCatalogo**: unicidad `serviceId`/`sku`/`slug`; `totalDuration === phase1Duration + exposureDuration + phase2Duration`; `tipoImpositivo` en enum AEAT.
-- **MapaStaff**: unicidad de `resourceId` y `memberId`; enums `rolBookings` y `rolWebsite` válidos.
-- **RegistrosHorariosStaff**: `clockEventType` válido; `notes` obligatorio cuando `recordType === "AJUSTE"`.
-- **ControlOperativo**: `controlType` y `dedupeKey` presentes; `eventId` obligatorio para `WEBHOOK_EVENT`; `resourceId + expiresAt` obligatorio para `SLOT_LOCK`.
-- **InventarioStockVenta**: `stockAvailable === stockOnHand - stockReserved`; sin negativos.
-- **MovimientosInventario**: unicidad `movementToken`; `reason` obligatorio cuando `movementType === "AJUSTE"`.
-- **DatosFiscales**: validación NIF/NIE/CIF/VAT-UE con `isValidNifOrEuVat()`. `beforeRemove` bloquea eliminación de `CONFIG_SISTEMA_FISCAL`.
+| Colección | Insert | Update | Remove |
+| --- | --- | --- | --- |
+| `MovimientosCaja` | Exige `traceId`, `schemaVersion`, `hash`; normaliza claves históricas; valida datos fiscales, payload, desglose y coherencia de importes. | Bloqueado. | Bloqueado. |
+| `HistoricoCierresZ` | Exige `traceId`. | Solo cambios permitidos en campos de firma/verificación definidos en el hook. | Bloqueado. |
+| `RegistrosHorariosStaff` | Normaliza `recordedAt` DATETIME y exige `traceId`. | Bloqueado. | Bloqueado. |
+| `CajaActual` | Solo acepta singleton `CAJA_PRINCIPAL` o `CAJA_SEQ`. | Protege la modificación de contadores fuera del documento de secuencia; mantiene metadatos de idempotencia. | Bloqueado. |
+| `ServiciosCatalogo` | Valida GUID de `serviceId`/`linkedPhases`, naturaleza, código fiscal, duraciones y reglas duales. | Mismas validaciones de esquema. | No hay hook exportado en el archivo actual. |
+| `DatosFiscales` | Valida estructura por tipo de registro, NIF/VAT y configuración fiscal; rechaza campos legacy de escritura. | Validación por tipo de registro. | Protege el registro de configuración fiscal del sistema. |
+| `LibroAsientosContablesDetalle` | Valida el contrato fiscal/contable y trazabilidad del asiento. | Bloqueado. | Bloqueado. |
+| `ControlOperativo` | Valida el tipo de control y los campos requeridos por cada modalidad. | Actualización controlada según el tipo. | Eliminación controlada según el tipo. |
+| `MovimientosInventario` | Valida movimiento, magnitud, trazabilidad e idempotencia. | Bloqueado. | Bloqueado. |
+| `InventarioStockVenta` | Normaliza `lastSyncAt`; valida catálogo/IDs/ubicación y stock no negativo; calcula o valida `stockAvailable`. | Mismas validaciones de stock. | No hay hook exportado en el archivo actual. |
+| `CitasF2` | Valida estados, fechas y estructura de la proyección. | Validación estructural para cambios controlados. | Bloqueado. |
+| `ComplementosCatalogo` | Exige `addonId` y `sku`; precio no negativo. | Mismas validaciones. | No hay hook exportado en el archivo actual. |
+| `MapaStaff` | No hay hook exportado actualmente. | No hay hook exportado actualmente. | No hay hook exportado actualmente. |
 
 ### Funciones de utilidad transversal
 
@@ -917,15 +897,17 @@ El sistema garantiza el cumplimiento estricto del marco legal español y europeo
 | **Dominio** | `https://www.marianmadrid.es` |
 | **Repositorio** | `https://github.com/nachoortegazgz/marianmadridz` |
 
-### 14.2 Personal y roles (`MapaStaff`)
+### 14.2 Identidad del personal y roles
 
-| Nombre | `resourceId` (Bookings) | `rolBookings` | `rolWebsite` |
-| :--- | :--- | :--- | :--- |
-| Marian Madrid | `e556070a-6d6a-402e-8422-11133033ea76` | `STAFF` | `ADMIN` |
-| Andrea Staff | `07f7344f-e7e4-4c53-854b-47fd82ac8d40` | `STAFF` | `ESTILISTA` |
-| Alba Staff | `9b905bfd-1a09-485d-9273-a24a20dfe648` | `STAFF` | `ESTILISTA` |
+El runtime obtiene los profesionales mediante **Bookings Staff API**. Los identificadores no son intercambiables:
 
-> `thirdPartyId` permanece vacío hasta vincular fichas fiscales en `DatosFiscales`. Prohibido rellenarlo por inferencia.
+| Profesional | `staffMemberId` (Bookings Staff) | `resourceId` (agenda) | `scheduleId` (calendario) | Rol web |
+| :--- | :--- | :--- | :--- | :--- |
+| Marian | `0114748d-2806-3928-9b97-ff0d09853759` | `e556070a-6d6a-402e-8422-11133033ea76` | `06af20d4-1ec3-49fa-9075-f0691dfa7fd4` | `ADMIN` |
+| Andrea | `bf177b1a-483a-4c03-9960-8da0aa0b8b41` | `07f7344f-e7e4-4c53-854b-47fd82ac8d40` | `a494b829-8161-4b84-b78d-6ffed45b4abe` | `ESTILISTA` |
+| Alba | `c5563137-1124-4366-abe0-1afe56418968` | `9b905bfd-1a09-485d-9273-a24a20dfe648` | `94b8980d-63f4-43b1-ba86-41075e0eb63c` | `ESTILISTA` |
+
+Los roles web se resuelven en `STAFF.WEBSITE_ROLE_BY_RESOURCE_ID` dentro de `internalConfig.js`. `MapaStaff` sigue existiendo en CMS con sus campos físicos, pero no es la fuente activa de identidad/rol de `staff.js`. La tabla anterior es un snapshot de identidad de Bookings consultado el 2026-11-01; verificar en Bookings antes de cambios de personal. `thirdPartyId` no se completa por inferencia.
 
 ### 14.3 Wix App IDs oficiales
 
@@ -941,41 +923,70 @@ El sistema garantiza el cumplimiento estricto del marco legal español y europeo
 
 ### 14.4 Resumen de colecciones CMS
 
-**13 colecciones NATIVE de negocio:**
-`DatosFiscales`, `CajaActual`, `MovimientosCaja`, `CitasF2`, `LibroAsientosContablesDetalle`, `HistoricoCierresZ`, `ServiciosCatalogo`, `ComplementosCatalogo`, `MapaStaff`, `RegistrosHorariosStaff`, `ControlOperativo`, `InventarioStockVenta`, `MovimientosInventario`.
+**Verificación directa Wix CMS — 2026-11-05:**
+- Colecciones totales devueltas por `GET /data/v2/collections`: **36**.
+- Colecciones de negocio de `BUSINESS_COLLECTIONS` y `OPERATIONAL_COLLECTIONS`: **13/13 encontradas**, todas con `collectionType=NATIVE`.
+- Las otras 23 colecciones no se etiquetan aquí automáticamente como `WIX_APP`; deben clasificarse individualmente por `collectionType` y `ownerAppId`.
+- Los ocho nombres de `FORBIDDEN_COLLECTIONS` son bloqueos de código, no una afirmación de existencia física en el CMS.
 
-**20 colecciones `WIX_APP` (solo lectura):**
-`Blog/Categories`, `Blog/Posts`, `Blog/Tags`, `Bookings/Schedule`, `Bookings/Services`, `Bookings/Staff`, `CampaignManager/campaigns`, `CampaignManager/userConfig`, `Forms/subscribers03`, `Locations/Locations`, `Marketing/Coupons`, `Members/Badges`, `Members/FullData`, `Members/PrivateMembersData`, `Members/PublicData`, `Stores/Collections`, `Stores/InventoryItems`, `Stores/Orders`, `Stores/Products`, `Stores/Variants`.
+| Colección | Tipo CMS | Revisión observada |
+| --- | --- | ---: |
+| `CajaActual` | NATIVE | 47 |
+| `CitasF2` | NATIVE | 31 |
+| `ComplementosCatalogo` | NATIVE | 138 |
+| `ControlOperativo` | NATIVE | 24 |
+| `DatosFiscales` | NATIVE | 10 |
+| `HistoricoCierresZ` | NATIVE | 36 |
+| `InventarioStockVenta` | NATIVE | 20 |
+| `LibroAsientosContablesDetalle` | NATIVE | 25 |
+| `MapaStaff` | NATIVE | 23 |
+| `MovimientosCaja` | NATIVE | 76 |
+| `MovimientosInventario` | NATIVE | 29 |
+| `RegistrosHorariosStaff` | NATIVE | 10 |
+| `ServiciosCatalogo` | NATIVE | 194 |
 
-**8 colecciones legacy prohibidas** (acceso lanza `FISCAL_VIOLATION`):
-`ConfiguracionFiscal`, `AsientosContables`, `EventosSistemaFacturacion`, `FacturasRecibidas`, `LibroRegistroFacturasExpedidas`, `LibroRegistroFacturasRecibidas`, `PlanCuentasContables`, `CategoriasServicio`.
+Las revisiones son las devueltas por Wix en la consulta de lectura; cambiarán cuando se edite la definición de una colección.
 
-### 14.5 Campos canónicos críticos
+#### 14.4.1 Esquema físico CMS — campos no sistema y tipos
 
-| Campo | Colección principal | Función |
-| :--- | :--- | :--- |
-| `taxId` | `DatosFiscales` | NIF/NIE/CIF/VAT-UE validado. |
-| `sequenceNumber` | `MovimientosCaja` | Secuencia monótona desde `CAJA_SEQ`. |
-| `numSerieFactura` | `MovimientosCaja` | Número correlativo sin saltos. |
-| `transactionId` | `MovimientosCaja` | Clave de idempotencia del hecho económico. |
-| `hash` / `previousRecordHash` | `MovimientosCaja` | Huellas SHA-256 encadenadas Veri*Factu. |
-| `recordHash` | `LibroAsientosContablesDetalle` | Huella de línea contable. |
-| `bookingId` | `CitasF2` | GUID oficial de Wix Bookings V2. |
-| `pairToken` | `CitasF2` | UUID v4 que vincula `DUAL_F1` + `DUAL_F2`. |
-| `bookingStatus` | `CitasF2` | Estado interno (`PENDING`, `CONFIRMED`, `CANCELED`, `NO_SHOW`). |
-| `paymentStatus` | `CitasF2` | Estado de tesorería (`UNPAID`, `PARTIAL`, `PAID`, `REFUNDED`). |
-| `resourceId` | `MapaStaff`, `CitasF2` | GUID del recurso en Wix Bookings. |
-| `memberId` | `MapaStaff` | GUID de usuario en Wix Members. |
-| `rolBookings` / `rolWebsite` | `MapaStaff` | Rol nativo vs. rol de autorización de negocio. |
-| `serviceId` | `ServiciosCatalogo` | GUID inmutable del servicio en Bookings. |
-| `slug` | `ServiciosCatalogo` | Identificador público para routing. |
-| `linkedPhases` | `ServiciosCatalogo` | GUID de la Fase 2 vinculada. |
-| `addonId` / `addOnIds` | `ComplementosCatalogo` | PK del complemento / array de transporte a Bookings. |
-| `clockEventType` | `RegistrosHorariosStaff` | Tipo de fichaje laboral. |
-| `controlType` / `dedupeKey` | `ControlOperativo` | Discriminador técnico y clave de deduplicación. |
-| `stockOnHand` / `stockReserved` / `stockAvailable` | `InventarioStockVenta` | Invariante `available === onHand - reserved`. |
+La siguiente lista refleja los campos declarados en cada definición CMS en el momento de la consulta. No declara que todos sean obligatorios ni que todos tengan un consumidor activo. Los campos de sistema Wix `_id`, `_createdDate`, `_updatedDate` y `_owner` se omiten de las listas siguientes cuando están presentes.
+
+- **CajaActual (rev. 47):** `netAmount:NUMBER`, `closedBy:TEXT`, `sequenceCounters:OBJECT`, `versionState:NUMBER`, `stateHash:TEXT`, `lastMovementAt:DATETIME`, `differenceReason:TEXT`, `difference:NUMBER`, `countedCash:NUMBER`, `expectedCash:NUMBER`, `cashAmount:NUMBER`, `totalOutAmount:NUMBER`, `totalInAmount:NUMBER`, `paymentAmount:NUMBER`, `paymentCount:NUMBER`, `refundAmount:NUMBER`, `refundCount:NUMBER`, `salesAmount:NUMBER`, `salesCount:NUMBER`, `otherAmount:NUMBER`, `voucherAmount:NUMBER`, `cardAmount:NUMBER`, `openedBy:TEXT`, `openingAmount:NUMBER`, `closedAt:DATETIME`, `openedAt:DATETIME`, `traceId:TEXT`, `staffResourceId:TEXT`, `operationDate:DATE`, `cashRegisterStatus:TEXT`, `singletonKey:TEXT`, `isOpen:BOOLEAN`, `id:TEXT`, `currentSequence:NUMBER`, `fiscalPeriod:TEXT`.
+- **CitasF2 (rev. 31):** `slotStart:DATETIME`, `timeZone:TEXT`, `noShowReason:TEXT`, `noShowAt:DATETIME`, `changeLog:OBJECT`, `cancellationReason:TEXT`, `canceledAt:DATETIME`, `privacyNoticePurpose:TEXT`, `privacyNoticeAcceptedAt:DATETIME`, `privacyNoticeVersion:TEXT`, `totalAmount:NUMBER`, `slotEnd:DATETIME`, `bookingId:TEXT`, `traceId:TEXT`, `bookingType:TEXT`, `bookingStatus:TEXT`, `paymentStatus:TEXT`, `serviceId:TEXT`, `resourceId:TEXT`, `pairToken:TEXT`, `dateYmd:TEXT`, `scheduleId:TEXT`, `contactDetails:OBJECT`, `thirdPartyId:TEXT`, `catalogId:TEXT`, `cashMovementId:TEXT`, `fiscalData:OBJECT`, `invoicingDate:DATETIME`, `sourceEventId:TEXT`, `revision:NUMBER`, `meta:OBJECT`.
+- **ComplementosCatalogo (rev. 138):** `sku:TEXT`, `taxIncluded:BOOLEAN`, `durationMinutes:NUMBER`, `tipoImpositivo:NUMBER`, `addonId:TEXT`, `traceId:TEXT`, `name:TEXT`, `description:RICH_TEXT`, `price:NUMBER`, `itemNature:TEXT`, `codigoImpuesto:TEXT`, `claveRegimen:TEXT`, `cuentaContableIngreso:TEXT`, `ServiciosCatalogo_name:MULTI_REFERENCE`.
+- **ControlOperativo (rev. 24):** `controlType:TEXT`, `dedupeKey:TEXT`, `traceId:TEXT`, `status:TEXT`, `eventId:TEXT`, `expiresAt:DATETIME`, `bookingId:TEXT`, `pairToken:TEXT`, `resourceId:TEXT`, `serviceId:TEXT`, `slotStart:DATETIME`, `slotEnd:DATETIME`, `dateYmd:TEXT`, `transactionId:TEXT`, `orderId:TEXT`, `refundId:TEXT`, `kind:TEXT`, `attempts:NUMBER`, `maxAttempts:NUMBER`, `nextRetryAt:DATETIME`, `lastError:TEXT`, `totalAmount:NUMBER`, `operationDescription:TEXT`, `severity:TEXT`, `alertType:TEXT`, `message:TEXT`, `surface:TEXT`, `requesterKey:TEXT`, `requestCount:NUMBER`, `windowStart:DATETIME`, `retryAfter:NUMBER`, `payload:OBJECT`, `version:NUMBER`, `processedAt:DATETIME`, `leaseExpiresAt:DATETIME`, `heartbeatAt:DATETIME`, `attempt:NUMBER`.
+- **DatosFiscales (rev. 10):** `taxId:TEXT`, `recordType:TEXT`, `thirdPartyType:TEXT`, `legalName:TEXT`, `commercialName:TEXT`, `address:TEXT`, `postalCode:TEXT`, `province:TEXT`, `country:TEXT`, `email:TEXT`, `phone:TEXT`, `taxRegime:TEXT`, `verifactuEnabled:BOOLEAN`, `verifactuVersion:TEXT`, `tipoUsoPosibleMultiOT:BOOLEAN`, `indicadorMultiplesOT:BOOLEAN`, `fechaInicioVerifactu:DATE`.
+- **HistoricoCierresZ (rev. 36):** `totalTips:NUMBER`, `snapshotJSON:TEXT`, `closedAt:DATETIME`, `timeZone:TEXT`, `closingSchemaVersion:TEXT`, `closingSource:TEXT`, `auditedRecordsCount:NUMBER`, `taxTypeBreakdown:OBJECT`, `movementTypeBreakdown:OBJECT`, `endTicketNumber:TEXT`, `startTicketNumber:TEXT`, `totalOperations:NUMBER`, `totalAdjustments:NUMBER`, `closeDate:DATE`, `totalRefunds:NUMBER`, `fiscalPeriod:TEXT`, `totalTaxAmount:NUMBER`, `totalTaxBase:NUMBER`, `totalOnline:NUMBER`, `totalBizum:NUMBER`, `totalCard:NUMBER`, `totalCash:NUMBER`, `closedBy:TEXT`, `recordDomain:TEXT`, `closingStatus:TEXT`, `operationDate:DATE`, `consolidatedTotalAmount:NUMBER`, `grossSalesTotal:NUMBER`, `netTaxableAmount:NUMBER`, `netTaxAmount:NUMBER`, `totalesMedioPago:OBJECT`, `startSequence:NUMBER`, `endSequence:NUMBER`, `startRecordHash:TEXT`, `endRecordHash:TEXT`, `isIntegrityVerified:BOOLEAN`, `closingHash:TEXT`, `closingSignature:TEXT`, `closingSignatureStatus:TEXT`, `verifiedAt:DATETIME`, `approverUser:TEXT`, `estadoEnvioAEAT:TEXT`, `traceId:TEXT`, `inventoryClosingId:TEXT`, `fiscalYear:NUMBER`, `closingType:TEXT`, `sku:TEXT`, `wixProductId:TEXT`, `stockQuantity:NUMBER`, `unitCost:NUMBER`, `stockValue:NUMBER`, `cuentaContable:TEXT`, `summaryData:OBJECT`, `invoiceData:OBJECT`, `packageStatus:TEXT`, `packageVersion:NUMBER`, `sentTo:TEXT`, `sentAt:DATETIME`.
+- **InventarioStockVenta (rev. 20):** `name:TEXT`, `catalogVersion:TEXT`, `locationId:TEXT`, `stockKey:TEXT`, `lastInventoryMovementId:TEXT`, `lastInventoryMovementAt:DATETIME`, `location:TEXT`, `tipoImpositivo:NUMBER`, `taxIncluded:BOOLEAN`, `price:NUMBER`, `sku:TEXT`, `stockOnHand:NUMBER`, `stockReserved:NUMBER`, `stockAvailable:NUMBER`, `wixProductId:TEXT`, `wixVariantId:TEXT`, `traceId:TEXT`, `stockId:TEXT`, `productId:TEXT`, `variantId:TEXT`, `stockMinimo:NUMBER`, `reorderPoint:NUMBER`, `reorderQuantity:NUMBER`, `needsWixReconciliation:BOOLEAN`, `lastSyncAt:DATETIME`.
+- **LibroAsientosContablesDetalle (rev. 25):** `desgloseDetallado:OBJECT`, `entryId:TEXT`, `recordTimestamp:DATETIME`, `cashMovementId:TEXT`, `concept:TEXT`, `lineNumber:NUMBER`, `origenTipo:TEXT`, `origenRegistro:TEXT`, `sourceMovementId:TEXT`, `entryDate:DATE`, `fiscalPeriod:TEXT`, `accountCode:TEXT`, `debitAmount:NUMBER`, `creditAmount:NUMBER`, `accountingAmount:NUMBER`, `payloadFiscal:OBJECT`, `recordHash:TEXT`, `previousRecordHash:TEXT`, `idSistemaInformatico:TEXT`, `bookingId:TEXT`, `orderId:TEXT`, `resourceId:TEXT`, `traceId:TEXT`.
+- **MapaStaff (rev. 23):** `displayName:TEXT`, `staffMemberId:TEXT`, `scheduleId:TEXT`, `thirdPartyId:TEXT`, `staffName:TEXT`, `rolWebsite:TEXT`, `rolBookings:TEXT`, `memberId:TEXT`, `resourceId:TEXT`, `active:BOOLEAN`, `sortOrder:NUMBER`, `sourceSystem:TEXT`, `schemaVersion:NUMBER`, `ServiciosCatalogo_staffMembers:MULTI_REFERENCE`.
+- **MovimientosCaja (rev. 76):** `resourceId:TEXT`, `payloadAEAT:OBJECT`, `NIFEmisor:TEXT`, `NIFDestinatario:TEXT`, `IRPFWithholdingRate:NUMBER`, `IRPFWithholdingAmount:NUMBER`, `baseImponibleOImporteNoSujeto:NUMBER`, `signatureAlgorithm:TEXT`, `hashAlgorithm:TEXT`, `verificationQR:TEXT`, `digitalSignature:TEXT`, `generationTimestamp:DATETIME`, `serviceIdRedeemed:TEXT`, `giftCardOperation:TEXT`, `giftCardId:TEXT`, `accountingSign:NUMBER`, `lineItems:OBJECT`, `recordSource:TEXT`, `desgloseDetallado:OBJECT`, `bankReconciliationReference:TEXT`, `vatAccrualStatus:TEXT`, `linkedAdvanceId:TEXT`, `article20Exempt:BOOLEAN`, `cashBasisRegime:BOOLEAN`, `nonSubjectReason:TEXT`, `issuerThirdPartyTaxId:TEXT`, `thirdPartyLegalName:TEXT`, `issuedByThirdPartyOrRecipient:TEXT`, `isB2B:BOOLEAN`, `issuerLegalName:TEXT`, `correctionAmount:NUMBER`, `issuerInvoiceNumber:TEXT`, `previousInvoiceIssueDate:DATE`, `previousInvoiceNumber:TEXT`, `correctionReason:TEXT`, `withholdingBase:NUMBER`, `surchargeRate:NUMBER`, `linkedBookingIds:ARRAY_STRING`, `bookingId:TEXT`, `hash:TEXT`, `amount:NUMBER`, `taxAmount:NUMBER`, `taxBase:NUMBER`, `numSerieFactura:TEXT`, `sequenceNumber:NUMBER`, `transactionId:TEXT`, `previousRecordHash:TEXT`, `recordTimestamp:DATETIME`, `schemaVersion:TEXT`, `traceId:TEXT`, `movementType:TEXT`, `totalAmount:NUMBER`, `paymentMethod:TEXT`, `channelType:TEXT`, `operationDescription:TEXT`, `staffResourceId:TEXT`, `tipoFactura:TEXT`, `fechaExpedicionFactura:DATE`, `fechaOperacion:DATE`, `tipoImpositivo:NUMBER`, `recipientLegalName:TEXT`, `recipientAddress:OBJECT`, `payloadFiscal:OBJECT`, `sistemaInformatico:OBJECT`, `estadoEnvioAEAT:TEXT`, `csvAEAT:TEXT`, `fechaEnvioAEAT:DATETIME`, `tipoRectificativa:TEXT`, `previousInvoiceId:TEXT`, `claveRegimen:TEXT`, `calificacionOperacion:TEXT`, `operacionExenta:BOOLEAN`, `inversionSujetoPasivo:BOOLEAN`, `surchargeAmount:NUMBER`, `fiscalRole:TEXT`, `eventType:TEXT`, `thirdPartyId:TEXT`, `catalogId:TEXT`, `pairToken:TEXT`, `orderId:TEXT`, `refundId:TEXT`, `fiscalPeriod:TEXT`, `accountingAmount:NUMBER`, `projectionStatus:TEXT`.
+- **MovimientosInventario (rev. 29):** `variantId:TEXT`, `orderId:TEXT`, `productId:TEXT`, `stockApplied:BOOLEAN`, `lineItemId:TEXT`, `catalogVersion:TEXT`, `locationId:TEXT`, `stockKey:TEXT`, `magnitude:NUMBER`, `nativeCommercialMovement:BOOLEAN`, `requiresWixReconciliation:BOOLEAN`, `actorMemberId:TEXT`, `actorEmail:TEXT`, `referenceId:TEXT`, `refundId:TEXT`, `recordTimestamp:DATETIME`, `catalogId:TEXT`, `productName:TEXT`, `reason:TEXT`, `movementToken:TEXT`, `movementType:TEXT`, `sku:TEXT`, `quantityDelta:NUMBER`, `traceId:TEXT`, `direction:TEXT`, `quantity:NUMBER`, `stockBefore:NUMBER`, `stockAfter:NUMBER`, `operationDescription:TEXT`, `sourceEventId:TEXT`, `thirdPartyId:TEXT`, `wixProductId:TEXT`, `wixVariantId:TEXT`, `movementId:TEXT`.
+- **RegistrosHorariosStaff (rev. 10):** `resourceId:TEXT`, `notes:TEXT`, `memberId:TEXT`, `recordedAt:DATETIME`, `clockEventType:TEXT`, `recordType:TEXT`, `traceId:TEXT`, `adjustmentReason:TEXT`, `signature:TEXT`, `recordedTime:TEXT`, `dayKey:TEXT`, `monthKey:TEXT`, `staffName:TEXT`, `registeredBy:TEXT`, `registeredByMemberId:TEXT`, `deviceIpAddress:TEXT`, `meta:OBJECT`.
+- **ServiciosCatalogo (rev. 194):** `sessionCount:NUMBER`, `staffMembers:MULTI_REFERENCE`, `pricingPlanId:TEXT`, `catalogEntryType:TEXT`, `locationId:TEXT`, `description:TEXT`, `serviceId:TEXT`, `title:TEXT`, `slug:TEXT`, `tagLine:TEXT`, `categoryId:TEXT`, `itemNature:TEXT`, `sku:TEXT`, `price:NUMBER`, `currency:TEXT`, `taxIncluded:BOOLEAN`, `tipoImpositivo:NUMBER`, `calificacionOperacion:TEXT`, `totalDuration:NUMBER`, `phase1Duration:NUMBER`, `phase2Duration:NUMBER`, `exposureDuration:NUMBER`, `allowCombine:BOOLEAN`, `linkedPhases:TEXT`, `location:TEXT`, `clientHidden:BOOLEAN`, `onlinePayment:BOOLEAN`, `inPersonPayment:BOOLEAN`, `pricingModel:TEXT`, `depositType:TEXT`, `depositAmount:NUMBER`, `margin:NUMBER`, `internalNotes:TEXT`, `category:TEXT`, `precioCosteBase:NUMBER`, `mainMedia:IMAGE`, `recomendaciones:TEXT`, `name:MULTI_REFERENCE`.
+
+### 14.5 Campos canónicos críticos y matices del contrato
+
+| Campo | Colección | Contrato actual |
+| --- | --- | --- |
+| `taxId` | `DatosFiscales` | Identificador fiscal del tercero; el tipo de registro distingue tercero/configuración. |
+| `bookingId` | `CitasF2` | Identificador de reserva Bookings V2; no equivale a `_id` CMS. |
+| `pairToken` | `CitasF2`, `ControlOperativo`, `MovimientosCaja` | Vincula fases/operaciones de una reserva dual cuando aplica. |
+| `bookingStatus` / `paymentStatus` | `CitasF2` | Estados de la proyección interna; no sustituye al estado nativo Bookings/pagos. |
+| `serviceId` | `ServiciosCatalogo`, `CitasF2`, `ControlOperativo` | ID del servicio Bookings; distinto de `catalogId`. |
+| `catalogId` | Colecciones transaccionales | Referencia al registro CMS de catálogo cuando el flujo la utiliza. |
+| `resourceId` | `CitasF2`, `ControlOperativo`, `RegistrosHorariosStaff`, `MovimientosCaja` | ID del recurso de agenda Bookings; distinto de `staffMemberId` y `memberId`. |
+| `staffMemberId` | Bookings Staff / campo físico en `MapaStaff` | ID del profesional en Bookings Staff; no es el recurso de agenda. |
+| `memberId` | `RegistrosHorariosStaff`, `MapaStaff` | ID de miembro Wix; no equivale a `resourceId`. |
+| `hash` / `previousRecordHash` | `MovimientosCaja` | Cadena de integridad fiscal; conservar claves físicas exactas. |
+| `payloadFiscal` | `MovimientosCaja`, `LibroAsientosContablesDetalle` | Snapshot/payload fiscal canónico en el código actual. `payloadAEAT` también existe físicamente en MovimientosCaja, pero no debe adoptarse como alias nuevo. |
+| `sequenceNumber` / `numSerieFactura` | `MovimientosCaja` | Secuencia y número de documento asignados por el backend. |
+| `debitAmount` / `creditAmount` | `LibroAsientosContablesDetalle` | Nombres físicos actuales de debe/haber; no usar `debit`/`credit`. |
+| `clockEventType` / `recordedAt` | `RegistrosHorariosStaff` | Evento laboral y timestamp original; `recordedTime`, `dayKey`, `monthKey` son campos auxiliares persistidos. |
 | `movementToken` | `MovimientosInventario` | Clave de idempotencia del movimiento de stock. |
-| `traceId` | Transversal | UUID v4 obligatorio de trazabilidad end-to-end. |
+| `stockOnHand` / `stockReserved` / `stockAvailable` | `InventarioStockVenta` | El último es derivado y validado respecto a los dos primeros. |
+| `controlType` / `dedupeKey` | `ControlOperativo` | Discriminador y clave de control; los campos requeridos dependen del subtipo. |
+| `traceId` | Colecciones transaccionales | Correlación de operación cuando el contrato de escritura lo exige. |
 
 ### 14.6 Enums canónicos
 
@@ -1052,23 +1063,25 @@ CONTROL_TYPE    = { SLOT_LOCK, WEBHOOK_EVENT, DEDUPE_KEY,
 | `fiscalAggregator.web.js` | `getQuarterlyTaxSummary` | SiteMember | ADMIN / GESTION |
 | `fiscalDocuments.web.js` | `createManagerPackageVersion` | SiteMember | ADMIN / GESTION |
 
-### 14.9 Resumen de hooks CMS (`backend/data.js`)
+### 14.9 Resumen de hooks CMS (`src/backend/data.js`)
+
+La tabla describe los hooks exportados actualmente en el archivo; no confundir ausencia de hook con ausencia de campo CMS.
 
 | Colección | `beforeInsert` | `beforeUpdate` | `beforeRemove` |
-| :--- | :--- | :--- | :--- |
-| `MovimientosCaja` | Valida `hash`, `schemaVersion`, `traceId`, enums y cuadre `taxBase + taxAmount ≈ amount`. | **Bloqueado** → `FISCAL_VIOLATION`. | **Bloqueado** → `FISCAL_VIOLATION`. |
-| `LibroAsientosContablesDetalle` | Valida partida doble (`debit === credit`). | **Bloqueado**. | **Bloqueado**. |
-| `RegistrosHorariosStaff` | Valida `clockEventType`; `notes` obligatorio si `recordType === "AJUSTE"`. | **Bloqueado**. | **Bloqueado**. |
-| `MovimientosInventario` | Valida `movementToken` único; `reason` obligatorio si `movementType === "AJUSTE"`. | **Bloqueado**. | **Bloqueado**. |
-| `CitasF2` | Valida enums, `traceId`, coherencia `pairToken`. | Actualizaciones controladas. | **Bloqueado**. |
-| `ServiciosCatalogo` | Unicidad `serviceId`/`sku`/`slug`; `totalDuration === phase1 + exposure + phase2`. | Controlado. | Solo ADMIN. |
-| `DatosFiscales` | Valida NIF/NIE/CIF/VAT-UE. | Controlado. | Bloqueado para `CONFIG_SISTEMA_FISCAL`. |
-| `CajaActual` | Valida `singletonKey` ∈ {`CAJA_PRINCIPAL`, `CAJA_SEQ`}. | Solo `CAJA_SEQ` editable. | **Bloqueado**. |
-| `InventarioStockVenta` | Valida `stockAvailable === stockOnHand - stockReserved`. | Controlado. | Solo ADMIN. |
-| `ControlOperativo` | Valida `controlType`, `dedupeKey`, `traceId`. | Controlado. | Controlado. |
-| `MapaStaff` | Unicidad `resourceId`/`memberId`; enums de roles. | Controlado. | Solo ADMIN. |
-| `ComplementosCatalogo` | Unicidad `addonId`/`sku`. | Controlado. | Solo ADMIN. |
-| `HistoricoCierresZ` | Valida firma de cierre. | **Bloqueado**. | **Bloqueado**. |
+| --- | --- | --- | --- |
+| `MovimientosCaja` | Trazabilidad, versión, hash, normalización y validación fiscal. | Bloqueado. | Bloqueado. |
+| `HistoricoCierresZ` | Exige `traceId`. | Solo campos permitidos de firma/verificación. | Bloqueado. |
+| `RegistrosHorariosStaff` | Normaliza `recordedAt`; exige `traceId`. | Bloqueado. | Bloqueado. |
+| `CajaActual` | Solo `CAJA_PRINCIPAL` o `CAJA_SEQ`. | Control de contadores/proyección. | Bloqueado. |
+| `ServiciosCatalogo` | GUIDs, relación de fases, naturaleza, códigos y duraciones. | Mismas validaciones. | Sin hook exportado. |
+| `DatosFiscales` | Validación por tipo de registro y fiscalidad. | Validación por tipo de registro. | Configuración fiscal protegida. |
+| `LibroAsientosContablesDetalle` | Validación contable/fiscal y trazabilidad. | Bloqueado. | Bloqueado. |
+| `ControlOperativo` | Validación según tipo de control. | Controlado. | Controlado. |
+| `MovimientosInventario` | Validación de movimiento, magnitud e idempotencia. | Bloqueado. | Bloqueado. |
+| `InventarioStockVenta` | Fecha de sincronización y stock; disponible calculado/validado. | Mismas validaciones. | Sin hook exportado. |
+| `CitasF2` | Validación de proyección y estados. | Validación de cambios. | Bloqueado. |
+| `ComplementosCatalogo` | Exige `addonId`, `sku` y precio no negativo. | Mismas validaciones. | Sin hook exportado. |
+| `MapaStaff` | Sin hook exportado. | Sin hook exportado. | Sin hook exportado. |
 
 ### 14.10 Códigos de error estandarizados
 
@@ -1081,7 +1094,7 @@ CONTROL_TYPE    = { SLOT_LOCK, WEBHOOK_EVENT, DEDUPE_KEY,
 | `BOOKING_CREATION_FAILED` | Integración | Error en `Bookings Writer V2`. |
 | `CHECKOUT_FAILED` | eCommerce | Error en carrito/checkout. |
 | `AUTH_REQUIRED` | Seguridad | Usuario no autenticado. |
-| `ACCESS_DENIED` | Seguridad | Rol insuficiente en `MapaStaff.rolWebsite`. |
+| `ACCESS_DENIED` | Seguridad | Identidad/rol de negocio no autorizado según Bookings Staff API + `STAFF.WEBSITE_ROLE_BY_RESOURCE_ID`. |
 | `RATE_LIMITED` | Protección | Límite de tasa excedido. |
 | `SLOT_UNAVAILABLE` | Negocio | Slot ya no disponible. |
 | `SERVICE_NOT_FOUND` | Catálogo | `serviceId` o `slug` no registrado. |
@@ -3181,3 +3194,40 @@ Esta guía implementa la **Capa 3 completa** de Marian Madrid usando **exclusiva
 *Guía generada el 6 de febrero de 2027. Basada en la solución técnica Capa 3 diseñada para Marian Madrid Peluquería y Estética, conforme a la Biblia SSOT v10.0, el PTD Kit Digital y la normativa fiscal/laboral española vigente.*
 
 ### Cierre del dossier
+
+---
+
+## ANEXO DE RECONCILIACIÓN CMS Y CÓDIGO — 2026-11-05
+
+Este anexo prevalece sobre cualquier referencia anterior del dossier que contradiga los nombres, tipos, revisiones o estado de uso aquí indicados.
+
+### Fuente y método
+- Sitio: `188bed94-177c-4bc9-a9f0-35080d874f3e`.
+- Wix Data Collections API oficial: `GET /data/v2/collections` y `GET /data/v2/collections/{dataCollectionId}`.
+- Se consultó la lista completa y después la definición individual de cada una de las 13 colecciones de negocio.
+- Solo lectura: no se crearon, actualizaron ni eliminaron colecciones o registros.
+- Repositorio contrastado: rama `main` en el commit `2eaafe309d2592eb004b4a4dcace53c3bed09cff`.
+- Código revisado: `internalConfig.js`, `data.js`, `validation.js`, `staff.js`, `security.js`, `reservas.web.js`, `cajas.web.js`, `eventLog.js`, `inventario.web.js` y `horario.web.js`.
+
+### Discrepancias físicas/código que requieren decisión técnica
+
+1. **MovimientosCaja — payload fiscal:** el CMS conserva `payloadAEAT:OBJECT` y `payloadFiscal:OBJECT`. El código actual usa `payloadFiscal` como clave canónica y normaliza claves históricas; no introducir nuevas escrituras con `payloadAEAT` como alias.
+2. **HistoricoCierresZ — campos de proyección:** el esquema físico contiene `taxTypeBreakdown`, `movementTypeBreakdown`, `summaryData`, `invoiceData`, `totalesMedioPago`, etc. El comentario de `eventLog.js` reconoce que su proyección escribe además `breakdownByRegime`, `breakdownByOperationType`, `breakdownByTaxRate` y `verifactuSummary`, que no aparecen en el esquema leído. Debe acordarse una única nomenclatura antes de ampliar esa proyección.
+3. **HistoricoCierresZ — dominio mixto:** la misma colección contiene campos fiscales/cierre y campos de inventario (`inventoryClosingId`, `fiscalYear`, `closingType`, `sku`, `wixProductId`, `stockQuantity`, `unitCost`, `stockValue`, `cuentaContable`). La separación de cierres de inventario merece ADR; no renombrar ni mover campos sin migración.
+4. **LibroAsientosContablesDetalle:** los nombres físicos actuales son `debitAmount` y `creditAmount`; cualquier referencia a `debit` y `credit` en documentación o código debe corregirse tras revisar todos los consumidores.
+5. **RegistrosHorariosStaff:** el esquema tiene tanto `notes` como `adjustmentReason`; el writer actual utiliza `adjustmentReason`. No documentar `notes` como campo obligatorio del ajuste.
+6. **CitasF2:** existen físicamente `cashMovementId`, `fiscalData`, `invoicingDate` y `sourceEventId`; el contrato actual de `BOOKING_FIELDS` no incluye algunos campos históricos/huérfanos. La presencia física no autoriza a reintroducirlos sin consumidor y ADR.
+7. **ControlOperativo:** coexisten `attempts` y `attempt`, además de `expiresAt` y `leaseExpiresAt`. La consolidación requiere inventario de consumidores y migración; no hacer una sustitución global.
+8. **DatosFiscales:** los tipos físicos de `tipoUsoPosibleMultiOT` e `indicadorMultiplesOT` son BOOLEAN. Validar el contrato del writer contra esos tipos antes de añadir nuevos campos o cambiar tipos.
+9. **MapaStaff:** la colección y campos siguen en CMS (incluidos `staffMemberId` y `active`), pero `staff.js` resuelve staff por Bookings Staff API y el rol desde `internalConfig.js`. No eliminar la colección/campos hasta completar el inventario de lectores, escritores y datos históricos.
+10. **ServiciosCatalogo:** el esquema contiene `staffMembers` y `name` como MULTI_REFERENCE, y `linkedPhases` como TEXT. No confundir estos campos con arrays de IDs de transporte ni cambiar sus tipos desde el código sin reconciliar Wix CMS.
+
+### Regla de mantenimiento documental
+
+Cuando cambie una colección:
+1. Leer primero su definición CMS real (ID, `collectionType`, `revision`, campos y tipos).
+2. Comparar con `BUSINESS_COLLECTIONS` / `OPERATIONAL_COLLECTIONS`, writers, readers y hooks.
+3. Clasificar cada campo como activo, físico no consumido, legacy retenido o derivado/proyección.
+4. No eliminar ni renombrar campos en producción sin ADR, copia de seguridad, plan de migración y lectura de compatibilidad.
+5. Actualizar este anexo y la matriz de trazabilidad con el SHA y revisión CMS observados.
+
