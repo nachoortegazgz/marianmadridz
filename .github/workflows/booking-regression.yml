@@ -29,4 +29,5 @@ jobs:
       - name: Run offline regression suite
         run: npm test
       - name: Run ESLint
+        if: always()
         run: npm run lint
