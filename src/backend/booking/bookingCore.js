@@ -1,18 +1,30 @@
 /*
 MODULE: backend/booking/bookingCore.js
-VERSION: v5020-CART-V2-ITEM-VALIDATION
-BASE: v5018-SDK-BOOKED-SLOT-SHAPE + Cart V2 checkout
+VERSION: v5021-WIX-V2-ID-CONTRACT
+BASE: v5020-CART-V2-ITEM-VALIDATION
 RESPONSIBILITY: Primitivas atomicas de reserva (simple y dual con gap),
 Bookings Writer V2, checkout Cart V2 de F1, locks, idempotencia,
 persistencia CitasF2, proyeccion de slots y traduccion de enums en frontera.
 
+CORRECCIONES v5021 (alineadas con la documentacion oficial de Wix Bookings V2):
+  WIX-V2-ID-01 (P0): _resolveWriteLocation devuelve `{ id, locationType }`,
+    no `{ _id, locationType }`. El contrato oficial de BookedSlot.Location
+    es `{ id, name, formattedAddress, locationType }` (id, NO _id).
+    Ref: https://dev.wix.com/docs/api-reference/business-solutions/bookings/
+    bookings/bookings-writer-v2/create-booking
+  WIX-V2-ID-02 (P0): _forceStaffInPristineSlot devuelve
+    `resource: { id }`, no `resource: { _id }`. El contrato oficial de
+    BookedSlot.Resource es `{ id, name, email, scheduleId }`.
+  WIX-V2-ID-03 (P1): _forceStaffInPristineSlot acepta
+    `resourceCandidate.id` (fallback a `_id` para compatibilidad).
+  WIX-V2-ID-04 (P1): _projectCertifiedSlot lee `location.id` (antes ._id)
+    para construir `locationId` interno.
+  LOG-NOISE-01 (P2): eliminado el log.warn de thirdPartyId en
+    _persistBooking. El campo es OPCIONAL en Bookings Writer V2.
+
 CORRECCIONES v5017-STRONG-QUERY:
   CORE-52 (P0): elevatedQueryFind llamaba q.find() sin consistencyMode,
-    degradando TODAS las queries a eventual. Afectaba a:
-    _persistBooking (deteccion de duplicados), _updateCitaSafe (read-
-    modify-write), _rankResourcesByLoad (ranking sobre datos potencialmente
-    obsoletos), _getTransactionById/_writeTransaction (idempotencia),
-    _getLock (locks). Ahora find({consistencyMode:"strong"}).
+    degradando TODAS las queries a eventual. Ahora find({consistencyMode:"strong"}).
 
 CART-01: Cart V2 solo entrega checkout si el carrito calculado contiene
     exactamente la reserva F1 esperada y no declara el item como no disponible.
@@ -87,10 +99,7 @@ const elevatedGet = function (collection, id) {
 };
 
 /**
- * CORE-52: lectura fuerte obligatoria. v5016 ejecutaba q.find() sin
- * consistencyMode -> eventual. Afecta a _persistBooking (duplicados),
- * _updateCitaSafe (RMw), _rankResourcesByLoad (ranking), y helpers de
- * transacciones. v5017 fuerza strong.
+ * CORE-52: lectura fuerte obligatoria.
  */
 function elevatedQueryFind(collection, queryFn) {
     return Promise.resolve(queryFn(dalQuery(collection))).then(function (q) {
@@ -136,8 +145,6 @@ export const ERROR_CODES = Object.freeze({
 
 // =============================================================================
 // BLOQUE 2 - ENUMS EN FRONTERA
-// CERO-DEUDA ZC-07: eliminados los alias exportados CMS_BOOKING_STATUS /
-// CMS_PAYMENT_STATUS (rebinding de CITAS_* sin consumidores externos).
 // =============================================================================
 const CMS_BOOKING_CANCELLED =
     (CITAS_BOOKING_STATUS &&
@@ -244,10 +251,6 @@ function _deriveCmsBookingStatus(cmsPaymentStatus) {
 // =============================================================================
 export const cancelBookingElevated = auth.elevate(bookings.cancelBooking);
 
-// Keep Cart V2 calls on the active visitor/member identity. Wix's appointment
-// flow requires the same customer identity for cart creation, calculation,
-// and checkout URL retrieval; these customer-scoped methods do not need
-// administrative elevation.
 export const createCartV2 = cartV2.createCart;
 export const calculateCartV2 = cartV2.calculateCart;
 export const getCartV2CheckoutUrl = cartV2.getCheckoutUrl;
@@ -510,10 +513,6 @@ export function _handleError(error, context, traceId, logFn) {
 // =============================================================================
 // BLOQUE 5 - HELPERS BAJO NIVEL
 // =============================================================================
-// MATRIZ v15: ControlOperativo usa la clave canonica "payload" (objeto
-// estructurado). payloadJson quedo erradicado como clave fisica; los docs
-// historicos que aun la conservan se leen via readControlPayload (lectura
-// dual con tolerancia, promovida destructivamente en el hook beforeUpdate).
 function _readControlPayload(doc) {
     return readControlPayload(doc);
 }
@@ -612,25 +611,28 @@ function _readSlotLocalEnd(slot) {
 
 const CONFIGURED_LOCATION_ID = _safeTrim(SDK_CONFIG && SDK_CONFIG.LOCATION_ID);
 
+/**
+ * WIX-V2-ID-01: BookedSlot.Location usa `id`, no `_id`.
+ * Ref: https://dev.wix.com/docs/api-reference/business-solutions/bookings/
+ *      bookings/bookings-writer-v2/create-booking
+ * NOTA: NO usar Object.freeze. El SDK de Wix Bookings V2 muta este objeto
+ * al normalizar el payload (renameKeysFromSDKRequestToRESTRequest).
+ */
 export function _resolveWriteLocation(slotLocation, serviceConfig) {
     const incoming = _safeTrim(slotLocation && slotLocation._id);
     const fromCms = _safeTrim(serviceConfig && serviceConfig.locationId);
-    // NOTA: NO usar Object.freeze. El SDK de Wix Bookings V2 muta
-    // este objeto al normalizar el payload (renombra _id → id internamente).
-    // Congelarlo produce "Cannot add property id, object is not extensible"
-    // dentro de createBooking.
     if (incoming) {
         return _looksLikeGuid(incoming)
-            ? { _id: incoming, locationType: "OWNER_BUSINESS" }
+            ? { id: incoming, locationType: "OWNER_BUSINESS" }
             : null;
     }
     if (fromCms) {
         return _looksLikeGuid(fromCms)
-            ? { _id: fromCms, locationType: "OWNER_BUSINESS" }
+            ? { id: fromCms, locationType: "OWNER_BUSINESS" }
             : null;
     }
     return _looksLikeGuid(CONFIGURED_LOCATION_ID)
-        ? { _id: CONFIGURED_LOCATION_ID, locationType: "OWNER_BUSINESS" }
+        ? { id: CONFIGURED_LOCATION_ID, locationType: "OWNER_BUSINESS" }
         : null;
 }
 
@@ -651,8 +653,12 @@ export async function _forceStaffInPristineSlot(
     }
     const resourceCandidate =
         slot.resource && typeof slot.resource === "object" ? slot.resource : {};
+    /* WIX-V2-ID-03: acepta `id` (contrato V2) con fallback a `_id` (legacy). */
     const resourceIdClean = _safeTrim(
-        resourceId || slot.resourceId || resourceCandidate._id
+        resourceId ||
+            slot.resourceId ||
+            resourceCandidate.id ||
+            resourceCandidate._id
     );
     if (!resourceIdClean || !_looksLikeGuid(resourceIdClean)) {
         log.error("_forceStaffInPristineSlot: invalid resourceId", {
@@ -702,20 +708,18 @@ export async function _forceStaffInPristineSlot(
         });
         return null;
     }
+    /* WIX-V2-ID-02: BookedSlot.Resource usa `id`, no `_id`. */
     return {
         serviceId: serviceId,
         scheduleId: scheduleId,
         startDate: startDate.toISOString(),
         endDate: endDate.toISOString(),
         timezone: _safeTrim(SDK_CONFIG && SDK_CONFIG.TZ) || "Europe/Madrid",
-        resource: { _id: resourceIdClean }, 
+        resource: { id: resourceIdClean },
         location,
     };
 }
 
-// =============================================================================
-// BLOQUE 8 - CHECKOUT URL HELPER
-// =============================================================================
 // =============================================================================
 // BLOQUE 9 - SLOT KEYS
 // =============================================================================
@@ -770,9 +774,6 @@ export function parseResourceIdFromSlotKey(slotKey) {
     return _looksLikeGuid(resourceId) ? resourceId : "";
 }
 
-// CERO-DEUDA ZC-07: canonicaliza a parseResourceIdFromSlotKey (el shadow
-// _parseResourceIdFromSlotKey era un alias sin sentido; el test que lo
-// consumia usa ahora el nombre canonico).
 export const _buildLockKeys = buildLockKeys;
 export function buildLockKeys(phases, resourceId) {
     const keys = (Array.isArray(phases) ? phases : [])
@@ -1061,9 +1062,6 @@ function _extractBookingIdFromResult(result) {
 
 function _buildTransactionControl(pairToken, state, existingDoc) {
     const payload = Object.assign({}, state);
-    // MATRIZ v15: "payload" canonico (objeto estructurado). El limite de
-    // tamano se evalua sobre la serializacion; si excede, se recorta el
-    // resultado antes de persistir el objeto.
     if (JSON.stringify(payload).length > TX_PAYLOAD_MAX_CHARS) {
         delete payload.result;
         payload.resultDropped = true;
@@ -1436,13 +1434,9 @@ export async function _persistBooking(params, traceId) {
         _deriveCmsBookingStatus(paymentStatus);
     assertValidEnum(bookingStatus, CITAS_BOOKING_STATUS, "bookingStatus");
     assertValidEnum(paymentStatus, CITAS_PAYMENT_STATUS, "paymentStatus");
+    /* LOG-NOISE-01: thirdPartyId es opcional en Bookings Writer V2.
+       Su ausencia es esperada; no generamos WARN. */
     const thirdPartyId = _safeTrim(p.thirdPartyId || metaObj.thirdPartyId);
-    if (!thirdPartyId) {
-        log.warn("CitasF2 persisted without thirdPartyId (ADR pendiente)", {
-            traceId: traceIdClean,
-            bookingId: bookingId,
-        });
-    }
     const catalogId = _safeTrim(p.catalogId) || serviceId;
     const totalAmount = _roundMoney(
         Number(
@@ -1462,8 +1456,6 @@ export async function _persistBooking(params, traceId) {
         [BOOKING_FIELDS.DATE_YMD]: dateYmd,
         [BOOKING_FIELDS.SLOT_START]: startDateObj,
         [BOOKING_FIELDS.SLOT_END]: endDateObj,
-        // SSOT-KEYFIELD v13: canon DUAL_F1/DUAL_F2 con guion (DUALF1 sin
-        // guion es ID legacy erradicada; normalizeBookingType la promueve).
         [BOOKING_FIELDS.BOOKING_TYPE]: normalizeBookingType(bookingType),
         [BOOKING_FIELDS.REVISION]: Number(p.revision) || 1,
         [BOOKING_FIELDS.STATUS]: bookingStatus,
@@ -1485,9 +1477,6 @@ export async function _persistBooking(params, traceId) {
     });
     if (existing && Array.isArray(existing.items) && existing.items.length > 0) {
         const existingDoc = existing.items[0];
-        // Native Bookings webhooks may race the booking saga. In insert-only
-        // mode, never overwrite a richer custom dual record with a partial
-        // native projection; the caller can update status after this check.
         if (p.insertOnly === true) {
             return { created: false, item: existingDoc, existing: true };
         }
@@ -1509,8 +1498,6 @@ export async function _persistBooking(params, traceId) {
         delete updated._createdDate;
         delete updated._updatedDate;
         delete updated._owner;
-        // SSOT-KEYFIELD-01: "status" es alias legacy ERRADICADO de CitasF2;
-        // la clave canonica es BOOKING_FIELDS.STATUS ("bookingStatus").
         delete updated.status;
         const item = await elevatedUpdate(CITAS_COL, updated);
         return { created: false, item: item };
@@ -1583,13 +1570,6 @@ export function _extractResourceIdsFromSlot(slot) {
 }
 
 // =============================================================================
-// BLOQUE 15 - CONTIGUIDAD / GAP
-// CERO-DEUDA ZC-07: eliminado _areSlotsContiguous (0 consumidores en src/ y
-// tests; la contiguidad real se resuelve via computeGapMinutes inline).
-// La logica de gap canonica vive en bookingUtils.computeGapMinutes.
-// =============================================================================
-
-// =============================================================================
 // BLOQUE 16 - PROYECCION SLOTS
 // =============================================================================
 export function _projectCertifiedSlot(slot, resourceId) {
@@ -1635,15 +1615,12 @@ export function _projectCertifiedSlot(slot, resourceId) {
         bookable: normalized.bookable === true,
         availableResources: _extractResourceIdsFromSlot(normalized),
         timezone: _safeTrim(SDK_CONFIG && SDK_CONFIG.TZ) || "Europe/Madrid",
-        locationId: location._id,
+        /* WIX-V2-ID-04: `location` ahora es `{ id, locationType }`. */
+        locationId: location.id,
         locationName: _safeTrim(slotLocation.name),
         formattedAddress: _safeTrim(slotLocation.formattedAddress),
     };
 }
-
-// CERO-DEUDA ZC-07: eliminado _projectWriterSlotFromAvailability
-// (0 consumidores fuera de su propia definicion; el flujo de escritura usa
-// _projectCertifiedSlot directamente).
 
 // =============================================================================
 // BLOQUE 17 - PAIR TOKEN CANONICO
