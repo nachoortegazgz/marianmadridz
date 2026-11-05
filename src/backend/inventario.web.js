@@ -484,8 +484,8 @@ export async function recordInventoryMovementSafe(identity, movementType, quanti
     stockItem._updatedDate = new Date();
     await update(INVENTARIO_COL, stockItem);
 
-    const recovered = { ...existingMovement, stockApplied: true, _updatedDate: new Date() };
-    await update(MOVIMIENTOS_INV_COL, recovered);
+    // Stock state now carries the durable receipt; keep the movement row immutable.
+    const recovered = { ...existingMovement, applicationConfirmed: true };
     return { status: "SUCCESS", data: recovered, error: null, idempotent: true, recovered: true };
   }
 
