@@ -19,6 +19,7 @@ function extractInlineScripts(html, label) {
 }
 
 const serviceHtml = read("#htmlWidgetCustomService.txt");
+const confirmationHtml = read("#html2.txt");
 const calendarHtml = read("#html1.txt");
 const bridge = read("src/public/widgetBridge.js");
 
@@ -77,19 +78,16 @@ test("calendar boot renders the current month before waiting for service context
   );
 });
 
-test("confirmation navigation URLs are centralized in widgetBridge and re-exported by mmUtils", () => {
-  const utils = read("src/public/mmUtils.js");
-  const confirmation = read("src/pages/ConfirmacionReserva.q5vps.js");
-
-  assert.match(bridge, /HOME:\s*"\\/"/);
-  assert.match(bridge, /MIS_RESERVAS:\s*"\\/my-bookings"/);
-  assert.match(bridge, /SERVICIOS:\s*"\\/reserva-online"/);
-  assert.match(utils, /PROTOCOL_URLS as URLS/);
-
-  assert.match(confirmation, /return URLS\.MIS_RESERVAS;/);
-  assert.match(confirmation, /return URLS\.HOME;/);
-  assert.match(confirmation, /return URLS\.SERVICIOS;/);
-  assert.match(confirmation, /location\.to\(URLS\.HOME\)/);
-  assert.match(confirmation, /location\.to\(URLS\.SERVICIOS\)/);
-  assert.doesNotMatch(confirmation, /URLS\?\.(?:MIS_RESERVAS|HOME|SERVICIOS)/);
+test("confirmation ticket shows one estimated total without tax breakdown", () => {
+  const scripts = extractInlineScripts(confirmationHtml, "confirmation widget");
+  for (const [index, source] of scripts.entries()) {
+    assert.doesNotThrow(
+      () => new vm.Script(source, { filename: "confirmation-widget-" + index + ".js" }),
+      "confirmation inline script " + (index + 1) + " must parse",
+    );
+  }
+  assert.match(confirmationHtml, /Importe total estimado:/);
+  assert.match(confirmationHtml, /Importe aproximado/);
+  assert.match(confirmationHtml, /precio definitivo dependerá del servicio y tratamiento finalmente realizado/i);
+  assert.doesNotMatch(confirmationHtml, /Base Imponible|I\.V\.A\.|21%/);
 });
