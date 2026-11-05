@@ -102,6 +102,21 @@ const VALID_PAYMENT_METHODS = Object.freeze(
 
 const PUBLIC_ERROR_MESSAGE =
     "No se ha podido completar la operación. Inténtalo de nuevo.";
+const NON_RETRYABLE_PUBLIC_CODES = new Set([
+    "BOOKING_STATUS_UNCERTAIN",
+    "BOOKING_RECONCILIATION_PENDING",
+    "BOOKING_RESULT_INCOMPLETE",
+    "STAFF_ASSIGNMENT_MISMATCH",
+    "BOOKING_NOT_CONFIRMED",
+    "CHECKOUT_ASSOCIATION_FAILED",
+    "CITA_PERSIST_FAILED",
+]);
+
+function getPublicErrorMessage(code) {
+    return NON_RETRYABLE_PUBLIC_CODES.has(_safeTrim(code).toUpperCase())
+        ? "No hemos podido verificar la reserva. No vuelvas a intentarlo todavía; contacta con el salón para comprobar su estado."
+        : PUBLIC_ERROR_MESSAGE;
+}
 
 const AVAILABILITY_ATTEMPT_TIMEOUT_MS = 45000;
 const RETRYABLE_READ_CODES = new Set([
@@ -148,7 +163,7 @@ function resultError(code) {
         data: null,
         error: {
             code,
-            message: PUBLIC_ERROR_MESSAGE
+            message: getPublicErrorMessage(code)
         }
     };
 }
@@ -205,7 +220,7 @@ function normalizePublicError(result) {
         ...result,
         error: {
             ...result.error,
-            message: PUBLIC_ERROR_MESSAGE
+            message: getPublicErrorMessage(result.error.code)
         }
     };
 }
