@@ -458,40 +458,68 @@ function _resolveFiscalBase({ amount, taxRate, withholdingBase, irpfWithholdingA
 // ============================================================================
 
 async function _projectToAccountingLedger(movement, traceId) {
-    if (!LIBRO_ASIENTOS_CONTABLES_DETALLE_COL) return;
+    if (!LIBRO_ASIENTOS_CONTABLES_DETALLE_COL) return null;
+
+    const movementId = _safeTrim(movement?._id);
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(movementId)) {
+        throw new Error("ACCOUNTING_SOURCE_MOVEMENT_ID_INVALID");
+    }
+
+    const totalAmount = Math.abs(Number(movement.accountingAmount || movement.totalAmount) || 0);
+    if (totalAmount <= 0) return null;
+
+    const entryId = `ASIENTO_${movementId}`;
+    const existing = await dalGet(LIBRO_ASIENTOS_CONTABLES_DETALLE_COL, entryId, "strong").catch(() => null);
+    if (existing) return existing;
+
+    const method = _safeTrim(movement.paymentMethod).toUpperCase();
+    const accountCode = (method === PAYMENT_METHOD.EFECTIVO) ? "570000" : "572000";
+    const entryDate = movement.fechaOperacion || movement.fechaExpedicionFactura ||
+        new Date().toISOString().slice(0, 10);
+    const linkedBookingIds = Array.isArray(movement.linkedBookingIds)
+        ? movement.linkedBookingIds.map(_safeTrim).filter(Boolean)
+        : _safeTrim(movement.linkedBookingIds)
+            ? _safeTrim(movement.linkedBookingIds).split(",").map((value) => _safeTrim(value)).filter(Boolean)
+            : [];
+
+    const entry = {
+        _id: entryId,
+        entryId,
+        lineNumber: 1,
+        entryDate,
+        fiscalPeriod: movement.fiscalPeriod || entryDate.slice(0, 7),
+        accountCode,
+        concept: movement.operationDescription || "Cobro TPV",
+        debitAmount: totalAmount,
+        creditAmount: totalAmount,
+        accountingAmount: totalAmount,
+        cashMovementId: movementId,
+        sourceMovementId: movementId,
+        origenTipo: "MOVIMIENTOCAJA",
+        origenRegistro: MOVIMIENTOS_CAJA_COL,
+        recordHash: movement.hash || GENESIS_HASH,
+        previousRecordHash: movement.previousRecordHash || GENESIS_HASH,
+        bookingId: linkedBookingIds.length === 1 &&
+            /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(linkedBookingIds[0])
+                ? linkedBookingIds[0]
+                : null,
+        orderId: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(_safeTrim(movement.orderId))
+            ? _safeTrim(movement.orderId)
+            : null,
+        resourceId: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(_safeTrim(movement.staffResourceId || movement.resourceId))
+            ? _safeTrim(movement.staffResourceId || movement.resourceId)
+            : null,
+        recordTimestamp: movement.recordTimestamp || new Date(),
+        traceId: movement.traceId || traceId,
+        _createdDate: new Date(),
+    };
+
     try {
-        const totalAmount = Math.abs(Number(movement.accountingAmount || movement.totalAmount) || 0);
-        if (totalAmount <= 0) return;
-
-        const method = _safeTrim(movement.paymentMethod).toUpperCase();
-        const accountCode = (method === PAYMENT_METHOD.EFECTIVO) ? "570000" : "572000";
-
-        const entry = {
-            entryId: `ASIENTO_${movement.sequenceNumber || movement.transactionId || Date.now()}`,
-            lineNumber: 1,
-            entryDate: movement.fechaOperacion || new Date().toISOString().slice(0, 10),
-            fiscalPeriod: movement.fiscalPeriod || new Date().toISOString().slice(0, 7),
-            accountCode,
-            concept: movement.operationDescription || "Cobro TPV",
-            debitAmount: totalAmount,
-            creditAmount: totalAmount,
-            accountingAmount: totalAmount,
-            cashMovementId: movement._id || null,
-            bookingId: (movement.linkedBookingIds && !movement.linkedBookingIds.includes(",")) ? movement.linkedBookingIds : null,
-            orderId: movement.orderId || null,
-            resourceId: movement.staffResourceId || movement.resourceId || null,
-            recordTimestamp: movement.recordTimestamp || new Date(),
-            traceId: movement.traceId || traceId,
-            _createdDate: new Date(),
-        };
-
-        await dalInsert(LIBRO_ASIENTOS_CONTABLES_DETALLE_COL, entry);
-    } catch (err) {
-        log.warn("Accounting projection to LibroAsientosContablesDetalle failed (non-blocking)", {
-            traceId,
-            transactionId: movement?.transactionId,
-            error: err?.message,
-        });
+        return await dalInsert(LIBRO_ASIENTOS_CONTABLES_DETALLE_COL, entry);
+    } catch (error) {
+        const recovered = await dalGet(LIBRO_ASIENTOS_CONTABLES_DETALLE_COL, entryId, "strong").catch(() => null);
+        if (recovered) return recovered;
+        throw error;
     }
 }
 
