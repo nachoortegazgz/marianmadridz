@@ -1,6 +1,6 @@
 # DOSSIER TÉCNICO CONSOLIDADO — marianmadrid.es versión.z
 
-**Proyecto:** Marian Madrid Peluquería y Estética · **Repositorio canónico en GITHUB:** `nachoortegazgz/marianmadridz` · **QA: www.marianmadrid.es** arquitectura, estado, evidencias y protocolo para su uso como QA. El estado operativo se consulta en el checkpoint más reciente (§32); los datos de prueba y condiciones de validación, en §25; el plan de trabajo, en §26.
+**Proyecto:** Marian Madrid Peluquería y Estética · **Repositorio canónico en GITHUB:** `nachoortegazgz/marianmadridz` · **QA: www.marianmadrid.es** arquitectura, estado, evidencias y protocolo para su uso como QA. El estado operativo se consulta en el checkpoint más reciente (§36); los datos de prueba y condiciones de validación, en §25; el plan de trabajo, en §26.
 
 ## MAPA DE CONTENIDOS
 
@@ -24,7 +24,7 @@
 
 ---
 
-# ROLES Y DIRECTRICES DE COMPORTAMIENTO PARA MODELOS IA — Proyecto marianmadrid.es
+# ANEXO A — ROLES Y DIRECTRICES DE COMPORTAMIENTO PARA MODELOS IA
 
 > **Naturaleza del documento:** instrucciones operativas para cualquier modelo IA que intervenga en el proyecto (arquitectura, código, auditoría, documentación, verificación fiscal-legal). No sustituye a la SSOT v10.0; la **aplica**. En caso de conflicto con la SSOT, prevalece la SSOT y este documento se corrige vía ADR.
 > **Uso:** *system prompt* o como archivo de instrucciones del agente. Los roles (R1–R7) son invocables; las directrices (D1–D20) son **permanentes** y no se desactivan por rol.
@@ -547,11 +547,11 @@ El workflow activo de Preview, sus controles y sus evidencias se describen una s
 
 ---
 
-# RESUMEN EJECUTIVO — DIRECTRICES GENERALES Y OBJETIVOS POR CAPAS
+# ANEXO C — RESUMEN EJECUTIVO: DIRECTRICES GENERALES Y OBJETIVOS POR CAPAS
 
 ---
 
-## 0. Propósito de este documento
+## 1. Propósito de este documento
 
 Fijar la **doctrina única** que gobierna toda acción y decisión del proyecto (código, datos, permisos, integraciones, documentación y operación) y establecer los **tres objetivos sucesivos** que deben cerrarse en orden estricto: **Capa 1** (reservas), **Capa 2** (fiscal-contable-legal) y **Capa 3** (registro externo de seguridad en Microsoft 365). Ninguna capa se declara cerrada sin superar sus criterios de aceptación y sin ADR cuando corresponda.
 
@@ -559,9 +559,9 @@ Fijar la **doctrina única** que gobierna toda acción y decisión del proyecto 
 
 ---
 
-## 1. Directrices generales (doctrina inviolable)
+## 2. Directrices generales (doctrina inviolable)
 
-### 1.2 Mapeo de "profesional" y "100 % buenas prácticas"
+### 2.2 Mapeo de "profesional" y "100 % buenas prácticas"
 
 No se añaden prioridades nuevas que rompan el orden SSOT. Se **materializan** así:
 
@@ -571,7 +571,7 @@ No se añaden prioridades nuevas que rompan el orden SSOT. Se **materializan** a
 | **100 % buenas prácticas** | **ADR obligatorio** para todo cambio estructural; **CI verde** (Vitest + ESLint + instalación limpia) como gate; **QA real en Preview** antes de publicar; `wix.lock` y `velo.dependencies.json` generados por CLI, nunca editados a mano; secretos solo en Secrets Manager. |
 | **Trazabilidad** | `traceId` (UUID v4) obligatorio en toda mutación transaccional; `pairToken`, `dedupeKey`, `movementToken`, `transactionId`, `eventId` como claves de idempotencia. |
 
-### 1.3 Principios operativos
+### 2.3 Principios operativos
 
 1. **Una sola fuente de verdad (SSOT):** cada constante, tipo o esquema vive en un único lugar.
 2. **El CMS y las Wix Apps son autoridad:** Bookings, Members y Stores dictan sus contratos; las colecciones `WIX_APP` son **solo lectura**; mutación exclusivamente vía SDK oficial.
@@ -581,17 +581,17 @@ No se añaden prioridades nuevas que rompan el orden SSOT. Se **materializan** a
 6. **Seguridad por diseño:** `elevate()` acotado a la llamada específica; HMAC-SHA256 con ventana ±60 s; rate limiting persistido en `ControlOperativo`; PII minimizada y enmascarada.
 7. **Precedencia de fuentes ante discrepancia:** aplicar exactamente §A.4 / §4: (1) APIs y SDK oficiales Wix; (2) esquema y registros CMS vivos; (3) SSOT v10.0 y anexo aclaratorio vigente; (4) auditoría, CI y repositorio `main` como evidencia de implementación; (5) hoja de necesidades como objetivo deseado. Ningún resumen, anexo del dossier ni código puede invertir esta jerarquía.
 
-### 1.4 Anti-patrones prohibidos (política de PR)
+### 2.4 Anti-patrones prohibidos (política de PR)
 
 Duplicar validaciones frontend/backend · crear flags o campos sin consumidor · mantener módulos *helper* de un solo uso · aplicar seguridad desproporcionada en rutas internas · abstraer para un proveedor futuro · dejar logs de depuración · reescribir código funcional por estética · comentarios que explican el "qué" · código comentado en repositorio · **sincronizar datos operativos hacia sistemas externos como si fueran autoridad**.
 
 ---
 
-## 2. Objetivos sucesivos
+## 3. Objetivos sucesivos
 
 > **Regla de secuencia:** una capa no se inicia hasta que la anterior esté **cerrada y certificada** (CI verde + QA real en Preview + criterios de aceptación cumplidos + ADR si aplica). La Capa 3 no puede adelantar a la Capa 2 porque depende de que los datos fiscales y laborales sean ya fiables y auditables.
 
-### 2.1 Capa 1 — Gestión de reservas simples y duales (Wix Bookings)
+### 3.1 Capa 1 — Gestión de reservas simples y duales (Wix Bookings)
 
 **Objetivo:** motor de reservas 24/7 fiable, con reserva dual F1+F2 que libera al profesional durante el gap de exposición, sin conflictos de agenda y con compensación determinista ante fallo de F2.
 
@@ -619,7 +619,7 @@ Duplicar validaciones frontend/backend · crear flags o campos sin consumidor ·
 
 ---
 
-### 2.2 Capa 2 — Contabilidad, fiscalidad, cumplimiento legal y registros detallados
+### 3.2 Capa 2 — Contabilidad, fiscalidad, cumplimiento legal y registros detallados
 
 **Objetivo:** sistema fiscal-contable y laboral **auditable al 100 %**, con ledgers inmutables, cadena SHA-256 verificable, cierre Z diario, exportación normalizada a gestoría y registro de jornada inalterable.
 
@@ -663,7 +663,7 @@ Duplicar validaciones frontend/backend · crear flags o campos sin consumidor ·
 
 ---
 
-### 2.3 Capa 3 — Registro externo de seguridad en Microsoft 365 *(nueva — requiere ADR-003)*
+### 3.3 Capa 3 — Registro externo de seguridad en Microsoft 365 *(nueva — requiere ADR-003)*
 
 > **Estado:** **no existe en la SSOT v10.0** ni en la auditoría de migración. Se define aquí como objetivo, **no como diseño aprobado**. Sin ADR-003 aprobado, no se implementa, no se contrata licencia adicional y no se sincroniza ningún dato.
 
@@ -722,7 +722,7 @@ Duplicar validaciones frontend/backend · crear flags o campos sin consumidor ·
 
 ---
 
-## 3. Secuencia, gates y criterios de cierre
+## 4. Secuencia, gates y criterios de cierre
 
 ```
 CAPA 1 ──► CAPA 2 ──► ADR-003 ──► CAPA 3
@@ -745,7 +745,7 @@ CAPA 1 ──► CAPA 2 ──► ADR-003 ──► CAPA 3
 
 ---
 
-## 4. Riesgos transversales (vigilancia permanente)
+## 5. Riesgos transversales (vigilancia permanente)
 
 | Riesgo | Impacto | Mitigación |
 |---|---:|---|
@@ -761,7 +761,7 @@ CAPA 1 ──► CAPA 2 ──► ADR-003 ──► CAPA 3
 
 ---
 
-## 5. Gobernanza
+## 6. Gobernanza
 
 - **Toda decisión estructural** (nueva colección, nueva integración, cambio de versión de API, cambio de autoridad de un dato) se canaliza por **ADR** antes de tocar código.
 - **Toda modificación de código** pasa por CI (Vitest + ESLint + instalación limpia) y, si toca producción, por QA real en Preview.
@@ -970,7 +970,7 @@ La matriz única de profesionales (nombre, `resourceId`, `rolBookings` y `rolWeb
 
 La tabla canónica de `traceId`, `pairToken`, `dedupeKey`, `movementToken`, `transactionId`, `bookingId`, `eventId`, `sequenceNumber` y `numSerieFactura` está en §7.3. No duplicar la tabla aquí.
 
-# Recopilación estructurada de documentación oficial — Wix Apps y APIs (versiones recomendadas)
+# ANEXO E — RECOPILACIÓN ESTRUCTURADA DE DOCUMENTACIÓN OFICIAL: WIX APPS Y APIS
 
 > **Criterio de versión aplicado:** se prioriza **SDK v2 de JavaScript** (`@wix/*`) sobre APIs Velo legacy, salvo donde la SSOT v10.0 §16.3 retiene expresamente `wix-web-module` / `wix-http-functions` como APIs permanentes de Velo. Las APIs marcadas como *Developer Preview* no se recomiendan para producción. Las versiones de paquete corresponden a las fijadas en `package.json` del repositorio `main` (auditoría 30-10-2026).
 
@@ -1300,7 +1300,7 @@ export const getPublicCatalog = webMethod(
 14. **No validar `NO_FEE` en F2** en entorno real antes de fijarlo como contrato.
 15. **Declarar una fase cerrada** solo por tener CI offline verde o dependencias instaladas.
 
-# DOSSIER TÉCNICO — marianmadrid.es (continuación)
+# DOSSIER TÉCNICO F — marianmadrid.es (continuación)
 
 ---
 
@@ -1848,6 +1848,8 @@ Puede: ver sus reservas/calendario, clientes de sus citas, marcar asistencia. No
 - Legislación española citada en §18.
 
 ---
+
+# ANEXO G — CONTEXTO DEL NEGOCIO Y CORRECCIONES ACLARATORIAS
 
 ## 23. Correcciones del anexo aclaratorio (subordinadas a la precedencia §A.4)
 
@@ -3478,7 +3480,7 @@ La búsqueda de sitios Wix por nombre que contenga `QA` no devolvió un sitio se
 
 ANEXO IMPORTANTE. BIBLIA DE COLECCIONES Y KEYFIELDS EN CMS
 
-# Diccionario de colecciones CMS — Marian Madrid
+# ANEXO L — DICCIONARIO DE COLECCIONES CMS — MARIAN MADRID
 
 **Extracción detallada base:** 25-10-2026. **Reconciliación de revisiones, keyfields, tipos y permisos:** 2026-11-01 (solo lectura). **Sitio:** MarianMadrid.es. **Repositorio de referencia:** nachoortegazgz/marianmadridz.
 
