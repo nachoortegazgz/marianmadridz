@@ -9,6 +9,7 @@ const calendarUrl = new URL("../../pages/Calendario%20de%20reservas%202.q39h6.js
 const serviceUrl = new URL("../../pages/Pagina%20de%20servicio%202.xnfr4.js", import.meta.url);
 const calendarSource = await readFile(calendarUrl, "utf8");
 const sagaSource = await readFile(new URL("../booking/bookingSaga.js", import.meta.url), "utf8");
+const availabilitySource = await readFile(new URL("../reservas.web.js", import.meta.url), "utf8");
 const bookingUtilsSource = await readFile(new URL("../booking/bookingUtils.js", import.meta.url), "utf8");
 const serviceSource = await readFile(serviceUrl, "utf8");
 const bridgeSource = await readFile(new URL("../../public/widgetBridge.js", import.meta.url), "utf8");
@@ -59,6 +60,15 @@ test("BOOK-FLOW-FAIL-CLOSED-01 confirmation requires matching staff, confirmed s
   assert.match(calendarSource, /validateBookingResultForConfirmation/);
   assert.match(calendarSource, /CHECKOUT_ASSOCIATION_FAILED/);
   assert.match(calendarSource, /BOOKING_NOT_CONFIRMED/);
+});
+
+test("BOOK-FLOW-STAFF-BALANCE-01 dual phases use the common available staff pool and one selected resource", () => {
+  assert.match(availabilitySource, /candidateResourceIds = candidateResourceIds\.filter\(\(id\) => candidatesF2\.includes\(id\)\)/);
+  assert.match(availabilitySource, /_pickLeastLoadedResource\(candidateResourceIds, dateYMD, traceId\)/);
+  assert.match(availabilitySource, /STAFF-BALANCE-02: common staff assigned to requested phases/);
+  assert.match(sagaSource, /_forceStaffInPristineSlot\([\s\S]{0,300}finalResourceId[\s\S]{0,150}linkedPhases/);
+  assert.match(sagaSource, /selectedPaymentOption: BOOKING_PAYMENT_OPTION_OFFLINE/);
+  assert.match(sagaSource, /bookingBodyF1\.selectedPaymentOption = isOnline/);
 });
 
 test("BOOK-FLOW-IDEMPOTENCY-01 pair fingerprint and payload hash exclude auto-balanced resourceId", () => {
