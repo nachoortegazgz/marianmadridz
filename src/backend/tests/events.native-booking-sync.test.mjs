@@ -108,12 +108,17 @@ test("EVENT-BOOKING-01 native confirmation creates a canonical CitasF2 projectio
   assert.equal(markers.filter(row => row.dedupeKey === "WEBHOOK_evt-native-confirm-001").length, 1);
 });
 
-test("EVENT-BOOKING-02 confirmation preserves custom dual metadata and pair token", async () => {
+test("EVENT-BOOKING-02 confirmation preserves custom dual row when webhook omits resource", async () => {
   wixDataMock._reset();
   wixDataMock._store.set("CitasF2", [seedCita()]);
 
+  const booking = nativeBooking({
+    _id: BOOKING_ID,
+    status: "CONFIRMED",
+    bookedEntity: { title: "QA Corte Clásico", slot: { serviceId: SERVICE_ID } },
+  });
   const result = await events.wixBookingsV2_onBookingConfirmed(
-    bookingConfirmedEvent("evt-native-confirm-002", nativeBooking({ _id: BOOKING_ID, status: "CONFIRMED" }))
+    bookingConfirmedEvent("evt-native-confirm-002", booking)
   );
 
   assert.equal(result.status, "OK");
@@ -254,6 +259,61 @@ test("EVENT-BOOKING-05 order cancellation matches the Bookings catalog GUID and 
   }
 });
 
+
+
+const STAFF_MEMBER_ID = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee";
+
+test("EVENT-BOOKING-07 maps staffMemberId to resourceId and scheduleId for a new native projection", async () => {
+  wixDataMock._reset();
+  wixDataMock._store.set("MapaStaff", [{
+    _id: "mapa-staff-1",
+    staffMemberId: STAFF_MEMBER_ID,
+    resourceId: RESOURCE_ID,
+    scheduleId: SCHEDULE_ID,
+    active: true,
+    rolBookings: "STAFF",
+    rolWebsite: "ESTILISTA",
+  }]);
+
+  const booking = nativeBooking({
+    _id: "88888888-8888-4888-8888-888888888888",
+    staffMemberId: STAFF_MEMBER_ID,
+    bookedEntity: {
+      title: "QA booking mapped staff",
+      slot: { serviceId: SERVICE_ID, startDate: "2026-10-22T09:00:00.000Z", endDate: "2026-10-22T09:30:00.000Z" },
+    },
+  });
+  const result = await events.wixBookingsV2_onBookingConfirmed(
+    bookingConfirmedEvent("evt-native-confirm-007", booking)
+  );
+
+  assert.equal(result.status, "OK");
+  assert.equal(result.ledgerCreated, true);
+  const row = (wixDataMock._store.get("CitasF2") || [])[0];
+  assert.equal(row.resourceId, RESOURCE_ID);
+  assert.equal(row.scheduleId, SCHEDULE_ID);
+});
+
+test("EVENT-BOOKING-08 refuses ambiguous active MapaStaff mappings", async () => {
+  wixDataMock._reset();
+  wixDataMock._store.set("MapaStaff", [
+    { _id: "mapa-staff-a", staffMemberId: STAFF_MEMBER_ID, resourceId: RESOURCE_ID, scheduleId: SCHEDULE_ID, active: true },
+    { _id: "mapa-staff-b", staffMemberId: STAFF_MEMBER_ID, resourceId: "99999999-9999-4999-8999-999999999999", scheduleId: SCHEDULE_ID, active: true },
+  ]);
+  const booking = nativeBooking({
+    _id: "77777777-7777-4777-8777-777777777777",
+    staffMemberId: STAFF_MEMBER_ID,
+    bookedEntity: { title: "QA ambiguous mapping", slot: { serviceId: SERVICE_ID } },
+  });
+
+  const result = await events.wixBookingsV2_onBookingConfirmed(
+    bookingConfirmedEvent("evt-native-confirm-008", booking)
+  );
+  assert.equal(result.status, "RETRY_REQUIRED");
+  assert.equal(result.reason, "MAPA_STAFF_ACTIVE_MAPPING_AMBIGUOUS");
+  assert.equal((wixDataMock._store.get("CitasF2") || []).length, 0);
+  assert.equal((wixDataMock._store.get("ControlOperativo") || []).length, 0);
+});
 
 test("EVENT-BOOKING-06 native Bookings V2 cancellation consumes metadata.id + data.booking._id", async () => {
   wixDataMock._reset();
