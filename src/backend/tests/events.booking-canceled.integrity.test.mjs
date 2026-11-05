@@ -14,7 +14,7 @@ const CONTROL_COLLECTION = IC.OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
 function canceledEvent() {
   return {
     metadata: { id: EVENT_ID },
-    data: { booking: { _id: BOOKING_ID, status: 'CANCELED' } },
+    entity: { id: BOOKING_ID, status: 'CANCELED' },
   };
 }
 

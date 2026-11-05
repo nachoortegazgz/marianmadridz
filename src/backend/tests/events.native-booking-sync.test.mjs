@@ -13,7 +13,7 @@ const PAIR_TOKEN = "55555555-5555-4555-8555-555555555555";
 
 function nativeBooking(overrides = {}) {
   return {
-    _id: BOOKING_ID,
+    id: BOOKING_ID,
     revision: 3,
     status: "CONFIRMED",
     paymentStatus: "UNDEFINED",
@@ -48,7 +48,7 @@ function nativeBooking(overrides = {}) {
 }
 
 function bookingConfirmedEvent(eventId, booking) {
-  return { metadata: { id: eventId }, data: { booking } };
+  return { metadata: { id: eventId }, entity: booking };
 }
 
 function seedCita(overrides = {}) {
@@ -113,7 +113,7 @@ test("EVENT-BOOKING-02 confirmation preserves custom dual row when webhook omits
   wixDataMock._store.set("CitasF2", [seedCita()]);
 
   const booking = nativeBooking({
-    _id: BOOKING_ID,
+    id: BOOKING_ID,
     status: "CONFIRMED",
     bookedEntity: { title: "QA Corte Clásico", slot: { serviceId: SERVICE_ID } },
   });
@@ -144,7 +144,7 @@ test("EVENT-BOOKING-03 repairs a processed webhook whose CitasF2 row is missing"
   }]);
 
   const result = await events.wixBookingsV2_onBookingConfirmed(
-    bookingConfirmedEvent("evt-native-confirm-003", nativeBooking({ _id: "99999999-9999-4999-8999-999999999999" }))
+    bookingConfirmedEvent("evt-native-confirm-003", nativeBooking({ id: "99999999-9999-4999-8999-999999999999" }))
   );
 
   assert.equal(result.status, "OK");
@@ -276,7 +276,7 @@ test("EVENT-BOOKING-07 maps staffMemberId to resourceId and scheduleId for a new
   }]);
 
   const booking = nativeBooking({
-    _id: "88888888-8888-4888-8888-888888888888",
+    id: "88888888-8888-4888-8888-888888888888",
     staffMemberId: STAFF_MEMBER_ID,
     bookedEntity: {
       title: "QA booking mapped staff",
@@ -327,11 +327,9 @@ test("EVENT-BOOKING-06 native Bookings V2 cancellation consumes metadata.id + da
 
   const result = await events.wixBookingsV2_onBookingCanceled({
     metadata: { id: "evt-native-cancel-006" },
-    data: {
-      booking: {
-        _id: BOOKING_ID,
-        status: "CANCELED",
-      },
+    entity: {
+      id: BOOKING_ID,
+      status: "CANCELED",
     },
   });
 
