@@ -1,6 +1,6 @@
 /**
  * MODULE: pages/servicio-2.js
- * VERSION: v5020-STRICT-ASCII-SERVICE-LOOKUP
+ * VERSION: v5021-CANONICAL-CALENDAR-ROUTE
  */
 
 import { location } from "@wix/site-location";
@@ -458,7 +458,11 @@ function buildBookingUrl(service, payload) {
         );
     }
 
-    const base = "/calendario-2";
+    const base = text(URLS?.CALENDARIO_2);
+
+    if (!base.startsWith("/") || base.startsWith("//")) {
+        throw new Error("La ruta canonica del calendario no esta configurada.");
+    }
 
     const query = new URLSearchParams({
         serviceId,
