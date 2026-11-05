@@ -343,7 +343,10 @@ function validateEventStructure(event, requiredFields) {
  * are deliberately not accepted here as unverified plain objects.
  */
 function _normalizeBookingsEvent(event) {
-    const booking = event?.entity || {};
+    // Wix Editor Velo backend events use metadata + data.booking.
+    // SDK event handlers use metadata + entity; retain entity as a compatible
+    // shape, but do not confuse REST webhook actionEvent envelopes with Velo events.
+    const booking = event?.data?.booking || event?.entity || {};
     const bookingId = _safeTrim(booking?.id || booking?._id || "");
     return {
         eventId: _safeTrim(event?.metadata?.id || ""),
