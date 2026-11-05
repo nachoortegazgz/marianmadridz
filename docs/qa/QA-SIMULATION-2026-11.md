@@ -31,7 +31,7 @@ This pack makes the QA fixtures repeatable and traceable. The machine-readable s
 | Staff identity, authorization and signed timeclock | `site.flows.e2e.test.mjs` | Mock covered |
 | Cash transaction, close Z and hash chain | `site.flows.e2e.test.mjs` | Mock covered with mock signer only |
 | Order total resolution | `orderLedgerAmount.test.mjs` | Mock/unit covered |
-| Inventory lock release | `inventory.lock.release.test.mjs` | Contract only |
+| Inventory sale/refund/idempotency/lock release | `inventory.movement.flow.test.mjs`, `inventory.lock.release.test.mjs` | Offline flow covered; Wix Stores reconciliation still needs integration validation |
 | Wix Automations delivery, public forms/CRM, rescheduling, Gift Cards | No evidenced E2E suite | Manual/integration work remains |
 
 The manifest test `qa.simulation-manifest.test.mjs` checks stable IDs, unique traces, existence of referenced tests, synthetic fixtures and explicit limitation labels. It is included in Layer 1 and the canonical `npm test` discovery.
@@ -50,7 +50,7 @@ All suites use `src/backend/tests/loader.mjs`; they do not call Wix services. A 
 
 1. Add an integrated `processDualBooking` failure test: F1 created, F2 Writer V2 fails, native F1 cancellation attempted, both CitasF2 projections reconciled, locks released, idempotency state finalized; assert original error and compensation errors separately.
 2. Add end-to-end reschedule semantics, including dual pair consistency and old-slot release.
-3. Add Stores order/refund to inventory movement tests and reconcile quantity, movement token, order/line/refund IDs.
+3. Extend the inventory flow tests to Wix Stores order/refund event payloads and reconciliation queue replay; stock movement, idempotency, refund restock, negative-stock guard and lock release are now covered offline.
 4. Add paid-order webhook and payment/refund state tests using mocked event payloads; never invoke a payment provider.
 5. Inventory Wix Automations and test recipient/trigger/template configuration in isolated QA without sending to real customers.
 6. Test form-to-CRM routing and marketing opt-in/withdrawal separately; use only reserved `.example.test` addresses.
