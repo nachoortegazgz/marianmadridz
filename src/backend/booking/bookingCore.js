@@ -817,7 +817,7 @@ export function _buildSlotLockControl(slotClave, lockOwnerId, ttlMs, existing, s
     const ttl = Number(ttlMs);
     const now = new Date();
     const existingPayload = _readControlPayload(existing);
-    const lockToken = _safeTrim(existingPayload.lockToken) || _generateUUID();
+    const lockToken = _safeTrim(existingPayload.lockToken || existing?.lockToken) || _generateUUID();
     const doc = {
         _id: safeLockId(slotClave),
         controlType: CONTROL_TYPE.SLOT_LOCK,
@@ -834,7 +834,7 @@ export function _buildSlotLockControl(slotClave, lockOwnerId, ttlMs, existing, s
             ...existingPayload,
             lockOwnerId: String(lockOwnerId || ""),
             lockToken,
-            acquiredAt: existingPayload.acquiredAt || now,
+            acquiredAt: existingPayload.acquiredAt || existing?.acquiredAt || now,
             lockStatus: "ACTIVE",
         },
         traceId: _safeTrim(existing && existing.traceId) || makeTraceId("lock"),
@@ -859,12 +859,13 @@ async function _getLock(slotClave) {
 function _getLockOwnerId(lock) {
     if (!lock || typeof lock !== "object") return "";
     const payload = _readControlPayload(lock);
-    return _safeTrim(payload.lockOwnerId) || "";
+    return _safeTrim(payload.lockOwnerId || lock.lockOwnerId) || "";
 }
 
 function _getLockToken(lock) {
     if (!lock || typeof lock !== "object") return "";
-    return _safeTrim(_readControlPayload(lock).lockToken);
+    const payload = _readControlPayload(lock);
+    return _safeTrim(payload.lockToken || lock.lockToken);
 }
 
 export async function _lockSlotKeyOrFail(slotClave, lockOwnerId, ttlMs, serviceId) {
