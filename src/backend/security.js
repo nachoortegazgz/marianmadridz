@@ -368,6 +368,26 @@ export async function rateLimiter(
         // Excessive contention is denied rather than bypassing the limiter.
         return { allowed: false, retryAfter: 1 };
     } catch (error) {
+        const storageErrorCode = error?.code ||
+            error?.details?.applicationError?.code ||
+            "";
+        const isDataQuotaExceeded = storageErrorCode === "WDE0014" ||
+            /WDE0014/.test(_safeString(error?.message));
+
+        if (isDataQuotaExceeded) {
+            log.warn("Wix Data request quota reached; rate limit denied", {
+                surface: normalizedSurface,
+                traceId,
+                stage: storageStage,
+                errorCode: "WDE0014",
+            });
+            return {
+                allowed: false,
+                retryAfter: 60,
+                reason: "DATA_QUOTA_EXCEEDED",
+            };
+        }
+
         log.error("Distributed rate limiter storage failure", {
             surface: normalizedSurface,
             traceId,
