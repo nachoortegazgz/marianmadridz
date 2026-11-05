@@ -99,6 +99,12 @@ function cajaBase() {
   };
 }
 
+test('HOOK-CAJA-00 permits projection idempotency metadata on CajaActual principal', () => {
+  const previous = { _id: 'CAJA_PRINCIPAL', sequenceCounters: { seqGlobal: 5, appliedMovementIds: ['movement-1'] } };
+  const next = { _id: 'CAJA_PRINCIPAL', sequenceCounters: { seqGlobal: 5, appliedMovementIds: ['movement-1', 'movement-2'] } };
+  assert.strictEqual(H.CajaActual_beforeUpdate(next, { original: previous }), next);
+});
+
 test('HOOK-CAJA-01 rejects write without traceId', () => {
   const item = cajaBase();
   delete item.traceId;
