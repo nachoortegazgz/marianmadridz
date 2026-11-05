@@ -361,6 +361,7 @@ async function markEventAsProcessed(eventId, eventType, traceId, metadata = {}) 
     try {
         await dalInsert(CONTROL_OPERATIVO_COL, {
             controlType: CONTROL_TYPE.WEBHOOK_EVENT,
+            serviceId: _looksLikeGuid(metadata?.serviceId) ? _safeTrim(metadata.serviceId) : undefined,
             dedupeKey: webhookKey,
             eventId: String(eventId),
             status: CONTROL_STATUS.COMPLETED,
@@ -536,7 +537,8 @@ async function _syncNativeBookingToCitas(booking, eventId, traceId) {
 
     if (existing?.items?.length) {
         await _updateCitaStatus(bookingId, BOOKING_STATUS.CONFIRMED, traceId);
-        return { ok: true, created: false, existing: true, bookingId };
+        const existingCita = existing.items[0];
+        return { ok: true, created: false, existing: true, bookingId, serviceId: _safeTrim(existingCita?.serviceId || serviceId) };
     }
 
     const selectedPaymentOption = _safeTrim(booking?.selectedPaymentOption || "UNDEFINED").toUpperCase();
@@ -616,7 +618,7 @@ async function _syncNativeBookingToCitas(booking, eventId, traceId) {
     if (!write?.created) {
         await _updateCitaStatus(bookingId, BOOKING_STATUS.CONFIRMED, traceId);
     }
-    return { ok: true, created: Boolean(write?.created), existing: !write?.created, bookingId };
+    return { ok: true, created: Boolean(write?.created), existing: !write?.created, bookingId, serviceId };
 }
 
 // ============================================================================
@@ -846,6 +848,7 @@ export async function wixBookingsV2_onBookingConfirmed(rawBody) {
         if (!alreadyProcessed) {
             await markEventAsProcessed(eventId, "BOOKING_CONFIRMED", traceId, {
                 bookingId,
+                serviceId: syncResult.serviceId,
                 ledgerCreated: syncResult.created,
                 ledgerSource: syncResult.created ? "WIX_BOOKINGS_NATIVE" : "EXISTING_CITASF2",
             });
@@ -872,6 +875,7 @@ export async function wixBookingsV2_onBookingCanceled(rawBody) {
         const eventId = _safeTrim(event?.metadata?.id || "");
         const booking = event?.data?.booking || {};
         const bookingId = _safeTrim(booking?._id || "");
+        let serviceId = _safeTrim(booking?.bookedEntity?.slot?.serviceId || booking?.serviceId || "");
         const valid = Boolean(eventId) && validateEventStructure(event, [
             "metadata.id",
             "data.booking._id",
@@ -1009,6 +1013,14 @@ export async function wixBookingsV2_onBookingCanceled(rawBody) {
             }
         }
 
+        if (!_looksLikeGuid(serviceId)) {
+            const citaResult = await dalQuery(CITAS_COL)
+                .eq(BOOKING_FIELDS.BOOKING_ID, bookingId)
+                .limit(1)
+                .find(STRONG_READ);
+            serviceId = _safeTrim(citaResult?.items?.[0]?.serviceId || "");
+        }
+
         // ALN-03: enum Wix nativo es CANCELED (una L).
         const statusUpdate = await _updateCitaStatus(bookingId, BOOKING_STATUS.CANCELED, traceId);
         if (!statusUpdate?.updated && statusUpdate?.reason !== "NO_CHANGE") {
@@ -1016,6 +1028,7 @@ export async function wixBookingsV2_onBookingCanceled(rawBody) {
         }
         await markEventAsProcessed(eventId, "BOOKING_CANCELED", traceId, {
             bookingId,
+            serviceId,
         });
         return { status: "OK", eventId };
     } catch (error) {
