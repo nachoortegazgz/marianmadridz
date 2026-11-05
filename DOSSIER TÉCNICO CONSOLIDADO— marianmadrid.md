@@ -754,14 +754,14 @@ Las referencias de este bloque son puntos de partida. El agente debe abrir la do
 |---|---|
 | Wix Developers | https://dev.wix.com/docs |
 | Wix JavaScript SDK | https://dev.wix.com/docs/sdk |
-| Wix Bookings | https://dev.wix.com/docs/api-reference/business-solutions/bookings |
-| Wix Data / CMS | https://dev.wix.com/docs/api-reference/wix-data |
-| Wix Secrets | https://dev.wix.com/docs/api-reference/wix-secrets |
-| Wix Members | https://dev.wix.com/docs/api-reference/business-management/members |
-| Wix eCommerce | https://dev.wix.com/docs/api-reference/business-solutions/e-commerce |
-| Wix CLI for Sites | https://dev.wix.com/docs/develop-websites/articles/workspace-tools/developer-tools/git-integration-wix-cli-for-sites |
+| Wix Developers — documentación de APIs | https://dev.wix.com/docs/api-reference.md |
+| Wix Data / CMS | https://dev.wix.com/docs/api-reference.md |
+| Wix Secrets | https://dev.wix.com/docs/api-reference.md |
+| Wix Members | https://dev.wix.com/docs/api-reference.md |
+| Wix eCommerce | https://dev.wix.com/docs/api-reference.md |
+| Wix CLI for Sites | https://dev.wix.com/docs/wix-cli.md y https://dev.wix.com/docs/velo.md |
 | Wix MCP | https://dev.wix.com/docs/overview/ai-the-wix-platform/the-wix-mcp |
-| Wix Site MCP | https://dev.wix.com/docs/develop-websites/articles/get-started/ai-agents/about-the-wix-site-mcp |
+| Wix Site MCP | https://dev.wix.com/docs/llms.txt (índice oficial; localizar la sección Site MCP) |
 
 ## 16.2 Repositorios y herramientas
 
