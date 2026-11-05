@@ -500,6 +500,7 @@ export function HistoricoCierresZ_beforeRemove() {
 
 export function RegistrosHorariosStaff_beforeInsert(item) {
     if (!item || typeof item !== "object") return item;
+    _normalizeCmsDateTime(item, "recordedAt");
     if (!_safeTrim(item.traceId)) _schemaError("traceId obligatorio en RegistrosHorariosStaff (RD 8/2019 trazabilidad)");
     return item;
 }
