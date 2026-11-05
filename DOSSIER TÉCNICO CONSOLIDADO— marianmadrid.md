@@ -4117,15 +4117,16 @@ La lista agrupa pendientes de §26, §24, §29–§31, la revisión previa de m�
 
 La tabla histórica G.1 y §6.2 ya no deben presentar `UNPAID`/`PARTIAL` como enums vigentes. No hacer migración de datos ni cambiar el escritor hasta un ADR respaldado por inventario de valores reales, consumidores, pruebas de regresión y QA autorizado.
 
-### 33.3 pairToken: formato real de las ramas de generación
+### 33.3 pairToken: contrato vigente tras PR #108
 
-El tamaño documentado (16 caracteres hexadecimales) coincide con el helper actual; se precisa aquí la diferencia entre ramas y los datos que intervienen:
+El código de `main` en el merge `a43604d` excluye el profesional automático de la identidad del par. La descripción anterior de este apartado estaba desactualizada: indicaba que `resourceId` formaba parte de ambas huellas, lo que ya no coincide con el código ni con las pruebas actuales.
 
-- SIMPLE y fallback dual: `_resolveStablePairToken()` serializa `serviceId`, `resourceId`, `f1Start`, `f2Start`, calcula `emailHash` y devuelve `pt` + `_hashKey(...)`. `public/mmUtils.js` devuelve 16 caracteres hexadecimales; el `slice(0, 32)` de la saga no amplía ese valor.
-- DUAL con `resourceId` GUID: `_resolveUnifiedPairToken()` delega en `_buildPairTokenDeterministic()`, que aplica `_hashKey()` al fingerprint validado de `serviceId`, `linkedPhases`, `dateYmd`, inicio/fin de F1 y F2 y `resourceId`. Devuelve 16 caracteres hexadecimales, sin prefijo `pt`.
-- `public/mmUtils.js` implementa `_hashKey()` como concatenación de dos enteros de 32 bits en hexadecimal con padding: 16 caracteres hexadecimales. La longitud queda verificada en el código; la compatibilidad de valores históricos debe comprobarse con fixtures/datos antes de cambiar nada.
+- SIMPLE: `_resolveStablePairToken()` serializa `serviceId`, `f1Start` y `f2Start`, añade un hash de email normalizado y devuelve `pt` + 16 caracteres hexadecimales. No incluye `resourceId`.
+- DUAL: `_resolveUnifiedPairToken()` llama a `_buildPairTokenDeterministic()` con `serviceId`, `linkedPhases`, `dateYmd`, inicio/fin de F1 y F2 y `customerKey` (hash de la identidad del cliente). La whitelist de `bookingUtils.js` contiene exactamente esos ocho campos y excluye `resourceId`. Devuelve 16 caracteres hexadecimales, sin prefijo `pt`.
+- El `payloadHash` de la saga también excluye `resourceId`.
+- Las pruebas `PAIR-IDEMPOTENCY-01` y `BOOK-FLOW-IDEMPOTENCY-01` verifican que dos `resourceId` distintos producen la misma huella/token y que clientes distintos producen tokens distintos.
 
-**Regla:** `pairToken` es opaco para los consumidores. No regenerar tokens históricos ni cambiar algoritmo/formato sin ADR, análisis de colisiones/compatibilidad, drenaje de locks, migración/reconciliación y pruebas.
+**Regla:** `pairToken` es opaco para los consumidores. No regenerar tokens históricos ni cambiar algoritmo/formato sin ADR, análisis de compatibilidad, drenaje de locks, migración/reconciliación y pruebas. La compatibilidad de los tokens históricos se conserva mediante la búsqueda de reservas activas legacy antes de abrir una nueva transacción; los dos pares duplicados ya existentes siguen requiriendo reconciliación manual.
 
 ### 33.4 Pendientes de cierre
 
@@ -4186,3 +4187,50 @@ La lectura de `ControlOperativo` devolvió cuatro registros (tres ALERT y uno RA
 **Pendiente:** reconciliar las dos filas históricas sin alterar datos por inferencia; validar visualmente el flujo de calendario/widget y la respuesta de WebMethod en un entorno QA autorizado; ejecutar una reserva SIMPLE de extremo a extremo solo en un sitio de pruebas o con autorización explícita para crear y cancelar una reserva de prueba. El Preview #55 sigue pendiente de resultado en este corte.
 
 La búsqueda de sitios Wix por nombre que contenga `QA` no devolvió un sitio separado. Por tanto, no se ha demostrado que exista un entorno Wix aislado para ejecutar el E2E; crear/cancelar una reserva en el sitio seleccionado podría afectar Bookings y notificaciones, y requiere autorización explícita.\n\n**Restricción:** no crear ni cancelar reservas reales, no actualizar CitasF2 manualmente y no cambiar la política de estados mientras siga abierto el ADR CMS/backend.
+
+## 35. VALIDACIÓN POST-PR #108 — CORTE 2026-11-05
+
+**Alcance:** auditoría read-only de `main`, Wix Site Context, CMS Data Collections/Items, Bookings Services/Resources/Bookings Reader V2 y CI. No se crearon, cancelaron ni reprogramaron reservas; no se actualizaron filas CMS, servicios, recursos, pagos ni publicación.
+
+### 35.1 Publicación y CI
+
+- PR #108 está integrado en `main`: merge `a43604ded068c9c0830fb4626d1f493f3a48c4d9` (05-11-2026 03:02 UTC).
+- El propietario confirma que #108 está publicado en Wix. `GetSiteContext` devuelve el sitio `188bed94-177c-4bc9-a9f0-35080d874f3e` como `Published` y última actualización 03:16 UTC. El contexto Wix no expone el SHA desplegado; por tanto, el estado publicado y la actualización posterior al merge están confirmados, pero no se certifica una igualdad de hash entre Editor/producción y `a43604d`.
+- La ejecución CI `41957173395` pasó sobre el head de PR `52438b1750329e5ade8eff370e1e94006a512281`: 317 pruebas, 34 suites, 0 fallos; ESLint correcto. Es el código que se integró, pero no hubo ejecución separada sobre el merge commit.
+- `.github/workflows/booking-regression.yml` en `main` solo se activa con `pull_request` y `workflow_dispatch`; no tiene trigger `push` a `main`. Esta actualización añade ese trigger para que los siguientes merges tengan validación post-merge. Hasta que se integre este cambio, no se debe afirmar que CI se ejecuta automáticamente después del merge.
+- El secreto `CLI_API_KEY` está disponible y autentica Wix CLI: `wix login` terminó correctamente y `wix whoami` identificó la cuenta. El valor secreto no se ha leído ni expuesto.
+- Los workflows `backend-quality.yml` y `wix-velo-manifest.yml` fueron eliminados en los commits `f8de90b` y `4bd65e5` del 04-11-2026. El ensayo histórico `41256102498` ejecutó `wix install --npm @wix/data` con login correcto, pero no generó `src/velo.dependencies.json`; sí generó `dependencies-metadata.json` y `wix.lock`. `@wix/data` ya está declarado en `package.json`; no repetir una instalación redundante ni afirmar que el manifiesto quedó generado.
+- `@wix/cli/no-invalid-backend-import` permanece desactivada en `.eslintrc.json`. Por tanto, el lint verde no certifica esa regla. La CLI Preview se está comprobando en una rama aislada; el resultado se añadirá cuando termine.
+
+### 35.2 CMS vivo y dossier
+
+- La Data Collections API devuelve 35 colecciones: 13 NATIVE de negocio, 2 NATIVE auxiliares y 20 WIX_APP. Las 13 colecciones de negocio coinciden con el inventario y revisiones del audit `docs/audits/2026-11-01-live-cms-reconciliation.md`.
+- Revisiones actuales observadas: `CitasF2` 19; `ServiciosCatalogo` 193; `ComplementosCatalogo` 137; `CajaActual` 45; `MovimientosCaja` 75; `DatosFiscales` 8; `HistoricoCierresZ` 35; `LibroAsientosContablesDetalle` 24; `InventarioStockVenta` 19; `MovimientosInventario` 26; `ControlOperativo` 15; `RegistrosHorariosStaff` 9; `MapaStaff` 13.
+- El archivo aportado `CMS KEYFIELDS.md` declara extracción 25-10-2026 y conserva revisiones anteriores para `MovimientosCaja` (60), `HistoricoCierresZ` (32), `InventarioStockVenta` (16) y `MovimientosInventario` (21); además no fija la revisión de `MapaStaff`. Para revisión/estado actual prevalece el audit vivo de 01-11 y esta consulta de 05-11, no el encabezado antiguo del adjunto.
+
+### 35.3 Bookings: catálogo, fases y recursos
+
+- `ServiciosCatalogo` contiene 95 registros; 94 incluyen `serviceId`. Bookings Services V2 devuelve 94 servicios: 70 visibles y 24 ocultos.
+- Los 24 registros con fase vinculada apuntan a un servicio F2 existente; los 24 F2 están ocultos. Las 24 parejas F1/F2 comparten el conjunto de tres recursos de personal configurados. La lectura confirma referencias/configuración, no la ejecución de una reserva dual.
+- Bookings Resources V2 devuelve los tres recursos de personal esperados. No se cambió la asignación de staff.
+
+### 35.4 CitasF2 ↔ Bookings Reader V2
+
+- `CitasF2` contiene 20 filas: 19 `bookingId` GUID reales y una fila QA sin booking nativo. Los 19 IDs reales se resuelven en Bookings Reader V2.
+- Hay 8 divergencias reales de estado: CMS `CONFIRMED` frente a Bookings `CANCELED`. Son reservas históricas con fechas 21-10 (3 filas), 03-11 (3 filas) y 04-11 (2 filas); las cancelaciones nativas se actualizaron el 31-10 entre 18:08 y 18:11 UTC.
+- Otras 2 filas del 05-11 muestran CMS `CANCELLED` frente a Bookings `CANCELED`: diferencia de grafía, no de estado semántico. En las dos filas del 21-10 también difiere `paymentStatus` (`NOT_PAID` en CMS frente a `UNDEFINED` en Bookings).
+- `ControlOperativo` devuelve dos marcadores `WEBHOOK_EVENT` actuales de cancelación del 05-11, coherentes con las dos filas cuyo CMS ya refleja `CANCELLED`. No hay marcadores actuales para las ocho filas históricas. Como las cancelaciones nativas se actualizaron el 31-10 y los marcadores tienen TTL de 72 horas, su ausencia actual no permite concluir si el evento se procesó y expiró o si no llegó a procesarse. No actualizar estados históricos por inferencia.
+
+### 35.5 Pares duplicados históricos
+
+- Se mantienen dos pares F1/F2 para el mismo cliente y los mismos intervalos del 12-11: F1 09:30–10:10 y F2 10:50–11:40 (`Europe/Madrid`). El primer par está asignado a ALBA y el segundo a ANDREA.
+- Los cuatro bookings siguen `CONFIRMED` y `NOT_PAID`, sin `doubleBooked`. En los cuatro `selectedPaymentOption` es `UNDEFINED`; las filas históricas no contienen `memberId` ni `contactId`.
+- Se crearon entre 01:27 y 01:28 UTC, antes del merge de #108 a las 03:02 UTC. No son causados por el código integrado en #108. Hay otro par separado del 13-11, no coincidente en horario y no incluido en este duplicado.
+- No cancelar ni reasignar automáticamente. La elección del par que se conserva requiere reconciliación manual del propietario.
+
+### 35.6 Cobertura runtime y pendientes
+
+- La reserva nativa más reciente enlazada a `CitasF2` se creó el 05-11 a las 02:42:47 UTC, antes del merge de #108. No hay bookings creados después del merge; por tanto, no existe evidencia runtime posterior a la publicación del nuevo flujo.
+- La prueba dual real sigue excluida por instrucción expresa del propietario. No se ha ejecutado ni se declara superada.
+- `src/pages/Mis reservas.ecd7l.js` continúa siendo un esqueleto; no se ha implementado todavía un listado backend por miembro.
+- Pendientes: reconciliar manualmente los dos pares duplicados; decidir por ADR cómo reparar las ocho filas históricas y las dos diferencias de pago; completar verificación Preview/visual; mantener excluida la reserva dual real mientras no exista autorización específica. No se han realizado escrituras en Wix durante esta auditoría.
