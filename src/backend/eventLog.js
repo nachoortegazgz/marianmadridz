@@ -630,7 +630,12 @@ export async function registrarEventoEconomico(input) {
         bankReconciliationReference: _safeTrim(input.bankReconciliationReference) || null,
 
         resourceId: _safeTrim(input.resourceId) || null,
-        staffResourceId: _safeTrim(input.staffResourceId) || null,
+        // MovimientosCaja.staffResourceId is required by the live CMS schema.
+        // Online sales have no salon employee resource; persist their channel
+        // resource ("online") instead of a null value.
+        staffResourceId: _safeTrim(
+            input.staffResourceId || input.resourceId || "CAJA_LOCAL"
+        ),
         linkedBookingIds: linkedBookingIdsArr,
         transactionId: _safeTrim(input.transactionId) || `TX_${seq.sequenceNumber}`,
         orderId: _safeTrim(input.orderId) || null,
