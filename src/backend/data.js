@@ -44,9 +44,63 @@ export function _readCanonical(item, canonicalKey, legacyKeys = []) {
     return undefined;
 }
 
+const MOVIMIENTOS_CAJA_PHYSICAL_FIELDS = Object.freeze({
+    nifEmisor: "NIFEmisor",
+    nifDestinatario: "NIFDestinatario",
+    irpfWithholdingRate: "IRPFWithholdingRate",
+    irpfWithholdingAmount: "IRPFWithholdingAmount",
+});
+
 export function readMovementField(item, canonicalKey) {
     const aliases = MOVEMENT_LEGACY_READ_ALIASES[canonicalKey] || [];
-    return _readCanonical(item, canonicalKey, aliases) ?? null;
+    const value = _readCanonical(item, canonicalKey, aliases);
+    if (value !== undefined && value !== null && value !== "") return value;
+    const physicalField = MOVIMIENTOS_CAJA_PHYSICAL_FIELDS[canonicalKey];
+    return physicalField && item && typeof item === "object"
+        ? item[physicalField] ?? null
+        : null;
+}
+
+function _normalizeMovimientosCajaPhysicalFields(item, toPhysical) {
+    for (const [canonical, physical] of Object.entries(MOVIMIENTOS_CAJA_PHYSICAL_FIELDS)) {
+        if (toPhysical) {
+            if (item[canonical] !== undefined && item[canonical] !== null) {
+                item[physical] = item[canonical];
+            }
+            delete item[canonical];
+        } else {
+            if ((item[canonical] === undefined || item[canonical] === null) &&
+                item[physical] !== undefined && item[physical] !== null) {
+                item[canonical] = item[physical];
+            }
+            delete item[physical];
+        }
+    }
+    return item;
+}
+
+function _normalizeMovimientosCajaObjectFields(item) {
+    if (Array.isArray(item.lineItems)) {
+        item.lineItems = { items: item.lineItems };
+    }
+
+    const nestedFields = {};
+    if ("aeatPayload" in item) {
+        nestedFields.aeatPayload = item.aeatPayload;
+        delete item.aeatPayload;
+    }
+    if ("customerEmail" in item) {
+        nestedFields.customerEmail = item.customerEmail;
+        delete item.customerEmail;
+    }
+    if (Object.keys(nestedFields).length > 0) {
+        if (item.payloadFiscal == null) item.payloadFiscal = {};
+        if (typeof item.payloadFiscal !== "object" || Array.isArray(item.payloadFiscal)) {
+            _schemaError("payloadFiscal debe ser OBJECT en MovimientosCaja");
+        }
+        item.payloadFiscal = { ...item.payloadFiscal, ...nestedFields };
+    }
+    return item;
 }
 
 export function readInvoiceNumber(item) {
@@ -381,6 +435,11 @@ function _validateFiscalPayload(item) {
 export function MovimientosCaja_beforeInsert(item) {
     if (!item || typeof item !== "object") return item;
 
+    // Normalize the CMS's uppercase physical identifiers into the internal
+    // domain names before validation. The final persisted item is converted
+    // back to the exact CMS field IDs at the end of this hook.
+    _normalizeMovimientosCajaPhysicalFields(item, false);
+
     // BLOQUE DE INTEGRIDAD (v13.0, HOOK-CAJA-01/02/05): las guardas duras de
     // trazabilidad y cadena de hash se evaluan PRIMERO, antes que cualquier
     // validacion AEAT especifica de dominio. Un registro sin traceId,
@@ -455,6 +514,8 @@ export function MovimientosCaja_beforeInsert(item) {
         }
     }
 
+    _normalizeMovimientosCajaObjectFields(item);
+    _normalizeMovimientosCajaPhysicalFields(item, true);
     return item;
 }
 
@@ -850,6 +911,15 @@ export function normalizeControlKeys(item) {
             if (item.payload === undefined || item.payload === null) {
                 item.payload = parsed !== null ? parsed : { raw: String(legacyVal) };
             }
+        }
+    }
+    // Consolidate duplicate physical columns on the selected canonical keys.
+    for (const [legacy, canonical] of [["attempt", "attempts"], ["leaseExpiresAt", "expiresAt"]]) {
+        if (legacy in item) {
+            if (item[canonical] === undefined || item[canonical] === null) {
+                item[canonical] = item[legacy];
+            }
+            delete item[legacy];
         }
     }
     // createdAt/updatedAt duplicaban los nativos Wix; se erradican del doc.
