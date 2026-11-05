@@ -8,10 +8,10 @@
 |---|---|---|
 | A. Roles y gobierno de IA | **Roles y directrices**, §§1–9 | Misión, límites, principios, precedencia de fuentes, protocolos y criterios de calidad. |
 | B. Wix CLI y herramientas | **Guía operativa Wix CLI**, §§1–10 | Git Integration, autenticación, CLI for Sites, Wix MCP, Skills, diagnóstico y CI/CD. |
-| C. Resumen ejecutivo | **Resumen ejecutivo**, §§0–5 | Objetivos por capas, secuencia, gates, riesgos y gobernanza. |
+| C. Resumen ejecutivo | **Resumen ejecutivo**, §§1–6 | Objetivos por capas, secuencia, gates, riesgos y gobernanza. |
 | D. Ficha técnica | **Anexo de ficha técnica**, §§1–4 | Identidad del negocio, stack/runtime, Apps Wix e identificadores canónicos. |
 | E. APIs Wix | **Recopilación de documentación oficial**, §§1–12 | Contratos y versiones de Bookings, Data, Secrets, eCommerce, Stores, Members, CRM y módulos Velo. Verificar vigencia oficial antes de implementar. |
-| F. Arquitectura y operación | **Dossier técnico (continuación)**, §§8–23 | Backend, flujos, CMS, permisos, jobs, SDK v2, Stores, Invoices, Bookings, riesgos, normativa y necesidades. |
+| F. Arquitectura y operación | **Dossier técnico (continuación)**, §§8–22 | Backend, flujos, CMS, permisos, jobs, SDK v2, Stores, Invoices, Bookings, riesgos, normativa y necesidades. |
 | G. Contexto del negocio | **Anexo aclaratorio**, §23 y §§1–7 subordinados | Localización, titularidad, personal, gestoría, perfil de cliente, normativa y lagunas contextuales. |
 | H. Archivo y cumplimiento documental | **Anexo SharePoint**, principio rector y §§1–8 | Retención, carpetas, nomenclatura, metadatos, integración Wix–SharePoint, permisos y trazabilidad. Es una arquitectura propuesta sujeta a ADR-003. |
 | J. Desarrollo asistido por IA | **Anexo J**, §§J.1–J.6 | Wix MCP, CLI, diagnóstico, agentes IA, enlaces oficiales y datos faltantes. |
@@ -20,7 +20,7 @@
 
 **Ruta rápida:** estado actual → §36 (y después confirmar HEAD/CI); reservas y pruebas → §§25, 27–28 y 33–35; plan → §26 y §32.6; arquitectura → §§8–16; contratos de API → bloque E; esquema de datos → bloque L y CMS KEYFIELDS.md.
 
-**Convención de numeración:** los bloques A–L son documentos/anexos independientes y conservan su numeración interna. Las secciones 24–36 forman la serie cronológica de checkpoints. No interpretar el mismo número de dos bloques distintos como una referencia equivalente.
+**Convención de numeración:** los bloques A–H y J–L son documentos/anexos independientes y conservan su numeración interna. Las secciones 24–36 forman la serie cronológica de checkpoints. No interpretar el mismo número de dos bloques distintos como una referencia equivalente.
 
 ---
 
