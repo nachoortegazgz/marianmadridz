@@ -614,24 +614,22 @@ export function DatosFiscales_beforeInsert(item) {
     const recordTypeEarly = _safeTrim(item.recordType).toUpperCase();
     if (recordTypeEarly === "CONFIG_SISTEMA") return _applyConfigSistemaRules(item);
 
-    const taxId = _safeTrim(item.taxId || item.nifCif);
+    // Normalize input aliases and remove them before persisting physical CMS keys.
+    if (!item.taxId && item.nifCif) item.taxId = item.nifCif;
+    if (!item.legalName && item.razonSocial) item.legalName = item.razonSocial;
+    if (!item.thirdPartyType && item.tipoTercero) item.thirdPartyType = item.tipoTercero;
+    delete item.nifCif;
+    delete item.razonSocial;
+    delete item.tipoTercero;
+
+    const taxId = _safeTrim(item.taxId);
     if (!taxId || !_isValidNifOrEuVat(taxId)) _schemaError("taxId obligatorio y valido (espanol o VAT UE)");
+    if (!_safeTrim(item.legalName)) _schemaError("legalName obligatoria");
 
-    const legalName = _safeTrim(item.legalName || item.razonSocial);
-    if (!legalName) _schemaError("legalName obligatoria");
-
-    const type = _safeTrim(item.thirdPartyType || item.tipoTercero).toUpperCase();
+    const type = _safeTrim(item.thirdPartyType).toUpperCase();
     if (!type || !VALID_THIRD_PARTY_TYPES.has(type)) {
         _schemaError("thirdPartyType invalido (CLIENTE, PROVEEDOR, STAFF, AAPP, MIXTO, EMISOR)");
     }
-
-    if (type === "STAFF") {
-        const bookingsResourceId = _safeTrim(item.bookingsResourceId || item.resourceIdBookings);
-        const memberId = _safeTrim(item.memberId);
-        if (!_isGuid(bookingsResourceId)) _schemaError("thirdPartyType=STAFF exige bookingsResourceId GUID");
-        if (!memberId) _schemaError("thirdPartyType=STAFF exige memberId");
-    }
-
     return item;
 }
 
@@ -640,8 +638,24 @@ export function DatosFiscales_beforeUpdate(item) {
     const recordType = _safeTrim(item.recordType).toUpperCase();
     if (recordType === "CONFIG_SISTEMA") return _applyConfigSistemaRules(item);
 
-    const taxId = _safeTrim(item.taxId || item.nifCif);
+    if (!item.taxId && item.nifCif) item.taxId = item.nifCif;
+    if (!item.legalName && item.razonSocial) item.legalName = item.razonSocial;
+    if (!item.thirdPartyType && item.tipoTercero) item.thirdPartyType = item.tipoTercero;
+    delete item.nifCif;
+    delete item.razonSocial;
+    delete item.tipoTercero;
+    for (const field of DATOS_FISCALES_NON_SCHEMA_FIELDS) {
+        if (item[field] !== undefined && item[field] !== null) {
+            _schemaError(`Campo "${field}" no existe en el esquema físico DatosFiscales`);
+        }
+    }
+    const taxId = _safeTrim(item.taxId);
     if (taxId && !_isValidNifOrEuVat(taxId)) _schemaError("taxId invalido en update");
+    for (const field of ["verifactuEnabled", "tipoUsoPosibleMultiOT", "indicadorMultiplesOT"]) {
+        if (item[field] !== undefined && item[field] !== null && typeof item[field] !== "boolean") {
+            _schemaError(`${field} debe ser BOOLEAN según el esquema CMS`);
+        }
+    }
     return item;
 }
 
@@ -768,21 +782,33 @@ export function LibroAsientosContablesDetalle_beforeRemove() {
 // BLOQUE 14 - DATOS FISCALES: singleton CONFIG_SISTEMA (SSOT V2, v5011)
 // =============================================================================
 
-const DATOS_FISCALES_LEGACY_WRITE_FIELDS = [
+const DATOS_FISCALES_NON_SCHEMA_FIELDS = [
     "producerTaxId", "producerLegalName", "computerSystemId",
     "installationNumber", "possibleUseMultiOT", "possibleUseOnlyVerifactu",
-    "multipleOTIndicator", "verifactuStartDate",
+    "multipleOTIndicator", "verifactuStartDate", "nifProductor",
+    "nombreRazonProductor", "idSistemaInformatico", "sistemaInformaticoNombre",
+    "numeroInstalacion", "tipoUsoPosibleSoloVerifactu", "bookingsResourceId",
+    "resourceIdBookings", "memberId", "registrationTraceId", "active",
 ];
 
 function _applyConfigSistemaRules(item) {
-    for (const legacyField of DATOS_FISCALES_LEGACY_WRITE_FIELDS) {
-        if (item[legacyField] !== undefined && item[legacyField] !== null) {
-            _schemaError(`Campo legacy "${legacyField}" prohibido en DatosFiscales CONFIG_SISTEMA`);
+    for (const field of DATOS_FISCALES_NON_SCHEMA_FIELDS) {
+        if (item[field] !== undefined && item[field] !== null) {
+            _schemaError(`Campo "${field}" no existe en el esquema físico DatosFiscales; use taxId/legalName y los campos declarados`);
         }
     }
-    for (const required of ["nifProductor", "nombreRazonProductor", "idSistemaInformatico"]) {
-        if (!_isValidNifOrEuVat(item[required]) && _safeTrim(item[required]) === "") {
-            _schemaError(`${required} obligatorio en el singleton CONFIG_SISTEMA`);
+    if (!_isValidNifOrEuVat(item.taxId)) {
+        _schemaError("taxId obligatorio y valido en CONFIG_SISTEMA");
+    }
+    if (!_safeTrim(item.legalName)) {
+        _schemaError("legalName obligatorio en CONFIG_SISTEMA");
+    }
+    if (_safeTrim(item.thirdPartyType).toUpperCase() !== "EMISOR") {
+        _schemaError("CONFIG_SISTEMA requiere thirdPartyType=EMISOR");
+    }
+    for (const field of ["verifactuEnabled", "tipoUsoPosibleMultiOT", "indicadorMultiplesOT"]) {
+        if (item[field] !== undefined && item[field] !== null && typeof item[field] !== "boolean") {
+            _schemaError(`${field} debe ser BOOLEAN según el esquema CMS`);
         }
     }
     return item;
