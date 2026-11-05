@@ -913,6 +913,7 @@ export function InventarioStockVenta_beforeUpdate(item) { return _validateInvent
 
 function _validateInventarioStockVenta(item) {
     if (!item || typeof item !== "object") return item;
+    _normalizeCmsDateTime(item, "lastSyncAt");
 
     const catalogVersion = _safeTrim(item.catalogVersion);
     if (catalogVersion) {
