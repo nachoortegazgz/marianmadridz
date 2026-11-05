@@ -69,10 +69,10 @@ test('READ-06 fiscal aggregator prefers canonical ledger hash over legacy aliase
   );
 });
 
-test('TAXID-01 business tax id reads DatosFiscales CONFIG_SISTEMA nifProductor', async () => {
+test('TAXID-01 business tax id reads DatosFiscales CONFIG_SISTEMA taxId', async () => {
   wixDataMock._reset();
   wixDataMock._seed(IC.BUSINESS_COLLECTIONS.DATOS_FISCALES, [
-    { recordType: IC.RECORD_TYPE.CONFIG_SISTEMA, active: true, nifProductor: 'B12345678' },
+    { recordType: IC.RECORD_TYPE.CONFIG_SISTEMA, taxId: 'B12345678', legalName: 'Marian Madrid', thirdPartyType: 'EMISOR' },
   ]);
   const id = await T.getBusinessTaxId('trace-taxid-1');
   assert.strictEqual(id, 'B12345678');
@@ -90,7 +90,7 @@ test('TAXID-01 business tax id reads DatosFiscales CONFIG_SISTEMA nifProductor',
 test('TAXID-02 legacy EMISOR adapter returns taxId with warn when no config row', async () => {
   wixDataMock._reset();
   wixDataMock._seed(IC.BUSINESS_COLLECTIONS.DATOS_FISCALES, [
-    { thirdPartyType: 'EMISOR', active: true, taxId: 'b99999999' },
+    { recordType: IC.RECORD_TYPE.TERCERO, thirdPartyType: 'EMISOR', taxId: 'b99999999' },
   ]);
   const warns = [];
   const orig = loggerMod.logger.warn;
