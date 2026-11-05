@@ -191,6 +191,7 @@ test('HOOK-CAJA-06 normalizes legacy recordHash alias to canonical hash', () => 
 test('HOOK-CAJA-07 persists exact CMS field IDs and OBJECT payloads', () => {
   const item = {
     ...cajaBase(),
+    totalAmount: 15,
     nifEmisor: 'B12345678',
     nifDestinatario: '12345678Z',
     irpfWithholdingRate: 0.15,
