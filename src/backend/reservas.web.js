@@ -1,7 +1,12 @@
 /**
  * MODULE: backend/reservas.web.js
- * VERSION: v10.20-DUAL-BATCH-AVAILABILITY
+ * VERSION: v10.21-CUSTOMER-SLOT-SPACING
  * BASE: v10.18-WIDGET-DTO-MINIMAL
+ *
+ * CORRECCIONES v10.21:
+ *   - DISP-30M-01: preserve 5-minute internal availability, but return customer
+ *     slots with at least 30 minutes between F1 start times. Applied to simple
+ *     and dual public availability without rounding times or changing pair data.
  *
  * CORRECCIONES v10.20:
  *   - DUAL-PERF-01 (P0): F1 y F2 se consultan una sola vez por jornada y en paralelo.
@@ -123,6 +128,9 @@ const SLOTS_CACHE_TTL_MS = Number(SDK_CONFIG?.CACHE?.SLOTS_CACHE_TTL_MS) || 6000
 const DUAL_CACHE_TTL_MS = Number(SDK_CONFIG?.CACHE?.DUAL_CACHE_TTL_MS) || 300000;
 const DISPLAY_TOKEN_TTL_MS = 30 * 60 * 1000;
 const DISPLAY_TOKEN_MAX_ATTEMPTS = 5;
+
+/* Internal availability stays at 5-minute granularity; customer display is spaced. */
+const CUSTOMER_SLOT_START_INTERVAL_MINUTES = 30;
 
 const DIAS_LIMITE = Number(SLOT_SEARCH?.DIAS_LIMITE) || 14;
 const CACHE_MAX_SIZE = Number(SDK_CONFIG?.CACHE?.MAX_ENTRIES) || 500;
@@ -2112,6 +2120,38 @@ export async function _getAvailableDaysInternal({ serviceId, resourceId, year, m
     return { status: "SUCCESS", data: _filterDaysByLimit(slotDays), error: null };
 }
 
+/**
+ * DISP-30M-01: reduce visible options without changing actual availability.
+ * Internal 5-minute slots remain available for calculations and booking validation.
+ * Customers receive the first available start, then the next start at least
+ * 30 minutes after the last displayed start.
+ */
+function _toCustomerVisibleSlots(result, traceId = null) {
+    if (result?.status !== "SUCCESS" || !Array.isArray(result.data)) return result;
+    const sorted = result.data
+        .map((pair, index) => {
+            const localStart = _normalizeLocalIsoStr(pair?.slotF1?.localStartDate);
+            const startUtc = localStart ? getUtcDateFromMadridLocal(localStart) : null;
+            return startUtc && Number.isFinite(startUtc.getTime())
+                ? { pair, index, startMs: startUtc.getTime() }
+                : null;
+        })
+        .filter(Boolean)
+        .sort((a, b) => a.startMs - b.startMs || a.index - b.index);
+    const minimumSeparationMs = CUSTOMER_SLOT_START_INTERVAL_MINUTES * 60000;
+    const visible = [];
+    let lastVisibleStartMs = null;
+    for (const item of sorted) {
+        if (lastVisibleStartMs !== null && item.startMs - lastVisibleStartMs < minimumSeparationMs) continue;
+        visible.push(item.pair);
+        lastVisibleStartMs = item.startMs;
+    }
+    log.info("[availability] customer slot spacing applied", {
+        traceId, internalSlots: result.data.length, visibleSlots: visible.length,
+        minimumStartSeparationMinutes: CUSTOMER_SLOT_START_INTERVAL_MINUTES,
+    });
+    return { ...result, data: visible };
+}
 export const getCertifiedDualSlots = webMethod(
     Permissions.Anyone,
     async (serviceId, resourceId, dateYMD, addonIds = []) => {
@@ -2119,7 +2159,8 @@ export const getCertifiedDualSlots = webMethod(
             const visitor = await _getVisitorIdentity();
             const rateKey = _buildRateLimitKey("availability", visitor.memberId, "");
             await _rateLimitOrThrow("availability", rateKey);
-            return await _getCertifiedDualSlotsInternal(serviceId, resourceId, dateYMD, addonIds);
+            const result = await _getCertifiedDualSlotsInternal(serviceId, resourceId, dateYMD, addonIds);
+            return _toCustomerVisibleSlots(result);
         } catch (err) {
             return { status: "ERROR", data: null, error: _toPublicError(err, "DUAL_SLOTS_FAILED") };
         }
@@ -2133,7 +2174,8 @@ export const getAvailableSlots = webMethod(
             const visitor = await _getVisitorIdentity();
             const rateKey = _buildRateLimitKey("availability", visitor.memberId, "");
             await _rateLimitOrThrow("availability", rateKey);
-            return await _getCertifiedDualSlotsInternal(serviceId, resourceId, dateYMD, addonIds);
+            const result = await _getCertifiedDualSlotsInternal(serviceId, resourceId, dateYMD, addonIds);
+            return _toCustomerVisibleSlots(result);
         } catch (err) {
             return { status: "ERROR", data: null, error: _toPublicError(err, "SLOTS_QUERY_FAILED") };
         }
