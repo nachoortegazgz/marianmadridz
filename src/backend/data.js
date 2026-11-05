@@ -955,11 +955,15 @@ function _validateInventarioStockVenta(item) {
 // Keep the SSOT structural guard at the CMS boundary as a second barrier to
 // the booking saga's point-of-use validation.
 export function CitasF2_beforeInsert(item) {
+    _normalizeCmsDateTime(item, "slotStart");
+    _normalizeCmsDateTime(item, "slotEnd");
     assertCitasF2(item);
     return item;
 }
 
 export function CitasF2_beforeUpdate(item) {
+    _normalizeCmsDateTime(item, "slotStart");
+    _normalizeCmsDateTime(item, "slotEnd");
     assertCitasF2(item);
     return item;
 }
