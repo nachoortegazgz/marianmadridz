@@ -61,14 +61,22 @@ jobs:
           import termios
           import time
 
-          os.environ.pop("CI", None)
+          os.environ["CI"] = "false"
+          os.environ["GITHUB_ACTIONS"] = "false"
+          os.environ.pop("GITHUB_WORKFLOW", None)
+          os.environ.pop("GITHUB_RUN_ID", None)
+          os.environ.pop("GITHUB_JOB", None)
           os.environ["TERM"] = "xterm-256color"
-
-          pid, master = pty.fork()
-          if pid == 0:
-              os.execvp("wix", ["wix", "preview"])
+          os.environ["FORCE_COLOR"] = "1"
+          os.environ["LINES"] = "24"
+          os.environ["COLUMNS"] = "120"
 
           window = struct.pack("HHHH", 24, 120, 0, 0)
+          pid, master = pty.fork()
+          if pid == 0:
+              fcntl.ioctl(0, termios.TIOCSWINSZ, window)
+              os.execvp("wix", ["wix", "preview"])
+
           fcntl.ioctl(master, termios.TIOCSWINSZ, window)
 
           started = time.monotonic()
