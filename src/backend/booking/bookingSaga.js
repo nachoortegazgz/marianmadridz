@@ -2007,6 +2007,9 @@ export async function executeBookingSaga(unsafePayload) {
                         totalAmount: amountSnapshot.totalAmount,
                         pairToken: pairToken,
                         contactDetails: persistedContactDetails,
+                        privacyNoticeVersion: unsafePayload?.privacyNoticeVersion || null,
+                        privacyNoticeAcceptedAt: unsafePayload?.privacyNoticeAcceptedAt || null,
+                        privacyNoticePurpose: unsafePayload?.privacyNoticePurpose || null,
                         meta: {
                             totalAmount: amountSnapshot.totalAmount,
                             amountSource: amountSnapshot.amountSource,
@@ -2073,6 +2076,9 @@ export async function executeBookingSaga(unsafePayload) {
                             totalAmount: 0,
                             pairToken: pairToken,
                             contactDetails: persistedContactDetails,
+                            privacyNoticeVersion: unsafePayload?.privacyNoticeVersion || null,
+                            privacyNoticeAcceptedAt: unsafePayload?.privacyNoticeAcceptedAt || null,
+                            privacyNoticePurpose: unsafePayload?.privacyNoticePurpose || null,
                             meta: {
                                 totalAmount: 0,
                                 amountSource: "INTERNAL_F2_NO_FEE",
