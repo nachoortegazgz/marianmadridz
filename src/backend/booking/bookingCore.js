@@ -1052,11 +1052,9 @@ function _readTransaction(doc) {
         error: _safeTrim(payload.error),
         bookingId: _safeTrim(payload.bookingId || doc.bookingId),
         result: payload.result,
-        leaseExpiresAt: _toDateSafe(
-            payload.leaseExpiresAt || doc.leaseExpiresAt
-        ),
+        expiresAt: _toDateSafe(payload.expiresAt || doc.expiresAt),
         heartbeatAt: _toDateSafe(payload.heartbeatAt || doc.heartbeatAt),
-        attempt: Number(payload.attempt || doc.attempt || 0),
+        attempts: Number(payload.attempts || doc.attempts || 0),
         serviceId: _safeTrim(payload.serviceId || doc.serviceId),
     };
 }
@@ -1085,15 +1083,15 @@ function _buildTransactionControl(pairToken, state, existingDoc) {
         serviceId: serviceId,
         dedupeKey: TX_DEDUPE_PREFIX + String(pairToken),
         payload: payload,
-        leaseExpiresAt:
-            payload.leaseExpiresAt ||
-            (existingDoc && existingDoc.leaseExpiresAt) ||
+        expiresAt:
+            payload.expiresAt ||
+            (existingDoc && existingDoc.expiresAt) ||
             null,
         heartbeatAt:
             payload.heartbeatAt ||
             (existingDoc && existingDoc.heartbeatAt) ||
             now,
-        attempt: payload.attempt || (existingDoc && existingDoc.attempt) || 1,
+        attempts: payload.attempts || (existingDoc && existingDoc.attempts) || 1,
         traceId:
             _safeTrim(existingDoc && existingDoc.traceId) ||
             _safeTrim(state.ownerTraceId) ||
@@ -1190,9 +1188,9 @@ export async function _initTransaction(
         payloadHash: String(payloadHash || ""),
         ownerTraceId: String(traceId || ""),
         ownerExecutionId: String(ownerExecutionId || traceId || ""),
-        leaseExpiresAt: new Date(now.getTime() + TRANSACTION_LEASE_MS),
+        expiresAt: new Date(now.getTime() + TRANSACTION_LEASE_MS),
         heartbeatAt: now,
-        attempt: 1,
+        attempts: 1,
     };
     try {
         await elevatedInsert(
@@ -1260,8 +1258,8 @@ export async function claimTransaction(
         return { ok: false, reason: "ALREADY_COMPLETED" };
     }
 
-    const leaseExpiresAt = tx.leaseExpiresAt;
-    if (leaseExpiresAt && leaseExpiresAt.getTime() > Date.now()) {
+    const expiresAt = tx.expiresAt;
+    if (expiresAt && expiresAt.getTime() > Date.now()) {
         return { ok: false, reason: "LEASE_NOT_EXPIRED" };
     }
 
@@ -1271,9 +1269,9 @@ export async function claimTransaction(
         payloadHash: tx.payloadHash,
         ownerTraceId: String(newTraceId || ""),
         ownerExecutionId: String(newOwnerExecutionId || ""),
-        leaseExpiresAt: new Date(now.getTime() + TRANSACTION_LEASE_MS),
+        expiresAt: new Date(now.getTime() + TRANSACTION_LEASE_MS),
         heartbeatAt: now,
-        attempt: tx.attempt + 1,
+        attempts: tx.attempts + 1,
         bookingId: tx.bookingId,
         serviceId: tx.serviceId,
     };
