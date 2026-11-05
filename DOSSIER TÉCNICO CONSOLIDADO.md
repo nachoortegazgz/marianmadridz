@@ -446,7 +446,7 @@ PAYMENT_STATUS_WIX = { UNDEFINED, NOT_PAID, PENDING_PAYMENT,
 ```javascript
 // CitasF2.bookingStatus
 BOOKING_STATUS_CMS = { PENDING, CONFIRMED, COMPLETED,
-  CANCELED, NO_SHOW }  // CANCELED con doble L
+  CANCELED, NO_SHOW }  // CANCELED con una sola L
 
 // CitasF2.paymentStatus
 PAYMENT_STATUS_CMS = { UNPAID, PARTIAL, PAID, REFUNDED }
@@ -503,7 +503,7 @@ La seguridad opera en dos capas:
 1. **Barrera de plataforma (Velo Permissions):** el permiso del `webMethod` aplica el primer filtro de invocación.
 2. **Rol de negocio:** `backend/security.js` resuelve el miembro autenticado mediante su `contactId` y `backend/staff.js` consulta Bookings Staff API. El rol web canónico se obtiene de `STAFF.WEBSITE_ROLE_BY_RESOURCE_ID` en `internalConfig.js`, asociado al `resourceId`.
 
-**Importante:** `MapaStaff` existe físicamente en CMS y conserva campos como `rolWebsite`, `rolBookings`, `staffMemberId`, `resourceId` y `active`; sin embargo, el resolver actual `staff.js` no usa esa colección para resolver identidad ni rol. No documentar `STAFF.WEBSITE_ROLE_BY_RESOURCE_ID` como fuente activa de autorización. La decisión de conservar sus campos físicos es no destructiva y no implica que sean el SSOT del runtime.
+**Importante:** `MapaStaff` existe físicamente en CMS y conserva campos como `rolWebsite`, `rolBookings`, `staffMemberId`, `resourceId` y `active`; sin embargo, el resolver actual `staff.js` no usa esa colección para resolver identidad ni rol. No documentar `MapaStaff.rolWebsite` como fuente activa de autorización; la fuente activa es `STAFF.WEBSITE_ROLE_BY_RESOURCE_ID`. La decisión de conservar sus campos físicos es no destructiva y no implica que sean el SSOT del runtime.
 
 | Rol | Acceso |
 | --- | --- |
