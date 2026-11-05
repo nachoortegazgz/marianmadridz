@@ -1,6 +1,6 @@
 /*
 MODULE: backend/booking/bookingCore.js
-VERSION: v5021-WIX-V2-ID-CONTRACT
+VERSION: v5022-CONTROL-SERVICE-ID
 BASE: v5020-CART-V2-ITEM-VALIDATION
 RESPONSIBILITY: Primitivas atomicas de reserva (simple y dual con gap),
 Bookings Writer V2, checkout Cart V2 de F1, locks, idempotencia,
@@ -812,14 +812,16 @@ export function safeLockId(key) {
     return "lk" + _hashKey(k) + k.slice(0, 24);
 }
 
-export function _buildSlotLockControl(slotClave, lockOwnerId, ttlMs, existing) {
+export function _buildSlotLockControl(slotClave, lockOwnerId, ttlMs, existing, serviceId) {
     const resourceId = parseResourceIdFromSlotKey(slotClave);
+    const resolvedServiceId = _safeTrim(serviceId || (existing && existing.serviceId));
     const ttl = Number(ttlMs);
     const now = new Date();
     const doc = {
         _id: safeLockId(slotClave),
         controlType: CONTROL_TYPE.SLOT_LOCK,
         dedupeKey: String(slotClave),
+        serviceId: resolvedServiceId,
         resourceId: resourceId,
         lockOwnerId: String(lockOwnerId || ""),
         lockToken: existing && existing.lockToken ? existing.lockToken : _generateUUID(),
@@ -858,10 +860,11 @@ function _getLockOwnerId(lock) {
     return _safeTrim(payload.lockOwnerId) || "";
 }
 
-export async function _lockSlotKeyOrFail(slotClave, lockOwnerId, ttlMs) {
+export async function _lockSlotKeyOrFail(slotClave, lockOwnerId, ttlMs, serviceId) {
     const k = _safeTrim(slotClave);
     const owner = _safeTrim(lockOwnerId);
-    if (!k || !owner) {
+    const service = _safeTrim(serviceId);
+    if (!k || !owner || !_looksLikeGuid(service)) {
         return {
             ok: false,
             message: ERROR_CODES.LOCK_KEY_OR_OWNER_INVALID,
@@ -874,7 +877,7 @@ export async function _lockSlotKeyOrFail(slotClave, lockOwnerId, ttlMs) {
         };
     }
     try {
-        const newLock = _buildSlotLockControl(k, owner, ttlMs);
+        const newLock = _buildSlotLockControl(k, owner, ttlMs, null, service);
         await elevatedInsert(LOCKS_COL, newLock);
         return {
             ok: true,
@@ -896,7 +899,7 @@ export async function _lockSlotKeyOrFail(slotClave, lockOwnerId, ttlMs) {
         const existing = await _getLock(k);
         const currentOwner = _getLockOwnerId(existing);
         if (currentOwner && currentOwner === owner) {
-            const renewed = await _renewLock(k, owner, ttlMs, existing._revision);
+            const renewed = await _renewLock(k, owner, ttlMs, existing._revision, service);
             return renewed.ok
                 ? {
                     ok: true,
@@ -919,7 +922,7 @@ export async function _lockSlotKeyOrFail(slotClave, lockOwnerId, ttlMs) {
             try {
                 const updated = await elevatedUpdate(
                     LOCKS_COL,
-                    _buildSlotLockControl(k, owner, ttlMs, existing)
+                    _buildSlotLockControl(k, owner, ttlMs, existing, service)
                 );
                 return {
                     ok: true,
@@ -977,7 +980,7 @@ export async function _unlockSlotKey(slotClave, lockOwnerId, expectedRevision) {
     }
 }
 
-export async function _renewLock(slotClave, lockOwnerId, ttlMs, expectedRevision) {
+export async function _renewLock(slotClave, lockOwnerId, ttlMs, expectedRevision, serviceId) {
     const owner = _safeTrim(lockOwnerId);
     try {
         const existing = await _getLock(slotClave);
@@ -990,7 +993,7 @@ export async function _renewLock(slotClave, lockOwnerId, ttlMs, expectedRevision
         }
         const updated = await elevatedUpdate(
             LOCKS_COL,
-            _buildSlotLockControl(slotClave, owner, ttlMs, existing)
+            _buildSlotLockControl(slotClave, owner, ttlMs, existing, serviceId)
         );
         return {
             ok: true,
@@ -1048,6 +1051,7 @@ function _readTransaction(doc) {
         ),
         heartbeatAt: _toDateSafe(payload.heartbeatAt || doc.heartbeatAt),
         attempt: Number(payload.attempt || doc.attempt || 0),
+        serviceId: _safeTrim(payload.serviceId || doc.serviceId),
     };
 }
 
@@ -1066,10 +1070,13 @@ function _buildTransactionControl(pairToken, state, existingDoc) {
         delete payload.result;
         payload.resultDropped = true;
     }
+    const serviceId = _safeTrim(payload.serviceId || (existingDoc && existingDoc.serviceId));
+    if (serviceId) payload.serviceId = serviceId;
     const now = new Date();
     const doc = {
         _id: String(pairToken),
         controlType: CONTROL_TYPE.IDEMPOTENCY,
+        serviceId: serviceId,
         dedupeKey: TX_DEDUPE_PREFIX + String(pairToken),
         payload: payload,
         leaseExpiresAt:
@@ -1163,13 +1170,17 @@ export async function _initTransaction(
     pairToken,
     payloadHash,
     traceId,
+    serviceId,
     ownerExecutionId
 ) {
     const id = _safeTrim(pairToken);
+    const resolvedServiceId = _safeTrim(serviceId);
     if (!id) return { success: false, error: "INVALID_PAIR_TOKEN" };
+    if (!_looksLikeGuid(resolvedServiceId)) return { success: false, error: "INVALID_SERVICE_ID" };
     const now = new Date();
     const state = {
         status: "IN_PROGRESS",
+        serviceId: resolvedServiceId,
         payloadHash: String(payloadHash || ""),
         ownerTraceId: String(traceId || ""),
         ownerExecutionId: String(ownerExecutionId || traceId || ""),
@@ -1258,6 +1269,7 @@ export async function claimTransaction(
         heartbeatAt: now,
         attempt: tx.attempt + 1,
         bookingId: tx.bookingId,
+        serviceId: tx.serviceId,
     };
 
     try {
@@ -1293,6 +1305,7 @@ export async function _completeTransaction(pairToken, result, traceId) {
             id,
             {
                 status: "COMPLETED",
+                serviceId: current ? current.serviceId : "",
                 payloadHash: current ? current.payloadHash : "",
                 ownerTraceId:
                     _safeTrim(traceId) || (current ? current.ownerTraceId : ""),
@@ -1322,6 +1335,7 @@ export async function _failTransaction(pairToken, errorMessage, retryable) {
         id,
         {
             status: finalStatus,
+            serviceId: current ? current.serviceId : "",
             payloadHash: current ? current.payloadHash : "",
             ownerTraceId: current ? current.ownerTraceId : "",
             error: String(errorMessage || ERROR_CODES.UNKNOWN_ERROR),

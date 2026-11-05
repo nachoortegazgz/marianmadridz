@@ -17,6 +17,8 @@ const suites = [
   'booking.core.concurrency.test.mjs',
   'controlOperativo.hooks.test.mjs',
   'reservas.web.test.mjs',
+  'servicePage.bookingRoute.contract.test.mjs',
+  'htmlComponents.source-contract.test.mjs',
   'unit.ssot.v5011.test.mjs',
 ];
 

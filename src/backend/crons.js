@@ -199,6 +199,63 @@ return result;
 }
 
 // =============================================================================
+// CRON: cleanExpiredDisplayTokens - every 15 minutes
+// =============================================================================
+/**
+ * Removes expired one-time display tokens. Only DISPLAY_TOKEN rows with an
+ * expired expiresAt are eligible; reservation transactions and webhook ledger
+ * rows are deliberately excluded.
+ */
+export async function cleanExpiredDisplayTokens() {
+const traceId = makeTraceId("cron-display-tokens");
+const result = { removed: 0, skipped: 0, failed: 0, errors: [] };
+
+try {
+const now = new Date();
+const collection = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
+const res = await dalQuery(collection)
+.eq("controlType", CONTROL_TYPE.DISPLAY_TOKEN)
+.lt("expiresAt", now)
+.limit(500)
+.find({ consistencyMode: "strong" });
+const ids = (res?.items || []).map((item) => item._id).filter(Boolean);
+
+if (ids.length) {
+const removal = await dalBulkRemove(collection, ids, {
+condition: {
+filter: {
+controlType: { $eq: CONTROL_TYPE.DISPLAY_TOKEN },
+expiresAt: { $lt: now },
+},
+},
+});
+result.removed = Number(removal?.removed) || 0;
+result.skipped = Number(removal?.skipped) || 0;
+const errors = Array.isArray(removal?.errors) ? removal.errors : [];
+result.failed = errors.length;
+result.errors = errors.slice(0, 10).map((error) => ({
+id: error?.item || null,
+code: error?.code || "REMOVE_FAILED",
+error: error?.message || "UNKNOWN",
+}));
+}
+
+log.info("cleanExpiredDisplayTokens completed", {
+removed: result.removed,
+skipped: result.skipped,
+failed: result.failed,
+traceId,
+});
+} catch (err) {
+log.error("cleanExpiredDisplayTokens failed", { error: err?.message, traceId });
+result.failed += 1;
+result.errors.push({ query: "main", error: err?.message || "UNKNOWN" });
+}
+
+return result;
+}
+
+// =============================================================================
 // CRON 2: cleanupExpiredDualCache - 20 * * * *
 // =============================================================================
 /**
@@ -206,40 +263,54 @@ return result;
 */
 export async function cleanupExpiredDualCache() {
 const traceId = makeTraceId("cron-dual-cache");
-const result = { removed: 0, failed: 0, errors: [] };
+const result = { removed: 0, skipped: 0, failed: 0, errors: [] };
 
 try {
 const now = new Date();
-const limit =
-Number(SDK_CONFIG?.JOBS?.DUAL_CACHE_CLEANUP_LIMIT) || 100;
-const res = await dalQuery(OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO)
+const collection = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
+const batchSize = Math.max(
+1,
+Math.min(Number(SDK_CONFIG?.JOBS?.DUAL_CACHE_CLEANUP_LIMIT) || 500, 500)
+);
+
+// Drain bounded batches so a backlog of expired slot-pair cache rows does
+// not persist for several hourly runs. The remove condition rechecks expiry
+// at write time and cannot delete a row refreshed by a concurrent request.
+for (let batch = 0; batch < 10; batch++) {
+const res = await dalQuery(collection)
 .eq("controlType", CONTROL_TYPE.DUAL_CACHE)
 .lt("expiresAt", now)
-.limit(limit)
+.limit(batchSize)
 .find({ consistencyMode: "strong" });
+const ids = (res?.items || []).map((item) => item._id).filter(Boolean);
+if (!ids.length) break;
 
-for (const item of res?.items || []) {
-try {
-await dalRemove(OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO, item._id);
-result.removed++;
-} catch (removeError) {
-result.failed++;
-if (result.errors.length < 5) {
-result.errors.push({
-id: item._id,
-error: removeError?.message || "UNKNOWN",
+const removal = await dalBulkRemove(collection, ids, {
+condition: {
+filter: {
+controlType: { $eq: CONTROL_TYPE.DUAL_CACHE },
+expiresAt: { $lt: now },
+},
+},
 });
+const removed = Number(removal?.removed) || 0;
+result.removed += removed;
+result.skipped += Number(removal?.skipped) || 0;
+const errors = Array.isArray(removal?.errors) ? removal.errors : [];
+result.failed += errors.length;
+if (result.errors.length < 10) {
+result.errors.push(...errors.slice(0, 10 - result.errors.length).map((error) => ({
+id: error?.item || null,
+code: error?.code || "REMOVE_FAILED",
+error: error?.message || "UNKNOWN",
+})));
 }
-log.warn("cleanupExpiredDualCache: remove failed", {
-cacheId: item._id,
-error: removeError?.message,
-traceId,
-});
-}
+if (removed === 0) break;
 }
 
 log.info("cleanupExpiredDualCache completed", {
 removed: result.removed,
+skipped: result.skipped,
 failed: result.failed,
 traceId,
 });
@@ -248,7 +319,8 @@ log.error("cleanupExpiredDualCache failed", {
 error: err?.message,
 traceId,
 });
-result.errors.push({ query: "main", error: err?.message });
+result.failed += 1;
+result.errors.push({ query: "main", error: err?.message || "UNKNOWN" });
 }
 
 return result;
