@@ -504,10 +504,15 @@ export function CajaActual_beforeInsert(item) {
 
 export function CajaActual_beforeUpdate(item, context) {
     const previous = context?.original || {};
-    const prevSeq = previous?.sequenceCounters;
-    const nextSeq = item?.sequenceCounters;
+    const prevSeq = { ...(previous?.sequenceCounters || {}) };
+    const nextSeq = { ...(item?.sequenceCounters || {}) };
 
-    if (JSON.stringify(prevSeq || {}) !== JSON.stringify(nextSeq || {}) && item?._id !== "CAJA_SEQ") {
+    // appliedMovementIds is projection idempotency metadata on CAJA_PRINCIPAL,
+    // not a fiscal sequence counter. Ignore it when guarding sequence changes.
+    delete prevSeq.appliedMovementIds;
+    delete nextSeq.appliedMovementIds;
+
+    if (JSON.stringify(prevSeq) !== JSON.stringify(nextSeq) && item?._id !== "CAJA_SEQ") {
         log.warn("CajaActual_beforeUpdate: sequenceCounters modified on non-CAJA_SEQ document", { _id: item?._id });
     }
     return item;
