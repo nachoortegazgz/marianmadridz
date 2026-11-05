@@ -258,7 +258,7 @@ async function _getStaffAccess(resourceId, traceId = null) {
     }
 }
 
-function _validateProcessBookingPayload(payload, traceId, sessionMemberId = "") {
+function _validateProcessBookingPayload(payload, traceId, sessionMemberId = "", sessionContactId = "") {
     if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
         throw createBookingError(
             ERROR_CODES.INVALID_PAYLOAD,
@@ -344,7 +344,7 @@ function _validateProcessBookingPayload(payload, traceId, sessionMemberId = "") 
         addOnIds: _normalizeBookingAddOnIds(payload.addOnIds),
         traceId: _safeTrim(payload.traceId || ""),
         memberId: _safeTrim(sessionMemberId),
-        contactId: _safeTrim(sessionMember?.contactId || ""),
+        contactId: _safeTrim(sessionContactId),
     };
 }
 
@@ -362,7 +362,8 @@ export const processDualBooking = webMethod(
             const validatedDto = _validateProcessBookingPayload(
                 unsafePayload,
                 traceId,
-                sessionMemberId
+                sessionMemberId,
+                _safeTrim(sessionMember?.contactId || "")
             );
 
             await _rateLimitOrThrow(

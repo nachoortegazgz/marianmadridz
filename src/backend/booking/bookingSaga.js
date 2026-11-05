@@ -1316,6 +1316,13 @@ export async function executeBookingSaga(unsafePayload) {
         const finalResourceId = resourceValidation.data.resourceId;
         const validatedSlotF1 = resourceValidation.data.slotF1;
         const validatedSlotF2 = resourceValidation.data.slotF2;
+        if (isDual && (!f2LocalStart || !validatedSlotF2)) {
+            throw createBookingError(
+                ERROR_CODES.SLOT_UNAVAILABLE,
+                "Dual booking requires both F1 and F2 slots before any booking is created.",
+                { traceId: traceId, phase: "F2" }
+            );
+        }
 
         if (isDual && validatedSlotF1 && validatedSlotF2) {
             _validateDualGap(
@@ -1610,7 +1617,7 @@ export async function executeBookingSaga(unsafePayload) {
                 let f2Meta = null;
                 let pristineF2 = null;
 
-                if (isDual && f2LocalStart && validatedSlotF2) {
+                if (isDual) {
                     if (heartbeatMonitor) heartbeatMonitor.assertHealthy();
 
                     pristineF2 = await _forceStaffInPristineSlot(

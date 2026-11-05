@@ -38,7 +38,7 @@ test("BOOK-FLOW-WIDGET-BRAND-01 both widgets share the approved image, typograph
 });
 test("BOOK-FLOW-TIMING-01 module deadlines fit the configured widget watchdogs", () => {
   assert.match(calendarWidgetSource, /contextTimeoutMs:120000/);
-  assert.match(calendarWidgetSource, /bookingTimeoutMs:90000/);
+  assert.match(calendarWidgetSource, /bookingTimeoutMs:150000/);
   assert.match(serviceWidgetSource, /CONTEXT_TIMEOUT_MS:\s*155000/);
   assert.match(serviceWidgetSource, /BOOK_NOTICE_TIMEOUT_MS:\s*60000/);
   assert.match(calendarSource, /contextTimeoutMs:\s*110000/);
