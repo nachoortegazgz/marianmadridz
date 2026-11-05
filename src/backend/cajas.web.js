@@ -868,51 +868,65 @@ async function _updateCajaActual(movement, traceId) {
         const movementKey = _safeTrim(movement?._id || movement?.transactionId);
         if (!movementKey) throw new Error("CAJA_MOVEMENT_ID_REQUIRED");
 
-        // Do not collapse a read failure into 'register missing': that could reset the
-        // accumulated balance to zero and overwrite it. A genuine missing item must
-        // be represented by dalGet as null; thrown errors go to the recovery path.
-        let cashRegister = await dalGet(CAJA_ACTUAL_COL, CASH_REGISTER_ID, "strong");
-        if (!cashRegister) {
-            cashRegister = {
-                _id: CASH_REGISTER_ID,
-                [CAJA_KEYS.SINGLETON_KEY]: SINGLETONS.CAJA_PRINCIPAL,
-                [CAJA_KEYS.OPERATION_DATE]: readOperationDate(movement) || new Date().toLocaleDateString("sv-SE", { timeZone: SDK_CONFIG?.TZ || "Europe/Madrid" }),
-                [CAJA_KEYS.STATUS]: CASH_REGISTER_STATUS.ABIERTA,
-                [CAJA_KEYS.TOTAL]: 0, [CAJA_KEYS.CASH]: 0, [CAJA_KEYS.CARD]: 0,
-                [CAJA_KEYS.BIZUM]: 0, [CAJA_KEYS.ONLINE]: 0,
-                [CAJA_KEYS.OPERATIONS]: 0,
-                sequenceCounters: {},
-                [CAJA_KEYS.OPENED_AT]: new Date(), [CAJA_KEYS.CLOSED_AT]: null,
-                [CAJA_KEYS.LAST_MOVEMENT_AT]: new Date(),
-                _createdDate: new Date(), _updatedDate: new Date(),
-            };
+        // CajaActual is a mutable projection. Use the CMS revision on updates
+        // and retain the movement ID in the same write as the balance change.
+        // This makes retries idempotent and concurrent updates recoverable.
+        for (let attempt = 0; attempt < 4; attempt += 1) {
+            let cashRegister = await dalGet(CAJA_ACTUAL_COL, CASH_REGISTER_ID, "strong");
+            const isNew = !cashRegister;
+            if (!cashRegister) {
+                cashRegister = {
+                    _id: CASH_REGISTER_ID,
+                    [CAJA_KEYS.SINGLETON_KEY]: SINGLETONS.CAJA_PRINCIPAL,
+                    [CAJA_KEYS.OPERATION_DATE]: readOperationDate(movement) || new Date().toLocaleDateString("sv-SE", { timeZone: SDK_CONFIG?.TZ || "Europe/Madrid" }),
+                    [CAJA_KEYS.STATUS]: CASH_REGISTER_STATUS.ABIERTA,
+                    [CAJA_KEYS.TOTAL]: 0, [CAJA_KEYS.CASH]: 0, [CAJA_KEYS.CARD]: 0,
+                    [CAJA_KEYS.BIZUM]: 0, [CAJA_KEYS.ONLINE]: 0,
+                    [CAJA_KEYS.OPERATIONS]: 0,
+                    sequenceCounters: {},
+                    [CAJA_KEYS.OPENED_AT]: new Date(), [CAJA_KEYS.CLOSED_AT]: null,
+                    [CAJA_KEYS.LAST_MOVEMENT_AT]: new Date(),
+                    _createdDate: new Date(), _updatedDate: new Date(),
+                };
+            }
+
+            const sequenceCounters = { ...(cashRegister.sequenceCounters || {}) };
+            const appliedMovementIds = Array.isArray(sequenceCounters.appliedMovementIds)
+                ? sequenceCounters.appliedMovementIds.map(String)
+                : [];
+            if (appliedMovementIds.includes(movementKey)) {
+                return { status: "SUCCESS", idempotent: true, movementId: movementKey };
+            }
+
+            const amount = Number(movement.accountingAmount) || 0;
+            const method = _safeTrim(movement.paymentMethod).toUpperCase();
+            if (method === PAYMENT_METHOD.EFECTIVO) cashRegister[CAJA_KEYS.CASH] = _roundMoney((cashRegister[CAJA_KEYS.CASH] || 0) + amount);
+            else if (method === PAYMENT_METHOD.TARJETA) cashRegister[CAJA_KEYS.CARD] = _roundMoney((cashRegister[CAJA_KEYS.CARD] || 0) + amount);
+            else if (method === PAYMENT_METHOD.BIZUM) cashRegister[CAJA_KEYS.BIZUM] = _roundMoney((cashRegister[CAJA_KEYS.BIZUM] || 0) + amount);
+            else if (ONLINE_PAYMENT_METHODS.includes(method)) cashRegister[CAJA_KEYS.ONLINE] = _roundMoney((cashRegister[CAJA_KEYS.ONLINE] || 0) + amount);
+
+            sequenceCounters.appliedMovementIds = [...appliedMovementIds, movementKey];
+            cashRegister.sequenceCounters = sequenceCounters;
+            cashRegister[CAJA_KEYS.TOTAL] = _roundMoney(
+                (cashRegister[CAJA_KEYS.CASH] || 0) + (cashRegister[CAJA_KEYS.CARD] || 0) +
+                (cashRegister[CAJA_KEYS.BIZUM] || 0) + (cashRegister[CAJA_KEYS.ONLINE] || 0));
+            cashRegister[CAJA_KEYS.OPERATIONS] = Number(cashRegister[CAJA_KEYS.OPERATIONS] || 0) + 1;
+            cashRegister[CAJA_KEYS.LAST_MOVEMENT_AT] = new Date();
+            cashRegister._updatedDate = new Date();
+
+            try {
+                if (isNew) {
+                    await dalInsert(CAJA_ACTUAL_COL, cashRegister);
+                } else {
+                    await dalUpdate(CAJA_ACTUAL_COL, cashRegister);
+                }
+                return { status: "SUCCESS", idempotent: false, movementId: movementKey };
+            } catch (writeError) {
+                if (attempt === 3) throw writeError;
+                await new Promise((resolve) => setTimeout(resolve, 25 * (attempt + 1)));
+            }
         }
-
-        const sequenceCounters = { ...(cashRegister.sequenceCounters || {}) };
-        const appliedMovementIds = Array.isArray(sequenceCounters.appliedMovementIds)
-            ? sequenceCounters.appliedMovementIds.map(String)
-            : [];
-        if (appliedMovementIds.includes(movementKey)) {
-            return { status: "SUCCESS", idempotent: true, movementId: movementKey };
-        }
-
-        const amount = Number(movement.accountingAmount) || 0;
-        const method = _safeTrim(movement.paymentMethod).toUpperCase();
-        if (method === PAYMENT_METHOD.EFECTIVO) cashRegister[CAJA_KEYS.CASH] = _roundMoney((cashRegister[CAJA_KEYS.CASH] || 0) + amount);
-        else if (method === PAYMENT_METHOD.TARJETA) cashRegister[CAJA_KEYS.CARD] = _roundMoney((cashRegister[CAJA_KEYS.CARD] || 0) + amount);
-        else if (method === PAYMENT_METHOD.BIZUM) cashRegister[CAJA_KEYS.BIZUM] = _roundMoney((cashRegister[CAJA_KEYS.BIZUM] || 0) + amount);
-        else if (ONLINE_PAYMENT_METHODS.includes(method)) cashRegister[CAJA_KEYS.ONLINE] = _roundMoney((cashRegister[CAJA_KEYS.ONLINE] || 0) + amount);
-
-        sequenceCounters.appliedMovementIds = [...appliedMovementIds, movementKey];
-        cashRegister.sequenceCounters = sequenceCounters;
-        cashRegister[CAJA_KEYS.TOTAL] = _roundMoney(
-            (cashRegister[CAJA_KEYS.CASH] || 0) + (cashRegister[CAJA_KEYS.CARD] || 0) +
-            (cashRegister[CAJA_KEYS.BIZUM] || 0) + (cashRegister[CAJA_KEYS.ONLINE] || 0));
-        cashRegister[CAJA_KEYS.OPERATIONS] = Number(cashRegister[CAJA_KEYS.OPERATIONS] || 0) + 1;
-        cashRegister[CAJA_KEYS.LAST_MOVEMENT_AT] = new Date();
-        cashRegister._updatedDate = new Date();
-        await dalSave(CAJA_ACTUAL_COL, cashRegister);
-        return { status: "SUCCESS", idempotent: false, movementId: movementKey };
+        throw new Error("CAJA_ACTUAL_CONCURRENCY_RETRIES_EXHAUSTED");
     } catch (err) {
         log.error("_updateCajaActual failed; queuing resync", { traceId, error: err?.message });
         try {
