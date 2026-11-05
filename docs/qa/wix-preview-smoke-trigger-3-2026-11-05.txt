@@ -1,0 +1,1 @@
+Temporary trigger for the isolated Wix CLI preview smoke test. Do not merge.
