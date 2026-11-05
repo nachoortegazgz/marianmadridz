@@ -4227,6 +4227,7 @@ La búsqueda de sitios Wix por nombre que contenga `QA` no devolvió un sitio se
 - Los cuatro bookings siguen `CONFIRMED` y `NOT_PAID`, sin `doubleBooked`. En los cuatro `selectedPaymentOption` es `UNDEFINED`; las filas históricas no contienen `memberId` ni `contactId`.
 - Se crearon entre 01:27 y 01:28 UTC, antes del merge de #108 a las 03:02 UTC. No son causados por el código integrado en #108. Hay otro par separado del 13-11, no coincidente en horario y no incluido en este duplicado.
 - No cancelar ni reasignar automáticamente. La elección del par que se conserva requiere reconciliación manual del propietario.
+- El flujo #108 consulta `_findExistingCitasForSlot()` antes de resolver el profesional: busca por servicio F1, fecha, inicio/fin exactos e identidad (memberId/contactId, con email como fallback); no incluye `resourceId` y excluye estados cancelados/declinados. Por tanto, estos pares legacy activos deben bloquear un tercer intento aunque el balanceador elija otro profesional. Es una garantía de código/contrato, no una prueba runtime posterior a la publicación.
 
 ### 35.6 Cobertura runtime y pendientes
 
