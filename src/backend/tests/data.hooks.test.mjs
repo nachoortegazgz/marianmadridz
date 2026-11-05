@@ -58,6 +58,50 @@ test('HOOK-CITAS-01 validates canonical enums, traceId and pairToken', () => {
   assert.throws(() => H.CitasF2_beforeRemove({}), /cancelacion formal/);
 });
 
+test('HOOK-CMS-DATETIME-01 normalizes CitasF2 slot dates to Date objects', () => {
+  const item = {
+    bookingId: '11111111-1111-4111-8111-111111111111',
+    bookingType: 'SIMPLE',
+    bookingStatus: 'PENDING',
+    paymentStatus: 'NOT_PAID',
+    traceId: 'trace-citas-datetime',
+    slotStart: '2026-11-12T08:30:00.000Z',
+    slotEnd: '2026-11-12T09:00:00.000Z',
+  };
+  H.CitasF2_beforeInsert(item);
+  assert.ok(item.slotStart instanceof Date);
+  assert.ok(item.slotEnd instanceof Date);
+  assert.strictEqual(item.slotStart.toISOString(), '2026-11-12T08:30:00.000Z');
+  assert.strictEqual(item.slotEnd.toISOString(), '2026-11-12T09:00:00.000Z');
+  assert.throws(() => H.CitasF2_beforeInsert({ ...item, slotStart: 'not-a-date' }), /DATETIME/);
+});
+
+test('HOOK-CMS-DATETIME-02 normalizes inventory DATETIME fields', () => {
+  const stock = { stockOnHand: 4, stockReserved: 1, stockAvailable: 3, lastSyncAt: '2026-11-05T10:00:00.000Z' };
+  H.InventarioStockVenta_beforeInsert(stock);
+  assert.ok(stock.lastSyncAt instanceof Date);
+
+  const movement = {
+    traceId: 'trace-inventory-datetime',
+    movementToken: 'movement-datetime-1',
+    movementType: 'AJUSTE',
+    reason: 'Ajuste de prueba',
+    quantity: 1,
+    recordTimestamp: '2026-11-05T10:05:00.000Z',
+  };
+  H.MovimientosInventario_beforeInsert(movement);
+  assert.ok(movement.recordTimestamp instanceof Date);
+  assert.throws(() => H.MovimientosInventario_beforeInsert({ ...movement, recordTimestamp: 'invalid' }), /DATETIME/);
+});
+
+test('HOOK-CMS-DATETIME-03 normalizes timeclock recordedAt', () => {
+  const item = { traceId: 'trace-timeclock-datetime', recordedAt: '2026-11-05T10:10:00.000Z' };
+  H.RegistrosHorariosStaff_beforeInsert(item);
+  assert.ok(item.recordedAt instanceof Date);
+  assert.strictEqual(item.recordedAt.toISOString(), '2026-11-05T10:10:00.000Z');
+  assert.throws(() => H.RegistrosHorariosStaff_beforeInsert({ ...item, recordedAt: 'invalid' }), /DATETIME/);
+});
+
 // -----------------------------------------------------------------------------
 // SSOT 5.13 / 15.1: inventory movements are append-only; stock projection
 // updates remain allowed only when the stock invariant is satisfied.

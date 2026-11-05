@@ -99,6 +99,29 @@ export function readMovementHash(item) {
 }
 
 /** @deprecated Alias de dominio contable; para MovimientosCaja usa readMovementHash. */
+/**
+ * Normalize a CMS DATETIME field at the data-hook boundary.
+ * Wix Data stores date-time values as Date objects; accepting ISO strings
+ * from older callers without conversion can persist the wrong CMS type.
+ * Missing optional fields remain untouched; invalid supplied values fail fast.
+ */
+function _normalizeCmsDateTime(item, fieldName) {
+    if (!item || typeof item !== "object") return item;
+    const value = item[fieldName];
+    if (value === undefined || value === null || value === "") return item;
+
+    let dateValue = value;
+    if (value && typeof value === "object" && !(value instanceof Date) && value.$date) {
+        dateValue = value.$date;
+    }
+    const normalized = dateValue instanceof Date ? dateValue : new Date(dateValue);
+    if (Number.isNaN(normalized.getTime())) {
+        _schemaError(`${fieldName} debe ser una fecha/hora válida (DATETIME)`);
+    }
+    item[fieldName] = normalized;
+    return item;
+}
+
 export const readRecordHash = readMovementHash;
 
 export function readRecipientLegalName(item) {
@@ -477,6 +500,7 @@ export function HistoricoCierresZ_beforeRemove() {
 
 export function RegistrosHorariosStaff_beforeInsert(item) {
     if (!item || typeof item !== "object") return item;
+    _normalizeCmsDateTime(item, "recordedAt");
     if (!_safeTrim(item.traceId)) _schemaError("traceId obligatorio en RegistrosHorariosStaff (RD 8/2019 trazabilidad)");
     return item;
 }
@@ -844,6 +868,7 @@ const VALID_MOV_INVENTARIO_TYPES = new Set([
 
 export function MovimientosInventario_beforeInsert(item) {
     if (!item || typeof item !== "object") return item;
+    _normalizeCmsDateTime(item, "recordTimestamp");
 
     if (!_safeTrim(item.traceId)) _schemaError("traceId obligatorio en MovimientosInventario (trazabilidad)");
     if (!_safeTrim(item.movementToken)) _schemaError("movementToken obligatorio (clave de idempotencia)");
@@ -888,6 +913,7 @@ export function InventarioStockVenta_beforeUpdate(item) { return _validateInvent
 
 function _validateInventarioStockVenta(item) {
     if (!item || typeof item !== "object") return item;
+    _normalizeCmsDateTime(item, "lastSyncAt");
 
     const catalogVersion = _safeTrim(item.catalogVersion);
     if (catalogVersion) {
@@ -929,11 +955,15 @@ function _validateInventarioStockVenta(item) {
 // Keep the SSOT structural guard at the CMS boundary as a second barrier to
 // the booking saga's point-of-use validation.
 export function CitasF2_beforeInsert(item) {
+    _normalizeCmsDateTime(item, "slotStart");
+    _normalizeCmsDateTime(item, "slotEnd");
     assertCitasF2(item);
     return item;
 }
 
 export function CitasF2_beforeUpdate(item) {
+    _normalizeCmsDateTime(item, "slotStart");
+    _normalizeCmsDateTime(item, "slotEnd");
     assertCitasF2(item);
     return item;
 }
