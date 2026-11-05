@@ -188,6 +188,58 @@ test('HOOK-CAJA-06 normalizes legacy recordHash alias to canonical hash', () => 
   assert.ok(!("recordHash" in item), "el alias 'recordHash' debe eliminarse del documento");
 });
 
+test('HOOK-CAJA-07 persists exact CMS field IDs and OBJECT payloads', () => {
+  const item = {
+    ...cajaBase(),
+    totalAmount: 15,
+    fiscalRole: 'RECEPTOR',
+    nifEmisor: 'B12345678',
+    nifDestinatario: '12345678Z',
+    irpfWithholdingRate: 0.15,
+    irpfWithholdingAmount: 15,
+    lineItems: [{ productId: 'p1', variantId: 'v1' }],
+    aeatPayload: 'NumSerieFactura=FAC-1',
+    customerEmail: 'qa@example.test',
+  };
+  H.MovimientosCaja_beforeInsert(item);
+  assert.equal(item.NIFEmisor, 'B12345678');
+  assert.equal(item.NIFDestinatario, '12345678Z');
+  assert.equal(item.IRPFWithholdingRate, 0.15);
+  assert.equal(item.IRPFWithholdingAmount, 15);
+  assert.ok(!('nifEmisor' in item));
+  assert.ok(!('nifDestinatario' in item));
+  assert.ok(!('irpfWithholdingRate' in item));
+  assert.ok(!('irpfWithholdingAmount' in item));
+  assert.deepEqual(item.lineItems, { items: [{ productId: 'p1', variantId: 'v1' }] });
+  assert.equal(item.payloadFiscal.aeatPayload, 'NumSerieFactura=FAC-1');
+  assert.equal(item.payloadFiscal.customerEmail, 'qa@example.test');
+  assert.ok(!('aeatPayload' in item));
+  assert.ok(!('customerEmail' in item));
+  assert.equal(H.readIssuerTaxId(item), 'B12345678');
+  assert.equal(H.readRecipientTaxId(item), '12345678Z');
+});
+
+test('HOOK-CONTROL-01 canonicalizes duplicate ControlOperativo columns', () => {
+  const expiresAt = new Date('2026-11-05T12:00:00.000Z');
+  const item = {
+    controlType: 'IDEMPOTENCY',
+    attempt: 2,
+    leaseExpiresAt: expiresAt,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    payloadJson: JSON.stringify({ lockOwnerId: 'qa-owner' }),
+  };
+  H.ControlOperativo_beforeInsert(item);
+  assert.equal(item.attempts, 2);
+  assert.equal(item.expiresAt, expiresAt);
+  assert.ok(!('attempt' in item));
+  assert.ok(!('leaseExpiresAt' in item));
+  assert.ok(!('createdAt' in item));
+  assert.ok(!('updatedAt' in item));
+  assert.deepEqual(item.payload, { lockOwnerId: 'qa-owner' });
+  assert.ok(!('payloadJson' in item));
+});
+
 // -----------------------------------------------------------------------------
 // DatosFiscales — schema físico CMS (rev. 10)
 // -----------------------------------------------------------------------------

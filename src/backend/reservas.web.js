@@ -61,6 +61,7 @@
 import { webMethod, Permissions } from "wix-web-module";
 import {
     query as dalQuery,
+    getItem as dalGet,
     removeById,
     saveItem,
     insertItem as dalInsert,
@@ -2238,11 +2239,9 @@ async function _generateDisplayToken(bookingId, traceId, serviceId) {
             dedupeKey: `DISPLAY_TOKEN_${tokenHash}`,
             bookingId: _safeTrim(bookingId),
             serviceId: _looksLikeGuid(serviceId) ? _safeTrim(serviceId) : undefined,
-            tokenHash,
             expiresAt,
             attempts: 0,
             maxAttempts: DISPLAY_TOKEN_MAX_ATTEMPTS,
-            consumedAt: null,
             traceId,
         });
         return token;
@@ -2256,16 +2255,14 @@ async function _validateAndConsumeDisplayToken(token, traceId) {
     const tokenHash = _hashKey(token);
     const tokenId = `DT_${tokenHash}`;
     try {
-        const tokenRecord = await withTimeout(
-            dalQuery(CONTROL_COL).eq("controlType", CT_DISPLAY_TOKEN).eq("tokenHash", tokenHash).limit(1).find(CONSISTENT_READ),
+        const record = await withTimeout(
+            dalGet(CONTROL_COL, tokenId, "strong"),
             WATCHDOG_TIMEOUT_MS,
             "validateDisplayToken"
         );
-        const record = tokenRecord?.items?.[0];
         if (!record) return { valid: false, reason: "TOKEN_NOT_FOUND" };
         const expiresAtMs = new Date(record.expiresAt).getTime();
         if (!Number.isFinite(expiresAtMs) || expiresAtMs <= Date.now()) return { valid: false, reason: "TOKEN_EXPIRED" };
-        if (record.consumedAt) return { valid: false, reason: "TOKEN_ALREADY_CONSUMED" };
         if (record.attempts >= record.maxAttempts) return { valid: false, reason: "TOKEN_MAX_ATTEMPTS_EXCEEDED" };
         const consumed = await _consumeDisplayToken(tokenId, traceId);
         if (!consumed) return { valid: false, reason: "TOKEN_ALREADY_CONSUMED" };
@@ -2399,7 +2396,7 @@ export const generateDisplayToken = webMethod(
                     WATCHDOG_TIMEOUT_MS,
                     "verifyEmissionCredential"
                 );
-                const ownsCredential = (credRec?.items || []).some((row) => row.tokenHash && row.tokenHash === credHash);
+                const ownsCredential = (credRec?.items || []).some((row) => row._id === `DT_${credHash}` || row.payload?.tokenHash === credHash || row.tokenHash === credHash);
                 if (!ownsCredential) return { ok: false, token: null, error: "ACCESS_DENIED" };
             }
             const token = await _generateDisplayToken(id, traceId, rec.serviceId);
