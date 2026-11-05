@@ -634,6 +634,7 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
 
             if (existingRes?.items?.length > 0) {
                 log.info("Ledger idempotent duplicate detected", { transactionId, traceId });
+                await _updateCajaActual(existingRes.items[0], traceId);
                 // Retry projection if the fiscal movement survived a prior partial attempt.
                 await _projectToAccountingLedger(existingRes.items[0], traceId);
                 return { status: "SUCCESS", data: existingRes.items[0], error: null, idempotent: true };
@@ -824,7 +825,7 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
         }
 
         const saved = await dalInsert(MOVIMIENTOS_CAJA_COL, movement);
-        await _updateCajaActual(movement, traceId);
+        await _updateCajaActual(saved, traceId);
         await _projectToAccountingLedger(saved, traceId);
 
         return { status: "SUCCESS", data: saved, error: null };
@@ -864,6 +865,9 @@ const CAJA_KEYS = Object.freeze({
 
 async function _updateCajaActual(movement, traceId) {
     try {
+        const movementKey = _safeTrim(movement?._id || movement?.transactionId);
+        if (!movementKey) throw new Error("CAJA_MOVEMENT_ID_REQUIRED");
+
         // Do not collapse a read failure into 'register missing': that could reset the
         // accumulated balance to zero and overwrite it. A genuine missing item must
         // be represented by dalGet as null; thrown errors go to the recovery path.
@@ -877,11 +881,21 @@ async function _updateCajaActual(movement, traceId) {
                 [CAJA_KEYS.TOTAL]: 0, [CAJA_KEYS.CASH]: 0, [CAJA_KEYS.CARD]: 0,
                 [CAJA_KEYS.BIZUM]: 0, [CAJA_KEYS.ONLINE]: 0,
                 [CAJA_KEYS.OPERATIONS]: 0,
+                sequenceCounters: {},
                 [CAJA_KEYS.OPENED_AT]: new Date(), [CAJA_KEYS.CLOSED_AT]: null,
                 [CAJA_KEYS.LAST_MOVEMENT_AT]: new Date(),
                 _createdDate: new Date(), _updatedDate: new Date(),
             };
         }
+
+        const sequenceCounters = { ...(cashRegister.sequenceCounters || {}) };
+        const appliedMovementIds = Array.isArray(sequenceCounters.appliedMovementIds)
+            ? sequenceCounters.appliedMovementIds.map(String)
+            : [];
+        if (appliedMovementIds.includes(movementKey)) {
+            return { status: "SUCCESS", idempotent: true, movementId: movementKey };
+        }
+
         const amount = Number(movement.accountingAmount) || 0;
         const method = _safeTrim(movement.paymentMethod).toUpperCase();
         if (method === PAYMENT_METHOD.EFECTIVO) cashRegister[CAJA_KEYS.CASH] = _roundMoney((cashRegister[CAJA_KEYS.CASH] || 0) + amount);
@@ -889,6 +903,8 @@ async function _updateCajaActual(movement, traceId) {
         else if (method === PAYMENT_METHOD.BIZUM) cashRegister[CAJA_KEYS.BIZUM] = _roundMoney((cashRegister[CAJA_KEYS.BIZUM] || 0) + amount);
         else if (ONLINE_PAYMENT_METHODS.includes(method)) cashRegister[CAJA_KEYS.ONLINE] = _roundMoney((cashRegister[CAJA_KEYS.ONLINE] || 0) + amount);
 
+        sequenceCounters.appliedMovementIds = [...appliedMovementIds, movementKey];
+        cashRegister.sequenceCounters = sequenceCounters;
         cashRegister[CAJA_KEYS.TOTAL] = _roundMoney(
             (cashRegister[CAJA_KEYS.CASH] || 0) + (cashRegister[CAJA_KEYS.CARD] || 0) +
             (cashRegister[CAJA_KEYS.BIZUM] || 0) + (cashRegister[CAJA_KEYS.ONLINE] || 0));
@@ -896,14 +912,15 @@ async function _updateCajaActual(movement, traceId) {
         cashRegister[CAJA_KEYS.LAST_MOVEMENT_AT] = new Date();
         cashRegister._updatedDate = new Date();
         await dalSave(CAJA_ACTUAL_COL, cashRegister);
+        return { status: "SUCCESS", idempotent: false, movementId: movementKey };
     } catch (err) {
         log.error("_updateCajaActual failed; queuing resync", { traceId, error: err?.message });
         try {
             await _queueCompensation({
                 kind: "RESYNC_CAJA_BALANCE",
-                transactionId: movement.transactionId || null,
-                totalAmount: Number(movement.accountingAmount) || 0,
-                paymentMethod: movement.paymentMethod || null,
+                transactionId: movement?.transactionId || null,
+                totalAmount: Number(movement?.accountingAmount) || 0,
+                paymentMethod: movement?.paymentMethod || null,
                 operationDescription: "Sincronizacion de saldo tras fallo en _updateCajaActual",
                 phase: "WAIT_FOR_CAJA_RESYNC",
                 origin: "UPDATE_CAJA_FAILED",
@@ -913,7 +930,12 @@ async function _updateCajaActual(movement, traceId) {
         } catch (queueErr) {
             log.error("_updateCajaActual: failed to queue resync", { traceId, error: queueErr?.message });
         }
+        return { status: "PENDING_RECONCILIATION", error: err?.message || "UNKNOWN" };
     }
+}
+
+export async function updateCajaActualFromMovement(movement, traceId) {
+    return _updateCajaActual(movement, traceId || movement?.traceId || makeTraceId("caja-projection"));
 }
 
 // ============================================================================
@@ -1474,6 +1496,7 @@ export const registerGiftCardRedemption = webMethod(Permissions.SiteMember, asyn
 
         if (existingRedemption?.items?.length > 0) {
             log.info("Gift card redemption idempotent duplicate detected", { redemptionId, giftCardId, traceId });
+            await _updateCajaActual(existingRedemption.items[0], traceId);
             await _projectToAccountingLedger(existingRedemption.items[0], traceId);
             return { status: "SUCCESS", data: existingRedemption.items[0], error: null, idempotent: true };
         }
