@@ -293,8 +293,8 @@ export function assertMovimientosInventario(item) {
 
 /* R2/DUP-01: _GUID_RE local ELIMINADO. Regex GUID canonicas:
  * isValidGuid (internalConfig, backend SSOT) / _looksLikeGuid (mmUtils,
- * frontend). R2: assertMapaStaff ELIMINADO (coleccion MapaStaff no existe
- * en CMS KEY FIELDS; cero consumidores tras reescritura de staff.js v9). */
+ * frontend). MapaStaff se valida en el resolver de identidad que necesita
+ * la consulta: una unica fila activa por staffMemberId y resourceId GUID. */
 
 // =============================================================================
 // NIF / NIE / CIF / VAT-UE CHECKSUM (Ley 11/2021)
