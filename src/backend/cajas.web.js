@@ -641,10 +641,19 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
 
             if (existingRes?.items?.length > 0) {
                 log.info("Ledger idempotent duplicate detected", { transactionId, traceId });
-                await _updateCajaActual(existingRes.items[0], traceId);
+                const cashProjection = await _updateCajaActual(existingRes.items[0], traceId);
                 // Retry projection if the fiscal movement survived a prior partial attempt.
                 await _projectToAccountingLedger(existingRes.items[0], traceId);
-                return { status: "SUCCESS", data: existingRes.items[0], error: null, idempotent: true };
+                if (cashProjection?.status !== "SUCCESS") {
+                    return {
+                        status: "PARTIAL",
+                        data: existingRes.items[0],
+                        error: { code: "CASH_PROJECTION_PENDING", message: "Movimiento fiscal persistido; CajaActual requiere reconciliacion." },
+                        idempotent: true,
+                        cashProjectionStatus: cashProjection?.status || "UNKNOWN",
+                    };
+                }
+                return { status: "SUCCESS", data: existingRes.items[0], error: null, idempotent: true, cashProjectionStatus: "SUCCESS" };
             }
         }
 
@@ -832,10 +841,32 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
         }
 
         const saved = await dalInsert(MOVIMIENTOS_CAJA_COL, movement);
-        await _updateCajaActual(saved, traceId);
-        await _projectToAccountingLedger(saved, traceId);
+        const cashProjection = await _updateCajaActual(saved, traceId);
+        try {
+            await _projectToAccountingLedger(saved, traceId);
+        } catch (projectionError) {
+            log.error("Accounting projection failed after fiscal ledger insert", {
+                traceId,
+                movementId: saved?._id,
+                error: projectionError?.message,
+            });
+            return {
+                status: "PARTIAL",
+                data: saved,
+                error: { code: "ACCOUNTING_PROJECTION_PENDING", message: "Movimiento fiscal persistido; asiento contable requiere reconciliacion." },
+                cashProjectionStatus: cashProjection?.status || "UNKNOWN",
+            };
+        }
+        if (cashProjection?.status !== "SUCCESS") {
+            return {
+                status: "PARTIAL",
+                data: saved,
+                error: { code: "CASH_PROJECTION_PENDING", message: "Movimiento fiscal persistido; CajaActual requiere reconciliacion." },
+                cashProjectionStatus: cashProjection?.status || "UNKNOWN",
+            };
+        }
 
-        return { status: "SUCCESS", data: saved, error: null };
+        return { status: "SUCCESS", data: saved, error: null, cashProjectionStatus: "SUCCESS", accountingProjectionStatus: "SUCCESS" };
     } catch (err) {
         const norm = normalizeError(err);
         log.error("registerManualTransaction failed", { code: norm.code, error: norm.message, traceId });
