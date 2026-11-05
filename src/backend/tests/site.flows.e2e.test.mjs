@@ -475,6 +475,50 @@ test('FLOW-CAJA-05 CajaActual applies each persisted movement exactly once', asy
   assert.deepStrictEqual(register.sequenceCounters.appliedMovementIds, [movement._id]);
 });
 
+test('FLOW-CAJA-06 CajaActual resolves singletonKey when Wix assigned a different physical _id', async () => {
+  wixDataMock._reset();
+  wixDataMock._store.set('CajaActual', [{
+    _id: 'SINGLE_ITEM_ID',
+    singletonKey: 'CAJA_PRINCIPAL',
+    isOpen: true,
+    cashRegisterStatus: 'ABIERTA',
+    operationDate: '2026-11-06',
+    openingAmount: 300,
+    cashAmount: 300,
+    totalInAmount: 300,
+    expectedCash: 300,
+    cardAmount: 0,
+    voucherAmount: 0,
+    otherAmount: 0,
+    salesCount: 0,
+    sequenceCounters: {},
+  }]);
+  const { cajas } = await freshImports();
+  const movement = {
+    _id: '22222222-2222-4222-8222-222222222222',
+    transactionId: 'cash-projection-existing-singleton-001',
+    accountingAmount: 35,
+    paymentMethod: 'WIX_PAYMENTS',
+    traceId: 'trace-caja-existing-singleton-001',
+  };
+
+  const first = await cajas.updateCajaActualFromMovement(movement, movement.traceId);
+  const replay = await cajas.updateCajaActualFromMovement(movement, movement.traceId);
+  const rows = wixDataMock._store.get('CajaActual') || [];
+  const register = rows.find((row) => row.singletonKey === 'CAJA_PRINCIPAL');
+
+  assert.strictEqual(first.status, 'SUCCESS');
+  assert.strictEqual(replay.status, 'SUCCESS');
+  assert.strictEqual(replay.idempotent, true);
+  assert.strictEqual(rows.length, 1, 'no debe crear un segundo singleton');
+  assert.strictEqual(register._id, 'SINGLE_ITEM_ID', 'debe conservar el _id físico de Wix');
+  assert.strictEqual(register.cashAmount, 300, 'el cobro online no altera efectivo');
+  assert.strictEqual(register.otherAmount, 35);
+  assert.strictEqual(register.netAmount, 335);
+  assert.strictEqual(register.salesCount, 1);
+  assert.deepStrictEqual(register.sequenceCounters.appliedMovementIds, [movement._id]);
+});
+
 test('FLOW-CAJA-04 transactionId concurrente no crea movimientos duplicados', async () => {
   wixDataMock._reset();
   const { cajas } = await freshImports();
