@@ -192,6 +192,7 @@ test('HOOK-CAJA-07 persists exact CMS field IDs and OBJECT payloads', () => {
   const item = {
     ...cajaBase(),
     totalAmount: 15,
+    fiscalRole: 'RECEPTOR',
     nifEmisor: 'B12345678',
     nifDestinatario: '12345678Z',
     irpfWithholdingRate: 0.15,
