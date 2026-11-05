@@ -1,5 +1,7 @@
 # DOSSIER TÉCNICO CONSOLIDADO — marianmadrid.es versión.z
 
+> **ESTATUS DOCUMENTAL — REFERENCIA CONSULTIVA, NO SSOT.** Este dossier es un documento auxiliar de contexto, síntesis y trazabilidad. **No es fuente de verdad única, no establece autoridad normativa ni técnica y no puede prevalecer sobre la SSOT vigente, las fuentes primarias oficiales, los datos vivos de Wix/CMS, el código integrado ni las decisiones aprobadas mediante ADR.** Sus afirmaciones deben tratarse como declaradas hasta contrastarlas. Si hay conflicto, se registra y se consulta al propietario; no se resuelve usando este dossier como árbitro. Las incoherencias pendientes se recogen en el registro de decisión que sigue al mapa de contenidos.
+
 **Proyecto:** Marian Madrid Peluquería y Estética · **Repositorio canónico en GITHUB:** `nachoortegazgz/marianmadridz` · **QA: www.marianmadrid.es** arquitectura, estado, evidencias y protocolo para su uso como QA. El estado operativo se consulta en el checkpoint más reciente (§36); los datos de prueba y condiciones de validación, en §25; el plan de trabajo, en §26.
 
 ## MAPA DE CONTENIDOS
@@ -21,6 +23,24 @@
 **Ruta rápida:** estado actual → §36 (y después confirmar HEAD/CI); reservas y pruebas → §§25, 27–28 y 33–35; plan → §26 y §32.6; arquitectura → §§8–16; contratos de API → bloque E; esquema de datos → bloque L y CMS KEYFIELDS.md.
 
 **Convención de numeración:** los bloques A–H y J–L son documentos/anexos independientes y conservan su numeración interna. Las secciones 24–36 forman la serie cronológica de checkpoints. No interpretar el mismo número de dos bloques distintos como una referencia equivalente.
+
+
+## REGISTRO DE INCOHERENCIAS DEL DOSSIER — DECISIÓN DEL PROPIETARIO
+
+> Este registro identifica conflictos internos o desajustes de vigencia detectados durante la revisión. **No son correcciones aprobadas.** Se conservan las evidencias y se solicita decidir, caso por caso, si corresponde **ELIMINAR**, **EDITAR** o **CONSERVAR** (marcando expresamente como histórico/pendiente). No se ha borrado información de este registro ni se han reconciliado las discrepancias por inferencia.
+
+| ID | Incoherencia detectada | Localización/evidencia | Decisión pendiente |
+|---|---|---|---|
+| D-01 | El dossier aparecía como prioridad 3 en la jerarquía de discrepancias, por encima de auditorías/CI/repositorio, pese a declararse subordinado a la SSOT y a fuentes primarias. | Antiguo §5, lista de precedencia; matriz de referencias; entradas obligatorias. | **EDITADO en esta revisión** para dejarlo en último lugar y solo como consulta. Confirmar que la jerarquía resultante coincide con la SSOT vigente. |
+| D-02 | La SSOT v10.0 se cita como fuente superior y como documento aplicado, pero el propio dossier indica que no estaba en la raíz del repositorio consultada. No queda identificada aquí su ubicación controlada ni la versión vigente posterior. | Bloque A, §5 y Anexo J, pendiente sobre SSOT v10.0 y hoja de necesidades. | ¿CONSERVAR como fuente externa controlada, EDITAR la referencia con su ubicación/versión, o incorporar el documento canónico al proyecto? No asumir que v10.0 sigue siendo la última. |
+| D-03 | Hay dos métricas históricas de tests que no coinciden: 182 pass/0 fail (11 suites) y 158/158. El texto las etiqueta como declaradas, pero no resuelve si son universos/fechas distintos o un error. | §6.2, filas “Tests Vitest” y “Tests Vitest (SSOT)”. | ¿CONSERVAR ambas con fecha/commit y alcance, EDITAR tras verificar los informes originales o ELIMINAR una cifra si carece de evidencia? |
+| D-04 | Los checkpoints §24 y §32 contienen frases de “estado más reciente/prevalece” que quedaron superadas por §§33–36. Son útiles como histórico, pero sus encabezados/notas pueden inducir a tratarlos como vigentes. | §§24.1–24.2; §32 y sus notas de vigencia; §§33–36 posteriores. | ¿CONSERVAR como histórico con aviso visible, EDITAR sus notas para señalar que §36 es el último snapshot del dossier, o ELIMINAR solo frases de vigencia obsoletas? Recomiendo conservar la evidencia. |
+| D-05 | Persisten referencias internas heredadas que pueden estar desfasadas por cambios de numeración o por referencias a §0/§A.4, mientras la estructura actual usa otra numeración. | Ejemplos: §6.2 cita “dossier §0”; §23 y otros apartados citan §A.4; varias referencias del bloque F/G. | ¿Autorizar una auditoría integral de referencias y su edición, o conservar las referencias históricas cuando identifiquen el documento/versión de origen? No corregir automáticamente las ambiguas. |
+| D-06 | El Anexo L mezcla una extracción CMS base del 25-10, revisiones reconciliadas el 01-11 y datos de cortes posteriores en §35.2. La nota advierte del desfase, pero el resumen de L puede leerse como inventario actual. | Anexo L, “Extracción detallada base” y tabla Resumen; §35.2. | ¿CONSERVAR L como snapshot histórico y añadir una advertencia destacada, EDITAR su resumen a la última extracción comprobada o mantenerlo como histórico separado del inventario vivo? |
+| D-07 | En §35.1 se afirma que el workflow no tenía trigger push y que se añade; §36 ya confirma que el trigger quedó integrado y ejecutó correctamente. La secuencia es cronológica, pero la frase anterior queda obsoleta si se consulta aislada. | §§35.1 y 36.1. | ¿CONSERVAR ambas como trazabilidad temporal, o EDITAR §35.1 con una nota “situación previa a PR #109, superada por §36.1”? Recomiendo conservar y aclarar, no borrar. |
+| D-08 | El Bloque A se define como instrucciones operativas para cualquier modelo IA y el Resumen Ejecutivo afirma fijar la “doctrina única” que gobierna toda acción. Estas formulaciones chocan con el estatus consultivo y no vinculante que el propietario acaba de establecer para el dossier. | Naturaleza del Anexo A; propósito del Anexo C; reglas de activación y gobernanza. | ¿EDITAR esas formulaciones para convertirlas en recomendaciones subordinadas, ELIMINARlas si duplican la SSOT o CONSERVARlas solo como texto histórico claramente no vinculante? Pendiente de decisión expresa.
+
+**Estado del registro:** D-01 ajustado para reflejar la instrucción del propietario; D-02 a D-08 pendientes de decisión. La presencia de un punto en esta tabla no autoriza su eliminación ni modificación. Registrar la decisión del propietario antes de tocar esos contenidos.
 
 ---
 
@@ -82,7 +102,7 @@ La necesidad principal es gestionar el negocio desde Wix y cubrir las carencias 
 
 ### 2.3 Directrices de ejecución
 
-1. Aplicar la precedencia documental y técnica definida en este dossier; ante conflicto, registrar las fuentes y no resolverlo por antigüedad sin evidencia.
+1. Aplicar la precedencia definida por la SSOT vigente y las fuentes primarias aplicables; este dossier es consultivo. Ante conflicto, registrar las fuentes y elevarlo al usuario sin resolverlo por antigüedad.
 2. Verificar el estado actual en el repositorio, CMS/API Wix, CI y entorno de QA antes de cambiar contratos o afirmar resultados.
 3. Implementar el mínimo código necesario; no introducir nuevas colecciones, proveedores, licencias o arquitecturas sin ADR cuando corresponda.
 4. No publicar, ejecutar cobros, mutar datos reales ni modificar ledgers protegidos sin autorización explícita y procedimiento de validación.
@@ -130,22 +150,22 @@ Los identificadores anteriores son referencias del dossier y deben contrastarse 
 
 ---
 
-### Matriz de autoridad documental
+### Matriz de referencias consultivas del dossier
 
-El dossier combina directrices, contratos, inventarios y checkpoints fechados. Para evitar que un resumen se interprete como fuente de verdad paralela, aplicar esta tabla:
+El siguiente cuadro solo ayuda a localizar contenido dentro de este documento. **No asigna autoridad ni convierte sus apartados en referencias canónicas del proyecto.** La autoridad se determina fuera del dossier, conforme a la SSOT vigente y a las fuentes primarias correspondientes.
 
-| Necesidad | Referencia canónica | Regla |
+| Necesidad | Localización orientativa dentro del dossier | Límite de uso |
 |---|---|---|
-| Conducta del agente, fuentes y límites | Bloque A y §§1–9 | Directrices de trabajo; no acreditan el estado del sistema. |
-| Prioridades y gates | Resumen ejecutivo y §§19–20, 25–26 | Contrastar con SSOT y evidencia primaria. |
-| Contratos Wix, APIs y versiones | §E, documentación Wix y §§13–16 | Verificar vigencia oficial antes de implementar. |
-| CMS, keyfields, enums e invariantes | §§F–G, §§5–7 y CMS KEYFIELDS | No duplicar esquemas; resolver contradicciones con evidencia/ADR. |
-| Backend, permisos, secretos y jobs | §§8, 10–12 y 21 | Código/configuración actuales prevalecen sobre descripciones históricas. |
-| IDs y credenciales de referencia | §§2.5–2.6 y ficha técnica | Inventario declarado; no demuestra acceso ni vigencia. |
-| Estado operativo y pendientes | **§36** | Checkpoint más reciente de este dossier; confirmar HEAD y CI antes de actuar. |
-| Evidencia anterior | §§24–35 y anexos fechados | Trazabilidad histórica; no reutilizar como estado actual si §36 la sustituye. |
+| Conducta del agente, fuentes y límites | Bloque A y §§1–9 | Texto consultivo; contrastar con las instrucciones vigentes del proyecto. |
+| Prioridades y gates | Resumen ejecutivo y §§19–20, 25–26 | Contrastar con SSOT vigente y decisiones aprobadas. |
+| Contratos Wix, APIs y versiones | §E, documentación Wix y §§13–16 | La documentación oficial Wix vigente prevalece; el dossier solo orienta. |
+| CMS, keyfields, enums e invariantes | §§F–G, §§5–7 y CMS KEYFIELDS | Consultar CMS vivo, SSOT y código/ADR; este resumen no es autoridad. |
+| Backend, permisos, secretos y jobs | §§8, 10–12 y 21 | Contrastar con código/configuración integrados y configuración Wix vigente. |
+| IDs y credenciales de referencia | §§2.5–2.6 y ficha técnica | Inventario orientativo; no demuestra acceso ni vigencia. |
+| Estado operativo y pendientes | **§36** | Snapshot documental más reciente incluido aquí; comprobar HEAD, CI y Wix en vivo antes de actuar. |
+| Evidencia anterior | §§24–35 y anexos fechados | Trazabilidad histórica; sus afirmaciones no se eliminan por quedar obsoletas. |
 
-**Regla de consolidación:** una sola descripción canónica por contrato, inventario o estado. En los demás apartados, usar referencias cruzadas y conservar solo el contexto diferencial. No borrar evidencia histórica si su eliminación rompe la trazabilidad; marcar explícitamente lo sustituido.
+**Regla editorial del dossier:** procurar una sola descripción de referencia por tema y enlazarla desde el resto del documento. Esto es una convención de mantenimiento, no una regla de autoridad del proyecto. No borrar evidencia histórica si su eliminación rompe la trazabilidad; marcar explícitamente lo sustituido.
 
 ---
 
@@ -286,15 +306,16 @@ Siguiente acción propuesta: <1 línea>
 
 ## 5. Precedencia de fuentes ante discrepancia
 
-Orden **estricto** (ya fijado en la SSOT; el modelo lo aplica sin reinterpretarlo):
+Orden de referencia para resolver discrepancias (la SSOT vigente es la que debe confirmar y gobernar este orden; el dossier no puede modificarlo):
 
 1. **APIs y SDK oficiales de Wix en su versión actualizada y correcta comprobada** (comportamiento real de la plataforma).
 2. **Esquema y registros del CMS vivo** (fuente de lo persistido).
-3. **DOSSIER CONSOLIDADO** (documento actual. Sirve de referencia y se corrige ante incoherencias confirmadas tras consultar al usuario).
-4. **Auditoría de migración / CI / repo `main`** (hechos verificados a fecha).
-5. **Hoja de necesidades** (deseado).
+3. **SSOT vigente y ADRs aprobados** (doctrina y decisiones formalmente aceptadas; confirmar siempre la versión/ubicación vigente).
+4. **Código integrado, auditorías y CI** (evidencia de implementación y estado; el CMS vivo ya figura en el nivel 2 para esquema y datos persistidos).
+5. **Hoja de necesidades** (objetivo deseado; no acredita implementación).
+6. **DOSSIER TÉCNICO CONSOLIDADO** (referencia consultiva únicamente; no resuelve discrepancias ni prevalece sobre ninguna de las fuentes anteriores).
 
-Si la discrepancia afecta a una decisión, se **documenta** y se propone corrección (ADR o actualización de SSOT). Nunca se oculta.
+Si la discrepancia afecta a una decisión, se **documenta** y se eleva al usuario/propietario. El dossier no decide la resolución. La SSOT se modifica solo mediante el proceso de aprobación correspondiente. Nunca se oculta.
 
 ---
 
