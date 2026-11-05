@@ -54,6 +54,13 @@ test("BOOK-FLOW-TIMING-01 module deadlines fit the configured widget watchdogs",
   assert.match(calendarWidgetSource, /bookingTimeoutMs:150000/);
 });
 
+test("BOOK-FLOW-IDEMPOTENCY-02 completed replay is checked before staff availability", () => {
+  const replayIndex = sagaSource.indexOf("_inspectTransactionReplay(candidatePairToken, payloadHash)");
+  const staffIndex = sagaSource.indexOf("_resolveStaffForSlotInternal({");
+  assert.ok(replayIndex > 0 && staffIndex > replayIndex, "completed replay must bypass current staff availability");
+  assert.match(sagaSource, /transactionStarted && pairToken/);
+});
+
 test("BOOK-FLOW-FAIL-CLOSED-01 confirmation requires matching staff, confirmed status and complete persistence", () => {
   assert.match(sagaSource, /_assertBookingResourceMatches\(bookingF1, "F1", finalResourceId/);
   assert.match(sagaSource, /_assertBookingResourceMatches\(bookingF2, "F2", finalResourceId/);

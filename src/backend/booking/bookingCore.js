@@ -1142,6 +1142,23 @@ function _evaluatePendingTransaction(current, payloadHash) {
     return null;
 }
 
+export async function _inspectTransactionReplay(pairToken, payloadHash) {
+    const id = _safeTrim(pairToken);
+    if (!id) return { state: "MISSING" };
+    const current = _readTransaction(await _getTransactionById(id));
+    if (!current) return { state: "MISSING" };
+    if (current.payloadHash !== String(payloadHash || "")) {
+        return { state: "PAYLOAD_MISMATCH" };
+    }
+    if (current.status === "COMPLETED") {
+        return { state: "COMPLETED", result: current.result || null };
+    }
+    if (["FAILED", "FAILED_RETRYABLE", "FAILED_FINAL"].includes(current.status)) {
+        return { state: "FAILED", error: current.error || null };
+    }
+    return { state: "IN_PROGRESS", status: current.status || null };
+}
+
 export async function _initTransaction(
     pairToken,
     payloadHash,

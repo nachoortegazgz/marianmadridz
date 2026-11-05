@@ -14,7 +14,7 @@ const SLOT_END = '2026-11-04T11:00:00';
 
 const writerCalls = [];
 const confirmationCalls = [];
-const slotsState = { calls: [], getCalls: [] };
+const slotsState = { calls: [], getCalls: [], failAvailability: false };
 const staffMember = {
   _id: 'ffffffff-ffff-4fff-8fff-ffffffffffff',
   resourceId: RESOURCE_ID,
@@ -45,11 +45,13 @@ const slotFixture = {
 mocks.webMethods.register('@wix/bookings', 'availabilityTimeSlots::listAvailabilityTimeSlots',
   async (payload) => {
     slotsState.calls.push(payload);
+    if (slotsState.failAvailability) throw new Error('completed replay must bypass staff availability');
     return { timeSlots: [slotFixture] };
   });
 mocks.webMethods.register('@wix/bookings', 'availabilityTimeSlots::getAvailabilityTimeSlot',
   async (...args) => {
     slotsState.getCalls.push(args);
+    if (slotsState.failAvailability) throw new Error('completed replay must bypass staff availability');
     return slotFixture;
   });
 mocks.sdk['bookings::staffMembers'] = {
@@ -154,6 +156,7 @@ test('QA-SIMPLE-BOOKING-01 resolves real catalogue and staff mocks, creates one 
   assert.equal(citas[0].bookingType, IC.BOOKING_TYPE.SIMPLE, 'stable token must not turn a simple booking into a dual booking');
   assert.equal(citas[0].contactDetails.email, 'qa.simple@example.test');
 
+  slotsState.failAvailability = true;
   const replay = await executeBookingSaga({
     traceId: 'trace-qa-simple-001-replay',
     firstName: 'Cliente',

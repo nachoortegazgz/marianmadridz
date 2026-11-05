@@ -76,6 +76,7 @@ import {
     _unlockSlotKey,
     _renewLock,
     _initTransaction,
+    _inspectTransactionReplay,
     _completeTransaction,
     _failTransaction,
     _persistBooking,
@@ -1118,6 +1119,7 @@ export async function executeBookingSaga(unsafePayload) {
     let lockRevisions = {};
     const createdBookings = [];
     let pairToken = "";
+    let transactionStarted = false;
 
     try {
         // ---------------- PHASE 0 ----------------
@@ -1293,6 +1295,63 @@ export async function executeBookingSaga(unsafePayload) {
         );
         const amountSnapshot = calculateBookingAmount(serviceConfig, detectedAddonIds);
 
+        // Resolve idempotency before querying current availability. A completed
+        // booking has already consumed its slots; replay must return the stored
+        // result even when every staff member is now unavailable for that time.
+        const tokenResolution = _resolveUnifiedPairToken({
+            isDual: isDual,
+            serviceId: serviceId,
+            linkedPhases: linkedPhases,
+            f1Start: f1LocalStart,
+            f1End: f1LocalEnd,
+            f2Start: f2LocalStart,
+            f2End: f2LocalEnd,
+            email: email,
+            traceId: traceId,
+        });
+        const candidatePairToken = tokenResolution.pairToken;
+        const payloadHash = _hashKey(
+            _stableSerialize({
+                serviceId: serviceId,
+                f1LocalStart: f1LocalStart,
+                f1LocalEnd: f1LocalEnd,
+                f2LocalStart: f2LocalStart,
+                f2LocalEnd: f2LocalEnd,
+                email: email,
+                addOnIds: detectedAddonIds,
+            })
+        );
+        const replay = await _inspectTransactionReplay(candidatePairToken, payloadHash);
+        if (replay.state === "COMPLETED") {
+            return {
+                status: "SUCCESS",
+                data: replay.result,
+                error: null,
+                idempotent: true,
+            };
+        }
+        if (replay.state === "PAYLOAD_MISMATCH") {
+            throw createBookingError(
+                ERROR_CODES.INVALID_PAYLOAD,
+                "Payload mismatch for existing pairToken",
+                { traceId: traceId }
+            );
+        }
+        if (replay.state === "FAILED") {
+            throw createBookingError(
+                ERROR_CODES.BOOKING_CREATION_FAILED,
+                "Previous transaction failed",
+                { traceId: traceId }
+            );
+        }
+        if (replay.state === "IN_PROGRESS") {
+            throw createBookingError(
+                ERROR_CODES.TOKEN_BUSY,
+                "A booking request for these same slots is already in progress.",
+                { traceId: traceId }
+            );
+        }
+
         // ---------------- PHASE 1 ----------------
         const resourceValidation = await _resolveStaffForSlotInternal({
             serviceId: serviceId,
@@ -1335,19 +1394,7 @@ export async function executeBookingSaga(unsafePayload) {
         }
 
         // ---------------- PHASE 2 ----------------
-        const tokenResolution = _resolveUnifiedPairToken({
-            isDual: isDual,
-            serviceId: serviceId,
-            linkedPhases: linkedPhases,
-            f1Start: f1LocalStart,
-            f1End: f1LocalEnd,
-            f2Start: f2LocalStart,
-            f2End: f2LocalEnd,
-            email: email,
-            traceId: traceId,
-        });
-        pairToken = tokenResolution.pairToken;
-
+        pairToken = candidatePairToken;
         lockOwnerId = [pairToken, traceId, _generateUUID()].join(":");
 
         log.info("SAGA-02: pairToken resolved", {
@@ -1369,24 +1416,16 @@ export async function executeBookingSaga(unsafePayload) {
             traceId: traceId,
         });
 
-        const payloadHash = _hashKey(
-            _stableSerialize({
-                serviceId: serviceId,
-                f1LocalStart: f1LocalStart,
-                f1LocalEnd: f1LocalEnd,
-                f2LocalStart: f2LocalStart,
-                f2LocalEnd: f2LocalEnd,
-                email: email,
-                addOnIds: detectedAddonIds,
-            })
-        );
-
         const txResult = await _initTransaction(
             pairToken,
             payloadHash,
             traceId,
             lockOwnerId
         );
+
+        if (txResult && txResult.success && txResult.isNew === true) {
+            transactionStarted = true;
+        }
 
         if (txResult && txResult.success && txResult.isNew === false) {
             if (txResult.existing && txResult.existing.status === "COMPLETED") {
@@ -2112,24 +2151,26 @@ export async function executeBookingSaga(unsafePayload) {
 
             return { status: "SUCCESS", data: finalResult, error: null };
         } catch (sagaErr) {
-            try {
-                const normSaga = normalizeError(sagaErr);
-                const uncertainStep =
-                    (normSaga.details && normSaga.details.uncertainStep) || null;
-                if (uncertainStep) {
-                    await markTransactionResultUnknown(pairToken, uncertainStep, traceId);
-                } else {
-                    await _failTransaction(
-                        pairToken,
-                        (normSaga && normSaga.code) || "SAGA_FAILED"
-                    );
+            if (transactionStarted && pairToken) {
+                try {
+                    const normSaga = normalizeError(sagaErr);
+                    const uncertainStep =
+                        (normSaga.details && normSaga.details.uncertainStep) || null;
+                    if (uncertainStep) {
+                        await markTransactionResultUnknown(pairToken, uncertainStep, traceId);
+                    } else {
+                        await _failTransaction(
+                            pairToken,
+                            (normSaga && normSaga.code) || "SAGA_FAILED"
+                        );
+                    }
+                } catch (failErr) {
+                    log.warn("_failTransaction could not be recorded", {
+                        pairToken: pairToken,
+                        traceId: traceId,
+                        error: failErr && failErr.message,
+                    });
                 }
-            } catch (failErr) {
-                log.warn("_failTransaction could not be recorded", {
-                    pairToken: pairToken,
-                    traceId: traceId,
-                    error: failErr && failErr.message,
-                });
             }
             throw sagaErr;
         }
