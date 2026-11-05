@@ -85,7 +85,7 @@ import {
 import { SECRETS } from "backend/mmSecrets";
 import { logger } from "backend/logger";
 import { normalizeError, _updateCitaSafe, _persistBooking } from "backend/booking/bookingCore";
-import { queueFiscalRecovery } from "backend/cajas.web";
+import { queueFiscalRecovery, updateCajaActualFromMovement } from "backend/cajas.web";
 import { registrarEventoEconomico } from "backend/eventLog";
 import {
     recordOnlineInventoryOrderInternal,
@@ -1232,6 +1232,9 @@ export async function wixEcom_onOrderPaymentStatusUpdated(rawBody) {
         ).catch(() => ({ items: [] }));
 
         if (existingLedgerRes?.items?.length > 0) {
+            // Recover a possible interruption after fiscal movement insertion.
+            // The cash-register projection deduplicates by persisted movement ID.
+            await updateCajaActualFromMovement(existingLedgerRes.items[0], traceId);
             const inventoryRetry = await recordOnlineInventoryOrderInternal(order, traceId);
             if (inventoryRetry?.status === "PENDING_RECONCILIATION") {
                 await logAuditEventWithTimeout(
