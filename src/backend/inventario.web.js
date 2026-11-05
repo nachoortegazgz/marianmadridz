@@ -3,9 +3,9 @@
 MODULE: backend/inventario.web.js
 VERSION: v5009-FISCAL-V20.1
 BASE: v5007.4-FINAL + Directriz V20 (IDs nativa en ingles)
-RESPONSIBILITY: Dashboard de inventario, cola de conciliacion Wix,
-                movimiento seguro de inventario, y cierre de inventario
-                valorado con hash y firma.
+RESPONSIBILITY: Dashboard de inventario, cola de conciliacion Wix y
+                movimientos seguros; el cierre valorado permanece bloqueado
+                hasta verificar una coleccion destino fisica.
 STANDARDS: G10 ASCII Strict (0 non-ASCII characters).
            Idempotencia por movementToken.
            Conciliacion con Wix Stores V1.
@@ -22,17 +22,14 @@ FIXES APLICADOS v5009-FISCAL-V20.1:
             preserva tal cual (bug del original, no de V20.1). El schema
             V20.1-EXPANDED-v2 amplia HistoricoCierresZ para acomodar los
             campos de inventario (inventoryClosingId, fiscalYear,
-            closingDate, closingType, sku, productId, productDescription,
-            stockQuantity, unitCost, stockValue, accountCode, debitBalance,
-            creditBalance).
+            closeDate, closingType, sku, wixProductId, stockQuantity,
+            unitCost, stockValue, cuentaContable, summaryData).
 
 CORRECTIONS (heredadas v5007.4):
   [INV-01..05] movementToken, stockBefore/After, needsWixReconciliation,
                recordOnlineInventoryOrder/Refund.
   [FIX-C3] generateInventoryClosing + listInventoryClosings.
   [FIX-D1..D3] Imports correctos.
-  - FIX-52: generateInventoryClosing usa try/catch por insert.
-  - FIX-53: fallo explicito si SECRETS.FISCAL_KEY no esta disponible.
   - FIX-54: getInventoryDashboard usa contains en lugar de hasSome.
 =============================================================================
 */
@@ -51,19 +48,17 @@ import {
   makeTraceId,
   _safeTrim,
   _roundMoney,
-  _readDate,
-  _stableSerialize,
 } from "public/mmUtils";
 
 import { logger } from "backend/logger";
 import { requireAdmin, requireCajero } from "backend/security";
 import { _toPublicError } from "backend/responseUtils";
-import { normalizeError } from "backend/booking/bookingCore";
-import { logAuditEvent } from "backend/audit";
 
-import { hashSHA256, hmacSha256Hex } from "backend/securityEngine";
-import { getSecretValue } from "backend/secretAccess";
-import { SECRETS } from "backend/mmSecrets";
+
+
+
+
+
 
 const log = logger;
 const INVENTARIO_COL = BUSINESS_COLLECTIONS.INVENTARIO_STOCK_VENTA;
@@ -947,181 +942,7 @@ export const generateInventoryClosing = webMethod(Permissions.Admin, async (opti
       message: "El cierre de inventario esta bloqueado hasta verificar su coleccion destino.",
     },
   };
-  // eslint-disable-next-line no-unreachable
-  try {
-    await requireAdmin(traceId);
 
-    const fiscalYear = Number(options?.fiscalYear);
-    if (!Number.isFinite(fiscalYear) || fiscalYear < 2020 || fiscalYear > 2100) {
-      return { status: "ERROR", data: null, error: { code: "INVALID_FISCAL_YEAR", message: "fiscalYear invalido" } };
-    }
-
-    const closingType = _safeTrim(options?.closingType).toUpperCase() || "ANUAL";
-    if (!["ANUAL", "MENSUAL", "EXTRAORDINARIO"].includes(closingType)) {
-      return { status: "ERROR", data: null, error: { code: "INVALID_CLOSING_TYPE", message: "closingType debe ser ANUAL, MENSUAL o EXTRAORDINARIO" } };
-    }
-
-    const closingDate = _readDate(options?.closingDate) || new Date().toLocaleDateString("sv-SE", { timeZone: SDK_CONFIG?.TZ || "Europe/Madrid" });
-
-    const existingClosing = await dalQuery(CIERRE_INV_COL)
-      .eq("fiscalYear", fiscalYear)
-      .eq("closingType", closingType)
-      .limit(1)
-      .find();
-
-    if (existingClosing?.items?.length > 0) {
-      return { status: "ERROR", data: null, error: { code: "CLOSING_ALREADY_EXISTS", message: "Ya existe un cierre para este ejercicio y tipo" } };
-    }
-
-    const stockRes = await dalQuery(INVENTARIO_COL)
-      .eq("active", true)
-      .limit(1000)
-      .find();
-
-    const stockItems = stockRes?.items || [];
-    if (stockItems.length === 0) {
-      return { status: "ERROR", data: null, error: { code: "NO_STOCK_ITEMS", message: "No hay articulos activos en inventario" } };
-    }
-
-    // FIX-53: fallo explicito si no hay fiscal key activa.
-    const fiscalKey = await getSecretValue(SECRETS.FISCAL_KEY).catch(() => "");
-    if (!fiscalKey) {
-      return {
-        status: "ERROR",
-        data: null,
-        error: {
-          code: "FISCAL_KEY_UNAVAILABLE",
-          message: "No se puede generar un cierre valorado sin clave fiscal activa",
-        },
-      };
-    }
-
-    const closingRecords = [];
-    let totalStockValue = 0;
-
-    for (const item of stockItems) {
-      const sku = _safeTrim(item.sku);
-      const stockQuantity = Number(
-        Number.isFinite(Number(item.stockOnHand))
-          ? Number(item.stockOnHand)
-          : Number(item.stockExpected || 0)
-      );
-      const unitCost = Number(item.costExTax) || 0;
-      const stockValue = _roundMoney(stockQuantity * unitCost);
-      totalStockValue += stockValue;
-
-      const closingId = `CLOSING_${fiscalYear}_${closingType}_${sku}`;
-
-      const recordPayload = _stableSerialize({
-        closingId,
-        fiscalYear,
-        closingDate,
-        closingType,
-        sku,
-        stockQuantity,
-        unitCost,
-        stockValue,
-      });
-      const closingHash = await hashSHA256(recordPayload);
-      const closingSignature = await hmacSha256Hex(fiscalKey, closingHash);
-
-      const closingRecord = {
-        _id: closingId,
-        inventoryClosingId: closingId,
-        fiscalYear,
-        closeDate: new Date(closingDate),
-        closingType,
-        sku,
-        wixProductId: item.wixProductId || null,
-        stockQuantity,
-        unitCost,
-        stockValue,
-        cuentaContable: "300000",
-        summaryData: {
-          productName: _safeTrim(item.productName) || _safeTrim(item.description) || "",
-          accountCode: "300000",
-          debitBalance: stockValue > 0 ? stockValue : 0,
-          creditBalance: stockValue < 0 ? Math.abs(stockValue) : 0,
-        },
-        closingHash,
-        closingSignature,
-        traceId,
-        _createdDate: new Date(),
-      };
-
-      closingRecords.push(closingRecord);
-    }
-
-    // FIX-52: try/catch por insert. Idempotencia sobre retry.
-    let createdCount = 0;
-    let idempotentCount = 0;
-    const failedRecords = [];
-
-    for (const record of closingRecords) {
-      try {
-        await insert(CIERRE_INV_COL, record);
-        createdCount += 1;
-      } catch (insertErr) {
-        const message = String(insertErr?.message || "");
-        const isDuplicate = /Duplicated|WDE0123|ALREADY_EXISTS/.test(message);
-        if (isDuplicate) {
-          idempotentCount += 1;
-        } else {
-          failedRecords.push({ sku: record.sku, error: message });
-        }
-      }
-    }
-
-    if (failedRecords.length > 0) {
-      await logAuditEvent(
-        "INVENTORY_CLOSING_PARTIAL",
-        "ERROR",
-        `Cierre de inventario incompleto: ${failedRecords.length} SKUs fallaron`,
-        { fiscalYear, closingType, failedCount: failedRecords.length, failedRecords: failedRecords.slice(0, 10), traceId },
-        traceId,
-        `CLOSING_${fiscalYear}`,
-        "backend/inventario.web.js"
-      );
-
-      return {
-        status: "ERROR",
-        data: null,
-        error: {
-          code: "INVENTORY_CLOSING_PARTIAL",
-          message: `Cierre incompleto: ${failedRecords.length} SKUs fallaron. Reintenta la operacion.`,
-        },
-      };
-    }
-
-    await logAuditEvent(
-      "INVENTORY_CLOSING_GENERATED",
-      "INFO",
-      `Cierre de inventario generado: ${fiscalYear} ${closingType}`,
-      { fiscalYear, closingType, createdCount, idempotentCount, totalStockValue, traceId },
-      traceId,
-      `CLOSING_${fiscalYear}`,
-      "backend/inventario.web.js"
-    );
-
-    return {
-      status: "SUCCESS",
-      data: {
-        fiscalYear,
-        closingType,
-        closingDate,
-        totalItems: closingRecords.length,
-        createdCount,
-        idempotentCount,
-        totalStockValue: _roundMoney(totalStockValue),
-        closingIds: closingRecords.map((r) => r._id),
-      },
-      error: null,
-    };
-  } catch (err) {
-    const norm = normalizeError(err);
-    log.error("generateInventoryClosing failed", { code: norm.code, error: norm.message, traceId });
-    return { status: "ERROR", data: null, error: { code: norm.code || "INV_CLOSE_FAIL", message: norm.message } };
-  }
 });
 
 // =============================================================================
@@ -1141,7 +962,7 @@ export const listInventoryClosings = webMethod(Permissions.SiteMember, async (op
     if (closingType) closeQuery = closeQuery.eq("closingType", closingType);
 
     const res = await closeQuery
-      .descending("closingDate")
+      .descending("closeDate")
       .limit(Math.min(Number(options?.limit) || 50, 200))
       .find();
 
