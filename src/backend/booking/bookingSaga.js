@@ -2183,6 +2183,7 @@ export async function executeBookingSaga(unsafePayload) {
                         controlType: CONTROL_TYPE.SYSTEM_FLAG,
                         dedupeKey: "COMPLETION_RETRY_" + pairToken,
                         bookingId: finalResult.bookingId || "",
+                        serviceId: serviceId,
                         payload: {
                             compensationKind: "COMPLETION_RETRY",
                             pairToken: pairToken,
