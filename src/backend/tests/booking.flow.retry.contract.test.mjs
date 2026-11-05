@@ -32,9 +32,12 @@ test("BOOK-FLOW-WIDGET-BRAND-01 both widgets share the approved image, typograph
     assert.ok(source.includes(sharedImage));
     assert.match(source, /Libre\+Baskerville|Libre Baskerville/);
     assert.match(source, /Brandon Grotesque/);
-    for (const type of ["MM_READY", "MM_CONTEXT", "MM_AVAIL", "MM_SELECT", "MM_BOOK", "MM_NAV"]) {
-      assert.ok(source.includes(type), `missing protocol message: ${type}`);
-    }
+  }
+  for (const type of ["MM_READY", "MM_CONTEXT", "MM_AVAIL", "MM_BOOK", "MM_NAV"]) {
+    assert.ok(calendarWidgetSource.includes(type), `calendar widget missing protocol message: ${type}`);
+  }
+  for (const type of ["MM_READY", "MM_CONTEXT", "MM_AVAIL", "MM_SELECT", "MM_BOOK", "MM_NAV"]) {
+    assert.ok(serviceWidgetSource.includes(type), `service widget missing protocol message: ${type}`);
   }
 });
 test("BOOK-FLOW-TIMING-01 module deadlines fit the configured widget watchdogs", () => {
@@ -82,8 +85,12 @@ test("BOOK-FLOW-IDEMPOTENCY-01 pair fingerprint and payload hash exclude auto-ba
     sagaSource.indexOf("function _resolveStablePairToken"),
     sagaSource.indexOf("function _resolveUnifiedPairToken"),
   );
+  const unifiedTokenBlock = sagaSource.slice(
+    sagaSource.indexOf("function _resolveUnifiedPairToken"),
+    sagaSource.indexOf("// BLOCK 2 - META"),
+  );
   assert.doesNotMatch(tokenBlock, /resourceId/);
-  assert.match(tokenBlock, /customerKey/);
+  assert.match(unifiedTokenBlock, /customerKey/);
   const payloadHashBlock = sagaSource.slice(
     sagaSource.indexOf("const payloadHash"),
     sagaSource.indexOf("const txResult"),

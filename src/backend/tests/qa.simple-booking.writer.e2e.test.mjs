@@ -65,14 +65,19 @@ mocks.sdk['@wix/bookings::bookings'] = {
       booking: {
         id: BOOKING_ID,
         revision: 1,
-        bookingStatus: 'CREATED',
+        status: 'CREATED',
+        bookedEntity: { slot: { resource: { id: RESOURCE_ID } } },
         doubleBooked: false,
       },
     };
   },
   confirmOrDeclineBooking: async (bookingId, options) => {
     confirmationCalls.push({ bookingId, options });
-    return { booking: { id: bookingId, bookingStatus: 'CONFIRMED' } };
+    return { booking: {
+      id: bookingId,
+      status: 'CONFIRMED',
+      bookedEntity: { slot: { resource: { id: RESOURCE_ID } } },
+    } };
   },
 };
 

@@ -32,7 +32,7 @@ test('BOOKING-DOUBLE-01 aborts saga when Wix flags a double-booked slot', () => 
   assert.ok(f2.indexOf('createdBookings.push({') < f2.indexOf('_checkDoubleBookingFlag(bookingF2'),
     'F2 must be tracked before the guard can throw so compensation can cancel both phases');
 
-  const confirmIndex = source.indexOf('_checkDoubleBookingFlag(confirmResult, "CONFIRM_" + booking.phase, traceId);');
+  const confirmIndex = source.indexOf('_checkDoubleBookingFlag(confirmedBooking, "CONFIRM_" + booking.phase, traceId);');
   assert.ok(confirmIndex >= 0, 'confirmation result must also be checked for double booking');
   assert.match(source, /async function _compensateCreatedBookings\(/,
     'saga compensation must exist for created bookings');
