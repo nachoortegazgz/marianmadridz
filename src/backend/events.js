@@ -167,6 +167,7 @@ const log = logger;
 const CITAS_COL = BUSINESS_COLLECTIONS.CITAS_F2;
 const MOVIMIENTOS_CAJA_COL = BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA;
 const CONTROL_OPERATIVO_COL = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
+const MAPA_STAFF_COL = BUSINESS_COLLECTIONS.MAPA_STAFF;
 
 // ALN-05: VAT_ACCRUAL_STATUS no existe en internalConfig v12.0.
 const VAT_ACCRUAL_DEVENGADO = "DEVENGADO";
@@ -509,37 +510,137 @@ function _extractFiscalDataFromOrder(order) {
  * confirmations must also be represented when no saga row exists, without
  * replacing pairToken/meta if the webhook races a custom dual transaction.
  */
+async function _resolveStaffResourceFromMapaStaff(staffMemberId) {
+    const id = _safeTrim(staffMemberId);
+    if (!id || !_looksLikeGuid(id)) {
+        return { ok: false, reason: "MAPA_STAFF_MEMBER_ID_MISSING" };
+    }
+
+    const result = await dalQuery(MAPA_STAFF_COL)
+        .eq("staffMemberId", id)
+        .eq("active", true)
+        .limit(2)
+        .find(STRONG_READ);
+    const matches = Array.isArray(result?.items) ? result.items : [];
+
+    if (matches.length === 0) {
+        return { ok: false, reason: "MAPA_STAFF_ACTIVE_MAPPING_NOT_FOUND" };
+    }
+    if (matches.length !== 1) {
+        return { ok: false, reason: "MAPA_STAFF_ACTIVE_MAPPING_AMBIGUOUS" };
+    }
+
+    const resourceId = _safeTrim(matches[0]?.resourceId || "");
+    const scheduleId = _safeTrim(matches[0]?.scheduleId || "");
+    if (!_looksLikeGuid(resourceId)) {
+        return { ok: false, reason: "MAPA_STAFF_RESOURCE_ID_INVALID" };
+    }
+    if (scheduleId && !_looksLikeGuid(scheduleId)) {
+        return { ok: false, reason: "MAPA_STAFF_SCHEDULE_ID_INVALID" };
+    }
+    return { ok: true, resourceId, scheduleId };
+}
+
 async function _syncNativeBookingToCitas(booking, eventId, traceId) {
     const bookingId = _safeTrim(booking?.id || booking?._id);
     const bookedEntity = booking?.bookedEntity || {};
     const slot = bookedEntity.slot || bookedEntity.item?.slot || {};
     const resource = slot.resource || {};
     const serviceId = _safeTrim(slot.serviceId || booking?.serviceId);
-    const resourceId = _safeTrim(resource.id || booking?.resource?.id);
-    const scheduleId = _safeTrim(slot.scheduleId || resource.scheduleId || booking?.scheduleId);
+    let resourceId = _safeTrim(resource.id || booking?.resource?.id);
+    let scheduleId = _safeTrim(slot.scheduleId || resource.scheduleId || booking?.scheduleId);
+    const staffMemberId = _safeTrim(booking?.staffMemberId || booking?.staff?.staffMemberId || "");
     const startDate = booking?.startDate || slot.startDate;
     const endDate = booking?.endDate || slot.endDate;
 
-    const missing = [];
-    if (!bookingId) missing.push("bookingId");
-    if (!serviceId) missing.push("serviceId");
-    if (!resourceId) missing.push("resourceId");
-    if (!scheduleId) missing.push("scheduleId");
-    if (!startDate) missing.push("startDate");
-    if (!endDate) missing.push("endDate");
-    if (missing.length) {
+    if (!bookingId || !serviceId) {
+        const missing = [];
+        if (!bookingId) missing.push("bookingId");
+        if (!serviceId) missing.push("serviceId");
         return { ok: false, reason: "NATIVE_BOOKING_MISSING_REQUIRED_FIELDS", missing };
     }
 
+    // Order is intentional: custom booking sagas persist the complete CitasF2
+    // row before Wix emits the confirmation webhook. Reconcile that row first;
+    // do not reject a valid saga projection because the webhook snapshot omits
+    // resource details that are already stored in CitasF2.
     const existing = await dalQuery(CITAS_COL)
         .eq(BOOKING_FIELDS.BOOKING_ID, bookingId)
         .limit(1)
         .find(STRONG_READ);
 
     if (existing?.items?.length) {
-        await _updateCitaStatus(bookingId, BOOKING_STATUS.CONFIRMED, traceId);
         const existingCita = existing.items[0];
-        return { ok: true, created: false, existing: true, bookingId, serviceId: _safeTrim(existingCita?.serviceId || serviceId) };
+        const existingResourceId = _safeTrim(existingCita?.resourceId || "");
+        const existingScheduleId = _safeTrim(existingCita?.scheduleId || "");
+        if (_looksLikeGuid(existingResourceId) && _looksLikeGuid(existingScheduleId)) {
+            await _updateCitaStatus(bookingId, BOOKING_STATUS.CONFIRMED, traceId);
+            return {
+                ok: true,
+                created: false,
+                existing: true,
+                bookingId,
+                serviceId: _safeTrim(existingCita?.serviceId || serviceId),
+            };
+        }
+
+        if ((!_looksLikeGuid(resourceId) || !scheduleId) && staffMemberId) {
+            const mapping = await _resolveStaffResourceFromMapaStaff(staffMemberId);
+            if (!mapping.ok) {
+                return { ok: false, reason: mapping.reason, missing: ["resourceId", "scheduleId"] };
+            }
+            if (!_looksLikeGuid(resourceId)) resourceId = mapping.resourceId;
+            if (!scheduleId) scheduleId = mapping.scheduleId;
+        }
+        const resolvedResourceId = _looksLikeGuid(existingResourceId) ? existingResourceId : resourceId;
+        const resolvedScheduleId = _looksLikeGuid(existingScheduleId) ? existingScheduleId : scheduleId;
+        if (!_looksLikeGuid(resolvedResourceId) || !_looksLikeGuid(resolvedScheduleId)) {
+            const missing = [];
+            if (!_looksLikeGuid(resolvedResourceId)) missing.push("resourceId");
+            if (!_looksLikeGuid(resolvedScheduleId)) missing.push("scheduleId");
+            if (!startDate) missing.push("startDate");
+            if (!endDate) missing.push("endDate");
+            return { ok: false, reason: "NATIVE_BOOKING_MISSING_REQUIRED_FIELDS", missing };
+        }
+        await _updateCitaSafe(
+            bookingId,
+            (cita) => ({
+                ...cita,
+                resourceId: resolvedResourceId,
+                scheduleId: resolvedScheduleId,
+                [BOOKING_FIELDS.STATUS]: BOOKING_STATUS.CONFIRMED,
+            }),
+            traceId,
+            "events_reconcileExistingCitaResource"
+        );
+        return {
+            ok: true,
+            created: false,
+            existing: true,
+            bookingId,
+            serviceId: _safeTrim(existingCita?.serviceId || serviceId),
+        };
+    }
+
+    // New native projections prefer the canonical Wix slot resource. When it
+    // is absent, use the explicit staff identity only through the active CMS
+    // mapping; never infer a resource from a display name or a default staff.
+    if ((!_looksLikeGuid(resourceId) || !scheduleId) && staffMemberId) {
+        const mapping = await _resolveStaffResourceFromMapaStaff(staffMemberId);
+        if (!mapping.ok) {
+            return { ok: false, reason: mapping.reason, missing: ["resourceId", "scheduleId"] };
+        }
+        if (!_looksLikeGuid(resourceId)) resourceId = mapping.resourceId;
+        if (!scheduleId) scheduleId = mapping.scheduleId;
+    }
+
+    const missing = [];
+    if (!_looksLikeGuid(resourceId)) missing.push("resourceId");
+    if (!_looksLikeGuid(scheduleId)) missing.push("scheduleId");
+    if (!startDate) missing.push("startDate");
+    if (!endDate) missing.push("endDate");
+    if (missing.length) {
+        return { ok: false, reason: "NATIVE_BOOKING_MISSING_REQUIRED_FIELDS", missing };
     }
 
     const selectedPaymentOption = _safeTrim(booking?.selectedPaymentOption || "UNDEFINED").toUpperCase();
