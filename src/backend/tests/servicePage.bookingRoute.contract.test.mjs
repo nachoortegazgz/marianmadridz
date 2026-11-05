@@ -11,11 +11,11 @@ const bridgeSource = readFileSync(
   'utf8',
 );
 
-test('SERVICE-ROUTE-01 service page uses the canonical calendar route', () => {
+test('SERVICE-ROUTE-01 service page uses the published calendar page path', () => {
   assert.match(
     bridgeSource,
     /CALENDARIO_2:\s*"\/booking-calendar\/calendario-2"/,
-    'widgetBridge is the source of truth for the calendar route',
+    'widgetBridge matches the live published page path verified through Wix Site Context',
   );
   assert.match(
     pageSource,
@@ -25,7 +25,7 @@ test('SERVICE-ROUTE-01 service page uses the canonical calendar route', () => {
   assert.doesNotMatch(
     pageSource,
     /const base = ["']\/calendario-2["']/,
-    'service page must not hardcode the legacy route',
+    'service page must not hardcode a stale calendar route',
   );
 });
 
