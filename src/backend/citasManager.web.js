@@ -33,7 +33,7 @@ import { currentMember } from "@wix/members";
 import { queryFirstItem, queryItems, wql, CONSISTENCY, insertItem as dalInsert } from "backend/dataAccess";
 import {
     BUSINESS_COLLECTIONS, OPERATIONAL_COLLECTIONS, CONTROL_TYPE, SDK_CONFIG,
-    WIX_CATALOG_APP_IDS, BOOKING_STATUS, CITAS_BOOKING_STATUS, PAYMENT_STATUS, PAYMENT_METHOD, CHANNEL_TYPE,
+    WIX_CATALOG_APP_IDS, CITAS_BOOKING_STATUS, PAYMENT_STATUS, PAYMENT_METHOD, CHANNEL_TYPE,
     MOVEMENT_TYPE, BOOKING_TYPE, BOOKING_FIELDS, ROL_WEBSITE
 } from "backend/internalConfig";
 import {
@@ -41,7 +41,7 @@ import {
     _readPositiveAmount, _toDateSafe, getUtcDateFromMadridLocal,
     getMadridLocalStringNoZ, withTimeout
 } from "public/mmUtils";
-import { toUtcRange, computeGapMinutes } from "backend/booking/bookingUtils";
+import { toUtcRange } from "backend/booking/bookingUtils";
 import { executeBookingSaga } from "backend/booking/bookingSaga";
 import { normalizeError, _handleError, ERROR_CODES, createBookingError, _updateCitaSafe, _forceStaffInPristineSlot } from "backend/booking/bookingCore";
 import { registerBookingPayment } from "backend/cajas.web.js";
