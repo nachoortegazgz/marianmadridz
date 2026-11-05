@@ -153,6 +153,9 @@
             Tu cita ha quedado registrada en nuestro sistema de agenda de manera exitosa.
             Hemos enviado un correo electrónico con los detalles.
         </p>
+        <p class="subtitle" id="paymentNote" style="display:none; font-weight:600;">
+            El pago se realizará presencialmente en el salón el día de tu cita.
+        </p>
 
         <div id="badgeDual" style="display:none;" class="dual-badge-container">
             <span class="dual-badge">🎯 Servicio Dual Sincronizado</span>
@@ -315,6 +318,13 @@
         ) || 0;
 
         var esDual = p.isCombined === true || nested.isCombined === true || Boolean(bookingIdF2);
+        var channelType = safeText(
+            p.channelType || nested.channelType || (nested.meta && nested.meta.channelType) || ""
+        ).toUpperCase();
+        var paymentNote = document.getElementById("paymentNote");
+        if (paymentNote) {
+            paymentNote.style.display = channelType === "PRESENCIAL" ? "block" : "none";
+        }
         var servicio = safeText(p.serviceName || tituloServicio);
         var estilistaDisplay = safeText(
             nested.staffName || nested.resourceName || p.staffName || ""
@@ -367,7 +377,8 @@
             estilistaDisplay: estilistaDisplay,
             extras: extras,
             duracion: duracion,
-            appointmentNote: appointmentNote
+            appointmentNote: appointmentNote,
+            channelType: channelType
         };
 
         /* Habilitar botones de descarga ahora que los datos están listos */
@@ -475,8 +486,10 @@
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        try { console.info("[ConfirmacionReserva-HTML] Ticket .txt descargado"); } catch (_) {}
+        /* No revocar el Blob URL en el mismo tick: el navegador/iframe
+           puede no haber iniciado todavía la descarga. */
+        window.setTimeout(function () { URL.revokeObjectURL(url); }, 1500);
+        try { console.info("[ConfirmacionReserva-HTML] Ticket .txt solicitado"); } catch (_) {}
     }
 
     function descargarCalendario() {
@@ -573,8 +586,9 @@
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        try { console.info("[ConfirmacionReserva-HTML] Agenda .ics descargada"); } catch (_) {}
+        /* Mantener vivo el Blob URL hasta que el navegador procese el click. */
+        window.setTimeout(function () { URL.revokeObjectURL(url); }, 1500);
+        try { console.info("[ConfirmacionReserva-HTML] Agenda .ics solicitada"); } catch (_) {}
     }
 
     /* ----------------------------------------------------------------

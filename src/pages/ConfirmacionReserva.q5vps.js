@@ -377,6 +377,10 @@ function buildConfirmationWidgetPayload(context, displayData) {
         ),
         dateTime: safeText(displayData.dateTime, 100),
         status: safeText(displayData.status || "CONFIRMED", 40),
+        channelType: safeText(
+            booking.channelType || booking.meta?.channelType || context.channelType || "",
+            40
+        ).toUpperCase(),
     };
 }
 
@@ -403,6 +407,7 @@ function mapBackendResultToUI(data) {
         dateTime: formatDateTime(data && data.slotStart),
         totalAmount: safeAmount,
         status: (data && data.bookingStatus) || "CONFIRMED",
+        channelType: safeText(data && data.channelType, 40).toUpperCase(),
     };
 }
 
@@ -425,7 +430,10 @@ function renderConfirmation(data) {
         currency: "EUR",
     });
     _safeSetText(ELEMENTS.TOTAL_AMOUNT, formatter.format(safeAmount));
-    _safeSetText(ELEMENTS.STATUS, "Estado: Confirmado");
+    const paymentLabel = _safeTrim(data && data.channelType).toUpperCase() === "PRESENCIAL"
+        ? "Estado: Confirmado · Pago pendiente en el salón"
+        : "Estado: Confirmado";
+    _safeSetText(ELEMENTS.STATUS, paymentLabel);
 
     _safeCollapse(ELEMENTS.ERROR_MSG);
 }

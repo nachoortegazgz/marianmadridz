@@ -131,6 +131,7 @@ const BOOKING_STATUS_PENDING_PAYMENT = _safeTrim(
 const CHANNEL_ONLINE = _safeTrim(CHANNEL_TYPE.ONLINE).toUpperCase();
 const CHANNEL_PRESENCIAL = _safeTrim(CHANNEL_TYPE.PRESENCIAL).toUpperCase();
 const BOOKING_PAYMENT_OPTION_ONLINE = "ONLINE";
+const BOOKING_PAYMENT_OPTION_OFFLINE = "OFFLINE";
 
 const NON_CANCELABLE_STATUSES = new Set(
     [
@@ -1543,6 +1544,13 @@ export async function executeBookingSaga(unsafePayload) {
                 }
                 pristineF1.location = bookingLocation;
                 _assertPristineSlotContract(pristineF1, "F1", traceId);
+                if (_safeTrim(pristineF1.resource && pristineF1.resource.id) !== finalResourceId) {
+                    throw createBookingError(
+                        ERROR_CODES.INVALID_PAYLOAD,
+                        "F1 staff assignment differs from the validated resource.",
+                        { traceId: traceId, phase: "F1", resourceId: pristineF1.resource && pristineF1.resource.id }
+                    );
+                }
 
                 const bookingBodyF1 = {
                     bookedEntity: { slot: pristineF1 },
@@ -1551,7 +1559,9 @@ export async function executeBookingSaga(unsafePayload) {
                 };
                 if (appointmentNote) bookingBodyF1.internalBusinessNote = appointmentNote;
                 if (bookedAddOns.length > 0) bookingBodyF1.bookedAddOns = bookedAddOns;
-                if (isOnline) bookingBodyF1.selectedPaymentOption = BOOKING_PAYMENT_OPTION_ONLINE;
+                bookingBodyF1.selectedPaymentOption = isOnline
+                    ? BOOKING_PAYMENT_OPTION_ONLINE
+                    : BOOKING_PAYMENT_OPTION_OFFLINE;
 
                 let resF1;
                 try {
@@ -1611,11 +1621,19 @@ export async function executeBookingSaga(unsafePayload) {
                     }
                     pristineF2.location = bookingLocation;
                     _assertPristineSlotContract(pristineF2, "F2", traceId);
+                    if (_safeTrim(pristineF2.resource && pristineF2.resource.id) !== finalResourceId) {
+                        throw createBookingError(
+                            ERROR_CODES.INVALID_PAYLOAD,
+                            "F2 staff assignment differs from the validated resource.",
+                            { traceId: traceId, phase: "F2", resourceId: pristineF2.resource && pristineF2.resource.id }
+                        );
+                    }
 
                     const bookingBodyF2 = {
                         bookedEntity: { slot: pristineF2 },
                         contactDetails: contactDetails,
                         totalParticipants: 1,
+                        selectedPaymentOption: BOOKING_PAYMENT_OPTION_OFFLINE,
                     };
                     if (appointmentNote) bookingBodyF2.internalBusinessNote = appointmentNote;
                     let resF2;
@@ -1651,6 +1669,20 @@ export async function executeBookingSaga(unsafePayload) {
                     });
                     _checkDoubleBookingFlag(bookingF2, "F2", traceId);
                 }
+
+                log.info("SAGA-42: validated staff assignment applied to all phases", {
+                    traceId: traceId,
+                    resourceId: finalResourceId,
+                    resourceName: resourceValidation.data.resourceName,
+                    resourceIdsByPhase: {
+                        F1: pristineF1 && pristineF1.resource && pristineF1.resource.id,
+                        F2: pristineF2 && pristineF2.resource && pristineF2.resource.id,
+                    },
+                    selectedPaymentOptionByPhase: {
+                        F1: bookingBodyF1.selectedPaymentOption,
+                        F2: isDual ? BOOKING_PAYMENT_OPTION_OFFLINE : null,
+                    },
+                });
 
                 return {
                     bookingF1: bookingF1,
