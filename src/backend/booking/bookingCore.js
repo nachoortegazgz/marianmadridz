@@ -816,21 +816,25 @@ export function _buildSlotLockControl(slotClave, lockOwnerId, ttlMs, existing, s
     const resolvedServiceId = _safeTrim(serviceId || (existing && existing.serviceId));
     const ttl = Number(ttlMs);
     const now = new Date();
+    const existingPayload = _readControlPayload(existing);
+    const lockToken = _safeTrim(existingPayload.lockToken) || _generateUUID();
     const doc = {
         _id: safeLockId(slotClave),
         controlType: CONTROL_TYPE.SLOT_LOCK,
         dedupeKey: String(slotClave),
         serviceId: resolvedServiceId,
         resourceId: resourceId,
-        lockOwnerId: String(lockOwnerId || ""),
-        lockToken: existing && existing.lockToken ? existing.lockToken : _generateUUID(),
         expiresAt: new Date(
             now.getTime() + (Number.isFinite(ttl) && ttl > 0 ? ttl : MUTEX_TTL_MS)
         ),
-        acquiredAt: now,
         heartbeatAt: now,
+        // lockOwnerId, lockToken and acquiredAt are not physical columns in
+        // ControlOperativo; keep lock-specific state inside its OBJECT payload.
         payload: {
+            ...existingPayload,
             lockOwnerId: String(lockOwnerId || ""),
+            lockToken,
+            acquiredAt: existingPayload.acquiredAt || now,
             lockStatus: "ACTIVE",
         },
         traceId: _safeTrim(existing && existing.traceId) || makeTraceId("lock"),
@@ -854,9 +858,13 @@ async function _getLock(slotClave) {
 
 function _getLockOwnerId(lock) {
     if (!lock || typeof lock !== "object") return "";
-    if (lock.lockOwnerId) return _safeTrim(lock.lockOwnerId);
     const payload = _readControlPayload(lock);
     return _safeTrim(payload.lockOwnerId) || "";
+}
+
+function _getLockToken(lock) {
+    if (!lock || typeof lock !== "object") return "";
+    return _safeTrim(_readControlPayload(lock).lockToken);
 }
 
 export async function _lockSlotKeyOrFail(slotClave, lockOwnerId, ttlMs, serviceId) {
@@ -882,7 +890,7 @@ export async function _lockSlotKeyOrFail(slotClave, lockOwnerId, ttlMs, serviceI
             ok: true,
             acquired: true,
             revision: newLock._revision,
-            lockToken: newLock.lockToken,
+            lockToken: _getLockToken(newLock),
         };
     } catch (error) {
         if (!_isDuplicateItemError(error)) {
@@ -904,7 +912,7 @@ export async function _lockSlotKeyOrFail(slotClave, lockOwnerId, ttlMs, serviceI
                     ok: true,
                     renewed: true,
                     revision: renewed.newRevision,
-                    lockToken: existing.lockToken,
+                    lockToken: _getLockToken(existing),
                 }
                 : { ok: false, message: ERROR_CODES.LOCK_RENEWAL_FAILED };
         }
@@ -928,7 +936,7 @@ export async function _lockSlotKeyOrFail(slotClave, lockOwnerId, ttlMs, serviceI
                     acquired: true,
                     reclaimed: true,
                     revision: updated._revision,
-                    lockToken: updated.lockToken,
+                    lockToken: _getLockToken(updated),
                 };
             } catch (updateError) {
                 if (_isRevisionConflictError(updateError)) {
@@ -1037,14 +1045,12 @@ function _readTransaction(doc) {
     return {
         doc: doc,
         status: _safeTrim(payload.status || doc.status),
-        payloadHash: _safeTrim(payload.payloadHash || doc.payloadHash),
-        ownerTraceId: _safeTrim(payload.ownerTraceId || doc.ownerTraceId),
-        ownerExecutionId: _safeTrim(
-            payload.ownerExecutionId || doc.ownerExecutionId
-        ),
-        error: _safeTrim(payload.error || doc.error),
+        payloadHash: _safeTrim(payload.payloadHash),
+        ownerTraceId: _safeTrim(payload.ownerTraceId),
+        ownerExecutionId: _safeTrim(payload.ownerExecutionId),
+        error: _safeTrim(payload.error),
         bookingId: _safeTrim(payload.bookingId || doc.bookingId),
-        result: payload.result !== undefined ? payload.result : doc.result,
+        result: payload.result,
         leaseExpiresAt: _toDateSafe(
             payload.leaseExpiresAt || doc.leaseExpiresAt
         ),
