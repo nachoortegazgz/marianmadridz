@@ -76,3 +76,20 @@ test("calendar boot renders the current month before waiting for service context
     "calendar shell must render before the MM_READY handshake",
   );
 });
+
+test("confirmation navigation URLs are centralized in widgetBridge and re-exported by mmUtils", () => {
+  const utils = read("src/public/mmUtils.js");
+  const confirmation = read("src/pages/ConfirmacionReserva.q5vps.js");
+
+  assert.match(bridge, /HOME:\s*"\\/"/);
+  assert.match(bridge, /MIS_RESERVAS:\s*"\\/my-bookings"/);
+  assert.match(bridge, /SERVICIOS:\s*"\\/reserva-online"/);
+  assert.match(utils, /PROTOCOL_URLS as URLS/);
+
+  assert.match(confirmation, /return URLS\.MIS_RESERVAS;/);
+  assert.match(confirmation, /return URLS\.HOME;/);
+  assert.match(confirmation, /return URLS\.SERVICIOS;/);
+  assert.match(confirmation, /location\.to\(URLS\.HOME\)/);
+  assert.match(confirmation, /location\.to\(URLS\.SERVICIOS\)/);
+  assert.doesNotMatch(confirmation, /URLS\?\.(?:MIS_RESERVAS|HOME|SERVICIOS)/);
+});
