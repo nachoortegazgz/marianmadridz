@@ -584,7 +584,7 @@ async function _syncNativeBookingToCitas(booking, eventId, traceId) {
             };
         }
 
-        if ((!_looksLikeGuid(resourceId) || !scheduleId) && staffMemberId) {
+        if ((!_looksLikeGuid(resourceId) || !_looksLikeGuid(scheduleId)) && staffMemberId) {
             const mapping = await _resolveStaffResourceFromMapaStaff(staffMemberId);
             if (!mapping.ok) {
                 return { ok: false, reason: mapping.reason, missing: ["resourceId", "scheduleId"] };
@@ -598,8 +598,6 @@ async function _syncNativeBookingToCitas(booking, eventId, traceId) {
             const missing = [];
             if (!_looksLikeGuid(resolvedResourceId)) missing.push("resourceId");
             if (!_looksLikeGuid(resolvedScheduleId)) missing.push("scheduleId");
-            if (!startDate) missing.push("startDate");
-            if (!endDate) missing.push("endDate");
             return { ok: false, reason: "NATIVE_BOOKING_MISSING_REQUIRED_FIELDS", missing };
         }
         await _updateCitaSafe(
@@ -625,7 +623,7 @@ async function _syncNativeBookingToCitas(booking, eventId, traceId) {
     // New native projections prefer the canonical Wix slot resource. When it
     // is absent, use the explicit staff identity only through the active CMS
     // mapping; never infer a resource from a display name or a default staff.
-    if ((!_looksLikeGuid(resourceId) || !scheduleId) && staffMemberId) {
+    if ((!_looksLikeGuid(resourceId) || !_looksLikeGuid(scheduleId)) && staffMemberId) {
         const mapping = await _resolveStaffResourceFromMapaStaff(staffMemberId);
         if (!mapping.ok) {
             return { ok: false, reason: mapping.reason, missing: ["resourceId", "scheduleId"] };
