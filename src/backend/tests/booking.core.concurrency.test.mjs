@@ -527,6 +527,16 @@ test('PERSIST-06 online fiscal events populate required staffResourceId from the
   assert.match(source, /staffResourceId:\s*_safeTrim\([\s\S]{0,160}input\.staffResourceId\s*\|\|\s*input\.resourceId\s*\|\|\s*"CAJA_LOCAL"/);
 });
 
+test('PERSIST-08 online payment flow projects CajaActual and retries idempotently', async () => {
+  const eventLog = await readFile(new URL('../eventLog.js', import.meta.url), 'utf8');
+  const events = await readFile(new URL('../events.js', import.meta.url), 'utf8');
+  assert.match(eventLog, /updateCajaActualFromMovement\(cabecera,\s*traceId\)/);
+  assert.match(events, /updateCajaActualFromMovement\(existingLedgerRes\.items\[0\],\s*traceId\)/);
+  const caja = await readFile(new URL('../cajas.web.js', import.meta.url), 'utf8');
+  assert.match(caja, /appliedMovementIds\.includes\(movementKey\)/);
+  assert.match(caja, /dalUpdate\(CAJA_ACTUAL_COL,\s*cashRegister\)/);
+});
+
 test('PERSIST-07 booking frontend sends the version of the displayed privacy notice', async () => {
   const source = await readFile(new URL('../../pages/Calendario de reservas 2.q39h6.js', import.meta.url), 'utf8');
   assert.match(source, /BOOKING_PRIVACY_NOTICE_VERSION\s*=\s*"RESERVAS_PRIVACIDAD_2026-11-05_V1"/);
