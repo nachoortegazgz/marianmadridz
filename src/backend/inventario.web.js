@@ -22,9 +22,8 @@ FIXES APLICADOS v5009-FISCAL-V20.1:
             preserva tal cual (bug del original, no de V20.1). El schema
             V20.1-EXPANDED-v2 amplia HistoricoCierresZ para acomodar los
             campos de inventario (inventoryClosingId, fiscalYear,
-            closingDate, closingType, sku, productId, productDescription,
-            stockQuantity, unitCost, stockValue, accountCode, debitBalance,
-            creditBalance).
+            closeDate, closingType, sku, wixProductId, stockQuantity,
+            unitCost, stockValue, cuentaContable, summaryData).
 
 CORRECTIONS (heredadas v5007.4):
   [INV-01..05] movementToken, stockBefore/After, needsWixReconciliation,
@@ -1032,7 +1031,7 @@ export const generateInventoryClosing = webMethod(Permissions.Admin, async (opti
         closeDate: new Date(closingDate),
         closingType,
         sku,
-        wixProductId: item.wixProductId || null,
+        wixProductId: item.productId || null,
         stockQuantity,
         unitCost,
         stockValue,
@@ -1141,7 +1140,7 @@ export const listInventoryClosings = webMethod(Permissions.SiteMember, async (op
     if (closingType) closeQuery = closeQuery.eq("closingType", closingType);
 
     const res = await closeQuery
-      .descending("closingDate")
+      .descending("closeDate")
       .limit(Math.min(Number(options?.limit) || 50, 200))
       .find();
 
