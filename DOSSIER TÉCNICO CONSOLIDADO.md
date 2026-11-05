@@ -7,7 +7,7 @@ Aquí tienes el **Resumen Ejecutivo Previo** y el **Mapa de Contenidos Estructur
 # 1. RESUMEN EJECUTIVO PREVIO: CONTEXTO Y DIRECTRICES DE ROL
 
 ### 1.1 Identidad y Misión del Proyecto
-*   **Proyecto:** Marian Madrid Peluquería y Estética (`marianmadrid.es`).
+*   **Proyecto:** Marian Madrid Peluquería y Estética (`con QA: www.marianmadrid.es`).
 *   **Naturaleza:** Salón físico en Zaragoza (C/ Maurice Ravel 35) transformado en un punto de venta digital integral mediante Wix Editor + Velo.
 *   **Objetivo Técnico:** Implementar una capa propia (CMS + Backend) sobre Wix para cubrir requerimientos no nativos: reservas duales con gap de exposición, ledger fiscal Veri*Factu, cierre Z automatizado, control horario laboral e inventario espejo.
 *   **Financiación:** Cofinanciado por Kit Digital (NextGenerationEU). Plazo legal Veri*Factu para autónomos: **1 de julio de 2027**.
