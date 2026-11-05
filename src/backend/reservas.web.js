@@ -1,7 +1,16 @@
 /**
  * MODULE: backend/reservas.web.js
- * VERSION: v10.19-DUAL-EXACT-GAP
+ * VERSION: v10.20-DUAL-BATCH-AVAILABILITY
  * BASE: v10.18-WIDGET-DTO-MINIMAL
+ *
+ * CORRECCIONES v10.20:
+ *   - DUAL-PERF-01 (P0): F1 y F2 se consultan una sola vez por jornada y en paralelo.
+ *     F2 se indexa por localStartDate y se conserva la comprobación de gap exacto
+ *     y resourceId común. Elimina la multiplicación de llamadas F2 por slot F1
+ *     y profesional que podía agotar el timeout del webMethod.
+ *   - TIMEOUT-01 (P0): no reintentar TIMEOUT porque withTimeout no cancela la
+ *     petición SDK subyacente; un retry podía dejar peticiones colgadas y
+ *     exceder los 59 s de Wix. Se mantiene un reintento para otros errores.
  *
  * CORRECCIONES v10.19 (alineadas con la documentación oficial de Wix Bookings V2):
  *   - DUAL-GAP-01 (P0): _findNextSlotForServiceInternal devolvía el primer slot
@@ -1004,9 +1013,20 @@ async function _listTimeSlotsV2({ serviceId, fromLocalDate, toLocalDate, resourc
             if (normalizedNativeAddonIds.length > 0) payload.customerChoices = { addOnIds: normalizedNativeAddonIds };
             if (Number.isFinite(timeSlotsPerDay) && Number(timeSlotsPerDay) > 0) payload.timeSlotsPerDay = Number(timeSlotsPerDay);
 
+            /* TIMEOUT-01: no reintentar una llamada que ya ha agotado el watchdog.
+               withTimeout no cancela la petición SDK subyacente; reintentar TIMEOUT
+               puede dejar varias consultas Wix simultáneas y agotar el límite de
+               59 s del webMethod. Se conserva un único reintento para errores
+               transitorios distintos de TIMEOUT. */
             const data = await _executeWithRetry(
-                () => withTimeout(availabilityTimeSlots.listAvailabilityTimeSlots(payload), WATCHDOG_TIMEOUT_MS, "listAvailabilityTimeSlots"),
-                3, 500
+                () => withTimeout(
+                    availabilityTimeSlots.listAvailabilityTimeSlots(payload),
+                    WATCHDOG_TIMEOUT_MS,
+                    "listAvailabilityTimeSlots"
+                ),
+                1,
+                300,
+                (error) => error?.code !== "TIMEOUT"
             );
             const rawSlots = Array.isArray(data?.timeSlots) ? data.timeSlots : [];
             const slots = rawSlots.map((s) => {
@@ -1598,7 +1618,16 @@ export async function _getCertifiedDualSlotsInternal(serviceId, resourceId, date
 
     const fromLocalDate = `${dateYMD}T00:00:00`;
     const toLocalDate = `${dateYMD}T23:59:59`;
-    const slotsF1 = await _listTimeSlotsV2(
+
+    /* DUAL-PERF-01:
+       Antes se consultaba disponibilidad de F2 dentro del bucle de cada slot F1
+       y de cada profesional, con skipCache=true. Una jornada con N slots y M
+       profesionales podía disparar N×M llamadas secuenciales a Wix y superar
+       el timeout de 59 s del webMethod.
+       Ahora se consulta F1 y F2 una sola vez, en paralelo, y se indexa F2 por
+       hora local. La validación de gap exacto y mismo profesional se mantiene. */
+    const availabilityStartedAt = Date.now();
+    const f1Promise = _listTimeSlotsV2(
         {
             serviceId: resolvedServiceId,
             fromLocalDate,
@@ -1608,6 +1637,41 @@ export async function _getCertifiedDualSlotsInternal(serviceId, resourceId, date
         },
         { skipCache: true }
     );
+    const f2Promise = isDual
+        ? _listTimeSlotsV2(
+            {
+                serviceId: linkedServiceId,
+                fromLocalDate,
+                toLocalDate,
+                resourceIds: resourceIdsFilter,
+                nativeAddonIds: [],
+            },
+            { skipCache: true }
+        )
+        : Promise.resolve([]);
+
+    const [slotsF1, slotsF2] = await Promise.all([f1Promise, f2Promise]);
+    log.info("[dual] disponibilidad F1/F2 consultada", {
+        traceId,
+        serviceId: resolvedServiceId,
+        linkedServiceId: isDual ? linkedServiceId : null,
+        dateYMD,
+        isDual,
+        slotsF1: slotsF1.length,
+        slotsF2: slotsF2.length,
+        elapsedMs: Date.now() - availabilityStartedAt,
+    });
+
+    const f2SlotsByStart = new Map();
+    if (isDual) {
+        for (const slot of slotsF2 || []) {
+            const start = _normalizeLocalIsoStr(slot?.localStartDate);
+            if (!start) continue;
+            const bucket = f2SlotsByStart.get(start) || [];
+            bucket.push(slot);
+            f2SlotsByStart.set(start, bucket);
+        }
+    }
 
     if (!isDual) {
         const out = [];
@@ -1672,18 +1736,15 @@ export async function _getCertifiedDualSlotsInternal(serviceId, resourceId, date
         let chosenResourceId = null;
         let s2 = null;
 
+        const exactF2Candidates = f2SlotsByStart.get(targetF2Local) || [];
         for (const candidateResourceId of candidatesToTry) {
-            /* DUAL-GAP-01: búsqueda exacta en el instante target. */
-            const nextF2 = await _findNextSlotForServiceInternal(
-                linkedServiceId,
-                targetF2Local,
-                candidateResourceId,
-                traceId,
-                true,
-                targetF2Local
+            /* DUAL-GAP-01 + DUAL-PERF-01: misma hora exacta, mismo profesional,
+               usando la consulta F2 agrupada de la jornada (sin nuevas llamadas
+               de disponibilidad dentro del bucle F1×staff). */
+            const candidateF2 = exactF2Candidates.find((slot) =>
+                _getResourceIdsFromSlot(slot).includes(String(candidateResourceId))
             );
-            if (nextF2?.status !== "SUCCESS" || !nextF2?.data?.slot) continue;
-            const candidateF2 = nextF2.data.slot;
+            if (!candidateF2) continue;
             const s2StartLocal = _normalizeLocalIsoStr(candidateF2.localStartDate);
             const s2EndLocal = _normalizeLocalIsoStr(candidateF2.localEndDate);
             if (!_isValidSlotRange(s1.localStartDate, s1.localEndDate) || !_isValidSlotRange(s2StartLocal, s2EndLocal)) continue;
