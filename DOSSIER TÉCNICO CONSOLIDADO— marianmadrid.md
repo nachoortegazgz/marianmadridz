@@ -38,8 +38,9 @@
 | D-05 | Persisten referencias internas heredadas que pueden estar desfasadas por cambios de numeración o por referencias a §0/§A.4, mientras la estructura actual usa otra numeración. | Ejemplos: §6.2 cita “dossier §0”; §23 y otros apartados citan §A.4; varias referencias del bloque F/G. | ¿Autorizar una auditoría integral de referencias y su edición, o conservar las referencias históricas cuando identifiquen el documento/versión de origen? No corregir automáticamente las ambiguas. |
 | D-06 | El Anexo L mezcla una extracción CMS base del 25-10, revisiones reconciliadas el 01-11 y datos de cortes posteriores en §35.2. La nota advierte del desfase, pero el resumen de L puede leerse como inventario actual. | Anexo L, “Extracción detallada base” y tabla Resumen; §35.2. | ¿CONSERVAR L como snapshot histórico y añadir una advertencia destacada, EDITAR su resumen a la última extracción comprobada o mantenerlo como histórico separado del inventario vivo? |
 | D-07 | En §35.1 se afirma que el workflow no tenía trigger push y que se añade; §36 ya confirma que el trigger quedó integrado y ejecutó correctamente. La secuencia es cronológica, pero la frase anterior queda obsoleta si se consulta aislada. | §§35.1 y 36.1. | ¿CONSERVAR ambas como trazabilidad temporal, o EDITAR §35.1 con una nota “situación previa a PR #109, superada por §36.1”? Recomiendo conservar y aclarar, no borrar. |
+| D-08 | El Bloque A se define como instrucciones operativas para cualquier modelo IA y el Resumen Ejecutivo afirma fijar la “doctrina única” que gobierna toda acción. Estas formulaciones chocan con el estatus consultivo y no vinculante que el propietario acaba de establecer para el dossier. | Naturaleza del Anexo A; propósito del Anexo C; reglas de activación y gobernanza. | ¿EDITAR esas formulaciones para convertirlas en recomendaciones subordinadas, ELIMINARlas si duplican la SSOT o CONSERVARlas solo como texto histórico claramente no vinculante? Pendiente de decisión expresa.
 
-**Estado del registro:** D-01 ajustado para reflejar la instrucción del propietario; D-02 a D-07 pendientes de decisión. La presencia de un punto en esta tabla no autoriza su eliminación ni modificación. Registrar la decisión del propietario antes de tocar esos contenidos.
+**Estado del registro:** D-01 ajustado para reflejar la instrucción del propietario; D-02 a D-08 pendientes de decisión. La presencia de un punto en esta tabla no autoriza su eliminación ni modificación. Registrar la decisión del propietario antes de tocar esos contenidos.
 
 ---
 
@@ -310,7 +311,7 @@ Orden de referencia para resolver discrepancias (la SSOT vigente es la que debe 
 1. **APIs y SDK oficiales de Wix en su versión actualizada y correcta comprobada** (comportamiento real de la plataforma).
 2. **Esquema y registros del CMS vivo** (fuente de lo persistido).
 3. **SSOT vigente y ADRs aprobados** (doctrina y decisiones formalmente aceptadas; confirmar siempre la versión/ubicación vigente).
-4. **Código integrado, CMS vivo, auditorías y CI** (evidencia de implementación y estado, cada uno dentro de su ámbito; no sustituyen la doctrina SSOT).
+4. **Código integrado, auditorías y CI** (evidencia de implementación y estado; el CMS vivo ya figura en el nivel 2 para esquema y datos persistidos).
 5. **Hoja de necesidades** (objetivo deseado; no acredita implementación).
 6. **DOSSIER TÉCNICO CONSOLIDADO** (referencia consultiva únicamente; no resuelve discrepancias ni prevalece sobre ninguna de las fuentes anteriores).
 
