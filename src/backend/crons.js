@@ -88,6 +88,10 @@ const PURGABLE_TERMINAL_ALERT_STATUSES = [CONTROL_STATUS.CLOSED, CONTROL_STATUS.
 const AUDIT_RETENTION_DAYS =
 Math.max(30, Number(SDK_CONFIG?.JOBS?.AUDIT_RETENTION_DAYS) || 90);
 
+// Reservation idempotency is retained for one replay window after a terminal
+// outcome. Never purge in-flight, retryable, or unknown-result transactions.
+const IDEMPOTENCY_RETENTION_MS = 24 * 60 * 60 * 1000;
+
 // CRON-08: elevatedGet para reconciliación
 const getBookingElevated = auth.elevate(bookings.getBooking);
 
@@ -1004,6 +1008,84 @@ result.errors.push({ query: "main", error: err?.message });
 }
 
 return result;
+}
+
+// =============================================================================
+// CRON: cleanExpiredIdempotencyTransactions - every 15 minutes
+// =============================================================================
+/**
+ * Keeps terminal booking idempotency records for 24 hours after their last
+ * update, then removes them. The CMS _updatedDate is used as the terminal
+ * timestamp because _completeTransaction/_failTransaction update the row.
+ *
+ * Strict allow-list: COMPLETED and FAILED_FINAL only. IN_PROGRESS,
+ * FAILED_RETRYABLE, RESULT_UNKNOWN and all other states remain available to
+ * retries/reconciliation. WEBHOOK_EVENT is a separate immutable ledger.
+ */
+export async function cleanExpiredIdempotencyTransactions() {
+    const traceId = makeTraceId("cron-idempotency-purge");
+    const result = { removed: 0, skipped: 0, failed: 0, errors: [] };
+
+    try {
+        const cutoff = new Date(Date.now() - IDEMPOTENCY_RETENTION_MS);
+        const C = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
+        const res = await dalQuery(C)
+            .eq("controlType", CONTROL_TYPE.IDEMPOTENCY)
+            .lt("_updatedDate", cutoff)
+            .limit(100)
+            .find({ consistencyMode: "strong" });
+
+        for (const tx of res?.items || []) {
+            const payload = readControlPayload(tx);
+            const status = _safeTrim(payload.status || tx.status).toUpperCase();
+            const updatedAt = tx._updatedDate instanceof Date
+                ? tx._updatedDate
+                : new Date(tx._updatedDate || "");
+            if (
+                !["COMPLETED", "FAILED_FINAL"].includes(status) ||
+                !Number.isFinite(updatedAt.getTime()) ||
+                updatedAt.getTime() > cutoff.getTime()
+            ) {
+                result.skipped++;
+                continue;
+            }
+
+            try {
+                await dalRemove(C, tx._id);
+                result.removed++;
+            } catch (removeError) {
+                result.failed++;
+                if (result.errors.length < 10) {
+                    result.errors.push({
+                        id: tx._id,
+                        error: removeError?.message || "UNKNOWN",
+                    });
+                }
+                log.warn("cleanExpiredIdempotencyTransactions: remove failed", {
+                    id: tx._id,
+                    error: removeError?.message,
+                    traceId,
+                });
+            }
+        }
+
+        log.info("cleanExpiredIdempotencyTransactions completed", {
+            removed: result.removed,
+            skipped: result.skipped,
+            failed: result.failed,
+            retentionHours: 24,
+            traceId,
+        });
+    } catch (err) {
+        result.failed++;
+        result.errors.push({ query: "main", error: err?.message || "UNKNOWN" });
+        log.error("cleanExpiredIdempotencyTransactions failed", {
+            error: err?.message,
+            traceId,
+        });
+    }
+
+    return result;
 }
 
 // =============================================================================
