@@ -687,7 +687,7 @@ test('RES-DTO-01 _toPublicService uses explicit public allowlist and strips inte
     [
       'addOnOptions', 'allowCombine', 'catalogEntryType', 'clientHidden',
       'currency', 'description', 'exposureDuration', 'inPersonPayment',
-      'linkedPhases', 'location', 'mainMedia', 'onlinePayment',
+      'linkedPhases', 'location', 'locationId', 'mainMedia', 'onlinePayment',
       'phase1Duration', 'phase2Duration', 'price', 'primaryActionLabel',
       'recommendations', 'serviceId', 'slug', 'tagLine', 'title', 'totalDuration',
     ].sort()
