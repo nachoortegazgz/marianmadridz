@@ -9,7 +9,9 @@
       "scenarioId": "QA-BOOKING-SIMPLE-001",
       "name": "Reserva simple presencial",
       "status": "MOCK_COVERED",
-      "testFiles": ["src/backend/tests/qa.simple-booking.writer.e2e.test.mjs"],
+      "testFiles": [
+        "src/backend/tests/qa.simple-booking.writer.e2e.test.mjs"
+      ],
       "traceId": "trace-qa-simple-001",
       "fixture": {
         "serviceSlug": "qa-corte-simple",
@@ -21,13 +23,21 @@
         "customerEmail": "qa.simple@example.test",
         "channelType": "PRESENCIAL"
       },
-      "assertions": ["availability consulted", "one Bookings Writer V2 create", "one confirmation", "one CitasF2 projection", "idempotent replay creates no duplicate"]
+      "assertions": [
+        "availability consulted",
+        "one Bookings Writer V2 create",
+        "one confirmation",
+        "one CitasF2 projection",
+        "idempotent replay creates no duplicate"
+      ]
     },
     {
       "scenarioId": "QA-BOOKING-DUAL-AVAIL-001",
       "name": "Disponibilidad dual con gap exacto y mismo profesional",
       "status": "MOCK_COVERED",
-      "testFiles": ["src/backend/tests/reservas.web.test.mjs"],
+      "testFiles": [
+        "src/backend/tests/reservas.web.test.mjs"
+      ],
       "traceId": "trace-qa-dual-availability-001",
       "fixture": {
         "dateYmd": "2026-10-20",
@@ -38,26 +48,45 @@
         "phase2EndLocal": "2026-10-20T10:40:00",
         "sameResource": true
       },
-      "assertions": ["exact exposure interval", "same staff resource", "dual availability cache persisted", "shorter or longer gap rejected"]
+      "assertions": [
+        "exact exposure interval",
+        "same staff resource",
+        "dual availability cache persisted",
+        "shorter or longer gap rejected"
+      ]
     },
     {
       "scenarioId": "QA-BOOKING-DUAL-COMPENSATION-001",
       "name": "Compensación LIFO al fallar F2",
       "status": "PARTIAL_MOCK_COVERAGE",
-      "testFiles": ["src/backend/tests/booking.availability.saga.test.mjs"],
+      "testFiles": [
+        "src/backend/tests/booking.availability.saga.test.mjs"
+      ],
       "traceId": "trace-qa-dual-compensation-001",
       "fixture": {
-        "steps": ["acquire-lock", "create-F1", "create-F2-fails"],
-        "expectedCompensationOrder": ["cancel-F1", "release-lock"]
+        "steps": [
+          "acquire-lock",
+          "create-F1",
+          "create-F2-fails"
+        ],
+        "expectedCompensationOrder": [
+          "cancel-F1",
+          "release-lock"
+        ]
       },
-      "assertions": ["orchestrator compensates completed steps in reverse order", "original F2 error is preserved"],
+      "assertions": [
+        "orchestrator compensates completed steps in reverse order",
+        "original F2 error is preserved"
+      ],
       "limitation": "The orchestration primitive is tested; an end-to-end processDualBooking failure with Wix Writer V2 and native cancellation is not certified."
     },
     {
       "scenarioId": "QA-CHECKOUT-CART-V2-001",
       "name": "Preparación de checkout sin pago",
       "status": "MOCK_COVERED",
-      "testFiles": ["src/backend/tests/booking.cart-v2.checkout.test.mjs"],
+      "testFiles": [
+        "src/backend/tests/booking.cart-v2.checkout.test.mjs"
+      ],
       "traceId": "trace-qa-cart-v2-001",
       "fixture": {
         "bookingId": "11111111-1111-4111-8111-111111111111",
@@ -66,26 +95,40 @@
         "calculatedTotal": "48.50",
         "paymentExecution": false
       },
-      "assertions": ["create cart from booking ID", "calculate cart", "reject violations and mismatched response", "checkout URL retrieved only after valid calculation"],
+      "assertions": [
+        "create cart from booking ID",
+        "calculate cart",
+        "reject violations and mismatched response",
+        "checkout URL retrieved only after valid calculation"
+      ],
       "limitation": "No payment provider transaction or successful paid-order webhook is simulated by this fixture."
     },
     {
       "scenarioId": "QA-WEBHOOK-CANCEL-001",
       "name": "Cancelación y repetición de webhook",
       "status": "MOCK_COVERED",
-      "testFiles": ["src/backend/tests/events.booking-canceled.integrity.test.mjs"],
+      "testFiles": [
+        "src/backend/tests/events.booking-canceled.integrity.test.mjs"
+      ],
       "traceId": "trace-qa-cancel-webhook-001",
       "fixture": {
         "bookingId": "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
         "eventId": "11111111-1111-4111-8111-111111111111"
       },
-      "assertions": ["CitasF2 updated before webhook marker", "missing projection fails closed", "read errors propagate", "replay reconciles stale projection"]
+      "assertions": [
+        "CitasF2 updated before webhook marker",
+        "missing projection fails closed",
+        "read errors propagate",
+        "replay reconciles stale projection"
+      ]
     },
     {
       "scenarioId": "QA-STAFF-TIMECLOCK-001",
       "name": "Identidad, permisos y fichaje",
       "status": "MOCK_COVERED",
-      "testFiles": ["src/backend/tests/site.flows.e2e.test.mjs"],
+      "testFiles": [
+        "src/backend/tests/site.flows.e2e.test.mjs"
+      ],
       "traceId": "trace-qa-timeclock-001",
       "fixture": {
         "memberId": "22222222-2222-4222-8222-222222222222",
@@ -94,13 +137,21 @@
         "clockEventType": "ENTRADA",
         "userAgent": "qa-simulation"
       },
-      "assertions": ["member-contact-staff identity linked", "role guards enforced", "signed clock record persisted", "signature verifies and tampering fails", "history consumes persisted record"]
+      "assertions": [
+        "member-contact-staff identity linked",
+        "role guards enforced",
+        "signed clock record persisted",
+        "signature verifies and tampering fails",
+        "history consumes persisted record"
+      ]
     },
     {
       "scenarioId": "QA-CASH-CLOSE-Z-001",
       "name": "Venta presencial, caja y cierre Z",
       "status": "MOCK_COVERED",
-      "testFiles": ["src/backend/tests/site.flows.e2e.test.mjs"],
+      "testFiles": [
+        "src/backend/tests/site.flows.e2e.test.mjs"
+      ],
       "traceId": "trace-qa-cash-close-001",
       "fixture": {
         "transactionId": "e2e-tx-0001",
@@ -111,35 +162,62 @@
         "invoiceType": "F2",
         "fiscalSigner": "mock-only"
       },
-      "assertions": ["manual transaction persists", "cash projection updates", "close Z created", "hash-chain integrity verified"],
+      "assertions": [
+        "manual transaction persists",
+        "cash projection updates",
+        "close Z created",
+        "hash-chain integrity verified"
+      ],
       "limitation": "The signer is a local mock. No real certificate, AEAT submission or fiscal compliance is established."
     },
     {
       "scenarioId": "QA-ORDER-AMOUNT-001",
       "name": "Resolución de total de pedido",
       "status": "MOCK_COVERED",
-      "testFiles": ["src/backend/tests/orderLedgerAmount.test.mjs"],
+      "testFiles": [
+        "src/backend/tests/orderLedgerAmount.test.mjs"
+      ],
       "traceId": "trace-qa-order-amount-001",
       "fixture": {
         "explicitOrderTotal": "45.50",
         "lineItemsTotal": "120.00",
         "expectedResolvedTotal": 45.5
       },
-      "assertions": ["explicit order total takes precedence", "zero total preserved", "fallback total validated"]
+      "assertions": [
+        "explicit order total takes precedence",
+        "zero total preserved",
+        "fallback total validated"
+      ]
     },
     {
       "scenarioId": "QA-INVENTORY-LOCK-001",
-      "name": "Liberación del lock de inventario",
-      "status": "CONTRACT_ONLY",
-      "testFiles": ["src/backend/tests/inventory.lock.release.test.mjs"],
-      "traceId": "trace-qa-inventory-lock-001",
+      "name": "Inventario: venta, reintento idempotente, devolución y bloqueo",
+      "status": "MOCK_COVERED",
+      "testFiles": [
+        "src/backend/tests/inventory.movement.flow.test.mjs",
+        "src/backend/tests/inventory.lock.release.test.mjs"
+      ],
+      "traceId": "trace-qa-inventory-flow-001",
       "fixture": {
-        "lockType": "SLOT_LOCK",
-        "movementToken": "qa-inventory-movement-001",
-        "quantityDelta": -1
+        "productId": "11111111-1111-4111-8111-111111111111",
+        "variantId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "stockKey": "V1:11111111-1111-4111-8111-111111111111:aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "initialStockOnHand": 5,
+        "initialStockReserved": 1,
+        "simulatedSaleQuantity": 2,
+        "simulatedRefundQuantity": 1,
+        "finalStockOnHand": 4,
+        "orderId": "qa-order-003",
+        "refundId": "qa-refund-001"
       },
-      "assertions": ["canonical lock is released in finally"],
-      "limitation": "No full Stores order-to-stock movement, refund or inventory reconciliation is exercised by this test."
+      "assertions": [
+        "sale decrements stockOnHand and stockAvailable",
+        "movement ledger is append-only",
+        "same movementToken replay does not double-decrement",
+        "confirmed refund restock increments stock with distinct refund token",
+        "insufficient stock fails closed and releases lock",
+        "variant identity mismatch writes no movement"
+      ]
     },
     {
       "scenarioId": "QA-NOTIFICATIONS-001",
@@ -152,7 +230,12 @@
         "bookingState": "CONFIRMED",
         "sendExternalMessage": false
       },
-      "assertions": ["one customer confirmation", "one staff notification", "cancel and reschedule templates", "delivery evidence captured"],
+      "assertions": [
+        "one customer confirmation",
+        "one staff notification",
+        "cancel and reschedule templates",
+        "delivery evidence captured"
+      ],
       "limitation": "Wix Automations configuration and actual delivery are not covered by offline backend mocks."
     },
     {
@@ -166,7 +249,11 @@
         "purpose": "MARKETING",
         "optIn": false
       },
-      "assertions": ["contact request reaches CRM", "marketing opt-in is separate", "unsubscribe persists and suppresses further sends"],
+      "assertions": [
+        "contact request reaches CRM",
+        "marketing opt-in is separate",
+        "unsubscribe persists and suppresses further sends"
+      ],
       "limitation": "Public form delivery, Wix Contacts and Automations are not exercised in this offline suite."
     },
     {
@@ -180,7 +267,12 @@
         "newDateYmd": "2026-11-12",
         "timezone": "Europe/Madrid"
       },
-      "assertions": ["old slot released", "new slot reserved", "dual pair remains consistent", "customer and staff notifications sent"],
+      "assertions": [
+        "old slot released",
+        "new slot reserved",
+        "dual pair remains consistent",
+        "customer and staff notifications sent"
+      ],
       "limitation": "No end-to-end reschedule scenario has been evidenced."
     },
     {
@@ -195,7 +287,12 @@
         "currency": "EUR",
         "redemptionBookingId": "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee"
       },
-      "assertions": ["issue", "redeem partially", "prevent over-redemption", "refund and reconcile balance"],
+      "assertions": [
+        "issue",
+        "redeem partially",
+        "prevent over-redemption",
+        "refund and reconcile balance"
+      ],
       "limitation": "No Gift Card issue/redeem integration test has been evidenced."
     }
   ]
