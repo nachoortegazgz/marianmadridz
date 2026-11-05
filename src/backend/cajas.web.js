@@ -473,18 +473,13 @@ async function _projectToAccountingLedger(movement, traceId) {
             fiscalPeriod: movement.fiscalPeriod || new Date().toISOString().slice(0, 7),
             accountCode,
             concept: movement.operationDescription || "Cobro TPV",
-            debit: totalAmount,
-            credit: totalAmount,
             debitAmount: totalAmount,
             creditAmount: totalAmount,
             accountingAmount: totalAmount,
-            cashMovementId: movement.transactionId || null,
+            cashMovementId: movement._id || null,
             bookingId: (movement.linkedBookingIds && !movement.linkedBookingIds.includes(",")) ? movement.linkedBookingIds : null,
             orderId: movement.orderId || null,
             resourceId: movement.staffResourceId || movement.resourceId || null,
-            origenTipo: "MOVIMIENTOCAJA",
-            origenRegistro: MOVIMIENTOS_CAJA_COL,
-            recordHash: movement.recordHash || GENESIS_HASH,
             recordTimestamp: movement.recordTimestamp || new Date(),
             traceId: movement.traceId || traceId,
             _createdDate: new Date(),
@@ -767,6 +762,7 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
                     _id: claimId,
                     controlType: "LEDGER_IDEMPOTENCY",
                     transactionId,
+                    dedupeKey: transactionId,
                     status: "RESERVED",
                     traceId,
                     createdAt: new Date(),
@@ -799,7 +795,7 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
 
         const saved = await dalInsert(MOVIMIENTOS_CAJA_COL, movement);
         await _updateCajaActual(movement, traceId);
-        await _projectToAccountingLedger(movement, traceId);
+        await _projectToAccountingLedger(saved, traceId);
 
         return { status: "SUCCESS", data: saved, error: null };
     } catch (err) {
