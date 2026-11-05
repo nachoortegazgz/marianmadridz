@@ -795,7 +795,7 @@ async function _proyectarMovimientoInventario(cabecera, traceId) {
         // eliminado por HOOK-CAJA-06. Leer el canon evita nulos silenciosos.
         const snapshot = readFiscalPayload(cabecera) || {};
         await fn({
-            wixProductId: snapshot.wixProductId || null,
+            productId: snapshot.wixProductId || null,
             sku: snapshot.sku || null,
             orderId: cabecera.orderId || null,
             refundId: snapshot.refundId || null,
