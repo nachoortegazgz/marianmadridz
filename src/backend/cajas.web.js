@@ -1294,7 +1294,7 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
 
         const saved = await dalInsert(HISTORICO_CIERRES_Z_COL, zRecord);
 
-        const cashRegister = await dalGet(CAJA_ACTUAL_COL, CASH_REGISTER_ID, "strong").catch(() => null);
+        const cashRegister = await _getCashRegisterSingleton();
         if (cashRegister) {
             cashRegister.cashRegisterStatus = CASH_REGISTER_STATUS.CERRADA;
             cashRegister.closedAt = new Date();
