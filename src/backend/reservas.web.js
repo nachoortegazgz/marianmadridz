@@ -2228,7 +2228,7 @@ export const resolveStaffForSlot = webMethod(
 /* =============================================================================
  * TOKENS DE VISUALIZACIÓN
  * ==========================================================================*/
-async function _generateDisplayToken(bookingId, traceId) {
+async function _generateDisplayToken(bookingId, traceId, serviceId) {
     const token = _generateUUID();
     const tokenHash = _hashKey(token);
     const expiresAt = new Date(Date.now() + DISPLAY_TOKEN_TTL_MS);
@@ -2238,6 +2238,7 @@ async function _generateDisplayToken(bookingId, traceId) {
             controlType: CT_DISPLAY_TOKEN,
             dedupeKey: `DISPLAY_TOKEN_${tokenHash}`,
             bookingId: _safeTrim(bookingId),
+            serviceId: _looksLikeGuid(serviceId) ? _safeTrim(serviceId) : undefined,
             tokenHash,
             expiresAt,
             attempts: 0,
@@ -2402,7 +2403,7 @@ export const generateDisplayToken = webMethod(
                 const ownsCredential = (credRec?.items || []).some((row) => row.tokenHash && row.tokenHash === credHash);
                 if (!ownsCredential) return { ok: false, token: null, error: "ACCESS_DENIED" };
             }
-            const token = await _generateDisplayToken(id, traceId);
+            const token = await _generateDisplayToken(id, traceId, rec.serviceId);
             return {
                 ok: true, token,
                 expiresIn: DISPLAY_TOKEN_TTL_MS,
