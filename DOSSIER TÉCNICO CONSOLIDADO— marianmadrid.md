@@ -4236,3 +4236,26 @@ La búsqueda de sitios Wix por nombre que contenga `QA` no devolvió un sitio se
 - La prueba dual real sigue excluida por instrucción expresa del propietario. No se ha ejecutado ni se declara superada.
 - `src/pages/Mis reservas.ecd7l.js` continúa siendo un esqueleto; no se ha implementado todavía un listado backend por miembro.
 - Pendientes: reconciliar manualmente los dos pares duplicados; decidir por ADR cómo reparar las ocho filas históricas y las dos diferencias de pago; completar verificación Preview/visual; mantener excluida la reserva dual real mientras no exista autorización específica. No se han realizado escrituras en Wix durante esta auditoría.
+
+## 36. CIERRE DE PR #109 Y DIAGNÓSTICO PREVIEW — 2026-11-05
+
+### 36.1 Integración y CI post-merge
+
+- PR #109 quedó fusionado en `main` a las 03:42:30 UTC; merge commit `e6ce7341705482db056962f3839280ea1edaff83`.
+- El trigger `push` añadido a `booking-regression.yml` ya se ejecutó sobre el propio merge commit: workflow run `41963267447`, job `validate` completado con `success`. Instalación de dependencias, regresión offline y ESLint finalizaron correctamente.
+- El PR #109 actualiza el dossier y el workflow de CI; no cambia código de reservas, configuración CMS, servicios, recursos, reservas ni publicación Wix.
+
+### 36.2 Wix CLI Preview — resultado verificado
+
+- El secreto `CLI_API_KEY` autentica correctamente. `wix login --api-key` y `wix whoami` completan sin error.
+- La automatización con PTY selecciona la opción que presenta la CLI: `Latest commit from the default branch`. Queda confirmado que la selección interactiva no era el bloqueo.
+- El run `41963373103` termina con error Wix `PUBLISH_PIPELINE_TASK_NOT_FOUND` al intentar crear el deployment. Request ID `1793850304.70111544164821481`; deployment ID `b7fdf73c-f779-42f4-9f71-1e9c94419186`. Mensaje: `PublishPipelineTask not found for given deployment id`.
+- No se obtuvo URL `wix.to`; no existe Preview verificable ni runtime/E2E visual. No se ejecutó `wix publish` ni se alteró producción.
+- La documentación oficial de Wix CLI para Sites describe Preview y workflows de GitHub Actions como flujo soportado; el fallo se produce en el backend de despliegue de Wix después de autenticar y seleccionar la rama predeterminada. No hay evidencia para atribuirlo al código de reservas ni al secreto.
+- Referencias oficiales: `https://dev.wix.com/docs/develop-websites/articles/workspace-tools/developer-tools/git-integration-wix-cli-for-sites/about-automated-workflows-and-the-wix-cli-for-sites` y `https://dev.wix.com/docs/develop-websites/articles/workspace-tools/developer-tools/git-integration-wix-cli-for-sites/set-up-git-hub-actions-to-work-with-the-wix-cli-for-sites`.
+
+### 36.3 Próxima acción segura
+
+- No repetir el mismo `wix preview` sin cambio de diagnóstico: el fallo actual es reproducible y está del lado de la tarea de despliegue Wix. Escalar a soporte Wix con Request ID y deployment ID, o esperar confirmación de Wix antes de otro intento.
+- No fusionar el workflow temporal de diagnóstico `.github/workflows/wix-preview-smoke.yml` ni la rama `automation/wix-preview-smoke-20261105` en `main`. No es parte de CI permanente.
+- Se mantienen sin ejecutar: prueba dual real (sigue excluida), cancelación del duplicado ANDREA y reparación de ocho filas históricas. La recomendación de conservar ALBA/cancelar ANDREA requiere autorización expresa del propietario.
