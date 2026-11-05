@@ -684,6 +684,10 @@ async function _syncNativeBookingToCitas(booking, eventId, traceId) {
         amountSource: hasExactAmount ? "NATIVE_BOOKING_SNAPSHOT" : "NOT_EXPOSED_BY_BOOKINGS",
         amountReconciliationRequired: !hasExactAmount,
         nativePhasePairUnknown: true,
+        staffMemberId: staffMemberId || null,
+        resourceIdSource: _looksLikeGuid(_safeTrim(resource.id || booking?.resource?.id || ""))
+            ? "BOOKINGS_SLOT_RESOURCE"
+            : (staffMemberId ? "MAPA_STAFF" : "UNRESOLVED"),
     };
     const internalBusinessNote = _safeTrim(booking?.internalBusinessNote || "").slice(0, 200);
     const formSubmissionId = _safeTrim(booking?.formSubmissionId || "");
@@ -958,7 +962,9 @@ export async function wixBookingsV2_onBookingConfirmed(rawBody) {
         return { status: "OK", eventId, ledgerCreated: syncResult.created };
     } catch (error) {
         _handleError(error, "wixBookingsV2_onBookingConfirmed", traceId);
-        return { status: "OK" };
+        // A transient CMS/API failure must remain retryable. Acknowledge only
+        // after CitasF2 projection and webhook idempotency marker both succeed.
+        return { status: "RETRY_REQUIRED", reason: "BOOKING_CONFIRMED_HANDLER_ERROR" };
     }
 }
 
