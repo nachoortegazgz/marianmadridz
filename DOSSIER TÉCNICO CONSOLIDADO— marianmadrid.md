@@ -325,7 +325,7 @@ Si la discrepancia afecta a una decisión, se **documenta** y se eleva al usuari
 
 ### 6.1 Protocolo de honestidad (antes de enviar)
 
-**Nota de referencias heredadas:** las menciones a “dossier (referencia histórica a §0 de una versión anterior)” identifican la sección de estado de una versión anterior del documento; no apuntan a una sección vigente de este dossier. La referencia §A.4, en cambio, sí corresponde al apartado 4 del Anexo A.
+**Nota de referencias heredadas:** las menciones a “dossier §0” identifican la sección de estado de una versión anterior del documento; no apuntan a una sección vigente de este dossier. La referencia §A.4, en cambio, sí corresponde al apartado 4 del Anexo A.
 
 ### 6.2 Protocolo de métricas
 
@@ -333,7 +333,7 @@ Toda métrica se entrega como tabla:
 
 | Métrica | Valor | Fuente | Fecha | Estado |
 |---|---|---|---|---|
-| Tests Vitest | 182 pass / 0 fail · 11 suites (dato histórico declarado; no es una medición actual verificada) | dossier (referencia histórica a §0 de una versión anterior) | 2026-11-01 | `[DECLARADO]` |
+| Tests Vitest | 182 pass / 0 fail · 11 suites (dato histórico declarado; no es una medición actual verificada) | dossier (legacy §0; versión anterior) | 2026-11-01 | `[DECLARADO]` |
 | Tests Vitest (SSOT) | 158/158 | SSOT §0.8 | 2026-10-30 | `[DECLARADO]` — discrepancia abierta |
 | CI `main` | run `41053070852` SUCCESS | auditoría §7 | 2026-10-30 | `[HECHO]` |
 | Publicado en Wix | — | — | — | `[PENDIENTE]` |
@@ -575,6 +575,8 @@ El workflow activo de Preview, sus controles y sus evidencias se describen una s
 ---
 
 ## 1. Propósito de este documento
+
+> **Carácter consultivo:** el Anexo C resume propuestas y prioridades de trabajo; no fija doctrina ni instrucciones vinculantes. No prevalece sobre la SSOT vigente, ADR aprobados, fuentes primarias ni decisiones del propietario.
 
 Documentar un **marco orientativo** para analizar las decisiones del proyecto (código, datos, permisos, integraciones, documentación y operación) y describir los **tres objetivos sucesivos** propuestos: **Capa 1** (reservas), **Capa 2** (fiscal-contable-legal) y **Capa 3** (registro externo de seguridad en Microsoft 365). Ninguna capa se declara cerrada sin superar sus criterios de aceptación y sin ADR cuando corresponda.
 
