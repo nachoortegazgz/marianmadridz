@@ -33,8 +33,6 @@ function seedStock(overrides = {}) {
   wixDataMock._seed(INVENTORY_COL, [{
     _id: "qa-stock-row-001",
     stockKey: STOCK_KEY,
-    wixProductId: PRODUCT_ID,
-    wixVariantId: VARIANT_ID,
     productId: PRODUCT_ID,
     variantId: VARIANT_ID,
     catalogVersion: mapper.CATALOG_VERSION.V1,
