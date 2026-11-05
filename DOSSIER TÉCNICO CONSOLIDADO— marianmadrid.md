@@ -327,7 +327,7 @@ Colección auxiliar para coordinación técnica y operativa. Entre los tipos de 
 - `SLOT_LOCK`: protección temporal de slots.
 - `DUAL_CACHE`: datos temporales asociados al flujo dual.
 - `IDEMPOTENCY`: deduplicación de operaciones.
-  Las transacciones terminales `COMPLETED` y `FAILED_FINAL` se conservan 24 horas desde su última actualización y después se purgan automáticamente cada 15 minutos. Se excluyen expresamente `IN_PROGRESS`, `FAILED_RETRYABLE` y `RESULT_UNKNOWN`, que siguen siendo necesarios para reintentos o reconciliación.
+  Las transacciones terminales `COMPLETED` y `FAILED_FINAL` se conservan 24 horas desde su última actualización y después se purgan automáticamente cada 15 minutos. También se purgan los `SYSTEM_FLAG` resueltos (`COMPLETED`, `RECONCILED`) tras 24 horas. Se excluyen expresamente `IN_PROGRESS`, `FAILED_RETRYABLE`, `RESULT_UNKNOWN`, `COMPLETION_RETRY_REQUIRED` y `REPAIR_REQUIRED`, necesarios para reintentos o reconciliación.
 - `WEBHOOK_EVENT`: registro de eventos webhook.
 - `RATE_LIMIT`: control de frecuencia.
 - `DISPLAY_TOKEN`: tokens temporales de visualización.
