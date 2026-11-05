@@ -170,6 +170,29 @@ test("SEC-RL-08 reuses the persisted row without another bootstrap insert", asyn
     );
 });
 
+
+test("SEC-RL-09 treats Wix Data quota exhaustion as a temporary fail-closed denial", async () => {
+    const originalGet = wixDataMock.get;
+    wixDataMock.get = async () => {
+        const error = new Error("WDE0014: Requests per minute quota exceeded.");
+        error.details = { applicationError: { code: "WDE0014" } };
+        throw error;
+    };
+
+    try {
+        assert.deepEqual(
+            await rateLimiter({ surface: "security.test", key: "quota-exhausted" }),
+            {
+                allowed: false,
+                retryAfter: 60,
+                reason: "DATA_QUOTA_EXCEEDED",
+            }
+        );
+    } finally {
+        wixDataMock.get = originalGet;
+    }
+});
+
 test("SEC-CRYPTO-01 computes standard SHA-256 vectors without Web Crypto", async () => {
     assert.equal(
         await hashSHA256("abc"),
