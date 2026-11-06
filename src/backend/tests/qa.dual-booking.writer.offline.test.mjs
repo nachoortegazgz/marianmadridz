@@ -250,3 +250,41 @@ test.after(() => {
   mocks.sdk['bookings::staffMembers'] = {};
   mocks.sdk['@wix/bookings::bookings'] = {};
 });
+
+test('QA-DUAL-BOOKING-03 partial CitasF2 persistence marks the written projection compensated and cancels both bookings', async () => {
+  seedCatalog();
+  const originalInsert = wixDataMock.insert;
+  let citaInsertCount = 0;
+  wixDataMock.insert = async (collection, item) => {
+    if (collection === 'CitasF2') {
+      citaInsertCount += 1;
+      if (citaInsertCount === 2) {
+        throw new Error('synthetic second CitasF2 insert failure');
+      }
+    }
+    return originalInsert(collection, item);
+  };
+
+  let result;
+  try {
+    result = await executeBookingSaga(bookingPayload('trace-qa-dual-cms-partial-001'));
+  } finally {
+    wixDataMock.insert = originalInsert;
+  }
+
+  assert.equal(result.status, 'ERROR');
+  assert.equal(writerCalls.length, 2, 'both native bookings were created before CMS persistence');
+  assert.equal(confirmationCalls.length, 2, 'both native bookings were confirmed before CMS persistence');
+  assert.equal(cancellationCalls.length, 2, 'partial persistence must compensate both native bookings');
+  assert.deepEqual(
+    cancellationCalls.map((call) => call.bookingId).sort(),
+    [BOOKING_F1_ID, BOOKING_F2_ID].sort()
+  );
+
+  const citas = wixDataMock._store.get('CitasF2') || [];
+  assert.equal(citas.length, 1, 'the first insert remains as an auditable projection, not an active orphan');
+  assert.equal(citas[0].bookingId, BOOKING_F1_ID);
+  assert.equal(citas[0].bookingStatus, IC.CITAS_BOOKING_STATUS.CANCELLED);
+  assert.equal(citas[0].meta.compensated, true);
+  assert.equal(citas[0].meta.compensationTraceId, 'trace-qa-dual-cms-partial-001');
+});
