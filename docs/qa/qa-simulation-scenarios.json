@@ -56,11 +56,21 @@
       ]
     },
     {
+      "scenarioId": "QA-BOOKING-DUAL-WRITER-001",
+      "name": "Reserva dual: dos bookings independientes y dos proyecciones CMS vinculadas",
+      "status": "MOCK_COVERED",
+      "testFiles": [
+        "src/backend/tests/qa.dual-booking.writer.offline.test.mjs"
+      ],
+      "limitation": "Wix Bookings Writer y CMS se simulan offline. No certifica disponibilidad concurrente ni escritura real en el sitio publicado."
+    },
+    {
       "scenarioId": "QA-BOOKING-DUAL-COMPENSATION-001",
       "name": "Compensación LIFO al fallar F2",
-      "status": "PARTIAL_MOCK_COVERAGE",
+      "status": "MOCK_COVERED",
       "testFiles": [
-        "src/backend/tests/booking.availability.saga.test.mjs"
+        "src/backend/tests/booking.availability.saga.test.mjs",
+        "src/backend/tests/qa.dual-booking.writer.offline.test.mjs"
       ],
       "traceId": "trace-qa-dual-compensation-001",
       "fixture": {
@@ -78,7 +88,7 @@
         "orchestrator compensates completed steps in reverse order",
         "original F2 error is preserved"
       ],
-      "limitation": "The orchestration primitive is tested; an end-to-end processDualBooking failure with Wix Writer V2 and native cancellation is not certified."
+      "limitation": "La saga y la llamada de cancelación se prueban con Writer V2/CMS simulados offline. Falta E2E contra un entorno Wix de QA con Writer real."
     },
     {
       "scenarioId": "QA-CHECKOUT-CART-V2-001",
