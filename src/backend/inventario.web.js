@@ -16,7 +16,7 @@ ARCHITECTURE:
 
 import { Permissions, webMethod } from "wix-web-module";
 import { auth } from "@wix/essentials";
-import { catalogVersioning, products } from "@wix/stores";
+import { catalogVersioning, inventory, products } from "@wix/stores";
 
 import {
     getItem as dalGet,
@@ -51,6 +51,10 @@ const API_TIMEOUT_MS = Number(SDK_CONFIG?.TIMEOUTS?.WEBHOOK_MS) || 30000;
 
 const getCatalogVersionElevated = auth.elevate(catalogVersioning.getCatalogVersion);
 const getStoreVariantElevated = auth.elevate(products.getStoreVariant);
+const queryProductVariantsElevated = auth.elevate(products.queryProductVariants);
+const queryStoreVariantsElevated = auth.elevate(products.queryStoreVariants);
+const incrementInventoryElevated = auth.elevate(inventory.incrementInventory);
+const decrementInventoryElevated = auth.elevate(inventory.decrementInventory);
 
 function _error(code, message, details = {}) {
     return { status: "ERROR", data: null, error: { code, message, ...details } };
@@ -76,8 +80,8 @@ async function _getCatalogVersion() {
 function _toTaxRate(value) {
     const number = Number(value);
     if (!Number.isFinite(number) || number < 0) return null;
-    const normalized = number > 1 ? number / 100 : number;
-    return normalized <= 1 ? normalized : null;
+    const percentage = number > 1 ? number : number * 100;
+    return percentage <= 100 ? percentage : null;
 }
 
 function _isDuplicate(error) {
