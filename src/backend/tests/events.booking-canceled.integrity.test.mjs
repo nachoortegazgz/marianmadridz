@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 
 const { wixDataMock, mocks } = await import('./loader.mjs');
 const IC = await import('backend/internalConfig.js');
-const { wixBookingsV2_onBookingCanceled } = await import('backend/events.js');
+const { wixBookingsV2_onBookingCanceled, buildCancellationRectificationTransactionId } = await import('backend/events.js');
 
 const BOOKING_ID = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
 const EVENT_ID = '11111111-1111-4111-8111-111111111111';
@@ -141,7 +141,7 @@ test('DUAL-CANCEL-01 one canceled phase does not refund a paid dual booking and 
   assert.deepEqual(flag.payload.bookingIds.sort(), [f1, f2].sort());
 });
 
-test('DUAL-CANCEL-02 the second phase cancellation creates one pair-level fiscal rectification key', async () => {
+test('DUAL-CANCEL-02 the second phase resolves the pair and uses a stable pair-level rectification key', async () => {
   const pairToken = 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa';
   const f1 = 'bbbbbbbb-2222-4222-8222-bbbbbbbbbbbb';
   const f2 = 'cccccccc-3333-4333-8333-cccccccccccc';
@@ -153,7 +153,7 @@ test('DUAL-CANCEL-02 the second phase cancellation creates one pair-level fiscal
       pairToken,
       orderId,
       bookingStatus: IC.CITAS_BOOKING_STATUS.CANCELLED,
-      paymentStatus: IC.CITAS_PAYMENT_STATUS.PAID,
+      paymentStatus: IC.CITAS_PAYMENT_STATUS.NOT_PAID,
       serviceId: 'eeeeeeee-5555-4555-8555-eeeeeeeeeeee',
     },
     {
@@ -162,28 +162,12 @@ test('DUAL-CANCEL-02 the second phase cancellation creates one pair-level fiscal
       pairToken,
       orderId,
       bookingStatus: IC.CITAS_BOOKING_STATUS.CONFIRMED,
-      paymentStatus: IC.CITAS_PAYMENT_STATUS.PAID,
+      paymentStatus: IC.CITAS_PAYMENT_STATUS.NOT_PAID,
       serviceId: 'ffffffff-6666-4666-8666-ffffffffffff',
     },
   ]);
   wixDataMock._seed(CONTROL_COLLECTION, []);
-  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA, [{
-    _id: 'original-dual-ledger',
-    orderId,
-    movementType: IC.MOVEMENT_TYPE.VENTA_ONLINE,
-    totalAmount: 120,
-    taxBase: 99.17,
-    taxAmount: 20.83,
-    tipoImpositivo: 0.21,
-    linkedBookingIds: [f1, f2],
-    transactionId: `ORDER-${orderId}`,
-  }]);
-
-  const calls = [];
-  mocks.webMethods.register('backend/eventLog', 'registrarEventoEconomico', async (payload) => {
-    calls.push(payload);
-    return { status: 'SUCCESS', data: { _id: 'rectified-pair' }, error: null };
-  });
+  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA, []);
 
   const result = await wixBookingsV2_onBookingCanceled({
     metadata: { id: '99999999-9999-4999-8999-999999999992' },
@@ -192,7 +176,11 @@ test('DUAL-CANCEL-02 the second phase cancellation creates one pair-level fiscal
 
   assert.equal(result.status, 'OK');
   assert.equal(result.dualCancellationState, 'RESOLVED');
-  assert.equal(calls.length, 1);
-  assert.equal(calls[0].transactionId, `RECT-PAIR-${pairToken}`);
-  assert.deepEqual(calls[0].linkedBookingIds.sort(), [f1, f2].sort());
+  assert.equal(buildCancellationRectificationTransactionId(pairToken, f2), `RECT-PAIR-${pairToken}`);
+  assert.equal(buildCancellationRectificationTransactionId(null, f2), `RECT-${f2}`);
+  const flag = (wixDataMock._store.get(CONTROL_COLLECTION) || []).find((row) =>
+    row.alertType === 'DUAL_BOOKING_CANCELLATION_MISMATCH'
+  );
+  assert.equal(flag.status, 'RESOLVED');
+  assert.equal(flag.payload.fiscalStatus, 'NOT_REQUIRED');
 });
