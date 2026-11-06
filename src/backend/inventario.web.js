@@ -1331,6 +1331,76 @@ export const reconcilePendingInventoryMovements = webMethod(Permissions.SiteMemb
     }
 });
 
+export const processPendingInventoryRepairs = webMethod(Permissions.SiteMember, async (options = {}) => {
+    const traceId = _safeTrim(options?.traceId) || makeTraceId("inventory-repair-queue");
+    try {
+        await _rateLimitOrThrow("inventario.processRepairs", "admin");
+        await requireAdmin(traceId);
+        const limit = Math.min(
+            INVENTORY_CONFIG.REPAIR_PAGE_LIMIT,
+            Math.max(1, Math.floor(Number(options?.limit) || INVENTORY_CONFIG.REPAIR_PAGE_LIMIT))
+        );
+        const pending = await dalQuery(CONTROL_COL)
+            .eq("controlType", CONTROL_TYPE.SYSTEM_FLAG)
+            .eq("alertType", "INVENTORY_SYNC_REPAIR_REQUIRED")
+            .eq("status", "PENDING")
+            .limit(limit)
+            .find(STRONG_READ);
+        const results = [];
+        for (const repair of pending?.items || []) {
+            const payload = repair?.payload && typeof repair.payload === "object" ? repair.payload : {};
+            const order = {
+                _id: payload.orderId,
+                taxIncludedInPrices: payload.taxIncludedInPrices,
+                lineItems: payload.lineItem ? [payload.lineItem] : [],
+            };
+            let result;
+            if (payload.operation === "RESERVE") {
+                result = await _reserveOrderLine(order, payload.lineItem, traceId, payload.eventId);
+            } else if (payload.operation === "SALE") {
+                result = await _syncPaidOrderLine(order, payload.lineItem, traceId, payload.eventId);
+            } else if (payload.operation === "RELEASE") {
+                result = await releaseOrderInventoryInternal(order, traceId, payload.eventId);
+            } else {
+                result = { status: "ERROR", code: "INVENTORY_REPAIR_OPERATION_UNKNOWN" };
+            }
+
+            const attempts = Number(payload.attempts || 0) + 1;
+            if (result?.status === "SUCCESS") {
+                await dalUpdate(CONTROL_COL, {
+                    ...repair,
+                    status: "RESOLVED",
+                    payload: {
+                        ...payload,
+                        attempts,
+                        resolvedAt: new Date().toISOString(),
+                        lastResult: result.data || null,
+                    },
+                    processedAt: new Date(),
+                    _updatedDate: new Date(),
+                });
+            } else {
+                await dalUpdate(CONTROL_COL, {
+                    ...repair,
+                    status: attempts >= INVENTORY_CONFIG.MAX_REPAIR_ATTEMPTS ? "REPAIR_REQUIRED" : "PENDING",
+                    payload: {
+                        ...payload,
+                        attempts,
+                        lastError: result?.code || result?.error?.code || "INVENTORY_REPAIR_FAILED",
+                        lastAttemptAt: new Date().toISOString(),
+                    },
+                    _updatedDate: new Date(),
+                });
+            }
+            results.push({ repairId: repair._id, status: result?.status || "ERROR", code: result?.code || null });
+        }
+        return { status: "SUCCESS", data: { processed: results.length, results }, error: null };
+    } catch (error) {
+        log.error("processPendingInventoryRepairs failed", { traceId, error: error?.message });
+        return _error(error?.code || "INVENTORY_REPAIR_QUEUE_FAILED", error?.message || "No se pudo procesar la cola de inventario.");
+    }
+});
+
 export const getInventoryCatalogCandidates = webMethod(Permissions.SiteMember, async (options = {}) => {
     const traceId = _safeTrim(options?.traceId) || makeTraceId("inventory-candidates");
     try {
