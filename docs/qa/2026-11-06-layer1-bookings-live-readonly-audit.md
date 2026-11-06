@@ -59,13 +59,12 @@ Suite nueva `src/backend/tests/qa.dual-booking.writer.offline.test.mjs`:
 
 - `QA-DUAL-BOOKING-01`: dos llamadas independientes a `createBooking`, consultas de disponibilidad separadas para F1 y F2, mismo `resourceId`, gap exacto, dos filas `CitasF2` con el mismo `pairToken`, F2 con `OFFLINE`/importe cero y confirmación de ambas reservas.
 - `QA-DUAL-BOOKING-02`: fallo sintético de Writer F2 después de crear F1; se verifica cancelación de F1 con su revisión y ausencia de persistencia de una pareja incompleta.
+- `QA-DUAL-BOOKING-03`: fallo en el segundo insert de `CitasF2`; la primera proyección queda marcada `CANCELLED`/`compensated` y se cancelan ambas reservas nativas.
 - La prueba simple `qa.simple-booking.writer.offline.test.mjs` continúa pasando: una reserva nativa, una fila `CitasF2` y replay idempotente sin duplicado.
 
-**Resultado observado en run #42205445202:** las dos suites de Writer pasan (4/4 pruebas); las suites de disponibilidad, concurrencia y saga pasan; Layer 2 y ESLint pasan. El run global falla únicamente en `qa.simulation-manifest.test.mjs`, porque el escenario nuevo se añadió sin `traceId` y `fixture`. Se corrigió el manifiesto en commit `454d4305b0ef9dea74cda9cdbc709d5ef6ebf072`; falta una nueva ejecución CI sobre ese head.
+**CI final del head `6583e424`: PASS completo.** GitHub Actions run #42206036528: suite offline, gate Capa 1, gate Capa 2 y ESLint: **PASS**. El run anterior #42205445202 falló solo por campos obligatorios ausentes en el manifiesto QA; se corrigió el escenario y el run final pasa.
 
-Run: https://github.com/nachoortegazgz/marianmadridz/actions/runs/42205445202
-
-Run #42204139849: suite offline, gate Capa 1, gate Capa 2 y ESLint: **PASS** en el head anterior `45b189c`.
+Run final: https://github.com/nachoortegazgz/marianmadridz/actions/runs/42206036528
 
 Las pruebas offline usan mocks; no equivalen a una prueba con Wix Bookings Writer real.
 
@@ -79,14 +78,14 @@ La configuración real de los 24 F2 ya es `NO_FEE` con pago presencial habilitad
 
 ## 7. Gaps y pendientes para certificar
 
-1. Ejecutar el CI completo tras la corrección del manifiesto `454d4305`.
-2. Ejecutar reserva simple y dual contra un Wix QA/Local Editor con Writer real y CMS aislado.
-3. Carrera con una reserva creada desde Wix nativo mientras la saga confirma; verificar rechazo nativo y compensación de la otra fase.
-4. Inyectar fallo durante el segundo insert de `CitasF2`; verificar que la primera proyección queda marcada `CANCELLED` y las dos reservas nativas se compensan.
-5. E2E de navegador: selección de servicio, día, opción F1/F2, datos, consentimiento, confirmación y mensajes de error.
-6. E2E de reprogramación dual y cancelación completa. La reprogramación dual sigue sin escenario automatizado de extremo a extremo.
-7. Resolver mediante ADR la diferencia entre Dossier P1.5 y la validación nativa de F2.
-8. Resolver la política de fianza: el Dossier P10.4 menciona 30% para servicios >50 €, mientras RF-06 de Necesidades Web indica servicios >30 € y señal de 15 € o 20%. No se localizó `createDepositPaymentOrder` ni `cancellationPolicyHours` en el código. No implementar importes ni reglas de cobro hasta aprobar una única política y su contrato de checkout.
+1. Ejecutar reserva simple y dual contra un Wix QA/Local Editor con Writer real y CMS aislado.
+2. Carrera con una reserva creada desde Wix nativo mientras la saga confirma; verificar rechazo nativo y compensación de la otra fase.
+3. E2E de navegador: selección de servicio, día, opción F1/F2, datos, consentimiento, confirmación y mensajes de error.
+4. E2E de reprogramación dual y cancelación completa. La reprogramación dual sigue sin escenario automatizado de extremo a extremo.
+5. E2E integrado del checkout online dual y su webhook de pago; los componentes de checkout y webhook tienen pruebas separadas, no una transacción completa en un entorno Wix QA.
+6. Resolver mediante ADR la diferencia entre Dossier P1.5 y la validación nativa de F2.
+7. Resolver la política de fianza: el Dossier P10.4 menciona 30% para servicios >50 €, mientras RF-06 de Necesidades Web indica servicios >30 € y señal de 15 € o 20%. No se localizó `createDepositPaymentOrder` ni `cancellationPolicyHours` en el código. No implementar importes ni reglas de cobro hasta aprobar una única política y su contrato de checkout.
+8. Adjuntar/identificar la SSOT v10.0 canónica vigente para cerrar la trazabilidad de decisiones; el documento original no está entre los archivos disponibles en este proyecto.
 
 ## 8. Límites
 
