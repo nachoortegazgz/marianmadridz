@@ -5,7 +5,7 @@
 
 ## 1. Alcance y conclusión
 
-Auditoría de reservas simples y duales F1/F2, gap de exposición, disponibilidad y compensación. La configuración CMS ↔ Bookings V2 de las 24 reservas duales está alineada y Wix ofrece slots que dejan libre al profesional durante el gap. No se certifica aún la creación E2E en producción: no se han creado reservas reales ni escrito en CMS.
+Auditoría de reservas simples y duales F1/F2, gap de exposición, disponibilidad, creación, persistencia y compensación. La configuración CMS ↔ Bookings V2 de las 24 reservas duales está alineada y Wix ofrece slots que dejan libre al profesional durante el gap. Se añadieron pruebas de integración offline para la escritura simple y dual; no se certifica aún la creación E2E en un entorno Wix de QA ni en producción.
 
 ## 2. Integridad CMS ↔ Bookings V2
 
@@ -53,13 +53,21 @@ Corrección en rama `fix/booking-saga-partial-compensation`:
 
 PR: https://github.com/nachoortegazgz/marianmadridz/pull/153
 
-## 5. CI
+## 5. Pruebas de escritura offline — Bookings Writer V2
 
-GitHub Actions run #203: suite offline, gate Capa 1, gate Capa 2 y ESLint: **PASS**.
+Suite nueva `src/backend/tests/qa.dual-booking.writer.offline.test.mjs`:
 
-https://github.com/nachoortegazgz/marianmadridz/actions/runs/42203700085
+- `QA-DUAL-BOOKING-01`: dos llamadas independientes a `createBooking`, consultas de disponibilidad separadas para F1 y F2, mismo `resourceId`, gap exacto, dos filas `CitasF2` con el mismo `pairToken`, F2 con `OFFLINE`/importe cero y confirmación de ambas reservas.
+- `QA-DUAL-BOOKING-02`: fallo sintético de Writer F2 después de crear F1; se verifica cancelación de F1 con su revisión y ausencia de persistencia de una pareja incompleta.
+- La prueba simple `qa.simple-booking.writer.offline.test.mjs` continúa pasando: una reserva nativa, una fila `CitasF2` y replay idempotente sin duplicado.
 
-CI verde no equivale a prueba E2E con Wix Bookings Writer real.
+**Resultado observado en run #42205445202:** las dos suites de Writer pasan (4/4 pruebas); las suites de disponibilidad, concurrencia y saga pasan; Layer 2 y ESLint pasan. El run global falla únicamente en `qa.simulation-manifest.test.mjs`, porque el escenario nuevo se añadió sin `traceId` y `fixture`. Se corrigió el manifiesto en commit `454d4305b0ef9dea74cda9cdbc709d5ef6ebf072`; falta una nueva ejecución CI sobre ese head.
+
+Run: https://github.com/nachoortegazgz/marianmadridz/actions/runs/42205445202
+
+Run #42204139849: suite offline, gate Capa 1, gate Capa 2 y ESLint: **PASS** en el head anterior `45b189c`.
+
+Las pruebas offline usan mocks; no equivalen a una prueba con Wix Bookings Writer real.
 
 ## 6. Decisión pendiente sobre F2
 
@@ -69,19 +77,22 @@ La configuración real de los 24 F2 ya es `NO_FEE` con pago presencial habilitad
 
 **Resolución recomendada:** aclarar P1.5 mediante ADR: mantener validación de disponibilidad y no omitir validación de pago salvo rechazo reproducible y excepción justificada. No se ha modificado el Dossier ni la configuración de producción.
 
-## 7. Pendiente para certificar
+## 7. Gaps y pendientes para certificar
 
-1. Reserva simple completa en Local Editor/QA: Wix Booking + `CitasF2`.
-2. Reserva dual completa: F1, F2, `pairToken`, dos filas CMS y liberación del lock.
-3. Inyectar fallo entre F1 y F2; comprobar cancelación de F1 y cola de compensación.
-4. Inyectar fallo durante persistencia CMS; comprobar que no quedan proyecciones activas huérfanas.
-5. Carrera con reserva nativa concurrente; Wix debe rechazar el slot perdido y la saga compensar cualquier reserva parcial.
-6. E2E de navegador: selección, fecha/hora, confirmación y errores.
-7. Aprobar ADR sobre `skipAvailabilityValidation`.
+1. Ejecutar el CI completo tras la corrección del manifiesto `454d4305`.
+2. Ejecutar reserva simple y dual contra un Wix QA/Local Editor con Writer real y CMS aislado.
+3. Carrera con una reserva creada desde Wix nativo mientras la saga confirma; verificar rechazo nativo y compensación de la otra fase.
+4. Inyectar fallo durante el segundo insert de `CitasF2`; verificar que la primera proyección queda marcada `CANCELLED` y las dos reservas nativas se compensan.
+5. E2E de navegador: selección de servicio, día, opción F1/F2, datos, consentimiento, confirmación y mensajes de error.
+6. E2E de reprogramación dual y cancelación completa. La reprogramación dual sigue sin escenario automatizado de extremo a extremo.
+7. Resolver mediante ADR la diferencia entre Dossier P1.5 y la validación nativa de F2.
+8. Resolver la política de fianza: el Dossier P10.4 menciona 30% para servicios >50 €, mientras RF-06 de Necesidades Web indica servicios >30 € y señal de 15 € o 20%. No se localizó `createDepositPaymentOrder` ni `cancellationPolicyHours` en el código. No implementar importes ni reglas de cobro hasta aprobar una única política y su contrato de checkout.
 
 ## 8. Límites
 
 - No se crearon, modificaron ni cancelaron reservas reales.
 - No se escribieron colecciones CMS ni se alteraron servicios, horarios, personal o pagos.
 - No se publicó ni desplegó código.
-- PR #153 permanece abierto y en borrador; CI verde, sin integrar en `main`.
+- PR #153 permanece abierto y en borrador; no se ha integrado en `main`.
+- No se han creado, modificado ni cancelado reservas reales, ni escrito en CMS de producción.
+- No se ha desplegado ni publicado código.
