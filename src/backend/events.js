@@ -976,7 +976,7 @@ export async function wixBookingsV2_onBookingConfirmed(rawBody) {
 // WEBHOOK: BOOKING CANCELED (ALN-03: BOOKING_STATUS.CANCELED)
 // ============================================================================
 
-async function _upsertDualCancellationFlag(pairToken, traceId, triggerBookingId) {
+async function _upsertDualCancellationFlag(pairToken, traceId, triggerBookingId, fiscalStatus = "NOT_REQUIRED") {
     const token = _safeTrim(pairToken);
     if (!token) return { status: "NOT_DUAL" };
 
@@ -991,19 +991,22 @@ async function _upsertDualCancellationFlag(pairToken, traceId, triggerBookingId)
         return status === "CANCELLED" || status === "CANCELED";
     });
     const flagId = `DUAL_CANCEL_${token.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 64)}`;
-    const status = allCanceled ? "RESOLVED" : "REPAIR_REQUIRED";
+    const fiscalPending = ["REPAIR_REQUIRED", "WAITING_FOR_SIBLING_CANCELLATION", "RECOVERY_QUEUED"].includes(fiscalStatus);
+    const resolved = allCanceled && !fiscalPending;
+    const status = resolved ? "RESOLVED" : "REPAIR_REQUIRED";
     const flag = {
         _id: flagId,
         controlType: CONTROL_TYPE.SYSTEM_FLAG,
         dedupeKey: `DUAL_CANCELLATION_${token}`,
         status,
         alertType: "DUAL_BOOKING_CANCELLATION_MISMATCH",
-        severity: allCanceled ? "INFO" : "ERROR",
-        message: allCanceled
-            ? "Ambas fases de la reserva dual constan canceladas en CitasF2."
-            : "Una fase de la reserva dual ha sido cancelada; la fase hermana requiere conciliacion manual.",
+        severity: resolved ? "INFO" : "ERROR",
+        message: resolved
+            ? "Ambas fases de la reserva dual y su estado fiscal estan conciliados."
+            : "La reserva dual o su rectificacion fiscal requiere conciliacion manual.",
         payload: {
             pairToken: token,
+            fiscalStatus,
             bookingIds,
             bookingStatuses: rows.map((row) => ({
                 bookingId: row?.bookingId || null,
@@ -1012,12 +1015,12 @@ async function _upsertDualCancellationFlag(pairToken, traceId, triggerBookingId)
             triggerBookingId: _safeTrim(triggerBookingId),
             reason: rows.length === 2 ? "DUAL_PHASE_CANCELLATION_MISMATCH" : "DUAL_PAIR_CARDINALITY_INVALID",
             detectedAt: new Date().toISOString(),
-            resolution: allCanceled
-                ? "BOTH_PHASES_CANCELED"
-                : "Review native Wix Bookings status and cancellation policy; do not auto-cancel or refund the sibling phase.",
+            resolution: resolved
+                ? "BOTH_PHASES_CANCELED_AND_FISCALLY_RECONCILED"
+                : "Review native Wix Bookings status, cancellation policy and fiscal ledger; do not auto-cancel or refund the sibling phase without policy approval.",
         },
         traceId,
-        processedAt: allCanceled ? new Date() : null,
+        processedAt: resolved ? new Date() : null,
         _updatedDate: new Date(),
     };
     const existing = await dalGet(CONTROL_OPERATIVO_COL, flagId, "strong");
@@ -1073,6 +1076,7 @@ export async function wixBookingsV2_onBookingCanceled(rawBody) {
         const pairToken = _safeTrim(previousCita?.pairToken);
         let dualPairFullyCancelled = false;
         let dualPairBookingIds = [bookingId];
+        let dualFiscalStatus = pairToken ? "WAITING_FOR_SIBLING_CANCELLATION" : "NOT_DUAL";
         if (pairToken) {
             const pairRes = await dalQuery(CITAS_COL)
                 .eq("pairToken", pairToken)
@@ -1097,9 +1101,16 @@ export async function wixBookingsV2_onBookingCanceled(rawBody) {
             const pairOrderId = pairToken
                 ? _safeTrim(previousCita.orderId || null)
                 : null;
-            const originalMovementRes = await dalQuery(MOVIMIENTOS_CAJA_COL)
-                .eq(pairOrderId ? "orderId" : "linkedBookingIds", pairOrderId || bookingId)
-                .eq("movementType", MOVEMENT_TYPE.VENTA_ONLINE)
+            const originalMovementQuery = dalQuery(MOVIMIENTOS_CAJA_COL)
+                .eq("movementType", MOVEMENT_TYPE.VENTA_ONLINE);
+            if (pairOrderId) {
+                originalMovementQuery.eq("orderId", pairOrderId);
+            } else if (pairToken) {
+                originalMovementQuery.hasSome("linkedBookingIds", dualPairBookingIds);
+            } else {
+                originalMovementQuery.eq("linkedBookingIds", bookingId);
+            }
+            const originalMovementRes = await originalMovementQuery
                 .limit(2)
                 .find(STRONG_READ);
 
@@ -1177,6 +1188,7 @@ export async function wixBookingsV2_onBookingCanceled(rawBody) {
                                 "EVENTLOG_RECT_FAIL"
                         );
                     }
+                    dualFiscalStatus = "RECTIFIED";
                 } catch (rectErr) {
                     log.error(
                         "Rectification ledger failed; queuing recovery",
@@ -1209,8 +1221,21 @@ export async function wixBookingsV2_onBookingCanceled(rawBody) {
                     if (!recovery?.queued) {
                         throw new Error("FISCAL_RECOVERY_QUEUE_FAILED");
                     }
+                    dualFiscalStatus = pairToken ? "RECOVERY_QUEUED" : dualFiscalStatus;
                 }
+            } else if (pairToken) {
+                dualFiscalStatus = "REPAIR_REQUIRED";
+                log.error("DUAL_CANCELLATION_ORIGINAL_LEDGER_MISSING_OR_AMBIGUOUS", {
+                    pairToken,
+                    orderId: pairOrderId || null,
+                    bookingIds: dualPairBookingIds,
+                    matches: originalMovementRes?.items?.length || 0,
+                    traceId,
+                });
             }
+        } else if (pairToken && previousCita &&
+            String(previousCita.paymentStatus || "").toUpperCase() === PAYMENT_STATUS.PAID) {
+            dualFiscalStatus = "WAITING_FOR_SIBLING_CANCELLATION";
         }
 
         if (!_looksLikeGuid(serviceId)) {
@@ -1228,15 +1253,16 @@ export async function wixBookingsV2_onBookingCanceled(rawBody) {
         }
         let dualCancellationState = { status: "NOT_DUAL" };
         if (pairToken) {
-            dualCancellationState = await _upsertDualCancellationFlag(pairToken, traceId, bookingId);
+            dualCancellationState = await _upsertDualCancellationFlag(pairToken, traceId, bookingId, dualFiscalStatus);
         }
         await markEventAsProcessed(eventId, "BOOKING_CANCELED", traceId, {
             bookingId,
             serviceId,
             pairToken: pairToken || null,
             dualCancellationState: dualCancellationState.status,
+            dualFiscalStatus,
         });
-        return { status: "OK", eventId, dualCancellationState: dualCancellationState.status };
+        return { status: "OK", eventId, dualCancellationState: dualCancellationState.status, dualFiscalStatus };
     } catch (error) {
         _handleError(error, "wixBookingsV2_onBookingCanceled", traceId);
         throw error;
