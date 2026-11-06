@@ -305,7 +305,7 @@ test('BCORE-TX-07 writer intent phases persist and update without losing sibling
 test('BCORE-TX-06 oversized result is dropped but state preserved (TX_PAYLOAD cap)', async () => {
   wixDataMock._reset();
   await BC._initTransaction('pt-big', 'hashA', 'tr-1', SVC);
-  const fat = { bookingId: 'BK-9', blob: 'x'.repeat(2000) };
+  const fat = { bookingId: 'BK-9', blob: 'x'.repeat(6000) };
   await BC._completeTransaction('pt-big', fat, 'tr-1');
   const row = (wixDataMock._store.get(CONTROL) || []).find((r) => r._id === 'pt-big');
   const payload = row.payload;
