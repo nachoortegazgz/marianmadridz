@@ -29,7 +29,7 @@ import { webMethod, Permissions } from "wix-web-module";
 import {
   query as dalQuery,
   getItem as dalGet,
-  saveItem as dalSave,
+  insertItem as dalInsert,
 } from "backend/dataAccess";
 
 import { BUSINESS_COLLECTIONS, SDK_CONFIG } from "backend/internalConfig";
@@ -174,10 +174,14 @@ export const createManagerPackageVersion = webMethod(Permissions.SiteMember, asy
       _createdDate: new Date(),
     };
 
+    // Package versions are immutable snapshots. save/upsert could overwrite
+    // a version created by a concurrent request after both read the same history.
+    // insert enforces uniqueness on the deterministic documentId; the loser
+    // fails closed and must refresh history before requesting the next version.
     await withTimeout(
-      dalSave(DOCS_COL, record),
+      dalInsert(DOCS_COL, record),
       CMS_TIMEOUT_MS,
-      "saveManagerPackage"
+      "insertManagerPackage"
     );
 
     return {
@@ -186,6 +190,18 @@ export const createManagerPackageVersion = webMethod(Permissions.SiteMember, asy
       error: null,
     };
   } catch (err) {
+    const code = String(err?.code || "");
+    const message = String(err?.message || "");
+    if (code === "WDE0023" || /WDE0023|already exists|duplicated/i.test(message)) {
+      return {
+        status: "ERROR",
+        data: null,
+        error: {
+          code: "PACKAGE_VERSION_CONFLICT",
+          message: "Otra solicitud ha creado esta versión. Actualiza el historial y vuelve a intentarlo.",
+        },
+      };
+    }
     return { status: "ERROR", data: null, error: _toPublicError(err, "DOC_CREATE_FAIL") };
   }
 });
