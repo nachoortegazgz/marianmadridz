@@ -1407,6 +1407,57 @@ export const processPendingInventoryRepairs = webMethod(Permissions.SiteMember, 
     }
 });
 
+export const processPendingRefundInventoryRepairs = webMethod(Permissions.SiteMember, async (options = {}) => {
+    const traceId = _safeTrim(options?.traceId) || makeTraceId("inventory-refund-repair");
+    try {
+        await _rateLimitOrThrow("inventario.processRefundRepairs", "admin");
+        await requireAdmin(traceId);
+        const limit = Math.min(
+            INVENTORY_CONFIG.REPAIR_PAGE_LIMIT,
+            Math.max(1, Math.floor(Number(options?.limit) || INVENTORY_CONFIG.REPAIR_PAGE_LIMIT))
+        );
+        const pending = await dalQuery(CONTROL_COL)
+            .eq("controlType", CONTROL_TYPE.SYSTEM_FLAG)
+            .eq("alertType", "INVENTORY_REFUND_REPAIR_REQUIRED")
+            .eq("status", "PENDING")
+            .limit(limit)
+            .find(STRONG_READ);
+        const results = [];
+        for (const repair of pending?.items || []) {
+            const payload = repair?.payload && typeof repair.payload === "object" ? repair.payload : {};
+            const result = await _syncRestockedOrderLine(
+                payload.orderId,
+                payload.refundId,
+                { lineItemId: payload.lineItemId, quantity: payload.quantity },
+                payload.reason,
+                traceId,
+                payload.eventId
+            );
+            const attempts = Number(payload.attempts || 0) + 1;
+            await dalUpdate(CONTROL_COL, {
+                ...repair,
+                status: result.status === "SUCCESS"
+                    ? "RESOLVED"
+                    : attempts >= INVENTORY_CONFIG.MAX_REPAIR_ATTEMPTS ? "REPAIR_REQUIRED" : "PENDING",
+                payload: {
+                    ...payload,
+                    attempts,
+                    lastError: result.code || null,
+                    lastAttemptAt: new Date().toISOString(),
+                    resolvedAt: result.status === "SUCCESS" ? new Date().toISOString() : null,
+                },
+                processedAt: result.status === "SUCCESS" ? new Date() : null,
+                _updatedDate: new Date(),
+            });
+            results.push({ repairId: repair._id, status: result.status, code: result.code || null });
+        }
+        return { status: "SUCCESS", data: { processed: results.length, results }, error: null };
+    } catch (error) {
+        log.error("processPendingRefundInventoryRepairs failed", { traceId, error: error?.message });
+        return _error(error?.code || "INVENTORY_REFUND_REPAIR_FAILED", error?.message || "No se pudo conciliar la cola de devoluciones.");
+    }
+});
+
 export const getInventoryCatalogCandidates = webMethod(Permissions.SiteMember, async (options = {}) => {
     const traceId = _safeTrim(options?.traceId) || makeTraceId("inventory-candidates");
     try {
