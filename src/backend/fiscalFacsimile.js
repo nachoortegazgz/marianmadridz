@@ -8,7 +8,8 @@ import { hashChain, hashSHA256 } from "backend/securityEngine";
 const PREFIX = "FACSIMIL-";
 const SIGNATURE_PREFIX = "FACSIMIL-SIGNATURE-NOT-X509-";
 const LABEL = "(SIMULACION PREVIA A DESPLIEGUE REAL)";
-const GENESIS = "0".repeat(64);\nconst FACSIMIL_HASH_PATTERN = /^FACSIMIL-[0-9a-f]{64}$/;
+const GENESIS = "0".repeat(64);
+const FACSIMIL_HASH_PATTERN = /^FACSIMIL-[0-9a-f]{64}$/;
 
 function stableSerialize(value) {
     if (Array.isArray(value)) return `[${value.map(stableSerialize).join(",")}]`;
