@@ -15,6 +15,7 @@ const suites = [
   'data.hooks.test.mjs',
   'dto.whitelist.test.mjs',
   'fiscalAggregator.read.test.mjs',
+  'fiscalFacsimile.test.mjs',
   'site.flows.e2e.test.mjs',
   'orderLedgerAmount.test.mjs',
   'events.booking-canceled.integrity.test.mjs',
