@@ -6,6 +6,7 @@ const IC = await import("backend/internalConfig.js");
 
 let catalogVersion = "V1_CATALOG";
 let getStoreVariantCalls = 0;
+let nativeQuantity = 6;
 mocks.sdk["@wix/stores::@wix/stores::catalogVersioning::getCatalogVersion"] = async () => ({
   catalogVersion,
 });
@@ -21,9 +22,35 @@ mocks.sdk["@wix/stores::@wix/stores::products::getStoreVariant"] = async (storeV
       productName: "Producto de prueba",
       sku: "SKU-QA-001",
       price: { amount: "25.00" },
-      stock: { trackQuantity: true, quantity: 6 },
+      stock: { trackQuantity: true, quantity: nativeQuantity },
     },
   };
+};
+mocks.sdk["@wix/stores::@wix/stores::products::queryProductVariants"] = async (productId, options) => ({
+  variants: [{
+    _id: options?.variantIds?.[0],
+    variant: { sku: "SKU-QA-001", priceData: { price: 25 } },
+  }],
+});
+mocks.sdk["@wix/stores::@wix/stores::products::queryStoreVariants"] = async () => ({
+  variants: [{
+    productId: PRODUCT_ID,
+    variantId: VARIANT_ID,
+    productName: "Producto de prueba",
+    variantName: "Unica",
+    sku: "SKU-QA-001",
+    managedVariant: true,
+    stock: { trackQuantity: true, quantity: nativeQuantity },
+  }],
+  totalCount: 1,
+});
+mocks.sdk["@wix/stores::@wix/stores::inventory::incrementInventory"] = async (input) => {
+  nativeQuantity += Number(input?.incrementData?.[0]?.incrementBy || 0);
+  return {};
+};
+mocks.sdk["@wix/stores::@wix/stores::inventory::decrementInventory"] = async (input) => {
+  nativeQuantity -= Number(input?.decrementData?.[0]?.decrementBy || 0);
+  return {};
 };
 
 const INV = await import("backend/inventario.web.js");
@@ -58,6 +85,7 @@ function paidOrder() {
 function seed() {
   wixDataMock._reset();
   getStoreVariantCalls = 0;
+  nativeQuantity = 6;
   wixDataMock._seed(CONTROL_COL, []);
   wixDataMock._seed(MOVEMENTS_COL, []);
   wixDataMock._seed(STOCK_COL, [{
@@ -143,4 +171,59 @@ test("INVENTORY-WRITER-04 missing variant identity fails closed", async () => {
   assert.equal(result.status, "PARTIAL");
   assert.equal(result.data.results[0].code, "INVENTORY_ORDER_LINE_INVALID");
   assert.equal(wixDataMock._store.get(MOVEMENTS_COL).length, 0);
+});
+
+
+test("INVENTORY-RESERVE-01 order creation reserves stock once and payment releases the reservation", async () => {
+  const order = paidOrder();
+  const reserve = await INV.reserveOrderInventoryInternal(order, "trace-reserve-001", "event-reserve-001");
+  assert.equal(reserve.status, "SUCCESS");
+  assert.equal(wixDataMock._store.get(STOCK_COL)[0].stockReserved, 3);
+  assert.equal(wixDataMock._store.get(STOCK_COL)[0].stockAvailable, 5);
+
+  const replay = await INV.reserveOrderInventoryInternal(order, "trace-reserve-002", "event-reserve-002");
+  assert.equal(replay.status, "SUCCESS");
+  assert.equal(wixDataMock._store.get(STOCK_COL)[0].stockReserved, 3);
+
+  const sale = await INV.syncPaidOrderInventoryInternal(order, "trace-reserve-003", "event-paid-003");
+  assert.equal(sale.status, "SUCCESS");
+  assert.equal(wixDataMock._store.get(STOCK_COL)[0].stockReserved, 1);
+  assert.equal(wixDataMock._store.get(STOCK_COL)[0].stockOnHand, 6);
+  assert.equal(wixDataMock._store.get(STOCK_COL)[0].stockAvailable, 5);
+  assert.equal(wixDataMock._store.get(MOVEMENTS_COL).length, 1);
+});
+
+test("INVENTORY-REFUND-01 only explicit restock side effect creates a positive return movement", async () => {
+  seed();
+  nativeQuantity = 9;
+  wixDataMock._seed(MOVEMENTS_COL, [{
+    _id: "sale-movement-001",
+    movementToken: "SALE-existing",
+    movementType: "VENTA",
+    orderId: ORDER_ID,
+    lineItemId: LINE_ID,
+    productId: PRODUCT_ID,
+    variantId: VARIANT_ID,
+    stockKey: STOCK_KEY,
+    sku: "SKU-QA-001",
+    quantityDelta: -2,
+    traceId: "trace-sale",
+  }]);
+
+  const first = await INV.syncRestockedOrderInventoryInternal(
+    ORDER_ID, "refund-001", [{ lineItemId: LINE_ID, quantity: 1 }],
+    "WIX_REFUND_RESTOCK", "trace-refund-001", "event-refund-001"
+  );
+  const second = await INV.syncRestockedOrderInventoryInternal(
+    ORDER_ID, "refund-001", [{ lineItemId: LINE_ID, quantity: 1 }],
+    "WIX_REFUND_RESTOCK", "trace-refund-002", "event-refund-002"
+  );
+
+  assert.equal(first.status, "SUCCESS");
+  assert.equal(second.status, "SUCCESS");
+  const returns = wixDataMock._store.get(MOVEMENTS_COL).filter((row) => row.movementType === "DEVOLUCION");
+  assert.equal(returns.length, 1);
+  assert.equal(returns[0].quantityDelta, 1);
+  assert.equal(returns[0].refundId, "refund-001");
+  assert.equal(wixDataMock._store.get(STOCK_COL)[0].stockOnHand, 9);
 });
