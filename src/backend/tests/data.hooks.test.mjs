@@ -316,3 +316,17 @@ test('HOOK-MOCK-00 loader mock available', () => {
   wixDataMock._reset();
   assert.ok(true);
 });
+
+
+// -----------------------------------------------------------------------------
+// Capa 2 — inventory and accounting ledgers are immutable append-only records.
+// -----------------------------------------------------------------------------
+test('HOOK-INVENTORY-LEDGER-01 blocks update and remove of MovimientosInventario', () => {
+  assert.throws(() => H.MovimientosInventario_beforeUpdate({}), /append-only/);
+  assert.throws(() => H.MovimientosInventario_beforeRemove({}), /append-only/);
+});
+
+test('HOOK-ACCOUNTING-LEDGER-01 blocks update and remove of LibroAsientosContablesDetalle', () => {
+  assert.throws(() => H.LibroAsientosContablesDetalle_beforeUpdate({}), /append-only/);
+  assert.throws(() => H.LibroAsientosContablesDetalle_beforeRemove({}), /append-only/);
+});
