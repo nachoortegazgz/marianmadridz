@@ -56,29 +56,102 @@
       ]
     },
     {
+      "scenarioId": "QA-BOOKING-DUAL-WRITER-001",
+      "name": "Reserva dual: dos bookings independientes y dos proyecciones CMS vinculadas",
+      "status": "MOCK_COVERED",
+      "testFiles": [
+        "src/backend/tests/qa.dual-booking.writer.offline.test.mjs"
+      ],
+      "limitation": "Wix Bookings Writer y CMS se simulan offline. No certifica disponibilidad concurrente ni escritura real en el sitio publicado.",
+      "traceId": "trace-qa-dual-writer-001",
+      "fixture": {
+        "dateYmd": "2026-11-10",
+        "phase1StartLocal": "2026-11-10T09:00:00",
+        "phase1EndLocal": "2026-11-10T09:30:00",
+        "exposureMinutes": 30,
+        "phase2StartLocal": "2026-11-10T10:00:00",
+        "phase2EndLocal": "2026-11-10T10:40:00",
+        "phase1ServiceId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa11",
+        "phase2ServiceId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        "sameResource": true,
+        "channelType": "PRESENCIAL",
+        "paymentExecution": false
+      },
+      "assertions": [
+        "query native F1 and F2 availability independently",
+        "create two independent Bookings V2 appointments",
+        "persist two CitasF2 rows with shared pairToken",
+        "confirm both native bookings",
+        "keep F2 native availability validation enabled"
+      ]
+    },
+    {
       "scenarioId": "QA-BOOKING-DUAL-COMPENSATION-001",
       "name": "Compensación LIFO al fallar F2",
-      "status": "PARTIAL_MOCK_COVERAGE",
+      "status": "MOCK_COVERED",
       "testFiles": [
-        "src/backend/tests/booking.availability.saga.test.mjs"
+        "src/backend/tests/booking.availability.saga.test.mjs",
+        "src/backend/tests/qa.dual-booking.writer.offline.test.mjs"
       ],
       "traceId": "trace-qa-dual-compensation-001",
       "fixture": {
         "steps": [
           "acquire-lock",
           "create-F1",
-          "create-F2-fails"
+          "create-F2",
+          "confirm-F1",
+          "confirm-F2",
+          "persist-CitasF2-F1",
+          "persist-CitasF2-F2-fails"
         ],
         "expectedCompensationOrder": [
+          "mark-persisted-CitasF2-F1-cancelled",
+          "cancel-F2",
           "cancel-F1",
           "release-lock"
+        ],
+        "syntheticFailure": "second CitasF2 insert throws"
+      },
+      "assertions": [
+        "F2 Writer failure cancels previously created F1",
+        "partial CitasF2 insert is marked CANCELLED and compensated",
+        "both native bookings are cancelled after partial CMS persistence",
+        "original saga failure is preserved",
+        "compensation is followed by lock release"
+      ],
+      "limitation": "La saga y la llamada de cancelación se prueban con Writer V2/CMS simulados offline. Falta E2E contra un entorno Wix de QA con Writer real."
+    },
+    {
+      "scenarioId": "QA-BOOKING-UNKNOWN-RECOVERY-001",
+      "name": "Reconciliación segura de resultado incierto de Bookings Writer",
+      "status": "MOCK_COVERED",
+      "testFiles": [
+        "src/backend/tests/events.unknown-booking-recovery.test.mjs"
+      ],
+      "traceId": "trace-qa-unknown-booking-001",
+      "fixture": {
+        "txStatus": "RESULT_UNKNOWN",
+        "simpleProjectionCount": 1,
+        "dualProjectionCounts": [
+          0,
+          1,
+          2
+        ],
+        "expectedAmbiguousStatus": "REPAIR_REQUIRED",
+        "expectedCompleteStatuses": [
+          "SIMPLE",
+          "DUAL_F1+DUAL_F2"
         ]
       },
       "assertions": [
-        "orchestrator compensates completed steps in reverse order",
-        "original F2 error is preserved"
+        "one SIMPLE CitasF2 projection resolves using its native bookingId",
+        "exact DUAL_F1 and DUAL_F2 projections resolve using native bookingIds",
+        "no projection never proves that Wix did not create a booking",
+        "partial dual projection is retained for manual repair",
+        "ambiguous outcomes never transition to FAILED_FINAL",
+        "ambiguous outcomes create a deduplicated operational alert"
       ],
-      "limitation": "The orchestration primitive is tested; an end-to-end processDualBooking failure with Wix Writer V2 and native cancellation is not certified."
+      "limitation": "The test simulates CMS projections and transaction records. It does not query the live Wix Bookings Writer after a network timeout; ambiguous results are intentionally held for manual reconciliation."
     },
     {
       "scenarioId": "QA-CHECKOUT-CART-V2-001",

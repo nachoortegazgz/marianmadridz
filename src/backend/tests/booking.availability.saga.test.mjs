@@ -413,14 +413,36 @@ test('BSAGA-ORCH-01 success path returns ordered results, no compensation', asyn
   assert.deepStrictEqual(trail, ['execA', 'execB']);
 });
 
-test('BSAGA-ORCH-02 mid-failure compensates completed steps in reverse order', async () => {
+test('BSAGA-ORCH-02 failing step is compensated before completed steps in reverse order', async () => {
   const trail = [];
   const o = new BS.BookingSagaOrchestrator('tr-o2');
   o.addStep('Lock', async () => 'L', async (r) => trail.push('un:' + r));
   o.addStep('CreateF1', async () => 'F1', async (r) => trail.push('cancel:' + r));
-  o.addStep('CreateF2', async () => { throw new Error('fallo F2'); }, async () => trail.push('cancel:F2'));
+  o.addStep('CreateF2', async () => {
+    trail.push('create:F1');
+    throw new Error('fallo F2');
+  }, async () => trail.push('compensate:partial-F2-step'));
   await assert.rejects(() => o.execute(), /fallo F2/);
-  assert.deepStrictEqual(trail, ['cancel:F1', 'un:L'], 'orden LIFO estricto');
+  assert.deepStrictEqual(
+    trail,
+    ['create:F1', 'compensate:partial-F2-step', 'cancel:F1', 'un:L'],
+    'la compensacion del paso parcial precede a los pasos completados (LIFO)'
+  );
+});
+
+test('BSAGA-ORCH-04 failing-step compensation errors do not mask the original failure or stop prior compensation', async () => {
+  const trail = [];
+  const o = new BS.BookingSagaOrchestrator('tr-o4');
+  o.addStep('Lock', async () => 'L', async () => trail.push('unlock'));
+  o.addStep('PersistPartial', async () => {
+    trail.push('persist:F1');
+    throw new Error('persist failed');
+  }, async () => {
+    trail.push('compensate:persist');
+    throw new Error('compensation failed');
+  });
+  await assert.rejects(() => o.execute(), /persist failed/);
+  assert.deepStrictEqual(trail, ['persist:F1', 'compensate:persist', 'unlock']);
 });
 
 test('BSAGA-ORCH-03 compensation failure is swallowed (best-effort) not masked', async () => {

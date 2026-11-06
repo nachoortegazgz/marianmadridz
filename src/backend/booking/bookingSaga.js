@@ -1072,6 +1072,24 @@ export class BookingSagaOrchestrator {
                     traceId: this.traceId,
                     error: error && error.message,
                 });
+
+                // A step may perform external side effects before rejecting.
+                // Compensate that partial execution first, then completed steps
+                // in reverse order. Compensation handlers must be idempotent.
+                if (step.compensateFn) {
+                    try {
+                        log.info("Saga compensating partially executed step: " + step.name, {
+                            traceId: this.traceId,
+                        });
+                        await step.compensateFn(undefined);
+                    } catch (compErr) {
+                        log.error("Saga partial-step compensation failed: " + step.name, {
+                            traceId: this.traceId,
+                            error: compErr && compErr.message,
+                        });
+                    }
+                }
+
                 await this._compensate();
                 throw error;
             }
