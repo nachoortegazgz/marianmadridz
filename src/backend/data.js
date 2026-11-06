@@ -1056,23 +1056,45 @@ function _validateInventarioStockVenta(item) {
 
 // CitasF2 is a mutable booking projection, not an append-only ledger.
 // Keep the SSOT structural guard at the CMS boundary as a second barrier to
-// the booking saga's point-of-use validation.
-export function CitasF2_beforeInsert(item) {
+// the booking saga's point-of-use validation. Wix binds hooks to the physical
+// collection ID (not its display name); QA uses a generated collection ID.
+function _validateCitasF2Write(item) {
     _normalizeCmsDateTime(item, "slotStart");
     _normalizeCmsDateTime(item, "slotEnd");
     assertCitasF2(item);
     return item;
+}
+
+function _blockCitasF2Remove() {
+    _fiscalError("Borrado directo de CitasF2 bloqueado: use cancelacion formal de reserva");
+}
+
+// Production/legacy collection ID.
+export function CitasF2_beforeInsert(item) {
+    return _validateCitasF2Write(item);
 }
 
 export function CitasF2_beforeUpdate(item) {
-    _normalizeCmsDateTime(item, "slotStart");
-    _normalizeCmsDateTime(item, "slotEnd");
-    assertCitasF2(item);
-    return item;
+    return _validateCitasF2Write(item);
 }
 
 export function CitasF2_beforeRemove() {
-    _fiscalError("Borrado directo de CitasF2 bloqueado: use cancelacion formal de reserva");
+    return _blockCitasF2Remove();
+}
+
+// QA collection ID: QA_LIVECMS_20261023_2000_BOOKING_DUAL.
+// Without these exact exports Wix does not associate the CitasF2 hooks with
+// this collection, so the Date conversion and structural guard never run.
+export function QA_LIVECMS_20261023_2000_BOOKING_DUAL_beforeInsert(item) {
+    return _validateCitasF2Write(item);
+}
+
+export function QA_LIVECMS_20261023_2000_BOOKING_DUAL_beforeUpdate(item) {
+    return _validateCitasF2Write(item);
+}
+
+export function QA_LIVECMS_20261023_2000_BOOKING_DUAL_beforeRemove() {
+    return _blockCitasF2Remove();
 }
 
 // =============================================================================
