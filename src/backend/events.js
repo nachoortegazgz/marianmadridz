@@ -2373,19 +2373,72 @@ export async function reconcileUnknownTransaction(txId, traceId) {
             return { ok: true, reconciled: true, bookingIds };
         }
 
-        // Ausencia o parcialidad de CitasF2 no prueba ausencia en Wix Bookings.
-        // Mantener el idempotency record en un estado no terminal para impedir
-        // que un retry cree una segunda reserva mientras el resultado sea incierto.
-        const knownBookingIds = existing
-            .map((row) => _safeTrim(row?.bookingId))
-            .filter((bookingId) => _looksLikeGuid(bookingId));
-        const reconciliationReason = queryFailed
-            ? "CITAS_QUERY_FAILED"
-            : existing.length === 0
-                ? "NO_CITAS_PROJECTION"
-                : existing.length === 1
-                    ? "PARTIAL_CITAS_PROJECTION"
-                    : "CITAS_PROJECTION_SHAPE_INVALID";
+        // CitasF2 partial/absent is not evidence that Wix Bookings did not
+        // create the booking. Query the native Reader V2 using the intent
+        // persisted before each Writer call, then require one exact candidate.
+        const readerRecovery = await _recoverUnknownWriterFromReader(id, payload, existing, traceId);
+        if (readerRecovery.attempted) {
+            payload.writerIntent = readerRecovery.writerIntent || payload.writerIntent;
+            payload.readerRecovery = {
+                attemptedAt: new Date().toISOString(),
+                outcome: readerRecovery.outcome || "REPAIR_REQUIRED",
+                reason: readerRecovery.reason || null,
+                phaseResults: readerRecovery.phaseResults || {},
+            };
+            if (readerRecovery.outcome === "COMPLETED" || readerRecovery.outcome === "FAILED_FINAL") {
+                const resolvedIntent = payload.writerIntent && typeof payload.writerIntent === "object"
+                    ? { ...payload.writerIntent }
+                    : {};
+                const resolvedPhases = resolvedIntent.phases && typeof resolvedIntent.phases === "object"
+                    ? { ...resolvedIntent.phases }
+                    : {};
+                for (const phaseKey of Object.keys(resolvedPhases)) {
+                    const phase = { ...resolvedPhases[phaseKey] };
+                    delete phase.contactEmail;
+                    resolvedPhases[phaseKey] = phase;
+                }
+                payload.writerIntent = { ...resolvedIntent, phases: resolvedPhases, contactEmailClearedAt: new Date().toISOString() };
+                payload.status = readerRecovery.outcome;
+                payload.manualReconciliationRequired = false;
+                payload.reconciledBy = "CRON-11-BOOKINGS-READER-V2";
+                payload.reconciledAt = new Date().toISOString();
+                payload.bookingIds = readerRecovery.bookingIds || [];
+                payload.reconciliationMode = "BOOKINGS_READER_V2";
+                await dalUpdate(CONTROL_OPERATIVO_COL, Object.assign({}, doc, {
+                    payload,
+                    traceId: _safeTrim(traceId) || doc.traceId,
+                }));
+                log.info("reconcileUnknownTransaction resolved from native Reader V2", {
+                    traceId,
+                    txId: id,
+                    outcome: readerRecovery.outcome,
+                    bookingCount: payload.bookingIds.length,
+                });
+                return {
+                    ok: true,
+                    reconciled: true,
+                    failedFinal: readerRecovery.outcome === "FAILED_FINAL",
+                    bookingIds: payload.bookingIds,
+                    mode: "BOOKINGS_READER_V2",
+                };
+            }
+        }
+
+        // Absence or ambiguity in both the projection and native Reader keeps
+        // the idempotency guard non-terminal. Never retry the Writer blindly.
+        const knownBookingIds = Array.from(new Set([
+            ...existing.map((row) => _safeTrim(row?.bookingId)),
+            ...(readerRecovery.bookingIds || []),
+        ])).filter((bookingId) => _looksLikeGuid(bookingId));
+        const reconciliationReason = readerRecovery.attempted
+            ? (readerRecovery.reason || "READER_PHASES_INCOMPLETE")
+            : queryFailed
+                ? "CITAS_QUERY_FAILED"
+                : existing.length === 0
+                    ? "NO_CITAS_PROJECTION"
+                    : existing.length === 1
+                        ? "PARTIAL_CITAS_PROJECTION"
+                        : "CITAS_PROJECTION_SHAPE_INVALID";
 
         payload.status = "REPAIR_REQUIRED";
         payload.manualReconciliationRequired = true;
