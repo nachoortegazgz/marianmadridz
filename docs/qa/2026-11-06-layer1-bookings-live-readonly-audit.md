@@ -51,6 +51,18 @@ Corrección en rama `fix/booking-saga-partial-compensation`:
 - No enmascarar el error original si falla la compensación parcial.
 - Regresiones para fallo a mitad de paso y fallo del compensador.
 
+## 4.1 Resultado incierto del Writer — segundo hallazgo P1
+
+`reconcileUnknownTransaction()` buscaba solo filas `CitasF2`. Antes, cero filas se convertían en `FAILED_FINAL`, aunque una llamada `createBooking` con timeout puede haber creado una reserva nativa sin respuesta y sin proyección CMS. Una fila simple también se trataba erróneamente como creación parcial; además, el reconciliador guardaba `_id` de CMS en `bookingIds`, no los IDs nativos.
+
+Corrección:
+- Una única fila `SIMPLE` válida se reconcilia como COMPLETED con su `bookingId` nativo.
+- Un par exacto `DUAL_F1` + `DUAL_F2`, con dos `bookingId` distintos, se reconcilia como COMPLETED.
+- Cero filas, dual parcial, consulta fallida o estructura ambigua pasan a `REPAIR_REQUIRED`, conservan el bloqueo de idempotencia y generan alerta operativa deduplicada `BOOKING_RESULT_UNKNOWN`.
+- Ya no se declara `FAILED_FINAL` por ausencia de proyección CMS.
+
+**Límite explícito:** este reconciliador sigue sin consultar Bookings V2 directamente para descubrir una reserva cuyo `createBooking` expiró sin devolver ID. El estado `REPAIR_REQUIRED` es una contención segura con intervención manual, no una reconciliación automática completa. El Dossier describe una comprobación de existencia real en Bookings; hace falta cerrar ese contrato y construir el procedimiento/consulta nativa antes de certificar recuperación automática.
+
 PR: https://github.com/nachoortegazgz/marianmadridz/pull/153
 
 ## 5. Pruebas de escritura offline — Bookings Writer V2
@@ -60,11 +72,16 @@ Suite nueva `src/backend/tests/qa.dual-booking.writer.offline.test.mjs`:
 - `QA-DUAL-BOOKING-01`: dos llamadas independientes a `createBooking`, consultas de disponibilidad separadas para F1 y F2, mismo `resourceId`, gap exacto, dos filas `CitasF2` con el mismo `pairToken`, F2 con `OFFLINE`/importe cero y confirmación de ambas reservas.
 - `QA-DUAL-BOOKING-02`: fallo sintético de Writer F2 después de crear F1; se verifica cancelación de F1 con su revisión y ausencia de persistencia de una pareja incompleta.
 - `QA-DUAL-BOOKING-03`: fallo en el segundo insert de `CitasF2`; la primera proyección queda marcada `CANCELLED`/`compensated` y se cancelan ambas reservas nativas.
+- `events.unknown-booking-recovery.test.mjs`: cuatro casos para reconciliar una reserva SIMPLE, un par DUAL completo, ausencia de proyección y par DUAL parcial; los casos ambiguos crean alerta y permanecen en `REPAIR_REQUIRED`.
 - La prueba simple `qa.simple-booking.writer.offline.test.mjs` continúa pasando: una reserva nativa, una fila `CitasF2` y replay idempotente sin duplicado.
 
-**CI final del head `6583e424`: PASS completo.** GitHub Actions run #42206036528: suite offline, gate Capa 1, gate Capa 2 y ESLint: **PASS**. El run anterior #42205445202 falló solo por campos obligatorios ausentes en el manifiesto QA; se corrigió el escenario y el run final pasa.
+**CI final del head `1c5dd11`: PASS completo.** GitHub Actions run #42207047731:
+- Suite offline: **339/339 PASS**.
+- Gate Capa 1: **214/214 PASS**.
+- Gate Capa 2: **105/105 PASS**.
+- ESLint: **PASS**.
 
-Run final: https://github.com/nachoortegazgz/marianmadridz/actions/runs/42206036528
+Run final: https://github.com/nachoortegazgz/marianmadridz/actions/runs/42207047731
 
 Las pruebas offline usan mocks; no equivalen a una prueba con Wix Bookings Writer real.
 
