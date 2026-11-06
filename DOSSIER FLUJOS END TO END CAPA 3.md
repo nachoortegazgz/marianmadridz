@@ -1,3 +1,14 @@
+
+
+---
+
+> **DIRECTRIZ VIGENTE — 2026-11-06:** consultar el archivo 'DIRECTRICES VIGENTES DEL PROYECTO.md' en la raíz. Prevalece sobre cualquier descripción histórica contradictoria. Arquitectura aprobada: Wix + Wix Apps nativas + M365; código propio mínimo; evitar integraciones y costes externos. No asumir proveedores externos ni cumplimiento legal garantizado.
+
+## Actualización de arquitectura vigente (2026-11-06)
+La única arquitectura aprobada para Capa 3 es **Wix backend → Power Automate mediante trigger HTTP → SharePoint**, sin correo intermedio. Se priorizan conectores y capacidades ya incluidos en M365 contratado; no se asumirá que HTTP/Request o Entra ID están incluidos hasta verificar plan, licencia y tenant.
+Sitio SharePoint propuesto: MarianMadrid_Gestion (no creado/confirmado); biblioteca Registro_Documental_MarianMadridPeluqueria. No se han creado todavía el sitio ni el flujo. No declarar integración operativa sin E2E autorizado.
+Los bloques históricos que describan Wix → Resend/SendGrid/email → Power Automate, licencias no verificadas, porcentajes de automatización, costes, cumplimiento legal garantizado, proveedores externos o estructuras/flows no aprobados quedan obsoletos y no autorizan implementación. Capa 3 es custodia documental; Wix sigue siendo fuente de verdad operativa. Véase 'DIRECTRICES VIGENTES DEL PROYECTO.md'.
+---
 # DOSSIER TÉCNICO DE FLUJOS END-TO-END
 ## Capa 1 (Wix SSOT) → Capa 3 (SharePoint / M365)
 ### Marian Madrid Peluquería y Estética · marianmadrid.es
