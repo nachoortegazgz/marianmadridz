@@ -98,16 +98,26 @@
         "steps": [
           "acquire-lock",
           "create-F1",
-          "create-F2-fails"
+          "create-F2",
+          "confirm-F1",
+          "confirm-F2",
+          "persist-CitasF2-F1",
+          "persist-CitasF2-F2-fails"
         ],
         "expectedCompensationOrder": [
+          "mark-persisted-CitasF2-F1-cancelled",
+          "cancel-F2",
           "cancel-F1",
           "release-lock"
-        ]
+        ],
+        "syntheticFailure": "second CitasF2 insert throws"
       },
       "assertions": [
-        "orchestrator compensates completed steps in reverse order",
-        "original F2 error is preserved"
+        "F2 Writer failure cancels previously created F1",
+        "partial CitasF2 insert is marked CANCELLED and compensated",
+        "both native bookings are cancelled after partial CMS persistence",
+        "original saga failure is preserved",
+        "compensation is followed by lock release"
       ],
       "limitation": "La saga y la llamada de cancelación se prueban con Writer V2/CMS simulados offline. Falta E2E contra un entorno Wix de QA con Writer real."
     },
