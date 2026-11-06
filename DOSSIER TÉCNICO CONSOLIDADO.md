@@ -432,23 +432,23 @@ Los hooks `beforeUpdate` y `beforeRemove` en `MovimientosCaja`, `LibroAsientosCo
 
 ### Campos canónicos transversales
 
-| Campo | Tipo | Función |
-| --- | --- | --- |
-| `traceId` | TEXT UUID v4 | Trazabilidad end-to-end. Obligatorio en toda escritura. |
-| `pairToken` | TEXT UUID v4 | Vincula citas DUAL\_F1 y DUAL\_F2. |
-| `bookingId` | TEXT | GUID de Wix Bookings. No equivale a `_id` CMS. |
-| `serviceId` | TEXT | GUID del servicio en Wix Bookings. Distinto de `catalogId`. |
-| `resourceId` | TEXT | GUID del recurso en Wix Bookings. Distinto de `memberId`. |
-| `memberId` | TEXT | GUID de usuario en Wix Members. Distinto de `resourceId`. |
-| `catalogId` | TEXT | `_id` del registro en `ServiciosCatalogo`. |
-| `transactionId` | TEXT | Clave de idempotencia única de la transacción. |
-| `dedupeKey` | TEXT | Clave indexada para deduplicación atómica. |
-| `movementToken` | TEXT | Clave de idempotencia en `MovimientosInventario`. |
-| `hash` | TEXT | Huella SHA-256 en `MovimientosCaja`. |
-| `previousRecordHash` | TEXT | Enlace al registro fiscal anterior. |
-| `recordHash` | TEXT | Huella en `LibroAsientosContablesDetalle`. |
-| `sequenceNumber` | NUMBER | Secuencia monótona asignada desde `CAJA_SEQ`. |
-| `numSerieFactura` | TEXT | Número de ticket/factura correlativo sin saltos. |
+| KEYFIELD | ETIQUETA VISIBLE | Tipo | Dato que contiene e información relevante |
+| --- | --- | --- | --- |
+| `traceId` | `trazaId` | TEXT UUID v4 | Trazabilidad end-to-end. Obligatorio en toda escritura. |
+| `pairToken` | `parTokenReserva` | TEXT UUID v4 | Vincula citas DUAL\_F1 y DUAL\_F2. |
+| `bookingId` | `reservaIdWix` | TEXT | GUID de Wix Bookings. No equivale a `_id` CMS. |
+| `serviceId` | `servicioIdWix` | TEXT | GUID del servicio en Wix Bookings. Distinto de `catalogId`. |
+| `resourceId` | `recursoIdWix` | TEXT | GUID del recurso en Wix Bookings. Distinto de `memberId`. |
+| `memberId` | `miembroIdWix` | TEXT | GUID de usuario en Wix Members. Distinto de `resourceId`. |
+| `catalogId` | `catalogoIdServicios` | TEXT | `_id` del registro en `ServiciosCatalogo`. |
+| `transactionId` | `transaccionId` | TEXT | Clave de idempotencia única de la transacción. |
+| `dedupeKey` | `deduplicacionClaveOperacion` | TEXT | Clave indexada para deduplicación atómica. |
+| `movementToken` | `movimientoTokenInventario` | TEXT | Clave de idempotencia en `MovimientosInventario`. |
+| `hash` | `huellaFiscal` | TEXT | Huella SHA-256 en `MovimientosCaja`. |
+| `previousRecordHash` | `anteriorRegistroHuellaFiscal` | TEXT | Enlace al registro fiscal anterior. |
+| `recordHash` | `registroHuellaContable` | TEXT | Huella en `LibroAsientosContablesDetalle`. |
+| `sequenceNumber` | `secuenciaNumeroCaja` | NUMBER | Secuencia monótona asignada desde `CAJA_SEQ`. |
+| `numSerieFactura` | `numeroSerieFactura` | TEXT | Número de ticket/factura correlativo sin saltos. |
 
 ### ControlOperativo — tipos de control
 
