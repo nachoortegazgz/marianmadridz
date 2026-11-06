@@ -36,7 +36,7 @@ import {
     isValidGuid,
 } from "backend/internalConfig";
 
-import { requireCajero, rateLimiter } from "backend/security";
+import { requireCajero, requireAdmin, rateLimiter } from "backend/security";
 import { hashSHA256 } from "backend/securityEngine";
 import { validateInventoryOrderLine } from "backend/validation";
 import { makeTraceId, _safeTrim, withTimeout } from "public/mmUtils";
@@ -329,6 +329,9 @@ async function _syncPaidOrderLine(order, lineItem, traceId, eventId) {
         }
 
         const existing = await _findStockByKey(stockKey);
+        if (!existing) {
+            return { status: "ERROR", code: "INVENTORY_MASTER_MAPPING_REQUIRED", stockKey };
+        }
         const snapshotResult = await _persistStockSnapshot(
             existing,
             stockKey,
@@ -492,6 +495,154 @@ export const getInventoryDashboard = webMethod(Permissions.SiteMember, async (op
     } catch (error) {
         log.error("getInventoryDashboard failed", { traceId, error: error?.message });
         return _error(error?.code || "INVENTORY_DASHBOARD_FAILED", error?.message || "No se pudo leer el inventario.");
+    }
+});
+
+
+export const getInventoryCatalogCandidates = webMethod(Permissions.SiteMember, async (options = {}) => {
+    const traceId = _safeTrim(options?.traceId) || makeTraceId("inventory-candidates");
+    try {
+        await _rateLimitOrThrow("inventario.getCatalogCandidates", "staff");
+        await requireCajero(traceId);
+        const catalogVersion = await _getCatalogVersion();
+        if (catalogVersion !== INVENTORY_CONFIG.CATALOG_VERSION) {
+            return _error("INVENTORY_CATALOG_VERSION_MISMATCH", "El modulo esta preparado para Wix Stores Catalog V1.");
+        }
+        const limit = Math.min(100, Math.max(1, Math.floor(Number(options?.limit) || 100)));
+        const offset = Math.min(10000, Math.max(0, Math.floor(Number(options?.offset) || 0)));
+        const response = await withTimeout(
+            queryStoreVariantsElevated({ paging: { limit, offset } }),
+            API_TIMEOUT_MS,
+            "inventory.queryStoreVariants"
+        );
+        const variants = Array.isArray(response?.variants) ? response.variants : [];
+        return {
+            status: "SUCCESS",
+            data: {
+                items: variants
+                    .filter((item) => item?.managedVariant === true && item?.stock?.trackQuantity === true)
+                    .map((item) => ({
+                        productId: item.productId,
+                        variantId: item.variantId,
+                        productName: item.productName,
+                        variantName: item.variantName,
+                        sku: item.sku || null,
+                        stockOnHand: Number(item.stock?.quantity),
+                        choices: item.choices || {},
+                        stockKey: _stockKey(item.productId, item.variantId),
+                    })),
+                totalCount: response?.totalCount || 0,
+                catalogVersion,
+                observedAt: new Date(),
+            },
+            error: null,
+        };
+    } catch (error) {
+        log.error("getInventoryCatalogCandidates failed", { traceId, error: error?.message });
+        return _error(error?.code || "INVENTORY_CATALOG_CANDIDATES_FAILED", error?.message || "No se pudo consultar el catalogo.");
+    }
+});
+
+export const registerInventoryMaster = webMethod(Permissions.SiteMember, async (input = {}) => {
+    const traceId = _safeTrim(input?.traceId) || makeTraceId("inventory-master");
+    try {
+        await _rateLimitOrThrow("inventario.registerMaster", "admin");
+        await requireAdmin(traceId);
+        const productId = _safeTrim(input?.productId);
+        const variantId = _safeTrim(input?.variantId);
+        const taxRatePercent = Number(input?.taxRatePercent);
+        const taxIncluded = input?.taxIncluded;
+        const stockReserved = Number(input?.stockReserved);
+        if (!isValidGuid(productId) || !isValidGuid(variantId)) {
+            return _error("INVENTORY_CATALOG_ID_INVALID", "productId y variantId deben ser GUID validos.");
+        }
+        if (!Number.isFinite(taxRatePercent) || taxRatePercent < 0 || taxRatePercent > 100) {
+            return _error("INVENTORY_TAX_RATE_INVALID", "tipoImpositivo debe expresarse como porcentaje entre 0 y 100.");
+        }
+        if (typeof taxIncluded !== "boolean") {
+            return _error("INVENTORY_TAX_INCLUDED_REQUIRED", "Debe indicarse expresamente si el precio incluye impuestos.");
+        }
+        if (!Number.isSafeInteger(stockReserved) || stockReserved < 0) {
+            return _error("INVENTORY_RESERVED_STOCK_INVALID", "stockReserved debe ser un entero no negativo verificado por el administrador.");
+        }
+
+        const catalogVersion = await _getCatalogVersion();
+        if (catalogVersion !== INVENTORY_CONFIG.CATALOG_VERSION) {
+            return _error("INVENTORY_CATALOG_VERSION_MISMATCH", "El modulo esta preparado para Wix Stores Catalog V1.");
+        }
+        const [storeResponse, variantsResponse] = await Promise.all([
+            withTimeout(getStoreVariantElevated(`${productId}-${variantId}`), API_TIMEOUT_MS, "inventory.getStoreVariant"),
+            withTimeout(queryProductVariantsElevated(productId, { variantIds: [variantId] }), API_TIMEOUT_MS, "inventory.queryProductVariants"),
+        ]);
+        const storeVariant = storeResponse?.variant;
+        const catalogVariant = (variantsResponse?.variants || []).find((item) => item?._id === variantId);
+        const nativeStock = storeVariant?.stock || {};
+        const stockOnHand = Number(nativeStock.quantity);
+        const price = Number(catalogVariant?.variant?.priceData?.price);
+        const sku = _safeTrim(catalogVariant?.variant?.sku || storeVariant?.sku);
+        const name = _safeTrim(storeVariant?.productName);
+        if (
+            !storeVariant ||
+            storeVariant.productId !== productId ||
+            storeVariant.variantId !== variantId ||
+            !nativeStock.trackQuantity ||
+            !Number.isSafeInteger(stockOnHand) ||
+            stockOnHand < 0 ||
+            !Number.isFinite(price) ||
+            price < 0 ||
+            !sku ||
+            !name
+        ) {
+            return _error("INVENTORY_VARIANT_NOT_READY", "La variante no dispone de identidad, seguimiento de stock, SKU o precio verificables.");
+        }
+        if (stockReserved > stockOnHand) {
+            return _error("INVENTORY_RESERVED_EXCEEDS_ON_HAND", "Las reservas verificadas no pueden superar el stock nativo observado.");
+        }
+
+        const stockKey = _stockKey(productId, variantId);
+        const existing = await _findStockByKey(stockKey);
+        if (existing) {
+            return {
+                status: "SUCCESS",
+                data: { ...existing, alreadyMapped: true },
+                error: null,
+            };
+        }
+        const legacyMapping = await dalQuery(STOCK_COL)
+            .eq("productId", productId)
+            .eq("variantId", variantId)
+            .limit(1)
+            .find(STRONG_READ);
+        if (legacyMapping?.items?.length) {
+            return _error("INVENTORY_LEGACY_MAPPING_REQUIRES_REVIEW", "Existe una fila previa sin stockKey canonico; requiere reconciliacion manual antes de migrarla.");
+        }
+
+        const now = new Date();
+        const saved = await dalInsert(STOCK_COL, {
+            name,
+            tipoImpositivo: taxRatePercent,
+            taxIncluded,
+            price,
+            sku,
+            stockOnHand,
+            stockReserved,
+            stockAvailable: stockOnHand - stockReserved,
+            productId,
+            variantId,
+            wixProductId: productId,
+            wixVariantId: variantId,
+            catalogVersion: INVENTORY_CONFIG.CATALOG_VERSION,
+            stockKey,
+            needsWixReconciliation: false,
+            lastSyncAt: now,
+            traceId,
+            _createdDate: now,
+            _updatedDate: now,
+        });
+        return { status: "SUCCESS", data: { ...saved, alreadyMapped: false }, error: null };
+    } catch (error) {
+        log.error("registerInventoryMaster failed", { traceId, error: error?.message, code: error?.code });
+        return _error(error?.code || "INVENTORY_MASTER_REGISTER_FAILED", error?.message || "No se pudo registrar el maestro de inventario.");
     }
 });
 
