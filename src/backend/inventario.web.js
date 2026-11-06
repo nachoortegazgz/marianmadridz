@@ -783,6 +783,192 @@ export async function releaseOrderInventoryInternal(order, traceId, eventId) {
 }
 
 
+async function _queueRefundInventoryRepair(orderId, refundId, lineItemId, quantity, traceId, eventId, reason) {
+    const digest = await hashSHA256(`REFUND_REPAIR|${orderId}|${refundId}|${lineItemId}`);
+    const repairId = `INV_REFUND_REPAIR_${digest.slice(0, 40)}`;
+    const existing = await dalGet(CONTROL_COL, repairId, "strong");
+    if (existing) return { queued: true, repairId, duplicate: true };
+    const now = new Date();
+    try {
+        await dalInsert(CONTROL_COL, {
+            _id: repairId,
+            controlType: CONTROL_TYPE.SYSTEM_FLAG,
+            dedupeKey: `INVENTORY_REFUND_REPAIR:${orderId}:${refundId}:${lineItemId}`,
+            status: "PENDING",
+            alertType: "INVENTORY_REFUND_REPAIR_REQUIRED",
+            severity: "ERROR",
+            message: "Una devolucion con restock nativo requiere conciliacion de inventario.",
+            payload: {
+                orderId,
+                refundId,
+                lineItemId,
+                quantity,
+                eventId: _safeTrim(eventId) || null,
+                reason: String(reason || "UNKNOWN"),
+                queuedAt: now.toISOString(),
+                attempts: 0,
+            },
+            traceId,
+            _createdDate: now,
+            _updatedDate: now,
+        });
+        return { queued: true, repairId, duplicate: false };
+    } catch (error) {
+        if (!_isDuplicate(error)) throw error;
+        return { queued: Boolean(await dalGet(CONTROL_COL, repairId, "strong")), repairId, duplicate: true };
+    }
+}
+
+async function _syncRestockedOrderLine(orderId, refundId, restockLine, reason, traceId, eventId) {
+    const lineItemId = _safeTrim(restockLine?.lineItemId || restockLine?._id || restockLine?.id);
+    const quantity = Number(restockLine?.quantity ?? restockLine?.restockQuantity);
+    if (!isValidGuid(orderId) || !lineItemId || !Number.isSafeInteger(quantity) || quantity <= 0) {
+        return { status: "ERROR", code: "INVENTORY_RESTOCK_LINE_INVALID" };
+    }
+
+    const saleRes = await dalQuery(MOVEMENTS_COL)
+        .eq("orderId", orderId)
+        .eq("lineItemId", lineItemId)
+        .eq("movementType", INVENTORY_CONFIG.MOVEMENT_TYPE_SALE)
+        .limit(2)
+        .find(STRONG_READ);
+    if (saleRes?.items?.length !== 1) {
+        return { status: "ERROR", code: saleRes?.items?.length > 1
+            ? "INVENTORY_SALE_MOVEMENT_AMBIGUOUS"
+            : "INVENTORY_SALE_MOVEMENT_MISSING" };
+    }
+
+    const sale = saleRes.items[0];
+    const productId = _safeTrim(sale.productId);
+    const variantId = _safeTrim(sale.variantId);
+    const stockKey = _safeTrim(sale.stockKey);
+    if (!isValidGuid(productId) || !isValidGuid(variantId) || !stockKey) {
+        return { status: "ERROR", code: "INVENTORY_SALE_IDENTITY_INCOMPLETE" };
+    }
+
+    const lock = await _acquireStockLock(stockKey, productId, traceId);
+    try {
+        const movementDigest = await hashSHA256(`REFUND|${refundId}|${lineItemId}`);
+        const movementToken = `REFUND_${movementDigest}`;
+        const existingMovement = await dalQuery(MOVEMENTS_COL)
+            .eq("movementToken", movementToken)
+            .limit(1)
+            .find(STRONG_READ);
+        const response = await withTimeout(
+            getStoreVariantElevated(`${productId}-${variantId}`),
+            API_TIMEOUT_MS,
+            "inventory.getStoreVariant.refund"
+        );
+        const variant = response?.variant;
+        const nativeQuantity = Number(variant?.stock?.quantity);
+        if (
+            !variant ||
+            variant.productId !== productId ||
+            variant.variantId !== variantId ||
+            !variant.stock?.trackQuantity ||
+            !Number.isSafeInteger(nativeQuantity) ||
+            nativeQuantity < 0
+        ) {
+            return { status: "ERROR", code: "INVENTORY_REFUND_NATIVE_STOCK_UNAVAILABLE" };
+        }
+
+        const stock = await _findStockByKey(stockKey);
+        if (!stock) return { status: "ERROR", code: "INVENTORY_MASTER_MAPPING_REQUIRED", stockKey };
+        await _assertStockLock(lock);
+        const now = new Date();
+        const updatedStock = {
+            ...stock,
+            stockOnHand: nativeQuantity,
+            stockAvailable: nativeQuantity - Number(stock.stockReserved || 0),
+            lastSyncAt: now,
+            traceId,
+            needsWixReconciliation: false,
+            _updatedDate: now,
+        };
+        await dalUpdate(STOCK_COL, updatedStock);
+
+        if (!existingMovement?.items?.length) {
+            await _assertStockLock(lock);
+            const movement = {
+                recordTimestamp: now,
+                movementToken,
+                movementType: INVENTORY_CONFIG.MOVEMENT_TYPE_RETURN,
+                sku: stock.sku,
+                quantityDelta: quantity,
+                traceId,
+                orderId,
+                refundId,
+                lineItemId,
+                productId,
+                variantId,
+                stockKey,
+                catalogVersion: INVENTORY_CONFIG.CATALOG_VERSION,
+                catalogId: stock._id,
+                productName: stock.name,
+                magnitude: 1,
+                direction: "ENTRADA",
+                quantity,
+                nativeCommercialMovement: true,
+                stockApplied: true,
+                requiresWixReconciliation: false,
+                sourceEventId: _safeTrim(eventId) || null,
+                referenceId: refundId,
+                reason: _safeTrim(reason) || "WIX_REFUND_RESTOCK",
+                stockBefore: Number(stock.stockOnHand),
+                stockAfter: nativeQuantity,
+                _createdDate: now,
+            };
+            try {
+                await dalInsert(MOVEMENTS_COL, movement);
+            } catch (error) {
+                if (!_isDuplicate(error)) throw error;
+                const confirmed = await dalQuery(MOVEMENTS_COL)
+                    .eq("movementToken", movementToken)
+                    .limit(1)
+                    .find(STRONG_READ);
+                if (!confirmed?.items?.length) throw error;
+            }
+        }
+
+        return {
+            status: "SUCCESS",
+            data: {
+                stockKey,
+                movementToken,
+                stockOnHand: nativeQuantity,
+                idempotent: Boolean(existingMovement?.items?.length),
+            },
+        };
+    } finally {
+        await _releaseStockLock(lock);
+    }
+}
+
+export async function syncRestockedOrderInventoryInternal(orderId, refundId, restockLines, reason, traceId, eventId) {
+    if (!Array.isArray(restockLines) || !restockLines.length) {
+        return { status: "SUCCESS", data: { processed: 0, results: [] }, error: null };
+    }
+    const results = [];
+    for (const line of restockLines) {
+        let result = await _syncRestockedOrderLine(orderId, refundId, line, reason, traceId, eventId);
+        if (result.status === "ERROR") {
+            const repair = await _queueRefundInventoryRepair(
+                orderId, refundId, line?.lineItemId || line?._id || line?.id,
+                Number(line?.quantity ?? line?.restockQuantity),
+                traceId, eventId, result.code
+            ).catch((error) => ({ queued: false, error: error?.message }));
+            result = { ...result, repairQueued: repair.queued === true, repairId: repair.repairId || null };
+        }
+        results.push({ lineItemId: line?.lineItemId || line?._id || line?.id || null, ...result });
+    }
+    const failed = results.filter((result) => result.status === "ERROR");
+    return {
+        status: failed.length ? "PARTIAL" : "SUCCESS",
+        data: { processed: results.length - failed.length, results },
+        error: failed.length ? { code: "INVENTORY_RESTOCK_PARTIAL", failed } : null,
+    };
+}
+
 export const getInventoryDashboard = webMethod(Permissions.SiteMember, async (options = {}) => {
     const traceId = _safeTrim(options?.traceId) || makeTraceId("inventory-dashboard");
     try {
