@@ -1648,7 +1648,8 @@ export async function wixEcom_onOrderPaymentStatusUpdated(rawBody) {
 export async function wixEcom_onOrderRefunded(rawBody) {
     const traceId = makeTraceId("whook-refund");
     try {
-        const event = await _verifyAndDecodeWebhook(rawBody, "ORDER_REFUNDED");
+        const event = await _verifyAndDecodeWebhook(rawBody, "ORDER_REFUND_UPDATED") ||
+            await _verifyAndDecodeWebhook(rawBody, "ORDER_REFUNDED");
         if (!event) return { status: "REJECTED", reason: "JWT_VERIFICATION_FAILED" };
 
         const orderId = String(
@@ -1889,8 +1890,13 @@ export async function wixEcom_onOrderRefunded(rawBody) {
         return { status: "OK" };
     } catch (error) {
         _handleError(error, "wixEcom_onOrderRefunded", traceId);
+        if (String(error?.message || "").includes("INVENTORY_REFUND")) throw error;
         return { status: "OK" };
     }
+}
+
+export async function wixEcom_onOrderRefundUpdated(rawBody) {
+    return wixEcom_onOrderRefunded(rawBody);
 }
 
 // ============================================================================
