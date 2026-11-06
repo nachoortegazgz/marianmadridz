@@ -689,9 +689,9 @@ return result;
 // =============================================================================
 /**
 * CRON-11: reconcilia transacciones RESULT_UNKNOWN de bookingSaga.
-* Busca en ControlOperativo transacciones con status RESULT_UNKNOWN
-* y llama a events.reconcileUnknownTransaction para verificar si
-* la reserva se creó realmente en Bookings.
+* Busca transacciones RESULT_UNKNOWN y valida la proyeccion CitasF2.
+* Solo cierra una SIMPLE completa o un par DUAL_F1/DUAL_F2 completo;
+* estados ambiguos pasan a REPAIR_REQUIRED y requieren revision manual.
 */
 export async function reconcileUnknownTransactions() {
 const traceId = makeTraceId("cron-reconcile-unknown");
