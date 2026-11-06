@@ -21,7 +21,7 @@ test('FDOC-VERSION-01 fiscal package versions use insert, never upsert', () => {
 test('FDOC-VERSION-02 deterministic version collision fails closed with a retryable conflict', () => {
   assert.match(source, /DOC_GESTORIA_\$\{year\}_T\$\{quarter\}_PAQUETE_GESTORIA_V\$\{vStr\}/);
   assert.match(handler, /PACKAGE_VERSION_CONFLICT/);
-  assert.match(handler, /WDE0023|already exists|duplicated/i);
+  assert.match(handler, /WDE0074|WD_ITEM_ALREADY_EXISTS|already exists|duplicated/i);
   assert.match(handler, /Actualiza el historial y vuelve a intentarlo/);
 });
 
