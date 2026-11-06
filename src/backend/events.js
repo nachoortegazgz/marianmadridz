@@ -88,6 +88,7 @@ import { logger } from "backend/logger";
 import { normalizeError, _updateCitaSafe, _persistBooking } from "backend/booking/bookingCore";
 import { queueFiscalRecovery, updateCajaActualFromMovement } from "backend/cajas.web";
 import { registrarEventoEconomico } from "backend/eventLog";
+import { syncPaidOrderInventoryInternal } from "backend/inventario.web";
 
 import { logAuditEventWithTimeout, notifyOperationalAlert } from "backend/audit";
 import {
@@ -1270,6 +1271,22 @@ export async function wixBookingsV2_onBookingCanceled(rawBody) {
     }
 }
 
+async function _syncPaidOrderInventoryOrThrow(order, traceId, eventId) {
+    const result = await syncPaidOrderInventoryInternal(order, traceId, eventId);
+    if (result?.status !== "SUCCESS") {
+        log.error("INVENTORY_SYNC_RETRY_REQUIRED", {
+            orderId: order?._id || order?.id || null,
+            traceId,
+            eventId: eventId || null,
+            result,
+        });
+        const error = new Error("INVENTORY_SYNC_RETRY_REQUIRED");
+        error.code = "INVENTORY_SYNC_RETRY_REQUIRED";
+        throw error;
+    }
+    return result;
+}
+
 // ============================================================================
 // WEBHOOK: ORDER PAYMENT STATUS UPDATED
 // ============================================================================
@@ -1362,6 +1379,7 @@ export async function wixEcom_onOrderPaymentStatusUpdated(rawBody) {
             // Recover a possible interruption after fiscal movement insertion.
             // The cash-register projection deduplicates by persisted movement ID.
             await updateCajaActualFromMovement(existingLedgerRes.items[0], traceId);
+            await _syncPaidOrderInventoryOrThrow(order, traceId, eventId);
             if (bookingIds.length) {
                 await _executeWithRetry(async () => {
                     await _markCitasPaidByBookingIds(
@@ -1393,6 +1411,7 @@ export async function wixEcom_onOrderPaymentStatusUpdated(rawBody) {
         }
 
         if (finalLedgerAmount <= 0) {
+            await _syncPaidOrderInventoryOrThrow(order, traceId, eventId);
             if (bookingIds.length) {
                 await _executeWithRetry(async () => {
                     await _markCitasPaidByBookingIds(
@@ -1494,6 +1513,7 @@ export async function wixEcom_onOrderPaymentStatusUpdated(rawBody) {
             eventResult?.status === "PARTIAL";
 
         if (ledgerOk) {
+            await _syncPaidOrderInventoryOrThrow(order, traceId, eventId);
             if (bookingIds.length) {
                 await _executeWithRetry(async () => {
                     await _markCitasPaidByBookingIds(
@@ -1552,6 +1572,10 @@ export async function wixEcom_onOrderPaymentStatusUpdated(rawBody) {
             "wixEcom_onOrderPaymentStatusUpdated",
             traceId
         );
+        if (normalized?.code === "INVENTORY_SYNC_RETRY_REQUIRED" ||
+            String(error?.message || "").includes("INVENTORY_SYNC_RETRY_REQUIRED")) {
+            throw error;
+        }
         await logAuditEventWithTimeout(
             "WEBHOOK_CRITICAL_ERROR",
             "ERROR",
