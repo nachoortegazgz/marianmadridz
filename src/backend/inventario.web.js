@@ -1194,7 +1194,7 @@ export const registerInventoryMovement = webMethod(Permissions.SiteMember, async
         if (!isValidGuid(productId) || !isValidGuid(variantId)) {
             return _error("INVENTORY_CATALOG_MAPPING_REQUIRED", "El maestro no esta vinculado a una variante nativa Wix.");
         }
-        const lock = await _acquireStockLock(stockKey, productId, traceId);
+        lock = await _acquireStockLock(stockKey, productId, traceId);
         const catalogVersion = await _getCatalogVersion();
         if (catalogVersion !== INVENTORY_CONFIG.CATALOG_VERSION) {
             await _releaseStockLock(lock);
