@@ -153,6 +153,17 @@ export const CONCURRENCY = Object.freeze({
   TRANSACTION_POLL_BASE_MS: 250,
 });
 
+// Global mutex for append-only MovimientosCaja sequence/hash-chain writes.
+export const FISCAL_LEDGER_LOCK_CONFIG = Object.freeze({
+  ID: "FISCAL_LEDGER_CHAIN_LOCK",
+  DEDUPE_KEY: "FISCAL_LEDGER_HASH_SEQUENCE",
+  TTL_MS: 600000,
+  WAIT_MS: 3000,
+  POLL_MS: 100,
+  SERVICE_ID: "00000000-0000-4000-8000-000000000001",
+  RESOURCE_ID: "00000000-0000-4000-8000-000000000002",
+});
+
 // Singleton ids de caja (cajas.web.js ALN-04, eventLog.js).
 export const SINGLETONS = Object.freeze({
   CAJA_PRINCIPAL: "CAJA_PRINCIPAL",
