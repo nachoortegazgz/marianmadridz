@@ -89,7 +89,7 @@ import { normalizeError, _updateCitaSafe, _persistBooking } from "backend/bookin
 import { queueFiscalRecovery, updateCajaActualFromMovement } from "backend/cajas.web";
 import { registrarEventoEconomico } from "backend/eventLog";
 
-import { logAuditEventWithTimeout } from "backend/audit";
+import { logAuditEventWithTimeout, notifyOperationalAlert } from "backend/audit";
 import {
     readControlPayload,
     readInvoiceNumber,
@@ -1878,6 +1878,22 @@ export async function reconcileUnknownTransaction(txId, traceId) {
             payload,
             traceId: _safeTrim(traceId) || doc.traceId,
         }));
+        await notifyOperationalAlert({
+            alertType: "BOOKING_RESULT_UNKNOWN",
+            severity: "ERROR",
+            message: "Booking Writer outcome requires manual reconciliation.",
+            data: {
+                pairToken: id,
+                serviceId: _safeTrim(doc.serviceId || payload.serviceId),
+                uncertainStep: _safeTrim(payload.uncertainStep),
+                reconciliationReason,
+                existingCount: existing.length,
+                knownBookingIds,
+            },
+            traceId: _safeTrim(traceId) || doc.traceId,
+            dedupeKey: "BOOKING_RESULT_UNKNOWN_" + id,
+            source: "BOOKING_RECONCILIATION",
+        });
 
         log.error("reconcileUnknownTransaction requires manual repair", {
             traceId,
