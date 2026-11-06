@@ -38,6 +38,16 @@ Los nombres anteriores corresponden a archivos verificados en `main`. No se han 
 - `src/backend/tests/fiscalDocuments.package-version.concurrency.test.mjs`
 - `src/backend/tests/run-layer2.mjs`
 
+## 4. Cambio adicional — informes fiscales truncados rechazados
+
+**Diagnóstico verificado:** `_fetchQuarterMovements` ya devolvía `reachedMaxPages=true` cuando quedaban registros fuera del límite de paginación. Sin embargo, `getQuarterlyTaxSummaryInternal` y `getLibroRegistroFacturasExpedidasInternal` seguían agregando las páginas parciales y devolvían `SUCCESS`, incluyendo el indicador de truncamiento como dato informativo. Un consumidor podía interpretar como completo un informe incompleto.
+
+**Cambio mínimo:** ambos métodos consultan el indicador antes de calcular/devolver datos. Si se alcanzó el máximo, devuelven `FISCAL_DATASET_LIMIT_EXCEEDED` con `data:null`; no publican totales ni libro parcial como informe válido.
+
+**Pruebas añadidas:** `FISCAL-PAGING-01` y `FISCAL-PAGING-02` siembran 5.001 movimientos sintéticos (más de 50 páginas de 100) y exigen rechazo fail-closed para resumen y libro de facturas.
+
+**Archivos:** `src/backend/fiscalAggregator.web.js`, `src/backend/tests/fiscalAggregator.read.test.mjs`.
+
 ## 4. Hallazgo P1 pendiente — serialización de la cadena fiscal en eventLog
 
 **Evidencia estática:** `registrarEventoEconomico` realiza, en este orden:
