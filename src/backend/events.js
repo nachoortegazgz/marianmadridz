@@ -2071,7 +2071,6 @@ async function _queryExactNativeBooking(intent, traceId) {
         for (let page = 0; page < READER_V2_MAX_PAGES; page++) {
             const query = {
                 filter,
-                sort: [{ fieldName: "createdDate", order: "ASC" }],
                 cursorPaging: {
                     limit: READER_V2_PAGE_LIMIT,
                     ...(cursor ? { cursor } : {}),
@@ -2203,6 +2202,7 @@ async function _recoverUnknownWriterFromReader(pairToken, payload, existingCitas
                 status: "FOUND",
                 bookingId: _safeTrim(projected[0].bookingId),
                 bookingStatus: _safeTrim(projected[0].bookingStatus).toUpperCase(),
+                intentStatus: _safeTrim(intent.status).toUpperCase(),
                 source: "CITAS_F2",
             };
             continue;
@@ -2221,12 +2221,18 @@ async function _recoverUnknownWriterFromReader(pairToken, payload, existingCitas
             };
             continue;
         }
-        const projection = await _persistReaderBookingProjection(
-            readerResult.booking,
-            intent,
-            pairToken,
-            traceId
-        );
+        let projection;
+        try {
+            projection = await _persistReaderBookingProjection(
+                readerResult.booking,
+                intent,
+                pairToken,
+                traceId
+            );
+        } catch (projectionError) {
+            phaseResults[phaseKey] = { status: "ERROR", reason: "READER_CITAS_PROJECTION_EXCEPTION", error: projectionError?.message };
+            continue;
+        }
         if (!projection.ok) {
             phaseResults[phaseKey] = { status: "ERROR", reason: projection.reason };
             continue;
@@ -2235,6 +2241,7 @@ async function _recoverUnknownWriterFromReader(pairToken, payload, existingCitas
             status: "FOUND",
             bookingId: projection.bookingId,
             bookingStatus: projection.bookingStatus,
+            intentStatus: _safeTrim(intent.status).toUpperCase(),
             source: "BOOKINGS_READER_V2",
         };
         phases[phaseKey] = {
@@ -2251,10 +2258,10 @@ async function _recoverUnknownWriterFromReader(pairToken, payload, existingCitas
         .filter((id) => _looksLikeGuid(id));
     const allFound = expected.every((phaseKey) => phaseResults[phaseKey]?.status === "FOUND");
     const allCompensated = allFound && expected.every((phaseKey) =>
-        ["COMPENSATED", "TERMINAL"].includes(_safeTrim(phases[phaseKey]?.status).toUpperCase())
+        ["COMPENSATED", "TERMINAL"].includes(_safeTrim(phaseResults[phaseKey]?.intentStatus).toUpperCase())
     );
     const anyCompensated = expected.some((phaseKey) =>
-        ["COMPENSATED", "COMPENSATION_PENDING", "TERMINAL"].includes(_safeTrim(phases[phaseKey]?.status).toUpperCase())
+        ["COMPENSATED", "COMPENSATION_PENDING", "TERMINAL"].includes(_safeTrim(phaseResults[phaseKey]?.intentStatus).toUpperCase())
     );
     const anyCanceled = expected.some((phaseKey) => phaseResults[phaseKey]?.bookingStatus === "CANCELED");
     const anyActive = expected.some((phaseKey) => ["CREATED", "CONFIRMED", "PENDING"].includes(phaseResults[phaseKey]?.bookingStatus));
