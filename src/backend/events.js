@@ -1801,14 +1801,19 @@ export async function reconcileUnknownTransaction(txId, traceId) {
             });
         }
 
+        const hasCanonicalType = (row, expectedType) => {
+            const rawType = _safeTrim(row?.bookingType);
+            return Boolean(rawType) &&
+                normalizeBookingType(rawType) === expectedType;
+        };
         const simpleRows = existing.filter((row) =>
-            normalizeBookingType(row?.bookingType) === BOOKING_TYPE.SIMPLE
+            hasCanonicalType(row, BOOKING_TYPE.SIMPLE)
         );
         const f1Rows = existing.filter((row) =>
-            normalizeBookingType(row?.bookingType) === BOOKING_TYPE.DUAL_F1
+            hasCanonicalType(row, BOOKING_TYPE.DUAL_F1)
         );
         const f2Rows = existing.filter((row) =>
-            normalizeBookingType(row?.bookingType) === BOOKING_TYPE.DUAL_F2
+            hasCanonicalType(row, BOOKING_TYPE.DUAL_F2)
         );
 
         const simpleBookingId = _safeTrim(simpleRows[0]?.bookingId);
