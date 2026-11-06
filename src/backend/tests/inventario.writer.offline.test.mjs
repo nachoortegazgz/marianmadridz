@@ -6,10 +6,10 @@ const IC = await import("backend/internalConfig.js");
 
 let catalogVersion = "V1_CATALOG";
 let getStoreVariantCalls = 0;
-mocks.sdk["@wix/stores::catalogVersioning::getCatalogVersion"] = async () => ({
+mocks.sdk["@wix/stores::@wix/stores::catalogVersioning::getCatalogVersion"] = async () => ({
   catalogVersion,
 });
-mocks.sdk["@wix/stores::products::getStoreVariant"] = async (storeVariantId) => {
+mocks.sdk["@wix/stores::@wix/stores::products::getStoreVariant"] = async (storeVariantId) => {
   getStoreVariantCalls += 1;
   const rawId = String(storeVariantId);
   const productId = rawId.slice(0, 36);
