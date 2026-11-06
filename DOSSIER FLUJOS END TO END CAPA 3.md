@@ -7,6 +7,221 @@
 
 ---
 
+RESUMEN
+
+# CAPA 3 — Resumen extraído de los adjuntos
+
+## 1. Definición y principio rector
+
+**Capa 3** = repositorio externo de evidencia documental en **Microsoft 365 / SharePoint**, destinado al gestor/contable. **No es fuente de verdad.** Wix CMS (Capa 1) sigue siendo la SSOT transaccional. Flujo **unidireccional** Wix → SharePoint. Ningún dato de Capa 3 tiene autoridad sobre el CMS ni escribe de vuelta.
+
+> Si Microsoft cae, el negocio sigue operando en Wix. SharePoint solo conserva copias firmadas, fechadas y trazables.
+
+---
+
+## 2. Arquitectura técnica del puente
+
+**Patrón adoptado: email estructurado** (por restricción de licencia M365 Business Standard, que solo incluye conectores estándar; HTTP/Request es Premium).
+
+```
+Wix CMS (SSOT) → Cron backend → CSV → Resend API → email a gestion@marianmadrid.es
+    → Power Automate (conector Office 365 Outlook) → SharePoint Online
+```
+
+| Componente | Tecnología | Rol |
+|---|---|---|
+| Origen | Wix CMS (colecciones NATIVE) | Autoridad transaccional |
+| Generador de exports | `backend/exports/exportService.js` (módulo nuevo) + crons en `jobs.config` | Consulta CMS, formatea CSV, envía por Resend |
+| Transporte | Resend API → IONOS MX → buzón `gestion@` | SPF/DKIM/DMARC activos, TLS 1.2+ |
+| Automatización | Power Automate (M365 Business Standard) | Detecta email, extrae adjunto, guarda en SharePoint |
+| Destino | SharePoint Online `MarianMadrid_Documentacion` | Versionado 500, retención 6 años, AES-256 |
+| Consolidación | Excel Online | Hojas resumen para gestor |
+| Notificación | Outlook/Teams | Alertas y confirmaciones |
+
+**Asunto canónico del email:** `[MM-EXPORT] {TIPO_EXPORT} {FECHA}`
+
+---
+
+## 3. Datos que se trasladan (por origen)
+
+### 3.1 Automáticos (~90%)
+
+| Export | Cron | Colección SSOT | Frecuencia | Carpeta destino |
+|---|---|---|---|---|
+| **CIERRE_Z** | `verifyNightlyZClosing` 01:20 | `HistoricoCierresZ` | Diario | `1_VENTAS/Cierres_Z/AAAA/MM/` |
+| **MOVIMIENTOS_CAJA** | `exportDailyMovements` 03:00 | `MovimientosCaja` | Diario | `1_VENTAS/Movimientos/AAAA/` |
+| **FICHAJES_SEMANAL** | `exportWeeklyFichajes` lunes 06:00 | `RegistrosHorariosStaff` | Semanal | `4_PERSONAL/Fichajes/AAAA/` |
+| **VENTAS_MENSUAL** | `exportMonthlyVentas` día 2, 06:00 | `CitasF2` + `Stores/Orders` | Mensual | `1_VENTAS/Reservas/AAAA/` |
+| **INVENTARIO_MENSUAL** | `exportMonthlyInventario` día 3, 06:00 | `MovimientosInventario` | Mensual | `5_INVENTARIO/AAAA/` |
+
+### 3.2 Manuales (~10%)
+
+| Documento | Quién | Mecanismo | Carpeta |
+|---|---|---|---|
+| Facturas de proveedores | Marian | Reenvía email con asunto `[GASTO] AAAA-MM Descripción` → Power Automate PA-06 | `2_GASTOS/AAAA/MM/` |
+| Extracto bancario Ibercaja | Marian | Descarga PDF y sube a SharePoint (1 vez/mes) | `3_BANCO/AAAA/` |
+| Contratos, seguros, licencias | Marian | Subida manual puntual | `9_DOCUMENTOS_NEGOCIO/` |
+
+### 3.3 Datos que NUNCA se trasladan
+
+- PII de clientes (nombre, email, teléfono, dirección) — RGPD art. 5.1.c
+- Datos de tarjetas (PAN/CVV) — PCI-DSS; los gestiona MONEI
+- Fórmulas de color, alergias, historial de clientas — datos operativos sin relevancia fiscal
+- Hashes Veri*Factu y cuentas PGC en DTO frontend (solo en CSV de export)
+- Márgenes y notas privadas
+- Slots de disponibilidad consultados
+- Registros de `ControlOperativo` (locks, rate limits)
+
+---
+
+## 4. Estructura SharePoint
+
+**Sitio:** `MarianMadrid_Documentacion` · **Biblioteca:** `Documentos_Capa3`
+
+```
+1_VENTAS/           ← Cierres_Z · Movimientos · Reservas · Tienda_Online · MONEI
+2_GASTOS/           ← Facturas proveedores (AAAA/MM)
+3_BANCO/            ← Extractos Ibercaja (AAAA)
+4_PERSONAL/         ← Fichajes · Resumen_Mensual · Nominas
+5_INVENTARIO/       ← Movimientos stock (AAAA)
+6_ENTREGA_GESTOR/   ← T1/T2/T3/T4/Anual por año
+9_DOCUMENTOS_NEGOCIO/ ← Contratos, seguros, licencias, Kit Digital
+```
+
+**Permisos:**
+
+| Usuario | Permiso |
+|---|---|
+| Marian (`marian@marianmadrid.es`) | Full Control |
+| Cuenta de sistema (Power Automate) | Contribute |
+| Gestor / Asesor externo | **Read only** |
+| Alba / Andrea | Sin acceso |
+
+**Retención:** 6 años (Código de Comercio art. 30) · Versionado 500 · Cifrado AES-256.
+
+---
+
+## 5. Power Automate — 7 flujos
+
+| ID | Nombre | Trigger | Conectores |
+|---|---|---|---|
+| **PA-01** | Cierre Z → SharePoint | Email `[MM-EXPORT] CIERRE_Z` | Outlook + SharePoint |
+| **PA-02** | Movimientos Caja → SharePoint | Email `[MM-EXPORT] MOVIMIENTOS_CAJA` | Outlook + SharePoint |
+| **PA-03** | Fichajes → SharePoint | Email `[MM-EXPORT] FICHAJES_SEMANAL` | Outlook + SharePoint |
+| **PA-04** | Ventas Mensual → SharePoint + Excel | Email `[MM-EXPORT] VENTAS_MENSUAL` | Outlook + SharePoint + Excel |
+| **PA-05** | Inventario → SharePoint + Excel | Email `[MM-EXPORT] INVENTARIO_MENSUAL` | Outlook + SharePoint + Excel |
+| **PA-06** | Gastos Marian → SharePoint | Email `[GASTO]` | Outlook + SharePoint |
+| **PA-07** | Consolidación trimestral | Recurrence día 10 (ene/abr/jul/oct) | SharePoint + Excel + Outlook |
+
+Todos con **conectores estándar** de M365 Business Standard. Sin Premium.
+
+---
+
+## 6. Módulo Wix de exportación
+
+**Ubicación:** `backend/exports/exportService.js` (nuevo, único punto de generación de exports)
+
+**Funciones principales:**
+- `sendExportEmail({ exportType, dateLabel, csvContent, filename })` — Resend API
+- `buildCierreZCSV`, `buildMovimientosCSV`, `buildFichajesCSV`, `buildVentasCSV`, `buildInventarioCSV`
+- `toCSV(rows)` — serialización UTF-8
+
+**Formato CSV canónico:**
+- Separador `,` · UTF-8 · cabeceras `camelCase`
+- Sin PII · importes 2 decimales · fechas ISO 8601 · timestamps `Europe/Madrid`
+- Incluye `hash`, `previousRecordHash`, `traceId` (trazabilidad Veri*Factu)
+
+**Crons nuevos en `jobs.config`:** los 4 indicados en la tabla §3.1 (el Cierre Z se añade dentro del cron existente `verifyNightlyZClosing`).
+
+---
+
+## 7. Cumplimiento normativo del tránsito
+
+| Norma | Cómo lo cumple el traslado |
+|---|---|
+| **Ley 11/2021 (Veri*Factu)** | CSV incluye `hash`, `previousRecordHash`, `sequenceNumber`, `numSerieFactura`. Cadena SHA-256 preservada. |
+| **RD 1007/2023** | Cierre Z incluye `closingHash`, `isIntegrityVerified`. |
+| **RD 1619/2012** | `numSerieFactura` correlativo; `tipoRectificativa`/`previousInvoiceId` en devoluciones. |
+| **Ley 37/1992 (IVA)** | `taxBase`, `taxAmount`, `tipoImpositivo` en cada CSV → gestor calcula Modelo 303. |
+| **PGC (RD 1514/2007)** | `LibroAsientosContablesDetalle` exportable; gestor genera asientos desde `MovimientosCaja`. |
+| **RD 8/2019** | Fichajes exportados con `clockEventType`, `recordedAt`, `staffName`. Retención 6 años en SharePoint (>4 legales). |
+| **RGPD/LOPDGDD** | Sin PII en CSV; AES-256; gestor solo lectura; Alba/Andrea sin acceso; servidores UE. |
+| **LGT 58/2003 / C.Comercio art. 30** | Retención 6 años en SharePoint. |
+| **RD 253/2025 (Bizum)** | MONEI reporta automáticamente; Cierre Z incluye `totalBizum`. |
+| **LSSI-CE** | No aplica al traslado (textos legales en el sitio). |
+
+**Trazabilidad end-to-end:** cada dato conserva `traceId` desde su generación en Wix hasta el CSV en SharePoint → permite auditoría AEAT/Inspección de Trabajo en <15 min.
+
+---
+
+## 8. Operativa y esfuerzo
+
+### Marian
+
+| Tarea | Tiempo | Frecuencia |
+|---|---|---|
+| Reenviar facturas proveedores con `[GASTO]` | ~2 min/factura | Según llegan (2-4/mes) |
+| Descargar extracto Ibercaja y subir a SharePoint | ~3 min | Mensual (día 1-5) |
+| Verificar Cierres Z generados | ~2 min | Mensual |
+| **Total** | **~15-20 min/mes** | |
+| Checklist y entrega trimestral al gestor | ~10 min | Trimestral |
+
+### Gestor
+- Accede a SharePoint en solo lectura → descarga paquete → organiza en su sistema contable → presenta modelos.
+
+### Implementación
+| Fase | Tarea | Horas |
+|---|---|---|
+| F1 | Crear sitio SharePoint + carpetas + permisos | 2 h |
+| F2 | Implementar `exportService.js` en Wix | 4 h |
+| F3 | Añadir crons a `jobs.config` | 1 h |
+| F4 | Probar Resend en Preview | 1 h |
+| F5 | Crear 7 flujos Power Automate | 3 h |
+| F6 | Probar E2E | 2 h |
+| F7 | Crear Excel consolidado | 1 h |
+| F8 | Invitar gestor (Read) | 0.5 h |
+| F9 | Formación Marian | 0.5 h |
+| **TOTAL** | | **~15 h** |
+
+---
+
+## 9. Redundancia documental detectada en los adjuntos
+
+Los dos ficheros **repiten contenido extensamente**. Observaciones:
+
+| Elemento | `DOSSIER FLUJOS E2E CAPA 3` | `DOSSIER TÉCNICO CONSOLIDADO` (Anexos) |
+|---|---|---|
+| Arquitectura email estructurado | Sí (Bloque B) | Sí (Anexo B + Solución Técnica) |
+| Módulo `exportService.js` | Sí (resumen) | Sí (código completo) |
+| 7 flujos Power Automate | Sí (Bloque C) | Sí (Anexo B + Solución Técnica) |
+| Estructura SharePoint | Sí (Bloque C.5) | Sí (Anexo B + Solución Técnica) |
+| Cumplimiento normativo | Sí (Bloque D) | Sí (Solución Técnica §6) |
+| Guía práctica Marian | No | Sí (Guía práctica) |
+| Rutina mensual Marian | Parcial (Bloque E.3) | Sí (Guía práctica + Anexo A) |
+
+**Incoherencias menores entre adjuntos:**
+- `DOSSIER FLUJOS E2E` presenta 7 flujos PA-01…PA-07; `Anexo A` del Consolidado habla de "4 carpetas de Marian" mientras `Anexo B` describe 7 carpetas. Son vistas distintas (simplificada vs. técnica), no contradicción real, pero conviene unificar la terminología.
+- En `DOSSIER FLUJOS E2E` Bloque A.4.3 se cita `calcularHorasTrabajadas` como exportable; no aparece en la lista de crons. Aclarar si va incluido en `FICHAJES_SEMANAL`.
+- Fechas de generación inconsistentes: los documentos declaran "6 de noviembre de 2026" y también "6 de febrero de 2027" en distintos cierres. Corregir.
+
+---
+
+## 10. Conclusión operativa
+
+Capa 3 queda **diseñada a nivel técnico y operativo** en los adjuntos, pero **no implementada**. Para activarla hace falta:
+
+1. Aprobar **ADR-003** (frontera SSOT, licencia M365 exacta, retención, permisos).
+2. Resolver la **incompatibilidad IONOS vs. Exchange Online** si se activa M365 con el mismo dominio.
+3. Implementar `exportService.js` + crons en Wix.
+4. Crear sitio SharePoint y 7 flujos Power Automate.
+5. Probar E2E con email real a `gestion@` y verificar hash/traceId en CSV.
+6. Formar a Marian y dar acceso Read al gestor.
+
+**Restricción clave:** todo el diseño depende de que la licencia M365 Business Standard incluya SharePoint + Power Automate con conectores estándar. Si se necesitan conectores Premium (HTTP), habría que replantear el patrón o asumir coste adicional.
+
+---
+
+
 ## ÍNDICE
 
 - [Bloque A — Catálogo de Datos Trasladables](#bloque-a)
