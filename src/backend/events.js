@@ -73,6 +73,7 @@ import {
     BOOKING_STATUS,
     PAYMENT_STATUS,
     BOOKING_TYPE,
+    normalizeBookingType,
     CHANNEL_TYPE,
     BOOKING_FIELDS,
     SDK_CONFIG,
@@ -1764,11 +1765,11 @@ export async function markTransactionResultUnknown(pairToken, uncertainStep, tra
 }
 
 /**
- * Reconcilia una transaccion RESULT_UNKNOWN: verifica si las reservas F1/F2
- * realmente existen en CitasF2 (persistencia local post-commit) y cierra el
- * ciclo escribiendo COMPLETED (si existen) o FAILED_FINAL (si no hay rastro).
- * Consumido por CRON-11 cada 45 min. Idempotente: solo actua sobre
- * payload.status === RESULT_UNKNOWN.
+ * Reconcilia una transaccion RESULT_UNKNOWN usando las proyecciones CitasF2.
+ * CitasF2 no demuestra por si sola que Wix no haya creado un booking cuando
+ * el Writer devuelve timeout. Solo se cierra automaticamente si la proyeccion
+ * es completa: una fila SIMPLE o exactamente un par DUAL_F1 + DUAL_F2.
+ * Los estados ambiguos pasan a REPAIR_REQUIRED y bloquean reintentos ciegos.
  */
 export async function reconcileUnknownTransaction(txId, traceId) {
     const id = _safeTrim(txId);
@@ -1776,14 +1777,15 @@ export async function reconcileUnknownTransaction(txId, traceId) {
     try {
         const doc = await dalGet(CONTROL_OPERATIVO_COL, id);
         if (!doc || !doc._id) return { ok: false, reason: "TX_NOT_FOUND" };
+
         let payload = {};
         try { payload = readControlPayload(doc); } catch (_e) { payload = {}; }
         if (payload.status !== "RESULT_UNKNOWN") {
             return { ok: true, reconciled: false, reason: "NOT_RESULT_UNKNOWN" };
         }
 
-        // Verificacion: buscar citas persistidas con pairToken == txId.
         let existing = [];
+        let queryFailed = false;
         try {
             const res = await dalQuery(CITAS_COL)
                 .eq(BOOKING_FIELDS.PAIR_TOKEN || "pairToken", id)
@@ -1791,42 +1793,107 @@ export async function reconcileUnknownTransaction(txId, traceId) {
                 .find({ consistencyMode: "strong" });
             existing = (res && res.items) || [];
         } catch (queryErr) {
-            log.warn("reconcileUnknownTransaction verify query failed", { traceId, txId: id, error: queryErr && queryErr.message });
+            queryFailed = true;
+            log.warn("reconcileUnknownTransaction CitasF2 query failed", {
+                traceId,
+                txId: id,
+                error: queryErr && queryErr.message,
+            });
         }
 
-        let updated;
-        if (existing.length >= 2) {
+        const simpleRows = existing.filter((row) =>
+            normalizeBookingType(row?.bookingType) === BOOKING_TYPE.SIMPLE
+        );
+        const f1Rows = existing.filter((row) =>
+            normalizeBookingType(row?.bookingType) === BOOKING_TYPE.DUAL_F1
+        );
+        const f2Rows = existing.filter((row) =>
+            normalizeBookingType(row?.bookingType) === BOOKING_TYPE.DUAL_F2
+        );
+
+        const simpleBookingId = _safeTrim(simpleRows[0]?.bookingId);
+        const f1BookingId = _safeTrim(f1Rows[0]?.bookingId);
+        const f2BookingId = _safeTrim(f2Rows[0]?.bookingId);
+        const simpleComplete =
+            !queryFailed &&
+            existing.length === 1 &&
+            simpleRows.length === 1 &&
+            _looksLikeGuid(simpleBookingId);
+        const dualComplete =
+            !queryFailed &&
+            existing.length === 2 &&
+            f1Rows.length === 1 &&
+            f2Rows.length === 1 &&
+            _looksLikeGuid(f1BookingId) &&
+            _looksLikeGuid(f2BookingId) &&
+            f1BookingId !== f2BookingId;
+
+        if (simpleComplete || dualComplete) {
+            const bookingIds = simpleComplete
+                ? [simpleBookingId]
+                : [f1BookingId, f2BookingId];
             payload.status = "COMPLETED";
             payload.reconciledBy = "CRON-11";
             payload.reconciledAt = new Date().toISOString();
-            payload.bookingIds = existing.map((c) => c._id);
-            updated = Object.assign({}, doc, { payload });
-            await dalUpdate(CONTROL_OPERATIVO_COL, updated);
-            log.info("reconcileUnknownTransaction resolved COMPLETED", { traceId, txId: id });
-            return { ok: true, reconciled: true };
+            payload.bookingIds = bookingIds;
+            payload.reconciliationMode = simpleComplete ? "SIMPLE_PROJECTION" : "DUAL_PROJECTIONS";
+            await dalUpdate(CONTROL_OPERATIVO_COL, Object.assign({}, doc, {
+                payload,
+                traceId: _safeTrim(traceId) || doc.traceId,
+            }));
+            log.info("reconcileUnknownTransaction resolved COMPLETED", {
+                traceId,
+                txId: id,
+                bookingCount: bookingIds.length,
+            });
+            return { ok: true, reconciled: true, bookingIds };
         }
 
-        if (existing.length === 1) {
-            // Media creacion confirmada: delegar compensacion al cron dedicado
-            // (compensateOrphanBookings) marcando la necesidad via flag.
-            payload.compensationRequired = true;
-            updated = Object.assign({}, doc, { payload });
-            await dalUpdate(CONTROL_OPERATIVO_COL, updated);
-            log.warn("reconcileUnknownTransaction flagged compensationRequired", { traceId, txId: id });
-            return { ok: true, reconciled: false, reason: "COMPENSATION_REQUIRED" };
-        }
+        // Ausencia o parcialidad de CitasF2 no prueba ausencia en Wix Bookings.
+        // Mantener el idempotency record en un estado no terminal para impedir
+        // que un retry cree una segunda reserva mientras el resultado sea incierto.
+        const knownBookingIds = existing
+            .map((row) => _safeTrim(row?.bookingId))
+            .filter((bookingId) => _looksLikeGuid(bookingId));
+        const reconciliationReason = queryFailed
+            ? "CITAS_QUERY_FAILED"
+            : existing.length === 0
+                ? "NO_CITAS_PROJECTION"
+                : existing.length === 1
+                    ? "PARTIAL_CITAS_PROJECTION"
+                    : "CITAS_PROJECTION_SHAPE_INVALID";
 
-        // Sin rastro alguno: el create nunca aterrizo. Cerrar como definitivo.
-        payload.status = "FAILED_FINAL";
+        payload.status = "REPAIR_REQUIRED";
+        payload.manualReconciliationRequired = true;
+        payload.reconciliationReason = reconciliationReason;
+        payload.knownBookingIds = knownBookingIds;
+        payload.reconciliationRequiredAt = new Date().toISOString();
         payload.reconciledBy = "CRON-11";
-        payload.reconciledAt = new Date().toISOString();
-        payload.error = String(payload.error || "SAGA-39 unresolved: no bookings found");
-        updated = Object.assign({}, doc, { payload });
-        await dalUpdate(CONTROL_OPERATIVO_COL, updated);
-        log.info("reconcileUnknownTransaction resolved FAILED_FINAL", { traceId, txId: id });
-        return { ok: true, reconciled: true };
+        await dalUpdate(CONTROL_OPERATIVO_COL, Object.assign({}, doc, {
+            payload,
+            traceId: _safeTrim(traceId) || doc.traceId,
+        }));
+
+        log.error("reconcileUnknownTransaction requires manual repair", {
+            traceId,
+            txId: id,
+            reason: reconciliationReason,
+            existingCount: existing.length,
+            knownBookingIds,
+        });
+        return {
+            ok: true,
+            reconciled: false,
+            reason: "MANUAL_RECONCILIATION_REQUIRED",
+            reconciliationReason,
+            existingCount: existing.length,
+        };
     } catch (error) {
-        log.error("reconcileUnknownTransaction failed", { traceId, txId: id, error: error && error.message });
+        log.error("reconcileUnknownTransaction failed", {
+            traceId,
+            txId: id,
+            error: error && error.message,
+        });
         return { ok: false, reason: (error && error.message) || "RECONCILE_FAILED" };
     }
 }
