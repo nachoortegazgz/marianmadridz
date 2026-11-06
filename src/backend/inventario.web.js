@@ -1208,6 +1208,26 @@ export const registerInventoryMovement = webMethod(Permissions.SiteMember, async
             return _error("INVENTORY_CATALOG_MAPPING_REQUIRED", "El maestro no esta vinculado a una variante nativa Wix.");
         }
         lock = await _acquireStockLock(stockKey, productId, traceId);
+        const journalAfterLock = await dalGet(CONTROL_COL, journalId, "strong");
+        if (journalAfterLock?.status === "COMPLETED") {
+            return { status: "SUCCESS", data: journalAfterLock.payload, error: null, idempotent: true };
+        }
+        if (journalAfterLock?.status === "NATIVE_APPLIED") {
+            const recovered = await _completeManualInventoryMovement(journalAfterLock, traceId, lock);
+            return recovered.status === "SUCCESS"
+                ? { status: "SUCCESS", data: recovered.data, error: null, idempotent: true }
+                : { status: "PARTIAL", data: null, error: { code: "INVENTORY_MANUAL_MOVEMENT_COMPLETION_PENDING", details: recovered } };
+        }
+        if (journalAfterLock?.status === "INTENT") {
+            await _updateInventoryClaim(journalAfterLock, "REPAIR_REQUIRED", {
+                completionError: "NATIVE_WRITER_OUTCOME_UNKNOWN",
+                requiresManualNativeStockReview: true,
+            });
+            return _error("INVENTORY_NATIVE_WRITER_RESULT_UNKNOWN", "La operacion nativa pudo haberse aplicado; no se repetira automaticamente.");
+        }
+        if (journalAfterLock?.status === "REPAIR_REQUIRED") {
+            return _error("INVENTORY_MOVEMENT_REPAIR_REQUIRED", "El movimiento requiere conciliacion manual; no se repetira la mutacion nativa.");
+        }
         const catalogVersion = await _getCatalogVersion();
         if (catalogVersion !== INVENTORY_CONFIG.CATALOG_VERSION) {
             await _releaseStockLock(lock);
