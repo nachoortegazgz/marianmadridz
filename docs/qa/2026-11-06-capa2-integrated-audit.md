@@ -29,7 +29,7 @@ Los nombres anteriores corresponden a archivos verificados en `main`. No se han 
 
 **Diagnóstico verificado:** `createManagerPackageVersion` calculaba `nextVersion = history.length + 1`, construía un `documentId` determinista y persistía con `dalSave`. Dos solicitudes concurrentes podían leer el mismo historial y guardar el mismo `_id`; la semántica upsert de `save` permitía sobrescribir el snapshot que había creado la primera solicitud.
 
-**Cambio mínimo:** sustituir el upsert por `dalInsert`. La unicidad del `_id` hace que solo una solicitud pueda crear esa versión. Una colisión `WDE0023` se devuelve como `PACKAGE_VERSION_CONFLICT`, indicando actualizar historial y reintentar. No se modifica ni elimina ninguna versión previa.
+**Cambio mínimo:** sustituir el upsert por `dalInsert`. La unicidad del `_id` hace que solo una solicitud pueda crear esa versión. Una colisión de ID existente (`WDE0074` / `WD_ITEM_ALREADY_EXISTS`, según el catálogo oficial de Wix Data) se devuelve como `PACKAGE_VERSION_CONFLICT`, indicando actualizar historial y reintentar. No se modifica ni elimina ninguna versión previa.
 
 **Pruebas añadidas:** `fiscalDocuments.package-version.concurrency.test.mjs`, incorporada al runner `run-layer2.mjs`. Son pruebas estáticas de contrato sobre el writer; no simulan concurrencia real contra Wix CMS.
 
@@ -116,7 +116,7 @@ La actualización optimista de `CAJA_SEQ` evita que dos writers consuman el mism
 
 ## 9. Estado
 
-- **Verificado:** PR #153 integrada en `main`; mapa de módulos y gate Capa 2 inspeccionados; defecto potencial de upsert concurrente en paquetes identificado y corregido en esta rama mediante insert-only.
-- **Pendiente de ejecución:** nueva suite y gates CI.
+- **Verificado:** PR #153 integrada en `main`; mapa de módulos y gate Capa 2 inspeccionados; defecto potencial de upsert concurrente en paquetes identificado y corregido en esta rama mediante insert-only. Wix Data documenta que `insert` falla si el ID ya existe (WDE0074 / WD_ITEM_ALREADY_EXISTS), mientras `save` realiza upsert.
+- **CI verificado en run #245:** suite offline 349/349 PASS; Layer 1 217/217 PASS; Layer 2 112/112 PASS; ESLint PASS. Una corrección posterior del mapeo de error Wix Data (WDE0074) está pendiente de nueva ejecución CI.
 - **Pendiente de diseño/cierre:** serialización concurrente del ledger fiscal `eventLog`, pruebas Wix QA y flujos E2E.
 - **No autorizado/realizado:** merge de esta rama y despliegue.
