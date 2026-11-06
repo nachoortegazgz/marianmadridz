@@ -102,7 +102,6 @@ La configuración real de los 24 F2 ya es `NO_FEE` con pago presencial habilitad
 5. E2E integrado del checkout online dual y su webhook de pago; los componentes de checkout y webhook tienen pruebas separadas, no una transacción completa en un entorno Wix QA.
 6. Resolver mediante ADR la diferencia entre Dossier P1.5 y la validación nativa de F2.
 7. Resolver la política de fianza: el Dossier P10.4 menciona 30% para servicios >50 €, mientras RF-06 de Necesidades Web indica servicios >30 € y señal de 15 € o 20%. No se localizó `createDepositPaymentOrder` ni `cancellationPolicyHours` en el código. No implementar importes ni reglas de cobro hasta aprobar una única política y su contrato de checkout.
-8. Adjuntar/identificar la SSOT v10.0 canónica vigente para cerrar la trazabilidad de decisiones; el documento original no está entre los archivos disponibles en este proyecto.
 
 ## 8. Límites
 
