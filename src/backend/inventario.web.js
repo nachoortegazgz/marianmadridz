@@ -1016,7 +1016,7 @@ export const getInventoryDashboard = webMethod(Permissions.SiteMember, async (op
 });
 
 
-async function _completeManualInventoryMovement(journal, traceId) {
+async function _completeManualInventoryMovement(journal, traceId, existingLock = null) {
     const payload = journal?.payload && typeof journal.payload === "object" ? journal.payload : {};
     const {
         movementToken,
@@ -1052,6 +1052,9 @@ async function _completeManualInventoryMovement(journal, traceId) {
         return { status: "ERROR", code: "INVENTORY_NATIVE_STOCK_UNAVAILABLE" };
     }
 
+    const lock = existingLock || await _acquireStockLock(stockKey, productId, traceId);
+    try {
+    await _assertStockLock(lock);
     const stock = await _findStockByKey(stockKey);
     if (!stock) {
         await _updateInventoryClaim(journal, "REPAIR_REQUIRED", { completionError: "MASTER_MAPPING_MISSING" });
@@ -1117,6 +1120,7 @@ async function _completeManualInventoryMovement(journal, traceId) {
         }
     }
 
+    await _assertStockLock(lock);
     await _updateInventoryClaim(journal, "COMPLETED", {
         completedAt: new Date().toISOString(),
         nativeStockAfter: stockOnHand,
@@ -1126,6 +1130,9 @@ async function _completeManualInventoryMovement(journal, traceId) {
         status: "SUCCESS",
         data: { movementToken, stockKey, stockOnHand, idempotent: Boolean(existingMovement?.items?.length) },
     };
+    } finally {
+        if (!existingLock) await _releaseStockLock(lock);
+    }
 }
 
 export const registerInventoryMovement = webMethod(Permissions.SiteMember, async (input = {}) => {
@@ -1289,7 +1296,7 @@ export const registerInventoryMovement = webMethod(Permissions.SiteMember, async
             nativeOutcome: "APPLIED",
             nativeAppliedAt: new Date().toISOString(),
         });
-        const completed = await _completeManualInventoryMovement(appliedJournal, traceId);
+        const completed = await _completeManualInventoryMovement(appliedJournal, traceId, lock);
         if (completed.status !== "SUCCESS") {
             return {
                 status: "PARTIAL",
