@@ -9,7 +9,7 @@
 
 Incorporar al desarrollo conjunto los módulos de dominio intermedio que consumen los contratos transaccionales de Capa 1 y producen proyecciones operativas, fiscales y laborales. No se amplía la arquitectura con módulos nuevos sin consumidor probado.
 
-En el repositorio, `src/backend/tests/run-layer2.mjs` es el gate denominado Capa 2. Contiene diez suites y cubre caja/ledger, fiscalidad, DTOs, hooks CMS, crons y flujos integrados. Este gate no debe confundirse con una declaración de que todos los procesos funcionales del negocio estén certificados.
+En el repositorio, `src/backend/tests/run-layer2.mjs` es el gate denominado Capa 2. Contiene once suites tras incorporar las nuevas regresiones y cubre caja/ledger, fiscalidad, DTOs, hooks CMS, crons y flujos integrados. Este gate no debe confundirse con una declaración de que todos los procesos funcionales del negocio estén certificados.
 
 ## 2. Mapa de módulos incorporados al ciclo
 
@@ -48,7 +48,7 @@ Los nombres anteriores corresponden a archivos verificados en `main`. No se han 
 
 **Archivos:** `src/backend/fiscalAggregator.web.js`, `src/backend/tests/fiscalAggregator.read.test.mjs`.
 
-## 4. Hallazgo P1 pendiente — serialización de la cadena fiscal en eventLog
+## 5. Hallazgo P1 pendiente — serialización de la cadena fiscal en eventLog
 
 **Evidencia estática:** `registrarEventoEconomico` realiza, en este orden:
 1. `_getLastCashEvent()` para leer el hash anterior.
@@ -64,7 +64,7 @@ La actualización optimista de `CAJA_SEQ` evita que dos writers consuman el mism
 
 **Resolución técnica necesaria:** diseñar una serialización de append que use una primitiva CMS con compare-and-swap/lease y recuperación tras timeout, o una estrategia de reserva única por secuencia con reconciliación del head. Antes de implementar, verificar esquema físico de `CajaActual`/`ControlOperativo`, semántica de revisión de `@wix/data`, vencimiento/fencing y comportamiento tras caída del proceso. Un lock con TTL sin fencing/renovación no basta.
 
-## 5. Gaps adicionales que permanecen abiertos
+## 6. Gaps adicionales que permanecen abiertos
 
 1. Ejecutar suite completa `npm run test:layer2` y `npm run test` en CI para el head de esta rama; el cambio aún no tiene resultado de ejecución.
 2. Probar concurrencia de eventos fiscales distintos, colisión de secuencia, timeout después del insert y reconciliación del hash head.
@@ -75,7 +75,7 @@ La actualización optimista de `CAJA_SEQ` evita que dos writers consuman el mism
 7. Validar fichajes y firmas HMAC en Wix QA, incluyendo duplicidad, ajustes rectificativos y secuencias de eventos.
 8. Completar pruebas E2E integradas Capa 1 → Capa 2 → Capa 3 en entorno aislado. SharePoint sigue siendo evidencia documental, nunca autoridad transaccional.
 
-## 6. Seguridad y límites de ejecución
+## 7. Seguridad y límites de ejecución
 
 - Cambios únicamente en rama GitHub; sin despliegue ni publicación Wix.
 - Sin escrituras en CMS de producción.
@@ -84,7 +84,7 @@ La actualización optimista de `CAJA_SEQ` evita que dos writers consuman el mism
 - Sin mutar ledgers existentes.
 - No se considera validado ningún test que no haya sido ejecutado y observado en CI o entorno controlado.
 
-## 7. Estado
+## 8. Estado
 
 - **Verificado:** PR #153 integrada en `main`; mapa de módulos y gate Capa 2 inspeccionados; defecto potencial de upsert concurrente en paquetes identificado y corregido en esta rama mediante insert-only.
 - **Pendiente de ejecución:** nueva suite y gates CI.
