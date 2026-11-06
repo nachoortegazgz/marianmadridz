@@ -1091,6 +1091,7 @@ export async function wixBookingsV2_onBookingCanceled(rawBody) {
                 const status = String(row?.bookingStatus || "").toUpperCase();
                 return status === "CANCELLED" || status === "CANCELED";
             });
+            if (dualPairFullyCancelled) dualFiscalStatus = "NOT_REQUIRED";
         }
 
         if (
