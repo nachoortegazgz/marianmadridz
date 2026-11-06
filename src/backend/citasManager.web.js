@@ -43,7 +43,7 @@ import {
 } from "public/mmUtils";
 import { toUtcRange } from "backend/booking/bookingUtils";
 import { executeBookingSaga } from "backend/booking/bookingSaga";
-import { normalizeError, _handleError, ERROR_CODES, createBookingError, _updateCitaSafe, _forceStaffInPristineSlot } from "backend/booking/bookingCore";
+import { normalizeError, _handleError, ERROR_CODES, createBookingError, _updateCitaSafe, _forceStaffInPristineSlot, generateSlotKey, _lockSlotKeyOrFail, _unlockSlotKey } from "backend/booking/bookingCore";
 import { registerBookingPayment } from "backend/cajas.web.js";
 import { rateLimiter } from "backend/security";
 import { logger } from "backend/logger";
@@ -1651,6 +1651,8 @@ export const rescheduleDualBookings = webMethod(
     Permissions.SiteMember,
     async (payload) => {
         const traceId = payload?.traceId || makeTraceId("resched-dual");
+        const lockOwnerId = `${traceId}:${makeTraceId("dual-reschedule")}`;
+        const acquiredLockKeys = [];
         try {
             await _rateLimitOrThrow(
                 "citasManager.rescheduleDualBookings",
@@ -1721,6 +1723,54 @@ export const rescheduleDualBookings = webMethod(
                     "F2 slot does not correspond to the linked phase of the service.",
                     { traceId, expected: f2ExpectedServiceId }
                 );
+            }
+
+            // Lock both original and target F1/F2 intervals in canonical order.
+            // The exposure gap is intentionally excluded: it remains bookable.
+            const originalF1 = _getBookingSlotFromCita(f1Cita);
+            const originalF2 = _getBookingSlotFromCita(f2Cita);
+            const resourceId = _safeTrim(validation.selectedResourceId);
+            if (!_looksLikeGuid(resourceId)) {
+                throw createBookingError(
+                    ERROR_CODES.INVALID_EMPLOYEE,
+                    "A valid shared staff resource is required to lock the dual reschedule.",
+                    { traceId, pairToken }
+                );
+            }
+            const lockCandidates = [
+                { serviceId: originalF1.serviceId, start: originalF1.slotStart, end: originalF1.slotEnd },
+                { serviceId: originalF2.serviceId, start: originalF2.slotStart, end: originalF2.slotEnd },
+                { serviceId: _safeTrim(f1Cita?.[FIELD_SERVICE_ID] || f1Cita?.serviceId), start: slotF1Input.localStartDate, end: slotF1Input.localEndDate },
+                { serviceId: _safeTrim(dualF2Slot.serviceId), start: dualF2Slot.localStartDate, end: dualF2Slot.localEndDate },
+            ];
+            const lockServiceByKey = new Map();
+            for (const candidate of lockCandidates) {
+                if (!candidate.serviceId || !candidate.start || !candidate.end) {
+                    throw createBookingError(
+                        ERROR_CODES.INVALID_PAYLOAD,
+                        "Original and target dual slots must be complete before locking.",
+                        { traceId, pairToken }
+                    );
+                }
+                const key = generateSlotKey(candidate.serviceId, resourceId, candidate.start, candidate.end);
+                lockServiceByKey.set(key, candidate.serviceId);
+            }
+            const orderedLockKeys = Array.from(lockServiceByKey.keys()).sort();
+            for (const key of orderedLockKeys) {
+                const acquired = await _lockSlotKeyOrFail(
+                    key,
+                    lockOwnerId,
+                    300000,
+                    lockServiceByKey.get(key)
+                );
+                if (!acquired?.ok) {
+                    throw createBookingError(
+                        ERROR_CODES.TOKEN_BUSY,
+                        "Dual reschedule conflicts with another booking operation.",
+                        { traceId, pairToken, lockKey: key, reason: acquired?.message || acquired?.reason }
+                    );
+                }
+                acquiredLockKeys.push(key);
             }
 
             const journalDedupeKey = `DUAL_RESCHEDULE_${pairToken}_${Date.now()}`;
@@ -1895,6 +1945,18 @@ export const rescheduleDualBookings = webMethod(
             };
         } catch (error) {
             return _handleError(error, "rescheduleDualBookings", traceId);
+        } finally {
+            for (let i = acquiredLockKeys.length - 1; i >= 0; i -= 1) {
+                const released = await _unlockSlotKey(acquiredLockKeys[i], lockOwnerId);
+                if (!released?.ok) {
+                    log.error("Dual reschedule slot lock release requires attention.", {
+                        traceId,
+                        pairToken: _safeTrim(payload?.pairToken),
+                        lockKey: acquiredLockKeys[i],
+                        reason: released?.reason || "LOCK_RELEASE_FAILED",
+                    });
+                }
+            }
         }
     }
 );
