@@ -1010,6 +1010,327 @@ export const getInventoryDashboard = webMethod(Permissions.SiteMember, async (op
 });
 
 
+async function _completeManualInventoryMovement(journal, traceId) {
+    const payload = journal?.payload && typeof journal.payload === "object" ? journal.payload : {};
+    const {
+        movementToken,
+        stockKey,
+        productId,
+        variantId,
+        movementType,
+        quantityDelta,
+        stockBefore,
+        reason,
+        referenceId,
+    } = payload;
+    const existingMovement = await dalQuery(MOVEMENTS_COL)
+        .eq("movementToken", movementToken)
+        .limit(1)
+        .find(STRONG_READ);
+    const response = await withTimeout(
+        getStoreVariantElevated(`${productId}-${variantId}`),
+        API_TIMEOUT_MS,
+        "inventory.getStoreVariant.manual-reconcile"
+    );
+    const variant = response?.variant;
+    const stockOnHand = Number(variant?.stock?.quantity);
+    if (
+        !variant ||
+        variant.productId !== productId ||
+        variant.variantId !== variantId ||
+        !variant.stock?.trackQuantity ||
+        !Number.isSafeInteger(stockOnHand) ||
+        stockOnHand < 0
+    ) {
+        await _updateInventoryClaim(journal, "REPAIR_REQUIRED", { completionError: "NATIVE_STOCK_UNAVAILABLE" });
+        return { status: "ERROR", code: "INVENTORY_NATIVE_STOCK_UNAVAILABLE" };
+    }
+
+    const stock = await _findStockByKey(stockKey);
+    if (!stock) {
+        await _updateInventoryClaim(journal, "REPAIR_REQUIRED", { completionError: "MASTER_MAPPING_MISSING" });
+        return { status: "ERROR", code: "INVENTORY_MASTER_MAPPING_REQUIRED" };
+    }
+    const stockReserved = Number(stock.stockReserved || 0);
+    if (stockOnHand < stockReserved) {
+        await _updateInventoryClaim(journal, "REPAIR_REQUIRED", {
+            completionError: "NATIVE_STOCK_BELOW_RESERVATIONS",
+            observedStockOnHand: stockOnHand,
+            observedStockReserved: stockReserved,
+        });
+        return { status: "ERROR", code: "INVENTORY_STOCK_BELOW_RESERVATIONS" };
+    }
+
+    const now = new Date();
+    const updatedStock = {
+        ...stock,
+        stockOnHand,
+        stockAvailable: stockOnHand - stockReserved,
+        lastSyncAt: now,
+        traceId,
+        needsWixReconciliation: false,
+        _updatedDate: now,
+    };
+    await dalUpdate(STOCK_COL, updatedStock);
+
+    if (!existingMovement?.items?.length) {
+        const movement = {
+            recordTimestamp: now,
+            movementToken,
+            movementType,
+            sku: stock.sku,
+            quantityDelta,
+            traceId,
+            stockBefore,
+            stockAfter: stockOnHand,
+            reason,
+            referenceId: referenceId || null,
+            productId,
+            variantId,
+            stockKey,
+            catalogVersion: INVENTORY_CONFIG.CATALOG_VERSION,
+            catalogId: stock._id,
+            productName: stock.name,
+            magnitude: quantityDelta > 0 ? 1 : -1,
+            direction: quantityDelta > 0 ? "ENTRADA" : "SALIDA",
+            quantity: Math.abs(quantityDelta),
+            nativeCommercialMovement: false,
+            stockApplied: true,
+            requiresWixReconciliation: false,
+            _createdDate: now,
+        };
+        try {
+            await dalInsert(MOVEMENTS_COL, movement);
+        } catch (error) {
+            if (!_isDuplicate(error)) throw error;
+            const confirmed = await dalQuery(MOVEMENTS_COL)
+                .eq("movementToken", movementToken)
+                .limit(1)
+                .find(STRONG_READ);
+            if (!confirmed?.items?.length) throw error;
+        }
+    }
+
+    await _updateInventoryClaim(journal, "COMPLETED", {
+        completedAt: new Date().toISOString(),
+        nativeStockAfter: stockOnHand,
+        ledgerMovementToken: movementToken,
+    });
+    return {
+        status: "SUCCESS",
+        data: { movementToken, stockKey, stockOnHand, idempotent: Boolean(existingMovement?.items?.length) },
+    };
+}
+
+export const registerInventoryMovement = webMethod(Permissions.SiteMember, async (input = {}) => {
+    const traceId = _safeTrim(input?.traceId) || makeTraceId("inventory-movement");
+    let lock = null;
+    try {
+        const movementType = _safeTrim(input?.movementType).toUpperCase();
+        const movementToken = _safeTrim(input?.movementToken);
+        const stockKey = _safeTrim(input?.stockKey);
+        const quantityDelta = Number(input?.quantityDelta);
+        const reason = _safeTrim(input?.reason);
+        const referenceId = _safeTrim(input?.referenceId);
+        if (![INVENTORY_CONFIG.MOVEMENT_TYPE_RECEIPT, INVENTORY_CONFIG.MOVEMENT_TYPE_ISSUE, INVENTORY_CONFIG.MOVEMENT_TYPE_ADJUSTMENT].includes(movementType)) {
+            return _error("INVENTORY_MOVEMENT_TYPE_INVALID", "Tipo de movimiento manual no permitido.");
+        }
+        if (
+            movementToken.length < INVENTORY_CONFIG.MOVEMENT_TOKEN_MIN_LENGTH ||
+            movementToken.length > INVENTORY_CONFIG.MOVEMENT_TOKEN_MAX_LENGTH
+        ) {
+            return _error("INVENTORY_MOVEMENT_TOKEN_INVALID", "movementToken estable obligatorio (8-128 caracteres).");
+        }
+        if (!stockKey || stockKey.length > 200 || !Number.isSafeInteger(quantityDelta) || quantityDelta === 0) {
+            return _error("INVENTORY_MOVEMENT_INPUT_INVALID", "stockKey y quantityDelta entero distinto de cero son obligatorios.");
+        }
+        if (!reason || reason.length < 3 || reason.length > 500) {
+            return _error("INVENTORY_MOVEMENT_REASON_REQUIRED", "reason es obligatorio y debe tener entre 3 y 500 caracteres.");
+        }
+        if (movementType === INVENTORY_CONFIG.MOVEMENT_TYPE_RECEIPT && (quantityDelta <= 0 || !referenceId)) {
+            return _error("INVENTORY_RECEIPT_REFERENCE_REQUIRED", "ENTRADA_STOCK exige cantidad positiva y referencia de factura de proveedor.");
+        }
+        if (movementType === INVENTORY_CONFIG.MOVEMENT_TYPE_ISSUE && quantityDelta >= 0) {
+            return _error("INVENTORY_ISSUE_QUANTITY_INVALID", "SALIDA_STOCK exige cantidad negativa.");
+        }
+
+        await _rateLimitOrThrow("inventario.registerMovement", "staff");
+        if (movementType === INVENTORY_CONFIG.MOVEMENT_TYPE_ADJUSTMENT ||
+            movementType === INVENTORY_CONFIG.MOVEMENT_TYPE_ISSUE) {
+            await requireAdmin(traceId);
+        } else {
+            await requireCajero(traceId);
+        }
+
+        const digest = await hashSHA256(movementToken);
+        const journalId = `INV_TX_${digest.slice(0, 48)}`;
+        const priorMovement = await dalQuery(MOVEMENTS_COL)
+            .eq("movementToken", movementToken)
+            .limit(1)
+            .find(STRONG_READ);
+        if (priorMovement?.items?.length) {
+            return { status: "SUCCESS", data: priorMovement.items[0], error: null, idempotent: true };
+        }
+
+        const journalExisting = await dalGet(CONTROL_COL, journalId, "strong");
+        if (journalExisting?.status === "COMPLETED") {
+            return { status: "SUCCESS", data: journalExisting.payload, error: null, idempotent: true };
+        }
+        if (journalExisting?.status === "INTENT") {
+            await _updateInventoryClaim(journalExisting, "REPAIR_REQUIRED", {
+                completionError: "NATIVE_WRITER_OUTCOME_UNKNOWN",
+                requiresManualNativeStockReview: true,
+            });
+            return _error("INVENTORY_NATIVE_WRITER_RESULT_UNKNOWN", "La operacion nativa pudo haberse aplicado; no se repetira automaticamente.");
+        }
+        if (journalExisting?.status === "REPAIR_REQUIRED") {
+            return _error("INVENTORY_MOVEMENT_REPAIR_REQUIRED", "El movimiento requiere conciliacion manual; no se repetira la mutacion nativa.");
+        }
+
+        const stock = await _findStockByKey(stockKey);
+        if (!stock) return _error("INVENTORY_MASTER_MAPPING_REQUIRED", "No existe un maestro CMS para stockKey.");
+        const productId = _safeTrim(stock.productId || stock.wixProductId);
+        const variantId = _safeTrim(stock.variantId || stock.wixVariantId);
+        if (!isValidGuid(productId) || !isValidGuid(variantId)) {
+            return _error("INVENTORY_CATALOG_MAPPING_REQUIRED", "El maestro no esta vinculado a una variante nativa Wix.");
+        }
+        const lock = await _acquireStockLock(stockKey, productId, traceId);
+        const catalogVersion = await _getCatalogVersion();
+        if (catalogVersion !== INVENTORY_CONFIG.CATALOG_VERSION) {
+            await _releaseStockLock(lock);
+            return _error("INVENTORY_CATALOG_VERSION_MISMATCH", "La operacion solo admite Catalog V1.");
+        }
+
+        const nativeResponse = await withTimeout(
+            getStoreVariantElevated(`${productId}-${variantId}`),
+            API_TIMEOUT_MS,
+            "inventory.getStoreVariant.before-manual-movement"
+        );
+        const nativeVariant = nativeResponse?.variant;
+        const stockBefore = Number(nativeVariant?.stock?.quantity);
+        if (
+            !nativeVariant ||
+            nativeVariant.productId !== productId ||
+            nativeVariant.variantId !== variantId ||
+            !nativeVariant.stock?.trackQuantity ||
+            !Number.isSafeInteger(stockBefore) ||
+            stockBefore < 0
+        ) {
+            await _releaseStockLock(lock);
+            return _error("INVENTORY_NATIVE_STOCK_UNAVAILABLE", "No se puede verificar el stock nativo antes de modificarlo.");
+        }
+        const expectedAfter = stockBefore + quantityDelta;
+        if (expectedAfter < Number(stock.stockReserved || 0) || expectedAfter < 0) {
+            await _releaseStockLock(lock);
+            return _error("INVENTORY_ADJUSTMENT_BELOW_RESERVED", "El movimiento dejaría el stock por debajo de las reservas activas.");
+        }
+
+        const now = new Date();
+        const journalPayload = {
+            operation: "MANUAL_NATIVE_STOCK",
+            movementToken,
+            movementType,
+            stockKey,
+            productId,
+            variantId,
+            quantityDelta,
+            stockBefore,
+            expectedAfter,
+            reason,
+            referenceId: referenceId || null,
+            traceId,
+        };
+        const journal = await dalInsert(CONTROL_COL, {
+            _id: journalId,
+            controlType: CONTROL_TYPE.DEDUPE_KEY,
+            dedupeKey: "INVENTORY_MANUAL_MOVEMENT",
+            status: "INTENT",
+            payload: journalPayload,
+            traceId,
+            _createdDate: now,
+            _updatedDate: now,
+        });
+
+        try {
+            await _assertStockLock(lock);
+            if (quantityDelta > 0) {
+                await withTimeout(
+                    incrementInventoryElevated({
+                        incrementData: [{ productId, variantId, incrementBy: quantityDelta }],
+                    }),
+                    API_TIMEOUT_MS,
+                    "inventory.incrementInventory"
+                );
+            } else {
+                await withTimeout(
+                    decrementInventoryElevated({
+                        decrementData: [{ productId, variantId, decrementBy: Math.abs(quantityDelta) }],
+                    }),
+                    API_TIMEOUT_MS,
+                    "inventory.decrementInventory"
+                );
+            }
+        } catch (nativeError) {
+            await _updateInventoryClaim(journal, "REPAIR_REQUIRED", {
+                nativeOutcome: "UNKNOWN",
+                nativeError: nativeError?.message || "NATIVE_WRITER_FAILED",
+                requiresManualNativeStockReview: true,
+            });
+            return _error("INVENTORY_NATIVE_WRITER_RESULT_UNKNOWN", "Wix no confirmó el resultado; no se repetirá la mutacion para evitar duplicar stock.");
+        }
+
+        const appliedJournal = await _updateInventoryClaim(journal, "NATIVE_APPLIED", {
+            nativeOutcome: "APPLIED",
+            nativeAppliedAt: new Date().toISOString(),
+        });
+        const completed = await _completeManualInventoryMovement(appliedJournal, traceId);
+        if (completed.status !== "SUCCESS") {
+            return {
+                status: "PARTIAL",
+                data: null,
+                error: {
+                    code: "INVENTORY_MANUAL_MOVEMENT_COMPLETION_PENDING",
+                    message: "El stock nativo se actualizo; la proyeccion CMS/ledger requiere reconciliacion.",
+                    details: completed,
+                },
+            };
+        }
+        return { status: "SUCCESS", data: completed.data, error: null };
+    } catch (error) {
+        log.error("registerInventoryMovement failed", { traceId, error: error?.message, code: error?.code });
+        return _error(error?.code || "INVENTORY_MOVEMENT_FAILED", error?.message || "No se pudo registrar el movimiento.");
+    } finally {
+        if (lock) await _releaseStockLock(lock);
+    }
+});
+
+export const reconcilePendingInventoryMovements = webMethod(Permissions.SiteMember, async (options = {}) => {
+    const traceId = _safeTrim(options?.traceId) || makeTraceId("inventory-reconcile");
+    try {
+        await _rateLimitOrThrow("inventario.reconcileMovements", "admin");
+        await requireAdmin(traceId);
+        const limit = Math.min(
+            INVENTORY_CONFIG.REPAIR_PAGE_LIMIT,
+            Math.max(1, Math.floor(Number(options?.limit) || INVENTORY_CONFIG.REPAIR_PAGE_LIMIT))
+        );
+        const pending = await dalQuery(CONTROL_COL)
+            .eq("controlType", CONTROL_TYPE.DEDUPE_KEY)
+            .eq("dedupeKey", "INVENTORY_MANUAL_MOVEMENT")
+            .eq("status", "NATIVE_APPLIED")
+            .limit(limit)
+            .find(STRONG_READ);
+        const results = [];
+        for (const journal of pending?.items || []) {
+            const result = await _completeManualInventoryMovement(journal, traceId);
+            results.push({ journalId: journal._id, ...result });
+        }
+        return { status: "SUCCESS", data: { processed: results.length, results }, error: null };
+    } catch (error) {
+        log.error("reconcilePendingInventoryMovements failed", { traceId, error: error?.message });
+        return _error(error?.code || "INVENTORY_RECONCILIATION_FAILED", error?.message || "No se pudo reconciliar el inventario.");
+    }
+});
+
 export const getInventoryCatalogCandidates = webMethod(Permissions.SiteMember, async (options = {}) => {
     const traceId = _safeTrim(options?.traceId) || makeTraceId("inventory-candidates");
     try {
