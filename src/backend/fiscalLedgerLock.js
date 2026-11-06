@@ -13,20 +13,17 @@ import {
     insertItem as dalInsert,
     removeById as dalRemove,
 } from "backend/dataAccess";
-import { BUSINESS_COLLECTIONS, CONTROL_TYPE } from "backend/internalConfig";
+import { BUSINESS_COLLECTIONS, CONTROL_TYPE, FISCAL_LEDGER_LOCK_CONFIG } from "backend/internalConfig";
 import { makeTraceId } from "public/mmUtils";
 
 const CONTROL_COL = BUSINESS_COLLECTIONS.CONTROL_OPERATIVO;
-const LOCK_ID = "FISCAL_LEDGER_CHAIN_LOCK";
-const LOCK_DEDUPE_KEY = "FISCAL_LEDGER_HASH_SEQUENCE";
-const LOCK_TTL_MS = 10 * 60 * 1000;
-const DEFAULT_WAIT_MS = 3000;
-const POLL_MS = 100;
-
-// These UUIDs are reserved identifiers for the singleton fiscal-ledger lock.
-// They are not Wix service/resource IDs and are never sent to Bookings.
-const LOCK_SERVICE_ID = "00000000-0000-4000-8000-000000000001";
-const LOCK_RESOURCE_ID = "00000000-0000-4000-8000-000000000002";
+const LOCK_ID = FISCAL_LEDGER_LOCK_CONFIG.ID;
+const LOCK_DEDUPE_KEY = FISCAL_LEDGER_LOCK_CONFIG.DEDUPE_KEY;
+const LOCK_TTL_MS = FISCAL_LEDGER_LOCK_CONFIG.TTL_MS;
+const DEFAULT_WAIT_MS = FISCAL_LEDGER_LOCK_CONFIG.WAIT_MS;
+const POLL_MS = FISCAL_LEDGER_LOCK_CONFIG.POLL_MS;
+const LOCK_SERVICE_ID = FISCAL_LEDGER_LOCK_CONFIG.SERVICE_ID;
+const LOCK_RESOURCE_ID = FISCAL_LEDGER_LOCK_CONFIG.RESOURCE_ID;
 
 function _readPayload(item) {
     return item?.payload && typeof item.payload === "object" && !Array.isArray(item.payload)
