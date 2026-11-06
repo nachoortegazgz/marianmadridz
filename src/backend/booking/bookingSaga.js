@@ -76,6 +76,7 @@ import {
     _unlockSlotKey,
     _renewLock,
     _initTransaction,
+    updateBookingWriterIntent,
     _inspectTransactionReplay,
     _findExistingCitasForSlot,
     _completeTransaction,
@@ -1505,12 +1506,110 @@ export async function executeBookingSaga(unsafePayload) {
             traceId: traceId,
         });
 
+        const writerIntentCreatedAt = new Date();
+        const writerIntentCreatedDateFrom = new Date(writerIntentCreatedAt.getTime() - 120000).toISOString();
+        const writerIntentPaymentStatus = isOnline ? PAYMENT_STATUS_PENDING : PAYMENT_STATUS_NOT_PAID;
+        const writerIntentBookingStatus = isOnline ? BOOKING_STATUS_PENDING_PAYMENT : BOOKING_STATUS_CONFIRMED;
+        const f1StartUtcIntent = getUtcDateFromMadridLocal(f1LocalStart);
+        const f1EndUtcIntent = getUtcDateFromMadridLocal(f1LocalEnd);
+        const f2StartUtcIntent = isDual ? getUtcDateFromMadridLocal(f2LocalStart) : null;
+        const f2EndUtcIntent = isDual ? getUtcDateFromMadridLocal(f2LocalEnd) : null;
+        const writerIntentContext = {
+            schemaVersion: 1,
+            pairToken,
+            bookingType: isDual ? "DUAL" : "SIMPLE",
+            isDual,
+            createdAt: writerIntentCreatedAt.toISOString(),
+            paymentStatus: writerIntentPaymentStatus,
+            bookingStatus: writerIntentBookingStatus,
+            contactId: _looksLikeGuid(sessionContactId) ? sessionContactId : null,
+            contactEmail: _looksLikeGuid(sessionContactId) ? null : email,
+            privacyNoticeVersion: unsafePayload?.privacyNoticeVersion || null,
+            privacyNoticeAcceptedAt: unsafePayload?.privacyNoticeAcceptedAt || null,
+            privacyNoticePurpose: unsafePayload?.privacyNoticePurpose || null,
+            appointmentNote: appointmentNote || null,
+            addOnIds: detectedAddonIds,
+            channelType: isOnline ? CHANNEL_ONLINE : CHANNEL_PRESENCIAL,
+            amountSnapshot: {
+                totalAmount: amountSnapshot.totalAmount,
+                amountSource: amountSnapshot.amountSource,
+                amountReconciliationRequired: amountSnapshot.amountReconciliationRequired,
+                missingAddonIds: amountSnapshot.missingAddonIds,
+            },
+            phases: {
+                F1: {
+                    phase: "F1",
+                    status: "PREPARED",
+                    bookingType: isDual ? BOOKING_TYPE.DUAL_F1 : BOOKING_TYPE.SIMPLE,
+                    serviceId,
+                    scheduleId: _isGuidOrNull(validatedSlotF1?.scheduleId),
+                    resourceId: finalResourceId,
+                    startDate: f1StartUtcIntent?.toISOString() || null,
+                    endDate: f1EndUtcIntent?.toISOString() || null,
+                    createdDateFrom: writerIntentCreatedDateFrom,
+                    contactId: _looksLikeGuid(sessionContactId) ? sessionContactId : null,
+                    contactEmail: _looksLikeGuid(sessionContactId) ? null : email,
+                    totalAmount: amountSnapshot.totalAmount,
+                    paymentStatus: writerIntentPaymentStatus,
+                    bookingStatus: writerIntentBookingStatus,
+                    meta: {
+                        totalAmount: amountSnapshot.totalAmount,
+                        amountSource: amountSnapshot.amountSource,
+                        amountReconciliationRequired: amountSnapshot.amountReconciliationRequired,
+                        appointmentNote: appointmentNote || null,
+                        missingAddonIds: amountSnapshot.missingAddonIds,
+                        pairToken,
+                        pairTokenSource: tokenResolution.source,
+                        f1Start: f1LocalStart,
+                        f1End: f1LocalEnd,
+                        f2Start: f2LocalStart || null,
+                        f2End: f2LocalEnd || null,
+                        addOnIds: detectedAddonIds,
+                        channelType: isOnline ? CHANNEL_ONLINE : CHANNEL_PRESENCIAL,
+                        locationType: "OWNER_BUSINESS",
+                    },
+                },
+                ...(isDual ? {
+                    F2: {
+                        phase: "F2",
+                        status: "PREPARED",
+                        bookingType: BOOKING_TYPE.DUAL_F2,
+                        serviceId: linkedPhases,
+                        scheduleId: _isGuidOrNull(validatedSlotF2?.scheduleId),
+                        resourceId: finalResourceId,
+                        startDate: f2StartUtcIntent?.toISOString() || null,
+                        endDate: f2EndUtcIntent?.toISOString() || null,
+                        createdDateFrom: writerIntentCreatedDateFrom,
+                        contactId: _looksLikeGuid(sessionContactId) ? sessionContactId : null,
+                        contactEmail: _looksLikeGuid(sessionContactId) ? null : email,
+                        totalAmount: 0,
+                        paymentStatus: writerIntentPaymentStatus,
+                        bookingStatus: writerIntentBookingStatus,
+                        meta: {
+                            totalAmount: 0,
+                            amountSource: "INTERNAL_F2_NO_FEE",
+                            amountReconciliationRequired: false,
+                            appointmentNote: appointmentNote || null,
+                            pairToken,
+                            pairTokenSource: tokenResolution.source,
+                            linkedF1BookingId: null,
+                            addOnIds: detectedAddonIds,
+                            channelType: isOnline ? CHANNEL_ONLINE : CHANNEL_PRESENCIAL,
+                            noFee: true,
+                            locationType: "OWNER_BUSINESS",
+                        },
+                    },
+                } : {}),
+            },
+        };
+
         const txResult = await _initTransaction(
             pairToken,
             payloadHash,
             traceId,
             serviceId,
-            lockOwnerId
+            lockOwnerId,
+            writerIntentContext
         );
 
         if (txResult && txResult.success && txResult.isNew === true) {
@@ -1721,6 +1820,14 @@ export async function executeBookingSaga(unsafePayload) {
                     ? BOOKING_PAYMENT_OPTION_ONLINE
                     : BOOKING_PAYMENT_OPTION_OFFLINE;
 
+                const f1IntentStarted = await updateBookingWriterIntent(
+                    pairToken, "F1", "INTENT",
+                    { writerCallStartedAt: new Date().toISOString() },
+                    traceId
+                );
+                if (!f1IntentStarted?.ok) {
+                    throw createBookingError(ERROR_CODES.DATABASE_ERROR, "Could not persist F1 Writer intent", { traceId, phase: "F1" });
+                }
                 let resF1;
                 try {
                     resF1 = await _createBookingWithSelectiveElevation(
@@ -1753,6 +1860,14 @@ export async function executeBookingSaga(unsafePayload) {
                     status: f1Meta.status,
                     phase: "F1",
                 });
+                const f1IntentCompleted = await updateBookingWriterIntent(
+                    pairToken, "F1", "CREATED",
+                    { bookingId: f1Meta.bookingId, revision: f1Meta.revision, writerStatus: f1Meta.status, writerReturnedAt: new Date().toISOString() },
+                    traceId
+                );
+                if (!f1IntentCompleted?.ok) {
+                    throw createBookingError(ERROR_CODES.DATABASE_ERROR, "Could not persist F1 Writer result", { traceId, phase: "F1", uncertainStep: "CREATE_F1" });
+                }
                 _checkDoubleBookingFlag(bookingF1, "F1", traceId);
                 _assertBookingResourceMatches(bookingF1, "F1", finalResourceId, traceId);
 
@@ -1789,6 +1904,14 @@ export async function executeBookingSaga(unsafePayload) {
                         selectedPaymentOption: BOOKING_PAYMENT_OPTION_OFFLINE,
                     };
                     if (appointmentNote) bookingBodyF2.internalBusinessNote = appointmentNote;
+                    const f2IntentStarted = await updateBookingWriterIntent(
+                        pairToken, "F2", "INTENT",
+                        { writerCallStartedAt: new Date().toISOString() },
+                        traceId
+                    );
+                    if (!f2IntentStarted?.ok) {
+                        throw createBookingError(ERROR_CODES.DATABASE_ERROR, "Could not persist F2 Writer intent", { traceId, phase: "F2" });
+                    }
                     let resF2;
                     try {
                         resF2 = await _createBookingWithSelectiveElevation(
@@ -1821,6 +1944,14 @@ export async function executeBookingSaga(unsafePayload) {
                         status: f2Meta.status,
                         phase: "F2",
                     });
+                    const f2IntentCompleted = await updateBookingWriterIntent(
+                        pairToken, "F2", "CREATED",
+                        { bookingId: f2Meta.bookingId, revision: f2Meta.revision, writerStatus: f2Meta.status, writerReturnedAt: new Date().toISOString() },
+                        traceId
+                    );
+                    if (!f2IntentCompleted?.ok) {
+                        throw createBookingError(ERROR_CODES.DATABASE_ERROR, "Could not persist F2 Writer result", { traceId, phase: "F2", uncertainStep: "CREATE_F2" });
+                    }
                     _checkDoubleBookingFlag(bookingF2, "F2", traceId);
                     _assertBookingResourceMatches(bookingF2, "F2", finalResourceId, traceId);
                 }
@@ -1836,7 +1967,7 @@ export async function executeBookingSaga(unsafePayload) {
                 };
             },
             async function () {
-                await _compensateCreatedBookings(createdBookings, traceId);
+                await _compensateCreatedBookings(createdBookings, traceId, pairToken);
             }
         );
 
