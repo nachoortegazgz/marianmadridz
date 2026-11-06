@@ -8,6 +8,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, '..', '..', '..');
 const loaderUrl = pathToFileURL(join(here, 'loader.mjs')).href;
 const suites = [
+  'accountingLedger.writer.offline.test.mjs',
   'controlOperativo.hooks.test.mjs',
   'crons.jobsConfigParity.test.mjs',
   'data.hooks.test.mjs',
