@@ -10,6 +10,7 @@ const root = join(here, '..', '..', '..');
 const loaderUrl = pathToFileURL(join(here, 'loader.mjs')).href;
 const suites = [
   'citasManager.rate-limit-contract.test.mjs',
+  'citasManager.dual-reschedule-locking.test.mjs',
   'security.rateLimiter.test.mjs',
   'booking.cart-v2.checkout.test.mjs',
   'staff.identity.contract.test.mjs',
