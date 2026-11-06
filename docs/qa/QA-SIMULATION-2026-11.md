@@ -73,7 +73,7 @@ Lectura consistente de Wix Data Collections API (40 colecciones totales; 15 `NAT
 
 | Colección | Revisión | Campos retirados en la sesión |
 |---|---:|---|
-| `CitasF2` | 12 | `noShowReason`, `noShowAt`, `changeLog`, `cancellationReason`, `canceledAt`, `invoicingDate`, `fiscalData`, `sourceEventId` |
+| `CitasF2` | 17 (lectura final) | `noShowReason`, `noShowAt`, `changeLog`, `cancellationReason`, `canceledAt`, `invoicingDate`, `fiscalData`, `sourceEventId` |
 | `ComplementosCatalogo` | 3 | `traceId` |
 | `ControlOperativo` | 9 | `nextRetryAt`, `retryAfter` |
 
@@ -101,3 +101,13 @@ Total: 11 campos eliminados físicamente y verificados ausentes en lecturas post
 
 ### Seguridad de la simulación
 Todas las suites offline usan fixtures sintéticos y mocks. No se crean reservas, pagos, reembolsos, movimientos de caja/inventario, envíos externos ni despliegues. La evidencia de CI se consignará solo tras completar el workflow de la PR de esta auditoría.
+
+
+### Evidencia CI — run #172 (2026-11-06)
+- Run ID: `42149432291`; conclusión: `success`.
+- `npm test`: 366/366 pruebas, 39 suites, 0 fallos.
+- Layer 1: 207/207 pruebas, 12 suites, 0 fallos.
+- Layer 2: 116/116 pruebas, 12 suites, 0 fallos.
+- ESLint: success.
+- [Workflow run #172](https://github.com/nachoortegazgz/marianmadridz/actions/runs/42149432291).
+- Esto acredita suites offline con mocks, no navegador, checkout, proveedor de pagos, firma X.509 real ni envío AEAT.
