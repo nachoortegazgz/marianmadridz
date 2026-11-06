@@ -391,7 +391,7 @@ async function _rollbackSequenceAllocation(seq, traceId) {
         const seqDoc = await dalGet(CAJA_ACTUAL_COL, CASH_SEQ_ID, "strong");
         if (!seqDoc) return false;
         const counters = { ...(seqDoc.sequenceCounters || {}) };
-        const yearMatch = /^FAC-(\\d{4})-(\\d{5})$/.exec(_safeTrim(seq.numSerieFactura));
+        const yearMatch = /^FAC-(\d{4})-(\d{5})$/.exec(_safeTrim(seq.numSerieFactura));
         if (!yearMatch) return false;
         const yearKey = yearMatch[1];
         if (
