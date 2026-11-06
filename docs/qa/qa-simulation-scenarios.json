@@ -332,6 +332,33 @@
         "concept contains the exact simulation label"
       ],
       "limitation": "Only offline Wix Data mocks and a mock signer are used. No real X.509 signature, AEAT transmission, payment, CMS mutation or fiscal validity is established."
+    },
+    {
+      "scenarioId": "QA-FISCAL-FACSIMIL-CHAIN-001",
+      "name": "Serie, hash encadenado y firma ficticia FACSIMIL",
+      "status": "MOCK_COVERED",
+      "testFiles": [
+        "src/backend/tests/fiscalFacsimile.test.mjs"
+      ],
+      "traceId": "trace-qa-facsimil-chain-001",
+      "fixture": {
+        "seriesPrefix": "FACSIMIL-FAC",
+        "hashPrefix": "FACSIMIL-",
+        "signaturePrefix": "FACSIMIL-SIGNATURE-NOT-X509-",
+        "year": 2026,
+        "currency": "EUR",
+        "aeatSubmissionAllowed": false,
+        "verificationQR": null
+      },
+      "assertions": [
+        "global and annual synthetic sequence values form a FACSIMIL series",
+        "each FACSIMIL hash chains to the previous FACSIMIL hash",
+        "signature-shaped placeholder is explicitly NOT-X509",
+        "canonical payload tampering invalidates verification",
+        "real hexadecimal chain hashes are rejected as previous FACSIMIL hashes",
+        "AEAT submission and verification QR remain disabled"
+      ],
+      "limitation": "This isolated helper is not connected to registerManualTransaction or production CMS. It does not create a legal invoice, X.509 signature or AEAT-valid hash."
     }
   ]
 }
