@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-const { wixDataMock } = await import('./loader.mjs');
+const { wixDataMock, mocks } = await import('./loader.mjs');
 const IC = await import('backend/internalConfig.js');
 const { wixBookingsV2_onBookingCanceled } = await import('backend/events.js');
 
