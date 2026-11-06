@@ -52,6 +52,18 @@ mocks.sdk["@wix/stores::@wix/stores::inventory::decrementInventory"] = async (in
   nativeQuantity -= Number(input?.decrementData?.[0]?.decrementBy || 0);
   return {};
 };
+mocks.sdk["@wix/bookings::@wix/bookings::staffMembers::queryStaffMembers"] = async () => ({
+  staffMembers: [{
+    _id: "77777777-8888-4888-8888-777777777777",
+    name: "QA Admin",
+    resourceId: "e556070a-6d6a-402e-8422-11133033ea76",
+    associatedWixIdentity: {
+      connection: { status: "CONNECTED" },
+      identificationData: { contactId: "88888888-9999-4999-8999-888888888888" },
+    },
+    resource: { workingHoursSchedules: [{ _id: "66666666-7777-4888-8999-aaaaaaaaaaaa" }] },
+  }],
+});
 
 const INV = await import("backend/inventario.web.js");
 const STOCK_COL = IC.BUSINESS_COLLECTIONS.INVENTARIO_STOCK_VENTA;
@@ -86,6 +98,11 @@ function seed() {
   wixDataMock._reset();
   getStoreVariantCalls = 0;
   nativeQuantity = 6;
+  mocks.members._current = {
+    _id: "99999999-aaaa-4bbb-8ccc-dddddddddddd",
+    contactId: "88888888-9999-4999-8999-888888888888",
+    loginEmail: "admin@example.test",
+  };
   wixDataMock._seed(CONTROL_COL, []);
   wixDataMock._seed(MOVEMENTS_COL, []);
   wixDataMock._seed(STOCK_COL, [{
@@ -225,4 +242,35 @@ test("INVENTORY-REFUND-01 only explicit restock side effect creates a positive r
   assert.equal(returns[0].quantityDelta, 1);
   assert.equal(returns[0].refundId, "refund-001");
   assert.equal(wixDataMock._store.get(STOCK_COL)[0].stockOnHand, 9);
+});
+
+
+test("INVENTORY-MANUAL-01 supplier receipt increments Wix V1 atomically and writes one append-only movement", async () => {
+  seed();
+  nativeQuantity = 8;
+  const input = {
+    movementToken: "QA-RECEIPT-2026-001",
+    stockKey: STOCK_KEY,
+    movementType: "ENTRADA_STOCK",
+    quantityDelta: 3,
+    reason: "Factura proveedor QA-001",
+    referenceId: "FAC-PROV-QA-001",
+    traceId: "trace-manual-receipt-001",
+  };
+
+  const first = await INV.registerInventoryMovement(input);
+  const replay = await INV.registerInventoryMovement(input);
+
+  assert.equal(first.status, "SUCCESS");
+  assert.equal(replay.status, "SUCCESS");
+  assert.equal(nativeQuantity, 11);
+  assert.equal(wixDataMock._store.get(STOCK_COL)[0].stockOnHand, 11);
+  assert.equal(wixDataMock._store.get(STOCK_COL)[0].stockAvailable, 10);
+  const movements = wixDataMock._store.get(MOVEMENTS_COL);
+  assert.equal(movements.length, 1);
+  assert.equal(movements[0].movementType, "ENTRADA_STOCK");
+  assert.equal(movements[0].quantityDelta, 3);
+  assert.equal(movements[0].stockBefore, 8);
+  assert.equal(movements[0].stockAfter, 11);
+  assert.equal(movements[0].movementToken, input.movementToken);
 });
