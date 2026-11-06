@@ -76,6 +76,28 @@ test('HOOK-CMS-DATETIME-01 normalizes CitasF2 slot dates to Date objects', () =>
   assert.throws(() => H.CitasF2_beforeInsert({ ...item, slotStart: 'not-a-date' }), /DATETIME/);
 });
 
+test('HOOK-CMS-DATETIME-QA-01 binds conversion and guards to physical QA collection ID', () => {
+  const item = {
+    bookingId: '11111111-1111-4111-8111-111111111111',
+    bookingType: 'SIMPLE',
+    bookingStatus: 'PENDING',
+    paymentStatus: 'NOT_PAID',
+    traceId: 'trace-citas-qa-datetime',
+    slotStart: '2026-11-12T08:30:00.000Z',
+    slotEnd: '2026-11-12T09:00:00.000Z',
+  };
+  H.QA_LIVECMS_20261023_2000_BOOKING_DUAL_beforeInsert(item);
+  assert.ok(item.slotStart instanceof Date);
+  assert.ok(item.slotEnd instanceof Date);
+  assert.strictEqual(item.slotStart.toISOString(), '2026-11-12T08:30:00.000Z');
+  assert.strictEqual(item.slotEnd.toISOString(), '2026-11-12T09:00:00.000Z');
+
+  assert.throws(() => H.QA_LIVECMS_20261023_2000_BOOKING_DUAL_beforeInsert({
+    ...item, slotStart: 'not-a-date',
+  }), /DATETIME/);
+  assert.throws(() => H.QA_LIVECMS_20261023_2000_BOOKING_DUAL_beforeRemove({}), /cancelacion formal/);
+});
+
 test('HOOK-CMS-DATETIME-02 normalizes inventory DATETIME fields', () => {
   const stock = { stockOnHand: 4, stockReserved: 1, stockAvailable: 3, lastSyncAt: '2026-11-05T10:00:00.000Z' };
   H.InventarioStockVenta_beforeInsert(stock);
