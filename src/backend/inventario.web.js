@@ -1029,6 +1029,9 @@ async function _completeManualInventoryMovement(journal, traceId, existingLock =
         reason,
         referenceId,
     } = payload;
+    const lock = existingLock || await _acquireStockLock(stockKey, productId, traceId);
+    try {
+    await _assertStockLock(lock);
     const existingMovement = await dalQuery(MOVEMENTS_COL)
         .eq("movementToken", movementToken)
         .limit(1)
@@ -1052,9 +1055,6 @@ async function _completeManualInventoryMovement(journal, traceId, existingLock =
         return { status: "ERROR", code: "INVENTORY_NATIVE_STOCK_UNAVAILABLE" };
     }
 
-    const lock = existingLock || await _acquireStockLock(stockKey, productId, traceId);
-    try {
-    await _assertStockLock(lock);
     const stock = await _findStockByKey(stockKey);
     if (!stock) {
         await _updateInventoryClaim(journal, "REPAIR_REQUIRED", { completionError: "MASTER_MAPPING_MISSING" });
