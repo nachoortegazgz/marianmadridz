@@ -1961,6 +1961,7 @@ export async function wixEcom_onOrderCanceled(rawBody) {
         return { status: "OK", eventId };
     } catch (error) {
         _handleError(error, "wixEcom_onOrderCanceled", traceId);
+        if (String(error?.message || "").includes("INVENTORY_")) throw error;
         return { status: "OK" };
     }
 }
