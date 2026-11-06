@@ -297,6 +297,240 @@ async function _persistStockSnapshot(existing, stockKey, variant, lineItem, orde
     }
 }
 
+async function _inventoryClaimId(prefix, orderId, lineItemId) {
+    const digest = await hashSHA256(`${prefix}|${orderId}|${lineItemId}`);
+    return `INV_${prefix}_${digest.slice(0, 48)}`;
+}
+
+async function _updateInventoryClaim(claim, status, payloadPatch = {}) {
+    const payload = {
+        ...(claim?.payload && typeof claim.payload === "object" ? claim.payload : {}),
+        ...payloadPatch,
+        updatedAt: new Date().toISOString(),
+    };
+    return dalUpdate(CONTROL_COL, {
+        ...claim,
+        status,
+        payload,
+        _updatedDate: new Date(),
+    });
+}
+
+async function _queueInventoryRepair(order, lineItem, traceId, eventId, operation, reason) {
+    const orderId = _safeTrim(order?._id || order?.id);
+    const lineItemId = _safeTrim(lineItem?._id || lineItem?.id);
+    const digest = await hashSHA256(`REPAIR|${operation}|${orderId}|${lineItemId}`);
+    const repairId = `INV_REPAIR_${digest.slice(0, 48)}`;
+    const existing = await dalGet(CONTROL_COL, repairId, "strong");
+    if (existing) return { queued: true, repairId, duplicate: true };
+
+    const now = new Date();
+    const safeLineItem = {
+        _id: lineItemId,
+        quantity: Number(lineItem?.quantity),
+        catalogReference: lineItem?.catalogReference || null,
+        productName: lineItem?.productName || null,
+        taxDetails: lineItem?.taxDetails || null,
+    };
+    const record = {
+        _id: repairId,
+        controlType: CONTROL_TYPE.SYSTEM_FLAG,
+        dedupeKey: `INVENTORY_REPAIR:${operation}:${orderId}:${lineItemId}`,
+        status: "PENDING",
+        alertType: "INVENTORY_SYNC_REPAIR_REQUIRED",
+        severity: "ERROR",
+        message: "Una linea de inventario requiere conciliacion.",
+        payload: {
+            operation,
+            orderId,
+            lineItem: safeLineItem,
+            taxIncludedInPrices: typeof order?.taxIncludedInPrices === "boolean"
+                ? order.taxIncludedInPrices
+                : null,
+            eventId: _safeTrim(eventId) || null,
+            reason: String(reason || "UNKNOWN"),
+            attempts: 0,
+            queuedAt: now.toISOString(),
+        },
+        traceId,
+        _createdDate: now,
+        _updatedDate: now,
+    };
+    try {
+        await dalInsert(CONTROL_COL, record);
+        return { queued: true, repairId, duplicate: false };
+    } catch (error) {
+        if (!_isDuplicate(error)) throw error;
+        const confirmed = await dalGet(CONTROL_COL, repairId, "strong");
+        return { queued: Boolean(confirmed), repairId, duplicate: true };
+    }
+}
+
+async function _reserveOrderLine(order, lineItem, traceId, eventId) {
+    const validation = validateInventoryOrderLine(order?._id || order?.id, lineItem);
+    if (!validation.valid) {
+        return { status: "ERROR", code: "INVENTORY_ORDER_LINE_INVALID", errors: validation.errors };
+    }
+    const { orderId, lineItemId, productId, variantId, quantity } = validation.value;
+    const stockKey = _stockKey(productId, variantId);
+    const lock = await _acquireStockLock(stockKey, productId, traceId);
+    try {
+        const stock = await _findStockByKey(stockKey);
+        if (!stock) return { status: "ERROR", code: "INVENTORY_MASTER_MAPPING_REQUIRED", stockKey };
+
+        const claimId = await _inventoryClaimId("RESERVE", orderId, lineItemId);
+        let claim = await dalGet(CONTROL_COL, claimId, "strong");
+        if (claim?.status === "COMPLETED" || claim?.status === "RELEASED") {
+            return { status: "SUCCESS", data: { stockKey, idempotent: true, reservationStatus: claim.status } };
+        }
+        if (claim?.status === "REPAIR_REQUIRED") {
+            return { status: "ERROR", code: "INVENTORY_RESERVATION_REPAIR_REQUIRED", stockKey };
+        }
+
+        const currentReserved = Number(stock.stockReserved);
+        if (!Number.isSafeInteger(currentReserved) || currentReserved < 0) {
+            return { status: "ERROR", code: "INVENTORY_RESERVED_STOCK_INVALID", stockKey };
+        }
+        let before = currentReserved;
+        let after = currentReserved + quantity;
+        if (claim?.status === "PENDING") {
+            before = Number(claim.payload?.stockReservedBefore);
+            after = Number(claim.payload?.stockReservedAfter);
+            if (currentReserved === after) {
+                await _updateInventoryClaim(claim, "COMPLETED", { recoveredAfterSnapshotWrite: true });
+                return { status: "SUCCESS", data: { stockKey, idempotent: true, reservationStatus: "COMPLETED" } };
+            }
+            if (currentReserved !== before) {
+                await _updateInventoryClaim(claim, "REPAIR_REQUIRED", { observedStockReserved: currentReserved });
+                return { status: "ERROR", code: "INVENTORY_RESERVATION_STATE_AMBIGUOUS", stockKey };
+            }
+        } else {
+            if (after > Number(stock.stockOnHand)) {
+                return { status: "ERROR", code: "INVENTORY_RESERVATION_EXCEEDS_ON_HAND", stockKey };
+            }
+            const now = new Date();
+            claim = await dalInsert(CONTROL_COL, {
+                _id: claimId,
+                controlType: CONTROL_TYPE.DEDUPE_KEY,
+                dedupeKey: `INVENTORY_RESERVE:${orderId}:${lineItemId}`,
+                status: "PENDING",
+                payload: {
+                    operation: "RESERVE",
+                    orderId,
+                    lineItemId,
+                    stockKey,
+                    quantity,
+                    stockReservedBefore: before,
+                    stockReservedAfter: after,
+                    eventId: _safeTrim(eventId) || null,
+                },
+                traceId,
+                _createdDate: now,
+                _updatedDate: now,
+            });
+        }
+
+        await _assertStockLock(lock);
+        await dalUpdate(STOCK_COL, {
+            ...stock,
+            stockReserved: after,
+            stockAvailable: Number(stock.stockOnHand) - after,
+            traceId,
+            _updatedDate: new Date(),
+        });
+        await _updateInventoryClaim(claim, "COMPLETED", { completedAt: new Date().toISOString() });
+        return { status: "SUCCESS", data: { stockKey, stockReserved: after, idempotent: false } };
+    } finally {
+        await _releaseStockLock(lock);
+    }
+}
+
+async function _releaseOrderReservationUnderLock(stock, orderId, lineItemId, quantity, traceId) {
+    const reserveClaimId = await _inventoryClaimId("RESERVE", orderId, lineItemId);
+    let reserveClaim = await dalGet(CONTROL_COL, reserveClaimId, "strong");
+    if (!reserveClaim) return { status: "SUCCESS", data: { released: false, reason: "NO_RESERVATION" } };
+    if (reserveClaim.status === "RELEASED") return { status: "SUCCESS", data: { released: false, idempotent: true } };
+    if (reserveClaim.status === "REPAIR_REQUIRED") return { status: "ERROR", code: "INVENTORY_RESERVATION_REPAIR_REQUIRED" };
+
+    let currentReserved = Number(stock.stockReserved);
+    const reservedBefore = Number(reserveClaim.payload?.stockReservedBefore);
+    const reservedAfter = Number(reserveClaim.payload?.stockReservedAfter);
+    if (reserveClaim.status === "PENDING") {
+        if (currentReserved === reservedBefore) {
+            await _updateInventoryClaim(reserveClaim, "RELEASED", { releasedWithoutAppliedReservation: true });
+            return { status: "SUCCESS", data: { released: false, idempotent: true } };
+        }
+        if (currentReserved !== reservedAfter) {
+            await _updateInventoryClaim(reserveClaim, "REPAIR_REQUIRED", { observedStockReserved: currentReserved });
+            return { status: "ERROR", code: "INVENTORY_RESERVATION_STATE_AMBIGUOUS" };
+        }
+        reserveClaim = await _updateInventoryClaim(reserveClaim, "COMPLETED", { recoveredAfterSnapshotWrite: true });
+    }
+    if (reserveClaim.status !== "COMPLETED") {
+        return { status: "ERROR", code: "INVENTORY_RESERVATION_STATE_INVALID" };
+    }
+
+    const releaseClaimId = await _inventoryClaimId("RELEASE", orderId, lineItemId);
+    let releaseClaim = await dalGet(CONTROL_COL, releaseClaimId, "strong");
+    if (releaseClaim?.status === "COMPLETED") {
+        await _updateInventoryClaim(reserveClaim, "RELEASED", { releasedAt: new Date().toISOString() });
+        return { status: "SUCCESS", data: { released: true, idempotent: true } };
+    }
+    if (releaseClaim?.status === "REPAIR_REQUIRED") {
+        return { status: "ERROR", code: "INVENTORY_RESERVATION_RELEASE_REPAIR_REQUIRED" };
+    }
+
+    const after = Math.max(0, currentReserved - quantity);
+    if (currentReserved < quantity) {
+        await _updateInventoryClaim(reserveClaim, "REPAIR_REQUIRED", { observedStockReserved: currentReserved });
+        return { status: "ERROR", code: "INVENTORY_RESERVATION_UNDERFLOW" };
+    }
+    if (!releaseClaim) {
+        const now = new Date();
+        releaseClaim = await dalInsert(CONTROL_COL, {
+            _id: releaseClaimId,
+            controlType: CONTROL_TYPE.DEDUPE_KEY,
+            dedupeKey: `INVENTORY_RELEASE:${orderId}:${lineItemId}`,
+            status: "PENDING",
+            payload: {
+                operation: "RELEASE",
+                orderId,
+                lineItemId,
+                stockKey: stock.stockKey,
+                quantity,
+                stockReservedBefore: currentReserved,
+                stockReservedAfter: after,
+            },
+            traceId,
+            _createdDate: now,
+            _updatedDate: now,
+        });
+    } else if (releaseClaim.status === "PENDING") {
+        const before = Number(releaseClaim.payload?.stockReservedBefore);
+        const expected = Number(releaseClaim.payload?.stockReservedAfter);
+        if (currentReserved === expected) {
+            await _updateInventoryClaim(releaseClaim, "COMPLETED", { recoveredAfterSnapshotWrite: true });
+            await _updateInventoryClaim(reserveClaim, "RELEASED", { releasedAt: new Date().toISOString() });
+            return { status: "SUCCESS", data: { released: true, idempotent: true } };
+        }
+        if (currentReserved !== before) {
+            await _updateInventoryClaim(releaseClaim, "REPAIR_REQUIRED", { observedStockReserved: currentReserved });
+            return { status: "ERROR", code: "INVENTORY_RESERVATION_RELEASE_AMBIGUOUS" };
+        }
+    }
+
+    await dalUpdate(STOCK_COL, {
+        ...stock,
+        stockReserved: after,
+        stockAvailable: Number(stock.stockOnHand) - after,
+        traceId,
+        _updatedDate: new Date(),
+    });
+    await _updateInventoryClaim(releaseClaim, "COMPLETED", { completedAt: new Date().toISOString() });
+    await _updateInventoryClaim(reserveClaim, "RELEASED", { releasedAt: new Date().toISOString() });
+    return { status: "SUCCESS", data: { released: true, stockReserved: after } };
+}
+
 async function _syncPaidOrderLine(order, lineItem, traceId, eventId) {
     const validation = validateInventoryOrderLine(order?._id || order?.id, lineItem);
     if (!validation.valid) {
