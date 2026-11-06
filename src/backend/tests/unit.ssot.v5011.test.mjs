@@ -200,9 +200,9 @@ test('SSOT-08 ITEM_NATURE present', () => {
 import {readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
-test('SSOT-09 suppressAuth eliminated from crons/inventario/fiscalAggregator', () => {
+test('SSOT-09 suppressAuth eliminated from active backend modules', () => {
   const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-  for (const f of ['crons.js', 'inventario.web.js', 'fiscalAggregator.web.js']) {
+  for (const f of ['crons.js', 'fiscalAggregator.web.js']) {
     const src = readFileSync(resolve(root, f), 'utf8');
     assert.ok(!/suppressAuth\s*:/.test(src), `${f} reintroduced suppressAuth option`);
   }

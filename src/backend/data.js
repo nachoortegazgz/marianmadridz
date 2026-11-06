@@ -5,7 +5,7 @@ VERSION: v5016-ZERO-LEGACY
 REPO: https://github.com/nachoortegazgz/marianmadridz.git
 RESPONSIBILITY: Hooks de inmutabilidad, protecciones append-only y
                 validacion estricta de esquemas CMS.
-STANDARDS: G10 ASCII Strict. Cero suppressAuth. Cero alias. Cero legacy.
+STANDARDS: G10 ASCII Strict. Cero suppressAuth. Legacy input normalized at boundary; persisted fields canonical.
 =============================================================================
 */
 
@@ -244,7 +244,7 @@ const VALID_TAX_CODES = new Set([
 
 const VALID_EVENT_TYPES = new Set([
     "VENTA_LINEA", "COMPRA_LINEA", "CIERRE_Z",
-    "AJUSTE", "RECTIFICATIVA", "MOV_STOCK",
+    "AJUSTE", "RECTIFICATIVA",
 ]);
 
 const VALID_FISCAL_ROLES = new Set(["EMISOR", "RECEPTOR"]);
@@ -392,7 +392,7 @@ function _validateFiscalPayload(item) {
         // integridad valido (cadena verificada): un asiento ya firmado y
         // cuadrado no puede reescribirse, asi que su referencia operativa se
         // audita via verificador contra el ledger, no duplicando FKs.
-        // AJUSTE/MOV_STOCK son movimientos internos sin contraparte externa.
+        // AJUSTE es un movimiento interno sin contraparte externa.
         const sealedLedgerEntry = /^[0-9a-f]{64}$/i.test(readMovementHash(item));
         if (["VENTA_LINEA", "COMPRA_LINEA"].includes(eventType)) {
             if (!sealedLedgerEntry && !_isGuid(item.catalogId) && !_isGuid(item.thirdPartyId)) {
@@ -422,7 +422,7 @@ function _validateFiscalPayload(item) {
         }
     }
 
-    const isInternalAdjustment = eventType === "AJUSTE" || eventType === "MOV_STOCK";
+    const isInternalAdjustment = eventType === "AJUSTE";
     if (!isInternalAdjustment && !readMovementHash(item)) {
         _schemaError("hash obligatorio (cadena SHA-256)");
     }
@@ -737,116 +737,6 @@ export function DatosFiscales_beforeRemove(item) {
 }
 
 // =============================================================================
-// BLOQUE 13 - LIBRO ASIENTOS CONTABLES DETALLE (SSOT V2, v5011)
-// =============================================================================
-
-const VALID_LIBRO_ORIGEN_TIPOS = new Set([
-    "ASIENTOCONTABLE", "EVENTOSISTEMAFACTURACION",
-    "MOVIMIENTOCAJA", "CIERREZ", "RECTIFICATIVA",
-]);
-
-const LIBRO_LEGACY_WRITE_FIELDS = [
-    "entryHash", "fiscalPayloadSnapshot", "computerSystemId",
-    // MATRIZ v15 Bloque 2 (campos eliminados): debit/credit quedan erradicados
-    // por duplicidad; la partida doble se expresa con debitAmount/creditAmount.
-    "debit", "credit",
-];
-
-export function LibroAsientosContablesDetalle_beforeInsert(item) {
-    if (!item || typeof item !== "object") return item;
-
-    if (!_safeTrim(item.traceId)) _schemaError("traceId obligatorio en el libro definitivo (trazabilidad)");
-
-    // Legacy debit/credit are forbidden even when the rest of the AEAT
-    // extension is absent; otherwise missing canonical amounts mask the
-    // actual contract violation.
-    for (const legacyField of ["debit", "credit"]) {
-        if (item[legacyField] !== undefined && item[legacyField] !== null) {
-            _schemaError(`Campo legacy "${legacyField}" prohibido; use debitAmount/creditAmount canonicos`);
-        }
-    }
-
-    // MATRIZ v15: claves canonicas debitAmount/creditAmount (debit/credit
-    // erradicados por duplicidad; ver LIBRO_LEGACY_WRITE_FIELDS).
-    const debit = Number(item.debitAmount);
-    const credit = Number(item.creditAmount);
-    if (!Number.isFinite(debit)) {
-        _schemaError("debitAmount obligatorio (partida doble PGC: debe > 0)");
-    }
-    if (!Number.isFinite(credit)) {
-        _schemaError("creditAmount obligatorio (partida doble PGC: debe > 0)");
-    }
-    if (Number.isFinite(debit) && Number.isFinite(credit) && Math.abs(debit - credit) > 0.005) {
-        _schemaError(`Partida descuadrada: debitAmount (${debit}) != creditAmount (${credit}) (PGC cuadre estricto)`);
-    }
-
-    // CMS requires the origin and source hashes for every accounting row.
-    // These are accounting provenance fields, not proof that an AEAT snapshot
-    // was attached. Fiscal snapshot validation is conditional on its presence.
-    for (const legacyField of LIBRO_LEGACY_WRITE_FIELDS) {
-        if (item[legacyField] !== undefined && item[legacyField] !== null) {
-            _schemaError(`Campo legacy "${legacyField}" prohibido en escrituras nuevas; use su equivalente canonico SSOT V2`);
-        }
-    }
-
-    const origenTipo = _safeTrim(item.origenTipo);
-    if (!origenTipo || !VALID_LIBRO_ORIGEN_TIPOS.has(origenTipo)) {
-        _schemaError("origenTipo obligatorio y valido (ASIENTOCONTABLE, EVENTOSISTEMAFACTURACION, MOVIMIENTOCAJA, CIERREZ, RECTIFICATIVA)");
-    }
-    if (!_safeTrim(item.origenRegistro)) _schemaError("origenRegistro obligatorio");
-    if (!_safeTrim(item.sourceMovementId)) _schemaError("sourceMovementId obligatorio");
-    if (!/^[a-f0-9]{64}$/i.test(_safeTrim(item.recordHash))) {
-        _schemaError("recordHash obligatorio (SHA-256 de 64 caracteres hexadecimales)");
-    }
-    if (!/^[a-f0-9]{64}$/i.test(_safeTrim(item.previousRecordHash))) {
-        _schemaError("previousRecordHash obligatorio (SHA-256 de 64 caracteres hexadecimales)");
-    }
-    for (const requiredField of ["entryId", "entryDate", "fiscalPeriod", "accountCode", "concept"]) {
-        if (!_safeTrim(item[requiredField])) {
-            _schemaError(`${requiredField} obligatorio en LibroAsientosContablesDetalle`);
-        }
-    }
-    if (!Number.isInteger(Number(item.lineNumber)) || Number(item.lineNumber) < 1) {
-        _schemaError("lineNumber obligatorio y debe ser entero positivo");
-    }
-    if (!item.recordTimestamp) _schemaError("recordTimestamp obligatorio");
-
-    const hasFiscalSnapshot = item.payloadFiscal !== undefined && item.payloadFiscal !== null;
-    if (hasFiscalSnapshot || item.desgloseDetallado !== undefined && item.desgloseDetallado !== null) {
-        const pf = item.payloadFiscal;
-        if (!pf || typeof pf !== "object" || Array.isArray(pf)) {
-            _schemaError("payloadFiscal obligatorio cuando se incluye desglose AEAT");
-        }
-        if (_safeTrim(pf.numSerieFactura) === "" && _safeTrim(pf.descripcionOperacion) === "") {
-            _schemaError("payloadFiscal exige al menos numSerieFactura o descripcionOperacion");
-        }
-
-        const breakdown = item.desgloseDetallado ?? pf.desgloseDetallado;
-        if (breakdown !== undefined && breakdown !== null && !Array.isArray(breakdown)) {
-            _schemaError("desgloseDetallado debe ser un array (claves AEAT en espanol)");
-        }
-
-        if (_safeTrim(item.idSistemaInformatico) === "" && _safeTrim(pf.sistemaInformatico?.idSistemaInformatico) === "") {
-            _schemaError("idSistemaInformatico obligatorio cuando se incluye payloadFiscal");
-        }
-    }
-
-    if (item.bookingId !== undefined && item.bookingId !== null && !_isGuid(item.bookingId)) _schemaError("bookingId debe ser un GUID valido");
-    if (item.orderId !== undefined && item.orderId !== null && !_isGuid(item.orderId)) _schemaError("orderId debe ser un GUID valido");
-    if (item.resourceId !== undefined && item.resourceId !== null && !_isGuid(item.resourceId)) _schemaError("resourceId debe ser un GUID valido");
-
-    return item;
-}
-
-export function LibroAsientosContablesDetalle_beforeUpdate() {
-    _fiscalError("Modificacion de LibroAsientosContablesDetalle prohibida (append-only). Use una linea RECTIFICATIVA.");
-}
-
-export function LibroAsientosContablesDetalle_beforeRemove() {
-    _fiscalError("Borrado de LibroAsientosContablesDetalle prohibido: registro contable append-only (PGC / Ley 11/2021)");
-}
-
-// =============================================================================
 // BLOQUE 14 - DATOS FISCALES: singleton CONFIG_SISTEMA (SSOT V2, v5011)
 // =============================================================================
 
@@ -957,95 +847,6 @@ export function ControlOperativo_beforeUpdate(item, context) {
 export function ControlOperativo_beforeRemove(item) {
     if (APPEND_ONLY_CONTROL_TYPES.has(item?.controlType)) {
         _fiscalError(`ControlOperativo/${item.controlType} es append-only: borrado prohibido`);
-    }
-    return item;
-}
-
-// =============================================================================
-// BLOQUE 15 - MOVIMIENTOS INVENTARIO (APPEND-ONLY LEDGER)
-// =============================================================================
-
-const VALID_MOV_INVENTARIO_TYPES = new Set([
-    "VENTA", "DEVOLUCION", "AJUSTE", "ENTRADA_STOCK", "SALIDA_STOCK", "TRANSFERENCIA",
-]);
-
-export function MovimientosInventario_beforeInsert(item) {
-    if (!item || typeof item !== "object") return item;
-    _normalizeCmsDateTime(item, "recordTimestamp");
-
-    if (!_safeTrim(item.traceId)) _schemaError("traceId obligatorio en MovimientosInventario (trazabilidad)");
-    if (!_safeTrim(item.movementToken)) _schemaError("movementToken obligatorio (clave de idempotencia)");
-    const movementType = _safeTrim(item.movementType).toUpperCase();
-    if (!movementType || !VALID_MOV_INVENTARIO_TYPES.has(movementType)) _schemaError("movementType obligatorio y valido");
-    if (movementType === "AJUSTE" && !_safeTrim(item.reason)) _schemaError("reason obligatorio cuando movementType=AJUSTE");
-    if (item.quantity === undefined || !Number.isFinite(Number(item.quantity))) _schemaError("quantity obligatorio y numerico");
-    const catalogVersion = _safeTrim(item.catalogVersion);
-    if (catalogVersion) {
-        if (!["V1_CATALOG", "V3_CATALOG"].includes(catalogVersion)) _schemaError("catalogVersion invalido en MovimientosInventario");
-        if (!_safeTrim(item.stockKey) || !_safeTrim(item.productId) || !_safeTrim(item.variantId)) {
-            _schemaError("Identidad de variante Wix incompleta: productId/variantId son las claves oficiales de Wix Stores");
-        }
-        if (catalogVersion === "V3_CATALOG" && !_safeTrim(item.locationId)) {
-            _schemaError("locationId obligatorio en movimientos Catalog V3");
-        }
-        if (catalogVersion === "V1_CATALOG" && _safeTrim(item.locationId)) {
-            _schemaError("locationId no se utiliza en movimientos Catalog V1");
-        }
-    }
-    if (item.stockApplied !== undefined && typeof item.stockApplied !== "boolean") {
-        _schemaError("stockApplied debe ser booleano");
-    }
-
-    return item;
-}
-
-export function MovimientosInventario_beforeUpdate() {
-    _fiscalError("Modificacion de MovimientosInventario prohibida: ledger append-only. Use un movimiento rectificativo.");
-}
-
-export function MovimientosInventario_beforeRemove() {
-    _fiscalError("Borrado de MovimientosInventario prohibido: ledger append-only.");
-}
-
-// =============================================================================
-// BLOQUE 16 - INVENTARIO STOCK VENTA (INVARIANTE DE ALMACEN)
-// =============================================================================
-
-export function InventarioStockVenta_beforeInsert(item) { return _validateInventarioStockVenta(item); }
-export function InventarioStockVenta_beforeUpdate(item) { return _validateInventarioStockVenta(item); }
-
-function _validateInventarioStockVenta(item) {
-    if (!item || typeof item !== "object") return item;
-    _normalizeCmsDateTime(item, "lastSyncAt");
-
-    const catalogVersion = _safeTrim(item.catalogVersion);
-    if (catalogVersion) {
-        if (!["V1_CATALOG", "V3_CATALOG"].includes(catalogVersion)) {
-            _schemaError("catalogVersion debe ser V1_CATALOG o V3_CATALOG");
-        }
-        if (!_safeTrim(item.stockKey) || !_safeTrim(item.productId) || !_safeTrim(item.variantId)) {
-            _schemaError("stockKey, productId y variantId son obligatorios para inventario vinculado a Wix Stores");
-        }
-        if (catalogVersion === "V3_CATALOG" && !_safeTrim(item.locationId)) {
-            _schemaError("locationId obligatorio para inventario Catalog V3");
-        }
-        if (catalogVersion === "V1_CATALOG" && _safeTrim(item.locationId)) {
-            _schemaError("locationId no se utiliza en Catalog V1");
-        }
-    }
-
-    const onHand = Number(item.stockOnHand) || 0;
-    const reserved = Number(item.stockReserved) || 0;
-    if (onHand < 0 || reserved < 0) _schemaError("stockOnHand y stockReserved no pueden ser negativos");
-
-    if (item.stockAvailable === undefined || item.stockAvailable === null) {
-        item.stockAvailable = Math.max(0, onHand - reserved);
-    } else {
-        const available = Number(item.stockAvailable);
-        if (available < 0) _schemaError("stockAvailable no puede ser negativo");
-        if (Math.abs(available - (onHand - reserved)) > 0.001) {
-            _schemaError("Invariante de stock violada: stockAvailable debe ser igual a stockOnHand - stockReserved");
-        }
     }
     return item;
 }

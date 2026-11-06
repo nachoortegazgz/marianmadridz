@@ -4,7 +4,6 @@ import { readFileSync } from "node:fs";
 
 const auditSource = readFileSync(new URL("../audit.js", import.meta.url), "utf8");
 const cronSource = readFileSync(new URL("../crons.js", import.meta.url), "utf8");
-const inventorySource = readFileSync(new URL("../inventario.web.js", import.meta.url), "utf8");
 
 test("operational alerts have one centralized, deduplicated writer", () => {
   assert.match(auditSource, /export async function notifyOperationalAlert/);
@@ -27,18 +26,4 @@ test("audit write paths share one persistence implementation", () => {
   assert.match(auditSource, /async function _persistAuditRecord/);
   assert.match(auditSource, /await _persistAuditRecord\(record\);/);
   assert.match(auditSource, /await _persistAuditRecord\(record, "audit_insert"\);/);
-});
-
-test("inventory reconciliation remains a work queue; variant mutex is a lock", () => {
-  assert.match(inventorySource, /controlType: CONTROL_TYPE\.ALERT,[\s\S]{0,100}alertType,/);
-  assert.match(inventorySource, /controlType: CONTROL_TYPE\.SLOT_LOCK,[\s\S]{0,100}dedupeKey: stockKey/);
-  assert.doesNotMatch(
-    inventorySource.slice(
-      inventorySource.indexOf("async function acquireInventoryVariantLock"),
-      inventorySource.indexOf("async function releaseInventoryVariantLock"),
-    ),
-    /alertType:|severity:|message:/,
-    "a mutex must not carry alert presentation fields",
-  );
-  assert.match(inventorySource, /const CONTROL_COL = OPERATIONAL_COLLECTIONS\.CONTROL_OPERATIVO/);
 });

@@ -3,9 +3,9 @@
 MODULE: backend/cajas.web.js
 VERSION: v5016-ZERO-LEGACY
 REPO: https://github.com/nachoortegazgz/marianmadridz.git
-RESPONSIBILITY: TPV cashier ledger, daily closures, Veri*factu SHA-256
-                chain integrity, fiscal persistence and PGC projection.
-STANDARDS: G10 ASCII Strict. Cero suppressAuth. Cero alias. Cero legacy.
+RESPONSIBILITY: cashier fiscal ledger, daily Z closures, Veri*factu SHA-256
+                chain integrity and fiscal persistence.
+STANDARDS: G10 ASCII Strict. Cero suppressAuth. Campos persistidos canonicos; alias ONLINE solo se normaliza en entrada.
 =============================================================================
 */
 
@@ -88,9 +88,7 @@ const VAT_ACCRUAL_APLICACION_ANTICIPO = "APLICACION_ANTICIPO";
 const MOVIMIENTOS_CAJA_COL = BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA;
 const CAJA_ACTUAL_COL = BUSINESS_COLLECTIONS.CAJA_ACTUAL;
 const HISTORICO_CIERRES_Z_COL = BUSINESS_COLLECTIONS.HISTORICO_CIERRES_Z;
-const SERVICIOS_CATALOGO_COL = BUSINESS_COLLECTIONS.SERVICIOS_CATALOGO;
 const CONTROL_OPERATIVO_COL = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
-const LIBRO_ASIENTOS_CONTABLES_DETALLE_COL = BUSINESS_COLLECTIONS.LIBRO_ASIENTOS_CONTABLES_DETALLE;
 
 const LEDGER_SCHEMA_VERSION = "LEDGER_V5_FISCAL";
 const GENESIS_HASH = "0".repeat(64);
@@ -115,7 +113,7 @@ const ONLINE_PAYMENT_METHODS = Object.freeze([
     LEGACY_ONLINE_ALIAS,
 ]);
 
-export function normalizeLegacyPaymentMethod(raw) {
+function normalizeLegacyPaymentMethod(raw) {
     const v = _safeTrim(raw).toUpperCase();
     if (v === LEGACY_ONLINE_ALIAS) return PAYMENT_METHOD.WIX_PAYMENTS;
     return v;
@@ -193,7 +191,7 @@ async function _queueCompensation(params) {
     await dalInsert(CONTROL_OPERATIVO_COL, record);
 }
 
-export async function validateFiscalConfig(traceId = "init") {
+async function validateFiscalConfig(traceId = "init") {
     const key = await _getCachedSecret(SECRETS.FISCAL_KEY);
     const nif = await _getCachedSecret(SECRETS.FISCAL_NIF_EMISOR);
     if (!key || key.length < 32) {
@@ -456,76 +454,6 @@ function _resolveFiscalBase({ amount, taxRate, withholdingBase, irpfWithholdingA
 }
 
 // ============================================================================
-// PROYECCION CONTABLE PGC (LibroAsientosContablesDetalle)
-// ============================================================================
-
-async function _projectToAccountingLedger(movement, traceId) {
-    if (!LIBRO_ASIENTOS_CONTABLES_DETALLE_COL) return null;
-
-    const movementId = _safeTrim(movement?._id);
-    if (!movementId) {
-        throw new Error("ACCOUNTING_SOURCE_MOVEMENT_ID_REQUIRED");
-    }
-
-    const totalAmount = Math.abs(Number(movement.accountingAmount || movement.totalAmount) || 0);
-    if (totalAmount <= 0) return null;
-
-    const entryId = `ASIENTO_${movementId}`;
-    const existing = await dalGet(LIBRO_ASIENTOS_CONTABLES_DETALLE_COL, entryId, "strong").catch(() => null);
-    if (existing) return existing;
-
-    const method = _safeTrim(movement.paymentMethod).toUpperCase();
-    const accountCode = (method === PAYMENT_METHOD.EFECTIVO) ? "570000" : "572000";
-    const entryDate = movement.fechaOperacion || movement.fechaExpedicionFactura ||
-        new Date().toISOString().slice(0, 10);
-    const linkedBookingIds = Array.isArray(movement.linkedBookingIds)
-        ? movement.linkedBookingIds.map(_safeTrim).filter(Boolean)
-        : _safeTrim(movement.linkedBookingIds)
-            ? _safeTrim(movement.linkedBookingIds).split(",").map((value) => _safeTrim(value)).filter(Boolean)
-            : [];
-
-    const entry = {
-        _id: entryId,
-        entryId,
-        lineNumber: 1,
-        entryDate,
-        fiscalPeriod: movement.fiscalPeriod || entryDate.slice(0, 7),
-        accountCode,
-        concept: movement.operationDescription || "Cobro TPV",
-        debitAmount: totalAmount,
-        creditAmount: totalAmount,
-        accountingAmount: totalAmount,
-        cashMovementId: movementId,
-        sourceMovementId: movementId,
-        origenTipo: "MOVIMIENTOCAJA",
-        origenRegistro: MOVIMIENTOS_CAJA_COL,
-        recordHash: movement.hash || GENESIS_HASH,
-        previousRecordHash: movement.previousRecordHash || GENESIS_HASH,
-        bookingId: linkedBookingIds.length === 1 &&
-            /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(linkedBookingIds[0])
-                ? linkedBookingIds[0]
-                : null,
-        orderId: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(_safeTrim(movement.orderId))
-            ? _safeTrim(movement.orderId)
-            : null,
-        resourceId: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(_safeTrim(movement.staffResourceId || movement.resourceId))
-            ? _safeTrim(movement.staffResourceId || movement.resourceId)
-            : null,
-        recordTimestamp: movement.recordTimestamp || new Date(),
-        traceId: movement.traceId || traceId,
-        _createdDate: new Date(),
-    };
-
-    try {
-        return await dalInsert(LIBRO_ASIENTOS_CONTABLES_DETALLE_COL, entry);
-    } catch (error) {
-        const recovered = await dalGet(LIBRO_ASIENTOS_CONTABLES_DETALLE_COL, entryId, "strong").catch(() => null);
-        if (recovered) return recovered;
-        throw error;
-    }
-}
-
-// ============================================================================
 // REGISTER MANUAL TRANSACTION
 // ============================================================================
 
@@ -643,7 +571,6 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
                 log.info("Ledger idempotent duplicate detected", { transactionId, traceId });
                 const cashProjection = await _updateCajaActual(existingRes.items[0], traceId);
                 // Retry projection if the fiscal movement survived a prior partial attempt.
-                await _projectToAccountingLedger(existingRes.items[0], traceId);
                 if (cashProjection?.status !== "SUCCESS") {
                     return {
                         status: "PARTIAL",
@@ -842,21 +769,6 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
 
         const saved = await dalInsert(MOVIMIENTOS_CAJA_COL, movement);
         const cashProjection = await _updateCajaActual(saved, traceId);
-        try {
-            await _projectToAccountingLedger(saved, traceId);
-        } catch (projectionError) {
-            log.error("Accounting projection failed after fiscal ledger insert", {
-                traceId,
-                movementId: saved?._id,
-                error: projectionError?.message,
-            });
-            return {
-                status: "PARTIAL",
-                data: saved,
-                error: { code: "ACCOUNTING_PROJECTION_PENDING", message: "Movimiento fiscal persistido; asiento contable requiere reconciliacion." },
-                cashProjectionStatus: cashProjection?.status || "UNKNOWN",
-            };
-        }
         if (cashProjection?.status !== "SUCCESS") {
             return {
                 status: "PARTIAL",
@@ -866,7 +778,7 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
             };
         }
 
-        return { status: "SUCCESS", data: saved, error: null, cashProjectionStatus: "SUCCESS", accountingProjectionStatus: "SUCCESS" };
+        return { status: "SUCCESS", data: saved, error: null, cashProjectionStatus: "SUCCESS" };
     } catch (err) {
         const norm = normalizeError(err);
         log.error("registerManualTransaction failed", { code: norm.code, error: norm.message, traceId });
@@ -1391,298 +1303,6 @@ export async function verifyFiscalHashChainIntegrity(options = {}) {
         return { status: "ERROR", data: null, error: { code: "AUDIT_FAIL", message: err.message } };
     }
 }
-
-// ============================================================================
-// FLUJO TARJETAS REGALO
-// ============================================================================
-
-export const registerGiftCardSale = webMethod(Permissions.SiteMember, async (payload) => {
-    const traceId = payload?.traceId || makeTraceId("gc-sale");
-    try {
-        await requireCajero(traceId);
-        await validateFiscalConfig(traceId);
-        const { nifEmisor } = await _getFiscalKeys();
-
-        const giftCardId = _safeTrim(payload?.giftCardId);
-        if (!giftCardId) {
-            return { status: "ERROR", data: null, error: { code: "INVALID_GIFT_CARD", message: "giftCardId requerido" } };
-        }
-
-        const totalAmount = _readPositiveAmount(payload?.totalAmount);
-        if (!totalAmount) {
-            return { status: "ERROR", data: null, error: { code: "INVALID_AMOUNT", message: "Importe positivo requerido" } };
-        }
-
-        const paymentMethod = normalizeLegacyPaymentMethod(payload?.paymentMethod);
-        if (!Object.values(PAYMENT_METHOD).includes(paymentMethod)) {
-            return { status: "ERROR", data: null, error: { code: "INVALID_PAYMENT_METHOD", message: "Forma de pago invalida" } };
-        }
-
-        const existingRes = await dalQuery(MOVIMIENTOS_CAJA_COL)
-            .eq("transactionId", `GC_SALE-${giftCardId}`)
-            .limit(1)
-            .find(STRONG_READ);
-
-        if (existingRes?.items?.length > 0) {
-            return { status: "SUCCESS", data: existingRes.items[0], error: null, idempotent: true };
-        }
-
-        const operationDate = new Date().toLocaleDateString("sv-SE", { timeZone: SDK_CONFIG?.TZ || "Europe/Madrid" });
-        await _assertPeriodNotClosed(operationDate, traceId);
-
-        const seq = await _getNextSequence(traceId);
-        const lastMovement = await _getLastMovement();
-        const previousRecordHash = lastMovement?.hash || GENESIS_HASH;
-        const generatedAt = new Date();
-
-        const baseMovement = {
-            sequenceNumber: seq.sequenceNumber,
-            numSerieFactura: seq.numSerieFactura,
-            fechaExpedicionFactura: operationDate,
-            // MATRIZ v15 (decision de usuario): amount y totalAmount COEXISTEN
-            // como claves canonicas propias hasta cerrar el ADR de la formula
-            // fiscal. amount = importe base; totalAmount = total cobrado con
-            // impuestos (venta GC sin desglose: taxBase == totalAmount).
-            fechaOperacion: operationDate,
-            fiscalPeriod: operationDate.slice(0, 7),
-            movementType: MOVEMENT_TYPE.VENTA_TARJETA_REGALO,
-            paymentMethod,
-            amount: totalAmount,
-            totalAmount: totalAmount,
-            taxBase: totalAmount,
-            taxAmount: 0,
-            tipoImpositivo: 0,
-            accountingSign: 1,
-            accountingAmount: totalAmount,
-            operationDescription: `Venta tarjeta regalo ${giftCardId}`,
-            lineItems: [],
-            nifEmisor,
-            schemaVersion: LEDGER_SCHEMA_VERSION,
-            projectionStatus: "PROYECTADO",
-            recordSource: "POS",
-            staffResourceId: _safeTrim(payload?.staffResourceId) || _safeTrim(payload?.resourceId) || "CAJA_LOCAL",
-            linkedBookingIds: null,
-            transactionId: `GC_SALE-${giftCardId}`,
-            orderId: null, refundId: null,
-            giftCardId, giftCardOperation: "SALE",
-            customerEmail: payload?.customerEmail || null,
-
-            nifDestinatario: _safeTrim(payload?.nifDestinatario) || null,
-            recipientLegalName: _cleanText(payload?.recipientLegalName || "", 200) || null,
-            isB2B: false,
-            withholdingBase: 0,
-            irpfWithholdingRate: 0,
-            irpfWithholdingAmount: 0,
-            fiscalRole: FISCAL_ROLE.EMISOR,
-            surchargeRate: 0,
-            surchargeAmount: 0,
-            linkedAdvanceId: null,
-            vatAccrualStatus: VAT_ACCRUAL_ANTICIPADO,
-            bankReconciliationReference: _safeTrim(payload?.bankReconciliationReference) || null,
-            tipoFactura: TIPO_FACTURA.F2,
-            correctionReason: null,
-            previousInvoiceId: null,
-            issuerInvoiceNumber: null,
-        };
-
-        const aeatPayload = _buildAEATPayload({ ...baseMovement, previousRecordHash }, generatedAt);
-        const movementHash = await _computeCurrentHash(previousRecordHash, aeatPayload);
-
-        let digitalSignature;
-        try {
-            digitalSignature = await _computeSignature(movementHash, traceId);
-        } catch (signErr) {
-            await queueFiscalRecovery({
-                transactionId: baseMovement.transactionId, totalAmount: totalAmount, paymentMethod,
-                operationDescription: baseMovement.operationDescription, movementType: baseMovement.movementType,
-                phase: "WAIT_FOR_SIGNER", origin: "FISCAL_SIGNER_DOWN", traceId,
-                lastError: signErr?.message || "FISCAL_SIGN_FAIL",
-            });
-            return {
-                status: "SUCCESS",
-                data: { ...baseMovement, previousRecordHash, hash: movementHash, pendingSignature: true, queued: true },
-                error: null,
-            };
-        }
-
-        const verificationQR = _generateVerificationQR(baseMovement.numSerieFactura, nifEmisor, operationDate, totalAmount);
-
-        const movement = {
-            ...baseMovement,
-            previousRecordHash, hash: movementHash, digitalSignature, aeatPayload, verificationQR,
-            hashAlgorithm: "SHA-256",
-            signatureAlgorithm: "RSASSA-PKCS1-v1_5-SHA-256",
-            recordTimestamp: generatedAt,
-            traceId,
-            _createdDate: new Date(),
-        };
-
-        const saved = await dalInsert(MOVIMIENTOS_CAJA_COL, movement);
-        await _updateCajaActual(saved, traceId);
-        await _projectToAccountingLedger(saved, traceId);
-
-        await logAuditEvent("GIFT_CARD_SOLD", "INFO", `Tarjeta regalo vendida: ${giftCardId}`, { giftCardId, totalAmount, traceId }, traceId, giftCardId, "backend/cajas.web.js");
-
-        return { status: "SUCCESS", data: saved, error: null };
-    } catch (err) {
-        const norm = normalizeError(err);
-        log.error("registerGiftCardSale failed", { code: norm.code, error: norm.message, traceId });
-        return { status: "ERROR", data: null, error: { code: norm.code || "GC_SALE_FAIL", message: norm.message } };
-    }
-});
-
-export const registerGiftCardRedemption = webMethod(Permissions.SiteMember, async (payload) => {
-    const traceId = payload?.traceId || makeTraceId("gc-redeem");
-    try {
-        await requireCajero(traceId);
-        await validateFiscalConfig(traceId);
-        const { nifEmisor } = await _getFiscalKeys();
-
-        const giftCardId = _safeTrim(payload?.giftCardId);
-        if (!giftCardId) {
-            return { status: "ERROR", data: null, error: { code: "INVALID_GIFT_CARD", message: "giftCardId requerido" } };
-        }
-
-        const totalAmount = _readPositiveAmount(payload?.totalAmount);
-        if (!totalAmount) {
-            return { status: "ERROR", data: null, error: { code: "INVALID_AMOUNT", message: "Importe positivo requerido" } };
-        }
-
-        const serviceId = _safeTrim(payload?.serviceId);
-        const bookingId = _safeTrim(payload?.bookingId);
-
-        const clientRedemptionId = _safeTrim(payload?.redemptionId);
-        const clientTransactionId = _safeTrim(payload?.transactionId);
-        const redemptionId = clientRedemptionId || clientTransactionId ||
-            `GC_REDEEM-${giftCardId}-${bookingId || "NA"}-${totalAmount}-${Date.now()}`;
-
-        const existingRedemption = await dalQuery(MOVIMIENTOS_CAJA_COL)
-            .eq("transactionId", redemptionId)
-            .limit(1)
-            .find(STRONG_READ);
-
-        if (existingRedemption?.items?.length > 0) {
-            log.info("Gift card redemption idempotent duplicate detected", { redemptionId, giftCardId, traceId });
-            await _updateCajaActual(existingRedemption.items[0], traceId);
-            await _projectToAccountingLedger(existingRedemption.items[0], traceId);
-            return { status: "SUCCESS", data: existingRedemption.items[0], error: null, idempotent: true };
-        }
-
-        let taxRate = IVA_RATES.GENERAL;
-        if (serviceId) {
-            const serviceRes = await dalQuery(SERVICIOS_CATALOGO_COL)
-                .eq("serviceId", serviceId)
-                .limit(1)
-                .find()
-                .catch(() => ({ items: [] }));
-
-            if (serviceRes?.items?.length > 0) {
-                taxRate = Number(serviceRes.items[0].taxRate) || IVA_RATES.GENERAL;
-            }
-        }
-
-        const taxableBaseOrNonSubjectAmount = _roundMoney(totalAmount / (1 + taxRate));
-        const taxAmount = _roundMoney(totalAmount - taxableBaseOrNonSubjectAmount);
-
-        const operationDate = new Date().toLocaleDateString("sv-SE", { timeZone: SDK_CONFIG?.TZ || "Europe/Madrid" });
-        await _assertPeriodNotClosed(operationDate, traceId);
-
-        const seq = await _getNextSequence(traceId);
-        const lastMovement = await _getLastMovement();
-        const previousRecordHash = lastMovement?.hash || GENESIS_HASH;
-        const generatedAt = new Date();
-
-        const baseMovement = {
-            sequenceNumber: seq.sequenceNumber,
-            numSerieFactura: seq.numSerieFactura,
-            fechaExpedicionFactura: operationDate,
-            // MATRIZ v15: amount (base) y totalAmount (con IVA) coexisten.
-            fechaOperacion: operationDate,
-            fiscalPeriod: operationDate.slice(0, 7),
-            movementType: MOVEMENT_TYPE.CANJE_TARJETA_REGALO,
-            paymentMethod: PAYMENT_METHOD.TARJETA_REGALO,
-            amount: taxableBaseOrNonSubjectAmount,
-            totalAmount: totalAmount,
-            taxBase: taxableBaseOrNonSubjectAmount, taxAmount, tipoImpositivo: taxRate,
-            accountingSign: 1,
-            accountingAmount: totalAmount,
-            operationDescription: `Canje tarjeta regalo ${giftCardId}${serviceId ? ` - servicio ${serviceId}` : ""}`,
-            lineItems: [],
-            nifEmisor,
-            schemaVersion: LEDGER_SCHEMA_VERSION,
-            projectionStatus: "PROYECTADO",
-            recordSource: "POS",
-            staffResourceId: _safeTrim(payload?.staffResourceId) || _safeTrim(payload?.resourceId) || "CAJA_LOCAL",
-            linkedBookingIds: bookingId ? _linkedBookingValue([bookingId]) : null,
-            transactionId: redemptionId,
-            orderId: null, refundId: null,
-            giftCardId, giftCardOperation: "REDEMPTION",
-            serviceIdRedeemed: serviceId || null,
-
-            nifDestinatario: _safeTrim(payload?.nifDestinatario) || null,
-            recipientLegalName: _cleanText(payload?.recipientLegalName || "", 200) || null,
-            isB2B: false,
-            withholdingBase: 0,
-            irpfWithholdingRate: 0,
-            irpfWithholdingAmount: 0,
-            fiscalRole: FISCAL_ROLE.EMISOR,
-            surchargeRate: 0,
-            surchargeAmount: 0,
-            linkedAdvanceId: null,
-            vatAccrualStatus: VAT_ACCRUAL_APLICACION_ANTICIPO,
-            bankReconciliationReference: null,
-            tipoFactura: TIPO_FACTURA.F2,
-            correctionReason: null,
-            previousInvoiceId: null,
-            issuerInvoiceNumber: null,
-        };
-
-        const aeatPayload = _buildAEATPayload({ ...baseMovement, previousRecordHash }, generatedAt);
-        const movementHash = await _computeCurrentHash(previousRecordHash, aeatPayload);
-
-        let digitalSignature;
-        try {
-            digitalSignature = await _computeSignature(movementHash, traceId);
-        } catch (signErr) {
-            await queueFiscalRecovery({
-                transactionId: baseMovement.transactionId, totalAmount: totalAmount,
-                paymentMethod: baseMovement.paymentMethod,
-                operationDescription: baseMovement.operationDescription, movementType: baseMovement.movementType,
-                phase: "WAIT_FOR_SIGNER", origin: "FISCAL_SIGNER_DOWN", traceId,
-                lastError: signErr?.message || "FISCAL_SIGN_FAIL",
-            });
-            return {
-                status: "SUCCESS",
-                data: { ...baseMovement, previousRecordHash, hash: movementHash, pendingSignature: true, queued: true },
-                error: null,
-            };
-        }
-
-        const verificationQR = _generateVerificationQR(baseMovement.numSerieFactura, nifEmisor, operationDate, totalAmount);
-
-        const movement = {
-            ...baseMovement,
-            previousRecordHash, hash: movementHash, digitalSignature, aeatPayload, verificationQR,
-            hashAlgorithm: "SHA-256",
-            signatureAlgorithm: "RSASSA-PKCS1-v1_5-SHA-256",
-            recordTimestamp: generatedAt,
-            traceId,
-            _createdDate: new Date(),
-        };
-
-        const saved = await dalInsert(MOVIMIENTOS_CAJA_COL, movement);
-        await _updateCajaActual(saved, traceId);
-        await _projectToAccountingLedger(saved, traceId);
-
-        await logAuditEvent("GIFT_CARD_REDEEMED", "INFO", `Tarjeta regalo canjeada: ${giftCardId}`, { giftCardId, totalAmount, serviceId, traceId }, traceId, giftCardId, "backend/cajas.web.js");
-
-        return { status: "SUCCESS", data: saved, error: null };
-    } catch (err) {
-        const norm = normalizeError(err);
-        log.error("registerGiftCardRedemption failed", { code: norm.code, error: norm.message, traceId });
-        return { status: "ERROR", data: null, error: { code: norm.code || "GC_REDEEM_FAIL", message: norm.message } };
-    }
-});
 
 // ============================================================================
 // getMovimientoByBooking

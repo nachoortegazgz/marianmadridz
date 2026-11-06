@@ -1,16 +1,7 @@
 /*
  * MODULE: backend/internalConfig.js
- * VERSION: v5010.11-SSOT-RESTORED
- * Correcciones criticas aplicadas (depuracion 2026-10-19):
- * - Se restauran los exports eliminados por la edicion v5010.10 que rompieron
- *   TODOS los modulos dependientes (SyntaxError: does not provide an export
- *   named 'ROL_WEBSITE', etc.). Lista completa verificada contra los
- *   importadores reales de src/ (backend, pages, public y suites de tests).
- * - Se conservan los nombres publicos originales de las constantes.
- * - Se corrigen referencias BOOKING_STATUS.
- * - Se conservan los enums nativos Wix con guion bajo.
- * - Se corrige el identificador de Alba.
- * - Se corrige la plantilla de buildInvoiceNumber.
+ * RESPONSIBILITY: canonical CMS names, business enums and shared configuration.
+ * STANDARDS: single source of truth for active backend contracts.
  */
 
 export const ROL_WEBSITE = Object.freeze({
@@ -25,11 +16,6 @@ export const STAFF = Object.freeze({
     "07f7344f-e7e4-4c53-854b-47fd82ac8d40",
     "9b905bfd-1a09-485d-9273-a24a20dfe648",
   ]),
-  RESOURCE_TO_DISPLAY: Object.freeze({
-    "e556070a-6d6a-402e-8422-11133033ea76": "MARIAN MADRID",
-    "07f7344f-e7e4-4c53-854b-47fd82ac8d40": "ANDREA STAFF",
-    "9b905bfd-1a09-485d-9273-a24a20dfe648": "ALBA STAFF",
-  }),
   WEBSITE_ROLE_BY_RESOURCE_ID: Object.freeze({
     "e556070a-6d6a-402e-8422-11133033ea76": ROL_WEBSITE.ADMIN,
     "07f7344f-e7e4-4c53-854b-47fd82ac8d40": ROL_WEBSITE.ESTILISTA,
@@ -48,25 +34,15 @@ export const BUSINESS_COLLECTIONS = Object.freeze({
   CONTROL_OPERATIVO: "ControlOperativo",
   DATOS_FISCALES: "DatosFiscales",
   HISTORICO_CIERRES_Z: "HistoricoCierresZ",
-  LIBRO_ASIENTOS_CONTABLES_DETALLE: "LibroAsientosContablesDetalle",
   MAPA_STAFF: "MapaStaff",
-  INVENTARIO_STOCK_VENTA: "InventarioStockVenta",
   MOVIMIENTOS_CAJA: "MovimientosCaja",
   REGISTROS_HORARIOS_STAFF: "RegistrosHorariosStaff",
   SERVICIOS_CATALOGO: "ServiciosCatalogo",
 });
 
-// FASE3 (8-en-1, ADR-05): las colecciones de soporte/lock/cache fueron
-// absorbidas por ControlOperativo. CERO-ALIAS (v13.0): los alias singulares
-// MOVIMIENTO_CAJA / MOVIMIENTO_INVENTARIO y las claves sin consumidores
-// PROVEEDORES_LISTA / SERVICIOS_CATALOGO quedan ERRADICADOS del SSOT; el
-// nombre canonico plural vive en BUSINESS_COLLECTIONS (MOVIMIENTOS_CAJA) y
-// OPERATIONAL_COLLECTIONS (MOVIMIENTOS_INVENTARIO). CONTROL_OPERATIVO se
-// expone deliberadamente en ambos grupos con el mismo valor (alias
-// intencional documentado en unit.testRunner allowedOverlaps).
+// Operational lock and idempotency state is centralized in ControlOperativo.
 export const OPERATIONAL_COLLECTIONS = Object.freeze({
   CONTROL_OPERATIVO: "ControlOperativo",
-  MOVIMIENTOS_INVENTARIO: "MovimientosInventario",
 });
 
 // ITEM_NATURE canonico v12.0+ (SSOT-08). Los valores legacy observados en la
@@ -100,19 +76,11 @@ export const RECORD_TYPE = Object.freeze({
 
 export const API = Object.freeze({
   STAFF_RESOURCE_TYPE_ID: "1cd44cf8-756f-41c3-bd90-3e2ffcaf1155",
-  MARIAN_MANAGEMENT_RESOURCE_ID: STAFF.IDS[0],
 });
 
 export const SDK_CONFIG = Object.freeze({
   TZ: "Europe/Madrid",
   LOCATION_ID: "7a12abfd-bf30-4847-bcdf-00dc573d4802",
-  LOCATION_TYPES: Object.freeze({
-    TIME_SLOTS: "BUSINESS",
-    BOOKINGS_WRITER: "OWNER_BUSINESS",
-  }),
-  M365: Object.freeze({ ENABLED: false }),
-  ACCOUNTING: Object.freeze({ ENABLED: false }),
-  SYNC_BOOKINGS_SERVICES_ENABLED: false,
 });
 
 export const BOOKING_STATUS = Object.freeze({
@@ -157,7 +125,6 @@ export const PAYMENT_STATUS = Object.freeze({
 // bookingSaga.js al filtrar webhooks y crear bookings.
 export const APP_IDS = Object.freeze({
   BOOKINGS: "bookings",
-  STORES: "215238eb-22a5-4c36-9e7b-e7c08025e04e",
 });
 
 // Wix eCommerce catalog IDs are GUIDs and are distinct from webhook app IDs.
@@ -280,7 +247,6 @@ export const PAYMENT_METHOD = Object.freeze({
   BIZUM: "BIZUM",
   TRANSFERENCIA: "TRANSFERENCIA",
   WIX_PAYMENTS: "WIX_PAYMENTS",
-  TARJETA_REGALO: "TARJETA_REGALO",
 });
 
 // Tipos de movimiento del ledger de caja (cajas.web.js). Default historico:
@@ -288,32 +254,12 @@ export const PAYMENT_METHOD = Object.freeze({
 export const MOVEMENT_TYPE = Object.freeze({
   VENTA: "VENTA",
   VENTA_ONLINE: "VENTA_ONLINE",
-  VENTA_TARJETA_REGALO: "VENTA_TARJETA_REGALO",
-  CANJE_TARJETA_REGALO: "CANJE_TARJETA_REGALO",
   ANTICIPO: "ANTICIPO",
   REEMBOLSO: "REEMBOLSO",
   DEVOLUCION: "DEVOLUCION",
   DEVOLUCION_SERVICIO: "DEVOLUCION_SERVICIO",
   PROPINA: "PROPINA",
   AJUSTE: "AJUSTE",
-});
-
-// Tipos de movimiento de inventario (inventario.web.js, validation.js).
-export const INVENTORY_MOVEMENT_TYPE = Object.freeze({
-  ENTRADA: "ENTRADA",
-  SALIDA: "SALIDA",
-  COMPRA: "COMPRA",
-  VENTA: "VENTA",
-  MERMA: "MERMA",
-  AJUSTE: "AJUSTE",
-  DEVOLUCION: "DEVOLUCION",
-});
-
-// Signo de magnitudes (validation.js expectedInventoryMagnitude).
-export const MAGNITUDE = Object.freeze({
-  POSITIVE: "POSITIVE",
-  NEGATIVE: "NEGATIVE",
-  NEUTRAL: "NEUTRAL",
 });
 
 // Estados del registro de control operativo (ControlOperativo, ADR-05).
@@ -360,7 +306,6 @@ export const EVENT_TYPE = Object.freeze({
   COMPRA_LINEA: "COMPRA_LINEA",
   RECTIFICATIVA: "RECTIFICATIVA",
   AJUSTE: "AJUSTE",
-  MOV_STOCK: "MOV_STOCK",
   CIERRE_Z: "CIERRE_Z",
 });
 
@@ -595,24 +540,6 @@ export function normalizeMovementKeys(item) {
   }
   return item;
 }
-
-// CERO-DEUDA ZC-07: contabilidad.js eliminado (modulo declarado DEAD CODE
-// por la BIBLIA v5010.1, 0 importadores verificados con grep; MovimientosCaja
-// es el SSOT fiscal unico y la proyeccion contable no tenia escritor activo).
-// Mapa de cuentas PGC (Plan General Contable español, EHA/1609/2007).
-// Códigos canónicos de 6 dígitos exigidos por el SII/AEAT en la proyección
-// contable. Consumido por la auditoría E2E (CUENTAS_PGC_CANONICAS) y por
-// cualquier escritor de asientos; fuente única de verdad — no duplicar
-// literales de cuenta fuera de este mapa.
-export const ACCOUNTING_ACCOUNT = Object.freeze({
-  CASH: "570000",        // (570) Caja, e.
-  BANKS: "572000",       // (572) Bancos c/c
-  SUPPLIERS: "400000",   // (400) Proveedores
-  CLIENTS: "430000",     // (430) Clientes
-  SERVICE_REVENUE: "705000", // (705) Prestaciones de servicios
-  VAT_OUTPUT: "477000",  // (477) H.P. IVA repercutido
-  VAT_INPUT: "472000",   // (472) H.P.C. IVA soportado
-});
 
 // Tipos impositivos IVA Espana (rigor fiscal Ley 28/2014 RDL).
 export const IVA_RATES = Object.freeze({

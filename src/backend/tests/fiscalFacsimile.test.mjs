@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {
   createFiscalFacsimile,
   verifyFiscalFacsimile,
-} from "backend/fiscalFacsimile.js";
+} from "./fixtures/fiscalFacsimile.js";
 
 test("FACSIMIL series, chained hashes and non-X509 signature are reproducible", async () => {
   const first = await createFiscalFacsimile({

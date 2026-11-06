@@ -9,14 +9,12 @@ const root = join(here, '..', '..', '..');
 const loaderUrl = pathToFileURL(join(here, 'loader.mjs')).href;
 const suites = [
   'controlOperativo.hooks.test.mjs',
-  'inventory.lock.release.test.mjs',
-  'inventory.movement.flow.test.mjs',
   'crons.jobsConfigParity.test.mjs',
   'data.hooks.test.mjs',
   'dto.whitelist.test.mjs',
   'fiscalAggregator.read.test.mjs',
   'fiscalFacsimile.test.mjs',
-  'site.flows.e2e.test.mjs',
+  'site.flows.offline.test.mjs',
   'orderLedgerAmount.test.mjs',
   'events.booking-canceled.integrity.test.mjs',
   'unit.ssot.v5011.test.mjs',

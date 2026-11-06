@@ -24,8 +24,6 @@ FIXES APLICADOS v5009.0-UTILS06-FINAL:
             Sin logger, no se registra nada (capa pura).
   UTILS-13: getResourceIdsFromSlot exige staffResourceTypeId explicito.
             Sin el, devuelve [] (fail-closed).
-  UTILS-14: pickStaffByLowestLoad asigna Infinity a cargas invalidas para
-            no priorizar recursos con datos corruptos.
   UTILS-15: _normalizeGuidForComparison para comparaciones estables en
             dedupe de GUIDs.
 
@@ -308,34 +306,6 @@ export function getResourceIdsFromSlot(slot, staffResourceTypeId) {
 
     return _looksLikeGuid(directId) ? [directId] : [];
 }
-
-export function pickStaffByLowestLoad(candidateIds, loadByResourceId) {
-    const candidates = cleanGuidList(candidateIds);
-    if (candidates.length === 0) return null;
-
-    const loads = (loadByResourceId && typeof loadByResourceId === "object")
-        ? loadByResourceId
-        : {};
-
-    let picked = null;
-    let pickedLoad = Infinity;
-
-    for (let index = 0; index < candidates.length; index += 1) {
-        const id = candidates[index];
-        const raw = Number(loads[id]);
-        const safeLoad = (Number.isFinite(raw) && raw >= 0)
-            ? raw
-            : Infinity;
-
-        if (safeLoad < pickedLoad) {
-            pickedLoad = safeLoad;
-            picked = id;
-        }
-    }
-
-    return picked || candidates[0];
-}
-
 
 /**
  * Rank available staff by already-booked minutes for the requested day.

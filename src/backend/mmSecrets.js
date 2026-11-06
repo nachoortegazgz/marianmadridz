@@ -14,7 +14,6 @@ CAMBIOS DE ALINEACION v5015-ALIGNED:
             - SECRETS.FISCAL_KEY (cajas.web, securityEngine)
             - SECRETS.FISCAL_NIF_EMISOR (cajas.web, events, fiscalAggregator)
             - SECRETS.FISCAL_SIGNER_ENDPOINT / _BEARER (cajas.web)
-            - SECRETS.RESEND_API_KEY / _FROM_EMAIL (fiscalDocuments)
           CERO-DEUDA ZC-07: AUTH_JWT_KEY, ADMIN_EMAILS y CAJERO_EMAILS
           eliminados del mapa SECRETS (consumidor null verificado).
 
@@ -36,23 +35,4 @@ export const SECRETS = Object.freeze({
     // emite JWT), ADMIN_EMAILS y CAJERO_EMAILS (roles viven en
     // MapaStaff.rolWebsite desde v5010; consumidor null verificado grep).
 
-    // Automatizacion
-    POWER_AUTOMATE: "POWER_AUTOMATE_TOKEN",
-
-    // Email (SendGrid legacy + Resend actual)
-    SENDGRID_API_KEY: "SENDGRID_API_KEY",
-    SENDGRID_FROM_EMAIL: "SENDGRID_FROM_EMAIL",
-    RESEND_API_KEY: "RESEND_API_KEY",
-    RESEND_FROM_EMAIL: "RESEND_FROM_EMAIL",
-
-    // Asistente IA
-    MARIAN_ASSISTANT_OPENAI_KEY: "MARIAN_ASSISTANT_OPENAI_KEY",
-
-    // Microsoft 365 Graph API
-    M365_GRAPH_CLIENT_ID: "M365_CLIENT_ID",
-    M365_GRAPH_CLIENT_SECRET: "M365_CLIENT_SECRET",
-    M365_GRAPH_TENANT_ID: "M365_TENANT_ID",
-    M365_GRAPH_SITE_ID: "M365_GRAPH_SITE_ID",
-    M365_GRAPH_LIST_ID: "M365_LIST_ID",
-    M365_WEBHOOK_HMAC_KEY: "SECRET_M365_WEBHOOK_HMAC_KEY",
 });

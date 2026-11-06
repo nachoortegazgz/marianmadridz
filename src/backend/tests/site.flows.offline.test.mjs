@@ -1,8 +1,8 @@
 /*
 =============================================================================
-MODULE: backend/tests/site.flows.e2e.test.mjs
-PURPOSE: E2E de FLUJOS COMPLETOS del sitio con mocks funcionales (LH-18).
-Cubre los flujos que no tenian test end-to-end continuo:
+MODULE: backend/tests/site.flows.offline.test.mjs
+PURPOSE: Simulacion offline de flujos completos del sitio con mocks funcionales (LH-18).
+Cubre los flujos que no tenian test offline continuo:
   FLOW-SEC-*   seguridad/roles (security.js) sobre identidad mockeada
   FLOW-HOR-*   fichaje horario completo (horario.web.js, RD 8/2019)
   FLOW-CAJA-*  caja: alta manual -> estado cajero -> cierre Z -> integridad
@@ -99,13 +99,13 @@ function setMember(member) {
 }
 
 // LH-18b: secrets fiscales validos (>=32 chars key, >=9 NIF) + invalidacion
-// de la cache interna de cajas.web para que el flujo E2E vea los overrides.
+// de la cache interna de cajas.web para que el flujo offline vea los overrides.
 async function setupFiscalSecrets() {
   const state = globalThis.__mmSecretsState || (globalThis.__mmSecretsState = { _map: {}, _default: 'mock-secret' });
   state._map.SECRET_FISCALKEY = 'A'.repeat(40);
   state._map.FISCAL_NIF_EMISOR = 'B12345678';
   // LH-19 (FLOW-CAJA-01): el signer X.509 delegado es un microservicio externo;
-  // en E2E offline se mockea su contrato HTTP (POST {hash,...} -> {signature}).
+  // en offline offline se mockea su contrato HTTP (POST {hash,...} -> {signature}).
   state._map.FISCAL_SIGNER_ENDPOINT = 'https://signer.mock.local/sign';
   state._map.FISCAL_SIGNER_BEARER = 'mock-bearer-token';
   if (!globalThis.__mmSignerFetchInstalled) {
@@ -218,7 +218,7 @@ test('FLOW-HOR-01 flujo continuo: contexto -> fichar ENTRADA -> estado jornada -
   assert.strictEqual(ctxRes.data.resourceId, GUID_RESOURCE);
 
   // Paso 2: fichar ENTRADA (payload canonico clockEventType)
-  const inRes = await horario.registrarFichaje({ clockEventType: 'ENTRADA', userAgent: 'e2e-test' });
+  const inRes = await horario.registrarFichaje({ clockEventType: 'ENTRADA', userAgent: 'offline-test' });
   assert.strictEqual(inRes.status, 'OK', JSON.stringify(inRes.error));
   assert.ok(inRes.data.id, 'registro persistido con id');
 
@@ -314,11 +314,11 @@ test('FLOW-CAJA-01 flujo continuo: venta EFECTIVO -> caja incrementada -> cierre
   const tx = await cajas.registerManualTransaction({
     totalAmount: 50.0,
     tipoFactura: 'F2',
-    operationDescription: 'Venta mostrador e2e (SIMULACION PREVIA A DESPLIEGUE REAL)',
+    operationDescription: 'Venta mostrador offline (SIMULACION PREVIA A DESPLIEGUE REAL)',
     paymentMethod: 'EFECTIVO',
     movementType: 'VENTA',
     tipoImpositivo: 21,
-    transactionId: 'e2e-tx-0001',
+    transactionId: 'offline-tx-0001',
   });
   assert.strictEqual(tx.status, 'SUCCESS', JSON.stringify(tx.error));
   const mov = tx.data;
@@ -335,7 +335,7 @@ test('FLOW-CAJA-01 flujo continuo: venta EFECTIVO -> caja incrementada -> cierre
   // Paso 1b: idempotencia - mismo transactionId devuelve el registro original
   const dup = await cajas.registerManualTransaction({
     totalAmount: 50.0, tipoFactura: 'F2', operationDescription: 'Reintento idempotente (SIMULACION PREVIA A DESPLIEGUE REAL)', paymentMethod: 'EFECTIVO',
-    transactionId: 'e2e-tx-0001',
+    transactionId: 'offline-tx-0001',
   });
   assert.strictEqual(dup.status, 'SUCCESS');
   assert.strictEqual(dup.idempotent, true);
@@ -384,12 +384,12 @@ test('FLOW-CAJA-01 flujo continuo: venta EFECTIVO -> caja incrementada -> cierre
   const zOld = await cajas.registerZClosing(diaCerrado, {});
   assert.strictEqual(zOld.status, 'SUCCESS', JSON.stringify(zOld.error));
   // AUDIT-TEST-PURITY: transaccion con transactionId PROPIO. La primera version
-  // del test reutilizaba 'e2e-tx-0001' y la capa de idempotencia devolvia el
+  // del test reutilizaba 'offline-tx-0001' y la capa de idempotencia devolvia el
   // registro original (SUCCESS) antes de evaluar PERIOD_CLOSED, enmascarando el
   // invariante que se queria probar.
   const txAfterZ = await cajas.registerManualTransaction({
     totalAmount: 10, tipoFactura: 'F2', operationDescription: 'Venta posterior a cierre (SIMULACION PREVIA A DESPLIEGUE REAL)', paymentMethod: 'EFECTIVO',
-    transactionId: 'e2e-tx-postz-' + Date.now(),
+    transactionId: 'offline-tx-postz-' + Date.now(),
   });
   assert.strictEqual(txAfterZ.status, 'ERROR', 'periodo cerrado debe bloquear: ' + JSON.stringify(txAfterZ));
   assert.ok(/CLOSED|PERIODO/i.test(String(txAfterZ.error?.code) + String(txAfterZ.error?.message)),
@@ -446,7 +446,7 @@ test('FLOW-CAJA-03 traducion legacy ONLINE -> WIX_PAYMENTS en la frontera (CAJA-
   try {
     const tx = await cajas.registerManualTransaction({
       totalAmount: 30, tipoFactura: 'F2', operationDescription: 'Pago online legado (SIMULACION PREVIA A DESPLIEGUE REAL)',
-      paymentMethod: 'ONLINE', transactionId: 'e2e-tx-legacy-online-' + Date.now(),
+      paymentMethod: 'ONLINE', transactionId: 'offline-tx-legacy-online-' + Date.now(),
     });
     if (tx.status === 'SUCCESS') {
       assert.strictEqual(tx.data.paymentMethod, 'WIX_PAYMENTS',
@@ -546,7 +546,7 @@ test('FLOW-CAJA-04 transactionId concurrente no crea movimientos duplicados', as
   setMember({ _id: GUID_MEMBER, contactId: GUID_CONTACT, loginEmail: 'marta@test.local' });
   await setupFiscalSecrets();
 
-  const transactionId = 'e2e-concurrent-ledger-' + Date.now();
+  const transactionId = 'offline-concurrent-ledger-' + Date.now();
   const payload = {
     totalAmount: 30,
     tipoFactura: 'F2',
