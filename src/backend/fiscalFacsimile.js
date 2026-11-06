@@ -30,7 +30,7 @@ export async function createFiscalFacsimile({
     const fiscalYear = String(year ?? new Date(generatedAt).getFullYear());
     if (!Number.isSafeInteger(globalSequence) || globalSequence < 1) throw new Error("FACSIMIL_SEQUENCE_NUMBER_INVALID");
     if (!Number.isSafeInteger(annualSequence) || annualSequence < 1) throw new Error("FACSIMIL_YEAR_SEQUENCE_INVALID");
-    if (!/^20\\d{2}$/.test(fiscalYear)) throw new Error("FACSIMIL_YEAR_INVALID");
+    if (!/^20\d{2}$/.test(fiscalYear)) throw new Error("FACSIMIL_YEAR_INVALID");
     if (!payload || typeof payload !== "object" || Array.isArray(payload)) throw new Error("FACSIMIL_PAYLOAD_INVALID");
 
     const numSerieFactura = `FACSIMIL-FAC-${fiscalYear}-${String(annualSequence).padStart(5, "0")}`;
