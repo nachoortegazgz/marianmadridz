@@ -672,10 +672,20 @@ export async function syncPaidOrderInventoryInternal(order, traceId, eventId) {
     if (!isValidGuid(orderId)) {
         return _error("INVENTORY_ORDER_ID_INVALID", "El pedido de tienda no contiene un ID GUID valido.");
     }
+    const catalogVersion = await _getCatalogVersion();
+    if (catalogVersion !== INVENTORY_CONFIG.CATALOG_VERSION) {
+        return _error("INVENTORY_CATALOG_VERSION_MISMATCH", "El catalogo nativo no es V1.");
+    }
 
     const results = [];
     for (const lineItem of storeLines) {
-        const result = await _syncPaidOrderLine(order, lineItem, traceId, eventId);
+        let result = await _syncPaidOrderLine(order, lineItem, traceId, eventId);
+        if (result.status === "ERROR") {
+            const repair = await _queueInventoryRepair(
+                order, lineItem, traceId, eventId, "SALE", result.code || result.reason
+            ).catch((error) => ({ queued: false, error: error?.message }));
+            result = { ...result, repairQueued: repair.queued === true, repairId: repair.repairId || null };
+        }
         results.push({
             lineItemId: lineItem?._id || lineItem?.id || null,
             ...result,
@@ -689,7 +699,7 @@ export async function syncPaidOrderInventoryInternal(order, traceId, eventId) {
             data: { processed: results.length - failed.length - skipped.length, skipped: skipped.length, results },
             error: {
                 code: "INVENTORY_ORDER_SYNC_PARTIAL",
-                message: "Una o mas lineas de tienda requieren reintento o conciliacion.",
+                message: "Una o mas lineas de tienda requieren conciliacion.",
                 failed,
             },
         };
@@ -700,6 +710,78 @@ export async function syncPaidOrderInventoryInternal(order, traceId, eventId) {
         error: null,
     };
 }
+
+export async function reserveOrderInventoryInternal(order, traceId, eventId) {
+    const lineItems = Array.isArray(order?.lineItems) ? order.lineItems : [];
+    const storeLines = lineItems.filter((line) =>
+        line?.catalogReference?.appId === WIX_CATALOG_APP_IDS.STORES
+    );
+    if (!storeLines.length) {
+        return { status: "SUCCESS", data: { reserved: 0, results: [] }, error: null };
+    }
+    const orderId = _safeTrim(order?._id || order?.id);
+    if (!isValidGuid(orderId)) return _error("INVENTORY_ORDER_ID_INVALID", "Pedido no valido.");
+    const results = [];
+    for (const lineItem of storeLines) {
+        let result = await _reserveOrderLine(order, lineItem, traceId, eventId);
+        if (result.status === "ERROR") {
+            const repair = await _queueInventoryRepair(
+                order, lineItem, traceId, eventId, "RESERVE", result.code || result.reason
+            ).catch((error) => ({ queued: false, error: error?.message }));
+            result = { ...result, repairQueued: repair.queued === true, repairId: repair.repairId || null };
+        }
+        results.push({ lineItemId: lineItem?._id || lineItem?.id || null, ...result });
+    }
+    const failed = results.filter((result) => result.status === "ERROR");
+    return {
+        status: failed.length ? "PARTIAL" : "SUCCESS",
+        data: { reserved: results.filter((result) => result.status === "SUCCESS").length, results },
+        error: failed.length ? { code: "INVENTORY_RESERVATION_PARTIAL", failed } : null,
+    };
+}
+
+export async function releaseOrderInventoryInternal(order, traceId, eventId) {
+    const lineItems = Array.isArray(order?.lineItems) ? order.lineItems : [];
+    const storeLines = lineItems.filter((line) =>
+        line?.catalogReference?.appId === WIX_CATALOG_APP_IDS.STORES
+    );
+    if (!storeLines.length) {
+        return { status: "SUCCESS", data: { released: 0, results: [] }, error: null };
+    }
+    const orderId = _safeTrim(order?._id || order?.id);
+    if (!isValidGuid(orderId)) return _error("INVENTORY_ORDER_ID_INVALID", "Pedido no valido.");
+    const results = [];
+    for (const lineItem of storeLines) {
+        const validation = validateInventoryOrderLine(orderId, lineItem);
+        if (!validation.valid) {
+            results.push({ status: "ERROR", code: "INVENTORY_ORDER_LINE_INVALID", errors: validation.errors });
+            continue;
+        }
+        const { lineItemId, productId, variantId, quantity } = validation.value;
+        const stockKey = _stockKey(productId, variantId);
+        const lock = await _acquireStockLock(stockKey, productId, traceId);
+        try {
+            const stock = await _findStockByKey(stockKey);
+            if (!stock) {
+                results.push({ status: "ERROR", code: "INVENTORY_MASTER_MAPPING_REQUIRED", stockKey });
+                continue;
+            }
+            const result = await _releaseOrderReservationUnderLock(
+                stock, orderId, lineItemId, quantity, traceId
+            );
+            results.push(result);
+        } finally {
+            await _releaseStockLock(lock);
+        }
+    }
+    const failed = results.filter((result) => result.status === "ERROR");
+    return {
+        status: failed.length ? "PARTIAL" : "SUCCESS",
+        data: { released: results.filter((result) => result.status === "SUCCESS").length, results },
+        error: failed.length ? { code: "INVENTORY_RESERVATION_RELEASE_PARTIAL", failed } : null,
+    };
+}
+
 
 export const getInventoryDashboard = webMethod(Permissions.SiteMember, async (options = {}) => {
     const traceId = _safeTrim(options?.traceId) || makeTraceId("inventory-dashboard");
