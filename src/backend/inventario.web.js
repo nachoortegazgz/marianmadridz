@@ -408,10 +408,6 @@ export async function syncPaidOrderInventoryInternal(order, traceId, eventId) {
     if (!order || typeof order !== "object") {
         return _error("INVENTORY_ORDER_INVALID", "Pedido nativo no valido.");
     }
-    const orderId = _safeTrim(order._id || order.id);
-    if (!isValidGuid(orderId)) {
-        return _error("INVENTORY_ORDER_ID_INVALID", "El pedido no contiene un ID GUID valido.");
-    }
     const lineItems = Array.isArray(order.lineItems) ? order.lineItems : [];
     if (lineItems.length > INVENTORY_CONFIG.MAX_ORDER_LINES) {
         return _error("INVENTORY_ORDER_LINES_LIMIT", "El pedido supera el maximo de lineas admitido.");
@@ -421,6 +417,10 @@ export async function syncPaidOrderInventoryInternal(order, traceId, eventId) {
     );
     if (!storeLines.length) {
         return { status: "SUCCESS", data: { processed: 0, skipped: 0, results: [] }, error: null };
+    }
+    const orderId = _safeTrim(order._id || order.id);
+    if (!isValidGuid(orderId)) {
+        return _error("INVENTORY_ORDER_ID_INVALID", "El pedido de tienda no contiene un ID GUID valido.");
     }
 
     const results = [];
