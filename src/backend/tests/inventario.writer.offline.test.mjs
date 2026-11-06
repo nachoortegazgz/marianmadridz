@@ -52,7 +52,8 @@ mocks.sdk["@wix/stores::@wix/stores::inventory::decrementInventory"] = async (in
   nativeQuantity -= Number(input?.decrementData?.[0]?.decrementBy || 0);
   return {};
 };
-mocks.sdk["@wix/bookings::@wix/bookings::staffMembers::queryStaffMembers"] = async () => ({
+mocks.sdk["@wix/bookings::bookings::staffMembers"] = {
+  queryStaffMembers: async () => ({
   staffMembers: [{
     _id: "77777777-8888-4888-8888-777777777777",
     name: "QA Admin",
@@ -63,7 +64,8 @@ mocks.sdk["@wix/bookings::@wix/bookings::staffMembers::queryStaffMembers"] = asy
     },
     resource: { workingHoursSchedules: [{ _id: "66666666-7777-4888-8999-aaaaaaaaaaaa" }] },
   }],
-});
+  }),
+};
 
 const INV = await import("backend/inventario.web.js");
 const STOCK_COL = IC.BUSINESS_COLLECTIONS.INVENTARIO_STOCK_VENTA;
