@@ -91,7 +91,7 @@ function seed() {
   wixDataMock._seed(STOCK_COL, [{
     _id: "stock-master-001",
     name: "Producto de prueba",
-    tipoImpositivo: 0.21,
+    tipoImpositivo: 21,
     taxIncluded: true,
     price: 25,
     sku: "SKU-QA-001",
@@ -156,9 +156,8 @@ test("INVENTORY-WRITER-03 refuses an unsupported catalog version before any CMS 
     "event-inventory-004"
   );
 
-  assert.equal(result.status, "PARTIAL");
-  assert.equal(result.error.code, "INVENTORY_ORDER_SYNC_PARTIAL");
-  assert.equal(result.data.results[0].code, "INVENTORY_CATALOG_VERSION_MISMATCH");
+  assert.equal(result.status, "ERROR");
+  assert.equal(result.error.code, "INVENTORY_CATALOG_VERSION_MISMATCH");
   assert.equal(wixDataMock._store.get(MOVEMENTS_COL).length, 0);
   assert.equal(wixDataMock._store.get(STOCK_COL)[0].stockOnHand, 8);
 });
