@@ -181,6 +181,8 @@ export const INVENTORY_CONFIG = Object.freeze({
   LOCK_TTL_MS: 300000,
   LOCK_WAIT_MS: 3000,
   LOCK_POLL_MS: 100,
+  MAX_REPAIR_ATTEMPTS: 10,
+  REPAIR_PAGE_LIMIT: 25,
 });
 
 // Singleton ids de caja (cajas.web.js ALN-04, eventLog.js).
