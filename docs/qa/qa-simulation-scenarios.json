@@ -122,6 +122,37 @@
       "limitation": "La saga y la llamada de cancelación se prueban con Writer V2/CMS simulados offline. Falta E2E contra un entorno Wix de QA con Writer real."
     },
     {
+      "scenarioId": "QA-BOOKING-UNKNOWN-RECOVERY-001",
+      "name": "Reconciliación segura de resultado incierto de Bookings Writer",
+      "status": "MOCK_COVERED",
+      "testFiles": [
+        "src/backend/tests/events.unknown-booking-recovery.test.mjs"
+      ],
+      "traceId": "trace-qa-unknown-booking-001",
+      "fixture": {
+        "txStatus": "RESULT_UNKNOWN",
+        "simpleProjectionCount": 1,
+        "dualProjectionCounts": [
+          0,
+          1,
+          2
+        ],
+        "expectedAmbiguousStatus": "REPAIR_REQUIRED",
+        "expectedCompleteStatuses": [
+          "SIMPLE",
+          "DUAL_F1+DUAL_F2"
+        ]
+      },
+      "assertions": [
+        "one SIMPLE CitasF2 projection resolves using its native bookingId",
+        "exact DUAL_F1 and DUAL_F2 projections resolve using native bookingIds",
+        "no projection never proves that Wix did not create a booking",
+        "partial dual projection is retained for manual repair",
+        "ambiguous outcomes never transition to FAILED_FINAL"
+      ],
+      "limitation": "The test simulates CMS projections and transaction records. It does not query the live Wix Bookings Writer after a network timeout; ambiguous results are intentionally held for manual reconciliation."
+    },
+    {
       "scenarioId": "QA-CHECKOUT-CART-V2-001",
       "name": "Preparación de checkout sin pago",
       "status": "MOCK_COVERED",
