@@ -80,7 +80,8 @@ export async function verifyFiscalFacsimile(artifact) {
             artifact?.aeatSubmissionAllowed !== false ||
             artifact?.signatureAlgorithm !== "FACSIMIL-NOT-X509" ||
             artifact?.verificationQR !== null ||
-            !FACSIMIL_HASH_PATTERN.test(String(artifact?.hash || "")) ||\n            !FACSIMIL_HASH_PATTERN.test(String(artifact?.previousRecordHash || "")) ||
+            !FACSIMIL_HASH_PATTERN.test(String(artifact?.hash || "")) ||
+            !FACSIMIL_HASH_PATTERN.test(String(artifact?.previousRecordHash || "")) ||
             !String(artifact?.digitalSignature || "").startsWith(SIGNATURE_PREFIX)
         ) return false;
 
