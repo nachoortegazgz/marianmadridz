@@ -220,6 +220,12 @@ test('BCORE-TX-01 first init creates IN_PROGRESS transaction (isNew)', async () 
   const row = (wixDataMock._store.get(CONTROL) || []).find((r) => r._id === 'pt-new-1');
   assert.ok(row, 'fila TX persistida con _id = pairToken');
   assert.strictEqual(row.controlType, IC.CONTROL_TYPE.IDEMPOTENCY);
+  // The canonical lease field is the CMS DATETIME expiresAt, never the
+  // retired leaseExpiresAt/leasesExpireAt variants.
+  assert.ok(row.expiresAt instanceof Date, 'IDEMPOTENCY expiry must be persisted as Date in expiresAt');
+  assert.ok(row.expiresAt.getTime() > Date.now(), 'IDEMPOTENCY lease must be active on creation');
+  assert.strictEqual(row.leaseExpiresAt, undefined);
+  assert.strictEqual(row.leasesExpireAt, undefined);
   const payload = row.payload;
   // CORE-41 (v5014): el estado inicial es IN_PROGRESS (lease activo), no
   // PENDING. Un crash entre insert y heartbeat deja lease expirado que
