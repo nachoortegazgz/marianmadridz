@@ -85,6 +85,7 @@ import {
 } from "public/mmUtils";
 
 import { logger } from "backend/logger";
+import { acquireFiscalLedgerLock, assertFiscalLedgerLock, releaseFiscalLedgerLock } from "backend/fiscalLedgerLock";
 
 const log = logger;
 
@@ -384,6 +385,37 @@ async function _getLastCashEvent() {
     return res?.items?.[0] || null;
 }
 
+async function _rollbackSequenceAllocation(seq, traceId) {
+    if (!seq || !Number.isFinite(Number(seq.sequenceNumber))) return false;
+    try {
+        const seqDoc = await dalGet(CAJA_ACTUAL_COL, CASH_SEQ_ID, "strong");
+        if (!seqDoc) return false;
+        const counters = { ...(seqDoc.sequenceCounters || {}) };
+        const yearMatch = /^FAC-(\\d{4})-(\\d{5})$/.exec(_safeTrim(seq.numSerieFactura));
+        if (!yearMatch) return false;
+        const yearKey = yearMatch[1];
+        if (
+            Number(counters.seqGlobal || 0) !== Number(seq.sequenceNumber) ||
+            Number(counters[yearKey] || 0) !== Number(seq.yearSequence)
+        ) return false;
+        counters.seqGlobal = Number(seq.sequenceNumber) - 1;
+        counters[yearKey] = Number(seq.yearSequence) - 1;
+        await dalUpdate(CAJA_ACTUAL_COL, {
+            ...seqDoc,
+            sequenceCounters: counters,
+            _updatedDate: new Date(),
+        });
+        return true;
+    } catch (error) {
+        log.error("FISCAL_SEQUENCE_ROLLBACK_FAILED", {
+            traceId,
+            sequenceNumber: seq.sequenceNumber,
+            error: error?.message,
+        });
+        return false;
+    }
+}
+
 // ============================================================================
 // SECCION 3 - MAESTROS
 // ============================================================================
@@ -542,9 +574,45 @@ export async function registrarEventoEconomico(input) {
     // 3. Sistema informatico (ALN-09)
     const sistemaInformatico = await _getFiscalSystemConfig(traceId);
 
-    // 4. Ultimo evento + secuencia
-    const previous = await _getLastCashEvent();
-    const seq = await _getNextSequenceInternal(traceId);
+    // 4. Serializacion global del ledger: head hash + secuencia + insert
+    // deben ejecutarse dentro de una misma seccion critica compartida con cajas.web.
+    const ledgerLock = await acquireFiscalLedgerLock(traceId);
+    let retainLedgerLock = false;
+    try {
+        if (_safeTrim(input.transactionId)) {
+            const existing = await dalQuery(MOVIMIENTOS_CAJA_COL)
+                .eq("transactionId", _safeTrim(input.transactionId))
+                .limit(1)
+                .find({ consistencyMode: "strong" });
+            if (existing?.items?.length === 1) {
+                const savedMovement = existing.items[0];
+                const cashProjection = await updateCajaActualFromMovement(savedMovement, traceId);
+                return {
+                    status: cashProjection?.status === "SUCCESS" ? "SUCCESS" : "PARTIAL",
+                    data: {
+                        cabeceraId: savedMovement._id,
+                        hash: readMovementHash(savedMovement),
+                        sequenceNumber: savedMovement.sequenceNumber,
+                        numSerieFactura: savedMovement.numSerieFactura,
+                        projectionStatus: cashProjection?.status === "SUCCESS" ? PROJECTION_STATUS.OK : PROJECTION_STATUS.ERROR,
+                        cashProjectionStatus: cashProjection?.status || "UNKNOWN",
+                    },
+                    error: cashProjection?.status === "SUCCESS" ? null : {
+                        code: "CASH_OR_SECONDARY_PROJECTION_PENDING",
+                        message: "Evento fiscal ya persistido; la proyeccion requiere reconciliacion.",
+                    },
+                    idempotent: true,
+                };
+            }
+            if (existing?.items?.length > 1) {
+                retainLedgerLock = true;
+                throw new Error("FISCAL_TRANSACTION_ID_AMBIGUOUS");
+            }
+        }
+
+        // 4a. El head se lee solo despues de adquirir el lock.
+        const previous = await _getLastCashEvent();
+        const seq = await _getNextSequenceInternal(traceId);
 
     const previousRecordHash = _safeTrim(readMovementHash(previous)) || GENESIS_HASH;
     const recordTimestamp = _formatAEATDateTimeMadrid(ts);
@@ -710,22 +778,81 @@ export async function registrarEventoEconomico(input) {
 
     let cabecera;
     try {
+        // Fencing check immediately before the append-only write.
+        await assertFiscalLedgerLock(ledgerLock);
         cabecera = await dalInsert(MOVIMIENTOS_CAJA_COL, doc);
     } catch (err) {
-        log.error("registrarEventoEconomico: insercion de cabecera fallo", {
-            traceId,
-            message: err?.message,
-            code: err?.code || null,
-        });
-        return {
-            status: "ERROR",
-            data: null,
-            error: {
-                code: "LEDGER_INSERT_FAIL",
-                message: err?.message || "No se pudo registrar el evento economico.",
+        // A rejected insert can be an uncertain network outcome. Resolve by
+        // the caller's stable transactionId (or traceId when none exists)
+        // before deciding whether the sequence may be rolled back.
+        let recovery;
+        try {
+            const query = dalQuery(MOVIMIENTOS_CAJA_COL);
+            recovery = await query
+                .eq(_safeTrim(doc.transactionId) ? "transactionId" : "traceId",
+                    _safeTrim(doc.transactionId) || traceId)
+                .limit(2)
+                .find({ consistencyMode: "strong" });
+        } catch (readError) {
+            retainLedgerLock = true;
+            log.error("FISCAL_LEDGER_RESULT_UNKNOWN", {
                 traceId,
-            },
-        };
+                transactionId: doc.transactionId,
+                insertError: err?.message,
+                readError: readError?.message,
+            });
+            return {
+                status: "ERROR",
+                data: null,
+                error: {
+                    code: "LEDGER_RESULT_UNKNOWN",
+                    message: "No se pudo confirmar el resultado del insert. El bloqueo fiscal se conserva para evitar bifurcar la cadena.",
+                    traceId,
+                },
+            };
+        }
+
+        if (recovery?.items?.length === 1) {
+            cabecera = recovery.items[0];
+            log.warn("FISCAL_LEDGER_INSERT_RECOVERED", {
+                traceId,
+                transactionId: doc.transactionId,
+                movementId: cabecera._id,
+            });
+        } else {
+            if (recovery?.items?.length > 1) {
+                retainLedgerLock = true;
+                log.error("FISCAL_LEDGER_DUPLICATE_TRANSACTION_ID", {
+                    traceId,
+                    transactionId: doc.transactionId,
+                    matches: recovery.items.length,
+                });
+            } else {
+                const rolledBack = await _rollbackSequenceAllocation(seq, traceId);
+                if (!rolledBack) {
+                    retainLedgerLock = true;
+                    log.error("FISCAL_LEDGER_SEQUENCE_ROLLBACK_FAILED", {
+                        traceId,
+                        transactionId: doc.transactionId,
+                        sequenceNumber: seq.sequenceNumber,
+                    });
+                }
+            }
+            log.error("registrarEventoEconomico: insercion de cabecera fallo", {
+                traceId,
+                message: err?.message,
+                code: err?.code || null,
+            });
+            return {
+                status: "ERROR",
+                data: null,
+                error: {
+                    code: retainLedgerLock ? "LEDGER_REPAIR_REQUIRED" : "LEDGER_INSERT_FAIL",
+                    message: err?.message || "No se pudo registrar el evento economico.",
+                    traceId,
+                },
+            };
+        }
     }
 
     // Update the operational cash-register projection as part of the online
@@ -770,6 +897,22 @@ export async function registrarEventoEconomico(input) {
             ? null
             : { code: "CASH_OR_SECONDARY_PROJECTION_PENDING", message: "Evento fiscal persistido; una o mas proyecciones requieren reconciliacion." },
     };
+    } finally {
+        if (!retainLedgerLock) {
+            const released = await releaseFiscalLedgerLock(ledgerLock);
+            if (!released?.released) {
+                log.error("FISCAL_LEDGER_LOCK_RELEASE_FAILED", {
+                    traceId,
+                    reason: released?.reason || "UNKNOWN",
+                });
+            }
+        } else {
+            log.error("FISCAL_LEDGER_LOCK_RETAINED_FOR_REPAIR", {
+                traceId,
+                transactionId: _safeTrim(input.transactionId) || null,
+            });
+        }
+    }
 }
 
 // ============================================================================
