@@ -70,7 +70,7 @@ La actualización optimista de `CAJA_SEQ` evita que dos writers consuman el mism
 
 **Evidencia de repositorio:** el árbol real de `src/backend` no contiene `inventario.web.js` ni `storesCatalog.js`. Las búsquedas de `InventarioStockVenta`, `MovimientosInventario`, `movementToken`, `stockOnHand` y `getInventoryDashboard` no encuentran referencias de código; solo aparecen en necesidades, dossier y matrices. `package.json` tampoco declara `@wix/stores`.
 
-**Evidencia CMS documental:** el audit de reconciliación CMS del 2026-11-01 declara `InventarioStockVenta` (19 campos) y `MovimientosInventario` (26 campos). Esto acredita la declaración y conteo documental de colecciones, no que exista un writer operativo.
+**Evidencia CMS verificada en lectura live:** `InventarioStockVenta` y `MovimientosInventario` existen como colecciones `NATIVE`; sus esquemas se consultaron en Wix CMS sin mutaciones. `InventarioStockVenta` tiene campos requeridos `name`, `tipoImpositivo`, `taxIncluded`, `price`, `sku`, `stockOnHand`, `stockReserved`, `stockAvailable`, `traceId`; `productId`, `variantId`, `catalogVersion`, `locationId` y `stockKey` son opcionales en el esquema actual. `MovimientosInventario` exige `recordTimestamp`, `movementToken`, `movementType`, `sku`, `quantityDelta` y `traceId`; `lineItemId`, `stockBefore`, `stockAfter`, `stockApplied`, `nativeCommercialMovement` y `requiresWixReconciliation` son opcionales. Esto acredita los esquemas físicos, no que exista un writer operativo.
 
 **Contrato Wix verificado:** el proyecto declara Wix Stores Catalog V1. La documentación oficial V1 usa `@wix/stores`:
 - `inventory.getInventoryVariants(inventoryId)` para leer variantes.
@@ -88,7 +88,9 @@ La actualización optimista de `CAJA_SEQ` evita que dos writers consuman el mism
 
 **Evidencia de repositorio:** la búsqueda de `LibroAsientosContablesDetalle`, `entryId`, `accountCode`, `debitAmount` y `creditAmount` no encuentra escritor en `src/backend`. `eventLog.js` inserta en `MovimientosCaja` y proyecta cierres Z, pero no genera asientos en el libro contable.
 
-**Evidencia documental:** la matriz de trazabilidad `WEB-16` marca la proyección como PARCIAL y advierte discrepancia entre los nombres declarados en schema (`debitAmount/creditAmount`) y el contrato de writer pendiente (`debit/credit`). No inventar ni normalizar ese contrato hasta contrastarlo con el esquema físico completo.
+**Evidencia CMS verificada en lectura live:** `LibroAsientosContablesDetalle` existe como colección `NATIVE`. El esquema exige `entryId`, `recordTimestamp`, `concept`, `lineNumber`, `origenTipo`, `origenRegistro`, `sourceMovementId`, `entryDate`, `fiscalPeriod`, `accountCode`, `debitAmount`, `creditAmount`, `recordHash`, `previousRecordHash` y `traceId`. No existe campo `sourceEventId`; el vínculo requerido es `sourceMovementId` y `cashMovementId` es opcional. Esto resuelve la discrepancia con la matriz `WEB-16`: el contrato físico prevalece y la matriz debe actualizarse antes de crear el writer.
+
+**Protección añadida en esta rama:** `data.js` incorpora hooks `beforeUpdate` y `beforeRemove` para ambos ledgers (`MovimientosInventario` y `LibroAsientosContablesDetalle`), con pruebas en `data.hooks.test.mjs`. Esto protege operaciones que atraviesen los hooks Velo; queda pendiente verificar el comportamiento de edición desde CMS UI, ya que la metadata live muestra `dataPermissions.itemUpdate/itemRemove = CMS_EDITOR` aunque las operaciones Data API indiquen `ADMIN`.
 
 **Diseño pendiente:** definir plan de cuentas, reglas de partida doble, origen único por `sourceEventId`, idempotencia, rectificativas append-only, validación `debit = credit` por asiento y conciliación con `MovimientosCaja`. La proyección contable nunca debe modificar el ledger fiscal de origen.
 
