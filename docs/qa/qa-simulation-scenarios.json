@@ -294,6 +294,44 @@
         "refund and reconcile balance"
       ],
       "limitation": "No Gift Card issue/redeem integration test has been evidenced."
+    },
+    {
+      "scenarioId": "QA-CASH-REFUND-FACSIMIL-001",
+      "name": "Devoluciones y reembolsos con cadena fiscal facsímil",
+      "status": "MOCK_COVERED",
+      "testFiles": [
+        "src/backend/tests/site.flows.e2e.test.mjs"
+      ],
+      "traceId": "trace-qa-facsimil-refunds-001",
+      "fixture": {
+        "transactionIds": [
+          "facsimil-refund-reembolso",
+          "facsimil-refund-devolucion",
+          "facsimil-refund-devolucion_servicio"
+        ],
+        "amount": 12.1,
+        "currency": "EUR",
+        "paymentMethod": "EFECTIVO",
+        "movementTypes": [
+          "REEMBOLSO",
+          "DEVOLUCION",
+          "DEVOLUCION_SERVICIO"
+        ],
+        "invoiceType": "R1",
+        "previousInvoiceId": "FACSIMIL-FAC-2026-00001",
+        "fiscalSigner": "mock-only",
+        "cmsWrites": false,
+        "externalPayment": false
+      },
+      "assertions": [
+        "all supported refund movement types create a RECTIFICATIVA event",
+        "accountingSign is -1 and accountingAmount is negative",
+        "cash projection reduces the seeded synthetic opening balance",
+        "movement id is applied exactly once to CajaActual",
+        "hash chain integrity reports zero breaks",
+        "concept contains the exact simulation label"
+      ],
+      "limitation": "Only offline Wix Data mocks and a mock signer are used. No real X.509 signature, AEAT transmission, payment, CMS mutation or fiscal validity is established."
     }
   ]
 }
