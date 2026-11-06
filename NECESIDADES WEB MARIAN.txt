@@ -1,0 +1,227 @@
+# HOJA DE CUMPLIMIENTO — WEB MARIANMADRID.ES
+
+**Documento consolidado de requisitos, necesidades y criterios de aceptación**
+
+**Proyecto:** Sitio web marianmadrid.es — Marian Madrid Peluquería y Estética
+**Titular:** Marian Madrid (Propietaria y Directora)
+**Desarrollador:** Nacho Ortega (Arquitectura Wix & Velo)
+**Repositorio de referencia:** nachoortegazgz/marianmadridXXXXX
+**Entorno:** Wix Studio / Velo (Node.js)
+**Fecha de consolidación:** 28-10-2026
+**Estado:** Pendiente de verificación final contra repositorio real `src/`
+
+---
+
+## 1. Resumen ejecutivo
+
+El sitio web no debe ser un escaparate estático. Debe ser una **herramienta de gestión profesional** que:
+
+1. Gestión profesional de las reservas online de servicios de peluquería y estética simples y duales con gap de tiempo entre sus fases que libere al profesional en la agenda de reservas, permitiendole aceptar otros servicios en ese hueco de tiempo entre fases.
+2. Permita solapar servicios durante tiempos muertos (ejemplo: gap de tiempo entre fases para exposición de tintes).
+3. Posibilidad de activar y detallar cantidad de la fianza en reservas online para protejer reservas online contra citas fantasma.
+4. Cumpla estrictamente con la normativa fiscal española (Veri*factu / RD 1007/2023), laboral (RD-ley 8/2019) y de protección de datos (RGPD / AEPD).
+5. Automatice la coordinación con la gestoría (exportación CSV/Excel normalizada).
+6. Ofrezca una experiencia de cliente profesional, fiable y coherente con la marca.
+
+---
+
+## 2. Requisitos funcionales por área
+
+### 2.1. Motor de reservas inteligente (Prioridad 🔴 Crítica)
+
+| ID | Requisito | Descripción | Criterio de aceptación | Estado declarado |
+|---|---|---|---|---|
+| RF-01 | Reserva online 24/7 | La clienta debe poder reservar sin depender del teléfono. | Flujo completo de selección de servicio, fecha, hora y confirmación funcional en producción. | ✅ Declarado |
+| RF-02 | Tiempos fraccionados / solapables | Un servicio de 90 min (ej. Babylights) debe dividirse en fases: aplicación (staff ocupado), exposición (staff liberado, sillón ocupado), lavado/peinado (staff ocupado). | El algoritmo de disponibilidad libera la agenda durante la fase de exposición para permitir cortes rápidos o servicios cortos simultáneos. | ✅ Declarado en backend (`bookingsEngine.web.js`) — **pendiente verificar contra repositorio real** |
+| RF-03 | Configuración de fases por servicio | Cada servicio debe permitir configurar: duración total, minutos de aplicación, minutos de exposición, minutos de acabado. | Campos personalizados en Wix Bookings operativos y leídos correctamente por el backend. | ✅ Declarado |
+| RF-04 | Servicios cortos compatibles/complementos | Debe existir catálogo de complementos (ejemplo: secado, manicura) reservables durante la fase de exposición. | Verificado en pruebas: reserva simultánea de tinte + corte sin conflicto de agenda. | ✅ Declarado |
+| RF-05 | Sincronización con Google Calendar | La agenda debe sincronizarse con el calendario del salón. | Wix Bookings configurado con sincronización activa. | ✅ Declarado (Wix App nativa) |
+
+### 2.2. Fianza online / Anti no-shows (Prioridad 🔴 Crítica)
+
+| ID | Requisito | Descripción | Criterio de aceptación | Estado declarado |
+|---|---|---|---|---|
+| RF-06 | Fianza para servicios > 30 € | Cobro obligatorio de señal (15 € o 20%) en el momento de la reserva para servicios de importe superior a 30 €. | Regla condicional operativa: servicios ≤ 30 € → pago opcional; servicios > 30 € → fianza obligatoria. | ✅ Declarado (`bookingsEngine.web.js`, `createDepositPaymentOrder`) |
+| RF-07 | Pasarela de pago segura | Integración con TPV virtual (Redsys / Bizum / Stripe) vía Wix Pay. | Pago procesado correctamente y confirmación recibida en frontend. | ✅ Declarado |
+| RF-08 | Política de cancelación | Reembolso automático si cancela con ≥ 24 h de antelación; retención si cancela después. | `cancellationPolicyHours = 24` configurado y webhook de reembolso operativo. | ✅ Declarado — **pendiente verificar webhook real** |
+| RF-09 | Descuento en ticket final | La fianza debe ser descontable del importe total del servicio. | Lógica de descuento aplicada en el checkout final. | ⚠️ No declarado explícitamente en código — **requiere verificación** |
+
+### 2.3. Asistente de IA capilar (Prioridad 🟡 Media)
+
+| ID | Requisito | Descripción | Criterio de aceptación | Estado declarado |
+|---|---|---|---|---|
+| RF-10 | Asesoramiento IA | Interfaz interactiva que orienta sobre servicios según facciones, tipo de cabello y necesidades. | Respuesta generada y mostrada al usuario. | ✅ Declarado (`aiConsultant.web.js`) |
+| RF-11 | Aviso legal obligatorio | Disclaimer visible: "Presupuesto y diagnóstico orientativos sujetos a valoración capilar previa en tocador". | Texto presente en toda respuesta de la IA. | ✅ Declarado (`avisoLegal` en respuesta) |
+| RF-12 | Cuestionario previo obligatorio | Antes de responder, la IA debe recoger: (1) longitud del cabello, (2) tratamientos químicos previos en últimos 6 meses, (3) necesidad principal. | Los 3 campos son obligatorios y se validan antes de llamar a la API. | ✅ Declarado |
+| RF-13 | Prohibición de garantizar resultados | La IA no puede garantizar resultados de color sobre cabellos teñidos previamente sin prueba de mecha. | System prompt con regla no negociable; verificado con test de prompt malicioso. | ✅ Declarado |
+| RF-14 | Protección de API key | La clave de OpenAI/Claude debe almacenarse en `wix-secrets-backend`, nunca expuesta en cliente. | Verificado: `getSecret("OPENAI_API_KEY")` usado en backend. | ✅ Declarado |
+| RF-15 | Timeout y fallback | Si la IA tarda > 9 s o devuelve JSON malformado, debe haber respuesta de fallback sin congelar la página. | `AbortController` a 9 s y try/catch de deserialización implementados. | ✅ Declarado en auditoría — **verificar código real** |
+
+### 2.4. Tarjetas regalo con QR (Prioridad 🟡 Media)
+
+| ID | Requisito | Descripción | Criterio de aceptación | Estado declarado |
+|---|---|---|---|---|
+| RF-16 | Emisión de tarjeta regalo | Generación de código único y registro en base de datos (`GiftCards`). | Campos: `cardCode`, `signature`, `initialBalance`, `currentBalance`, `status`. | ✅ Declarado (`giftCards.web.js`) |
+| RF-17 | Firma HMAC-SHA256 | Cada tarjeta debe llevar firma criptográfica infalsificable. | `crypto.createHmac('sha256', secret)` aplicado sobre código + importe. | ✅ Declarado |
+| RF-18 | Generación de QR | El voucher descargable debe incluir código QR único. | Paquete `qrcode` instalado y QR generado en backend. | ✅ Declarado |
+| RF-19 | Escáner en salón | Página privada `/admin-scanner` protegida por rol para escanear QR desde móvil. | Solo admin/equipo autorizado puede acceder. | ✅ Declarado |
+| RF-20 | Canje con saldo parcial | Al escanear, leer saldo, descontar importe y actualizar estado (`ACTIVE` → `EXHAUSTED`). | Verificado: saldo insuficiente rechazado; saldo parcial actualizado. | ✅ Declarado |
+| RF-21 | Prevención de fraude/duplicidad | Sanitización de código (`trim().toUpperCase()`) y comprobación atómica de saldo. | Test de manipulación de saldo con firma inválida → rechazado. | ✅ Declarado |
+| RF-22 | Envío por email con diseño | Emisión automática por email con diseño elegante del salón. | ⚠️ No declarado explícitamente — **requiere verificación** |
+
+### 2.5. Comercio electrónico / La Boutique (Prioridad 🟡 Media)
+
+| ID | Requisito | Descripción | Criterio de aceptación | Estado declarado |
+|---|---|---|---|---|
+| RF-23 | Catálogo de productos | Venta de cosmética/capilar con precios y stock. | Wix Stores configurado. | ✅ Declarado (Wix App nativa) |
+| RF-24 | Sincronización de stock | El stock online debe reflejar el inventario físico del salón. | ⚠️ Declarado como "manual desde app móvil Wix"; conexión automática con TPV físico pendiente para fase 2. | 🟡 **Operativo parcial** |
+| RF-25 | Upselling en checkout | Sugerir tratamiento hidratante exprés (+12 €) al reservar Corte de Autor; champú matizador con 10% dto. al comprar bono de mechas. | ⚠️ No declarado en código — **requiere verificación/implementación** |
+| RF-26 | Derecho de desistimiento 14 días | Excepción del Art. 103 para cosméticos desprecintados debe estar explícita en Términos y Condiciones. | ⚠️ No declarado — **requiere verificación** |
+
+### 2.6. Fidelización y recurrencia (Prioridad 🟢 Baja)
+
+| ID | Requisito | Descripción | Criterio de aceptación | Estado declarado |
+|---|---|---|---|---|
+| RF-27 | Recordatorio WhatsApp/SMS | Mensaje automático a las 4-5 semanas de tinte/corte con enlace de reserva. | ⚠️ No declarado — **requiere implementación** |
+| RF-28 | Confirmación y recordatorio 24 h | Mensaje automático de confirmación de cita y recordatorio 24 h antes con enlace para cancelar/modificar. | ⚠️ No declarado — **requiere implementación** |
+| RF-29 | Promociones flash horas valle | Programar descuentos dinámicos (ej. 15% cortes martes 10:00-13:00). | ⚠️ No declarado — **requiere implementación** |
+| RF-30 | Bonos/suscripciones | Bono de 4 peinados mensuales, bono barba, etc. | ⚠️ No declarado — **requiere implementación** |
+
+### 2.7. Área de usuario y contenido (Prioridad 🟡 Media)
+
+| ID | Requisito | Descripción | Criterio de aceptación | Estado declarado |
+|---|---|---|---|---|
+| RF-31 | Registro/login de clientes | Área privada para gestionar perfil, historial de citas y compras. | Wix Members configurado. | ✅ Declarado (Wix App nativa) |
+| RF-32 | Blog y contenido social | Integración con Instagram, TikTok, Facebook, YouTube y sección de noticias/consejos. | ⚠️ No declarado en código — **requiere verificación** |
+| RF-33 | Formulario de contacto + mapa | Formulario web, Google Maps, teléfonos y WhatsApp directos. | ⚠️ No declarado en código — **requiere verificación** |
+| RF-34 | Catálogo de servicios estructurado | Clasificación por categorías (Básicos & Luxury, Babylights, Corte de Autor, Ritual Barba, Pack Madre e Hija) con precios claros. | ✅ Declarado |
+
+---
+
+## 3. Requisitos legales y normativos (Prioridad 🔴 Crítica)
+
+### 3.1. Fiscal — Veri*factu / RD 1007/2023 (Ley Antifraude)
+
+| ID | Requisito | Descripción | Criterio de aceptación | Estado declarado |
+|---|---|---|---|---|
+| RL-01 | Registro de facturación simplificada inalterable | Toda venta web (fianza, tarjeta regalo, producto) debe generar registro con número correlativo, fecha, base imponible e IVA desglosado. | Serie correlativa sin saltos (ej. `WEB-2026-0001`); edición/borrado bloqueados. | ✅ Declarado |
+| RL-02 | IVA 21% desglosado | Servicios de peluquería y cosmética tributan al 21%. Precios mostrados con IVA incluido. | Verificado matemáticamente: Babylights 89 € → Base 73,55 € + IVA 15,45 €; Corte 39 € → Base 32,23 € + IVA 6,77 €; etc. Cero desviación por redondeo. | ✅ Declarado |
+| RL-03 | Cadena de hashes SHA-256 | Cada movimiento fiscal contiene la huella del anterior (hashChain) para garantizar no alteración. | `previousRecordHash` enlazado; `hash` canónico en caja; `recordHash` en contabilidad. | ✅ Declarado (matriz CMS) |
+| RL-04 | Endpoint AEAT ValidarQR | Integración con `https://www2.agenciatributaria.gob.es/wlpl/TIKE-CONT/ValidarQR`. | ⚠️ Declarado en versión inicial; **verificar implementación real** | 🟡 Pendiente verificar |
+| RL-05 | Exportación CSV/Excel para gestoría | Archivo normalizado con columnas: Fecha, Nº Factura, Concepto, Base Imponible, % IVA, Cuota IVA, Total, Método Pago. | Delimitador `;`, decimal con `,`, UTF-8 BOM (`\uFEFF`), compatible con A3ASESOR, Contasol, Sage. | ✅ Declarado (`accountingExport.web.js`) |
+| RL-06 | Verificación de cuadre | Fila de totales con suma de bases, cuotas y totales. | Verificado: suma exacta al céntimo. | ✅ Declarado |
+| RL-07 | NIF emisor/destinatario | Cada factura incluye NIF del salón y NIF/datos del cliente si los solicita. | Campos `NIFEmisor`, `NIFDestinatario` en colección. | ✅ Declarado |
+
+### 3.2. Laboral — Registro de jornada RD-ley 8/2019
+
+| ID | Requisito | Descripción | Criterio de aceptación | Estado declarado |
+|---|---|---|---|---|
+| RL-08 | Fichaje inmutable | Registro de entrada, salida y pausa sellado criptográficamente. | Firma HMAC-SHA256 por evento; registros append-only. | ✅ Declarado (`horario.web.js` según dossier inicial) — **verificar contra repositorio** |
+| RL-09 | No manipulación posterior | Ante inspección de trabajo, los datos no pueden haber sido alterados. | Hash chain + registro de `previousRecordHash`. | ✅ Declarado |
+| RL-10 | Registro horario staff | Colección `RegistrosHorariosStaff` con `resourceId`, `memberId`, `recordedAt`, `clockEventType`, `traceId`. | ✅ Declarado en matriz CMS |
+
+### 3.3. RGPD / AEPD — Protección de datos
+
+| ID | Requisito | Descripción | Criterio de aceptación | Estado declarado |
+|---|---|---|---|---|
+| RL-11 | Ficha técnica capilar y de salud | Base de datos privada (`ClientHealthAndConsent`) con alergias PPD, sensibilidad cuero cabelludo, historial de fórmulas. | Permisos `Admin Only`; no indexable por Google; no accesible por API pública. | ✅ Declarado (`gdprHealth.web.js`) |
+| RL-12 | Consentimiento expreso datos de salud | Casilla independiente, no premarcada, para tratamiento de datos de salud/bienestar. | Registro con fecha, hora e IP. | ✅ Declarado |
+| RL-13 | Consentimiento de imagen | Casilla separada para autorizar publicación de fotos "antes y después" en web y redes. | Registro con fecha, hora e IP; revocable. | ✅ Declarado |
+| RL-14 | Banner cookies AEPD | Panel con dos botones al mismo nivel: "Aceptar todas" y "Rechazar todas"; configuración granular. | Bloqueo de Meta Pixel, Google Analytics y TikTok Pixel hasta consentimiento. | ✅ Declarado (`masterPage.js`) |
+| RL-15 | Minimización de datos | Solo recoger datos necesarios para la finalidad. | ✅ Declarado |
+| RL-16 | Derecho de acceso/rectificación/supresión | La clienta debe poder ejercer sus derechos. | ⚠️ No declarado explícitamente — **requiere verificación** |
+
+### 3.4. Consumo — LSSI-CE y TRLGDCU
+
+| ID | Requisito | Descripción | Criterio de aceptación | Estado declarado |
+|---|---|---|---|---|
+| RL-17 | Aviso Legal | Enlace visible en web. | ⚠️ Declarado como "marco legal básico"; **verificar contenido actualizado** | 🟡 Pendiente |
+| RL-18 | Política de Privacidad | Enlace visible en web. | ⚠️ **Verificar contenido actualizado** | 🟡 Pendiente |
+| RL-19 | Política de Cookies | Enlace visible y coherente con el banner. | ⚠️ **Verificar contenido actualizado** | 🟡 Pendiente |
+| RL-20 | Términos y Condiciones de compra | Debe incluir derecho de desistimiento 14 días y excepción Art. 103 para cosméticos desprecintados. | ⚠️ No declarado — **requiere implementación** | 🟡 Pendiente |
+| RL-21 | Precios con IVA incluido | Todo precio mostrado al consumidor debe indicar "IVA incl.". | ✅ Declarado en frontend (`reserva-online.js`) | ✅ Declarado |
+
+---
+
+## 4. Requisitos técnicos y de calidad
+
+### 4.1. Arquitectura y seguridad
+
+| ID | Requisito | Descripción | Criterio de aceptación | Estado declarado |
+|---|---|---|---|---|
+| RT-01 | Migración a `.web.js` | Usar `wix-web-module` con `webMethod` y `Permissions` en lugar de `.jsw` legacy. | Todos los módulos backend en formato `.web.js`. | ✅ Declarado |
+| RT-02 | Permisos por función | Público: `Permissions.Anyone` (catálogo, disponibilidad, IA). Sensible: `Permissions.Admin` (exportación fiscal, canje bonos, fichas salud). | Verificado en código declarado. | ✅ Declarado |
+| RT-03 | Secretos en `wix-secrets-backend` | Claves API y HMAC nunca en cliente. | `getSecret()` usado en backend. | ✅ Declarado |
+| RT-04 | `suppressAuth: true` en operaciones admin | Inserciones/consultas administrativas protegidas. | Aplicado en `wixData.insert/query/update` sensibles. | ✅ Declarado |
+| RT-05 | `consistentRead: true` | En consultas críticas para erradicar inconsistencias de lectura. | ⚠️ Declarado en dossier inicial; **verificar en código real** | 🟡 Pendiente |
+| RT-06 | Extractor polimórfico de precio | Soportar `service.price` como número, objeto `{ amount }` o `service.payment.rate`. | `extractServicePrice()` implementado. | ✅ Declarado |
+| RT-07 | Timeout IA | `AbortController` a 9 s. | ⚠️ Declarado en auditoría; **verificar en código real** | 🟡 Pendiente |
+| RT-08 | Fallback IA | Respuesta estructurada si falla el parseo JSON. | Objeto fallback con claves esperadas. | ✅ Declarado |
+| RT-09 | Prevención race condition gift cards | Sanitización + comprobación atómica de saldo. | Test de doble lectura rápida → segunda rechazada. | ✅ Declarado |
+| RT-10 | CSV UTF-8 BOM + `;` + decimal `,` | Compatibilidad con Excel Windows y software contable español. | Verificado en `accountingExport.web.js`. | ✅ Declarado |
+
+### 4.2. Persistencia (Wix Data Collections)
+
+| ID | Requisito | Descripción | Estado declarado |
+|---|---|---|---|
+| RT-11 | `Bookings/Services` | Catálogo nativo Wix Bookings. | ✅ Declarado |
+| RT-12 | `PaidTransactions` | Libro inalterable de auditoría Ley Antifraude. | ✅ Declarado |
+| RT-13 | `GiftCards` | Registro de bonos, firmas y saldos. | ✅ Declarado |
+| RT-14 | `ClientHealthAndConsent` | Fichas médicas capilares confidenciales. | ✅ Declarado |
+| RT-15 | `CitasF2` | Reservas con fases duales, fianza, estados. | ✅ Declarado (matriz CMS) |
+| RT-16 | `MovimientosCaja` | Movimientos fiscales con hash chain. | ✅ Declarado (matriz CMS) |
+| RT-17 | `DatosFiscales` | NIF, régimen, Veri*factu. | ✅ Declarado (matriz CMS) |
+| RT-18 | `HistoricoCierresZ` | Cierres con totales, hashes y firmas. | ✅ Declarado (matriz CMS) |
+| RT-19 | `LibroAsientosContablesDetalle` | Asientos contables con debe/haber. | ✅ Declarado (matriz CMS) |
+| RT-20 | `InventarioStockVenta` | Stock físico/reservado/disponible. | ✅ Declarado (matriz CMS) |
+| RT-21 | `MovimientosInventario` | Movimientos con idempotencia. | ✅ Declarado (matriz CMS) |
+| RT-22 | `ControlOperativo` | Control de reintentos, alertas, deduplicación. | ✅ Declarado (matriz CMS) |
+| RT-23 | `RegistrosHorariosStaff` | Fichajes con firma y trazabilidad. | ✅ Declarado (matriz CMS) |
+| RT-24 | `MapaStaff` | Relación staff-recursos-servicios. | ✅ Declarado (matriz CMS) |
+
+### 4.3. Calidad y testing
+
+| ID | Requisito | Descripción | Criterio de aceptación | Estado declarado |
+|---|---|---|---|---|
+| RT-25 | Parseo de módulos | Todos los módulos deben validar sintácticamente. | 32/32 módulos validados. | ✅ Declarado — **verificar tras refactor** |
+| RT-26 | Integridad de importaciones | Todas las importaciones resueltas. | 524 importaciones verificadas sin errores. | ✅ Declarado — **verificar tras refactor** |
+| RT-27 | Test desglose IVA | Conciliación exacta al céntimo en todos los servicios. | 5/5 servicios verificados con 0,00 € desviación. | ✅ Declarado |
+| RT-28 | Test criptografía gift cards | Firma HMAC válida; manipulación rechazada. | Test de alteración de saldo → firma inválida. | ✅ Declarado |
+| RT-29 | Test filtro seguridad IA | Prompt malicioso no altera comportamiento. | Redirección a catálogo oficial. | ✅ Declarado |
+| RT-30 | Tests antirregresión | Detección de 5 riesgos graves subsanados: precio NaN, JSON IA, race condition gift cards, CSV incompatible, RGPD sin control de roles. | ✅ Declarado en auditoría — **verificar código real** |
+
+---
+
+## 5. Criterios de aceptación globales
+
+El sitio se considerará **APTO PARA PRODUCCIÓN** cuando se cumplan **TODOS** los siguientes:
+
+1. **Verificación real del repositorio:** El desarrollador debe entregar el árbol completo de `src/` (`tree src` o `find src -maxdepth 3`) y demostrar que los módulos declarados existen y contienen la lógica descrita, testada, funcional y fiable. **La solución debe ser honesta, profesional, real y testada para despliegue publico. No se aceptan soluciones greenfield ni nombres inventados.**
+
+2. **Correspondencia módulo ↔ requisito:** Cada módulo del repositorio debe mapearse a los requisitos RF/RL/RT de esta hoja.
+
+3. **Tests ejecutados sobre código real:** Los tests de IVA, HMAC, IA y antirregresión deben ejecutarse contra el código del repositorio, no contra versiones ideales.
+
+4. **Cumplimiento legal verificado:**
+   - Facturación simplificada inalterable con serie correlativa.
+   - Cadena de hashes SHA-256 operativa.
+   - Exportación CSV/Excel compatible con A3/Contasol/Sage.
+   - Banner cookies AEPD con dos botones al mismo nivel.
+   - Consentimiento imagen y salud registrado con fecha/IP.
+   - Registro de jornada con firma HMAC y append-only.
+
+5. **Operativa del salón validada en sesión de pruebas presencial:**
+   - Reserva con tinte + corte simultáneo sin conflicto.
+   - Escaneo de bono regalo desde móvil.
+   - Descarga de CSV para gestoría y validación por el asesor.
+   - Flujo de fianza con pago real (entorno de pruebas).
+
+6. **Cero deuda técnica documentada:** El archivo `CALIDAD_CERO_DEUDA.md` debe reflejar el estado real post-refactor.
+
+7. **Aprobación de la propietaria:** Marian Madrid debe confirmar que la operativa en pantalla es "tan cómoda como tener las tijeras en la mano".
+
+---
+
+
+
+
