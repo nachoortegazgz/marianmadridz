@@ -29,6 +29,12 @@ function seedUnknownTransaction() {
   }]);
 }
 
+function alertRecords() {
+  return (wixDataMock._store.get('ControlOperativo') || []).filter(
+    (row) => row.controlType === IC.CONTROL_TYPE.ALERT
+  );
+}
+
 function transactionPayload() {
   const row = (wixDataMock._store.get('ControlOperativo') || [])[0];
   return row?.payload || {};
@@ -92,6 +98,8 @@ test('QA-UNKNOWN-BOOKING-03 no CitasF2 projection remains REPAIR_REQUIRED, never
   assert.equal(transactionPayload().status, 'REPAIR_REQUIRED');
   assert.equal(transactionPayload().manualReconciliationRequired, true);
   assert.notEqual(transactionPayload().status, 'FAILED_FINAL');
+  assert.equal(alertRecords().length, 1, 'manual repair must create one operational alert');
+  assert.equal(alertRecords()[0].payload.eventType, 'BOOKING_RESULT_UNKNOWN');
 });
 
 test('QA-UNKNOWN-BOOKING-04 a partial dual projection remains REPAIR_REQUIRED with known native bookingId', async () => {
@@ -111,4 +119,5 @@ test('QA-UNKNOWN-BOOKING-04 a partial dual projection remains REPAIR_REQUIRED wi
   assert.equal(result.reconciliationReason, 'PARTIAL_CITAS_PROJECTION');
   assert.equal(transactionPayload().status, 'REPAIR_REQUIRED');
   assert.deepEqual(transactionPayload().knownBookingIds, [F1_BOOKING_ID]);
+  assert.equal(alertRecords().length, 1, 'partial dual projection must create a deduplicated operational alert');
 });
