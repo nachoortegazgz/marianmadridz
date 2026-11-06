@@ -575,3 +575,75 @@ test('FLOW-CAJA-04 transactionId concurrente no crea movimientos duplicados', as
     setMember(null);
   }
 });
+
+test('FLOW-CAJA-07 devoluciones y reembolsos reducen caja y conservan cadena fiscal (FACSIMIL QA)', async () => {
+  const refundTypes = ['REEMBOLSO', 'DEVOLUCION', 'DEVOLUCION_SERVICIO'];
+
+  for (const movementType of refundTypes) {
+    wixDataMock._reset();
+    await seedStaff({ resourceId: GUID_ADMIN_RESOURCE });
+    setMember({ _id: GUID_MEMBER, contactId: GUID_CONTACT, loginEmail: 'marta@test.local' });
+    await setupFiscalSecrets();
+    const { cajas } = await freshImports();
+
+    // Saldo de apertura ficticio: el reembolso debe descontarse sin crear
+    // movimientos reales ni tocar CMS fuera del mock de esta suite.
+    wixDataMock._store.set('CajaActual', [{
+      _id: 'SINGLE_ITEM_ID',
+      singletonKey: 'CAJA_PRINCIPAL',
+      cashRegisterStatus: 'ABIERTA',
+      isOpen: true,
+      operationDate: '2026-11-06',
+      openingAmount: 100,
+      cashAmount: 100,
+      totalInAmount: 100,
+      netAmount: 100,
+      expectedCash: 100,
+      cardAmount: 0,
+      voucherAmount: 0,
+      otherAmount: 0,
+      salesCount: 0,
+      sequenceCounters: {},
+    }]);
+
+    try {
+      const result = await cajas.registerManualTransaction({
+        totalAmount: 12.10,
+        tipoFactura: 'R1',
+        movementType,
+        operationDescription: `Devolucion simulada ${movementType} (SIMULACION PREVIA A DESPLIEGUE REAL)`,
+        paymentMethod: 'EFECTIVO',
+        transactionId: `facsimil-refund-${movementType.toLowerCase()}`,
+        correctionReason: 'OTRAS',
+        previousInvoiceId: 'FACSIMIL-FAC-2026-00001',
+      });
+
+      assert.strictEqual(result.status, 'SUCCESS', JSON.stringify(result.error));
+      assert.strictEqual(result.data.movementType, movementType);
+      assert.strictEqual(result.data.eventType, 'RECTIFICATIVA');
+      assert.strictEqual(result.data.accountingSign, -1);
+      assert.strictEqual(result.data.accountingAmount, -12.10);
+      assert.match(result.data.hash, /^[0-9a-f]{64}$/i);
+      assert.ok(result.data.previousRecordHash);
+      assert.ok(String(result.data.digitalSignature).startsWith('MOCKX509SIG:'));
+      assert.ok(result.data.operationDescription.includes('(SIMULACION PREVIA A DESPLIEGUE REAL)'));
+
+      const movements = wixDataMock._store.get('MovimientosCaja') || [];
+      assert.strictEqual(movements.length, 1, 'un único movimiento rectificativo en el ledger mock');
+      assert.strictEqual(movements[0].transactionId, `facsimil-refund-${movementType.toLowerCase()}`);
+
+      const cashRegister = (wixDataMock._store.get('CajaActual') || [])
+        .find((row) => row.singletonKey === 'CAJA_PRINCIPAL');
+      assert.ok(cashRegister, 'CajaActual singleton conservado');
+      assert.strictEqual(cashRegister._id, 'SINGLE_ITEM_ID');
+      assert.strictEqual(cashRegister.cashAmount, 87.90, 'el reembolso resta efectivo');
+      assert.strictEqual(cashRegister.netAmount, 87.90, 'netAmount concilia con el efectivo disponible');
+      assert.deepStrictEqual(cashRegister.sequenceCounters.appliedMovementIds, [result.data._id]);
+
+      const chain = await cajas.verifyFiscalHashChainIntegrity({ limit: 20 });
+      assert.strictEqual(Number(chain.data?.breaksCount), 0, JSON.stringify(chain));
+    } finally {
+      setMember(null);
+    }
+  }
+});
