@@ -2276,7 +2276,9 @@ async function _recoverUnknownWriterFromReader(pairToken, payload, existingCitas
         complete: outcome === "COMPLETED",
         terminalFailure: outcome === "FAILED_FINAL",
         outcome,
-        reason: allFound ? (outcome === "REPAIR_REQUIRED" ? "DUAL_COMPENSATION_STATE_MIXED" : null) : "READER_PHASES_INCOMPLETE",
+        reason: allFound
+            ? (outcome === "REPAIR_REQUIRED" ? "DUAL_COMPENSATION_STATE_MIXED" : null)
+            : Object.values(phaseResults).find((result) => result.status !== "FOUND")?.reason || "READER_PHASES_INCOMPLETE",
         bookingIds,
         phaseResults,
         writerIntent: { ...writerIntent, phases },
