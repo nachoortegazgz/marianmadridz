@@ -88,7 +88,7 @@ import { logger } from "backend/logger";
 import { normalizeError, _updateCitaSafe, _persistBooking } from "backend/booking/bookingCore";
 import { queueFiscalRecovery, updateCajaActualFromMovement } from "backend/cajas.web";
 import { registrarEventoEconomico } from "backend/eventLog";
-import { syncPaidOrderInventoryInternal } from "backend/inventario.web";
+import { syncPaidOrderInventoryInternal, reserveOrderInventoryInternal, releaseOrderInventoryInternal, syncRestockedOrderInventoryInternal } from "backend/inventario.web";
 
 import { logAuditEventWithTimeout, notifyOperationalAlert } from "backend/audit";
 import {
@@ -1276,6 +1276,17 @@ export async function wixBookingsV2_onBookingCanceled(rawBody) {
 
 async function _syncPaidOrderInventoryOrThrow(order, traceId, eventId) {
     const result = await syncPaidOrderInventoryInternal(order, traceId, eventId);
+    if (result?.status === "PARTIAL" &&
+        Array.isArray(result.data?.results) &&
+        result.data.results.filter((item) => item.status === "ERROR").every((item) => item.repairQueued === true)) {
+        log.warn("INVENTORY_SYNC_QUEUED_FOR_REPAIR", {
+            orderId: order?._id || order?.id || null,
+            traceId,
+            eventId: eventId || null,
+            failedLines: result.data.results.filter((item) => item.status === "ERROR").length,
+        });
+        return result;
+    }
     if (result?.status !== "SUCCESS") {
         log.error("INVENTORY_SYNC_RETRY_REQUIRED", {
             orderId: order?._id || order?.id || null,
@@ -1283,11 +1294,49 @@ async function _syncPaidOrderInventoryOrThrow(order, traceId, eventId) {
             eventId: eventId || null,
             result,
         });
-        const error = new Error("INVENTORY_SYNC_RETRY_REQUIRED");
-        error.code = "INVENTORY_SYNC_RETRY_REQUIRED";
+        const error = new Error("INVENTORY_REPAIR_QUEUE_FAILED");
+        error.code = "INVENTORY_REPAIR_QUEUE_FAILED";
         throw error;
     }
     return result;
+}
+
+// ============================================================================
+// WEBHOOK: ORDER CREATED — reserve stock in CMS after native checkout reserve
+// ============================================================================
+
+export async function wixEcom_onOrderCreated(rawBody) {
+    const traceId = makeTraceId("whook-order-created");
+    try {
+        const event = await _verifyAndDecodeWebhook(rawBody, "ORDER_CREATED");
+        if (!event) return { status: "REJECTED", reason: "JWT_VERIFICATION_FAILED" };
+        const order = event?.order || event?.data?.order || event;
+        const orderId = _safeTrim(order?._id || order?.id);
+        if (!isValidGuid(orderId)) return { status: "OK", skipped: "ORDER_ID_MISSING" };
+        const eventId = _safeTrim(event?.eventId || event?._id || event?.metadata?.id) || `order-created-${orderId}`;
+        if (await isEventProcessed(eventId)) return { status: "OK", duplicate: true };
+
+        const result = await reserveOrderInventoryInternal(order, traceId, eventId);
+        if (result.status === "PARTIAL") {
+            const failed = result.data?.results?.filter((item) => item.status === "ERROR") || [];
+            if (!failed.length || failed.some((item) => item.repairQueued !== true)) {
+                throw new Error("INVENTORY_REPAIR_QUEUE_FAILED");
+            }
+        } else if (result.status !== "SUCCESS") {
+            throw new Error("INVENTORY_RESERVATION_FAILED");
+        }
+
+        await markEventAsProcessed(eventId, "ORDER_CREATED", traceId, {
+            orderId,
+            inventoryStatus: result.status,
+            queuedRepairs: result.data?.results?.filter((item) => item.repairQueued).length || 0,
+        });
+        return { status: "OK", eventId, inventoryStatus: result.status };
+    } catch (error) {
+        _handleError(error, "wixEcom_onOrderCreated", traceId);
+        if (String(error?.message || "").includes("INVENTORY_")) throw error;
+        return { status: "OK" };
+    }
 }
 
 // ============================================================================
@@ -1644,6 +1693,26 @@ export async function wixEcom_onOrderRefunded(rawBody) {
         const transactionId = `REFUND-${orderId}-${refundId}`;
         const originalTransactionId = `ORDER-${orderId}`;
 
+        const restockLines = refundObj?.sideEffects?.restock?.lineItems;
+        if (Array.isArray(restockLines) && restockLines.length) {
+            const inventoryRefundResult = await syncRestockedOrderInventoryInternal(
+                orderId,
+                refundId,
+                restockLines,
+                refundObj?.reason || "WIX_REFUND_RESTOCK",
+                traceId,
+                event?.eventId || event?._id || null
+            );
+            if (inventoryRefundResult.status === "PARTIAL") {
+                const failed = inventoryRefundResult.data?.results?.filter((item) => item.status === "ERROR") || [];
+                if (failed.some((item) => item.repairQueued !== true)) {
+                    throw new Error("INVENTORY_REFUND_REPAIR_QUEUE_FAILED");
+                }
+            } else if (inventoryRefundResult.status !== "SUCCESS") {
+                throw new Error("INVENTORY_REFUND_SYNC_FAILED");
+            }
+        }
+
         const originalMovementRes = await withTimeout(
             dalQuery(MOVIMIENTOS_CAJA_COL)
                 .eq("transactionId", originalTransactionId)
@@ -1853,6 +1922,15 @@ export async function wixEcom_onOrderCanceled(rawBody) {
         const lineItems = Array.isArray(order.lineItems)
             ? order.lineItems
             : [];
+        const inventoryReleaseResult = await releaseOrderInventoryInternal(order, traceId, eventId);
+        if (inventoryReleaseResult.status === "PARTIAL") {
+            const failed = inventoryReleaseResult.data?.results?.filter((item) => item.status === "ERROR") || [];
+            if (failed.some((item) => item.repairQueued !== true)) {
+                throw new Error("INVENTORY_RESERVATION_RELEASE_QUEUE_FAILED");
+            }
+        } else if (inventoryReleaseResult.status !== "SUCCESS") {
+            throw new Error("INVENTORY_RESERVATION_RELEASE_FAILED");
+        }
         const bookingsAppId = WIX_CATALOG_APP_IDS.BOOKINGS;
         const bookingIds = _normalizeBookingIds(
             lineItems
