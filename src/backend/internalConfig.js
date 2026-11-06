@@ -34,6 +34,8 @@ export const BUSINESS_COLLECTIONS = Object.freeze({
   CONTROL_OPERATIVO: "ControlOperativo",
   DATOS_FISCALES: "DatosFiscales",
   HISTORICO_CIERRES_Z: "HistoricoCierresZ",
+  INVENTARIO_STOCK_VENTA: "InventarioStockVenta",
+  MOVIMIENTOS_INVENTARIO: "MovimientosInventario",
   MAPA_STAFF: "MapaStaff",
   MOVIMIENTOS_CAJA: "MovimientosCaja",
   REGISTROS_HORARIOS_STAFF: "RegistrosHorariosStaff",
@@ -162,6 +164,18 @@ export const FISCAL_LEDGER_LOCK_CONFIG = Object.freeze({
   POLL_MS: 100,
   SERVICE_ID: "00000000-0000-4000-8000-000000000001",
   RESOURCE_ID: "00000000-0000-4000-8000-000000000002",
+});
+
+// Wix Stores Catalog V1 inventory projection and per-variant reconciliation.
+export const INVENTORY_CONFIG = Object.freeze({
+  CATALOG_VERSION: "V1_CATALOG",
+  STOCK_KEY_PREFIX: "V1",
+  MOVEMENT_TYPE_SALE: "VENTA",
+  PAGE_LIMIT: 100,
+  MAX_ORDER_LINES: 300,
+  LOCK_TTL_MS: 300000,
+  LOCK_WAIT_MS: 3000,
+  LOCK_POLL_MS: 100,
 });
 
 // Singleton ids de caja (cajas.web.js ALN-04, eventLog.js).
