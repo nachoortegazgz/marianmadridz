@@ -148,7 +148,8 @@
         "exact DUAL_F1 and DUAL_F2 projections resolve using native bookingIds",
         "no projection never proves that Wix did not create a booking",
         "partial dual projection is retained for manual repair",
-        "ambiguous outcomes never transition to FAILED_FINAL"
+        "ambiguous outcomes never transition to FAILED_FINAL",
+        "ambiguous outcomes create a deduplicated operational alert"
       ],
       "limitation": "The test simulates CMS projections and transaction records. It does not query the live Wix Bookings Writer after a network timeout; ambiguous results are intentionally held for manual reconciliation."
     },
