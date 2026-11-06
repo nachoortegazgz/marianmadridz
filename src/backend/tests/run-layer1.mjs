@@ -19,6 +19,7 @@ const suites = [
   'qa.simple-booking.writer.offline.test.mjs',
   'qa.dual-booking.writer.offline.test.mjs',
   'events.unknown-booking-recovery.test.mjs',
+  'events.booking-canceled.integrity.test.mjs',
   'booking.core.concurrency.test.mjs',
   'controlOperativo.hooks.test.mjs',
   'reservas.web.test.mjs',
