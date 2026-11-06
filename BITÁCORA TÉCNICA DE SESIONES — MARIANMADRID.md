@@ -154,3 +154,33 @@
 ### Cambios de esta sesión
 - Corrección de documentación Node.js en `README.md`.
 - Este registro de evidencia y límites. No se modifican módulos de negocio ni configuración Wix.
+
+---
+
+## Sesión 2026-11-06 — Alineación documental de arquitectura y costes
+
+### Objetivo
+Reducir contradicciones y ruido documental, alineando los documentos de raíz con la decisión vigente: Wix y sus Wix Apps nativas como centro operativo; Microsoft 365 como capa documental; código Velo e integraciones adicionales solo cuando sean imprescindibles y aprobados.
+
+### Cambios preparados en rama
+- `README.md`: arquitectura resumida, mapa de documentos, reglas de validación y límites de publicación.
+- `DIRECTRICES VIGENTES DEL PROYECTO.md`: nuevo documento de reglas obligatorias, costes, reservas, M365, seguridad y toma de decisiones.
+- `DOSSIER TÉCNICO CONSOLIDADO.md`: consolidación del estado técnico, contratos QA, reservas duales, módulos propios, M365 y evidencia de pruebas; se eliminan planes antiguos presentados como arquitectura vigente.
+- `DOSSIER FLUJOS END TO END CAPA 3.md`: simplificación del diseño Wix → Power Automate → SharePoint; se marcan recursos, licencias e integración como pendientes de verificación.
+
+### Rama y commits
+- Rama: `docs/alineacion-directrices-2026-11-06`.
+- README: `945f130b3e3f167ed23ef69ea2575fafb00b581a`.
+- Directrices: `537849a6e55c9614c8876965275f7a0a412ab0e1`.
+- Dossier técnico: `1ed072e8bb70beae8512e9866a27ffd32d155935`.
+- Flujos Capa 3: `940c041c63a69ba1b3128a084e71a1e6a1d691e3`.
+
+### Límites y estado
+- Cambios exclusivamente documentales en una rama de trabajo; no se han fusionado en `main`.
+- No se ha modificado código runtime, configuración Wix, CMS, reservas, pagos, producción ni secretos.
+- No se ha ejecutado Preview, Publish, despliegue ni prueba E2E.
+- SharePoint y Power Automate siguen sin crearse ni probarse.
+- No se ha verificado todavía CI para el HEAD final de esta rama.
+
+### Siguiente paso
+Revisar el diff de la rama, comprobar consistencia y enlaces, ejecutar validaciones documentales disponibles y abrir PR para revisión. No fusionar ni publicar en Wix sin aprobación.
