@@ -64,7 +64,35 @@ La actualización optimista de `CAJA_SEQ` evita que dos writers consuman el mism
 
 **Resolución técnica necesaria:** diseñar una serialización de append que use una primitiva CMS con compare-and-swap/lease y recuperación tras timeout, o una estrategia de reserva única por secuencia con reconciliación del head. Antes de implementar, verificar esquema físico de `CajaActual`/`ControlOperativo`, semántica de revisión de `@wix/data`, vencimiento/fencing y comportamiento tras caída del proceso. Un lock con TTL sin fencing/renovación no basta.
 
-## 6. Gaps adicionales que permanecen abiertos
+## 6. Módulos P1 ausentes — inventario y proyección contable
+
+### Inventario Wix Stores
+
+**Evidencia de repositorio:** el árbol real de `src/backend` no contiene `inventario.web.js` ni `storesCatalog.js`. Las búsquedas de `InventarioStockVenta`, `MovimientosInventario`, `movementToken`, `stockOnHand` y `getInventoryDashboard` no encuentran referencias de código; solo aparecen en necesidades, dossier y matrices. `package.json` tampoco declara `@wix/stores`.
+
+**Evidencia CMS documental:** el audit de reconciliación CMS del 2026-11-01 declara `InventarioStockVenta` (19 campos) y `MovimientosInventario` (26 campos). Esto acredita la declaración y conteo documental de colecciones, no que exista un writer operativo.
+
+**Contrato Wix verificado:** el proyecto declara Wix Stores Catalog V1. La documentación oficial V1 usa `@wix/stores`:
+- `inventory.getInventoryVariants(inventoryId)` para leer variantes.
+- `inventory.updateInventoryVariants(productId, inventoryItem)` para actualizar stock.
+- El payload de escritura debe incluir explícitamente `trackQuantity`; omitirlo se trata como `false` y puede desactivar el seguimiento de cantidades para todo el producto.
+- Documentación: [Get Inventory Variants](https://dev.wix.com/docs/api-reference/business-solutions/stores/catalog-v1/inventory/get-inventory-variants), [Update Inventory Variants](https://dev.wix.com/docs/api-reference/business-solutions/stores/catalog-v1/inventory/update-inventory-variants), [SDK @wix/stores](https://dev.wix.com/docs/api-reference/business-solutions/stores/catalog-v1/inventory/introduction?apiView=SDK).
+
+**Restricción de arquitectura:** no migrar a Catalog V3 en esta intervención. Wix V3 usa otro modelo de inventory items y revisiones; el dossier vigente exige ADR propio para migrar desde V1.
+
+**Webhook pendiente de reconciliar:** el código actual expone `wixEcom_onOrderRefunded` y verifica `ORDER_REFUNDED`; no hay writer de inventario asociado. La documentación oficial de Wix describe además [Order Transactions Refund Completed](https://dev.wix.com/docs/api-reference/business-solutions/e-commerce/orders/order-transactions/order-transactions-refund-completed), que se dispara cuando todos los refund transactions llegan a estado final (`SUCCEEDED` o `FAILED`) e incluye side effects como restocking. No asumir que el payload de este evento coincide con el evento legado que hoy procesa `events.js`; hay que verificar la suscripción y el payload real del sitio antes de adaptar el handler.
+
+**Diseño pendiente:** `MovimientosInventario` debe ser append-only e idempotente por movimiento de línea/refund; `InventarioStockVenta` será proyección espejo. El checkout nativo ya puede descontar stock: el writer no debe aplicar un segundo decremento al inventario nativo. Debe determinarse si el webhook registra el delta y actualiza solo la proyección CMS, y cómo se reconcilia con Wix Inventory sin doble efecto.
+
+### Proyección contable
+
+**Evidencia de repositorio:** la búsqueda de `LibroAsientosContablesDetalle`, `entryId`, `accountCode`, `debitAmount` y `creditAmount` no encuentra escritor en `src/backend`. `eventLog.js` inserta en `MovimientosCaja` y proyecta cierres Z, pero no genera asientos en el libro contable.
+
+**Evidencia documental:** la matriz de trazabilidad `WEB-16` marca la proyección como PARCIAL y advierte discrepancia entre los nombres declarados en schema (`debitAmount/creditAmount`) y el contrato de writer pendiente (`debit/credit`). No inventar ni normalizar ese contrato hasta contrastarlo con el esquema físico completo.
+
+**Diseño pendiente:** definir plan de cuentas, reglas de partida doble, origen único por `sourceEventId`, idempotencia, rectificativas append-only, validación `debit = credit` por asiento y conciliación con `MovimientosCaja`. La proyección contable nunca debe modificar el ledger fiscal de origen.
+
+## 7. Gaps adicionales que permanecen abiertos
 
 1. Ejecutar suite completa `npm run test:layer2` y `npm run test` en CI para el head de esta rama; el cambio aún no tiene resultado de ejecución.
 2. Probar concurrencia de eventos fiscales distintos, colisión de secuencia, timeout después del insert y reconciliación del hash head.
@@ -75,7 +103,7 @@ La actualización optimista de `CAJA_SEQ` evita que dos writers consuman el mism
 7. Validar fichajes y firmas HMAC en Wix QA, incluyendo duplicidad, ajustes rectificativos y secuencias de eventos.
 8. Completar pruebas E2E integradas Capa 1 → Capa 2 → Capa 3 en entorno aislado. SharePoint sigue siendo evidencia documental, nunca autoridad transaccional.
 
-## 7. Seguridad y límites de ejecución
+## 8. Seguridad y límites de ejecución
 
 - Cambios únicamente en rama GitHub; sin despliegue ni publicación Wix.
 - Sin escrituras en CMS de producción.
@@ -84,7 +112,7 @@ La actualización optimista de `CAJA_SEQ` evita que dos writers consuman el mism
 - Sin mutar ledgers existentes.
 - No se considera validado ningún test que no haya sido ejecutado y observado en CI o entorno controlado.
 
-## 8. Estado
+## 9. Estado
 
 - **Verificado:** PR #153 integrada en `main`; mapa de módulos y gate Capa 2 inspeccionados; defecto potencial de upsert concurrente en paquetes identificado y corregido en esta rama mediante insert-only.
 - **Pendiente de ejecución:** nueva suite y gates CI.
