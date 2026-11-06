@@ -64,3 +64,50 @@ All suites use `src/backend/tests/loader.mjs`; they do not call Wix services. A 
 - Do not use production credentials or a live checkout.
 - Do not mark a manual/integration scenario as passed based on an offline mock.
 - No Preview, Publish or deployment is performed by this branch.
+
+
+## Update 2026-11-06 — auditoría de Capas 1 y 2
+
+### Estado de CMS QA tras poda
+Lectura consistente de Wix Data Collections API (40 colecciones totales; 15 `NATIVE`). Solo se han podado colecciones propias en QA; ninguna colección `WIX_APP` ni producción.
+
+| Colección | Revisión | Campos retirados en la sesión |
+|---|---:|---|
+| `CitasF2` | 17 (lectura final) | `noShowReason`, `noShowAt`, `changeLog`, `cancellationReason`, `canceledAt`, `invoicingDate`, `fiscalData`, `sourceEventId` |
+| `ComplementosCatalogo` | 3 | `traceId` |
+| `ControlOperativo` | 9 | `nextRetryAt`, `retryAfter` |
+
+Total: 11 campos eliminados físicamente y verificados ausentes en lecturas posteriores. Los borrados de campos eliminan también sus valores históricos.
+
+### Contratos preservados
+- `CitasF2.slotStart` y `slotEnd` permanecen `DATETIME`; hooks de colección enlazados al ID lógico y al ID físico QA.
+- Se conservan privacidad/consentimiento, contacto, estado de reserva/pago, identidad de servicio y staff, `pairToken`, `revision`, `meta`, `catalogId`, `thirdPartyId` y `cashMovementId`.
+- `ControlOperativo.expiresAt` y `attempts` son canónicos. Se mantienen `processedAt` (usado por la cola de conciliación de inventario), `heartbeatAt`, locks, rate limits, alertas y compensaciones.
+- Se mantiene la relación nativa `ComplementosCatalogo.ServiciosCatalogo_name` ↔ `ServiciosCatalogo.name` (`MULTI_REFERENCE`).
+
+### Suites incluidas en los gates
+- Layer 1: 12 entradas de suites, con reservas simples/duales, disponibilidad, concurrencia, idempotencia, rate limiting, identidad/staff, Cart V2 y contratos frontend/backend.
+- Layer 2: 12 entradas de suites, con caja, ledger fiscal, Cierre Z, devoluciones, conciliación de inventario, locks, hooks CMS, DTOs, cron parity y eventos.
+- Runner canónico: `npm test` descubre suites `*.test.mjs` y `*.runner.mjs`; workflow `.github/workflows/booking-regression.yml` ejecuta `npm ci`, `npm test`, `test:layer1`, `test:layer2` y ESLint en push/PR a `main`.
+
+### Límites que siguen abiertos
+- Saga dual integrada: falta probar F1 creado + F2 Writer V2 fallido + cancelación nativa de F1 + reconciliación de ambas proyecciones + liberación de locks/idempotencia.
+- Pago confirmado y webhook de pedido pagado: no se ejecuta proveedor ni transacción real.
+- Reprogramación completa simple/dual y liberación del slot anterior: sin escenario integrado certificado.
+- Wix Stores: la venta/devolución/idempotencia offline está cubierta; reconciliación real con Stores requiere integración QA.
+- Wix Automations, formularios/CRM, marketing opt-in/baja y Gift Cards: no hay evidencia E2E automatizada.
+- Firma X.509 real, QR y envío AEAT: fuera de los mocks FACSIMIL; no se certifica validez fiscal.
+- Browser E2E/checkout: requiere ejecución manual del usuario en Preview QA con pagos de prueba e inbox aislado.
+
+### Seguridad de la simulación
+Todas las suites offline usan fixtures sintéticos y mocks. No se crean reservas, pagos, reembolsos, movimientos de caja/inventario, envíos externos ni despliegues. La evidencia de CI se consignará solo tras completar el workflow de la PR de esta auditoría.
+
+
+### Evidencia CI — run #172 (2026-11-06)
+- Run ID: `42149432291`; conclusión: `success`.
+- `npm test`: 366/366 pruebas, 39 suites, 0 fallos.
+- Layer 1: 207/207 pruebas, 12 suites, 0 fallos.
+- Layer 2: 116/116 pruebas, 12 suites, 0 fallos.
+- ESLint: success.
+- [Workflow run #172](https://github.com/nachoortegazgz/marianmadridz/actions/runs/42149432291).
+- Esto acredita suites offline con mocks, no navegador, checkout, proveedor de pagos, firma X.509 real ni envío AEAT.
