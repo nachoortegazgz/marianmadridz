@@ -977,6 +977,11 @@ export async function wixBookingsV2_onBookingConfirmed(rawBody) {
 // WEBHOOK: BOOKING CANCELED (ALN-03: BOOKING_STATUS.CANCELED)
 // ============================================================================
 
+export function buildCancellationRectificationTransactionId(pairToken, bookingId) {
+    const token = _safeTrim(pairToken);
+    return token ? `RECT-PAIR-${token}` : `RECT-${_safeTrim(bookingId)}`;
+}
+
 async function _upsertDualCancellationFlag(pairToken, traceId, triggerBookingId, fiscalStatus = "NOT_REQUIRED") {
     const token = _safeTrim(pairToken);
     if (!token) return { status: "NOT_DUAL" };
@@ -1119,9 +1124,7 @@ export async function wixBookingsV2_onBookingCanceled(rawBody) {
             const originalMovement = originalMovementRes?.items?.length === 1
                 ? originalMovementRes.items[0]
                 : null;
-            const rectificationTransactionId = pairToken
-                ? `RECT-PAIR-${pairToken}`
-                : `RECT-${bookingId}`;
+            const rectificationTransactionId = buildCancellationRectificationTransactionId(pairToken, bookingId);
             const rectificationBookingIds = pairToken ? dualPairBookingIds : [bookingId];
 
             if (originalMovement) {
