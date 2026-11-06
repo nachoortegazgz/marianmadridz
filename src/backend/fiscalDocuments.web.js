@@ -10,7 +10,7 @@ STANDARDS: G10 ASCII Strict. Cero suppressAuth. Colecciones canonicas.
 
 CAMBIOS DE ALINEACION v5015-ALIGNED (respecto a v5009-FISCAL-V20.1):
   ALN-01: COLLECTIONS alias eliminado. Uso de BUSINESS_COLLECTIONS.
-  ALN-02: wixData.save/query/get -> dalSave/dalQuery/dalGet (dataAccess v2.1).
+  ALN-02: wixData.query/get/insert -> dalQuery/dalGet/dalInsert (dataAccess v2.4).
   ALN-04: Paginacion query(...).find() usa la interfaz { items, hasNext(),
           next() } de dataAccess. next() es async y se awaita.
   ALN-05: Se mantiene el uso de HistoricoCierresZ como almacen de paquetes
