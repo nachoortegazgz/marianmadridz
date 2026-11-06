@@ -19,7 +19,7 @@ Lectura consistente del esquema CMS: 40 colecciones en total, 15 `NATIVE`. La po
 
 | Colección | Revisión posterior | Campos eliminados |
 |---|---:|---|
-| `CitasF2` | 12 | `noShowReason`, `noShowAt`, `changeLog`, `cancellationReason`, `canceledAt`, `invoicingDate`, `fiscalData`, `sourceEventId` |
+| `CitasF2` | 17 (lectura final) | `noShowReason`, `noShowAt`, `changeLog`, `cancellationReason`, `canceledAt`, `invoicingDate`, `fiscalData`, `sourceEventId` |
 | `ComplementosCatalogo` | 3 | `traceId` |
 | `ControlOperativo` | 9 | `nextRetryAt`, `retryAfter` |
 
@@ -98,7 +98,7 @@ El workflow `.github/workflows/booking-regression.yml` está configurado para PR
 4. `npm run test:layer2`
 5. `npm run lint`
 
-Esta documentación se presenta mediante PR para disparar el workflow. **Los resultados numéricos, duración y conclusión del run se añadirán solo después de consultar el run concreto de este commit.** Los estados vacíos o pendientes no se considerarán CI verde.
+Run #172, ID `42149432291`, asociado al commit `c5189cb9abfb992458daccd18a497e9667e038af`: **success**. `npm ci` correcto; suite completa **366/366**, 39 suites, 0 fallos; Layer 1 **207/207**, 12 suites, 0 fallos; Layer 2 **116/116**, 12 suites, 0 fallos; ESLint correcto. Evidencia: [workflow run #172](https://github.com/nachoortegazgz/marianmadridz/actions/runs/42149432291). El workflow no ejecuta Preview, Publish ni despliegue.
 
 ## 6. Restricciones del simulacro
 
