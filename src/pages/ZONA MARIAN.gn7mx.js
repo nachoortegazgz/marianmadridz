@@ -28,6 +28,17 @@ import {
     downloadManagerPackageVersion,
 } from "backend/fiscalDocuments.web.js";
 
+import {
+    getInventoryDashboard,
+    getInventoryCatalogCandidates,
+    registerInventoryMaster,
+    getInventoryMovementHistory,
+    registerInventoryMovement,
+    processPendingInventoryRepairs,
+    processPendingRefundInventoryRepairs,
+    reconcilePendingInventoryMovements,
+} from "backend/inventario.web.js";
+
 import { makeTraceId, URLS } from "public/mmUtils";
 import { createWidgetBridge } from "public/widgetBridge";
 
@@ -75,6 +86,30 @@ const ACTIONS = {
 
     DOCUMENT_DOWNLOAD: ({ payload }) =>
         downloadManagerPackageVersion(payload || {}),
+
+    INVENTORY_DASHBOARD: ({ payload, traceId }) =>
+        getInventoryDashboard({ ...(payload || {}), traceId }),
+
+    INVENTORY_CANDIDATES: ({ payload, traceId }) =>
+        getInventoryCatalogCandidates({ ...(payload || {}), traceId }),
+
+    INVENTORY_REGISTER_MASTER: ({ payload, traceId }) =>
+        registerInventoryMaster({ ...(payload || {}), traceId }),
+
+    INVENTORY_MOVEMENT_HISTORY: ({ payload, traceId }) =>
+        getInventoryMovementHistory(payload?.stockKey, { ...(payload || {}), traceId }),
+
+    INVENTORY_REGISTER_MOVEMENT: ({ payload, traceId }) =>
+        registerInventoryMovement({ ...(payload || {}), traceId }),
+
+    INVENTORY_RECONCILE_MOVEMENTS: ({ payload, traceId }) =>
+        reconcilePendingInventoryMovements({ ...(payload || {}), traceId }),
+
+    INVENTORY_PROCESS_REPAIRS: ({ payload, traceId }) =>
+        processPendingInventoryRepairs({ ...(payload || {}), traceId }),
+
+    INVENTORY_PROCESS_REFUND_REPAIRS: ({ payload, traceId }) =>
+        processPendingRefundInventoryRepairs({ ...(payload || {}), traceId }),
 
 };
 

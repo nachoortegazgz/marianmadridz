@@ -1024,7 +1024,7 @@ export async function _renewLock(slotClave, lockOwnerId, ttlMs, expectedRevision
 // =============================================================================
 const TRANSACTIONS_COL = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
 const TX_DEDUPE_PREFIX = "TX_";
-const TX_PAYLOAD_MAX_CHARS = 900;
+const TX_PAYLOAD_MAX_CHARS = 5000;
 const TRANSACTION_POLL_BASE_MS =
     Number(CONCURRENCY && CONCURRENCY.TRANSACTION_POLL_BASE_MS) || 250;
 const TRANSACTION_MAX_WAIT_MS =
@@ -1056,6 +1056,9 @@ function _readTransaction(doc) {
         heartbeatAt: _toDateSafe(payload.heartbeatAt || doc.heartbeatAt),
         attempts: Number(payload.attempts || doc.attempts || 0),
         serviceId: _safeTrim(payload.serviceId || doc.serviceId),
+        writerIntent: payload.writerIntent && typeof payload.writerIntent === "object"
+            ? payload.writerIntent
+            : null,
     };
 }
 
@@ -1175,7 +1178,8 @@ export async function _initTransaction(
     payloadHash,
     traceId,
     serviceId,
-    ownerExecutionId
+    ownerExecutionId,
+    writerIntent
 ) {
     const id = _safeTrim(pairToken);
     const resolvedServiceId = _safeTrim(serviceId);
@@ -1191,6 +1195,7 @@ export async function _initTransaction(
         expiresAt: new Date(now.getTime() + TRANSACTION_LEASE_MS),
         heartbeatAt: now,
         attempts: 1,
+        writerIntent: writerIntent && typeof writerIntent === "object" ? writerIntent : null,
     };
     try {
         await elevatedInsert(
@@ -1241,6 +1246,61 @@ export async function _initTransaction(
     );
 }
 
+export async function updateBookingWriterIntent(pairToken, phase, status, metadata = {}, traceId) {
+    const id = _safeTrim(pairToken);
+    const phaseKey = _safeTrim(phase).toUpperCase();
+    const nextStatus = _safeTrim(status).toUpperCase();
+    if (!id || !["F1", "F2"].includes(phaseKey) || !nextStatus) {
+        return { ok: false, reason: "INVALID_WRITER_INTENT_INPUT" };
+    }
+
+    for (let attempt = 0; attempt < 4; attempt++) {
+        const doc = await _getTransactionById(id);
+        if (!doc) return { ok: false, reason: "TX_NOT_FOUND" };
+        const payload = _readControlPayload(doc);
+        if (payload.status === "COMPLETED") return { ok: false, reason: "TX_ALREADY_COMPLETED" };
+
+        const writerIntent = payload.writerIntent && typeof payload.writerIntent === "object"
+            ? payload.writerIntent
+            : {};
+        const phases = writerIntent.phases && typeof writerIntent.phases === "object"
+            ? writerIntent.phases
+            : {};
+        const currentPhase = phases[phaseKey] && typeof phases[phaseKey] === "object"
+            ? phases[phaseKey]
+            : {};
+        const updatedWriterIntent = {
+            ...writerIntent,
+            phases: {
+                ...phases,
+                [phaseKey]: {
+                    ...currentPhase,
+                    ...metadata,
+                    status: nextStatus,
+                    updatedAt: new Date().toISOString(),
+                },
+            },
+            updatedAt: new Date().toISOString(),
+        };
+        const nextPayload = { ...payload, writerIntent: updatedWriterIntent };
+        const nextDoc = _buildTransactionControl(id, nextPayload, doc);
+        try {
+            await elevatedUpdate(TRANSACTIONS_COL, nextDoc);
+            return { ok: true, writerIntent: updatedWriterIntent };
+        } catch (error) {
+            if (_isRevisionConflictError(error)) continue;
+            log.error("updateBookingWriterIntent failed", {
+                traceId,
+                pairToken: id,
+                phase: phaseKey,
+                error: error?.message,
+            });
+            return { ok: false, reason: (error && error.message) || "WRITER_INTENT_UPDATE_FAILED" };
+        }
+    }
+    return { ok: false, reason: "WRITER_INTENT_REVISION_CONFLICT" };
+}
+
 export async function claimTransaction(
     pairToken,
     newOwnerExecutionId,
@@ -1274,6 +1334,7 @@ export async function claimTransaction(
         attempts: tx.attempts + 1,
         bookingId: tx.bookingId,
         serviceId: tx.serviceId,
+        writerIntent: tx.writerIntent || null,
     };
 
     try {

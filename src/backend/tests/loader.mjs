@@ -467,6 +467,9 @@ const _makeNamespaceStub = (rootName) => new Proxy({}, {
 });
 export const availabilityTimeSlots = _makeNamespaceStub('availabilityTimeSlots');
 export const extendedBookings = _makeNamespaceStub('extendedBookings');
+export const catalogVersioning = _makeNamespaceStub('catalogVersioning');
+export const products = _makeNamespaceStub('products');
+export const inventory = _makeNamespaceStub('inventory');
 // LH-21 (fix derivado de tests 2026-10-14): 'bookings' es un NAMESPACE real
 // en el SDK (@wix/bookings -> bookings.staff.getStaff/listStaff, consumidos
 // por backend/staff.js v9). Antes se hardcodeaba a fnProxy: cualquier acceso

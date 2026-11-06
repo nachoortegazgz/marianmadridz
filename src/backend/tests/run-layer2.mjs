@@ -8,12 +8,17 @@ const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, '..', '..', '..');
 const loaderUrl = pathToFileURL(join(here, 'loader.mjs')).href;
 const suites = [
+  'accountingLedger.writer.offline.test.mjs',
   'controlOperativo.hooks.test.mjs',
   'crons.jobsConfigParity.test.mjs',
   'data.hooks.test.mjs',
   'dto.whitelist.test.mjs',
   'fiscalAggregator.read.test.mjs',
   'fiscalFacsimile.test.mjs',
+  'fiscalDocuments.package-version.concurrency.test.mjs',
+  'fiscalLedgerLock.test.mjs',
+  'fiscalLedgerWriters.locking.test.mjs',
+  'inventario.writer.offline.test.mjs',
   'site.flows.offline.test.mjs',
   'orderLedgerAmount.test.mjs',
   'events.booking-canceled.integrity.test.mjs',

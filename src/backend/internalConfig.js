@@ -34,6 +34,9 @@ export const BUSINESS_COLLECTIONS = Object.freeze({
   CONTROL_OPERATIVO: "ControlOperativo",
   DATOS_FISCALES: "DatosFiscales",
   HISTORICO_CIERRES_Z: "HistoricoCierresZ",
+  INVENTARIO_STOCK_VENTA: "InventarioStockVenta",
+  MOVIMIENTOS_INVENTARIO: "MovimientosInventario",
+  LIBRO_ASIENTOS_CONTABLES_DETALLE: "LibroAsientosContablesDetalle",
   MAPA_STAFF: "MapaStaff",
   MOVIMIENTOS_CAJA: "MovimientosCaja",
   REGISTROS_HORARIOS_STAFF: "RegistrosHorariosStaff",
@@ -130,6 +133,7 @@ export const APP_IDS = Object.freeze({
 // Wix eCommerce catalog IDs are GUIDs and are distinct from webhook app IDs.
 export const WIX_CATALOG_APP_IDS = Object.freeze({
   BOOKINGS: "13d21c63-b5ec-5912-8397-c3a5ddb27a97",
+  STORES: "215238eb-22a5-4c36-9e7b-e7c08025e04e",
 });
 
 // CERO-DEUDA ZC-07: export JWT eliminado (generateJWT/verifyJWT ya no
@@ -151,6 +155,47 @@ export const CONCURRENCY = Object.freeze({
   TRANSACTION_LEASE_MS: 300000,
   TRANSACTION_MAX_WAIT_MS: 3000,
   TRANSACTION_POLL_BASE_MS: 250,
+});
+
+// Global mutex for append-only MovimientosCaja sequence/hash-chain writes.
+export const FISCAL_LEDGER_LOCK_CONFIG = Object.freeze({
+  ID: "FISCAL_LEDGER_CHAIN_LOCK",
+  DEDUPE_KEY: "FISCAL_LEDGER_HASH_SEQUENCE",
+  TTL_MS: 600000,
+  WAIT_MS: 3000,
+  POLL_MS: 100,
+  SERVICE_ID: "00000000-0000-4000-8000-000000000001",
+  RESOURCE_ID: "00000000-0000-4000-8000-000000000002",
+});
+export const ACCOUNTING_LEDGER_LOCK_CONFIG = Object.freeze({
+  ID: "ACCOUNTING_LEDGER_LOCK_GLOBAL",
+  DEDUPE_KEY: "ACCOUNTING_LEDGER_LOCK_GLOBAL",
+  SERVICE_ID: "00000000-0000-4000-8000-000000000001",
+  RESOURCE_ID: "00000000-0000-4000-8000-000000000002",
+  TTL_MS: 300000,
+  WAIT_MS: 3000,
+  POLL_MS: 100,
+});
+
+
+// Wix Stores Catalog V1 inventory projection and per-variant reconciliation.
+export const INVENTORY_CONFIG = Object.freeze({
+  CATALOG_VERSION: "V1_CATALOG",
+  STOCK_KEY_PREFIX: "V1",
+  MOVEMENT_TYPE_SALE: "VENTA",
+  MOVEMENT_TYPE_RETURN: "DEVOLUCION",
+  MOVEMENT_TYPE_ADJUSTMENT: "AJUSTE",
+  MOVEMENT_TYPE_RECEIPT: "ENTRADA_STOCK",
+  MOVEMENT_TYPE_ISSUE: "SALIDA_STOCK",
+  PAGE_LIMIT: 100,
+  MAX_ORDER_LINES: 300,
+  LOCK_TTL_MS: 300000,
+  LOCK_WAIT_MS: 3000,
+  LOCK_POLL_MS: 100,
+  MAX_REPAIR_ATTEMPTS: 10,
+  REPAIR_PAGE_LIMIT: 25,
+  MOVEMENT_TOKEN_MIN_LENGTH: 8,
+  MOVEMENT_TOKEN_MAX_LENGTH: 128,
 });
 
 // Singleton ids de caja (cajas.web.js ALN-04, eventLog.js).
