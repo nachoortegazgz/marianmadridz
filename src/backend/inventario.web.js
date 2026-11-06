@@ -766,9 +766,15 @@ export async function releaseOrderInventoryInternal(order, traceId, eventId) {
                 results.push({ status: "ERROR", code: "INVENTORY_MASTER_MAPPING_REQUIRED", stockKey });
                 continue;
             }
-            const result = await _releaseOrderReservationUnderLock(
+            let result = await _releaseOrderReservationUnderLock(
                 stock, orderId, lineItemId, quantity, traceId
             );
+            if (result.status === "ERROR") {
+                const repair = await _queueInventoryRepair(
+                    order, lineItem, traceId, eventId, "RELEASE", result.code || result.reason
+                ).catch((error) => ({ queued: false, error: error?.message }));
+                result = { ...result, repairQueued: repair.queued === true, repairId: repair.repairId || null };
+            }
             results.push(result);
         } finally {
             await _releaseStockLock(lock);
