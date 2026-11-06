@@ -192,7 +192,7 @@ export const createManagerPackageVersion = webMethod(Permissions.SiteMember, asy
   } catch (err) {
     const code = String(err?.code || "");
     const message = String(err?.message || "");
-    if (code === "WDE0023" || /WDE0023|already exists|duplicated/i.test(message)) {
+    if (code === "WDE0074" || code === "WD_ITEM_ALREADY_EXISTS" || /WDE0074|WD_ITEM_ALREADY_EXISTS|already exists|duplicated/i.test(message)) {
       return {
         status: "ERROR",
         data: null,
