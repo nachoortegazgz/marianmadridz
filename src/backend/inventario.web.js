@@ -562,10 +562,19 @@ async function _syncPaidOrderLine(order, lineItem, traceId, eventId) {
             return { status: "ERROR", code: "WIX_STORE_VARIANT_NOT_FOUND" };
         }
 
-        const existing = await _findStockByKey(stockKey);
+        let existing = await _findStockByKey(stockKey);
         if (!existing) {
             return { status: "ERROR", code: "INVENTORY_MASTER_MAPPING_REQUIRED", stockKey };
         }
+        const reservationRelease = await _releaseOrderReservationUnderLock(
+            existing,
+            orderId,
+            lineItemId,
+            quantity,
+            traceId
+        );
+        if (reservationRelease.status !== "SUCCESS") return reservationRelease;
+        existing = await _findStockByKey(stockKey);
         const snapshotResult = await _persistStockSnapshot(
             existing,
             stockKey,
