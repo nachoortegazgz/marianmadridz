@@ -1,3 +1,9 @@
+
+
+---
+
+> **DIRECTRIZ VIGENTE — 2026-11-06:** consultar el archivo 'DIRECTRICES VIGENTES DEL PROYECTO.md' en la raíz. Prevalece sobre cualquier descripción histórica contradictoria. Arquitectura aprobada: Wix + Wix Apps nativas + M365; código propio mínimo; evitar integraciones y costes externos. No asumir proveedores externos ni cumplimiento legal garantizado.
+
 # DOSSIER TÉCNICO CONSOLIDADO de QA www.marianmadrid.es. Sitio para tests completos y simulacros realistas de funcionamiento y fiabilidad.
 
 Aquí tienes el **Resumen Ejecutivo Previo** y el **Mapa de Contenidos Estructurado** del Dossier Técnico Consolidado adjunto. Este documento está diseñado para alinear inmediatamente al modelo IA con el contexto, las restricciones y la arquitectura del proyecto `marianmadrid.es`, permitiendo una navegación semántica y técnica precisa.
