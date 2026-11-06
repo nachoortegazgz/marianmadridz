@@ -44,6 +44,8 @@ FIXES APLICADOS v5009-FISCAL (heredados):
 */
 
 import { createClient } from "@wix/sdk";
+import { extendedBookings } from "@wix/bookings";
+import { auth } from "@wix/essentials";
 import { getSecretValue } from "backend/secretAccess";
 
 import {
@@ -157,6 +159,9 @@ export function resolveOrderLedgerAmount(order) {
 }
 
 const log = logger;
+const queryExtendedBookingsElevated = auth.elevate(extendedBookings.queryExtendedBookings);
+const READER_V2_PAGE_LIMIT = 100;
+const READER_V2_MAX_PAGES = 5;
 
 // ============================================================================
 // CONSTANTES (ALN-01, ALN-05, ALN-06)
@@ -2000,6 +2005,275 @@ export async function markTransactionResultUnknown(pairToken, uncertainStep, tra
         log.error("markTransactionResultUnknown failed", { traceId, pairToken: id, error: error && error.message });
         return { ok: false, reason: (error && error.message) || "MARK_FAILED" };
     }
+}
+
+function _sameInstant(left, right) {
+    const leftMs = Date.parse(left);
+    const rightMs = Date.parse(right);
+    return Number.isFinite(leftMs) && Number.isFinite(rightMs) && leftMs === rightMs;
+}
+
+function _isExactReaderBooking(booking, intent, now) {
+    const slot = booking?.bookedEntity?.slot || {};
+    const serviceId = _safeTrim(slot.serviceId);
+    const resourceId = _safeTrim(slot.resource?._id || slot.resource?.id);
+    const startDate = booking?.startDate || slot.startDate;
+    const endDate = booking?.endDate || slot.endDate;
+    const contactDetails = booking?.contactDetails || {};
+    const createdDate = booking?.createdDate || booking?._createdDate;
+    const createdMs = Date.parse(createdDate);
+    const fromMs = Date.parse(intent.createdDateFrom);
+    const toMs = now.getTime() + 120000;
+
+    if (intent.bookingId && _safeTrim(booking?._id || booking?.id) !== intent.bookingId) return false;
+    if (serviceId !== intent.serviceId || resourceId !== intent.resourceId) return false;
+    if (!_sameInstant(startDate, intent.startDate) || !_sameInstant(endDate, intent.endDate)) return false;
+    if (!Number.isFinite(createdMs) || !Number.isFinite(fromMs) || createdMs < fromMs || createdMs > toMs) return false;
+
+    const readerContactId = _safeTrim(contactDetails.contactId);
+    const readerEmail = _safeTrim(contactDetails.email).toLowerCase();
+    if (intent.contactId && readerContactId && readerContactId !== intent.contactId) return false;
+    if (intent.contactEmail && readerEmail !== intent.contactEmail.toLowerCase()) return false;
+    if (intent.contactId && !readerContactId && !readerEmail) return false;
+    return true;
+}
+
+async function _queryExactNativeBooking(intent, traceId) {
+    if (
+        !_looksLikeGuid(intent?.serviceId) ||
+        !_looksLikeGuid(intent?.resourceId) ||
+        !intent?.startDate ||
+        !intent?.endDate ||
+        !intent?.createdDateFrom ||
+        (!intent?.contactId && !intent?.contactEmail)
+    ) {
+        return { status: "ERROR", reason: "WRITER_INTENT_CORRELATION_INCOMPLETE", candidates: [] };
+    }
+
+    const filter = {
+        "bookedEntity.item.slot.serviceId": intent.serviceId,
+        "bookedEntity.item.slot.resource.id": intent.resourceId,
+        startDate: intent.startDate,
+        endDate: intent.endDate,
+        createdDate: {
+            $gte: intent.createdDateFrom,
+            $lte: new Date(Date.now() + 120000).toISOString(),
+        },
+    };
+    if (intent.bookingId) filter.id = intent.bookingId;
+    if (intent.contactId) filter["contactDetails.contactId"] = intent.contactId;
+    else filter["contactDetails.email"] = intent.contactEmail.toLowerCase();
+
+    const matches = [];
+    let cursor = null;
+    let exhausted = false;
+    try {
+        for (let page = 0; page < READER_V2_MAX_PAGES; page++) {
+            const query = {
+                filter,
+                sort: [{ fieldName: "createdDate", order: "ASC" }],
+                cursorPaging: {
+                    limit: READER_V2_PAGE_LIMIT,
+                    ...(cursor ? { cursor } : {}),
+                },
+            };
+            const response = await withTimeout(
+                queryExtendedBookingsElevated(query, {}),
+                20000,
+                "bookings.readerV2.queryExtendedBookings"
+            );
+            const rows = Array.isArray(response?.extendedBookings) ? response.extendedBookings : [];
+            for (const wrapper of rows) {
+                const booking = wrapper?.booking || wrapper;
+                if (_isExactReaderBooking(booking, intent, new Date())) matches.push(booking);
+                if (matches.length > 1) {
+                    return { status: "AMBIGUOUS", reason: "READER_MULTIPLE_EXACT_MATCHES", candidates: matches };
+                }
+            }
+            cursor = response?.pagingMetadata?.cursors?.next || null;
+            if (!cursor) {
+                exhausted = true;
+                break;
+            }
+        }
+    } catch (error) {
+        log.warn("Bookings Reader V2 query failed during unknown writer recovery", {
+            traceId,
+            serviceId: intent.serviceId,
+            error: error?.message,
+        });
+        return { status: "ERROR", reason: "READER_QUERY_FAILED", candidates: [] };
+    }
+
+    if (!exhausted) {
+        return { status: "AMBIGUOUS", reason: "READER_PAGE_LIMIT_REACHED", candidates: matches };
+    }
+    if (matches.length === 1) return { status: "FOUND", booking: matches[0], candidates: matches };
+    return { status: "NOT_FOUND", reason: "READER_NO_EXACT_MATCH", candidates: [] };
+}
+
+async function _persistReaderBookingProjection(booking, intent, pairToken, traceId) {
+    const slot = booking?.bookedEntity?.slot || {};
+    const bookingId = _safeTrim(booking?._id || booking?.id);
+    const serviceId = _safeTrim(slot.serviceId || intent.serviceId);
+    const resourceId = _safeTrim(slot.resource?._id || slot.resource?.id || intent.resourceId);
+    const scheduleId = _safeTrim(slot.scheduleId || booking?.bookedEntity?.schedule?.scheduleId || intent.scheduleId);
+    const startDate = booking?.startDate || slot.startDate || intent.startDate;
+    const endDate = booking?.endDate || slot.endDate || intent.endDate;
+    if (!_looksLikeGuid(bookingId) || !_looksLikeGuid(serviceId) ||
+        !_looksLikeGuid(resourceId) || !_looksLikeGuid(scheduleId) ||
+        !startDate || !endDate) {
+        return { ok: false, reason: "READER_BOOKING_PROJECTION_FIELDS_INCOMPLETE" };
+    }
+
+    const contactDetails = booking?.contactDetails || {};
+    const persisted = await _persistBooking({
+        bookingId,
+        serviceId,
+        scheduleId,
+        resourceId,
+        startDate,
+        endDate,
+        bookingType: intent.bookingType,
+        revision: Number(booking?.revision) || 1,
+        bookingStatus: booking?.status || intent.bookingStatus,
+        paymentStatus: booking?.paymentStatus || intent.paymentStatus,
+        totalAmount: Number(intent.totalAmount) || 0,
+        pairToken,
+        contactDetails: {
+            firstName: contactDetails.firstName || "",
+            lastName: contactDetails.lastName || "",
+            email: contactDetails.email || intent.contactEmail || "",
+            contactId: contactDetails.contactId || intent.contactId || undefined,
+            memberId: contactDetails.memberId || undefined,
+        },
+        thirdPartyId: booking?.thirdPartyId || null,
+        privacyNoticeVersion: intent.privacyNoticeVersion || null,
+        privacyNoticeAcceptedAt: intent.privacyNoticeAcceptedAt || null,
+        privacyNoticePurpose: intent.privacyNoticePurpose || null,
+        meta: {
+            ...(intent.meta && typeof intent.meta === "object" ? intent.meta : {}),
+            pairToken,
+            writerRecovery: "BOOKINGS_READER_V2",
+            writerPhase: intent.phase,
+            readerCreatedDate: booking?.createdDate || booking?._createdDate || null,
+            readerStatus: booking?.status || null,
+        },
+        insertOnly: true,
+        traceId,
+    }, traceId);
+
+    if (!persisted?.item || _safeTrim(persisted.item.bookingId) !== bookingId) {
+        return { ok: false, reason: "READER_CITAS_PROJECTION_FAILED", bookingId };
+    }
+    return {
+        ok: true,
+        bookingId,
+        bookingStatus: _safeTrim(booking?.status).toUpperCase(),
+        item: persisted.item,
+    };
+}
+
+async function _recoverUnknownWriterFromReader(pairToken, payload, existingCitas, traceId) {
+    const writerIntent = payload?.writerIntent;
+    const phases = writerIntent?.phases && typeof writerIntent.phases === "object"
+        ? writerIntent.phases
+        : null;
+    if (!phases || !phases.F1) {
+        return { attempted: false, complete: false, reason: "WRITER_INTENT_NOT_AVAILABLE", bookingIds: [] };
+    }
+
+    const isDual = writerIntent.isDual === true || writerIntent.bookingType === "DUAL";
+    const expected = isDual ? ["F1", "F2"] : ["F1"];
+    const existingRows = Array.isArray(existingCitas) ? existingCitas : [];
+    const phaseResults = {};
+    for (const phaseKey of expected) {
+        const intent = phases[phaseKey];
+        if (!intent) {
+            phaseResults[phaseKey] = { status: "MISSING_INTENT", reason: "PHASE_INTENT_MISSING" };
+            continue;
+        }
+        const expectedType = intent.bookingType;
+        const projected = existingRows.filter((row) =>
+            normalizeBookingType(row?.bookingType) === expectedType &&
+            _looksLikeGuid(_safeTrim(row?.bookingId))
+        );
+        if (projected.length === 1) {
+            phaseResults[phaseKey] = {
+                status: "FOUND",
+                bookingId: _safeTrim(projected[0].bookingId),
+                bookingStatus: _safeTrim(projected[0].bookingStatus).toUpperCase(),
+                source: "CITAS_F2",
+            };
+            continue;
+        }
+        if (projected.length > 1) {
+            phaseResults[phaseKey] = { status: "AMBIGUOUS", reason: "CITAS_PHASE_DUPLICATED" };
+            continue;
+        }
+
+        const readerResult = await _queryExactNativeBooking(intent, traceId);
+        if (readerResult.status !== "FOUND") {
+            phaseResults[phaseKey] = {
+                status: readerResult.status,
+                reason: readerResult.reason,
+                candidateCount: readerResult.candidates?.length || 0,
+            };
+            continue;
+        }
+        const projection = await _persistReaderBookingProjection(
+            readerResult.booking,
+            intent,
+            pairToken,
+            traceId
+        );
+        if (!projection.ok) {
+            phaseResults[phaseKey] = { status: "ERROR", reason: projection.reason };
+            continue;
+        }
+        phaseResults[phaseKey] = {
+            status: "FOUND",
+            bookingId: projection.bookingId,
+            bookingStatus: projection.bookingStatus,
+            source: "BOOKINGS_READER_V2",
+        };
+        phases[phaseKey] = {
+            ...intent,
+            status: "RECONCILED",
+            bookingId: projection.bookingId,
+            readerStatus: projection.bookingStatus,
+            reconciledAt: new Date().toISOString(),
+        };
+    }
+
+    const bookingIds = expected
+        .map((phaseKey) => phaseResults[phaseKey]?.bookingId)
+        .filter((id) => _looksLikeGuid(id));
+    const allFound = expected.every((phaseKey) => phaseResults[phaseKey]?.status === "FOUND");
+    const allCompensated = allFound && expected.every((phaseKey) =>
+        ["COMPENSATED", "TERMINAL"].includes(_safeTrim(phases[phaseKey]?.status).toUpperCase())
+    );
+    const anyCompensated = expected.some((phaseKey) =>
+        ["COMPENSATED", "COMPENSATION_PENDING", "TERMINAL"].includes(_safeTrim(phases[phaseKey]?.status).toUpperCase())
+    );
+    const anyCanceled = expected.some((phaseKey) => phaseResults[phaseKey]?.bookingStatus === "CANCELED");
+    const anyActive = expected.some((phaseKey) => ["CREATED", "CONFIRMED", "PENDING"].includes(phaseResults[phaseKey]?.bookingStatus));
+
+    let outcome = "REPAIR_REQUIRED";
+    if (allFound && allCompensated && !anyActive) outcome = "FAILED_FINAL";
+    else if (allFound && !(isDual && anyCanceled && anyActive)) outcome = "COMPLETED";
+    else if (allFound && anyCompensated) outcome = "REPAIR_REQUIRED";
+
+    return {
+        attempted: true,
+        complete: outcome === "COMPLETED",
+        terminalFailure: outcome === "FAILED_FINAL",
+        outcome,
+        reason: allFound ? (outcome === "REPAIR_REQUIRED" ? "DUAL_COMPENSATION_STATE_MIXED" : null) : "READER_PHASES_INCOMPLETE",
+        bookingIds,
+        phaseResults,
+        writerIntent: { ...writerIntent, phases },
+    };
 }
 
 /**
