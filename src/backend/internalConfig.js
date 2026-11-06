@@ -132,6 +132,7 @@ export const APP_IDS = Object.freeze({
 // Wix eCommerce catalog IDs are GUIDs and are distinct from webhook app IDs.
 export const WIX_CATALOG_APP_IDS = Object.freeze({
   BOOKINGS: "13d21c63-b5ec-5912-8397-c3a5ddb27a97",
+  STORES: "215238eb-22a5-4c36-9e7b-e7c08025e04e",
 });
 
 // CERO-DEUDA ZC-07: export JWT eliminado (generateJWT/verifyJWT ya no
