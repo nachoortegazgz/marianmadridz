@@ -26,8 +26,6 @@ MANTENIDO (consumidores activos verificados):
   - assertDatosFiscales: consumido por data.js/handlers fiscales
   - assertControlOperativo: consumido por data.js ControlOperativo hooks
   - assertRegistrosHorariosStaff: consumido por data.js + horario.web.js
-  - assertMovimientosInventario: consumido por data.js hook
-  - expectedInventoryMagnitude: consumido por data.js hook
   - isValidNifOrEuVat: validacion fiscal obligatoria (Ley 11/2021)
   - THIRD_PARTY_TYPE: enum fiscal normativo activo
 DEPENDENCIAS: backend/internalConfig (enums). Cero dependencias de
@@ -44,8 +42,6 @@ import {
     RECORD_TYPE_HORARIOS,
     RECORD_TYPE,
     THIRD_PARTY_TYPE,
-    INVENTORY_MOVEMENT_TYPE,
-    MAGNITUDE,
     isValidGuid,
     normalizeBookingType,
     isDualBookingType,
@@ -227,54 +223,6 @@ export function assertRegistrosHorariosStaff(item) {
     if (item.recordType === RECORD_TYPE_HORARIOS.AJUSTE) {
         if (!item.adjustmentReason || !String(item.adjustmentReason).trim()) {
             throw new Error("SCHEMA_VIOLATION: AJUSTE requires adjustmentReason (RD 8/2019)");
-        }
-    }
-
-    return true;
-}
-
-// =============================================================================
-// MOVIMIENTOS INVENTARIO
-// =============================================================================
-
-export function expectedInventoryMagnitude(movementType, quantityDelta) {
-    const qty = Number(quantityDelta) || 0;
-    if (qty > 0) return MAGNITUDE.POSITIVE;
-    if (qty < 0) return MAGNITUDE.NEGATIVE;
-    return MAGNITUDE.NEUTRAL;
-}
-
-export function assertMovimientosInventario(item) {
-    if (!item || typeof item !== "object") {
-        throw new Error("SCHEMA_VIOLATION: MovimientosInventario item must be an object");
-    }
-
-    if (!item.movementToken || !String(item.movementToken).trim()) {
-        throw new Error("SCHEMA_VIOLATION: MovimientosInventario requires movementToken");
-    }
-
-    assertValidEnum(item.movementType, INVENTORY_MOVEMENT_TYPE, "movementType");
-
-    if (!item.sku || !String(item.sku).trim()) {
-        throw new Error("SCHEMA_VIOLATION: MovimientosInventario requires sku");
-    }
-
-    const qty = Number(item.quantityDelta);
-    if (!Number.isFinite(qty) || qty === 0) {
-        throw new Error("SCHEMA_VIOLATION: MovimientosInventario.quantityDelta must be non-zero number");
-    }
-
-    if (!item.recordTimestamp) {
-        throw new Error("SCHEMA_VIOLATION: MovimientosInventario requires recordTimestamp");
-    }
-    if (!item.traceId || !String(item.traceId).trim()) {
-        throw new Error("SCHEMA_VIOLATION: MovimientosInventario requires traceId");
-    }
-
-    // AJUSTE requiere reason
-    if (item.movementType === INVENTORY_MOVEMENT_TYPE.AJUSTE) {
-        if (!item.reason || !String(item.reason).trim()) {
-            throw new Error("SCHEMA_VIOLATION: AJUSTE requires reason");
         }
     }
 

@@ -54,7 +54,6 @@ export const PAYMENT_METHOD = Object.freeze({
     TRANSFERENCIA: "TRANSFERENCIA",
     WIX_PAYMENTS: "WIX_PAYMENTS",
     OTRO: "OTRO",
-    TARJETA_REGALO: "TARJETA_REGALO"
 });
 
 /* --------------------------------------------------------------------------

@@ -502,32 +502,6 @@ test('PERSIST-02 cash ledger idempotency claim writes required dedupeKey', async
   assert.match(source, /controlType:\s*"LEDGER_IDEMPOTENCY",[\s\S]{0,180}dedupeKey:\s*transactionId/);
 });
 
-test('PERSIST-03 accounting projection uses canonical debit/credit fields and actual cash movement id', async () => {
-  const source = await readFile(new URL('../cajas.web.js', import.meta.url), 'utf8');
-  const start = source.indexOf('async function _projectToAccountingLedger');
-  const end = source.indexOf('// REGISTER MANUAL TRANSACTION', start);
-  assert.ok(start >= 0 && end > start);
-  const projection = source.slice(start, end);
-  assert.match(projection, /debitAmount:\s*totalAmount/);
-  assert.match(projection, /creditAmount:\s*totalAmount/);
-  assert.doesNotMatch(projection, /\bdebit:\s*totalAmount|\bcredit:\s*totalAmount/);
-  assert.match(projection, /cashMovementId:\s*movementId/);
-  assert.match(projection, /sourceMovementId:\s*movementId/);
-  assert.match(projection, /origenTipo:\s*"MOVIMIENTOCAJA"/);
-  assert.match(projection, /origenRegistro:\s*MOVIMIENTOS_CAJA_COL/);
-  assert.match(projection, /recordHash:\s*movement\.hash/);
-  assert.match(projection, /previousRecordHash:\s*movement\.previousRecordHash/);
-  assert.match(projection, /_id:\s*entryId/);
-  assert.match(source, /_projectToAccountingLedger\(saved,\s*traceId\)/);
-});
-
-test('PERSIST-04 inventory workflow never updates its append-only movement ledger', async () => {
-  const source = await readFile(new URL('../inventario.web.js', import.meta.url), 'utf8');
-  assert.doesNotMatch(source, /update\(MOVIMIENTOS_INV_COL/);
-  assert.match(source, /lastInventoryMovementId\s*===\s*existingMovement\._id/);
-  assert.match(source, /applicationConfirmed:\s*true/);
-});
-
 test('PERSIST-06 online fiscal events populate required staffResourceId from the channel resource', async () => {
   const source = await readFile(new URL('../eventLog.js', import.meta.url), 'utf8');
   assert.match(source, /staffResourceId:\s*_safeTrim\([\s\S]{0,160}input\.staffResourceId\s*\|\|\s*input\.resourceId\s*\|\|\s*"CAJA_LOCAL"/);

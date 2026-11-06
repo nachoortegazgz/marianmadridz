@@ -17,10 +17,6 @@ import {
     registerZClosing,
 } from "backend/cajas.web.js";
 import {
-    getInventoryDashboard,
-    getInventoryReconciliationQueue,
-} from "backend/inventario.web.js";
-import {
     getQuarterlyTaxSummary,
     getLibroRegistroFacturasExpedidas,
 } from "backend/fiscalAggregator.web.js";
@@ -30,9 +26,7 @@ import {
     getManagerPackageHistory,
     getPreparedManagerPackages,
     downloadManagerPackageVersion,
-    emailManagerPackageVersion,
 } from "backend/fiscalDocuments.web.js";
-import { askMarianAssistant } from "backend/marianAssistant.web.js";
 
 import { makeTraceId, URLS } from "public/mmUtils";
 import { createWidgetBridge } from "public/widgetBridge";
@@ -43,12 +37,6 @@ const ACTIONS = {
             traceId,
             diaKey: payload?.diaKey || null,
         }),
-
-    INVENTORY_DASH: () =>
-        getInventoryDashboard(),
-
-    INVENTORY_QUEUE: () =>
-        getInventoryReconciliationQueue(),
 
     TPV_TX: ({ payload, traceId }) =>
         registerManualTransaction({
@@ -88,14 +76,6 @@ const ACTIONS = {
     DOCUMENT_DOWNLOAD: ({ payload }) =>
         downloadManagerPackageVersion(payload || {}),
 
-    DOCUMENT_EMAIL: ({ payload }) =>
-        emailManagerPackageVersion(payload || {}),
-
-    AI_CHAT: ({ payload, traceId }) =>
-        askMarianAssistant({
-            ...(payload || {}),
-            traceId,
-        }),
 };
 
 $w.onReady(async () => {
@@ -140,15 +120,7 @@ $w.onReady(async () => {
         traceId,
 
         onContextReady: async () => {
-            const [
-                cashierRes,
-                inventoryRes,
-                queueRes,
-            ] = await Promise.all([
-                getCashierState({ traceId }).catch(() => null),
-                getInventoryDashboard().catch(() => null),
-                getInventoryReconciliationQueue().catch(() => null),
-            ]);
+            const cashierRes = await getCashierState({ traceId }).catch(() => null);
 
             return {
                 isMarianManager: true,
@@ -165,12 +137,6 @@ $w.onReady(async () => {
                 cashierState: cashierRes?.status === "SUCCESS" ?
                     cashierRes.data :
                     null,
-                inventory: inventoryRes?.status === "SUCCESS" ?
-                    inventoryRes.data :
-                    null,
-                inventoryQueue: queueRes?.status === "SUCCESS" ?
-                    queueRes.data?.items || [] :
-                    [],
             };
         },
 

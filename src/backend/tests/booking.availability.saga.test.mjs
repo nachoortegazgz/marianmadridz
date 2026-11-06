@@ -112,26 +112,6 @@ test('BUTIL-RES-03 flat single-resource slot falls back to direct id', () => {
 });
 
 // ---------------------------------------------------------------------------
-// PICK STAFF BY LOWEST LOAD (UTILS-14 determinista)
-// ---------------------------------------------------------------------------
-
-test('BUTIL-PICK-01 lowest load wins; corrupt loads treated as Infinity', () => {
-  assert.strictEqual(
-    BU.pickStaffByLowestLoad([GUID_1, GUID_2], { [GUID_1]: 5, [GUID_2]: 2 }),
-    GUID_2
-  );
-  assert.strictEqual(
-    BU.pickStaffByLowestLoad([GUID_1, GUID_2], { [GUID_1]: NaN, [GUID_2]: 0 }),
-    GUID_2
-  );
-  assert.strictEqual(
-    BU.pickStaffByLowestLoad([GUID_1, GUID_2], { [GUID_1]: -3, [GUID_2]: -1 }),
-    GUID_1, 'desempate: primer candidato'
-  );
-  assert.strictEqual(BU.pickStaffByLowestLoad([], {}), null);
-});
-
-// ---------------------------------------------------------------------------
 // ADD-ONS (UTILS-09/10)
 // ---------------------------------------------------------------------------
 

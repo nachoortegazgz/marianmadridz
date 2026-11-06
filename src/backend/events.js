@@ -87,10 +87,6 @@ import { logger } from "backend/logger";
 import { normalizeError, _updateCitaSafe, _persistBooking } from "backend/booking/bookingCore";
 import { queueFiscalRecovery, updateCajaActualFromMovement } from "backend/cajas.web";
 import { registrarEventoEconomico } from "backend/eventLog";
-import {
-    recordOnlineInventoryOrderInternal,
-    recordOnlineInventoryRefundInternal,
-} from "backend/inventario.web";
 
 import { logAuditEventWithTimeout } from "backend/audit";
 import {
@@ -1239,23 +1235,6 @@ export async function wixEcom_onOrderPaymentStatusUpdated(rawBody) {
             // Recover a possible interruption after fiscal movement insertion.
             // The cash-register projection deduplicates by persisted movement ID.
             await updateCajaActualFromMovement(existingLedgerRes.items[0], traceId);
-            const inventoryRetry = await recordOnlineInventoryOrderInternal(order, traceId);
-            if (inventoryRetry?.status === "PENDING_RECONCILIATION") {
-                await logAuditEventWithTimeout(
-                    "INVENTORY_ORDER_RECONCILIATION_QUEUED",
-                    "ERROR",
-                    `Inventario pendiente de conciliacion para pedido ${orderId}`,
-                    {
-                        orderId,
-                        queueId: inventoryRetry.queueId || null,
-                        results: inventoryRetry.data || [],
-                        traceId,
-                    },
-                    traceId,
-                    orderId,
-                    "backend/events.js"
-                );
-            }
             if (bookingIds.length) {
                 await _executeWithRetry(async () => {
                     await _markCitasPaidByBookingIds(
@@ -1388,45 +1367,6 @@ export async function wixEcom_onOrderPaymentStatusUpdated(rawBody) {
             eventResult?.status === "PARTIAL";
 
         if (ledgerOk) {
-            try {
-                const inventoryResult = await recordOnlineInventoryOrderInternal(order, traceId);
-                if (inventoryResult?.status === "PENDING_RECONCILIATION") {
-                    await logAuditEventWithTimeout(
-                        "INVENTORY_ORDER_RECONCILIATION_QUEUED",
-                        "ERROR",
-                        `Inventario pendiente de conciliacion para pedido ${orderId}`,
-                        {
-                            orderId,
-                            queueId: inventoryResult.queueId || null,
-                            results: inventoryResult.data || [],
-                            traceId,
-                        },
-                        traceId,
-                        orderId,
-                        "backend/events.js"
-                    );
-                }
-            } catch (inventoryError) {
-                log.error("Online inventory mirror failed", {
-                    orderId,
-                    traceId,
-                    error: inventoryError?.message || String(inventoryError),
-                });
-                await logAuditEventWithTimeout(
-                    "INVENTORY_MIRROR_FAILED",
-                    "ERROR",
-                    `Inventario no sincronizado para orden ${orderId} tras ledger OK`,
-                    {
-                        orderId,
-                        traceId,
-                        error: inventoryError?.message || String(inventoryError),
-                    },
-                    traceId,
-                    orderId,
-                    "backend/events.js"
-                );
-            }
-
             if (bookingIds.length) {
                 await _executeWithRetry(async () => {
                     await _markCitasPaidByBookingIds(
@@ -1592,88 +1532,6 @@ export async function wixEcom_onOrderRefunded(rawBody) {
         const linkedBookingIds = _normalizeBookingIds(
             originalMovement.linkedBookingIds
         );
-
-        const refundRestockInfo =
-            event?.actionEvent?.body?.sideEffects?.restock ||
-            event?.sideEffects?.restock ||
-            event?.data?.sideEffects?.restock ||
-            refundObj?.sideEffects?.restock ||
-            null;
-
-        const refundOrderSource =
-            event?.actionEvent?.body?.order ||
-            event?.order ||
-            event?.data?.order ||
-            {};
-        const refundOrder = {
-            ...refundOrderSource,
-            _id: refundOrderSource?._id || refundOrderSource?.id || orderId,
-            lineItems: Array.isArray(refundOrderSource?.lineItems)
-                ? refundOrderSource.lineItems
-                : event?.lineItems || event?.data?.lineItems || [],
-        };
-
-        try {
-            const inventoryRefund = await recordOnlineInventoryRefundInternal(
-                refundOrder,
-                refundObj,
-                refundRestockInfo,
-                traceId
-            );
-            if (inventoryRefund?.status === "PENDING_RECONCILIATION") {
-                await logAuditEventWithTimeout(
-                    "REFUND_INVENTORY_RECONCILIATION_QUEUED",
-                    "ERROR",
-                    `Inventario pendiente de conciliacion para reembolso ${refundId}`,
-                    {
-                        orderId,
-                        refundId,
-                        queueId: inventoryRefund.queueId || null,
-                        results: inventoryRefund.data || [],
-                        traceId,
-                    },
-                    traceId,
-                    orderId,
-                    "backend/events.js"
-                );
-            }
-            if (
-                inventoryRefund?.status === "SKIPPED" &&
-                inventoryRefund?.reason !== "NO_CONFIRMED_RESTOCK"
-            ) {
-                await logAuditEventWithTimeout(
-                    "REFUND_INVENTORY_TRACE_SKIPPED",
-                    "WARN",
-                    `Inventory trace skipped for refund ${refundId}`,
-                    {
-                        orderId,
-                        refundId,
-                        reason: inventoryRefund.reason,
-                        traceId,
-                    },
-                    traceId,
-                    orderId,
-                    "backend/events.js"
-                );
-            }
-        } catch (inventoryRefundError) {
-            await logAuditEventWithTimeout(
-                "REFUND_INVENTORY_TRACE_FAILED",
-                "ERROR",
-                `Inventory trace failed for refund ${refundId}`,
-                {
-                    orderId,
-                    refundId,
-                    error:
-                        inventoryRefundError?.message ||
-                        String(inventoryRefundError),
-                    traceId,
-                },
-                traceId,
-                orderId,
-                "backend/events.js"
-            );
-        }
 
         const emisor = await _getEmisorFiscal();
         const todayDate = new Date().toLocaleDateString("sv-SE", {

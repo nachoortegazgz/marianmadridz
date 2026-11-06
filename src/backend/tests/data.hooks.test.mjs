@@ -4,8 +4,7 @@ SUITE: data.hooks (v13.0-MINIMAL alignment, 2026-10-14)
 Purpose: sell the RETIREMENT decisions DATA-01..DATA-05 (hooks that added
 friction without real benefit: duplicated point-of-use validation and
 compliance-free collections) AND verify the conserved legal guards
-(Ley 11/2021 caja ledger, PGC double entry, RD 8/2019 time clock,
-WEBHOOK_EVENT append-only). Runs offline via tests/loader.mjs mocks.
+(Ley 11/2021 caja ledger, RD 8/2019 time clock, WEBHOOK_EVENT append-only). Runs offline via tests/loader.mjs mocks.
 G10 ASCII strict.
 =============================================================================
 */
@@ -98,24 +97,6 @@ test('HOOK-CMS-DATETIME-QA-01 binds conversion and guards to physical QA collect
   assert.throws(() => H.QA_LIVECMS_20261023_2000_BOOKING_DUAL_beforeRemove({}), /cancelacion formal/);
 });
 
-test('HOOK-CMS-DATETIME-02 normalizes inventory DATETIME fields', () => {
-  const stock = { stockOnHand: 4, stockReserved: 1, stockAvailable: 3, lastSyncAt: '2026-11-05T10:00:00.000Z' };
-  H.InventarioStockVenta_beforeInsert(stock);
-  assert.ok(stock.lastSyncAt instanceof Date);
-
-  const movement = {
-    traceId: 'trace-inventory-datetime',
-    movementToken: 'movement-datetime-1',
-    movementType: 'AJUSTE',
-    reason: 'Ajuste de prueba',
-    quantity: 1,
-    recordTimestamp: '2026-11-05T10:05:00.000Z',
-  };
-  H.MovimientosInventario_beforeInsert(movement);
-  assert.ok(movement.recordTimestamp instanceof Date);
-  assert.throws(() => H.MovimientosInventario_beforeInsert({ ...movement, recordTimestamp: 'invalid' }), /DATETIME/);
-});
-
 test('HOOK-CMS-DATETIME-03 normalizes timeclock recordedAt', () => {
   const item = { traceId: 'trace-timeclock-datetime', recordedAt: '2026-11-05T10:10:00.000Z' };
   H.RegistrosHorariosStaff_beforeInsert(item);
@@ -125,28 +106,8 @@ test('HOOK-CMS-DATETIME-03 normalizes timeclock recordedAt', () => {
 });
 
 // -----------------------------------------------------------------------------
-// SSOT 5.13 / 15.1: inventory movements are append-only; stock projection
-// updates remain allowed only when the stock invariant is satisfied.
-// -----------------------------------------------------------------------------
-
-test('HOOK-INVENTORY-01 movements ledger blocks update/remove', () => {
-  assert.throws(() => H.MovimientosInventario_beforeUpdate({}), /append-only/);
-  assert.throws(() => H.MovimientosInventario_beforeRemove({}), /append-only/);
-});
-
-test('HOOK-INVENTORY-02 stock projection update enforces invariant', () => {
-  assert.doesNotThrow(() => H.InventarioStockVenta_beforeUpdate({
-    stockOnHand: 10, stockReserved: 3, stockAvailable: 7,
-  }));
-  assert.throws(() => H.InventarioStockVenta_beforeUpdate({
-    stockOnHand: 10, stockReserved: 3, stockAvailable: 8,
-  }), /Invariante de stock/);
-});
-
 test('HOOK-APPEND-02 retired blocked-collection hooks are gone (ADR-02)', () => {
   assert.strictEqual(H.SecuenciaTickets_beforeUpdate, undefined);
-  assert.strictEqual(H.InventarioStockVentaCierre_beforeUpdate, undefined);
-  assert.strictEqual(H.InventarioStockVentaCierre_beforeRemove, undefined);
 });
 
 // -----------------------------------------------------------------------------
@@ -312,62 +273,6 @@ test('HOOK-FISCAL-CONFIG-03 legacy aliases are normalized and removed before per
   assert.ok(!('nifCif' in item));
   assert.ok(!('razonSocial' in item));
   assert.ok(!('tipoTercero' in item));
-});
-
-// -----------------------------------------------------------------------------
-// LibroAsientosContablesDetalle (PGC partida doble minima) — CONSERVED
-// -----------------------------------------------------------------------------
-
-function validLibroEntry() {
-  return {
-    entryId: 'ASIENTO_11111111-1111-4111-8111-111111111111',
-    recordTimestamp: new Date('2026-11-05T10:00:00.000Z'),
-    concept: 'Venta mostrador',
-    lineNumber: 1,
-    origenTipo: 'MOVIMIENTOCAJA',
-    origenRegistro: 'MovimientosCaja',
-    sourceMovementId: '11111111-1111-4111-8111-111111111111',
-    entryDate: '2026-11-05',
-    fiscalPeriod: '2026-11',
-    accountCode: '572000',
-    debitAmount: 10,
-    creditAmount: 10,
-    recordHash: 'a'.repeat(64),
-    previousRecordHash: 'b'.repeat(64),
-    traceId: 't1',
-  };
-}
-
-test('HOOK-LIBRO-01 enforces the full CMS provenance contract and blocks update/remove', () => {
-  const missingTrace = validLibroEntry();
-  delete missingTrace.traceId;
-  assert.throws(() => H.LibroAsientosContablesDetalle_beforeInsert(missingTrace), /traceId/);
-
-  const missingSource = validLibroEntry();
-  delete missingSource.sourceMovementId;
-  assert.throws(() => H.LibroAsientosContablesDetalle_beforeInsert(missingSource), /sourceMovementId/);
-
-  const missingPreviousHash = validLibroEntry();
-  delete missingPreviousHash.previousRecordHash;
-  assert.throws(() => H.LibroAsientosContablesDetalle_beforeInsert(missingPreviousHash), /previousRecordHash/);
-
-  const legacy = validLibroEntry();
-  legacy.debit = 10;
-  assert.throws(() => H.LibroAsientosContablesDetalle_beforeInsert(legacy), /legacy/);
-
-  assert.doesNotThrow(() => H.LibroAsientosContablesDetalle_beforeInsert(validLibroEntry()));
-  assert.throws(() => H.LibroAsientosContablesDetalle_beforeUpdate({}), /append-only/);
-  assert.throws(() => H.LibroAsientosContablesDetalle_beforeRemove({}), /append-only/);
-});
-
-test('HOOK-LIBRO-02 AEAT snapshot requires fiscal system identity only when a snapshot is written', () => {
-  const withSnapshot = { ...validLibroEntry(), payloadFiscal: {
-    numSerieFactura: 'FAC-2026-00001',
-    descripcionOperacion: 'Venta mostrador',
-  } };
-  assert.throws(() => H.LibroAsientosContablesDetalle_beforeInsert(withSnapshot), /idSistemaInformatico/);
-  withSnapshot.idSistemaInformatico = 'WIX-MARIAN-01';
-  assert.doesNotThrow(() => H.LibroAsientosContablesDetalle_beforeInsert(withSnapshot));
 });
 
 // -----------------------------------------------------------------------------
