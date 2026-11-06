@@ -1,64 +1,52 @@
 # Marian Madrid — Wix Editor + Velo
 
-Repositorio canónico de código del sitio **Marian Madrid Peluquería y Estética**. Las ramas de trabajo no se publican automáticamente en Wix ni equivalen a producción.
+Repositorio canónico del sitio **Marian Madrid Peluquería y Estética** (`www.marianmadrid.es`). El proyecto se construye sobre Wix y sus Wix Apps nativas, con Microsoft 365 como capa documental externa.
 
-## Requisitos
+## Arquitectura y fuente de verdad
 
-- Git.
-- Node.js **v24.22.1 o superior** (requisito oficial de Wix CLI for Sites; CI puede validar también versiones posteriores).
-- npm.
-- Acceso SSH al repositorio y cuenta Wix con permisos sobre el sitio.
+- **Wix** es el centro operativo: Bookings, Stores/eCommerce, Payments, CRM, POS/Owner y Automations, según disponibilidad real del plan, país y configuración.
+- **Velo** se limita a lógica imprescindible que Wix no cubra. La reserva dual F1–gap–F2 es el caso propio identificado; debe conservar revalidación, mismo profesional, idempotencia y compensación.
+- **Microsoft 365** aporta archivo documental mediante SharePoint y, si la licencia lo permite sin coste adicional, Power Automate. Flujo previsto unidireccional Wix backend → Power Automate → SharePoint.
+- No se incorporan proveedores, middleware ni servicios de pago/fiscalidad/email/IA externos por defecto. Cualquier excepción requiere justificar necesidad, alternativas, coste total y aprobación expresa.
+- No duplicar en CMS propio funciones que Wix ya gestione suficientemente. Antes de retirar módulos o datos, auditar consumidores, históricos, automatizaciones y rollback.
 
-## Preparación local
+## Documentos raíz
 
-1. Clona el repositorio conectado al sitio y entra en su raíz (la que contiene `wix.config.json`).
-2. Comprueba que `node -v` devuelve `v24.22.1` o superior.
-3. Instala Wix CLI for Sites globalmente: `npm install -g @wix/cli`.
-4. Instala las dependencias del proyecto con `npm install`.
-5. Inicia sesión con `wix login` si es necesario y comprueba la cuenta con `wix whoami`.
-6. Comprueba `git status --short` antes de modificar dependencias.
-7. Ejecuta `npm run dev` para abrir el Editor local asociado al `siteId` de `wix.config.json`.
+1. [Directrices vigentes del proyecto](DIRECTRICES%20VIGENTES%20DEL%20PROYECTO.md): reglas obligatorias y límites.
+2. [Dossier técnico consolidado](DOSSIER%20TÉCNICO%20CONSOLIDADO.md): arquitectura, contratos, módulos, CMS y estado técnico verificado.
+3. [Flujos end-to-end Capa 3](DOSSIER%20FLUJOS%20END%20TO%20END%20CAPA%203.md): diseño documental Wix–M365 y despliegue pendiente.
+4. [Bitácora técnica](BIT%C3%81CORA%20T%C3%89CNICA%20DE%20SESIONES%20%E2%80%94%20MARIANMADRID.md): decisiones y evidencias por sesión.
 
-No se ejecuta `wix sync-types` en `postinstall`: ese comando falló con el CLI disponible y no debe bloquear la instalación. No mezclar el Wix CLI genérico para Apps/Headless con **Wix CLI for Sites**, que es el correspondiente a este Wix Editor clásico.
+El código, la configuración viva de Wix, los contratos oficiales de las APIs y las pruebas ejecutadas tienen prioridad sobre afirmaciones históricas de los documentos. Registrar siempre fecha, rama/SHA y evidencia.
 
-## Dependencias npm de Wix
+## Entorno de desarrollo
 
-Las dependencias instaladas para el sitio se gestionan con Wix CLI for Sites (`wix install`, `wix update`, `wix uninstall`), no editando manualmente los artefactos generados. Wix crea `src/velo.dependencies.json` al instalar el primer paquete npm y lo actualiza automáticamente al instalar paquetes con Wix CLI; no editarlo a mano. El CLI también actualiza los archivos de dependencias del sitio.
+- Proyecto Wix Editor clásico con Velo y Wix CLI for Sites.
+- Node.js mínimo: **24.22.1**, conforme a la documentación de Wix CLI for Sites consultada.
+- Instalar dependencias con `npm ci`; usar Wix CLI for Sites para gestionar paquetes Wix.
+- No editar manualmente artefactos generados por Wix CLI.
+- Comandos de validación disponibles: `npm run lint`, `npm test`, `npm run test:layer1`, `npm run test:layer2`.
 
-Para resolver dependencias ausentes del lock, ejecutar desde la raíz del proyecto, una por una, `wix install @wix/stores` y `wix install @wix/site-pricing-plans`. Revisar inmediatamente `git diff -- package.json wix.lock src/velo.dependencies.json`: conservar las versiones compatibles fijadas en `package.json` y detenerse si el CLI propone una actualización no aprobada. No publicar en esta fase.
+## Criterio de validación
 
-## Estado y traspaso de sesión
+Distinguir siempre:
+- **Pruebas offline:** mocks y fixtures; no prueban Wix runtime.
+- **QA/Preview:** evidencia de ejecución en el entorno Wix de pruebas.
+- **E2E real:** flujo completo ejecutado en navegador/runtime, con sus integraciones reales y resultado comprobado.
 
-El estado técnico consolidado, los cambios verificados, los bloqueos de QA y la secuencia de reanudación están en [docs/SESSION-STATUS-2026-10-31.md](docs/SESSION-STATUS-2026-10-31.md). Este informe distingue código en GitHub, CI, QA runtime y publicación Wix; no asumir que una rama feature está desplegada.
+CI verde no equivale a E2E ni a publicación. No afirmar que una función está operativa sin evidencia.
 
-## Validación
+## Seguridad y operaciones
 
-- `npm run lint`: análisis estático.
-- `npm test`: todas las suites offline registradas por el runner canónico.
-- `npm run test:layer1`: contratos de reservas, disponibilidad y concurrencia.
-- `npm run test:layer2`: flujos operativos, datos y fiscalidad.
-
-Las pruebas offline usan mocks del entorno Wix; **no prueban** CMS, Bookings ni pagos reales.
-
-## Limitación temporal de ESLint
-
-La regla `@wix/cli/no-invalid-backend-import` está desactivada temporalmente porque el plugin falla al cargar cuando falta el manifiesto generado `src/velo.dependencies.json`. **Esto no valida los imports de backend**: antes de retirar esta excepción hay que regenerar el manifiesto con el Wix CLI for Sites compatible con el Editor clásico y volver a ejecutar lint. No publicar mientras siga pendiente.
-
-## Preview y publicación
-
-1. Ejecuta lint y pruebas, y resuelve todos los fallos.
-2. Abre el Editor local con `npm run dev` y valida los cambios en el sitio correcto.
-3. Usa Preview cuando el flujo de Wix lo permita y verifica reservas, logs y datos.
-4. Publica solo el commit validado, seleccionando conscientemente el origen en Wix CLI for Sites.
-5. Tras publicar, verifica el dominio y el flujo real de reservas.
-
-No se debe publicar una rama de auditoría sin validar ni asumir que GitHub y el sitio publicado están sincronizados.
+- No publicar, ejecutar Wix Preview ni desplegar cambios; estas acciones las realiza manualmente el propietario.
+- No tocar producción ni CMS de producción sin autorización explícita.
+- No crear reservas, pagos, devoluciones, movimientos económicos, emails ni automatizaciones activas sin autorización.
+- No solicitar ni exponer secretos. No sortear controles de seguridad.
+- No borrar código, colecciones o campos sin auditoría de consumidores, impacto, histórico y rollback.
 
 ## Documentación oficial
 
-- [Requisitos y configuración de Wix CLI for Sites](https://dev.wix.com/docs/develop-websites/articles/workspace-tools/developer-tools/git-integration-wix-cli-for-sites/setting-up-git-integration-wix-cli-for-sites)
-- [Estructura del repositorio y `velo.dependencies.json`](https://dev.wix.com/docs/develop-websites/articles/workspace-tools/developer-tools/git-integration-wix-cli-for-sites/git-hub-repository-file-structure)
-- [Instalación y actualización de paquetes npm](https://dev.wix.com/docs/develop-websites/articles/coding-with-velo/packages/work-with-npm-packages-with-the-wix-cli)
-
-- [Comandos del Wix CLI para Sites](https://dev.wix.com/docs/develop-websites/articles/workspace-tools/developer-tools/git-integration-wix-cli-for-sites/wix-cli-for-sites-commands)
-- [Acerca de Git Integration y Wix CLI](https://dev.wix.com/docs/develop-websites/articles/workspace-tools/developer-tools/git-integration-wix-cli-for-sites/about-git-integration-wix-cli-for-sites)
+- [Wix CLI for Sites: configuración](https://dev.wix.com/docs/develop-websites/articles/workspace-tools/developer-tools/git-integration-wix-cli-for-sites/setting-up-git-integration-wix-cli-for-sites)
+- [Estructura del repositorio Wix](https://dev.wix.com/docs/develop-websites/articles/workspace-tools/developer-tools/git-integration-wix-cli-for-sites/git-hub-repository-file-structure)
+- [Paquetes npm con Wix CLI](https://dev.wix.com/docs/develop-websites/articles/coding-with-velo/packages/work-with-npm-packages-with-the-wix-cli)
+- [Comandos Wix CLI for Sites](https://dev.wix.com/docs/develop-websites/articles/workspace-tools/developer-tools/git-integration-wix-cli-for-sites/wix-cli-for-sites-commands)
