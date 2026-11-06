@@ -274,3 +274,28 @@ test("INVENTORY-MANUAL-01 supplier receipt increments Wix V1 atomically and writ
   assert.equal(movements[0].stockAfter, 11);
   assert.equal(movements[0].movementToken, input.movementToken);
 });
+
+
+test("INVENTORY-MASTER-01 admin maps a managed Wix V1 variant with explicit tax and reservation baseline", async () => {
+  seed();
+  nativeQuantity = 8;
+  wixDataMock._seed(STOCK_COL, []);
+
+  const result = await INV.registerInventoryMaster({
+    productId: PRODUCT_ID,
+    variantId: VARIANT_ID,
+    taxRatePercent: 21,
+    taxIncluded: true,
+    stockReserved: 1,
+    traceId: "trace-inventory-master-001",
+  });
+
+  assert.equal(result.status, "SUCCESS");
+  assert.equal(result.data.alreadyMapped, false);
+  assert.equal(result.data.stockKey, STOCK_KEY);
+  assert.equal(result.data.tipoImpositivo, 21);
+  assert.equal(result.data.taxIncluded, true);
+  assert.equal(result.data.stockOnHand, 8);
+  assert.equal(result.data.stockReserved, 1);
+  assert.equal(result.data.stockAvailable, 7);
+});
