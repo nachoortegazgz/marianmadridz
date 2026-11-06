@@ -553,6 +553,11 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
         }
 
         const movementType = _safeTrim(payload?.movementType || payload?.tipoMovimiento || "VENTA").toUpperCase();
+        const isRefundMovement = [
+            MOVEMENT_TYPE.REEMBOLSO,
+            MOVEMENT_TYPE.DEVOLUCION,
+            MOVEMENT_TYPE.DEVOLUCION_SERVICIO,
+        ].includes(movementType);
         const operationDescription = _cleanText(payload?.operationDescription || payload?.description || "Venta mostrador", 500);
         const resourceId = _safeTrim(payload?.resourceId || "CAJA_LOCAL");
         const transactionId = _safeTrim(payload?.transactionId) || null;
@@ -636,10 +641,19 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
 
             if (existingRes?.items?.length > 0) {
                 log.info("Ledger idempotent duplicate detected", { transactionId, traceId });
-                await _updateCajaActual(existingRes.items[0], traceId);
+                const cashProjection = await _updateCajaActual(existingRes.items[0], traceId);
                 // Retry projection if the fiscal movement survived a prior partial attempt.
                 await _projectToAccountingLedger(existingRes.items[0], traceId);
-                return { status: "SUCCESS", data: existingRes.items[0], error: null, idempotent: true };
+                if (cashProjection?.status !== "SUCCESS") {
+                    return {
+                        status: "PARTIAL",
+                        data: existingRes.items[0],
+                        error: { code: "CASH_PROJECTION_PENDING", message: "Movimiento fiscal persistido; CajaActual requiere reconciliacion." },
+                        idempotent: true,
+                        cashProjectionStatus: cashProjection?.status || "UNKNOWN",
+                    };
+                }
+                return { status: "SUCCESS", data: existingRes.items[0], error: null, idempotent: true, cashProjectionStatus: "SUCCESS" };
             }
         }
 
@@ -687,8 +701,8 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
             taxBase: taxableBaseOrNonSubjectAmount,
             taxAmount,
             tipoImpositivo: taxRate,
-            accountingSign: movementType === MOVEMENT_TYPE.REEMBOLSO ? -1 : 1,
-            accountingAmount: movementType === MOVEMENT_TYPE.REEMBOLSO ? -amount : amount,
+            accountingSign: isRefundMovement ? -1 : 1,
+            accountingAmount: isRefundMovement ? -amount : amount,
             operationDescription,
             lineItems: inDto.lineItems || [],
             nifEmisor,
@@ -827,10 +841,32 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
         }
 
         const saved = await dalInsert(MOVIMIENTOS_CAJA_COL, movement);
-        await _updateCajaActual(saved, traceId);
-        await _projectToAccountingLedger(saved, traceId);
+        const cashProjection = await _updateCajaActual(saved, traceId);
+        try {
+            await _projectToAccountingLedger(saved, traceId);
+        } catch (projectionError) {
+            log.error("Accounting projection failed after fiscal ledger insert", {
+                traceId,
+                movementId: saved?._id,
+                error: projectionError?.message,
+            });
+            return {
+                status: "PARTIAL",
+                data: saved,
+                error: { code: "ACCOUNTING_PROJECTION_PENDING", message: "Movimiento fiscal persistido; asiento contable requiere reconciliacion." },
+                cashProjectionStatus: cashProjection?.status || "UNKNOWN",
+            };
+        }
+        if (cashProjection?.status !== "SUCCESS") {
+            return {
+                status: "PARTIAL",
+                data: saved,
+                error: { code: "CASH_PROJECTION_PENDING", message: "Movimiento fiscal persistido; CajaActual requiere reconciliacion." },
+                cashProjectionStatus: cashProjection?.status || "UNKNOWN",
+            };
+        }
 
-        return { status: "SUCCESS", data: saved, error: null };
+        return { status: "SUCCESS", data: saved, error: null, cashProjectionStatus: "SUCCESS", accountingProjectionStatus: "SUCCESS" };
     } catch (err) {
         const norm = normalizeError(err);
         log.error("registerManualTransaction failed", { code: norm.code, error: norm.message, traceId });
@@ -865,6 +901,21 @@ const CAJA_KEYS = Object.freeze({
     LAST_MOVEMENT_AT: "lastMovementAt",
 });
 
+// CajaActual's singletonKey is the logical identity. Wix may assign a
+// different physical _id to the collection's singleton item, so never use
+// CAJA_PRINCIPAL as a getItem(_id) argument. Fail closed on duplicates.
+async function _getCashRegisterSingleton() {
+    const result = await dalQuery(CAJA_ACTUAL_COL)
+        .eq(CAJA_KEYS.SINGLETON_KEY, SINGLETONS.CAJA_PRINCIPAL)
+        .limit(2)
+        .find(STRONG_READ);
+    const matches = result?.items || [];
+    if (matches.length > 1) {
+        throw new Error("CAJA_PRINCIPAL_DUPLICATE_SINGLETON");
+    }
+    return matches[0] || null;
+}
+
 async function _updateCajaActual(movement, traceId) {
     try {
         const movementKey = _safeTrim(movement?._id || movement?.transactionId);
@@ -874,7 +925,7 @@ async function _updateCajaActual(movement, traceId) {
         // and retain the movement ID in the same write as the balance change.
         // This makes retries idempotent and concurrent updates recoverable.
         for (let attempt = 0; attempt < 4; attempt += 1) {
-            let cashRegister = await dalGet(CAJA_ACTUAL_COL, CASH_REGISTER_ID, "strong");
+            let cashRegister = await _getCashRegisterSingleton();
             const isNew = !cashRegister;
             if (!cashRegister) {
                 cashRegister = {
@@ -1040,7 +1091,7 @@ export const getCashierState = webMethod(Permissions.SiteMember, async (options 
     const { traceId, diaKey } = options;
     try {
         await requireCajero(traceId);
-        const cashRegister = await dalGet(CAJA_ACTUAL_COL, CASH_REGISTER_ID, "strong").catch(() => null);
+        const cashRegister = await _getCashRegisterSingleton();
         const day = diaKey || new Date().toLocaleDateString("sv-SE", { timeZone: SDK_CONFIG?.TZ || "Europe/Madrid" });
         const res = await dalQuery(MOVIMIENTOS_CAJA_COL)
             .eq("fechaExpedicionFactura", day)
@@ -1053,7 +1104,7 @@ export const getCashierState = webMethod(Permissions.SiteMember, async (options 
         return {
             status: "SUCCESS",
             data: {
-                _id: CASH_REGISTER_ID,
+                _id: cashRegister?._id || CASH_REGISTER_ID,
                 singletonKey: cashRegister?.[CAJA_KEYS.SINGLETON_KEY] || SINGLETONS.CAJA_PRINCIPAL,
                 operationDate: cashRegister?.[CAJA_KEYS.OPERATION_DATE] || day,
                 cashRegisterStatus: cashRegister?.[CAJA_KEYS.STATUS] || CASH_REGISTER_STATUS.CERRADA,
@@ -1274,7 +1325,7 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
 
         const saved = await dalInsert(HISTORICO_CIERRES_Z_COL, zRecord);
 
-        const cashRegister = await dalGet(CAJA_ACTUAL_COL, CASH_REGISTER_ID, "strong").catch(() => null);
+        const cashRegister = await _getCashRegisterSingleton();
         if (cashRegister) {
             cashRegister.cashRegisterStatus = CASH_REGISTER_STATUS.CERRADA;
             cashRegister.closedAt = new Date();

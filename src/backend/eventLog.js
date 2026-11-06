@@ -730,12 +730,22 @@ export async function registrarEventoEconomico(input) {
     }
 
     // Update the operational cash-register projection as part of the online
-    // payment flow. The helper is idempotent by persisted movement ID.
-    await updateCajaActualFromMovement(cabecera, traceId);
+    // payment flow. A persisted fiscal movement with a pending cash projection
+    // must be reported as PARTIAL, never as a fully completed operation.
+    const cashProjection = await updateCajaActualFromMovement(cabecera, traceId);
 
     // 9. Proyeccion secundaria - NUNCA propaga errores al caller
     const detailIds = [];
-    let projectionStatus = PROJECTION_STATUS.OK;
+    let projectionStatus = cashProjection?.status === "SUCCESS"
+        ? PROJECTION_STATUS.OK
+        : PROJECTION_STATUS.ERROR;
+    if (projectionStatus === PROJECTION_STATUS.ERROR) {
+        log.error("CajaActual projection pending after fiscal ledger insert", {
+            traceId,
+            eventoId: cabecera._id,
+            cashProjectionStatus: cashProjection?.status || "UNKNOWN",
+        });
+    }
     try {
         await _proyectarSegunTipoEvento(cabecera, detailIds, traceId);
     } catch (err) {
@@ -757,8 +767,11 @@ export async function registrarEventoEconomico(input) {
             sequenceNumber: seq.sequenceNumber,
             numSerieFactura: doc.numSerieFactura,
             projectionStatus,
+            cashProjectionStatus: cashProjection?.status || "UNKNOWN",
         },
-        error: null,
+        error: projectionStatus === PROJECTION_STATUS.OK
+            ? null
+            : { code: "CASH_OR_SECONDARY_PROJECTION_PENDING", message: "Evento fiscal persistido; una o mas proyecciones requieren reconciliacion." },
     };
 }
 

@@ -29,7 +29,7 @@ This pack makes the QA fixtures repeatable and traceable. The machine-readable s
 | Cart V2 calculation and checkout URL guards | `booking.cart-v2.checkout.test.mjs` | Mock covered; no payment execution |
 | Booking cancellation webhook and replay reconciliation | `events.booking-canceled.integrity.test.mjs` | Mock covered |
 | Staff identity, authorization and signed timeclock | `site.flows.e2e.test.mjs` | Mock covered |
-| Cash transaction, close Z and hash chain | `site.flows.e2e.test.mjs` | Mock covered with mock signer only |
+| Cash transaction, close Z and hash chain | `site.flows.e2e.test.mjs` | Mock covered with mock signer only |\n| Refund / service refund / reimbursement, negative accounting sign, cash projection replay and chain integrity | `site.flows.e2e.test.mjs` (`FLOW-CAJA-07`) | Mock covered for `REEMBOLSO`, `DEVOLUCION`, `DEVOLUCION_SERVICIO`; signer remains mock-only |\n| FACSIMIL series, chained digest, signature-shaped invalid placeholder and tamper detection | `fiscalFacsimile.test.mjs` | Isolated helper mock covered; no CMS writes, real signer, QR or AEAT path |
 | Order total resolution | `orderLedgerAmount.test.mjs` | Mock/unit covered |
 | Inventory sale/refund/idempotency/lock release | `inventory.movement.flow.test.mjs`, `inventory.lock.release.test.mjs` | Offline flow covered; Wix Stores reconciliation still needs integration validation |
 | Wix Automations delivery, public forms/CRM, rescheduling, Gift Cards | No evidenced E2E suite | Manual/integration work remains |
