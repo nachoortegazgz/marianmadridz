@@ -351,7 +351,7 @@ async function _bestEffortUnlockAll(lockKeys, lockOwnerId, lockRevisions) {
 // =============================================================================
 // BLOCK 4 - COMPENSACION
 // =============================================================================
-async function _compensateCreatedBookings(createdBookings, traceId) {
+async function _compensateCreatedBookings(createdBookings, traceId, pairToken) {
     const list = Array.isArray(createdBookings) ? createdBookings : [];
     for (let i = 0; i < list.length; i++) {
         const booking = list[i];
@@ -362,6 +362,13 @@ async function _compensateCreatedBookings(createdBookings, traceId) {
             (booking && booking[BOOKING_FIELDS.STATUS]) || (booking && booking.status)
         ).toUpperCase();
         if (status && NON_CANCELABLE_STATUSES.has(status)) {
+            if (pairToken && booking?.phase) {
+                await updateBookingWriterIntent(pairToken, booking.phase, "TERMINAL", {
+                    bookingId: String(bookingId),
+                    writerStatus: status,
+                    compensationSkippedAt: new Date().toISOString(),
+                }, traceId);
+            }
             log.warn("Skipping compensation for terminal-state booking", {
                 bookingId: bookingId,
                 status: status,
@@ -413,12 +420,25 @@ async function _compensateCreatedBookings(createdBookings, traceId) {
                 2,
                 300
             );
+            if (pairToken && booking?.phase) {
+                await updateBookingWriterIntent(pairToken, booking.phase, "COMPENSATED", {
+                    bookingId: String(bookingId),
+                    compensatedAt: new Date().toISOString(),
+                }, traceId);
+            }
             log.info("Compensated booking cancelled", {
                 bookingId: bookingId,
                 revision: revision,
                 traceId: traceId,
             });
         } catch (cancelErr) {
+            if (pairToken && booking?.phase) {
+                await updateBookingWriterIntent(pairToken, booking.phase, "COMPENSATION_PENDING", {
+                    bookingId: String(bookingId),
+                    compensationError: (cancelErr && cancelErr.message) || "UNKNOWN",
+                    compensationPendingAt: new Date().toISOString(),
+                }, traceId);
+            }
             log.error("Compensation cancel failed; queuing in ControlOperativo", {
                 bookingId: bookingId,
                 revision: hasValidRevision ? revision : null,
