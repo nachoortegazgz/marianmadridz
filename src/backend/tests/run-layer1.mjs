@@ -15,6 +15,8 @@ const suites = [
   'staff.identity.contract.test.mjs',
   'qa.simulation-manifest.test.mjs',
   'booking.availability.saga.test.mjs',
+  'qa.simple-booking.writer.offline.test.mjs',
+  'qa.dual-booking.writer.offline.test.mjs',
   'booking.core.concurrency.test.mjs',
   'controlOperativo.hooks.test.mjs',
   'reservas.web.test.mjs',
