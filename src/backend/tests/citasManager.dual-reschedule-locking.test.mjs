@@ -33,5 +33,5 @@ test('CM-DUAL-RESCHEDULE-LOCK-02 uses canonical lock ordering and releases only 
 test('CM-DUAL-RESCHEDULE-LOCK-03 never locks the exposure gap', () => {
   const lockPhase = handler.slice(handler.indexOf('const lockCandidates = ['), handler.indexOf('const journalDedupeKey ='));
   assert.doesNotMatch(lockPhase, /gapStart|gapEnd|exposureStart|exposureEnd/);
-  assert.match(handler, /The exposure gap is intentionally excluded: it remains bookable\\.\\s*const lockCandidates = \\[/);
+  assert.ok(handler.includes('The exposure gap is intentionally excluded: it remains bookable.\\n            const lockCandidates = ['));
 });
