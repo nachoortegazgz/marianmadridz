@@ -129,3 +129,19 @@ Referencia oficial: https://dev.wix.com/docs/api-reference/business-solutions/bo
 La inspección estática de `rescheduleDualBookings` confirma que existe journal, reprogramación secuencial F1/F2, rollback de F1 cuando falla F2 y marca de inconsistencia cuando falla la proyección CMS. No obstante, no se ha demostrado todavía exclusión mutua/idempotencia de toda la operación dual ni reconciliación automática del journal tras interrupción. Esta ruta no debe certificarse hasta cubrir esos escenarios con pruebas y verificar su contrato contra Bookings Reader/Writer V2.
 
 La prueba CI del head `46b10dc25dedef4c1fa9ce911ad133275ebcc183` (run #42208394023) completó correctamente: offline regression, gate Capa 1, gate Capa 2 y ESLint. Esta ejecución no sustituye QA E2E con Wix Bookings real.
+
+
+## 11. Exclusión mutua de reprogramación dual
+
+En el head `bea0d70` se incorporó bloqueo de intervalos a `rescheduleDualBookings`:
+
+- Se generan claves para los intervalos originales F1/F2 y los intervalos destino F1/F2.
+- Las claves se adquieren en orden lexicográfico para evitar interbloqueos por orden de adquisición.
+- Cada adquisición usa un propietario único de ejecución y las primitivas ya existentes de `bookingCore.js` (`_lockSlotKeyOrFail` / `_unlockSlotKey`).
+- Si una adquisición falla, no se inicia la escritura nativa; los locks previamente adquiridos se liberan en `finally`.
+- El intervalo de exposición no se bloquea, por lo que sigue disponible para otras reservas.
+- Se añade una suite de contrato estático `citasManager.dual-reschedule-locking.test.mjs` al gate de Capa 1.
+
+**Límite:** los locks coordinan operaciones que usan estas primitivas internas. Wix Bookings sigue siendo la autoridad final y su validación nativa de disponibilidad permanece activa en `rescheduleBooking`. La suite nueva verifica el cableado/orden/alcance de locks, no simula concurrencia real de dos llamadas webMethod ni sustituye una prueba E2E contra Wix QA.
+
+La journalización de reprogramación todavía no dispone de un reconciliador de interrupciones que consulte el estado nativo de ambas reservas y repare de forma automática una ejecución cortada. Hasta añadirlo y probarlo, una interrupción entre F1 y F2 requiere inspección operativa; no debe repetirse a ciegas.
