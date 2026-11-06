@@ -51,7 +51,7 @@ Corrección en rama `fix/booking-saga-partial-compensation`:
 - No enmascarar el error original si falla la compensación parcial.
 - Regresiones para fallo a mitad de paso y fallo del compensador.
 
-## 4.1 Resultado incierto del Writer — segundo hallazgo P1
+### 4.1 Resultado incierto del Writer — segundo hallazgo P1
 
 `reconcileUnknownTransaction()` buscaba solo filas `CitasF2`. Antes, cero filas se convertían en `FAILED_FINAL`, aunque una llamada `createBooking` con timeout puede haber creado una reserva nativa sin respuesta y sin proyección CMS. Una fila simple también se trataba erróneamente como creación parcial; además, el reconciliador guardaba `_id` de CMS en `bookingIds`, no los IDs nativos.
 
@@ -107,8 +107,6 @@ La configuración real de los 24 F2 ya es `NO_FEE` con pago presencial habilitad
 ## 8. Límites
 
 - No se crearon, modificaron ni cancelaron reservas reales.
-- No se escribieron colecciones CMS ni se alteraron servicios, horarios, personal o pagos.
+- No se escribieron colecciones CMS de producción ni se alteraron servicios, horarios, personal o pagos.
 - No se publicó ni desplegó código.
 - PR #153 permanece abierto y en borrador; no se ha integrado en `main`.
-- No se han creado, modificado ni cancelado reservas reales, ni escrito en CMS de producción.
-- No se ha desplegado ni publicado código.
