@@ -62,7 +62,28 @@
       "testFiles": [
         "src/backend/tests/qa.dual-booking.writer.offline.test.mjs"
       ],
-      "limitation": "Wix Bookings Writer y CMS se simulan offline. No certifica disponibilidad concurrente ni escritura real en el sitio publicado."
+      "limitation": "Wix Bookings Writer y CMS se simulan offline. No certifica disponibilidad concurrente ni escritura real en el sitio publicado.",
+      "traceId": "trace-qa-dual-writer-001",
+      "fixture": {
+        "dateYmd": "2026-11-10",
+        "phase1StartLocal": "2026-11-10T09:00:00",
+        "phase1EndLocal": "2026-11-10T09:30:00",
+        "exposureMinutes": 30,
+        "phase2StartLocal": "2026-11-10T10:00:00",
+        "phase2EndLocal": "2026-11-10T10:40:00",
+        "phase1ServiceId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa11",
+        "phase2ServiceId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        "sameResource": true,
+        "channelType": "PRESENCIAL",
+        "paymentExecution": false
+      },
+      "assertions": [
+        "query native F1 and F2 availability independently",
+        "create two independent Bookings V2 appointments",
+        "persist two CitasF2 rows with shared pairToken",
+        "confirm both native bookings",
+        "keep F2 native availability validation enabled"
+      ]
     },
     {
       "scenarioId": "QA-BOOKING-DUAL-COMPENSATION-001",
