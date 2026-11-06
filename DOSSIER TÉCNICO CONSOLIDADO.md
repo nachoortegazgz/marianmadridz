@@ -380,6 +380,22 @@ InicioF2 = InicioF1 + phase1Duration + exposureDuration
 | `allowCombine` | Boolean: habilita la reserva dual en UI |
 | `clientHidden` | Boolean: oculta F2 del catálogo público |
 
+### Nomenclatura de keyfields (reglas N1–N5)
+
+Estas reglas se aplican a los KEYFIELDs y a las ETIQUETAS VISIBLES de los campos de todas las colecciones CMS. La nomenclatura debe ser consistente entre CMS, backend, frontend, WebMethods y webhooks.
+
+- **N1 — KEYFIELDs en camelCase:** todos los KEYFIELDs se escriben en `camelCase`. Se conservan los nombres técnicos nativos de Wix en inglés cuando exista un identificador nativo (`bookingId`, `serviceId`, `resourceId`, `slug`). Cuando no exista un ID nativo, se utilizan las denominaciones normalizadas aplicables de AEAT y PGC en español, según corresponda (`numSerieFactura`, `taxBase`, `tipoImpositivo`).
+- **N2 — IDs nativos y siglas:** los IDs técnicos nativos de Wix se mantienen exactamente en inglés, sin traducirlos. Las siglas integradas en un KEYFIELD se escriben en mayúsculas, manteniendo la estructura camelCase (`payloadAEAT`).
+- **N3 — Traducción de etiquetas técnicas visibles:** las etiquetas visibles que representen KEYFIELDs se expresan en español y en `camelCase`, conservando el orden de los términos del KEYFIELD original. Se traduce el término cuando corresponda (`serviceId` → `servicioId`), pero no se traducen los anglicismos aceptados por el proyecto (`staff`).
+- **N4 — Identificación inequívoca para el usuario:** cada etiqueta visible debe permitir identificar el dato que contiene, estar redactada en español y seguir `camelCase`. La etiqueta visible no sustituye ni modifica el KEYFIELD técnico.
+- **N5 — ENUMS:** cuando un campo tenga un conjunto cerrado de opciones seleccionables, debe definirse y documentarse como ENUM, explicando previamente qué representa el dato y enumerando después sus valores permitidos. Los valores persistidos deben respetar el enum canónico correspondiente.
+
+**Estructura obligatoria para documentar los campos de una colección:**
+
+| KEYFIELD | ETIQUETA VISIBLE | Tipo | Dato que contiene e información relevante |
+| --- | --- | --- | --- |
+| `traceId` | `trazaId` | TEXT UUID v4 | Trazabilidad end-to-end. Obligatorio en toda escritura. |
+
 ## 6. Modelo CMS: colecciones, keyfields e integridad
 
 El CMS propio tiene **13 colecciones NATIVE** activas. Las 20 colecciones `WIX_APP` son de estricta lectura. Las 8 colecciones legacy están prohibidas; cualquier acceso a ellas lanza `FISCAL_VIOLATION`.
@@ -433,14 +449,6 @@ Los hooks `beforeUpdate` y `beforeRemove` en `MovimientosCaja`, `LibroAsientosCo
 | `recordHash` | TEXT | Huella en `LibroAsientosContablesDetalle`. |
 | `sequenceNumber` | NUMBER | Secuencia monótona asignada desde `CAJA_SEQ`. |
 | `numSerieFactura` | TEXT | Número de ticket/factura correlativo sin saltos. |
-
-### Nomenclatura de keyfields (reglas N1–N5)
-
-- N1: convención única compartida por CMS, backend, frontend y webhooks.
-- N2: IDs técnicos nativos de Wix se conservan en inglés (`bookingId`, `serviceId`, `resourceId`, `slug`).
-- N3: si no existe ID nativo, se adoptan estándares AEAT y PGC en español (`numSerieFactura`, `taxBase`, `tipoImpositivo`).
-- N4: campos y variables en `camelCase`; etiqueta visible en español camelCase.
-- N5: enums cualificados por dominio (`bookingStatus`, `movementType`, `clockEventType`).
 
 ### ControlOperativo — tipos de control
 
