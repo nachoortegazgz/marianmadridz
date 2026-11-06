@@ -109,3 +109,23 @@ La configuración real de los 24 F2 ya es `NO_FEE` con pago presencial habilitad
 - No se escribieron colecciones CMS de producción ni se alteraron servicios, horarios, personal o pagos.
 - No se publicó ni desplegó código.
 - PR #153 permanece abierto y en borrador; no se ha integrado en `main`.
+
+
+## 9. Contrato oficial de recuperación nativa — Bookings Reader V2
+
+Consulta realizada sobre la especificación oficial de Wix para `Query Extended Bookings`:
+
+- SDK: `@wix/bookings`, módulo `extendedBookings`, método `queryExtendedBookings(query, options)`.
+- Campos de filtro documentados y relevantes: `booking.createdDate`, `booking.startDate`, `booking.endDate`, `booking.bookedEntity.slot.serviceId`, `booking.bookedEntity.slot.resource.id`, `booking.contactDetails.email`, `booking.contactDetails.contactId`, `booking.status`.
+- El endpoint Reader V2 permite localizar candidatos mediante esos atributos y paginación.
+- El contrato no ofrece un campo arbitrario de idempotencia/pairToken escrito por el consumidor como filtro de correlación garantizado.
+
+**Decisión de fiabilidad:** no se debe confirmar automáticamente una reserva solo por coincidir servicio, profesional, contacto y hora. Puede existir otra reserva legítima con los mismos atributos. Para habilitar reconciliación automática se debe persistir antes del Writer un contexto de intención por fase y verificar que el resultado Reader es único y coincide íntegramente; aun así, las coincidencias múltiples, incompletas o con datos insuficientes permanecen en `REPAIR_REQUIRED`. No se permite retry ciego ni cancelación especulativa.
+
+Referencia oficial: https://dev.wix.com/docs/api-reference/business-solutions/bookings/bookings/bookings-reader-v2/query-extended-bookings
+
+## 10. Revisión de integridad operativa pendiente
+
+La inspección estática de `rescheduleDualBookings` confirma que existe journal, reprogramación secuencial F1/F2, rollback de F1 cuando falla F2 y marca de inconsistencia cuando falla la proyección CMS. No obstante, no se ha demostrado todavía exclusión mutua/idempotencia de toda la operación dual ni reconciliación automática del journal tras interrupción. Esta ruta no debe certificarse hasta cubrir esos escenarios con pruebas y verificar su contrato contra Bookings Reader/Writer V2.
+
+La prueba CI del head `46b10dc25dedef4c1fa9ce911ad133275ebcc183` (run #42208394023) completó correctamente: offline regression, gate Capa 1, gate Capa 2 y ESLint. Esta ejecución no sustituye QA E2E con Wix Bookings real.
