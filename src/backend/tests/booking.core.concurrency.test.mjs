@@ -273,6 +273,35 @@ test('BCORE-TX-05 empty pairToken rejected immediately', async () => {
   assert.strictEqual(res.error, 'INVALID_PAIR_TOKEN');
 });
 
+test('BCORE-TX-07 writer intent phases persist and update without losing sibling phase', async () => {
+  wixDataMock._reset();
+  const intent = {
+    schemaVersion: 1,
+    bookingType: 'DUAL',
+    isDual: true,
+    phases: {
+      F1: { phase: 'F1', status: 'PREPARED', serviceId: SVC, contactEmail: 'qa@example.test' },
+      F2: { phase: 'F2', status: 'PREPARED', serviceId: RES_B, contactEmail: 'qa@example.test' },
+    },
+  };
+  await BC._initTransaction('pt-writer-intent', 'hash-writer-intent', 'tr-writer-intent', SVC, 'owner-1', intent);
+
+  const started = await BC.updateBookingWriterIntent(
+    'pt-writer-intent', 'F1', 'INTENT', { writerCallStartedAt: new Date().toISOString() }, 'tr-writer-intent'
+  );
+  assert.equal(started.ok, true);
+  const completed = await BC.updateBookingWriterIntent(
+    'pt-writer-intent', 'F1', 'CREATED', { bookingId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' }, 'tr-writer-intent'
+  );
+  assert.equal(completed.ok, true);
+
+  const row = (wixDataMock._store.get(CONTROL) || []).find((item) => item._id === 'pt-writer-intent');
+  assert.equal(row.payload.writerIntent.phases.F1.status, 'CREATED');
+  assert.equal(row.payload.writerIntent.phases.F1.bookingId, 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
+  assert.equal(row.payload.writerIntent.phases.F2.status, 'PREPARED');
+  assert.equal(row.payload.writerIntent.phases.F2.contactEmail, 'qa@example.test');
+});
+
 test('BCORE-TX-06 oversized result is dropped but state preserved (TX_PAYLOAD cap)', async () => {
   wixDataMock._reset();
   await BC._initTransaction('pt-big', 'hashA', 'tr-1', SVC);
