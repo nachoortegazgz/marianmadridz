@@ -91,6 +91,35 @@ Math.max(30, Number(SDK_CONFIG?.JOBS?.AUDIT_RETENTION_DAYS) || 90);
 // outcome. Never purge in-flight, retryable, or unknown-result transactions.
 const IDEMPOTENCY_RETENTION_MS = 24 * 60 * 60 * 1000;
 
+function _summarizeBulkRemove(response) {
+    if (Array.isArray(response?.results)) {
+        let removed = 0, skipped = 0, failed = 0;
+        const errors = [];
+        for (const entry of response.results) {
+            const metadata = entry?.itemMetadata || {};
+            if (metadata.success === true) { removed++; continue; }
+            const error = metadata.error || {};
+            const code = String(error.code || "REMOVE_FAILED");
+            if (code === "WDE0193") { skipped++; continue; }
+            failed++;
+            if (errors.length < 10) errors.push({
+                item: metadata.id || null,
+                code,
+                message: error.description || error.message || "UNKNOWN",
+            });
+        }
+        return { removed, skipped, failed, errors };
+    }
+    const errors = Array.isArray(response?.errors) ? response.errors : [];
+    return {
+        removed: Number(response?.removed) || 0,
+        skipped: Number(response?.skipped) || 0,
+        failed: Number.isFinite(Number(response?.failed)) ? Number(response.failed) : errors.length,
+        errors,
+    };
+}
+
+
 // CRON-08: elevatedGet para reconciliación
 const getBookingElevated = auth.elevate(bookings.getBooking);
 
@@ -117,22 +146,16 @@ const res = await dalQuery(collection)
 const ids = (res?.items || []).map((item) => item._id).filter(Boolean);
 if (ids.length > 0) {
 const removal = await dalBulkRemove(collection, ids, {
-condition: {
-filter: {
+condition: { filter: {
 controlType: { $eq: CONTROL_TYPE.SLOT_LOCK },
 expiresAt: { $lt: now },
-},
-},
+} },
 });
-result.removed = Number(removal?.removed) || 0;
-result.skipped = Number(removal?.skipped) || 0;
-const errors = Array.isArray(removal?.errors) ? removal.errors : [];
-result.failed = errors.length;
-result.errors = errors.slice(0, 5).map((error) => ({
-id: error?.item || null,
-code: error?.code || "REMOVE_FAILED",
-error: error?.message || "UNKNOWN",
-}));
+const summary = _summarizeBulkRemove(removal);
+result.removed = summary.removed;
+result.skipped = summary.skipped;
+result.failed = summary.failed;
+result.errors = summary.errors.slice(0, 5);
 }
 
 log.info("cleanExpiredLocks completed", {
@@ -173,21 +196,16 @@ const res = await dalQuery(collection)
 const ids = (res?.items || []).map((item) => item._id).filter(Boolean);
 if (ids.length > 0) {
 const removal = await dalBulkRemove(collection, ids, {
-condition: {
-filter: {
+condition: { filter: {
 controlType: { $eq: CONTROL_TYPE.RATE_LIMIT },
 expiresAt: { $lt: now },
-},
-},
+} },
 });
-result.removed = Number(removal?.removed) || 0;
-result.skipped = Number(removal?.skipped) || 0;
-result.failed = Array.isArray(removal?.errors) ? removal.errors.length : 0;
-result.errors = (removal?.errors || []).slice(0, 5).map((error) => ({
-id: error?.item || null,
-code: error?.code || "REMOVE_FAILED",
-error: error?.message || "UNKNOWN",
-}));
+const summary = _summarizeBulkRemove(removal);
+result.removed = summary.removed;
+result.skipped = summary.skipped;
+result.failed = summary.failed;
+result.errors = summary.errors.slice(0, 5);
 }
 
 log.info("cleanExpiredRateLimits completed", {
@@ -229,22 +247,16 @@ const ids = (res?.items || []).map((item) => item._id).filter(Boolean);
 
 if (ids.length) {
 const removal = await dalBulkRemove(collection, ids, {
-condition: {
-filter: {
+condition: { filter: {
 controlType: { $eq: CONTROL_TYPE.DISPLAY_TOKEN },
 expiresAt: { $lt: now },
-},
-},
+} },
 });
-result.removed = Number(removal?.removed) || 0;
-result.skipped = Number(removal?.skipped) || 0;
-const errors = Array.isArray(removal?.errors) ? removal.errors : [];
-result.failed = errors.length;
-result.errors = errors.slice(0, 10).map((error) => ({
-id: error?.item || null,
-code: error?.code || "REMOVE_FAILED",
-error: error?.message || "UNKNOWN",
-}));
+const summary = _summarizeBulkRemove(removal);
+result.removed = summary.removed;
+result.skipped = summary.skipped;
+result.failed = summary.failed;
+result.errors = summary.errors.slice(0, 10);
 }
 
 log.info("cleanExpiredDisplayTokens completed", {
@@ -300,17 +312,12 @@ expiresAt: { $lt: now },
 },
 },
 });
-const removed = Number(removal?.removed) || 0;
-result.removed += removed;
-result.skipped += Number(removal?.skipped) || 0;
-const errors = Array.isArray(removal?.errors) ? removal.errors : [];
-result.failed += errors.length;
+const summary = _summarizeBulkRemove(removal);
+result.removed += summary.removed;
+result.skipped += summary.skipped;
+result.failed += summary.failed;
 if (result.errors.length < 10) {
-result.errors.push(...errors.slice(0, 10 - result.errors.length).map((error) => ({
-id: error?.item || null,
-code: error?.code || "REMOVE_FAILED",
-error: error?.message || "UNKNOWN",
-})));
+result.errors.push(...summary.errors.slice(0, 10 - result.errors.length));
 }
 if (removed === 0) break;
 }
@@ -560,51 +567,42 @@ return result;
 * CRON-09/10: contadores precisos. Solo incrementa tras éxito confirmado.
 */
 export async function cleanExpiredDaysCache() {
-const traceId = makeTraceId("cron-days-cache");
-const result = { removed: 0, failed: 0, errors: [] };
-
-try {
-const now = new Date();
-const res = await dalQuery(OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO)
-.eq("controlType", CONTROL_TYPE.DAYS_CACHE)
-.lt("expiresAt", now)
-.limit(200)
-.find({ consistencyMode: "strong" });
-
-for (const item of res?.items || []) {
-try {
-await dalRemove(OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO, item._id);
-result.removed++;
-} catch (removeError) {
-result.failed++;
-if (result.errors.length < 5) {
-result.errors.push({
-id: item._id,
-error: removeError?.message || "UNKNOWN",
-});
-}
-log.warn("cleanExpiredDaysCache: remove failed", {
-cacheId: item._id,
-error: removeError?.message,
-traceId,
-});
-}
-}
-
-log.info("cleanExpiredDaysCache completed", {
-removed: result.removed,
-failed: result.failed,
-traceId,
-});
-} catch (err) {
-log.error("cleanExpiredDaysCache failed", {
-error: err?.message,
-traceId,
-});
-result.errors.push({ query: "main", error: err?.message });
-}
-
-return result;
+    const traceId = makeTraceId("cron-days-cache");
+    const result = { removed: 0, skipped: 0, failed: 0, errors: [] };
+    try {
+        const now = new Date();
+        const collection = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
+        const batchSize = Math.max(1, Math.min(Number(SDK_CONFIG?.JOBS?.DAYS_CACHE_CLEANUP_LIMIT) || 500, 500));
+        for (let batch = 0; batch < 10; batch++) {
+            const res = await dalQuery(collection)
+                .eq("controlType", CONTROL_TYPE.DAYS_CACHE)
+                .lt("expiresAt", now)
+                .limit(batchSize)
+                .find({ consistencyMode: "strong" });
+            const ids = (res?.items || []).map((item) => item._id).filter(Boolean);
+            if (!ids.length) break;
+            const removal = await dalBulkRemove(collection, ids, {
+                condition: { filter: {
+                    controlType: { $eq: CONTROL_TYPE.DAYS_CACHE },
+                    expiresAt: { $lt: now },
+                } },
+            });
+            const summary = _summarizeBulkRemove(removal);
+            result.removed += summary.removed;
+            result.skipped += summary.skipped;
+            result.failed += summary.failed;
+            if (result.errors.length < 10) result.errors.push(...summary.errors.slice(0, 10 - result.errors.length));
+            if (summary.removed === 0) break;
+        }
+        log.info("cleanExpiredDaysCache completed", {
+            removed: result.removed, skipped: result.skipped, failed: result.failed, traceId,
+        });
+    } catch (err) {
+        result.failed++;
+        result.errors.push({ query: "main", error: err?.message || "UNKNOWN" });
+        log.error("cleanExpiredDaysCache failed", { error: err?.message, traceId });
+    }
+    return result;
 }
 
 // =============================================================================
@@ -1031,104 +1029,80 @@ return result;
 export async function cleanExpiredBookingControl() {
     const traceId = makeTraceId("cron-booking-control-purge");
     const result = { removed: 0, skipped: 0, failed: 0, errors: [] };
-
     try {
         const cutoff = new Date(Date.now() - IDEMPOTENCY_RETENTION_MS);
-        const C = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
-        const types = [CONTROL_TYPE.IDEMPOTENCY, CONTROL_TYPE.SYSTEM_FLAG];
-        const batches = await Promise.all(types.map((type) =>
-            dalQuery(C)
-                .eq("controlType", type)
-                .lt("_updatedDate", cutoff)
-                .limit(100)
-                .find({ consistencyMode: "strong" })
-        ));
-
-        for (const candidate of batches.flatMap((batch) => batch?.items || [])) {
-            const isEligible = (item) => {
-                const payload = readControlPayload(item);
-                const status = _safeTrim(payload.status || item?.status).toUpperCase();
-                return (
-                    (item?.controlType === CONTROL_TYPE.IDEMPOTENCY &&
-                        ["COMPLETED", "FAILED_FINAL"].includes(status)) ||
-                    (item?.controlType === CONTROL_TYPE.SYSTEM_FLAG &&
-                        ["COMPLETED", "RECONCILED"].includes(status))
-                );
-            };
-            const terminalDate = (item) => {
-                const payload = readControlPayload(item);
-                return new Date(
-                    payload.terminalAt ||
-                    payload.completedAt ||
-                    payload.reconciledAt ||
-                    item?._updatedDate ||
-                    ""
-                );
-            };
-
-            const candidateTerminalAt = terminalDate(candidate);
+        const collection = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
+        const candidates = [];
+        const seenIds = new Set();
+        for (const type of [CONTROL_TYPE.IDEMPOTENCY, CONTROL_TYPE.SYSTEM_FLAG]) {
+            for (let page = 0; page < 10; page++) {
+                const res = await dalQuery(collection)
+                    .eq("controlType", type)
+                    .lt("_updatedDate", cutoff)
+                    .ascending("_updatedDate")
+                    .limit(500)
+                    .skip(page * 500)
+                    .find({ consistencyMode: "strong" });
+                const rows = res?.items || [];
+                for (const item of rows) {
+                    if (item?._id && !seenIds.has(item._id)) {
+                        seenIds.add(item._id);
+                        candidates.push(item);
+                    }
+                }
+                if (rows.length < 500) break;
+            }
+        }
+        const eligibleStatuses = {
+            [CONTROL_TYPE.IDEMPOTENCY]: new Set(["COMPLETED", "FAILED_FINAL"]),
+            [CONTROL_TYPE.SYSTEM_FLAG]: new Set(["COMPLETED", "RECONCILED", "RESOLVED"]),
+        };
+        const groups = new Map();
+        for (const item of candidates) {
+            const payload = readControlPayload(item);
+            const payloadStatus = _safeTrim(payload.status).toUpperCase();
+            const status = payloadStatus || _safeTrim(item.status).toUpperCase();
+            const statusField = payloadStatus ? "payload.status" : "status";
+            const terminalAt = new Date(
+                payload.terminalAt || payload.completedAt || payload.reconciledAt || item?._updatedDate || ""
+            );
             if (
-                !candidate?._id ||
-                !isEligible(candidate) ||
-                !Number.isFinite(candidateTerminalAt.getTime()) ||
-                candidateTerminalAt.getTime() > cutoff.getTime()
+                !eligibleStatuses[item.controlType]?.has(status) ||
+                !Number.isFinite(terminalAt.getTime()) ||
+                terminalAt.getTime() > cutoff.getTime()
             ) {
                 result.skipped++;
                 continue;
             }
-
-            try {
-                // Re-read before removal to avoid deleting a record that was
-                // concurrently moved back into a recovery-required state.
-                const latest = await dalGet(C, candidate._id);
-                if (!latest || latest.controlType !== candidate.controlType) {
-                    result.skipped++;
-                    continue;
-                }
-                const latestTerminalAt = terminalDate(latest);
-                if (
-                    !isEligible(latest) ||
-                    !Number.isFinite(latestTerminalAt.getTime()) ||
-                    latestTerminalAt.getTime() > cutoff.getTime()
-                ) {
-                    result.skipped++;
-                    continue;
-                }
-
-                await dalRemove(C, latest._id);
-                result.removed++;
-            } catch (removeError) {
-                result.failed++;
-                if (result.errors.length < 10) {
-                    result.errors.push({
-                        id: candidate._id,
-                        error: removeError?.message || "UNKNOWN",
-                    });
-                }
-                log.warn("cleanExpiredBookingControl: remove failed", {
-                    id: candidate._id,
-                    error: removeError?.message,
-                    traceId,
-                });
-            }
+            const key = [item.controlType, statusField, status].join("|");
+            if (!groups.has(key)) groups.set(key, {
+                controlType: item.controlType, statusField, status, ids: [],
+            });
+            groups.get(key).ids.push(item._id);
         }
-
+        for (const group of groups.values()) {
+            const removal = await dalBulkRemove(collection, group.ids, {
+                condition: { filter: {
+                    controlType: { $eq: group.controlType },
+                    _updatedDate: { $lt: cutoff },
+                    [group.statusField]: { $eq: group.status },
+                } },
+            });
+            const summary = _summarizeBulkRemove(removal);
+            result.removed += summary.removed;
+            result.skipped += summary.skipped;
+            result.failed += summary.failed;
+            if (result.errors.length < 10) result.errors.push(...summary.errors.slice(0, 10 - result.errors.length));
+        }
         log.info("cleanExpiredBookingControl completed", {
-            removed: result.removed,
-            skipped: result.skipped,
-            failed: result.failed,
-            retentionHours: 24,
-            traceId,
+            removed: result.removed, skipped: result.skipped, failed: result.failed,
+            retentionHours: 24, traceId,
         });
     } catch (err) {
         result.failed++;
         result.errors.push({ query: "main", error: err?.message || "UNKNOWN" });
-        log.error("cleanExpiredBookingControl failed", {
-            error: err?.message,
-            traceId,
-        });
+        log.error("cleanExpiredBookingControl failed", { error: err?.message, traceId });
     }
-
     return result;
 }
 
@@ -1146,81 +1120,54 @@ export async function cleanExpiredBookingControl() {
 * y quedan fuera de este job.
 */
 export async function cleanAuditLogs() {
-const traceId = makeTraceId("cron-audit-purge");
-const result = { removed: 0, failed: 0, skippedLedger: 0, errors: [] };
-
-try {
-const cutoff = new Date(Date.now() - AUDIT_RETENTION_DAYS * 24 * 60 * 60 * 1000);
-const C = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
-
-const terminalCompensationStatuses = [
-CONTROL_STATUS.EXECUTED,
-CONTROL_STATUS.FAILED,
-];
-
-const queryResults = await Promise.all([
-...PURGABLE_TERMINAL_ALERT_STATUSES.map((status) =>
-dalQuery(C)
-.eq("controlType", CONTROL_TYPE.ALERT)
-.eq("status", status)
-.lt("_createdDate", cutoff)
-.limit(200)
-.find({ consistencyMode: "strong" })
-),
-...terminalCompensationStatuses.map((status) =>
-dalQuery(C)
-.eq("controlType", CONTROL_TYPE.COMPENSATION)
-.eq("status", status)
-.lt("_createdDate", cutoff)
-.limit(200)
-.find({ consistencyMode: "strong" })
-),
-]);
-
-const seenIds = new Set();
-const candidates = queryResults
-.flatMap((res) => res?.items || [])
-.filter((item) => {
-if (!item?._id || seenIds.has(item._id)) return false;
-seenIds.add(item._id);
-// Doble red de seguridad ADR-05: jamas purgar el ledger webhook.
-if (item.controlType === CONTROL_TYPE.WEBHOOK_EVENT) {
-result.skippedLedger++;
-return false;
-}
-return true;
-});
-
-for (const item of candidates) {
-try {
-await dalRemove(C, item._id);
-result.removed++;
-} catch (removeError) {
-result.failed++;
-if (result.errors.length < 5) {
-result.errors.push({ id: item._id, error: removeError?.message || "UNKNOWN" });
-}
-log.warn("cleanAuditLogs: remove failed", {
-id: item._id,
-error: removeError?.message,
-traceId,
-});
-}
-}
-
-log.info("cleanAuditLogs completed", {
-removed: result.removed,
-failed: result.failed,
-skippedLedger: result.skippedLedger,
-retentionDays: AUDIT_RETENTION_DAYS,
-traceId,
-});
-} catch (err) {
-log.error("cleanAuditLogs failed", { error: err?.message, traceId });
-result.errors.push({ query: "main", error: err?.message });
-}
-
-return result;
+    const traceId = makeTraceId("cron-audit-purge");
+    const result = { removed: 0, skipped: 0, failed: 0, errors: [] };
+    try {
+        const cutoff = new Date(Date.now() - AUDIT_RETENTION_DAYS * 24 * 60 * 60 * 1000);
+        const collection = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
+        const purgeGroups = [
+            { controlType: CONTROL_TYPE.ALERT, statuses: ["COMPLETED", ...PURGABLE_TERMINAL_ALERT_STATUSES] },
+            // FAILED compensation may still require fiscal or booking recovery.
+            { controlType: CONTROL_TYPE.COMPENSATION, statuses: [CONTROL_STATUS.EXECUTED] },
+        ];
+        for (const group of purgeGroups) {
+            for (const status of group.statuses) {
+                for (let batch = 0; batch < 10; batch++) {
+                    const res = await dalQuery(collection)
+                        .eq("controlType", group.controlType)
+                        .eq("status", status)
+                        .lt("_createdDate", cutoff)
+                        .ascending("_createdDate")
+                        .limit(500)
+                        .find({ consistencyMode: "strong" });
+                    const ids = (res?.items || []).map((item) => item._id).filter(Boolean);
+                    if (!ids.length) break;
+                    const removal = await dalBulkRemove(collection, ids, {
+                        condition: { filter: {
+                            controlType: { $eq: group.controlType },
+                            status: { $eq: status },
+                            _createdDate: { $lt: cutoff },
+                        } },
+                    });
+                    const summary = _summarizeBulkRemove(removal);
+                    result.removed += summary.removed;
+                    result.skipped += summary.skipped;
+                    result.failed += summary.failed;
+                    if (result.errors.length < 10) result.errors.push(...summary.errors.slice(0, 10 - result.errors.length));
+                    if (summary.removed === 0) break;
+                }
+            }
+        }
+        log.info("cleanAuditLogs completed", {
+            removed: result.removed, skipped: result.skipped, failed: result.failed,
+            retentionDays: AUDIT_RETENTION_DAYS, traceId,
+        });
+    } catch (err) {
+        result.failed++;
+        log.error("cleanAuditLogs failed", { error: err?.message, traceId });
+        result.errors.push({ query: "main", error: err?.message || "UNKNOWN" });
+    }
+    return result;
 }
 
 // =============================================================================
