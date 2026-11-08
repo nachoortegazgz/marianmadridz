@@ -72,7 +72,7 @@ jobs:
 
       - name: Authenticate Wix CLI
         env:
-          WIX_CLI_API_KEY: \${{ secrets.CLI_API_KEY }}
+          WIX_CLI_API_KEY: ${{ secrets.CLI_API_KEY }}
         run: |
           set -euo pipefail
           test -n "$WIX_CLI_API_KEY"
