@@ -27,7 +27,9 @@ test('CM-DUAL-RESCHEDULE-LOCK-01 locks original and target F1/F2 intervals befor
 test('CM-DUAL-RESCHEDULE-LOCK-02 uses canonical lock ordering and releases only owned locks in finally', () => {
   assert.match(handler, /Array\.from\(lockServiceByKey\.keys\(\)\)\.sort\(\)/);
   assert.match(handler, /_lockSlotKeyOrFail\(\s*key,\s*lockOwnerId/s);
-  assert.match(handler, /finally\s*\{[\s\S]*acquiredLockKeys\.length - 1[\s\S]*_unlockSlotKey\(acquiredLockKeys\[i\],\s*lockOwnerId\)/);
+  assert.match(handler, /acquiredLockRevisions\[key\]\s*=\s*acquired\.revision/);
+  assert.match(handler, /acquiredLockTokens\[key\]\s*=\s*acquired\.lockToken/);
+  assert.match(handler, /finally\s*\{[\s\S]*acquiredLockKeys\.length - 1[\s\S]*_unlockSlotKey\(lockKey,\s*lockOwnerId,\s*\{/);
 });
 
 test('CM-DUAL-RESCHEDULE-LOCK-03 never locks the exposure gap', () => {
