@@ -115,7 +115,7 @@ test('DTO-01 getConfirmedBookingForDisplay returns whitelisted DTO only', async 
   }
   assert.strictEqual(res.data.bookingId, DTO_GUID_1);
   assert.strictEqual(res.data.bookingStatus, 'CONFIRMED');
-  assert.strictEqual(res.data.slotStart, '2026-10-05T10:00:00Z');
+  assert.strictEqual(new Date(res.data.slotStart).toISOString(), '2026-10-05T10:00:00.000Z');
   assert.strictEqual(res.data.totalAmount, 45);
   assert.deepStrictEqual(
     Object.keys(res.data).sort(),
