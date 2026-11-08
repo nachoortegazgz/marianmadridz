@@ -272,10 +272,8 @@ test('DTO-03 non-displayable booking states are hidden', async () => {
   wixDataMock._seed(IC.BUSINESS_COLLECTIONS.CITAS_F2, [{
     _id: 'r3', bookingId: DTO_GUID_3, bookingStatus: 'CANCELED',
   }]);
-  // AUDIT-TOKEN-P0-01: identidad antes que estado. Autenticando como miembro
-  // se supera el gate AUTH_REQUIRED y el emisor revela NOT_CONFIRMED (la
-  // reserva existe pero no es mostrable). Sin sesion la respuesta seria
-  // AUTH_REQUIRED (anti-enumeracion, probado en RES-DISPLAY-03).
+  // A non-confirmed record has the same public response as a missing or
+  // non-owned record; the issuer does not reveal booking existence/state.
   mockVisitor(OWNER_MEMBER_ID);
   try {
     const gen = await RW.generateDisplayToken({ bookingId: DTO_GUID_3 });
@@ -287,49 +285,6 @@ test('DTO-03 non-displayable booking states are hidden', async () => {
   const res = await RW.getConfirmedBookingForDisplay({ bookingId: DTO_GUID_3 });
   assert.strictEqual(res.ok, false);
   assert.strictEqual(res.error, 'AUTH_REQUIRED');
-});
-
-test('DTO-13 token issuance does not distinguish missing, non-owned or non-confirmed bookings', async () => {
-  wixDataMock._reset();
-  const ownerId = OWNER_MEMBER_ID;
-  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.CITAS_F2, [
-    { _id: 'r13a', bookingId: DTO_GUID_1, bookingStatus: 'CONFIRMED', contactDetails: { memberId: 'someone-else' } },
-    { _id: 'r13b', bookingId: DTO_GUID_2, bookingStatus: 'CANCELED', contactDetails: { memberId: ownerId } },
-  ]);
-  mockVisitor(ownerId);
-  try {
-    const nonOwned = await RW.generateDisplayToken({ bookingId: DTO_GUID_1 });
-    const missing = await RW.generateDisplayToken({ bookingId: DTO_GUID_3 });
-    const nonConfirmed = await RW.generateDisplayToken({ bookingId: DTO_GUID_2 });
-    assert.deepStrictEqual(
-      [nonOwned.error, missing.error, nonConfirmed.error],
-      ['TOKEN_UNAVAILABLE', 'TOKEN_UNAVAILABLE', 'TOKEN_UNAVAILABLE']
-    );
-  } finally {
-    mockVisitor(null);
-    resetRateLimitRows();
-  }
-});
-
-test('DTO-14 anonymous invalid credential cannot enumerate booking existence', async () => {
-  wixDataMock._reset();
-  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.CITAS_F2, [
-    { _id: 'r14', bookingId: DTO_GUID_1, bookingStatus: 'CONFIRMED' },
-  ]);
-  mockVisitor(null);
-  const existing = await RW.generateDisplayToken({
-    bookingId: DTO_GUID_1,
-    confirmationToken: 'INVALID-CREDENTIAL-14',
-  });
-  const missing = await RW.generateDisplayToken({
-    bookingId: DTO_GUID_3,
-    confirmationToken: 'INVALID-CREDENTIAL-14',
-  });
-  assert.deepStrictEqual(
-    [existing.error, missing.error],
-    ['TOKEN_UNAVAILABLE', 'TOKEN_UNAVAILABLE']
-  );
-  resetRateLimitRows();
 });
 
 test('DTO-13 token issuance does not distinguish missing, non-owned or non-confirmed bookings', async () => {
