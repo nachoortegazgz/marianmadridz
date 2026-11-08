@@ -1,4 +1,4 @@
-# DOSSIER TÉCNICO CONSOLIDADO — QA www.marianmadrid.es
+# DOSSIER TÉCNICO CONSOLIDADO — Entorno QA crado para pruebas y simulacro de despliegue: www.marianmadrid.es
 
 Aquí tienes el **Resumen Ejecutivo Previo** y el **Mapa de Contenidos Estructurado** del Dossier Técnico Consolidado adjunto. Este documento está diseñado para alinear inmediatamente al modelo IA con el contexto, las restricciones y la arquitectura del proyecto `marianmadrid.es`, permitiendo una navegación semántica y técnica precisa.
 
