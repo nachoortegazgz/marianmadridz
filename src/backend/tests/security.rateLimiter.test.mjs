@@ -193,6 +193,16 @@ test("SEC-RL-09 treats Wix Data quota exhaustion as a temporary fail-closed deni
     }
 });
 
+test("SEC-RL-10 applies the dedicated display-token issuance budget", async () => {
+    const key = { surface: "display-token", key: "booking-and-credential" };
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+        assert.equal((await rateLimiter(key)).allowed, true);
+    }
+    const blocked = await rateLimiter(key);
+    assert.equal(blocked.allowed, false);
+    assert.equal(blocked.retryAfter, 12);
+});
+
 test("SEC-CRYPTO-01 computes standard SHA-256 vectors without Web Crypto", async () => {
     assert.equal(
         await hashSHA256("abc"),
