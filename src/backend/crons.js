@@ -790,6 +790,11 @@ const res = await dalQuery(OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO)
 for (const flag of res?.items || []) {
 try {
 const payload = readControlPayload(flag);
+// Dual-reschedule journals have their own operation identity and recovery
+// contract. This legacy pair reconciler only checks booking existence; it
+// must never rewrite a journal to RECONCILED without verifying target slots
+// and the CMS projection.
+if (payload.operationType === "DUAL_RESCHEDULE") continue;
 if (payload.reason !== "DUAL_INCONSISTENT" &&
 payload.status !== "REPAIR_REQUIRED") continue;
 
