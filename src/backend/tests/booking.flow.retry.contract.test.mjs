@@ -201,6 +201,23 @@ test("BOOK-FLOW-SERVICE-01 installs the service-page bridge before asynchronous 
   assert.match(serviceSource, /contextTimeoutMs:\s*120000/);
 });
 
+test("BOOK-FLOW-TIMEOUT-02 dual booking side effect is passed to timeout as a factory", () => {
+  const bookingStart = calendarSource.indexOf("activeBookingMessageId = messageId;");
+  const timeoutStart = calendarSource.indexOf("const result = await withTimeout(", bookingStart);
+  const timeoutEnd = calendarSource.indexOf("\n\n        const bookingResult", timeoutStart);
+  assert.ok(bookingStart >= 0 && timeoutStart > bookingStart && timeoutEnd > timeoutStart);
+  const bookingTimeoutBlock = calendarSource.slice(timeoutStart, timeoutEnd);
+  assert.match(
+    bookingTimeoutBlock,
+    /withTimeout\(\s*\(\)\s*=>\s*processDualBooking\(requestPayload\)/
+  );
+  assert.doesNotMatch(
+    bookingTimeoutBlock,
+    /withTimeout\(\s*processDualBooking\(requestPayload\)/
+  );
+  assert.match(calendarSource, /isTimeout\s*\?\s*"BOOKING_STATUS_UNCERTAIN"/);
+});
+
 test("BOOK-FLOW-AVAIL-01 availability reads use three attempts while booking side effects are not blindly retried in the page", () => {
   assert.match(calendarSource, /runAvailabilityWithRetry/);
   assert.match(calendarSource, /AVAILABILITY_ATTEMPT_TIMEOUT_MS\s*=\s*45000/);
