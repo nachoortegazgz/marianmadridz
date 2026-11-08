@@ -60,3 +60,12 @@ No se ha ejecutado una prueba autenticada en Wix Preview/producción con un miem
 ## Despliegue
 
 La PR no publica en Wix. Publicación únicamente después de CI verde, revisión del diff y autorización expresa.
+
+
+## Corrección adicional — identidad de la cuenta administradora
+
+La comprobación `_isMarianManagerIdentity()` no debe comparar emails. El objeto normalizado por `backend/staff.js` no publica un campo `email`; sí expone el `contactId` de la identidad Wix conectada. La autorización compara ahora el `contactId` del miembro autenticado con el `contactId` del recurso Marian conectado en Bookings Staff, y falla cerrada si falta cualquiera de ellos.
+
+Prueba añadida:
+- ContactId coincidente: acceso de administradora permitido.
+- ContactId distinto: acceso denegado.
