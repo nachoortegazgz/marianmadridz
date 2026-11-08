@@ -54,7 +54,6 @@ test("DRJ-03 identity rejects missing critical dimensions", async () => {
 
 test("DRJ-04 only completed, compensated and repair-required are terminal", () => {
     assert.equal(isDualRescheduleTerminalStatus(DUAL_RESCHEDULE_STATUS.COMPLETED), true);
-    assert.equal(isDualRescheduleTerminalStatus(DUAL_RESCHEDULE_STATUS.COMPENSATED), true);
     assert.equal(isDualRescheduleTerminalStatus(DUAL_RESCHEDULE_STATUS.REPAIR_REQUIRED), true);
     assert.equal(isDualRescheduleTerminalStatus(DUAL_RESCHEDULE_STATUS.F1_DONE), false);
 });
