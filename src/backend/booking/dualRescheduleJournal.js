@@ -16,8 +16,6 @@ export const DUAL_RESCHEDULE_STATUS = Object.freeze({
     F1_DONE: "F1_DONE",
     F2_IN_PROGRESS: "F2_IN_PROGRESS",
     F2_DONE: "F2_DONE",
-    COMPENSATING: "COMPENSATING",
-    COMPENSATED: "COMPENSATED",
     CMS_PROJECTED: "CMS_PROJECTED",
     COMPLETED: "COMPLETED",
     REPAIR_REQUIRED: "REPAIR_REQUIRED",
@@ -25,7 +23,6 @@ export const DUAL_RESCHEDULE_STATUS = Object.freeze({
 
 export function isDualRescheduleTerminalStatus(status) {
     return [
-        DUAL_RESCHEDULE_STATUS.COMPENSATED,
         DUAL_RESCHEDULE_STATUS.COMPLETED,
         DUAL_RESCHEDULE_STATUS.REPAIR_REQUIRED,
     ].includes(String(status || "").trim().toUpperCase());
