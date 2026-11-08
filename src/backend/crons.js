@@ -319,7 +319,7 @@ result.failed += summary.failed;
 if (result.errors.length < 10) {
 result.errors.push(...summary.errors.slice(0, 10 - result.errors.length));
 }
-if (removed === 0) break;
+if (summary.removed === 0) break;
 }
 
 log.info("cleanupExpiredDualCache completed", {
