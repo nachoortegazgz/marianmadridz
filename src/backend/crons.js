@@ -1067,11 +1067,14 @@ export async function cleanExpiredBookingControl() {
         for (const item of candidates) {
             const payload = readControlPayload(item);
             const payloadStatus = _safeTrim(payload.status).toUpperCase();
-            const status = payloadStatus || _safeTrim(item.status).toUpperCase();
+            const rootStatus = _safeTrim(item.status).toUpperCase();
+            const status = payloadStatus || rootStatus;
             const terminalAt = new Date(
-                payload.terminalAt || payload.completedAt || payload.reconciledAt || item?._updatedDate || ""
+                payload.terminalAt || payload.completedAt || payload.reconciledAt ||
+                payload.resolvedAt || item?._updatedDate || ""
             );
             if (
+                (payloadStatus && rootStatus && payloadStatus !== rootStatus) ||
                 !eligibleStatuses[item.controlType]?.has(status) ||
                 !Number.isFinite(terminalAt.getTime()) ||
                 terminalAt.getTime() > cutoff.getTime()
