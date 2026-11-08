@@ -189,6 +189,7 @@ function _startLockHeartbeat({
 }) {
     let stopped = false;
     let failure = null;
+    let wakePendingInterval = null;
     const versions = lockVersions && typeof lockVersions === "object" ? lockVersions : {};
     const tokens = lockTokens && typeof lockTokens === "object" ? lockTokens : {};
     const serviceIds = lockServiceIds && typeof lockServiceIds === "object" ? lockServiceIds : {};
@@ -196,7 +197,15 @@ function _startLockHeartbeat({
     const completion = (async function () {
         while (!stopped) {
             await new Promise(function (resolve) {
-                setTimeout(resolve, intervalMs);
+                const timer = setTimeout(function () {
+                    wakePendingInterval = null;
+                    resolve();
+                }, intervalMs);
+                wakePendingInterval = function () {
+                    clearTimeout(timer);
+                    wakePendingInterval = null;
+                    resolve();
+                };
             });
             if (stopped) break;
 
@@ -233,7 +242,10 @@ function _startLockHeartbeat({
     })();
 
     return {
-        stop: function () { stopped = true; },
+        stop: function () {
+            stopped = true;
+            if (wakePendingInterval) wakePendingInterval();
+        },
         assertHealthy: function () { if (failure) throw failure; },
         getFailure: function () { return failure; },
         wait: completion,
@@ -330,10 +342,16 @@ async function _bestEffortUnlockAll(lockKeys, lockOwnerId, lockVersions, lockTok
 
     for (let i = 0; i < keys.length; i++) {
         try {
-            await _unlockSlotKey(keys[i], lockOwnerId, {
+            const released = await _unlockSlotKey(keys[i], lockOwnerId, {
                 expectedVersion: versions[keys[i]],
                 expectedLockToken: tokens[keys[i]],
             });
+            if (!released?.ok) {
+                log.warn("_bestEffortUnlockAll: lock release not confirmed", {
+                    key: keys[i],
+                    reason: released?.reason || "LOCK_RELEASE_FAILED",
+                });
+            }
         } catch (e) {
             log.warn("_bestEffortUnlockAll: failed", {
                 key: keys[i],
@@ -1753,20 +1771,14 @@ export async function executeBookingSaga(unsafePayload) {
                     traceId,
                 });
 
-                if (
-                    heartbeatMonitor &&
-                    heartbeatMonitor.wait &&
-                    typeof heartbeatMonitor.wait.unref === "function"
-                ) {
-                    heartbeatMonitor.wait.unref();
-                }
-
                 return { lockKeys: lockKeys };
             },
             async function () {
                 if (heartbeatMonitor) {
-                    heartbeatMonitor.stop();
+                    const monitor = heartbeatMonitor;
+                    monitor.stop();
                     heartbeatMonitor = null;
+                    await monitor.wait;
                 }
                 await _bestEffortUnlockAll(lockKeys, lockOwnerId, lockVersions, lockTokens);
             }
