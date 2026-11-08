@@ -56,7 +56,7 @@ jobs:
             if (config.siteId !== "188bed94-177c-4bc9-a9f0-35080d874f3e") {
               throw new Error("wix.config.json siteId does not match Marian Madrid production site");
             }
-            if (!/^\\d+$/.test(String(config.uiVersion ?? ""))) {
+            if (!/^\d+$/.test(String(config.uiVersion ?? ""))) {
               throw new Error("wix.config.json uiVersion is missing or invalid");
             }
             console.log("Wix siteId and pinned UI version verified:", config.uiVersion);
