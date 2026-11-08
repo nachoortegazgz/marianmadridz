@@ -250,6 +250,17 @@ test("BOOK-FLOW-TIMEOUT-04 widget watchdog follows the Velo watchdog and locks u
   );
 });
 
+test("BOOK-FLOW-TIMEOUT-05 uncertain Writer outcomes are returned with the non-retryable public code", () => {
+  const marker = "const resultUncertain = Boolean(norm.details && norm.details.uncertainStep)";
+  const start = sagaSource.indexOf(marker);
+  const end = sagaSource.indexOf("\n    } finally {", start);
+  assert.ok(start >= 0 && end > start);
+  const block = sagaSource.slice(start, end);
+  assert.match(block, /code:\s*resultUncertain\s*\?\s*"BOOKING_STATUS_UNCERTAIN"/);
+  assert.match(calendarSource, /"BOOKING_STATUS_UNCERTAIN"/);
+  assert.match(calendarWidgetSource, /"BOOKING_STATUS_UNCERTAIN"/);
+});
+
 test("BOOK-FLOW-AVAIL-01 availability reads use three attempts while booking side effects are not blindly retried in the page", () => {
   assert.match(calendarSource, /runAvailabilityWithRetry/);
   assert.match(calendarSource, /AVAILABILITY_ATTEMPT_TIMEOUT_MS\s*=\s*45000/);
