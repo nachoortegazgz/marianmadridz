@@ -143,11 +143,8 @@ test('DTO-02 canonical bookingStatus row readable via whitelist projection', asy
   wixDataMock._seed(IC.BUSINESS_COLLECTIONS.CITAS_F2, [{
     _id: 'r2b', bookingId: DTO_GUID_LEGACY, status: 'CONFIRMED',
   }]);
-  // AUDIT-TOKEN-P0-01: el emisor evalua identidad ANTES que estado. Para
-  // llegar a NOT_CONFIRMED hay que autenticar como miembro (cualquiera: la
-  // verificacion de propiedad es posterior al chequeo de estado en el
-  // contrato del emisor). Sin sesion la respuesta correcta y probada en
-  // reservas.web (RES-DISPLAY-03) es AUTH_REQUIRED anti-enumeracion.
+  // Anti-enumeration: an absent or non-confirmed record has the same public
+  // response, and the owner check always precedes the status check.
   mockVisitor(OWNER_MEMBER_ID);
   try {
     const genLegacy = await RW.generateDisplayToken({ bookingId: DTO_GUID_LEGACY });
@@ -376,6 +373,24 @@ test('DTO-14 anonymous invalid credential cannot enumerate booking existence', a
     ['TOKEN_UNAVAILABLE', 'TOKEN_UNAVAILABLE']
   );
   resetRateLimitRows();
+});
+
+test('DTO-15 display lookup hides missing and non-owned booking IDs uniformly', async () => {
+  wixDataMock._reset();
+  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.CITAS_F2, [
+    { _id: 'r15', bookingId: DTO_GUID_1, bookingStatus: 'CONFIRMED', contactDetails: { memberId: OWNER_MEMBER_ID } },
+  ]);
+  mockVisitor('member-not-owner-15');
+  try {
+    const nonOwned = await RW.getConfirmedBookingForDisplay({ bookingId: DTO_GUID_1 });
+    const missing = await RW.getConfirmedBookingForDisplay({ bookingId: DTO_GUID_3 });
+    assert.deepStrictEqual(
+      [nonOwned.error, missing.error],
+      ['NOT_AVAILABLE', 'NOT_AVAILABLE']
+    );
+  } finally {
+    mockVisitor(null);
+  }
 });
 
 test('DTO-04 getMovimientoByBooking exposes only receipt-safe fields', async () => {
