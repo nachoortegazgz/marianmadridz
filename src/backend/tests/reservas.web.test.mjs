@@ -1384,7 +1384,7 @@ test('RES-DISPLAY-02 whitelist projection: forbidden fiscal fields never leak', 
   assert.ok(!('totalPrice' in res.data) && !('totalAmount' in res.data));
 });
 
-test('RES-DISPLAY-03 CANCELED hidden (NOT_CONFIRMED), legacy CANCELED normalized', async () => {
+test('RES-DISPLAY-03 CANCELED and legacy CANCELED hidden uniformly', async () => {
   resetState();
   await invalidateStaffCache();
   const b1 = GUID_OK;
@@ -1407,20 +1407,20 @@ test('RES-DISPLAY-03 CANCELED hidden (NOT_CONFIRMED), legacy CANCELED normalized
     if (rb1) rb1.contactDetails = { memberId: DISPLAY_OWNER_ID };
     const genAuth = await RW.generateDisplayToken({ bookingId: b1 });
     assert.strictEqual(genAuth.ok, false, 'cancelled booking must never receive a token');
-    assert.strictEqual(genAuth.error, 'NOT_CONFIRMED');
+    assert.strictEqual(genAuth.error, 'TOKEN_UNAVAILABLE');
     // Legacy-only row (campo 'status'): el lector v12 solo conoce bookingStatus,
     // por lo que tampoco es confirmable ni tokenizable.
     const b2 = 'ffffffff-1111-4222-9333-cccccccccccc';
     wixDataMock._store.get(CITAS_COL).push({ _id: 'r2', bookingId: b2, status: 'canceled' });
     const gen2 = await RW.generateDisplayToken({ bookingId: b2 });
     assert.strictEqual(gen2.ok, false, 'legacy canceled must not receive a token');
-    assert.strictEqual(gen2.error, 'NOT_CONFIRMED');
+    assert.strictEqual(gen2.error, 'TOKEN_UNAVAILABLE');
   } finally {
     globalThis.__mmMembersState._current = null;
   }
 });
 
-test('RES-DISPLAY-04 unknown booking -> NOT_FOUND', async () => {
+test('RES-DISPLAY-04 unknown booking -> TOKEN_UNAVAILABLE', async () => {
   resetState();
   await invalidateStaffCache();
   wixDataMock._seed(CITAS_COL, []);
@@ -1436,7 +1436,7 @@ test('RES-DISPLAY-04 unknown booking -> NOT_FOUND', async () => {
   try {
     const gen = await RW.generateDisplayToken({ bookingId: ghost });
     assert.strictEqual(gen.ok, false);
-    assert.strictEqual(gen.error, 'NOT_FOUND');
+    assert.strictEqual(gen.error, 'TOKEN_UNAVAILABLE');
   } finally {
     globalThis.__mmMembersState._current = null;
   }
