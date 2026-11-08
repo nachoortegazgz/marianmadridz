@@ -1317,7 +1317,7 @@ export async function wixEcom_onOrderCreated(rawBody) {
         if (!event) return { status: "REJECTED", reason: "JWT_VERIFICATION_FAILED" };
         const order = event?.order || event?.data?.order || event;
         const orderId = _safeTrim(order?._id || order?.id);
-        if (!isValidGuid(orderId)) return { status: "OK", skipped: "ORDER_ID_MISSING" };
+        if (!_looksLikeGuid(orderId)) return { status: "OK", skipped: "ORDER_ID_MISSING" };
         const eventId = _safeTrim(event?.eventId || event?._id || event?.metadata?.id) || `order-created-${orderId}`;
         if (await isEventProcessed(eventId)) return { status: "OK", duplicate: true };
 
