@@ -89,6 +89,8 @@ test('DTO-01 getConfirmedBookingForDisplay returns whitelisted DTO only', async 
     bookingId: DTO_GUID_1,
     bookingStatus: 'CONFIRMED',
     paymentStatus: 'PAID',
+    totalAmount: 45,
+    slotStart: '2026-10-05T10:00:00Z',
     pairToken: 'PT-1',
     serviceId: 'SVC-9',
     dateYmd: '2026-10-05',
