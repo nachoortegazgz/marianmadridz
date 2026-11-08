@@ -177,17 +177,21 @@ function elevatedQueryFind(collection, queryFn) {
 // =============================================================================
 // SAGA-37: HEARTBEAT
 // =============================================================================
-function _startLockHeartbeat(
+function _startLockHeartbeat({
     lockKeys,
     lockOwnerId,
     lockTokens,
+    lockRevisions,
+    lockServiceIds,
     ttlMs,
     intervalMs,
-    traceId
-) {
+    traceId,
+}) {
     let stopped = false;
     let failure = null;
-    const revisions = {};
+    const revisions = lockRevisions && typeof lockRevisions === "object" ? lockRevisions : {};
+    const tokens = lockTokens && typeof lockTokens === "object" ? lockTokens : {};
+    const serviceIds = lockServiceIds && typeof lockServiceIds === "object" ? lockServiceIds : {};
 
     const completion = (async function () {
         while (!stopped) {
@@ -198,33 +202,25 @@ function _startLockHeartbeat(
 
             for (let i = 0; i < lockKeys.length; i += 1) {
                 const key = lockKeys[i];
-                const lockToken = lockTokens[key] || null;
-                const expectedRevision = revisions[key];
-
                 try {
-                    const result = await _renewLock(
-                        key,
-                        lockOwnerId,
-                        ttlMs,
-                        expectedRevision,
-                        lockToken
-                    );
+                    const result = await _renewLock(key, lockOwnerId, ttlMs, {
+                        expectedRevision: revisions[key],
+                        expectedLockToken: tokens[key],
+                        serviceId: serviceIds[key],
+                    });
 
                     if (!result || !result.ok) {
                         failure = createBookingError(
                             ERROR_CODES.TOKEN_BUSY,
                             "Lock ownership lost during heartbeat",
-                            {
-                                traceId: traceId,
-                                lockKey: key,
-                                reason: result && result.reason,
-                            }
+                            { traceId, lockKey: key, reason: result && result.reason }
                         );
                         stopped = true;
                         break;
                     }
 
                     if (result.newRevision !== undefined) {
+                        // Final release must use the latest revision after heartbeat.
                         revisions[key] = result.newRevision;
                     }
                 } catch (error) {
@@ -237,20 +233,9 @@ function _startLockHeartbeat(
     })();
 
     return {
-        stop: function () {
-            stopped = true;
-        },
-        assertHealthy: function () {
-            if (failure) {
-                throw failure;
-            }
-        },
-        getFailure: function () {
-            return failure;
-        },
-        setRevision: function (key, revision) {
-            revisions[key] = revision;
-        },
+        stop: function () { stopped = true; },
+        assertHealthy: function () { if (failure) throw failure; },
+        getFailure: function () { return failure; },
         wait: completion,
     };
 }
@@ -338,14 +323,17 @@ function _isGuidOrNull(value) {
     return _looksLikeGuid(v) ? v : null;
 }
 
-async function _bestEffortUnlockAll(lockKeys, lockOwnerId, lockRevisions) {
+async function _bestEffortUnlockAll(lockKeys, lockOwnerId, lockRevisions, lockTokens) {
     const keys = Array.isArray(lockKeys) ? lockKeys : [];
-    const revisions =
-        lockRevisions && typeof lockRevisions === "object" ? lockRevisions : {};
+    const revisions = lockRevisions && typeof lockRevisions === "object" ? lockRevisions : {};
+    const tokens = lockTokens && typeof lockTokens === "object" ? lockTokens : {};
 
     for (let i = 0; i < keys.length; i++) {
         try {
-            await _unlockSlotKey(keys[i], lockOwnerId, revisions[keys[i]]);
+            await _unlockSlotKey(keys[i], lockOwnerId, {
+                expectedRevision: revisions[keys[i]],
+                expectedLockToken: tokens[keys[i]],
+            });
         } catch (e) {
             log.warn("_bestEffortUnlockAll: failed", {
                 key: keys[i],
@@ -1750,23 +1738,20 @@ export async function executeBookingSaga(unsafePayload) {
                     }
                 }
 
-                heartbeatMonitor = _startLockHeartbeat(
+                const lockServiceIdsByKey = {};
+                for (const [key, serviceId] of lockServiceIds.entries()) {
+                    lockServiceIdsByKey[key] = serviceId;
+                }
+                heartbeatMonitor = _startLockHeartbeat({
                     lockKeys,
                     lockOwnerId,
                     lockTokens,
-                    LOCK_TTL_MS,
-                    HEARTBEAT_MS,
-                    traceId
-                );
-
-                for (let ri = 0; ri < lockKeys.length; ri++) {
-                    if (lockRevisions[lockKeys[ri]] !== undefined) {
-                        heartbeatMonitor.setRevision(
-                            lockKeys[ri],
-                            lockRevisions[lockKeys[ri]]
-                        );
-                    }
-                }
+                    lockRevisions,
+                    lockServiceIds: lockServiceIdsByKey,
+                    ttlMs: LOCK_TTL_MS,
+                    intervalMs: HEARTBEAT_MS,
+                    traceId,
+                });
 
                 if (
                     heartbeatMonitor &&
@@ -1783,7 +1768,7 @@ export async function executeBookingSaga(unsafePayload) {
                     heartbeatMonitor.stop();
                     heartbeatMonitor = null;
                 }
-                await _bestEffortUnlockAll(lockKeys, lockOwnerId, lockRevisions);
+                await _bestEffortUnlockAll(lockKeys, lockOwnerId, lockRevisions, lockTokens);
             }
         );
 
@@ -2474,6 +2459,6 @@ export async function executeBookingSaga(unsafePayload) {
             heartbeatMonitor.stop();
             heartbeatMonitor = null;
         }
-        await _bestEffortUnlockAll(lockKeys, lockOwnerId, lockRevisions);
+        await _bestEffortUnlockAll(lockKeys, lockOwnerId, lockRevisions, lockTokens);
     }
 }
