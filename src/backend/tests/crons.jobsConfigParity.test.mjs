@@ -17,7 +17,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const { wixDataMock } = await import('./loader.mjs');
+const { wixDataMock, mocks } = await import('./loader.mjs');
 const CR = await import('backend/crons.js');
 const IC = await import('backend/internalConfig');
 
@@ -56,6 +56,44 @@ test('CRON-DUAL-CACHE-01 cleanupExpiredDualCache drains expired rows only', asyn
   assert.equal(result.failed, 0);
   const remaining = (wixDataMock._store.get(C) || []).map((row) => row._id).sort();
   assert.deepStrictEqual(remaining, ['dual-active', 'tx-preserve', 'webhook-preserve']);
+});
+
+test('CRON-DUAL-RESCHEDULE-01 legacy reconciler must not rewrite dual-reschedule journals', async () => {
+  wixDataMock._reset();
+  let nativeReads = 0;
+  mocks.sdk['bookings::getBooking'] = async (bookingId) => {
+    nativeReads++;
+    return { booking: { id: bookingId } };
+  };
+
+  const C = IC.OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
+  const journalId = `DR_${'a'.repeat(64)}`;
+  wixDataMock._seed(C, [{
+    _id: journalId,
+    controlType: IC.CONTROL_TYPE.SYSTEM_FLAG,
+    pairToken: 'pair-reschedule-guard',
+    version: 3,
+    payload: {
+      operationType: 'DUAL_RESCHEDULE',
+      status: 'REPAIR_REQUIRED',
+      reason: 'DUAL_RESCHEDULE_F2_RESULT_UNCERTAIN_NO_AUTOMATIC_ROLLBACK',
+    },
+  }]);
+  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.CITAS_F2, [
+    { _id: 'f1-cita', pairToken: 'pair-reschedule-guard', bookingType: IC.BOOKING_TYPE.DUAL_F1, bookingId: '11111111-1111-4111-8111-111111111111' },
+    { _id: 'f2-cita', pairToken: 'pair-reschedule-guard', bookingType: IC.BOOKING_TYPE.DUAL_F2, bookingId: '22222222-2222-4222-8222-222222222222' },
+  ]);
+
+  const result = await CR.reconcileInconsistentDualPairs();
+  const journal = (wixDataMock._store.get(C) || []).find((row) => row._id === journalId);
+
+  assert.equal(result.processed, 0, 'the legacy reconciler must skip operationType DUAL_RESCHEDULE');
+  assert.equal(result.reconciled, 0);
+  assert.equal(nativeReads, 0, 'must not treat mere booking existence as reschedule recovery');
+  assert.equal(journal.payload.status, 'REPAIR_REQUIRED');
+  assert.equal(journal.payload.reason, 'DUAL_RESCHEDULE_F2_RESULT_UNCERTAIN_NO_AUTOMATIC_ROLLBACK');
+
+  delete mocks.sdk['bookings::getBooking'];
 });
 
 test('CRON-DISPLAY-01 cleanExpiredDisplayTokens removes only expired display tokens', async () => {
