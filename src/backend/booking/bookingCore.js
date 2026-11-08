@@ -811,13 +811,15 @@ export function safeLockId(key) {
     return "lk" + _hashKey(k) + k.slice(0, 24);
 }
 
-export function _buildSlotLockControl(slotClave, lockOwnerId, ttlMs, existing, serviceId) {
+export function _buildSlotLockControl(slotClave, lockOwnerId, ttlMs, existing, serviceId, lockTokenOverride) {
     const resourceId = parseResourceIdFromSlotKey(slotClave);
     const resolvedServiceId = _safeTrim(serviceId || (existing && existing.serviceId));
     const ttl = Number(ttlMs);
     const now = new Date();
     const existingPayload = _readControlPayload(existing);
-    const lockToken = _safeTrim(existingPayload.lockToken || existing?.lockToken) || _generateUUID();
+    const lockToken = _safeTrim(lockTokenOverride) ||
+        _safeTrim(existingPayload.lockToken || existing?.lockToken) ||
+        _generateUUID();
     const doc = {
         _id: safeLockId(slotClave),
         controlType: CONTROL_TYPE.SLOT_LOCK,
@@ -873,17 +875,12 @@ export async function _lockSlotKeyOrFail(slotClave, lockOwnerId, ttlMs, serviceI
     const owner = _safeTrim(lockOwnerId);
     const service = _safeTrim(serviceId);
     if (!k || !owner || !_looksLikeGuid(service)) {
-        return {
-            ok: false,
-            message: ERROR_CODES.LOCK_KEY_OR_OWNER_INVALID,
-        };
+        return { ok: false, message: ERROR_CODES.LOCK_KEY_OR_OWNER_INVALID };
     }
     if (!parseResourceIdFromSlotKey(k)) {
-        return {
-            ok: false,
-            message: ERROR_CODES.LOCK_KEY_OR_OWNER_INVALID,
-        };
+        return { ok: false, message: ERROR_CODES.LOCK_KEY_OR_OWNER_INVALID };
     }
+
     try {
         const newLock = _buildSlotLockControl(k, owner, ttlMs, null, service);
         await elevatedInsert(LOCKS_COL, newLock);
@@ -904,33 +901,47 @@ export async function _lockSlotKeyOrFail(slotClave, lockOwnerId, ttlMs, serviceI
                 message: (error && error.message) || ERROR_CODES.DATABASE_ERROR,
             };
         }
+
         const existing = await _getLock(k);
+        if (!existing || !existing._id) {
+            return { ok: false, message: ERROR_CODES.LOCK_HELD_BY_ANOTHER_OWNER };
+        }
+
         const currentOwner = _getLockOwnerId(existing);
-        if (currentOwner && currentOwner === owner) {
-            const renewed = await _renewLock(k, owner, ttlMs, existing._revision, service);
+        const expiresAt = _toDateSafe(existing.expiresAt);
+        const expired = !expiresAt || expiresAt.getTime() <= Date.now();
+
+        if (currentOwner === owner && !expired) {
+            const existingToken = _getLockToken(existing);
+            const renewed = await _renewLock(k, owner, ttlMs, {
+                expectedRevision: existing._revision,
+                expectedLockToken: existingToken,
+                serviceId: service,
+            });
             return renewed.ok
                 ? {
                     ok: true,
                     renewed: true,
                     revision: renewed.newRevision,
-                    lockToken: _getLockToken(existing),
+                    lockToken: renewed.lockToken,
                 }
-                : { ok: false, message: ERROR_CODES.LOCK_RENEWAL_FAILED };
+                : { ok: false, message: renewed.reason || ERROR_CODES.LOCK_RENEWAL_FAILED };
         }
-        const expiresAt = _toDateSafe(existing && existing.expiresAt);
-        const malformed = !expiresAt;
-        const expired = malformed || expiresAt.getTime() <= Date.now();
-        if (malformed) {
-            log.error("CORE-43: Malformed lock found (missing expiresAt)", {
-                slotClave: k,
-                lockId: existing ? existing._id : null,
-            });
-        }
-        if (expired && existing && existing._id) {
+
+        if (expired) {
+            if (!expiresAt) {
+                log.error("CORE-43: Malformed lock found (missing expiresAt)", {
+                    slotClave: k,
+                    lockId: existing._id,
+                });
+            }
             try {
+                // A reclaimed lease is a new ownership generation: rotate its
+                // fencing token so the previous holder can no longer renew/unlock.
+                const reclaimedToken = _generateUUID();
                 const updated = await elevatedUpdate(
                     LOCKS_COL,
-                    _buildSlotLockControl(k, owner, ttlMs, existing, service)
+                    _buildSlotLockControl(k, owner, ttlMs, existing, service, reclaimedToken)
                 );
                 return {
                     ok: true,
@@ -953,25 +964,36 @@ export async function _lockSlotKeyOrFail(slotClave, lockOwnerId, ttlMs, serviceI
                 };
             }
         }
+
         return { ok: false, message: ERROR_CODES.LOCK_HELD_BY_ANOTHER_OWNER };
     }
 }
 
-export async function _unlockSlotKey(slotClave, lockOwnerId, expectedRevision) {
+export async function _unlockSlotKey(slotClave, lockOwnerId, options = {}) {
     const owner = _safeTrim(lockOwnerId);
+    const expectedRevision = options?.expectedRevision;
+    const expectedLockToken = _safeTrim(options?.expectedLockToken);
     const existing = await _getLock(slotClave);
     if (!existing) return { ok: true, missing: true };
-    const currentOwner = _getLockOwnerId(existing);
-    if (!owner || currentOwner !== owner) {
+
+    if (!owner || _getLockOwnerId(existing) !== owner) {
         return {
             ok: false,
             reason: ERROR_CODES.LOCK_OWNERSHIP_CHANGED,
             skipped: true,
         };
     }
-    if (expectedRevision !== undefined && existing._revision !== expectedRevision) {
+    if (!expectedLockToken || _getLockToken(existing) !== expectedLockToken) {
+        return {
+            ok: false,
+            reason: ERROR_CODES.LOCK_OWNERSHIP_CHANGED,
+            skipped: true,
+        };
+    }
+    if (expectedRevision === undefined || existing._revision !== expectedRevision) {
         return { ok: false, reason: ERROR_CODES.LOCK_CONFLICT };
     }
+
     try {
         await elevatedRemove(LOCKS_COL, existing._id);
         return { ok: true };
@@ -988,17 +1010,28 @@ export async function _unlockSlotKey(slotClave, lockOwnerId, expectedRevision) {
     }
 }
 
-export async function _renewLock(slotClave, lockOwnerId, ttlMs, expectedRevision, serviceId) {
+export async function _renewLock(slotClave, lockOwnerId, ttlMs, options = {}) {
     const owner = _safeTrim(lockOwnerId);
+    const expectedRevision = options?.expectedRevision;
+    const expectedLockToken = _safeTrim(options?.expectedLockToken);
+    const serviceId = _safeTrim(options?.serviceId);
     try {
         const existing = await _getLock(slotClave);
         if (!existing) return { ok: false, reason: "LOCK_NOT_FOUND" };
         if (!owner || _getLockOwnerId(existing) !== owner) {
             return { ok: false, reason: ERROR_CODES.LOCK_OWNERSHIP_CHANGED };
         }
-        if (expectedRevision !== undefined && existing._revision !== expectedRevision) {
+        if (!expectedLockToken || _getLockToken(existing) !== expectedLockToken) {
+            return { ok: false, reason: ERROR_CODES.LOCK_OWNERSHIP_CHANGED };
+        }
+        if (expectedRevision === undefined || existing._revision !== expectedRevision) {
             return { ok: false, reason: ERROR_CODES.LOCK_CONFLICT };
         }
+        const expiresAt = _toDateSafe(existing.expiresAt);
+        if (!expiresAt || expiresAt.getTime() <= Date.now()) {
+            return { ok: false, reason: ERROR_CODES.LOCK_EXPIRED_PENDING_CLEANUP };
+        }
+
         const updated = await elevatedUpdate(
             LOCKS_COL,
             _buildSlotLockControl(slotClave, owner, ttlMs, existing, serviceId)
@@ -1006,6 +1039,7 @@ export async function _renewLock(slotClave, lockOwnerId, ttlMs, expectedRevision
         return {
             ok: true,
             newRevision: updated._revision,
+            lockToken: _getLockToken(updated),
         };
     } catch (error) {
         if (_isRevisionConflictError(error)) {
