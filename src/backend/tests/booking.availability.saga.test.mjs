@@ -25,11 +25,12 @@ test('CMS-CONTROL-01 slot lock persists only physical ControlOperativo columns',
     `slot_svc_${GUID_1}_100_110`,
     'execution-owner',
     60000,
-    null,
     GUID_2
   );
   assert.equal(lock.controlType, IC.CONTROL_TYPE.SLOT_LOCK);
   assert.equal(lock.resourceId, GUID_1);
+  assert.equal(lock.serviceId, GUID_2);
+  assert.equal(lock.version, 0);
   assert.ok(lock.expiresAt instanceof Date);
   assert.ok(lock.heartbeatAt instanceof Date);
   assert.equal(lock.payload.lockOwnerId, 'execution-owner');
