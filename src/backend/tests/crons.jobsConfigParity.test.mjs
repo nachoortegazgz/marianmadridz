@@ -130,6 +130,23 @@ test('CRON-RL-01 cleanExpiredRateLimits removes only expired RATE_LIMIT rows', a
 });
 
 
+test('CRON-DAYS-CACHE-01 cleanExpiredDaysCache conditionally drains expired rows', async () => {
+  wixDataMock._reset();
+  const C = IC.OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
+  const now = new Date();
+  wixDataMock._seed(C, [
+    { _id: 'days-expired-1', controlType: IC.CONTROL_TYPE.DAYS_CACHE, expiresAt: new Date(now.getTime() - 2000) },
+    { _id: 'days-expired-2', controlType: IC.CONTROL_TYPE.DAYS_CACHE, expiresAt: new Date(now.getTime() - 1000) },
+    { _id: 'days-active', controlType: IC.CONTROL_TYPE.DAYS_CACHE, expiresAt: new Date(now.getTime() + 60000) },
+    { _id: 'rate-expired', controlType: IC.CONTROL_TYPE.RATE_LIMIT, expiresAt: new Date(now.getTime() - 60000) },
+  ]);
+  const result = await CR.cleanExpiredDaysCache();
+  assert.equal(result.removed, 2);
+  assert.equal(result.skipped, 0);
+  assert.equal(result.failed, 0);
+  assert.deepStrictEqual((wixDataMock._store.get(C) || []).map((row) => row._id).sort(), ['days-active', 'rate-expired']);
+});
+
 test('CRON-Z-ENTRY-01 cron uses a backend-only internal closing entry point', () => {
   const cronSource = fs.readFileSync(backendPath('crons.js'), 'utf8').replace(/\r\n/g, '\n');
   const cashSource = fs.readFileSync(backendPath('cajas.web.js'), 'utf8').replace(/\r\n/g, '\n');
@@ -178,19 +195,22 @@ test('CRON-CONTROL-01 purges only terminal transactions and resolved flags after
     { _id: 'webhook-old', controlType: IC.CONTROL_TYPE.WEBHOOK_EVENT, status: 'CLOSED', _updatedDate: old },
     { _id: 'flag-completed-old', controlType: IC.CONTROL_TYPE.SYSTEM_FLAG, payload: { status: 'COMPLETED' }, _updatedDate: old },
     { _id: 'flag-reconciled-old', controlType: IC.CONTROL_TYPE.SYSTEM_FLAG, payload: { status: 'RECONCILED' }, _updatedDate: old },
+    { _id: 'flag-resolved-old', controlType: IC.CONTROL_TYPE.SYSTEM_FLAG, payload: { status: 'RESOLVED' }, _updatedDate: old },
+    { _id: 'flag-status-conflict', controlType: IC.CONTROL_TYPE.SYSTEM_FLAG, status: 'IN_PROGRESS', payload: { status: 'RESOLVED' }, _updatedDate: old },
     { _id: 'flag-repair-old', controlType: IC.CONTROL_TYPE.SYSTEM_FLAG, payload: { status: 'REPAIR_REQUIRED' }, _updatedDate: old },
     { _id: 'flag-completion-retry-old', controlType: IC.CONTROL_TYPE.SYSTEM_FLAG, payload: { status: 'COMPLETION_RETRY_REQUIRED' }, _updatedDate: old },
     { _id: 'compensation-old', controlType: IC.CONTROL_TYPE.COMPENSATION, status: 'EXECUTED', _updatedDate: old },
   ]);
 
   const result = await CR.cleanExpiredBookingControl();
-  assert.equal(result.removed, 4);
+  assert.equal(result.removed, 5);
   assert.equal(result.failed, 0);
   const remaining = (wixDataMock._store.get(C) || []).map((row) => row._id).sort();
   assert.deepStrictEqual(remaining, [
     'compensation-old',
     'flag-completion-retry-old',
     'flag-repair-old',
+    'flag-status-conflict',
     'tx-completed-recent',
     'tx-in-progress-old',
     'tx-retryable-old',
@@ -204,31 +224,37 @@ test('CRON-AUDIT-01 cleanAuditLogs purges only terminal rows past retention', as
   const old = new Date(Date.now() - 120 * 24 * 60 * 60 * 1000);
   const recent = new Date();
   const C = IC.OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
-  // [CRON-AUDIT-01] Semantica real de ciclo de vida en ControlOperativo:
-  // las ALERT nacen OPEN (vivas) y solo son purgables cuando llegan a la
-  // forma terminal CLOSED/RESOLVED. Se siembra por tanto:
+  // [CRON-AUDIT-01] ALERT operativas nacen OPEN; logs INFO/WARNING se
+  // almacenan como COMPLETED. Solo estados terminales con retencion vencida
+  // son purgables. Se siembra por tanto:
   //  a1 ALERT CLOSED antigua -> purgable
   //  a3 ALERT RESOLVED antigua -> purgable
+  //  a5 ALERT COMPLETED antigua (INFO/WARNING audit) -> purgable
   //  a2 ALERT OPEN reciente -> sobrevive (no terminal Y no retenida)
   //  c1 COMP EXECUTED antigua -> purgable
   //  c2 COMP PENDING antigua -> sobrevive (no terminal)
+  //  c3 COMP FAILED antigua -> sobrevive (recuperacion ambigua)
   //  w1 WEBHOOK_EVENT antigua CLOSED -> sobrevive SIEMPRE (ADR-05)
   //  l1 SLOT_LOCK antigua -> sobrevive (no es tipo purgable)
   //  a4 ALERT CLOSED reciente -> sobrevive (dentro de retencion)
   wixDataMock._seed(C, [
     { _id: 'a1', controlType: IC.CONTROL_TYPE.ALERT, status: IC.CONTROL_STATUS.CLOSED, _createdDate: old },
     { _id: 'a3', controlType: IC.CONTROL_TYPE.ALERT, status: IC.CONTROL_STATUS.RESOLVED, _createdDate: old },
+    { _id: 'a5', controlType: IC.CONTROL_TYPE.ALERT, status: IC.CONTROL_STATUS.COMPLETED, _createdDate: old },
     { _id: 'c1', controlType: IC.CONTROL_TYPE.COMPENSATION, status: IC.CONTROL_STATUS.EXECUTED, _createdDate: old },
     { _id: 'c2', controlType: IC.CONTROL_TYPE.COMPENSATION, status: IC.CONTROL_STATUS.PENDING, _createdDate: old },
+    { _id: 'c3', controlType: IC.CONTROL_TYPE.COMPENSATION, status: IC.CONTROL_STATUS.FAILED, _createdDate: old },
     { _id: 'w1', controlType: IC.CONTROL_TYPE.WEBHOOK_EVENT, status: IC.CONTROL_STATUS.CLOSED, _createdDate: old },
     { _id: 'l1', controlType: IC.CONTROL_TYPE.SLOT_LOCK, status: IC.CONTROL_STATUS.ACTIVE, _createdDate: old },
     { _id: 'a2', controlType: IC.CONTROL_TYPE.ALERT, status: IC.CONTROL_STATUS.OPEN, _createdDate: recent },
     { _id: 'a4', controlType: IC.CONTROL_TYPE.ALERT, status: IC.CONTROL_STATUS.CLOSED, _createdDate: recent },
   ]);
-  await CR.cleanAuditLogs();
+  const result = await CR.cleanAuditLogs();
+  assert.equal(result.removed, 4);
+  assert.equal(result.failed, 0);
   const remaining = (wixDataMock._store.get(C) || []).map((r) => r._id).sort();
   // [CRON-AUDIT-FIX-01] WEBHOOK_EVENT w1 is NEVER purged: append-only ledger
   // per ADR-05 (hook ControlOperativo_beforeRemove blocks it; cron aligned).
-  assert.deepStrictEqual(remaining, ['a2', 'a4', 'c2', 'l1', 'w1'],
-    'only ALERT + terminal COMPENSATION past retention are purged; WEBHOOK_EVENT kept (ADR-05)');
+  assert.deepStrictEqual(remaining, ['a2', 'a4', 'c2', 'c3', 'l1', 'w1'],
+    'terminal ALERT and EXECUTED compensation rows are purged; FAILED and WEBHOOK_EVENT remain');
 });

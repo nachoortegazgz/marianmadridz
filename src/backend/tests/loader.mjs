@@ -931,28 +931,28 @@ export const items = {
   bulkUpdate: (col, rows, opts) => m.bulkUpdate(col, rows, opts),
   async bulkRemove(col, ids, options = {}) {
     const itemIds = Array.isArray(ids) ? ids : [ids];
-    const removedItemIds = [];
-    const errors = [];
-    let skipped = 0;
-    for (const id of itemIds) {
+    const results = [];
+    for (let index = 0; index < itemIds.length; index++) {
+      const id = itemIds[index];
       const item = await m.get(col, id);
       if (!item) {
-        skipped += 1;
+        results.push({ action: 'DELETE', itemMetadata: { id, originalIndex: index, success: false, error: { code: 'WDE0073', description: 'Item not found.' } } });
         continue;
       }
       if (options?.condition?.filter && !matchOne(item, options.condition.filter)) {
-        skipped += 1;
+        results.push({ action: 'DELETE', itemMetadata: { id, originalIndex: index, success: false, error: { code: 'WDE0193', description: 'Remove condition not met.' } } });
         continue;
       }
       try {
         await _runHook(_hookName(col, 'beforeRemove'), item);
         await m.remove(col, id);
-        removedItemIds.push(id);
+        results.push({ action: 'DELETE', itemMetadata: { id, originalIndex: index, success: true } });
       } catch (error) {
-        errors.push({ code: error?.code || 'REMOVE_FAILED', item: id, message: error?.message || String(error) });
+        results.push({ action: 'DELETE', itemMetadata: { id, originalIndex: index, success: false, error: { code: error?.code || 'REMOVE_FAILED', description: error?.message || String(error) } } });
       }
     }
-    return { removed: removedItemIds.length, skipped, errors, removedItemIds };
+    const totalSuccesses = results.filter((entry) => entry.itemMetadata.success).length;
+    return { results, bulkActionMetadata: { totalSuccesses, totalFailures: results.length - totalSuccesses } };
   },
   queryReferencedItems: (col, id, field) => m.queryReferencedItems(col, id, field),
 };
