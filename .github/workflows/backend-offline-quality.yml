@@ -55,3 +55,6 @@ jobs:
       - name: Run ESLint
         if: always()
         run: npm run lint
+
+      - name: Self-test Wix publish PTY controller
+        run: python3 scripts/wix-publish-pty.py --self-test
