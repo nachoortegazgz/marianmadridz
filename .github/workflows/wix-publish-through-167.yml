@@ -97,7 +97,7 @@ jobs:
           # Wix CLI for Sites is interactive even in GitHub Actions.
           # First Enter selects the documented default: Remote - default branch.
           # The queued y confirms the subsequent production publish prompt.
-          printf '\\ny' | timeout 15m script -q -f -e -c "npm run wix publish" /dev/null 2>&1 | tee wix-publish.log
+          printf '\ny' | timeout 15m script -q -f -e -c "npm run wix publish" /dev/null 2>&1 | tee wix-publish.log
 
           # A zero exit code alone is insufficient: without a PTY the CLI can
           # exit after rendering its selector without publishing anything.
