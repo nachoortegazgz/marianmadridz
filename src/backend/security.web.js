@@ -106,10 +106,9 @@ export const checkCajeroAccess = webMethod(
 // =============================================================================
 // BLOQUE 5 - CHECK STAFF COLLABORATOR ACCESS (CONTRATO ADMINISTRACION)
 // Devuelve { isMarianManager, isAdmin, isCajero }.
-// isMarianManager: miembro autenticado cuyo email coincide con el staff
-// resuelto via backend/staff.js para MARIAN_RESOURCE_ID (Bookings Staff
-// API; R2/DUP-03: ya no existe MapaStaff). Fail-closed: cualquier duda
-// deniega.
+// isMarianManager: miembro autenticado cuyo contactId coincide con la
+// identidad Wix conectada del recurso Marian en Bookings Staff API.
+// Fail-closed: cualquier duda deniega.
 // =============================================================================
 
 /* R2/DUP-03: constante local _MARIAN_RESOURCE_ID eliminada. La identidad
@@ -117,26 +116,21 @@ export const checkCajeroAccess = webMethod(
  * findStaffByResourceId). */
 async function _isMarianManagerIdentity(traceId) {
     try {
-        /* @wix/members backend SDK: Get My Member devuelve el miembro actual. */
-        const response = await members.getCurrentMember().catch(() => null);
-        const contact = response?.member || response;
+        /* @wix/members backend: Get My Member devuelve el Member directamente. */
+        const member = await members.getCurrentMember().catch(() => null);
+        const contactId = String(member?.contactId || "").trim();
 
-        const email = String(
-            contact?.loginEmail || contact?.contactDetails?.email || contact?.email || ""
-        ).trim().toLowerCase();
-
-        if (!email) {
+        if (!contactId) {
             return false;
         }
 
-        /* R2/DUP-03: sin query a "MapaStaff" ni suppressAuth. La identidad
-         * Marian se resuelve via backend/staff.js (Bookings Staff API):
-         * el resourceId de Marian debe existir y su email coincidir con el
-         * miembro autenticado. Fail-closed ante cualquier error. */
+        /* La identidad normalizada de Bookings Staff expone contactId cuando
+         * la cuenta Wix está conectada. No comparar email: no forma parte del
+         * contrato normalizado de staff.js. Fail-closed ante cualquier duda. */
         const marian = await findMarianStaff(traceId);
         if (!marian) return false;
-        const staffEmail = String(marian.email || "").trim().toLowerCase();
-        return Boolean(staffEmail && staffEmail === email);
+        const marianContactId = String(marian.contactId || "").trim();
+        return Boolean(marianContactId && marianContactId === contactId);
     } catch (error) {
         return false;
     }
