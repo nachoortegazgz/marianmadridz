@@ -6,7 +6,7 @@ RATE LIMITING: persistent per-requester state in ControlOperativo (RATE_LIMIT),
 using atomic conditional bulkPatch compare-and-set. Fail closed on storage errors.
 */
 
-import { currentMember } from "@wix/members";
+import { members } from "@wix/members";
 
 import {
     CONTROL_STATUS,
@@ -411,8 +411,7 @@ export async function rateLimiter(
 
 async function _getCurrentMemberInfo(traceId = null) {
     try {
-        const response = await currentMember.getMember();
-        const member = response?.member || response;
+        const member = await members.getCurrentMember();
 
         if (!member) {
             return null;

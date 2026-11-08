@@ -405,16 +405,12 @@ export const webMethod = (...args) => {
   return fns.length ? fns[fns.length - 1] : (handlerFn) => handlerFn;
 };
 export const Permissions = { Admin: 'ADMIN', SiteMember: 'MEMBER', Public: 'PUBLIC', Anyone: 'ANYONE' };
-// LH-24 (fix derivado de tests 2026-10-14): security/horario/citasManager
-// post-R0-02 usan currentMember.getMember() (API v2), no members.
-// getCurrentMember(). El stub devolvia fnProxy inapelable -> getMember()
-// resolvia a undefined y los guards negaban acceso en TODOS los flujos E2E.
-// Ahora delega en el mismo estado mutable __mmMembersState (mocks.members._current)
-// con shape defensivo SDK v2: { member } segun contrato de security.js SEC-R3-03.
-const _membersMockStateLH24 = globalThis.__mmMembersState || (globalThis.__mmMembersState = { _current: null });
-export const currentMember = {
-  getMember: async () => ({ member: _membersMockStateLH24._current }),
-};
+// @wix/members backend SDK contract: members.getCurrentMember() returns
+// the current Member directly (including _id and contactId), or null when
+// the request has no authenticated member. Do not mock the frontend
+// @wix/site-members currentMember.getMember() API in backend tests.
+const membersMockState = globalThis.__mmMembersState || (globalThis.__mmMembersState = { _current: null });
+export const members = { getCurrentMember: async () => membersMockState._current };
 export const locations = fnProxy;
 export const bookingsBackend = fnProxy;
 export const paymentsBackend = fnProxy;
@@ -425,8 +421,7 @@ export const crypto = fnProxy;
 // flows (security.js roles, horario.web staff context). Tests set
 // mocks.members._current to a member object or null. State lives in
 // globalThis so the stub factory and the test file share one reference.
-const membersMockState = globalThis.__mmMembersState || (globalThis.__mmMembersState = { _current: null });
-export const members = { getCurrentMember: async () => membersMockState._current };
+
 // LH-18b (E2E flows suite): secrets por nombre con override mutable. El stub
 // generico se evalua UNA vez por specifier, asi que un valor fijo no permite
 // al test configurar claves fiscales validas (>=32 chars) para @wix/secrets

@@ -18,9 +18,7 @@ PENDIENTES: ninguno (dataLegacyAdapter ya no se usa en este modulo).
 =============================================================================
 */
 import { webMethod, Permissions } from "wix-web-module";
-/* SW-R3-02 (R0-02): currentMember.getMember() sustituye a
- * members.getCurrentMember(). */
-import { currentMember } from "@wix/members";
+import { members } from "@wix/members";
 import { makeTraceId } from "public/mmUtils";
 import {
     isAdmin,
@@ -119,26 +117,21 @@ export const checkCajeroAccess = webMethod(
  * findStaffByResourceId). */
 async function _isMarianManagerIdentity(traceId) {
     try {
-        /* SW-R3-02 (R0-02): currentMember.getMember() con shape defensivo. */
-        const response = await currentMember.getMember().catch(() => null);
-        const contact = response?.member || response;
+        /* @wix/members backend: Get My Member devuelve el Member directamente. */
+        const member = await members.getCurrentMember().catch(() => null);
+        const contactId = String(member?.contactId || "").trim();
 
-        const email = String(
-            contact?.loginEmail || contact?.contactDetails?.email || contact?.email || ""
-        ).trim().toLowerCase();
-
-        if (!email) {
+        if (!contactId) {
             return false;
         }
 
-        /* R2/DUP-03: sin query a "MapaStaff" ni suppressAuth. La identidad
-         * Marian se resuelve via backend/staff.js (Bookings Staff API):
-         * el resourceId de Marian debe existir y su email coincidir con el
-         * miembro autenticado. Fail-closed ante cualquier error. */
+        /* La vinculacion de identidad staff se realiza por contactId canonico,
+         * no por email. findMarianStaff normaliza la identidad conectada de
+         * Bookings y devuelve el contactId verificado. Fail-closed. */
         const marian = await findMarianStaff(traceId);
         if (!marian) return false;
-        const staffEmail = String(marian.email || "").trim().toLowerCase();
-        return Boolean(staffEmail && staffEmail === email);
+        const marianContactId = String(marian.contactId || "").trim();
+        return Boolean(marianContactId && marianContactId === contactId);
     } catch (error) {
         return false;
     }

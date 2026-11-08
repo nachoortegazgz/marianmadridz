@@ -29,7 +29,7 @@ import { webMethod, Permissions } from "wix-web-module";
 import { orders } from "@wix/ecom";
 import { bookings } from "@wix/bookings";
 import { auth } from "@wix/essentials";
-import { currentMember } from "@wix/members";
+import { members } from "@wix/members";
 import { queryFirstItem, queryItems, wql, CONSISTENCY, insertItem as dalInsert, bulkPatchItems } from "backend/dataAccess";
 import {
     BUSINESS_COLLECTIONS, OPERATIONAL_COLLECTIONS, CONTROL_TYPE, SDK_CONFIG,
@@ -225,8 +225,7 @@ function _isOnlinePaymentAllowed(cita) {
 
 async function _getCurrentMemberInfo() {
     try {
-        const response = await currentMember.getMember();
-        const member = response?.member || response;
+        const member = await members.getCurrentMember();
         if (!member || member.status === "ERROR") return null;
         return member;
     } catch (_) {

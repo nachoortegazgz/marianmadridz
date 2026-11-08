@@ -68,7 +68,7 @@ import {
 } from "backend/dataAccess";
 import { availabilityTimeSlots, extendedBookings } from "@wix/bookings";
 import { auth } from "@wix/essentials";
-import { currentMember } from "@wix/members";
+import { members } from "@wix/members";
 import {
     BUSINESS_COLLECTIONS,
     OPERATIONAL_COLLECTIONS,
@@ -280,8 +280,7 @@ async function _rateLimitOrThrow(surface, key) {
 
 async function _getVisitorIdentity() {
     try {
-        const response = await currentMember.getMember();
-        const member = response?.member || response;
+        const member = await members.getCurrentMember();
         if (member && member.status === "ERROR") return { memberId: "", isAuthenticated: false };
         const memberId = _safeTrim(member?._id || member?.id || member?.memberId || "");
         return { memberId, isAuthenticated: Boolean(memberId) };

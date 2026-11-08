@@ -74,3 +74,66 @@ test('STAFF-SDK-02 disconnected staff identity never exposes a Contact ID', asyn
   const result = await staff.findStaffByResourceId(RESOURCE_ID);
   assert.equal(result.contactId, '');
 });
+
+ 
+test('MEMBER-SDK-01 backend @wix/members returns the current Member directly', async () => {
+  const { members } = await import('@wix/members');
+  const expected = {
+    _id: '55555555-5555-4555-8555-555555555555',
+    contactId: '66666666-6666-4666-8666-666666666666',
+  };
+  mocks.members._current = expected;
+  assert.deepEqual(await members.getCurrentMember(), expected);
+  assert.equal((await members.getCurrentMember())?.member, undefined,
+    'backend Get My Member response is not wrapped in { member }');
+  mocks.members._current = null;
+  assert.equal(await members.getCurrentMember(), null,
+    'anonymous request has no current member');
+});
+
+test('SECWEB-MEMBER-01 manager identity matches canonical Wix contactId and fails closed on mismatch', async () => {
+  const { STAFF } = await import('../internalConfig.js');
+  const memberId = '55555555-5555-4555-8555-555555555555';
+  const contactId = '66666666-6666-4666-8666-666666666666';
+  const resourceId = STAFF.IDS[0];
+  staff.invalidateStaffCache();
+  mocks.members._current = { _id: memberId, contactId };
+
+  mocks.sdk['bookings::staffMembers'] = {
+    queryStaffMembers: async (query = {}) => {
+      const requested = query?.filter?.resourceId?.$eq || '';
+      const rows = [{
+        _id: '77777777-7777-4777-8777-777777777777',
+        resourceId,
+        name: 'Marian',
+        resource: { workingHoursSchedules: [], eventsSchedule: {} },
+        associatedWixIdentity: {
+          identificationData: { contactId },
+          connection: { status: 'CONNECTED' },
+        },
+      }];
+      return {
+        staffMembers: requested && requested !== resourceId ? [] : rows,
+        pagingMetadata: { hasNext: false, cursors: {} },
+      };
+    },
+  };
+
+  const securityWeb = await import('../security.web.js');
+  try {
+    const result = await securityWeb.checkStaffCollaboratorAccess({ traceId: 'member-sdk-manager-match' });
+    assert.equal(result.status, 'SUCCESS');
+    assert.equal(result.data.isMarianManager, true);
+    assert.equal(result.data.isAdmin, true);
+
+    staff.invalidateStaffCache();
+    mocks.members._current = { _id: memberId, contactId: '88888888-8888-4888-8888-888888888888' };
+    const denied = await securityWeb.checkStaffCollaboratorAccess({ traceId: 'member-sdk-manager-mismatch' });
+    assert.equal(denied.status, 'SUCCESS');
+    assert.equal(denied.data.isMarianManager, false);
+    assert.equal(denied.data.authorized, false);
+  } finally {
+    mocks.members._current = null;
+    staff.invalidateStaffCache();
+  }
+});

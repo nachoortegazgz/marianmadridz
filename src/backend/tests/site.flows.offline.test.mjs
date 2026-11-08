@@ -133,7 +133,7 @@ async function setupFiscalSecrets() {
 async function freshImports() {
   // Each flow test imports modules fresh per process run is not possible in a
   // single node:test file (ESM cache). Modules are stateless w.r.t. identity
-  // (they call members.getCurrentMember() per request), so one import shared
+  // (they call the backend members.getCurrentMember() per request), so one import shared
   // across tests is faithful to the runtime.
   const security = await import('backend/security');
   const horario = await import('backend/horario.web.js');
