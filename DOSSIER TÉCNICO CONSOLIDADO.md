@@ -3265,6 +3265,15 @@ El sitio `marianmadrid.es` gestiona **12 procesos de negocio** a través de tres
 | **P1.10** No-show | Registro manual por staff vía `citasManager.web.js`. Actualización de `CitasF2`. | `bookingStatus: "NO_SHOW"`, `traceId` | `CitasF2` (update controlado) |
 | **P1.11** Webhooks Bookings (5 eventos) | `events.js` procesa: `booking_created`, `booking_updated`, `booking_confirmed`, `booking_canceled`, `booking_rescheduled`. Verificación JWT + deduplicación `eventId` en `ControlOperativo`. | `eventId`, `bookingId`, payload del evento, `dedupeKey`, `traceId` | `ControlOperativo` (`WEBHOOK_EVENT`, append-only) + `CitasF2` (según evento) |
 
+**Reprogramación dual — cambio propuesto en PR #176 (no integrado ni publicado):**
+- Identidad idempotente estable SHA-256 a partir de `pairToken`, booking IDs, servicios, recurso objetivo y slots destino; `traceId` no forma parte de la identidad. `operationId` UUID opcional permite distinguir una nueva intención.
+- Journal versionado en `ControlOperativo` con estados `IN_PROGRESS`, `F1_IN_PROGRESS`, `F1_DONE`, `F2_IN_PROGRESS`, `F2_DONE`, `CMS_PROJECTED`, `COMPLETED` y `REPAIR_REQUIRED`.
+- Heartbeat de los locks originales y destino durante la operación; la liberación espera a que termine cualquier renovación en curso.
+- La proyección CMS es idempotente: acepta que el slot ya esté en destino, actualiza solo si sigue en el slot original y falla si detecta una modificación externa inesperada.
+- Ante un resultado nativo F1/F2 incierto o fallo de F2, no se ejecuta rollback especulativo. Se registra `REPAIR_REQUIRED` y se abre incidencia.
+- **Pendiente:** reconciliación automática del journal no terminal mediante Bookings Reader V2 y prueba real de concurrencia en Wix Preview. Hasta entonces, un reintento no terminal se bloquea y requiere reparación; no se reejecuta el Writer a ciegas.
+- La actualización del journal usa `@wix/data` `items.bulkPatch`, marcado como Developer Preview: [documentación oficial](https://dev.wix.com/docs/api-reference/business-solutions/cms/data-items/bulk-patch-data-items?apiView=SDK). No publicar esta ampliación hasta validar ese contrato en Wix Preview.
+
 ---
 
 ### P2 — VENTA ONLINE (TIENDA)
