@@ -93,8 +93,8 @@ test('BCORE-LOCK-01 acquire fresh lock writes SLOT_LOCK row with TTL expiry', as
   const key = BC.generateSlotKey(SVC, RES_A, new Date('2026-10-15T08:00:00Z'), new Date('2026-10-15T09:00:00Z'));
   const res = await BC._lockSlotKeyOrFail(key, 'owner-1', 60000, SVC);
   // CORE-39/CORE-45 (v5014): el contrato del lock exitoso es ahora
-  // { ok, acquired, revision, lockToken } — la saga necesita el lockToken y
-  // la _revision para unlock/renew atomicos con optimismo. deepStrictEqual
+  // { ok, acquired, version, lockToken } — la saga propaga la version CAS y el
+  // token opaco para renovar/liberar sin afectar generaciones posteriores. deepStrictEqual
   // sobre el objeto completo quedo obsoleto; se valida forma + extras.
   assert.strictEqual(res.ok, true);
   assert.strictEqual(res.acquired, true);
@@ -106,6 +106,7 @@ test('BCORE-LOCK-01 acquire fresh lock writes SLOT_LOCK row with TTL expiry', as
   assert.strictEqual(row.dedupeKey, key);
   assert.strictEqual(row.resourceId, RES_A);
   assert.strictEqual(row.serviceId, SVC, 'SLOT_LOCK debe guardar el serviceId de la fase bloqueada');
+  assert.strictEqual(row.version, 0, 'SLOT_LOCK starts with CAS version zero');
   assert.ok(row.expiresAt instanceof Date);
   const ttl = row.expiresAt.getTime() - Date.now();
   assert.ok(ttl > 0 && ttl <= 60000 + 5000, 'TTL aplicado dentro de tolerancia');
@@ -123,9 +124,10 @@ test('BCORE-LOCK-02 second owner is refused while lock active (HELD_BY_ANOTHER)'
 test('BCORE-LOCK-03 same owner re-acquire renews instead of duplicating', async () => {
   wixDataMock._reset();
   const key = BC.generateSlotKey(SVC, RES_A, new Date('2026-10-15T08:00:00Z'), new Date('2026-10-15T09:00:00Z'));
-  await BC._lockSlotKeyOrFail(key, 'owner-1', 60000, SVC);
+  const first = await BC._lockSlotKeyOrFail(key, 'owner-1', 60000, SVC);
   const again = await BC._lockSlotKeyOrFail(key, 'owner-1', 60000, SVC);
   assert.strictEqual(again.ok, true);
+  assert.strictEqual(again.lockToken, first.lockToken, 'same lease generation retains its fencing token');
   assert.strictEqual(again.renewed, true);
   const rows = wixDataMock._store.get(CONTROL) || [];
   assert.strictEqual(rows.length, 1, 'sin filas duplicadas tras renewal');
@@ -134,7 +136,7 @@ test('BCORE-LOCK-03 same owner re-acquire renews instead of duplicating', async 
 test('BCORE-LOCK-04 expired lock is reclaimed by next owner', async () => {
   wixDataMock._reset();
   const key = BC.generateSlotKey(SVC, RES_A, new Date('2026-10-15T08:00:00Z'), new Date('2026-10-15T09:00:00Z'));
-  await BC._lockSlotKeyOrFail(key, 'owner-1', 60000, SVC);
+  const first = await BC._lockSlotKeyOrFail(key, 'owner-1', 60000, SVC);
   // forzar expiracion en el store (el mock revive fechas ISO a Date)
   const rows = wixDataMock._store.get(CONTROL);
   rows[0].expiresAt = new Date(Date.now() - 1000);
@@ -144,6 +146,81 @@ test('BCORE-LOCK-04 expired lock is reclaimed by next owner', async () => {
   assert.strictEqual(taken.reclaimed, true);
   const payload = wixDataMock._store.get(CONTROL)[0].payload;
   assert.strictEqual(payload.lockOwnerId, 'owner-2');
+  assert.notStrictEqual(payload.lockToken, first.lockToken, 'reclaim rotates the fencing token');
+  const staleRenewal = await BC._renewLock(key, 'owner-1', 60000, {
+    expectedVersion: taken.version,
+    expectedLockToken: first.lockToken,
+    serviceId: SVC,
+  });
+  assert.strictEqual(staleRenewal.ok, false, 'previous owner cannot renew a reclaimed lease');
+  assert.strictEqual(staleRenewal.reason, BC.ERROR_CODES.LOCK_OWNERSHIP_CHANGED);
+});
+
+test('BCORE-LOCK-03B renewal requires matching owner, fencing token and CAS version; preserves service metadata', async () => {
+  wixDataMock._reset();
+  const key = BC.generateSlotKey(SVC, RES_A, new Date('2026-10-15T08:00:00Z'), new Date('2026-10-15T09:00:00Z'));
+  const acquired = await BC._lockSlotKeyOrFail(key, 'owner-1', 60000, SVC);
+
+  const staleToken = await BC._renewLock(key, 'owner-1', 60000, {
+    expectedVersion: acquired.version,
+    expectedLockToken: 'stale-token',
+    serviceId: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+  });
+  assert.strictEqual(staleToken.ok, false);
+  assert.strictEqual(staleToken.reason, BC.ERROR_CODES.LOCK_OWNERSHIP_CHANGED);
+
+  const staleRevision = await BC._renewLock(key, 'owner-1', 60000, {
+    expectedVersion: 'stale-version',
+    expectedLockToken: acquired.lockToken,
+    serviceId: SVC,
+  });
+  assert.strictEqual(staleRevision.ok, false);
+  assert.strictEqual(staleRevision.reason, BC.ERROR_CODES.LOCK_CONFLICT);
+
+  const foreignOwner = await BC._renewLock(key, 'owner-x', 60000, {
+    expectedVersion: acquired.version,
+    expectedLockToken: acquired.lockToken,
+    serviceId: SVC,
+  });
+  assert.strictEqual(foreignOwner.ok, false);
+  assert.strictEqual(foreignOwner.reason, BC.ERROR_CODES.LOCK_OWNERSHIP_CHANGED);
+
+  const renewed = await BC._renewLock(key, 'owner-1', 60000, {
+    expectedVersion: acquired.version,
+    expectedLockToken: acquired.lockToken,
+    serviceId: SVC,
+  });
+  assert.strictEqual(renewed.ok, true);
+  assert.strictEqual(renewed.lockToken, acquired.lockToken);
+  const row = (wixDataMock._store.get(CONTROL) || [])[0];
+  assert.strictEqual(row.serviceId, SVC, 'opaque lock token must never overwrite serviceId');
+  assert.strictEqual(row.payload.lockToken, acquired.lockToken);
+  assert.strictEqual(renewed.newVersion, acquired.version + 1);
+  assert.strictEqual(row.version, renewed.newVersion);
+});
+
+test('BCORE-LOCK-03C concurrent renewals from one CAS version allow only one writer', async () => {
+  wixDataMock._reset();
+  const key = BC.generateSlotKey(SVC, RES_A, new Date('2026-10-15T08:00:00Z'), new Date('2026-10-15T09:00:00Z'));
+  const acquired = await BC._lockSlotKeyOrFail(key, 'owner-1', 60000, SVC);
+
+  const attempts = await Promise.all([
+    BC._renewLock(key, 'owner-1', 60000, {
+      expectedVersion: acquired.version,
+      expectedLockToken: acquired.lockToken,
+      serviceId: SVC,
+    }),
+    BC._renewLock(key, 'owner-1', 60000, {
+      expectedVersion: acquired.version,
+      expectedLockToken: acquired.lockToken,
+      serviceId: SVC,
+    }),
+  ]);
+
+  assert.strictEqual(attempts.filter((result) => result.ok).length, 1);
+  assert.strictEqual(attempts.filter((result) => !result.ok).length, 1);
+  const row = (wixDataMock._store.get(CONTROL) || [])[0];
+  assert.strictEqual(row.version, acquired.version + 1);
 });
 
 test('BCORE-LOCK-05 invalid slot key or empty owner rejected without DB touch', async () => {
@@ -159,14 +236,30 @@ test('BCORE-LOCK-05 invalid slot key or empty owner rejected without DB touch', 
 test('BCORE-LOCK-06 unlock only by owner; foreign unlock skipped, missing ok', async () => {
   wixDataMock._reset();
   const key = BC.generateSlotKey(SVC, RES_A, new Date('2026-10-15T08:00:00Z'), new Date('2026-10-15T09:00:00Z'));
-  await BC._lockSlotKeyOrFail(key, 'owner-1', 60000, SVC);
-  const foreign = await BC._unlockSlotKey(key, 'owner-x');
+  const acquired = await BC._lockSlotKeyOrFail(key, 'owner-1', 60000, SVC);
+  const foreign = await BC._unlockSlotKey(key, 'owner-x', {
+    expectedVersion: acquired.version,
+    expectedLockToken: acquired.lockToken,
+  });
   assert.strictEqual(foreign.ok, false);
   assert.strictEqual(foreign.skipped, true);
   assert.strictEqual((wixDataMock._store.get(CONTROL) || []).length, 1);
-  const mine = await BC._unlockSlotKey(key, 'owner-1');
+  const mine = await BC._unlockSlotKey(key, 'owner-1', {
+    expectedVersion: acquired.version,
+    expectedLockToken: acquired.lockToken,
+  });
   assert.strictEqual(mine.ok, true);
-  assert.strictEqual((wixDataMock._store.get(CONTROL) || []).length, 0);
+  const releasedRow = (wixDataMock._store.get(CONTROL) || [])[0];
+  assert.strictEqual(releasedRow.payload.lockStatus, 'RELEASED');
+  assert.strictEqual(releasedRow.expiresAt.getTime(), 0, 'release expires the lease via conditional patch');
+  assert.strictEqual(releasedRow.version, acquired.version + 1);
+  const staleRelease = await BC._unlockSlotKey(key, 'owner-1', {
+    expectedVersion: acquired.version,
+    expectedLockToken: acquired.lockToken,
+  });
+  assert.strictEqual(staleRelease.ok, false, 'stale release cannot alter the tombstone');
+  assert.strictEqual(staleRelease.reason, BC.ERROR_CODES.LOCK_CONFLICT);
+  wixDataMock._store.set(CONTROL, []);
   const missing = await BC._unlockSlotKey(key, 'owner-1');
   assert.deepStrictEqual(missing, { ok: true, missing: true });
 });

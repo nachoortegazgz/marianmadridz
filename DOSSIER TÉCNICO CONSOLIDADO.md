@@ -746,14 +746,20 @@ El scheduler de Velo ejecuta las tareas declaradas en `backend/jobs.config` medi
 
 | Tarea (`functionName`) | Cron (Madrid) | Dominio | Operación |
 | :--- | :--- | :--- | :--- |
-| `cleanExpiredLocks` | `15 * * * *` | Concurrencia | Purga `ControlOperativo` (`SLOT_LOCK`) con `expiresAt < now()`. |
-| `cleanExpiredDualCache` | `20 * * * *` | Reservas | Libera memoria intermedia de pares duales inconclusos. |
+| `cleanExpiredLocks` | `15 * * * *` | Concurrencia | Purga `SLOT_LOCK` expirados mediante `bulkRemove` condicionado por `controlType` y `expiresAt` vigente en el momento del borrado. |
+| `cleanExpiredDualCache` | `20 * * * *` | Reservas | Purga registros `DUAL_CACHE` legacy expirados; el código vigente ya no genera snapshots de disponibilidad dual. |
 | `runPendingCompensationsJob` | `30 * * * *` | Sagas | Reintenta cancelación de F1 cuando F2 falló. |
 | `cleanExpiredDaysCache` | `0 1 * * *` | Disponibilidad | Invalida caché de días disponibles. |
-| `cleanExpiredSlotsCache` | `10 1 * * *` | Disponibilidad | Purga respuestas cacheadas de `listAvailabilityTimeSlots`. |
 | `verifyNightlyZClosing` | `20 1 * * *` | Fiscal | Cierre Z automático: agrega `MovimientosCaja`, valida cadena SHA-256 y consolida en `HistoricoCierresZ`. |
 | `systemHealthCheck` | `0 7 * * *` | Operativo | Verifica CMS, Secrets Manager y continuidad del ledger fiscal. |
 | `cleanAuditLogs` | `0 2 * * 0` | Auditoría | Aplica retención sobre logs técnicos caducados. |
+
+**Caché y locks de disponibilidad (contrato vigente):**
+- `DAYS_CACHE` almacena solo fechas/días disponibles (TTL de 5 minutos); no contiene listas de slots.
+- `reservas.web.js` no conserva slots F1/F2 ni combinaciones en memoria o `ControlOperativo`. Cada solicitud de disponibilidad obtiene los slots de Wix Bookings V2 y construye el subconjunto que se devuelve al cliente.
+- `DUAL_CACHE` queda reservado para purgar registros legacy; no se generan nuevas filas.
+- `SLOT_LOCK` utiliza `version` numérica y `lockToken` opaco. Renovación, recuperación y liberación aplican `bulkPatchItems` con condición de versión (las filas legacy sin versión se migran mediante comparación de `expiresAt`). La liberación marca el lease expirado; `cleanExpiredLocks` elimina únicamente registros que sigan expirados al ejecutar el borrado.
+- El heartbeat de la saga propaga la versión más reciente para la liberación final. La reprogramación dual conserva versión y token de cada lock adquirido. Los locks coordinan procesos del backend; no sustituyen la validación nativa de disponibilidad de Wix Bookings.
 
 **Reglas invariables:**
 - Los jobs **nunca escriben directamente** en colecciones *append-only*; invocan servicios que pasan por `backend/data.js`.
@@ -3248,7 +3254,7 @@ El sitio `marianmadrid.es` gestiona **12 procesos de negocio** a través de tres
 | Subproceso | Descripción técnica | Datos generados | Colección / Destino SSOT |
 | :--- | :--- | :--- | :--- |
 | **P1.1** Consulta de catálogo público | `reservas.web.js` → `getServiceBySlugOrId` (Permiso `Anyone`). Lee `ServiciosCatalogo` por `slug` o `serviceId`. Resuelve datos de Bookings V2 (precio, duración, imagen, recomendaciones, complementos). | `serviceId`, `slug`, `title`, `description`, `price`, `totalDuration`, `mainMedia`, `recomendaciones`, `addonId[]`, `categoryId` | `ServiciosCatalogo` (lectura) + `ComplementosCatalogo` (lectura) |
-| **P1.2** Consulta de disponibilidad | `reservas.web.js` → `getAvailableDays`. Invoca `listAvailabilityTimeSlots` (Time Slots V2) con `timeZone: "Europe/Madrid"`, `locationType: "BUSINESS"`. Cachea resultados en memoria. | Slots disponibles por día, `resourceId` disponible por slot, `scheduleId` | Caché en memoria + respuesta DTO al frontend |
+| **P1.2** Consulta de disponibilidad | `reservas.web.js` → `getAvailableDays` consulta `listAvailabilityTimeSlots` (Time Slots V2) con `timeZone: "Europe/Madrid"`, `locationType: "BUSINESS"`. `DAYS_CACHE` conserva únicamente claves de días disponibles; `getAvailableSlots` y `getCertifiedDualSlots` vuelven a consultar Wix para los slots. El DTO de cliente aplica el intervalo de inicio configurado de 30 minutos. No se persisten inventarios de slots ni parejas duales. | Días disponibles; slots visibles en el DTO, `resourceId` y `scheduleId` | `ControlOperativo` (`DAYS_CACHE`, solo fechas) + respuesta DTO al frontend; sin caché de slots |
 | **P1.3** Resolución de profesional | `reservas.web.js` → `resolveStaffForSlot`. Si el cliente elige profesional → usa ese `resourceId`. Si no → `staff.js` asigna el profesional con menos horas reservadas ese día (desempate por rotación). | `resourceId` asignado, `scheduleId`, `staffName` | Respuesta DTO + `MapaStaff` (lectura) |
 | **P1.4** Creación de reserva simple | `citasManager.web.js` → `processDualBooking` (tipo SIMPLE). Revalida slot en servidor. `bookingCore.js` ejecuta `createBooking` (Bookings Writer V2) con `timezone: "Europe/Madrid"`, `locationType: "OWNER_BUSINESS"`, `resource._id`, `location._id`. Inserta en `CitasF2`. | `bookingId` (GUID Wix), `bookingType: "SIMPLE"`, `bookingStatus: "PENDING"`, `paymentStatus: "UNPAID"`, `serviceId`, `resourceId`, `slotStart`, `slotEnd`, `totalAmount`, `traceId` (UUID v4), `dateYmd` | `CitasF2` (insert) + Wix Bookings V2 (reserva nativa) |
 | **P1.5** Creación de reserva dual (F1+F2) | `bookingSaga.js` orquesta dos llamadas independientes a `createBooking` vinculadas por `pairToken` (UUID v4). F1: fase de aplicación (importe total). F2: fase de lavado/peinado (`totalAmount = 0`, `NO_FEE`, `selectedPaymentOption: OFFLINE`). El Writer F2 se invoca sin opciones de bypass y conserva la validación nativa de disponibilidad y de opción de pago de Wix. Mutex `SLOT_LOCK` en `ControlOperativo` como coordinación adicional, sin sustituir la validación nativa. | `pairToken`, `bookingId` F1, `bookingId` F2, `bookingType: "DUAL_F1"` / `"DUAL_F2"`, `totalAmount` (F1: importe total, F2: 0), `slotStart` F2 = `slotStart` F1 + `phase1Duration` + `exposureDuration`, `traceId` | `CitasF2` (2 inserts) + `ControlOperativo` (`SLOT_LOCK`) + Wix Bookings V2 (2 reservas nativas) |

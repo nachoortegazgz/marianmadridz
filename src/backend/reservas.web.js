@@ -124,8 +124,7 @@ const CONSISTENT_READ = Object.freeze({ consistentRead: true });
 
 const WATCHDOG_TIMEOUT_MS = Number(SDK_CONFIG?.TIMEOUTS?.WATCHDOG_MS) || 15000;
 const SERVICE_CACHE_TTL_MS = Number(SDK_CONFIG?.CACHE?.SERVICES_TTL_MS) || 120000;
-const SLOTS_CACHE_TTL_MS = Number(SDK_CONFIG?.CACHE?.SLOTS_CACHE_TTL_MS) || 60000;
-const DUAL_CACHE_TTL_MS = Number(SDK_CONFIG?.CACHE?.DUAL_CACHE_TTL_MS) || 300000;
+const DAYS_CACHE_TTL_MS = 300000;
 const DISPLAY_TOKEN_TTL_MS = 30 * 60 * 1000;
 const DISPLAY_TOKEN_MAX_ATTEMPTS = 5;
 
@@ -149,8 +148,6 @@ function _normalizeServiceLookupKey(value) {
 const DAYS_CACHE_VERSION = String(SDK_CONFIG?.CACHE?.DAYS_CACHE_VERSION || "v1");
 const STAFF_RESOURCE_TYPE_ID = API.STAFF_RESOURCE_TYPE_ID;
 
-const availabilityCache = new Map();
-const inflightRequests = new Map();
 const serviceCatalogRAM = new Map();
 
 /* =============================================================================
@@ -956,7 +953,7 @@ export async function revalidateExactAvailabilitySlot({
  * LISTADO DE SLOTS
  * ==========================================================================*/
 async function _listTimeSlotsV2({ serviceId, fromLocalDate, toLocalDate, resourceIds, nativeAddonIds = [] }, options = {}) {
-    const { skipCache = false, timeSlotsPerDay } = options;
+    const { timeSlotsPerDay } = options;
     const traceId = makeTraceId("slots");
     const fromKey = _normalizeLocalIsoStr(fromLocalDate);
     const toKey = _normalizeLocalIsoStr(toLocalDate);
@@ -992,18 +989,7 @@ async function _listTimeSlotsV2({ serviceId, fromLocalDate, toLocalDate, resourc
     const normalizedNativeAddonIds = Array.from(new Set(
         (Array.isArray(nativeAddonIds) ? nativeAddonIds : []).map((id) => _safeTrim(id)).filter((id) => _looksLikeGuid(id))
     )).sort();
-    const resourceKey = normalizedResourceIds.slice().sort().join(",");
-    const addonKey = normalizedNativeAddonIds.join(",");
     /* SDK-01: la ubicación en el SDK usa `_id`, no `id`. */
-    const locationKey = location._id;
-    const cacheKey = `${String(resolvedServiceId)}__${locationKey}__${resourceKey}__${addonKey}__${fromKey}__${toKey}__ts:${timeSlotsPerDay || 0}`;
-
-    if (!skipCache) {
-        const cached = availabilityCache.get(cacheKey);
-        if (cached && Date.now() - cached.timestamp < SLOTS_CACHE_TTL_MS) return cached.data;
-        const inflight = inflightRequests.get(cacheKey);
-        if (inflight) return inflight;
-    }
     const p = (async () => {
         try {
             const resourceTypes = normalizedResourceIds.length
@@ -1057,7 +1043,6 @@ async function _listTimeSlotsV2({ serviceId, fromLocalDate, toLocalDate, resourc
                 };
             }).filter(Boolean);
 
-            if (!skipCache) _cacheSetBounded(availabilityCache, cacheKey, { data: slots, timestamp: Date.now() }, CACHE_MAX_SIZE);
             return slots;
         } catch (e) {
             /* ERR-01: no ocultar el fallo real; conservar message/code/details. */
@@ -1073,10 +1058,6 @@ async function _listTimeSlotsV2({ serviceId, fromLocalDate, toLocalDate, resourc
         }
     })();
 
-    if (!skipCache) {
-        inflightRequests.set(cacheKey, p);
-        try { return await p; } finally { inflightRequests.delete(cacheKey); }
-    }
     return await p;
 }
 
@@ -1313,7 +1294,7 @@ async function _findNextSlotForServiceInternal(
         const dayTo = `${ymd}T23:59:59`;
         const slots = await _listTimeSlotsV2(
             { serviceId: resolvedServiceId, fromLocalDate: dayFrom, toLocalDate: dayTo, resourceIds },
-            { skipCache: true }
+            {}
         );
 
         /* DUAL-GAP-01: búsqueda exacta del target. */
@@ -1400,7 +1381,7 @@ export async function _resolveStaffForSlotInternal(params) {
                 resourceIds: requestedResourceId ? [requestedResourceId] : [],
                 nativeAddonIds: addonContext.nativeAddonIds,
             },
-            { skipCache: true }
+            {}
         );
         const slotF1Raw = (slotsF1 || []).find((s) => {
             if (_normalizeLocalIsoStr(s.localStartDate) !== f1Start) return false;
@@ -1457,7 +1438,7 @@ export async function _resolveStaffForSlotInternal(params) {
                     resourceIds: requestedResourceId ? [requestedResourceId] : [],
                     nativeAddonIds: [],
                 },
-                { skipCache: true }
+                {}
             );
             const slotF2Raw = (slotsF2 || []).find((s) => {
                 if (_normalizeLocalIsoStr(s.localStartDate) !== f2Start) return false;
@@ -1654,9 +1635,8 @@ export async function _getCertifiedDualSlotsInternal(serviceId, resourceId, date
 
     /* DUAL-PERF-01:
        Antes se consultaba disponibilidad de F2 dentro del bucle de cada slot F1
-       y de cada profesional, con skipCache=true. Una jornada con N slots y M
-       profesionales podía disparar N×M llamadas secuenciales a Wix y superar
-       el timeout de 59 s del webMethod.
+       y de cada profesional. Una jornada con N slots y M profesionales podía
+       disparar N×M llamadas secuenciales a Wix y superar el timeout de 59 s del webMethod.
        Ahora se consulta F1 y F2 una sola vez, en paralelo, y se indexa F2 por
        hora local. La validación de gap exacto y mismo profesional se mantiene. */
     const availabilityStartedAt = Date.now();
@@ -1668,7 +1648,7 @@ export async function _getCertifiedDualSlotsInternal(serviceId, resourceId, date
             resourceIds: resourceIdsFilter,
             nativeAddonIds: addonContext.nativeAddonIds,
         },
-        { skipCache: true }
+        {}
     );
     const f2Promise = isDual
         ? _listTimeSlotsV2(
@@ -1679,7 +1659,7 @@ export async function _getCertifiedDualSlotsInternal(serviceId, resourceId, date
                 resourceIds: resourceIdsFilter,
                 nativeAddonIds: [],
             },
-            { skipCache: true }
+            {}
         )
         : Promise.resolve([]);
 
@@ -1847,34 +1827,8 @@ export async function _getCertifiedDualSlotsInternal(serviceId, resourceId, date
         });
     }
 
-    if (pairs.length > 0) {
-        const cachePromises = pairs.map((slotPair) => {
-            const expiresAt = new Date(Date.now() + DUAL_CACHE_TTL_MS);
-            const record = {
-                _id: String(slotPair.pairToken),
-                controlType: CT_DUAL_CACHE,
-                dedupeKey: "DUAL_" + String(slotPair.pairToken),
-                serviceId: String(slotPair.serviceId),
-                resourceId: String(slotPair.resourceId || ""),
-                dateYmd: String(dateYMD),
-                slotStart: getUtcDateFromMadridLocal(slotPair.slotF1.localStartDate),
-                slotEnd: getUtcDateFromMadridLocal((slotPair.slotF2 || slotPair.slotF1).localEndDate),
-                expiresAt,
-                payload: {
-                    pairToken: slotPair.pairToken,
-                    linkedPhases: String(linkedServiceId),
-                    f1Start: slotPair.slotF1.localStartDate,
-                    f1End: slotPair.slotF1.localEndDate,
-                    f2Start: slotPair.slotF2 ? slotPair.slotF2.localStartDate : null,
-                    f2End: slotPair.slotF2 ? slotPair.slotF2.localEndDate : null,
-                    candidateResourceIds: slotPair.candidateResourceIds || [],
-                },
-                traceId,
-            };
-            return saveItem(CONTROL_COL, record).catch(() => null);
-        });
-        await Promise.allSettled(cachePromises);
-    }
+    // Slot availability is intentionally not persisted: it is volatile and
+    // is re-read from Wix for each customer-facing request.
     return { status: "SUCCESS", data: pairs, error: null };
 }
 
@@ -1907,11 +1861,6 @@ export async function _invalidateCachesInternal(serviceId, dateYMD, resourceId, 
     const ymd = _safeTrim(dateYMD);
     if (!resolvedServiceId || !_isValidMadridYmd(ymd)) {
         return { ok: true, traceId: tId, skipped: true };
-    }
-
-    const prefix = `${String(resolvedServiceId)}__`;
-    for (const k of availabilityCache.keys()) {
-        if (String(k).startsWith(prefix)) availabilityCache.delete(k);
     }
 
     /* CACHE-03 + CACHE-04: recolectar IDs durante la paginación y borrar
@@ -2004,7 +1953,7 @@ async function _queryAvailableDaysFromSlots(resolvedServiceId, resourceIds, from
             resourceIds,
             nativeAddonIds,
         },
-        { skipCache: true, timeSlotsPerDay: 1 }
+        { timeSlotsPerDay: 1 }
     );
     const dateSet = new Set();
     (slots || []).forEach((s) => {
@@ -2036,7 +1985,7 @@ async function _readDaysCacheWindow(daysCacheKey) {
 }
 
 async function _writeDaysCacheWindow(daysCacheKey, payload) {
-    const expiresAt = new Date(Date.now() + DUAL_CACHE_TTL_MS);
+    const expiresAt = new Date(Date.now() + DAYS_CACHE_TTL_MS);
     const cacheId = `DAYS_${_hashKey(String(daysCacheKey))}`.slice(0, 64);
     const record = {
         _id: cacheId,

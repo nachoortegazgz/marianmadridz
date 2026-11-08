@@ -912,6 +912,12 @@ export const items = {
             const hookResult = hook(patched, { original: item });
             if (hookResult && typeof hookResult.then === "function") await hookResult;
           }
+          // Re-evaluate the server-side condition immediately before commit.
+          // This models Wix bulkPatch's conditional update under concurrent callers.
+          if (condition && !matchOne(item, condition)) {
+            skipped += 1;
+            continue;
+          }
           Object.assign(item, patched);
           updatedItemIds.push(id);
         }

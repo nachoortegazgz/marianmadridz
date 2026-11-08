@@ -103,44 +103,48 @@ const getBookingElevated = auth.elevate(bookings.getBooking);
 */
 export async function cleanExpiredLocks() {
 const traceId = makeTraceId("cron-locks");
-const result = { removed: 0, failed: 0, errors: [] };
+const result = { removed: 0, skipped: 0, failed: 0, errors: [] };
 
 try {
 const now = new Date();
-const res = await dalQuery(OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO)
+const collection = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
+const res = await dalQuery(collection)
 .eq("controlType", CONTROL_TYPE.SLOT_LOCK)
 .lt("expiresAt", now)
 .limit(100)
 .find({ consistencyMode: "strong" });
 
-for (const item of res?.items || []) {
-try {
-await dalRemove(OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO, item._id);
-result.removed++;
-} catch (removeError) {
-result.failed++;
-if (result.errors.length < 5) {
-result.errors.push({
-id: item._id,
-error: removeError?.message || "UNKNOWN",
+const ids = (res?.items || []).map((item) => item._id).filter(Boolean);
+if (ids.length > 0) {
+const removal = await dalBulkRemove(collection, ids, {
+condition: {
+filter: {
+controlType: { $eq: CONTROL_TYPE.SLOT_LOCK },
+expiresAt: { $lt: now },
+},
+},
 });
-}
-log.warn("cleanExpiredLocks: remove failed", {
-lockId: item._id,
-error: removeError?.message,
-traceId,
-});
-}
+result.removed = Number(removal?.removed) || 0;
+result.skipped = Number(removal?.skipped) || 0;
+const errors = Array.isArray(removal?.errors) ? removal.errors : [];
+result.failed = errors.length;
+result.errors = errors.slice(0, 5).map((error) => ({
+id: error?.item || null,
+code: error?.code || "REMOVE_FAILED",
+error: error?.message || "UNKNOWN",
+}));
 }
 
 log.info("cleanExpiredLocks completed", {
 removed: result.removed,
+skipped: result.skipped,
 failed: result.failed,
 traceId,
 });
 } catch (err) {
 log.error("cleanExpiredLocks failed", { error: err?.message, traceId });
-result.errors.push({ query: "main", error: err?.message });
+result.failed += 1;
+result.errors.push({ query: "main", error: err?.message || "UNKNOWN" });
 }
 
 return result;

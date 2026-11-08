@@ -51,7 +51,8 @@
       "assertions": [
         "exact exposure interval",
         "same staff resource",
-        "dual availability cache persisted",
+        "customer-facing 30-minute visible subset returned",
+        "no raw slot inventory or dual pair snapshot persisted",
         "shorter or longer gap rejected"
       ]
     },
