@@ -1653,7 +1653,7 @@ export const rescheduleDualBookings = webMethod(
         const traceId = payload?.traceId || makeTraceId("resched-dual");
         const lockOwnerId = `${traceId}:${makeTraceId("dual-reschedule")}`;
         const acquiredLockKeys = [];
-        const acquiredLockRevisions = {};
+        const acquiredLockVersions = {};
         const acquiredLockTokens = {};
         try {
             await _rateLimitOrThrow(
@@ -1773,7 +1773,7 @@ export const rescheduleDualBookings = webMethod(
                     );
                 }
                 acquiredLockKeys.push(key);
-                acquiredLockRevisions[key] = acquired.revision;
+                acquiredLockVersions[key] = acquired.version;
                 acquiredLockTokens[key] = acquired.lockToken;
             }
 
@@ -1953,7 +1953,7 @@ export const rescheduleDualBookings = webMethod(
             for (let i = acquiredLockKeys.length - 1; i >= 0; i -= 1) {
                 const lockKey = acquiredLockKeys[i];
                 const released = await _unlockSlotKey(lockKey, lockOwnerId, {
-                    expectedRevision: acquiredLockRevisions[lockKey],
+                    expectedVersion: acquiredLockVersions[lockKey],
                     expectedLockToken: acquiredLockTokens[lockKey],
                 });
                 if (!released?.ok) {
