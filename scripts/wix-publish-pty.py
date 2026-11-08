@@ -21,7 +21,7 @@ LATEST_REMOTE_RE = re.compile(
     r"Latest commit from\s+(?:origin/)?(?:main|master|[^\s]+)|Remote\s*-\s*default branch",
     re.IGNORECASE,
 )
-PREVIEW_URL_RE = re.compile(r"https?://[^\s\x1b]+", re.IGNORECASE)
+PREVIEW_URL_RE = re.compile(r"https?://wix\.to/[A-Za-z0-9]+", re.IGNORECASE)
 CONFIRM_RE = re.compile(
     r"press\s+['\"]?y\b|\(\s*y\s*/\s*n\s*\)|\[\s*y\s*\]\s*/\s*\[\s*n\s*\]",
     re.IGNORECASE,
