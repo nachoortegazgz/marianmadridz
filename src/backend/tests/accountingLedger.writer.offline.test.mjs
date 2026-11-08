@@ -1,4 +1,5 @@
-import { describe, it, beforeEach, expect } from "vitest";
+import { describe, it, beforeEach } from "node:test";
+import assert from "node:assert/strict";
 import { wixDataMock } from "./loader.mjs";
 import * as IC from "backend/internalConfig.js";
 import { appendAccountingEntry } from "backend/accountingLedger.js";
@@ -34,14 +35,14 @@ describe("accounting ledger writer", () => {
   it("ACC-LEDGER-01 appends a balanced double-entry with a continuous hash chain", async () => {
     const result = await appendAccountingEntry(entry("ACC-QA-ENTRY-001"), "trace-acc-001");
 
-    expect(result.status).toBe("SUCCESS");
+    assert.equal(result.status, "SUCCESS");
     const rows = wixDataMock._store.get(ACCOUNTING_COL);
-    expect(rows).toHaveLength(2);
-    expect(rows[0].debitAmount + rows[0].creditAmount).toBe(121);
-    expect(rows[1].debitAmount + rows[1].creditAmount).toBe(121);
-    expect(rows[0].previousRecordHash).toBe("0".repeat(64));
-    expect(rows[1].previousRecordHash).toBe(rows[0].recordHash);
-    expect(rows.every((row) => /^[a-f0-9]{64}$/i.test(row.recordHash))).toBe(true);
+    assert.equal(rows.length, 2);
+    assert.equal(rows[0].debitAmount + rows[0].creditAmount, 121);
+    assert.equal(rows[1].debitAmount + rows[1].creditAmount, 121);
+    assert.equal(rows[0].previousRecordHash, "0".repeat(64));
+    assert.equal(rows[1].previousRecordHash, rows[0].recordHash);
+    assert.equal(rows.every((row) => /^[a-f0-9]{64}$/i.test(row.recordHash)), true);
   });
 
   it("ACC-LEDGER-02 replays the same entry idempotently without duplicate lines", async () => {
@@ -49,28 +50,28 @@ describe("accounting ledger writer", () => {
     const first = await appendAccountingEntry(payload, "trace-acc-002");
     const replay = await appendAccountingEntry(payload, "trace-acc-002-replay");
 
-    expect(first.status).toBe("SUCCESS");
+    assert.equal(first.status, "SUCCESS");
     expect(replay.status).toBe("SUCCESS");
-    expect(replay.data.idempotent).toBe(true);
-    expect(wixDataMock._store.get(ACCOUNTING_COL)).toHaveLength(2);
+    assert.equal(replay.data.idempotent, true);
+    assert.equal(wixDataMock._store.get(ACCOUNTING_COL).length, 2);
   });
 
   it("ACC-LEDGER-03 rejects unbalanced entries before any append", async () => {
     const result = await appendAccountingEntry(entry("ACC-QA-ENTRY-003", 121, 120), "trace-acc-003");
 
-    expect(result.status).toBe("ERROR");
-    expect(result.error.code).toBe("ACCOUNTING_ENTRY_UNBALANCED");
-    expect(wixDataMock._store.get(ACCOUNTING_COL)).toHaveLength(0);
+    assert.equal(result.status, "ERROR");
+    assert.equal(result.error.code, "ACCOUNTING_ENTRY_UNBALANCED");
+    assert.equal(wixDataMock._store.get(ACCOUNTING_COL).length, 0);
   });
 
   it("ACC-LEDGER-04 rejects reuse of entryId with a different payload", async () => {
     const first = await appendAccountingEntry(entry("ACC-QA-ENTRY-004"), "trace-acc-004");
     const conflicting = await appendAccountingEntry(entry("ACC-QA-ENTRY-004", 99, 99), "trace-acc-004-conflict");
 
-    expect(first.status).toBe("SUCCESS");
-    expect(conflicting.status).toBe("ERROR");
-    expect(conflicting.error.code).toBe("ACCOUNTING_ENTRY_PAYLOAD_MISMATCH");
-    expect(wixDataMock._store.get(ACCOUNTING_COL)).toHaveLength(2);
+    assert.equal(first.status, "SUCCESS");
+    assert.equal(conflicting.status, "ERROR");
+    assert.equal(conflicting.error.code, "ACCOUNTING_ENTRY_PAYLOAD_MISMATCH");
+    assert.equal(wixDataMock._store.get(ACCOUNTING_COL).length, 2);
   });
 
   it("ACC-LEDGER-05 serializes concurrent entries into one unbroken global hash chain", async () => {
@@ -79,13 +80,13 @@ describe("accounting ledger writer", () => {
       appendAccountingEntry(entry("ACC-QA-ENTRY-005-B"), "trace-acc-005-b"),
     ]);
 
-    expect(first.status).toBe("SUCCESS");
-    expect(second.status).toBe("SUCCESS");
+    assert.equal(first.status, "SUCCESS");
+    assert.equal(second.status, "SUCCESS");
     const rows = [...wixDataMock._store.get(ACCOUNTING_COL)]
       .sort((a, b) => new Date(a.recordTimestamp).getTime() - new Date(b.recordTimestamp).getTime());
-    expect(rows).toHaveLength(4);
+    assert.equal(rows.length, 4);
     for (let index = 1; index < rows.length; index += 1) {
-      expect(rows[index].previousRecordHash).toBe(rows[index - 1].recordHash);
+      assert.equal(rows[index].previousRecordHash, rows[index - 1].recordHash);
     }
   });
 });
