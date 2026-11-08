@@ -1,0 +1,98 @@
+name: One-time publish of main to Wix Editor site
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/release-triggers/publish-through-167"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wix-production-publish
+  cancel-in-progress: false
+
+jobs:
+  quality-and-publish:
+    name: Verify and publish Wix site from main
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout the default branch
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24.22.1"
+          cache: npm
+
+      - name: Verify this is the latest main commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          local_sha="$(git rev-parse HEAD)"
+          remote_sha="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
+          test -n "$remote_sha"
+          test "$local_sha" = "$remote_sha"
+          echo "Publishing main commit: $local_sha"
+
+      - name: Verify target Wix site
+        run: |
+          node --input-type=module -e '
+            import fs from "node:fs";
+            const config = JSON.parse(fs.readFileSync("wix.config.json", "utf8"));
+            if (config.siteId !== "188bed94-177c-4bc9-a9f0-35080d874f3e") {
+              throw new Error("wix.config.json siteId does not match Marian Madrid production site");
+            }
+          '
+
+      - name: Install locked project dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Run full offline regression suite
+        run: npm test
+
+      - name: Verify Wix eCommerce and Data SDK contracts
+        run: npm run verify:wix-ecom-cart-v2
+
+      - name: Verify Wix Bookings Reader V2 SDK contract
+        run: npm run verify:wix-bookings-reader-v2
+
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: Install Wix CLI for Sites
+        run: npm install --global @wix/cli@1.2.9
+
+      - name: Authenticate Wix CLI
+        env:
+          WIX_CLI_API_KEY: ${{ secrets.CLI_API_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$WIX_CLI_API_KEY"
+          npm run wix login -- --api-key "$WIX_CLI_API_KEY"
+
+      - name: Publish latest main code to Wix
+        env:
+          CI: "true"
+        run: npm run wix publish
+
+      - name: Verify public site responds
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3 4 5 6; do
+            if curl --fail --silent --show-error --location https://www.marianmadrid.es/ --output /dev/null; then
+              echo "Public site responds successfully."
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Public site did not return a successful HTTP response after publish." >&2
+          exit 1
