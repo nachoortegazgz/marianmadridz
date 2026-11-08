@@ -272,10 +272,8 @@ test('DTO-03 non-displayable booking states are hidden', async () => {
   wixDataMock._seed(IC.BUSINESS_COLLECTIONS.CITAS_F2, [{
     _id: 'r3', bookingId: DTO_GUID_3, bookingStatus: 'CANCELED',
   }]);
-  // AUDIT-TOKEN-P0-01: identidad antes que estado. Autenticando como miembro
-  // se supera el gate AUTH_REQUIRED y el emisor revela NOT_CONFIRMED (la
-  // reserva existe pero no es mostrable). Sin sesion la respuesta seria
-  // AUTH_REQUIRED (anti-enumeracion, probado en RES-DISPLAY-03).
+  // A non-confirmed record has the same public response as a missing or
+  // non-owned record; the issuer does not reveal booking existence/state.
   mockVisitor(OWNER_MEMBER_ID);
   try {
     const gen = await RW.generateDisplayToken({ bookingId: DTO_GUID_3 });
