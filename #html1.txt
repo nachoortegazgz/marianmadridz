@@ -54,17 +54,17 @@ const MESSAGE_TYPES = Object.freeze({
   NAV: "MM_NAV"
 });
 
-/* SEC-01 (v5023): CONFIG solo contiene constantes inmutables de sesión.
-   - bookingTimeoutMs: 90 s.
+/* SEC-01 / BOOK-TIMEOUT-02:
+   - bookingTimeoutMs: 150 s, por encima del watchdog Velo de 120 s.
+   - Los resultados inciertos bloquean otro intento en esta sesión.
    - contextTimeoutMs: 120 s (watchdog de MM_CONTEXT).
-   - handshakeDelays: backoff exponencial capado a 8 s.
    - allowAnyOriginFallback: false → fail-closed si no hay parentOrigin. */
 const CONFIG={
   version:1,
   maxAddOns:5,
   maxHandshake:6,
   handshakeDelays:[500,1000,2000,4000,8000,8000],
-  bookingTimeoutMs:90000,
+  bookingTimeoutMs:150000,
   contextTimeoutMs:120000,
   currency:"EUR",
   location:"Marian Madrid",
@@ -78,7 +78,7 @@ let parentOrigin = "";
 
 function madridDateParts(){const p=new Intl.DateTimeFormat("en-GB",{timeZone:"Europe/Madrid",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date());const v=Object.fromEntries(p.map(x=>[x.type,x.value]));return{year:+v.year,month:+v.month,day:+v.day}}const todayMadrid=madridDateParts();
 
-const state={service:null,year:todayMadrid.year,month:todayMadrid.month,days:[],slots:[],selectedDay:"",selectedSlot:null,addons:new Set(),requestSequence:0,latestAvailability:0,bridgeId:"",connected:false,processing:false,completed:false,bookingTimedOut:false};
+const state={service:null,year:todayMadrid.year,month:todayMadrid.month,days:[],slots:[],selectedDay:"",selectedSlot:null,addons:new Set(),requestSequence:0,latestAvailability:0,bridgeId:"",connected:false,processing:false,completed:false,bookingTimedOut:false,bookingUncertain:false};
 let handshakeTimer=null,handshakeCount=0,bookingTimer=null,contextTimer=null;
 
 const el=id=>document.getElementById(id);const text=(v,f="")=>String(v??"").trim()||f;const num=(v,f=0)=>{if(v===null||v===undefined||v==="")return f;const n=Number(v);return Number.isFinite(n)?n:f};const makeMessageId=p=>`${p}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
@@ -156,7 +156,8 @@ function updateConfirmButton(){
     state.selectedSlot &&
     validContact &&
     !state.processing &&
-    !state.completed
+    !state.completed &&
+    !state.bookingUncertain
   );
 }
 
@@ -205,6 +206,7 @@ function renderSlots(raw){
 }
 function buildBookingPayload(){const s=state.selectedSlot,a=normalizePhaseSlot(s?.slotF1||s),b=s?.slotF2?normalizePhaseSlot(s.slotF2):null;if(!a)return null;const full=text(el("inputName").value),parts=full.split(/\s+/).filter(Boolean);return{serviceId:text(state.service?.serviceId),slug:text(state.service?.slug),slotF1:a,slotF2:b,resourceId:null,addOnIds:normalizeAddOnIds([...state.addons]),preferences:text(el("inputPreferences").value),email:text(el("inputEmail").value),firstName:parts.shift()||"",lastName:parts.join(" "),phone:text(el("inputPhone").value),channelType:document.querySelector("input[name='channelType']:checked")?.value==="ONLINE"?"ONLINE":"PRESENCIAL",rgpdConsent:el("inputRGPD").checked,traceId:makeMessageId("booking-trace")}}
 function confirmBooking(){
+  if(state.bookingUncertain)return showError("La reserva anterior tiene un resultado incierto. Contacta con el salón antes de realizar otra reserva.");
   if(state.processing||state.completed||!state.selectedSlot)return showError("Selecciona un día y una hora.");
   const p=buildBookingPayload(),email=el("inputEmail");
   if(!p||!p.firstName||!p.email||!email.checkValidity()||!p.phone||p.phone.replace(/\D/g,"").length<8||!p.rgpdConsent)return showError("Revisa el nombre, el correo, el teléfono y la aceptación de privacidad.");
@@ -217,6 +219,7 @@ function confirmBooking(){
   bookingTimer=setTimeout(()=>{
     /* FIX 3: marcamos timeout, limpiamos estado y banner de envío. */
     state.bookingTimedOut=true;
+    state.bookingUncertain=true;
     state.processing=false;
     showStatus("");
     updateConfirmButton();
@@ -259,6 +262,7 @@ function handleMessage(e){
 
     /* FIX 3: una respuesta tardía tras timeout no puede confirmar visualmente. */
     if(state.bookingTimedOut){
+      state.bookingUncertain=true;
       state.processing=false;
       showStatus("");
       updateConfirmButton();
@@ -274,6 +278,10 @@ function handleMessage(e){
       el("btnConfirm").textContent=requiresPayment?"Redirigiendo...":"Cita confirmada";
       updateConfirmButton();
     }else{
+      const errorCode=text(p.error?.code).toUpperCase();
+      if(["BOOKING_STATUS_UNCERTAIN","BOOKING_RECONCILIATION_PENDING","BOOKING_RESULT_INCOMPLETE","EXISTING_BOOKING_REQUIRES_RECONCILIATION","CITA_PERSIST_FAILED","BOOKING_NOT_CONFIRMED","CHECKOUT_ASSOCIATION_FAILED","STAFF_ASSIGNMENT_MISMATCH"].includes(errorCode)){
+        state.bookingUncertain=true;
+      }
       state.processing=false;
       showStatus("");
       updateConfirmButton();
