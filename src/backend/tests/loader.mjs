@@ -672,26 +672,27 @@ const startsWithStr = (s, p) => String(s ?? '').startsWith(String(p));
 // every .eq()/wql.eq() query threw "operador no soportado bookingId" and the
 // DTO-whitelist webMethods failed. This mirrors official Wix Data API v2
 // semantics (queryItems filter accepts field:{op:value} maps directly).
+const getFieldValue = (item, field) => String(field).split('.').reduce((value, key) => value?.[key], item);
 function matchOperators(it, ops) {
   return Object.entries(ops).every(([op, arg]) => {
     switch (op) {
-      case '$eq': return it[op_field] === arg;
-      case '$ne': return it[op_field] !== arg;
-      case '$gt': return cmpValue(it[op_field]) > cmpValue(arg);
-      case '$gte': return cmpValue(it[op_field]) >= cmpValue(arg);
-      case '$lt': return cmpValue(it[op_field]) < cmpValue(arg);
-      case '$lte': return cmpValue(it[op_field]) <= cmpValue(arg);
-      case '$in': return Array.isArray(arg) && arg.includes(it[op_field]);
-      case '$nin': return Array.isArray(arg) && !arg.includes(it[op_field]);
+      case '$eq': return getFieldValue(it, op_field) === arg;
+      case '$ne': return getFieldValue(it, op_field) !== arg;
+      case '$gt': return cmpValue(getFieldValue(it, op_field)) > cmpValue(arg);
+      case '$gte': return cmpValue(getFieldValue(it, op_field)) >= cmpValue(arg);
+      case '$lt': return cmpValue(getFieldValue(it, op_field)) < cmpValue(arg);
+      case '$lte': return cmpValue(getFieldValue(it, op_field)) <= cmpValue(arg);
+      case '$in': return Array.isArray(arg) && arg.includes(getFieldValue(it, op_field));
+      case '$nin': return Array.isArray(arg) && !arg.includes(getFieldValue(it, op_field));
       // LH-05 (fix derivado de tests 2026-10-14, CRON-AUDIT-01): el SDK v2
       // real aplica $hasSome TAMBIEN a campos escalares (membresia del valor
       // en el conjunto de candidatos), no solo a arrays. El adapter legacy
       // traduce .in(field, values) a $hasSome para escalares; sin este
       // soporte escalar la query de purga devolvia 0 filas offline.
-      case '$hasSome': return Array.isArray(it[op_field])
-        ? (arg || []).some((x) => it[op_field].includes(x))
-        : Array.isArray(arg) && arg.includes(it[op_field]);
-      case '$startsWith': return startsWithStr(it[op_field], arg);
+      case '$hasSome': return Array.isArray(getFieldValue(it, op_field))
+        ? (arg || []).some((x) => getFieldValue(it, op_field).includes(x))
+        : Array.isArray(arg) && arg.includes(getFieldValue(it, op_field));
+      case '$startsWith': return startsWithStr(getFieldValue(it, op_field), arg);
       default: throw new Error('loader mock v2: operador no soportado ' + op);
     }
   });
@@ -728,7 +729,7 @@ function matchOne(it, clause) {
       return matchOperators(it, val);
     }
     // Bare equality shorthand: { fieldName: value }
-    return it[key] === val;
+    return getFieldValue(it, key) === val;
   });
 }
 
@@ -931,28 +932,28 @@ export const items = {
   bulkUpdate: (col, rows, opts) => m.bulkUpdate(col, rows, opts),
   async bulkRemove(col, ids, options = {}) {
     const itemIds = Array.isArray(ids) ? ids : [ids];
-    const removedItemIds = [];
-    const errors = [];
-    let skipped = 0;
-    for (const id of itemIds) {
+    const results = [];
+    for (let index = 0; index < itemIds.length; index++) {
+      const id = itemIds[index];
       const item = await m.get(col, id);
       if (!item) {
-        skipped += 1;
+        results.push({ action: 'DELETE', itemMetadata: { id, originalIndex: index, success: false, error: { code: 'WDE0073', description: 'Item not found.' } } });
         continue;
       }
       if (options?.condition?.filter && !matchOne(item, options.condition.filter)) {
-        skipped += 1;
+        results.push({ action: 'DELETE', itemMetadata: { id, originalIndex: index, success: false, error: { code: 'WDE0193', description: 'Remove condition not met.' } } });
         continue;
       }
       try {
         await _runHook(_hookName(col, 'beforeRemove'), item);
         await m.remove(col, id);
-        removedItemIds.push(id);
+        results.push({ action: 'DELETE', itemMetadata: { id, originalIndex: index, success: true } });
       } catch (error) {
-        errors.push({ code: error?.code || 'REMOVE_FAILED', item: id, message: error?.message || String(error) });
+        results.push({ action: 'DELETE', itemMetadata: { id, originalIndex: index, success: false, error: { code: error?.code || 'REMOVE_FAILED', description: error?.message || String(error) } } });
       }
     }
-    return { removed: removedItemIds.length, skipped, errors, removedItemIds };
+    const totalSuccesses = results.filter((entry) => entry.itemMetadata.success).length;
+    return { results, bulkActionMetadata: { totalSuccesses, totalFailures: results.length - totalSuccesses } };
   },
   queryReferencedItems: (col, id, field) => m.queryReferencedItems(col, id, field),
 };
