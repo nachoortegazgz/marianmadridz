@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - ".github/release-triggers/publish-through-167"
+      - ".github/release-triggers/publish-through-167-pty"
 
 permissions:
   contents: read
@@ -78,10 +78,50 @@ jobs:
           test -n "$WIX_CLI_API_KEY"
           npm run wix login -- --api-key "$WIX_CLI_API_KEY"
 
-      - name: Publish latest main code to Wix
+      - name: Publish latest main code to Wix with confirmed PTY interaction
         env:
           CI: "true"
-        run: npm run wix publish
+          TERM: "xterm"
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f wix-publish.log
+
+          for required_command in script timeout tee grep; do
+            if ! command -v "${required_command}" >/dev/null 2>&1; then
+              echo "::error::Required command not found: ${required_command}"
+              exit 1
+            fi
+          done
+
+          # Wix CLI for Sites is interactive even in GitHub Actions.
+          # First Enter selects the documented default: Remote - default branch.
+          # The queued y confirms the subsequent production publish prompt.
+          printf '\\ny' | timeout 15m script -q -f -e -c "npm run wix publish" /dev/null 2>&1 | tee wix-publish.log
+
+          # A zero exit code alone is insufficient: without a PTY the CLI can
+          # exit after rendering its selector without publishing anything.
+          if ! grep -Eiq 'published' wix-publish.log; then
+            echo "::error::Wix CLI exited without an explicit publication success message."
+            cat wix-publish.log
+            exit 1
+          fi
+
+          if ! grep -Fqi 'marianmadrid.es' wix-publish.log; then
+            echo "::error::Wix CLI did not report the Marian Madrid site URL."
+            cat wix-publish.log
+            exit 1
+          fi
+
+          echo "Wix CLI confirmed publication for marianmadrid.es."
+
+      - name: Preserve Wix publish transcript
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wix-publish-transcript-${{ github.run_id }}
+          if-no-files-found: warn
+          path: wix-publish.log
 
       - name: Verify public site responds
         shell: bash
