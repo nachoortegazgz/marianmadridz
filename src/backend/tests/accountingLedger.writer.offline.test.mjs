@@ -51,7 +51,7 @@ describe("accounting ledger writer", () => {
     const replay = await appendAccountingEntry(payload, "trace-acc-002-replay");
 
     assert.equal(first.status, "SUCCESS");
-    expect(replay.status).toBe("SUCCESS");
+    assert.equal(replay.status, "SUCCESS");
     assert.equal(replay.data.idempotent, true);
     assert.equal(wixDataMock._store.get(ACCOUNTING_COL).length, 2);
   });
