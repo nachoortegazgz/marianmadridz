@@ -50,6 +50,27 @@ def preview_url(text: str) -> str | None:
     return match.group(0).rstrip(".,);]") if match else None
 
 
+def preview_environment(source: dict[str, str]) -> dict[str, str]:
+    """Build a child-only environment that permits Wix's interactive PTY."""
+    env = source.copy()
+    env.pop("CI", None)
+    env["GITHUB_ACTIONS"] = "false"
+    for key in (
+        "GITHUB_WORKFLOW",
+        "GITHUB_RUN_ID",
+        "GITHUB_JOB",
+        "GITHUB_ACTION",
+        "GITHUB_ACTION_PATH",
+        "GITHUB_STEP_SUMMARY",
+    ):
+        env.pop(key, None)
+    env["TERM"] = "xterm-256color"
+    env["FORCE_COLOR"] = "1"
+    env["COLUMNS"] = str(TERMINAL_COLUMNS)
+    env["LINES"] = str(TERMINAL_ROWS)
+    return env
+
+
 def set_terminal_size(fd: int) -> None:
     fcntl.ioctl(
         fd,
@@ -100,29 +121,39 @@ def self_test() -> None:
     assert not PREVIEW_SUCCESS_RE.search(
         "Preview failed: PUBLISH_PIPELINE_TASK_NOT_FOUND"
     )
+    child_env = preview_environment({
+        "CI": "true",
+        "GITHUB_ACTIONS": "true",
+        "GITHUB_WORKFLOW": "workflow",
+        "GITHUB_RUN_ID": "123",
+        "GITHUB_JOB": "preview",
+        "GITHUB_ACTION": "step",
+        "GITHUB_ACTION_PATH": "/tmp/action",
+        "GITHUB_STEP_SUMMARY": "/tmp/summary",
+        "PATH": "/usr/bin",
+    })
+    assert "CI" not in child_env
+    assert child_env["GITHUB_ACTIONS"] == "false"
+    assert all(
+        key not in child_env
+        for key in (
+            "GITHUB_WORKFLOW",
+            "GITHUB_RUN_ID",
+            "GITHUB_JOB",
+            "GITHUB_ACTION",
+            "GITHUB_ACTION_PATH",
+            "GITHUB_STEP_SUMMARY",
+        )
+    )
+    assert child_env["PATH"] == "/usr/bin"
     print("Wix Preview PTY controller self-test: PASS")
 
 
 def run_preview() -> None:
     env = os.environ.copy()
-    # Wix CLI for Sites renders its interactive selector only when the CLI
-    # process does not detect a CI/non-interactive environment. Keep GitHub
-    # Actions enabled for the runner, but remove its markers from this child.
-    env.pop("CI", None)
-    env["GITHUB_ACTIONS"] = "false"
-    for key in (
-        "GITHUB_WORKFLOW",
-        "GITHUB_RUN_ID",
-        "GITHUB_JOB",
-        "GITHUB_ACTION",
-        "GITHUB_ACTION_PATH",
-        "GITHUB_STEP_SUMMARY",
-    ):
-        env.pop(key, None)
-    env["TERM"] = "xterm-256color"
-    env["FORCE_COLOR"] = "1"
-    env["COLUMNS"] = str(TERMINAL_COLUMNS)
-    env["LINES"] = str(TERMINAL_ROWS)
+    # Keep GitHub Actions enabled for the runner; only the Wix CLI child
+    # receives a terminal-capable environment.
+    env = preview_environment(os.environ)
 
     pid, master_fd = pty.fork()
     if pid == 0:
