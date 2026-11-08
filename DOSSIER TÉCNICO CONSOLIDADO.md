@@ -1614,6 +1614,10 @@ La clave no es que Marian aprenda contabilidad. La clave es que el sistema gener
 ---
 
 # SOLUCIÓN TÉCNICA — CAPA 3 AUTOMATIZADA
+
+> **Estado de implantación verificado — 8 de noviembre de 2026:** este anexo define la arquitectura objetivo de Capa 3; no acredita que esté desplegada. En `main` no existe `src/backend/exports/exportService.js`, no hay llamadas runtime a Resend ni los cuatro jobs específicos de exportación en `jobs.config`. Existe `verifyNightlyZClosing`, pero no genera ni envía actualmente el CSV de Cierre Z. El tenant M365, SharePoint y los flujos PA-01…PA-07 no han sido auditados; su estado queda **pendiente de verificación**, no se presume activo.
+
+
 ## Wix (SSOT) → M365 Business Standard → SharePoint
 ### Marian Madrid Peluquería y Estética · marianmadrid.es
 
@@ -3274,7 +3278,7 @@ El sitio `marianmadrid.es` gestiona **12 procesos de negocio** a través de tres
 | **P1.10** No-show | Registro manual por staff vía `citasManager.web.js`. Actualización de `CitasF2`. | `bookingStatus: "NO_SHOW"`, `traceId` | `CitasF2` (update controlado) |
 | **P1.11** Webhooks Bookings (5 eventos) | `events.js` procesa: `booking_created`, `booking_updated`, `booking_confirmed`, `booking_canceled`, `booking_rescheduled`. Verificación JWT + deduplicación `eventId` en `ControlOperativo`. | `eventId`, `bookingId`, payload del evento, `dedupeKey`, `traceId` | `ControlOperativo` (`WEBHOOK_EVENT`, append-only) + `CitasF2` (según evento) |
 
-**Reprogramación dual — cambio propuesto en PR #176 (no integrado ni publicado):**
+**Reprogramación dual — implementación integrada en `main` mediante PR #176; publicación Wix no verificada en esta auditoría:**
 - Identidad idempotente estable SHA-256 a partir de `pairToken`, booking IDs, servicios, recurso objetivo y slots destino; `traceId` no forma parte de la identidad. `operationId` UUID opcional permite distinguir una nueva intención.
 - Journal versionado en `ControlOperativo` con estados `IN_PROGRESS`, `F1_IN_PROGRESS`, `F1_DONE`, `F2_IN_PROGRESS`, `F2_DONE`, `CMS_PROJECTED`, `COMPLETED` y `REPAIR_REQUIRED`.
 - Heartbeat de los locks originales y destino durante la operación; la liberación espera a que termine cualquier renovación en curso.
