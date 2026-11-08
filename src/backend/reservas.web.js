@@ -2332,20 +2332,34 @@ export const generateDisplayToken = webMethod(
             };
         }
         try {
-            // Authenticate an anonymous bearer credential before looking up the
-            // booking. A caller cannot distinguish an unknown booking from an
-            // existing booking for which they lack the credential.
+            let priorCredentialRecord = null;
+            let priorCredentialExpiresAtMs = 0;
+            let priorCredentialMaxAttempts = DISPLAY_TOKEN_MAX_ATTEMPTS;
+
+            // An anonymous confirmation credential is already a one-time
+            // DISPLAY_TOKEN. Reuse it as the display token instead of minting
+            // additional bearer tokens from the same credential. This makes
+            // retries after a lost response idempotent without storing bearer
+            // values in CMS or consuming the credential before display.
             if (!visitor.isAuthenticated) {
                 const credHash = _hashKey(credential);
-                const credentialRecord = await withTimeout(
+                priorCredentialRecord = await withTimeout(
                     dalGet(CONTROL_COL, `DT_${credHash}`, "strong"),
                     WATCHDOG_TIMEOUT_MS,
                     "verifyEmissionCredential"
                 );
-                const expiresAtMs = new Date(credentialRecord?.expiresAt || 0).getTime();
-                const credentialMatches = credentialRecord?.controlType === CT_DISPLAY_TOKEN &&
-                    _safeTrim(credentialRecord?.bookingId) === id &&
-                    Number.isFinite(expiresAtMs) && expiresAtMs > Date.now();
+                priorCredentialExpiresAtMs = new Date(priorCredentialRecord?.expiresAt || 0).getTime();
+                const attempts = Number(priorCredentialRecord?.attempts ?? 0);
+                const configuredMaxAttempts = Number(priorCredentialRecord?.maxAttempts);
+                priorCredentialMaxAttempts = Number.isInteger(configuredMaxAttempts) && configuredMaxAttempts > 0
+                    ? configuredMaxAttempts
+                    : DISPLAY_TOKEN_MAX_ATTEMPTS;
+                const credentialMatches = priorCredentialRecord?.controlType === CT_DISPLAY_TOKEN &&
+                    _safeTrim(priorCredentialRecord?.bookingId) === id &&
+                    Number.isFinite(priorCredentialExpiresAtMs) &&
+                    priorCredentialExpiresAtMs > Date.now() &&
+                    Number.isFinite(attempts) &&
+                    attempts < priorCredentialMaxAttempts;
                 if (!credentialMatches) {
                     return { ok: false, token: null, error: "TOKEN_UNAVAILABLE" };
                 }
@@ -2372,11 +2386,18 @@ export const generateDisplayToken = webMethod(
             const isConfirmed = rawStatus === CITAS_BOOKING_STATUS?.CONFIRMED || rawStatus === "CONFIRMED";
             if (!isConfirmed) return { ok: false, token: null, error: "TOKEN_UNAVAILABLE" };
 
-            const token = await _generateDisplayToken(id, traceId, rec.serviceId);
+            const token = visitor.isAuthenticated
+                ? await _generateDisplayToken(id, traceId, rec.serviceId)
+                : credential;
             return {
-                ok: true, token,
-                expiresIn: DISPLAY_TOKEN_TTL_MS,
-                maxAttempts: DISPLAY_TOKEN_MAX_ATTEMPTS,
+                ok: true,
+                token,
+                expiresIn: visitor.isAuthenticated
+                    ? DISPLAY_TOKEN_TTL_MS
+                    : Math.max(0, priorCredentialExpiresAtMs - Date.now()),
+                maxAttempts: visitor.isAuthenticated
+                    ? DISPLAY_TOKEN_MAX_ATTEMPTS
+                    : priorCredentialMaxAttempts,
                 error: null,
             };
         } catch (e) {
