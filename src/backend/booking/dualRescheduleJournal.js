@@ -1,4 +1,4 @@
-import { hashSHA256 } from "backend/securityEngine";
+import { hashSHA256 } from "../securityEngine.js";
 
 function _required(value, field) {
     const normalized = String(value ?? "").trim();
