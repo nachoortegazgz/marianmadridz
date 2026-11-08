@@ -1041,35 +1041,41 @@ export async function _lockSlotKeyOrFail(slotClave, lockOwnerId, ttlMs, serviceI
 
 export async function _unlockSlotKey(slotClave, lockOwnerId, options = {}) {
     const owner = _safeTrim(lockOwnerId);
-    const expectedRevision = options?.expectedRevision;
+    const expectedVersion = options?.expectedVersion;
     const expectedLockToken = _safeTrim(options?.expectedLockToken);
     const existing = await _getLock(slotClave);
     if (!existing) return { ok: true, missing: true };
 
     if (!owner || _getLockOwnerId(existing) !== owner) {
-        return {
-            ok: false,
-            reason: ERROR_CODES.LOCK_OWNERSHIP_CHANGED,
-            skipped: true,
-        };
+        return { ok: false, reason: ERROR_CODES.LOCK_OWNERSHIP_CHANGED, skipped: true };
     }
     if (!expectedLockToken || _getLockToken(existing) !== expectedLockToken) {
-        return {
-            ok: false,
-            reason: ERROR_CODES.LOCK_OWNERSHIP_CHANGED,
-            skipped: true,
-        };
+        return { ok: false, reason: ERROR_CODES.LOCK_OWNERSHIP_CHANGED, skipped: true };
     }
-    if (expectedRevision === undefined || existing._revision !== expectedRevision) {
+    if (existing.version !== undefined && expectedVersion !== existing.version) {
         return { ok: false, reason: ERROR_CODES.LOCK_CONFLICT };
     }
 
     try {
-        await elevatedRemove(LOCKS_COL, existing._id);
-        return { ok: true };
+        const now = new Date();
+        const payload = {
+            ..._readControlPayload(existing),
+            lockStatus: "RELEASED",
+            releasedAt: now.toISOString(),
+        };
+        const released = await _patchSlotLockConditionally(existing, {
+            expiresAt: new Date(0),
+            heartbeatAt: now,
+            payload,
+            serviceId: _safeTrim(existing.serviceId),
+        });
+        if (!released.ok) {
+            return { ok: false, reason: released.reason || ERROR_CODES.LOCK_CONFLICT };
+        }
+        return { ok: true, version: released.newVersion };
     } catch (error) {
-        log.warn("_unlockSlotKey: remove failed", {
-            slotClave: slotClave,
+        log.warn("_unlockSlotKey: conditional release failed", {
+            slotClave,
             error: error && error.message,
         });
         return {
@@ -1082,7 +1088,7 @@ export async function _unlockSlotKey(slotClave, lockOwnerId, options = {}) {
 
 export async function _renewLock(slotClave, lockOwnerId, ttlMs, options = {}) {
     const owner = _safeTrim(lockOwnerId);
-    const expectedRevision = options?.expectedRevision;
+    const expectedVersion = options?.expectedVersion;
     const expectedLockToken = _safeTrim(options?.expectedLockToken);
     const serviceId = _safeTrim(options?.serviceId);
     try {
@@ -1094,7 +1100,7 @@ export async function _renewLock(slotClave, lockOwnerId, ttlMs, options = {}) {
         if (!expectedLockToken || _getLockToken(existing) !== expectedLockToken) {
             return { ok: false, reason: ERROR_CODES.LOCK_OWNERSHIP_CHANGED };
         }
-        if (expectedRevision === undefined || existing._revision !== expectedRevision) {
+        if (existing.version !== undefined && expectedVersion !== existing.version) {
             return { ok: false, reason: ERROR_CODES.LOCK_CONFLICT };
         }
         const expiresAt = _toDateSafe(existing.expiresAt);
@@ -1102,21 +1108,30 @@ export async function _renewLock(slotClave, lockOwnerId, ttlMs, options = {}) {
             return { ok: false, reason: ERROR_CODES.LOCK_EXPIRED_PENDING_CLEANUP };
         }
 
-        const updated = await elevatedUpdate(
-            LOCKS_COL,
-            _buildSlotLockControl(slotClave, owner, ttlMs, existing, serviceId)
-        );
+        const now = new Date();
+        const payload = {
+            ..._readControlPayload(existing),
+            lockOwnerId: owner,
+            lockToken: expectedLockToken,
+            lockStatus: "ACTIVE",
+        };
+        const renewed = await _patchSlotLockConditionally(existing, {
+            expiresAt: new Date(now.getTime() + (Number(ttlMs) > 0 ? Number(ttlMs) : MUTEX_TTL_MS)),
+            heartbeatAt: now,
+            payload,
+            serviceId: serviceId || _safeTrim(existing.serviceId),
+        });
+        if (!renewed.ok) {
+            return { ok: false, reason: renewed.reason || ERROR_CODES.LOCK_CONFLICT };
+        }
         return {
             ok: true,
-            newRevision: updated._revision,
-            lockToken: _getLockToken(updated),
+            newVersion: renewed.newVersion,
+            lockToken: expectedLockToken,
         };
     } catch (error) {
-        if (_isRevisionConflictError(error)) {
-            return { ok: false, reason: ERROR_CODES.LOCK_CONFLICT };
-        }
         log.error("_renewLock failed", {
-            slotClave: slotClave,
+            slotClave,
             error: error && error.message,
         });
         return { ok: false, reason: ERROR_CODES.LOCK_RENEWAL_FAILED };
