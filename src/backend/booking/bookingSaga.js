@@ -2441,8 +2441,10 @@ export async function executeBookingSaga(unsafePayload) {
         }
     } catch (error) {
         const norm = normalizeError(error);
+        const resultUncertain = Boolean(norm.details && norm.details.uncertainStep);
         log.error("executeBookingSaga failed", {
             code: norm.code,
+            resultUncertain,
             error: norm.message,
             traceId: traceId,
         });
@@ -2450,8 +2452,14 @@ export async function executeBookingSaga(unsafePayload) {
             status: "ERROR",
             data: null,
             error: {
-                code: norm.code || ERROR_CODES.UNKNOWN_ERROR,
-                message: norm.message,
+                // Do not expose an ordinary retryable failure when the Writer
+                // side effect may have succeeded but its response was lost.
+                code: resultUncertain
+                    ? "BOOKING_STATUS_UNCERTAIN"
+                    : norm.code || ERROR_CODES.UNKNOWN_ERROR,
+                message: resultUncertain
+                    ? "Booking result is uncertain; reconciliation is required."
+                    : norm.message,
             },
         };
     } finally {
