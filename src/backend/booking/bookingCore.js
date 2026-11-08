@@ -812,42 +812,31 @@ export function safeLockId(key) {
     return "lk" + _hashKey(k) + k.slice(0, 24);
 }
 
-export function _buildSlotLockControl(slotClave, lockOwnerId, ttlMs, existing, serviceId, lockTokenOverride) {
+export function _buildSlotLockControl(slotClave, lockOwnerId, ttlMs, serviceId) {
     const resourceId = parseResourceIdFromSlotKey(slotClave);
-    const resolvedServiceId = _safeTrim(serviceId || (existing && existing.serviceId));
+    const resolvedServiceId = _safeTrim(serviceId);
     const ttl = Number(ttlMs);
     const now = new Date();
-    const existingPayload = _readControlPayload(existing);
-    const lockToken = _safeTrim(lockTokenOverride) ||
-        _safeTrim(existingPayload.lockToken || existing?.lockToken) ||
-        _generateUUID();
     const doc = {
         _id: safeLockId(slotClave),
         controlType: CONTROL_TYPE.SLOT_LOCK,
         dedupeKey: String(slotClave),
         serviceId: resolvedServiceId,
-        resourceId: resourceId,
+        resourceId,
         expiresAt: new Date(
             now.getTime() + (Number.isFinite(ttl) && ttl > 0 ? ttl : MUTEX_TTL_MS)
         ),
         heartbeatAt: now,
         version: 0,
-        // lockOwnerId, lockToken and acquiredAt are not physical columns in
-        // ControlOperativo; keep lock-specific state inside its OBJECT payload.
+        // lockOwnerId, lockToken and acquiredAt are payload metadata, not CMS columns.
         payload: {
-            ...existingPayload,
             lockOwnerId: String(lockOwnerId || ""),
-            lockToken,
-            acquiredAt: _safeTrim(lockTokenOverride)
-                ? now
-                : existingPayload.acquiredAt || existing?.acquiredAt || now,
+            lockToken: _generateUUID(),
+            acquiredAt: now,
             lockStatus: "ACTIVE",
         },
-        traceId: _safeTrim(existing && existing.traceId) || makeTraceId("lock"),
+        traceId: makeTraceId("lock"),
     };
-    if (existing && existing._revision !== undefined) {
-        doc._revision = existing._revision;
-    }
     return doc;
 }
 
@@ -857,7 +846,7 @@ async function _getLock(slotClave) {
     const item = await elevatedGet(LOCKS_COL, id).catch(function () {
         return null;
     });
-    if (!item) return null;
+    if (!item || item.controlType !== CONTROL_TYPE.SLOT_LOCK) return null;
     if (item.expiresAt) item.expiresAt = _toDateSafe(item.expiresAt);
     return item;
 }
@@ -885,14 +874,18 @@ async function _patchSlotLockConditionally(existing, {
     }
 
     const currentVersion = Number(existing.version);
-    const hasVersion = Number.isInteger(currentVersion) && currentVersion >= 0;
+    const hasVersion = existing.version !== undefined && existing.version !== null &&
+        existing.version !== "" && Number.isInteger(currentVersion) && currentVersion >= 0;
     if (!hasVersion && !existing.expiresAt) {
         // Legacy malformed rows have no safe compare field; fail closed.
         return { ok: false, reason: ERROR_CODES.LOCK_CONFLICT };
     }
-    const conditionFilter = hasVersion
-        ? { version: { $eq: currentVersion } }
-        : { expiresAt: { $eq: existing.expiresAt } };
+    const conditionFilter = {
+        controlType: { $eq: CONTROL_TYPE.SLOT_LOCK },
+        ...(hasVersion
+            ? { version: { $eq: currentVersion } }
+            : { expiresAt: { $eq: existing.expiresAt } }),
+    };
 
     const modifications = [
         { fieldPath: "expiresAt", action: "SET_FIELD", value: expiresAt },
@@ -949,7 +942,7 @@ export async function _lockSlotKeyOrFail(slotClave, lockOwnerId, ttlMs, serviceI
     }
 
     try {
-        const newLock = _buildSlotLockControl(k, owner, ttlMs, null, service);
+        const newLock = _buildSlotLockControl(k, owner, ttlMs, service);
         await elevatedInsert(LOCKS_COL, newLock);
         return {
             ok: true,
@@ -1056,7 +1049,7 @@ export async function _unlockSlotKey(slotClave, lockOwnerId, options = {}) {
     if (!expectedLockToken || _getLockToken(existing) !== expectedLockToken) {
         return { ok: false, reason: ERROR_CODES.LOCK_OWNERSHIP_CHANGED, skipped: true };
     }
-    if (existing.version !== undefined && expectedVersion !== existing.version) {
+    if (existing.version !== undefined && existing.version !== null && expectedVersion !== existing.version) {
         return { ok: false, reason: ERROR_CODES.LOCK_CONFLICT };
     }
 
