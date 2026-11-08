@@ -181,7 +181,7 @@ function _startLockHeartbeat({
     lockKeys,
     lockOwnerId,
     lockTokens,
-    lockRevisions,
+    lockVersions,
     lockServiceIds,
     ttlMs,
     intervalMs,
@@ -189,7 +189,7 @@ function _startLockHeartbeat({
 }) {
     let stopped = false;
     let failure = null;
-    const revisions = lockRevisions && typeof lockRevisions === "object" ? lockRevisions : {};
+    const versions = lockVersions && typeof lockVersions === "object" ? lockVersions : {};
     const tokens = lockTokens && typeof lockTokens === "object" ? lockTokens : {};
     const serviceIds = lockServiceIds && typeof lockServiceIds === "object" ? lockServiceIds : {};
 
@@ -204,7 +204,7 @@ function _startLockHeartbeat({
                 const key = lockKeys[i];
                 try {
                     const result = await _renewLock(key, lockOwnerId, ttlMs, {
-                        expectedRevision: revisions[key],
+                        expectedVersion: versions[key],
                         expectedLockToken: tokens[key],
                         serviceId: serviceIds[key],
                     });
@@ -219,9 +219,9 @@ function _startLockHeartbeat({
                         break;
                     }
 
-                    if (result.newRevision !== undefined) {
-                        // Final release must use the latest revision after heartbeat.
-                        revisions[key] = result.newRevision;
+                    if (result.newVersion !== undefined) {
+                        // Final release must use the latest CAS version after heartbeat.
+                        versions[key] = result.newVersion;
                     }
                 } catch (error) {
                     failure = error;
@@ -323,15 +323,15 @@ function _isGuidOrNull(value) {
     return _looksLikeGuid(v) ? v : null;
 }
 
-async function _bestEffortUnlockAll(lockKeys, lockOwnerId, lockRevisions, lockTokens) {
+async function _bestEffortUnlockAll(lockKeys, lockOwnerId, lockVersions, lockTokens) {
     const keys = Array.isArray(lockKeys) ? lockKeys : [];
-    const revisions = lockRevisions && typeof lockRevisions === "object" ? lockRevisions : {};
+    const versions = lockVersions && typeof lockVersions === "object" ? lockVersions : {};
     const tokens = lockTokens && typeof lockTokens === "object" ? lockTokens : {};
 
     for (let i = 0; i < keys.length; i++) {
         try {
             await _unlockSlotKey(keys[i], lockOwnerId, {
-                expectedRevision: revisions[keys[i]],
+                expectedVersion: versions[keys[i]],
                 expectedLockToken: tokens[keys[i]],
             });
         } catch (e) {
@@ -1154,7 +1154,7 @@ export async function executeBookingSaga(unsafePayload) {
     let lockKeys = [];
     let lockOwnerId = "";
     let lockTokens = {};
-    let lockRevisions = {};
+    let lockVersions = {};
     const createdBookings = [];
     let pairToken = "";
     let transactionStarted = false;
@@ -1730,8 +1730,8 @@ export async function executeBookingSaga(unsafePayload) {
                             { traceId: traceId, lockKey: lockKeys[li] }
                         );
                     }
-                    if (lockResult.revision !== undefined) {
-                        lockRevisions[lockKeys[li]] = lockResult.revision;
+                    if (lockResult.version !== undefined) {
+                        lockVersions[lockKeys[li]] = lockResult.version;
                     }
                     if (lockResult.lockToken) {
                         lockTokens[lockKeys[li]] = lockResult.lockToken;
@@ -1746,7 +1746,7 @@ export async function executeBookingSaga(unsafePayload) {
                     lockKeys,
                     lockOwnerId,
                     lockTokens,
-                    lockRevisions,
+                    lockVersions,
                     lockServiceIds: lockServiceIdsByKey,
                     ttlMs: LOCK_TTL_MS,
                     intervalMs: HEARTBEAT_MS,
@@ -1768,7 +1768,7 @@ export async function executeBookingSaga(unsafePayload) {
                     heartbeatMonitor.stop();
                     heartbeatMonitor = null;
                 }
-                await _bestEffortUnlockAll(lockKeys, lockOwnerId, lockRevisions, lockTokens);
+                await _bestEffortUnlockAll(lockKeys, lockOwnerId, lockVersions, lockTokens);
             }
         );
 
@@ -2459,6 +2459,6 @@ export async function executeBookingSaga(unsafePayload) {
             heartbeatMonitor.stop();
             heartbeatMonitor = null;
         }
-        await _bestEffortUnlockAll(lockKeys, lockOwnerId, lockRevisions, lockTokens);
+        await _bestEffortUnlockAll(lockKeys, lockOwnerId, lockVersions, lockTokens);
     }
 }
