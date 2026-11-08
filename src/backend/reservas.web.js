@@ -280,7 +280,8 @@ async function _rateLimitOrThrow(surface, key) {
 
 async function _getVisitorIdentity() {
     try {
-        const member = await members.getCurrentMember();
+        const response = await members.getCurrentMember();
+        const member = response?.member || response;
         if (member && member.status === "ERROR") return { memberId: "", isAuthenticated: false };
         const memberId = _safeTrim(member?._id || member?.id || member?.memberId || "");
         return { memberId, isAuthenticated: Boolean(memberId) };

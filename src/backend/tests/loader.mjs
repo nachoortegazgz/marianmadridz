@@ -405,12 +405,9 @@ export const webMethod = (...args) => {
   return fns.length ? fns[fns.length - 1] : (handlerFn) => handlerFn;
 };
 export const Permissions = { Admin: 'ADMIN', SiteMember: 'MEMBER', Public: 'PUBLIC', Anyone: 'ANYONE' };
-// @wix/members backend SDK contract: members.getCurrentMember() returns
-// the current Member directly (including _id and contactId), or null when
-// the request has no authenticated member. Do not mock the frontend
-// @wix/site-members currentMember.getMember() API in backend tests.
-const membersMockState = globalThis.__mmMembersState || (globalThis.__mmMembersState = { _current: null });
-export const members = { getCurrentMember: async () => membersMockState._current };
+// @wix/members SDK contract: members.getCurrentMember() returns the current
+// member object (or null/undefined when no member identity is available).
+// The shared mutable state is exposed by the members mock below.
 export const locations = fnProxy;
 export const bookingsBackend = fnProxy;
 export const paymentsBackend = fnProxy;

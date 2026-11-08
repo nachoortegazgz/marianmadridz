@@ -411,7 +411,8 @@ export async function rateLimiter(
 
 async function _getCurrentMemberInfo(traceId = null) {
     try {
-        const member = await members.getCurrentMember();
+        const response = await members.getCurrentMember();
+        const member = response?.member || response;
 
         if (!member) {
             return null;

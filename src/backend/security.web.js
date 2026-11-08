@@ -116,9 +116,9 @@ export const checkCajeroAccess = webMethod(
  * findStaffByResourceId). */
 async function _isMarianManagerIdentity(traceId) {
     try {
-        /* @wix/members backend: Get My Member devuelve el Member directamente. */
-        const member = await members.getCurrentMember().catch(() => null);
-        const contactId = String(member?.contactId || "").trim();
+        /* @wix/members backend SDK: Get My Member devuelve el miembro actual. */
+        const response = await members.getCurrentMember().catch(() => null);
+        const contact = response?.member || response;
 
         if (!contactId) {
             return false;

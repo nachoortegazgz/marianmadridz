@@ -225,7 +225,8 @@ function _isOnlinePaymentAllowed(cita) {
 
 async function _getCurrentMemberInfo() {
     try {
-        const member = await members.getCurrentMember();
+        const response = await members.getCurrentMember();
+        const member = response?.member || response;
         if (!member || member.status === "ERROR") return null;
         return member;
     } catch (_) {
