@@ -106,10 +106,9 @@ export const checkCajeroAccess = webMethod(
 // =============================================================================
 // BLOQUE 5 - CHECK STAFF COLLABORATOR ACCESS (CONTRATO ADMINISTRACION)
 // Devuelve { isMarianManager, isAdmin, isCajero }.
-// isMarianManager: miembro autenticado cuyo email coincide con el staff
-// resuelto via backend/staff.js para MARIAN_RESOURCE_ID (Bookings Staff
-// API; R2/DUP-03: ya no existe MapaStaff). Fail-closed: cualquier duda
-// deniega.
+// isMarianManager: miembro autenticado cuyo contactId coincide con la
+// identidad Wix conectada del recurso Marian en Bookings Staff API.
+// Fail-closed: cualquier duda deniega.
 // =============================================================================
 
 /* R2/DUP-03: constante local _MARIAN_RESOURCE_ID eliminada. La identidad
