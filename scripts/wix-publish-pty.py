@@ -28,11 +28,11 @@ CONFIRM_RE = re.compile(
 )
 SUCCESS_RE = re.compile(r"(?:site|website).{0,80}published|published.{0,80}(?:site|website)", re.IGNORECASE | re.DOTALL)
 EDITOR_UI_DRIFT_RE = re.compile(
-    r"(?:The\\s+)?Editor\\s+contains\\s+newer\\s+(?:design|UI)\\s+changes|newer UI changes",
+    r"(?:The\s+)?Editor\s+contains\s+newer\s+(?:design|UI)\s+changes|newer UI changes",
     re.IGNORECASE,
 )
-UI_VERSION_RE = re.compile(r"UI\\s+version:\\s*(\\d+)", re.IGNORECASE)
-REQUEST_ID_RE = re.compile(r"Request ID:\\s*([^\\s]+)", re.IGNORECASE)
+UI_VERSION_RE = re.compile(r"UI\s+version:\s*(\d+)", re.IGNORECASE)
+REQUEST_ID_RE = re.compile(r"Request ID:\s*([^\s]+)", re.IGNORECASE)
 PUBLISH_PIPELINE_ERROR_RE = re.compile(
     r"PUBLISH_PIPELINE_TASK_NOT_FOUND",
     re.IGNORECASE,
