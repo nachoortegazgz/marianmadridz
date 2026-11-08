@@ -1097,7 +1097,7 @@ export async function _renewLock(slotClave, lockOwnerId, ttlMs, options = {}) {
         if (!expectedLockToken || _getLockToken(existing) !== expectedLockToken) {
             return { ok: false, reason: ERROR_CODES.LOCK_OWNERSHIP_CHANGED };
         }
-        if (existing.version !== undefined && expectedVersion !== existing.version) {
+        if (existing.version !== undefined && existing.version !== null && expectedVersion !== existing.version) {
             return { ok: false, reason: ERROR_CODES.LOCK_CONFLICT };
         }
         const expiresAt = _toDateSafe(existing.expiresAt);
