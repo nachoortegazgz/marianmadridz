@@ -196,6 +196,7 @@ test('CRON-CONTROL-01 purges only terminal transactions and resolved flags after
     { _id: 'flag-completed-old', controlType: IC.CONTROL_TYPE.SYSTEM_FLAG, payload: { status: 'COMPLETED' }, _updatedDate: old },
     { _id: 'flag-reconciled-old', controlType: IC.CONTROL_TYPE.SYSTEM_FLAG, payload: { status: 'RECONCILED' }, _updatedDate: old },
     { _id: 'flag-resolved-old', controlType: IC.CONTROL_TYPE.SYSTEM_FLAG, payload: { status: 'RESOLVED' }, _updatedDate: old },
+    { _id: 'flag-status-conflict', controlType: IC.CONTROL_TYPE.SYSTEM_FLAG, status: 'IN_PROGRESS', payload: { status: 'RESOLVED' }, _updatedDate: old },
     { _id: 'flag-repair-old', controlType: IC.CONTROL_TYPE.SYSTEM_FLAG, payload: { status: 'REPAIR_REQUIRED' }, _updatedDate: old },
     { _id: 'flag-completion-retry-old', controlType: IC.CONTROL_TYPE.SYSTEM_FLAG, payload: { status: 'COMPLETION_RETRY_REQUIRED' }, _updatedDate: old },
     { _id: 'compensation-old', controlType: IC.CONTROL_TYPE.COMPENSATION, status: 'EXECUTED', _updatedDate: old },
@@ -209,6 +210,7 @@ test('CRON-CONTROL-01 purges only terminal transactions and resolved flags after
     'compensation-old',
     'flag-completion-retry-old',
     'flag-repair-old',
+    'flag-status-conflict',
     'tx-completed-recent',
     'tx-in-progress-old',
     'tx-retryable-old',
@@ -227,9 +229,11 @@ test('CRON-AUDIT-01 cleanAuditLogs purges only terminal rows past retention', as
   // forma terminal CLOSED/RESOLVED. Se siembra por tanto:
   //  a1 ALERT CLOSED antigua -> purgable
   //  a3 ALERT RESOLVED antigua -> purgable
+  //  a5 ALERT COMPLETED antigua (INFO/WARNING audit) -> purgable
   //  a2 ALERT OPEN reciente -> sobrevive (no terminal Y no retenida)
   //  c1 COMP EXECUTED antigua -> purgable
   //  c2 COMP PENDING antigua -> sobrevive (no terminal)
+  //  c3 COMP FAILED antigua -> sobrevive (recuperacion ambigua)
   //  w1 WEBHOOK_EVENT antigua CLOSED -> sobrevive SIEMPRE (ADR-05)
   //  l1 SLOT_LOCK antigua -> sobrevive (no es tipo purgable)
   //  a4 ALERT CLOSED reciente -> sobrevive (dentro de retencion)
@@ -252,5 +256,5 @@ test('CRON-AUDIT-01 cleanAuditLogs purges only terminal rows past retention', as
   // [CRON-AUDIT-FIX-01] WEBHOOK_EVENT w1 is NEVER purged: append-only ledger
   // per ADR-05 (hook ControlOperativo_beforeRemove blocks it; cron aligned).
   assert.deepStrictEqual(remaining, ['a2', 'a4', 'c2', 'c3', 'l1', 'w1'],
-    'only ALERT + terminal COMPENSATION past retention are purged; WEBHOOK_EVENT kept (ADR-05)');
+    'terminal ALERT and EXECUTED compensation rows are purged; FAILED and WEBHOOK_EVENT remain');
 });
