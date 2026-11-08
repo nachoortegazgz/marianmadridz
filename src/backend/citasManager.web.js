@@ -1426,13 +1426,33 @@ async function _rescheduleBookingNative(cita, slotInput, traceId) {
     };
 }
 
-async function _applyRescheduleToCita(cita, rescheduleResult, traceId) {
+async function _applyRescheduleToCita(cita, rescheduleResult, traceId, expectedOriginalSlot) {
     const bookingId = rescheduleResult.bookingId;
-    const previousSlot = _getBookingSlotFromCita(cita);
+    const previousSlot = expectedOriginalSlot || _getBookingSlotFromCita(cita);
+    let alreadyProjected = false;
 
-    await _updateCitaSafe(
+    const projection = await _updateCitaSafe(
         bookingId,
         (currentCita) => {
+            if (_isSameSlotDates(
+                currentCita?.[FIELD_SLOT_START],
+                currentCita?.[FIELD_SLOT_END],
+                rescheduleResult.startUtc,
+                rescheduleResult.endUtc
+            )) {
+                alreadyProjected = true;
+                return null;
+            }
+
+            if (!_isSameSlotDates(
+                currentCita?.[FIELD_SLOT_START],
+                currentCita?.[FIELD_SLOT_END],
+                previousSlot.slotStart,
+                previousSlot.slotEnd
+            )) {
+                throw new Error("CITA_SLOT_CHANGED_OUTSIDE_RESCHEDULE_OPERATION");
+            }
+
             const currentMeta = _getCitaMeta(currentCita);
             return {
                 ...currentCita,
@@ -1452,6 +1472,19 @@ async function _applyRescheduleToCita(cita, rescheduleResult, traceId) {
         traceId,
         "citasManager_reschedule"
     );
+
+    if (!projection?.updated && !(projection?.reason === "NO_CHANGE" && alreadyProjected)) {
+        throw createBookingError(
+            ERROR_CODES.DATABASE_ERROR,
+            "CMS projection of the rescheduled booking failed.",
+            {
+                traceId,
+                bookingId,
+                reason: projection?.reason || "UNKNOWN",
+                error: projection?.error || null,
+            }
+        );
+    }
 
     try {
         const serviceId = _safeTrim(
@@ -1475,115 +1508,12 @@ async function _applyRescheduleToCita(cita, rescheduleResult, traceId) {
     } catch (_) {
         /* best effort */
     }
-}
 
-function _selectDualCitas(citas) {
-    const rows = Array.isArray(citas) ? citas : [];
-    const f1Cita = rows.find((cita) => {
-        const meta = _getCitaMeta(cita);
-        return !(cita?.bookingType === BOOKING_TYPE.DUAL_F2 || meta.linkedF1BookingId);
-    }) || rows[0];
-    const f2Cita = rows.find((cita) => {
-        const meta = _getCitaMeta(cita);
-        return cita?.bookingType === BOOKING_TYPE.DUAL_F2 || Boolean(meta.linkedF1BookingId);
-    }) || rows[1];
-    return { f1Cita: f1Cita || null, f2Cita: f2Cita || null };
-}
-
-async function _readDualRescheduleJournal(journalId) {
-    return queryFirstItem({
-        dataCollectionId: CONTROL_COL,
-        filter: wql.eq("_id", _safeTrim(journalId)),
-        consistency: CONSISTENCY.STRONG,
-    });
-}
-
-async function _createDualRescheduleJournal(identity, pairToken, traceId, payload) {
-    const now = new Date().toISOString();
-    const row = {
-        _id: identity.journalId,
-        controlType: CONTROL_TYPE.SYSTEM_FLAG,
-        dedupeKey: identity.dedupeKey,
-        pairToken: _safeTrim(pairToken),
-        version: 0,
-        payload: {
-            ...payload,
-            operationType: "DUAL_RESCHEDULE",
-            operationHash: identity.operationHash,
-            status: DUAL_RESCHEDULE_STATUS.IN_PROGRESS,
-            traceId: _safeTrim(traceId),
-            startedAt: now,
-            updatedAt: now,
-        },
-        traceId: _safeTrim(traceId),
-    };
-    try {
-        await dalInsert(CONTROL_COL, row);
-        return row;
-    } catch (error) {
-        const existing = await _readDualRescheduleJournal(identity.journalId).catch(() => null);
-        if (existing) return existing;
-        throw error;
-    }
-}
-
-async function _patchDualRescheduleJournal(journal, patch, traceId) {
-    if (!journal?._id || !Number.isInteger(Number(journal.version))) {
-        throw createBookingError(
-            ERROR_CODES.DATABASE_ERROR,
-            "Dual reschedule journal version is missing or invalid.",
-            { traceId, journalId: journal?._id || null }
-        );
-    }
-    const expectedVersion = Number(journal.version);
-    const payload = {
-        ...(journal.payload && typeof journal.payload === "object" ? journal.payload : {}),
-        ...patch,
-        traceId: _safeTrim(traceId),
-        updatedAt: new Date().toISOString(),
-    };
-    const result = await bulkPatchItems(
-        CONTROL_COL,
-        [journal._id],
-        [[
-            { fieldPath: "payload", action: "SET_FIELD", value: payload },
-            { fieldPath: "version", action: "INCREMENT_FIELD", value: 1 },
-            { fieldPath: "traceId", action: "SET_FIELD", value: _safeTrim(traceId) },
-        ]],
-        {
-            condition: {
-                filter: {
-                    controlType: { $eq: CONTROL_TYPE.SYSTEM_FLAG },
-                    version: { $eq: expectedVersion },
-                },
-            },
-        }
-    );
-    if (!Array.isArray(result?.updatedItemIds) || !result.updatedItemIds.includes(journal._id)) {
-        throw createBookingError(
-            ERROR_CODES.DATABASE_ERROR,
-            "Dual reschedule journal compare-and-swap conflict.",
-            { traceId, journalId: journal._id, expectedVersion }
-        );
-    }
     return {
-        ...journal,
-        version: expectedVersion + 1,
-        payload,
-        traceId: _safeTrim(traceId),
+        updated: Boolean(projection?.updated),
+        alreadyProjected,
+        bookingId,
     };
-}
-
-function _isSameSlotDates(currentStart, currentEnd, targetStart, targetEnd) {
-    const aStart = _toDateSafe(currentStart);
-    const aEnd = _toDateSafe(currentEnd);
-    const bStart = _toDateSafe(targetStart);
-    const bEnd = _toDateSafe(targetEnd);
-    return Boolean(
-        aStart && aEnd && bStart && bEnd &&
-        aStart.getTime() === bStart.getTime() &&
-        aEnd.getTime() === bEnd.getTime()
-    );
 }
 
 async function _markDualPairInconsistent(pairToken, reason, traceId, error) {
