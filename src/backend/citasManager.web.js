@@ -1096,23 +1096,7 @@ async function _revalidateDualInputSlots(
         );
     }
 
-    const f1Cita =
-        citas.find((cita) => {
-            const meta = _getCitaMeta(cita);
-            return !(
-                cita?.bookingType === BOOKING_TYPE.DUAL_F2 ||
-                meta.linkedF1BookingId
-            );
-        }) || citas[0];
-
-    const f2Cita =
-        citas.find((cita) => {
-            const meta = _getCitaMeta(cita);
-            return (
-                cita?.bookingType === BOOKING_TYPE.DUAL_F2 ||
-                Boolean(meta.linkedF1BookingId)
-            );
-        }) || citas[1];
+    const { f1Cita, f2Cita } = _selectDualCitas(citas);
 
     if (!f1Cita || !f2Cita) {
         throw createBookingError(
