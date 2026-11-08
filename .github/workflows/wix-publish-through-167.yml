@@ -1,11 +1,17 @@
-name: One-time publish of main to Wix Editor site
+name: Wix production publish
 
 on:
   push:
     branches:
       - main
     paths:
-      - ".github/release-triggers/publish-through-167-pty-v2"
+      - "src/**"
+      - "#html*.txt"
+      - "package.json"
+      - "package-lock.json"
+      - "wix.config.json"
+      - "dependencies-metadata.json"
+      - "wix.lock"
 
 permissions:
   contents: read
@@ -17,6 +23,7 @@ concurrency:
 jobs:
   quality-and-publish:
     name: Verify and publish Wix site from main
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -50,6 +57,10 @@ jobs:
             if (config.siteId !== "188bed94-177c-4bc9-a9f0-35080d874f3e") {
               throw new Error("wix.config.json siteId does not match Marian Madrid production site");
             }
+            if (!/^\d+$/.test(String(config.uiVersion ?? ""))) {
+              throw new Error("wix.config.json uiVersion is missing or invalid");
+            }
+            console.log("Wix siteId and pinned UI version verified:", config.uiVersion);
           '
 
       - name: Install locked project dependencies
@@ -67,8 +78,8 @@ jobs:
       - name: Run ESLint
         run: npm run lint
 
-      - name: Install Wix CLI for Sites
-        run: npm install --global @wix/cli@1.2.9
+      - name: Install pinned Wix CLI for Sites
+        run: npm install --global @wix/cli@1.2.9 --no-audit --no-fund
 
       - name: Authenticate Wix CLI
         env:
@@ -77,6 +88,7 @@ jobs:
           set -euo pipefail
           test -n "$CLI_API_KEY"
           npm run wix login -- --api-key "$CLI_API_KEY"
+          npm run wix whoami
 
       - name: Self-test Wix publish PTY controller
         run: python3 scripts/wix-publish-pty.py --self-test

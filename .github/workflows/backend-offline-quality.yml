@@ -64,3 +64,81 @@ jobs:
 
       - name: Self-test Wix publish PTY controller
         run: python3 scripts/wix-publish-pty.py --self-test
+
+      - name: Self-test Wix Preview PTY controller
+        run: python3 scripts/wix-preview-pty.py --self-test
+
+  wix-preview:
+    name: Create and verify Wix Preview from pull request code
+    needs: offline-quality
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout pull request merge commit
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24.22.1"
+          cache: npm
+
+      - name: Verify target Wix site
+        run: |
+          node --input-type=module -e '
+            import fs from "node:fs";
+            const config = JSON.parse(fs.readFileSync("wix.config.json", "utf8"));
+            if (config.siteId !== "188bed94-177c-4bc9-a9f0-35080d874f3e") {
+              throw new Error("wix.config.json siteId does not match Marian Madrid production site");
+            }
+            if (!/^\d+$/.test(String(config.uiVersion ?? ""))) {
+              throw new Error("wix.config.json uiVersion is missing or invalid");
+            }
+            console.log("Preview target and pinned UI version verified:", config.uiVersion);
+          '
+
+      - name: Install locked project dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Install pinned Wix CLI for Sites
+        run: npm install --global @wix/cli@1.2.9 --no-audit --no-fund
+
+      - name: Authenticate Wix CLI
+        env:
+          CLI_API_KEY: ${{ secrets.CLI_API_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$CLI_API_KEY"
+          npm run wix login -- --api-key "$CLI_API_KEY"
+          npm run wix whoami
+
+      - name: Create Wix Preview from the PR merge commit
+        env:
+          CI: "true"
+          TERM: "xterm-256color"
+        run: python3 scripts/wix-preview-pty.py
+
+      - name: Verify Wix Preview URL responds
+        shell: bash
+        run: |
+          set -euo pipefail
+          preview_url="$(cat wix-preview-url.txt)"
+          if [[ ! "$preview_url" =~ ^https?://wix\.to/[[:alnum:]]+$ ]]; then
+            echo "::error::Preview URL does not match the documented wix.to format."
+            exit 1
+          fi
+          curl --fail --silent --show-error --location --max-time 60 "$preview_url" --output /dev/null
+          echo "Verified Wix Preview URL: $preview_url" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Preserve Wix Preview transcript and URL
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wix-preview-${{ github.run_id }}
+          if-no-files-found: warn
+          path: |
+            wix-preview.log
+            wix-preview-url.txt
