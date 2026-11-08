@@ -265,8 +265,9 @@ function _cacheSetBounded(map, key, value, maxSize) {
     if (firstKey) map.delete(firstKey);
 }
 
-function _buildRateLimitKey(surface, visitorId, ipHash) {
-    return `${_safeTrim(visitorId) || "anon"}:${_safeTrim(ipHash) || "noip"}:${surface}`;
+function _buildRateLimitKey(surface, visitorId, ipHash, anonymousIdentity = "") {
+    const identity = _safeTrim(visitorId) || _safeTrim(ipHash) || _safeTrim(anonymousIdentity) || "anon";
+    return `${identity}:${surface}`;
 }
 
 async function _rateLimitOrThrow(surface, key) {
@@ -2325,25 +2326,26 @@ export const getConfirmedBookingForDisplay = webMethod(
                 "getConfirmedBookingForDisplay"
             );
             const rec = res?.items?.[0];
-            if (!rec) return { ok: false, data: null, error: "NOT_FOUND" };
+            // Missing, non-owned and non-confirmed records share one public
+            // response. This prevents bookingId enumeration at the display API.
+            if (!rec) return { ok: false, data: null, error: "NOT_AVAILABLE" };
 
             if (!guardViaToken && guardMemberId) {
                 const contactDetails = rec.contactDetails || {};
                 const citaMemberId = _safeTrim(contactDetails.memberId || rec.memberId || "");
                 if (!citaMemberId || citaMemberId !== guardMemberId) {
-                    return { ok: false, data: null, error: "ACCESS_DENIED" };
+                    return { ok: false, data: null, error: "NOT_AVAILABLE" };
                 }
             }
 
             const rawStatus = String(rec.bookingStatus || "").toUpperCase();
             const isConfirmed = rawStatus === CITAS_BOOKING_STATUS?.CONFIRMED || rawStatus === "CONFIRMED";
-            if (!isConfirmed) return { ok: false, data: null, error: "NOT_CONFIRMED" };
+            if (!isConfirmed) return { ok: false, data: null, error: "NOT_AVAILABLE" };
 
+            // Explicit consumer contract: ConfirmacionReserva reads only these
+            // fields. Internal pairing, staff/resource and payment metadata stay private.
             const data = {};
-            for (const key of [
-                "bookingId", "bookingStatus", "paymentStatus", "pairToken",
-                "serviceId", "dateYmd", "slotStart", "slotEnd", "resourceId",
-            ]) {
+            for (const key of ["bookingId", "bookingStatus", "slotStart", "totalAmount"]) {
                 if (rec[key] !== undefined && rec[key] !== null) data[key] = rec[key];
             }
             data.bookingStatus = "CONFIRMED";
@@ -2360,45 +2362,62 @@ export const generateDisplayToken = webMethod(
     async ({ bookingId, confirmationToken } = {}) => {
         const traceId = makeTraceId("wm-gen-token");
         const visitor = await _getVisitorIdentity();
-        const rateKey = _buildRateLimitKey("display-token", visitor.memberId, "");
+        const id = _safeTrim(bookingId);
+        const credential = _safeTrim(confirmationToken);
+        const anonymousIdentity = !visitor.isAuthenticated
+            ? `${id || "no-booking"}:${credential ? _hashKey(credential) : "no-credential"}`
+            : "";
+        const rateKey = _buildRateLimitKey("display-token", visitor.memberId, "", anonymousIdentity);
         await _rateLimitOrThrow("display-token", rateKey);
 
-        const id = _safeTrim(bookingId);
         if (!id || !_looksLikeGuid(id)) return { ok: false, token: null, error: "INVALID_PAYLOAD" };
-        if (!visitor.isAuthenticated && !_safeTrim(confirmationToken)) {
+        if (!visitor.isAuthenticated && !credential) {
             return {
                 ok: false, token: null, error: "AUTH_REQUIRED",
                 message: "Membership or confirmation credential required to issue a display token.",
             };
         }
         try {
+            // Authenticate an anonymous bearer credential before looking up the
+            // booking. A caller cannot distinguish an unknown booking from an
+            // existing booking for which they lack the credential.
+            if (!visitor.isAuthenticated) {
+                const credHash = _hashKey(credential);
+                const credentialRecord = await withTimeout(
+                    dalGet(CONTROL_COL, `DT_${credHash}`, "strong"),
+                    WATCHDOG_TIMEOUT_MS,
+                    "verifyEmissionCredential"
+                );
+                const expiresAtMs = new Date(credentialRecord?.expiresAt || 0).getTime();
+                const credentialMatches = credentialRecord?.controlType === CT_DISPLAY_TOKEN &&
+                    _safeTrim(credentialRecord?.bookingId) === id &&
+                    Number.isFinite(expiresAtMs) && expiresAtMs > Date.now();
+                if (!credentialMatches) {
+                    return { ok: false, token: null, error: "TOKEN_UNAVAILABLE" };
+                }
+            }
+
             const res = await withTimeout(
                 dalQuery(BUSINESS_COLLECTIONS.CITAS_F2).eq("bookingId", id).limit(1).find(CONSISTENT_READ),
                 WATCHDOG_TIMEOUT_MS,
                 "verifyBookingForToken"
             );
             const rec = res?.items?.[0];
-            if (!rec) return { ok: false, token: null, error: "NOT_FOUND" };
+            if (!rec) return { ok: false, token: null, error: "TOKEN_UNAVAILABLE" };
 
-            const rawStatus = String(rec.bookingStatus || "").toUpperCase();
-            const isConfirmed = rawStatus === CITAS_BOOKING_STATUS?.CONFIRMED || rawStatus === "CONFIRMED";
-            if (!isConfirmed) return { ok: false, token: null, error: "NOT_CONFIRMED" };
-
+            // Verify ownership before status to avoid disclosing a booking's
+            // existence or state to an authenticated non-owner.
             if (visitor.isAuthenticated) {
                 const ownerId = _safeTrim((rec.contactDetails && rec.contactDetails.memberId) || rec.memberId || "");
                 if (!ownerId || ownerId !== visitor.memberId) {
-                    return { ok: false, token: null, error: "ACCESS_DENIED" };
+                    return { ok: false, token: null, error: "TOKEN_UNAVAILABLE" };
                 }
-            } else {
-                const credHash = _hashKey(_safeTrim(confirmationToken));
-                const credRec = await withTimeout(
-                    dalQuery(CONTROL_COL).eq("controlType", CT_DISPLAY_TOKEN).eq("bookingId", id).limit(5).find(CONSISTENT_READ),
-                    WATCHDOG_TIMEOUT_MS,
-                    "verifyEmissionCredential"
-                );
-                const ownsCredential = (credRec?.items || []).some((row) => row._id === `DT_${credHash}` || row.payload?.tokenHash === credHash || row.tokenHash === credHash);
-                if (!ownsCredential) return { ok: false, token: null, error: "ACCESS_DENIED" };
             }
+
+            const rawStatus = String(rec.bookingStatus || "").toUpperCase();
+            const isConfirmed = rawStatus === CITAS_BOOKING_STATUS?.CONFIRMED || rawStatus === "CONFIRMED";
+            if (!isConfirmed) return { ok: false, token: null, error: "TOKEN_UNAVAILABLE" };
+
             const token = await _generateDisplayToken(id, traceId, rec.serviceId);
             return {
                 ok: true, token,
