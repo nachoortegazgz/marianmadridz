@@ -2,6 +2,7 @@
 """Drive Wix CLI for Sites' interactive production publish and require proof of success."""
 import errno
 import fcntl
+import json
 import os
 import pty
 import re
@@ -27,9 +28,11 @@ CONFIRM_RE = re.compile(
 )
 SUCCESS_RE = re.compile(r"(?:site|website).{0,80}published|published.{0,80}(?:site|website)", re.IGNORECASE | re.DOTALL)
 EDITOR_UI_DRIFT_RE = re.compile(
-    r"Editor contains newer design changes|newer UI changes",
+    r"(?:The\\s+)?Editor\\s+contains\\s+newer\\s+(?:design|UI)\\s+changes|newer UI changes",
     re.IGNORECASE,
 )
+UI_VERSION_RE = re.compile(r"UI\\s+version:\\s*(\\d+)", re.IGNORECASE)
+REQUEST_ID_RE = re.compile(r"Request ID:\\s*([^\\s]+)", re.IGNORECASE)
 PUBLISH_PIPELINE_ERROR_RE = re.compile(
     r"PUBLISH_PIPELINE_TASK_NOT_FOUND",
     re.IGNORECASE,
@@ -55,25 +58,49 @@ def set_terminal_size(fd: int) -> None:
     )
 
 
-def confirmation_ready(text: str) -> bool:
+def expected_ui_version() -> str:
+    with open("wix.config.json", "r", encoding="utf-8") as config_file:
+        config = json.load(config_file)
+    version = str(config.get("uiVersion", ""))
+    if not version.isdigit():
+        raise RuntimeError("wix.config.json uiVersion is missing or invalid.")
+    return version
+
+
+def confirmation_ready(text: str, expected_version: str) -> bool:
+    version = UI_VERSION_RE.search(text)
     return bool(
         PREVIEW_URL_RE.search(text)
         and CONFIRM_RE.search(text)
+        and version
+        and version.group(1) == expected_version
         and not EDITOR_UI_DRIFT_RE.search(text)
     )
 
 
-def publication_blocker(text: str) -> str | None:
+def publication_blocker(text: str, expected_version: str | None = None) -> str | None:
     if EDITOR_UI_DRIFT_RE.search(text):
         return (
             "Wix Editor contains newer UI/design changes than the repository UI version. "
             "Publication blocked to avoid publishing a stale UI snapshot; sync/save the "
             "latest Editor UI to the repository before retrying."
         )
-    if PUBLISH_PIPELINE_ERROR_RE.search(text):
+    reported_version = UI_VERSION_RE.search(text)
+    if (
+        expected_version
+        and reported_version
+        and reported_version.group(1) != expected_version
+    ):
         return (
-            "Wix returned PUBLISH_PIPELINE_TASK_NOT_FOUND. The preview deployment task "
-            "does not exist on Wix; aborting without retry."
+            "Wix CLI UI version does not match wix.config.json "
+            f"({reported_version.group(1)} != {expected_version}); publication blocked."
+        )
+    if PUBLISH_PIPELINE_ERROR_RE.search(text):
+        request_id = REQUEST_ID_RE.search(text)
+        suffix = f" Wix request ID: {request_id.group(1)}." if request_id else ""
+        return (
+            "Wix returned PUBLISH_PIPELINE_TASK_NOT_FOUND. The deployment pipeline "
+            "task could not be retrieved; aborting without an unsafe retry." + suffix
         )
     return None
 
@@ -90,7 +117,12 @@ def self_test() -> None:
         "Your site has been published: https://www.marianmadrid.es/"
     )
     assert SELECTION_RE.search(selection) and LATEST_REMOTE_RE.search(selection)
-    assert confirmation_ready(confirmation)
+    assert confirmation_ready(confirmation + "UI version: 15941", "15941")
+    assert not confirmation_ready(confirmation + "UI version: 15940", "15941")
+    assert not confirmation_ready(
+        confirmation + " Caution: The Editor contains newer design changes. UI version: 15941",
+        "15941",
+    )
     assert SUCCESS_RE.search(success) and SITE_DOMAIN in success.lower()
     # Guard: never confirm a publish from a prompt without the preview URL.
     assert not confirmation_ready("Press y to publish")
@@ -132,6 +164,7 @@ def terminate_child(pid: int) -> None:
 
 
 def run_publish() -> None:
+    expected_version = expected_ui_version()
     os.environ["CI"] = "true"
     os.environ["TERM"] = "xterm-256color"
     pid, master_fd = pty.fork()
@@ -169,7 +202,7 @@ def run_publish() -> None:
                         output.extend(chunk)
 
                         text = clean_output(output.decode("utf-8", errors="replace"))
-                        blocker = publication_blocker(text)
+                        blocker = publication_blocker(text, expected_version)
                         if blocker:
                             raise RuntimeError(blocker)
 
@@ -189,7 +222,7 @@ def run_publish() -> None:
                         if (
                             selected_remote
                             and not confirmed_publish
-                            and confirmation_ready(text)
+                            and confirmation_ready(text, expected_version)
                         ):
                             os.write(master_fd, b"y")
                             confirmed_publish = True
