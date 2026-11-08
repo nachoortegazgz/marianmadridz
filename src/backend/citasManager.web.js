@@ -1653,6 +1653,8 @@ export const rescheduleDualBookings = webMethod(
         const traceId = payload?.traceId || makeTraceId("resched-dual");
         const lockOwnerId = `${traceId}:${makeTraceId("dual-reschedule")}`;
         const acquiredLockKeys = [];
+        const acquiredLockRevisions = {};
+        const acquiredLockTokens = {};
         try {
             await _rateLimitOrThrow(
                 "citasManager.rescheduleDualBookings",
@@ -1771,6 +1773,8 @@ export const rescheduleDualBookings = webMethod(
                     );
                 }
                 acquiredLockKeys.push(key);
+                acquiredLockRevisions[key] = acquired.revision;
+                acquiredLockTokens[key] = acquired.lockToken;
             }
 
             const journalDedupeKey = `DUAL_RESCHEDULE_${pairToken}_${Date.now()}`;
@@ -1947,7 +1951,11 @@ export const rescheduleDualBookings = webMethod(
             return _handleError(error, "rescheduleDualBookings", traceId);
         } finally {
             for (let i = acquiredLockKeys.length - 1; i >= 0; i -= 1) {
-                const released = await _unlockSlotKey(acquiredLockKeys[i], lockOwnerId);
+                const lockKey = acquiredLockKeys[i];
+                const released = await _unlockSlotKey(lockKey, lockOwnerId, {
+                    expectedRevision: acquiredLockRevisions[lockKey],
+                    expectedLockToken: acquiredLockTokens[lockKey],
+                });
                 if (!released?.ok) {
                     log.error("Dual reschedule slot lock release requires attention.", {
                         traceId,
