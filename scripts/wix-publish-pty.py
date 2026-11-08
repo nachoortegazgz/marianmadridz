@@ -107,10 +107,10 @@ def publication_blocker(text: str, expected_version: str | None = None) -> str |
 
 def self_test() -> None:
     selection = clean_output(
-        "What would you like to publish?\\n❯ Latest commit from origin/main\\n  Local code"
+        "What would you like to publish?\n❯ Latest commit from origin/main\n  Local code"
     )
     confirmation = clean_output(
-        "Creating preview deployment...\\nPreview: https://wix.to/QA123\\n"
+        "Creating preview deployment...\nPreview: https://wix.to/QA123\n"
         "If you're sure you want to publish, press y."
     )
     success = clean_output(
@@ -125,13 +125,13 @@ def self_test() -> None:
     )
     assert publication_blocker(editor_warning)
     assert not confirmation_ready(
-        "Preview: https://wix.to/QA123\\n" + editor_warning + " UI version: 15941",
+        "Preview: https://wix.to/QA123\n" + editor_warning + " UI version: 15941",
         "15941",
     )
     assert publication_blocker("UI version: 15940", "15941")
     assert not confirmation_ready("Press y to publish", "15941")
     assert SUCCESS_RE.search(success) and SITE_DOMAIN in success.lower()
-    pipeline_error = "Request ID: req-123\\nCode: PUBLISH_PIPELINE_TASK_NOT_FOUND"
+    pipeline_error = "Request ID: req-123\nCode: PUBLISH_PIPELINE_TASK_NOT_FOUND"
     assert "req-123" in publication_blocker(pipeline_error)
     print("Wix publish PTY controller self-test: PASS")
 
