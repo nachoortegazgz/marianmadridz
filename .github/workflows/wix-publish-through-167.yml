@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - "src/**"
+      - "#html*.txt"
       - "package.json"
       - "package-lock.json"
       - "wix.config.json"
