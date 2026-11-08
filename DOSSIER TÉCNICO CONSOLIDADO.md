@@ -692,6 +692,13 @@ Nunca mutar estas colecciones directamente desde código propio.
 3. Registro rectificativo append-only en `MovimientosCaja` con `movementType = "DEVOLUCION"` y hash encadenado.
 4. Si hay devolución de stock: registro en `MovimientosInventario` con `movementType = "DEVOLUCION"`.
 
+**Visualización segura de la confirmación de reserva**:
+
+1. `generateDisplayToken` permite emitir un token a un miembro autenticado solo si es propietario de la reserva y esta está confirmada.
+2. Para un visitante anónimo, `confirmationToken` debe corresponder a un registro `DISPLAY_TOKEN` vigente, ligado al mismo `bookingId` y dentro de su límite de intentos. La API devuelve esa misma credencial como token de visualización; no acuña un segundo bearer ni crea otra fila. Los reintentos de emisión devuelven el mismo token y respetan su TTL restante.
+3. `getConfirmedBookingForDisplay` exige el token para visitantes anónimos; para miembros autenticados exige propiedad de la reserva. Tras validar, consume el registro del token y devuelve un DTO público mínimo. El replay secuencial se rechaza.
+4. El CMS conserva únicamente el hash del token en el identificador `DT_<hash>`; nunca se persiste el bearer en claro. La garantía de consumo exactamente una vez bajo concurrencia real debe validarse en Wix QA; la suite offline no sustituye esa prueba.
+
 **Cierre Z diario**:
 
 1. Se agregan y consolidan todas las transacciones del día.
