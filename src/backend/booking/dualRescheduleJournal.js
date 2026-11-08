@@ -1,4 +1,4 @@
-import { hashSHA256 } from "../securityEngine.js";
+import { createHash } from "node:crypto";
 
 function _required(value, field) {
     const normalized = String(value ?? "").trim();
@@ -50,7 +50,7 @@ export async function buildDualRescheduleJournalIdentity(input = {}) {
         targetF2Start: _required(input.targetF2Start, "targetF2Start"),
         targetF2End: _required(input.targetF2End, "targetF2End"),
     };
-    const operationHash = await hashSHA256(JSON.stringify(canonical));
+    const operationHash = createHash("sha256").update(JSON.stringify(canonical), "utf8").digest("hex");
     return {
         operationHash,
         journalId: `DR_${operationHash}`,
