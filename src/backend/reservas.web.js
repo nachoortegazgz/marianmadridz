@@ -266,8 +266,11 @@ function _cacheSetBounded(map, key, value, maxSize) {
 }
 
 function _buildRateLimitKey(surface, visitorId, ipHash, anonymousIdentity = "") {
-    const memberOrIp = _safeTrim(visitorId) || _safeTrim(ipHash);
-    if (memberOrIp) return `${memberOrIp}:${_safeTrim(ipHash) || "noip"}:${surface}`;
+    const memberId = _safeTrim(visitorId);
+    const ip = _safeTrim(ipHash);
+    if (memberId || ip) {
+        return `${memberId || "anon"}:${ip || "noip"}:${surface}`;
+    }
     const identity = _safeTrim(anonymousIdentity) || "anon";
     return `${identity}:${surface}`;
 }
