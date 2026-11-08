@@ -880,12 +880,16 @@ async function _patchSlotLockConditionally(existing, {
     payload,
     serviceId,
 }) {
-    if (!existing?._id || !existing?.expiresAt) {
+    if (!existing?._id) {
         return { ok: false, reason: ERROR_CODES.LOCK_CONFLICT };
     }
 
     const currentVersion = Number(existing.version);
     const hasVersion = Number.isInteger(currentVersion) && currentVersion >= 0;
+    if (!hasVersion && !existing.expiresAt) {
+        // Legacy malformed rows have no safe compare field; fail closed.
+        return { ok: false, reason: ERROR_CODES.LOCK_CONFLICT };
+    }
     const conditionFilter = hasVersion
         ? { version: { $eq: currentVersion } }
         : { expiresAt: { $eq: existing.expiresAt } };
