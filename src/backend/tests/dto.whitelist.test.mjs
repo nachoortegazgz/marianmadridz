@@ -202,7 +202,7 @@ test('DTO-08 rejects member who is not the booking owner', async () => {
   }
 });
 
-test('DTO-09 anonymous visitor with valid prior credential can issue', async () => {
+test('DTO-09 anonymous credential issuance is idempotent and reuses the one-time display token', async () => {
   wixDataMock._reset();
   wixDataMock._seed(IC.BUSINESS_COLLECTIONS.CITAS_F2, [{
     _id: 'r9', bookingId: DTO_GUID_1, bookingStatus: 'CONFIRMED',
@@ -216,16 +216,31 @@ test('DTO-09 anonymous visitor with valid prior credential can issue', async () 
   const CONTROL_COL = CWIC.OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
   wixDataMock._seed(CONTROL_COL, []);
   const list = wixDataMock._store.get(CONTROL_COL);
-  // hash identico al que usa reservas.web (_hashKey de mmUtils)
   const tokenHash = MMU._hashKey(priorCredential);
   list.push({
     _id: `DT_${tokenHash}`, controlType: 'DISPLAY_TOKEN',
     bookingId: DTO_GUID_1, tokenHash, expiresAt: new Date(Date.now() + 60000),
     attempts: 0, maxAttempts: 3, consumedAt: null,
   });
-  const gen = await RW.generateDisplayToken({ bookingId: DTO_GUID_1, confirmationToken: priorCredential });
-  assert.strictEqual(gen.ok, true, JSON.stringify(gen));
-  assert.ok(typeof gen.token === 'string' && gen.token.length > 10);
+
+  const first = await RW.generateDisplayToken({ bookingId: DTO_GUID_1, confirmationToken: priorCredential });
+  const retry = await RW.generateDisplayToken({ bookingId: DTO_GUID_1, confirmationToken: priorCredential });
+  assert.strictEqual(first.ok, true, JSON.stringify(first));
+  assert.strictEqual(retry.ok, true, JSON.stringify(retry));
+  assert.strictEqual(first.token, priorCredential, 'the existing bearer credential is the display token');
+  assert.strictEqual(retry.token, first.token, 'retry returns the same token after a lost response');
+  assert.ok(first.expiresIn > 0 && first.expiresIn <= 60000, 'remaining TTL is reported, not a fresh TTL');
+  assert.strictEqual(first.maxAttempts, 3, 'the original token policy is preserved');
+
+  const tokenRows = (wixDataMock._store.get(CONTROL_COL) || [])
+    .filter((row) => row.controlType === 'DISPLAY_TOKEN');
+  assert.strictEqual(tokenRows.length, 1, 'issuance must not mint additional bearer records');
+
+  const displayed = await RW.getConfirmedBookingForDisplay({ displayToken: retry.token });
+  assert.strictEqual(displayed.ok, true, JSON.stringify(displayed));
+  const replay = await RW.getConfirmedBookingForDisplay({ displayToken: retry.token });
+  assert.strictEqual(replay.ok, false);
+  assert.strictEqual(replay.error, 'TOKEN_NOT_FOUND');
 });
 
 test('DTO-10 anonymous visitor with wrong credential rejected uniformly', async () => {
