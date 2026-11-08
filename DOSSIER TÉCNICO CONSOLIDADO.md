@@ -349,7 +349,7 @@ La disponibilidad mostrada al usuario no garantiza que el slot siga libre al con
 La arquitectura DUAL implementa dos llamadas independientes a `createBooking` vinculadas por un `pairToken` (UUID v4):
 
 - **F1** (`bookingType = "DUAL_F1"`): fase de aplicación. Lleva el importe total del servicio.
-- **F2** (`bookingType = "DUAL_F2"`): fase de lavado/peinado. `totalAmount = 0`; se marca `NO_FEE` en Bookings. Usa `skipSelectedPaymentOptionValidation: true` y `skipAvailabilityValidation: true` (slot protegido por mutex en `ControlOperativo`).
+- **F2** (`bookingType = "DUAL_F2"`): fase de lavado/peinado. `totalAmount = 0`; se marca `NO_FEE` en Bookings y envía `selectedPaymentOption: BOOKING_PAYMENT_OPTION_OFFLINE`. El Writer se invoca sin opciones de bypass (`undefined`), por lo que Wix conserva sus validaciones nativas de disponibilidad y de opción de pago. El mutex `SLOT_LOCK` es coordinación adicional; no sustituye la validación final de Bookings.
 - Ambas comparten el mismo `pairToken` en `CitasF2` y `ControlOperativo`.
 
 **Cálculo temporal**:
@@ -364,9 +364,9 @@ InicioF2 = InicioF1 + phase1Duration + exposureDuration
 
 | Parámetro | Uso |
 | --- | --- |
-| `skipAvailabilityValidation: true` | Solo tras adquirir mutex SLOT\_LOCK y revalidar en servidor |
+| `skipAvailabilityValidation: true` | No se usa en la saga dual vigente; F1 y F2 conservan la validación nativa de disponibilidad de Wix. |
 | `skipBusinessConfirmation: true` | Confirma automáticamente reservas con pago online validado |
-| `skipSelectedPaymentOptionValidation: true` | Solo en la reserva F2 (importe imputado en F1) |
+| `skipSelectedPaymentOptionValidation: true` | No se usa en la saga dual vigente; F2 envía la opción offline configurada. |
 
 ### Duración desglosada (campo `ServiciosCatalogo`)
 
