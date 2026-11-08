@@ -18,9 +18,7 @@ PENDIENTES: ninguno (dataLegacyAdapter ya no se usa en este modulo).
 =============================================================================
 */
 import { webMethod, Permissions } from "wix-web-module";
-/* SW-R3-02 (R0-02): currentMember.getMember() sustituye a
- * members.getCurrentMember(). */
-import { currentMember } from "@wix/members";
+import { members } from "@wix/members";
 import { makeTraceId } from "public/mmUtils";
 import {
     isAdmin,
@@ -119,8 +117,8 @@ export const checkCajeroAccess = webMethod(
  * findStaffByResourceId). */
 async function _isMarianManagerIdentity(traceId) {
     try {
-        /* SW-R3-02 (R0-02): currentMember.getMember() con shape defensivo. */
-        const response = await currentMember.getMember().catch(() => null);
+        /* @wix/members backend SDK: Get My Member devuelve el miembro actual. */
+        const response = await members.getCurrentMember().catch(() => null);
         const contact = response?.member || response;
 
         const email = String(
