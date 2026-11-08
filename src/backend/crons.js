@@ -14,8 +14,8 @@ intento de cierre automatico via SSOT cajas.web, aviso ALERT deduplicado por
 el notificador central backend/audit.js si se requiere accion humana. No lanza
 al scheduler (condicion no recuperable).
 AUDIT-WEBHOOK-01 (P0): cleanAuditLogs implementado (declurado sin export).
-Purga solo ALERT terminales (CLOSED/RESOLVED) y COMPENSATION terminales
-(EXECUTED/FAILED/CLOSED) pasados AUDIT_RETENTION_DAYS. WEBHOOK_EVENT JAMAS
+Purga ALERT terminales (COMPLETED/CLOSED/RESOLVED) y COMPENSATION
+EXECUTED pasados AUDIT_RETENTION_DAYS. FAILED y WEBHOOK_EVENT JAMAS
 (ADR-05 append-only, doble filtro defensivo).
 CRON-P2-01 (P1): systemHealthCheck no incluye MapaStaff porque la
 comprobacion de salud se limita a colecciones criticas del ledger y agenda;
@@ -1112,8 +1112,8 @@ export async function cleanExpiredBookingControl() {
 /**
 * AUDIT-WEBHOOK-01 (P0): Declurado en jobs.config pero NO implementado.
 * Purga exclusivamente filas TERMINALES de retencion vencida:
-*  - ALERT con status CLOSED/RESOLVED y _createdDate > ventana de retencion.
-*  - COMPENSATION con status EXECUTED/FAILED/CLOSED y _createdDate > ventana.
+*  - ALERT con status COMPLETED/CLOSED/RESOLVED y _createdDate > retencion.
+*  - COMPENSATION solo EXECUTED; FAILED puede requerir recuperacion manual.
 * NUNCA purga WEBHOOK_EVENT (ledger append-only, ADR-05; ademas el hook
 * ControlOperativo_beforeRemove lo bloquea en runtime real). SLOT_LOCK y
 * caches tienen su propio ciclo de vida (cleanExpiredLocks/DualCache/DaysCache)
