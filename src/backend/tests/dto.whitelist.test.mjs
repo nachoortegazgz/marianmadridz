@@ -89,6 +89,7 @@ test('DTO-01 getConfirmedBookingForDisplay returns whitelisted DTO only', async 
     bookingId: DTO_GUID_1,
     bookingStatus: 'CONFIRMED',
     paymentStatus: 'PAID',
+    totalAmount: 45,
     pairToken: 'PT-1',
     serviceId: 'SVC-9',
     dateYmd: '2026-10-05',
@@ -114,6 +115,12 @@ test('DTO-01 getConfirmedBookingForDisplay returns whitelisted DTO only', async 
   }
   assert.strictEqual(res.data.bookingId, DTO_GUID_1);
   assert.strictEqual(res.data.bookingStatus, 'CONFIRMED');
+  assert.strictEqual(res.data.slotStart, '2026-10-05T10:00:00Z');
+  assert.strictEqual(res.data.totalAmount, 45);
+  assert.deepStrictEqual(
+    Object.keys(res.data).sort(),
+    ['bookingId', 'bookingStatus', 'slotStart', 'totalAmount'].sort()
+  );
 });
 
 // DTO-02 (actualizado v12): la rama legacy rec.status fue ELIMINADA del
@@ -136,16 +143,13 @@ test('DTO-02 canonical bookingStatus row readable via whitelist projection', asy
   wixDataMock._seed(IC.BUSINESS_COLLECTIONS.CITAS_F2, [{
     _id: 'r2b', bookingId: DTO_GUID_LEGACY, status: 'CONFIRMED',
   }]);
-  // AUDIT-TOKEN-P0-01: el emisor evalua identidad ANTES que estado. Para
-  // llegar a NOT_CONFIRMED hay que autenticar como miembro (cualquiera: la
-  // verificacion de propiedad es posterior al chequeo de estado en el
-  // contrato del emisor). Sin sesion la respuesta correcta y probada en
-  // reservas.web (RES-DISPLAY-03) es AUTH_REQUIRED anti-enumeracion.
+  // Anti-enumeration: an absent or non-confirmed record has the same public
+  // response, and the owner check always precedes the status check.
   mockVisitor(OWNER_MEMBER_ID);
   try {
     const genLegacy = await RW.generateDisplayToken({ bookingId: DTO_GUID_LEGACY });
     assert.strictEqual(genLegacy.ok, false);
-    assert.strictEqual(genLegacy.error, 'NOT_CONFIRMED');
+    assert.strictEqual(genLegacy.error, 'TOKEN_UNAVAILABLE');
   } finally {
     mockVisitor(null);
   }
@@ -176,7 +180,7 @@ test('DTO-07 rejects member when booking has no owner (fail-closed)', async () =
   try {
     const gen = await RW.generateDisplayToken({ bookingId: DTO_GUID_1 });
     assert.strictEqual(gen.ok, false);
-    assert.strictEqual(gen.error, 'ACCESS_DENIED');
+    assert.strictEqual(gen.error, 'TOKEN_UNAVAILABLE');
   } finally {
     mockVisitor(null);
   }
@@ -192,7 +196,7 @@ test('DTO-08 rejects member who is not the booking owner', async () => {
   try {
     const gen = await RW.generateDisplayToken({ bookingId: DTO_GUID_1 });
     assert.strictEqual(gen.ok, false);
-    assert.strictEqual(gen.error, 'ACCESS_DENIED');
+    assert.strictEqual(gen.error, 'TOKEN_UNAVAILABLE');
   } finally {
     mockVisitor(null);
   }
@@ -232,7 +236,7 @@ test('DTO-10 anonymous visitor with wrong credential rejected uniformly', async 
   mockVisitor(null);
   const gen = await RW.generateDisplayToken({ bookingId: DTO_GUID_1, confirmationToken: 'GUESS-WRONG' });
   assert.strictEqual(gen.ok, false);
-  assert.strictEqual(gen.error, 'ACCESS_DENIED');
+  assert.strictEqual(gen.error, 'TOKEN_UNAVAILABLE');
 });
 
 test('DTO-11 token bound to its booking cannot be replayed cross-booking', async () => {
@@ -276,13 +280,117 @@ test('DTO-03 non-displayable booking states are hidden', async () => {
   try {
     const gen = await RW.generateDisplayToken({ bookingId: DTO_GUID_3 });
     assert.strictEqual(gen.ok, false);
-    assert.strictEqual(gen.error, 'NOT_CONFIRMED');
+    assert.strictEqual(gen.error, 'TOKEN_UNAVAILABLE');
   } finally {
     mockVisitor(null);
   }
   const res = await RW.getConfirmedBookingForDisplay({ bookingId: DTO_GUID_3 });
   assert.strictEqual(res.ok, false);
   assert.strictEqual(res.error, 'AUTH_REQUIRED');
+});
+
+test('DTO-13 token issuance does not distinguish missing, non-owned or non-confirmed bookings', async () => {
+  wixDataMock._reset();
+  const ownerId = OWNER_MEMBER_ID;
+  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.CITAS_F2, [
+    { _id: 'r13a', bookingId: DTO_GUID_1, bookingStatus: 'CONFIRMED', contactDetails: { memberId: 'someone-else' } },
+    { _id: 'r13b', bookingId: DTO_GUID_2, bookingStatus: 'CANCELED', contactDetails: { memberId: ownerId } },
+  ]);
+  mockVisitor(ownerId);
+  try {
+    const nonOwned = await RW.generateDisplayToken({ bookingId: DTO_GUID_1 });
+    const missing = await RW.generateDisplayToken({ bookingId: DTO_GUID_3 });
+    const nonConfirmed = await RW.generateDisplayToken({ bookingId: DTO_GUID_2 });
+    assert.deepStrictEqual(
+      [nonOwned.error, missing.error, nonConfirmed.error],
+      ['TOKEN_UNAVAILABLE', 'TOKEN_UNAVAILABLE', 'TOKEN_UNAVAILABLE']
+    );
+  } finally {
+    mockVisitor(null);
+    resetRateLimitRows();
+  }
+});
+
+test('DTO-14 anonymous invalid credential cannot enumerate booking existence', async () => {
+  wixDataMock._reset();
+  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.CITAS_F2, [
+    { _id: 'r14', bookingId: DTO_GUID_1, bookingStatus: 'CONFIRMED' },
+  ]);
+  mockVisitor(null);
+  const existing = await RW.generateDisplayToken({
+    bookingId: DTO_GUID_1,
+    confirmationToken: 'INVALID-CREDENTIAL-14',
+  });
+  const missing = await RW.generateDisplayToken({
+    bookingId: DTO_GUID_3,
+    confirmationToken: 'INVALID-CREDENTIAL-14',
+  });
+  assert.deepStrictEqual(
+    [existing.error, missing.error],
+    ['TOKEN_UNAVAILABLE', 'TOKEN_UNAVAILABLE']
+  );
+  resetRateLimitRows();
+});
+
+test('DTO-13 token issuance does not distinguish missing, non-owned or non-confirmed bookings', async () => {
+  wixDataMock._reset();
+  const ownerId = OWNER_MEMBER_ID;
+  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.CITAS_F2, [
+    { _id: 'r13a', bookingId: DTO_GUID_1, bookingStatus: 'CONFIRMED', contactDetails: { memberId: 'someone-else' } },
+    { _id: 'r13b', bookingId: DTO_GUID_2, bookingStatus: 'CANCELED', contactDetails: { memberId: ownerId } },
+  ]);
+  mockVisitor(ownerId);
+  try {
+    const nonOwned = await RW.generateDisplayToken({ bookingId: DTO_GUID_1 });
+    const missing = await RW.generateDisplayToken({ bookingId: DTO_GUID_3 });
+    const nonConfirmed = await RW.generateDisplayToken({ bookingId: DTO_GUID_2 });
+    assert.deepStrictEqual(
+      [nonOwned.error, missing.error, nonConfirmed.error],
+      ['TOKEN_UNAVAILABLE', 'TOKEN_UNAVAILABLE', 'TOKEN_UNAVAILABLE']
+    );
+  } finally {
+    mockVisitor(null);
+    resetRateLimitRows();
+  }
+});
+
+test('DTO-14 anonymous invalid credential cannot enumerate booking existence', async () => {
+  wixDataMock._reset();
+  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.CITAS_F2, [
+    { _id: 'r14', bookingId: DTO_GUID_1, bookingStatus: 'CONFIRMED' },
+  ]);
+  mockVisitor(null);
+  const existing = await RW.generateDisplayToken({
+    bookingId: DTO_GUID_1,
+    confirmationToken: 'INVALID-CREDENTIAL-14',
+  });
+  const missing = await RW.generateDisplayToken({
+    bookingId: DTO_GUID_3,
+    confirmationToken: 'INVALID-CREDENTIAL-14',
+  });
+  assert.deepStrictEqual(
+    [existing.error, missing.error],
+    ['TOKEN_UNAVAILABLE', 'TOKEN_UNAVAILABLE']
+  );
+  resetRateLimitRows();
+});
+
+test('DTO-15 display lookup hides missing and non-owned booking IDs uniformly', async () => {
+  wixDataMock._reset();
+  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.CITAS_F2, [
+    { _id: 'r15', bookingId: DTO_GUID_1, bookingStatus: 'CONFIRMED', contactDetails: { memberId: OWNER_MEMBER_ID } },
+  ]);
+  mockVisitor('member-not-owner-15');
+  try {
+    const nonOwned = await RW.getConfirmedBookingForDisplay({ bookingId: DTO_GUID_1 });
+    const missing = await RW.getConfirmedBookingForDisplay({ bookingId: DTO_GUID_3 });
+    assert.deepStrictEqual(
+      [nonOwned.error, missing.error],
+      ['NOT_AVAILABLE', 'NOT_AVAILABLE']
+    );
+  } finally {
+    mockVisitor(null);
+  }
 });
 
 test('DTO-04 getMovimientoByBooking exposes only receipt-safe fields', async () => {

@@ -55,6 +55,9 @@ const RATE_LIMIT_POLICIES = Object.freeze({
     "public-booking": Object.freeze({ maxRequests: 5, windowMs: 10000 }),
     reservas: Object.freeze({ maxRequests: 20, windowMs: 5000 }),
     availability: Object.freeze({ maxRequests: 12, windowMs: 5000 }),
+    // Token issuance is a credential-bearing endpoint; keep a dedicated,
+    // stricter GCRA budget instead of inheriting the generic default.
+    "display-token": Object.freeze({ maxRequests: 5, windowMs: 60000 }),
 });
 
 const RATE_LIMIT_CAS_ATTEMPTS = 12;
