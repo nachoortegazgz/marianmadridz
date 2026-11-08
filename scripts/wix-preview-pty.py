@@ -154,13 +154,16 @@ def run_preview() -> None:
     # Keep GitHub Actions enabled for the runner; only the Wix CLI child
     # receives a terminal-capable environment.
     env = preview_environment(os.environ)
+    # Apply the isolated environment before fork, matching the known-working
+    # Wix PTY invocation pattern; the parent process exits with this script.
+    os.environ.clear()
+    os.environ.update(env)
 
     window = struct.pack("HHHH", TERMINAL_ROWS, TERMINAL_COLUMNS, 0, 0)
     pid, master_fd = pty.fork()
     if pid == 0:
-        # Match the controlling-TTY setup proven by the isolated Wix CLI run.
         fcntl.ioctl(0, termios.TIOCSWINSZ, window)
-        os.execvpe("wix", ["wix", "preview"], env)
+        os.execvp("wix", ["wix", "preview"])
 
     set_terminal_size(master_fd)
     print("[preview] Launching pinned Wix CLI in a controlling PTY.", flush=True)
