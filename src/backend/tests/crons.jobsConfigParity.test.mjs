@@ -17,7 +17,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const { wixDataMock } = await import('./loader.mjs');
+const { wixDataMock, mocks } = await import('./loader.mjs');
 const CR = await import('backend/crons.js');
 const IC = await import('backend/internalConfig');
 
