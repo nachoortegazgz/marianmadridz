@@ -43,7 +43,7 @@ PENDIENTES:
 - Verificar operaciones de dataAccess en CI y runtime QA.
 =============================================================================
 */
-import { query as dalQuery, getItem as dalGet, insertItem as dalInsert, updateItem as dalUpdate, removeById as dalRemove, bulkRemove as dalBulkRemove } from "backend/dataAccess";
+import { query as dalQuery, getItem as dalGet, insertItem as dalInsert, updateItem as dalUpdate, bulkRemove as dalBulkRemove } from "backend/dataAccess";
 import { bookings } from "@wix/bookings";
 import { auth } from "@wix/essentials";
 import {
