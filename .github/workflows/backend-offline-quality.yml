@@ -1,0 +1,53 @@
+name: Backend offline quality gates
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-offline-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  offline-quality:
+    name: Offline regression, SDK contract and lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24.22.1"
+          cache: npm
+
+      - name: Install locked dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Run complete offline regression suite
+        run: npm test
+
+      - name: Capture individual failing suite diagnostics
+        if: failure()
+        continue-on-error: true
+        shell: bash
+        run: |
+          for suite in accountingLedger.writer.offline.test.mjs dto.whitelist.test.mjs reservas.web.test.mjs widget.handshake.contract.test.mjs; do
+            echo "===== Diagnostic run: ${suite} ====="
+            node --no-warnings --loader ./src/backend/tests/loader.mjs "./src/backend/tests/${suite}" || true
+          done
+
+      - name: Verify installed Wix SDK contracts
+        if: always()
+        run: npm run verify:wix-ecom-cart-v2
+
+      - name: Run ESLint
+        if: always()
+        run: npm run lint

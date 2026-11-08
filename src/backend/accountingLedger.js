@@ -279,8 +279,11 @@ export async function appendAccountingEntry(input, traceId) {
         return { status: "ERROR", data: null, error: { code: normalized.code } };
     }
     const entry = normalized.value;
+    // traceId is correlation metadata, not part of the accounting payload identity.
+    const idempotencyEntry = { ...entry };
+    delete idempotencyEntry.traceId;
     const payloadHash = await hashSHA256(JSON.stringify({
-        ...entry,
+        ...idempotencyEntry,
         entryDate: entry.entryDate.toISOString(),
     }));
     const claimDigest = await hashSHA256(entry.entryId);
