@@ -1683,6 +1683,9 @@ export const rescheduleDualBookings = webMethod(
         const acquiredLockKeys = [];
         const acquiredLockVersions = {};
         const acquiredLockTokens = {};
+        let lockHeartbeat = null;
+        let journal = null;
+
         try {
             await _rateLimitOrThrow(
                 "citasManager.rescheduleDualBookings",
@@ -1701,7 +1704,6 @@ export const rescheduleDualBookings = webMethod(
 
             const slotF1Input = _getDualSlotInput(payload, "slotF1");
             const slotF2Input = _getDualSlotInput(payload, "slotF2");
-
             if (!slotF1Input || !slotF2Input) {
                 throw createBookingError(
                     ERROR_CODES.INVALID_PAYLOAD,
@@ -1714,7 +1716,6 @@ export const rescheduleDualBookings = webMethod(
             const matched = citas.filter((cita) =>
                 _matchesCitaPairIdentifier(cita, pairToken)
             );
-
             if (matched.length < 2) {
                 throw createBookingError(
                     ERROR_CODES.INVALID_PAYLOAD,
@@ -1728,25 +1729,91 @@ export const rescheduleDualBookings = webMethod(
                 _assertReschedulableCita(cita, traceId);
             }
 
+            const { f1Cita, f2Cita } = _selectDualCitas(matched);
+            if (!f1Cita || !f2Cita) {
+                throw createBookingError(
+                    ERROR_CODES.INVALID_PAYLOAD,
+                    "Both dual booking phases are required.",
+                    { traceId, pairToken }
+                );
+            }
+
+            const f1BookingId = _safeTrim(f1Cita?.[FIELD_BOOKING_ID] || f1Cita?.bookingId || "");
+            const f2BookingId = _safeTrim(f2Cita?.[FIELD_BOOKING_ID] || f2Cita?.bookingId || "");
+            const f1ServiceId = _safeTrim(f1Cita?.[FIELD_SERVICE_ID] || f1Cita?.serviceId || "");
+            const f2ServiceId = _safeTrim(f2Cita?.[FIELD_SERVICE_ID] || f2Cita?.serviceId || "");
+            const f1ResourceId = _safeTrim(f1Cita?.[FIELD_RESOURCE_ID] || f1Cita?.resourceId || "");
+            const f2ResourceId = _safeTrim(f2Cita?.[FIELD_RESOURCE_ID] || f2Cita?.resourceId || "");
+            if (!f1ResourceId || (f2ResourceId && f1ResourceId !== f2ResourceId)) {
+                throw createBookingError(
+                    ERROR_CODES.INVALID_EMPLOYEE,
+                    "Dual phases must use the same valid staff resource.",
+                    { traceId, pairToken }
+                );
+            }
+            const resourceId = f1ResourceId || f2ResourceId;
+            const operationId = _safeTrim(payload?.operationId || "");
+            if (operationId && !_looksLikeGuid(operationId)) {
+                throw createBookingError(
+                    ERROR_CODES.INVALID_PAYLOAD,
+                    "operationId must be a GUID when supplied.",
+                    { traceId }
+                );
+            }
+
+            const journalIdentity = await buildDualRescheduleJournalIdentity({
+                pairToken,
+                operationId,
+                f1BookingId,
+                f2BookingId,
+                f1ServiceId,
+                f2ServiceId,
+                resourceId,
+                targetF1Start: slotF1Input.localStartDate,
+                targetF1End: slotF1Input.localEndDate,
+                targetF2Start: slotF2Input.localStartDate,
+                targetF2End: slotF2Input.localEndDate,
+            });
+
+            const existingJournal = await _readDualRescheduleJournal(journalIdentity.journalId);
+            if (existingJournal) {
+                journal = existingJournal;
+                const status = _safeTrim(journal.payload?.status).toUpperCase();
+                if (status === DUAL_RESCHEDULE_STATUS.COMPLETED && journal.payload?.result) {
+                    return { status: "SUCCESS", data: journal.payload.result, error: null };
+                }
+                throw createBookingError(
+                    ERROR_CODES.TOKEN_BUSY,
+                    "This dual reschedule intent already has a journal and requires reconciliation before retry.",
+                    {
+                        traceId,
+                        pairToken,
+                        journalId: journalIdentity.journalId,
+                        journalStatus: status || "UNKNOWN",
+                    }
+                );
+            }
+
             const validation = await _revalidateDualInputSlots(
                 matched,
                 slotF1Input,
                 slotF2Input,
                 traceId
             );
-
-            const { f1Cita, f2Cita, serviceConfig } = validation;
-
-            const f2ExpectedServiceId = _safeTrim(
-                f2Cita?.[FIELD_SERVICE_ID] || f2Cita?.serviceId || ""
-            );
-
+            if (_safeTrim(validation.selectedResourceId) !== resourceId) {
+                throw createBookingError(
+                    ERROR_CODES.INVALID_EMPLOYEE,
+                    "The selected resource changed during dual reschedule validation.",
+                    { traceId, pairToken }
+                );
+            }
+            const serviceConfig = validation.serviceConfig;
+            const f2ExpectedServiceId = f2ServiceId;
             const dualF2Slot = _buildDualRescheduleSlot(
                 serviceConfig,
                 slotF2Input,
                 f2ExpectedServiceId
             );
-
             if (!dualF2Slot) {
                 throw createBookingError(
                     ERROR_CODES.INVALID_PAYLOAD,
@@ -1757,20 +1824,12 @@ export const rescheduleDualBookings = webMethod(
 
             // Lock both original and target F1/F2 intervals in canonical order.
             // The exposure gap is intentionally excluded: it remains bookable.
-            const originalF1 = _getBookingSlotFromCita(f1Cita);
-            const originalF2 = _getBookingSlotFromCita(f2Cita);
-            const resourceId = _safeTrim(validation.selectedResourceId);
-            if (!_looksLikeGuid(resourceId)) {
-                throw createBookingError(
-                    ERROR_CODES.INVALID_EMPLOYEE,
-                    "A valid shared staff resource is required to lock the dual reschedule.",
-                    { traceId, pairToken }
-                );
-            }
+            const originalF1Slot = _getBookingSlotFromCita(f1Cita);
+            const originalF2Slot = _getBookingSlotFromCita(f2Cita);
             const lockCandidates = [
-                { serviceId: originalF1.serviceId, start: originalF1.slotStart, end: originalF1.slotEnd },
-                { serviceId: originalF2.serviceId, start: originalF2.slotStart, end: originalF2.slotEnd },
-                { serviceId: _safeTrim(f1Cita?.[FIELD_SERVICE_ID] || f1Cita?.serviceId), start: slotF1Input.localStartDate, end: slotF1Input.localEndDate },
+                { serviceId: originalF1Slot.serviceId, start: originalF1Slot.slotStart, end: originalF1Slot.slotEnd },
+                { serviceId: originalF2Slot.serviceId, start: originalF2Slot.slotStart, end: originalF2Slot.slotEnd },
+                { serviceId: f1ServiceId, start: slotF1Input.localStartDate, end: slotF1Input.localEndDate },
                 { serviceId: _safeTrim(dualF2Slot.serviceId), start: dualF2Slot.localStartDate, end: dualF2Slot.localEndDate },
             ];
             const lockServiceByKey = new Map();
@@ -1785,6 +1844,7 @@ export const rescheduleDualBookings = webMethod(
                 const key = generateSlotKey(candidate.serviceId, resourceId, candidate.start, candidate.end);
                 lockServiceByKey.set(key, candidate.serviceId);
             }
+
             const orderedLockKeys = Array.from(lockServiceByKey.keys()).sort();
             for (const key of orderedLockKeys) {
                 const acquired = await _lockSlotKeyOrFail(
@@ -1805,143 +1865,208 @@ export const rescheduleDualBookings = webMethod(
                 acquiredLockTokens[key] = acquired.lockToken;
             }
 
-            const journalDedupeKey = `DUAL_RESCHEDULE_${pairToken}_${Date.now()}`;
-            try {
-                await dalInsert(CONTROL_COL, {
-                    controlType: CONTROL_TYPE.SYSTEM_FLAG,
-                    dedupeKey: journalDedupeKey,
-                    pairToken,
-                    payload: {
-                        operationType: "DUAL_RESCHEDULE",
-                        status: "IN_PROGRESS",
-                        originalF1: _getBookingSlotFromCita(f1Cita),
-                        originalF2: _getBookingSlotFromCita(f2Cita),
-                        targetF1: slotF1Input,
-                        targetF2: dualF2Slot,
-                        traceId,
-                        startedAt: new Date().toISOString(),
-                    },
-                    traceId,
-                });
-            } catch (journalError) {
-                log.error("CM5-14: failed to persist reschedule journal", {
-                    pairToken,
-                    traceId,
-                    error: journalError?.message,
-                });
+            const lockServiceIdsByKey = {};
+            for (const [key, serviceId] of lockServiceByKey.entries()) {
+                lockServiceIdsByKey[key] = serviceId;
+            }
+            lockHeartbeat = _startLockHeartbeat({
+                lockKeys: orderedLockKeys,
+                lockOwnerId,
+                lockTokens: acquiredLockTokens,
+                lockVersions: acquiredLockVersions,
+                lockServiceIds: lockServiceIdsByKey,
+                ttlMs: 300000,
+                intervalMs: 60000,
+                traceId,
+            });
+
+            const journalAfterLock = await _readDualRescheduleJournal(journalIdentity.journalId);
+            if (journalAfterLock) {
+                journal = journalAfterLock;
+                const status = _safeTrim(journal.payload?.status).toUpperCase();
+                if (status === DUAL_RESCHEDULE_STATUS.COMPLETED && journal.payload?.result) {
+                    return { status: "SUCCESS", data: journal.payload.result, error: null };
+                }
+                if (!isDualRescheduleTerminalStatus(status)) {
+                    journal = await _patchDualRescheduleJournal(journal, {
+                        status: DUAL_RESCHEDULE_STATUS.REPAIR_REQUIRED,
+                        repairReason: "NONTERMINAL_JOURNAL_REENTRY_REQUIRES_READER_RECONCILIATION",
+                    }, traceId);
+                }
                 throw createBookingError(
-                    ERROR_CODES.DATABASE_ERROR,
-                    "Dual reschedule journal could not be persisted.",
-                    { traceId, pairToken, cause: journalError?.message }
+                    ERROR_CODES.TOKEN_BUSY,
+                    "A previous dual reschedule attempt is not terminal and requires reconciliation.",
+                    { traceId, pairToken, journalId: journalIdentity.journalId, journalStatus: status }
                 );
             }
 
-            const originalF1Slot = _getBookingSlotFromCita(f1Cita);
-
-            const f1Result = await _rescheduleBookingNative(
-                f1Cita,
-                slotF1Input,
-                traceId
+            const createdJournal = await _createDualRescheduleJournal(
+                journalIdentity,
+                pairToken,
+                traceId,
+                {
+                    originalF1: {
+                        serviceId: originalF1Slot.serviceId,
+                        resourceId: originalF1Slot.resourceId,
+                        slotStart: originalF1Slot.slotStart?.toISOString() || null,
+                        slotEnd: originalF1Slot.slotEnd?.toISOString() || null,
+                    },
+                    originalF2: {
+                        serviceId: originalF2Slot.serviceId,
+                        resourceId: originalF2Slot.resourceId,
+                        slotStart: originalF2Slot.slotStart?.toISOString() || null,
+                        slotEnd: originalF2Slot.slotEnd?.toISOString() || null,
+                    },
+                    targetF1: slotF1Input,
+                    targetF2: dualF2Slot,
+                    selectedResourceId: resourceId,
+                    f1BookingId,
+                    f2BookingId,
+                }
             );
+            journal = createdJournal.journal;
+            if (!createdJournal.created) {
+                const status = _safeTrim(journal.payload?.status).toUpperCase();
+                if (status === DUAL_RESCHEDULE_STATUS.COMPLETED && journal.payload?.result) {
+                    return { status: "SUCCESS", data: journal.payload.result, error: null };
+                }
+                if (!isDualRescheduleTerminalStatus(status)) {
+                    journal = await _patchDualRescheduleJournal(journal, {
+                        status: DUAL_RESCHEDULE_STATUS.REPAIR_REQUIRED,
+                        repairReason: "DUPLICATE_JOURNAL_INSERT_REQUIRES_READER_RECONCILIATION",
+                    }, traceId);
+                }
+                throw createBookingError(
+                    ERROR_CODES.TOKEN_BUSY,
+                    "Dual reschedule journal already exists and requires reconciliation.",
+                    { traceId, pairToken, journalId: journalIdentity.journalId, journalStatus: status }
+                );
+            }
+
+            journal = await _patchDualRescheduleJournal(journal, {
+                status: DUAL_RESCHEDULE_STATUS.F1_IN_PROGRESS,
+                f1StartedAt: new Date().toISOString(),
+            }, traceId);
+
+            let f1Result = null;
+            try {
+                lockHeartbeat.assertHealthy();
+                f1Result = await _rescheduleBookingNative(f1Cita, slotF1Input, traceId);
+            } catch (f1Error) {
+                journal = await _patchDualRescheduleJournal(journal, {
+                    status: DUAL_RESCHEDULE_STATUS.REPAIR_REQUIRED,
+                    repairReason: "F1_NATIVE_RESULT_UNCERTAIN",
+                    lastError: f1Error?.message || String(f1Error),
+                    lastErrorCode: f1Error?.code || null,
+                }, traceId);
+                throw f1Error;
+            }
+
+            journal = await _patchDualRescheduleJournal(journal, {
+                status: DUAL_RESCHEDULE_STATUS.F1_DONE,
+                f1CompletedAt: new Date().toISOString(),
+                f1Result: {
+                    bookingId: f1Result.bookingId,
+                    startUtc: f1Result.startUtc?.toISOString?.() || null,
+                    endUtc: f1Result.endUtc?.toISOString?.() || null,
+                    dateYmd: f1Result.dateYmd,
+                },
+            }, traceId);
+
+            journal = await _patchDualRescheduleJournal(journal, {
+                status: DUAL_RESCHEDULE_STATUS.F2_IN_PROGRESS,
+                f2StartedAt: new Date().toISOString(),
+            }, traceId);
 
             let f2Result = null;
             try {
-                f2Result = await _rescheduleBookingNative(
-                    f2Cita,
-                    dualF2Slot,
-                    traceId
-                );
+                lockHeartbeat.assertHealthy();
+                f2Result = await _rescheduleBookingNative(f2Cita, dualF2Slot, traceId);
+                journal = await _patchDualRescheduleJournal(journal, {
+                    status: DUAL_RESCHEDULE_STATUS.F2_DONE,
+                    f2CompletedAt: new Date().toISOString(),
+                    f2Result: {
+                        bookingId: f2Result.bookingId,
+                        startUtc: f2Result.startUtc?.toISOString?.() || null,
+                        endUtc: f2Result.endUtc?.toISOString?.() || null,
+                        dateYmd: f2Result.dateYmd,
+                    },
+                }, traceId);
             } catch (f2Error) {
-                log.error("Dual reschedule: F2 failed; rolling back F1 with live revision", {
-                    traceId,
-                    error: f2Error?.message,
-                });
-
-                if (originalF1Slot.slotStart && originalF1Slot.slotEnd) {
-                    try {
-                        const liveF1Revision = await _fetchLiveRevision(
-                            f1Result.bookingId,
-                            f1Cita
-                        );
-
-                        if (!liveF1Revision) {
-                            throw new Error("Cannot obtain live revision for F1 rollback");
-                        }
-
-                        await _rescheduleBookingNative(
-                            {
-                                ...f1Cita,
-                                revision: liveF1Revision,
-                            },
-                            {
-                                localStartDate: getMadridLocalStringNoZ(
-                                    originalF1Slot.slotStart
-                                ),
-                                localEndDate: getMadridLocalStringNoZ(
-                                    originalF1Slot.slotEnd
-                                ),
-                                serviceId: originalF1Slot.serviceId,
-                            },
-                            traceId
-                        );
-
-                        log.info("CM5-13: F1 rollback succeeded with live revision", {
-                            pairToken,
-                            traceId,
-                            bookingId: f1Result.bookingId,
-                        });
-                    } catch (rollbackError) {
-                        log.error("CM5-17: F1 rollback failed; marking pair inconsistent", {
-                            pairToken,
-                            traceId,
-                            error: rollbackError?.message,
-                        });
-
-                        await _markDualPairInconsistent(
-                            pairToken,
-                            "F1_ROLLBACK_FAILED",
-                            traceId,
-                            rollbackError
-                        );
-
-                        await logAuditEvent(
-                            "RESCHEDULE_ROLLBACK_FAILED",
-                            "ERROR",
-                            "F1 rollback failed after F2 reschedule error. Pair marked inconsistent.",
-                            {
-                                pairToken,
-                                traceId,
-                                error:
-                                    rollbackError?.message ||
-                                    String(rollbackError),
-                            },
-                            traceId,
-                            pairToken,
-                            AUDIT_SOURCE
-                        );
-                    }
+                if (f2Error?.code === "TIMEOUT") {
+                    journal = await _patchDualRescheduleJournal(journal, {
+                        status: DUAL_RESCHEDULE_STATUS.REPAIR_REQUIRED,
+                        repairReason: "F2_NATIVE_RESULT_UNCERTAIN_NO_AUTOMATIC_ROLLBACK",
+                        lastError: f2Error?.message || String(f2Error),
+                        lastErrorCode: f2Error?.code || null,
+                    }, traceId);
+                    throw f2Error;
                 }
 
+                try {
+                    lockHeartbeat.assertHealthy();
+                    journal = await _patchDualRescheduleJournal(journal, {
+                        status: DUAL_RESCHEDULE_STATUS.COMPENSATING,
+                        compensationStartedAt: new Date().toISOString(),
+                    }, traceId);
+
+                    const liveF1Revision = await _fetchLiveRevision(f1Result.bookingId, f1Cita);
+                    if (!liveF1Revision) {
+                        throw new Error("Cannot obtain live revision for F1 rollback");
+                    }
+                    const rollbackResult = await _rescheduleBookingNative(
+                        { ...f1Cita, revision: liveF1Revision },
+                        {
+                            localStartDate: getMadridLocalStringNoZ(originalF1Slot.slotStart),
+                            localEndDate: getMadridLocalStringNoZ(originalF1Slot.slotEnd),
+                            serviceId: f1ServiceId,
+                        },
+                        traceId
+                    );
+                    journal = await _patchDualRescheduleJournal(journal, {
+                        status: DUAL_RESCHEDULE_STATUS.COMPENSATED,
+                        compensatedAt: new Date().toISOString(),
+                        compensationResult: {
+                            bookingId: rollbackResult.bookingId,
+                            startUtc: rollbackResult.startUtc?.toISOString?.() || null,
+                            endUtc: rollbackResult.endUtc?.toISOString?.() || null,
+                        },
+                    }, traceId);
+                } catch (rollbackError) {
+                    journal = await _patchDualRescheduleJournal(journal, {
+                        status: DUAL_RESCHEDULE_STATUS.REPAIR_REQUIRED,
+                        repairReason: "F2_FAILED_AND_F1_ROLLBACK_FAILED",
+                        lastError: rollbackError?.message || String(rollbackError),
+                    }, traceId).catch(() => journal);
+                    await _markDualPairInconsistent(
+                        pairToken,
+                        "DUAL_RESCHEDULE_ROLLBACK_FAILED",
+                        traceId,
+                        rollbackError
+                    );
+                }
                 throw f2Error;
             }
 
             try {
-                await _applyRescheduleToCita(f1Cita, f1Result, traceId);
-                await _applyRescheduleToCita(f2Cita, f2Result, traceId);
+                await _applyRescheduleToCita(f1Cita, f1Result, traceId, originalF1Slot);
+                await _applyRescheduleToCita(f2Cita, f2Result, traceId, originalF2Slot);
+                journal = await _patchDualRescheduleJournal(journal, {
+                    status: DUAL_RESCHEDULE_STATUS.CMS_PROJECTED,
+                    cmsProjectedAt: new Date().toISOString(),
+                }, traceId);
             } catch (cmsError) {
-                log.error("CM5-14: CMS update failed after native reschedule; marking inconsistent", {
-                    pairToken,
-                    traceId,
-                    error: cmsError?.message,
-                });
-
+                journal = await _patchDualRescheduleJournal(journal, {
+                    status: DUAL_RESCHEDULE_STATUS.REPAIR_REQUIRED,
+                    repairReason: "DUAL_CMS_PARTIAL_UPDATE",
+                    lastError: cmsError?.message || String(cmsError),
+                }, traceId).catch(() => journal);
                 await _markDualPairInconsistent(
                     pairToken,
                     "DUAL_CMS_PARTIAL_UPDATE",
                     traceId,
                     cmsError
                 );
-
                 throw cmsError;
             }
 
@@ -1955,29 +2080,50 @@ export const rescheduleDualBookings = webMethod(
                 AUDIT_SOURCE
             );
 
+            const resultData = {
+                pairToken,
+                f1: {
+                    bookingId: f1Result.bookingId,
+                    slotStart: f1Result.startUtc?.toISOString?.() || null,
+                    slotEnd: f1Result.endUtc?.toISOString?.() || null,
+                    dateYmd: f1Result.dateYmd,
+                },
+                f2: {
+                    bookingId: f2Result.bookingId,
+                    slotStart: f2Result.startUtc?.toISOString?.() || null,
+                    slotEnd: f2Result.endUtc?.toISOString?.() || null,
+                    dateYmd: f2Result.dateYmd,
+                },
+                gapMinutes: validation.gapMinutes,
+            };
+            journal = await _patchDualRescheduleJournal(journal, {
+                status: DUAL_RESCHEDULE_STATUS.COMPLETED,
+                completedAt: new Date().toISOString(),
+                result: resultData,
+            }, traceId);
+
             return {
                 status: "SUCCESS",
-                data: {
-                    pairToken,
-                    f1: {
-                        bookingId: f1Result.bookingId,
-                        slotStart: f1Result.startUtc,
-                        slotEnd: f1Result.endUtc,
-                        dateYmd: f1Result.dateYmd,
-                    },
-                    f2: {
-                        bookingId: f2Result.bookingId,
-                        slotStart: f2Result.startUtc,
-                        slotEnd: f2Result.endUtc,
-                        dateYmd: f2Result.dateYmd,
-                    },
-                    gapMinutes: validation.gapMinutes,
-                },
+                data: resultData,
                 error: null,
             };
         } catch (error) {
+            if (journal && !isDualRescheduleTerminalStatus(journal.payload?.status)) {
+                journal = await _patchDualRescheduleJournal(journal, {
+                    status: DUAL_RESCHEDULE_STATUS.REPAIR_REQUIRED,
+                    repairReason: "UNHANDLED_DUAL_RESCHEDULE_FAILURE",
+                    lastError: error?.message || String(error),
+                    lastErrorCode: error?.code || null,
+                }, traceId).catch(() => journal);
+            }
             return _handleError(error, "rescheduleDualBookings", traceId);
         } finally {
+            if (lockHeartbeat) {
+                const monitor = lockHeartbeat;
+                monitor.stop();
+                lockHeartbeat = null;
+                await monitor.wait;
+            }
             for (let i = acquiredLockKeys.length - 1; i >= 0; i -= 1) {
                 const lockKey = acquiredLockKeys[i];
                 const released = await _unlockSlotKey(lockKey, lockOwnerId, {
@@ -1988,7 +2134,7 @@ export const rescheduleDualBookings = webMethod(
                     log.error("Dual reschedule slot lock release requires attention.", {
                         traceId,
                         pairToken: _safeTrim(payload?.pairToken),
-                        lockKey: acquiredLockKeys[i],
+                        lockKey,
                         reason: released?.reason || "LOCK_RELEASE_FAILED",
                     });
                 }
