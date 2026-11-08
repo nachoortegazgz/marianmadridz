@@ -1068,7 +1068,6 @@ export async function cleanExpiredBookingControl() {
             const payload = readControlPayload(item);
             const payloadStatus = _safeTrim(payload.status).toUpperCase();
             const status = payloadStatus || _safeTrim(item.status).toUpperCase();
-            const statusField = payloadStatus ? "payload.status" : "status";
             const terminalAt = new Date(
                 payload.terminalAt || payload.completedAt || payload.reconciledAt || item?._updatedDate || ""
             );
@@ -1080,9 +1079,9 @@ export async function cleanExpiredBookingControl() {
                 result.skipped++;
                 continue;
             }
-            const key = [item.controlType, statusField, status].join("|");
+            const key = item.controlType;
             if (!groups.has(key)) groups.set(key, {
-                controlType: item.controlType, statusField, status, ids: [],
+                controlType: item.controlType, ids: [],
             });
             groups.get(key).ids.push(item._id);
         }
@@ -1093,7 +1092,6 @@ export async function cleanExpiredBookingControl() {
                     condition: { filter: {
                         controlType: { $eq: group.controlType },
                         _updatedDate: { $lt: cutoff },
-                        [group.statusField]: { $eq: group.status },
                     } },
                 });
                 const summary = _summarizeBulkRemove(removal);
