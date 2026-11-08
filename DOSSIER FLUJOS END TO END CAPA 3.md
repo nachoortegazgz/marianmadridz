@@ -5,6 +5,10 @@
 **Versión:** 1.0 · **Fecha:** 6 de noviembre de 2026
 **Fuentes:** Biblia SSOT v10.0, Dossier Técnico Consolidado, PTD Kit Digital, Anexo Biblia Migración, Anexo Biblia por Wix, Directrices Desarrollo Código, Documentación oficial Wix Developers (noviembre 2026), Normativa fiscal/laboral/contable española vigente
 
+> **Estado de implantación verificado — 8 de noviembre de 2026:** este documento describe la arquitectura objetivo de Capa 3; no acredita que esté desplegada. En `main` no existe `src/backend/exports/exportService.js`, no hay llamadas runtime a Resend ni los cuatro jobs específicos de exportación en `jobs.config`. Existe `verifyNightlyZClosing`, pero no genera ni envía actualmente el CSV de Cierre Z. El tenant M365, SharePoint y los flujos PA-01…PA-07 no han sido auditados; su estado queda **pendiente de verificación**, no se presume activo.
+>
+> **Disponibilidad Bookings (estado de código):** los slots y parejas duales se consultan de nuevo a Wix en cada petición; no se almacenan en caché. `DAYS_CACHE` conserva únicamente fechas disponibles/vacías durante 5 minutos. El DTO público aplica una separación mínima de 30 minutos entre inicios visibles. Las referencias a caché de slots en apartados antiguos deben entenderse como históricas, no como comportamiento vigente.
+
 ---
 
 ## ÍNDICE
@@ -48,7 +52,7 @@ Los procesos que generan datos trasladables se clasifican en tres categorías se
 | Cancelación de reserva | `cancelBooking` / webhook `booking_canceled` | `bookingId`, `status: CANCELED`, motivo | `CitasF2` + `MovimientosCaja` (rectificativo) | ✅ Sí — vía `MovimientosCaja` |
 | Confirmación de reserva | Webhook `booking_confirmed` | `bookingId`, `status: CONFIRMED` | `CitasF2` | ✅ Sí — incluido en export mensual |
 | Reprogramación | Webhook `booking_rescheduled` | `bookingId`, nuevo slot, nuevo recurso | `CitasF2` | ✅ Sí — incluido en export mensual |
-| Consulta de disponibilidad | `listAvailabilityTimeSlots` (Time Slots V2) | Slots disponibles (efímeros) | No se persiste (caché en memoria) | ❌ No — dato efímero, sin relevancia fiscal |
+| Consulta de disponibilidad | `listAvailabilityTimeSlots` (Time Slots V2) | Slots disponibles (efímeros) | No se persiste; se consulta de nuevo a Wix en cada petición (sin caché de slots) | ❌ No — dato efímero, sin relevancia fiscal |
 | Creación de reserva dual (F1+F2) | Dos llamadas `createBooking` + `pairToken` | Dos `bookingId`, `pairToken`, `bookingType` | `CitasF2` (2 registros) + `ControlOperativo` | ✅ Sí — vía export mensual `CitasF2` |
 
 **Datos que NO se trasladan de Bookings:**
