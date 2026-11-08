@@ -224,7 +224,7 @@ El proyecto corre íntegramente en la infraestructura de Wix. No es multi-tenant
 | Módulo | API objetivo | Restricción |
 | --- | --- | --- |
 | Bookings | `@wix/bookings` V2 | V1 prohibida |
-| Stores catálogo | Catalog V1 | Catalog V3 prohibido |
+| Stores catálogo | Catalog V1 | migración en pausa temporal a Catalog V3. Avisar cuando sea recomendable |
 | eCommerce | `@wix/ecom` Cart V2 | Migración Cart V2 — plazo Feb 2027 |
 | Datos / CMS | `@wix/data` | `suppressAuth` sustituido por `elevate()` |
 | Members | `@wix/members` | Migración gradual desde `wix-members-backend` |
@@ -330,7 +330,7 @@ La API Bookings V2 tiene diferencias explícitas de capitalización según el m�
 
 Estas diferencias son intencionadas en la API de Wix y deben respetarse exactamente.
 
-### Reserva simple
+### Reserva simple - Proceso alineado con flujo nativo de wix bookings
 
 1. Frontend solicita servicios y disponibilidad via webMethods públicos.
 2. Backend consulta slots nativos de Bookings (`listAvailabilityTimeSlots`, `locationType: "BUSINESS"`).
@@ -342,7 +342,7 @@ Estas diferencias son intencionadas en la API de Wix y deben respetarse exactame
 
 La disponibilidad mostrada al usuario no garantiza que el slot siga libre al confirmar. La revalidación es obligatoria en servidor.
 
-### Reserva dual con gap de exposición (F1 + F2)
+### Reserva dual con gap de exposición (F1 + F2) - proceso con algoritmo dual gestionando las 2 fases del servicio como 2 reservas simples
 
 **Prohibición absoluta**: no usar `createMultiServiceBooking`. La API nativa Multiservice exige secuencia sin ningún hueco; el gap de exposición requiere otro enfoque.
 
@@ -436,11 +436,11 @@ Los hooks `beforeUpdate` y `beforeRemove` en `MovimientosCaja`, `LibroAsientosCo
 | --- | --- | --- | --- |
 | `traceId` | `trazaId` | TEXT UUID v4 | Trazabilidad end-to-end. Obligatorio en toda escritura. |
 | `pairToken` | `parTokenReserva` | TEXT UUID v4 | Vincula citas DUAL\_F1 y DUAL\_F2. |
-| `bookingId` | `reservaIdWix` | TEXT | GUID de Wix Bookings. No equivale a `_id` CMS. |
-| `serviceId` | `servicioIdWix` | TEXT | GUID del servicio en Wix Bookings. Distinto de `catalogId`. |
-| `resourceId` | `recursoIdWix` | TEXT | GUID del recurso en Wix Bookings. Distinto de `memberId`. |
-| `memberId` | `miembroIdWix` | TEXT | GUID de usuario en Wix Members. Distinto de `resourceId`. |
-| `catalogId` | `catalogoIdServicios` | TEXT | `_id` del registro en `ServiciosCatalogo`. |
+| `bookingId` | `reservaBookingsId` | TEXT | GUID de Wix Bookings. No equivale a `_id` CMS. |
+| `serviceId` | `servicioBookingsId` | TEXT | GUID del servicio en Wix Bookings. Distinto de `catalogId`. |
+| `resourceId` | `recursoBookingsId` | TEXT | GUID del recurso en Wix Bookings. Distinto de `memberId`. |
+| `memberId` | `miembroMembersId` | TEXT | GUID de usuario en Wix Members. Distinto de `resourceId`. |
+| `catalogId` | `catalogoServiciosId` | TEXT | `_id` del registro en `ServiciosCatalogo`. |
 | `transactionId` | `transaccionId` | TEXT | Clave de idempotencia única de la transacción. |
 | `dedupeKey` | `deduplicacionClaveOperacion` | TEXT | Clave indexada para deduplicación atómica. |
 | `movementToken` | `movimientoTokenInventario` | TEXT | Clave de idempotencia en `MovimientosInventario`. |
@@ -583,7 +583,7 @@ Límites por IP/clave de solicitante, persistidos en `ControlOperativo` (`contro
 
 | Surface | Máximo | Ventana |
 | --- | --- | --- |
-| `public-booking` | 5 peticiones | 10 segundos |
+| `public-booking` | 3 peticiones | 10 segundos |
 | `reservas` | 20 peticiones | 5 segundos |
 | `availability` | 12 peticiones | 5 segundos |
 
@@ -623,7 +623,7 @@ Las colecciones `WIX_APP` son de **estricta lectura**. Prohibido ejecutar `wixDa
 
 **Bookings**: la disponibilidad mostrada al usuario no garantiza que el slot siga libre. Revalidar siempre en servidor. `resource.id` y `scheduleId` deben pasarse explícitamente al crear reservas.
 
-**Stores Catalog V1**: cualquier migración a V3 requiere ADR propio, análisis de compatibilidad con `InventarioStockVenta` y aprobación explícita. Prohibido mezclar objetos V1 y V3.
+**Stores Catalog V1**: migración a v3 temporalmente en pausa. Cualquier migración a V3 requiere ADR propio, análisis de compatibilidad con `InventarioStockVenta` y aprobación explícita. Prohibido mezclar objetos V1 y V3. Avisar cuando sea recomendable iniciar migración.
 
 **eCommerce / Cart V2**: la migración desde Checkout V1 es obligatoria antes de Feb 2027. Los pagos no confirman automáticamente una reserva; la confirmación proviene del webhook `order_payment_status_updated`.
 
@@ -734,7 +734,7 @@ Validaciones `beforeInsert` / `beforeUpdate` por colección:
 
 # DOSSIER TÉCNICO CONSOLIDADO — marianmadrid.es (continuación)
 
-A continuación se completan los capítulos 11 a 14 del dossier, alineados con la **Biblia SSOT v10.0**, el **Anexo Biblia por Wix**, las **Directrices de Desarrollo**, el **Anexo de Migración SDK** y la documentación oficial de Wix Developers consultada a fecha 5 de noviembre de 2026.
+A continuación se completan los capítulos 11 a 14 del dossier, alineados con los documentos fuente consultados.
 
 ---
 
