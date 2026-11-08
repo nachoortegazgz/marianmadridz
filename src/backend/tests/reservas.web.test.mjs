@@ -15,9 +15,8 @@ Harness notes:
   - LH-09: overrides for 'mock:@wix/bookings::availabilityTimeSlots' MUST be
     registered BEFORE importing reservas.web.js so the ESM binding captures
     the test function (dynamic named-import returns the live namespace).
-  - Module-level Maps (serviceCatalogRAM / availabilityCache) persist across
-    tests in the same process; fixtures are keyed by unique GUIDs per test to
-    avoid cross-contamination.
+  - The serviceCatalogRAM module cache persists across tests in the same
+    process; fixtures use unique GUIDs to avoid cross-contamination.
 Runs offline via tests/loader.mjs. G10 ASCII strict.
 =============================================================================
 */
@@ -793,7 +792,7 @@ test('RES-DUAL-03 simple service -> slotF2 null entries with candidates + pairTo
   assert.strictEqual(pair.serviceId, row.serviceId);
 });
 
-test('RES-DUAL-04 dual pair: exact exposure gap, same staff, DUAL_CACHE persisted (RES-18)', async () => {
+test('RES-DUAL-04 dual pair: exact exposure gap and same staff; no slot snapshot is persisted', async () => {
   resetState();
   await invalidateStaffCache();
   const st1 = guid();
@@ -814,12 +813,49 @@ test('RES-DUAL-04 dual pair: exact exposure gap, same staff, DUAL_CACHE persiste
   assert.strictEqual(p.slotF1.resourceId, st1);
   assert.strictEqual(p.slotF2.resourceId, st1, 'same-staff pairing');
   assert.strictEqual(p.slotF2.localStartDate, '2026-10-20T10:10:00');
-  const ctrl = (wixDataMock._store.get(CONTROL_COL) || []).find((r) => r.controlType === 'DUAL_CACHE');
-  assert.ok(ctrl, 'DUAL_CACHE record persisted in ControlOperativo');
-  assert.strictEqual(ctrl.dateYmd, '2026-10-20');
-  const payload = ctrl.payload;
-  assert.strictEqual(payload.linkedPhases, f2);
-  assert.strictEqual(payload.f2Start, '2026-10-20T10:10:00');
+  const slotCacheRows = (wixDataMock._store.get(CONTROL_COL) || [])
+    .filter((r) => r.controlType === 'DUAL_CACHE');
+  assert.strictEqual(slotCacheRows.length, 0, 'slot availability is not persisted in ControlOperativo');
+});
+
+test('RES-DUAL-04B customer availability returns only visible slots and persists no slot inventory', async () => {
+  resetState();
+  await invalidateStaffCache();
+  const st1 = guid();
+  const f2 = guid();
+  const row = baseServiceRow({
+    allowCombine: true,
+    linkedPhases: f2,
+    exposureDuration: 10,
+    phase2Duration: 30,
+  });
+  seedService(row);
+  seedService(baseServiceRow({ serviceId: f2, clientHidden: true }));
+  seedStaffApi([{ resourceId: st1, name: 'Ana', role: 'STYLIST' }]);
+
+  slotsState.responses.set(row.serviceId, [
+    availSlot('2026-10-20T09:00:00', '2026-10-20T10:00:00', [st1]),
+    availSlot('2026-10-20T09:15:00', '2026-10-20T10:15:00', [st1]),
+    availSlot('2026-10-20T09:30:00', '2026-10-20T10:30:00', [st1]),
+    availSlot('2026-10-20T10:00:00', '2026-10-20T11:00:00', [st1]),
+  ]);
+  slotsState.responses.set(f2, [
+    availSlot('2026-10-20T10:10:00', '2026-10-20T10:40:00', [st1]),
+    availSlot('2026-10-20T10:25:00', '2026-10-20T10:55:00', [st1]),
+    availSlot('2026-10-20T10:40:00', '2026-10-20T11:10:00', [st1]),
+    availSlot('2026-10-20T11:10:00', '2026-10-20T11:40:00', [st1]),
+  ]);
+
+  const result = await RW.getCertifiedDualSlots(row.serviceId, '', '2026-10-20');
+  assert.strictEqual(result.status, 'SUCCESS');
+  assert.deepStrictEqual(
+    result.data.map((pair) => pair.slotF1.localStartDate),
+    ['2026-10-20T09:00:00', '2026-10-20T09:30:00', '2026-10-20T10:00:00'],
+    'the customer receives the 30-minute spaced subset only'
+  );
+  const slotCacheRows = (wixDataMock._store.get(CONTROL_COL) || [])
+    .filter((record) => record.controlType === 'DUAL_CACHE');
+  assert.strictEqual(slotCacheRows.length, 0, 'no raw or complete slot inventory is persisted');
 });
 
 test('RES-DUAL-05 gap below exposure -> no pair (fail-closed empty)', async () => {
