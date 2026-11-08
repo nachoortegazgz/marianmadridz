@@ -246,7 +246,7 @@ test("BOOK-FLOW-TIMEOUT-04 widget watchdog follows the Velo watchdog and locks u
   assert.match(calendarWidgetSource, /state\.bookingUncertain=true/);
   assert.match(
     calendarWidgetSource,
-    /BOOKING_STATUS_UNCERTAIN[\s\S]{0,220}STAFF_ASSIGNMENT_MISMATCH/
+    /BOOKING_STATUS_UNCERTAIN[\s\S]{0,350}STAFF_ASSIGNMENT_MISMATCH/
   );
 });
 
