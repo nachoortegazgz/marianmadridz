@@ -672,27 +672,26 @@ const startsWithStr = (s, p) => String(s ?? '').startsWith(String(p));
 // every .eq()/wql.eq() query threw "operador no soportado bookingId" and the
 // DTO-whitelist webMethods failed. This mirrors official Wix Data API v2
 // semantics (queryItems filter accepts field:{op:value} maps directly).
-const getFieldValue = (item, field) => String(field).split('.').reduce((value, key) => value?.[key], item);
 function matchOperators(it, ops) {
   return Object.entries(ops).every(([op, arg]) => {
     switch (op) {
-      case '$eq': return getFieldValue(it, op_field) === arg;
-      case '$ne': return getFieldValue(it, op_field) !== arg;
-      case '$gt': return cmpValue(getFieldValue(it, op_field)) > cmpValue(arg);
-      case '$gte': return cmpValue(getFieldValue(it, op_field)) >= cmpValue(arg);
-      case '$lt': return cmpValue(getFieldValue(it, op_field)) < cmpValue(arg);
-      case '$lte': return cmpValue(getFieldValue(it, op_field)) <= cmpValue(arg);
-      case '$in': return Array.isArray(arg) && arg.includes(getFieldValue(it, op_field));
-      case '$nin': return Array.isArray(arg) && !arg.includes(getFieldValue(it, op_field));
+      case '$eq': return it[op_field] === arg;
+      case '$ne': return it[op_field] !== arg;
+      case '$gt': return cmpValue(it[op_field]) > cmpValue(arg);
+      case '$gte': return cmpValue(it[op_field]) >= cmpValue(arg);
+      case '$lt': return cmpValue(it[op_field]) < cmpValue(arg);
+      case '$lte': return cmpValue(it[op_field]) <= cmpValue(arg);
+      case '$in': return Array.isArray(arg) && arg.includes(it[op_field]);
+      case '$nin': return Array.isArray(arg) && !arg.includes(it[op_field]);
       // LH-05 (fix derivado de tests 2026-10-14, CRON-AUDIT-01): el SDK v2
       // real aplica $hasSome TAMBIEN a campos escalares (membresia del valor
       // en el conjunto de candidatos), no solo a arrays. El adapter legacy
       // traduce .in(field, values) a $hasSome para escalares; sin este
       // soporte escalar la query de purga devolvia 0 filas offline.
-      case '$hasSome': return Array.isArray(getFieldValue(it, op_field))
-        ? (arg || []).some((x) => getFieldValue(it, op_field).includes(x))
-        : Array.isArray(arg) && arg.includes(getFieldValue(it, op_field));
-      case '$startsWith': return startsWithStr(getFieldValue(it, op_field), arg);
+      case '$hasSome': return Array.isArray(it[op_field])
+        ? (arg || []).some((x) => it[op_field].includes(x))
+        : Array.isArray(arg) && arg.includes(it[op_field]);
+      case '$startsWith': return startsWithStr(it[op_field], arg);
       default: throw new Error('loader mock v2: operador no soportado ' + op);
     }
   });
@@ -729,7 +728,7 @@ function matchOne(it, clause) {
       return matchOperators(it, val);
     }
     // Bare equality shorthand: { fieldName: value }
-    return getFieldValue(it, key) === val;
+    return it[key] === val;
   });
 }
 
