@@ -105,16 +105,30 @@ def self_test() -> None:
 
 def run_preview() -> None:
     env = os.environ.copy()
-    # GitHub Actions sets CI=true. Remove it only for the interactive Wix CLI
-    # child; the runner and the rest of the workflow remain in CI.
+    # Wix CLI for Sites renders its interactive selector only when the CLI
+    # process does not detect a CI/non-interactive environment. Keep GitHub
+    # Actions enabled for the runner, but remove its markers from this child.
     env.pop("CI", None)
+    env["GITHUB_ACTIONS"] = "false"
+    for key in (
+        "GITHUB_WORKFLOW",
+        "GITHUB_RUN_ID",
+        "GITHUB_JOB",
+        "GITHUB_ACTION",
+        "GITHUB_ACTION_PATH",
+        "GITHUB_STEP_SUMMARY",
+    ):
+        env.pop(key, None)
     env["TERM"] = "xterm-256color"
+    env["FORCE_COLOR"] = "1"
     env["COLUMNS"] = str(TERMINAL_COLUMNS)
     env["LINES"] = str(TERMINAL_ROWS)
 
     pid, master_fd = pty.fork()
     if pid == 0:
-        os.execvpe("npm", ["npm", "run", "wix", "preview"], env)
+        # Invoke the pinned global CLI directly. Avoid npm's script wrapper
+        # between the PTY and the interactive terminal application.
+        os.execvpe("wix", ["wix", "preview"], env)
 
     set_terminal_size(master_fd)
     output = bytearray()
