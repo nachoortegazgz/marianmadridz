@@ -43,6 +43,7 @@ import {
     getItem as dalGet,
     insertItem as dalInsert,
     updateItem as dalUpdate,
+    bulkPatchItems,
     removeById as dalRemove
 } from "backend/dataAccess";
 import { getStaffScheduleId } from "backend/staff";
@@ -830,13 +831,16 @@ export function _buildSlotLockControl(slotClave, lockOwnerId, ttlMs, existing, s
             now.getTime() + (Number.isFinite(ttl) && ttl > 0 ? ttl : MUTEX_TTL_MS)
         ),
         heartbeatAt: now,
+        version: 0,
         // lockOwnerId, lockToken and acquiredAt are not physical columns in
         // ControlOperativo; keep lock-specific state inside its OBJECT payload.
         payload: {
             ...existingPayload,
             lockOwnerId: String(lockOwnerId || ""),
             lockToken,
-            acquiredAt: existingPayload.acquiredAt || existing?.acquiredAt || now,
+            acquiredAt: _safeTrim(lockTokenOverride)
+                ? now
+                : existingPayload.acquiredAt || existing?.acquiredAt || now,
             lockStatus: "ACTIVE",
         },
         traceId: _safeTrim(existing && existing.traceId) || makeTraceId("lock"),
@@ -870,6 +874,65 @@ function _getLockToken(lock) {
     return _safeTrim(payload.lockToken || lock.lockToken);
 }
 
+async function _patchSlotLockConditionally(existing, {
+    expiresAt,
+    heartbeatAt,
+    payload,
+    serviceId,
+}) {
+    if (!existing?._id || !existing?.expiresAt) {
+        return { ok: false, reason: ERROR_CODES.LOCK_CONFLICT };
+    }
+
+    const currentVersion = Number(existing.version);
+    const hasVersion = Number.isInteger(currentVersion) && currentVersion >= 0;
+    const conditionFilter = hasVersion
+        ? { version: { $eq: currentVersion } }
+        : { expiresAt: { $eq: existing.expiresAt } };
+
+    const modifications = [
+        { fieldPath: "expiresAt", action: "SET_FIELD", value: expiresAt },
+        { fieldPath: "heartbeatAt", action: "SET_FIELD", value: heartbeatAt },
+        { fieldPath: "payload", action: "SET_FIELD", value: payload },
+        {
+            fieldPath: "version",
+            action: hasVersion ? "INCREMENT_FIELD" : "SET_FIELD",
+            value: 1,
+        },
+    ];
+    if (serviceId) {
+        modifications.push({
+            fieldPath: "serviceId",
+            action: "SET_FIELD",
+            value: serviceId,
+        });
+    }
+
+    const result = await bulkPatchItems(
+        LOCKS_COL,
+        [existing._id],
+        [modifications],
+        { condition: { filter: conditionFilter } }
+    );
+
+    if (Array.isArray(result?.errors) && result.errors.length > 0) {
+        const missing = result.errors.every((entry) => entry?.code === "WDE0073");
+        return {
+            ok: false,
+            reason: missing ? "LOCK_NOT_FOUND" : ERROR_CODES.LOCK_RENEWAL_FAILED,
+        };
+    }
+    if (!Array.isArray(result?.updatedItemIds) ||
+        !result.updatedItemIds.includes(existing._id)) {
+        return { ok: false, reason: ERROR_CODES.LOCK_CONFLICT };
+    }
+
+    return {
+        ok: true,
+        newVersion: hasVersion ? currentVersion + 1 : 1,
+    };
+}
+
 export async function _lockSlotKeyOrFail(slotClave, lockOwnerId, ttlMs, serviceId) {
     const k = _safeTrim(slotClave);
     const owner = _safeTrim(lockOwnerId);
@@ -887,7 +950,7 @@ export async function _lockSlotKeyOrFail(slotClave, lockOwnerId, ttlMs, serviceI
         return {
             ok: true,
             acquired: true,
-            revision: newLock._revision,
+            version: newLock.version,
             lockToken: _getLockToken(newLock),
         };
     } catch (error) {
@@ -914,7 +977,7 @@ export async function _lockSlotKeyOrFail(slotClave, lockOwnerId, ttlMs, serviceI
         if (currentOwner === owner && !expired) {
             const existingToken = _getLockToken(existing);
             const renewed = await _renewLock(k, owner, ttlMs, {
-                expectedRevision: existing._revision,
+                expectedVersion: existing.version,
                 expectedLockToken: existingToken,
                 serviceId: service,
             });
@@ -922,7 +985,7 @@ export async function _lockSlotKeyOrFail(slotClave, lockOwnerId, ttlMs, serviceI
                 ? {
                     ok: true,
                     renewed: true,
-                    revision: renewed.newRevision,
+                    version: renewed.newVersion,
                     lockToken: renewed.lockToken,
                 }
                 : { ok: false, message: renewed.reason || ERROR_CODES.LOCK_RENEWAL_FAILED };
@@ -935,26 +998,33 @@ export async function _lockSlotKeyOrFail(slotClave, lockOwnerId, ttlMs, serviceI
                     lockId: existing._id,
                 });
             }
+            const reclaimedToken = _generateUUID();
+            const reclaimedPayload = {
+                ..._readControlPayload(existing),
+                lockOwnerId: owner,
+                lockToken: reclaimedToken,
+                acquiredAt: new Date(),
+                lockStatus: "ACTIVE",
+            };
             try {
-                // A reclaimed lease is a new ownership generation: rotate its
-                // fencing token so the previous holder can no longer renew/unlock.
-                const reclaimedToken = _generateUUID();
-                const updated = await elevatedUpdate(
-                    LOCKS_COL,
-                    _buildSlotLockControl(k, owner, ttlMs, existing, service, reclaimedToken)
-                );
+                const reclaimed = await _patchSlotLockConditionally(existing, {
+                    expiresAt: new Date(Date.now() + (Number(ttlMs) > 0 ? Number(ttlMs) : MUTEX_TTL_MS)),
+                    heartbeatAt: new Date(),
+                    payload: reclaimedPayload,
+                    serviceId: service,
+                });
+                if (!reclaimed.ok) {
+                    return { ok: false, message: reclaimed.reason || ERROR_CODES.LOCK_RACE };
+                }
                 return {
                     ok: true,
                     acquired: true,
                     reclaimed: true,
-                    revision: updated._revision,
-                    lockToken: _getLockToken(updated),
+                    version: reclaimed.newVersion,
+                    lockToken: reclaimedToken,
                 };
             } catch (updateError) {
-                if (_isRevisionConflictError(updateError)) {
-                    return { ok: false, message: ERROR_CODES.LOCK_RACE };
-                }
-                log.error("_lockSlotKeyOrFail: update failed", {
+                log.error("_lockSlotKeyOrFail: conditional reclaim failed", {
                     slotClave: k,
                     error: updateError && updateError.message,
                 });
