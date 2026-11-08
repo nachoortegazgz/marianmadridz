@@ -1,8 +1,15 @@
 /*
 MODULE: backend/booking/bookingSaga.js
-VERSION: v5020-CONTROL-SERVICE-ID
-BASE: v5018-SDK-BOOKED-SLOT-SHAPE
+VERSION: v5021-UNCERTAIN-WRITER-RESULT
+BASE: v5020-CONTROL-SERVICE-ID
 RESPONSIBILITY: Orquestador transaccional de reservas (simple y dual con gap).
+
+CORRECCIONES v5021:
+  SAGA-TIMEOUT-01 (P0): cuando normalizeError contiene uncertainStep (timeout
+    o resultado incierto del Writer), executeBookingSaga devuelve el código
+    público BOOKING_STATUS_UNCERTAIN en vez de BOOKING_CREATION_FAILED. Evita
+    que el frontend habilite un reintento normal cuando la escritura Wix pudo
+    completarse y el resultado necesita reconciliación.
 
 CORRECCIONES v5019 (alineadas con bookingCore v5021 y doc oficial Wix Bookings V2):
   SAGA-V2-ID-01 (P0): _resolveBookingLocation devuelve
