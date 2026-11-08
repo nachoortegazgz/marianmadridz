@@ -1744,14 +1744,15 @@ export const rescheduleDualBookings = webMethod(
             const f2ServiceId = _safeTrim(f2Cita?.[FIELD_SERVICE_ID] || f2Cita?.serviceId || "");
             const f1ResourceId = _safeTrim(f1Cita?.[FIELD_RESOURCE_ID] || f1Cita?.resourceId || "");
             const f2ResourceId = _safeTrim(f2Cita?.[FIELD_RESOURCE_ID] || f2Cita?.resourceId || "");
-            if (!f1ResourceId || (f2ResourceId && f1ResourceId !== f2ResourceId)) {
+            if (f1ResourceId && f2ResourceId && f1ResourceId !== f2ResourceId) {
                 throw createBookingError(
                     ERROR_CODES.INVALID_EMPLOYEE,
                     "Dual phases must use the same valid staff resource.",
                     { traceId, pairToken }
                 );
             }
-            const resourceId = f1ResourceId || f2ResourceId;
+            const resourceHint = f1ResourceId || f2ResourceId ||
+                _safeTrim(payload?.resourceId || "") || "AUTO";
             const operationId = _safeTrim(payload?.operationId || "");
             if (operationId && !_looksLikeGuid(operationId)) {
                 throw createBookingError(
@@ -1768,7 +1769,7 @@ export const rescheduleDualBookings = webMethod(
                 f2BookingId,
                 f1ServiceId,
                 f2ServiceId,
-                resourceId,
+                resourceId: resourceHint,
                 targetF1Start: slotF1Input.localStartDate,
                 targetF1End: slotF1Input.localEndDate,
                 targetF2Start: slotF2Input.localStartDate,
@@ -1800,7 +1801,8 @@ export const rescheduleDualBookings = webMethod(
                 slotF2Input,
                 traceId
             );
-            if (_safeTrim(validation.selectedResourceId) !== resourceId) {
+            const resourceId = _safeTrim(validation.selectedResourceId);
+            if (!resourceId || (resourceHint !== "AUTO" && resourceId !== resourceHint)) {
                 throw createBookingError(
                     ERROR_CODES.INVALID_EMPLOYEE,
                     "The selected resource changed during dual reschedule validation.",
@@ -1917,8 +1919,16 @@ export const rescheduleDualBookings = webMethod(
                         slotStart: originalF2Slot.slotStart?.toISOString() || null,
                         slotEnd: originalF2Slot.slotEnd?.toISOString() || null,
                     },
-                    targetF1: slotF1Input,
-                    targetF2: dualF2Slot,
+                    targetF1: {
+                        serviceId: f1ServiceId,
+                        localStartDate: slotF1Input.localStartDate,
+                        localEndDate: slotF1Input.localEndDate,
+                    },
+                    targetF2: {
+                        serviceId: _safeTrim(dualF2Slot.serviceId),
+                        localStartDate: dualF2Slot.localStartDate,
+                        localEndDate: dualF2Slot.localEndDate,
+                    },
                     selectedResourceId: resourceId,
                     f1BookingId,
                     f2BookingId,
@@ -2108,7 +2118,7 @@ export const rescheduleDualBookings = webMethod(
                 error: null,
             };
         } catch (error) {
-            if (journal && !isDualRescheduleTerminalStatus(journal.payload?.status)) {
+            if (journal && lockHeartbeat && !isDualRescheduleTerminalStatus(journal.payload?.status)) {
                 journal = await _patchDualRescheduleJournal(journal, {
                     status: DUAL_RESCHEDULE_STATUS.REPAIR_REQUIRED,
                     repairReason: "UNHANDLED_DUAL_RESCHEDULE_FAILURE",
