@@ -224,9 +224,9 @@ test('CRON-AUDIT-01 cleanAuditLogs purges only terminal rows past retention', as
   const old = new Date(Date.now() - 120 * 24 * 60 * 60 * 1000);
   const recent = new Date();
   const C = IC.OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
-  // [CRON-AUDIT-01] Semantica real de ciclo de vida en ControlOperativo:
-  // las ALERT nacen OPEN (vivas) y solo son purgables cuando llegan a la
-  // forma terminal CLOSED/RESOLVED. Se siembra por tanto:
+  // [CRON-AUDIT-01] ALERT operativas nacen OPEN; logs INFO/WARNING se
+  // almacenan como COMPLETED. Solo estados terminales con retencion vencida
+  // son purgables. Se siembra por tanto:
   //  a1 ALERT CLOSED antigua -> purgable
   //  a3 ALERT RESOLVED antigua -> purgable
   //  a5 ALERT COMPLETED antigua (INFO/WARNING audit) -> purgable
