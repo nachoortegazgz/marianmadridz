@@ -2039,6 +2039,7 @@ export const rescheduleDualBookings = webMethod(
                         localEndDate: dualF2Slot.localEndDate,
                     },
                     selectedResourceId: resourceId,
+                    operationId: journalIdentity.canonical.operationId,
                     gapMinutes: validation.gapMinutes,
                     f1BookingId,
                     f2BookingId,
@@ -2079,6 +2080,12 @@ export const rescheduleDualBookings = webMethod(
                     lastError: f1Error?.message || String(f1Error),
                     lastErrorCode: f1Error?.code || null,
                 }, traceId);
+                await _markDualPairInconsistent(
+                    pairToken,
+                    "DUAL_RESCHEDULE_F1_RESULT_UNCERTAIN",
+                    traceId,
+                    f1Error
+                );
                 throw f1Error;
             }
 
