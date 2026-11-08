@@ -11,9 +11,8 @@ CORRECTIONS: C-01 (sin active), C-03/C-04 (memberId), BUG-04 FIX (campos
 
 import { query as dalQuery, insertItem as insert } from "backend/dataAccess";
 import { webMethod, Permissions } from "wix-web-module";
-/* HOR-R3 (R0-02): currentMember.getMember() sustituye a
- * members.getCurrentMember() (API v2 canonica, shape defensivo). */
-import { currentMember } from "@wix/members";
+/* @wix/members backend SDK: Get My Member devuelve el miembro actual. */
+import { members } from "@wix/members";
 
 import {
     BUSINESS_COLLECTIONS,
@@ -84,9 +83,8 @@ function _getMadridTime(d) {
 
 async function _resolveStaffContext(traceId) {
     try {
-        /* HOR-R3 (R0-02): currentMember.getMember() con shape defensivo
-         * (SDK v2 envuelve en {member}). */
-        const response = await currentMember.getMember();
+        /* @wix/members backend SDK: respuesta de Get My Member. */
+        const response = await members.getCurrentMember();
         const member = response?.member || response;
         if (!member || member.status === "ERROR") return null;
 
