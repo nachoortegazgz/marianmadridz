@@ -177,7 +177,7 @@ function elevatedQueryFind(collection, queryFn) {
 // =============================================================================
 // SAGA-37: HEARTBEAT
 // =============================================================================
-function _startLockHeartbeat({
+export function _startLockHeartbeat({
     lockKeys,
     lockOwnerId,
     lockTokens,
