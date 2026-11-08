@@ -100,7 +100,7 @@ def self_test() -> None:
     )
     assert publication_blocker(editor_warning)
     assert not confirmation_ready(
-        "Preview: https://wix.to/QA123\\n" + editor_warning
+        "Preview: https://wix.to/QA123\n" + editor_warning
     )
     pipeline_error = "Code: PUBLISH_PIPELINE_TASK_NOT_FOUND"
     assert publication_blocker(pipeline_error)
