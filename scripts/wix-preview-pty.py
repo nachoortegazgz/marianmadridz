@@ -53,7 +53,7 @@ def preview_url(text: str) -> str | None:
 def preview_environment(source: dict[str, str]) -> dict[str, str]:
     """Build a child-only environment that permits Wix's interactive PTY."""
     env = source.copy()
-    env.pop("CI", None)
+    env["CI"] = "false"
     env["GITHUB_ACTIONS"] = "false"
     for key in (
         "GITHUB_WORKFLOW",
@@ -132,7 +132,7 @@ def self_test() -> None:
         "GITHUB_STEP_SUMMARY": "/tmp/summary",
         "PATH": "/usr/bin",
     })
-    assert "CI" not in child_env
+    assert child_env["CI"] == "false"
     assert child_env["GITHUB_ACTIONS"] == "false"
     assert all(
         key not in child_env
@@ -155,13 +155,15 @@ def run_preview() -> None:
     # receives a terminal-capable environment.
     env = preview_environment(os.environ)
 
+    window = struct.pack("HHHH", TERMINAL_ROWS, TERMINAL_COLUMNS, 0, 0)
     pid, master_fd = pty.fork()
     if pid == 0:
-        # Invoke the pinned global CLI directly. Avoid npm's script wrapper
-        # between the PTY and the interactive terminal application.
+        # Match the controlling-TTY setup proven by the isolated Wix CLI run.
+        fcntl.ioctl(0, termios.TIOCSWINSZ, window)
         os.execvpe("wix", ["wix", "preview"], env)
 
     set_terminal_size(master_fd)
+    print("[preview] Launching pinned Wix CLI in a controlling PTY.", flush=True)
     output = bytearray()
     selected_local = False
     preview_success = False
