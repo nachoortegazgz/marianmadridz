@@ -106,9 +106,9 @@ export const checkCajeroAccess = webMethod(
 // =============================================================================
 // BLOQUE 5 - CHECK STAFF COLLABORATOR ACCESS (CONTRATO ADMINISTRACION)
 // Devuelve { isMarianManager, isAdmin, isCajero }.
-// isMarianManager: miembro autenticado cuyo contactId coincide con
-// la identidad Wix conectada del resourceId canonico de Marian, resuelto
-// via backend/staff.js. Fail-closed: cualquier duda deniega.
+// isMarianManager: miembro autenticado cuyo contactId coincide con la
+// identidad Wix conectada del recurso Marian en Bookings Staff API.
+// Fail-closed: cualquier duda deniega.
 // =============================================================================
 
 /* R2/DUP-03: constante local _MARIAN_RESOURCE_ID eliminada. La identidad
@@ -116,20 +116,21 @@ export const checkCajeroAccess = webMethod(
  * findStaffByResourceId). */
 async function _isMarianManagerIdentity(traceId) {
     try {
-        /* @wix/members backend SDK: Get My Member devuelve el miembro actual. */
-        const response = await members.getCurrentMember().catch(() => null);
-        const member = response?.member || response;
-        const memberContactId = String(member?.contactId || "").trim().toLowerCase();
+        /* @wix/members backend: Get My Member devuelve el Member directamente. */
+        const member = await members.getCurrentMember().catch(() => null);
+        const contactId = String(member?.contactId || "").trim();
 
-        if (!memberContactId) return false;
+        if (!contactId) {
+            return false;
+        }
 
-        /* Bookings Staff API expone el vínculo de identidad mediante
-         * associatedWixIdentity.identificationData.contactId. El normalizador
-         * staff.js solo publica contactId cuando connection.status=CONNECTED.
-         * No comparar email: no forma parte del contrato normalizado. */
+        /* La identidad normalizada de Bookings Staff expone contactId cuando
+         * la cuenta Wix está conectada. No comparar email: no forma parte del
+         * contrato normalizado de staff.js. Fail-closed ante cualquier duda. */
         const marian = await findMarianStaff(traceId);
-        const marianContactId = String(marian?.contactId || "").trim().toLowerCase();
-        return Boolean(marianContactId && marianContactId === memberContactId);
+        if (!marian) return false;
+        const marianContactId = String(marian.contactId || "").trim();
+        return Boolean(marianContactId && marianContactId === contactId);
     } catch (error) {
         return false;
     }
