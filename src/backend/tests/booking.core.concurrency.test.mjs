@@ -199,6 +199,30 @@ test('BCORE-LOCK-03B renewal requires matching owner, fencing token and CAS vers
   assert.strictEqual(row.version, renewed.newVersion);
 });
 
+test('BCORE-LOCK-03C concurrent renewals from one CAS version allow only one writer', async () => {
+  wixDataMock._reset();
+  const key = BC.generateSlotKey(SVC, RES_A, new Date('2026-10-15T08:00:00Z'), new Date('2026-10-15T09:00:00Z'));
+  const acquired = await BC._lockSlotKeyOrFail(key, 'owner-1', 60000, SVC);
+
+  const attempts = await Promise.all([
+    BC._renewLock(key, 'owner-1', 60000, {
+      expectedVersion: acquired.version,
+      expectedLockToken: acquired.lockToken,
+      serviceId: SVC,
+    }),
+    BC._renewLock(key, 'owner-1', 60000, {
+      expectedVersion: acquired.version,
+      expectedLockToken: acquired.lockToken,
+      serviceId: SVC,
+    }),
+  ]);
+
+  assert.strictEqual(attempts.filter((result) => result.ok).length, 1);
+  assert.strictEqual(attempts.filter((result) => !result.ok).length, 1);
+  const row = (wixDataMock._store.get(CONTROL) || [])[0];
+  assert.strictEqual(row.version, acquired.version + 1);
+});
+
 test('BCORE-LOCK-05 invalid slot key or empty owner rejected without DB touch', async () => {
   wixDataMock._reset();
   const before = (wixDataMock._calls || []).length;
