@@ -1,1 +1,3 @@
-One-time prompt-aware PTY retry for production publication through PR #167.
+One-time production publication trigger after PR #183 merge.
+Merged main commit: 7609f1bf2ffc63321c7e06d86a91cac5f1dbcb5c
+Purpose: publish ControlOperativo cron retention hardening to Marian Madrid Wix site.
