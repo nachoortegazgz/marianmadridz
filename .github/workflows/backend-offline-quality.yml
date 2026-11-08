@@ -15,9 +15,9 @@ concurrency:
 
 jobs:
   offline-quality:
-    name: Offline regression, SDK contract and lint
+    name: Layer 1 and 2 QA, offline regression, SDK contract and lint
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 35
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -30,6 +30,12 @@ jobs:
 
       - name: Install locked dependencies without lifecycle scripts
         run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Run Layer 1 QA simulation
+        run: npm run test:layer1
+
+      - name: Run Layer 2 QA simulation
+        run: npm run test:layer2
 
       - name: Run complete offline regression suite
         run: npm test
