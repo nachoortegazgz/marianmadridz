@@ -1,3 +1,4 @@
-One-time production publication trigger after PR #183 merge.
-Merged main commit: 7609f1bf2ffc63321c7e06d86a91cac5f1dbcb5c
-Purpose: publish ControlOperativo cron retention hardening to Marian Madrid Wix site.
+One-time production publication trigger after PR #183 and PR #185 merge.
+Merged main commit: c6a33ce3625a9714ebdcef8f29217fd9a33f9096
+Scope: Capa 1 and Capa 2 codebase, including ControlOperativo retention hardening and Wix CLI PTY publish controller.
+Purpose: publish latest main to Marian Madrid Wix site after full CI gates.
