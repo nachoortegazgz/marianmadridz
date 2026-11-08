@@ -1,7 +1,13 @@
 /**
  * MODULE: pages/calendario-2.js
- * VERSION: v5027-HARDENED-AUTO-STAFF-DTO-AUTOSEL
- * BASE: v5026-HARDENED-AUTO-STAFF-DTO-AUTOSEL
+ * VERSION: v5028-DUAL-BOOKING-TIMEOUT-FACTORY
+ * BASE: v5027-HARDENED-AUTO-STAFF-DTO-AUTOSEL
+ *
+ * CORRECCIONES v5028:
+ *   - BOOK-TIMEOUT-01 (P1): processDualBooking se entrega a withTimeout como
+ *     factory, no como promesa ya iniciada. El watchdog queda armado antes de
+ *     invocar el WebMethod. El timeout sigue sin cancelar la operación remota;
+ *     se conserva BOOKING_STATUS_UNCERTAIN y la prohibición de reintento ciego.
  *
  * CORRECCIONES v5027:
  *   - LIGHTBOX-03 (P2): lightboxBooking incluye `fecha`, `hora` y `horaF2`
@@ -1540,7 +1546,7 @@ async function handleBooking(
 
     try {
         const result = await withTimeout(
-            processDualBooking(requestPayload),
+            () => processDualBooking(requestPayload),
             120000,
             "processDualBooking"
         );
