@@ -2039,6 +2039,7 @@ export const rescheduleDualBookings = webMethod(
                         localEndDate: dualF2Slot.localEndDate,
                     },
                     selectedResourceId: resourceId,
+                    gapMinutes: validation.gapMinutes,
                     f1BookingId,
                     f2BookingId,
                 }
@@ -2112,58 +2113,18 @@ export const rescheduleDualBookings = webMethod(
                     },
                 }, traceId);
             } catch (f2Error) {
-                if (f2Error?.code === "TIMEOUT") {
-                    journal = await _patchDualRescheduleJournal(journal, {
-                        status: DUAL_RESCHEDULE_STATUS.REPAIR_REQUIRED,
-                        repairReason: "F2_NATIVE_RESULT_UNCERTAIN_NO_AUTOMATIC_ROLLBACK",
-                        lastError: f2Error?.message || String(f2Error),
-                        lastErrorCode: f2Error?.code || null,
-                    }, traceId);
-                    throw f2Error;
-                }
-
-                try {
-                    lockHeartbeat.assertHealthy();
-                    journal = await _patchDualRescheduleJournal(journal, {
-                        status: DUAL_RESCHEDULE_STATUS.COMPENSATING,
-                        compensationStartedAt: new Date().toISOString(),
-                    }, traceId);
-
-                    const liveF1Revision = await _fetchLiveRevision(f1Result.bookingId, f1Cita);
-                    if (!liveF1Revision) {
-                        throw new Error("Cannot obtain live revision for F1 rollback");
-                    }
-                    const rollbackResult = await _rescheduleBookingNative(
-                        { ...f1Cita, revision: liveF1Revision },
-                        {
-                            localStartDate: getMadridLocalStringNoZ(originalF1Slot.slotStart),
-                            localEndDate: getMadridLocalStringNoZ(originalF1Slot.slotEnd),
-                            serviceId: f1ServiceId,
-                        },
-                        traceId
-                    );
-                    journal = await _patchDualRescheduleJournal(journal, {
-                        status: DUAL_RESCHEDULE_STATUS.COMPENSATED,
-                        compensatedAt: new Date().toISOString(),
-                        compensationResult: {
-                            bookingId: rollbackResult.bookingId,
-                            startUtc: rollbackResult.startUtc?.toISOString?.() || null,
-                            endUtc: rollbackResult.endUtc?.toISOString?.() || null,
-                        },
-                    }, traceId);
-                } catch (rollbackError) {
-                    journal = await _patchDualRescheduleJournal(journal, {
-                        status: DUAL_RESCHEDULE_STATUS.REPAIR_REQUIRED,
-                        repairReason: "F2_FAILED_AND_F1_ROLLBACK_FAILED",
-                        lastError: rollbackError?.message || String(rollbackError),
-                    }, traceId).catch(() => journal);
-                    await _markDualPairInconsistent(
-                        pairToken,
-                        "DUAL_RESCHEDULE_ROLLBACK_FAILED",
-                        traceId,
-                        rollbackError
-                    );
-                }
+                journal = await _patchDualRescheduleJournal(journal, {
+                    status: DUAL_RESCHEDULE_STATUS.REPAIR_REQUIRED,
+                    repairReason: "F2_NATIVE_RESULT_UNCERTAIN_NO_AUTOMATIC_ROLLBACK",
+                    lastError: f2Error?.message || String(f2Error),
+                    lastErrorCode: f2Error?.code || null,
+                }, traceId).catch(() => journal);
+                await _markDualPairInconsistent(
+                    pairToken,
+                    "DUAL_RESCHEDULE_F2_RESULT_UNCERTAIN",
+                    traceId,
+                    f2Error
+                );
                 throw f2Error;
             }
 
