@@ -47,6 +47,10 @@ def set_terminal_size(fd: int) -> None:
     )
 
 
+def confirmation_ready(text: str) -> bool:
+    return bool(PREVIEW_URL_RE.search(text) and CONFIRM_RE.search(text))
+
+
 def self_test() -> None:
     selection = clean_output(
         "What would you like to publish?\n❯ Latest commit from origin/main\n  Local code"
@@ -59,10 +63,10 @@ def self_test() -> None:
         "Your site has been published: https://www.marianmadrid.es/"
     )
     assert SELECTION_RE.search(selection) and LATEST_REMOTE_RE.search(selection)
-    assert PREVIEW_URL_RE.search(confirmation) and CONFIRM_RE.search(confirmation)
+    assert confirmation_ready(confirmation)
     assert SUCCESS_RE.search(success) and SITE_DOMAIN in success.lower()
     # Guard: never confirm a publish from a prompt without the preview URL.
-    assert not (PREVIEW_URL_RE.search("Press y to publish") and CONFIRM_RE.search("Press y to publish"))
+    assert not confirmation_ready("Press y to publish")
     print("Wix publish PTY controller self-test: PASS")
 
 
@@ -144,8 +148,7 @@ def run_publish() -> None:
                         if (
                             selected_remote
                             and not confirmed_publish
-                            and PREVIEW_URL_RE.search(text)
-                            and CONFIRM_RE.search(text)
+                            and confirmation_ready(text)
                         ):
                             os.write(master_fd, b"y")
                             confirmed_publish = True
