@@ -106,10 +106,9 @@ export const checkCajeroAccess = webMethod(
 // =============================================================================
 // BLOQUE 5 - CHECK STAFF COLLABORATOR ACCESS (CONTRATO ADMINISTRACION)
 // Devuelve { isMarianManager, isAdmin, isCajero }.
-// isMarianManager: miembro autenticado cuyo email coincide con el staff
-// resuelto via backend/staff.js para MARIAN_RESOURCE_ID (Bookings Staff
-// API; R2/DUP-03: ya no existe MapaStaff). Fail-closed: cualquier duda
-// deniega.
+// isMarianManager: miembro autenticado cuyo contactId coincide con
+// la identidad Wix conectada del resourceId canonico de Marian, resuelto
+// via backend/staff.js. Fail-closed: cualquier duda deniega.
 // =============================================================================
 
 /* R2/DUP-03: constante local _MARIAN_RESOURCE_ID eliminada. La identidad
@@ -119,24 +118,18 @@ async function _isMarianManagerIdentity(traceId) {
     try {
         /* @wix/members backend SDK: Get My Member devuelve el miembro actual. */
         const response = await members.getCurrentMember().catch(() => null);
-        const contact = response?.member || response;
+        const member = response?.member || response;
+        const memberContactId = String(member?.contactId || "").trim().toLowerCase();
 
-        const email = String(
-            contact?.loginEmail || contact?.contactDetails?.email || contact?.email || ""
-        ).trim().toLowerCase();
+        if (!memberContactId) return false;
 
-        if (!email) {
-            return false;
-        }
-
-        /* R2/DUP-03: sin query a "MapaStaff" ni suppressAuth. La identidad
-         * Marian se resuelve via backend/staff.js (Bookings Staff API):
-         * el resourceId de Marian debe existir y su email coincidir con el
-         * miembro autenticado. Fail-closed ante cualquier error. */
+        /* Bookings Staff API expone el vínculo de identidad mediante
+         * associatedWixIdentity.identificationData.contactId. El normalizador
+         * staff.js solo publica contactId cuando connection.status=CONNECTED.
+         * No comparar email: no forma parte del contrato normalizado. */
         const marian = await findMarianStaff(traceId);
-        if (!marian) return false;
-        const staffEmail = String(marian.email || "").trim().toLowerCase();
-        return Boolean(staffEmail && staffEmail === email);
+        const marianContactId = String(marian?.contactId || "").trim().toLowerCase();
+        return Boolean(marianContactId && marianContactId === memberContactId);
     } catch (error) {
         return false;
     }
