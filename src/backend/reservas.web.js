@@ -1635,9 +1635,8 @@ export async function _getCertifiedDualSlotsInternal(serviceId, resourceId, date
 
     /* DUAL-PERF-01:
        Antes se consultaba disponibilidad de F2 dentro del bucle de cada slot F1
-       y de cada profesional, con skipCache=true. Una jornada con N slots y M
-       profesionales podía disparar N×M llamadas secuenciales a Wix y superar
-       el timeout de 59 s del webMethod.
+       y de cada profesional. Una jornada con N slots y M profesionales podía
+       disparar N×M llamadas secuenciales a Wix y superar el timeout de 59 s del webMethod.
        Ahora se consulta F1 y F2 una sola vez, en paralelo, y se indexa F2 por
        hora local. La validación de gap exacto y mismo profesional se mantiene. */
     const availabilityStartedAt = Date.now();
