@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
 import { createWidgetBridge, PROTOCOL_UI, MESSAGE_TYPES } from "../../public/widgetBridge.js";
-import { _executeWithRetry } from "../../public/mmUtils.js";
+import { _executeWithRetry, withTimeout } from "../../public/mmUtils.js";
 
 const calendarUrl = new URL("../../pages/Calendario%20de%20reservas%202.q39h6.js", import.meta.url);
 const serviceUrl = new URL("../../pages/Pagina%20de%20servicio%202.xnfr4.js", import.meta.url);
@@ -216,6 +216,38 @@ test("BOOK-FLOW-TIMEOUT-02 dual booking side effect is passed to timeout as a fa
     /withTimeout\(\s*processDualBooking\(requestPayload\)/
   );
   assert.match(calendarSource, /isTimeout\s*\?\s*"BOOKING_STATUS_UNCERTAIN"/);
+});
+
+test("BOOK-FLOW-TIMEOUT-03 withTimeout invokes a factory asynchronously and timeout does not cancel the underlying work", async () => {
+  let started = false;
+  let completed = false;
+  const operation = withTimeout(() => {
+    started = true;
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        completed = true;
+        resolve("late-result");
+      }, 25);
+    });
+  }, 1, "factory-timeout");
+
+  assert.equal(started, false, "factory must not start before the watchdog is established");
+  await assert.rejects(operation, (error) => error?.code === "TIMEOUT");
+  await new Promise((resolve) => setTimeout(resolve, 35));
+  assert.equal(started, true);
+  assert.equal(completed, true, "timeout rejects the waiter but does not cancel the remote operation");
+});
+
+test("BOOK-FLOW-TIMEOUT-04 widget watchdog follows the Velo watchdog and locks uncertain outcomes", () => {
+  assert.match(calendarWidgetSource, /bookingTimeoutMs:150000/);
+  assert.match(calendarSource, /120000,\s*"processDualBooking"/);
+  assert.match(calendarWidgetSource, /bookingUncertain:false/);
+  assert.match(calendarWidgetSource, /!state\.bookingUncertain/);
+  assert.match(calendarWidgetSource, /state\.bookingUncertain=true/);
+  assert.match(
+    calendarWidgetSource,
+    /BOOKING_STATUS_UNCERTAIN[\s\S]{0,220}STAFF_ASSIGNMENT_MISMATCH/
+  );
 });
 
 test("BOOK-FLOW-AVAIL-01 availability reads use three attempts while booking side effects are not blindly retried in the page", () => {
