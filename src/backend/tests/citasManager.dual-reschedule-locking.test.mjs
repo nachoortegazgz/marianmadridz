@@ -14,12 +14,13 @@ test('CM-DUAL-RESCHEDULE-LOCK-01 locks original and target F1/F2 intervals befor
   assert.notEqual(start, -1, 'dual reschedule webMethod must exist');
   assert.match(source, /generateSlotKey,\s*_lockSlotKeyOrFail,\s*_unlockSlotKey/);
   const lockPhase = handler.indexOf('const lockCandidates = [');
-  const journal = handler.indexOf('const journalDedupeKey =');
-  const nativeF1 = handler.indexOf('const f1Result = await _rescheduleBookingNative');
-  assert.ok(lockPhase >= 0 && journal > lockPhase && nativeF1 > journal,
-    'locks must be acquired before journaled native reschedule');
-  assert.match(handler.slice(lockPhase, journal), /originalF1\.slotStart/);
-  assert.match(handler.slice(lockPhase, journal), /originalF2\.slotStart/);
+  const lockAcquire = handler.indexOf('_lockSlotKeyOrFail(', lockPhase);
+  const journal = handler.indexOf('const createdJournal = await _createDualRescheduleJournal');
+  const nativeF1 = handler.indexOf('f1Result = await _rescheduleBookingNative', journal);
+  assert.ok(lockPhase >= 0 && lockAcquire > lockPhase && journal > lockAcquire && nativeF1 > journal,
+    'locks must be acquired before journal insertion and native reschedule');
+  assert.match(handler.slice(lockPhase, journal), /originalF1Slot\.slotStart/);
+  assert.match(handler.slice(lockPhase, journal), /originalF2Slot\.slotStart/);
   assert.match(handler.slice(lockPhase, journal), /slotF1Input\.localStartDate/);
   assert.match(handler.slice(lockPhase, journal), /dualF2Slot\.localStartDate/);
 });
@@ -33,7 +34,7 @@ test('CM-DUAL-RESCHEDULE-LOCK-02 uses canonical lock ordering and releases only 
 });
 
 test('CM-DUAL-RESCHEDULE-LOCK-03 never locks the exposure gap', () => {
-  const lockPhase = handler.slice(handler.indexOf('const lockCandidates = ['), handler.indexOf('const journalDedupeKey ='));
+  const lockPhase = handler.slice(handler.indexOf('const lockCandidates = ['), handler.indexOf('const createdJournal = await _createDualRescheduleJournal'));
   assert.doesNotMatch(lockPhase, /gapStart|gapEnd|exposureStart|exposureEnd/);
   assert.ok(source.includes('// The exposure gap is intentionally excluded: it remains bookable.'));
 });
