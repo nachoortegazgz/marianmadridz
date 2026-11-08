@@ -10,7 +10,7 @@ STANDARDS: G10 ASCII Strict. Cero suppressAuth. Colecciones canonicas.
 
 CAMBIOS DE ALINEACION v5015-ALIGNED (respecto a v5009-FISCAL-V20.1):
   ALN-01: COLLECTIONS alias eliminado. Uso de BUSINESS_COLLECTIONS.
-  ALN-02: wixData.save/query/get -> dalSave/dalQuery/dalGet (dataAccess v2.1).
+  ALN-02: wixData.query/get/insert -> dalQuery/dalGet/dalInsert (dataAccess v2.4).
   ALN-04: Paginacion query(...).find() usa la interfaz { items, hasNext(),
           next() } de dataAccess. next() es async y se awaita.
   ALN-05: Se mantiene el uso de HistoricoCierresZ como almacen de paquetes
@@ -29,7 +29,7 @@ import { webMethod, Permissions } from "wix-web-module";
 import {
   query as dalQuery,
   getItem as dalGet,
-  saveItem as dalSave,
+  insertItem as dalInsert,
 } from "backend/dataAccess";
 
 import { BUSINESS_COLLECTIONS, SDK_CONFIG } from "backend/internalConfig";
@@ -174,10 +174,14 @@ export const createManagerPackageVersion = webMethod(Permissions.SiteMember, asy
       _createdDate: new Date(),
     };
 
+    // Package versions are immutable snapshots. save/upsert could overwrite
+    // a version created by a concurrent request after both read the same history.
+    // insert enforces uniqueness on the deterministic documentId; the loser
+    // fails closed and must refresh history before requesting the next version.
     await withTimeout(
-      dalSave(DOCS_COL, record),
+      dalInsert(DOCS_COL, record),
       CMS_TIMEOUT_MS,
-      "saveManagerPackage"
+      "insertManagerPackage"
     );
 
     return {
@@ -186,6 +190,18 @@ export const createManagerPackageVersion = webMethod(Permissions.SiteMember, asy
       error: null,
     };
   } catch (err) {
+    const code = String(err?.code || "");
+    const message = String(err?.message || "");
+    if (code === "WDE0074" || code === "WD_ITEM_ALREADY_EXISTS" || /WDE0074|WD_ITEM_ALREADY_EXISTS|already exists|duplicated/i.test(message)) {
+      return {
+        status: "ERROR",
+        data: null,
+        error: {
+          code: "PACKAGE_VERSION_CONFLICT",
+          message: "Otra solicitud ha creado esta versión. Actualiza el historial y vuelve a intentarlo.",
+        },
+      };
+    }
     return { status: "ERROR", data: null, error: _toPublicError(err, "DOC_CREATE_FAIL") };
   }
 });

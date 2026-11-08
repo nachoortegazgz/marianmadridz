@@ -71,6 +71,7 @@ import { logger } from "backend/logger";
 import { normalizeError } from "backend/booking/bookingCore";
 import { _toPublicError } from "backend/responseUtils";
 import { logAuditEvent } from "backend/audit";
+import { acquireFiscalLedgerLock, assertFiscalLedgerLock, releaseFiscalLedgerLock } from "backend/fiscalLedgerLock";
 
 const log = logger;
 
@@ -421,6 +422,37 @@ async function _getLastMovement() {
     return res?.items?.[0] || null;
 }
 
+async function _rollbackManualSequence(seq, traceId) {
+    if (!seq || !Number.isFinite(Number(seq.sequenceNumber))) return false;
+    try {
+        const seqDoc = await dalGet(CAJA_ACTUAL_COL, CASH_SEQ_ID, "strong");
+        if (!seqDoc) return false;
+        const counters = { ...(seqDoc.sequenceCounters || {}) };
+        const yearMatch = /^FAC-(\d{4})-(\d{5})$/.exec(_safeTrim(seq.numSerieFactura));
+        if (!yearMatch) return false;
+        const yearKey = yearMatch[1];
+        if (
+            Number(counters.seqGlobal || 0) !== Number(seq.sequenceNumber) ||
+            Number(counters[yearKey] || 0) !== Number(seq.yearSequence)
+        ) return false;
+        counters.seqGlobal = Number(seq.sequenceNumber) - 1;
+        counters[yearKey] = Number(seq.yearSequence) - 1;
+        await dalUpdate(CAJA_ACTUAL_COL, {
+            ...seqDoc,
+            sequenceCounters: counters,
+            _updatedDate: new Date(),
+        });
+        return true;
+    } catch (error) {
+        log.error("_rollbackManualSequence failed", {
+            traceId,
+            sequenceNumber: seq.sequenceNumber,
+            error: error?.message,
+        });
+        return false;
+    }
+}
+
 async function _assertPeriodNotClosed(operationDate, traceId) {
     const existingZ = await dalGet(HISTORICO_CIERRES_Z_COL, `Z_${operationDate}`, "strong").catch(() => null);
     if (existingZ) {
@@ -603,6 +635,35 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
         const taxableBaseOrNonSubjectAmount = fiscalCalc.base;
         const taxAmount = fiscalCalc.taxAmount;
 
+        const ledgerLock = await acquireFiscalLedgerLock(traceId);
+        let retainLedgerLock = false;
+        try {
+            // Recheck idempotency inside the global lock. The earlier preflight
+            // is only an optimization and cannot prevent a concurrent duplicate.
+            if (transactionId) {
+                const lockedExisting = await dalQuery(MOVIMIENTOS_CAJA_COL)
+                    .eq("transactionId", transactionId)
+                    .limit(1)
+                    .find(STRONG_READ);
+                if (lockedExisting?.items?.length === 1) {
+                    const cashProjection = await _updateCajaActual(lockedExisting.items[0], traceId);
+                    return {
+                        status: cashProjection?.status === "SUCCESS" ? "SUCCESS" : "PARTIAL",
+                        data: lockedExisting.items[0],
+                        error: cashProjection?.status === "SUCCESS" ? null : {
+                            code: "CASH_PROJECTION_PENDING",
+                            message: "Movimiento fiscal persistido; CajaActual requiere reconciliacion.",
+                        },
+                        idempotent: true,
+                        cashProjectionStatus: cashProjection?.status || "UNKNOWN",
+                    };
+                }
+                if (lockedExisting?.items?.length > 1) {
+                    retainLedgerLock = true;
+                    throw new Error("FISCAL_TRANSACTION_ID_AMBIGUOUS");
+                }
+            }
+
         const seq = await _getNextSequence(traceId);
         const lastMovement = await _getLastMovement();
         const previousRecordHash = lastMovement?.hash || GENESIS_HASH;
@@ -673,7 +734,24 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
         try {
             digitalSignature = await _computeSignature(movementHash, traceId);
         } catch (signErr) {
-            log.warn("Fiscal signer unavailable; queuing movement", {
+            const rolledBack = await _rollbackManualSequence(seq, traceId);
+            if (!rolledBack) {
+                retainLedgerLock = true;
+                log.error("FISCAL_SEQUENCE_ROLLBACK_FAILED", {
+                    traceId,
+                    transactionId: baseMovement.transactionId,
+                    sequenceNumber: seq.sequenceNumber,
+                });
+                return {
+                    status: "ERROR",
+                    data: null,
+                    error: {
+                        code: "LEDGER_REPAIR_REQUIRED",
+                        message: "No se pudo revertir la secuencia reservada; el bloqueo fiscal se conserva para revision.",
+                    },
+                };
+            }
+            log.warn("Fiscal signer unavailable; queuing movement without consuming a sequence", {
                 transactionId: baseMovement.transactionId,
                 error: signErr?.message,
                 traceId,
@@ -748,18 +826,21 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
                     .limit(1)
                     .find(STRONG_READ)
                     .catch(() => ({ items: [] }));
-                if (existingMovement?.items?.length) {
+                if (existingMovement?.items?.length === 1) {
+                    await _rollbackManualSequence(seq, traceId);
                     log.info("Ledger duplicate recovered after atomic claim", { transactionId, traceId });
                     return { status: "SUCCESS", data: existingMovement.items[0], error: null, idempotent: true };
                 }
                 const existingClaim = await dalGet(CONTROL_OPERATIVO_COL, claimId, "strong").catch(() => null);
                 if (existingClaim) {
+                    const rolledBack = await _rollbackManualSequence(seq, traceId);
+                    if (!rolledBack) retainLedgerLock = true;
                     return {
                         status: "ERROR",
                         data: null,
                         error: {
-                            code: "IDEMPOTENCY_IN_PROGRESS",
-                            message: "La transaccion ya esta reservada y requiere reconciliacion antes de reintentar.",
+                            code: rolledBack ? "IDEMPOTENCY_IN_PROGRESS" : "LEDGER_REPAIR_REQUIRED",
+                            message: "La transaccion ya esta reservada; requiere reconciliacion antes de reintentar.",
                         },
                     };
                 }
@@ -767,7 +848,54 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
             }
         }
 
-        const saved = await dalInsert(MOVIMIENTOS_CAJA_COL, movement);
+        let saved;
+        try {
+            await assertFiscalLedgerLock(ledgerLock);
+            saved = await dalInsert(MOVIMIENTOS_CAJA_COL, movement);
+        } catch (insertError) {
+            let recovered;
+            try {
+                recovered = await dalQuery(MOVIMIENTOS_CAJA_COL)
+                    .eq(transactionId ? "transactionId" : "traceId",
+                        transactionId || baseMovement.transactionId)
+                    .limit(2)
+                    .find(STRONG_READ);
+            } catch (readError) {
+                retainLedgerLock = true;
+                log.error("MANUAL_LEDGER_RESULT_UNKNOWN", {
+                    traceId,
+                    transactionId: baseMovement.transactionId,
+                    insertError: insertError?.message,
+                    readError: readError?.message,
+                });
+                return {
+                    status: "ERROR",
+                    data: null,
+                    error: {
+                        code: "LEDGER_RESULT_UNKNOWN",
+                        message: "No se pudo confirmar el resultado del insert. El bloqueo fiscal se conserva para evitar bifurcar la cadena.",
+                    },
+                };
+            }
+
+            if (recovered?.items?.length === 1) {
+                saved = recovered.items[0];
+            } else {
+                const rolledBack = recovered?.items?.length === 0
+                    ? await _rollbackManualSequence(seq, traceId)
+                    : false;
+                if (!rolledBack) retainLedgerLock = true;
+                return {
+                    status: "ERROR",
+                    data: null,
+                    error: {
+                        code: rolledBack ? "LEDGER_INSERT_FAIL" : "LEDGER_REPAIR_REQUIRED",
+                        message: insertError?.message || "No se pudo confirmar el registro fiscal.",
+                    },
+                };
+            }
+        }
+
         const cashProjection = await _updateCajaActual(saved, traceId);
         if (cashProjection?.status !== "SUCCESS") {
             return {
@@ -779,6 +907,22 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
         }
 
         return { status: "SUCCESS", data: saved, error: null, cashProjectionStatus: "SUCCESS" };
+        } finally {
+            if (!retainLedgerLock) {
+                const released = await releaseFiscalLedgerLock(ledgerLock);
+                if (!released?.released) {
+                    log.error("FISCAL_LEDGER_LOCK_RELEASE_FAILED", {
+                        traceId,
+                        reason: released?.reason || "UNKNOWN",
+                    });
+                }
+            } else {
+                log.error("FISCAL_LEDGER_LOCK_RETAINED_FOR_REPAIR", {
+                    traceId,
+                    transactionId,
+                });
+            }
+        }
     } catch (err) {
         const norm = normalizeError(err);
         log.error("registerManualTransaction failed", { code: norm.code, error: norm.message, traceId });

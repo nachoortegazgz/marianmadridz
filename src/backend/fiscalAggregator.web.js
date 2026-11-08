@@ -235,6 +235,24 @@ async function _fetchQuarterMovements(months, options = {}) {
   return { items: allItems, reachedMaxPages, totalPages: page - 1 };
 }
 
+function _getFiscalFetchLimitError(fetchResult, traceId, months, reportType) {
+  if (!fetchResult?.reachedMaxPages) return null;
+  log.error("Fiscal report refused: source dataset exceeded pagination limit", {
+    traceId,
+    months,
+    reportType,
+    totalPagesFetched: fetchResult.totalPages,
+  });
+  return {
+    status: "ERROR",
+    data: null,
+    error: {
+      code: "FISCAL_DATASET_LIMIT_EXCEEDED",
+      message: "El periodo supera el límite de lectura. No se genera un informe fiscal parcial; reduce el periodo o revisa el volumen del ledger.",
+    },
+  };
+}
+
 // =============================================================================
 // BLOQUE 2 - RESUMEN FISCAL TRIMESTRAL
 // =============================================================================
@@ -253,6 +271,9 @@ export async function getQuarterlyTaxSummaryInternal(year, quarter, options = {}
   }
 
   const fetchResult = await _fetchQuarterMovements(months, { traceId });
+  const incompleteResult = _getFiscalFetchLimitError(fetchResult, traceId, months, "QUARTERLY_TAX_SUMMARY");
+  if (incompleteResult) return incompleteResult;
+
   const state = _initTaxAccumulator(months);
   _accumulatePage(fetchResult.items, state);
 
@@ -338,6 +359,9 @@ export async function getLibroRegistroFacturasExpedidasInternal(year, quarter, o
   }
 
   const fetchResult = await _fetchQuarterMovements(months, { traceId });
+  const incompleteResult = _getFiscalFetchLimitError(fetchResult, traceId, months, "SALES_LEDGER");
+  if (incompleteResult) return incompleteResult;
+
   let libroFilas = [];
   let orderIndex = 1;
 

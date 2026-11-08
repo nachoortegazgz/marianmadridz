@@ -118,3 +118,50 @@ test('TAXID-03 throws FISCAL_CONFIG_MISSING when nothing found (SSOT v20.1: plac
 test('DEDUPE-01 prepareScheduledManagerPackages removed from aggregator', () => {
   assert.strictEqual(FA.prepareScheduledManagerPackages, undefined);
 });
+
+
+test('FISCAL-PAGING-01 truncated quarterly summary is rejected, never returned as a successful partial report', async () => {
+  wixDataMock._reset();
+  const movements = Array.from({ length: 5001 }, (_, index) => ({
+    _id: `fiscal-paging-${index + 1}`,
+    fiscalPeriod: '2026-01',
+    sequenceNumber: index + 1,
+    movementType: 'VENTA',
+    accountingAmount: 10,
+    taxBase: 8.26,
+    taxAmount: 1.74,
+    totalAmount: 10,
+    paymentMethod: 'EFECTIVO',
+    tipoImpositivo: 0.21,
+  }));
+  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA, movements);
+
+  const result = await FA.getQuarterlyTaxSummaryInternal(2026, 1, { traceId: 'trace-fiscal-page-cap-001' });
+
+  assert.equal(result.status, 'ERROR');
+  assert.equal(result.data, null);
+  assert.equal(result.error.code, 'FISCAL_DATASET_LIMIT_EXCEEDED');
+});
+
+test('FISCAL-PAGING-02 truncated sales ledger is rejected, never returned as a successful partial export', async () => {
+  wixDataMock._reset();
+  const movements = Array.from({ length: 5001 }, (_, index) => ({
+    _id: `fiscal-ledger-paging-${index + 1}`,
+    fiscalPeriod: '2026-01',
+    sequenceNumber: index + 1,
+    movementType: 'VENTA',
+    accountingAmount: 10,
+    taxBase: 8.26,
+    taxAmount: 1.74,
+    totalAmount: 10,
+    paymentMethod: 'EFECTIVO',
+    tipoImpositivo: 0.21,
+  }));
+  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA, movements);
+
+  const result = await FA.getLibroRegistroFacturasExpedidasInternal(2026, 1, { traceId: 'trace-fiscal-page-cap-002' });
+
+  assert.equal(result.status, 'ERROR');
+  assert.equal(result.data, null);
+  assert.equal(result.error.code, 'FISCAL_DATASET_LIMIT_EXCEEDED');
+});
