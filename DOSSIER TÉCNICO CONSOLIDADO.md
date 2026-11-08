@@ -661,6 +661,8 @@ Nunca mutar estas colecciones directamente desde código propio.
 | `security.web.js` | `checkStaffCollaboratorAccess` | SiteMember | Cualquiera de los 3 roles |
 | `reservas.web.js` | `getServiceBySlugOrId` | Anyone | Público |
 | `reservas.web.js` | `getAvailableDays` | Anyone | Público |
+| `reservas.web.js` | `generateDisplayToken` | Anyone | Propietario autenticado o credencial anónima vigente |
+| `reservas.web.js` | `getConfirmedBookingForDisplay` | Anyone | Propietario autenticado o token de visualización de un solo uso |
 | `reservas.web.js` | `resolveStaffForSlot` | Anyone | Público |
 | `reservas.web.js` | `invalidateCachesInternal` | Admin | `ADMIN` |
 | `citasManager.web.js` | `processDualBooking` | Anyone | Rate limitado |
