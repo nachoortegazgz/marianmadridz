@@ -573,14 +573,21 @@ export async function cleanExpiredDaysCache() {
         const now = new Date();
         const collection = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
         const batchSize = Math.max(1, Math.min(Number(SDK_CONFIG?.JOBS?.DAYS_CACHE_CLEANUP_LIMIT) || 500, 500));
-        for (let batch = 0; batch < 10; batch++) {
+        const candidates = [];
+        for (let page = 0; page < 10; page++) {
             const res = await dalQuery(collection)
                 .eq("controlType", CONTROL_TYPE.DAYS_CACHE)
                 .lt("expiresAt", now)
+                .ascending("expiresAt")
                 .limit(batchSize)
+                .skip(page * batchSize)
                 .find({ consistencyMode: "strong" });
-            const ids = (res?.items || []).map((item) => item._id).filter(Boolean);
-            if (!ids.length) break;
+            const rows = res?.items || [];
+            candidates.push(...rows.map((item) => item._id).filter(Boolean));
+            if (rows.length < batchSize) break;
+        }
+        for (let offset = 0; offset < candidates.length; offset += 500) {
+            const ids = candidates.slice(offset, offset + 500);
             const removal = await dalBulkRemove(collection, ids, {
                 condition: { filter: {
                     controlType: { $eq: CONTROL_TYPE.DAYS_CACHE },
@@ -592,7 +599,6 @@ export async function cleanExpiredDaysCache() {
             result.skipped += summary.skipped;
             result.failed += summary.failed;
             if (result.errors.length < 10) result.errors.push(...summary.errors.slice(0, 10 - result.errors.length));
-            if (summary.removed === 0) break;
         }
         log.info("cleanExpiredDaysCache completed", {
             removed: result.removed, skipped: result.skipped, failed: result.failed, traceId,
@@ -1081,18 +1087,21 @@ export async function cleanExpiredBookingControl() {
             groups.get(key).ids.push(item._id);
         }
         for (const group of groups.values()) {
-            const removal = await dalBulkRemove(collection, group.ids, {
-                condition: { filter: {
-                    controlType: { $eq: group.controlType },
-                    _updatedDate: { $lt: cutoff },
-                    [group.statusField]: { $eq: group.status },
-                } },
-            });
-            const summary = _summarizeBulkRemove(removal);
-            result.removed += summary.removed;
-            result.skipped += summary.skipped;
-            result.failed += summary.failed;
-            if (result.errors.length < 10) result.errors.push(...summary.errors.slice(0, 10 - result.errors.length));
+            for (let offset = 0; offset < group.ids.length; offset += 500) {
+                const ids = group.ids.slice(offset, offset + 500);
+                const removal = await dalBulkRemove(collection, ids, {
+                    condition: { filter: {
+                        controlType: { $eq: group.controlType },
+                        _updatedDate: { $lt: cutoff },
+                        [group.statusField]: { $eq: group.status },
+                    } },
+                });
+                const summary = _summarizeBulkRemove(removal);
+                result.removed += summary.removed;
+                result.skipped += summary.skipped;
+                result.failed += summary.failed;
+                if (result.errors.length < 10) result.errors.push(...summary.errors.slice(0, 10 - result.errors.length));
+            }
         }
         log.info("cleanExpiredBookingControl completed", {
             removed: result.removed, skipped: result.skipped, failed: result.failed,
@@ -1132,16 +1141,22 @@ export async function cleanAuditLogs() {
         ];
         for (const group of purgeGroups) {
             for (const status of group.statuses) {
-                for (let batch = 0; batch < 10; batch++) {
+                const candidates = [];
+                for (let page = 0; page < 10; page++) {
                     const res = await dalQuery(collection)
                         .eq("controlType", group.controlType)
                         .eq("status", status)
                         .lt("_createdDate", cutoff)
                         .ascending("_createdDate")
                         .limit(500)
+                        .skip(page * 500)
                         .find({ consistencyMode: "strong" });
-                    const ids = (res?.items || []).map((item) => item._id).filter(Boolean);
-                    if (!ids.length) break;
+                    const rows = res?.items || [];
+                    candidates.push(...rows.map((item) => item._id).filter(Boolean));
+                    if (rows.length < 500) break;
+                }
+                for (let offset = 0; offset < candidates.length; offset += 500) {
+                    const ids = candidates.slice(offset, offset + 500);
                     const removal = await dalBulkRemove(collection, ids, {
                         condition: { filter: {
                             controlType: { $eq: group.controlType },
@@ -1154,7 +1169,6 @@ export async function cleanAuditLogs() {
                     result.skipped += summary.skipped;
                     result.failed += summary.failed;
                     if (result.errors.length < 10) result.errors.push(...summary.errors.slice(0, 10 - result.errors.length));
-                    if (summary.removed === 0) break;
                 }
             }
         }
