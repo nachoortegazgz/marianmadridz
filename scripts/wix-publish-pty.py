@@ -26,6 +26,14 @@ CONFIRM_RE = re.compile(
     re.IGNORECASE,
 )
 SUCCESS_RE = re.compile(r"(?:site|website).{0,80}published|published.{0,80}(?:site|website)", re.IGNORECASE | re.DOTALL)
+EDITOR_UI_DRIFT_RE = re.compile(
+    r"Editor contains newer design changes|newer UI changes",
+    re.IGNORECASE,
+)
+PUBLISH_PIPELINE_ERROR_RE = re.compile(
+    r"PUBLISH_PIPELINE_TASK_NOT_FOUND",
+    re.IGNORECASE,
+)
 SITE_DOMAIN = "marianmadrid.es"
 TIMEOUT_SECONDS = 900
 TERMINAL_ROWS = 40
@@ -48,7 +56,26 @@ def set_terminal_size(fd: int) -> None:
 
 
 def confirmation_ready(text: str) -> bool:
-    return bool(PREVIEW_URL_RE.search(text) and CONFIRM_RE.search(text))
+    return bool(
+        PREVIEW_URL_RE.search(text)
+        and CONFIRM_RE.search(text)
+        and not EDITOR_UI_DRIFT_RE.search(text)
+    )
+
+
+def publication_blocker(text: str) -> str | None:
+    if EDITOR_UI_DRIFT_RE.search(text):
+        return (
+            "Wix Editor contains newer UI/design changes than the repository UI version. "
+            "Publication blocked to avoid publishing a stale UI snapshot; sync/save the "
+            "latest Editor UI to the repository before retrying."
+        )
+    if PUBLISH_PIPELINE_ERROR_RE.search(text):
+        return (
+            "Wix returned PUBLISH_PIPELINE_TASK_NOT_FOUND. The preview deployment task "
+            "does not exist on Wix; aborting without retry."
+        )
+    return None
 
 
 def self_test() -> None:
@@ -67,6 +94,16 @@ def self_test() -> None:
     assert SUCCESS_RE.search(success) and SITE_DOMAIN in success.lower()
     # Guard: never confirm a publish from a prompt without the preview URL.
     assert not confirmation_ready("Press y to publish")
+    editor_warning = (
+        "Caution: The Editor contains newer design changes. "
+        "Continue with publish? (Y/n)"
+    )
+    assert publication_blocker(editor_warning)
+    assert not confirmation_ready(
+        "Preview: https://wix.to/QA123\n" + editor_warning
+    )
+    pipeline_error = "Code: PUBLISH_PIPELINE_TASK_NOT_FOUND"
+    assert publication_blocker(pipeline_error)
     print("Wix publish PTY controller self-test: PASS")
 
 
@@ -132,6 +169,10 @@ def run_publish() -> None:
                         output.extend(chunk)
 
                         text = clean_output(output.decode("utf-8", errors="replace"))
+                        blocker = publication_blocker(text)
+                        if blocker:
+                            raise RuntimeError(blocker)
+
                         if (
                             not selected_remote
                             and SELECTION_RE.search(text)
