@@ -72,11 +72,11 @@ jobs:
 
       - name: Authenticate Wix CLI
         env:
-          WIX_CLI_API_KEY: ${{ secrets.CLI_API_KEY }}
+          CLI_API_KEY: ${{ secrets.CLI_API_KEY }}
         run: |
           set -euo pipefail
-          test -n "$WIX_CLI_API_KEY"
-          npm run wix login -- --api-key "$WIX_CLI_API_KEY"
+          test -n "$CLI_API_KEY"
+          npm run wix login -- --api-key "$CLI_API_KEY"
 
       - name: Self-test Wix publish PTY controller
         run: python3 scripts/wix-publish-pty.py --self-test
