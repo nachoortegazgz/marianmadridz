@@ -2100,6 +2100,7 @@ export const rescheduleDualBookings = webMethod(
                 },
             }, traceId);
 
+            lockHeartbeat.assertHealthy();
             journal = await _patchDualRescheduleJournal(journal, {
                 status: DUAL_RESCHEDULE_STATUS.F2_IN_PROGRESS,
                 f2StartedAt: new Date().toISOString(),
@@ -2107,8 +2108,8 @@ export const rescheduleDualBookings = webMethod(
 
             let f2Result = null;
             try {
-                lockHeartbeat.assertHealthy();
                 f2Result = await _rescheduleBookingNative(f2Cita, dualF2Slot, traceId);
+                lockHeartbeat.assertHealthy();
                 journal = await _patchDualRescheduleJournal(journal, {
                     status: DUAL_RESCHEDULE_STATUS.F2_DONE,
                     f2CompletedAt: new Date().toISOString(),
@@ -2135,6 +2136,7 @@ export const rescheduleDualBookings = webMethod(
                 throw f2Error;
             }
 
+            lockHeartbeat.assertHealthy();
             try {
                 await _applyRescheduleToCita(f1Cita, f1Result, traceId, originalF1Slot);
                 await _applyRescheduleToCita(f2Cita, f2Result, traceId, originalF2Slot);
