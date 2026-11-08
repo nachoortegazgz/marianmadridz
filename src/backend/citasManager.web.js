@@ -30,7 +30,7 @@ import { orders } from "@wix/ecom";
 import { bookings } from "@wix/bookings";
 import { auth } from "@wix/essentials";
 import { currentMember } from "@wix/members";
-import { queryFirstItem, queryItems, wql, CONSISTENCY, insertItem as dalInsert } from "backend/dataAccess";
+import { queryFirstItem, queryItems, wql, CONSISTENCY, insertItem as dalInsert, bulkPatchItems } from "backend/dataAccess";
 import {
     BUSINESS_COLLECTIONS, OPERATIONAL_COLLECTIONS, CONTROL_TYPE, SDK_CONFIG,
     WIX_CATALOG_APP_IDS, CITAS_BOOKING_STATUS, PAYMENT_STATUS, PAYMENT_METHOD, CHANNEL_TYPE,
@@ -42,7 +42,7 @@ import {
     getMadridLocalStringNoZ, withTimeout
 } from "public/mmUtils";
 import { toUtcRange } from "backend/booking/bookingUtils";
-import { executeBookingSaga } from "backend/booking/bookingSaga";
+import { executeBookingSaga, _startLockHeartbeat } from "backend/booking/bookingSaga";
 import { normalizeError, _handleError, ERROR_CODES, createBookingError, _updateCitaSafe, _forceStaffInPristineSlot, generateSlotKey, _lockSlotKeyOrFail, _unlockSlotKey } from "backend/booking/bookingCore";
 import { registerBookingPayment } from "backend/cajas.web.js";
 import { rateLimiter } from "backend/security";
@@ -50,6 +50,11 @@ import { logger } from "backend/logger";
 import { logAuditEvent } from "backend/audit";
 import { revalidateExactAvailabilitySlot, _getServiceBySlugOrIdInternal } from "backend/reservas.web.js";
 import { findStaffByResourceId } from "backend/staff";
+import {
+    buildDualRescheduleJournalIdentity,
+    DUAL_RESCHEDULE_STATUS,
+    isDualRescheduleTerminalStatus,
+} from "backend/booking/dualRescheduleJournal";
 
 const log = logger;
 
@@ -1486,6 +1491,115 @@ async function _applyRescheduleToCita(cita, rescheduleResult, traceId) {
     } catch (_) {
         /* best effort */
     }
+}
+
+function _selectDualCitas(citas) {
+    const rows = Array.isArray(citas) ? citas : [];
+    const f1Cita = rows.find((cita) => {
+        const meta = _getCitaMeta(cita);
+        return !(cita?.bookingType === BOOKING_TYPE.DUAL_F2 || meta.linkedF1BookingId);
+    }) || rows[0];
+    const f2Cita = rows.find((cita) => {
+        const meta = _getCitaMeta(cita);
+        return cita?.bookingType === BOOKING_TYPE.DUAL_F2 || Boolean(meta.linkedF1BookingId);
+    }) || rows[1];
+    return { f1Cita: f1Cita || null, f2Cita: f2Cita || null };
+}
+
+async function _readDualRescheduleJournal(journalId) {
+    return queryFirstItem({
+        dataCollectionId: CONTROL_COL,
+        filter: wql.eq("_id", _safeTrim(journalId)),
+        consistency: CONSISTENCY.STRONG,
+    });
+}
+
+async function _createDualRescheduleJournal(identity, pairToken, traceId, payload) {
+    const now = new Date().toISOString();
+    const row = {
+        _id: identity.journalId,
+        controlType: CONTROL_TYPE.SYSTEM_FLAG,
+        dedupeKey: identity.dedupeKey,
+        pairToken: _safeTrim(pairToken),
+        version: 0,
+        payload: {
+            ...payload,
+            operationType: "DUAL_RESCHEDULE",
+            operationHash: identity.operationHash,
+            status: DUAL_RESCHEDULE_STATUS.IN_PROGRESS,
+            traceId: _safeTrim(traceId),
+            startedAt: now,
+            updatedAt: now,
+        },
+        traceId: _safeTrim(traceId),
+    };
+    try {
+        await dalInsert(CONTROL_COL, row);
+        return row;
+    } catch (error) {
+        const existing = await _readDualRescheduleJournal(identity.journalId).catch(() => null);
+        if (existing) return existing;
+        throw error;
+    }
+}
+
+async function _patchDualRescheduleJournal(journal, patch, traceId) {
+    if (!journal?._id || !Number.isInteger(Number(journal.version))) {
+        throw createBookingError(
+            ERROR_CODES.DATABASE_ERROR,
+            "Dual reschedule journal version is missing or invalid.",
+            { traceId, journalId: journal?._id || null }
+        );
+    }
+    const expectedVersion = Number(journal.version);
+    const payload = {
+        ...(journal.payload && typeof journal.payload === "object" ? journal.payload : {}),
+        ...patch,
+        traceId: _safeTrim(traceId),
+        updatedAt: new Date().toISOString(),
+    };
+    const result = await bulkPatchItems(
+        CONTROL_COL,
+        [journal._id],
+        [[
+            { fieldPath: "payload", action: "SET_FIELD", value: payload },
+            { fieldPath: "version", action: "INCREMENT_FIELD", value: 1 },
+            { fieldPath: "traceId", action: "SET_FIELD", value: _safeTrim(traceId) },
+        ]],
+        {
+            condition: {
+                filter: {
+                    controlType: { $eq: CONTROL_TYPE.SYSTEM_FLAG },
+                    version: { $eq: expectedVersion },
+                },
+            },
+        }
+    );
+    if (!Array.isArray(result?.updatedItemIds) || !result.updatedItemIds.includes(journal._id)) {
+        throw createBookingError(
+            ERROR_CODES.DATABASE_ERROR,
+            "Dual reschedule journal compare-and-swap conflict.",
+            { traceId, journalId: journal._id, expectedVersion }
+        );
+    }
+    return {
+        ...journal,
+        version: expectedVersion + 1,
+        payload,
+        traceId: _safeTrim(traceId),
+    };
+}
+
+function _isSameSlotDates(currentStart, currentEnd, targetStart, targetEnd) {
+    const aStart = _toDateSafe(currentStart);
+    const aEnd = _toDateSafe(currentEnd);
+    const bStart = _toDateSafe(targetStart);
+    const bEnd = _toDateSafe(targetEnd);
+    return Boolean(
+        aStart && aEnd && bStart && bEnd &&
+        aStart.getTime() === bStart.getTime() &&
+        aEnd.getTime() === bEnd.getTime()
+    );
 }
 
 async function _markDualPairInconsistent(pairToken, reason, traceId, error) {
