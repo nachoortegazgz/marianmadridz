@@ -720,7 +720,9 @@ Validaciones `beforeInsert` / `beforeUpdate` por colección:
 - `_roundMoney(v)` — redondeo bancario a 2 decimales
 - `_stableSerialize(value)` — serialización determinista con ordenación de claves
 - `getMadridLocalStringNoZ(utcDate)` / `getUtcDateFromMadridLocal(local)` — conversión zona horaria
-- `withTimeout(promise, ms, label)` / `_executeWithRetry(fn, retries, delay)` — control asíncrono
+- `withTimeout(promiseOrFactory, ms, label)` / `_executeWithRetry(fn, retries, delay)` — control asíncrono
+
+**Contrato operativo de timeout:** `withTimeout` admite una promesa o una factory. Para efectos secundarios (Bookings Writer, confirmación, cancelación y WebMethods de reserva) usar factory `() => operation()`. El timeout solo limita la espera local: no cancela la operación Wix ya iniciada. Si expira una operación de escritura, clasificar el resultado como incierto, bloquear el reintento ciego y reconciliar por identidad/idempotencia. El watchdog del widget debe superar el watchdog Velo y mantener bloqueada la sesión cuando el resultado sea incierto.
 - `_maskEmail()` / `_maskPhone()` / `_maskName()` — enmascaramiento PII
 
 **`backend/securityEngine.js`**:
@@ -1027,7 +1029,7 @@ CONTROL_TYPE    = { SLOT_LOCK, WEBHOOK_EVENT, DEDUPE_KEY,
 ### 14.7 Librerías de helpers y utilidades
 
 **`public/mmUtils.js` (client-side):**
-`makeTraceId(prefix)`, `_generateUUID()`, `_roundMoney(v)`, `_stableSerialize(value)`, `getUtcDateFromMadridLocal(local)`, `getMadridLocalStringNoZ(utcDate)`, `withTimeout(promise, ms, label)`, `_executeWithRetry(fn, retries, delay)`, `_maskEmail()`, `_maskPhone()`, `_maskName()`.
+`makeTraceId(prefix)`, `_generateUUID()`, `_roundMoney(v)`, `_stableSerialize(value)`, `getUtcDateFromMadridLocal(local)`, `getMadridLocalStringNoZ(utcDate)`, `withTimeout(promiseOrFactory, ms, label)`, `_executeWithRetry(fn, retries, delay)`, `_maskEmail()`, `_maskPhone()`, `_maskName()`.
 
 **`public/widgetBridge.js`:**
 `createWidgetBridge(widget, options)`, `bridge.post(type, payload, messageId)`, `bridge.postContext()`, `bridge.destroy()`, `bridge.getTraceId()`, `bridge.isReady()`.
