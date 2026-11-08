@@ -9,7 +9,7 @@ import signal
 import sys
 import time
 
-ANSI_RE = re.compile(r"\x1b(?:\[[0-?]*[ -/]*[@-~]|\][^\x07]*(?:\x07|\x1b\\\\))")
+ANSI_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
 SELECTION_RE = re.compile(r"What would you like to publish\?", re.IGNORECASE)
 REMOTE_RE = re.compile(r"Remote\s*-\s*default branch", re.IGNORECASE)
 CONFIRM_RE = re.compile(
