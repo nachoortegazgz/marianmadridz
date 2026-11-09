@@ -1132,7 +1132,7 @@ export const getCashierState = webMethod(Permissions.SiteMember, async (options 
     const { traceId, diaKey } = options;
     try {
         await requireCajero(traceId);
-        const cashRegister = await _getCashRegisterSingleton();
+        const cashRegister = await getCashRegisterSingleton();
         const day = diaKey || new Date().toLocaleDateString("sv-SE", { timeZone: SDK_CONFIG?.TZ || "Europe/Madrid" });
         const res = await dalQuery(MOVIMIENTOS_CAJA_COL)
             .eq("fechaExpedicionFactura", day)
@@ -1427,7 +1427,7 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
             else throw insertError;
         }
 
-        const cashRegister = await _getCashRegisterSingleton();
+        const cashRegister = await getCashRegisterSingleton();
         if (cashRegister) {
             cashRegister.cashRegisterStatus = CASH_REGISTER_STATUS.CERRADA;
             cashRegister.closedAt = new Date();
