@@ -1,17 +1,17 @@
 /*
 =============================================================================
 MODULE: backend/data.js
-VERSION: v5016-ZERO-LEGACY
+VERSION: v5016-CANONICAL-READ
 REPO: https://github.com/nachoortegazgz/marianmadridz.git
 RESPONSIBILITY: Hooks de inmutabilidad, protecciones append-only y
                 validacion estricta de esquemas CMS.
-STANDARDS: G10 ASCII Strict. Cero suppressAuth. Legacy input normalized at boundary; persisted fields canonical.
+STANDARDS: G10 ASCII Strict. Cero suppressAuth. Historical fields are read-only; persisted fields are canonical.
 =============================================================================
 */
 
 import {
     FISCAL_ROLE,
-    MOVEMENT_LEGACY_READ_ALIASES,
+    MOVEMENT_HISTORICAL_READ_ALIASES,
     normalizeMovementKeys,
     OPERATIONAL_COLLECTIONS,
 } from "backend/internalConfig";
@@ -23,21 +23,21 @@ import { logger } from "backend/logger";
 const log = logger;
 
 // =============================================================================
-// HELPERS SSOT-KEYFIELD-02 (2026-10-20) — LECTURA CANONICA CON FALLBACK LEGACY
+// HELPERS SSOT-KEYFIELD-02 (2026-10-20) — LECTURA CANONICA DE CAMPOS HISTORICOS
 // =============================================================================
 
-export function _readCanonical(item, canonicalKey, legacyKeys = []) {
+export function _readCanonical(item, canonicalKey, historicalKeys = []) {
     if (!item || typeof item !== "object") return undefined;
     const isPresent = (v) => v !== undefined && v !== null && v !== "";
     const direct = item[canonicalKey];
     if (isPresent(direct)) return direct;
     for (const legacy of legacyKeys) {
-        const v = item[legacy];
+        const v = item[historicalKey];
         if (isPresent(v)) {
-            log.warn("legacy-read", {
+            log.warn("historical-field-read", {
                 collection: "MovimientosCaja",
                 canonicalKey,
-                legacyKey: legacy,
+                historicalKey,
                 docId: item._id ?? null,
             });
             return v;
@@ -54,7 +54,7 @@ const MOVIMIENTOS_CAJA_PHYSICAL_FIELDS = Object.freeze({
 });
 
 export function readMovementField(item, canonicalKey) {
-    const aliases = MOVEMENT_LEGACY_READ_ALIASES[canonicalKey] || [];
+    const aliases = MOVEMENT_HISTORICAL_READ_ALIASES[canonicalKey] || [];
     const value = _readCanonical(item, canonicalKey, aliases);
     if (value !== undefined && value !== null && value !== "") return value;
     const physicalField = MOVIMIENTOS_CAJA_PHYSICAL_FIELDS[canonicalKey];
@@ -116,7 +116,7 @@ export function readInvoiceIssueDate(item) {
 export function readTotalAmount(item) {
     // MATRIZ v15: totalAmount es clave canonica propia (total cobrado con
     // impuestos); "importeTotal" se tolera solo como alias historico via el
-    // contrato unico MOVEMENT_LEGACY_READ_ALIASES.
+    // contrato unico MOVEMENT_HISTORICAL_READ_ALIASES.
     return Number(readMovementField(item, "totalAmount")) || 0;
 }
 
@@ -148,7 +148,7 @@ export function readRecipientTaxId(item) {
 
 // MATRIZ v15 (MovimientosCaja): la huella canonica del dominio caja/fiscal es
 // "hash"; "recordHash" es alias historico tolerado SOLO via contrato unico
-// (MOVEMENT_LEGACY_READ_ALIASES). Nadie debe volver a acceder a item.recordHash
+// (MOVEMENT_HISTORICAL_READ_ALIASES). Nadie debe volver a acceder a item.recordHash
 // ni item.hash directamente en el ledger.
 export function readMovementHash(item) {
     return _safeTrim(readMovementField(item, "hash") ?? "");
