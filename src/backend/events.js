@@ -1867,6 +1867,11 @@ export async function wixEcom_onOrderPaymentStatusUpdated(eventPayload) {
             )
         );
         const linkedBookingIds = bookingIds;
+        const bookingOnlyOrder = bookingIds.length > 0 &&
+            lineItems.length > 0 &&
+            lineItems.every(
+                (item) => item?.catalogReference?.appId === bookingsAppId
+            );
 
         const finalLedgerAmount = resolveOrderLedgerAmount(order);
         const transactionId = `ORDER-${orderId}`;
@@ -2007,8 +2012,9 @@ export async function wixEcom_onOrderPaymentStatusUpdated(eventPayload) {
         const emisor = await _getEmisorFiscal();
 
         let eventResult;
+        let fiscalPayload = null;
         try {
-            eventResult = await registrarEventoEconomico({
+            fiscalPayload = {
                 eventType: EVENT_TYPE.VENTA_LINEA,
                 movementType: MOVEMENT_TYPE.VENTA_ONLINE,
                 // ALN-06: WIX_PAYMENTS es el canonico v12.0.
@@ -2050,7 +2056,8 @@ export async function wixEcom_onOrderPaymentStatusUpdated(eventPayload) {
                     operationDescription: line.operationDescription || orderConcept,
                 })),
                 traceId,
-            });
+            };
+            eventResult = await registrarEventoEconomico(fiscalPayload);
         } catch (err) {
             log.error("registrarEventoEconomico fallo", {
                 orderId,
@@ -2096,6 +2103,9 @@ export async function wixEcom_onOrderPaymentStatusUpdated(eventPayload) {
             operationDescription: orderConcept,
             resourceId: "online",
             movementType: MOVEMENT_TYPE.VENTA_ONLINE,
+            recoveryProcessor: fiscalPayload && bookingOnlyOrder ? "EVENT_LOG_ORDER" : "MANUAL",
+            recoveryScope: bookingOnlyOrder ? "BOOKINGS_ONLY" : "UNSUPPORTED_ORDER_COMPOSITION",
+            fiscalPayload,
             traceId,
             lastError:
                 eventResult?.error?.message ||
