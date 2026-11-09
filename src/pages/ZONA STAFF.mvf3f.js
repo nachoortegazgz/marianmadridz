@@ -191,7 +191,7 @@ $w.onReady(async () => {
           case "STAFF_CALENDAR":
           case "CALENDAR":
           case "MI_CALENDARIO":
-            location.to("/mi-calendario"); // ajustar ruta real
+            location.to("/mi-calendario"); // ruta pendiente de confirmar en Wix
             break;
 
           default:
