@@ -23,6 +23,7 @@ const confirmationHtml = read("#html2.txt");
 const calendarHtml = read("#html1.txt");
 const bridge = read("src/public/widgetBridge.js");
 const staffPage = read("src/pages/ZONA STAFF.mvf3f.js");
+const calendarPage = read("src/pages/Calendario de reservas 2.q39h6.js");
 
 test("HTML component snapshots contain syntactically valid JavaScript", () => {
   for (const [label, html] of [
@@ -116,4 +117,12 @@ test("staff admin navigation targets the published ZONA MARIAN route", () => {
   assert.match(bridge, /ADMIN_PANEL: "\/zona-marian"/);
   assert.match(staffPage, /case "ADMIN_PANEL":[\s\S]*?location\.to\(URLS\.ADMIN_PANEL\)/);
   assert.doesNotMatch(staffPage, /location\.to\("\/administracion"\)/);
+});
+
+
+test("booking privacy navigation targets the published Privacidad y Cookies route", () => {
+  assert.match(bridge, /PRIVACY_POLICY: "\/politica-privacidad-texto"/);
+  assert.match(calendarPage, /URLS\?\.PRIVACY_POLICY[\s\S]*?\/politica-privacidad-texto/);
+  assert.doesNotMatch(calendarPage, /\/politica-de-privacidad/);
+  assert.match(calendarHtml, /btnPrivacy/);
 });
