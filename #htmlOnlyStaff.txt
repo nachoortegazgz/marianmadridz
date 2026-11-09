@@ -693,11 +693,11 @@
 
       /* ═════════════════════════════════════════════════════════════════
          CONTEXTO — alineado con zonastaff.js v5004
-         Defaults seguros: fichaje + caja + historial VISIBLES
+         Seguridad: no se muestra ninguna operación sin contexto autorizado.
          ═════════════════════════════════════════════════════════════════ */
       function _renderContext(ctx) {
         contextData = ctx || {};
-        if (contextData.isAuthorized === false) {
+        if (contextData.isAuthorized !== true) {
           [clockPanel, historyPanel, hoursPanel, cashPanel, inventoryPanel, adminPanel]
             .forEach((panel) => { if (panel) panel.style.display = 'none'; });
           _showError('Acceso no autorizado o contexto no disponible.');
