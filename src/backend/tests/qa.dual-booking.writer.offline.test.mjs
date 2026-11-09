@@ -284,7 +284,7 @@ test('QA-DUAL-BOOKING-03 partial CitasF2 persistence marks the written projectio
   const citas = wixDataMock._store.get('CitasF2') || [];
   assert.equal(citas.length, 1, 'the first insert remains as an auditable projection, not an active orphan');
   assert.equal(citas[0].bookingId, BOOKING_F1_ID);
-  assert.equal(citas[0].bookingStatus, IC.CITAS_BOOKING_STATUS.CANCELLED);
+  assert.equal(citas[0].bookingStatus, IC.CITAS_BOOKING_STATUS.CANCELED);
   assert.equal(citas[0].meta.compensated, true);
   assert.equal(citas[0].meta.compensationTraceId, 'trace-qa-dual-cms-partial-001');
 });
