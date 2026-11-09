@@ -169,8 +169,11 @@ test("SEC-RL-08 reuses the persisted row without another bootstrap insert", asyn
         "one explicit state read plus the mocked bulkPatch item lookup"
     );
     const bulkPatchCall = wixDataMock._calls.findLast((call) => call.op === "bulkPatch");
-    assert.equal(bulkPatchCall?.suppressHooks, true,
-        "RATE_LIMIT compare-and-set skips generic CMS hooks after point-of-use validation");
+    assert.ok(bulkPatchCall, "RATE_LIMIT compare-and-set uses atomic bulkPatch");
+    assert.ok(
+        wixDataMock._calls.some((call) => call.op === "get" && call.collection === IC.OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO),
+        "the CMS beforeUpdate hook performs its authoritative strong read"
+    );
 });
 
 
