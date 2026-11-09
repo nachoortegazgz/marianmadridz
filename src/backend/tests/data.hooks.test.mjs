@@ -43,6 +43,7 @@ test('HOOK-SVC-DUAL-01 requires explicit numeric exposureDuration', () => {
 test('HOOK-CITAS-01 validates canonical enums, traceId and pairToken', () => {
   const valid = {
     bookingId: '11111111-1111-4111-8111-111111111111',
+    scheduleId: '22222222-2222-4222-8222-222222222222',
     bookingType: 'SIMPLE',
     bookingStatus: 'PENDING',
     paymentStatus: 'NOT_PAID',
@@ -54,6 +55,8 @@ test('HOOK-CITAS-01 validates canonical enums, traceId and pairToken', () => {
   assert.throws(() => H.CitasF2_beforeInsert({ ...valid, bookingType: 'DUAL_F1' }), /pairToken/);
   assert.throws(() => H.CitasF2_beforeInsert({ ...valid, traceId: '' }), /traceId/);
   assert.throws(() => H.CitasF2_beforeInsert({ ...valid, bookingId: 'not-a-guid' }), /GUID/);
+  assert.throws(() => H.CitasF2_beforeInsert(({ scheduleId, ...rest }) => rest)(valid), /scheduleId/);
+  assert.throws(() => H.CitasF2_beforeInsert({ ...valid, scheduleId: 'invalid-schedule' }), /scheduleId.*GUID/);
   assert.throws(() => H.CitasF2_beforeRemove({}), /cancelacion formal/);
 });
 
