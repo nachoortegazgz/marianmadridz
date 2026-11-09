@@ -1,8 +1,8 @@
 # Estado actual del proyecto — Marian Madrid
 
-**Revisión:** 2026-11-09  
+**Revisión:** 2026-11-10  
 **Repositorio:** [nachoortegazgz/marianmadridz](https://github.com/nachoortegazgz/marianmadridz)  
-**Baseline de código:** `main` · `8abe9bf6aee215fadd9f41beec671c16ae44fb93`  
+**Baseline de código:** `main` · `c046a975d0ca3d45e83aa2dbab07e278e02edaae`  
 **Sitio:** https://www.marianmadrid.es/  
 **Alcance:** estado documental y técnico contrastado con el árbol de `main`, auditorías existentes, CI y consultas live de solo lectura.
 
@@ -10,7 +10,7 @@
 
 ## 1. Resumen ejecutivo
 
-El repositorio contiene una solución Wix Editor/Velo con reservas Bookings V2, saga dual, checkout eCommerce Cart V2, proyección de pedidos, ledger fiscal/laboral, inventario Stores Catalog V3 y controles de seguridad. CI offline está verde en la revisión Capa 1 consolidada. Las APIs REST nativas de Stores V3, Bookings y Gift Cards han respondido en consultas de solo lectura. La conciliación adicional confirmó el catálogo Bookings 94/94 y detectó que la proyección CMS de inventario no tiene maestros canónicos para las 30 variantes.
+El repositorio contiene una solución Wix Editor/Velo con reservas Bookings V2, saga dual, checkout eCommerce Cart V2, proyección de pedidos, ledger fiscal/laboral, Wix Stores Catalog V3 y controles de seguridad. PR #235 está fusionado y corrige la recuperación fiscal idempotente de pedidos pagados dentro del alcance Bookings-only. La decisión del 2026-11-10 establece que el inventario comercial se gestiona exclusivamente con Wix Stores nativo; el módulo personalizado está pendiente de retirada controlada. Las APIs REST nativas de Stores V3, Bookings y Gift Cards han respondido en consultas de solo lectura. Wix Orders Settings confirma `inventoryUpdateTrigger=ON_ORDER_PAID` y `createInvoice=false`. Bookings V2 contiene 94 servicios: 70 tarifas fijas, 24 servicios auxiliares sin precio, siete servicios visibles >100 EUR y ningún depósito configurado.
 
 **No existe certificación E2E del runtime Velo ni evidencia de que el HEAD actual de `main` esté publicado.** No se deben equiparar el código fusionado, CI offline, las respuestas REST de Wix ni la publicación del sitio.
 
@@ -20,9 +20,10 @@ El repositorio contiene una solución Wix Editor/Velo con reservas Bookings V2, 
 |---|---|---|
 | Reservas simples y duales | Implementado en código; runtime pendiente | `reservas.web.js`, `citasManager.web.js`, `booking/bookingCore.js`, `booking/bookingSaga.js`; pruebas offline. Falta E2E real de creación, compensación, reprogramación y concurrencia. |
 | Wix Bookings V2 | Catálogo conciliado en lectura | 94 servicios nativos ↔ 94 filas CMS; 70 visibles y 24 ocultos en ambos. IDs, títulos, precios y fases duales coinciden. Disponibilidad smoke anterior; runtime WebMethods pendiente. |
+| Depósitos Bookings nativos | **Pendiente de configuración/validación** | 94 servicios leídos; 7 servicios visibles >100 EUR; 0 depósitos activos. Wix Help y esquema REST discrepan sobre pago presencial con depósito; no configurar hasta resolverlo. |
 | Checkout eCommerce Cart V2 | Contratos de SDK en CI | La suite de contratos no sustituye checkout, pago y webhooks E2E en entorno de prueba. |
-| Stores Catalog V3 | V3 activo y APIs REST responden | `V3_CATALOG`; 24 productos visibles; 30 inventory items en una ubicación. Adaptador V3 presente; import SDK/scopes Velo pendientes. |
-| Proyección de inventario | **Bloqueada por falta de maestros CMS** | Stores V3: 30/30 inventory items con tracking en una ubicación. `InventarioStockVenta`: 1 fila sin `productId`/`variantId`/`stockKey`; 0/30 maestros canónicos. El backend devuelve `INVENTORY_MASTER_MAPPING_REQUIRED` si falta el maestro. No se han escrito datos. |
+| Stores Catalog V3 | V3 activo y APIs REST responden | `V3_CATALOG`; 24 productos visibles; 30 inventory items en una ubicación. Orders Settings: `inventoryUpdateTrigger=ON_ORDER_PAID`, `createInvoice=false`. La capa custom está pendiente de retirada. |
+| Inventario personalizado | **En retirada; no crear maestros CMS** | Wix Stores Catalog V3: 30/30 inventory items con tracking en una ubicación. Se decide que Wix nativo es la única autoridad. El módulo custom aún está conectado a webhooks y UI; retirada requiere PR de código y QA. No se han escrito datos ni se han modificado históricos. |
 | Ledger fiscal / Veri*Factu | **NO APTO para activar remisión Veri*Factu** | Auditoría de código: no hay transporte SOAP AEAT, XML XSD ni flujo de respuesta/remisión. Las huellas internas no acreditan conformidad AEAT. |
 | Registro horario | Implementación parcial | Writers/hooks existen; faltan pruebas runtime, auditoría de firma de históricos y aceptación legal/operativa. |
 | Paquetes de gestoría | Snapshot y envío bloqueados | `PaquetesGestoria` tiene confirmación de creación de esquema en auditoría; creación de snapshot deshabilitada por contrato/hash/tamaño/concurrencia pendientes. Envío Resend deshabilitado por configuración. |
@@ -77,7 +78,8 @@ Referencia: [Auditoría de preparación Veri*Factu](qa/2026-11-09-verifactu-read
 1. Abrir Wix Local Editor conectado al sitio y reconciliar versión UI/código.
 2. Verificar import real de `@wix/stores`, manifiesto generado por Wix CLI y scopes V3.
 3. Ejecutar E2E con miembros/servicios/slots QA y pagos no cobrables: reserva simple/dual, compensación, checkout Cart V2, webhooks, cancelación y reprogramación.
-4. Registrar y validar los maestros de inventario mediante `registerInventoryMaster` en QA; no crear mappings por REST ni en producción sin autorización.
+4. Retirar de forma controlada las reservas/proyecciones/movimientos de inventario personalizados y su panel, manteniendo el stock nativo Wix. No crear maestros CMS ni borrar históricos; probar pedidos, cancelaciones y reembolsos en QA.
+5. Clasificar los 94 servicios Bookings por tarifa fija/variable y variantes para configurar depósitos nativos de 15 EUR solo en servicios >100 EUR; probar disponibilidad de la función, método de pago, saldo, reembolsos y conciliación fiscal.
 5. Probar hooks CMS, permisos, DISPLAY_TOKEN, locks, fencing, concurrencia e idempotencia.
 6. Comparar los HTML Components de Wix Editor/publicados con `#htmlAdmin.txt` y `#htmlOnlyStaff.txt` versionados; validar IDs, mensajes, acciones y rutas en runtime antes de habilitar flags.
 7. Reconciliar Wix Bookings/Orders con proyecciones CMS mediante lecturas; no crear movimientos ni reparar históricos hasta disponer de procedimiento backend controlado y autorización.
@@ -100,10 +102,10 @@ Referencia: [Auditoría de preparación Veri*Factu](qa/2026-11-09-verifactu-read
 
 ## 5. Invariantes para toda intervención
 
-- Wix CMS/Wix Apps son SSOT transaccional según dominio; SharePoint solo custodia evidencia.
+- Wix Bookings es autoridad de servicios, disponibilidad y reservas; Wix Stores Catalog V3 es autoridad única de stock comercial; Wix CMS propio solo conserva datos de dominio que no estén cubiertos nativamente. SharePoint solo custodia evidencia.
 - Capa 3 no escribe en Capa 1.
 - Ledgers fiscales, contables y laborales son append-only; rectificaciones mediante nuevos registros trazables.
-- No pruebas con escrituras reales ni cambios de stock/reservas/pagos en producción.
+- No pruebas con escrituras reales ni cambios de stock/reservas/pagos en producción. No activar automatizaciones que contacten clientes.
 - No modificar históricos por REST ni borrar datos para hacer pasar pruebas.
 - No desplegar sin CI verde, revisión del diff, QA runtime, autorización y estrategia de recuperación.
 - Separar siempre: verificado en código, CI offline, APIs nativas live, runtime Wix, E2E y publicado.
@@ -111,6 +113,8 @@ Referencia: [Auditoría de preparación Veri*Factu](qa/2026-11-09-verifactu-read
 ## 6. Documentos canónicos
 
 - [README e índice del repositorio](../README.md)
+- [Registro de decisiones de negocio y arquitectura](DECISION-LOG.md)
+- [ADR de depósitos e inventario nativo](adr/2026-11-10-deposit-and-native-inventory.md)
 - [Directrices de arquitectura, desarrollo y QA](../DIRECTRICES_DESARROLLO_CODIGO.txt)
 - [Dossier técnico consolidado](../DOSSIER%20TÉCNICO%20CONSOLIDADO.md)
 - [Necesidades y criterios de aceptación](../NECESIDADES%20WEB%20MARIAN.txt)
