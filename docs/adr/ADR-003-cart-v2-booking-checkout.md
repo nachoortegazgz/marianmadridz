@@ -1,6 +1,6 @@
 # ADR-003 — Checkout de reservas con Wix eCommerce Cart V2
 
-- **Estado:** Propuesta implementada en PR #19; pendiente de QA Wix y merge a `main`.
+- **Estado:** Cart V2 aislado implementado en `main`; guard de propiedad de miembro y login nativo en PR #204 (Draft); QA Wix publicado pendiente.
 - **Fecha:** 2026-10-30.
 - **Alcance:** Checkout online de reservas simples y duales F1/F2 desde backend Velo.
 - **No aplica:** Wix Stores Catalog V1, Invoices V1 ni Multiservice Bookings.
@@ -25,6 +25,18 @@ La referencia del elemento de catálogo utiliza:
 
 `summary.violations` es opcional. Si no aparece, no debe rechazarse por ese único motivo. Si aparece, debe ser un array vacío; cualquier violación o forma no válida bloquea la entrega de la URL de checkout.
 
+## Identidad y propiedad del carrito
+
+El checkout de reserva utiliza un carrito independiente de Cart V2. No se debe sustituir automáticamente por `currentCartV2`: el carrito de reserva contiene exactamente una línea de Bookings F1 y la conciliación fiscal actual espera esa separación. Añadir productos de Stores al mismo carrito alteraría el contrato de cálculo y de conciliación.
+
+La documentación oficial de Cart V2 especifica:
+- Cart gestiona carritos independientes por ID.
+- Current Cart gestiona el carrito de la sesión actual (visitor/member).
+- Si no se identifica al cliente al crear un Cart, `customerInfo.openAccess` puede ser `true`; el primer visitante/miembro que acceda pasa a ser propietario.
+- `customerInfo.memberId` y `customerInfo.contactId` son campos de solo lectura que identifican al propietario.
+
+**Invariante añadida en PR #204:** `createBookingCartCheckout` recibe los identificadores obtenidos de la sesión Wix Members. Antes de calcular o devolver la URL, exige que `createdCart.customerInfo.memberId` y `contactId` coincidan con esa sesión y que `openAccess !== true`. Si falla, elimina el carrito recién creado y aborta para que la saga compense la reserva. La atribución del Order final a `buyerInfo.memberId` debe comprobarse en E2E publicado.
+
 ## Decisión de estados
 
 1. El webhook de pago de eCommerce actualiza el estado de pago (`paymentStatus`) y la trazabilidad del pedido.
@@ -39,6 +51,8 @@ La referencia del elemento de catálogo utiliza:
 - [Cart V2 — Create Cart](https://dev.wix.com/docs/api-reference/business-solutions/e-commerce/purchase-flow/cart-v2/create-cart?apiView=SDK)
 - [Cart V2 — Calculate Cart](https://dev.wix.com/docs/api-reference/business-solutions/e-commerce/purchase-flow/cart-v2/calculate-cart?apiView=SDK)
 - [Cart V2 — Get Checkout URL](https://dev.wix.com/docs/api-reference/business-solutions/e-commerce/purchase-flow/cart-v2/get-checkout-url?apiView=SDK)
+- [Cart V2 — Delete Cart](https://dev.wix.com/docs/api-reference/business-solutions/e-commerce/purchase-flow/cart-v2/delete-cart?apiView=SDK)
+- [Cart V2 — Introduction](https://dev.wix.com/docs/api-reference/business-solutions/e-commerce/purchase-flow/cart-v2/introduction)
 - [Bookings V2 — Create Service / manual approval](https://dev.wix.com/docs/api-reference/business-solutions/bookings/services/services-v2/create-service)
 - [eCommerce — Payment Status Updated webhook](https://dev.wix.com/docs/api-reference/business-solutions/e-commerce/orders/orders/payment-status-updated)
 
@@ -46,6 +60,7 @@ La referencia del elemento de catálogo utiliza:
 
 En PR #19:
 - Prueba de contrato para la respuesta directa de `createCart`.
+- PR #204 añade guard de propiedad `memberId/contactId`, rechazo de `openAccess`, limpieza del carrito huérfano y contrato de propagación de identidad desde la saga.
 - Prueba de rechazo cuando `calculateCart` devuelve violaciones.
 - Prueba de aceptación cuando `summary.violations` está omitido.
 - Prueba de rechazo para respuestas incompletas o IDs discordantes.
