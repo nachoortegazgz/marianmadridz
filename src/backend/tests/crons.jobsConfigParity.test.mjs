@@ -109,6 +109,8 @@ test('CRON-PAYMENT-RECOVERY-01 repairs CitasF2 from the existing paid ORDER move
   wixDataMock._seed(C, [{
     _id: 'payment-recovery-alert',
     controlType: IC.CONTROL_TYPE.ALERT,
+    dedupeKey: 'test:payment-recovery-alert',
+    traceId: 'trace-payment-recovery-alert',
     alertType: 'PAYMENT_STATE_UPDATE_REQUIRED',
     status: IC.CONTROL_STATUS.OPEN,
     payload: {
@@ -377,7 +379,10 @@ test('CRON-DUAL-RECONCILE-02 only reconciles a fully consistent dual pair and un
   const movementId = 'cash-movement-strict';
   const flagId = 'dual-flag-strict';
   wixDataMock._seed(C, [{
-    _id: flagId, controlType: IC.CONTROL_TYPE.SYSTEM_FLAG,
+    _id: flagId,
+    controlType: IC.CONTROL_TYPE.SYSTEM_FLAG,
+    dedupeKey: 'test:dual-flag-strict',
+    traceId: 'trace-dual-flag-strict',
     payload: { reason: 'DUAL_INCONSISTENT', status: 'REPAIR_REQUIRED', pairToken },
   }]);
   wixDataMock._seed(IC.BUSINESS_COLLECTIONS.CITAS_F2, [
