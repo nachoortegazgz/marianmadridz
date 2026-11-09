@@ -178,6 +178,38 @@
       "limitation": "No payment provider transaction or successful paid-order webhook is simulated by this fixture."
     },
     {
+      "scenarioId": "QA-WIX-PAYMENTS-BOOKING-001",
+      "name": "Pago Wix Payments confirmado: webhook oficial, ledger append-only y reserva dual",
+      "status": "MOCK_COVERED",
+      "testFiles": [
+        "src/backend/tests/events.native-booking-sync.test.mjs",
+        "src/backend/tests/orderLedgerAmount.test.mjs"
+      ],
+      "traceId": "trace-qa-wix-payments-booking-001",
+      "fixture": {
+        "provider": "WIX_PAYMENTS",
+        "eventContract": "Velo OrderPaymentStatusUpdated (metadata.id + data.order)",
+        "previousPaymentStatus": "PENDING",
+        "paymentStatus": "PAID",
+        "orderTotal": "45.50",
+        "lineItemFallbackTotal": "120.00",
+        "currency": "EUR",
+        "bookingType": "DUAL_F1+DUAL_F2",
+        "paymentExecution": false,
+        "customerContact": "synthetic-only"
+      },
+      "assertions": [
+        "read the official Wix event id from metadata.id",
+        "read data.order and use priceSummary.totalPrice.amount as the authoritative order total",
+        "append exactly one MovimientosCaja movement with paymentMethod WIX_PAYMENTS and movementType VENTA_ONLINE",
+        "persist linked booking ids and an event idempotency marker in ControlOperativo",
+        "mark both CitasF2 rows PAID while preserving bookingStatus PENDING",
+        "same-event replay is ignored",
+        "new event id for the same order does not append a second fiscal movement"
+      ],
+      "limitation": "Offline test uses Wix event-shaped fixtures and mocked Wix Data only. It does not initiate a Wix Payments transaction, validate account activation, invoke the live Wix webhook runtime, or write to production CMS."
+    },
+    {
       "scenarioId": "QA-WEBHOOK-CANCEL-001",
       "name": "Cancelación y repetición de webhook",
       "status": "MOCK_COVERED",

@@ -26,7 +26,7 @@ This pack makes the QA fixtures repeatable and traceable. The machine-readable s
 | Simple booking Writer V2 + CitasF2 + idempotent replay | `qa.simple-booking.writer.e2e.test.mjs` | Mock covered |
 | Dual availability, exact exposure interval, same resource | `reservas.web.test.mjs` | Mock covered |
 | Dual saga compensation | `booking.availability.saga.test.mjs` | Orchestrator primitive only; integrated F2 failure remains open |
-| Cart V2 calculation and checkout URL guards | `booking.cart-v2.checkout.test.mjs` | Mock covered; no payment execution |
+| Cart V2 calculation and checkout URL guards | `booking.cart-v2.checkout.test.mjs` | Mock covered; no payment execution |\n| Wix Payments paid-order event → WIX_PAYMENTS ledger → dual CitasF2 reconciliation → idempotent replay | `events.native-booking-sync.test.mjs` + `orderLedgerAmount.test.mjs` | Mock covered with official Velo event envelope; no provider transaction or live Wix webhook |
 | Booking cancellation webhook and replay reconciliation | `events.booking-canceled.integrity.test.mjs` | Mock covered |
 | Staff identity, authorization and signed timeclock | `site.flows.e2e.test.mjs` | Mock covered |
 | Cash transaction, close Z and hash chain | `site.flows.e2e.test.mjs` | Mock covered with mock signer only |\n| Refund / service refund / reimbursement, negative accounting sign, cash projection replay and chain integrity | `site.flows.e2e.test.mjs` (`FLOW-CAJA-07`) | Mock covered for `REEMBOLSO`, `DEVOLUCION`, `DEVOLUCION_SERVICIO`; signer remains mock-only |\n| FACSIMIL series, chained digest, signature-shaped invalid placeholder and tamper detection | `fiscalFacsimile.test.mjs` | Isolated helper mock covered; no CMS writes, real signer, QR or AEAT path |
@@ -51,7 +51,7 @@ All suites use `src/backend/tests/loader.mjs`; they do not call Wix services. A 
 1. Add an integrated `processDualBooking` failure test: F1 created, F2 Writer V2 fails, native F1 cancellation attempted, both CitasF2 projections reconciled, locks released, idempotency state finalized; assert original error and compensation errors separately.
 2. Add end-to-end reschedule semantics, including dual pair consistency and old-slot release.
 3. Extend the inventory flow tests to Wix Stores order/refund event payloads and reconciliation queue replay; stock movement, idempotency, refund restock, negative-stock guard and lock release are now covered offline.
-4. Add paid-order webhook and payment/refund state tests using mocked event payloads; never invoke a payment provider.
+4. Payment webhook is now covered offline with an official Velo event-shaped fixture. Refund-state behavior and a real Wix Payments sandbox transaction remain pending; never invoke a live payment provider from automated CI.
 5. Inventory Wix Automations and test recipient/trigger/template configuration in isolated QA without sending to real customers.
 6. Test form-to-CRM routing and marketing opt-in/withdrawal separately; use only reserved `.example.test` addresses.
 7. Verify Gift Card issue/redeem/refund only if the feature is configured and the Wix test surface supports it.
@@ -92,7 +92,7 @@ Total: 11 campos eliminados físicamente y verificados ausentes en lecturas post
 
 ### Límites que siguen abiertos
 - Saga dual integrada: falta probar F1 creado + F2 Writer V2 fallido + cancelación nativa de F1 + reconciliación de ambas proyecciones + liberación de locks/idempotencia.
-- Pago confirmado y webhook de pedido pagado: no se ejecuta proveedor ni transacción real.
+- Pago confirmado: cubierto offline con evento Wix Velo `metadata.id` + `data.order`, ledger WIX_PAYMENTS, actualización dual CitasF2 e idempotencia. No se ejecuta proveedor ni transacción real; falta validación integrada en sitio QA aislado.
 - Reprogramación completa simple/dual y liberación del slot anterior: sin escenario integrado certificado.
 - Wix Stores: la venta/devolución/idempotencia offline está cubierta; reconciliación real con Stores requiere integración QA.
 - Wix Automations, formularios/CRM, marketing opt-in/baja y Gift Cards: no hay evidencia E2E automatizada.
@@ -111,3 +111,4 @@ Todas las suites offline usan fixtures sintéticos y mocks. No se crean reservas
 - ESLint: success.
 - [Workflow run #172](https://github.com/nachoortegazgz/marianmadridz/actions/runs/42149432291).
 - Esto acredita suites offline con mocks, no navegador, checkout, proveedor de pagos, firma X.509 real ni envío AEAT.
+\n\n### Update 2026-11-09 — simulación offline Wix Payments + reserva\n\n- Se añadió el escenario `QA-WIX-PAYMENTS-BOOKING-001` al manifiesto de QA.\n- El fixture reproduce la forma oficial de `OrderPaymentStatusUpdated` de Velo: `metadata.id`, `data.order` y `data.previousPaymentStatus`.\n- Se cubre pago `PAID` de 45,50 EUR, con total autoritativo en `priceSummary.totalPrice.amount` y un total alternativo de línea de 120,00 EUR para comprobar precedencia.\n- El escenario exige un único asiento append-only en `MovimientosCaja` con `paymentMethod=WIX_PAYMENTS`, `movementType=VENTA_ONLINE`, asociación de reserva, hash de integridad y marcador de webhook en `ControlOperativo`.\n- Para reserva dual, ambas filas de `CitasF2` pasan a pago `PAID`, sin alterar `bookingStatus=PENDING`. Se comprueba replay del mismo evento y un segundo evento para el mismo pedido sin duplicar el asiento.\n- **Límite:** toda la persistencia usa `wixDataMock`; no se cobra, no se llama a Wix Payments y no se escribe en el CMS del sitio. La prueba tampoco acredita el runtime del webhook ni la activación de la cuenta.\n

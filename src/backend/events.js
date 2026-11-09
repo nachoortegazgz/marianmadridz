@@ -109,7 +109,10 @@ import {
  */
 export function resolveOrderLedgerAmount(order) {
     const orderTotalCandidates = [
+        order?.priceSummary?.totalPrice?.amount,
         order?.priceSummary?.total?.amount,
+        order?.payNow?.total?.amount,
+        order?.payNow?.totalPrice?.amount,
         order?.totals?.total?.amount,
     ];
     for (const rawOrderTotal of orderTotalCandidates) {
@@ -1357,7 +1360,7 @@ export async function wixEcom_onOrderPaymentStatusUpdated(rawBody) {
         );
         if (!event) return { status: "REJECTED", reason: "JWT_VERIFICATION_FAILED" };
 
-        const eventId = event?.id || event?.eventId || event?._id;
+        const eventId = event?.metadata?.id || event?.id || event?.eventId || event?._id;
         if (eventId) {
             const alreadyProcessed = await isEventProcessed(eventId);
             if (alreadyProcessed) {

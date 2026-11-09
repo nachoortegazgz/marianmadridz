@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { wixDataMock } from "./loader.mjs";
+import * as IC from "backend/internalConfig.js";
 
 const events = await import("backend/events.js");
 
@@ -349,4 +350,121 @@ test("EVENT-BOOKING-06 native Bookings V2 cancellation consumes metadata.id + da
 
   const markers = wixDataMock._store.get("ControlOperativo") || [];
   assert.equal(markers.filter(row => row.dedupeKey === "WEBHOOK_evt-native-cancel-006").length, 1);
+});
+
+
+test("EVENT-PAYMENT-09 official Wix eCommerce paid event appends WIX_PAYMENTS ledger and reconciles the full dual booking idempotently", async () => {
+  wixDataMock._reset();
+
+  const secretState = globalThis.__mmSecretsState || (globalThis.__mmSecretsState = { _map: {}, _default: "mock-secret" });
+  secretState._map.FISCAL_NIF_EMISOR = "B12345678";
+
+  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.DATOS_FISCALES, [{
+    _id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+    recordType: "TERCERO",
+    taxId: "B12345678",
+    legalName: "MARIAN MADRID",
+    thirdPartyType: "EMISOR",
+    address: null,
+  }]);
+
+  wixDataMock._seed("CitasF2", [
+    seedCita({
+      bookingStatus: "PENDING",
+      paymentStatus: "PENDING_PAYMENT",
+      totalAmount: 45.5,
+      meta: { pairToken: PAIR_TOKEN, customSaga: true, paymentStatus: "PENDING_PAYMENT" },
+    }),
+    seedCita({
+      _id: "cita-row-f2-paid",
+      bookingId: F2_BOOKING_ID,
+      bookingType: "DUAL_F2",
+      bookingStatus: "PENDING",
+      paymentStatus: "PENDING_PAYMENT",
+      totalAmount: 45.5,
+      meta: {
+        pairToken: PAIR_TOKEN,
+        customSaga: true,
+        linkedF1BookingId: BOOKING_ID,
+        paymentStatus: "PENDING_PAYMENT",
+        noFee: true,
+      },
+    }),
+  ]);
+
+  const orderId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+  const eventId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+  const event = {
+    metadata: {
+      id: eventId,
+      entityId: orderId,
+      eventTime: "2026-11-09T10:00:00.000Z",
+      triggeredByAnonymizeRequest: false,
+    },
+    data: {
+      order: {
+        _id: orderId,
+        paymentStatus: "PAID",
+        currency: "EUR",
+        priceSummary: {
+          totalPrice: { amount: "45.50" },
+        },
+        lineItems: [{
+          catalogReference: {
+            appId: IC.WIX_CATALOG_APP_IDS.BOOKINGS,
+            catalogItemId: BOOKING_ID,
+          },
+          quantity: 1,
+          price: { amount: "120.00" },
+          totalPriceAfterTax: { amount: "120.00" },
+        }],
+      },
+      previousPaymentStatus: "PENDING",
+    },
+  };
+
+  const result = await events.wixEcom_onOrderPaymentStatusUpdated(event);
+  assert.equal(result.status, "OK");
+
+  const movements = wixDataMock._store.get(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA) || [];
+  assert.equal(movements.length, 1, "paid webhook must append a ledger movement; recovery/control state: " + JSON.stringify(wixDataMock._store.get(IC.OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO) || []));
+  const movement = movements[0];
+  assert.equal(movement.transactionId, "ORDER-" + orderId);
+  assert.equal(movement.orderId, orderId);
+  assert.equal(movement.totalAmount, 45.5, "official priceSummary.totalPrice must take precedence over the line-item fallback");
+  assert.equal(movement.paymentMethod, IC.PAYMENT_METHOD.WIX_PAYMENTS);
+  assert.equal(movement.movementType, IC.MOVEMENT_TYPE.VENTA_ONLINE);
+  assert.equal(movement.channelType, IC.CHANNEL_TYPE.ONLINE);
+  assert.deepEqual(movement.linkedBookingIds, [BOOKING_ID]);
+  assert.match(movement.hash, /^[a-f0-9]{64}$/i);
+
+  const citas = wixDataMock._store.get("CitasF2") || [];
+  assert.equal(citas.length, 2);
+  for (const row of citas) {
+    assert.equal(row.paymentStatus, IC.PAYMENT_STATUS.PAID);
+    assert.equal(row.meta.paymentStatus, IC.PAYMENT_STATUS.PAID);
+    assert.equal(row.meta.orderId, orderId);
+    assert.equal(row.bookingStatus, "PENDING", "payment must not approve/confirm the appointment");
+    assert.equal(row.pairToken, PAIR_TOKEN);
+  }
+
+  const controlRows = wixDataMock._store.get(IC.OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO) || [];
+  assert.equal(
+    controlRows.filter(row => row.dedupeKey === "WEBHOOK_" + eventId).length,
+    1,
+    "official metadata.id must be persisted as the webhook idempotency marker"
+  );
+
+  const sameEventReplay = await events.wixEcom_onOrderPaymentStatusUpdated(event);
+  assert.equal(sameEventReplay.status, "OK");
+  assert.equal(sameEventReplay.duplicate, true);
+  assert.equal((wixDataMock._store.get(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA) || []).length, 1);
+
+  const newEventReplay = await events.wixEcom_onOrderPaymentStatusUpdated({
+    ...event,
+    metadata: { ...event.metadata, id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc" },
+  });
+  assert.equal(newEventReplay.status, "OK");
+  assert.equal((wixDataMock._store.get(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA) || []).length, 1,
+    "stable ORDER-{orderId} transaction id must prevent a second fiscal movement");
 });
