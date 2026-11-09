@@ -88,7 +88,7 @@ mocks.sdk['@wix/bookings::bookings'] = {
         status: 'CREATED',
         bookedEntity: {
           slot: {
-            resource: { id: RESOURCE_ID },
+            resource: { _id: RESOURCE_ID },
           },
         },
         doubleBooked: false,
@@ -101,7 +101,7 @@ mocks.sdk['@wix/bookings::bookings'] = {
       booking: {
         id: bookingId,
         status: 'CONFIRMED',
-        bookedEntity: { slot: { resource: { id: RESOURCE_ID } } },
+        bookedEntity: { slot: { resource: { _id: RESOURCE_ID } } },
       },
     };
   },
