@@ -68,7 +68,7 @@ Este mapa permite la navegación semántica y técnica precisa por las 4 capas d
 | Capítulo | Título | Contenido Clave y Datos de Búsqueda Rápida |
 | :--- | :--- | :--- |
 | **8** | Seguridad y Permisos | • RBAC doble capa: Velo Permissions + `MapaStaff.rolWebsite`<br>• Roles: ADMIN / GESTION / ESTILISTA<br>• Secretos en Wix Secrets Manager (`mmSecrets.js`)<br>• Firma HMAC-SHA256 + ventana ±60s anti-replay<br>• Rate limiting por surface (public-booking, reservas, availability)<br>• Minimización PII: enmascaramiento en logs, exclusión datos tarjeta<br>• Webhooks Bookings: verificación JWT + deduplicación `eventId` |
-| **9** | Integraciones | • Apps Wix nativas: reglas por app (Bookings V2, Stores V1, eCom Cart V2)<br>• Externas: Resend (email), OpenAI (IA), MONEI (Bizum BdE 6911), IONOS (DNS/correo), M365 (custodia)<br>• Gestión colecciones WIX_APP: solo lectura, mutación vía SDK oficial<br>• Prohibición de llamadas externas desde frontend |
+| **9** | Integraciones | • Apps Wix nativas: reglas por app (Bookings V2, Stores V1, eCom Cart V2)<br>• Externas: Resend (email), OpenAI (IA), Wix Payments (Bizum BdE 6911), IONOS (DNS/correo), M365 (custodia)<br>• Gestión colecciones WIX_APP: solo lectura, mutación vía SDK oficial<br>• Prohibición de llamadas externas desde frontend |
 | **10** | Backend: Módulos y Hooks | • Catálogo completo de 18 WebMethods con permisos Velo y rol negocio<br>• Flujos críticos: venta online, cancelaciones, cierre Z nocturno<br>• Hooks CMS por colección (`data.js`): validaciones beforeInsert/beforeUpdate<br>• Helpers: `mmUtils.js`, `securityEngine.js`, `validation.js`, `widgetBridge.js` |
 | **11** | Jobs y Webhooks | • 8 crons en `jobs.config` (tabla con frecuencia, dominio y operación)<br>• Webhooks Bookings V2: 5 eventos + procesamiento seguro idempotente<br>• Webhooks eCommerce: independientes de V1/V3<br>• Catalog V3 webhooks: pendientes (Developer Preview, no activar sin ADR)<br>• Reglas invariables: jobs nunca escriben directo en append-only |
 | **12** | Estándares de Código | • Reglas N1-N5 detalladas con ejemplos<br>• G10 ASCII Strict (ñ permitida en términos españoles canónicos)<br>• Convenciones enums y códigos de error estandarizados<br>• Plantilla cabecera módulo (@module, @version, @apis, @changelog)<br>• Reglas "Cero Deuda" v1.0: cero alias, cero legacy silencioso, cero deprecated |
@@ -115,7 +115,7 @@ Este mapa permite la navegación semántica y técnica precisa por las 4 capas d
 | Capítulo | Título | Contenido Clave y Datos de Búsqueda Rápida |
 | :--- | :--- | :--- |
 | **8** | Seguridad y Permisos | • RBAC doble capa: Velo Permissions + `MapaStaff.rolWebsite`<br>• Roles: ADMIN / GESTION / ESTILISTA<br>• Secretos en Wix Secrets Manager (`mmSecrets.js`)<br>• Firma HMAC-SHA256 + ventana ±60s anti-replay<br>• Rate limiting por surface (public-booking, reservas, availability)<br>• Minimización PII: enmascaramiento en logs, exclusión datos tarjeta<br>• Webhooks Bookings: verificación JWT + deduplicación `eventId` |
-| **9** | Integraciones | • Apps Wix nativas: reglas por app (Bookings V2, Stores V1, eCom Cart V2)<br>• Externas: Resend (email), OpenAI (IA), MONEI (Bizum BdE 6911), IONOS (DNS/correo), M365 (custodia)<br>• Gestión colecciones WIX_APP: solo lectura, mutación vía SDK oficial<br>• Prohibición de llamadas externas desde frontend |
+| **9** | Integraciones | • Apps Wix nativas: reglas por app (Bookings V2, Stores V1, eCom Cart V2)<br>• Externas: Resend (email), OpenAI (IA), Wix Payments (Bizum BdE 6911), IONOS (DNS/correo), M365 (custodia)<br>• Gestión colecciones WIX_APP: solo lectura, mutación vía SDK oficial<br>• Prohibición de llamadas externas desde frontend |
 | **10** | Backend: Módulos y Hooks | • Catálogo completo de 18 WebMethods con permisos Velo y rol negocio<br>• Flujos críticos: venta online, cancelaciones, cierre Z nocturno<br>• Hooks CMS por colección (`data.js`): validaciones beforeInsert/beforeUpdate<br>• Helpers: `mmUtils.js`, `securityEngine.js`, `validation.js`, `widgetBridge.js` |
 | **11** | Jobs y Webhooks | • 8 crons en `jobs.config` (tabla con frecuencia, dominio y operación)<br>• Webhooks Bookings V2: 5 eventos + procesamiento seguro idempotente<br>• Webhooks eCommerce: independientes de V1/V3<br>• Catalog V3 webhooks: pendientes (Developer Preview, no activar sin ADR)<br>• Reglas invariables: jobs nunca escriben directo en append-only |
 | **12** | Estándares de Código | • Reglas N1-N5 detalladas con ejemplos<br>• G10 ASCII Strict (ñ permitida en términos españoles canónicos)<br>• Convenciones enums y códigos de error estandarizados<br>• Plantilla cabecera módulo (@module, @version, @apis, @changelog)<br>• Reglas "Cero Deuda" v1.0: cero alias, cero legacy silencioso, cero deprecated |
@@ -633,7 +633,7 @@ Las colecciones `WIX_APP` son de **estricta lectura**. Prohibido ejecutar `wixDa
 | --- | --- | --- |
 | Resend | `fetch()` backend con secreto en Wix Secrets | Email transaccional; no sustituir por SDK Wix sin rediseño |
 | OpenAI API | `fetch()` backend con secreto en Wix Secrets | Timeout `AbortController` ≤ 9 s; respuesta fallback si JSON malformado |
-| MONEI (pagos) | Integración nativa Wix (pasarela certificada BdE lic. 6911) | Bizum nativo en checkout |
+| Wix Payments | Proveedor de pagos nativo de Wix; gestiona pagos, payouts, reembolsos y contracargos desde su panel. | Métodos disponibles según país y configuración de la cuenta; confirmar en el panel del sitio. |
 | IONOS | DNS/correo corporativo (infraestructura externa) | No forma parte de la lógica transaccional |
 | Microsoft 365 | OneDrive para custodia de Cierres Z; Power Automate para automatización | Si se activa, es repositorio de evidencia, no autoridad transaccional |
 
@@ -911,7 +911,7 @@ El sistema garantiza el cumplimiento estricto del marco legal español y europeo
 | **RGPD (UE) 2016/679** y **LOPDGDD 3/2018** | Minimización de PII, consentimiento, derechos ARCO+. | Enmascaramiento automático en logs (`_maskEmail`, `_maskPhone`, `_maskName`); exclusión de datos de tarjeta en CMS; Consent Mode v2 en web; servidores en UE (IONOS + Wix). |
 | **LGT 58/2003** y **Código de Comercio art. 30** | Conservación de documentación fiscal y mercantil 4–6 años. | Retención nativa del CMS; `HistoricoCierresZ` con firma criptográfica del periodo; copias en OneDrive M365. |
 | **LSSI-CE 34/2002** | Transparencia de precios, información previa al pago. | Precios con IVA incluido; Aviso Legal, Política de Privacidad y Condiciones de Cancelación en footer. |
-| **RD 253/2025** | Reporte AEAT de cobros Bizum desde enero 2026. | MONEI (BdE lic. 6911) reporta automáticamente; Cierre Z como evidencia documental. |
+| **RD 253/2025** | Obligaciones de información sobre cobros mediante Bizum, cuando resulte aplicable. | El Cierre Z conserva el desglose registrado; no se presume que Wix Payments presente declaraciones ni comunique automáticamente estos datos a AEAT. Validar alcance y responsable con AEAT/asesoría. |
 
 ### 13.5 Matriz de cumplimiento consolidada
 
@@ -921,7 +921,7 @@ El sistema garantiza el cumplimiento estricto del marco legal español y europeo
 | IVA 21% / desgloses | ✅ Cumple | `_roundMoney()` + enum `TIPO_IMPOSITIVO`. |
 | Registro horario | ✅ Cumple | `RegistrosHorariosStaff` exportable a PDF. |
 | RGPD / LOPDGDD | ✅ Cumple | Servidores UE, PII enmascarada, Consent Mode v2. |
-| Ley Antifraude (MONEI) | ✅ Cumple | Segregación automática Bizum/Tarjeta/Efectivo. |
+| Ley Antifraude / control de cobros | Pendiente de acreditación integral | El ledger propio mantiene trazabilidad e inalterabilidad; el proveedor de pago no sustituye las obligaciones del sistema de facturación. |
 | LSSI-CE | ✅ Cumple | Textos legales en footer, precios con IVA. |
 
 ---
@@ -1207,7 +1207,7 @@ Estos procesos se ejecutan solos gracias al sistema Wix + Power Automate ya impl
 | :--- | :--- | :--- | :--- |
 | Cierre Z diario | PDF con resumen del día: total cobrado, desglose por método de pago, IVA | Cada noche a las 01:20 | `1. VENTAS / Cierres Z /` |
 | Movimientos de caja | Excel con cada cobro/devolución del día | Cada noche a las 03:00 | `1. VENTAS / Movimientos /` |
-| Cobros MONEI (Bizum/tarjeta online) | Extracto MONEI | Cada noche a las 04:00 | `1. VENTAS / MONEI /` |
+| Cobros online procesados por Wix Payments | Informe/registro de transacciones y payouts de Wix Payments | Según disponibilidad del panel | `1. VENTAS / WIX_PAYMENTS /` |
 | Fichajes de Alba y Andrea | Excel semanal con entradas/salidas/pausas | Cada lunes a las 06:00 | `4. PERSONAL / Fichajes /` |
 | Resumen mensual de horas | PDF por trabajadora | Día 1 de cada mes | `4. PERSONAL / Resumen mensual /` |
 | Ventas online (tienda) | Excel con pedidos, IVA y método de pago | Día 2 de cada mes | `1. VENTAS / Tienda online /` |
@@ -1241,7 +1241,7 @@ Estos procesos se ejecutan solos gracias al sistema Wix + Power Automate ya impl
 | Material fungible | Toallas, guantes, papel de aluminio, tinte |
 | Marketing / publicidad | Si contrata algo puntual |
 | Seguros | RC, local |
-| Software / suscripciones | IONOS (dominio), comisiones MONEI |
+| Software / suscripciones | IONOS (dominio), comisiones Wix Payments |
 | Reparaciones / mantenimiento | Avería del calentador, pintura del local |
 
 > **Regla sencilla:** Si le han cobrado algo y le han dado una factura → foto → carpeta GASTOS. Si no hay factura (un café, una propina) → no se guarda.
@@ -1288,9 +1288,9 @@ Estos procesos se ejecutan solos gracias al sistema Wix + Power Automate ya impl
 │   │   └── 📂 2026
 │   │       ├── 2026-01_Movimientos_Caja.xlsx
 │   │       └── ...
-│   ├── 📂 MONEI
+│   ├── 📂 WIX_PAYMENTS
 │   │   └── 📂 2026
-│   │       ├── 2026-01_Extracto_MONEI.pdf
+│   │       ├── 2026-01_Informe_Wix_Payments.ext (formato disponible en el panel)
 │   │       └── ...
 │   ├── 📂 Reservas
 │   │   └── 📂 2026
@@ -1367,7 +1367,7 @@ Cuando llega el día 15 de abril, julio, octubre o enero, el gestor recibe (por 
 | :--- | :--- | :--- |
 | Resumen de ventas del trimestre (servicios + tienda) | Carpeta `1. VENTAS` | Excel |
 | Cierres Z diarios del trimestre | Carpeta `1. VENTAS / Cierres Z` | PDF (o ZIP) |
-| Extracto MONEI del trimestre | Carpeta `1. VENTAS / MONEI` | PDF |
+| Informe de transacciones/payouts de Wix Payments | Carpeta `1. VENTAS / WIX_PAYMENTS` | Formato disponible en el panel; exportación automatizada pendiente de verificar |
 | Facturas de gastos del trimestre | Carpeta `2. GASTOS` | PDF (o ZIP) |
 | Extracto bancario del trimestre | Carpeta `3. BANCO` | PDF |
 | Fichajes y resumen de horas del personal | Carpeta `4. PERSONAL` | Excel + PDF |
@@ -1458,7 +1458,7 @@ Para que quede absolutamente claro:
 | Conciliar banco con ventas | ❌ No | El gestor |
 | Preparar el Modelo 303 | ❌ No | El gestor |
 | Preparar la Renta | ❌ No | El gestor |
-| Guardar datos de tarjetas de clientas | ❌ No | Prohibido (RGPD). MONEI los gestiona. |
+| Guardar datos de tarjetas de clientas | ❌ No | Prohibido (RGPD). Wix Payments procesa los datos de tarjeta durante el checkout; el CMS no almacena PAN ni CVV. |
 
 ---
 
@@ -1519,7 +1519,7 @@ Cuando el gestor abre la carpeta del trimestre, encuentra exactamente esto:
 ├── 📂 VENTAS/
 │   ├── Cierres_Z_T1.zip                  ← 90 PDFs (enero + febrero + marzo)
 │   ├── Movimientos_Caja_T1.xlsx          ← Todos los cobros del trimestre
-│   ├── MONEI_T1.zip                      ← Extractos MONEI
+│   ├── WIX_PAYMENTS_T1.zip                      ← Extractos Wix Payments
 │   ├── Reservas_T1.xlsx                  ← Servicios realizados
 │   └── Tienda_Online_T1.xlsx             ← Pedidos online
 │
@@ -1554,7 +1554,7 @@ Cuando el gestor abre la carpeta del trimestre, encuentra exactamente esto:
 | "¿Tengo que hacer algo todos los días?" | **No.** El sistema genera el Cierre Z solo. Tú solo guarda facturas cuando lleguen. |
 | "¿Qué pasa si un día no se genera el Cierre Z?" | Recibirás un email de alerta a las 8:00. Si pasa, llama al soporte técnico. |
 | "¿Tengo que hacer facturas a mano?" | **No.** El sistema genera facturas simplificadas automáticamente con cada cobro. |
-| "¿Qué pasa con las propinas?" | Las propinas en efectivo no son ingreso del negocio. No se registran. Si una clienta deja propina con tarjeta, MONEI la registra y aparece en el extracto. |
+| "¿Qué pasa con las propinas?" | Las propinas en efectivo no son ingreso del negocio. No se registran. Si una clienta deja propina con tarjeta, solo se registra si el checkout y los datos nativos de Wix Payments exponen ese importe; pendiente de verificar. |
 | "¿Tengo que darle mis claves del banco al gestor?" | **No.** El gestor solo necesita el extracto PDF. Nunca las claves. |
 | "¿Qué pasa si una clienta me pide una factura?" | Se la generas desde el sistema (Wix Invoices). Si es una factura completa (no simplificada), pides sus datos fiscales y se emite. |
 | "¿Y si compro algo con mi tarjeta personal para el negocio?" | Guarda el ticket/factura. Dile al gestor que lo pagaste tú. Él lo registra como aportación. |
@@ -2383,7 +2383,7 @@ Esto ya está descrito en el PTD Kit Digital (Sección 7.5) y no requiere desarr
 | **RD 8/2019** | Fichajes exportados semanalmente con `clockEventType`, `recordedAt`, `staffName`. Retención 4 años en SharePoint. |
 | **Código de Comercio art. 30** | Política de retención de 6 años en SharePoint. Versionado de 500 versiones. |
 | **LGT 58/2003** | Documentación disponible ante requerimiento AEAT en <15 minutos (PTD §13, test de estrés). |
-| **RD 253/2025 (Bizum)** | MONEI reporta automáticamente a AEAT. El Cierre Z incluye `totalBizum` como evidencia documental. |
+| **RD 253/2025 (Bizum)** | Obligación y sujeto obligado a validar con AEAT/asesoría. El Cierre Z conserva el desglose `totalBizum` cuando se registra; no se presume reporte automático de Wix Payments. |
 | **LSSI-CE** | No aplica directamente a la Capa 3. Los textos legales están en el sitio web. |
 
 ---
@@ -3239,7 +3239,7 @@ El sitio `marianmadrid.es` gestiona **12 procesos de negocio** a través de tres
 | :--- | :--- | :--- |
 | **Wix Apps nativas** | Bookings V2, Stores V1, eCommerce, Members, Invoices V1, Gift Cards, Forms & Payments, Blog | Reservas, catálogo público, checkout, identidad de clientes, facturación nativa, tarjetas regalo, formularios, contenido SEO |
 | **Backend personalizado (Velo)** | 22 módulos backend, 13 colecciones CMS NATIVE, 12 crons, 8 webhooks, 18 webMethods | Caja fiscal Veri*Factu, cierre Z, inventario espejo, fichajes laborales, reservas duales, agregación fiscal, paquetes para gestoría |
-| **Integraciones externas** | Resend, MONEI, OpenAI, IONOS, M365 (SharePoint/Power Automate/OneDrive) | Email transaccional, pagos Bizum/tarjeta, IA conversacional, DNS/correo, custodia documental Capa 3 |
+| **Integraciones externas** | Resend, OpenAI, IONOS, M365 (SharePoint/Power Automate/OneDrive) | Email transaccional, IA conversacional, DNS/correo y custodia documental Capa 3; pagos online mediante Wix Payments (servicio nativo) |
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -3296,7 +3296,7 @@ El sitio `marianmadrid.es` gestiona **12 procesos de negocio** a través de tres
 | Subproceso | Descripción técnica | Datos generados | Colección / Destino SSOT |
 | :--- | :--- | :--- | :--- |
 | **P2.1** Catálogo de productos | Wix Stores V1 gestiona productos, variantes y colecciones. `InventarioStockVenta` mantiene snapshot espejo del stock. | `productId`, `variantId`, `sku`, `name`, `price`, `stockOnHand`, `stockReserved`, `stockAvailable`, `tipoImpositivo`, `taxIncluded`, `wixProductId`, `wixVariantId`, `traceId` | `InventarioStockVenta` (lectura/escritura controlada) + `Stores/Products`, `Stores/Variants` (WIX_APP, solo lectura) |
-| **P2.2** Carrito y checkout | Wix eCommerce Cart V2. El cliente añade productos, selecciona Click&Collect, paga vía MONEI. | `cartId`, `lineItems[]` (`productId`, `variantId`, `quantity`, `price`, `taxRate`), `totalAmount`, `currency: "EUR"` | Wix eCommerce (nativo) |
+| **P2.2** Carrito y checkout | Wix eCommerce Cart V2. El cliente añade productos, selecciona Click&Collect, paga mediante el checkout nativo de Wix Payments. | `cartId`, `lineItems[]` (`productId`, `variantId`, `quantity`, `price`, `taxRate`), `totalAmount`, `currency: "EUR"` | Wix eCommerce (nativo) |
 | **P2.3** Confirmación de pago | Webhook `order_payment_status_updated` → `events.js` deduplica. Inserta en `MovimientosCaja`. | `orderId`, `transactionId`, `sequenceNumber`, `numSerieFactura`, `amount`, `taxBase`, `taxAmount`, `tipoImpositivo`, `paymentMethod` (TARJETA/BIZUM/WIX_PAYMENTS), `channelType: "ONLINE"`, `movementType: "COBRO"`, `hash`, `previousRecordHash`, `traceId` | `MovimientosCaja` (insert append-only) + `ControlOperativo` (`WEBHOOK_EVENT`) |
 | **P2.4** Registro de pedido | Webhook `order_created`. Registro de intención de compra. | `orderId`, `paymentStatus: "PENDING_PAYMENT"`, `lineItems[]`, `traceId` | `CitasF2` o registro interno + `Stores/Orders` (WIX_APP) |
 | **P2.5** Descuento de stock | El checkout nativo de Wix Stores descuenta stock automáticamente. `MovimientosInventario` registra la salida con `movementToken` idempotente. | `movementToken`, `movementType: "VENTA"`, `sku`, `quantityDelta`, `stockBefore`, `stockAfter`, `orderId`, `lineItemId`, `traceId` | `MovimientosInventario` (insert append-only) + `InventarioStockVenta` (update `stockOnHand`) |
@@ -3414,16 +3414,16 @@ El sitio `marianmadrid.es` gestiona **12 procesos de negocio** a través de tres
 
 ### P10 — PAGOS Y COBROS
 
-**Gestionado por:** MONEI (pasarela BdE lic. 6911) + Wix Payments + Wix eCommerce.
+**Gestionado por:** Wix Payments (proveedor de pagos nativo) + Wix eCommerce.
 
 | Subproceso | Descripción técnica | Datos generados | Colección / Destino SSOT |
 | :--- | :--- | :--- | :--- |
-| **P10.1** Cobro con tarjeta (online/presencial) | MONEI procesa. Wix registra el pago. Webhook confirma. | `transactionId`, `paymentMethod: "TARJETA"`, `amount`, `orderId` (si online) | MONEI (extracto) + `MovimientosCaja` |
-| **P10.2** Cobro con Bizum (online/presencial) | MONEI Bizum nativo. Único en España con Bizum en checkout Wix. | `paymentMethod: "BIZUM"`, `transactionId`, `amount` | MONEI (extracto) + `MovimientosCaja` |
+| **P10.1** Cobro online con tarjeta | Wix Payments procesa el pago en el checkout nativo; Wix eCommerce registra la orden y el evento de pago. | `transactionId`, `paymentMethod` nativo/canónico, `amount`, `orderId` | `MovimientosCaja` (insert append-only) |
+| **P10.2** Métodos de pago digitales alternativos | Solo se consideran los métodos que Wix Payments muestre habilitados para esta cuenta y país. No se declara Bizum disponible en Wix Payments sin verificación expresa en el panel. | Método nativo confirmado, `transactionId`, `amount` | `MovimientosCaja` (insert append-only) |
 | **P10.3** Cobro en efectivo | Registro manual en caja. | `paymentMethod: "EFECTIVO"`, `amount`, `channelType: "PRESENCIAL"` | `MovimientosCaja` |
-| **P10.4** Depósito de reserva (30%) | Para servicios >50€. Procesado por MONEI. | `depositAmount`, `depositType`, `transactionId` | Wix Bookings + MONEI |
+| **P10.4** Depósito de reserva | La fianza, si se aprueba, se cobra mediante el checkout nativo de Wix Payments. El umbral y el importe siguen pendientes de resolución documental/ADR. | `depositAmount`, `depositType`, `transactionId` | Wix Bookings + Wix eCommerce / Wix Payments |
 | **P10.5** Reembolso | Webhook `order_refund_updated`. Registro rectificativo. | `refundId`, `movementType: "DEVOLUCION"`, `amount` (negativo o rectificativo) | `MovimientosCaja` (insert append-only) |
-| **P10.6** Extracto MONEI | MONEI genera extracto periódico. Reporta automáticamente a AEAT (RD 253/2025). | Extracto PDF/CSV con todas las transacciones | MONEI (externo) → **Capa 3** |
+| **P10.6** Informes de pagos y payouts | Wix Payments ofrece gestión centralizada de pagos, payouts, reembolsos y contracargos. Formato y descarga de informes para Capa 3 pendientes de verificar; no se atribuye reporte automático a AEAT. | Informe/registro disponible en el panel de Wix Payments → **Capa 3**, tras verificar exportación y alcance. |
 
 ---
 
@@ -3467,7 +3467,7 @@ El sitio `marianmadrid.es` gestiona **12 procesos de negocio** a través de tres
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **P9** Cierre Z | Cierre Z diario (totales, desglose por método de pago, IVA, hash, firma) | `HistoricoCierresZ` | `1_VENTAS/Cierres_Z/AAAA/MM/` | **Automático:** Cron `verifyNightlyZClosing` → export CSV → Resend → `gestion@` → Power Automate → SharePoint | Diario (01:20) | Sistema (0 min Marian) |
 | **P3** Caja física | Movimientos de caja del día (cada cobro, devolución, ajuste, con hash y secuencia) | `MovimientosCaja` | `1_VENTAS/Movimientos/AAAA/` | **Automático:** Cron `exportDailyMovements` (03:00) → CSV → Resend → Power Automate → SharePoint | Diario (03:00) | Sistema (0 min Marian) |
-| **P10** Pagos | Extracto MONEI (Bizum, tarjeta, Apple Pay, Google Pay) | MONEI (externo) | `1_VENTAS/MONEI/AAAA/` | **Semi-automático:** MONEI envía extracto por email → Marian reenvía a `gestion@` → Power Automate → SharePoint. O descarga manual del panel MONEI. | Mensual | Marian (~2 min) |
+| **P10** Pagos | Informe de transacciones y payouts de Wix Payments | Wix Payments (proveedor nativo Wix) | `1_VENTAS/WIX_PAYMENTS/AAAA/` | **Semi-automático pendiente de validar:** descarga desde el panel Wix Payments y archivo en SharePoint; no se presume envío automático por email ni formato concreto. | Mensual | Marian (~2 min, estimación por confirmar) |
 | **P1** Reservas | Ventas y reservas del mes (servicios realizados, importes, estados, métodos de pago) | `CitasF2` | `1_VENTAS/Reservas/AAAA/` | **Automático:** Cron `exportMonthlyVentas` (día 2, 06:00) → CSV → Resend → Power Automate → SharePoint | Mensual (día 2) | Sistema (0 min Marian) |
 | **P2** Venta online | Pedidos online del mes (productos, importes, IVA, estado) | `Stores/Orders` (WIX_APP) + `MovimientosCaja` | `1_VENTAS/Tienda_Online/AAAA/` | **Automático:** Incluido en `exportMonthlyVentas` o export separado | Mensual (día 2) | Sistema (0 min Marian) |
 | **P5** Inventario | Movimientos de inventario del mes (entradas, salidas, ajustes, devoluciones) | `MovimientosInventario` | `5_INVENTARIO/AAAA/` | **Automático:** Cron `exportMonthlyInventario` (día 3, 06:00) → CSV → Resend → Power Automate → SharePoint | Mensual (día 3) | Sistema (0 min Marian) |
@@ -3496,7 +3496,7 @@ El sitio `marianmadrid.es` gestiona **12 procesos de negocio** a través de tres
 │  Stores/Orders (WIX_APP) ──────────────────────────────────────────────────┤    │
 │  Members/FullData (WIX_APP) ───────────────────────────────────────────────┤    │
 │                                                                              │    │
-│  MONEI (extracto externo) ─────────────────────────────────────────────────┤    │
+│  Wix Payments (transacciones/payouts; exportación por verificar) ────────────┤    │
 │  Ibercaja (extracto externo) ──────────────────────────────────────────────┤    │
 │  Facturas proveedores (documentos externos) ───────────────────────────────┤    │
 └──────────────────────────────────────────────────────────────────────────────┘    │
@@ -3519,7 +3519,7 @@ El sitio `marianmadrid.es` gestiona **12 procesos de negocio** a través de tres
 ┌─────────────────────────────────────────────────────────────────────────────────┐│
 │                    CAPA 3 — SHAREPOINT (MarianMadrid_Documentacion)             ││
 │                                                                                  ││
-│  🟢 1_VENTAS/ ← Cierres Z, Movimientos, Reservas, Tienda Online, MONEI         ││
+│  🟢 1_VENTAS/ ← Cierres Z, Movimientos, Reservas, Tienda Online, Wix Payments         ││
 │  🔴 2_GASTOS/ ← Facturas de proveedores (Marian)                                ││
 │  🔵 3_BANCO/  ← Extractos bancarios (Marian)                                    ││
 │  🟡 4_PERSONAL/ ← Fichajes, Resumen horas                                      ││
@@ -3581,7 +3581,7 @@ Para facturas de proveedores que no existen en el SSOT Wix:
 | Dato | Motivo de exclusión |
 | :--- | :--- |
 | PII de clientes (nombre, email, teléfono, dirección) | RGPD: minimización. El gestor no necesita datos de clientes para la contabilidad. Solo importes. |
-| Datos de tarjetas de crédito | PCI-DSS. Prohibido por SSOT §8. MONEI los gestiona. Nunca llegan al CMS. |
+| Datos de tarjetas de crédito | PCI-DSS. Prohibido por SSOT §8. Wix Payments procesa los datos de tarjeta durante el checkout; el CMS no almacena PAN ni CVV. Nunca llegan al CMS. |
 | Hashes Veri*Factu completos en el DTO frontend | Seguridad. Solo se incluyen en el CSV de export para el gestor, no en la UI. |
 | Cuentas contables PGC en el DTO frontend | Seguridad. Solo en el CSV de export. |
 | Márgenes comerciales y notas privadas | Confidencialidad. No se trasladan al gestor salvo que Marian lo autorice explícitamente. |
@@ -3605,7 +3605,7 @@ Para facturas de proveedores que no existen en el SSOT Wix:
 | **RGPD / LOPDGDD** | Minimización PII, cifrado, acceso restringido | Los CSV de export **nunca** incluyen PII de clientes. SharePoint cifra con AES-256. Gestor accede en solo lectura. Alba y Andrea sin acceso. Datos en servidores UE. |
 | **LGT 58/2003** | Conservación 4 años (fiscal) | Retención SharePoint: 6 años. |
 | **Código de Comercio art. 30** | Conservación 6 años (mercantil) | Retención SharePoint: 6 años. Versionado 500 versiones. |
-| **RD 253/2025 (Bizum)** | Reporte AEAT de cobros Bizum | MONEI reporta automáticamente. El Cierre Z incluye `totalBizum` como evidencia documental. Extracto MONEI archivado en `1_VENTAS/MONEI/`. |
+| **RD 253/2025 (Bizum)** | Reporte AEAT de cobros Bizum | Wix Payments reporta automáticamente. El Cierre Z incluye `totalBizum` como evidencia documental. Extracto Wix Payments archivado en `1_VENTAS/Wix Payments/`. |
 | **LSSI-CE** | Transparencia de precios | No aplica directamente al traslado. Los textos legales están en el sitio web. |
 
 ### 5.2 Trazabilidad end-to-end del dato
@@ -3651,7 +3651,7 @@ Según PTD Kit Digital §13 (25 escenarios, 96% resiliencia):
 | Dato del SSOT | No se traslada porque... |
 | :--- | :--- |
 | PII de clientes (nombres, emails, teléfonos) | RGPD: minimización. El gestor solo necesita importes, no identidades de clientes. |
-| Datos de tarjetas (PAN, CVV, caducidad) | PCI-DSS. Nunca llegan al CMS. MONEI los gestiona. |
+| Datos de tarjetas (PAN, CVV, caducidad) | PCI-DSS. Nunca llegan al CMS. Wix Payments procesa los datos de tarjeta durante el checkout; el CMS no almacena PAN ni CVV. |
 | Fórmulas de color, alergias, historial de clientas | Datos operativos del salón. Sin relevancia fiscal. |
 | Datos de marketing (clics, aperturas, tráfico) | Sin relevancia contable ni fiscal. |
 | Hashes y cuentas contables en la UI del frontend | Seguridad. Solo en el CSV de export, no en la interfaz. |
