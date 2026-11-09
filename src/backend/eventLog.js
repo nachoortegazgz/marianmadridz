@@ -568,7 +568,13 @@ export async function registrarEventoEconomico(input) {
 
         // 4a. El head se lee solo despues de adquirir el lock.
         const previous = await _getLastCashEvent();
-        const seq = await allocateFiscalSequence(ledgerLock, previous, traceId);
+        let seq;
+        try {
+            seq = await allocateFiscalSequence(ledgerLock, previous);
+        } catch (sequenceError) {
+            if (sequenceError?.code === "SEQUENCE_RESULT_UNKNOWN") retainLedgerLock = true;
+            throw sequenceError;
+        }
 
     const previousRecordHash = _safeTrim(readMovementHash(previous)) || GENESIS_HASH;
     const recordTimestamp = _formatAEATDateTimeMadrid(ts);
@@ -784,7 +790,7 @@ export async function registrarEventoEconomico(input) {
                     matches: recovery.items.length,
                 });
             } else {
-                const rolledBack = await rollbackFiscalSequence(ledgerLock, seq, traceId);
+                const rolledBack = await rollbackFiscalSequence(ledgerLock, seq);
                 if (!rolledBack) {
                     retainLedgerLock = true;
                     log.error("FISCAL_LEDGER_SEQUENCE_ROLLBACK_FAILED", {
