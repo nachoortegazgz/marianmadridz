@@ -610,7 +610,6 @@
         const enableCashier       = contextData.enableCashier       === true;
         const enableScheduleQuery = contextData.enableScheduleQuery === true;  // default OFF
         const isAdmin   = contextData.isAdmin === true;
-        const isCajero  = contextData.isCajero === true || enableCashier;
 
         /* Visibilidad */
         clockPanel.style.display     = enableClocking ? 'block' : 'none';
