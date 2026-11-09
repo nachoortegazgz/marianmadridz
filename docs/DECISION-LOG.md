@@ -46,9 +46,9 @@ Este registro centraliza las decisiones explícitas del propietario y las decisi
 | TEC-015 | La auditoría de Bookings detecta 7 servicios visibles >100 EUR y ningún depósito activo. | Query Services V2: 94 resultados, 70 FIXED, 24 NO_FEE, 0 VARIED, 0 depósitos. | Verificado live, solo lectura |
 | TEC-016 | Los webhooks de pedido/pago/cancelación/reembolso no deben invocar writers de stock; cron marca todos los pedidos con referencias de catálogo completas sin distinguir Bookings/Stores/mixtos. | Wix Orders Settings `ON_ORDER_PAID`; Wix gestiona el stock y el cron solo conserva idempotencia. | Implementado en rama; CI pendiente |
 | TEC-017 | No borrar ni mutar `MovimientosInventario` existente; conservar hooks `beforeUpdate`/`beforeRemove` append-only. | El histórico puede contener evidencia QA/operativa que debe preservarse. | Aprobado y conservado |
-| TEC-019 | Usar `WIX_CATALOG_OWNER` como autoridad en marcador `ORDER_CREATED` para pedidos Bookings/Stores/mixtos. | `WIX_STORES_NATIVE` sería semánticamente incorrecto para pedidos Bookings. | Corrección en PR #240; CI pendiente |
+| TEC-019 | Usar `WIX_CATALOG_OWNER` como autoridad en marcador `ORDER_CREATED` para pedidos Bookings/Stores/mixtos. | `WIX_STORES_NATIVE` sería semánticamente incorrecto para pedidos Bookings. | Corrección en PR #241; CI run 42722015208 verde |
 | TEC-020 | El restock se ejecuta exclusivamente por las opciones nativas Wix: `restockAllItems=true` al cancelar antes de fulfillment; `sideEffects.restock.lineItems` por línea/cantidad al reembolsar devoluciones reales. | Wix Cancel Order y Refund Payments exponen esos side effects explícitos; no hay writer custom. | Adoptada; verificación operativa pendiente |
-| TEC-018 | La retirada del módulo custom está fusionada; runtime Wix y E2E nativo siguen siendo gates de despliegue. | PR #238 fusionado; run 42721311048 en commit 94974c: 50 suites, 488 tests, 0 fallos; SDK contracts y ESLint verdes. | CI offline verde; runtime Wix pendiente |
+| TEC-018 | La retirada del módulo custom está fusionada; runtime Wix y E2E nativo siguen siendo gates de despliegue. | PR #238 fusionado; run 42721311048 en commit 94974c: 50 suites, 488 tests, 0 fallos; SDK contracts y ESLint verdes. | CI offline verde (PR #238 y corrección PR #241); runtime Wix pendiente |
 
 ### Fuentes técnicas oficiales Wix
 
