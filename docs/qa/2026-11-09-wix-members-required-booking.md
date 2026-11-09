@@ -84,3 +84,12 @@ Las páginas personalizadas identificadas son `Calendario de reservas 2.q39h6.js
 - Esta PR no publica ni sincroniza Wix.
 - La integración no se considera operativa hasta que se integre, sincronice con Wix y se valide en entorno adecuado.
 - Reversión de código: revertir el commit de esta PR. No requiere ni autoriza borrar o modificar reservas, CMS, pagos o ledgers.
+
+
+### Reprogramación nativa Wix Bookings — protección de reservas duales
+- La documentación oficial SDK confirma el evento Bookings V2 `onBookingRescheduled`, disparado cuando una reserva se reprograma. El handler Velo correspondiente se incorpora como `wixBookingsV2_onBookingRescheduled`.
+- El handler actualiza exclusivamente la fase cuyo booking fue reprogramado en Wix: `slotStart`, `slotEnd`, `dateYmd`, `resourceId`, `scheduleId`, `serviceId` y `revision`. No altera el estado de pago, estado de reserva, pedido ni ledger fiscal.
+- Para una reserva dual, el evento no contiene el `pairToken` interno de CitasF2. El handler detecta la pareja desde CMS y abre una alerta deduplicada `DUAL_BOOKING_NATIVE_RESCHEDULE_MISMATCH`. No mueve automáticamente la otra fase porque debe pasar por el lock/journal y la validación de disponibilidad del flujo dual.
+- Si no existe la proyección CitasF2, el handler devuelve `RETRY_REQUIRED`; no crea un registro fiscal/pago parcial a partir de un evento de reprogramación.
+- Pruebas añadidas: actualización solo de la fase afectada, preservación de pagos/ledger, alerta de pareja dual, replay idempotente, proyección ausente y protección frente a revisiones antiguas.
+- Esto cierra la sincronización del tramo reprogramado y detecta el desajuste dual, pero no sustituye la reparación manual/controlada de la fase hermana. El uso de My Bookings para reservas duales debe considerarse limitado hasta que se confirme un flujo nativo de reprogramación atómica de ambas fases.
