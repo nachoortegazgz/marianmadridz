@@ -111,6 +111,25 @@ test('CRON-FISCAL-RECOVERY-01 replays cancellation rectifications through EventL
   assert.match(cron, /Refund recovery without the original fiscal rectification payload is unsafe/);
 });
 
+test('CRON-FISCAL-RECOVERY-02 reads compensation kind from the ControlOperativo root record', () => {
+  const cron = fs.readFileSync(backendPath('crons.js'), 'utf8');
+  assert.match(cron, /payload\.compensationKind\s*\|\|\s*payload\.kind\s*\|\|\s*comp\?\.kind/);
+});
+
+test('CRON-FISCAL-RECOVERY-03 paid-order recovery requires the original EventLog payload and BOOKINGS_ONLY scope', () => {
+  const cron = fs.readFileSync(backendPath('crons.js'), 'utf8');
+  const events = fs.readFileSync(backendPath('events.js'), 'utf8');
+  const cajas = fs.readFileSync(backendPath('cajas.web.js'), 'utf8');
+  assert.match(events, /fiscalPayload\s*=\s*\{/);
+  assert.match(events, /recoveryProcessor:\s*fiscalPayload\s*&&\s*bookingOnlyOrder\s*\?\s*"EVENT_LOG_ORDER"\s*:\s*"MANUAL"/);
+  assert.match(events, /recoveryScope:\s*bookingOnlyOrder\s*\?\s*"BOOKINGS_ONLY"/);
+  assert.match(cajas, /recoveryScope:\s*p\.recoveryScope\s*\|\|\s*null/);
+  assert.match(cron, /recoveryProcessor === "EVENT_LOG_ORDER"/);
+  assert.match(cron, /payload\.recoveryScope === "BOOKINGS_ONLY"/);
+  assert.match(cron, /reconcilePaidCitasFromLedgerInternal/);
+  assert.match(cron, /Legacy paid-order recovery lacks the original fiscal payload/);
+});
+
 test('CRON-PAYMENT-RECOVERY-01 repairs CitasF2 from the existing paid ORDER movement without creating another movement', async () => {
   wixDataMock._reset();
   const C = IC.OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
