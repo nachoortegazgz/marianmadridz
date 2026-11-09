@@ -3,8 +3,8 @@
 MODULE: backend/fiscalDocuments.web.js
 VERSION: v5017-ALIGNED-DATOSFISCALES
 BASE: v5016-ALIGNED-WITH-SEND
-RESPONSIBILITY: Genera paquetes fiscales trimestrales, documentos CSV/PDF,
- mantiene historial de versiones y despacha via Resend API.
+RESPONSIBILITY: Previsualiza y consulta snapshots de gestoría; creación y
+ despacho permanecen fail-closed hasta verificar sus garantías append-only.
 STANDARDS: G10 ASCII Strict. Cero suppressAuth. Colecciones canonicas.
 
 CAMBIOS v5017-ALIGNED-DATOSFISCALES (respecto a v5016):
