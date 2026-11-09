@@ -52,48 +52,6 @@ mocks.sdk["@wix/stores::@wix/stores::inventoryItemsV3::bulkDecrementInventoryIte
   nativeQuantity -= Number(data?.[0]?.decrementBy || 0);
   return { results: [{ itemMetadata: { success: true }, item: { id: INVENTORY_ITEM_ID, quantity: nativeQuantity } }] };
 };
-mocks.sdk["@wix/stores::@wix/stores::products::getStoreVariant"] = async (storeVariantId) => {
-  getStoreVariantCalls += 1;
-  const rawId = String(storeVariantId);
-  const productId = rawId.slice(0, 36);
-  const variantId = rawId.slice(37);
-  return {
-    variant: {
-      productId,
-      variantId,
-      productName: "Producto de prueba",
-      sku: "SKU-QA-001",
-      price: { amount: "25.00" },
-      stock: { trackQuantity: true, quantity: nativeQuantity },
-    },
-  };
-};
-mocks.sdk["@wix/stores::@wix/stores::products::queryProductVariants"] = async (productId, options) => ({
-  variants: [{
-    _id: options?.variantIds?.[0],
-    variant: { sku: "SKU-QA-001", priceData: { price: 25 } },
-  }],
-});
-mocks.sdk["@wix/stores::@wix/stores::products::queryStoreVariants"] = async () => ({
-  variants: [{
-    productId: PRODUCT_ID,
-    variantId: VARIANT_ID,
-    productName: "Producto de prueba",
-    variantName: "Unica",
-    sku: "SKU-QA-001",
-    managedVariant: true,
-    stock: { trackQuantity: true, quantity: nativeQuantity },
-  }],
-  totalCount: 1,
-});
-mocks.sdk["@wix/stores::@wix/stores::inventory::incrementInventory"] = async (input) => {
-  nativeQuantity += Number(input?.incrementData?.[0]?.incrementBy || 0);
-  return {};
-};
-mocks.sdk["@wix/stores::@wix/stores::inventory::decrementInventory"] = async (input) => {
-  nativeQuantity -= Number(input?.decrementData?.[0]?.decrementBy || 0);
-  return {};
-};
 mocks.sdk["@wix/bookings::bookings::staffMembers"] = {
   queryStaffMembers: async () => ({
   staffMembers: [{
