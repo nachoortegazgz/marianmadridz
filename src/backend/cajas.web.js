@@ -243,6 +243,9 @@ async function _queueCompensation(params) {
             phase,
             origin,
             alertRequired: Boolean(p.alertRequired),
+            recoveryProcessor: p.recoveryProcessor || null,
+            fiscalPayload: p.fiscalPayload && typeof p.fiscalPayload === "object" &&
+                !Array.isArray(p.fiscalPayload) ? p.fiscalPayload : null,
         },
         _createdDate: new Date(),
         _updatedDate: new Date(),
@@ -1123,6 +1126,8 @@ export async function queueFiscalRecovery(recoveryData) {
             traceId,
             lastError: recoveryData.lastError,
             alertRequired: false,
+            recoveryProcessor: recoveryData.recoveryProcessor || null,
+            fiscalPayload: recoveryData.fiscalPayload || null,
         });
         return {
             queued: Boolean(queued?.created || queued?.duplicate),
