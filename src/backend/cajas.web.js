@@ -1542,11 +1542,21 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
                 },
             };
     } catch (err) {
-        log.error("_registerZClosing failed", { traceId, error: err?.message });
+        const normalized = normalizeError(err);
+        const publicMessages = {
+            PERIOD_CLOSED: "El periodo fiscal esta cerrado.",
+            Z_CLOSING_RESULT_UNKNOWN: "El resultado del cierre es incierto y requiere reconciliacion.",
+        };
+        const publicCodes = new Set(Object.keys(publicMessages));
+        const publicCode = publicCodes.has(normalized.code) ? normalized.code : "Z_CLOSING_FAIL";
+        log.error("_registerZClosing failed", { traceId, code: normalized.code, error: normalized.message });
         return {
             status: "ERROR",
             data: null,
-            error: _toPublicError(err, "Z_CLOSING_FAIL", "No se pudo completar el cierre Z."),
+            error: {
+                code: publicCode,
+                message: publicMessages[publicCode] || "No se pudo completar el cierre Z.",
+            },
         };
     } finally {
         if (ledgerLock && !retainLedgerLock) {
