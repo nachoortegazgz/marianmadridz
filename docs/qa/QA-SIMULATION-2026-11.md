@@ -112,3 +112,28 @@ Todas las suites offline usan fixtures sintéticos y mocks. No se crean reservas
 - [Workflow run #172](https://github.com/nachoortegazgz/marianmadridz/actions/runs/42149432291).
 - Esto acredita suites offline con mocks, no navegador, checkout, proveedor de pagos, firma X.509 real ni envío AEAT.
 \n\n### Update 2026-11-09 — simulación offline Wix Payments + reserva\n\n- Se añadió el escenario `QA-WIX-PAYMENTS-BOOKING-001` al manifiesto de QA.\n- El fixture reproduce la forma oficial de `OrderPaymentStatusUpdated` de Velo: `metadata.id`, `data.order` y `data.previousPaymentStatus`.\n- Se cubre pago `PAID` de 45,50 EUR, con total autoritativo en `priceSummary.totalPrice.amount` y un total alternativo de línea de 120,00 EUR para comprobar precedencia.\n- El escenario exige un único asiento append-only en `MovimientosCaja` con `paymentMethod=WIX_PAYMENTS`, `movementType=VENTA_ONLINE`, asociación de reserva, hash de integridad y marcador de webhook en `ControlOperativo`.\n- Para reserva dual, ambas filas de `CitasF2` pasan a pago `PAID`, sin alterar `bookingStatus=PENDING`. Se comprueba replay del mismo evento y un segundo evento para el mismo pedido sin duplicar el asiento.\n- **Límite:** toda la persistencia usa `wixDataMock`; no se cobra, no se llama a Wix Payments y no se escribe en el CMS del sitio. La prueba tampoco acredita el runtime del webhook ni la activación de la cuenta.\n
+## QA realista Wix Payments — cierre de simulación 2026-11-09
+
+### Evidencia automatizada
+
+- **PR de corrección de contrato y simulación:** [#198](https://github.com/nachoortegazgz/marianmadridz/pull/198), integrado en el commit `a85f35e4d2357ed400b8dcdacc695feb5c5c4e3c`.
+- **CI offline:** [run #42541079403](https://github.com/nachoortegazgz/marianmadridz/actions/runs/42541079403), correcto.
+  - Layer 1: 18 suites, 234 tests, 0 fallos.
+  - Layer 2: 15 suites, 139 tests, 0 fallos.
+  - Regresión completa: 45 suites, 402 tests, 0 fallos.
+  - Contratos Wix eCommerce y Bookings Reader V2: correctos.
+  - ESLint y self-tests de controladores Wix Preview/Publish: correctos.
+- **Escenario de pago:** payload oficial Velo `OrderPaymentStatusUpdated`; pedido sintético de 45,50 EUR; una sola alta en `MovimientosCaja` con `paymentMethod=WIX_PAYMENTS`; dos filas de reserva dual actualizadas a `PAID`; `bookingStatus` sigue `PENDING`; marcador de evento en `ControlOperativo`; reintentos no duplican el asiento.
+
+### Límite del entorno
+
+- La conexión Wix devuelve un único sitio Marian Madrid, el sitio publicado asociado a `www.marianmadrid.es`. La búsqueda de sitios con nombre QA no devuelve ninguno. No hay evidencia de un sitio QA aislado con Wix Bookings y Wix Payments.
+- Por protección de datos e integridad, el simulacro usa `wixDataMock`; no ha creado citas reales, órdenes, pagos, asientos ni documentos en el CMS productivo.
+- Wix documenta que los backend events no funcionan en Preview. Por tanto, el Preview no sirve para validar este webhook ni el recorrido real de pago. Fuente: [Wix Velo — onOrderPaymentStatusUpdated](https://dev.wix.com/docs/velo/events-service-plugins/e-commerce/events/on-order-payment-status-updated).
+- El workflow de publicación posterior a la integración [run #42541096013](https://github.com/nachoortegazgz/marianmadridz/actions/runs/42541096013) **falló de forma segura antes de publicar**: el CLI creó el Preview `https://wix.to/JwIx2SH`, mostró que el Editor contiene cambios de diseño más recientes y abortó la publicación. `wix.config.json` mantiene `uiVersion=15941`. El dominio productivo no se considera actualizado por este run.
+
+### Estado final
+
+- **Verificado:** el flujo backend de pago y persistencia simulado en memoria; idempotencia; actualización dual de CitasF2; ledger append-only; CI offline.
+- **No verificado:** transacción real de Wix Payments, recepción del webhook por el runtime Wix publicado, escritura real en CMS/agenda de un entorno QA, conciliación de payouts/reembolsos y desglose fiscal de IVA del pedido.
+- **Siguiente condición para E2E remoto:** disponer de un sitio Wix QA separado con Bookings y Wix Payments configurado en modo de prueba, y alinear/sincronizar primero la UI del Editor con el repositorio. No usar el sitio productivo para reservas o pagos sintéticos.
