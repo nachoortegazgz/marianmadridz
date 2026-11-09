@@ -59,7 +59,7 @@ import { makeTraceId, _safeTrim, withTimeout, _roundMoney } from "public/mmUtils
 // SSOT-KEYFIELD-02: lectura canonica con fallback alias (contrato unico).
 import { readMovementField } from "backend/data";
 
-const CMS_TIMEOUT_MS = Number(SDK_CONFIG?.TIMEOUTS?.CMS_MS) || 15000;
+const CMS_TIMEOUT_MS = SDK_CONFIG.TIMEOUTS.CMS_MS;
 const DOCS_COL = BUSINESS_COLLECTIONS.HISTORICO_CIERRES_Z;
 const DATOS_FISCALES_COL = BUSINESS_COLLECTIONS.DATOS_FISCALES;
 
@@ -68,9 +68,8 @@ const STRONG_READ = Object.freeze({ consistencyMode: "strong" });
 // Envio a gestoria via Resend.
 const RESEND_ENDPOINT = "https://api.resend.com/emails";
 const RESEND_KEY_NAME = "RESEND_API_KEY";
-const RESEND_FROM_NAME = SDK_CONFIG?.EMAIL?.FROM_NAME || "Marian Madrid";
-const RESEND_FROM_ADDRESS =
-  SDK_CONFIG?.EMAIL?.FROM_ADDRESS || "noreply@marianmadrid.com";
+const RESEND_FROM_NAME = SDK_CONFIG.EMAIL.FROM_NAME;
+const RESEND_FROM_ADDRESS = SDK_CONFIG.EMAIL.FROM_ADDRESS;
 
 // Marcadores canonicos para identificar un item dedicado a gestor.
 const GESTOR_RECORD_TYPE_MARKERS = Object.freeze([
