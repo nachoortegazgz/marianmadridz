@@ -551,3 +551,26 @@ test('CRON-ORDER-CREATED-02 fails closed when native order pagination cannot con
   );
   delete mocks.sdk['@wix/ecom::orders'];
 });
+
+
+test('CRON-ORDER-CREATED-03 rejects native order rows without a valid GUID', async () => {
+  wixDataMock._reset();
+  mocks.sdk['@wix/ecom::orders'] = {
+    searchOrders: async (search) => {
+      if (search.filter?.status) return { orders: [], metadata: { hasNext: false, cursors: {} } };
+      return {
+        orders: [{
+          id: 'not-a-guid',
+          lineItems: [{ catalogReference: { appId: IC.WIX_CATALOG_APP_IDS.BOOKINGS } }],
+        }],
+        metadata: { hasNext: false, cursors: {} },
+      };
+    },
+  };
+  await assert.rejects(
+    CR.reconcileUnmarkedOrderCreatedEvents(),
+    /ORDER_ID_INVALID_IN_NATIVE_SEARCH/
+  );
+  assert.equal((wixDataMock._store.get(IC.OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO) || []).length, 0);
+  delete mocks.sdk['@wix/ecom::orders'];
+});
