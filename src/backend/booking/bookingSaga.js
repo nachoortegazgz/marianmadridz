@@ -11,26 +11,12 @@ CORRECCIONES v5021:
     que el frontend habilite un reintento normal cuando la escritura Wix pudo
     completarse y el resultado necesita reconciliación.
 
-CORRECCIONES v5019 (alineadas con bookingCore v5021 y doc oficial Wix Bookings V2):
-  SAGA-V2-ID-01 (P0): _resolveBookingLocation devuelve
-    `{ id: resolvedId, locationType }` (antes `{ _id, locationType }`).
-    Contrato oficial de BookedSlot.Location: `{ id, name, formattedAddress,
-    locationType }` (id, NO _id).
-    Ref: https://dev.wix.com/docs/api-reference/business-solutions/bookings/
-         bookings/bookings-writer-v2/create-booking
-  SAGA-V2-ID-02 (P1): _resolveBookingLocation lee
-    `location._id || location.id` en validatedSlotF1/F2. Los slots F1/F2
-    provienen de TimeSlotLocation (usa `_id`), pero el fallback a `id`
-    protege ante futuros cambios de shape o bundles mixtos.
-  SAGA-V2-ID-03 (P0): _assertPristineSlotContract valida `resource.id`
-    (antes `resource._id`). Contrato oficial de BookedSlot.Resource:
-    `{ id, name, email, scheduleId }`.
-  SAGA-V2-ID-04 (P0): _assertPristineSlotContract valida `location.id`
-    (antes `location._id`).
-  SAGA-V2-ID-05 (P1): _assertPristineSlotContract acepta `id` o `_id` como
-    fallback (con mensaje diferenciado en el log) para evitar que un
-    bundle antiguo de bookingCore rompa la reserva. Se loguea un warn
-    específico cuando se usa el alias legacy.
+CORRECCIONES V5022 — SDK Bookings V2:
+  SAGA-SDK-ID-01: los objetos BookedSlot del SDK usan resource._id y
+    location._id. La forma id corresponde a REST y no se acepta en writers SDK.
+  SAGA-SDK-ID-02: _resolveBookingLocation conserva el shape {_id, locationType}.
+  SAGA-SDK-ID-03: rescheduleBooking se invoca como
+    (bookingId, slot, { revision }), según la firma de @wix/bookings.
 
 CORRECCIONES v5017-STRONG-QUERY:
   SAGA-51 (P0): elevatedQueryFind forzaba strong en _validateLinkedPhaseService
@@ -55,6 +41,7 @@ import {
     BOOKING_TYPE,
     PAYMENT_STATUS,
     CHANNEL_TYPE,
+    BOOKING_PAYMENT_OPTION,
     COMPENSATION_KIND,
     COMPENSATION_STATUS,
     BOOKING_FIELDS,
@@ -141,9 +128,6 @@ const BOOKING_STATUS_PENDING_PAYMENT = _safeTrim(
 
 const CHANNEL_ONLINE = _safeTrim(CHANNEL_TYPE.ONLINE).toUpperCase();
 const CHANNEL_PRESENCIAL = _safeTrim(CHANNEL_TYPE.PRESENCIAL).toUpperCase();
-const BOOKING_PAYMENT_OPTION_ONLINE = "ONLINE";
-const BOOKING_PAYMENT_OPTION_OFFLINE = "OFFLINE";
-
 const NON_CANCELABLE_STATUSES = new Set(
     [
         BOOKING_STATUS.CANCELED,
@@ -588,11 +572,7 @@ function _validateCreateBookingResponse(booking, phase, traceId) {
 
 function _assertBookingResourceMatches(booking, phase, expectedResourceId, traceId) {
     const expected = _safeTrim(expectedResourceId);
-    const actual = _safeTrim(
-        booking?.bookedEntity?.slot?.resource?.id ||
-        booking?.bookedEntity?.slot?.resource?._id ||
-        ""
-    );
+    const actual = _safeTrim(booking?.bookedEntity?.slot?.resource?._id || "");
     if (!expected || !actual || actual !== expected) {
         log.error("BOOKING_STAFF_ASSIGNMENT_MISMATCH", {
             traceId: traceId,
@@ -938,30 +918,16 @@ function _detectAddons(unsafePayload, metaCita, serviceConfig, traceId) {
 // BLOCK 12 - UBICACION
 // =============================================================================
 /**
- * SAGA-V2-ID-01 + SAGA-V2-ID-02:
- * - Lee location._id || location.id en validatedSlotF1/F2 (TimeSlotLocation
- *   usa `_id`; BookedSlot.Location usa `id`). Fallback defensivo.
- * - Devuelve `{ id, locationType }` según el contrato oficial de
- *   BookedSlot.Location (id, NO _id).
+ * SDK Bookings V2: TimeSlotLocation and BookedSlot.Location use _id.
+ * REST id aliases are intentionally rejected in this SDK-only flow.
  */
 function _resolveBookingLocation(params) {
     const validatedSlotF1 = params.validatedSlotF1;
     const validatedSlotF2 = params.validatedSlotF2;
     const serviceConfig = params.serviceConfig;
 
-    const f1LocId =
-        validatedSlotF1 && validatedSlotF1.location
-            ? _isGuidOrNull(
-                  validatedSlotF1.location._id || validatedSlotF1.location.id
-              )
-            : null;
-    const f2LocId =
-        validatedSlotF2 && validatedSlotF2.location
-            ? _isGuidOrNull(
-                  validatedSlotF2.location._id || validatedSlotF2.location.id
-              )
-            : null;
-
+    const f1LocId = _isGuidOrNull(validatedSlotF1?.location?._id);
+    const f2LocId = _isGuidOrNull(validatedSlotF2?.location?._id);
     const resolvedId =
         f1LocId ||
         f2LocId ||
@@ -977,9 +943,7 @@ function _resolveBookingLocation(params) {
     }
 
     const sourceLocationType = _safeTrim(
-        validatedSlotF1 &&
-            validatedSlotF1.location &&
-            validatedSlotF1.location.locationType
+        validatedSlotF1?.location?.locationType
     ).toUpperCase();
 
     if (sourceLocationType && sourceLocationType !== "OWNER_BUSINESS") {
@@ -991,76 +955,36 @@ function _resolveBookingLocation(params) {
         });
     }
 
-    /* SAGA-V2-ID-01: id (no _id). */
-    return { id: resolvedId, locationType: "OWNER_BUSINESS" };
+    return { _id: resolvedId, locationType: "OWNER_BUSINESS" };
 }
-
 /**
- * SAGA-V2-ID-03 + SAGA-V2-ID-04 + SAGA-V2-ID-05:
- * - Valida resource.id y location.id (contrato BookedSlot V2).
- * - Acepta `_id` como fallback con log.warn específico (bundles mixtos).
+ * Validates the exact @wix/bookings SDK BookedSlot contract.
+ * SDK identifiers are _id; REST id aliases are deliberately rejected.
  */
 function _assertPristineSlotContract(pristineSlot, phase, traceId) {
     const startIso = _safeTrim(pristineSlot && pristineSlot.startDate);
     const endIso = _safeTrim(pristineSlot && pristineSlot.endDate);
     const locationType = _safeTrim(
-        pristineSlot &&
-            pristineSlot.location &&
-            pristineSlot.location.locationType
+        pristineSlot?.location?.locationType
     ).toUpperCase();
 
     const missing = [];
-    if (!_isGuidOrNull(pristineSlot && pristineSlot.serviceId))
-        missing.push("serviceId");
-    if (!_isGuidOrNull(pristineSlot && pristineSlot.scheduleId))
-        missing.push("scheduleId");
+    if (!_isGuidOrNull(pristineSlot && pristineSlot.serviceId)) missing.push("serviceId");
+    if (!_isGuidOrNull(pristineSlot && pristineSlot.scheduleId)) missing.push("scheduleId");
     if (!startIso) missing.push("startDate");
     else if (!/Z$/.test(startIso)) missing.push("startDate must be ISO UTC with Z");
     if (!endIso) missing.push("endDate");
     else if (!/Z$/.test(endIso)) missing.push("endDate must be ISO UTC with Z");
 
-    /* SAGA-V2-ID-03: BookedSlot.Resource usa `id` (con fallback a `_id`). */
-    const resourceIdValue = _isGuidOrNull(
-        (pristineSlot && pristineSlot.resource && pristineSlot.resource.id) ||
-            (pristineSlot && pristineSlot.resource && pristineSlot.resource._id)
-    );
-    if (!resourceIdValue) {
-        missing.push("resource.id");
-    } else if (
-        pristineSlot &&
-        pristineSlot.resource &&
-        !pristineSlot.resource.id &&
-        pristineSlot.resource._id
-    ) {
-        log.warn("SAGA-V2-ID-05: resource._id detected (legacy alias)", {
-            traceId: traceId,
-            phase: phase,
-            resourceId: resourceIdValue,
-        });
-    }
+    const resourceId = _isGuidOrNull(pristineSlot?.resource?._id);
+    if (!resourceId) missing.push("resource._id");
 
-    /* SAGA-V2-ID-04: BookedSlot.Location usa `id` (con fallback a `_id`). */
-    const locationIdValue = _isGuidOrNull(
-        (pristineSlot && pristineSlot.location && pristineSlot.location.id) ||
-            (pristineSlot && pristineSlot.location && pristineSlot.location._id)
-    );
-    if (!locationIdValue) {
-        missing.push("location.id");
-    } else if (
-        pristineSlot &&
-        pristineSlot.location &&
-        !pristineSlot.location.id &&
-        pristineSlot.location._id
-    ) {
-        log.warn("SAGA-V2-ID-05: location._id detected (legacy alias)", {
-            traceId: traceId,
-            phase: phase,
-            locationId: locationIdValue,
-        });
-    }
+    const locationId = _isGuidOrNull(pristineSlot?.location?._id);
+    if (!locationId) missing.push("location._id");
 
-    if (locationType !== "OWNER_BUSINESS")
+    if (locationType !== "OWNER_BUSINESS") {
         missing.push("location.locationType must be OWNER_BUSINESS");
+    }
 
     if (missing.length > 0) {
         throw createBookingError(
@@ -1839,8 +1763,8 @@ export async function executeBookingSaga(unsafePayload) {
                 if (appointmentNote) bookingBodyF1.internalBusinessNote = appointmentNote;
                 if (bookedAddOns.length > 0) bookingBodyF1.bookedAddOns = bookedAddOns;
                 bookingBodyF1.selectedPaymentOption = isOnline
-                    ? BOOKING_PAYMENT_OPTION_ONLINE
-                    : BOOKING_PAYMENT_OPTION_OFFLINE;
+                    ? BOOKING_PAYMENT_OPTION.ONLINE
+                    : BOOKING_PAYMENT_OPTION.OFFLINE;
 
                 const f1IntentStarted = await updateBookingWriterIntent(
                     pairToken, "F1", "INTENT",
@@ -1923,7 +1847,7 @@ export async function executeBookingSaga(unsafePayload) {
                         bookedEntity: { slot: pristineF2 },
                         contactDetails: contactDetails,
                         totalParticipants: 1,
-                        selectedPaymentOption: BOOKING_PAYMENT_OPTION_OFFLINE,
+                        selectedPaymentOption: BOOKING_PAYMENT_OPTION.OFFLINE,
                     };
                     if (appointmentNote) bookingBodyF2.internalBusinessNote = appointmentNote;
                     const f2IntentStarted = await updateBookingWriterIntent(
