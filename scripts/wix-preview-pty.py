@@ -50,6 +50,27 @@ def preview_url(text: str) -> str | None:
     return match.group(0).rstrip(".,);]") if match else None
 
 
+def preview_environment(source: dict[str, str]) -> dict[str, str]:
+    """Build a child-only environment that permits Wix's interactive PTY."""
+    env = source.copy()
+    env["CI"] = "false"
+    env["GITHUB_ACTIONS"] = "false"
+    for key in (
+        "GITHUB_WORKFLOW",
+        "GITHUB_RUN_ID",
+        "GITHUB_JOB",
+        "GITHUB_ACTION",
+        "GITHUB_ACTION_PATH",
+        "GITHUB_STEP_SUMMARY",
+    ):
+        env.pop(key, None)
+    env["TERM"] = "xterm-256color"
+    env["FORCE_COLOR"] = "1"
+    env["COLUMNS"] = str(TERMINAL_COLUMNS)
+    env["LINES"] = str(TERMINAL_ROWS)
+    return env
+
+
 def set_terminal_size(fd: int) -> None:
     fcntl.ioctl(
         fd,
@@ -100,23 +121,52 @@ def self_test() -> None:
     assert not PREVIEW_SUCCESS_RE.search(
         "Preview failed: PUBLISH_PIPELINE_TASK_NOT_FOUND"
     )
+    child_env = preview_environment({
+        "CI": "true",
+        "GITHUB_ACTIONS": "true",
+        "GITHUB_WORKFLOW": "workflow",
+        "GITHUB_RUN_ID": "123",
+        "GITHUB_JOB": "preview",
+        "GITHUB_ACTION": "step",
+        "GITHUB_ACTION_PATH": "/tmp/action",
+        "GITHUB_STEP_SUMMARY": "/tmp/summary",
+        "PATH": "/usr/bin",
+    })
+    assert child_env["CI"] == "false"
+    assert child_env["GITHUB_ACTIONS"] == "false"
+    assert all(
+        key not in child_env
+        for key in (
+            "GITHUB_WORKFLOW",
+            "GITHUB_RUN_ID",
+            "GITHUB_JOB",
+            "GITHUB_ACTION",
+            "GITHUB_ACTION_PATH",
+            "GITHUB_STEP_SUMMARY",
+        )
+    )
+    assert child_env["PATH"] == "/usr/bin"
     print("Wix Preview PTY controller self-test: PASS")
 
 
 def run_preview() -> None:
     env = os.environ.copy()
-    # GitHub Actions sets CI=true. Remove it only for the interactive Wix CLI
-    # child; the runner and the rest of the workflow remain in CI.
-    env.pop("CI", None)
-    env["TERM"] = "xterm-256color"
-    env["COLUMNS"] = str(TERMINAL_COLUMNS)
-    env["LINES"] = str(TERMINAL_ROWS)
+    # Keep GitHub Actions enabled for the runner; only the Wix CLI child
+    # receives a terminal-capable environment.
+    env = preview_environment(os.environ)
+    # Apply the isolated environment before fork, matching the known-working
+    # Wix PTY invocation pattern; the parent process exits with this script.
+    os.environ.clear()
+    os.environ.update(env)
 
+    window = struct.pack("HHHH", TERMINAL_ROWS, TERMINAL_COLUMNS, 0, 0)
     pid, master_fd = pty.fork()
     if pid == 0:
-        os.execvpe("npm", ["npm", "run", "wix", "preview"], env)
+        fcntl.ioctl(0, termios.TIOCSWINSZ, window)
+        os.execvp("wix", ["wix", "preview"])
 
     set_terminal_size(master_fd)
+    print("[preview] Launching pinned Wix CLI in a controlling PTY.", flush=True)
     output = bytearray()
     selected_local = False
     preview_success = False
