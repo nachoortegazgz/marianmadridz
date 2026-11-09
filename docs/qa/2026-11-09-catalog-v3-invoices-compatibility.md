@@ -20,7 +20,7 @@
 
 ## Dependencias de validación antes de merge/deploy
 
-1. Ejecutar CI completa (tests offline y lint).
+1. **CI ejecutada y verde:** 47 suites, 442 tests, 0 fallos; verificación Cart V2, Bookings Reader V2 y ESLint completados correctamente.
 2. Verificar los contratos SDK V3 en el entorno Wix del sitio.
 3. Probar lectura de variantes, reservas, ventas, devoluciones y ajustes manuales en entorno de prueba.
 4. Probar idempotencia, duplicados, fallos tras mutación nativa y recuperación de journals.
