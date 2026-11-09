@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 const { wixDataMock, mocks } = await import("./loader.mjs");
 const IC = await import("backend/internalConfig.js");
 
-let catalogVersion = "V1_CATALOG";
+let catalogVersion = "V3_CATALOG";
 let getStoreVariantCalls = 0;
 let nativeQuantity = 6;
 mocks.sdk["@wix/stores::@wix/stores::catalogVersioning::getCatalogVersion"] = async () => ({
@@ -76,7 +76,7 @@ const ORDER_ID = "11111111-1111-4111-8111-111111111111";
 const LINE_ID = "22222222-2222-4222-8222-222222222222";
 const PRODUCT_ID = "33333333-3333-4333-8333-333333333333";
 const VARIANT_ID = "44444444-4444-4444-8444-444444444444";
-const STOCK_KEY = `V1:${PRODUCT_ID}:${VARIANT_ID}`;
+const STOCK_KEY = `V3:${PRODUCT_ID}:${VARIANT_ID}`;
 
 function paidOrder() {
   return {
@@ -120,13 +120,13 @@ function seed() {
     stockKey: STOCK_KEY,
     productId: PRODUCT_ID,
     variantId: VARIANT_ID,
-    catalogVersion: "V1_CATALOG",
+    catalogVersion: "V3_CATALOG",
     traceId: "trace-seed",
   }]);
 }
 
 test.beforeEach(() => {
-  catalogVersion = "V1_CATALOG";
+  catalogVersion = "V3_CATALOG";
   seed();
 });
 
@@ -167,8 +167,8 @@ test("INVENTORY-WRITER-02 repeated paid-order event is idempotent by movementTok
   assert.equal(wixDataMock._store.get(STOCK_COL)[0].stockOnHand, 6);
 });
 
-test("INVENTORY-WRITER-03 refuses an unsupported catalog version before any CMS mutation", async () => {
-  catalogVersion = "V3_CATALOG";
+test("INVENTORY-WRITER-03 refuses Catalog V1 before any CMS mutation", async () => {
+  catalogVersion = "V1_CATALOG";
   const result = await INV.syncPaidOrderInventoryInternal(
     paidOrder(),
     "trace-inventory-004",
