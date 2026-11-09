@@ -358,13 +358,9 @@ export const BOOKING_PAYMENT_OPTION = Object.freeze({
   OFFLINE: "OFFLINE",
 });
 
-// Metodos de pago del ledger. Miembros EFECTIVO/TARJETA/BIZUM verificados en
-// site.flows.e2e (paymentMethod 'EFECTIVO'); TRANSFERENCIA admitido por el
-// runner legado; WIX_PAYMENTS por citasManager ALN-06/CM5-05.
-// FASE1-P0 (CAJA-01 SSOT): alias historical "ONLINE" ERRADICADO del enum. El canon
-// de pago online es WIX_PAYMENTS; la frontera de escritura (cajas.web) traduce
-// "ONLINE" -> WIX_PAYMENTS para payloads/crons historical, y el canal "ONLINE"
-// sigue existiendo como dato dimensional en CHANNEL_TYPE (no es metodo de pago).
+// Valores canonicos admitidos para MovimientosCaja.paymentMethod.
+// ONLINE identifica el canal de origen y nunca es un metodo de pago.
+// Wix Payments se persiste como WIX_PAYMENTS.
 export const PAYMENT_METHOD = Object.freeze({
   EFECTIVO: "EFECTIVO",
   TARJETA: "TARJETA",
