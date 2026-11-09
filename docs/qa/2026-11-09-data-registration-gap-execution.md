@@ -18,15 +18,13 @@ Reconciliar el plan de ejecución aportado con el código que existe actualmente
 | D-03 / C-04 — intención `order_created` | **BRECHA ABIERTA / ADR-02 NECESARIO** | `wixEcom_onOrderCreated` verifica/deduplica el evento y llama a `reserveOrderInventoryInternal`; no crea un registro de intención de compra ni proyecta `orderId` y líneas en una colección de intención. No se debe escribir en CitasF2 sin decisión de dominio. |
 | D-04 / C-06 — arqueos X append-only | **NO IMPLEMENTADA EN EL MÓDULO INSPECCIONADO** | No se encontró `registerXCount` ni colección `ArqueosCaja` en `src/backend/cajas.web.js` / `internalConfig.js`. Requiere ADR-03 y esquema CMS. |
 | D-05 / C-07 — actas de recuento de inventario | **NO IMPLEMENTADA EN EL MÓDULO INSPECCIONADO** | No se encontró `registerRecuentoInventario` ni colección `ActasRecuentoInventario` en `src/backend/inventario.web.js` / `internalConfig.js`. Requiere ADR-03 y esquema CMS. |
-| D-06 / ADR-04 — facturas recibidas pagadas por banco | **DECISIÓN BLOQUEADA** | `PAGO_PROVEEDOR` existe como movimiento del ledger de caja, pero el plan advierte correctamente que un pago bancario no debe producir una salida ficticia de caja. Además, `FacturasRecibidas` figura en `FORBIDDEN_COLLECTIONS` de `internalConfig.js`. La alternativa de crear esa colección contradice la configuración vigente y no puede implementarse sin decisión formal que resuelva la prohibición. |
+| D-06 / ADR-04 — facturas recibidas pagadas por banco | **DESTINO CANÓNICO DEFINIDO** | La regla canónica indicada por el responsable del sistema es que los procesos que no pasan por caja física (incluidas facturas recibidas y pagos bancarios a proveedores) se consolidan en `LibroAsientosContablesDetalle`. No deben generar movimientos ficticios en `MovimientosCaja` ni actualizar `CajaActual`. Se debe verificar el contrato de campos y el writer contable existente antes de conectar estos procesos. |
 
 ## 3. Contradicciones del plan que impiden ejecución literal
 
 ### 3.1 Enums de reserva
 
-El plan propone cambiar el estado CMS a `CANCELED` y erradicar `CANCELLED`. El código actual separa ambos dominios: `BOOKING_STATUS.CANCELED` representa el valor nativo Wix, mientras que `CITAS_BOOKING_STATUS.CANCELLED` es el valor CMS. `bookingCore.js` traduce el estado nativo al CMS. Cambiarlo por búsqueda/reemplazo rompería la frontera entre contratos.
-
-**Decisión:** no ejecutar B-01 ni migración de datos hasta que la SSOT aprobada y el esquema físico CMS determinen expresamente el valor canónico de CitasF2.
+La decisión del responsable del sistema fija `CANCELED` como único valor canónico tanto en el contrato CMS de CitasF2 como en los mapeos internos. `CANCELLED` debe desaparecer de enums, escritores, validadores, consumidores, pruebas y documentación activa. La traducción desde el estado nativo Wix debe conservar el contrato nativo y mapearlo explícitamente a `CITAS_BOOKING_STATUS.CANCELED`. Cualquier registro histórico con el valor anterior requiere inventario y migración controlada, nunca una sustitución masiva no auditada.
 
 ### 3.2 DISPLAY_TOKEN
 
@@ -38,7 +36,7 @@ El handler `order_created` tiene responsabilidad actual de reserva de inventario
 
 ### 3.4 Facturas recibidas
 
-La alternativa de crear `FacturasRecibidas` es incompatible con `FORBIDDEN_COLLECTIONS`. La alternativa de usar `MovimientosCaja` con `TRANSFERENCIA` no debe simular una salida de efectivo ni confundir factura recibida, obligación con proveedor y pago bancario. ADR-04 debe separar, como mínimo, el documento recibido, su obligación contable y su liquidación bancaria; no se implementará una escritura hasta definir el modelo canónico y su relación con el libro de asientos.
+No se crea una colección paralela `FacturasRecibidas` para estos datos. El registro contable de estos procesos se consolida en `LibroAsientosContablesDetalle`. La clasificación del asiento debe distinguir documento/obligación, pago y cuenta de contrapartida, conforme al contrato contable aprobado; nunca se representa el pago bancario como salida de caja física.
 
 ### 3.5 Estado del dossier frente a código
 
@@ -56,8 +54,8 @@ El dossier indexado describe enums, destinos y writers que no coinciden plenamen
 
 1. **ADR-01:** reconciliar formalmente enums y esquemas contra la SSOT aprobada. No migrar valores existentes por sustitución textual.
 2. **ADR-02:** decidir el tratamiento de `order_created` sin duplicar Wix Orders ni contaminar CitasF2.
-3. **ADR-03:** decidir y aprobar colecciones ledger separadas para arqueos X y actas de recuento; nunca sobrescribir `CajaActual` ni el stock para representar históricos.
-4. **ADR-04:** resolver la prohibición de `FacturasRecibidas` y separar documento, deuda y pago bancario.
+3. **ADR-03:** decidir y aprobar colecciones ledger separadas para arqueos X y actas de recuento. `CajaActual` es un único item de proyección realtime; `MovimientosCaja` conserva cada movimiento, su tipo, detalle, importes y acumulados. No sobrescribir el histórico ni el stock para representar recuentos.
+4. **ADR-04:** formalizar el contrato de asientos de procesos no-caja en `LibroAsientosContablesDetalle`; no crear movimientos ficticios de caja.
 5. Completar C-01/C-03 con comprobación del esquema físico CMS y validadores de frontera.
 6. Implementar únicamente writers aprobados, con idempotencia, autorización backend, `traceId`, pruebas unitarias/de integración y verificación en Wix Local Editor.
 7. No publicar hasta superar QA E2E y revisar reversión. Los ledgers append-only no se revierten mediante borrado.
@@ -78,3 +76,12 @@ El dossier indexado describe enums, destinos y writers que no coinciden plenamen
 - **Inferido:** impacto de la ausencia de writers a partir de la inspección estática; requiere confirmar consumidores y flujos activos.
 - **Pendiente:** esquema físico CMS, configuración real de hooks Wix, pruebas en Local Editor, scopes, conectores M365/Power Automate, validación normativa por asesoría y ejecución E2E.
 - **No ejecutado:** tests, escrituras CMS, migraciones, simulaciones transaccionales y despliegues.
+
+
+## 8. Contratos canónicos aclarados por el responsable del sistema
+
+- Estado CMS de cancelación: `CANCELED` (único valor; eliminar `CANCELLED`).
+- Libro contable: `LibroAsientosContablesDetalle` (nombre exacto y canónico).
+- Operaciones que no pasan por caja física: consolidación en `LibroAsientosContablesDetalle`; no generan movimientos en `MovimientosCaja` ni mutan `CajaActual`.
+- `CajaActual`: singleton de estado/saldo actualizado en tiempo real por cada movimiento físico.
+- `MovimientosCaja`: ledger detallado de cada movimiento físico, con tipo, detalle y acumulados.
