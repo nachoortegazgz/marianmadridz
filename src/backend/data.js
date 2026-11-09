@@ -599,8 +599,8 @@ export function RegistrosHorariosStaff_beforeRemove() {
 export function CajaActual_beforeInsert(item) {
     if (!item || typeof item !== "object") return item;
     const key = _safeTrim(item.singletonKey || item._id);
-    if (key !== "CAJA_PRINCIPAL" && key !== "CAJA_SEQ") {
-        _schemaError("singletonKey en CajaActual debe ser 'CAJA_PRINCIPAL' o 'CAJA_SEQ'");
+    if (key !== "CAJA_PRINCIPAL") {
+        _schemaError("CajaActual es SINGLE_ITEM: solo admite el singleton 'CAJA_PRINCIPAL'");
     }
     return item;
 }
@@ -610,13 +610,16 @@ export function CajaActual_beforeUpdate(item, context) {
     const prevSeq = { ...(previous?.sequenceCounters || {}) };
     const nextSeq = { ...(item?.sequenceCounters || {}) };
 
-    // appliedMovementIds is projection idempotency metadata on CAJA_PRINCIPAL,
-    // not a fiscal sequence counter. Ignore it when guarding sequence changes.
+    // The single CajaActual principal stores both fiscal counters and
+    // projection idempotency metadata; keep appliedMovementIds independent.
     delete prevSeq.appliedMovementIds;
     delete nextSeq.appliedMovementIds;
 
-    if (JSON.stringify(prevSeq) !== JSON.stringify(nextSeq) && item?._id !== "CAJA_SEQ") {
-        log.warn("CajaActual_beforeUpdate: sequenceCounters modified on non-CAJA_SEQ document", { _id: item?._id });
+    if (
+        JSON.stringify(prevSeq) !== JSON.stringify(nextSeq) &&
+        _safeTrim(item?.singletonKey) !== "CAJA_PRINCIPAL"
+    ) {
+        log.warn("CajaActual_beforeUpdate: sequenceCounters modified outside CAJA_PRINCIPAL", { _id: item?._id });
     }
     return item;
 }
