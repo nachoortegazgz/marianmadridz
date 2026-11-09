@@ -228,7 +228,7 @@ test('SSOT-10 suppression flag gone + elevation centralized in dataAccess', () =
     'dataAccess.js must elevate the official SDK query method directly');
   assert.ok(!/auth\.elevate\(\s*async/.test(da),
     'dataAccess.js must not elevate arbitrary callbacks');
-  assert.ok(/elevatedQuery\(\s*dataCollectionId\s*,\s*queryRequest/.test(da),
+  assert.ok(/elevatedQuery\(\s*collection\s*,\s*queryRequest/.test(da),
     'all query reads must pass through the elevated SDK query method');
   assert.ok(!/from ["']wix-data["']/.test(da),
     'dataAccess.js must not import the legacy wix-data module');
