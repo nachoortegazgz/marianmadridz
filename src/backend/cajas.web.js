@@ -195,17 +195,22 @@ async function _queueCompensation(params) {
     const traceId = _safeTrim(p.traceId) || makeTraceId("comp");
     const origin = p.origin || "FISCAL_RECOVERY";
     const phase = p.phase || null;
+    const bookingIds = Array.isArray(p.bookingIds)
+        ? [...new Set(p.bookingIds.map((id) => _safeTrim(id)).filter(Boolean))].sort()
+        : [];
+    const hasStableEntity = Boolean(p.transactionId || p.orderId || p.refundId || bookingIds.length > 0);
     const identity = {
         kind,
         transactionId: p.transactionId || null,
         orderId: p.orderId || null,
         refundId: p.refundId || null,
+        bookingIds,
         phase,
         origin,
         totalAmount: Number(p.totalAmount) || 0,
         paymentMethod: p.paymentMethod || null,
         movementType: p.movementType || null,
-        fallbackTraceId: p.transactionId || p.orderId || p.refundId ? null : traceId,
+        fallbackTraceId: hasStableEntity ? null : traceId,
     };
     const identityHash = await hashSHA256(_stableSerialize(identity));
     const record = {
@@ -1200,7 +1205,12 @@ export async function queueFiscalRecovery(recoveryData) {
             lastError: recoveryData.lastError,
             alertRequired: false,
         });
-        return { queued: Boolean(queued?.created || queued?.duplicate), duplicate: Boolean(queued?.duplicate), traceId };
+        return {
+            queued: Boolean(queued?.created || queued?.duplicate),
+            created: Boolean(queued?.created),
+            duplicate: Boolean(queued?.duplicate),
+            traceId,
+        };
     } catch (err) {
         log.error("queueFiscalRecovery failed", { traceId, error: err?.message });
         return { queued: false, traceId, error: "QUEUE_FAILED" };
