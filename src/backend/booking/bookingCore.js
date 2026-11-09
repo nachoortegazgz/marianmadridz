@@ -6,19 +6,10 @@ RESPONSIBILITY: Primitivas atomicas de reserva (simple y dual con gap),
 Bookings Writer V2, checkout Cart V2 de F1, locks, idempotencia,
 persistencia CitasF2, proyeccion de slots y traduccion de enums en frontera.
 
-CORRECCIONES v5021 (alineadas con la documentacion oficial de Wix Bookings V2):
-  WIX-V2-ID-01 (P0): _resolveWriteLocation devuelve `{ id, locationType }`,
-    no `{ _id, locationType }`. El contrato oficial de BookedSlot.Location
-    es `{ id, name, formattedAddress, locationType }` (id, NO _id).
-    Ref: https://dev.wix.com/docs/api-reference/business-solutions/bookings/
-    bookings/bookings-writer-v2/create-booking
-  WIX-V2-ID-02 (P0): _forceStaffInPristineSlot devuelve
-    `resource: { id }`, no `resource: { _id }`. El contrato oficial de
-    BookedSlot.Resource es `{ id, name, email, scheduleId }`.
-  WIX-V2-ID-03 (P1): _forceStaffInPristineSlot acepta
-    `resourceCandidate._id` (contrato SDK Bookings V2).
-  WIX-V2-ID-04 (P1): _projectCertifiedSlot conserva `location._id` del SDK
-    para construir `locationId` interno.
+CORRECCIONES V5022 — SDK Bookings V2:
+  BOOKINGS-SDK-ID-01 (P0): BookedSlot del SDK usa resource._id y
+    location._id. _resolveWriteLocation y _forceStaffInPristineSlot
+    construyen ese shape; la forma REST id no se acepta en writers SDK.
   LOG-NOISE-01 (P2): eliminado el log.warn de thirdPartyId en
     _persistBooking. El campo es OPCIONAL en Bookings Writer V2.
 
