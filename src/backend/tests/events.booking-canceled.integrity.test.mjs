@@ -24,6 +24,8 @@ function seedCita() {
   wixDataMock._seed(CITA_COLLECTION, [{
     _id: CITA_ID,
     bookingId: BOOKING_ID,
+    scheduleId: '99999999-9999-4999-8999-999999999999',
+    traceId: 'trace-test-cita-cancel',
     bookingStatus: IC.CITAS_BOOKING_STATUS.CONFIRMED,
     paymentStatus: IC.CITAS_PAYMENT_STATUS.NOT_PAID,
     meta: {},
@@ -96,6 +98,8 @@ test('DUAL-CANCEL-01 one canceled phase does not refund a paid dual booking and 
     {
       _id: 'dual-cita-f1',
       bookingId: f1,
+      scheduleId: '77777777-7777-4777-8777-777777777771',
+      traceId: 'trace-test-dual-f1',
       pairToken,
       orderId,
       bookingStatus: IC.CITAS_BOOKING_STATUS.CONFIRMED,
@@ -105,6 +109,8 @@ test('DUAL-CANCEL-01 one canceled phase does not refund a paid dual booking and 
     {
       _id: 'dual-cita-f2',
       bookingId: f2,
+      scheduleId: '88888888-8888-4888-8888-888888888881',
+      traceId: 'trace-test-dual-f2',
       pairToken,
       orderId,
       bookingStatus: IC.CITAS_BOOKING_STATUS.CONFIRMED,
