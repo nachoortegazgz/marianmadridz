@@ -591,7 +591,7 @@ Documentos_Capa3/
 | **RGPD / LOPDGDD** | Minimización PII, cifrado, acceso restringido | Los CSV **nunca** incluyen PII de clientes. SharePoint cifra con AES-256. Gestor accede en solo lectura. Alba y Andrea sin acceso. Datos en servidores UE. |
 | **LGT 58/2003** | Conservación 4 años (fiscal) | Retención SharePoint: 6 años. |
 | **Código de Comercio art. 30** | Conservación 6 años (mercantil) | Retención SharePoint: 6 años. Versionado 500 versiones. |
-| **obligación de información sobre Bizum, si aplica; no implica reporte automático del proveedor** | Reporte AEAT de cobros Bizum | No se presume que Wix Payments reporte automáticamente a AEAT. El Cierre Z incluye `totalBizum` como evidencia documental. Extracto Wix Payments archivado en `1_VENTAS/`. |
+| **RD 253/2025 (Bizum, si resulta aplicable)** | Obligación y sujeto obligado pendientes de validar con AEAT/asesoría. | El Cierre Z conserva `totalBizum` cuando se registra; no se presume reporte automático de Wix Payments. Los informes de pagos/payouts se archivan solo tras verificar el formato disponible en el panel. |
 | **LSSI-CE** | Transparencia de precios | No aplica directamente al traslado. Los textos legales están en el sitio web. |
 
 ### D.2 Trazabilidad end-to-end del dato
@@ -690,7 +690,7 @@ Según PTD Kit Digital §13 (25 escenarios, 96% resiliencia):
 | `traceId` | Transversal | UUID v4 | Todos los CSV | Todas las carpetas | Trazabilidad end-to-end |
 | `closingHash` | `HistoricoCierresZ` | `verifyNightlyZClosing` | `CIERRE_Z` | `1_VENTAS/Cierres_Z/` | Ley 11/2021 |
 | `isIntegrityVerified` | `HistoricoCierresZ` | Verificación cadena | `CIERRE_Z` | `1_VENTAS/Cierres_Z/` | Ley 11/2021 |
-| `totalCash` / `totalCard` / `totalBizum` / `totalOnline` | `HistoricoCierresZ` | Agregación | `CIERRE_Z` | `1_VENTAS/Cierres_Z/` | RD 253/2025 |
+| `totalCash` / `totalCard` / `totalBizum` / `totalOnline` | `HistoricoCierresZ` | Agregación | `CIERRE_Z` | `1_VENTAS/Cierres_Z/` | RD 253/2025, solo si aplica; validar obligación y sujeto obligado |
 | `totalTaxBase` / `totalTaxAmount` | `HistoricoCierresZ` | Agregación | `CIERRE_Z` | `1_VENTAS/Cierres_Z/` | Ley 37/1992 |
 | `bookingId` | `CitasF2` | Wix Bookings V2 | `VENTAS_MENSUAL` | `1_VENTAS/Reservas/` | Trazabilidad |
 | `bookingStatus` | `CitasF2` | Enum CMS | `VENTAS_MENSUAL` | `1_VENTAS/Reservas/` | Trazabilidad |
