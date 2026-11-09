@@ -166,11 +166,11 @@ Consulta de solo lectura a Wix Forms v4: hay 4 esquemas activos (`enabled=true`)
 | `FORM REGISTRO HORARIO` | 6 | `upsertContact` con mapping vacío | No acredita escritura en `RegistrosHorariosStaff` |
 | `FORMULARIO DE CONTACTO BÁSICO` | 7 | Upsert CRM de nombre, email y teléfono | Integración CRM coherente con su finalidad |
 
-Las tres primeras formas son compatibles por nombre/campos con flujos internos de caja y jornada, pero su esquema no contiene un trigger backend de negocio. La página ZONA STAFF mantiene los flags deshabilitados y no enruta estos eventos. No se puede confirmar desde la API de formularios en qué páginas están embebidas; hay que inspeccionarlo en Wix Editor. También hay que revisar Wix Automations antes de concluir que no existe ningún flujo externo.
+Las tres primeras formas son compatibles por nombre/campos con flujos internos de caja y jornada, pero su esquema no contiene un trigger backend de negocio. La página ZONA STAFF mantiene los flags deshabilitados y no enruta estos eventos. No se puede confirmar desde la API de formularios en qué páginas están embebidas; hay que inspeccionarlo en Wix Editor. La consulta de Wix Automations v2 no devolvió automatizaciones activas ni borradores con trigger de envío de formulario. No se ha inspeccionado ninguna integración externa fuera de Wix Automations.
 
-El endpoint oficial de conteo de envíos devolvió HTTP 200 y `formsSubmissionsCount=[]` para los IDs consultados. Ese resultado no se interpreta como cero envíos sin aclarar la semántica de la respuesta; no se leyeron contenidos de formularios ni datos personales. Tampoco se han auditado automatizaciones externas de Wix que pudieran reaccionar a los envíos.
+El endpoint oficial de conteo de envíos devolvió HTTP 200 y `formsSubmissionsCount=[]` para los IDs consultados. Ese resultado no se interpreta como cero envíos sin aclarar la semántica de la respuesta; no se leyeron contenidos de formularios ni datos personales. Se consultó Wix Automations v2, incluyendo borradores, filtrando por `configuration.trigger.triggerKey=wix_form_app-form_submitted`: 0 automatizaciones activas y 0 borradores. Por tanto, no hay un workflow de Wix Automations con ese trigger para procesar envíos de formularios.
 
-**Conclusión:** Wix Forms está instalado y tiene cuatro formularios configurados, pero los formularios de caja/X/fichaje no están conectados de forma demostrable con los WebMethods ni con los ledgers append-only. No deben tratarse como sustituto del backend.
+**Conclusión:** Wix Forms está instalado y tiene cuatro formularios configurados, pero los formularios de caja/X/fichaje no están conectados de forma demostrable con los WebMethods ni con los ledgers append-only. No deben tratarse como sustituto del backend. Si el negocio requiere que estos formularios generen registros contables/laborales, se necesita un flujo backend idempotente aprobado; el estado actual no lo proporciona.
 
 ### Gift Cards
 
