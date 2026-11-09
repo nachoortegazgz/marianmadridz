@@ -103,3 +103,8 @@ El dossier indexado describe enums, destinos y writers que no coinciden plenamen
 - `LibroAsientosContablesDetalle`: 0 registros en la consulta live. El esquema contiene `entryId`, `sourceMovementId`, `accountCode`, `debitAmount`, `creditAmount`, `recordHash`, `previousRecordHash` y `traceId` como campos obligatorios; `cashMovementId` es opcional.
 - `ControlOperativo`: colección existente con `orderId`, `eventId`, `dedupeKey`, `traceId`, `status` y `payload`, apta para el marcador idempotente `ORDER_CREATED`.
 - No se han escrito ni actualizado filas ni esquemas CMS.
+
+### 10.1 Caja y eventos de pedido
+
+- `CajaActual`: exactamente 1 fila (`_id=SINGLE_ITEM_ID`, `singletonKey=CAJA_PRINCIPAL`) con `cashAmount=300` y `operationDate=2026-11-05`. No se modificó. El CMS no devuelve un `MovimientosCaja` asociado: el ledger tiene 0 filas, por lo que el importe del singleton debe tratarse como estado técnico/preexistente y no como una venta ni como prueba de actividad real.
+- `ControlOperativo`: 68 filas; en la proyección consultada no aparece ningún marcador cuyo `payload.eventType` sea `ORDER_CREATED`. Esto no demuestra por sí solo que no existan pedidos Wix; la recuperación de pedidos debe reconciliarse contra Wix Orders.
