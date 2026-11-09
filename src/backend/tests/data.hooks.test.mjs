@@ -63,6 +63,7 @@ test('HOOK-CITAS-01 validates canonical enums, traceId and pairToken', () => {
 test('HOOK-CMS-DATETIME-01 normalizes CitasF2 slot dates to Date objects', () => {
   const item = {
     bookingId: '11111111-1111-4111-8111-111111111111',
+    scheduleId: '22222222-2222-4222-8222-222222222222',
     bookingType: 'SIMPLE',
     bookingStatus: 'PENDING',
     paymentStatus: 'NOT_PAID',
@@ -81,6 +82,7 @@ test('HOOK-CMS-DATETIME-01 normalizes CitasF2 slot dates to Date objects', () =>
 test('HOOK-CMS-DATETIME-QA-01 binds conversion and guards to physical QA collection ID', () => {
   const item = {
     bookingId: '11111111-1111-4111-8111-111111111111',
+    scheduleId: '22222222-2222-4222-8222-222222222222',
     bookingType: 'SIMPLE',
     bookingStatus: 'PENDING',
     paymentStatus: 'NOT_PAID',
