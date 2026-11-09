@@ -764,3 +764,50 @@ test("EVENT-BOOKING-11 controlled reconciliation refuses PAID bookings without l
   assert.equal((wixDataMock._store.get("CitasF2") || []).length, 0);
   assert.equal((wixDataMock._store.get("ControlOperativo") || []).length, 0);
 });
+
+
+test("EVENT-ORDER-NATIVE-STOCK-10 order-created marks mixed Wix catalog orders without custom stock writes", async () => {
+  wixDataMock._reset();
+  const orderId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+  const eventId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+  const event = {
+    metadata: { id: eventId },
+    data: {
+      order: {
+        _id: orderId,
+        status: "APPROVED",
+        paymentStatus: "NOT_PAID",
+        lineItems: [
+          {
+            catalogReference: {
+              appId: IC.WIX_CATALOG_APP_IDS.BOOKINGS,
+              catalogItemId: BOOKING_ID,
+            },
+          },
+          {
+            catalogReference: {
+              appId: IC.WIX_CATALOG_APP_IDS.STORES,
+              catalogItemId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+            },
+          },
+        ],
+      },
+    },
+  };
+
+  const first = await events.wixEcom_onOrderCreated(event);
+  const replay = await events.wixEcom_onOrderCreated(event);
+
+  assert.equal(first.status, "OK");
+  assert.equal(first.inventoryManagedBy, "WIX_NATIVE");
+  assert.equal(replay.status, "OK");
+  assert.equal(replay.duplicate, true);
+
+  const markers = wixDataMock._store.get(IC.OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO) || [];
+  const marker = markers.find(row => row.eventId === eventId);
+  assert.ok(marker);
+  assert.equal(marker.payload?.metadata?.inventoryAuthority, "WIX_STORES_NATIVE");
+  assert.equal(marker.payload?.metadata?.inventoryAction, "NO_CUSTOM_STOCK_WRITE");
+  assert.equal((wixDataMock._store.get(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_INVENTARIO) || []).length, 0);
+  assert.equal((wixDataMock._store.get(IC.BUSINESS_COLLECTIONS.INVENTARIO_STOCK_VENTA) || []).length, 0);
+});
