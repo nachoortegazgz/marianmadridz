@@ -503,6 +503,9 @@ MOVEMENT_TYPE = { COBRO, DEVOLUCION, APORTACION, RETIRO,
 // MovimientosCaja.channelType
 CHANNEL_TYPE = { PRESENCIAL, ONLINE }
 
+// Opciones de pago nativas de Bookings Writer V2
+BOOKING_PAYMENT_OPTION = { ONLINE, OFFLINE }
+
 // MovimientosCaja.paymentMethod
 PAYMENT_METHOD = { EFECTIVO, TARJETA, BIZUM, TRANSFERENCIA,
   WIX_PAYMENTS, OTRO }
@@ -3382,7 +3385,7 @@ El sitio `marianmadrid.es` gestiona **12 procesos de negocio** a través de tres
 | **P7.2** Ficha Técnica Clienta | Wix CRM + Wix Data. Fórmula de color, alergias, historial de tratamientos, preferencias, notas. | Fórmula de color, alergias, historial, preferencias, notas, fecha última actualización | Wix CRM / Wix Data (app nativa) |
 | **P7.3** Consentimiento y RGPD | Consent Mode v2 en web. Checkbox desmarcado por defecto. | `consentMarketing`, `consentDataProcessing`, `consentTimestamp` | Wix (nativo) |
 | **P7.4** Programa de fidelización | Wix Fidelización: Bronze (0-200 pts), Silver (201-500 pts), Gold (>500 pts). Canje por add-ons. | Puntos acumulados, nivel, canjes | Wix Fidelización (app nativa) |
-| **P7.5** Autenticación de personal | `MapaStaff` conserva el mapeo de respaldo `staffMemberId` (Bookings) ↔ `resourceId`/`scheduleId`; el rol de acceso procede de `STAFF.WEBSITE_ROLE_BY_RESOURCE_ID` en `internalConfig.js`. | `memberId`, `resourceId`, `rolBookings`, `rolWebsite`, `staffName`, `displayName`, `active`, `sortOrder`, `schemaVersion` | `MapaStaff` (NATIVE #13) |
+| **P7.5** Identidad y asignación de personal | `MapaStaff` conserva el mapeo de respaldo `staffMemberId` (Bookings) ↔ `resourceId`/`scheduleId`; el rol de acceso procede de `STAFF.WEBSITE_ROLE_BY_RESOURCE_ID` en `internalConfig.js`. | `staffMemberId`, `resourceId`, `scheduleId`, `active`; campos históricos `memberId`, `rolBookings`, `rolWebsite` no gobiernan RBAC | `MapaStaff` (NATIVE #13) |
 
 ---
 
