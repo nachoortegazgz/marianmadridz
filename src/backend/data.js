@@ -884,16 +884,30 @@ export function normalizeControlKeys(item) {
     return item;
 }
 
-/** Lectura dual: canon "payload" (objeto) con tolerancia de lectura para
- *  docs historicos que aun conservan "payloadJson" (string JSON). */
+/**
+ * Lee el campo canonico payload. El campo payloadJson solo se consulta para
+ * registros persistidos antes de la normalizacion del esquema.
+ * REVIEW-BY: 2027-01-31. Retirar el fallback cuando no queden registros
+ * historicos y la metrica historical-control-payload-read sea cero.
+ */
 export function readControlPayload(doc) {
     if (!doc || typeof doc !== "object") return {};
     if (doc.payload && typeof doc.payload === "object") return doc.payload;
     if (typeof doc.payloadJson === "string" && doc.payloadJson.trim()) {
+        log.warn("historical-control-payload-read", {
+            collection: OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO,
+            docId: doc._id ?? null,
+            traceId: doc.traceId ?? null,
+        });
         try {
             const parsed = JSON.parse(doc.payloadJson);
             if (parsed && typeof parsed === "object") return parsed;
-        } catch (_e) { /* doc historico corrupto */ }
+        } catch (_e) {
+            log.warn("historical-control-payload-invalid", {
+                docId: doc._id ?? null,
+                traceId: doc.traceId ?? null,
+            });
+        }
     }
     return {};
 }
