@@ -1,8 +1,8 @@
 /*
 =============================================================================
 MODULE: pages/zonamarian.js
-VERSION: v5002.5-canonical-admin-page
-RESPONSIBILITY: Canonical Velo page controller for Marian Administration.
+VERSION: v5005.0-canonical-admin-page-ai-accountant
+RESPONSIBILITY: Controlador canónico de la página de Administración (Marian).
 STANDARDS: G10 ASCII Strict, Velo V3 SDK.
 =============================================================================
 */
@@ -26,8 +26,11 @@ import {
     getManagerPackageHistory,
     getPreparedManagerPackages,
     downloadManagerPackageVersion,
+    // NUEVO — envio a gestor
+    listAccountantRecipients,
+    sendManagerPackageToAccountant,
+    sendSpecificDocumentToAccountant,
 } from "backend/fiscalDocuments.web.js";
-
 import {
     getInventoryDashboard,
     getInventoryCatalogCandidates,
@@ -38,115 +41,151 @@ import {
     processPendingRefundInventoryRepairs,
     reconcilePendingInventoryMovements,
 } from "backend/inventario.web.js";
+// NUEVO — IA + staff (crear estos backends)
+import { askMarianAI } from "backend/aiAgent.web.js";
+import {
+    getStaffList,
+    getStaffHoursSummary,
+    sendStaffNotification,
+} from "backend/staffManager.web.js";
 
 import { makeTraceId, URLS } from "public/mmUtils";
 import { createWidgetBridge } from "public/widgetBridge";
 
+/* ────────────────────────────────────────────────────────────────────
+   MAPA DE ACCIONES
+   ──────────────────────────────────────────────────────────────────── */
 const ACTIONS = {
+    // ── Caja ─────────────────────────────────────────────────────────
     CASHIER_STATE: ({ payload, traceId }) =>
-        getCashierState({
-            traceId,
-            diaKey: payload?.diaKey || null,
-        }),
+        getCashierState({ traceId, diaKey: payload?.diaKey || null }),
 
     TPV_TX: ({ payload, traceId }) =>
-        registerManualTransaction({
-            ...(payload || {}),
+        registerManualTransaction({ ...(payload || {}), traceId }),
+
+    Z_CLOSING: ({ payload, traceId }) =>
+        registerZClosing(payload?.diaKey || null, { traceId }),
+
+    // ── Fiscal ───────────────────────────────────────────────────────
+    FISCAL_SUMMARY: ({ payload, traceId }) =>
+        getQuarterlyTaxSummary(payload?.year, payload?.quarter, { traceId }),
+
+    FISCAL_BOOK: ({ payload, traceId }) =>
+        getLibroRegistroFacturasExpedidas(payload?.year, payload?.quarter, { traceId }),
+
+    // ── Documentos (existentes) ─────────────────────────────────────
+    DOCUMENT_PREVIEW: ({ payload }) => previewManagerPackage(payload || {}),
+    DOCUMENT_CREATE: ({ payload }) => createManagerPackageVersion(payload || {}),
+    DOCUMENT_HISTORY: ({ payload }) => getManagerPackageHistory(payload || {}),
+    DOCUMENT_PREPARED: () => getPreparedManagerPackages(),
+    DOCUMENT_DOWNLOAD: ({ payload }) => downloadManagerPackageVersion(payload || {}),
+
+    // ── Envío a gestor (NUEVO) ──────────────────────────────────────
+    ACCOUNTANT_RECIPIENTS: ({ traceId }) =>
+        listAccountantRecipients({ traceId }),
+
+    SEND_MONTHLY_PACKAGE: ({ payload, traceId }) =>
+        sendManagerPackageToAccountant({
+            periodType: "MONTHLY",
+            year: payload?.year,
+            month: payload?.month,
+            recipientId: payload?.recipientId,
+            notes: payload?.notes || null,
             traceId,
         }),
 
-    Z_CLOSING: ({ payload, traceId }) =>
-        registerZClosing(
-            payload?.diaKey || null, { traceId }
-        ),
+    SEND_QUARTERLY_PACKAGE: ({ payload, traceId }) =>
+        sendManagerPackageToAccountant({
+            periodType: "QUARTERLY",
+            year: payload?.year,
+            quarter: payload?.quarter,
+            recipientId: payload?.recipientId,
+            notes: payload?.notes || null,
+            traceId,
+        }),
 
-    FISCAL_SUMMARY: ({ payload, traceId }) =>
-        getQuarterlyTaxSummary(
-            payload?.year,
-            payload?.quarter, { traceId }
-        ),
+    SEND_SPECIFIC_DOCUMENT: ({ payload, traceId }) =>
+        sendSpecificDocumentToAccountant({
+            documentId: payload?.documentId,
+            documentType: payload?.documentType || null,
+            recipientId: payload?.recipientId,
+            notes: payload?.notes || null,
+            traceId,
+        }),
 
-    FISCAL_BOOK: ({ payload, traceId }) =>
-        getLibroRegistroFacturasExpedidas(
-            payload?.year,
-            payload?.quarter, { traceId }
-        ),
+    // ── Staff (NUEVO) ───────────────────────────────────────────────
+    STAFF_LIST: ({ traceId }) => getStaffList({ traceId }),
 
-    DOCUMENT_PREVIEW: ({ payload }) =>
-        previewManagerPackage(payload || {}),
+    STAFF_HOURS_SUMMARY: ({ payload, traceId }) =>
+        getStaffHoursSummary({
+            employeeId: payload?.employeeId || null,
+            startDateYMD: payload?.startDateYMD,
+            endDateYMD: payload?.endDateYMD,
+            traceId,
+        }),
 
-    DOCUMENT_CREATE: ({ payload }) =>
-        createManagerPackageVersion(payload || {}),
+    STAFF_NOTIFY: ({ payload, traceId }) =>
+        sendStaffNotification({
+            employeeId: payload?.employeeId,
+            channel: payload?.channel || "EMAIL",
+            subject: payload?.subject,
+            message: payload?.message,
+            traceId,
+        }),
 
-    DOCUMENT_HISTORY: ({ payload }) =>
-        getManagerPackageHistory(payload || {}),
+    // ── IA (NUEVO) ──────────────────────────────────────────────────
+    AI_QUERY: ({ payload, traceId }) =>
+        askMarianAI({
+            query: payload?.query || "",
+            conversationId: payload?.conversationId || null,
+            contextHints: payload?.contextHints || null,
+            traceId,
+        }),
 
-    DOCUMENT_PREPARED: () =>
-        getPreparedManagerPackages(),
-
-    DOCUMENT_DOWNLOAD: ({ payload }) =>
-        downloadManagerPackageVersion(payload || {}),
-
+    // ── Inventario (existentes) ────────────────────────────────────
     INVENTORY_DASHBOARD: ({ payload, traceId }) =>
         getInventoryDashboard({ ...(payload || {}), traceId }),
-
     INVENTORY_CANDIDATES: ({ payload, traceId }) =>
         getInventoryCatalogCandidates({ ...(payload || {}), traceId }),
-
     INVENTORY_REGISTER_MASTER: ({ payload, traceId }) =>
         registerInventoryMaster({ ...(payload || {}), traceId }),
-
     INVENTORY_MOVEMENT_HISTORY: ({ payload, traceId }) =>
         getInventoryMovementHistory(payload?.stockKey, { ...(payload || {}), traceId }),
-
     INVENTORY_REGISTER_MOVEMENT: ({ payload, traceId }) =>
         registerInventoryMovement({ ...(payload || {}), traceId }),
-
     INVENTORY_RECONCILE_MOVEMENTS: ({ payload, traceId }) =>
         reconcilePendingInventoryMovements({ ...(payload || {}), traceId }),
-
     INVENTORY_PROCESS_REPAIRS: ({ payload, traceId }) =>
         processPendingInventoryRepairs({ ...(payload || {}), traceId }),
-
     INVENTORY_PROCESS_REFUND_REPAIRS: ({ payload, traceId }) =>
         processPendingRefundInventoryRepairs({ ...(payload || {}), traceId }),
-
 };
 
+/* ────────────────────────────────────────────────────────────────────
+   ONREADY
+   ──────────────────────────────────────────────────────────────────── */
 $w.onReady(async () => {
     const traceId = makeTraceId("admin-page");
-    const widget = $w("#htmlAdmin") || $w("#htmlAdministracion");
+    const widget = $w("#htmlAdministracion") || $w("#htmlAdmin");
 
-    if (!widget || typeof widget.postMessage !== "function") {
-        return;
-    }
+    if (!widget || typeof widget.postMessage !== "function") return;
 
     const member = await wixMembersFrontend.currentMember
         .getMember()
         .catch(() => null);
 
     if (!member) {
-        // promptLogin() no debe awaitarse dentro de onReady(): segun la
-        // documentacion oficial, esperar/retornar su promesa puede bloquear
-        // la carga de la pagina. Se maneja con .catch() y se continua.
-        wixMembersFrontend.authentication
-            .promptLogin()
-            .catch(() => {});
+        // No await: según docs oficiales puede bloquear la carga.
+        wixMembersFrontend.authentication.promptLogin().catch(() => {});
         return;
     }
 
     const accessRes = await checkStaffCollaboratorAccess({ traceId })
         .catch(() => null);
-
-    const access =
-        accessRes?.status === "SUCCESS" ?
-        accessRes.data :
-        null;
+    const access = accessRes?.status === "SUCCESS" ? accessRes.data : null;
 
     if (!access || access.isMarianManager !== true) {
-        location.to(
-            URLS?.SERVICIOS || "/reserva-online"
-        );
+        location.to(URLS?.SERVICIOS || "/reserva-online");
         return;
     }
 
@@ -161,61 +200,59 @@ $w.onReady(async () => {
                 isMarianManager: true,
                 isAdmin: access.isAdmin === true,
                 isCajero: access.isCajero === true,
-                memberName: member.profile?.nickname ||
+                memberName:
+                    member.profile?.nickname ||
                     member.contactDetails?.firstName ||
                     "Marian",
+                roleLabel: "PROPIETARIA",
                 timeZone: "Europe/Madrid",
                 currencyCode: "EUR",
-                today: new Date().toLocaleDateString(
-                    "sv-SE", { timeZone: "Europe/Madrid" }
-                ),
-                cashierState: cashierRes?.status === "SUCCESS" ?
-                    cashierRes.data :
-                    null,
+                today: new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Madrid" }),
+
+                // ── Feature flags ─────────────────────────────────────
+                enableClocking: false,        // ❌ fichaje eliminado
+                enableBreaks: false,
+                enableCashier: true,
+                enableInventory: true,
+                enableScheduleQuery: true,    // consulta de horas staff
+                enableStaffManagement: true,  // ✅ NUEVO
+                enableAIAssistant: true,      // ✅ NUEVO
+                enableAccountantSend: true,   // ✅ NUEVO
+                enableFiscal: true,
+                enableDocuments: true,
+
+                cashierState:
+                    cashierRes?.status === "SUCCESS" ? cashierRes.data : null,
             };
         },
 
         onWidgetMessage: async (message, reply) => {
-            const type = String(message?.type || "")
-                .trim()
-                .toUpperCase();
-
+            const type = String(message?.type || "").trim().toUpperCase();
             const payload = message?.payload || {};
             const handler = ACTIONS[type];
 
             if (!handler) {
-                reply(
-                    `${type || "UNKNOWN"}_RES`, {
-                        status: "ERROR",
-                        error: {
-                            code: "UNKNOWN_ACTION",
-                            message: "Accion no reconocida",
-                        },
+                reply(`${type || "UNKNOWN"}_RES`, {
+                    status: "ERROR",
+                    error: {
+                        code: "UNKNOWN_ACTION",
+                        message: "Accion no reconocida",
                     },
-                    payload
-                );
+                }, payload);
                 return;
             }
 
             try {
-                const result = await handler({
-                    payload,
-                    traceId,
-                });
-
+                const result = await handler({ payload, traceId });
                 reply(`${type}_RES`, result, payload);
             } catch (error) {
-                reply(
-                    `${type}_RES`, {
-                        status: "ERROR",
-                        error: {
-                            code: "ACTION_FAILED",
-                            message: error?.message ||
-                                "No se pudo completar la accion.",
-                        },
+                reply(`${type}_RES`, {
+                    status: "ERROR",
+                    error: {
+                        code: "ACTION_FAILED",
+                        message: error?.message || "No se pudo completar la accion.",
                     },
-                    payload
-                );
+                }, payload);
             }
         },
     });
