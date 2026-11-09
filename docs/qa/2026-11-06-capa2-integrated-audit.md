@@ -63,7 +63,7 @@ Los nombres anteriores corresponden a archivos verificados en `main`. No se han 
 
 **Riesgo residual:** el bloqueo global tiene TTL de 10 minutos y verifica propietario antes del append, pero no implementa renovación/fencing distribuido. Las operaciones que superen el TTL deben seguir siendo rechazadas por la comprobación de propietario; la prueba de concurrencia real en Wix continúa pendiente.
 
-**Validación:** se añadieron pruebas offline para asignación, rollback, preservación de `appliedMovementIds`, ausencia de segundo registro y orden de bloqueo en ambos writers. CI todavía pendiente; no se declara validado hasta observar la ejecución.
+**Validación CI:** run #142 detectó sintaxis inválida en `eventLog.js` y fixtures sin el singleton principal; corregidos. Run #144 ejecutó 46 suites: 437 pruebas pasaron y una falló (`EVENT-PAYMENT-09`) porque el fixture de webhook no sembraba `CajaActual.CAJA_PRINCIPAL`; SDK Cart V2, Bookings Reader V2 y ESLint pasaron. Se añadió el singleton al fixture de ese webhook en el commit siguiente; la repetición completa de CI sobre ese commit queda pendiente. No se declara validado hasta obtener resultado verde.
 
 **Estado:** cambio de código preparado en rama; sin escrituras CMS, sin movimientos fiscales y sin publicación.
 
