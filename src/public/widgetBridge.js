@@ -17,6 +17,7 @@ export const MESSAGE_TYPES = Object.freeze({
 export const PROTOCOL_URLS = Object.freeze({
     HOME: "/",
     SERVICIOS: "/reserva-online",
+    ADMIN_PANEL: "/zona-marian",
     MIS_RESERVAS: "/my-bookings",
     CALENDARIO_2: "/booking-calendar",
     PRIVACY_POLICY: "/politica-de-privacidad"
