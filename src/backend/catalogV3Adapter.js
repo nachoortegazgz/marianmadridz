@@ -42,7 +42,7 @@ function _toVariant(item, product, variant) {
 
 export async function getCatalogVersion() {
     const result = await getCatalogVersionElevated();
-    return String(result?.catalogVersion || "");
+    return { catalogVersion: String(result?.catalogVersion || "") };
 }
 
 /**
