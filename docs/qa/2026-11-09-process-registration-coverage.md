@@ -38,7 +38,7 @@ Un proceso se considera cubierto solo si se puede demostrar:
 | Fichajes y ajustes de jornada | WebMethod de personal | `RegistrosHorariosStaff` append-only | **PARCIAL** | Hay 2 filas observadas con traceId y recordedAt, sin firma en los registros existentes. El writer genera HMAC pero el validator no exige signature. Determinar si son históricos/QA y reforzar contrato solo tras analizar compatibilidad; ejecutar pruebas de firma, replay, ajustes y export. |
 | Datos fiscales de terceros | Alta/actualización administrativa | `DatosFiscales` | **EXISTENCIA VERIFICADA; FLUJO NO E2E** | Existe 1 registro. Verificar alta, validación NIF/VAT, autorización, versionado/cambios y relación con asientos. No inferir datos ausentes. |
 | Facturación nativa Wix | Wix Invoices (app instalada) | Mantener separado del ledger fiscal propio hasta confirmar contrato | **API NO DISPONIBLE EN LA CUENTA** | Settings GET respondió 200, pero query de invoices v4 respondió 428 INVOICES_API_UNAVAILABLE. No afirmar disponibilidad de Invoices V2 ni crear segundo motor. Mantener versión activa hasta habilitación documentada. |
-| Exportación y custodia M365 | CMS SSOT → export backend → email/Resend → Outlook/Power Automate → SharePoint | SharePoint solo evidencia documental | **NO VERIFICADO EN EJECUCIÓN** | Dossier define 5 crons y 7 flujos PA, pero no hay evidencia de ejecución real, confirmación de archivo, idempotencia en destino ni conciliación de conteos. Verificar conectores, secretos, ejecuciones, errores y archivos con IDs/traceId. Capa 3 nunca escribe de vuelta en Capa 1. |
+| Exportación y custodia M365 | CMS SSOT → export backend → email/Resend → Outlook/Power Automate → SharePoint | SharePoint solo evidencia documental | **NO VERIFICADO EN EJECUCIÓN** | El dossier del repositorio incluye una auditoría fechada 2026-11-09 que confirma que Capa 3 no está implementada en runtime: falta exportService.js, faltan los cuatro crons y jobs de exportación, no se localiza envío runtime Resend y PA-01…PA-07/SharePoint no están auditados en el tenant. La arquitectura del dossier de flujos no acredita implantación. Capa 3 nunca escribe de vuelta en Capa 1. |
 | Registros técnicos, webhooks y recuperación | Wix webhooks / crons | `ControlOperativo` + logs/audit según política | **PARCIAL** | Se observaron 68 filas; 67 con traceId, todas con dedupeKey. Hay 34 registros webhook con eventId/dedupeKey/traceId/payload.processedAt. Un registro DAYS_CACHE carece de traceId y el hook de inserción no invoca el validator. Revisar todos los tipos de control y la regla de procesado durable antes de marcar webhook como completado. |
 | IA, formularios, Members y consentimientos | Wix Forms/Members + módulos personalizados | Colecciones específicas solo si están aprobadas y justificadas por finalidad | **FUERA DE LA VALIDACIÓN DE PERSISTENCIA** | El dossier de necesidades declara varios requisitos de IA, salud/consentimiento, formularios y perfil, pero esta auditoría no demuestra sus colecciones, permisos, retención ni funcionamiento publicado. No exportar PII/salud a Capa 3. Requiere auditoría de privacidad y pruebas separadas. |
 | Tarjetas regalo / bonos | Wix Gift Cards o módulo propio, según implementación real | Ledger/saldo y eventos de emisión/canje aprobados | **NO VERIFICADO EN EL REPOSITORIO/CMS ACTUAL** | El documento de necesidades declara GiftCards, HMAC y QR, pero no se ha acreditado en esta ejecución una colección/writer activo ni su conciliación con pedidos y pagos. No asumir que existe por estar declarado. |
@@ -105,3 +105,27 @@ No se declarará “todos los datos quedan registrados” hasta disponer, para c
 - versión de código, esquema y resultados enlazados.
 
 **Resultado de esta auditoría:** cobertura parcial. Se han cerrado brechas de código en la rama y CI offline está verde; quedan brechas de implementación, conciliación y validación real que impiden certificar cobertura total. No se han realizado escrituras CMS, migraciones, pagos, reservas, movimientos fiscales, cambios de stock ni despliegues.
+
+
+## 7. Hallazgos adicionales de inspección estática (rama de auditoría)
+
+### 7.1 Trazabilidad de caché de disponibilidad
+
+- `src/backend/reservas.web.js::_writeDaysCacheWindow` creaba filas `DAYS_CACHE` sin `traceId`.
+- Se corrigió en la rama para propagar el `traceId` de `_getAvailableDaysInternal` al registro de caché.
+- Se añadió una aserción en `src/backend/tests/reservas.web.test.mjs` para exigir que el registro cacheado contenga `traceId`.
+- La caché es temporal (TTL de 5 minutos); no se considera un hecho de negocio ni se exporta a Capa 3.
+
+### 7.2 Webhook ORDER_CREATED: fallo no durable acreditado
+
+En `src/backend/events.js::wixEcom_onOrderCreated`, el bloque `catch` llama a `_handleError`, pero solo relanza errores cuyo mensaje contiene `INVENTORY_`; para otros errores devuelve `{ status: "OK" }`. Si falla la persistencia del marcador `ORDER_CREATED` u otra operación fuera de esa categoría, el handler puede finalizar como OK sin que el código inspeccionado acredite una cola durable de recuperación.
+
+No se ha modificado este comportamiento en esta intervención: la documentación oficial de Wix consultada describe la ejecución de Velo event handlers, pero no establece en la página revisada una garantía de reintento automático que permita depender de lanzar una excepción como mecanismo de recuperación. La solución segura requiere diseñar una reconciliación periódica contra Wix Orders o una cola durable propia y probarla en el sitio publicado de QA.
+
+### 7.3 Capa 3: corrección del estado
+
+La auditoría del repositorio `docs/audits/2026-11-09-capa3-implementation-state.md` fija el estado de implantación: arquitectura documentada, ejecución operativa no demostrada. No existen los cuatro crons de exportación ni jobs correspondientes; `verifyNightlyZClosing` verifica el cierre, pero no genera/envía CSV; Resend no aparece en runtime; tenant M365, PA-01…PA-07 y SharePoint no están auditados. Además, existe una contradicción entre el patrón Resend descrito en el dossier y la directriz que prohíbe añadir proveedor externo sin aprobación. Requiere ADR antes de implementar transporte.
+
+### 7.4 Validación del webhook
+
+La documentación oficial de Wix consultada indica que los Velo backend event handlers para Wix Studio/Wix Editor se ejecutan en el sitio publicado. Por ello, la suite offline no acredita la ejecución real de esos handlers; la aceptación requiere un entorno Wix publicado de QA con eventos sintéticos, sin transacciones reales.
