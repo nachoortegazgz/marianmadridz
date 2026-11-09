@@ -79,6 +79,7 @@ Referencia: [Auditoría de preparación Veri*Factu](qa/2026-11-09-verifactu-read
 5. Probar hooks CMS, permisos, DISPLAY_TOKEN, locks, fencing, concurrencia e idempotencia.
 6. Sincronizar los HTML Components de administración y staff desde Wix Local Editor y conciliar IDs, mensajes, acciones y rutas antes de habilitar flags.
 7. Reconciliar Wix Bookings/Orders con proyecciones CMS mediante lecturas; no crear movimientos ni reparar históricos hasta disponer de procedimiento backend controlado y autorización.
+8. Auditar Wix Automations asociadas a `FORM MOVIMIENTO CAJA MANUAL`, `FORM CONTROL X` y `FORM REGISTRO HORARIO`; confirmar si existe integración externa con ledgers antes de implementar o activar handlers.
 
 ### P1 — Capa 3
 
