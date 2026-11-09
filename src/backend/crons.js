@@ -68,7 +68,7 @@ import { logger } from "backend/logger";
 import { notifyOperationalAlert } from "backend/audit";
 import { verifyFiscalHashChainIntegrity } from "backend/cajas.web";
 import { _completeTransaction, cancelBookingElevated } from "backend/booking/bookingCore";
-import { reconcileUnknownTransaction } from "backend/events";
+import { reconcileUnknownTransaction, reconcilePaidCitasFromLedgerInternal } from "backend/events";
 
 const log = logger;
 const API_TIMEOUT_MS =
@@ -434,14 +434,98 @@ throw new Error(`Unsupported compensation kind: ${kind || "UNKNOWN"}`);
 * CRON-09/10: contadores precisos. Solo incrementa tras éxito confirmado.
 * CRON-14: eliminada referencia a COLLECTIONS.ALERTAS_OPERATIVAS.
 */
+async function _recoverPendingPaymentStateAlerts(batchSize, traceId) {
+    const summary = { recovered: 0, failed: 0, manualRequired: 0, errors: [] };
+    const alerts = await dalQuery(OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO)
+        .eq("controlType", CONTROL_TYPE.ALERT)
+        .eq("alertType", "PAYMENT_STATE_UPDATE_REQUIRED")
+        .eq("status", CONTROL_STATUS.OPEN)
+        .ascending("_createdDate")
+        .limit(batchSize)
+        .find({ consistencyMode: "strong" });
+
+    for (const alert of alerts?.items || []) {
+        const payload = readControlPayload(alert);
+        const data = payload?.data || {};
+        const attempts = Number(payload?.recoveryAttempts) || 0;
+        try {
+            const recovered = await withTimeout(
+                () => reconcilePaidCitasFromLedgerInternal(data, traceId),
+                API_TIMEOUT_MS * 2,
+                "cron:paymentStateRecovery"
+            );
+            const resolvedPayload = {
+                ...payload,
+                recoveryAttempts: attempts + 1,
+                resolvedAt: new Date().toISOString(),
+                recoveryResult: {
+                    transactionId: recovered.transactionId,
+                    cashMovementId: recovered.cashMovementId,
+                    updatedCount: recovered.updatedCount,
+                },
+                lastRecoveryError: null,
+            };
+            await dalUpdate(OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO, {
+                ...alert,
+                status: CONTROL_STATUS.RESOLVED,
+                payload: resolvedPayload,
+            });
+            summary.recovered++;
+        } catch (error) {
+            const nextAttempts = attempts + 1;
+            const manualRequired = nextAttempts >= 5;
+            const failedPayload = {
+                ...payload,
+                recoveryAttempts: nextAttempts,
+                lastRecoveryAt: new Date().toISOString(),
+                lastRecoveryError: String(error?.message || "UNKNOWN").slice(0, 240),
+                ...(manualRequired ? { manualReconciliationRequired: true } : {}),
+            };
+            await dalUpdate(OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO, {
+                ...alert,
+                status: manualRequired ? CONTROL_STATUS.FAILED : CONTROL_STATUS.OPEN,
+                payload: failedPayload,
+            }).catch((updateError) => {
+                log.error("payment state recovery alert update failed", {
+                    alertId: alert?._id,
+                    error: updateError?.message,
+                    traceId,
+                });
+            });
+            if (manualRequired) summary.manualRequired++;
+            else summary.failed++;
+            if (summary.errors.length < 10) {
+                summary.errors.push({ alertId: alert?._id, error: error?.message || "UNKNOWN" });
+            }
+        }
+    }
+    return summary;
+}
+
 export async function runPendingCompensationsJob() {
 const traceId = makeTraceId("cron-comp");
-const result = { processed: 0, failed: 0, manualRequired: 0, errors: [] };
+const result = {
+paymentStatesRecovered: 0,
+paymentStatesFailed: 0,
+paymentStatesManualRequired: 0,
+processed: 0,
+failed: 0,
+manualRequired: 0,
+errors: [],
+};
 
 try {
 const batchSize =
 Number(SDK_CONFIG?.JOBS?.FISCAL_RECOVERY_BATCH_SIZE) || 25;
 const statuses = ["PENDING", "RETRYING", "PENDING_RECOVERY"];
+
+const paymentStateRecovery = await _recoverPendingPaymentStateAlerts(batchSize, traceId);
+result.paymentStatesRecovered = paymentStateRecovery.recovered;
+result.paymentStatesFailed = paymentStateRecovery.failed;
+result.paymentStatesManualRequired = paymentStateRecovery.manualRequired;
+if (paymentStateRecovery.errors.length) {
+result.errors.push(...paymentStateRecovery.errors.slice(0, 10));
+}
 
 const queryResults = await Promise.all(
 statuses.map((status) =>
@@ -549,6 +633,9 @@ traceId,
 }
 
 log.info("runPendingCompensationsJob completed", {
+paymentStatesRecovered: result.paymentStatesRecovered,
+paymentStatesFailed: result.paymentStatesFailed,
+paymentStatesManualRequired: result.paymentStatesManualRequired,
 processed: result.processed,
 failed: result.failed,
 manualRequired: result.manualRequired,
@@ -845,7 +932,8 @@ Boolean(f1OrderId && f1OrderId === f2OrderId) &&
 Boolean(f1PaymentStatus && f1PaymentStatus === f2PaymentStatus) &&
 Number.isFinite(f1Amount) &&
 Number.isFinite(f2Amount) &&
-Math.round(f1Amount * 100) === Math.round(f2Amount * 100);
+f1Amount >= 0 &&
+Math.round(f2Amount * 100) === 0;
 
 if (!pairValid) {
 result.failed++;
@@ -854,8 +942,7 @@ pairToken, reason: "DUAL_PAIR_INTEGRITY_MISMATCH", rowCount: pairRows.length,
 f1Count: f1Rows.length, f2Count: f2Rows.length,
 sameOrder: Boolean(f1OrderId && f1OrderId === f2OrderId),
 samePaymentStatus: Boolean(f1PaymentStatus && f1PaymentStatus === f2PaymentStatus),
-sameAmount: Number.isFinite(f1Amount) && Number.isFinite(f2Amount) &&
-Math.round(f1Amount * 100) === Math.round(f2Amount * 100),
+f2IsZero: Number.isFinite(f2Amount) && Math.round(f2Amount * 100) === 0,
 });
 continue;
 }

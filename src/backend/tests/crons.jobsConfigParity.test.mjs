@@ -96,6 +96,71 @@ test('CRON-DUAL-RESCHEDULE-01 legacy reconciler must not rewrite dual-reschedule
   delete mocks.sdk['bookings::getBooking'];
 });
 
+
+test('CRON-PAYMENT-RECOVERY-01 repairs CitasF2 from the existing paid ORDER movement without creating another movement', async () => {
+  wixDataMock._reset();
+  const C = IC.OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
+  const orderId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+  const f1Id = '11111111-1111-4111-8111-111111111111';
+  const f2Id = '22222222-2222-4222-8222-222222222222';
+  const movementId = 'cash-movement-recovery';
+  const pairToken = 'pair-payment-recovery';
+
+  wixDataMock._seed(C, [{
+    _id: 'payment-recovery-alert',
+    controlType: IC.CONTROL_TYPE.ALERT,
+    alertType: 'PAYMENT_STATE_UPDATE_REQUIRED',
+    status: IC.CONTROL_STATUS.OPEN,
+    payload: {
+      eventType: 'PAYMENT_STATE_UPDATE_REQUIRED',
+      data: { orderId, transactionId: 'ORDER-' + orderId, cashMovementId: movementId },
+    },
+  }]);
+  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.CITAS_F2, [
+    { _id: 'cita-f1-recovery', bookingId: f1Id, bookingType: IC.BOOKING_TYPE.DUAL_F1,
+      pairToken, bookingStatus: 'PENDING', paymentStatus: 'PENDING_PAYMENT', orderId,
+      totalAmount: 45.5, meta: { pairToken, orderId } },
+    { _id: 'cita-f2-recovery', bookingId: f2Id, bookingType: IC.BOOKING_TYPE.DUAL_F2,
+      pairToken, bookingStatus: 'PENDING', paymentStatus: 'PENDING_PAYMENT', orderId,
+      totalAmount: 0, meta: { pairToken, orderId, linkedF1BookingId: f1Id, noFee: true } },
+  ]);
+  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA, [{
+    _id: movementId,
+    transactionId: 'ORDER-' + orderId,
+    orderId,
+    totalAmount: 45.5,
+    paymentMethod: IC.PAYMENT_METHOD.WIX_PAYMENTS,
+    linkedBookingIds: [f1Id],
+  }]);
+  mocks.sdk['@wix/ecom::orders'] = {
+    getOrder: async (id) => ({
+      id,
+      paymentStatus: 'PAID',
+      priceSummary: { total: { amount: '45.50' } },
+      lineItems: [{
+        catalogReference: {
+          appId: IC.WIX_CATALOG_APP_IDS.BOOKINGS,
+          catalogItemId: f1Id,
+        },
+      }],
+    }),
+  };
+
+  const result = await CR.runPendingCompensationsJob();
+  assert.equal(result.paymentStatesRecovered, 1);
+  assert.equal(result.paymentStatesFailed, 0);
+  assert.equal(result.paymentStatesManualRequired, 0);
+  const rows = wixDataMock._store.get(IC.BUSINESS_COLLECTIONS.CITAS_F2) || [];
+  assert.equal(rows.find(row => row.bookingId === f1Id).paymentStatus, IC.PAYMENT_STATUS.PAID);
+  assert.equal(rows.find(row => row.bookingId === f2Id).paymentStatus, IC.PAYMENT_STATUS.PAID);
+  assert.equal(rows.find(row => row.bookingId === f1Id).bookingStatus, 'PENDING');
+  assert.equal(rows.find(row => row.bookingId === f2Id).bookingStatus, 'PENDING');
+  const alert = (wixDataMock._store.get(C) || []).find(row => row._id === 'payment-recovery-alert');
+  assert.equal(alert.status, IC.CONTROL_STATUS.RESOLVED);
+  assert.equal((wixDataMock._store.get(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA) || []).length, 1);
+  delete mocks.sdk['@wix/ecom::orders'];
+});
+
 test('CRON-DISPLAY-01 cleanExpiredDisplayTokens removes only expired display tokens', async () => {
   wixDataMock._reset();
   const C = IC.OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
@@ -315,7 +380,7 @@ test('CRON-DUAL-RECONCILE-02 only reconciles a fully consistent dual pair and un
     { _id: 'f1-row', pairToken, bookingType: IC.BOOKING_TYPE.DUAL_F1, bookingId: f1Id,
       orderId, paymentStatus: 'PAID', totalAmount: 45.5, cashMovementId: movementId },
     { _id: 'f2-row', pairToken, bookingType: IC.BOOKING_TYPE.DUAL_F2, bookingId: f2Id,
-      orderId, paymentStatus: 'PAID', totalAmount: 45.5, cashMovementId: movementId,
+      orderId, paymentStatus: 'PAID', totalAmount: 0, cashMovementId: movementId,
       meta: { linkedF1BookingId: f1Id } },
   ]);
   wixDataMock._seed(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA, [{
@@ -329,6 +394,40 @@ test('CRON-DUAL-RECONCILE-02 only reconciles a fully consistent dual pair and un
   assert.equal(result.reconciled, 1);
   assert.equal(flag.payload.status, 'RECONCILED');
   assert.equal(flag.payload.verified.movementId, movementId);
+  delete mocks.sdk['bookings::getBooking'];
+});
+
+
+test('CRON-DUAL-RECONCILE-04 refuses a non-zero F2 even when the ledger matches F1', async () => {
+  wixDataMock._reset();
+  const C = IC.OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
+  const pairToken = 'pair-nonzero-f2';
+  const orderId = 'order-nonzero-f2';
+  const f1Id = '11111111-1111-4111-8111-111111111111';
+  const f2Id = '22222222-2222-4222-8222-222222222222';
+  const movementId = 'cash-movement-nonzero-f2';
+  const flagId = 'dual-flag-nonzero-f2';
+  wixDataMock._seed(C, [{
+    _id: flagId, controlType: IC.CONTROL_TYPE.SYSTEM_FLAG,
+    payload: { reason: 'DUAL_INCONSISTENT', status: 'REPAIR_REQUIRED', pairToken },
+  }]);
+  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.CITAS_F2, [
+    { _id: 'f1-row', pairToken, bookingType: IC.BOOKING_TYPE.DUAL_F1, bookingId: f1Id,
+      orderId, paymentStatus: 'PAID', totalAmount: 45.5 },
+    { _id: 'f2-row', pairToken, bookingType: IC.BOOKING_TYPE.DUAL_F2, bookingId: f2Id,
+      orderId, paymentStatus: 'PAID', totalAmount: 45.5, meta: { linkedF1BookingId: f1Id } },
+  ]);
+  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA, [{
+    _id: movementId, transactionId: 'ORDER-' + orderId, orderId,
+    totalAmount: 45.5, linkedBookingIds: [f1Id, f2Id],
+  }]);
+  mocks.sdk['bookings::getBooking'] = async id => ({ booking: { id } });
+
+  const result = await CR.reconcileInconsistentDualPairs();
+  const flag = (wixDataMock._store.get(C) || []).find(row => row._id === flagId);
+  assert.equal(result.reconciled, 0);
+  assert.equal(result.failed, 1);
+  assert.equal(flag.payload.status, 'REPAIR_REQUIRED');
   delete mocks.sdk['bookings::getBooking'];
 });
 
