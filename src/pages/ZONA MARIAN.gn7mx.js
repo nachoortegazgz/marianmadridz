@@ -79,9 +79,7 @@ const ACTIONS = {
 
     SEND_MONTHLY_PACKAGE: ({ payload, traceId }) =>
         sendManagerPackageToAccountant({
-            periodType: "MONTHLY",
-            year: payload?.year,
-            month: payload?.month,
+            documentId: payload?.documentId,
             recipientId: payload?.recipientId,
             notes: payload?.notes || null,
             traceId,
@@ -89,9 +87,7 @@ const ACTIONS = {
 
     SEND_QUARTERLY_PACKAGE: ({ payload, traceId }) =>
         sendManagerPackageToAccountant({
-            periodType: "QUARTERLY",
-            year: payload?.year,
-            quarter: payload?.quarter,
+            documentId: payload?.documentId,
             recipientId: payload?.recipientId,
             notes: payload?.notes || null,
             traceId,
