@@ -125,8 +125,11 @@ test('UNIT-ENUM-02 fiscal AEAT enums', () => {
   const regimeKeys = Array.from({ length: 17 }, (_, i) => String(i + 1).padStart(2, '0'));
   assert.ok(regimeKeys.includes('01') && regimeKeys.includes('17'));
   assert.strictEqual(regimeKeys.length, 17);
-  const paymentMethods = ['EFECTIVO', 'TARJETA', 'BIZUM', 'TRANSFERENCIA', 'ONLINE'];
-  for (const m of ['EFECTIVO', 'TARJETA', 'BIZUM', 'ONLINE']) assert.ok(paymentMethods.includes(m));
+  assert.deepStrictEqual(
+    Object.values(IC.PAYMENT_METHOD).sort(),
+    ['BIZUM', 'EFECTIVO', 'TARJETA', 'TRANSFERENCIA', 'WIX_PAYMENTS'].sort()
+  );
+  assert.equal(Object.hasOwn(IC.PAYMENT_METHOD, 'ONLINE'), false);
 });
 
 test('UNIT-ENUM-03 accounting PGC enums', () => {
