@@ -180,8 +180,8 @@ export const ACCOUNTING_LEDGER_LOCK_CONFIG = Object.freeze({
 
 // Wix Stores Catalog V1 inventory projection and per-variant reconciliation.
 export const INVENTORY_CONFIG = Object.freeze({
-  CATALOG_VERSION: "V1_CATALOG",
-  STOCK_KEY_PREFIX: "V1",
+  CATALOG_VERSION: "V3_CATALOG",
+  STOCK_KEY_PREFIX: "V3",
   MOVEMENT_TYPE_SALE: "VENTA",
   MOVEMENT_TYPE_RETURN: "DEVOLUCION",
   MOVEMENT_TYPE_ADJUSTMENT: "AJUSTE",
