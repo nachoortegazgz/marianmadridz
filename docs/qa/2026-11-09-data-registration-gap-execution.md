@@ -18,7 +18,7 @@ Reconciliar el plan de ejecución aportado con el código que existe actualmente
 | D-03 / C-04 — intención `order_created` | **DECISIÓN DE DOMINIO: WIX ORDERS ES SSOT** | No se crea una segunda colección de intención de compra. El pedido nativo Wix Orders conserva la intención y el pedido; `wixEcom_onOrderCreated` registra `orderId`, estado de reserva y reparaciones en el evento idempotente de `ControlOperativo` tras completar la reserva de inventario. Debe verificarse la consulta/relectura de Wix Orders para recuperación y la persistencia del marcador de evento. |
 | D-04 / C-06 — arqueos X append-only | **PENDIENTE DE COLECCIÓN Y CONTRATO** | No existe writer/colección de arqueo X. `CajaActual` no debe usarse para guardar snapshots históricos. Se requiere colección de actas de arqueo append-only y hook físico antes de implementar el writer. |
 | D-05 / C-07 — actas de recuento de inventario | **PENDIENTE DE COLECCIÓN Y CONTRATO** | No existe writer/colección de acta de recuento. No se sobrescribirá stock ni `MovimientosInventario` para guardar el conteo observado. Se requiere colección append-only independiente y su hook físico. |
-| D-06 / ADR-04 — facturas recibidas pagadas por banco | **DESTINO DEFINIDO; AUTOMATIZACIÓN BLOQUEADA POR PGC** | `LibroAsientosContablesDetalle` es el destino canónico. Existe `src/backend/accountingLedger.js::appendAccountingEntry`, con validación de partida doble, hash-chain, idempotencia y persistencia append-only; el propio módulo desactiva el mapeo automático hasta que el titular apruebe el plan de cuentas y reglas PGC. No hay que crear `FacturasRecibidas` ni usar caja física. |
+| D-06 / ADR-04 — facturas recibidas pagadas por banco | **DESTINO DEFINIDO; AUTOMATIZACIÓN BLOQUEADA POR PGC** | `LibroAsientosContablesDetalle` es el destino canónico. Existe `src/backend/accountingLedger.js::appendAccountingEntry`, con validación de partida doble, hash-chain, idempotencia y persistencia append-only; el mapeo automático sigue desactivado hasta aprobar el PGC. Se corrigió además un defecto: el writer ya no inventa `cashMovementId=sourceMovementId` en asientos no-caja; el vínculo solo se persiste cuando el caller lo aporta explícitamente y queda incluido en la huella. Se añadieron pruebas para ambos casos. No hay que crear `FacturasRecibidas` ni usar caja física. |
 
 ## 3. Contradicciones del plan que impiden ejecución literal
 
@@ -91,8 +91,8 @@ El dossier indexado describe enums, destinos y writers que no coinciden plenamen
 ## 9. Implementación en rama y estado de ejecución
 
 - Rama: `audit/data-registration-gap-execution-2026-11-09` (PR #218).
-- Cambios de código: normalización del estado `CANCELED`; validación de `scheduleId` GUID en `assertCitasF2`; pruebas de hooks y contrato SSOT actualizadas.
-- CI de la revisión `67bf36aec88cc07ffc0246f1530d39a3be276557`: ejecución #194 iniciada; resultado pendiente al actualizar este informe.
+- Cambios de código: normalización del estado `CANCELED`; validación de `scheduleId` GUID en `assertCitasF2`; pruebas de hooks y contrato SSOT actualizadas; corrección de `cashMovementId` opcional en asientos contables y cobertura de operaciones no-caja.
+- CI #196 detectó fixtures de tests sin `scheduleId` (437/442 tests pasaron; 2 suites fallaron). Se corrigieron los fixtures afectados en commits posteriores; la nueva ejecución está pendiente de resultado.
 - No se ha hecho merge, publicación Velo, escritura CMS ni modificación de registros existentes.
 
 
