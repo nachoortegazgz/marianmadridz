@@ -462,6 +462,10 @@ test("EVENT-PAYMENT-09 official Wix eCommerce paid event appends WIX_PAYMENTS le
   const movements = wixDataMock._store.get(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA) || [];
   assert.equal(movements.length, 1, "paid webhook must append a ledger movement; recovery/control state: " + JSON.stringify(wixDataMock._store.get(IC.OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO) || []));
   const movement = movements[0];
+  const cajaRows = wixDataMock._store.get(IC.BUSINESS_COLLECTIONS.CAJA_ACTUAL) || [];
+  assert.equal(cajaRows.length, 1, "fiscal sequence must remain on the only CajaActual item");
+  assert.equal(cajaRows[0]._id, "SINGLE_ITEM_ID");
+  assert.equal(cajaRows[0].sequenceCounters.seqGlobal, 1);
   assert.equal(movement.transactionId, "ORDER-" + orderId);
   assert.equal(movement.orderId, orderId);
   assert.equal(movement.totalAmount, 45.5, "official priceSummary.totalPrice must take precedence over the line-item fallback");
