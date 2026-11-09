@@ -699,7 +699,7 @@ async function _syncNativeBookingToCitas(booking, eventId, traceId) {
     const slot = bookedEntity.slot || bookedEntity.item?.slot || {};
     const resource = slot.resource || {};
     const serviceId = _safeTrim(slot.serviceId || booking?.serviceId);
-    let resourceId = _safeTrim(resource.id || booking?.resource?.id);
+    let resourceId = _safeTrim(resource._id || resource.id || booking?.resource?._id || booking?.resource?.id);
     let scheduleId = _safeTrim(slot.scheduleId || resource.scheduleId || booking?.scheduleId);
     const staffMemberId = _safeTrim(booking?.staffMemberId || booking?.staff?.staffMemberId || "");
     const startDate = booking?.startDate || slot.startDate;
@@ -835,7 +835,7 @@ async function _syncNativeBookingToCitas(booking, eventId, traceId) {
         amountReconciliationRequired: !hasExactAmount,
         nativePhasePairUnknown: true,
         staffMemberId: staffMemberId || null,
-        resourceIdSource: _looksLikeGuid(_safeTrim(resource.id || booking?.resource?.id || ""))
+        resourceIdSource: _looksLikeGuid(_safeTrim(resource._id || resource.id || booking?.resource?._id || booking?.resource?.id || ""))
             ? "BOOKINGS_SLOT_RESOURCE"
             : (staffMemberId ? "MAPA_STAFF" : "UNRESOLVED"),
     };
@@ -875,6 +875,56 @@ async function _syncNativeBookingToCitas(booking, eventId, traceId) {
         await _updateCitaStatus(bookingId, BOOKING_STATUS.CONFIRMED, traceId);
     }
     return { ok: true, created: Boolean(write?.created), existing: !write?.created, bookingId, serviceId };
+}
+
+export async function reconcileConfirmedNativeBookingProjectionInternal(
+    booking,
+    traceId = makeTraceId("booking-projection-reconcile")
+) {
+    const bookingId = _safeTrim(booking?.id || booking?._id);
+    if (!_looksLikeGuid(bookingId)) {
+        return { ok: false, reason: "NATIVE_BOOKING_ID_INVALID", missing: ["bookingId"] };
+    }
+    if (_safeTrim(booking?.status).toUpperCase() !== BOOKING_STATUS.CONFIRMED) {
+        return { ok: false, reason: "NATIVE_BOOKING_NOT_CONFIRMED", missing: ["status"] };
+    }
+    const paymentStatus = _safeTrim(booking?.paymentStatus).toUpperCase();
+    if ([PAYMENT_STATUS.PAID, PAYMENT_STATUS.PARTIALLY_PAID, PAYMENT_STATUS.REFUNDED, PAYMENT_STATUS.PARTIALLY_REFUNDED].includes(paymentStatus)) {
+        return { ok: false, reason: "NATIVE_BOOKING_PAYMENT_REQUIRES_LEDGER_RECONCILIATION", missing: ["financialLedger"] };
+    }
+
+    const eventId = `BOOKING_CONFIRMED_RECONCILED_${bookingId}`;
+    const syncResult = await _syncNativeBookingToCitas(booking, eventId, traceId);
+    if (!syncResult?.ok) return syncResult;
+
+    const amountCandidates = [
+        booking?.totalAmount,
+        booking?.priceDetails?.totalPrice?.value,
+        booking?.priceDetails?.total?.amount,
+        booking?.priceSummary?.total?.amount,
+    ];
+    const rawAmount = amountCandidates.find((value) =>
+        value !== undefined && value !== null && value !== ""
+    );
+    const parsedAmount = Number(rawAmount);
+    const amountReconciliationRequired = rawAmount === undefined ||
+        !Number.isFinite(parsedAmount) || parsedAmount < 0;
+
+    await markEventAsProcessed(eventId, "BOOKING_CONFIRMED_RECONCILED", traceId, {
+        bookingId,
+        serviceId: syncResult.serviceId,
+        ledgerCreated: syncResult.created,
+        ledgerSource: "WIX_BOOKINGS_NATIVE_RECONCILIATION",
+        amountReconciliationRequired,
+    });
+    return {
+        ok: true,
+        created: Boolean(syncResult.created),
+        existing: Boolean(syncResult.existing),
+        bookingId,
+        serviceId: syncResult.serviceId,
+        amountReconciliationRequired,
+    };
 }
 
 // ============================================================================
@@ -1140,7 +1190,7 @@ export async function wixBookingsV2_onBookingConfirmed(rawBody) {
         const valid = Boolean(eventId && bookingId && _safeTrim(booking?.status || ""));
         if (!valid) {
             log.warn("EVENT_INVALID_STRUCTURE_REJECTED", { eventId, bookingId });
-            return { status: "RETRY_REQUIRED", reason: "INVALID_BOOKING_CONFIRMED_EVENT" };
+            throw new Error("INVALID_BOOKING_CONFIRMED_EVENT");
         }
 
         const alreadyProcessed = await isEventProcessed(eventId);
@@ -1171,7 +1221,9 @@ export async function wixBookingsV2_onBookingConfirmed(rawBody) {
                 reason: syncResult.reason,
                 missing: syncResult.missing,
             });
-            return { status: "RETRY_REQUIRED", reason: syncResult.reason, missing: syncResult.missing };
+            const syncError = new Error(syncResult.reason || "BOOKING_CONFIRMED_LEDGER_SYNC_FAILED");
+            syncError.details = { missing: syncResult.missing || [] };
+            throw syncError;
         }
         if (!alreadyProcessed) {
             await markEventAsProcessed(eventId, "BOOKING_CONFIRMED", traceId, {
@@ -1184,9 +1236,7 @@ export async function wixBookingsV2_onBookingConfirmed(rawBody) {
         return { status: "OK", eventId, ledgerCreated: syncResult.created };
     } catch (error) {
         _handleError(error, "wixBookingsV2_onBookingConfirmed", traceId);
-        // A transient CMS/API failure must remain retryable. Acknowledge only
-        // after CitasF2 projection and webhook idempotency marker both succeed.
-        return { status: "RETRY_REQUIRED", reason: "BOOKING_CONFIRMED_HANDLER_ERROR" };
+        throw error;
     }
 }
 
@@ -1302,7 +1352,7 @@ export async function wixBookingsV2_onBookingRescheduled(rawBody) {
             endDate.getTime() <= startDate.getTime()
         ) {
             log.warn("BOOKING_RESCHEDULED_INVALID_EVENT", { eventId, bookingId, traceId });
-            return { status: "RETRY_REQUIRED", reason: "INVALID_BOOKING_RESCHEDULED_EVENT" };
+            throw new Error("INVALID_BOOKING_RESCHEDULED_EVENT");
         }
 
         const existing = await dalQuery(CITAS_COL)
@@ -1437,11 +1487,7 @@ export async function wixBookingsV2_onBookingRescheduled(rawBody) {
                 dedupeKey: "DUAL_NATIVE_RESCHEDULE_" + pairToken + "_" + bookingId,
             });
             if (alert.failed) {
-                return {
-                    status: "RETRY_REQUIRED",
-                    reason: "DUAL_RESCHEDULE_REPAIR_ALERT_FAILED",
-                    bookingId,
-                };
+                throw new Error("DUAL_RESCHEDULE_REPAIR_ALERT_FAILED");
             }
         }
 
@@ -1472,7 +1518,7 @@ export async function wixBookingsV2_onBookingRescheduled(rawBody) {
         };
     } catch (error) {
         _handleError(error, "wixBookingsV2_onBookingRescheduled", traceId);
-        return { status: "RETRY_REQUIRED", reason: "BOOKING_RESCHEDULED_HANDLER_ERROR" };
+        throw error;
     }
 }
 
@@ -1490,7 +1536,7 @@ export async function wixBookingsV2_onBookingCanceled(rawBody) {
         const valid = Boolean(eventId && bookingId);
         if (!valid) {
             log.warn("EVENT_INVALID_STRUCTURE_REJECTED", { eventId });
-            return { status: "RETRY_REQUIRED", reason: "INVALID_BOOKING_CANCELED_EVENT" };
+            throw new Error("INVALID_BOOKING_CANCELED_EVENT");
         }
 
         const alreadyProcessed = await isEventProcessed(eventId);
@@ -2120,7 +2166,7 @@ export async function wixEcom_onOrderPaymentStatusUpdated(rawBody) {
             "system",
             "backend/events.js"
         );
-        return { status: "OK" };
+        throw error;
     }
 }
 
@@ -2464,8 +2510,7 @@ export async function wixEcom_onOrderRefunded(rawBody) {
         return { status: "OK" };
     } catch (error) {
         _handleError(error, "wixEcom_onOrderRefunded", traceId);
-        if (String(error?.message || "").includes("INVENTORY_REFUND")) throw error;
-        return { status: "OK" };
+        throw error;
     }
 }
 
@@ -2535,8 +2580,7 @@ export async function wixEcom_onOrderCanceled(rawBody) {
         return { status: "OK", eventId };
     } catch (error) {
         _handleError(error, "wixEcom_onOrderCanceled", traceId);
-        if (String(error?.message || "").includes("INVENTORY_")) throw error;
-        return { status: "OK" };
+        throw error;
     }
 }
 
