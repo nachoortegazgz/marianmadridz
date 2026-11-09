@@ -1,7 +1,7 @@
 /*
 =============================================================================
 MODULE: backend/dataAccess.js
-VERSION: v2.4-SDK-QUERY-ELEVATION
+VERSION: v2.6-SDK-QUERY-HYBRID
 RESPONSIBILITY: Capa unica de acceso elevado a colecciones CMS.
 STANDARDS: G10 ASCII Strict. Sin suppressAuth. Acceso CMS centralizado
   exclusivamente mediante @wix/data.
@@ -11,10 +11,27 @@ STANDARDS: G10 ASCII Strict. Sin suppressAuth. Acceso CMS centralizado
 import { items } from "@wix/data";
 import { auth } from "@wix/essentials";
 
+const DATA_ACCESS_ERROR = "DATA_ACCESS_ERROR";
+
 export const CONSISTENCY = Object.freeze({
     STRONG: Object.freeze({ consistentRead: true }),
     EVENTUAL: Object.freeze({}),
 });
+
+export const order = Object.freeze({
+    asc: (fieldName) => [{ fieldName, direction: "ASC" }],
+    desc: (fieldName) => [{ fieldName, direction: "DESC" }],
+});
+
+/*
+ * Errores unificados: mensaje generico para no filtrar informacion
+ * al exterior, codigo especifico en .code para diagnostico interno.
+ */
+function dataAccessError(code) {
+    const error = new Error(DATA_ACCESS_ERROR);
+    if (code) error.code = code;
+    return error;
+}
 
 function fieldClause(field, operator, value) {
     return { [String(field)]: { [operator]: value } };
@@ -36,79 +53,68 @@ export const wql = Object.freeze({
         fieldClause(field, "$hasSome", asArray(values)),
     startsWith: (field, value) =>
         fieldClause(field, "$startsWith", value),
+    contains: (field, value) =>
+        fieldClause(field, "$contains", value),
     and: (...clauses) => ({ $and: clauses.filter(Boolean) }),
     or: (...clauses) => ({ $or: clauses.filter(Boolean) }),
 });
 
-export const order = Object.freeze({
-    asc: (fieldName) => [{ fieldName, direction: "ASC" }],
-    desc: (fieldName) => [{ fieldName, direction: "DESC" }],
-});
-
 function buildOptions(consistency) {
     if (!consistency) return {};
-    if (consistency === CONSISTENCY.STRONG || consistency?.consistentRead === true) {
-        return { consistentRead: true };
-    }
-    if (typeof consistency === "string") {
-        return consistency.toLowerCase() === "strong"
-            ? { consistentRead: true }
-            : {};
-    }
-    if (String(consistency?.consistencyMode || "").toLowerCase() === "strong") {
+    if (
+        consistency === CONSISTENCY.STRONG ||
+        consistency?.consistentRead === true ||
+        String(consistency?.consistencyMode || "").toLowerCase() === "strong" ||
+        String(consistency || "").toLowerCase() === "strong"
+    ) {
         return { consistentRead: true };
     }
     return {};
 }
 
 function normalizeLimit(value) {
-    if (value === undefined || value === null) return 100;
     const parsed = Number(value);
-    return Number.isFinite(parsed) && parsed > 0
-        ? Math.floor(parsed)
-        : 100;
+    return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 100;
 }
 
 function normalizeOffset(value) {
     const parsed = Number(value);
-    return Number.isFinite(parsed) && parsed > 0
-        ? Math.floor(parsed)
-        : 0;
+    return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 0;
 }
 
-function normalizeSdkSort(sort) {
+function normalizeSort(sort) {
     if (!Array.isArray(sort)) return [];
-    const normalized = [];
-    for (const entry of sort) {
-        let fieldName = "";
-        let direction = "ASC";
-        if (typeof entry === "string") {
-            const parts = entry.trim().split(/\s+/);
-            fieldName = parts[0] || "";
-            direction = parts[1] || "ASC";
-        } else if (entry && typeof entry === "object") {
-            fieldName = String(entry.fieldName || "");
-            direction = String(entry.direction || entry.order || "ASC");
-        }
-        if (!fieldName) continue;
-        normalized.push({
-            fieldName,
-            order: direction.toUpperCase() === "DESC" ? "DESC" : "ASC",
-        });
-    }
-    return normalized;
+    return sort
+        .map((entry) => {
+            if (typeof entry === "string") {
+                const [fieldName, direction = "ASC"] =
+                    entry.trim().split(/\s+/);
+                if (!fieldName) return null;
+                return {
+                    fieldName,
+                    order: direction.toUpperCase() === "DESC" ? "DESC" : "ASC",
+                };
+            }
+            if (entry && typeof entry === "object") {
+                const fieldName = String(entry.fieldName || "");
+                if (!fieldName) return null;
+                return {
+                    fieldName,
+                    order: String(entry.direction || entry.order || "ASC")
+                        .toUpperCase() === "DESC" ? "DESC" : "ASC",
+                };
+            }
+            return null;
+        })
+        .filter(Boolean);
 }
 
-/*
- * SDK migration phase 1: elevate official Wix Data methods directly.
- * items.query accepts collection ID, query request, and operation options.
- * Do not pass arbitrary callbacks to auth.elevate.
- */
 const elevatedGet = auth.elevate(items.get);
 const elevatedInsert = auth.elevate(items.insert);
 const elevatedUpdate = auth.elevate(items.update);
-const elevatedRemove = auth.elevate(items.remove);
 const elevatedSave = auth.elevate(items.save);
+const elevatedRemove = auth.elevate(items.remove);
+const elevatedQuery = auth.elevate(items.query);
 const elevatedBulkInsert = auth.elevate(items.bulkInsert);
 const elevatedBulkPatch = auth.elevate(items.bulkPatch);
 const elevatedBulkUpdate = auth.elevate(items.bulkUpdate);
@@ -117,45 +123,110 @@ const elevatedQueryReferencedItems = auth.elevate(
     items.queryReferencedItems
 );
 
-const elevatedQuery = auth.elevate(items.query);
-
-async function runQuery({ dataCollectionId, filter, sort, limit, offset, consistency }) {
+async function executeQuery({
+    collection,
+    filter,
+    sort,
+    limit = 100,
+    offset = 0,
+    consistency,
+}) {
     const queryRequest = {
         paging: {
             limit: normalizeLimit(limit),
             offset: normalizeOffset(offset),
         },
     };
+
     if (filter) queryRequest.filter = filter;
-    const normalizedSort = normalizeSdkSort(sort);
+
+    const normalizedSort = normalizeSort(sort);
     if (normalizedSort.length > 0) queryRequest.sort = normalizedSort;
 
-    const response = await elevatedQuery(
-        dataCollectionId,
-        queryRequest,
-        { ...buildOptions(consistency), returnTotalCount: true }
-    );
+    const response = await elevatedQuery(collection, queryRequest, {
+        ...buildOptions(consistency),
+        returnTotalCount: true,
+    });
+
     const resultItems = Array.isArray(response?.items) ? response.items : [];
-    const totalCount = Number(response?.totalCount ?? response?.pagingMetadata?.total);
+    const totalCount = Number(
+        response?.totalCount ?? response?.pagingMetadata?.total
+    );
+
     if (!Number.isFinite(totalCount)) {
-        throw new Error("WIX_DATA_QUERY_COUNT_MISSING: SDK response omitted totalCount");
+        throw dataAccessError("WIX_DATA_QUERY_COUNT_MISSING");
     }
-    return { ...response, items: resultItems, totalCount };
+
+    return { items: resultItems, totalCount };
 }
 
-async function runCount({ dataCollectionId, filter, consistency }) {
-    const queryRequest = { paging: { limit: 1, offset: 0 } };
-    if (filter) queryRequest.filter = filter;
-    const response = await elevatedQuery(
+async function executeCount({ collection, filter, consistency }) {
+    const result = await executeQuery({
+        collection,
+        filter,
+        limit: 1,
+        offset: 0,
+        consistency,
+    });
+    return result.totalCount;
+}
+
+export async function queryItems({
+    dataCollectionId,
+    filter,
+    sort,
+    limit = 100,
+    offset = 0,
+    consistency,
+}) {
+    const pageLimit = normalizeLimit(limit);
+    const pageOffset = normalizeOffset(offset);
+
+    const result = await executeQuery({
+        collection: dataCollectionId,
+        filter,
+        sort,
+        limit: pageLimit,
+        offset: pageOffset,
+        consistency,
+    });
+
+    const hasNext = pageOffset + result.items.length < result.totalCount;
+
+    return {
+        items: result.items,
+        totalCount: result.totalCount,
+        hasNext,
+        next: hasNext
+            ? () => queryItems({
+                  dataCollectionId,
+                  filter,
+                  sort,
+                  limit: pageLimit,
+                  offset: pageOffset + result.items.length,
+                  consistency,
+              })
+            : null,
+    };
+}
+
+export async function queryFirstItem({
+    dataCollectionId,
+    filter,
+    consistency,
+}) {
+    const result = await queryItems({
         dataCollectionId,
-        queryRequest,
-        { ...buildOptions(consistency), returnTotalCount: true }
-    );
-    const count = Number(response?.totalCount ?? response?.pagingMetadata?.total);
-    if (!Number.isFinite(count)) {
-        throw new Error("WIX_DATA_COUNT_MISSING: SDK response omitted totalCount");
-    }
-    return count;
+        filter,
+        limit: 1,
+        offset: 0,
+        consistency,
+    });
+    return result.items[0] || null;
+}
+
+export async function countItems(collection, filter, consistency) {
+    return executeCount({ collection, filter, consistency });
 }
 
 export async function queryReferencedItems(
@@ -170,40 +241,211 @@ export async function queryReferencedItems(
         fieldName,
         buildOptions(consistency)
     );
+
     if (Array.isArray(result?.items)) return result.items;
+
     if (Array.isArray(result?.results)) {
         return result.results
-            .map((entry) => entry?.item || entry?.dataItem?.data || entry?.dataItem)
+            .map((entry) =>
+                entry?.item ||
+                entry?.dataItem?.data ||
+                entry?.dataItem
+            )
             .filter(Boolean);
     }
+
     return [];
 }
 
-export async function queryFirstItem({
-    dataCollectionId,
-    filter,
-    consistency,
-}) {
-    const result = await runQuery({
-        dataCollectionId,
-        filter,
-        limit: 1,
-        offset: 0,
-        consistency,
-    });
-    return result?.items?.[0] || null;
+function isMissingDataItemError(error) {
+    const code = String(
+        error?.code ||
+        error?.errorCode ||
+        error?.jsonContent?.errorCode ||
+        ""
+    ).toUpperCase();
+
+    const broadCode = String(
+        error?.broadCode ||
+        error?.details?.broadCode ||
+        error?.jsonContent?.broadCode ||
+        ""
+    ).toUpperCase();
+
+    const message = String(
+        error?.message ||
+        error?.jsonPayload?.message ||
+        ""
+    ).toUpperCase();
+
+    return code === "WDE0073" ||
+        code === "WD_ITEM_DOES_NOT_EXIST" ||
+        broadCode === "WD_ITEM_DOES_NOT_EXIST" ||
+        message.includes("WDE0073") ||
+        message.includes("WD_ITEM_DOES_NOT_EXIST") ||
+        message.includes("DOES NOT EXIST IN COLLECTION");
+}
+
+export async function getItem(collection, id, consistency) {
+    const normalizedCollection = String(collection || "").trim();
+    const normalizedId = String(id || "").trim();
+
+    if (!normalizedCollection || !normalizedId) return null;
+
+    try {
+        return await elevatedGet(
+            normalizedCollection,
+            normalizedId,
+            buildOptions(consistency)
+        );
+    } catch (error) {
+        if (isMissingDataItemError(error)) return null;
+        throw error;
+    }
+}
+
+export function insertItem(collection, item) {
+    return elevatedInsert(collection, item);
+}
+
+export function updateItem(collection, item) {
+    return elevatedUpdate(collection, item);
+}
+
+export function saveItem(collection, item) {
+    return elevatedSave(collection, item);
+}
+
+export async function removeById(collection, idOrItem) {
+    const id = idOrItem && typeof idOrItem === "object"
+        ? idOrItem._id || idOrItem.id
+        : idOrItem;
+
+    if (!id) throw dataAccessError("REMOVE_ID_REQUIRED");
+
+    await elevatedRemove(collection, id);
+    return { _id: id };
+}
+
+export function bulkInsert(collection, records) {
+    return elevatedBulkInsert(collection, records);
+}
+
+export function bulkUpdate(collection, records) {
+    return elevatedBulkUpdate(collection, records);
+}
+
+export function bulkRemove(collection, ids, options) {
+    return elevatedBulkRemove(collection, ids, options);
+}
+
+function buildBulkPatchCondition(filter) {
+    if (!filter || typeof filter !== "object" || Array.isArray(filter)) {
+        throw dataAccessError("BULK_PATCH_CONDITION_INVALID");
+    }
+
+    const condition = items.filter();
+
+    for (const [field, operators] of Object.entries(filter)) {
+        if (
+            !operators ||
+            typeof operators !== "object" ||
+            Array.isArray(operators)
+        ) {
+            throw dataAccessError("BULK_PATCH_CONDITION_OPERATOR_INVALID");
+        }
+
+        const entries = Object.entries(operators);
+        if (entries.length !== 1 || entries[0][0] !== "$eq") {
+            throw dataAccessError("BULK_PATCH_CONDITION_UNSUPPORTED");
+        }
+
+        condition.eq(field, entries[0][1]);
+    }
+
+    return condition;
+}
+
+export async function bulkPatchItems(
+    collection,
+    itemIds,
+    fieldModifications,
+    options = {}
+) {
+    const ids = Array.isArray(itemIds) ? itemIds : [itemIds];
+
+    if (
+        ids.length === 0 ||
+        ids.some((id) => typeof id !== "string" || !id.trim())
+    ) {
+        throw dataAccessError("BULK_PATCH_ITEM_IDS_INVALID");
+    }
+
+    const groups = Array.isArray(fieldModifications?.[0])
+        ? fieldModifications
+        : ids.map(() => fieldModifications || []);
+
+    if (groups.length !== ids.length) {
+        throw dataAccessError("BULK_PATCH_MODIFICATION_GROUPS_MISMATCH");
+    }
+
+    const modifications = groups[0] || [];
+    const canonicalGroup = JSON.stringify(modifications);
+
+    if (groups.some((group) => JSON.stringify(group || []) !== canonicalGroup)) {
+        throw dataAccessError("BULK_PATCH_PER_ITEM_MODIFICATIONS_UNSUPPORTED");
+    }
+
+    let operation = elevatedBulkPatch(collection, ids);
+
+    for (const modification of modifications) {
+        const field = String(modification?.fieldPath || "").trim();
+        if (!field) throw dataAccessError("BULK_PATCH_FIELD_REQUIRED");
+
+        switch (modification.action) {
+        case "SET_FIELD":
+            operation = operation.setField(field, modification.value);
+            break;
+        case "INCREMENT_FIELD":
+            operation = operation.incrementField(field, Number(modification.value));
+            break;
+        case "REMOVE_FIELD":
+            operation = operation.removeField(field);
+            break;
+        case "APPEND_TO_ARRAY":
+            operation = operation.appendToArray(field, modification.value);
+            break;
+        case "REMOVE_FROM_ARRAY":
+            operation = operation.removeFromArray(field, modification.value);
+            break;
+        default:
+            throw dataAccessError("BULK_PATCH_ACTION_UNSUPPORTED");
+        }
+    }
+
+    const runOptions = {};
+
+    if (options.condition?.filter) {
+        runOptions.condition = buildBulkPatchCondition(options.condition.filter);
+    }
+
+    if (typeof options.suppressHooks === "boolean") {
+        runOptions.suppressHooks = options.suppressHooks;
+    }
+
+    return operation.run(runOptions);
 }
 
 class QueryBuilder {
     constructor(
-        dataCollectionId,
+        collection,
         clauses = [],
         sort = [],
         limit,
         offset = 0,
         consistency = null
     ) {
-        this._collection = dataCollectionId;
+        this._collection = collection;
         this._clauses = clauses;
         this._sort = sort;
         this._limit = limit;
@@ -234,18 +476,14 @@ class QueryBuilder {
         return wql.and(...this._clauses);
     }
 
-    consistent() {
-        return this._with({ consistency: CONSISTENCY.STRONG });
-    }
-
     eq(field, value) { return this._add(wql.eq(field, value)); }
     ne(field, value) { return this._add(wql.ne(field, value)); }
     gt(field, value) { return this._add(wql.gt(field, value)); }
     gte(field, value) { return this._add(wql.gte(field, value)); }
     lt(field, value) { return this._add(wql.lt(field, value)); }
     lte(field, value) { return this._add(wql.lte(field, value)); }
-    hasSome(field, values) { return this._add(wql.hasSome(field, values)); }
     in(field, values) { return this._add(wql.in(field, values)); }
+    hasSome(field, values) { return this._add(wql.hasSome(field, values)); }
     startsWith(field, value) {
         return this._add(wql.startsWith(field, value));
     }
@@ -253,7 +491,7 @@ class QueryBuilder {
     contains(field, value) {
         return /Ids?$/.test(String(field))
             ? this.hasSome(field, [value])
-            : this.startsWith(field, value);
+            : this._add(wql.contains(field, value));
     }
 
     ascending(...fields) {
@@ -271,23 +509,26 @@ class QueryBuilder {
     limit(value) { return this._with({ limit: value }); }
     skip(value) { return this._with({ offset: value }); }
 
+    consistent() {
+        return this._with({ consistency: CONSISTENCY.STRONG });
+    }
+
     get(id) { return getItem(this._collection, id, this._consistency); }
     insert(item) { return insertItem(this._collection, item); }
     update(item) { return updateItem(this._collection, item); }
     save(item) { return saveItem(this._collection, item); }
     remove(idOrItem) { return removeById(this._collection, idOrItem); }
 
-    async find(options = {}) {
+    find(options = {}) {
         const consistency = options.consistentRead === true
             ? CONSISTENCY.STRONG
             : options.consistencyMode || this._consistency || undefined;
-        const offset = normalizeOffset(this._offset);
-        const result = await this._runPage(offset, consistency);
-        return this._pageResult(result, offset, consistency);
+
+        return this._findPage(normalizeOffset(this._offset), consistency);
     }
 
-    _runPage(offset, consistency) {
-        return queryItems({
+    async _findPage(offset, consistency) {
+        const result = await queryItems({
             dataCollectionId: this._collection,
             filter: this._filter(),
             sort: this._sort,
@@ -295,36 +536,27 @@ class QueryBuilder {
             offset,
             consistency,
         });
-    }
 
-    _pageResult(result, offset, consistency) {
-        const items = result?.items || [];
-        const totalCount = Number.isFinite(result?.totalCount)
-            ? result.totalCount
-            : offset + items.length;
         const builder = this;
+        const pageItems = result.items;
 
         return {
-            items,
-            length: items.length,
-            totalCount,
-            hasNext: () => offset + items.length < totalCount,
-            next: async () => {
-                if (items.length === 0) {
-                    return builder._pageResult(
-                        { items: [], totalCount },
-                        offset,
-                        consistency
-                    );
+            items: pageItems,
+            length: pageItems.length,
+            totalCount: result.totalCount,
+            hasNext() { return result.hasNext; },
+            next() {
+                if (!result.hasNext) {
+                    return Promise.resolve({
+                        items: [],
+                        length: 0,
+                        totalCount: result.totalCount,
+                        hasNext: () => false,
+                        next: () => Promise.resolve(null),
+                    });
                 }
-                const nextOffset = offset + items.length;
-                const nextResult = await builder._runPage(
-                    nextOffset,
-                    consistency
-                );
-                return builder._pageResult(
-                    nextResult,
-                    nextOffset,
+                return builder._findPage(
+                    offset + pageItems.length,
                     consistency
                 );
             },
@@ -335,187 +567,11 @@ class QueryBuilder {
         const consistency = options.consistentRead === true
             ? CONSISTENCY.STRONG
             : options.consistencyMode || this._consistency || undefined;
+
         return countItems(this._collection, this._filter(), consistency);
     }
 }
 
 export function query(dataCollectionId) {
     return new QueryBuilder(dataCollectionId);
-}
-
-export async function queryItems({
-    dataCollectionId,
-    filter,
-    sort,
-    limit = 100,
-    offset = 0,
-    consistency,
-}) {
-    const pageLimit = normalizeLimit(limit);
-    const pageOffset = normalizeOffset(offset);
-    const result = await runQuery({
-        dataCollectionId,
-        filter,
-        sort,
-        limit: pageLimit,
-        offset: pageOffset,
-        consistency,
-    });
-
-    const items = result?.items || [];
-    const totalCount = Number.isFinite(result?.totalCount)
-        ? result.totalCount
-        : pageOffset + items.length;
-    const hasNext = pageOffset + items.length < totalCount;
-
-    return {
-        items,
-        totalCount,
-        hasNext,
-        next: hasNext
-            ? () => queryItems({
-                  dataCollectionId,
-                  filter,
-                  sort,
-                  limit: pageLimit,
-                  offset: pageOffset + items.length,
-                  consistency,
-              })
-            : null,
-    };
-}
-
-export async function getItem(collection, id, consistency) {
-    try {
-        return await elevatedGet(
-            collection,
-            id,
-            buildOptions(consistency)
-        );
-    } catch (error) {
-        if (String(error?.message || "").includes("WDE0073")) return null;
-        throw error;
-    }
-}
-
-export async function countItems(collection, filter, consistency) {
-    const count = await runCount({
-        dataCollectionId: collection,
-        filter,
-        consistency,
-    });
-    return Number(count) || 0;
-}
-
-export function insertItem(collection, item) {
-    return elevatedInsert(collection, item);
-}
-
-export function updateItem(collection, item) {
-    return elevatedUpdate(collection, item);
-}
-
-export function saveItem(collection, item) {
-    return elevatedSave(collection, item);
-}
-
-export async function removeById(collection, idOrItem) {
-    const id = idOrItem && typeof idOrItem === "object"
-        ? idOrItem._id || idOrItem.id
-        : idOrItem;
-    await elevatedRemove(collection, id);
-    return { _id: id };
-}
-
-export function bulkInsert(collection, items) {
-    return elevatedBulkInsert(collection, items);
-}
-
-function buildBulkPatchCondition(filter) {
-    if (!filter || typeof filter !== "object" || Array.isArray(filter)) {
-        throw new TypeError("BULK_PATCH_CONDITION_INVALID");
-    }
-
-    const condition = items.filter();
-    for (const [field, operators] of Object.entries(filter)) {
-        if (!operators || typeof operators !== "object" || Array.isArray(operators)) {
-            throw new TypeError("BULK_PATCH_CONDITION_OPERATOR_INVALID");
-        }
-        const entries = Object.entries(operators);
-        if (entries.length !== 1 || entries[0][0] !== "$eq") {
-            throw new TypeError("BULK_PATCH_CONDITION_UNSUPPORTED");
-        }
-        condition.eq(field, entries[0][1]);
-    }
-    return condition;
-}
-
-/**
- * Wix Data SDK bulkPatch is a fluent operation:
- * bulkPatch(collection, ids).setField(...).incrementField(...).run(options).
- * Keep the repository adapter contract stable while translating the
- * internal field-modification DTO to the official SDK builder.
- */
-export async function bulkPatchItems(collection, itemIds, fieldModifications, options = {}) {
-    const ids = Array.isArray(itemIds) ? itemIds : [itemIds];
-    if (ids.length === 0 || ids.some((id) => typeof id !== "string" || !id)) {
-        throw new TypeError("BULK_PATCH_ITEM_IDS_INVALID");
-    }
-
-    const groups = Array.isArray(fieldModifications?.[0])
-        ? fieldModifications
-        : ids.map(() => fieldModifications || []);
-    if (groups.length !== ids.length) {
-        throw new TypeError("BULK_PATCH_MODIFICATION_GROUPS_MISMATCH");
-    }
-
-    const modifications = groups[0] || [];
-    const canonicalGroup = JSON.stringify(modifications);
-    if (groups.some((group) => JSON.stringify(group || []) !== canonicalGroup)) {
-        throw new TypeError("BULK_PATCH_PER_ITEM_MODIFICATIONS_UNSUPPORTED");
-    }
-
-    let operation = elevatedBulkPatch(collection, ids);
-    for (const modification of modifications) {
-        const field = String(modification?.fieldPath || "");
-        if (!field) throw new TypeError("BULK_PATCH_FIELD_REQUIRED");
-
-        switch (modification.action) {
-        case "SET_FIELD":
-            operation = operation.setField(field, modification.value);
-            break;
-        case "INCREMENT_FIELD":
-            operation = operation.incrementField(field, Number(modification.value));
-            break;
-        case "REMOVE_FIELD":
-            operation = operation.removeField(field);
-            break;
-        case "APPEND_TO_ARRAY":
-            operation = operation.appendToArray(field, modification.value);
-            break;
-        case "REMOVE_FROM_ARRAY":
-            operation = operation.removeFromArray(field, modification.value);
-            break;
-        default:
-            throw new TypeError("BULK_PATCH_ACTION_UNSUPPORTED");
-        }
-    }
-
-    const runOptions = {};
-    if (options.condition?.filter) {
-        runOptions.condition = buildBulkPatchCondition(options.condition.filter);
-    }
-    if (typeof options.suppressHooks === "boolean") {
-        runOptions.suppressHooks = options.suppressHooks;
-    }
-
-    return operation.run(runOptions);
-}
-
-export function bulkUpdate(collection, items) {
-    return elevatedBulkUpdate(collection, items);
-}
-
-export function bulkRemove(collection, ids, options) {
-    return elevatedBulkRemove(collection, ids, options);
 }
