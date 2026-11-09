@@ -28,7 +28,7 @@ CORRECCIONES v5017-STRONG-QUERY:
 
 CART-01: Cart V2 solo entrega checkout si el carrito calculado contiene
     exactamente la reserva F1 esperada y no declara el item como no disponible.
-FIXES HEREDADOS v5016: CORE-50/51 (CANCELLED dos L).
+FIXES HEREDADOS v5016: CORE-50/51 (CANCELED canonical).
 FIXES HEREDADOS v5015: CORE-46..CORE-49.
 FIXES HEREDADOS v5014: CORE-39..CORE-45.
 FIXES HEREDADOS v5013: CORE-30..CORE-38.
@@ -1795,7 +1795,7 @@ export async function _findExistingCitasForSlot(params) {
         const status = _safeTrim(
             item[BOOKING_FIELDS.STATUS] || item.bookingStatus || ""
         ).toUpperCase();
-        if (["CANCELED", "CANCELLED", "DECLINED"].includes(status)) return false;
+        if (["CANCELED", "DECLINED"].includes(status)) return false;
 
         const details = item[BOOKING_FIELDS.CONTACT_DETAILS] || {};
         const rowMemberId = _safeTrim(details.memberId);
