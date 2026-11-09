@@ -135,7 +135,7 @@ $w.onReady(async () => {
       enableScheduleQuery: false,  // panel de cálculo de horas oculto
 
       // ── Caja ────────────────────────────────────────────────────────
-      cashierMode: "SIMULADA",     // "SIMULADA" | "REAL"
+      cashierMode: "DISABLED",     // sin handler backend operativo
       isAdmin,
       isCajero,
 
