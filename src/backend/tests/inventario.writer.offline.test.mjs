@@ -127,6 +127,7 @@ function seed() {
 
 test.beforeEach(() => {
   catalogVersion = "V3_CATALOG";
+  INV._resetCatalogVersionCacheForTests();
   seed();
 });
 
