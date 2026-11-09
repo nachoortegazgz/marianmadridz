@@ -54,7 +54,7 @@ Detalle: [Informe QA runtime/smoke](qa/2026-11-09-runtime-smoke-production.md).
 
 ### Publicación
 
-El último intento de publish documentado (run #42545413297, commit `072910c6`) es anterior a los merges #229/#230 y fue detenido por una discrepancia de versión UI del Editor (`15941`). **No se ha vuelto a comprobar ese guard sobre el HEAD actual**. El estado de publicación del commit `cad48c04` queda sin verificar; no publicar ni desactivar el guard para resolverlo.
+El último intento de publish documentado (run #42545413297, commit `072910c6`) es anterior a los merges #229/#230/#231 y fue detenido por una discrepancia de versión UI del Editor (`15941`). **No se ha vuelto a comprobar ese guard sobre el HEAD actual**. El estado de publicación del commit `cad48c04` queda sin verificar; no publicar ni desactivar el guard para resolverlo.
 
 ## 4. Prioridades de trabajo
 
