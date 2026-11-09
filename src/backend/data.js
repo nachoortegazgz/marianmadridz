@@ -698,26 +698,30 @@ function _validateServiciosCatalogoSchema(item = {}) {
         _schemaError("Servicio dual requiere exposureDuration explicito como numero no negativo");
     }
 
-    const phase1Duration = Number(item.phase1Duration) || 0;
-    const exposureDuration = item.exposureDuration === undefined || item.exposureDuration === null || item.exposureDuration === ""
-        ? 0
-        : Number(item.exposureDuration);
-    const phase2Duration = Number(item.phase2Duration) || 0;
-    const totalDuration = Number(item.totalDuration) || 0;
+    const readDuration = (value) =>
+        value === undefined || value === null || value === "" ? 0 : Number(value);
+    const phase1Duration = readDuration(item.phase1Duration);
+    const exposureDuration = readDuration(item.exposureDuration);
+    const phase2Duration = readDuration(item.phase2Duration);
+    const totalDuration = readDuration(item.totalDuration);
 
-    if (!_isFiniteNonNegative(phase1Duration) || !_isFiniteNonNegative(exposureDuration) || !_isFiniteNonNegative(phase2Duration) || !_isFiniteNonNegative(totalDuration)) {
+    if (!_isFiniteNonNegative(phase1Duration) ||
+        !_isFiniteNonNegative(exposureDuration) ||
+        !_isFiniteNonNegative(phase2Duration) ||
+        !_isFiniteNonNegative(totalDuration)) {
         _schemaError("Las duraciones deben ser numeros no negativos");
     }
 
-    if (allowCombine && totalDuration === 0) {
-        const inferred = phase1Duration + exposureDuration + phase2Duration;
-        if (inferred > 0) item.totalDuration = inferred;
-    }
+    if (allowCombine) {
+        const expectedDuration =
+            phase1Duration + exposureDuration + phase2Duration;
 
-    if (allowCombine && totalDuration > 0) {
-        const expectedDuration = phase1Duration + exposureDuration + phase2Duration;
-        if (expectedDuration > 0 && Math.abs(totalDuration - expectedDuration) > 1) {
-            _schemaError(`totalDuration (${totalDuration}) no coincide con la suma de fases (${expectedDuration})`);
+        if (totalDuration === 0 && expectedDuration > 0) {
+            item.totalDuration = expectedDuration;
+        } else if (totalDuration !== expectedDuration) {
+            _schemaError(
+                `totalDuration (${totalDuration}) debe coincidir exactamente con la suma de fases (${expectedDuration})`
+            );
         }
     }
 
