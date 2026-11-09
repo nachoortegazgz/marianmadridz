@@ -189,8 +189,8 @@ export const WIX_CATALOG_APP_IDS = Object.freeze({
 // CERO-DEUDA ZC-07: export JWT eliminado (generateJWT/verifyJWT ya no
 // existen en securityEngine.js; no hay consumidores de config JWT).
 
-// Timeout de busqueda de slots (espejo fiel de public/mmUtils.js SLOT_SEARCH,
-// BIBLIA 3.2; MINUTOS_TOLERANCIA citado literalmente por bookingCore.js).
+// SSOT backend de busqueda de slots. public/mmUtils.js mantiene un espejo
+// frontend-safe cuya paridad queda cubierta por BUTIL-CONFIG-01.
 export const SLOT_SEARCH = Object.freeze({
   DIAS_LIMITE: 15,
   MINUTOS_TOLERANCIA: 120,
@@ -563,8 +563,8 @@ export const BOOKING_FIELDS = Object.freeze({
 // legacy tolerados SOLO en lectura de documentos historicos pre-migracion.
 // Fuente unica de verdad para los helpers de lectura dual (data.js y
 // cajas.web.js comparten este contrato; cero duplicacion de listas).
-// JAMAS usar las claves alias en escrituras nuevas: prohibidas por
-// MovimientosCaja_beforeInsert via MOVEMENT_LEGACY_WRITE_FIELDS.
+// JAMAS usar las claves alias en escrituras nuevas: normalizeMovementKeys,
+// invocada por MovimientosCaja_beforeInsert, rechaza las claves legacy.
 // =============================================================================
 // REVIEW-BY: 2027-01-31. Re-evaluar fallback de lectura tras medir
 // consumo de aliases historicos en MovimientosCaja; no usar en escrituras.
