@@ -30,3 +30,18 @@ test('FDOC-VERSION-03 fiscal package history remains a snapshot and is not mutat
   assert.match(handler, /packageVersion:\s*nextVersion/);
   assert.doesNotMatch(handler, /dalUpdate|dalSave|dalRemove/);
 });
+
+
+test('FDOC-DISPATCH-01 accountant email dispatch fails closed until immutable dispatch snapshots are implemented', () => {
+  assert.match(source, /ACCOUNTANT_SEND_ENABLED\s*=\s*SDK_CONFIG\.EMAIL\.ACCOUNTANT_SEND_ENABLED\s*===\s*true/);
+  assert.match(source, /ACCOUNTANT_SEND_ENABLED:\s*false/);
+  assert.match(source, /function _accountantSendDisabledResult\(traceId\)/);
+  for (const methodName of ['sendManagerPackageToAccountant', 'sendSpecificDocumentToAccountant']) {
+    const start = source.indexOf(`export const ${methodName} = webMethod(`);
+    assert.notEqual(start, -1, `${methodName} must exist`);
+    const next = source.indexOf('\nexport const ', start + 20);
+    const handler = source.slice(start, next < 0 ? source.length : next);
+    assert.match(handler, /await requireMarianManager\(traceId\);[\s\S]*?if \(!ACCOUNTANT_SEND_ENABLED\)/);
+    assert.match(handler, /return _accountantSendDisabledResult\(traceId\)/);
+  }
+});
