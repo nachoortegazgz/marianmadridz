@@ -220,10 +220,6 @@ async function _queueCompensation(params) {
         paymentMethod: p.paymentMethod || null,
         movementType: p.movementType || null,
         recoveryProcessor: p.recoveryProcessor || null,
-        fiscalPayload: p.fiscalPayload && typeof p.fiscalPayload === "object" &&
-            !Array.isArray(p.fiscalPayload)
-            ? { ...p.fiscalPayload, traceId: null }
-            : null,
         fallbackTraceId: hasStableEntity ? null : traceId,
     };
     const identityHash = await hashSHA256(_stableSerialize(identity));
