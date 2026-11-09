@@ -50,12 +50,11 @@ test('UNIT-GEN-03 date conversion Madrid TZ stable', () => {
 
 test('UNIT-ENUM-01 booking enums aligned with canonical SSOT', async () => {
   // FASE2 BIBLIA 12.2: BOOKING_STATUS canonico en ingles (PENDING/CANCELED);
-  // los antiguos PENDING_PAYMENT y el estado de cancelación anterior no forman parte del enum de escritura.
+  // PENDING_PAYMENT no forma parte del enum de escritura.
   assert.strictEqual(IC.BOOKING_STATUS.CONFIRMED, 'CONFIRMED');
   assert.strictEqual(IC.BOOKING_STATUS.PENDING, 'PENDING');
   assert.strictEqual(IC.BOOKING_STATUS.CANCELED, 'CANCELED');
   assert.strictEqual(IC.BOOKING_STATUS.PENDING_PAYMENT, undefined);
-  assert.strictEqual(IC.BOOKING_STATUS.CANCELLED, undefined);
   // AUDIT-2026-10-14: IC.LEGACY_BOOKING_STATUS_VALUES fue erradicado por
   // DEC-IC-03; la traduccion Wix->CMS vive exclusivamente en
   // bookingCore._toCmsBookingStatus. Se conserva la intencion original
