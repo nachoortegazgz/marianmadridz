@@ -55,6 +55,26 @@ function bookingConfirmedEvent(eventId, booking) {
   };
 }
 
+function seedCajaPrincipal() {
+  const operationDate = new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Madrid" });
+  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.CAJA_ACTUAL, [{
+    _id: "SINGLE_ITEM_ID",
+    singletonKey: "CAJA_PRINCIPAL",
+    isOpen: true,
+    cashRegisterStatus: "ABIERTA",
+    operationDate,
+    openingAmount: 300,
+    cashAmount: 300,
+    totalInAmount: 300,
+    expectedCash: 300,
+    cardAmount: 0,
+    voucherAmount: 0,
+    otherAmount: 0,
+    salesCount: 0,
+    sequenceCounters: {},
+  }]);
+}
+
 function seedCita(overrides = {}) {
   return {
     _id: "cita-row-1",
@@ -355,6 +375,7 @@ test("EVENT-BOOKING-06 native Bookings V2 cancellation consumes metadata.id + da
 
 test("EVENT-PAYMENT-09 official Wix eCommerce paid event appends WIX_PAYMENTS ledger and reconciles the full dual booking idempotently", async () => {
   wixDataMock._reset();
+  seedCajaPrincipal();
 
   const secretState = globalThis.__mmSecretsState || (globalThis.__mmSecretsState = { _map: {}, _default: "mock-secret" });
   secretState._map.FISCAL_NIF_EMISOR = "B12345678";
