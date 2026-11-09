@@ -168,4 +168,26 @@ La implementacion en GitHub no acredita por si sola el comportamiento del runtim
 - Entrega repetida y desordenada de eventos Bookings/eCommerce.
 - Duracion exacta de servicios duales mediante CMS.
 
+
+
+11. CHECKPOINT DE VALIDACION GITHUB — 2026-11-09
+
+- Rama: fix/capa1-audit-final-2026-11-09.
+- Commit validado: 5dbc3df90fc22f7eb9e4a5359b5dc6f0b3569708.
+- GitHub Actions run: 42656024671 — SUCCESS.
+- Regresion offline: 50 suites, 477 tests, 0 fallos.
+- Contratos SDK: Wix eCommerce Cart V2, Wix Data items.patch/items.bulkPatch y Bookings Reader V2 — SUCCESS.
+- ESLint: ejecucion SUCCESS.
+- Runtime Wix: pendiente; CI offline no acredita hooks, permisos, concurrencia ni eventos en sitio publicado.
+- Workflow CI usa actions/checkout@v5 y actions/setup-node@v5 con Node 24.22.1.
+
+12. BLOQUEO DE HERRAMIENTA DE LINT
+
+- El paquete oficial @wix/eslint-plugin-cli@1.0.2 declara peerDependency eslint ^8.0.0.
+- La version instalada eslint@8.25.0 esta fuera de soporte y npm marca tambien dependencias transitivas de esa cadena.
+- No se fuerza la instalacion de ESLint 10 ni se ignora la incompatibilidad de peerDependencies: hacerlo ocultaria un contrato no soportado.
+- Se conserva el plugin Wix actual hasta disponer de una version compatible mantenida o una sustitucion validada que conserve las reglas necesarias para el proyecto.
+- Este bloqueo afecta exclusivamente a la herramienta de desarrollo; no cambia el runtime Wix ni el codigo funcional.
+- El criterio de cierre de cero dependencias sin soporte queda pendiente de resolver este bloqueo. No se declara cumplimiento total de ese criterio.
+
 FIN DEL DOCUMENTO
