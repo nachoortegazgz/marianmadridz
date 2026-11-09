@@ -74,6 +74,34 @@ describe("accounting ledger writer", () => {
     assert.equal(wixDataMock._store.get(ACCOUNTING_COL).length, 2);
   });
 
+  it("ACC-LEDGER-06 non-cash entries do not fabricate a cashMovementId", async () => {
+    const payload = {
+      ...entry("ACC-QA-ENTRY-006"),
+      sourceMovementId: "supplier-invoice-source-006",
+      origenTipo: "FACTURA_RECIBIDA",
+      origenRegistro: "DOCUMENTO_PROVEEDOR",
+    };
+    const result = await appendAccountingEntry(payload, "trace-acc-006");
+
+    assert.equal(result.status, "SUCCESS");
+    const rows = wixDataMock._store.get(ACCOUNTING_COL);
+    assert.equal(rows.length, 2);
+    assert.equal(rows.every((row) => row.cashMovementId == null), true);
+  });
+
+  it("ACC-LEDGER-07 cashMovementId is stored only when explicitly supplied", async () => {
+    const payload = {
+      ...entry("ACC-QA-ENTRY-007"),
+      cashMovementId: "physical-cash-movement-007",
+    };
+    const result = await appendAccountingEntry(payload, "trace-acc-007");
+
+    assert.equal(result.status, "SUCCESS");
+    const rows = wixDataMock._store.get(ACCOUNTING_COL);
+    assert.equal(rows.length, 2);
+    assert.equal(rows.every((row) => row.cashMovementId === "physical-cash-movement-007"), true);
+  });
+
   it("ACC-LEDGER-05 serializes concurrent entries into one unbroken global hash chain", async () => {
     const [first, second] = await Promise.all([
       appendAccountingEntry(entry("ACC-QA-ENTRY-005-A"), "trace-acc-005-a"),
