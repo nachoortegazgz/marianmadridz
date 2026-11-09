@@ -463,6 +463,8 @@ export const extendedBookings = _makeNamespaceStub('extendedBookings');
 export const catalogVersioning = _makeNamespaceStub('catalogVersioning');
 export const products = _makeNamespaceStub('products');
 export const inventory = _makeNamespaceStub('inventory');
+export const productsV3 = _makeNamespaceStub('productsV3');
+export const inventoryItemsV3 = _makeNamespaceStub('inventoryItemsV3');
 // LH-21 (fix derivado de tests 2026-10-14): 'bookings' es un NAMESPACE real
 // en el SDK (@wix/bookings -> bookings.staff.getStaff/listStaff, consumidos
 // por backend/staff.js v9). Antes se hardcodeaba a fnProxy: cualquier acceso
