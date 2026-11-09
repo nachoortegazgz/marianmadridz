@@ -371,18 +371,30 @@ function _validateProcessBookingPayload(payload, traceId, sessionMemberId = "", 
 // PUBLIC WEB METHODS
 // =============================================================================
 export const processDualBooking = webMethod(
-    Permissions.Anyone,
+    Permissions.SiteMember,
     async (unsafePayload) => {
         const traceId = unsafePayload?.traceId || makeTraceId("dual-bkg");
         try {
             const sessionMember = await _getCurrentMemberInfo();
             const sessionMemberId = _getMemberId(sessionMember);
+            const sessionContactId = _safeTrim(sessionMember?.contactId || "");
+
+            // SiteMember is the platform boundary; this explicit identity check
+            // also prevents booking attribution when the member/contact context
+            // cannot be resolved. Never accept IDs supplied by the browser.
+            if (!sessionMemberId || !sessionContactId) {
+                throw createBookingError(
+                    ERROR_CODES.AUTH_REQUIRED,
+                    "An authenticated Wix member with memberId and contactId is required to book.",
+                    { traceId }
+                );
+            }
 
             const validatedDto = _validateProcessBookingPayload(
                 unsafePayload,
                 traceId,
                 sessionMemberId,
-                _safeTrim(sessionMember?.contactId || "")
+                sessionContactId
             );
 
             await _rateLimitOrThrow(
