@@ -1471,7 +1471,11 @@ export async function reconcileUnmarkedOrderCreatedEvents() {
                 const pageOrders = response?.orders || [];
                 for (const order of pageOrders) {
                     const orderId = _safeTrim(order?._id || order?.id);
-                    if (orderId) ordersById.set(orderId, order);
+                    if (!orderId) continue;
+                    if (!_looksLikeGuid(orderId)) {
+                        throw new Error("ORDER_ID_INVALID_IN_NATIVE_SEARCH");
+                    }
+                    ordersById.set(orderId, order);
                 }
                 hasNext = Boolean(response?.metadata?.hasNext);
                 cursor = response?.metadata?.cursors?.next || null;
@@ -1493,6 +1497,7 @@ export async function reconcileUnmarkedOrderCreatedEvents() {
         while (markerPage < ORDER_MARKER_MAX_PAGES) {
             const markerResponse = await dalQuery(OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO)
                 .eq("controlType", CONTROL_TYPE.WEBHOOK_EVENT)
+                .ascending("_createdDate")
                 .limit(ORDER_MARKER_PAGE_LIMIT)
                 .skip(markerPage * ORDER_MARKER_PAGE_LIMIT)
                 .find({ consistencyMode: "strong" });
@@ -1572,7 +1577,7 @@ export async function reconcileUnmarkedOrderCreatedEvents() {
                     const existing = await dalGet(
                         OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO,
                         recordId,
-                        { consistencyMode: "strong" }
+                        "strong"
                     );
                     if (existing?.payload?.eventType === "ORDER_CREATED_RECONCILED" &&
                         existing?.orderId === orderId) {
