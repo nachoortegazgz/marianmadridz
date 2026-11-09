@@ -29,7 +29,7 @@ El repositorio contiene una solución Wix Editor/Velo con reservas Bookings V2, 
 | Capa 3 M365 / SharePoint | Arquitectura objetivo; no implantación demostrada | No existe `exportService.js` ni jobs de exportación. PA-01…PA-07 y SharePoint no auditados en el tenant. Transporte requiere ADR. |
 | Asistente IA | Deshabilitado de forma segura | `aiAgent.web.js` falla cerrado con `AI_PROVIDER_NOT_CONFIGURED`; ZONA MARIAN mantiene `enableAIAssistant=false`. Copy público actual requiere comprobación visual. |
 | Gift Cards | App nativa instalada; personalización no implementada | Wix Gift Cards tiene 1 producto nativo configurado y 0 tarjetas emitidas. No existe `giftCards.web.js`, writer propio, QR scanner ni HMAC personalizado en `src/`. |
-| Wix Forms & Payments | 4 esquemas nativos activos | Contacto mapea nombre/email/teléfono a CRM. Formularios de caja manual, control X y registro horario no tienen trigger backend de negocio; su conexión a páginas/ledgers no está acreditada. |
+| Wix Forms & Payments | 4 esquemas nativos activos | Contacto mapea nombre/email/teléfono a CRM. Caja manual, control X y fichaje no tienen trigger backend; Wix Automations v2 devuelve 0 workflows activos y 0 borradores para `wix_form_app-form_submitted`. |
 | Páginas personalizadas / widgets | Parcial; contratos HTML incompletos | Wix devuelve 9 páginas estáticas y 2 dinámicas. Se detectaron y corrigieron en rama dos rutas erróneas (`/administracion` y `/politica-de-privacidad`). Los HTML de `#htmlAdministracion`, `#htmlAdmin` y `#htmlOnlyStaffPanel` no están sincronizados en el repo; ZONA STAFF tiene todos los flags funcionales desactivados y no enruta acciones de caja. |
 | Toolchain / lint | Bloqueo de mantenimiento | ESLint 8.25.0 está EOL; `@wix/eslint-plugin-cli@1.0.2` declara peer ESLint 8. La regla `no-invalid-backend-import` está desactivada y falta `src/velo.dependencies.json`. No forzar ESLint 10 ni editar artefactos Wix manualmente. |
 
@@ -79,7 +79,7 @@ Referencia: [Auditoría de preparación Veri*Factu](qa/2026-11-09-verifactu-read
 5. Probar hooks CMS, permisos, DISPLAY_TOKEN, locks, fencing, concurrencia e idempotencia.
 6. Sincronizar los HTML Components de administración y staff desde Wix Local Editor y conciliar IDs, mensajes, acciones y rutas antes de habilitar flags.
 7. Reconciliar Wix Bookings/Orders con proyecciones CMS mediante lecturas; no crear movimientos ni reparar históricos hasta disponer de procedimiento backend controlado y autorización.
-8. Auditar Wix Automations asociadas a `FORM MOVIMIENTO CAJA MANUAL`, `FORM CONTROL X` y `FORM REGISTRO HORARIO`; confirmar si existe integración externa con ledgers antes de implementar o activar handlers.
+8. Definir e implementar, si el negocio lo exige, la integración backend idempotente para `FORM MOVIMIENTO CAJA MANUAL`, `FORM CONTROL X` y `FORM REGISTRO HORARIO`; la auditoría encontró 0 workflows Wix Automations activos o en borrador para envíos de formularios.
 
 ### P1 — Capa 3
 
