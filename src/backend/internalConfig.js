@@ -37,6 +37,8 @@ export const STAFF = Object.freeze({
 
 // Nombre por defecto cuando la identidad staff no se puede resolver via
 // Bookings Staff API (staff.js v9, PEND-MAP-01).
+// REVIEW-BY: 2027-01-31 (D-2, PEND-MAP-01). Retirar al acreditar
+// cobertura completa de los nombres via Bookings Staff Members API.
 export const STAFF_DEFAULT_NAME = "STAFF";
 
 export const BUSINESS_COLLECTIONS = Object.freeze({
@@ -117,6 +119,8 @@ export const SDK_CONFIG = Object.freeze({
 
   JOBS: Object.freeze({
     AUDIT_RETENTION_DAYS: 90,
+    // DUAL_CACHE solo purga filas legacy; no se generan nuevas filas.
+    // REVIEW-BY: 2027-01-31 (D-2). Retirar al confirmar ControlOperativo sin filas.
     DUAL_CACHE_CLEANUP_LIMIT: 500,
     DAYS_CACHE_CLEANUP_LIMIT: 500,
     FISCAL_RECOVERY_BATCH_SIZE: 25,
@@ -191,6 +195,30 @@ export const SLOT_SEARCH = Object.freeze({
   DIAS_LIMITE: 15,
   MINUTOS_TOLERANCIA: 120,
   MINUTOS_MAX_HUECO_DUAL: 120,
+});
+
+// Capa 1 — reservas: constantes de presentacion y caducidad.
+export const DTO_CONFIG = Object.freeze({
+  MINUTOS_INTERVALO_INICIO: 30,
+});
+
+export const DAYS_CACHE_CONFIG = Object.freeze({
+  TTL_MS: 300000,
+});
+
+export const DISPLAY_TOKEN_CONFIG = Object.freeze({
+  TTL_MS: 1800000,
+  MAX_ATTEMPTS: 5,
+});
+
+// Rate limiting GCRA por superficie. Valores vigentes en security.js
+// (incluye la superficie publica y la emision de credenciales de display).
+export const RATE_LIMITS = Object.freeze({
+  DEFAULT: Object.freeze({ MAX_REQUESTS: 20, WINDOW_MS: 5000 }),
+  PUBLIC_BOOKING: Object.freeze({ MAX_REQUESTS: 5, WINDOW_MS: 10000 }),
+  RESERVAS: Object.freeze({ MAX_REQUESTS: 20, WINDOW_MS: 5000 }),
+  AVAILABILITY: Object.freeze({ MAX_REQUESTS: 12, WINDOW_MS: 5000 }),
+  DISPLAY_TOKEN: Object.freeze({ MAX_REQUESTS: 5, WINDOW_MS: 60000 }),
 });
 
 // Parametros de concurrencia/transaccion (bookingCore.js BCORE-*, crons.js).
@@ -322,6 +350,15 @@ export const CHANNEL_TYPE = Object.freeze({
   ONLINE: "ONLINE",
   PRESENCIAL: "PRESENCIAL",
 });
+
+export const BOOKING_PAYMENT_OPTION = Object.freeze({
+  ONLINE: "ONLINE",
+  OFFLINE: "OFFLINE",
+});
+
+// Opciones nativas de pago de Wix Bookings Writer V2.
+// La fase F2 sin coste usa OFFLINE; no se inventa un enum NO_FEE:
+// noFee es un booleano de metadata en la proyeccion CMS.
 
 // Metodos de pago del ledger. Miembros EFECTIVO/TARJETA/BIZUM verificados en
 // site.flows.e2e (paymentMethod 'EFECTIVO'); TRANSFERENCIA admitido por el
