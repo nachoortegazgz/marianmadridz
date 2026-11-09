@@ -102,26 +102,49 @@ function _formatDocumentId(year, quarter, version = 1) {
   return `DOC_GESTORIA_${year}_T${quarter}_PAQUETE_GESTORIA_V${vStr}`;
 }
 
+function _formatMonthlyDocumentId(year, month, version = 1) {
+  const vStr = String(version).padStart(4, "0");
+  return `DOC_GESTORIA_${year}_M${String(month).padStart(2, "0")}_PAQUETE_GESTORIA_V${vStr}`;
+}
+
+function _formatPackageDocumentId(year, periodType, periodValue, version = 1) {
+  return periodType === "MONTHLY"
+    ? _formatMonthlyDocumentId(year, periodValue, version)
+    : _formatDocumentId(year, periodValue, version);
+}
+
+function _packagePeriodPrefix(year, periodType, periodValue) {
+  const periodKey = periodType === "MONTHLY"
+    ? `M${String(periodValue).padStart(2, "0")}`
+    : `T${periodValue}`;
+  return `DOC_GESTORIA_${year}_${periodKey}_PAQUETE_GESTORIA_`;
+}
+
+function _invoiceValue(invoice, keys, fallbackKey) {
+  for (const key of keys) {
+    if (invoice && invoice[key] !== undefined && invoice[key] !== null) return invoice[key];
+  }
+  return fallbackKey ? readMovementField(invoice, fallbackKey) : "";
+}
+
 // SSOT-KEYFIELD-02: consume el contrato canon->alias UNICO (data.js) sobre
 // claves fisicas canonicas; cero grafias alias aqui.
 const _rf = (m, key) => _safeTrim(readMovementField(m, key));
 
 function _buildCsvFromInvoices(invoices) {
   if (!Array.isArray(invoices) || invoices.length === 0) return "";
-  const header = "Numero;Fecha;Tipo;Base;Cuota;Total;FormaPago;Hash\n";
-  const rows = invoices
-    .map(
-      (inv) =>
-        `"${_rf(inv, "numSerieFactura")}";` +
-        `"${_rf(inv, "fechaOperacion")}";` +
-        `"${_rf(inv, "movementType").toUpperCase()}";` +
-        `${_roundMoney(Number(_rf(inv, "taxBase")) || 0)};` +
-        `${_roundMoney(Number(_rf(inv, "taxAmount")) || 0)};` +
-        `${_roundMoney(Number(_rf(inv, "totalAmount")) || 0)};` +
-        `"${_rf(inv, "paymentMethod")}";` +
-        `"${_rf(inv, "recordHash")}"`
-    )
-    .join("\n");
+  const header = "Numero;Fecha;Tipo;Base;Cuota;Total;FormaPago;Hash\\n";
+  const rows = invoices.map((inv) => {
+    const number = _safeTrim(_invoiceValue(inv, ["invoiceNumber", "numSerieFactura"], "numSerieFactura"));
+    const date = _safeTrim(_invoiceValue(inv, ["fechaExpedicion", "fechaOperacion"], "fechaOperacion"));
+    const type = _safeTrim(_invoiceValue(inv, ["movementType"], "movementType")).toUpperCase();
+    const base = _roundMoney(Number(_invoiceValue(inv, ["taxableAmount", "taxBase"], "taxBase")) || 0);
+    const tax = _roundMoney(Number(_invoiceValue(inv, ["taxAmount"], "taxAmount")) || 0);
+    const total = _roundMoney(Number(_invoiceValue(inv, ["totalAmount", "accountingAmount"], "totalAmount")) || 0);
+    const method = _safeTrim(_invoiceValue(inv, ["paymentMethod"], "paymentMethod"));
+    const hash = _safeTrim(_invoiceValue(inv, ["hashCompleto", "recordHash", "hash"], "recordHash"));
+    return `"${number}";"${date}";"${type}";${base};${tax};${total};"${method}";"${hash}"`;
+  }).join("\\n");
   return header + rows;
 }
 
@@ -682,23 +705,28 @@ async function _dispatchEmailViaResend({
 // BLOQUE 8 - ENVIO DE PAQUETE A GESTOR (mensual / trimestral)
 // =============================================================================
 
-function _filterInvoicesByMonth(invoices, month) {
+function _filterInvoicesByMonth(invoices, year, month) {
   if (!Array.isArray(invoices)) return [];
-  return invoices.filter((inv) => {
-    const dateStr = String(_rf(inv, "fechaOperacion") || "");
-    const m = Number(dateStr.slice(5, 7));
-    return m === month;
+  return invoices.filter((invoice) => {
+    const date = String(_invoiceValue(invoice, ["fechaExpedicion", "fechaOperacion"], "fechaOperacion") || "");
+    const match = /^(\\d{4})-(\\d{2})/.exec(date);
+    return Boolean(match) && Number(match[1]) === year && Number(match[2]) === month;
   });
 }
 
 function _summarizeMonthly(invoices, year, month, quarter) {
+  let gross = 0;
+  let refunds = 0;
   let base = 0;
-  let iva = 0;
-  let total = 0;
-  for (const inv of invoices) {
-    base += Number(_rf(inv, "taxBase")) || 0;
-    iva += Number(_rf(inv, "taxAmount")) || 0;
-    total += Number(_rf(inv, "totalAmount")) || 0;
+  let tax = 0;
+  for (const invoice of invoices) {
+    const amount = Number(_invoiceValue(invoice, ["totalAmount", "accountingAmount"], "totalAmount")) || 0;
+    const type = _safeTrim(_invoiceValue(invoice, ["movementType"], "movementType")).toUpperCase();
+    const isRefund = amount < 0 || type.includes("DEVOLUCION") || type.includes("REEMBOLSO");
+    if (isRefund) refunds += Math.abs(amount);
+    else gross += amount;
+    base += Number(_invoiceValue(invoice, ["taxableAmount", "taxBase"], "taxBase")) || 0;
+    tax += Number(_invoiceValue(invoice, ["taxAmount"], "taxAmount")) || 0;
   }
   return {
     ejercicio: year,
@@ -707,13 +735,13 @@ function _summarizeMonthly(invoices, year, month, quarter) {
     totalOperaciones: invoices.length,
     totalOperacionesFiscales: invoices.length,
     totales: {
-      totalVentasBrutas: _roundMoney(total),
-      totalReembolsos: 0,
-      totalFacturadoNeto: _roundMoney(total),
+      totalVentasBrutas: _roundMoney(gross),
+      totalReembolsos: _roundMoney(refunds),
+      totalFacturadoNeto: _roundMoney(gross - refunds),
     },
     borradorIva: {
       baseImponibleRegistrada: _roundMoney(base),
-      cuotaIvaRegistrada: _roundMoney(iva),
+      cuotaIvaRegistrada: _roundMoney(tax),
     },
   };
 }
