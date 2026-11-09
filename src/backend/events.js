@@ -910,13 +910,21 @@ export async function reconcileConfirmedNativeBookingProjectionInternal(
     const amountReconciliationRequired = rawAmount === undefined ||
         !Number.isFinite(parsedAmount) || parsedAmount < 0;
 
-    await markEventAsProcessed(eventId, "BOOKING_CONFIRMED_RECONCILED", traceId, {
-        bookingId,
-        serviceId: syncResult.serviceId,
-        ledgerCreated: syncResult.created,
-        ledgerSource: "WIX_BOOKINGS_NATIVE_RECONCILIATION",
-        amountReconciliationRequired,
-    });
+    const reconciliationDedupeKey = `WEBHOOK_${_normalizeIdPart(eventId, 100)}`;
+    const existingReconciliationMarker = await dalQuery(CONTROL_OPERATIVO_COL)
+        .eq("controlType", CONTROL_TYPE.WEBHOOK_EVENT)
+        .eq("dedupeKey", reconciliationDedupeKey)
+        .limit(1)
+        .find(STRONG_READ);
+    if (!(existingReconciliationMarker?.items || []).length) {
+        await markEventAsProcessed(eventId, "BOOKING_CONFIRMED_RECONCILED", traceId, {
+            bookingId,
+            serviceId: syncResult.serviceId,
+            ledgerCreated: syncResult.created,
+            ledgerSource: "WIX_BOOKINGS_NATIVE_RECONCILIATION",
+            amountReconciliationRequired,
+        });
+    }
     return {
         ok: true,
         created: Boolean(syncResult.created),
