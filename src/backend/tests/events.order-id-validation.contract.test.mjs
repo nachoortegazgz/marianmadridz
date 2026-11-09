@@ -60,3 +60,21 @@ test("EVENT-ORDER-NATIVE-STOCK-02 eCommerce events no longer import the custom i
     assert.doesNotMatch(source, /backend\/inventario\.web/);
     assert.doesNotMatch(source, /_syncPaidOrderInventoryOrThrow|reserveOrderInventoryInternal|releaseOrderInventoryInternal|syncRestockedOrderInventoryInternal/);
 });
+
+
+test("EVENT-ORDER-NATIVE-STOCK-03 payment, refund and cancel handlers do not mirror stock into CMS", () => {
+    const handlers = [
+        ["wixEcom_onOrderPaymentStatusUpdated", "WEBHOOK: ORDER REFUNDED"],
+        ["wixEcom_onOrderRefunded", "WEBHOOK: ORDER CANCELED"],
+        ["wixEcom_onOrderCanceled", null],
+    ];
+    for (const [name, nextMarker] of handlers) {
+        const start = source.indexOf(`export async function ${name}`);
+        const end = nextMarker ? source.indexOf(nextMarker, start) : source.length;
+        assert.ok(start >= 0 && end > start, `${name} must remain discoverable`);
+        const handler = source.slice(start, end);
+        assert.doesNotMatch(handler, /MovimientosInventario|InventarioStockVenta|syncRestockedOrderInventoryInternal|releaseOrderInventoryInternal|syncPaidOrderInventoryInternal/);
+    }
+    assert.match(source, /registrarEventoEconomico\(fiscalPayload\)/);
+    assert.match(source, /queueFiscalRecovery\(/);
+});
