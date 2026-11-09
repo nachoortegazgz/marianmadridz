@@ -5,7 +5,7 @@ const { wixDataMock, mocks } = await import("./loader.mjs");
 const IC = await import("backend/internalConfig.js");
 
 let catalogVersion = "V3_CATALOG";
-let getStoreVariantCalls = 0;
+let getCatalogVariantCalls = 0;
 let nativeQuantity = 6;
 mocks.sdk["@wix/stores::@wix/stores::catalogVersioning::getCatalogVersion"] = async () => ({
   catalogVersion,
@@ -13,7 +13,7 @@ mocks.sdk["@wix/stores::@wix/stores::catalogVersioning::getCatalogVersion"] = as
 const INVENTORY_ITEM_ID = "55555555-6666-4666-8666-555555555555";
 const LOCATION_ID = "66666666-7777-4777-8777-666666666666";
 mocks.sdk["@wix/stores::@wix/stores::inventoryItemsV3::queryInventoryItems"] = async (query) => {
-  getStoreVariantCalls += 1;
+  getCatalogVariantCalls += 1;
   return {
     inventoryItems: [{
       id: INVENTORY_ITEM_ID,
@@ -98,7 +98,7 @@ function paidOrder() {
 
 function seed() {
   wixDataMock._reset();
-  getStoreVariantCalls = 0;
+  getCatalogVariantCalls = 0;
   nativeQuantity = 6;
   mocks.members._current = {
     _id: "99999999-aaaa-4bbb-8ccc-dddddddddddd",
@@ -153,7 +153,7 @@ test("INVENTORY-WRITER-01 mirrors native Wix Catalog V3 stock without writing to
   assert.equal(movements[0].movementToken.startsWith("SALE_"), true);
   assert.equal(movements[0].nativeCommercialMovement, true);
   assert.equal(movements[0].stockApplied, true);
-  assert.equal(getStoreVariantCalls, 1);
+  assert.equal(getCatalogVariantCalls, 1);
 });
 
 test("INVENTORY-WRITER-02 repeated paid-order event is idempotent by movementToken", async () => {
