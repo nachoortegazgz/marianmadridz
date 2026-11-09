@@ -17,16 +17,17 @@ test("EVENT-ORDER-GUID-01 order-created webhook uses the imported canonical GUID
 });
 
 
-test("EVENT-ORDER-RETRY-01 order-created reconciliation skips recovered booking-only orders and propagates every failure", () => {
+test("EVENT-ORDER-NATIVE-STOCK-01 order-created webhook records idempotency without custom inventory operations", () => {
     const start = source.indexOf("export async function wixEcom_onOrderCreated");
     const end = source.indexOf("// WEBHOOK: ORDER PAYMENT STATUS UPDATED", start);
     assert.ok(start >= 0 && end > start, "order-created handler must remain discoverable");
     const handler = source.slice(start, end);
 
     assert.match(handler, /isOrderCreatedReconciled\(orderId\)/);
-    assert.match(handler, /if\s*\(await isOrderCreatedReconciled\(orderId\)\)\s*\{[\s\S]*?reconciled:\s*true/);
+    assert.match(handler, /inventoryAuthority:\s*"WIX_STORES_NATIVE"/);
+    assert.match(handler, /inventoryAction:\s*"NO_CUSTOM_STOCK_WRITE"/);
     assert.match(handler, /catch\s*\(error\)\s*\{[\s\S]*?_handleError\(error,\s*"wixEcom_onOrderCreated",\s*traceId\);[\s\S]*?throw error;/);
-    assert.doesNotMatch(handler, /return\s*\{\s*status:\s*"OK"\s*\};/);
+    assert.doesNotMatch(handler, /reserveOrderInventoryInternal|syncPaidOrderInventoryInternal|MovimientosInventario|InventarioStockVenta/);
 });
 
 
@@ -52,4 +53,10 @@ test("EVENT-WEBHOOK-RETRY-02 booking and eCommerce persistence handlers never ac
         assert.doesNotMatch(catchBlock, /return\s*\{\s*status:\s*"OK"\s*\}/, `${name} must not acknowledge a failed write`);
     }
     assert.doesNotMatch(source, /return\s*\{\s*status:\s*"RETRY_REQUIRED"/);
+});
+
+
+test("EVENT-ORDER-NATIVE-STOCK-02 eCommerce events no longer import the custom inventory module", () => {
+    assert.doesNotMatch(source, /backend\/inventario\.web/);
+    assert.doesNotMatch(source, /_syncPaidOrderInventoryOrThrow|reserveOrderInventoryInternal|releaseOrderInventoryInternal|syncRestockedOrderInventoryInternal/);
 });
