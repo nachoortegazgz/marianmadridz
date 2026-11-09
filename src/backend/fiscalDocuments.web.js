@@ -1,30 +1,34 @@
 /*
 =============================================================================
 MODULE: backend/fiscalDocuments.web.js
-VERSION: v5016-ALIGNED-WITH-SEND
-BASE: v5015-ALIGNED + 3 exportaciones nuevas para envio a gestoria
+VERSION: v5017-ALIGNED-DATOSFISCALES
+BASE: v5016-ALIGNED-WITH-SEND
 RESPONSIBILITY: Genera paquetes fiscales trimestrales, documentos CSV/PDF,
  mantiene historial de versiones y despacha via Resend API.
 STANDARDS: G10 ASCII Strict. Cero suppressAuth. Colecciones canonicas.
 
-CAMBIOS v5016-ALIGNED-WITH-SEND:
-  NEW-01: listAccountantRecipients. Lee destinatarios desde
-          BUSINESS_COLLECTIONS.GESTORES_FISCALES. Fail-closed a lista
-          vacia si la coleccion no esta configurada en internalConfig.
-  NEW-02: sendManagerPackageToAccountant. Construye el paquete
-          (mensual o trimestral) al vuelo desde los agregadores,
-          adjunta CSV y envia via Resend.
-  NEW-03: sendSpecificDocumentToAccountant. Recupera un documento
-          concreto del historico y lo envia via Resend.
-  NEW-04: _dispatchEmailViaResend. Helper unico de envio.
-          API key desde secrets (RESEND_API_KEY). Si no esta
-          configurada, devuelve RESEND_NOT_CONFIGURED sin romper.
+CAMBIOS v5017-ALIGNED-DATOSFISCALES (respecto a v5016):
+  ALN-DF-01: Eliminada la dependencia de BUSINESS_COLLECTIONS.GESTORES_FISCALES
+             (coleccion no declarada en internalConfig v12). El origen de
+             verdad de destinatarios es BUSINESS_COLLECTIONS.DATOS_FISCALES.
+  ALN-DF-02: listAccountantRecipients consulta DatosFiscales y extrae
+             gestores por DOS patrones tolerados en paralelo:
+               A) item dedicado con recordType "GESTOR" | "GESTORIA" |
+                  "GESTOR_FISCAL" | "ACCOUNTANT" + campo email.
+               B) campos embebidos gestorEmail/gestorName en cualquier
+                  item (p.ej. el registro fiscal del negocio).
+  ALN-DF-03: _resolveRecipientById maneja los dos patrones. Los ids del
+             patron B viajan como `<recordId>#gestor`; los del A viajan
+             como `<recordId>` puro.
+
+CAMBIOS v5016-ALIGNED-WITH-SEND (heredados):
+  NEW-01..04: listAccountantRecipients, sendManagerPackageToAccountant,
+              sendSpecificDocumentToAccountant, _dispatchEmailViaResend.
 
 CAMBIOS DE ALINEACION v5015-ALIGNED (heredados):
-  ALN-01: COLLECTIONS alias eliminado. Uso de BUSINESS_COLLECTIONS.
-  ALN-02: wixData.query/get/insert -> dalQuery/dalGet/dalInsert.
-  ALN-04: Paginacion { items, hasNext(), next() } de dataAccess.
-  ALN-05: HistoricoCierresZ como almacen de paquetes de gestoria.
+  ALN-01..05: BUSINESS_COLLECTIONS, dalQuery/dalGet/dalInsert, paginacion
+              { items, hasNext(), next() }, HistoricoCierresZ para
+              paquetes de gestoria.
 
 FIXES APLICADOS v5009-FISCAL-V20.1 (heredados):
   V20-01, V20-02, SSOT-V2 (v5011).
@@ -57,6 +61,7 @@ import { readMovementField } from "backend/data";
 
 const CMS_TIMEOUT_MS = Number(SDK_CONFIG?.TIMEOUTS?.CMS_MS) || 15000;
 const DOCS_COL = BUSINESS_COLLECTIONS.HISTORICO_CIERRES_Z;
+const DATOS_FISCALES_COL = BUSINESS_COLLECTIONS.DATOS_FISCALES;
 
 const STRONG_READ = Object.freeze({ consistencyMode: "strong" });
 
@@ -67,13 +72,17 @@ const RESEND_FROM_NAME = SDK_CONFIG?.EMAIL?.FROM_NAME || "Marian Madrid";
 const RESEND_FROM_ADDRESS =
   SDK_CONFIG?.EMAIL?.FROM_ADDRESS || "noreply@marianmadrid.com";
 
-// Destinatarios de gestoria. Si la coleccion no esta declarada en
-// internalConfig, se hace fail-closed a lista vacia. Para habilitar el
-// envio real, anadir GESTORES_FISCALES a BUSINESS_COLLECTIONS (v13.0).
-const RECIPIENTS_COL = BUSINESS_COLLECTIONS?.GESTORES_FISCALES || null;
+// Marcadores canonicos para identificar un item dedicado a gestor.
+const GESTOR_RECORD_TYPE_MARKERS = Object.freeze([
+  "GESTOR",
+  "GESTORIA",
+  "GESTOR_FISCAL",
+  "GESTOR-FISCAL",
+  "ACCOUNTANT",
+]);
 
 // =============================================================================
-// BLOQUE 1 - HELPERS
+// BLOQUE 1 - HELPERS GENERALES
 // =============================================================================
 
 function _formatDocumentId(year, quarter, version = 1) {
@@ -145,9 +154,7 @@ function _buildSummaryText(summary) {
   return lines.join("\n");
 }
 
-// Codificacion base64 de texto para adjuntos Resend. Buffer es nativo en
-// el runtime Node.js de los .web.js; el fallback vacio mantiene el flujo
-// vivo si el entorno no lo expone (degradacion: envio sin adjunto CSV).
+// Codificacion base64 de texto para adjuntos Resend.
 function _toBase64(text) {
   const str = String(text || "");
   try {
@@ -155,6 +162,66 @@ function _toBase64(text) {
   } catch {
     return "";
   }
+}
+
+// =============================================================================
+// BLOQUE 1b - HELPERS DE GESTOR (DatosFiscales)
+// =============================================================================
+
+function _isGestorRecordType(record) {
+  if (!record || typeof record !== "object") return false;
+  const candidates = [
+    record.recordType,
+    record.tipo,
+    record.type,
+    record.categoria,
+    record.category,
+    record.role,
+    record.rol,
+  ]
+    .filter(Boolean)
+    .map((v) => String(v).trim().toUpperCase());
+  return candidates.some((v) => GESTOR_RECORD_TYPE_MARKERS.includes(v));
+}
+
+// Extrae un destinatario de un item de DatosFiscales. Devuelve null si el
+// item no contiene datos de gestor utiles. Tolera los DOS patrones en
+// paralelo: registro dedicado (recordType=GESTOR) o campos embebidos
+// gestorEmail/gestorName en cualquier item.
+function _extractGestorFromRecord(record) {
+  if (!record || record.active === false) return null;
+
+  // Patron A: registro dedicado de gestor.
+  if (_isGestorRecordType(record)) {
+    const email = _safeTrim(record.email || record.gestorEmail);
+    if (!email) return null;
+    return {
+      id: String(record._id),
+      email,
+      name: _safeTrim(record.name || record.nombre || record.gestorName || ""),
+      label:
+        _safeTrim(record.label || record.name || record.nombre || record.gestorName) ||
+        email,
+      nif: _safeTrim(record.nif || record.gestorNif || "") || null,
+      source: "DEDICATED",
+    };
+  }
+
+  // Patron B: campos embebidos en el registro fiscal del negocio.
+  const embeddedEmail = _safeTrim(record.gestorEmail);
+  if (embeddedEmail) {
+    return {
+      id: `${record._id}#gestor`,
+      email: embeddedEmail,
+      name: _safeTrim(record.gestorName || record.gestorNombre || ""),
+      label:
+        _safeTrim(record.gestorName || record.gestorNombre) || embeddedEmail,
+      nif: _safeTrim(record.gestorNif) || null,
+      source: "EMBEDDED",
+    };
+  }
+
+  return null;
 }
 
 // =============================================================================
@@ -261,11 +328,9 @@ export const createManagerPackageVersion = webMethod(
         _createdDate: new Date(),
       };
 
-      // Package versions are immutable snapshots. save/upsert could overwrite
-      // a version created by a concurrent request after both read the same
-      // history. insert enforces uniqueness on the deterministic documentId;
-      // the loser fails closed and must refresh history before requesting
-      // the next version.
+      // Package versions are immutable snapshots. insert enforces uniqueness
+      // on the deterministic documentId; the loser fails closed and must
+      // refresh history before requesting the next version.
       await withTimeout(
         dalInsert(DOCS_COL, record),
         CMS_TIMEOUT_MS,
@@ -447,7 +512,7 @@ export const downloadManagerPackageVersion = webMethod(
 );
 
 // =============================================================================
-// BLOQUE 6 - DESTINATARIOS DE GESTORIA
+// BLOQUE 6 - DESTINATARIOS DE GESTORIA (via DatosFiscales)
 // =============================================================================
 
 export const listAccountantRecipients = webMethod(
@@ -457,33 +522,39 @@ export const listAccountantRecipients = webMethod(
     try {
       await requireMarianManager(traceId);
 
-      if (!RECIPIENTS_COL) {
-        return {
-          status: "SUCCESS",
-          data: {
-            items: [],
-            traceId,
-            note:
-              "Coleccion GESTORES_FISCALES no configurada en internalConfig.",
-          },
-          error: null,
-        };
-      }
-
       const res = await withTimeout(
-        dalQuery(RECIPIENTS_COL).eq("active", true).limit(50).find(),
+        dalQuery(DATOS_FISCALES_COL)
+          .descending("_updatedDate")
+          .limit(100)
+          .find(),
         CMS_TIMEOUT_MS,
         "listAccountantRecipients"
       );
 
-      const items = (res?.items || []).map((r) => ({
-        id: r._id,
-        label: _safeTrim(r.label) || _safeTrim(r.name) || _safeTrim(r.email) || r._id,
-        name: _safeTrim(r.name) || _safeTrim(r.label) || "",
-        email: _safeTrim(r.email) || "",
-      }));
+      const items = [];
+      const seenEmails = new Set();
 
-      return { status: "SUCCESS", data: { items, traceId }, error: null };
+      for (const record of res?.items || []) {
+        const gestor = _extractGestorFromRecord(record);
+        if (!gestor) continue;
+        const emailKey = gestor.email.toLowerCase();
+        if (seenEmails.has(emailKey)) continue;
+        seenEmails.add(emailKey);
+        items.push({
+          id: gestor.id,
+          label: gestor.label,
+          name: gestor.name,
+          email: gestor.email,
+          nif: gestor.nif,
+          source: gestor.source,
+        });
+      }
+
+      return {
+        status: "SUCCESS",
+        data: { items, traceId },
+        error: null,
+      };
     } catch (err) {
       return {
         status: "ERROR",
@@ -493,6 +564,41 @@ export const listAccountantRecipients = webMethod(
     }
   }
 );
+
+// Resuelve un destinatario por id en DatosFiscales. Los ids del patron B
+// viajan como `<recordId>#gestor`; los del patron A como `<recordId>`.
+async function _resolveRecipientById(recipientId) {
+  if (!recipientId) return null;
+  const raw = String(recipientId);
+  const isEmbedded = raw.endsWith("#gestor");
+  const docId = isEmbedded ? raw.slice(0, -7) : raw;
+
+  try {
+    const record = await withTimeout(
+      dalGet(DATOS_FISCALES_COL, docId, "strong"),
+      CMS_TIMEOUT_MS,
+      "getRecipient"
+    );
+    if (!record || record.active === false) return null;
+
+    if (isEmbedded) {
+      const email = _safeTrim(record.gestorEmail);
+      if (!email) return null;
+      return {
+        id: raw,
+        email,
+        name: _safeTrim(record.gestorName || record.gestorNombre || ""),
+        label:
+          _safeTrim(record.gestorName || record.gestorNombre) || email,
+        nif: _safeTrim(record.gestorNif) || null,
+      };
+    }
+
+    return _extractGestorFromRecord(record);
+  } catch {
+    return null;
+  }
+}
 
 // =============================================================================
 // BLOQUE 7 - HELPER DE ENVIO VIA RESEND
@@ -560,30 +666,9 @@ async function _dispatchEmailViaResend({
   return { messageId: json?.id || null, provider: "resend" };
 }
 
-async function _resolveRecipientById(recipientId) {
-  if (!recipientId) return null;
-  if (!RECIPIENTS_COL) return null;
-
-  try {
-    const record = await withTimeout(
-      dalGet(RECIPIENTS_COL, recipientId, "strong"),
-      CMS_TIMEOUT_MS,
-      "getRecipient"
-    );
-    if (!record || record.active === false) return null;
-    return {
-      id: record._id,
-      email: _safeTrim(record.email),
-      name:
-        _safeTrim(record.name) ||
-        _safeTrim(record.label) ||
-        _safeTrim(record.email) ||
-        "",
-    };
-  } catch {
-    return null;
-  }
-}
+// =============================================================================
+// BLOQUE 8 - ENVIO DE PAQUETE A GESTOR (mensual / trimestral)
+// =============================================================================
 
 function _filterInvoicesByMonth(invoices, month) {
   if (!Array.isArray(invoices)) return [];
@@ -620,10 +705,6 @@ function _summarizeMonthly(invoices, year, month, quarter) {
     },
   };
 }
-
-// =============================================================================
-// BLOQUE 8 - ENVIO DE PAQUETE A GESTOR (mensual / trimestral)
-// =============================================================================
 
 export const sendManagerPackageToAccountant = webMethod(
   Permissions.SiteMember,
@@ -695,13 +776,11 @@ export const sendManagerPackageToAccountant = webMethod(
           error: {
             code: "RECIPIENT_NOT_FOUND",
             message:
-              "El destinatario no existe o no tiene email configurado",
+              "El destinatario no existe o no tiene email configurado en DatosFiscales",
           },
         };
       }
 
-      // Para MONTHLY se consulta el trimestre que contiene el mes y se
-      // filtra por mes en el CSV. Para QUARTERLY, se envia tal cual.
       const effectiveQuarter =
         periodType === "MONTHLY"
           ? Math.floor((month - 1) / 3) + 1
@@ -730,11 +809,7 @@ export const sendManagerPackageToAccountant = webMethod(
       }
 
       const csvContent = _buildCsvFromInvoices(emailInvoices);
-      const documentId = _formatDocumentId(
-        year,
-        effectiveQuarter,
-        1
-      );
+      const documentId = _formatDocumentId(year, effectiveQuarter, 1);
 
       const subject =
         periodType === "MONTHLY"
@@ -870,7 +945,7 @@ export const sendSpecificDocumentToAccountant = webMethod(
           error: {
             code: "RECIPIENT_NOT_FOUND",
             message:
-              "El destinatario no existe o no tiene email configurado",
+              "El destinatario no existe o no tiene email configurado en DatosFiscales",
           },
         };
       }
