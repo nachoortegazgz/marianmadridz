@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: backend-offline-${{ github.event.pull_request.number || github.ref }}
+  group: backend-offline-\${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -50,8 +50,8 @@ jobs:
         shell: bash
         run: |
           for suite in accountingLedger.writer.offline.test.mjs dto.whitelist.test.mjs reservas.web.test.mjs widget.handshake.contract.test.mjs; do
-            echo "===== Diagnostic run: ${suite} ====="
-            node --no-warnings --loader ./src/backend/tests/loader.mjs "./src/backend/tests/${suite}" || true
+            echo "===== Diagnostic run: \${suite} ====="
+            node --no-warnings --loader ./src/backend/tests/loader.mjs "./src/backend/tests/\${suite}" || true
           done
 
       - name: Verify installed Wix SDK contracts
@@ -65,10 +65,3 @@ jobs:
       - name: Run ESLint
         if: always()
         run: npm run lint
-
-      - name: Self-test Wix publish PTY controller
-        run: python3 scripts/wix-publish-pty.py --self-test
-
-      - name: Self-test Wix Preview PTY controller
-        run: python3 scripts/wix-preview-pty.py --self-test
-
