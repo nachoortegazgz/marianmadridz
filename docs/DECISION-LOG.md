@@ -34,7 +34,7 @@ Este registro centraliza las decisiones explícitas del propietario y las decisi
 | TEC-004 | Clasificar precios y variantes antes de configurar depósitos. Si un servicio variable contiene variantes a ambos lados del umbral y Wix no permite condición por variante, separar la oferta nativamente. | Lectura live: 94 servicios, 70 FIXED, 24 NO_FEE, 0 VARIED; 7 visibles >100 EUR; 0 depósitos activos. | Clasificación inicial completada; verificar variantes al cambiar catálogo |
 | TEC-005 | Wix Stores Catalog V3 y las herramientas nativas Wix son la única autoridad operativa del stock comercial. | El checkout nativo valida disponibilidad y deduce inventario cuando el seguimiento está activado. | Aprobada |
 | TEC-006 | No crear proyecciones CMS, reservas, deducciones, reposiciones, movimientos ni ajustes personalizados de stock. | Evitar doble autoridad, concurrencia y desincronización. | Aprobada; retirada de código pendiente |
-| TEC-007 | Retirar módulo, WebMethods, proyecciones y UI custom; conservar solo protección append-only de históricos. | Dependencias de webhooks, panel y tests localizadas; webhooks desacoplados, UI retirada y módulo/test eliminados en rama de refactorización. | Implementado en rama; CI y QA Wix pendientes |
+| TEC-007 | Los módulos personalizados de inventario y la UI asociada se retiran por fases; no borrar consumidores sin búsqueda exhaustiva, análisis de webhooks, pruebas y rollback. | `events.js`, `inventario.web.js` y `ZONA MARIAN` tienen dependencias directas. | Pendiente de PR de código |
 | TEC-008 | Los históricos `MovimientosInventario` existentes se preservan sin edición, borrado ni purga. No se insertan nuevos movimientos personalizados de stock. | La decisión de usar stock nativo no autoriza destruir evidencia histórica. | Aprobada |
 | TEC-009 | El ledger fiscal/contable registra hechos económicos y rectificaciones trazables; no gobierna cantidades de stock. | Mantener separación entre economía/fiscalidad e inventario. | Aprobada |
 | TEC-010 | La recuperación fiscal de pedidos pagados se limita a pedidos exclusivamente Bookings con payload fiscal original; pedidos Store/mixtos o legacy sin payload quedan en conciliación manual. | Evita reconstruir hechos fiscales incompletos o acoplar stock a ledger. Implementado en PR #235. | Fusionado; CI offline aprobada, runtime Wix pendiente |
@@ -43,8 +43,6 @@ Este registro centraliza las decisiones explícitas del propietario y las decisi
 | TEC-013 | La configuración nativa de pedidos queda como autoridad del inventario; estado live `ON_ORDER_PAID`. | Wix Orders Settings GET, 2026-11-10, HTTP 200; sin mutaciones. | Verificado live; no se ha cambiado |
 | TEC-014 | No activar depósitos hasta resolver discrepancia `inPerson` entre esquema REST Services V2 y Wix Help Center. | Esquema REST: `inPerson=false` con depósito; Wix Help: depósito online y resto en persona. | Bloqueo documentado; sin cambios en servicios |
 | TEC-015 | La auditoría de Bookings detecta 7 servicios visibles >100 EUR y ningún depósito activo. | Query Services V2: 94 resultados, 70 FIXED, 24 NO_FEE, 0 VARIED, 0 depósitos. | Verificado live, solo lectura |
-| TEC-016 | Los webhooks de pedido/pago/cancelación/reembolso no deben invocar writers de stock; cron marca todos los pedidos con referencias de catálogo completas sin distinguir Bookings/Stores/mixtos. | Wix Orders Settings `ON_ORDER_PAID`; Wix gestiona el stock y el cron solo conserva idempotencia. | Implementado en rama; CI pendiente |
-| TEC-017 | No borrar ni mutar `MovimientosInventario` existente; conservar hooks `beforeUpdate`/`beforeRemove` append-only. | El histórico puede contener evidencia QA/operativa que debe preservarse. | Aprobado y conservado |
 
 ### Fuentes técnicas oficiales Wix
 
@@ -68,8 +66,8 @@ Este registro centraliza las decisiones explícitas del propietario y las decisi
 
 - **Verificado:** Wix Stores deduce stock nativamente según el disparador configurado; en este sitio es `ON_ORDER_PAID`. Wix Bookings documenta capacidad nativa de depósitos, pero su esquema REST y Wix Help presentan una discrepancia sobre el método presencial.
 - **Verificado en lectura:** el sitio usa Stores Catalog V3 y tiene 30 inventory items con tracking en una ubicación; no se ha probado E2E.
-- **Verificado en rama de refactorización:** no hay módulo `inventario.web.js`, WebMethods ni panel custom; webhooks no realizan reservas, proyecciones ni movimientos de stock.
-- **Pendiente:** aclarar la discrepancia Wix Bookings `inPerson`; configurar depósitos en los 7 servicios elegibles solo tras QA; probar pago/saldo/refund/ledger E2E; ejecutar CI y QA Wix de la retirada de inventario.
+- **Verificado en código:** el módulo custom de inventario aún está conectado a webhooks y UI.
+- **Pendiente:** aclarar la discrepancia Wix Bookings `inPerson`; configurar depósitos en los 7 servicios elegibles solo tras QA; probar pago/saldo/refund/ledger E2E; retirar el módulo custom de inventario.
 - **No autorizado:** activar comunicaciones a clientes, cobros reales, cambios de datos o stock en producción y publicación.
 
 ---
