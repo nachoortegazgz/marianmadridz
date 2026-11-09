@@ -40,7 +40,7 @@ REFUND-01 (P1): deduplicacion fiscal por REFUND-{orderId}-{refundId}; valida
   reutilizacion de refundId, acumulado contra el importe original y lectura
   paginada con fallo cerrado. La base y cuota de IVA se prorratean en reembolsos
   parciales y el ultimo reembolso aplica el residual para cuadrar el original.
-  Los efectos restock explicitos de Wix conservan su idempotencia por refundId.
+  Los efectos de restock nativos son responsabilidad de Wix; el handler solo registra la rectificacion fiscal.
 
 FIXES APLICADOS v5009-FISCAL-V20.1 (heredados):
   - V20-01..V20-06.
