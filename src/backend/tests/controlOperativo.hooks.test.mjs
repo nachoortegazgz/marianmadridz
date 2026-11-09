@@ -71,13 +71,15 @@ describe("ControlOperativo hooks (ADR-05)", () => {
     /* SSOT-FIX (2026-10-13): el enum canónico de internalConfig es la fuente
        de verdad. BOOKING_TX quedo retirado (crons.js linea 509 confirma que
        no tiene productores ni consumidores activos). Se verifican ademas los
-       tres subtipos con productores reales en codigo activo: IDEMPOTENCY
-       (bookingCore v5013), SYSTEM_FLAG (bookingSaga v5013) y DEDUPE_KEY. */
+       tipos con productores reales: IDEMPOTENCY (bookingCore), SYSTEM_FLAG
+       (bookingSaga), DEDUPE_KEY (accounting/inventario) y
+       LEDGER_IDEMPOTENCY (caja). Los dos ultimos son durables y no entran
+       en cleanExpiredBookingControl. */
     /* La SSOT v10.0 entregada exige RATE_LIMIT persistido en ControlOperativo.
        DISPLAY_TOKEN se conserva por su productor activo en reservas.web.js. */
     const expected = [
       "SLOT_LOCK", "WEBHOOK_EVENT", "IDEMPOTENCY", "RATE_LIMIT",
-      "SYSTEM_FLAG",
+      "SYSTEM_FLAG", "DEDUPE_KEY", "LEDGER_IDEMPOTENCY",
       "COMPENSATION", "ALERT", "DAYS_CACHE", "DUAL_CACHE",
       "DISPLAY_TOKEN",
     ];
