@@ -164,7 +164,11 @@ test("staff widget remains fail-closed and bridge only accepts navigation", () =
   assert.doesNotMatch(allowlist[1], /CLOCK|TPV_TX|X_COUNT|Z_CLOSING|INVENTORY_/);
   assert.match(staffPage, /enableClocking:\s*false/);
   assert.match(staffPage, /enableCashier:\s*false/);
+  assert.match(staffPage, /cashierMode:\s*"DISABLED"/);
   assert.match(onlyStaffHtml, /isAuthorized:\s*false/);
+  assert.match(onlyStaffHtml, /contextData\.isAuthorized !== true/);
+  assert.match(onlyStaffHtml, /contextData\.enableClocking\s*===\s*true/);
+  assert.match(onlyStaffHtml, /contextData\.enableCashier\s*===\s*true/);
   assert.match(onlyStaffHtml, /enableClocking:\s*false/);
   assert.match(onlyStaffHtml, /enableCashier:\s*false/);
 });
