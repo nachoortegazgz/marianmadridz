@@ -201,7 +201,6 @@ export const INVENTORY_CONFIG = Object.freeze({
 // Singleton ids de caja (cajas.web.js ALN-04, eventLog.js).
 export const SINGLETONS = Object.freeze({
   CAJA_PRINCIPAL: "CAJA_PRINCIPAL",
-  CAJA_SEQ: "CAJA_SEQ",
 });
 
 // Enum de estados de caja. ALN-05: los miembros canonicos v12 son

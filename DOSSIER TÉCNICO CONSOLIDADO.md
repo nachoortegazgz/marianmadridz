@@ -428,7 +428,7 @@ Los hooks `beforeUpdate` y `beforeRemove` en `MovimientosCaja`, `LibroAsientosCo
 - **ServiciosCatalogo**: `totalDuration === phase1Duration + exposureDuration + phase2Duration`.
 - **InventarioStockVenta**: `stockAvailable === stockOnHand - stockReserved` y ningún valor negativo.
 - **LibroAsientosContablesDetalle**: para un mismo `entryId`, `SUM(debit) === SUM(credit)`.
-- **CajaActual**: solo dos documentos: `CAJA_PRINCIPAL` y `CAJA_SEQ`. Eliminación bloqueada.
+- **CajaActual**: colección `SINGLE_ITEM`; un único registro físico `SINGLE_ITEM_ID` con `singletonKey = CAJA_PRINCIPAL`. Los contadores global/anual viven en `sequenceCounters` del registro principal. Eliminación bloqueada.
 
 ### Campos canónicos transversales
 
@@ -447,7 +447,7 @@ Los hooks `beforeUpdate` y `beforeRemove` en `MovimientosCaja`, `LibroAsientosCo
 | `hash` | `huellaFiscal` | TEXT | Huella SHA-256 en `MovimientosCaja`. |
 | `previousRecordHash` | `anteriorRegistroHuellaFiscal` | TEXT | Enlace al registro fiscal anterior. |
 | `recordHash` | `registroHuellaContable` | TEXT | Huella en `LibroAsientosContablesDetalle`. |
-| `sequenceNumber` | `secuenciaNumeroCaja` | NUMBER | Secuencia monótona asignada desde `CAJA_SEQ`. |
+| `sequenceNumber` | `secuenciaNumeroCaja` | NUMBER | Secuencia monótona asignada desde `CajaActual.CAJA_PRINCIPAL.sequenceCounters`. |
 | `numSerieFactura` | `numeroSerieFactura` | TEXT | Número de ticket/factura correlativo sin saltos. |
 
 ### ControlOperativo — tipos de control
@@ -684,7 +684,7 @@ Nunca mutar estas colecciones directamente desde código propio.
 1. `CitasF2.paymentStatus = "PENDING_PAYMENT"` al crear la intención de compra.
 2. Pago procesado en la pasarela eCom / Wix Payments.
 3. Webhook `order_payment_status_updated` recibido y deduplicado en `ControlOperativo`.
-4. Se asigna `sequenceNumber` monótono desde `CAJA_SEQ` y se inserta append-only en `MovimientosCaja` con `channelType = "ONLINE"`, `movementType = "COBRO"`, hash SHA-256 encadenado.
+4. Se asigna `sequenceNumber` monótono desde `CajaActual.CAJA_PRINCIPAL.sequenceCounters` y se inserta append-only en `MovimientosCaja` con `channelType = "ONLINE"`, `movementType = "COBRO"`, hash SHA-256 encadenado.
 5. `CitasF2` actualizado a `paymentStatus = "PAID"`, `bookingStatus = "CONFIRMED"`.
 
 **Cancelaciones y reembolsos**:
@@ -888,7 +888,7 @@ El sistema garantiza el cumplimiento estricto del marco legal español y europeo
 | Norma | Exigencia | Implementación en Marian Madrid |
 | :--- | :--- | :--- |
 | **Ley 11/2021** (Medidas de Prevención del Fraude Fiscal) | Sistemas informáticos garantistas de inalterabilidad, trazabilidad y sin borrados. | Ledgers *append-only* (`MovimientosCaja`, `LibroAsientosContablesDetalle`, `RegistrosHorariosStaff`, `MovimientosInventario`) con hooks `beforeUpdate`/`beforeRemove` que lanzan `FISCAL_VIOLATION`. |
-| **RD 1007/2023** (Reglamento Veri*Factu) | Huella SHA-256 encadenada, secuencia monótona, QR de verificación. | `hash = SHA256(previousRecordHash + numSerieFactura + amount + timestamp)` en `MovimientosCaja`; `sequenceNumber` asignado desde `CAJA_SEQ`; `verificationQR` generado. Plazo legal autónomos: **1-jul-2027**. |
+| **RD 1007/2023** (Reglamento Veri*Factu) | Huella SHA-256 encadenada, secuencia monótona, QR de verificación. | `hash = SHA256(previousRecordHash + numSerieFactura + amount + timestamp)` en `MovimientosCaja`; `sequenceNumber` asignado desde `CajaActual.CAJA_PRINCIPAL.sequenceCounters`; `verificationQR` generado. Plazo legal autónomos: **1-jul-2027**. |
 | **RD 1619/2012** (Obligaciones de Facturación) | Facturas simplificadas correlativas, series rectificativas (R1–R5). | `numSerieFactura` correlativo sin saltos; `tipoRectificativa` y `previousInvoiceId` en asientos de devolución. |
 | **Ley 37/1992** (IVA) | Tipos impositivos oficiales y desglose base/cuota. | `tipoImpositivo` validado contra enum `TIPO_IMPOSITIVO` (`0`, `0.04`, `0.10`, `0.21`); invariante `taxBase + taxAmount ≈ amount` con `_roundMoney()`. |
 
@@ -981,7 +981,7 @@ El sistema garantiza el cumplimiento estricto del marco legal español y europeo
 | Campo | Colección principal | Función |
 | :--- | :--- | :--- |
 | `taxId` | `DatosFiscales` | NIF/NIE/CIF/VAT-UE validado. |
-| `sequenceNumber` | `MovimientosCaja` | Secuencia monótona desde `CAJA_SEQ`. |
+| `sequenceNumber` | `MovimientosCaja` | Secuencia monótona desde `CajaActual.CAJA_PRINCIPAL.sequenceCounters`. |
 | `numSerieFactura` | `MovimientosCaja` | Número correlativo sin saltos. |
 | `transactionId` | `MovimientosCaja` | Clave de idempotencia del hecho económico. |
 | `hash` / `previousRecordHash` | `MovimientosCaja` | Huellas SHA-256 encadenadas Veri*Factu. |
@@ -1089,7 +1089,7 @@ CONTROL_TYPE    = { SLOT_LOCK, WEBHOOK_EVENT, DEDUPE_KEY,
 | `CitasF2` | Valida enums, `traceId`, coherencia `pairToken`. | Actualizaciones controladas. | **Bloqueado**. |
 | `ServiciosCatalogo` | Unicidad `serviceId`/`sku`/`slug`; `totalDuration === phase1 + exposure + phase2`. | Controlado. | Solo ADMIN. |
 | `DatosFiscales` | Valida NIF/NIE/CIF/VAT-UE. | Controlado. | Bloqueado para `CONFIG_SISTEMA_FISCAL`. |
-| `CajaActual` | Valida `singletonKey` ∈ {`CAJA_PRINCIPAL`, `CAJA_SEQ`}. | Solo `CAJA_SEQ` editable. | **Bloqueado**. |
+| `CajaActual` | Valida `singletonKey = CAJA_PRINCIPAL` (colección `SINGLE_ITEM`). | `sequenceCounters` editable solo por backend bajo bloqueo fiscal global. | **Bloqueado**. |
 | `InventarioStockVenta` | Valida `stockAvailable === stockOnHand - stockReserved`. | Controlado. | Solo ADMIN. |
 | `ControlOperativo` | Valida `controlType`, `dedupeKey`, `traceId`. | Controlado. | Controlado. |
 | `MapaStaff` | Unicidad `resourceId`/`memberId`; enums de roles. | Controlado. | Solo ADMIN. |
@@ -3272,7 +3272,7 @@ El sitio `marianmadrid.es` gestiona **12 procesos de negocio** a través de tres
 | **P1.4** Creación de reserva simple | `citasManager.web.js` → `processDualBooking` (tipo SIMPLE). Revalida slot en servidor. `bookingCore.js` ejecuta `createBooking` (Bookings Writer V2) con `timezone: "Europe/Madrid"`, `locationType: "OWNER_BUSINESS"`, `resource._id`, `location._id`. Inserta en `CitasF2`. | `bookingId` (GUID Wix), `bookingType: "SIMPLE"`, `bookingStatus: "PENDING"`, `paymentStatus: "UNPAID"`, `serviceId`, `resourceId`, `slotStart`, `slotEnd`, `totalAmount`, `traceId` (UUID v4), `dateYmd` | `CitasF2` (insert) + Wix Bookings V2 (reserva nativa) |
 | **P1.5** Creación de reserva dual (F1+F2) | `bookingSaga.js` orquesta dos llamadas independientes a `createBooking` vinculadas por `pairToken` (UUID v4). F1: fase de aplicación (importe total). F2: fase de lavado/peinado (`totalAmount = 0`, `NO_FEE`, `selectedPaymentOption: OFFLINE`). El Writer F2 se invoca sin opciones de bypass y conserva la validación nativa de disponibilidad y de opción de pago de Wix. Mutex `SLOT_LOCK` en `ControlOperativo` como coordinación adicional, sin sustituir la validación nativa. | `pairToken`, `bookingId` F1, `bookingId` F2, `bookingType: "DUAL_F1"` / `"DUAL_F2"`, `totalAmount` (F1: importe total, F2: 0), `slotStart` F2 = `slotStart` F1 + `phase1Duration` + `exposureDuration`, `traceId` | `CitasF2` (2 inserts) + `ControlOperativo` (`SLOT_LOCK`) + Wix Bookings V2 (2 reservas nativas) |
 | **P1.6** Saga de compensación (fallo F2) | Si la creación de F2 o su persistencia fallan → `cancelBooking` sobre F1. Registro en `ControlOperativo`. Job `runPendingCompensationsJob` reintenta cada 30 min. | `controlType: "SYSTEM_FLAG"`, `alertType: "COMPENSATION_PENDING"`, `pairToken`, `bookingId` F1 cancelada, `traceId` | `ControlOperativo` (insert) + Wix Bookings V2 (cancelación F1) |
-| **P1.7** Confirmación por pago online | Webhook `order_payment_status_updated` → `events.js` deduplica por `eventId` en `ControlOperativo`. Actualiza `CitasF2`. Inserta en `MovimientosCaja` con `sequenceNumber` monótono desde `CAJA_SEQ`. | `paymentStatus: "PAID"`, `bookingStatus: "CONFIRMED"`, `transactionId`, `sequenceNumber`, `numSerieFactura`, `hash` (SHA-256), `previousRecordHash`, `taxBase`, `taxAmount`, `tipoImpositivo`, `channelType: "ONLINE"`, `movementType: "COBRO"`, `traceId` | `CitasF2` (update) + `MovimientosCaja` (insert append-only) + `ControlOperativo` (`WEBHOOK_EVENT`) |
+| **P1.7** Confirmación por pago online | Webhook `order_payment_status_updated` → `events.js` deduplica por `eventId` en `ControlOperativo`. Actualiza `CitasF2`. Inserta en `MovimientosCaja` con `sequenceNumber` monótono desde `CajaActual.CAJA_PRINCIPAL.sequenceCounters`. | `paymentStatus: "PAID"`, `bookingStatus: "CONFIRMED"`, `transactionId`, `sequenceNumber`, `numSerieFactura`, `hash` (SHA-256), `previousRecordHash`, `taxBase`, `taxAmount`, `tipoImpositivo`, `channelType: "ONLINE"`, `movementType: "COBRO"`, `traceId` | `CitasF2` (update) + `MovimientosCaja` (insert append-only) + `ControlOperativo` (`WEBHOOK_EVENT`) |
 | **P1.8** Reprogramación de reserva | `citasManager.web.js` → `rescheduleExistingBooking` / `rescheduleDualBookings` (Permiso `SiteMember`). Webhook `booking_rescheduled`. Regeneración de `pairToken` si dual. | `bookingId`, nuevo `slotStart`/`slotEnd`, nuevo `resourceId` (si cambia), `traceId` | `CitasF2` (update controlado) + Wix Bookings V2 |
 | **P1.9** Cancelación de reserva | Webhook `booking_canceled` → `events.js` deduplica. Actualiza `CitasF2`. Registro rectificativo en `MovimientosCaja` (`movementType: "DEVOLUCION"`). Devolución de stock si aplica en `MovimientosInventario`. | `bookingStatus: "CANCELED"`, `paymentStatus: "REFUNDED"`, `movementType: "DEVOLUCION"`, `hash` encadenado, `previousInvoiceId`, `tipoRectificativa`, `traceId` | `CitasF2` (update) + `MovimientosCaja` (insert append-only) + `MovimientosInventario` (si aplica) + `ControlOperativo` |
 | **P1.10** No-show | Registro manual por staff vía `citasManager.web.js`. Actualización de `CitasF2`. | `bookingStatus: "NO_SHOW"`, `traceId` | `CitasF2` (update controlado) |
@@ -3312,7 +3312,7 @@ El sitio `marianmadrid.es` gestiona **12 procesos de negocio** a través de tres
 | Subproceso | Descripción técnica | Datos generados | Colección / Destino SSOT |
 | :--- | :--- | :--- | :--- |
 | **P3.1** Apertura de caja | `CajaActual` (`CAJA_PRINCIPAL`) se inicializa al inicio de jornada. `isOpen: true`, `openedAt`, `openedBy`, `openingAmount` (fondo inicial). | `singletonKey: "CAJA_PRINCIPAL"`, `isOpen`, `openedAt`, `openedBy`, `openingAmount`, `operationDate`, `traceId` | `CajaActual` (update) |
-| **P3.2** Cobro presencial (efectivo/tarjeta/Bizum) | `cajas.web.js` → `registerManualTransaction` (Permiso `SiteMember`, rol ADMIN o GESTION). Inserta en `MovimientosCaja` con `channelType: "PRESENCIAL"`. Actualiza `CajaActual`. Asigna `sequenceNumber` desde `CAJA_SEQ`. Genera `hash` SHA-256 encadenado. | `sequenceNumber`, `numSerieFactura`, `fechaExpedicionFactura`, `movementType: "COBRO"`, `channelType: "PRESENCIAL"`, `paymentMethod` (EFECTIVO/TARJETA/BIZUM), `amount`, `taxBase`, `taxAmount`, `tipoImpositivo`, `hash`, `previousRecordHash`, `transactionId`, `staffResourceId`, `operationDescription`, `traceId` | `MovimientosCaja` (insert append-only) + `CajaActual` (update saldos) |
+| **P3.2** Cobro presencial (efectivo/tarjeta/Bizum) | `cajas.web.js` → `registerManualTransaction` (Permiso `SiteMember`, rol ADMIN o GESTION). Inserta en `MovimientosCaja` con `channelType: "PRESENCIAL"`. Actualiza `CajaActual`. Asigna `sequenceNumber` desde `CajaActual.CAJA_PRINCIPAL.sequenceCounters`. Genera `hash` SHA-256 encadenado. | `sequenceNumber`, `numSerieFactura`, `fechaExpedicionFactura`, `movementType: "COBRO"`, `channelType: "PRESENCIAL"`, `paymentMethod` (EFECTIVO/TARJETA/BIZUM), `amount`, `taxBase`, `taxAmount`, `tipoImpositivo`, `hash`, `previousRecordHash`, `transactionId`, `staffResourceId`, `operationDescription`, `traceId` | `MovimientosCaja` (insert append-only) + `CajaActual` (update saldos) |
 | **P3.3** Devolución presencial | `registerManualTransaction` con `movementType: "DEVOLUCION"`. Registro rectificativo con `previousInvoiceId` y `tipoRectificativa`. | `movementType: "DEVOLUCION"`, `previousInvoiceId`, `tipoRectificativa`, `correctionReason`, `hash` encadenado, `traceId` | `MovimientosCaja` (insert append-only) |
 | **P3.4** Ajuste de caja | `registerManualTransaction` con `movementType: "AJUSTE"`. Requiere `operationDescription` obligatoria. | `movementType: "AJUSTE"`, `amount`, `operationDescription`, `traceId` | `MovimientosCaja` (insert append-only) |
 | **P3.5** Aportación / Retiro | `movementType: "APORTACION"` o `"RETIRO"`. Operaciones no comerciales. | `movementType`, `amount`, `operationDescription`, `traceId` | `MovimientosCaja` (insert append-only) |

@@ -48,21 +48,24 @@ Los nombres anteriores corresponden a archivos verificados en `main`. No se han 
 
 **Archivos:** `src/backend/fiscalAggregator.web.js`, `src/backend/tests/fiscalAggregator.read.test.mjs`.
 
-## 5. Hallazgo P1 pendiente — serialización de la cadena fiscal en eventLog
+## 5. Cierre del generador duplicado de secuencia fiscal
 
-**Evidencia estática:** `registrarEventoEconomico` realiza, en este orden:
-1. `_getLastCashEvent()` para leer el hash anterior.
-2. `_getNextSequenceInternal()` para incrementar la secuencia mediante concurrencia optimista.
-3. Calcula `hashChain(previousRecordHash, aeatPayload)`.
-4. Inserta el movimiento en `MovimientosCaja`.
+**Causa raíz verificada en Wix CMS:** `CajaActual` tiene el plugin `SINGLE_ITEM` y `singleItemId = SINGLE_ITEM_ID`. Solo admite un registro. La lectura live devolvió un único elemento con `_id = SINGLE_ITEM_ID`, `singletonKey = CAJA_PRINCIPAL`; no existe un segundo registro de secuencia. `MovimientosCaja` devolvió cero elementos en esta inspección. El diseño anterior intentaba insertar `CAJA_SEQ` en esa misma colección, lo que contradice el contrato físico de Wix.
 
-La actualización optimista de `CAJA_SEQ` evita que dos writers consuman el mismo contador si el contrato de revisión de Wix se cumple, pero no serializa la lectura del último movimiento con la inserción. Dos eventos distintos concurrentes pueden leer el mismo hash anterior, reservar secuencias distintas y crear una bifurcación de la cadena.
+**Cambio mínimo en rama `fix/remove-caja-seq-singleton`:**
+1. Un único asignador `allocateFiscalSequence` y un único rollback `rollbackFiscalSequence` en `fiscalLedgerLock.js`.
+2. Los contadores global y anual se guardan en `sequenceCounters` del único `CAJA_PRINCIPAL`; se preserva `appliedMovementIds`.
+3. `cajas.web.js` y `eventLog.js` usan el mismo asignador bajo `acquireFiscalLedgerLock`; se eliminan los generadores y rollbacks duplicados.
+4. `CajaActual_beforeInsert` solo admite el singleton principal; la actualización de contadores se permite en ese mismo registro.
+5. Si una escritura devuelve resultado incierto, se hace lectura fuerte de comprobación. Si no puede determinarse el resultado, se conserva el bloqueo fiscal para reparación; no se asigna otra secuencia a ciegas.
 
-**Impacto:** integridad del ledger y verificabilidad de la cadena fiscal. La idempotencia por `eventId` de webhook no evita esta carrera entre eventos diferentes.
+**Evidencia:** esquema live de `CajaActual` con plugin `SINGLE_ITEM`; registro principal `_id=SINGLE_ITEM_ID`; cero filas en `MovimientosCaja` durante la consulta. Documentación Wix: colección de elemento único y su propósito de contenido no repetible.
 
-**Estado:** riesgo P1 identificado por inspección del código; todavía no se ha demostrado mediante una prueba de concurrencia contra Wix ni se ha implementado un mutex. No se debe declarar cerrada la integridad concurrente de `eventLog`.
+**Riesgo residual:** el bloqueo global tiene TTL de 10 minutos y verifica propietario antes del append, pero no implementa renovación/fencing distribuido. Las operaciones que superen el TTL deben seguir siendo rechazadas por la comprobación de propietario; la prueba de concurrencia real en Wix continúa pendiente.
 
-**Resolución técnica necesaria:** diseñar una serialización de append que use una primitiva CMS con compare-and-swap/lease y recuperación tras timeout, o una estrategia de reserva única por secuencia con reconciliación del head. Antes de implementar, verificar esquema físico de `CajaActual`/`ControlOperativo`, semántica de revisión de `@wix/data`, vencimiento/fencing y comportamiento tras caída del proceso. Un lock con TTL sin fencing/renovación no basta.
+**Validación CI:** run #142 detectó sintaxis inválida en `eventLog.js` y fixtures sin el singleton principal; corregidos. Run #144 ejecutó 46 suites: 437 pruebas pasaron y una falló (`EVENT-PAYMENT-09`) porque el fixture de webhook no sembraba `CajaActual.CAJA_PRINCIPAL`; SDK Cart V2, Bookings Reader V2 y ESLint pasaron. Se añadió el singleton al fixture de ese webhook en el commit siguiente; la repetición completa de CI sobre ese commit queda pendiente. No se declara validado hasta obtener resultado verde.
+
+**Estado:** cambio de código preparado en rama; sin escrituras CMS, sin movimientos fiscales y sin publicación.
 
 ## 6. Módulos P1 ausentes — inventario y proyección contable
 

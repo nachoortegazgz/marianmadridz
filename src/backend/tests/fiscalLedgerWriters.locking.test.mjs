@@ -15,12 +15,15 @@ test("FISCAL-CHAIN-01 eventLog acquires the shared lock before reading hash head
   const code = await source("eventLog.js");
   const acquire = code.indexOf("acquireFiscalLedgerLock(traceId)");
   const readHead = code.indexOf("const previous = await _getLastCashEvent()");
-  const nextSequence = code.indexOf("const seq = await _getNextSequenceInternal(traceId)");
+  const nextSequence = code.indexOf("seq = await allocateFiscalSequence(ledgerLock, previous)");
   const insert = code.indexOf("cabecera = await dalInsert(MOVIMIENTOS_CAJA_COL, doc)");
   const assertLock = code.indexOf("await assertFiscalLedgerLock(ledgerLock)");
 
   assert.ok(acquire >= 0);
   assert.ok(readHead > acquire);
+  const headReaderStart = code.indexOf("async function _getLastCashEvent()");
+  const strongHeadRead = code.indexOf('.find({ consistencyMode: "strong" })', headReaderStart);
+  assert.ok(strongHeadRead > headReaderStart);
   assert.ok(nextSequence > acquire);
   assert.ok(assertLock > nextSequence);
   assert.ok(insert > assertLock);
@@ -30,12 +33,14 @@ test("FISCAL-CHAIN-01 eventLog acquires the shared lock before reading hash head
 test("FISCAL-CHAIN-02 manual cash writer shares the same lock and checks ownership before append", async () => {
   const code = await source("cajas.web.js");
   const acquire = code.indexOf("acquireFiscalLedgerLock(traceId)");
-  const nextSequence = code.indexOf("const seq = await _getNextSequence(traceId)");
+  const lastMovement = code.indexOf("const lastMovement = await _getLastMovement()", acquire);
+  const nextSequence = code.indexOf("seq = await allocateFiscalSequence(ledgerLock, lastMovement)", acquire);
   const insert = code.indexOf("saved = await dalInsert(MOVIMIENTOS_CAJA_COL, movement)");
   const assertLock = code.indexOf("await assertFiscalLedgerLock(ledgerLock)");
 
   assert.ok(acquire >= 0);
-  assert.ok(nextSequence > acquire);
+  assert.ok(lastMovement > acquire);
+  assert.ok(nextSequence > lastMovement);
   assert.ok(assertLock > nextSequence);
   assert.ok(insert > assertLock);
   assert.match(code, /finally\s*\{[\s\S]*releaseFiscalLedgerLock\(ledgerLock\)/);
@@ -61,7 +66,8 @@ test("FISCAL-CHAIN-04 manual writer revalidates closed period after acquiring th
   const start = code.indexOf("export const registerManualTransaction");
   const acquire = code.indexOf("acquireFiscalLedgerLock(traceId)", start);
   const recheck = code.indexOf("_assertPeriodNotClosed(operationDate, traceId)", acquire);
-  const nextSequence = code.indexOf("const seq = await _getNextSequence(traceId)", acquire);
+  const lastMovement = code.indexOf("const lastMovement = await _getLastMovement()", acquire);
+  const nextSequence = code.indexOf("seq = await allocateFiscalSequence(ledgerLock, lastMovement)", acquire);
 
   assert.ok(acquire > start);
   assert.ok(recheck > acquire);
@@ -99,4 +105,19 @@ test("FISCAL-CHAIN-07 Z closing never exposes raw internal exception messages", 
   assert.doesNotMatch(catchBlock, /_toPublicError\(err/);
   assert.match(catchBlock, /publicMessages\[publicCode\]\s*\|\|\s*"No se pudo completar el cierre Z\."/);
   assert.match(catchBlock, /normalized\.message/);
+});
+
+test("FISCAL-CHAIN-08 no active backend path creates the obsolete CAJA_SEQ singleton", async () => {
+  const [cajas, eventLog, config, data, lock] = await Promise.all([
+    source("cajas.web.js"),
+    source("eventLog.js"),
+    source("internalConfig.js"),
+    source("data.js"),
+    source("fiscalLedgerLock.js"),
+  ]);
+  for (const code of [cajas, eventLog, config, data, lock]) {
+    assert.doesNotMatch(code, /CAJA_SEQ/);
+  }
+  assert.match(lock, /allocateFiscalSequence/);
+  assert.match(lock, /getCashRegisterSingleton/);
 });

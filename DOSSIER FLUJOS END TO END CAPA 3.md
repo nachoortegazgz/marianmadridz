@@ -677,7 +677,7 @@ Según PTD Kit Digital §13 (25 escenarios, 96% resiliencia):
 | Campo SSOT (Capa 1) | Colección origen | Proceso que lo genera | CSV de export que lo incluye | Carpeta Capa 3 destino | Norma que exige su conservación |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | `sequenceNumber` | `MovimientosCaja` | `registerManualTransaction` / webhook eCom | `MOVIMIENTOS_CAJA` | `1_VENTAS/Movimientos/` | RD 1007/2023 (secuencia monótona) |
-| `numSerieFactura` | `MovimientosCaja` | Asignación desde `CAJA_SEQ` | `MOVIMIENTOS_CAJA` | `1_VENTAS/Movimientos/` | RD 1619/2012 (correlativo) |
+| `numSerieFactura` | `MovimientosCaja` | Asignación desde `CajaActual.CAJA_PRINCIPAL.sequenceCounters` | `MOVIMIENTOS_CAJA` | `1_VENTAS/Movimientos/` | RD 1619/2012 (correlativo) |
 | `hash` | `MovimientosCaja` | `hashChain(prevHash, payload)` | `MOVIMIENTOS_CAJA` | `1_VENTAS/Movimientos/` | Ley 11/2021 (inalterabilidad) |
 | `previousRecordHash` | `MovimientosCaja` | Enlace al registro anterior | `MOVIMIENTOS_CAJA` | `1_VENTAS/Movimientos/` | Ley 11/2021 (cadena) |
 | `taxBase` | `MovimientosCaja` | Cálculo en `cajas.web.js` | `MOVIMIENTOS_CAJA` | `1_VENTAS/Movimientos/` | Ley 37/1992 (IVA) |

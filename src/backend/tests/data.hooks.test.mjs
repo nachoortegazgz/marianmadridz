@@ -317,6 +317,26 @@ test('HOOK-MOCK-00 loader mock available', () => {
   assert.ok(true);
 });
 
+test('HOOK-CAJA-SINGLE-01 enforces the CajaActual single-item principal', () => {
+  const principal = { _id: 'SINGLE_ITEM_ID', singletonKey: 'CAJA_PRINCIPAL' };
+  assert.strictEqual(H.CajaActual_beforeInsert(principal), principal);
+  assert.throws(
+    () => H.CajaActual_beforeInsert({ _id: 'CAJA_SEQ', singletonKey: 'CAJA_SEQ' }),
+    /SINGLE_ITEM/,
+  );
+
+  const previous = {
+    _id: 'SINGLE_ITEM_ID',
+    singletonKey: 'CAJA_PRINCIPAL',
+    sequenceCounters: { seqGlobal: 8, appliedMovementIds: ['movement-1'] },
+  };
+  const next = {
+    ...previous,
+    sequenceCounters: { seqGlobal: 9, appliedMovementIds: ['movement-1'] },
+  };
+  assert.strictEqual(H.CajaActual_beforeUpdate(next, { original: previous }), next);
+});
+
 
 // -----------------------------------------------------------------------------
 // Capa 2 — inventory and accounting ledgers are immutable append-only records.
