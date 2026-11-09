@@ -167,7 +167,7 @@ test("INVENTORY-WRITER-02 repeated paid-order event is idempotent by movementTok
   assert.equal(wixDataMock._store.get(STOCK_COL)[0].stockOnHand, 6);
 });
 
-test("INVENTORY-WRITER-03 refuses Catalog V3 before any CMS mutation", async () => {
+test("INVENTORY-WRITER-03 refuses Catalog V1 before any CMS mutation", async () => {
   catalogVersion = "V1_CATALOG";
   const result = await INV.syncPaidOrderInventoryInternal(
     paidOrder(),
