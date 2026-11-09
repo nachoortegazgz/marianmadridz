@@ -375,6 +375,12 @@ test('FLOW-CAJA-01 flujo continuo: venta EFECTIVO -> caja incrementada -> cierre
   assert.strictEqual(state.status, 'SUCCESS');
   assert.ok((state.data.totalOperations ?? 0) >= 1, 'operaciones contabilizadas: ' + JSON.stringify(state.data));
 
+  // A read failure must not be represented as a legitimate zero-operation day.
+  wixDataMock._findErrors.set('MovimientosCaja', new Error('synthetic CMS read failure'));
+  const failedState = await cajas.getCashierState({});
+  assert.strictEqual(failedState.status, 'ERROR', 'ledger read failure must fail closed');
+  wixDataMock._findErrors.delete('MovimientosCaja');
+
   // Paso 3: cierre Z del dia de la operacion
   const diaKey = mov.invoiceIssueDate || new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Madrid' });
   const z = await cajas.registerZClosing(diaKey, {});
