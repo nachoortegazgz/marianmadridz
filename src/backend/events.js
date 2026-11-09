@@ -1578,7 +1578,7 @@ export async function wixBookingsV2_onBookingCanceled(eventPayload) {
                         Number(originalMovement.totalAmount ?? 0)
                     );
 
-                    const eventResult = await registrarEventoEconomico({
+                    const rectificationPayload = {
                         eventType: EVENT_TYPE.RECTIFICATIVA,
                         movementType: MOVEMENT_TYPE.REEMBOLSO,
                         paymentMethod:
@@ -1626,7 +1626,8 @@ export async function wixBookingsV2_onBookingCanceled(eventPayload) {
                         transactionId: rectificationTransactionId,
                         orderId: originalMovement.orderId || null,
                         traceId,
-                    });
+                    };
+                    const eventResult = await registrarEventoEconomico(rectificationPayload);
 
                     if (
                         eventResult.status !== "SUCCESS" &&
@@ -1664,6 +1665,8 @@ export async function wixBookingsV2_onBookingCanceled(eventPayload) {
                             : `Rectificacion cancelacion booking ${bookingId}`,
                         resourceId: "online",
                         movementType: MOVEMENT_TYPE.REEMBOLSO,
+                        recoveryProcessor: "EVENT_LOG",
+                        fiscalPayload: rectificationPayload,
                         traceId,
                         lastError: rectErr?.message || "RECT_FAIL",
                     });
