@@ -120,7 +120,36 @@ function normalizeLegacyPaymentMethod(raw) {
     return v;
 }
 
+function _signedFiscalValue(movement, reader) {
+    const accountingAmount = Number(movement?.accountingAmount);
+    const sign = Number(movement?.accountingSign) < 0 || accountingAmount < 0 ? -1 : 1;
+    return Math.abs(Number(reader(movement)) || 0) * sign;
+}
+
+function _getLocalYear(date = new Date()) {
+    return new Intl.DateTimeFormat("en", {
+        timeZone: SDK_CONFIG?.TZ || "Europe/Madrid",
+        year: "numeric",
+    }).format(date);
+}
+
 const STRONG_READ = Object.freeze({ consistencyMode: "strong" });
+
+// CajaActual keys are canonical and shared by sequence and register projections.
+const CAJA_KEYS = Object.freeze({
+    SINGLETON_KEY: "singletonKey",
+    OPERATION_DATE: "operationDate",
+    STATUS: "cashRegisterStatus",
+    TOTAL: "netAmount",
+    CASH: "cashAmount",
+    CARD: "cardAmount",
+    BIZUM: "voucherAmount",
+    ONLINE: "otherAmount",
+    OPERATIONS: "salesCount",
+    OPENED_AT: "openedAt",
+    CLOSED_AT: "closedAt",
+    LAST_MOVEMENT_AT: "lastMovementAt",
+});
 
 // ============================================================================
 // HELPERS
@@ -162,12 +191,28 @@ export function _invalidateSecretCache() {
 
 async function _queueCompensation(params) {
     const p = params || {};
-    const dedupeKey = `COMP_${p.kind || "FISCAL"}_${p.transactionId || Date.now()}_${Date.now()}`;
+    const kind = p.kind || "FISCAL_LEDGER";
+    const traceId = _safeTrim(p.traceId) || makeTraceId("comp");
+    const origin = p.origin || "FISCAL_RECOVERY";
+    const phase = p.phase || null;
+    const identity = {
+        kind,
+        transactionId: p.transactionId || null,
+        orderId: p.orderId || null,
+        refundId: p.refundId || null,
+        phase,
+        origin,
+        totalAmount: Number(p.totalAmount) || 0,
+        paymentMethod: p.paymentMethod || null,
+        movementType: p.movementType || null,
+        fallbackTraceId: p.transactionId || p.orderId || p.refundId ? null : traceId,
+    };
+    const identityHash = await hashSHA256(_stableSerialize(identity));
     const record = {
-        _id: `REC_${p.kind || "FISCAL"}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        _id: `REC_${identityHash}`,
         controlType: CONTROL_TYPE.COMPENSATION,
-        dedupeKey,
-        kind: p.kind || "FISCAL_LEDGER",
+        dedupeKey: `COMP_${identityHash}`,
+        kind,
         transactionId: p.transactionId || null,
         orderId: p.orderId || null,
         refundId: p.refundId || null,
@@ -176,20 +221,28 @@ async function _queueCompensation(params) {
         status: "PENDING_RECOVERY",
         attempts: Number(p.attempts) || 0,
         lastError: p.lastError || null,
-        traceId: _safeTrim(p.traceId) || makeTraceId("comp"),
-        // Fields not declared by ControlOperativo stay in its OBJECT payload.
+        traceId,
         payload: {
             bookingIds: p.bookingIds || null,
             paymentMethod: p.paymentMethod || null,
             movementType: p.movementType || null,
-            phase: p.phase || null,
-            origin: p.origin || "FISCAL_RECOVERY",
+            phase,
+            origin,
             alertRequired: Boolean(p.alertRequired),
         },
         _createdDate: new Date(),
         _updatedDate: new Date(),
     };
-    await dalInsert(CONTROL_OPERATIVO_COL, record);
+    try {
+        const saved = await dalInsert(CONTROL_OPERATIVO_COL, record);
+        return { created: true, duplicate: false, id: saved?._id || record._id };
+    } catch (insertError) {
+        const existing = await dalGet(CONTROL_OPERATIVO_COL, record._id, "strong").catch(() => null);
+        if (existing?.dedupeKey === record.dedupeKey) {
+            return { created: false, duplicate: true, id: record._id };
+        }
+        throw insertError;
+    }
 }
 
 async function validateFiscalConfig(traceId = "init") {
@@ -349,11 +402,16 @@ async function _computeSignature(currentHash, traceId) {
 
 function _generateVerificationQR(numSerieFactura, nifEmisor, fechaExpedicionFactura, totalAmount) {
     const baseUrl = "https://www2.agenciatributaria.gob.es/wlpl/TIKE-CONT/ValidarQR";
+    const dateMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(_safeTrim(fechaExpedicionFactura));
+    const amount = Number(totalAmount);
+    if (!dateMatch || !Number.isFinite(amount) || amount < 0) {
+        throw new Error("FISCAL_QR_INPUT_INVALID");
+    }
     const params = [
-        `nif=${encodeURIComponent(nifEmisor)}`,
-        `numserie=${encodeURIComponent(numSerieFactura)}`,
-        `fecha=${encodeURIComponent(fechaExpedicionFactura)}`,
-        `importe=${encodeURIComponent(String(totalAmount))}`,
+        `nif=${encodeURIComponent(_safeTrim(nifEmisor).toUpperCase())}`,
+        `numserie=${encodeURIComponent(_safeTrim(numSerieFactura))}`,
+        `fecha=${encodeURIComponent(_formatAEATDate(fechaExpedicionFactura))}`,
+        `importe=${encodeURIComponent(amount.toFixed(2))}`,
     ];
     return `${baseUrl}?${params.join("&")}`;
 }
@@ -386,7 +444,7 @@ async function _getNextSequence(traceId) {
 
             const counters = { ...(seqDoc.sequenceCounters || {}) };
             const nextGlobal = Number(counters.seqGlobal || 0) + 1;
-            const yearKey = String(new Date().getFullYear());
+            const yearKey = _getLocalYear();
             const nextYear = Number(counters[yearKey] || 0) + 1;
             counters.seqGlobal = nextGlobal;
             counters[yearKey] = nextYear;
@@ -664,6 +722,10 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
                 }
             }
 
+        // Revalidate after acquiring the shared lock: a Z close may have
+        // completed while this writer was waiting.
+        await _assertPeriodNotClosed(operationDate, traceId);
+
         const seq = await _getNextSequence(traceId);
         const lastMovement = await _getLastMovement();
         const previousRecordHash = lastMovement?.hash || GENESIS_HASH;
@@ -756,7 +818,7 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
                 error: signErr?.message,
                 traceId,
             });
-            await queueFiscalRecovery({
+            const recovery = await queueFiscalRecovery({
                 transactionId: baseMovement.transactionId,
                 bookingIds: baseMovement.linkedBookingIds,
                 totalAmount: amount,
@@ -770,15 +832,20 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
                 lastError: signErr?.message || "FISCAL_SIGN_FAIL",
             });
             return {
-                status: "SUCCESS",
+                status: "PARTIAL",
                 data: {
                     ...baseMovement,
                     previousRecordHash,
                     hash: movementHash,
                     pendingSignature: true,
-                    queued: true,
+                    queued: recovery.queued,
                 },
-                error: null,
+                error: {
+                    code: recovery.queued ? "FISCAL_SIGNATURE_PENDING" : "FISCAL_SIGNATURE_RECOVERY_QUEUE_FAILED",
+                    message: recovery.queued
+                        ? "La firma fiscal esta pendiente de recuperacion."
+                        : "La firma fiscal esta pendiente y no se pudo registrar su recuperacion.",
+                },
             };
         }
 
@@ -926,7 +993,16 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
     } catch (err) {
         const norm = normalizeError(err);
         log.error("registerManualTransaction failed", { code: norm.code, error: norm.message, traceId });
-        return { status: "ERROR", data: null, error: { code: norm.code || "LEDGER_FAIL", message: norm.message } };
+        return {
+            status: "ERROR",
+            data: null,
+            error: {
+                code: norm.code || "LEDGER_FAIL",
+                message: norm.code === "PERIOD_CLOSED"
+                    ? "El periodo fiscal esta cerrado."
+                    : "No se pudo completar la operacion fiscal.",
+            },
+        };
     }
 });
 
@@ -939,23 +1015,6 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
 // "saldo contable". Claves legacy (cashBalance, cardBalance...) eliminadas:
 // CajaActual no tiene hook de normalizacion y cualquier lector debe usar
 // estas constantes como unica fuente.
-// MATRIZ v15 (CajaActual): singletonKey es el campo representativo del doc;
-// id es clave eliminada. CASH_REGISTER_ID ("CAJA_PRINCIPAL") / CASH_SEQ_ID
-// ("CAJA_SEQ") se persisten en singletonKey ademas de gobernar el _id.
-const CAJA_KEYS = Object.freeze({
-    SINGLETON_KEY: "singletonKey",
-    OPERATION_DATE: "operationDate",
-    STATUS: "cashRegisterStatus",
-    TOTAL: "netAmount",
-    CASH: "cashAmount",
-    CARD: "cardAmount",
-    BIZUM: "voucherAmount",
-    ONLINE: "otherAmount",
-    OPERATIONS: "salesCount",
-    OPENED_AT: "openedAt",
-    CLOSED_AT: "closedAt",
-    LAST_MOVEMENT_AT: "lastMovementAt",
-});
 
 // CajaActual's singletonKey is the logical identity. Wix may assign a
 // different physical _id to the collection's singleton item, so never use
@@ -1132,10 +1191,10 @@ export async function queueFiscalRecovery(recoveryData) {
             lastError: recoveryData.lastError,
             alertRequired: false,
         });
-        return { queued: queued !== false, traceId };
+        return { queued: Boolean(queued?.created || queued?.duplicate), duplicate: Boolean(queued?.duplicate), traceId };
     } catch (err) {
         log.error("queueFiscalRecovery failed", { traceId, error: err?.message });
-        return { queued: false, traceId, error: err?.message || "QUEUE_FAILED" };
+        return { queued: false, traceId, error: "QUEUE_FAILED" };
     }
 }
 
@@ -1204,6 +1263,8 @@ async function _countMovementsOfDay(diaKey) {
 
 async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) {
     const traceId = _safeTrim(options?.traceId) || makeTraceId("z-close");
+    let ledgerLock = null;
+    let retainLedgerLock = false;
     try {
         if (authorizeCashier) await requireCajero(traceId);
         await validateFiscalConfig(traceId);
@@ -1212,6 +1273,9 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
             return { status: "ERROR", data: null, error: { code: "INVALID_DATE", message: "Fecha invalida" } };
         }
 
+        ledgerLock = await acquireFiscalLedgerLock(traceId);
+        await assertFiscalLedgerLock(ledgerLock);
+
         const existingZ = await dalGet(HISTORICO_CIERRES_Z_COL, `Z_${cleanDiaKey}`, "strong").catch(() => null);
         if (existingZ) {
             log.warn("Z_CLOSING_ALREADY_EXISTS", { cleanDiaKey, traceId });
@@ -1219,6 +1283,7 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
         }
 
         let allMovements = [];
+        let hasMoreMovements = false;
         const seenIds = new Set();
         for (const dateField of ["fechaExpedicionFactura", ...MOVEMENT_LEGACY_READ_ALIASES.fechaExpedicionFactura]) {
             const query = dalQuery(MOVIMIENTOS_CAJA_COL)
@@ -1237,6 +1302,14 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
                 }
                 page++;
             }
+            if (res.hasNext()) hasMoreMovements = true;
+        }
+        if (hasMoreMovements) {
+            return {
+                status: "ERROR",
+                data: { checked: allMovements.length, complete: false },
+                error: { code: "Z_MOVEMENT_PAGE_LIMIT", message: "No se puede cerrar un periodo con movimientos sin auditar." },
+            };
         }
         allMovements.sort((a, b) => (Number(a.sequenceNumber) || 0) - (Number(b.sequenceNumber) || 0));
 
@@ -1244,16 +1317,16 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
             return { status: "ERROR", data: null, error: { code: "NO_MOVEMENTS", message: "No hay movimientos para cerrar" } };
         }
 
-        const totalCash = allMovements.filter(m => m.paymentMethod === PAYMENT_METHOD.EFECTIVO).reduce((s, m) => s + Number(m.accountingAmount || 0), 0);
-        const totalCard = allMovements.filter(m => m.paymentMethod === PAYMENT_METHOD.TARJETA).reduce((s, m) => s + Number(m.accountingAmount || 0), 0);
-        const totalBizum = allMovements.filter(m => m.paymentMethod === PAYMENT_METHOD.BIZUM).reduce((s, m) => s + Number(m.accountingAmount || 0), 0);
-        const totalOnline = allMovements.filter(m => ONLINE_PAYMENT_METHODS.includes(m.paymentMethod)).reduce((s, m) => s + Number(m.accountingAmount || 0), 0);
+        const totalCash = allMovements.filter(m => normalizeLegacyPaymentMethod(m.paymentMethod) === PAYMENT_METHOD.EFECTIVO).reduce((s, m) => s + Number(m.accountingAmount || 0), 0);
+        const totalCard = allMovements.filter(m => normalizeLegacyPaymentMethod(m.paymentMethod) === PAYMENT_METHOD.TARJETA).reduce((s, m) => s + Number(m.accountingAmount || 0), 0);
+        const totalBizum = allMovements.filter(m => normalizeLegacyPaymentMethod(m.paymentMethod) === PAYMENT_METHOD.BIZUM).reduce((s, m) => s + Number(m.accountingAmount || 0), 0);
+        const totalOnline = allMovements.filter(m => ONLINE_PAYMENT_METHODS.includes(normalizeLegacyPaymentMethod(m.paymentMethod))).reduce((s, m) => s + Number(m.accountingAmount || 0), 0);
         const totalRefunds = allMovements.filter(m => m.movementType === MOVEMENT_TYPE.REEMBOLSO).reduce((s, m) => s + Number(m.accountingAmount || 0), 0);
         const totalTips = allMovements.filter(m => m.movementType === MOVEMENT_TYPE.PROPINA).reduce((s, m) => s + Number(m.accountingAmount || 0), 0);
         const totalAdjustments = allMovements.filter(m => m.movementType === MOVEMENT_TYPE.AJUSTE).reduce((s, m) => s + Number(m.accountingAmount || 0), 0);
         const grossSalesTotal = allMovements.filter(m => m.movementType && !["REEMBOLSO", "PROPINA", "AJUSTE"].includes(m.movementType)).reduce((s, m) => s + Number(m.accountingAmount || 0), 0);
-        const netTaxableAmount = allMovements.reduce((s, m) => s + readTaxBase(m), 0);
-        const netTaxAmount = allMovements.reduce((s, m) => s + readTaxAmount(m), 0);
+        const netTaxableAmount = allMovements.reduce((s, m) => s + _signedFiscalValue(m, readTaxBase), 0);
+        const netTaxAmount = allMovements.reduce((s, m) => s + _signedFiscalValue(m, readTaxAmount), 0);
         const consolidatedTotalAmount = _roundMoney(totalCash + totalCard + totalBizum + totalOnline);
 
         let approverUser = null;
@@ -1282,13 +1355,23 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
             if (!taxTypeBreakdown[rate]) {
                 taxTypeBreakdown[rate] = { taxableBaseOrNonSubjectAmount: 0, taxAmount: 0, total: 0, operations: 0 };
             }
-            taxTypeBreakdown[rate].taxableBaseOrNonSubjectAmount = _roundMoney(taxTypeBreakdown[rate].taxableBaseOrNonSubjectAmount + readTaxBase(m));
-            taxTypeBreakdown[rate].taxAmount = _roundMoney(taxTypeBreakdown[rate].taxAmount + readTaxAmount(m));
+            taxTypeBreakdown[rate].taxableBaseOrNonSubjectAmount = _roundMoney(taxTypeBreakdown[rate].taxableBaseOrNonSubjectAmount + _signedFiscalValue(m, readTaxBase));
+            taxTypeBreakdown[rate].taxAmount = _roundMoney(taxTypeBreakdown[rate].taxAmount + _signedFiscalValue(m, readTaxAmount));
             taxTypeBreakdown[rate].total = _roundMoney(taxTypeBreakdown[rate].total + Number(m.accountingAmount || 0));
             taxTypeBreakdown[rate].operations++;
         }
 
-        let expectedPreviousHash = GENESIS_HASH;
+        const firstSequence = Number(allMovements[0]?.sequenceNumber);
+        let previousMovement = null;
+        if (Number.isFinite(firstSequence) && firstSequence > 1) {
+            const predecessorResult = await dalQuery(MOVIMIENTOS_CAJA_COL)
+                .lt("sequenceNumber", firstSequence)
+                .descending("sequenceNumber")
+                .limit(1)
+                .find(STRONG_READ);
+            previousMovement = predecessorResult?.items?.[0] || null;
+        }
+        let expectedPreviousHash = previousMovement?.hash || GENESIS_HASH;
         let integrityVerified = true;
         for (const mov of allMovements) {
             if (mov.previousRecordHash && mov.previousRecordHash !== expectedPreviousHash) {
@@ -1364,7 +1447,7 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
             endRecordHash: lastMovement?.hash || GENESIS_HASH,
             movementTypeBreakdown,
             taxTypeBreakdown,
-            isIntegrityVerified: closingSignatureStatus === "SIGNED",
+            isIntegrityVerified: integrityVerified,
             auditedRecordsCount: allMovements.length,
             closingHash,
             closingSignature,
@@ -1379,7 +1462,25 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
             _createdDate: new Date(),
         };
 
-        const saved = await dalInsert(HISTORICO_CIERRES_Z_COL, zRecord);
+        await assertFiscalLedgerLock(ledgerLock);
+        let saved;
+        try {
+            saved = await dalInsert(HISTORICO_CIERRES_Z_COL, zRecord);
+        } catch (insertError) {
+            let persisted;
+            try {
+                persisted = await dalGet(HISTORICO_CIERRES_Z_COL, zRecord._id, "strong");
+            } catch (readError) {
+                retainLedgerLock = true;
+                log.error("Z_CLOSING_RESULT_UNKNOWN", {
+                    traceId, operationDate: cleanDiaKey,
+                    insertError: insertError?.message, readError: readError?.message,
+                });
+                throw new Error("Z_CLOSING_RESULT_UNKNOWN");
+            }
+            if (persisted?.closingHash === closingHash) saved = persisted;
+            else throw insertError;
+        }
 
         const cashRegister = await _getCashRegisterSingleton();
         if (cashRegister) {
@@ -1389,9 +1490,36 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
             await dalSave(CAJA_ACTUAL_COL, cashRegister);
         }
 
-        return { status: "SUCCESS", data: saved, error: null };
+        return closingSignatureStatus === "SIGNED"
+            ? { status: "SUCCESS", data: saved, error: null }
+            : {
+                status: "PARTIAL",
+                data: saved,
+                error: {
+                    code: "Z_SIGNATURE_PENDING",
+                    message: "El cierre Z esta registrado, pero su firma requiere recuperacion.",
+                },
+            };
     } catch (err) {
-        return { status: "ERROR", data: null, error: _toPublicError(err, "Z_CLOSING_FAIL") };
+        log.error("_registerZClosing failed", { traceId, error: err?.message });
+        return {
+            status: "ERROR",
+            data: null,
+            error: _toPublicError(err, "Z_CLOSING_FAIL", "No se pudo completar el cierre Z."),
+        };
+    } finally {
+        if (ledgerLock && !retainLedgerLock) {
+            const released = await releaseFiscalLedgerLock(ledgerLock);
+            if (!released?.released) {
+                log.error("FISCAL_LEDGER_LOCK_RELEASE_FAILED", {
+                    traceId, reason: released?.reason || "UNKNOWN", scope: "Z_CLOSING",
+                });
+            }
+        } else if (ledgerLock && retainLedgerLock) {
+            log.error("FISCAL_LEDGER_LOCK_RETAINED_FOR_REPAIR", {
+                traceId, scope: "Z_CLOSING",
+            });
+        }
     }
 }
 
@@ -1416,22 +1544,35 @@ export async function verifyFiscalHashChainIntegrity(options = {}) {
     const batchSize = Number(options.limit) || LEDGER_PAGE_SIZE;
     const breaks = [];
     try {
-        const movements = await dalQuery(MOVIMIENTOS_CAJA_COL)
+        let movements = await dalQuery(MOVIMIENTOS_CAJA_COL)
             .ascending("sequenceNumber")
             .limit(batchSize)
             .find();
 
+        let checked = 0;
         let expectedPreviousHash = GENESIS_HASH;
-        for (const mov of movements.items || []) {
-            if (mov.previousRecordHash && mov.previousRecordHash !== expectedPreviousHash) {
-                breaks.push({
-                    movementId: mov._id,
-                    numSerieFactura: readInvoiceNumber(mov),
-                    expected: expectedPreviousHash,
-                    actual: mov.previousRecordHash,
-                });
+        let hasMore = false;
+        let page = 1;
+        while (true) {
+            for (const mov of movements.items || []) {
+                checked += 1;
+                if (mov.previousRecordHash && mov.previousRecordHash !== expectedPreviousHash) {
+                    breaks.push({
+                        movementId: mov._id,
+                        numSerieFactura: readInvoiceNumber(mov),
+                        expected: expectedPreviousHash,
+                        actual: mov.previousRecordHash,
+                    });
+                }
+                expectedPreviousHash = mov.hash || expectedPreviousHash;
             }
-            expectedPreviousHash = mov.hash;
+            if (!movements.hasNext()) break;
+            if (page >= MAX_LEDGER_BATCH_PAGES) {
+                hasMore = true;
+                break;
+            }
+            movements = await movements.next();
+            page += 1;
         }
 
         if (breaks.length > 0) {
@@ -1439,12 +1580,17 @@ export async function verifyFiscalHashChainIntegrity(options = {}) {
         }
 
         return {
-            status: breaks.length === 0 ? "SUCCESS" : "INTEGRITY_COMPROMISED",
-            data: { checked: movements.items.length, breaksCount: breaks.length, breaks },
-            error: null,
+            status: breaks.length > 0
+                ? "INTEGRITY_COMPROMISED"
+                : hasMore ? "PARTIAL" : "SUCCESS",
+            data: { checked, breaksCount: breaks.length, breaks, complete: !hasMore, hasMore },
+            error: hasMore
+                ? { code: "AUDIT_PAGE_LIMIT", message: "Auditoria parcial: quedan movimientos por comprobar." }
+                : null,
         };
     } catch (err) {
-        return { status: "ERROR", data: null, error: { code: "AUDIT_FAIL", message: err.message } };
+        log.error("verifyFiscalHashChainIntegrity failed", { traceId, error: err?.message });
+        return { status: "ERROR", data: null, error: { code: "AUDIT_FAIL", message: "No se pudo completar la auditoria fiscal." } };
     }
 }
 
