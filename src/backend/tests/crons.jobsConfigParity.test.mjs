@@ -548,7 +548,7 @@ test('CRON-ORDER-CREATED-01 reconciles Bookings, Stores and mixed catalog orders
     number: 20002,
     status: 'CANCELED',
     paymentStatus: 'NOT_PAID',
-    lineItems: [{ catalogReference: { appId: bookingsAppId } }],
+    lineItems: [{ catalogReference: { appId: bookingsAppId, catalogItemId: '44444444-4444-4444-8444-444444444444' } }],
   };
   const mixedOrder = {
     id: 'cccccccc-cccc-4ccc-8ccc-ccccccccccc3',
