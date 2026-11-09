@@ -96,7 +96,7 @@ El sitio web no debe ser un escaparate estático. Debe ser una **herramienta de 
 |---|---|---|---|---|
 | RF-31 | Registro/login de clientes | Área privada para gestionar perfil, historial de citas y compras. | Wix Members configurado. | APP NATIVA INSTALADA; Wix Members Area. Rutas, permisos y flujo completo de perfil/reservas/compras pendientes de E2E. |
 | RF-32 | Blog y contenido social | Integración con Instagram, TikTok, Facebook, YouTube y sección de noticias/consejos. | Wix Blog está instalado y existe la página `/blog`; la integración con redes sociales no está verificada. |
-| RF-33 | Formulario de contacto + mapa | Formulario web, Google Maps, teléfonos y WhatsApp directos. | Wix Forms & Payments está instalado; configuración de formularios, recepción, mapa y enlaces externos pendientes de comprobación en sitio publicado. |
+| RF-33 | Formulario de contacto + mapa | Formulario web, Google Maps, teléfonos y WhatsApp directos. | Wix Forms v4: 4 formularios activos. Contacto actualiza CRM; caja manual, X y fichaje no tienen trigger backend de negocio. Mapa/enlaces y ubicación de formularios pendientes de verificación en Editor. |
 | RF-34 | Catálogo de servicios estructurado | Clasificación por categorías (Básicos & Luxury, Babylights, Corte de Autor, Ritual Barba, Pack Madre e Hija) con precios claros. | VERIFICADO EN LECTURA PARCIAL; CMS y Wix Bookings contienen 94 servicios, 70 visibles y 24 ocultos. La presentación por categorías y precios en la UI publicada requiere revisión visual. |
 
 ---
@@ -119,9 +119,9 @@ El sitio web no debe ser un escaparate estático. Debe ser una **herramienta de 
 
 | ID | Requisito | Descripción | Criterio de aceptación | Estado de verificación |
 |---|---|---|---|---|
-| RL-08 | Fichaje inmutable | Registro de entrada, salida y pausa sellado criptográficamente. | Firma HMAC-SHA256 por evento; registros append-only. | PARCIAL; existe código de jornada en backend, pero ZONA STAFF mantiene fichaje deshabilitado y no hay E2E runtime. |
+| RL-08 | Fichaje inmutable | Registro de entrada, salida y pausa sellado criptográficamente. | Firma HMAC-SHA256 por evento; registros append-only. | PARCIAL; código de jornada en backend, pero el formulario nativo no acredita conexión con el writer y ZONA STAFF mantiene fichaje deshabilitado. E2E runtime pendiente. |
 | RL-09 | No manipulación posterior | Ante inspección de trabajo, los datos no pueden haber sido alterados. | Hash chain + registro de `previousRecordHash`. | ✅ Declarado |
-| RL-10 | Registro horario staff | Colección `RegistrosHorariosStaff` con `resourceId`, `memberId`, `recordedAt`, `clockEventType`, `traceId`. | PARCIAL; la colección está declarada en la matriz, pero el panel staff tiene funciones de jornada deshabilitadas. Esquema, permisos y writer requieren validación runtime. |
+| RL-10 | Registro horario staff | Colección `RegistrosHorariosStaff` con `resourceId`, `memberId`, `recordedAt`, `clockEventType`, `traceId`. | PARCIAL/BLOQUEADO; `FORM REGISTRO HORARIO` está activo, pero su `upsertContact` tiene mapping vacío y no invoca el ledger. ZONA STAFF mantiene flags desactivados; writer/permisos/E2E pendientes. |
 
 ### 3.3. RGPD / AEPD — Protección de datos
 
