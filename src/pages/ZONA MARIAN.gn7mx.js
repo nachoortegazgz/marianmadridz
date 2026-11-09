@@ -31,16 +31,6 @@ import {
     sendManagerPackageToAccountant,
     sendSpecificDocumentToAccountant,
 } from "backend/fiscalDocuments.web.js";
-import {
-    getInventoryDashboard,
-    getInventoryCatalogCandidates,
-    registerInventoryMaster,
-    getInventoryMovementHistory,
-    registerInventoryMovement,
-    processPendingInventoryRepairs,
-    processPendingRefundInventoryRepairs,
-    reconcilePendingInventoryMovements,
-} from "backend/inventario.web.js";
 
 import { makeTraceId, URLS, MESSAGE_TYPES } from "public/mmUtils";
 import { createWidgetBridge } from "public/widgetBridge";
@@ -102,23 +92,6 @@ const ACTIONS = {
             traceId,
         }),
 
-    // ── Inventario (existentes) ────────────────────────────────────
-    INVENTORY_DASHBOARD: ({ payload, traceId }) =>
-        getInventoryDashboard({ ...(payload || {}), traceId }),
-    INVENTORY_CANDIDATES: ({ payload, traceId }) =>
-        getInventoryCatalogCandidates({ ...(payload || {}), traceId }),
-    INVENTORY_REGISTER_MASTER: ({ payload, traceId }) =>
-        registerInventoryMaster({ ...(payload || {}), traceId }),
-    INVENTORY_MOVEMENT_HISTORY: ({ payload, traceId }) =>
-        getInventoryMovementHistory(payload?.stockKey, { ...(payload || {}), traceId }),
-    INVENTORY_REGISTER_MOVEMENT: ({ payload, traceId }) =>
-        registerInventoryMovement({ ...(payload || {}), traceId }),
-    INVENTORY_RECONCILE_MOVEMENTS: ({ payload, traceId }) =>
-        reconcilePendingInventoryMovements({ ...(payload || {}), traceId }),
-    INVENTORY_PROCESS_REPAIRS: ({ payload, traceId }) =>
-        processPendingInventoryRepairs({ ...(payload || {}), traceId }),
-    INVENTORY_PROCESS_REFUND_REPAIRS: ({ payload, traceId }) =>
-        processPendingRefundInventoryRepairs({ ...(payload || {}), traceId }),
 };
 
 /* ────────────────────────────────────────────────────────────────────
@@ -184,7 +157,7 @@ $w.onReady(async () => {
                 enableClocking: false,        // ❌ fichaje eliminado
                 enableBreaks: false,
                 enableCashier: true,
-                enableInventory: true,
+                enableInventory: false, // Inventory managed only in Wix Stores
                 enableScheduleQuery: false,   // backend de resumen aun no implementado
                 enableStaffManagement: false, // backend real pendiente
                 enableAIAssistant: false,      // proveedor IA no conectado
