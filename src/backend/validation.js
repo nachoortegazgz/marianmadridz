@@ -213,11 +213,12 @@ export function assertControlOperativo(item) {
 
     // SLOT_LOCK requiere resourceId + expiresAt
     if (item.controlType === CONTROL_TYPE.SLOT_LOCK) {
-        if (!item.resourceId || !String(item.resourceId).trim()) {
-            throw new Error("SCHEMA_VIOLATION: SLOT_LOCK requires resourceId");
+        if (!isValidGuid(item.resourceId)) {
+            throw new Error("SCHEMA_VIOLATION: SLOT_LOCK requires a valid resourceId GUID");
         }
-        if (!item.expiresAt) {
-            throw new Error("SCHEMA_VIOLATION: SLOT_LOCK requires expiresAt");
+        const expiresAt = new Date(item.expiresAt);
+        if (!item.expiresAt || Number.isNaN(expiresAt.getTime())) {
+            throw new Error("SCHEMA_VIOLATION: SLOT_LOCK requires a valid expiresAt date");
         }
     }
 
