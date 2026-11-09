@@ -610,8 +610,8 @@ Validaciones `beforeInsert` / `beforeUpdate` por colección. Wix entrega `itemId
 - **MapaStaff**: no tiene hook CMS activo. El lector de eventos filtra por `staffMemberId` + `active`, rechaza cero o múltiples coincidencias y valida `resourceId`/`scheduleId` como GUID. No es fuente de roles RBAC.
 - **RegistrosHorariosStaff**: `clockEventType` válido; `notes` obligatorio cuando `recordType === "AJUSTE"`.
 - **ControlOperativo**: `beforeInsert` y `beforeUpdate` ejecutan `assertControlOperativo`. `beforeUpdate` recupera el registro por `_id` con lectura fuerte, fusiona el cambio parcial, impide cambiar `controlType` y protege los tipos inmutables. `beforeRemove` recibe `itemId`, recupera el registro y bloquea `WEBHOOK_EVENT`. Los escritores de parches atómicos validan sus invariantes antes de mutar.
-- **InventarioStockVenta**: no hay hook CMS `beforeInsert`/`beforeUpdate` implementado en `data.js`; las validaciones se mantienen en los writers de inventario.
-- **MovimientosInventario**: unicidad `movementToken`; `reason` obligatorio cuando `movementType === "AJUSTE"`.
+- **InventarioStockVenta (legacy)**: no hay writers ni hooks de mantenimiento; la colección queda sin escrituras nuevas.
+- **MovimientosInventario (legacy)**: la colección se conserva y los hooks `beforeUpdate`/`beforeRemove` impiden alterar históricos; no hay nuevos writers.
 - **DatosFiscales**: validación NIF/NIE/CIF/VAT-UE con `isValidNifOrEuVat()`. `beforeRemove` bloquea eliminación de `CONFIG_SISTEMA_FISCAL`.
 
 ### Funciones de utilidad transversal

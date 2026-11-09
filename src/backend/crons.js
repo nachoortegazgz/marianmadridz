@@ -58,7 +58,6 @@ OPERATIONAL_COLLECTIONS,
 CONTROL_TYPE,
 CONTROL_STATUS,
 COMPENSATION_STATUS,
-WIX_CATALOG_APP_IDS,
 BOOKING_STATUS,
 PAYMENT_STATUS,
 BOOKING_FIELDS,
@@ -1569,11 +1568,9 @@ return result;
 /**
  * Reconciles native Wix Orders whose ORDER_CREATED event marker is absent.
  *
- * Only orders composed entirely of Wix Bookings line items are auto-marked:
- * they require no Stores inventory reservation. Any Stores or unknown catalog
- * line item is left unmarked and receives a deduplicated operational alert.
- * This cron never creates payments, cash movements, accounting entries, stock
- * movements, or stock reservations.
+ * Any native order with complete catalog references is auto-marked, including
+ * Bookings, Stores, and mixed orders. Wix and each catalog owner manage stock;
+ * this cron only records an idempotency marker and never writes stock.
  */
 export async function reconcileUnmarkedOrderCreatedEvents() {
     const traceId = makeTraceId("cron-order-created-reconcile");
@@ -1675,11 +1672,12 @@ export async function reconcileUnmarkedOrderCreatedEvents() {
             }
 
             const lineItems = Array.isArray(order?.lineItems) ? order.lineItems : [];
-            const bookingsOnly = lineItems.length > 0 && lineItems.every((line) =>
-                line?.catalogReference?.appId === WIX_CATALOG_APP_IDS.BOOKINGS
+            const catalogReferencesComplete = lineItems.length > 0 && lineItems.every((line) =>
+                _safeTrim(line?.catalogReference?.appId) &&
+                _safeTrim(line?.catalogReference?.catalogItemId)
             );
 
-            if (bookingsOnly) {
+            if (catalogReferencesComplete) {
                 const eventId = `ORDER_CREATED_RECONCILED_${orderId}`;
                 const recordId = `ORDER_CREATED_RECONCILED_${orderId}`;
                 const now = new Date();
@@ -1702,7 +1700,9 @@ export async function reconcileUnmarkedOrderCreatedEvents() {
                             orderStatus: _safeTrim(order?.status) || "UNKNOWN",
                             paymentStatus: _safeTrim(order?.paymentStatus) || "UNKNOWN",
                             lineItemCount: lineItems.length,
-                            inventoryAction: "NOT_REQUIRED_BOOKINGS_ONLY",
+                            inventoryAuthority: "WIX_CATALOG_OWNER",
+                            inventoryAction: "NO_CUSTOM_STOCK_WRITE",
+                            catalogAppIds: Array.from(new Set(lineItems.map(line => _safeTrim(line?.catalogReference?.appId)))),
                             reconciliationSource: "WIX_ORDERS_NATIVE",
                             originalEventMarkerMissing: true,
                         },
@@ -1739,7 +1739,7 @@ export async function reconcileUnmarkedOrderCreatedEvents() {
             const alert = await notifyOperationalAlert({
                 alertType: "ORDER_CREATED_RECONCILIATION_REQUIRED",
                 severity: "ERROR",
-                message: "Pedido nativo sin marcador ORDER_CREATED; requiere revisar lineas de catalogo antes de reconciliar inventario.",
+                message: "Pedido nativo sin marcador ORDER_CREATED y con referencias de catalogo incompletas; requiere revisar la identidad del pedido. No se modifica stock.",
                 data: {
                     orderId,
                     orderNumber: order?.number ?? null,
