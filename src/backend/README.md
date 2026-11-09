@@ -8,13 +8,13 @@ Los módulos invocables desde frontend usan exclusivamente archivos `.web.js` y 
 
 - `Permissions.Anyone`: solo para operaciones públicas cuyo DTO y validaciones están diseñados para visitantes anónimos.
 - `Permissions.SiteMember`: requiere una sesión de miembro Wix.
-- `Permissions.Admin`: reservado a operaciones administrativas que exigen identidad de propietario.
+- `Permissions.Admin`: reservado a operaciones administrativas para propietarios y colaboradores autorizados.
 
 La autorización de negocio se vuelve a comprobar en backend. La identidad, el rol y la propiedad de una reserva nunca se aceptan desde el payload del navegador.
 
 Documentación oficial:
 - [Web Modules y web methods](https://dev.wix.com/docs/develop-websites/articles/coding-with-velo/backend-code/web-modules/about-web-modules)
-- [Permisos de web methods](https://dev.wix.com/docs/velo/apis/wix-web-module/permissions)
+- [Permisos de web methods](https://dev.wix.com/docs/develop-websites/articles/coding-with-velo/backend-code/web-modules/about-web-modules#permissions)
 
 ## Wix Data y hooks CMS
 
@@ -34,7 +34,7 @@ La entrega de eventos es asíncrona y puede repetirse; cada manejador debe ser i
 
 Documentación oficial:
 - [Wix backend events](https://dev.wix.com/docs/overview/backend-services/events)
-- [Definir backend event handlers](https://dev.wix.com/docs/develop-websites/articles/coding-with-velo/backend-code/events/define-backend-event-handlers)
+- [Definir backend event handlers](https://dev.wix.com/docs/develop-websites-sdk/code-your-site/build-a-custom-backend/backend-events/define-backend-event-handlers)
 
 ## Scheduled jobs
 
