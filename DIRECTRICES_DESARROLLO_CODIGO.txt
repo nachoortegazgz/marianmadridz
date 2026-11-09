@@ -104,3 +104,78 @@ Actualizar tras cada sesión. Esta sección sustituye el inventario histórico d
 5. **Producción Wix:** solo tras revisar el diff, confirmar CI y validar el comportamiento afectado. No publicar por el mero hecho de que el cambio sea pequeño.
 
 **Criterio de cierre:** cero símbolos sin consumidor y cero redundancias demostradas, manteniendo las protecciones necesarias de seguridad, integridad fiscal, reservas duales, idempotencia y minimización del DTO. La reducción de líneas no es por sí sola una mejora.
+
+
+## 4. RECONCILIACION CAPA 1 — AUDITORIA R2 (2026-11-09)
+
+### Cambios implementados en la rama de correccion (CI pendiente)
+
+- SSOT de reservas centralizada en `internalConfig.js`:
+  - DTO intervalo visible: 30 minutos.
+  - DAYS_CACHE TTL: 300000 ms.
+  - DISPLAY_TOKEN TTL: 1800000 ms; maxAttempts: 5.
+  - Rate limits efectivos: public-booking 5/10 s; reservas 20/5 s;
+    availability 12/5 s; display-token 5/60 s; default 20/5 s.
+  - BOOKING_PAYMENT_OPTION: ONLINE/OFFLINE. `NO_FEE` no es enum: la
+    proyeccion F2 usa metadata booleana `noFee`.
+- `ControlOperativo_beforeInsert` invoca `assertControlOperativo`.
+  La validacion completa no se ha extendido a `beforeUpdate`: las rutas de
+  actualizacion pueden ser parciales (`bulkPatch`) y requieren validacion
+  especifica en Wix Preview antes de ampliar la guarda.
+- ADR-002 y los writers/lectores Bookings V2 se alinean con el SDK JavaScript:
+  `BookedSlot.resource._id` y `BookedSlot.location._id`; REST `id` no se
+  acepta en estos flujos SDK. `rescheduleBooking` usa la firma
+  `(bookingId, slot, options)`, con `revision` dentro de `options`.
+- Se añade regresion offline para shape SDK, firma de reprogramacion, valores
+  SSOT y guardas de insercion. El resultado de CI se documentara tras ejecutar
+  la suite del PR.
+
+### Hallazgos R2 descartados o corregidos por evidencia de codigo
+
+- L1-02: falso positivo. `booking/dualRescheduleJournal.js` ya define
+  `DUAL_RESCHEDULE_STATUS` con los ocho estados del journal. No duplicar el
+  enum dentro de `CONTROL_STATUS` ni crear un segundo enum en config.
+- L1-03: el patch propuesto no corresponde al contrato vigente. RBAC procede
+  de `STAFF.WEBSITE_ROLE_BY_RESOURCE_ID`; `MapaStaff` es un mapeo de respaldo
+  `staffMemberId -> resourceId/scheduleId` para eventos. Su lector falla
+  cerrado ante ausencia/ambiguedad y GUID invalidos. No añadir `rolWebsite`
+  como autoridad ni hooks con campos no acreditados en CMS.
+- L1-04: falso positivo para Wix Studio/Velo. Los eventos backend de sitios
+  Wix Studio/Editor llegan como objetos decodificados por la plataforma; la
+  verificacion JWT es automatica en rutas Wix-managed. `events.js` no es un
+  endpoint HTTP publico. Un futuro webhook HTTP self-managed debe verificar el
+  JWT con el mecanismo oficial Wix.
+  Fuente: https://dev.wix.com/docs/overview/backend-services/events
+- R-02: `processDualBooking` usa `Permissions.SiteMember`; el dossier se
+  corrige. La prueba de acceso anonimo publicado sigue pendiente.
+- R-05: no hay clase `BookingError` activa; `createBookingError` es una
+  factoría de errores nativos. No eliminarla por coincidencia textual.
+- L1-09: no se identifica un flujo de firma de peticiones
+  `X-MM-Signature/X-MM-Timestamp`; no añadir constantes sin consumidor.
+- L1-10: la opcion de pago F2 es `OFFLINE`; `NO_FEE` no constituye un enum
+  independiente en el codigo vigente.
+
+### Pendientes de validacion / no autorizan despliegue
+
+- L1-01 queda parcialmente cerrado: insert valida el contrato completo;
+  update no aplica assert completo hasta validar semantica de actualizaciones
+  parciales y heartbeat/locks en Wix Preview.
+- L1-12: el codigo admite una tolerancia de 1 minuto en `totalDuration`,
+  mientras el dossier declara suma estricta. No cambiar sin comprobar unidades,
+  redondeos y registros actuales de ServiciosCatalogo.
+- R-01: `SLOT_SEARCH` tiene un espejo frontend en `public/mmUtils.js` por
+  frontera de modulos; se añade prueba de paridad con el SSOT backend.
+- R-06: `permissions.json` conserva permisos globales amplios. No modificar
+  sin verificar el contrato Wix y probar invocacion anonima en Preview.
+- R-07: consumo exactamente-una-vez de DISPLAY_TOKEN bajo concurrencia real
+  sigue sin acreditar; CI offline no sustituye Wix QA.
+- R-10: fallback `STAFF_DEFAULT_NAME` mantiene REVIEW-BY 2027-01-31.
+  Warning trazable pendiente porque los consumidores no propagan traceId.
+- Journal dual `bulkPatch` y reprogramacion requieren validacion Wix Preview.
+- No se han escrito datos CMS, modificado ledgers, cambiado permisos CMS ni
+  desplegado esta rama. El despliegue de PR #226 es declaracion del usuario;
+  no valida estos cambios posteriores.
+
+### Estado de salida
+
+`CI PENDIENTE` · `WIX PREVIEW PENDIENTE` · `NO DESPLEGAR`.
