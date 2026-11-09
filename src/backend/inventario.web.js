@@ -4,8 +4,9 @@ MODULE: backend/inventario.web.js
 RESPONSIBILITY:
 - Read-only inventory views for the staff browser workspace.
 - Idempotent CMS projection of native Wix Stores Catalog V3 order movements.
-- Wix Stores remains authoritative for native stock; this module NEVER
-  decrements or increments Wix inventory.
+- Wix Stores remains authoritative for native stock. Paid order/refund handlers
+  only project Wix's completed stock side effects; explicit admin adjustments use
+  Catalog V3 bulk inventory operations.
 ARCHITECTURE:
 - Wix native checkout/refund side effects own native stock quantity.
 - MovimientosInventario is append-only; movementToken is the unique key.
