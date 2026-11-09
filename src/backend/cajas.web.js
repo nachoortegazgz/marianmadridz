@@ -404,14 +404,23 @@ function _generateVerificationQR(numSerieFactura, nifEmisor, fechaExpedicionFact
     const baseUrl = "https://www2.agenciatributaria.gob.es/wlpl/TIKE-CONT/ValidarQR";
     const dateMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(_safeTrim(fechaExpedicionFactura));
     const amount = Number(totalAmount);
-    if (!dateMatch || !Number.isFinite(amount) || amount < 0) {
+    const calendarDate = dateMatch
+        ? new Date(Date.UTC(Number(dateMatch[1]), Number(dateMatch[2]) - 1, Number(dateMatch[3])))
+        : null;
+    const validCalendarDate = Boolean(
+        calendarDate &&
+        calendarDate.getUTCFullYear() === Number(dateMatch[1]) &&
+        calendarDate.getUTCMonth() === Number(dateMatch[2]) - 1 &&
+        calendarDate.getUTCDate() === Number(dateMatch[3])
+    );
+    if (!validCalendarDate || !Number.isFinite(amount) || amount < 0) {
         throw new Error("FISCAL_QR_INPUT_INVALID");
     }
     const params = [
         `nif=${encodeURIComponent(_safeTrim(nifEmisor).toUpperCase())}`,
         `numserie=${encodeURIComponent(_safeTrim(numSerieFactura))}`,
         `fecha=${encodeURIComponent(_formatAEATDate(fechaExpedicionFactura))}`,
-        `importe=${encodeURIComponent(amount.toFixed(2))}`,
+        `importe=${encodeURIComponent(_roundMoney(amount).toFixed(2))}`,
     ];
     return `${baseUrl}?${params.join("&")}`;
 }
