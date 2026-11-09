@@ -3707,3 +3707,12 @@ Este anexo actualiza las referencias históricas de este dossier que indican Cat
 - Invoices settings: https://dev.wix.com/docs/api-reference/business-management/get-paid/invoices/invoices-settings/get-invoices-settings
 
 **Estado:** CI offline verde (run 168, commit 77d63d2: 47 suites/442 tests/0 fallos); pendiente validación del SDK V3 en Wix Local Editor, QA de flujos y despliegue autorizado. Invoices: bloqueado por disponibilidad de la API V4 en el sitio.
+
+## Scopes SDK V3 requeridos
+
+- Catalog Versioning: SCOPE.STORES.CATALOG_READ_LIMITED.
+- Query Inventory Items V3: SCOPE.STORES.INVENTORY_ITEM_READ.
+- Products V3 Get Product: SCOPE.STORES.PRODUCT_READ.
+- Bulk Increment/Decrement Inventory Items V3: SCOPE.STORES.INVENTORY_ITEM_WRITE.
+
+La concesión efectiva de estos scopes en el entorno Velo del sitio sigue pendiente de comprobación en Wix Local Editor; auth.elevate no sustituye la concesión de scopes.
