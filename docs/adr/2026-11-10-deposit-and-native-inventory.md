@@ -16,7 +16,7 @@
 - Cancelación/reprogramación gratuita con al menos 24 horas; si cancela el negocio, devolución íntegra.
 - No retener automáticamente el depósito por cancelación tardía o inasistencia hasta disponer de condiciones transparentes y revisión jurídica de proporcionalidad. No se presupone que una cláusula de no reembolso sea válida.
 - La contabilización fiscal del depósito, su saldo y las devoluciones debe quedar definida con asesoría antes de activar cobros. No se habilitarán cobros reales durante QA.
-- La configuración nativa de depósitos en Wix Bookings es la primera opción. Wix Help indica que el depósito se cobra online y el saldo en persona; advierte que la función no está disponible para todas las cuentas, que no se combina con aprobación manual y que el método manual puede evitar el depósito. Sin embargo, el esquema REST Services V2 actual describe `payment.options.deposit=true` con `online=true` y `inPerson=false`. Esta discrepancia debe resolverse antes de configurar servicios o desarrollar código. La consulta live muestra que actualmente no hay depósitos habilitados.
+- La configuración nativa de depósitos en Wix Bookings es la primera opción. Wix Help (25-03-2026) describe el flujo «depósito online y resto en persona», con opción de permitir pago completo online. Advierte que la función no está disponible para todas las cuentas, no se combina con aprobación manual y el método manual permite reservar sin pagar depósito. El esquema REST Services V2 exige `payment.options.deposit=true`, `online=true` e `inPerson=false`; la interpretación más probable es que `inPerson=false` deshabilita el pago íntegro en persona, mientras la modalidad de depósito liquida el saldo presencialmente. Es una inferencia que debe confirmarse en QA con el panel y el checkout antes de configurar servicios. La lectura live muestra 0 depósitos activos.
 
 ### Inventario
 
@@ -43,6 +43,30 @@
 - Bookings Services V2: 94 servicios; 70 `FIXED`, 24 `NO_FEE`, 0 `VARIED`; siete servicios visibles superan 100 EUR y cero servicios tienen depósito activo.
 - Servicios elegibles (>100 EUR): Pack Corte + Mechas (115 EUR), Recogido Exclusivo Novias (150 EUR), Rescate Express para Cabello Dañado (125 EUR), Pack Transformación Total (185 EUR), Terapia de Alisado Espejo Premium (195 EUR), Pack Novia Completo (290 EUR) y Alisado Espejo Premium (195 EUR).
 
+### Servicios que cumplen el umbral (>100 EUR)
+
+| Servicio | ID Wix Bookings | Precio actual |
+|---|---|---:|
+| Pack Corte + Mechas (Balayage o Babylights) | `337cf9c2-67de-40f6-9f7f-f5ae22b5968e` | 115 EUR |
+| Recogido Exclusivo Novias (Incluye Prueba) | `7a97d3b2-0d94-4487-8309-7eb617c8dbd7` | 150 EUR |
+| Rescate Express para Cabello Dañado | `7eca1256-4054-4b91-b333-0e84e7b71935` | 125 EUR |
+| Pack Transformación Total (Corte + Color + Tratamiento) | `98ac30dc-75d0-40c1-ac87-8023f038b4c1` | 185 EUR |
+| Terapia de Alisado Espejo Premium | `bf38879e-c4bc-4620-9979-e03c5df9f0cd` | 195 EUR |
+| Pack Novia Completo (Peinado + Maquillaje + Prueba) | `c76ed098-5e92-4a3d-bf31-82f02da2e69f` | 290 EUR |
+| Alisado Espejo Premium | `fc05f4c9-f118-4a07-bde3-a972c7b08a49` | 195 EUR |
+
+Todos aparecen visibles y con tarifa fija. En los siete, `online=true`, `inPerson=true` y no aparece ningún `deposit=true`; ninguno informa `requireManualApproval=true` (en seis el campo está omitido y en uno consta `false`). No se ha modificado ningún servicio.
+
+### Configuración nativa objetivo (pendiente de QA)
+
+- En panel Wix Bookings, elegir «El depósito online y el resto en persona».
+- Importe de depósito: 15 EUR fijo.
+- No habilitar «Permitir a los clientes pagar el monto total online» (`fullUpfrontPaymentAllowed=false`).
+- No ofrecer pago manual alternativo para estos servicios, porque Wix advierte que el cliente podría reservar sin pagar depósito.
+- No activar aprobación manual para los servicios con depósito.
+- Mantener el resto de servicios (≤100 EUR) sin depósito obligatorio.
+- Si la función no está disponible en la cuenta, no sustituirla por un writer propio; mantener la política sin activar y elevar el bloqueo para decisión del propietario.
+
 ## Impacto sobre el estado actual
 
 - RF-06 sustituye el criterio anterior (>30 EUR y 15 EUR/20%) y resuelve la contradicción con el criterio documental de 30% para >50 EUR.
@@ -55,7 +79,7 @@
 - Wix Services V2 API schema: `payment.options.deposit` requiere online y actualmente declara `inPerson=false` cuando está activo; `fixed.deposit` / `varied.deposit` forman parte del objeto de servicio.
 
 - Wix Bookings — depósitos y pagos: https://dev.wix.com/docs/api-reference/business-solutions/bookings/services/services-v2/about-service-payments
-- Wix Help — depósitos y saldo presencial: https://support.wix.com/es/article/wix-bookings-seleccionar-c%C3%B3mo-cobrar-los-servicios-de-reservas
+- Wix Help — depósitos online y saldo en persona; pago manual puede omitir depósito; no disponible en todas las cuentas ni con aprobación manual: https://support.wix.com/es/article/wix-bookings-seleccionar-c%C3%B3mo-cobrar-los-servicios-de-reservas
 - Wix Help — limitación de depósitos porcentuales (solo importes fijos): https://support.wix.com/es/article/solicitud-de-wix-bookings-dep%C3%B3sitos-basados-en-porcentajes
 - Wix Stores — compra y deducción automática de inventario: https://dev.wix.com/docs/api-reference/business-solutions/stores/catalog-v3/online-store-product-purchase-flow
 - Wix Stores — modelo nativo de inventario: https://dev.wix.com/docs/api-reference/business-solutions/stores/catalog-v3/about-inventory-management
