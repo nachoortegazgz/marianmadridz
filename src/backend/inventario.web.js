@@ -17,9 +17,9 @@ ARCHITECTURE:
 
 import { Permissions, webMethod } from "wix-web-module";
 import {
-    getCatalogVersion as readCatalogVersion,
-    getCatalogVariant as readCatalogVariant,
-    queryCatalogInventory as readCatalogInventory,
+    getCatalogVersion,
+    getCatalogVariant,
+    queryCatalogInventory,
     incrementCatalogInventory,
     decrementCatalogInventory,
 } from "backend/catalogV3Adapter";
@@ -56,12 +56,6 @@ const STRONG_READ = Object.freeze({ consistencyMode: "strong" });
 const API_TIMEOUT_MS = Number(SDK_CONFIG?.TIMEOUTS?.WEBHOOK_MS) || 30000;
 let _catalogVersionCache = null;
 
-const getCatalogVersionElevated = readCatalogVersion;
-const getStoreVariantElevated = readCatalogVariant;
-const queryStoreVariantsElevated = readCatalogInventory;
-const incrementInventoryElevated = incrementCatalogInventory;
-const decrementInventoryElevated = decrementCatalogInventory;
-
 function _error(code, message, details = {}) {
     return { status: "ERROR", data: null, error: { code, message, ...details } };
 }
@@ -77,7 +71,7 @@ async function _rateLimitOrThrow(surface, key) {
 async function _getCatalogVersion() {
     if (_catalogVersionCache) return _catalogVersionCache;
     const response = await withTimeout(
-        getCatalogVersionElevated(),
+        getCatalogVersion(),
         API_TIMEOUT_MS,
         "inventory.catalogVersion"
     );
@@ -566,9 +560,9 @@ async function _syncPaidOrderLine(order, lineItem, traceId, eventId) {
 
         const storeVariantId = `${productId}-${variantId}`;
         const response = await withTimeout(
-            getStoreVariantElevated(storeVariantId),
+            getCatalogVariant(storeVariantId),
             API_TIMEOUT_MS,
-            "inventory.getStoreVariant"
+            "inventory.catalogV3.getVariant"
         );
         const variant = response?.variant || null;
         if (!variant || variant.productId !== productId || variant.variantId !== variantId) {
@@ -874,9 +868,9 @@ async function _syncRestockedOrderLine(orderId, refundId, restockLine, reason, t
             .limit(1)
             .find(STRONG_READ);
         const response = await withTimeout(
-            getStoreVariantElevated(`${productId}-${variantId}`),
+            getCatalogVariant(`${productId}-${variantId}`),
             API_TIMEOUT_MS,
-            "inventory.getStoreVariant.refund"
+            "inventory.catalogV3.getVariant.refund"
         );
         const variant = response?.variant;
         const nativeQuantity = Number(variant?.stock?.quantity);
@@ -1063,9 +1057,9 @@ async function _completeManualInventoryMovement(journal, traceId, existingLock =
         .limit(1)
         .find(STRONG_READ);
     const response = await withTimeout(
-        getStoreVariantElevated(`${productId}-${variantId}`),
+        getCatalogVariant(`${productId}-${variantId}`),
         API_TIMEOUT_MS,
-        "inventory.getStoreVariant.manual-reconcile"
+        "inventory.catalogV3.getVariant.manual-reconcile"
     );
     const variant = response?.variant;
     const stockOnHand = Number(variant?.stock?.quantity);
@@ -1261,9 +1255,9 @@ export const registerInventoryMovement = webMethod(Permissions.SiteMember, async
         }
 
         const nativeResponse = await withTimeout(
-            getStoreVariantElevated(`${productId}-${variantId}`),
+            getCatalogVariant(`${productId}-${variantId}`),
             API_TIMEOUT_MS,
-            "inventory.getStoreVariant.before-manual-movement"
+            "inventory.catalogV3.getVariant.before-manual-movement"
         );
         const nativeVariant = nativeResponse?.variant;
         const stockBefore = Number(nativeVariant?.stock?.quantity);
@@ -1320,13 +1314,13 @@ export const registerInventoryMovement = webMethod(Permissions.SiteMember, async
             }
             if (quantityDelta > 0) {
                 await withTimeout(
-                    incrementInventoryElevated(inventoryItemId, quantityDelta),
+                    incrementCatalogInventory(inventoryItemId, quantityDelta),
                     API_TIMEOUT_MS,
                     "inventoryItemsV3.bulkIncrementInventoryItems"
                 );
             } else {
                 await withTimeout(
-                    decrementInventoryElevated(inventoryItemId, Math.abs(quantityDelta)),
+                    decrementCatalogInventory(inventoryItemId, Math.abs(quantityDelta)),
                     API_TIMEOUT_MS,
                     "inventoryItemsV3.bulkDecrementInventoryItems"
                 );
@@ -1525,9 +1519,9 @@ export const getInventoryCatalogCandidates = webMethod(Permissions.SiteMember, a
         const limit = Math.min(100, Math.max(1, Math.floor(Number(options?.limit) || 100)));
         const offset = Math.min(10000, Math.max(0, Math.floor(Number(options?.offset) || 0)));
         const response = await withTimeout(
-            queryStoreVariantsElevated({ paging: { limit, offset } }),
+            queryCatalogInventory({ paging: { limit, offset } }),
             API_TIMEOUT_MS,
-            "inventory.queryStoreVariants"
+            "inventory.catalogV3.queryInventoryItems"
         );
         const variants = Array.isArray(response?.variants) ? response.variants : [];
         return {
@@ -1589,7 +1583,7 @@ export const registerInventoryMaster = webMethod(Permissions.SiteMember, async (
             return _error("INVENTORY_CATALOG_VERSION_MISMATCH", "El modulo esta preparado para Wix Stores Catalog V3.");
         }
         const storeResponse = await withTimeout(
-            getStoreVariantElevated(`${productId}-${variantId}`),
+            getCatalogVariant(`${productId}-${variantId}`),
             API_TIMEOUT_MS,
             "inventory.catalogV3.getVariant"
         );
