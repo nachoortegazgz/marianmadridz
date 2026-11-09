@@ -1341,7 +1341,7 @@ export async function wixBookingsV2_onBookingRescheduled(rawBody) {
         if (!_looksLikeGuid(resourceId)) missingSlotFields.push("resourceId");
         if (!_looksLikeGuid(scheduleId)) missingSlotFields.push("scheduleId");
         if (!_looksLikeGuid(serviceId)) missingSlotFields.push("serviceId");
-        if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(dateYmd)) missingSlotFields.push("dateYmd");
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(dateYmd)) missingSlotFields.push("dateYmd");
         if (missingSlotFields.length > 0) {
             log.warn("BOOKING_RESCHEDULED_SLOT_PROJECTION_INCOMPLETE", {
                 bookingId, missingSlotFields, traceId,
