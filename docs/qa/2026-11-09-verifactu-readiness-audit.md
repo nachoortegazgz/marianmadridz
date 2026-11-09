@@ -193,3 +193,30 @@ No declarar VERI*FACTU operativo hasta que:
 - **No realizado:** escrituras CMS, remisiones AEAT, emisión de facturas reales, cobros, cambios de endpoint QR o despliegue.
 
 Esta auditoría no constituye certificación legal del software ni sustituye la validación de la gestoría o del responsable del SIF.
+
+## 10. Aclaraciones normativas verificadas el 2026-11-09
+
+La revisión de la FAQ oficial AEAT actualizada en octubre de 2026 precisa los siguientes puntos, que condicionan el diseño:
+
+- En VERI*FACTU deben calcularse huellas SHA-256 para todos los registros de facturación de alta y anulación. Los registros de evento normativos son exigibles a NO VERI*FACTU, no a VERI*FACTU. Los eventos económicos internos del dominio Marian Madrid no deben confundirse con esos registros normativos.
+- VERI*FACTU no exige firma electrónica individual de los registros de facturación. La firma actual del proveedor externo puede mantenerse voluntariamente como control interno, pero no es sustituto de la autenticación del presentador/remisión.
+- En una incidencia técnica que impida remitir, la AEAT indica que no debe detenerse la facturación por ese solo motivo: se conserva el registro, se reintenta periódicamente y se utiliza el indicador de incidencia exigido (campo `Incidencia` con valor `S` cuando corresponda).
+- Si no se recibe respuesta a un envío, deben remitirse de nuevo los registros hasta obtenerla. El reintento debe conservar la identidad del registro y no generar una factura nueva.
+- Un SIF VERI*FACTU remite todos los registros de facturación de las facturas que expide. Si módulos están interconectados y centralizados, comparten encadenamiento único; módulos realmente inconexos pueden ser SIF diferentes y deben cumplir individualmente.
+- La opción VERI*FACTU se entiende realizada tácitamente al iniciar sistemáticamente la remisión. Una vez iniciado el envío efectivo, existe permanencia mínima hasta el fin del año natural en los términos del artículo 16.5 RRSIF.
+- La representación puede recaer en el obligado tributario o en un tercero con representación válida. La colaboración social requiere la documentación normalizada aplicable; la mera relación contractual con una gestoría o proveedor no basta por sí sola.
+- RD-ley 15/2025 modificó la fecha de aplicación obligatoria: antes del 01-01-2027 para contribuyentes del Impuesto sobre Sociedades y antes del 01-07-2027 para el resto de obligados del artículo 3.1. Debe confirmarse qué fecha corresponde al obligado concreto; no inferirlo del nombre comercial.
+
+Fuentes oficiales:
+- AEAT FAQ VERI*FACTU: https://sede.agenciatributaria.gob.es/Sede/iva/sistemas-informaticos-facturacion-verifactu/preguntas-frecuentes/sistemas-verifactu.html
+- AEAT FAQ huella/hash: https://sede.agenciatributaria.gob.es/Sede/iva/sistemas-informaticos-facturacion-verifactu/preguntas-frecuentes/huella-hash.html
+- AEAT FAQ colaboración social: https://sede.agenciatributaria.gob.es/Sede/iva/sistemas-informaticos-facturacion-verifactu/preguntas-frecuentes/colaboracion-social.html
+- BOE RD-ley 15/2025: https://www.boe.es/eli/es/rdl/2025/12/02/15
+
+## 11. Estado de validación actualizado
+
+- **Verificado:** auditoría estática de los writers y consumidores; consulta live de Wix site context; revisión de documentación AEAT actualizada; revisión de Wix Data API.
+- **Verificado:** el repositorio sigue sin cliente AEAT de remisión; PR #208 incorpora auditoría y ADR de arquitectura.
+- **Inferido/recomendado:** separar persistencia fiscal y estado de transporte; reconciliación recuperable por ausencia de transacción multi-colección documentada; gateway desacoplado del custodio.
+- **Pendiente:** CI de PR #208; spike de autenticación TLS/certificado en Wix; esquema CMS exacto y diseño de persistencia; forma jurídica/tributación del obligado; representante y certificado; matriz fiscal; declaración responsable y E2E AEAT.
+- **No realizado:** escrituras CMS, remisiones AEAT, facturas reales, cobros, carga de certificados, modificación funcional o despliegue.
