@@ -477,18 +477,20 @@ test('FLOW-CAJA-08 fiscal recovery queue deduplicates repeated compensation requ
     traceId: 'flow-caja-recovery-trace-001',
   };
 
-  const first = await cajas.queueFiscalRecovery(request);
-  const duplicate = await cajas.queueFiscalRecovery({
-    ...request,
-    traceId: 'flow-caja-recovery-trace-002',
-    lastError: 'retry after timeout',
-  });
+  const results = await Promise.all([
+    cajas.queueFiscalRecovery(request),
+    cajas.queueFiscalRecovery({
+      ...request,
+      traceId: 'flow-caja-recovery-trace-002',
+      lastError: 'retry after timeout',
+    }),
+  ]);
   const records = (wixDataMock._store.get('ControlOperativo') || [])
     .filter((row) => row.controlType === 'COMPENSATION' && row.transactionId === request.transactionId);
 
-  assert.equal(first.queued, true);
-  assert.equal(duplicate.queued, true);
-  assert.equal(duplicate.duplicate, true);
+  assert.equal(results.every((result) => result.queued), true);
+  assert.equal(results.filter((result) => result.created).length, 1);
+  assert.equal(results.filter((result) => result.duplicate).length, 1);
   assert.equal(records.length, 1);
 });
 
