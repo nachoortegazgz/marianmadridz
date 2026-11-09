@@ -142,6 +142,7 @@ test('CRON-FISCAL-RECOVERY-04 routes a legacy paid-order queue with root kind to
     _id: recordId,
     controlType: IC.CONTROL_TYPE.COMPENSATION,
     dedupeKey: 'test:legacy-paid-order-recovery',
+    traceId: 'trace-legacy-paid-order-recovery',
     kind: 'FISCAL_LEDGER',
     transactionId: 'ORDER-' + orderId,
     orderId,
