@@ -24,7 +24,7 @@ Reconciliar el plan de ejecución aportado con el código que existe actualmente
 
 ### 3.1 Enums de reserva
 
-La decisión del responsable del sistema fija `CANCELED` como único valor canónico tanto en el contrato CMS de CitasF2 como en los mapeos internos. La traducción desde el estado nativo Wix conserva su contrato y mapea explícitamente a `CITAS_BOOKING_STATUS.CANCELED`. La rama auditada elimina el enum anterior de escritores, consumidores y pruebas activas. Cualquier dato histórico con el valor retirado requiere inventario y migración controlada, nunca sustitución masiva no auditada.
+La decisión del responsable del sistema fija `CANCELED` como único valor canónico tanto en el contrato CMS de CitasF2 como en los mapeos internos. La traducción desde el estado nativo Wix conserva su contrato y mapea explícitamente a `CITAS_BOOKING_STATUS.CANCELED`. La rama auditada elimina el valor anterior de escritores, consumidores y pruebas activas. La consulta live del CMS encontró 34 filas históricas con ese estado; deben migrarse mediante un proceso backend controlado, con trazabilidad, sin actualización REST directa ni sustitución masiva.
 
 ### 3.2 DISPLAY_TOKEN
 
@@ -75,7 +75,7 @@ El dossier indexado describe enums, destinos y writers que no coinciden plenamen
 - **Verificado en código:** rutas y funciones inspeccionadas en la rama de auditoría; la línea base `main` queda sin modificar.
 - **Declarado por el dossier/plan:** prioridades, obligaciones de arquitectura y criterios normativos aportados.
 - **Inferido:** impacto de la ausencia de writers a partir de la inspección estática; requiere confirmar consumidores y flujos activos.
-- **Pendiente:** CI de la rama para los cambios actuales; esquema físico CMS, configuración real de hooks Wix, pruebas en Local Editor, aprobación PGC, colecciones de arqueo/recuento, scopes, conectores M365/Power Automate, validación normativa por asesoría y ejecución E2E.
+- **Pendiente:** CI de la rama para los últimos cambios; migración backend de 34 estados históricos; un registro QA-only inválido en `CitasF2` (sin `scheduleId` y con `bookingId` no GUID); `scheduleId` sigue opcional en esquema físico CMS por ese registro; configuración real de hooks Wix, pruebas en Local Editor, aprobación PGC, colecciones de arqueo/recuento, scopes, conectores M365/Power Automate, validación normativa por asesoría y ejecución E2E.
 - **No ejecutado:** escrituras CMS, migraciones, simulaciones transaccionales reales y despliegues.
 
 
@@ -94,3 +94,12 @@ El dossier indexado describe enums, destinos y writers que no coinciden plenamen
 - Cambios de código: normalización del estado `CANCELED`; validación de `scheduleId` GUID en `assertCitasF2`; pruebas de hooks y contrato SSOT actualizadas.
 - CI de la revisión `67bf36aec88cc07ffc0246f1530d39a3be276557`: ejecución #194 iniciada; resultado pendiente al actualizar este informe.
 - No se ha hecho merge, publicación Velo, escritura CMS ni modificación de registros existentes.
+
+
+## 10. Verificación live de CMS (solo lectura)
+
+- `CitasF2`: 55 registros; 20 `CONFIRMED`, 34 con el estado histórico de cancelación retirado y 1 registro `QA_ONLY_NOT_A_REAL_BOOKING`. Ese registro QA carece de `scheduleId` y su `bookingId` no es GUID; no se debe borrar ni alterar mediante Data API directa. Por ello, `scheduleId` permanece opcional en el esquema físico hasta reparar/aislar ese registro, aunque el writer y hook backend ya lo exigen para nuevas escrituras.
+- `MovimientosCaja`: 0 registros en la consulta live. El esquema contiene `orderId` como TEXT opcional.
+- `LibroAsientosContablesDetalle`: 0 registros en la consulta live. El esquema contiene `entryId`, `sourceMovementId`, `accountCode`, `debitAmount`, `creditAmount`, `recordHash`, `previousRecordHash` y `traceId` como campos obligatorios; `cashMovementId` es opcional.
+- `ControlOperativo`: colección existente con `orderId`, `eventId`, `dedupeKey`, `traceId`, `status` y `payload`, apta para el marcador idempotente `ORDER_CREATED`.
+- No se han escrito ni actualizado filas ni esquemas CMS.
