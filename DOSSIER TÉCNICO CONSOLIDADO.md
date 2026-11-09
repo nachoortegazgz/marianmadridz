@@ -1013,7 +1013,7 @@ El sistema garantiza el cumplimiento estricto del marco legal español y europeo
 **Wix nativos (inglés, preservar exactamente):**
 ```javascript
 BOOKING_STATUS_WIX = { CREATED, PENDING, CONFIRMED, DECLINED,
-  WAITING_LIST, UPDATED, CANCELED, REFUNDED }
+  WAITING_LIST, CANCELED, REFUNDED }
 PAYMENT_STATUS_WIX = { UNDEFINED, NOT_PAID, PENDING_PAYMENT,
   PENDING_LEDGER, PAID, PARTIALLY_PAID, REFUNDED,
   PARTIALLY_REFUNDED, EXEMPT }
