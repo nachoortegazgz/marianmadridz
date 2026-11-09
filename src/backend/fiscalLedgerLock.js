@@ -81,28 +81,40 @@ function _counter(value) {
     return Number.isSafeInteger(number) && number > 0 ? number : 0;
 }
 
-export async function allocateFiscalSequence(lock, lastMovement, traceId) {
+function _sequenceUnknown(writeError, readError) {
+    const error = new Error("SEQUENCE_RESULT_UNKNOWN");
+    error.code = "SEQUENCE_RESULT_UNKNOWN";
+    error.writeError = writeError?.message || "unknown";
+    error.readError = readError?.message || "unknown";
+    return error;
+}
+
+export async function allocateFiscalSequence(lock, lastMovement) {
     await assertFiscalLedgerLock(lock);
     const yearKey = _localYear();
-    const invoiceMatch = /^FAC-(\\d{4})-(\\d{5})$/.exec(String(lastMovement?.numSerieFactura || ""));
-    const lastInvoiceYear = invoiceMatch?.[1] || "";
-    const lastYearSequence = lastInvoiceYear === yearKey ? _counter(invoiceMatch[2]) : 0;
+    const invoiceMatch = /^FAC-(\d{4})-(\d{5})$/.exec(String(lastMovement?.numSerieFactura || ""));
+    const lastYearSequence = invoiceMatch?.[1] === yearKey ? _counter(invoiceMatch[2]) : 0;
 
     for (let attempt = 0; attempt < SEQUENCE_RETRIES; attempt += 1) {
+        const cashRegister = await getCashRegisterSingleton();
+        if (!cashRegister) {
+            const error = new Error("CAJA_PRINCIPAL_MISSING");
+            error.code = "CAJA_PRINCIPAL_MISSING";
+            throw error;
+        }
+
+        const counters = { ...(cashRegister.sequenceCounters || {}) };
+        const previousGlobal = Math.max(_counter(counters.seqGlobal), _counter(lastMovement?.sequenceNumber));
+        const previousYear = Math.max(_counter(counters[yearKey]), lastYearSequence);
+        const sequenceNumber = previousGlobal + 1;
+        const yearSequence = previousYear + 1;
+        const allocated = {
+            sequenceNumber,
+            yearSequence,
+            numSerieFactura: \`FAC-\${yearKey}-\${String(yearSequence).padStart(5, "0")}\`,
+        };
+
         try {
-            const cashRegister = await getCashRegisterSingleton();
-            if (!cashRegister) throw new Error("CAJA_PRINCIPAL_MISSING");
-
-            const counters = { ...(cashRegister.sequenceCounters || {}) };
-            const sequenceNumber = Math.max(
-                _counter(counters.seqGlobal),
-                _counter(lastMovement?.sequenceNumber),
-            ) + 1;
-            const yearSequence = Math.max(
-                _counter(counters[yearKey]),
-                lastYearSequence,
-            ) + 1;
-
             await dalUpdate(CASH_COL, {
                 ...cashRegister,
                 sequenceCounters: {
@@ -112,18 +124,32 @@ export async function allocateFiscalSequence(lock, lastMovement, traceId) {
                 },
                 _updatedDate: new Date(),
             });
+            return allocated;
+        } catch (writeError) {
+            let latest;
+            try {
+                latest = await getCashRegisterSingleton();
+            } catch (readError) {
+                throw _sequenceUnknown(writeError, readError);
+            }
+            if (!latest) throw _sequenceUnknown(writeError, new Error("CAJA_PRINCIPAL_MISSING"));
 
-            return {
-                sequenceNumber,
-                yearSequence,
-                numSerieFactura: `FAC-${yearKey}-${String(yearSequence).padStart(5, "0")}`,
-            };
-        } catch (error) {
+            const observed = latest.sequenceCounters || {};
+            if (
+                _counter(observed.seqGlobal) === sequenceNumber &&
+                _counter(observed[yearKey]) === yearSequence
+            ) return allocated;
+
+            if (
+                _counter(observed.seqGlobal) !== previousGlobal ||
+                _counter(observed[yearKey]) !== previousYear
+            ) throw _sequenceUnknown(writeError, new Error("SEQUENCE_COUNTER_CHANGED"));
+
             if (attempt === SEQUENCE_RETRIES - 1) {
-                const failure = new Error(`SEQUENCE_ERROR: ${error?.message || "unknown"}`);
-                failure.code = "SEQUENCE_ERROR";
-                failure.cause = error;
-                throw failure;
+                const error = new Error(\`SEQUENCE_ERROR: \${writeError?.message || "unknown"}\`);
+                error.code = "SEQUENCE_ERROR";
+                error.cause = writeError;
+                throw error;
             }
             await _sleep(100 * (attempt + 1));
         }
@@ -131,24 +157,24 @@ export async function allocateFiscalSequence(lock, lastMovement, traceId) {
     throw new Error("SEQUENCE_ERROR");
 }
 
-export async function rollbackFiscalSequence(lock, sequence, traceId) {
+export async function rollbackFiscalSequence(lock, sequence) {
     if (!sequence || !_counter(sequence.sequenceNumber)) return false;
-    const invoiceMatch = /^FAC-(\\d{4})-(\\d{5})$/.exec(String(sequence.numSerieFactura || ""));
+    const invoiceMatch = /^FAC-(\d{4})-(\d{5})$/.exec(String(sequence.numSerieFactura || ""));
     if (!invoiceMatch) return false;
     const yearKey = invoiceMatch[1];
 
     try {
         await assertFiscalLedgerLock(lock);
         for (let attempt = 0; attempt < SEQUENCE_RETRIES; attempt += 1) {
-            try {
-                const cashRegister = await getCashRegisterSingleton();
-                if (!cashRegister) return false;
-                const counters = { ...(cashRegister.sequenceCounters || {}) };
-                if (
-                    _counter(counters.seqGlobal) !== _counter(sequence.sequenceNumber) ||
-                    _counter(counters[yearKey]) !== _counter(sequence.yearSequence)
-                ) return false;
+            const cashRegister = await getCashRegisterSingleton();
+            if (!cashRegister) return false;
+            const counters = { ...(cashRegister.sequenceCounters || {}) };
+            if (
+                _counter(counters.seqGlobal) !== _counter(sequence.sequenceNumber) ||
+                _counter(counters[yearKey]) !== _counter(sequence.yearSequence)
+            ) return false;
 
+            try {
                 await dalUpdate(CASH_COL, {
                     ...cashRegister,
                     sequenceCounters: {
@@ -159,12 +185,28 @@ export async function rollbackFiscalSequence(lock, sequence, traceId) {
                     _updatedDate: new Date(),
                 });
                 return true;
-            } catch (error) {
-                if (attempt === SEQUENCE_RETRIES - 1) throw error;
+            } catch (writeError) {
+                let latest;
+                try {
+                    latest = await getCashRegisterSingleton();
+                } catch (_) {
+                    return false;
+                }
+                if (!latest) return false;
+                const observed = latest.sequenceCounters || {};
+                if (
+                    _counter(observed.seqGlobal) === _counter(sequence.sequenceNumber) - 1 &&
+                    _counter(observed[yearKey]) === _counter(sequence.yearSequence) - 1
+                ) return true;
+                if (
+                    _counter(observed.seqGlobal) !== _counter(sequence.sequenceNumber) ||
+                    _counter(observed[yearKey]) !== _counter(sequence.yearSequence)
+                ) return false;
+                if (attempt === SEQUENCE_RETRIES - 1) return false;
                 await _sleep(100 * (attempt + 1));
             }
         }
-    } catch (error) {
+    } catch (_) {
         return false;
     }
     return false;
