@@ -42,6 +42,17 @@ test("CATALOG-DURATION-03 rejects a one-minute mismatch", () => {
 test("CATALOG-DURATION-04 rejects malformed numeric values", () => {
   assert.throws(
     () => ServiciosCatalogo_beforeInsert(dualService({ phase1Duration: "thirty" })),
-    /numeros no negativos/
+    /phase1Duration debe ser numerico/
+  );
+  assert.throws(
+    () => ServiciosCatalogo_beforeInsert(dualService({ phase1Duration: "30" })),
+    /phase1Duration debe ser numerico/
+  );
+});
+
+test("CATALOG-DURATION-05 rejects an explicit zero total when phases are positive", () => {
+  assert.throws(
+    () => ServiciosCatalogo_beforeInsert(dualService({ totalDuration: 0 })),
+    /coincidir exactamente/
   );
 });
