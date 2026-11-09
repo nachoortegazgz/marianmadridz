@@ -89,7 +89,13 @@ import {
 } from "public/mmUtils";
 
 import { logger } from "backend/logger";
-import { acquireFiscalLedgerLock, assertFiscalLedgerLock, releaseFiscalLedgerLock } from "backend/fiscalLedgerLock";
+import {
+    acquireFiscalLedgerLock,
+    allocateFiscalSequence,
+    assertFiscalLedgerLock,
+    releaseFiscalLedgerLock,
+    rollbackFiscalSequence,
+} from "backend/fiscalLedgerLock";
 
 const log = logger;
 
@@ -97,14 +103,10 @@ const log = logger;
 // CONSTANTES (ALN-01, ALN-03)
 // ============================================================================
 
-const CASH_REGISTER_ID = SINGLETONS.CAJA_PRINCIPAL;
-const CASH_SEQ_ID = SINGLETONS.CAJA_SEQ;
-
 const VAT_ACCRUAL_DEVENGADO = "DEVENGADO";
 const VAT_ACCRUAL_APLICACION_ANTICIPO = "APLICACION_ANTICIPO";
 
 const MOVIMIENTOS_CAJA_COL = BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA;
-const CAJA_ACTUAL_COL = BUSINESS_COLLECTIONS.CAJA_ACTUAL;
 const DATOS_FISCALES_COL = BUSINESS_COLLECTIONS.DATOS_FISCALES;
 const SERVICIOS_CATALOGO_COL = BUSINESS_COLLECTIONS.SERVICIOS_CATALOGO;
 const HISTORICO_CIERRES_Z_COL = BUSINESS_COLLECTIONS.HISTORICO_CIERRES_Z;
@@ -114,8 +116,6 @@ const GENESIS_HASH = "0".repeat(64);
 
 const PROYECCION_BATCH_LIMIT = 25;
 const PROYECCION_TIMEOUT_MS = Number(SDK_CONFIG?.TIMEOUTS?.API_MS) || 15000;
-
-const SEQUENCE_MAX_RETRIES = 5;
 
 // ============================================================================
 // ALN-07: COMPUTER_SYSTEM (fallback local con nomenclatura Veri*factu)
@@ -308,116 +308,12 @@ function _buildAEATPayload(movement, generatedAt) {
     return fields.map(([k, v]) => `${k}=${v}`).join("&");
 }
 
-// ============================================================================
-// SECCION 2 - SECUENCIA GLOBAL (ALN-06: concurrencia optimista)
-// ============================================================================
-
-export async function _getNextSequenceInternal(traceId) {
-    for (let attempt = 0; attempt < SEQUENCE_MAX_RETRIES; attempt++) {
-        try {
-            let seqDoc = await dalGet(CAJA_ACTUAL_COL, CASH_SEQ_ID, "strong").catch(() => null);
-
-            if (!seqDoc) {
-                const legacyCashRegister = await dalGet(CAJA_ACTUAL_COL, CASH_REGISTER_ID, "strong").catch(() => null);
-                const legacyCounters =
-                    legacyCashRegister && legacyCashRegister.sequenceCounters
-                        ? legacyCashRegister.sequenceCounters
-                        : { seqGlobal: 0 };
-
-                seqDoc = {
-                    _id: CASH_SEQ_ID,
-                    sequenceCounters: { ...legacyCounters },
-                    migratedFrom: CASH_REGISTER_ID,
-                    migratedAt: new Date(),
-                    _createdDate: new Date(),
-                    _updatedDate: new Date(),
-                };
-
-                try {
-                    await dalInsert(CAJA_ACTUAL_COL, seqDoc);
-                } catch (insertErr) {
-                    // Carrera: otro proceso lo creo. Reintentar lectura.
-                    await new Promise((r) => setTimeout(r, 50 + Math.random() * 100));
-                    continue;
-                }
-            }
-
-            const counters = { ...(seqDoc.sequenceCounters || {}) };
-            const nextGlobal = Number(counters.seqGlobal || 0) + 1;
-            const yearKey = String(new Date().getFullYear());
-            const nextYear = Number(counters[yearKey] || 0) + 1;
-            counters.seqGlobal = nextGlobal;
-            counters[yearKey] = nextYear;
-
-            const updated = {
-                ...seqDoc,
-                sequenceCounters: counters,
-                _updatedDate: new Date(),
-            };
-
-            // dataAccess.updateItem pasa el item a wixData.update; si lleva
-            // _revision, Wix aplica concurrencia optimista y lanza error si
-            // otra escritura incremento la revision.
-            await dalUpdate(CAJA_ACTUAL_COL, updated);
-
-            return {
-                sequenceNumber: nextGlobal,
-                yearSequence: nextYear,
-                // SSOT-KEYFIELD-02 (Matriz MovimientosCaja, Apartado 2): el DTO
-                // del secuenciador entrega la clave canonica numSerieFactura;
-                // invoiceNumber era alias prohibido. Alineado con cajas._getNextSequence.
-                numSerieFactura: `FAC-${yearKey}-${String(nextYear).padStart(5, "0")}`,
-            };
-        } catch (err) {
-            if (attempt === SEQUENCE_MAX_RETRIES - 1) {
-                log.error("_getNextSequenceInternal exhausted retries", {
-                    traceId, error: err?.message,
-                });
-                throw new Error(`SEQUENCE_ERROR: ${err?.message || "unknown"}`);
-            }
-            await new Promise((r) => setTimeout(r, 100 * Math.pow(2, attempt) + Math.random() * 100));
-        }
-    }
-    throw new Error("SEQUENCE_ERROR: unreachable");
-}
-
-async function _getLastCashEvent() {
+// SECCION 2 - LECTURA DEL HEAD FISCAL\n// ============================================================================\n\nasync function _getLastCashEvent() {
     const res = await dalQuery(MOVIMIENTOS_CAJA_COL)
         .descending("sequenceNumber")
         .limit(1)
         .find();
     return res?.items?.[0] || null;
-}
-
-async function _rollbackSequenceAllocation(seq, traceId) {
-    if (!seq || !Number.isFinite(Number(seq.sequenceNumber))) return false;
-    try {
-        const seqDoc = await dalGet(CAJA_ACTUAL_COL, CASH_SEQ_ID, "strong");
-        if (!seqDoc) return false;
-        const counters = { ...(seqDoc.sequenceCounters || {}) };
-        const yearMatch = /^FAC-(\d{4})-(\d{5})$/.exec(_safeTrim(seq.numSerieFactura));
-        if (!yearMatch) return false;
-        const yearKey = yearMatch[1];
-        if (
-            Number(counters.seqGlobal || 0) !== Number(seq.sequenceNumber) ||
-            Number(counters[yearKey] || 0) !== Number(seq.yearSequence)
-        ) return false;
-        counters.seqGlobal = Number(seq.sequenceNumber) - 1;
-        counters[yearKey] = Number(seq.yearSequence) - 1;
-        await dalUpdate(CAJA_ACTUAL_COL, {
-            ...seqDoc,
-            sequenceCounters: counters,
-            _updatedDate: new Date(),
-        });
-        return true;
-    } catch (error) {
-        log.error("FISCAL_SEQUENCE_ROLLBACK_FAILED", {
-            traceId,
-            sequenceNumber: seq.sequenceNumber,
-            error: error?.message,
-        });
-        return false;
-    }
 }
 
 // ============================================================================
@@ -681,7 +577,7 @@ export async function registrarEventoEconomico(input) {
 
         // 4a. El head se lee solo despues de adquirir el lock.
         const previous = await _getLastCashEvent();
-        const seq = await _getNextSequenceInternal(traceId);
+        const seq = await allocateFiscalSequence(ledgerLock, previous, traceId);
 
     const previousRecordHash = _safeTrim(readMovementHash(previous)) || GENESIS_HASH;
     const recordTimestamp = _formatAEATDateTimeMadrid(ts);
@@ -897,7 +793,7 @@ export async function registrarEventoEconomico(input) {
                     matches: recovery.items.length,
                 });
             } else {
-                const rolledBack = await _rollbackSequenceAllocation(seq, traceId);
+                const rolledBack = await rollbackFiscalSequence(ledgerLock, seq, traceId);
                 if (!rolledBack) {
                     retainLedgerLock = true;
                     log.error("FISCAL_LEDGER_SEQUENCE_ROLLBACK_FAILED", {
