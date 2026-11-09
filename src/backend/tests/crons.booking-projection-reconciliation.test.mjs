@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { wixDataMock, mocks } from "./loader.mjs";
 
-const bookingsReaderKey = "@wix/bookings::extendedBookings::queryExtendedBookings";
+const bookingsReaderKey = "@wix/bookings::@wix/bookings::extendedBookings::queryExtendedBookings";
 let readerCalls = [];
 let confirmedPage = 0;
 
@@ -59,7 +59,8 @@ const CANCELED_PAID = booking("eeeeeeee-eeee-4eee-8eee-eeeeeeeeeee5", {
   paymentStatus: "PAID",
 });
 
-mocks.sdk[bookingsReaderKey] = async (query) => {
+mocks.sdk[bookingsReaderKey] = async (...args) => {
+  const query = args.find(arg => arg && (arg.filter || arg.cursorPaging)) || args[0];
   readerCalls.push(query);
   const status = query?.filter?.status;
   if (status === "CANCELED") {
@@ -69,7 +70,7 @@ mocks.sdk[bookingsReaderKey] = async (query) => {
     };
   }
   if (status !== "CONFIRMED") {
-    throw new Error("Unexpected Bookings Reader filter");
+    throw new Error("Unexpected Bookings Reader filter: " + JSON.stringify(args));
   }
   if (query?.cursorPaging?.cursor) {
     confirmedPage++;
@@ -190,7 +191,8 @@ test("CRON-BOOKING-PROJECTION-02 replay is idempotent and does not duplicate pro
 
 test("CRON-BOOKING-PROJECTION-03 rejects malformed native booking identifiers", async () => {
   wixDataMock._reset();
-  mocks.sdk[bookingsReaderKey] = async (query) => {
+  mocks.sdk[bookingsReaderKey] = async (...args) => {
+    const query = args.find(arg => arg && (arg.filter || arg.cursorPaging)) || args[0];
     if (query?.filter?.status === "CANCELED") {
       return { extendedBookings: [], pagingMetadata: { cursors: { next: null } } };
     }
