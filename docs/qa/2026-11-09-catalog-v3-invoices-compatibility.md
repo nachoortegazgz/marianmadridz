@@ -28,9 +28,10 @@
 
 ## Facturación Wix — resultado de compatibilidad separado
 
-- La documentación oficial vigente encontrada es Invoices API V4 (@wix/get-paid), no una Invoices API V2.
-- La lectura GET /invoices/v4/invoices-settings funciona (HTTP 200), pero POST /invoices/v4/invoices/query devuelve HTTP 428 INVOICES_API_UNAVAILABLE: Wix confirma que este sitio sigue usando el servicio legacy de facturas, accesible mediante Velo, y que la migración a la nueva API se despliega gradualmente.
-- No se implementa un wrapper especulativo ni se activa un segundo motor de facturación. Se mantiene el sistema actual hasta que Wix habilite oficialmente la API nueva en este sitio y se haya aprobado el contrato de numeración/series frente al ledger fiscal propio.
+- GetSiteContext identifica la aplicación Wix Invoices instalada como versión V1. No se ha confirmado una Invoices API V2 habilitada para este sitio.
+- La nueva API Get Paid Invoices se documenta bajo el SDK @wix/get-paid y rutas REST v4; la versión de ruta REST no debe confundirse con la versión de la aplicación Wix.
+- La documentación oficial indica que Get Paid Invoices se despliega gradualmente y que los sitios aún no migrados reciben HTTP 428. En el sitio, GET /invoices/v4/invoices-settings responde 200, pero POST /invoices/v4/invoices/query devuelve 428 INVOICES_API_UNAVAILABLE; el CRUD nuevo no está habilitado.
+- No se implementa un wrapper especulativo ni se activa un segundo motor de facturación. Se conserva el emisor V1 hasta que Wix habilite la API nueva en este sitio y se apruebe el contrato de numeración/series frente al ledger fiscal propio.
 - La lectura de invoices-settings no se ha modificado. No se han creado, publicado, enviado ni cobrado facturas.
 
 ## Test harness
