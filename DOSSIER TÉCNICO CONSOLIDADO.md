@@ -3674,3 +3674,45 @@ El gestor recibe cada trimestre un **paquete consolidado** en SharePoint con tod
 
 
 ### Cierre del dossier
+
+
+---
+
+# ANEXO DE VIGENCIA — 2026-11-09: Wix Stores Catalog V3 e Invoices
+
+Este anexo actualiza las referencias históricas de este dossier que indican Catalog V1 activo o prohíben V3. Se basa en lectura directa del sitio publicado y en la solicitud explícita de migración del responsable del proyecto.
+
+## Wix Stores — decisión vigente para Marian Madrid
+
+- **Verificado en sitio publicado:** Catalog Versioning API devuelve V3_CATALOG. La API V3 devuelve 30 inventory items en una única ubicación en la lectura del 09-11-2026.
+- **Decisión de arquitectura:** Catalog V3 es la versión canónica para este sitio. El código que siga usando Products/Inventory V1 no es compatible con el catálogo real y debe migrarse antes de habilitar el módulo de inventario.
+- La decisión aplica a Marian Madrid, no constituye una declaración de compatibilidad App Market multi-site. Si el código se convierte en app distribuible, habrá que soportar V1 y V3 mediante detección de versión, conforme a la documentación oficial de Wix.
+- El PR #216 contiene la implementación propuesta. Mientras permanezca abierto/no fusionado, el código desplegado no se considera migrado.
+- La migración no reescribe MovimientosInventario ni otros ledgers. La fila QA existente en InventarioStockVenta no identifica ningún producto/variante V3; no se utiliza como correspondencia. Los 30 inventory items no se convierten automáticamente en maestros CMS porque faltan los datos fiscales y de reservas validados por producto.
+- V3 modela inventario por variante y ubicación. Hasta disponer de asignación de ubicación en el contrato de negocio, una variante con más de un inventory item debe fallar de forma cerrada; nunca se elige ubicación arbitrariamente.
+
+## Wix Invoices — decisión vigente
+
+- GetSiteContext identifica la aplicación Wix Invoices instalada como versión V1.
+- No se ha verificado una Invoices API V2 habilitada para este sitio. La nueva API Get Paid Invoices se documenta bajo el SDK @wix/get-paid y rutas API v4; no debe confundirse la versión de ruta REST con la versión de la aplicación Wix.
+- La documentación oficial indica que Get Paid Invoices se despliega gradualmente y que sitios aún no migrados reciben HTTP 428. En el sitio, GET de invoices-settings responde 200, pero POST /invoices/v4/invoices/query responde 428 INVOICES_API_UNAVAILABLE; por tanto, el CRUD nuevo no está habilitado.
+- Se conserva el flujo actual. No se conecta un segundo emisor ni se cambia numeración/series/ledger fiscal hasta que Wix habilite la API vigente y exista ADR específica de coexistencia/migración.
+
+## Fuentes oficiales
+
+- Catalog V3 introduction: https://dev.wix.com/docs/api-reference/business-solutions/stores/catalog-v3/introduction
+- Catalog Versioning: https://dev.wix.com/docs/api-reference/business-solutions/stores/catalog-versioning/get-catalog-version
+- Inventory Items V3: https://dev.wix.com/docs/api-reference/business-solutions/stores/catalog-v3/inventory-items-v3/introduction
+- Products V3: https://dev.wix.com/docs/api-reference/business-solutions/stores/catalog-v3/products-v3/introduction
+- Invoices settings: https://dev.wix.com/docs/api-reference/business-management/get-paid/invoices/invoices-settings/get-invoices-settings
+
+**Estado:** CI offline verde (run 168, commit 77d63d2: 47 suites/442 tests/0 fallos); pendiente validación del SDK V3 en Wix Local Editor, QA de flujos y despliegue autorizado. Invoices: bloqueado por disponibilidad de la API V4 en el sitio.
+
+## Scopes SDK V3 requeridos
+
+- Catalog Versioning: SCOPE.STORES.CATALOG_READ_LIMITED.
+- Query Inventory Items V3: SCOPE.STORES.INVENTORY_ITEM_READ.
+- Products V3 Get Product: SCOPE.STORES.PRODUCT_READ.
+- Bulk Increment/Decrement Inventory Items V3: SCOPE.STORES.INVENTORY_ITEM_WRITE.
+
+La concesión efectiva de estos scopes en el entorno Velo del sitio sigue pendiente de comprobación en Wix Local Editor; auth.elevate no sustituye la concesión de scopes.

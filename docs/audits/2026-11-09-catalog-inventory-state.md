@@ -63,3 +63,21 @@ Esta evidencia es del 2026-11-06 y **no se ha reconsultado en vivo en esta inter
 - No se ha publicado código desde esta auditoría.
 
 **Conclusión:** no debe reintroducirse V3 ni ejecutarse una migración de catálogo hasta reconciliar la dependencia Wix, revalidar el CMS y completar QA en un sitio de prueba.
+
+---
+
+## 7. Corrección de vigencia — 2026-11-09, lectura Wix y PR #216
+
+Esta revisión supersede las afirmaciones de las secciones 1 y 4 que indicaban Catalog V1 activo. La evidencia anterior se basaba en un contexto Wix desactualizado.
+
+- **Verificado ahora en GetSiteContext:** Wix Stores app version Catalog V3.
+- **Verificado ahora en Catalog Versioning API:** V3_CATALOG.
+- **Verificado ahora en Inventory Items V3:** 30 inventory items en una ubicación.
+- La lectura de InventarioStockVenta/MovimientosInventario identificó únicamente filas QA sintéticas sin correspondencia válida con los 30 inventory items; no se realizó migración de datos ni escritura.
+- PR #216 introduce un adaptador V3, migra las operaciones del writer y cambia la clave de proyección a V3. ADR-004 y anexo de vigencia del Dossier registran la decisión.
+- CI offline run 168 en commit 77d63d2: 47 suites, 442 tests, 0 fallos; ESLint y contratos Cart V2/Bookings Reader V2 correctos.
+- **Pendiente:** la suite offline usa mocks de los namespaces V3. No acredita que el import real de @wix/stores resuelva en Wix Local Editor. El manifiesto/lockfile requiere reconciliación con Wix CLI y prueba de importación real.
+- **Pendiente:** no se ha ejecutado E2E en Wix Local Editor ni se ha publicado el código V3. El PR permanece en borrador.
+- El código de pedidos y reembolsos mantiene la regla: Wix eCommerce aplica el efecto nativo y el módulo proyecta el resultado; solo los ajustes manuales explícitos llaman a Bulk Increment/Decrement V3.
+
+**Estado actualizado:** Catalog V3 activo en el sitio; migración de código propuesta y CI offline verde; runtime Wix, mapeo maestro CMS y E2E todavía pendientes. No modificar stock ni crear maestros CMS hasta completar esas verificaciones.

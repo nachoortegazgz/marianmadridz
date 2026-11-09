@@ -4,53 +4,53 @@ import assert from "node:assert/strict";
 const { wixDataMock, mocks } = await import("./loader.mjs");
 const IC = await import("backend/internalConfig.js");
 
-let catalogVersion = "V1_CATALOG";
-let getStoreVariantCalls = 0;
+let catalogVersion = "V3_CATALOG";
+let getCatalogVariantCalls = 0;
 let nativeQuantity = 6;
 mocks.sdk["@wix/stores::@wix/stores::catalogVersioning::getCatalogVersion"] = async () => ({
   catalogVersion,
 });
-mocks.sdk["@wix/stores::@wix/stores::products::getStoreVariant"] = async (storeVariantId) => {
-  getStoreVariantCalls += 1;
-  const rawId = String(storeVariantId);
-  const productId = rawId.slice(0, 36);
-  const variantId = rawId.slice(37);
+const INVENTORY_ITEM_ID = "55555555-6666-4666-8666-555555555555";
+const LOCATION_ID = "66666666-7777-4777-8777-666666666666";
+mocks.sdk["@wix/stores::@wix/stores::inventoryItemsV3::queryInventoryItems"] = async (query) => {
+  getCatalogVariantCalls += 1;
   return {
-    variant: {
-      productId,
-      variantId,
-      productName: "Producto de prueba",
-      sku: "SKU-QA-001",
-      price: { amount: "25.00" },
-      stock: { trackQuantity: true, quantity: nativeQuantity },
-    },
+    inventoryItems: [{
+      id: INVENTORY_ITEM_ID,
+      productId: PRODUCT_ID,
+      variantId: VARIANT_ID,
+      locationId: LOCATION_ID,
+      quantity: nativeQuantity,
+      trackQuantity: true,
+      product: {
+        name: "Producto de prueba",
+        variantName: "Unica",
+        variantSku: "SKU-QA-001",
+      },
+    }],
+    pagingMetadata: { count: 1, cursors: {} },
   };
 };
-mocks.sdk["@wix/stores::@wix/stores::products::queryProductVariants"] = async (productId, options) => ({
-  variants: [{
-    _id: options?.variantIds?.[0],
-    variant: { sku: "SKU-QA-001", priceData: { price: 25 } },
-  }],
+mocks.sdk["@wix/stores::@wix/stores::productsV3::getProduct"] = async () => ({
+  product: {
+    id: PRODUCT_ID,
+    name: "Producto de prueba",
+    variantsInfo: {
+      variants: [{
+        id: VARIANT_ID,
+        sku: "SKU-QA-001",
+        price: { actualPrice: { amount: "25.00" } },
+      }],
+    },
+  },
 });
-mocks.sdk["@wix/stores::@wix/stores::products::queryStoreVariants"] = async () => ({
-  variants: [{
-    productId: PRODUCT_ID,
-    variantId: VARIANT_ID,
-    productName: "Producto de prueba",
-    variantName: "Unica",
-    sku: "SKU-QA-001",
-    managedVariant: true,
-    stock: { trackQuantity: true, quantity: nativeQuantity },
-  }],
-  totalCount: 1,
-});
-mocks.sdk["@wix/stores::@wix/stores::inventory::incrementInventory"] = async (input) => {
-  nativeQuantity += Number(input?.incrementData?.[0]?.incrementBy || 0);
-  return {};
+mocks.sdk["@wix/stores::@wix/stores::inventoryItemsV3::bulkIncrementInventoryItems"] = async (data) => {
+  nativeQuantity += Number(data?.[0]?.incrementBy || 0);
+  return { results: [{ itemMetadata: { success: true }, item: { id: INVENTORY_ITEM_ID, quantity: nativeQuantity } }] };
 };
-mocks.sdk["@wix/stores::@wix/stores::inventory::decrementInventory"] = async (input) => {
-  nativeQuantity -= Number(input?.decrementData?.[0]?.decrementBy || 0);
-  return {};
+mocks.sdk["@wix/stores::@wix/stores::inventoryItemsV3::bulkDecrementInventoryItems"] = async (data) => {
+  nativeQuantity -= Number(data?.[0]?.decrementBy || 0);
+  return { results: [{ itemMetadata: { success: true }, item: { id: INVENTORY_ITEM_ID, quantity: nativeQuantity } }] };
 };
 mocks.sdk["@wix/bookings::bookings::staffMembers"] = {
   queryStaffMembers: async () => ({
@@ -76,7 +76,7 @@ const ORDER_ID = "11111111-1111-4111-8111-111111111111";
 const LINE_ID = "22222222-2222-4222-8222-222222222222";
 const PRODUCT_ID = "33333333-3333-4333-8333-333333333333";
 const VARIANT_ID = "44444444-4444-4444-8444-444444444444";
-const STOCK_KEY = `V1:${PRODUCT_ID}:${VARIANT_ID}`;
+const STOCK_KEY = `V3:${PRODUCT_ID}:${VARIANT_ID}`;
 
 function paidOrder() {
   return {
@@ -98,7 +98,7 @@ function paidOrder() {
 
 function seed() {
   wixDataMock._reset();
-  getStoreVariantCalls = 0;
+  getCatalogVariantCalls = 0;
   nativeQuantity = 6;
   mocks.members._current = {
     _id: "99999999-aaaa-4bbb-8ccc-dddddddddddd",
@@ -120,17 +120,18 @@ function seed() {
     stockKey: STOCK_KEY,
     productId: PRODUCT_ID,
     variantId: VARIANT_ID,
-    catalogVersion: "V1_CATALOG",
+    catalogVersion: "V3_CATALOG",
     traceId: "trace-seed",
   }]);
 }
 
 test.beforeEach(() => {
-  catalogVersion = "V1_CATALOG";
+  catalogVersion = "V3_CATALOG";
+  INV._resetCatalogVersionCacheForTests();
   seed();
 });
 
-test("INVENTORY-WRITER-01 mirrors native Wix V1 stock without writing to native inventory", async () => {
+test("INVENTORY-WRITER-01 mirrors native Wix Catalog V3 stock without writing to native inventory", async () => {
   const result = await INV.syncPaidOrderInventoryInternal(
     paidOrder(),
     "trace-inventory-001",
@@ -143,7 +144,7 @@ test("INVENTORY-WRITER-01 mirrors native Wix V1 stock without writing to native 
   assert.equal(stock.stockOnHand, 6);
   assert.equal(stock.stockReserved, 1);
   assert.equal(stock.stockAvailable, 5);
-  assert.equal(stock.catalogVersion, "V1_CATALOG");
+  assert.equal(stock.catalogVersion, "V3_CATALOG");
 
   const movements = wixDataMock._store.get(MOVEMENTS_COL);
   assert.equal(movements.length, 1);
@@ -152,7 +153,7 @@ test("INVENTORY-WRITER-01 mirrors native Wix V1 stock without writing to native 
   assert.equal(movements[0].movementToken.startsWith("SALE_"), true);
   assert.equal(movements[0].nativeCommercialMovement, true);
   assert.equal(movements[0].stockApplied, true);
-  assert.equal(getStoreVariantCalls, 1);
+  assert.equal(getCatalogVariantCalls, 1);
 });
 
 test("INVENTORY-WRITER-02 repeated paid-order event is idempotent by movementToken", async () => {
@@ -167,8 +168,8 @@ test("INVENTORY-WRITER-02 repeated paid-order event is idempotent by movementTok
   assert.equal(wixDataMock._store.get(STOCK_COL)[0].stockOnHand, 6);
 });
 
-test("INVENTORY-WRITER-03 refuses an unsupported catalog version before any CMS mutation", async () => {
-  catalogVersion = "V3_CATALOG";
+test("INVENTORY-WRITER-03 refuses Catalog V1 before any CMS mutation", async () => {
+  catalogVersion = "V1_CATALOG";
   const result = await INV.syncPaidOrderInventoryInternal(
     paidOrder(),
     "trace-inventory-004",
@@ -247,7 +248,7 @@ test("INVENTORY-REFUND-01 only explicit restock side effect creates a positive r
 });
 
 
-test("INVENTORY-MANUAL-01 supplier receipt increments Wix V1 atomically and writes one append-only movement", async () => {
+test("INVENTORY-MANUAL-01 supplier receipt increments Wix Catalog V3 atomically and writes one append-only movement", async () => {
   seed();
   nativeQuantity = 8;
   const input = {
@@ -278,7 +279,7 @@ test("INVENTORY-MANUAL-01 supplier receipt increments Wix V1 atomically and writ
 });
 
 
-test("INVENTORY-MASTER-01 admin maps a managed Wix V1 variant with explicit tax and reservation baseline", async () => {
+test("INVENTORY-MASTER-01 admin maps a managed Wix Catalog V3 variant with explicit tax and reservation baseline", async () => {
   seed();
   nativeQuantity = 8;
   wixDataMock._seed(STOCK_COL, []);
