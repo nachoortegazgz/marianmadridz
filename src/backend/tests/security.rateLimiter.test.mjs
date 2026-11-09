@@ -165,8 +165,8 @@ test("SEC-RL-08 reuses the persisted row without another bootstrap insert", asyn
     );
     assert.equal(
         wixDataMock._calls.filter((call) => call.op === "get").length,
-        2,
-        "one explicit state read plus the mocked bulkPatch item lookup"
+        3,
+        "explicit state read, bulkPatch lookup, and authoritative beforeUpdate hook read"
     );
     const bulkPatchCall = wixDataMock._calls.findLast((call) => call.op === "bulkPatch");
     assert.ok(bulkPatchCall, "RATE_LIMIT compare-and-set uses atomic bulkPatch");
