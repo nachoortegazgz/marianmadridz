@@ -98,6 +98,28 @@ function setMember(member) {
   mocks.members._current = member;
 }
 
+function seedCajaPrincipal() {
+  const rows = wixDataMock._store.get('CajaActual') || [];
+  if (rows.some((row) => row.singletonKey === 'CAJA_PRINCIPAL')) return;
+  const operationDate = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Madrid' });
+  wixDataMock._store.set('CajaActual', [{
+    _id: 'SINGLE_ITEM_ID',
+    singletonKey: 'CAJA_PRINCIPAL',
+    isOpen: true,
+    cashRegisterStatus: 'ABIERTA',
+    operationDate,
+    openingAmount: 300,
+    cashAmount: 300,
+    totalInAmount: 300,
+    expectedCash: 300,
+    cardAmount: 0,
+    voucherAmount: 0,
+    otherAmount: 0,
+    salesCount: 0,
+    sequenceCounters: {},
+  }]);
+}
+
 // LH-18b: secrets fiscales validos (>=32 chars key, >=9 NIF) + invalidacion
 // de la cache interna de cajas.web para que el flujo offline vea los overrides.
 async function setupFiscalSecrets() {
@@ -305,6 +327,7 @@ test('FLOW-HOR-04 manager adjustment writes the verified target site-member ID',
 
 test('FLOW-CAJA-01 flujo continuo: venta EFECTIVO -> caja incrementada -> cierre Z -> hash-chain integra', async () => {
   wixDataMock._reset();
+  seedCajaPrincipal();
   await seedStaff({ resourceId: GUID_ADMIN_RESOURCE });
   setMember({ _id: GUID_MEMBER, contactId: GUID_CONTACT, loginEmail: 'marta@test.local' });
   const { cajas } = await freshImports();
@@ -638,6 +661,7 @@ test('FLOW-CAJA-03 traducion legacy ONLINE -> WIX_PAYMENTS en la frontera (CAJA-
   await seedStaff({ resourceId: GUID_ADMIN_RESOURCE });
   setMember({ _id: GUID_MEMBER, contactId: GUID_CONTACT, loginEmail: 'marta@test.local' });
   await setupFiscalSecrets();
+  seedCajaPrincipal();
   // LH-27 (v13.0): FLOW-CAJA-01 cierra el Z del día de operación y FLOW-CAJA-02
   // opera sobre el mismo periodo compartido. En producción cada sesión de caja
   // abre un periodo nuevo; aquí se purga solo el ledger y los cierres Z para
@@ -744,6 +768,7 @@ test('FLOW-CAJA-06 CajaActual resolves singletonKey when Wix assigned a differen
 
 test('FLOW-CAJA-04 transactionId concurrente no crea movimientos duplicados', async () => {
   wixDataMock._reset();
+  seedCajaPrincipal();
   const { cajas } = await freshImports();
   await seedStaff({ resourceId: GUID_ADMIN_RESOURCE });
   setMember({ _id: GUID_MEMBER, contactId: GUID_CONTACT, loginEmail: 'marta@test.local' });
