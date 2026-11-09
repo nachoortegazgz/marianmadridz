@@ -3,7 +3,7 @@
 MODULE: backend/inventario.web.js
 RESPONSIBILITY:
 - Read-only inventory views for the staff browser workspace.
-- Idempotent CMS projection of native Wix Stores Catalog V1 order movements.
+- Idempotent CMS projection of native Wix Stores Catalog V3 order movements.
 - Wix Stores remains authoritative for native stock; this module NEVER
   decrements or increments Wix inventory.
 ARCHITECTURE:
@@ -15,8 +15,13 @@ ARCHITECTURE:
 */
 
 import { Permissions, webMethod } from "wix-web-module";
-import { auth } from "@wix/essentials";
-import { catalogVersioning, inventory, products } from "@wix/stores";
+import {
+    getCatalogVersion as readCatalogVersion,
+    getCatalogVariant as readCatalogVariant,
+    queryCatalogInventory as readCatalogInventory,
+    incrementCatalogInventory,
+    decrementCatalogInventory,
+} from "backend/catalogV3Adapter";
 
 import {
     getItem as dalGet,
@@ -49,12 +54,11 @@ const CONTROL_COL = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
 const STRONG_READ = Object.freeze({ consistencyMode: "strong" });
 const API_TIMEOUT_MS = Number(SDK_CONFIG?.TIMEOUTS?.WEBHOOK_MS) || 30000;
 
-const getCatalogVersionElevated = auth.elevate(catalogVersioning.getCatalogVersion);
-const getStoreVariantElevated = auth.elevate(products.getStoreVariant);
-const queryProductVariantsElevated = auth.elevate(products.queryProductVariants);
-const queryStoreVariantsElevated = auth.elevate(products.queryStoreVariants);
-const incrementInventoryElevated = auth.elevate(inventory.incrementInventory);
-const decrementInventoryElevated = auth.elevate(inventory.decrementInventory);
+const getCatalogVersionElevated = readCatalogVersion;
+const getStoreVariantElevated = readCatalogVariant;
+const queryStoreVariantsElevated = readCatalogInventory;
+const incrementInventoryElevated = incrementCatalogInventory;
+const decrementInventoryElevated = decrementCatalogInventory;
 
 function _error(code, message, details = {}) {
     return { status: "ERROR", data: null, error: { code, message, ...details } };
@@ -982,7 +986,7 @@ export const getInventoryDashboard = webMethod(Permissions.SiteMember, async (op
         await requireCajero(traceId);
         const catalogVersion = await _getCatalogVersion();
         if (catalogVersion !== INVENTORY_CONFIG.CATALOG_VERSION) {
-            return _error("INVENTORY_CATALOG_VERSION_MISMATCH", "El modulo esta preparado para Wix Stores Catalog V1.", {
+            return _error("INVENTORY_CATALOG_VERSION_MISMATCH", "El modulo esta preparado para Wix Stores Catalog V3.", {
                 expected: INVENTORY_CONFIG.CATALOG_VERSION,
                 actual: catalogVersion,
             });
@@ -1231,7 +1235,7 @@ export const registerInventoryMovement = webMethod(Permissions.SiteMember, async
         const catalogVersion = await _getCatalogVersion();
         if (catalogVersion !== INVENTORY_CONFIG.CATALOG_VERSION) {
             await _releaseStockLock(lock);
-            return _error("INVENTORY_CATALOG_VERSION_MISMATCH", "La operacion solo admite Catalog V1.");
+            return _error("INVENTORY_CATALOG_VERSION_MISMATCH", "La operacion solo admite Catalog V3.");
         }
 
         const nativeResponse = await withTimeout(
@@ -1286,21 +1290,21 @@ export const registerInventoryMovement = webMethod(Permissions.SiteMember, async
 
         try {
             await _assertStockLock(lock);
+            const inventoryItemId = _safeTrim(nativeVariant.inventoryItemId);
+            if (!isValidGuid(inventoryItemId)) {
+                throw Object.assign(new Error("INVENTORY_V3_ITEM_ID_MISSING"), { code: "INVENTORY_V3_ITEM_ID_MISSING" });
+            }
             if (quantityDelta > 0) {
                 await withTimeout(
-                    incrementInventoryElevated({
-                        incrementData: [{ productId, variantId, incrementBy: quantityDelta }],
-                    }),
+                    incrementInventoryElevated(inventoryItemId, quantityDelta),
                     API_TIMEOUT_MS,
-                    "inventory.incrementInventory"
+                    "inventoryItemsV3.bulkIncrementInventoryItems"
                 );
             } else {
                 await withTimeout(
-                    decrementInventoryElevated({
-                        decrementData: [{ productId, variantId, decrementBy: Math.abs(quantityDelta) }],
-                    }),
+                    decrementInventoryElevated(inventoryItemId, Math.abs(quantityDelta)),
                     API_TIMEOUT_MS,
-                    "inventory.decrementInventory"
+                    "inventoryItemsV3.bulkDecrementInventoryItems"
                 );
             }
         } catch (nativeError) {
@@ -1492,7 +1496,7 @@ export const getInventoryCatalogCandidates = webMethod(Permissions.SiteMember, a
         await requireCajero(traceId);
         const catalogVersion = await _getCatalogVersion();
         if (catalogVersion !== INVENTORY_CONFIG.CATALOG_VERSION) {
-            return _error("INVENTORY_CATALOG_VERSION_MISMATCH", "El modulo esta preparado para Wix Stores Catalog V1.");
+            return _error("INVENTORY_CATALOG_VERSION_MISMATCH", "El modulo esta preparado para Wix Stores Catalog V3.");
         }
         const limit = Math.min(100, Math.max(1, Math.floor(Number(options?.limit) || 100)));
         const offset = Math.min(10000, Math.max(0, Math.floor(Number(options?.offset) || 0)));
@@ -1554,18 +1558,18 @@ export const registerInventoryMaster = webMethod(Permissions.SiteMember, async (
 
         const catalogVersion = await _getCatalogVersion();
         if (catalogVersion !== INVENTORY_CONFIG.CATALOG_VERSION) {
-            return _error("INVENTORY_CATALOG_VERSION_MISMATCH", "El modulo esta preparado para Wix Stores Catalog V1.");
+            return _error("INVENTORY_CATALOG_VERSION_MISMATCH", "El modulo esta preparado para Wix Stores Catalog V3.");
         }
-        const [storeResponse, variantsResponse] = await Promise.all([
-            withTimeout(getStoreVariantElevated(`${productId}-${variantId}`), API_TIMEOUT_MS, "inventory.getStoreVariant"),
-            withTimeout(queryProductVariantsElevated(productId, { variantIds: [variantId] }), API_TIMEOUT_MS, "inventory.queryProductVariants"),
-        ]);
+        const storeResponse = await withTimeout(
+            getStoreVariantElevated(`${productId}-${variantId}`),
+            API_TIMEOUT_MS,
+            "inventory.catalogV3.getVariant"
+        );
         const storeVariant = storeResponse?.variant;
-        const catalogVariant = (variantsResponse?.variants || []).find((item) => item?._id === variantId);
         const nativeStock = storeVariant?.stock || {};
         const stockOnHand = Number(nativeStock.quantity);
-        const price = Number(catalogVariant?.variant?.priceData?.price);
-        const sku = _safeTrim(catalogVariant?.variant?.sku || storeVariant?.sku);
+        const price = Number(storeVariant?.price?.amount);
+        const sku = _safeTrim(storeVariant?.sku);
         const name = _safeTrim(storeVariant?.productName);
         if (
             !storeVariant ||
