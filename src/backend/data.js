@@ -31,7 +31,7 @@ export function _readCanonical(item, canonicalKey, historicalKeys = []) {
     const isPresent = (v) => v !== undefined && v !== null && v !== "";
     const direct = item[canonicalKey];
     if (isPresent(direct)) return direct;
-    for (const historical of historicalKeys) {
+    for (const historicalKey of historicalKeys) {
         const v = item[historicalKey];
         if (isPresent(v)) {
             log.warn("historical-field-read", {
