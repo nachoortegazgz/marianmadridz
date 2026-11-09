@@ -15,3 +15,16 @@ test("EVENT-ORDER-GUID-01 order-created webhook uses the imported canonical GUID
     );
     assert.doesNotMatch(source, /\bisValidGuid\s*\(/);
 });
+
+
+test("EVENT-ORDER-RETRY-01 order-created reconciliation skips recovered booking-only orders and propagates every failure", () => {
+    const start = source.indexOf("export async function wixEcom_onOrderCreated");
+    const end = source.indexOf("// WEBHOOK: ORDER PAYMENT STATUS UPDATED", start);
+    assert.ok(start >= 0 && end > start, "order-created handler must remain discoverable");
+    const handler = source.slice(start, end);
+
+    assert.match(handler, /isOrderCreatedReconciled\(orderId\)/);
+    assert.match(handler, /if\s*\(await isOrderCreatedReconciled\(orderId\)\)\s*\{[\s\S]*?reconciled:\s*true/);
+    assert.match(handler, /catch\s*\(error\)\s*\{[\s\S]*?_handleError\(error,\s*"wixEcom_onOrderCreated",\s*traceId\);[\s\S]*?throw error;/);
+    assert.doesNotMatch(handler, /return\s*\{\s*status:\s*"OK"\s*\};/);
+});

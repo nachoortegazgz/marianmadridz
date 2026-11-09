@@ -50,6 +50,7 @@ PENDIENTES:
 */
 import { query as dalQuery, getItem as dalGet, insertItem as dalInsert, updateItem as dalUpdate, bulkRemove as dalBulkRemove } from "backend/dataAccess";
 import { bookings } from "@wix/bookings";
+import { orders } from "@wix/ecom";
 import { auth } from "@wix/essentials";
 import {
 BUSINESS_COLLECTIONS,
@@ -57,6 +58,7 @@ OPERATIONAL_COLLECTIONS,
 CONTROL_TYPE,
 CONTROL_STATUS,
 COMPENSATION_STATUS,
+WIX_CATALOG_APP_IDS,
 CONCURRENCY,
 SDK_CONFIG,
 normalizeBookingType,
@@ -127,6 +129,12 @@ function _summarizeBulkRemove(response) {
 
 // CRON-08: elevatedGet para reconciliación
 const getBookingElevated = auth.elevate(bookings.getBooking);
+const searchOrdersElevated = auth.elevate(orders.searchOrders);
+const ORDER_RECONCILIATION_PAGE_LIMIT = 100;
+const ORDER_RECONCILIATION_MAX_PAGES = 20;
+const ORDER_MARKER_PAGE_LIMIT = 500;
+const ORDER_MARKER_MAX_PAGES = 20;
+const ORDER_RECONCILIATION_MARKER_TTL_HOURS = 72;
 
 // =============================================================================
 // CRON 1: cleanExpiredLocks - 15 * * * *
@@ -1411,4 +1419,231 @@ result.errors.push({ query: "main", error: err?.message });
 }
 
 return result;
+}
+
+
+// =============================================================================
+// CRON: reconcileUnmarkedOrderCreatedEvents - every 30 minutes
+// =============================================================================
+/**
+ * Reconciles native Wix Orders whose ORDER_CREATED event marker is absent.
+ *
+ * Only orders composed entirely of Wix Bookings line items are auto-marked:
+ * they require no Stores inventory reservation. Any Stores or unknown catalog
+ * line item is left unmarked and receives a deduplicated operational alert.
+ * This cron never creates payments, cash movements, accounting entries, stock
+ * movements, or stock reservations.
+ */
+export async function reconcileUnmarkedOrderCreatedEvents() {
+    const traceId = makeTraceId("cron-order-created-reconcile");
+    const result = {
+        ordersRead: 0,
+        markersFound: 0,
+        reconciled: 0,
+        reviewRequired: 0,
+        skipped: 0,
+        failed: 0,
+        errors: [],
+    };
+
+    const ordersById = new Map();
+    // Search Orders omits PENDING/REJECTED by default; INITIALIZED is never
+    // returned by Search Orders and must be handled by its originating event.
+    const filters = [null, { status: "PENDING" }, { status: "REJECTED" }];
+
+    try {
+        for (const filter of filters) {
+            let cursor = null;
+            let hasNext = true;
+            let page = 0;
+
+            while (hasNext && page < ORDER_RECONCILIATION_MAX_PAGES) {
+                const search = {
+                    ...(filter ? { filter } : {}),
+                    cursorPaging: {
+                        limit: ORDER_RECONCILIATION_PAGE_LIMIT,
+                        ...(cursor ? { cursor } : {}),
+                    },
+                };
+                const response = await withTimeout(
+                    () => searchOrdersElevated(search),
+                    API_TIMEOUT_MS,
+                    "cron:searchOrdersForOrderCreatedReconciliation"
+                );
+                const pageOrders = response?.orders || [];
+                for (const order of pageOrders) {
+                    const orderId = _safeTrim(order?._id || order?.id);
+                    if (!orderId) continue;
+                    if (!_looksLikeGuid(orderId)) {
+                        throw new Error("ORDER_ID_INVALID_IN_NATIVE_SEARCH");
+                    }
+                    ordersById.set(orderId, order);
+                }
+                hasNext = Boolean(response?.metadata?.hasNext);
+                cursor = response?.metadata?.cursors?.next || null;
+                page++;
+                if (hasNext && !cursor) {
+                    throw new Error("ORDER_SEARCH_NEXT_CURSOR_MISSING");
+                }
+            }
+
+            if (hasNext) {
+                throw new Error("ORDER_SEARCH_PAGE_LIMIT_REACHED");
+            }
+        }
+
+        result.ordersRead = ordersById.size;
+
+        const markerRows = [];
+        let markerPage = 0;
+        while (markerPage < ORDER_MARKER_MAX_PAGES) {
+            const markerResponse = await dalQuery(OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO)
+                .eq("controlType", CONTROL_TYPE.WEBHOOK_EVENT)
+                .ascending("_createdDate")
+                .limit(ORDER_MARKER_PAGE_LIMIT)
+                .skip(markerPage * ORDER_MARKER_PAGE_LIMIT)
+                .find({ consistencyMode: "strong" });
+            const rows = markerResponse?.items || [];
+            markerRows.push(...rows);
+            if (rows.length < ORDER_MARKER_PAGE_LIMIT) break;
+            markerPage++;
+        }
+        if (markerPage >= ORDER_MARKER_MAX_PAGES &&
+            markerRows.length === ORDER_MARKER_PAGE_LIMIT * ORDER_MARKER_MAX_PAGES) {
+            throw new Error("ORDER_EVENT_MARKER_SCAN_LIMIT_REACHED");
+        }
+
+        const markedOrderIds = new Set();
+        for (const row of markerRows) {
+            const payload = readControlPayload(row);
+            const eventType = _safeTrim(payload?.eventType).toUpperCase();
+            if (eventType !== "ORDER_CREATED" && eventType !== "ORDER_CREATED_RECONCILED") {
+                continue;
+            }
+            const orderId = _safeTrim(
+                row?.orderId || payload?.metadata?.orderId || payload?.orderId
+            );
+            if (orderId) markedOrderIds.add(orderId);
+        }
+        result.markersFound = markedOrderIds.size;
+
+        for (const [orderId, order] of ordersById.entries()) {
+            if (markedOrderIds.has(orderId)) {
+                result.skipped++;
+                continue;
+            }
+
+            const lineItems = Array.isArray(order?.lineItems) ? order.lineItems : [];
+            const bookingsOnly = lineItems.length > 0 && lineItems.every((line) =>
+                line?.catalogReference?.appId === WIX_CATALOG_APP_IDS.BOOKINGS
+            );
+
+            if (bookingsOnly) {
+                const eventId = `ORDER_CREATED_RECONCILED_${orderId}`;
+                const recordId = `ORDER_CREATED_RECONCILED_${orderId}`;
+                const now = new Date();
+                const record = {
+                    _id: recordId,
+                    controlType: CONTROL_TYPE.WEBHOOK_EVENT,
+                    dedupeKey: `WEBHOOK_${eventId}`,
+                    eventId,
+                    orderId,
+                    status: CONTROL_STATUS.COMPLETED,
+                    expiresAt: new Date(now.getTime() +
+                        ORDER_RECONCILIATION_MARKER_TTL_HOURS * 60 * 60 * 1000),
+                    payload: {
+                        eventType: "ORDER_CREATED_RECONCILED",
+                        traceId,
+                        processedAt: now.toISOString(),
+                        metadata: {
+                            orderId,
+                            orderNumber: order?.number ?? null,
+                            orderStatus: _safeTrim(order?.status) || "UNKNOWN",
+                            paymentStatus: _safeTrim(order?.paymentStatus) || "UNKNOWN",
+                            lineItemCount: lineItems.length,
+                            inventoryAction: "NOT_REQUIRED_BOOKINGS_ONLY",
+                            reconciliationSource: "WIX_ORDERS_NATIVE",
+                            originalEventMarkerMissing: true,
+                        },
+                    },
+                    traceId,
+                    _createdDate: now,
+                    _updatedDate: now,
+                };
+
+                try {
+                    await dalInsert(OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO, record);
+                    markedOrderIds.add(orderId);
+                    result.reconciled++;
+                } catch (insertError) {
+                    const existing = await dalGet(
+                        OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO,
+                        recordId,
+                        "strong"
+                    );
+                    if (existing?.payload?.eventType === "ORDER_CREATED_RECONCILED" &&
+                        existing?.orderId === orderId) {
+                        markedOrderIds.add(orderId);
+                        result.skipped++;
+                    } else {
+                        throw insertError;
+                    }
+                }
+                continue;
+            }
+
+            const appIds = Array.from(new Set(lineItems.map((line) =>
+                _safeTrim(line?.catalogReference?.appId) || "MISSING_APP_ID"
+            )));
+            const alert = await notifyOperationalAlert({
+                alertType: "ORDER_CREATED_RECONCILIATION_REQUIRED",
+                severity: "ERROR",
+                message: "Pedido nativo sin marcador ORDER_CREATED; requiere revisar lineas de catalogo antes de reconciliar inventario.",
+                data: {
+                    orderId,
+                    orderNumber: order?.number ?? null,
+                    orderStatus: _safeTrim(order?.status) || "UNKNOWN",
+                    paymentStatus: _safeTrim(order?.paymentStatus) || "UNKNOWN",
+                    lineItemCount: lineItems.length,
+                    catalogAppIds: appIds,
+                },
+                traceId,
+                entityId: orderId,
+                source: "backend/crons.js",
+                dedupeKey: `ORDER_CREATED_RECONCILIATION_${orderId}`,
+            });
+            if (alert?.failed) {
+                result.failed++;
+                if (result.errors.length < 10) {
+                    result.errors.push({ orderId, reason: "RECONCILIATION_ALERT_PERSISTENCE_FAILED" });
+                }
+                continue;
+            }
+            result.reviewRequired++;
+        }
+
+        log.info("reconcileUnmarkedOrderCreatedEvents completed", {
+            ordersRead: result.ordersRead,
+            markersFound: result.markersFound,
+            reconciled: result.reconciled,
+            reviewRequired: result.reviewRequired,
+            skipped: result.skipped,
+            failed: result.failed,
+            traceId,
+        });
+        if (result.failed > 0) {
+            throw new Error("ORDER_CREATED_RECONCILIATION_PARTIAL_FAILURE");
+        }
+        return result;
+    } catch (error) {
+        log.error("reconcileUnmarkedOrderCreatedEvents failed", {
+            error: error?.message || "UNKNOWN",
+            ordersRead: result.ordersRead,
+            reconciled: result.reconciled,
+            reviewRequired: result.reviewRequired,
+            failed: result.failed,
+            traceId,
+        });
+        throw error;
+    }
 }
