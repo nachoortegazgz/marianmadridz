@@ -1,11 +1,16 @@
 /*
 =============================================================================
 MODULE: backend/crons.js
-VERSION: v5011-CRON-PARITY
+VERSION: v5012-DUAL-PAIR-STRICT-RECONCILIATION
 BASE: v5010-TELEMETRY-ATOMIC + correcciones auditoria P0 (jobs huerfanos)
 RESPONSIBILITY: Jobs programados (cron). 9 jobs wired en jobs.config + 2 de
 reconciliacion interna (reconcileUnknownTransactions / InconsistentDualPairs).
 STANDARDS: G10 ASCII Strict. Cero suppressAuth. Cero COLLECTIONS alias.
+
+CORRECCIONES v5012-DUAL-PAIR-STRICT-RECONCILIATION:
+DUAL-RECONCILE-01 (P1): reconcileInconsistentDualPairs solo marca RECONCILED
+cuando existen exactamente F1+F2, relacion, mismo pedido/estado/importe,
+un unico movimiento ORDER vinculado y ambas reservas nativas en Wix.
 
 CORRECCIONES v5011-CRON-PARITY:
 AUDIT-NZ-01 (P0): verifyNightlyZClosing implementado (declurado en
@@ -810,88 +815,118 @@ result.failed++;
 continue;
 }
 
-// Consultar CitasF2 para verificar estado del par
-const citas = await dalQuery(BUSINESS_COLLECTIONS.CITAS_F2)
+// Reconcile only a complete, internally consistent dual pair.
+const citasRes = await dalQuery(BUSINESS_COLLECTIONS.CITAS_F2)
 .eq("pairToken", pairToken)
 .limit(10)
 .find({ consistencyMode: "strong" });
+const pairRows = Array.isArray(citasRes?.items) ? citasRes.items : [];
+const f1Rows = pairRows.filter(c => normalizeBookingType(c.bookingType) === BOOKING_TYPE.DUAL_F1);
+const f2Rows = pairRows.filter(c => normalizeBookingType(c.bookingType) === BOOKING_TYPE.DUAL_F2);
+const f1Cita = f1Rows[0];
+const f2Cita = f2Rows[0];
+const f1BookingId = _safeTrim(f1Cita?.bookingId || "");
+const f2BookingId = _safeTrim(f2Cita?.bookingId || "");
+const f1Meta = f1Cita?.meta && typeof f1Cita.meta === "object" ? f1Cita.meta : {};
+const f2Meta = f2Cita?.meta && typeof f2Cita.meta === "object" ? f2Cita.meta : {};
+const f1OrderId = _safeTrim(f1Cita?.orderId || f1Meta.orderId || "");
+const f2OrderId = _safeTrim(f2Cita?.orderId || f2Meta.orderId || "");
+const f1PaymentStatus = _safeTrim(f1Cita?.paymentStatus || f1Meta.paymentStatus || "").toUpperCase();
+const f2PaymentStatus = _safeTrim(f2Cita?.paymentStatus || f2Meta.paymentStatus || "").toUpperCase();
+const f1Amount = Number(f1Cita?.totalAmount);
+const f2Amount = Number(f2Cita?.totalAmount);
+const pairValid =
+pairRows.length === 2 &&
+f1Rows.length === 1 &&
+f2Rows.length === 1 &&
+Boolean(f1BookingId && f2BookingId && f1BookingId !== f2BookingId) &&
+_safeTrim(f2Meta.linkedF1BookingId) === f1BookingId &&
+Boolean(f1OrderId && f1OrderId === f2OrderId) &&
+Boolean(f1PaymentStatus && f1PaymentStatus === f2PaymentStatus) &&
+Number.isFinite(f1Amount) &&
+Number.isFinite(f2Amount) &&
+Math.round(f1Amount * 100) === Math.round(f2Amount * 100);
 
-// SSOT-KEYFIELD v13: canon DUAL_F1/DUAL_F2; normalizeBookingType promueve
-// docs historicos escritos con la ID legacy DUALF1/DUALF2.
-const f1Cita = citas?.items?.find(c =>
-normalizeBookingType(c.bookingType) === BOOKING_TYPE.DUAL_F1 || !c.meta?.linkedF1BookingId
-);
-const f2Cita = citas?.items?.find(c =>
-normalizeBookingType(c.bookingType) === BOOKING_TYPE.DUAL_F2 || c.meta?.linkedF1BookingId
-);
-
-if (!f1Cita || !f2Cita) {
-log.warn("reconcileInconsistentDualPairs: missing cita", {
-pairToken,
-hasF1: !!f1Cita,
-hasF2: !!f2Cita,
-traceId,
-});
+if (!pairValid) {
 result.failed++;
+if (result.errors.length < 10) result.errors.push({
+pairToken, reason: "DUAL_PAIR_INTEGRITY_MISMATCH", rowCount: pairRows.length,
+f1Count: f1Rows.length, f2Count: f2Rows.length,
+sameOrder: Boolean(f1OrderId && f1OrderId === f2OrderId),
+samePaymentStatus: Boolean(f1PaymentStatus && f1PaymentStatus === f2PaymentStatus),
+sameAmount: Number.isFinite(f1Amount) && Number.isFinite(f2Amount) &&
+Math.round(f1Amount * 100) === Math.round(f2Amount * 100),
+});
 continue;
 }
 
-// Verificar estado en Bookings
+const ledgerRes = await dalQuery(BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA)
+.eq("transactionId", `ORDER-${f1OrderId}`)
+.limit(2)
+.find({ consistencyMode: "strong" });
+const ledgerRows = Array.isArray(ledgerRes?.items) ? ledgerRes.items : [];
+const movement = ledgerRows[0];
+const movementAmount = Number(movement?.totalAmount ?? movement?.accountingAmount);
+const linkedIds = Array.isArray(movement?.linkedBookingIds)
+? movement.linkedBookingIds.map(value => _safeTrim(value))
+: _safeTrim(movement?.linkedBookingIds).split(",").map(value => _safeTrim(value)).filter(Boolean);
+const movementLinked = linkedIds.includes(f1BookingId) || linkedIds.includes(f2BookingId);
+const movementMatches = ledgerRows.length === 1 &&
+_safeTrim(movement?.orderId) === f1OrderId &&
+Number.isFinite(movementAmount) &&
+Math.round(movementAmount * 100) === Math.round(f1Amount * 100) &&
+movementLinked;
+
+if (!movementMatches) {
+result.failed++;
+if (result.errors.length < 10) result.errors.push({
+pairToken, reason: "DUAL_PAIR_LEDGER_MISMATCH", ledgerMovementCount: ledgerRows.length,
+movementAmount: Number.isFinite(movementAmount) ? movementAmount : null,
+expectedAmount: f1Amount, movementLinked,
+});
+continue;
+}
+
+const storedMovementIds = [
+f1Cita.cashMovementId || f1Meta.cashMovementId,
+f2Cita.cashMovementId || f2Meta.cashMovementId,
+].map(value => _safeTrim(value)).filter(Boolean);
+if (storedMovementIds.some(id => id !== _safeTrim(movement._id))) {
+result.failed++;
+if (result.errors.length < 10) result.errors.push({
+pairToken, reason: "DUAL_PAIR_CASH_MOVEMENT_REFERENCE_MISMATCH",
+});
+continue;
+}
+
 let f1Exists = false;
 let f2Exists = false;
-
 try {
-const f1Booking = await withTimeout(
-getBookingElevated(f1Cita.bookingId),
-API_TIMEOUT_MS,
-"getBookingF1"
-);
-f1Exists = !!f1Booking?.booking?.id;
+const f1Booking = await withTimeout(getBookingElevated(f1BookingId), API_TIMEOUT_MS, "getBookingF1");
+f1Exists = Boolean(f1Booking?.booking?.id || f1Booking?.booking?._id);
+} catch (_) {}
+try {
+const f2Booking = await withTimeout(getBookingElevated(f2BookingId), API_TIMEOUT_MS, "getBookingF2");
+f2Exists = Boolean(f2Booking?.booking?.id || f2Booking?.booking?._id);
 } catch (_) {}
 
-try {
-const f2Booking = await withTimeout(
-getBookingElevated(f2Cita.bookingId),
-API_TIMEOUT_MS,
-"getBookingF2"
-);
-f2Exists = !!f2Booking?.booking?.id;
-} catch (_) {}
-
-// Si ambas existen en Bookings, marcar como reconciliado
 if (f1Exists && f2Exists) {
 const updatedPayload = {
-...payload,
-status: "RECONCILED",
-reconciledAt: new Date().toISOString(),
-f1Exists,
-f2Exists,
+...payload, status: "RECONCILED", reconciledAt: new Date().toISOString(),
+f1Exists, f2Exists,
+verified: {
+pairRows: pairRows.length, f1BookingId, f2BookingId, orderId: f1OrderId,
+paymentStatus: f1PaymentStatus, amount: f1Amount,
+movementId: movement._id, transactionId: movement.transactionId,
+},
 };
-await dalUpdate(OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO, {
-...flag,
-payload: updatedPayload,
-});
+await dalUpdate(OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO, { ...flag, payload: updatedPayload });
 result.reconciled++;
-log.info("reconcileInconsistentDualPairs: reconciled", {
-pairToken,
-traceId,
-});
+log.info("reconcileInconsistentDualPairs: reconciled", { pairToken, traceId });
 } else {
 result.failed++;
-if (result.errors.length < 10) {
-result.errors.push({
-pairToken,
-f1Exists,
-f2Exists,
-reason: "BOOKING_MISSING",
-});
-}
-log.warn("reconcileInconsistentDualPairs: booking missing", {
-pairToken,
-f1Exists,
-f2Exists,
-traceId,
-});
+if (result.errors.length < 10) result.errors.push({ pairToken, f1Exists, f2Exists, reason: "BOOKING_MISSING" });
+log.warn("reconcileInconsistentDualPairs: booking missing", { pairToken, f1Exists, f2Exists, traceId });
 }
 } catch (flagError) {
 result.failed++;

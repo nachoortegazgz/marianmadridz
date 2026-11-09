@@ -1,12 +1,16 @@
 /*
 =============================================================================
 MODULE: backend/eventLog.js
-VERSION: v5015-ALIGNED
+VERSION: v5016-REFUND-ORDER-LOCK
 BASE: v5009-FISCAL-V20.1 + alineacion con internalConfig v12.0-SSOT-FINAL
       y dataAccess v2.1-UNIFIED
 RESPONSIBILITY: Motor atomico de registro fiscal (append-only) + proyector
                 secundario + API fiscal.
 STANDARDS: G10 ASCII Strict. Cero suppressAuth. Cero COLLECTIONS alias.
+
+REFUND-LOCK-01 (P1): la unicidad refundId y el limite acumulado del pedido se
+  revalidan dentro del bloqueo fiscal global, antes de leer el head/hash y de
+  reservar secuencia. Dos reembolsos distintos del mismo pedido quedan serializados.
 
 CAMBIOS DE ALINEACION v5015-ALIGNED (respecto a v5009-FISCAL-V20.1):
   ALN-01: COLLECTIONS/SINGLETONS alias eliminados. Uso de
@@ -607,6 +611,71 @@ export async function registrarEventoEconomico(input) {
             if (existing?.items?.length > 1) {
                 retainLedgerLock = true;
                 throw new Error("FISCAL_TRANSACTION_ID_AMBIGUOUS");
+            }
+        }
+
+        // Refund amount and refundId uniqueness must be revalidated while the
+        // shared fiscal-ledger lock is held. The webhook preflight is useful for
+        // diagnostics, but cannot serialize two different refundIds for one order.
+        if (_safeTrim(input.movementType) === MOVEMENT_TYPE.REEMBOLSO) {
+            const refundOrderId = _safeTrim(input.orderId);
+            const refundId = _safeTrim(input.refundId);
+            const refundTransactionId = _safeTrim(input.transactionId);
+            if (!refundOrderId || !refundId || refundTransactionId !== `REFUND-${refundOrderId}-${refundId}`) {
+                throw new Error("REFUND_IDENTITY_INVALID");
+            }
+
+            const refundIdRes = await dalQuery(MOVIMIENTOS_CAJA_COL)
+                .eq("refundId", refundId)
+                .limit(2)
+                .find({ consistencyMode: "strong" });
+            const refundIdConflict = (refundIdRes?.items || []).some(movement =>
+                _safeTrim(movement?.orderId) !== refundOrderId ||
+                _safeTrim(movement?.transactionId) !== refundTransactionId
+            );
+            if (refundIdConflict) throw new Error("REFUND_ID_REUSED_ACROSS_ORDERS");
+
+            const originalRes = await dalQuery(MOVIMIENTOS_CAJA_COL)
+                .eq("transactionId", `ORDER-${refundOrderId}`)
+                .limit(2)
+                .find({ consistencyMode: "strong" });
+            if (originalRes?.items?.length !== 1) {
+                throw new Error(originalRes?.items?.length > 1
+                    ? "REFUND_ORIGINAL_LEDGER_AMBIGUOUS"
+                    : "REFUND_ORIGINAL_LEDGER_MISSING");
+            }
+            const originalAmountCents = Math.round(Math.abs(Number(
+                originalRes.items[0]?.totalAmount ?? originalRes.items[0]?.accountingAmount ?? 0
+            )) * 100);
+            if (!Number.isSafeInteger(originalAmountCents) || originalAmountCents <= 0) {
+                throw new Error("REFUND_ORIGINAL_AMOUNT_INVALID");
+            }
+
+            let refundRowsResult = await dalQuery(MOVIMIENTOS_CAJA_COL)
+                .eq("orderId", refundOrderId)
+                .eq("movementType", MOVEMENT_TYPE.REEMBOLSO)
+                .limit(1000)
+                .find({ consistencyMode: "strong" });
+            const refundRows = [...(refundRowsResult?.items || [])];
+            let refundPages = 1;
+            while (typeof refundRowsResult?.hasNext === "function" && refundRowsResult.hasNext()) {
+                if (refundPages >= 100) throw new Error("REFUND_HISTORY_PAGE_LIMIT_EXCEEDED");
+                refundRowsResult = await refundRowsResult.next();
+                refundRows.push(...(refundRowsResult?.items || []));
+                refundPages++;
+            }
+            if (typeof refundRowsResult?.hasNext === "function" && refundRowsResult.hasNext()) {
+                throw new Error("REFUND_HISTORY_INCOMPLETE");
+            }
+
+            const refundedCents = refundRows.reduce((sum, movement) =>
+                sum + Math.round(Math.abs(Number(
+                    movement?.accountingAmount ?? movement?.totalAmount ?? 0
+                )) * 100), 0);
+            const requestedRefundCents = Math.round(Math.abs(Number(input.totalAmount)) * 100);
+            if (!Number.isSafeInteger(requestedRefundCents) || requestedRefundCents <= 0 ||
+                refundedCents + requestedRefundCents > originalAmountCents) {
+                throw new Error("REFUND_EXCEEDS_ORIGINAL_ORDER_AMOUNT");
             }
         }
 

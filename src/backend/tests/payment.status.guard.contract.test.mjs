@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 const here = dirname(fileURLToPath(import.meta.url));
 const source = readFileSync(join(here, '..', 'citasManager.web.js'), 'utf8').replace(/\r\n/g, '\n');
 const eventsSource = readFileSync(join(here, '..', 'events.js'), 'utf8').replace(/\r\n/g, '\n');
+const eventLogSource = readFileSync(join(here, '..', 'eventLog.js'), 'utf8').replace(/\r\n/g, '\n');
 
 test('PAY-GUARD-01 rejects noncanonical booking states before ledger registration', () => {
   const validateStart = source.indexOf('async function _validatePaymentCitaSet(');
@@ -62,4 +63,39 @@ test('PAY-GUARD-02 payment confirmation preserves booking approval state and use
   assert.ok(pairExpansionIndex >= 0, 'staff payment reconciliation must expand the dual pair');
   assert.ok(paymentValidationIndex > pairExpansionIndex, 'paired F2 must be included before payment validation');
   assert.match(confirmFlow, /const linkedBookingIds = citas\.map/);
+});
+
+
+test('PAY-GUARD-03 partial payment-state writes remain retryable without a second ledger movement', () => {
+  const confirmStart = source.indexOf('export const confirmPayment = webMethod(');
+  const confirmFlow = source.slice(confirmStart);
+  assert.match(confirmFlow, /\["SUCCESS",\s*"PARTIAL"\]\.includes\(ledgerResult\?\.status\)/);
+  assert.match(confirmFlow, /PAYMENT_STATE_UPDATE_REQUIRED/);
+  assert.match(confirmFlow, /transactionId:\s*`ORDER-\$\{orderId\}`/);
+  const idempotencyStart = source.indexOf('async function _validatePaymentIdempotency(');
+  const idempotencyEnd = source.indexOf('async function _setCitasPaymentState(', idempotencyStart);
+  assert.ok(idempotencyStart >= 0 && idempotencyEnd > idempotencyStart);
+  assert.doesNotMatch(source.slice(idempotencyStart, idempotencyEnd), /paidCount\s*!==\s*citas\.length/);
+});
+
+test('PAY-REFUND-01 refunds are idempotent, bounded by the original amount and prorate VAT', () => {
+  assert.match(eventsSource, /REFUND_TRANSACTION_DUPLICATE_LEDGER_ROWS/);
+  assert.match(eventsSource, /REFUND_ID_REUSED_ACROSS_ORDERS/);
+  assert.match(eventsSource, /REFUND_EXCEEDS_ORIGINAL_ORDER_AMOUNT/);
+  assert.match(eventsSource, /existingRefundMovement/);
+  assert.match(eventsSource, /refundTaxBase/);
+  assert.match(eventsSource, /refundTaxAmount/);
+  assert.match(eventsSource, /REFUND_REJECTED_INTEGRITY/);
+  assert.match(eventsSource, /\.limit\(1000\)/);
+});
+
+
+test('PAY-REFUND-02 cumulative refund cap is revalidated under the shared fiscal ledger lock', () => {
+  const lockIndex = eventLogSource.indexOf('const ledgerLock = await acquireFiscalLedgerLock(traceId)');
+  const refundGuardIndex = eventLogSource.indexOf('REFUND_EXCEEDS_ORIGINAL_ORDER_AMOUNT');
+  const headIndex = eventLogSource.indexOf('const previous = await _getLastCashEvent()', lockIndex);
+  assert.ok(lockIndex >= 0 && refundGuardIndex > lockIndex, 'refund cap check must run after acquiring the fiscal lock');
+  assert.ok(headIndex > refundGuardIndex, 'refund cap check must run before reading the ledger head and reserving sequence');
+  assert.match(eventLogSource, /REFUND_ID_REUSED_ACROSS_ORDERS/);
+  assert.match(eventLogSource, /REFUND_ORIGINAL_LEDGER_AMBIGUOUS/);
 });
