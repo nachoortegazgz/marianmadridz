@@ -1,11 +1,14 @@
 # DOSSIER TÉCNICO CONSOLIDADO — Marian Madrid
 
-**Revisión documental:** 2026-11-09  
+**Revisión documental:** 2026-11-10  
 **Repositorio canónico:** `nachoortegazgz/marianmadridz`  
-**Baseline de código revisado:** `main` · `740bff3481d1af3e8278fa31bcb9c20d5424866c`  
+**Baseline de código revisado:** `main` · `c046a975d0ca3d45e83aa2dbab07e278e02edaae`  
 **Sitio:** https://www.marianmadrid.es/
 
 ## Cómo interpretar este dossier
+
+> **Decisiones vinculantes aprobadas el 2026-11-10 — prevalecen sobre cualquier descripción histórica de este dossier:** (1) fianza de 15 EUR solo para servicios con precio estrictamente superior a 100 EUR; se descuenta del precio del servicio; (2) cancelación/reprogramación gratuita con al menos 24 h y devolución íntegra si cancela el negocio; no se activa retención automática por cancelación tardía/no-show hasta revisión jurídica de proporcionalidad; (3) utilizar depósitos nativos de Wix Bookings por servicio siempre que cubran el caso; no crear un motor de depósitos propio sin demostrar una limitación nativa; (4) Wix Stores Catalog V3 y las herramientas nativas Wix son la única autoridad de stock; no generar proyecciones, reservas, deducciones, reposiciones ni movimientos de inventario personalizados; los históricos personalizados existentes se preservan, sin nuevas escrituras, hasta decidir su archivo; (5) ledger fiscal/contable registra hechos económicos, no cantidades de stock; (6) no activar automatizaciones que contacten clientes ni realizar cobros, reservas, escrituras de stock/CMS o publicación durante QA.
+
 
 Este documento describe la arquitectura, contratos de dominio, colecciones, módulos y reglas técnicas del sistema. No sustituye los resultados de CI, las auditorías live ni la validación de Wix runtime.
 
@@ -133,7 +136,7 @@ Cada decisión de diseño se evalúa en este orden estricto. La prioridad de men
 
 - **Una sola fuente de verdad (SSOT)**: cada constante, tipo o schema vive en un único lugar.
 - **El CMS como autoridad**: Wix Bookings, Members y Stores dictan sus contratos; el código se adapta.
-- **Ledgers inmutables**: `MovimientosCaja`, `LibroAsientosContablesDetalle`, `RegistrosHorariosStaff` y `MovimientosInventario` son estrictamente append-only.
+- **Ledgers inmutables**: `MovimientosCaja`, `LibroAsientosContablesDetalle` y `RegistrosHorariosStaff` son ledgers operativos append-only. `MovimientosInventario` queda como histórico legacy append-only: se conserva sin mutaciones, pero no recibe nuevas escrituras y no gobierna stock.
 - **Aislamiento frontend-backend**: la interfaz invoca únicamente `webMethods` expuestos; nunca accede directamente al CMS.
 - **Validación en runtime**: todo enum persistido se valida obligatoriamente mediante `assertValidEnum()` en `backend/validation.js`.
 - **Trazabilidad**: `traceId` (UUID v4) en toda mutación transaccional; claves en `backend/mmSecrets.js`; minimización estricta de PII.
@@ -173,7 +176,7 @@ Capa de Datos — SDK @wix/data + APIs Wix (Bookings, Members, eCommerce)
 | `backend/reservas.web.js` | Consulta pública de disponibilidad y catálogo |
 | `backend/citasManager.web.js` | Gestión de reservas duales, pagos y reprogramación |
 | `backend/cajas.web.js` | Ledger fiscal Veri\*Factu, caja y cierre Z |
-| `backend/inventario.web.js` | Control de stock y reconciliación |
+| `backend/inventario.web.js` | Módulo legacy de inventario personalizado; retirada planificada tras desacoplar webhooks y UI |
 | `backend/horario.web.js` | Fichajes laborales y cálculo de jornada |
 | `backend/fiscalAggregator.web.js` | Agregación de impuestos y libros de facturas |
 | `backend/fiscalDocuments.web.js` | Generación de paquetes documentales para gestoría |
@@ -287,8 +290,8 @@ El CMS propio tiene **13 colecciones NATIVE** activas. Las 20 colecciones `WIX_A
 | `MapaStaff` | MASTER mutable | Identidad del personal y correlación de IDs |
 | `RegistrosHorariosStaff` | LEDGER append-only | Fichajes laborales (RD 8/2019) |
 | `ControlOperativo` | CONTROL mixto | Locks, deduplicación webhooks, rate limiting |
-| `InventarioStockVenta` | MASTER mutable | Snapshot de stock comercial |
-| `MovimientosInventario` | LEDGER append-only | Variaciones de stock con idempotencia |
+| `InventarioStockVenta` | LEGACY / no SSOT | Proyección custom retirada; no crear ni actualizar maestros |
+| `MovimientosInventario` | LEGACY / append-only histórico | No insertar nuevos movimientos; preservar filas existentes |
 
 ### Protecciones append-only (backend/data.js)
 
@@ -298,7 +301,7 @@ Los hooks `beforeUpdate` y `beforeRemove` en `MovimientosCaja`, `LibroAsientosCo
 
 - **MovimientosCaja**: `taxBase + taxAmount ≈ amount` (redondeo a 2 decimales con `_roundMoney()`). Cadena SHA-256: `hash = SHA256(previousRecordHash + numSerieFactura + amount + timestamp)`.
 - **ServiciosCatalogo**: `totalDuration === phase1Duration + exposureDuration + phase2Duration`.
-- **InventarioStockVenta**: `stockAvailable === stockOnHand - stockReserved` y ningún valor negativo.
+- **InventarioStockVenta (legacy)**: la antigua invariante `stockAvailable === stockOnHand - stockReserved` ya no se mantiene ni se usa para decisiones comerciales; Wix Stores Catalog V3 es la autoridad.
 - **LibroAsientosContablesDetalle**: para un mismo `entryId`, `SUM(debit) === SUM(credit)`.
 - **CajaActual**: colección `SINGLE_ITEM`; un único registro físico `SINGLE_ITEM_ID` con `singletonKey = CAJA_PRINCIPAL`. Los contadores global/anual viven en `sequenceCounters` del registro principal. Eliminación bloqueada.
 
@@ -507,7 +510,11 @@ Las colecciones `WIX_APP` son de **estricta lectura**. Prohibido ejecutar `wixDa
 
 **Bookings**: la disponibilidad mostrada al usuario no garantiza que el slot siga libre. Revalidar siempre en servidor. `resource.id` y `scheduleId` deben pasarse explícitamente al crear reservas.
 
-**Stores Catalog V3**: versión del catálogo confirmada por Catalog Versioning API (`V3_CATALOG`). `catalogV3Adapter.js` concentra las lecturas y ajustes explícitos; Wix mantiene la autoridad sobre stock nativo. No asumir que los mocks validan el SDK real: importación, scopes, variantes, ubicaciones y E2E siguen pendientes en Wix Local Editor/QA.
+**Orders Settings Wix (lectura live 2026-11-10):** `inventoryUpdateTrigger = ON_ORDER_PAID`, `createInvoice = false`. La deducción de stock está configurada para el momento del pago. No se ha cambiado esta configuración.
+
+**Bookings Services V2 (lectura live 2026-11-10):** 94 servicios: 70 `FIXED`, 24 `NO_FEE`, 0 `VARIED`; 7 servicios visibles superan 100 EUR; 0 tienen `payment.options.deposit = true`. No se han actualizado servicios.
+
+**Stores Catalog V3**: versión del catálogo confirmada por Catalog Versioning API (`V3_CATALOG`). Wix Stores y sus funciones nativas son la única autoridad de stock. La arquitectura objetivo elimina el adapter y las escrituras personalizadas de inventario; `backend/inventario.web.js`, sus proyecciones y el panel asociado quedan en retirada controlada. No crear maestros CMS ni nuevos movimientos de inventario. Los registros históricos existentes se preservan sin mutación. El checkout nativo debe validar automáticamente disponibilidad y deducir stock; E2E de venta, cancelación y devolución/restock en Wix QA sigue pendiente.
 
 **eCommerce / Cart V2**: el código y los contratos SDK de carrito están alineados con V2. La confirmación de una reserva y el estado del pago conservan autoridades separadas: no inferir confirmación de Bookings únicamente por la existencia de un pedido o carrito.
 
@@ -578,7 +585,7 @@ Nunca mutar estas colecciones directamente desde código propio.
 1. Evento backend `booking_canceled` deduplicado.
 2. `CitasF2` actualizado a `bookingStatus = "CANCELED"`, `paymentStatus = "REFUNDED"`.
 3. Registro rectificativo append-only en `MovimientosCaja` con `movementType = "DEVOLUCION"` y hash encadenado.
-4. Si hay devolución de stock: registro en `MovimientosInventario` con `movementType = "DEVOLUCION"`.
+4. Si Wix procesa una devolución con reposición: Wix Stores aplica el efecto de stock nativo; no insertar un movimiento paralelo en `MovimientosInventario`. El ledger fiscal/contable registra por separado la rectificación económica.
 
 **Visualización segura de la confirmación de reserva**:
 
@@ -855,7 +862,7 @@ Referencia obligatoria: [Auditoría de preparación VERI*FACTU](docs/qa/2026-11-
 
 ### 14.4 Resumen de colecciones CMS
 
-**13 colecciones NATIVE de negocio:**
+**11 colecciones operativas NATIVE de negocio + 2 colecciones legacy de inventario (solo lectura histórica):**
 `DatosFiscales`, `CajaActual`, `MovimientosCaja`, `CitasF2`, `LibroAsientosContablesDetalle`, `HistoricoCierresZ`, `ServiciosCatalogo`, `ComplementosCatalogo`, `MapaStaff`, `RegistrosHorariosStaff`, `ControlOperativo`, `InventarioStockVenta`, `MovimientosInventario`.
 
 **20 colecciones `WIX_APP` (solo lectura):**
@@ -887,8 +894,8 @@ Referencia obligatoria: [Auditoría de preparación VERI*FACTU](docs/qa/2026-11-
 | `addonId` / `addOnIds` | `ComplementosCatalogo` | PK del complemento / array de transporte a Bookings. |
 | `clockEventType` | `RegistrosHorariosStaff` | Tipo de fichaje laboral. |
 | `controlType` / `dedupeKey` | `ControlOperativo` | Discriminador técnico y clave de deduplicación. |
-| `stockOnHand` / `stockReserved` / `stockAvailable` | `InventarioStockVenta` | Invariante `available === onHand - reserved`. |
-| `movementToken` | `MovimientosInventario` | Clave de idempotencia del movimiento de stock. |
+| `stockOnHand` / `stockReserved` / `stockAvailable` | `InventarioStockVenta` (legacy) | Campos históricos; no autoridad ni proyección mantenida. |
+| `movementToken` | `MovimientosInventario` (legacy) | Idempotencia histórica; no insertar nuevos movimientos. |
 | `traceId` | Transversal | UUID v4 obligatorio de trazabilidad end-to-end. |
 
 ### 14.6 Enums canónicos
@@ -976,12 +983,12 @@ CONTROL_TYPE    = { ALERT, COMPENSATION, DAYS_CACHE, DEDUPE_KEY,
 | `MovimientosCaja` | Valida `hash`, `schemaVersion`, `traceId`, enums y cuadre `taxBase + taxAmount ≈ amount`. | **Bloqueado** → `FISCAL_VIOLATION`. | **Bloqueado** → `FISCAL_VIOLATION`. |
 | `LibroAsientosContablesDetalle` | Valida partida doble (`debit === credit`). | **Bloqueado**. | **Bloqueado**. |
 | `RegistrosHorariosStaff` | Valida `clockEventType`; `notes` obligatorio si `recordType === "AJUSTE"`. | **Bloqueado**. | **Bloqueado**. |
-| `MovimientosInventario` | Valida `movementToken` único; `reason` obligatorio si `movementType === "AJUSTE"`. | **Bloqueado**. | **Bloqueado**. |
+| `MovimientosInventario` (legacy) | Histórico append-only; no nuevos writers ni movimientos. | **Sin nuevas escrituras**. | **Sin nuevas escrituras**. |
 | `CitasF2` | Valida enums, `traceId`, coherencia `pairToken`. | Actualizaciones controladas. | **Bloqueado**. |
 | `ServiciosCatalogo` | Unicidad `serviceId`/`sku`/`slug`; `totalDuration === phase1 + exposure + phase2`. | Controlado. | Solo ADMIN. |
 | `DatosFiscales` | Valida NIF/NIE/CIF/VAT-UE. | Controlado. | Bloqueado para `CONFIG_SISTEMA_FISCAL`. |
 | `CajaActual` | Valida `singletonKey = CAJA_PRINCIPAL` (colección `SINGLE_ITEM`). | `sequenceCounters` editable solo por backend bajo bloqueo fiscal global. | **Bloqueado**. |
-| `InventarioStockVenta` | Sin hook CMS; validación en writers de inventario. | Sin hook CMS; validación en writers de inventario. | Sin hook CMS; autorización en WebMethods. |
+| `InventarioStockVenta` (legacy) | Sin nuevas altas ni actualizaciones; no crear maestros. | Sin nuevas altas ni actualizaciones. | Sin nuevas operaciones de inventario personalizadas. |
 | `ControlOperativo` | Valida identidad y requisitos específicos del tipo. | Recupera registro, fusiona el cambio, protege `controlType` e inmutabilidad y valida el estado resultante. | Recupera por `itemId` y bloquea la eliminación de `WEBHOOK_EVENT`. |
 | `MapaStaff` | Sin hook CMS. | Sin hook CMS. | Sin hook CMS. |
 | `ComplementosCatalogo` | Unicidad `addonId`/`sku`. | Controlado. | Solo ADMIN. |
