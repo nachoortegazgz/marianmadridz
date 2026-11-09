@@ -1,7 +1,16 @@
 /**
  * MODULE: backend/citasManager.web.js
- * VERSION: v10.9-DUAL-SLOT-ALIGNED
+ * VERSION: v10.10-PAYMENT-STATE-RECOVERY
  * BASE: v10.8-CLEAN
+ *
+ * CORRECCIONES v10.10:
+ *   - PAYMENT-RECOVERY-01: un movimiento fiscal persistido con estado PARTIAL
+ *     permite completar la proyeccion de pago; CajaActual pendiente no equivale
+ *     a ausencia de ledger. La clave ORDER-{orderId} conserva la idempotencia.
+ *   - PAYMENT-RECOVERY-02: un par con filas PAID y pendientes del mismo pedido
+ *     puede reintentarse; se rechazan filas PAID asociadas a otro orderId.
+ *   - PAYMENT-RECOVERY-03: el fallo de CitasF2 genera la alerta persistente
+ *     PAYMENT_STATE_UPDATE_REQUIRED con referencias para su recuperacion.
  *
  * CORRECCIONES v10.9 (alineadas con documentación oficial y con reservas v10.19):
  *   - DUAL-SLOT-01 (P1): _getDualSlotInput acepta `slot` como fallback de

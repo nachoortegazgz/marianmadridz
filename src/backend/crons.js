@@ -1,11 +1,16 @@
 /*
 =============================================================================
 MODULE: backend/crons.js
-VERSION: v5011-CRON-PARITY
+VERSION: v5012-DUAL-PAIR-STRICT-RECONCILIATION
 BASE: v5010-TELEMETRY-ATOMIC + correcciones auditoria P0 (jobs huerfanos)
 RESPONSIBILITY: Jobs programados (cron). 9 jobs wired en jobs.config + 2 de
 reconciliacion interna (reconcileUnknownTransactions / InconsistentDualPairs).
 STANDARDS: G10 ASCII Strict. Cero suppressAuth. Cero COLLECTIONS alias.
+
+CORRECCIONES v5012-DUAL-PAIR-STRICT-RECONCILIATION:
+DUAL-RECONCILE-01 (P1): reconcileInconsistentDualPairs solo marca RECONCILED
+cuando existen exactamente F1+F2, relacion, mismo pedido/estado/importe,
+un unico movimiento ORDER vinculado y ambas reservas nativas en Wix.
 
 CORRECCIONES v5011-CRON-PARITY:
 AUDIT-NZ-01 (P0): verifyNightlyZClosing implementado (declurado en

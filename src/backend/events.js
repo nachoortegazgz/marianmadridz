@@ -1,7 +1,7 @@
 /*
 =============================================================================
 MODULE: backend/events.js
-VERSION: v5016-ORDER-AMOUNT-ZERO-SAFE
+VERSION: v5017-REFUND-IDEMPOTENCY-BOUNDED
 BASE: v5009-FISCAL-V20.1 + alineacion con internalConfig v12.0-SSOT-FINAL
       y dataAccess v2.1-UNIFIED
 RESPONSIBILITY: Server-to-server native webhooks for Wix Bookings V2 and
@@ -35,6 +35,12 @@ CAMBIOS DE ALINEACION v5015-ALIGNED (respecto a v5009-FISCAL-V20.1):
   FISCAL-ORDER-01: El importe explicito de pedido, incluido 0, prevalece
           sobre el precio unitario. Si falta, se usan importes de linea
           despues de descuentos antes de recurrir al precio unitario.
+
+REFUND-01 (P1): deduplicacion fiscal por REFUND-{orderId}-{refundId}; valida
+  reutilizacion de refundId, acumulado contra el importe original y lectura
+  paginada con fallo cerrado. La base y cuota de IVA se prorratean en reembolsos
+  parciales y el ultimo reembolso aplica el residual para cuadrar el original.
+  Los efectos restock explicitos de Wix conservan su idempotencia por refundId.
 
 FIXES APLICADOS v5009-FISCAL-V20.1 (heredados):
   - V20-01..V20-06.
