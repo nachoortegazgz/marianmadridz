@@ -1,7 +1,5 @@
 /**
- * controlOperativo.hooks.test.mjs
- * FASE 3 SSOT v7.0 (BIBLIA 12 / ADR-05): validacion condicional de hooks
- * ControlOperativo: WEBHOOK_EVENT append-only, resto purgable.
+ * ControlOperativo CMS boundary contracts.
  */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
@@ -11,9 +9,17 @@ import {
   ControlOperativo_beforeUpdate,
   ControlOperativo_beforeRemove,
 } from "../data.js";
-import { CONTROL_TYPE, CONTROL_STATUS } from "../internalConfig.js";
+import {
+  CONTROL_TYPE,
+  CONTROL_STATUS,
+  OPERATIONAL_COLLECTIONS,
+} from "../internalConfig.js";
+import { wixDataMock } from "./loader.mjs";
 
-function _base(controlType) {
+const COLLECTION = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
+const RESOURCE_ID = "11111111-1111-4111-8111-111111111111";
+
+function base(controlType) {
   return {
     controlType,
     dedupeKey: `${controlType}:unit-test-key`,
@@ -22,68 +28,149 @@ function _base(controlType) {
   };
 }
 
-describe("ControlOperativo hooks (ADR-05)", () => {
-  it("DATA-05: beforeInsert validates control identity and type-specific invariants", () => {
-    // The insert hook receives a complete item. Patch/update paths keep their
-    // point-of-use validation because atomic bulkPatch may be partial.
-    const ok = {
-      ..._base(CONTROL_TYPE.SLOT_LOCK),
-      resourceId: "11111111-1111-4111-8111-111111111111",
+function seed(record) {
+  wixDataMock._reset();
+  wixDataMock._seed(COLLECTION, [record]);
+}
+
+describe("ControlOperativo hooks", () => {
+  it("validates inserts and all type-specific required fields", () => {
+    const validLock = {
+      ...base(CONTROL_TYPE.SLOT_LOCK),
+      resourceId: RESOURCE_ID,
       expiresAt: new Date(Date.now() + 60000),
     };
-    assert.strictEqual(ControlOperativo_beforeInsert(ok), ok);
+    assert.deepEqual(ControlOperativo_beforeInsert(validLock), validLock);
 
-    const badType = { ..._base("NOT_A_TYPE"), controlType: "NOT_A_TYPE" };
-    assert.throws(() => ControlOperativo_beforeInsert(badType), /controlType/);
-
-    const badWebhook = _base(CONTROL_TYPE.WEBHOOK_EVENT);
-    assert.throws(() => ControlOperativo_beforeInsert(badWebhook), /eventId/);
-
-    const badLock = {
-      ..._base(CONTROL_TYPE.SLOT_LOCK),
-      expiresAt: new Date(Date.now() + 60000),
-    };
-    assert.throws(() => ControlOperativo_beforeInsert(badLock), /resourceId/);
-  });
-
-  it("WEBHOOK_EVENT es append-only: update prohibido", () => {
-    const rec = _base(CONTROL_TYPE.WEBHOOK_EVENT);
     assert.throws(
-      () => ControlOperativo_beforeUpdate(rec),
-      /append-only/,
+      () => ControlOperativo_beforeInsert({ ...base("INVALID_TYPE") }),
+      /controlType/
+    );
+    assert.throws(
+      () => ControlOperativo_beforeInsert(base(CONTROL_TYPE.WEBHOOK_EVENT)),
+      /eventId/
+    );
+    assert.throws(
+      () => ControlOperativo_beforeInsert({
+        ...base(CONTROL_TYPE.SLOT_LOCK),
+        expiresAt: new Date(Date.now() + 60000),
+      }),
+      /resourceId/
+    );
+    assert.throws(
+      () => ControlOperativo_beforeInsert({
+        ...base(CONTROL_TYPE.SLOT_LOCK),
+        resourceId: RESOURCE_ID,
+        expiresAt: "not-a-date",
+      }),
+      /expiresAt/
     );
   });
 
-  it("WEBHOOK_EVENT es append-only: remove prohibido", () => {
-    const rec = _base(CONTROL_TYPE.WEBHOOK_EVENT);
-    assert.throws(() => ControlOperativo_beforeRemove(rec), /append-only/);
+  it("merges partial updates with the persisted record before validating", async () => {
+    const original = {
+      _id: "lock-1",
+      ...base(CONTROL_TYPE.SLOT_LOCK),
+      resourceId: RESOURCE_ID,
+      expiresAt: new Date(Date.now() + 60000),
+      payload: { owner: "saga" },
+    };
+    seed(original);
+
+    const updated = await ControlOperativo_beforeUpdate({
+      _id: original._id,
+      status: CONTROL_STATUS.COMPLETED,
+    });
+
+    assert.equal(updated.controlType, CONTROL_TYPE.SLOT_LOCK);
+    assert.equal(updated.resourceId, RESOURCE_ID);
+    assert.equal(updated.dedupeKey, original.dedupeKey);
+    assert.equal(updated.traceId, original.traceId);
+    assert.deepEqual(updated.payload, original.payload);
+    assert.equal(updated.status, CONTROL_STATUS.COMPLETED);
   });
 
-  it("Subtipos purgables (SLOT_LOCK/DUAL_CACHE) permiten update/remove", () => {
-    for (const t of [CONTROL_TYPE.SLOT_LOCK, CONTROL_TYPE.DUAL_CACHE, CONTROL_TYPE.DAYS_CACHE, CONTROL_TYPE.DISPLAY_TOKEN]) {
-      const rec = { ..._base(t), expiresAt: new Date(Date.now() + 60000) };
-      assert.doesNotThrow(() => ControlOperativo_beforeUpdate(rec, { original: rec }));
-      assert.doesNotThrow(() => ControlOperativo_beforeRemove(rec));
-    }
+  it("rejects partial updates that break a type-specific invariant", async () => {
+    const original = {
+      _id: "lock-2",
+      ...base(CONTROL_TYPE.SLOT_LOCK),
+      resourceId: RESOURCE_ID,
+      expiresAt: new Date(Date.now() + 60000),
+    };
+    seed(original);
+
+    await assert.rejects(
+      ControlOperativo_beforeUpdate({
+        _id: original._id,
+        resourceId: "",
+      }),
+      /resourceId/
+    );
   });
 
-  it("CONTROL_TYPE cubre los subtipos del esquema objetivo", () => {
-    /* SSOT-FIX (2026-10-13): el enum canónico de internalConfig es la fuente
-       de verdad. BOOKING_TX quedo retirado (crons.js linea 509 confirma que
-       no tiene productores ni consumidores activos). Se verifican ademas los
-       tipos con productores reales: IDEMPOTENCY (bookingCore), SYSTEM_FLAG
-       (bookingSaga), DEDUPE_KEY (accounting/inventario) y
-       LEDGER_IDEMPOTENCY (caja). Los dos ultimos son durables y no entran
-       en cleanExpiredBookingControl. */
-    /* La SSOT v10.0 entregada exige RATE_LIMIT persistido en ControlOperativo.
-       DISPLAY_TOKEN se conserva por su productor activo en reservas.web.js. */
+  it("prevents updates and type changes to an immutable webhook event", async () => {
+    const original = {
+      _id: "event-1",
+      ...base(CONTROL_TYPE.WEBHOOK_EVENT),
+      eventId: "wix-event-1",
+    };
+    seed(original);
+
+    await assert.rejects(
+      ControlOperativo_beforeUpdate({
+        _id: original._id,
+        status: CONTROL_STATUS.CLOSED,
+      }),
+      /append-only/
+    );
+
+    await assert.rejects(
+      ControlOperativo_beforeUpdate({
+        _id: original._id,
+        controlType: CONTROL_TYPE.SLOT_LOCK,
+        resourceId: RESOURCE_ID,
+        expiresAt: new Date(Date.now() + 60000),
+      }),
+      /append-only/
+    );
+  });
+
+  it("prevents removal by Wix beforeRemove itemId contract", async () => {
+    const original = {
+      _id: "event-2",
+      ...base(CONTROL_TYPE.WEBHOOK_EVENT),
+      eventId: "wix-event-2",
+    };
+    seed(original);
+
+    await assert.rejects(
+      ControlOperativo_beforeRemove(original._id),
+      /append-only/
+    );
+  });
+
+  it("allows removal of an expiring operational lock", async () => {
+    const original = {
+      _id: "lock-3",
+      ...base(CONTROL_TYPE.SLOT_LOCK),
+      resourceId: RESOURCE_ID,
+      expiresAt: new Date(Date.now() + 60000),
+    };
+    seed(original);
+
+    assert.equal(
+      await ControlOperativo_beforeRemove(original._id),
+      original._id
+    );
+  });
+
+  it("keeps the canonical control type set", () => {
     const expected = [
       "SLOT_LOCK", "WEBHOOK_EVENT", "IDEMPOTENCY", "RATE_LIMIT",
       "SYSTEM_FLAG", "DEDUPE_KEY", "LEDGER_IDEMPOTENCY",
       "COMPENSATION", "ALERT", "DAYS_CACHE", "DUAL_CACHE",
       "DISPLAY_TOKEN",
     ];
-    const values = Object.values(CONTROL_TYPE).sort();
-    assert.deepEqual(values, expected.sort());
+    assert.deepEqual(Object.values(CONTROL_TYPE).sort(), expected.sort());
   });
 });
