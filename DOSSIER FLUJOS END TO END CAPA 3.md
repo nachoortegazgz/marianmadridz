@@ -5,6 +5,13 @@
 **Baseline revisado:** `main` · `c046a975d0ca3d45e83aa2dbab07e278e02edaae`  
 **Estado:** arquitectura objetivo; implantación operativa no demostrada.
 
+
+### Evidencia Wix live de configuración (solo lectura, 2026-11-10)
+
+- Wix eCommerce Orders Settings: `inventoryUpdateTrigger=ON_ORDER_PAID`; `createInvoice=false`.
+- Wix Bookings Services V2: 94 servicios (70 `FIXED`, 24 `NO_FEE`, ninguno `VARIED`); siete visibles superan 100 EUR y ninguno tiene depósito habilitado.
+- La activación queda pendiente. Wix Help Center indica depósito online y saldo en persona, pero el esquema REST actual de Services V2 declara `inPerson=false` cuando `deposit=true`. Esta discrepancia se considera bloqueo de contrato; no activar ni programar cambios hasta aclararla con Wix y validar la cuenta.
+
 ## 1. Propósito y límites
 
 ## Decisiones de negocio y flujo de depósitos (2026-11-10)
