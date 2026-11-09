@@ -57,7 +57,7 @@
 
 Todos aparecen visibles y con tarifa fija. En los siete, `online=true`, `inPerson=true` y no aparece ningún `deposit=true`; ninguno informa `requireManualApproval=true` (en seis el campo está omitido y en uno consta `false`). No se ha modificado ningún servicio.
 
-### Configuración nativa objetivo (pendiente de QA)
+### Configuración nativa objetivo (pendiente de QA y del bloqueo fiscal P0)
 
 - En panel Wix Bookings, elegir «El depósito online y el resto en persona».
 - Importe de depósito: 15 EUR fijo.
@@ -66,6 +66,22 @@ Todos aparecen visibles y con tarifa fija. En los siete, `online=true`, `inPerso
 - No activar aprobación manual para los servicios con depósito.
 - Mantener el resto de servicios (≤100 EUR) sin depósito obligatorio.
 - Si la función no está disponible en la cuenta, no sustituirla por un writer propio; mantener la política sin activar y elevar el bloqueo para decisión del propietario.
+- No configurar hasta que issue #209 acredite factura/IVA del anticipo y conciliación de saldo y devolución.
+
+## Bloqueo fiscal P0 — depósito como anticipo
+
+La política comercial llama «fianza» a los 15 EUR, pero como el importe se descuenta del precio final del servicio, el flujo es un **pago anticipado a cuenta**. No debe modelarse como una tasa adicional ni como una fianza independiente sin confirmar otra calificación con asesoría.
+
+- LIVA art. 75.Dos: el IVA se devenga al cobrar anticipos, por los importes efectivamente percibidos.
+- RD 1619/2012 art. 2.1: debe expedirse factura por pagos recibidos antes de la prestación, con las excepciones legales aplicables.
+- El tipo impositivo y desglose base/IVA deben derivarse del servicio y ser confirmados por asesoría; no hardcodear un tipo.
+- El pago del saldo final debe reconocer únicamente el importe pendiente, sin duplicar base, IVA ni ingreso.
+- Cancelación y devolución requieren rectificación/ajuste fiscal trazable, sin modificar registros append-only.
+- El sistema Veri*Factu/SIF propio no está listo. Por tanto, aunque la política de negocio está aprobada y Wix Bookings admite depósitos nativos, **no activar ni configurar cobros reales** hasta superar estos criterios P0.
+
+Issue de seguimiento: [#209 — Preparar y validar SIF propio para VERI*FACTU](https://github.com/nachoortegazgz/marianmadridz/issues/209).
+
+Fuentes oficiales: [LIVA art. 75](https://www.boe.es/buscar/act.php?id=BOE-A-1992-28740), [RD 1619/2012 art. 2](https://www.boe.es/buscar/act.php?id=BOE-A-2012-14696).
 
 ## Impacto sobre el estado actual
 
