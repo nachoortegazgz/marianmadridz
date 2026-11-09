@@ -15,7 +15,7 @@ test("FISCAL-CHAIN-01 eventLog acquires the shared lock before reading hash head
   const code = await source("eventLog.js");
   const acquire = code.indexOf("acquireFiscalLedgerLock(traceId)");
   const readHead = code.indexOf("const previous = await _getLastCashEvent()");
-  const nextSequence = code.indexOf("const seq = await allocateFiscalSequence(ledgerLock, previous, traceId)");
+  const nextSequence = code.indexOf("const seq = await allocateFiscalSequence(ledgerLock, previous)");
   const insert = code.indexOf("cabecera = await dalInsert(MOVIMIENTOS_CAJA_COL, doc)");
   const assertLock = code.indexOf("await assertFiscalLedgerLock(ledgerLock)");
 
@@ -31,7 +31,7 @@ test("FISCAL-CHAIN-02 manual cash writer shares the same lock and checks ownersh
   const code = await source("cajas.web.js");
   const acquire = code.indexOf("acquireFiscalLedgerLock(traceId)");
   const lastMovement = code.indexOf("const lastMovement = await _getLastMovement()", acquire);
-  const nextSequence = code.indexOf("const seq = await allocateFiscalSequence(ledgerLock, lastMovement, traceId)", acquire);
+  const nextSequence = code.indexOf("const seq = await allocateFiscalSequence(ledgerLock, lastMovement)", acquire);
   const insert = code.indexOf("saved = await dalInsert(MOVIMIENTOS_CAJA_COL, movement)");
   const assertLock = code.indexOf("await assertFiscalLedgerLock(ledgerLock)");
 
@@ -64,7 +64,7 @@ test("FISCAL-CHAIN-04 manual writer revalidates closed period after acquiring th
   const acquire = code.indexOf("acquireFiscalLedgerLock(traceId)", start);
   const recheck = code.indexOf("_assertPeriodNotClosed(operationDate, traceId)", acquire);
   const lastMovement = code.indexOf("const lastMovement = await _getLastMovement()", acquire);
-  const nextSequence = code.indexOf("const seq = await allocateFiscalSequence(ledgerLock, lastMovement, traceId)", acquire);
+  const nextSequence = code.indexOf("const seq = await allocateFiscalSequence(ledgerLock, lastMovement)", acquire);
 
   assert.ok(acquire > start);
   assert.ok(recheck > acquire);
