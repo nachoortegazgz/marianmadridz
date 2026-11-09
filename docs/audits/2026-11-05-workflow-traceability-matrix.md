@@ -1,3 +1,5 @@
+> **Nota de vigencia (2026-11-10):** este documento conserva evidencia histórica del estado auditado en su fecha. La decisión posterior es que Wix Stores Catalog V3 es la única autoridad de stock y que la capa custom de inventario se retira. Ver `docs/DECISION-LOG.md` y `docs/adr/2026-11-10-deposit-and-native-inventory.md`; no usar este snapshot como autorización para reactivar writers o proyecciones CMS.
+
 # Matriz de trazabilidad de procesos — Marian Madrid
 
 - **Versión:** 1.0
