@@ -35,8 +35,12 @@ El cron solo cierra la incidencia si se cumplen simultáneamente:
 ## Validación
 
 - Pruebas añadidas: contrato B-01/B-02 y reconciliación dual válida / estado de pago divergente.
-- CI run inicial sobre el commit previo a la última reubicación del restock: Layer 1, Layer 2, regresión offline, contratos SDK y ESLint completaron sus pasos con éxito; el job fue cancelado por actualización de rama, por lo que no se declara como validación final.
-- La CI del HEAD actual debe completar sin cancelación para considerar el patch validado.
+- CI run #42543224618 (run 79), commit funcional 381fa8f: **success**.
+  - Layer 1: 18 suites, 234 pruebas, 0 fallos.
+  - Layer 2: 15 suites, 141 pruebas, 0 fallos.
+  - Regresión completa: 45 suites, 406 pruebas, 0 fallos.
+  - Contratos SDK Wix, Bookings Reader V2 y ESLint: correctos.
+- El commit posterior 004cc08 solo actualiza cabeceras/documentación de los tres módulos; no cambia lógica ejecutable.
 - No se ejecutó Wix Preview ni Publish. No hubo escrituras en CMS real, reservas reales, pagos ni reembolsos reales.
 
 ## Pendiente de QA aislado
