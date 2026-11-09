@@ -152,7 +152,6 @@ export function readMovementHash(item) {
     return _safeTrim(readMovementField(item, "hash") ?? "");
 }
 
-/** @deprecated Alias de dominio contable; para MovimientosCaja usa readMovementHash. */
 /**
  * Normalize a CMS DATETIME field at the data-hook boundary.
  * Wix Data stores date-time values as Date objects; accepting ISO strings
@@ -175,8 +174,6 @@ function _normalizeCmsDateTime(item, fieldName) {
     item[fieldName] = normalized;
     return item;
 }
-
-export const readRecordHash = readMovementHash;
 
 export function readRecipientLegalName(item) {
     return _safeTrim(readMovementField(item, "recipientLegalName"));
@@ -317,13 +314,6 @@ function _isValidNifOrEuVat(nif) {
     return false;
 }
 
-const _readTaxableBase = readTaxBase;
-const _readTaxAmount = readTaxAmount;
-const _readTotalAmount = readTotalAmount;
-const _readSurchargeAmount = readSurchargeAmount;
-const _readRecipientTaxId = readRecipientTaxId;
-const _readRecipientLegalName = readRecipientLegalName;
-const _readInvoiceType = readInvoiceType;
 
 function _readBreakdownBaseAndTax(item) {
     let base = 0;
@@ -350,10 +340,10 @@ function _readBreakdownBaseAndTax(item) {
 }
 
 function _validateF1Requirements(item) {
-    if (_readInvoiceType(item) !== "F1") return;
+    if (readInvoiceType(item) !== "F1") return;
     const pf = item.fiscalPayload || item.payloadFiscal || {};
-    const taxId = _readRecipientTaxId(item) || _safeTrim(pf.nifDestinatario);
-    const legalName = _readRecipientLegalName(item) || _safeTrim(pf.nombreRazonDestinatario);
+    const taxId = readRecipientTaxId(item) || _safeTrim(pf.nifDestinatario);
+    const legalName = readRecipientLegalName(item) || _safeTrim(pf.nombreRazonDestinatario);
     const address = item.recipientAddress || pf.domicilioDestinatario || {};
 
     if (!taxId) _schemaError("Factura F1 exige recipientTaxId");
@@ -363,7 +353,7 @@ function _validateF1Requirements(item) {
 
 function _validateReverseCharge(item) {
     if (item.reverseCharge !== true) return;
-    if (_readTaxAmount(item) > 0) _schemaError("reverseCharge implica taxAmount = 0");
+    if (readTaxAmount(item) > 0) _schemaError("reverseCharge implica taxAmount = 0");
 }
 
 function _validateAjuste(item) {
@@ -459,18 +449,18 @@ export function MovimientosCaja_beforeInsert(item) {
         _schemaError("hash obligatorio (cadena SHA-256 de integridad del asiento)");
     }
 
-    const taxId = _readRecipientTaxId(item);
+    const taxId = readRecipientTaxId(item);
     if (taxId && !_isValidNifOrEuVat(taxId)) {
         _schemaError("nifDestinatario no tiene formato valido (espanol o VAT UE)");
     }
 
     const { base, tax } = _readBreakdownBaseAndTax(item);
-    const finalBase = base > 0 ? base : _readTaxableBase(item);
-    const finalTax = tax > 0 ? tax : _readTaxAmount(item);
+    const finalBase = base > 0 ? base : readTaxBase(item);
+    const finalTax = tax > 0 ? tax : readTaxAmount(item);
 
     const withholding = Number(item.irpfWithholdingAmount) || 0;
-    const surcharge = _readSurchargeAmount(item);
-    const total = _readTotalAmount(item);
+    const surcharge = readSurchargeAmount(item);
+    const total = readTotalAmount(item);
 
     if (finalBase > 0 || finalTax > 0 || withholding > 0 || surcharge > 0) {
         const role = _safeTrim(item.fiscalRole).toUpperCase() || FISCAL_ROLE.EMISOR;

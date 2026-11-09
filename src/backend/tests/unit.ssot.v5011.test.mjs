@@ -54,7 +54,11 @@ test('UNIT-ENUM-01 booking enums aligned with canonical SSOT', async () => {
   assert.strictEqual(IC.BOOKING_STATUS.CONFIRMED, 'CONFIRMED');
   assert.strictEqual(IC.BOOKING_STATUS.PENDING, 'PENDING');
   assert.strictEqual(IC.BOOKING_STATUS.CANCELED, 'CANCELED');
+  assert.strictEqual(IC.BOOKING_STATUS.UPDATED, undefined);
+  assert.ok(!Object.values(IC.BOOKING_STATUS).includes('UPDATED'));
   assert.strictEqual(IC.BOOKING_STATUS.PENDING_PAYMENT, undefined);
+  assert.deepStrictEqual(Object.keys(IC.CASH_REGISTER_STATUS).sort(), ['ABIERTA', 'CERRADA']);
+  assert.deepStrictEqual(Object.values(IC.CASH_REGISTER_STATUS).sort(), ['ABIERTA', 'CERRADA']);
   // AUDIT-2026-10-14: IC.LEGACY_BOOKING_STATUS_VALUES fue erradicado por
   // DEC-IC-03; la traduccion Wix->CMS vive exclusivamente en
   // bookingCore._toCmsBookingStatus. Se conserva la intencion original
@@ -76,6 +80,12 @@ test('UNIT-ENUM-01 booking enums aligned with canonical SSOT', async () => {
   assert.strictEqual(IC.PAYMENT_STATUS.NOT_PAID, 'NOT_PAID');
   assert.strictEqual(IC.PAYMENT_STATUS.PENDING_PAYMENT, 'PENDING_PAYMENT');
   assert.strictEqual(IC.PAYMENT_STATUS.REFUNDED, 'REFUNDED');
+});
+
+test('UNIT-ENUM-01B data exports only canonical movement hash reader', async () => {
+  const DATA = await import('backend/data');
+  assert.equal(typeof DATA.readMovementHash, 'function');
+  assert.equal(DATA.readRecordHash, undefined);
 });
 
 test('UNIT-ENUM-02 fiscal AEAT enums', () => {
