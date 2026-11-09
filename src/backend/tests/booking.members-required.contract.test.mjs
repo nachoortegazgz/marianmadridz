@@ -40,3 +40,13 @@ test("BOOK-MEMBER-03 frontend maps member permission failures to AUTH_REQUIRED w
   assert.match(pageSource, /Para reservar necesitas iniciar sesión o crear una cuenta en Área Personal/);
   assert.match(widgetSource, /p\.error\?\.message\s*\|\|/);
 });
+test("BOOK-MEMBER-04 frontend opens native Wix Members login before booking and resumes the same request", () => {
+  assert.match(pageSource, /import wixMembersFrontend from ["']wix-members-frontend["']/);
+  assert.match(pageSource, /async function ensureBookingMemberSession\(\)/);
+  assert.match(pageSource, /wixMembersFrontend\.currentMember\s*\.\s*getMember\(\)/);
+  assert.match(pageSource, /wixMembersFrontend\.authentication\s*\.\s*promptLogin\(\)/);
+  const authGate = pageSource.indexOf("const memberSessionReady = await ensureBookingMemberSession()");
+  const bookingCall = pageSource.indexOf("processDualBooking(requestPayload)");
+  assert.ok(authGate >= 0 && bookingCall > authGate, "native login must complete before processDualBooking");
+  assert.match(pageSource, /resultError\("AUTH_REQUIRED"\)/);
+});
