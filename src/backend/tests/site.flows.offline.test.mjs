@@ -342,6 +342,10 @@ test('FLOW-CAJA-01 flujo continuo: venta EFECTIVO -> caja incrementada -> cierre
     movementType: 'VENTA',
     tipoImpositivo: 21,
     transactionId: 'offline-tx-0001',
+    linkedBookingIds: [
+      'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+    ],
   });
   assert.strictEqual(tx.status, 'SUCCESS', JSON.stringify(tx.error));
   const mov = tx.data;
@@ -356,6 +360,13 @@ test('FLOW-CAJA-01 flujo continuo: venta EFECTIVO -> caja incrementada -> cierre
       JSON.stringify({ hash: mov.hash, prh: mov.previousRecordHash, sig: mov.digitalSignature }));
   assert.strictEqual(mov.recordHash, undefined, 'legacy recordHash must not persist on MovimientosCaja');
   assert.strictEqual(mov.paymentMethod, 'EFECTIVO');
+  assert.deepStrictEqual(
+    persistedMovement.linkedBookingIds,
+    ['aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'],
+    'booking references must be persisted as a canonical array',
+  );
+  const linkedMovement = await cajas.getMovimientoByBooking({ bookingId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb' });
+  assert.strictEqual(linkedMovement.status, 'SUCCESS', 'array booking reference must be queryable');
   const qr = new URL(mov.verificationQR);
   const [qrYear, qrMonth, qrDay] = String(mov.fechaExpedicionFactura).slice(0, 10).split('-');
   assert.equal(qr.searchParams.get('fecha'), `${qrDay}-${qrMonth}-${qrYear}`);

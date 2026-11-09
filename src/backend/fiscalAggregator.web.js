@@ -83,6 +83,22 @@ const _readOperationDescription = (m) => _safeTrim(readMovementField(m, "operati
 const _readRecordSource = (m) => _safeTrim(readMovementField(m, "recordSource"));
 const _readPreviousInvoiceId = (m) => _safeTrim(readMovementField(m, "previousInvoiceId")) || null;
 
+function _signedFiscalValue(movement, reader) {
+  const accountingAmount = Number(movement?.accountingAmount);
+  const sign = Number(movement?.accountingSign) < 0 || accountingAmount < 0 ? -1 : 1;
+  return Math.abs(Number(reader(movement)) || 0) * sign;
+}
+
+function _paymentMethodBucket(value) {
+  const method = String(value || "").trim().toUpperCase();
+  if (method === "EFECTIVO") return "efectivo";
+  if (method === "TARJETA") return "tarjeta";
+  if (method === "BIZUM") return "bizum";
+  if (method === "WIX_PAYMENTS" || method === "ONLINE") return "online";
+  if (method === "TRANSFERENCIA") return "transferencia";
+  return null;
+}
+
 // =============================================================================
 // BLOQUE 1 - HELPERS
 // =============================================================================
@@ -129,7 +145,7 @@ function _initTaxAccumulator(months) {
     countAdjustments: 0,
     countFiscal: 0,
     totalOperations: 0,
-    breakdownByPaymentMethod: { efectivo: 0, tarjeta: 0, bizum: 0, online: 0 },
+    breakdownByPaymentMethod: { efectivo: 0, tarjeta: 0, bizum: 0, online: 0, transferencia: 0 },
     breakdownByMonth,
     breakdownByVatRate: {},
   };
@@ -139,10 +155,10 @@ function _accumulatePage(items, state) {
   for (const m of items) {
     state.totalOperations++;
     const accountingAmount = Number(m.accountingAmount || 0);
-    const taxableAmount = _readTaxableAmount(m);
-    const taxAmount = _readTaxAmount(m);
+    const taxableAmount = _signedFiscalValue(m, _readTaxableAmount);
+    const taxAmount = _signedFiscalValue(m, _readTaxAmount);
     const mes = _safeTrim(m.fiscalPeriod || m.mesKey);
-    const paymentMethod = _readPaymentMethod(m);
+    const paymentMethod = _paymentMethodBucket(_readPaymentMethod(m));
     const taxRate = _readTaxRate(m);
     const taxRateKey = String(taxRate);
     const movementType = _readMovementType(m).toUpperCase();
@@ -152,7 +168,7 @@ function _accumulatePage(items, state) {
       movementType === MOVEMENT_TYPE.AJUSTE ? "AJUSTE" : "VENTA"
     );
 
-    if (state.breakdownByPaymentMethod[paymentMethod] !== undefined) {
+    if (paymentMethod && state.breakdownByPaymentMethod[paymentMethod] !== undefined) {
       state.breakdownByPaymentMethod[paymentMethod] += accountingAmount;
     }
 
@@ -485,4 +501,6 @@ export const __test__ = {
   readTaxRate: _readTaxRate,
   readRecordHash: _readRecordHash,
   getBusinessTaxId: _getBusinessTaxId,
+  initTaxAccumulator: _initTaxAccumulator,
+  accumulatePage: _accumulatePage,
 };

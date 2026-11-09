@@ -520,9 +520,10 @@
           _renderMovements([]);
           return;
         }
-        cashSaldo.textContent = _formatMoney(state.saldoTotal);
-        cashOps.textContent = Number.isFinite(Number(state.totalOperaciones)) ? String(state.totalOperaciones) : '--';
-        cashDiaKey.textContent = state.diaKey || '--';
+        // DTO canónico de cajas.web.js:getCashierState.
+        cashSaldo.textContent = _formatMoney(state.netAmount);
+        cashOps.textContent = Number.isFinite(Number(state.totalOperations)) ? String(state.totalOperations) : '--';
+        cashDiaKey.textContent = state.operationDate || '--';
         cashMode.textContent = contextData?.cashierMode || state.cashierMode || '--';
         const movements = Array.isArray(state.movimientos) ? state.movimientos
           : Array.isArray(state.recentMovements) ? state.recentMovements : [];
@@ -538,7 +539,7 @@
         movementsBody.innerHTML = '';
         movements.forEach((m) => {
           const tr = document.createElement('tr');
-          const hora = m.hora || (m.fechaHora ? new Intl.DateTimeFormat('es-ES', { hour: '2-digit', minute: '2-digit', timeZone: contextData?.timeZone || 'Europe/Madrid' }).format(new Date(m.fechaHora))) : '';
+          const hora = m.hora || (m.fechaHora ? new Intl.DateTimeFormat('es-ES', { hour: '2-digit', minute: '2-digit', timeZone: contextData?.timeZone || 'Europe/Madrid' }).format(new Date(m.fechaHora)) : '');
           const tipo = m.tipo || m.txType || '';
           const concepto = m.concepto || m.concept || '';
           const importe = m.importe != null ? _formatMoney(m.importe) : (m.amount != null ? _formatMoney(m.amount) : '');
@@ -551,23 +552,43 @@
       }
 
       function _renderTicket(ticket) {
-        if (!ticket) { ticketDisplay.style.display = 'none'; return; }
+        if (!ticket) { ticketDisplay.style.display = 'none'; ticketBox.replaceChildren(); return; }
         ticketDisplay.style.display = 'block';
-        const lines = [];
-        lines.push(`<div class="ticket-title">${ticket.title || 'TICKET'}</div>`);
-        lines.push(`<div class="ticket-row"><span>Nº:</span><span>${ticket.ticketNumber || '—'}</span></div>`);
-        lines.push(`<div class="ticket-row"><span>Fecha:</span><span>${_formatMadridDate(ticket.createdAt || new Date(), false)}</span></div>`);
-        if (ticket.supplierName) lines.push(`<div class="ticket-row"><span>Proveedor:</span><span>${ticket.supplierName}</span></div>`);
-        if (ticket.supplierNif) lines.push(`<div class="ticket-row"><span>NIF:</span><span>${ticket.supplierNif}</span></div>`);
-        if (ticket.concept) lines.push(`<div class="ticket-row"><span>Concepto:</span><span>${ticket.concept}</span></div>`);
-        if (ticket.amount != null) lines.push(`<div class="ticket-row"><span>Importe:</span><span>${_formatMoney(ticket.amount)}</span></div>`);
-        if (ticket.paymentMethod) lines.push(`<div class="ticket-row"><span>Método:</span><span>${ticket.paymentMethod}</span></div>`);
-        lines.push(`<div class="ticket-sep"></div>`);
-        if (ticket.traceId) lines.push(`<div class="ticket-row"><span>Traza:</span><span class="ticket-mono">${ticket.traceId}</span></div>`);
-        if (ticket.fiscalFingerprint) lines.push(`<div class="ticket-row"><span>Huella fiscal:</span><span class="ticket-mono">${ticket.fiscalFingerprint}</span></div>`);
-        if (ticket.issuerName) lines.push(`<div class="ticket-sep"></div><div class="ticket-issuer">${ticket.issuerName}</div>`);
-        if (ticket.issuerCif) lines.push(`<div class="ticket-issuer">CIF: ${ticket.issuerCif}</div>`);
-        ticketBox.innerHTML = lines.join('');
+        ticketBox.replaceChildren();
+        const appendText = (tag, className, value) => {
+          const element = document.createElement(tag);
+          if (className) element.className = className;
+          element.textContent = String(value);
+          ticketBox.appendChild(element);
+          return element;
+        };
+        const appendRow = (label, value, mono = false) => {
+          const row = document.createElement('div');
+          row.className = 'ticket-row';
+          const key = document.createElement('span');
+          key.textContent = label;
+          const val = document.createElement('span');
+          if (mono) val.className = 'ticket-mono';
+          val.textContent = String(value);
+          row.append(key, val);
+          ticketBox.appendChild(row);
+        };
+        appendText('div', 'ticket-title', ticket.title || 'TICKET');
+        appendRow('Nº:', ticket.ticketNumber || '—');
+        appendRow('Fecha:', _formatMadridDate(ticket.createdAt || new Date(), false));
+        if (ticket.supplierName) appendRow('Proveedor:', ticket.supplierName);
+        if (ticket.supplierNif) appendRow('NIF:', ticket.supplierNif);
+        if (ticket.concept) appendRow('Concepto:', ticket.concept);
+        if (ticket.amount != null) appendRow('Importe:', _formatMoney(ticket.amount));
+        if (ticket.paymentMethod) appendRow('Método:', ticket.paymentMethod);
+        appendText('div', 'ticket-sep', '');
+        if (ticket.traceId) appendRow('Traza:', ticket.traceId, true);
+        if (ticket.fiscalFingerprint) appendRow('Huella fiscal:', ticket.fiscalFingerprint, true);
+        if (ticket.issuerName) {
+          appendText('div', 'ticket-sep', '');
+          appendText('div', 'ticket-issuer', ticket.issuerName);
+        }
+        if (ticket.issuerCif) appendText('div', 'ticket-issuer', 'CIF: ' + ticket.issuerCif);
       }
 
       /* ── Historial / Horas ── */
@@ -589,18 +610,25 @@
       }
 
       function _renderHoursResult(data) {
+        hoursResult.replaceChildren();
+        const appendLine = (value, style) => {
+          const line = document.createElement('div');
+          if (style) line.style.cssText = style;
+          line.textContent = String(value);
+          hoursResult.appendChild(line);
+        };
         if (!data) {
           quickHours.textContent = 'Consultar';
-          hoursResult.innerHTML = '<span style="color:var(--muted);">Horas trabajadas: &mdash;</span><br /><span style="color:var(--muted);">Tiempo de pausa: &mdash;</span>';
+          appendLine('Horas trabajadas: —', 'color:var(--muted)');
+          appendLine('Tiempo de pausa: —', 'color:var(--muted)');
           return;
         }
         const workedHours = Number(data.horasTrabajadasDecimal || 0);
-        quickHours.textContent = data.tiempoFormateado || `${workedHours}h`;
-        hoursResult.innerHTML = `
-          <span style="font-weight:600;">Horas trabajadas: ${workedHours}h (${data.tiempoFormateado || ''})</span><br />
-          <span style="color:var(--muted);">Tiempo de pausa: ${Number(data.horasPausaDecimal || 0)}h</span><br />
-          <span style="font-size:12px; color:var(--muted);">Fichajes procesados: ${Number(data.totalFichajesProcesados || 0)}</span>
-        `;
+        const formatted = String(data.tiempoFormateado || '');
+        quickHours.textContent = formatted || `${workedHours}h`;
+        appendLine(`Horas trabajadas: ${workedHours}h (${formatted})`, 'font-weight:600');
+        appendLine(`Tiempo de pausa: ${Number(data.horasPausaDecimal || 0)}h`, 'color:var(--muted)');
+        appendLine(`Fichajes procesados: ${Number(data.totalFichajesProcesados || 0)}`, 'font-size:12px;color:var(--muted)');
       }
 
       /* ── Inventario ── */
@@ -665,11 +693,16 @@
 
       /* ═════════════════════════════════════════════════════════════════
          CONTEXTO — alineado con zonastaff.js v5004
-         Defaults seguros: fichaje + caja + historial VISIBLES
+         Seguridad: no se muestra ninguna operación sin contexto autorizado.
          ═════════════════════════════════════════════════════════════════ */
       function _renderContext(ctx) {
         contextData = ctx || {};
-        if (contextData.isAuthorized === false) { _showError('Acceso no autorizado.'); return; }
+        if (contextData.isAuthorized !== true) {
+          [clockPanel, historyPanel, hoursPanel, cashPanel, inventoryPanel, adminPanel]
+            .forEach((panel) => { if (panel) panel.style.display = 'none'; });
+          _showError('Acceso no autorizado o contexto no disponible.');
+          return;
+        }
 
         /* Cabecera */
         const memberName = contextData.memberName || contextData.employeeName || 'EMPLEADO';
@@ -678,11 +711,11 @@
         userInfo.textContent = `Sesion activa: ${memberName} | ${roleLabel} | ${panelType}`;
         roleBadge.textContent = roleLabel;
 
-        /* Feature flags — defaults: fichaje/caja ON, schedule/inventory OFF */
-        const enableClocking      = contextData.enableClocking      !== false; // default ON
-        const enableBreaks        = contextData.enableBreaks        !== false; // default ON
-        const enableCashier       = contextData.enableCashier       !== false; // default ON
-        const enableInventory     = contextData.enableInventory     === true;  // default OFF
+        /* Feature flags: fail closed; the backend must explicitly enable them. */
+        const enableClocking      = contextData.enableClocking      === true;
+        const enableBreaks        = contextData.enableBreaks        === true;
+        const enableCashier       = contextData.enableCashier       === true;
+        const enableInventory     = contextData.enableInventory     === true;
         const enableScheduleQuery = contextData.enableScheduleQuery === true;  // default OFF
         const isAdmin   = contextData.isAdmin === true;
         const isCajero  = contextData.isCajero === true || enableCashier;
@@ -973,14 +1006,19 @@
       contextFallbackTimer = setTimeout(() => {
         if (!contextData) {
           console.warn('[only-staff] MM_CONTEXT no recibido, aplicando defaults');
+          // Fallback fail-closed: sin contexto de autorización no se
+          // exponen controles de jornada, caja, inventario ni administración.
           _renderContext({
+            isAuthorized: false,
             panelType: 'TPV',
-            enableClocking: true,
-            enableBreaks: true,
-            enableCashier: true,
+            enableClocking: false,
+            enableBreaks: false,
+            enableCashier: false,
             enableInventory: false,
             enableScheduleQuery: false,
-            cashierMode: 'SIMULADA',
+            isAdmin: false,
+            isCajero: false,
+            cashierMode: 'DISABLED',
             currencyCode: 'EUR',
             timeZone: 'Europe/Madrid'
           });

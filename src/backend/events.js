@@ -1862,7 +1862,7 @@ export async function wixEcom_onOrderPaymentStatusUpdated(eventPayload) {
                 (item) => item?.catalogReference?.catalogItemId
             )
         );
-        const linkedBookingIds = bookingIds.join(",");
+        const linkedBookingIds = bookingIds;
 
         const finalLedgerAmount = resolveOrderLedgerAmount(order);
         const transactionId = `ORDER-${orderId}`;
@@ -2380,7 +2380,7 @@ export async function wixEcom_onOrderRefunded(eventPayload) {
                 recipientLegalName:
                     originalMovement.recipientLegalName || null,
                 fiscalRole: FISCAL_ROLE.EMISOR,
-                linkedBookingIds: linkedBookingIds.join(",") || null,
+                linkedBookingIds: linkedBookingIds.length ? linkedBookingIds : null,
                 transactionId,
                 orderId,
                 refundId,

@@ -21,14 +21,20 @@ function extractInlineScripts(html, label) {
 const serviceHtml = read("#htmlWidgetCustomService.txt");
 const confirmationHtml = read("#html2.txt");
 const calendarHtml = read("#html1.txt");
+const adminHtml = read("#htmlAdmin.txt");
+const onlyStaffHtml = read("#htmlOnlyStaff.txt");
 const bridge = read("src/public/widgetBridge.js");
+const adminPage = read("src/pages/ZONA MARIAN.gn7mx.js");
 const staffPage = read("src/pages/ZONA STAFF.mvf3f.js");
 const calendarPage = read("src/pages/Calendario de reservas 2.q39h6.js");
+const cashierBackend = read("src/backend/cajas.web.js");
 
 test("HTML component snapshots contain syntactically valid JavaScript", () => {
   for (const [label, html] of [
     ["service widget", serviceHtml],
     ["booking calendar", calendarHtml],
+    ["admin widget", adminHtml],
+    ["staff widget", onlyStaffHtml],
   ]) {
     for (const [index, source] of extractInlineScripts(html, label).entries()) {
       assert.doesNotThrow(
@@ -125,4 +131,69 @@ test("booking privacy navigation targets the published Privacidad y Cookies rout
   assert.match(calendarPage, /URLS\?\.PRIVACY_POLICY[\s\S]*?\/politica-privacidad-texto/);
   assert.doesNotMatch(calendarPage, /\/politica-de-privacidad/);
   assert.match(calendarHtml, /btnPrivacy/);
+});
+
+
+test("admin widget actions are explicitly allowlisted and match implemented page handlers", () => {
+  const allowlist = adminPage.match(/allowedTypes:\s*\[([\s\S]*?)\]/);
+  assert.ok(allowlist, "admin page must declare an explicit widget allowlist");
+  assert.match(allowlist[1], /MESSAGE_TYPES\.READY/);
+  assert.match(allowlist[1], /MESSAGE_TYPES\.CONTEXT/);
+  assert.match(allowlist[1], /MESSAGE_TYPES\.NAV/);
+  for (const type of [
+    "CASHIER_STATE",
+    "Z_CLOSING",
+    "FISCAL_SUMMARY",
+    "FISCAL_BOOK",
+    "DOCUMENT_PREPARED",
+    "DOCUMENT_DOWNLOAD",
+  ]) {
+    assert.ok(allowlist[1].includes('"'+type+'"'), type+" must be allowed by the admin bridge");
+    assert.match(adminPage, new RegExp(type+"\\s*:"), type+" must have a page handler");
+    assert.ok(adminHtml.includes(type+":"+ "'"+type+"'") || adminHtml.includes(type+": '"+type+"'"),
+      type+" must be emitted by the admin HTML component");
+  }
+});
+
+test("staff widget remains fail-closed and bridge only accepts navigation", () => {
+  const allowlist = staffPage.match(/allowedTypes:\s*\[([\s\S]*?)\]/);
+  assert.ok(allowlist, "staff page must declare an explicit widget allowlist");
+  assert.match(allowlist[1], /MESSAGE_TYPES\.READY/);
+  assert.match(allowlist[1], /MESSAGE_TYPES\.CONTEXT/);
+  assert.match(allowlist[1], /MESSAGE_TYPES\.NAV/);
+  assert.doesNotMatch(allowlist[1], /CLOCK|TPV_TX|X_COUNT|Z_CLOSING|INVENTORY_/);
+  assert.match(staffPage, /enableClocking:\s*false/);
+  assert.match(staffPage, /enableCashier:\s*false/);
+  assert.match(staffPage, /cashierMode:\s*"DISABLED"/);
+  assert.match(onlyStaffHtml, /isAuthorized:\s*false/);
+  assert.match(onlyStaffHtml, /contextData\.isAuthorized !== true/);
+  assert.match(onlyStaffHtml, /contextData\.enableClocking\s*===\s*true/);
+  assert.match(onlyStaffHtml, /contextData\.enableCashier\s*===\s*true/);
+  assert.match(onlyStaffHtml, /enableClocking:\s*false/);
+  assert.match(onlyStaffHtml, /enableCashier:\s*false/);
+});
+
+test("admin and staff cash widgets consume the canonical getCashierState DTO", () => {
+  assert.match(cashierBackend, /netAmount:/);
+  assert.match(cashierBackend, /totalOperations,/);
+  assert.match(cashierBackend, /operationDate:/);
+  assert.match(adminHtml, /money\(state\.netAmount\)/);
+  assert.match(adminHtml, /state\.totalOperations/);
+  assert.match(adminHtml, /state\.operationDate/);
+  assert.match(onlyStaffHtml, /_formatMoney\(state\.netAmount\)/);
+  assert.match(onlyStaffHtml, /state\.totalOperations/);
+  assert.match(onlyStaffHtml, /state\.operationDate/);
+});
+
+test("admin fallback hides unsupported capabilities and ticket output uses text nodes", () => {
+  assert.match(adminHtml, /roleLabel: 'CONTEXTO NO DISPONIBLE'/);
+  assert.match(adminHtml, /enableCashier:\s*false/);
+  assert.match(adminHtml, /enableFiscal:\s*false/);
+  assert.match(adminHtml, /enableDocuments:\s*false/);
+  assert.match(adminHtml, /enableAIAssistant:\s*false/);
+  assert.match(adminHtml, /enableStaffManagement:\s*false/);
+  assert.match(adminHtml, /enableAccountantSend:\s*false/);
+  assert.doesNotMatch(adminHtml, /cashTicket\.innerHTML\s*=/);
+  assert.doesNotMatch(onlyStaffHtml, /ticketBox\.innerHTML\s*=/);
+  assert.doesNotMatch(onlyStaffHtml, /hoursResult\.innerHTML\s*=/);
 });

@@ -165,3 +165,59 @@ test('FISCAL-PAGING-02 truncated sales ledger is rejected, never returned as a s
   assert.equal(result.data, null);
   assert.equal(result.error.code, 'FISCAL_DATASET_LIMIT_EXCEEDED');
 });
+
+
+test('FISCAL-SIGN-01 refunds net taxable base and tax by accounting sign', () => {
+  const state = T.initTaxAccumulator(['2026-01']);
+  T.accumulatePage([{
+    _id: 'refund-sign-1',
+    fiscalPeriod: '2026-01',
+    movementType: 'REEMBOLSO',
+    operationNature: 'DEVOLUCION',
+    paymentMethod: 'WIX_PAYMENTS',
+    accountingAmount: -10,
+    accountingSign: -1,
+    taxBase: 8.26,
+    taxAmount: 1.74,
+    tipoImpositivo: 0.21,
+  }], state);
+
+  assert.equal(state.totalTaxableAmount, -8.26);
+  assert.equal(state.totalTaxAmount, -1.74);
+  assert.equal(state.totalInvoiced, -10);
+  assert.equal(state.breakdownByPaymentMethod.online, -10);
+  assert.equal(state.breakdownByMonth['2026-01'].taxableAmount, -8.26);
+});
+
+test('FISCAL-PAYMENT-01 transfer and Wix Payments use distinct payment buckets', () => {
+  const state = T.initTaxAccumulator(['2026-01']);
+  T.accumulatePage([
+    {
+      _id: 'transfer-bucket-1',
+      fiscalPeriod: '2026-01',
+      movementType: 'VENTA',
+      operationNature: 'VENTA',
+      paymentMethod: 'TRANSFERENCIA',
+      accountingAmount: 50,
+      accountingSign: 1,
+      taxBase: 41.32,
+      taxAmount: 8.68,
+      tipoImpositivo: 0.21,
+    },
+    {
+      _id: 'wix-payments-bucket-1',
+      fiscalPeriod: '2026-01',
+      movementType: 'VENTA_ONLINE',
+      operationNature: 'VENTA',
+      paymentMethod: 'WIX_PAYMENTS',
+      accountingAmount: 20,
+      accountingSign: 1,
+      taxBase: 16.53,
+      taxAmount: 3.47,
+      tipoImpositivo: 0.21,
+    },
+  ], state);
+
+  assert.equal(state.breakdownByPaymentMethod.transferencia, 50);
+  assert.equal(state.breakdownByPaymentMethod.online, 20);
+});

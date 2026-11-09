@@ -42,7 +42,7 @@ import {
     reconcilePendingInventoryMovements,
 } from "backend/inventario.web.js";
 
-import { makeTraceId, URLS } from "public/mmUtils";
+import { makeTraceId, URLS, MESSAGE_TYPES } from "public/mmUtils";
 import { createWidgetBridge } from "public/widgetBridge";
 
 /* ────────────────────────────────────────────────────────────────────
@@ -150,6 +150,17 @@ $w.onReady(async () => {
     }
 
     createWidgetBridge(widget, {
+        allowedTypes: [
+            MESSAGE_TYPES.READY,
+            MESSAGE_TYPES.CONTEXT,
+            MESSAGE_TYPES.NAV,
+            "CASHIER_STATE",
+            "Z_CLOSING",
+            "FISCAL_SUMMARY",
+            "FISCAL_BOOK",
+            "DOCUMENT_PREPARED",
+            "DOCUMENT_DOWNLOAD",
+        ],
         slug: "administracion",
         traceId,
 

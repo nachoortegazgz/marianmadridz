@@ -91,6 +91,33 @@ import {
 
 const log = logger;
 
+const REFUND_MOVEMENT_TYPES = new Set([
+    MOVEMENT_TYPE.REEMBOLSO,
+    MOVEMENT_TYPE.DEVOLUCION,
+    MOVEMENT_TYPE.DEVOLUCION_SERVICIO,
+]);
+
+function normalizeAccountingAmount(input = {}) {
+    const movementType = _safeTrim(input.movementType).toUpperCase();
+    const rawAmount = Number(input.accountingAmount ?? input.totalAmount ?? 0);
+    if (!Number.isFinite(rawAmount)) throw new Error("ACCOUNTING_AMOUNT_INVALID");
+    return REFUND_MOVEMENT_TYPES.has(movementType)
+        ? -Math.abs(rawAmount)
+        : rawAmount;
+}
+
+function normalizeLinkedBookingIds(value) {
+    const values = Array.isArray(value) ? value : _safeTrim(value).split(",");
+    return [...new Set(values.map((item) => _safeTrim(item)).filter(Boolean))];
+}
+
+function isCancellationRectification(input = {}) {
+    return _safeTrim(input.movementType).toUpperCase() === MOVEMENT_TYPE.REEMBOLSO &&
+        _safeTrim(input.eventType).toUpperCase() === EVENT_TYPE.RECTIFICATIVA &&
+        _safeTrim(input.transactionId).startsWith("RECT-") &&
+        Boolean(_safeTrim(input.previousInvoiceId));
+}
+
 // ============================================================================
 // CONSTANTES (ALN-01, ALN-03)
 // ============================================================================
@@ -506,68 +533,75 @@ export async function registrarEventoEconomico(input) {
             }
         }
 
-        // Refund amount and refundId uniqueness must be revalidated while the
-        // shared fiscal-ledger lock is held. The webhook preflight is useful for
-        // diagnostics, but cannot serialize two different refundIds for one order.
-        if (_safeTrim(input.movementType) === MOVEMENT_TYPE.REEMBOLSO) {
+        // Native eCommerce refunds require the Wix refund identity and are
+        // revalidated under the global ledger lock. Booking-cancellation
+        // rectifications use a separate RECT-* identity and reference the
+        // original invoice; they must not be forced through the refundId guard.
+        if (_safeTrim(input.movementType).toUpperCase() === MOVEMENT_TYPE.REEMBOLSO) {
             const refundOrderId = _safeTrim(input.orderId);
             const refundId = _safeTrim(input.refundId);
             const refundTransactionId = _safeTrim(input.transactionId);
-            if (!refundOrderId || !refundId || refundTransactionId !== `REFUND-${refundOrderId}-${refundId}`) {
-                throw new Error("REFUND_IDENTITY_INVALID");
-            }
+            const isEcommerceRefund = refundTransactionId.startsWith("REFUND-") || Boolean(refundId);
 
-            const refundIdRes = await dalQuery(MOVIMIENTOS_CAJA_COL)
-                .eq("refundId", refundId)
-                .limit(2)
-                .find({ consistencyMode: "strong" });
-            const refundIdConflict = (refundIdRes?.items || []).some(movement =>
-                _safeTrim(movement?.orderId) !== refundOrderId ||
-                _safeTrim(movement?.transactionId) !== refundTransactionId
-            );
-            if (refundIdConflict) throw new Error("REFUND_ID_REUSED_ACROSS_ORDERS");
+            if (!isEcommerceRefund) {
+                if (!isCancellationRectification(input)) throw new Error("REFUND_IDENTITY_INVALID");
+            } else {
+                if (!refundOrderId || !refundId || refundTransactionId !== `REFUND-${refundOrderId}-${refundId}`) {
+                    throw new Error("REFUND_IDENTITY_INVALID");
+                }
 
-            const originalRes = await dalQuery(MOVIMIENTOS_CAJA_COL)
-                .eq("transactionId", `ORDER-${refundOrderId}`)
-                .limit(2)
-                .find({ consistencyMode: "strong" });
-            if (originalRes?.items?.length !== 1) {
-                throw new Error(originalRes?.items?.length > 1
-                    ? "REFUND_ORIGINAL_LEDGER_AMBIGUOUS"
-                    : "REFUND_ORIGINAL_LEDGER_MISSING");
-            }
-            const originalAmountCents = Math.round(Math.abs(Number(
-                originalRes.items[0]?.totalAmount ?? originalRes.items[0]?.accountingAmount ?? 0
-            )) * 100);
-            if (!Number.isSafeInteger(originalAmountCents) || originalAmountCents <= 0) {
-                throw new Error("REFUND_ORIGINAL_AMOUNT_INVALID");
-            }
+                const refundIdRes = await dalQuery(MOVIMIENTOS_CAJA_COL)
+                    .eq("refundId", refundId)
+                    .limit(2)
+                    .find({ consistencyMode: "strong" });
+                const refundIdConflict = (refundIdRes?.items || []).some(movement =>
+                    _safeTrim(movement?.orderId) !== refundOrderId ||
+                    _safeTrim(movement?.transactionId) !== refundTransactionId
+                );
+                if (refundIdConflict) throw new Error("REFUND_ID_REUSED_ACROSS_ORDERS");
 
-            let refundRowsResult = await dalQuery(MOVIMIENTOS_CAJA_COL)
-                .eq("orderId", refundOrderId)
-                .eq("movementType", MOVEMENT_TYPE.REEMBOLSO)
-                .limit(1000)
-                .find({ consistencyMode: "strong" });
-            const refundRows = [...(refundRowsResult?.items || [])];
-            let refundPages = 1;
-            while (typeof refundRowsResult?.hasNext === "function" && refundRowsResult.hasNext()) {
-                if (refundPages >= 100) throw new Error("REFUND_HISTORY_PAGE_LIMIT_EXCEEDED");
-                refundRowsResult = await refundRowsResult.next();
-                refundRows.push(...(refundRowsResult?.items || []));
-                refundPages++;
-            }
-            if (typeof refundRowsResult?.hasNext === "function" && refundRowsResult.hasNext()) {
-                throw new Error("REFUND_HISTORY_INCOMPLETE");
-            }
+                const originalRes = await dalQuery(MOVIMIENTOS_CAJA_COL)
+                    .eq("transactionId", `ORDER-${refundOrderId}`)
+                    .limit(2)
+                    .find({ consistencyMode: "strong" });
+                if (originalRes?.items?.length !== 1) {
+                    throw new Error(originalRes?.items?.length > 1
+                        ? "REFUND_ORIGINAL_LEDGER_AMBIGUOUS"
+                        : "REFUND_ORIGINAL_LEDGER_MISSING");
+                }
+                const originalAmountCents = Math.round(Math.abs(Number(
+                    originalRes.items[0]?.totalAmount ?? originalRes.items[0]?.accountingAmount ?? 0
+                )) * 100);
+                if (!Number.isSafeInteger(originalAmountCents) || originalAmountCents <= 0) {
+                    throw new Error("REFUND_ORIGINAL_AMOUNT_INVALID");
+                }
 
-            const refundedCents = refundRows.reduce((sum, movement) =>
-                sum + Math.round(Math.abs(Number(
-                    movement?.accountingAmount ?? movement?.totalAmount ?? 0
-                )) * 100), 0);
-            const requestedRefundCents = Math.round(Math.abs(Number(input.totalAmount)) * 100);
-            if (!Number.isSafeInteger(requestedRefundCents) || requestedRefundCents <= 0 ||
-                refundedCents + requestedRefundCents > originalAmountCents) {
-                throw new Error("REFUND_EXCEEDS_ORIGINAL_ORDER_AMOUNT");
+                let refundRowsResult = await dalQuery(MOVIMIENTOS_CAJA_COL)
+                    .eq("orderId", refundOrderId)
+                    .eq("movementType", MOVEMENT_TYPE.REEMBOLSO)
+                    .limit(1000)
+                    .find({ consistencyMode: "strong" });
+                const refundRows = [...(refundRowsResult?.items || [])];
+                let refundPages = 1;
+                while (typeof refundRowsResult?.hasNext === "function" && refundRowsResult.hasNext()) {
+                    if (refundPages >= 100) throw new Error("REFUND_HISTORY_PAGE_LIMIT_EXCEEDED");
+                    refundRowsResult = await refundRowsResult.next();
+                    refundRows.push(...(refundRowsResult?.items || []));
+                    refundPages++;
+                }
+                if (typeof refundRowsResult?.hasNext === "function" && refundRowsResult.hasNext()) {
+                    throw new Error("REFUND_HISTORY_INCOMPLETE");
+                }
+
+                const refundedCents = refundRows.reduce((sum, movement) =>
+                    sum + Math.round(Math.abs(Number(
+                        movement?.accountingAmount ?? movement?.totalAmount ?? 0
+                    )) * 100), 0);
+                const requestedRefundCents = Math.round(Math.abs(Number(input.totalAmount)) * 100);
+                if (!Number.isSafeInteger(requestedRefundCents) || requestedRefundCents <= 0 ||
+                    refundedCents + requestedRefundCents > originalAmountCents) {
+                    throw new Error("REFUND_EXCEEDS_ORIGINAL_ORDER_AMOUNT");
+                }
             }
         }
 
@@ -588,11 +622,7 @@ export async function registrarEventoEconomico(input) {
     // literales AEAT; los aliases historical del caller ya fueron promovidos por
     // normalizeMovementKeys y NUNCA se persisten).
     const movementTypeRaw = _safeTrim(input.movementType);
-    const accountingAmount = Number(input.accountingAmount ??
-        (movementTypeRaw === MOVEMENT_TYPE.REEMBOLSO ||
-         movementTypeRaw === MOVEMENT_TYPE.DEVOLUCION
-            ? -Number(input.totalAmount ?? 0)
-            : Number(input.totalAmount ?? 0)));
+    const accountingAmount = normalizeAccountingAmount(input);
     const canonInvoiceNumber = _safeTrim(input.numSerieFactura) || seq.numSerieFactura;
     const canonIssueDate = _safeTrim(input.fechaExpedicionFactura) ||
         _safeTrim(input.fechaOperacion) ||
@@ -600,10 +630,7 @@ export async function registrarEventoEconomico(input) {
     // ALN-09 / SSOT Apartado 5: linkedBookingIds es ARRAY de GUIDs (no CSV).
     // El alias reservaIdVinculada del caller ya fue promovido a
     // linkedBookingIds por normalizeMovementKeys; aqui solo se lee el canon.
-    const linkedBookingIdsRaw = input.linkedBookingIds;
-    const linkedBookingIdsArr = Array.isArray(linkedBookingIdsRaw)
-        ? linkedBookingIdsRaw.map((v) => _safeTrim(v)).filter(Boolean)
-        : (_safeTrim(linkedBookingIdsRaw) ? [_safeTrim(linkedBookingIdsRaw)] : []);
+    const linkedBookingIdsArr = normalizeLinkedBookingIds(input.linkedBookingIds);
     const baseMovement = {
         sequenceNumber: seq.sequenceNumber,
         numSerieFactura: canonInvoiceNumber,
@@ -1017,6 +1044,12 @@ export async function reconciliarProyecciones() {
 // ============================================================================
 // EXPORTS
 // ============================================================================
+
+export const __test__ = {
+    normalizeAccountingAmount,
+    normalizeLinkedBookingIds,
+    isCancellationRectification,
+};
 
 export default {
     registrarEventoEconomico,
