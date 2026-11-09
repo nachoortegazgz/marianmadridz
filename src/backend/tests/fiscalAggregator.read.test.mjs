@@ -2,7 +2,7 @@
 =============================================================================
 SUITE: fiscalAggregator.read (FASE1-P0 mandatory test)
 Purpose: verify _read* adapters return the CANONICAL AEAT value when present
-and the legacy value with a log.warn when not, and that _getBusinessTaxId no
+and the historical value with a log.warn when not, and that _getBusinessTaxId no
 longer touches the FORBIDDEN ConfiguracionFiscal collection.
 Runs offline via tests/loader.mjs mocks. G10 ASCII strict.
 =============================================================================
@@ -27,7 +27,7 @@ test('READ-01 taxable amount prefers canonical baseImponibleOImporteNoSujeto', (
   assert.strictEqual(v, 100);
 });
 
-test('READ-02 taxable amount falls back to legacy with warn', () => {
+test('READ-02 taxable amount falls back to historical with warn', () => {
   const warns = [];
   const origWarn = loggerMod.logger.warn;
   loggerMod.logger.warn = (msg, meta) => { warns.push(msg); };
@@ -40,7 +40,7 @@ test('READ-02 taxable amount falls back to legacy with warn', () => {
   }
 });
 
-test('READ-03 tax amount prefers canonical taxAmount (cuotaTotal es alias legacy)', () => {
+test('READ-03 tax amount prefers canonical taxAmount (cuotaTotal es alias historical)', () => {
   // SSOT Apartado 5: la clave fisica canonica es taxAmount; cuotaTotal es
   // alias de lectura para documentos historicos pre-migracion.
   assert.strictEqual(T.readTaxAmount({ taxAmount: 21, cuotaTotal: 20, cuotaIva: 19 }), 21);
@@ -50,7 +50,7 @@ test('READ-04 tax rate prefers canonical tipoImpositivo', () => {
   assert.strictEqual(T.readTaxRate({ tipoImpositivo: 0.21, taxRate: 0.1, tasaIva: 0.04 }), 0.21);
 });
 
-test('READ-05 tax rate legacy emits warn', () => {
+test('READ-05 tax rate historical emits warn', () => {
   const warns = [];
   const orig = loggerMod.logger.warn;
   loggerMod.logger.warn = (m) => { warns.push(m); };
@@ -62,7 +62,7 @@ test('READ-05 tax rate legacy emits warn', () => {
   }
 });
 
-test('READ-06 fiscal aggregator prefers canonical ledger hash over legacy aliases', () => {
+test('READ-06 fiscal aggregator prefers canonical ledger hash over historical aliases', () => {
   assert.strictEqual(
     T.readRecordHash({ hash: 'AAA', currentRecordHash: 'BBB', hashCadena: 'CCC' }),
     'AAA'
@@ -78,7 +78,7 @@ test('TAXID-01 business tax id reads DatosFiscales CONFIG_SISTEMA taxId', async 
   assert.strictEqual(id, 'B12345678');
   /* FIXTURE-FIX (2026-10-13): fiscalAggregator.web.js resuelve wix-data por la
      via dataAccess (API v2), que el mock registra como op 'query_v2'; el op
-     'query' corresponde al builder legacy v1. Se aceptan ambos para no
+     'query' corresponde al builder historical v1. Se aceptan ambos para no
      acoplar la asercion a la capa de acceso. */
   const collectionsQueried = wixDataMock._calls
     .filter((c) => c.op === 'query' || c.op === 'query_v2')
@@ -87,7 +87,7 @@ test('TAXID-01 business tax id reads DatosFiscales CONFIG_SISTEMA taxId', async 
   assert.ok(!collectionsQueried.includes('ConfiguracionFiscal'), 'FORBIDDEN collection must NOT be queried');
 });
 
-test('TAXID-02 legacy EMISOR adapter returns taxId with warn when no config row', async () => {
+test('TAXID-02 historical EMISOR adapter returns taxId with warn when no config row', async () => {
   wixDataMock._reset();
   wixDataMock._seed(IC.BUSINESS_COLLECTIONS.DATOS_FISCALES, [
     { recordType: IC.RECORD_TYPE.TERCERO, thirdPartyType: 'EMISOR', taxId: 'b99999999' },
@@ -98,7 +98,7 @@ test('TAXID-02 legacy EMISOR adapter returns taxId with warn when no config row'
   try {
     const id = await T.getBusinessTaxId('trace-taxid-2');
     assert.strictEqual(id, 'B99999999');
-    assert.ok(warns.length >= 1, 'expected legacy adapter warning');
+    assert.ok(warns.length >= 1, 'expected historical adapter warning');
   } finally {
     loggerMod.logger.warn = orig;
   }
