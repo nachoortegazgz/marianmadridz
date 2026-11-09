@@ -22,6 +22,7 @@ const serviceHtml = read("#htmlWidgetCustomService.txt");
 const confirmationHtml = read("#html2.txt");
 const calendarHtml = read("#html1.txt");
 const bridge = read("src/public/widgetBridge.js");
+const staffPage = read("src/pages/ZONA STAFF.mvf3f.js");
 
 test("HTML component snapshots contain syntactically valid JavaScript", () => {
   for (const [label, html] of [
@@ -108,4 +109,11 @@ test("confirmation navigation uses canonical URL constants re-exported by mmUtil
   assert.ok(confirmation.includes("const legacyAllowed = [URLS.HOME, URLS.MIS_RESERVAS, URLS.SERVICIOS];"));
   assert.ok(!confirmation.includes('return URLS.MIS_RESERVAS || "/my-bookings";'));
   assert.ok(!confirmation.includes('return URLS.HOME || "/";'));
+});
+
+
+test("staff admin navigation targets the published ZONA MARIAN route", () => {
+  assert.match(bridge, /ADMIN_PANEL: "\/zona-marian"/);
+  assert.match(staffPage, /case "ADMIN_PANEL":[\\s\\S]*?location\\.to\\(URLS\\.ADMIN_PANEL\\)/);
+  assert.doesNotMatch(staffPage, /location\\.to\\("\/administracion"\\)/);
 });
