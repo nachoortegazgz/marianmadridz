@@ -54,3 +54,23 @@ test("FISCAL-LOCK-03 a previous owner cannot release a reclaimed lock", async ()
   assert.deepEqual(result, { released: false, reason: "OWNERSHIP_CHANGED" });
   assert.equal(wixDataMock._store.get(CONTROL).length, 1);
 });
+
+test("FISCAL-LOCK-04 release reports CMS read failure without throwing", async () => {
+  wixDataMock._reset();
+  const lock = await acquireFiscalLedgerLock("trace-fiscal-lock-release-read-001", { waitMs: 0 });
+  const originalGet = wixDataMock.get;
+  wixDataMock.get = async () => {
+    throw Object.assign(new Error("simulated CMS read outage"), { code: "CMS_UNAVAILABLE" });
+  };
+
+  try {
+    const result = await releaseFiscalLedgerLock(lock);
+    assert.deepEqual(result, {
+      released: false,
+      reason: "RELEASE_READ_FAILED",
+      errorCode: "CMS_UNAVAILABLE",
+    });
+  } finally {
+    wixDataMock.get = originalGet;
+  }
+});

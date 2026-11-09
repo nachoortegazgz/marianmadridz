@@ -1337,16 +1337,20 @@ export async function wixBookingsV2_onBookingRescheduled(rawBody) {
         );
         const startLocal = getMadridLocalStringNoZ(startDate);
         const dateYmd = startLocal ? startLocal.slice(0, 10) : "";
-        if (
-            !_looksLikeGuid(resourceId) ||
-            !_looksLikeGuid(scheduleId) ||
-            !_looksLikeGuid(serviceId) ||
-            !/^\\d{4}-\\d{2}-\\d{2}$/.test(dateYmd)
-        ) {
+        const missingSlotFields = [];
+        if (!_looksLikeGuid(resourceId)) missingSlotFields.push("resourceId");
+        if (!_looksLikeGuid(scheduleId)) missingSlotFields.push("scheduleId");
+        if (!_looksLikeGuid(serviceId)) missingSlotFields.push("serviceId");
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(dateYmd)) missingSlotFields.push("dateYmd");
+        if (missingSlotFields.length > 0) {
+            log.warn("BOOKING_RESCHEDULED_SLOT_PROJECTION_INCOMPLETE", {
+                bookingId, missingSlotFields, traceId,
+            });
             return {
                 status: "RETRY_REQUIRED",
                 reason: "RESCHEDULED_BOOKING_SLOT_PROJECTION_INCOMPLETE",
                 bookingId,
+                missingSlotFields,
             };
         }
 
@@ -1407,7 +1411,7 @@ export async function wixBookingsV2_onBookingRescheduled(rawBody) {
                 data: {
                     pairToken,
                     bookingId,
-                    bookingIds: pairedBookingIds,
+                    pairedBookingId: pairedBookingIds.find((id) => id !== bookingId) || null,
                     pairRowCount: pairRows.length,
                     eventId,
                     newStart: startDate.toISOString(),

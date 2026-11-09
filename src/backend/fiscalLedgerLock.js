@@ -150,7 +150,16 @@ export async function assertFiscalLedgerLock(lock) {
 
 export async function releaseFiscalLedgerLock(lock) {
     if (!lock?.ownerId) return { released: false, reason: "INVALID_OWNER" };
-    const current = await dalGet(CONTROL_COL, LOCK_ID, "strong");
+    let current;
+    try {
+        current = await dalGet(CONTROL_COL, LOCK_ID, "strong");
+    } catch (error) {
+        return {
+            released: false,
+            reason: "RELEASE_READ_FAILED",
+            errorCode: error?.code || null,
+        };
+    }
     if (!current) return { released: true, missing: true };
     if (_readPayload(current).lockOwnerId !== lock.ownerId) {
         return { released: false, reason: "OWNERSHIP_CHANGED" };

@@ -1,6 +1,6 @@
 # ADR-003 — Checkout de reservas con Wix eCommerce Cart V2
 
-- **Estado:** Cart V2 aislado implementado en `main`; guard de propiedad de miembro y login nativo en PR #204 (Draft); QA Wix publicado pendiente.
+- **Estado:** Cart V2 aislado y guard de propiedad de miembro/login nativo integrados en `main` mediante PR #204 (commit `5fba1b3`), con sitio publicado. QA offline vigente: 431 pruebas / 0 fallos en run 116 de PR #205. E2E real de checkout/pedido en Wix publicado sigue pendiente.
 - **Fecha:** 2026-10-30.
 - **Alcance:** Checkout online de reservas simples y duales F1/F2 desde backend Velo.
 - **No aplica:** Wix Stores Catalog V1, Invoices V1 ni Multiservice Bookings.
@@ -58,15 +58,12 @@ La documentación oficial de Cart V2 especifica:
 
 ## Verificación
 
-En PR #19:
-- Prueba de contrato para la respuesta directa de `createCart`.
-- PR #204 añade guard de propiedad `memberId/contactId`, rechazo de `openAccess`, limpieza del carrito huérfano y contrato de propagación de identidad desde la saga.
-- Prueba de rechazo cuando `calculateCart` devuelve violaciones.
-- Prueba de aceptación cuando `summary.violations` está omitido.
-- Prueba de rechazo para respuestas incompletas o IDs discordantes.
-- Suite offline: 259 pruebas, 0 fallos.
-- GitHub Actions: Node.js 24.22.1 y 26.12.1, suites layer 1 y layer 2, verificación de exports SDK y ESLint, todo correcto.
+Verificación offline vigente:
+- Contrato SDK: `cartV2.createCart`, `calculateCart`, `getCheckoutUrl`, `items.patch` y `items.bulkPatch`.
+- Suite Cart V2: creación de carrito aislado, propiedad `memberId/contactId`, rechazo de `openAccess`, limpieza del carrito huérfano, cálculo con violaciones, respuesta sin `violations`, IDs discordantes, total/moneda inválidos, URL no HTTPS y línea Bookings no disponible.
+- La saga propaga la identidad Wix Members autenticada a `createBookingCartCheckout`.
+- CI run 116 (2026-11-09): 46 suites, 431 pruebas correctas, 0 fallidas; Cart V2 SDK contract PASS; Bookings Reader V2 SDK contract PASS; ESLint PASS.
 
-Estas pruebas son offline con mocks. No acreditan el checkout en el sitio Wix. El lint actual mantiene desactivada temporalmente `@wix/cli/no-invalid-backend-import` por ausencia del manifiesto generado `src/velo.dependencies.json`; esa validación sigue pendiente.
+Estas pruebas son offline con mocks. No acreditan el checkout en el sitio Wix. La regla `@wix/cli/no-invalid-backend-import` continúa desactivada temporalmente por ausencia del manifiesto generado `src/velo.dependencies.json`; esa validación sigue pendiente.
 
-No se ha publicado código ni se ha ejecutado un cobro online o una emisión de factura.
+El sitio publicado no se ha usado para crear reservas ni ejecutar cobros durante esta sesión. La prueba E2E real queda limitada a un entorno de prueba y pasarela sin cargo real.

@@ -322,6 +322,9 @@ test('FLOW-CAJA-01 flujo continuo: venta EFECTIVO -> caja incrementada -> cierre
   });
   assert.strictEqual(tx.status, 'SUCCESS', JSON.stringify(tx.error));
   const mov = tx.data;
+  const persistedMovement = (wixDataMock._store.get('MovimientosCaja') || [])
+    .find((item) => item.transactionId === mov.transactionId);
+  assert.ok(persistedMovement?.hash, 'hash canónico persistido en CMS');
   // MovimientosCaja canonicalizes its internal digest as "hash". The
   // public receipt endpoint projects this as "recordHash"; the ledger row
   // itself must not keep the duplicate legacy key.
@@ -330,6 +333,10 @@ test('FLOW-CAJA-01 flujo continuo: venta EFECTIVO -> caja incrementada -> cierre
       JSON.stringify({ hash: mov.hash, prh: mov.previousRecordHash, sig: mov.digitalSignature }));
   assert.strictEqual(mov.recordHash, undefined, 'legacy recordHash must not persist on MovimientosCaja');
   assert.strictEqual(mov.paymentMethod, 'EFECTIVO');
+  const qr = new URL(mov.verificationQR);
+  const [qrYear, qrMonth, qrDay] = String(mov.fechaExpedicionFactura).slice(0, 10).split('-');
+  assert.equal(qr.searchParams.get('fecha'), `${qrDay}-${qrMonth}-${qrYear}`);
+  assert.equal(qr.searchParams.get('importe'), '50.00');
   assert.ok(mov.operationDescription.includes('(SIMULACION PREVIA A DESPLIEGUE REAL)'), 'concepto claramente identificado como simulación');
 
   // Paso 1b: idempotencia - mismo transactionId devuelve el registro original
@@ -370,7 +377,9 @@ test('FLOW-CAJA-01 flujo continuo: venta EFECTIVO -> caja incrementada -> cierre
     _id: 'mov-hist-2020',
     transactionId: 'qa-historic-close-fixture-2020',
     invoiceIssueDate: diaCerrado,
-    sequenceNumber: 999998,
+    sequenceNumber: Number(persistedMovement.sequenceNumber) + 1,
+    previousRecordHash: persistedMovement.hash,
+    hash: 'a'.repeat(64),
     movementType: 'VENTA',
     paymentMethod: 'EFECTIVO',
     totalAmount: 24.50,
@@ -401,6 +410,200 @@ test('FLOW-CAJA-01 flujo continuo: venta EFECTIVO -> caja incrementada -> cierre
   assert.ok(chain, 'verificacion ejecutada');
   assert.ok(chain.data && Number(chain.data.breaksCount) === 0,
     'cadena sin roturas: ' + JSON.stringify(chain));
+});
+
+
+test('FLOW-CAJA-07 Z closing verifies the previous day hash and nets refund VAT', async () => {
+  wixDataMock._reset();
+  await setupFiscalSecrets();
+  const { cajas } = await freshImports();
+  const genesis = '0'.repeat(64);
+  wixDataMock._store.set('MovimientosCaja', [
+    {
+      _id: 'cross-day-001', sequenceNumber: 1,
+      fechaExpedicionFactura: '2026-11-07',
+      previousRecordHash: genesis, hash: 'hash-day-one',
+      movementType: 'VENTA', paymentMethod: 'EFECTIVO',
+      accountingSign: 1, accountingAmount: 50,
+      taxBase: 41.32, taxAmount: 8.68, tipoImpositivo: 0.21,
+    },
+    {
+      _id: 'cross-day-002', sequenceNumber: 2,
+      fechaExpedicionFactura: '2026-11-08',
+      previousRecordHash: 'hash-day-one', hash: 'hash-day-two',
+      movementType: 'VENTA', paymentMethod: 'EFECTIVO',
+      accountingSign: 1, accountingAmount: 121,
+      taxBase: 100, taxAmount: 21, tipoImpositivo: 0.21,
+    },
+    {
+      _id: 'cross-day-003', sequenceNumber: 3,
+      fechaExpedicionFactura: '2026-11-08',
+      previousRecordHash: 'hash-day-two', hash: 'hash-day-three',
+      movementType: 'REEMBOLSO', paymentMethod: 'EFECTIVO',
+      accountingSign: -1, accountingAmount: -121,
+      taxBase: 100, taxAmount: 21, tipoImpositivo: 0.21,
+    },
+    {
+      _id: 'cross-day-004', sequenceNumber: 4,
+      fechaExpedicionFactura: '2026-11-08',
+      previousRecordHash: 'hash-day-three', hash: 'hash-day-four',
+      movementType: 'VENTA', paymentMethod: 'ONLINE',
+      accountingSign: 1, accountingAmount: 5,
+      taxBase: 4.13, taxAmount: 0.87, tipoImpositivo: 0.21,
+    },
+  ]);
+
+  const result = await cajas.registerZClosingInternal('2026-11-08', {
+    traceId: 'flow-caja-cross-day-001',
+  });
+
+  assert.equal(result.status, 'SUCCESS', JSON.stringify(result.error));
+  assert.equal(result.data.startRecordHash, 'hash-day-one');
+  assert.equal(result.data.endRecordHash, 'hash-day-four');
+  assert.equal(result.data.isIntegrityVerified, true);
+  assert.equal(result.data.closingSignatureStatus, 'SIGNED');
+  assert.equal(result.data.netTaxableAmount, 4.13);
+  assert.equal(result.data.netTaxAmount, 0.87);
+  assert.equal(result.data.totalOnline, 5);
+  assert.equal(result.data.totalRefunds, -121);
+});
+
+test('FLOW-CAJA-08 fiscal recovery queue deduplicates repeated compensation requests', async () => {
+  wixDataMock._reset();
+  const { cajas } = await freshImports();
+  const request = {
+    kind: 'FISCAL_LEDGER',
+    transactionId: 'flow-caja-recovery-idem-001',
+    totalAmount: 25,
+    paymentMethod: 'EFECTIVO',
+    movementType: 'VENTA',
+    phase: 'WAIT_FOR_SIGNER',
+    origin: 'FISCAL_SIGNER_DOWN',
+    traceId: 'flow-caja-recovery-trace-001',
+  };
+
+  const results = await Promise.all([
+    cajas.queueFiscalRecovery(request),
+    cajas.queueFiscalRecovery({
+      ...request,
+      traceId: 'flow-caja-recovery-trace-002',
+      lastError: 'retry after timeout',
+    }),
+  ]);
+  const records = (wixDataMock._store.get('ControlOperativo') || [])
+    .filter((row) => row.transactionId === request.transactionId);
+
+  assert.equal(results.every((result) => result.queued), true);
+  assert.equal(results.filter((result) => result.created).length, 1);
+  assert.equal(results.filter((result) => result.duplicate).length, 1);
+  assert.equal(records.length, 1);
+
+  const bookingOnlyRequest = {
+    kind: 'FISCAL_LEDGER',
+    bookingIds: 'booking-recovery-002,booking-recovery-001',
+    totalAmount: 15,
+    paymentMethod: 'WIX_PAYMENTS',
+    movementType: 'REEMBOLSO',
+    phase: 'WAIT_FOR_SIGNER',
+    origin: 'WIX_BOOKINGS_CANCEL_WEBHOOK',
+  };
+  const bookingOnlyResults = await Promise.all([
+    cajas.queueFiscalRecovery({ ...bookingOnlyRequest, traceId: 'booking-only-trace-001' }),
+    cajas.queueFiscalRecovery({ ...bookingOnlyRequest, traceId: 'booking-only-trace-002' }),
+  ]);
+  const bookingOnlyRecords = (wixDataMock._store.get('ControlOperativo') || [])
+    .filter((row) => row.payload?.origin === bookingOnlyRequest.origin &&
+      row.payload?.bookingIds === bookingOnlyRequest.bookingIds);
+
+  assert.equal(bookingOnlyResults.every((result) => result.queued), true);
+  assert.equal(bookingOnlyResults.filter((result) => result.created).length, 1);
+  assert.equal(bookingOnlyResults.filter((result) => result.duplicate).length, 1);
+  assert.equal(bookingOnlyRecords.length, 1);
+});
+
+test('FLOW-CAJA-09 fiscal hash audit checks more than one page before returning success', async () => {
+  wixDataMock._reset();
+  const { cajas } = await freshImports();
+  const movements = [];
+  let previousRecordHash = '0'.repeat(64);
+  for (let sequenceNumber = 1; sequenceNumber <= 205; sequenceNumber += 1) {
+    const hash = `hash-${sequenceNumber}`;
+    movements.push({
+      _id: `audit-page-${sequenceNumber}`,
+      sequenceNumber,
+      previousRecordHash,
+      hash,
+      numSerieFactura: `FAC-2026-${String(sequenceNumber).padStart(5, '0')}`,
+    });
+    previousRecordHash = hash;
+  }
+  wixDataMock._store.set('MovimientosCaja', movements);
+
+  const result = await cajas.verifyFiscalHashChainIntegrity({ limit: 200 });
+
+  assert.equal(result.status, 'SUCCESS', JSON.stringify(result));
+  assert.equal(result.data.checked, 205);
+  assert.equal(result.data.complete, true);
+  assert.equal(result.data.hasMore, false);
+  assert.equal(result.data.breaksCount, 0);
+});
+
+
+test('FLOW-CAJA-10 missing hash fields never pass audit or Z close', async () => {
+  wixDataMock._reset();
+  await setupFiscalSecrets();
+  const { cajas } = await freshImports();
+  wixDataMock._store.set('MovimientosCaja', [{
+    _id: 'missing-hash-001',
+    sequenceNumber: 1,
+    fechaExpedicionFactura: '2026-11-08',
+    previousRecordHash: '0'.repeat(64),
+    movementType: 'VENTA',
+    paymentMethod: 'EFECTIVO',
+    accountingSign: 1,
+    accountingAmount: 50,
+    taxBase: 41.32,
+    taxAmount: 8.68,
+    tipoImpositivo: 0.21,
+  }]);
+
+  const audit = await cajas.verifyFiscalHashChainIntegrity({ limit: 200 });
+  assert.equal(audit.status, 'INTEGRITY_COMPROMISED');
+  assert.equal(audit.data.breaks[0].reason, 'HASH_FIELDS_MISSING');
+
+  const closing = await cajas.registerZClosingInternal('2026-11-08', {
+    traceId: 'flow-caja-missing-hash-close-001',
+  });
+  assert.equal(closing.status, 'ERROR');
+  assert.equal(closing.error.code, 'INTEGRITY_VIOLATION');
+  assert.equal((wixDataMock._store.get('HistoricoCierresZ') || []).length, 0);
+
+  wixDataMock._reset();
+  const { cajas: missingPredecessorCajas } = await freshImports();
+  wixDataMock._store.set('MovimientosCaja', [{
+    _id: 'missing-predecessor-002',
+    sequenceNumber: 2,
+    fechaExpedicionFactura: '2026-11-08',
+    previousRecordHash: '0'.repeat(64),
+    hash: 'hash-sequence-two',
+    movementType: 'VENTA',
+    paymentMethod: 'EFECTIVO',
+    accountingSign: 1,
+    accountingAmount: 50,
+    taxBase: 41.32,
+    taxAmount: 8.68,
+    tipoImpositivo: 0.21,
+  }]);
+
+  const predecessorAudit = await missingPredecessorCajas.verifyFiscalHashChainIntegrity({ limit: 200 });
+  assert.equal(predecessorAudit.status, 'INTEGRITY_COMPROMISED');
+  assert.equal(predecessorAudit.data.breaks[0].reason, 'GLOBAL_PREDECESSOR_MISSING');
+
+  const predecessorClose = await missingPredecessorCajas.registerZClosingInternal('2026-11-08', {
+    traceId: 'flow-caja-missing-predecessor-close-001',
+  });
+  assert.equal(predecessorClose.status, 'ERROR');
+  assert.equal(predecessorClose.error.code, 'GLOBAL_PREDECESSOR_MISSING');
 });
 
 test('FLOW-CAJA-02 payload incorrecto => rechazos deterministas sin contaminar ledger', async () => {
