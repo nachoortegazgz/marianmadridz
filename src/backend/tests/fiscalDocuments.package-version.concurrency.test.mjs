@@ -52,7 +52,7 @@ test('FDOC-SNAPSHOT-01 monthly and quarterly package identities are disjoint and
   assert.match(source, /_formatMonthlyDocumentId\(year, month, version = 1\)/);
   assert.match(source, /DOC_GESTORIA_\$\{year\}_M\$\{String\(month\)\.padStart\(2, "0"\)\}_PAQUETE_GESTORIA_V/);
   assert.match(source, /_formatPackageDocumentId\(year, periodType, periodValue, nextVersion\)/);
-  assert.match(source, /periodType,\s*fiscalMonth:/);
+  assert.match(source, /fiscalMonth:[\s\S]*fiscalQuarter:[\s\S]*periodType/);
 });
 
 test('FDOC-SNAPSHOT-02 package creation rejects incomplete fiscal source reads', () => {
