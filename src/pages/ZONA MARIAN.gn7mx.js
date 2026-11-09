@@ -152,6 +152,7 @@ $w.onReady(async () => {
     createWidgetBridge(widget, {
         allowedTypes: [
             MESSAGE_TYPES.READY,
+            MESSAGE_TYPES.CONTEXT,
             MESSAGE_TYPES.NAV,
             "CASHIER_STATE",
             "Z_CLOSING",
