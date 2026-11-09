@@ -27,7 +27,7 @@ Un proceso se considera cubierto solo si se puede demostrar:
 | Reservas y reprogramaciones | Wix Bookings V2 | Wix Bookings + proyección `CitasF2`; `ControlOperativo` para eventos/locks | **PARCIAL / NO E2E** | La lectura anterior encontró 339 bookings nativos, 55 filas CitasF2, 54 IDs coincidentes, 285 bookings nativos sin proyección y 1 proyección no coincidente. Analizar por fecha, estado, origen y alcance del writer antes de declarar pérdida. La rama exige `scheduleId` GUID en el writer/hook; falta ejecutar Local Editor y validar el esquema físico. |
 | Cancelación de reservas | Wix Bookings V2 | Estado CMS `CANCELED`; rectificación económica en ledger cuando exista hecho económico | **CÓDIGO NORMALIZADO; HISTÓRICO PENDIENTE** | Se normalizó `CANCELED` en la rama. Hay 34 filas históricas con el estado antiguo; migración solo mediante backend controlado, trazable e idempotente. No usar REST directo. |
 | Reservas duales / compensaciones | Wix Bookings + saga propia | Dos filas CitasF2 + journal/controles de compensación en ControlOperativo | **PARCIAL** | Deben probarse fallos entre F1/F2, reintentos, cancelación compensatoria, replay y consistencia de ambos IDs en entorno Wix. CI offline no prueba estas llamadas reales. |
-| Pedidos de tienda / checkout | Wix Orders | Wix Orders es SSOT; `ControlOperativo` guarda marcador idempotente `ORDER_CREATED`; ledgers solo para hechos económicos confirmados | **PENDIENTE DE RECONCILIACIÓN** | Hay 30 pedidos nativos observados (3 APPROVED/PAID, 25 APPROVED/NOT_PAID, 2 CANCELED/NOT_PAID). En 68 filas ControlOperativo no se encontró marcador `ORDER_CREATED`. La ausencia del marcador no prueba pérdida: reconsultar Wix Orders y verificar el webhook/recovery. No crear colección duplicada de intención. |
+| Pedidos de tienda / checkout | Wix Orders | Wix Orders es SSOT; `ControlOperativo` guarda marcador idempotente `ORDER_CREATED`/`ORDER_CREATED_RECONCILED`; ledgers solo para hechos económicos confirmados | **BRECHA CONFIRMADA; RECUPERACIÓN EN PR #219** | Reconciliación read-only actual: 30 pedidos (28 APPROVED, 2 CANCELED; 3 PAID, 27 NOT_PAID), 68 filas ControlOperativo y 0 marcadores ORDER_CREATED localizados. 29 pedidos tienen exclusivamente líneas Wix Bookings; 1 pedido mixto contiene Stores + Bookings + una línea sin appId. El pedido mixto #10018 no tiene fila ControlOperativo ni movimiento MovimientosInventario por su orderId. PR #219 incorpora cron que registra solo Bookings-only y alerta los mixtos/productos, sin crear stock/caja/fiscal. No reconstruir movimientos del mixto hasta verificar la línea y el efecto nativo. |
 | Cobros, devoluciones y movimientos físicos de caja | Wix eCommerce / MONEI / WebMethod presencial | `MovimientosCaja` append-only + proyección singleton `CajaActual` | **NO CONCILIADO** | La última lectura encontró 0 MovimientosCaja y 1 CajaActual (`cashAmount=300`, fecha 2026-11-05). Tratar el singleton como estado técnico/preexistente, no como venta real. Reconciliar pedidos y pagos con transacciones confirmadas del proveedor antes de generar cualquier movimiento. Solo CAPTURED/settled debe producir cobro; AUTHORIZED no basta. |
 | Estado de caja | Movimientos físicos confirmados | Un único registro `CajaActual`, actualizado en tiempo real | **MODELO DEFINIDO; E2E PENDIENTE** | Mantener un único singleton. Cada movimiento físico debe reflejarse en tiempo real y de forma idempotente. Corregir/validar que un fallo de lectura de MovimientosCaja no se convierta silenciosamente en totalOperations=0. |
 | Arqueo X | Conteo físico manual | Nueva colección append-only de actas X (no CajaActual ni MovimientosCaja) | **NO IMPLEMENTADO** | Requiere aprobar esquema CMS, permisos, hook append-only, writer backend, traceId, clave idempotente, firma y pruebas. No se puede crear de forma segura sin contrato de colección aprobado. |
@@ -141,3 +141,35 @@ La documentación oficial de Wix consultada indica que los Velo backend event ha
 - La normalización `CANCELED`, la validación `scheduleId` y la corrección contable `cashMovementId` siguen incluidas en la rama.
 - Se mantiene pendiente el fallo no durable de `wixEcom_onOrderCreated` descrito en §7.2; no se declara resuelto.
 - No se ha hecho merge ni despliegue. No se han escrito datos ni esquemas CMS, ni se han ejecutado pagos, reservas, movimientos fiscales o cambios de stock.
+
+
+## 9. Reconciliación nativa de pedidos y corrección de recuperación (2026-11-09)
+
+### Evidencia Wix de solo lectura
+
+La consulta oficial `POST /ecom/v1/orders/search` devolvió 30 pedidos en una página:
+- Estado de pedido: 28 APPROVED y 2 CANCELED.
+- Estado de pago: 3 PAID y 27 NOT_PAID.
+- Canales: 25 WEB, 3 POS y 2 BACKOFFICE_MERCHANT.
+- 32 líneas Wix Bookings, 1 línea Wix Stores y 1 línea sin `catalogReference.appId`.
+- 29 pedidos tienen exclusivamente líneas Bookings; el pedido restante (n.º 10018) combina Bookings, Stores y una línea sin appId.
+
+La consulta de `ControlOperativo` devolvió 68 filas, pero ninguna con `payload.eventType=ORDER_CREATED`. Para el pedido mixto n.º 10018 (ID `70176e1b-6378-4eb9-90fe-fdebf692963f`) las consultas read-only por `orderId` devolvieron cero filas en `ControlOperativo` y cero movimientos en `MovimientosInventario`. Esto no prueba pérdida financiera ni stock incorrecto; sí deja pendiente verificar el efecto nativo de inventario y la línea concreta antes de reconstruir.
+
+### Implementación en PR #219
+
+- `wixEcom_onOrderCreated` ahora propaga todos los errores de persistencia/procesamiento en lugar de devolver `OK` en fallos no clasificados como INVENTORY. La idempotencia existente permanece.
+- `reconcileUnmarkedOrderCreatedEvents` busca Wix Orders con paginación; consulta explícitamente PENDING y REJECTED porque Search Orders no los incluye en la búsqueda predeterminada.
+- Solo escribe un registro append-only `WEBHOOK_EVENT` de tipo `ORDER_CREATED_RECONCILED` si todas las líneas pertenecen a Wix Bookings, ya que no se requiere proyección de inventario Stores.
+- Pedidos con línea Stores, mezcla de catálogos, appId ausente o líneas vacías quedan sin marcador y reciben alerta deduplicada `ORDER_CREATED_RECONCILIATION_REQUIRED`.
+- El cron no genera movimientos de caja, asientos, pagos, reservas ni movimientos de inventario.
+- El webhook reconoce los marcadores de reconciliación para evitar reprocesar pedidos Booking-only si llega un evento tardío.
+- Ejecución programada: cada 30 minutos, timeout 180 s, reintentos/alertas de fallo configurados.
+
+### Pruebas y estado
+
+- PR #219: `fix/order-created-reconciliation-recovery`.
+- CI #213: 47 suites, 447 tests, 0 fallos; SDK contracts, Bookings Reader V2 contract y ESLint correctos.
+- La prueba offline cubre paginación, reconciliación Booking-only, alerta de pedidos mixtos, replay idempotente y ausencia de escrituras en ledgers de caja/inventario.
+- No se ha escrito ningún dato en CMS live, no se ha ejecutado el cron en el sitio, no se ha publicado código Velo.
+- Sigue pendiente la validación de scopes/import runtime y la ejecución del cron en Wix QA publicado. El pedido mixto requiere revisión específica antes de cualquier efecto de inventario.
