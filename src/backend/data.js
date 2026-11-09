@@ -15,7 +15,7 @@ import {
     normalizeMovementKeys,
     OPERATIONAL_COLLECTIONS,
 } from "backend/internalConfig";
-import { assertCitasF2, assertControlOperativo } from "backend/validation";
+import { assertCitasF2, assertControlOperativo, assertCanonicalControlFields } from "backend/validation";
 import { CONSISTENCY, getItem } from "backend/dataAccess";
 
 import { logger } from "backend/logger";
@@ -846,78 +846,23 @@ function _applyConfigSistemaRules(item) {
 // bearer credential and must be atomically removable for one-use consumption.
 const APPEND_ONLY_CONTROL_TYPES = new Set(["WEBHOOK_EVENT"]);
 
-// MATRIZ v15 Bloque 2 (campos eliminados de ControlOperativo): payloadJson ->
-// payload (objeto estructurado canonico), createdAt/updatedAt -> campos
-// nativos Wix (_createdDate/_updatedDate). Normalizacion destructiva en la
-// frontera de persistencia: los docs historicos con payloadJson se promueven
-// a "payload" (parseado si es JSON valido; crudos como objeto si no) y las
-// claves duplicadas de fechas se eliminan. Cero alias sobrevive al CMS.
-export function normalizeControlKeys(item) {
-    if (!item || typeof item !== "object") return item;
-    if ("payloadJson" in item) {
-        const historicalVal = item.payloadJson;
-        delete item.payloadJson;
-        if (historicalVal !== undefined && historicalVal !== null && historicalVal !== "") {
-            let parsed = null;
-            if (typeof historicalVal === "string") {
-                try { parsed = JSON.parse(historicalVal); } catch (_e) { parsed = null; }
-            } else if (typeof historicalVal === "object") {
-                parsed = historicalVal;
-            }
-            if (item.payload === undefined || item.payload === null) {
-                item.payload = parsed !== null ? parsed : { raw: String(historicalVal) };
-            }
-        }
-    }
-    // Consolidate duplicate physical columns on the selected canonical keys.
-    for (const [historical, canonical] of [["attempt", "attempts"], ["leaseExpiresAt", "expiresAt"]]) {
-        if (historical in item) {
-            if (item[canonical] === undefined || item[canonical] === null) {
-                item[canonical] = item[historical];
-            }
-            delete item[historical];
-        }
-    }
-    // createdAt/updatedAt duplicaban los nativos Wix; se erradican del doc.
-    delete item.createdAt;
-    delete item.updatedAt;
-    return item;
-}
-
 /**
- * Lee el campo canonico payload. El campo payloadJson solo se consulta para
- * registros persistidos antes de la normalizacion del esquema.
- * REVIEW-BY: 2027-01-31. Retirar el fallback cuando no queden registros
- * historicos y la metrica historical-control-payload-read sea cero.
+ * Reads only the canonical structured payload. Retired fields are rejected
+ * at the CMS write boundary and are not interpreted here.
  */
 export function readControlPayload(doc) {
     if (!doc || typeof doc !== "object") return {};
-    if (doc.payload && typeof doc.payload === "object") return doc.payload;
-    if (typeof doc.payloadJson === "string" && doc.payloadJson.trim()) {
-        log.warn("historical-control-payload-read", {
-            collection: OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO,
-            docId: doc._id ?? null,
-            traceId: doc.traceId ?? null,
-        });
-        try {
-            const parsed = JSON.parse(doc.payloadJson);
-            if (parsed && typeof parsed === "object") return parsed;
-        } catch (_e) {
-            log.warn("historical-control-payload-invalid", {
-                docId: doc._id ?? null,
-                traceId: doc.traceId ?? null,
-            });
-        }
-    }
-    return {};
+    return doc.payload && typeof doc.payload === "object" && !Array.isArray(doc.payload)
+        ? doc.payload
+        : {};
 }
 
 export function ControlOperativo_beforeInsert(item) {
-    const normalized = normalizeControlKeys(item);
+    assertCanonicalControlFields(item);
     // Insert recibe el registro completo: proteger el discriminador y los
     // invariantes minimos del control antes de persistirlo.
-    assertControlOperativo(normalized);
-    return normalized;
+    assertControlOperativo(item);
+    return item;
 }
 
 export async function ControlOperativo_beforeUpdate(item) {
@@ -935,7 +880,8 @@ export async function ControlOperativo_beforeUpdate(item) {
         _fiscalError(`ControlOperativo/${original.controlType} es append-only: modificacion prohibida`);
     }
 
-    const normalized = normalizeControlKeys({ ...original, ...item });
+    const normalized = { ...original, ...item };
+    assertCanonicalControlFields(normalized);
     if (normalized.controlType !== original.controlType) {
         _fiscalError("ControlOperativo.controlType es inmutable");
     }
