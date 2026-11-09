@@ -296,6 +296,8 @@ test('CRON-CONTROL-01 purges only terminal transactions and resolved flags after
     { _id: 'tx-retryable-old', controlType: IC.CONTROL_TYPE.IDEMPOTENCY, status: 'FAILED_RETRYABLE', _updatedDate: old },
     { _id: 'tx-unknown-old', controlType: IC.CONTROL_TYPE.IDEMPOTENCY, status: 'RESULT_UNKNOWN', _updatedDate: old },
     { _id: 'webhook-old', controlType: IC.CONTROL_TYPE.WEBHOOK_EVENT, status: 'CLOSED', _updatedDate: old },
+    { _id: 'dedupe-claim-old', controlType: IC.CONTROL_TYPE.DEDUPE_KEY, status: 'COMPLETED', _updatedDate: old },
+    { _id: 'ledger-idempotency-old', controlType: IC.CONTROL_TYPE.LEDGER_IDEMPOTENCY, status: 'COMPLETED', _updatedDate: old },
     { _id: 'flag-completed-old', controlType: IC.CONTROL_TYPE.SYSTEM_FLAG, payload: { status: 'COMPLETED' }, _updatedDate: old },
     { _id: 'flag-reconciled-old', controlType: IC.CONTROL_TYPE.SYSTEM_FLAG, payload: { status: 'RECONCILED' }, _updatedDate: old },
     { _id: 'flag-resolved-old', controlType: IC.CONTROL_TYPE.SYSTEM_FLAG, payload: { status: 'RESOLVED' }, _updatedDate: old },
@@ -311,7 +313,9 @@ test('CRON-CONTROL-01 purges only terminal transactions and resolved flags after
   const remaining = (wixDataMock._store.get(C) || []).map((row) => row._id).sort();
   assert.deepStrictEqual(remaining, [
     'compensation-old',
+    'dedupe-claim-old',
     'flag-completion-retry-old',
+    'ledger-idempotency-old',
     'flag-repair-old',
     'flag-status-conflict',
     'tx-completed-recent',
