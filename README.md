@@ -56,7 +56,10 @@ CI verde no equivale a E2E ni a publicación. No afirmar que una función está 
 - No solicitar ni exponer secretos. No sortear controles de seguridad.
 - No borrar código, colecciones o campos sin auditoría de consumidores, impacto, histórico y rollback.
 
-## Documentación oficial
+## Documentación
+
+- [Registro de decisiones de negocio y arquitectura](docs/DECISION-LOG.md)
+- [ADR — Depósitos y gestión nativa de inventario](docs/adr/2026-11-10-deposit-and-native-inventory.md) oficial
 
 - [Wix CLI for Sites: configuración](https://dev.wix.com/docs/develop-websites/articles/workspace-tools/developer-tools/git-integration-wix-cli-for-sites/setting-up-git-integration-wix-cli-for-sites)
 - [Estructura del repositorio Wix](https://dev.wix.com/docs/develop-websites/articles/workspace-tools/developer-tools/git-integration-wix-cli-for-sites/git-hub-repository-file-structure)
