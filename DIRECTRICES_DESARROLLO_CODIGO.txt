@@ -154,6 +154,10 @@ Actualizar tras cada sesión. Esta sección sustituye el inventario histórico d
   `X-MM-Signature/X-MM-Timestamp`; no añadir constantes sin consumidor.
 - L1-10: la opcion de pago F2 es `OFFLINE`; `NO_FEE` no constituye un enum
   independiente en el codigo vigente.
+- L1-13: se localizaron consumidores reales de `CONTROL_TYPE.DEDUPE_KEY`
+  (accountingLedger.js e inventario.web.js) pese a que el enum no lo define;
+  se migraron a `CONTROL_TYPE.IDEMPOTENCY`. El literal no canónico
+  `LEDGER_IDEMPOTENCY` de cajas.web.js también se normalizó a IDEMPOTENCY.
 
 ### Pendientes de validacion / no autorizan despliegue
 
