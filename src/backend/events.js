@@ -40,7 +40,7 @@ REFUND-01 (P1): deduplicacion fiscal por REFUND-{orderId}-{refundId}; valida
   reutilizacion de refundId, acumulado contra el importe original y lectura
   paginada con fallo cerrado. La base y cuota de IVA se prorratean en reembolsos
   parciales y el ultimo reembolso aplica el residual para cuadrar el original.
-  Los efectos restock explicitos de Wix conservan su idempotencia por refundId.
+  Los efectos de restock nativos son responsabilidad de Wix; el handler solo registra la rectificacion fiscal.
 
 FIXES APLICADOS v5009-FISCAL-V20.1 (heredados):
   - V20-01..V20-06.
@@ -98,7 +98,6 @@ import { logger } from "backend/logger";
 import { normalizeError, _updateCitaSafe, _persistBooking } from "backend/booking/bookingCore";
 import { queueFiscalRecovery, updateCajaActualFromMovement } from "backend/cajas.web";
 import { registrarEventoEconomico } from "backend/eventLog";
-import { syncPaidOrderInventoryInternal, reserveOrderInventoryInternal, releaseOrderInventoryInternal, syncRestockedOrderInventoryInternal } from "backend/inventario.web";
 
 import { logAuditEventWithTimeout, notifyOperationalAlert } from "backend/audit";
 import {
@@ -1722,35 +1721,8 @@ export async function wixBookingsV2_onBookingCanceled(eventPayload) {
     }
 }
 
-async function _syncPaidOrderInventoryOrThrow(order, traceId, eventId) {
-    const result = await syncPaidOrderInventoryInternal(order, traceId, eventId);
-    if (result?.status === "PARTIAL" &&
-        Array.isArray(result.data?.results) &&
-        result.data.results.filter((item) => item.status === "ERROR").every((item) => item.repairQueued === true)) {
-        log.warn("INVENTORY_SYNC_QUEUED_FOR_REPAIR", {
-            orderId: order?._id || order?.id || null,
-            traceId,
-            eventId: eventId || null,
-            failedLines: result.data.results.filter((item) => item.status === "ERROR").length,
-        });
-        return result;
-    }
-    if (result?.status !== "SUCCESS") {
-        log.error("INVENTORY_SYNC_RETRY_REQUIRED", {
-            orderId: order?._id || order?.id || null,
-            traceId,
-            eventId: eventId || null,
-            result,
-        });
-        const error = new Error("INVENTORY_REPAIR_QUEUE_FAILED");
-        error.code = "INVENTORY_REPAIR_QUEUE_FAILED";
-        throw error;
-    }
-    return result;
-}
-
 // ============================================================================
-// WEBHOOK: ORDER CREATED — reserve stock in CMS after native checkout reserve
+// WEBHOOK: ORDER CREATED — persist idempotency marker; Wix owns native inventory
 // ============================================================================
 
 export async function wixEcom_onOrderCreated(eventPayload) {
@@ -1767,22 +1739,16 @@ export async function wixEcom_onOrderCreated(eventPayload) {
             return { status: "OK", reconciled: true, orderId };
         }
 
-        const result = await reserveOrderInventoryInternal(order, traceId, eventId);
-        if (result.status === "PARTIAL") {
-            const failed = result.data?.results?.filter((item) => item.status === "ERROR") || [];
-            if (!failed.length || failed.some((item) => item.repairQueued !== true)) {
-                throw new Error("INVENTORY_REPAIR_QUEUE_FAILED");
-            }
-        } else if (result.status !== "SUCCESS") {
-            throw new Error("INVENTORY_RESERVATION_FAILED");
-        }
-
+        const lineItems = Array.isArray(order.lineItems) ? order.lineItems : [];
+        // Wix Stores Catalog V3 owns stock reservation/deduction. This handler
+        // records only its idempotency marker; it never mirrors or mutates stock.
         await markEventAsProcessed(eventId, "ORDER_CREATED", traceId, {
             orderId,
-            inventoryStatus: result.status,
-            queuedRepairs: result.data?.results?.filter((item) => item.repairQueued).length || 0,
+            lineItemCount: lineItems.length,
+            inventoryAuthority: "WIX_STORES_NATIVE",
+            inventoryAction: "NO_CUSTOM_STOCK_WRITE",
         });
-        return { status: "OK", eventId, inventoryStatus: result.status };
+        return { status: "OK", eventId, inventoryManagedBy: "WIX_NATIVE" };
     } catch (error) {
         _handleError(error, "wixEcom_onOrderCreated", traceId);
         // Wix event delivery is asynchronous and at least once, so handlers
@@ -1889,7 +1855,6 @@ export async function wixEcom_onOrderPaymentStatusUpdated(eventPayload) {
             // Recover a possible interruption after fiscal movement insertion.
             // The cash-register projection deduplicates by persisted movement ID.
             await updateCajaActualFromMovement(existingLedgerRes.items[0], traceId);
-            await _syncPaidOrderInventoryOrThrow(order, traceId, eventId);
             if (bookingIds.length) {
                 try {
                     await _executeWithRetry(async () => {
@@ -1949,7 +1914,6 @@ export async function wixEcom_onOrderPaymentStatusUpdated(eventPayload) {
         }
 
         if (finalLedgerAmount <= 0) {
-            await _syncPaidOrderInventoryOrThrow(order, traceId, eventId);
             if (bookingIds.length) {
                 await _executeWithRetry(async () => {
                     await _markCitasPaidByBookingIds(
@@ -2072,7 +2036,6 @@ export async function wixEcom_onOrderPaymentStatusUpdated(eventPayload) {
             eventResult?.status === "PARTIAL";
 
         if (ledgerOk) {
-            await _syncPaidOrderInventoryOrThrow(order, traceId, eventId);
             if (bookingIds.length) {
                 await _executeWithRetry(async () => {
                     await _markCitasPaidByBookingIds(
@@ -2134,10 +2097,6 @@ export async function wixEcom_onOrderPaymentStatusUpdated(eventPayload) {
             "wixEcom_onOrderPaymentStatusUpdated",
             traceId
         );
-        if (normalized?.code === "INVENTORY_SYNC_RETRY_REQUIRED" ||
-            String(error?.message || "").includes("INVENTORY_SYNC_RETRY_REQUIRED")) {
-            throw error;
-        }
         await logAuditEventWithTimeout(
             "WEBHOOK_CRITICAL_ERROR",
             "ERROR",
@@ -2204,28 +2163,8 @@ export async function wixEcom_onOrderRefunded(eventPayload) {
         const transactionId = `REFUND-${orderId}-${refundId}`;
         const originalTransactionId = `ORDER-${orderId}`;
 
-        const restockLines = refundObj?.sideEffects?.restock?.lineItems;
-        if (Array.isArray(restockLines) && restockLines.length) {
-            const inventoryRefundResult = await syncRestockedOrderInventoryInternal(
-                orderId,
-                refundId,
-                restockLines,
-                refundObj?.reason || "WIX_REFUND_RESTOCK",
-                traceId,
-                event?.eventId || event?._id || null
-            );
-            if (inventoryRefundResult.status === "PARTIAL") {
-                const failed = inventoryRefundResult.data?.results?.filter((item) => item.status === "ERROR") || [];
-                if (failed.some((item) => item.repairQueued !== true)) {
-                    throw new Error("INVENTORY_REFUND_REPAIR_QUEUE_FAILED");
-                }
-            } else if (inventoryRefundResult.status !== "SUCCESS") {
-                throw new Error("INVENTORY_REFUND_SYNC_FAILED");
-            }
-        }
-
-
-
+        // Wix applies any requested native restock side effect. This webhook
+        // records the fiscal refund only; it does not mirror stock into CMS.
         const originalMovementRes = await withTimeout(
             dalQuery(MOVIMIENTOS_CAJA_COL)
                 .eq("transactionId", originalTransactionId)
@@ -2528,15 +2467,8 @@ export async function wixEcom_onOrderCanceled(eventPayload) {
         const lineItems = Array.isArray(order.lineItems)
             ? order.lineItems
             : [];
-        const inventoryReleaseResult = await releaseOrderInventoryInternal(order, traceId, eventId);
-        if (inventoryReleaseResult.status === "PARTIAL") {
-            const failed = inventoryReleaseResult.data?.results?.filter((item) => item.status === "ERROR") || [];
-            if (failed.some((item) => item.repairQueued !== true)) {
-                throw new Error("INVENTORY_RESERVATION_RELEASE_QUEUE_FAILED");
-            }
-        } else if (inventoryReleaseResult.status !== "SUCCESS") {
-            throw new Error("INVENTORY_RESERVATION_RELEASE_FAILED");
-        }
+        // Native Wix cancellation/restock policy owns store stock. The handler
+        // only updates the linked Bookings projection and event marker.
         const bookingsAppId = WIX_CATALOG_APP_IDS.BOOKINGS;
         const bookingIds = _normalizeBookingIds(
             lineItems
