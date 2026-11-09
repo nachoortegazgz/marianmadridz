@@ -71,7 +71,14 @@ import { logger } from "backend/logger";
 import { normalizeError } from "backend/booking/bookingCore";
 import { _toPublicError } from "backend/responseUtils";
 import { logAuditEvent } from "backend/audit";
-import { acquireFiscalLedgerLock, assertFiscalLedgerLock, releaseFiscalLedgerLock } from "backend/fiscalLedgerLock";
+import {
+    acquireFiscalLedgerLock,
+    allocateFiscalSequence,
+    assertFiscalLedgerLock,
+    getCashRegisterSingleton,
+    releaseFiscalLedgerLock,
+    rollbackFiscalSequence,
+} from "backend/fiscalLedgerLock";
 
 const log = logger;
 
@@ -80,7 +87,6 @@ const log = logger;
 // ============================================================================
 
 const CASH_REGISTER_ID = SINGLETONS.CAJA_PRINCIPAL;
-const CASH_SEQ_ID = SINGLETONS.CAJA_SEQ;
 
 const VAT_ACCRUAL_DEVENGADO = "DEVENGADO";
 const VAT_ACCRUAL_ANTICIPADO = "ANTICIPADO";
@@ -124,13 +130,6 @@ function _signedFiscalValue(movement, reader) {
     const accountingAmount = Number(movement?.accountingAmount);
     const sign = Number(movement?.accountingSign) < 0 || accountingAmount < 0 ? -1 : 1;
     return Math.abs(Number(reader(movement)) || 0) * sign;
-}
-
-function _getLocalYear(date = new Date()) {
-    return new Intl.DateTimeFormat("en", {
-        timeZone: SDK_CONFIG?.TZ || "Europe/Madrid",
-        year: "numeric",
-    }).format(date);
 }
 
 const STRONG_READ = Object.freeze({ consistencyMode: "strong" });
@@ -437,95 +436,12 @@ async function _computeCurrentHash(previousHash, payloadStr) {
     return await hashChain(previousHash, payloadStr);
 }
 
-async function _getNextSequence(traceId) {
-    const MAX_RETRIES = 5;
-    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-        try {
-            let seqDoc = await dalGet(CAJA_ACTUAL_COL, CASH_SEQ_ID, "strong").catch(() => null);
-
-            if (!seqDoc) {
-                try {
-                    seqDoc = {
-                        _id: CASH_SEQ_ID,
-                        [CAJA_KEYS.SINGLETON_KEY]: SINGLETONS.CAJA_SEQ,
-                        sequenceCounters: { seqGlobal: 0 },
-                        _createdDate: new Date(),
-                        _updatedDate: new Date(),
-                    };
-                    await dalInsert(CAJA_ACTUAL_COL, seqDoc);
-                } catch (createErr) {
-                    await new Promise((r) => setTimeout(r, 50 + Math.random() * 100));
-                    continue;
-                }
-            }
-
-            const counters = { ...(seqDoc.sequenceCounters || {}) };
-            const nextGlobal = Number(counters.seqGlobal || 0) + 1;
-            const yearKey = _getLocalYear();
-            const nextYear = Number(counters[yearKey] || 0) + 1;
-            counters.seqGlobal = nextGlobal;
-            counters[yearKey] = nextYear;
-
-            const updated = {
-                ...seqDoc,
-                sequenceCounters: counters,
-                _updatedDate: new Date(),
-            };
-
-            await dalUpdate(CAJA_ACTUAL_COL, updated);
-
-            return {
-                sequenceNumber: nextGlobal,
-                yearSequence: nextYear,
-                numSerieFactura: `FAC-${yearKey}-${String(nextYear).padStart(5, "0")}`,
-            };
-        } catch (err) {
-            if (attempt === MAX_RETRIES - 1) {
-                log.error("_getNextSequence failed after retries", { traceId, error: err?.message });
-                throw new Error(`SEQUENCE_ERROR: ${err?.message || "unknown"}`);
-            }
-            await new Promise((r) => setTimeout(r, 100 * Math.pow(2, attempt) + Math.random() * 100));
-        }
-    }
-}
-
 async function _getLastMovement() {
     const res = await dalQuery(MOVIMIENTOS_CAJA_COL)
         .descending("sequenceNumber")
         .limit(1)
         .find(STRONG_READ);
     return res?.items?.[0] || null;
-}
-
-async function _rollbackManualSequence(seq, traceId) {
-    if (!seq || !Number.isFinite(Number(seq.sequenceNumber))) return false;
-    try {
-        const seqDoc = await dalGet(CAJA_ACTUAL_COL, CASH_SEQ_ID, "strong");
-        if (!seqDoc) return false;
-        const counters = { ...(seqDoc.sequenceCounters || {}) };
-        const yearMatch = /^FAC-(\d{4})-(\d{5})$/.exec(_safeTrim(seq.numSerieFactura));
-        if (!yearMatch) return false;
-        const yearKey = yearMatch[1];
-        if (
-            Number(counters.seqGlobal || 0) !== Number(seq.sequenceNumber) ||
-            Number(counters[yearKey] || 0) !== Number(seq.yearSequence)
-        ) return false;
-        counters.seqGlobal = Number(seq.sequenceNumber) - 1;
-        counters[yearKey] = Number(seq.yearSequence) - 1;
-        await dalUpdate(CAJA_ACTUAL_COL, {
-            ...seqDoc,
-            sequenceCounters: counters,
-            _updatedDate: new Date(),
-        });
-        return true;
-    } catch (error) {
-        log.error("_rollbackManualSequence failed", {
-            traceId,
-            sequenceNumber: seq.sequenceNumber,
-            error: error?.message,
-        });
-        return false;
-    }
 }
 
 async function _assertPeriodNotClosed(operationDate, traceId) {
@@ -743,8 +659,8 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
         // completed while this writer was waiting.
         await _assertPeriodNotClosed(operationDate, traceId);
 
-        const seq = await _getNextSequence(traceId);
         const lastMovement = await _getLastMovement();
+        const seq = await allocateFiscalSequence(ledgerLock, lastMovement, traceId);
         const previousRecordHash = lastMovement?.hash || GENESIS_HASH;
 
         const generatedAt = new Date();
@@ -813,7 +729,7 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
         try {
             digitalSignature = await _computeSignature(movementHash, traceId);
         } catch (signErr) {
-            const rolledBack = await _rollbackManualSequence(seq, traceId);
+            const rolledBack = await rollbackFiscalSequence(ledgerLock, seq, traceId);
             if (!rolledBack) {
                 retainLedgerLock = true;
                 log.error("FISCAL_SEQUENCE_ROLLBACK_FAILED", {
@@ -911,13 +827,13 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
                     .find(STRONG_READ)
                     .catch(() => ({ items: [] }));
                 if (existingMovement?.items?.length === 1) {
-                    await _rollbackManualSequence(seq, traceId);
+                    await rollbackFiscalSequence(ledgerLock, seq, traceId);
                     log.info("Ledger duplicate recovered after atomic claim", { transactionId, traceId });
                     return { status: "SUCCESS", data: existingMovement.items[0], error: null, idempotent: true };
                 }
                 const existingClaim = await dalGet(CONTROL_OPERATIVO_COL, claimId, "strong").catch(() => null);
                 if (existingClaim) {
-                    const rolledBack = await _rollbackManualSequence(seq, traceId);
+                    const rolledBack = await rollbackFiscalSequence(ledgerLock, seq, traceId);
                     if (!rolledBack) retainLedgerLock = true;
                     return {
                         status: "ERROR",
@@ -966,7 +882,7 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
                 saved = recovered.items[0];
             } else {
                 const rolledBack = recovered?.items?.length === 0
-                    ? await _rollbackManualSequence(seq, traceId)
+                    ? await rollbackFiscalSequence(ledgerLock, seq, traceId)
                     : false;
                 if (!rolledBack) retainLedgerLock = true;
                 return {
@@ -1036,18 +952,6 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
 // CajaActual's singletonKey is the logical identity. Wix may assign a
 // different physical _id to the collection's singleton item, so never use
 // CAJA_PRINCIPAL as a getItem(_id) argument. Fail closed on duplicates.
-async function _getCashRegisterSingleton() {
-    const result = await dalQuery(CAJA_ACTUAL_COL)
-        .eq(CAJA_KEYS.SINGLETON_KEY, SINGLETONS.CAJA_PRINCIPAL)
-        .limit(2)
-        .find(STRONG_READ);
-    const matches = result?.items || [];
-    if (matches.length > 1) {
-        throw new Error("CAJA_PRINCIPAL_DUPLICATE_SINGLETON");
-    }
-    return matches[0] || null;
-}
-
 async function _updateCajaActual(movement, traceId) {
     try {
         const movementKey = _safeTrim(movement?._id || movement?.transactionId);
@@ -1057,7 +961,7 @@ async function _updateCajaActual(movement, traceId) {
         // and retain the movement ID in the same write as the balance change.
         // This makes retries idempotent and concurrent updates recoverable.
         for (let attempt = 0; attempt < 4; attempt += 1) {
-            let cashRegister = await _getCashRegisterSingleton();
+            let cashRegister = await getCashRegisterSingleton();
             const isNew = !cashRegister;
             if (!cashRegister) {
                 cashRegister = {
