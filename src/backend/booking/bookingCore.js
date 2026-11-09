@@ -479,21 +479,14 @@ export { logger };
 // =============================================================================
 // BLOQUE 4 - BOOKINGERROR Y NORMALIZACION
 // =============================================================================
-export class BookingError extends Error {
-    constructor(code, message, details) {
-        super(String(message || "Unknown error"));
-        this.name = "BookingError";
-        this.code = String(code || ERROR_CODES.UNKNOWN_ERROR);
-        this.details =
-            details && typeof details === "object"
-                ? details
-                : { details: details };
-        this.timestamp = new Date().toISOString();
-    }
-}
-
 export function createBookingError(code, message, details) {
-    return new BookingError(code, message, details);
+    const error = new Error(String(message || "Unknown error"));
+    error.code = String(code || ERROR_CODES.UNKNOWN_ERROR);
+    error.details =
+        details && typeof details === "object"
+            ? details
+            : { details };
+    return error;
 }
 
 export function normalizeError(err) {
