@@ -127,7 +127,7 @@ Actualizar tras cada sesión. Esta sección sustituye el inventario histórico d
   acepta en estos flujos SDK. `rescheduleBooking` usa la firma
   `(bookingId, slot, options)`, con `revision` dentro de `options`.
 - Se añade regresion offline para shape SDK, firma de reprogramacion, valores
-  SSOT y guardas de insercion. CI run #290 PASS: 48 suites / 466 tests / 0 fallos;
+  SSOT y guardas de insercion. CI run #291 PASS: 48 suites / 466 tests / 0 fallos;
   SDK contracts y ESLint PASS. npm aun avisa que ESLint 8.25.0 esta fuera de soporte;
   se registra como deuda P3 separada, sin actualizar dependencias en esta tanda.
 
@@ -151,6 +151,8 @@ Actualizar tras cada sesión. Esta sección sustituye el inventario histórico d
   corrige. La prueba de acceso anonimo publicado sigue pendiente.
 - R-05: no hay clase `BookingError` activa; `createBookingError` es una
   factoría de errores nativos. No eliminarla por coincidencia textual.
+- R-09: el grep de `status` encuentra el campo de estado de ControlOperativo y
+  el status del evento Wix nativo; no hay escritura literal `status` sobre CitasF2.
 - L1-09: no se identifica un flujo de firma de peticiones
   `X-MM-Signature/X-MM-Timestamp`; no añadir constantes sin consumidor.
 - L1-10: la opcion de pago F2 es `OFFLINE`; `NO_FEE` no constituye un enum
@@ -169,8 +171,9 @@ Actualizar tras cada sesión. Esta sección sustituye el inventario histórico d
 - L1-12: el codigo admite una tolerancia de 1 minuto en `totalDuration`,
   mientras el dossier declara suma estricta. No cambiar sin comprobar unidades,
   redondeos y registros actuales de ServiciosCatalogo.
-- R-01: `SLOT_SEARCH` tiene un espejo frontend en `public/mmUtils.js` por
-  frontera de modulos; se añade prueba de paridad con el SSOT backend.
+- R-01: `SLOT_SEARCH` mantiene un espejo frontend en `public/mmUtils.js` por
+  frontera de módulos; prueba de paridad con el SSOT backend añadida. Riesgo de
+  deriva cubierto por test; no se elimina el espejo sin cambiar esa frontera.
 - R-06: `permissions.json` conserva permisos globales amplios. No modificar
   sin verificar el contrato Wix y probar invocacion anonima en Preview.
 - R-07: consumo exactamente-una-vez de DISPLAY_TOKEN bajo concurrencia real
@@ -184,4 +187,4 @@ Actualizar tras cada sesión. Esta sección sustituye el inventario histórico d
 
 ### Estado de salida
 
-`CI PASS — run #290 — 48 suites / 466 tests / 0 fallos` · `WIX PREVIEW PENDIENTE` · `NO DESPLEGAR`.
+`CI PASS — run #291 — 48 suites / 466 tests / 0 fallos` · `WIX PREVIEW PENDIENTE` · `NO DESPLEGAR`.
