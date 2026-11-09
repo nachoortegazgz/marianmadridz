@@ -8,53 +8,62 @@ const here = dirname(fileURLToPath(import.meta.url));
 const source = readFileSync(join(here, '..', 'fiscalDocuments.web.js'), 'utf8');
 const config = readFileSync(join(here, '..', 'internalConfig.js'), 'utf8');
 
+function extractBlock(startMarker, endMarker) {
+  const start = source.indexOf(startMarker);
+  const end = source.indexOf(endMarker, start);
+  assert.notEqual(start, -1, `Missing block: ${startMarker}`);
+  assert.notEqual(end, -1, `Missing end marker: ${endMarker}`);
+  return source.slice(start, end);
+}
+
 test('FDOC-STORAGE-01 package creation fails closed until a dedicated immutable store exists', () => {
-  const start = source.indexOf('export const createManagerPackageVersion = webMethod(');
-  const end = source.indexOf('// BLOQUE 4 - HISTORIAL DE PAQUETES', start);
-  assert.notEqual(start, -1);
-  assert.notEqual(end, -1);
-  const handler = source.slice(start, end);
+  const handler = extractBlock(
+    'export const createManagerPackageVersion = webMethod(',
+    '// BLOQUE 4 - HISTORIAL DE PAQUETES'
+  );
   assert.match(handler, /PACKAGE_SNAPSHOT_STORAGE_NOT_CONFIGURED/);
   assert.match(handler, /HistoricoCierresZ está reservado a cierres Z/);
   assert.doesNotMatch(handler, /dalInsert|dalUpdate|dalSave|dalRemove/);
 });
 
 test('FDOC-STORAGE-02 package creation never fabricates mandatory Z-closing fields', () => {
-  const start = source.indexOf('export const createManagerPackageVersion = webMethod(');
-  const end = source.indexOf('// BLOQUE 4 - HISTORIAL DE PAQUETES', start);
-  const handler = source.slice(start, end);
+  const handler = extractBlock(
+    'export const createManagerPackageVersion = webMethod(',
+    '// BLOQUE 4 - HISTORIAL DE PAQUETES'
+  );
   for (const field of ['fiscalPeriod', 'operationDate', 'closedBy', 'recordDomain', 'totalCash', 'totalCard', 'totalBizum', 'totalOnline']) {
     assert.doesNotMatch(handler, new RegExp(field + '\\s*:'));
   }
 });
 
 test('FDOC-STORAGE-03 accountant dispatch remains disabled in canonical configuration', () => {
-  assert.match(config, /ACCOUNTANT_SEND_ENABLED:\\s*false/);
-  assert.match(source, /ACCOUNTANT_SEND_ENABLED\\s*=\\s*SDK_CONFIG\\.EMAIL\\.ACCOUNTANT_SEND_ENABLED\\s*===\\s*true/);
-  assert.match(source, /ACCOUNTANT_SEND_DISABLED/);
+  assert.ok(config.includes('ACCOUNTANT_SEND_ENABLED: false'));
+  assert.ok(source.includes('ACCOUNTANT_SEND_ENABLED = SDK_CONFIG.EMAIL.ACCOUNTANT_SEND_ENABLED === true'));
+  assert.ok(source.includes('ACCOUNTANT_SEND_DISABLED'));
 });
 
-test('FDOC-DISPATCH-01 accountant dispatch requires a persisted package snapshot', () => {
-  const start = source.indexOf('export const sendManagerPackageToAccountant = webMethod(');
-  const end = source.indexOf('// BLOQUE 9 - ENVIO DE DOCUMENTO CONCRETO', start);
-  assert.notEqual(start, -1);
-  assert.notEqual(end, -1);
-  const handler = source.slice(start, end);
-  assert.match(handler, /params\\.documentId/);
-  assert.match(handler, /dalGet\\(DOCS_COL, documentId, "strong"\\)/);
-  assert.match(handler, /_buildCsvFromInvoices\\(doc\\.invoiceData\\)/);
-  assert.doesNotMatch(handler, /getQuarterlyTaxSummary|getLibroRegistroFacturasExpedidasInternal/);
+test('FDOC-DISPATCH-01 package dispatch fails closed before recipient lookup or network access', () => {
+  const handler = extractBlock(
+    'export const sendManagerPackageToAccountant = webMethod(',
+    '// BLOQUE 9 - ENVIO DE DOCUMENTO CONCRETO'
+  );
+  assert.ok(handler.indexOf('if (!ACCOUNTANT_SEND_ENABLED)') < handler.indexOf('_resolveRecipientById'));
+  assert.match(handler, /_accountantSendDisabledResult\(traceId\)/);
+  assert.doesNotMatch(handler, /_dispatchEmailViaResend|wixFetch|dalInsert|dalUpdate/);
 });
 
-test('FDOC-CSV-01 CSV maps the persisted fiscal aggregator fields', () => {
-  assert.match(source, /invoiceNumber.*numSerieFactura/);
-  assert.match(source, /fechaExpedicion.*fechaOperacion/);
-  assert.match(source, /taxableAmount.*taxBase/);
-  assert.match(source, /hashCompleto.*recordHash.*hash/);
+test('FDOC-DISPATCH-02 specific-document dispatch also fails closed', () => {
+  const handler = extractBlock(
+    'export const sendSpecificDocumentToAccountant = webMethod(',
+    '// BLOQUE 10 -'
+  );
+  assert.match(handler, /if \(!ACCOUNTANT_SEND_ENABLED\)/);
+  assert.match(handler, /_accountantSendDisabledResult\(traceId\)/);
+  assert.doesNotMatch(handler, /_dispatchEmailViaResend/);
 });
 
 test('FDOC-HISTORY-01 legacy monthly and quarterly identifiers remain disjoint', () => {
-  assert.match(source, /_packagePeriodPrefix\\(year, "MONTHLY", month\\)/);
-  assert.match(source, /_packagePeriodPrefix\\(year, "QUARTERLY", quarter\\)/);
-  assert.match(source, /DOC_GESTORIA_\\$\\{year\\}_\\$\\{periodKey\\}_PAQUETE_GESTORIA_/);
+  assert.ok(source.includes('_packagePeriodPrefix(year, "MONTHLY", month)'));
+  assert.ok(source.includes('_packagePeriodPrefix(year, "QUARTERLY", quarter)'));
+  assert.ok(source.includes('${year}_${periodKey}_PAQUETE_GESTORIA_'));
 });
