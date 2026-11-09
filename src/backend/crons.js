@@ -72,6 +72,7 @@ import { readControlPayload } from "backend/data";
 import { logger } from "backend/logger";
 import { notifyOperationalAlert } from "backend/audit";
 import { verifyFiscalHashChainIntegrity } from "backend/cajas.web";
+import { registrarEventoEconomico } from "backend/eventLog";
 import { _completeTransaction, cancelBookingElevated } from "backend/booking/bookingCore";
 import {
     reconcileUnknownTransaction,
@@ -406,16 +407,67 @@ return { ok: true, action: "CANCEL_BOOKING", bookingId };
 
 if (kind === "FISCAL_LEDGER" || kind === "RESYNC_LEDGER_ACCOUNTING") {
 try {
-const { registerBookingPayment } = await import("backend/cajas.web");
+const transactionId = _safeTrim(payload.transactionId || comp?.transactionId);
+const recoveryProcessor = _safeTrim(payload.recoveryProcessor).toUpperCase();
+const origin = _safeTrim(payload.origin).toUpperCase();
+
+// Booking-cancellation rectifications must be replayed by the same fiscal
+// writer and with the exact immutable request. Old queue rows lack this
+// contract and are routed to manual reconciliation, never reinterpreted as
+// ordinary positive cashier payments.
+if (origin === "WIX_BOOKINGS_CANCEL_WEBHOOK" && recoveryProcessor !== "EVENT_LOG") {
+return {
+ok: false,
+manualReconciliationRequired: true,
+action: kind,
+reason: "Legacy cancellation recovery lacks the original rectification payload; manual fiscal reconciliation required",
+};
+}
+
+if (recoveryProcessor === "EVENT_LOG") {
+const fiscalPayload = payload.fiscalPayload;
+const amount = Number(fiscalPayload?.totalAmount);
+const validRectification = fiscalPayload &&
+typeof fiscalPayload === "object" &&
+!Array.isArray(fiscalPayload) &&
+fiscalPayload.eventType === "RECTIFICATIVA" &&
+fiscalPayload.movementType === "REEMBOLSO" &&
+fiscalPayload.tipoFactura === "R1" &&
+_safeTrim(fiscalPayload.previousInvoiceId) &&
+Number.isFinite(amount) && amount < 0 &&
+_safeTrim(fiscalPayload.transactionId) === transactionId &&
+Array.isArray(fiscalPayload.linkedBookingIds) &&
+fiscalPayload.linkedBookingIds.length > 0;
+if (!validRectification) {
+return {
+ok: false,
+manualReconciliationRequired: true,
+action: kind,
+reason: "Fiscal rectification recovery payload is incomplete or inconsistent; automatic replay blocked",
+};
+}
+const result = await withTimeout(
+() => registrarEventoEconomico({ ...fiscalPayload, traceId }),
+API_TIMEOUT_MS * 2,
+"cron:eventLogFiscalRectificationRecovery"
+);
+if (result?.status === "SUCCESS") {
+return { ok: true, action: kind, transactionId, recoveryProcessor };
+}
+throw new Error(
+(result && result.error && result.error.message) ||
+"FISCAL_RECTIFICATION_RECOVERY_NOT_CONFIRMED"
+);
+}
+
 const amount = Number(payload.totalAmount || comp?.totalAmount);
 const hasAmount = Number.isFinite(amount) && amount !== 0;
-const transactionId = _safeTrim(payload.transactionId || comp?.transactionId);
 const bookingIds = payload.bookingIds || payload.bookingId || comp?.bookingIds || comp?.bookingId || null;
-
 if (kind === "FISCAL_LEDGER" && hasAmount && transactionId) {
+const { registerBookingPayment } = await import("backend/cajas.web");
 const result = await withTimeout(
 () =>
-registerBookingPayment(bookingIds, amount, payload.paymentMethod || "WIX_PAYMENTS", {
+registerBookingPayment(bookingIds, Math.abs(amount), payload.paymentMethod || "WIX_PAYMENTS", {
 operationDescription: payload.operationDescription || "Fiscal recovery retry",
 transactionId: transactionId,
 orderId: payload.orderId || null,
