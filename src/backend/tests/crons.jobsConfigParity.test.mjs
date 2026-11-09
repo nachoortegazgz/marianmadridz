@@ -126,8 +126,41 @@ test('CRON-FISCAL-RECOVERY-03 paid-order recovery requires the original EventLog
   assert.match(cajas, /recoveryScope:\s*p\.recoveryScope\s*\|\|\s*null/);
   assert.match(cron, /recoveryProcessor === "EVENT_LOG_ORDER"/);
   assert.match(cron, /payload\.recoveryScope === "BOOKINGS_ONLY"/);
+  assert.match(cron, /fiscalPayload\.tipoFactura/);
+  assert.match(cron, /Array\.isArray\(fiscalPayload\.breakdown\)/);
+  assert.match(cron, /\^\\d\{4\}-\\d\{2\}-\\d\{2\}\$/);
   assert.match(cron, /reconcilePaidCitasFromLedgerInternal/);
   assert.match(cron, /Legacy paid-order recovery lacks the original fiscal payload/);
+});
+
+test('CRON-FISCAL-RECOVERY-04 routes a legacy paid-order queue with root kind to manual reconciliation', async () => {
+  wixDataMock._reset();
+  const C = IC.OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
+  const orderId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+  const recordId = 'legacy-paid-order-recovery';
+  wixDataMock._seed(C, [{
+    _id: recordId,
+    controlType: IC.CONTROL_TYPE.COMPENSATION,
+    kind: 'FISCAL_LEDGER',
+    transactionId: 'ORDER-' + orderId,
+    orderId,
+    totalAmount: 18.15,
+    attempts: 0,
+    status: 'PENDING_RECOVERY',
+    payload: {
+      origin: 'WIX_ECOM_PAYMENT_WEBHOOK',
+      movementType: 'VENTA_ONLINE',
+      transactionId: 'ORDER-' + orderId,
+      bookingIds: ['11111111-1111-4111-8111-111111111111'],
+    },
+  }]);
+
+  const result = await CR.runPendingCompensationsJob();
+  assert.equal(result.manualRequired, 1);
+  assert.equal(result.failed, 0);
+  const record = (wixDataMock._store.get(C) || []).find(row => row._id === recordId);
+  assert.equal(record.status, 'MANUAL_RECONCILIATION_REQUIRED');
+  assert.match(record.payload.lastError, /Legacy paid-order recovery lacks the original fiscal payload/);
 });
 
 test('CRON-PAYMENT-RECOVERY-01 repairs CitasF2 from the existing paid ORDER movement without creating another movement', async () => {
