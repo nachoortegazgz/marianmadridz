@@ -462,6 +462,15 @@ throw new Error(
 
 const amount = Number(payload.totalAmount || comp?.totalAmount);
 const hasAmount = Number.isFinite(amount) && amount !== 0;
+const movementType = _safeTrim(payload.movementType).toUpperCase();
+if (["REEMBOLSO", "DEVOLUCION", "DEVOLUCION_SERVICIO"].includes(movementType)) {
+return {
+ok: false,
+manualReconciliationRequired: true,
+action: kind,
+reason: "Refund recovery without the original fiscal rectification payload is unsafe; manual fiscal reconciliation required",
+};
+}
 const bookingIds = payload.bookingIds || payload.bookingId || comp?.bookingIds || comp?.bookingId || null;
 if (kind === "FISCAL_LEDGER" && hasAmount && transactionId) {
 const { registerBookingPayment } = await import("backend/cajas.web");
