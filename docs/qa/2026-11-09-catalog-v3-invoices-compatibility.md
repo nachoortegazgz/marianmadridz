@@ -47,3 +47,16 @@ The offline ESM loader now exposes the Catalog V3 namespaces (`productsV3`, `inv
 - Bulk Increment/Decrement Inventory Items V3: SCOPE.STORES.INVENTORY_ITEM_WRITE.
 
 La concesión efectiva de estos scopes en el entorno Velo del sitio sigue pendiente de comprobación en Wix Local Editor; auth.elevate no sustituye la concesión de scopes.
+
+
+---
+
+## Actualización de estado post-merge — 2026-11-09
+
+Esta sección supersede las referencias históricas de este informe que describían el PR #216 como abierto/en borrador.
+
+- PR #216 se fusionó en `main` mediante el merge commit `7b1d48d5255ffa5eb5d2f20080798be163d9dd57`.
+- `src/backend/catalogV3Adapter.js` y la migración del writer V3 están presentes en el código actual de `main`.
+- El merge y CI offline no demuestran que el código esté publicado ni que el import SDK `@wix/stores` resuelva en runtime Velo.
+- La smoke read-only del sitio confirma Catalog V3 REST, 24 productos visibles, 30 inventory items y Bookings availability; el detalle está en `docs/qa/2026-11-09-runtime-smoke-production.md`.
+- El despliegue sigue bloqueado por divergencia de UI entre Wix Editor y el snapshot Git (`UI version: 15941`). La regla de protección no debe eludirse.
