@@ -18,7 +18,7 @@ El análisis y cualquier intervención posterior deben regirse estrictamente por
 2.  **Funcionalidad Real:** Prohibido el código especulativo. Solo se implementa lo exigido por ley o negocio hoy.
 3.  **Cumplimiento Normativo 100%:** Veri*Factu (Ley 11/2021), PGC, RD 8/2019 (jornada laboral), RGPD/LOPDGDD.
 4.  **Mínimo Código:** Lógica en backend (`webMethods`), constantes en `internalConfig.js`, validaciones en `validation.js`. Frontend sin lógica de negocio.
-5.  **Cero Complejidad Innecesaria:** Eliminación de abstracciones prematuras, seguridad desproporcionada y deuda técnica.
+5.  **Complejidad justificada:** Mantener solo abstracciones, controles y dependencias que aporten valor verificable.
 
 ### 1.3 Metodología de Trabajo y Restricciones Críticas
 *   **Arquitectura:** Unidireccional (Frontend → WebMethods → Dominio/Sagas → Seguridad/Validación → Datos/CMS).
