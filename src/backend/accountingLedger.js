@@ -120,7 +120,7 @@ function _normalizeEntry(input, traceId) {
         value: {
             entryId,
             sourceMovementId,
-            cashMovementId: _safeTrim(input?.cashMovementId || sourceMovementId),
+            cashMovementId: _safeTrim(input?.cashMovementId) || null,
             concept,
             origenTipo,
             origenRegistro,
@@ -247,6 +247,7 @@ function _verifyEntryRows(rows, entry) {
             _roundMoney(actual.debitAmount) !== expected.debitAmount ||
             _roundMoney(actual.creditAmount) !== expected.creditAmount ||
             actual.sourceMovementId !== entry.sourceMovementId ||
+            (actual.cashMovementId || null) !== entry.cashMovementId ||
             !actual.recordHash ||
             !actual.previousRecordHash
         ) return false;
@@ -375,6 +376,7 @@ export async function appendAccountingEntry(input, traceId) {
                 origenTipo: entry.origenTipo,
                 origenRegistro: entry.origenRegistro,
                 sourceMovementId: entry.sourceMovementId,
+                cashMovementId: entry.cashMovementId,
                 entryDate: entry.entryDate.toISOString(),
                 fiscalPeriod: entry.fiscalPeriod,
                 accountCode: line.accountCode,
