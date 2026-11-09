@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const source = readFileSync(join(here, '..', 'fiscalDocuments.web.js'), 'utf8');
+const config = readFileSync(join(here, '..', 'internalConfig.js'), 'utf8');
 const start = source.indexOf('export const createManagerPackageVersion = webMethod(');
 const end = source.indexOf('\n});', start);
 const handler = source.slice(start, end < 0 ? source.length : end);
