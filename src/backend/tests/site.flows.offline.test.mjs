@@ -374,7 +374,9 @@ test('FLOW-CAJA-01 flujo continuo: venta EFECTIVO -> caja incrementada -> cierre
     _id: 'mov-hist-2020',
     transactionId: 'qa-historic-close-fixture-2020',
     invoiceIssueDate: diaCerrado,
-    sequenceNumber: 999998,
+    sequenceNumber: 2,
+    previousRecordHash: mov.hash,
+    hash: 'a'.repeat(64),
     movementType: 'VENTA',
     paymentMethod: 'EFECTIVO',
     totalAmount: 24.50,
@@ -492,6 +494,27 @@ test('FLOW-CAJA-08 fiscal recovery queue deduplicates repeated compensation requ
   assert.equal(results.filter((result) => result.created).length, 1);
   assert.equal(results.filter((result) => result.duplicate).length, 1);
   assert.equal(records.length, 1);
+
+  const bookingOnlyRequest = {
+    kind: 'FISCAL_LEDGER',
+    bookingIds: ['booking-recovery-002', 'booking-recovery-001'],
+    totalAmount: 15,
+    paymentMethod: 'WIX_PAYMENTS',
+    movementType: 'REEMBOLSO',
+    phase: 'WAIT_FOR_SIGNER',
+    origin: 'WIX_BOOKINGS_CANCEL_WEBHOOK',
+  };
+  const bookingOnlyResults = await Promise.all([
+    cajas.queueFiscalRecovery({ ...bookingOnlyRequest, traceId: 'booking-only-trace-001' }),
+    cajas.queueFiscalRecovery({ ...bookingOnlyRequest, traceId: 'booking-only-trace-002' }),
+  ]);
+  const bookingOnlyRecords = (wixDataMock._store.get('ControlOperativo') || [])
+    .filter((row) => row.controlType === 'COMPENSATION' && row.payload?.bookingIds?.length === 2);
+
+  assert.equal(bookingOnlyResults.every((result) => result.queued), true);
+  assert.equal(bookingOnlyResults.filter((result) => result.created).length, 1);
+  assert.equal(bookingOnlyResults.filter((result) => result.duplicate).length, 1);
+  assert.equal(bookingOnlyRecords.length, 1);
 });
 
 test('FLOW-CAJA-09 fiscal hash audit checks more than one page before returning success', async () => {
