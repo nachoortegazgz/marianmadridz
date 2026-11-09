@@ -881,6 +881,11 @@ export const items = {
         return operation;
       },
       async run(options = {}) {
+        wixDataMock._calls.push({
+          op: "bulkPatch",
+          collection: col,
+          suppressHooks: options.suppressHooks === true,
+        });
         const updatedItemIds = [];
         const errors = [];
         let skipped = 0;
@@ -930,7 +935,7 @@ export const items = {
 
           const hookName = _hookName(col, "beforeUpdate");
           const hook = hookName ? DATA_HOOKS[hookName] : null;
-          if (typeof hook === "function") {
+          if (!options.suppressHooks && typeof hook === "function") {
             const hookResult = hook(patched, { original: item });
             if (hookResult && typeof hookResult.then === "function") await hookResult;
           }
