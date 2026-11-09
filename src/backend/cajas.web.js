@@ -220,6 +220,7 @@ async function _queueCompensation(params) {
         paymentMethod: p.paymentMethod || null,
         movementType: p.movementType || null,
         recoveryProcessor: p.recoveryProcessor || null,
+        recoveryScope: p.recoveryScope || null,
         fallbackTraceId: hasStableEntity ? null : traceId,
     };
     const identityHash = await hashSHA256(_stableSerialize(identity));
@@ -245,6 +246,7 @@ async function _queueCompensation(params) {
             origin,
             alertRequired: Boolean(p.alertRequired),
             recoveryProcessor: p.recoveryProcessor || null,
+            recoveryScope: p.recoveryScope || null,
             fiscalPayload: p.fiscalPayload && typeof p.fiscalPayload === "object" &&
                 !Array.isArray(p.fiscalPayload) ? p.fiscalPayload : null,
         },
@@ -1128,6 +1130,7 @@ export async function queueFiscalRecovery(recoveryData) {
             lastError: recoveryData.lastError,
             alertRequired: false,
             recoveryProcessor: recoveryData.recoveryProcessor || null,
+            recoveryScope: recoveryData.recoveryScope || null,
             fiscalPayload: recoveryData.fiscalPayload || null,
         });
         return {
