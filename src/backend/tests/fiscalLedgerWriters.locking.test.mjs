@@ -97,6 +97,6 @@ test("FISCAL-CHAIN-07 Z closing never exposes raw internal exception messages", 
 
   assert.ok(catchIndex > start);
   assert.doesNotMatch(catchBlock, /_toPublicError\(err/);
-  assert.match(catchBlock, /message: "No se pudo completar el cierre Z\."/);
+  assert.match(catchBlock, /publicMessages\[publicCode\]\s*\|\|\s*"No se pudo completar el cierre Z\."/);
   assert.match(catchBlock, /normalized\.message/);
 });
