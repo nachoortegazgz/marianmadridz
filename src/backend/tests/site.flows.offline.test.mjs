@@ -521,6 +521,37 @@ test('FLOW-CAJA-09 fiscal hash audit checks more than one page before returning 
   assert.equal(result.data.breaksCount, 0);
 });
 
+
+test('FLOW-CAJA-10 missing hash fields never pass audit or Z close', async () => {
+  wixDataMock._reset();
+  await setupFiscalSecrets();
+  const { cajas } = await freshImports();
+  wixDataMock._store.set('MovimientosCaja', [{
+    _id: 'missing-hash-001',
+    sequenceNumber: 1,
+    fechaExpedicionFactura: '2026-11-08',
+    previousRecordHash: '0'.repeat(64),
+    movementType: 'VENTA',
+    paymentMethod: 'EFECTIVO',
+    accountingSign: 1,
+    accountingAmount: 50,
+    taxBase: 41.32,
+    taxAmount: 8.68,
+    tipoImpositivo: 0.21,
+  }]);
+
+  const audit = await cajas.verifyFiscalHashChainIntegrity({ limit: 200 });
+  assert.equal(audit.status, 'INTEGRITY_COMPROMISED');
+  assert.equal(audit.data.breaks[0].reason, 'HASH_FIELDS_MISSING');
+
+  const closing = await cajas.registerZClosingInternal('2026-11-08', {
+    traceId: 'flow-caja-missing-hash-close-001',
+  });
+  assert.equal(closing.status, 'ERROR');
+  assert.equal(closing.error.code, 'INTEGRITY_VIOLATION');
+  assert.equal((wixDataMock._store.get('HistoricoCierresZ') || []).length, 0);
+});
+
 test('FLOW-CAJA-02 payload incorrecto => rechazos deterministas sin contaminar ledger', async () => {
   const { cajas } = await freshImports();
   await setupFiscalSecrets();
