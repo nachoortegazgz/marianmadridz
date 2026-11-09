@@ -1,13 +1,17 @@
 /*
 =============================================================================
 MODULE: backend/staffManager.web.js
-VERSION: v1.0.0
+VERSION: v1.0.1
 RESPONSIBILITY: Gestion de equipo (listar, horas, avisos) para Marian.
+STANDARDS: G10 ASCII Strict.
+
+CAMBIOS v1.0.1:
+  FIX-01: import wixData anadido (no-undef en v1.0.0).
 =============================================================================
 */
 
 import { Permissions, webMethod } from "wix-web-module";
-import { currentMember } from "wix-members-backend";
+import wixData from "wix-data";
 
 const COLLABORATORS_COLLECTION = "StaffCollaborators"; // ajusta al nombre real
 const CLOCKINGS_COLLECTION = "Fichajes";              // ajusta al nombre real
