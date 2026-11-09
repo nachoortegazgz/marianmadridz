@@ -87,3 +87,16 @@ test("FISCAL-CHAIN-06 hash audit paginates and cannot report success when pages 
   assert.ok(pagination > start);
   assert.ok(partial > pagination);
 });
+
+test("FISCAL-CHAIN-07 Z closing never exposes raw internal exception messages", async () => {
+  const code = await source("cajas.web.js");
+  const start = code.indexOf("async function _registerZClosing");
+  const finallyIndex = code.indexOf("    } finally {", start);
+  const catchIndex = code.lastIndexOf("    } catch (err) {", finallyIndex);
+  const catchBlock = code.slice(catchIndex, finallyIndex);
+
+  assert.ok(catchIndex > start);
+  assert.doesNotMatch(catchBlock, /_toPublicError\(err/);
+  assert.match(catchBlock, /message: "No se pudo completar el cierre Z\."/);
+  assert.match(catchBlock, /normalized\.message/);
+});
