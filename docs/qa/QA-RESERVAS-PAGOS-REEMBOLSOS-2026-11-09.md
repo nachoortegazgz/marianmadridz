@@ -18,7 +18,7 @@
 - El historial se lee paginado. Si no puede completarse dentro del límite defensivo, el flujo falla cerrado.
 - Se rechaza un reembolso que supere el importe restante del cobro original.
 - Base y cuota se prorratean en reembolsos parciales; el último reembolso aplica el residual para cuadrar el total original.
-- La validación de importe ocurre antes de aplicar efectos de restock.
+- El restock explícito de Wix se conserva como efecto nativo idempotente por refundId; el límite fiscal se aplica antes de crear la rectificativa en el ledger. Si falta el movimiento original, el flujo conserva el restock y deja la rectificativa en recuperación.
 
 **Límite conocido:** la comprobación acumulada de reembolsos se hace antes de entrar en el writer fiscal. El writer serializa escrituras contables, pero esta comprobación de saldo no se repite todavía dentro de ese mismo bloqueo; por tanto, dos refundId distintos concurrentes para el mismo pedido requieren una prueba específica y una protección adicional antes de certificar concurrencia.
 
