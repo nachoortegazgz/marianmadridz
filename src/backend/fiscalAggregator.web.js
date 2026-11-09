@@ -430,12 +430,12 @@ async function _getBusinessTaxId(traceId) {
   const item = config?.items?.[0];
   const taxId = _safeTrim(item?.taxId);
   if (taxId) return taxId.toUpperCase();
-  // Fallback adapter legacy: filas historicas thirdPartyType=EMISOR con
+  // Historical configuration adapter: filas historicas thirdPartyType=EMISOR con
   // campo "taxId". Emiten warn para trazar la migracion a CONFIG_SISTEMA.
   const historicalConfig = await withTimeout(
     dalQuery(DATOS_FISCALES_COL).eq("thirdPartyType", "EMISOR").limit(1).find(),
     CMS_TIMEOUT_MS,
-    "getBusinessTaxIdLegacy"
+    "getBusinessTaxIdhistorical"
   );
   const historicalTaxId = _safeTrim(historicalConfig?.items?.[0]?.taxId);
   if (historicalTaxId) {
