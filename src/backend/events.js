@@ -1702,6 +1702,28 @@ export async function wixEcom_onOrderRefunded(rawBody) {
         const transactionId = `REFUND-${orderId}-${refundId}`;
         const originalTransactionId = `ORDER-${orderId}`;
 
+        const restockLines = refundObj?.sideEffects?.restock?.lineItems;
+        if (Array.isArray(restockLines) && restockLines.length) {
+            const inventoryRefundResult = await syncRestockedOrderInventoryInternal(
+                orderId,
+                refundId,
+                restockLines,
+                refundObj?.reason || "WIX_REFUND_RESTOCK",
+                traceId,
+                event?.eventId || event?._id || null
+            );
+            if (inventoryRefundResult.status === "PARTIAL") {
+                const failed = inventoryRefundResult.data?.results?.filter((item) => item.status === "ERROR") || [];
+                if (failed.some((item) => item.repairQueued !== true)) {
+                    throw new Error("INVENTORY_REFUND_REPAIR_QUEUE_FAILED");
+                }
+            } else if (inventoryRefundResult.status !== "SUCCESS") {
+                throw new Error("INVENTORY_REFUND_SYNC_FAILED");
+            }
+        }
+
+
+
         const originalMovementRes = await withTimeout(
             dalQuery(MOVIMIENTOS_CAJA_COL)
                 .eq("transactionId", originalTransactionId)
@@ -1831,27 +1853,6 @@ export async function wixEcom_onOrderRefunded(rawBody) {
         const refundTaxAmount = fullyRefunded
             ? Math.max(0, Math.round((originalTaxAmount - previousRefundTaxAmount) * 100) / 100)
             : Math.round(originalTaxAmount * refundAmountCents / originalAmountCents * 100) / 100;
-
-        const restockLines = refundObj?.sideEffects?.restock?.lineItems;
-        if (Array.isArray(restockLines) && restockLines.length) {
-            const inventoryRefundResult = await syncRestockedOrderInventoryInternal(
-                orderId,
-                refundId,
-                restockLines,
-                refundObj?.reason || "WIX_REFUND_RESTOCK",
-                traceId,
-                event?.eventId || event?._id || null
-            );
-            if (inventoryRefundResult.status === "PARTIAL") {
-                const failed = inventoryRefundResult.data?.results?.filter((item) => item.status === "ERROR") || [];
-                if (failed.some((item) => item.repairQueued !== true)) {
-                    throw new Error("INVENTORY_REFUND_REPAIR_QUEUE_FAILED");
-                }
-            } else if (inventoryRefundResult.status !== "SUCCESS") {
-                throw new Error("INVENTORY_REFUND_SYNC_FAILED");
-            }
-        }
-
 
         const emisor = await _getEmisorFiscal();
         const todayDate = new Date().toLocaleDateString("sv-SE", {
