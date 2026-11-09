@@ -457,6 +457,7 @@ Los hooks `beforeUpdate` y `beforeRemove` en `MovimientosCaja`, `LibroAsientosCo
 | `SLOT_LOCK` | Bloqueo temporal de slot durante saga dual |
 | `WEBHOOK_EVENT` | Deduplicación de eventos webhook (append-only) |
 | `DEDUPE_KEY` | Tipo de control para claims durables de deduplicación (contabilidad/inventario); `dedupeKey` es el campo llave del registro. |
+| `LEDGER_IDEMPOTENCY` | Claim durable de idempotencia de movimientos de caja; excluido de la purga de IDEMPOTENCY a 24 h. |
 | `RATE_LIMIT` | Control de frecuencia por surface/IP |
 | `SYSTEM_FLAG` | Alertas y flags de sistema |
 | `IDEMPOTENCY` | Control transaccional genérico |
