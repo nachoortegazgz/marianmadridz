@@ -1768,9 +1768,9 @@ export async function wixEcom_onOrderCreated(rawBody) {
         return { status: "OK", eventId, inventoryStatus: result.status };
     } catch (error) {
         _handleError(error, "wixEcom_onOrderCreated", traceId);
-        // Wix backend events are delivered at least once. Never acknowledge a
-        // failed persistence/reconciliation path: propagate so the delivery
-        // can be retried. Inventory and CMS writes remain idempotent.
+        // Wix event delivery is asynchronous and at least once, so handlers
+        // must remain idempotent. Do not report failed persistence as success;
+        // the scheduled native-order reconciler provides independent recovery.
         throw error;
     }
 }
