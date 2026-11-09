@@ -144,7 +144,7 @@ test("INVENTORY-WRITER-01 mirrors native Wix Catalog V3 stock without writing to
   assert.equal(stock.stockOnHand, 6);
   assert.equal(stock.stockReserved, 1);
   assert.equal(stock.stockAvailable, 5);
-  assert.equal(stock.catalogVersion, "V1_CATALOG");
+  assert.equal(stock.catalogVersion, "V3_CATALOG");
 
   const movements = wixDataMock._store.get(MOVEMENTS_COL);
   assert.equal(movements.length, 1);
