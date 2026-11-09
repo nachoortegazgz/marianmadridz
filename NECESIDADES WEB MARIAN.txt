@@ -34,8 +34,8 @@ El sitio web no debe ser un escaparate estático. Debe ser una **herramienta de 
 
 | ID | Requisito | Descripción | Criterio de aceptación | Estado de verificación |
 |---|---|---|---|---|
-| RF-01 | Reserva online 24/7 | La clienta debe poder reservar sin depender del teléfono. | Flujo completo de selección de servicio, fecha, hora y confirmación funcional en producción. | ✅ Declarado |
-| RF-02 | Tiempos fraccionados / solapables | Un servicio de 90 min (ej. Babylights) debe dividirse en fases: aplicación (staff ocupado), exposición (staff liberado, sillón ocupado), lavado/peinado (staff ocupado). | El algoritmo de disponibilidad libera la agenda durante la fase de exposición para permitir cortes rápidos o servicios cortos simultáneos. | VERIFICADO EN CÓDIGO; `reservas.web.js` y saga dual presentes. Lectura Wix: 94/94 servicios CMS↔Bookings y 24/24 vínculos F2 coherentes. E2E runtime pendiente. |
+| RF-01 | Reserva online 24/7 | La clienta debe poder reservar sin depender del teléfono. | Flujo completo de selección de servicio, fecha, hora y confirmación funcional en producción. | PARCIAL; Wix Bookings devuelve servicios y disponibilidad en lectura. No se ha ejecutado creación de reserva, confirmación ni checkout E2E. |
+| RF-02 | Tiempos fraccionados / solapables | Un servicio con fases (ej. Babylights: 150 min configurados en CMS/Bookings al 09-11-2026) debe dividirse en fases: aplicación (staff ocupado), exposición (staff liberado, sillón ocupado), lavado/peinado (staff ocupado). | El algoritmo de disponibilidad libera la agenda durante la fase de exposición para permitir cortes rápidos o servicios cortos simultáneos. | VERIFICADO EN CÓDIGO; `reservas.web.js` y saga dual presentes. Lectura Wix: 94/94 servicios CMS↔Bookings y 24/24 vínculos F2 coherentes. E2E runtime pendiente. |
 | RF-03 | Configuración de fases por servicio | Cada servicio debe permitir configurar: duración total, minutos de aplicación, minutos de exposición, minutos de acabado. | Campos personalizados en Wix Bookings operativos y leídos correctamente por el backend. | PARCIAL; campos de fases en CMS y servicios nativos conciliados en lectura. Falta probar configuración/edición desde Wix y runtime. |
 | RF-04 | Servicios cortos compatibles/complementos | Debe existir catálogo de complementos (ejemplo: secado, manicura) reservables durante la fase de exposición. | Verificado en pruebas: reserva simultánea de tinte + corte sin conflicto de agenda. | PENDIENTE; el catálogo de complementos aparece en código, pero no se ha ejecutado la reserva simultánea de servicios en Wix QA. |
 | RF-05 | Sincronización con Google Calendar | La agenda debe sincronizarse con el calendario del salón. | Wix Bookings configurado con sincronización activa. | PENDIENTE DE VERIFICAR; Wix Bookings está instalado, pero no se ha comprobado la sincronización Google Calendar en la configuración del sitio. |
@@ -46,8 +46,8 @@ El sitio web no debe ser un escaparate estático. Debe ser una **herramienta de 
 |---|---|---|---|---|
 | RF-06 | Fianza para servicios > 30 € | Cobro obligatorio de señal (15 € o 20%) en el momento de la reserva para servicios de importe superior a 30 €. | Regla condicional operativa: servicios ≤ 30 € → pago opcional; servicios > 30 € → fianza obligatoria. | NO IMPLEMENTADO. No existe `createDepositPaymentOrder` ni `bookingsEngine.web.js`. Conflicto de política: RF-06 indica >30 € y 15 €/20%; Dossier P10.4 indica 30% para >50 €. Requiere decisión aprobada antes de programar. |
 | RF-07 | Pasarela de pago segura | Integración mediante Wix Payments, proveedor de pagos nativo de Wix. Los métodos concretos se limitan a los que estén disponibles y habilitados para España y esta cuenta. | Pago procesado por Wix Payments y confirmación recibida mediante el flujo nativo de Wix eCommerce/webhook. | Declarado por el propietario; activación y métodos de la cuenta pendientes de comprobación en el panel. |
-| RF-08 | Política de cancelación | Reembolso automático si cancela con ≥ 24 h de antelación; retención si cancela después. | `cancellationPolicyHours = 24` configurado y webhook de reembolso operativo. | ✅ Declarado — **pendiente verificar webhook real** |
-| RF-09 | Descuento en ticket final | La fianza debe ser descontable del importe total del servicio. | Lógica de descuento aplicada en el checkout final. | ⚠️ No declarado explícitamente en código — **requiere verificación** |
+| RF-08 | Política de cancelación | Reembolso automático si cancela con ≥ 24 h de antelación; retención si cancela después. | `cancellationPolicyHours = 24` configurado y webhook de reembolso operativo. | PARCIAL; en la política nativa consultada figura cancelación/reprogramación con 1440 minutos. No se ha validado el reembolso automático ni el webhook en E2E. |
+| RF-09 | Descuento en ticket final | La fianza debe ser descontable del importe total del servicio. | Lógica de descuento aplicada en el checkout final. | NO IMPLEMENTADO/BLOQUEADO; no existe flujo `createDepositPaymentOrder` ni política de fianza aprobada. No se puede acreditar descuento de señal en ticket final. |
 
 ### 2.3. Asistente de IA capilar (Prioridad 🟡 Media)
 
@@ -97,7 +97,7 @@ El sitio web no debe ser un escaparate estático. Debe ser una **herramienta de 
 | RF-31 | Registro/login de clientes | Área privada para gestionar perfil, historial de citas y compras. | Wix Members configurado. | APP NATIVA INSTALADA; Wix Members Area. Rutas, permisos y flujo completo de perfil/reservas/compras pendientes de E2E. |
 | RF-32 | Blog y contenido social | Integración con Instagram, TikTok, Facebook, YouTube y sección de noticias/consejos. | Wix Blog está instalado y existe la página `/blog`; la integración con redes sociales no está verificada. |
 | RF-33 | Formulario de contacto + mapa | Formulario web, Google Maps, teléfonos y WhatsApp directos. | Wix Forms & Payments está instalado; configuración de formularios, recepción, mapa y enlaces externos pendientes de comprobación en sitio publicado. |
-| RF-34 | Catálogo de servicios estructurado | Clasificación por categorías (Básicos & Luxury, Babylights, Corte de Autor, Ritual Barba, Pack Madre e Hija) con precios claros. | ✅ Declarado |
+| RF-34 | Catálogo de servicios estructurado | Clasificación por categorías (Básicos & Luxury, Babylights, Corte de Autor, Ritual Barba, Pack Madre e Hija) con precios claros. | VERIFICADO EN LECTURA PARCIAL; CMS y Wix Bookings contienen 94 servicios, 70 visibles y 24 ocultos. La presentación por categorías y precios en la UI publicada requiere revisión visual. |
 
 ---
 
@@ -142,7 +142,7 @@ El sitio web no debe ser un escaparate estático. Debe ser una **herramienta de 
 | RL-18 | Política de Privacidad | Enlace visible en web. | ⚠️ **Verificar contenido actualizado** | 🟡 Pendiente |
 | RL-19 | Política de Cookies | Enlace visible y coherente con el banner. | ⚠️ **Verificar contenido actualizado** | 🟡 Pendiente |
 | RL-20 | Términos y Condiciones de compra | Debe incluir derecho de desistimiento 14 días y excepción Art. 103 para cosméticos desprecintados. | ⚠️ No declarado — **requiere implementación** | 🟡 Pendiente |
-| RL-21 | Precios con IVA incluido | Todo precio mostrado al consumidor debe indicar "IVA incl.". | ✅ Declarado en frontend (`reserva-online.js`) | ✅ Declarado |
+| RL-21 | Precios con IVA incluido | Todo precio mostrado al consumidor debe indicar "IVA incl.". | ✅ Declarado en frontend (`reserva-online.js`) | PENDIENTE DE VERIFICAR; no existe controlador `reserva-online.js` en `src/pages/`. La lectura CMS/Bookings devuelve importes, pero no demuestra que la UI publicada indique «IVA incl.» en todos los precios. |
 
 ---
 
@@ -157,11 +157,11 @@ El sitio web no debe ser un escaparate estático. Debe ser una **herramienta de 
 | RT-03 | Secretos en `wix-secrets-backend` | Claves API y HMAC nunca en cliente. | `getSecret()` usado en backend. | ✅ Declarado |
 | RT-04 | `suppressAuth: true` en operaciones admin | Inserciones/consultas administrativas protegidas. | Aplicado en `wixData.insert/query/update` sensibles. | ✅ Declarado |
 | RT-05 | `consistentRead: true` | En consultas críticas para erradicar inconsistencias de lectura. | ⚠️ Declarado en dossier inicial; **verificar en código real** | 🟡 Pendiente |
-| RT-06 | Extractor polimórfico de precio | Soportar `service.price` como número, objeto `{ amount }` o `service.payment.rate`. | `extractServicePrice()` implementado. | ✅ Declarado |
+| RT-06 | Extractor polimórfico de precio | Soportar `service.price` como número, objeto `{ amount }` o `service.payment.rate`. | `extractServicePrice()` implementado. | NO IMPLEMENTADO COMO SE ESPECIFICA; `extractServicePrice()` no existe en `src/`. El DTO de reservas convierte `price` con `Number(...)`; no se ha acreditado compatibilidad polimórfica con `{ amount }` o `payment.rate`. |
 | RT-07 | Timeout IA | `AbortController` a 9 s. | ⚠️ Declarado en auditoría; **verificar en código real** | NO OPERATIVO; no hay proveedor IA configurado, por lo que no se ejecuta llamada con timeout. |
 | RT-08 | Fallback IA | Respuesta estructurada si falla el parseo JSON. | Objeto fallback con claves esperadas. | NO OPERATIVO; no se acredita fallback de respuesta IA porque el proveedor está deshabilitado y el backend falla cerrado. |
 | RT-09 | Prevención race condition gift cards | Sanitización + comprobación atómica de saldo. | Test de doble lectura rápida → segunda rechazada. | NO IMPLEMENTADO EN CÓDIGO PROPIO; no hay módulo Gift Cards ni saldo propio sobre el que verificar concurrencia. |
-| RT-10 | CSV UTF-8 BOM + `;` + decimal `,` | Compatibilidad con Excel Windows y software contable español. | Verificado en `accountingExport.web.js`. | NO IMPLEMENTADO; no existe `accountingExport.web.js` ni serializador CSV de gestoría. |
+| RT-10 | CSV UTF-8 BOM + `;` + decimal `,` | Compatibilidad con Excel Windows y software contable español. | Cuando se implemente: delimitador `;`, decimal `,`, UTF-8 BOM y pruebas de compatibilidad. | NO IMPLEMENTADO; no existe `accountingExport.web.js` ni serializador CSV de gestoría. |
 
 ### 4.2. Persistencia (Wix Data Collections)
 
