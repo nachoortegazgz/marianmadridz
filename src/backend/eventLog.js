@@ -111,6 +111,13 @@ export function normalizeLinkedBookingIds(value) {
     return [...new Set(values.map((item) => _safeTrim(item)).filter(Boolean))];
 }
 
+export function isCancellationRectification(input = {}) {
+    return _safeTrim(input.movementType).toUpperCase() === MOVEMENT_TYPE.REEMBOLSO &&
+        _safeTrim(input.eventType).toUpperCase() === EVENT_TYPE.RECTIFICATIVA &&
+        _safeTrim(input.transactionId).startsWith("RECT-") &&
+        Boolean(_safeTrim(input.previousInvoiceId));
+}
+
 // ============================================================================
 // CONSTANTES (ALN-01, ALN-03)
 // ============================================================================
@@ -537,11 +544,7 @@ export async function registrarEventoEconomico(input) {
             const isEcommerceRefund = refundTransactionId.startsWith("REFUND-") || Boolean(refundId);
 
             if (!isEcommerceRefund) {
-                const isCancellationRectification =
-                    _safeTrim(input.eventType).toUpperCase() === EVENT_TYPE.RECTIFICATIVA &&
-                    refundTransactionId.startsWith("RECT-") &&
-                    Boolean(_safeTrim(input.previousInvoiceId));
-                if (!isCancellationRectification) throw new Error("REFUND_IDENTITY_INVALID");
+                if (!isCancellationRectification(input)) throw new Error("REFUND_IDENTITY_INVALID");
             } else {
                 if (!refundOrderId || !refundId || refundTransactionId !== `REFUND-${refundOrderId}-${refundId}`) {
                     throw new Error("REFUND_IDENTITY_INVALID");
@@ -1045,6 +1048,7 @@ export async function reconciliarProyecciones() {
 export const __test__ = {
     normalizeAccountingAmount,
     normalizeLinkedBookingIds,
+    isCancellationRectification,
 };
 
 export default {
