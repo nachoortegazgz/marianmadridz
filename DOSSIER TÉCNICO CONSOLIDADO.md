@@ -3693,9 +3693,9 @@ Este anexo actualiza las referencias históricas de este dossier que indican Cat
 
 ## Wix Invoices — decisión vigente
 
-- El sitio conserva Wix Invoices legacy (referido históricamente en este dossier como V1).
-- No se ha verificado una API Wix Invoices V2. La documentación actual consultada expone Invoices API V4.
-- En el sitio, GET de invoices-settings responde 200, pero la consulta de facturas V4 responde HTTP 428 INVOICES_API_UNAVAILABLE. La habilitación de la nueva API no está disponible para este sitio en esta fecha.
+- GetSiteContext identifica la aplicación Wix Invoices instalada como versión V1.
+- No se ha verificado una Invoices API V2 habilitada para este sitio. La nueva API Get Paid Invoices se documenta bajo el SDK @wix/get-paid y rutas API v4; no debe confundirse la versión de ruta REST con la versión de la aplicación Wix.
+- La documentación oficial indica que Get Paid Invoices se despliega gradualmente y que sitios aún no migrados reciben HTTP 428. En el sitio, GET de invoices-settings responde 200, pero POST /invoices/v4/invoices/query responde 428 INVOICES_API_UNAVAILABLE; por tanto, el CRUD nuevo no está habilitado.
 - Se conserva el flujo actual. No se conecta un segundo emisor ni se cambia numeración/series/ledger fiscal hasta que Wix habilite la API vigente y exista ADR específica de coexistencia/migración.
 
 ## Fuentes oficiales
