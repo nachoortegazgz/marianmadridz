@@ -128,7 +128,7 @@ export async function allocateFiscalSequence(lock, lastMovement, traceId) {
             await _sleep(100 * (attempt + 1));
         }
     }
-    throw new Error(`SEQUENCE_ERROR: ${String(traceId || "unknown")}`);
+    throw new Error("SEQUENCE_ERROR");
 }
 
 export async function rollbackFiscalSequence(lock, sequence, traceId) {
