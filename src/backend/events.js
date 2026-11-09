@@ -303,10 +303,10 @@ const VAT_ACCRUAL_DEVENGADO = "DEVENGADO";
 // para el ledger fiscal. El canal "ONLINE" se conserva en channelType.
 const LEDGER_PAYMENT_METHOD_ONLINE = PAYMENT_METHOD.WIX_PAYMENTS;
 
-const WEBHOOK_RETRIES = Number(SDK_CONFIG?.EVENTS?.RETRY_ATTEMPTS) || 3;
+const WEBHOOK_RETRIES = SDK_CONFIG.EVENTS.RETRY_ATTEMPTS;
 const WEBHOOK_RETRY_DELAY_MS =
-    Number(SDK_CONFIG?.EVENTS?.RETRY_BASE_BACKOFF_MS) || 1000;
-const API_TIMEOUT_MS = Number(SDK_CONFIG?.TIMEOUTS?.WEBHOOK_MS) || 30000;
+    SDK_CONFIG.EVENTS.RETRY_BASE_BACKOFF_MS;
+const API_TIMEOUT_MS = SDK_CONFIG.TIMEOUTS.WEBHOOK_MS;
 
 const EMISOR_FALLBACK_NAME = "MARIAN MADRID";
 const EVENT_TTL_HOURS = 72;
@@ -1632,7 +1632,7 @@ export async function wixBookingsV2_onBookingCanceled(rawBody) {
                             "sv-SE",
                             {
                                 timeZone:
-                                    SDK_CONFIG?.TZ || "Europe/Madrid",
+                                    SDK_CONFIG.TZ,
                             }
                         ),
                         tipoFactura: TIPO_FACTURA.R1,
@@ -2052,7 +2052,7 @@ export async function wixEcom_onOrderPaymentStatusUpdated(rawBody) {
                 operationDescription: orderConcept,
                 numSerieFactura: null,
                 fechaExpedicionFactura: new Date().toLocaleDateString("sv-SE", {
-                    timeZone: SDK_CONFIG?.TZ || "Europe/Madrid",
+                    timeZone: SDK_CONFIG.TZ,
                 }),
                 // ALN-04: TIPO_FACTURA
                 tipoFactura: fiscalData.isB2B
@@ -2375,7 +2375,7 @@ export async function wixEcom_onOrderRefunded(rawBody) {
 
         const emisor = await _getEmisorFiscal();
         const todayDate = new Date().toLocaleDateString("sv-SE", {
-            timeZone: SDK_CONFIG?.TZ || "Europe/Madrid",
+            timeZone: SDK_CONFIG.TZ,
         });
 
         let eventResult;
