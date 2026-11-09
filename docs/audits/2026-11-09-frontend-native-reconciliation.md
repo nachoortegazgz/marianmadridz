@@ -192,7 +192,7 @@ Cambios propuestos:
 - Controlador de ZONA STAFF ya no sugiere un módulo inexistente ni describe como implementado un enrutamiento de caja que solo registra mensajes.
 - Pruebas de contrato estáticas para ambas rutas.
 
-**Estado:** cambios en rama; no fusionados, no desplegados. Las pruebas de CI de esta rama quedan pendientes de ejecución. No se ha modificado Wix CMS, stock, reservas, pagos, tarjetas ni ledgers.
+**Estado:** cambios en rama; no fusionados, no desplegados. CI del commit de código `3fc7482` completada con SUCCESS (run #42671109488): 50 suites, 479 tests, 0 fallos; contratos SDK y ESLint también SUCCESS. Los commits posteriores de esta rama solo actualizan documentación. No se ha modificado Wix CMS, stock, reservas, pagos, tarjetas ni ledgers.
 
 ## 8. Siguiente secuencia de trabajo
 
