@@ -453,3 +453,101 @@ test('CRON-DUAL-RECONCILE-03 does not reconcile pairs with mismatched payment st
   assert.equal(result.failed, 1);
   assert.equal(flag.payload.status, 'REPAIR_REQUIRED');
 });
+
+
+test('CRON-ORDER-CREATED-01 reconciles bookings-only orders and flags product/mixed orders without stock or cash writes', async () => {
+  wixDataMock._reset();
+  const bookingsAppId = IC.WIX_CATALOG_APP_IDS.BOOKINGS;
+  const storesAppId = IC.WIX_CATALOG_APP_IDS.STORES;
+  const bookingOrderA = {
+    id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1',
+    number: 20001,
+    status: 'APPROVED',
+    paymentStatus: 'NOT_PAID',
+    lineItems: [{ catalogReference: { appId: bookingsAppId } }],
+  };
+  const bookingOrderB = {
+    id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2',
+    number: 20002,
+    status: 'CANCELED',
+    paymentStatus: 'NOT_PAID',
+    lineItems: [{ catalogReference: { appId: bookingsAppId } }],
+  };
+  const mixedOrder = {
+    id: 'cccccccc-cccc-4ccc-8ccc-ccccccccccc3',
+    number: 20003,
+    status: 'APPROVED',
+    paymentStatus: 'PAID',
+    lineItems: [
+      { catalogReference: { appId: bookingsAppId } },
+      { catalogReference: { appId: storesAppId } },
+    ],
+  };
+  const searches = [];
+  mocks.sdk['@wix/ecom::orders'] = {
+    searchOrders: async (search) => {
+      searches.push(search);
+      if (search.filter?.status === 'PENDING' || search.filter?.status === 'REJECTED') {
+        return { orders: [], metadata: { hasNext: false, cursors: {} } };
+      }
+      if (!search.cursorPaging?.cursor) {
+        return {
+          orders: [bookingOrderA, mixedOrder],
+          metadata: { hasNext: true, cursors: { next: 'orders-page-2' } },
+        };
+      }
+      return {
+        orders: [bookingOrderB],
+        metadata: { hasNext: false, cursors: {} },
+      };
+    },
+  };
+
+  const result = await CR.reconcileUnmarkedOrderCreatedEvents();
+  assert.equal(result.ordersRead, 3);
+  assert.equal(result.reconciled, 2);
+  assert.equal(result.reviewRequired, 1);
+  assert.equal(result.failed, 0);
+  assert.ok(searches.length >= 4, 'default orders and explicit PENDING/REJECTED searches must run');
+
+  const rows = wixDataMock._store.get(IC.OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO) || [];
+  const markers = rows.filter(row =>
+    row.controlType === IC.CONTROL_TYPE.WEBHOOK_EVENT &&
+    row.payload?.eventType === 'ORDER_CREATED_RECONCILED'
+  );
+  const alerts = rows.filter(row =>
+    row.controlType === IC.CONTROL_TYPE.ALERT &&
+    row.alertType === 'ORDER_CREATED_RECONCILIATION_REQUIRED'
+  );
+  assert.equal(markers.length, 2);
+  assert.equal(alerts.length, 1);
+  assert.ok(markers.every(row => row.traceId && row.eventId && row.orderId));
+  assert.ok(markers.every(row => row.payload?.metadata?.inventoryAction === 'NOT_REQUIRED_BOOKINGS_ONLY'));
+  assert.equal(rows.some(row => row.orderId === mixedOrder.id && row.payload?.eventType === 'ORDER_CREATED_RECONCILED'), false);
+  assert.equal((wixDataMock._store.get(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA) || []).length, 0);
+  assert.equal((wixDataMock._store.get(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_INVENTARIO) || []).length, 0);
+
+  const replay = await CR.reconcileUnmarkedOrderCreatedEvents();
+  assert.equal(replay.reconciled, 0);
+  assert.equal(replay.skipped, 2);
+  const rowsAfterReplay = wixDataMock._store.get(IC.OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO) || [];
+  assert.equal(rowsAfterReplay.filter(row => row.payload?.eventType === 'ORDER_CREATED_RECONCILED').length, 2);
+  assert.equal(rowsAfterReplay.filter(row => row.alertType === 'ORDER_CREATED_RECONCILIATION_REQUIRED').length, 1);
+
+  delete mocks.sdk['@wix/ecom::orders'];
+});
+
+test('CRON-ORDER-CREATED-02 fails closed when native order pagination cannot continue', async () => {
+  wixDataMock._reset();
+  mocks.sdk['@wix/ecom::orders'] = {
+    searchOrders: async () => ({
+      orders: [],
+      metadata: { hasNext: true, cursors: {} },
+    }),
+  };
+  await assert.rejects(
+    CR.reconcileUnmarkedOrderCreatedEvents(),
+    /ORDER_SEARCH_NEXT_CURSOR_MISSING/
+  );
+  delete mocks.sdk['@wix/ecom::orders'];
+});
