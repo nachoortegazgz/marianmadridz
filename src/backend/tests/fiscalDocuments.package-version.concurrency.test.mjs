@@ -35,7 +35,7 @@ test('FDOC-VERSION-03 fiscal package history remains a snapshot and is not mutat
 
 test('FDOC-DISPATCH-01 accountant email dispatch fails closed until immutable dispatch snapshots are implemented', () => {
   assert.match(source, /ACCOUNTANT_SEND_ENABLED\s*=\s*SDK_CONFIG\.EMAIL\.ACCOUNTANT_SEND_ENABLED\s*===\s*true/);
-  assert.match(source, /ACCOUNTANT_SEND_ENABLED:\s*false/);
+  assert.match(config, /ACCOUNTANT_SEND_ENABLED:\s*false/);
   assert.match(source, /function _accountantSendDisabledResult\(traceId\)/);
   for (const methodName of ['sendManagerPackageToAccountant', 'sendSpecificDocumentToAccountant']) {
     const start = source.indexOf(`export const ${methodName} = webMethod(`);
