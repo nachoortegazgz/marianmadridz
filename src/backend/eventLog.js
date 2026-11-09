@@ -299,7 +299,11 @@ function _buildAEATPayload(movement, generatedAt) {
     return fields.map(([k, v]) => `${k}=${v}`).join("&");
 }
 
-// SECCION 2 - LECTURA DEL HEAD FISCAL\n// ============================================================================\n\nasync function _getLastCashEvent() {
+// ============================================================================
+// SECCION 2 - LECTURA DEL HEAD FISCAL
+// ============================================================================
+
+async function _getLastCashEvent() {
     const res = await dalQuery(MOVIMIENTOS_CAJA_COL)
         .descending("sequenceNumber")
         .limit(1)
