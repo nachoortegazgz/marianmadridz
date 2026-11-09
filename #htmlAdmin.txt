@@ -514,21 +514,27 @@
       /* ── Caja ── */
       function renderCashier(state) {
         if (!state) { cashSaldo.textContent='--'; cashOps.textContent='--'; cashDiaKey.textContent='--'; return; }
-        cashSaldo.textContent = money(state.saldoTotal);
-        cashOps.textContent = Number.isFinite(Number(state.totalOperaciones)) ? String(state.totalOperaciones) : '--';
-        cashDiaKey.textContent = state.diaKey || '--';
+        // DTO canónico de cajas.web.js:getCashierState.
+        cashSaldo.textContent = money(state.netAmount);
+        cashOps.textContent = Number.isFinite(Number(state.totalOperations)) ? String(state.totalOperations) : '--';
+        cashDiaKey.textContent = state.operationDate || '--';
       }
       function renderTicket(t) {
-        if (!t) { cashTicket.style.display='none'; return; }
+        if (!t) { cashTicket.style.display='none'; cashTicket.replaceChildren(); return; }
         cashTicket.style.display = 'block';
-        const rows = [];
-        rows.push(`<div style="text-align:center;font-weight:900;text-transform:uppercase">${t.title || 'TICKET'}</div>`);
-        if (t.ticketNumber) rows.push(`Nº: ${t.ticketNumber}`);
-        if (t.concept) rows.push(`Concepto: ${t.concept}`);
-        if (t.amount != null) rows.push(`Importe: ${money(t.amount)}`);
-        if (t.traceId) rows.push(`Traza: ${t.traceId}`);
-        if (t.fiscalFingerprint) rows.push(`Huella fiscal: ${t.fiscalFingerprint}`);
-        cashTicket.innerHTML = rows.join('<br/>');
+        cashTicket.replaceChildren();
+        const appendLine = (value, style) => {
+          const line = document.createElement('div');
+          if (style) line.style.cssText = style;
+          line.textContent = String(value);
+          cashTicket.appendChild(line);
+        };
+        appendLine(t.title || 'TICKET', 'text-align:center;font-weight:900;text-transform:uppercase');
+        if (t.ticketNumber) appendLine('Nº: ' + t.ticketNumber);
+        if (t.concept) appendLine('Concepto: ' + t.concept);
+        if (t.amount != null) appendLine('Importe: ' + money(t.amount));
+        if (t.traceId) appendLine('Traza: ' + t.traceId);
+        if (t.fiscalFingerprint) appendLine('Huella fiscal: ' + t.fiscalFingerprint);
       }
       btnRefreshCash.addEventListener('click', () => send(MESSAGE_TYPES.CASHIER_STATE, {}));
       btnZClosing.addEventListener('click', () => {
@@ -733,15 +739,17 @@
       fallbackTimer = setTimeout(() => {
         if (!contextData) {
           console.warn('[admin-widget] MM_CONTEXT no recibido, aplicando defaults');
+          // Fallback fail-closed: no activar funciones que dependen de un
+          // contexto/contrato backend que no ha llegado.
           applyContext({
             roleLabel: 'PROPIETARIA',
             enableClocking: false,
             enableCashier: true,
-            enableInventory: true,
-            enableScheduleQuery: true,
-            enableStaffManagement: true,
-            enableAIAssistant: true,
-            enableAccountantSend: true,
+            enableInventory: false,
+            enableScheduleQuery: false,
+            enableStaffManagement: false,
+            enableAIAssistant: false,
+            enableAccountantSend: false,
             enableFiscal: true,
             enableDocuments: true,
             timeZone: 'Europe/Madrid',
