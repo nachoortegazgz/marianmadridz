@@ -447,7 +447,7 @@ test("EVENT-PAYMENT-09 official Wix eCommerce paid event appends WIX_PAYMENTS le
   assert.equal(movement.taxBase, 37.6);
   assert.equal(movement.taxAmount, 7.9);
   assert.equal(movement.tipoImpositivo, 21);
-  assert.equal(movement.breakdown?.[0]?.cuota, 7.9);
+  assert.equal(movement.desgloseDetallado?.[0]?.cuota, 7.9);
   assert.equal(movement.paymentMethod, IC.PAYMENT_METHOD.WIX_PAYMENTS);
   assert.equal(movement.movementType, IC.MOVEMENT_TYPE.VENTA_ONLINE);
   assert.equal(movement.channelType, IC.CHANNEL_TYPE.ONLINE);

@@ -40,12 +40,7 @@ jobs:
       - name: Install locked dependencies without lifecycle scripts
         run: npm ci --ignore-scripts --no-audit --no-fund
 
-      - name: Run Layer 1 QA simulation
-        run: npm run test:layer1
-
-      - name: Run Layer 2 QA simulation
-        run: npm run test:layer2
-
+      # The canonical npm test runner includes every Layer 1 and Layer 2 suite once.
       - name: Run complete offline regression suite
         run: npm test
 
