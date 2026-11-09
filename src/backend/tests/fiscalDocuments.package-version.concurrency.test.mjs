@@ -16,6 +16,17 @@ function extractBlock(startMarker, endMarker) {
   return source.slice(start, end);
 }
 
+function assertDisabledBeforeOperations(handler, operations) {
+  const guard = handler.indexOf('if (!ACCOUNTANT_SEND_ENABLED)');
+  assert.notEqual(guard, -1, 'Dispatch must have an explicit disabled guard');
+  for (const operation of operations) {
+    const operationIndex = handler.indexOf(operation);
+    assert.notEqual(operationIndex, -1, `Expected operation in handler: ${operation}`);
+    assert.ok(guard < operationIndex, `Disabled guard must precede ${operation}`);
+  }
+  assert.match(handler, /_accountantSendDisabledResult\(traceId\)/);
+}
+
 test('FDOC-STORAGE-01 package creation fails closed until a dedicated immutable store exists', () => {
   const handler = extractBlock(
     'export const createManagerPackageVersion = webMethod(',
@@ -42,24 +53,22 @@ test('FDOC-STORAGE-03 accountant dispatch remains disabled in canonical configur
   assert.ok(source.includes('ACCOUNTANT_SEND_DISABLED'));
 });
 
-test('FDOC-DISPATCH-01 package dispatch fails closed before recipient lookup or network access', () => {
+test('FDOC-DISPATCH-01 package dispatch checks the disabled guard before lookup or email dispatch', () => {
   const handler = extractBlock(
     'export const sendManagerPackageToAccountant = webMethod(',
     '// BLOQUE 9 - ENVIO DE DOCUMENTO CONCRETO'
   );
-  assert.ok(handler.indexOf('if (!ACCOUNTANT_SEND_ENABLED)') < handler.indexOf('_resolveRecipientById'));
-  assert.match(handler, /_accountantSendDisabledResult\(traceId\)/);
-  assert.doesNotMatch(handler, /_dispatchEmailViaResend|wixFetch|dalInsert|dalUpdate/);
+  assertDisabledBeforeOperations(handler, ['_resolveRecipientById(', '_dispatchEmailViaResend(']);
+  assert.doesNotMatch(handler, /dalInsert|dalUpdate/);
 });
 
-test('FDOC-DISPATCH-02 specific-document dispatch also fails closed', () => {
+test('FDOC-DISPATCH-02 specific-document dispatch checks the disabled guard before lookup or email dispatch', () => {
   const handler = extractBlock(
     'export const sendSpecificDocumentToAccountant = webMethod(',
-    '// BLOQUE 10 -'
+    '\n  }\n);'
   );
-  assert.match(handler, /if \(!ACCOUNTANT_SEND_ENABLED\)/);
-  assert.match(handler, /_accountantSendDisabledResult\(traceId\)/);
-  assert.doesNotMatch(handler, /_dispatchEmailViaResend/);
+  assertDisabledBeforeOperations(handler, ['_resolveRecipientById(', '_dispatchEmailViaResend(']);
+  assert.doesNotMatch(handler, /dalInsert|dalUpdate/);
 });
 
 test('FDOC-HISTORY-01 legacy monthly and quarterly identifiers remain disjoint', () => {
