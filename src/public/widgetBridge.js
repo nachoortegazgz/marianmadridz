@@ -20,7 +20,7 @@ export const PROTOCOL_URLS = Object.freeze({
     ADMIN_PANEL: "/zona-marian",
     MIS_RESERVAS: "/my-bookings",
     CALENDARIO_2: "/booking-calendar",
-    PRIVACY_POLICY: "/politica-de-privacidad"
+    PRIVACY_POLICY: "/politica-privacidad-texto"
 });
 export const PROTOCOL_UI = Object.freeze({
     FRONTEND_API_TIMEOUT_MS: 210000,
