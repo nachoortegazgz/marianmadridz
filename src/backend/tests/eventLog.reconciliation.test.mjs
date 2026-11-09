@@ -33,3 +33,30 @@ test("EVENTLOG-LINK-01 booking references are normalized to a unique array", () 
   );
   assert.deepEqual(eventLogTest.normalizeLinkedBookingIds(null), []);
 });
+
+
+test("EVENTLOG-RECT-01 only referenced RECT cancellation records bypass eCommerce refund identity", () => {
+  assert.equal(eventLogTest.isCancellationRectification({
+    movementType: "REEMBOLSO",
+    eventType: "RECTIFICATIVA",
+    transactionId: "RECT-BOOKING-123",
+    previousInvoiceId: "F2-2026-000123",
+  }), true);
+  assert.equal(eventLogTest.isCancellationRectification({
+    movementType: "REEMBOLSO",
+    eventType: "RECTIFICATIVA",
+    transactionId: "REFUND-ORDER-1-REFUND-1",
+    previousInvoiceId: "F2-2026-000123",
+  }), false);
+  assert.equal(eventLogTest.isCancellationRectification({
+    movementType: "REEMBOLSO",
+    eventType: "VENTA",
+    transactionId: "RECT-BOOKING-123",
+    previousInvoiceId: "F2-2026-000123",
+  }), false);
+  assert.equal(eventLogTest.isCancellationRectification({
+    movementType: "REEMBOLSO",
+    eventType: "RECTIFICATIVA",
+    transactionId: "RECT-BOOKING-123",
+  }), false);
+});
