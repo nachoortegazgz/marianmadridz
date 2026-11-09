@@ -15,7 +15,7 @@ CAMBIOS DE ALINEACION v5015-ALIGNED (respecto a v5009-FISCAL-V20.1):
   ALN-02: PROCESSED_WEBHOOK_EVENTS (coleccion inexistente en v12.0) se
           consolida en ControlOperativo con controlType = WEBHOOK_EVENT.
           El _id se mantiene como normalizacion del eventId (<=100 chars).
-  ALN-03: BOOKING_STATUS.CANCELLED (dos L) -> BOOKING_STATUS.CANCELED
+  ALN-03: BOOKING_STATUS.CANCELED -> BOOKING_STATUS.CANCELED
           (enum Wix nativo correcto en v12.0).
   ALN-04: AEAT_INVOICE_TYPE -> TIPO_FACTURA.
   ALN-05: VAT_ACCRUAL_STATUS no existe en v12.0. Constante local
