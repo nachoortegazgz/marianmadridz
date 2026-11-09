@@ -39,7 +39,8 @@ El repositorio contiene una solución Wix Editor/Velo con reservas Bookings V2, 
 
 - Main incorpora PR #229 (correcciones Capa 1), PR #230 (checkpoint documental) y PR #231 (smoke live y reconciliación Catalog V3).
 - Run #42656024671: 50 suites, 477 tests, 0 fallos; contratos SDK de Cart V2, Wix Data patch/bulkPatch y Bookings Reader V2.
-- Run #42656358136: CI del checkpoint documental, SUCCESS.\n- PR #232, run #42671109488 sobre el commit de código `3fc7482`: 50 suites, 479 tests, 0 fallos; SDK contracts y ESLint SUCCESS. Los commits posteriores en la rama son solo documentación.
+- Run #42656358136: CI del checkpoint documental, SUCCESS.
+- PR #232, run #42671109488 sobre el commit de código `3fc7482`: 50 suites, 479 tests, 0 fallos; SDK contracts y ESLint SUCCESS. Los commits posteriores en la rama son solo documentación.
 - La CI es offline: mocks/fixtures no prueban hooks CMS, permisos efectivos, SDK importado en Velo, webhooks reales ni concurrencia en Wix.
 
 ### Smoke live read-only — 2026-11-09
