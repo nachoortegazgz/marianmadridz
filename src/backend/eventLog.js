@@ -97,7 +97,7 @@ const REFUND_MOVEMENT_TYPES = new Set([
     MOVEMENT_TYPE.DEVOLUCION_SERVICIO,
 ]);
 
-export function normalizeAccountingAmount(input = {}) {
+function normalizeAccountingAmount(input = {}) {
     const movementType = _safeTrim(input.movementType).toUpperCase();
     const rawAmount = Number(input.accountingAmount ?? input.totalAmount ?? 0);
     if (!Number.isFinite(rawAmount)) throw new Error("ACCOUNTING_AMOUNT_INVALID");
@@ -106,12 +106,12 @@ export function normalizeAccountingAmount(input = {}) {
         : rawAmount;
 }
 
-export function normalizeLinkedBookingIds(value) {
+function normalizeLinkedBookingIds(value) {
     const values = Array.isArray(value) ? value : _safeTrim(value).split(",");
     return [...new Set(values.map((item) => _safeTrim(item)).filter(Boolean))];
 }
 
-export function isCancellationRectification(input = {}) {
+function isCancellationRectification(input = {}) {
     return _safeTrim(input.movementType).toUpperCase() === MOVEMENT_TYPE.REEMBOLSO &&
         _safeTrim(input.eventType).toUpperCase() === EVENT_TYPE.RECTIFICATIVA &&
         _safeTrim(input.transactionId).startsWith("RECT-") &&
