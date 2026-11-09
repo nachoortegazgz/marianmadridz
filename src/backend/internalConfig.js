@@ -46,6 +46,7 @@ export const BUSINESS_COLLECTIONS = Object.freeze({
   CONTROL_OPERATIVO: "ControlOperativo",
   DATOS_FISCALES: "DatosFiscales",
   HISTORICO_CIERRES_Z: "HistoricoCierresZ",
+  PAQUETES_GESTORIA: "PaquetesGestoria",
   INVENTARIO_STOCK_VENTA: "InventarioStockVenta",
   MOVIMIENTOS_INVENTARIO: "MovimientosInventario",
   LIBRO_ASIENTOS_CONTABLES_DETALLE: "LibroAsientosContablesDetalle",
