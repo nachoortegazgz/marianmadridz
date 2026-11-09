@@ -166,7 +166,8 @@ function _normalizeLinkedBookingIds(value) {
 }
 
 function _linkedBookingValue(value) {
-    return _normalizeLinkedBookingIds(value).join(",") || null;
+    const ids = _normalizeLinkedBookingIds(value);
+    return ids.length ? ids : null;
 }
 
 async function _rateLimitOrThrow(surface, key, traceId) {
@@ -1603,12 +1604,21 @@ export const getMovimientoByBooking = webMethod(
             // restricted to authorized cashier/admin staff, not every member.
             await requireCajero(traceId);
 
-            const candidates = await dalQuery(MOVIMIENTOS_CAJA_COL)
-                .eq("linkedBookingIds", cleanId)
+            const canonical = await dalQuery(MOVIMIENTOS_CAJA_COL)
+                .hasSome("linkedBookingIds", [cleanId])
                 .limit(5)
                 .find();
 
-            let items = candidates.items || [];
+            let items = canonical.items || [];
+
+            if (items.length === 0) {
+                // Read-only compatibility for historical CSV/single-string rows.
+                const exact = await dalQuery(MOVIMIENTOS_CAJA_COL)
+                    .eq("linkedBookingIds", cleanId)
+                    .limit(5)
+                    .find();
+                items = exact.items || [];
+            }
 
             if (items.length === 0) {
                 const all = await dalQuery(MOVIMIENTOS_CAJA_COL)
