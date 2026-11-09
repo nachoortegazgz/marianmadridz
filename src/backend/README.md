@@ -1,115 +1,56 @@
-# The Backend Code Folder
+# Backend — Marian Madrid
 
-This folder contains the backend code files for your site. These files correspond to the ones found in the [**Backend**](https://support.wix.com/en/article/velo-working-with-the-velo-sidebar#backend) section of the **Public & Backend** 
-![image](https://user-images.githubusercontent.com/89579857/184862813-e55cdd98-b723-4d64-b73c-593eb9af21c7.png) tab in the Velo sidebar. Add the following files to this folder to include them in your site:
-+ [**Web Modules:**](https://support.wix.com/en/article/velo-web-modules-calling-backend-code-from-the-frontend)  
-  These are files that allow you to expose functions in your site's backend that you can run in your frontend code. These files require a `.jsw` file extension.
-  >**Note:**  
-  >You can't change [web module permissions](https://support.wix.com/en/article/velo-about-web-module-permissions) in Wix editors when using Git Integration & Wix CLI. Instead, use the [permissions.json](#permissionsjson) file to set function permissions.
+El backend contiene los Web Modules Velo, los manejadores de eventos, los hooks CMS, los trabajos programados y los módulos internos compartidos.
 
-+ **data.js**  
-  A file for [adding data hooks](https://support.wix.com/en/article/velo-using-data-hooks) to your site's collections.
+## Web Modules
 
-+ **routers.js**  
-  A file for implementing [routing and sitemap](https://support.wix.com/en/article/velo-about-routers#routing-code) functionality for your site.
+Los módulos invocables desde frontend usan exclusivamente archivos `.web.js` y declaran el nivel de acceso en cada exportación mediante `webMethod(Permissions...)`.
 
-+ **events.js**  
-  A file for implementing your site's [backend event handlers](https://support.wix.com/en/article/velo-backend-events). 
+- `Permissions.Anyone`: solo para operaciones públicas cuyo DTO y validaciones están diseñados para visitantes anónimos.
+- `Permissions.SiteMember`: requiere una sesión de miembro Wix.
+- `Permissions.Admin`: reservado a operaciones administrativas que exigen identidad de propietario.
 
-+ **http-functions.js**  
-  A file for implementing [HTTP endpoints](https://www.wix.com/velo/reference/wix-http-functions/introduction) that are exposed on your site.
+La autorización de negocio se vuelve a comprobar en backend. La identidad, el rol y la propiedad de una reserva nunca se aceptan desde el payload del navegador.
 
-+ **jobs.config**  
-  A file for [scheduling recurring jobs](https://support.wix.com/en/article/velo-scheduling-recurring-jobs). Jobs consist of other backend code that's run at regular intervals.
-  
-+ **General backend files**  
-  JavaScript code files. You can import code from these files into any other backend file on your site. These files require a `.js` file extension.
+Documentación oficial:
+- [Web Modules y web methods](https://dev.wix.com/docs/develop-websites/articles/coding-with-velo/backend-code/web-modules/about-web-modules)
+- [Permisos de web methods](https://dev.wix.com/docs/velo/apis/wix-web-module/permissions)
 
-Use the following syntax to import code from backend files: 
-```js 
-import { myFunctionName } from 'backend/myFileName';
-```  
-Trying to import from the relative path in your site's repo doesn't work.
+## Wix Data y hooks CMS
 
-Learn more about [this repo's file structure](https://support.wix.com/en/article/velo-understanding-your-sites-github-repository-beta).
+`data.js` contiene los hooks asociados a las colecciones CMS. Las validaciones de esquema residen en `validation.js`; el acceso a CMS se centraliza en `dataAccess.js`.
 
-## permissions.json
-This file defines [permissions](https://support.wix.com/en/article/velo-about-web-module-permissions) for the functions in your web module files. The file contains a key, `"web-methods"`, whose value is an object that can contain keys named after the web module files in your `backend` folder. Name these keys with the following syntax: `"backend/{path to file}myFile.jsw"`. The value for each file name key is an object that can contain keys named after the functions in that file. Each function key has a value with the following format:
-```js
-"backend/myFile.jsw": {
-  "siteOwner" : {
-    "invoke" : // Boolean
-  },
-  "siteMember" : {
-    "invoke" : // Boolean
-  },
-  "anonymous" : {
-    "invoke" : // Boolean
-  }  
-}
-```
-These values reflect the different levels of web module function permissions. You can set them using the following options:
-| |`siteOwner`|`siteMember`|`anonymous`|
-|-|-----------|------------|-----------|
-|Owner-only access| `true` | `false` | `false`|
-|Site member access| `true` | `true` | `false`|
-|Anyone can access| `true` | `true`| `true`|
+Los hooks `beforeUpdate` reciben el elemento que se va a actualizar y el contexto de la operación. Los hooks `beforeRemove` reciben el identificador del elemento. Si una regla depende del estado persistido, el hook recupera el registro por ID con lectura fuerte antes de decidir.
 
-The `"web-methods"` object must also contain a `"*"` key. The value for this key defines the default permissions that are applied to any function whose permissions you don't set manually.
+Documentación oficial:
+- [Wix Data hooks](https://dev.wix.com/docs/velo/apis/wix-data/hooks/before-update)
+- [Wix Data beforeRemove](https://dev.wix.com/docs/velo/apis/wix-data/hooks/before-remove)
 
-Here is an example `permissions.json` file for a site with a backend file called `helperFunctions.jsw`. The file's functions are called `calculate`, `fetchData`, and `syncWithServer`. In this case anyone can call `calculate`, site members can call `syncWithServer`, and only site owners can call `fetchData`.
+## Backend events
 
-```json
-{
-  "web-methods": {
-    "*": {
-      "*": {
-        "siteOwner": {
-          "invoke": true
-        },
-        "siteMember": {
-          "invoke": true
-        },
-        "anonymous": {
-          "invoke": true
-        }
-      }
-    },
-    "backend/helperFunctions.jsw": {
-      "calculate": {
-        "siteOwner": {
-          "invoke": true
-        },
-        "siteMember": {
-          "invoke": true
-        },
-        "anonymous": {
-          "invoke": true
-        }
-      },
-      "fetchData": {
-        "siteOwner": {
-          "invoke": true
-        },
-        "siteMember": {
-          "invoke": false
-        },
-        "anonymous": {
-          "invoke": false
-        }
-      },
-      "syncWithServer": {
-        "siteOwner": {
-          "invoke": true
-        },
-        "siteMember": {
-          "invoke": true
-        },
-        "anonymous": {
-          "invoke": false
-        }
-      }
-    }
-  }
-}
-```
+`events.js` implementa manejadores de eventos Velo gestionados por Wix. Wix entrega al manejador el objeto de evento ya verificado y decodificado. El módulo exige ese objeto y no expone un endpoint HTTP para recibir JWT.
+
+La entrega de eventos es asíncrona y puede repetirse; cada manejador debe ser idempotente mediante `eventId` y el registro inmutable `WEBHOOK_EVENT`.
+
+Documentación oficial:
+- [Wix backend events](https://dev.wix.com/docs/overview/backend-services/events)
+- [Definir backend event handlers](https://dev.wix.com/docs/develop-websites/articles/coding-with-velo/backend-code/events/define-backend-event-handlers)
+
+## Scheduled jobs
+
+`jobs.config` declara los trabajos programados. Las funciones correspondientes se implementan y exportan desde los módulos backend indicados por cada job.
+
+## Estructura de responsabilidades
+
+| Archivo / carpeta | Responsabilidad |
+|---|---|
+| `internalConfig.js` | Constantes, enums y contratos canónicos |
+| `validation.js` | Validaciones puras de DTO y esquemas CMS |
+| `dataAccess.js` | Acceso centralizado y elevado a Wix Data |
+| `data.js` | Hooks de integridad CMS |
+| `security.js` | Identidad de miembro, roles y rate limiting |
+| `events.js` | Eventos backend Velo de Wix |
+| `booking/` | Primitivas y sagas de reservas |
+| `tests/` | Suites offline y contratos de regresión |
+
+No existe ningún módulo `.jsw` en este backend. Por tanto, `permissions.json` no forma parte del modelo de autorización: Wix documenta ese manifiesto para módulos `.jsw`; los módulos actuales aplican permisos en sus declaraciones `webMethod`.
