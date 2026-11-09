@@ -754,7 +754,7 @@ async function handleNavigation(payload) {
     if (target === "PRIVACY") {
         await location.to(
             URLS?.PRIVACY_POLICY ||
-            "/politica-de-privacidad"
+            "/politica-privacidad-texto"
         );
         return true;
     }
