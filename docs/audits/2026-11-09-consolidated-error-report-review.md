@@ -34,7 +34,7 @@ El informe adjunto contiene dos datos desalineados con el repositorio inspeccion
 - Pruebas del agregador para devoluciones, WIX Payments y transferencias.
 - Flujo offline de caja que comprueba que `linkedBookingIds` se persiste como array y se puede consultar por bookingId.
 
-La ejecución CI más reciente debe consultarse en el PR; una ejecución anterior de esta rama alcanzó 51 suites y 487 tests, pero falló una aserción de contrato sobre flags fail-closed. Esa aserción se corrigió después; no se declara verde hasta que el último commit complete CI.
+CI verificada en el commit de código `8d91c4c`: run #42711143272 SUCCESS, 51 suites, 488 tests, 0 fallos. SDK contracts, Wix Bookings Reader V2 contract y ESLint también SUCCESS. Los commits posteriores en esta rama son solo documentación.
 
 ## Pendientes que NO se han corregido
 
