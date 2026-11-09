@@ -102,23 +102,7 @@ function _formatDocumentId(year, quarter, version = 1) {
   return `DOC_GESTORIA_${year}_T${quarter}_PAQUETE_GESTORIA_V${vStr}`;
 }
 
-function _formatMonthlyDocumentId(year, month, version = 1) {
-  const vStr = String(version).padStart(4, "0");
-  return `DOC_GESTORIA_${year}_M${String(month).padStart(2, "0")}_PAQUETE_GESTORIA_V${vStr}`;
-}
 
-function _formatPackageDocumentId(year, periodType, periodValue, version = 1) {
-  return periodType === "MONTHLY"
-    ? _formatMonthlyDocumentId(year, periodValue, version)
-    : _formatDocumentId(year, periodValue, version);
-}
-
-function _packagePeriodPrefix(year, periodType, periodValue) {
-  const periodKey = periodType === "MONTHLY"
-    ? `M${String(periodValue).padStart(2, "0")}`
-    : `T${periodValue}`;
-  return `DOC_GESTORIA_${year}_${periodKey}_PAQUETE_GESTORIA_`;
-}
 
 function _invoiceValue(invoice, keys, fallbackKey) {
   for (const key of keys) {
@@ -320,83 +304,25 @@ export const previewManagerPackage = webMethod(
 
 export const createManagerPackageVersion = webMethod(
   Permissions.SiteMember,
-  async (period = {}) => {
+  async () => {
     const traceId = makeTraceId("doc-create");
     try {
       await requireMarianManager(traceId);
-      const periodType = _safeTrim(period.periodType || "QUARTERLY").toUpperCase();
-      const year = Number(period.year);
-      const month = period.month != null ? Number(period.month) : null;
-      const quarter = period.quarter != null ? Number(period.quarter) : null;
-      if (!Number.isInteger(year) || year < 2000 || year > 9999) {
-        return { status: "ERROR", data: null, error: { code: "INVALID_YEAR", message: "A valid fiscal year is required." } };
-      }
-      if (periodType !== "MONTHLY" && periodType !== "QUARTERLY") {
-        return { status: "ERROR", data: null, error: { code: "INVALID_PERIOD_TYPE", message: "periodType must be MONTHLY or QUARTERLY." } };
-      }
-      if (periodType === "MONTHLY" && (!Number.isInteger(month) || month < 1 || month > 12)) {
-        return { status: "ERROR", data: null, error: { code: "INVALID_MONTH", message: "month 1-12 required." } };
-      }
-      if (periodType === "QUARTERLY" && (!Number.isInteger(quarter) || quarter < 1 || quarter > 4)) {
-        return { status: "ERROR", data: null, error: { code: "INVALID_QUARTER", message: "quarter 1-4 required." } };
-      }
-
-      const periodValue = periodType === "MONTHLY" ? month : quarter;
-      const effectiveQuarter = periodType === "MONTHLY" ? Math.floor((month - 1) / 3) + 1 : quarter;
-      const historyRes = await getManagerPackageHistory({ year, periodType, month, quarter });
-      if (historyRes?.status !== "SUCCESS" || !Array.isArray(historyRes.data)) {
-        throw new Error("PACKAGE_HISTORY_UNAVAILABLE: cannot allocate a version without a complete history read.");
-      }
-      const nextVersion = historyRes.data.length + 1;
-      const documentId = _formatPackageDocumentId(year, periodType, periodValue, nextVersion);
-
-      const [summaryRes, bookRes] = await Promise.all([
-        getQuarterlyTaxSummary(year, effectiveQuarter, { traceId }),
-        getLibroRegistroFacturasExpedidasInternal(year, effectiveQuarter, { traceId, rateLimitKey: "manager" }),
-      ]);
-      if (summaryRes?.status !== "SUCCESS" || !summaryRes.data ||
-          bookRes?.status !== "SUCCESS" || !bookRes.data || !Array.isArray(bookRes.data.filas)) {
-        throw new Error("PACKAGE_SOURCE_DATA_UNAVAILABLE: fiscal summary or invoice ledger query did not complete successfully.");
-      }
-
-      const quarterInvoices = bookRes.data.filas;
-      const invoiceData = periodType === "MONTHLY"
-        ? _filterInvoicesByMonth(quarterInvoices, year, month)
-        : quarterInvoices;
-      const summaryData = periodType === "MONTHLY"
-        ? _summarizeMonthly(invoiceData, year, month, effectiveQuarter)
-        : summaryRes.data;
-      const createdAt = new Date();
-      const record = {
-        _id: documentId,
-        inventoryClosingId: documentId,
-        fiscalYear: year,
-        fiscalMonth: periodType === "MONTHLY" ? month : null,
-        fiscalQuarter: effectiveQuarter,
-        periodType,
-        closeDate: createdAt,
-        closingType: "PAQUETE_GESTORIA",
-        summaryData,
-        invoiceData,
-        packageStatus: "PREPARED",
-        packageVersion: nextVersion,
-        traceId,
-        _createdDate: createdAt,
-      };
-
-      await withTimeout(dalInsert(DOCS_COL, record), CMS_TIMEOUT_MS, "insertManagerPackage");
+      // HistoricoCierresZ is the immutable Z-closing ledger. Its live CMS
+      // schema requires closing-specific fields and must not receive manager
+      // package records. RegistroIntegracion is not append-only protected.
+      // Until a dedicated immutable package collection and delivery contract
+      // are approved and installed, package creation must fail closed.
       return {
-        status: "SUCCESS",
-        data: { documentId, version: nextVersion, periodType, year, month: periodType === "MONTHLY" ? month : null, quarter: effectiveQuarter, invoiceCount: invoiceData.length, createdAt },
-        error: null,
+        status: "ERROR",
+        data: null,
+        error: {
+          code: "PACKAGE_SNAPSHOT_STORAGE_NOT_CONFIGURED",
+          message: "No se puede crear el paquete: falta un almacén append-only específico para paquetes de gestor. HistoricoCierresZ está reservado a cierres Z.",
+          traceId,
+        },
       };
     } catch (err) {
-      const code = String(err?.code || "");
-      const message = String(err?.message || "");
-      if (code === "WDE0074" || code === "WD_ITEM_ALREADY_EXISTS" ||
-          /WDE0074|WD_ITEM_ALREADY_EXISTS|already exists|duplicated/i.test(message)) {
-        return { status: "ERROR", data: null, error: { code: "PACKAGE_VERSION_CONFLICT", message: "Otra solicitud ha creado esta versión. Actualiza el historial y vuelve a intentarlo." } };
-      }
       return { status: "ERROR", data: null, error: _toPublicError(err, "DOC_CREATE_FAIL") };
     }
   }
@@ -685,46 +611,7 @@ async function _dispatchEmailViaResend({
 // BLOQUE 8 - ENVIO DE PAQUETE A GESTOR (mensual / trimestral)
 // =============================================================================
 
-function _filterInvoicesByMonth(invoices, year, month) {
-  if (!Array.isArray(invoices)) return [];
-  return invoices.filter((invoice) => {
-    const date = String(_invoiceValue(invoice, ["fechaExpedicion", "fechaOperacion"], "fechaOperacion") || "");
-    const match = /^(\\d{4})-(\\d{2})/.exec(date);
-    return Boolean(match) && Number(match[1]) === year && Number(match[2]) === month;
-  });
-}
 
-function _summarizeMonthly(invoices, year, month, quarter) {
-  let gross = 0;
-  let refunds = 0;
-  let base = 0;
-  let tax = 0;
-  for (const invoice of invoices) {
-    const amount = Number(_invoiceValue(invoice, ["totalAmount", "accountingAmount"], "totalAmount")) || 0;
-    const type = _safeTrim(_invoiceValue(invoice, ["movementType"], "movementType")).toUpperCase();
-    const isRefund = amount < 0 || type.includes("DEVOLUCION") || type.includes("REEMBOLSO");
-    if (isRefund) refunds += Math.abs(amount);
-    else gross += amount;
-    base += Number(_invoiceValue(invoice, ["taxableAmount", "taxBase"], "taxBase")) || 0;
-    tax += Number(_invoiceValue(invoice, ["taxAmount"], "taxAmount")) || 0;
-  }
-  return {
-    ejercicio: year,
-    trimestre: quarter,
-    mes: month,
-    totalOperaciones: invoices.length,
-    totalOperacionesFiscales: invoices.length,
-    totales: {
-      totalVentasBrutas: _roundMoney(gross),
-      totalReembolsos: _roundMoney(refunds),
-      totalFacturadoNeto: _roundMoney(gross - refunds),
-    },
-    borradorIva: {
-      baseImponibleRegistrada: _roundMoney(base),
-      cuotaIvaRegistrada: _roundMoney(tax),
-    },
-  };
-}
 
 export const sendManagerPackageToAccountant = webMethod(
   Permissions.SiteMember,
