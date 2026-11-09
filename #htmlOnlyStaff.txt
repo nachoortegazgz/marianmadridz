@@ -327,42 +327,6 @@
       </div>
     </div>
 
-    <!-- ════════════ INVENTARIO (oculto por defecto) ════════════ -->
-    <div class="panel" id="inventoryPanel" style="display:none; margin-top:16px;">
-      <div class="panel-title">Inventario Interno</div>
-      <p style="font-size:12px; color:var(--muted); margin-bottom:12px;">Las ventas Wix Stores/POS descuentan stock nativo. Registra aqui consumo profesional y recepciones; aplica despues los ajustes pendientes en Wix Dashboard/POS.</p>
-      <div class="row">
-        <div class="form-group"><label>Producto</label><select id="inventorySku"></select></div>
-        <div class="form-group"><label>Unidades</label><input type="number" id="inventoryQuantity" min="1" step="1" value="1" /></div>
-      </div>
-      <div class="form-group">
-        <label>Referencia o nota</label>
-        <input type="text" id="inventoryNote" maxlength="500" placeholder="Ej: Coloracion servicio cliente" />
-      </div>
-      <div class="btn-group">
-        <button class="btn btn-warn" id="btnInventoryUse" type="button">Registrar consumo interno</button>
-        <button class="btn btn-success" id="btnInventoryReceipt" type="button" style="display:none;">Registrar recepcion</button>
-        <button class="btn btn-outline" id="btnInventoryRefresh" type="button">Refrescar stock</button>
-      </div>
-      <div class="history-scroll" style="margin-top:12px;">
-        <table class="history-table">
-          <thead><tr><th>SKU</th><th>Producto</th><th>Stock previsto</th><th>Punto pedido</th></tr></thead>
-          <tbody id="inventoryBody">
-            <tr><td colspan="4" style="text-align:center; color:var(--muted);">Cargando inventario</td></tr>
-          </tbody>
-        </table>
-      </div>
-      <div id="inventoryQueuePanel" style="display:none; margin-top:12px;">
-        <div class="panel-title" style="margin-top:12px;">Conciliacion pendiente Wix</div>
-        <div class="history-scroll">
-          <table class="history-table">
-            <thead><tr><th>SKU</th><th>Delta</th><th>Motivo</th><th>Accion</th></tr></thead>
-            <tbody id="inventoryQueueBody"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
     <div class="footer" id="footerInfo">Only Staff | Marian Madrid Peluqueria y Estetica</div>
   </div>
 
@@ -374,17 +338,11 @@
         READY: 'MM_READY', CONTEXT: 'MM_CONTEXT', NAV: 'MM_NAV',
         CLOCK: 'CLOCK', GET_STATE: 'GET_STATE', GET_HISTORY: 'GET_HISTORY',
         HOURS_CALC: 'HOURS_CALC', ADJUSTMENT: 'ADJUSTMENT',
-        INVENTORY_DASH: 'INVENTORY_DASH', INVENTORY_USE: 'INVENTORY_USE',
-        INVENTORY_RECEIPT: 'INVENTORY_RECEIPT', INVENTORY_QUEUE: 'INVENTORY_QUEUE',
-        INVENTORY_APPLY: 'INVENTORY_APPLY',
         TPV_TX: 'TPV_TX', CASHIER_STATE: 'CASHIER_STATE',
         X_COUNT: 'X_COUNT', Z_CLOSING: 'Z_CLOSING',
         CLOCK_RES: 'CLOCK_RES', GET_STATE_RES: 'GET_STATE_RES',
         GET_HISTORY_RES: 'GET_HISTORY_RES', HOURS_CALC_RES: 'HOURS_CALC_RES',
         ADJUSTMENT_RES: 'ADJUSTMENT_RES',
-        INVENTORY_DASH_RES: 'INVENTORY_DASH_RES', INVENTORY_USE_RES: 'INVENTORY_USE_RES',
-        INVENTORY_RECEIPT_RES: 'INVENTORY_RECEIPT_RES', INVENTORY_QUEUE_RES: 'INVENTORY_QUEUE_RES',
-        INVENTORY_APPLY_RES: 'INVENTORY_APPLY_RES',
         TPV_TX_RES: 'TPV_TX_RES', CASHIER_STATE_RES: 'CASHIER_STATE_RES',
         X_COUNT_RES: 'X_COUNT_RES', Z_CLOSING_RES: 'Z_CLOSING_RES',
         ONLY_STAFF_ERROR: 'ONLY_STAFF_ERROR', STAFF_ERROR: 'STAFF_ERROR'
@@ -415,7 +373,7 @@
       const userInfo = $('userInfo'), roleBadge = $('roleBadge');
 
       const clockPanel = $('clockPanel'), historyPanel = $('historyPanel'), hoursPanel = $('hoursPanel'),
-            cashPanel = $('cashPanel'), inventoryPanel = $('inventoryPanel');
+            cashPanel = $('cashPanel');
 
       const cashModeBadge = $('cashModeBadge'), cashSaldo = $('cashSaldo'), cashOps = $('cashOps'),
             cashDiaKey = $('cashDiaKey'), cashMode = $('cashMode');
@@ -429,11 +387,6 @@
       const ticketDisplay = $('ticketDisplay'), ticketBox = $('ticketBox');
       const movementsBody = $('movementsBody');
 
-      const inventorySku = $('inventorySku'), inventoryQuantity = $('inventoryQuantity'),
-            inventoryNote = $('inventoryNote'), btnInventoryUse = $('btnInventoryUse'),
-            btnInventoryReceipt = $('btnInventoryReceipt'), btnInventoryRefresh = $('btnInventoryRefresh'),
-            inventoryBody = $('inventoryBody'), inventoryQueuePanel = $('inventoryQueuePanel'),
-            inventoryQueueBody = $('inventoryQueueBody');
 
       /* ── Comunicación ── */
       function _sendToVelo(type, payload = {}, messageId) {
@@ -631,66 +584,6 @@
         appendLine(`Fichajes procesados: ${Number(data.totalFichajesProcesados || 0)}`, 'font-size:12px;color:var(--muted)');
       }
 
-      /* ── Inventario ── */
-      function _renderInventory(data, queue) {
-        const products = Array.isArray(data?.products) ? data.products : [];
-        const lowSku = new Set((data?.lowStock || []).map((item) => String(item.sku || '')));
-        inventorySku.innerHTML = ''; inventoryBody.innerHTML = '';
-        if (!products.length) {
-          inventorySku.innerHTML = '<option value="">Sin productos cargados</option>';
-          inventoryBody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--muted);">No hay productos importados</td></tr>';
-        } else {
-          products.forEach((product) => {
-            const option = document.createElement('option');
-            option.value = product.sku || '';
-            option.textContent = `${product.sku || ''} - ${product.productName || ''}`;
-            inventorySku.appendChild(option);
-            const tr = document.createElement('tr');
-            if (lowSku.has(String(product.sku || ''))) tr.style.color = 'var(--danger)';
-            [product.sku || '', product.productName || '', Number(product.stockExpected || 0), Number(product.reorderPoint || 0)].forEach((value) => {
-              const td = document.createElement('td'); td.textContent = String(value); tr.appendChild(td);
-            });
-            inventoryBody.appendChild(tr);
-          });
-        }
-        _renderInventoryQueue(queue || []);
-      }
-
-      function _renderInventoryQueue(items) {
-        const queue = Array.isArray(items) ? items : [];
-        inventoryQueueBody.innerHTML = '';
-        const canApply = !!(contextData?.isAdmin || contextData?.isCajero);
-        inventoryQueuePanel.style.display = canApply && queue.length ? 'block' : 'none';
-        queue.forEach((item) => {
-          const tr = document.createElement('tr');
-          [item.sku || '', Number(item.quantityDelta || 0), item.reason || ''].forEach((value) => {
-            const td = document.createElement('td'); td.textContent = String(value); tr.appendChild(td);
-          });
-          const action = document.createElement('td');
-          const applyButton = document.createElement('button');
-          applyButton.className = 'btn btn-outline';
-          applyButton.style.cssText = 'width:auto;padding:5px 8px;margin:0;';
-          applyButton.textContent = 'Aplicado en Wix';
-          applyButton.addEventListener('click', () => {
-            _setLoading(applyButton, true);
-            _sendToVelo(MESSAGE_TYPES.INVENTORY_APPLY, { reconciliationId: item._id, note: 'Ajustado manualmente en Wix Stores/POS' });
-          });
-          action.appendChild(applyButton); tr.appendChild(action); inventoryQueueBody.appendChild(tr);
-        });
-      }
-
-      function _sendInventory(type) {
-        const sku = inventorySku.value || '';
-        const quantity = Number(inventoryQuantity.value || 0);
-        const note = (inventoryNote.value || '').trim();
-        if (!sku || !Number.isFinite(quantity) || quantity <= 0) {
-          _showWarn('Selecciona un producto y una cantidad valida.'); return;
-        }
-        const token = `staff_${Date.now().toString(36)}_${sku}`;
-        _setLoading(type === MESSAGE_TYPES.INVENTORY_USE ? btnInventoryUse : btnInventoryReceipt, true);
-        _sendToVelo(type, { sku, quantity, note, referenceId: note || null, batchToken: token });
-      }
-
       /* ═════════════════════════════════════════════════════════════════
          CONTEXTO — alineado con zonastaff.js v5004
          Seguridad: no se muestra ninguna operación sin contexto autorizado.
@@ -698,7 +591,7 @@
       function _renderContext(ctx) {
         contextData = ctx || {};
         if (contextData.isAuthorized !== true) {
-          [clockPanel, historyPanel, hoursPanel, cashPanel, inventoryPanel, adminPanel]
+          [clockPanel, historyPanel, hoursPanel, cashPanel, adminPanel]
             .forEach((panel) => { if (panel) panel.style.display = 'none'; });
           _showError('Acceso no autorizado o contexto no disponible.');
           return;
@@ -715,7 +608,6 @@
         const enableClocking      = contextData.enableClocking      === true;
         const enableBreaks        = contextData.enableBreaks        === true;
         const enableCashier       = contextData.enableCashier       === true;
-        const enableInventory     = contextData.enableInventory     === true;
         const enableScheduleQuery = contextData.enableScheduleQuery === true;  // default OFF
         const isAdmin   = contextData.isAdmin === true;
         const isCajero  = contextData.isCajero === true || enableCashier;
@@ -725,7 +617,6 @@
         historyPanel.style.display   = enableClocking ? 'block' : 'none';
         hoursPanel.style.display     = enableScheduleQuery ? 'block' : 'none';
         cashPanel.style.display      = enableCashier ? 'block' : 'none';
-        inventoryPanel.style.display = enableInventory ? 'block' : 'none';
         adminPanel.style.display     = isAdmin ? 'block' : 'none';
 
         btnPausaInicio.style.display = enableBreaks ? '' : 'none';
@@ -749,10 +640,6 @@
             adjEmployee.appendChild(opt);
           });
         }
-
-        /* Inventario (sólo si habilitado) */
-        if (isCajero || isAdmin) btnInventoryReceipt.style.display = 'block';
-        if (enableInventory) _renderInventory(contextData.inventory || null, contextData.inventoryQueue || []);
 
         /* Estado de jornada */
         if (contextData.estadoInicial) {
@@ -864,11 +751,6 @@
         _sendToVelo(MESSAGE_TYPES.Z_CLOSING, { confirm: true, requestFiscalFingerprint: true });
       });
 
-      /* ── Listeners inventario / navegación ── */
-      btnInventoryUse.addEventListener('click', () => _sendInventory(MESSAGE_TYPES.INVENTORY_USE));
-      btnInventoryReceipt.addEventListener('click', () => _sendInventory(MESSAGE_TYPES.INVENTORY_RECEIPT));
-      btnInventoryRefresh.addEventListener('click', () => _sendToVelo(MESSAGE_TYPES.INVENTORY_DASH, {}));
-
       /* ── Respuestas ── */
       function _handleResponse(msg) {
         const type = String(msg.type || '').toUpperCase();
@@ -944,36 +826,6 @@
             } else _showError(error?.message || 'Error en el Cierre Z Diario.');
             break;
 
-          case MESSAGE_TYPES.INVENTORY_DASH_RES:
-            if (status === 'SUCCESS') { _renderInventory(data || null, contextData?.inventoryQueue || []); _showInfo('Stock interno actualizado.'); }
-            else _showError(error?.message || 'No se pudo cargar el inventario.');
-            break;
-
-          case MESSAGE_TYPES.INVENTORY_USE_RES:
-          case MESSAGE_TYPES.INVENTORY_RECEIPT_RES:
-            _setLoading(btnInventoryUse, false); _setLoading(btnInventoryReceipt, false);
-            if (status === 'SUCCESS') {
-              inventoryNote.value = '';
-              _showInfo('Movimiento de inventario registrado.');
-              _sendToVelo(MESSAGE_TYPES.INVENTORY_DASH, {});
-              if (contextData?.isAdmin || contextData?.isCajero) _sendToVelo(MESSAGE_TYPES.INVENTORY_QUEUE, {});
-            } else _showError(error?.message || 'No se pudo registrar el movimiento.');
-            break;
-
-          case MESSAGE_TYPES.INVENTORY_QUEUE_RES:
-            if (status === 'SUCCESS') {
-              contextData.inventoryQueue = data?.items || [];
-              _renderInventoryQueue(contextData.inventoryQueue);
-            } else _showError(error?.message || 'No se pudo cargar la conciliacion.');
-            break;
-
-          case MESSAGE_TYPES.INVENTORY_APPLY_RES:
-            if (status === 'SUCCESS') {
-              _showInfo('Conciliacion marcada como aplicada en Wix.');
-              _sendToVelo(MESSAGE_TYPES.INVENTORY_QUEUE, {});
-            } else _showError(error?.message || 'No se pudo confirmar la conciliacion.');
-            break;
-
           case MESSAGE_TYPES.ONLY_STAFF_ERROR:
           case MESSAGE_TYPES.STAFF_ERROR:
             _showError(error?.message || 'Error en la solicitud.');
@@ -1014,7 +866,6 @@
             enableClocking: false,
             enableBreaks: false,
             enableCashier: false,
-            enableInventory: false,
             enableScheduleQuery: false,
             isAdmin: false,
             isCajero: false,
