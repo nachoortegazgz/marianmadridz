@@ -303,7 +303,7 @@ function _buildAEATPayload(movement, generatedAt) {
     const res = await dalQuery(MOVIMIENTOS_CAJA_COL)
         .descending("sequenceNumber")
         .limit(1)
-        .find();
+        .find({ consistencyMode: "strong" });
     return res?.items?.[0] || null;
 }
 
