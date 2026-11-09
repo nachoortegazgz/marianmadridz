@@ -55,7 +55,7 @@
 | Pack Novia Completo (Peinado + Maquillaje + Prueba) | `c76ed098-5e92-4a3d-bf31-82f02da2e69f` | 290 EUR |
 | Alisado Espejo Premium | `fc05f4c9-f118-4a07-bde3-a972c7b08a49` | 195 EUR |
 
-Todos aparecen visibles y con tarifa fija. En los siete, `online=true`, `inPerson=true` y no aparece ningún `deposit=true`; ninguno informa `requireManualApproval=true` (en seis el campo está omitido y en uno consta `false`). No se ha modificado ningún servicio.
+Todos aparecen visibles y con tarifa fija. En los siete, `online=true`, `inPerson=true` y no aparece ningún `deposit=true`; ninguno informa `requireManualApproval=true` (en seis el campo está omitido y en uno consta `false`). Los siete devuelven `pricingPlanIds=[]`; `Pack Novia Completo` mantiene `payment.options.pricingPlan=true` pero no tiene IDs de planes conectados. No se ha modificado ningún servicio.
 
 ### Configuración nativa objetivo (pendiente de QA y del bloqueo fiscal P0)
 
@@ -64,6 +64,7 @@ Todos aparecen visibles y con tarifa fija. En los siete, `online=true`, `inPerso
 - No habilitar «Permitir a los clientes pagar el monto total online» (`fullUpfrontPaymentAllowed=false`).
 - No ofrecer pago manual alternativo para estos servicios, porque Wix advierte que el cliente podría reservar sin pagar depósito.
 - No activar aprobación manual para los servicios con depósito.
+- No ofrecer planes/paquetes como alternativa de pago en servicios elegibles salvo que se demuestre en QA que el anticipo obligatorio también se cobra con ese método. `Pack Novia Completo` tiene el flag `pricingPlan=true` pero no hay IDs de planes conectados; revisarlo antes de activar.
 - Mantener el resto de servicios (≤100 EUR) sin depósito obligatorio.
 - Si la función no está disponible en la cuenta, no sustituirla por un writer propio; mantener la política sin activar y elevar el bloqueo para decisión del propietario.
 - No configurar hasta que issue #209 acredite factura/IVA del anticipo y conciliación de saldo y devolución.
