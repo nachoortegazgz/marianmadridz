@@ -625,7 +625,7 @@ test('PERSIST-01 fiscal third-party writer uses the canonical TERCERO record typ
 
 test('PERSIST-02 cash ledger idempotency claim writes required dedupeKey', async () => {
   const source = await readFile(new URL('../cajas.web.js', import.meta.url), 'utf8');
-  assert.match(source, /controlType:\s*"LEDGER_IDEMPOTENCY",[\s\S]{0,180}dedupeKey:\s*transactionId/);
+  assert.match(source, /controlType:\s*CONTROL_TYPE\.IDEMPOTENCY,[\s\S]{0,180}dedupeKey:\s*transactionId/);
 });
 
 test('PERSIST-06 online fiscal events populate required staffResourceId from the channel resource', async () => {
