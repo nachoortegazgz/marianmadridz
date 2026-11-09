@@ -395,7 +395,7 @@ async function _getEmisorFiscal() {
     try {
         const nif = await getSecretValue(SECRETS.FISCAL_NIF_EMISOR);
         // SSOT-KEYFIELD (Matriz MovimientosCaja, Apartado 2): claves canonicas
-        // AEAT; el motor promueve aliases legacy, pero los writers entregan
+        // AEAT; el motor promueve aliases historical, pero los writers entregan
         // directamente el canon — cero aliases en src/.
         _emisorCache = {
             nifEmisor: _safeTrim(nif).toUpperCase(),
