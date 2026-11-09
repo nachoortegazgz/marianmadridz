@@ -102,6 +102,13 @@ function _formatDocumentId(year, quarter, version = 1) {
   return `DOC_GESTORIA_${year}_T${quarter}_PAQUETE_GESTORIA_V${vStr}`;
 }
 
+function _packagePeriodPrefix(year, periodType, periodValue) {
+  const periodKey = periodType === "MONTHLY"
+    ? `M${String(periodValue).padStart(2, "0")}`
+    : `T${periodValue}`;
+  return `DOC_GESTORIA_${year}_${periodKey}_PAQUETE_GESTORIA_`;
+}
+
 
 
 function _invoiceValue(invoice, keys, fallbackKey) {
