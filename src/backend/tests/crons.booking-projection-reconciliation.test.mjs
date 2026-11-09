@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { wixDataMock, mocks } from "./loader.mjs";
 
-const bookingsReaderKey = "@wix/bookings::@wix/bookings::extendedBookings::queryExtendedBookings";
+const bookingsReaderKey = "@wix/bookings::extendedBookings::queryExtendedBookings";
 let readerCalls = [];
 let confirmedPage = 0;
 
