@@ -1503,7 +1503,9 @@ export async function wixEcom_onOrderPaymentStatusUpdated(rawBody) {
         const emisor = await _getEmisorFiscal();
 
         let eventResult;
-        try {
+        if (existingRefundMovement) {
+            eventResult = { status: "SUCCESS", idempotent: true, data: existingRefundMovement };
+        } else try {
             eventResult = await registrarEventoEconomico({
                 eventType: EVENT_TYPE.VENTA_LINEA,
                 movementType: MOVEMENT_TYPE.VENTA_ONLINE,
@@ -1760,10 +1762,97 @@ export async function wixEcom_onOrderRefunded(rawBody) {
             return { status: "OK" };
         }
 
-        const originalAmount = Number(originalMovement.totalAmount ?? 0);
+        const originalAmount = Math.abs(Number(originalMovement.totalAmount ?? originalMovement.accountingAmount ?? 0));
         const linkedBookingIds = _normalizeBookingIds(
             originalMovement.linkedBookingIds
         );
+        if (!Number.isFinite(originalAmount) || originalAmount <= 0) {
+            throw new Error("REFUND_ORIGINAL_AMOUNT_INVALID");
+        }
+
+        // Read the complete refund history before creating a fiscal correction.
+        // The bounded page count fails closed instead of silently undercounting.
+        const refundsRes = await withTimeout(
+            dalQuery(MOVIMIENTOS_CAJA_COL)
+                .eq("orderId", orderId)
+                .eq("movementType", MOVEMENT_TYPE.REEMBOLSO)
+                .limit(1000)
+                .find(STRONG_READ),
+            API_TIMEOUT_MS,
+            "queryRefundsForOrder"
+        );
+        const refundMovements = [...(refundsRes?.items || [])];
+        let refundPage = refundsRes;
+        let refundPages = 1;
+        while (typeof refundPage?.hasNext === "function" && refundPage.hasNext()) {
+            if (refundPages >= 100) throw new Error("REFUND_HISTORY_PAGE_LIMIT_EXCEEDED");
+            refundPage = await withTimeout(() => refundPage.next(), API_TIMEOUT_MS, "queryRefundsNextPage");
+            refundMovements.push(...(refundPage?.items || []));
+            refundPages++;
+        }
+        if (typeof refundPage?.hasNext === "function" && refundPage.hasNext()) {
+            throw new Error("REFUND_HISTORY_INCOMPLETE");
+        }
+
+        const matchingRefunds = refundMovements.filter(
+            movement => _safeTrim(movement?.transactionId) === transactionId
+        );
+        if (matchingRefunds.length > 1) throw new Error("REFUND_TRANSACTION_DUPLICATE_LEDGER_ROWS");
+        const existingRefundMovement = matchingRefunds[0] || null;
+
+        const refundIdMatches = await withTimeout(
+            dalQuery(MOVIMIENTOS_CAJA_COL)
+                .eq("refundId", refundId)
+                .limit(2)
+                .find(STRONG_READ),
+            API_TIMEOUT_MS,
+            "queryRefundIdUniqueness"
+        );
+        const reusedRefundId = (refundIdMatches?.items || []).some(
+            movement => _safeTrim(movement?.orderId) !== orderId ||
+                _safeTrim(movement?.transactionId) !== transactionId
+        );
+        if (reusedRefundId) throw new Error("REFUND_ID_REUSED_ACROSS_ORDERS");
+
+        const refundAmountCents = Math.round(refundAmount * 100);
+        const originalAmountCents = Math.round(originalAmount * 100);
+        const priorRefundMovements = refundMovements.filter(
+            movement => _safeTrim(movement?.transactionId) !== transactionId
+        );
+        const refundedBeforeCents = priorRefundMovements.reduce(
+            (sum, movement) => sum + Math.round(Math.abs(Number(
+                movement?.accountingAmount ?? movement?.totalAmount ?? 0
+            )) * 100),
+            0
+        );
+        const remainingCents = Math.max(0, originalAmountCents - refundedBeforeCents);
+        if (existingRefundMovement) {
+            const existingAmountCents = Math.round(Math.abs(Number(
+                existingRefundMovement?.accountingAmount ?? existingRefundMovement?.totalAmount ?? 0
+            )) * 100);
+            if (existingAmountCents !== refundAmountCents) {
+                throw new Error("REFUND_IDEMPOTENCY_AMOUNT_MISMATCH");
+            }
+        } else if (refundAmountCents > remainingCents) {
+            throw new Error("REFUND_EXCEEDS_ORIGINAL_ORDER_AMOUNT");
+        }
+
+        const refundedAfterCents = refundedBeforeCents + refundAmountCents;
+        const fullyRefunded = refundedAfterCents >= originalAmountCents;
+        const originalTaxBase = Math.abs(readTaxBase(originalMovement));
+        const originalTaxAmount = Math.abs(readTaxAmount(originalMovement));
+        const previousRefundTaxBase = priorRefundMovements.reduce(
+            (sum, movement) => sum + Math.abs(readTaxBase(movement)), 0
+        );
+        const previousRefundTaxAmount = priorRefundMovements.reduce(
+            (sum, movement) => sum + Math.abs(readTaxAmount(movement)), 0
+        );
+        const refundTaxBase = fullyRefunded
+            ? Math.max(0, Math.round((originalTaxBase - previousRefundTaxBase) * 100) / 100)
+            : Math.round(originalTaxBase * refundAmountCents / originalAmountCents * 100) / 100;
+        const refundTaxAmount = fullyRefunded
+            ? Math.max(0, Math.round((originalTaxAmount - previousRefundTaxAmount) * 100) / 100)
+            : Math.round(originalTaxAmount * refundAmountCents / originalAmountCents * 100) / 100;
 
         const emisor = await _getEmisorFiscal();
         const todayDate = new Date().toLocaleDateString("sv-SE", {
@@ -1779,8 +1868,8 @@ export async function wixEcom_onOrderRefunded(rawBody) {
                 channelType: "ONLINE",
                 resourceId: "online",
                 totalAmount: -refundAmount,
-                taxBase: -Math.abs(readTaxBase(originalMovement)),
-                taxAmount: -Math.abs(readTaxAmount(originalMovement)),
+                taxBase: -refundTaxBase,
+                taxAmount: -refundTaxAmount,
                 tipoImpositivo: Number(
                     readMovementField(originalMovement, "tipoImpositivo") ?? 21
                 ),
@@ -1807,11 +1896,11 @@ export async function wixEcom_onOrderRefunded(rawBody) {
                 refundId,
                 breakdown: [
                     {
-                        base: -Math.abs(readTaxBase(originalMovement)),
+                        base: -refundTaxBase,
                         tipo: Number(
                             readMovementField(originalMovement, "tipoImpositivo") ?? 21
                         ),
-                        cuota: -Math.abs(readTaxAmount(originalMovement)),
+                        cuota: -refundTaxAmount,
                         operationDescription: `Refund - Order ${orderId}`,
                         units: 1,
                         magnitude: -1,
@@ -1862,30 +1951,7 @@ export async function wixEcom_onOrderRefunded(rawBody) {
             return { status: "OK" };
         }
 
-        const refundsRes = await withTimeout(
-            dalQuery(MOVIMIENTOS_CAJA_COL)
-                .eq("orderId", orderId)
-                .eq("movementType", MOVEMENT_TYPE.REEMBOLSO)
-                .limit(100)
-                .find(STRONG_READ),
-            API_TIMEOUT_MS,
-            "queryRefundsForOrder"
-        );
 
-        const refundedTotal = (refundsRes?.items || []).reduce(
-            (sum, movement) =>
-                sum +
-                Math.abs(
-                    Number(
-                        movement?.accountingAmount ??
-                            movement?.totalAmount ??
-                            0
-                    )
-                ),
-            0
-        );
-        const fullyRefunded =
-            originalAmount > 0 && refundedTotal >= originalAmount;
 
         await _markCitasRefundedByBookingIds(
             linkedBookingIds,

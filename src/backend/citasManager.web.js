@@ -536,7 +536,10 @@ export const confirmPayment = webMethod(
                 }
             );
 
-            if (ledgerResult?.status !== "SUCCESS") {
+            const ledgerPersisted = ["SUCCESS", "PARTIAL"].includes(ledgerResult?.status) &&
+                Boolean(ledgerResult?.data?.cabeceraId || ledgerResult?.data?._id);
+
+            if (!ledgerPersisted) {
                 await logAuditEvent(
                     "PAYMENT_LEDGER_FAILED",
                     "ERROR",
@@ -598,12 +601,14 @@ export const confirmPayment = webMethod(
                 );
             } catch (stateError) {
                 await logAuditEvent(
-                    "PAYMENT_STATE_UPDATE_FAILED",
+                    "PAYMENT_STATE_UPDATE_REQUIRED",
                     "ERROR",
-                    "Ledger payment exists but booking state update failed.",
+                    "Fiscal payment exists; booking state requires retry.",
                     {
                         orderId,
+                        transactionId: `ORDER-${orderId}`,
                         cashMovementId,
+                        bookingIds: citas.map(cita => _safeTrim(cita?.[FIELD_BOOKING_ID] || cita?.bookingId || "")).filter(Boolean),
                         traceId,
                         error: stateError?.message || String(stateError),
                     },
@@ -615,9 +620,11 @@ export const confirmPayment = webMethod(
                     status: "ERROR",
                     data: null,
                     error: {
-                        code: "PAYMENT_STATE_UPDATE_FAILED",
+                        code: "PAYMENT_STATE_UPDATE_REQUIRED",
                         message:
-                            "Payment was registered but booking could not be updated. Reconciliation required.",
+                            "Payment is recorded. Retry reservation reconciliation; the existing ORDER transaction will be reused.",
+                        transactionId: `ORDER-${orderId}`,
+                        cashMovementId,
                     },
                 };
             }
@@ -799,7 +806,6 @@ async function _validatePaymentCitaSet(citas, orderId, traceId) {
 }
 
 async function _validatePaymentIdempotency(citas, orderId, traceId) {
-    let paidCount = 0;
     for (const cita of citas) {
         const meta = _getCitaMeta(cita);
         const existingOrderId = _safeTrim(meta.orderId || "");
@@ -817,16 +823,11 @@ async function _validatePaymentIdempotency(citas, orderId, traceId) {
             );
         }
 
-        paidCount += 1;
     }
 
-    if (paidCount > 0 && paidCount !== citas.length) {
-        throw createBookingError(
-            ERROR_CODES.INVALID_PAYLOAD,
-            "Payment state is inconsistent across bookings.",
-            { traceId, orderId, paidCount, total: citas.length }
-        );
-    }
+    // A mixed PAID/unpaid pair is a recoverable partial write. Every row already
+    // marked PAID was checked above to belong to this order; confirmPayment can
+    // reuse ORDER-{orderId} and repair the remaining CitasF2 rows.
 }
 
 async function _setCitasPaymentState(
