@@ -38,6 +38,8 @@ Consulta Wix Site Context API `ListStaticPages` y `ListDynamicPages`:
 
 Wix devuelve 9 páginas estáticas y 2 dinámicas. La consulta de URL mappings devuelve 0 redirecciones. El inventario de páginas estáticas no enumera todas las páginas administradas internamente por Wix Apps; por eso no se interpreta la ausencia de una ruta de app como 404 sin comprobarla por el mecanismo correspondiente.
 
+El repositorio también contiene controladores de páginas como `Mis reservas`, `Mis pedidos`, `Página del producto`, `Página del carrito` y `TARJETAS REGALO` con poco o ningún código Velo propio. Esto no se clasifica automáticamente como defecto: varias de esas páginas pertenecen a Wix Members, Stores o Gift Cards y pueden ser gestionadas por la app nativa. La verificación de su contenido y permisos debe hacerse en Wix Editor y en los recorridos publicados, no añadiendo lógica duplicada al controlador.
+
 ### Rutas corregidas en la rama de auditoría
 
 - `ZONA STAFF` → `ADMIN_PANEL`: antes `/administracion`; ahora constante canónica `URLS.ADMIN_PANEL = /zona-marian`.
