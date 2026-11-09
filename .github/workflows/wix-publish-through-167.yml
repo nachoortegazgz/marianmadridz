@@ -67,12 +67,7 @@ jobs:
       - name: Install locked project dependencies
         run: npm ci --ignore-scripts --no-audit --no-fund
 
-      - name: Run Layer 1 QA simulation
-        run: npm run test:layer1
-
-      - name: Run Layer 2 QA simulation
-        run: npm run test:layer2
-
+      # npm test runs the complete suite once, including all Layer 1 and Layer 2 suites.
       - name: Run full offline regression suite
         run: npm test
 

@@ -315,7 +315,7 @@ test('CRON-DUAL-RECONCILE-02 only reconciles a fully consistent dual pair and un
     { _id: 'f1-row', pairToken, bookingType: IC.BOOKING_TYPE.DUAL_F1, bookingId: f1Id,
       orderId, paymentStatus: 'PAID', totalAmount: 45.5, cashMovementId: movementId },
     { _id: 'f2-row', pairToken, bookingType: IC.BOOKING_TYPE.DUAL_F2, bookingId: f2Id,
-      orderId, paymentStatus: 'PAID', totalAmount: 45.5, cashMovementId: movementId,
+      orderId, paymentStatus: 'PAID', totalAmount: 0, cashMovementId: movementId,
       meta: { linkedF1BookingId: f1Id } },
   ]);
   wixDataMock._seed(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA, [{
@@ -329,6 +329,40 @@ test('CRON-DUAL-RECONCILE-02 only reconciles a fully consistent dual pair and un
   assert.equal(result.reconciled, 1);
   assert.equal(flag.payload.status, 'RECONCILED');
   assert.equal(flag.payload.verified.movementId, movementId);
+  delete mocks.sdk['bookings::getBooking'];
+});
+
+
+test('CRON-DUAL-RECONCILE-04 refuses a non-zero F2 even when the ledger matches F1', async () => {
+  wixDataMock._reset();
+  const C = IC.OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
+  const pairToken = 'pair-nonzero-f2';
+  const orderId = 'order-nonzero-f2';
+  const f1Id = '11111111-1111-4111-8111-111111111111';
+  const f2Id = '22222222-2222-4222-8222-222222222222';
+  const movementId = 'cash-movement-nonzero-f2';
+  const flagId = 'dual-flag-nonzero-f2';
+  wixDataMock._seed(C, [{
+    _id: flagId, controlType: IC.CONTROL_TYPE.SYSTEM_FLAG,
+    payload: { reason: 'DUAL_INCONSISTENT', status: 'REPAIR_REQUIRED', pairToken },
+  }]);
+  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.CITAS_F2, [
+    { _id: 'f1-row', pairToken, bookingType: IC.BOOKING_TYPE.DUAL_F1, bookingId: f1Id,
+      orderId, paymentStatus: 'PAID', totalAmount: 45.5 },
+    { _id: 'f2-row', pairToken, bookingType: IC.BOOKING_TYPE.DUAL_F2, bookingId: f2Id,
+      orderId, paymentStatus: 'PAID', totalAmount: 45.5, meta: { linkedF1BookingId: f1Id } },
+  ]);
+  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA, [{
+    _id: movementId, transactionId: 'ORDER-' + orderId, orderId,
+    totalAmount: 45.5, linkedBookingIds: [f1Id, f2Id],
+  }]);
+  mocks.sdk['bookings::getBooking'] = async id => ({ booking: { id } });
+
+  const result = await CR.reconcileInconsistentDualPairs();
+  const flag = (wixDataMock._store.get(C) || []).find(row => row._id === flagId);
+  assert.equal(result.reconciled, 0);
+  assert.equal(result.failed, 1);
+  assert.equal(flag.payload.status, 'REPAIR_REQUIRED');
   delete mocks.sdk['bookings::getBooking'];
 });
 

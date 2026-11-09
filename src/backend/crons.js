@@ -845,7 +845,8 @@ Boolean(f1OrderId && f1OrderId === f2OrderId) &&
 Boolean(f1PaymentStatus && f1PaymentStatus === f2PaymentStatus) &&
 Number.isFinite(f1Amount) &&
 Number.isFinite(f2Amount) &&
-Math.round(f1Amount * 100) === Math.round(f2Amount * 100);
+f1Amount >= 0 &&
+Math.round(f2Amount * 100) === 0;
 
 if (!pairValid) {
 result.failed++;
@@ -854,8 +855,7 @@ pairToken, reason: "DUAL_PAIR_INTEGRITY_MISMATCH", rowCount: pairRows.length,
 f1Count: f1Rows.length, f2Count: f2Rows.length,
 sameOrder: Boolean(f1OrderId && f1OrderId === f2OrderId),
 samePaymentStatus: Boolean(f1PaymentStatus && f1PaymentStatus === f2PaymentStatus),
-sameAmount: Number.isFinite(f1Amount) && Number.isFinite(f2Amount) &&
-Math.round(f1Amount * 100) === Math.round(f2Amount * 100),
+f2IsZero: Number.isFinite(f2Amount) && Math.round(f2Amount * 100) === 0,
 });
 continue;
 }

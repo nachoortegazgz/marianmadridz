@@ -381,7 +381,7 @@ test("EVENT-PAYMENT-09 official Wix eCommerce paid event appends WIX_PAYMENTS le
       bookingType: "DUAL_F2",
       bookingStatus: "PENDING",
       paymentStatus: "PENDING_PAYMENT",
-      totalAmount: 45.5,
+      totalAmount: 0,
       meta: {
         pairToken: PAIR_TOKEN,
         customSaga: true,
@@ -406,7 +406,12 @@ test("EVENT-PAYMENT-09 official Wix eCommerce paid event appends WIX_PAYMENTS le
         _id: orderId,
         paymentStatus: "PAID",
         currency: "EUR",
+        taxIncludedInPrices: true,
+        taxInfo: { totalTax: { amount: "7.90" }, taxBreakdown: [] },
         priceSummary: {
+          subtotal: { amount: "37.60" },
+          tax: { amount: "7.90" },
+          total: { amount: "45.50" },
           totalPrice: { amount: "45.50" },
         },
         lineItems: [{
@@ -414,9 +419,16 @@ test("EVENT-PAYMENT-09 official Wix eCommerce paid event appends WIX_PAYMENTS le
             appId: IC.WIX_CATALOG_APP_IDS.BOOKINGS,
             catalogItemId: BOOKING_ID,
           },
+          productName: { original: "QA booking service" },
           quantity: 1,
           price: { amount: "120.00" },
-          totalPriceAfterTax: { amount: "120.00" },
+          totalPriceAfterTax: { amount: "45.50" },
+          taxInfo: {
+            taxableAmount: { amount: "37.60" },
+            taxAmount: { amount: "7.90" },
+            taxRate: "0.21",
+            taxBreakdown: [],
+          },
         }],
       },
       previousPaymentStatus: "PENDING",
@@ -432,6 +444,10 @@ test("EVENT-PAYMENT-09 official Wix eCommerce paid event appends WIX_PAYMENTS le
   assert.equal(movement.transactionId, "ORDER-" + orderId);
   assert.equal(movement.orderId, orderId);
   assert.equal(movement.totalAmount, 45.5, "official priceSummary.totalPrice must take precedence over the line-item fallback");
+  assert.equal(movement.taxBase, 37.6);
+  assert.equal(movement.taxAmount, 7.9);
+  assert.equal(movement.tipoImpositivo, 21);
+  assert.equal(movement.breakdown?.[0]?.cuota, 7.9);
   assert.equal(movement.paymentMethod, IC.PAYMENT_METHOD.WIX_PAYMENTS);
   assert.equal(movement.movementType, IC.MOVEMENT_TYPE.VENTA_ONLINE);
   assert.equal(movement.channelType, IC.CHANNEL_TYPE.ONLINE);
