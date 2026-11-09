@@ -36,7 +36,8 @@ No se cambian las colecciones ni los datos existentes. Los hooks de protección 
 ## 4. Integridad fiscal y datos
 
 - `wixEcom_onOrderPaymentStatusUpdated` mantiene el registro económico, recuperación fiscal, proyección de caja y actualización de pagos Bookings.
-- `wixEcom_onOrderRefunded` mantiene el ledger de reembolso y su idempotencia; Wix aplica el side effect nativo de restock cuando corresponde.
+- `wixEcom_onOrderRefunded` mantiene el ledger de reembolso y su idempotencia; Wix aplica restock solo si el refund solicita `sideEffects.restock.lineItems`.
+- `Cancel Order` requiere `restockAllItems=true` para restock; no asumir que toda cancelación repone stock.
 - `wixEcom_onOrderCanceled` mantiene la cancelación de reservas Bookings; no libera stock desde CMS.
 - No se insertan nuevos registros en `MovimientosInventario`; sus hooks `beforeUpdate` y `beforeRemove` siguen protegiendo el histórico.
 - No se ha modificado Wix CMS, stock, servicios, reservas, pagos ni Orders Settings.
@@ -56,7 +57,14 @@ No se cambian las colecciones ni los datos existentes. Los hooks de protección 
 
 El marcador de `ORDER_CREATED` fusionado en PR #238 etiqueta la autoridad como `WIX_STORES_NATIVE`, aunque el handler también procesa pedidos Bookings y mixtos. PR #240 cambia el valor a `WIX_CATALOG_OWNER` y ajusta la expectativa del test; no modifica efectos de negocio ni datos. CI de esta corrección debe confirmarse antes de fusionar.
 
-## 7. Pruebas runtime pendientes
+## 7. Política operativa nativa de cancelación y devolución
+
+- Cancelar antes de fulfillment/consumo: seleccionar restock de todos los artículos en Wix si continúan físicamente disponibles. El API `Cancel Order` usa `restockAllItems=true`; no es automático si el parámetro no se activa.
+- Reembolso tras devolución física: restock solo de las líneas y cantidades recibidas y vendibles mediante `sideEffects.restock.lineItems`.
+- No restock por reembolso de cortesía, servicio consumido, artículo dañado o producto no devuelto.
+- No existe lógica custom que replique estos efectos.
+
+## 8. Pruebas runtime pendientes
 
 1. Wix Local Editor/Preview: compra de producto con tracking activo; confirmar decremento nativo al pago.
 2. Cancelación de pedido: comprobar la política nativa `restockAllItems` configurada por Wix.
@@ -65,13 +73,13 @@ El marcador de `ORDER_CREATED` fusionado en PR #238 etiqueta la autoridad como `
 5. Confirmar que venta y refund siguen creando movimientos económicos/fiscales correctos.
 6. Verificar no regresión en pedidos Bookings, Stores y mixtos.
 
-## 8. Reversión y despliegue
+## 9. Reversión y despliegue
 
 - PR #238 fusionado, pero no se ha publicado una nueva versión del sitio por esta intervención.
 - Reversión técnica: revertir el merge commit antes de publicar. No requiere revertir datos porque no se han hecho mutaciones.
 - No desplegar si falla CI de PR #240 o el E2E nativo de venta/cancelación/refund.
 - La restauración de código custom no debe reactivar escrituras históricas ni modificar cantidades; cualquier reversión futura requiere nueva revisión de arquitectura.
 
-## 9. Restricciones vigentes
+## 10. Restricciones vigentes
 
 No activar automatizaciones que contacten clientes. No realizar cargos reales, reservas reales, cambios de stock, escrituras CMS de producción ni publicación durante esta fase.
