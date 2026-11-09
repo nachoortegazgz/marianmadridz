@@ -129,3 +129,15 @@ La auditoría del repositorio `docs/audits/2026-11-09-capa3-implementation-state
 ### 7.4 Validación del webhook
 
 La documentación oficial de Wix consultada indica que los Velo backend event handlers para Wix Studio/Wix Editor se ejecutan en el sitio publicado. Por ello, la suite offline no acredita la ejecución real de esos handlers; la aceptación requiere un entorno Wix publicado de QA con eventos sintéticos, sin transacciones reales.
+
+
+## 8. Actualización tras ampliar la auditoría (2026-11-09)
+
+- Último commit de código verificado: `c5378dcb869201566a4f3f0d6c248e2aaaef4cf3`.
+- CI #210: **success**; 47 suites, 444 tests, 0 fallos.
+- SDK contract, Bookings Reader V2 contract y ESLint: **success**.
+- `src/backend/reservas.web.js::_writeDaysCacheWindow`: ahora añade `traceId` al registro temporal `DAYS_CACHE`; prueba `RES-DAYS-01` verifica el campo.
+- `src/backend/cajas.web.js::getCashierState`: eliminados los `.catch()` que convertían fallos de lectura/conteo del ledger en cero operaciones o en el contador de la proyección. El método devuelve ERROR si no puede leer el ledger. `site.flows.offline.test.mjs` cubre el fallo de lectura forzado.
+- La normalización `CANCELED`, la validación `scheduleId` y la corrección contable `cashMovementId` siguen incluidas en la rama.
+- Se mantiene pendiente el fallo no durable de `wixEcom_onOrderCreated` descrito en §7.2; no se declara resuelto.
+- No se ha hecho merge ni despliegue. No se han escrito datos ni esquemas CMS, ni se han ejecutado pagos, reservas, movimientos fiscales o cambios de stock.
