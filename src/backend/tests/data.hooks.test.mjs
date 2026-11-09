@@ -355,3 +355,47 @@ test('HOOK-ACCOUNTING-LEDGER-01 blocks update and remove of LibroAsientosContabl
   assert.throws(() => H.LibroAsientosContablesDetalle_beforeUpdate({}), /append-only/);
   assert.throws(() => H.LibroAsientosContablesDetalle_beforeRemove({}), /append-only/);
 });
+
+
+test('HOOK-PACKAGE-01 validates immutable accountant package snapshot inserts', () => {
+  const valid = {
+    _id: 'DOC_GESTORIA_2026_T1_PAQUETE_GESTORIA_V0001',
+    periodType: 'QUARTERLY',
+    fiscalYear: 2026,
+    fiscalQuarter: 1,
+    packageVersion: 1,
+    summaryData: { totalOperaciones: 1 },
+    invoiceData: [{ invoiceNumber: 'F-1' }],
+    packageStatus: 'PREPARED',
+    snapshotHash: 'a'.repeat(64),
+    schemaVersion: '1.0',
+    source: 'FISCAL_AGGREGATOR',
+    traceId: 'trace-package-1',
+  };
+  assert.strictEqual(H.PaquetesGestoria_beforeInsert(valid), valid);
+  assert.throws(() => H.PaquetesGestoria_beforeInsert({ ...valid, snapshotHash: 'invalid' }), /SHA-256/);
+  assert.throws(() => H.PaquetesGestoria_beforeInsert({ ...valid, fiscalMonth: 2 }), /no admite fiscalMonth/);
+});
+
+test('HOOK-PACKAGE-02 monthly package requires month and forbids quarter', () => {
+  const valid = {
+    periodType: 'MONTHLY',
+    fiscalYear: 2026,
+    fiscalMonth: 2,
+    packageVersion: 1,
+    summaryData: {},
+    invoiceData: [],
+    packageStatus: 'PREPARED',
+    snapshotHash: 'b'.repeat(64),
+    schemaVersion: '1.0',
+    source: 'FISCAL_AGGREGATOR',
+    traceId: 'trace-package-2',
+  };
+  assert.strictEqual(H.PaquetesGestoria_beforeInsert(valid), valid);
+  assert.throws(() => H.PaquetesGestoria_beforeInsert({ ...valid, fiscalQuarter: 1 }), /no admite fiscalQuarter/);
+});
+
+test('HOOK-PACKAGE-03 update and remove are forbidden', () => {
+  assert.throws(() => H.PaquetesGestoria_beforeUpdate({}), /append-only/);
+  assert.throws(() => H.PaquetesGestoria_beforeRemove({}), /append-only/);
+});
