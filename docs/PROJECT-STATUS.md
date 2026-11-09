@@ -1,6 +1,6 @@
 # Estado actual del proyecto — Marian Madrid
 
-**Revisión:** 2026-11-09  
+**Revisión:** 2026-11-10  
 **Repositorio:** [nachoortegazgz/marianmadridz](https://github.com/nachoortegazgz/marianmadridz)  
 **Baseline de código:** `main` · `8abe9bf6aee215fadd9f41beec671c16ae44fb93`  
 **Sitio:** https://www.marianmadrid.es/  
@@ -22,7 +22,7 @@ El repositorio contiene una solución Wix Editor/Velo con reservas Bookings V2, 
 | Wix Bookings V2 | Catálogo conciliado en lectura | 94 servicios nativos ↔ 94 filas CMS; 70 visibles y 24 ocultos en ambos. IDs, títulos, precios y fases duales coinciden. Disponibilidad smoke anterior; runtime WebMethods pendiente. |
 | Checkout eCommerce Cart V2 | Contratos de SDK en CI | La suite de contratos no sustituye checkout, pago y webhooks E2E en entorno de prueba. |
 | Stores Catalog V3 | V3 activo y APIs REST responden | `V3_CATALOG`; 24 productos visibles; 30 inventory items en una ubicación. Adaptador V3 presente; import SDK/scopes Velo pendientes. |
-| Proyección de inventario | **Bloqueada por falta de maestros CMS** | Stores V3: 30/30 inventory items con tracking en una ubicación. `InventarioStockVenta`: 1 fila sin `productId`/`variantId`/`stockKey`; 0/30 maestros canónicos. El backend devuelve `INVENTORY_MASTER_MAPPING_REQUIRED` si falta el maestro. No se han escrito datos. |
+| Inventario personalizado | **En retirada; no crear maestros CMS** | Wix Stores Catalog V3: 30/30 inventory items con tracking en una ubicación. Se decide que Wix nativo es la única autoridad. El módulo custom aún está conectado a webhooks y UI; retirada requiere PR de código y QA. No se han escrito datos ni se han modificado históricos. |
 | Ledger fiscal / Veri*Factu | **NO APTO para activar remisión Veri*Factu** | Auditoría de código: no hay transporte SOAP AEAT, XML XSD ni flujo de respuesta/remisión. Las huellas internas no acreditan conformidad AEAT. |
 | Registro horario | Implementación parcial | Writers/hooks existen; faltan pruebas runtime, auditoría de firma de históricos y aceptación legal/operativa. |
 | Paquetes de gestoría | Snapshot y envío bloqueados | `PaquetesGestoria` tiene confirmación de creación de esquema en auditoría; creación de snapshot deshabilitada por contrato/hash/tamaño/concurrencia pendientes. Envío Resend deshabilitado por configuración. |
@@ -77,7 +77,7 @@ Referencia: [Auditoría de preparación Veri*Factu](qa/2026-11-09-verifactu-read
 1. Abrir Wix Local Editor conectado al sitio y reconciliar versión UI/código.
 2. Verificar import real de `@wix/stores`, manifiesto generado por Wix CLI y scopes V3.
 3. Ejecutar E2E con miembros/servicios/slots QA y pagos no cobrables: reserva simple/dual, compensación, checkout Cart V2, webhooks, cancelación y reprogramación.
-4. Registrar y validar los maestros de inventario mediante `registerInventoryMaster` en QA; no crear mappings por REST ni en producción sin autorización.
+4. Retirar de forma controlada las reservas/proyecciones/movimientos de inventario personalizados y su panel, manteniendo el stock nativo Wix. No crear maestros CMS ni borrar históricos; probar pedidos, cancelaciones y reembolsos en QA.
 5. Probar hooks CMS, permisos, DISPLAY_TOKEN, locks, fencing, concurrencia e idempotencia.
 6. Comparar los HTML Components de Wix Editor/publicados con `#htmlAdmin.txt` y `#htmlOnlyStaff.txt` versionados; validar IDs, mensajes, acciones y rutas en runtime antes de habilitar flags.
 7. Reconciliar Wix Bookings/Orders con proyecciones CMS mediante lecturas; no crear movimientos ni reparar históricos hasta disponer de procedimiento backend controlado y autorización.
@@ -100,10 +100,10 @@ Referencia: [Auditoría de preparación Veri*Factu](qa/2026-11-09-verifactu-read
 
 ## 5. Invariantes para toda intervención
 
-- Wix CMS/Wix Apps son SSOT transaccional según dominio; SharePoint solo custodia evidencia.
+- Wix Bookings es autoridad de servicios, disponibilidad y reservas; Wix Stores Catalog V3 es autoridad única de stock comercial; Wix CMS propio solo conserva datos de dominio que no estén cubiertos nativamente. SharePoint solo custodia evidencia.
 - Capa 3 no escribe en Capa 1.
 - Ledgers fiscales, contables y laborales son append-only; rectificaciones mediante nuevos registros trazables.
-- No pruebas con escrituras reales ni cambios de stock/reservas/pagos en producción.
+- No pruebas con escrituras reales ni cambios de stock/reservas/pagos en producción. No activar automatizaciones que contacten clientes.
 - No modificar históricos por REST ni borrar datos para hacer pasar pruebas.
 - No desplegar sin CI verde, revisión del diff, QA runtime, autorización y estrategia de recuperación.
 - Separar siempre: verificado en código, CI offline, APIs nativas live, runtime Wix, E2E y publicado.
