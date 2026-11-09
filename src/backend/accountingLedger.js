@@ -306,7 +306,7 @@ export async function appendAccountingEntry(input, traceId) {
         try {
             claim = await dalInsert(CONTROL_COL, {
                 _id: claimId,
-                controlType: CONTROL_TYPE.IDEMPOTENCY,
+                controlType: CONTROL_TYPE.DEDUPE_KEY,
                 dedupeKey: `ACCOUNTING_ENTRY:${entry.entryId}`,
                 status: "PENDING",
                 payload: {
