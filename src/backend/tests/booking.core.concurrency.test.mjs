@@ -542,9 +542,12 @@ test('BCORE-LOC-02 Writer location falls back to service config when slot lacks 
   assert.deepStrictEqual(resolved, { _id: RES_B, locationType: 'OWNER_BUSINESS' });
 });
 
-test('BCORE-LOC-03 Writer location rejects invalid ids and REST aliases', () => {
+test('BCORE-LOC-03 Writer location rejects invalid ids and ignores REST aliases', () => {
   assert.strictEqual(BC._resolveWriteLocation({ _id: 'not-a-guid' }, { locationId: 'also-invalid' }), null);
-  assert.strictEqual(BC._resolveWriteLocation({ id: RES_A }, null), null);
+  assert.deepStrictEqual(
+    BC._resolveWriteLocation({ id: RES_A }, { locationId: RES_B }),
+    { _id: RES_B, locationType: 'OWNER_BUSINESS' }
+  );
 });
 
 
