@@ -452,7 +452,7 @@ Number.isFinite(amount) && amount > 0 &&
 Number.isFinite(taxBase) && taxBase >= 0 &&
 Number.isFinite(taxAmount) && taxAmount >= 0 &&
 Number.isFinite(taxRate) && taxRate >= 0 &&
-/^\\d{4}-\\d{2}-\\d{2}$/.test(issueDate) &&
+/^\d{4}-\d{2}-\d{2}$/.test(issueDate) &&
 _safeTrim(fiscalPayload.nifEmisor) &&
 _safeTrim(fiscalPayload.issuerLegalName) &&
 Array.isArray(fiscalPayload.breakdown) && fiscalPayload.breakdown.length > 0 &&
