@@ -68,7 +68,7 @@
 - `inventario.web.js`, su suite de writer, `INVENTORY_CONFIG`, `validateInventoryOrderLine`, acciones admin y panel staff eliminados y fusionados mediante PR #238.
 - Webhooks eCommerce y cron desacoplados de stock CMS; se mantiene ledger fiscal, idempotencia y hooks append-only históricos.
 - CI run 42721311048: 50 suites/488 tests, SDK eCommerce Cart V2 y Bookings Reader V2 y ESLint en verde para commit `94974c254644594e76fc717278098a2968073028`.
-- PR #240 corrige el valor semántico del marcador de autoridad de catálogo (`WIX_STORES_NATIVE` → `WIX_CATALOG_OWNER`); CI pendiente.
+- PR #241 corrige el valor semántico del marcador de autoridad de catálogo (`WIX_STORES_NATIVE` → `WIX_CATALOG_OWNER`); CI run 42722015208 verde (50 suites/488 tests).
 - QA Wix runtime de venta/cancelación/reembolso pendiente; no desplegar hasta completarlo.
 - Informe: `docs/qa/2026-11-10-native-inventory-retirement.md`.
 
