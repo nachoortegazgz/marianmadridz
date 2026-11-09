@@ -149,42 +149,14 @@ $w.onReady(async () => {
       roleLabel,
 
       // ── Navegación / calendario ─────────────────────────────────────
-      calendarUrl: "/mi-calendario", // ruta real del calendario del staff
+      // Ruta pendiente de confirmar en el inventario publicado de Wix.
+      calendarUrl: "/mi-calendario",
     }),
 
-    /* ─────────────────────────────────────────────────────────────────
-       MENSAJES del widget
-       ─────────────────────────────────────────────────────────────────
-       Contrato backend esperado (el bridge debe enrutar a backend y
-       devolver el _RES correspondiente):
-
-         CLOCK           → CLOCK_RES           (fichajes)
-         GET_STATE       → GET_STATE_RES       (estado jornada)
-         GET_HISTORY     → GET_HISTORY_RES
-         HOURS_CALC      → HOURS_CALC_RES
-         ADJUSTMENT      → ADJUSTMENT_RES
-
-         CASHIER_STATE   → CASHIER_STATE_RES   { saldoTotal, totalOperaciones,
-                                                 diaKey, movimientos[] }
-         TPV_TX          → TPV_TX_RES          { ticket: { ticketNumber,
-                                                 createdAt, supplierName,
-                                                 supplierNif, concept, amount,
-                                                 paymentMethod, traceId,
-                                                 fiscalFingerprint,
-                                                 issuerName, issuerCif } }
-         X_COUNT         → X_COUNT_RES         { ticket: { … } }
-         Z_CLOSING       → Z_CLOSING_RES       { ticket: { … } }
-
-         INVENTORY_*     → INVENTORY_*_RES
-
-       Estos mensajes de caja deben:
-         · Escribir en la colección nativa `MovimientosCaja`
-         · Actualizar `CajaActual` (saldoTotal, totalOperaciones, diaKey)
-         · Generar número de ticket secuencial
-         · Estampar traza (traceId) + huella fiscal (fiscalFingerprint)
-
-       Si el bridge no auto-enruta, añadir aquí las llamadas
-       explícitas a backend y devolver el `_RES` correspondiente.
+    /* El widget de staff permanece en modo placeholder: las funciones de caja,
+       inventario y jornada están deshabilitadas y este controlador no invoca
+       WebMethods de negocio. No activar flags hasta sincronizar el HTML real y
+       definir un contrato de acciones backend probado.
        ───────────────────────────────────────────────────────────────── */
     onWidgetMessage: async (message) => {
       const type = String(message?.type || "").toUpperCase();
@@ -195,7 +167,7 @@ $w.onReady(async () => {
       if (type === MESSAGE_TYPES.NAV) {
         switch (target) {
           case "ADMIN_PANEL":
-            location.to("/administracion");
+            location.to(URLS.ADMIN_PANEL);
             break;
 
           case "SERVICIOS":
@@ -219,7 +191,7 @@ $w.onReady(async () => {
           case "STAFF_CALENDAR":
           case "CALENDAR":
           case "MI_CALENDARIO":
-            location.to("/mi-calendario"); // ajustar ruta real
+            location.to("/mi-calendario"); // ruta pendiente de confirmar en Wix
             break;
 
           default:
@@ -231,12 +203,8 @@ $w.onReady(async () => {
         return;
       }
 
-      /* ── Caja / TPV ────────────────────────────────────────────────
-         Los tipos TPV_TX, X_COUNT, Z_CLOSING y CASHIER_STATE deben
-         ser enrutados por el bridge o por el backend. Aquí sólo
-         dejamos logging defensivo si el tipo no es conocido por el
-         bridge (para detectar desalineaciones de contrato).
-         ──────────────────────────────────────────────────────────── */
+      // La zona staff es un placeholder: estos mensajes solo se registran
+      // para diagnóstico. No existe en esta página un enrutamiento de caja.
       const CASHIER_TYPES = new Set([
         "TPV_TX",
         "X_COUNT",
@@ -245,29 +213,7 @@ $w.onReady(async () => {
       ]);
 
       if (CASHIER_TYPES.has(type)) {
-        // Si tu `widgetBridge` no auto-enruta estos tipos, sustituye
-        // este bloque por:
-        //
-        //   import {
-        //     cashierState,
-        //     tpvTx,
-        //     xCount,
-        //     zClosing,
-        //   } from "backend/cashier.web.js";
-        //
-        //   const handlerMap = {
-        //     CASHIER_STATE: cashierState,
-        //     TPV_TX: tpvTx,
-        //     X_COUNT: xCount,
-        //     Z_CLOSING: zClosing,
-        //   };
-        //   const fn = handlerMap[type];
-        //   const res = await fn(payload);
-        //   return { type: `${type}_RES`, payload: res };
-        //
-        // El retorno debe ser `{ type: 'XXX_RES', payload }` para que
-        // el bridge lo reenvíe al widget.
-        console.debug("[only-staff] cashier message", {
+        console.debug("[only-staff] cashier message (not routed)", {
           traceId,
           type,
           txType: payload.txType || null,
