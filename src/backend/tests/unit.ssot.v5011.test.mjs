@@ -82,6 +82,12 @@ test('UNIT-ENUM-01 booking enums aligned with canonical SSOT', async () => {
   assert.strictEqual(IC.PAYMENT_STATUS.REFUNDED, 'REFUNDED');
 });
 
+test('UNIT-CONTROL-TYPES-01 durable dedupe types remain distinct from purgeable idempotency', () => {
+  assert.equal(IC.CONTROL_TYPE.DEDUPE_KEY, 'DEDUPE_KEY');
+  assert.equal(IC.CONTROL_TYPE.LEDGER_IDEMPOTENCY, 'LEDGER_IDEMPOTENCY');
+  assert.equal(IC.CONTROL_TYPE.IDEMPOTENCY, 'IDEMPOTENCY');
+});
+
 test('UNIT-RESERVATION-CONFIG-01 canonical reservation values are centralized', () => {
   assert.deepStrictEqual(IC.DTO_CONFIG, {
     MINUTOS_INTERVALO_INICIO: 30,
