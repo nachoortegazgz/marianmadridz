@@ -178,7 +178,7 @@ export const ACCOUNTING_LEDGER_LOCK_CONFIG = Object.freeze({
 });
 
 
-// Wix Stores Catalog V1 inventory projection and per-variant reconciliation.
+// Wix Stores Catalog V3 inventory projection and per-variant reconciliation.
 export const INVENTORY_CONFIG = Object.freeze({
   CATALOG_VERSION: "V3_CATALOG",
   STOCK_KEY_PREFIX: "V3",
