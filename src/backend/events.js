@@ -502,6 +502,19 @@ async function isEventProcessed(eventId) {
     return Boolean(existing?.items?.length);
 }
 
+async function isOrderCreatedReconciled(orderId) {
+    if (!_looksLikeGuid(orderId)) return false;
+    const existing = await dalQuery(CONTROL_OPERATIVO_COL)
+        .eq("controlType", CONTROL_TYPE.WEBHOOK_EVENT)
+        .eq("orderId", orderId)
+        .eq("status", CONTROL_STATUS.COMPLETED)
+        .limit(5)
+        .find(STRONG_READ);
+    return (existing?.items || []).some((row) =>
+        row?.payload?.eventType === "ORDER_CREATED_RECONCILED"
+    );
+}
+
 async function markEventAsProcessed(eventId, eventType, traceId, metadata = {}) {
     if (!eventId) return;
     const normalizedId = _normalizeIdPart(String(eventId), 100);
@@ -1733,6 +1746,9 @@ export async function wixEcom_onOrderCreated(rawBody) {
         if (!_looksLikeGuid(orderId)) return { status: "OK", skipped: "ORDER_ID_MISSING" };
         const eventId = _safeTrim(event?.eventId || event?._id || event?.metadata?.id) || `order-created-${orderId}`;
         if (await isEventProcessed(eventId)) return { status: "OK", duplicate: true };
+        if (await isOrderCreatedReconciled(orderId)) {
+            return { status: "OK", reconciled: true, orderId };
+        }
 
         const result = await reserveOrderInventoryInternal(order, traceId, eventId);
         if (result.status === "PARTIAL") {
@@ -1752,8 +1768,10 @@ export async function wixEcom_onOrderCreated(rawBody) {
         return { status: "OK", eventId, inventoryStatus: result.status };
     } catch (error) {
         _handleError(error, "wixEcom_onOrderCreated", traceId);
-        if (String(error?.message || "").includes("INVENTORY_")) throw error;
-        return { status: "OK" };
+        // Wix backend events are delivered at least once. Never acknowledge a
+        // failed persistence/reconciliation path: propagate so the delivery
+        // can be retried. Inventory and CMS writes remain idempotent.
+        throw error;
     }
 }
 
