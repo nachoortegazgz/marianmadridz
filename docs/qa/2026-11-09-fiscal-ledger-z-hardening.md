@@ -56,3 +56,11 @@ This change addresses verified risks in `src/backend/cajas.web.js`:
 - Confirm the public booking/checkout flows remain functional.
 
 **Deployment is not part of this PR.**
+
+## Fiscal QR mode — unresolved live configuration
+
+A read-only Wix CMS query on 2026-11-09 returned one DatosFiscales item: recordType=TERCERO, thirdPartyType=EMISOR. A query for recordType=CONFIG_SISTEMA returned no rows. The non-sensitive fields taxRegime, verifactuEnabled, verifactuVersion and fechaInicioVerifactu are null on the legacy emitter row. The fiscal aggregator has a legacy emitter-ID fallback, but this does not establish the operating Veri*Factu mode.
+
+The AEAT QR specification distinguishes the endpoint for VERI*FACTU (ValidarQR) from NO VERI*FACTU (ValidarQRNoVerifactu). This PR formats the date as DD-MM-AAAA and the amount with two decimal places; it intentionally does not change the endpoint until the operating mode is confirmed. The missing CONFIG_SISTEMA singleton must be populated through an approved, traceable migration using verified legal data; no tax regime, mode or start date is inferred.
+
+No tax ID, legal name, or secret was read or exposed in the probe. No CMS write was performed.
