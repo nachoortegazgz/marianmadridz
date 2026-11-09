@@ -156,6 +156,7 @@ test("staff widget remains fail-closed and bridge only accepts navigation", () =
   const allowlist = staffPage.match(/allowedTypes:\s*\[([\s\S]*?)\]/);
   assert.ok(allowlist, "staff page must declare an explicit widget allowlist");
   assert.match(allowlist[1], /MESSAGE_TYPES\.READY/);
+  assert.match(allowlist[1], /MESSAGE_TYPES\.CONTEXT/);
   assert.match(allowlist[1], /MESSAGE_TYPES\.NAV/);
   assert.doesNotMatch(allowlist[1], /CLOCK|TPV_TX|X_COUNT|Z_CLOSING|INVENTORY_/);
   assert.match(staffPage, /enableClocking:\s*false/);
