@@ -123,3 +123,13 @@ Los nombres anteriores corresponden a archivos verificados en `main`. No se han 
 - **CI verificado en run #245:** suite offline 349/349 PASS; Layer 1 217/217 PASS; Layer 2 112/112 PASS; ESLint PASS. Una corrección posterior del mapeo de error Wix Data (WDE0074) está pendiente de nueva ejecución CI.
 - **Pendiente de diseño/cierre:** serialización concurrente del ledger fiscal `eventLog`, pruebas Wix QA y flujos E2E.
 - **No autorizado/realizado:** merge de esta rama y despliegue.
+
+
+## Addendum 2026-11-09 — limpieza del modelo de errores
+
+- **Integrado en main:** PR #212 consolidó la secuencia fiscal en `CajaActual.CAJA_PRINCIPAL.sequenceCounters` y eliminó el modelo `CAJA_SEQ`.
+- **Cambio en revisión:** PR #214 unifica las excepciones de reserva en `Error` nativo con `code` y `details`. Se eliminan la clase `BookingError`, su rama específica de normalización y la clase `AppError` (sin consumidores verificados).
+- `responseUtils.js` mantiene separados los envelopes públicos (`successResponse` / `errorResponse`) y la conversión pública (`_toPublicError`), porque tienen contratos distintos; se elimina únicamente el wrapper redundante `_normalizeMeta`.
+- Se añade `responseUtils.contract.test.mjs` para verificar `Error` nativo, conservación de `code/details`, normalización, envelope y metadatos.
+- **CI verificado en run #151:** 47 suites, 442 tests, 0 fallos; contratos Cart V2 y Bookings Reader V2 correctos; ESLint correcto.
+- **Límite:** validación offline/SDK; no acredita runtime Wix publicado. Sin escrituras CMS, reservas, pagos, caja o ledger. PR #214 permanece abierta, sin merge ni despliegue.

@@ -1,24 +1,4 @@
-/*
-=============================================================================
-MODULE: backend/responseUtils.js
-VERSION: v5015-ALIGNED
-BASE: v5009-FISCAL-V20.1 + verificacion contra internalConfig v12.0 y
-      mmUtils v5011.
-RESPONSIBILITY: Respuestas publicas, errores controlados y normalizacion
-                de resultados de web methods.
-STANDARDS: G10 ASCII Strict.
-           Sin dependencias de Node.js.
-           Sin exposicion de stacks ni secretos.
-
-CAMBIOS DE ALINEACION v5015-ALIGNED:
-  ALN-01: Sin cambios funcionales. mmUtils v5011 exporta _cloneDeep y
-          _safeTrim, ambos usados aqui. No se apoya en ningun simbolo
-          eliminado en internalConfig v12.0. Compatible por diseno.
-
-CORRECTIONS (heredadas):
-  v5007.4.
-=============================================================================
-*/
+// Public response envelopes and safe error serialization.
 
 import { _cloneDeep, _safeTrim } from "public/mmUtils";
 
@@ -31,25 +11,15 @@ const DEFAULT_ERROR_CODE = "INTERNAL_ERROR";
 const DEFAULT_ERROR_MESSAGE = "Error interno";
 const UNKNOWN_ERROR_CODE = "UNKNOWN_ERROR";
 
-// =============================================================================
-// BLOQUE 2 - ERROR DE APLICACION
-// =============================================================================
-
-// =============================================================================
-// BLOQUE 3 - HELPERS INTERNOS
-// =============================================================================
+// Internal helpers.
 
 function _cloneMeta(value) {
-    if (!value || typeof value !== "object") {
-        return value === undefined ? {} : { details: value };
-    }
+    if (!value || typeof value !== "object") return {};
 
     try {
         return _cloneDeep(value);
     } catch {
-        return {
-            details: "Metadata could not be cloned safely.",
-        };
+        return { details: "Metadata could not be cloned safely." };
     }
 }
 
@@ -103,9 +73,6 @@ function _extractErrorValues(code, message) {
     };
 }
 
-// =============================================================================
-// BLOQUE 4 - RESPUESTAS PUBLICAS
-// =============================================================================
 
 export function successResponse(data = null, metaExtra = {}) {
     const extra = _cloneMeta(metaExtra);
@@ -146,9 +113,6 @@ export function errorResponse(
     };
 }
 
-// =============================================================================
-// BLOQUE 5 - CONVERSION DE ERRORES PUBLICOS
-// =============================================================================
 
 export function _toPublicError(
     err,
@@ -164,8 +128,3 @@ export function _toPublicError(
     };
 }
 
-// =============================================================================
-// CERO-DEUDA ZC-07: eliminados toWebMethodResult e isSuccess
-// (0 consumidores en src/ y tests; los web methods construyen respuestas
-// explicitamente con successResponse/errorResponse).
-// =============================================================================
