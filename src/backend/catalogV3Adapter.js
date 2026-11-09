@@ -65,6 +65,9 @@ export async function getCatalogVariant(productAndVariantId) {
         },
         cursorPaging: { limit: 100 },
     });
+    if (inventoryResponse?.pagingMetadata?.cursors?.next) {
+        throw _failure("INVENTORY_V3_LOCATION_LIMIT_EXCEEDED", "La consulta de ubicaciones supero el limite de seguridad.");
+    }
     const matches = (inventoryResponse?.inventoryItems || []).filter((item) =>
         String(item?.productId) === productId && String(item?.variantId) === variantId
     );
