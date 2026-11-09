@@ -512,7 +512,7 @@ Las colecciones `WIX_APP` son de **estricta lectura**. Prohibido ejecutar `wixDa
 
 **Orders Settings Wix (lectura live 2026-11-10):** `inventoryUpdateTrigger = ON_ORDER_PAID`, `createInvoice = false`. La deducción de stock está configurada para el momento del pago. No se ha cambiado esta configuración.
 
-**Bookings Services V2 (lectura live 2026-11-10):** 94 servicios: 70 `FIXED`, 24 `NO_FEE`, 0 `VARIED`; 7 servicios visibles superan 100 EUR; 0 tienen `payment.options.deposit = true`. No se han actualizado servicios.
+**Bookings Services V2 (lectura live 2026-11-10):** 94 servicios: 70 `FIXED`, 24 `NO_FEE`, 0 `VARIED`; 7 servicios visibles superan 100 EUR; 0 tienen `payment.options.deposit = true`. Los siete IDs/precios están en el ADR. No se han actualizado servicios.
 
 **Stores Catalog V3**: versión del catálogo confirmada por Catalog Versioning API (`V3_CATALOG`). Wix Stores y sus funciones nativas son la única autoridad de stock. La arquitectura objetivo elimina el adapter y las escrituras personalizadas de inventario; `backend/inventario.web.js`, sus proyecciones y el panel asociado quedan en retirada controlada. No crear maestros CMS ni nuevos movimientos de inventario. Los registros históricos existentes se preservan sin mutación. El checkout nativo debe validar automáticamente disponibilidad y deducir stock; E2E de venta, cancelación y devolución/restock en Wix QA sigue pendiente.
 
