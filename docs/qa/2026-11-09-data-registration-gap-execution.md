@@ -13,18 +13,18 @@ Reconciliar el plan de ejecución aportado con el código que existe actualmente
 
 | Tarea del plan | Estado en `main` | Evidencia / conclusión |
 |---|---|---|
-| D-01 / C-01 — persistir `scheduleId` en CitasF2 | **PARCIALMENTE RESUELTA** | `src/backend/booking/bookingCore.js::_persistBooking` exige GUID y escribe `BOOKING_FIELDS.SCHEDULE_ID`. Sin embargo, `src/backend/validation.js::assertCitasF2` y el hook `CitasF2_beforeInsert` de `src/backend/data.js` no exigen `scheduleId`. El contrato físico CMS también requiere comprobación en Wix. |
+| D-01 / C-01 — persistir `scheduleId` en CitasF2 | **IMPLEMENTADA EN RAMA; CI PENDIENTE** | `_persistBooking` lo exige y persiste; ahora `assertCitasF2` también exige GUID, por lo que los hooks `CitasF2_beforeInsert/beforeUpdate` lo validan en la frontera CMS. Se añadieron pruebas de ausencia y formato inválido. Falta confirmar el campo físico en CMS y ejecutar Wix Local Editor. |
 | D-02 / C-03 — `orderId` en movimientos de pedido | **IMPLEMENTADA EN WRITER PRINCIPAL** | `src/backend/events.js::wixEcom_onOrderPaymentStatusUpdated` pasa `orderId` y `transactionId` a `registrarEventoEconomico`; el flujo de recuperación fiscal también conserva `orderId`. Falta validar el esquema físico CMS y el CSV exportado. |
-| D-03 / C-04 — intención `order_created` | **BRECHA ABIERTA / ADR-02 NECESARIO** | `wixEcom_onOrderCreated` verifica/deduplica el evento y llama a `reserveOrderInventoryInternal`; no crea un registro de intención de compra ni proyecta `orderId` y líneas en una colección de intención. No se debe escribir en CitasF2 sin decisión de dominio. |
-| D-04 / C-06 — arqueos X append-only | **NO IMPLEMENTADA EN EL MÓDULO INSPECCIONADO** | No se encontró `registerXCount` ni colección `ArqueosCaja` en `src/backend/cajas.web.js` / `internalConfig.js`. Requiere ADR-03 y esquema CMS. |
-| D-05 / C-07 — actas de recuento de inventario | **NO IMPLEMENTADA EN EL MÓDULO INSPECCIONADO** | No se encontró `registerRecuentoInventario` ni colección `ActasRecuentoInventario` en `src/backend/inventario.web.js` / `internalConfig.js`. Requiere ADR-03 y esquema CMS. |
-| D-06 / ADR-04 — facturas recibidas pagadas por banco | **DESTINO CANÓNICO DEFINIDO** | La regla canónica indicada por el responsable del sistema es que los procesos que no pasan por caja física (incluidas facturas recibidas y pagos bancarios a proveedores) se consolidan en `LibroAsientosContablesDetalle`. No deben generar movimientos ficticios en `MovimientosCaja` ni actualizar `CajaActual`. Se debe verificar el contrato de campos y el writer contable existente antes de conectar estos procesos. |
+| D-03 / C-04 — intención `order_created` | **DECISIÓN DE DOMINIO: WIX ORDERS ES SSOT** | No se crea una segunda colección de intención de compra. El pedido nativo Wix Orders conserva la intención y el pedido; `wixEcom_onOrderCreated` registra `orderId`, estado de reserva y reparaciones en el evento idempotente de `ControlOperativo` tras completar la reserva de inventario. Debe verificarse la consulta/relectura de Wix Orders para recuperación y la persistencia del marcador de evento. |
+| D-04 / C-06 — arqueos X append-only | **PENDIENTE DE COLECCIÓN Y CONTRATO** | No existe writer/colección de arqueo X. `CajaActual` no debe usarse para guardar snapshots históricos. Se requiere colección de actas de arqueo append-only y hook físico antes de implementar el writer. |
+| D-05 / C-07 — actas de recuento de inventario | **PENDIENTE DE COLECCIÓN Y CONTRATO** | No existe writer/colección de acta de recuento. No se sobrescribirá stock ni `MovimientosInventario` para guardar el conteo observado. Se requiere colección append-only independiente y su hook físico. |
+| D-06 / ADR-04 — facturas recibidas pagadas por banco | **DESTINO DEFINIDO; AUTOMATIZACIÓN BLOQUEADA POR PGC** | `LibroAsientosContablesDetalle` es el destino canónico. Existe `src/backend/accountingLedger.js::appendAccountingEntry`, con validación de partida doble, hash-chain, idempotencia y persistencia append-only; el propio módulo desactiva el mapeo automático hasta que el titular apruebe el plan de cuentas y reglas PGC. No hay que crear `FacturasRecibidas` ni usar caja física. |
 
 ## 3. Contradicciones del plan que impiden ejecución literal
 
 ### 3.1 Enums de reserva
 
-La decisión del responsable del sistema fija `CANCELED` como único valor canónico tanto en el contrato CMS de CitasF2 como en los mapeos internos. `CANCELLED` debe desaparecer de enums, escritores, validadores, consumidores, pruebas y documentación activa. La traducción desde el estado nativo Wix debe conservar el contrato nativo y mapearlo explícitamente a `CITAS_BOOKING_STATUS.CANCELED`. Cualquier registro histórico con el valor anterior requiere inventario y migración controlada, nunca una sustitución masiva no auditada.
+La decisión del responsable del sistema fija `CANCELED` como único valor canónico tanto en el contrato CMS de CitasF2 como en los mapeos internos. La traducción desde el estado nativo Wix conserva su contrato y mapea explícitamente a `CITAS_BOOKING_STATUS.CANCELED`. La rama auditada elimina el enum anterior de escritores, consumidores y pruebas activas. Cualquier dato histórico con el valor retirado requiere inventario y migración controlada, nunca sustitución masiva no auditada.
 
 ### 3.2 DISPLAY_TOKEN
 
@@ -32,11 +32,11 @@ El plan B-04 propone añadir `DISPLAY_TOKEN` a `CONTROL_TYPE`. Ya está declarad
 
 ### 3.3 Destino de las intenciones de compra
 
-El handler `order_created` tiene responsabilidad actual de reserva de inventario, no de registrar una intención comercial en una colección propia. La existencia de Wix Orders no autoriza a reutilizar CitasF2. ADR-02 debe decidir si Wix Orders es suficiente como SSOT de la intención y si basta una proyección de auditoría, o si se necesita una colección NATIVE específica. No se debe crear una segunda fuente de verdad del pedido.
+Wix Orders es SSOT de la intención/pedido. `order_created` conserva el identificador y la reserva en el marcador idempotente de `ControlOperativo`; no se crea una colección duplicada ni se reutiliza CitasF2. La recuperación debe reconsultar Wix Orders, no confiar en un payload de webhook como única copia.
 
 ### 3.4 Facturas recibidas
 
-No se crea una colección paralela `FacturasRecibidas` para estos datos. El registro contable de estos procesos se consolida en `LibroAsientosContablesDetalle`. La clasificación del asiento debe distinguir documento/obligación, pago y cuenta de contrapartida, conforme al contrato contable aprobado; nunca se representa el pago bancario como salida de caja física.
+No se crea una colección paralela `FacturasRecibidas`. `accountingLedger.appendAccountingEntry` ya ofrece el writer append-only equilibrado, pero no puede automatizarse sin aprobar plan de cuentas, reglas de contabilización y mapeo de tipos de documento. Documento/obligación/pago bancario deben distinguirse en el asiento y sus referencias; nunca se representa el pago bancario como salida de caja física.
 
 ### 3.5 Estado del dossier frente a código
 
@@ -47,18 +47,19 @@ El dossier indexado describe enums, destinos y writers que no coinciden plenamen
 - Se inspeccionaron los writers y validadores de reservas, eCommerce, caja e inventario en `main`.
 - Se contrastaron los criterios D-01 a D-06 y los ADR asociados con el estado actual del código.
 - Se identificaron dos tareas ya cubiertas a nivel de writer (D-01 y D-02), una parcial por falta de validación de frontera (D-01), y las brechas abiertas D-03 a D-05.
-- Se documentaron los bloqueos de ADR-02, ADR-03 y ADR-04 y las contradicciones de enums.
+- Se normalizó `CANCELED` en la rama: enums, mapeo Wix→CMS, saga de compensación, gestor de citas, filtros y pruebas afectadas.
+- Se reforzó `assertCitasF2` para exigir `scheduleId` GUID en la frontera CMS y se añadieron pruebas de ausencia/formato.
+- Se confirmó el writer `accountingLedger.appendAccountingEntry`; su mapeo automático está deliberadamente deshabilitado sin aprobación PGC.
+- Se definió Wix Orders como SSOT de pedido/intención, sin crear una colección duplicada.
 - No se hicieron escrituras CMS, migraciones de datos, movimientos fiscales, reservas, pagos, cambios de stock ni despliegues.
 
 ## 5. Ruta segura de ejecución
 
-1. **ADR-01:** reconciliar formalmente enums y esquemas contra la SSOT aprobada. No migrar valores existentes por sustitución textual.
-2. **ADR-02:** decidir el tratamiento de `order_created` sin duplicar Wix Orders ni contaminar CitasF2.
-3. **ADR-03:** decidir y aprobar colecciones ledger separadas para arqueos X y actas de recuento. `CajaActual` es un único item de proyección realtime; `MovimientosCaja` conserva cada movimiento, su tipo, detalle, importes y acumulados. No sobrescribir el histórico ni el stock para representar recuentos.
-4. **ADR-04:** formalizar el contrato de asientos de procesos no-caja en `LibroAsientosContablesDetalle`; no crear movimientos ficticios de caja.
-5. Completar C-01/C-03 con comprobación del esquema físico CMS y validadores de frontera.
-6. Implementar únicamente writers aprobados, con idempotencia, autorización backend, `traceId`, pruebas unitarias/de integración y verificación en Wix Local Editor.
-7. No publicar hasta superar QA E2E y revisar reversión. Los ledgers append-only no se revierten mediante borrado.
+1. Completar verificación del esquema físico de `CitasF2.scheduleId` y de `MovimientosCaja.orderId` en Wix CMS.
+2. Confirmar recuperación/relectura de Wix Orders y persistencia del marcador `ORDER_CREATED` en `ControlOperativo`.
+3. Aprobar esquema y permisos CMS de actas de arqueo X y recuento de inventario; después implementar writers append-only con idempotencia y `traceId`.
+4. Aprobar PGC/mapeos contables para habilitar el uso de `appendAccountingEntry` en facturas recibidas y pagos bancarios.
+5. Ejecutar suite offline, Local Editor, pruebas E2E y concurrencia/idempotencia. No publicar hasta superar controles y revisar reversión; ledgers append-only no se revierten mediante borrado.
 
 ## 6. Criterios de cierre verificables
 
@@ -71,11 +72,11 @@ El dossier indexado describe enums, destinos y writers que no coinciden plenamen
 
 ## 7. Estado de validación
 
-- **Verificado en código:** rutas y funciones citadas en esta auditoría, consultadas en `main`.
+- **Verificado en código:** rutas y funciones inspeccionadas en la rama de auditoría; la línea base `main` queda sin modificar.
 - **Declarado por el dossier/plan:** prioridades, obligaciones de arquitectura y criterios normativos aportados.
 - **Inferido:** impacto de la ausencia de writers a partir de la inspección estática; requiere confirmar consumidores y flujos activos.
-- **Pendiente:** esquema físico CMS, configuración real de hooks Wix, pruebas en Local Editor, scopes, conectores M365/Power Automate, validación normativa por asesoría y ejecución E2E.
-- **No ejecutado:** tests, escrituras CMS, migraciones, simulaciones transaccionales y despliegues.
+- **Pendiente:** CI de la rama para los cambios actuales; esquema físico CMS, configuración real de hooks Wix, pruebas en Local Editor, aprobación PGC, colecciones de arqueo/recuento, scopes, conectores M365/Power Automate, validación normativa por asesoría y ejecución E2E.
+- **No ejecutado:** escrituras CMS, migraciones, simulaciones transaccionales reales y despliegues.
 
 
 ## 8. Contratos canónicos aclarados por el responsable del sistema
@@ -85,3 +86,11 @@ El dossier indexado describe enums, destinos y writers que no coinciden plenamen
 - Operaciones que no pasan por caja física: consolidación en `LibroAsientosContablesDetalle`; no generan movimientos en `MovimientosCaja` ni mutan `CajaActual`.
 - `CajaActual`: singleton de estado/saldo actualizado en tiempo real por cada movimiento físico.
 - `MovimientosCaja`: ledger detallado de cada movimiento físico, con tipo, detalle y acumulados.
+
+
+## 9. Implementación en rama y estado de ejecución
+
+- Rama: `audit/data-registration-gap-execution-2026-11-09` (PR #218).
+- Cambios de código: normalización del estado `CANCELED`; validación de `scheduleId` GUID en `assertCitasF2`; pruebas de hooks y contrato SSOT actualizadas.
+- CI de la revisión `67bf36aec88cc07ffc0246f1530d39a3be276557`: ejecución #194 iniciada; resultado pendiente al actualizar este informe.
+- No se ha hecho merge, publicación Velo, escritura CMS ni modificación de registros existentes.
