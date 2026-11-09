@@ -1,7 +1,7 @@
 /*
 =============================================================================
 MODULE: pages/zonastaff.js
-VERSION: v5004.0-staff-native-flows
+VERSION: v5003.0-staff-pos-cashier-calendar
 =============================================================================
 */
 
@@ -20,12 +20,12 @@ import { checkStaffCollaboratorAccess } from "backend/security.web.js";
 let bridge = null;
 let isAuthorized = false;
 
-const TZ = "Europe/Madrid";
-const CASHIER_MODE = "SIMULADA";
-
 $w.onReady(async () => {
   const traceId = makeTraceId("only-staff");
 
+  /* ────────────────────────────────────────────────────────────────────
+     1) Control de acceso (solo staff / colaboradores)
+     ──────────────────────────────────────────────────────────────────── */
   const accessRes = await withTimeout(
     () => checkStaffCollaboratorAccess({ traceId }),
     UI.FRONTEND_API_TIMEOUT_MS,
@@ -35,8 +35,10 @@ $w.onReady(async () => {
   if (
     !accessRes ||
     accessRes.status !== "SUCCESS" ||
-    accessRes.data?.isStaffCollaborator !== true
+    !accessRes.data?.isStaffCollaborator
   ) {
+    console.warn("[only-staff] Access denied", { traceId });
+
     const accessDeniedEl = $w("#textAccessDenied");
 
     if (accessDeniedEl && "text" in accessDeniedEl) {
@@ -59,10 +61,14 @@ $w.onReady(async () => {
 
   isAuthorized = true;
 
+  /* ────────────────────────────────────────────────────────────────────
+     2) Datos del colaborador (permisos / identidad)
+        - Si el backend aún no devuelve estos campos, quedan en modo
+          conservador y el widget muestra sólo lo permitido.
+     ──────────────────────────────────────────────────────────────────── */
   const staffData = accessRes.data || {};
 
   const isAdmin = staffData.isAdmin === true;
-
   const isCajero =
     staffData.isCajero === true ||
     staffData.canOperateCashier === true ||
@@ -75,190 +81,205 @@ $w.onReady(async () => {
     null;
 
   const employeeName =
-    staffData.employeeName ||
-    staffData.employeeId ||
-    null;
+    staffData.employeeName || staffData.employeeId || null;
 
   const roleLabel =
     staffData.roleLabel ||
-    (isAdmin
-      ? "ADMINISTRACION"
-      : isCajero
-        ? "CAJA"
-        : "EQUIPO");
+    (isAdmin ? "ADMINISTRACION" : isCajero ? "CAJA" : "EQUIPO");
 
-  const today = new Intl.DateTimeFormat("sv-SE", {
-    timeZone: TZ,
-  }).format(new Date());
+  /* ────────────────────────────────────────────────────────────────────
+     3) Localización (fecha ISO ymd "hoy" en Europe/Madrid)
+     ──────────────────────────────────────────────────────────────────── */
+  const TZ = "Europe/Madrid";
+  const today = new Intl.DateTimeFormat("sv-SE", { timeZone: TZ })
+    .format(new Date());
 
+  /* ────────────────────────────────────────────────────────────────────
+     4) Localizar widget
+     ──────────────────────────────────────────────────────────────────── */
   const widget = $w("#htmlOnlyStaffPanel");
 
   if (!widget || typeof widget.postMessage !== "function") {
-    console.error("[only-staff] HTML widget no disponible", { traceId });
+    console.error(
+      "[only-staff] HTML widget not found or incompatible",
+      { traceId }
+    );
     return;
   }
 
+  /* ────────────────────────────────────────────────────────────────────
+     5) Bridge con el widget HTML
+     ──────────────────────────────────────────────────────────────────── */
   bridge = createWidgetBridge(widget, {
     slug: "only-staff",
     traceId,
     handshakeTimeoutMs: UI.HANDSHAKE_TIMEOUT_MS,
     contextTimeoutMs: UI.CONTEXT_TIMEOUT_MS,
 
+    /* ─────────────────────────────────────────────────────────────────
+       CONTEXT: lo que recibe el widget al hacer handshake.
+       El widget se guía por estos flags para mostrar/ocultar paneles.
+       ───────────────────────────────────────────────────────────────── */
     onContextReady: async () => ({
       isAuthorized,
 
+      // Tipo de panel (visible en cabecera del widget)
       panelType: "TPV",
 
-      enableClocking: true,
-      enableBreaks: true,
-      enableCashier: true,
-      enableInventory: false,
-      enableScheduleQuery: false,
+      // ── Feature flags ───────────────────────────────────────────────
+      enableClocking: true,        // cuadro de fichaje
+      enableBreaks: true,          // botones Inicio/Fin Pausa
+      enableCashier: true,         // cuadro de CAJA/TPV
+      enableInventory: false,      // panel de inventario oculto
+      enableScheduleQuery: false,  // panel de cálculo de horas oculto
 
-      cashierMode: CASHIER_MODE,
+      // ── Caja ────────────────────────────────────────────────────────
+      cashierMode: "SIMULADA",     // "SIMULADA" | "REAL"
       isAdmin,
       isCajero,
 
+      // ── Localización ────────────────────────────────────────────────
       currencyCode: "EUR",
       timeZone: TZ,
       today,
 
+      // ── Identidad (para cabecera "Sesion activa: …") ────────────────
       memberName,
       employeeName,
       roleLabel,
 
-      calendarUrl: "/mi-calendario",
+      // ── Navegación / calendario ─────────────────────────────────────
+      calendarUrl: "/mi-calendario", // ruta real del calendario del staff
     }),
 
+    /* ─────────────────────────────────────────────────────────────────
+       MENSAJES del widget
+       ─────────────────────────────────────────────────────────────────
+       Contrato backend esperado (el bridge debe enrutar a backend y
+       devolver el _RES correspondiente):
+
+         CLOCK           → CLOCK_RES           (fichajes)
+         GET_STATE       → GET_STATE_RES       (estado jornada)
+         GET_HISTORY     → GET_HISTORY_RES
+         HOURS_CALC      → HOURS_CALC_RES
+         ADJUSTMENT      → ADJUSTMENT_RES
+
+         CASHIER_STATE   → CASHIER_STATE_RES   { saldoTotal, totalOperaciones,
+                                                 diaKey, movimientos[] }
+         TPV_TX          → TPV_TX_RES          { ticket: { ticketNumber,
+                                                 createdAt, supplierName,
+                                                 supplierNif, concept, amount,
+                                                 paymentMethod, traceId,
+                                                 fiscalFingerprint,
+                                                 issuerName, issuerCif } }
+         X_COUNT         → X_COUNT_RES         { ticket: { … } }
+         Z_CLOSING       → Z_CLOSING_RES       { ticket: { … } }
+
+         INVENTORY_*     → INVENTORY_*_RES
+
+       Estos mensajes de caja deben:
+         · Escribir en la colección nativa `MovimientosCaja`
+         · Actualizar `CajaActual` (saldoTotal, totalOperaciones, diaKey)
+         · Generar número de ticket secuencial
+         · Estampar traza (traceId) + huella fiscal (fiscalFingerprint)
+
+       Si el bridge no auto-enruta, añadir aquí las llamadas
+       explícitas a backend y devolver el `_RES` correspondiente.
+       ───────────────────────────────────────────────────────────────── */
     onWidgetMessage: async (message) => {
       const type = String(message?.type || "").toUpperCase();
       const payload = message?.payload || {};
       const target = _safeTrim(payload.target || "");
 
-      /*
-      -----------------------------------------------------------------------
-      NAVEGACIÓN NATIVA
-      -----------------------------------------------------------------------
-      */
+      /* ── Navegación (sólo el widget la pide con MM_NAV) ───────────── */
       if (type === MESSAGE_TYPES.NAV) {
         switch (target) {
           case "ADMIN_PANEL":
             location.to("/administracion");
-            return;
+            break;
 
           case "SERVICIOS":
           case "HOME":
             location.to(URLS.SERVICIOS);
-            return;
+            break;
 
           case "POS":
           case "TPV":
           case "POS_CHECKOUT":
             location.to("/pos-checkout");
-            return;
+            break;
 
           case "CAJA":
           case "CAJA_ACTUAL":
             location.to("/caja-actual");
-            return;
+            break;
 
+          /* Nuevo: calendario del miembro de staff loggeado.
+             El widget lo pide con { target: "STAFF_CALENDAR" }. */
           case "STAFF_CALENDAR":
           case "CALENDAR":
           case "MI_CALENDARIO":
-            location.to("/mi-calendario");
-            return;
+            location.to("/mi-calendario"); // ajustar ruta real
+            break;
 
           default:
-            console.warn("[only-staff] Destino no reconocido", {
+            console.warn("[only-staff] Unknown navigation target", {
               traceId,
               target,
             });
-            return;
         }
+        return;
       }
 
-      /*
-      -----------------------------------------------------------------------
-      FLUJOS NATIVOS DE CAJA Y TPV
-      -----------------------------------------------------------------------
-      */
-      const cashierTypes = new Set([
-        MESSAGE_TYPES.CASHIER_STATE,
-        MESSAGE_TYPES.TPV_TX,
-        MESSAGE_TYPES.X_COUNT,
-        MESSAGE_TYPES.Z_CLOSING,
+      /* ── Caja / TPV ────────────────────────────────────────────────
+         Los tipos TPV_TX, X_COUNT, Z_CLOSING y CASHIER_STATE deben
+         ser enrutados por el bridge o por el backend. Aquí sólo
+         dejamos logging defensivo si el tipo no es conocido por el
+         bridge (para detectar desalineaciones de contrato).
+         ──────────────────────────────────────────────────────────── */
+      const CASHIER_TYPES = new Set([
+        "TPV_TX",
+        "X_COUNT",
+        "Z_CLOSING",
+        "CASHIER_STATE",
       ]);
 
-      if (cashierTypes.has(type)) {
-        console.debug("[only-staff] Flujo nativo de caja", {
+      if (CASHIER_TYPES.has(type)) {
+        // Si tu `widgetBridge` no auto-enruta estos tipos, sustituye
+        // este bloque por:
+        //
+        //   import {
+        //     cashierState,
+        //     tpvTx,
+        //     xCount,
+        //     zClosing,
+        //   } from "backend/cashier.web.js";
+        //
+        //   const handlerMap = {
+        //     CASHIER_STATE: cashierState,
+        //     TPV_TX: tpvTx,
+        //     X_COUNT: xCount,
+        //     Z_CLOSING: zClosing,
+        //   };
+        //   const fn = handlerMap[type];
+        //   const res = await fn(payload);
+        //   return { type: `${type}_RES`, payload: res };
+        //
+        // El retorno debe ser `{ type: 'XXX_RES', payload }` para que
+        // el bridge lo reenvíe al widget.
+        console.debug("[only-staff] cashier message", {
           traceId,
           type,
-          cashierMode: CASHIER_MODE,
           txType: payload.txType || null,
         });
-
-        /*
-         * Estos mensajes deben ser procesados por widgetBridge/backend:
-         *
-         * CASHIER_STATE -> CASHIER_STATE_RES
-         * TPV_TX        -> TPV_TX_RES
-         * X_COUNT       -> X_COUNT_RES
-         * Z_CLOSING     -> Z_CLOSING_RES
-         *
-         * Todos deben trabajar con:
-         * - CajaActual
-         * - MovimientosCaja
-         * - ticketNumber
-         * - traceId
-         * - fiscalFingerprint
-         * - cashRegisterStatus
-         * - operationDate
-         * - currentSequence
-         */
-
-        return;
       }
-
-      /*
-      -----------------------------------------------------------------------
-      FICHAJES Y JORNADA
-      -----------------------------------------------------------------------
-      */
-      const staffFlowTypes = new Set([
-        MESSAGE_TYPES.CLOCK,
-        MESSAGE_TYPES.GET_STATE,
-        MESSAGE_TYPES.GET_HISTORY,
-        MESSAGE_TYPES.HOURS_CALC,
-        MESSAGE_TYPES.ADJUSTMENT,
-      ]);
-
-      if (staffFlowTypes.has(type)) {
-        console.debug("[only-staff] Flujo de personal", {
-          traceId,
-          type,
-        });
-
-        /*
-         * El bridge debe devolver:
-         *
-         * CLOCK       -> CLOCK_RES
-         * GET_STATE   -> GET_STATE_RES
-         * GET_HISTORY -> GET_HISTORY_RES
-         * HOURS_CALC  -> HOURS_CALC_RES
-         * ADJUSTMENT  -> ADJUSTMENT_RES
-         */
-
-        return;
-      }
-
-      console.warn("[only-staff] Tipo no soportado", {
-        traceId,
-        type,
-      });
     },
 
+    /* ─────────────────────────────────────────────────────────────────
+       Error handler del bridge
+       ───────────────────────────────────────────────────────────────── */
     onError: (error) => {
-      console.error("[only-staff] Error del widget bridge", {
+      console.error("[only-staff] Widget bridge error", {
         traceId,
         error: error?.message || String(error),
       });
