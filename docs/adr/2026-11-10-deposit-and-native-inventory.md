@@ -13,7 +13,7 @@
 - Para servicios de precio igual o inferior a 100 EUR no habrá fianza obligatoria.
 - La fianza se descontará del importe final del servicio.
 - El depósito forma parte del precio del servicio y el cliente paga solo el saldo pendiente en persona.
-- Cancelación/reprogramación gratuita con al menos 24 horas; si cancela el negocio, devolución íntegra.
+- Cancelación con al menos 24 horas: devolución íntegra del anticipo o reprogramación sin coste. Reprogramación con al menos 24 horas: trasladar íntegro el anticipo a la nueva cita. Si cancela el negocio, devolución íntegra.
 - No retener automáticamente el depósito por cancelación tardía o inasistencia hasta disponer de condiciones transparentes y revisión jurídica de proporcionalidad. No se presupone que una cláusula de no reembolso sea válida.
 - La contabilización fiscal del depósito, su saldo y las devoluciones debe quedar definida con asesoría antes de activar cobros. No se habilitarán cobros reales durante QA.
 - La configuración nativa de depósitos en Wix Bookings es la primera opción. Wix Help (25-03-2026) describe el flujo «depósito online y resto en persona», con opción de permitir pago completo online. Advierte que la función no está disponible para todas las cuentas, no se combina con aprobación manual y el método manual permite reservar sin pagar depósito. El esquema REST Services V2 exige `payment.options.deposit=true`, `online=true` e `inPerson=false`; la interpretación más probable es que `inPerson=false` deshabilita el pago íntegro en persona, mientras la modalidad de depósito liquida el saldo presencialmente. Es una inferencia que debe confirmarse en QA con el panel y el checkout antes de configurar servicios. La lectura live muestra 0 depósitos activos.
