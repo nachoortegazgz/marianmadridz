@@ -698,25 +698,35 @@ function _validateServiciosCatalogoSchema(item = {}) {
         _schemaError("Servicio dual requiere exposureDuration explicito como numero no negativo");
     }
 
-    const readDuration = (value) =>
-        value === undefined || value === null || value === "" ? 0 : Number(value);
-    const phase1Duration = readDuration(item.phase1Duration);
-    const exposureDuration = readDuration(item.exposureDuration);
-    const phase2Duration = readDuration(item.phase2Duration);
-    const totalDuration = readDuration(item.totalDuration);
+    const readDuration = (field) => {
+        const value = item[field];
+        if (value === undefined || value === null || value === "") return 0;
+        if (typeof value !== "number") {
+            _schemaError(`${field} debe ser numerico`);
+        }
+        return value;
+    };
+    const hasTotalDuration =
+        item.totalDuration !== undefined &&
+        item.totalDuration !== null &&
+        item.totalDuration !== "";
+    const phase1Duration = readDuration("phase1Duration");
+    const exposureDuration = readDuration("exposureDuration");
+    const phase2Duration = readDuration("phase2Duration");
+    const totalDuration = readDuration("totalDuration");
 
     if (!_isFiniteNonNegative(phase1Duration) ||
         !_isFiniteNonNegative(exposureDuration) ||
         !_isFiniteNonNegative(phase2Duration) ||
         !_isFiniteNonNegative(totalDuration)) {
-        _schemaError("Las duraciones deben ser numeros no negativos");
+        _schemaError("Las duraciones deben ser numeros finitos no negativos");
     }
 
     if (allowCombine) {
         const expectedDuration =
             phase1Duration + exposureDuration + phase2Duration;
 
-        if (totalDuration === 0 && expectedDuration > 0) {
+        if (!hasTotalDuration) {
             item.totalDuration = expectedDuration;
         } else if (totalDuration !== expectedDuration) {
             _schemaError(
