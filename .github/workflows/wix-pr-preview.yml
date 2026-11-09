@@ -14,9 +14,12 @@ on:
 permissions:
   contents: read
 
+# Preview creation can take several minutes. Do not cancel an in-progress Wix
+# CLI/PTy session when another event for this PR arrives; let it finish and
+# queue the newer run instead.
 concurrency:
   group: wix-preview-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   wix-preview:
@@ -64,3 +67,14 @@ jobs:
 
       - name: Create Wix preview
         run: python3 scripts/wix-preview-pty.py
+
+      - name: Upload Wix Preview diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wix-preview-diagnostics-${{ github.run_id }}
+          path: |
+            wix-preview.log
+            wix-preview-url.txt
+          if-no-files-found: ignore
+          retention-days: 7
