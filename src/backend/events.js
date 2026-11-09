@@ -1931,6 +1931,29 @@ export async function wixEcom_onOrderRefunded(rawBody) {
             eventResult?.status === "PARTIAL";
 
         if (!ledgerOk) {
+            const refundErrorCode = _safeTrim(eventResult?.error?.message);
+            const nonRetryableRefundErrors = new Set([
+                "REFUND_IDENTITY_INVALID",
+                "REFUND_ID_REUSED_ACROSS_ORDERS",
+                "REFUND_ORIGINAL_LEDGER_AMBIGUOUS",
+                "REFUND_ORIGINAL_AMOUNT_INVALID",
+                "REFUND_EXCEEDS_ORIGINAL_ORDER_AMOUNT",
+                "REFUND_HISTORY_PAGE_LIMIT_EXCEEDED",
+                "REFUND_HISTORY_INCOMPLETE",
+            ]);
+            if (nonRetryableRefundErrors.has(refundErrorCode)) {
+                await logAuditEventWithTimeout(
+                    "REFUND_REJECTED_INTEGRITY",
+                    "ERROR",
+                    `Refund rejected by fiscal integrity guard for order ${orderId}`,
+                    { orderId, refundId, refundAmount, errorCode: refundErrorCode, traceId },
+                    traceId,
+                    orderId,
+                    "backend/events.js"
+                );
+                return { status: "OK", rejected: true, reason: refundErrorCode };
+            }
+
             await queueFiscalRecovery({
                 bookingIds: linkedBookingIds.join(","),
                 totalAmount: -refundAmount,
