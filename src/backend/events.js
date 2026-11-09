@@ -1572,13 +1572,14 @@ export async function wixBookingsV2_onBookingCanceled(eventPayload) {
             const rectificationBookingIds = pairToken ? dualPairBookingIds : [bookingId];
 
             if (originalMovement) {
+                let rectificationPayload = null;
                 try {
                     const emisor = await _getEmisorFiscal();
                     const amountOriginal = Math.abs(
                         Number(originalMovement.totalAmount ?? 0)
                     );
 
-                    const rectificationPayload = {
+                    rectificationPayload = {
                         eventType: EVENT_TYPE.RECTIFICATIVA,
                         movementType: MOVEMENT_TYPE.REEMBOLSO,
                         paymentMethod:
@@ -1665,7 +1666,7 @@ export async function wixBookingsV2_onBookingCanceled(eventPayload) {
                             : `Rectificacion cancelacion booking ${bookingId}`,
                         resourceId: "online",
                         movementType: MOVEMENT_TYPE.REEMBOLSO,
-                        recoveryProcessor: "EVENT_LOG",
+                        recoveryProcessor: rectificationPayload ? "EVENT_LOG" : "MANUAL",
                         fiscalPayload: rectificationPayload,
                         traceId,
                         lastError: rectErr?.message || "RECT_FAIL",
