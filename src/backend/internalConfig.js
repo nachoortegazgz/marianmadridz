@@ -127,6 +127,8 @@ export const SDK_CONFIG = Object.freeze({
     // Si cambia el dominio, actualizar aqui y re-desplegar.
     FROM_NAME: "Marian Madrid",
     FROM_ADDRESS: "noreply@marianmadrid.com",
+    // Fail-closed: activar solo tras persistencia inmutable e idempotencia del despacho.
+    ACCOUNTANT_SEND_ENABLED: false,
   }),
 });
 
