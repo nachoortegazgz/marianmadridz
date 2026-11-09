@@ -139,7 +139,6 @@ export const BOOKING_STATUS = Object.freeze({
   CONFIRMED: "CONFIRMED",
   DECLINED: "DECLINED",
   WAITING_LIST: "WAITING_LIST",
-  UPDATED: "UPDATED",
   CANCELED: "CANCELED",
   REFUNDED: "REFUNDED",
 });
@@ -250,13 +249,10 @@ export const SINGLETONS = Object.freeze({
   CAJA_PRINCIPAL: "CAJA_PRINCIPAL",
 });
 
-// Enum de estados de caja. ALN-05: los miembros canonicos v12 son
-// ABIERTA/CERRADA; OPEN/CLOSED se conservan como alias legacy.
+// Enum de estados de caja. Canonico: ABIERTA/CERRADA.
 export const CASH_REGISTER_STATUS = Object.freeze({
   ABIERTA: "ABIERTA",
   CERRADA: "CERRADA",
-  OPEN: "ABIERTA",
-  CLOSED: "CERRADA",
 });
 
 // Tipos de cita internos (ledger CitasF2). CERO-ALIAS v13.0: el dominio de
@@ -301,6 +297,8 @@ export const BOOKING_TYPE = Object.freeze({
   DUAL_F2: "DUAL_F2",
 });
 
+// REVIEW-BY: 2027-01-31. Re-evaluar DUALF1/DUALF2 cuando la lectura
+// de CitasF2 confirme que no quedan filas historicas sin guion.
 export function normalizeBookingType(value) {
   const s = String(value == null ? "" : value).trim().toUpperCase();
   // ID legacy erradicada: DUALF1/DUALF2 -> canon con guion.
@@ -531,6 +529,8 @@ export const BOOKING_FIELDS = Object.freeze({
 // JAMAS usar las claves alias en escrituras nuevas: prohibidas por
 // MovimientosCaja_beforeInsert via MOVEMENT_LEGACY_WRITE_FIELDS.
 // =============================================================================
+// REVIEW-BY: 2027-01-31. Re-evaluar fallback de lectura tras medir
+// consumo de aliases historicos en MovimientosCaja; no usar en escrituras.
 export const MOVEMENT_LEGACY_READ_ALIASES = Object.freeze({
   // MATRIZ v15 Bloque 1 apartado 5 (MovimientosCaja) + decision de usuario:
   // amount y totalAmount COEXISTEN como claves canonicas propias hasta cerrar
