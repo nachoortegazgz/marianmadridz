@@ -50,3 +50,13 @@ test("BOOK-MEMBER-04 frontend opens native Wix Members login before booking and 
   assert.ok(authGate >= 0 && bookingCall > authGate, "native login must complete before processDualBooking");
   assert.match(pageSource, /resultError\("AUTH_REQUIRED"\)/);
 });
+
+test("BOOK-MEMBER-05 booking creation accepts channelType only", () => {
+  const start = backendSource.indexOf("function _validateProcessBookingPayload(");
+  const end = backendSource.indexOf("\n}\n", start);
+  assert.ok(start >= 0 && end > start, "booking payload validator must exist");
+  const block = backendSource.slice(start, end);
+  assert.match(block, /payload\.channelType/);
+  assert.doesNotMatch(block, /payload\.paymentMethod/);
+  assert.doesNotMatch(block, /pmRaw/);
+});

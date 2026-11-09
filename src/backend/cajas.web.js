@@ -1,11 +1,11 @@
 /*
 =============================================================================
 MODULE: backend/cajas.web.js
-VERSION: v5016-ZERO-LEGACY
+VERSION: v5016-CANONICAL-READ
 REPO: https://github.com/nachoortegazgz/marianmadridz.git
 RESPONSIBILITY: cashier fiscal ledger, daily Z closures, Veri*factu SHA-256
                 chain integrity and fiscal persistence.
-STANDARDS: G10 ASCII Strict. Cero suppressAuth. Campos persistidos canonicos; alias ONLINE solo se normaliza en entrada.
+STANDARDS: G10 ASCII Strict. Cero suppressAuth. WIX_PAYMENTS es el metodo online canonico.
 =============================================================================
 */
 
@@ -33,7 +33,7 @@ import {
     FISCAL_ROLE,
     CONTROL_TYPE,
     EVENT_TYPE,
-    MOVEMENT_LEGACY_READ_ALIASES,
+    MOVEMENT_HISTORICAL_READ_ALIASES,
     normalizeMovementKeys,
 } from "backend/internalConfig";
 
@@ -114,16 +114,22 @@ const MONTO_OBLIGA_NIF_TERCERO = 300;
 const MONTO_OBLIGA_APROBADOR_Z = 500;
 const MONEY_EPSILON_FISCAL = 0.02;
 
-const LEGACY_ONLINE_ALIAS = "ONLINE";
-const ONLINE_PAYMENT_METHODS = Object.freeze([
-    PAYMENT_METHOD.WIX_PAYMENTS,
-    LEGACY_ONLINE_ALIAS,
-]);
+// REVIEW-BY: 2027-01-31. Retirar la lectura de ONLINE cuando no existan
+// consumidores historicos; WIX_PAYMENTS es el unico valor persistido.
+const HISTORICAL_ONLINE_PAYMENT_METHOD = "ONLINE";
+const ONLINE_PAYMENT_METHODS = Object.freeze([PAYMENT_METHOD.WIX_PAYMENTS]);
 
-function normalizeLegacyPaymentMethod(raw) {
-    const v = _safeTrim(raw).toUpperCase();
-    if (v === LEGACY_ONLINE_ALIAS) return PAYMENT_METHOD.WIX_PAYMENTS;
-    return v;
+function readHistoricalPaymentMethod(movement) {
+    const value = _safeTrim(movement?.paymentMethod).toUpperCase();
+    if (value === HISTORICAL_ONLINE_PAYMENT_METHOD) {
+        log.warn("historical-payment-method-read", {
+            collection: MOVIMIENTOS_CAJA_COL,
+            docId: movement?._id ?? null,
+            canonical: PAYMENT_METHOD.WIX_PAYMENTS,
+        });
+        return PAYMENT_METHOD.WIX_PAYMENTS;
+    }
+    return value;
 }
 
 function _signedFiscalValue(movement, reader) {
@@ -498,7 +504,7 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
             return { status: "ERROR", data: null, error: { code: "INVALID_AMOUNT", message: "Importe positivo requerido" } };
         }
 
-        const paymentMethod = normalizeLegacyPaymentMethod(payload?.paymentMethod);
+        const paymentMethod = _safeTrim(payload?.paymentMethod).toUpperCase();
         if (!Object.values(PAYMENT_METHOD).includes(paymentMethod)) {
             return { status: "ERROR", data: null, error: { code: "INVALID_PAYMENT_METHOD", message: "Forma de pago invalida" } };
         }
@@ -823,7 +829,6 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
                     dedupeKey: transactionId,
                     status: "RESERVED",
                     traceId,
-                    createdAt: new Date(),
                     _createdDate: new Date(),
                 });
             } catch (claimError) {
@@ -951,7 +956,7 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
 
 // SSOT Apartado 4 (CajaActual): claves canonicas cashAmount/cardAmount/...;
 // los campos de saldo usan la semantica "acumulado del periodo abierto", no
-// "saldo contable". Claves legacy (cashBalance, cardBalance...) eliminadas:
+// "saldo contable". Claves historical (cashBalance, cardBalance...) eliminadas:
 // CajaActual no tiene hook de normalizacion y cualquier lector debe usar
 // estas constantes como unica fuente.
 
@@ -1216,7 +1221,7 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
         let allMovements = [];
         let hasMoreMovements = false;
         const seenIds = new Set();
-        for (const dateField of ["fechaExpedicionFactura", ...MOVEMENT_LEGACY_READ_ALIASES.fechaExpedicionFactura]) {
+        for (const dateField of ["fechaExpedicionFactura", ...MOVEMENT_HISTORICAL_READ_ALIASES.fechaExpedicionFactura]) {
             const query = dalQuery(MOVIMIENTOS_CAJA_COL)
                 .eq(dateField, cleanDiaKey)
                 .ascending("sequenceNumber")
@@ -1248,10 +1253,10 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
             return { status: "ERROR", data: null, error: { code: "NO_MOVEMENTS", message: "No hay movimientos para cerrar" } };
         }
 
-        const totalCash = allMovements.filter(m => normalizeLegacyPaymentMethod(m.paymentMethod) === PAYMENT_METHOD.EFECTIVO).reduce((s, m) => s + Number(m.accountingAmount || 0), 0);
-        const totalCard = allMovements.filter(m => normalizeLegacyPaymentMethod(m.paymentMethod) === PAYMENT_METHOD.TARJETA).reduce((s, m) => s + Number(m.accountingAmount || 0), 0);
-        const totalBizum = allMovements.filter(m => normalizeLegacyPaymentMethod(m.paymentMethod) === PAYMENT_METHOD.BIZUM).reduce((s, m) => s + Number(m.accountingAmount || 0), 0);
-        const totalOnline = allMovements.filter(m => ONLINE_PAYMENT_METHODS.includes(normalizeLegacyPaymentMethod(m.paymentMethod))).reduce((s, m) => s + Number(m.accountingAmount || 0), 0);
+        const totalCash = allMovements.filter(m => readHistoricalPaymentMethod(m) === PAYMENT_METHOD.EFECTIVO).reduce((s, m) => s + Number(m.accountingAmount || 0), 0);
+        const totalCard = allMovements.filter(m => readHistoricalPaymentMethod(m) === PAYMENT_METHOD.TARJETA).reduce((s, m) => s + Number(m.accountingAmount || 0), 0);
+        const totalBizum = allMovements.filter(m => readHistoricalPaymentMethod(m) === PAYMENT_METHOD.BIZUM).reduce((s, m) => s + Number(m.accountingAmount || 0), 0);
+        const totalOnline = allMovements.filter(m => ONLINE_PAYMENT_METHODS.includes(readHistoricalPaymentMethod(m))).reduce((s, m) => s + Number(m.accountingAmount || 0), 0);
         const totalRefunds = allMovements.filter(m => m.movementType === MOVEMENT_TYPE.REEMBOLSO).reduce((s, m) => s + Number(m.accountingAmount || 0), 0);
         const totalTips = allMovements.filter(m => m.movementType === MOVEMENT_TYPE.PROPINA).reduce((s, m) => s + Number(m.accountingAmount || 0), 0);
         const totalAdjustments = allMovements.filter(m => m.movementType === MOVEMENT_TYPE.AJUSTE).reduce((s, m) => s + Number(m.accountingAmount || 0), 0);

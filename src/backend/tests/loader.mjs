@@ -881,6 +881,10 @@ export const items = {
         return operation;
       },
       async run(options = {}) {
+        m._calls.push({
+          op: "bulkPatch",
+          collection: col,
+        });
         const updatedItemIds = [];
         const errors = [];
         let skipped = 0;
@@ -931,8 +935,10 @@ export const items = {
           const hookName = _hookName(col, "beforeUpdate");
           const hook = hookName ? DATA_HOOKS[hookName] : null;
           if (typeof hook === "function") {
-            const hookResult = hook(patched, { original: item });
-            if (hookResult && typeof hookResult.then === "function") await hookResult;
+            const hookResult = await hook(patched, { original: item });
+            if (hookResult && typeof hookResult === "object") {
+              Object.assign(patched, hookResult);
+            }
           }
           // Re-evaluate the server-side condition immediately before commit.
           // This models Wix bulkPatch's conditional update under concurrent callers.

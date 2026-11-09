@@ -24,6 +24,8 @@ const suites = [
   'events.booking-canceled.integrity.test.mjs',
   'booking.core.concurrency.test.mjs',
   'controlOperativo.hooks.test.mjs',
+  'serviciosCatalogo.hooks.test.mjs',
+  'events.backend-events.contract.test.mjs',
   'reservas.web.test.mjs',
   'servicePage.bookingRoute.contract.test.mjs',
   'htmlComponents.source-contract.test.mjs',

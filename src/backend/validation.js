@@ -43,6 +43,7 @@ import {
     isValidGuid,
     normalizeBookingType,
     isDualBookingType,
+    CONTROL_OPERATIVO_NON_CANONICAL_FIELDS,
 } from "backend/internalConfig";
 
 // =============================================================================
@@ -154,7 +155,7 @@ export function assertCitasF2(item) {
 
 /**
  * Validacion fiscal obligatoria. NIF checksum por Ley 11/2021.
- * THIRD_PARTY_TYPE es enum fiscal normativo activo (no legacy).
+ * THIRD_PARTY_TYPE es el enum fiscal normativo vigente.
  */
 export function assertDatosFiscales(item) {
     if (!item || typeof item !== "object") {
@@ -190,6 +191,21 @@ export function assertDatosFiscales(item) {
 // CONTROL OPERATIVO
 // =============================================================================
 
+export function assertCanonicalControlFields(item) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) {
+        throw new Error("SCHEMA_VIOLATION: ControlOperativo item must be an object");
+    }
+    const rejected = CONTROL_OPERATIVO_NON_CANONICAL_FIELDS.filter((field) =>
+        Object.prototype.hasOwnProperty.call(item, field)
+    );
+    if (rejected.length) {
+        throw new Error(
+            `SCHEMA_VIOLATION: ControlOperativo fields not allowed: ${rejected.join(", ")}`
+        );
+    }
+    return true;
+}
+
 export function assertControlOperativo(item) {
     if (!item || typeof item !== "object") {
         throw new Error("SCHEMA_VIOLATION: ControlOperativo item must be an object");
@@ -213,11 +229,12 @@ export function assertControlOperativo(item) {
 
     // SLOT_LOCK requiere resourceId + expiresAt
     if (item.controlType === CONTROL_TYPE.SLOT_LOCK) {
-        if (!item.resourceId || !String(item.resourceId).trim()) {
-            throw new Error("SCHEMA_VIOLATION: SLOT_LOCK requires resourceId");
+        if (!isValidGuid(item.resourceId)) {
+            throw new Error("SCHEMA_VIOLATION: SLOT_LOCK requires a valid resourceId GUID");
         }
-        if (!item.expiresAt) {
-            throw new Error("SCHEMA_VIOLATION: SLOT_LOCK requires expiresAt");
+        const expiresAt = new Date(item.expiresAt);
+        if (!item.expiresAt || Number.isNaN(expiresAt.getTime())) {
+            throw new Error("SCHEMA_VIOLATION: SLOT_LOCK requires a valid expiresAt date");
         }
     }
 

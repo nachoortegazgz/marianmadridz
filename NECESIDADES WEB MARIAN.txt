@@ -149,7 +149,7 @@ El sitio web no debe ser un escaparate estático. Debe ser una **herramienta de 
 
 | ID | Requisito | Descripción | Criterio de aceptación | Estado declarado |
 |---|---|---|---|---|
-| RT-01 | Migración a `.web.js` | Usar `wix-web-module` con `webMethod` y `Permissions` en lugar de `.jsw` legacy. | Todos los módulos backend en formato `.web.js`. | ✅ Declarado |
+| RT-01 | Web Modules Velo | Los módulos invocables desde frontend usan `.web.js`, `webMethod` y permisos por función. | Todos los módulos backend invocables usan el contrato `.web.js` vigente. | ✅ Declarado |
 | RT-02 | Permisos por función | Público: `Permissions.Anyone` (catálogo, disponibilidad, IA). Sensible: `Permissions.Admin` (exportación fiscal, canje bonos, fichas salud). | Verificado en código declarado. | ✅ Declarado |
 | RT-03 | Secretos en `wix-secrets-backend` | Claves API y HMAC nunca en cliente. | `getSecret()` usado en backend. | ✅ Declarado |
 | RT-04 | `suppressAuth: true` en operaciones admin | Inserciones/consultas administrativas protegidas. | Aplicado en `wixData.insert/query/update` sensibles. | ✅ Declarado |
@@ -216,7 +216,7 @@ El sitio se considerará **APTO PARA PRODUCCIÓN** cuando se cumplan **TODOS** l
    - Descarga de CSV para gestoría y validación por el asesor.
    - Flujo de fianza con pago real (entorno de pruebas).
 
-6. **Cero deuda técnica documentada:** El archivo `CALIDAD_CERO_DEUDA.md` debe reflejar el estado real post-refactor.
+6. **Calidad técnica documentada:** El dossier de calidad debe reflejar el estado real tras cada intervención.
 
 7. **Aprobación de la propietaria:** Marian Madrid debe confirmar que la operativa en pantalla es "tan cómoda como tener las tijeras en la mano".
 

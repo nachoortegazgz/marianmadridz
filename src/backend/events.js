@@ -4,9 +4,9 @@ MODULE: backend/events.js
 VERSION: v5017-REFUND-IDEMPOTENCY-BOUNDED
 BASE: v5009-FISCAL-V20.1 + alineacion con internalConfig v12.0-SSOT-FINAL
       y dataAccess v2.1-UNIFIED
-RESPONSIBILITY: Server-to-server native webhooks for Wix Bookings V2 and
-                Wix eCommerce V2 with exact-indexed queries, bounded
-                execution and full idempotency.
+RESPONSIBILITY: Wix-managed Velo backend events for Bookings V2 and
+                eCommerce with exact-indexed queries, bounded execution
+                and full idempotency.
 STANDARDS: G10 ASCII Strict. Cero suppressAuth. Cero COLLECTIONS alias.
 
 CAMBIOS DE ALINEACION v5015-ALIGNED (respecto a v5009-FISCAL-V20.1):
@@ -49,7 +49,6 @@ FIXES APLICADOS v5009-FISCAL (heredados):
 =============================================================================
 */
 
-import { createClient } from "@wix/sdk";
 import { orders } from "@wix/ecom";
 import { extendedBookings } from "@wix/bookings";
 import { auth } from "@wix/essentials";
@@ -314,57 +313,20 @@ const EVENT_TTL_HOURS = 72;
 const STRONG_READ = Object.freeze({ consistencyMode: "strong" });
 
 // ============================================================================
-// WIX CLIENT
+// WIX-MANAGED BACKEND EVENTS
 // ============================================================================
 
-const wixClient = createClient({});
-
 /*
- * These exports are Wix Velo backend event handlers, not public HTTP routes.
- * Wix dispatches native event objects to this module; object payloads are
- * already platform-delivered and decoded. If this helper receives a raw JWT
- * string, the official Wix webhooks.process path verifies and decodes it.
- * Never reuse the object passthrough for an externally exposed HTTP endpoint.
+ * Wix Studio Velo event handlers receive the platform-delivered event object.
+ * Wix verifies and decodes the signed delivery before invoking this handler.
+ * This module does not expose an HTTP webhook endpoint and accepts no raw JWT.
  */
-async function _verifyAndDecodeWebhook(rawBody, expectedEventType) {
-    try {
-        if (!rawBody) {
-            log.warn("WEBHOOK_EMPTY_BODY", { expectedEventType });
-            return null;
-        }
-
-        if (typeof rawBody === "object" && !(rawBody instanceof String)) {
-            return rawBody;
-        }
-
-        if (typeof wixClient?.webhooks?.process !== "function") {
-            log.error("WEBHOOK_PROCESS_NOT_AVAILABLE", {
-                expectedEventType,
-                hint: "El runtime debe entregar el evento ya decodificado.",
-            });
-            return null;
-        }
-
-        const event = await wixClient.webhooks.process(rawBody);
-
-        if (!event) {
-            log.warn("WEBHOOK_VERIFICATION_FAILED", { expectedEventType });
-            return null;
-        }
-
-        log.debug("WEBHOOK_VERIFIED", {
-            eventType: event.eventType || expectedEventType,
-            hasData: !!event.data,
-        });
-
-        return event;
-    } catch (err) {
-        log.error("WEBHOOK_JWT_VERIFICATION_FAILED", {
-            expectedEventType,
-            error: err?.message || String(err),
-        });
+function _readWixBackendEvent(event, expectedEventType) {
+    if (!event || typeof event !== "object" || Array.isArray(event)) {
+        log.warn("WIX_EVENT_OBJECT_REQUIRED", { expectedEventType });
         return null;
     }
+    return event;
 }
 
 function _normalizeBookingIds(value) {
@@ -433,7 +395,7 @@ async function _getEmisorFiscal() {
     try {
         const nif = await getSecretValue(SECRETS.FISCAL_NIF_EMISOR);
         // SSOT-KEYFIELD (Matriz MovimientosCaja, Apartado 2): claves canonicas
-        // AEAT; el motor promueve aliases legacy, pero los writers entregan
+        // AEAT; el motor promueve aliases historical, pero los writers entregan
         // directamente el canon — cero aliases en src/.
         _emisorCache = {
             nifEmisor: _safeTrim(nif).toUpperCase(),
@@ -1190,14 +1152,14 @@ export async function reconcilePaidCitasFromLedgerInternal(recoveryData, traceId
 // WEBHOOK: BOOKING CONFIRMED
 // ============================================================================
 
-export async function wixBookingsV2_onBookingConfirmed(rawBody) {
+export async function wixBookingsV2_onBookingConfirmed(eventPayload) {
     const traceId = makeTraceId("whook-conf");
     try {
-        const event = await _verifyAndDecodeWebhook(
-            rawBody,
+        const event = await _readWixBackendEvent(
+            eventPayload,
             "BOOKING_CONFIRMED"
         );
-        if (!event) return { status: "REJECTED", reason: "JWT_VERIFICATION_FAILED" };
+        if (!event) return { status: "REJECTED", reason: "INVALID_WIX_EVENT" };
 
         // Wix Editor Velo Bookings V2 backend events expose metadata + data.booking.
         // SDK event callback payloads may expose metadata + entity.
@@ -1343,12 +1305,12 @@ async function _upsertDualCancellationFlag(pairToken, traceId, triggerBookingId,
  * repair alert for its sibling; never move the sibling without availability
  * validation and the dual-reschedule journal/lock protocol.
  */
-export async function wixBookingsV2_onBookingRescheduled(rawBody) {
+export async function wixBookingsV2_onBookingRescheduled(eventPayload) {
     const traceId = makeTraceId("whook-reschedule");
     try {
-        const event = await _verifyAndDecodeWebhook(rawBody, "BOOKING_RESCHEDULED");
+        const event = await _readWixBackendEvent(eventPayload, "BOOKING_RESCHEDULED");
         if (!event) {
-            return { status: "REJECTED", reason: "JWT_VERIFICATION_FAILED" };
+            return { status: "REJECTED", reason: "INVALID_WIX_EVENT" };
         }
 
         const { eventId, bookingId, booking } = _normalizeBookingsEvent(event);
@@ -1528,11 +1490,11 @@ export async function wixBookingsV2_onBookingRescheduled(rawBody) {
 }
 
 
-export async function wixBookingsV2_onBookingCanceled(rawBody) {
+export async function wixBookingsV2_onBookingCanceled(eventPayload) {
     const traceId = makeTraceId("whook-cancel");
     try {
-        const event = await _verifyAndDecodeWebhook(rawBody, "BOOKING_CANCELED");
-        if (!event) return { status: "REJECTED", reason: "JWT_VERIFICATION_FAILED" };
+        const event = await _readWixBackendEvent(eventPayload, "BOOKING_CANCELED");
+        if (!event) return { status: "REJECTED", reason: "INVALID_WIX_EVENT" };
 
         // Wix Editor Velo Bookings V2 backend events expose metadata + data.booking.
         // SDK event callback payloads may expose metadata + entity.
@@ -1787,11 +1749,11 @@ async function _syncPaidOrderInventoryOrThrow(order, traceId, eventId) {
 // WEBHOOK: ORDER CREATED — reserve stock in CMS after native checkout reserve
 // ============================================================================
 
-export async function wixEcom_onOrderCreated(rawBody) {
+export async function wixEcom_onOrderCreated(eventPayload) {
     const traceId = makeTraceId("whook-order-created");
     try {
-        const event = await _verifyAndDecodeWebhook(rawBody, "ORDER_CREATED");
-        if (!event) return { status: "REJECTED", reason: "JWT_VERIFICATION_FAILED" };
+        const event = await _readWixBackendEvent(eventPayload, "ORDER_CREATED");
+        if (!event) return { status: "REJECTED", reason: "INVALID_WIX_EVENT" };
         const order = event?.order || event?.data?.order || event;
         const orderId = _safeTrim(order?._id || order?.id);
         if (!_looksLikeGuid(orderId)) return { status: "OK", skipped: "ORDER_ID_MISSING" };
@@ -1830,14 +1792,14 @@ export async function wixEcom_onOrderCreated(rawBody) {
 // WEBHOOK: ORDER PAYMENT STATUS UPDATED
 // ============================================================================
 
-export async function wixEcom_onOrderPaymentStatusUpdated(rawBody) {
+export async function wixEcom_onOrderPaymentStatusUpdated(eventPayload) {
     const traceId = makeTraceId("whook-pay-status");
     try {
-        const event = await _verifyAndDecodeWebhook(
-            rawBody,
+        const event = await _readWixBackendEvent(
+            eventPayload,
             "ORDER_PAYMENT_STATUS_UPDATED"
         );
-        if (!event) return { status: "REJECTED", reason: "JWT_VERIFICATION_FAILED" };
+        if (!event) return { status: "REJECTED", reason: "INVALID_WIX_EVENT" };
 
         const eventId = event?.metadata?.id || event?.id || event?.eventId || event?._id;
         if (eventId) {
@@ -2179,12 +2141,12 @@ export async function wixEcom_onOrderPaymentStatusUpdated(rawBody) {
 // WEBHOOK: ORDER REFUNDED
 // ============================================================================
 
-export async function wixEcom_onOrderRefunded(rawBody) {
+export async function wixEcom_onOrderRefunded(eventPayload) {
     const traceId = makeTraceId("whook-refund");
     try {
-        const event = await _verifyAndDecodeWebhook(rawBody, "ORDER_REFUND_UPDATED") ||
-            await _verifyAndDecodeWebhook(rawBody, "ORDER_REFUNDED");
-        if (!event) return { status: "REJECTED", reason: "JWT_VERIFICATION_FAILED" };
+        const event = await _readWixBackendEvent(eventPayload, "ORDER_REFUND_UPDATED") ||
+            await _readWixBackendEvent(eventPayload, "ORDER_REFUNDED");
+        if (!event) return { status: "REJECTED", reason: "INVALID_WIX_EVENT" };
 
         const orderId = String(
             event?.orderId ||
@@ -2519,19 +2481,19 @@ export async function wixEcom_onOrderRefunded(rawBody) {
     }
 }
 
-export async function wixEcom_onOrderRefundUpdated(rawBody) {
-    return wixEcom_onOrderRefunded(rawBody);
+export async function wixEcom_onOrderRefundUpdated(eventPayload) {
+    return wixEcom_onOrderRefunded(eventPayload);
 }
 
 // ============================================================================
 // WEBHOOK: ORDER CANCELED
 // ============================================================================
 
-export async function wixEcom_onOrderCanceled(rawBody) {
+export async function wixEcom_onOrderCanceled(eventPayload) {
     const traceId = makeTraceId("whook-order-cancel");
     try {
-        const event = await _verifyAndDecodeWebhook(rawBody, "ORDER_CANCELED");
-        if (!event) return { status: "REJECTED", reason: "JWT_VERIFICATION_FAILED" };
+        const event = await _readWixBackendEvent(eventPayload, "ORDER_CANCELED");
+        if (!event) return { status: "REJECTED", reason: "INVALID_WIX_EVENT" };
 
         const order = event?.order || event?.data?.order || event || {};
         const orderId =

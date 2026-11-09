@@ -64,7 +64,7 @@ import {
     THIRD_PARTY_TYPE,
     PROJECTION_STATUS,
     RECORD_TYPE,
-    MOVEMENT_LEGACY_READ_ALIASES,
+    MOVEMENT_HISTORICAL_READ_ALIASES,
     normalizeMovementKeys,
 } from "backend/internalConfig";
 
@@ -250,7 +250,7 @@ function _buildAEATPayload(movement, generatedAt) {
     const fechaExpedicionFactura = _safeTrim(readInvoiceIssueDate(movement));
     const tipoFactura = readInvoiceType(movement) || TIPO_FACTURA.F1;
     // Cuota: canon SSOT es taxAmount; cuotaTotal es alias de lectura
-    // tolerado SOLO para docs historicos (MOVEMENT_LEGACY_READ_ALIASES).
+    // tolerado SOLO para docs historicos (MOVEMENT_HISTORICAL_READ_ALIASES).
     const taxAmount = readTaxAmount(movement);
     const totalAmount = Number(movement.totalAmount ?? 0);
     const previousRecordHash = _safeTrim(movement.previousRecordHash);
@@ -442,7 +442,7 @@ export async function registrarEventoEconomico(input) {
     // SSOT-KEYFIELD-02 / HOOK-CAJA-06: normalizacion destructiva de la
     // entrada (unica implementacion en internalConfig.normalizeMovementKeys,
     // compartida con el hook data.MovimientosCaja_beforeInsert). Los writers
-    // legacy pueden entregar aliases (invoiceNumber, taxRate, issuerTaxId,
+    // historical pueden entregar aliases (invoiceNumber, taxRate, issuerTaxId,
     // operationDate...); aqui se promueven a su canon SSOT sobre una copia
     // local — el objeto del caller NO se muta. Despues de esta linea todo el
     // motor trabaja SOLO con claves canonicas; ningun alias alcanza al doc.
@@ -585,7 +585,7 @@ export async function registrarEventoEconomico(input) {
     const recordTimestamp = _formatAEATDateTimeMadrid(ts);
 
     // 5. Construir movimiento base (SSOT-KEYFIELD-02: claves fisicas canonicas
-    // literales AEAT; los aliases legacy del caller ya fueron promovidos por
+    // literales AEAT; los aliases historical del caller ya fueron promovidos por
     // normalizeMovementKeys y NUNCA se persisten).
     const movementTypeRaw = _safeTrim(input.movementType);
     const accountingAmount = Number(input.accountingAmount ??

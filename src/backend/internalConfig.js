@@ -63,7 +63,18 @@ export const OPERATIONAL_COLLECTIONS = Object.freeze({
   CONTROL_OPERATIVO: "ControlOperativo",
 });
 
-// ITEM_NATURE canonico v12.0+ (SSOT-08). Los valores legacy observados en la
+// Campos retirados de ControlOperativo. Se rechazan en nuevas escrituras;
+// no existe compatibilidad de lectura ni migracion automatica porque CMS no contiene valores.
+export const CONTROL_OPERATIVO_NON_CANONICAL_FIELDS = Object.freeze([
+  "payloadJson",
+  "attempt",
+  "leaseExpiresAt",
+  "leasesExpireAt",
+  "createdAt",
+  "updatedAt",
+]);
+
+// ITEM_NATURE canonico v12.0+ (SSOT-08). Los valores historical observados en la
 // exportacion real del CMS (SERVICIO_PROPIO, PRODUCTO_VENTA, PRODUCTO_USO,
 // GASTO_FIJO) se aceptan en lectura via data.js VALID_ITEM_NATURES pero NO
 // forman parte del enum canonico de escritura.
@@ -119,8 +130,8 @@ export const SDK_CONFIG = Object.freeze({
 
   JOBS: Object.freeze({
     AUDIT_RETENTION_DAYS: 90,
-    // DUAL_CACHE solo purga filas legacy; no se generan nuevas filas.
-    // REVIEW-BY: 2027-01-31 (D-2). Retirar al confirmar ControlOperativo sin filas.
+    // Purga los registros DUAL_CACHE expirados que puedan permanecer en CMS.
+    // No existe writer activo para este tipo; retirar tras verificar cero filas.
     DUAL_CACHE_CLEANUP_LIMIT: 500,
     DAYS_CACHE_CLEANUP_LIMIT: 500,
     FISCAL_RECOVERY_BATCH_SIZE: 25,
@@ -157,7 +168,7 @@ export const PAYMENT_STATUS = Object.freeze({
   NOT_PAID: "NOT_PAID",
   // FASE1-P0 (MATRIZ alias F): el alias UNPAID queda ERRADICADO. El valor
   // canonico es NOT_PAID; CITAS_PAYMENT_STATUS.UNPAID es dominio de lectura
-  // legacy del CMS y no sustituye este enum.
+  // historical del CMS y no sustituye este enum.
   PENDING_PAYMENT: "PENDING_PAYMENT",
   PENDING_LEDGER: "PENDING_LEDGER",
   PAID: "PAID",
@@ -317,7 +328,7 @@ export const CITAS_PAYMENT_STATUS = Object.freeze({
 // Tipo de booking (SIMPLE / DUAL F1 / DUAL F2). SSOT-KEYFIELD v13 CitasF2
 // Apartado 2 (decisión de usuario, cierra ADR P2): canones FISICOS en la
 // coleccion son DUAL_F1 / DUAL_F2. Las variantes sin guion (DUALF1/DUALF2)
-// quedan ERRADICADAS como ID legacy: se promueven al canon en toda escritura
+// quedan ERRADICADAS como ID historical: se promueven al canon en toda escritura
 // via normalizeBookingType (frontera unica de entrada).
 export const BOOKING_TYPE = Object.freeze({
   SIMPLE: "SIMPLE",
@@ -325,11 +336,10 @@ export const BOOKING_TYPE = Object.freeze({
   DUAL_F2: "DUAL_F2",
 });
 
-// REVIEW-BY: 2027-01-31. Re-evaluar DUALF1/DUALF2 cuando la lectura
-// de CitasF2 confirme que no quedan filas historicas sin guion.
+// Normaliza los valores historicos DUALF1/DUALF2 al formato canonico persistido.
 export function normalizeBookingType(value) {
   const s = String(value == null ? "" : value).trim().toUpperCase();
-  // ID legacy erradicada: DUALF1/DUALF2 -> canon con guion.
+  // Los valores historicos DUALF1/DUALF2 se convierten al formato canonico con guion.
   if (s === "DUALF1") return BOOKING_TYPE.DUAL_F1;
   if (s === "DUALF2") return BOOKING_TYPE.DUAL_F2;
   if (s === "DUAL-F1") return BOOKING_TYPE.DUAL_F1;
@@ -359,13 +369,9 @@ export const BOOKING_PAYMENT_OPTION = Object.freeze({
   OFFLINE: "OFFLINE",
 });
 
-// Metodos de pago del ledger. Miembros EFECTIVO/TARJETA/BIZUM verificados en
-// site.flows.e2e (paymentMethod 'EFECTIVO'); TRANSFERENCIA admitido por el
-// runner legado; WIX_PAYMENTS por citasManager ALN-06/CM5-05.
-// FASE1-P0 (CAJA-01 SSOT): alias legacy "ONLINE" ERRADICADO del enum. El canon
-// de pago online es WIX_PAYMENTS; la frontera de escritura (cajas.web) traduce
-// "ONLINE" -> WIX_PAYMENTS para payloads/crons legacy, y el canal "ONLINE"
-// sigue existiendo como dato dimensional en CHANNEL_TYPE (no es metodo de pago).
+// Valores canonicos admitidos para MovimientosCaja.paymentMethod.
+// ONLINE identifica el canal de origen y nunca es un metodo de pago.
+// Wix Payments se persiste como WIX_PAYMENTS.
 export const PAYMENT_METHOD = Object.freeze({
   EFECTIVO: "EFECTIVO",
   TARJETA: "TARJETA",
@@ -524,7 +530,7 @@ export const REGISTROS_HORARIOS_FIELDS = Object.freeze({
 // citasManager.web.js / events.js).
 // SSOT-KEYFIELD-01 (2026-10-20, Matriz CitasF2 Apartado 2): la clave canonica
 // del estado interno en CitasF2 es "bookingStatus"; "status" queda ERRADICADO
-// como alias legacy a eliminar. Se anade CASH_MOVEMENT_ID (FK MovimientosCaja)
+// como alias historical a eliminar. Se anade CASH_MOVEMENT_ID (FK MovimientosCaja)
 // y ORDER_ID, consumidos por citasManager.web.js via BOOKING_FIELDS.
 // v14: miembros CASH_MOVEMENT_ID y ORDER_ID erradicados (0 consumidores
 // verificados por grep; el SSOT Apartado 1 los documenta como campos de
@@ -557,28 +563,28 @@ export const BOOKING_FIELDS = Object.freeze({
 // usuario 2026-10-20): el contrato vivo de claves del ledger son las literales
 // canonicas AEAT/SSOT escritas directamente por los escritores
 // (numSerieFactura, fechaExpedicionFactura, totalAmount, recordHash, ...) y el
-// mapa unico MOVEMENT_LEGACY_READ_ALIASES de abajo. El antiguo espejo
+// mapa unico MOVEMENT_HISTORICAL_READ_ALIASES de abajo. El antiguo espejo
 // MOVEMENT_FIELDS quedo ERRADICADO por codigo muerto (0 consumidores verificados
 // por grep; duplicaba literales ya presentes en los writers).
 
 // =============================================================================
 // SSOT-KEYFIELD-02 (Matriz MovimientosCaja, Apartado 2): mapa canon -> aliases
-// legacy tolerados SOLO en lectura de documentos historicos pre-migracion.
+// historical tolerados SOLO en lectura de documentos historicos pre-migracion.
 // Fuente unica de verdad para los helpers de lectura dual (data.js y
 // cajas.web.js comparten este contrato; cero duplicacion de listas).
 // JAMAS usar las claves alias en escrituras nuevas: normalizeMovementKeys,
-// invocada por MovimientosCaja_beforeInsert, rechaza las claves legacy.
+// invocada por MovimientosCaja_beforeInsert, rechaza las claves historical.
 // =============================================================================
 // REVIEW-BY: 2027-01-31. Re-evaluar fallback de lectura tras medir
 // consumo de aliases historicos en MovimientosCaja; no usar en escrituras.
-export const MOVEMENT_LEGACY_READ_ALIASES = Object.freeze({
+export const MOVEMENT_HISTORICAL_READ_ALIASES = Object.freeze({
   // MATRIZ v15 Bloque 1 apartado 5 (MovimientosCaja) + decision de usuario:
   // amount y totalAmount COEXISTEN como claves canonicas propias hasta cerrar
   // el ADR de la formula fiscal (amount = importe base; totalAmount = total
   // cobrado con impuestos). Ninguna es alias de la otra: no se promueven ni
-  // destruyen entre si. "importeTotal" sigue siendo alias legacy de lectura.
+  // destruyen entre si. "importeTotal" sigue siendo alias historical de lectura.
   // Clave canonica "amount" propia (no figuran en este mapa: es clave SSOT,
-  // no alias); solo sus literales legacy se toleran en lectura historica.
+  // no alias); solo sus literales historical se toleran en lectura historica.
   amount: ["importe", "baseImponible"],
   totalAmount: ["importeTotal"],
   numSerieFactura: ["invoiceNumber", "numTicketFactura"],
@@ -614,7 +620,7 @@ export const MOVEMENT_LEGACY_READ_ALIASES = Object.freeze({
   // fiscal es "hash". El alias NO se tolera en lectura: el hook promueve
   // docs históricos a "hash" en su próximo update autorizado y los lectores
   // usan readMovementHash (clave directa). Dominio contable: recordHash sigue
-  // siendo canónico (LIBRO_LEGACY_WRITE_FIELDS); por dominio, no duplicidad.
+  // siendo canónico (LIBRO_HISTORICAL_WRITE_FIELDS); por dominio, no duplicidad.
   hash: ["currentRecordHash", "hashCadena", "huella"],
   operationNature: ["naturalezaOperacion"],
   recordSource: ["origen"],
@@ -628,7 +634,7 @@ export const MOVEMENT_LEGACY_READ_ALIASES = Object.freeze({
 // dominio (invoiceNumber, taxRate, ...); el hook las PROMUEVE a su canon SSOT
 // antes de persistir: ningun alias sobrevive al ledger.
 export const MOVEMENT_ALIAS_TO_CANON = Object.freeze(
-  Object.entries(MOVEMENT_LEGACY_READ_ALIASES).reduce((acc, [canon, aliases]) => {
+  Object.entries(MOVEMENT_HISTORICAL_READ_ALIASES).reduce((acc, [canon, aliases]) => {
     for (const a of aliases) acc[a] = canon;
     return acc;
   }, {})
@@ -642,7 +648,7 @@ export const MOVEMENT_ALIAS_TO_CANON = Object.freeze(
 //   - canon presente + alias igual  -> se elimina el alias (idempotente).
 //   - canon presente + alias distinto -> prevalece el valor canonico.
 //   - solo alias                     -> se promueve a la clave canonica.
-// Despues de esta funcion el objeto NO contiene ninguna clave legacy del
+// Despues de esta funcion el objeto NO contiene ninguna clave historical del
 // dominio MovimientosCaja. Devuelve el mismo objeto (mutacion controlada en
 // copias locales del caller).
 export function normalizeMovementKeys(item) {
@@ -652,11 +658,11 @@ export function normalizeMovementKeys(item) {
   // promueve ANTES del mapa de aliases porque recordHash ya no figura en el
   // contrato de lectura (erradicacion total, sin tolerancia pasiva).
   if ("recordHash" in item) {
-    const legacyVal = item.recordHash;
+    const historicalVal = item.recordHash;
     delete item.recordHash;
-    if (legacyVal !== undefined && legacyVal !== null && legacyVal !== "" &&
+    if (historicalVal !== undefined && historicalVal !== null && historicalVal !== "" &&
         (item.hash === undefined || item.hash === null || item.hash === "")) {
-      item.hash = legacyVal;
+      item.hash = historicalVal;
     }
   }
   for (const [alias, canonicalKey] of Object.entries(MOVEMENT_ALIAS_TO_CANON)) {

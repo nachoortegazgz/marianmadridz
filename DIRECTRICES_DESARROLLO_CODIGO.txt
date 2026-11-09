@@ -1,190 +1,171 @@
-# ESTANDAR DE CALIDAD "CERO DEUDA" (v1.0 — 2026-10-20)
+DIRECTRICES DE ARQUITECTURA, DESARROLLO Y QA
+Proyecto: Marian Madrid — www.marianmadrid.es
+Repositorio: nachoortegazgz/marianmadridz
+Revision: 2026-11-09
 
-**Objective: minimo código en backend y frontend para cumplir objetivos de funcionalidad y fiabilidad.**
-**cero código: innecesario, alias, legacy, deprecated, muerto, obsoleto, deuda técnica, placeholder que genere error crítico**.
-**Permitir sólo en caso de necesidad. Comunicar excepcion y documentarla.**
-**Fuentes consultivas son las documentaciones oficiales de wix y wix apps, en la version actualizada usada en el código. Preferencia sdk v2 javascrippt. Código siempre alineado con directrices de la documentación oficial y código entregado como ejemplo por documentación oficial y código profesional para soluciones iguales a la nuestra.**
-**Anotar y actualizar informacion clave del módulo, APIs que usa y su versión, funciones, etc. Para conservar historico de correcciones en el módulo, recordatorios y verificacion de contenido para evitar perdidas.
+1. AUTORIDAD Y FUENTES
 
----
+1.1. Orden de autoridad
+1) Documentacion oficial vigente de Wix, Wix Apps y SDKs integrados.
+2) Dossier Tecnico Consolidado y Dossier de Flujos End-to-End.
+3) Este documento.
+4) Necesidades Web y criterios de aceptacion.
 
-## 0. REVALIDACION DE HALLAZGOS — 2026-10-24
+1.2. Resolucion de contradicciones
+- El contrato oficial del proveedor prevalece sobre comentarios o ejemplos internos.
+- El codigo ejecutable y sus pruebas describen el comportamiento implementado.
+- El dossier debe reflejar el comportamiento comprobado, no definir contratos distintos.
+- Cada decision debe registrar la opcion elegida y su razon tecnica. No mantener instrucciones incompatibles.
 
-Añadir aquí correcciones clave a recordar en próximas sesiones
+2. INVARIANTES DE ARQUITECTURA
 
----
+- Wix CMS es la fuente de verdad transaccional.
+- SharePoint custodia evidencia documental y no gobierna transacciones.
+- La Capa 3 no modifica ni dirige datos de la Capa 1.
+- El frontend presenta y recoge datos; la logica de negocio reside en backend y WebMethods.
+- Las constantes compartidas se centralizan en internalConfig.js.
+- Las validaciones puras se centralizan en validation.js.
+- La autenticacion, autorizacion y permisos se comprueban en backend.
+- Los secretos nunca se incluyen en frontend, DTOs ni logs.
+- Los eventos, webhooks y procesos asincronos son idempotentes.
+- Los ledgers fiscales, contables y laborales son append-only. Las rectificaciones se registran como nuevos documentos trazables.
+- No se realizan escrituras de prueba en datos reales del CMS.
 
-## 1. DEFINICIONES OPERATIVAS
+3. CONTRATOS WIX ADOPTADOS
 
-### D-1 ALIAS (cero admitido en codigo productivo)
-- **Incluso en tests: debe usarse el nombre canonico o eliminarse la bateria antigua.**
-- **A1.1** Constante/enum duplicado que reexpone otro SSOT con nombre distinto
-  (`COLLECTIONS = {...BUSINESS, ...OPERATIONAL}`, `RECORDTYPECONFIGSISTEMA`).
-- **A1.2** Renombre de compatibilidad (`export const resolveNativeAddOnIds = resolveAddOnIds`).
-- **A1.3** Rebinding local de nombres retirados (`const ESTADO_CITA = BOOKING_STATUS`),
+3.1. Web Modules
+- Los modulos de acceso frontend usan archivos .web.js.
+- Cada WebMethod declara su permiso mediante webMethod(Permissions.Anyone), Permissions.SiteMember o Permissions.Admin, segun el caso de uso.
+- La autorizacion de negocio se vuelve a comprobar dentro del backend.
+- processDualBooking exige Permissions.SiteMember y resuelve memberId/contactId desde la sesion Wix.
+- No se utiliza permissions.json porque el backend no contiene modulos .jsw. La autorizacion de los modulos .web.js se define en cada WebMethod.
 
-### D-2 LEGACY (cero rutas silenciosas)
-- **L2.1** Lectura/aceptacion de campos o formatos antiguos y obsoletos sin fecha de retiro,
-  metrica de consumo o marca de auditoria.
-- **Permitido condicionalmente**: fallback de LECTURA sobre datos historicos inmutables
-  (p. ej. `legacy-read` en fiscalAggregator) SIEMPRE QUE emita warn trazable y tenga
-  plan de migracion. Un fallback de ESCRITURA o de AUTORIZACION es violacion P0.
+3.2. Backend events
+- `events.js` contiene manejadores Velo gestionados por Wix.
+- Wix entrega al handler el objeto de evento ya verificado y decodificado.
+- Los eventos se procesan como handlers Velo; no se implementa un endpoint HTTP de recepción de webhooks.
+- Los handlers de este sitio aceptan objetos de evento y no procesan JWT raw.
+- La verificacion manual de JWT pertenece a endpoints HTTP autoalojados; este proyecto no implementa esa ruta.
+- La entrega puede repetirse o llegar fuera de orden. La deduplicacion se realiza mediante eventId y ControlOperativo.WEBHOOK_EVENT.
 
-### D-3 DEPRECATED (cero API marcada como tal vivas)
-- **P3.1** Cualquier `@deprecated`, comentario "se conserva por compatibilidad" o
-  parametro "no-op para compatibilidad" en superficie exportada = violacion.
-  O se consume, o se elimina. No existe termino medio.
+3.3. Wix Bookings V2
+- La disponibilidad usa timeZone.
+- La creacion de reservas usa timezone.
+- Los objetos Writer usan resource._id y location._id conforme al contrato SDK adoptado.
+- La saga dual crea dos reservas independientes F1/F2 con pairToken y SLOT_LOCK.
+- El Writer conserva las validaciones nativas de disponibilidad y opcion de pago. No se habilitan bypasses en la saga dual.
+- No se utiliza createMultiServiceBooking para el servicio con gap de exposicion.
+- rescheduleBooking recibe bookingId, slot y options; revision pertenece a options.
 
-### D-4 CODIGO MUERTO (cero simbolos exportados sin consumidor verificable)
-- **M4.1** Export sin referencias externas Y sin uso interno propio => eliminar.
-- **M4.2** Rama logica inalcanzable (condicion siempre falsa, variable leida y jamas
-  escrita, guard que nunca dispara) => eliminar rama.
-- **M4.3** Funcion definida y nunca invocada (incluso privada `_x`) => eliminar.
-- **M4.4** Test/archivo runner huerfano: no ejecutado por ningun runner canónico
-  (`npm test`) ni referenciado => eliminar o integrar.
-- Regla de decision: **solo cuentan consumidores dentro de `src/`**. Wix no resuelve
-  imports magicos; un simbolo sin import explicito esta muerto. Si un HTML externo
-  podria consumirlo, debe listarse en `README` del modulo; si no esta listado, es muerto.
+4. CMS Y VALIDACION
 
-### D-5 OBSOLETO (cero contratos zombis)
-- **O5.1** Parametro aceptado e ignorado (no-op) en firma publica.
-- **O5.2** Estado/valor enum definido pero sin transicion que lo produzca o consuma.
-- **O5.3** Cometario/cabecera que describe comportamiento distinto del codigo
-  (documentacion mentirosa) — peor que su ausencia.
-- **O5.4** Versiones historicas en cabeceras (FASE4, v5010.1, CLEAN-xx...) que ya
-  no describen el contrato vigente: condensar a "contrato actual + motivo".
+4.1. ControlOperativo
+- beforeInsert normaliza y ejecuta assertControlOperativo.
+- beforeUpdate recupera el registro persistido mediante lectura fuerte, fusiona la modificacion, impide cambiar controlType, protege tipos inmutables y valida el resultado completo.
+- beforeRemove recibe itemId; recupera el registro y bloquea la eliminacion de WEBHOOK_EVENT.
+- Toda operacion de parche atomico valida sus invariantes en el writer antes de ejecutar el cambio y usa condiciones de version cuando corresponda.
+- WEBHOOK_EVENT es inmutable.
+- SLOT_LOCK exige resourceId GUID y expiresAt valido.
+- WEBHOOK_EVENT exige eventId.
+- Todos los controles exigen controlType, dedupeKey y traceId.
 
----
+4.2. ServiciosCatalogo
+- En servicios duales, totalDuration es la suma exacta de phase1Duration, exposureDuration y phase2Duration.
+- Si totalDuration no se informa y las fases suman un valor positivo, el hook calcula el total.
+- Si se informa un total distinto, la escritura se rechaza.
+- Las duraciones deben ser valores numericos finitos no negativos.
 
-**Regla de oro anti-regresion**: ninguna eliminacion se ejecuta sin (a) grep de
-consumidores en TODO `src/` incluyendo pages y tests, y (b) suite verde despues.
-Ninguna regeneracion destructiva de archivo sin diff verificable contra base limpia.
+4.3. MapaStaff
+- MapaStaff no es autoridad RBAC.
+- security.js resuelve roles mediante Wix Members, Bookings Staff Members API e internalConfig.STAFF.WEBSITE_ROLE_BY_RESOURCE_ID.
+- MapaStaff se utiliza como correlacion staffMemberId -> resourceId/scheduleId cuando un evento nativo no aporta esos identificadores.
+- La resolucion exige exactamente una fila activa y GUID validos. Cero o varias coincidencias producen fallo cerrado.
+- No se declaran hooks CMS para MapaStaff en data.js.
 
-**Caducidad obligatoria**: todo espejo/fallback legacy declarado debe llevar campo
-`review-by` (fecha). Sin fecha = violacion automatica.
+4.4. Datos historicos fiscales
+- Los documentos fiscales append-only no se reescriben para normalizar nombres de campo.
+- Los lectores de `MovimientosCaja`, `ControlOperativo` y `CitasF2` pueden interpretar valores historicos exclusivamente en lectura, con `warn` trazable y fecha `REVIEW-BY`.
+- Los campos `ONLINE` de `paymentMethod`, `payloadJson` y `meta.paymentMethod` no se aceptan en escrituras nuevas.
+- Toda escritura nueva utiliza `WIX_PAYMENTS`, `payload` y `channelType` como contratos canonicos.
+- No se retira un lector historico hasta verificar el contenido CMS y demostrar cero lecturas.
 
+5. SEGURIDAD Y PRIVACIDAD
 
-## 2B. CHECKPOINT FUNCIONAL POR CAPAS ACTUALIZADO TRAS CADA SESION (2026-10-20)
+- No confiar en IDs, roles, permisos, importes ni propiedad enviados por el navegador.
+- Validar en backend identidad Wix, propiedad del recurso y rol requerido.
+- Aplicar minimo privilegio y usar elevation solo para operaciones de sistema justificadas.
+- No exponer hashes fiscales, claves, tokens bearer, PII innecesaria ni notas internas.
+- Los tokens de visualizacion son opacos, ligados a una reserva, de un solo uso y con caducidad.
+- Los errores publicos no deben permitir enumerar reservas, miembros ni datos fiscales.
 
-Actualizar con la última validación fiable validada en GitHub Actions sobre el estado funcional actual:
-- `npm test`: 182 pass / 0 fail (11 suites).
-- `npm run test:layer1`: 130 pass / 0 fail (5 suites: reservas, concurrencia y núcleo compartido).
-- `npm run test:layer2`: 72 pass / 0 fail (7 suites: ledger, caja, fiscalidad, DTO de recibo, cron y flujo integrado).
+6. CONCURRENCIA E IDEMPOTENCIA
 
-Correcciones funcionales verificadas en esta tanda:
-- Consumo de token de visualización por eliminación atómica; el CMS ya permite retirar `DISPLAY_TOKEN` y mantiene `WEBHOOK_EVENT` append-only.
-- Parser duplicado del caché de días eliminado y DTO público de servicio normalizado.
-- `CAJA_KEYS` duplicado eliminado.
-- `MovimientosCaja` guarda la huella canónica en `hash`; el DTO de recibo la proyecta como `recordHash`.
-- Normalización de hash previa a la validación fiscal y rechazo explícito de campos contables legacy `debit/credit`.
-- Hooks de CMS redundantes retirados en reservas/inventario; permanecen las validaciones de integridad del ledger, partida doble, horario y cancelación formal.
+- Las reservas simples y duales revalidan disponibilidad en servidor.
+- SLOT_LOCK usa version, lockToken y expiracion.
+- La saga dual mantiene journal de reprogramacion en ControlOperativo con estados propios del dominio.
+- Un resultado incierto de Writer bloquea el reintento ciego y requiere reconciliacion por identidad e idempotencia.
+- Los webhooks se deduplican por eventId antes de mutar datos.
+- Los claims durables de DEDUPE_KEY y LEDGER_IDEMPOTENCY no se purgan con la retencion corta de IDEMPOTENCY.
+- DISPLAY_TOKEN se consume mediante eliminacion condicionada; la garantia de concurrencia debe probarse en Wix QA.
 
-El resultado verde confirma las suites offline cubiertas; no equivale a una prueba de aceptación sobre el sitio Wix publicado. Los hallazgos estáticos H-01..H-13 que siguen debajo provienen de la auditoría previa y deben revalidarse sobre el commit actual antes de aplicar limpiezas adicionales.
+7. TESTING Y CRITERIOS DE ACEPTACION
 
----
+Cada cambio debe incluir pruebas proporcionales al riesgo:
+- Unitarias de validacion y transformacion.
+- Contratos de SDK y WebMethods.
+- Integracion de acceso CMS y hooks.
+- Regresion de reservas, pagos y sagas.
+- Idempotencia y concurrencia.
+- Seguridad y permisos.
+- Pruebas end-to-end en Wix Preview y en sitio publicado cuando proceda.
 
-## 3. ESTADO RECONCILIADO DE HALLAZGOS — 2026-10-25
+Los mocks offline no acreditan comportamiento de Wix CMS, permisos efectivos, hooks ni concurrencia real. El informe debe separar:
+- Verificado en codigo.
+- Verificado en CI.
+- Verificado en Wix Preview.
+- Verificado en sitio publicado.
+- Pendiente de comprobar.
 
-Actualizar tras cada sesión. Esta sección sustituye el inventario histórico del 2026-10-20. Los hallazgos originales se conservan como trazabilidad en Git, pero no deben ejecutarse de nuevo como una lista de cambios pendientes.
+8. CONTROL DE CAMBIOS
 
-### Cerrados y protegidos por regresión
+1) Identificar HEAD y estado del repositorio.
+2) Crear rama de trabajo.
+3) Localizar consumidores, contratos y dependencias.
+4) Consultar documentacion oficial vigente.
+5) Definir comportamiento y pruebas de aceptacion.
+6) Implementar el cambio minimo.
+7) Ejecutar lint y suites pertinentes.
+8) Revisar diff y resultados de CI.
+9) Preparar reversibilidad.
+10) Abrir PR para revision.
+11) Fusionar solo con aprobacion.
+12) Desplegar Wix solo con autorizacion expresa y QA aprobado.
+13) Verificar el resultado en el entorno destino.
 
-### Pendiente real
+No fusionar ni desplegar con pruebas fallidas, riesgos criticos abiertos o sin estrategia de recuperacion. No modificar workflows de CI sin necesidad demostrada y aprobacion.
 
-### Deuda aceptada, no código muerto
+9. DECISIONES CONSOLIDADAS DE LA REVISION CAPA 1 — 2026-11-09
 
----
+- ControlOperativo: validacion completa en insercion y actualizacion; update fusiona el estado persistido y la modificacion; remove recibe itemId y consulta el registro.
+- Journal dual: mantiene su enum especifico en booking/dualRescheduleJournal.js; no se mezcla con CONTROL_STATUS.
+- MapaStaff: solo correlacion de identidad de eventos nativos; no participa en RBAC.
+- Eventos Wix: se consumen como objetos Velo verificados por la plataforma; no se procesa JWT dentro de events.js.
+- Permisos: .web.js controla acceso en cada webMethod; no existe manifiesto permissions.json aplicable al backend actual.
+- Control types: DEDUPE_KEY y LEDGER_IDEMPOTENCY se conservan porque tienen productores activos y retencion duradera.
+- Servicios duales: `totalDuration` debe coincidir exactamente con la suma de las tres fases; si se omite, el hook lo calcula.
+- BOOKING_STATUS.UPDATED no existe como estado. CANCELED es la grafia canonica.
+- PAYMENT_STATUS.NOT_PAID es el valor persistido; no se utiliza UNPAID en el contrato CMS.
+- Los lectores de documentos fiscales y de proyecciones operativas historicas se conservan en modo lectura, con aviso trazable y `REVIEW-BY`; no pueden generar escrituras con valores o nombres anteriores.
 
-## 4. SIGUIENTE PLAN DE AUDITORÍA
+10. VALIDACION PENDIENTE EN WIX
 
-1. **Inventario reproducible:** enumerar exports, imports, llamadas, runners, scripts y workflows; distinguir producción, pruebas, diagnóstico y herramientas de una sola ejecución.
-2. **Clasificar evidencia:** cada candidato debe incluir ruta, consumidores, prueba de ausencia/duplicación y sustituto verificable si se propone retirar un test o diagnóstico.
-3. **Cambios mínimos por tanda:** una familia de símbolos o archivos por commit; nunca borrar módulos completos por una búsqueda textual aislada.
-4. **Validación por tanda:** búsqueda global de consumidores, `npm test`, lint y gates aplicables. Si el entorno local o CI no está disponible, declarar la validación pendiente en vez de inferir éxito.
-5. **Producción Wix:** solo tras revisar el diff, confirmar CI y validar el comportamiento afectado. No publicar por el mero hecho de que el cambio sea pequeño.
+La implementacion en GitHub no acredita por si sola el comportamiento del runtime. Antes de fusionar o desplegar deben ejecutarse:
+- Hook ControlOperativo_beforeUpdate con heartbeat, renovacion, liberacion y parche parcial.
+- Hook ControlOperativo_beforeRemove con WEBHOOK_EVENT y SLOT_LOCK.
+- Invocacion anonima y autenticada de processDualBooking.
+- Doble consumo simultaneo de DISPLAY_TOKEN.
+- Reprogramacion dual: bulkPatch, fencing, heartbeat, expiracion y recuperacion.
+- Entrega repetida y desordenada de eventos Bookings/eCommerce.
+- Duracion exacta de servicios duales mediante CMS.
 
-**Criterio de cierre:** cero símbolos sin consumidor y cero redundancias demostradas, manteniendo las protecciones necesarias de seguridad, integridad fiscal, reservas duales, idempotencia y minimización del DTO. La reducción de líneas no es por sí sola una mejora.
-
-
-## 4. RECONCILIACION CAPA 1 — AUDITORIA R2 (2026-11-09)
-
-### Cambios implementados en la rama de correccion (CI pendiente)
-
-- SSOT de reservas centralizada en `internalConfig.js`:
-  - DTO intervalo visible: 30 minutos.
-  - DAYS_CACHE TTL: 300000 ms.
-  - DISPLAY_TOKEN TTL: 1800000 ms; maxAttempts: 5.
-  - Rate limits efectivos: public-booking 5/10 s; reservas 20/5 s;
-    availability 12/5 s; display-token 5/60 s; default 20/5 s.
-  - BOOKING_PAYMENT_OPTION: ONLINE/OFFLINE. `NO_FEE` no es enum: la
-    proyeccion F2 usa metadata booleana `noFee`.
-- `ControlOperativo_beforeInsert` invoca `assertControlOperativo`.
-  La validacion completa no se ha extendido a `beforeUpdate`: las rutas de
-  actualizacion pueden ser parciales (`bulkPatch`) y requieren validacion
-  especifica en Wix Preview antes de ampliar la guarda.
-- ADR-002 y los writers/lectores Bookings V2 se alinean con el SDK JavaScript:
-  `BookedSlot.resource._id` y `BookedSlot.location._id`; REST `id` no se
-  acepta en estos flujos SDK. `rescheduleBooking` usa la firma
-  `(bookingId, slot, options)`, con `revision` dentro de `options`.
-- Se añade regresion offline para shape SDK, firma de reprogramacion, valores
-  SSOT y guardas de insercion. CI run #292 PASS: 48 suites / 466 tests / 0 fallos;
-  SDK contracts y ESLint PASS. npm aun avisa que ESLint 8.25.0 esta fuera de soporte;
-  se registra como deuda P3 separada, sin actualizar dependencias en esta tanda.
-
-### Hallazgos R2 descartados o corregidos por evidencia de codigo
-
-- L1-02: falso positivo. `booking/dualRescheduleJournal.js` ya define
-  `DUAL_RESCHEDULE_STATUS` con los ocho estados del journal. No duplicar el
-  enum dentro de `CONTROL_STATUS` ni crear un segundo enum en config.
-- L1-03: el patch propuesto no corresponde al contrato vigente. RBAC procede
-  de `STAFF.WEBSITE_ROLE_BY_RESOURCE_ID`; `MapaStaff` es un mapeo de respaldo
-  `staffMemberId -> resourceId/scheduleId` para eventos. Su lector falla
-  cerrado ante ausencia/ambiguedad y GUID invalidos. No añadir `rolWebsite`
-  como autoridad ni hooks con campos no acreditados en CMS.
-- L1-04: falso positivo para Wix Studio/Velo. Los eventos backend de sitios
-  Wix Studio/Editor llegan como objetos decodificados por la plataforma; la
-  verificacion JWT es automatica en rutas Wix-managed. `events.js` no es un
-  endpoint HTTP publico. Un futuro webhook HTTP self-managed debe verificar el
-  JWT con el mecanismo oficial Wix.
-  Fuente: https://dev.wix.com/docs/overview/backend-services/events
-- R-02: `processDualBooking` usa `Permissions.SiteMember`; el dossier se
-  corrige. La prueba de acceso anonimo publicado sigue pendiente.
-- R-05: no hay clase `BookingError` activa; `createBookingError` es una
-  factoría de errores nativos. No eliminarla por coincidencia textual.
-- R-09: el grep de `status` encuentra el campo de estado de ControlOperativo y
-  el status del evento Wix nativo; no hay escritura literal `status` sobre CitasF2.
-- L1-09: no se identifica un flujo de firma de peticiones
-  `X-MM-Signature/X-MM-Timestamp`; no añadir constantes sin consumidor.
-- L1-10: la opcion de pago F2 es `OFFLINE`; `NO_FEE` no constituye un enum
-  independiente en el codigo vigente.
-- L1-13: el informe confundia el campo `dedupeKey` con el tipo de control.
-  `DEDUPE_KEY` (accounting/inventario) y `LEDGER_IDEMPOTENCY` (caja) son
-  categorias durables distintas de `IDEMPOTENCY`, que el cron purga a las
-  24 h en estados terminales. Se añaden ambos valores al enum; sus productores
-  conservan el tipo especializado y una prueba garantiza que no se purgan.
-
-### Pendientes de validacion / no autorizan despliegue
-
-- L1-01 queda parcialmente cerrado: insert valida el contrato completo;
-  update no aplica assert completo hasta validar semantica de actualizaciones
-  parciales y heartbeat/locks en Wix Preview.
-- L1-12: el codigo admite una tolerancia de 1 minuto en `totalDuration`,
-  mientras el dossier declara suma estricta. No cambiar sin comprobar unidades,
-  redondeos y registros actuales de ServiciosCatalogo.
-- R-01: `SLOT_SEARCH` mantiene un espejo frontend en `public/mmUtils.js` por
-  frontera de módulos; prueba de paridad con el SSOT backend añadida. Riesgo de
-  deriva cubierto por test; no se elimina el espejo sin cambiar esa frontera.
-- R-06: `permissions.json` conserva permisos globales amplios. No modificar
-  sin verificar el contrato Wix y probar invocacion anonima en Preview.
-- R-07: consumo exactamente-una-vez de DISPLAY_TOKEN bajo concurrencia real
-  sigue sin acreditar; CI offline no sustituye Wix QA.
-- R-10: fallback `STAFF_DEFAULT_NAME` mantiene REVIEW-BY 2027-01-31.
-  Warning trazable pendiente porque los consumidores no propagan traceId.
-- Journal dual `bulkPatch` y reprogramacion requieren validacion Wix Preview.
-- No se han escrito datos CMS, modificado ledgers, cambiado permisos CMS ni
-  desplegado esta rama. El despliegue de PR #226 es declaracion del usuario;
-  no valida estos cambios posteriores.
-
-### Estado de salida
-
-`CI PASS — run #292 — 48 suites / 466 tests / 0 fallos` · `WIX PREVIEW PENDIENTE` · `NO DESPLEGAR`.
+FIN DEL DOCUMENTO

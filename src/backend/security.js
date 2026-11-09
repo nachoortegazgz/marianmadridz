@@ -321,6 +321,7 @@ export async function rateLimiter(
                 {
                     condition: {
                         filter: {
+                            controlType: { $eq: CONTROL_TYPE.RATE_LIMIT },
                             version: { $eq: version },
                         },
                     },

@@ -1,41 +1,43 @@
 /*
 =============================================================================
 MODULE: backend/data.js
-VERSION: v5016-ZERO-LEGACY
+VERSION: v5016-CANONICAL-READ
 REPO: https://github.com/nachoortegazgz/marianmadridz.git
 RESPONSIBILITY: Hooks de inmutabilidad, protecciones append-only y
                 validacion estricta de esquemas CMS.
-STANDARDS: G10 ASCII Strict. Cero suppressAuth. Legacy input normalized at boundary; persisted fields canonical.
+STANDARDS: G10 ASCII Strict. Cero suppressAuth. Historical fields are read-only; persisted fields are canonical.
 =============================================================================
 */
 
 import {
     FISCAL_ROLE,
-    MOVEMENT_LEGACY_READ_ALIASES,
+    MOVEMENT_HISTORICAL_READ_ALIASES,
     normalizeMovementKeys,
+    OPERATIONAL_COLLECTIONS,
 } from "backend/internalConfig";
-import { assertCitasF2, assertControlOperativo } from "backend/validation";
+import { assertCitasF2, assertControlOperativo, assertCanonicalControlFields } from "backend/validation";
+import { CONSISTENCY, getItem } from "backend/dataAccess";
 
 import { logger } from "backend/logger";
 
 const log = logger;
 
 // =============================================================================
-// HELPERS SSOT-KEYFIELD-02 (2026-10-20) — LECTURA CANONICA CON FALLBACK LEGACY
+// HELPERS SSOT-KEYFIELD-02 (2026-10-20) — LECTURA CANONICA DE CAMPOS HISTORICOS
 // =============================================================================
 
-export function _readCanonical(item, canonicalKey, legacyKeys = []) {
+export function _readCanonical(item, canonicalKey, historicalKeys = []) {
     if (!item || typeof item !== "object") return undefined;
     const isPresent = (v) => v !== undefined && v !== null && v !== "";
     const direct = item[canonicalKey];
     if (isPresent(direct)) return direct;
-    for (const legacy of legacyKeys) {
-        const v = item[legacy];
+    for (const historicalKey of historicalKeys) {
+        const v = item[historicalKey];
         if (isPresent(v)) {
-            log.warn("legacy-read", {
+            log.warn("historical-field-read", {
                 collection: "MovimientosCaja",
                 canonicalKey,
-                legacyKey: legacy,
+                historicalKey,
                 docId: item._id ?? null,
             });
             return v;
@@ -52,7 +54,7 @@ const MOVIMIENTOS_CAJA_PHYSICAL_FIELDS = Object.freeze({
 });
 
 export function readMovementField(item, canonicalKey) {
-    const aliases = MOVEMENT_LEGACY_READ_ALIASES[canonicalKey] || [];
+    const aliases = MOVEMENT_HISTORICAL_READ_ALIASES[canonicalKey] || [];
     const value = _readCanonical(item, canonicalKey, aliases);
     if (value !== undefined && value !== null && value !== "") return value;
     const physicalField = MOVIMIENTOS_CAJA_PHYSICAL_FIELDS[canonicalKey];
@@ -114,7 +116,7 @@ export function readInvoiceIssueDate(item) {
 export function readTotalAmount(item) {
     // MATRIZ v15: totalAmount es clave canonica propia (total cobrado con
     // impuestos); "importeTotal" se tolera solo como alias historico via el
-    // contrato unico MOVEMENT_LEGACY_READ_ALIASES.
+    // contrato unico MOVEMENT_HISTORICAL_READ_ALIASES.
     return Number(readMovementField(item, "totalAmount")) || 0;
 }
 
@@ -146,7 +148,7 @@ export function readRecipientTaxId(item) {
 
 // MATRIZ v15 (MovimientosCaja): la huella canonica del dominio caja/fiscal es
 // "hash"; "recordHash" es alias historico tolerado SOLO via contrato unico
-// (MOVEMENT_LEGACY_READ_ALIASES). Nadie debe volver a acceder a item.recordHash
+// (MOVEMENT_HISTORICAL_READ_ALIASES). Nadie debe volver a acceder a item.recordHash
 // ni item.hash directamente en el ledger.
 export function readMovementHash(item) {
     return _safeTrim(readMovementField(item, "hash") ?? "");
@@ -670,7 +672,7 @@ export function ServiciosCatalogo_beforeUpdate(item) {
 }
 
 function _validateServiciosCatalogoSchema(item = {}) {
-    // Normalize legacy caller aliases into the physical CMS keys and remove
+    // Normalize historical caller aliases into the physical CMS keys and remove
     // the aliases before the document reaches Wix Data.
     if (!item.itemNature && item.naturalezaItem) item.itemNature = item.naturalezaItem;
     if (!item.codigoImpuesto && item.taxCode) item.codigoImpuesto = item.taxCode;
@@ -696,26 +698,40 @@ function _validateServiciosCatalogoSchema(item = {}) {
         _schemaError("Servicio dual requiere exposureDuration explicito como numero no negativo");
     }
 
-    const phase1Duration = Number(item.phase1Duration) || 0;
-    const exposureDuration = item.exposureDuration === undefined || item.exposureDuration === null || item.exposureDuration === ""
-        ? 0
-        : Number(item.exposureDuration);
-    const phase2Duration = Number(item.phase2Duration) || 0;
-    const totalDuration = Number(item.totalDuration) || 0;
+    const readDuration = (field) => {
+        const value = item[field];
+        if (value === undefined || value === null || value === "") return 0;
+        if (typeof value !== "number") {
+            _schemaError(`${field} debe ser numerico`);
+        }
+        return value;
+    };
+    const hasTotalDuration =
+        item.totalDuration !== undefined &&
+        item.totalDuration !== null &&
+        item.totalDuration !== "";
+    const phase1Duration = readDuration("phase1Duration");
+    const exposureDuration = readDuration("exposureDuration");
+    const phase2Duration = readDuration("phase2Duration");
+    const totalDuration = readDuration("totalDuration");
 
-    if (!_isFiniteNonNegative(phase1Duration) || !_isFiniteNonNegative(exposureDuration) || !_isFiniteNonNegative(phase2Duration) || !_isFiniteNonNegative(totalDuration)) {
-        _schemaError("Las duraciones deben ser numeros no negativos");
+    if (!_isFiniteNonNegative(phase1Duration) ||
+        !_isFiniteNonNegative(exposureDuration) ||
+        !_isFiniteNonNegative(phase2Duration) ||
+        !_isFiniteNonNegative(totalDuration)) {
+        _schemaError("Las duraciones deben ser numeros finitos no negativos");
     }
 
-    if (allowCombine && totalDuration === 0) {
-        const inferred = phase1Duration + exposureDuration + phase2Duration;
-        if (inferred > 0) item.totalDuration = inferred;
-    }
+    if (allowCombine) {
+        const expectedDuration =
+            phase1Duration + exposureDuration + phase2Duration;
 
-    if (allowCombine && totalDuration > 0) {
-        const expectedDuration = phase1Duration + exposureDuration + phase2Duration;
-        if (expectedDuration > 0 && Math.abs(totalDuration - expectedDuration) > 1) {
-            _schemaError(`totalDuration (${totalDuration}) no coincide con la suma de fases (${expectedDuration})`);
+        if (!hasTotalDuration) {
+            item.totalDuration = expectedDuration;
+        } else if (totalDuration !== expectedDuration) {
+            _schemaError(
+                `totalDuration (${totalDuration}) debe coincidir exactamente con la suma de fases (${expectedDuration})`
+            );
         }
     }
 
@@ -830,79 +846,65 @@ function _applyConfigSistemaRules(item) {
 // bearer credential and must be atomically removable for one-use consumption.
 const APPEND_ONLY_CONTROL_TYPES = new Set(["WEBHOOK_EVENT"]);
 
-// MATRIZ v15 Bloque 2 (campos eliminados de ControlOperativo): payloadJson ->
-// payload (objeto estructurado canonico), createdAt/updatedAt -> campos
-// nativos Wix (_createdDate/_updatedDate). Normalizacion destructiva en la
-// frontera de persistencia: los docs historicos con payloadJson se promueven
-// a "payload" (parseado si es JSON valido; crudos como objeto si no) y las
-// claves duplicadas de fechas se eliminan. Cero alias sobrevive al CMS.
-export function normalizeControlKeys(item) {
-    if (!item || typeof item !== "object") return item;
-    if ("payloadJson" in item) {
-        const legacyVal = item.payloadJson;
-        delete item.payloadJson;
-        if (legacyVal !== undefined && legacyVal !== null && legacyVal !== "") {
-            let parsed = null;
-            if (typeof legacyVal === "string") {
-                try { parsed = JSON.parse(legacyVal); } catch (_e) { parsed = null; }
-            } else if (typeof legacyVal === "object") {
-                parsed = legacyVal;
-            }
-            if (item.payload === undefined || item.payload === null) {
-                item.payload = parsed !== null ? parsed : { raw: String(legacyVal) };
-            }
-        }
-    }
-    // Consolidate duplicate physical columns on the selected canonical keys.
-    for (const [legacy, canonical] of [["attempt", "attempts"], ["leaseExpiresAt", "expiresAt"]]) {
-        if (legacy in item) {
-            if (item[canonical] === undefined || item[canonical] === null) {
-                item[canonical] = item[legacy];
-            }
-            delete item[legacy];
-        }
-    }
-    // createdAt/updatedAt duplicaban los nativos Wix; se erradican del doc.
-    delete item.createdAt;
-    delete item.updatedAt;
-    return item;
-}
-
-/** Lectura dual: canon "payload" (objeto) con tolerancia de lectura para
- *  docs historicos que aun conservan "payloadJson" (string JSON). */
+/**
+ * Reads only the canonical structured payload. Retired fields are rejected
+ * at the CMS write boundary and are not interpreted here.
+ */
 export function readControlPayload(doc) {
     if (!doc || typeof doc !== "object") return {};
-    if (doc.payload && typeof doc.payload === "object") return doc.payload;
-    if (typeof doc.payloadJson === "string" && doc.payloadJson.trim()) {
-        try {
-            const parsed = JSON.parse(doc.payloadJson);
-            if (parsed && typeof parsed === "object") return parsed;
-        } catch (_e) { /* doc historico corrupto */ }
-    }
-    return {};
+    return doc.payload && typeof doc.payload === "object" && !Array.isArray(doc.payload)
+        ? doc.payload
+        : {};
 }
 
 export function ControlOperativo_beforeInsert(item) {
-    const normalized = normalizeControlKeys(item);
+    assertCanonicalControlFields(item);
     // Insert recibe el registro completo: proteger el discriminador y los
     // invariantes minimos del control antes de persistirlo.
+    assertControlOperativo(item);
+    return item;
+}
+
+export async function ControlOperativo_beforeUpdate(item) {
+    const id = _safeTrim(item?._id);
+    if (!id) _schemaError("ControlOperativo update requires _id");
+
+    const original = await getItem(
+        OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO,
+        id,
+        CONSISTENCY.STRONG
+    );
+    if (!original) _schemaError("ControlOperativo update target not found");
+
+    if (APPEND_ONLY_CONTROL_TYPES.has(original.controlType)) {
+        _fiscalError(`ControlOperativo/${original.controlType} es append-only: modificacion prohibida`);
+    }
+
+    const normalized = { ...original, ...item };
+    assertCanonicalControlFields(normalized);
+    if (normalized.controlType !== original.controlType) {
+        _fiscalError("ControlOperativo.controlType es inmutable");
+    }
     assertControlOperativo(normalized);
     return normalized;
 }
 
-export function ControlOperativo_beforeUpdate(item, context) {
-    const original = context?.original || item || {};
-    if (APPEND_ONLY_CONTROL_TYPES.has(original.controlType)) {
-        _fiscalError(`ControlOperativo/${original.controlType} es append-only: modificacion prohibida`);
-    }
-    return normalizeControlKeys(item);
-}
+export async function ControlOperativo_beforeRemove(itemId) {
+    const id = typeof itemId === "string"
+        ? itemId.trim()
+        : _safeTrim(itemId?._id);
+    if (!id) _schemaError("ControlOperativo remove requires itemId");
 
-export function ControlOperativo_beforeRemove(item) {
-    if (APPEND_ONLY_CONTROL_TYPES.has(item?.controlType)) {
-        _fiscalError(`ControlOperativo/${item.controlType} es append-only: borrado prohibido`);
+    const original = await getItem(
+        OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO,
+        id,
+        CONSISTENCY.STRONG
+    );
+    if (!original) _schemaError("ControlOperativo remove target not found");
+    if (APPEND_ONLY_CONTROL_TYPES.has(original.controlType)) {
+        _fiscalError(`ControlOperativo/${original.controlType} es append-only: borrado prohibido`);
     }
-    return item;
+    return id;
 }
 
 // =============================================================================
@@ -924,7 +926,7 @@ function _blockCitasF2Remove() {
     _fiscalError("Borrado directo de CitasF2 bloqueado: use cancelacion formal de reserva");
 }
 
-// Production/legacy collection ID.
+// Production/historical collection ID.
 export function CitasF2_beforeInsert(item) {
     return _validateCitasF2Write(item);
 }

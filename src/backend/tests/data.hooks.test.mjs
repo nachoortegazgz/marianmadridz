@@ -207,27 +207,25 @@ test('HOOK-CAJA-07 persists exact CMS field IDs and OBJECT payloads', () => {
   assert.equal(H.readRecipientTaxId(item), '12345678Z');
 });
 
-test('HOOK-CONTROL-01 canonicalizes duplicate ControlOperativo columns', () => {
-  const expiresAt = new Date('2026-11-05T12:00:00.000Z');
-  const item = {
+test('HOOK-CONTROL-01 rejects retired ControlOperativo fields on new writes', () => {
+  const base = {
     controlType: 'IDEMPOTENCY',
     dedupeKey: 'IDEMPOTENCY:qa-owner',
     traceId: 'trace-control-01',
-    attempt: 2,
-    leaseExpiresAt: expiresAt,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    payloadJson: JSON.stringify({ lockOwnerId: 'qa-owner' }),
+    attempts: 2,
+    expiresAt: new Date('2026-11-05T12:00:00.000Z'),
+    payload: { lockOwnerId: 'qa-owner' },
   };
-  H.ControlOperativo_beforeInsert(item);
-  assert.equal(item.attempts, 2);
-  assert.equal(item.expiresAt, expiresAt);
-  assert.ok(!('attempt' in item));
-  assert.ok(!('leaseExpiresAt' in item));
-  assert.ok(!('createdAt' in item));
-  assert.ok(!('updatedAt' in item));
-  assert.deepEqual(item.payload, { lockOwnerId: 'qa-owner' });
-  assert.ok(!('payloadJson' in item));
+  for (const field of [
+    'payloadJson', 'attempt', 'leaseExpiresAt', 'leasesExpireAt',
+    'createdAt', 'updatedAt',
+  ]) {
+    assert.throws(
+      () => H.ControlOperativo_beforeInsert({ ...base, [field]: 'retired-value' }),
+      /fields not allowed/
+    );
+  }
+  assert.doesNotThrow(() => H.ControlOperativo_beforeInsert({ ...base }));
 });
 
 // -----------------------------------------------------------------------------

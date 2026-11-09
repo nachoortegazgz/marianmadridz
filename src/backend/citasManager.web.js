@@ -217,16 +217,26 @@ function _getBookingLineItemsTotal(lineItems) {
     }, 0);
 }
 
+// REVIEW-BY: 2027-01-31. Retirar el fallback cuando no existan filas
+// CitasF2 que dependan de meta.paymentMethod.
 function _isOnlinePaymentAllowed(cita) {
     const meta = _getCitaMeta(cita);
     const channel = _safeTrim(meta.channelType || "").toUpperCase();
     if (channel === CHANNEL_ONLINE) return true;
     if (_safeTrim(meta.checkoutUrl || "")) return true;
-    const legacyPm = _safeTrim(meta.paymentMethod || "").toUpperCase();
-    return (
-        legacyPm === CHANNEL_ONLINE ||
-        legacyPm === _safeTrim(PAYMENT_METHOD.WIX_PAYMENTS).toUpperCase()
-    );
+
+    const historicalPaymentMethod = _safeTrim(meta.paymentMethod || "").toUpperCase();
+    if (
+        historicalPaymentMethod === CHANNEL_ONLINE ||
+        historicalPaymentMethod === _safeTrim(PAYMENT_METHOD.WIX_PAYMENTS).toUpperCase()
+    ) {
+        log.warn("historical-booking-payment-read", {
+            bookingId: cita?.bookingId ?? null,
+            traceId: cita?.traceId ?? null,
+        });
+        return true;
+    }
+    return false;
 }
 
 async function _getCurrentMemberInfo() {
@@ -305,29 +315,13 @@ function _validateProcessBookingPayload(payload, traceId, sessionMemberId = "", 
         );
     }
 
-    const channelRaw = _safeTrim(
-        payload.channelType || payload.paymentMethod || ""
-    ).toUpperCase();
+    const channelRaw = _safeTrim(payload.channelType || "").toUpperCase();
     if (channelRaw !== CHANNEL_ONLINE && channelRaw !== CHANNEL_PRESENCIAL) {
         throw createBookingError(
             ERROR_CODES.INVALID_PAYLOAD,
             "Invalid channelType: expected ONLINE or PRESENCIAL.",
             { traceId, channelType: channelRaw || null }
         );
-    }
-
-    const pmRaw = _safeTrim(payload.paymentMethod || "").toUpperCase();
-    if (pmRaw && pmRaw !== CHANNEL_ONLINE && pmRaw !== CHANNEL_PRESENCIAL) {
-        const validMembers = Object.values(PAYMENT_METHOD || {}).map((v) =>
-            _safeTrim(v).toUpperCase()
-        );
-        if (!validMembers.includes(pmRaw)) {
-            throw createBookingError(
-                ERROR_CODES.INVALID_PAYLOAD,
-                "Invalid payment method.",
-                { traceId, paymentMethod: pmRaw }
-            );
-        }
     }
 
     if (payload.addOnIds !== undefined && !Array.isArray(payload.addOnIds)) {
@@ -350,7 +344,6 @@ function _validateProcessBookingPayload(payload, traceId, sessionMemberId = "", 
         phone: _safeTrim(payload.phone),
         appointmentNote: _safeTrim(payload.appointmentNote || "").slice(0, 200),
         channelType: channelRaw,
-        paymentMethod: pmRaw || null,
         rgpdConsent: true,
         // Timestamp is generated server-side only after explicit checkbox acceptance.
         // This records booking-management processing, not optional marketing consent.
