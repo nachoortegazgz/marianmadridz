@@ -182,6 +182,10 @@ test("admin and staff cash widgets consume the canonical getCashierState DTO", (
 });
 
 test("admin fallback hides unsupported capabilities and ticket output uses text nodes", () => {
+  assert.match(adminHtml, /roleLabel: 'CONTEXTO NO DISPONIBLE'/);
+  assert.match(adminHtml, /enableCashier:\s*false/);
+  assert.match(adminHtml, /enableFiscal:\s*false/);
+  assert.match(adminHtml, /enableDocuments:\s*false/);
   assert.match(adminHtml, /enableAIAssistant:\s*false/);
   assert.match(adminHtml, /enableStaffManagement:\s*false/);
   assert.match(adminHtml, /enableAccountantSend:\s*false/);
