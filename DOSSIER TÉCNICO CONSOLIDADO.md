@@ -7,6 +7,9 @@
 
 ## Cómo interpretar este dossier
 
+> **Decisiones vinculantes aprobadas el 2026-11-10 — prevalecen sobre cualquier descripción histórica de este dossier:** (1) fianza de 15 EUR solo para servicios con precio estrictamente superior a 100 EUR; se descuenta del precio del servicio; (2) cancelación/reprogramación gratuita con al menos 24 h y devolución íntegra si cancela el negocio; no se activa retención automática por cancelación tardía/no-show hasta revisión jurídica de proporcionalidad; (3) utilizar depósitos nativos de Wix Bookings por servicio siempre que cubran el caso; no crear un motor de depósitos propio sin demostrar una limitación nativa; (4) Wix Stores Catalog V3 y las herramientas nativas Wix son la única autoridad de stock; no generar proyecciones, reservas, deducciones, reposiciones ni movimientos de inventario personalizados; los históricos personalizados existentes se preservan, sin nuevas escrituras, hasta decidir su archivo; (5) ledger fiscal/contable registra hechos económicos, no cantidades de stock; (6) no activar automatizaciones que contacten clientes ni realizar cobros, reservas, escrituras de stock/CMS o publicación durante QA.
+
+
 Este documento describe la arquitectura, contratos de dominio, colecciones, módulos y reglas técnicas del sistema. No sustituye los resultados de CI, las auditorías live ni la validación de Wix runtime.
 
 - El código y sus consumidores definen lo implementado.
@@ -173,7 +176,7 @@ Capa de Datos — SDK @wix/data + APIs Wix (Bookings, Members, eCommerce)
 | `backend/reservas.web.js` | Consulta pública de disponibilidad y catálogo |
 | `backend/citasManager.web.js` | Gestión de reservas duales, pagos y reprogramación |
 | `backend/cajas.web.js` | Ledger fiscal Veri\*Factu, caja y cierre Z |
-| `backend/inventario.web.js` | Control de stock y reconciliación |
+| `backend/inventario.web.js` | Módulo legacy de inventario personalizado; retirada planificada tras desacoplar webhooks y UI |
 | `backend/horario.web.js` | Fichajes laborales y cálculo de jornada |
 | `backend/fiscalAggregator.web.js` | Agregación de impuestos y libros de facturas |
 | `backend/fiscalDocuments.web.js` | Generación de paquetes documentales para gestoría |
@@ -507,7 +510,7 @@ Las colecciones `WIX_APP` son de **estricta lectura**. Prohibido ejecutar `wixDa
 
 **Bookings**: la disponibilidad mostrada al usuario no garantiza que el slot siga libre. Revalidar siempre en servidor. `resource.id` y `scheduleId` deben pasarse explícitamente al crear reservas.
 
-**Stores Catalog V3**: versión del catálogo confirmada por Catalog Versioning API (`V3_CATALOG`). `catalogV3Adapter.js` concentra las lecturas y ajustes explícitos; Wix mantiene la autoridad sobre stock nativo. No asumir que los mocks validan el SDK real: importación, scopes, variantes, ubicaciones y E2E siguen pendientes en Wix Local Editor/QA.
+**Stores Catalog V3**: versión del catálogo confirmada por Catalog Versioning API (`V3_CATALOG`). Wix Stores y sus funciones nativas son la única autoridad de stock. La arquitectura objetivo elimina el adapter y las escrituras personalizadas de inventario; `backend/inventario.web.js`, sus proyecciones y el panel asociado quedan en retirada controlada. No crear maestros CMS ni nuevos movimientos de inventario. Los registros históricos existentes se preservan sin mutación. El checkout nativo debe validar automáticamente disponibilidad y deducir stock; E2E de venta, cancelación y devolución/restock en Wix QA sigue pendiente.
 
 **eCommerce / Cart V2**: el código y los contratos SDK de carrito están alineados con V2. La confirmación de una reserva y el estado del pago conservan autoridades separadas: no inferir confirmación de Bookings únicamente por la existencia de un pedido o carrito.
 
