@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 const here = dirname(fileURLToPath(import.meta.url));
 const source = readFileSync(join(here, '..', 'citasManager.web.js'), 'utf8').replace(/\r\n/g, '\n');
 const eventsSource = readFileSync(join(here, '..', 'events.js'), 'utf8').replace(/\r\n/g, '\n');
+const eventLogSource = readFileSync(join(here, '..', 'eventLog.js'), 'utf8').replace(/\r\n/g, '\n');
 
 test('PAY-GUARD-01 rejects noncanonical booking states before ledger registration', () => {
   const validateStart = source.indexOf('async function _validatePaymentCitaSet(');
@@ -85,4 +86,15 @@ test('PAY-REFUND-01 refunds are idempotent, bounded by the original amount and p
   assert.match(eventsSource, /refundTaxBase/);
   assert.match(eventsSource, /refundTaxAmount/);
   assert.match(eventsSource, /\.limit\(1000\)/);
+});
+
+
+test('PAY-REFUND-02 cumulative refund cap is revalidated under the shared fiscal ledger lock', () => {
+  const lockIndex = eventLogSource.indexOf('const ledgerLock = await acquireFiscalLedgerLock(traceId)');
+  const refundGuardIndex = eventLogSource.indexOf('REFUND_EXCEEDS_ORIGINAL_ORDER_AMOUNT');
+  const headIndex = eventLogSource.indexOf('const previous = await _getLastCashEvent()', lockIndex);
+  assert.ok(lockIndex >= 0 && refundGuardIndex > lockIndex, 'refund cap check must run after acquiring the fiscal lock');
+  assert.ok(headIndex > refundGuardIndex, 'refund cap check must run before reading the ledger head and reserving sequence');
+  assert.match(eventLogSource, /REFUND_ID_REUSED_ACROSS_ORDERS/);
+  assert.match(eventLogSource, /REFUND_ORIGINAL_LEDGER_AMBIGUOUS/);
 });

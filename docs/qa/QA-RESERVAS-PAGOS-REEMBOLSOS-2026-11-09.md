@@ -20,7 +20,7 @@
 - Base y cuota se prorratean en reembolsos parciales; el último reembolso aplica el residual para cuadrar el total original.
 - El restock explícito de Wix se conserva como efecto nativo idempotente por refundId; el límite fiscal se aplica antes de crear la rectificativa en el ledger. Si falta el movimiento original, el flujo conserva el restock y deja la rectificativa en recuperación.
 
-**Límite conocido:** la comprobación acumulada de reembolsos se hace antes de entrar en el writer fiscal. El writer serializa escrituras contables, pero esta comprobación de saldo no se repite todavía dentro de ese mismo bloqueo; por tanto, dos refundId distintos concurrentes para el mismo pedido requieren una prueba específica y una protección adicional antes de certificar concurrencia.
+**Control de concurrencia:** el writer fiscal vuelve a comprobar refundId y el acumulado del pedido dentro del bloqueo fiscal global, antes de leer el head/hash y reservar secuencia. Esto serializa reembolsos distintos concurrentes del mismo pedido. La cobertura offline incluye un contrato estático de que la comprobación queda dentro de la sección crítica; la prueba E2E concurrente en Wix QA sigue pendiente.
 
 ### B-03 — Pares duales
 El cron solo cierra la incidencia si se cumplen simultáneamente:
