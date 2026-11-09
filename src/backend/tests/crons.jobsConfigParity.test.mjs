@@ -117,10 +117,10 @@ test('CRON-PAYMENT-RECOVERY-01 repairs CitasF2 from the existing paid ORDER move
     },
   }]);
   wixDataMock._seed(IC.BUSINESS_COLLECTIONS.CITAS_F2, [
-    { _id: 'cita-f1-recovery', bookingId: f1Id, bookingType: IC.BOOKING_TYPE.DUAL_F1,
+    { _id: 'cita-f1-recovery', bookingId: f1Id, scheduleId: '33333333-3333-4333-8333-333333333333', traceId: 'trace-cron-recovery-f1', bookingType: IC.BOOKING_TYPE.DUAL_F1,
       pairToken, bookingStatus: 'PENDING', paymentStatus: 'PENDING_PAYMENT', orderId,
       totalAmount: 45.5, meta: { pairToken, orderId } },
-    { _id: 'cita-f2-recovery', bookingId: f2Id, bookingType: IC.BOOKING_TYPE.DUAL_F2,
+    { _id: 'cita-f2-recovery', bookingId: f2Id, scheduleId: '44444444-4444-4444-8444-444444444444', traceId: 'trace-cron-recovery-f2', bookingType: IC.BOOKING_TYPE.DUAL_F2,
       pairToken, bookingStatus: 'PENDING', paymentStatus: 'PENDING_PAYMENT', orderId,
       totalAmount: 0, meta: { pairToken, orderId, linkedF1BookingId: f1Id, noFee: true } },
   ]);

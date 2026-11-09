@@ -1984,13 +1984,14 @@ async function _readDaysCacheWindow(daysCacheKey) {
     }
 }
 
-async function _writeDaysCacheWindow(daysCacheKey, payload) {
+async function _writeDaysCacheWindow(daysCacheKey, payload, traceId) {
     const expiresAt = new Date(Date.now() + DAYS_CACHE_TTL_MS);
     const cacheId = `DAYS_${_hashKey(String(daysCacheKey))}`.slice(0, 64);
     const record = {
         _id: cacheId,
         controlType: CT_DAYS_CACHE,
         dedupeKey: String(daysCacheKey),
+        traceId: _safeTrim(traceId) || makeTraceId("days-cache"),
         serviceId: String(payload.serviceId || ""),
         resourceId: "",
         dateYmd: String(payload.yearMonth || ""),
@@ -2090,7 +2091,7 @@ export async function _getAvailableDaysInternal({ serviceId, resourceId, year, m
         toLocal,
         availableDaysYmds: slotDays,
         emptyDaysYmds,
-    });
+    }, tId);
     return { status: "SUCCESS", data: _filterDaysByLimit(slotDays), error: null };
 }
 

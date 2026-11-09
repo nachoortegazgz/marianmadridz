@@ -1276,6 +1276,7 @@ test('RES-DAYS-01 payload contract + day extraction + DAYS_CACHE persisted', asy
   assert.strictEqual(call.timeSlotsPerDay, 1);
   const daysRec = (wixDataMock._store.get(CONTROL_COL) || []).find((r) => r.controlType === 'DAYS_CACHE');
   assert.ok(daysRec, 'DAYS_CACHE record written (PEND-09)');
+  assert.ok(typeof daysRec.traceId === 'string' && daysRec.traceId.length > 0, 'DAYS_CACHE record carries traceId');
   const payload = daysRec.payload;
   assert.ok(Array.isArray(payload.emptyDaysYmds));
 });
@@ -1424,7 +1425,7 @@ test('RES-DISPLAY-03 CANCELED and legacy CANCELED hidden uniformly', async () =>
   resetState();
   await invalidateStaffCache();
   const b1 = GUID_OK;
-  wixDataMock._seed(CITAS_COL, [{ _id: 'r1', bookingId: b1, bookingStatus: 'CANCELLED' }]);
+  wixDataMock._seed(CITAS_COL, [{ _id: 'r1', bookingId: b1, bookingStatus: 'CANCELED' }]);
   // Sin token: AUTH_REQUIRED primero (no se revela que la reserva existe ni su estado).
   const noTok = await RW.getConfirmedBookingForDisplay({ bookingId: b1 });
   assert.strictEqual(noTok.error, 'AUTH_REQUIRED');
@@ -1433,7 +1434,7 @@ test('RES-DISPLAY-03 CANCELED and legacy CANCELED hidden uniformly', async () =>
   const gen = await RW.generateDisplayToken({ bookingId: b1 });
   assert.strictEqual(gen.ok, false);
   assert.strictEqual(gen.error, 'AUTH_REQUIRED');
-  // Via miembro propietario autenticado: la reserva CANCELLED (huerfana o con
+  // Via miembro propietario autenticado: la reserva CANCELED (huerfana o con
   // dueno) jamas obtiene token -> NOT_CONFIRMED sin emitir.
   globalThis.__mmMembersState = globalThis.__mmMembersState || { _current: null };
   globalThis.__mmMembersState._current = { _id: DISPLAY_OWNER_ID };

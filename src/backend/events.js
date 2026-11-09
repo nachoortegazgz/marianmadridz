@@ -15,7 +15,7 @@ CAMBIOS DE ALINEACION v5015-ALIGNED (respecto a v5009-FISCAL-V20.1):
   ALN-02: PROCESSED_WEBHOOK_EVENTS (coleccion inexistente en v12.0) se
           consolida en ControlOperativo con controlType = WEBHOOK_EVENT.
           El _id se mantiene como normalizacion del eventId (<=100 chars).
-  ALN-03: BOOKING_STATUS.CANCELLED (dos L) -> BOOKING_STATUS.CANCELED
+  ALN-03: BOOKING_STATUS.CANCELED -> BOOKING_STATUS.CANCELED
           (enum Wix nativo correcto en v12.0).
   ALN-04: AEAT_INVOICE_TYPE -> TIPO_FACTURA.
   ALN-05: VAT_ACCRUAL_STATUS no existe en v12.0. Constante local
@@ -1198,7 +1198,7 @@ async function _upsertDualCancellationFlag(pairToken, traceId, triggerBookingId,
     const bookingIds = _normalizeBookingIds(rows.map((row) => row?.bookingId));
     const allCanceled = rows.length === 2 && rows.every((row) => {
         const status = String(row?.bookingStatus || "").toUpperCase();
-        return status === "CANCELLED" || status === "CANCELED";
+        return status === "CANCELED";
     });
     const flagId = `DUAL_CANCEL_${token.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 64)}`;
     const fiscalPending = ["REPAIR_REQUIRED", "WAITING_FOR_SIBLING_CANCELLATION", "RECOVERY_QUEUED"].includes(fiscalStatus);
@@ -1508,12 +1508,12 @@ export async function wixBookingsV2_onBookingCanceled(rawBody) {
                 .find(STRONG_READ);
             const pairRows = pairRes?.items || [];
             const effectiveRows = pairRows.map((row) => row.bookingId === bookingId
-                ? { ...row, bookingStatus: "CANCELLED" }
+                ? { ...row, bookingStatus: "CANCELED" }
                 : row);
             dualPairBookingIds = _normalizeBookingIds(effectiveRows.map((row) => row.bookingId));
             dualPairFullyCancelled = effectiveRows.length === 2 && effectiveRows.every((row) => {
                 const status = String(row?.bookingStatus || "").toUpperCase();
-                return status === "CANCELLED" || status === "CANCELED";
+                return status === "CANCELED";
             });
             if (dualPairFullyCancelled) dualFiscalStatus = "NOT_REQUIRED";
         }

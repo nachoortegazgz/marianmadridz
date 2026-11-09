@@ -28,7 +28,7 @@ CORRECCIONES v5017-STRONG-QUERY:
 
 CART-01: Cart V2 solo entrega checkout si el carrito calculado contiene
     exactamente la reserva F1 esperada y no declara el item como no disponible.
-FIXES HEREDADOS v5016: CORE-50/51 (CANCELLED dos L).
+FIXES HEREDADOS v5016: CORE-50/51 (CANCELED canonical).
 FIXES HEREDADOS v5015: CORE-46..CORE-49.
 FIXES HEREDADOS v5014: CORE-39..CORE-45.
 FIXES HEREDADOS v5013: CORE-30..CORE-38.
@@ -146,10 +146,6 @@ export const ERROR_CODES = Object.freeze({
 // =============================================================================
 // BLOQUE 2 - ENUMS EN FRONTERA
 // =============================================================================
-const CMS_BOOKING_CANCELLED =
-    (CITAS_BOOKING_STATUS &&
-        (CITAS_BOOKING_STATUS.CANCELLED || CITAS_BOOKING_STATUS.CANCELED)) ||
-    "CANCELLED";
 const CMS_BOOKING_REFUNDED =
     (CITAS_BOOKING_STATUS && CITAS_BOOKING_STATUS.REFUNDED) || "REFUNDED";
 
@@ -160,16 +156,15 @@ const WIX_TO_CMS_BOOKING_STATUS = Object.freeze({
     CONFIRMED: CITAS_BOOKING_STATUS.CONFIRMED,
     UPDATED: CITAS_BOOKING_STATUS.CONFIRMED,
     COMPLETED: CITAS_BOOKING_STATUS.COMPLETED,
-    CANCELED: CMS_BOOKING_CANCELLED,
-    CANCELLED: CMS_BOOKING_CANCELLED,
-    DECLINED: CMS_BOOKING_CANCELLED,
+    CANCELED: CITAS_BOOKING_STATUS.CANCELED,
+    DECLINED: CITAS_BOOKING_STATUS.CANCELED,
     REFUNDED: CMS_BOOKING_REFUNDED,
     NO_SHOW: CITAS_BOOKING_STATUS.NO_SHOW,
     NOSHOW: CITAS_BOOKING_STATUS.NO_SHOW,
     PENDIENTE: CITAS_BOOKING_STATUS.PENDING,
     CONFIRMADO: CITAS_BOOKING_STATUS.CONFIRMED,
     COMPLETADO: CITAS_BOOKING_STATUS.COMPLETED,
-    CANCELADO: CMS_BOOKING_CANCELLED,
+    CANCELADO: CITAS_BOOKING_STATUS.CANCELED,
     REEMBOLSADO: CMS_BOOKING_REFUNDED,
     NO_PRESENTADO: CITAS_BOOKING_STATUS.NO_SHOW,
 });
@@ -1800,7 +1795,7 @@ export async function _findExistingCitasForSlot(params) {
         const status = _safeTrim(
             item[BOOKING_FIELDS.STATUS] || item.bookingStatus || ""
         ).toUpperCase();
-        if (["CANCELED", "CANCELLED", "DECLINED"].includes(status)) return false;
+        if (["CANCELED", "DECLINED"].includes(status)) return false;
 
         const details = item[BOOKING_FIELDS.CONTACT_DETAILS] || {};
         const rowMemberId = _safeTrim(details.memberId);

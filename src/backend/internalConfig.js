@@ -223,7 +223,7 @@ export const CITAS_BOOKING_STATUS = Object.freeze({
   PENDING: "PENDING",
   CONFIRMED: "CONFIRMED",
   COMPLETED: "COMPLETED",
-  CANCELLED: "CANCELLED",
+  CANCELED: "CANCELED",
   // UNIT-ENUM-01 fix: el SDK BOOKING_STATUS.REFUNDED debe traducirse a un
   // estado CMS canonico. Sin esta clave, _toCmsBookingStatus("REFUNDED")
   // caia al fallback literal y violaba el contrato de pertenencia al enum.

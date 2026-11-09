@@ -24,6 +24,8 @@ function seedCita() {
   wixDataMock._seed(CITA_COLLECTION, [{
     _id: CITA_ID,
     bookingId: BOOKING_ID,
+    scheduleId: '99999999-9999-4999-8999-999999999999',
+    traceId: 'trace-test-cita-cancel',
     bookingStatus: IC.CITAS_BOOKING_STATUS.CONFIRMED,
     paymentStatus: IC.CITAS_PAYMENT_STATUS.NOT_PAID,
     meta: {},
@@ -40,7 +42,7 @@ test('BOOKING_CANCELED persists CitasF2 before marking the webhook processed', a
 
   assert.equal(result.status, 'OK');
   const cita = wixDataMock._store.get(CITA_COLLECTION).find((row) => row.bookingId === BOOKING_ID);
-  assert.equal(cita.bookingStatus, IC.CITAS_BOOKING_STATUS.CANCELLED || IC.CITAS_BOOKING_STATUS.CANCELED);
+  assert.equal(cita.bookingStatus, IC.CITAS_BOOKING_STATUS.CANCELED);
   const eventRows = wixDataMock._store.get(CONTROL_COLLECTION) || [];
   assert.equal(eventRows.filter((row) => row.eventId === EVENT_ID).length, 1);
 });
@@ -83,7 +85,7 @@ test('BOOKING_CANCELED replay reconciles a stale CitasF2 row even when the event
 
   assert.equal(result.status, 'OK');
   const cita = wixDataMock._store.get(CITA_COLLECTION).find((row) => row.bookingId === BOOKING_ID);
-  assert.equal(cita.bookingStatus, IC.CITAS_BOOKING_STATUS.CANCELLED || IC.CITAS_BOOKING_STATUS.CANCELED);
+  assert.equal(cita.bookingStatus, IC.CITAS_BOOKING_STATUS.CANCELED);
 });
 
 
@@ -96,6 +98,8 @@ test('DUAL-CANCEL-01 one canceled phase does not refund a paid dual booking and 
     {
       _id: 'dual-cita-f1',
       bookingId: f1,
+      scheduleId: '77777777-7777-4777-8777-777777777771',
+      traceId: 'trace-test-dual-f1',
       pairToken,
       orderId,
       bookingStatus: IC.CITAS_BOOKING_STATUS.CONFIRMED,
@@ -105,6 +109,8 @@ test('DUAL-CANCEL-01 one canceled phase does not refund a paid dual booking and 
     {
       _id: 'dual-cita-f2',
       bookingId: f2,
+      scheduleId: '88888888-8888-4888-8888-888888888881',
+      traceId: 'trace-test-dual-f2',
       pairToken,
       orderId,
       bookingStatus: IC.CITAS_BOOKING_STATUS.CONFIRMED,
@@ -150,15 +156,19 @@ test('DUAL-CANCEL-02 the second phase resolves the pair and uses a stable pair-l
     {
       _id: 'dual-cita-f1',
       bookingId: f1,
+      scheduleId: '77777777-7777-4777-8777-777777777772',
+      traceId: 'trace-test-dual-f1-second',
       pairToken,
       orderId,
-      bookingStatus: IC.CITAS_BOOKING_STATUS.CANCELLED,
+      bookingStatus: IC.CITAS_BOOKING_STATUS.CANCELED,
       paymentStatus: IC.CITAS_PAYMENT_STATUS.NOT_PAID,
       serviceId: 'eeeeeeee-5555-4555-8555-eeeeeeeeeeee',
     },
     {
       _id: 'dual-cita-f2',
       bookingId: f2,
+      scheduleId: '88888888-8888-4888-8888-888888888882',
+      traceId: 'trace-test-dual-f2-second',
       pairToken,
       orderId,
       bookingStatus: IC.CITAS_BOOKING_STATUS.CONFIRMED,
