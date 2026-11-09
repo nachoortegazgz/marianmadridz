@@ -119,8 +119,8 @@ export const SDK_CONFIG = Object.freeze({
 
   JOBS: Object.freeze({
     AUDIT_RETENTION_DAYS: 90,
-    // DUAL_CACHE purga registros de caché dual expirados; no se generan nuevas filas.
-    // Mantener hasta verificar que ControlOperativo no contiene registros DUAL_CACHE.
+    // Purga los registros DUAL_CACHE expirados que puedan permanecer en CMS.
+    // No existe writer activo para este tipo; retirar tras verificar cero filas.
     DUAL_CACHE_CLEANUP_LIMIT: 500,
     DAYS_CACHE_CLEANUP_LIMIT: 500,
     FISCAL_RECOVERY_BATCH_SIZE: 25,
@@ -613,7 +613,7 @@ export const MOVEMENT_HISTORICAL_READ_ALIASES = Object.freeze({
   // fiscal es "hash". El alias NO se tolera en lectura: el hook promueve
   // docs históricos a "hash" en su próximo update autorizado y los lectores
   // usan readMovementHash (clave directa). Dominio contable: recordHash sigue
-  // siendo canónico (LIBRO_historical_WRITE_FIELDS); por dominio, no duplicidad.
+  // siendo canónico (LIBRO_HISTORICAL_WRITE_FIELDS); por dominio, no duplicidad.
   hash: ["currentRecordHash", "hashCadena", "huella"],
   operationNature: ["naturalezaOperacion"],
   recordSource: ["origen"],
