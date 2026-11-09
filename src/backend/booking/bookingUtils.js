@@ -286,7 +286,7 @@ export function getResourceIdsFromSlot(slot, staffResourceTypeId) {
             .map(function (resource) {
                 if (!resource) return "";
                 if (typeof resource === "string") return _safeTrim(resource);
-                return _safeTrim(resource.id || resource._id || resource.resourceId);
+                return _safeTrim(resource._id || resource.resourceId);
             })
             .filter(_looksLikeGuid);
 
@@ -298,7 +298,6 @@ export function getResourceIdsFromSlot(slot, staffResourceTypeId) {
         : {};
 
     const directId = _safeTrim(
-        resource.id ||
         resource._id ||
         resource.resourceId ||
         normalized.resourceId
