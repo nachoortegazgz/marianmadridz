@@ -92,7 +92,6 @@ const ACTIONS = {
             traceId,
         }),
 
-        processPendingRefundInventoryRepairs({ ...(payload || {}), traceId }),
 };
 
 /* ────────────────────────────────────────────────────────────────────
