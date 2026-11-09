@@ -456,7 +456,7 @@ Los hooks `beforeUpdate` y `beforeRemove` en `MovimientosCaja`, `LibroAsientosCo
 | --- | --- |
 | `SLOT_LOCK` | Bloqueo temporal de slot durante saga dual |
 | `WEBHOOK_EVENT` | Deduplicación de eventos webhook (append-only) |
-| — | `dedupeKey` es un campo de idempotencia, no un valor de `controlType`. |
+| `DEDUPE_KEY` | Tipo de control para claims durables de deduplicación (contabilidad/inventario); `dedupeKey` es el campo llave del registro. |
 | `RATE_LIMIT` | Control de frecuencia por surface/IP |
 | `SYSTEM_FLAG` | Alertas y flags de sistema |
 | `IDEMPOTENCY` | Control transaccional genérico |
@@ -526,8 +526,9 @@ MOV_INVENTARIO = { VENTA, DEVOLUCION, AJUSTE, ENTRADA_STOCK,
 ROL_WEBSITE = { ADMIN, GESTION, ESTILISTA }
 
 // ControlOperativo.controlType
-CONTROL_TYPE = { ALERT, COMPENSATION, DAYS_CACHE, DISPLAY_TOKEN,
-  DUAL_CACHE, IDEMPOTENCY, SLOT_LOCK, RATE_LIMIT, SYSTEM_FLAG, WEBHOOK_EVENT }
+CONTROL_TYPE = { ALERT, COMPENSATION, DAYS_CACHE, DEDUPE_KEY, DISPLAY_TOKEN,
+  DUAL_CACHE, IDEMPOTENCY, LEDGER_IDEMPOTENCY, SLOT_LOCK, RATE_LIMIT,
+  SYSTEM_FLAG, WEBHOOK_EVENT }
 ```
 
 ### Addons — nomenclatura crítica
