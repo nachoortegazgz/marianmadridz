@@ -527,7 +527,7 @@ test("EVENT-BOOKING-RESCHEDULE-01 native reschedule updates only the affected Ci
     },
   });
 
-  assert.equal(result.status, "OK");
+  assert.equal(result.status, "OK", JSON.stringify(result));
   assert.equal(result.pairRepairRequired, true);
   assert.equal(result.updated, true);
   const rows = wixDataMock._store.get("CitasF2") || [];
@@ -596,7 +596,7 @@ test("EVENT-BOOKING-RESCHEDULE-02 duplicate native reschedule event is idempoten
     },
   });
 
-  assert.equal(result.status, "OK");
+  assert.equal(result.status, "OK", JSON.stringify(result));
   assert.equal(result.updated, false);
   assert.equal((wixDataMock._store.get("ControlOperativo") || []).filter(
     row => row.alertType === "DUAL_BOOKING_NATIVE_RESCHEDULE_MISMATCH"
