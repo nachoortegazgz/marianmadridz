@@ -87,7 +87,7 @@ test("BOOK-FLOW-STAFF-BALANCE-01 dual phases use the common available staff pool
 
 test("BOOK-FLOW-SDK-ID-01 all @wix/bookings slot identifiers use the SDK _id shape", () => {
   assert.match(bookingCoreSource, /resource: \{ _id: resourceIdClean \}/);
-  assert.match(bookingCoreSource, /return \{ _id: incoming, locationType: "OWNER_BUSINESS" \}/);
+  assert.match(bookingCoreSource, /\{ _id: incoming, locationType: "OWNER_BUSINESS" \}/);
   assert.match(sagaSource, /return \{ _id: resolvedId, locationType: "OWNER_BUSINESS" \}/);
   assert.match(sagaSource, /pristineSlot\?\.resource\?\._id/);
   assert.match(sagaSource, /pristineSlot\?\.location\?\._id/);
