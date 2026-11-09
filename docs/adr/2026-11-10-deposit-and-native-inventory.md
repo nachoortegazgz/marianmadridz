@@ -16,7 +16,7 @@
 - Cancelación/reprogramación gratuita con al menos 24 horas; si cancela el negocio, devolución íntegra.
 - No retener automáticamente el depósito por cancelación tardía o inasistencia hasta disponer de condiciones transparentes y revisión jurídica de proporcionalidad. No se presupone que una cláusula de no reembolso sea válida.
 - La contabilización fiscal del depósito, su saldo y las devoluciones debe quedar definida con asesoría antes de activar cobros. No se habilitarán cobros reales durante QA.
-- La configuración nativa de depósitos en Wix Bookings es la primera opción: `payment.options.deposit` con importe fijo según tarifa. Requiere pago online y pago presencial si el depósito es inferior al precio; Wix Help advierte que la función no está disponible para todas las cuentas y no puede combinarse con aprobación manual. Los pagos manuales pueden evitar el depósito. La capacidad real de la cuenta y el tratamiento de precios variables quedan pendientes de QA.
+- La configuración nativa de depósitos en Wix Bookings es la primera opción. Wix Help indica que el depósito se cobra online y el saldo en persona; advierte que la función no está disponible para todas las cuentas, que no se combina con aprobación manual y que el método manual puede evitar el depósito. Sin embargo, el esquema REST Services V2 actual describe `payment.options.deposit=true` con `online=true` y `inPerson=false`. Esta discrepancia debe resolverse antes de configurar servicios o desarrollar código. La consulta live muestra que actualmente no hay depósitos habilitados.
 
 ### Inventario
 
@@ -36,6 +36,12 @@
 6. **Históricos:** `MovimientosInventario` se considera histórico append-only; no insertar nuevos movimientos personalizados, editar, borrar ni purgar filas existentes. Cualquier política de archivo requiere ADR separado.
 7. **Pruebas:** cubrir precios 100.00/100.01, fijo/variable, depósito correcto, saldo restante, pago fallido, reintentos, cancelación a 24h exactas/antes/después, cancelación por negocio, refund y duplicación de webhooks. QA con datos sintéticos y sin cargos reales.
 
+## Evidencia live de Wix (solo lectura, 2026-11-10)
+
+- eCommerce Orders Settings: HTTP 200; `inventoryUpdateTrigger=ON_ORDER_PAID`; `createInvoice=false`. No se actualizó configuración.
+- Bookings Services V2: 94 servicios; 70 `FIXED`, 24 `NO_FEE`, 0 `VARIED`; siete servicios visibles superan 100 EUR y cero servicios tienen depósito activo.
+- Servicios elegibles (>100 EUR): Pack Corte + Mechas (115 EUR), Recogido Exclusivo Novias (150 EUR), Rescate Express para Cabello Dañado (125 EUR), Pack Transformación Total (185 EUR), Terapia de Alisado Espejo Premium (195 EUR), Pack Novia Completo (290 EUR) y Alisado Espejo Premium (195 EUR).
+
 ## Impacto sobre el estado actual
 
 - RF-06 sustituye el criterio anterior (>30 EUR y 15 EUR/20%) y resuelve la contradicción con el criterio documental de 30% para >50 EUR.
@@ -44,6 +50,8 @@
 - Las auditorías anteriores que describen `InventarioStockVenta`, `MovimientosInventario` o el bloqueo por falta de maestros CMS quedan como evidencia histórica del código existente, no como autorización para ampliar esa arquitectura.
 
 ## Fuentes de autoridad y referencias
+
+- Wix Services V2 API schema: `payment.options.deposit` requiere online y actualmente declara `inPerson=false` cuando está activo; `fixed.deposit` / `varied.deposit` forman parte del objeto de servicio.
 
 - Wix Bookings — depósitos y pagos: https://dev.wix.com/docs/api-reference/business-solutions/bookings/services/services-v2/about-service-payments
 - Wix Help — depósitos y saldo presencial: https://support.wix.com/es/article/wix-bookings-seleccionar-c%C3%B3mo-cobrar-los-servicios-de-reservas
