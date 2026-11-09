@@ -156,6 +156,8 @@ test('DUAL-CANCEL-02 the second phase resolves the pair and uses a stable pair-l
     {
       _id: 'dual-cita-f1',
       bookingId: f1,
+      scheduleId: '77777777-7777-4777-8777-777777777772',
+      traceId: 'trace-test-dual-f1-second',
       pairToken,
       orderId,
       bookingStatus: IC.CITAS_BOOKING_STATUS.CANCELED,
@@ -165,6 +167,8 @@ test('DUAL-CANCEL-02 the second phase resolves the pair and uses a stable pair-l
     {
       _id: 'dual-cita-f2',
       bookingId: f2,
+      scheduleId: '88888888-8888-4888-8888-888888888882',
+      traceId: 'trace-test-dual-f2-second',
       pairToken,
       orderId,
       bookingStatus: IC.CITAS_BOOKING_STATUS.CONFIRMED,
