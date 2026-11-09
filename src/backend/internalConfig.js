@@ -404,7 +404,8 @@ export const CONTROL_STATUS = Object.freeze({
 // Las referencias a una supuesta v13.0 en comentarios historicos no tienen
 // un documento normativo v13.0 en el repositorio ni entre las fuentes aportadas;
 // por tanto no prevalecen sobre la SSOT aprobada disponible.
-// DISPLAY_TOKEN se conserva por su productor activo en reservas.web.js.
+// DISPLAY_TOKEN tiene ciclo de vida propio; DEDUPE_KEY y LEDGER_IDEMPOTENCY
+// son claims durables y quedan fuera de la purga de IDEMPOTENCY a 24 h.
 export const CONTROL_TYPE = Object.freeze({
   ALERT: "ALERT",
   COMPENSATION: "COMPENSATION",
