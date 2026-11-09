@@ -77,7 +77,13 @@ Esta revisión supersede las afirmaciones de las secciones 1 y 4 que indicaban C
 - PR #216 introduce un adaptador V3, migra las operaciones del writer y cambia la clave de proyección a V3. ADR-004 y anexo de vigencia del Dossier registran la decisión.
 - CI offline run 168 en commit 77d63d2: 47 suites, 442 tests, 0 fallos; ESLint y contratos Cart V2/Bookings Reader V2 correctos.
 - **Pendiente:** la suite offline usa mocks de los namespaces V3. No acredita que el import real de @wix/stores resuelva en Wix Local Editor. El manifiesto/lockfile requiere reconciliación con Wix CLI y prueba de importación real.
-- **Pendiente:** no se ha ejecutado E2E en Wix Local Editor ni se ha publicado el código V3. El PR permanece en borrador.
+- **Actualización 2026-11-09:** PR #216 está fusionado en main (merge commit `7b1d48d5255ffa5eb5d2f20080798be163d9dd57`), pero no hay evidencia de publicación del código V3. La ejecución de publicación más reciente falló por divergencia de UI del Editor (`UI version: 15941`).
 - El código de pedidos y reembolsos mantiene la regla: Wix eCommerce aplica el efecto nativo y el módulo proyecta el resultado; solo los ajustes manuales explícitos llaman a Bulk Increment/Decrement V3.
 
 **Estado actualizado:** Catalog V3 activo en el sitio; migración de código propuesta y CI offline verde; runtime Wix, mapeo maestro CMS y E2E todavía pendientes. No modificar stock ni crear maestros CMS hasta completar esas verificaciones.
+
+## 8. QA live read-only — 2026-11-09
+
+Se ha confirmado de nuevo Catalog Versioning `V3_CATALOG` (HTTP 200), 24 productos visibles en Stores V3, 30 inventory items seguidos en una ubicación, 70 servicios de Bookings y disponibilidad de una cita para el 10-11-2026. La revalidación del slot 09:00–09:40 respondió `bookable=true`. No se realizaron escrituras CMS/stock ni reservas/pagos.
+
+La evidencia valida las APIs REST nativas; no valida el import real del SDK `@wix/stores` en Velo ni los WebMethods personalizados. El bloqueo de publicación permanece: el Editor tiene cambios UI más recientes que el snapshot del repositorio. Ver `docs/qa/2026-11-09-runtime-smoke-production.md`.
