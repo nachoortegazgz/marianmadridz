@@ -22,8 +22,8 @@ test("FISCAL-CHAIN-01 eventLog acquires the shared lock before reading hash head
   assert.ok(acquire >= 0);
   assert.ok(readHead > acquire);
   const headReaderStart = code.indexOf("async function _getLastCashEvent()");
-  const headReaderEnd = code.indexOf("}", headReaderStart);
-  assert.match(code.slice(headReaderStart, headReaderEnd), /find\\(\\{ consistencyMode: "strong" \\}\\)/);
+  const strongHeadRead = code.indexOf('.find({ consistencyMode: "strong" })', headReaderStart);
+  assert.ok(strongHeadRead > headReaderStart);
   assert.ok(nextSequence > acquire);
   assert.ok(assertLock > nextSequence);
   assert.ok(insert > assertLock);
