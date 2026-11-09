@@ -41,8 +41,9 @@ Revision: 2026-11-09
 - No se utiliza permissions.json porque el backend no contiene modulos .jsw. La autorizacion de los modulos .web.js se define en cada WebMethod.
 
 3.2. Backend events
-- events.js contiene manejadores Velo gestionados por Wix.
+- `events.js` contiene manejadores Velo gestionados por Wix.
 - Wix entrega al handler el objeto de evento ya verificado y decodificado.
+- Los eventos se procesan como handlers Velo; no se implementa un endpoint HTTP de recepción de webhooks.
 - Los handlers de este sitio aceptan objetos de evento y no procesan JWT raw.
 - La verificacion manual de JWT pertenece a endpoints HTTP autoalojados; este proyecto no implementa esa ruta.
 - La entrega puede repetirse o llegar fuera de orden. La deduplicacion se realiza mediante eventId y ControlOperativo.WEBHOOK_EVENT.
@@ -83,9 +84,10 @@ Revision: 2026-11-09
 
 4.4. Datos historicos fiscales
 - Los documentos fiscales append-only no se reescriben para normalizar nombres de campo.
-- Los lectores historicos centralizados pueden interpretar campos anteriores exclusivamente en lectura y deben emitir trazabilidad.
-- Toda escritura nueva utiliza campos canonicos.
-- No se elimina un lector historico mientras no se haya comprobado el contenido real de CMS y la continuidad de consulta fiscal.
+- Los lectores de `MovimientosCaja`, `ControlOperativo` y `CitasF2` pueden interpretar valores historicos exclusivamente en lectura, con `warn` trazable y fecha `REVIEW-BY`.
+- Los campos `ONLINE` de `paymentMethod`, `payloadJson` y `meta.paymentMethod` no se aceptan en escrituras nuevas.
+- Toda escritura nueva utiliza `WIX_PAYMENTS`, `payload` y `channelType` como contratos canonicos.
+- No se retira un lector historico hasta verificar el contenido CMS y demostrar cero lecturas.
 
 5. SEGURIDAD Y PRIVACIDAD
 
@@ -150,10 +152,10 @@ No fusionar ni desplegar con pruebas fallidas, riesgos criticos abiertos o sin e
 - Eventos Wix: se consumen como objetos Velo verificados por la plataforma; no se procesa JWT dentro de events.js.
 - Permisos: .web.js controla acceso en cada webMethod; no existe manifiesto permissions.json aplicable al backend actual.
 - Control types: DEDUPE_KEY y LEDGER_IDEMPOTENCY se conservan porque tienen productores activos y retencion duradera.
-- Servicios duales: totalDuration debe coincidir exactamente con la suma de las tres fases.
+- Servicios duales: `totalDuration` debe coincidir exactamente con la suma de las tres fases; si se omite, el hook lo calcula.
 - BOOKING_STATUS.UPDATED no existe como estado. CANCELED es la grafia canonica.
 - PAYMENT_STATUS.NOT_PAID es el valor persistido; no se utiliza UNPAID en el contrato CMS.
-- Los lectores de documentos fiscales historicos se conservan en modo lectura hasta verificar los registros CMS. No pueden generar escrituras con nombres de campo anteriores.
+- Los lectores de documentos fiscales y de proyecciones operativas historicas se conservan en modo lectura, con aviso trazable y `REVIEW-BY`; no pueden generar escrituras con valores o nombres anteriores.
 
 10. VALIDACION PENDIENTE EN WIX
 
