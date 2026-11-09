@@ -550,6 +550,33 @@ test('FLOW-CAJA-10 missing hash fields never pass audit or Z close', async () =>
   assert.equal(closing.status, 'ERROR');
   assert.equal(closing.error.code, 'INTEGRITY_VIOLATION');
   assert.equal((wixDataMock._store.get('HistoricoCierresZ') || []).length, 0);
+
+  wixDataMock._reset();
+  const { cajas: missingPredecessorCajas } = await freshImports();
+  wixDataMock._store.set('MovimientosCaja', [{
+    _id: 'missing-predecessor-002',
+    sequenceNumber: 2,
+    fechaExpedicionFactura: '2026-11-08',
+    previousRecordHash: '0'.repeat(64),
+    hash: 'hash-sequence-two',
+    movementType: 'VENTA',
+    paymentMethod: 'EFECTIVO',
+    accountingSign: 1,
+    accountingAmount: 50,
+    taxBase: 41.32,
+    taxAmount: 8.68,
+    tipoImpositivo: 0.21,
+  }]);
+
+  const predecessorAudit = await missingPredecessorCajas.verifyFiscalHashChainIntegrity({ limit: 200 });
+  assert.equal(predecessorAudit.status, 'INTEGRITY_COMPROMISED');
+  assert.equal(predecessorAudit.data.breaks[0].reason, 'GLOBAL_PREDECESSOR_MISSING');
+
+  const predecessorClose = await missingPredecessorCajas.registerZClosingInternal('2026-11-08', {
+    traceId: 'flow-caja-missing-predecessor-close-001',
+  });
+  assert.equal(predecessorClose.status, 'ERROR');
+  assert.equal(predecessorClose.error.code, 'GLOBAL_PREDECESSOR_MISSING');
 });
 
 test('FLOW-CAJA-02 payload incorrecto => rechazos deterministas sin contaminar ledger', async () => {
