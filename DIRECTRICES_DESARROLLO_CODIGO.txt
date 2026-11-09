@@ -191,3 +191,15 @@ La implementacion en GitHub no acredita por si sola el comportamiento del runtim
 - El criterio de cierre de cero dependencias sin soporte queda pendiente de resolver este bloqueo. No se declara cumplimiento total de ese criterio.
 
 FIN DEL DOCUMENTO
+
+
+13. DECISIONES VINCULANTES — 2026-11-10
+
+- Wix Stores Catalog V3 y sus herramientas nativas son la única autoridad operativa del inventario comercial.
+- Orders Settings live: inventoryUpdateTrigger=ON_ORDER_PAID. Los webhooks de eCommerce no reservan, descuentan, reponen ni proyectan stock en CMS.
+- Los handlers eCommerce mantienen idempotencia, ledger fiscal, estado de reservas y reembolsos, pero no realizan escrituras de inventario.
+- La colección histórica MovimientosInventario conserva hooks beforeUpdate/beforeRemove append-only; no se insertan nuevos movimientos ni se editan/borran históricos.
+- La capa custom inventario.web.js, sus WebMethods, el panel de staff y los tests de su writer se retiran cuando no quedan consumidores. La retirada requiere CI y QA Wix de venta, cancelación y reembolso.
+- Depósito de reserva: 15 EUR solo para servicios >100 EUR; Wix Bookings nativo es primera opción. No configurar hasta resolver discrepancia de contrato REST vs Wix Help sobre inPerson y verificar la capacidad de la cuenta.
+- Cancelación/reprogramación gratuita con 24 h; devolución íntegra si cancela el negocio. No retención automática tardía/no-show sin revisión jurídica de proporcionalidad.
+- Registro central de decisiones: docs/DECISION-LOG.md y ADR docs/adr/2026-11-10-deposit-and-native-inventory.md.
