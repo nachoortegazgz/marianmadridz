@@ -285,7 +285,7 @@ function _formatAEATDate(ymd) {
 function _formatAEATDateTimeMadrid(date) {
     const dt = date instanceof Date ? date : new Date();
     const parts = new Intl.DateTimeFormat("sv-SE", {
-        timeZone: SDK_CONFIG?.TZ || "Europe/Madrid",
+        timeZone: SDK_CONFIG.TZ,
         year: "numeric", month: "2-digit", day: "2-digit",
         hour: "2-digit", minute: "2-digit", second: "2-digit",
         hour12: false,
@@ -607,7 +607,7 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
             }
         }
 
-        const operationDate = new Date().toLocaleDateString("sv-SE", { timeZone: SDK_CONFIG?.TZ || "Europe/Madrid" });
+        const operationDate = new Date().toLocaleDateString("sv-SE", { timeZone: SDK_CONFIG.TZ });
         await _assertPeriodNotClosed(operationDate, traceId);
 
         const taxRate = Number(inDto.tipoImpositivo) || IVA_RATES.GENERAL;
@@ -973,7 +973,7 @@ async function _updateCajaActual(movement, traceId) {
                 cashRegister = {
                     _id: CASH_REGISTER_ID,
                     [CAJA_KEYS.SINGLETON_KEY]: SINGLETONS.CAJA_PRINCIPAL,
-                    [CAJA_KEYS.OPERATION_DATE]: readOperationDate(movement) || new Date().toLocaleDateString("sv-SE", { timeZone: SDK_CONFIG?.TZ || "Europe/Madrid" }),
+                    [CAJA_KEYS.OPERATION_DATE]: readOperationDate(movement) || new Date().toLocaleDateString("sv-SE", { timeZone: SDK_CONFIG.TZ }),
                     [CAJA_KEYS.STATUS]: CASH_REGISTER_STATUS.ABIERTA,
                     [CAJA_KEYS.TOTAL]: 0, [CAJA_KEYS.CASH]: 0, [CAJA_KEYS.CARD]: 0,
                     [CAJA_KEYS.BIZUM]: 0, [CAJA_KEYS.ONLINE]: 0,
@@ -1139,7 +1139,7 @@ export const getCashierState = webMethod(Permissions.SiteMember, async (options 
     try {
         await requireCajero(traceId);
         const cashRegister = await getCashRegisterSingleton();
-        const day = diaKey || new Date().toLocaleDateString("sv-SE", { timeZone: SDK_CONFIG?.TZ || "Europe/Madrid" });
+        const day = diaKey || new Date().toLocaleDateString("sv-SE", { timeZone: SDK_CONFIG.TZ });
         const res = await dalQuery(MOVIMIENTOS_CAJA_COL)
             .eq("fechaExpedicionFactura", day)
             .limit(1)
@@ -1404,7 +1404,7 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
             closingSignatureStatus,
             closingSource: "CRON",
             closingSchemaVersion: LEDGER_SCHEMA_VERSION,
-            timeZone: SDK_CONFIG?.TZ || "Europe/Madrid",
+            timeZone: SDK_CONFIG.TZ,
             closedAt: new Date(),
             verifiedAt: closingSignatureStatus === "SIGNED" ? new Date() : null,
             approverUser,

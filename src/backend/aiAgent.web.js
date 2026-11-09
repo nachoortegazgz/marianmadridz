@@ -1,50 +1,22 @@
 /*
 =============================================================================
 MODULE: backend/aiAgent.web.js
-VERSION: v1.0.0-stub
-RESPONSIBILITY: Asistente IA para la propietaria (Marian Madrid).
-NOTES: Stub funcional. Sustituir el cuerpo por la llamada real al
-       proveedor LLM cuando esté conectado (OpenAI, Anthropic, Wix AI...).
+VERSION: v1.1.0-fail-closed
+RESPONSIBILITY: Contrato del asistente de Marian mientras no exista proveedor.
+SECURITY: Nunca devuelve una respuesta simulada como si procediera de una IA.
 =============================================================================
 */
-
 import { Permissions, webMethod } from "wix-web-module";
 
 export const askMarianAI = webMethod(
-  Permissions.Admin,
-  async ({ query, conversationId = null, contextHints = null, traceId = null } = {}) => {
-    if (!query || typeof query !== "string" || !query.trim()) {
-      return {
+    Permissions.Admin,
+    async ({ traceId = null } = {}) => ({
         status: "ERROR",
-        error: { code: "EMPTY_QUERY", message: "La consulta esta vacia." },
-      };
-    }
-
-    // TODO: sustituir por llamada real al proveedor LLM.
-    // Ejemplo esperado:
-    //
-    //   const reply = await callLLM({
-    //     system: "Eres asistente de Marian Madrid, peluqueria...",
-    //     user: query,
-    //     conversationId,
-    //     context: { fiscal, caja, staff, ... }
-    //   });
-    //
-    //   return {
-    //     status: "SUCCESS",
-    //     data: { text: reply.text, conversationId: reply.id }
-    //   };
-
-    return {
-      status: "SUCCESS",
-      data: {
-        text:
-          "Asistente IA pendiente de conectar. Recibi tu consulta: \"" +
-          query.trim() +
-          "\". Configura el proveedor LLM en backend/aiAgent.web.js.",
-        conversationId: conversationId || "conv_" + Date.now().toString(36),
-        traceId: traceId || null,
-      },
-    };
-  }
+        data: null,
+        error: {
+            code: "AI_PROVIDER_NOT_CONFIGURED",
+            message: "El proveedor de IA no esta configurado; la consulta no se ha procesado.",
+            traceId: traceId || null,
+        },
+    })
 );

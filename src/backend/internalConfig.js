@@ -46,6 +46,7 @@ export const BUSINESS_COLLECTIONS = Object.freeze({
   CONTROL_OPERATIVO: "ControlOperativo",
   DATOS_FISCALES: "DatosFiscales",
   HISTORICO_CIERRES_Z: "HistoricoCierresZ",
+  PAQUETES_GESTORIA: "PaquetesGestoria",
   INVENTARIO_STOCK_VENTA: "InventarioStockVenta",
   MOVIMIENTOS_INVENTARIO: "MovimientosInventario",
   LIBRO_ASIENTOS_CONTABLES_DETALLE: "LibroAsientosContablesDetalle",
@@ -104,9 +105,21 @@ export const SDK_CONFIG = Object.freeze({
   LOCATION_ID: "7a12abfd-bf30-4847-bcdf-00dc573d4802",
 
   TIMEOUTS: Object.freeze({
-    // Timeout canonico de operaciones CMS (query/get/insert/update).
-    // Consumidores: fiscalDocuments.web.js, dataAccess, cajas.web.js.
     CMS_MS: 15000,
+    API_MS: 15000,
+    WEBHOOK_MS: 30000,
+  }),
+
+  EVENTS: Object.freeze({
+    RETRY_ATTEMPTS: 3,
+    RETRY_BASE_BACKOFF_MS: 1000,
+  }),
+
+  JOBS: Object.freeze({
+    AUDIT_RETENTION_DAYS: 90,
+    DUAL_CACHE_CLEANUP_LIMIT: 500,
+    DAYS_CACHE_CLEANUP_LIMIT: 500,
+    FISCAL_RECOVERY_BATCH_SIZE: 25,
   }),
 
   EMAIL: Object.freeze({
@@ -115,6 +128,8 @@ export const SDK_CONFIG = Object.freeze({
     // Si cambia el dominio, actualizar aqui y re-desplegar.
     FROM_NAME: "Marian Madrid",
     FROM_ADDRESS: "noreply@marianmadrid.com",
+    // Fail-closed: activar solo tras persistencia inmutable e idempotencia del despacho.
+    ACCOUNTANT_SEND_ENABLED: false,
   }),
 });
 

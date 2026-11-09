@@ -81,7 +81,7 @@ import {
 
 const log = logger;
 const API_TIMEOUT_MS =
-Number(SDK_CONFIG?.TIMEOUTS?.API_MS) || 15000;
+SDK_CONFIG.TIMEOUTS.API_MS;
 const MAX_COMPENSATION_ATTEMPTS =
 Math.max(1, Number(CONCURRENCY?.MAX_COMPENSATION_RETRIES) || 3);
 // CRON-P2-01: MapaStaff es coleccion MUERTA (internalConfig v12.1-SSOT
@@ -99,7 +99,7 @@ Math.max(1, Number(CONCURRENCY?.MAX_COMPENSATION_RETRIES) || 3);
 // purga por retencion junto a COMPENSATION EXECUTED/FAILED.
 const PURGABLE_TERMINAL_ALERT_STATUSES = [CONTROL_STATUS.CLOSED, CONTROL_STATUS.RESOLVED];
 const AUDIT_RETENTION_DAYS =
-Math.max(30, Number(SDK_CONFIG?.JOBS?.AUDIT_RETENTION_DAYS) || 90);
+Math.max(30, SDK_CONFIG.JOBS.AUDIT_RETENTION_DAYS);
 
 // Reservation idempotency is retained for one replay window after a terminal
 // outcome. Never purge in-flight, retryable, or unknown-result transactions.
@@ -314,7 +314,7 @@ const now = new Date();
 const collection = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
 const batchSize = Math.max(
 1,
-Math.min(Number(SDK_CONFIG?.JOBS?.DUAL_CACHE_CLEANUP_LIMIT) || 500, 500)
+Math.min(SDK_CONFIG.JOBS.DUAL_CACHE_CLEANUP_LIMIT, 500)
 );
 
 // Drain bounded batches so a backlog of expired slot-pair cache rows does
@@ -536,7 +536,7 @@ errors: [],
 
 try {
 const batchSize =
-Number(SDK_CONFIG?.JOBS?.FISCAL_RECOVERY_BATCH_SIZE) || 25;
+SDK_CONFIG.JOBS.FISCAL_RECOVERY_BATCH_SIZE;
 const statuses = ["PENDING", "RETRYING", "PENDING_RECOVERY"];
 
 const paymentStateRecovery = await _recoverPendingPaymentStateAlerts(batchSize, traceId);
@@ -684,7 +684,7 @@ export async function cleanExpiredDaysCache() {
     try {
         const now = new Date();
         const collection = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
-        const batchSize = Math.max(1, Math.min(Number(SDK_CONFIG?.JOBS?.DAYS_CACHE_CLEANUP_LIMIT) || 500, 500));
+        const batchSize = Math.max(1, Math.min(SDK_CONFIG.JOBS.DAYS_CACHE_CLEANUP_LIMIT, 500));
         const candidates = [];
         for (let page = 0; page < 10; page++) {
             const res = await dalQuery(collection)
@@ -1086,7 +1086,7 @@ const traceId = makeTraceId("cron-nightly-z");
 const result = { checkedDate: null, closed: false, alerted: false, errors: [] };
 
 try {
-const ymd = new Intl.DateTimeFormat("en-CA", { timeZone: SDK_CONFIG?.TZ || "Europe/Madrid" })
+const ymd = new Intl.DateTimeFormat("en-CA", { timeZone: SDK_CONFIG.TZ })
 .format(new Date(Date.now() - 24 * 60 * 60 * 1000));
 result.checkedDate = ymd;
 

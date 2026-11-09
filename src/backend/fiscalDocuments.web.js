@@ -59,7 +59,7 @@ import { makeTraceId, _safeTrim, withTimeout, _roundMoney } from "public/mmUtils
 // SSOT-KEYFIELD-02: lectura canonica con fallback alias (contrato unico).
 import { readMovementField } from "backend/data";
 
-const CMS_TIMEOUT_MS = Number(SDK_CONFIG?.TIMEOUTS?.CMS_MS) || 15000;
+const CMS_TIMEOUT_MS = SDK_CONFIG.TIMEOUTS.CMS_MS;
 const DOCS_COL = BUSINESS_COLLECTIONS.HISTORICO_CIERRES_Z;
 const DATOS_FISCALES_COL = BUSINESS_COLLECTIONS.DATOS_FISCALES;
 
@@ -68,9 +68,21 @@ const STRONG_READ = Object.freeze({ consistencyMode: "strong" });
 // Envio a gestoria via Resend.
 const RESEND_ENDPOINT = "https://api.resend.com/emails";
 const RESEND_KEY_NAME = "RESEND_API_KEY";
-const RESEND_FROM_NAME = SDK_CONFIG?.EMAIL?.FROM_NAME || "Marian Madrid";
-const RESEND_FROM_ADDRESS =
-  SDK_CONFIG?.EMAIL?.FROM_ADDRESS || "noreply@marianmadrid.com";
+const RESEND_FROM_NAME = SDK_CONFIG.EMAIL.FROM_NAME;
+const RESEND_FROM_ADDRESS = SDK_CONFIG.EMAIL.FROM_ADDRESS;
+const ACCOUNTANT_SEND_ENABLED = SDK_CONFIG.EMAIL.ACCOUNTANT_SEND_ENABLED === true;
+
+function _accountantSendDisabledResult(traceId) {
+  return {
+    status: "ERROR",
+    data: null,
+    error: {
+      code: "ACCOUNTANT_SEND_DISABLED",
+      message: "El envio a gestoria esta bloqueado hasta persistir y verificar el snapshot inmutable del despacho.",
+      traceId: traceId || null,
+    },
+  };
+}
 
 // Marcadores canonicos para identificar un item dedicado a gestor.
 const GESTOR_RECORD_TYPE_MARKERS = Object.freeze([
@@ -90,26 +102,40 @@ function _formatDocumentId(year, quarter, version = 1) {
   return `DOC_GESTORIA_${year}_T${quarter}_PAQUETE_GESTORIA_V${vStr}`;
 }
 
+function _packagePeriodPrefix(year, periodType, periodValue) {
+  const periodKey = periodType === "MONTHLY"
+    ? `M${String(periodValue).padStart(2, "0")}`
+    : `T${periodValue}`;
+  return `DOC_GESTORIA_${year}_${periodKey}_PAQUETE_GESTORIA_`;
+}
+
+
+
+function _invoiceValue(invoice, keys, fallbackKey) {
+  for (const key of keys) {
+    if (invoice && invoice[key] !== undefined && invoice[key] !== null) return invoice[key];
+  }
+  return fallbackKey ? readMovementField(invoice, fallbackKey) : "";
+}
+
 // SSOT-KEYFIELD-02: consume el contrato canon->alias UNICO (data.js) sobre
 // claves fisicas canonicas; cero grafias alias aqui.
 const _rf = (m, key) => _safeTrim(readMovementField(m, key));
 
 function _buildCsvFromInvoices(invoices) {
   if (!Array.isArray(invoices) || invoices.length === 0) return "";
-  const header = "Numero;Fecha;Tipo;Base;Cuota;Total;FormaPago;Hash\n";
-  const rows = invoices
-    .map(
-      (inv) =>
-        `"${_rf(inv, "numSerieFactura")}";` +
-        `"${_rf(inv, "fechaOperacion")}";` +
-        `"${_rf(inv, "movementType").toUpperCase()}";` +
-        `${_roundMoney(Number(_rf(inv, "taxBase")) || 0)};` +
-        `${_roundMoney(Number(_rf(inv, "taxAmount")) || 0)};` +
-        `${_roundMoney(Number(_rf(inv, "totalAmount")) || 0)};` +
-        `"${_rf(inv, "paymentMethod")}";` +
-        `"${_rf(inv, "recordHash")}"`
-    )
-    .join("\n");
+  const header = "Numero;Fecha;Tipo;Base;Cuota;Total;FormaPago;Hash\\n";
+  const rows = invoices.map((inv) => {
+    const number = _safeTrim(_invoiceValue(inv, ["invoiceNumber", "numSerieFactura"], "numSerieFactura"));
+    const date = _safeTrim(_invoiceValue(inv, ["fechaExpedicion", "fechaOperacion"], "fechaOperacion"));
+    const type = _safeTrim(_invoiceValue(inv, ["movementType"], "movementType")).toUpperCase();
+    const base = _roundMoney(Number(_invoiceValue(inv, ["taxableAmount", "taxBase"], "taxBase")) || 0);
+    const tax = _roundMoney(Number(_invoiceValue(inv, ["taxAmount"], "taxAmount")) || 0);
+    const total = _roundMoney(Number(_invoiceValue(inv, ["totalAmount", "accountingAmount"], "totalAmount")) || 0);
+    const method = _safeTrim(_invoiceValue(inv, ["paymentMethod"], "paymentMethod"));
+    const hash = _safeTrim(_invoiceValue(inv, ["hashCompleto", "recordHash", "hash"], "recordHash"));
+    return `"${number}";"${date}";"${type}";${base};${tax};${total};"${method}";"${hash}"`;
+  }).join("\\n");
   return header + rows;
 }
 
@@ -285,92 +311,26 @@ export const previewManagerPackage = webMethod(
 
 export const createManagerPackageVersion = webMethod(
   Permissions.SiteMember,
-  async (period = {}) => {
+  async () => {
     const traceId = makeTraceId("doc-create");
     try {
       await requireMarianManager(traceId);
-      const year = Number(period.year);
-      const quarter = Number(period.quarter);
-      if (!year || !quarter || quarter < 1 || quarter > 4) {
-        return {
-          status: "ERROR",
-          data: null,
-          error: {
-            code: "INVALID_PERIOD",
-            message: "year and quarter (1-4) are required",
-          },
-        };
-      }
-
-      const historyRes = await getManagerPackageHistory({ year, quarter });
-      const nextVersion = (historyRes?.data?.length || 0) + 1;
-      const documentId = _formatDocumentId(year, quarter, nextVersion);
-
-      const [summaryRes, bookRes] = await Promise.all([
-        getQuarterlyTaxSummary(year, quarter, { traceId }),
-        getLibroRegistroFacturasExpedidasInternal(year, quarter, {
-          traceId,
-          rateLimitKey: "manager",
-        }),
-      ]);
-
-      const record = {
-        _id: documentId,
-        inventoryClosingId: documentId,
-        fiscalYear: year,
-        closeDate: new Date(),
-        closingType: "PAQUETE_GESTORIA",
-        summaryData: summaryRes?.data || {},
-        invoiceData: bookRes?.data?.filas || [],
-        packageStatus: "PREPARED",
-        packageVersion: nextVersion,
-        traceId,
-        _createdDate: new Date(),
-      };
-
-      // Package versions are immutable snapshots. insert enforces uniqueness
-      // on the deterministic documentId; the loser fails closed and must
-      // refresh history before requesting the next version.
-      await withTimeout(
-        dalInsert(DOCS_COL, record),
-        CMS_TIMEOUT_MS,
-        "insertManagerPackage"
-      );
-
-      return {
-        status: "SUCCESS",
-        data: {
-          documentId,
-          version: nextVersion,
-          createdAt: record._createdDate,
-        },
-        error: null,
-      };
-    } catch (err) {
-      const code = String(err?.code || "");
-      const message = String(err?.message || "");
-      if (
-        code === "WDE0074" ||
-        code === "WD_ITEM_ALREADY_EXISTS" ||
-        /WDE0074|WD_ITEM_ALREADY_EXISTS|already exists|duplicated/i.test(
-          message
-        )
-      ) {
-        return {
-          status: "ERROR",
-          data: null,
-          error: {
-            code: "PACKAGE_VERSION_CONFLICT",
-            message:
-              "Otra solicitud ha creado esta versión. Actualiza el historial y vuelve a intentarlo.",
-          },
-        };
-      }
+      // HistoricoCierresZ is the immutable Z-closing ledger. Its live CMS
+      // schema requires closing-specific fields and must not receive manager
+      // package records. RegistroIntegracion is not append-only protected.
+      // Until a dedicated immutable package collection and delivery contract
+      // are approved and installed, package creation must fail closed.
       return {
         status: "ERROR",
         data: null,
-        error: _toPublicError(err, "DOC_CREATE_FAIL"),
+        error: {
+          code: "PACKAGE_SNAPSHOT_STORAGE_NOT_CONFIGURED",
+          message: "No se puede crear el paquete: falta un almacén append-only específico para paquetes de gestor. HistoricoCierresZ está reservado a cierres Z.",
+          traceId,
+        },
       };
+    } catch (err) {
+      return { status: "ERROR", data: null, error: _toPublicError(err, "DOC_CREATE_FAIL") };
     }
   }
 );
@@ -386,32 +346,20 @@ export const getManagerPackageHistory = webMethod(
     try {
       await requireMarianManager(traceId);
       const year = Number(period.year);
-      const quarter = Number(period.quarter);
+      const periodType = _safeTrim(period.periodType || "QUARTERLY").toUpperCase();
+      const month = period.month != null ? Number(period.month) : null;
+      const quarter = period.quarter != null ? Number(period.quarter) : null;
       let q = dalQuery(DOCS_COL).eq("closingType", "PAQUETE_GESTORIA");
-      if (year && Number.isFinite(year)) q = q.eq("fiscalYear", year);
-      if (
-        quarter &&
-        Number.isFinite(quarter) &&
-        quarter >= 1 &&
-        quarter <= 4
-      ) {
-        q = q.startsWith(
-          "inventoryClosingId",
-          `DOC_GESTORIA_${year}_T${quarter}`
-        );
+      if (Number.isInteger(year) && year > 0) q = q.eq("fiscalYear", year);
+      if (Number.isInteger(year) && periodType === "MONTHLY" && Number.isInteger(month) && month >= 1 && month <= 12) {
+        q = q.startsWith("inventoryClosingId", _packagePeriodPrefix(year, "MONTHLY", month));
+      } else if (Number.isInteger(year) && periodType === "QUARTERLY" && Number.isInteger(quarter) && quarter >= 1 && quarter <= 4) {
+        q = q.startsWith("inventoryClosingId", _packagePeriodPrefix(year, "QUARTERLY", quarter));
       }
-      const res = await withTimeout(
-        q.descending("_createdDate").limit(50).find(),
-        CMS_TIMEOUT_MS,
-        "docHistory"
-      );
+      const res = await withTimeout(q.descending("_createdDate").limit(50).find(), CMS_TIMEOUT_MS, "docHistory");
       return { status: "SUCCESS", data: res?.items || [], error: null };
     } catch (err) {
-      return {
-        status: "ERROR",
-        data: null,
-        error: _toPublicError(err, "DOC_HIST_FAIL"),
-      };
+      return { status: "ERROR", data: null, error: _toPublicError(err, "DOC_HIST_FAIL") };
     }
   }
 );
@@ -670,41 +618,7 @@ async function _dispatchEmailViaResend({
 // BLOQUE 8 - ENVIO DE PAQUETE A GESTOR (mensual / trimestral)
 // =============================================================================
 
-function _filterInvoicesByMonth(invoices, month) {
-  if (!Array.isArray(invoices)) return [];
-  return invoices.filter((inv) => {
-    const dateStr = String(_rf(inv, "fechaOperacion") || "");
-    const m = Number(dateStr.slice(5, 7));
-    return m === month;
-  });
-}
 
-function _summarizeMonthly(invoices, year, month, quarter) {
-  let base = 0;
-  let iva = 0;
-  let total = 0;
-  for (const inv of invoices) {
-    base += Number(_rf(inv, "taxBase")) || 0;
-    iva += Number(_rf(inv, "taxAmount")) || 0;
-    total += Number(_rf(inv, "totalAmount")) || 0;
-  }
-  return {
-    ejercicio: year,
-    trimestre: quarter,
-    mes: month,
-    totalOperaciones: invoices.length,
-    totalOperacionesFiscales: invoices.length,
-    totales: {
-      totalVentasBrutas: _roundMoney(total),
-      totalReembolsos: 0,
-      totalFacturadoNeto: _roundMoney(total),
-    },
-    borradorIva: {
-      baseImponibleRegistrada: _roundMoney(base),
-      cuotaIvaRegistrada: _roundMoney(iva),
-    },
-  };
-}
 
 export const sendManagerPackageToAccountant = webMethod(
   Permissions.SiteMember,
@@ -712,190 +626,68 @@ export const sendManagerPackageToAccountant = webMethod(
     const traceId = makeTraceId("doc-send-pkg");
     try {
       await requireMarianManager(traceId);
+      if (!ACCOUNTANT_SEND_ENABLED) return _accountantSendDisabledResult(traceId);
 
-      const periodType = _safeTrim(params.periodType).toUpperCase();
-      const year = Number(params.year);
-      const month = params.month != null ? Number(params.month) : null;
-      const quarter = params.quarter != null ? Number(params.quarter) : null;
+      const documentId = _safeTrim(params.documentId);
       const recipientId = _safeTrim(params.recipientId);
       const notes = _safeTrim(params.notes) || null;
+      if (!documentId) return { status: "ERROR", data: null, error: { code: "PACKAGE_SNAPSHOT_REQUIRED", message: "Create and select a persisted package snapshot before dispatch." } };
+      if (!recipientId) return { status: "ERROR", data: null, error: { code: "RECIPIENT_REQUIRED", message: "recipientId required." } };
 
-      if (periodType !== "MONTHLY" && periodType !== "QUARTERLY") {
-        return {
-          status: "ERROR",
-          data: null,
-          error: {
-            code: "INVALID_PERIOD_TYPE",
-            message: "periodType must be MONTHLY or QUARTERLY",
-          },
-        };
-      }
-      if (!year || !Number.isFinite(year)) {
-        return {
-          status: "ERROR",
-          data: null,
-          error: { code: "INVALID_YEAR", message: "year required" },
-        };
-      }
-      if (
-        periodType === "QUARTERLY" &&
-        (!quarter || quarter < 1 || quarter > 4)
-      ) {
-        return {
-          status: "ERROR",
-          data: null,
-          error: {
-            code: "INVALID_QUARTER",
-            message: "quarter 1-4 required",
-          },
-        };
-      }
-      if (periodType === "MONTHLY" && (!month || month < 1 || month > 12)) {
-        return {
-          status: "ERROR",
-          data: null,
-          error: { code: "INVALID_MONTH", message: "month 1-12 required" },
-        };
-      }
-      if (!recipientId) {
-        return {
-          status: "ERROR",
-          data: null,
-          error: {
-            code: "RECIPIENT_REQUIRED",
-            message: "recipientId required",
-          },
-        };
-      }
-
-      const recipient = await _resolveRecipientById(recipientId);
-      if (!recipient || !recipient.email) {
-        return {
-          status: "ERROR",
-          data: null,
-          error: {
-            code: "RECIPIENT_NOT_FOUND",
-            message:
-              "El destinatario no existe o no tiene email configurado en DatosFiscales",
-          },
-        };
-      }
-
-      const effectiveQuarter =
-        periodType === "MONTHLY"
-          ? Math.floor((month - 1) / 3) + 1
-          : quarter;
-
-      const [summaryRes, bookRes] = await Promise.all([
-        getQuarterlyTaxSummary(year, effectiveQuarter, { traceId }),
-        getLibroRegistroFacturasExpedidasInternal(year, effectiveQuarter, {
-          traceId,
-          rateLimitKey: "manager",
-        }),
+      const [doc, recipient] = await Promise.all([
+        withTimeout(dalGet(DOCS_COL, documentId, "strong"), CMS_TIMEOUT_MS, "getPackageSnapshot"),
+        _resolveRecipientById(recipientId),
       ]);
+      if (!doc || doc.closingType !== "PAQUETE_GESTORIA" || !Array.isArray(doc.invoiceData) || !doc.summaryData) {
+        return { status: "ERROR", data: null, error: { code: "PACKAGE_SNAPSHOT_NOT_FOUND", message: "A complete persisted package snapshot is required." } };
+      }
+      if (!recipient?.email) return { status: "ERROR", data: null, error: { code: "RECIPIENT_NOT_FOUND", message: "The accountant recipient is not configured in DatosFiscales." } };
 
-      const quarterInvoices = bookRes?.data?.filas || [];
-      let emailInvoices = quarterInvoices;
-      let summaryForEmail = summaryRes?.data || null;
-
-      if (periodType === "MONTHLY") {
-        emailInvoices = _filterInvoicesByMonth(quarterInvoices, month);
-        summaryForEmail = _summarizeMonthly(
-          emailInvoices,
-          year,
-          month,
-          effectiveQuarter
-        );
+      const periodType = _safeTrim(doc.periodType || "QUARTERLY").toUpperCase();
+      const year = Number(doc.fiscalYear);
+      const idQuarter = /_T([1-4])_/.exec(String(doc.inventoryClosingId || documentId));
+      const idMonth = /_M(0[1-9]|1[0-2])_/.exec(String(doc.inventoryClosingId || documentId));
+      const month = doc.fiscalMonth == null ? (idMonth ? Number(idMonth[1]) : null) : Number(doc.fiscalMonth);
+      const quarter = doc.fiscalQuarter == null ? (idQuarter ? Number(idQuarter[1]) : null) : Number(doc.fiscalQuarter);
+      const periodLabel = periodType === "MONTHLY" ? `${String(month).padStart(2, "0")}/${year}` : `T${quarter}/${year}`;
+      if (!Number.isInteger(year) || (periodType === "MONTHLY" && (!Number.isInteger(month) || month < 1 || month > 12)) ||
+          (periodType === "QUARTERLY" && (!Number.isInteger(quarter) || quarter < 1 || quarter > 4))) {
+        return { status: "ERROR", data: null, error: { code: "PACKAGE_PERIOD_INVALID", message: "The stored package period is invalid." } };
       }
 
-      const csvContent = _buildCsvFromInvoices(emailInvoices);
-      const documentId = _formatDocumentId(year, effectiveQuarter, 1);
-
-      const subject =
-        periodType === "MONTHLY"
-          ? `Marian Madrid - Paquete ${String(month).padStart(2, "0")}/${year}`
-          : `Marian Madrid - Paquete T${effectiveQuarter}/${year}`;
-
-      const lines = [];
-      lines.push("Paquete fiscal de gestoria - Marian Madrid");
-      lines.push("");
-      lines.push(`Ejercicio: ${year}`);
-      if (periodType === "MONTHLY") {
-        lines.push(`Mes: ${String(month).padStart(2, "0")}`);
-        lines.push(`Trimestre contenedor: T${effectiveQuarter}`);
-      } else {
-        lines.push(`Trimestre: T${effectiveQuarter}`);
-      }
-      lines.push(`Documento referencia: ${documentId}`);
-      lines.push(`Facturas incluidas: ${emailInvoices.length}`);
-      if (notes) {
-        lines.push("");
-        lines.push("Notas:");
-        lines.push(notes);
-      }
-      lines.push("");
-      lines.push("Resumen:");
-      lines.push(_buildSummaryText(summaryForEmail));
-      lines.push("");
-      lines.push("--");
-      lines.push(
-        "Enviado desde el panel de administracion de Marian Madrid."
-      );
-
-      const attachments = csvContent
-        ? [
-            {
-              filename:
-                periodType === "MONTHLY"
-                  ? `paquete_${year}_${String(month).padStart(2, "0")}.csv`
-                  : `paquete_${year}_T${effectiveQuarter}.csv`,
-              content: _toBase64(csvContent),
-            },
-          ]
-        : [];
-
+      const csvContent = _buildCsvFromInvoices(doc.invoiceData);
+      const lines = [
+        "Paquete fiscal de gestoria - Marian Madrid",
+        "",
+        `Ejercicio: ${year}`,
+        `Periodo: ${periodLabel}`,
+        `Documento referencia: ${documentId}`,
+        `Version: ${doc.packageVersion}`,
+        `Facturas incluidas: ${doc.invoiceData.length}`,
+        ...(notes ? ["", "Notas:", notes] : []),
+        "",
+        "Resumen:",
+        _buildSummaryText(doc.summaryData),
+        "",
+        "--",
+        "Enviado desde el panel de administracion de Marian Madrid.",
+      ];
+      const attachments = csvContent ? [{ filename: `${documentId}.csv`, content: _toBase64(csvContent) }] : [];
       const dispatch = await _dispatchEmailViaResend({
         to: recipient.email,
-        subject,
-        text: lines.join("\n"),
+        subject: `Marian Madrid - Paquete ${periodLabel}`,
+        text: lines.join("\\n"),
         attachments,
         traceId,
       });
-
       return {
         status: "SUCCESS",
-        data: {
-          sent: true,
-          periodType,
-          year,
-          quarter: effectiveQuarter,
-          month: periodType === "MONTHLY" ? month : null,
-          recipientId,
-          recipientEmail: recipient.email,
-          documentId,
-          invoiceCount: emailInvoices.length,
-          provider: dispatch.provider,
-          messageId: dispatch.messageId,
-          traceId,
-        },
+        data: { sent: true, documentId, periodType, year, month, quarter, recipientId, recipientEmail: recipient.email, invoiceCount: doc.invoiceData.length, provider: dispatch.provider, messageId: dispatch.messageId, traceId },
         error: null,
       };
     } catch (err) {
-      if (err?.code === "RESEND_NOT_CONFIGURED") {
-        return {
-          status: "ERROR",
-          data: null,
-          error: {
-            code: "RESEND_NOT_CONFIGURED",
-            message: err.message,
-          },
-        };
-      }
-      return {
-        status: "ERROR",
-        data: null,
-        error: _toPublicError(err, "SEND_PACKAGE_FAIL"),
-      };
+      if (err?.code === "RESEND_NOT_CONFIGURED") return { status: "ERROR", data: null, error: { code: "RESEND_NOT_CONFIGURED", message: err.message } };
+      return { status: "ERROR", data: null, error: _toPublicError(err, "SEND_PACKAGE_FAIL") };
     }
   }
 );
@@ -910,6 +702,10 @@ export const sendSpecificDocumentToAccountant = webMethod(
     const traceId = makeTraceId("doc-send-doc");
     try {
       await requireMarianManager(traceId);
+
+      if (!ACCOUNTANT_SEND_ENABLED) {
+        return _accountantSendDisabledResult(traceId);
+      }
 
       const documentId = _safeTrim(params.documentId);
       const documentType = _safeTrim(params.documentType) || null;

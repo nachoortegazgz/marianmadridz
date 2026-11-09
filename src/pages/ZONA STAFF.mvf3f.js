@@ -127,9 +127,9 @@ $w.onReady(async () => {
       panelType: "TPV",
 
       // ── Feature flags ───────────────────────────────────────────────
-      enableClocking: true,        // cuadro de fichaje
-      enableBreaks: true,          // botones Inicio/Fin Pausa
-      enableCashier: true,         // cuadro de CAJA/TPV
+      enableClocking: false,       // deshabilitado: el bridge no invoca WebMethods de fichaje
+      enableBreaks: false,         // deshabilitado hasta integrar fichajes
+      enableCashier: false,        // deshabilitado: no hay handler conectado en esta pagina
       enableInventory: false,      // panel de inventario oculto
       enableScheduleQuery: false,  // panel de cálculo de horas oculto
 

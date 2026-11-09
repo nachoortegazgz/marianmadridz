@@ -41,13 +41,6 @@ import {
     processPendingRefundInventoryRepairs,
     reconcilePendingInventoryMovements,
 } from "backend/inventario.web.js";
-// NUEVO — IA + staff (crear estos backends)
-import { askMarianAI } from "backend/aiAgent.web.js";
-import {
-    getStaffList,
-    getStaffHoursSummary,
-    sendStaffNotification,
-} from "backend/staffManager.web.js";
 
 import { makeTraceId, URLS } from "public/mmUtils";
 import { createWidgetBridge } from "public/widgetBridge";
@@ -86,9 +79,7 @@ const ACTIONS = {
 
     SEND_MONTHLY_PACKAGE: ({ payload, traceId }) =>
         sendManagerPackageToAccountant({
-            periodType: "MONTHLY",
-            year: payload?.year,
-            month: payload?.month,
+            documentId: payload?.documentId,
             recipientId: payload?.recipientId,
             notes: payload?.notes || null,
             traceId,
@@ -96,9 +87,7 @@ const ACTIONS = {
 
     SEND_QUARTERLY_PACKAGE: ({ payload, traceId }) =>
         sendManagerPackageToAccountant({
-            periodType: "QUARTERLY",
-            year: payload?.year,
-            quarter: payload?.quarter,
+            documentId: payload?.documentId,
             recipientId: payload?.recipientId,
             notes: payload?.notes || null,
             traceId,
@@ -110,35 +99,6 @@ const ACTIONS = {
             documentType: payload?.documentType || null,
             recipientId: payload?.recipientId,
             notes: payload?.notes || null,
-            traceId,
-        }),
-
-    // ── Staff (NUEVO) ───────────────────────────────────────────────
-    STAFF_LIST: ({ traceId }) => getStaffList({ traceId }),
-
-    STAFF_HOURS_SUMMARY: ({ payload, traceId }) =>
-        getStaffHoursSummary({
-            employeeId: payload?.employeeId || null,
-            startDateYMD: payload?.startDateYMD,
-            endDateYMD: payload?.endDateYMD,
-            traceId,
-        }),
-
-    STAFF_NOTIFY: ({ payload, traceId }) =>
-        sendStaffNotification({
-            employeeId: payload?.employeeId,
-            channel: payload?.channel || "EMAIL",
-            subject: payload?.subject,
-            message: payload?.message,
-            traceId,
-        }),
-
-    // ── IA (NUEVO) ──────────────────────────────────────────────────
-    AI_QUERY: ({ payload, traceId }) =>
-        askMarianAI({
-            query: payload?.query || "",
-            conversationId: payload?.conversationId || null,
-            contextHints: payload?.contextHints || null,
             traceId,
         }),
 
@@ -214,10 +174,10 @@ $w.onReady(async () => {
                 enableBreaks: false,
                 enableCashier: true,
                 enableInventory: true,
-                enableScheduleQuery: true,    // consulta de horas staff
-                enableStaffManagement: true,  // ✅ NUEVO
-                enableAIAssistant: true,      // ✅ NUEVO
-                enableAccountantSend: true,   // ✅ NUEVO
+                enableScheduleQuery: false,   // backend de resumen aun no implementado
+                enableStaffManagement: false, // backend real pendiente
+                enableAIAssistant: false,      // proveedor IA no conectado
+                enableAccountantSend: false,  // despacho bloqueado hasta cerrar snapshot inmutable
                 enableFiscal: true,
                 enableDocuments: true,
 
