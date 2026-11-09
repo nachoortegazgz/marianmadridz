@@ -23,7 +23,7 @@ El repositorio contiene una solución Wix Editor/Velo con reservas Bookings V2, 
 | Depósitos Bookings nativos | **Pendiente de configuración/validación** | 94 servicios leídos; 7 servicios visibles >100 EUR; 0 depósitos activos. Wix Help y esquema REST discrepan sobre pago presencial con depósito; no configurar hasta resolverlo. |
 | Checkout eCommerce Cart V2 | Contratos de SDK en CI | La suite de contratos no sustituye checkout, pago y webhooks E2E en entorno de prueba. |
 | Stores Catalog V3 | V3 activo y APIs REST responden | `V3_CATALOG`; 24 productos visibles; 30 inventory items en una ubicación. Orders Settings: `inventoryUpdateTrigger=ON_ORDER_PAID`, `createInvoice=false`. La capa custom se ha retirado en la rama de refactorización; pendiente CI/QA. |
-| Inventario personalizado | **En retirada; no crear maestros CMS** | Wix Stores Catalog V3: 30/30 inventory items con tracking en una ubicación. Se decide que Wix nativo es la única autoridad. El módulo custom y el panel se han retirado en la rama `refactor/native-wix-inventory-only-2026-11-10`; webhooks ahora registran idempotencia y fiscalidad sin escribir stock. Pendiente CI/QA Wix. No se han escrito datos ni se han modificado históricos. |
+| Inventario personalizado | **Retirado en PR #239; QA runtime pendiente** | Wix Stores Catalog V3: 30/30 inventory items con tracking en una ubicación. Orders Settings: `ON_ORDER_PAID`. Módulo, WebMethods y panel custom eliminados en la rama. CI offline run 42721080098: 50 suites/488 tests OK en commit previo; reejecución del HEAD actual y QA Wix E2E pendientes. No se han escrito datos ni modificado históricos. |
 | Ledger fiscal / Veri*Factu | **NO APTO para activar remisión Veri*Factu** | Auditoría de código: no hay transporte SOAP AEAT, XML XSD ni flujo de respuesta/remisión. Las huellas internas no acreditan conformidad AEAT. |
 | Registro horario | Implementación parcial | Writers/hooks existen; faltan pruebas runtime, auditoría de firma de históricos y aceptación legal/operativa. |
 | Paquetes de gestoría | Snapshot y envío bloqueados | `PaquetesGestoria` tiene confirmación de creación de esquema en auditoría; creación de snapshot deshabilitada por contrato/hash/tamaño/concurrencia pendientes. Envío Resend deshabilitado por configuración. |
@@ -114,6 +114,7 @@ Referencia: [Auditoría de preparación Veri*Factu](qa/2026-11-09-verifactu-read
 
 - [README e índice del repositorio](../README.md)
 - [Registro de decisiones de negocio y arquitectura](DECISION-LOG.md)
+- [QA de retirada de inventario personalizado](qa/2026-11-10-native-inventory-retirement.md)
 - [ADR de depósitos e inventario nativo](adr/2026-11-10-deposit-and-native-inventory.md)
 - [Directrices de arquitectura, desarrollo y QA](../DIRECTRICES_DESARROLLO_CODIGO.txt)
 - [Dossier técnico consolidado](../DOSSIER%20TÉCNICO%20CONSOLIDADO.md)
