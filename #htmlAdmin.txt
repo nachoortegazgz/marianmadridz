@@ -742,19 +742,20 @@
           // Fallback fail-closed: no activar funciones que dependen de un
           // contexto/contrato backend que no ha llegado.
           applyContext({
-            roleLabel: 'PROPIETARIA',
+            roleLabel: 'CONTEXTO NO DISPONIBLE',
             enableClocking: false,
-            enableCashier: true,
+            enableCashier: false,
             enableInventory: false,
             enableScheduleQuery: false,
             enableStaffManagement: false,
             enableAIAssistant: false,
             enableAccountantSend: false,
-            enableFiscal: true,
-            enableDocuments: true,
+            enableFiscal: false,
+            enableDocuments: false,
             timeZone: 'Europe/Madrid',
             currencyCode: 'EUR'
           });
+          warn('No se ha recibido el contexto autorizado desde Velo. Las funciones quedan deshabilitadas.');
         }
       }, 3000);
     })();
