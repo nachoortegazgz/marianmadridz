@@ -23,7 +23,7 @@ El análisis y cualquier intervención posterior deben regirse estrictamente por
 ### 1.3 Metodología de Trabajo y Restricciones Críticas
 *   **Arquitectura:** Unidireccional (Frontend → WebMethods → Dominio/Sagas → Seguridad/Validación → Datos/CMS).
 *   **Runtime:** Wix Velo Sandbox (Node.js). Prohibido `fs`, `path`, `process.env`. Solo módulos `wix-*` / `@wix/*` y npm whitelist.
-*   **Seguridad:** RBAC doble capa (Velo Permissions + `MapaStaff.rolWebsite`). Secretos en Wix Secrets Manager. Firma HMAC-SHA256 en webhooks.
+*   **Seguridad:** RBAC doble capa (Velo Permissions + `STAFF.WEBSITE_ROLE_BY_RESOURCE_ID` (internalConfig.js)). Secretos en Wix Secrets Manager. HMAC-SHA256 para firma de fichajes laborales; los eventos nativos de Wix se reciben mediante backend/events.js.
 *   **Estado Actual del Catálogo:** Wix Stores **Catalog V1** activo. Migración a V3 preparada en código (PR #13) pero **no activada en producción**. Requiere ADR y QA real.
 *   **Bookings V2 SDK:** Uso estricto de `resource._id` y `location._id` (SDK JS), no `resource.id` (REST). Documentado en ADR-002.
 *   **Colecciones Legacy:** 8 colecciones prohibidas. Cualquier acceso lanza `FISCAL_VIOLATION`.
@@ -67,7 +67,7 @@ Este mapa permite la navegación semántica y técnica precisa por las 4 capas d
 
 | Capítulo | Título | Contenido Clave y Datos de Búsqueda Rápida |
 | :--- | :--- | :--- |
-| **8** | Seguridad y Permisos | • RBAC doble capa: Velo Permissions + `MapaStaff.rolWebsite`<br>• Roles: ADMIN / GESTION / ESTILISTA<br>• Secretos en Wix Secrets Manager (`mmSecrets.js`)<br>• Firma HMAC-SHA256 + ventana ±60s anti-replay<br>• Rate limiting por surface (public-booking, reservas, availability)<br>• Minimización PII: enmascaramiento en logs, exclusión datos tarjeta<br>• Webhooks Bookings: verificación JWT + deduplicación `eventId` |
+| **8** | Seguridad y Permisos | • RBAC doble capa: Velo Permissions + `STAFF.WEBSITE_ROLE_BY_RESOURCE_ID` (internalConfig.js)<br>• Roles: ADMIN / GESTION / ESTILISTA<br>• Secretos en Wix Secrets Manager (`mmSecrets.js`)<br>• Firma HMAC-SHA256 + ventana ±60s anti-replay<br>• Rate limiting por surface (public-booking, reservas, availability)<br>• Minimización PII: enmascaramiento en logs, exclusión datos tarjeta<br>• Webhooks Bookings: verificación JWT + deduplicación `eventId` |
 | **9** | Integraciones | • Apps Wix nativas: reglas por app (Bookings V2, Stores V1, eCom Cart V2)<br>• Externas: Resend (email), OpenAI (IA), Wix Payments (proveedor nativo de pagos), IONOS (DNS/correo), M365 (custodia)<br>• Gestión colecciones WIX_APP: solo lectura, mutación vía SDK oficial<br>• Prohibición de llamadas externas desde frontend |
 | **10** | Backend: Módulos y Hooks | • Catálogo completo de 18 WebMethods con permisos Velo y rol negocio<br>• Flujos críticos: venta online, cancelaciones, cierre Z nocturno<br>• Hooks CMS por colección (`data.js`): validaciones beforeInsert/beforeUpdate<br>• Helpers: `mmUtils.js`, `securityEngine.js`, `validation.js`, `widgetBridge.js` |
 | **11** | Jobs y Webhooks | • 8 crons en `jobs.config` (tabla con frecuencia, dominio y operación)<br>• Webhooks Bookings V2: 5 eventos + procesamiento seguro idempotente<br>• Webhooks eCommerce: independientes de V1/V3<br>• Catalog V3 webhooks: pendientes (Developer Preview, no activar sin ADR)<br>• Reglas invariables: jobs nunca escriben directo en append-only |
@@ -114,7 +114,7 @@ Este mapa permite la navegación semántica y técnica precisa por las 4 capas d
 
 | Capítulo | Título | Contenido Clave y Datos de Búsqueda Rápida |
 | :--- | :--- | :--- |
-| **8** | Seguridad y Permisos | • RBAC doble capa: Velo Permissions + `MapaStaff.rolWebsite`<br>• Roles: ADMIN / GESTION / ESTILISTA<br>• Secretos en Wix Secrets Manager (`mmSecrets.js`)<br>• Firma HMAC-SHA256 + ventana ±60s anti-replay<br>• Rate limiting por surface (public-booking, reservas, availability)<br>• Minimización PII: enmascaramiento en logs, exclusión datos tarjeta<br>• Webhooks Bookings: verificación JWT + deduplicación `eventId` |
+| **8** | Seguridad y Permisos | • RBAC doble capa: Velo Permissions + `STAFF.WEBSITE_ROLE_BY_RESOURCE_ID` (internalConfig.js)<br>• Roles: ADMIN / GESTION / ESTILISTA<br>• Secretos en Wix Secrets Manager (`mmSecrets.js`)<br>• Firma HMAC-SHA256 + ventana ±60s anti-replay<br>• Rate limiting por surface (public-booking, reservas, availability)<br>• Minimización PII: enmascaramiento en logs, exclusión datos tarjeta<br>• Webhooks Bookings: verificación JWT + deduplicación `eventId` |
 | **9** | Integraciones | • Apps Wix nativas: reglas por app (Bookings V2, Stores V1, eCom Cart V2)<br>• Externas: Resend (email), OpenAI (IA), Wix Payments (proveedor nativo de pagos), IONOS (DNS/correo), M365 (custodia)<br>• Gestión colecciones WIX_APP: solo lectura, mutación vía SDK oficial<br>• Prohibición de llamadas externas desde frontend |
 | **10** | Backend: Módulos y Hooks | • Catálogo completo de 18 WebMethods con permisos Velo y rol negocio<br>• Flujos críticos: venta online, cancelaciones, cierre Z nocturno<br>• Hooks CMS por colección (`data.js`): validaciones beforeInsert/beforeUpdate<br>• Helpers: `mmUtils.js`, `securityEngine.js`, `validation.js`, `widgetBridge.js` |
 | **11** | Jobs y Webhooks | • 8 crons en `jobs.config` (tabla con frecuencia, dominio y operación)<br>• Webhooks Bookings V2: 5 eventos + procesamiento seguro idempotente<br>• Webhooks eCommerce: independientes de V1/V3<br>• Catalog V3 webhooks: pendientes (Developer Preview, no activar sin ADR)<br>• Reglas invariables: jobs nunca escriben directo en append-only |
@@ -337,7 +337,7 @@ Estas diferencias son intencionadas en la API de Wix y deben respetarse exactame
 3. En la operación de creación, el servidor revalida la disponibilidad del slot exacto.
 4. `backend/staff.js` resuelve y asigna explícitamente un `resourceId` y `scheduleId`.
 5. Se crea la reserva nativa (`createBooking`, `locationType: "OWNER_BUSINESS"`).
-6. `bookingCore.js` inserta en `CitasF2` con `bookingStatus = "PENDING"`, `paymentStatus = "UNPAID"`, `bookingType = "SIMPLE"` y un `traceId` UUID v4.
+6. `bookingCore.js` inserta en `CitasF2` con `bookingStatus = "PENDING"`, `paymentStatus = "NOT_PAID"`, `bookingType = "SIMPLE"` y un `traceId` UUID v4.
 7. Si hay pago previo, se redirige al checkout eCom; el webhook confirma el estado final.
 
 La disponibilidad mostrada al usuario no garantiza que el slot siga libre al confirmar. La revalidación es obligatoria en servidor.
@@ -456,7 +456,7 @@ Los hooks `beforeUpdate` y `beforeRemove` en `MovimientosCaja`, `LibroAsientosCo
 | --- | --- |
 | `SLOT_LOCK` | Bloqueo temporal de slot durante saga dual |
 | `WEBHOOK_EVENT` | Deduplicación de eventos webhook (append-only) |
-| `DEDUPE_KEY` | Idempotencia de operaciones |
+| — | `dedupeKey` es un campo de idempotencia, no un valor de `controlType`. |
 | `RATE_LIMIT` | Control de frecuencia por surface/IP |
 | `SYSTEM_FLAG` | Alertas y flags de sistema |
 | `IDEMPOTENCY` | Control transaccional genérico |
@@ -470,7 +470,7 @@ Todo enum persistido en el CMS debe validarse mediante `assertValidEnum()` en `b
 ```javascript
 // Estados de reserva en Wix Bookings V2
 BOOKING_STATUS_WIX = { CREATED, PENDING, CONFIRMED, DECLINED,
-  WAITING_LIST, UPDATED, CANCELED, REFUNDED }
+  WAITING_LIST, CANCELED, REFUNDED }
 
 // Estados de pago en Wix eCom / Bookings
 PAYMENT_STATUS_WIX = { UNDEFINED, NOT_PAID, PENDING_PAYMENT,
@@ -482,11 +482,12 @@ PAYMENT_STATUS_WIX = { UNDEFINED, NOT_PAID, PENDING_PAYMENT,
 
 ```javascript
 // CitasF2.bookingStatus
-BOOKING_STATUS_CMS = { PENDING, CONFIRMED, COMPLETED,
-  CANCELLED, NO_SHOW }  // CANCELLED con doble L
+BOOKING_STATUS_CMS = { PENDING, CONFIRMED, COMPLETED, CANCELED,
+  REFUNDED, NO_SHOW }  // CANCELED con doble L
 
 // CitasF2.paymentStatus
-PAYMENT_STATUS_CMS = { UNPAID, PARTIAL, PAID, REFUNDED }
+PAYMENT_STATUS_CMS = { NOT_PAID, PENDING_PAYMENT, PENDING_LEDGER,
+  PAID, PARTIALLY_PAID, REFUNDED, PARTIALLY_REFUNDED, EXEMPT, UNDEFINED }
 
 // CitasF2.bookingType
 BOOKING_TYPE = { SIMPLE, DUAL_F1, DUAL_F2 }
@@ -522,8 +523,8 @@ MOV_INVENTARIO = { VENTA, DEVOLUCION, AJUSTE, ENTRADA_STOCK,
 ROL_WEBSITE = { ADMIN, GESTION, ESTILISTA }
 
 // ControlOperativo.controlType
-CONTROL_TYPE = { SLOT_LOCK, WEBHOOK_EVENT, DEDUPE_KEY,
-  IDEMPOTENCY, RATE_LIMIT, SYSTEM_FLAG }
+CONTROL_TYPE = { ALERT, COMPENSATION, DAYS_CACHE, DISPLAY_TOKEN,
+  DUAL_CACHE, IDEMPOTENCY, SLOT_LOCK, RATE_LIMIT, SYSTEM_FLAG, WEBHOOK_EVENT }
 ```
 
 ### Addons — nomenclatura crítica
@@ -538,9 +539,9 @@ CONTROL_TYPE = { SLOT_LOCK, WEBHOOK_EVENT, DEDUPE_KEY,
 La seguridad opera en dos capas superpuestas:
 
 1. **Barrera de plataforma (Velo Permissions)**: el decorador del webMethod (`Permissions.Anyone`, `Permissions.SiteMember`, `Permissions.Admin`) aplica el primer filtro de red.
-2. **Control de roles de negocio (RBAC SSOT)**: `backend/security.js` evalúa la identidad del usuario contra `MapaStaff.rolWebsite`.
+2. **Control de roles de negocio (RBAC SSOT)**: `backend/security.js` resuelve la identidad mediante Wix Members + Bookings Staff Members API y asigna el rol desde `STAFF.WEBSITE_ROLE_BY_RESOURCE_ID` (internalConfig.js).
 
-Un miembro registrado en el sitio que no tenga registro activo en `MapaStaff` es rechazado devolviendo `ACCESS_DENIED`.
+`MapaStaff` no es la autoridad RBAC vigente. Se conserva como mapeo de respaldo `staffMemberId` → `resourceId`/`scheduleId` para proyecciones de eventos nativos cuando el payload Wix no aporta esos identificadores; la resolución exige una única fila activa y GUID válidos.
 
 | Rol | Acceso |
 | --- | --- |
@@ -565,9 +566,6 @@ Todos los tokens, llaves criptográficas y secretos de integración se almacenan
 ```javascript
 export const SECRETS = Object.freeze({
   FISCAL_KEY:    "SECRET_FISCAL_KEY",
-  JWT_KEY:       "SECRET_AUTH_JWT_KEY",
-  RESEND_API_KEY: "RESEND_API_KEY",
-  OPENAI_API_KEY: "OPENAI_API_KEY",
 });
 ```
 
@@ -575,7 +573,7 @@ Reglas: nunca en frontend, nunca en logs, nunca en repositorio.
 
 ### Firma criptográfica HMAC-SHA256
 
-Peticiones sensibles y webhooks internos se firman con HMAC-SHA256. El backend valida la cabecera `X-MM-Signature` y exige que `X-MM-Timestamp` esté dentro de ±60 segundos para prevenir replay attacks.
+HMAC-SHA256 se utiliza para firmar y verificar registros de fichaje laboral. No se ha identificado en el código vigente un middleware de firma general `X-MM-Signature`/`X-MM-Timestamp` ni una ventana anti-replay de ±60 segundos; no debe describirse como protección implementada.
 
 ### Rate limiting
 
@@ -583,9 +581,10 @@ Límites por IP/clave de solicitante, persistidos en `ControlOperativo` (`contro
 
 | Surface | Máximo | Ventana |
 | --- | --- | --- |
-| `public-booking` | 3 peticiones | 10 segundos |
+| `public-booking` | 5 peticiones | 10 segundos |
 | `reservas` | 20 peticiones | 5 segundos |
 | `availability` | 12 peticiones | 5 segundos |
+| `display-token` | 5 peticiones | 60 segundos |
 
 ### Minimización de PII
 
@@ -599,7 +598,7 @@ Eventos suscritos: `booking_created`, `booking_updated`, `booking_confirmed`, `b
 
 Procesamiento seguro:
 
-1. Verificar firma JWT con clave pública de Wix.
+1. Los handlers de `backend/events.js` son eventos backend Velo gestionados por Wix y reciben el objeto de evento entregado por la plataforma; no son endpoints HTTP públicos. Si se recibe un JWT raw, se procesa con `wixClient.webhooks.process`.
 2. Extraer `eventId` del payload.
 3. Verificar idempotencia en `ControlOperativo` (`controlType = "WEBHOOK_EVENT"`) antes de cualquier mutación.
 4. Si `eventId` ya existe, abortar sin error (procesamiento idempotente).
@@ -665,7 +664,7 @@ Nunca mutar estas colecciones directamente desde código propio.
 | `reservas.web.js` | `getConfirmedBookingForDisplay` | Anyone | Propietario autenticado o token de visualización de un solo uso |
 | `reservas.web.js` | `resolveStaffForSlot` | Anyone | Público |
 | `reservas.web.js` | `invalidateCachesInternal` | Admin | `ADMIN` |
-| `citasManager.web.js` | `processDualBooking` | Anyone | Rate limitado |
+| `citasManager.web.js` | `processDualBooking` | SiteMember | Miembro Wix autenticado |
 | `citasManager.web.js` | `confirmPayment` | Admin | `ADMIN` |
 | `citasManager.web.js` | `rescheduleExistingBooking` | SiteMember | Propietario / Staff |
 | `cajas.web.js` | `registerManualTransaction` | SiteMember | `ADMIN` o `GESTION` |
@@ -690,7 +689,7 @@ Nunca mutar estas colecciones directamente desde código propio.
 **Cancelaciones y reembolsos**:
 
 1. Webhook `booking_canceled` deduplicado.
-2. `CitasF2` actualizado a `bookingStatus = "CANCELLED"`, `paymentStatus = "REFUNDED"`.
+2. `CitasF2` actualizado a `bookingStatus = "CANCELED"`, `paymentStatus = "REFUNDED"`.
 3. Registro rectificativo append-only en `MovimientosCaja` con `movementType = "DEVOLUCION"` y hash encadenado.
 4. Si hay devolución de stock: registro en `MovimientosInventario` con `movementType = "DEVOLUCION"`.
 
@@ -714,10 +713,10 @@ Validaciones `beforeInsert` / `beforeUpdate` por colección:
 - **MovimientosCaja**: presencia de `hash`, `schemaVersion`, `traceId`; cuadre `taxBase + taxAmount ≈ amount`.
 - **CitasF2**: enums válidos via `assertValidEnum()`, `traceId` presente, coherencia `pairToken` en duales. `beforeRemove` bloqueado.
 - **ServiciosCatalogo**: unicidad `serviceId`/`sku`/`slug`; `totalDuration === phase1Duration + exposureDuration + phase2Duration`; `tipoImpositivo` en enum AEAT.
-- **MapaStaff**: unicidad de `resourceId` y `memberId`; enums `rolBookings` y `rolWebsite` válidos.
+- **MapaStaff**: no tiene hook CMS activo. El lector de eventos filtra por `staffMemberId` + `active`, rechaza cero o múltiples coincidencias y valida `resourceId`/`scheduleId` como GUID. No es fuente de roles RBAC.
 - **RegistrosHorariosStaff**: `clockEventType` válido; `notes` obligatorio cuando `recordType === "AJUSTE"`.
-- **ControlOperativo**: `controlType` y `dedupeKey` presentes; `eventId` obligatorio para `WEBHOOK_EVENT`; `resourceId + expiresAt` obligatorio para `SLOT_LOCK`.
-- **InventarioStockVenta**: `stockAvailable === stockOnHand - stockReserved`; sin negativos.
+- **ControlOperativo**: `beforeInsert` ejecuta `assertControlOperativo` (`controlType`, `dedupeKey`, `traceId`; `eventId` en `WEBHOOK_EVENT`; `resourceId` + `expiresAt` en `SLOT_LOCK`). `beforeUpdate` conserva la guardia append-only y normaliza; las actualizaciones parciales mantienen validación en el writer.
+- **InventarioStockVenta**: no hay hook CMS `beforeInsert`/`beforeUpdate` implementado en `data.js`; las validaciones se mantienen en los writers de inventario.
 - **MovimientosInventario**: unicidad `movementToken`; `reason` obligatorio cuando `movementType === "AJUSTE"`.
 - **DatosFiscales**: validación NIF/NIE/CIF/VAT-UE con `isValidNifOrEuVat()`. `beforeRemove` bloquea eliminación de `CONFIG_SISTEMA_FISCAL`.
 
@@ -989,10 +988,10 @@ El sistema garantiza el cumplimiento estricto del marco legal español y europeo
 | `bookingId` | `CitasF2` | GUID oficial de Wix Bookings V2. |
 | `pairToken` | `CitasF2` | UUID v4 que vincula `DUAL_F1` + `DUAL_F2`. |
 | `bookingStatus` | `CitasF2` | Estado interno (`PENDING`, `CONFIRMED`, `CANCELED`, `NO_SHOW`). |
-| `paymentStatus` | `CitasF2` | Estado de tesorería (`UNPAID`, `PARTIAL`, `PAID`, `REFUNDED`). |
+| `paymentStatus` | `CitasF2` | Estado de tesorería (`NOT_PAID`, `PENDING_PAYMENT`, `PENDING_LEDGER`, `PAID`, `PARTIALLY_PAID`, `REFUNDED`, `PARTIALLY_REFUNDED`, `EXEMPT`, `UNDEFINED`). |
 | `resourceId` | `MapaStaff`, `CitasF2` | GUID del recurso en Wix Bookings. |
 | `memberId` | `MapaStaff` | GUID de usuario en Wix Members. |
-| `rolBookings` / `rolWebsite` | `MapaStaff` | Rol nativo vs. rol de autorización de negocio. |
+| `staffMemberId` / `scheduleId` | `MapaStaff` | Mapeo de respaldo a `resourceId`/`scheduleId`; los campos históricos `rolBookings`/`rolWebsite` no gobiernan el RBAC actual. |
 | `serviceId` | `ServiciosCatalogo` | GUID inmutable del servicio en Bookings. |
 | `slug` | `ServiciosCatalogo` | Identificador público para routing. |
 | `linkedPhases` | `ServiciosCatalogo` | GUID de la Fase 2 vinculada. |
@@ -1018,7 +1017,8 @@ PAYMENT_STATUS_WIX = { UNDEFINED, NOT_PAID, PENDING_PAYMENT,
 **CMS (`CitasF2`):**
 ```javascript
 BOOKING_STATUS_CMS = { PENDING, CONFIRMED, COMPLETED, CANCELED, NO_SHOW }
-PAYMENT_STATUS_CMS = { UNPAID, PARTIAL, PAID, REFUNDED }
+PAYMENT_STATUS_CMS = { NOT_PAID, PENDING_PAYMENT, PENDING_LEDGER,
+  PAID, PARTIALLY_PAID, REFUNDED, PARTIALLY_REFUNDED, EXEMPT, UNDEFINED }
 BOOKING_TYPE         = { SIMPLE, DUAL_F1, DUAL_F2 }
 ```
 > `CANCELED` se escribe con **una sola L** (canon Wix oficial).
@@ -1066,7 +1066,7 @@ CONTROL_TYPE    = { SLOT_LOCK, WEBHOOK_EVENT, DEDUPE_KEY,
 | `reservas.web.js` | `getAvailableDays` | Anyone | Público |
 | `reservas.web.js` | `resolveStaffForSlot` | Anyone | Público |
 | `reservas.web.js` | `invalidateCachesInternal` | Admin | ADMIN |
-| `citasManager.web.js` | `processDualBooking` | Anyone | Rate limitado |
+| `citasManager.web.js` | `processDualBooking` | SiteMember | Miembro Wix autenticado |
 | `citasManager.web.js` | `confirmPayment` | Admin | ADMIN |
 | `citasManager.web.js` | `rescheduleExistingBooking` | SiteMember | Propietario / Staff |
 | `cajas.web.js` | `registerManualTransaction` | SiteMember | ADMIN / GESTION |
@@ -1092,7 +1092,7 @@ CONTROL_TYPE    = { SLOT_LOCK, WEBHOOK_EVENT, DEDUPE_KEY,
 | `CajaActual` | Valida `singletonKey = CAJA_PRINCIPAL` (colección `SINGLE_ITEM`). | `sequenceCounters` editable solo por backend bajo bloqueo fiscal global. | **Bloqueado**. |
 | `InventarioStockVenta` | Valida `stockAvailable === stockOnHand - stockReserved`. | Controlado. | Solo ADMIN. |
 | `ControlOperativo` | Valida `controlType`, `dedupeKey`, `traceId`. | Controlado. | Controlado. |
-| `MapaStaff` | Unicidad `resourceId`/`memberId`; enums de roles. | Controlado. | Solo ADMIN. |
+| `MapaStaff` | Mapeo de respaldo; lectura falla cerrada ante mapping ausente/ambiguo o GUID inválidos. | Sin hook CMS. | Solo ADMIN. |
 | `ComplementosCatalogo` | Unicidad `addonId`/`sku`. | Controlado. | Solo ADMIN. |
 | `HistoricoCierresZ` | Valida firma de cierre. | **Bloqueado**. | **Bloqueado**. |
 
@@ -1107,7 +1107,7 @@ CONTROL_TYPE    = { SLOT_LOCK, WEBHOOK_EVENT, DEDUPE_KEY,
 | `BOOKING_CREATION_FAILED` | Integración | Error en `Bookings Writer V2`. |
 | `CHECKOUT_FAILED` | eCommerce | Error en carrito/checkout. |
 | `AUTH_REQUIRED` | Seguridad | Usuario no autenticado. |
-| `ACCESS_DENIED` | Seguridad | Rol insuficiente en `MapaStaff.rolWebsite`. |
+| `ACCESS_DENIED` | Seguridad | Rol no autorizado en `STAFF.WEBSITE_ROLE_BY_RESOURCE_ID` (internalConfig.js). |
 | `RATE_LIMITED` | Protección | Límite de tasa excedido. |
 | `SLOT_UNAVAILABLE` | Negocio | Slot ya no disponible. |
 | `SERVICE_NOT_FOUND` | Catálogo | `serviceId` o `slug` no registrado. |
@@ -3269,14 +3269,14 @@ El sitio `marianmadrid.es` gestiona **12 procesos de negocio** a través de tres
 | **P1.1** Consulta de catálogo público | `reservas.web.js` → `getServiceBySlugOrId` (Permiso `Anyone`). Lee `ServiciosCatalogo` por `slug` o `serviceId`. Resuelve datos de Bookings V2 (precio, duración, imagen, recomendaciones, complementos). | `serviceId`, `slug`, `title`, `description`, `price`, `totalDuration`, `mainMedia`, `recomendaciones`, `addonId[]`, `categoryId` | `ServiciosCatalogo` (lectura) + `ComplementosCatalogo` (lectura) |
 | **P1.2** Consulta de disponibilidad | `reservas.web.js` → `getAvailableDays` consulta `listAvailabilityTimeSlots` (Time Slots V2) con `timeZone: "Europe/Madrid"`, `locationType: "BUSINESS"`. `DAYS_CACHE` conserva únicamente claves de días disponibles; `getAvailableSlots` y `getCertifiedDualSlots` vuelven a consultar Wix para los slots. El DTO de cliente aplica el intervalo de inicio configurado de 30 minutos. No se persisten inventarios de slots ni parejas duales. | Días disponibles; slots visibles en el DTO, `resourceId` y `scheduleId` | `ControlOperativo` (`DAYS_CACHE`, solo fechas) + respuesta DTO al frontend; sin caché de slots |
 | **P1.3** Resolución de profesional | `reservas.web.js` → `resolveStaffForSlot`. Si el cliente elige profesional → usa ese `resourceId`. Si no → `staff.js` asigna el profesional con menos horas reservadas ese día (desempate por rotación). | `resourceId` asignado, `scheduleId`, `staffName` | Respuesta DTO + `MapaStaff` (lectura) |
-| **P1.4** Creación de reserva simple | `citasManager.web.js` → `processDualBooking` (tipo SIMPLE). Revalida slot en servidor. `bookingCore.js` ejecuta `createBooking` (Bookings Writer V2) con `timezone: "Europe/Madrid"`, `locationType: "OWNER_BUSINESS"`, `resource._id`, `location._id`. Inserta en `CitasF2`. | `bookingId` (GUID Wix), `bookingType: "SIMPLE"`, `bookingStatus: "PENDING"`, `paymentStatus: "UNPAID"`, `serviceId`, `resourceId`, `slotStart`, `slotEnd`, `totalAmount`, `traceId` (UUID v4), `dateYmd` | `CitasF2` (insert) + Wix Bookings V2 (reserva nativa) |
+| **P1.4** Creación de reserva simple | `citasManager.web.js` → `processDualBooking` (tipo SIMPLE). Revalida slot en servidor. `bookingCore.js` ejecuta `createBooking` (Bookings Writer V2) con `timezone: "Europe/Madrid"`, `locationType: "OWNER_BUSINESS"`, `resource._id`, `location._id`. Inserta en `CitasF2`. | `bookingId` (GUID Wix), `bookingType: "SIMPLE"`, `bookingStatus: "PENDING"`, `paymentStatus: "NOT_PAID"`, `serviceId`, `resourceId`, `slotStart`, `slotEnd`, `totalAmount`, `traceId` (UUID v4), `dateYmd` | `CitasF2` (insert) + Wix Bookings V2 (reserva nativa) |
 | **P1.5** Creación de reserva dual (F1+F2) | `bookingSaga.js` orquesta dos llamadas independientes a `createBooking` vinculadas por `pairToken` (UUID v4). F1: fase de aplicación (importe total). F2: fase de lavado/peinado (`totalAmount = 0`, `NO_FEE`, `selectedPaymentOption: OFFLINE`). El Writer F2 se invoca sin opciones de bypass y conserva la validación nativa de disponibilidad y de opción de pago de Wix. Mutex `SLOT_LOCK` en `ControlOperativo` como coordinación adicional, sin sustituir la validación nativa. | `pairToken`, `bookingId` F1, `bookingId` F2, `bookingType: "DUAL_F1"` / `"DUAL_F2"`, `totalAmount` (F1: importe total, F2: 0), `slotStart` F2 = `slotStart` F1 + `phase1Duration` + `exposureDuration`, `traceId` | `CitasF2` (2 inserts) + `ControlOperativo` (`SLOT_LOCK`) + Wix Bookings V2 (2 reservas nativas) |
 | **P1.6** Saga de compensación (fallo F2) | Si la creación de F2 o su persistencia fallan → `cancelBooking` sobre F1. Registro en `ControlOperativo`. Job `runPendingCompensationsJob` reintenta cada 30 min. | `controlType: "SYSTEM_FLAG"`, `alertType: "COMPENSATION_PENDING"`, `pairToken`, `bookingId` F1 cancelada, `traceId` | `ControlOperativo` (insert) + Wix Bookings V2 (cancelación F1) |
 | **P1.7** Confirmación por pago online | Webhook `order_payment_status_updated` → `events.js` deduplica por `eventId` en `ControlOperativo`. Actualiza `CitasF2`. Inserta en `MovimientosCaja` con `sequenceNumber` monótono desde `CajaActual.CAJA_PRINCIPAL.sequenceCounters`. | `paymentStatus: "PAID"`, `bookingStatus: "CONFIRMED"`, `transactionId`, `sequenceNumber`, `numSerieFactura`, `hash` (SHA-256), `previousRecordHash`, `taxBase`, `taxAmount`, `tipoImpositivo`, `channelType: "ONLINE"`, `movementType: "COBRO"`, `traceId` | `CitasF2` (update) + `MovimientosCaja` (insert append-only) + `ControlOperativo` (`WEBHOOK_EVENT`) |
 | **P1.8** Reprogramación de reserva | `citasManager.web.js` → `rescheduleExistingBooking` / `rescheduleDualBookings` (Permiso `SiteMember`). Webhook `booking_rescheduled`. Regeneración de `pairToken` si dual. | `bookingId`, nuevo `slotStart`/`slotEnd`, nuevo `resourceId` (si cambia), `traceId` | `CitasF2` (update controlado) + Wix Bookings V2 |
 | **P1.9** Cancelación de reserva | Webhook `booking_canceled` → `events.js` deduplica. Actualiza `CitasF2`. Registro rectificativo en `MovimientosCaja` (`movementType: "DEVOLUCION"`). Devolución de stock si aplica en `MovimientosInventario`. | `bookingStatus: "CANCELED"`, `paymentStatus: "REFUNDED"`, `movementType: "DEVOLUCION"`, `hash` encadenado, `previousInvoiceId`, `tipoRectificativa`, `traceId` | `CitasF2` (update) + `MovimientosCaja` (insert append-only) + `MovimientosInventario` (si aplica) + `ControlOperativo` |
 | **P1.10** No-show | Registro manual por staff vía `citasManager.web.js`. Actualización de `CitasF2`. | `bookingStatus: "NO_SHOW"`, `traceId` | `CitasF2` (update controlado) |
-| **P1.11** Webhooks Bookings (5 eventos) | `events.js` procesa: `booking_created`, `booking_updated`, `booking_confirmed`, `booking_canceled`, `booking_rescheduled`. Verificación JWT + deduplicación `eventId` en `ControlOperativo`. | `eventId`, `bookingId`, payload del evento, `dedupeKey`, `traceId` | `ControlOperativo` (`WEBHOOK_EVENT`, append-only) + `CitasF2` (según evento) |
+| **P1.11** Webhooks Bookings (5 eventos) | `events.js` procesa: `booking_created`, `booking_updated`, `booking_confirmed`, `booking_canceled`, `booking_rescheduled`. Evento backend Velo gestionado por Wix + deduplicación `eventId` en `ControlOperativo`. | `eventId`, `bookingId`, payload del evento, `dedupeKey`, `traceId` | `ControlOperativo` (`WEBHOOK_EVENT`, append-only) + `CitasF2` (según evento) |
 
 **Reprogramación dual — implementación integrada en `main` mediante PR #176; publicación Wix no verificada en esta auditoría:**
 - Identidad idempotente estable SHA-256 a partir de `pairToken`, booking IDs, servicios, recurso objetivo y slots destino; `traceId` no forma parte de la identidad. `operationId` UUID opcional permite distinguir una nueva intención.
@@ -3382,7 +3382,7 @@ El sitio `marianmadrid.es` gestiona **12 procesos de negocio** a través de tres
 | **P7.2** Ficha Técnica Clienta | Wix CRM + Wix Data. Fórmula de color, alergias, historial de tratamientos, preferencias, notas. | Fórmula de color, alergias, historial, preferencias, notas, fecha última actualización | Wix CRM / Wix Data (app nativa) |
 | **P7.3** Consentimiento y RGPD | Consent Mode v2 en web. Checkbox desmarcado por defecto. | `consentMarketing`, `consentDataProcessing`, `consentTimestamp` | Wix (nativo) |
 | **P7.4** Programa de fidelización | Wix Fidelización: Bronze (0-200 pts), Silver (201-500 pts), Gold (>500 pts). Canje por add-ons. | Puntos acumulados, nivel, canjes | Wix Fidelización (app nativa) |
-| **P7.5** Autenticación de personal | `MapaStaff` correlaciona `memberId` (Wix Members) ↔ `resourceId` (Wix Bookings) ↔ `rolWebsite`. | `memberId`, `resourceId`, `rolBookings`, `rolWebsite`, `staffName`, `displayName`, `active`, `sortOrder`, `schemaVersion` | `MapaStaff` (NATIVE #13) |
+| **P7.5** Autenticación de personal | `MapaStaff` conserva el mapeo de respaldo `staffMemberId` (Bookings) ↔ `resourceId`/`scheduleId`; el rol de acceso procede de `STAFF.WEBSITE_ROLE_BY_RESOURCE_ID` en `internalConfig.js`. | `memberId`, `resourceId`, `rolBookings`, `rolWebsite`, `staffName`, `displayName`, `active`, `sortOrder`, `schemaVersion` | `MapaStaff` (NATIVE #13) |
 
 ---
 
