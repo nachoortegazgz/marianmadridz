@@ -1740,12 +1740,12 @@ export async function wixEcom_onOrderCreated(eventPayload) {
         }
 
         const lineItems = Array.isArray(order.lineItems) ? order.lineItems : [];
-        // Wix Stores Catalog V3 owns stock reservation/deduction. This handler
-        // records only its idempotency marker; it never mirrors or mutates stock.
+        // Wix catalog owners manage their native stock. This handler records only
+        // its idempotency marker; it never reserves, mirrors, or mutates stock.
         await markEventAsProcessed(eventId, "ORDER_CREATED", traceId, {
             orderId,
             lineItemCount: lineItems.length,
-            inventoryAuthority: "WIX_STORES_NATIVE",
+            inventoryAuthority: "WIX_CATALOG_OWNER",
             inventoryAction: "NO_CUSTOM_STOCK_WRITE",
         });
         return { status: "OK", eventId, inventoryManagedBy: "WIX_NATIVE" };

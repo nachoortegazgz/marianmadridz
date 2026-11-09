@@ -24,7 +24,7 @@ test("EVENT-ORDER-NATIVE-STOCK-01 order-created webhook records idempotency with
     const handler = source.slice(start, end);
 
     assert.match(handler, /isOrderCreatedReconciled\(orderId\)/);
-    assert.match(handler, /inventoryAuthority:\s*"WIX_STORES_NATIVE"/);
+    assert.match(handler, /inventoryAuthority:\s*"WIX_CATALOG_OWNER"/);
     assert.match(handler, /inventoryAction:\s*"NO_CUSTOM_STOCK_WRITE"/);
     assert.match(handler, /catch\s*\(error\)\s*\{[\s\S]*?_handleError\(error,\s*"wixEcom_onOrderCreated",\s*traceId\);[\s\S]*?throw error;/);
     assert.doesNotMatch(handler, /reserveOrderInventoryInternal|syncPaidOrderInventoryInternal|MovimientosInventario|InventarioStockVenta/);

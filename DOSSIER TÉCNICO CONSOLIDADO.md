@@ -176,7 +176,7 @@ Capa de Datos — SDK @wix/data + APIs Wix (Bookings, Members, eCommerce)
 | `backend/reservas.web.js` | Consulta pública de disponibilidad y catálogo |
 | `backend/citasManager.web.js` | Gestión de reservas duales, pagos y reprogramación |
 | `backend/cajas.web.js` | Ledger fiscal Veri\*Factu, caja y cierre Z |
-| `backend/inventario.web.js` | Módulo legacy de inventario personalizado; retirada planificada tras desacoplar webhooks y UI |
+| `backend/inventario.web.js` | **RETIRADO Y FUSIONADO EN PR #238**; sin writer ni WebMethods custom de inventario |
 | `backend/horario.web.js` | Fichajes laborales y cálculo de jornada |
 | `backend/fiscalAggregator.web.js` | Agregación de impuestos y libros de facturas |
 | `backend/fiscalDocuments.web.js` | Generación de paquetes documentales para gestoría |
@@ -951,7 +951,7 @@ CONTROL_TYPE    = { ALERT, COMPENSATION, DAYS_CACHE, DEDUPE_KEY,
 `hashSHA256(input)`, `hmacSha256Hex(key, payload)`, `hashChain(prevHash, payload)`, `timingSafeEqual(a, b)`.
 
 **`backend/validation.js`:**
-`assertValidEnum(value, enumObject, fieldName)`, `assertCitasF2(item)`, `assertDatosFiscales(item)`, `assertControlOperativo(item)`, `assertRegistrosHorariosStaff(item)`, `assertMovimientosInventario(item)`, `isValidNifOrEuVat(taxId)`.
+`assertValidEnum(value, enumObject, fieldName)`, `assertCitasF2(item)`, `assertDatosFiscales(item)`, `assertControlOperativo(item)`, `assertRegistrosHorariosStaff(item)`, `isValidNifOrEuVat(taxId)`. No existe validator ni writer de nuevas filas `MovimientosInventario`.
 
 ### 14.8 Catálogo de WebMethods públicos
 

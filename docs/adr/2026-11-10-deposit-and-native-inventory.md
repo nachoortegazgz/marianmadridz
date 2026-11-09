@@ -32,8 +32,9 @@
 2. **Umbral:** `price > 10000` en unidad monetaria menor (céntimos) si el backend llegara a validar el criterio; evitar comparaciones de punto flotante. La configuración nativa sigue siendo preferente y debe reconciliarse con el catálogo de servicios.
 3. **Precio variable:** clasificar cada variante. Si un servicio contiene variantes a ambos lados del umbral y Wix solo permite un importe de depósito común para el servicio, separar variantes/servicios en la configuración nativa antes de considerar código custom.
 4. **Cancelaciones:** 24 horas de preaviso como ventana gratuita. No activar retención automática tardía/no-show sin revisión jurídica; reembolso por cancelación del negocio íntegro. Reprogramación y refund deben ser idempotentes y reconciliar el pago nativo.
-5. **Inventario:** retirar la capa custom por fases: primero quitar la dependencia de webhooks y UI, luego eliminar código no referenciado tras búsqueda completa y pruebas. No crear ni reparar `InventarioStockVenta`.
+5. **Inventario:** retirar la capa custom por fases: quitar dependencia de webhooks/UI y eliminar código no referenciado. No crear ni reparar `InventarioStockVenta`.
 6. **Históricos:** `MovimientosInventario` se considera histórico append-only; no insertar nuevos movimientos personalizados, editar, borrar ni purgar filas existentes. Cualquier política de archivo requiere ADR separado.
+7. **Restock:** al cancelar antes de fulfillment/consumo, usar `restockAllItems=true` si el producto sigue físicamente disponible. En reembolsos, enviar `sideEffects.restock.lineItems` solo por cantidades recibidas y vendibles. No restock por reembolso de cortesía, servicio consumido, producto dañado o artículo no devuelto.
 7. **Pruebas:** cubrir precios 100.00/100.01, fijo/variable, depósito correcto, saldo restante, pago fallido, reintentos, cancelación a 24h exactas/antes/después, cancelación por negocio, refund y duplicación de webhooks. QA con datos sintéticos y sin cargos reales.
 
 ## Evidencia live de Wix (solo lectura, 2026-11-10)
@@ -46,7 +47,7 @@
 
 - RF-06 sustituye el criterio anterior (>30 EUR y 15 EUR/20%) y resuelve la contradicción con el criterio documental de 30% para >50 EUR.
 - El flujo de fianzas no está implementado (`createDepositPaymentOrder` y `bookingsEngine.web.js` no existen según la auditoría disponible).
-- El repositorio contiene adaptadores y proyecciones de inventario personalizados. Su estado no se considera automáticamente alineado con esta decisión; requieren revisión antes de cualquier retirada.
+- En el baseline anterior existían adaptadores y proyecciones custom; la rama `refactor/native-wix-inventory-only-2026-11-10` los elimina, junto con sus WebMethods y UI, después de desacoplar los webhooks. Pendiente CI y QA Wix.
 - Las auditorías anteriores que describen `InventarioStockVenta`, `MovimientosInventario` o el bloqueo por falta de maestros CMS quedan como evidencia histórica del código existente, no como autorización para ampliar esa arquitectura.
 
 ## Fuentes de autoridad y referencias
@@ -62,6 +63,15 @@
 - Código Civil arts. 1152–1155 y 1255: https://www.boe.es/buscar/act.php?id=BOE-A-1889-4763
 - Referencias comerciales comparables (no normativas): https://adaraessenceestetica.com/wp-content/uploads/2025/06/Carta-NUEVA-CAST.pdf ; https://www.beassence.es/politicas
 
+## Estado de implementación en PR #239
+
+- `inventario.web.js`, su suite de writer, `INVENTORY_CONFIG`, `validateInventoryOrderLine`, acciones admin y panel staff eliminados y fusionados mediante PR #238.
+- Webhooks eCommerce y cron desacoplados de stock CMS; se mantiene ledger fiscal, idempotencia y hooks append-only históricos.
+- CI run 42721311048: 50 suites/488 tests, SDK eCommerce Cart V2 y Bookings Reader V2 y ESLint en verde para commit `94974c254644594e76fc717278098a2968073028`.
+- PR #241 corrige el valor semántico del marcador de autoridad de catálogo (`WIX_STORES_NATIVE` → `WIX_CATALOG_OWNER`); CI run 42722015208 verde (50 suites/488 tests).
+- QA Wix runtime de venta/cancelación/reembolso pendiente; no desplegar hasta completarlo.
+- Informe: `docs/qa/2026-11-10-native-inventory-retirement.md`.
+
 ## Límites de ejecución
 
 - Este ADR no autoriza cambios en Wix CMS, stock, productos, reservas, pagos ni configuración publicada.
@@ -73,11 +83,11 @@
 Lectura estática del `main` auditado el 2026-11-10:
 
 - `src/backend/events.js` importa y llama a `reserveOrderInventoryInternal` en `wixEcom_onOrderCreated`, `releaseOrderInventoryInternal` en `wixEcom_onOrderCanceled`, `syncPaidOrderInventoryInternal` en el flujo de pago y `syncRestockedOrderInventoryInternal` en el webhook de reembolso.
-- `src/backend/inventario.web.js` mantiene proyecciones CMS, reservas internas, colas de reparación y un WebMethod de ajuste manual que invoca `inventoryItemsV3.bulkIncrementInventoryItems` / `bulkDecrementInventoryItems`.
+- En el baseline previo, `src/backend/inventario.web.js` mantenía proyecciones CMS, reservas y ajustes manuales. Se ha eliminado en la rama de refactorización.
 - `src/pages/ZONA MARIAN.gn7mx.js` expone el panel y acciones de candidatos, alta de maestros, movimientos, conciliación y reparaciones; `enableInventory` está activo en el contexto entregado al widget.
 - `#htmlOnlyStaff.txt` lee `enableInventory` para mostrar la funcionalidad.
-- La búsqueda del repositorio encuentra como consumidores directos de `backend/inventario.web.js` `events.js`, la página de administración y su suite offline. La búsqueda no sustituye una búsqueda local exhaustiva en todo el árbol ni revisión de referencias dinámicas.
+- La búsqueda inicial encontró como consumidores directos `events.js`, la página de administración y la suite offline. Se han retirado esos imports/llamadas y la suite específica. La búsqueda final de referencias y CI deben confirmar cero consumidores.
 
 **Riesgo de retirada:** `events.js` trata errores de reserva/liberación/proyección como fallos del webhook y puede lanzar excepciones/reintentos. Por tanto, eliminar imports o llamadas sin rediseñar esos handlers podría afectar la finalización de webhooks eCommerce aunque Wix gestione ya el stock nativo. El ajuste manual actual también escribe directamente en stock nativo y debe desaparecer de la UI personalizada si la operación se delega por completo en Wix.
 
-**Plan obligatorio antes de retirar:** (1) inventariar todos los consumidores estáticos y dinámicos; (2) separar los efectos fiscales/contables de los efectos de stock; (3) eliminar las reservas/proyecciones CMS de los handlers sin alterar la idempotencia fiscal ni el procesamiento de pagos/reembolsos; (4) retirar el panel y sus WebMethods de inventario; (5) decidir por separado el destino de colecciones CMS históricas, sin borrar ni mutar `MovimientosInventario`; (6) ejecutar suites de pedidos, pagos, cancelaciones y reembolsos; (7) probar en Wix QA/Local Editor que Wix mantiene reservas y stock nativos; (8) preparar rollback y publicar solo con aprobación.
+**Plan de validación de la retirada:** (1) búsqueda final de consumidores estáticos/dinámicos; (2) ejecutar suites de pedidos, pagos, cancelaciones, reembolsos y cron; (3) confirmar que no se escriben `InventarioStockVenta`/`MovimientosInventario`; (4) Wix QA/Local Editor: verificar venta, cancelación y devolución/restock nativos; (5) confirmar que el ledger fiscal sigue registrando ventas y rectificaciones; (6) revisar diff, CI y rollback antes de merge/publicación. Las colecciones históricas no se borran ni mutan.
