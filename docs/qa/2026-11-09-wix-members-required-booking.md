@@ -42,6 +42,13 @@ La documentación oficial de Wix indica que actualmente no existe una opción gl
 - Deben ejecutarse `npm test`, `npm run lint`, `npm run verify:wix-ecom-cart-v2` y `npm run verify:wix-bookings-reader-v2` en CI.
 - Pendiente: prueba en Wix publicado con un usuario invitado (debe rechazarse) y un miembro activo (debe reservar y quedar vinculado a su contacto/miembro). No ejecutar estas pruebas con reservas reales sin un entorno de QA controlado.
 
+## Resultado CI observado — run 91
+- La suite nueva `booking.members-required.contract.test.mjs`: 3/3 pruebas correctas.
+- `npm run lint`: correcto.
+- Verificación de contratos Wix eCommerce Cart V2: correcta.
+- Verificación de contrato Wix Bookings Reader V2: correcta.
+- `npm test` / regresión completa: **fallida** por `unit.ssot.v5011.test.mjs`, prueba `SSOT-10` (15/16), que afirma que todas las lecturas query pasan por el método SDK elevado de `dataAccess`. Ni ese test ni `dataAccess.js` forman parte del diff de esta PR; se registra como fallo fuera del alcance del cambio y no se declara CI verde. Requiere diagnóstico separado en la rama base antes de integrar.
+
 ## Despliegue y reversión
 - Esta PR no publica ni sincroniza Wix.
 - La integración no se considera operativa hasta que se integre, sincronice con Wix y se valide en entorno adecuado.
