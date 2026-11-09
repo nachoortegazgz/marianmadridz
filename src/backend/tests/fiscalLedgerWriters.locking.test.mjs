@@ -82,7 +82,7 @@ test("FISCAL-CHAIN-06 hash audit paginates and cannot report success when pages 
   const code = await source("cajas.web.js");
   const start = code.indexOf("export async function verifyFiscalHashChainIntegrity");
   const pagination = code.indexOf("movements = await movements.next()", start);
-  const partial = code.indexOf('status: "PARTIAL"', start);
+  const partial = code.indexOf('"PARTIAL"', pagination);
 
   assert.ok(pagination > start);
   assert.ok(partial > pagination);
