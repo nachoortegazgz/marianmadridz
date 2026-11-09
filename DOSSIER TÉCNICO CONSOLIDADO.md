@@ -3706,4 +3706,4 @@ Este anexo actualiza las referencias históricas de este dossier que indican Cat
 - Products V3: https://dev.wix.com/docs/api-reference/business-solutions/stores/catalog-v3/products-v3/introduction
 - Invoices settings: https://dev.wix.com/docs/api-reference/business-management/get-paid/invoices/invoices-settings/get-invoices-settings
 
-**Estado:** CI offline verde (47 suites/442 tests/0 fallos) en commit f8d26d0; pendiente validación del SDK V3 en Wix Local Editor, QA de flujos y despliegue autorizado. Invoices: bloqueado por disponibilidad de la API V4 en el sitio.
+**Estado:** CI offline verde (run 168, commit 77d63d2: 47 suites/442 tests/0 fallos); pendiente validación del SDK V3 en Wix Local Editor, QA de flujos y despliegue autorizado. Invoices: bloqueado por disponibilidad de la API V4 en el sitio.
