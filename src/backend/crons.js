@@ -369,7 +369,7 @@ return result;
 // =============================================================================
 async function _runOneCompensation(comp, traceId) {
 const payload = readControlPayload(comp);
-const kind = _safeTrim(payload.compensationKind || payload.kind).toUpperCase();
+const kind = _safeTrim(payload.compensationKind || payload.kind || comp?.kind).toUpperCase();
 const bookingId = _safeTrim(payload.bookingId || comp?.bookingId);
 
 // CajaActual es una proyeccion incremental, no una fuente contable.
@@ -422,6 +422,75 @@ manualReconciliationRequired: true,
 action: kind,
 reason: "Legacy cancellation recovery lacks the original rectification payload; manual fiscal reconciliation required",
 };
+}
+if (origin === "WIX_ECOM_PAYMENT_WEBHOOK" && recoveryProcessor !== "EVENT_LOG_ORDER") {
+return {
+ok: false,
+manualReconciliationRequired: true,
+action: kind,
+reason: "Legacy paid-order recovery lacks the original fiscal payload; manual fiscal reconciliation required",
+};
+}
+
+if (recoveryProcessor === "EVENT_LOG_ORDER") {
+const fiscalPayload = payload.fiscalPayload;
+const amount = Number(fiscalPayload?.totalAmount);
+const taxBase = Number(fiscalPayload?.taxBase);
+const taxAmount = Number(fiscalPayload?.taxAmount);
+const taxRate = Number(fiscalPayload?.tipoImpositivo);
+const issueDate = _safeTrim(fiscalPayload?.fechaExpedicionFactura);
+const linkedBookingIds = fiscalPayload?.linkedBookingIds;
+const validOrderPayload = fiscalPayload &&
+typeof fiscalPayload === "object" &&
+!Array.isArray(fiscalPayload) &&
+fiscalPayload.eventType === "VENTA_LINEA" &&
+fiscalPayload.movementType === "VENTA_ONLINE" &&
+fiscalPayload.paymentMethod === "WIX_PAYMENTS" &&
+["F1", "F2"].includes(fiscalPayload.tipoFactura) &&
+payload.recoveryScope === "BOOKINGS_ONLY" &&
+Number.isFinite(amount) && amount > 0 &&
+Number.isFinite(taxBase) && taxBase >= 0 &&
+Number.isFinite(taxAmount) && taxAmount >= 0 &&
+Number.isFinite(taxRate) && taxRate >= 0 &&
+/^\d{4}-\d{2}-\d{2}$/.test(issueDate) &&
+_safeTrim(fiscalPayload.nifEmisor) &&
+_safeTrim(fiscalPayload.issuerLegalName) &&
+Array.isArray(fiscalPayload.breakdown) && fiscalPayload.breakdown.length > 0 &&
+_safeTrim(fiscalPayload.transactionId) === transactionId &&
+_safeTrim(fiscalPayload.orderId) &&
+transactionId === `ORDER-${_safeTrim(fiscalPayload.orderId)}` &&
+Array.isArray(linkedBookingIds) &&
+linkedBookingIds.length > 0 &&
+linkedBookingIds.every(_looksLikeGuid);
+if (!validOrderPayload) {
+return {
+ok: false,
+manualReconciliationRequired: true,
+action: kind,
+reason: "Paid-order recovery payload is incomplete or contains unsupported order composition",
+};
+}
+const result = await withTimeout(
+() => registrarEventoEconomico({ ...fiscalPayload, traceId }),
+API_TIMEOUT_MS * 2,
+"cron:eventLogPaidOrderRecovery"
+);
+if (result?.status !== "SUCCESS") {
+throw new Error(
+(result && result.error && result.error.message) ||
+"PAID_ORDER_FISCAL_RECOVERY_NOT_CONFIRMED"
+);
+}
+await withTimeout(
+() => reconcilePaidCitasFromLedgerInternal({
+orderId: fiscalPayload.orderId,
+transactionId,
+cashMovementId: null,
+}, traceId),
+API_TIMEOUT_MS * 2,
+"cron:paidOrderBookingProjectionRecovery"
+);
+return { ok: true, action: kind, transactionId, recoveryProcessor };
 }
 
 if (recoveryProcessor === "EVENT_LOG") {
