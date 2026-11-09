@@ -71,41 +71,6 @@ export function assertValidEnum(value, enumObj, fieldName, allowEmpty = false) {
 }
 
 // =============================================================================
-// WIX STORES INVENTORY ORDER LINE
-// =============================================================================
-
-/**
- * Validates the stable identifiers and quantity required to project one
- * native Wix Stores order line into MovimientosInventario.
- */
-export function validateInventoryOrderLine(orderId, lineItem) {
-    const errors = [];
-    const normalizedOrderId = String(orderId || "").trim();
-    const lineItemId = String(lineItem?._id || lineItem?.id || "").trim();
-    const productId = String(lineItem?.catalogReference?.catalogItemId || "").trim();
-    const variantId = String(lineItem?.catalogReference?.options?.variantId || "").trim();
-    const quantity = Number(lineItem?.quantity);
-
-    if (!isValidGuid(normalizedOrderId)) errors.push("ORDER_ID_INVALID");
-    if (!isValidGuid(lineItemId)) errors.push("LINE_ITEM_ID_INVALID");
-    if (!isValidGuid(productId)) errors.push("PRODUCT_ID_INVALID");
-    if (!isValidGuid(variantId)) errors.push("VARIANT_ID_REQUIRED");
-    if (!Number.isSafeInteger(quantity) || quantity <= 0) errors.push("QUANTITY_INVALID");
-
-    return {
-        valid: errors.length === 0,
-        errors,
-        value: {
-            orderId: normalizedOrderId,
-            lineItemId,
-            productId,
-            variantId,
-            quantity,
-        },
-    };
-}
-
-// =============================================================================
 // CITAS F2 (BIBLIA 12.2)
 // =============================================================================
 
