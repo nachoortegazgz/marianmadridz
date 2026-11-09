@@ -2,7 +2,7 @@
 
 **Fecha:** 2026-11-10  
 **PR de retirada:** [#238](https://github.com/nachoortegazgz/marianmadridz/pull/238) — fusionado  
-**PR de corrección semántica:** [#240](https://github.com/nachoortegazgz/marianmadridz/pull/240) — pendiente  
+**PR de corrección semántica:** [#241](https://github.com/nachoortegazgz/marianmadridz/pull/241) — CI verde  
 **Baseline de retirada:** `main` en `0f1baa8d542fb90041ba3ec20f148eebe3479369`  
 **Commit fusionado:** `fb853e3f78e973d7f2bab3eed25e3902acf76a20`  
 **Estado:** CI offline verde; runtime Wix y E2E pendientes.
@@ -53,7 +53,7 @@ No se cambian las colecciones ni los datos existentes. Los hooks de protección 
 - ESLint: SUCCESS.
 - El test de cron y el test de eventos Bookings/eCommerce pasaron; el test de hooks append-only también pasó.
 
-## 6. Corrección semántica pendiente — PR #240
+## 6. Corrección semántica — PR #241
 
 El marcador de `ORDER_CREATED` fusionado en PR #238 etiqueta la autoridad como `WIX_STORES_NATIVE`, aunque el handler también procesa pedidos Bookings y mixtos. PR #240 cambia el valor a `WIX_CATALOG_OWNER` y ajusta la expectativa del test; no modifica efectos de negocio ni datos. CI de esta corrección debe confirmarse antes de fusionar.
 
