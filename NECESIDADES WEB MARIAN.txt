@@ -186,7 +186,7 @@ El sitio web no debe ser un escaparate estático. Debe ser una **herramienta de 
 
 | ID | Requisito | Descripción | Criterio de aceptación | Estado de verificación |
 |---|---|---|---|---|
-| RT-25 | Parseo de módulos | Todos los módulos deben validar sintácticamente. | 32/32 módulos validados. | CI OFFLINE VERDE en run #42656358136: 50 suites, 477 tests, 0 fallos. No equivale a runtime Wix. |
+| RT-25 | Parseo de módulos | Todos los módulos deben validar sintácticamente. | 32/32 módulos validados. | CI OFFLINE VERDE en PR #232, run #42671109488: 50 suites, 479 tests, 0 fallos; SDK contracts y ESLint SUCCESS. No equivale a runtime Wix. |
 | RT-26 | Integridad de importaciones | Todas las importaciones resueltas. | 524 importaciones verificadas sin errores. | ✅ Declarado — **verificar tras refactor** |
 | RT-27 | Test desglose IVA | Conciliación exacta al céntimo en todos los servicios. | 5/5 servicios verificados con 0,00 € desviación. | ✅ Declarado |
 | RT-28 | Test criptografía gift cards | Firma HMAC válida; manipulación rechazada. | Test de alteración de saldo → firma inválida. | NO IMPLEMENTADO/NO VERIFICADO; no hay HMAC de Gift Cards propio ni test de manipulación de saldo. |
