@@ -5,7 +5,7 @@ VERSION: v5016-CANONICAL-READ
 REPO: https://github.com/nachoortegazgz/marianmadridz.git
 RESPONSIBILITY: cashier fiscal ledger, daily Z closures, Veri*factu SHA-256
                 chain integrity and fiscal persistence.
-STANDARDS: G10 ASCII Strict. Cero suppressAuth. Campos persistidos canonicos; alias ONLINE solo se normaliza en entrada.
+STANDARDS: G10 ASCII Strict. Cero suppressAuth. WIX_PAYMENTS es el metodo online canonico.
 =============================================================================
 */
 
@@ -119,11 +119,12 @@ const MONEY_EPSILON_FISCAL = 0.02;
 const HISTORICAL_ONLINE_PAYMENT_METHOD = "ONLINE";
 const ONLINE_PAYMENT_METHODS = Object.freeze([PAYMENT_METHOD.WIX_PAYMENTS]);
 
-function normalizeHistoricalPaymentMethod(raw) {
-    const value = _safeTrim(raw).toUpperCase();
+function readHistoricalPaymentMethod(movement) {
+    const value = _safeTrim(movement?.paymentMethod).toUpperCase();
     if (value === HISTORICAL_ONLINE_PAYMENT_METHOD) {
-        log.warn("historical-payment-method-input", {
-            received: HISTORICAL_ONLINE_PAYMENT_METHOD,
+        log.warn("historical-payment-method-read", {
+            collection: MOVIMIENTOS_CAJA_COL,
+            docId: movement?._id ?? null,
             canonical: PAYMENT_METHOD.WIX_PAYMENTS,
         });
         return PAYMENT_METHOD.WIX_PAYMENTS;
@@ -503,7 +504,7 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
             return { status: "ERROR", data: null, error: { code: "INVALID_AMOUNT", message: "Importe positivo requerido" } };
         }
 
-        const paymentMethod = normalizeHistoricalPaymentMethod(payload?.paymentMethod);
+        const paymentMethod = _safeTrim(payload?.paymentMethod).toUpperCase();
         if (!Object.values(PAYMENT_METHOD).includes(paymentMethod)) {
             return { status: "ERROR", data: null, error: { code: "INVALID_PAYMENT_METHOD", message: "Forma de pago invalida" } };
         }
@@ -1253,10 +1254,10 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
             return { status: "ERROR", data: null, error: { code: "NO_MOVEMENTS", message: "No hay movimientos para cerrar" } };
         }
 
-        const totalCash = allMovements.filter(m => normalizeHistoricalPaymentMethod(m.paymentMethod) === PAYMENT_METHOD.EFECTIVO).reduce((s, m) => s + Number(m.accountingAmount || 0), 0);
-        const totalCard = allMovements.filter(m => normalizeHistoricalPaymentMethod(m.paymentMethod) === PAYMENT_METHOD.TARJETA).reduce((s, m) => s + Number(m.accountingAmount || 0), 0);
-        const totalBizum = allMovements.filter(m => normalizeHistoricalPaymentMethod(m.paymentMethod) === PAYMENT_METHOD.BIZUM).reduce((s, m) => s + Number(m.accountingAmount || 0), 0);
-        const totalOnline = allMovements.filter(m => ONLINE_PAYMENT_METHODS.includes(normalizeHistoricalPaymentMethod(m.paymentMethod))).reduce((s, m) => s + Number(m.accountingAmount || 0), 0);
+        const totalCash = allMovements.filter(m => readHistoricalPaymentMethod(m) === PAYMENT_METHOD.EFECTIVO).reduce((s, m) => s + Number(m.accountingAmount || 0), 0);
+        const totalCard = allMovements.filter(m => readHistoricalPaymentMethod(m) === PAYMENT_METHOD.TARJETA).reduce((s, m) => s + Number(m.accountingAmount || 0), 0);
+        const totalBizum = allMovements.filter(m => readHistoricalPaymentMethod(m) === PAYMENT_METHOD.BIZUM).reduce((s, m) => s + Number(m.accountingAmount || 0), 0);
+        const totalOnline = allMovements.filter(m => ONLINE_PAYMENT_METHODS.includes(readHistoricalPaymentMethod(m))).reduce((s, m) => s + Number(m.accountingAmount || 0), 0);
         const totalRefunds = allMovements.filter(m => m.movementType === MOVEMENT_TYPE.REEMBOLSO).reduce((s, m) => s + Number(m.accountingAmount || 0), 0);
         const totalTips = allMovements.filter(m => m.movementType === MOVEMENT_TYPE.PROPINA).reduce((s, m) => s + Number(m.accountingAmount || 0), 0);
         const totalAdjustments = allMovements.filter(m => m.movementType === MOVEMENT_TYPE.AJUSTE).reduce((s, m) => s + Number(m.accountingAmount || 0), 0);
