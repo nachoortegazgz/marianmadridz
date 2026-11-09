@@ -21,6 +21,15 @@ Todas las reservas creadas desde el flujo personalizado requieren una sesión Wi
 - La documentación oficial de Wix para `members.getCurrentMember()` indica que devuelve el miembro actual; el contrato del proyecto conserva `member._id` como `memberId` y `member.contactId` como `contactId`, sin asumir que sean iguales.
 - Referencias: [Get My Member — @wix/members](https://dev.wix.com/docs/api-reference/crm/members-contacts/members/member-management/members/get-my-member?apiView=SDK), [Wix Web Methods permissions](https://dev.wix.com/docs/develop-websites/articles/coding-with-velo/velo-web-modules/web-methods).
 
+## Requisito adicional de configuración Wix nativa (bloqueante para cobertura total)
+La protección de este PR cubre la ruta personalizada `processDualBooking`. No modifica las páginas nativas de Wix Bookings ni puede impedir por sí sola que otra superficie nativa cree reservas.
+
+La documentación oficial de Wix indica que actualmente no existe una opción global para exigir login en el último paso de reserva. Wix propone como alternativa restringir las páginas de reservas a miembros:
+- [Wix Bookings Request: Requiring Login or Registration Before Booking a Service](https://support.wix.com/en/article/wix-bookings-request-requiring-login-or-registration-before-booking-a-service)
+- [Wix Bookings: Allowing Clients to Become Site Members](https://support.wix.com/en/article/wix-bookings-allowing-clients-to-become-site-members)
+
+**Acción manual obligatoria antes de considerar cubiertas todas las reservas:** en Wix Studio, revisar Pages & Menu y restringir a miembros todas las páginas de reserva nativas y la página personalizada de calendario/reserva. Confirmar también que no quedan enlaces públicos alternativos a páginas de reserva nativas. La configuración viva de acceso de esas páginas no es legible ni modificable mediante el conector Wix disponible en esta tarea; queda pendiente de verificación por el propietario en el Editor.
+
 ## Impacto y límites
 - Las reservas de invitados dejan de estar permitidas en este flujo.
 - Los usuarios podrán seguir consultando servicios y disponibilidad antes de iniciar sesión.
