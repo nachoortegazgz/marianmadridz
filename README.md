@@ -1,6 +1,6 @@
 # Marian Madrid — Wix Editor + Velo
 
-Repositorio canónico del sitio **Marian Madrid Peluquería y Estética** (`www.marianmadrid.es`), destinado a QA, pruebas previas y simulacros controlados antes de cambios en el sitio real. El proyecto se construye sobre Wix y sus Wix Apps nativas, con Microsoft 365 como capa documental externa.
+Repositorio canónico del sitio **Marian Madrid Peluquería y Estética** (\`www.marianmadrid.es\`), destinado a QA, pruebas previas y simulacros controlados antes de cambios en el sitio real. El proyecto se construye sobre Wix y sus Wix Apps nativas, con Microsoft 365 como capa documental externa.
 
 ## Arquitectura y fuente de verdad
 
@@ -23,18 +23,18 @@ El código, la configuración viva de Wix, los contratos oficiales de las APIs y
 
 - Proyecto Wix Editor clásico con Velo y Wix CLI for Sites.
 - Node.js mínimo: **24.22.1**, conforme a la documentación de Wix CLI for Sites consultada.
-- Instalar dependencias con `npm ci`; usar Wix CLI for Sites para gestionar paquetes Wix.
+- Instalar dependencias con \`npm ci\`; usar Wix CLI for Sites para gestionar paquetes Wix.
 - No editar manualmente artefactos generados por Wix CLI.
-- Comandos de validación disponibles: `npm run lint`, `npm test`, `npm run test:layer1`, `npm run test:layer2`.
+- Comandos de validación disponibles: \`npm run lint\`, \`npm test\`, \`npm run test:layer1\`, \`npm run test:layer2\`.
 
 ## GitHub Actions y rutas de trabajo
 
-- Los workflows usan runners alojados por GitHub (`ubuntu-latest`) y `actions/checkout` descarga el commit del evento dentro del workspace del runner.
-- La ruta operativa debe obtenerse dinámicamente con `${{ github.workspace }}` o mediante rutas relativas al repositorio. No codificar rutas absolutas del equipo local ni rutas internas fijas del runner.
-- La ruta local `C:\\Users\\nacho\\marianmadridz` pertenece únicamente al clon de desarrollo en Windows. No es accesible desde GitHub-hosted runners y no se debe pasar al workflow.
-- En un run observado, GitHub situó este repositorio en `/home/runner/work/marianmadridz/marianmadridz`. Es una ruta de ejecución del runner, no una ruta contractual: puede cambiar según el runner y el contexto.
-- El workflow `.github/workflows/backend-offline-quality.yml` ejecuta QA offline (Layer 1/2, regresión, contratos SDK y ESLint). **No inicia Wix Preview, Wix Publish ni otros despliegues.**
-- El workflow comprueba que la raíz Git del checkout coincide con `$GITHUB_WORKSPACE`.
+- Los workflows usan runners alojados por GitHub (\`ubuntu-latest\`) y \`actions/checkout\` descarga el commit del evento dentro del workspace del runner.
+- La ruta operativa debe obtenerse dinámicamente con \`\${{ github.workspace }}\` o mediante rutas relativas al repositorio. No codificar rutas absolutas del equipo local ni rutas internas fijas del runner.
+- La ruta local \`C:\Users\nacho\marianmadridz\` pertenece únicamente al clon de desarrollo en Windows. No es accesible desde GitHub-hosted runners y no se debe pasar al workflow.
+- En un run observado, GitHub situó este repositorio en \`/home/runner/work/marianmadridz/marianmadridz\`. Es una ruta de ejecución del runner, no una ruta contractual: puede cambiar según el runner y el contexto.
+- El workflow \`.github/workflows/backend-offline-quality.yml\` ejecuta QA offline (Layer 1/2, regresión, contratos SDK y ESLint). **No inicia Wix Preview, Wix Publish ni otros despliegues.**
+- El workflow comprueba que la raíz Git del checkout coincide con \`$GITHUB_WORKSPACE\`.
 
 ## Criterio de validación
 
@@ -49,7 +49,7 @@ CI verde no equivale a E2E ni a publicación. No afirmar que una función está 
 
 - **Wix Preview:** ejecución exclusivamente manual por el propietario mediante Wix Editor o Wix CLI for Sites.
 - **Wix Publish:** publicación exclusivamente manual y autorizada por el propietario mediante Wix Editor o Wix CLI for Sites.
-- **GitHub Actions no contiene workflows de Wix Preview ni Wix Publish.** Los cambios en `main` no deben iniciar despliegues Wix; GitHub Actions conserva únicamente las comprobaciones de calidad automatizadas.
+- **GitHub Actions no contiene workflows de Wix Preview ni Wix Publish.** Los cambios en \`main\` no deben iniciar despliegues Wix; GitHub Actions conserva únicamente las comprobaciones de calidad automatizadas.
 - Antes de publicar, ejecutar las pruebas offline pertinentes, revisar la sincronización del código y de la versión UI del Editor y confirmar el destino Wix.
 - No tocar producción ni CMS de producción fuera del proceso manual controlado y sin autorización explícita.
 - No crear reservas, pagos, devoluciones, movimientos económicos, emails ni automatizaciones activas sin autorización.
