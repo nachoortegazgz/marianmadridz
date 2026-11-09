@@ -118,9 +118,9 @@ No se declarará “todos los datos quedan registrados” hasta disponer, para c
 
 ### 7.2 Webhook ORDER_CREATED: fallo no durable acreditado
 
-En `src/backend/events.js::wixEcom_onOrderCreated`, el bloque `catch` llama a `_handleError`, pero solo relanza errores cuyo mensaje contiene `INVENTORY_`; para otros errores devuelve `{ status: "OK" }`. Si falla la persistencia del marcador `ORDER_CREATED` u otra operación fuera de esa categoría, el handler puede finalizar como OK sin que el código inspeccionado acredite una cola durable de recuperación.
+En `src/backend/events.js::wixEcom_onOrderCreated`, el código anterior solo relanzaba errores `INVENTORY_`; otros fallos devolvían `{ status: "OK" }`, lo que ocultaba el fallo de persistencia del marcador.
 
-No se ha modificado este comportamiento en esta intervención: la documentación oficial de Wix consultada describe la ejecución de Velo event handlers, pero no establece en la página revisada una garantía de reintento automático que permita depender de lanzar una excepción como mecanismo de recuperación. La solución segura requiere diseñar una reconciliación periódica contra Wix Orders o una cola durable propia y probarla en el sitio publicado de QA.
+PR #219 cambia el handler para propagar todos los errores y añade reconciliación periódica independiente contra Wix Orders. La documentación oficial de Wix confirma entrega asíncrona al menos una vez e insta a implementar idempotencia, pero no se ha encontrado una garantía explícita de reintento automático ante una excepción de Velo. Por ello, la recuperación periódica no depende exclusivamente de ese comportamiento.
 
 ### 7.3 Capa 3: corrección del estado
 
@@ -139,7 +139,7 @@ La documentación oficial de Wix consultada indica que los Velo backend event ha
 - `src/backend/reservas.web.js::_writeDaysCacheWindow`: ahora añade `traceId` al registro temporal `DAYS_CACHE`; prueba `RES-DAYS-01` verifica el campo.
 - `src/backend/cajas.web.js::getCashierState`: eliminados los `.catch()` que convertían fallos de lectura/conteo del ledger en cero operaciones o en el contador de la proyección. El método devuelve ERROR si no puede leer el ledger. `site.flows.offline.test.mjs` cubre el fallo de lectura forzado.
 - La normalización `CANCELED`, la validación `scheduleId` y la corrección contable `cashMovementId` siguen incluidas en la rama.
-- Se mantiene pendiente el fallo no durable de `wixEcom_onOrderCreated` descrito en §7.2; no se declara resuelto.
+- El fallo de `wixEcom_onOrderCreated` descrito en §7.2 se corrige en PR #219: el handler ya no devuelve OK tras un error de persistencia; propaga el error y existe un cron independiente de reconciliación. No se afirma que la excepción por sí sola garantice reintento automático.
 - No se ha hecho merge ni despliegue. No se han escrito datos ni esquemas CMS, ni se han ejecutado pagos, reservas, movimientos fiscales o cambios de stock.
 
 
@@ -164,6 +164,7 @@ La consulta de `ControlOperativo` devolvió 68 filas, pero ninguna con `payload.
 - Pedidos con línea Stores, mezcla de catálogos, appId ausente o líneas vacías quedan sin marcador y reciben alerta deduplicada `ORDER_CREATED_RECONCILIATION_REQUIRED`.
 - El cron no genera movimientos de caja, asientos, pagos, reservas ni movimientos de inventario.
 - El webhook reconoce los marcadores de reconciliación para evitar reprocesar pedidos Booking-only si llega un evento tardío.
+- Límite oficial de Search Orders: PENDING y REJECTED requieren filtros explícitos (incluidos); INITIALIZED nunca aparece en Search Orders. Esos pedidos solo pueden procesarse desde su evento original o con Get Order si ya se conoce su ID. La reconciliación periódica no certifica cobertura de INITIALIZED.
 - Ejecución programada: cada 30 minutos, timeout 180 s, reintentos/alertas de fallo configurados.
 
 ### Pruebas y estado
