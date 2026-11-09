@@ -181,7 +181,7 @@ $w.onReady(async () => {
                 enableScheduleQuery: false,   // backend de resumen aun no implementado
                 enableStaffManagement: false, // backend real pendiente
                 enableAIAssistant: false,      // proveedor IA no conectado
-                enableAccountantSend: true,   // ✅ NUEVO
+                enableAccountantSend: false,  // despacho bloqueado hasta cerrar snapshot inmutable
                 enableFiscal: true,
                 enableDocuments: true,
 
