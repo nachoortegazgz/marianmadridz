@@ -84,11 +84,9 @@ const API_TIMEOUT_MS =
 SDK_CONFIG.TIMEOUTS.API_MS;
 const MAX_COMPENSATION_ATTEMPTS =
 Math.max(1, Number(CONCURRENCY?.MAX_COMPENSATION_RETRIES) || 3);
-// CRON-P2-01: MapaStaff es coleccion MUERTA (internalConfig v12.1-SSOT
-// PEND-DAL: staff.js v9 lee exclusivamente de la Bookings Staff API).
-// Retirada de criticalCols en systemHealthCheck: referenciar una clave
-// inexistente devolvia undefined -> query a coleccion vacia y contaje
-// erroneo "accessible:true".
+// CRON-P2-01: systemHealthCheck comprueba las colecciones críticas del ledger
+// y la agenda. MapaStaff se mantiene como mapeo de identidad para proyecciones
+// nativas cuando el evento Wix no aporta resourceId/scheduleId.
 // AUDIT-NZ-01 / AUDIT-WEBHOOK-01: unicos controlTypes purgables por
 // cleanAuditLogs. WEBHOOK_EVENT es ledger append-only (ADR-05): NUNCA se
 // purgea desde el cron, ni aunque llegue a estado terminal.
