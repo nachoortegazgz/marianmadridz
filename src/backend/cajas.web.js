@@ -660,7 +660,13 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
         await _assertPeriodNotClosed(operationDate, traceId);
 
         const lastMovement = await _getLastMovement();
-        const seq = await allocateFiscalSequence(ledgerLock, lastMovement, traceId);
+        let seq;
+        try {
+            seq = await allocateFiscalSequence(ledgerLock, lastMovement);
+        } catch (sequenceError) {
+            if (sequenceError?.code === "SEQUENCE_RESULT_UNKNOWN") retainLedgerLock = true;
+            throw sequenceError;
+        }
         const previousRecordHash = lastMovement?.hash || GENESIS_HASH;
 
         const generatedAt = new Date();
@@ -729,7 +735,7 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
         try {
             digitalSignature = await _computeSignature(movementHash, traceId);
         } catch (signErr) {
-            const rolledBack = await rollbackFiscalSequence(ledgerLock, seq, traceId);
+            const rolledBack = await rollbackFiscalSequence(ledgerLock, seq);
             if (!rolledBack) {
                 retainLedgerLock = true;
                 log.error("FISCAL_SEQUENCE_ROLLBACK_FAILED", {
@@ -827,13 +833,13 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
                     .find(STRONG_READ)
                     .catch(() => ({ items: [] }));
                 if (existingMovement?.items?.length === 1) {
-                    await rollbackFiscalSequence(ledgerLock, seq, traceId);
+                    await rollbackFiscalSequence(ledgerLock, seq);
                     log.info("Ledger duplicate recovered after atomic claim", { transactionId, traceId });
                     return { status: "SUCCESS", data: existingMovement.items[0], error: null, idempotent: true };
                 }
                 const existingClaim = await dalGet(CONTROL_OPERATIVO_COL, claimId, "strong").catch(() => null);
                 if (existingClaim) {
-                    const rolledBack = await rollbackFiscalSequence(ledgerLock, seq, traceId);
+                    const rolledBack = await rollbackFiscalSequence(ledgerLock, seq);
                     if (!rolledBack) retainLedgerLock = true;
                     return {
                         status: "ERROR",
@@ -882,7 +888,7 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
                 saved = recovered.items[0];
             } else {
                 const rolledBack = recovered?.items?.length === 0
-                    ? await rollbackFiscalSequence(ledgerLock, seq, traceId)
+                    ? await rollbackFiscalSequence(ledgerLock, seq)
                     : false;
                 if (!rolledBack) retainLedgerLock = true;
                 return {
