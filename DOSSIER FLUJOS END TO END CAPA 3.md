@@ -1,8 +1,8 @@
 # Dossier de flujos end-to-end — Capa 1 → Capa 3
 
 **Proyecto:** Marian Madrid · https://www.marianmadrid.es/  
-**Revisión:** 2026-11-09  
-**Baseline revisado:** `main` · `740bff3481d1af3e8278fa31bcb9c20d5424866c`  
+**Revisión:** 2026-11-10  
+**Baseline revisado:** `main` · `c046a975d0ca3d45e83aa2dbab07e278e02edaae`  
 **Estado:** arquitectura objetivo; implantación operativa no demostrada.
 
 ## 1. Propósito y límites
