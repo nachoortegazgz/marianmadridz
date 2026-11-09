@@ -35,12 +35,13 @@ El cron solo cierra la incidencia si se cumplen simultáneamente:
 ## Validación
 
 - Pruebas añadidas: contrato B-01/B-02 y reconciliación dual válida / estado de pago divergente.
-- CI run #42543224618 (run 79), commit funcional 381fa8f: **success**.
+- CI final #42543581386 (run 85), commit funcional 490327c: **success**.
   - Layer 1: 18 suites, 234 pruebas, 0 fallos.
   - Layer 2: 15 suites, 141 pruebas, 0 fallos.
-  - Regresión completa: 45 suites, 406 pruebas, 0 fallos.
-  - Contratos SDK Wix, Bookings Reader V2 y ESLint: correctos.
-- El commit posterior 004cc08 solo actualiza cabeceras/documentación de los tres módulos; no cambia lógica ejecutable.
+  - Regresión completa: 45 suites, 407 pruebas, 0 fallos.
+  - Contratos SDK Wix, Bookings Reader V2, ESLint y controladores PTY: correctos.
+- El contrato `REFUND-LOCK-01` vuelve a validar unicidad y saldo acumulado dentro del bloqueo fiscal global, antes de leer el head/hash y reservar secuencia.
+- No se ejecutó Wix Preview ni Publish; el CI es offline y no accede al CMS transaccional real.
 - No se ejecutó Wix Preview ni Publish. No hubo escrituras en CMS real, reservas reales, pagos ni reembolsos reales.
 
 ## Pendiente de QA aislado
