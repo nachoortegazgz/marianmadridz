@@ -82,6 +82,21 @@ El fallback legacy de emisor no sustituye la configuración de sistema requerida
 
 No modificar el endpoint hasta validar XML, envío, respuesta y configuración de modalidad.
 
+### 3.7 Consumidores y coexistencia con Wix Invoices
+
+Mapa de consumidores localizado mediante búsqueda del repositorio:
+- `src/backend/events.js` llama a `registrarEventoEconomico` para ventas de pedidos (`EVENT_TYPE.VENTA_LINEA`) y devoluciones/rectificativas (`EVENT_TYPE.RECTIFICATIVA`).
+- `src/pages/ZONA MARIAN.gn7mx.js` llama a `registerManualTransaction` para operaciones TPV.
+- `src/backend/cajas.web.js` contiene además un wrapper que vuelve a llamar a `registerManualTransaction` para movimientos de venta online.
+- No se localizó llamada de código a una operación `createInvoice` ni integración runtime con Wix Invoices.
+
+Contexto live de Wix obtenido el 2026-11-09:
+- Sitio publicado y Velo habilitado.
+- Wix Invoices instalada en versión V1.
+- Wix Stores instalada en Catalog V1.
+
+Consecuencia: el SIF propio y Wix Invoices V1 coexisten como sistemas instalados, pero la auditoría no acredita que Wix Invoices emita facturas ni que esté integrada con el ledger propio. Antes de activar VERI*FACTU debe documentarse qué sistema expide legalmente cada factura, qué series utiliza, qué SIF la genera y si las facturas de Wix Invoices se excluyen, se sincronizan o constituyen un SIF independiente. No asumir que la mera instalación de Wix Invoices equivale a emisión efectiva.
+
 ## 4. Requisitos técnicos oficiales relevantes
 
 Fuente AEAT: documento «Sistemas Informáticos de Facturación — Remisión voluntaria», versión 1.0.3 (28-07-2025).
