@@ -109,7 +109,10 @@ import {
  */
 export function resolveOrderLedgerAmount(order) {
     const orderTotalCandidates = [
+        order?.priceSummary?.totalPrice?.amount,
         order?.priceSummary?.total?.amount,
+        order?.payNow?.total?.amount,
+        order?.payNow?.totalPrice?.amount,
         order?.totals?.total?.amount,
     ];
     for (const rawOrderTotal of orderTotalCandidates) {
