@@ -2019,7 +2019,11 @@ export async function executeBookingSaga(unsafePayload) {
 
                     const checkout = await createBookingCartCheckout(
                         bookingF1Id,
-                        traceId
+                        traceId,
+                        {
+                            memberId: sessionMemberId,
+                            contactId: sessionContactId,
+                        }
                     );
 
                     return {

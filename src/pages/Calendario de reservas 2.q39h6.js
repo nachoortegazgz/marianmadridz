@@ -91,6 +91,7 @@ import {
 
 import { createWidgetBridge } from "public/widgetBridge";
 import { processDualBooking } from "backend/citasManager.web.js";
+import wixMembersFrontend from "wix-members-frontend";
 
 let currentServiceId = null;
 let currentSlug = null;
@@ -1376,6 +1377,32 @@ async function handleAvailability(
  * RESERVA
  * ========================================================================== */
 
+/**
+ * Wix Members native login gate for the custom booking flow.
+ * Called only from the booking widget message event, after page readiness.
+ * The backend still enforces Permissions.SiteMember and validates member/contact IDs.
+ */
+async function ensureBookingMemberSession() {
+    let member = await wixMembersFrontend.currentMember
+        .getMember()
+        .catch(() => null);
+
+    if (member?._id) return true;
+
+    try {
+        await wixMembersFrontend.authentication.promptLogin({ mode: "login", modal: true });
+    } catch (_) {
+        // Closing/cancelling the native login dialog is an expected user action.
+        return false;
+    }
+
+    member = await wixMembersFrontend.currentMember
+        .getMember()
+        .catch(() => null);
+
+    return Boolean(member?._id);
+}
+
 async function handleBooking(
     message,
     reply,
@@ -1548,6 +1575,17 @@ async function handleBooking(
     bookingInFlight = true;
 
     try {
+        // Open the native Wix Members login dialog before making the booking
+        // request. Keep the backend SiteMember permission as the security boundary.
+        const memberSessionReady = await ensureBookingMemberSession();
+        if (!memberSessionReady) {
+            reply(
+                MESSAGE_TYPES.BOOK,
+                resultError("AUTH_REQUIRED")
+            );
+            return;
+        }
+
         const result = await withTimeout(
             () => processDualBooking(requestPayload),
             120000,

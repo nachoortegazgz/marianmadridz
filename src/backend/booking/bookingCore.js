@@ -254,17 +254,28 @@ export const cancelBookingElevated = auth.elevate(bookings.cancelBooking);
 export const createCartV2 = cartV2.createCart;
 export const calculateCartV2 = cartV2.calculateCart;
 export const getCartV2CheckoutUrl = cartV2.getCheckoutUrl;
+export const deleteCartV2 = cartV2.deleteCart;
 
 const _confirmOrDeclineElevatedRaw = auth.elevate(
     bookings.confirmOrDeclineBooking
 );
 
-export async function createBookingCartCheckout(bookingId, traceId) {
+export async function createBookingCartCheckout(bookingId, traceId, memberIdentity) {
     const normalizedBookingId = _safeTrim(bookingId);
     if (!_looksLikeGuid(normalizedBookingId)) {
         throw createBookingError(
             ERROR_CODES.CHECKOUT_FAILED,
             "A valid Wix Bookings booking ID is required for Cart V2 checkout.",
+            { traceId: _safeTrim(traceId) }
+        );
+    }
+
+    const expectedMemberId = _safeTrim(memberIdentity?.memberId);
+    const expectedContactId = _safeTrim(memberIdentity?.contactId);
+    if (!_looksLikeGuid(expectedMemberId) || !_looksLikeGuid(expectedContactId)) {
+        throw createBookingError(
+            ERROR_CODES.AUTH_REQUIRED,
+            "Authenticated Wix member and contact IDs are required for booking checkout.",
             { traceId: _safeTrim(traceId) }
         );
     }
@@ -304,100 +315,141 @@ export async function createBookingCartCheckout(bookingId, traceId) {
         );
     }
 
-    const calculation = await withTimeout(
-        function () {
-            return calculateCartV2(cartId, { refreshCart: true });
-        },
-        checkoutTimeoutMs,
-        "calculateCartV2"
-    );
+    try {
+        // Create Cart may return an open-access cart when the caller identity
+        // is not propagated. Never expose a checkout URL unless Wix confirms
+        // that this isolated booking cart belongs to the authenticated member.
+        const customerInfo = createdCart?.customerInfo || {};
+        if (
+            _safeTrim(customerInfo.memberId) !== expectedMemberId ||
+            _safeTrim(customerInfo.contactId) !== expectedContactId ||
+            customerInfo.openAccess === true
+        ) {
+            throw createBookingError(
+                ERROR_CODES.CHECKOUT_FAILED,
+                "Cart V2 is not bound to the authenticated Wix member.",
+                {
+                    traceId: _safeTrim(traceId),
+                    cartId,
+                    memberBound: _safeTrim(customerInfo.memberId) === expectedMemberId,
+                    contactBound: _safeTrim(customerInfo.contactId) === expectedContactId,
+                    openAccess: customerInfo.openAccess === true,
+                }
+            );
+        }
 
-    const summary = calculation && calculation.summary;
-    const calculatedCartId = _safeTrim(
-        calculation && calculation.cart && calculation.cart._id
-    );
-    const cartLineItems = Array.isArray(calculation?.cart?.lineItems)
-        ? calculation.cart.lineItems
-        : null;
-    const matchingBookingItems = cartLineItems
-        ? cartLineItems.filter((item) => {
-              const reference = item?.source?.catalogReference;
-              return (
-                  reference?.appId === WIX_CATALOG_APP_IDS.BOOKINGS &&
-                  reference?.catalogItemId === normalizedBookingId
-              );
-          })
-        : [];
-    const bookingItemUnavailable = matchingBookingItems.some(
-        (item) => item?.status != null && item.status !== "IN_STOCK"
-    );
-    const violations = summary && summary.violations;
-    const totalAmount = _safeTrim(
-        summary &&
-            summary.priceSummary &&
-            summary.priceSummary.total &&
-            summary.priceSummary.total.amount
-    );
-    const currencyCode = _safeTrim(
-        calculation &&
-            calculation.cart &&
-            calculation.cart.businessInfo &&
-            calculation.cart.businessInfo.currencyCode
-    );
-
-    if (
-        calculatedCartId !== cartId ||
-        !cartLineItems ||
-        cartLineItems.length !== 1 ||
-        matchingBookingItems.length !== 1 ||
-        bookingItemUnavailable ||
-        (violations != null &&
-            (!Array.isArray(violations) || violations.length > 0)) ||
-        !totalAmount ||
-        !Number.isFinite(Number(totalAmount)) ||
-        Number(totalAmount) < 0 ||
-        !/^[A-Z]{3}$/.test(currencyCode)
-    ) {
-        throw createBookingError(
-            ERROR_CODES.CHECKOUT_FAILED,
-            "Cart V2 calculation is incomplete or contains violations.",
-            {
-                traceId: _safeTrim(traceId),
-                cartId: cartId,
-                violationCount: Array.isArray(violations) ? violations.length : null,
-            }
+        const calculation = await withTimeout(
+            function () {
+                return calculateCartV2(cartId, { refreshCart: true });
+            },
+            checkoutTimeoutMs,
+            "calculateCartV2"
         );
-    }
 
-    const checkoutResult = await _executeWithRetry(
-        function () {
-            return withTimeout(
+        const summary = calculation && calculation.summary;
+        const calculatedCartId = _safeTrim(
+            calculation && calculation.cart && calculation.cart._id
+        );
+        const cartLineItems = Array.isArray(calculation?.cart?.lineItems)
+            ? calculation.cart.lineItems
+            : null;
+        const matchingBookingItems = cartLineItems
+            ? cartLineItems.filter((item) => {
+                  const reference = item?.source?.catalogReference;
+                  return (
+                      reference?.appId === WIX_CATALOG_APP_IDS.BOOKINGS &&
+                      reference?.catalogItemId === normalizedBookingId
+                  );
+              })
+            : [];
+        const bookingItemUnavailable = matchingBookingItems.some(
+            (item) => item?.status != null && item.status !== "IN_STOCK"
+        );
+        const violations = summary && summary.violations;
+        const totalAmount = _safeTrim(
+            summary &&
+                summary.priceSummary &&
+                summary.priceSummary.total &&
+                summary.priceSummary.total.amount
+        );
+        const currencyCode = _safeTrim(
+            calculation &&
+                calculation.cart &&
+                calculation.cart.businessInfo &&
+                calculation.cart.businessInfo.currencyCode
+        );
+
+        if (
+            calculatedCartId !== cartId ||
+            !cartLineItems ||
+            cartLineItems.length !== 1 ||
+            matchingBookingItems.length !== 1 ||
+            bookingItemUnavailable ||
+            (violations != null &&
+                (!Array.isArray(violations) || violations.length > 0)) ||
+            !totalAmount ||
+            !Number.isFinite(Number(totalAmount)) ||
+            Number(totalAmount) < 0 ||
+            !/^[A-Z]{3}$/.test(currencyCode)
+        ) {
+            throw createBookingError(
+                ERROR_CODES.CHECKOUT_FAILED,
+                "Cart V2 calculation is incomplete or contains violations.",
+                {
+                    traceId: _safeTrim(traceId),
+                    cartId: cartId,
+                    violationCount: Array.isArray(violations) ? violations.length : null,
+                }
+            );
+        }
+
+        const checkoutResult = await _executeWithRetry(
+            function () {
+                return withTimeout(
+                    function () {
+                        return getCartV2CheckoutUrl(cartId);
+                    },
+                    apiTimeoutMs,
+                    "getCartV2CheckoutUrl"
+                );
+            },
+            2,
+            300
+        );
+
+        const checkoutUrl = _safeTrim(checkoutResult && checkoutResult.checkoutUrl);
+        if (!/^https:\/\//i.test(checkoutUrl)) {
+            throw createBookingError(
+                ERROR_CODES.CHECKOUT_FAILED,
+                "Cart V2 did not return a valid HTTPS checkout URL.",
+                { traceId: _safeTrim(traceId), cartId: cartId }
+            );
+        }
+
+        return {
+            cartId: cartId,
+            checkoutUrl: checkoutUrl,
+            totalAmount: totalAmount,
+            currencyCode: currencyCode,
+        };
+    } catch (error) {
+        try {
+            await withTimeout(
                 function () {
-                    return getCartV2CheckoutUrl(cartId);
+                    return deleteCartV2(cartId);
                 },
                 apiTimeoutMs,
-                "getCartV2CheckoutUrl"
+                "deleteCartV2"
             );
-        },
-        2,
-        300
-    );
-
-    const checkoutUrl = _safeTrim(checkoutResult && checkoutResult.checkoutUrl);
-    if (!/^https:\/\//i.test(checkoutUrl)) {
-        throw createBookingError(
-            ERROR_CODES.CHECKOUT_FAILED,
-            "Cart V2 did not return a valid HTTPS checkout URL.",
-            { traceId: _safeTrim(traceId), cartId: cartId }
-        );
+        } catch (cleanupError) {
+            log.error("CHECKOUT_CART_CLEANUP_FAILED", {
+                traceId: _safeTrim(traceId),
+                cartId,
+                error: cleanupError?.message || String(cleanupError),
+            });
+        }
+        throw error;
     }
-
-    return {
-        cartId: cartId,
-        checkoutUrl: checkoutUrl,
-        totalAmount: totalAmount,
-        currencyCode: currencyCode,
-    };
 }
 
 export async function confirmOrDeclineBookingElevated(bookingId, options) {

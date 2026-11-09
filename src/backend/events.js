@@ -68,6 +68,8 @@ import {
     _normalizeIdPart,
     _safeTrim,
     _looksLikeGuid,
+    getMadridLocalStringNoZ,
+    _toDateSafe,
     withTimeout,
 } from "public/mmUtils";
 
@@ -1247,6 +1249,216 @@ async function _upsertDualCancellationFlag(pairToken, traceId, triggerBookingId,
     }
     return { status, bookingIds, rows };
 }
+
+
+
+// ============================================================================
+// BOOKING RESCHEDULED
+// ============================================================================
+
+/**
+ * Reconcile reschedules performed through native Wix Bookings surfaces.
+ *
+ * A custom dual booking is represented by two independent Wix bookings. The
+ * native Members Area can reschedule one of them without knowing CitasF2's
+ * pairToken. Update only the booking Wix actually rescheduled and open a
+ * repair alert for its sibling; never move the sibling without availability
+ * validation and the dual-reschedule journal/lock protocol.
+ */
+export async function wixBookingsV2_onBookingRescheduled(rawBody) {
+    const traceId = makeTraceId("whook-reschedule");
+    try {
+        const event = await _verifyAndDecodeWebhook(rawBody, "BOOKING_RESCHEDULED");
+        if (!event) {
+            return { status: "REJECTED", reason: "JWT_VERIFICATION_FAILED" };
+        }
+
+        const { eventId, bookingId, booking } = _normalizeBookingsEvent(event);
+        const slot = booking?.bookedEntity?.slot || {};
+        const startRaw = booking?.startDate || slot.startDate;
+        const endRaw = booking?.endDate || slot.endDate;
+        const startDate = _toDateSafe(startRaw);
+        const endDate = _toDateSafe(endRaw);
+        if (
+            !eventId ||
+            !_looksLikeGuid(bookingId) ||
+            !startDate ||
+            !endDate ||
+            Number.isNaN(startDate.getTime()) ||
+            Number.isNaN(endDate.getTime()) ||
+            endDate.getTime() <= startDate.getTime()
+        ) {
+            log.warn("BOOKING_RESCHEDULED_INVALID_EVENT", { eventId, bookingId, traceId });
+            return { status: "RETRY_REQUIRED", reason: "INVALID_BOOKING_RESCHEDULED_EVENT" };
+        }
+
+        const existing = await dalQuery(CITAS_COL)
+            .eq(BOOKING_FIELDS.BOOKING_ID, bookingId)
+            .limit(1)
+            .find(STRONG_READ);
+        const currentCita = existing?.items?.[0] || null;
+        if (!currentCita) {
+            // Do not create an incomplete payment/fiscal projection from a
+            // reschedule-only event. Retry until the canonical booking row exists.
+            return {
+                status: "RETRY_REQUIRED",
+                reason: "RESCHEDULED_BOOKING_CITASF2_NOT_FOUND",
+                bookingId,
+            };
+        }
+
+        const incomingRevision = Number(booking?.revision);
+        const currentRevision = Number(currentCita?.revision);
+        if (
+            Number.isFinite(incomingRevision) &&
+            incomingRevision > 0 &&
+            Number.isFinite(currentRevision) &&
+            currentRevision > incomingRevision
+        ) {
+            const alreadyProcessed = await isEventProcessed(eventId);
+            if (!alreadyProcessed) {
+                await markEventAsProcessed(eventId, "BOOKING_RESCHEDULED", traceId, {
+                    bookingId,
+                    staleRevision: incomingRevision,
+                    currentRevision,
+                });
+            }
+            return { status: "OK", stale: true, bookingId };
+        }
+
+        const resourceId = _safeTrim(
+            slot?.resource?.id || booking?.resource?.id || currentCita.resourceId
+        );
+        const scheduleId = _safeTrim(
+            slot?.scheduleId || slot?.resource?.scheduleId || currentCita.scheduleId
+        );
+        const serviceId = _safeTrim(
+            slot?.serviceId || booking?.serviceId || currentCita.serviceId
+        );
+        const startLocal = getMadridLocalStringNoZ(startDate);
+        const dateYmd = startLocal ? startLocal.slice(0, 10) : "";
+        if (
+            !_looksLikeGuid(resourceId) ||
+            !_looksLikeGuid(scheduleId) ||
+            !_looksLikeGuid(serviceId) ||
+            !/^\\d{4}-\\d{2}-\\d{2}$/.test(dateYmd)
+        ) {
+            return {
+                status: "RETRY_REQUIRED",
+                reason: "RESCHEDULED_BOOKING_SLOT_PROJECTION_INCOMPLETE",
+                bookingId,
+            };
+        }
+
+        const updateResult = await _updateCitaSafe(
+            bookingId,
+            (cita) => {
+                const sameSlot =
+                    new Date(cita.slotStart).getTime() === startDate.getTime() &&
+                    new Date(cita.slotEnd).getTime() === endDate.getTime() &&
+                    _safeTrim(cita.resourceId) === resourceId &&
+                    _safeTrim(cita.scheduleId) === scheduleId &&
+                    _safeTrim(cita.serviceId) === serviceId;
+                if (
+                    sameSlot &&
+                    (!Number.isFinite(incomingRevision) || incomingRevision <= Number(cita.revision || 0))
+                ) {
+                    return null;
+                }
+                return {
+                    ...cita,
+                    serviceId,
+                    resourceId,
+                    scheduleId,
+                    slotStart: startDate,
+                    slotEnd: endDate,
+                    dateYmd,
+                    revision: Number.isFinite(incomingRevision) && incomingRevision > 0
+                        ? incomingRevision
+                        : cita.revision,
+                };
+            },
+            traceId,
+            "events_nativeBookingRescheduled"
+        );
+        if (!updateResult.updated && updateResult.reason !== "NO_CHANGE") {
+            return {
+                status: "RETRY_REQUIRED",
+                reason: "RESCHEDULED_BOOKING_CITASF2_UPDATE_FAILED",
+                bookingId,
+            };
+        }
+
+        const pairToken = _safeTrim(currentCita.pairToken || currentCita.meta?.pairToken);
+        let pairRepairRequired = false;
+        let pairedBookingIds = [bookingId];
+        if (pairToken) {
+            const pairResult = await dalQuery(CITAS_COL)
+                .eq(BOOKING_FIELDS.PAIR_TOKEN, pairToken)
+                .limit(3)
+                .find(STRONG_READ);
+            const pairRows = pairResult?.items || [];
+            pairedBookingIds = _normalizeBookingIds(pairRows.map((row) => row.bookingId));
+            pairRepairRequired = true;
+            const alert = await notifyOperationalAlert({
+                alertType: "DUAL_BOOKING_NATIVE_RESCHEDULE_MISMATCH",
+                severity: "CRITICAL",
+                message: "A native Wix Members reschedule changed one phase of a dual booking; reconcile the sibling through the controlled dual-reschedule flow.",
+                data: {
+                    pairToken,
+                    bookingId,
+                    bookingIds: pairedBookingIds,
+                    pairRowCount: pairRows.length,
+                    eventId,
+                    newStart: startDate.toISOString(),
+                    newEnd: endDate.toISOString(),
+                    actionRequired: "RECONCILE_SIBLING_WITH_DUAL_RESCHEDULE_JOURNAL",
+                },
+                traceId,
+                entityId: pairToken,
+                source: "WIX_BOOKINGS_RESCHEDULE_WEBHOOK",
+                dedupeKey: "DUAL_NATIVE_RESCHEDULE_" + pairToken + "_" + bookingId,
+            });
+            if (alert.failed) {
+                return {
+                    status: "RETRY_REQUIRED",
+                    reason: "DUAL_RESCHEDULE_REPAIR_ALERT_FAILED",
+                    bookingId,
+                };
+            }
+        }
+
+        const alreadyProcessed = await isEventProcessed(eventId);
+        if (!alreadyProcessed) {
+            await markEventAsProcessed(eventId, "BOOKING_RESCHEDULED", traceId, {
+                bookingId,
+                pairToken: pairToken || null,
+                pairRepairRequired,
+                bookingIds: pairedBookingIds,
+                revision: Number.isFinite(incomingRevision) ? incomingRevision : null,
+            });
+        }
+
+        log.warn("NATIVE_BOOKING_RESCHEDULED_RECONCILED", {
+            bookingId,
+            pairToken: pairToken || null,
+            pairRepairRequired,
+            eventId,
+            traceId,
+        });
+        return {
+            status: "OK",
+            bookingId,
+            pairRepairRequired,
+            bookingIds: pairedBookingIds,
+            updated: updateResult.updated,
+        };
+    } catch (error) {
+        _handleError(error, "wixBookingsV2_onBookingRescheduled", traceId);
+        return { status: "RETRY_REQUIRED", reason: "BOOKING_RESCHEDULED_HANDLER_ERROR" };
+    }
+}
+
 
 export async function wixBookingsV2_onBookingCanceled(rawBody) {
     const traceId = makeTraceId("whook-cancel");

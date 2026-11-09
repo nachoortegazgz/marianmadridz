@@ -484,3 +484,176 @@ test("EVENT-PAYMENT-09 official Wix eCommerce paid event appends WIX_PAYMENTS le
   assert.equal((wixDataMock._store.get(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA) || []).length, 1,
     "stable ORDER-{orderId} transaction id must prevent a second fiscal movement");
 });
+
+test("EVENT-BOOKING-RESCHEDULE-01 native reschedule updates only the affected CitasF2 phase and flags its dual sibling", async () => {
+  wixDataMock._reset();
+  wixDataMock._store.set("CitasF2", [
+    seedCita({
+      revision: 3,
+      paymentStatus: "PAID",
+      bookingStatus: "CONFIRMED",
+      orderId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    }),
+    seedCita({
+      _id: "cita-row-f2",
+      bookingId: F2_BOOKING_ID,
+      bookingType: "DUAL_F2",
+      revision: 3,
+      paymentStatus: "PAID",
+      bookingStatus: "CONFIRMED",
+      meta: { pairToken: PAIR_TOKEN, customSaga: true, linkedF1BookingId: BOOKING_ID },
+    }),
+  ]);
+
+  const result = await events.wixBookingsV2_onBookingRescheduled({
+    metadata: { id: "native-reschedule-event-01" },
+    data: {
+      booking: {
+        id: BOOKING_ID,
+        _id: BOOKING_ID,
+        revision: 4,
+        startDate: "2026-11-10T11:00:00",
+        endDate: "2026-11-10T11:30:00",
+        bookedEntity: {
+          slot: {
+            serviceId: SERVICE_ID,
+            scheduleId: SCHEDULE_ID,
+            startDate: "2026-11-10T11:00:00",
+            endDate: "2026-11-10T11:30:00",
+            resource: { id: RESOURCE_ID, scheduleId: SCHEDULE_ID },
+          },
+        },
+      },
+    },
+  });
+
+  assert.equal(result.status, "OK", JSON.stringify(result));
+  assert.equal(result.pairRepairRequired, true);
+  assert.equal(result.updated, true);
+  const rows = wixDataMock._store.get("CitasF2") || [];
+  const f1 = rows.find(row => row.bookingId === BOOKING_ID);
+  const f2 = rows.find(row => row.bookingId === F2_BOOKING_ID);
+  assert.equal(new Date(f1.slotStart).toISOString(), "2026-11-10T10:00:00.000Z");
+  assert.equal(new Date(f1.slotEnd).toISOString(), "2026-11-10T10:30:00.000Z");
+  assert.equal(f1.dateYmd, "2026-11-10");
+  assert.equal(f1.revision, 4);
+  assert.equal(f1.paymentStatus, "PAID");
+  assert.equal(f1.bookingStatus, "CONFIRMED");
+  assert.equal(f1.orderId, "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
+  assert.equal(new Date(f2.slotStart).toISOString(), "2026-10-22T09:00:00.000Z");
+  assert.equal(f2.paymentStatus, "PAID");
+  assert.equal(f2.pairToken, PAIR_TOKEN);
+
+  const alerts = (wixDataMock._store.get("ControlOperativo") || []).filter(
+    row => row.alertType === "DUAL_BOOKING_NATIVE_RESCHEDULE_MISMATCH"
+  );
+  assert.equal(alerts.length, 1);
+  assert.equal(alerts[0].status, "OPEN");
+  assert.deepEqual(alerts[0].payload.bookingIds.sort(), [BOOKING_ID, F2_BOOKING_ID].sort());
+});
+
+test("EVENT-BOOKING-RESCHEDULE-02 duplicate native reschedule event is idempotent", async () => {
+  wixDataMock._reset();
+  wixDataMock._store.set("CitasF2", [
+    seedCita({
+      revision: 4,
+      slotStart: new Date("2026-11-10T10:00:00.000Z"),
+      slotEnd: new Date("2026-11-10T10:30:00.000Z"),
+      dateYmd: "2026-11-10",
+    }),
+    seedCita({
+      _id: "cita-row-f2",
+      bookingId: F2_BOOKING_ID,
+      bookingType: "DUAL_F2",
+      meta: { pairToken: PAIR_TOKEN, customSaga: true },
+    }),
+  ]);
+  wixDataMock._store.set("ControlOperativo", [{
+    _id: "processed-event-marker",
+    controlType: IC.CONTROL_TYPE.WEBHOOK_EVENT,
+    dedupeKey: "WEBHOOK_aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa02",
+    eventId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa02",
+    status: IC.CONTROL_STATUS.COMPLETED,
+    payload: { eventType: "BOOKING_RESCHEDULED" },
+  }]);
+
+  const result = await events.wixBookingsV2_onBookingRescheduled({
+    metadata: { id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa02" },
+    data: {
+      booking: {
+        id: BOOKING_ID,
+        revision: 4,
+        startDate: "2026-11-10T10:00:00.000Z",
+        endDate: "2026-11-10T10:30:00.000Z",
+        bookedEntity: {
+          slot: {
+            serviceId: SERVICE_ID,
+            scheduleId: SCHEDULE_ID,
+            resource: { id: RESOURCE_ID, scheduleId: SCHEDULE_ID },
+          },
+        },
+      },
+    },
+  });
+
+  assert.equal(result.status, "OK", JSON.stringify(result));
+  assert.equal(result.updated, false);
+  assert.equal((wixDataMock._store.get("ControlOperativo") || []).filter(
+    row => row.alertType === "DUAL_BOOKING_NATIVE_RESCHEDULE_MISMATCH"
+  ).length, 1);
+});
+
+test("EVENT-BOOKING-RESCHEDULE-03 missing CitasF2 projection is retriable and never creates a partial row", async () => {
+  wixDataMock._reset();
+  const result = await events.wixBookingsV2_onBookingRescheduled({
+    metadata: { id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa03" },
+    data: {
+      booking: {
+        id: BOOKING_ID,
+        revision: 4,
+        startDate: "2026-11-10T10:00:00.000Z",
+        endDate: "2026-11-10T10:30:00.000Z",
+        bookedEntity: { slot: { serviceId: SERVICE_ID } },
+      },
+    },
+  });
+  assert.equal(result.status, "RETRY_REQUIRED");
+  assert.equal(result.reason, "RESCHEDULED_BOOKING_CITASF2_NOT_FOUND");
+  assert.equal((wixDataMock._store.get("CitasF2") || []).length, 0);
+  assert.equal((wixDataMock._store.get("ControlOperativo") || []).length, 0);
+});
+
+test("EVENT-BOOKING-RESCHEDULE-04 older native reschedule revision cannot roll a newer CitasF2 slot back", async () => {
+  wixDataMock._reset();
+  wixDataMock._store.set("CitasF2", [
+    seedCita({
+      revision: 5,
+      slotStart: new Date("2026-11-12T10:00:00.000Z"),
+      slotEnd: new Date("2026-11-12T10:30:00.000Z"),
+      dateYmd: "2026-11-12",
+    }),
+  ]);
+  const result = await events.wixBookingsV2_onBookingRescheduled({
+    metadata: { id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa04" },
+    data: {
+      booking: {
+        id: BOOKING_ID,
+        revision: 4,
+        startDate: "2026-11-10T10:00:00.000Z",
+        endDate: "2026-11-10T10:30:00.000Z",
+        bookedEntity: {
+          slot: {
+            serviceId: SERVICE_ID,
+            scheduleId: SCHEDULE_ID,
+            resource: { id: RESOURCE_ID, scheduleId: SCHEDULE_ID },
+          },
+        },
+      },
+    },
+  });
+  assert.equal(result.status, "OK");
+  assert.equal(result.stale, true);
+  const row = (wixDataMock._store.get("CitasF2") || [])[0];
+  assert.equal(new Date(row.slotStart).toISOString(), "2026-11-12T10:00:00.000Z");
+  assert.equal(row.revision, 5);
+});
