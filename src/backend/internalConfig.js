@@ -1,7 +1,19 @@
 /*
  * MODULE: backend/internalConfig.js
+ * VERSION: v12.1-SSOT-EMAIL
  * RESPONSIBILITY: canonical CMS names, business enums and shared configuration.
  * STANDARDS: single source of truth for active backend contracts.
+ *
+ * CAMBIOS v12.1-SSOT-EMAIL (respecto a v12.0):
+ *   ADD-01: SDK_CONFIG.TIMEOUTS.CMS_MS declarado como SSOT. Antes
+ *           fiscalDocuments.web.js caia a un fallback hard-coded 15000
+ *           cuando la clave no existia. Ahora es fuente unica.
+ *   ADD-02: SDK_CONFIG.EMAIL declarado como SSOT del remitente Resend.
+ *           fiscalDocuments.web.js lee FROM_NAME/FROM_ADDRESS; sin esta
+ *           clave caia a fallbacks hard-coded. Centralizado aqui.
+ *   NOTA: FROM_ADDRESS debe coincidir con un dominio verificado en Resend.
+ *         Si se cambia el dominio remitente, actualizar esta constante y
+ *         re-desplegar; no hay otra copia en el codigo.
  */
 
 export const ROL_WEBSITE = Object.freeze({
@@ -81,9 +93,29 @@ export const API = Object.freeze({
   STAFF_RESOURCE_TYPE_ID: "1cd44cf8-756f-41c3-bd90-3e2ffcaf1155",
 });
 
+/* ===========================================================================
+ * SDK_CONFIG — configuracion transversal de SDKs y servicios externos.
+ * v12.1: TIMEOUTS y EMAIL declarados como SSOT. Cualquier modulo que
+ * necesite estos valores debe leerlos aqui; cero fallbacks hard-coded en
+ * los consumidores.
+ * =========================================================================*/
 export const SDK_CONFIG = Object.freeze({
   TZ: "Europe/Madrid",
   LOCATION_ID: "7a12abfd-bf30-4847-bcdf-00dc573d4802",
+
+  TIMEOUTS: Object.freeze({
+    // Timeout canonico de operaciones CMS (query/get/insert/update).
+    // Consumidores: fiscalDocuments.web.js, dataAccess, cajas.web.js.
+    CMS_MS: 15000,
+  }),
+
+  EMAIL: Object.freeze({
+    // Remitente canonico de los envios via Resend (fiscalDocuments).
+    // FROM_ADDRESS DEBE coincidir con un dominio verificado en Resend.
+    // Si cambia el dominio, actualizar aqui y re-desplegar.
+    FROM_NAME: "Marian Madrid",
+    FROM_ADDRESS: "noreply@marianmadrid.com",
+  }),
 });
 
 export const BOOKING_STATUS = Object.freeze({
@@ -603,4 +635,3 @@ export function isValidGuid(value) {
 /* CERO-DEUDA H-06 (2026-10-20): buildInvoiceNumber eliminado. Cero consumidores
    en src/; la numeracion fiscal real vive en fiscalDocuments.web.js. Si algun
    consumidor futuro la necesita, renace junto a el, no "por si acaso". */
-
