@@ -29,13 +29,14 @@ El repositorio contiene una solución Wix Editor/Velo con reservas Bookings V2, 
 | Capa 3 M365 / SharePoint | Arquitectura objetivo; no implantación demostrada | No existe `exportService.js` ni jobs de exportación. PA-01…PA-07 y SharePoint no auditados en el tenant. Transporte requiere ADR. |
 | Asistente IA | Deshabilitado de forma segura | `aiAgent.web.js` falla cerrado con `AI_PROVIDER_NOT_CONFIGURED`; ZONA MARIAN mantiene `enableAIAssistant=false`. Copy público actual requiere comprobación visual. |
 | Gift Cards | App nativa instalada; personalización no implementada | Wix Gift Cards tiene 1 producto nativo configurado y 0 tarjetas emitidas. No existe `giftCards.web.js`, writer propio, QR scanner ni HMAC personalizado en `src/`. |
-| Páginas personalizadas / widgets | Parcial; contratos HTML incompletos | Wix devuelve 9 páginas estáticas y 2 dinámicas. Se detectaron y corrigieron en rama dos rutas erróneas (`/administracion` y `/politica-de-privacidad`). Los HTML de `#htmlAdministracion`, `#htmlAdmin` y `#htmlOnlyStaffPanel` no están sincronizados en el repo; ZONA STAFF tiene todos los flags funcionales desactivados y no enruta acciones de caja. |\n| Toolchain / lint | Bloqueo de mantenimiento | ESLint 8.25.0 está EOL; `@wix/eslint-plugin-cli@1.0.2` declara peer ESLint 8. La regla `no-invalid-backend-import` está desactivada y falta `src/velo.dependencies.json`. No forzar ESLint 10 ni editar artefactos Wix manualmente. |
+| Páginas personalizadas / widgets | Parcial; contratos HTML incompletos | Wix devuelve 9 páginas estáticas y 2 dinámicas. Se detectaron y corrigieron en rama dos rutas erróneas (`/administracion` y `/politica-de-privacidad`). Los HTML de `#htmlAdministracion`, `#htmlAdmin` y `#htmlOnlyStaffPanel` no están sincronizados en el repo; ZONA STAFF tiene todos los flags funcionales desactivados y no enruta acciones de caja. |
+| Toolchain / lint | Bloqueo de mantenimiento | ESLint 8.25.0 está EOL; `@wix/eslint-plugin-cli@1.0.2` declara peer ESLint 8. La regla `no-invalid-backend-import` está desactivada y falta `src/velo.dependencies.json`. No forzar ESLint 10 ni editar artefactos Wix manualmente. |
 
 ## 3. Evidencia de validación
 
 ### CI
 
-- Main incorpora PR #229 (correcciones Capa 1) y PR #230 (checkpoint documental).
+- Main incorpora PR #229 (correcciones Capa 1), PR #230 (checkpoint documental) y PR #231 (smoke live y reconciliación Catalog V3).
 - Run #42656024671: 50 suites, 477 tests, 0 fallos; contratos SDK de Cart V2, Wix Data patch/bulkPatch y Bookings Reader V2.
 - Run #42656358136: CI del checkpoint documental, SUCCESS.
 - La CI es offline: mocks/fixtures no prueban hooks CMS, permisos efectivos, SDK importado en Velo, webhooks reales ni concurrencia en Wix.
@@ -53,7 +54,7 @@ Detalle: [Informe QA runtime/smoke](qa/2026-11-09-runtime-smoke-production.md).
 
 ### Publicación
 
-El último intento de publish documentado (run #42545413297, commit `072910c6`) es anterior a los merges #229/#230 y fue detenido por una discrepancia de versión UI del Editor (`15941`). **No se ha vuelto a comprobar ese guard sobre el HEAD actual**. El estado de publicación del commit `740bff3` queda sin verificar; no publicar ni desactivar el guard para resolverlo.
+El último intento de publish documentado (run #42545413297, commit `072910c6`) es anterior a los merges #229/#230 y fue detenido por una discrepancia de versión UI del Editor (`15941`). **No se ha vuelto a comprobar ese guard sobre el HEAD actual**. El estado de publicación del commit `cad48c04` queda sin verificar; no publicar ni desactivar el guard para resolverlo.
 
 ## 4. Prioridades de trabajo
 
@@ -72,7 +73,9 @@ Referencia: [Auditoría de preparación Veri*Factu](qa/2026-11-09-verifactu-read
 1. Abrir Wix Local Editor conectado al sitio y reconciliar versión UI/código.
 2. Verificar import real de `@wix/stores`, manifiesto generado por Wix CLI y scopes V3.
 3. Ejecutar E2E con miembros/servicios/slots QA y pagos no cobrables: reserva simple/dual, compensación, checkout Cart V2, webhooks, cancelación y reprogramación.
-4. Registrar y validar los maestros de inventario mediante `registerInventoryMaster` en QA; no crear mappings por REST ni en producción sin autorización.\n5. Probar hooks CMS, permisos, DISPLAY_TOKEN, locks, fencing, concurrencia e idempotencia.\n6. Sincronizar los HTML Components de administración y staff desde Wix Local Editor y conciliar IDs, mensajes, acciones y rutas antes de habilitar flags.
+4. Registrar y validar los maestros de inventario mediante `registerInventoryMaster` en QA; no crear mappings por REST ni en producción sin autorización.
+5. Probar hooks CMS, permisos, DISPLAY_TOKEN, locks, fencing, concurrencia e idempotencia.
+6. Sincronizar los HTML Components de administración y staff desde Wix Local Editor y conciliar IDs, mensajes, acciones y rutas antes de habilitar flags.
 7. Reconciliar Wix Bookings/Orders con proyecciones CMS mediante lecturas; no crear movimientos ni reparar históricos hasta disponer de procedimiento backend controlado y autorización.
 
 ### P1 — Capa 3
@@ -107,7 +110,8 @@ Referencia: [Auditoría de preparación Veri*Factu](qa/2026-11-09-verifactu-read
 - [Dossier técnico consolidado](../DOSSIER%20TÉCNICO%20CONSOLIDADO.md)
 - [Necesidades y criterios de aceptación](../NECESIDADES%20WEB%20MARIAN.txt)
 - [Flujos Capa 1 → Capa 3](../DOSSIER%20FLUJOS%20END%20TO%20END%20CAPA%203.md)
-- [Auditoría Catalog V3 e inventario](audits/2026-11-09-catalog-inventory-state.md)\n- [Auditoría de conciliación frontend/backend/Wix Apps](audits/2026-11-09-frontend-native-reconciliation.md)
+- [Auditoría Catalog V3 e inventario](audits/2026-11-09-catalog-inventory-state.md)
+- [Auditoría de conciliación frontend/backend/Wix Apps](audits/2026-11-09-frontend-native-reconciliation.md)
 - [Auditoría implantación Capa 3](audits/2026-11-09-capa3-implementation-state.md)
 - [Auditoría Veri*Factu](qa/2026-11-09-verifactu-readiness-audit.md)
 
