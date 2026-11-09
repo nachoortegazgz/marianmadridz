@@ -59,8 +59,8 @@ jobs:
           fi
           wix login --api-key "$CLI_API_KEY"
 
+      - name: Test Wix Preview PTY controller
+        run: python3 scripts/wix-preview-pty.py --self-test
+
       - name: Create Wix preview
-        shell: bash
-        run: |
-          set -euo pipefail
-          wix preview
+        run: python3 scripts/wix-preview-pty.py
