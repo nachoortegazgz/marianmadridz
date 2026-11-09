@@ -34,7 +34,7 @@ test('READ-02 taxable amount falls back to legacy with warn', () => {
   try {
     const v = T.readTaxableAmount({ taxableAmount: 80, _id: 'M1' });
     assert.strictEqual(v, 80);
-    assert.ok(warns.some((w) => String(w).includes('legacy-read')), 'expected legacy-read warning');
+    assert.ok(warns.some((w) => String(w).includes('historical-field-read')), 'expected historical-field-read warning');
   } finally {
     loggerMod.logger.warn = origWarn;
   }
@@ -56,7 +56,7 @@ test('READ-05 tax rate legacy emits warn', () => {
   loggerMod.logger.warn = (m) => { warns.push(m); };
   try {
     assert.strictEqual(T.readTaxRate({ tasaIva: 0.04, _id: 'M2' }), 0.04);
-    assert.ok(warns.length >= 1, 'expected at least one legacy-read warning');
+    assert.ok(warns.length >= 1, 'expected at least one historical-field-read warning');
   } finally {
     loggerMod.logger.warn = orig;
   }
