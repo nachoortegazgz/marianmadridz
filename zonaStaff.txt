@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Panel de Empleados - ONLY STAFF</title>
+  <style>
+    :root {
+      --bg: #f7f8fa; --surface: #ffffff; --ink: #23272f; --ink-secondary: #34404d;
+      --muted: #69707c; --line: #e6e9ed; --line-strong: #bac1ca; --soft: #f1f4f6;
+      --accent: #aa8756; --accent-hover: #8d6b3e; --accent-soft: #f7efe4; --accent-ink: #725226;
+      --navy: #273543; --navy-2: #1f2a35;
+      --navy-hero-start: #222c39; --navy-hero-mid: #34485a; --navy-hero-end: #596c7a;
+      --success: #1d6b4e; --success-hover: #15523b; --success-soft: #eaf6ef;
+      --warning: #9b671a; --warning-soft: #fff4df;
+      --danger: #b00020; --danger-hover: #8f001a; --danger-soft: #fff5f5;
+      --shadow: 0 16px 38px rgba(31, 40, 52, 0.07);
+      --shadow-sm: 0 8px 20px rgba(31, 40, 52, 0.03);
+      --radius-sm: 8px; --radius-md: 14px; --radius-lg: 20px; --radius-pill: 999px;
+      --font-serif: Georgia, "Times New Roman", serif;
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      min-height: 100vh; background: var(--bg); color: var(--ink);
+      font-family: var(--font-sans); font-size: 14px; line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+    button:focus-visible, input:focus-visible, select:focus-visible {
+      outline: 3px solid rgba(170, 135, 86, .48); outline-offset: 2px;
+    }
+    .widget-container { width: 100%; max-width: 1220px; margin: 0 auto; padding: clamp(14px, 3vw, 34px); }
+
+    .dashboard-hero {
+      display: flex; align-items: center; justify-content: space-between; gap: 24px;
+      margin-bottom: 20px; padding: clamp(22px, 4vw, 36px);
+      border: 1px solid var(--line); border-radius: var(--radius-lg);
+      background: linear-gradient(118deg, var(--navy-hero-start) 0%, var(--navy-hero-mid) 62%, var(--navy-hero-end) 100%);
+      color: #fff; box-shadow: var(--shadow);
+    }
+    .hero-eyebrow { margin: 0 0 8px; color: #d8c39f; font-size: 10px; font-weight: 900; letter-spacing: .14em; text-transform: uppercase; }
+    h1 { margin: 0; color: #fff; font-family: var(--font-serif); font-size: clamp(30px, 4vw, 44px); font-weight: 500; line-height: 1.05; letter-spacing: -.03em; }
+    .subtitle { max-width: 650px; margin: 10px 0 0; color: #e1e6ea; font-size: 13.5px; line-height: 1.5; }
+    .role-badge {
+      display: inline-flex; align-items: center; justify-content: center; min-width: 118px;
+      padding: 9px 14px; border: 1px solid rgba(255,255,255,.22); border-radius: var(--radius-pill);
+      background: rgba(255,255,255,.11); color: #fff; font-size: 10px; font-weight: 900;
+      letter-spacing: .1em; text-transform: uppercase; white-space: nowrap;
+    }
+    .error-banner, .info-banner, .warn-banner {
+      padding: 12px 16px; margin-bottom: 16px; border-radius: 10px; font-size: 13px;
+      display: none; font-weight: 600; line-height: 1.45;
+    }
+    .error-banner { background: var(--danger-soft); border: 1px solid #ffd6d6; color: var(--danger); }
+    .info-banner { background: var(--success-soft); border: 1px solid #cbe9d6; color: var(--success); }
+    .warn-banner { background: var(--warning-soft); border: 1px solid #f6dfb8; color: var(--warning); }
+
+    .clock-panel, .panel {
+      border: 1px solid var(--line); border-radius: 15px; background: var(--surface); box-shadow: var(--shadow-sm);
+    }
+    .clock-panel { padding: 20px; margin-bottom: 20px; }
+    .panel { padding: 20px; }
+    .panel.soft { background: var(--soft); }
+
+    .clock-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 14px; }
+    .panel-title { font-size: 15px; font-weight: 800; margin-bottom: 14px; border-bottom: 1px solid var(--line); padding-bottom: 10px; color: var(--ink); }
+    .clock-panel .panel-title { margin: 0; padding: 0; border: 0; font-size: 16px; }
+    .status-time { font-size: 12px; color: var(--muted); }
+
+    .clock-status-row {
+      display: flex; align-items: center; gap: 14px; margin-bottom: 14px;
+      padding: 10px 14px; background: var(--soft); border-radius: 10px;
+    }
+    .clock-status-row .status-value { font-size: 20px; font-weight: 850; }
+    .clock-status-row .status-time { font-size: 12px; color: var(--muted); }
+    .status-value.activo { color: var(--success); }
+    .status-value.pausa { color: var(--warning); }
+    .status-value.inactivo { color: var(--muted); }
+
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin-bottom: 20px; }
+    @media (max-width: 860px) { .dashboard-hero, .clock-panel-head { flex-direction: column; align-items: flex-start; } }
+
+    .row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    @media (max-width: 600px) { .row { grid-template-columns: 1fr; } }
+
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: .08em; color: #4a5568; margin-bottom: 5px; }
+    .form-group input, .form-group select, .form-group textarea {
+      width: 100%; min-height: 40px; padding: 8px 12px; border: 1px solid #d9dde3;
+      border-radius: var(--radius-sm); font-size: 13px; background: #fff; color: var(--ink); outline: none;
+      transition: border-color .15s ease, box-shadow .15s ease;
+    }
+    .form-group textarea { resize: vertical; min-height: 50px; }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--navy); box-shadow: 0 0 0 3px rgba(39,53,67,.12); }
+
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 100%; min-height: 42px; border: 1px solid transparent; background: var(--navy); color: #fff;
+      font-size: 11.5px; font-weight: 850; text-transform: uppercase; letter-spacing: .05em;
+      border-radius: var(--radius-sm); margin-top: 6px; transition: background-color .15s ease;
+    }
+    .btn:hover { background: var(--navy-2); }
+    .btn:disabled { cursor: not-allowed; opacity: .55; }
+    .btn-outline { background: transparent; border-color: var(--line-strong); color: var(--ink-secondary); }
+    .btn-outline:hover { background: var(--soft); border-color: var(--navy); }
+    .btn-success { background: var(--success); } .btn-success:hover { background: var(--success-hover); }
+    .btn-danger { background: var(--danger); } .btn-danger:hover { background: var(--danger-hover); }
+    .btn-warn { background: var(--accent); } .btn-warn:hover { background: var(--accent-hover); }
+    .btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
+    .btn-group .btn { flex: 1 1 120px; }
+
+    .history-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; }
+    .history-table th { text-align: left; padding: 10px 12px; background: var(--soft); color: var(--muted); font-size: 10px; font-weight: 900; letter-spacing: .06em; text-transform: uppercase; border-bottom: 1px solid var(--line); }
+    .history-table td { padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+    .history-scroll { max-height: 220px; overflow-y: auto; border: 1px solid var(--line); border-radius: 10px; }
+
+    /* ── Caja / TPV ── */
+    .cash-panel { margin-bottom: 20px; }
+    .cash-mode-badge { display: inline-block; margin-left: 8px; padding: 2px 8px; border-radius: var(--radius-pill); background: var(--warning-soft); color: var(--warning); font-size: 9px; font-weight: 900; letter-spacing: .06em; text-transform: uppercase; vertical-align: middle; }
+    .cash-mode-badge:empty { display: none; }
+    .cash-state-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 16px; }
+    .cash-state-item { padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--soft); }
+    .cash-state-value { display: block; margin-top: 4px; font-family: var(--font-serif); font-size: 20px; font-weight: 500; color: var(--ink); }
+    .metric-label { margin: 0; color: var(--muted); font-size: 10px; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; }
+    .cash-tabs { display: flex; gap: 4px; margin-bottom: 14px; border-bottom: 1px solid var(--line); }
+    .cash-tab { flex: 1; padding: 10px 12px; border: none; border-bottom: 3px solid transparent; background: transparent; color: var(--muted); font-size: 11px; font-weight: 850; text-transform: uppercase; letter-spacing: .05em; cursor: pointer; transition: color .15s, border-color .15s; }
+    .cash-tab:hover { color: var(--ink); }
+    .cash-tab.active { color: var(--accent-ink); border-bottom-color: var(--accent); }
+    .ticket-box { padding: 14px; border: 1px dashed var(--line-strong); border-radius: 10px; background: #fffefb; font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; font-size: 11.5px; line-height: 1.6; color: var(--ink); }
+    .ticket-title { font-weight: 900; text-align: center; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 8px; font-family: var(--font-sans); font-size: 12px; }
+    .ticket-row { display: flex; justify-content: space-between; gap: 12px; }
+    .ticket-row span:first-child { color: var(--muted); flex-shrink: 0; }
+    .ticket-row span:last-child { text-align: right; word-break: break-all; }
+    .ticket-sep { border-top: 1px dashed var(--line-strong); margin: 8px 0; }
+    .ticket-mono { font-family: monospace; font-size: 10px; }
+    .ticket-issuer { text-align: center; font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+    .footer { margin-top: 24px; text-align: center; font-size: 11.5px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 14px; }
+    .employee-select { max-width: 300px; margin-bottom: 8px; }
+  </style>
+</head>
+<body>
+  <div class="widget-container" id="root">
+    <header class="dashboard-hero">
+      <div>
+        <p class="hero-eyebrow">Operacion interna</p>
+        <h1>Panel Only Staff</h1>
+        <p class="subtitle" id="userInfo">Sesion activa: Equipo | EQUIPO | TPV</p>
+      </div>
+      <span class="role-badge" id="roleBadge">EQUIPO</span>
+    </header>
+
+    <div class="error-banner" id="errorBanner"></div>
+    <div class="info-banner" id="infoBanner"></div>
+    <div class="warn-banner" id="warnBanner"></div>
+
+    <!-- ════════════ CUADRO DE FICHAJE (visible por defecto) ════════════ -->
+    <section class="clock-panel" id="clockPanel">
+      <div class="clock-panel-head">
+        <div class="panel-title">Registrar actividad</div>
+        <span class="status-time">Fichajes protegidos y trazables (RD-Ley 8/2019)</span>
+      </div>
+      <div class="clock-status-row" id="statusBox" data-status="INACTIVO">
+        <span class="status-value inactivo" id="statusValue">Inactivo</span>
+        <span class="status-time" id="statusTime">Sin fichajes registrados hoy</span>
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-success" id="btnEntrada" type="button">Entrada</button>
+        <button class="btn btn-warn" id="btnPausaInicio" type="button">Inicio Pausa</button>
+        <button class="btn btn-success" id="btnPausaFin" type="button">Fin Pausa</button>
+        <button class="btn btn-danger" id="btnSalida" type="button">Salida</button>
+      </div>
+      <div class="btn-group" style="margin-top:8px;">
+        <button class="btn btn-outline" id="btnRefreshState" type="button">Refrescar estado</button>
+        <button class="btn btn-outline" id="btnOpenCalendar" type="button">Mi Calendario</button>
+      </div>
+    </section>
+
+    <!-- ════════════ CUADRO DE CAJA / TPV (visible por defecto) ════════════ -->
+    <section class="panel cash-panel" id="cashPanel">
+      <div class="panel-title">Caja / TPV <span class="cash-mode-badge" id="cashModeBadge"></span></div>
+
+      <div class="cash-state-grid">
+        <div class="cash-state-item">
+          <span class="metric-label">Saldo actual</span>
+          <span class="cash-state-value" id="cashSaldo">--</span>
+        </div>
+        <div class="cash-state-item">
+          <span class="metric-label">Operaciones hoy</span>
+          <span class="cash-state-value" id="cashOps">--</span>
+        </div>
+        <div class="cash-state-item">
+          <span class="metric-label">Jornada</span>
+          <span class="cash-state-value" id="cashDiaKey">--</span>
+        </div>
+        <div class="cash-state-item">
+          <span class="metric-label">Modo</span>
+          <span class="cash-state-value" id="cashMode">--</span>
+        </div>
+      </div>
+
+      <div class="cash-tabs">
+        <button class="cash-tab active" data-tab="supplier" type="button">Pago a proveedor</button>
+        <button class="cash-tab" data-tab="withdrawal" type="button">Salida de efectivo</button>
+        <button class="cash-tab" data-tab="reports" type="button">Arqueos / Cierres</button>
+      </div>
+
+      <div class="cash-tab-content" id="tabSupplier">
+        <div class="row">
+          <div class="form-group">
+            <label>Proveedor *</label>
+            <input type="text" id="supplierName" placeholder="Nombre del proveedor" />
+          </div>
+          <div class="form-group">
+            <label>NIF / CIF</label>
+            <input type="text" id="supplierNif" placeholder="B12345678" />
+          </div>
+        </div>
+        <div class="row">
+          <div class="form-group">
+            <label>Importe (EUR) *</label>
+            <input type="number" id="supplierAmount" min="0.01" step="0.01" placeholder="0.00" />
+          </div>
+          <div class="form-group">
+            <label>Referencia factura</label>
+            <input type="text" id="supplierInvoiceRef" placeholder="FAC-2026-001" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Concepto *</label>
+          <input type="text" id="supplierConcept" maxlength="200" placeholder="Ej: Compra de material" />
+        </div>
+        <button class="btn btn-warn" id="btnSupplierPayment" type="button">Generar ticket y registrar pago</button>
+      </div>
+
+      <div class="cash-tab-content" id="tabWithdrawal" style="display:none;">
+        <div class="row">
+          <div class="form-group">
+            <label>Importe (EUR) *</label>
+            <input type="number" id="withdrawalAmount" min="0.01" step="0.01" placeholder="0.00" />
+          </div>
+          <div class="form-group">
+            <label>Concepto *</label>
+            <input type="text" id="withdrawalConcept" maxlength="200" placeholder="Ej: Retirada a banco" />
+          </div>
+        </div>
+        <button class="btn btn-danger" id="btnWithdrawal" type="button">Registrar salida de efectivo</button>
+      </div>
+
+      <div class="cash-tab-content" id="tabReports" style="display:none;">
+        <div class="btn-group">
+          <button class="btn btn-outline" id="btnXCount" type="button">Generar Ticket X</button>
+          <button class="btn btn-danger" id="btnZClosing" type="button">Cierre Z Diario</button>
+        </div>
+        <p style="font-size:11px; color:var(--muted); margin-top:8px;">El Ticket X es un arqueo parcial sin cierre. El Cierre Z cierra la jornada y genera el informe fiscal diario.</p>
+      </div>
+
+      <div id="ticketDisplay" style="display:none; margin-top:16px;">
+        <div class="panel-title" style="font-size:13px;">Ticket generado</div>
+        <div class="ticket-box" id="ticketBox"></div>
+      </div>
+
+      <div style="margin-top:16px;">
+        <div class="panel-title" style="font-size:13px;">Movimientos recientes (MovimientosCaja)</div>
+        <div class="history-scroll">
+          <table class="history-table">
+            <thead><tr><th>Hora</th><th>Tipo</th><th>Concepto</th><th>Importe</th><th>Traza / Huella</th></tr></thead>
+            <tbody id="movementsBody">
+              <tr><td colspan="5" style="text-align:center; color:var(--muted);">Sin movimientos</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════ HISTORIAL (visible) / HORAS / ADMIN (ocultos) ════════════ -->
+    <div class="grid" id="lowerGrid">
+      <div class="panel" id="historyPanel">
+        <div class="panel-title">Historial de Fichajes</div>
+        <div class="row" style="margin-bottom:8px;">
+          <div class="form-group"><label>Desde</label><input type="date" id="histStart" /></div>
+          <div class="form-group"><label>Hasta</label><input type="date" id="histEnd" /></div>
+        </div>
+        <button class="btn btn-outline" id="btnLoadHistory" type="button">Cargar historial</button>
+        <div class="history-scroll" id="historyContainer" style="margin-top:10px;">
+          <table class="history-table">
+            <thead><tr><th>Fecha</th><th>Hora</th><th>Tipo</th></tr></thead>
+            <tbody id="historyBody">
+              <tr><td colspan="3" style="text-align:center; color:var(--muted);">Selecciona un rango de fechas</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel" id="hoursPanel" style="display:none;">
+        <div class="panel-title">Calculo de Horas
+          <span id="quickHours" style="float:right; font-weight:500; font-size:13px; color:var(--muted);">Consultar</span>
+        </div>
+        <div class="row" style="margin-bottom:8px;">
+          <div class="form-group"><label>Desde</label><input type="date" id="hoursStart" /></div>
+          <div class="form-group"><label>Hasta</label><input type="date" id="hoursEnd" /></div>
+        </div>
+        <button class="btn" id="btnCalcHours" type="button">Calcular horas</button>
+        <div style="margin-top:12px; padding:12px; background:var(--soft); border-radius:8px;" id="hoursResult">
+          <span style="color:var(--muted);">Horas trabajadas: &mdash;</span>
+          <br /><span style="color:var(--muted);">Tiempo de pausa: &mdash;</span>
+        </div>
+      </div>
+
+      <div class="panel" id="adminPanel" style="display:none;">
+        <div class="panel-title">Ajuste Horario (Admin)</div>
+        <div class="form-group">
+          <label>Empleado</label>
+          <select id="adjEmployee" class="employee-select"></select>
+        </div>
+        <div class="form-group">
+          <label>Fecha y Hora (referencia)</label>
+          <input type="datetime-local" id="adjDateTime" />
+        </div>
+        <div class="form-group">
+          <label>Motivo del ajuste *</label>
+          <input type="text" id="adjMotivo" placeholder="Ej: Correccion de salida" />
+        </div>
+        <button class="btn btn-warn" id="btnAdjSubmit" type="button">Registrar Ajuste</button>
+      </div>
+    </div>
+
+    <!-- ════════════ INVENTARIO (oculto por defecto) ════════════ -->
+    <div class="panel" id="inventoryPanel" style="display:none; margin-top:16px;">
+      <div class="panel-title">Inventario Interno</div>
+      <p style="font-size:12px; color:var(--muted); margin-bottom:12px;">Las ventas Wix Stores/POS descuentan stock nativo. Registra aqui consumo profesional y recepciones; aplica despues los ajustes pendientes en Wix Dashboard/POS.</p>
+      <div class="row">
+        <div class="form-group"><label>Producto</label><select id="inventorySku"></select></div>
+        <div class="form-group"><label>Unidades</label><input type="number" id="inventoryQuantity" min="1" step="1" value="1" /></div>
+      </div>
+      <div class="form-group">
+        <label>Referencia o nota</label>
+        <input type="text" id="inventoryNote" maxlength="500" placeholder="Ej: Coloracion servicio cliente" />
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-warn" id="btnInventoryUse" type="button">Registrar consumo interno</button>
+        <button class="btn btn-success" id="btnInventoryReceipt" type="button" style="display:none;">Registrar recepcion</button>
+        <button class="btn btn-outline" id="btnInventoryRefresh" type="button">Refrescar stock</button>
+      </div>
+      <div class="history-scroll" style="margin-top:12px;">
+        <table class="history-table">
+          <thead><tr><th>SKU</th><th>Producto</th><th>Stock previsto</th><th>Punto pedido</th></tr></thead>
+          <tbody id="inventoryBody">
+            <tr><td colspan="4" style="text-align:center; color:var(--muted);">Cargando inventario</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div id="inventoryQueuePanel" style="display:none; margin-top:12px;">
+        <div class="panel-title" style="margin-top:12px;">Conciliacion pendiente Wix</div>
+        <div class="history-scroll">
+          <table class="history-table">
+            <thead><tr><th>SKU</th><th>Delta</th><th>Motivo</th><th>Accion</th></tr></thead>
+            <tbody id="inventoryQueueBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer" id="footerInfo">Only Staff | Marian Madrid Peluqueria y Estetica</div>
+  </div>
+
+  <script>
+    (function () {
+      'use strict';
+
+      const MESSAGE_TYPES = {
+        READY: 'MM_READY', CONTEXT: 'MM_CONTEXT', NAV: 'MM_NAV',
+        CLOCK: 'CLOCK', GET_STATE: 'GET_STATE', GET_HISTORY: 'GET_HISTORY',
+        HOURS_CALC: 'HOURS_CALC', ADJUSTMENT: 'ADJUSTMENT',
+        INVENTORY_DASH: 'INVENTORY_DASH', INVENTORY_USE: 'INVENTORY_USE',
+        INVENTORY_RECEIPT: 'INVENTORY_RECEIPT', INVENTORY_QUEUE: 'INVENTORY_QUEUE',
+        INVENTORY_APPLY: 'INVENTORY_APPLY',
+        TPV_TX: 'TPV_TX', CASHIER_STATE: 'CASHIER_STATE',
+        X_COUNT: 'X_COUNT', Z_CLOSING: 'Z_CLOSING',
+        CLOCK_RES: 'CLOCK_RES', GET_STATE_RES: 'GET_STATE_RES',
+        GET_HISTORY_RES: 'GET_HISTORY_RES', HOURS_CALC_RES: 'HOURS_CALC_RES',
+        ADJUSTMENT_RES: 'ADJUSTMENT_RES',
+        INVENTORY_DASH_RES: 'INVENTORY_DASH_RES', INVENTORY_USE_RES: 'INVENTORY_USE_RES',
+        INVENTORY_RECEIPT_RES: 'INVENTORY_RECEIPT_RES', INVENTORY_QUEUE_RES: 'INVENTORY_QUEUE_RES',
+        INVENTORY_APPLY_RES: 'INVENTORY_APPLY_RES',
+        TPV_TX_RES: 'TPV_TX_RES', CASHIER_STATE_RES: 'CASHIER_STATE_RES',
+        X_COUNT_RES: 'X_COUNT_RES', Z_CLOSING_RES: 'Z_CLOSING_RES',
+        ONLY_STAFF_ERROR: 'ONLY_STAFF_ERROR', STAFF_ERROR: 'STAFF_ERROR'
+      };
+
+      const VALID_TYPES = new Set(Object.values(MESSAGE_TYPES));
+
+      let PARENT_ORIGIN = null;
+      let traceId = 'staff_widget_' + Date.now().toString(36);
+      let contextData = null;
+      let contextFallbackTimer = null;
+
+      const $ = (id) => document.getElementById(id);
+
+      const errorBanner = $('errorBanner'), infoBanner = $('infoBanner'), warnBanner = $('warnBanner');
+
+      const statusBox = $('statusBox'), statusValue = $('statusValue'), statusTime = $('statusTime');
+      const btnEntrada = $('btnEntrada'), btnPausaInicio = $('btnPausaInicio'),
+            btnPausaFin = $('btnPausaFin'), btnSalida = $('btnSalida'),
+            btnRefreshState = $('btnRefreshState'), btnOpenCalendar = $('btnOpenCalendar');
+
+      const histStart = $('histStart'), histEnd = $('histEnd'), btnLoadHistory = $('btnLoadHistory'), historyBody = $('historyBody');
+      const hoursStart = $('hoursStart'), hoursEnd = $('hoursEnd'), btnCalcHours = $('btnCalcHours'),
+            hoursResult = $('hoursResult'), quickHours = $('quickHours');
+      const adminPanel = $('adminPanel'), adjEmployee = $('adjEmployee'), adjDateTime = $('adjDateTime'),
+            adjMotivo = $('adjMotivo'), btnAdjSubmit = $('btnAdjSubmit');
+
+      const userInfo = $('userInfo'), roleBadge = $('roleBadge');
+
+      const clockPanel = $('clockPanel'), historyPanel = $('historyPanel'), hoursPanel = $('hoursPanel'),
+            cashPanel = $('cashPanel'), inventoryPanel = $('inventoryPanel');
+
+      const cashModeBadge = $('cashModeBadge'), cashSaldo = $('cashSaldo'), cashOps = $('cashOps'),
+            cashDiaKey = $('cashDiaKey'), cashMode = $('cashMode');
+      const tabSupplier = $('tabSupplier'), tabWithdrawal = $('tabWithdrawal'), tabReports = $('tabReports');
+      const supplierName = $('supplierName'), supplierNif = $('supplierNif'),
+            supplierAmount = $('supplierAmount'), supplierInvoiceRef = $('supplierInvoiceRef'),
+            supplierConcept = $('supplierConcept'), btnSupplierPayment = $('btnSupplierPayment');
+      const withdrawalAmount = $('withdrawalAmount'), withdrawalConcept = $('withdrawalConcept'),
+            btnWithdrawal = $('btnWithdrawal');
+      const btnXCount = $('btnXCount'), btnZClosing = $('btnZClosing');
+      const ticketDisplay = $('ticketDisplay'), ticketBox = $('ticketBox');
+      const movementsBody = $('movementsBody');
+
+      const inventorySku = $('inventorySku'), inventoryQuantity = $('inventoryQuantity'),
+            inventoryNote = $('inventoryNote'), btnInventoryUse = $('btnInventoryUse'),
+            btnInventoryReceipt = $('btnInventoryReceipt'), btnInventoryRefresh = $('btnInventoryRefresh'),
+            inventoryBody = $('inventoryBody'), inventoryQueuePanel = $('inventoryQueuePanel'),
+            inventoryQueueBody = $('inventoryQueueBody');
+
+      /* ── Comunicación ── */
+      function _sendToVelo(type, payload = {}, messageId) {
+        const msg = { type, payload: { ...payload, traceId } };
+        if (messageId) msg.messageId = messageId;
+        try { window.parent.postMessage(msg, PARENT_ORIGIN || '*'); } catch (_) {}
+      }
+      function _showError(m) { errorBanner.textContent = m; errorBanner.style.display = 'block'; infoBanner.style.display = 'none'; warnBanner.style.display = 'none'; }
+      function _showInfo(m) { infoBanner.textContent = m; infoBanner.style.display = 'block'; errorBanner.style.display = 'none'; warnBanner.style.display = 'none'; }
+      function _showWarn(m) { warnBanner.textContent = m; warnBanner.style.display = 'block'; errorBanner.style.display = 'none'; infoBanner.style.display = 'none'; }
+      function _hideAllBanners() { errorBanner.style.display = 'none'; infoBanner.style.display = 'none'; warnBanner.style.display = 'none'; }
+
+      /* Loading con timeout (evita quedar bloqueado si no llega el _RES) */
+      function _setLoading(btn, loading, timeoutMs) {
+        if (!btn) return;
+        if (loading) {
+          if (!btn.dataset.original) btn.dataset.original = btn.textContent;
+          btn.disabled = true; btn.textContent = 'Procesando...';
+          const token = (btn._loadToken || 0) + 1;
+          btn._loadToken = token;
+          if (timeoutMs) {
+            setTimeout(() => {
+              if (btn._loadToken === token && btn.disabled) {
+                btn.disabled = false;
+                btn.textContent = btn.dataset.original || btn.textContent;
+                _showWarn('Operación sin respuesta del servidor. Reintenta o revisa el bridge.');
+              }
+            }, timeoutMs);
+          }
+        } else {
+          btn._loadToken = (btn._loadToken || 0) + 1;
+          btn.disabled = false; btn.textContent = btn.dataset.original || btn.textContent;
+        }
+      }
+
+      function _formatMadridDate(value, dateOnly) {
+        if (!value) return '';
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return '';
+        const timeZone = contextData?.timeZone || 'Europe/Madrid';
+        const options = dateOnly
+          ? { year: 'numeric', month: '2-digit', day: '2-digit', timeZone }
+          : { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', timeZone };
+        return new Intl.DateTimeFormat('es-ES', options).format(date);
+      }
+      function _formatMoney(value) {
+        const amount = Number(value);
+        if (!Number.isFinite(amount)) return '--';
+        return new Intl.NumberFormat('es-ES', {
+          style: 'currency', currency: contextData?.currencyCode || 'EUR',
+          minimumFractionDigits: 2, maximumFractionDigits: 2
+        }).format(amount);
+      }
+
+      /* ── Estado de jornada ── */
+      function _updateStatus(state) {
+        if (!state) return;
+        const estado = state.estadoActual || 'INACTIVO';
+        const map = {
+          TRABAJANDO: { text: 'En jornada', cls: 'activo' },
+          EN_PAUSA: { text: 'En pausa', cls: 'pausa' },
+          INACTIVO: { text: 'Inactivo', cls: 'inactivo' },
+          AJUSTADO: { text: 'Ajustado', cls: 'inactivo' }
+        };
+        const info = map[estado] || { text: estado, cls: 'inactivo' };
+        statusValue.textContent = info.text;
+        statusValue.className = `status-value ${info.cls}`;
+        statusBox.dataset.status = estado;
+        if (state.ultimoFichaje) {
+          const uf = state.ultimoFichaje;
+          statusTime.textContent = `Ultimo fichaje: ${(uf.tipo || uf.tipoFichaje || '').trim()} ${_formatMadridDate(uf.fechaHora, false)}`.trim();
+        } else { statusTime.textContent = 'Sin fichajes registrados'; }
+        btnEntrada.disabled = estado === 'TRABAJANDO' || estado === 'EN_PAUSA';
+        btnSalida.disabled = estado !== 'TRABAJANDO' && estado !== 'EN_PAUSA';
+        btnPausaInicio.disabled = estado !== 'TRABAJANDO';
+        btnPausaFin.disabled = estado !== 'EN_PAUSA';
+      }
+
+      /* ── Caja ── */
+      function _renderCashierState(state) {
+        if (!state || typeof state !== 'object') {
+          cashSaldo.textContent = '--'; cashOps.textContent = '--';
+          cashDiaKey.textContent = '--'; cashMode.textContent = contextData?.cashierMode || '--';
+          _renderMovements([]);
+          return;
+        }
+        cashSaldo.textContent = _formatMoney(state.saldoTotal);
+        cashOps.textContent = Number.isFinite(Number(state.totalOperaciones)) ? String(state.totalOperaciones) : '--';
+        cashDiaKey.textContent = state.diaKey || '--';
+        cashMode.textContent = contextData?.cashierMode || state.cashierMode || '--';
+        const movements = Array.isArray(state.movimientos) ? state.movimientos
+          : Array.isArray(state.recentMovements) ? state.recentMovements : [];
+        _renderMovements(movements);
+      }
+
+      function _renderMovements(items) {
+        const movements = Array.isArray(items) ? items : [];
+        if (!movements.length) {
+          movementsBody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--muted);">Sin movimientos</td></tr>';
+          return;
+        }
+        movementsBody.innerHTML = '';
+        movements.forEach((m) => {
+          const tr = document.createElement('tr');
+          const hora = m.hora || (m.fechaHora ? new Intl.DateTimeFormat('es-ES', { hour: '2-digit', minute: '2-digit', timeZone: contextData?.timeZone || 'Europe/Madrid' }).format(new Date(m.fechaHora))) : '';
+          const tipo = m.tipo || m.txType || '';
+          const concepto = m.concepto || m.concept || '';
+          const importe = m.importe != null ? _formatMoney(m.importe) : (m.amount != null ? _formatMoney(m.amount) : '');
+          const traza = m.traza || m.traceId || m.huella || m.fiscalFingerprint || '';
+          [hora, tipo, concepto, importe, traza].forEach((v) => {
+            const td = document.createElement('td'); td.textContent = String(v); tr.appendChild(td);
+          });
+          movementsBody.appendChild(tr);
+        });
+      }
+
+      function _renderTicket(ticket) {
+        if (!ticket) { ticketDisplay.style.display = 'none'; return; }
+        ticketDisplay.style.display = 'block';
+        const lines = [];
+        lines.push(`<div class="ticket-title">${ticket.title || 'TICKET'}</div>`);
+        lines.push(`<div class="ticket-row"><span>Nº:</span><span>${ticket.ticketNumber || '—'}</span></div>`);
+        lines.push(`<div class="ticket-row"><span>Fecha:</span><span>${_formatMadridDate(ticket.createdAt || new Date(), false)}</span></div>`);
+        if (ticket.supplierName) lines.push(`<div class="ticket-row"><span>Proveedor:</span><span>${ticket.supplierName}</span></div>`);
+        if (ticket.supplierNif) lines.push(`<div class="ticket-row"><span>NIF:</span><span>${ticket.supplierNif}</span></div>`);
+        if (ticket.concept) lines.push(`<div class="ticket-row"><span>Concepto:</span><span>${ticket.concept}</span></div>`);
+        if (ticket.amount != null) lines.push(`<div class="ticket-row"><span>Importe:</span><span>${_formatMoney(ticket.amount)}</span></div>`);
+        if (ticket.paymentMethod) lines.push(`<div class="ticket-row"><span>Método:</span><span>${ticket.paymentMethod}</span></div>`);
+        lines.push(`<div class="ticket-sep"></div>`);
+        if (ticket.traceId) lines.push(`<div class="ticket-row"><span>Traza:</span><span class="ticket-mono">${ticket.traceId}</span></div>`);
+        if (ticket.fiscalFingerprint) lines.push(`<div class="ticket-row"><span>Huella fiscal:</span><span class="ticket-mono">${ticket.fiscalFingerprint}</span></div>`);
+        if (ticket.issuerName) lines.push(`<div class="ticket-sep"></div><div class="ticket-issuer">${ticket.issuerName}</div>`);
+        if (ticket.issuerCif) lines.push(`<div class="ticket-issuer">CIF: ${ticket.issuerCif}</div>`);
+        ticketBox.innerHTML = lines.join('');
+      }
+
+      /* ── Historial / Horas ── */
+      function _renderHistory(items) {
+        historyBody.innerHTML = '';
+        if (!items || items.length === 0) {
+          historyBody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:var(--muted);">No hay fichajes en este periodo</td></tr>';
+          return;
+        }
+        items.forEach((item) => {
+          const tr = document.createElement('tr');
+          const fecha = item.fechaHora ? _formatMadridDate(item.fechaHora, true) : item.diaKey || '';
+          const hora = item.hora || (item.fechaHora ? new Intl.DateTimeFormat('es-ES', { hour: '2-digit', minute: '2-digit', timeZone: contextData?.timeZone || 'Europe/Madrid' }).format(new Date(item.fechaHora)) : '');
+          [fecha, hora, item.tipo || item.tipoFichaje || ''].forEach((value) => {
+            const td = document.createElement('td'); td.textContent = String(value); tr.appendChild(td);
+          });
+          historyBody.appendChild(tr);
+        });
+      }
+
+      function _renderHoursResult(data) {
+        if (!data) {
+          quickHours.textContent = 'Consultar';
+          hoursResult.innerHTML = '<span style="color:var(--muted);">Horas trabajadas: &mdash;</span><br /><span style="color:var(--muted);">Tiempo de pausa: &mdash;</span>';
+          return;
+        }
+        const workedHours = Number(data.horasTrabajadasDecimal || 0);
+        quickHours.textContent = data.tiempoFormateado || `${workedHours}h`;
+        hoursResult.innerHTML = `
+          <span style="font-weight:600;">Horas trabajadas: ${workedHours}h (${data.tiempoFormateado || ''})</span><br />
+          <span style="color:var(--muted);">Tiempo de pausa: ${Number(data.horasPausaDecimal || 0)}h</span><br />
+          <span style="font-size:12px; color:var(--muted);">Fichajes procesados: ${Number(data.totalFichajesProcesados || 0)}</span>
+        `;
+      }
+
+      /* ── Inventario ── */
+      function _renderInventory(data, queue) {
+        const products = Array.isArray(data?.products) ? data.products : [];
+        const lowSku = new Set((data?.lowStock || []).map((item) => String(item.sku || '')));
+        inventorySku.innerHTML = ''; inventoryBody.innerHTML = '';
+        if (!products.length) {
+          inventorySku.innerHTML = '<option value="">Sin productos cargados</option>';
+          inventoryBody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--muted);">No hay productos importados</td></tr>';
+        } else {
+          products.forEach((product) => {
+            const option = document.createElement('option');
+            option.value = product.sku || '';
+            option.textContent = `${product.sku || ''} - ${product.productName || ''}`;
+            inventorySku.appendChild(option);
+            const tr = document.createElement('tr');
+            if (lowSku.has(String(product.sku || ''))) tr.style.color = 'var(--danger)';
+            [product.sku || '', product.productName || '', Number(product.stockExpected || 0), Number(product.reorderPoint || 0)].forEach((value) => {
+              const td = document.createElement('td'); td.textContent = String(value); tr.appendChild(td);
+            });
+            inventoryBody.appendChild(tr);
+          });
+        }
+        _renderInventoryQueue(queue || []);
+      }
+
+      function _renderInventoryQueue(items) {
+        const queue = Array.isArray(items) ? items : [];
+        inventoryQueueBody.innerHTML = '';
+        const canApply = !!(contextData?.isAdmin || contextData?.isCajero);
+        inventoryQueuePanel.style.display = canApply && queue.length ? 'block' : 'none';
+        queue.forEach((item) => {
+          const tr = document.createElement('tr');
+          [item.sku || '', Number(item.quantityDelta || 0), item.reason || ''].forEach((value) => {
+            const td = document.createElement('td'); td.textContent = String(value); tr.appendChild(td);
+          });
+          const action = document.createElement('td');
+          const applyButton = document.createElement('button');
+          applyButton.className = 'btn btn-outline';
+          applyButton.style.cssText = 'width:auto;padding:5px 8px;margin:0;';
+          applyButton.textContent = 'Aplicado en Wix';
+          applyButton.addEventListener('click', () => {
+            _setLoading(applyButton, true);
+            _sendToVelo(MESSAGE_TYPES.INVENTORY_APPLY, { reconciliationId: item._id, note: 'Ajustado manualmente en Wix Stores/POS' });
+          });
+          action.appendChild(applyButton); tr.appendChild(action); inventoryQueueBody.appendChild(tr);
+        });
+      }
+
+      function _sendInventory(type) {
+        const sku = inventorySku.value || '';
+        const quantity = Number(inventoryQuantity.value || 0);
+        const note = (inventoryNote.value || '').trim();
+        if (!sku || !Number.isFinite(quantity) || quantity <= 0) {
+          _showWarn('Selecciona un producto y una cantidad valida.'); return;
+        }
+        const token = `staff_${Date.now().toString(36)}_${sku}`;
+        _setLoading(type === MESSAGE_TYPES.INVENTORY_USE ? btnInventoryUse : btnInventoryReceipt, true);
+        _sendToVelo(type, { sku, quantity, note, referenceId: note || null, batchToken: token });
+      }
+
+      /* ═════════════════════════════════════════════════════════════════
+         CONTEXTO — alineado con zonastaff.js v5004
+         Defaults seguros: fichaje + caja + historial VISIBLES
+         ═════════════════════════════════════════════════════════════════ */
+      function _renderContext(ctx) {
+        contextData = ctx || {};
+        if (contextData.isAuthorized === false) { _showError('Acceso no autorizado.'); return; }
+
+        /* Cabecera */
+        const memberName = contextData.memberName || contextData.employeeName || 'EMPLEADO';
+        const roleLabel = contextData.roleLabel || (contextData.isAdmin ? 'ADMINISTRACION' : (contextData.isCajero ? 'CAJA' : 'EQUIPO'));
+        const panelType = contextData.panelType || 'TPV';
+        userInfo.textContent = `Sesion activa: ${memberName} | ${roleLabel} | ${panelType}`;
+        roleBadge.textContent = roleLabel;
+
+        /* Feature flags — defaults: fichaje/caja ON, schedule/inventory OFF */
+        const enableClocking      = contextData.enableClocking      !== false; // default ON
+        const enableBreaks        = contextData.enableBreaks        !== false; // default ON
+        const enableCashier       = contextData.enableCashier       !== false; // default ON
+        const enableInventory     = contextData.enableInventory     === true;  // default OFF
+        const enableScheduleQuery = contextData.enableScheduleQuery === true;  // default OFF
+        const isAdmin   = contextData.isAdmin === true;
+        const isCajero  = contextData.isCajero === true || enableCashier;
+
+        /* Visibilidad */
+        clockPanel.style.display     = enableClocking ? 'block' : 'none';
+        historyPanel.style.display   = enableClocking ? 'block' : 'none';
+        hoursPanel.style.display     = enableScheduleQuery ? 'block' : 'none';
+        cashPanel.style.display      = enableCashier ? 'block' : 'none';
+        inventoryPanel.style.display = enableInventory ? 'block' : 'none';
+        adminPanel.style.display     = isAdmin ? 'block' : 'none';
+
+        btnPausaInicio.style.display = enableBreaks ? '' : 'none';
+        btnPausaFin.style.display    = enableBreaks ? '' : 'none';
+
+        /* Caja: cabecera y estado inicial */
+        if (enableCashier) {
+          cashMode.textContent = contextData.cashierMode || '—';
+          cashModeBadge.textContent = contextData.cashierMode ? `(${contextData.cashierMode})` : '';
+          if (contextData.cashierState) _renderCashierState(contextData.cashierState);
+          setTimeout(() => _sendToVelo(MESSAGE_TYPES.CASHIER_STATE, {}), 700);
+        }
+
+        /* Admin: opciones de empleados */
+        if (isAdmin && Array.isArray(contextData.staffOptions)) {
+          adjEmployee.innerHTML = '';
+          contextData.staffOptions.forEach((s) => {
+            const opt = document.createElement('option');
+            opt.value = s.id || s.value;
+            opt.textContent = s.name || s.label || String(s);
+            adjEmployee.appendChild(opt);
+          });
+        }
+
+        /* Inventario (sólo si habilitado) */
+        if (isCajero || isAdmin) btnInventoryReceipt.style.display = 'block';
+        if (enableInventory) _renderInventory(contextData.inventory || null, contextData.inventoryQueue || []);
+
+        /* Estado de jornada */
+        if (contextData.estadoInicial) {
+          _updateStatus(contextData.estadoInicial);
+        } else if (enableClocking) {
+          setTimeout(() => _sendToVelo(MESSAGE_TYPES.GET_STATE, {}), 500);
+        }
+
+        /* Fechas por defecto */
+        const today = contextData.today || new Intl.DateTimeFormat('sv-SE', { timeZone: contextData.timeZone || 'Europe/Madrid' }).format(new Date());
+        histStart.value = today; histEnd.value = today;
+        hoursStart.value = today; hoursEnd.value = today;
+
+        /* Cancelar fallback: contexto real ya llegó */
+        if (contextFallbackTimer) { clearTimeout(contextFallbackTimer); contextFallbackTimer = null; }
+
+        _hideAllBanners();
+      }
+
+      /* Fechas por defecto (antes de cualquier contexto) */
+      const initialToday = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Madrid' }).format(new Date());
+      histStart.value = initialToday; histEnd.value = initialToday;
+      hoursStart.value = initialToday; hoursEnd.value = initialToday;
+
+      /* ── Tabs de caja ── */
+      const cashTabs = document.querySelectorAll('.cash-tab');
+      cashTabs.forEach((tab) => {
+        tab.addEventListener('click', () => {
+          cashTabs.forEach((t) => t.classList.remove('active'));
+          tab.classList.add('active');
+          tabSupplier.style.display = 'none';
+          tabWithdrawal.style.display = 'none';
+          tabReports.style.display = 'none';
+          const target = tab.dataset.tab;
+          if (target === 'supplier') tabSupplier.style.display = 'block';
+          else if (target === 'withdrawal') tabWithdrawal.style.display = 'block';
+          else if (target === 'reports') tabReports.style.display = 'block';
+        });
+      });
+
+      /* ── Listeners fichaje ── */
+      btnEntrada.addEventListener('click', () => _sendToVelo(MESSAGE_TYPES.CLOCK, { tipoFichaje: 'ENTRADA' }));
+      btnSalida.addEventListener('click', () => _sendToVelo(MESSAGE_TYPES.CLOCK, { tipoFichaje: 'SALIDA' }));
+      btnPausaInicio.addEventListener('click', () => _sendToVelo(MESSAGE_TYPES.CLOCK, { tipoFichaje: 'PAUSA_INICIO' }));
+      btnPausaFin.addEventListener('click', () => _sendToVelo(MESSAGE_TYPES.CLOCK, { tipoFichaje: 'PAUSA_FIN' }));
+      btnRefreshState.addEventListener('click', () => _sendToVelo(MESSAGE_TYPES.GET_STATE, {}));
+      btnOpenCalendar.addEventListener('click', () => _sendToVelo(MESSAGE_TYPES.NAV, { target: 'STAFF_CALENDAR' }));
+
+      /* ── Listeners historial / horas / admin ── */
+      btnLoadHistory.addEventListener('click', () => {
+        const start = histStart.value, end = histEnd.value;
+        if (!start || !end) return _showWarn('Selecciona un rango de fechas valido.');
+        _sendToVelo(MESSAGE_TYPES.GET_HISTORY, { startDateYMD: start, endDateYMD: end });
+      });
+      btnCalcHours.addEventListener('click', () => {
+        const start = hoursStart.value, end = hoursEnd.value;
+        if (!start || !end) return _showWarn('Selecciona un rango de fechas valido.');
+        _setLoading(btnCalcHours, true);
+        _sendToVelo(MESSAGE_TYPES.HOURS_CALC, { startDateYMD: start, endDateYMD: end });
+      });
+      btnAdjSubmit.addEventListener('click', () => {
+        const employeeId = adjEmployee.value;
+        const motivo = (adjMotivo.value || '').trim();
+        if (!employeeId || !motivo) return _showWarn('Completa Empleado y Motivo del ajuste.');
+        _setLoading(btnAdjSubmit, true);
+        _sendToVelo(MESSAGE_TYPES.ADJUSTMENT, { employeeId, motivoAjuste: motivo });
+      });
+
+      /* ── Listeners caja (con timeout de 12s) ── */
+      btnSupplierPayment.addEventListener('click', () => {
+        const name = (supplierName.value || '').trim();
+        const nif = (supplierNif.value || '').trim();
+        const amount = Number(supplierAmount.value);
+        const concept = (supplierConcept.value || '').trim();
+        const invoiceRef = (supplierInvoiceRef.value || '').trim();
+        if (!name || !concept || !Number.isFinite(amount) || amount <= 0) {
+          _showWarn('Completa proveedor, concepto e importe válido.'); return;
+        }
+        _setLoading(btnSupplierPayment, true, 12000);
+        _sendToVelo(MESSAGE_TYPES.TPV_TX, {
+          txType: 'PAGO_PROVEEDOR',
+          supplierName: name, supplierNif: nif, amount, concept,
+          invoiceRef: invoiceRef || null, paymentMethod: 'EFECTIVO',
+          generateTicket: true, requestFiscalFingerprint: true
+        });
+      });
+
+      btnWithdrawal.addEventListener('click', () => {
+        const amount = Number(withdrawalAmount.value);
+        const concept = (withdrawalConcept.value || '').trim();
+        if (!concept || !Number.isFinite(amount) || amount <= 0) {
+          _showWarn('Completa concepto e importe válido.'); return;
+        }
+        _setLoading(btnWithdrawal, true, 12000);
+        _sendToVelo(MESSAGE_TYPES.TPV_TX, {
+          txType: 'SALIDA_EFECTIVO', amount, concept,
+          generateTicket: true, requestFiscalFingerprint: true
+        });
+      });
+
+      btnXCount.addEventListener('click', () => {
+        _setLoading(btnXCount, true, 12000);
+        _sendToVelo(MESSAGE_TYPES.X_COUNT, { includeBreakdown: true, requestFiscalFingerprint: true });
+      });
+
+      btnZClosing.addEventListener('click', () => {
+        if (!confirm('¿Confirmas el Cierre Z Diario? Esta acción cierra la jornada fiscal.')) return;
+        _setLoading(btnZClosing, true, 12000);
+        _sendToVelo(MESSAGE_TYPES.Z_CLOSING, { confirm: true, requestFiscalFingerprint: true });
+      });
+
+      /* ── Listeners inventario / navegación ── */
+      btnInventoryUse.addEventListener('click', () => _sendInventory(MESSAGE_TYPES.INVENTORY_USE));
+      btnInventoryReceipt.addEventListener('click', () => _sendInventory(MESSAGE_TYPES.INVENTORY_RECEIPT));
+      btnInventoryRefresh.addEventListener('click', () => _sendToVelo(MESSAGE_TYPES.INVENTORY_DASH, {}));
+
+      /* ── Respuestas ── */
+      function _handleResponse(msg) {
+        const type = String(msg.type || '').toUpperCase();
+        const payload = msg.payload || {};
+        const data = payload.data, error = payload.error, status = payload.status;
+
+        switch (type) {
+          case MESSAGE_TYPES.GET_STATE_RES:
+            if (status === 'SUCCESS' && data) { _updateStatus(data); _hideAllBanners(); }
+            else _showError(error?.message || 'No se pudo obtener el estado.');
+            break;
+
+          case MESSAGE_TYPES.CLOCK_RES:
+            _setLoading(btnEntrada, false); _setLoading(btnSalida, false);
+            _setLoading(btnPausaInicio, false); _setLoading(btnPausaFin, false);
+            if (status === 'SUCCESS') {
+              _showInfo('Fichaje registrado correctamente.');
+              setTimeout(() => _sendToVelo(MESSAGE_TYPES.GET_STATE, {}), 500);
+            } else _showError(error?.message || 'Error al registrar el fichaje.');
+            break;
+
+          case MESSAGE_TYPES.GET_HISTORY_RES:
+            if (status === 'SUCCESS') { _renderHistory(data || []); _hideAllBanners(); }
+            else _showError(error?.message || 'Error al cargar el historial.');
+            break;
+
+          case MESSAGE_TYPES.HOURS_CALC_RES:
+            _setLoading(btnCalcHours, false);
+            if (status === 'SUCCESS') { _renderHoursResult(data); _hideAllBanners(); }
+            else _showError(error?.message || 'Error al calcular horas.');
+            break;
+
+          case MESSAGE_TYPES.ADJUSTMENT_RES:
+            _setLoading(btnAdjSubmit, false);
+            if (status === 'SUCCESS') {
+              _showInfo('Ajuste registrado correctamente.');
+              adjMotivo.value = ''; adjDateTime.value = '';
+              setTimeout(() => _sendToVelo(MESSAGE_TYPES.GET_STATE, {}), 500);
+            } else _showError(error?.message || 'Error al registrar el ajuste.');
+            break;
+
+          case MESSAGE_TYPES.CASHIER_STATE_RES:
+            if (status === 'SUCCESS' && data) _renderCashierState(data);
+            break;
+
+          case MESSAGE_TYPES.TPV_TX_RES:
+            _setLoading(btnSupplierPayment, false);
+            _setLoading(btnWithdrawal, false);
+            if (status === 'SUCCESS') {
+              _showInfo('Movimiento de caja registrado correctamente.');
+              if (data?.ticket) _renderTicket(data.ticket);
+              supplierName.value = ''; supplierNif.value = ''; supplierAmount.value = '';
+              supplierConcept.value = ''; supplierInvoiceRef.value = '';
+              withdrawalAmount.value = ''; withdrawalConcept.value = '';
+              _sendToVelo(MESSAGE_TYPES.CASHIER_STATE, {});
+            } else _showError(error?.message || 'Error al registrar el movimiento de caja.');
+            break;
+
+          case MESSAGE_TYPES.X_COUNT_RES:
+            _setLoading(btnXCount, false);
+            if (status === 'SUCCESS') {
+              _showInfo('Ticket X generado correctamente.');
+              if (data?.ticket) _renderTicket(data.ticket);
+            } else _showError(error?.message || 'Error al generar Ticket X.');
+            break;
+
+          case MESSAGE_TYPES.Z_CLOSING_RES:
+            _setLoading(btnZClosing, false);
+            if (status === 'SUCCESS') {
+              _showInfo('Cierre Z Diario completado.');
+              if (data?.ticket) _renderTicket(data.ticket);
+              _sendToVelo(MESSAGE_TYPES.CASHIER_STATE, {});
+            } else _showError(error?.message || 'Error en el Cierre Z Diario.');
+            break;
+
+          case MESSAGE_TYPES.INVENTORY_DASH_RES:
+            if (status === 'SUCCESS') { _renderInventory(data || null, contextData?.inventoryQueue || []); _showInfo('Stock interno actualizado.'); }
+            else _showError(error?.message || 'No se pudo cargar el inventario.');
+            break;
+
+          case MESSAGE_TYPES.INVENTORY_USE_RES:
+          case MESSAGE_TYPES.INVENTORY_RECEIPT_RES:
+            _setLoading(btnInventoryUse, false); _setLoading(btnInventoryReceipt, false);
+            if (status === 'SUCCESS') {
+              inventoryNote.value = '';
+              _showInfo('Movimiento de inventario registrado.');
+              _sendToVelo(MESSAGE_TYPES.INVENTORY_DASH, {});
+              if (contextData?.isAdmin || contextData?.isCajero) _sendToVelo(MESSAGE_TYPES.INVENTORY_QUEUE, {});
+            } else _showError(error?.message || 'No se pudo registrar el movimiento.');
+            break;
+
+          case MESSAGE_TYPES.INVENTORY_QUEUE_RES:
+            if (status === 'SUCCESS') {
+              contextData.inventoryQueue = data?.items || [];
+              _renderInventoryQueue(contextData.inventoryQueue);
+            } else _showError(error?.message || 'No se pudo cargar la conciliacion.');
+            break;
+
+          case MESSAGE_TYPES.INVENTORY_APPLY_RES:
+            if (status === 'SUCCESS') {
+              _showInfo('Conciliacion marcada como aplicada en Wix.');
+              _sendToVelo(MESSAGE_TYPES.INVENTORY_QUEUE, {});
+            } else _showError(error?.message || 'No se pudo confirmar la conciliacion.');
+            break;
+
+          case MESSAGE_TYPES.ONLY_STAFF_ERROR:
+          case MESSAGE_TYPES.STAFF_ERROR:
+            _showError(error?.message || 'Error en la solicitud.');
+            _setLoading(btnCalcHours, false); _setLoading(btnAdjSubmit, false);
+            _setLoading(btnSupplierPayment, false); _setLoading(btnWithdrawal, false);
+            _setLoading(btnXCount, false); _setLoading(btnZClosing, false);
+            break;
+        }
+      }
+
+      window.addEventListener('message', (e) => {
+        const msg = e?.data || {};
+        const type = String(msg.type || '').trim().toUpperCase();
+        if (!type || !VALID_TYPES.has(type)) return;
+        if (e.source !== window.parent) return;
+        if (e.origin && e.origin !== 'null') PARENT_ORIGIN = e.origin;
+        if (type === MESSAGE_TYPES.READY) return;
+        if (type === MESSAGE_TYPES.CONTEXT) { _renderContext(msg.payload || {}); return; }
+        _handleResponse(msg);
+      });
+
+      /* ═══════════ Handshake + fallback ═══════════ */
+      _sendToVelo(MESSAGE_TYPES.READY, { traceId });
+      setTimeout(() => { if (!contextData) _sendToVelo(MESSAGE_TYPES.READY, { traceId }); }, 600);
+      setTimeout(() => { if (!contextData) _sendToVelo(MESSAGE_TYPES.READY, { traceId }); }, 1800);
+
+      /* Fallback: si a los 3 s no llegó MM_CONTEXT, aplicamos defaults
+         equivalentes a lo que envía zonastaff.js v5004. Evita pantalla
+         en blanco. Cuando llegue el contexto real, sobreescribirá. */
+      contextFallbackTimer = setTimeout(() => {
+        if (!contextData) {
+          console.warn('[only-staff] MM_CONTEXT no recibido, aplicando defaults');
+          _renderContext({
+            panelType: 'TPV',
+            enableClocking: true,
+            enableBreaks: true,
+            enableCashier: true,
+            enableInventory: false,
+            enableScheduleQuery: false,
+            cashierMode: 'SIMULADA',
+            currencyCode: 'EUR',
+            timeZone: 'Europe/Madrid'
+          });
+        }
+      }, 3000);
+    })();
+  </script>
+</body>
+</html>
