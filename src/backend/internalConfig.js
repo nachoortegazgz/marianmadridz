@@ -351,14 +351,13 @@ export const CHANNEL_TYPE = Object.freeze({
   PRESENCIAL: "PRESENCIAL",
 });
 
+// Opciones nativas de pago de Wix Bookings Writer V2.
+// La fase F2 sin coste usa OFFLINE; no se inventa un enum NO_FEE:
+// noFee es un booleano de metadata en la proyeccion CMS.
 export const BOOKING_PAYMENT_OPTION = Object.freeze({
   ONLINE: "ONLINE",
   OFFLINE: "OFFLINE",
 });
-
-// Opciones nativas de pago de Wix Bookings Writer V2.
-// La fase F2 sin coste usa OFFLINE; no se inventa un enum NO_FEE:
-// noFee es un booleano de metadata en la proyeccion CMS.
 
 // Metodos de pago del ledger. Miembros EFECTIVO/TARJETA/BIZUM verificados en
 // site.flows.e2e (paymentMethod 'EFECTIVO'); TRANSFERENCIA admitido por el
