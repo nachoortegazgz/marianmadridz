@@ -418,7 +418,7 @@ test("EVENT-PAYMENT-09 official Wix eCommerce paid event appends WIX_PAYMENTS le
   assert.equal(result.status, "OK");
 
   const movements = wixDataMock._store.get(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA) || [];
-  assert.equal(movements.length, 1);
+  assert.equal(movements.length, 1, "paid webhook must append a ledger movement; recovery/control state: " + JSON.stringify(wixDataMock._store.get(IC.OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO) || []));
   const movement = movements[0];
   assert.equal(movement.transactionId, "ORDER-" + orderId);
   assert.equal(movement.orderId, orderId);
