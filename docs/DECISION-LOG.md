@@ -17,6 +17,7 @@ Este registro centraliza las decisiones explícitas del propietario y las decisi
 | BUS-005 | No retener automáticamente el depósito por cancelación tardía o inasistencia hasta redactar condiciones claras y obtener revisión jurídica de proporcionalidad. | Decisión prudencial de cumplimiento | Bloqueo preventivo; no activa retenciones |
 | BUS-006 | No activar automatizaciones que contacten clientes (email, SMS, WhatsApp, campañas o mensajes automáticos). | Propietario, instrucción expresa | Prohibición operativa temporal |
 | BUS-007 | Durante la auditoría/QA no realizar cargos reales, reservas de clientes, cambios de stock, escrituras CMS de producción ni publicación del sitio. | Alcance de autorización del propietario y controles del proyecto | Restricción activa |
+| BUS-008 | En cancelaciones antes de envío/consumo, restock nativo completo en Wix si el producto sigue físicamente disponible. En reembolsos posteriores, restock solo de las unidades efectivamente devueltas y vendibles; nunca restock automático por el mero hecho de reembolsar. | Buenas prácticas de comercio minorista y opciones nativas explícitas de Wix. | Adoptada; SOP de staff y QA pendientes |
 
 ### Base comparativa y jurídica de BUS-001…BUS-005
 
@@ -46,6 +47,7 @@ Este registro centraliza las decisiones explícitas del propietario y las decisi
 | TEC-016 | Los webhooks de pedido/pago/cancelación/reembolso no deben invocar writers de stock; cron marca todos los pedidos con referencias de catálogo completas sin distinguir Bookings/Stores/mixtos. | Wix Orders Settings `ON_ORDER_PAID`; Wix gestiona el stock y el cron solo conserva idempotencia. | Implementado en rama; CI pendiente |
 | TEC-017 | No borrar ni mutar `MovimientosInventario` existente; conservar hooks `beforeUpdate`/`beforeRemove` append-only. | El histórico puede contener evidencia QA/operativa que debe preservarse. | Aprobado y conservado |
 | TEC-019 | Usar `WIX_CATALOG_OWNER` como autoridad en marcador `ORDER_CREATED` para pedidos Bookings/Stores/mixtos. | `WIX_STORES_NATIVE` sería semánticamente incorrecto para pedidos Bookings. | Corrección en PR #240; CI pendiente |
+| TEC-020 | El restock se ejecuta exclusivamente por las opciones nativas Wix: `restockAllItems=true` al cancelar antes de fulfillment; `sideEffects.restock.lineItems` por línea/cantidad al reembolsar devoluciones reales. | Wix Cancel Order y Refund Payments exponen esos side effects explícitos; no hay writer custom. | Adoptada; verificación operativa pendiente |
 | TEC-018 | La retirada del módulo custom está fusionada; runtime Wix y E2E nativo siguen siendo gates de despliegue. | PR #238 fusionado; run 42721311048 en commit 94974c: 50 suites, 488 tests, 0 fallos; SDK contracts y ESLint verdes. | CI offline verde; runtime Wix pendiente |
 
 ### Fuentes técnicas oficiales Wix
