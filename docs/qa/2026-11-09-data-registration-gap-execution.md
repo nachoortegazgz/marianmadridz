@@ -75,7 +75,7 @@ El dossier indexado describe enums, destinos y writers que no coinciden plenamen
 - **Verificado en código:** rutas y funciones inspeccionadas en la rama de auditoría; la línea base `main` queda sin modificar.
 - **Declarado por el dossier/plan:** prioridades, obligaciones de arquitectura y criterios normativos aportados.
 - **Inferido:** impacto de la ausencia de writers a partir de la inspección estática; requiere confirmar consumidores y flujos activos.
-- **Pendiente:** CI de la rama para los últimos cambios; migración backend de 34 estados históricos; un registro QA-only inválido en `CitasF2` (sin `scheduleId` y con `bookingId` no GUID); `scheduleId` sigue opcional en esquema físico CMS por ese registro; configuración real de hooks Wix, pruebas en Local Editor, aprobación PGC, colecciones de arqueo/recuento, scopes, conectores M365/Power Automate, validación normativa por asesoría y ejecución E2E.
+- **Pendiente:** migración backend de 34 estados históricos; un registro QA-only inválido en `CitasF2` (sin `scheduleId` y con `bookingId` no GUID); `scheduleId` sigue opcional en esquema físico CMS por ese registro; configuración real de hooks Wix, pruebas en Local Editor, aprobación PGC, colecciones de arqueo/recuento, scopes, conectores M365/Power Automate, validación normativa por asesoría y ejecución E2E.
 - **No ejecutado:** escrituras CMS, migraciones, simulaciones transaccionales reales y despliegues.
 
 
@@ -92,7 +92,7 @@ El dossier indexado describe enums, destinos y writers que no coinciden plenamen
 
 - Rama: `audit/data-registration-gap-execution-2026-11-09` (PR #218).
 - Cambios de código: normalización del estado `CANCELED`; validación de `scheduleId` GUID en `assertCitasF2`; pruebas de hooks y contrato SSOT actualizadas; corrección de `cashMovementId` opcional en asientos contables y cobertura de operaciones no-caja.
-- CI #196 detectó fixtures de tests sin `scheduleId` (437/442 tests pasaron; 2 suites fallaron). Se corrigieron los fixtures afectados en commits posteriores; la nueva ejecución está pendiente de resultado.
+- CI #204 confirmó la normalización `CANCELED` y los cambios iniciales: 47 suites, 442 tests, 0 fallos. Tras añadir trazabilidad a `DAYS_CACHE` y hacer que `getCashierState` falle de forma cerrada ante errores de lectura, CI #210 pasó 47 suites, 444 tests, 0 fallos; contratos SDK, Bookings Reader V2 y ESLint también pasaron.
 - No se ha hecho merge, publicación Velo, escritura CMS ni modificación de registros existentes.
 
 
@@ -108,3 +108,13 @@ El dossier indexado describe enums, destinos y writers que no coinciden plenamen
 
 - `CajaActual`: exactamente 1 fila (`_id=SINGLE_ITEM_ID`, `singletonKey=CAJA_PRINCIPAL`) con `cashAmount=300` y `operationDate=2026-11-05`. No se modificó. El CMS no devuelve un `MovimientosCaja` asociado: el ledger tiene 0 filas, por lo que el importe del singleton debe tratarse como estado técnico/preexistente y no como una venta ni como prueba de actividad real.
 - `ControlOperativo`: 68 filas; en la proyección consultada no aparece ningún marcador cuyo `payload.eventType` sea `ORDER_CREATED`. Esto no demuestra por sí solo que no existan pedidos Wix; la recuperación de pedidos debe reconciliarse contra Wix Orders.
+
+
+## 11. Actualización de cobertura y validación
+
+- La matriz ampliada por proceso está en [`docs/qa/2026-11-09-process-registration-coverage.md`](2026-11-09-process-registration-coverage.md).
+- CI #210: 47 suites, 444 tests, 0 fallos; SDK contract, Bookings Reader V2 contract y ESLint correctos.
+- Se añadió `traceId` al writer `DAYS_CACHE` y su prueba.
+- `getCashierState` ya no transforma un fallo de lectura del ledger en cero operaciones; ahora devuelve error. Hay prueba offline del caso.
+- Se confirmó que Capa 3 no está implementada en runtime: no hay `exportService.js`, cuatro crons/jobs de exportación ni envío runtime Resend; PA-01…PA-07 y SharePoint no están auditados en el tenant. Requiere ADR de transporte y acceso al tenant antes de implementación.
+- Sigue pendiente resolver la ruta de error no durable en `wixEcom_onOrderCreated`, reconciliar Wix Orders y desplegar/probar el código en un sitio QA publicado.
