@@ -14,7 +14,7 @@ import {
     MOVEMENT_LEGACY_READ_ALIASES,
     normalizeMovementKeys,
 } from "backend/internalConfig";
-import { assertCitasF2 } from "backend/validation";
+import { assertCitasF2, assertControlOperativo } from "backend/validation";
 
 import { logger } from "backend/logger";
 
@@ -883,7 +883,11 @@ export function readControlPayload(doc) {
 }
 
 export function ControlOperativo_beforeInsert(item) {
-    return normalizeControlKeys(item);
+    const normalized = normalizeControlKeys(item);
+    // Insert recibe el registro completo: proteger el discriminador y los
+    // invariantes minimos del control antes de persistirlo.
+    assertControlOperativo(normalized);
+    return normalized;
 }
 
 export function ControlOperativo_beforeUpdate(item, context) {
