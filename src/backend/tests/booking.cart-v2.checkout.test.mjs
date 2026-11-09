@@ -120,7 +120,7 @@ test('CARTV2-03 rejects an invalid booking ID before creating a cart', async () 
   setCartV2Mock({
     createCart: async () => {
       createCartCalls += 1;
-      return { _id: CART_ID };
+      return { _id: CART_ID, customerInfo: OWNED_CART };
     },
   });
 
@@ -133,7 +133,7 @@ test('CARTV2-03 rejects an invalid booking ID before creating a cart', async () 
 
 test('CARTV2-04 rejects incomplete or mismatched calculation responses', async () => {
   setCartV2Mock({
-    createCart: async () => ({ _id: CART_ID }),
+    createCart: async () => ({ _id: CART_ID, customerInfo: OWNED_CART }),
     calculateCart: async () => ({
       cart: { _id: '33333333-3333-4333-8333-333333333333', businessInfo: { currencyCode: 'EUR' }, lineItems: validBookingLineItems() },
       summary: {
@@ -152,7 +152,7 @@ test('CARTV2-04 rejects incomplete or mismatched calculation responses', async (
 
 test('CARTV2-05 accepts a valid calculation when optional violations are omitted', async () => {
   setCartV2Mock({
-    createCart: async () => ({ _id: CART_ID }),
+    createCart: async () => ({ _id: CART_ID, customerInfo: OWNED_CART }),
     calculateCart: async () => ({
       cart: {
         _id: CART_ID,
@@ -175,7 +175,7 @@ test('CARTV2-05 accepts a valid calculation when optional violations are omitted
 
 test('CARTV2-06 rejects malformed violations instead of treating them as absent', async () => {
   setCartV2Mock({
-    createCart: async () => ({ _id: CART_ID }),
+    createCart: async () => ({ _id: CART_ID, customerInfo: OWNED_CART }),
     calculateCart: async () => ({
       cart: { _id: CART_ID, businessInfo: { currencyCode: 'EUR' }, lineItems: validBookingLineItems() },
       summary: {
@@ -203,7 +203,7 @@ test('CARTV2-07 rejects invalid totals and currency before checkout URL retrieva
     await t.test('invalid case ' + (index + 1), async () => {
       let checkoutUrlCalls = 0;
       setCartV2Mock({
-        createCart: async () => ({ _id: CART_ID }),
+        createCart: async () => ({ _id: CART_ID, customerInfo: OWNED_CART }),
         calculateCart: async () => ({
           cart: { _id: CART_ID, businessInfo: { currencyCode: item.currency }, lineItems: validBookingLineItems() },
           summary: {
@@ -218,7 +218,7 @@ test('CARTV2-07 rejects invalid totals and currency before checkout URL retrieva
       });
 
       await assert.rejects(
-        core.createBookingCartCheckout(BOOKING_ID, 'trace-cart-7-' + index),
+        core.createBookingCartCheckout(BOOKING_ID, 'trace-cart-7-' + index, MEMBER_IDENTITY),
         (error) => error && error.code === 'CHECKOUT_FAILED'
       );
       assert.equal(checkoutUrlCalls, 0);
@@ -228,7 +228,7 @@ test('CARTV2-07 rejects invalid totals and currency before checkout URL retrieva
 
 test('CARTV2-08 rejects a non-HTTPS checkout URL', async () => {
   setCartV2Mock({
-    createCart: async () => ({ _id: CART_ID }),
+    createCart: async () => ({ _id: CART_ID, customerInfo: OWNED_CART }),
     calculateCart: async () => ({
       cart: { _id: CART_ID, businessInfo: { currencyCode: 'EUR' }, lineItems: validBookingLineItems() },
       summary: {
@@ -248,7 +248,7 @@ test('CARTV2-08 rejects a non-HTTPS checkout URL', async () => {
 test('CARTV2-09 rejects an empty calculated cart before returning checkout URL', async () => {
   let checkoutUrlCalls = 0;
   setCartV2Mock({
-    createCart: async () => ({ _id: CART_ID }),
+    createCart: async () => ({ _id: CART_ID, customerInfo: OWNED_CART }),
     calculateCart: async () => ({
       cart: {
         _id: CART_ID,
@@ -276,7 +276,7 @@ test('CARTV2-09 rejects an empty calculated cart before returning checkout URL',
 test('CARTV2-10 rejects a calculated cart containing a different booking ID', async () => {
   let checkoutUrlCalls = 0;
   setCartV2Mock({
-    createCart: async () => ({ _id: CART_ID }),
+    createCart: async () => ({ _id: CART_ID, customerInfo: OWNED_CART }),
     calculateCart: async () => ({
       cart: {
         _id: CART_ID,
@@ -304,7 +304,7 @@ test('CARTV2-10 rejects a calculated cart containing a different booking ID', as
 test('CARTV2-11 rejects an unavailable Bookings line item', async () => {
   let checkoutUrlCalls = 0;
   setCartV2Mock({
-    createCart: async () => ({ _id: CART_ID }),
+    createCart: async () => ({ _id: CART_ID, customerInfo: OWNED_CART }),
     calculateCart: async () => ({
       cart: {
         _id: CART_ID,
