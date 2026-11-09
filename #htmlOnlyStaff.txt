@@ -601,7 +601,7 @@
         items.forEach((item) => {
           const tr = document.createElement('tr');
           const fecha = item.fechaHora ? _formatMadridDate(item.fechaHora, true) : item.diaKey || '';
-          const hora = item.hora || (item.fechaHora ? new Intl.DateTimeFormat('es-ES', { hour: '2-digit', minute: '2-digit', timeZone: contextData?.timeZone || 'Europe/Madrid' }).format(new Date(item.fechaHora)) : '');
+          const hora = item.hora || (item.fechaHora ? new Intl.DateTimeFormat('es-ES', { hour: '2-digit', minute: '2-digit', timeZone: contextData?.timeZone || 'Europe/Madrid' }).format(new Date(item.fechaHora))) : '');
           [fecha, hora, item.tipo || item.tipoFichaje || ''].forEach((value) => {
             const td = document.createElement('td'); td.textContent = String(value); tr.appendChild(td);
           });
