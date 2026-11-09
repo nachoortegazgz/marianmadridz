@@ -154,7 +154,7 @@ export function assertCitasF2(item) {
 
 /**
  * Validacion fiscal obligatoria. NIF checksum por Ley 11/2021.
- * THIRD_PARTY_TYPE es enum fiscal normativo activo (no legacy).
+ * THIRD_PARTY_TYPE es el enum fiscal normativo vigente.
  */
 export function assertDatosFiscales(item) {
     if (!item || typeof item !== "object") {
