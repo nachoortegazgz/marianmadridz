@@ -62,6 +62,14 @@
 - Código Civil arts. 1152–1155 y 1255: https://www.boe.es/buscar/act.php?id=BOE-A-1889-4763
 - Referencias comerciales comparables (no normativas): https://adaraessenceestetica.com/wp-content/uploads/2025/06/Carta-NUEVA-CAST.pdf ; https://www.beassence.es/politicas
 
+## Estado de implementación en PR #239
+
+- `inventario.web.js`, su suite de writer, `INVENTORY_CONFIG`, `validateInventoryOrderLine`, acciones admin y panel staff eliminados en la rama.
+- Webhooks eCommerce y cron desacoplados de stock CMS; se mantiene ledger fiscal, idempotencia y hooks append-only históricos.
+- CI run 42721080098: 50 suites/488 tests, SDK eCommerce Cart V2 y Bookings Reader V2 y ESLint en verde para commit `ca6bbdfa5d0e7d43ca863558a67f9185065cedb4`. Tras cambios menores de metadatos y test se requiere confirmar CI del HEAD actual.
+- QA Wix runtime de venta/cancelación/reembolso pendiente; no fusionar ni desplegar hasta completarlo.
+- Informe: `docs/qa/2026-11-10-native-inventory-retirement.md`.
+
 ## Límites de ejecución
 
 - Este ADR no autoriza cambios en Wix CMS, stock, productos, reservas, pagos ni configuración publicada.
