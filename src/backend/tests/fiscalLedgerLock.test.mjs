@@ -93,7 +93,7 @@ test("FISCAL-LOCK-05 allocates and rolls back sequence in the only CajaActual it
     const seq = await allocateFiscalSequence(lock, {
       sequenceNumber: 8,
       numSerieFactura: `FAC-${year}-00007`,
-    }, "trace-sequence-singleton-001");
+    });
 
     assert.deepEqual(seq, {
       sequenceNumber: 9,
@@ -107,7 +107,7 @@ test("FISCAL-LOCK-05 allocates and rolls back sequence in the only CajaActual it
     assert.deepEqual(register.sequenceCounters.appliedMovementIds, ["movement-existing"]);
     assert.equal((wixDataMock._store.get("CajaActual") || []).length, 1);
 
-    assert.equal(await rollbackFiscalSequence(lock, seq, "trace-sequence-singleton-001"), true);
+    assert.equal(await rollbackFiscalSequence(lock, seq), true);
     const rolledBack = await getCashRegisterSingleton();
     assert.equal(rolledBack.sequenceCounters.seqGlobal, 8);
     assert.equal(rolledBack.sequenceCounters[year], 7);
@@ -123,8 +123,8 @@ test("FISCAL-LOCK-06 refuses to allocate when the CajaActual principal item is m
   const lock = await acquireFiscalLedgerLock("trace-sequence-singleton-002", { waitMs: 0 });
   try {
     await assert.rejects(
-      () => allocateFiscalSequence(lock, null, "trace-sequence-singleton-002"),
-      (error) => error?.code === "SEQUENCE_ERROR" && /CAJA_PRINCIPAL_MISSING/.test(error.message),
+      () => allocateFiscalSequence(lock, null),
+      (error) => error?.code === "CAJA_PRINCIPAL_MISSING",
     );
     assert.equal((wixDataMock._store.get("CajaActual") || []).length, 0);
   } finally {
