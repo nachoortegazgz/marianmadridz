@@ -330,11 +330,12 @@ test("EVENT-BOOKING-08 refuses ambiguous active MapaStaff mappings", async () =>
     bookedEntity: { title: "QA ambiguous mapping", slot: { serviceId: SERVICE_ID } },
   });
 
-  const result = await events.wixBookingsV2_onBookingConfirmed(
-    bookingConfirmedEvent("evt-native-confirm-008", booking)
+  await assert.rejects(
+    events.wixBookingsV2_onBookingConfirmed(
+      bookingConfirmedEvent("evt-native-confirm-008", booking)
+    ),
+    /MAPA_STAFF_ACTIVE_MAPPING_AMBIGUOUS/
   );
-  assert.equal(result.status, "RETRY_REQUIRED");
-  assert.equal(result.reason, "MAPA_STAFF_ACTIVE_MAPPING_AMBIGUOUS");
   assert.equal((wixDataMock._store.get("CitasF2") || []).length, 0);
   assert.equal((wixDataMock._store.get("ControlOperativo") || []).length, 0);
 });
@@ -631,20 +632,21 @@ test("EVENT-BOOKING-RESCHEDULE-02 duplicate native reschedule event is idempoten
 
 test("EVENT-BOOKING-RESCHEDULE-03 missing CitasF2 projection is retriable and never creates a partial row", async () => {
   wixDataMock._reset();
-  const result = await events.wixBookingsV2_onBookingRescheduled({
-    metadata: { id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa03" },
-    data: {
-      booking: {
-        id: BOOKING_ID,
-        revision: 4,
-        startDate: "2026-11-10T10:00:00.000Z",
-        endDate: "2026-11-10T10:30:00.000Z",
-        bookedEntity: { slot: { serviceId: SERVICE_ID } },
+  await assert.rejects(
+    events.wixBookingsV2_onBookingRescheduled({
+      metadata: { id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa03" },
+      data: {
+        booking: {
+          id: BOOKING_ID,
+          revision: 4,
+          startDate: "2026-11-10T10:00:00.000Z",
+          endDate: "2026-11-10T10:30:00.000Z",
+          bookedEntity: { slot: { serviceId: SERVICE_ID } },
+        },
       },
-    },
-  });
-  assert.equal(result.status, "RETRY_REQUIRED");
-  assert.equal(result.reason, "RESCHEDULED_BOOKING_CITASF2_NOT_FOUND");
+    }),
+    /RESCHEDULED_BOOKING_CITASF2_NOT_FOUND/
+  );
   assert.equal((wixDataMock._store.get("CitasF2") || []).length, 0);
   assert.equal((wixDataMock._store.get("ControlOperativo") || []).length, 0);
 });
@@ -682,4 +684,83 @@ test("EVENT-BOOKING-RESCHEDULE-04 older native reschedule revision cannot roll a
   const row = (wixDataMock._store.get("CitasF2") || [])[0];
   assert.equal(new Date(row.slotStart).toISOString(), "2026-11-12T10:00:00.000Z");
   assert.equal(row.revision, 5);
+});
+
+
+test("EVENT-BOOKING-09 native SDK resource _id is accepted by the CitasF2 projection writer", async () => {
+  wixDataMock._reset();
+  const booking = nativeBooking({
+    id: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+    bookedEntity: {
+      title: "QA booking SDK resource id",
+      slot: {
+        serviceId: SERVICE_ID,
+        scheduleId: SCHEDULE_ID,
+        startDate: "2026-10-22T09:00:00.000Z",
+        endDate: "2026-10-22T09:30:00.000Z",
+        resource: { _id: RESOURCE_ID, name: "QA SDK Staff" },
+      },
+    },
+  });
+  const result = await events.wixBookingsV2_onBookingConfirmed(
+    bookingConfirmedEvent("evt-native-confirm-009", booking)
+  );
+  assert.equal(result.status, "OK");
+  const row = (wixDataMock._store.get("CitasF2") || [])[0];
+  assert.equal(row.resourceId, RESOURCE_ID);
+  assert.equal(row.scheduleId, SCHEDULE_ID);
+});
+
+test("EVENT-BOOKING-10 controlled reconciliation projects confirmed unpaid bookings and is idempotent", async () => {
+  wixDataMock._reset();
+  const booking = nativeBooking({
+    id: "bbbbbbbb-cccc-4ddd-8eee-ffffffffffff",
+    status: "CONFIRMED",
+    paymentStatus: "NOT_PAID",
+    bookedEntity: {
+      title: "QA booking reconciliation",
+      slot: {
+        serviceId: SERVICE_ID,
+        scheduleId: SCHEDULE_ID,
+        startDate: "2026-10-22T09:00:00.000Z",
+        endDate: "2026-10-22T09:30:00.000Z",
+        resource: { _id: RESOURCE_ID, name: "QA SDK Staff" },
+      },
+    },
+  });
+  const first = await events.reconcileConfirmedNativeBookingProjectionInternal(booking, "trace-reconcile-booking");
+  assert.equal(first.ok, true);
+  assert.equal(first.created, true);
+  assert.equal(first.amountReconciliationRequired, true);
+
+  const rows = wixDataMock._store.get("CitasF2") || [];
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].bookingId, booking.id);
+  assert.equal(rows[0].bookingStatus, "CONFIRMED");
+  assert.equal(rows[0].paymentStatus, "NOT_PAID");
+  assert.equal(rows[0].totalAmount, 0);
+  assert.equal(rows[0].meta.amountReconciliationRequired, true);
+
+  const markers = wixDataMock._store.get("ControlOperativo") || [];
+  assert.equal(markers.filter(row => row.payload?.eventType === "BOOKING_CONFIRMED_RECONCILED").length, 1);
+
+  const replay = await events.reconcileConfirmedNativeBookingProjectionInternal(booking, "trace-reconcile-booking");
+  assert.equal(replay.ok, true);
+  assert.equal(replay.created, false);
+  assert.equal((wixDataMock._store.get("CitasF2") || []).length, 1);
+  assert.equal((wixDataMock._store.get("ControlOperativo") || []).filter(row => row.payload?.eventType === "BOOKING_CONFIRMED_RECONCILED").length, 1);
+});
+
+test("EVENT-BOOKING-11 controlled reconciliation refuses PAID bookings without ledger proof", async () => {
+  wixDataMock._reset();
+  const booking = nativeBooking({
+    id: "cccccccc-dddd-4eee-8fff-aaaaaaaaaaaa",
+    status: "CONFIRMED",
+    paymentStatus: "PAID",
+  });
+  const result = await events.reconcileConfirmedNativeBookingProjectionInternal(booking, "trace-paid-booking");
+  assert.equal(result.ok, false);
+  assert.equal(result.reason, "NATIVE_BOOKING_PAYMENT_REQUIRES_LEDGER_RECONCILIATION");
+  assert.equal((wixDataMock._store.get("CitasF2") || []).length, 0);
+  assert.equal((wixDataMock._store.get("ControlOperativo") || []).length, 0);
 });

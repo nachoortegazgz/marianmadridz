@@ -49,7 +49,7 @@ PENDIENTES:
 =============================================================================
 */
 import { query as dalQuery, getItem as dalGet, insertItem as dalInsert, updateItem as dalUpdate, bulkRemove as dalBulkRemove } from "backend/dataAccess";
-import { bookings } from "@wix/bookings";
+import { bookings, extendedBookings } from "@wix/bookings";
 import { orders } from "@wix/ecom";
 import { auth } from "@wix/essentials";
 import {
@@ -59,6 +59,9 @@ CONTROL_TYPE,
 CONTROL_STATUS,
 COMPENSATION_STATUS,
 WIX_CATALOG_APP_IDS,
+BOOKING_STATUS,
+PAYMENT_STATUS,
+BOOKING_FIELDS,
 CONCURRENCY,
 SDK_CONFIG,
 normalizeBookingType,
@@ -70,7 +73,11 @@ import { logger } from "backend/logger";
 import { notifyOperationalAlert } from "backend/audit";
 import { verifyFiscalHashChainIntegrity } from "backend/cajas.web";
 import { _completeTransaction, cancelBookingElevated } from "backend/booking/bookingCore";
-import { reconcileUnknownTransaction, reconcilePaidCitasFromLedgerInternal } from "backend/events";
+import {
+    reconcileUnknownTransaction,
+    reconcilePaidCitasFromLedgerInternal,
+    reconcileConfirmedNativeBookingProjectionInternal,
+} from "backend/events";
 
 const log = logger;
 const API_TIMEOUT_MS =
@@ -130,7 +137,12 @@ function _summarizeBulkRemove(response) {
 // CRON-08: elevatedGet para reconciliación
 const getBookingElevated = auth.elevate(bookings.getBooking);
 const searchOrdersElevated = auth.elevate(orders.searchOrders);
+const queryExtendedBookingsElevated = auth.elevate(extendedBookings.queryExtendedBookings);
 const ORDER_RECONCILIATION_PAGE_LIMIT = 100;
+const BOOKING_RECONCILIATION_PAGE_LIMIT = 100;
+const BOOKING_RECONCILIATION_MAX_PAGES = 5;
+const BOOKING_RECONCILIATION_MARKER_PAGE_LIMIT = 500;
+const BOOKING_RECONCILIATION_MARKER_MAX_PAGES = 20;
 const ORDER_RECONCILIATION_MAX_PAGES = 20;
 const ORDER_MARKER_PAGE_LIMIT = 500;
 const ORDER_MARKER_MAX_PAGES = 20;
@@ -1639,6 +1651,256 @@ export async function reconcileUnmarkedOrderCreatedEvents() {
         log.error("reconcileUnmarkedOrderCreatedEvents failed", {
             error: error?.message || "UNKNOWN",
             ordersRead: result.ordersRead,
+            reconciled: result.reconciled,
+            reviewRequired: result.reviewRequired,
+            failed: result.failed,
+            traceId,
+        });
+        throw error;
+    }
+}
+
+
+// =============================================================================
+// CRON: reconcileMissingConfirmedBookingProjections - every 30 minutes
+// =============================================================================
+/**
+ * Reconciles confirmed native Bookings V2 that lack a CitasF2 projection.
+ * Unpaid/exempt bookings with complete service, schedule and resource data
+ * are projected using the canonical events.js writer. Paid bookings and
+ * bookings without a selected resource are never guessed or financially
+ * posted; they receive deduplicated operational alerts.
+ *
+ * Canceled unpaid bookings remain in Wix Bookings SSOT and are not copied
+ * into the active operational projection. Canceled PAID bookings without a
+ * CitasF2 projection are flagged for financial review.
+ */
+export async function reconcileMissingConfirmedBookingProjections() {
+    const traceId = makeTraceId("cron-booking-projection-reconcile");
+    const result = {
+        nativeConfirmedRead: 0,
+        canceledPaidRead: 0,
+        amountReconciliationRequired: 0,
+        reconciled: 0,
+        alreadyProjected: 0,
+        reviewRequired: 0,
+        skipped: 0,
+        failed: 0,
+        errors: [],
+    };
+
+    const _queryNativeBookings = async (filter) => {
+        const nativeBookings = new Map();
+        let cursor = null;
+        let page = 0;
+        let hasNext = true;
+        while (hasNext && page < BOOKING_RECONCILIATION_MAX_PAGES) {
+            const query = page === 0
+                ? { filter, cursorPaging: { limit: BOOKING_RECONCILIATION_PAGE_LIMIT } }
+                : { cursorPaging: { limit: BOOKING_RECONCILIATION_PAGE_LIMIT, cursor } };
+            const response = await withTimeout(
+                () => queryExtendedBookingsElevated(query, {
+                    withBookingAllowedActions: false,
+                    withBookingAttendanceInfo: false,
+                    withBookingConferencingDetails: false,
+                    withBookingPolicySettings: false,
+                    withBookingFeeDetails: false,
+                    withEcomOrder: false,
+                    withEcomTransactions: false,
+                }),
+                API_TIMEOUT_MS,
+                "cron:queryExtendedBookingsForProjectionReconciliation"
+            );
+            for (const item of response?.extendedBookings || []) {
+                const booking = item?.booking || item;
+                const bookingId = _safeTrim(booking?.id || booking?._id);
+                if (!bookingId) continue;
+                if (!_looksLikeGuid(bookingId)) {
+                    throw new Error("NATIVE_BOOKING_ID_INVALID_IN_READER");
+                }
+                nativeBookings.set(bookingId, booking);
+            }
+            cursor = response?.pagingMetadata?.cursors?.next || null;
+            hasNext = Boolean(cursor);
+            page++;
+        }
+        if (hasNext) throw new Error("NATIVE_BOOKING_QUERY_PAGE_LIMIT_REACHED");
+        return [...nativeBookings.values()];
+    };
+
+    const _loadCitasByBookingId = async () => {
+        const rows = [];
+        let page = 0;
+        while (page < BOOKING_RECONCILIATION_MAX_PAGES) {
+            const response = await dalQuery(BUSINESS_COLLECTIONS.CITAS_F2)
+                .limit(BOOKING_RECONCILIATION_MARKER_PAGE_LIMIT)
+                .skip(page * BOOKING_RECONCILIATION_MARKER_PAGE_LIMIT)
+                .find({ consistencyMode: "strong" });
+            const items = response?.items || [];
+            rows.push(...items);
+            if (items.length < BOOKING_RECONCILIATION_MARKER_PAGE_LIMIT) break;
+            page++;
+        }
+        if (page >= BOOKING_RECONCILIATION_MAX_PAGES) {
+            throw new Error("CITASF2_RECONCILIATION_SCAN_LIMIT_REACHED");
+        }
+        return new Map(rows.map((row) => [
+            _safeTrim(row?.[BOOKING_FIELDS.BOOKING_ID]),
+            row,
+        ]).filter(([bookingId]) => bookingId));
+    };
+
+    const _loadBookingEventMarkerIds = async () => {
+        const rows = [];
+        let page = 0;
+        while (page < BOOKING_RECONCILIATION_MARKER_MAX_PAGES) {
+            const response = await dalQuery(OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO)
+                .eq("controlType", CONTROL_TYPE.WEBHOOK_EVENT)
+                .ascending("_createdDate")
+                .limit(BOOKING_RECONCILIATION_MARKER_PAGE_LIMIT)
+                .skip(page * BOOKING_RECONCILIATION_MARKER_PAGE_LIMIT)
+                .find({ consistencyMode: "strong" });
+            const items = response?.items || [];
+            rows.push(...items);
+            if (items.length < BOOKING_RECONCILIATION_MARKER_PAGE_LIMIT) break;
+            page++;
+        }
+        if (page >= BOOKING_RECONCILIATION_MARKER_MAX_PAGES) {
+            throw new Error("BOOKING_EVENT_MARKER_SCAN_LIMIT_REACHED");
+        }
+        const ids = new Set();
+        for (const row of rows) {
+            const payload = readControlPayload(row);
+            const eventType = _safeTrim(payload?.eventType).toUpperCase();
+            if (eventType !== "BOOKING_CONFIRMED" &&
+                eventType !== "BOOKING_CONFIRMED_RECONCILED") continue;
+            const bookingId = _safeTrim(
+                payload?.metadata?.bookingId || payload?.bookingId || row?.bookingId
+            );
+            if (bookingId) ids.add(bookingId);
+        }
+        return ids;
+    };
+
+    const _queueBookingReview = async (booking, reason, alertType) => {
+        const bookingId = _safeTrim(booking?.id || booking?._id);
+        const alert = await notifyOperationalAlert({
+            alertType,
+            severity: "ERROR",
+            message: "Reserva nativa sin proyeccion CitasF2 automatizable; requiere revision controlada.",
+            data: {
+                bookingId,
+                bookingStatus: _safeTrim(booking?.status) || "UNKNOWN",
+                paymentStatus: _safeTrim(booking?.paymentStatus) || "UNKNOWN",
+                selectedPaymentOption: _safeTrim(booking?.selectedPaymentOption) || "UNKNOWN",
+                reason,
+                serviceId: _safeTrim(booking?.bookedEntity?.slot?.serviceId) || null,
+                scheduleId: _safeTrim(booking?.bookedEntity?.slot?.scheduleId) || null,
+                resourceId: _safeTrim(
+                    booking?.bookedEntity?.slot?.resource?._id ||
+                    booking?.bookedEntity?.slot?.resource?.id
+                ) || null,
+            },
+            traceId,
+            entityId: bookingId,
+            source: "backend/crons.js",
+            dedupeKey: `${alertType}_${bookingId}`,
+        });
+        if (alert?.failed) {
+            result.failed++;
+            if (result.errors.length < 10) result.errors.push({ bookingId, reason: "ALERT_PERSISTENCE_FAILED" });
+            return false;
+        }
+        result.reviewRequired++;
+        return true;
+    };
+
+    try {
+        const [confirmedBookings, canceledPaidBookings] = await Promise.all([
+            _queryNativeBookings({
+                status: BOOKING_STATUS.CONFIRMED,
+                startDate: { "$gte": "2020-01-01T00:00:00.000Z" },
+            }),
+            _queryNativeBookings({
+                status: BOOKING_STATUS.CANCELED,
+                paymentStatus: PAYMENT_STATUS.PAID,
+                startDate: { "$gte": "2020-01-01T00:00:00.000Z" },
+            }),
+        ]);
+        result.nativeConfirmedRead = confirmedBookings.length;
+        result.canceledPaidRead = canceledPaidBookings.length;
+
+        const [citasByBookingId, markerIds] = await Promise.all([
+            _loadCitasByBookingId(),
+            _loadBookingEventMarkerIds(),
+        ]);
+
+        for (const booking of confirmedBookings) {
+            const bookingId = _safeTrim(booking?.id || booking?._id);
+            if (!_looksLikeGuid(bookingId)) {
+                await _queueBookingReview(booking, "NATIVE_BOOKING_ID_INVALID", "BOOKING_PROJECTION_RECONCILIATION_REQUIRED");
+                continue;
+            }
+
+            const paymentStatus = _safeTrim(booking?.paymentStatus).toUpperCase();
+            if ([PAYMENT_STATUS.PAID, PAYMENT_STATUS.PARTIALLY_PAID, PAYMENT_STATUS.REFUNDED, PAYMENT_STATUS.PARTIALLY_REFUNDED].includes(paymentStatus)) {
+                await _queueBookingReview(booking, "PAYMENT_REQUIRES_LEDGER_RECONCILIATION", "BOOKING_PAID_PROJECTION_REVIEW_REQUIRED");
+                continue;
+            }
+
+            const hasProjection = citasByBookingId.has(bookingId);
+            const hasMarker = markerIds.has(bookingId);
+            if (hasProjection && hasMarker) {
+                result.skipped++;
+                continue;
+            }
+
+            const syncResult = await reconcileConfirmedNativeBookingProjectionInternal(booking, traceId);
+            if (!syncResult?.ok) {
+                await _queueBookingReview(
+                    booking,
+                    syncResult?.reason || "NATIVE_BOOKING_PROJECTION_FAILED",
+                    "BOOKING_PROJECTION_RECONCILIATION_REQUIRED"
+                );
+                continue;
+            }
+            if (syncResult.created) result.reconciled++;
+            else result.alreadyProjected++;
+            if (syncResult.amountReconciliationRequired) result.amountReconciliationRequired++;
+            citasByBookingId.set(bookingId, { bookingId });
+            markerIds.add(bookingId);
+        }
+
+        for (const booking of canceledPaidBookings) {
+            const bookingId = _safeTrim(booking?.id || booking?._id);
+            if (!bookingId || citasByBookingId.has(bookingId)) {
+                result.skipped++;
+                continue;
+            }
+            await _queueBookingReview(
+                booking,
+                "CANCELED_BOOKING_STILL_MARKED_PAID_WITHOUT_CITASF2",
+                "CANCELED_PAID_BOOKING_FINANCIAL_REVIEW_REQUIRED"
+            );
+        }
+
+        log.info("reconcileMissingConfirmedBookingProjections completed", {
+            nativeConfirmedRead: result.nativeConfirmedRead,
+            canceledPaidRead: result.canceledPaidRead,
+            amountReconciliationRequired: result.amountReconciliationRequired,
+            reconciled: result.reconciled,
+            alreadyProjected: result.alreadyProjected,
+            reviewRequired: result.reviewRequired,
+            skipped: result.skipped,
+            failed: result.failed,
+            traceId,
+        });
+        if (result.failed > 0) throw new Error("BOOKING_PROJECTION_RECONCILIATION_PARTIAL_FAILURE");
+        return result;
+    } catch (error) {
+        log.error("reconcileMissingConfirmedBookingProjections failed", {
+            error: error?.message || "UNKNOWN",
+            nativeConfirmedRead: result.nativeConfirmedRead,
             reconciled: result.reconciled,
             reviewRequired: result.reviewRequired,
             failed: result.failed,

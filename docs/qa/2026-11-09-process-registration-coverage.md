@@ -24,7 +24,7 @@ Un proceso se considera cubierto solo si se puede demostrar:
 
 | Proceso | Fuente de verdad | Persistencia / destino canónico | Estado observado | Brecha / acción necesaria |
 |---|---|---|---|---|
-| Reservas y reprogramaciones | Wix Bookings V2 | Wix Bookings + proyección `CitasF2`; `ControlOperativo` para eventos/locks | **PARCIAL / NO E2E** | La lectura anterior encontró 339 bookings nativos, 55 filas CitasF2, 54 IDs coincidentes, 285 bookings nativos sin proyección y 1 proyección no coincidente. Analizar por fecha, estado, origen y alcance del writer antes de declarar pérdida. La rama exige `scheduleId` GUID en el writer/hook; falta ejecutar Local Editor y validar el esquema físico. |
+| Reservas y reprogramaciones | Wix Bookings V2 | Wix Bookings SSOT + proyección `CitasF2`; `ControlOperativo` para eventos/locks | **BRECHA CLASIFICADA; RECUPERACIÓN EN PR #220** | 339 reservas nativas; 55 filas CitasF2; 54 IDs coincidentes; 285 sin proyección. De las 285: 56 CONFIRMED creadas por WIX_USER (39 con recurso válido, 17 NO_SELECTION), 18 CREATED WIX_USER, 90 CANCELED WIX_USER, 97 CANCELED MEMBER y 24 CANCELED ANONYMOUS_VISITOR. De las 56 confirmadas, 1 está PAID y ligada a pedido eCommerce; 38 son no pagadas/exentas con recurso válido y se pueden proyectar con importe 0 + bandera de conciliación. 15 canceladas siguen PAID (2 con pedido eCommerce, 13 sin pedido asociado en la lectura); requieren revisión financiera. |
 | Cancelación de reservas | Wix Bookings V2 | Estado CMS `CANCELED`; rectificación económica en ledger cuando exista hecho económico | **CÓDIGO NORMALIZADO; HISTÓRICO PENDIENTE** | Se normalizó `CANCELED` en la rama. Hay 34 filas históricas con el estado antiguo; migración solo mediante backend controlado, trazable e idempotente. No usar REST directo. |
 | Reservas duales / compensaciones | Wix Bookings + saga propia | Dos filas CitasF2 + journal/controles de compensación en ControlOperativo | **PARCIAL** | Deben probarse fallos entre F1/F2, reintentos, cancelación compensatoria, replay y consistencia de ambos IDs en entorno Wix. CI offline no prueba estas llamadas reales. |
 | Pedidos de tienda / checkout | Wix Orders | Wix Orders es SSOT; `ControlOperativo` guarda marcador idempotente `ORDER_CREATED`/`ORDER_CREATED_RECONCILED`; ledgers solo para hechos económicos confirmados | **BRECHA CONFIRMADA; RECUPERACIÓN EN PR #219** | Reconciliación read-only actual: 30 pedidos (28 APPROVED, 2 CANCELED; 3 PAID, 27 NOT_PAID), 68 filas ControlOperativo y 0 marcadores ORDER_CREATED localizados. 29 pedidos tienen exclusivamente líneas Wix Bookings; 1 pedido mixto contiene Stores + Bookings + una línea sin appId. El pedido mixto #10018 no tiene fila ControlOperativo ni movimiento MovimientosInventario por su orderId. PR #219 incorpora cron que registra solo Bookings-only y alerta los mixtos/productos, sin crear stock/caja/fiscal. No reconstruir movimientos del mixto hasta verificar la línea y el efecto nativo. |
@@ -174,3 +174,42 @@ La consulta de `ControlOperativo` devolvió 68 filas, pero ninguna con `payload.
 - La prueba offline cubre paginación, reconciliación Booking-only, alerta de pedidos mixtos, replay idempotente y ausencia de escrituras en ledgers de caja/inventario.
 - No se ha escrito ningún dato en CMS live, no se ha ejecutado el cron en el sitio, no se ha publicado código Velo.
 - Sigue pendiente la validación de scopes/import runtime y la ejecución del cron en Wix QA publicado. El pedido mixto requiere revisión específica antes de cualquier efecto de inventario.
+
+
+## 10. Reconciliación de proyecciones Bookings (2026-11-09)
+
+### Evidencia nativa Wix (solo lectura)
+
+La consulta V2 de Bookings, paginada y sin extraer datos de contacto, confirma:
+- 339 reservas nativas; 55 filas CitasF2; 54 coincidencias por bookingId; 285 sin proyección.
+- Las 285 faltantes se desglosan por estado/creador:
+  - 56 CONFIRMED / WIX_USER.
+  - 18 CREATED / WIX_USER.
+  - 90 CANCELED / WIX_USER.
+  - 97 CANCELED / MEMBER.
+  - 24 CANCELED / ANONYMOUS_VISITOR.
+- Entre las 56 CONFIRMED: 39 tienen serviceId, scheduleId, resourceId y fechas válidas; 17 tienen `resourceSelections=NO_SELECTION` y no permiten asignar profesional de forma segura.
+- De las 39 con recurso válido: 38 son NOT_PAID/UNDEFINED/EXEMPT y una es PAID. Las 56 no exponen importe exacto; el writer canónico proyecta `totalAmount=0` y `meta.amountReconciliationRequired=true` cuando no existe importe verificable.
+- La única confirmada PAID sin proyección está asociada a un pedido eCommerce PAID. No se crea asiento ni movimiento de caja.
+- Hay 15 reservas CANCELED con paymentStatus PAID: 2 tienen pedido eCommerce asociado (ambos PAID) y 13 no exponen pedido eCommerce asociado en Reader V2. No se ha inferido que proceda un reembolso; se requiere conciliación de pago, política y ledger.
+- Las 121 reservas CANCELED creadas por MEMBER/ANONYMOUS_VISITOR están ya registradas en Wix Bookings SSOT; no se reactivan ni se convierten en reservas activas.
+
+### Implementación en PR #220
+
+- `_syncNativeBookingToCitas` acepta tanto `BookedResource.id` como `BookedResource._id`, manteniendo el contrato de SDK/REST.
+- Nuevo writer interno `reconcileConfirmedNativeBookingProjectionInternal`: solo permite reservas nativas CONFIRMED y excluye estados PAID/PARTIALLY_PAID/REFUNDED sin prueba de ledger.
+- Nuevo cron `reconcileMissingConfirmedBookingProjections`:
+  - Lee Bookings Reader V2 con paginación correcta (el cursor se envía sin repetir el filtro inicial).
+  - Proyecta únicamente reservas CONFIRMED no pagadas con datos de servicio, schedule y recurso completos.
+  - Crea marcador `BOOKING_CONFIRMED_RECONCILED` append-only e idempotente.
+  - Genera alertas deduplicadas para recurso no asignado, pagos no conciliados y reservas CANCELED/PAID sin proyección.
+  - No crea movimientos de caja, asientos, pagos, reservas ni movimientos de inventario.
+- Los handlers de Booking Confirmed/Rescheduled/Canceled y Order Payment/Refund/Canceled ya no devuelven objetos `RETRY_REQUIRED` o `OK` tras errores de persistencia: propagan la excepción. Los caminos de rechazo de integridad no reintentables permanecen explícitos.
+- El cron se programa cada 30 minutos, desplazado 15 minutos respecto al reconciliador de pedidos.
+
+### Validación pendiente
+
+- PR #220: CI pendiente.
+- No se ha ejecutado ningún cron en el sitio ni se han escrito filas CitasF2/ControlOperativo live.
+- No se han creado movimientos fiscales, caja ni inventario.
+- La publicación Velo y la prueba E2E en Wix QA siguen pendientes por ausencia de herramienta de despliegue/invocación desde esta sesión.
