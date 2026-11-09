@@ -14,8 +14,8 @@ REFUND-LOCK-01 (P1): la unicidad refundId y el limite acumulado del pedido se
 
 CAMBIOS DE ALINEACION v5015-ALIGNED (respecto a v5009-FISCAL-V20.1):
   ALN-01: COLLECTIONS/SINGLETONS alias eliminados. Uso de
-          BUSINESS_COLLECTIONS / OPERATIONAL_COLLECTIONS y de
-          SINGLETONS.CAJA_PRINCIPAL / .CAJA_SEQ.
+          BUSINESS_COLLECTIONS / OPERATIONAL_COLLECTIONS; sequence state
+          is stored in the single CajaActual principal item.
   ALN-02: AEAT_INVOICE_TYPE -> TIPO_FACTURA (v12.0).
   ALN-03: VAT_ACCRUAL_STATUS no existe en v12.0. Constantes locales
           VAT_ACCRUAL_DEVENGADO / _ANTICIPADO / _APLICACION_ANTICIPO.
@@ -53,16 +53,12 @@ import { updateCajaActualFromMovement } from "backend/cajas.web";
 
 import {
     query as dalQuery,
-    getItem as dalGet,
     insertItem as dalInsert,
-    updateItem as dalUpdate,
-    saveItem as dalSave,
 } from "backend/dataAccess";
 
 import {
     BUSINESS_COLLECTIONS,
     OPERATIONAL_COLLECTIONS,
-    SINGLETONS,
     SDK_CONFIG,
     MOVEMENT_TYPE,
     IVA_RATES,
@@ -1018,7 +1014,6 @@ export async function reconciliarProyecciones() {
 
 export default {
     registrarEventoEconomico,
-    _getNextSequenceInternal,
     getEventoPorId,
     reconciliarProyecciones,
 };
