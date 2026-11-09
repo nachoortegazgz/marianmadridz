@@ -26,7 +26,7 @@ El análisis y cualquier intervención posterior deben regirse estrictamente por
 *   **Seguridad:** RBAC doble capa (Velo Permissions + `STAFF.WEBSITE_ROLE_BY_RESOURCE_ID` (internalConfig.js)). Secretos en Wix Secrets Manager. HMAC-SHA256 para firma de fichajes laborales; los eventos nativos de Wix se reciben mediante backend/events.js.
 *   **Estado Actual del Catálogo:** Wix Stores **Catalog V1** activo. Migración a V3 preparada en código (PR #13) pero **no activada en producción**. Requiere ADR y QA real.
 *   **Bookings V2 SDK:** Uso estricto de `resource._id` y `location._id` (SDK JS), no `resource.id` (REST). Documentado en ADR-002.
-*   **Colecciones Legacy:** 8 colecciones prohibidas. Cualquier acceso lanza `FISCAL_VIOLATION`.
+*   **Colecciones Histórico:** 8 colecciones prohibidas. Cualquier acceso lanza `FISCAL_VIOLATION`.
 
 ### 1.4 Estado de Madurez Técnica
 *   **Código:** Migración SDK v2 fusionada en `main` (PRs #5, #10, #11, #12, #13, #15). Tests offline verdes (Vitest).
@@ -58,8 +58,8 @@ Este mapa permite la navegación semántica y técnica precisa por las 4 capas d
 | Capítulo | Título | Contenido Clave y Datos de Búsqueda Rápida |
 | :--- | :--- | :--- |
 | **4** | Arquitectura del Sistema | • Diagrama de capas unidireccional (Frontend → WebMethods → Dominio → Seguridad → Datos)<br>• Estructura de directorios `backend/` y `public/` (22 módulos)<br>• Reglas de dependencia entre capas<br>• Uso restringido de `elevate()` |
-| **5** | Modelo de Reservas | • Contratos Bookings V2: `timeZone` vs `timezone`, `BUSINESS` vs `OWNER_BUSINESS`<br>• Reserva Simple: flujo end-to-end con revalidación en servidor<br>• Reserva Dual (F1+F2): `pairToken`, gap de exposición, saga de compensación<br>• `FlowControlSettings`: `skipAvailabilityValidation`, `skipBusinessConfirmation`<br>• Duraciones desglosadas: `phase1Duration + exposureDuration + phase2Duration` |
-| **6** | Modelo CMS | • 13 Colecciones NATIVE (tabla con tipo, rol y protección)<br>• 20 Colecciones WIX_APP (solo lectura)<br>• 8 Colecciones Legacy PROHIBIDAS (`FISCAL_VIOLATION`)<br>• Protecciones append-only (`beforeUpdate`/`beforeRemove`)<br>• Invariantes de integridad (hash chain, partida doble, stock, duración)<br>• Campos canónicos transversales (21 campos clave)<br>• Reglas N1-N5 de nomenclatura |
+| **5** | Modelo de Reservas | • Contratos Bookings V2: `timeZone` vs `timezone`, `BUSINESS` vs `OWNER_BUSINESS`<br>• Reserva Simple: flujo end-to-end con revalidación en servidor<br>• Reserva Dual (F1+F2): `pairToken`, gap de exposición, saga de compensación<br>• Validación nativa de disponibilidad y pago en Writer<br>• Duraciones desglosadas con suma exacta |
+| **6** | Modelo CMS | • 13 Colecciones NATIVE (tabla con tipo, rol y protección)<br>• 20 Colecciones WIX_APP (solo lectura)<br>• 8 Colecciones Histórico PROHIBIDAS (`FISCAL_VIOLATION`)<br>• Protecciones append-only (`beforeUpdate`/`beforeRemove`)<br>• Invariantes de integridad (hash chain, partida doble, stock, duración)<br>• Campos canónicos transversales (21 campos clave)<br>• Reglas N1-N5 de nomenclatura |
 | **7** | Enums Canónicos | • Wix nativos (inglés): `BOOKING_STATUS_WIX`, `PAYMENT_STATUS_WIX`<br>• CMS: `BOOKING_STATUS_CMS` (`CANCELED` 1L), `BOOKING_TYPE`<br>• Negocio (español): `MOVEMENT_TYPE`, `TIPO_IMPOSITIVO`, `ROL_WEBSITE`, `CLOCK_EVENT_TYPE`, etc.<br>• Addons: `addonId` (singular PK) vs `addOnIds` (array transporte)<br>• Validación obligatoria: `assertValidEnum()` |
 
 ### BLOQUE C: SEGURIDAD, INTEGRACIONES Y BACKEND (Capítulos 8–12)
@@ -71,7 +71,7 @@ Este mapa permite la navegación semántica y técnica precisa por las 4 capas d
 | **9** | Integraciones | • Apps Wix nativas: reglas por app (Bookings V2, Stores V1, eCom Cart V2)<br>• Externas: Resend (email), OpenAI (IA), Wix Payments (proveedor nativo de pagos), IONOS (DNS/correo), M365 (custodia)<br>• Gestión colecciones WIX_APP: solo lectura, mutación vía SDK oficial<br>• Prohibición de llamadas externas desde frontend |
 | **10** | Backend: Módulos y Hooks | • Catálogo completo de 18 WebMethods con permisos Velo y rol negocio<br>• Flujos críticos: venta online, cancelaciones, cierre Z nocturno<br>• Hooks CMS por colección (`data.js`): validaciones beforeInsert/beforeUpdate<br>• Helpers: `mmUtils.js`, `securityEngine.js`, `validation.js`, `widgetBridge.js` |
 | **11** | Jobs y Webhooks | • 8 crons en `jobs.config` (tabla con frecuencia, dominio y operación)<br>• Webhooks Bookings V2: 5 eventos + procesamiento seguro idempotente<br>• Webhooks eCommerce: independientes de V1/V3<br>• Catalog V3 webhooks: pendientes (Developer Preview, no activar sin ADR)<br>• Reglas invariables: jobs nunca escriben directo en append-only |
-| **12** | Estándares de Código | • Reglas N1-N5 detalladas con ejemplos<br>• G10 ASCII Strict (ñ permitida en términos españoles canónicos)<br>• Convenciones enums y códigos de error estandarizados<br>• Plantilla cabecera módulo (@module, @version, @apis, @changelog)<br>• Reglas "Cero Deuda" v1.0: cero alias, cero legacy silencioso, cero deprecated |
+| **12** | Estándares de Código | • Reglas N1-N5 detalladas con ejemplos<br>• G10 ASCII Strict (ñ permitida en términos españoles canónicos)<br>• Convenciones enums y códigos de error estandarizados<br>• Plantilla de cabecera de módulo<br>• Contratos canónicos, consumidores verificados y pruebas de regresión |
 
 ### BLOQUE D: NORMATIVA, CAPA 3, REFERENCIAS Y ANEXO DE FLUJOS (Capítulos 13–14 + Anexos)
 *Define QUÉ cumplimiento legal garantiza, CÓMO se entrega al gestor y DÓNDE verificar fuentes.*
@@ -79,7 +79,7 @@ Este mapa permite la navegación semántica y técnica precisa por las 4 capas d
 | Capítulo | Título | Contenido Clave y Datos de Búsqueda Rápida |
 | :--- | :--- | :--- |
 | **13** | Normativa Aplicable | • Fiscal: Ley 11/2021 Veri*Factu, RD 1007/2023, RD 1619/2012, Ley 37/1992 IVA<br>• Contable: PGC RD 1514/2007 (partida doble, cuentas 6 dígitos)<br>• Laboral: RD 8/2019 registro horario inalterable 4 años<br>• Privacidad: RGPD/LOPDGDD, LGT 58/2003, LSSI-CE, RD 253/2025 Bizum<br>• Matriz consolidada de cumplimiento con estado y evidencia |
-| **14** | Glosario e Identificadores | • IDs inmutables sitio/ubicación/personal<br>• Resumen colecciones (13 NATIVE, 20 WIX_APP, 8 legacy)<br>• 21 campos canónicos críticos con función<br>• Librerías helpers y catálogo WebMethods<br>• 21 códigos de error estandarizados<br>• Fuentes oficiales Wix Developers y marco legal español |
+| **14** | Glosario e Identificadores | • IDs inmutables sitio/ubicación/personal<br>• Resumen colecciones (13 NATIVE, 20 WIX_APP, 8 histórico)<br>• 21 campos canónicos críticos con función<br>• Librerías helpers y catálogo WebMethods<br>• 21 códigos de error estandarizados<br>• Fuentes oficiales Wix Developers y marco legal español |
 | **ANEXO A** | Capa 3: Modelo Simplificado Gestor | • Filosofía: "Tú trabajas, el sistema recopila, el gestor organiza"<br>• 4 carpetas de Marian: VENTAS (auto), GASTOS (manual), BANCO (manual), PERSONAL (auto)<br>• Rutina mensual: ~20 min/mes<br>• Entrega trimestral: paquete cerrado día 15 post-trimestre<br>• Checklist trimestral de verificación |
 | **ANEXO B** | Solución Técnica Capa 3 Automatizada | • Patrón email estructurado: Wix → Resend → Power Automate → SharePoint<br>• Conectores estándar M365 Business Standard (sin Premium)<br>• Módulo `backend/exports/exportService.js` + 4 crons de export<br>• 7 flujos Power Automate (PA-01 a PA-07)<br>• Estructura SharePoint: 7 carpetas principales + subcarpetas anuales<br>• Permisos: Marian (Full Control), GestorAquí tienes el **Mapa de Contenidos Estructurado** diseñado para insertarse inmediatamente después de la definición de rol y directrices básicas. Este mapa actúa como índice semántico y técnico para que el modelo IA (o cualquier auditor humano) localice instantáneamente cualquier dato, restricción o contrato dentro del Dossier Técnico Consolidado.
 | **ANEXO FLUJOS CAPA 3** | Detalle del End-to-End de los datos desde sitio wix a registro externo organizado  |
@@ -105,8 +105,8 @@ Este mapa permite la navegación semántica y técnica precisa por las 4 capas d
 | Capítulo | Título | Contenido Clave y Datos de Búsqueda Rápida |
 | :--- | :--- | :--- |
 | **4** | Arquitectura del Sistema | • Diagrama de capas unidireccional (Frontend → WebMethods → Dominio → Seguridad → Datos)<br>• Estructura de directorios `backend/` y `public/` (22 módulos)<br>• Reglas de dependencia entre capas<br>• Uso restringido de `elevate()` |
-| **5** | Modelo de Reservas | • Contratos Bookings V2: `timeZone` vs `timezone`, `BUSINESS` vs `OWNER_BUSINESS`<br>• Reserva Simple: flujo end-to-end con revalidación en servidor<br>• Reserva Dual (F1+F2): `pairToken`, gap de exposición, saga de compensación<br>• `FlowControlSettings`: `skipAvailabilityValidation`, `skipBusinessConfirmation`<br>• Duraciones desglosadas: `phase1Duration + exposureDuration + phase2Duration` |
-| **6** | Modelo CMS | • 13 Colecciones NATIVE (tabla con tipo, rol y protección)<br>• 20 Colecciones WIX_APP (solo lectura)<br>• 8 Colecciones Legacy PROHIBIDAS (`FISCAL_VIOLATION`)<br>• Protecciones append-only (`beforeUpdate`/`beforeRemove`)<br>• Invariantes de integridad (hash chain, partida doble, stock, duración)<br>• Campos canónicos transversales (21 campos clave)<br>• Reglas N1-N5 de nomenclatura |
+| **5** | Modelo de Reservas | • Contratos Bookings V2: `timeZone` vs `timezone`, `BUSINESS` vs `OWNER_BUSINESS`<br>• Reserva Simple: flujo end-to-end con revalidación en servidor<br>• Reserva Dual (F1+F2): `pairToken`, gap de exposición, saga de compensación<br>• Validación nativa de disponibilidad y pago en Writer<br>• Duraciones desglosadas con suma exacta |
+| **6** | Modelo CMS | • 13 Colecciones NATIVE (tabla con tipo, rol y protección)<br>• 20 Colecciones WIX_APP (solo lectura)<br>• 8 Colecciones Histórico PROHIBIDAS (`FISCAL_VIOLATION`)<br>• Protecciones append-only (`beforeUpdate`/`beforeRemove`)<br>• Invariantes de integridad (hash chain, partida doble, stock, duración)<br>• Campos canónicos transversales (21 campos clave)<br>• Reglas N1-N5 de nomenclatura |
 | **7** | Enums Canónicos | • Wix nativos (inglés): `BOOKING_STATUS_WIX`, `PAYMENT_STATUS_WIX`<br>• CMS: `BOOKING_STATUS_CMS` (`CANCELED` 1L), `BOOKING_TYPE`<br>• Negocio (español): `MOVEMENT_TYPE`, `TIPO_IMPOSITIVO`, `ROL_WEBSITE`, `CLOCK_EVENT_TYPE`, etc.<br>• Addons: `addonId` (singular PK) vs `addOnIds` (array transporte)<br>• Validación obligatoria: `assertValidEnum()` |
 
 ### BLOQUE C: SEGURIDAD, INTEGRACIONES Y BACKEND (Capítulos 8–12)
@@ -118,7 +118,7 @@ Este mapa permite la navegación semántica y técnica precisa por las 4 capas d
 | **9** | Integraciones | • Apps Wix nativas: reglas por app (Bookings V2, Stores V1, eCom Cart V2)<br>• Externas: Resend (email), OpenAI (IA), Wix Payments (proveedor nativo de pagos), IONOS (DNS/correo), M365 (custodia)<br>• Gestión colecciones WIX_APP: solo lectura, mutación vía SDK oficial<br>• Prohibición de llamadas externas desde frontend |
 | **10** | Backend: Módulos y Hooks | • Catálogo completo de 18 WebMethods con permisos Velo y rol negocio<br>• Flujos críticos: venta online, cancelaciones, cierre Z nocturno<br>• Hooks CMS por colección (`data.js`): validaciones beforeInsert/beforeUpdate<br>• Helpers: `mmUtils.js`, `securityEngine.js`, `validation.js`, `widgetBridge.js` |
 | **11** | Jobs y Webhooks | • 8 crons en `jobs.config` (tabla con frecuencia, dominio y operación)<br>• Webhooks Bookings V2: 5 eventos + procesamiento seguro idempotente<br>• Webhooks eCommerce: independientes de V1/V3<br>• Catalog V3 webhooks: pendientes (Developer Preview, no activar sin ADR)<br>• Reglas invariables: jobs nunca escriben directo en append-only |
-| **12** | Estándares de Código | • Reglas N1-N5 detalladas con ejemplos<br>• G10 ASCII Strict (ñ permitida en términos españoles canónicos)<br>• Convenciones enums y códigos de error estandarizados<br>• Plantilla cabecera módulo (@module, @version, @apis, @changelog)<br>• Reglas "Cero Deuda" v1.0: cero alias, cero legacy silencioso, cero deprecated |
+| **12** | Estándares de Código | • Reglas N1-N5 detalladas con ejemplos<br>• G10 ASCII Strict (ñ permitida en términos españoles canónicos)<br>• Convenciones enums y códigos de error estandarizados<br>• Plantilla de cabecera de módulo<br>• Contratos canónicos, consumidores verificados y pruebas de regresión |
 
 ### BLOQUE D: NORMATIVA, CAPA 3 Y REFERENCIAS (Capítulos 13–14 + Anexos)
 *Define QUÉ cumplimiento legal garantiza, CÓMO se entrega al gestor y DÓNDE verificar fuentes.*
@@ -126,7 +126,7 @@ Este mapa permite la navegación semántica y técnica precisa por las 4 capas d
 | Capítulo | Título | Contenido Clave y Datos de Búsqueda Rápida |
 | :--- | :--- | :--- |
 | **13** | Normativa Aplicable | • Fiscal: Ley 11/2021 Veri*Factu, RD 1007/2023, RD 1619/2012, Ley 37/1992 IVA<br>• Contable: PGC RD 1514/2007 (partida doble, cuentas 6 dígitos)<br>• Laboral: RD 8/2019 registro horario inalterable 4 años<br>• Privacidad: RGPD/LOPDGDD, LGT 58/2003, LSSI-CE, RD 253/2025 Bizum<br>• Matriz consolidada de cumplimiento con estado y evidencia |
-| **14** | Glosario e Identificadores | • IDs inmutables sitio/ubicación/personal<br>• Resumen colecciones (13 NATIVE, 20 WIX_APP, 8 legacy)<br>• 21 campos canónicos críticos con función<br>• Librerías helpers y catálogo WebMethods<br>• 21 códigos de error estandarizados<br>• Fuentes oficiales Wix Developers y marco legal español |
+| **14** | Glosario e Identificadores | • IDs inmutables sitio/ubicación/personal<br>• Resumen colecciones (13 NATIVE, 20 WIX_APP, 8 histórico)<br>• 21 campos canónicos críticos con función<br>• Librerías helpers y catálogo WebMethods<br>• 21 códigos de error estandarizados<br>• Fuentes oficiales Wix Developers y marco legal español |
 | **ANEXO A** | Capa 3: Modelo Simplificado Gestor | • Filosofía: "Tú trabajas, el sistema recopila, el gestor organiza"<br>• 4 carpetas de Marian: VENTAS (auto), GASTOS (manual), BANCO (manual), PERSONAL (auto)<br>• Rutina mensual: ~20 min/mes<br>• Entrega trimestral: paquete cerrado día 15 post-trimestre<br>• Checklist trimestral de verificación |
 | **ANEXO B** | Solución Técnica Capa 3 Automatizada | • Patrón email estructurado: Wix → Resend → Power Automate → SharePoint<br>• Conectores estándar M365 Business Standard (sin Premium)<br>• Módulo `backend/exports/exportService.js` + 4 crons de export<br>• 7 flujos Power Automate (PA-01 a PA-07)<br>• Estructura SharePoint: 7 carpetas principales + subcarpetas anuales<br>• Permisos: Marian (Full Control), Gestor (Read), Staff (Sin acceso)<br>• Cumplimiento normativo mapeado |
 | **ANEXO C** | Guía Práctica Implementación Capa 3 | • Paso a paso para amateurs: Fase 1 (SharePoint) → Fase 2 (Power Automate) → Fase 3 (Email) → Fase 4 (Pruebas) → Fase 5 (Rutina) → Fase 6 (Entrega) → Fase 7 (Copilot)<br>• Solución de problemas comunes (6 escenarios)<br>• Glosario para Marian (14 términos en lenguaje sencillo)<br>• Tiempo total: 3-4 horas implementación + 20 min/mes operación |
@@ -290,7 +290,7 @@ Capa de Datos — SDK @wix/data + APIs Wix (Bookings, Members, eCommerce)
 | `backend/mmSecrets.js` | Catálogo de nombres de secretos |
 | `backend/responseUtils.js` | Normalización de respuestas DTO |
 | `backend/security.js` | Autenticación, RBAC y control de acceso |
-| `backend/securityEngine.js` | Criptografía: SHA-256, HMAC, JWT |
+| `backend/securityEngine.js` | Criptografía: SHA-256 y HMAC |
 | `backend/staff.js` | Resolución y filtrado de personal |
 | `backend/booking/bookingCore.js` | Primitivas: locks, persistencia y elevación |
 | `backend/booking/bookingSaga.js` | Orquestador transaccional (Simple + Dual F1+F2) |
@@ -360,13 +360,9 @@ InicioF2 = InicioF1 + phase1Duration + exposureDuration
 
 **Saga de compensación**: si la creación de F2 o su persistencia fallan, el backend ejecuta `cancelBooking` sobre F1 y registra el evento en `ControlOperativo`. El proceso es idempotente: reintentos deben producir el mismo resultado final.
 
-### Configuración de FlowControlSettings
+### Validación nativa del Writer
 
-| Parámetro | Uso |
-| --- | --- |
-| `skipAvailabilityValidation: true` | No se usa en la saga dual vigente; F1 y F2 conservan la validación nativa de disponibilidad de Wix. |
-| `skipBusinessConfirmation: true` | Confirma automáticamente reservas con pago online validado |
-| `skipSelectedPaymentOptionValidation: true` | No se usa en la saga dual vigente; F2 envía la opción offline configurada. |
+Las llamadas de la saga dual no envían opciones de bypass. Wix conserva la comprobación de disponibilidad y la validación de la opción de pago para F1 y F2.
 
 ### Duración desglosada (campo `ServiciosCatalogo`)
 
@@ -398,7 +394,7 @@ Estas reglas se aplican a los KEYFIELDs y a las ETIQUETAS VISIBLES de los campos
 
 ## 6. Modelo CMS: colecciones, keyfields e integridad
 
-El CMS propio tiene **13 colecciones NATIVE** activas. Las 20 colecciones `WIX_APP` son de estricta lectura. Las 8 colecciones legacy están prohibidas; cualquier acceso a ellas lanza `FISCAL_VIOLATION`.
+El CMS propio tiene **13 colecciones NATIVE** activas. Las 20 colecciones `WIX_APP` son de estricta lectura. Las 8 colecciones retiradas están bloqueadas; cualquier acceso a ellas lanza `FISCAL_VIOLATION`.
 
 ### Colecciones NATIVE (autoridad del negocio)
 
@@ -534,7 +530,7 @@ CONTROL_TYPE = { ALERT, COMPENSATION, DAYS_CACHE, DEDUPE_KEY, DISPLAY_TOKEN,
 
 ### Addons — nomenclatura crítica
 
-- `addonId`: campo singular en `ComplementosCatalogo` (PK de cada complemento). Nunca `addOnId` (legacy).
+- `addonId`: campo singular en `ComplementosCatalogo` (PK de cada complemento). `addOnIds` es el array de transporte a Bookings.
 - `addOnIds`: array de transporte hacia Wix Bookings (plural). Contiene valores de `addonId`.
 
 ## 8. Seguridad, identidad y permisos
@@ -606,7 +602,7 @@ Eventos suscritos: `booking_created`, `booking_updated`, `booking_confirmed`, `b
 
 Procesamiento seguro:
 
-1. Los handlers de `backend/events.js` son eventos backend Velo gestionados por Wix y reciben el objeto de evento entregado por la plataforma; no son endpoints HTTP públicos. Si se recibe un JWT raw, se procesa con `wixClient.webhooks.process`.
+1. Los handlers de `backend/events.js` son eventos backend Velo gestionados por Wix. La plataforma verifica y decodifica la entrega y proporciona al handler el objeto de evento. El módulo no recibe JWT sin procesar ni expone un endpoint HTTP.
 2. Extraer `eventId` del payload.
 3. Verificar idempotencia en `ControlOperativo` (`controlType = "WEBHOOK_EVENT"`) antes de cualquier mutación.
 4. Si `eventId` ya existe, abortar sin error (procesamiento idempotente).
@@ -723,7 +719,7 @@ Validaciones `beforeInsert` / `beforeUpdate` por colección:
 - **ServiciosCatalogo**: unicidad `serviceId`/`sku`/`slug`; `totalDuration === phase1Duration + exposureDuration + phase2Duration`; `tipoImpositivo` en enum AEAT.
 - **MapaStaff**: no tiene hook CMS activo. El lector de eventos filtra por `staffMemberId` + `active`, rechaza cero o múltiples coincidencias y valida `resourceId`/`scheduleId` como GUID. No es fuente de roles RBAC.
 - **RegistrosHorariosStaff**: `clockEventType` válido; `notes` obligatorio cuando `recordType === "AJUSTE"`.
-- **ControlOperativo**: `beforeInsert` ejecuta `assertControlOperativo` (`controlType`, `dedupeKey`, `traceId`; `eventId` en `WEBHOOK_EVENT`; `resourceId` + `expiresAt` en `SLOT_LOCK`). `beforeUpdate` conserva la guardia append-only y normaliza; las actualizaciones parciales mantienen validación en el writer.
+- **ControlOperativo**: `beforeInsert` y `beforeUpdate` ejecutan `assertControlOperativo`. `beforeUpdate` recupera el registro por `_id` con lectura fuerte, fusiona el cambio parcial, impide cambiar `controlType` y protege los tipos inmutables. `beforeRemove` recibe `itemId`, recupera el registro y bloquea `WEBHOOK_EVENT`. Los escritores de parches atómicos validan sus invariantes antes de mutar.
 - **InventarioStockVenta**: no hay hook CMS `beforeInsert`/`beforeUpdate` implementado en `data.js`; las validaciones se mantienen en los writers de inventario.
 - **MovimientosInventario**: unicidad `movementToken`; `reason` obligatorio cuando `movementType === "AJUSTE"`.
 - **DatosFiscales**: validación NIF/NIE/CIF/VAT-UE con `isValidNifOrEuVat()`. `beforeRemove` bloquea eliminación de `CONFIG_SISTEMA_FISCAL`.
@@ -763,7 +759,7 @@ El scheduler de Velo ejecuta las tareas declaradas en `backend/jobs.config` medi
 | Tarea (`functionName`) | Cron (Madrid) | Dominio | Operación |
 | :--- | :--- | :--- | :--- |
 | `cleanExpiredLocks` | `15 * * * *` | Concurrencia | Purga `SLOT_LOCK` expirados mediante `bulkRemove` condicionado por `controlType` y `expiresAt` vigente en el momento del borrado. |
-| `cleanExpiredDualCache` | `20 * * * *` | Reservas | Purga registros `DUAL_CACHE` legacy expirados; el código vigente ya no genera snapshots de disponibilidad dual. |
+| `cleanExpiredDualCache` | `20 * * * *` | Reservas | Purga registros `DUAL_CACHE` expirados; el flujo actual no genera snapshots de disponibilidad dual. |
 | `runPendingCompensationsJob` | `30 * * * *` | Sagas | Reintenta cancelación de F1 cuando F2 falló. |
 | `cleanExpiredDaysCache` | `0 1 * * *` | Disponibilidad | Invalida caché de días disponibles. |
 | `verifyNightlyZClosing` | `20 1 * * *` | Fiscal | Cierre Z automático: agrega `MovimientosCaja`, valida cadena SHA-256 y consolida en `HistoricoCierresZ`. |
@@ -773,8 +769,8 @@ El scheduler de Velo ejecuta las tareas declaradas en `backend/jobs.config` medi
 **Caché y locks de disponibilidad (contrato vigente):**
 - `DAYS_CACHE` almacena solo fechas/días disponibles (TTL de 5 minutos); no contiene listas de slots.
 - `reservas.web.js` no conserva slots F1/F2 ni combinaciones en memoria o `ControlOperativo`. Cada solicitud de disponibilidad obtiene los slots de Wix Bookings V2 y construye el subconjunto que se devuelve al cliente.
-- `DUAL_CACHE` queda reservado para purgar registros legacy; no se generan nuevas filas.
-- `SLOT_LOCK` utiliza `version` numérica y `lockToken` opaco. Renovación, recuperación y liberación aplican `bulkPatchItems` con condición de versión (las filas legacy sin versión se migran mediante comparación de `expiresAt`). La liberación marca el lease expirado; `cleanExpiredLocks` elimina únicamente registros que sigan expirados al ejecutar el borrado.
+- `DUAL_CACHE` se mantiene para purgar registros expirados que aún puedan existir; el flujo actual no genera nuevas filas.
+- `SLOT_LOCK` utiliza `version` numérica y `lockToken` opaco. Renovación, recuperación y liberación aplican `bulkPatchItems` con condición de versión. La liberación marca el lease expirado; `cleanExpiredLocks` elimina únicamente registros que sigan expirados al ejecutar el borrado.
 - El heartbeat de la saga propaga la versión más reciente para la liberación final. La reprogramación dual conserva versión y token de cada lock adquirido. Los locks coordinan procesos del backend; no sustituyen la validación nativa de disponibilidad de Wix Bookings.
 
 **Reglas invariables:**
@@ -795,10 +791,10 @@ Eventos suscritos en el panel de Wix y procesados por `backend/events.js`:
 | `booking_rescheduled` | Regeneración de `pairToken` si aplica y reasignación de slot. |
 
 **Procesamiento seguro:**
-1. El webhook llega como JWT firmado por Wix. Se verifica con la clave pública oficial.
+1. Wix entrega al handler Velo el objeto de evento después de verificar y decodificar la entrega firmada.
 2. Se extrae `eventId` del payload.
-3. Se consulta `ControlOperativo` (`controlType = "WEBHOOK_EVENT"`, `dedupeKey = eventId`). Si ya existe, se aborta sin error (idempotencia estricta).
-4. Se inserta el registro de deduplicación *append-only* y se ejecuta la mutación de dominio.
+3. Se consulta `ControlOperativo` (`controlType = "WEBHOOK_EVENT"`, `dedupeKey = eventId`). Si ya existe, se aborta sin error.
+4. Se inserta el registro inmutable de deduplicación y se ejecuta la mutación de dominio.
 5. Toda mutación propaga `traceId` y se enmascara PII en logs.
 
 ### 11.3 Webhooks de eCommerce
@@ -873,13 +869,13 @@ Toda excepción del backend devuelve un DTO normalizado con uno de los códigos 
  */
 ```
 
-### 12.6 Reglas de calidad "Cero Deuda" (v1.0)
+### 12.6 Reglas de calidad "Estándar de calidad" (v1.0)
 
 Según `DIRECTRICES_DESARROLLO_CODIGO.txt`:
 
 - **Cero alias** en código productivo (ni en tests).
-- **Cero rutas legacy silenciosas**: fallback de lectura permitido solo con `warn` trazable y plan de migración con fecha `review-by`.
-- **Cero APIs `@deprecated` vivas**.
+- **Cero rutas histórico silenciosas**: fallback de lectura permitido solo con `warn` trazable y plan de migración con fecha `review-by`.
+- **Cero APIs `@retirado` vivas**.
 - **Cero símbolos exportados sin consumidor verificable** en `src/`.
 - **Cero contratos zombis** (parámetros ignorados, enums sin transición).
 - **Regla anti-regresión:** ninguna eliminación sin `grep` de consumidores en `src/` y suite verde posterior.
@@ -950,15 +946,15 @@ El sistema garantiza el cumplimiento estricto del marco legal español y europeo
 | **Dominio** | `https://www.marianmadrid.es` |
 | **Repositorio** | `https://github.com/nachoortegazgz/marianmadridz` |
 
-### 14.2 Personal y roles (`MapaStaff`)
+### 14.2 Personal y mapeo de identidad (`MapaStaff`)
 
-| Nombre | `resourceId` (Bookings) | `rolBookings` | `rolWebsite` |
+| Nombre | `resourceId` (Bookings) | `rolBookings` | `rolWebsite` (referencia) |
 | :--- | :--- | :--- | :--- |
 | Marian Madrid | `e556070a-6d6a-402e-8422-11133033ea76` | `STAFF` | `ADMIN` |
 | Andrea Staff | `07f7344f-e7e4-4c53-854b-47fd82ac8d40` | `STAFF` | `ESTILISTA` |
 | Alba Staff | `9b905bfd-1a09-485d-9273-a24a20dfe648` | `STAFF` | `ESTILISTA` |
 
-> `thirdPartyId` permanece vacío hasta vincular fichas fiscales en `DatosFiscales`. Prohibido rellenarlo por inferencia.
+> `rolWebsite` y `rolBookings` de esta tabla son datos de referencia del mapeo. El RBAC efectivo procede de `internalConfig.STAFF.WEBSITE_ROLE_BY_RESOURCE_ID`. `thirdPartyId` permanece vacío hasta vincular fichas fiscales en `DatosFiscales`.
 
 ### 14.3 Wix App IDs oficiales
 
@@ -980,7 +976,7 @@ El sistema garantiza el cumplimiento estricto del marco legal español y europeo
 **20 colecciones `WIX_APP` (solo lectura):**
 `Blog/Categories`, `Blog/Posts`, `Blog/Tags`, `Bookings/Schedule`, `Bookings/Services`, `Bookings/Staff`, `CampaignManager/campaigns`, `CampaignManager/userConfig`, `Forms/subscribers03`, `Locations/Locations`, `Marketing/Coupons`, `Members/Badges`, `Members/FullData`, `Members/PrivateMembersData`, `Members/PublicData`, `Stores/Collections`, `Stores/InventoryItems`, `Stores/Orders`, `Stores/Products`, `Stores/Variants`.
 
-**8 colecciones legacy prohibidas** (acceso lanza `FISCAL_VIOLATION`):
+**8 colecciones retiradas y bloqueadas** (acceso lanza `FISCAL_VIOLATION`):
 `ConfiguracionFiscal`, `AsientosContables`, `EventosSistemaFacturacion`, `FacturasRecibidas`, `LibroRegistroFacturasExpedidas`, `LibroRegistroFacturasRecibidas`, `PlanCuentasContables`, `CategoriasServicio`.
 
 ### 14.5 Campos canónicos críticos
@@ -995,7 +991,7 @@ El sistema garantiza el cumplimiento estricto del marco legal español y europeo
 | `recordHash` | `LibroAsientosContablesDetalle` | Huella de línea contable. |
 | `bookingId` | `CitasF2` | GUID oficial de Wix Bookings V2. |
 | `pairToken` | `CitasF2` | UUID v4 que vincula `DUAL_F1` + `DUAL_F2`. |
-| `bookingStatus` | `CitasF2` | Estado interno (`PENDING`, `CONFIRMED`, `CANCELED`, `NO_SHOW`). |
+| `bookingStatus` | `CitasF2` | Estado interno (`PENDING`, `CONFIRMED`, `COMPLETED`, `CANCELED`, `REFUNDED`, `NO_SHOW`). |
 | `paymentStatus` | `CitasF2` | Estado de tesorería (`NOT_PAID`, `PENDING_PAYMENT`, `PENDING_LEDGER`, `PAID`, `PARTIALLY_PAID`, `REFUNDED`, `PARTIALLY_REFUNDED`, `EXEMPT`, `UNDEFINED`). |
 | `resourceId` | `MapaStaff`, `CitasF2` | GUID del recurso en Wix Bookings. |
 | `memberId` | `MapaStaff` | GUID de usuario en Wix Members. |
@@ -1100,9 +1096,9 @@ CONTROL_TYPE    = { ALERT, COMPENSATION, DAYS_CACHE, DEDUPE_KEY,
 | `ServiciosCatalogo` | Unicidad `serviceId`/`sku`/`slug`; `totalDuration === phase1 + exposure + phase2`. | Controlado. | Solo ADMIN. |
 | `DatosFiscales` | Valida NIF/NIE/CIF/VAT-UE. | Controlado. | Bloqueado para `CONFIG_SISTEMA_FISCAL`. |
 | `CajaActual` | Valida `singletonKey = CAJA_PRINCIPAL` (colección `SINGLE_ITEM`). | `sequenceCounters` editable solo por backend bajo bloqueo fiscal global. | **Bloqueado**. |
-| `InventarioStockVenta` | Valida `stockAvailable === stockOnHand - stockReserved`. | Controlado. | Solo ADMIN. |
-| `ControlOperativo` | Valida `controlType`, `dedupeKey`, `traceId`. | Controlado. | Controlado. |
-| `MapaStaff` | Mapeo de respaldo; lectura falla cerrada ante mapping ausente/ambiguo o GUID inválidos. | Sin hook CMS. | Solo ADMIN. |
+| `InventarioStockVenta` | Sin hook CMS; validación en writers de inventario. | Sin hook CMS; validación en writers de inventario. | Sin hook CMS; autorización en WebMethods. |
+| `ControlOperativo` | Valida identidad y requisitos específicos del tipo. | Recupera registro, fusiona el cambio, protege `controlType` e inmutabilidad y valida el estado resultante. | Recupera por `itemId` y bloquea la eliminación de `WEBHOOK_EVENT`. |
+| `MapaStaff` | Sin hook CMS. | Sin hook CMS. | Sin hook CMS. |
 | `ComplementosCatalogo` | Unicidad `addonId`/`sku`. | Controlado. | Solo ADMIN. |
 | `HistoricoCierresZ` | Valida firma de cierre. | **Bloqueado**. | **Bloqueado**. |
 
@@ -3286,7 +3282,7 @@ El sitio `marianmadrid.es` gestiona **12 procesos de negocio** a través de tres
 | **P1.8** Reprogramación de reserva | `citasManager.web.js` → `rescheduleExistingBooking` / `rescheduleDualBookings` (Permiso `SiteMember`). Evento backend `booking_rescheduled`. Regeneración de `pairToken` si dual. | `bookingId`, nuevo `slotStart`/`slotEnd`, nuevo `resourceId` (si cambia), `traceId` | `CitasF2` (update controlado) + Wix Bookings V2 |
 | **P1.9** Cancelación de reserva | Webhook `booking_canceled` → `events.js` deduplica. Actualiza `CitasF2`. Registro rectificativo en `MovimientosCaja` (`movementType: "DEVOLUCION"`). Devolución de stock si aplica en `MovimientosInventario`. | `bookingStatus: "CANCELED"`, `paymentStatus: "REFUNDED"`, `movementType: "DEVOLUCION"`, `hash` encadenado, `previousInvoiceId`, `tipoRectificativa`, `traceId` | `CitasF2` (update) + `MovimientosCaja` (insert append-only) + `MovimientosInventario` (si aplica) + `ControlOperativo` |
 | **P1.10** No-show | Registro manual por staff vía `citasManager.web.js`. Actualización de `CitasF2`. | `bookingStatus: "NO_SHOW"`, `traceId` | `CitasF2` (update controlado) |
-| **P1.11** Eventos backend Bookings (5 handlers) | `events.js` registra handlers Velo para `booking_created`, `booking_updated`, `booking_confirmed`, `booking_canceled` y `booking_rescheduled`. Wix los entrega como eventos backend gestionados por la plataforma; la deduplicación `eventId` se persiste en `ControlOperativo` (`WEBHOOK_EVENT`, nombre histórico del tipo de control). | `eventId`, `bookingId`, payload del evento, `dedupeKey`, `traceId` | `ControlOperativo` (`WEBHOOK_EVENT`, append-only) + `CitasF2` (según evento) |
+| **P1.11** Eventos backend Bookings (5 handlers) | `events.js` registra handlers Velo para `booking_created`, `booking_updated`, `booking_confirmed`, `booking_canceled` y `booking_rescheduled`. Wix los entrega como eventos backend gestionados por la plataforma; la deduplicación `eventId` se persiste en `ControlOperativo` (`WEBHOOK_EVENT`, registro inmutable de entrega). | `eventId`, `bookingId`, payload del evento, `dedupeKey`, `traceId` | `ControlOperativo` (`WEBHOOK_EVENT`, append-only) + `CitasF2` (según evento) |
 
 **Reprogramación dual — implementación integrada en `main` mediante PR #176; publicación Wix no verificada en esta auditoría:**
 - Identidad idempotente estable SHA-256 a partir de `pairToken`, booking IDs, servicios, recurso objetivo y slots destino; `traceId` no forma parte de la identidad. `operationId` UUID opcional permite distinguir una nueva intención.
