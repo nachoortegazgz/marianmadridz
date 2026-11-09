@@ -12,6 +12,7 @@ import {
     CONTROL_STATUS,
     CONTROL_TYPE,
     OPERATIONAL_COLLECTIONS,
+    RATE_LIMITS,
     ROL_WEBSITE,
 } from "backend/internalConfig";
 
@@ -46,19 +47,7 @@ const ALLOWED_STAFF_ROLES = Object.freeze([
     ROL_WEBSITE.ESTILISTA,
 ]);
 
-const DEFAULT_RATE_LIMIT = Object.freeze({
-    maxRequests: 20,
-    windowMs: 5000,
-});
 
-const RATE_LIMIT_POLICIES = Object.freeze({
-    "public-booking": Object.freeze({ maxRequests: 5, windowMs: 10000 }),
-    reservas: Object.freeze({ maxRequests: 20, windowMs: 5000 }),
-    availability: Object.freeze({ maxRequests: 12, windowMs: 5000 }),
-    // Token issuance is a credential-bearing endpoint; keep a dedicated,
-    // stricter GCRA budget instead of inheriting the generic default.
-    "display-token": Object.freeze({ maxRequests: 5, windowMs: 60000 }),
-});
 
 const RATE_LIMIT_CAS_ATTEMPTS = 12;
 const RATE_LIMIT_COLLECTION = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
@@ -186,9 +175,10 @@ export async function rateLimiter(
 ) {
     const normalizedSurface = _normalizeRateLimitPart(surface);
     const normalizedKey = _normalizeRateLimitPart(key, "anonymous");
-    const policy = RATE_LIMIT_POLICIES[normalizedSurface] || DEFAULT_RATE_LIMIT;
-    const max = Math.max(1, Math.floor(Number(maxRequests) || policy.maxRequests));
-    const window = Math.max(1, Math.floor(Number(windowMs) || policy.windowMs));
+    const policyKey = normalizedSurface.toUpperCase().replace(/-/g, "_");
+    const policy = RATE_LIMITS[policyKey] || RATE_LIMITS.DEFAULT;
+    const max = Math.max(1, Math.floor(Number(maxRequests) || policy.MAX_REQUESTS));
+    const window = Math.max(1, Math.floor(Number(windowMs) || policy.WINDOW_MS));
     const intervalMicros = Math.floor((window * 1000) / max);
     const burstToleranceMicros = Math.max(0, window * 1000 - intervalMicros);
     const traceId = makeTraceId("rate-limit");

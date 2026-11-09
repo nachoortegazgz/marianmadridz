@@ -55,6 +55,10 @@ test('BAVAIL-WINDOW-01 backend and frontend expose the same 15-day booking windo
 // SLOT SHAPE NORMALIZATION (Wix Bookings Writer V2 devuelve ambas formas)
 // ---------------------------------------------------------------------------
 
+test('BUTIL-CONFIG-01 public SLOT_SEARCH mirror matches backend SSOT', () => {
+  assert.deepStrictEqual(MU.SLOT_SEARCH, IC.SLOT_SEARCH);
+});
+
 test('BUTIL-SLOT-01 normalizeSlotShape flattens nested slot, outer wins', () => {
   const nested = BU.normalizeSlotShape({
     slot: { localStartDate: '2026-10-15T09:00:00', _id: 'S1' },
@@ -92,7 +96,7 @@ test('BUTIL-RES-01 extracts only STAFF-type group ids, deduped', () => {
       { resourceTypeId: 'room-type-99', resources: [{ id: GUID_3 }] },
       {
         resourceTypeId: STAFF_TYPE,
-        resources: [{ id: GUID_1 }, { _id: GUID_2 }, { id: 'no-guid' }, GUID_1],
+        resources: [{ _id: GUID_1 }, { _id: GUID_2 }, { _id: 'no-guid' }, GUID_1],
       },
     ],
   };
@@ -106,10 +110,11 @@ test('BUTIL-RES-02 missing staffResourceTypeId returns empty (never confuses roo
   assert.deepStrictEqual(BU.getResourceIdsFromSlot(slot, null), []);
 });
 
-test('BUTIL-RES-03 flat single-resource slot falls back to direct id', () => {
-  const ids = BU.getResourceIdsFromSlot({ resource: { id: GUID_1 } }, STAFF_TYPE);
+test('BUTIL-RES-03 flat single-resource slot requires the SDK _id field', () => {
+  const ids = BU.getResourceIdsFromSlot({ resource: { _id: GUID_1 } }, STAFF_TYPE);
   assert.deepStrictEqual(ids, [GUID_1]);
-  assert.deepStrictEqual(BU.getResourceIdsFromSlot({ resource: { id: 'basura' } }, STAFF_TYPE), []);
+  assert.deepStrictEqual(BU.getResourceIdsFromSlot({ resource: { _id: 'basura' } }, STAFF_TYPE), []);
+  assert.deepStrictEqual(BU.getResourceIdsFromSlot({ resource: { id: GUID_1 } }, STAFF_TYPE), []);
 });
 
 // ---------------------------------------------------------------------------

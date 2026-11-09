@@ -534,16 +534,20 @@ test('BCORE-PAIR-02 inverted phase order fails closed', () => {
 
 test('BCORE-LOC-01 Writer location prefers the slot returned by Wix', () => {
   const resolved = BC._resolveWriteLocation({ _id: RES_A, locationType: 'BUSINESS' }, { locationId: RES_B });
-  assert.deepStrictEqual(resolved, { id: RES_A, locationType: 'OWNER_BUSINESS' });
+  assert.deepStrictEqual(resolved, { _id: RES_A, locationType: 'OWNER_BUSINESS' });
 });
 
 test('BCORE-LOC-02 Writer location falls back to service config when slot lacks location', () => {
   const resolved = BC._resolveWriteLocation(null, { locationId: RES_B });
-  assert.deepStrictEqual(resolved, { id: RES_B, locationType: 'OWNER_BUSINESS' });
+  assert.deepStrictEqual(resolved, { _id: RES_B, locationType: 'OWNER_BUSINESS' });
 });
 
-test('BCORE-LOC-03 Writer location rejects invalid ids without guessing', () => {
+test('BCORE-LOC-03 Writer location rejects invalid ids and ignores REST aliases', () => {
   assert.strictEqual(BC._resolveWriteLocation({ _id: 'not-a-guid' }, { locationId: 'also-invalid' }), null);
+  assert.deepStrictEqual(
+    BC._resolveWriteLocation({ id: RES_A }, { locationId: RES_B }),
+    { _id: RES_B, locationType: 'OWNER_BUSINESS' }
+  );
 });
 
 
@@ -621,7 +625,7 @@ test('PERSIST-01 fiscal third-party writer uses the canonical TERCERO record typ
 
 test('PERSIST-02 cash ledger idempotency claim writes required dedupeKey', async () => {
   const source = await readFile(new URL('../cajas.web.js', import.meta.url), 'utf8');
-  assert.match(source, /controlType:\s*"LEDGER_IDEMPOTENCY",[\s\S]{0,180}dedupeKey:\s*transactionId/);
+  assert.match(source, /controlType:\s*CONTROL_TYPE\.LEDGER_IDEMPOTENCY,[\s\S]{0,180}dedupeKey:\s*transactionId/);
 });
 
 test('PERSIST-06 online fiscal events populate required staffResourceId from the channel resource', async () => {

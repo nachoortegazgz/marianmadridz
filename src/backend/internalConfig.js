@@ -37,6 +37,8 @@ export const STAFF = Object.freeze({
 
 // Nombre por defecto cuando la identidad staff no se puede resolver via
 // Bookings Staff API (staff.js v9, PEND-MAP-01).
+// REVIEW-BY: 2027-01-31 (D-2, PEND-MAP-01). Retirar al acreditar
+// cobertura completa de los nombres via Bookings Staff Members API.
 export const STAFF_DEFAULT_NAME = "STAFF";
 
 export const BUSINESS_COLLECTIONS = Object.freeze({
@@ -117,6 +119,8 @@ export const SDK_CONFIG = Object.freeze({
 
   JOBS: Object.freeze({
     AUDIT_RETENTION_DAYS: 90,
+    // DUAL_CACHE solo purga filas legacy; no se generan nuevas filas.
+    // REVIEW-BY: 2027-01-31 (D-2). Retirar al confirmar ControlOperativo sin filas.
     DUAL_CACHE_CLEANUP_LIMIT: 500,
     DAYS_CACHE_CLEANUP_LIMIT: 500,
     FISCAL_RECOVERY_BATCH_SIZE: 25,
@@ -185,12 +189,36 @@ export const WIX_CATALOG_APP_IDS = Object.freeze({
 // CERO-DEUDA ZC-07: export JWT eliminado (generateJWT/verifyJWT ya no
 // existen en securityEngine.js; no hay consumidores de config JWT).
 
-// Timeout de busqueda de slots (espejo fiel de public/mmUtils.js SLOT_SEARCH,
-// BIBLIA 3.2; MINUTOS_TOLERANCIA citado literalmente por bookingCore.js).
+// SSOT backend de busqueda de slots. public/mmUtils.js mantiene un espejo
+// frontend-safe cuya paridad queda cubierta por BUTIL-CONFIG-01.
 export const SLOT_SEARCH = Object.freeze({
   DIAS_LIMITE: 15,
   MINUTOS_TOLERANCIA: 120,
   MINUTOS_MAX_HUECO_DUAL: 120,
+});
+
+// Capa 1 — reservas: constantes de presentacion y caducidad.
+export const DTO_CONFIG = Object.freeze({
+  MINUTOS_INTERVALO_INICIO: 30,
+});
+
+export const DAYS_CACHE_CONFIG = Object.freeze({
+  TTL_MS: 300000,
+});
+
+export const DISPLAY_TOKEN_CONFIG = Object.freeze({
+  TTL_MS: 1800000,
+  MAX_ATTEMPTS: 5,
+});
+
+// Rate limiting GCRA por superficie. Valores vigentes en security.js
+// (incluye la superficie publica y la emision de credenciales de display).
+export const RATE_LIMITS = Object.freeze({
+  DEFAULT: Object.freeze({ MAX_REQUESTS: 20, WINDOW_MS: 5000 }),
+  PUBLIC_BOOKING: Object.freeze({ MAX_REQUESTS: 5, WINDOW_MS: 10000 }),
+  RESERVAS: Object.freeze({ MAX_REQUESTS: 20, WINDOW_MS: 5000 }),
+  AVAILABILITY: Object.freeze({ MAX_REQUESTS: 12, WINDOW_MS: 5000 }),
+  DISPLAY_TOKEN: Object.freeze({ MAX_REQUESTS: 5, WINDOW_MS: 60000 }),
 });
 
 // Parametros de concurrencia/transaccion (bookingCore.js BCORE-*, crons.js).
@@ -323,6 +351,14 @@ export const CHANNEL_TYPE = Object.freeze({
   PRESENCIAL: "PRESENCIAL",
 });
 
+// Opciones nativas de pago de Wix Bookings Writer V2.
+// La fase F2 sin coste usa OFFLINE; no se inventa un enum NO_FEE:
+// noFee es un booleano de metadata en la proyeccion CMS.
+export const BOOKING_PAYMENT_OPTION = Object.freeze({
+  ONLINE: "ONLINE",
+  OFFLINE: "OFFLINE",
+});
+
 // Metodos de pago del ledger. Miembros EFECTIVO/TARJETA/BIZUM verificados en
 // site.flows.e2e (paymentMethod 'EFECTIVO'); TRANSFERENCIA admitido por el
 // runner legado; WIX_PAYMENTS por citasManager ALN-06/CM5-05.
@@ -368,13 +404,17 @@ export const CONTROL_STATUS = Object.freeze({
 // Las referencias a una supuesta v13.0 en comentarios historicos no tienen
 // un documento normativo v13.0 en el repositorio ni entre las fuentes aportadas;
 // por tanto no prevalecen sobre la SSOT aprobada disponible.
-// DISPLAY_TOKEN se conserva por su productor activo en reservas.web.js.
+// DISPLAY_TOKEN tiene ciclo de vida propio; DEDUPE_KEY y LEDGER_IDEMPOTENCY
+// son claims durables y quedan fuera de la purga de IDEMPOTENCY a 24 h.
 export const CONTROL_TYPE = Object.freeze({
   ALERT: "ALERT",
   COMPENSATION: "COMPENSATION",
   DAYS_CACHE: "DAYS_CACHE",
   DISPLAY_TOKEN: "DISPLAY_TOKEN",
   DUAL_CACHE: "DUAL_CACHE",
+  // Durable deduplication claims are not eligible for the 24h booking-control purge.
+  DEDUPE_KEY: "DEDUPE_KEY",
+  LEDGER_IDEMPOTENCY: "LEDGER_IDEMPOTENCY",
   IDEMPOTENCY: "IDEMPOTENCY",
   SLOT_LOCK: "SLOT_LOCK",
   RATE_LIMIT: "RATE_LIMIT",
@@ -526,8 +566,8 @@ export const BOOKING_FIELDS = Object.freeze({
 // legacy tolerados SOLO en lectura de documentos historicos pre-migracion.
 // Fuente unica de verdad para los helpers de lectura dual (data.js y
 // cajas.web.js comparten este contrato; cero duplicacion de listas).
-// JAMAS usar las claves alias en escrituras nuevas: prohibidas por
-// MovimientosCaja_beforeInsert via MOVEMENT_LEGACY_WRITE_FIELDS.
+// JAMAS usar las claves alias en escrituras nuevas: normalizeMovementKeys,
+// invocada por MovimientosCaja_beforeInsert, rechaza las claves legacy.
 // =============================================================================
 // REVIEW-BY: 2027-01-31. Re-evaluar fallback de lectura tras medir
 // consumo de aliases historicos en MovimientosCaja; no usar en escrituras.

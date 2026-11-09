@@ -32,6 +32,16 @@ Fuentes oficiales consultadas:
 4. Los identificadores propios del dominio, por ejemplo `resourceId` en DTOs y CMS, permanecen como `resourceId`; no se renombrarán por esta ADR.
 5. Actualizar la SSOT §17.3 y §20.3 para que la regla distinga explícitamente REST de SDK.
 
+## Firma del Writer de reprogramación
+
+El SDK expone `bookings.rescheduleBooking(bookingId, slot, options)`. El argumento
+`slot` es el objeto BookedSlot SDK (con `resource._id` y `location._id`), mientras
+que `revision` pertenece al tercer argumento `options`. No se debe anidar
+`{ slot, revision }` como segundo argumento.
+
+Fuente oficial:
+- [Reschedule Booking V2 — SDK](https://dev.wix.com/docs/api-reference/business-solutions/bookings/bookings/bookings-writer-v2/reschedule-booking?apiView=SDK)
+
 ## Consecuencias
 
 - `bookingCore.js`, `bookingSaga.js` y `reservas.web.js` deben usar `BookedResource._id` y `Location._id` en los objetos SDK.

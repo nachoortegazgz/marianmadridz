@@ -9,8 +9,10 @@ STANDARDS: G10 ASCII Strict.
 
 HISTORIAL CERO-DEUDA:
   ZC-07: generateJWT/verifyJWT eliminados (0 consumidores). El modulo ya no
-          exporta ni importa configuracion JWT; la autenticacion vive en
-          security.js (sesiones Wix + MapaStaff.rolWebsite).
+          exporta ni importa configuracion JWT. La autenticacion de WebMethods
+          usa sesiones Wix y roles canonicos de internalConfig.STAFF; los
+          eventos backend nativos son callbacks gestionados por Wix en events.js.
+          Ninguno de estos flujos usa JWT propio ni HMAC de webhooks internos.
 =============================================================================
 */
 
@@ -125,8 +127,10 @@ export function timingSafeEqual(first, second) {
 
 // =============================================================================
 // CERO-DEUDA ZC-07: eliminados generateJWT/verifyJWT (0 consumidores
-// en src/ y tests; la autenticacion real vive en security.js via sesiones
-// Wix + MapaStaff.rolWebsite, no via JWT propio).
+// en src/ y tests). Los WebMethods autentican sesiones Wix y roles canonicos
+// desde internalConfig.STAFF; events.js recibe callbacks backend gestionados
+// por Wix. Esta decision no sustituye la verificacion de JWT raw en endpoints
+// HTTP externos, que deben usar el procesamiento oficial de webhooks de Wix.
 // =============================================================================
 
 // =============================================================================

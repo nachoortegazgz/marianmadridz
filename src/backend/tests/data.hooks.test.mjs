@@ -211,6 +211,8 @@ test('HOOK-CONTROL-01 canonicalizes duplicate ControlOperativo columns', () => {
   const expiresAt = new Date('2026-11-05T12:00:00.000Z');
   const item = {
     controlType: 'IDEMPOTENCY',
+    dedupeKey: 'IDEMPOTENCY:qa-owner',
+    traceId: 'trace-control-01',
     attempt: 2,
     leaseExpiresAt: expiresAt,
     createdAt: new Date(),

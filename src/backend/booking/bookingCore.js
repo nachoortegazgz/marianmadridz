@@ -6,19 +6,10 @@ RESPONSIBILITY: Primitivas atomicas de reserva (simple y dual con gap),
 Bookings Writer V2, checkout Cart V2 de F1, locks, idempotencia,
 persistencia CitasF2, proyeccion de slots y traduccion de enums en frontera.
 
-CORRECCIONES v5021 (alineadas con la documentacion oficial de Wix Bookings V2):
-  WIX-V2-ID-01 (P0): _resolveWriteLocation devuelve `{ id, locationType }`,
-    no `{ _id, locationType }`. El contrato oficial de BookedSlot.Location
-    es `{ id, name, formattedAddress, locationType }` (id, NO _id).
-    Ref: https://dev.wix.com/docs/api-reference/business-solutions/bookings/
-    bookings/bookings-writer-v2/create-booking
-  WIX-V2-ID-02 (P0): _forceStaffInPristineSlot devuelve
-    `resource: { id }`, no `resource: { _id }`. El contrato oficial de
-    BookedSlot.Resource es `{ id, name, email, scheduleId }`.
-  WIX-V2-ID-03 (P1): _forceStaffInPristineSlot acepta
-    `resourceCandidate.id` (fallback a `_id` para compatibilidad).
-  WIX-V2-ID-04 (P1): _projectCertifiedSlot lee `location.id` (antes ._id)
-    para construir `locationId` interno.
+CORRECCIONES V5022 — SDK Bookings V2:
+  BOOKINGS-SDK-ID-01 (P0): BookedSlot del SDK usa resource._id y
+    location._id. _resolveWriteLocation y _forceStaffInPristineSlot
+    construyen ese shape; la forma REST id no se acepta en writers SDK.
   LOG-NOISE-01 (P2): eliminado el log.warn de thirdPartyId en
     _persistBooking. El campo es OPCIONAL en Bookings Writer V2.
 
@@ -655,16 +646,16 @@ export function _resolveWriteLocation(slotLocation, serviceConfig) {
     const fromCms = _safeTrim(serviceConfig && serviceConfig.locationId);
     if (incoming) {
         return _looksLikeGuid(incoming)
-            ? { id: incoming, locationType: "OWNER_BUSINESS" }
+            ? { _id: incoming, locationType: "OWNER_BUSINESS" }
             : null;
     }
     if (fromCms) {
         return _looksLikeGuid(fromCms)
-            ? { id: fromCms, locationType: "OWNER_BUSINESS" }
+            ? { _id: fromCms, locationType: "OWNER_BUSINESS" }
             : null;
     }
     return _looksLikeGuid(CONFIGURED_LOCATION_ID)
-        ? { id: CONFIGURED_LOCATION_ID, locationType: "OWNER_BUSINESS" }
+        ? { _id: CONFIGURED_LOCATION_ID, locationType: "OWNER_BUSINESS" }
         : null;
 }
 
@@ -685,11 +676,10 @@ export async function _forceStaffInPristineSlot(
     }
     const resourceCandidate =
         slot.resource && typeof slot.resource === "object" ? slot.resource : {};
-    /* WIX-V2-ID-03: acepta `id` (contrato V2) con fallback a `_id` (legacy). */
+    /* Bookings SDK V2: el recurso del slot usa `_id`, no la forma REST `id`. */
     const resourceIdClean = _safeTrim(
         resourceId ||
             slot.resourceId ||
-            resourceCandidate.id ||
             resourceCandidate._id
     );
     if (!resourceIdClean || !_looksLikeGuid(resourceIdClean)) {
@@ -740,14 +730,14 @@ export async function _forceStaffInPristineSlot(
         });
         return null;
     }
-    /* WIX-V2-ID-02: BookedSlot.Resource usa `id`, no `_id`. */
+    /* BookedSlot.Resource del SDK usa `_id`. */
     return {
         serviceId: serviceId,
         scheduleId: scheduleId,
         startDate: startDate.toISOString(),
         endDate: endDate.toISOString(),
         timezone: _safeTrim(SDK_CONFIG && SDK_CONFIG.TZ) || "Europe/Madrid",
-        resource: { id: resourceIdClean },
+        resource: { _id: resourceIdClean },
         location,
     };
 }
@@ -1895,7 +1885,7 @@ export function _projectCertifiedSlot(slot, resourceId) {
             ? normalized.resource
             : {};
     const resourceIdClean = _safeTrim(
-        resourceId || normalized.resourceId || resourceCandidate.id
+        resourceId || normalized.resourceId || resourceCandidate._id
     );
     if (!resourceIdClean || !_looksLikeGuid(resourceIdClean)) return null;
     const localStartDate = normalized.localStartDate;
@@ -1928,8 +1918,8 @@ export function _projectCertifiedSlot(slot, resourceId) {
         bookable: normalized.bookable === true,
         availableResources: _extractResourceIdsFromSlot(normalized),
         timezone: _safeTrim(SDK_CONFIG && SDK_CONFIG.TZ) || "Europe/Madrid",
-        /* WIX-V2-ID-04: `location` ahora es `{ id, locationType }`. */
-        locationId: location.id,
+        /* WIX-V2-ID-04: `location` conserva el shape SDK `{ _id, locationType }`. */
+        locationId: location._id,
         locationName: _safeTrim(slotLocation.name),
         formattedAddress: _safeTrim(slotLocation.formattedAddress),
     };

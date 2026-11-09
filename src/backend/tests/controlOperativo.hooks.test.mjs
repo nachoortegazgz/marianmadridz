@@ -23,21 +23,33 @@ function _base(controlType) {
 }
 
 describe("ControlOperativo hooks (ADR-05)", () => {
-  it("DATA-05: beforeInsert es passthrough (schema vive en bookingCore/events)", () => {
-    /* SSOT v13.0-MINIMAL: las validaciones de controlType/dedupeKey/status se
-       eliminaron del hook CMS porque ya se aplican en el punto de uso
-       (bookingCore, events.js). El hook solo conserva la guardia append-only
-       de WEBHOOK_EVENT. Este test sella la decision de eliminacion. */
-    const ok = _base(CONTROL_TYPE.SLOT_LOCK);
+  it("DATA-05: beforeInsert validates control identity and type-specific invariants", () => {
+    // The insert hook receives a complete item. Patch/update paths keep their
+    // point-of-use validation because atomic bulkPatch may be partial.
+    const ok = {
+      ..._base(CONTROL_TYPE.SLOT_LOCK),
+      resourceId: "11111111-1111-4111-8111-111111111111",
+      expiresAt: new Date(Date.now() + 60000),
+    };
     assert.strictEqual(ControlOperativo_beforeInsert(ok), ok);
-    const bad = { ..._base("NOT_A_TYPE"), controlType: "NOT_A_TYPE" };
-    assert.doesNotThrow(() => ControlOperativo_beforeInsert(bad));
+
+    const badType = { ..._base("NOT_A_TYPE"), controlType: "NOT_A_TYPE" };
+    assert.throws(() => ControlOperativo_beforeInsert(badType), /controlType/);
+
+    const badWebhook = _base(CONTROL_TYPE.WEBHOOK_EVENT);
+    assert.throws(() => ControlOperativo_beforeInsert(badWebhook), /eventId/);
+
+    const badLock = {
+      ..._base(CONTROL_TYPE.SLOT_LOCK),
+      expiresAt: new Date(Date.now() + 60000),
+    };
+    assert.throws(() => ControlOperativo_beforeInsert(badLock), /resourceId/);
   });
 
   it("WEBHOOK_EVENT es append-only: update prohibido", () => {
     const rec = _base(CONTROL_TYPE.WEBHOOK_EVENT);
     assert.throws(
-      () => ControlOperativo_beforeUpdate(rec, { original: rec }),
+      () => ControlOperativo_beforeUpdate(rec),
       /append-only/,
     );
   });
@@ -59,13 +71,15 @@ describe("ControlOperativo hooks (ADR-05)", () => {
     /* SSOT-FIX (2026-10-13): el enum canónico de internalConfig es la fuente
        de verdad. BOOKING_TX quedo retirado (crons.js linea 509 confirma que
        no tiene productores ni consumidores activos). Se verifican ademas los
-       tres subtipos con productores reales en codigo activo: IDEMPOTENCY
-       (bookingCore v5013), SYSTEM_FLAG (bookingSaga v5013) y DEDUPE_KEY. */
+       tipos con productores reales: IDEMPOTENCY (bookingCore), SYSTEM_FLAG
+       (bookingSaga), DEDUPE_KEY (accounting/inventario) y
+       LEDGER_IDEMPOTENCY (caja). Los dos ultimos son durables y no entran
+       en cleanExpiredBookingControl. */
     /* La SSOT v10.0 entregada exige RATE_LIMIT persistido en ControlOperativo.
        DISPLAY_TOKEN se conserva por su productor activo en reservas.web.js. */
     const expected = [
       "SLOT_LOCK", "WEBHOOK_EVENT", "IDEMPOTENCY", "RATE_LIMIT",
-      "SYSTEM_FLAG",
+      "SYSTEM_FLAG", "DEDUPE_KEY", "LEDGER_IDEMPOTENCY",
       "COMPENSATION", "ALERT", "DAYS_CACHE", "DUAL_CACHE",
       "DISPLAY_TOKEN",
     ];

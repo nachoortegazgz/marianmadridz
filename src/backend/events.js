@@ -319,6 +319,13 @@ const STRONG_READ = Object.freeze({ consistencyMode: "strong" });
 
 const wixClient = createClient({});
 
+/*
+ * These exports are Wix Velo backend event handlers, not public HTTP routes.
+ * Wix dispatches native event objects to this module; object payloads are
+ * already platform-delivered and decoded. If this helper receives a raw JWT
+ * string, the official Wix webhooks.process path verifies and decodes it.
+ * Never reuse the object passthrough for an externally exposed HTTP endpoint.
+ */
 async function _verifyAndDecodeWebhook(rawBody, expectedEventType) {
     try {
         if (!rawBody) {

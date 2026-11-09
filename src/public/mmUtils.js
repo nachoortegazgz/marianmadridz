@@ -32,6 +32,9 @@ export const CURRENCY_CONFIG = Object.freeze({
     DECIMALES: SITE.DECIMALS
 });
 
+// Public mirror of backend/internalConfig.SLOT_SEARCH. Frontend-safe
+// module boundaries prevent importing backend config here; BUTIL-CONFIG-01
+// locks the values together so the mirror cannot drift silently.
 export const SLOT_SEARCH = Object.freeze({
     DIAS_LIMITE: 15,
     MINUTOS_TOLERANCIA: 120,

@@ -20,17 +20,14 @@
  *   - DUAL-GAP-03 (P1): _revalidateDualInputSlots mantiene la validación
  *     exacta del gap (gapMinutes === exposureMinutes) coherente con la
  *     búsqueda exacta de reservas.web.js. Añade log de diagnóstico.
- *   - PRISTINE-ID-01 (P0): _rescheduleBookingNative verifica que el
- *     pristineSlot tenga `resource.id` y `location.id` (no `_id`).
- *     Si no los tiene, falla con mensaje explícito. La corrección del
- *     origen está en bookingCore.js / bookingSaga.js (ver nota final).
+ *   - PRISTINE-ID-01 (P0): los objetos BookedSlot de @wix/bookings usan
+ *     `resource._id` y `location._id`. La forma `id` corresponde a REST y
+ *     no se acepta en este flujo SDK.
  *
  * DOC OFICIAL:
- *   - Create Booking: https://dev.wix.com/docs/api-reference/business-solutions/bookings/bookings/bookings-writer-v2/create-booking
- *     "Specify the slot's startDate, endDate, resource, and location in
- *     booking.bookedEntity.slot." El resource usa `id`, no `_id`.
- *   - Reschedule Booking: https://dev.wix.com/docs/velo/apis/wix-bookings-v2/bookings/reschedule-booking
- *     "slot: V2Slot". El V2Slot usa `resource.id` y `location.id`.
+ *   - Bookings Writer V2 SDK: https://dev.wix.com/docs/api-reference/business-solutions/bookings/bookings/bookings-writer-v2/create-booking?apiView=SDK
+ *   - Reschedule Booking V2 SDK: https://dev.wix.com/docs/api-reference/business-solutions/bookings/bookings/bookings-writer-v2/reschedule-booking?apiView=SDK
+ *     Firma: rescheduleBooking(bookingId, slot, options); revision pertenece a options.
  *   - Multi-Service Booking: no soporta gaps (solo SEQUENTIAL_BOOKINGS).
  *     La estrategia de dos bookings individuales con gap manual es correcta.
  */
@@ -1335,41 +1332,24 @@ function _assertReschedulableCita(cita, traceId) {
 }
 
 /**
- * PRISTINE-ID-01: verifica que el pristineSlot tenga `resource.id` y
- * `location.id` (no `_id`). La corrección del origen está en
- * bookingCore.js / bookingSaga.js; aquí hacemos fail-fast si llega mal.
+ * Enforce the @wix/bookings SDK BookedSlot identifier shape.
+ * REST id aliases are intentionally rejected in this SDK-only path.
  */
 function _assertPristineSlotIdContract(pristineSlot, traceId) {
-    const resourceId = _safeTrim(pristineSlot?.resource?.id || "");
-    const locationId = _safeTrim(pristineSlot?.location?.id || "");
-    const resourceIdLegacy = _safeTrim(pristineSlot?.resource?._id || "");
-    const locationIdLegacy = _safeTrim(pristineSlot?.location?._id || "");
+    const resourceId = _safeTrim(pristineSlot?.resource?._id || "");
+    const locationId = _safeTrim(pristineSlot?.location?._id || "");
 
-    if (resourceIdLegacy && !resourceId) {
-        throw createBookingError(
-            ERROR_CODES.INVALID_PAYLOAD,
-            "pristineSlot.resource must use `id`, not `_id`.",
-            { traceId, resourceIdLegacy }
-        );
-    }
-    if (locationIdLegacy && !locationId) {
-        throw createBookingError(
-            ERROR_CODES.INVALID_PAYLOAD,
-            "pristineSlot.location must use `id`, not `_id`.",
-            { traceId, locationIdLegacy }
-        );
-    }
     if (!resourceId || !_looksLikeGuid(resourceId)) {
         throw createBookingError(
             ERROR_CODES.INVALID_PAYLOAD,
-            "pristineSlot.resource.id is required (GUID).",
+            "pristineSlot.resource._id is required (GUID).",
             { traceId }
         );
     }
     if (!locationId || !_looksLikeGuid(locationId)) {
         throw createBookingError(
             ERROR_CODES.INVALID_PAYLOAD,
-            "pristineSlot.location.id is required (GUID).",
+            "pristineSlot.location._id is required (GUID).",
             { traceId }
         );
     }
@@ -1416,7 +1396,7 @@ async function _rescheduleBookingNative(cita, slotInput, traceId) {
         );
     }
 
-    /* PRISTINE-ID-01: contrato oficial resource.id / location.id. */
+    /* PRISTINE-ID-01: contrato oficial SDK resource._id / location._id. */
     _assertPristineSlotIdContract(pristineSlot, traceId);
 
     const revision = await _fetchLiveRevision(bookingId, cita);
@@ -1429,8 +1409,7 @@ async function _rescheduleBookingNative(cita, slotInput, traceId) {
     }
 
     await withTimeout(
-        rescheduleBookingElevated(bookingId, {
-            slot: pristineSlot,
+        rescheduleBookingElevated(bookingId, pristineSlot, {
             revision: String(revision),
         }),
         API_TIMEOUT_MS,

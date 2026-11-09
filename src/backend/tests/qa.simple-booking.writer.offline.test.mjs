@@ -69,7 +69,7 @@ mocks.sdk['@wix/bookings::bookings'] = {
         id: BOOKING_ID,
         revision: 1,
         status: 'CREATED',
-        bookedEntity: { slot: { resource: { id: RESOURCE_ID } } },
+        bookedEntity: { slot: { resource: { _id: RESOURCE_ID } } },
         doubleBooked: false,
       },
     };
@@ -79,7 +79,7 @@ mocks.sdk['@wix/bookings::bookings'] = {
     return { booking: {
       id: bookingId,
       status: 'CONFIRMED',
-      bookedEntity: { slot: { resource: { id: RESOURCE_ID } } },
+      bookedEntity: { slot: { resource: { _id: RESOURCE_ID } } },
     } };
   },
 };
@@ -144,7 +144,7 @@ test('QA-SIMPLE-BOOKING-01 resolves real catalogue and staff mocks, creates one 
   assert.equal(body.contactDetails.email, 'qa.simple@example.test');
   assert.equal(body.bookedEntity.slot.serviceId, SERVICE_ID);
   assert.equal(body.bookedEntity.slot.scheduleId, SCHEDULE_ID);
-  assert.equal(body.bookedEntity.slot.resource.id || body.bookedEntity.slot.resource._id, RESOURCE_ID);
+  assert.equal(body.bookedEntity.slot.resource._id, RESOURCE_ID);
   assert.equal(body.totalParticipants, 1);
 
   const citas = wixDataMock._store.get('CitasF2') || [];

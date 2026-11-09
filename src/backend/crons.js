@@ -1177,7 +1177,8 @@ return result;
  * - SYSTEM_FLAG: COMPLETED, RECONCILED.
  * IN_PROGRESS, FAILED_RETRYABLE, RESULT_UNKNOWN, COMPLETION_RETRY_REQUIRED,
  * REPAIR_REQUIRED and all other states remain available to recovery.
- * WEBHOOK_EVENT is a separate immutable ledger.
+ * DEDUPE_KEY and LEDGER_IDEMPOTENCY are durable claims and are deliberately
+ * excluded from this 24h purge. WEBHOOK_EVENT is a separate immutable ledger.
  */
 export async function cleanExpiredBookingControl() {
     const traceId = makeTraceId("cron-booking-control-purge");

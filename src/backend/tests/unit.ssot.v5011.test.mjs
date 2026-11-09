@@ -82,6 +82,36 @@ test('UNIT-ENUM-01 booking enums aligned with canonical SSOT', async () => {
   assert.strictEqual(IC.PAYMENT_STATUS.REFUNDED, 'REFUNDED');
 });
 
+test('UNIT-CONTROL-TYPES-01 durable dedupe types remain distinct from purgeable idempotency', () => {
+  assert.equal(IC.CONTROL_TYPE.DEDUPE_KEY, 'DEDUPE_KEY');
+  assert.equal(IC.CONTROL_TYPE.LEDGER_IDEMPOTENCY, 'LEDGER_IDEMPOTENCY');
+  assert.equal(IC.CONTROL_TYPE.IDEMPOTENCY, 'IDEMPOTENCY');
+});
+
+test('UNIT-RESERVATION-CONFIG-01 canonical reservation values are centralized', () => {
+  assert.deepStrictEqual(IC.DTO_CONFIG, {
+    MINUTOS_INTERVALO_INICIO: 30,
+  });
+  assert.deepStrictEqual(IC.DAYS_CACHE_CONFIG, { TTL_MS: 300000 });
+  assert.deepStrictEqual(IC.DISPLAY_TOKEN_CONFIG, {
+    TTL_MS: 1800000,
+    MAX_ATTEMPTS: 5,
+  });
+  assert.deepStrictEqual(IC.RATE_LIMITS, {
+    DEFAULT: { MAX_REQUESTS: 20, WINDOW_MS: 5000 },
+    PUBLIC_BOOKING: { MAX_REQUESTS: 5, WINDOW_MS: 10000 },
+    RESERVAS: { MAX_REQUESTS: 20, WINDOW_MS: 5000 },
+    AVAILABILITY: { MAX_REQUESTS: 12, WINDOW_MS: 5000 },
+    DISPLAY_TOKEN: { MAX_REQUESTS: 5, WINDOW_MS: 60000 },
+  });
+  assert.deepStrictEqual(IC.BOOKING_PAYMENT_OPTION, {
+    ONLINE: 'ONLINE',
+    OFFLINE: 'OFFLINE',
+  });
+  assert.ok(Object.isFrozen(IC.RATE_LIMITS));
+  assert.ok(Object.isFrozen(IC.RATE_LIMITS.PUBLIC_BOOKING));
+});
+
 test('UNIT-ENUM-01B data exports only canonical movement hash reader', async () => {
   const DATA = await import('backend/data');
   assert.equal(typeof DATA.readMovementHash, 'function');

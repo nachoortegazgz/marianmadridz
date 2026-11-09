@@ -272,6 +272,9 @@ export function isMarianResource(resourceId) {
 
 /**
  * Nombre visible de staff. Fallback a STAFF_DEFAULT_NAME (SSOT internalConfig).
+ * REVIEW-BY: 2027-01-31 (D-2, PEND-MAP-01). Retirar cuando Bookings Staff API
+ * resuelva el 100% de los resourceId activos. Warning trazable pendiente:
+ * los consumidores actuales no propagan traceId a esta función.
  */
 export function getStaffDisplayName(staff) {
     if (!staff) return STAFF_DEFAULT_NAME;

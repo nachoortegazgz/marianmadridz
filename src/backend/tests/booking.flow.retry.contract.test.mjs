@@ -9,6 +9,8 @@ const calendarUrl = new URL("../../pages/Calendario%20de%20reservas%202.q39h6.js
 const serviceUrl = new URL("../../pages/Pagina%20de%20servicio%202.xnfr4.js", import.meta.url);
 const calendarSource = (await readFile(calendarUrl, "utf8")).replace(/\r\n/g, "\n");
 const sagaSource = await readFile(new URL("../booking/bookingSaga.js", import.meta.url), "utf8");
+const bookingCoreSource = await readFile(new URL("../booking/bookingCore.js", import.meta.url), "utf8");
+const managerSource = await readFile(new URL("../citasManager.web.js", import.meta.url), "utf8");
 const availabilitySource = await readFile(new URL("../reservas.web.js", import.meta.url), "utf8");
 const bookingUtilsSource = await readFile(new URL("../booking/bookingUtils.js", import.meta.url), "utf8");
 const serviceSource = await readFile(serviceUrl, "utf8");
@@ -79,8 +81,26 @@ test("BOOK-FLOW-STAFF-BALANCE-01 dual phases use the common available staff pool
   assert.match(availabilitySource, /_pickLeastLoadedResource\(candidateResourceIds, dateYMD, traceId\)/);
   assert.match(availabilitySource, /STAFF-BALANCE-02: common staff assigned to requested phases/);
   assert.match(sagaSource, /_forceStaffInPristineSlot\([\s\S]{0,300}finalResourceId[\s\S]{0,150}linkedPhases/);
-  assert.match(sagaSource, /selectedPaymentOption: BOOKING_PAYMENT_OPTION_OFFLINE/);
+  assert.match(sagaSource, /selectedPaymentOption: BOOKING_PAYMENT_OPTION\.OFFLINE/);
   assert.match(sagaSource, /bookingBodyF1\.selectedPaymentOption = isOnline/);
+});
+
+test("BOOK-FLOW-SDK-ID-01 all @wix/bookings slot identifiers use the SDK _id shape", () => {
+  assert.match(bookingCoreSource, /resource: \{ _id: resourceIdClean \}/);
+  assert.match(bookingCoreSource, /\{ _id: incoming, locationType: "OWNER_BUSINESS" \}/);
+  assert.match(sagaSource, /return \{ _id: resolvedId, locationType: "OWNER_BUSINESS" \}/);
+  assert.match(sagaSource, /pristineSlot\?\.resource\?\._id/);
+  assert.match(sagaSource, /pristineSlot\?\.location\?\._id/);
+  assert.match(sagaSource, /booking\?\.bookedEntity\?\.slot\?\.resource\?\._id/);
+  assert.match(availabilitySource, /booking\?\.bookedEntity\?\.slot\?\.resource\?\._id/);
+  assert.match(managerSource, /pristineSlot\?\.resource\?\._id/);
+  assert.match(managerSource, /pristineSlot\?\.location\?\._id/);
+  assert.match(managerSource, /rescheduleBookingElevated\(bookingId, pristineSlot, \{\s*revision:/);
+  assert.doesNotMatch(bookingCoreSource, /resource\.id|location\.id/);
+  assert.doesNotMatch(bookingUtilsSource, /resource\.id/);
+  assert.doesNotMatch(sagaSource, /resource\.id|location\.id/);
+  assert.doesNotMatch(managerSource, /resource\.id|location\.id/);
+  assert.doesNotMatch(availabilitySource, /resource\.id/);
 });
 
 test("BOOK-FLOW-IDEMPOTENCY-01 pair fingerprint and payload hash exclude auto-balanced resourceId", () => {
