@@ -135,8 +135,8 @@ Este mapa permite la navegación semántica y técnica precisa por las 4 capas d
 
 | Nota | Detalle | Impacto |
 | :--- | :--- | :--- |
-| **Catalog V3 prioritario** | La migración es prioritaria (contradice SSOT original §16.4). Código tiene adaptador dual (PR #13), sitio sigue en V1. Requiere ADR y QA real. | No escribir código nuevo asumiendo V1 permanente |
-| **MapaStaff NATIVE #13** | Ya incorporada al inventario CMS. Pendiente ADR sobre campos `staffMemberId` y `active`. | Verificar esquema vivo antes de modificar |
+| **Catálogo Wix** | El sitio opera con Wix Stores Catalog V1. La migración a V3 requiere ADR, compatibilidad probada con InventarioStockVenta y aprobación expresa. | Mantener V1 hasta aprobar y validar la migración |
+| **MapaStaff NATIVE #13** | Se usa como correlación `staffMemberId` → `resourceId`/`scheduleId` en eventos nativos. No determina roles RBAC ni tiene hooks CMS. | Verificar campos e índices en Wix antes de cambiar el esquema |
 | **Enum `CANCELED` = 1L** | Canon Wix oficial. El comentario "doble L" en SSOT §8.2 es erróneo. | Usar siempre `CANCELED` (una L) en código |
 | **`UPDATED` ≠ estado** | Es tipo de evento webhook, NO estado de reserva. Eliminar del enum de estados. | No persistir `UPDATED` como bookingStatus |
 | **Bookings V2 SDK ≠ REST** | SDK usa `resource._id` / `location._id`; REST usa `.id`. Documentado en ADR-002. | Verificar contexto (SDK vs REST) antes de acceder |
@@ -528,12 +528,17 @@ CONTROL_TYPE = { ALERT, COMPENSATION, DAYS_CACHE, DEDUPE_KEY, DISPLAY_TOKEN,
   SYSTEM_FLAG, WEBHOOK_EVENT }
 ```
 
+`RESCHEDULE_JOURNAL_STATE` es una máquina de estados propia de `dualRescheduleJournal.js`; no se mezcla con `CONTROL_STATUS`. El journal se persiste como payload de `ControlOperativo` y conserva sus transiciones específicas.
+
 ### Addons — nomenclatura crítica
 
 - `addonId`: campo singular en `ComplementosCatalogo` (PK de cada complemento). `addOnIds` es el array de transporte a Bookings.
-- `addOnIds`: array de transporte hacia Wix Bookings (plural). Contiene valores de `addonId`.
 
 ## 8. Seguridad, identidad y permisos
+
+### Permisos de Web Modules
+
+El backend contiene módulos `.web.js` y no contiene módulos `.jsw`. Cada exportación invocable declara su permiso con `webMethod(Permissions...)`; la autorización de negocio se comprueba de nuevo en backend. El manifiesto `permissions.json` no forma parte del modelo de autorización de este sitio y se ha retirado. Referencias oficiales: [Web Modules](https://dev.wix.com/docs/develop-websites/articles/coding-with-velo/backend-code/web-modules/about-web-modules) y [Permissions](https://dev.wix.com/docs/velo/apis/wix-web-module/permissions).
 
 ### Modelo de autorización RBAC
 
@@ -542,7 +547,7 @@ La seguridad opera en dos capas superpuestas:
 1. **Barrera de plataforma (Velo Permissions)**: el decorador del webMethod (`Permissions.Anyone`, `Permissions.SiteMember`, `Permissions.Admin`) aplica el primer filtro de red.
 2. **Control de roles de negocio (RBAC SSOT)**: `backend/security.js` resuelve la identidad mediante Wix Members + Bookings Staff Members API y asigna el rol desde `STAFF.WEBSITE_ROLE_BY_RESOURCE_ID` (internalConfig.js).
 
-`MapaStaff` no es la autoridad RBAC vigente. Se conserva como mapeo de respaldo `staffMemberId` → `resourceId`/`scheduleId` para proyecciones de eventos nativos cuando el payload Wix no aporta esos identificadores; la resolución exige una única fila activa y GUID válidos.
+`MapaStaff` no es la autoridad RBAC vigente. Se utiliza como mapeo de identidad `staffMemberId` → `resourceId`/`scheduleId` para proyecciones de eventos nativos cuando el payload Wix no aporta esos identificadores; la resolución exige una única fila activa y GUID válidos.
 
 | Rol | Acceso |
 | --- | --- |
@@ -680,6 +685,8 @@ Nunca mutar estas colecciones directamente desde código propio.
 | `fiscalAggregator.web.js` | `getQuarterlyTaxSummary` | SiteMember | `ADMIN` o `GESTION` |
 | `fiscalDocuments.web.js` | `createManagerPackageVersion` | SiteMember | `ADMIN` o `GESTION` |
 
+`processDualBooking` declara `Permissions.SiteMember` y exige `memberId` y `contactId` obtenidos de la sesión Wix antes de ejecutar la saga. El frontend no puede atribuir una reserva a una identidad suministrada en el payload.
+
 ### Flujos de negocio críticos
 
 **Venta online y confirmación por pago**:
@@ -712,7 +719,7 @@ Nunca mutar estas colecciones directamente desde código propio.
 
 ### Hooks CMS (backend/data.js)
 
-Validaciones `beforeInsert` / `beforeUpdate` por colección:
+Validaciones `beforeInsert` / `beforeUpdate` por colección. Wix entrega `itemId` a `beforeRemove`; cuando la regla depende del tipo o estado persistido, el hook consulta el registro por ID con lectura fuerte.
 
 - **MovimientosCaja**: presencia de `hash`, `schemaVersion`, `traceId`; cuadre `taxBase + taxAmount ≈ amount`.
 - **CitasF2**: enums válidos via `assertValidEnum()`, `traceId` presente, coherencia `pairToken` en duales. `beforeRemove` bloqueado.
