@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Panel Marian Madrid — Propietaria</title>
+  <style>
+    :root {
+      --bg:#f7f8fa; --surface:#fff; --ink:#23272f; --muted:#69707c;
+      --line:#e6e9ed; --line-strong:#bac1ca; --soft:#f1f4f6;
+      --accent:#aa8756; --accent-hover:#8d6b3e; --accent-soft:#f7efe4; --accent-ink:#725226;
+      --navy:#273543; --navy-2:#1f2a35;
+      --hero-start:#222c39; --hero-mid:#34485a; --hero-end:#596c7a;
+      --success:#1d6b4e; --success-hover:#15523b; --success-soft:#eaf6ef;
+      --warning:#9b671a; --warning-soft:#fff4df;
+      --danger:#b00020; --danger-hover:#8f001a; --danger-soft:#fff5f5;
+      --info:#1f4e79; --info-soft:#eaf2fb;
+      --shadow:0 16px 38px rgba(31,40,52,.07);
+      --shadow-sm:0 8px 20px rgba(31,40,52,.03);
+      --r-sm:8px; --r-md:14px; --r-lg:20px; --r-pill:999px;
+      --font-serif:Georgia,"Times New Roman",serif;
+      --font-sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+      --font-mono:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{min-height:100vh;background:var(--bg);color:var(--ink);font-family:var(--font-sans);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+    button,input,select,textarea{font:inherit}
+    button{cursor:pointer}
+    button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid rgba(170,135,86,.48);outline-offset:2px}
+
+    .widget-container{width:100%;max-width:1220px;margin:0 auto;padding:clamp(14px,3vw,34px)}
+
+    .hero{display:flex;align-items:center;justify-content:space-between;gap:24px;margin-bottom:20px;padding:clamp(22px,4vw,36px);border:1px solid var(--line);border-radius:var(--r-lg);background:linear-gradient(118deg,var(--hero-start) 0%,var(--hero-mid) 62%,var(--hero-end) 100%);color:#fff;box-shadow:var(--shadow)}
+    .hero-eyebrow{margin:0 0 8px;color:#d8c39f;font-size:10px;font-weight:900;letter-spacing:.14em;text-transform:uppercase}
+    h1{margin:0;color:#fff;font-family:var(--font-serif);font-size:clamp(30px,4vw,44px);font-weight:500;line-height:1.05;letter-spacing:-.03em}
+    .subtitle{max-width:650px;margin:10px 0 0;color:#e1e6ea;font-size:13.5px}
+    .role-badge{display:inline-flex;align-items:center;justify-content:center;min-width:130px;padding:9px 14px;border:1px solid rgba(255,255,255,.22);border-radius:var(--r-pill);background:rgba(255,255,255,.11);color:#fff;font-size:10px;font-weight:900;letter-spacing:.1em;text-transform:uppercase}
+
+    .banner{padding:12px 16px;margin-bottom:16px;border-radius:10px;font-size:13px;display:none;font-weight:600;line-height:1.45}
+    .banner.error{background:var(--danger-soft);border:1px solid #ffd6d6;color:var(--danger)}
+    .banner.info{background:var(--success-soft);border:1px solid #cbe9d6;color:var(--success)}
+    .banner.warn{background:var(--warning-soft);border:1px solid #f6dfb8;color:var(--warning)}
+
+    .panel{border:1px solid var(--line);border-radius:15px;background:var(--surface);box-shadow:var(--shadow-sm);padding:20px;margin-bottom:20px}
+    .panel-title{font-size:15px;font-weight:800;margin-bottom:14px;border-bottom:1px solid var(--line);padding-bottom:10px;color:var(--ink);display:flex;justify-content:space-between;align-items:center;gap:10px}
+    .panel-title .badge{padding:2px 8px;border-radius:var(--r-pill);background:var(--accent-soft);color:var(--accent-ink);font-size:9px;font-weight:900;letter-spacing:.06em;text-transform:uppercase}
+
+    .grid-2{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+    .row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+    @media(max-width:600px){.row{grid-template-columns:1fr}}
+
+    .form-group{margin-bottom:12px}
+    .form-group label{display:block;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:#4a5568;margin-bottom:5px}
+    .form-group input,.form-group select,.form-group textarea{width:100%;min-height:40px;padding:8px 12px;border:1px solid #d9dde3;border-radius:var(--r-sm);font-size:13px;background:#fff;color:var(--ink);outline:none}
+    .form-group textarea{resize:vertical;min-height:60px}
+    .form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--navy);box-shadow:0 0 0 3px rgba(39,53,67,.12)}
+
+    .btn{display:inline-flex;align-items:center;justify-content:center;width:100%;min-height:42px;border:1px solid transparent;background:var(--navy);color:#fff;font-size:11.5px;font-weight:850;text-transform:uppercase;letter-spacing:.05em;border-radius:var(--r-sm);margin-top:6px;transition:background-color .15s}
+    .btn:hover{background:var(--navy-2)}
+    .btn:disabled{cursor:not-allowed;opacity:.55}
+    .btn-outline{background:transparent;border-color:var(--line-strong);color:#34404d}
+    .btn-outline:hover{background:var(--soft);border-color:var(--navy)}
+    .btn-success{background:var(--success)}.btn-success:hover{background:var(--success-hover)}
+    .btn-danger{background:var(--danger)}.btn-danger:hover{background:var(--danger-hover)}
+    .btn-accent{background:var(--accent)}.btn-accent:hover{background:var(--accent-hover)}
+    .btn-group{display:flex;gap:8px;flex-wrap:wrap}
+    .btn-group .btn{flex:1 1 140px}
+
+    .table{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}
+    .table th{text-align:left;padding:10px 12px;background:var(--soft);color:var(--muted);font-size:10px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;border-bottom:1px solid var(--line)}
+    .table td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:middle}
+    .scroll{max-height:220px;overflow-y:auto;border:1px solid var(--line);border-radius:10px}
+
+    /* ── IA chat ── */
+    .ai-chat{max-height:340px;overflow-y:auto;border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--soft);display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+    .ai-msg{max-width:85%;padding:10px 14px;border-radius:12px;font-size:13px;line-height:1.45;white-space:pre-wrap;word-break:break-word}
+    .ai-msg.user{align-self:flex-end;background:var(--navy);color:#fff;border-bottom-right-radius:2px}
+    .ai-msg.assistant{align-self:flex-start;background:#fff;border:1px solid var(--line);color:var(--ink);border-bottom-left-radius:2px}
+    .ai-msg.error{align-self:flex-start;background:var(--danger-soft);border:1px solid #ffd6d6;color:var(--danger);font-size:12px}
+    .ai-msg.loading{color:var(--muted);font-style:italic}
+    .ai-input-row{display:flex;gap:8px;align-items:stretch}
+    .ai-input-row input{flex:1;min-height:42px;padding:8px 12px;border:1px solid #d9dde3;border-radius:var(--r-sm);font-size:13px}
+    .ai-input-row .btn{width:auto;min-width:110px;margin-top:0}
+
+    /* ── Estado caja ── */
+    .state-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px}
+    .state-item{padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--soft)}
+    .state-label{color:var(--muted);font-size:10px;font-weight:900;letter-spacing:.1em;text-transform:uppercase}
+    .state-value{display:block;margin-top:4px;font-family:var(--font-serif);font-size:20px;font-weight:500}
+
+    .footer{margin-top:24px;text-align:center;font-size:11.5px;color:var(--muted);border-top:1px solid var(--line);padding-top:14px}
+  </style>
+</head>
+<body>
+  <div class="widget-container">
+    <header class="hero">
+      <div>
+        <p class="hero-eyebrow">Administracion</p>
+        <h1>Panel Marian Madrid</h1>
+        <p class="subtitle" id="userInfo">Sesion activa: Marian | PROPIETARIA</p>
+      </div>
+      <span class="role-badge" id="roleBadge">PROPIETARIA</span>
+    </header>
+
+    <div class="banner error" id="errorBanner"></div>
+    <div class="banner info" id="infoBanner"></div>
+    <div class="banner warn" id="warnBanner"></div>
+
+    <!-- ══════════════════ IA ══════════════════ -->
+    <section class="panel" id="aiPanel">
+      <div class="panel-title">Asistente IA <span class="badge">NUEVO</span></div>
+      <div class="ai-chat" id="aiChat"></div>
+      <div class="ai-input-row">
+        <input type="text" id="aiInput" placeholder="Ej: ¿Cuánto he facturado este trimestre?" maxlength="800" />
+        <button class="btn" id="btnAISend" type="button">Enviar</button>
+      </div>
+    </section>
+
+    <!-- ══════════════════ ENVÍO A GESTOR ══════════════════ -->
+    <section class="panel" id="sendPanel">
+      <div class="panel-title">Envio a gestor <span class="badge">NUEVO</span></div>
+
+      <div class="form-group">
+        <label>Destinatario</label>
+        <select id="recipientSelect"><option value="">Cargando destinatarios…</option></select>
+      </div>
+
+      <div class="btn-group">
+        <button class="btn btn-accent" id="btnOpenMonthly" type="button">Paquete mensual</button>
+        <button class="btn btn-accent" id="btnOpenQuarterly" type="button">Paquete trimestral</button>
+        <button class="btn btn-outline" id="btnOpenSpecific" type="button">Documento concreto</button>
+      </div>
+
+      <!-- Formulario mensual -->
+      <div id="formMonthly" style="display:none; margin-top:16px; padding:16px; border:1px solid var(--line); border-radius:10px; background:var(--soft);">
+        <div class="row">
+          <div class="form-group"><label>Año</label><input type="number" id="monthlyYear" min="2024" max="2099" /></div>
+          <div class="form-group"><label>Mes</label>
+            <select id="monthlyMonth">
+              <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option>
+              <option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option>
+              <option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option>
+              <option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group"><label>Notas (opcional)</label><input type="text" id="monthlyNotes" maxlength="300" /></div>
+        <div class="btn-group">
+          <button class="btn btn-success" id="btnConfirmMonthly" type="button">Enviar paquete mensual</button>
+          <button class="btn btn-outline" id="btnCancelMonthly" type="button">Cancelar</button>
+        </div>
+      </div>
+
+      <!-- Formulario trimestral -->
+      <div id="formQuarterly" style="display:none; margin-top:16px; padding:16px; border:1px solid var(--line); border-radius:10px; background:var(--soft);">
+        <div class="row">
+          <div class="form-group"><label>Año</label><input type="number" id="quarterlyYear" min="2024" max="2099" /></div>
+          <div class="form-group"><label>Trimestre</label>
+            <select id="quarterlyQuarter">
+              <option value="1">T1 (Ene-Mar)</option><option value="2">T2 (Abr-Jun)</option>
+              <option value="3">T3 (Jul-Sep)</option><option value="4">T4 (Oct-Dic)</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group"><label>Notas (opcional)</label><input type="text" id="quarterlyNotes" maxlength="300" /></div>
+        <div class="btn-group">
+          <button class="btn btn-success" id="btnConfirmQuarterly" type="button">Enviar paquete trimestral</button>
+          <button class="btn btn-outline" id="btnCancelQuarterly" type="button">Cancelar</button>
+        </div>
+      </div>
+
+      <!-- Formulario documento concreto -->
+      <div id="formSpecific" style="display:none; margin-top:16px; padding:16px; border:1px solid var(--line); border-radius:10px; background:var(--soft);">
+        <div class="row">
+          <div class="form-group"><label>ID del documento</label><input type="text" id="specificDocId" placeholder="doc_xxx" /></div>
+          <div class="form-group"><label>Tipo</label>
+            <select id="specificDocType">
+              <option value="">—</option>
+              <option value="FACTURA">Factura</option>
+              <option value="PAQUETE">Paquete</option>
+              <option value="LIBRO">Libro registro</option>
+              <option value="RESUMEN">Resumen fiscal</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group"><label>Notas (opcional)</label><input type="text" id="specificNotes" maxlength="300" /></div>
+        <div class="btn-group">
+          <button class="btn btn-success" id="btnConfirmSpecific" type="button">Enviar documento</button>
+          <button class="btn btn-outline" id="btnCancelSpecific" type="button">Cancelar</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════ GESTIÓN STAFF ══════════════════ -->
+    <section class="panel" id="staffPanel">
+      <div class="panel-title">Gestion de equipo <span class="badge">NUEVO</span></div>
+
+      <div class="btn-group" style="margin-bottom:14px;">
+        <button class="btn btn-outline" id="btnLoadStaff" type="button">Cargar equipo</button>
+      </div>
+
+      <div class="scroll">
+        <table class="table">
+          <thead><tr><th>Nombre</th><th>Rol</th><th>Email</th><th>Estado</th></tr></thead>
+          <tbody id="staffBody">
+            <tr><td colspan="4" style="text-align:center;color:var(--muted);">Pulsa "Cargar equipo"</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="grid-2" style="margin-top:16px;">
+        <div>
+          <div class="panel-title" style="font-size:13px;">Consulta de horas</div>
+          <div class="form-group">
+            <label>Empleado</label>
+            <select id="hoursStaffSelect"><option value="">—</option></select>
+          </div>
+          <div class="row">
+            <div class="form-group"><label>Desde</label><input type="date" id="staffHoursStart" /></div>
+            <div class="form-group"><label>Hasta</label><input type="date" id="staffHoursEnd" /></div>
+          </div>
+          <button class="btn" id="btnLoadStaffHours" type="button">Consultar horas</button>
+          <div id="staffHoursResult" style="margin-top:10px;padding:12px;background:var(--soft);border-radius:8px;font-size:12px;color:var(--muted);">—</div>
+        </div>
+
+        <div>
+          <div class="panel-title" style="font-size:13px;">Enviar aviso</div>
+          <div class="form-group">
+            <label>Empleado</label>
+            <select id="notifyStaffSelect"><option value="">—</option></select>
+          </div>
+          <div class="form-group">
+            <label>Canal</label>
+            <select id="notifyChannel">
+              <option value="EMAIL">Email</option>
+              <option value="SMS">SMS</option>
+              <option value="APP">App interna</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Asunto</label><input type="text" id="notifySubject" maxlength="200" /></div>
+          <div class="form-group"><label>Mensaje</label><textarea id="notifyMessage" maxlength="1000"></textarea></div>
+          <button class="btn btn-accent" id="btnNotifyStaff" type="button">Enviar notificacion</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════ CAJA ══════════════════ -->
+    <section class="panel" id="cashPanel">
+      <div class="panel-title">Caja</div>
+      <div class="state-grid">
+        <div class="state-item"><span class="state-label">Saldo</span><span class="state-value" id="cashSaldo">--</span></div>
+        <div class="state-item"><span class="state-label">Operaciones</span><span class="state-value" id="cashOps">--</span></div>
+        <div class="state-item"><span class="state-label">Jornada</span><span class="state-value" id="cashDiaKey">--</span></div>
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-outline" id="btnRefreshCash" type="button">Refrescar</button>
+        <button class="btn btn-danger" id="btnZClosing" type="button">Cierre Z Diario</button>
+      </div>
+      <div id="cashTicket" style="display:none;margin-top:14px;padding:14px;border:1px dashed var(--line-strong);border-radius:10px;background:#fffefb;font-family:var(--font-mono);font-size:11.5px;line-height:1.6;"></div>
+    </section>
+
+    <!-- ══════════════════ FISCAL ══════════════════ -->
+    <section class="panel" id="fiscalPanel">
+      <div class="panel-title">Resumen fiscal</div>
+      <div class="row">
+        <div class="form-group"><label>Año</label><input type="number" id="fiscalYear" min="2024" max="2099" /></div>
+        <div class="form-group"><label>Trimestre</label>
+          <select id="fiscalQuarter">
+            <option value="1">T1</option><option value="2">T2</option>
+            <option value="3">T3</option><option value="4">T4</option>
+          </select>
+        </div>
+      </div>
+      <div class="btn-group">
+        <button class="btn" id="btnFiscalSummary" type="button">Resumen trimestral</button>
+        <button class="btn btn-outline" id="btnFiscalBook" type="button">Libro registro facturas</button>
+      </div>
+      <div id="fiscalResult" style="margin-top:14px;padding:14px;background:var(--soft);border-radius:10px;font-size:12px;color:var(--muted);">—</div>
+    </section>
+
+    <!-- ══════════════════ DOCUMENTOS ══════════════════ -->
+    <section class="panel" id="documentsPanel">
+      <div class="panel-title">Documentos / paquetes</div>
+      <div class="btn-group" style="margin-bottom:14px;">
+        <button class="btn btn-outline" id="btnLoadPrepared" type="button">Paquetes preparados</button>
+      </div>
+      <div class="scroll">
+        <table class="table">
+          <thead><tr><th>ID</th><th>Periodo</th><th>Estado</th><th>Accion</th></tr></thead>
+          <tbody id="documentsBody">
+            <tr><td colspan="4" style="text-align:center;color:var(--muted);">Pulsa "Paquetes preparados"</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <footer class="footer">Marian Madrid | Peluqueria y Estetica</footer>
+  </div>
+
+  <script>
+    (function () {
+      'use strict';
+
+      const MESSAGE_TYPES = {
+        READY:'MM_READY', CONTEXT:'MM_CONTEXT', NAV:'MM_NAV',
+        AI_QUERY:'AI_QUERY', AI_QUERY_RES:'AI_QUERY_RES',
+        ACCOUNTANT_RECIPIENTS:'ACCOUNTANT_RECIPIENTS', ACCOUNTANT_RECIPIENTS_RES:'ACCOUNTANT_RECIPIENTS_RES',
+        SEND_MONTHLY_PACKAGE:'SEND_MONTHLY_PACKAGE', SEND_MONTHLY_PACKAGE_RES:'SEND_MONTHLY_PACKAGE_RES',
+        SEND_QUARTERLY_PACKAGE:'SEND_QUARTERLY_PACKAGE', SEND_QUARTERLY_PACKAGE_RES:'SEND_QUARTERLY_PACKAGE_RES',
+        SEND_SPECIFIC_DOCUMENT:'SEND_SPECIFIC_DOCUMENT', SEND_SPECIFIC_DOCUMENT_RES:'SEND_SPECIFIC_DOCUMENT_RES',
+        STAFF_LIST:'STAFF_LIST', STAFF_LIST_RES:'STAFF_LIST_RES',
+        STAFF_HOURS_SUMMARY:'STAFF_HOURS_SUMMARY', STAFF_HOURS_SUMMARY_RES:'STAFF_HOURS_SUMMARY_RES',
+        STAFF_NOTIFY:'STAFF_NOTIFY', STAFF_NOTIFY_RES:'STAFF_NOTIFY_RES',
+        CASHIER_STATE:'CASHIER_STATE', CASHIER_STATE_RES:'CASHIER_STATE_RES',
+        Z_CLOSING:'Z_CLOSING', Z_CLOSING_RES:'Z_CLOSING_RES',
+        FISCAL_SUMMARY:'FISCAL_SUMMARY', FISCAL_SUMMARY_RES:'FISCAL_SUMMARY_RES',
+        FISCAL_BOOK:'FISCAL_BOOK', FISCAL_BOOK_RES:'FISCAL_BOOK_RES',
+        DOCUMENT_PREPARED:'DOCUMENT_PREPARED', DOCUMENT_PREPARED_RES:'DOCUMENT_PREPARED_RES',
+        DOCUMENT_DOWNLOAD:'DOCUMENT_DOWNLOAD', DOCUMENT_DOWNLOAD_RES:'DOCUMENT_DOWNLOAD_RES',
+        ONLY_STAFF_ERROR:'ONLY_STAFF_ERROR', STAFF_ERROR:'STAFF_ERROR'
+      };
+
+      const VALID_TYPES = new Set(Object.values(MESSAGE_TYPES));
+
+      let PARENT_ORIGIN = null;
+      let traceId = 'admin_widget_' + Date.now().toString(36);
+      let contextData = null;
+      let conversationId = null;
+      let fallbackTimer = null;
+
+      const $ = (id) => document.getElementById(id);
+      const errorBanner=$('errorBanner'), infoBanner=$('infoBanner'), warnBanner=$('warnBanner');
+      const userInfo=$('userInfo'), roleBadge=$('roleBadge');
+
+      const aiChat=$('aiChat'), aiInput=$('aiInput'), btnAISend=$('btnAISend');
+
+      const recipientSelect=$('recipientSelect');
+      const formMonthly=$('formMonthly'), formQuarterly=$('formQuarterly'), formSpecific=$('formSpecific');
+      const monthlyYear=$('monthlyYear'), monthlyMonth=$('monthlyMonth'), monthlyNotes=$('monthlyNotes');
+      const quarterlyYear=$('quarterlyYear'), quarterlyQuarter=$('quarterlyQuarter'), quarterlyNotes=$('quarterlyNotes');
+      const specificDocId=$('specificDocId'), specificDocType=$('specificDocType'), specificNotes=$('specificNotes');
+
+      const staffBody=$('staffBody'), btnLoadStaff=$('btnLoadStaff');
+      const hoursStaffSelect=$('hoursStaffSelect'), staffHoursStart=$('staffHoursStart'), staffHoursEnd=$('staffHoursEnd');
+      const btnLoadStaffHours=$('btnLoadStaffHours'), staffHoursResult=$('staffHoursResult');
+      const notifyStaffSelect=$('notifyStaffSelect'), notifyChannel=$('notifyChannel');
+      const notifySubject=$('notifySubject'), notifyMessage=$('notifyMessage'), btnNotifyStaff=$('btnNotifyStaff');
+
+      const cashSaldo=$('cashSaldo'), cashOps=$('cashOps'), cashDiaKey=$('cashDiaKey');
+      const btnRefreshCash=$('btnRefreshCash'), btnZClosing=$('btnZClosing'), cashTicket=$('cashTicket');
+
+      const fiscalYear=$('fiscalYear'), fiscalQuarter=$('fiscalQuarter'), fiscalResult=$('fiscalResult');
+      const btnFiscalSummary=$('btnFiscalSummary'), btnFiscalBook=$('btnFiscalBook');
+
+      const btnLoadPrepared=$('btnLoadPrepared'), documentsBody=$('documentsBody');
+
+      let staffCache = [];
+
+      function send(type, payload={}) {
+        try { window.parent.postMessage({ type, payload: { ...payload, traceId } }, PARENT_ORIGIN || '*'); } catch (_) {}
+      }
+      function err(m){errorBanner.textContent=m;errorBanner.style.display='block';infoBanner.style.display='none';warnBanner.style.display='none';}
+      function info(m){infoBanner.textContent=m;infoBanner.style.display='block';errorBanner.style.display='none';warnBanner.style.display='none';}
+      function warn(m){warnBanner.textContent=m;warnBanner.style.display='block';errorBanner.style.display='none';infoBanner.style.display='none';}
+      function clearBanners(){errorBanner.style.display='none';infoBanner.style.display='none';warnBanner.style.display='none';}
+
+      function setLoading(btn, loading) {
+        if (!btn) return;
+        if (loading) {
+          if (!btn.dataset.original) btn.dataset.original = btn.textContent;
+          btn.disabled = true; btn.textContent = 'Procesando…';
+        } else {
+          btn.disabled = false; btn.textContent = btn.dataset.original || btn.textContent;
+        }
+      }
+
+      function money(v) {
+        const n = Number(v);
+        if (!Number.isFinite(n)) return '--';
+        return new Intl.NumberFormat('es-ES',{style:'currency',currency:contextData?.currencyCode||'EUR'}).format(n);
+      }
+
+      /* ── AI ── */
+      function appendAIMessage(role, text) {
+        const el = document.createElement('div');
+        el.className = 'ai-msg ' + role;
+        el.textContent = text;
+        aiChat.appendChild(el);
+        aiChat.scrollTop = aiChat.scrollHeight;
+        return el;
+      }
+      function sendAIQuery() {
+        const q = (aiInput.value || '').trim();
+        if (!q) return warn('Escribe una pregunta para la IA.');
+        appendAIMessage('user', q);
+        aiInput.value = '';
+        const loading = appendAIMessage('loading', 'Pensando…');
+        setLoading(btnAISend, true);
+        send(MESSAGE_TYPES.AI_QUERY, { query: q, conversationId });
+        loading.dataset.pending = '1';
+      }
+      btnAISend.addEventListener('click', sendAIQuery);
+      aiInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendAIQuery(); });
+
+      /* ── Destinatarios ── */
+      function renderRecipients(items) {
+        recipientSelect.innerHTML = '';
+        if (!Array.isArray(items) || items.length === 0) {
+          recipientSelect.innerHTML = '<option value="">Sin destinatarios configurados</option>';
+          return;
+        }
+        items.forEach((r) => {
+          const opt = document.createElement('option');
+          opt.value = r.id || r.recipientId;
+          opt.textContent = r.label || r.email || r.name || opt.value;
+          recipientSelect.appendChild(opt);
+        });
+      }
+
+      /* ── Envío ── */
+      function toggleForms(which) {
+        formMonthly.style.display = which === 'monthly' ? 'block' : 'none';
+        formQuarterly.style.display = which === 'quarterly' ? 'block' : 'none';
+        formSpecific.style.display = which === 'specific' ? 'block' : 'none';
+      }
+      $('btnOpenMonthly').addEventListener('click', () => toggleForms('monthly'));
+      $('btnOpenQuarterly').addEventListener('click', () => toggleForms('quarterly'));
+      $('btnOpenSpecific').addEventListener('click', () => toggleForms('specific'));
+      $('btnCancelMonthly').addEventListener('click', () => toggleForms(null));
+      $('btnCancelQuarterly').addEventListener('click', () => toggleForms(null));
+      $('btnCancelSpecific').addEventListener('click', () => toggleForms(null));
+
+      $('btnConfirmMonthly').addEventListener('click', () => {
+        const recipientId = recipientSelect.value;
+        const year = Number(monthlyYear.value);
+        const month = Number(monthlyMonth.value);
+        if (!recipientId) return warn('Selecciona un destinatario.');
+        if (!year || !month) return warn('Indica año y mes.');
+        setLoading($('btnConfirmMonthly'), true);
+        send(MESSAGE_TYPES.SEND_MONTHLY_PACKAGE, { recipientId, year, month, notes: monthlyNotes.value.trim() || null });
+      });
+      $('btnConfirmQuarterly').addEventListener('click', () => {
+        const recipientId = recipientSelect.value;
+        const year = Number(quarterlyYear.value);
+        const quarter = Number(quarterlyQuarter.value);
+        if (!recipientId) return warn('Selecciona un destinatario.');
+        if (!year || !quarter) return warn('Indica año y trimestre.');
+        setLoading($('btnConfirmQuarterly'), true);
+        send(MESSAGE_TYPES.SEND_QUARTERLY_PACKAGE, { recipientId, year, quarter, notes: quarterlyNotes.value.trim() || null });
+      });
+      $('btnConfirmSpecific').addEventListener('click', () => {
+        const recipientId = recipientSelect.value;
+        const documentId = specificDocId.value.trim();
+        if (!recipientId) return warn('Selecciona un destinatario.');
+        if (!documentId) return warn('Indica el ID del documento.');
+        setLoading($('btnConfirmSpecific'), true);
+        send(MESSAGE_TYPES.SEND_SPECIFIC_DOCUMENT, {
+          recipientId, documentId,
+          documentType: specificDocType.value || null,
+          notes: specificNotes.value.trim() || null
+        });
+      });
+
+      /* ── Staff ── */
+      function fillStaffSelects(items) {
+        hoursStaffSelect.innerHTML = '<option value="">—</option>';
+        notifyStaffSelect.innerHTML = '<option value="">—</option>';
+        items.forEach((s) => {
+          const value = s.id || s.employeeId;
+          const label = s.name || s.displayName || value;
+          [hoursStaffSelect, notifyStaffSelect].forEach((sel) => {
+            const opt = document.createElement('option');
+            opt.value = value; opt.textContent = label;
+            sel.appendChild(opt);
+          });
+        });
+      }
+      function renderStaff(items) {
+        staffCache = items || [];
+        if (!staffCache.length) {
+          staffBody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--muted);">Sin empleados</td></tr>';
+          fillStaffSelects([]); return;
+        }
+        staffBody.innerHTML = '';
+        staffCache.forEach((s) => {
+          const tr = document.createElement('tr');
+          [s.name || s.displayName || '—', s.roleLabel || s.role || '—', s.email || '—', s.status || 'activo'].forEach((v) => {
+            const td = document.createElement('td'); td.textContent = String(v); tr.appendChild(td);
+          });
+          staffBody.appendChild(tr);
+        });
+        fillStaffSelects(staffCache);
+      }
+      btnLoadStaff.addEventListener('click', () => { setLoading(btnLoadStaff, true); send(MESSAGE_TYPES.STAFF_LIST, {}); });
+      btnLoadStaffHours.addEventListener('click', () => {
+        const employeeId = hoursStaffSelect.value;
+        const startDateYMD = staffHoursStart.value;
+        const endDateYMD = staffHoursEnd.value;
+        if (!employeeId || !startDateYMD || !endDateYMD) return warn('Completa empleado, desde y hasta.');
+        setLoading(btnLoadStaffHours, true);
+        send(MESSAGE_TYPES.STAFF_HOURS_SUMMARY, { employeeId, startDateYMD, endDateYMD });
+      });
+      btnNotifyStaff.addEventListener('click', () => {
+        const employeeId = notifyStaffSelect.value;
+        const subject = notifySubject.value.trim();
+        const message = notifyMessage.value.trim();
+        if (!employeeId || !subject || !message) return warn('Completa empleado, asunto y mensaje.');
+        setLoading(btnNotifyStaff, true);
+        send(MESSAGE_TYPES.STAFF_NOTIFY, {
+          employeeId, channel: notifyChannel.value || 'EMAIL', subject, message
+        });
+      });
+
+      /* ── Caja ── */
+      function renderCashier(state) {
+        if (!state) { cashSaldo.textContent='--'; cashOps.textContent='--'; cashDiaKey.textContent='--'; return; }
+        cashSaldo.textContent = money(state.saldoTotal);
+        cashOps.textContent = Number.isFinite(Number(state.totalOperaciones)) ? String(state.totalOperaciones) : '--';
+        cashDiaKey.textContent = state.diaKey || '--';
+      }
+      function renderTicket(t) {
+        if (!t) { cashTicket.style.display='none'; return; }
+        cashTicket.style.display = 'block';
+        const rows = [];
+        rows.push(`<div style="text-align:center;font-weight:900;text-transform:uppercase">${t.title || 'TICKET'}</div>`);
+        if (t.ticketNumber) rows.push(`Nº: ${t.ticketNumber}`);
+        if (t.concept) rows.push(`Concepto: ${t.concept}`);
+        if (t.amount != null) rows.push(`Importe: ${money(t.amount)}`);
+        if (t.traceId) rows.push(`Traza: ${t.traceId}`);
+        if (t.fiscalFingerprint) rows.push(`Huella fiscal: ${t.fiscalFingerprint}`);
+        cashTicket.innerHTML = rows.join('<br/>');
+      }
+      btnRefreshCash.addEventListener('click', () => send(MESSAGE_TYPES.CASHIER_STATE, {}));
+      btnZClosing.addEventListener('click', () => {
+        if (!confirm('¿Confirmas el Cierre Z Diario? Cierra la jornada fiscal.')) return;
+        setLoading(btnZClosing, true);
+        send(MESSAGE_TYPES.Z_CLOSING, { confirm: true });
+      });
+
+      /* ── Fiscal ── */
+      function renderFiscal(data) {
+        if (!data) { fiscalResult.textContent = '—'; return; }
+        fiscalResult.textContent = JSON.stringify(data, null, 2);
+      }
+      btnFiscalSummary.addEventListener('click', () => {
+        const year = Number(fiscalYear.value), quarter = Number(fiscalQuarter.value);
+        if (!year || !quarter) return warn('Indica año y trimestre.');
+        setLoading(btnFiscalSummary, true);
+        send(MESSAGE_TYPES.FISCAL_SUMMARY, { year, quarter });
+      });
+      btnFiscalBook.addEventListener('click', () => {
+        const year = Number(fiscalYear.value), quarter = Number(fiscalQuarter.value);
+        if (!year || !quarter) return warn('Indica año y trimestre.');
+        setLoading(btnFiscalBook, true);
+        send(MESSAGE_TYPES.FISCAL_BOOK, { year, quarter });
+      });
+
+      /* ── Documentos ── */
+      function renderDocuments(items) {
+        documentsBody.innerHTML = '';
+        if (!Array.isArray(items) || items.length === 0) {
+          documentsBody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--muted);">Sin paquetes preparados</td></tr>';
+          return;
+        }
+        items.forEach((d) => {
+          const tr = document.createElement('tr');
+          [d.id || d._id || '—', d.periodLabel || d.periodType || '—', d.status || '—'].forEach((v) => {
+            const td = document.createElement('td'); td.textContent = String(v); tr.appendChild(td);
+          });
+          const action = document.createElement('td');
+          const b = document.createElement('button');
+          b.className = 'btn btn-outline';
+          b.style.cssText = 'width:auto;padding:5px 8px;margin:0;';
+          b.textContent = 'Descargar';
+          b.addEventListener('click', () => {
+            setLoading(b, true);
+            send(MESSAGE_TYPES.DOCUMENT_DOWNLOAD, { documentId: d.id || d._id });
+          });
+          action.appendChild(b); tr.appendChild(action); documentsBody.appendChild(tr);
+        });
+      }
+      btnLoadPrepared.addEventListener('click', () => { setLoading(btnLoadPrepared, true); send(MESSAGE_TYPES.DOCUMENT_PREPARED, {}); });
+
+      /* ── Contexto ── */
+      function applyContext(ctx) {
+        contextData = ctx || {};
+        const memberName = contextData.memberName || 'Marian';
+        const roleLabel = contextData.roleLabel || 'PROPIETARIA';
+        userInfo.textContent = `Sesion activa: ${memberName} | ${roleLabel}`;
+        roleBadge.textContent = roleLabel;
+
+        if (contextData.cashierState) renderCashier(contextData.cashierState);
+        if (contextData.cashierMode) { /* badge opcional */ }
+
+        // Fechas por defecto
+        const today = contextData.today || new Intl.DateTimeFormat('sv-SE', { timeZone: contextData.timeZone || 'Europe/Madrid' }).format(new Date());
+        const year = Number(today.slice(0, 4));
+        monthlyYear.value = year; quarterlyYear.value = year; fiscalYear.value = year;
+        staffHoursStart.value = today; staffHoursEnd.value = today;
+
+        // Visibilidad por flags
+        const flags = {
+          ai: contextData.enableAIAssistant !== false,
+          send: contextData.enableAccountantSend !== false,
+          staff: contextData.enableStaffManagement !== false,
+          cash: contextData.enableCashier !== false,
+          fiscal: contextData.enableFiscal !== false,
+          documents: contextData.enableDocuments !== false
+        };
+        $('aiPanel').style.display = flags.ai ? 'block' : 'none';
+        $('sendPanel').style.display = flags.send ? 'block' : 'none';
+        $('staffPanel').style.display = flags.staff ? 'block' : 'none';
+        $('cashPanel').style.display = flags.cash ? 'block' : 'none';
+        $('fiscalPanel').style.display = flags.fiscal ? 'block' : 'none';
+        $('documentsPanel').style.display = flags.documents ? 'block' : 'none';
+
+        // Cargas iniciales
+        if (flags.send) send(MESSAGE_TYPES.ACCOUNTANT_RECIPIENTS, {});
+        if (flags.cash) send(MESSAGE_TYPES.CASHIER_STATE, {});
+
+        if (fallbackTimer) { clearTimeout(fallbackTimer); fallbackTimer = null; }
+        clearBanners();
+      }
+
+      /* ── Respuestas ── */
+      function handleResponse(msg) {
+        const type = String(msg.type || '').toUpperCase();
+        const payload = msg.payload || {};
+        const data = payload.data, error = payload.error, status = payload.status;
+        const ok = status === 'SUCCESS';
+
+        switch (type) {
+          case 'AI_QUERY_RES': {
+            setLoading(btnAISend, false);
+            const pending = aiChat.querySelector('.ai-msg.loading[data-pending="1"]');
+            if (pending) pending.remove();
+            if (ok && data) {
+              if (data.conversationId) conversationId = data.conversationId;
+              const text = data.text || data.message || data.answer || '(sin respuesta)';
+              appendAIMessage('assistant', text);
+            } else {
+              appendAIMessage('error', error?.message || 'Error al consultar la IA.');
+            }
+            break;
+          }
+          case 'ACCOUNTANT_RECIPIENTS_RES':
+            if (ok) renderRecipients(data?.items || data?.recipients || data);
+            else warn(error?.message || 'No se pudieron cargar los destinatarios.');
+            break;
+          case 'SEND_MONTHLY_PACKAGE_RES':
+            setLoading($('btnConfirmMonthly'), false);
+            if (ok) { info('Paquete mensual enviado al gestor.'); toggleForms(null); }
+            else err(error?.message || 'No se pudo enviar el paquete mensual.');
+            break;
+          case 'SEND_QUARTERLY_PACKAGE_RES':
+            setLoading($('btnConfirmQuarterly'), false);
+            if (ok) { info('Paquete trimestral enviado al gestor.'); toggleForms(null); }
+            else err(error?.message || 'No se pudo enviar el paquete trimestral.');
+            break;
+          case 'SEND_SPECIFIC_DOCUMENT_RES':
+            setLoading($('btnConfirmSpecific'), false);
+            if (ok) { info('Documento enviado al gestor.'); toggleForms(null); }
+            else err(error?.message || 'No se pudo enviar el documento.');
+            break;
+          case 'STAFF_LIST_RES':
+            setLoading(btnLoadStaff, false);
+            if (ok) renderStaff(data?.items || data?.employees || data || []);
+            else err(error?.message || 'No se pudo cargar el equipo.');
+            break;
+          case 'STAFF_HOURS_SUMMARY_RES':
+            setLoading(btnLoadStaffHours, false);
+            if (ok && data) {
+              const h = Number(data.horasTrabajadasDecimal || data.totalHoras || 0);
+              staffHoursResult.textContent = `Horas trabajadas: ${h}h` +
+                (data.horasPausaDecimal != null ? ` | Pausas: ${Number(data.horasPausaDecimal)}h` : '') +
+                (data.totalFichajesProcesados != null ? ` | Fichajes: ${Number(data.totalFichajesProcesados)}` : '');
+            } else staffHoursResult.textContent = error?.message || 'Sin datos.';
+            break;
+          case 'STAFF_NOTIFY_RES':
+            setLoading(btnNotifyStaff, false);
+            if (ok) { info('Aviso enviado.'); notifySubject.value=''; notifyMessage.value=''; }
+            else err(error?.message || 'No se pudo enviar el aviso.');
+            break;
+          case 'CASHIER_STATE_RES':
+            if (ok) renderCashier(data);
+            break;
+          case 'Z_CLOSING_RES':
+            setLoading(btnZClosing, false);
+            if (ok) { info('Cierre Z Diario completado.'); renderTicket(data?.ticket || data); send(MESSAGE_TYPES.CASHIER_STATE, {}); }
+            else err(error?.message || 'Error en Cierre Z.');
+            break;
+          case 'FISCAL_SUMMARY_RES':
+            setLoading(btnFiscalSummary, false);
+            if (ok) renderFiscal(data);
+            else err(error?.message || 'Error al obtener resumen fiscal.');
+            break;
+          case 'FISCAL_BOOK_RES':
+            setLoading(btnFiscalBook, false);
+            if (ok) renderFiscal(data);
+            else err(error?.message || 'Error al obtener libro registro.');
+            break;
+          case 'DOCUMENT_PREPARED_RES':
+            setLoading(btnLoadPrepared, false);
+            if (ok) renderDocuments(data?.items || data || []);
+            else err(error?.message || 'No se pudieron cargar los paquetes.');
+            break;
+          case 'DOCUMENT_DOWNLOAD_RES':
+            if (ok && data?.url) window.open(data.url, '_blank');
+            else if (!ok) err(error?.message || 'No se pudo descargar.');
+            break;
+          case MESSAGE_TYPES.ONLY_STAFF_ERROR:
+          case MESSAGE_TYPES.STAFF_ERROR:
+            err(error?.message || 'Error en la solicitud.');
+            break;
+        }
+      }
+
+      window.addEventListener('message', (e) => {
+        const msg = e?.data || {};
+        const type = String(msg.type || '').trim().toUpperCase();
+        if (!type || !VALID_TYPES.has(type)) return;
+        if (e.source !== window.parent) return;
+        if (e.origin && e.origin !== 'null') PARENT_ORIGIN = e.origin;
+        if (type === MESSAGE_TYPES.READY) return;
+        if (type === MESSAGE_TYPES.CONTEXT) { applyContext(msg.payload || {}); return; }
+        handleResponse(msg);
+      });
+
+      send(MESSAGE_TYPES.READY, { traceId });
+      setTimeout(() => { if (!contextData) send(MESSAGE_TYPES.READY, { traceId }); }, 600);
+      setTimeout(() => { if (!contextData) send(MESSAGE_TYPES.READY, { traceId }); }, 1800);
+
+      fallbackTimer = setTimeout(() => {
+        if (!contextData) {
+          console.warn('[admin-widget] MM_CONTEXT no recibido, aplicando defaults');
+          applyContext({
+            roleLabel: 'PROPIETARIA',
+            enableClocking: false,
+            enableCashier: true,
+            enableInventory: true,
+            enableScheduleQuery: true,
+            enableStaffManagement: true,
+            enableAIAssistant: true,
+            enableAccountantSend: true,
+            enableFiscal: true,
+            enableDocuments: true,
+            timeZone: 'Europe/Madrid',
+            currencyCode: 'EUR'
+          });
+        }
+      }, 3000);
+    })();
+  </script>
+</body>
+</html>
