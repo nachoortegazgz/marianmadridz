@@ -10,6 +10,48 @@ let nativeQuantity = 6;
 mocks.sdk["@wix/stores::@wix/stores::catalogVersioning::getCatalogVersion"] = async () => ({
   catalogVersion,
 });
+const INVENTORY_ITEM_ID = "55555555-6666-4666-8666-555555555555";
+const LOCATION_ID = "66666666-7777-4777-8777-666666666666";
+mocks.sdk["@wix/stores::@wix/stores::inventoryItemsV3::queryInventoryItems"] = async (query) => {
+  getStoreVariantCalls += 1;
+  return {
+    inventoryItems: [{
+      id: INVENTORY_ITEM_ID,
+      productId: PRODUCT_ID,
+      variantId: VARIANT_ID,
+      locationId: LOCATION_ID,
+      quantity: nativeQuantity,
+      trackQuantity: true,
+      product: {
+        name: "Producto de prueba",
+        variantName: "Unica",
+        variantSku: "SKU-QA-001",
+      },
+    }],
+    pagingMetadata: { count: 1, cursors: {} },
+  };
+};
+mocks.sdk["@wix/stores::@wix/stores::productsV3::getProduct"] = async () => ({
+  product: {
+    id: PRODUCT_ID,
+    name: "Producto de prueba",
+    variantsInfo: {
+      variants: [{
+        id: VARIANT_ID,
+        sku: "SKU-QA-001",
+        price: { actualPrice: { amount: "25.00" } },
+      }],
+    },
+  },
+});
+mocks.sdk["@wix/stores::@wix/stores::inventoryItemsV3::bulkIncrementInventoryItems"] = async (data) => {
+  nativeQuantity += Number(data?.[0]?.incrementBy || 0);
+  return { results: [{ itemMetadata: { success: true }, item: { id: INVENTORY_ITEM_ID, quantity: nativeQuantity } }] };
+};
+mocks.sdk["@wix/stores::@wix/stores::inventoryItemsV3::bulkDecrementInventoryItems"] = async (data) => {
+  nativeQuantity -= Number(data?.[0]?.decrementBy || 0);
+  return { results: [{ itemMetadata: { success: true }, item: { id: INVENTORY_ITEM_ID, quantity: nativeQuantity } }] };
+};
 mocks.sdk["@wix/stores::@wix/stores::products::getStoreVariant"] = async (storeVariantId) => {
   getStoreVariantCalls += 1;
   const rawId = String(storeVariantId);
@@ -130,7 +172,7 @@ test.beforeEach(() => {
   seed();
 });
 
-test("INVENTORY-WRITER-01 mirrors native Wix V1 stock without writing to native inventory", async () => {
+test("INVENTORY-WRITER-01 mirrors native Wix Catalog V3 stock without writing to native inventory", async () => {
   const result = await INV.syncPaidOrderInventoryInternal(
     paidOrder(),
     "trace-inventory-001",
@@ -167,7 +209,7 @@ test("INVENTORY-WRITER-02 repeated paid-order event is idempotent by movementTok
   assert.equal(wixDataMock._store.get(STOCK_COL)[0].stockOnHand, 6);
 });
 
-test("INVENTORY-WRITER-03 refuses Catalog V1 before any CMS mutation", async () => {
+test("INVENTORY-WRITER-03 refuses Catalog V3 before any CMS mutation", async () => {
   catalogVersion = "V1_CATALOG";
   const result = await INV.syncPaidOrderInventoryInternal(
     paidOrder(),
@@ -247,7 +289,7 @@ test("INVENTORY-REFUND-01 only explicit restock side effect creates a positive r
 });
 
 
-test("INVENTORY-MANUAL-01 supplier receipt increments Wix V1 atomically and writes one append-only movement", async () => {
+test("INVENTORY-MANUAL-01 supplier receipt increments Wix Catalog V3 atomically and writes one append-only movement", async () => {
   seed();
   nativeQuantity = 8;
   const input = {
@@ -278,7 +320,7 @@ test("INVENTORY-MANUAL-01 supplier receipt increments Wix V1 atomically and writ
 });
 
 
-test("INVENTORY-MASTER-01 admin maps a managed Wix V1 variant with explicit tax and reservation baseline", async () => {
+test("INVENTORY-MASTER-01 admin maps a managed Wix Catalog V3 variant with explicit tax and reservation baseline", async () => {
   seed();
   nativeQuantity = 8;
   wixDataMock._seed(STOCK_COL, []);
