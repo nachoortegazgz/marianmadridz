@@ -111,7 +111,7 @@ $w.onReady(async () => {
      5) Bridge con el widget HTML
      ──────────────────────────────────────────────────────────────────── */
   bridge = createWidgetBridge(widget, {
-    allowedTypes: [MESSAGE_TYPES.READY, MESSAGE_TYPES.NAV],
+    allowedTypes: [MESSAGE_TYPES.READY, MESSAGE_TYPES.CONTEXT, MESSAGE_TYPES.NAV],
     slug: "only-staff",
     traceId,
     handshakeTimeoutMs: UI.HANDSHAKE_TIMEOUT_MS,
