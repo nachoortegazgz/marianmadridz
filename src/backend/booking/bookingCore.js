@@ -490,14 +490,6 @@ export function createBookingError(code, message, details) {
 }
 
 export function normalizeError(err) {
-    if (err && typeof err === "object" && err.name === "BookingError") {
-        return {
-            code: String(err.code || ERROR_CODES.UNKNOWN_ERROR),
-            message: String(err.message || "Unknown error"),
-            stack: err.stack || null,
-            details: err.details || {},
-        };
-    }
     if (err instanceof Error) {
         const legacy = err.code || err.errorCode || null;
         const msgCode =
@@ -1749,7 +1741,7 @@ export async function _persistBooking(params, traceId) {
         const incomingRevision = Number(doc[BOOKING_FIELDS.REVISION]) || 1;
         const currentRevision = Number(existingDoc[BOOKING_FIELDS.REVISION]) || 1;
         if (incomingRevision < currentRevision) {
-            throw new BookingError(
+            throw createBookingError(
                 ERROR_CODES.DATABASE_ERROR,
                 "Booking revision conflict",
                 {
