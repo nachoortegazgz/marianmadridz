@@ -135,7 +135,7 @@ test("booking privacy navigation targets the published Privacidad y Cookies rout
 
 
 test("admin widget actions are explicitly allowlisted and match implemented page handlers", () => {
-  const allowlist = adminPage.match(/allowedTypes:\s*\[([\\s\\S]*?)\]/);
+  const allowlist = adminPage.match(/allowedTypes:\s*\[([\s\S]*?)\]/);
   assert.ok(allowlist, "admin page must declare an explicit widget allowlist");
   for (const type of [
     "CASHIER_STATE",
@@ -153,7 +153,7 @@ test("admin widget actions are explicitly allowlisted and match implemented page
 });
 
 test("staff widget remains fail-closed and bridge only accepts navigation", () => {
-  const allowlist = staffPage.match(/allowedTypes:\s*\[([\\s\\S]*?)\]/);
+  const allowlist = staffPage.match(/allowedTypes:\s*\[([\s\S]*?)\]/);
   assert.ok(allowlist, "staff page must declare an explicit widget allowlist");
   assert.match(allowlist[1], /MESSAGE_TYPES\.READY/);
   assert.match(allowlist[1], /MESSAGE_TYPES\.NAV/);
