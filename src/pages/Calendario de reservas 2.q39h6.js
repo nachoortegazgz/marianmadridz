@@ -1390,7 +1390,7 @@ async function ensureBookingMemberSession() {
     if (member?._id) return true;
 
     try {
-        await wixMembersFrontend.authentication.promptLogin();
+        await wixMembersFrontend.authentication.promptLogin({ mode: "login", modal: true });
     } catch (_) {
         // Closing/cancelling the native login dialog is an expected user action.
         return false;
