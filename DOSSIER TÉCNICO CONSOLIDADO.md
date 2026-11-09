@@ -70,7 +70,7 @@ Este mapa permite la navegación semántica y técnica precisa por las 4 capas d
 | **8** | Seguridad y Permisos | • RBAC doble capa: Velo Permissions + `STAFF.WEBSITE_ROLE_BY_RESOURCE_ID` (internalConfig.js)<br>• Roles: ADMIN / GESTION / ESTILISTA<br>• Secretos en Wix Secrets Manager (`mmSecrets.js`)<br>• HMAC-SHA256 de fichajes laborales; sin middleware X-MM anti-replay activo<br>• Rate limiting por surface (public-booking, reservas, availability, display-token)<br>• Minimización PII: enmascaramiento en logs, exclusión datos tarjeta<br>• Eventos backend Bookings gestionados por Wix + deduplicación `eventId` |
 | **9** | Integraciones | • Apps Wix nativas: reglas por app (Bookings V2, Stores V1, eCom Cart V2)<br>• Externas: Resend (email), OpenAI (IA), Wix Payments (proveedor nativo de pagos), IONOS (DNS/correo), M365 (custodia)<br>• Gestión colecciones WIX_APP: solo lectura, mutación vía SDK oficial<br>• Prohibición de llamadas externas desde frontend |
 | **10** | Backend: Módulos y Hooks | • Catálogo completo de 18 WebMethods con permisos Velo y rol negocio<br>• Flujos críticos: venta online, cancelaciones, cierre Z nocturno<br>• Hooks CMS por colección (`data.js`): validaciones beforeInsert/beforeUpdate<br>• Helpers: `mmUtils.js`, `securityEngine.js`, `validation.js`, `widgetBridge.js` |
-| **11** | Jobs y Webhooks | • 8 crons en `jobs.config` (tabla con frecuencia, dominio y operación)<br>• Webhooks Bookings V2: 5 eventos + procesamiento seguro idempotente<br>• Webhooks eCommerce: independientes de V1/V3<br>• Catalog V3 webhooks: pendientes (Developer Preview, no activar sin ADR)<br>• Reglas invariables: jobs nunca escriben directo en append-only |
+| **11** | Jobs y Webhooks | • 8 crons en `jobs.config` (tabla con frecuencia, dominio y operación)<br>• Eventos backend Bookings V2: 5 handlers Velo + procesamiento idempotente<br>• Webhooks eCommerce: independientes de V1/V3<br>• Catalog V3 webhooks: pendientes (Developer Preview, no activar sin ADR)<br>• Reglas invariables: jobs nunca escriben directo en append-only |
 | **12** | Estándares de Código | • Reglas N1-N5 detalladas con ejemplos<br>• G10 ASCII Strict (ñ permitida en términos españoles canónicos)<br>• Convenciones enums y códigos de error estandarizados<br>• Plantilla de cabecera de módulo<br>• Contratos canónicos, consumidores verificados y pruebas de regresión |
 
 ### BLOQUE D: NORMATIVA, CAPA 3, REFERENCIAS Y ANEXO DE FLUJOS (Capítulos 13–14 + Anexos)
@@ -538,7 +538,7 @@ CONTROL_TYPE = { ALERT, COMPENSATION, DAYS_CACHE, DEDUPE_KEY, DISPLAY_TOKEN,
 
 ### Permisos de Web Modules
 
-El backend contiene módulos `.web.js` y no contiene módulos `.jsw`. Cada exportación invocable declara su permiso con `webMethod(Permissions...)`; la autorización de negocio se comprueba de nuevo en backend. El manifiesto `permissions.json` no forma parte del modelo de autorización de este sitio y se ha retirado. Referencias oficiales: [Web Modules](https://dev.wix.com/docs/develop-websites/articles/coding-with-velo/backend-code/web-modules/about-web-modules) y [Permissions](https://dev.wix.com/docs/velo/apis/wix-web-module/permissions).
+El backend contiene módulos `.web.js` y no contiene módulos `.jsw`. Cada exportación invocable declara su permiso con `webMethod(Permissions...)`; la autorización de negocio se comprueba de nuevo en backend. El manifiesto `permissions.json` no forma parte del modelo de autorización del sitio y se ha retirado. Wix documenta `.jsw` como formato anterior y recomienda Web Modules `.web.js` con permisos por método. Referencias oficiales: [Web Modules](https://dev.wix.com/docs/develop-websites/articles/coding-with-velo/backend-code/web-modules/about-web-modules) y [Permisos](https://dev.wix.com/docs/develop-websites/articles/coding-with-velo/backend-code/web-modules/about-web-modules#permissions).
 
 ### Modelo de autorización RBAC
 
@@ -607,7 +607,7 @@ Eventos suscritos: `booking_created`, `booking_updated`, `booking_confirmed`, `b
 
 Procesamiento seguro:
 
-1. Los handlers de `backend/events.js` son eventos backend Velo gestionados por Wix. La plataforma verifica y decodifica la entrega y proporciona al handler el objeto de evento. El módulo no recibe JWT sin procesar ni expone un endpoint HTTP.
+1. Los handlers de `backend/events.js` son eventos backend Velo gestionados por Wix. La plataforma verifica y decodifica la entrega y proporciona al handler el objeto de evento. El módulo no recibe JWT sin procesar ni expone un endpoint HTTP; la verificación manual de JWT corresponde a endpoints autoalojados.
 2. Extraer `eventId` del payload.
 3. Verificar idempotencia en `ControlOperativo` (`controlType = "WEBHOOK_EVENT"`) antes de cualquier mutación.
 4. Si `eventId` ya existe, abortar sin error (procesamiento idempotente).
@@ -785,9 +785,9 @@ El scheduler de Velo ejecuta las tareas declaradas en `backend/jobs.config` medi
 - Las tareas de sincronización externa no confirmadas (p. ej. M365 bidireccional) permanecen **deshabilitadas** hasta ADR específico.
 - Todo job genera y propaga un `traceId` UUID v4.
 
-### 11.2 Webhooks de Bookings V2
+### 11.2 Eventos backend de Bookings V2
 
-Eventos suscritos en el panel de Wix y procesados por `backend/events.js`:
+Eventos backend Velo gestionados por Wix y procesados por `backend/events.js`:
 
 | Evento | Propósito |
 | :--- | :--- |
@@ -804,7 +804,7 @@ Eventos suscritos en el panel de Wix y procesados por `backend/events.js`:
 4. Se inserta el registro inmutable de deduplicación y se ejecuta la mutación de dominio.
 5. Toda mutación propaga `traceId` y se enmascara PII en logs.
 
-### 11.3 Webhooks de eCommerce
+### 11.3 Eventos de eCommerce
 
 | Evento | Propósito |
 | :--- | :--- |
@@ -814,7 +814,7 @@ Eventos suscritos en el panel de Wix y procesados por `backend/events.js`:
 
 **Regla crítica:** los webhooks de eCommerce son **independientes** de la versión de catálogo (V1/V3). No cambian entre migraciones.
 
-### 11.4 Webhooks pendientes de activación (Catalog V3)
+### 11.4 Eventos pendientes de activación (Catalog V3)
 
 Los eventos V3 de Velo (`ProductsV3` / `InventoryItemsV3`) están actualmente en **Developer Preview** según la documentación oficial de Wix (consultada el 30-10-2026). Por tanto:
 
