@@ -1679,6 +1679,8 @@ export async function reconcileMissingConfirmedBookingProjections() {
     const traceId = makeTraceId("cron-booking-projection-reconcile");
     const result = {
         nativeConfirmedRead: 0,
+        canceledPaidRead: 0,
+        amountReconciliationRequired: 0,
         reconciled: 0,
         alreadyProjected: 0,
         reviewRequired: 0,
@@ -1826,6 +1828,7 @@ export async function reconcileMissingConfirmedBookingProjections() {
             }),
         ]);
         result.nativeConfirmedRead = confirmedBookings.length;
+        result.canceledPaidRead = canceledPaidBookings.length;
 
         const [citasByBookingId, markerIds] = await Promise.all([
             _loadCitasByBookingId(),
@@ -1863,6 +1866,7 @@ export async function reconcileMissingConfirmedBookingProjections() {
             }
             if (syncResult.created) result.reconciled++;
             else result.alreadyProjected++;
+            if (syncResult.amountReconciliationRequired) result.amountReconciliationRequired++;
             citasByBookingId.set(bookingId, { bookingId });
             markerIds.add(bookingId);
         }
@@ -1882,6 +1886,8 @@ export async function reconcileMissingConfirmedBookingProjections() {
 
         log.info("reconcileMissingConfirmedBookingProjections completed", {
             nativeConfirmedRead: result.nativeConfirmedRead,
+            canceledPaidRead: result.canceledPaidRead,
+            amountReconciliationRequired: result.amountReconciliationRequired,
             reconciled: result.reconciled,
             alreadyProjected: result.alreadyProjected,
             reviewRequired: result.reviewRequired,
