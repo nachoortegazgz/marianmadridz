@@ -10,7 +10,6 @@ import {
   ControlOperativo_beforeRemove,
   readControlPayload,
 } from "../data.js";
-import { logger } from "../logger.js";
 import {
   CONTROL_TYPE,
   CONTROL_STATUS,
@@ -166,32 +165,15 @@ describe("ControlOperativo hooks", () => {
     );
   });
 
-  it("traces historical payloadJson reads while preferring canonical payload", () => {
-    const warnings = [];
-    const originalWarn = logger.warn;
-    logger.warn = (event, metadata) => warnings.push({ event, metadata });
-    try {
-      assert.deepEqual(
-        readControlPayload({
-          _id: "historical-control-1",
-          traceId: "trace-historical-1",
-          payloadJson: '{"status":"COMPLETED"}',
-        }),
-        { status: "COMPLETED" }
-      );
-      assert.equal(warnings.length, 1);
-      assert.equal(warnings[0].event, "historical-control-payload-read");
-      assert.equal(warnings[0].metadata.docId, "historical-control-1");
-
-      warnings.length = 0;
-      assert.deepEqual(
-        readControlPayload({ _id: "canonical-control-1", payload: { status: "ACTIVE" } }),
-        { status: "ACTIVE" }
-      );
-      assert.equal(warnings.length, 0);
-    } finally {
-      logger.warn = originalWarn;
-    }
+  it("reads only the canonical structured payload", () => {
+    assert.deepEqual(
+      readControlPayload({ _id: "canonical-control-1", payload: { status: "ACTIVE" } }),
+      { status: "ACTIVE" }
+    );
+    assert.deepEqual(
+      readControlPayload({ _id: "retired-control-1", payloadJson: '{"status":"ACTIVE"}' }),
+      {}
+    );
   });
 
   it("keeps the canonical control type set", () => {
