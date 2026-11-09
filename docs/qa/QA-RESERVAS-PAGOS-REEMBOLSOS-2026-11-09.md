@@ -16,7 +16,7 @@
 - Clave fiscal estable: `REFUND-{orderId}-{refundId}`.
 - Reutilización idempotente del movimiento existente; rechazo de múltiples filas con la misma clave y de refundId reutilizado con otro pedido/transacción.
 - El historial se lee paginado. Si no puede completarse dentro del límite defensivo, el flujo falla cerrado.
-- Se rechaza un reembolso que supere el importe restante del cobro original.
+- Se rechaza un reembolso que supere el importe restante del cobro original; las violaciones no recuperables generan alerta y no entran en la cola de reintentos fiscales.
 - Base y cuota se prorratean en reembolsos parciales; el último reembolso aplica el residual para cuadrar el total original.
 - El restock explícito de Wix se conserva como efecto nativo idempotente por refundId; el límite fiscal se aplica antes de crear la rectificativa en el ledger. Si falta el movimiento original, el flujo conserva el restock y deja la rectificativa en recuperación.
 

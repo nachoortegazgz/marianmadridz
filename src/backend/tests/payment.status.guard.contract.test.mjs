@@ -85,6 +85,7 @@ test('PAY-REFUND-01 refunds are idempotent, bounded by the original amount and p
   assert.match(eventsSource, /existingRefundMovement/);
   assert.match(eventsSource, /refundTaxBase/);
   assert.match(eventsSource, /refundTaxAmount/);
+  assert.match(eventsSource, /REFUND_REJECTED_INTEGRITY/);
   assert.match(eventsSource, /\.limit\(1000\)/);
 });
 
