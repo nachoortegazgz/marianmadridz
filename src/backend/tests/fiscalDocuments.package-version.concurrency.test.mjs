@@ -27,13 +27,13 @@ function assertDisabledBeforeOperations(handler, operations) {
   assert.match(handler, /_accountantSendDisabledResult\(traceId\)/);
 }
 
-test('FDOC-STORAGE-01 package creation fails closed until a dedicated immutable store exists', () => {
+test('FDOC-STORAGE-01 package creation remains fail-closed until snapshot guarantees are implemented', () => {
   const handler = extractBlock(
     'export const createManagerPackageVersion = webMethod(',
-    '// BLOQUE 4 - HISTORIAL DE PAQUETES'
+    '// =============================================================================\n// BLOQUE 4 - HISTORIAL DE PAQUETES'
   );
-  assert.match(handler, /PACKAGE_SNAPSHOT_STORAGE_NOT_CONFIGURED/);
-  assert.match(handler, /HistoricoCierresZ está reservado a cierres Z/);
+  assert.match(handler, /PACKAGE_SNAPSHOT_IMPLEMENTATION_PENDING/);
+  assert.match(handler, /hash canónico, límite de tamaño y versionado concurrente seguro/);
   assert.doesNotMatch(handler, /dalInsert|dalUpdate|dalSave|dalRemove/);
 });
 
@@ -71,8 +71,20 @@ test('FDOC-DISPATCH-02 specific-document dispatch checks the disabled guard befo
   assert.doesNotMatch(handler, /dalInsert|dalUpdate/);
 });
 
-test('FDOC-HISTORY-01 legacy monthly and quarterly identifiers remain disjoint', () => {
-  assert.ok(source.includes('_packagePeriodPrefix(year, "MONTHLY", month)'));
-  assert.ok(source.includes('_packagePeriodPrefix(year, "QUARTERLY", quarter)'));
-  assert.ok(source.includes('${year}_${periodKey}_PAQUETE_GESTORIA_'));
+test('FDOC-STORE-01 package read models use PaquetesGestoria, never the Z-closing ledger', () => {
+  assert.ok(source.includes('const DOCS_COL = BUSINESS_COLLECTIONS.PAQUETES_GESTORIA'));
+  assert.doesNotMatch(source, /BUSINESS_COLLECTIONS\.HISTORICO_CIERRES_Z/);
+  const history = extractBlock(
+    'export const getManagerPackageHistory = webMethod(',
+    'export const getPreparedManagerPackages'
+  );
+  assert.match(history, /\.eq\("periodType", periodType\)/);
+  assert.match(history, /\.eq\("fiscalMonth", month\)/);
+  assert.match(history, /\.eq\("fiscalQuarter", quarter\)/);
+  assert.doesNotMatch(history, /closingType|inventoryClosingId/);
+  const prepared = extractBlock(
+    'export const getPreparedManagerPackages = webMethod(',
+    '// BLOQUE 5 - DESCARGAR VERSION'
+  );
+  assert.match(prepared, /\.eq\("packageStatus", "PREPARED"\)/);
 });
