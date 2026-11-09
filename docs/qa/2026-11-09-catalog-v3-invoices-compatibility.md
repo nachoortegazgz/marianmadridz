@@ -37,3 +37,13 @@
 ## Test harness
 
 The offline ESM loader now exposes the Catalog V3 namespaces (`productsV3`, `inventoryItemsV3`) as test doubles. This is test-only plumbing; production imports continue to resolve from the Wix SDK package.
+
+
+## Scopes SDK V3 requeridos
+
+- Catalog Versioning: SCOPE.STORES.CATALOG_READ_LIMITED.
+- Query Inventory Items V3: SCOPE.STORES.INVENTORY_ITEM_READ.
+- Products V3 Get Product: SCOPE.STORES.PRODUCT_READ.
+- Bulk Increment/Decrement Inventory Items V3: SCOPE.STORES.INVENTORY_ITEM_WRITE.
+
+La concesión efectiva de estos scopes en el entorno Velo del sitio sigue pendiente de comprobación en Wix Local Editor; auth.elevate no sustituye la concesión de scopes.
