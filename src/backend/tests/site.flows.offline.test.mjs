@@ -322,6 +322,9 @@ test('FLOW-CAJA-01 flujo continuo: venta EFECTIVO -> caja incrementada -> cierre
   });
   assert.strictEqual(tx.status, 'SUCCESS', JSON.stringify(tx.error));
   const mov = tx.data;
+  const persistedMovement = (wixDataMock._store.get('MovimientosCaja') || [])
+    .find((item) => item.transactionId === mov.transactionId);
+  assert.ok(persistedMovement?.hash, 'hash canónico persistido en CMS');
   // MovimientosCaja canonicalizes its internal digest as "hash". The
   // public receipt endpoint projects this as "recordHash"; the ledger row
   // itself must not keep the duplicate legacy key.
@@ -374,8 +377,8 @@ test('FLOW-CAJA-01 flujo continuo: venta EFECTIVO -> caja incrementada -> cierre
     _id: 'mov-hist-2020',
     transactionId: 'qa-historic-close-fixture-2020',
     invoiceIssueDate: diaCerrado,
-    sequenceNumber: 2,
-    previousRecordHash: mov.hash,
+    sequenceNumber: Number(persistedMovement.sequenceNumber) + 1,
+    previousRecordHash: persistedMovement.hash,
     hash: 'a'.repeat(64),
     movementType: 'VENTA',
     paymentMethod: 'EFECTIVO',
@@ -488,7 +491,7 @@ test('FLOW-CAJA-08 fiscal recovery queue deduplicates repeated compensation requ
     }),
   ]);
   const records = (wixDataMock._store.get('ControlOperativo') || [])
-    .filter((row) => row.controlType === 'COMPENSATION' && row.transactionId === request.transactionId);
+    .filter((row) => row.transactionId === request.transactionId);
 
   assert.equal(results.every((result) => result.queued), true);
   assert.equal(results.filter((result) => result.created).length, 1);
@@ -509,7 +512,8 @@ test('FLOW-CAJA-08 fiscal recovery queue deduplicates repeated compensation requ
     cajas.queueFiscalRecovery({ ...bookingOnlyRequest, traceId: 'booking-only-trace-002' }),
   ]);
   const bookingOnlyRecords = (wixDataMock._store.get('ControlOperativo') || [])
-    .filter((row) => row.controlType === 'COMPENSATION' && row.payload?.bookingIds?.length === 2);
+    .filter((row) => row.payload?.origin === bookingOnlyRequest.origin &&
+      row.payload?.bookingIds === bookingOnlyRequest.bookingIds);
 
   assert.equal(bookingOnlyResults.every((result) => result.queued), true);
   assert.equal(bookingOnlyResults.filter((result) => result.created).length, 1);
