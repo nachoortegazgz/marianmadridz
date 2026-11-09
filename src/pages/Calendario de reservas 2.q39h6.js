@@ -121,6 +121,9 @@ const NON_RETRYABLE_PUBLIC_CODES = new Set([
 
 function getPublicErrorMessage(code) {
     const normalized = _safeTrim(code).toUpperCase();
+    if (normalized === "AUTH_REQUIRED") {
+        return "Para reservar necesitas iniciar sesión o crear una cuenta en Área Personal. Inicia sesión y vuelve a intentarlo.";
+    }
     if (normalized === "EXISTING_BOOKING_REQUIRES_RECONCILIATION") {
         return "Ya existe una reserva para este horario. No vuelvas a intentarlo; contacta con el salón para revisar las reservas existentes.";
     }
@@ -1703,13 +1706,21 @@ async function handleBooking(
                 .toUpperCase()
                 .includes("TIMEOUT");
 
+        const errorCode = _safeTrim(error?.code || "").toUpperCase();
+        const errorText = _safeTrim(error?.message || "").toLowerCase();
+        const memberAccessDenied =
+            /AUTH|MEMBER|PERMISSION|ACCESS_DENIED|UNAUTHORIZED/.test(errorCode) ||
+            /member authentication|site member|permission denied|not authorized/.test(errorText);
+
         reply(
             MESSAGE_TYPES.BOOK,
             resultError(
                 isTimeout
                     ? "BOOKING_STATUS_UNCERTAIN"
-                    : error?.code ||
-                      "BOOKING_FAILED"
+                    : memberAccessDenied
+                      ? "AUTH_REQUIRED"
+                      : error?.code ||
+                        "BOOKING_FAILED"
             )
         );
     } finally {
