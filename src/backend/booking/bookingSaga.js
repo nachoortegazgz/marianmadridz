@@ -11,13 +11,27 @@ CORRECCIONES v5021:
     que el frontend habilite un reintento normal cuando la escritura Wix pudo
     completarse y el resultado necesita reconciliación.
 
-CORRECCIONES V5022 — SDK Bookings V2:
-  SAGA-SDK-ID-01: Los objetos BookedSlot del SDK usan resource._id y
-    location._id. La forma id corresponde a REST y no se acepta en writers SDK.
-  SAGA-SDK-ID-02: _resolveBookingLocation conserva el shape {_id, locationType}.
-  SAGA-SDK-ID-03: rescheduleBooking se invoca como
-    (bookingId, slot, { revision }), según la firma de @wix/bookings.
-  
+CORRECCIONES v5019 (alineadas con bookingCore v5021 y doc oficial Wix Bookings V2):
+  SAGA-V2-ID-01 (P0): _resolveBookingLocation devuelve
+    `{ id: resolvedId, locationType }` (antes `{ _id, locationType }`).
+    Contrato oficial de BookedSlot.Location: `{ id, name, formattedAddress,
+    locationType }` (id, NO _id).
+    Ref: https://dev.wix.com/docs/api-reference/business-solutions/bookings/
+         bookings/bookings-writer-v2/create-booking
+  SAGA-V2-ID-02 (P1): _resolveBookingLocation lee
+    `location._id || location.id` en validatedSlotF1/F2. Los slots F1/F2
+    provienen de TimeSlotLocation (usa `_id`), pero el fallback a `id`
+    protege ante futuros cambios de shape o bundles mixtos.
+  SAGA-V2-ID-03 (P0): _assertPristineSlotContract valida `resource.id`
+    (antes `resource._id`). Contrato oficial de BookedSlot.Resource:
+    `{ id, name, email, scheduleId }`.
+  SAGA-V2-ID-04 (P0): _assertPristineSlotContract valida `location.id`
+    (antes `location._id`).
+  SAGA-V2-ID-05 (P1): _assertPristineSlotContract acepta `id` o `_id` como
+    fallback (con mensaje diferenciado en el log) para evitar que un
+    bundle antiguo de bookingCore rompa la reserva. Se loguea un warn
+    específico cuando se usa el alias legacy.
+
 CORRECCIONES v5017-STRONG-QUERY:
   SAGA-51 (P0): elevatedQueryFind forzaba strong en _validateLinkedPhaseService
     y _cancelCitasByPairToken.
@@ -41,7 +55,6 @@ import {
     BOOKING_TYPE,
     PAYMENT_STATUS,
     CHANNEL_TYPE,
-    BOOKING_PAYMENT_OPTION,
     COMPENSATION_KIND,
     COMPENSATION_STATUS,
     BOOKING_FIELDS,
@@ -128,6 +141,9 @@ const BOOKING_STATUS_PENDING_PAYMENT = _safeTrim(
 
 const CHANNEL_ONLINE = _safeTrim(CHANNEL_TYPE.ONLINE).toUpperCase();
 const CHANNEL_PRESENCIAL = _safeTrim(CHANNEL_TYPE.PRESENCIAL).toUpperCase();
+const BOOKING_PAYMENT_OPTION_ONLINE = "ONLINE";
+const BOOKING_PAYMENT_OPTION_OFFLINE = "OFFLINE";
+
 const NON_CANCELABLE_STATUSES = new Set(
     [
         BOOKING_STATUS.CANCELED,
@@ -148,33 +164,903 @@ const NON_CANCELABLE_STATUSES = new Set(
 const elevatedInsert = dalInsert;
 
 /**
- * Validates the exact @wix/bookings SDK BookedSlot contract.
- * SDK identifiers are _id; REST id aliases are deliberately rejected.
+ * SAGA-51: lectura fuerte obligatoria.
+ */
+function elevatedQueryFind(collection, queryFn) {
+    return Promise.resolve(queryFn(dalQuery(collection))).then(function (q) {
+        return q.find({ consistencyMode: "strong" });
+    });
+}
+
+// =============================================================================
+// SAGA-37: HEARTBEAT
+// =============================================================================
+export function _startLockHeartbeat({
+    lockKeys,
+    lockOwnerId,
+    lockTokens,
+    lockVersions,
+    lockServiceIds,
+    ttlMs,
+    intervalMs,
+    traceId,
+}) {
+    let stopped = false;
+    let failure = null;
+    let wakePendingInterval = null;
+    const versions = lockVersions && typeof lockVersions === "object" ? lockVersions : {};
+    const tokens = lockTokens && typeof lockTokens === "object" ? lockTokens : {};
+    const serviceIds = lockServiceIds && typeof lockServiceIds === "object" ? lockServiceIds : {};
+
+    const completion = (async function () {
+        while (!stopped) {
+            await new Promise(function (resolve) {
+                const timer = setTimeout(function () {
+                    wakePendingInterval = null;
+                    resolve();
+                }, intervalMs);
+                wakePendingInterval = function () {
+                    clearTimeout(timer);
+                    wakePendingInterval = null;
+                    resolve();
+                };
+            });
+            if (stopped) break;
+
+            for (let i = 0; i < lockKeys.length; i += 1) {
+                const key = lockKeys[i];
+                try {
+                    const result = await _renewLock(key, lockOwnerId, ttlMs, {
+                        expectedVersion: versions[key],
+                        expectedLockToken: tokens[key],
+                        serviceId: serviceIds[key],
+                    });
+
+                    if (!result || !result.ok) {
+                        failure = createBookingError(
+                            ERROR_CODES.TOKEN_BUSY,
+                            "Lock ownership lost during heartbeat",
+                            { traceId, lockKey: key, reason: result && result.reason }
+                        );
+                        stopped = true;
+                        break;
+                    }
+
+                    if (result.newVersion !== undefined) {
+                        // Final release must use the latest CAS version after heartbeat.
+                        versions[key] = result.newVersion;
+                    }
+                } catch (error) {
+                    failure = error;
+                    stopped = true;
+                    break;
+                }
+            }
+        }
+    })();
+
+    return {
+        stop: function () {
+            stopped = true;
+            if (wakePendingInterval) wakePendingInterval();
+        },
+        assertHealthy: function () { if (failure) throw failure; },
+        getFailure: function () { return failure; },
+        wait: completion,
+    };
+}
+
+// =============================================================================
+// BLOCK 1 - PAIR TOKEN
+// =============================================================================
+function _resolveStablePairToken(params) {
+    const emailHash = _hashKey(_safeTrim(params.email).toLowerCase());
+    const payload = _stableSerialize({
+        serviceId: _safeTrim(params.serviceId),
+        f1Start: _safeTrim(params.f1Start),
+        f2Start: _safeTrim(params.f2Start || ""),
+    });
+    const hash = _hashKey(payload + "|" + emailHash);
+    return "pt" + hash.slice(0, 32);
+}
+
+function _resolveUnifiedPairToken(params) {
+    if (params.isDual) {
+        let pairToken;
+        try {
+            pairToken = _buildPairTokenDeterministic({
+                serviceId: params.serviceId,
+                linkedPhases: params.linkedPhases,
+                dateYmd: _safeTrim(params.f1Start).slice(0, 10),
+                f1Start: params.f1Start,
+                f1End: params.f1End,
+                f2Start: params.f2Start,
+                f2End: params.f2End,
+                customerKey: _hashKey(_safeTrim(params.email).toLowerCase()),
+            });
+        } catch (error) {
+            log.error("SAGA-19: pair fingerprint rejected the dual payload", {
+                traceId: params.traceId,
+                error: error && error.message,
+                serviceId: params.serviceId,
+                linkedPhases: params.linkedPhases,
+            });
+            throw createBookingError(
+                ERROR_CODES.INVALID_PAYLOAD,
+                "Dual booking has invalid slot dates for pairToken fingerprint",
+                { traceId: params.traceId }
+            );
+        }
+        return { pairToken: pairToken, source: "FINGERPRINT" };
+    }
+
+    return {
+        pairToken: _resolveStablePairToken({
+            serviceId: params.serviceId,
+            f1Start: params.f1Start,
+            f2Start: params.f2Start,
+            email: params.email,
+        }),
+        source: "STABLE",
+    };
+}
+
+// =============================================================================
+// BLOCK 2 - META
+// =============================================================================
+export function _normalizePersistedMeta(meta) {
+    if (!meta) return {};
+    try {
+        if (typeof meta === "string") {
+            const parsed = JSON.parse(meta);
+            return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+                ? parsed
+                : {};
+        }
+        return typeof meta === "object" && !Array.isArray(meta) ? meta : {};
+    } catch (_) {
+        return {};
+    }
+}
+export { _normalizePersistedMeta as normalizePersistedMeta };
+
+// =============================================================================
+// BLOCK 3 - UTILIDADES
+// =============================================================================
+function _isGuidOrNull(value) {
+    const v = _safeTrim(value);
+    if (!v) return null;
+    return _looksLikeGuid(v) ? v : null;
+}
+
+async function _bestEffortUnlockAll(lockKeys, lockOwnerId, lockVersions, lockTokens) {
+    const keys = Array.isArray(lockKeys) ? lockKeys : [];
+    const versions = lockVersions && typeof lockVersions === "object" ? lockVersions : {};
+    const tokens = lockTokens && typeof lockTokens === "object" ? lockTokens : {};
+
+    for (let i = 0; i < keys.length; i++) {
+        try {
+            const released = await _unlockSlotKey(keys[i], lockOwnerId, {
+                expectedVersion: versions[keys[i]],
+                expectedLockToken: tokens[keys[i]],
+            });
+            if (!released?.ok) {
+                log.warn("_bestEffortUnlockAll: lock release not confirmed", {
+                    key: keys[i],
+                    reason: released?.reason || "LOCK_RELEASE_FAILED",
+                });
+            }
+        } catch (e) {
+            log.warn("_bestEffortUnlockAll: failed", {
+                key: keys[i],
+                error: e && e.message,
+            });
+        }
+    }
+}
+
+// =============================================================================
+// BLOCK 4 - COMPENSACION
+// =============================================================================
+async function _compensateCreatedBookings(createdBookings, traceId, pairToken) {
+    const list = Array.isArray(createdBookings) ? createdBookings : [];
+    for (let i = 0; i < list.length; i++) {
+        const booking = list[i];
+        const bookingId = (booking && booking.bookingId) || (booking && booking.id);
+        if (!bookingId) continue;
+
+        const status = _safeTrim(
+            (booking && booking[BOOKING_FIELDS.STATUS]) || (booking && booking.status)
+        ).toUpperCase();
+        if (status && NON_CANCELABLE_STATUSES.has(status)) {
+            if (pairToken && booking?.phase) {
+                await updateBookingWriterIntent(pairToken, booking.phase, "TERMINAL", {
+                    bookingId: String(bookingId),
+                    writerStatus: status,
+                    compensationSkippedAt: new Date().toISOString(),
+                }, traceId);
+            }
+            log.warn("Skipping compensation for terminal-state booking", {
+                bookingId: bookingId,
+                status: status,
+                phase: (booking && booking.phase) || null,
+                traceId: traceId,
+            });
+            continue;
+        }
+
+        const revisionRaw =
+            booking && booking.revision !== undefined
+                ? booking.revision
+                : booking && booking.revisionNumber !== undefined
+                    ? booking.revisionNumber
+                    : NaN;
+        const revision = Number(revisionRaw);
+        const hasValidRevision = Number.isInteger(revision) && revision > 0;
+
+        if (!hasValidRevision) {
+            log.error("Compensation will require manual intervention: revision missing", {
+                bookingId: String(bookingId),
+                phase: (booking && booking.phase) || null,
+                traceId: traceId,
+                rawRevision:
+                    booking && booking.revision !== undefined
+                        ? booking.revision
+                        : booking && booking.revisionNumber !== undefined
+                            ? booking.revisionNumber
+                            : "MISSING",
+            });
+        }
+
+        const cancelBody = hasValidRevision ? { revision: String(revision) } : {};
+
+        try {
+            if (!hasValidRevision) {
+                throw new Error("REVISION_MISSING: manual compensation required");
+            }
+            await _executeWithRetry(
+                function () {
+                    return withTimeout(
+                        function () {
+                            return cancelBookingElevated(bookingId, cancelBody);
+                        },
+                        API_TIMEOUT_MS,
+                        "cancelBookingCompensation"
+                    );
+                },
+                2,
+                300
+            );
+            if (pairToken && booking?.phase) {
+                await updateBookingWriterIntent(pairToken, booking.phase, "COMPENSATED", {
+                    bookingId: String(bookingId),
+                    compensatedAt: new Date().toISOString(),
+                }, traceId);
+            }
+            log.info("Compensated booking cancelled", {
+                bookingId: bookingId,
+                revision: revision,
+                traceId: traceId,
+            });
+        } catch (cancelErr) {
+            if (pairToken && booking?.phase) {
+                await updateBookingWriterIntent(pairToken, booking.phase, "COMPENSATION_PENDING", {
+                    bookingId: String(bookingId),
+                    compensationError: (cancelErr && cancelErr.message) || "UNKNOWN",
+                    compensationPendingAt: new Date().toISOString(),
+                }, traceId);
+            }
+            log.error("Compensation cancel failed; queuing in ControlOperativo", {
+                bookingId: bookingId,
+                revision: hasValidRevision ? revision : null,
+                traceId: traceId,
+                error: cancelErr && cancelErr.message,
+            });
+            const compDedupeKey =
+                "COMP_" + COMPENSATION_KIND.CANCEL_BOOKING + "_" + bookingId;
+            try {
+                await elevatedInsert(COMPENSACIONES_COL, {
+                    controlType: CONTROL_TYPE.COMPENSATION,
+                    dedupeKey: compDedupeKey,
+                    bookingId: String(bookingId),
+                    serviceId: _safeTrim(booking && booking.serviceId),
+                    compensationKind: COMPENSATION_KIND.CANCEL_BOOKING,
+                    status: "PENDING",
+                    attempts: 0,
+                    revision: hasValidRevision ? revision : null,
+                    payload: {
+                        compensationKind: COMPENSATION_KIND.CANCEL_BOOKING,
+                        serviceId: _safeTrim(booking && booking.serviceId),
+                        phase: (booking && booking.phase) || "UNKNOWN",
+                        status: "PENDING",
+                        compensationStatus: COMPENSATION_STATUS.PENDING,
+                        revision: hasValidRevision ? revision : null,
+                        attempts: 0,
+                        lastError: (cancelErr && cancelErr.message) || "UNKNOWN",
+                    },
+                    traceId: _safeTrim(traceId) || makeTraceId("comp"),
+                });
+            } catch (queueErr) {
+                log.error("Failed to queue compensation in ControlOperativo", {
+                    bookingId: bookingId,
+                    traceId: traceId,
+                    error: queueErr && queueErr.message,
+                });
+            }
+        }
+    }
+}
+
+// =============================================================================
+// BLOCK 5 - SELECTIVE ELEVATION
+// =============================================================================
+async function _createBookingWithSelectiveElevation(booking, options, traceId) {
+    const safeBooking = JSON.parse(JSON.stringify(booking));
+    const safeOptions = options
+        ? JSON.parse(JSON.stringify(options))
+        : options;
+
+    try {
+        return await withTimeout(
+            function () {
+                return bookings.createBooking(safeBooking, safeOptions);
+            },
+            BOOKING_CREATION_TIMEOUT_MS,
+            "createBooking"
+        );
+    } catch (err) {
+        const code = _safeTrim(
+            (err && err.code) ||
+                (err &&
+                    err.details &&
+                    err.details.applicationError &&
+                    err.details.applicationError.code)
+        ).toUpperCase();
+        const isAccessDenied =
+            code === "ACCESS_DENIED" ||
+            String((err && err.message) || "").toUpperCase().indexOf("ACCESS_DENIED") >= 0;
+
+        if (!isAccessDenied) throw err;
+
+        log.info("Elevating createBooking due to ACCESS_DENIED", {
+            traceId: traceId,
+        });
+        return await withTimeout(
+            function () {
+                return auth.elevate(bookings.createBooking)(safeBooking, safeOptions);
+            },
+            BOOKING_CREATION_TIMEOUT_MS,
+            "createBooking:elevated"
+        );
+    }
+}
+
+// =============================================================================
+// BLOCK 6 - VALIDACION RESPUESTA
+// =============================================================================
+function _validateCreateBookingResponse(booking, phase, traceId) {
+    const id = _safeTrim((booking && booking.id) || (booking && booking._id));
+    if (!id || !_looksLikeGuid(id)) {
+        log.error("CreateBooking returned invalid booking", {
+            phase: phase,
+            traceId: traceId,
+            hasId: Boolean(booking && booking.id),
+            hasUnderscoreId: Boolean(booking && booking._id),
+        });
+        throw createBookingError(
+            ERROR_CODES.BOOKING_CREATION_FAILED,
+            "Booking " + phase + " created but no valid ID returned",
+            { traceId: traceId, phase: phase }
+        );
+    }
+
+    const revisionRaw =
+        booking && booking.revision !== undefined
+            ? booking.revision
+            : booking && booking.revisionNumber !== undefined
+                ? booking.revisionNumber
+                : null;
+    const revisionNum = Number(revisionRaw);
+
+    if (!Number.isFinite(revisionNum) || revisionNum < 1) {
+        log.error("CreateBooking returned no valid revision", {
+            phase: phase,
+            traceId: traceId,
+            bookingId: id,
+            revisionRaw: revisionRaw,
+        });
+        throw createBookingError(
+            ERROR_CODES.BOOKING_CREATION_FAILED,
+            "Booking " + phase + " created but no valid revision returned. Manual reconciliation required.",
+            { traceId: traceId, phase: phase, bookingId: id }
+        );
+    }
+
+    return {
+        bookingId: id,
+        revision: revisionNum,
+        status:
+            _safeTrim(booking && booking.bookingStatus) ||
+            _safeTrim(booking && booking.status) ||
+            null,
+    };
+}
+
+function _assertBookingResourceMatches(booking, phase, expectedResourceId, traceId) {
+    const expected = _safeTrim(expectedResourceId);
+    const actual = _safeTrim(
+        booking?.bookedEntity?.slot?.resource?.id ||
+        booking?.bookedEntity?.slot?.resource?._id ||
+        ""
+    );
+    if (!expected || !actual || actual !== expected) {
+        log.error("BOOKING_STAFF_ASSIGNMENT_MISMATCH", {
+            traceId: traceId,
+            phase: phase,
+            expectedResourceId: expected || null,
+            actualResourceId: actual || null,
+            bookingId: _safeTrim(booking?.id || booking?._id) || null,
+        });
+        throw createBookingError(
+            "STAFF_ASSIGNMENT_MISMATCH",
+            "Wix booking resource does not match the validated staff member.",
+            { traceId: traceId, phase: phase, expectedResourceId: expected, actualResourceId: actual }
+        );
+    }
+}
+
+// =============================================================================
+// BLOCK 7 - DOUBLEBOOKED FLAG
+// =============================================================================
+function _checkDoubleBookingFlag(booking, phase, traceId) {
+    if (booking && booking.doubleBooked === true) {
+        const bookingId = (booking && booking.id) || (booking && booking._id) || null;
+        log.error("DOUBLE_BOOKING_DETECTED", {
+            phase: phase,
+            traceId: traceId,
+            bookingId: bookingId,
+        });
+        throw createBookingError(
+            ERROR_CODES.BOOKING_CREATION_FAILED,
+            "Wix reported a double-booked slot; aborting booking saga for compensation",
+            { traceId: traceId, phase: phase, bookingId: bookingId, doubleBooked: true }
+        );
+    }
+}
+
+// =============================================================================
+// BLOCK 8 - GAP VALIDACION
+// =============================================================================
+function _validateDualGap(f1LocalEnd, f2LocalStart, traceId, minimumGapMinutes) {
+    const f1EndLocal = _normalizeLocalIsoStr(f1LocalEnd);
+    const f2StartLocal = _normalizeLocalIsoStr(f2LocalStart);
+    if (!f1EndLocal || !f2StartLocal) {
+        throw createBookingError(
+            ERROR_CODES.INVALID_DATES,
+            "Dual gap validation: invalid dates",
+            {
+                traceId: traceId,
+                f1LocalEnd: f1LocalEnd,
+                f2LocalStart: f2LocalStart,
+            }
+        );
+    }
+    const f1EndUtc = getUtcDateFromMadridLocal(f1EndLocal);
+    const f2StartUtc = getUtcDateFromMadridLocal(f2StartLocal);
+    if (!f1EndUtc || !f2StartUtc) {
+        throw createBookingError(
+            ERROR_CODES.INVALID_DATES,
+            "Dual gap validation: could not convert to UTC",
+            {
+                traceId: traceId,
+                f1LocalEnd: f1LocalEnd,
+                f2LocalStart: f2LocalStart,
+            }
+        );
+    }
+    const rawDiffMinutes = (f2StartUtc.getTime() - f1EndUtc.getTime()) / 60000;
+    if (rawDiffMinutes < 0) {
+        throw createBookingError(
+            ERROR_CODES.INVALID_PAYLOAD,
+            "Dual gap validation: F2 starts before F1 ends (" +
+                rawDiffMinutes.toFixed(2) +
+                " min)",
+            { traceId: traceId, gapMinutes: rawDiffMinutes }
+        );
+    }
+    const gapMinutes = (f2StartUtc.getTime() - f1EndUtc.getTime()) / 60000;
+    const expectedGapMinutes = Number(minimumGapMinutes);
+    if (!Number.isFinite(expectedGapMinutes) || expectedGapMinutes < 0) {
+        throw createBookingError(
+            ERROR_CODES.INVALID_PAYLOAD,
+            "Dual gap validation: ServiciosCatalogo.exposureDuration is invalid",
+            {
+                traceId: traceId,
+                exposureDuration: minimumGapMinutes,
+            }
+        );
+    }
+    if (gapMinutes !== expectedGapMinutes) {
+        throw createBookingError(
+            ERROR_CODES.INVALID_PAYLOAD,
+            "Dual gap validation: actual gap must exactly match ServiciosCatalogo.exposureDuration",
+            {
+                traceId: traceId,
+                gapMinutes: gapMinutes,
+                expectedGapMinutes: expectedGapMinutes,
+            }
+        );
+    }
+    return {
+        gapMinutes: gapMinutes,
+        expectedGapMinutes: expectedGapMinutes,
+    };
+}
+
+// =============================================================================
+// BLOCK 9 - VALIDACION SERVICIO F2
+// =============================================================================
+async function _validateLinkedPhaseService(linkedPhases, parentServiceConfig, parentLocationId, traceId) {
+    const linkedServiceId = _safeTrim(linkedPhases);
+    if (!linkedServiceId || !_looksLikeGuid(linkedServiceId)) {
+        throw createBookingError(
+            ERROR_CODES.SERVICE_NOT_FOUND,
+            "Linked phase service: invalid GUID",
+            { traceId: traceId, linkedPhases: linkedServiceId }
+        );
+    }
+
+    const res = await elevatedQueryFind(SERVICIOS_COL, function (q) {
+        return q.eq("serviceId", linkedServiceId).limit(1);
+    }).catch(function () {
+        return { items: [] };
+    });
+
+    const service = (res && res.items && res.items[0]) || null;
+    if (!service) {
+        throw createBookingError(
+            ERROR_CODES.SERVICE_NOT_FOUND,
+            "Linked phase service " + linkedServiceId + " not found in catalog",
+            { traceId: traceId }
+        );
+    }
+
+    if (service.clientHidden !== true) {
+        log.info("Linked phase service is not hidden (verify configuration)", {
+            linkedServiceId: linkedServiceId,
+            traceId: traceId,
+        });
+    }
+
+    const serviceType = _safeTrim(service.serviceType).toUpperCase();
+    if (serviceType && serviceType !== "APPOINTMENT" && serviceType !== "CITA") {
+        throw createBookingError(
+            ERROR_CODES.INVALID_PAYLOAD,
+            "Linked phase service " +
+                linkedServiceId +
+                " is not APPOINTMENT (type=" +
+                serviceType +
+                ")",
+            { traceId: traceId }
+        );
+    }
+
+    // La duración de F2 pertenece al registro visible/configurable de F1.
+    // linkedPhases identifica el servicio Wix que se reserva en la segunda fase;
+    // NO es la fuente de configuración de phase2Duration.
+    const phase2Duration = Number(parentServiceConfig && parentServiceConfig.phase2Duration);
+    if (!Number.isFinite(phase2Duration) || phase2Duration <= 0) {
+        throw createBookingError(
+            ERROR_CODES.INVALID_PAYLOAD,
+            "Parent service " +
+                _safeTrim(parentServiceConfig && parentServiceConfig.serviceId) +
+                " has invalid phase2Duration (" +
+                phase2Duration +
+                ")",
+            {
+                traceId: traceId,
+                serviceId: _safeTrim(parentServiceConfig && parentServiceConfig.serviceId),
+                linkedServiceId: linkedServiceId,
+            }
+        );
+    }
+
+    const parentLoc = _safeTrim(parentLocationId);
+    const f2Loc = _safeTrim(service.locationId || service.location);
+    if (
+        parentLoc &&
+        f2Loc &&
+        _looksLikeGuid(parentLoc) &&
+        _looksLikeGuid(f2Loc) &&
+        parentLoc !== f2Loc
+    ) {
+        throw createBookingError(
+            ERROR_CODES.INVALID_PAYLOAD,
+            "Linked phase service " + linkedServiceId + " has incompatible locationId",
+            { traceId: traceId }
+        );
+    }
+
+    return { service: service, phase2Duration: phase2Duration };
+}
+
+// =============================================================================
+// BLOCK 10 - COMPENSACION CMS
+// =============================================================================
+async function _cancelCitasByPairToken(pairToken, traceId) {
+    const token = _safeTrim(pairToken);
+    if (!token) return;
+    try {
+        const res = await elevatedQueryFind(CITAS_COL, function (q) {
+            return q.eq(BOOKING_FIELDS.PAIR_TOKEN, token).limit(10);
+        });
+        const items = (res && res.items) || [];
+        for (let i = 0; i < items.length; i++) {
+            const item = items[i];
+            const bookingId = _safeTrim(item.bookingId);
+            if (!bookingId) continue;
+
+            const updateResult = await _updateCitaSafe(
+                bookingId,
+                function (cita) {
+                    let meta = cita && cita.meta;
+                    if (typeof meta === "string") {
+                        try {
+                            meta = JSON.parse(meta);
+                        } catch (_) {
+                            meta = {};
+                        }
+                    }
+                    if (!meta || typeof meta !== "object" || Array.isArray(meta)) {
+                        meta = {};
+                    }
+                    return Object.assign({}, cita, {
+                        bookingStatus: "CANCELED",
+                        meta: Object.assign({}, meta, {
+                            compensated: true,
+                            compensatedAt: new Date().toISOString(),
+                            compensationTraceId: _safeTrim(traceId),
+                        }),
+                    });
+                },
+                traceId,
+                "saga_compensate_cita"
+            );
+
+            if (updateResult && updateResult.updated) {
+                log.info("Compensated CitaF2 marked CANCELED", {
+                    citaId: item._id,
+                    bookingId: bookingId,
+                    traceId: traceId,
+                });
+            } else {
+                log.error("Failed to compensate CitaF2", {
+                    citaId: item._id,
+                    bookingId: bookingId,
+                    traceId: traceId,
+                    reason: (updateResult && updateResult.reason) || "UNKNOWN",
+                });
+            }
+        }
+    } catch (err) {
+        log.error("_cancelCitasByPairToken failed", {
+            pairToken: token,
+            traceId: traceId,
+            error: err && err.message,
+        });
+    }
+}
+
+// =============================================================================
+// BLOCK 11 - ADDONS
+// =============================================================================
+function _detectAddons(unsafePayload, metaCita, serviceConfig, traceId) {
+    const rawAddons =
+        (unsafePayload && unsafePayload.addOnIds) ||
+        (metaCita && metaCita.addOnIds) ||
+        [];
+    const requested = Array.isArray(rawAddons)
+        ? rawAddons
+            .map(function (id) {
+                return _safeTrim(id);
+            })
+            .filter(function (id) {
+                return _looksLikeGuid(id);
+            })
+        : [];
+    const unique = Array.from(new Set(requested));
+
+    if (unique.length > MAX_ADDONS_PER_BOOKING) {
+        throw createBookingError(
+            ERROR_CODES.INVALID_PAYLOAD,
+            "Too many addOnIds requested (" +
+                unique.length +
+                "). Max: " +
+                MAX_ADDONS_PER_BOOKING,
+            {
+                traceId: traceId,
+                addonCount: unique.length,
+                max: MAX_ADDONS_PER_BOOKING,
+            }
+        );
+    }
+
+    const catalogAddons = Array.isArray(serviceConfig && serviceConfig.addOnOptions)
+        ? serviceConfig.addOnOptions
+        : [];
+
+    if (catalogAddons.length === 0) {
+        if (unique.length > 0) {
+            log.info("SAGA-18: addons detected without catalog (passthrough)", {
+                traceId: traceId,
+                addonCount: unique.length,
+                addOnIds: unique,
+            });
+        }
+        return unique;
+    }
+
+    const allowedSet = new Set();
+    for (let c = 0; c < catalogAddons.length; c++) {
+        const addon = catalogAddons[c];
+        const addonId = _safeTrim(
+            (addon && (addon.addonId || addon.addOnId)) ||
+                (addon && typeof addon === "object" && (addon._id || addon.id)) ||
+                ""
+        );
+        if (addonId && _looksLikeGuid(addonId)) allowedSet.add(addonId);
+    }
+
+    if (unique.length === 0) return [];
+
+    const unmapped = [];
+    const validated = [];
+    for (let u = 0; u < unique.length; u++) {
+        if (allowedSet.has(unique[u])) validated.push(unique[u]);
+        else unmapped.push(unique[u]);
+    }
+
+    if (unmapped.length > 0) {
+        throw createBookingError(
+            ERROR_CODES.INVALID_PAYLOAD,
+            "Requested addOnIds not in catalog: " + unmapped.join(", "),
+            {
+                traceId: traceId,
+                unmapped: unmapped,
+                catalogSize: allowedSet.size,
+            }
+        );
+    }
+    return validated;
+}
+
+// =============================================================================
+// BLOCK 12 - UBICACION
+// =============================================================================
+/**
+ * SAGA-V2-ID-01 + SAGA-V2-ID-02:
+ * - Lee location._id || location.id en validatedSlotF1/F2 (TimeSlotLocation
+ *   usa `_id`; BookedSlot.Location usa `id`). Fallback defensivo.
+ * - Devuelve `{ id, locationType }` según el contrato oficial de
+ *   BookedSlot.Location (id, NO _id).
+ */
+function _resolveBookingLocation(params) {
+    const validatedSlotF1 = params.validatedSlotF1;
+    const validatedSlotF2 = params.validatedSlotF2;
+    const serviceConfig = params.serviceConfig;
+
+    const f1LocId =
+        validatedSlotF1 && validatedSlotF1.location
+            ? _isGuidOrNull(
+                  validatedSlotF1.location._id || validatedSlotF1.location.id
+              )
+            : null;
+    const f2LocId =
+        validatedSlotF2 && validatedSlotF2.location
+            ? _isGuidOrNull(
+                  validatedSlotF2.location._id || validatedSlotF2.location.id
+              )
+            : null;
+
+    const resolvedId =
+        f1LocId ||
+        f2LocId ||
+        _isGuidOrNull(serviceConfig && serviceConfig.locationId) ||
+        _isGuidOrNull(params.parentLocationId);
+
+    if (!resolvedId) {
+        throw createBookingError(
+            ERROR_CODES.INVALID_PAYLOAD,
+            "Booking location is missing.",
+            { traceId: params.traceId }
+        );
+    }
+
+    const sourceLocationType = _safeTrim(
+        validatedSlotF1 &&
+            validatedSlotF1.location &&
+            validatedSlotF1.location.locationType
+    ).toUpperCase();
+
+    if (sourceLocationType && sourceLocationType !== "OWNER_BUSINESS") {
+        log.info("SAGA-03: overriding locationType", {
+            traceId: params.traceId,
+            from: sourceLocationType,
+            to: "OWNER_BUSINESS",
+            locationId: resolvedId,
+        });
+    }
+
+    /* SAGA-V2-ID-01: id (no _id). */
+    return { id: resolvedId, locationType: "OWNER_BUSINESS" };
+}
+
+/**
+ * SAGA-V2-ID-03 + SAGA-V2-ID-04 + SAGA-V2-ID-05:
+ * - Valida resource.id y location.id (contrato BookedSlot V2).
+ * - Acepta `_id` como fallback con log.warn específico (bundles mixtos).
  */
 function _assertPristineSlotContract(pristineSlot, phase, traceId) {
     const startIso = _safeTrim(pristineSlot && pristineSlot.startDate);
     const endIso = _safeTrim(pristineSlot && pristineSlot.endDate);
     const locationType = _safeTrim(
-        pristineSlot?.location?.locationType
+        pristineSlot &&
+            pristineSlot.location &&
+            pristineSlot.location.locationType
     ).toUpperCase();
 
     const missing = [];
-    if (!_isGuidOrNull(pristineSlot && pristineSlot.serviceId)) missing.push("serviceId");
-    if (!_isGuidOrNull(pristineSlot && pristineSlot.scheduleId)) missing.push("scheduleId");
+    if (!_isGuidOrNull(pristineSlot && pristineSlot.serviceId))
+        missing.push("serviceId");
+    if (!_isGuidOrNull(pristineSlot && pristineSlot.scheduleId))
+        missing.push("scheduleId");
     if (!startIso) missing.push("startDate");
     else if (!/Z$/.test(startIso)) missing.push("startDate must be ISO UTC with Z");
     if (!endIso) missing.push("endDate");
     else if (!/Z$/.test(endIso)) missing.push("endDate must be ISO UTC with Z");
 
-    const resourceId = _isGuidOrNull(pristineSlot?.resource?._id);
-    if (!resourceId) missing.push("resource._id");
-
-    const locationId = _isGuidOrNull(pristineSlot?.location?._id);
-    if (!locationId) missing.push("location._id");
-
-    if (locationType !== "OWNER_BUSINESS") {
-        missing.push("location.locationType must be OWNER_BUSINESS");
+    /* SAGA-V2-ID-03: BookedSlot.Resource usa `id` (con fallback a `_id`). */
+    const resourceIdValue = _isGuidOrNull(
+        (pristineSlot && pristineSlot.resource && pristineSlot.resource.id) ||
+            (pristineSlot && pristineSlot.resource && pristineSlot.resource._id)
+    );
+    if (!resourceIdValue) {
+        missing.push("resource.id");
+    } else if (
+        pristineSlot &&
+        pristineSlot.resource &&
+        !pristineSlot.resource.id &&
+        pristineSlot.resource._id
+    ) {
+        log.warn("SAGA-V2-ID-05: resource._id detected (legacy alias)", {
+            traceId: traceId,
+            phase: phase,
+            resourceId: resourceIdValue,
+        });
     }
+
+    /* SAGA-V2-ID-04: BookedSlot.Location usa `id` (con fallback a `_id`). */
+    const locationIdValue = _isGuidOrNull(
+        (pristineSlot && pristineSlot.location && pristineSlot.location.id) ||
+            (pristineSlot && pristineSlot.location && pristineSlot.location._id)
+    );
+    if (!locationIdValue) {
+        missing.push("location.id");
+    } else if (
+        pristineSlot &&
+        pristineSlot.location &&
+        !pristineSlot.location.id &&
+        pristineSlot.location._id
+    ) {
+        log.warn("SAGA-V2-ID-05: location._id detected (legacy alias)", {
+            traceId: traceId,
+            phase: phase,
+            locationId: locationIdValue,
+        });
+    }
+
+    if (locationType !== "OWNER_BUSINESS")
+        missing.push("location.locationType must be OWNER_BUSINESS");
 
     if (missing.length > 0) {
         throw createBookingError(
@@ -953,8 +1839,8 @@ export async function executeBookingSaga(unsafePayload) {
                 if (appointmentNote) bookingBodyF1.internalBusinessNote = appointmentNote;
                 if (bookedAddOns.length > 0) bookingBodyF1.bookedAddOns = bookedAddOns;
                 bookingBodyF1.selectedPaymentOption = isOnline
-                    ? BOOKING_PAYMENT_OPTION.ONLINE
-                    : BOOKING_PAYMENT_OPTION.OFFLINE;
+                    ? BOOKING_PAYMENT_OPTION_ONLINE
+                    : BOOKING_PAYMENT_OPTION_OFFLINE;
 
                 const f1IntentStarted = await updateBookingWriterIntent(
                     pairToken, "F1", "INTENT",
@@ -1037,7 +1923,7 @@ export async function executeBookingSaga(unsafePayload) {
                         bookedEntity: { slot: pristineF2 },
                         contactDetails: contactDetails,
                         totalParticipants: 1,
-                        selectedPaymentOption: BOOKING_PAYMENT_OPTION.OFFLINE,
+                        selectedPaymentOption: BOOKING_PAYMENT_OPTION_OFFLINE,
                     };
                     if (appointmentNote) bookingBodyF2.internalBusinessNote = appointmentNote;
                     const f2IntentStarted = await updateBookingWriterIntent(
