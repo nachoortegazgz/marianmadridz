@@ -3,8 +3,8 @@
 MODULE: backend/fiscalDocuments.web.js
 VERSION: v5017-ALIGNED-DATOSFISCALES
 BASE: v5016-ALIGNED-WITH-SEND
-RESPONSIBILITY: Genera paquetes fiscales trimestrales, documentos CSV/PDF,
- mantiene historial de versiones y despacha via Resend API.
+RESPONSIBILITY: Previsualiza y consulta snapshots de gestoría; creación y
+ despacho permanecen fail-closed hasta verificar sus garantías append-only.
 STANDARDS: G10 ASCII Strict. Cero suppressAuth. Colecciones canonicas.
 
 CAMBIOS v5017-ALIGNED-DATOSFISCALES (respecto a v5016):
@@ -60,7 +60,8 @@ import { makeTraceId, _safeTrim, withTimeout, _roundMoney } from "public/mmUtils
 import { readMovementField } from "backend/data";
 
 const CMS_TIMEOUT_MS = SDK_CONFIG.TIMEOUTS.CMS_MS;
-const DOCS_COL = BUSINESS_COLLECTIONS.HISTORICO_CIERRES_Z;
+// Manager package snapshots have their own collection; Z closings remain isolated.
+const DOCS_COL = BUSINESS_COLLECTIONS.PAQUETES_GESTORIA;
 const DATOS_FISCALES_COL = BUSINESS_COLLECTIONS.DATOS_FISCALES;
 
 const STRONG_READ = Object.freeze({ consistencyMode: "strong" });
@@ -101,15 +102,6 @@ function _formatDocumentId(year, quarter, version = 1) {
   const vStr = String(version).padStart(4, "0");
   return `DOC_GESTORIA_${year}_T${quarter}_PAQUETE_GESTORIA_V${vStr}`;
 }
-
-function _packagePeriodPrefix(year, periodType, periodValue) {
-  const periodKey = periodType === "MONTHLY"
-    ? `M${String(periodValue).padStart(2, "0")}`
-    : `T${periodValue}`;
-  return `DOC_GESTORIA_${year}_${periodKey}_PAQUETE_GESTORIA_`;
-}
-
-
 
 function _invoiceValue(invoice, keys, fallbackKey) {
   for (const key of keys) {
@@ -315,17 +307,15 @@ export const createManagerPackageVersion = webMethod(
     const traceId = makeTraceId("doc-create");
     try {
       await requireMarianManager(traceId);
-      // HistoricoCierresZ is the immutable Z-closing ledger. Its live CMS
-      // schema requires closing-specific fields and must not receive manager
-      // package records. RegistroIntegracion is not append-only protected.
-      // Until a dedicated immutable package collection and delivery contract
-      // are approved and installed, package creation must fail closed.
+      // The dedicated PaquetesGestoria collection now exists, but creation
+      // remains disabled until canonical hashing, size bounds, and concurrent
+      // version allocation are implemented and verified end to end.
       return {
         status: "ERROR",
         data: null,
         error: {
-          code: "PACKAGE_SNAPSHOT_STORAGE_NOT_CONFIGURED",
-          message: "No se puede crear el paquete: falta un almacén append-only específico para paquetes de gestor. HistoricoCierresZ está reservado a cierres Z.",
+          code: "PACKAGE_SNAPSHOT_IMPLEMENTATION_PENDING",
+          message: "La creación de paquetes sigue bloqueada hasta completar hash canónico, límite de tamaño y versionado concurrente seguro en PaquetesGestoria.",
           traceId,
         },
       };
@@ -345,17 +335,44 @@ export const getManagerPackageHistory = webMethod(
     const traceId = makeTraceId("doc-hist");
     try {
       await requireMarianManager(traceId);
-      const year = Number(period.year);
+      const year = period.year != null ? Number(period.year) : null;
       const periodType = _safeTrim(period.periodType || "QUARTERLY").toUpperCase();
       const month = period.month != null ? Number(period.month) : null;
       const quarter = period.quarter != null ? Number(period.quarter) : null;
-      let q = dalQuery(DOCS_COL).eq("closingType", "PAQUETE_GESTORIA");
-      if (Number.isInteger(year) && year > 0) q = q.eq("fiscalYear", year);
-      if (Number.isInteger(year) && periodType === "MONTHLY" && Number.isInteger(month) && month >= 1 && month <= 12) {
-        q = q.startsWith("inventoryClosingId", _packagePeriodPrefix(year, "MONTHLY", month));
-      } else if (Number.isInteger(year) && periodType === "QUARTERLY" && Number.isInteger(quarter) && quarter >= 1 && quarter <= 4) {
-        q = q.startsWith("inventoryClosingId", _packagePeriodPrefix(year, "QUARTERLY", quarter));
+
+      if (!["MONTHLY", "QUARTERLY"].includes(periodType)) {
+        return {
+          status: "ERROR",
+          data: null,
+          error: { code: "INVALID_PERIOD_TYPE", message: "periodType must be MONTHLY or QUARTERLY." },
+        };
       }
+      if (year != null && (!Number.isInteger(year) || year < 2000 || year > 9999)) {
+        return {
+          status: "ERROR",
+          data: null,
+          error: { code: "INVALID_FISCAL_YEAR", message: "year must be an integer between 2000 and 9999." },
+        };
+      }
+      if (periodType === "MONTHLY" && (quarter != null || (month != null && (!Number.isInteger(month) || month < 1 || month > 12)))) {
+        return {
+          status: "ERROR",
+          data: null,
+          error: { code: "INVALID_MONTH_PERIOD", message: "Monthly history requires month 1-12 and cannot include quarter." },
+        };
+      }
+      if (periodType === "QUARTERLY" && (month != null || (quarter != null && (!Number.isInteger(quarter) || quarter < 1 || quarter > 4)))) {
+        return {
+          status: "ERROR",
+          data: null,
+          error: { code: "INVALID_QUARTER_PERIOD", message: "Quarterly history requires quarter 1-4 and cannot include month." },
+        };
+      }
+
+      let q = dalQuery(DOCS_COL).eq("periodType", periodType);
+      if (year != null) q = q.eq("fiscalYear", year);
+      if (periodType === "MONTHLY" && month != null) q = q.eq("fiscalMonth", month);
+      if (periodType === "QUARTERLY" && quarter != null) q = q.eq("fiscalQuarter", quarter);
       const res = await withTimeout(q.descending("_createdDate").limit(50).find(), CMS_TIMEOUT_MS, "docHistory");
       return { status: "SUCCESS", data: res?.items || [], error: null };
     } catch (err) {
@@ -372,7 +389,7 @@ export const getPreparedManagerPackages = webMethod(
       await requireMarianManager(traceId);
       const res = await withTimeout(
         dalQuery(DOCS_COL)
-          .eq("closingType", "PAQUETE_GESTORIA")
+          .eq("packageStatus", "PREPARED")
           .descending("_createdDate")
           .limit(20)
           .find(),
