@@ -75,3 +75,14 @@ test("FISCAL-ORDER-06 treats a zero discounted line total as authoritative", () 
         0
     );
 });
+
+test("FISCAL-ORDER-07 prefers the documented Wix Velo priceSummary.totalPrice amount", () => {
+    assert.equal(
+        resolveOrderLedgerAmount({
+            priceSummary: { totalPrice: { amount: "45.50" } },
+            lineItems: [{ totalPriceAfterTax: { amount: "120.00" }, quantity: 1 }],
+        }),
+        45.5
+    );
+});
+
