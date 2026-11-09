@@ -176,7 +176,7 @@ Capa de Datos — SDK @wix/data + APIs Wix (Bookings, Members, eCommerce)
 | `backend/reservas.web.js` | Consulta pública de disponibilidad y catálogo |
 | `backend/citasManager.web.js` | Gestión de reservas duales, pagos y reprogramación |
 | `backend/cajas.web.js` | Ledger fiscal Veri\*Factu, caja y cierre Z |
-| `backend/inventario.web.js` | **RETIRADO EN LA RAMA DE REFACTORIZACIÓN 2026-11-10**; sin writer ni WebMethods custom de inventario |
+| `backend/inventario.web.js` | **RETIRADO Y FUSIONADO EN PR #238**; sin writer ni WebMethods custom de inventario |
 | `backend/horario.web.js` | Fichajes laborales y cálculo de jornada |
 | `backend/fiscalAggregator.web.js` | Agregación de impuestos y libros de facturas |
 | `backend/fiscalDocuments.web.js` | Generación de paquetes documentales para gestoría |
