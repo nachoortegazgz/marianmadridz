@@ -324,88 +324,80 @@ export const createManagerPackageVersion = webMethod(
     const traceId = makeTraceId("doc-create");
     try {
       await requireMarianManager(traceId);
+      const periodType = _safeTrim(period.periodType || "QUARTERLY").toUpperCase();
       const year = Number(period.year);
-      const quarter = Number(period.quarter);
-      if (!year || !quarter || quarter < 1 || quarter > 4) {
-        return {
-          status: "ERROR",
-          data: null,
-          error: {
-            code: "INVALID_PERIOD",
-            message: "year and quarter (1-4) are required",
-          },
-        };
+      const month = period.month != null ? Number(period.month) : null;
+      const quarter = period.quarter != null ? Number(period.quarter) : null;
+      if (!Number.isInteger(year) || year < 2000 || year > 9999) {
+        return { status: "ERROR", data: null, error: { code: "INVALID_YEAR", message: "A valid fiscal year is required." } };
+      }
+      if (periodType !== "MONTHLY" && periodType !== "QUARTERLY") {
+        return { status: "ERROR", data: null, error: { code: "INVALID_PERIOD_TYPE", message: "periodType must be MONTHLY or QUARTERLY." } };
+      }
+      if (periodType === "MONTHLY" && (!Number.isInteger(month) || month < 1 || month > 12)) {
+        return { status: "ERROR", data: null, error: { code: "INVALID_MONTH", message: "month 1-12 required." } };
+      }
+      if (periodType === "QUARTERLY" && (!Number.isInteger(quarter) || quarter < 1 || quarter > 4)) {
+        return { status: "ERROR", data: null, error: { code: "INVALID_QUARTER", message: "quarter 1-4 required." } };
       }
 
-      const historyRes = await getManagerPackageHistory({ year, quarter });
-      const nextVersion = (historyRes?.data?.length || 0) + 1;
-      const documentId = _formatDocumentId(year, quarter, nextVersion);
+      const periodValue = periodType === "MONTHLY" ? month : quarter;
+      const effectiveQuarter = periodType === "MONTHLY" ? Math.floor((month - 1) / 3) + 1 : quarter;
+      const historyRes = await getManagerPackageHistory({ year, periodType, month, quarter });
+      if (historyRes?.status !== "SUCCESS" || !Array.isArray(historyRes.data)) {
+        throw new Error("PACKAGE_HISTORY_UNAVAILABLE: cannot allocate a version without a complete history read.");
+      }
+      const nextVersion = historyRes.data.length + 1;
+      const documentId = _formatPackageDocumentId(year, periodType, periodValue, nextVersion);
 
       const [summaryRes, bookRes] = await Promise.all([
-        getQuarterlyTaxSummary(year, quarter, { traceId }),
-        getLibroRegistroFacturasExpedidasInternal(year, quarter, {
-          traceId,
-          rateLimitKey: "manager",
-        }),
+        getQuarterlyTaxSummary(year, effectiveQuarter, { traceId }),
+        getLibroRegistroFacturasExpedidasInternal(year, effectiveQuarter, { traceId, rateLimitKey: "manager" }),
       ]);
+      if (summaryRes?.status !== "SUCCESS" || !summaryRes.data ||
+          bookRes?.status !== "SUCCESS" || !bookRes.data || !Array.isArray(bookRes.data.filas)) {
+        throw new Error("PACKAGE_SOURCE_DATA_UNAVAILABLE: fiscal summary or invoice ledger query did not complete successfully.");
+      }
 
+      const quarterInvoices = bookRes.data.filas;
+      const invoiceData = periodType === "MONTHLY"
+        ? _filterInvoicesByMonth(quarterInvoices, year, month)
+        : quarterInvoices;
+      const summaryData = periodType === "MONTHLY"
+        ? _summarizeMonthly(invoiceData, year, month, effectiveQuarter)
+        : summaryRes.data;
+      const createdAt = new Date();
       const record = {
         _id: documentId,
         inventoryClosingId: documentId,
         fiscalYear: year,
-        closeDate: new Date(),
+        fiscalMonth: periodType === "MONTHLY" ? month : null,
+        fiscalQuarter: effectiveQuarter,
+        periodType,
+        closeDate: createdAt,
         closingType: "PAQUETE_GESTORIA",
-        summaryData: summaryRes?.data || {},
-        invoiceData: bookRes?.data?.filas || [],
+        summaryData,
+        invoiceData,
         packageStatus: "PREPARED",
         packageVersion: nextVersion,
         traceId,
-        _createdDate: new Date(),
+        _createdDate: createdAt,
       };
 
-      // Package versions are immutable snapshots. insert enforces uniqueness
-      // on the deterministic documentId; the loser fails closed and must
-      // refresh history before requesting the next version.
-      await withTimeout(
-        dalInsert(DOCS_COL, record),
-        CMS_TIMEOUT_MS,
-        "insertManagerPackage"
-      );
-
+      await withTimeout(dalInsert(DOCS_COL, record), CMS_TIMEOUT_MS, "insertManagerPackage");
       return {
         status: "SUCCESS",
-        data: {
-          documentId,
-          version: nextVersion,
-          createdAt: record._createdDate,
-        },
+        data: { documentId, version: nextVersion, periodType, year, month: periodType === "MONTHLY" ? month : null, quarter: effectiveQuarter, invoiceCount: invoiceData.length, createdAt },
         error: null,
       };
     } catch (err) {
       const code = String(err?.code || "");
       const message = String(err?.message || "");
-      if (
-        code === "WDE0074" ||
-        code === "WD_ITEM_ALREADY_EXISTS" ||
-        /WDE0074|WD_ITEM_ALREADY_EXISTS|already exists|duplicated/i.test(
-          message
-        )
-      ) {
-        return {
-          status: "ERROR",
-          data: null,
-          error: {
-            code: "PACKAGE_VERSION_CONFLICT",
-            message:
-              "Otra solicitud ha creado esta versión. Actualiza el historial y vuelve a intentarlo.",
-          },
-        };
+      if (code === "WDE0074" || code === "WD_ITEM_ALREADY_EXISTS" ||
+          /WDE0074|WD_ITEM_ALREADY_EXISTS|already exists|duplicated/i.test(message)) {
+        return { status: "ERROR", data: null, error: { code: "PACKAGE_VERSION_CONFLICT", message: "Otra solicitud ha creado esta versión. Actualiza el historial y vuelve a intentarlo." } };
       }
-      return {
-        status: "ERROR",
-        data: null,
-        error: _toPublicError(err, "DOC_CREATE_FAIL"),
-      };
+      return { status: "ERROR", data: null, error: _toPublicError(err, "DOC_CREATE_FAIL") };
     }
   }
 );
@@ -421,32 +413,20 @@ export const getManagerPackageHistory = webMethod(
     try {
       await requireMarianManager(traceId);
       const year = Number(period.year);
-      const quarter = Number(period.quarter);
+      const periodType = _safeTrim(period.periodType || "QUARTERLY").toUpperCase();
+      const month = period.month != null ? Number(period.month) : null;
+      const quarter = period.quarter != null ? Number(period.quarter) : null;
       let q = dalQuery(DOCS_COL).eq("closingType", "PAQUETE_GESTORIA");
-      if (year && Number.isFinite(year)) q = q.eq("fiscalYear", year);
-      if (
-        quarter &&
-        Number.isFinite(quarter) &&
-        quarter >= 1 &&
-        quarter <= 4
-      ) {
-        q = q.startsWith(
-          "inventoryClosingId",
-          `DOC_GESTORIA_${year}_T${quarter}`
-        );
+      if (Number.isInteger(year) && year > 0) q = q.eq("fiscalYear", year);
+      if (Number.isInteger(year) && periodType === "MONTHLY" && Number.isInteger(month) && month >= 1 && month <= 12) {
+        q = q.startsWith("inventoryClosingId", _packagePeriodPrefix(year, "MONTHLY", month));
+      } else if (Number.isInteger(year) && periodType === "QUARTERLY" && Number.isInteger(quarter) && quarter >= 1 && quarter <= 4) {
+        q = q.startsWith("inventoryClosingId", _packagePeriodPrefix(year, "QUARTERLY", quarter));
       }
-      const res = await withTimeout(
-        q.descending("_createdDate").limit(50).find(),
-        CMS_TIMEOUT_MS,
-        "docHistory"
-      );
+      const res = await withTimeout(q.descending("_createdDate").limit(50).find(), CMS_TIMEOUT_MS, "docHistory");
       return { status: "SUCCESS", data: res?.items || [], error: null };
     } catch (err) {
-      return {
-        status: "ERROR",
-        data: null,
-        error: _toPublicError(err, "DOC_HIST_FAIL"),
-      };
+      return { status: "ERROR", data: null, error: _toPublicError(err, "DOC_HIST_FAIL") };
     }
   }
 );
