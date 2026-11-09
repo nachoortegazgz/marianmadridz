@@ -1383,7 +1383,10 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
                 return {
                     status: "ERROR",
                     data: null,
-                    error: { code: "GLOBAL_PREDECESSOR_HASH_MISSING", message: "No se puede verificar la continuidad global de la cadena fiscal." },
+                    error: {
+                        code: previousMovement ? "GLOBAL_PREDECESSOR_HASH_MISSING" : "GLOBAL_PREDECESSOR_MISSING",
+                        message: "No se puede verificar la continuidad global de la cadena fiscal.",
+                    },
                 };
             }
         }
@@ -1578,6 +1581,15 @@ export async function verifyFiscalHashChainIntegrity(options = {}) {
         let expectedPreviousHash = GENESIS_HASH;
         let hasMore = false;
         let page = 1;
+        const firstSequence = Number(movements.items?.[0]?.sequenceNumber);
+        if (Number.isFinite(firstSequence) && firstSequence > 1) {
+            breaks.push({
+                movementId: movements.items?.[0]?._id || null,
+                numSerieFactura: readInvoiceNumber(movements.items?.[0] || {}),
+                reason: "GLOBAL_PREDECESSOR_MISSING",
+                firstSequence,
+            });
+        }
         while (true) {
             for (const mov of movements.items || []) {
                 checked += 1;
