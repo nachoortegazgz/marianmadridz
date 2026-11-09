@@ -40,7 +40,7 @@ test('BOOKING_CANCELED persists CitasF2 before marking the webhook processed', a
 
   assert.equal(result.status, 'OK');
   const cita = wixDataMock._store.get(CITA_COLLECTION).find((row) => row.bookingId === BOOKING_ID);
-  assert.equal(cita.bookingStatus, IC.CITAS_BOOKING_STATUS.CANCELLED || IC.CITAS_BOOKING_STATUS.CANCELED);
+  assert.equal(cita.bookingStatus, IC.CITAS_BOOKING_STATUS.CANCELED);
   const eventRows = wixDataMock._store.get(CONTROL_COLLECTION) || [];
   assert.equal(eventRows.filter((row) => row.eventId === EVENT_ID).length, 1);
 });
@@ -83,7 +83,7 @@ test('BOOKING_CANCELED replay reconciles a stale CitasF2 row even when the event
 
   assert.equal(result.status, 'OK');
   const cita = wixDataMock._store.get(CITA_COLLECTION).find((row) => row.bookingId === BOOKING_ID);
-  assert.equal(cita.bookingStatus, IC.CITAS_BOOKING_STATUS.CANCELLED || IC.CITAS_BOOKING_STATUS.CANCELED);
+  assert.equal(cita.bookingStatus, IC.CITAS_BOOKING_STATUS.CANCELED);
 });
 
 
@@ -152,7 +152,7 @@ test('DUAL-CANCEL-02 the second phase resolves the pair and uses a stable pair-l
       bookingId: f1,
       pairToken,
       orderId,
-      bookingStatus: IC.CITAS_BOOKING_STATUS.CANCELLED,
+      bookingStatus: IC.CITAS_BOOKING_STATUS.CANCELED,
       paymentStatus: IC.CITAS_PAYMENT_STATUS.NOT_PAID,
       serviceId: 'eeeeeeee-5555-4555-8555-eeeeeeeeeeee',
     },
