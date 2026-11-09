@@ -203,12 +203,8 @@ $w.onReady(async () => {
         return;
       }
 
-      /* ── Caja / TPV ────────────────────────────────────────────────
-         Los tipos TPV_TX, X_COUNT, Z_CLOSING y CASHIER_STATE deben
-         ser enrutados por el bridge o por el backend. Aquí sólo
-         dejamos logging defensivo si el tipo no es conocido por el
-         bridge (para detectar desalineaciones de contrato).
-         ──────────────────────────────────────────────────────────── */
+      // La zona staff es un placeholder: estos mensajes solo se registran
+      // para diagnóstico. No existe en esta página un enrutamiento de caja.
       const CASHIER_TYPES = new Set([
         "TPV_TX",
         "X_COUNT",
@@ -217,29 +213,7 @@ $w.onReady(async () => {
       ]);
 
       if (CASHIER_TYPES.has(type)) {
-        // Si tu `widgetBridge` no auto-enruta estos tipos, sustituye
-        // este bloque por:
-        //
-        //   import {
-        //     cashierState,
-        //     tpvTx,
-        //     xCount,
-        //     zClosing,
-        //   } from "backend/cashier.web.js";
-        //
-        //   const handlerMap = {
-        //     CASHIER_STATE: cashierState,
-        //     TPV_TX: tpvTx,
-        //     X_COUNT: xCount,
-        //     Z_CLOSING: zClosing,
-        //   };
-        //   const fn = handlerMap[type];
-        //   const res = await fn(payload);
-        //   return { type: `${type}_RES`, payload: res };
-        //
-        // El retorno debe ser `{ type: 'XXX_RES', payload }` para que
-        // el bridge lo reenvíe al widget.
-        console.debug("[only-staff] cashier message", {
+        console.debug("[only-staff] cashier message (not routed)", {
           traceId,
           type,
           txType: payload.txType || null,
