@@ -33,9 +33,8 @@
  *     isDual se evaluaba como false y getCertifiedDualSlots devolvía slots de
  *     F1 como si fuera simple.
  *   - LOAD-RANK-01 (P1): _getBookedMinutesByResourceForDay lee
- *     booking.bookedEntity.slot.resource.id (no _id). El Extended Booking
- *     Object usa `id` para el resource; leer `_id` dejaba el ranking de carga a 0
- *     y el balanceo por staff no funcionaba.
+ *     booking.bookedEntity.slot.resource._id (SDK). El Extended Booking
+ *     Object usa `_id` en la forma JavaScript SDK; REST `id` no es válido aquí.
  *     Ref: https://dev.wix.com/docs/api-reference/business-solutions/bookings/bookings/bookings-reader-v2/supported-filters
  *
  * FIXES HEREDADOS v10.18:
@@ -1208,11 +1207,9 @@ async function _getBookedMinutesByResourceForDay(dateYMD, resourceIds, traceId) 
                 if (!["CREATED", "PENDING", "CONFIRMED", "COMPLETED"].includes(status)) continue;
                 if (String(booking.paymentStatus || "").trim().toUpperCase() === "REFUNDED") continue;
 
-                /* LOAD-RANK-01: el Extended Booking Object usa `resource.id`,
-                   no `resource._id`. Leer `_id` dejaba el ranking de carga a 0. */
+                /* Bookings Reader V2 SDK: BookedResource usa `_id` (ADR-002). */
                 const resourceId = _safeTrim(
-                    booking?.bookedEntity?.slot?.resource?.id ||
-                    booking?.bookedEntity?.slot?.resource?._id
+                    booking?.bookedEntity?.slot?.resource?._id || ""
                 );
                 if (!resourceId || minutes[resourceId] === undefined) continue;
                 const start = _toDateSafe(booking.startDate);
