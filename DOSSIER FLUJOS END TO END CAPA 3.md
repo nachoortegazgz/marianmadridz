@@ -86,8 +86,8 @@ Los procesos que generan datos trasladables se clasifican en tres categorías se
 | Subproceso intrínseco | API Wix que lo genera | Datos generados | Colección CMS destino | ¿Se traslada a Capa 3? |
 | :--- | :--- | :--- | :--- | :--- |
 | Creación de carrito | `createCart` (Cart V2) | `cartId`, `lineItems[]`, `totalAmount` | Efímero (no se persiste en CMS propio) | ❌ No — dato efímero |
-| Pago procesado (MONEI) | Pasarela MONEI → webhook eCom | `transactionId`, `paymentMethod`, `amount`, `currency` | `MovimientosCaja` (insert) | ✅ Sí — vía export diario |
-| Pago con Bizum (MONEI) | MONEI Bizum nativo → webhook eCom | `transactionId`, `paymentMethod: BIZUM`, `amount` | `MovimientosCaja` (insert) | ✅ Sí — vía export diario |
+| Pago online procesado | Wix Payments → Wix eCommerce / evento de pago | `transactionId`, `paymentMethod` nativo/canónico, `amount`, `currency` | `MovimientosCaja` (insert append-only) | Sí — vía export diario del ledger propio |
+| Método digital alternativo | Solo se registra como método online si Wix Payments lo ofrece y está habilitado para esta cuenta; no se presupone disponibilidad de Bizum. | Método nativo confirmado, `transactionId`, `amount` | `MovimientosCaja` (insert append-only) | Sí — vía export diario del ledger propio |
 | Pago presencial (efectivo/tarjeta) | Registro manual en `cajas.web.js` | `transactionId`, `paymentMethod`, `channelType: PRESENCIAL` | `MovimientosCaja` (insert) | ✅ Sí — vía export diario |
 
 #### A.3.4 Wix Members — Identidad
@@ -211,7 +211,7 @@ Los procesos que generan datos trasladables se clasifican en tres categorías se
 | Dato | Motivo de exclusión | Norma aplicable |
 | :--- | :--- | :--- |
 | PII de clientes (nombre, email, teléfono, dirección) | Minimización de datos. El gestor no necesita identidad de clientes para contabilidad. | RGPD art. 5.1.c) |
-| Datos de tarjetas de crédito (PAN, CVV, caducidad) | PCI-DSS. Nunca llegan al CMS. MONEI los gestiona. | PCI-DSS, RGPD |
+| Datos de tarjetas de crédito (PAN, CVV, caducidad) | PCI-DSS. Nunca llegan al CMS. Wix Payments procesa los datos de tarjeta durante el checkout; el CMS no almacena PAN ni CVV. | PCI-DSS, RGPD |
 | Fórmulas de color, alergias, historial de clientas | Datos operativos del salón sin relevancia fiscal. PII sensible. | RGPD art. 9 (datos de salud) |
 | Hashes Veri*Factu en la UI del frontend | Seguridad. Solo en CSV de export, nunca en DTO al cliente. | SSOT §18.1 |
 | Cuentas contables PGC en el DTO frontend | Seguridad. Solo en export para gestor. | SSOT §18.1 |
@@ -591,7 +591,7 @@ Documentos_Capa3/
 | **RGPD / LOPDGDD** | Minimización PII, cifrado, acceso restringido | Los CSV **nunca** incluyen PII de clientes. SharePoint cifra con AES-256. Gestor accede en solo lectura. Alba y Andrea sin acceso. Datos en servidores UE. |
 | **LGT 58/2003** | Conservación 4 años (fiscal) | Retención SharePoint: 6 años. |
 | **Código de Comercio art. 30** | Conservación 6 años (mercantil) | Retención SharePoint: 6 años. Versionado 500 versiones. |
-| **RD 253/2025 (Bizum)** | Reporte AEAT de cobros Bizum | MONEI reporta automáticamente. El Cierre Z incluye `totalBizum` como evidencia documental. Extracto MONEI archivado en `1_VENTAS/`. |
+| **obligación de información sobre Bizum, si aplica; no implica reporte automático del proveedor** | Reporte AEAT de cobros Bizum | No se presume que Wix Payments reporte automáticamente a AEAT. El Cierre Z incluye `totalBizum` como evidencia documental. Extracto Wix Payments archivado en `1_VENTAS/`. |
 | **LSSI-CE** | Transparencia de precios | No aplica directamente al traslado. Los textos legales están en el sitio web. |
 
 ### D.2 Trazabilidad end-to-end del dato
@@ -684,8 +684,8 @@ Según PTD Kit Digital §13 (25 escenarios, 96% resiliencia):
 | `taxAmount` | `MovimientosCaja` | Cálculo en `cajas.web.js` | `MOVIMIENTOS_CAJA` | `1_VENTAS/Movimientos/` | Ley 37/1992 (IVA) |
 | `tipoImpositivo` | `MovimientosCaja` | Enum AEAT | `MOVIMIENTOS_CAJA` | `1_VENTAS/Movimientos/` | Ley 37/1992 (IVA) |
 | `movementType` | `MovimientosCaja` | Enum negocio | `MOVIMIENTOS_CAJA` | `1_VENTAS/Movimientos/` | PGC (clasificación) |
-| `channelType` | `MovimientosCaja` | Enum negocio | `MOVIMIENTOS_CAJA` | `1_VENTAS/Movimientos/` | RD 253/2025 (Bizum) |
-| `paymentMethod` | `MovimientosCaja` | Enum negocio | `MOVIMIENTOS_CAJA` | `1_VENTAS/Movimientos/` | RD 253/2025 (Bizum) |
+| `channelType` | `MovimientosCaja` | Enum negocio | `MOVIMIENTOS_CAJA` | `1_VENTAS/Movimientos/` | obligación de información sobre Bizum, si aplica; no implica reporte automático del proveedor |
+| `paymentMethod` | `MovimientosCaja` | Enum negocio | `MOVIMIENTOS_CAJA` | `1_VENTAS/Movimientos/` | obligación de información sobre Bizum, si aplica; no implica reporte automático del proveedor |
 | `transactionId` | `MovimientosCaja` | Idempotencia | `MOVIMIENTOS_CAJA` | `1_VENTAS/Movimientos/` | Trazabilidad |
 | `traceId` | Transversal | UUID v4 | Todos los CSV | Todas las carpetas | Trazabilidad end-to-end |
 | `closingHash` | `HistoricoCierresZ` | `verifyNightlyZClosing` | `CIERRE_Z` | `1_VENTAS/Cierres_Z/` | Ley 11/2021 |
