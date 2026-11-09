@@ -42,15 +42,15 @@ El sitio web no debe ser un escaparate estático. Debe ser una **herramienta de 
 
 ### 2.2. Fianza online / Anti no-shows (Prioridad 🔴 Crítica)
 
-> **Decisión de negocio 2026-11-10:** la fianza es fija (15 €) y solo se exige cuando el precio del servicio es estrictamente superior a 100 €. Para 100 € exactos o menos no hay fianza obligatoria. Esta decisión sustituye los umbrales e importes anteriores de RF-06 y cualquier criterio contradictorio del dossier. La fianza se descuenta del importe final; el tratamiento de cancelaciones, reembolsos y registro fiscal debe definirse en el contrato técnico antes de activar cobros.
+> **Decisión de negocio 2026-11-10:** fianza fija de 15 € únicamente para servicios cuyo precio sea estrictamente superior a 100 €; 100 € exactos no activa fianza. Se descuenta del precio total. Política ordinaria: cancelación/reprogramación gratuita con al menos 24 h y devolución íntegra si cancela el negocio. Para menos de 24 h o inasistencia no se aplicará una retención automática hasta que exista una cláusula proporcionada, transparente y revisada jurídicamente. Prioridad técnica: utilizar el depósito nativo de Wix Bookings por servicio; no crear un motor de cobro propio mientras la capacidad nativa cubra el caso.
 
 
 | ID | Requisito | Descripción | Criterio de aceptación | Estado de verificación |
 |---|---|---|---|---|
 | RF-06 | Fianza fija para servicios > 100 € | Cobro obligatorio de una fianza fija de 15 € en el momento de la reserva para servicios cuyo precio sea estrictamente superior a 100 €. | Regla condicional: servicios ≤ 100 € → sin fianza obligatoria; servicios > 100 € → fianza obligatoria de 15 €. La fianza se descuenta del importe final del servicio, sujeto a definir y validar el flujo de liquidación. | POLÍTICA APROBADA POR EL PROPIETARIO (2026-11-10); NO IMPLEMENTADO. No existe `createDepositPaymentOrder` ni `bookingsEngine.web.js`. Deben actualizarse los criterios de checkout, cancelación/reembolso y contabilización antes de implementar. |
 | RF-07 | Pasarela de pago segura | Integración mediante Wix Payments, proveedor de pagos nativo de Wix. Los métodos concretos se limitan a los que estén disponibles y habilitados para España y esta cuenta. | Pago procesado por Wix Payments y confirmación recibida mediante el flujo nativo de Wix eCommerce/webhook. | Declarado por el propietario; activación y métodos de la cuenta pendientes de comprobación en el panel. |
-| RF-08 | Política de cancelación | Reembolso automático si cancela con ≥ 24 h de antelación; retención si cancela después. | `cancellationPolicyHours = 24` configurado y webhook de reembolso operativo. | PARCIAL; en la política nativa consultada figura cancelación/reprogramación con 1440 minutos. No se ha validado el reembolso automático ni el webhook en E2E. |
-| RF-09 | Descuento en ticket final | La fianza debe ser descontable del importe total del servicio. | Lógica de descuento aplicada en el checkout final. | NO IMPLEMENTADO/BLOQUEADO; no existe flujo `createDepositPaymentOrder` ni política de fianza aprobada. No se puede acreditar descuento de señal en ticket final. |
+| RF-08 | Política de cancelación | Cancelación o reprogramación sin penalización con ≥ 24 h; devolución íntegra si cancela el negocio. La retención por cancelación tardía/no-show queda desactivada hasta revisión legal de proporcionalidad y condiciones. | Política Wix Bookings configurada a 1440 minutos; cancelación, reprogramación y devolución verificadas en QA. | PARCIAL; la política nativa consultada refleja 1440 minutos. No se ha probado reembolso ni webhook E2E. No se autoriza retención automática en este estado. |
+| RF-09 | Aplicación de la fianza al saldo | El depósito nativo pagado online forma parte del precio del servicio; el cliente abona únicamente el saldo pendiente en persona. | Wix Bookings muestra depósito y saldo pendiente coherentes; el pago inicial y el saldo no duplican ingresos ni IVA. | NATIVO SOPORTADO POR WIX; configuración por servicio y conciliación fiscal/ledger pendientes de QA. No implementar un segundo cobro/descuento personalizado. |
 
 ### 2.3. Asistente de IA capilar (Prioridad 🟡 Media)
 
@@ -80,7 +80,7 @@ El sitio web no debe ser un escaparate estático. Debe ser una **herramienta de 
 | ID | Requisito | Descripción | Criterio de aceptación | Estado de verificación |
 |---|---|---|---|---|
 | RF-23 | Catálogo de productos | Venta de cosmética/capilar con precios y stock. | Wix Stores configurado. | VERIFICADO NATIVO EN LECTURA; Wix Stores Catalog V3 responde, con 24 productos visibles. Checkout E2E pendiente. |
-| RF-24 | Sincronización de stock | El stock online debe reflejar el inventario físico del salón. | ⚠️ Declarado como "manual desde app móvil Wix"; conexión automática con TPV físico pendiente para fase 2. | PARCIAL/BLOQUEADO; 30/30 inventory items nativos tienen seguimiento de cantidad, pero `InventarioStockVenta` solo tiene 1 fila sin productId/variantId/stockKey. No hay maestros CMS canónicos para las 30 variantes. |
+| RF-24 | Gestión y sincronización de stock | Stock y disponibilidad comercial gestionados exclusivamente en Wix Stores Catalog V3 y sus herramientas nativas (panel/app Wix). | El checkout nativo deduce stock automáticamente; el personal actualiza stock físico desde las herramientas Wix. Sin proyecciones ni movimientos de stock personalizados. | NATIVO VERIFICADO EN LECTURA: 30/30 inventory items con tracking en una ubicación. No se ha probado checkout/restock E2E. El CMS personalizado de inventario se considera legado en retirada; no se crearán maestros CMS. |
 | RF-25 | Upselling en checkout | Sugerir tratamiento hidratante exprés (+12 €) al reservar Corte de Autor; champú matizador con 10% dto. al comprar bono de mechas. | ⚠️ No declarado en código — **requiere verificación/implementación** |
 | RF-26 | Derecho de desistimiento 14 días | Excepción del Art. 103 para cosméticos desprecintados debe estar explícita en Términos y Condiciones. | ⚠️ No declarado — **requiere verificación** |
 
@@ -179,8 +179,8 @@ El sitio web no debe ser un escaparate estático. Debe ser una **herramienta de 
 | RT-17 | `DatosFiscales` | NIF, régimen, Veri*factu. | ✅ Declarado (matriz CMS) |
 | RT-18 | `HistoricoCierresZ` | Cierres con totales, hashes y firmas. | ✅ Declarado (matriz CMS) |
 | RT-19 | `LibroAsientosContablesDetalle` | Asientos contables con debe/haber. | ✅ Declarado (matriz CMS) |
-| RT-20 | `InventarioStockVenta` | Stock físico/reservado/disponible. | PARCIAL/BLOQUEADO; 1 fila CMS sin identidad canónica frente a 30 inventory items nativos. No se acredita proyección completa. |
-| RT-21 | `MovimientosInventario` | Movimientos con idempotencia. | PARCIAL; existe 1 movimiento CMS identificado como QA predespliegue, sin stockKey canónico. No acredita ledger comercial operativo. |
+| RT-20 | `InventarioStockVenta` | Proyección personalizada de stock (LEGACY, no SSOT). | Retirada funcional planificada; no crear/actualizar maestros. Datos existentes preservados hasta decisión específica de archivo. |
+| RT-21 | `MovimientosInventario` | Histórico de movimientos personalizado (LEGACY append-only, no SSOT de stock). | No generar nuevos movimientos de stock. Conservar los existentes sin editar ni borrar; su archivo/retención requiere decisión separada. |
 | RT-22 | `ControlOperativo` | Control de reintentos, alertas, deduplicación. | ✅ Declarado (matriz CMS) |
 | RT-23 | `RegistrosHorariosStaff` | Fichajes con firma y trazabilidad. | ✅ Declarado (matriz CMS) |
 | RT-24 | `MapaStaff` | Relación staff-recursos-servicios. | ✅ Declarado (matriz CMS) |
