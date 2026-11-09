@@ -430,12 +430,13 @@ async function _getBusinessTaxId(traceId) {
   const item = config?.items?.[0];
   const taxId = _safeTrim(item?.taxId);
   if (taxId) return taxId.toUpperCase();
-  // Historical configuration adapter: filas historicas thirdPartyType=EMISOR con
-  // campo "taxId". Emiten warn para trazar la migracion a CONFIG_SISTEMA.
+  // REVIEW-BY: 2027-01-31. Retirar tras normalizar la fila EMISOR a
+  // CONFIG_SISTEMA y verificar cero lecturas historical-config-read.
+  // Solo lectura historica; nunca crea ni modifica configuracion.
   const historicalConfig = await withTimeout(
     dalQuery(DATOS_FISCALES_COL).eq("thirdPartyType", "EMISOR").limit(1).find(),
     CMS_TIMEOUT_MS,
-    "getBusinessTaxIdhistorical"
+    "getBusinessTaxIdHistorical"
   );
   const historicalTaxId = _safeTrim(historicalConfig?.items?.[0]?.taxId);
   if (historicalTaxId) {
