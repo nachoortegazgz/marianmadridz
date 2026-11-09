@@ -2,7 +2,7 @@
 
 **Revisión:** 2026-11-09  
 **Repositorio:** [nachoortegazgz/marianmadridz](https://github.com/nachoortegazgz/marianmadridz)  
-**Baseline de código:** `main` · `cad48c04bfe9206a23a2eb0a582e360e36a21864`  
+**Baseline de código:** `main` · `8abe9bf6aee215fadd9f41beec671c16ae44fb93`  
 **Sitio:** https://www.marianmadrid.es/  
 **Alcance:** estado documental y técnico contrastado con el árbol de `main`, auditorías existentes, CI y consultas live de solo lectura.
 
@@ -30,7 +30,7 @@ El repositorio contiene una solución Wix Editor/Velo con reservas Bookings V2, 
 | Asistente IA | Deshabilitado de forma segura | `aiAgent.web.js` falla cerrado con `AI_PROVIDER_NOT_CONFIGURED`; ZONA MARIAN mantiene `enableAIAssistant=false`. Copy público actual requiere comprobación visual. |
 | Gift Cards | App nativa instalada; personalización no implementada | Wix Gift Cards tiene 1 producto nativo configurado y 0 tarjetas emitidas. No existe `giftCards.web.js`, writer propio, QR scanner ni HMAC personalizado en `src/`. |
 | Wix Forms & Payments | 4 esquemas nativos activos | Contacto mapea nombre/email/teléfono a CRM. Caja manual, control X y fichaje no tienen trigger backend; Wix Automations v2 devuelve 0 workflows activos y 0 borradores para `wix_form_app-form_submitted`. |
-| Páginas personalizadas / widgets | Parcial; contratos HTML incompletos | Wix devuelve 9 páginas estáticas y 2 dinámicas. Se detectaron y corrigieron en rama dos rutas erróneas (`/administracion` y `/politica-de-privacidad`). Los HTML de `#htmlAdministracion`, `#htmlAdmin` y `#htmlOnlyStaffPanel` no están sincronizados en el repo; ZONA STAFF tiene todos los flags funcionales desactivados y no enruta acciones de caja. |
+| Páginas personalizadas / widgets | Contratos estáticos conciliados; runtime pendiente | `#htmlAdmin.txt` y `#htmlOnlyStaff.txt` están versionados en raíz. PR #232 corrigió rutas. PR #233 corrige allowlists, DTO de caja, fallback fail-closed y un error de sintaxis JS en staff. ZONA STAFF sigue siendo placeholder sin handlers operativos; falta comparar el HTML del Editor/publicado con el snapshot Git y ejecutar runtime. |
 | Toolchain / lint | Bloqueo de mantenimiento | ESLint 8.25.0 está EOL; `@wix/eslint-plugin-cli@1.0.2` declara peer ESLint 8. La regla `no-invalid-backend-import` está desactivada y falta `src/velo.dependencies.json`. No forzar ESLint 10 ni editar artefactos Wix manualmente. |
 
 ## 3. Evidencia de validación
@@ -40,7 +40,8 @@ El repositorio contiene una solución Wix Editor/Velo con reservas Bookings V2, 
 - Main incorpora PR #229 (correcciones Capa 1), PR #230 (checkpoint documental) y PR #231 (smoke live y reconciliación Catalog V3).
 - Run #42656024671: 50 suites, 477 tests, 0 fallos; contratos SDK de Cart V2, Wix Data patch/bulkPatch y Bookings Reader V2.
 - Run #42656358136: CI del checkpoint documental, SUCCESS.
-- PR #232, run #42671109488 sobre el commit de código `3fc7482`: 50 suites, 479 tests, 0 fallos; SDK contracts y ESLint SUCCESS. Los commits posteriores en la rama son solo documentación.
+- PR #232, run #42671109488 sobre el commit de código `3fc7482`: 50 suites, 479 tests, 0 fallos; SDK contracts y ESLint SUCCESS.
+- PR #233, run #42711143272 sobre el commit de código `8d91c4c`: 51 suites, 488 tests, 0 fallos; SDK contracts, Bookings Reader V2 y ESLint SUCCESS. PR #233 sigue abierto, no fusionado.
 - La CI es offline: mocks/fixtures no prueban hooks CMS, permisos efectivos, SDK importado en Velo, webhooks reales ni concurrencia en Wix.
 
 ### Smoke live read-only — 2026-11-09
@@ -54,6 +55,7 @@ El repositorio contiene una solución Wix Editor/Velo con reservas Bookings V2, 
 
 Detalle: [Informe QA runtime/smoke](qa/2026-11-09-runtime-smoke-production.md).
 
+Auditoría de correcciones del informe consolidado: [Revisión de errores y estado de fixes](audits/2026-11-09-consolidated-error-report-review.md).
 ### Publicación
 
 El último intento de publish documentado (run #42545413297, commit `072910c6`) es anterior a los merges #229/#230/#231 y fue detenido por una discrepancia de versión UI del Editor (`15941`). **No se ha vuelto a comprobar ese guard sobre el HEAD actual**. El estado de publicación del commit `cad48c04` queda sin verificar; no publicar ni desactivar el guard para resolverlo.
@@ -77,7 +79,7 @@ Referencia: [Auditoría de preparación Veri*Factu](qa/2026-11-09-verifactu-read
 3. Ejecutar E2E con miembros/servicios/slots QA y pagos no cobrables: reserva simple/dual, compensación, checkout Cart V2, webhooks, cancelación y reprogramación.
 4. Registrar y validar los maestros de inventario mediante `registerInventoryMaster` en QA; no crear mappings por REST ni en producción sin autorización.
 5. Probar hooks CMS, permisos, DISPLAY_TOKEN, locks, fencing, concurrencia e idempotencia.
-6. Sincronizar los HTML Components de administración y staff desde Wix Local Editor y conciliar IDs, mensajes, acciones y rutas antes de habilitar flags.
+6. Comparar los HTML Components de Wix Editor/publicados con `#htmlAdmin.txt` y `#htmlOnlyStaff.txt` versionados; validar IDs, mensajes, acciones y rutas en runtime antes de habilitar flags.
 7. Reconciliar Wix Bookings/Orders con proyecciones CMS mediante lecturas; no crear movimientos ni reparar históricos hasta disponer de procedimiento backend controlado y autorización.
 8. Definir e implementar, si el negocio lo exige, la integración backend idempotente para `FORM MOVIMIENTO CAJA MANUAL`, `FORM CONTROL X` y `FORM REGISTRO HORARIO`; la auditoría encontró 0 workflows Wix Automations activos o en borrador para envíos de formularios.
 
