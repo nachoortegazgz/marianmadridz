@@ -587,6 +587,7 @@ test('FLOW-CAJA-08B fiscal recovery queue preserves the original rectification w
     movementType: fiscalPayload.movementType,
     origin: 'WIX_BOOKINGS_CANCEL_WEBHOOK',
     recoveryProcessor: 'EVENT_LOG',
+    recoveryScope: 'BOOKINGS_ONLY',
     fiscalPayload,
     traceId: 'rectification-queue-trace',
   });
@@ -595,6 +596,7 @@ test('FLOW-CAJA-08B fiscal recovery queue preserves the original rectification w
     .find((row) => row.transactionId === fiscalPayload.transactionId);
   assert.ok(record);
   assert.equal(record.payload.recoveryProcessor, 'EVENT_LOG');
+  assert.equal(record.payload.recoveryScope, 'BOOKINGS_ONLY');
   assert.deepEqual(record.payload.fiscalPayload, fiscalPayload);
 });
 
