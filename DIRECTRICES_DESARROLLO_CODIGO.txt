@@ -127,7 +127,7 @@ Actualizar tras cada sesión. Esta sección sustituye el inventario histórico d
   acepta en estos flujos SDK. `rescheduleBooking` usa la firma
   `(bookingId, slot, options)`, con `revision` dentro de `options`.
 - Se añade regresion offline para shape SDK, firma de reprogramacion, valores
-  SSOT y guardas de insercion. CI run #291 PASS: 48 suites / 466 tests / 0 fallos;
+  SSOT y guardas de insercion. CI run #292 PASS: 48 suites / 466 tests / 0 fallos;
   SDK contracts y ESLint PASS. npm aun avisa que ESLint 8.25.0 esta fuera de soporte;
   se registra como deuda P3 separada, sin actualizar dependencias en esta tanda.
 
@@ -187,4 +187,4 @@ Actualizar tras cada sesión. Esta sección sustituye el inventario histórico d
 
 ### Estado de salida
 
-`CI PASS — run #291 — 48 suites / 466 tests / 0 fallos` · `WIX PREVIEW PENDIENTE` · `NO DESPLEGAR`.
+`CI PASS — run #292 — 48 suites / 466 tests / 0 fallos` · `WIX PREVIEW PENDIENTE` · `NO DESPLEGAR`.
