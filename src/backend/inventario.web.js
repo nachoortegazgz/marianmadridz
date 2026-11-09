@@ -54,6 +54,7 @@ const MOVEMENTS_COL = BUSINESS_COLLECTIONS.MOVIMIENTOS_INVENTARIO;
 const CONTROL_COL = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
 const STRONG_READ = Object.freeze({ consistencyMode: "strong" });
 const API_TIMEOUT_MS = Number(SDK_CONFIG?.TIMEOUTS?.WEBHOOK_MS) || 30000;
+let _catalogVersionCache = null;
 
 const getCatalogVersionElevated = readCatalogVersion;
 const getStoreVariantElevated = readCatalogVariant;
@@ -74,12 +75,19 @@ async function _rateLimitOrThrow(surface, key) {
 }
 
 async function _getCatalogVersion() {
+    if (_catalogVersionCache) return _catalogVersionCache;
     const response = await withTimeout(
         getCatalogVersionElevated(),
         API_TIMEOUT_MS,
         "inventory.catalogVersion"
     );
-    return String(response?.catalogVersion || "");
+    const version = String(response?.catalogVersion || "");
+    if (version) _catalogVersionCache = version;
+    return version;
+}
+
+export function _resetCatalogVersionCacheForTests() {
+    _catalogVersionCache = null;
 }
 
 function _toTaxRate(value) {
@@ -679,7 +687,7 @@ export async function syncPaidOrderInventoryInternal(order, traceId, eventId) {
     }
     const catalogVersion = await _getCatalogVersion();
     if (catalogVersion !== INVENTORY_CONFIG.CATALOG_VERSION) {
-        return _error("INVENTORY_CATALOG_VERSION_MISMATCH", "El catalogo nativo no es V1.");
+        return _error("INVENTORY_CATALOG_VERSION_MISMATCH", "El catalogo nativo no es V3.");
     }
 
     const results = [];
@@ -956,6 +964,14 @@ async function _syncRestockedOrderLine(orderId, refundId, restockLine, reason, t
 }
 
 export async function syncRestockedOrderInventoryInternal(orderId, refundId, restockLines, reason, traceId, eventId) {
+    const catalogVersion = await _getCatalogVersion();
+    if (catalogVersion !== INVENTORY_CONFIG.CATALOG_VERSION) {
+        return {
+            status: "ERROR",
+            data: null,
+            error: { code: "INVENTORY_CATALOG_VERSION_MISMATCH", expected: INVENTORY_CONFIG.CATALOG_VERSION, actual: catalogVersion },
+        };
+    }
     if (!Array.isArray(restockLines) || !restockLines.length) {
         return { status: "SUCCESS", data: { processed: 0, results: [] }, error: null };
     }
@@ -1036,6 +1052,11 @@ async function _completeManualInventoryMovement(journal, traceId, existingLock =
     } = payload;
     const lock = existingLock || await _acquireStockLock(stockKey, productId, traceId);
     try {
+    const catalogVersion = await _getCatalogVersion();
+    if (catalogVersion !== INVENTORY_CONFIG.CATALOG_VERSION) {
+        await _updateInventoryClaim(journal, "REPAIR_REQUIRED", { completionError: "CATALOG_VERSION_MISMATCH", actualCatalogVersion: catalogVersion });
+        return { status: "ERROR", code: "INVENTORY_CATALOG_VERSION_MISMATCH" };
+    }
     await _assertStockLock(lock);
     const existingMovement = await dalQuery(MOVEMENTS_COL)
         .eq("movementToken", movementToken)
