@@ -418,7 +418,7 @@ async function _reserveOrderLine(order, lineItem, traceId, eventId) {
             const now = new Date();
             claim = await dalInsert(CONTROL_COL, {
                 _id: claimId,
-                controlType: CONTROL_TYPE.IDEMPOTENCY,
+                controlType: CONTROL_TYPE.DEDUPE_KEY,
                 dedupeKey: `INVENTORY_RESERVE:${orderId}:${lineItemId}`,
                 status: "PENDING",
                 payload: {
@@ -496,7 +496,7 @@ async function _releaseOrderReservationUnderLock(stock, orderId, lineItemId, qua
         const now = new Date();
         releaseClaim = await dalInsert(CONTROL_COL, {
             _id: releaseClaimId,
-            controlType: CONTROL_TYPE.IDEMPOTENCY,
+            controlType: CONTROL_TYPE.DEDUPE_KEY,
             dedupeKey: `INVENTORY_RELEASE:${orderId}:${lineItemId}`,
             status: "PENDING",
             payload: {
@@ -1297,7 +1297,7 @@ export const registerInventoryMovement = webMethod(Permissions.SiteMember, async
         };
         const journal = await dalInsert(CONTROL_COL, {
             _id: journalId,
-            controlType: CONTROL_TYPE.IDEMPOTENCY,
+            controlType: CONTROL_TYPE.DEDUPE_KEY,
             dedupeKey: "INVENTORY_MANUAL_MOVEMENT",
             status: "INTENT",
             payload: journalPayload,
@@ -1369,7 +1369,7 @@ export const reconcilePendingInventoryMovements = webMethod(Permissions.SiteMemb
             Math.max(1, Math.floor(Number(options?.limit) || INVENTORY_CONFIG.REPAIR_PAGE_LIMIT))
         );
         const pending = await dalQuery(CONTROL_COL)
-            .eq("controlType", CONTROL_TYPE.IDEMPOTENCY)
+            .eq("controlType", CONTROL_TYPE.DEDUPE_KEY)
             .eq("dedupeKey", "INVENTORY_MANUAL_MOVEMENT")
             .eq("status", "NATIVE_APPLIED")
             .limit(limit)
