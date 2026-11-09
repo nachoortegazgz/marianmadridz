@@ -49,15 +49,15 @@ jobs:
 
       - name: Authenticate Wix CLI
         env:
-          WIX_CLI_API_KEY: ${{ secrets.WIX_CLI_API_KEY }}
+          CLI_API_KEY: ${{ secrets.CLI_API_KEY }}
         shell: bash
         run: |
           set -euo pipefail
-          if [[ -z "${WIX_CLI_API_KEY:-}" ]]; then
-            echo "::error::Missing GitHub Actions secret WIX_CLI_API_KEY. Create a Wix API key with the 'Wix CLI for Sites - Git Integration' permission and add it as a repository secret."
+          if [[ -z "${CLI_API_KEY:-}" ]]; then
+            echo "::error::Missing GitHub Actions secret CLI_API_KEY. Create a Wix API key with the 'Wix CLI for Sites - Git Integration' permission and add it as a repository secret."
             exit 1
           fi
-          wix login --api-key "$WIX_CLI_API_KEY"
+          wix login --api-key "$CLI_API_KEY"
 
       - name: Create Wix preview
         shell: bash
