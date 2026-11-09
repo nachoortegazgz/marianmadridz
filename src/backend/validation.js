@@ -43,6 +43,7 @@ import {
     isValidGuid,
     normalizeBookingType,
     isDualBookingType,
+    CONTROL_OPERATIVO_NON_CANONICAL_FIELDS,
 } from "backend/internalConfig";
 
 // =============================================================================
@@ -189,6 +190,21 @@ export function assertDatosFiscales(item) {
 // =============================================================================
 // CONTROL OPERATIVO
 // =============================================================================
+
+export function assertCanonicalControlFields(item) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) {
+        throw new Error("SCHEMA_VIOLATION: ControlOperativo item must be an object");
+    }
+    const rejected = CONTROL_OPERATIVO_NON_CANONICAL_FIELDS.filter((field) =>
+        Object.prototype.hasOwnProperty.call(item, field)
+    );
+    if (rejected.length) {
+        throw new Error(
+            `SCHEMA_VIOLATION: ControlOperativo fields not allowed: ${rejected.join(", ")}`
+        );
+    }
+    return true;
+}
 
 export function assertControlOperativo(item) {
     if (!item || typeof item !== "object") {
