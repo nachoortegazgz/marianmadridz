@@ -349,7 +349,7 @@ La disponibilidad mostrada al usuario no garantiza que el slot siga libre al con
 La arquitectura DUAL implementa dos llamadas independientes a `createBooking` vinculadas por un `pairToken` (UUID v4):
 
 - **F1** (`bookingType = "DUAL_F1"`): fase de aplicación. Lleva el importe total del servicio.
-- **F2** (`bookingType = "DUAL_F2"`): fase de lavado/peinado. `totalAmount = 0`; se marca `NO_FEE` en Bookings y envía `selectedPaymentOption: BOOKING_PAYMENT_OPTION_OFFLINE`. El Writer se invoca sin opciones de bypass (`undefined`), por lo que Wix conserva sus validaciones nativas de disponibilidad y de opción de pago. El mutex `SLOT_LOCK` es coordinación adicional; no sustituye la validación final de Bookings.
+- **F2** (`bookingType = "DUAL_F2"`): fase de lavado/peinado. `totalAmount = 0`; usa metadata booleana `noFee: true` y envía `selectedPaymentOption: BOOKING_PAYMENT_OPTION.OFFLINE`. El Writer se invoca sin opciones de bypass (`undefined`), por lo que Wix conserva sus validaciones nativas de disponibilidad y de opción de pago. El mutex `SLOT_LOCK` es coordinación adicional; no sustituye la validación final de Bookings.
 - Ambas comparten el mismo `pairToken` en `CitasF2` y `ControlOperativo`.
 
 **Cálculo temporal**:
