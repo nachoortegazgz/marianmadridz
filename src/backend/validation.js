@@ -132,6 +132,10 @@ export function assertCitasF2(item) {
         throw new Error("SCHEMA_VIOLATION: CitasF2 requires bookingId");
     }
 
+    if (!isValidGuid(item.scheduleId)) {
+        throw new Error("SCHEMA_VIOLATION: CitasF2.scheduleId is required and must be a valid GUID");
+    }
+
     // VAL-R3-05: regex SSOT internalConfig.isValidGuid (sin duplicados).
     if (!isValidGuid(item.bookingId)) {
         throw new Error("SCHEMA_VIOLATION: CitasF2.bookingId must be a valid GUID");
