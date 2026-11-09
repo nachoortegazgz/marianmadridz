@@ -1,0 +1,180 @@
+# Auditoría de preparación VERI*FACTU — 2026-11-09
+
+## 1. Objetivo y alcance
+
+Determinar si el SIF propio de Marian Madrid está preparado para operar en modalidad VERI*FACTU conforme al RD 1007/2023, la Orden HAC/1177/2024 y las especificaciones técnicas vigentes publicadas por la AEAT.
+
+Esta auditoría es estática sobre el código de `main` después de integrar PR #205, #206 y #207. No se han enviado registros a la AEAT, no se han alterado datos CMS, no se han creado facturas ni se han utilizado certificados reales.
+
+## 2. Conclusión ejecutiva
+
+**Estado: NO APTO PARA ACTIVAR VERI*FACTU.**
+
+La modalidad solicitada queda establecida como VERI*FACTU, pero el repositorio no contiene un flujo de remisión SOAP operativo a la AEAT. La presencia de QR, hashes internos y firma externa no acredita por sí sola la modalidad VERI*FACTU.
+
+No se debe activar `verifactuEnabled`, cambiar la URL QR ni emitir la leyenda «VERI*FACTU» hasta superar las fases de implementación y pruebas de conformidad descritas aquí.
+
+## 3. Evidencia verificada en código
+
+### 3.1 Writers fiscales identificados
+
+- `src/backend/cajas.web.js`: `registerManualTransaction` genera secuencia, `previousRecordHash`, `aeatPayload`, hash SHA-256, firma externa y QR; inserta el movimiento en `MovimientosCaja`.
+- `src/backend/eventLog.js`: `registrarEventoEconomico` genera secuencia global, cadena/hash y snapshot fiscal; inserta el movimiento en `MovimientosCaja`.
+- `src/backend/crons.js` y `src/backend/jobs.config`: hay tareas de mantenimiento, cierre Z y reconciliación, pero no un job de remisión AEAT.
+- `src/backend/mmSecrets.js`: hay secretos de firma fiscal externa (`FISCAL_SIGNER_ENDPOINT`, `FISCAL_SIGNER_BEARER`) y clave fiscal; no se identifica configuración de certificado cualificado, almacén PKCS#12 o proveedor de firma TLS para AEAT.
+
+### 3.2 No existe transporte de remisión AEAT
+
+Búsqueda de código en el repositorio para operaciones y estructuras del servicio oficial (`SuministroLRFacturasEmitidas`, `RegistroAlta`, `SuministroLR`) sin resultados. Las únicas referencias de runtime a AEAT localizadas son la construcción del QR y la construcción de payload/hash. La llamada HTTP `fetch()` localizada en `cajas.web.js` corresponde al microservicio de firma externo, no a AEAT.
+
+Por tanto, no hay evidencia de:
+- Cliente SOAP 1.1 / HTTPS para remisión voluntaria VERI*FACTU.
+- Serialización XML conforme al XSD AEAT.
+- Autenticación mediante certificado electrónico cualificado.
+- Lectura y persistencia de la respuesta síncrona, CSV, estado global, estado por registro, códigos de error y `TiempoEsperaEnvio`.
+- Cola de reintentos de remisión y control de flujo AEAT.
+
+### 3.3 Divergencias en el cálculo de huella
+
+La especificación oficial AEAT para un registro de alta define exactamente estos campos, en este orden:
+
+1. `IDEmisorFactura`
+2. `NumSerieFactura`
+3. `FechaExpedicionFactura`
+4. `TipoFactura`
+5. `CuotaTotal`
+6. `ImporteTotal`
+7. `Huella` (huella del registro anterior)
+8. `FechaHoraHusoGenRegistro`
+
+La cadena se concatena como `nombre=valor&...`, codificada en UTF-8, y el resultado SHA-256 se expresa en hexadecimal mayúsculo de 64 caracteres.
+
+Hallazgos:
+- El builder de `cajas.web.js` usa `BaseImponibleOImporteNoSujeto` y `CuotaRepercutida` en el string de huella en lugar de `CuotaTotal`; no coincide con los ocho campos de entrada oficiales.
+- El builder de `eventLog.js` incorpora los ocho campos base, pero añade campos opcionales como NIF/nombre del destinatario, referencia bancaria, retenciones y otros datos al string de huella. La especificación de huella de alta limita la entrada a los ocho campos enumerados; esos extras no deben incorporarse al string.
+- Los dos writers no comparten un builder canónico único, por lo que pueden producir huellas distintas para un mismo documento lógico.
+- El campo `aeatPayload` se transforma a `payloadFiscal.aeatPayload` en `data.js`; debe reconciliarse con el esquema CMS y la matriz canónica antes de modificar persistencia.
+
+**Acción requerida:** diseñar un único builder puro y testeable que produzca el string oficial exacto y un objeto XML separado. No migrar ni recalcular hashes históricos; cualquier corrección solo afectará a nuevos registros tras una decisión de transición y pruebas de regresión.
+
+### 3.4 Firma local y modalidad VERI*FACTU
+
+`registerManualTransaction` exige la firma de un microservicio externo y devuelve `PARTIAL`/recovery si no está disponible.
+
+La AEAT establece que VERI*FACTU no requiere firma electrónica individual de cada registro. La autenticación del envío se realiza mediante certificado cualificado. La firma externa actual no sustituye esa autenticación y no debe confundirse con ella.
+
+**Acción requerida:** decidir si la firma actual se mantiene como control interno adicional o se desacopla del camino crítico VERI*FACTU. No eliminarla ni cambiar el comportamiento sin revisar consumidores, contratos, idempotencia y pruebas.
+
+### 3.5 Configuración fiscal incompleta en CMS
+
+La consulta de solo lectura realizada el 2026-11-09 identificó:
+- Una fila legacy `TERCERO/EMISOR`.
+- Ningún singleton `CONFIG_SISTEMA`.
+- `taxRegime`, `verifactuEnabled`, `verifactuVersion` y `fechaInicioVerifactu` vacíos/null.
+
+No se consultaron ni se incorporaron NIF ni datos personales en esta auditoría. No se ha escrito nada en CMS.
+
+El fallback legacy de emisor no sustituye la configuración de sistema requerida para generar los datos de identificación del SIF en el XML AEAT.
+
+### 3.6 QR
+
+`_generateVerificationQR` en `cajas.web.js` construye la URL de VERI*FACTU `ValidarQR`. Esto no demuestra que el registro se haya remitido ni aceptado por AEAT. El QR debe generarse con los datos y endpoint coherentes con el modo operativo real y con el diseño AEAT vigente.
+
+No modificar el endpoint hasta validar XML, envío, respuesta y configuración de modalidad.
+
+## 4. Requisitos técnicos oficiales relevantes
+
+Fuente AEAT: documento «Sistemas Informáticos de Facturación — Remisión voluntaria», versión 1.0.3 (28-07-2025).
+
+- Transporte: HTTPS, Web Service SOAP 1.1, estilo document/literal, XML UTF-8.
+- Autenticación: certificado electrónico cualificado reconocido.
+- Respuesta: síncrona; debe procesarse tanto el resultado global como el de cada registro.
+- Estados globales: `Correcto`, `ParcialmenteCorrecto`, `Incorrecto`.
+- Estados por registro: `Correcto`, `AceptadoConErrores`, `Incorrecto`.
+- CSV de la presentación y marca temporal de presentación deben conservarse.
+- El sistema debe respetar `TiempoEsperaEnvio` recibido de AEAT como control de flujo.
+- Si no se recibe respuesta o hay fallo transitorio del servidor/transmisión, debe reintentarse el mismo mensaje; errores de cliente requieren corregir el XML/datos antes de reenviar.
+- Límite técnico documentado: hasta 1.000 registros por envío.
+
+La AEAT indica que los registros de alta/anulación deben conservar el encadenamiento y que la anulación no borra el alta anterior.
+
+## 5. Plan de implementación por fases
+
+### Fase A — Contrato fiscal y modelo de datos (bloqueante)
+1. Reconciliar esquema CMS real de `MovimientosCaja` y `DatosFiscales` con los campos AEAT.
+2. Determinar si el SIF propio genera únicamente facturas F1/F2 o también documentos que no son factura. La norma SIF afecta a facturas expedidas, no a cualquier movimiento económico por defecto.
+3. Definir una única identidad de SIF: nombre, NIF productor, identificador, versión, número de instalación, flags de uso, NIF del obligado y versión de esquema.
+4. Formalizar series y secuencia global por SIF; revisar si el Wix Invoices V1 o cualquier otro sistema emite facturas en paralelo para el mismo obligado.
+5. Aprobar la configuración fiscal (régimen, clave de régimen, clasificación de operación, exenciones y tipos impositivos) con gestoría.
+
+### Fase B — Núcleo de conformidad (código + pruebas)
+1. Builder puro del registro de alta y del registro de anulación según XSD vigente.
+2. Builder de huella conforme a los ocho campos oficiales, con pruebas de vectores AEAT.
+3. XML SOAP 1.1 document/literal con namespaces y orden de elementos validados por XSD.
+4. Parser robusto de respuestas SOAP/Fault, CSV, estado global, respuesta por registro, códigos y control de flujo.
+5. Estados por registro persistidos sin sobrescribir el contenido fiscal original: pendiente, enviado, aceptado, aceptado con errores, rechazado, reintento pendiente.
+6. Outbox transaccional e idempotente: el registro fiscal se conserva aunque el envío falle; cada intento guarda trazabilidad y respuesta, sin duplicar el alta.
+7. Reintentos periódicos para fallos de red/servidor; no reintentar ciegamente errores de cliente.
+8. Gestión append-only de anulaciones y rectificaciones según la operativa AEAT.
+
+### Fase C — Certificado y seguridad
+1. Acordar con el titular/gestoría quién será el presentador: obligado, apoderado o colaborador social.
+2. Definir dónde reside el certificado cualificado y cómo se realiza mTLS/autenticación sin exponer claves en Wix ni en frontend.
+3. Revisar si el runtime Wix soporta el mecanismo requerido; si no, usar un servicio backend controlado y aprobado, con contrato, cifrado, rotación y auditoría.
+4. Probar caducidad, revocación, errores de certificado y recuperación.
+5. No almacenar certificados privados ni contraseñas en CMS.
+
+### Fase D — Pruebas y activación
+1. Pruebas unitarias con ejemplos y XSD oficiales.
+2. Pruebas contractuales contra entorno externo de pruebas AEAT.
+3. Pruebas de aceptación/rechazo parcial, duplicado, indisponibilidad, timeout y respuesta perdida.
+4. Verificación de continuidad de cadena bajo concurrencia entre ambos writers.
+5. E2E de facturación de prueba y cotejo QR en entorno AEAT de pruebas.
+6. Validación del titular/gestoría y aprobación de activación.
+7. Solo entonces configurar el singleton fiscal y activar VERI*FACTU para nuevos registros. No reescribir históricos.
+
+## 6. Riesgos P0/P1
+
+| ID | Hallazgo | Riesgo | Prioridad |
+|---|---|---|---|
+| VF-01 | No existe envío SOAP AEAT | No se acredita modalidad VERI*FACTU | P0 |
+| VF-02 | Huella divergente entre writers y especificación | Rechazo AEAT / cadena no conforme | P0 |
+| VF-03 | No hay certificado cualificado ni autenticación de remisión configurada | Imposibilidad de remitir | P0 |
+| VF-04 | Singleton CONFIG_SISTEMA ausente | XML SIF incompleto/no fiable | P0 |
+| VF-05 | Firma externa es requisito del writer aunque VERI*FACTU no la exige | Bloqueo operativo por dependencia no normativa | P1 |
+| VF-06 | Sin estados/CSV/respuesta AEAT persistidos | Falta de prueba de presentación y recuperación | P0 |
+| VF-07 | Alcance factura vs movimiento económico no formalizado | Envíos indebidos o facturas omitidas | P0 |
+| VF-08 | Identidad/series de Wix Invoices V1 vs ledger propio sin reconciliación probada | Doble SIF o series/cadenas incoherentes | P0 |
+
+## 7. Criterios de aceptación
+
+No declarar VERI*FACTU operativo hasta que:
+- Cada factura expedida por este SIF produzca un registro de alta válido conforme al XSD.
+- La huella coincida con los vectores oficiales AEAT.
+- El registro se remita con certificado cualificado y se procese la respuesta.
+- Se conserve CSV, timestamp, estado por registro y trazabilidad del intento.
+- Los reintentos no dupliquen registros ni bifurquen la cadena.
+- Las anulaciones/rectificaciones sigan la operativa AEAT y sean append-only.
+- El QR y leyenda de factura correspondan a la modalidad efectiva.
+- Gestoría/titular aprueben configuración fiscal y pruebas.
+
+## 8. Fuentes oficiales
+
+- AEAT — Información técnica SIF/VERI*FACTU: https://sede.agenciatributaria.gob.es/Sede/iva/sistemas-informaticos-facturacion-verifactu/informacion-tecnica.html
+- AEAT — Remisión voluntaria, versión 1.0.3: https://sede.agenciatributaria.gob.es/Sede/iva/sistemas-informaticos-facturacion-verifactu/informacion-tecnica/especificaciones-servicios-remision-voluntaria-registros-validaciones.html
+- PDF técnico AEAT — Sistemas Informáticos de Facturación, versión 1.0.3: https://sede.agenciatributaria.gob.es/static_files/AEAT_Desarrolladores/EEDD/IVA/VERI-FACTU/Veri-Factu_Descripcion_SWeb.pdf
+- AEAT — Especificación de huella/hash: https://sede.agenciatributaria.gob.es/Sede/iva/sistemas-informaticos-facturacion-verifactu/informacion-tecnica/algoritmo-calculo-codificacion-huella-hash.html
+- PDF AEAT — Especificaciones de huella: https://www.agenciatributaria.es/static_files/AEAT_Desarrolladores/EEDD/IVA/VERI-FACTU/Veri-Factu_especificaciones_huella_hash_registros.pdf
+- AEAT — FAQ Sistemas VERI*FACTU: https://sede.agenciatributaria.gob.es/Sede/iva/sistemas-informaticos-facturacion-verifactu/preguntas-frecuentes/sistemas-verifactu.html
+
+## 9. Estado de validación y limitaciones
+
+- **Verificado:** búsqueda estática del repositorio y lectura de los writers, configuración, secretos y jobs.
+- **Verificado:** PR #205 integrada en `main`; las auditorías documentales #206 y #207 también integradas.
+- **Pendiente:** CI de esta auditoría documental.
+- **Pendiente:** validación XSD y entorno de pruebas AEAT.
+- **Pendiente:** acceso/configuración de certificado cualificado y definición de presentador.
+- **Pendiente:** revalidación live de CMS y aprobación de configuración fiscal.
+- **No realizado:** escrituras CMS, remisiones AEAT, emisión de facturas reales, cobros, cambios de endpoint QR o despliegue.
+
+Esta auditoría no constituye certificación legal del software ni sustituye la validación de la gestoría o del responsable del SIF.
