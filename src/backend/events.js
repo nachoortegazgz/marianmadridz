@@ -69,6 +69,7 @@ import {
     _safeTrim,
     _looksLikeGuid,
     getMadridLocalStringNoZ,
+    _toDateSafe,
     withTimeout,
 } from "public/mmUtils";
 
@@ -1276,8 +1277,8 @@ export async function wixBookingsV2_onBookingRescheduled(rawBody) {
         const slot = booking?.bookedEntity?.slot || {};
         const startRaw = booking?.startDate || slot.startDate;
         const endRaw = booking?.endDate || slot.endDate;
-        const startDate = startRaw ? new Date(startRaw) : null;
-        const endDate = endRaw ? new Date(endRaw) : null;
+        const startDate = _toDateSafe(startRaw);
+        const endDate = _toDateSafe(endRaw);
         if (
             !eventId ||
             !_looksLikeGuid(bookingId) ||
