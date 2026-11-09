@@ -44,4 +44,4 @@ El dossier anterior declaraba Catalog V1 activo y prohibía V3. La lectura read-
 
 ## Validación y despliegue
 
-PR #216 contiene la implementación. CI offline verde en commit f8d26d0: 47 suites, 442 tests, 0 fallos; lint y contratos Cart V2/Bookings Reader V2 correctos. No se fusiona ni despliega hasta ejecutar pruebas de integración/E2E en Wix Local Editor con producto/variante QA dedicados y verificar la importación real de los namespaces SDK V3. No se modifica stock real del catálogo como parte de la migración.
+PR #216 contiene la implementación. CI offline run 168 verde en commit 77d63d2: 47 suites, 442 tests, 0 fallos; lint y contratos Cart V2/Bookings Reader V2 correctos. No se fusiona ni despliega hasta ejecutar pruebas de integración/E2E en Wix Local Editor con producto/variante QA dedicados y verificar la importación real de los namespaces SDK V3. No se modifica stock real del catálogo como parte de la migración.
