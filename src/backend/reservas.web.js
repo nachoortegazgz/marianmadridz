@@ -76,6 +76,9 @@ import {
     CITAS_BOOKING_STATUS,
     SDK_CONFIG,
     SLOT_SEARCH,
+    DTO_CONFIG,
+    DAYS_CACHE_CONFIG,
+    DISPLAY_TOKEN_CONFIG,
     API,
     STAFF_DEFAULT_NAME,
 } from "backend/internalConfig";
@@ -124,12 +127,6 @@ const CONSISTENT_READ = Object.freeze({ consistentRead: true });
 
 const WATCHDOG_TIMEOUT_MS = Number(SDK_CONFIG?.TIMEOUTS?.WATCHDOG_MS) || 15000;
 const SERVICE_CACHE_TTL_MS = Number(SDK_CONFIG?.CACHE?.SERVICES_TTL_MS) || 120000;
-const DAYS_CACHE_TTL_MS = 300000;
-const DISPLAY_TOKEN_TTL_MS = 30 * 60 * 1000;
-const DISPLAY_TOKEN_MAX_ATTEMPTS = 5;
-
-/* Internal availability stays at 5-minute granularity; customer display is spaced. */
-const CUSTOMER_SLOT_START_INTERVAL_MINUTES = 30;
 
 const DIAS_LIMITE = Number(SLOT_SEARCH?.DIAS_LIMITE) || 14;
 const CACHE_MAX_SIZE = Number(SDK_CONFIG?.CACHE?.MAX_ENTRIES) || 500;
@@ -1985,7 +1982,7 @@ async function _readDaysCacheWindow(daysCacheKey) {
 }
 
 async function _writeDaysCacheWindow(daysCacheKey, payload, traceId) {
-    const expiresAt = new Date(Date.now() + DAYS_CACHE_TTL_MS);
+    const expiresAt = new Date(Date.now() + DAYS_CACHE_CONFIG.TTL_MS);
     const cacheId = `DAYS_${_hashKey(String(daysCacheKey))}`.slice(0, 64);
     const record = {
         _id: cacheId,
@@ -2113,7 +2110,7 @@ function _toCustomerVisibleSlots(result, traceId = null) {
         })
         .filter(Boolean)
         .sort((a, b) => a.startMs - b.startMs || a.index - b.index);
-    const minimumSeparationMs = CUSTOMER_SLOT_START_INTERVAL_MINUTES * 60000;
+    const minimumSeparationMs = DTO_CONFIG.MINUTOS_INTERVALO_INICIO * 60000;
     const visible = [];
     let lastVisibleStartMs = null;
     for (const item of sorted) {
@@ -2123,7 +2120,7 @@ function _toCustomerVisibleSlots(result, traceId = null) {
     }
     log.info("[availability] customer slot spacing applied", {
         traceId, internalSlots: result.data.length, visibleSlots: visible.length,
-        minimumStartSeparationMinutes: CUSTOMER_SLOT_START_INTERVAL_MINUTES,
+        minimumStartSeparationMinutes: DTO_CONFIG.MINUTOS_INTERVALO_INICIO,
     });
     return { ...result, data: visible };
 }
@@ -2187,7 +2184,7 @@ export const resolveStaffForSlot = webMethod(
 async function _generateDisplayToken(bookingId, traceId, serviceId) {
     const token = _generateUUID();
     const tokenHash = _hashKey(token);
-    const expiresAt = new Date(Date.now() + DISPLAY_TOKEN_TTL_MS);
+    const expiresAt = new Date(Date.now() + DISPLAY_TOKEN_CONFIG.TTL_MS);
     try {
         await dalInsert(CONTROL_COL, {
             _id: `DT_${tokenHash}`,
@@ -2197,7 +2194,7 @@ async function _generateDisplayToken(bookingId, traceId, serviceId) {
             serviceId: _looksLikeGuid(serviceId) ? _safeTrim(serviceId) : undefined,
             expiresAt,
             attempts: 0,
-            maxAttempts: DISPLAY_TOKEN_MAX_ATTEMPTS,
+            maxAttempts: DISPLAY_TOKEN_CONFIG.MAX_ATTEMPTS,
             traceId,
         });
         return token;
@@ -2335,7 +2332,7 @@ export const generateDisplayToken = webMethod(
         try {
             let priorCredentialRecord = null;
             let priorCredentialExpiresAtMs = 0;
-            let priorCredentialMaxAttempts = DISPLAY_TOKEN_MAX_ATTEMPTS;
+            let priorCredentialMaxAttempts = DISPLAY_TOKEN_CONFIG.MAX_ATTEMPTS;
 
             // An anonymous confirmation credential is already a one-time
             // DISPLAY_TOKEN. Reuse it as the display token instead of minting
@@ -2354,7 +2351,7 @@ export const generateDisplayToken = webMethod(
                 const configuredMaxAttempts = Number(priorCredentialRecord?.maxAttempts);
                 priorCredentialMaxAttempts = Number.isInteger(configuredMaxAttempts) && configuredMaxAttempts > 0
                     ? configuredMaxAttempts
-                    : DISPLAY_TOKEN_MAX_ATTEMPTS;
+                    : DISPLAY_TOKEN_CONFIG.MAX_ATTEMPTS;
                 const credentialMatches = priorCredentialRecord?.controlType === CT_DISPLAY_TOKEN &&
                     _safeTrim(priorCredentialRecord?.bookingId) === id &&
                     Number.isFinite(priorCredentialExpiresAtMs) &&
@@ -2394,10 +2391,10 @@ export const generateDisplayToken = webMethod(
                 ok: true,
                 token,
                 expiresIn: visitor.isAuthenticated
-                    ? DISPLAY_TOKEN_TTL_MS
+                    ? DISPLAY_TOKEN_CONFIG.TTL_MS
                     : Math.max(0, priorCredentialExpiresAtMs - Date.now()),
                 maxAttempts: visitor.isAuthenticated
-                    ? DISPLAY_TOKEN_MAX_ATTEMPTS
+                    ? DISPLAY_TOKEN_CONFIG.MAX_ATTEMPTS
                     : priorCredentialMaxAttempts,
                 error: null,
             };
