@@ -48,6 +48,7 @@ import { updateCajaActualFromMovement } from "backend/cajas.web";
 
 import {
     query as dalQuery,
+    getItem as dalGet,
     insertItem as dalInsert,
 } from "backend/dataAccess";
 
