@@ -119,8 +119,8 @@ export const SDK_CONFIG = Object.freeze({
 
   JOBS: Object.freeze({
     AUDIT_RETENTION_DAYS: 90,
-    // DUAL_CACHE solo purga filas legacy; no se generan nuevas filas.
-    // REVIEW-BY: 2027-01-31 (D-2). Retirar al confirmar ControlOperativo sin filas.
+    // DUAL_CACHE purga registros de caché dual expirados; no se generan nuevas filas.
+    // Mantener hasta verificar que ControlOperativo no contiene registros DUAL_CACHE.
     DUAL_CACHE_CLEANUP_LIMIT: 500,
     DAYS_CACHE_CLEANUP_LIMIT: 500,
     FISCAL_RECOVERY_BATCH_SIZE: 25,
@@ -325,11 +325,10 @@ export const BOOKING_TYPE = Object.freeze({
   DUAL_F2: "DUAL_F2",
 });
 
-// REVIEW-BY: 2027-01-31. Re-evaluar DUALF1/DUALF2 cuando la lectura
-// de CitasF2 confirme que no quedan filas historicas sin guion.
+// Normaliza los valores historicos DUALF1/DUALF2 al formato canonico persistido.
 export function normalizeBookingType(value) {
   const s = String(value == null ? "" : value).trim().toUpperCase();
-  // ID legacy erradicada: DUALF1/DUALF2 -> canon con guion.
+  // Los valores historicos DUALF1/DUALF2 se convierten al formato canonico con guion.
   if (s === "DUALF1") return BOOKING_TYPE.DUAL_F1;
   if (s === "DUALF2") return BOOKING_TYPE.DUAL_F2;
   if (s === "DUAL-F1") return BOOKING_TYPE.DUAL_F1;
@@ -557,7 +556,7 @@ export const BOOKING_FIELDS = Object.freeze({
 // usuario 2026-10-20): el contrato vivo de claves del ledger son las literales
 // canonicas AEAT/SSOT escritas directamente por los escritores
 // (numSerieFactura, fechaExpedicionFactura, totalAmount, recordHash, ...) y el
-// mapa unico MOVEMENT_LEGACY_READ_ALIASES de abajo. El antiguo espejo
+// mapa unico MOVEMENT_HISTORICAL_READ_ALIASES de abajo. El antiguo espejo
 // MOVEMENT_FIELDS quedo ERRADICADO por codigo muerto (0 consumidores verificados
 // por grep; duplicaba literales ya presentes en los writers).
 
@@ -571,7 +570,7 @@ export const BOOKING_FIELDS = Object.freeze({
 // =============================================================================
 // REVIEW-BY: 2027-01-31. Re-evaluar fallback de lectura tras medir
 // consumo de aliases historicos en MovimientosCaja; no usar en escrituras.
-export const MOVEMENT_LEGACY_READ_ALIASES = Object.freeze({
+export const MOVEMENT_HISTORICAL_READ_ALIASES = Object.freeze({
   // MATRIZ v15 Bloque 1 apartado 5 (MovimientosCaja) + decision de usuario:
   // amount y totalAmount COEXISTEN como claves canonicas propias hasta cerrar
   // el ADR de la formula fiscal (amount = importe base; totalAmount = total
@@ -628,7 +627,7 @@ export const MOVEMENT_LEGACY_READ_ALIASES = Object.freeze({
 // dominio (invoiceNumber, taxRate, ...); el hook las PROMUEVE a su canon SSOT
 // antes de persistir: ningun alias sobrevive al ledger.
 export const MOVEMENT_ALIAS_TO_CANON = Object.freeze(
-  Object.entries(MOVEMENT_LEGACY_READ_ALIASES).reduce((acc, [canon, aliases]) => {
+  Object.entries(MOVEMENT_HISTORICAL_READ_ALIASES).reduce((acc, [canon, aliases]) => {
     for (const a of aliases) acc[a] = canon;
     return acc;
   }, {})
