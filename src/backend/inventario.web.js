@@ -1550,7 +1550,6 @@ export const getInventoryCatalogCandidates = webMethod(Permissions.SiteMember, a
                 totalCount: Number.isFinite(response?.totalCount) ? response.totalCount : null,
                 hasNext: Boolean(response?.hasNext),
                 nextOffset: offset + variants.length,
-                nextCursor: response?.nextCursor || null,
                 catalogVersion,
                 observedAt: new Date(),
             },
