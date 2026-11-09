@@ -1379,11 +1379,27 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
                 .limit(1)
                 .find(STRONG_READ);
             previousMovement = predecessorResult?.items?.[0] || null;
+            if (!previousMovement?.hash) {
+                return {
+                    status: "ERROR",
+                    data: null,
+                    error: { code: "GLOBAL_PREDECESSOR_HASH_MISSING", message: "No se puede verificar la continuidad global de la cadena fiscal." },
+                };
+            }
         }
         let expectedPreviousHash = previousMovement?.hash || GENESIS_HASH;
         let integrityVerified = true;
         for (const mov of allMovements) {
-            if (mov.previousRecordHash && mov.previousRecordHash !== expectedPreviousHash) {
+            if (!mov.hash || !mov.previousRecordHash) {
+                integrityVerified = false;
+                log.error("Fiscal hash fields missing", {
+                    traceId, movementId: mov._id,
+                    hasHash: Boolean(mov.hash),
+                    hasPreviousRecordHash: Boolean(mov.previousRecordHash),
+                });
+                break;
+            }
+            if (mov.previousRecordHash !== expectedPreviousHash) {
                 integrityVerified = false;
                 log.error("Hash chain integrity violation detected", {
                     traceId, movementId: mov._id,
@@ -1391,7 +1407,7 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
                 });
                 break;
             }
-            expectedPreviousHash = mov.hash || expectedPreviousHash;
+            expectedPreviousHash = mov.hash;
         }
 
         if (!integrityVerified) {
@@ -1565,7 +1581,18 @@ export async function verifyFiscalHashChainIntegrity(options = {}) {
         while (true) {
             for (const mov of movements.items || []) {
                 checked += 1;
-                if (mov.previousRecordHash && mov.previousRecordHash !== expectedPreviousHash) {
+                if (!mov.hash || !mov.previousRecordHash) {
+                    breaks.push({
+                        movementId: mov._id,
+                        numSerieFactura: readInvoiceNumber(mov),
+                        reason: "HASH_FIELDS_MISSING",
+                        hasHash: Boolean(mov.hash),
+                        hasPreviousRecordHash: Boolean(mov.previousRecordHash),
+                    });
+                    expectedPreviousHash = mov.hash || expectedPreviousHash;
+                    continue;
+                }
+                if (mov.previousRecordHash !== expectedPreviousHash) {
                     breaks.push({
                         movementId: mov._id,
                         numSerieFactura: readInvoiceNumber(mov),
@@ -1573,7 +1600,7 @@ export async function verifyFiscalHashChainIntegrity(options = {}) {
                         actual: mov.previousRecordHash,
                     });
                 }
-                expectedPreviousHash = mov.hash || expectedPreviousHash;
+                expectedPreviousHash = mov.hash;
             }
             if (!movements.hasNext()) break;
             if (page >= MAX_LEDGER_BATCH_PAGES) {
