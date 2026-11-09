@@ -803,7 +803,7 @@ test('FLOW-CAJA-04 transactionId concurrente no crea movimientos duplicados', as
       result.status === 'SUCCESS' || result.error?.code === 'IDEMPOTENCY_IN_PROGRESS'
     ), 'la petición concurrente debe recuperar el movimiento o fallar cerrada');
     const claims = (wixDataMock._store.get('ControlOperativo') || [])
-      .filter((row) => row.controlType === 'IDEMPOTENCY' && row.transactionId === transactionId);
+      .filter((row) => row.controlType === 'LEDGER_IDEMPOTENCY' && row.transactionId === transactionId);
     assert.strictEqual(claims.length, 1, 'solo puede existir una reserva atomica');
   } finally {
     setMember(null);
