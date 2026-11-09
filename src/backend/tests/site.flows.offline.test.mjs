@@ -330,6 +330,10 @@ test('FLOW-CAJA-01 flujo continuo: venta EFECTIVO -> caja incrementada -> cierre
       JSON.stringify({ hash: mov.hash, prh: mov.previousRecordHash, sig: mov.digitalSignature }));
   assert.strictEqual(mov.recordHash, undefined, 'legacy recordHash must not persist on MovimientosCaja');
   assert.strictEqual(mov.paymentMethod, 'EFECTIVO');
+  const qr = new URL(mov.verificationQR);
+  const [qrYear, qrMonth, qrDay] = String(mov.invoiceIssueDate).slice(0, 10).split('-');
+  assert.equal(qr.searchParams.get('fecha'), `${qrDay}-${qrMonth}-${qrYear}`);
+  assert.equal(qr.searchParams.get('importe'), '50.00');
   assert.ok(mov.operationDescription.includes('(SIMULACION PREVIA A DESPLIEGUE REAL)'), 'concepto claramente identificado como simulación');
 
   // Paso 1b: idempotencia - mismo transactionId devuelve el registro original
