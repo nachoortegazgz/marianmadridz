@@ -44,7 +44,7 @@ test("BOOK-MEMBER-04 frontend opens native Wix Members login before booking and 
   assert.match(pageSource, /import wixMembersFrontend from ["']wix-members-frontend["']/);
   assert.match(pageSource, /async function ensureBookingMemberSession\(\)/);
   assert.match(pageSource, /wixMembersFrontend\.currentMember\s*\.\s*getMember\(\)/);
-  assert.match(pageSource, /wixMembersFrontend\.authentication\s*\.\s*promptLogin\(\)/);
+  assert.match(pageSource, /wixMembersFrontend\.authentication\s*\.\s*promptLogin\(\{\s*mode:\s*["\']login["\'],\s*modal:\s*true\s*\}\)/);
   const authGate = pageSource.indexOf("const memberSessionReady = await ensureBookingMemberSession()");
   const bookingCall = pageSource.indexOf("processDualBooking(requestPayload)");
   assert.ok(authGate >= 0 && bookingCall > authGate, "native login must complete before processDualBooking");
