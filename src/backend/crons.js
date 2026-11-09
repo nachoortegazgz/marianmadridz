@@ -1447,6 +1447,8 @@ export async function reconcileUnmarkedOrderCreatedEvents() {
     };
 
     const ordersById = new Map();
+    // Search Orders omits PENDING/REJECTED by default; INITIALIZED is never
+    // returned by Search Orders and must be handled by its originating event.
     const filters = [null, { status: "PENDING" }, { status: "REJECTED" }];
 
     try {
