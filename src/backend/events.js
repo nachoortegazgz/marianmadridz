@@ -1198,7 +1198,7 @@ async function _upsertDualCancellationFlag(pairToken, traceId, triggerBookingId,
     const bookingIds = _normalizeBookingIds(rows.map((row) => row?.bookingId));
     const allCanceled = rows.length === 2 && rows.every((row) => {
         const status = String(row?.bookingStatus || "").toUpperCase();
-        return status === "CANCELLED" || status === "CANCELED";
+        return status === "CANCELED";
     });
     const flagId = `DUAL_CANCEL_${token.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 64)}`;
     const fiscalPending = ["REPAIR_REQUIRED", "WAITING_FOR_SIBLING_CANCELLATION", "RECOVERY_QUEUED"].includes(fiscalStatus);
@@ -1508,12 +1508,12 @@ export async function wixBookingsV2_onBookingCanceled(rawBody) {
                 .find(STRONG_READ);
             const pairRows = pairRes?.items || [];
             const effectiveRows = pairRows.map((row) => row.bookingId === bookingId
-                ? { ...row, bookingStatus: "CANCELLED" }
+                ? { ...row, bookingStatus: "CANCELED" }
                 : row);
             dualPairBookingIds = _normalizeBookingIds(effectiveRows.map((row) => row.bookingId));
             dualPairFullyCancelled = effectiveRows.length === 2 && effectiveRows.every((row) => {
                 const status = String(row?.bookingStatus || "").toUpperCase();
-                return status === "CANCELLED" || status === "CANCELED";
+                return status === "CANCELED";
             });
             if (dualPairFullyCancelled) dualFiscalStatus = "NOT_REQUIRED";
         }
