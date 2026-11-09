@@ -497,7 +497,7 @@ test('FLOW-CAJA-08 fiscal recovery queue deduplicates repeated compensation requ
 
   const bookingOnlyRequest = {
     kind: 'FISCAL_LEDGER',
-    bookingIds: ['booking-recovery-002', 'booking-recovery-001'],
+    bookingIds: 'booking-recovery-002,booking-recovery-001',
     totalAmount: 15,
     paymentMethod: 'WIX_PAYMENTS',
     movementType: 'REEMBOLSO',
