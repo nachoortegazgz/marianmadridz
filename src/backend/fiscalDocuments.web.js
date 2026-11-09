@@ -732,194 +732,68 @@ export const sendManagerPackageToAccountant = webMethod(
     const traceId = makeTraceId("doc-send-pkg");
     try {
       await requireMarianManager(traceId);
+      if (!ACCOUNTANT_SEND_ENABLED) return _accountantSendDisabledResult(traceId);
 
-      if (!ACCOUNTANT_SEND_ENABLED) {
-        return _accountantSendDisabledResult(traceId);
-      }
-
-      const periodType = _safeTrim(params.periodType).toUpperCase();
-      const year = Number(params.year);
-      const month = params.month != null ? Number(params.month) : null;
-      const quarter = params.quarter != null ? Number(params.quarter) : null;
+      const documentId = _safeTrim(params.documentId);
       const recipientId = _safeTrim(params.recipientId);
       const notes = _safeTrim(params.notes) || null;
+      if (!documentId) return { status: "ERROR", data: null, error: { code: "PACKAGE_SNAPSHOT_REQUIRED", message: "Create and select a persisted package snapshot before dispatch." } };
+      if (!recipientId) return { status: "ERROR", data: null, error: { code: "RECIPIENT_REQUIRED", message: "recipientId required." } };
 
-      if (periodType !== "MONTHLY" && periodType !== "QUARTERLY") {
-        return {
-          status: "ERROR",
-          data: null,
-          error: {
-            code: "INVALID_PERIOD_TYPE",
-            message: "periodType must be MONTHLY or QUARTERLY",
-          },
-        };
-      }
-      if (!year || !Number.isFinite(year)) {
-        return {
-          status: "ERROR",
-          data: null,
-          error: { code: "INVALID_YEAR", message: "year required" },
-        };
-      }
-      if (
-        periodType === "QUARTERLY" &&
-        (!quarter || quarter < 1 || quarter > 4)
-      ) {
-        return {
-          status: "ERROR",
-          data: null,
-          error: {
-            code: "INVALID_QUARTER",
-            message: "quarter 1-4 required",
-          },
-        };
-      }
-      if (periodType === "MONTHLY" && (!month || month < 1 || month > 12)) {
-        return {
-          status: "ERROR",
-          data: null,
-          error: { code: "INVALID_MONTH", message: "month 1-12 required" },
-        };
-      }
-      if (!recipientId) {
-        return {
-          status: "ERROR",
-          data: null,
-          error: {
-            code: "RECIPIENT_REQUIRED",
-            message: "recipientId required",
-          },
-        };
-      }
-
-      const recipient = await _resolveRecipientById(recipientId);
-      if (!recipient || !recipient.email) {
-        return {
-          status: "ERROR",
-          data: null,
-          error: {
-            code: "RECIPIENT_NOT_FOUND",
-            message:
-              "El destinatario no existe o no tiene email configurado en DatosFiscales",
-          },
-        };
-      }
-
-      const effectiveQuarter =
-        periodType === "MONTHLY"
-          ? Math.floor((month - 1) / 3) + 1
-          : quarter;
-
-      const [summaryRes, bookRes] = await Promise.all([
-        getQuarterlyTaxSummary(year, effectiveQuarter, { traceId }),
-        getLibroRegistroFacturasExpedidasInternal(year, effectiveQuarter, {
-          traceId,
-          rateLimitKey: "manager",
-        }),
+      const [doc, recipient] = await Promise.all([
+        withTimeout(dalGet(DOCS_COL, documentId, "strong"), CMS_TIMEOUT_MS, "getPackageSnapshot"),
+        _resolveRecipientById(recipientId),
       ]);
+      if (!doc || doc.closingType !== "PAQUETE_GESTORIA" || !Array.isArray(doc.invoiceData) || !doc.summaryData) {
+        return { status: "ERROR", data: null, error: { code: "PACKAGE_SNAPSHOT_NOT_FOUND", message: "A complete persisted package snapshot is required." } };
+      }
+      if (!recipient?.email) return { status: "ERROR", data: null, error: { code: "RECIPIENT_NOT_FOUND", message: "The accountant recipient is not configured in DatosFiscales." } };
 
-      const quarterInvoices = bookRes?.data?.filas || [];
-      let emailInvoices = quarterInvoices;
-      let summaryForEmail = summaryRes?.data || null;
-
-      if (periodType === "MONTHLY") {
-        emailInvoices = _filterInvoicesByMonth(quarterInvoices, month);
-        summaryForEmail = _summarizeMonthly(
-          emailInvoices,
-          year,
-          month,
-          effectiveQuarter
-        );
+      const periodType = _safeTrim(doc.periodType || "QUARTERLY").toUpperCase();
+      const year = Number(doc.fiscalYear);
+      const idQuarter = /_T([1-4])_/.exec(String(doc.inventoryClosingId || documentId));
+      const idMonth = /_M(0[1-9]|1[0-2])_/.exec(String(doc.inventoryClosingId || documentId));
+      const month = doc.fiscalMonth == null ? (idMonth ? Number(idMonth[1]) : null) : Number(doc.fiscalMonth);
+      const quarter = doc.fiscalQuarter == null ? (idQuarter ? Number(idQuarter[1]) : null) : Number(doc.fiscalQuarter);
+      const periodLabel = periodType === "MONTHLY" ? `${String(month).padStart(2, "0")}/${year}` : `T${quarter}/${year}`;
+      if (!Number.isInteger(year) || (periodType === "MONTHLY" && (!Number.isInteger(month) || month < 1 || month > 12)) ||
+          (periodType === "QUARTERLY" && (!Number.isInteger(quarter) || quarter < 1 || quarter > 4))) {
+        return { status: "ERROR", data: null, error: { code: "PACKAGE_PERIOD_INVALID", message: "The stored package period is invalid." } };
       }
 
-      const csvContent = _buildCsvFromInvoices(emailInvoices);
-      const documentId = _formatDocumentId(year, effectiveQuarter, 1);
-
-      const subject =
-        periodType === "MONTHLY"
-          ? `Marian Madrid - Paquete ${String(month).padStart(2, "0")}/${year}`
-          : `Marian Madrid - Paquete T${effectiveQuarter}/${year}`;
-
-      const lines = [];
-      lines.push("Paquete fiscal de gestoria - Marian Madrid");
-      lines.push("");
-      lines.push(`Ejercicio: ${year}`);
-      if (periodType === "MONTHLY") {
-        lines.push(`Mes: ${String(month).padStart(2, "0")}`);
-        lines.push(`Trimestre contenedor: T${effectiveQuarter}`);
-      } else {
-        lines.push(`Trimestre: T${effectiveQuarter}`);
-      }
-      lines.push(`Documento referencia: ${documentId}`);
-      lines.push(`Facturas incluidas: ${emailInvoices.length}`);
-      if (notes) {
-        lines.push("");
-        lines.push("Notas:");
-        lines.push(notes);
-      }
-      lines.push("");
-      lines.push("Resumen:");
-      lines.push(_buildSummaryText(summaryForEmail));
-      lines.push("");
-      lines.push("--");
-      lines.push(
-        "Enviado desde el panel de administracion de Marian Madrid."
-      );
-
-      const attachments = csvContent
-        ? [
-            {
-              filename:
-                periodType === "MONTHLY"
-                  ? `paquete_${year}_${String(month).padStart(2, "0")}.csv`
-                  : `paquete_${year}_T${effectiveQuarter}.csv`,
-              content: _toBase64(csvContent),
-            },
-          ]
-        : [];
-
+      const csvContent = _buildCsvFromInvoices(doc.invoiceData);
+      const lines = [
+        "Paquete fiscal de gestoria - Marian Madrid",
+        "",
+        `Ejercicio: ${year}`,
+        `Periodo: ${periodLabel}`,
+        `Documento referencia: ${documentId}`,
+        `Version: ${doc.packageVersion}`,
+        `Facturas incluidas: ${doc.invoiceData.length}`,
+        ...(notes ? ["", "Notas:", notes] : []),
+        "",
+        "Resumen:",
+        _buildSummaryText(doc.summaryData),
+        "",
+        "--",
+        "Enviado desde el panel de administracion de Marian Madrid.",
+      ];
+      const attachments = csvContent ? [{ filename: `${documentId}.csv`, content: _toBase64(csvContent) }] : [];
       const dispatch = await _dispatchEmailViaResend({
         to: recipient.email,
-        subject,
-        text: lines.join("\n"),
+        subject: `Marian Madrid - Paquete ${periodLabel}`,
+        text: lines.join("\\n"),
         attachments,
         traceId,
       });
-
       return {
         status: "SUCCESS",
-        data: {
-          sent: true,
-          periodType,
-          year,
-          quarter: effectiveQuarter,
-          month: periodType === "MONTHLY" ? month : null,
-          recipientId,
-          recipientEmail: recipient.email,
-          documentId,
-          invoiceCount: emailInvoices.length,
-          provider: dispatch.provider,
-          messageId: dispatch.messageId,
-          traceId,
-        },
+        data: { sent: true, documentId, periodType, year, month, quarter, recipientId, recipientEmail: recipient.email, invoiceCount: doc.invoiceData.length, provider: dispatch.provider, messageId: dispatch.messageId, traceId },
         error: null,
       };
     } catch (err) {
-      if (err?.code === "RESEND_NOT_CONFIGURED") {
-        return {
-          status: "ERROR",
-          data: null,
-          error: {
-            code: "RESEND_NOT_CONFIGURED",
-            message: err.message,
-          },
-        };
-      }
-      return {
-        status: "ERROR",
-        data: null,
-        error: _toPublicError(err, "SEND_PACKAGE_FAIL"),
-      };
+      if (err?.code === "RESEND_NOT_CONFIGURED") return { status: "ERROR", data: null, error: { code: "RESEND_NOT_CONFIGURED", message: err.message } };
+      return { status: "ERROR", data: null, error: _toPublicError(err, "SEND_PACKAGE_FAIL") };
     }
   }
 );
