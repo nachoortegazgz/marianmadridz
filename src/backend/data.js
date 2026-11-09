@@ -31,7 +31,7 @@ export function _readCanonical(item, canonicalKey, historicalKeys = []) {
     const isPresent = (v) => v !== undefined && v !== null && v !== "";
     const direct = item[canonicalKey];
     if (isPresent(direct)) return direct;
-    for (const legacy of legacyKeys) {
+    for (const historical of historicalKeys) {
         const v = item[historicalKey];
         if (isPresent(v)) {
             log.warn("historical-field-read", {
@@ -672,7 +672,7 @@ export function ServiciosCatalogo_beforeUpdate(item) {
 }
 
 function _validateServiciosCatalogoSchema(item = {}) {
-    // Normalize legacy caller aliases into the physical CMS keys and remove
+    // Normalize historical caller aliases into the physical CMS keys and remove
     // the aliases before the document reaches Wix Data.
     if (!item.itemNature && item.naturalezaItem) item.itemNature = item.naturalezaItem;
     if (!item.codigoImpuesto && item.taxCode) item.codigoImpuesto = item.taxCode;
@@ -845,27 +845,27 @@ const APPEND_ONLY_CONTROL_TYPES = new Set(["WEBHOOK_EVENT"]);
 export function normalizeControlKeys(item) {
     if (!item || typeof item !== "object") return item;
     if ("payloadJson" in item) {
-        const legacyVal = item.payloadJson;
+        const historicalVal = item.payloadJson;
         delete item.payloadJson;
-        if (legacyVal !== undefined && legacyVal !== null && legacyVal !== "") {
+        if (historicalVal !== undefined && historicalVal !== null && historicalVal !== "") {
             let parsed = null;
-            if (typeof legacyVal === "string") {
-                try { parsed = JSON.parse(legacyVal); } catch (_e) { parsed = null; }
-            } else if (typeof legacyVal === "object") {
-                parsed = legacyVal;
+            if (typeof historicalVal === "string") {
+                try { parsed = JSON.parse(historicalVal); } catch (_e) { parsed = null; }
+            } else if (typeof historicalVal === "object") {
+                parsed = historicalVal;
             }
             if (item.payload === undefined || item.payload === null) {
-                item.payload = parsed !== null ? parsed : { raw: String(legacyVal) };
+                item.payload = parsed !== null ? parsed : { raw: String(historicalVal) };
             }
         }
     }
     // Consolidate duplicate physical columns on the selected canonical keys.
-    for (const [legacy, canonical] of [["attempt", "attempts"], ["leaseExpiresAt", "expiresAt"]]) {
-        if (legacy in item) {
+    for (const [historical, canonical] of [["attempt", "attempts"], ["leaseExpiresAt", "expiresAt"]]) {
+        if (historical in item) {
             if (item[canonical] === undefined || item[canonical] === null) {
-                item[canonical] = item[legacy];
+                item[canonical] = item[historical];
             }
-            delete item[legacy];
+            delete item[historical];
         }
     }
     // createdAt/updatedAt duplicaban los nativos Wix; se erradican del doc.
@@ -955,7 +955,7 @@ function _blockCitasF2Remove() {
     _fiscalError("Borrado directo de CitasF2 bloqueado: use cancelacion formal de reserva");
 }
 
-// Production/legacy collection ID.
+// Production/historical collection ID.
 export function CitasF2_beforeInsert(item) {
     return _validateCitasF2Write(item);
 }
