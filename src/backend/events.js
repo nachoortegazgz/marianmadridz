@@ -1411,7 +1411,7 @@ export async function wixBookingsV2_onBookingRescheduled(rawBody) {
                 data: {
                     pairToken,
                     bookingId,
-                    bookingIds: pairedBookingIds,
+                    pairedBookingId: pairedBookingIds.find((id) => id !== bookingId) || null,
                     pairRowCount: pairRows.length,
                     eventId,
                     newStart: startDate.toISOString(),
