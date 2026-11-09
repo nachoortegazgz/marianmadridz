@@ -75,7 +75,7 @@ Esta revisión supersede las afirmaciones de las secciones 1 y 4 que indicaban C
 - **Verificado ahora en Inventory Items V3:** 30 inventory items en una ubicación.
 - La lectura de InventarioStockVenta/MovimientosInventario identificó únicamente filas QA sintéticas sin correspondencia válida con los 30 inventory items; no se realizó migración de datos ni escritura.
 - PR #216 introduce un adaptador V3, migra las operaciones del writer y cambia la clave de proyección a V3. ADR-004 y anexo de vigencia del Dossier registran la decisión.
-- CI offline en commit f8d26d0: 47 suites, 442 tests, 0 fallos; ESLint y contratos Cart V2/Bookings Reader V2 correctos.
+- CI offline run 168 en commit 77d63d2: 47 suites, 442 tests, 0 fallos; ESLint y contratos Cart V2/Bookings Reader V2 correctos.
 - **Pendiente:** la suite offline usa mocks de los namespaces V3. No acredita que el import real de @wix/stores resuelva en Wix Local Editor. El manifiesto/lockfile requiere reconciliación con Wix CLI y prueba de importación real.
 - **Pendiente:** no se ha ejecutado E2E en Wix Local Editor ni se ha publicado el código V3. El PR permanece en borrador.
 - El código de pedidos y reembolsos mantiene la regla: Wix eCommerce aplica el efecto nativo y el módulo proyecta el resultado; solo los ajustes manuales explícitos llaman a Bulk Increment/Decrement V3.
