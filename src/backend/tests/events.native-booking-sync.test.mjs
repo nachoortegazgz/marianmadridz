@@ -330,9 +330,6 @@ test("EVENT-BOOKING-08 refuses ambiguous active MapaStaff mappings", async () =>
     bookedEntity: { title: "QA ambiguous mapping", slot: { serviceId: SERVICE_ID } },
   });
 
-  const result = await events.wixBookingsV2_onBookingConfirmed(
-    bookingConfirmedEvent("evt-native-confirm-008", booking)
-  );
   await assert.rejects(
     events.wixBookingsV2_onBookingConfirmed(
       bookingConfirmedEvent("evt-native-confirm-008", booking)
