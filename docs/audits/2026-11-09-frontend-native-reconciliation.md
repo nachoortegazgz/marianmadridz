@@ -155,6 +155,23 @@ El contexto Wix confirma instaladas: Wix Bookings, Wix Stores Catalog V3, Wix Gi
 | Wix Blog | App instalada; página Blog publicada | No se ha auditado publicación/feeds |
 | Wix Hotels | App instalada | No se ha encontrado flujo de negocio que la consuma; confirmar si es necesaria |
 
+### Wix Forms & Payments
+
+Consulta de solo lectura a Wix Forms v4: hay 4 esquemas activos (`enabled=true`):
+
+| Formulario | Campos | Automatización posterior observada | Evaluación |
+|---|---:|---|---|
+| `FORM MOVIMIENTO CAJA MANUAL` | 7 | `postSubmissionTriggers=[]`; mensaje de gracias | No llama a `registerManualTransaction` ni acredita asiento en `MovimientosCaja` |
+| `FORM CONTROL X` | 7 | `upsertContact` con mapping vacío | No acredita cierre X ni escritura en ledger |
+| `FORM REGISTRO HORARIO` | 6 | `upsertContact` con mapping vacío | No acredita escritura en `RegistrosHorariosStaff` |
+| `FORMULARIO DE CONTACTO BÁSICO` | 7 | Upsert CRM de nombre, email y teléfono | Integración CRM coherente con su finalidad |
+
+Las tres primeras formas son compatibles por nombre/campos con flujos internos de caja y jornada, pero su esquema no contiene un trigger backend de negocio. La página ZONA STAFF mantiene los flags deshabilitados y no enruta estos eventos. No se puede confirmar desde la API de formularios en qué páginas están embebidas; hay que inspeccionarlo en Wix Editor.
+
+El endpoint oficial de conteo de envíos devolvió HTTP 200 y `formsSubmissionsCount=[]` para los IDs consultados. Ese resultado no se interpreta como cero envíos sin aclarar la semántica de la respuesta; no se leyeron contenidos de formularios ni datos personales.
+
+**Conclusión:** Wix Forms está instalado y tiene cuatro formularios configurados, pero los formularios de caja/X/fichaje no están conectados de forma demostrable con los WebMethods ni con los ledgers append-only. No deben tratarse como sustituto del backend.
+
 ### Gift Cards
 
 La app nativa tiene un producto configurado (`TARJETA REGALO Marian Madrid Peluquería&Belleza`) y el contador nativo devuelve 0 tarjetas emitidas. No existe `giftCards.web.js`, writer propio, escáner `/admin-scanner` ni implementación HMAC/QR personalizada demostrable en `src/`. No confundir la app instalada con la personalización descrita en RF-16…RF-21.
