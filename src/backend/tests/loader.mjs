@@ -610,7 +610,34 @@ export const cartV2 = new Proxy({}, {
     return _cartV2Methods.get(name);
   },
 });
-export const orders = fnProxy;
+// Wix eCommerce Orders namespace: lazy delegation keeps auth.elevate(orders.getOrder)
+ // bound to the live mock even when the module is imported before the test seeds it.
+const _ordersRootMethods = new Map();
+const _currentOrdersRootMock = (name) => {
+  const namespace = sdkNamespaceState[MODULE_KEY + '::orders'] || sdkNamespaceState['orders'] || null;
+  if (namespace && typeof namespace[name] === 'function') return namespace[name];
+  const directKey = MODULE_KEY + '::orders::' + name;
+  if (typeof sdkNamespaceState[directKey] === 'function') return sdkNamespaceState[directKey];
+  return null;
+};
+export const orders = new Proxy({}, {
+  get: (_target, property) => {
+    if (property === 'then') return undefined;
+    const name = String(property);
+    if (!_ordersRootMethods.has(name)) {
+      _ordersRootMethods.set(name, (...args) => {
+        const method = _currentOrdersRootMock(name);
+        if (typeof method !== 'function') {
+          const error = new Error('Missing @wix/ecom orders mock: ' + name);
+          error.code = 'MISSING_ECOM_ORDERS_MOCK';
+          throw error;
+        }
+        return method(...args);
+      });
+    }
+    return _ordersRootMethods.get(name);
+  },
+});
 export const elevate = fnProxy;
 export const createClient = () => fnProxy;
 export const getSecret = async () => "mock-secret";

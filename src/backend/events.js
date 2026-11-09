@@ -50,6 +50,7 @@ FIXES APLICADOS v5009-FISCAL (heredados):
 */
 
 import { createClient } from "@wix/sdk";
+import { orders } from "@wix/ecom";
 import { extendedBookings } from "@wix/bookings";
 import { auth } from "@wix/essentials";
 import { getSecretValue } from "backend/secretAccess";
@@ -280,6 +281,7 @@ export function resolveOrderFiscalTaxData(order) {
 
 const log = logger;
 const queryExtendedBookingsElevated = auth.elevate(extendedBookings.queryExtendedBookings);
+const getOrderElevated = auth.elevate(orders.getOrder);
 const READER_V2_PAGE_LIMIT = 100;
 const READER_V2_MAX_PAGES = 5;
 
@@ -977,6 +979,11 @@ async function _markCitasPaidByBookingIds(bookingIds, orderId, traceId) {
             failedCount: failures.length,
         });
     }
+    return {
+        totalIds: ids.length,
+        updatedCount: ids.length - failures.length,
+        failedCount: failures.length,
+    };
 }
 
 async function _markCitasPendingLedgerByBookingIds(bookingIds, orderId, traceId) {
@@ -1018,6 +1025,85 @@ async function _markCitasPendingLedgerByBookingIds(bookingIds, orderId, traceId)
             failedCount: failures.length,
         });
     }
+}
+
+/**
+ * Repairs only the CitasF2 payment projection after verifying the paid Wix
+ * order and its single existing ORDER ledger movement. Never creates a second
+ * fiscal movement and never changes bookingStatus.
+ */
+export async function reconcilePaidCitasFromLedgerInternal(recoveryData, traceId = makeTraceId("payment-state-recovery")) {
+    const orderId = _safeTrim(recoveryData?.orderId);
+    const transactionId = _safeTrim(recoveryData?.transactionId);
+    const expectedMovementId = _safeTrim(recoveryData?.cashMovementId);
+    if (!orderId || transactionId !== `ORDER-${orderId}`) {
+        throw new Error("PAYMENT_STATE_RECOVERY_IDENTITY_INVALID");
+    }
+
+    const orderResponse = await withTimeout(
+        getOrderElevated(orderId),
+        API_TIMEOUT_MS,
+        "paymentStateRecovery:getOrder"
+    );
+    const order = orderResponse?.order || orderResponse;
+    if (!order || _safeTrim(order.id || order._id) !== orderId) {
+        throw new Error("PAYMENT_STATE_RECOVERY_ORDER_MISSING");
+    }
+    if (!["PAID", "FULLY_PAID", "PAID_FULL"].includes(String(order.paymentStatus || "").toUpperCase())) {
+        throw new Error("PAYMENT_STATE_RECOVERY_ORDER_NOT_PAID");
+    }
+
+    const orderBookingIds = _normalizeBookingIds(
+        (Array.isArray(order.lineItems) ? order.lineItems : [])
+            .filter((item) => item?.catalogReference?.appId === WIX_CATALOG_APP_IDS.BOOKINGS)
+            .map((item) => item?.catalogReference?.catalogItemId)
+    );
+    if (!orderBookingIds.length) throw new Error("PAYMENT_STATE_RECOVERY_BOOKING_LINES_MISSING");
+
+    const ledgerResult = await dalQuery(MOVIMIENTOS_CAJA_COL)
+        .eq("transactionId", transactionId)
+        .limit(2)
+        .find(STRONG_READ);
+    const movements = Array.isArray(ledgerResult?.items) ? ledgerResult.items : [];
+    if (movements.length !== 1) throw new Error("PAYMENT_STATE_RECOVERY_LEDGER_NOT_UNIQUE");
+
+    const movement = movements[0];
+    const movementId = _safeTrim(movement?._id);
+    if (!movementId || (expectedMovementId && movementId !== expectedMovementId)) {
+        throw new Error("PAYMENT_STATE_RECOVERY_LEDGER_REFERENCE_MISMATCH");
+    }
+    if (_safeTrim(movement?.orderId) !== orderId) {
+        throw new Error("PAYMENT_STATE_RECOVERY_LEDGER_ORDER_MISMATCH");
+    }
+    if (_safeTrim(movement?.paymentMethod).toUpperCase() !== PAYMENT_METHOD.WIX_PAYMENTS) {
+        throw new Error("PAYMENT_STATE_RECOVERY_LEDGER_METHOD_MISMATCH");
+    }
+
+    const expectedAmount = resolveOrderLedgerAmount(order);
+    const movementAmount = Number(movement?.totalAmount ?? movement?.accountingAmount);
+    if (!Number.isFinite(expectedAmount) || !Number.isFinite(movementAmount) ||
+        Math.abs(Math.round(expectedAmount * 100) - Math.round(movementAmount * 100)) > 1) {
+        throw new Error("PAYMENT_STATE_RECOVERY_LEDGER_AMOUNT_MISMATCH");
+    }
+
+    const linkedIds = Array.isArray(movement?.linkedBookingIds)
+        ? movement.linkedBookingIds.map((value) => _safeTrim(value)).filter(Boolean)
+        : _safeTrim(movement?.linkedBookingIds).split(",").map((value) => _safeTrim(value)).filter(Boolean);
+    if (orderBookingIds.some((bookingId) => !linkedIds.includes(bookingId))) {
+        throw new Error("PAYMENT_STATE_RECOVERY_LEDGER_BOOKING_LINK_MISMATCH");
+    }
+
+    const sync = await _markCitasPaidByBookingIds(orderBookingIds, orderId, traceId);
+    if (sync.failedCount > 0 || sync.updatedCount !== sync.totalIds) {
+        throw new Error("PAYMENT_STATE_RECOVERY_CITAS_UPDATE_INCOMPLETE");
+    }
+    return {
+        orderId,
+        transactionId,
+        cashMovementId: movementId,
+        bookingIds: orderBookingIds,
+        updatedCount: sync.updatedCount,
+    };
 }
 
 // ============================================================================
@@ -1549,13 +1635,41 @@ export async function wixEcom_onOrderPaymentStatusUpdated(rawBody) {
             await updateCajaActualFromMovement(existingLedgerRes.items[0], traceId);
             await _syncPaidOrderInventoryOrThrow(order, traceId, eventId);
             if (bookingIds.length) {
-                await _executeWithRetry(async () => {
-                    await _markCitasPaidByBookingIds(
-                        bookingIds,
+                try {
+                    await _executeWithRetry(async () => {
+                        const sync = await _markCitasPaidByBookingIds(
+                            bookingIds,
+                            orderId,
+                            traceId
+                        );
+                        if (sync.failedCount > 0 || sync.updatedCount !== sync.totalIds) {
+                            throw new Error("PAYMENT_STATE_UPDATE_INCOMPLETE");
+                        }
+                    }, WEBHOOK_RETRIES, WEBHOOK_RETRY_DELAY_MS);
+                } catch (stateError) {
+                    const alert = await notifyOperationalAlert({
+                        alertType: "PAYMENT_STATE_UPDATE_REQUIRED",
+                        severity: "ERROR",
+                        message: "Wix payment and fiscal ledger are recorded; booking payment projection requires recovery.",
+                        data: {
+                            orderId,
+                            transactionId,
+                            bookingIds: bookingIds.join(","),
+                            reasonCode: "PAYMENT_STATE_UPDATE_INCOMPLETE",
+                        },
+                        traceId,
+                        entityId: orderId,
+                        source: "backend/events.js",
+                        dedupeKey: `PAYMENT_STATE_${orderId}`,
+                    });
+                    if (alert?.failed) throw new Error("PAYMENT_STATE_RECOVERY_ALERT_PERSISTENCE_FAILED");
+                    log.error("PAYMENT_STATE_UPDATE_REQUIRED", {
                         orderId,
-                        traceId
-                    );
-                }, WEBHOOK_RETRIES, WEBHOOK_RETRY_DELAY_MS);
+                        transactionId,
+                        error: stateError?.message || "UNKNOWN",
+                        traceId,
+                    });
+                }
             }
             if (eventId) {
                 await markEventAsProcessed(
