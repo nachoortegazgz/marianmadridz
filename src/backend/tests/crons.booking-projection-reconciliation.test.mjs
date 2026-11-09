@@ -5,6 +5,7 @@ import { wixDataMock, mocks } from "./loader.mjs";
 const bookingsReaderKey = "@wix/bookings::@wix/bookings::extendedBookings::queryExtendedBookings";
 let readerCalls = [];
 let confirmedPage = 0;
+let activeReaderStatus = null;
 
 const SERVICE_ID = "11111111-1111-4111-8111-111111111111";
 const SCHEDULE_ID = "22222222-2222-4222-8222-222222222222";
@@ -62,6 +63,7 @@ const CANCELED_PAID = booking("eeeeeeee-eeee-4eee-8eee-eeeeeeeeeee5", {
 mocks.sdk[bookingsReaderKey] = async (...args) => {
   const query = args.find(arg => arg && (arg.filter || arg.cursorPaging)) || args[0];
   readerCalls.push(query);
+  if (query?.filter?.status) activeReaderStatus = query.filter.status;
   if (query?.cursorPaging?.cursor) {
     confirmedPage++;
     return {
@@ -69,7 +71,7 @@ mocks.sdk[bookingsReaderKey] = async (...args) => {
       pagingMetadata: { cursors: { next: null } },
     };
   }
-  const status = query?.filter?.status;
+  const status = query?.filter?.status || activeReaderStatus;
   if (status === "CANCELED") {
     return {
       extendedBookings: [{ booking: CANCELED_PAID }],
@@ -80,6 +82,7 @@ mocks.sdk[bookingsReaderKey] = async (...args) => {
     throw new Error("Unexpected Bookings Reader filter: " + JSON.stringify(args));
   }
   confirmedPage = 0;
+  activeReaderStatus = "CONFIRMED";
   return {
     extendedBookings: [{ booking: CONFIRMED_VALID }, { booking: CONFIRMED_NO_RESOURCE }],
     pagingMetadata: { cursors: { next: "confirmed-page-2" } },
@@ -124,6 +127,7 @@ test("CRON-BOOKING-PROJECTION-01 projects only confirmed unpaid bookings with co
   wixDataMock._reset();
   readerCalls = [];
   confirmedPage = 0;
+  activeReaderStatus = null;
   seedExistingProjection();
 
   const result = await CR.reconcileMissingConfirmedBookingProjections();
@@ -172,6 +176,7 @@ test("CRON-BOOKING-PROJECTION-02 replay is idempotent and does not duplicate pro
   wixDataMock._reset();
   readerCalls = [];
   confirmedPage = 0;
+  activeReaderStatus = null;
   seedExistingProjection();
 
   await CR.reconcileMissingConfirmedBookingProjections();
@@ -193,6 +198,7 @@ test("CRON-BOOKING-PROJECTION-02 replay is idempotent and does not duplicate pro
 
 test("CRON-BOOKING-PROJECTION-03 rejects malformed native booking identifiers", async () => {
   wixDataMock._reset();
+  activeReaderStatus = null;
   mocks.sdk[bookingsReaderKey] = async (...args) => {
     const query = args.find(arg => arg && (arg.filter || arg.cursorPaging)) || args[0];
     if (query?.filter?.status === "CANCELED") {
