@@ -127,8 +127,8 @@ Actualizar tras cada sesión. Esta sección sustituye el inventario histórico d
   acepta en estos flujos SDK. `rescheduleBooking` usa la firma
   `(bookingId, slot, options)`, con `revision` dentro de `options`.
 - Se añade regresion offline para shape SDK, firma de reprogramacion, valores
-  SSOT y guardas de insercion. El resultado de CI se documentara tras ejecutar
-  la suite del PR.
+  SSOT y guardas de insercion. CI run #276 PASS: 48 suites / 465 tests / 0 fallos; lint PASS; SDK contracts
+  Cart V2, Data items.patch/bulkPatch y Bookings Reader V2 PASS.
 
 ### Hallazgos R2 descartados o corregidos por evidencia de codigo
 
@@ -182,4 +182,4 @@ Actualizar tras cada sesión. Esta sección sustituye el inventario histórico d
 
 ### Estado de salida
 
-`CI PENDIENTE` · `WIX PREVIEW PENDIENTE` · `NO DESPLEGAR`.
+`CI PASS — run #276 — 48 suites / 465 tests / 0 fallos` · `WIX PREVIEW PENDIENTE` · `NO DESPLEGAR`.
