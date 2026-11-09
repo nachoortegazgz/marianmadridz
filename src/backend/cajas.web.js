@@ -1143,10 +1143,9 @@ export const getCashierState = webMethod(Permissions.SiteMember, async (options 
         const res = await dalQuery(MOVIMIENTOS_CAJA_COL)
             .eq("fechaExpedicionFactura", day)
             .limit(1)
-            .find(STRONG_READ)
-            .catch(() => ({ items: [] }));
+            .find(STRONG_READ);
         const totalOperations = (res.items || []).length > 0
-            ? await _countMovementsOfDay(day).catch(() => Number(cashRegister?.[CAJA_KEYS.OPERATIONS]) || 0)
+            ? await _countMovementsOfDay(day)
             : 0;
         return {
             status: "SUCCESS",
