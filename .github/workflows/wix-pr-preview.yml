@@ -1,0 +1,66 @@
+name: Wix PR Preview
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wix-preview-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  wix-preview:
+    name: Create Wix preview (no production publish)
+    if: >-
+      ${{ github.event_name != 'pull_request' ||
+          (github.event.pull_request.head.repo.full_name == github.repository &&
+           github.event.pull_request.draft == false) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout PR merge ref or manually selected branch
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24.22.1"
+          cache: npm
+
+      - name: Install project dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Install pinned Wix CLI for Sites
+        run: npm install --global @wix/cli@1.2.9 --no-audit --no-fund
+
+      - name: Verify Wix CLI
+        run: wix --version
+
+      - name: Authenticate Wix CLI
+        env:
+          WIX_CLI_API_KEY: ${{ secrets.CLI_API_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "${WIX_CLI_API_KEY:-}" ]]; then
+            echo "::error::Missing GitHub Actions secret CLI_API_KEY. Create a Wix API key with the 'Wix CLI for Sites - Git Integration' permission and add it as a repository secret."
+            exit 1
+          fi
+          wix login --api-key "$WIX_CLI_API_KEY"
+
+      - name: Create Wix preview
+        shell: bash
+        run: |
+          set -euo pipefail
+          wix preview
