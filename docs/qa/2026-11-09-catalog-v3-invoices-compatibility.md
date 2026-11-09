@@ -32,3 +32,7 @@
 - La lectura GET /invoices/v4/invoices-settings funciona (HTTP 200), pero POST /invoices/v4/invoices/query devuelve HTTP 428 INVOICES_API_UNAVAILABLE: Wix confirma que este sitio sigue usando el servicio legacy de facturas, accesible mediante Velo, y que la migración a la nueva API se despliega gradualmente.
 - No se implementa un wrapper especulativo ni se activa un segundo motor de facturación. Se mantiene el sistema actual hasta que Wix habilite oficialmente la API nueva en este sitio y se haya aprobado el contrato de numeración/series frente al ledger fiscal propio.
 - La lectura de invoices-settings no se ha modificado. No se han creado, publicado, enviado ni cobrado facturas.
+
+## Test harness
+
+The offline ESM loader now exposes the Catalog V3 namespaces (`productsV3`, `inventoryItemsV3`) as test doubles. This is test-only plumbing; production imports continue to resolve from the Wix SDK package.
