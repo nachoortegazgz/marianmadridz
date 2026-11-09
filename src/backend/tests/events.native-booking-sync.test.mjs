@@ -632,20 +632,21 @@ test("EVENT-BOOKING-RESCHEDULE-02 duplicate native reschedule event is idempoten
 
 test("EVENT-BOOKING-RESCHEDULE-03 missing CitasF2 projection is retriable and never creates a partial row", async () => {
   wixDataMock._reset();
-  const result = await events.wixBookingsV2_onBookingRescheduled({
-    metadata: { id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa03" },
-    data: {
-      booking: {
-        id: BOOKING_ID,
-        revision: 4,
-        startDate: "2026-11-10T10:00:00.000Z",
-        endDate: "2026-11-10T10:30:00.000Z",
-        bookedEntity: { slot: { serviceId: SERVICE_ID } },
+  await assert.rejects(
+    events.wixBookingsV2_onBookingRescheduled({
+      metadata: { id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa03" },
+      data: {
+        booking: {
+          id: BOOKING_ID,
+          revision: 4,
+          startDate: "2026-11-10T10:00:00.000Z",
+          endDate: "2026-11-10T10:30:00.000Z",
+          bookedEntity: { slot: { serviceId: SERVICE_ID } },
+        },
       },
-    },
-  });
-  assert.equal(result.status, "RETRY_REQUIRED");
-  assert.equal(result.reason, "RESCHEDULED_BOOKING_CITASF2_NOT_FOUND");
+    }),
+    /RESCHEDULED_BOOKING_CITASF2_NOT_FOUND/
+  );
   assert.equal((wixDataMock._store.get("CitasF2") || []).length, 0);
   assert.equal((wixDataMock._store.get("ControlOperativo") || []).length, 0);
 });
