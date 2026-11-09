@@ -6,6 +6,7 @@ const bookingsReaderKey = "@wix/bookings::@wix/bookings::extendedBookings::query
 let readerCalls = [];
 let confirmedPage = 0;
 let activeReaderStatus = null;
+let malformedReaderResponse = false;
 
 const SERVICE_ID = "11111111-1111-4111-8111-111111111111";
 const SCHEDULE_ID = "22222222-2222-4222-8222-222222222222";
@@ -74,7 +75,7 @@ mocks.sdk[bookingsReaderKey] = async (...args) => {
   const status = query?.filter?.status || activeReaderStatus;
   if (status === "CANCELED") {
     return {
-      extendedBookings: [{ booking: CANCELED_PAID }],
+      extendedBookings: malformedReaderResponse ? [] : [{ booking: CANCELED_PAID }],
       pagingMetadata: { cursors: { next: null } },
     };
   }
@@ -83,6 +84,12 @@ mocks.sdk[bookingsReaderKey] = async (...args) => {
   }
   confirmedPage = 0;
   activeReaderStatus = "CONFIRMED";
+  if (malformedReaderResponse) {
+    return {
+      extendedBookings: [{ booking: booking("not-a-guid") }],
+      pagingMetadata: { cursors: { next: null } },
+    };
+  }
   return {
     extendedBookings: [{ booking: CONFIRMED_VALID }, { booking: CONFIRMED_NO_RESOURCE }],
     pagingMetadata: { cursors: { next: "confirmed-page-2" } },
@@ -128,6 +135,7 @@ test("CRON-BOOKING-PROJECTION-01 projects only confirmed unpaid bookings with co
   readerCalls = [];
   confirmedPage = 0;
   activeReaderStatus = null;
+  malformedReaderResponse = false;
   seedExistingProjection();
 
   const result = await CR.reconcileMissingConfirmedBookingProjections();
@@ -199,16 +207,7 @@ test("CRON-BOOKING-PROJECTION-02 replay is idempotent and does not duplicate pro
 test("CRON-BOOKING-PROJECTION-03 rejects malformed native booking identifiers", async () => {
   wixDataMock._reset();
   activeReaderStatus = null;
-  mocks.sdk[bookingsReaderKey] = async (...args) => {
-    const query = args.find(arg => arg && (arg.filter || arg.cursorPaging)) || args[0];
-    if (query?.filter?.status === "CANCELED") {
-      return { extendedBookings: [], pagingMetadata: { cursors: { next: null } } };
-    }
-    return {
-      extendedBookings: [{ booking: booking("not-a-guid") }],
-      pagingMetadata: { cursors: { next: null } },
-    };
-  };
+  malformedReaderResponse = true;
   await assert.rejects(
     CR.reconcileMissingConfirmedBookingProjections(),
     /NATIVE_BOOKING_ID_INVALID_IN_READER/
