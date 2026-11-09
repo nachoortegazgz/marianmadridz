@@ -33,7 +33,7 @@ import {
     FISCAL_ROLE,
     CONTROL_TYPE,
     EVENT_TYPE,
-    MOVEMENT_LEGACY_READ_ALIASES,
+    MOVEMENT_HISTORICAL_READ_ALIASES,
     normalizeMovementKeys,
 } from "backend/internalConfig";
 
@@ -1216,7 +1216,7 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
         let allMovements = [];
         let hasMoreMovements = false;
         const seenIds = new Set();
-        for (const dateField of ["fechaExpedicionFactura", ...MOVEMENT_LEGACY_READ_ALIASES.fechaExpedicionFactura]) {
+        for (const dateField of ["fechaExpedicionFactura", ...MOVEMENT_HISTORICAL_READ_ALIASES.fechaExpedicionFactura]) {
             const query = dalQuery(MOVIMIENTOS_CAJA_COL)
                 .eq(dateField, cleanDiaKey)
                 .ascending("sequenceNumber")
