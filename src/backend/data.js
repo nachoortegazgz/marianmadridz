@@ -940,10 +940,11 @@ export async function ControlOperativo_beforeRemove(itemId) {
         id,
         CONSISTENCY.STRONG
     );
-    if (original && APPEND_ONLY_CONTROL_TYPES.has(original.controlType)) {
+    if (!original) _schemaError("ControlOperativo remove target not found");
+    if (APPEND_ONLY_CONTROL_TYPES.has(original.controlType)) {
         _fiscalError(`ControlOperativo/${original.controlType} es append-only: borrado prohibido`);
     }
-    return itemId;
+    return id;
 }
 
 // =============================================================================
