@@ -561,6 +561,43 @@ test('FLOW-CAJA-08 fiscal recovery queue deduplicates repeated compensation requ
   assert.equal(bookingOnlyRecords.length, 1);
 });
 
+test('FLOW-CAJA-08B fiscal recovery queue preserves the original rectification writer payload', async () => {
+  wixDataMock._reset();
+  const { cajas } = await freshImports();
+  const fiscalPayload = {
+    eventType: 'RECTIFICATIVA',
+    movementType: 'REEMBOLSO',
+    paymentMethod: 'WIX_PAYMENTS',
+    totalAmount: -45.5,
+    taxBase: -37.6,
+    taxAmount: -7.9,
+    tipoFactura: 'R1',
+    previousInvoiceId: 'F2-2026-000123',
+    correctionReason: 'OTRAS',
+    transactionId: 'RECT-BOOKING-RECOVERY-001',
+    linkedBookingIds: ['aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'],
+    traceId: 'rectification-original-trace',
+  };
+  const queued = await cajas.queueFiscalRecovery({
+    kind: 'FISCAL_LEDGER',
+    transactionId: fiscalPayload.transactionId,
+    bookingIds: fiscalPayload.linkedBookingIds,
+    totalAmount: fiscalPayload.totalAmount,
+    paymentMethod: fiscalPayload.paymentMethod,
+    movementType: fiscalPayload.movementType,
+    origin: 'WIX_BOOKINGS_CANCEL_WEBHOOK',
+    recoveryProcessor: 'EVENT_LOG',
+    fiscalPayload,
+    traceId: 'rectification-queue-trace',
+  });
+  assert.equal(queued.queued, true);
+  const record = (wixDataMock._store.get('ControlOperativo') || [])
+    .find((row) => row.transactionId === fiscalPayload.transactionId);
+  assert.ok(record);
+  assert.equal(record.payload.recoveryProcessor, 'EVENT_LOG');
+  assert.deepEqual(record.payload.fiscalPayload, fiscalPayload);
+});
+
 test('FLOW-CAJA-09 fiscal hash audit checks more than one page before returning success', async () => {
   wixDataMock._reset();
   const { cajas } = await freshImports();

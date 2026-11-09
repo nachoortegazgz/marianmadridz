@@ -97,6 +97,20 @@ test('CRON-DUAL-RESCHEDULE-01 legacy reconciler must not rewrite dual-reschedule
 });
 
 
+test('CRON-FISCAL-RECOVERY-01 replays cancellation rectifications through EventLog and blocks incomplete legacy refunds', () => {
+  const cron = fs.readFileSync(backendPath('crons.js'), 'utf8');
+  const events = fs.readFileSync(backendPath('events.js'), 'utf8');
+  const cajas = fs.readFileSync(backendPath('cajas.web.js'), 'utf8');
+  assert.match(events, /rectificationPayload\s*=\s*\{/);
+  assert.match(events, /recoveryProcessor:\s*rectificationPayload\s*\?\s*"EVENT_LOG"\s*:\s*"MANUAL"/);
+  assert.match(events, /fiscalPayload:\s*rectificationPayload/);
+  assert.match(cajas, /recoveryProcessor:\s*p\.recoveryProcessor\s*\|\|\s*null/);
+  assert.match(cajas, /fiscalPayload:\s*p\.fiscalPayload/);
+  assert.match(cron, /registrarEventoEconomico\(\{\s*\.\.\.fiscalPayload,\s*traceId\s*\}\)/);
+  assert.match(cron, /Legacy cancellation recovery lacks the original rectification payload/);
+  assert.match(cron, /Refund recovery without the original fiscal rectification payload is unsafe/);
+});
+
 test('CRON-PAYMENT-RECOVERY-01 repairs CitasF2 from the existing paid ORDER movement without creating another movement', async () => {
   wixDataMock._reset();
   const C = IC.OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
