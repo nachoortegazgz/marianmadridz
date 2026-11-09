@@ -506,7 +506,7 @@ test("EVENT-BOOKING-RESCHEDULE-01 native reschedule updates only the affected Ci
   ]);
 
   const result = await events.wixBookingsV2_onBookingRescheduled({
-    metadata: { id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa01" },
+    metadata: { id: "native-reschedule-event-01" },
     data: {
       booking: {
         id: BOOKING_ID,
