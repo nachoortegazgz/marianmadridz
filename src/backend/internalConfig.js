@@ -63,6 +63,17 @@ export const OPERATIONAL_COLLECTIONS = Object.freeze({
   CONTROL_OPERATIVO: "ControlOperativo",
 });
 
+// Campos retirados de ControlOperativo. Se rechazan en nuevas escrituras;
+// no existe compatibilidad de lectura ni migracion automatica porque CMS no contiene valores.
+export const CONTROL_OPERATIVO_NON_CANONICAL_FIELDS = Object.freeze([
+  "payloadJson",
+  "attempt",
+  "leaseExpiresAt",
+  "leasesExpireAt",
+  "createdAt",
+  "updatedAt",
+]);
+
 // ITEM_NATURE canonico v12.0+ (SSOT-08). Los valores historical observados en la
 // exportacion real del CMS (SERVICIO_PROPIO, PRODUCTO_VENTA, PRODUCTO_USO,
 // GASTO_FIJO) se aceptan en lectura via data.js VALID_ITEM_NATURES pero NO
