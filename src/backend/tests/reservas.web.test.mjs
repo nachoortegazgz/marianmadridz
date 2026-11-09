@@ -1276,6 +1276,7 @@ test('RES-DAYS-01 payload contract + day extraction + DAYS_CACHE persisted', asy
   assert.strictEqual(call.timeSlotsPerDay, 1);
   const daysRec = (wixDataMock._store.get(CONTROL_COL) || []).find((r) => r.controlType === 'DAYS_CACHE');
   assert.ok(daysRec, 'DAYS_CACHE record written (PEND-09)');
+  assert.ok(typeof daysRec.traceId === 'string' && daysRec.traceId.length > 0, 'DAYS_CACHE record carries traceId');
   const payload = daysRec.payload;
   assert.ok(Array.isArray(payload.emptyDaysYmds));
 });
