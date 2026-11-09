@@ -10,6 +10,7 @@ const serviceUrl = new URL("../../pages/Pagina%20de%20servicio%202.xnfr4.js", im
 const calendarSource = (await readFile(calendarUrl, "utf8")).replace(/\r\n/g, "\n");
 const sagaSource = await readFile(new URL("../booking/bookingSaga.js", import.meta.url), "utf8");
 const bookingCoreSource = await readFile(new URL("../booking/bookingCore.js", import.meta.url), "utf8");
+const bookingUtilsSource = await readFile(new URL("../booking/bookingUtils.js", import.meta.url), "utf8");
 const managerSource = await readFile(new URL("../citasManager.web.js", import.meta.url), "utf8");
 const availabilitySource = await readFile(new URL("../reservas.web.js", import.meta.url), "utf8");
 const bookingUtilsSource = await readFile(new URL("../booking/bookingUtils.js", import.meta.url), "utf8");
@@ -97,6 +98,7 @@ test("BOOK-FLOW-SDK-ID-01 all @wix/bookings slot identifiers use the SDK _id sha
   assert.match(managerSource, /pristineSlot\?\.location\?\._id/);
   assert.match(managerSource, /rescheduleBookingElevated\(bookingId, pristineSlot, \{\s*revision:/);
   assert.doesNotMatch(bookingCoreSource, /resource\.id|location\.id/);
+  assert.doesNotMatch(bookingUtilsSource, /resource\.id/);
   assert.doesNotMatch(sagaSource, /resource\.id|location\.id/);
   assert.doesNotMatch(managerSource, /resource\.id|location\.id/);
   assert.doesNotMatch(availabilitySource, /resource\.id/);
