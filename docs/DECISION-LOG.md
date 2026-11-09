@@ -28,10 +28,10 @@ Este registro centraliza las decisiones explícitas del propietario y las decisi
 
 | ID | Decisión | Justificación / consecuencia | Estado |
 |---|---|---|---|
-| TEC-001 | Wix Bookings nativo es la primera opción para depósitos. Configurar depósito fijo por servicio; no crear writer/checkout de depósitos propio mientras la capacidad nativa cubra el caso. | Wix Services V2 documenta `payment.options.deposit` y `payment.fixed.deposit.value` / `payment.varied.deposit.value`. | Adoptada; configuración y disponibilidad de la cuenta pendientes |
-| TEC-002 | Los servicios sujetos a depósito deben usar pago online; si el depósito es inferior al total, habilitar pago presencial para el saldo. No ofrecer pago manual como alternativa de reserva con depósito. | Wix Help indica que depósitos se cobran online y la ruta manual no cobra depósito; la función puede no estar disponible en todas las cuentas. | Requiere QA de cuenta |
+| TEC-001 | Wix Bookings nativo es la primera opción para depósitos. No crear writer/checkout propio mientras la capacidad nativa cubra el caso. | Wix Services V2 documenta depósitos por servicio. Sin embargo, el esquema REST actual declara `inPerson=false` con `deposit=true`, mientras Wix Help indica depósito online y saldo en persona. | Preferencia adoptada; discrepancia contractual bloquea configuración |
+| TEC-002 | No activar depósitos hasta resolver la discrepancia entre el esquema REST y Wix Help sobre `inPerson`; además comprobar disponibilidad de la función y comportamiento del método manual en la cuenta. | Wix Help (actualizado 2026-03-25) y esquema REST Service V2 no son plenamente consistentes. | Bloqueo de integración; no cambiar servicios |
 | TEC-003 | No combinar depósitos con aprobación manual de reservas. | Wix documenta incompatibilidad entre depósitos y aprobación manual. | Regla de configuración |
-| TEC-004 | Clasificar precios y variantes antes de configurar depósitos. Si un servicio variable contiene variantes por encima y por debajo del umbral y Wix no permite condicionar el depósito por variante, separar servicios/variantes de forma nativa antes de considerar código custom. | Evita cobrar indebidamente a servicios ≤100 EUR. Wix admite tarifas fijas/variables y depósitos, pero no se ha demostrado en esta cuenta el comportamiento condicional por variante. | Pendiente de inventario de servicios |
+| TEC-004 | Clasificar precios y variantes antes de configurar depósitos. Si un servicio variable contiene variantes a ambos lados del umbral y Wix no permite condición por variante, separar la oferta nativamente. | Lectura live: 94 servicios, 70 FIXED, 24 NO_FEE, 0 VARIED; 7 visibles >100 EUR; 0 depósitos activos. | Clasificación inicial completada; verificar variantes al cambiar catálogo |
 | TEC-005 | Wix Stores Catalog V3 y las herramientas nativas Wix son la única autoridad operativa del stock comercial. | El checkout nativo valida disponibilidad y deduce inventario cuando el seguimiento está activado. | Aprobada |
 | TEC-006 | No crear proyecciones CMS, reservas, deducciones, reposiciones, movimientos ni ajustes personalizados de stock. | Evitar doble autoridad, concurrencia y desincronización. | Aprobada; retirada de código pendiente |
 | TEC-007 | Los módulos personalizados de inventario y la UI asociada se retiran por fases; no borrar consumidores sin búsqueda exhaustiva, análisis de webhooks, pruebas y rollback. | `events.js`, `inventario.web.js` y `ZONA MARIAN` tienen dependencias directas. | Pendiente de PR de código |
@@ -40,6 +40,9 @@ Este registro centraliza las decisiones explícitas del propietario y las decisi
 | TEC-010 | La recuperación fiscal de pedidos pagados se limita a pedidos exclusivamente Bookings con payload fiscal original; pedidos Store/mixtos o legacy sin payload quedan en conciliación manual. | Evita reconstruir hechos fiscales incompletos o acoplar stock a ledger. Implementado en PR #235. | Fusionado; CI offline aprobada, runtime Wix pendiente |
 | TEC-011 | No fusionar/publicar cambios críticos solo con CI offline; exigir pruebas positivas de integración/runtime, revisión de diff y rollback. | CI no certifica Velo runtime, webhooks reales ni Wix publicado. | Gate permanente |
 | TEC-012 | Los cambios documentales se consolidan en ADR/registro central; PR #236 se mantiene draft hasta revisión del diff. | Trazabilidad y control de cambios. | PR abierto, 10 commits ahead / 0 behind, sin cambios ejecutables |
+| TEC-013 | La configuración nativa de pedidos queda como autoridad del inventario; estado live `ON_ORDER_PAID`. | Wix Orders Settings GET, 2026-11-10, HTTP 200; sin mutaciones. | Verificado live; no se ha cambiado |
+| TEC-014 | No activar depósitos hasta resolver discrepancia `inPerson` entre esquema REST Services V2 y Wix Help Center. | Esquema REST: `inPerson=false` con depósito; Wix Help: depósito online y resto en persona. | Bloqueo documentado; sin cambios en servicios |
+| TEC-015 | La auditoría de Bookings detecta 7 servicios visibles >100 EUR y ningún depósito activo. | Query Services V2: 94 resultados, 70 FIXED, 24 NO_FEE, 0 VARIED, 0 depósitos. | Verificado live, solo lectura |
 
 ### Fuentes técnicas oficiales Wix
 
@@ -61,10 +64,10 @@ Este registro centraliza las decisiones explícitas del propietario y las decisi
 
 ## 4. Estados de validación
 
-- **Verificado:** documentación Wix oficial confirma la capacidad nativa de depósitos y el descuento de stock en checkout nativo.
+- **Verificado:** Wix Stores deduce stock nativamente según el disparador configurado; en este sitio es `ON_ORDER_PAID`. Wix Bookings documenta capacidad nativa de depósitos, pero su esquema REST y Wix Help presentan una discrepancia sobre el método presencial.
 - **Verificado en lectura:** el sitio usa Stores Catalog V3 y tiene 30 inventory items con tracking en una ubicación; no se ha probado E2E.
 - **Verificado en código:** el módulo custom de inventario aún está conectado a webhooks y UI.
-- **Pendiente:** clasificación de 94 servicios Bookings por precio fijo/variable y variantes; configuración nativa de depósitos; pago/saldo/refund/ledger E2E en QA; retirada del módulo de inventario.
+- **Pendiente:** aclarar la discrepancia Wix Bookings `inPerson`; configurar depósitos en los 7 servicios elegibles solo tras QA; probar pago/saldo/refund/ledger E2E; retirar el módulo custom de inventario.
 - **No autorizado:** activar comunicaciones a clientes, cobros reales, cambios de datos o stock en producción y publicación.
 
 ---
