@@ -103,7 +103,6 @@ function _formatDocumentId(year, quarter, version = 1) {
   return `DOC_GESTORIA_${year}_T${quarter}_PAQUETE_GESTORIA_V${vStr}`;
 }
 
-
 function _invoiceValue(invoice, keys, fallbackKey) {
   for (const key of keys) {
     if (invoice && invoice[key] !== undefined && invoice[key] !== null) return invoice[key];
@@ -251,6 +250,89 @@ export const previewManagerPackage = webMethod(
   Permissions.SiteMember,
   async (period = {}) => {
     const traceId = makeTraceId("doc-preview");
+    try {
+      await requireMarianManager(traceId);
+      const year = Number(period.year);
+      const quarter = Number(period.quarter);
+      if (!year || !quarter || quarter < 1 || quarter > 4) {
+        return {
+          status: "ERROR",
+          data: null,
+          error: {
+            code: "INVALID_PERIOD",
+            message: "year and quarter (1-4) are required",
+          },
+        };
+      }
+
+      const [summaryRes, bookRes] = await Promise.all([
+        getQuarterlyTaxSummary(year, quarter, { traceId }),
+        getLibroRegistroFacturasExpedidasInternal(year, quarter, {
+          traceId,
+          rateLimitKey: "manager",
+        }),
+      ]);
+
+      const summary = summaryRes?.data || null;
+      const invoices = bookRes?.data?.filas || [];
+
+      return {
+        status: "SUCCESS",
+        data: {
+          period: { year, quarter },
+          documentIdDraft: _formatDocumentId(year, quarter, 1),
+          summary,
+          invoiceCount: invoices.length,
+          previewGeneratedAt: new Date(),
+        },
+        error: null,
+      };
+    } catch (err) {
+      return {
+        status: "ERROR",
+        data: null,
+        error: _toPublicError(err, "DOC_PREVIEW_FAIL"),
+      };
+    }
+  }
+);
+
+// =============================================================================
+// BLOQUE 3 - CREAR VERSION DE PAQUETE
+// =============================================================================
+
+export const createManagerPackageVersion = webMethod(
+  Permissions.SiteMember,
+  async () => {
+    const traceId = makeTraceId("doc-create");
+    try {
+      await requireMarianManager(traceId);
+      // The dedicated PaquetesGestoria collection now exists, but creation
+      // remains disabled until canonical hashing, size bounds, and concurrent
+      // version allocation are implemented and verified end to end.
+      return {
+        status: "ERROR",
+        data: null,
+        error: {
+          code: "PACKAGE_SNAPSHOT_IMPLEMENTATION_PENDING",
+          message: "La creación de paquetes sigue bloqueada hasta completar hash canónico, límite de tamaño y versionado concurrente seguro en PaquetesGestoria.",
+          traceId,
+        },
+      };
+    } catch (err) {
+      return { status: "ERROR", data: null, error: _toPublicError(err, "DOC_CREATE_FAIL") };
+    }
+  }
+);
+
+// =============================================================================
+// BLOQUE 4 - HISTORIAL DE PAQUETES
+// =============================================================================
+
+export const getManagerPackageHistory = webMethod(
+  Permissions.SiteMember,
+  async (period = {}) => {
+    const traceId = makeTraceId("doc-hist");
     try {
       await requireMarianManager(traceId);
       const year = period.year != null ? Number(period.year) : null;
