@@ -45,3 +45,12 @@ El dossier anterior declaraba Catalog V1 activo y prohibía V3. La lectura read-
 ## Validación y despliegue
 
 PR #216 contiene la implementación. CI offline run 168 verde en commit 77d63d2: 47 suites, 442 tests, 0 fallos; lint y contratos Cart V2/Bookings Reader V2 correctos. No se fusiona ni despliega hasta ejecutar pruebas de integración/E2E en Wix Local Editor con producto/variante QA dedicados y verificar la importación real de los namespaces SDK V3. No se modifica stock real del catálogo como parte de la migración.
+
+## Scopes SDK V3 requeridos
+
+- Catalog Versioning: SCOPE.STORES.CATALOG_READ_LIMITED.
+- Query Inventory Items V3: SCOPE.STORES.INVENTORY_ITEM_READ.
+- Products V3 Get Product: SCOPE.STORES.PRODUCT_READ.
+- Bulk Increment/Decrement Inventory Items V3: SCOPE.STORES.INVENTORY_ITEM_WRITE.
+
+La concesión efectiva de estos scopes en el entorno Velo del sitio sigue pendiente de comprobación en Wix Local Editor; auth.elevate no sustituye la concesión de scopes.
