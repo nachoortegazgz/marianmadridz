@@ -127,6 +127,8 @@ test("CRON-BOOKING-PROJECTION-01 projects only confirmed unpaid bookings with co
 
   const result = await CR.reconcileMissingConfirmedBookingProjections();
   assert.equal(result.nativeConfirmedRead, 4);
+  assert.equal(result.canceledPaidRead, 1);
+  assert.equal(result.amountReconciliationRequired, 1);
   assert.equal(result.reconciled, 1);
   assert.equal(result.reviewRequired, 3);
   assert.equal(result.failed, 0);
