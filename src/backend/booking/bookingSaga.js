@@ -36,7 +36,7 @@ CORRECCIONES v5017-STRONG-QUERY:
   SAGA-51 (P0): elevatedQueryFind forzaba strong en _validateLinkedPhaseService
     y _cancelCitasByPairToken.
 
-FIXES HEREDADOS v5016: SAGA-48/49/50 (CANCELLED, COMPLETION_RETRY).
+FIXES HEREDADOS v5016: SAGA-48/49/50 (CANCELED, COMPLETION_RETRY).
 FIXES HEREDADOS v5015: SAGA-46/47.
 FIXES HEREDADOS v5014: SAGA-36..SAGA-45.
 =============================================================================
@@ -815,7 +815,7 @@ async function _cancelCitasByPairToken(pairToken, traceId) {
                         meta = {};
                     }
                     return Object.assign({}, cita, {
-                        bookingStatus: "CANCELLED",
+                        bookingStatus: "CANCELED",
                         meta: Object.assign({}, meta, {
                             compensated: true,
                             compensatedAt: new Date().toISOString(),
@@ -828,7 +828,7 @@ async function _cancelCitasByPairToken(pairToken, traceId) {
             );
 
             if (updateResult && updateResult.updated) {
-                log.info("Compensated CitaF2 marked CANCELLED", {
+                log.info("Compensated CitaF2 marked CANCELED", {
                     citaId: item._id,
                     bookingId: bookingId,
                     traceId: traceId,
