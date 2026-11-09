@@ -35,24 +35,6 @@ const UNKNOWN_ERROR_CODE = "UNKNOWN_ERROR";
 // BLOQUE 2 - ERROR DE APLICACION
 // =============================================================================
 
-export class AppError extends Error {
-    constructor(
-        code = DEFAULT_ERROR_CODE,
-        message = DEFAULT_ERROR_MESSAGE,
-        meta = {}
-    ) {
-        super(String(message || DEFAULT_ERROR_MESSAGE));
-
-        this.name = "AppError";
-        this.code = String(code || DEFAULT_ERROR_CODE);
-        this.meta = _cloneMeta(meta);
-
-        if (Error.captureStackTrace) {
-            Error.captureStackTrace(this, AppError);
-        }
-    }
-}
-
 // =============================================================================
 // BLOQUE 3 - HELPERS INTERNOS
 // =============================================================================
@@ -69,13 +51,6 @@ function _cloneMeta(value) {
             details: "Metadata could not be cloned safely.",
         };
     }
-}
-
-function _normalizeMeta(metaExtra) {
-    if (!metaExtra || typeof metaExtra !== "object") {
-        return {};
-    }
-    return _cloneMeta(metaExtra);
 }
 
 function _truncateMessage(value) {
@@ -133,7 +108,7 @@ function _extractErrorValues(code, message) {
 // =============================================================================
 
 export function successResponse(data = null, metaExtra = {}) {
-    const extra = _normalizeMeta(metaExtra);
+    const extra = _cloneMeta(metaExtra);
 
     return {
         status: "SUCCESS",
@@ -155,7 +130,7 @@ export function errorResponse(
     const safeMessage =
         _truncateMessage(extracted.message) || DEFAULT_ERROR_MESSAGE;
 
-    const extra = _normalizeMeta(metaExtra);
+    const extra = _cloneMeta(metaExtra);
 
     return {
         status: "ERROR",
