@@ -45,6 +45,7 @@ Este registro centraliza las decisiones explícitas del propietario y las decisi
 | TEC-015 | La auditoría de Bookings detecta 7 servicios visibles >100 EUR y ningún depósito activo. | Query Services V2: 94 resultados, 70 FIXED, 24 NO_FEE, 0 VARIED, 0 depósitos. | Verificado live, solo lectura |
 | TEC-016 | Los webhooks de pedido/pago/cancelación/reembolso no deben invocar writers de stock; cron marca todos los pedidos con referencias de catálogo completas sin distinguir Bookings/Stores/mixtos. | Wix Orders Settings `ON_ORDER_PAID`; Wix gestiona el stock y el cron solo conserva idempotencia. | Implementado en rama; CI pendiente |
 | TEC-017 | No borrar ni mutar `MovimientosInventario` existente; conservar hooks `beforeUpdate`/`beforeRemove` append-only. | El histórico puede contener evidencia QA/operativa que debe preservarse. | Aprobado y conservado |
+| TEC-018 | La retirada del módulo custom se considera CI-validada solo en el commit probado; runtime Wix y E2E nativo siguen siendo gates de merge/deploy. | Run 42721080098: 50 suites, 488 tests, 0 fallos; el HEAD posterior requiere reejecución. | CI del commit ca6bbd verde; reejecución HEAD pendiente |
 
 ### Fuentes técnicas oficiales Wix
 
@@ -57,6 +58,7 @@ Este registro centraliza las decisiones explícitas del propietario y las decisi
 ## 3. Evidencia de decisiones y artefactos
 
 - [ADR de depósitos e inventario nativo](adr/2026-11-10-deposit-and-native-inventory.md)
+- [QA de retirada de inventario personalizado](qa/2026-11-10-native-inventory-retirement.md)
 - [Necesidades web y criterios de aceptación](../NECESIDADES%20WEB%20MARIAN.txt)
 - [Dossier técnico consolidado](../DOSSIER%20TÉCNICO%20CONSOLIDADO.md)
 - [Flujos end-to-end Capa 1 → Capa 3](../DOSSIER%20FLUJOS%20END%20TO%20END%20CAPA%203.md)
@@ -69,7 +71,7 @@ Este registro centraliza las decisiones explícitas del propietario y las decisi
 - **Verificado:** Wix Stores deduce stock nativamente según el disparador configurado; en este sitio es `ON_ORDER_PAID`. Wix Bookings documenta capacidad nativa de depósitos, pero su esquema REST y Wix Help presentan una discrepancia sobre el método presencial.
 - **Verificado en lectura:** el sitio usa Stores Catalog V3 y tiene 30 inventory items con tracking en una ubicación; no se ha probado E2E.
 - **Verificado en rama de refactorización:** no hay módulo `inventario.web.js`, WebMethods ni panel custom; webhooks no realizan reservas, proyecciones ni movimientos de stock.
-- **Pendiente:** aclarar la discrepancia Wix Bookings `inPerson`; configurar depósitos en los 7 servicios elegibles solo tras QA; probar pago/saldo/refund/ledger E2E; ejecutar CI y QA Wix de la retirada de inventario.
+- **Pendiente:** aclarar la discrepancia Wix Bookings `inPerson`; configurar depósitos en los 7 servicios elegibles solo tras QA; probar pago/saldo/refund/ledger E2E; reejecutar CI sobre HEAD actual y completar QA Wix de la retirada.
 - **No autorizado:** activar comunicaciones a clientes, cobros reales, cambios de datos o stock en producción y publicación.
 
 ---
