@@ -42,7 +42,7 @@ El sitio web no debe ser un escaparate estático. Debe ser una **herramienta de 
 | ID | Requisito | Descripción | Criterio de aceptación | Estado declarado |
 |---|---|---|---|---|
 | RF-06 | Fianza para servicios > 30 € | Cobro obligatorio de señal (15 € o 20%) en el momento de la reserva para servicios de importe superior a 30 €. | Regla condicional operativa: servicios ≤ 30 € → pago opcional; servicios > 30 € → fianza obligatoria. | ✅ Declarado (`bookingsEngine.web.js`, `createDepositPaymentOrder`) |
-| RF-07 | Pasarela de pago segura | Integración con TPV virtual (Redsys / Bizum / Stripe) vía Wix Pay. | Pago procesado correctamente y confirmación recibida en frontend. | ✅ Declarado |
+| RF-07 | Pasarela de pago segura | Integración mediante Wix Payments, proveedor de pagos nativo de Wix. Los métodos concretos se limitan a los que estén disponibles y habilitados para España y esta cuenta. | Pago procesado por Wix Payments y confirmación recibida mediante el flujo nativo de Wix eCommerce/webhook. | Declarado por el propietario; activación y métodos de la cuenta pendientes de comprobación en el panel. |
 | RF-08 | Política de cancelación | Reembolso automático si cancela con ≥ 24 h de antelación; retención si cancela después. | `cancellationPolicyHours = 24` configurado y webhook de reembolso operativo. | ✅ Declarado — **pendiente verificar webhook real** |
 | RF-09 | Descuento en ticket final | La fianza debe ser descontable del importe total del servicio. | Lógica de descuento aplicada en el checkout final. | ⚠️ No declarado explícitamente en código — **requiere verificación** |
 
