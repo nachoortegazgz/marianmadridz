@@ -7,9 +7,16 @@ const core = await import('../booking/bookingCore.js');
 const BOOKING_ID = '11111111-1111-4111-8111-111111111111';
 const CART_ID = '22222222-2222-4222-8222-222222222222';
 const BOOKINGS_CATALOG_APP_ID = '13d21c63-b5ec-5912-8397-c3a5ddb27a97';
+const MEMBER_ID = '33333333-3333-4333-8333-333333333333';
+const CONTACT_ID = '44444444-4444-4444-8444-444444444444';
+const MEMBER_IDENTITY = { memberId: MEMBER_ID, contactId: CONTACT_ID };
+const OWNED_CART = { memberId: MEMBER_ID, contactId: CONTACT_ID, openAccess: false };
 
 function setCartV2Mock(namespace) {
-  mocks.sdk['@wix/ecom::cartV2'] = namespace;
+  mocks.sdk['@wix/ecom::cartV2'] = {
+    deleteCart: async () => ({}),
+    ...namespace,
+  };
 }
 
 function validBookingLineItems(bookingId = BOOKING_ID, status = 'IN_STOCK') {
@@ -24,12 +31,12 @@ function validBookingLineItems(bookingId = BOOKING_ID, status = 'IN_STOCK') {
   }];
 }
 
-test('CARTV2-01 creates a visitor WEB cart from the Bookings booking ID and returns a calculated checkout URL', async () => {
+test('CARTV2-01 creates a member-owned WEB cart from the Bookings booking ID and returns a calculated checkout URL', async () => {
   const calls = [];
   setCartV2Mock({
     createCart: async (options) => {
       calls.push({ method: 'createCart', options });
-      return { _id: CART_ID };
+      return { _id: CART_ID, customerInfo: OWNED_CART };
     },
     calculateCart: async (cartId, options) => {
       calls.push({ method: 'calculateCart', cartId, options });
@@ -51,7 +58,7 @@ test('CARTV2-01 creates a visitor WEB cart from the Bookings booking ID and retu
     },
   });
 
-  const result = await core.createBookingCartCheckout(BOOKING_ID, 'trace-cart-1');
+  const result = await core.createBookingCartCheckout(BOOKING_ID, 'trace-cart-1', MEMBER_IDENTITY);
 
   assert.deepEqual(result, {
     cartId: CART_ID,
@@ -86,7 +93,7 @@ test('CARTV2-01 creates a visitor WEB cart from the Bookings booking ID and retu
 test('CARTV2-02 refuses to return a checkout URL when cart calculation has violations', async () => {
   let checkoutUrlCalls = 0;
   setCartV2Mock({
-    createCart: async () => ({ _id: CART_ID }),
+    createCart: async () => ({ _id: CART_ID, customerInfo: OWNED_CART }),
     calculateCart: async () => ({
       cart: { _id: CART_ID, businessInfo: { currencyCode: 'EUR' }, lineItems: validBookingLineItems() },
       summary: {
@@ -101,7 +108,7 @@ test('CARTV2-02 refuses to return a checkout URL when cart calculation has viola
   });
 
   await assert.rejects(
-    core.createBookingCartCheckout(BOOKING_ID, 'trace-cart-2'),
+    core.createBookingCartCheckout(BOOKING_ID, 'trace-cart-2', MEMBER_IDENTITY),
     (error) => error && error.code === 'CHECKOUT_FAILED'
   );
   assert.equal(checkoutUrlCalls, 0);
@@ -117,7 +124,7 @@ test('CARTV2-03 rejects an invalid booking ID before creating a cart', async () 
   });
 
   await assert.rejects(
-    core.createBookingCartCheckout('not-a-guid', 'trace-cart-3'),
+    core.createBookingCartCheckout('not-a-guid', 'trace-cart-3', MEMBER_IDENTITY),
     (error) => error && error.code === 'CHECKOUT_FAILED'
   );
   assert.equal(createCartCalls, 0);
@@ -137,7 +144,7 @@ test('CARTV2-04 rejects incomplete or mismatched calculation responses', async (
   });
 
   await assert.rejects(
-    core.createBookingCartCheckout(BOOKING_ID, 'trace-cart-4'),
+    core.createBookingCartCheckout(BOOKING_ID, 'trace-cart-4', MEMBER_IDENTITY),
     (error) => error && error.code === 'CHECKOUT_FAILED'
   );
 });
@@ -160,7 +167,7 @@ test('CARTV2-05 accepts a valid calculation when optional violations are omitted
     }),
   });
 
-  const result = await core.createBookingCartCheckout(BOOKING_ID, 'trace-cart-5');
+  const result = await core.createBookingCartCheckout(BOOKING_ID, 'trace-cart-5', MEMBER_IDENTITY);
   assert.equal(result.cartId, CART_ID);
   assert.equal(result.checkoutUrl, 'https://checkout.wix.com/cart/abc123');
 });
@@ -179,7 +186,7 @@ test('CARTV2-06 rejects malformed violations instead of treating them as absent'
   });
 
   await assert.rejects(
-    core.createBookingCartCheckout(BOOKING_ID, 'trace-cart-6'),
+    core.createBookingCartCheckout(BOOKING_ID, 'trace-cart-6', MEMBER_IDENTITY),
     (error) => error && error.code === 'CHECKOUT_FAILED'
   );
 });
@@ -232,7 +239,7 @@ test('CARTV2-08 rejects a non-HTTPS checkout URL', async () => {
   });
 
   await assert.rejects(
-    core.createBookingCartCheckout(BOOKING_ID, 'trace-cart-8'),
+    core.createBookingCartCheckout(BOOKING_ID, 'trace-cart-8', MEMBER_IDENTITY),
     (error) => error && error.code === 'CHECKOUT_FAILED'
   );
 });
@@ -259,7 +266,7 @@ test('CARTV2-09 rejects an empty calculated cart before returning checkout URL',
   });
 
   await assert.rejects(
-    core.createBookingCartCheckout(BOOKING_ID, 'trace-cart-9'),
+    core.createBookingCartCheckout(BOOKING_ID, 'trace-cart-9', MEMBER_IDENTITY),
     (error) => error && error.code === 'CHECKOUT_FAILED'
   );
   assert.equal(checkoutUrlCalls, 0);
@@ -287,7 +294,7 @@ test('CARTV2-10 rejects a calculated cart containing a different booking ID', as
   });
 
   await assert.rejects(
-    core.createBookingCartCheckout(BOOKING_ID, 'trace-cart-10'),
+    core.createBookingCartCheckout(BOOKING_ID, 'trace-cart-10', MEMBER_IDENTITY),
     (error) => error && error.code === 'CHECKOUT_FAILED'
   );
   assert.equal(checkoutUrlCalls, 0);
@@ -315,8 +322,61 @@ test('CARTV2-11 rejects an unavailable Bookings line item', async () => {
   });
 
   await assert.rejects(
-    core.createBookingCartCheckout(BOOKING_ID, 'trace-cart-11'),
+    core.createBookingCartCheckout(BOOKING_ID, 'trace-cart-11', MEMBER_IDENTITY),
     (error) => error && error.code === 'CHECKOUT_FAILED'
   );
   assert.equal(checkoutUrlCalls, 0);
+});
+test('CARTV2-12 refuses an open-access cart and deletes it before any checkout calculation', async () => {
+  let calculateCalls = 0;
+  let deleteCalls = 0;
+  setCartV2Mock({
+    createCart: async () => ({
+      _id: CART_ID,
+      customerInfo: { memberId: '', contactId: '', openAccess: true },
+    }),
+    calculateCart: async () => {
+      calculateCalls += 1;
+      return {};
+    },
+    deleteCart: async (cartId) => {
+      assert.equal(cartId, CART_ID);
+      deleteCalls += 1;
+      return {};
+    },
+  });
+
+  await assert.rejects(
+    core.createBookingCartCheckout(BOOKING_ID, 'trace-cart-12', MEMBER_IDENTITY),
+    (error) => error && error.code === 'CHECKOUT_FAILED'
+  );
+  assert.equal(calculateCalls, 0);
+  assert.equal(deleteCalls, 1);
+});
+
+test('CARTV2-13 rejects a cart owned by a different member and deletes the orphan cart', async () => {
+  let deleteCalls = 0;
+  setCartV2Mock({
+    createCart: async () => ({
+      _id: CART_ID,
+      customerInfo: {
+        memberId: '55555555-5555-4555-8555-555555555555',
+        contactId: CONTACT_ID,
+        openAccess: false,
+      },
+    }),
+    calculateCart: async () => {
+      throw new Error('must not calculate a cart owned by another member');
+    },
+    deleteCart: async () => {
+      deleteCalls += 1;
+      return {};
+    },
+  });
+
+  await assert.rejects(
+    core.createBookingCartCheckout(BOOKING_ID, 'trace-cart-13', MEMBER_IDENTITY),
+    (error) => error && error.code === 'CHECKOUT_FAILED'
+  );
+  assert.equal(deleteCalls, 1);
 });
