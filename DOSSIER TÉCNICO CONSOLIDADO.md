@@ -3729,3 +3729,19 @@ Este anexo actualiza las referencias históricas de este dossier que indican Cat
 - Bulk Increment/Decrement Inventory Items V3: SCOPE.STORES.INVENTORY_ITEM_WRITE.
 
 La concesión efectiva de estos scopes en el entorno Velo del sitio sigue pendiente de comprobación en Wix Local Editor; auth.elevate no sustituye la concesión de scopes.
+
+
+---
+
+## ANEXO QA LIVE — 2026-11-09: smoke de producción
+
+La ejecución read-only de QA del 09-11-2026 queda registrada en `docs/qa/2026-11-09-runtime-smoke-production.md`.
+
+- **Verificado en el sitio publicado:** Catalog Versioning devuelve `V3_CATALOG`; Query Products V3 devuelve 24 productos visibles; Query Inventory Items V3 devuelve 30 artículos seguidos en una ubicación.
+- **Verificado en Wix Bookings:** 70 servicios de cita visibles; el endpoint de disponibilidad devuelve slots para Balayage Signature el 10-11-2026 y la revalidación del slot 09:00–09:40 responde `bookable=true`.
+- **Límite de evidencia:** estas llamadas validan APIs REST nativas y disponibilidad, no la importación del SDK `@wix/stores` ni la ejecución de los WebMethods personalizados en Velo.
+- **Publicación bloqueada:** Wix CLI autentica y crea preview, pero detiene el publish porque el Editor contiene cambios UI más recientes que el snapshot Git (`UI version: 15941`). No se elude el guard; debe sincronizarse y guardarse la UI desde Local Editor.
+- **CI offline:** run `42656358136`, 50 suites / 477 pruebas / 0 fallos. No certifica runtime Wix.
+- **Sin mutaciones:** no se han creado reservas/pedidos, cobrado, modificado CMS, stock ni ledgers.
+
+**Estado:** smoke REST nativa PASS; smoke visual parcial; runtime Velo y despliegue de la revisión actual BLOCKED hasta sincronización UI y validación Local Editor.
