@@ -31,26 +31,27 @@ El código, la configuración viva de Wix, los contratos oficiales de las APIs y
 
 - Los workflows usan runners alojados por GitHub (`ubuntu-latest`) y `actions/checkout` descarga el commit del evento dentro del workspace del runner.
 - La ruta operativa debe obtenerse dinámicamente con `${{ github.workspace }}` o mediante rutas relativas al repositorio. No codificar rutas absolutas del equipo local ni rutas internas fijas del runner.
-- La ruta local `C:\Users\nacho\marianmadridz` pertenece únicamente al clon de desarrollo en Windows. No es accesible desde GitHub-hosted runners y no se debe pasar al workflow.
+- La ruta local `C:\\Users\\nacho\\marianmadridz` pertenece únicamente al clon de desarrollo en Windows. No es accesible desde GitHub-hosted runners y no se debe pasar al workflow.
 - En un run observado, GitHub situó este repositorio en `/home/runner/work/marianmadridz/marianmadridz`. Es una ruta de ejecución del runner, no una ruta contractual: puede cambiar según el runner y el contexto.
-- El workflow `.github/workflows/backend-offline-quality.yml` ejecuta QA offline (Layer 1/2, regresión, contratos SDK, ESLint y self-tests). **No inicia Wix Preview, Wix Publish ni otros despliegues.**
+- El workflow `.github/workflows/backend-offline-quality.yml` ejecuta QA offline (Layer 1/2, regresión, contratos SDK y ESLint). **No inicia Wix Preview, Wix Publish ni otros despliegues.**
 - El workflow comprueba que la raíz Git del checkout coincide con `$GITHUB_WORKSPACE`.
-- Los self-tests de controladores PTY solo prueban su lógica local; no autentican en Wix ni crean despliegues.
 
 ## Criterio de validación
 
 Distinguir siempre:
 - **Pruebas offline:** mocks y fixtures; no prueban Wix runtime.
-- **QA/Preview:** evidencia de ejecución en el entorno Wix de pruebas. Wix Preview se inicia manualmente por el propietario, fuera de los workflows automáticos de CI.
+- **QA/Preview:** Wix Preview se inicia y valida manualmente por el propietario, fuera de GitHub Actions.
 - **E2E real:** flujo completo ejecutado en navegador/runtime, con sus integraciones reales y resultado comprobado.
 
 CI verde no equivale a E2E ni a publicación. No afirmar que una función está operativa sin evidencia.
 
 ## Seguridad, Preview y publicación
 
-- **Wix Preview:** no se ejecuta automáticamente desde GitHub Actions. Su creación y validación corresponden al propietario mediante el flujo manual autorizado.
-- **Publicación de producción:** el workflow `.github/workflows/wix-publish-through-167.yml` puede publicar desde `main` en dos supuestos: (1) push elegible que afecte a las rutas incluidas en su filtro `paths`; o (2) ejecución manual mediante `workflow_dispatch` desde `main`. Ejecuta sus gates y, si los supera, invoca Wix Publish. Por tanto, fusionar cambios de código/configuración incluidos en ese filtro o lanzar manualmente el workflow puede iniciar una publicación real. Revisar el workflow y obtener autorización expresa antes de integrar o ejecutar cambios con ese efecto.
-- No tocar producción ni CMS de producción fuera de ese proceso controlado y sin autorización explícita.
+- **Wix Preview:** ejecución exclusivamente manual por el propietario mediante Wix Editor o Wix CLI for Sites.
+- **Wix Publish:** publicación exclusivamente manual y autorizada por el propietario mediante Wix Editor o Wix CLI for Sites.
+- **GitHub Actions no contiene workflows de Wix Preview ni Wix Publish.** Los cambios en `main` no deben iniciar despliegues Wix; GitHub Actions conserva únicamente las comprobaciones de calidad automatizadas.
+- Antes de publicar, ejecutar las pruebas offline pertinentes, revisar la sincronización del código y de la versión UI del Editor y confirmar el destino Wix.
+- No tocar producción ni CMS de producción fuera del proceso manual controlado y sin autorización explícita.
 - No crear reservas, pagos, devoluciones, movimientos económicos, emails ni automatizaciones activas sin autorización.
 - No solicitar ni exponer secretos. No sortear controles de seguridad.
 - No borrar código, colecciones o campos sin auditoría de consumidores, impacto, histórico y rollback.
