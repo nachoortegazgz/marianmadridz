@@ -64,7 +64,7 @@ import {
     THIRD_PARTY_TYPE,
     PROJECTION_STATUS,
     RECORD_TYPE,
-    MOVEMENT_LEGACY_READ_ALIASES,
+    MOVEMENT_HISTORICAL_READ_ALIASES,
     normalizeMovementKeys,
 } from "backend/internalConfig";
 
@@ -250,7 +250,7 @@ function _buildAEATPayload(movement, generatedAt) {
     const fechaExpedicionFactura = _safeTrim(readInvoiceIssueDate(movement));
     const tipoFactura = readInvoiceType(movement) || TIPO_FACTURA.F1;
     // Cuota: canon SSOT es taxAmount; cuotaTotal es alias de lectura
-    // tolerado SOLO para docs historicos (MOVEMENT_LEGACY_READ_ALIASES).
+    // tolerado SOLO para docs historicos (MOVEMENT_HISTORICAL_READ_ALIASES).
     const taxAmount = readTaxAmount(movement);
     const totalAmount = Number(movement.totalAmount ?? 0);
     const previousRecordHash = _safeTrim(movement.previousRecordHash);
