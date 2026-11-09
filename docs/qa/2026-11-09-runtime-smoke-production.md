@@ -37,15 +37,15 @@ Se observó en la extracción de texto de inicio la cadena «Confirmación al in
 | WIX-SM-05 | `POST /_api/service-availability/v2/time-slots` | HTTP 200 · servicio Balayage Signature · 10 slots en primera página · zona `Europe/Madrid` · hay página siguiente |
 | WIX-SM-06 | `POST /_api/service-availability/v2/time-slots/get` | HTTP 200 · 10-11-2026 09:00–09:40 · `bookable=true` · capacidad restante 1 · un recurso disponible |
 
-La disponibilidad fue consultada para el 10-11-2026. La revalidación de un slot confirma que Wix lo consideraba disponible en el instante de la consulta; no es una reserva ni garantiza disponibilidad futura.
+La disponibilidad fue consultada para el 10-11-2026. La revalidación de un slot confirma que Wix lo consideraba disponible en el instante de la consulta; no es una reserva ni garantiza disponibilidad futura. El esquema oficial de Bookings indica que schedule.firstSessionStart/lastSessionEnd se usan solo para cursos, por lo que no deben interpretarse como límite temporal de este servicio de cita.
 
 ## 4. CI y estado de publicación
 
 - GitHub Actions run `42656358136`: `success`, 50 suites, 477 pruebas, 0 fallos. Es CI offline; los mocks no ejecutan los WebMethods en el runtime Wix.
-- GitHub Actions run `42545413297` (`Wix production publish`): autenticación CLI correcta y preview creado; publicación detenida por protección de versión UI.
-- Mensaje reproducible: el Editor contiene cambios de diseño más recientes que la versión UI del repositorio (`UI version: 15941`). El script detiene la publicación para evitar publicar un snapshot visual obsoleto.
-- Última publicación exitosa visible en las ejecuciones recientes: run `42501667041`, 08-11-2026 16:47Z, commit `795a38b9edadcb2d0d0592d96a73015c2f725221`. Las ejecuciones de publicación del 09-11-2026 fallaron por el bloqueo UI.
-- No hay evidencia en Actions de que el código de los merges de 09-11-2026 se haya publicado. No se ha intentado forzar la publicación.
+- GitHub Actions run `42545413297` (`Wix production publish`, 09-11-2026 01:24Z): autenticación CLI correcta y preview creado; publicación detenida por protección de versión UI. Esta ejecución es anterior a los merges #229 y #230 de ese día.
+- Mensaje reproducible: el Editor contenía cambios de diseño más recientes que la versión UI del repositorio (`UI version: 15941`). El script detuvo esa publicación para evitar publicar un snapshot visual obsoleto.
+- Última publicación exitosa visible en las ejecuciones recientes: run `42501667041`, 08-11-2026 16:47Z, commit `795a38b9edadcb2d0d0592d96a73015c2f725221`.
+- No aparece una ejecución de publicación posterior a los merges #229 y #230. Por tanto, no hay evidencia de que la revisión actual de main esté desplegada. El bloqueo UI se debe volver a comprobar en un intento de publicación sobre el commit actual; no se ha forzado ninguna publicación.
 
 ## 5. Bloqueos pendientes — no ocultar ni eludir
 
