@@ -512,14 +512,14 @@ test("EVENT-BOOKING-RESCHEDULE-01 native reschedule updates only the affected Ci
         id: BOOKING_ID,
         _id: BOOKING_ID,
         revision: 4,
-        startDate: "2026-11-10T10:00:00.000Z",
-        endDate: "2026-11-10T10:30:00.000Z",
+        startDate: "2026-11-10T11:00:00",
+        endDate: "2026-11-10T11:30:00",
         bookedEntity: {
           slot: {
             serviceId: SERVICE_ID,
             scheduleId: SCHEDULE_ID,
-            startDate: "2026-11-10T10:00:00.000Z",
-            endDate: "2026-11-10T10:30:00.000Z",
+            startDate: "2026-11-10T11:00:00",
+            endDate: "2026-11-10T11:30:00",
             resource: { id: RESOURCE_ID, scheduleId: SCHEDULE_ID },
           },
         },
