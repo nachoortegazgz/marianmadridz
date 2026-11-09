@@ -139,7 +139,6 @@ export async function queryCatalogInventory(options = {}) {
         variants,
         totalCount: hasNext ? null : selected.length,
         hasNext: offset + variants.length < selected.length || hasNext,
-        nextCursor: cursor,
     };
 }
 
