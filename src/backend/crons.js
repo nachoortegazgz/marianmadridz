@@ -435,19 +435,33 @@ reason: "Legacy paid-order recovery lacks the original fiscal payload; manual fi
 if (recoveryProcessor === "EVENT_LOG_ORDER") {
 const fiscalPayload = payload.fiscalPayload;
 const amount = Number(fiscalPayload?.totalAmount);
+const taxBase = Number(fiscalPayload?.taxBase);
+const taxAmount = Number(fiscalPayload?.taxAmount);
+const taxRate = Number(fiscalPayload?.tipoImpositivo);
+const issueDate = _safeTrim(fiscalPayload?.fechaExpedicionFactura);
+const linkedBookingIds = fiscalPayload?.linkedBookingIds;
 const validOrderPayload = fiscalPayload &&
 typeof fiscalPayload === "object" &&
 !Array.isArray(fiscalPayload) &&
 fiscalPayload.eventType === "VENTA_LINEA" &&
 fiscalPayload.movementType === "VENTA_ONLINE" &&
 fiscalPayload.paymentMethod === "WIX_PAYMENTS" &&
+["F1", "F2"].includes(fiscalPayload.tipoFactura) &&
 payload.recoveryScope === "BOOKINGS_ONLY" &&
 Number.isFinite(amount) && amount > 0 &&
+Number.isFinite(taxBase) && taxBase >= 0 &&
+Number.isFinite(taxAmount) && taxAmount >= 0 &&
+Number.isFinite(taxRate) && taxRate >= 0 &&
+/^\\d{4}-\\d{2}-\\d{2}$/.test(issueDate) &&
+_safeTrim(fiscalPayload.nifEmisor) &&
+_safeTrim(fiscalPayload.issuerLegalName) &&
+Array.isArray(fiscalPayload.breakdown) && fiscalPayload.breakdown.length > 0 &&
 _safeTrim(fiscalPayload.transactionId) === transactionId &&
 _safeTrim(fiscalPayload.orderId) &&
 transactionId === `ORDER-${_safeTrim(fiscalPayload.orderId)}` &&
-Array.isArray(fiscalPayload.linkedBookingIds) &&
-fiscalPayload.linkedBookingIds.length > 0;
+Array.isArray(linkedBookingIds) &&
+linkedBookingIds.length > 0 &&
+linkedBookingIds.every(_looksLikeGuid);
 if (!validOrderPayload) {
 return {
 ok: false,
