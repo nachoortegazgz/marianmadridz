@@ -9,15 +9,25 @@ STANDARDS: Wix CMS ControlOperativo SLOT_LOCK; no business data is mutated.
 */
 
 import {
+    query as dalQuery,
     getItem as dalGet,
     insertItem as dalInsert,
+    updateItem as dalUpdate,
     removeById as dalRemove,
 } from "backend/dataAccess";
-import { BUSINESS_COLLECTIONS, CONTROL_TYPE, FISCAL_LEDGER_LOCK_CONFIG } from "backend/internalConfig";
+import {
+    BUSINESS_COLLECTIONS,
+    CONTROL_TYPE,
+    FISCAL_LEDGER_LOCK_CONFIG,
+    SINGLETONS,
+    SDK_CONFIG,
+} from "backend/internalConfig";
 import { makeTraceId } from "public/mmUtils";
 
 const CONTROL_COL = BUSINESS_COLLECTIONS.CONTROL_OPERATIVO;
+const CASH_COL = BUSINESS_COLLECTIONS.CAJA_ACTUAL;
 const LOCK_ID = FISCAL_LEDGER_LOCK_CONFIG.ID;
+const SEQUENCE_RETRIES = 5;
 const LOCK_DEDUPE_KEY = FISCAL_LEDGER_LOCK_CONFIG.DEDUPE_KEY;
 const LOCK_TTL_MS = FISCAL_LEDGER_LOCK_CONFIG.TTL_MS;
 const DEFAULT_WAIT_MS = FISCAL_LEDGER_LOCK_CONFIG.WAIT_MS;
@@ -47,6 +57,117 @@ function _isNotFound(error) {
 
 function _sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+export async function getCashRegisterSingleton() {
+    const result = await dalQuery(CASH_COL)
+        .eq("singletonKey", SINGLETONS.CAJA_PRINCIPAL)
+        .limit(2)
+        .find({ consistencyMode: "strong" });
+    const matches = result?.items || [];
+    if (matches.length > 1) throw new Error("CAJA_PRINCIPAL_DUPLICATE_SINGLETON");
+    return matches[0] || null;
+}
+
+function _localYear() {
+    return new Intl.DateTimeFormat("en", {
+        timeZone: SDK_CONFIG?.TZ || "Europe/Madrid",
+        year: "numeric",
+    }).format(new Date());
+}
+
+function _counter(value) {
+    const number = Number(value);
+    return Number.isSafeInteger(number) && number > 0 ? number : 0;
+}
+
+export async function allocateFiscalSequence(lock, lastMovement, traceId) {
+    await assertFiscalLedgerLock(lock);
+    const yearKey = _localYear();
+    const invoiceMatch = /^FAC-(\\d{4})-(\\d{5})$/.exec(String(lastMovement?.numSerieFactura || ""));
+    const lastInvoiceYear = invoiceMatch?.[1] || "";
+    const lastYearSequence = lastInvoiceYear === yearKey ? _counter(invoiceMatch[2]) : 0;
+
+    for (let attempt = 0; attempt < SEQUENCE_RETRIES; attempt += 1) {
+        try {
+            const cashRegister = await getCashRegisterSingleton();
+            if (!cashRegister) throw new Error("CAJA_PRINCIPAL_MISSING");
+
+            const counters = { ...(cashRegister.sequenceCounters || {}) };
+            const sequenceNumber = Math.max(
+                _counter(counters.seqGlobal),
+                _counter(lastMovement?.sequenceNumber),
+            ) + 1;
+            const yearSequence = Math.max(
+                _counter(counters[yearKey]),
+                lastYearSequence,
+            ) + 1;
+
+            await dalUpdate(CASH_COL, {
+                ...cashRegister,
+                sequenceCounters: {
+                    ...counters,
+                    seqGlobal: sequenceNumber,
+                    [yearKey]: yearSequence,
+                },
+                _updatedDate: new Date(),
+            });
+
+            return {
+                sequenceNumber,
+                yearSequence,
+                numSerieFactura: `FAC-${yearKey}-${String(yearSequence).padStart(5, "0")}`,
+            };
+        } catch (error) {
+            if (attempt === SEQUENCE_RETRIES - 1) {
+                const failure = new Error(`SEQUENCE_ERROR: ${error?.message || "unknown"}`);
+                failure.code = "SEQUENCE_ERROR";
+                failure.cause = error;
+                throw failure;
+            }
+            await _sleep(100 * (attempt + 1));
+        }
+    }
+    throw new Error(`SEQUENCE_ERROR: ${String(traceId || "unknown")}`);
+}
+
+export async function rollbackFiscalSequence(lock, sequence, traceId) {
+    if (!sequence || !_counter(sequence.sequenceNumber)) return false;
+    const invoiceMatch = /^FAC-(\\d{4})-(\\d{5})$/.exec(String(sequence.numSerieFactura || ""));
+    if (!invoiceMatch) return false;
+    const yearKey = invoiceMatch[1];
+
+    try {
+        await assertFiscalLedgerLock(lock);
+        for (let attempt = 0; attempt < SEQUENCE_RETRIES; attempt += 1) {
+            try {
+                const cashRegister = await getCashRegisterSingleton();
+                if (!cashRegister) return false;
+                const counters = { ...(cashRegister.sequenceCounters || {}) };
+                if (
+                    _counter(counters.seqGlobal) !== _counter(sequence.sequenceNumber) ||
+                    _counter(counters[yearKey]) !== _counter(sequence.yearSequence)
+                ) return false;
+
+                await dalUpdate(CASH_COL, {
+                    ...cashRegister,
+                    sequenceCounters: {
+                        ...counters,
+                        seqGlobal: _counter(sequence.sequenceNumber) - 1,
+                        [yearKey]: _counter(sequence.yearSequence) - 1,
+                    },
+                    _updatedDate: new Date(),
+                });
+                return true;
+            } catch (error) {
+                if (attempt === SEQUENCE_RETRIES - 1) throw error;
+                await _sleep(100 * (attempt + 1));
+            }
+        }
+    } catch (error) {
+        return false;
+    }
+    return false;
 }
 
 export async function acquireFiscalLedgerLock(traceId, options = {}) {
