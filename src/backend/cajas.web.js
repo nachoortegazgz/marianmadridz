@@ -829,7 +829,6 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
                     dedupeKey: transactionId,
                     status: "RESERVED",
                     traceId,
-                    createdAt: new Date(),
                     _createdDate: new Date(),
                 });
             } catch (claimError) {
