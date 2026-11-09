@@ -429,10 +429,6 @@ export async function bulkPatchItems(
         runOptions.condition = buildBulkPatchCondition(options.condition.filter);
     }
 
-    if (typeof options.suppressHooks === "boolean") {
-        runOptions.suppressHooks = options.suppressHooks;
-    }
-
     return operation.run(runOptions);
 }
 
