@@ -39,6 +39,7 @@ Este registro centraliza las decisiones explícitas del propietario y las decisi
 | TEC-009 | El ledger fiscal/contable registra hechos económicos y rectificaciones trazables; no gobierna cantidades de stock. | Mantener separación entre economía/fiscalidad e inventario. | Aprobada |
 | TEC-010 | La recuperación fiscal de pedidos pagados se limita a pedidos exclusivamente Bookings con payload fiscal original; pedidos Store/mixtos o legacy sin payload quedan en conciliación manual. | Evita reconstruir hechos fiscales incompletos o acoplar stock a ledger. Implementado en PR #235. | Fusionado; CI offline aprobada, runtime Wix pendiente |
 | TEC-011 | No fusionar/publicar cambios críticos solo con CI offline; exigir pruebas positivas de integración/runtime, revisión de diff y rollback. | CI no certifica Velo runtime, webhooks reales ni Wix publicado. | Gate permanente |
+| TEC-012 | Los cambios documentales se consolidan en ADR/registro central; PR #236 se mantiene draft hasta revisión del diff. | Trazabilidad y control de cambios. | PR abierto, 10 commits ahead / 0 behind, sin cambios ejecutables |
 
 ### Fuentes técnicas oficiales Wix
 
