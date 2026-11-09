@@ -549,7 +549,7 @@ test("EVENT-BOOKING-RESCHEDULE-01 native reschedule updates only the affected Ci
   );
   assert.equal(alerts.length, 1);
   assert.equal(alerts[0].status, "OPEN");
-  assert.deepEqual(alerts[0].payload.bookingIds.sort(), [BOOKING_ID, F2_BOOKING_ID].sort());
+  assert.deepEqual(alerts[0].payload.data.bookingIds.sort(), [BOOKING_ID, F2_BOOKING_ID].sort());
 });
 
 test("EVENT-BOOKING-RESCHEDULE-02 duplicate native reschedule event is idempotent", async () => {
