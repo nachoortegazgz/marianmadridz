@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 
 const { mocks } = await import('./loader.mjs');
 const core = await import('../booking/bookingCore.js');
@@ -379,4 +380,30 @@ test('CARTV2-13 rejects a cart owned by a different member and deletes the orpha
     (error) => error && error.code === 'CHECKOUT_FAILED'
   );
   assert.equal(deleteCalls, 1);
+});
+test('CARTV2-14 requires member and contact identity before creating any cart', async () => {
+  let createCalls = 0;
+  setCartV2Mock({
+    createCart: async () => {
+      createCalls += 1;
+      return { _id: CART_ID, customerInfo: OWNED_CART };
+    },
+  });
+
+  await assert.rejects(
+    core.createBookingCartCheckout(BOOKING_ID, 'trace-cart-14', {}),
+    (error) => error && error.code === 'AUTH_REQUIRED'
+  );
+  assert.equal(createCalls, 0);
+});
+
+test('CARTV2-15 saga passes the authenticated member and contact IDs to the isolated booking cart', async () => {
+  const sagaSource = await readFile(
+    new URL('../booking/bookingSaga.js', import.meta.url),
+    'utf8'
+  );
+  assert.match(
+    sagaSource,
+    /createBookingCartCheckout\(\s*bookingF1Id,\s*traceId,\s*\{\s*memberId:\s*sessionMemberId,\s*contactId:\s*sessionContactId/
+  );
 });
