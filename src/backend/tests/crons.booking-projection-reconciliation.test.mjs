@@ -62,6 +62,13 @@ const CANCELED_PAID = booking("eeeeeeee-eeee-4eee-8eee-eeeeeeeeeee5", {
 mocks.sdk[bookingsReaderKey] = async (...args) => {
   const query = args.find(arg => arg && (arg.filter || arg.cursorPaging)) || args[0];
   readerCalls.push(query);
+  if (query?.cursorPaging?.cursor) {
+    confirmedPage++;
+    return {
+      extendedBookings: [{ booking: CONFIRMED_PAID }, { booking: CONFIRMED_EXISTING }],
+      pagingMetadata: { cursors: { next: null } },
+    };
+  }
   const status = query?.filter?.status;
   if (status === "CANCELED") {
     return {
@@ -71,13 +78,6 @@ mocks.sdk[bookingsReaderKey] = async (...args) => {
   }
   if (status !== "CONFIRMED") {
     throw new Error("Unexpected Bookings Reader filter: " + JSON.stringify(args));
-  }
-  if (query?.cursorPaging?.cursor) {
-    confirmedPage++;
-    return {
-      extendedBookings: [{ booking: CONFIRMED_PAID }, { booking: CONFIRMED_EXISTING }],
-      pagingMetadata: { cursors: { next: null } },
-    };
   }
   confirmedPage = 0;
   return {
@@ -134,9 +134,11 @@ test("CRON-BOOKING-PROJECTION-01 projects only confirmed unpaid bookings with co
   assert.equal(result.reviewRequired, 3);
   assert.equal(result.failed, 0);
   assert.ok(readerCalls.length >= 3);
-  assert.equal(readerCalls[0].filter.status, "CONFIRMED");
-  assert.equal(readerCalls[1].filter, undefined, "cursor pages must not repeat the first-page filter");
-  assert.equal(readerCalls[1].cursorPaging.cursor, "confirmed-page-2");
+  assert.ok(readerCalls.some(query => query.filter?.status === "CONFIRMED"));
+  const cursorQuery = readerCalls.find(query => query.cursorPaging?.cursor);
+  assert.ok(cursorQuery, "second page must use a cursor");
+  assert.equal(cursorQuery.filter, undefined, "cursor pages must not repeat the first-page filter");
+  assert.equal(cursorQuery.cursorPaging.cursor, "confirmed-page-2");
 
   const citas = wixDataMock._store.get(IC.BUSINESS_COLLECTIONS.CITAS_F2) || [];
   const projected = citas.find(row => row.bookingId === CONFIRMED_VALID.id);
