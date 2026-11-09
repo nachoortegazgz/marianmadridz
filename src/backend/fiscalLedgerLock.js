@@ -185,7 +185,7 @@ export async function rollbackFiscalSequence(lock, sequence) {
                     _updatedDate: new Date(),
                 });
                 return true;
-            } catch (writeError) {
+            } catch (_) {
                 let latest;
                 try {
                     latest = await getCashRegisterSingleton();
