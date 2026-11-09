@@ -1503,9 +1503,7 @@ export async function wixEcom_onOrderPaymentStatusUpdated(rawBody) {
         const emisor = await _getEmisorFiscal();
 
         let eventResult;
-        if (existingRefundMovement) {
-            eventResult = { status: "SUCCESS", idempotent: true, data: existingRefundMovement };
-        } else try {
+        try {
             eventResult = await registrarEventoEconomico({
                 eventType: EVENT_TYPE.VENTA_LINEA,
                 movementType: MOVEMENT_TYPE.VENTA_ONLINE,
@@ -1860,7 +1858,9 @@ export async function wixEcom_onOrderRefunded(rawBody) {
         });
 
         let eventResult;
-        try {
+        if (existingRefundMovement) {
+            eventResult = { status: "SUCCESS", idempotent: true, data: existingRefundMovement };
+        } else try {
             eventResult = await registrarEventoEconomico({
                 eventType: EVENT_TYPE.RECTIFICATIVA,
                 movementType: MOVEMENT_TYPE.REEMBOLSO,
