@@ -70,6 +70,19 @@ const RESEND_ENDPOINT = "https://api.resend.com/emails";
 const RESEND_KEY_NAME = "RESEND_API_KEY";
 const RESEND_FROM_NAME = SDK_CONFIG.EMAIL.FROM_NAME;
 const RESEND_FROM_ADDRESS = SDK_CONFIG.EMAIL.FROM_ADDRESS;
+const ACCOUNTANT_SEND_ENABLED = SDK_CONFIG.EMAIL.ACCOUNTANT_SEND_ENABLED === true;
+
+function _accountantSendDisabledResult(traceId) {
+  return {
+    status: "ERROR",
+    data: null,
+    error: {
+      code: "ACCOUNTANT_SEND_DISABLED",
+      message: "El envio a gestoria esta bloqueado hasta persistir y verificar el snapshot inmutable del despacho.",
+      traceId: traceId || null,
+    },
+  };
+}
 
 // Marcadores canonicos para identificar un item dedicado a gestor.
 const GESTOR_RECORD_TYPE_MARKERS = Object.freeze([
@@ -712,6 +725,10 @@ export const sendManagerPackageToAccountant = webMethod(
     try {
       await requireMarianManager(traceId);
 
+      if (!ACCOUNTANT_SEND_ENABLED) {
+        return _accountantSendDisabledResult(traceId);
+      }
+
       const periodType = _safeTrim(params.periodType).toUpperCase();
       const year = Number(params.year);
       const month = params.month != null ? Number(params.month) : null;
@@ -909,6 +926,10 @@ export const sendSpecificDocumentToAccountant = webMethod(
     const traceId = makeTraceId("doc-send-doc");
     try {
       await requireMarianManager(traceId);
+
+      if (!ACCOUNTANT_SEND_ENABLED) {
+        return _accountantSendDisabledResult(traceId);
+      }
 
       const documentId = _safeTrim(params.documentId);
       const documentType = _safeTrim(params.documentType) || null;
