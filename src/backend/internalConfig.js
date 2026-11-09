@@ -411,6 +411,9 @@ export const CONTROL_TYPE = Object.freeze({
   DAYS_CACHE: "DAYS_CACHE",
   DISPLAY_TOKEN: "DISPLAY_TOKEN",
   DUAL_CACHE: "DUAL_CACHE",
+  // Durable deduplication claims are not eligible for the 24h booking-control purge.
+  DEDUPE_KEY: "DEDUPE_KEY",
+  LEDGER_IDEMPOTENCY: "LEDGER_IDEMPOTENCY",
   IDEMPOTENCY: "IDEMPOTENCY",
   SLOT_LOCK: "SLOT_LOCK",
   RATE_LIMIT: "RATE_LIMIT",
