@@ -13,8 +13,10 @@ import {
     FISCAL_ROLE,
     MOVEMENT_LEGACY_READ_ALIASES,
     normalizeMovementKeys,
+    OPERATIONAL_COLLECTIONS,
 } from "backend/internalConfig";
 import { assertCitasF2, assertControlOperativo } from "backend/validation";
+import { CONSISTENCY, getItem } from "backend/dataAccess";
 
 import { logger } from "backend/logger";
 
@@ -890,19 +892,44 @@ export function ControlOperativo_beforeInsert(item) {
     return normalized;
 }
 
-export function ControlOperativo_beforeUpdate(item, context) {
-    const original = context?.original || item || {};
+export async function ControlOperativo_beforeUpdate(item) {
+    const id = _safeTrim(item?._id);
+    if (!id) _schemaError("ControlOperativo update requires _id");
+
+    const original = await getItem(
+        OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO,
+        id,
+        CONSISTENCY.STRONG
+    );
+    if (!original) _schemaError("ControlOperativo update target not found");
+
     if (APPEND_ONLY_CONTROL_TYPES.has(original.controlType)) {
         _fiscalError(`ControlOperativo/${original.controlType} es append-only: modificacion prohibida`);
     }
-    return normalizeControlKeys(item);
+
+    const normalized = normalizeControlKeys({ ...original, ...item });
+    if (normalized.controlType !== original.controlType) {
+        _fiscalError("ControlOperativo.controlType es inmutable");
+    }
+    assertControlOperativo(normalized);
+    return normalized;
 }
 
-export function ControlOperativo_beforeRemove(item) {
-    if (APPEND_ONLY_CONTROL_TYPES.has(item?.controlType)) {
-        _fiscalError(`ControlOperativo/${item.controlType} es append-only: borrado prohibido`);
+export async function ControlOperativo_beforeRemove(itemId) {
+    const id = typeof itemId === "string"
+        ? itemId.trim()
+        : _safeTrim(itemId?._id);
+    if (!id) _schemaError("ControlOperativo remove requires itemId");
+
+    const original = await getItem(
+        OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO,
+        id,
+        CONSISTENCY.STRONG
+    );
+    if (original && APPEND_ONLY_CONTROL_TYPES.has(original.controlType)) {
+        _fiscalError(`ControlOperativo/${original.controlType} es append-only: borrado prohibido`);
     }
-    return item;
+    return itemId;
 }
 
 // =============================================================================
