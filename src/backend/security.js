@@ -321,9 +321,14 @@ export async function rateLimiter(
                 {
                     condition: {
                         filter: {
+                            controlType: { $eq: CONTROL_TYPE.RATE_LIMIT },
                             version: { $eq: version },
                         },
                     },
+                    // This CAS updates only RATE_LIMIT state. Its identity and
+                    // schema are validated above; skip the generic CMS hook's
+                    // extra strong read on every public request.
+                    suppressHooks: true,
                 }
             );
 
