@@ -55,6 +55,7 @@ import {
     BOOKING_TYPE,
     PAYMENT_STATUS,
     CHANNEL_TYPE,
+    BOOKING_PAYMENT_OPTION,
     COMPENSATION_KIND,
     COMPENSATION_STATUS,
     BOOKING_FIELDS,
@@ -141,9 +142,6 @@ const BOOKING_STATUS_PENDING_PAYMENT = _safeTrim(
 
 const CHANNEL_ONLINE = _safeTrim(CHANNEL_TYPE.ONLINE).toUpperCase();
 const CHANNEL_PRESENCIAL = _safeTrim(CHANNEL_TYPE.PRESENCIAL).toUpperCase();
-const BOOKING_PAYMENT_OPTION_ONLINE = "ONLINE";
-const BOOKING_PAYMENT_OPTION_OFFLINE = "OFFLINE";
-
 const NON_CANCELABLE_STATUSES = new Set(
     [
         BOOKING_STATUS.CANCELED,
@@ -1839,8 +1837,8 @@ export async function executeBookingSaga(unsafePayload) {
                 if (appointmentNote) bookingBodyF1.internalBusinessNote = appointmentNote;
                 if (bookedAddOns.length > 0) bookingBodyF1.bookedAddOns = bookedAddOns;
                 bookingBodyF1.selectedPaymentOption = isOnline
-                    ? BOOKING_PAYMENT_OPTION_ONLINE
-                    : BOOKING_PAYMENT_OPTION_OFFLINE;
+                    ? BOOKING_PAYMENT_OPTION.ONLINE
+                    : BOOKING_PAYMENT_OPTION.OFFLINE;
 
                 const f1IntentStarted = await updateBookingWriterIntent(
                     pairToken, "F1", "INTENT",
@@ -1923,7 +1921,7 @@ export async function executeBookingSaga(unsafePayload) {
                         bookedEntity: { slot: pristineF2 },
                         contactDetails: contactDetails,
                         totalParticipants: 1,
-                        selectedPaymentOption: BOOKING_PAYMENT_OPTION_OFFLINE,
+                        selectedPaymentOption: BOOKING_PAYMENT_OPTION.OFFLINE,
                     };
                     if (appointmentNote) bookingBodyF2.internalBusinessNote = appointmentNote;
                     const f2IntentStarted = await updateBookingWriterIntent(
