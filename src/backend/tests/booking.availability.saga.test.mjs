@@ -55,6 +55,10 @@ test('BAVAIL-WINDOW-01 backend and frontend expose the same 15-day booking windo
 // SLOT SHAPE NORMALIZATION (Wix Bookings Writer V2 devuelve ambas formas)
 // ---------------------------------------------------------------------------
 
+test('BUTIL-CONFIG-01 public SLOT_SEARCH mirror matches backend SSOT', () => {
+  assert.deepStrictEqual(MU.SLOT_SEARCH, IC.SLOT_SEARCH);
+});
+
 test('BUTIL-SLOT-01 normalizeSlotShape flattens nested slot, outer wins', () => {
   const nested = BU.normalizeSlotShape({
     slot: { localStartDate: '2026-10-15T09:00:00', _id: 'S1' },
