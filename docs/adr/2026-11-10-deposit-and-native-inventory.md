@@ -32,8 +32,9 @@
 2. **Umbral:** `price > 10000` en unidad monetaria menor (céntimos) si el backend llegara a validar el criterio; evitar comparaciones de punto flotante. La configuración nativa sigue siendo preferente y debe reconciliarse con el catálogo de servicios.
 3. **Precio variable:** clasificar cada variante. Si un servicio contiene variantes a ambos lados del umbral y Wix solo permite un importe de depósito común para el servicio, separar variantes/servicios en la configuración nativa antes de considerar código custom.
 4. **Cancelaciones:** 24 horas de preaviso como ventana gratuita. No activar retención automática tardía/no-show sin revisión jurídica; reembolso por cancelación del negocio íntegro. Reprogramación y refund deben ser idempotentes y reconciliar el pago nativo.
-5. **Inventario:** retirar la capa custom por fases: primero quitar la dependencia de webhooks y UI, luego eliminar código no referenciado tras búsqueda completa y pruebas. No crear ni reparar `InventarioStockVenta`.
+5. **Inventario:** retirar la capa custom por fases: quitar dependencia de webhooks/UI y eliminar código no referenciado. No crear ni reparar `InventarioStockVenta`.
 6. **Históricos:** `MovimientosInventario` se considera histórico append-only; no insertar nuevos movimientos personalizados, editar, borrar ni purgar filas existentes. Cualquier política de archivo requiere ADR separado.
+7. **Restock:** al cancelar antes de fulfillment/consumo, usar `restockAllItems=true` si el producto sigue físicamente disponible. En reembolsos, enviar `sideEffects.restock.lineItems` solo por cantidades recibidas y vendibles. No restock por reembolso de cortesía, servicio consumido, producto dañado o artículo no devuelto.
 7. **Pruebas:** cubrir precios 100.00/100.01, fijo/variable, depósito correcto, saldo restante, pago fallido, reintentos, cancelación a 24h exactas/antes/después, cancelación por negocio, refund y duplicación de webhooks. QA con datos sintéticos y sin cargos reales.
 
 ## Evidencia live de Wix (solo lectura, 2026-11-10)
