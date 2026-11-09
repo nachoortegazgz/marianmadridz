@@ -1279,7 +1279,7 @@ export async function wixBookingsV2_onBookingRescheduled(rawBody) {
         const startDate = startRaw ? new Date(startRaw) : null;
         const endDate = endRaw ? new Date(endRaw) : null;
         if (
-            !_looksLikeGuid(eventId) ||
+            !eventId ||
             !_looksLikeGuid(bookingId) ||
             !startDate ||
             !endDate ||
