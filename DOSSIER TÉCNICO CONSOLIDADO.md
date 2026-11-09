@@ -951,7 +951,7 @@ CONTROL_TYPE    = { ALERT, COMPENSATION, DAYS_CACHE, DEDUPE_KEY,
 `hashSHA256(input)`, `hmacSha256Hex(key, payload)`, `hashChain(prevHash, payload)`, `timingSafeEqual(a, b)`.
 
 **`backend/validation.js`:**
-`assertValidEnum(value, enumObject, fieldName)`, `assertCitasF2(item)`, `assertDatosFiscales(item)`, `assertControlOperativo(item)`, `assertRegistrosHorariosStaff(item)`, `assertMovimientosInventario(item)`, `isValidNifOrEuVat(taxId)`.
+`assertValidEnum(value, enumObject, fieldName)`, `assertCitasF2(item)`, `assertDatosFiscales(item)`, `assertControlOperativo(item)`, `assertRegistrosHorariosStaff(item)`, `isValidNifOrEuVat(taxId)`. No existe validator ni writer de nuevas filas `MovimientosInventario`.
 
 ### 14.8 Catálogo de WebMethods públicos
 
