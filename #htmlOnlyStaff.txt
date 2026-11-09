@@ -711,11 +711,11 @@
         userInfo.textContent = `Sesion activa: ${memberName} | ${roleLabel} | ${panelType}`;
         roleBadge.textContent = roleLabel;
 
-        /* Feature flags — defaults: fichaje/caja ON, schedule/inventory OFF */
-        const enableClocking      = contextData.enableClocking      !== false; // default ON
-        const enableBreaks        = contextData.enableBreaks        !== false; // default ON
-        const enableCashier       = contextData.enableCashier       !== false; // default ON
-        const enableInventory     = contextData.enableInventory     === true;  // default OFF
+        /* Feature flags: fail closed; the backend must explicitly enable them. */
+        const enableClocking      = contextData.enableClocking      === true;
+        const enableBreaks        = contextData.enableBreaks        === true;
+        const enableCashier       = contextData.enableCashier       === true;
+        const enableInventory     = contextData.enableInventory     === true;
         const enableScheduleQuery = contextData.enableScheduleQuery === true;  // default OFF
         const isAdmin   = contextData.isAdmin === true;
         const isCajero  = contextData.isCajero === true || enableCashier;
