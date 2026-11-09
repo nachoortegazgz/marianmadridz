@@ -111,7 +111,7 @@ export async function allocateFiscalSequence(lock, lastMovement) {
         const allocated = {
             sequenceNumber,
             yearSequence,
-            numSerieFactura: \`FAC-\${yearKey}-\${String(yearSequence).padStart(5, "0")}\`,
+            numSerieFactura: "FAC-" + yearKey + "-" + String(yearSequence).padStart(5, "0"),
         };
 
         try {
@@ -146,7 +146,7 @@ export async function allocateFiscalSequence(lock, lastMovement) {
             ) throw _sequenceUnknown(writeError, new Error("SEQUENCE_COUNTER_CHANGED"));
 
             if (attempt === SEQUENCE_RETRIES - 1) {
-                const error = new Error(\`SEQUENCE_ERROR: \${writeError?.message || "unknown"}\`);
+                const error = new Error("SEQUENCE_ERROR: " + (writeError?.message || "unknown"));
                 error.code = "SEQUENCE_ERROR";
                 error.cause = writeError;
                 throw error;
@@ -265,7 +265,7 @@ export async function acquireFiscalLedgerLock(traceId, options = {}) {
                 lockOwnerId: ownerId,
                 lockStatus: "ACTIVE",
                 acquiredAt: acquiredAt.toISOString(),
-                purpose: "MOVIMIENTOS_CAJA_SEQUENCE_AND_HASH_CHAIN",
+                purpose: "FISCAL_LEDGER_APPEND",
             },
             traceId: String(traceId || makeTraceId("fiscal-lock")),
             _createdDate: acquiredAt,
