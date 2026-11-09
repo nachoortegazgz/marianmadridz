@@ -1363,11 +1363,7 @@ export async function wixBookingsV2_onBookingRescheduled(rawBody) {
         if (!currentCita) {
             // Do not create an incomplete payment/fiscal projection from a
             // reschedule-only event. Retry until the canonical booking row exists.
-            return {
-                status: "RETRY_REQUIRED",
-                reason: "RESCHEDULED_BOOKING_CITASF2_NOT_FOUND",
-                bookingId,
-            };
+            throw new Error("RESCHEDULED_BOOKING_CITASF2_NOT_FOUND");
         }
 
         const incomingRevision = Number(booking?.revision);
@@ -1390,7 +1386,8 @@ export async function wixBookingsV2_onBookingRescheduled(rawBody) {
         }
 
         const resourceId = _safeTrim(
-            slot?.resource?.id || booking?.resource?.id || currentCita.resourceId
+            slot?.resource?._id || slot?.resource?.id ||
+            booking?.resource?._id || booking?.resource?.id || currentCita.resourceId
         );
         const scheduleId = _safeTrim(
             slot?.scheduleId || slot?.resource?.scheduleId || currentCita.scheduleId
@@ -1409,12 +1406,9 @@ export async function wixBookingsV2_onBookingRescheduled(rawBody) {
             log.warn("BOOKING_RESCHEDULED_SLOT_PROJECTION_INCOMPLETE", {
                 bookingId, missingSlotFields, traceId,
             });
-            return {
-                status: "RETRY_REQUIRED",
-                reason: "RESCHEDULED_BOOKING_SLOT_PROJECTION_INCOMPLETE",
-                bookingId,
-                missingSlotFields,
-            };
+            const slotError = new Error("RESCHEDULED_BOOKING_SLOT_PROJECTION_INCOMPLETE");
+            slotError.details = { bookingId, missingSlotFields };
+            throw slotError;
         }
 
         const updateResult = await _updateCitaSafe(
@@ -1449,11 +1443,7 @@ export async function wixBookingsV2_onBookingRescheduled(rawBody) {
             "events_nativeBookingRescheduled"
         );
         if (!updateResult.updated && updateResult.reason !== "NO_CHANGE") {
-            return {
-                status: "RETRY_REQUIRED",
-                reason: "RESCHEDULED_BOOKING_CITASF2_UPDATE_FAILED",
-                bookingId,
-            };
+            throw new Error("RESCHEDULED_BOOKING_CITASF2_UPDATE_FAILED");
         }
 
         const pairToken = _safeTrim(currentCita.pairToken || currentCita.meta?.pairToken);
