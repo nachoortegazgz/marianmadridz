@@ -149,42 +149,14 @@ $w.onReady(async () => {
       roleLabel,
 
       // ── Navegación / calendario ─────────────────────────────────────
-      calendarUrl: "/mi-calendario", // ruta real del calendario del staff
+      // Ruta pendiente de confirmar en el inventario publicado de Wix.
+      calendarUrl: "/mi-calendario",
     }),
 
-    /* ─────────────────────────────────────────────────────────────────
-       MENSAJES del widget
-       ─────────────────────────────────────────────────────────────────
-       Contrato backend esperado (el bridge debe enrutar a backend y
-       devolver el _RES correspondiente):
-
-         CLOCK           → CLOCK_RES           (fichajes)
-         GET_STATE       → GET_STATE_RES       (estado jornada)
-         GET_HISTORY     → GET_HISTORY_RES
-         HOURS_CALC      → HOURS_CALC_RES
-         ADJUSTMENT      → ADJUSTMENT_RES
-
-         CASHIER_STATE   → CASHIER_STATE_RES   { saldoTotal, totalOperaciones,
-                                                 diaKey, movimientos[] }
-         TPV_TX          → TPV_TX_RES          { ticket: { ticketNumber,
-                                                 createdAt, supplierName,
-                                                 supplierNif, concept, amount,
-                                                 paymentMethod, traceId,
-                                                 fiscalFingerprint,
-                                                 issuerName, issuerCif } }
-         X_COUNT         → X_COUNT_RES         { ticket: { … } }
-         Z_CLOSING       → Z_CLOSING_RES       { ticket: { … } }
-
-         INVENTORY_*     → INVENTORY_*_RES
-
-       Estos mensajes de caja deben:
-         · Escribir en la colección nativa `MovimientosCaja`
-         · Actualizar `CajaActual` (saldoTotal, totalOperaciones, diaKey)
-         · Generar número de ticket secuencial
-         · Estampar traza (traceId) + huella fiscal (fiscalFingerprint)
-
-       Si el bridge no auto-enruta, añadir aquí las llamadas
-       explícitas a backend y devolver el `_RES` correspondiente.
+    /* El widget de staff permanece en modo placeholder: las funciones de caja,
+       inventario y jornada están deshabilitadas y este controlador no invoca
+       WebMethods de negocio. No activar flags hasta sincronizar el HTML real y
+       definir un contrato de acciones backend probado.
        ───────────────────────────────────────────────────────────────── */
     onWidgetMessage: async (message) => {
       const type = String(message?.type || "").toUpperCase();
@@ -195,7 +167,7 @@ $w.onReady(async () => {
       if (type === MESSAGE_TYPES.NAV) {
         switch (target) {
           case "ADMIN_PANEL":
-            location.to("/administracion");
+            location.to(URLS.ADMIN_PANEL);
             break;
 
           case "SERVICIOS":
