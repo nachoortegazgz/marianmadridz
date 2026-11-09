@@ -8,9 +8,7 @@ RESPONSIBILITY: Aalidacion centralizada de enums, NIFs y schemas CMS.
 STANDARDS: G10 ASCII Strict. Minimo codigo. Cero duplicacion.
 CORRECCIONES v12.0-MINIMAL:
   VAL-01 (P0): assertCitasF2 valida contra CITAS_BOOKING_STATUS y
-    CITAS_PAYMENT_STATUS (enums CMS persistidos). Antes validaba contra
-    BOOKING_STATUS/PAYMENT_STATUS (Wix nativos) -> rechazaba CANCELLED
-    (doble L) que es el valor correcto en CitasF2.
+    CITAS_PAYMENT_STATUS (enums CMS persistidos). CitasF2 persiste CANCELED.
   VAL-02 (P1): isValidGuid duplicado eliminado. Usar isValidGuid de
     internalConfig o _looksLikeGuid de mmUtils.
   VAL-03 (P1): Imports muertos eliminados (COMPENSATION_KIND, ITEM_NATURE,
