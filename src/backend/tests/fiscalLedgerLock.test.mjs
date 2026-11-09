@@ -3,7 +3,10 @@ import assert from "node:assert/strict";
 import { wixDataMock } from "./loader.mjs";
 import {
   acquireFiscalLedgerLock,
+  allocateFiscalSequence,
+  getCashRegisterSingleton,
   releaseFiscalLedgerLock,
+  rollbackFiscalSequence,
 } from "../fiscalLedgerLock.js";
 
 const CONTROL = "ControlOperativo";
@@ -72,5 +75,59 @@ test("FISCAL-LOCK-04 release reports CMS read failure without throwing", async (
     });
   } finally {
     wixDataMock.get = originalGet;
+  }
+});
+
+test("FISCAL-LOCK-05 allocates and rolls back sequence in the only CajaActual item", async () => {
+  wixDataMock._reset();
+  const year = new Intl.DateTimeFormat("en", { timeZone: "Europe/Madrid", year: "numeric" }).format(new Date());
+  wixDataMock._seed("CajaActual", [{
+    _id: "SINGLE_ITEM_ID",
+    singletonKey: "CAJA_PRINCIPAL",
+    isOpen: true,
+    sequenceCounters: { appliedMovementIds: ["movement-existing"] },
+  }]);
+
+  const lock = await acquireFiscalLedgerLock("trace-sequence-singleton-001", { waitMs: 0 });
+  try {
+    const seq = await allocateFiscalSequence(lock, {
+      sequenceNumber: 8,
+      numSerieFactura: `FAC-${year}-00007`,
+    }, "trace-sequence-singleton-001");
+
+    assert.deepEqual(seq, {
+      sequenceNumber: 9,
+      yearSequence: 8,
+      numSerieFactura: `FAC-${year}-00008`,
+    });
+    const register = await getCashRegisterSingleton();
+    assert.equal(register._id, "SINGLE_ITEM_ID");
+    assert.equal(register.sequenceCounters.seqGlobal, 9);
+    assert.equal(register.sequenceCounters[year], 8);
+    assert.deepEqual(register.sequenceCounters.appliedMovementIds, ["movement-existing"]);
+    assert.equal((wixDataMock._store.get("CajaActual") || []).length, 1);
+
+    assert.equal(await rollbackFiscalSequence(lock, seq, "trace-sequence-singleton-001"), true);
+    const rolledBack = await getCashRegisterSingleton();
+    assert.equal(rolledBack.sequenceCounters.seqGlobal, 8);
+    assert.equal(rolledBack.sequenceCounters[year], 7);
+    assert.deepEqual(rolledBack.sequenceCounters.appliedMovementIds, ["movement-existing"]);
+    assert.equal((wixDataMock._store.get("CajaActual") || []).length, 1);
+  } finally {
+    await releaseFiscalLedgerLock(lock);
+  }
+});
+
+test("FISCAL-LOCK-06 refuses to allocate when the CajaActual principal item is missing", async () => {
+  wixDataMock._reset();
+  const lock = await acquireFiscalLedgerLock("trace-sequence-singleton-002", { waitMs: 0 });
+  try {
+    await assert.rejects(
+      () => allocateFiscalSequence(lock, null, "trace-sequence-singleton-002"),
+      (error) => error?.code === "SEQUENCE_ERROR" && /CAJA_PRINCIPAL_MISSING/.test(error.message),
+    );
+    assert.equal((wixDataMock._store.get("CajaActual") || []).length, 0);
+  } finally {
+    await releaseFiscalLedgerLock(lock);
   }
 });
