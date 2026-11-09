@@ -24,11 +24,6 @@ CAMBIOS DE ALINEACION v5015-ALIGNED (respecto a v5009-FISCAL-V20.1):
   ALN-05: MOVEMENT_TYPE.DEVOLUCION_SERVICIO y .DEVOLUCION_PRODUCTO no
           existen en v12.0. Sustituidos por MOVEMENT_TYPE.DEVOLUCION /
           MOVEMENT_TYPE.REEMBOLSO.
-  ALN-06: _getNextSequenceInternal: la version v5009 usaba
-          _lockSlotKeyOrFail("FISCAL_SEQUENCE_LOCK", ...) que SIEMPRE falla
-          contra bookingCore v5014 (el parser exige formato
-          slot_{prefix}_{guid}_{epoch}_{epoch}). Se sustituye por
-          concurrencia optimista via _revision de wix-data.
   ALN-07: COMPUTER_SYSTEM v12.0 = { nombre, version, getSecretKey } (forma
           nueva). El payload AEAT exige la nomenclatura Veri*factu
           (sistemaInformaticoNombre, idSistemaInformatico,
