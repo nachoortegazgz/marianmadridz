@@ -60,7 +60,7 @@ const DATOS_FISCALES_COL = BUSINESS_COLLECTIONS.DATOS_FISCALES;
 
 // =============================================================================
 // BLOQUE 0 - HELPERS DE LECTURA (SSOT-KEYFIELD-02: delegacion total a data.js)
-// El contrato canon->alias vive SOLO en internalConfig.MOVEMENT_LEGACY_READ_ALIASES
+// El contrato canon->alias vive SOLO en internalConfig.MOVEMENT_HISTORICAL_READ_ALIASES
 // y se consume via readMovementField (data.js). Cero listas paralelas aqui.
 // =============================================================================
 
@@ -432,15 +432,15 @@ async function _getBusinessTaxId(traceId) {
   if (taxId) return taxId.toUpperCase();
   // Fallback adapter legacy: filas historicas thirdPartyType=EMISOR con
   // campo "taxId". Emiten warn para trazar la migracion a CONFIG_SISTEMA.
-  const legacy = await withTimeout(
+  const historicalConfig = await withTimeout(
     dalQuery(DATOS_FISCALES_COL).eq("thirdPartyType", "EMISOR").limit(1).find(),
     CMS_TIMEOUT_MS,
     "getBusinessTaxIdLegacy"
   );
-  const legacyTaxId = _safeTrim(legacy?.items?.[0]?.taxId);
-  if (legacyTaxId) {
-    log.warn("legacy-read: DatosFiscales EMISOR.taxId en uso; normalizar a recordType=CONFIG_SISTEMA", { traceId });
-    return legacyTaxId.toUpperCase();
+  const historicalTaxId = _safeTrim(historicalConfig?.items?.[0]?.taxId);
+  if (historicalTaxId) {
+    log.warn("historical-config-read: DatosFiscales EMISOR.taxId en uso; normalizar a recordType=CONFIG_SISTEMA", { traceId });
+    return historicalTaxId.toUpperCase();
   }
   throw new Error(
     "FISCAL_CONFIG_MISSING: no existe DatosFiscales recordType=CONFIG_SISTEMA con taxId"
