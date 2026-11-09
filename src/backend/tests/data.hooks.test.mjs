@@ -55,7 +55,7 @@ test('HOOK-CITAS-01 validates canonical enums, traceId and pairToken', () => {
   assert.throws(() => H.CitasF2_beforeInsert({ ...valid, bookingType: 'DUAL_F1' }), /pairToken/);
   assert.throws(() => H.CitasF2_beforeInsert({ ...valid, traceId: '' }), /traceId/);
   assert.throws(() => H.CitasF2_beforeInsert({ ...valid, bookingId: 'not-a-guid' }), /GUID/);
-  assert.throws(() => H.CitasF2_beforeInsert(({ scheduleId, ...rest }) => rest)(valid), /scheduleId/);
+  assert.throws(() => H.CitasF2_beforeInsert((({ scheduleId, ...rest }) => rest)(valid)), /scheduleId/);
   assert.throws(() => H.CitasF2_beforeInsert({ ...valid, scheduleId: 'invalid-schedule' }), /scheduleId.*GUID/);
   assert.throws(() => H.CitasF2_beforeRemove({}), /cancelacion formal/);
 });
