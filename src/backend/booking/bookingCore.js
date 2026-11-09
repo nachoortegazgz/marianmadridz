@@ -479,32 +479,17 @@ export { logger };
 // =============================================================================
 // BLOQUE 4 - BOOKINGERROR Y NORMALIZACION
 // =============================================================================
-export class BookingError extends Error {
-    constructor(code, message, details) {
-        super(String(message || "Unknown error"));
-        this.name = "BookingError";
-        this.code = String(code || ERROR_CODES.UNKNOWN_ERROR);
-        this.details =
-            details && typeof details === "object"
-                ? details
-                : { details: details };
-        this.timestamp = new Date().toISOString();
-    }
-}
-
 export function createBookingError(code, message, details) {
-    return new BookingError(code, message, details);
+    const error = new Error(String(message || "Unknown error"));
+    error.code = String(code || ERROR_CODES.UNKNOWN_ERROR);
+    error.details =
+        details && typeof details === "object"
+            ? details
+            : { details };
+    return error;
 }
 
 export function normalizeError(err) {
-    if (err && typeof err === "object" && err.name === "BookingError") {
-        return {
-            code: String(err.code || ERROR_CODES.UNKNOWN_ERROR),
-            message: String(err.message || "Unknown error"),
-            stack: err.stack || null,
-            details: err.details || {},
-        };
-    }
     if (err instanceof Error) {
         const legacy = err.code || err.errorCode || null;
         const msgCode =
@@ -1756,7 +1741,7 @@ export async function _persistBooking(params, traceId) {
         const incomingRevision = Number(doc[BOOKING_FIELDS.REVISION]) || 1;
         const currentRevision = Number(existingDoc[BOOKING_FIELDS.REVISION]) || 1;
         if (incomingRevision < currentRevision) {
-            throw new BookingError(
+            throw createBookingError(
                 ERROR_CODES.DATABASE_ERROR,
                 "Booking revision conflict",
                 {
