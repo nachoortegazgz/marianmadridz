@@ -12,12 +12,12 @@ Repositorio canónico del sitio **Marian Madrid Peluquería y Estética** (\`www
 
 ## Documentos raíz
 
-1. [Directrices vigentes del proyecto](DIRECTRICES%20VIGENTES%20DEL%20PROYECTO.md): reglas obligatorias y límites.
+1. [Directrices de arquitectura, desarrollo y QA](DIRECTRICES_DESARROLLO_CODIGO.txt): reglas obligatorias y límites.
 2. [Dossier técnico consolidado](DOSSIER%20TÉCNICO%20CONSOLIDADO.md): arquitectura, contratos, módulos, CMS y estado técnico verificado.
 3. [Flujos end-to-end Capa 3](DOSSIER%20FLUJOS%20END%20TO%20END%20CAPA%203.md): diseño documental Wix–M365 y despliegue pendiente.
-4. [Bitácora técnica](BIT%C3%81CORA%20T%C3%89CNICA%20DE%20SESIONES%20%E2%80%94%20MARIANMADRID.md): decisiones y evidencias por sesión.
+4. [Estado actual del proyecto](docs/PROJECT-STATUS.md): estado verificado, bloqueos y prioridades.
 
-El código, la configuración viva de Wix, los contratos oficiales de las APIs y las pruebas ejecutadas tienen prioridad sobre afirmaciones históricas de los documentos. Registrar siempre fecha, rama/SHA y evidencia.
+El código, la configuración viva de Wix, los contratos oficiales de las APIs y las pruebas ejecutadas tienen prioridad sobre afirmaciones históricas de los documentos. Registrar siempre fecha, rama/SHA y evidencia. El estado de implementación y los bloqueos se mantienen en [docs/PROJECT-STATUS.md](docs/PROJECT-STATUS.md).
 
 ## Entorno de desarrollo
 
