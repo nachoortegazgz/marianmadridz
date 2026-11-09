@@ -195,9 +195,12 @@ async function _queueCompensation(params) {
     const traceId = _safeTrim(p.traceId) || makeTraceId("comp");
     const origin = p.origin || "FISCAL_RECOVERY";
     const phase = p.phase || null;
-    const bookingIds = Array.isArray(p.bookingIds)
-        ? [...new Set(p.bookingIds.map((id) => _safeTrim(id)).filter(Boolean))].sort()
-        : [];
+    const rawBookingIds = Array.isArray(p.bookingIds)
+        ? p.bookingIds
+        : typeof p.bookingIds === "string"
+            ? p.bookingIds.split(",")
+            : [];
+    const bookingIds = [...new Set(rawBookingIds.map((id) => _safeTrim(id)).filter(Boolean))].sort();
     const hasStableEntity = Boolean(p.transactionId || p.orderId || p.refundId || bookingIds.length > 0);
     const identity = {
         kind,
