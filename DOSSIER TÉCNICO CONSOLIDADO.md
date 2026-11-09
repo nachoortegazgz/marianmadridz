@@ -67,7 +67,7 @@ Este mapa permite la navegación semántica y técnica precisa por las 4 capas d
 
 | Capítulo | Título | Contenido Clave y Datos de Búsqueda Rápida |
 | :--- | :--- | :--- |
-| **8** | Seguridad y Permisos | • RBAC doble capa: Velo Permissions + `STAFF.WEBSITE_ROLE_BY_RESOURCE_ID` (internalConfig.js)<br>• Roles: ADMIN / GESTION / ESTILISTA<br>• Secretos en Wix Secrets Manager (`mmSecrets.js`)<br>• Firma HMAC-SHA256 + ventana ±60s anti-replay<br>• Rate limiting por surface (public-booking, reservas, availability)<br>• Minimización PII: enmascaramiento en logs, exclusión datos tarjeta<br>• Webhooks Bookings: verificación JWT + deduplicación `eventId` |
+| **8** | Seguridad y Permisos | • RBAC doble capa: Velo Permissions + `STAFF.WEBSITE_ROLE_BY_RESOURCE_ID` (internalConfig.js)<br>• Roles: ADMIN / GESTION / ESTILISTA<br>• Secretos en Wix Secrets Manager (`mmSecrets.js`)<br>• HMAC-SHA256 de fichajes laborales; sin middleware X-MM anti-replay activo<br>• Rate limiting por surface (public-booking, reservas, availability, display-token)<br>• Minimización PII: enmascaramiento en logs, exclusión datos tarjeta<br>• Eventos backend Bookings gestionados por Wix + deduplicación `eventId` |
 | **9** | Integraciones | • Apps Wix nativas: reglas por app (Bookings V2, Stores V1, eCom Cart V2)<br>• Externas: Resend (email), OpenAI (IA), Wix Payments (proveedor nativo de pagos), IONOS (DNS/correo), M365 (custodia)<br>• Gestión colecciones WIX_APP: solo lectura, mutación vía SDK oficial<br>• Prohibición de llamadas externas desde frontend |
 | **10** | Backend: Módulos y Hooks | • Catálogo completo de 18 WebMethods con permisos Velo y rol negocio<br>• Flujos críticos: venta online, cancelaciones, cierre Z nocturno<br>• Hooks CMS por colección (`data.js`): validaciones beforeInsert/beforeUpdate<br>• Helpers: `mmUtils.js`, `securityEngine.js`, `validation.js`, `widgetBridge.js` |
 | **11** | Jobs y Webhooks | • 8 crons en `jobs.config` (tabla con frecuencia, dominio y operación)<br>• Webhooks Bookings V2: 5 eventos + procesamiento seguro idempotente<br>• Webhooks eCommerce: independientes de V1/V3<br>• Catalog V3 webhooks: pendientes (Developer Preview, no activar sin ADR)<br>• Reglas invariables: jobs nunca escriben directo en append-only |
@@ -114,7 +114,7 @@ Este mapa permite la navegación semántica y técnica precisa por las 4 capas d
 
 | Capítulo | Título | Contenido Clave y Datos de Búsqueda Rápida |
 | :--- | :--- | :--- |
-| **8** | Seguridad y Permisos | • RBAC doble capa: Velo Permissions + `STAFF.WEBSITE_ROLE_BY_RESOURCE_ID` (internalConfig.js)<br>• Roles: ADMIN / GESTION / ESTILISTA<br>• Secretos en Wix Secrets Manager (`mmSecrets.js`)<br>• Firma HMAC-SHA256 + ventana ±60s anti-replay<br>• Rate limiting por surface (public-booking, reservas, availability)<br>• Minimización PII: enmascaramiento en logs, exclusión datos tarjeta<br>• Webhooks Bookings: verificación JWT + deduplicación `eventId` |
+| **8** | Seguridad y Permisos | • RBAC doble capa: Velo Permissions + `STAFF.WEBSITE_ROLE_BY_RESOURCE_ID` (internalConfig.js)<br>• Roles: ADMIN / GESTION / ESTILISTA<br>• Secretos en Wix Secrets Manager (`mmSecrets.js`)<br>• HMAC-SHA256 de fichajes laborales; sin middleware X-MM anti-replay activo<br>• Rate limiting por surface (public-booking, reservas, availability, display-token)<br>• Minimización PII: enmascaramiento en logs, exclusión datos tarjeta<br>• Eventos backend Bookings gestionados por Wix + deduplicación `eventId` |
 | **9** | Integraciones | • Apps Wix nativas: reglas por app (Bookings V2, Stores V1, eCom Cart V2)<br>• Externas: Resend (email), OpenAI (IA), Wix Payments (proveedor nativo de pagos), IONOS (DNS/correo), M365 (custodia)<br>• Gestión colecciones WIX_APP: solo lectura, mutación vía SDK oficial<br>• Prohibición de llamadas externas desde frontend |
 | **10** | Backend: Módulos y Hooks | • Catálogo completo de 18 WebMethods con permisos Velo y rol negocio<br>• Flujos críticos: venta online, cancelaciones, cierre Z nocturno<br>• Hooks CMS por colección (`data.js`): validaciones beforeInsert/beforeUpdate<br>• Helpers: `mmUtils.js`, `securityEngine.js`, `validation.js`, `widgetBridge.js` |
 | **11** | Jobs y Webhooks | • 8 crons en `jobs.config` (tabla con frecuencia, dominio y operación)<br>• Webhooks Bookings V2: 5 eventos + procesamiento seguro idempotente<br>• Webhooks eCommerce: independientes de V1/V3<br>• Catalog V3 webhooks: pendientes (Developer Preview, no activar sin ADR)<br>• Reglas invariables: jobs nunca escriben directo en append-only |
@@ -519,7 +519,7 @@ CLOCK_EVENT_TYPE = { ENTRADA, SALIDA, PAUSA_INICIO,
 MOV_INVENTARIO = { VENTA, DEVOLUCION, AJUSTE, ENTRADA_STOCK,
   SALIDA_STOCK, TRANSFERENCIA }
 
-// MapaStaff.rolWebsite
+// Rol de negocio centralizado en internalConfig.STAFF.WEBSITE_ROLE_BY_RESOURCE_ID
 ROL_WEBSITE = { ADMIN, GESTION, ESTILISTA }
 
 // ControlOperativo.controlType
@@ -1016,7 +1016,7 @@ PAYMENT_STATUS_WIX = { UNDEFINED, NOT_PAID, PENDING_PAYMENT,
 
 **CMS (`CitasF2`):**
 ```javascript
-BOOKING_STATUS_CMS = { PENDING, CONFIRMED, COMPLETED, CANCELED, NO_SHOW }
+BOOKING_STATUS_CMS = { PENDING, CONFIRMED, COMPLETED, CANCELED, REFUNDED, NO_SHOW }
 PAYMENT_STATUS_CMS = { NOT_PAID, PENDING_PAYMENT, PENDING_LEDGER,
   PAID, PARTIALLY_PAID, REFUNDED, PARTIALLY_REFUNDED, EXEMPT, UNDEFINED }
 BOOKING_TYPE         = { SIMPLE, DUAL_F1, DUAL_F2 }
