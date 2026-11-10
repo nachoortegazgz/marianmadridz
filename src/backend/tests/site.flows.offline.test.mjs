@@ -1134,3 +1134,51 @@ test('FLOW-HOR-06 bounded cross-month range aggregates multiple shifts and pause
   assert.equal(history.data.items.length, 6);
   assert.ok(history.data.items.every((item) => item.integrityStatus === 'VERIFIED'));
 });
+
+
+test('FLOW-HOR-07 signed but invalid event sequence is surfaced and cannot produce hours', async () => {
+  wixDataMock._reset();
+  await seedStaff();
+  setMember({ _id: GUID_MEMBER, contactId: GUID_CONTACT, loginEmail: 'marta@test.local' });
+  await setupFiscalSecrets();
+  const { horario, engine } = await freshImports();
+  const now = new Date();
+  const dayKey = now.toLocaleDateString('sv-SE', { timeZone: 'Europe/Madrid' });
+  const monthKey = dayKey.slice(0, 7);
+  const record = {
+    resourceId: GUID_RESOURCE,
+    memberId: GUID_MEMBER,
+    staffName: 'Marta',
+    recordedAt: now,
+    recordedTime: now.toLocaleTimeString('sv-SE', { timeZone: 'Europe/Madrid', hour12: false }),
+    dayKey,
+    monthKey,
+    clockEventType: 'PAUSA_FIN',
+    recordType: 'REGULAR',
+    registeredBy: 'SELF',
+    registeredByMemberId: GUID_MEMBER,
+    adjustmentReason: null,
+    deviceIpAddress: null,
+    meta: {},
+    traceId: 'trace-timeclock-invalid-sequence-001',
+  };
+  record.signature = await engine.signTimeclockRecord(record);
+  wixDataMock._store.set('RegistrosHorariosStaff', [record]);
+
+  const state = await horario.getEstadoJornada({ dayKey });
+  assert.equal(state.status, 'ERROR');
+  assert.equal(state.error.code, 'TIMECLOCK_SEQUENCE_INVALID');
+
+  const hours = await horario.calcularHorasTrabajadas({ dayKey });
+  assert.equal(hours.status, 'ERROR');
+  assert.equal(hours.error.code, 'TIMECLOCK_SEQUENCE_INVALID');
+
+  const history = await horario.getHistorialFichajes({
+    startDateYMD: dayKey,
+    endDateYMD: dayKey,
+    limit: 500,
+  });
+  assert.equal(history.status, 'OK');
+  assert.equal(history.data.items[0].integrityStatus, 'VERIFIED');
+  assert.equal(history.data.items[0].sequenceStatus, 'INVALID');
+});
