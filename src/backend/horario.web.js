@@ -19,6 +19,7 @@ import {
     CLOCK_EVENT_TYPE,
     RECORD_TYPE_HORARIOS,
     CLOCK_REGISTERED_BY,
+    STAFF_CLOCKING_CONFIG,
     REGISTROS_HORARIOS_FIELDS as F,
     SDK_CONFIG,
 } from "backend/internalConfig";
@@ -46,6 +47,15 @@ import { logger } from "backend/logger";
 
 const log = logger;
 const REGISTROS_COL = BUSINESS_COLLECTIONS.REGISTROS_HORARIOS_STAFF;
+
+function _writerDisabled(code, message, traceId) {
+    return {
+        status: "ERROR",
+        data: null,
+        error: { code, message },
+        traceId,
+    };
+}
 
 // =============================================================================
 // HELPERS DE ZONA HORARIA (Europe/Madrid, SSOT)
@@ -233,6 +243,14 @@ export const registrarFichaje = webMethod(
                     data: null,
                     error: { code: "NOT_STAFF", message: "Miembro sin ficha staff activa" },
                 };
+            }
+
+            if (STAFF_CLOCKING_CONFIG.WRITES_ENABLED !== true) {
+                return _writerDisabled(
+                    "CLOCKING_WRITES_DISABLED",
+                    "Los fichajes permanecerán deshabilitados hasta validar idempotencia, secuencia y concurrencia en Wix QA.",
+                    traceId
+                );
             }
 
             const clockEventType = _safeTrim(options?.clockEventType).toUpperCase();
@@ -632,6 +650,14 @@ export const registrarAjusteHorario = webMethod(
         const traceId = _safeTrim(options?.traceId) || makeTraceId("ajuste-horario");
         try {
             await requireAdmin(traceId);
+
+            if (STAFF_CLOCKING_CONFIG.ADJUSTMENTS_ENABLED !== true) {
+                return _writerDisabled(
+                    "CLOCKING_ADJUSTMENTS_DISABLED",
+                    "Los ajustes de jornada permanecerán deshabilitados hasta validar el flujo rectificativo append-only y sus permisos en Wix QA.",
+                    traceId
+                );
+            }
 
             const adminCtx = await _resolveStaffContext(traceId);
             const targetResourceId = _safeTrim(options?.resourceId);
