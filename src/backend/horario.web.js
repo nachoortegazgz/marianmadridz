@@ -75,6 +75,26 @@ function _getMadridTime(d) {
     return date.toTimeString().slice(0, 8); // HH:MM:SS
 }
 
+function _getDayKeysInRange(startValue, endValue, maxDays = 31) {
+    const startKey = _safeTrim(startValue || "");
+    const endKey = _safeTrim(endValue || startKey);
+    const parse = (value) => {
+        const match = /^(\\d{4})-(\\d{2})-(\\d{2})$/.exec(value);
+        if (!match) return null;
+        const date = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
+        return date.toISOString().slice(0, 10) === value ? date : null;
+    };
+    const start = parse(startKey);
+    const end = parse(endKey);
+    if (!start || !end || end.getTime() < start.getTime()) return null;
+    const days = [];
+    for (let time = start.getTime(); time <= end.getTime(); time += 86400000) {
+        days.push(new Date(time).toISOString().slice(0, 10));
+        if (days.length > maxDays) return null;
+    }
+    return days;
+}
+
 async function _getTimeclockIntegrity(records) {
     const items = Array.isArray(records) ? records : [];
     const verified = await Promise.all(items.map((record) => verifyTimeclockSignature(record)));
@@ -326,15 +346,41 @@ export const calcularHorasTrabajadas = webMethod(
                 return { status: "ERROR", data: null, error: { code: "NOT_STAFF" } };
             }
 
-            const dayKey = _safeTrim(options?.dayKey) || _getMadridDayKey();
+            const startDayKey = _safeTrim(options?.startDateYMD || options?.dayKey) || _getMadridDayKey();
+            const endDayKey = _safeTrim(options?.endDateYMD) || startDayKey;
+            const dayKeys = _getDayKeysInRange(startDayKey, endDayKey, 31);
+            if (!dayKeys) {
+                return {
+                    status: "ERROR",
+                    data: null,
+                    error: { code: "INVALID_DATE_RANGE", message: "Rango de fechas inválido o superior a 31 días." },
+                    traceId,
+                };
+            }
 
-            const res = await dalQuery(REGISTROS_COL)
-                .eq(F.RESOURCE_ID, ctx.resourceId)
-                .eq(F.DAY_KEY, dayKey)
-                .ascending(F.RECORDED_AT)
-                .find();
+            const monthKeys = [...new Set(dayKeys.map((dayKey) => dayKey.slice(0, 7)))];
+            const monthResults = await Promise.all(monthKeys.map((monthKey) =>
+                dalQuery(REGISTROS_COL)
+                    .eq(F.RESOURCE_ID, ctx.resourceId)
+                    .eq(F.MONTH_KEY, monthKey)
+                    .ascending(F.RECORDED_AT)
+                    .limit(1000)
+                    .find()
+            ));
+            if (monthResults.some((result) => typeof result?.hasNext === "function" && result.hasNext())) {
+                return {
+                    status: "ERROR",
+                    data: null,
+                    error: { code: "TIMECLOCK_DATASET_LIMIT_EXCEEDED", message: "El rango supera el límite de lectura segura." },
+                    traceId,
+                };
+            }
 
-            const fichajes = res?.items || [];
+            const fichajes = monthResults
+                .flatMap((result) => result?.items || [])
+                .filter((record) => record[F.DAY_KEY] >= startDayKey && record[F.DAY_KEY] <= endDayKey)
+                .sort((a, b) => new Date(a[F.RECORDED_AT]) - new Date(b[F.RECORDED_AT]));
+
             const integrity = await _getTimeclockIntegrity(fichajes);
             if (!integrity.allVerified) {
                 return {
@@ -348,49 +394,69 @@ export const calcularHorasTrabajadas = webMethod(
                     traceId,
                 };
             }
-            let minutosTrabajados = 0;
-            let totalMinutosPausa = 0;
-            let minutosPausaJornada = 0;
-            let entradaTs = null;
-            let pausaInicioTs = null;
 
-            for (const f of fichajes) {
-                const tipo = f[F.CLOCK_EVENT_TYPE];
-                const ts = new Date(f[F.RECORDED_AT]).getTime();
-
-                if (tipo === CLOCK_EVENT_TYPE.ENTRADA) {
-                    entradaTs = ts;
-                    pausaInicioTs = null;
-                    minutosPausaJornada = 0;
-                } else if (tipo === CLOCK_EVENT_TYPE.PAUSA_INICIO && entradaTs !== null && pausaInicioTs === null) {
-                    pausaInicioTs = ts;
-                } else if (tipo === CLOCK_EVENT_TYPE.PAUSA_FIN && pausaInicioTs !== null) {
-                    minutosPausaJornada += Math.max(0, (ts - pausaInicioTs) / 60000);
-                    pausaInicioTs = null;
-                } else if (tipo === CLOCK_EVENT_TYPE.SALIDA && entradaTs !== null) {
-                    if (pausaInicioTs !== null) {
-                        minutosPausaJornada += Math.max(0, (ts - pausaInicioTs) / 60000);
-                        pausaInicioTs = null;
-                    }
-                    totalMinutosPausa += minutosPausaJornada;
-                    minutosTrabajados += (ts - entradaTs) / 60000 - minutosPausaJornada;
-                    entradaTs = null;
-                    minutosPausaJornada = 0;
-                }
+            const byDay = new Map();
+            for (const record of fichajes) {
+                const key = record[F.DAY_KEY];
+                if (!byDay.has(key)) byDay.set(key, []);
+                byDay.get(key).push(record);
             }
 
-            const minutosTrabajadosRedondeados = Math.max(0, Math.round(minutosTrabajados));
+            let totalMinutosTrabajados = 0;
+            let totalMinutosPausa = 0;
+            let jornadasAbiertas = 0;
+
+            for (const dayRecords of byDay.values()) {
+                let minutosTrabajados = 0;
+                let minutosPausaJornada = 0;
+                let entradaTs = null;
+                let pausaInicioTs = null;
+
+                for (const record of dayRecords) {
+                    const tipo = record[F.CLOCK_EVENT_TYPE];
+                    const ts = new Date(record[F.RECORDED_AT]).getTime();
+
+                    if (tipo === CLOCK_EVENT_TYPE.ENTRADA) {
+                        entradaTs = ts;
+                        pausaInicioTs = null;
+                        minutosPausaJornada = 0;
+                    } else if (tipo === CLOCK_EVENT_TYPE.PAUSA_INICIO && entradaTs !== null && pausaInicioTs === null) {
+                        pausaInicioTs = ts;
+                    } else if (tipo === CLOCK_EVENT_TYPE.PAUSA_FIN && pausaInicioTs !== null) {
+                        minutosPausaJornada += Math.max(0, (ts - pausaInicioTs) / 60000);
+                        pausaInicioTs = null;
+                    } else if (tipo === CLOCK_EVENT_TYPE.SALIDA && entradaTs !== null) {
+                        if (pausaInicioTs !== null) {
+                            minutosPausaJornada += Math.max(0, (ts - pausaInicioTs) / 60000);
+                            pausaInicioTs = null;
+                        }
+                        totalMinutosPausa += minutosPausaJornada;
+                        minutosTrabajados += (ts - entradaTs) / 60000 - minutosPausaJornada;
+                        entradaTs = null;
+                        minutosPausaJornada = 0;
+                    }
+                }
+
+                if (entradaTs !== null) jornadasAbiertas += 1;
+                totalMinutosTrabajados += minutosTrabajados;
+            }
+
+            const minutosTrabajadosRedondeados = Math.max(0, Math.round(totalMinutosTrabajados));
             const minutosPausaRedondeados = Math.max(0, Math.round(totalMinutosPausa));
             return {
                 status: "OK",
                 data: {
-                    dayKey,
+                    dayKey: startDayKey === endDayKey ? startDayKey : null,
+                    startDateYMD: startDayKey,
+                    endDateYMD: endDayKey,
                     minutosTrabajados: minutosTrabajadosRedondeados,
                     horasTrabajadas: (minutosTrabajadosRedondeados / 60).toFixed(2),
                     minutosPausa: minutosPausaRedondeados,
                     horasPausa: (minutosPausaRedondeados / 60).toFixed(2),
                     totalFichajesProcesados: fichajes.length,
-                    jornadaCerrada: entradaTs === null,
+                    diasProcesados: dayKeys.length,
+                    jornadasAbiertas,
+                    jornadaCerrada: jornadasAbiertas === 0,
                     integrityStatus: "VERIFIED",
                 },
                 traceId,
