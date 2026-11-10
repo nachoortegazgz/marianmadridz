@@ -155,34 +155,34 @@ test("admin widget actions are explicitly allowlisted and match implemented page
   }
 });
 
-test("staff widget remains fail-closed for writes while read-only queries are permitted", () => {
+test("staff widget exposes only authorized read-only state, history and hours panels", () => {
   const allowlist = staffPage.match(/allowedTypes:\s*\[([\s\S]*?)\]/);
-  assert.ok(allowlist, "staff page must declare an explicit widget allowlist");
+  assert.ok(allowlist, "staff page must declare an explicit message allowlist");
   assert.match(allowlist[1], /MESSAGE_TYPES\.READY/);
   assert.match(allowlist[1], /MESSAGE_TYPES\.CONTEXT/);
-  assert.match(allowlist[1], /MESSAGE_TYPES\.NAV/);
-  assert.doesNotMatch(allowlist[1], /CLOCK|TPV_TX|X_COUNT|Z_CLOSING|INVENTORY_/);
-  assert.match(staffPage, /enableClocking:\s*false/);
-  assert.match(staffPage, /enableCashier:\s*false/);
-  assert.match(staffPage, /cashierMode:\s*"DISABLED"/);
-  assert.match(onlyStaffHtml, /isAuthorized:\s*false/);
+  for (const type of ["GET_STATE", "GET_HISTORY", "HOURS_CALC"]) {
+    assert.ok(allowlist[1].includes('"' + type + '"'), type + " must be allowed");
+  }
+  assert.doesNotMatch(allowlist[1], /NAV|CLOCK|ADJUSTMENT|TPV_TX|CASHIER_STATE|X_COUNT|Z_CLOSING|INVENTORY_/);
+  assert.match(staffPage, /enableStateQuery:\s*hasStaffContext/);
+  assert.match(staffPage, /enableHistory:\s*hasStaffContext/);
+  assert.match(staffPage, /enableScheduleQuery:\s*hasStaffContext/);
   assert.match(onlyStaffHtml, /contextData\.isAuthorized !== true/);
-  assert.match(onlyStaffHtml, /contextData\.enableClocking\s*===\s*true/);
-  assert.match(onlyStaffHtml, /contextData\.enableCashier\s*===\s*true/);
-  assert.match(onlyStaffHtml, /enableClocking:\s*false/);
-  assert.match(onlyStaffHtml, /enableCashier:\s*false/);
+  assert.match(onlyStaffHtml, /statePanel\.style\.display\s*=\s*enableStateQuery/);
+  assert.match(onlyStaffHtml, /historyPanel\.style\.display\s*=\s*enableHistory/);
+  assert.match(onlyStaffHtml, /hoursPanel\.style\.display\s*=\s*enableScheduleQuery/);
+  assert.doesNotMatch(onlyStaffHtml, /enableClocking|enableCashier|cashPanel|TPV_TX|CASHIER_STATE|btnOpenCalendar|btnEntrada|btnAdjSubmit|btnSupplierPayment|btnXCount|btnZClosing/);
+  assert.doesNotMatch(staffPage, /location\.to|URLS|\/pos-checkout|\/caja-actual|\/mi-calendario/);
 });
 
-test("admin and staff cash widgets consume the canonical getCashierState DTO", () => {
+test("cashier DTO is consumed only by the Marian manager panel", () => {
   assert.match(cashierBackend, /netAmount:/);
   assert.match(cashierBackend, /totalOperations,/);
   assert.match(cashierBackend, /operationDate:/);
   assert.match(adminHtml, /money\(state\.netAmount\)/);
   assert.match(adminHtml, /state\.totalOperations/);
   assert.match(adminHtml, /state\.operationDate/);
-  assert.match(onlyStaffHtml, /_formatMoney\(state\.netAmount\)/);
-  assert.match(onlyStaffHtml, /state\.totalOperations/);
-  assert.match(onlyStaffHtml, /state\.operationDate/);
+  assert.doesNotMatch(onlyStaffHtml, /cashPanel|cashier|TPV|MovimientosCaja/);
 });
 
 test("admin widget no longer exposes discarded staff management or business status flow", () => {
@@ -212,18 +212,17 @@ test("admin cashier panel is available only when backend reports an open operati
 });
 
 
-test("staff page routes only read-only timeclock queries and keeps write actions disabled", () => {
+test("staff page maps only read-only timeclock queries and excludes nonexistent Wix routes", () => {
   const allowlist = staffPage.match(/allowedTypes:\s*\[([\s\S]*?)\]/);
   assert.ok(allowlist, "staff page must declare an explicit message allowlist");
   for (const type of ["GET_STATE", "GET_HISTORY", "HOURS_CALC"]) {
-    assert.ok(allowlist[1].includes('"'+type+'"'), type + " must be allowed");
+    assert.ok(allowlist[1].includes('"' + type + '"'), type + " must be allowed");
     assert.match(staffPage, new RegExp('type === "' + type + '"'));
   }
-  assert.match(staffPage, /enableScheduleQuery:\s*hasStaffContext/);
-  assert.match(staffPage, /enableClocking:\s*false/);
   assert.match(staffPage, /getMyStaffContext/);
   assert.match(staffPage, /getHistorialFichajes/);
   assert.match(staffPage, /calcularHorasTrabajadas/);
+  assert.doesNotMatch(staffPage, /\/pos-checkout|\/caja-actual|\/mi-calendario|MESSAGE_TYPES\.NAV/);
   assert.doesNotMatch(allowlist[1], /CLOCK|ADJUSTMENT|TPV_TX|X_COUNT|Z_CLOSING/);
   assert.match(onlyStaffHtml, /integrityStatus === 'UNVERIFIED'[\s\S]*NO VERIFICADO/);
   assert.match(onlyStaffHtml, /sequenceStatus === 'INVALID'[\s\S]*SECUENCIA INVÁLIDA/);
