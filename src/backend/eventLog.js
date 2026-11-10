@@ -263,15 +263,11 @@ function _buildGenerationTimestamp(date) {
     };
 }
 
-// SSOT-KEYFIELD-02 (migracion destructiva, 2026-10-20): este builder consume
-// EXCLUSIVAMENTE las claves fisicas canonicas del doc MovimientosCaja
-// (literales AEAT + keys SSOT), leidas via los helpers de lectura dual
-// (data.js) para soportar documentos historicos pre-migracion. Cero aliases
-// locales: la huella Veri*factu se calcula siempre sobre el contrato canonico.
-// Las keys internas sin entrada en la matriz SSOT (vatAccrualStatus,
-// linkedAdvanceId, bankReconciliationReference, withholdingBase,
-// correctionReason) se conservan como dominio interno del ledger.
-function _buildAEATPayload(movement, generatedAt) {
+// This builder creates the project's internal fiscal-ledger chain payload.
+// It is not the official AEAT v0.1.2 hash input: it includes domain fields and
+// is consumed by securityEngine.hashChain(). Keep its output stable for
+// existing records. The official AEAT builder remains isolated in aeatHash.js.
+function _buildInternalFiscalChainPayload(movement, generatedAt) {
     const nifDestinatario = _safeTrim(readRecipientTaxId(movement));
     const recipientLegalName = _safeTrim(movement.recipientLegalName);
     const numSerieFactura = _safeTrim(readInvoiceNumber(movement));
@@ -744,9 +740,9 @@ export async function registrarEventoEconomico(input) {
             : (input.lineItems && typeof input.lineItems === "object" ? input.lineItems : { items: [] }),
     };
 
-    // 6. AEAT payload + huella
-    const aeatPayload = _buildAEATPayload({ ...baseMovement, previousRecordHash }, ts);
-    const movementHash = await hashChain(previousRecordHash, aeatPayload);
+    // 6. Internal fiscal-ledger chain payload + digest (not AEAT v0.1.2).
+    const fiscalChainPayload = _buildInternalFiscalChainPayload({ ...baseMovement, previousRecordHash }, ts);
+    const movementHash = await hashChain(previousRecordHash, fiscalChainPayload);
 
     // 7. Snapshot inmutable (ALN-09: sistemaInformatico resuelto)
     const fiscalPayload = _buildFiscalPayloadSnapshot({
