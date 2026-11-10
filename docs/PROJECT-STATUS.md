@@ -228,6 +228,10 @@ PR #256 no se integra: rama divergida, pruebas de concurrencia estáticas (no ej
 - El merge commit de cada PR no dispone de check runs propios; CI se ejecuta sobre el HEAD del PR. No hay garantía de que un merge posterior se someta a checks obligatorios.
 - No se ha publicado el HEAD actual en Wix ni se ha comprobado la paridad entre HTML del Editor y snapshots Git.
 
+### Entorno QA disponible
+
+La consulta Wix `ListWixSites` del 2026-11-10 devuelve solo dos sitios en la cuenta: Marian Madrid (sitio publicado auditado) y un sitio personal de CV no relacionado. No existe un sitio QA/staging de Marian Madrid con Bookings, CMS y Cart V2. Por tanto, no hay un entorno aislado disponible para E2E runtime de reservas, checkout, fichajes, hooks CMS o fiscalidad. No se utilizará el sitio publicado para crear datos sintéticos que puedan contaminar calendarios, pagos o ledgers; debe provisionarse un sitio QA aislado antes de ejecutar esas pruebas.
+
 ### Criterio de salida de Fase 2 — pendiente
 
 Fase 2 **no está completada**. Bloqueos principales:
