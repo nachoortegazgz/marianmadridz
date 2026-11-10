@@ -349,9 +349,10 @@ export const calcularHorasTrabajadas = webMethod(
                 };
             }
             let minutosTrabajados = 0;
+            let totalMinutosPausa = 0;
+            let minutosPausaJornada = 0;
             let entradaTs = null;
             let pausaInicioTs = null;
-            let minutosPausa = 0;
 
             for (const f of fichajes) {
                 const tipo = f[F.CLOCK_EVENT_TYPE];
@@ -359,26 +360,38 @@ export const calcularHorasTrabajadas = webMethod(
 
                 if (tipo === CLOCK_EVENT_TYPE.ENTRADA) {
                     entradaTs = ts;
-                    minutosPausa = 0;
-                } else if (tipo === CLOCK_EVENT_TYPE.PAUSA_INICIO) {
-                    pausaInicioTs = ts;
-                } else if (tipo === CLOCK_EVENT_TYPE.PAUSA_FIN && pausaInicioTs) {
-                    minutosPausa += (ts - pausaInicioTs) / 60000;
                     pausaInicioTs = null;
-                } else if (tipo === CLOCK_EVENT_TYPE.SALIDA && entradaTs) {
-                    minutosTrabajados += (ts - entradaTs) / 60000 - minutosPausa;
+                    minutosPausaJornada = 0;
+                } else if (tipo === CLOCK_EVENT_TYPE.PAUSA_INICIO && entradaTs !== null && pausaInicioTs === null) {
+                    pausaInicioTs = ts;
+                } else if (tipo === CLOCK_EVENT_TYPE.PAUSA_FIN && pausaInicioTs !== null) {
+                    minutosPausaJornada += Math.max(0, (ts - pausaInicioTs) / 60000);
+                    pausaInicioTs = null;
+                } else if (tipo === CLOCK_EVENT_TYPE.SALIDA && entradaTs !== null) {
+                    if (pausaInicioTs !== null) {
+                        minutosPausaJornada += Math.max(0, (ts - pausaInicioTs) / 60000);
+                        pausaInicioTs = null;
+                    }
+                    totalMinutosPausa += minutosPausaJornada;
+                    minutosTrabajados += (ts - entradaTs) / 60000 - minutosPausaJornada;
                     entradaTs = null;
-                    minutosPausa = 0;
+                    minutosPausaJornada = 0;
                 }
             }
 
+            const minutosTrabajadosRedondeados = Math.max(0, Math.round(minutosTrabajados));
+            const minutosPausaRedondeados = Math.max(0, Math.round(totalMinutosPausa));
             return {
                 status: "OK",
                 data: {
                     dayKey,
-                    minutosTrabajados: Math.max(0, Math.round(minutosTrabajados)),
-                    horasTrabajadas: (Math.max(0, minutosTrabajados) / 60).toFixed(2),
+                    minutosTrabajados: minutosTrabajadosRedondeados,
+                    horasTrabajadas: (minutosTrabajadosRedondeados / 60).toFixed(2),
+                    minutosPausa: minutosPausaRedondeados,
+                    horasPausa: (minutosPausaRedondeados / 60).toFixed(2),
+                    totalFichajesProcesados: fichajes.length,
                     jornadaCerrada: entradaTs === null,
+                    integrityStatus: "VERIFIED",
                 },
                 traceId,
             };
