@@ -231,4 +231,6 @@ En la rama `fix/staff-readonly-surface-20261110` se elimina del snapshot de `#ht
 
 Se conservan tres operaciones read-only: estado de jornada, historial de fichajes y cálculo de horas. El backend solo habilita las tres cuando `getMyStaffContext` devuelve un `resourceId` válido; la consulta de estado se realiza después de resolver el contexto, no en paralelo si no existe personal asociado. El widget mantiene fallback fail-closed y los paneles permanecen ocultos hasta recibir contexto autorizado. El historial pasa a tener su propio flag `enableHistory`, independiente de los writers de fichaje.
 
+**CI:** PR #257, workflow `42812448587`, 51 suites / 506 tests / 0 fallos; contratos SDK Cart V2 / Bookings Reader V2 y ESLint correctos.
+
 **Límite:** el cambio es código propuesto en rama, no una edición del HTML en Wix Editor ni una publicación. La versión UI del Editor es más reciente que el snapshot Git; antes de desplegar hay que comparar/sincronizar el HTML real del Editor, ejecutar el contrato de mensajes en Wix Local Editor y validar los tres WebMethods read-only con una cuenta de personal QA. No se han creado páginas ni escrito datos en Wix.
