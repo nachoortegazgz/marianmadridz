@@ -1182,3 +1182,54 @@ test('FLOW-HOR-07 signed but invalid event sequence is surfaced and cannot produ
   assert.equal(history.data.items[0].integrityStatus, 'VERIFIED');
   assert.equal(history.data.items[0].sequenceStatus, 'INVALID');
 });
+
+
+
+test('FLOW-HOR-08 counts completed pauses but excludes in-progress time for an open shift', async () => {
+  wixDataMock._reset();
+  await seedStaff();
+  setMember({ _id: GUID_MEMBER, contactId: GUID_CONTACT, loginEmail: 'marta@test.local' });
+  await setupFiscalSecrets();
+  const { horario, engine } = await freshImports();
+
+  const definitions = [
+    ['2026-11-10T09:00:00+01:00', 'ENTRADA'],
+    ['2026-11-10T10:00:00+01:00', 'PAUSA_INICIO'],
+    ['2026-11-10T10:15:00+01:00', 'PAUSA_FIN'],
+  ];
+  const records = [];
+  for (let index = 0; index < definitions.length; index += 1) {
+    const [iso, clockEventType] = definitions[index];
+    const recordedAt = new Date(iso);
+    const record = {
+      resourceId: GUID_RESOURCE,
+      memberId: GUID_MEMBER,
+      staffName: 'Marta',
+      recordedAt,
+      recordedTime: iso.slice(11, 19),
+      dayKey: '2026-11-10',
+      monthKey: '2026-11',
+      clockEventType,
+      recordType: 'REGULAR',
+      registeredBy: 'SELF',
+      registeredByMemberId: GUID_MEMBER,
+      adjustmentReason: null,
+      deviceIpAddress: null,
+      meta: {},
+      traceId: 'trace-timeclock-open-shift-' + index,
+    };
+    record.signature = await engine.signTimeclockRecord(record);
+    records.push(record);
+  }
+  wixDataMock._store.set('RegistrosHorariosStaff', records);
+
+  const result = await horario.calcularHorasTrabajadas({
+    startDateYMD: '2026-11-10',
+    endDateYMD: '2026-11-10',
+  });
+  assert.equal(result.status, 'OK', JSON.stringify(result.error));
+  assert.equal(result.data.minutosTrabajados, 0);
+  assert.equal(result.data.minutosPausa, 15);
+  assert.equal(result.data.jornadasAbiertas, 1);
+  assert.equal(result.data.integrityStatus, 'VERIFIED');
+});
