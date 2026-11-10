@@ -2,7 +2,7 @@
 
 **Revisión:** 2026-11-10  
 **Repositorio:** [nachoortegazgz/marianmadridz](https://github.com/nachoortegazgz/marianmadridz)  
-**Baseline de código:** `main` · `c046a975d0ca3d45e83aa2dbab07e278e02edaae`  
+**Baseline de código:** `main` · `3b26df214530a740e23dca8a501b99cce844e310`  
 **Sitio:** https://www.marianmadrid.es/  
 **Alcance:** estado documental y técnico contrastado con el árbol de `main`, auditorías existentes, CI y consultas live de solo lectura.
 
@@ -10,7 +10,7 @@
 
 ## 1. Resumen ejecutivo
 
-El repositorio contiene una solución Wix Editor/Velo con reservas Bookings V2, saga dual, checkout eCommerce Cart V2, proyección de pedidos, ledger fiscal/laboral, Wix Stores Catalog V3 y controles de seguridad. PR #235 está fusionado y corrige la recuperación fiscal idempotente de pedidos pagados dentro del alcance Bookings-only. La decisión del 2026-11-10 establece que el inventario comercial se gestiona exclusivamente con Wix Stores nativo; el módulo personalizado y su UI se han retirado en la rama de refactorización 2026-11-10; pendiente CI y QA Wix antes de fusionar/desplegar. Las APIs REST nativas de Stores V3, Bookings y Gift Cards han respondido en consultas de solo lectura. Wix Orders Settings confirma `inventoryUpdateTrigger=ON_ORDER_PAID` y `createInvoice=false`. Bookings V2 contiene 94 servicios: 70 tarifas fijas, 24 servicios auxiliares sin precio, siete servicios visibles >100 EUR y ningún depósito configurado.
+El repositorio contiene una solución Wix Editor/Velo con reservas Bookings V2, saga dual, checkout eCommerce Cart V2, proyección de pedidos, ledgers fiscal/laboral, Wix Stores Catalog V3 y controles de seguridad. PR #235 mantiene la recuperación fiscal idempotente de pedidos pagados dentro del alcance Bookings-only. La retirada del inventario personalizado está integrada; Wix Stores Catalog V3 queda como autoridad única del stock. ZONA STAFF incorpora consultas read-only de identidad, estado, historial y horas, sin habilitar fichajes ni caja. PR #250 añade un builder AEAT v0.1.2 aislado con vectores oficiales para alta y anulación; no está conectado a writers ni certifica Veri*Factu. Las consultas REST nativas de Stores V3, Bookings y Gift Cards son de solo lectura. Wix Orders Settings confirma `inventoryUpdateTrigger=ON_ORDER_PAID` y `createInvoice=false`. Bookings V2 contiene 94 servicios: 70 tarifas fijas, 24 auxiliares sin precio, siete servicios visibles >100 EUR y ningún depósito configurado.
 
 **No existe certificación E2E del runtime Velo ni evidencia de que el HEAD actual de `main` esté publicado.** No se deben equiparar el código fusionado, CI offline, las respuestas REST de Wix ni la publicación del sitio.
 
@@ -24,26 +24,27 @@ El repositorio contiene una solución Wix Editor/Velo con reservas Bookings V2, 
 | Checkout eCommerce Cart V2 | Contratos de SDK en CI | La suite de contratos no sustituye checkout, pago y webhooks E2E en entorno de prueba. |
 | Stores Catalog V3 | V3 activo y APIs REST responden | `V3_CATALOG`; 24 productos visibles; 30 inventory items en una ubicación. Orders Settings: `inventoryUpdateTrigger=ON_ORDER_PAID`, `createInvoice=false`. La capa custom se ha retirado en la rama de refactorización; pendiente CI/QA. |
 | Inventario personalizado | **Retirado en PR #239; QA runtime pendiente** | Wix Stores Catalog V3: 30/30 inventory items con tracking en una ubicación. Orders Settings: `ON_ORDER_PAID`. Módulo, WebMethods y panel custom eliminados en la rama. CI offline run 42721080098: 50 suites/488 tests OK en commit previo; reejecución del HEAD actual y QA Wix E2E pendientes. No se han escrito datos ni modificado históricos. |
-| Ledger fiscal / Veri*Factu | **NO APTO para activar remisión Veri*Factu** | Auditoría de código: no hay transporte SOAP AEAT, XML XSD ni flujo de respuesta/remisión. Las huellas internas no acreditan conformidad AEAT. |
-| Registro horario | Implementación parcial | Writers/hooks existen; faltan pruebas runtime, auditoría de firma de históricos y aceptación legal/operativa. |
+| Ledger fiscal / Veri*Factu | **NO APTO para activar remisión Veri*Factu** | PR #250 incorpora `aeatHash.js` puro con vectores oficiales v0.1.2 para alta/anulación, sin consumers runtime. Siguen pendientes reconciliación de campos en writers, XML/XSD, transporte SOAP, respuesta/remisión, pruebas AEAT y aprobación legal. |
+| Registro horario | Consultas read-only implementadas; escrituras deshabilitadas | ZONA STAFF consulta contexto, estado, historial y horas. Los lectores verifican firma HMAC y secuencia; faltan runtime Wix, idempotencia/concurrencia de writers y aceptación legal/operativa. No habilitar fichajes ni ajustes. |
 | Paquetes de gestoría | Snapshot y envío bloqueados | `PaquetesGestoria` tiene confirmación de creación de esquema en auditoría; creación de snapshot deshabilitada por contrato/hash/tamaño/concurrencia pendientes. Envío Resend deshabilitado por configuración. |
 | Capa 3 M365 / SharePoint | Arquitectura objetivo; no implantación demostrada | No existe `exportService.js` ni jobs de exportación. PA-01…PA-07 y SharePoint no auditados en el tenant. Transporte requiere ADR. |
 | Asistente IA | Deshabilitado de forma segura | `aiAgent.web.js` falla cerrado con `AI_PROVIDER_NOT_CONFIGURED`; ZONA MARIAN mantiene `enableAIAssistant=false`. Copy público actual requiere comprobación visual. |
 | Gift Cards | App nativa instalada; personalización no implementada | Wix Gift Cards tiene 1 producto nativo configurado y 0 tarjetas emitidas. No existe `giftCards.web.js`, writer propio, QR scanner ni HMAC personalizado en `src/`. |
 | Wix Invoices | **V1 activa; adopción de Invoices V2 recomendada cuando Wix la habilite** | GetSiteContext confirma app V1; `POST /invoices/v4/invoices/query` devuelve 428 `INVOICES_API_UNAVAILABLE`; `GET /invoices/v4/invoices-settings` devuelve 200. Wix gestiona el rollout automáticamente. No añadir un paquete Invoices V2 independiente no confirmado ni crear adapter hasta que el CRUD esté habilitado; seguir SDK universal/REST oficial. No sustituye SIF/Veri*Factu. QA: [compatibilidad Invoices V2](qa/2026-11-09-catalog-v3-invoices-compatibility.md). |
 | Wix Forms & Payments | 4 esquemas nativos activos | Contacto mapea nombre/email/teléfono a CRM. Caja manual, control X y fichaje no tienen trigger backend; Wix Automations v2 devuelve 0 workflows activos y 0 borradores para `wix_form_app-form_submitted`. |
-| Páginas personalizadas / widgets | Contratos estáticos conciliados; runtime pendiente | `#htmlAdmin.txt` y `#htmlOnlyStaff.txt` están versionados en raíz. PR #232 corrigió rutas. PR #233 corrige allowlists, DTO de caja, fallback fail-closed y un error de sintaxis JS en staff. ZONA STAFF sigue siendo placeholder sin handlers operativos; falta comparar el HTML del Editor/publicado con el snapshot Git y ejecutar runtime. |
+| Páginas personalizadas / widgets | Staff read-only conectado; Marian parcial; runtime pendiente | `#htmlAdmin.txt` y `#htmlOnlyStaff.txt` están versionados. ZONA STAFF consulta contexto, estado, historial y horas; fichajes, ajustes, caja e inventario permanecen deshabilitados. ZONA MARIAN conecta lectura caja/fiscal y acciones documentales; TPV solo aparece con caja `ABIERTA`, y el estado live `SIMULACION` lo bloquea. Falta comparar HTML real de Editor/publicado con Git y ejecutar runtime Wix. |
 | Toolchain / lint | Bloqueo de mantenimiento | ESLint 8.25.0 está EOL; `@wix/eslint-plugin-cli@1.0.2` declara peer ESLint 8. La regla `no-invalid-backend-import` está desactivada y falta `src/velo.dependencies.json`. No forzar ESLint 10 ni editar artefactos Wix manualmente. |
 
 ## 3. Evidencia de validación
 
 ### CI
 
-- Main incorpora PR #229 (correcciones Capa 1), PR #230 (checkpoint documental), PR #231 (smoke live y reconciliación Catalog V3) y PR #232 (reconciliación de rutas). PR #233 permanece abierto.
+- Main incorpora PR #229–#233 y las correcciones posteriores de caja/ledger, fichajes read-only y el contrato hash AEAT aislado. PR #250 está integrado.
 - Run #42656024671: 50 suites, 477 tests, 0 fallos; contratos SDK de Cart V2, Wix Data patch/bulkPatch y Bookings Reader V2.
 - Run #42656358136: CI del checkpoint documental, SUCCESS.
 - PR #232, run #42671109488 sobre el commit de código `3fc7482`: 50 suites, 479 tests, 0 fallos; SDK contracts y ESLint SUCCESS.
-- PR #233, run #42711143272 sobre el commit de código `8d91c4c`: 51 suites, 488 tests, 0 fallos; SDK contracts, Bookings Reader V2 y ESLint SUCCESS. PR #233 sigue abierto, no fusionado.
+- PR #233, run #42711143272 sobre el commit de código `8d91c4c`: 51 suites, 488 tests, 0 fallos; SDK contracts, Bookings Reader V2 y ESLint SUCCESS.
+- PR #250, run #42801308683 sobre el commit `0106ce1206bcaa6a17ac7b7f56c6c9b2d4869c8e`: 51 suites, 503 tests, 0 fallos; SDK contracts Cart V2 y Bookings Reader V2, ESLint SUCCESS. Incluye la corrección de regex detectada en la primera ejecución.
 - La CI es offline: mocks/fixtures no prueban hooks CMS, permisos efectivos, SDK importado en Velo, webhooks reales ni concurrencia en Wix.
 
 ### Smoke live read-only — 2026-11-09
@@ -79,12 +80,14 @@ Referencia: [Auditoría de preparación Veri*Factu](qa/2026-11-09-verifactu-read
 1. Abrir Wix Local Editor conectado al sitio y reconciliar versión UI/código.
 2. Verificar import real de `@wix/stores`, manifiesto generado por Wix CLI y scopes V3.
 3. Ejecutar E2E con miembros/servicios/slots QA y pagos no cobrables: reserva simple/dual, compensación, checkout Cart V2, webhooks, cancelación y reprogramación.
-4. Retirar de forma controlada las reservas/proyecciones/movimientos de inventario personalizados y su panel, manteniendo el stock nativo Wix. No crear maestros CMS ni borrar históricos; probar pedidos, cancelaciones y reembolsos en QA.
-5. Clasificar los 94 servicios Bookings por tarifa fija/variable y variantes para configurar depósitos nativos de 15 EUR solo en servicios >100 EUR; probar disponibilidad de la función, método de pago, saldo, reembolsos y conciliación fiscal.
-5. Probar hooks CMS, permisos, DISPLAY_TOKEN, locks, fencing, concurrencia e idempotencia.
-6. Comparar los HTML Components de Wix Editor/publicados con `#htmlAdmin.txt` y `#htmlOnlyStaff.txt` versionados; validar IDs, mensajes, acciones y rutas en runtime antes de habilitar flags.
-7. Reconciliar Wix Bookings/Orders con proyecciones CMS mediante lecturas; no crear movimientos ni reparar históricos hasta disponer de procedimiento backend controlado y autorización.
-8. Definir e implementar, si el negocio lo exige, la integración backend idempotente para `FORM MOVIMIENTO CAJA MANUAL`, `FORM CONTROL X` y `FORM REGISTRO HORARIO`; la auditoría encontró 0 workflows Wix Automations activos o en borrador para envíos de formularios.
+4. Inventario personalizado ya retirado: mantener Wix Stores como autoridad; ejecutar pruebas QA de pedidos, cancelaciones y reembolsos sin reconstruir proyecciones custom ni modificar históricos.
+5. Clasificar los 94 servicios Bookings y validar en QA la función nativa de anticipo de 15 EUR solo para servicios >100 EUR; mantener bloqueado hasta cerrar factura, IVA, ledger y rectificación (issue #209).
+6. Completar E2E de reservas simples/duales, compensación, cancelación, reprogramación y concurrencia con identidades QA y sin cobros reales.
+7. Completar fichajes con idempotencia, serialización persistente y pruebas de carrera; habilitar ajustes solo como nuevos registros rectificativos y con RBAC manager.
+8. Comparar HTML Components reales de Wix Editor/publicados con `#htmlAdmin.txt` y `#htmlOnlyStaff.txt`; validar IDs, mensajes, acciones y rutas en runtime antes de activar flags.
+9. Reconciliar Wix Bookings/Orders con proyecciones CMS mediante lecturas; no crear movimientos ni reparar históricos hasta disponer de procedimiento backend controlado y autorización.
+10. Probar hooks CMS, permisos, DISPLAY_TOKEN, locks, fencing, concurrencia e idempotencia en Wix runtime.
+11. No crear automatizaciones Wix Forms ni flujos externos que contacten clientes; si se decide procesar formularios, hacerlo mediante backend idempotente y autorización explícita.
 
 ### P1 — Capa 3
 
@@ -134,7 +137,7 @@ Referencia: [Auditoría de preparación Veri*Factu](qa/2026-11-09-verifactu-read
 
 Consulta live de Wix CMS (solo lectura): `ServiciosCatalogo` 95/95, `ComplementosCatalogo` 36/36 y `MapaStaff` 3/3 no tienen campo `status` en el esquema ni en los registros consultados. `MapaStaff.active` sí existe y se conserva como parte del contrato de correlación de identidad; `associatedWixIdentity.connection.status` es un estado nativo de conexión de Wix Members/Bookings y también se conserva. No se ha realizado ninguna migración ni escritura CMS.
 
-Se retira `src/backend/staffManager.web.js`, módulo sin consumidores en el repositorio que únicamente exponía stubs fail-closed. La página ZONA STAFF sigue siendo placeholder y su conexión a los WebMethods canónicos continúa pendiente en [issue #224](https://github.com/nachoortegazgz/marianmadridz/issues/224). Evidencia detallada: [auditoría de status de catálogos y personal](qa/2026-11-10-phase2-catalog-status-audit.md).
+Se retiró `src/backend/staffManager.web.js`, módulo sin consumidores que solo exponía stubs fail-closed. No existe campo ni flujo CMS `status` para servicios, complementos o personal y no se requiere migración ni borrado. ZONA STAFF ya conecta consultas read-only a los WebMethods canónicos de `horario.web.js`; la escritura de fichajes/ajustes y la caja siguen deshabilitadas. `MapaStaff.active` se conserva como selector de correlación de identidad y `associatedWixIdentity.connection.status` como estado nativo de conexión Wix. Evidencia: [auditoría de status de catálogos y personal](qa/2026-11-10-phase2-catalog-status-audit.md) y [issue #224](https://github.com/nachoortegazgz/marianmadridz/issues/224).
 
 
 ## 9. Integridad de caja y ledgers — auditoría live 2026-11-10
@@ -162,3 +165,9 @@ Siguen deshabilitados los fichajes y ajustes de escritura, caja e inventario. No
 
 
 El cálculo de horas valida secuencias de eventos por día, admite múltiples sesiones completas, suma pausas correctamente y expone jornadas abiertas sin incluir tiempo en curso. El historial distingue firma no verificada de secuencia semánticamente inválida.
+
+## 13. Contrato puro de huella AEAT integrado — 2026-11-10
+
+PR #250 se ha fusionado en `main` mediante squash (merge commit `3b26df214530a740e23dca8a501b99cce844e310`). Añade `src/backend/aeatHash.js` con builders separados para `RegistroAlta` y `RegistroAnulacion`, SHA-256 en mayúsculas y vectores oficiales AEAT v0.1.2. La primera ejecución CI detectó regex de importes con escape doble; se corrigió antes de fusionar. Run #42801308683: 51 suites / 503 tests / 0 fallos, contratos SDK Cart V2 y Bookings Reader V2 correctos y ESLint correcto.
+
+El helper permanece aislado y no está conectado a `cajas.web.js` ni `eventLog.js`. No se ha cambiado `hashChain` compartido con contabilidad, no se han recalculado hashes históricos y no se han modificado ledgers. Antes de integrar writers se deben mapear sus snapshots inmutables, diferenciar los contratos de alta/anulación y probar secuencia, concurrencia y persistencia. Esto no certifica el SIF ni habilita remisiones AEAT.
