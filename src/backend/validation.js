@@ -358,3 +358,27 @@ export function isValidNifOrEuVat(value) {
     if (!v) return false;
     return _isValidNif(v) || _isValidNie(v) || _isValidCif(v) || _isValidEuVat(v);
 }
+
+/**
+ * Identifica exclusivamente filas de simulacion marcadas de forma explicita.
+ * No clasifica como simulacion una fila solo por tener una huella invalida:
+ * esos registros deben seguir provocando una alerta de integridad.
+ */
+export function isExplicitSimulationLedgerRecord(item) {
+    if (!item || typeof item !== "object") return false;
+    const upper = (value) => String(value ?? "").trim().toUpperCase();
+    const recordSource = upper(item.recordSource);
+    const eventType = upper(item.eventType);
+    const origenTipo = upper(item.origenTipo);
+    const accountCode = upper(item.accountCode);
+    const hash = upper(item.hash);
+    const previousRecordHash = upper(item.previousRecordHash);
+    const recordHash = upper(item.recordHash);
+    return recordSource === "SMOKE_TEST" ||
+        eventType.startsWith("SIMULATED_") ||
+        origenTipo === "SMOKE_TEST" ||
+        accountCode === "SIMULATED" ||
+        hash === "SIMULATED_HASH" ||
+        previousRecordHash === "SIMULATED_PREVIOUS_HASH" ||
+        recordHash === "SIMULATED_DETAIL_HASH";
+}
