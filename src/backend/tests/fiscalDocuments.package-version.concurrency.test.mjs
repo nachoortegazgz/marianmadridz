@@ -65,6 +65,8 @@ test('FDOC-STORAGE-03 canonical hash and 450 KiB cap protect immutable CMS snaps
     'Buffer.byteLength(_stableSerialize(snapshot), "utf8")',
     'hashSHA256(_stableSerialize(base))',
     'PACKAGE_VERSION_ALLOCATION_ATTEMPTS',
+    '_normalizeSnapshotJson',
+    'JSON.stringify(value)',
     'snapshotInsertUncertain',
     '!snapshotInserted && !snapshotInsertUncertain',
     'dalQuery(DOCS_COL)',
@@ -110,6 +112,7 @@ test('FDOC-STORAGE-06 CSV output uses real line breaks and preview uses manager-
     'export const previewManagerPackage = webMethod(',
     '// =============================================================================\n// BLOQUE 3 - CREAR VERSION DE PAQUETE'
   );
+  assert.ok(preview.includes('_rateLimitManagerPackageRead'));
   assert.ok(preview.includes('getQuarterlyTaxSummaryInternal'));
   assert.ok(!preview.includes('getQuarterlyTaxSummary('));
   assert.ok(preview.includes('summaryRes?.status !== "SUCCESS"'));
