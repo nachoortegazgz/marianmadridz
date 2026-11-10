@@ -228,7 +228,7 @@ PR #250 incorpora `src/backend/aeatHash.js`, un builder puro AEAT v0.1.2 con vec
 
 La revisión de los dos writers confirma que sus funciones locales construyen un payload de cadena fiscal interna y lo pasan a `securityEngine.hashChain()`:
 
-- `cajas.web.js`: `_buildInternalFiscalChainPayload` + `_computeInternalFiscalChainHash`; su contenido incluye campos no pertenecientes a la entrada oficial AEAT de alta.
+- `cajas.web.js`: `_buildInternalFiscalChainPayload` + `securityEngine.hashChain`; su contenido incluye campos no pertenecientes a la entrada oficial AEAT de alta.
 - `eventLog.js`: `_buildInternalFiscalChainPayload`; contiene los ocho campos base, pero también campos de dominio adicionales que no pertenecen a la entrada oficial de huella.
 - Ambos siguen usando la cadena interna del proyecto; ninguno invoca `computeAeatAltaHash` ni `computeAeatAnulacionHash`.
 
