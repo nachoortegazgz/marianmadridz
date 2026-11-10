@@ -2,7 +2,7 @@
 
 **Revisión:** 2026-11-10  
 **Repositorio:** [nachoortegazgz/marianmadridz](https://github.com/nachoortegazgz/marianmadridz)  
-**Baseline de código:** `main` · `5be351e06557cf0bb8900e6a4453c07f1db86b73`  
+**Baseline de código:** `main` · `5726aaaec37ca028587dc007b63c284ddc24d113` (base del PR #259; rama revisada `fix/staff-readonly-surface-20261110-v2` · `84d5799d465f4348c21a1834d50e6f3c82e09795`)  
 **Sitio:** https://www.marianmadrid.es/  
 **Alcance:** estado documental y técnico contrastado con el árbol de `main`, auditorías existentes, CI y consultas live de solo lectura.
 
@@ -32,7 +32,7 @@ El repositorio contiene una solución Wix Editor/Velo con reservas Bookings V2, 
 | Gift Cards | App nativa instalada; personalización no implementada | Wix Gift Cards tiene 1 producto nativo configurado y 0 tarjetas emitidas. No existe `giftCards.web.js`, writer propio, QR scanner ni HMAC personalizado en `src/`. |
 | Wix Invoices | **V1 activa; adopción de Invoices V2 recomendada cuando Wix la habilite** | GetSiteContext confirma app V1; `POST /invoices/v4/invoices/query` devuelve 428 `INVOICES_API_UNAVAILABLE`; `GET /invoices/v4/invoices-settings` devuelve 200. Wix gestiona el rollout automáticamente. No añadir un paquete Invoices V2 independiente no confirmado ni crear adapter hasta que el CRUD esté habilitado; seguir SDK universal/REST oficial. No sustituye SIF/Veri*Factu. QA: [compatibilidad Invoices V2](qa/2026-11-09-catalog-v3-invoices-compatibility.md). |
 | Wix Forms & Payments | 4 esquemas nativos activos | Contacto mapea nombre/email/teléfono a CRM. Caja manual, control X y fichaje no tienen trigger backend; Wix Automations v2 devuelve 0 workflows activos y 0 borradores para `wix_form_app-form_submitted`. |
-| Páginas personalizadas / widgets | Staff read-only acotado en rama; Marian parcial; runtime pendiente | `#htmlAdmin.txt` conserva caja/fiscal/documentos. La rama `fix/staff-readonly-surface-20261110-v2` elimina del widget Staff el TPV/caja, writers de fichaje, ajustes y rutas no publicadas; mantiene estado, historial y cálculo de horas read-only tras `getMyStaffContext`. Wix Site Context confirma `/onlystaff` y `/zona-marian`, no `/pos-checkout`, `/caja-actual` ni `/mi-calendario`. CI PR #259 pendiente; falta sincronización con HTML real de Editor y QA runtime. |
+| Páginas personalizadas / widgets | Staff read-only acotado en rama; Marian parcial; runtime pendiente | `#htmlAdmin.txt` conserva caja/fiscal/documentos. La rama `fix/staff-readonly-surface-20261110-v2` elimina del widget Staff el TPV/caja, writers de fichaje, ajustes y rutas no publicadas; mantiene estado, historial y cálculo de horas read-only tras `getMyStaffContext`. Wix Site Context confirma `/onlystaff` y `/zona-marian`, no `/pos-checkout`, `/caja-actual` ni `/mi-calendario`. CI PR #259: SUCCESS (run 42814723943; regresión offline, contratos SDK y ESLint). La validación Wix runtime/Preview y la comparación/sincronización con el HTML real del Editor siguen pendientes; no equivale a publicación. |
 | Toolchain / lint | Bloqueo de mantenimiento | ESLint 8.25.0 está EOL; `@wix/eslint-plugin-cli@1.0.2` declara peer ESLint 8. La regla `no-invalid-backend-import` está desactivada y falta `src/velo.dependencies.json`. No forzar ESLint 10 ni editar artefactos Wix manualmente. |
 
 ## 3. Evidencia de validación
