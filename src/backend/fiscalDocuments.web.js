@@ -1,11 +1,21 @@
 /*
 =============================================================================
 MODULE: backend/fiscalDocuments.web.js
-VERSION: v5017-ALIGNED-DATOSFISCALES
-BASE: v5016-ALIGNED-WITH-SEND
-RESPONSIBILITY: Previsualiza y consulta snapshots de gestoría; creación y
- despacho permanecen fail-closed hasta verificar sus garantías append-only.
+VERSION: v5018-IDEMPOTENT-IMMUTABLE-SNAPSHOT
+BASE: v5017-ALIGNED-DATOSFISCALES
+RESPONSIBILITY: Previsualiza, crea, verifica y consulta snapshots trimestrales
+ append-only. El despacho a gestoría permanece deshabilitado.
 STANDARDS: G10 ASCII Strict. Cero suppressAuth. Colecciones canonicas.
+
+CAMBIOS v5018-IDEMPOTENT-IMMUTABLE-SNAPSHOT (respecto a v5017):
+  PKG-01: createManagerPackageVersion persiste snapshots trimestrales con
+          hash canonico, limite 450 KiB y versionado create-only concurrente.
+  PKG-02: ControlOperativo.IDEMPOTENCY deduplica operationId; las inserciones
+          inciertas conservan el claim para recuperar por traceId sin duplicar.
+  PKG-03: preview usa agregadores internos autorizados por requireMarianManager
+          y rechaza cualquier fuente incompleta.
+  PKG-04: listado devuelve solo metadatos; descarga verifica snapshotHash.
+  PKG-05: envio a gestoria permanece deshabilitado. Agregacion mensual pendiente.
 
 CAMBIOS v5017-ALIGNED-DATOSFISCALES (respecto a v5016):
   ALN-DF-01: Eliminada la dependencia de BUSINESS_COLLECTIONS.GESTORES_FISCALES
