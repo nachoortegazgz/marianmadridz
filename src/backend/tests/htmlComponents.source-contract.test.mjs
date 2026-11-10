@@ -187,7 +187,8 @@ test("admin and staff cash widgets consume the canonical getCashierState DTO", (
 
 test("admin widget no longer exposes discarded staff management or business status flow", () => {
   assert.doesNotMatch(adminHtml, /staffPanel|STAFF_LIST|STAFF_HOURS_SUMMARY|STAFF_NOTIFY|staffHoursStart|enableStaffManagement/);
-  assert.doesNotMatch(adminHtml, /s\\.status|Estado<\\/th>/);
+  assert.ok(!adminHtml.includes("s.status"));
+  assert.ok(!adminHtml.includes("<th>Estado</th>"));
 });
 
 test("admin fallback hides unsupported capabilities and ticket output uses text nodes", () => {
