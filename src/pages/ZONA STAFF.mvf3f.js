@@ -258,6 +258,7 @@ $w.onReady(async () => {
             diaKey: item.diaClave,
             tipo: item.fichajeEventoTipo,
             integrityStatus: item.integrityStatus,
+            sequenceStatus: item.sequenceStatus,
           }));
         reply("GET_HISTORY_RES", { status: "SUCCESS", data: items }, payload);
         return;
