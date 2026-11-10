@@ -511,16 +511,6 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
         );
 
         await requireCajero(traceId);
-        const currentCashRegister = await getCashRegisterSingleton();
-        if (_isSimulationCashRegister(currentCashRegister)) {
-            return { status: "ERROR", data: null, error: { code: "CASH_REGISTER_SIMULATION_STATE", message: "La caja actual contiene estado de simulacion; no se permiten movimientos reales." } };
-        }
-        if (currentCashRegister && (
-            _safeTrim(currentCashRegister.cashRegisterStatus).toUpperCase() !== CASH_REGISTER_STATUS.ABIERTA ||
-            currentCashRegister.isOpen !== true
-        )) {
-            return { status: "ERROR", data: null, error: { code: "CASH_REGISTER_NOT_OPEN", message: "La caja debe estar abierta antes de registrar movimientos manuales." } };
-        }
         await validateFiscalConfig(traceId);
         const { nifEmisor } = await _getFiscalKeys();
 
@@ -638,6 +628,16 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
             }
         }
 
+        const currentCashRegister = await getCashRegisterSingleton();
+        if (_isSimulationCashRegister(currentCashRegister)) {
+            return { status: "ERROR", data: null, error: { code: "CASH_REGISTER_SIMULATION_STATE", message: "La caja actual contiene estado de simulacion; no se permiten movimientos reales." } };
+        }
+        if (currentCashRegister && (
+            _safeTrim(currentCashRegister.cashRegisterStatus).toUpperCase() !== CASH_REGISTER_STATUS.ABIERTA ||
+            currentCashRegister.isOpen !== true
+        )) {
+            return { status: "ERROR", data: null, error: { code: "CASH_REGISTER_NOT_OPEN", message: "La caja debe estar abierta antes de registrar movimientos manuales." } };
+        }
         const operationDate = new Date().toLocaleDateString("sv-SE", { timeZone: SDK_CONFIG.TZ });
         await _assertPeriodNotClosed(operationDate, traceId);
 
