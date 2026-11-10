@@ -1,7 +1,7 @@
 /*
 =============================================================================
 MODULE: pages/zonastaff.js
-VERSION: v5004.0-staff-readonly-hours-history
+VERSION: v5005.0-staff-readonly-ui
 =============================================================================
 */
 
@@ -182,7 +182,7 @@ $w.onReady(async () => {
 
       return {
         isAuthorized: isAuthorized && hasStaffContext,
-            enableStateQuery: hasStaffContext,
+        enableStateQuery: hasStaffContext,
         enableHistory: hasStaffContext,
         enableScheduleQuery: hasStaffContext,
         timeZone: TZ,
@@ -271,8 +271,6 @@ $w.onReady(async () => {
         }, payload);
         return;
       }
-
-
     },
 
     /* ─────────────────────────────────────────────────────────────────
