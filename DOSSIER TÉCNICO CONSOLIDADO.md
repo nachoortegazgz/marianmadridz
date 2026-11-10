@@ -136,7 +136,7 @@ Cada decisión de diseño se evalúa en este orden estricto. La prioridad de men
 
 - **Una sola fuente de verdad (SSOT)**: cada constante, tipo o schema vive en un único lugar.
 - **El CMS como autoridad**: Wix Bookings, Members y Stores dictan sus contratos; el código se adapta.
-- **Ledgers inmutables**: `MovimientosCaja`, `LibroAsientosContablesDetalle` y `RegistrosHorariosStaff` son ledgers operativos append-only. `MovimientosInventario` queda como histórico legacy append-only: se conserva sin mutaciones, pero no recibe nuevas escrituras y no gobierna stock.
+- **Ledgers inmutables**: `MovimientosCaja`, `LibroAsientosContablesDetalle` y `RegistrosHorariosStaff` son ledgers operativos append-only. `MovimientosInventario` queda como histórico legacy append-only: se conserva sin mutaciones, pero no recibe nuevas escrituras y no gobierna stock. NOTA: Permitir edicion de ledgers mientras dure el proceso de desarrollo del sitio web.
 - **Aislamiento frontend-backend**: la interfaz invoca únicamente `webMethods` expuestos; nunca accede directamente al CMS.
 - **Validación en runtime**: todo enum persistido se valida obligatoriamente mediante `assertValidEnum()` en `backend/validation.js`.
 - **Trazabilidad**: `traceId` (UUID v4) en toda mutación transaccional; claves en `backend/mmSecrets.js`; minimización estricta de PII.
