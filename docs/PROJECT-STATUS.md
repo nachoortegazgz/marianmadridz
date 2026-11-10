@@ -1,6 +1,6 @@
 # Estado actual del proyecto — Marian Madrid
 
-**Revisión:** 2026-11-10  
+**Revisión:** 2026-11-11  
 **Repositorio:** [nachoortegazgz/marianmadridz](https://github.com/nachoortegazgz/marianmadridz)  
 **Baseline de código:** `main` · `4bfb04e6d907f682b571f94fa3e66446215d1e84` (PR #259, #263, #267, #264 y #256 integradas; revisión documental 2026-11-11)  
 **Sitio:** https://www.marianmadrid.es/  
