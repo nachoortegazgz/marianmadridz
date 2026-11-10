@@ -56,6 +56,7 @@ test('FDOC-STORAGE-02 snapshot creation is idempotent and uses create-only inser
     'PACKAGE_SNAPSHOT_RECOVERY_REQUIRED',
   ]) assert.ok(source.includes(contract), 'Missing idempotency contract: ' + contract);
   assert.ok(handler.includes('dalInsert(DOCS_COL, snapshot)'));
+  assert.ok(!handler.includes('_id: _formatDocumentId'));
   assert.ok(!source.includes('"WDE0123"'));
   assert.doesNotMatch(handler, /dalSave|dalUpdate\(DOCS_COL|dalRemove\(DOCS_COL/);
 });
@@ -66,6 +67,10 @@ test('FDOC-STORAGE-03 canonical hash and 450 KiB cap protect immutable CMS snaps
     'Buffer.byteLength(_stableSerialize(snapshot), "utf8")',
     'hashSHA256(_stableSerialize(base))',
     'PACKAGE_VERSION_ALLOCATION_ATTEMPTS',
+    'function _uuidV8FromHash(hashHex)',
+    'const claimId = _uuidV8FromHash(operationHash)',
+    '_uuidV8FromHash(await hashSHA256(key))',
+    '_id: itemId',
     '_normalizeSnapshotJson',
     'JSON.stringify(value)',
     'snapshotInsertUncertain',
