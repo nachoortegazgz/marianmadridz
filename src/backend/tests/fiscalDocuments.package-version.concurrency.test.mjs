@@ -32,14 +32,16 @@ test('FDOC-STORAGE-01 snapshot creation requires manager authorization, quarterl
     'export const createManagerPackageVersion = webMethod(',
     '// =============================================================================\n// BLOQUE 4 - HISTORIAL DE PAQUETES'
   );
-  assert.match(handler, /requireMarianManager\(traceId\)/);
-  assert.match(handler, /periodType !== "QUARTERLY"/);
-  assert.match(handler, /_looksLikeGuid\(operationId\)/);
-  assert.match(handler, /getQuarterlyTaxSummaryInternal\(year, quarter/);
-  assert.match(handler, /getLibroRegistroFacturasExpedidasInternal\(year, quarter/);
-  assert.match(handler, /summaryRes\?\.status !== "SUCCESS"/);
-  assert.match(handler, /bookRes\?\.status !== "SUCCESS"/);
-  assert.match(handler, /PACKAGE_SOURCE_DATA_INCOMPLETE/);
+  for (const contract of [
+    'requireMarianManager(traceId)',
+    'periodType !== "QUARTERLY"',
+    '_looksLikeGuid(operationId)',
+    'getQuarterlyTaxSummaryInternal(year, quarter',
+    'getLibroRegistroFacturasExpedidasInternal(year, quarter',
+    'summaryRes?.status !== "SUCCESS"',
+    'bookRes?.status !== "SUCCESS"',
+    'PACKAGE_SOURCE_DATA_INCOMPLETE',
+  ]) assert.ok(handler.includes(contract), 'Missing snapshot contract: ' + contract);
 });
 
 test('FDOC-STORAGE-02 snapshot creation is idempotent and uses create-only insert, never upsert', () => {
@@ -47,26 +49,32 @@ test('FDOC-STORAGE-02 snapshot creation is idempotent and uses create-only inser
     'export const createManagerPackageVersion = webMethod(',
     '// =============================================================================\n// BLOQUE 4 - HISTORIAL DE PAQUETES'
   );
-  assert.match(source, /CONTROL_TYPE\.IDEMPOTENCY/);
-  assert.match(source, /MANAGER_PACKAGE_CREATE:/);
-  assert.match(source, /PACKAGE_SNAPSHOT_IN_PROGRESS/);
-  assert.match(source, /PACKAGE_SNAPSHOT_RECOVERY_REQUIRED/);
-  assert.match(handler, /dalInsert\(DOCS_COL, snapshot\)/);
+  for (const contract of [
+    'CONTROL_TYPE.IDEMPOTENCY',
+    'MANAGER_PACKAGE_CREATE:',
+    'PACKAGE_SNAPSHOT_IN_PROGRESS',
+    'PACKAGE_SNAPSHOT_RECOVERY_REQUIRED',
+  ]) assert.ok(source.includes(contract), 'Missing idempotency contract: ' + contract);
+  assert.ok(handler.includes('dalInsert(DOCS_COL, snapshot)'));
   assert.doesNotMatch(handler, /dalSave|dalUpdate\(DOCS_COL|dalRemove\(DOCS_COL/);
 });
 
 test('FDOC-STORAGE-03 canonical hash and 450 KiB cap protect immutable CMS snapshots', () => {
-  assert.match(source, /PACKAGE_MAX_ITEM_BYTES = 450 \* 1024/);
-  assert.match(source, /Buffer\.byteLength\(_stableSerialize\(snapshot\), "utf8"\)/);
-  assert.match(source, /hashSHA256\(_stableSerialize\(base\)\)/);
-  assert.match(source, /PACKAGE_VERSION_ALLOCATION_ATTEMPTS/);
-  assert.match(source, /snapshotInsertUncertain/);
-  assert.match(source, /!snapshotInserted && !snapshotInsertUncertain/);
-  assert.match(source, /dalQuery\(DOCS_COL\)[\s\S]*?\.limit\(1000\)[\s\S]*?find\(STRONG_READ\)/);
-  assert.match(source, /_verifyPackageSnapshot\(doc\)/);
+  for (const contract of [
+    'PACKAGE_MAX_ITEM_BYTES = 450 * 1024',
+    'Buffer.byteLength(_stableSerialize(snapshot), "utf8")',
+    'hashSHA256(_stableSerialize(base))',
+    'PACKAGE_VERSION_ALLOCATION_ATTEMPTS',
+    'snapshotInsertUncertain',
+    '!snapshotInserted && !snapshotInsertUncertain',
+    'dalQuery(DOCS_COL)',
+    '.limit(1000)',
+    '.find(STRONG_READ)',
+    '_verifyPackageSnapshot(doc)',
+  ]) assert.ok(source.includes(contract), 'Missing integrity contract: ' + contract);
 });
 
-test('FDOC-STORAGE-04 snapshot creation never fabricates mandatory Z-closing fields or mutates ledgers', () => {
+test('FDOC-STORAGE-04 snapshot creation never fabricates Z-closing fields or mutates ledgers', () => {
   const handler = extractBlock(
     'export const createManagerPackageVersion = webMethod(',
     '// =============================================================================\n// BLOQUE 4 - HISTORIAL DE PAQUETES'
@@ -74,7 +82,9 @@ test('FDOC-STORAGE-04 snapshot creation never fabricates mandatory Z-closing fie
   for (const field of ['fiscalPeriod', 'operationDate', 'closedBy', 'recordDomain', 'totalCash', 'totalCard', 'totalBizum', 'totalOnline']) {
     assert.doesNotMatch(handler, new RegExp(field + '\\s*:'));
   }
-  assert.doesNotMatch(handler, /BUSINESS_COLLECTIONS\.(MOVIMIENTOS_CAJA|LIBRO_ASIENTOS_CONTABLES_DETALLE|HISTORICO_CIERRES_Z)/);
+  for (const collection of ['MOVIMIENTOS_CAJA', 'LIBRO_ASIENTOS_CONTABLES_DETALLE', 'HISTORICO_CIERRES_Z']) {
+    assert.ok(!handler.includes('BUSINESS_COLLECTIONS.' + collection));
+  }
 });
 
 test('FDOC-STORAGE-05 package list returns metadata only; download verifies hash before building CSV', () => {
@@ -82,26 +92,27 @@ test('FDOC-STORAGE-05 package list returns metadata only; download verifies hash
     'export const getPreparedManagerPackages = webMethod(',
     '// =============================================================================\n// BLOQUE 5 - DESCARGAR VERSION'
   );
-  assert.match(prepared, /periodLabel/);
-  assert.doesNotMatch(prepared, /invoiceData|summaryData/);
+  assert.ok(prepared.includes('periodLabel'));
+  assert.ok(!prepared.includes('invoiceData'));
+  assert.ok(!prepared.includes('summaryData'));
   const download = extractBlock(
     'export const downloadManagerPackageVersion = webMethod(',
     '// =============================================================================\n// BLOQUE 6 - DESTINATARIOS'
   );
-  assert.match(download, /_verifyPackageSnapshot\(doc\)/);
-  assert.match(download, /PACKAGE_SNAPSHOT_HASH_INVALID/);
-  assert.match(download, /csvContent/);
+  assert.ok(download.includes('_verifyPackageSnapshot(doc)'));
+  assert.ok(download.includes('PACKAGE_SNAPSHOT_HASH_INVALID'));
+  assert.ok(download.includes('csvContent'));
 });
 
 test('FDOC-STORAGE-06 CSV output uses real line breaks and preview uses manager-safe internal aggregators', () => {
-  assert.match(source, /\.join\("\\\\n"\)/);
+  assert.ok(source.includes('.join("\\n")'));
   const preview = extractBlock(
     'export const previewManagerPackage = webMethod(',
     '// =============================================================================\n// BLOQUE 3 - CREAR VERSION DE PAQUETE'
   );
-  assert.match(preview, /getQuarterlyTaxSummaryInternal/);
-  assert.doesNotMatch(preview, /getQuarterlyTaxSummary\(/);
-  assert.match(preview, /summaryRes\?\.status !== "SUCCESS"/);
+  assert.ok(preview.includes('getQuarterlyTaxSummaryInternal'));
+  assert.ok(!preview.includes('getQuarterlyTaxSummary('));
+  assert.ok(preview.includes('summaryRes?.status !== "SUCCESS"'));
 });
 
 test('FDOC-DISPATCH-03 accountant dispatch remains disabled in canonical configuration', () => {
