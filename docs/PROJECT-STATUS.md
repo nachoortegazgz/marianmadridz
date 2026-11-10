@@ -159,3 +159,6 @@ Los lectores de jornada y horas verifican ahora la firma HMAC antes de calcular 
 ZONA STAFF ya conecta contexto de colaborador, estado de jornada, historial y cálculo de horas mediante WebMethods backend. El historial expone VERIFIED/UNVERIFIED sin filtrar HMAC; los cálculos solo se entregan si todas las firmas son válidas. Los rangos están limitados (historial 92 días; cálculo 31 días) y el cálculo agregado se resuelve en una única llamada backend. El widget muestra `NO VERIFICADO` en registros históricos sin firma.
 
 Siguen deshabilitados los fichajes y ajustes de escritura, caja e inventario. No activar `enableClocking` hasta implementar y probar transiciones, idempotencia y concurrencia en un entorno QA aislado. La página aún no tiene validación Wix runtime/Preview.
+
+
+El cálculo de horas valida secuencias de eventos por día, admite múltiples sesiones completas, suma pausas correctamente y expone jornadas abiertas sin incluir tiempo en curso. El historial distingue firma no verificada de secuencia semánticamente inválida.
