@@ -163,7 +163,6 @@ $w.onReady(async () => {
                     cashierRes.data?.cashRegisterStatus === "ABIERTA",
                 enableInventory: false, // Inventory managed only in Wix Stores
                 enableScheduleQuery: false,   // backend de resumen aun no implementado
-                enableStaffManagement: false, // backend real pendiente
                 enableAIAssistant: false,      // proveedor IA no conectado
                 enableAccountantSend: false,  // despacho bloqueado hasta cerrar snapshot inmutable
                 enableFiscal: true,
