@@ -15,7 +15,7 @@ export const AEAT_HASH_SPEC_VERSION = "0.1.2";
 
 const ZERO_HASH = "0".repeat(64);
 const HEX_64 = /^[0-9A-Fa-f]{64}$/;
-const AMOUNT_PATTERN = /^-?\\d+(?:\\.\\d{1,2})?$/;
+const AMOUNT_PATTERN = /^-?\d+(?:\.\d{1,2})?$/;
 
 function _requiredText(value, fieldName) {
     if (value === null || value === undefined) {
@@ -43,7 +43,7 @@ function _normalizeAmount(value, fieldName) {
 
     // AEAT v0.1.2 treats 1 decimal and 2 decimals with a trailing zero as
     // equivalent lexical values (e.g. 123.1 and 123.10).
-    return raw.replace(/(\\.\\d)0$/, "$1");
+    return raw.replace(/(\.\d)0$/, "$1");
 }
 
 function _normalizePreviousHash(value, isFirstRecord) {
