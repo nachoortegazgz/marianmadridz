@@ -71,8 +71,8 @@ Esta sección supersede las referencias históricas de este informe que describ�
 - **Aplicación instalada en Marian Madrid:** Wix Invoices **V1**, confirmado por GetSiteContext para el siteId `188bed94-177c-4bc9-a9f0-35080d874f3e`.
 - **API objetivo de nueva generación:** Wix documenta este producto como **Get Paid Invoices / Invoices V2** y confirma un despliegue gradual por sitio.
 - **Versión de rutas REST:** la API descubierta usa rutas `/invoices/v4/...`. Este `v4` es la versión del contrato REST y **no** significa que la aplicación Wix instalada sea Invoices V4.
-- **SDK JavaScript:** los esquemas oficiales actuales exponen el paquete `@wix/get-paid`, namespace `invoices` (por ejemplo, `invoices.queryInvoices(query)` y `invoices.createInvoice(invoice)`). El paquete no está declarado en el `package.json` actual del repositorio.
-- No se debe instalar ni importar el SDK nuevo hasta que Wix habilite la API en este sitio y se valide su disponibilidad/contrato en el runtime Velo real.
+- **SDK JavaScript:** la documentación oficial presenta el acceso a la nueva API principalmente mediante REST API v4 y el SDK universal de Wix. No se ha verificado un paquete npm independiente, estable y publicable denominado `@wix/get-paid`; no debe tratarse como dependencia confirmada ni añadirse al `package.json` por inferencia.
+- La integración futura deberá seguir el patrón oficial de SDK universal/REST documentado para el entorno concreto (Velo), una vez habilitada la API en este sitio y validada su disponibilidad/contrato en runtime.
 
 ### 2. Comprobación live repetida (solo lectura)
 
@@ -83,7 +83,7 @@ Site: `Marian Madrid` — `188bed94-177c-4bc9-a9f0-35080d874f3e`.
 | GetSiteContext | Wix Invoices V1 | La aplicación instalada continúa en V1 |
 | `POST /invoices/v4/invoices/query`, cursor limit 1 | HTTP **428** · `INVOICES_API_UNAVAILABLE` | La API nueva no está habilitada en este sitio |
 | `GET /invoices/v4/invoices-settings` | HTTP **200** · revision 1 · nextNumber 1 | El recurso de configuración de numeración es legible, pero no acredita disponibilidad del CRUD de facturas |
-| `package.json` | No contiene `@wix/get-paid` | No existe dependencia SDK declarada para la API nueva |
+| `package.json` | No contiene una dependencia específica de Invoices V2 | No existe una integración SDK V2 declarada; esto no implica que deba añadirse un paquete independiente |
 
 El error 428 devuelve literalmente que el sitio todavía utiliza el servicio de facturas heredado, accesible únicamente mediante Velo, y que Wix está desplegando New Invoices junto con su API y SDK de forma gradual; no requiere acción manual del propietario.
 
@@ -98,7 +98,7 @@ No hay una operación pública documentada para que el propietario fuerce la mig
 Por tanto:
 
 1. Mantener la aplicación/servicio V1 existente sin cambios mientras el sitio permanezca en ese estado.
-2. No instalar `@wix/get-paid`, crear un adapter especulativo ni implementar fallback V1/V2 por detección de errores.
+2. No instalar un supuesto paquete independiente `@wix/get-paid`, crear un adapter especulativo ni implementar fallback V1/V2 por detección de errores. Usar SDK universal/REST conforme al patrón oficial que Wix soporte en Velo.
 3. No crear facturas de prueba, publicar, enviar, cobrar, borrar ni cambiar numeración.
 4. Repetir la comprobación read-only cuando Wix comunique o muestre la migración; el criterio mínimo es que Query Invoices deje de devolver 428 y responda con el contrato V2 documentado.
 5. Después, desarrollar una rama separada con el SDK oficial y pruebas de contrato/runtime, sin retirar V1 hasta validar todos los flujos y disponer de rollback.
@@ -136,3 +136,8 @@ Abrir la migración solo cuando se cumplan todas:
 - **Declarado por Wix:** migración progresiva automática, sin acción manual necesaria.
 - **Decisión:** preparar adopción futura de Invoices V2, pero no ejecutar migración ni modificar código/runtime ahora.
 - **Bloqueos conservados:** Veri*Factu P0 y emisión fiscal de anticipos permanecen bloqueados. Ninguna factura ni configuración se ha modificado.
+
+
+### Aclaración de nomenclatura SDK — 2026-11-10
+
+Se ajusta la formulación anterior para evitar presentar `@wix/get-paid` como paquete npm independiente confirmado. La recomendación es **Invoices V2 / REST API v4** y, para JavaScript, el patrón oficial de **SDK universal de Wix** (o REST donde corresponda), no un paquete «SDK v2» separado. El acceso concreto desde Velo debe validarse con la documentación y runtime vigentes cuando el sitio reciba el rollout. Esta precisión no altera la decisión: el sitio continúa en V1 y la query de Invoices V2 devuelve 428, por lo que no hay migración ejecutable ahora.
