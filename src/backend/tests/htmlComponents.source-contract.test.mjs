@@ -155,7 +155,7 @@ test("admin widget actions are explicitly allowlisted and match implemented page
   }
 });
 
-test("staff widget remains fail-closed and bridge only accepts navigation", () => {
+test("staff widget remains fail-closed for writes while read-only queries are permitted", () => {
   const allowlist = staffPage.match(/allowedTypes:\s*\[([\s\S]*?)\]/);
   assert.ok(allowlist, "staff page must declare an explicit widget allowlist");
   assert.match(allowlist[1], /MESSAGE_TYPES\.READY/);
@@ -207,7 +207,7 @@ test("admin cashier panel is available only when backend reports an open operati
 
 
 test("staff page routes only read-only timeclock queries and keeps write actions disabled", () => {
-  const allowlist = staffPage.match(/allowedTypes:\s*\[([\\s\\S]*?)\]/);
+  const allowlist = staffPage.match(/allowedTypes:\s*\[([\s\S]*?)\]/);
   assert.ok(allowlist, "staff page must declare an explicit message allowlist");
   for (const type of ["GET_STATE", "GET_HISTORY", "HOURS_CALC"]) {
     assert.ok(allowlist[1].includes('"'+type+'"'), type + " must be allowed");
