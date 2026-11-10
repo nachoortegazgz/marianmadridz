@@ -1,4 +1,5 @@
 import test from 'node:test';
+import vm from 'node:vm';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -165,4 +166,26 @@ test('FDOC-STORE-01 package read models use PaquetesGestoria, never the Z-closin
     '// BLOQUE 5 - DESCARGAR VERSION'
   );
   assert.match(prepared, /\.eq\("packageStatus", "PREPARED"\)/);
+});
+
+
+test('FDOC-CSV-01 text cells escape delimiters, quotes and neutralize spreadsheet formulas', () => {
+  const start = source.indexOf('function _csvCell(value) {');
+  const end = source.indexOf('\\n}', start) + 2;
+  assert.notEqual(start, -1, 'CSV cell encoder must exist');
+  assert.ok(end > start, 'CSV cell encoder must be complete');
+  const csvCell = vm.runInNewContext('(' + source.slice(start, end) + ')');
+  assert.equal(csvCell('A;"B"'), '"A;""B"""');
+  assert.equal(csvCell('=1+1'), '"\'=1+1"');
+  assert.equal(csvCell('\\t=1+1'), '"\'\\t=1+1"');
+  assert.equal(csvCell('normal text'), '"normal text"');
+
+  const builderStart = source.indexOf('function _buildCsvFromInvoices(invoices) {');
+  const builderEnd = source.indexOf('\\n}', builderStart);
+  const builder = source.slice(builderStart, builderEnd);
+  for (const call of ['_csvCell(number)', '_csvCell(date)', '_csvCell(type)', '_csvCell(method)', '_csvCell(hash)']) {
+    assert.ok(builder.includes(call), 'Missing safe CSV encoding: ' + call);
+  }
+  assert.ok(builder.includes('.join(";")'));
+  assert.ok(builder.includes('.join("\\\\n")'));
 });
