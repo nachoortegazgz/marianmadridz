@@ -350,9 +350,6 @@ export async function appendAccountingEntry(input, traceId) {
         if (payload.payloadHash !== payloadHash) {
             return { status: "ERROR", data: null, error: { code: "ACCOUNTING_ENTRY_PAYLOAD_MISMATCH" } };
         }
-        if (claim.status === "COMPLETED") {
-            return { status: "SUCCESS", data: { entryId: entry.entryId, idempotent: true }, error: null };
-        }
         if (claim.status === "REPAIR_REQUIRED") {
             return { status: "ERROR", data: null, error: { code: "ACCOUNTING_ENTRY_REPAIR_REQUIRED" } };
         }
@@ -383,6 +380,7 @@ export async function appendAccountingEntry(input, traceId) {
         }
     }
 
+    const claimWasCompleted = claim.status === "COMPLETED";
     let lock = null;
     let retainLock = false;
     try {
@@ -392,16 +390,25 @@ export async function appendAccountingEntry(input, traceId) {
         const existingRows = await _readEntryRows(entry.entryId);
         if (existingRows.length) {
             if (await _verifyEntryRows(existingRows, entry)) {
-                await _markEntryClaim(claim, "COMPLETED", {
-                    completedAt: new Date().toISOString(),
-                    recoveredExistingRows: true,
-                });
+                if (!claimWasCompleted) {
+                    await _markEntryClaim(claim, "COMPLETED", {
+                        completedAt: new Date().toISOString(),
+                        recoveredExistingRows: true,
+                    });
+                }
                 return { status: "SUCCESS", data: { entryId: entry.entryId, lineCount: existingRows.length, idempotent: true }, error: null };
             }
             await _markEntryClaim(claim, "REPAIR_REQUIRED", {
                 observedLineCount: existingRows.length,
                 expectedLineCount: entry.lines.length,
                 reason: "PARTIAL_OR_MISMATCHED_ENTRY",
+            });
+            return { status: "ERROR", data: null, error: { code: "ACCOUNTING_ENTRY_REPAIR_REQUIRED" } };
+        }
+        if (claimWasCompleted) {
+            await _markEntryClaim(claim, "REPAIR_REQUIRED", {
+                reason: "COMPLETED_CLAIM_WITHOUT_ROWS",
+                expectedLineCount: entry.lines.length,
             });
             return { status: "ERROR", data: null, error: { code: "ACCOUNTING_ENTRY_REPAIR_REQUIRED" } };
         }
