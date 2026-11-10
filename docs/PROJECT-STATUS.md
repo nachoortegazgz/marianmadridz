@@ -2,7 +2,7 @@
 
 **Revisión:** 2026-11-10  
 **Repositorio:** [nachoortegazgz/marianmadridz](https://github.com/nachoortegazgz/marianmadridz)  
-**Baseline de código:** `main` · `5be351e06557cf0bb8900e6a4453c07f1db86b73`  
+**Baseline de código:** `main` · `216ee5bbd7d508cb355cf7215c06d54d171390d8` (base del PR #259; rama revisada `fix/staff-readonly-surface-20261110-v2` · `84d5799d465f4348c21a1834d50e6f3c82e09795`)  
 **Sitio:** https://www.marianmadrid.es/  
 **Alcance:** estado documental y técnico contrastado con el árbol de `main`, auditorías existentes, CI y consultas live de solo lectura.
 
@@ -24,7 +24,7 @@ El repositorio contiene una solución Wix Editor/Velo con reservas Bookings V2, 
 | Checkout eCommerce Cart V2 | Contratos de SDK en CI | La suite de contratos no sustituye checkout, pago y webhooks E2E en entorno de prueba. |
 | Stores Catalog V3 | V3 activo y APIs REST responden | `V3_CATALOG`; 24 productos visibles; 30 inventory items en una ubicación. Orders Settings: `inventoryUpdateTrigger=ON_ORDER_PAID`, `createInvoice=false`. La capa custom se ha retirado en la rama de refactorización; pendiente CI/QA. |
 | Inventario personalizado | **Retirado en PR #239; QA runtime pendiente** | Wix Stores Catalog V3: 30/30 inventory items con tracking en una ubicación. Orders Settings: `ON_ORDER_PAID`. Módulo, WebMethods y panel custom eliminados en la rama. CI offline run 42721080098: 50 suites/488 tests OK en commit previo; reejecución del HEAD actual y QA Wix E2E pendientes. No se han escrito datos ni modificado históricos. |
-| Ledger fiscal / Veri*Factu | **NO APTO para activar remisión Veri*Factu** | PR #250 incorpora `aeatHash.js` puro con vectores oficiales v0.1.2 para alta/anulación, sin consumers runtime. Siguen pendientes reconciliación de campos en writers, XML/XSD, transporte SOAP, respuesta/remisión, pruebas AEAT y aprobación legal. |
+| Ledger fiscal / Veri*Factu | **NO APTO para activar remisión Veri*Factu** | PR #250 incorpora `aeatHash.js` puro con vectores oficiales v0.1.2 para alta/anulación, sin consumers runtime. PR #258 aclara que `cajas.web.js` y `eventLog.js` usan una cadena interna `hashChain`; renombra los builders privados y elimina un wrapper redundante sin alterar hashes. Siguen pendientes transición de series/cadena, reconciliación de campos, XML/XSD, transporte SOAP, respuesta/remisión, pruebas AEAT y aprobación legal. |
 | Registro horario | Consultas read-only implementadas; writers bloqueados en backend | ZONA STAFF consulta contexto, estado, historial y horas. Los lectores verifican firma HMAC y secuencia. PR #254 añade `STAFF_CLOCKING_CONFIG` y bloquea también las llamadas directas a `registrarFichaje`/`registrarAjusteHorario`; faltan idempotencia, lock persistente, transiciones/concurrencia y runtime Wix QA antes de reactivar. |
 | Paquetes de gestoría | Snapshot trimestral implementado en PR #256; CI/runtime QA pendientes | PR #256 añade hash canónico, límite 450 KiB, claim idempotente y alta create-only versionada en `PaquetesGestoria`; listado metadata-only y descarga con verificación hash. Solo trimestre; agregador mensual pendiente. Envío Resend sigue deshabilitado. No hay inserciones CMS reales. |
 | Capa 3 M365 / SharePoint | Arquitectura objetivo; no implantación demostrada | No existe `exportService.js` ni jobs de exportación. PA-01…PA-07 y SharePoint no auditados en el tenant. Transporte requiere ADR. |
@@ -32,7 +32,7 @@ El repositorio contiene una solución Wix Editor/Velo con reservas Bookings V2, 
 | Gift Cards | App nativa instalada; personalización no implementada | Wix Gift Cards tiene 1 producto nativo configurado y 0 tarjetas emitidas. No existe `giftCards.web.js`, writer propio, QR scanner ni HMAC personalizado en `src/`. |
 | Wix Invoices | **V1 activa; adopción de Invoices V2 recomendada cuando Wix la habilite** | GetSiteContext confirma app V1; `POST /invoices/v4/invoices/query` devuelve 428 `INVOICES_API_UNAVAILABLE`; `GET /invoices/v4/invoices-settings` devuelve 200. Wix gestiona el rollout automáticamente. No añadir un paquete Invoices V2 independiente no confirmado ni crear adapter hasta que el CRUD esté habilitado; seguir SDK universal/REST oficial. No sustituye SIF/Veri*Factu. QA: [compatibilidad Invoices V2](qa/2026-11-09-catalog-v3-invoices-compatibility.md). |
 | Wix Forms & Payments | 4 esquemas nativos activos | Contacto mapea nombre/email/teléfono a CRM. Caja manual, control X y fichaje no tienen trigger backend; Wix Automations v2 devuelve 0 workflows activos y 0 borradores para `wix_form_app-form_submitted`. |
-| Páginas personalizadas / widgets | Staff read-only conectado; Marian parcial; runtime pendiente | `#htmlAdmin.txt` y `#htmlOnlyStaff.txt` están versionados. ZONA STAFF consulta contexto, estado, historial y horas; fichajes, ajustes, caja e inventario permanecen deshabilitados. ZONA MARIAN conecta lectura caja/fiscal y acciones documentales; TPV solo aparece con caja `ABIERTA`, y el estado live `SIMULACION` lo bloquea. Falta comparar HTML real de Editor/publicado con Git y ejecutar runtime Wix. |
+| Páginas personalizadas / widgets | Staff read-only acotado en rama; Marian parcial; runtime pendiente | `#htmlAdmin.txt` conserva caja/fiscal/documentos. La rama `fix/staff-readonly-surface-20261110-v2` elimina del widget Staff el TPV/caja, writers de fichaje, ajustes y rutas no publicadas; mantiene estado, historial y cálculo de horas read-only tras `getMyStaffContext`. Wix Site Context confirma `/onlystaff` y `/zona-marian`, no `/pos-checkout`, `/caja-actual` ni `/mi-calendario`. CI PR #259: SUCCESS (run 42814723943 sobre el commit de código `84d5799`; regresión offline, contratos SDK y ESLint). Después se añadió únicamente este ajuste documental en `724aab1`; ese commit no tiene checks propios y no contiene cambios de código. La validación Wix runtime/Preview y la comparación/sincronización con el HTML real del Editor siguen pendientes; no equivale a publicación. |
 | Toolchain / lint | Bloqueo de mantenimiento | ESLint 8.25.0 está EOL; `@wix/eslint-plugin-cli@1.0.2` declara peer ESLint 8. La regla `no-invalid-backend-import` está desactivada y falta `src/velo.dependencies.json`. No forzar ESLint 10 ni editar artefactos Wix manualmente. |
 
 ## 3. Evidencia de validación
@@ -191,10 +191,56 @@ Se centraliza `STAFF_CLOCKING_CONFIG` en `internalConfig.js` con `WRITES_ENABLED
 CI del PR #254, run #42803615666: 51 suites / 505 tests / 0 fallos; contratos SDK Cart V2 y Bookings Reader V2 y ESLint correctos. Los flags no deben reactivarse hasta implementar `operationId`, lock persistente por empleado/día, validación de transiciones, manejo de replay/timeout y pruebas reales de concurrencia en Wix QA. No se modificaron fichajes históricos ni se escribieron datos CMS en Wix.
 
 
-## 16. Snapshots trimestrales inmutables de gestoría — 2026-11-10
+## 16. Checkpoint de Fase 2 — 2026-11-10 (post PR #264)
 
-PR #256 propone habilitar la creación de snapshots trimestrales en `PaquetesGestoria`. El writer exige `requireMarianManager`, `operationId` UUID, claim idempotente en `ControlOperativo`, hash SHA-256 determinista, límite de 450 KiB y versionado create-only mediante `dalInsert`. Los IDs CMS son GUID UUIDv8 deterministas derivados de SHA-256; el código legible `DOC_GESTORIA_...` se presenta aparte. Las colisiones de versión se reintentan con lectura fuerte; un timeout ambiguo conserva el claim para recuperar el documento por `traceId`. No se usa upsert ni se modifica una versión existente.
+**Baseline:** `main` · `999935d2c93577bcd2f5251055605dd44001ca8e`. Este checkpoint amplía las secciones anteriores; no sustituye las auditorías por dominio ni acredita publicación del HEAD en Wix.
 
-ZONA MARIAN incorpora el botón de creación trimestral y la descarga del CSV que devuelve el WebMethod. El listado de paquetes solo expone metadatos y la descarga verifica la huella antes de generar el fichero. La previsualización usa agregadores internos bajo autorización de Marian Manager y rate limit.
+### Cambios fusionados y validados por CI
 
-El alcance actual es exclusivamente trimestral: el agregador mensual no existe y `MONTHLY` se rechaza. `ACCOUNTANT_SEND_ENABLED=false` permanece sin cambios; no se envía correo ni se activa Resend. No se ha escrito ningún snapshot, ledger, reserva, pago, cierre ni dato CMS. La colección y sus permisos efectivos aún requieren verificación read-only y pruebas en un sitio QA Wix aislado. CI del PR #256 está pendiente; ver [detalle de implementación y límites](qa/2026-11-10-manager-package-snapshot-implementation.md).
+- **PR #259 — ZONA STAFF read-only:** elimina TPV/caja, pagos/salidas, cierres X/Z, botones de fichaje y ajustes sin writer operativo, y rutas Wix no existentes. Mantiene estado, historial y cálculo de horas solo lectura, después de resolver el contexto de staff. CI HEAD PR: 51 suites / 506 tests, 0 fallos.
+- **PR #263 — ZONA MARIAN:** elimina el mensaje `MM_NAV` no emitido y sin handler. CI: 52 suites / 509 tests, 0 fallos; SDK Cart V2, Bookings Reader V2 y ESLint correctos.
+- **PR #267 — ZONA MARIAN:** elimina `isMarianManager`/`isAdmin`/`isCajero` del contexto del widget (no consumidos), el bloque vacío `cashierMode` y flags fallback `enableClocking`/`enableInventory`/`enableScheduleQuery` sin panel. El control `access.isMarianManager` del controlador permanece intacto. CI: 52 suites / 513 tests, 0 fallos; SDK Cart V2, Bookings Reader V2 y ESLint correctos.
+- **PR #264 — ledger contable:** replay verifica hash de cada fila, metadata persistida y predecessor anterior; claims COMPLETED ya no retornan éxito sin comprobar filas. Si faltan filas o hay discrepancias, pasa a `REPAIR_REQUIRED`. CI: 52 suites / 513 tests, 0 fallos; SDK Cart V2, Bookings Reader V2 y ESLint correctos. Issue #260 cerrado como corrección de código.
+
+Los resultados CI son offline. Ninguno demuestra runtime Velo, hooks en el sitio publicado ni E2E de reservas, pagos o cierres.
+
+### Flujo `status` descartado
+
+La auditoría live de Wix y los contratos de la rama principal confirman que `ServiciosCatalogo`, `ComplementosCatalogo` y `MapaStaff` no contienen un campo comercial `status`. Se conserva `MapaStaff.active` como disponibilidad canónica y `packageStatus` en paquetes de gestoría. No eliminar estados técnicos de respuesta (`SUCCESS/ERROR`), estados nativos de reservas/pagos ni estados fiscales/contables que formen parte de sus contratos.
+
+### Gobernanza CMS de ledgers — hallazgo P1 #261
+
+Consultas Wix solo lectura del 2026-11-10:
+
+- `PaquetesGestoria`: revisión 2, 0 registros.
+- `ControlOperativo`: revisión 27, 72 registros.
+- La Data Permissions API devuelve `CMS_EDITOR` para read/insert/update/remove en `MovimientosCaja`, `LibroAsientosContablesDetalle`, `HistoricoCierresZ`, `RegistrosHorariosStaff` y `PaquetesGestoria`.
+- Wix documenta que los Data Hooks se ejecutan también en operaciones iniciadas desde Content Manager; por tanto, los `beforeUpdate`/`beforeRemove` append-only existentes sí pueden bloquear esas acciones si la versión correcta está publicada y asociada a cada colección.
+- El riesgo no debe describirse como bypass probado de hooks. El riesgo concreto es la inserción manual: `CMS_EDITOR` tiene `itemInsert`; varios `beforeInsert` solo validan estructura/traza y no acreditan procedencia backend. `LibroAsientosContablesDetalle` no tiene hook `beforeInsert` específico. La identidad del actor en los hooks y el efecto de restringir permisos sin romper `auth.elevate` requieren QA aislado.
+- Issue #261 abierto. No cambiar permisos de producción hasta probar la ruta backend elevada y la UI de Content Manager en un sitio QA.
+
+### Paquetes de gestoría — bloqueo #223
+
+PR #256 no se integra: rama divergida, pruebas de concurrencia estáticas (no ejecutan el writer), operationId guardado solo en memoria del widget y sin recuperación fiable tras recarga/timeout. La configuración de permisos CMS y el hook de inserción se deben resolver junto con #261. No se han creado snapshots y Resend continúa deshabilitado.
+
+### Seguridad del repositorio y estado de despliegue
+
+- `main` sigue sin protección: `protected=false`, `required_status_checks.enforcement_level=off`. Issue #210 abierto.
+- El merge commit de cada PR no dispone de check runs propios; CI se ejecuta sobre el HEAD del PR. No hay garantía de que un merge posterior se someta a checks obligatorios.
+- No se ha publicado el HEAD actual en Wix ni se ha comprobado la paridad entre HTML del Editor y snapshots Git.
+
+### Entorno QA disponible
+
+La consulta Wix `ListWixSites` del 2026-11-10 devuelve solo dos sitios en la cuenta: Marian Madrid (sitio publicado auditado) y un sitio personal de CV no relacionado. No existe un sitio QA/staging de Marian Madrid con Bookings, CMS y Cart V2. Por tanto, no hay un entorno aislado disponible para E2E runtime de reservas, checkout, fichajes, hooks CMS o fiscalidad. No se utilizará el sitio publicado para crear datos sintéticos que puedan contaminar calendarios, pagos o ledgers; debe provisionarse un sitio QA aislado antes de ejecutar esas pruebas.
+
+### Criterio de salida de Fase 2 — pendiente
+
+Fase 2 **no está completada**. Bloqueos principales:
+
+1. **P0 fiscal:** issue #209; builder/contrato AEAT y vectores aislados no equivalen a SIF operativo. Falta completar payloads de alta/anulación, transporte certificado, respuestas, reintentos, pruebas AEAT y aprobación asesoría. No activar Veri*Factu.
+2. **Reservas:** falta E2E en entorno QA para simples/duales, compensación, reprogramación/cancelación, checkout no cobrable y webhooks. No crear reservas reales en producción.
+3. **Caja/contabilidad:** CajaActual sigue en estado no operativo para TPV; no activar cierres ni writers. Falta aprobación del mapeo PGC y cerrar #261.
+4. **Registro horario:** lecturas staff disponibles en código; escrituras bloqueadas hasta operationId, lock persistente por empleado/día, transiciones e idempotencia, y pruebas runtime.
+5. **Páginas:** ZONA STAFF está acotada a lectura en main; ZONA MARIAN mantiene consultas fiscales/documentales y caja condicionada a estado ABIERTA. Falta Wix Preview/Local Editor con identidades QA y contraste del HTML real del Editor.
+
+**Restricciones mantenidas:** sin cambios CMS, sin inserciones en ledgers, sin reservas/pagos reales, sin comunicaciones a clientes, sin envío a gestoría y sin publicación. Los registros históricos no se recalculan ni sobrescriben.

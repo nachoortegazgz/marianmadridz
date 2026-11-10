@@ -84,7 +84,6 @@ $w.onReady(async () => {
         allowedTypes: [
             MESSAGE_TYPES.READY,
             MESSAGE_TYPES.CONTEXT,
-            MESSAGE_TYPES.NAV,
             "CASHIER_STATE",
             "Z_CLOSING",
             "FISCAL_SUMMARY",
@@ -100,9 +99,6 @@ $w.onReady(async () => {
             const cashierRes = await getCashierState({ traceId }).catch(() => null);
 
             return {
-                isMarianManager: true,
-                isAdmin: access.isAdmin === true,
-                isCajero: access.isCajero === true,
                 memberName:
                     member.profile?.nickname ||
                     member.contactDetails?.firstName ||

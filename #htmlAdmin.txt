@@ -155,7 +155,7 @@
       'use strict';
 
       const MESSAGE_TYPES = {
-        READY:'MM_READY', CONTEXT:'MM_CONTEXT', NAV:'MM_NAV',
+        READY:'MM_READY', CONTEXT:'MM_CONTEXT',
         CASHIER_STATE:'CASHIER_STATE', CASHIER_STATE_RES:'CASHIER_STATE_RES',
         Z_CLOSING:'Z_CLOSING', Z_CLOSING_RES:'Z_CLOSING_RES',
         FISCAL_SUMMARY:'FISCAL_SUMMARY', FISCAL_SUMMARY_RES:'FISCAL_SUMMARY_RES',
@@ -351,7 +351,6 @@
         roleBadge.textContent = roleLabel;
 
         if (contextData.cashierState) renderCashier(contextData.cashierState);
-        if (contextData.cashierMode) { /* badge opcional */ }
 
         // Fechas por defecto
         const today = contextData.today || new Intl.DateTimeFormat('sv-SE', { timeZone: contextData.timeZone || 'Europe/Madrid' }).format(new Date());
@@ -459,10 +458,7 @@
           // contexto/contrato backend que no ha llegado.
           applyContext({
             roleLabel: 'CONTEXTO NO DISPONIBLE',
-            enableClocking: false,
             enableCashier: false,
-            enableInventory: false,
-            enableScheduleQuery: false,
             enableFiscal: false,
             enableDocuments: false,
             timeZone: 'Europe/Madrid',
