@@ -484,7 +484,6 @@
           console.warn('[only-staff] MM_CONTEXT no recibido; se mantiene el panel cerrado');
           _renderContext({
             isAuthorized: false,
-            panelType: 'PERSONAL',
             enableStateQuery: false,
             enableHistory: false,
             enableScheduleQuery: false,
