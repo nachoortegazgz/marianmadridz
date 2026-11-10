@@ -938,6 +938,7 @@ test('FLOW-CAJA-11 simulation cash state blocks manual writes, state display and
   await seedStaff({ resourceId: GUID_ADMIN_RESOURCE });
   setMember({ _id: GUID_MEMBER, contactId: GUID_CONTACT, loginEmail: 'marta@test.local' });
   const { cajas } = await freshImports();
+  await setupFiscalSecrets();
 
   const before = (wixDataMock._store.get('MovimientosCaja') || []).length;
   const tx = await cajas.registerManualTransaction({
