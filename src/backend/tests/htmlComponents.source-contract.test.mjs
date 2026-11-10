@@ -197,3 +197,10 @@ test("admin fallback hides unsupported capabilities and ticket output uses text 
   assert.doesNotMatch(onlyStaffHtml, /ticketBox\.innerHTML\s*=/);
   assert.doesNotMatch(onlyStaffHtml, /hoursResult\.innerHTML\s*=/);
 });
+
+
+test("admin cashier panel is available only when backend reports an open operational register", () => {
+  assert.match(adminPage, /enableCashier:\s*cashierRes\?\.status === "SUCCESS" &&\s*cashierRes\.data\?\.cashRegisterStatus === "ABIERTA"/);
+  assert.doesNotMatch(adminPage, /enableCashier:\s*true/);
+  assert.match(adminPage, /cashierRes\?\.status === "SUCCESS" \? cashierRes\.data : null/);
+});
