@@ -439,7 +439,12 @@ async function _claimPackageOperation(operationId, period, traceId) {
   if (existing) {
     const payload = readControlPayload(existing);
     if (payload.operationId !== operationId || !_packagePeriodMatches(payload, period)) {
-      return { error: { code: "PACKAGE_OPERATION_ID_REUSED" } };
+      return {
+        error: {
+          code: "PACKAGE_OPERATION_ID_REUSED",
+          message: "Este operationId ya está asociado a otro periodo. Genera un UUID nuevo para una operación distinta.",
+        },
+      };
     }
 
     if (existing.status === "COMPLETED" && payload.documentId) {
@@ -448,7 +453,14 @@ async function _claimPackageOperation(operationId, period, traceId) {
         CMS_TIMEOUT_MS,
         "getCompletedPackageSnapshot"
       );
-      if (!completedDoc) return { error: { code: "PACKAGE_SNAPSHOT_CLAIM_INCONSISTENT" } };
+      if (!completedDoc) {
+        return {
+          error: {
+            code: "PACKAGE_SNAPSHOT_CLAIM_INCONSISTENT",
+            message: "El claim figura completado, pero su snapshot no existe. Requiere reconciliación manual; no se crea otra versión automáticamente.",
+          },
+        };
+      }
       return { completedDoc };
     }
 
@@ -460,7 +472,12 @@ async function _claimPackageOperation(operationId, period, traceId) {
 
     const expiresAt = existing.expiresAt ? new Date(existing.expiresAt) : null;
     if (expiresAt && Number.isFinite(expiresAt.getTime()) && expiresAt.getTime() <= Date.now()) {
-      return { error: { code: "PACKAGE_SNAPSHOT_REPAIR_REQUIRED" } };
+      return {
+        error: {
+          code: "PACKAGE_SNAPSHOT_REPAIR_REQUIRED",
+          message: "La operación expiró sin snapshot verificable. Revisa el historial antes de iniciar otra operación; el claim no se elimina automáticamente.",
+        },
+      };
     }
     // Never delete/reclaim an in-flight claim automatically: a stale worker
     // could resume after lease expiry and create a second immutable snapshot.
@@ -512,7 +529,12 @@ async function _claimPackageOperation(operationId, period, traceId) {
       );
       return completedDoc
         ? { completedDoc }
-        : { error: { code: "PACKAGE_SNAPSHOT_CLAIM_INCONSISTENT" } };
+        : {
+            error: {
+              code: "PACKAGE_SNAPSHOT_CLAIM_INCONSISTENT",
+              message: "El claim completado no tiene snapshot recuperable. Requiere reconciliación manual.",
+            },
+          };
     }
     const recovered = await _findPackageByTraceId(payload.traceId);
     if (recovered) {
@@ -917,7 +939,7 @@ export const downloadManagerPackageVersion = webMethod(
           csvContent,
           summaryText,
           invoiceCount: invoices.length,
-          createdAt: doc._createdDate || doc.closeDate,
+          createdAt: doc.createdAt || doc._createdDate || null,
         },
         error: null,
       };
