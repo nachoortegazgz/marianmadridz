@@ -191,59 +191,6 @@
       </div>
     </section>
 
-    <!-- ══════════════════ GESTIÓN STAFF ══════════════════ -->
-    <section class="panel" id="staffPanel">
-      <div class="panel-title">Gestion de equipo <span class="badge">NUEVO</span></div>
-
-      <div class="btn-group" style="margin-bottom:14px;">
-        <button class="btn btn-outline" id="btnLoadStaff" type="button">Cargar equipo</button>
-      </div>
-
-      <div class="scroll">
-        <table class="table">
-          <thead><tr><th>Nombre</th><th>Rol</th><th>Email</th><th>Estado</th></tr></thead>
-          <tbody id="staffBody">
-            <tr><td colspan="4" style="text-align:center;color:var(--muted);">Pulsa "Cargar equipo"</td></tr>
-          </tbody>
-        </table>
-      </div>
-
-      <div class="grid-2" style="margin-top:16px;">
-        <div>
-          <div class="panel-title" style="font-size:13px;">Consulta de horas</div>
-          <div class="form-group">
-            <label>Empleado</label>
-            <select id="hoursStaffSelect"><option value="">—</option></select>
-          </div>
-          <div class="row">
-            <div class="form-group"><label>Desde</label><input type="date" id="staffHoursStart" /></div>
-            <div class="form-group"><label>Hasta</label><input type="date" id="staffHoursEnd" /></div>
-          </div>
-          <button class="btn" id="btnLoadStaffHours" type="button">Consultar horas</button>
-          <div id="staffHoursResult" style="margin-top:10px;padding:12px;background:var(--soft);border-radius:8px;font-size:12px;color:var(--muted);">—</div>
-        </div>
-
-        <div>
-          <div class="panel-title" style="font-size:13px;">Enviar aviso</div>
-          <div class="form-group">
-            <label>Empleado</label>
-            <select id="notifyStaffSelect"><option value="">—</option></select>
-          </div>
-          <div class="form-group">
-            <label>Canal</label>
-            <select id="notifyChannel">
-              <option value="EMAIL">Email</option>
-              <option value="SMS">SMS</option>
-              <option value="APP">App interna</option>
-            </select>
-          </div>
-          <div class="form-group"><label>Asunto</label><input type="text" id="notifySubject" maxlength="200" /></div>
-          <div class="form-group"><label>Mensaje</label><textarea id="notifyMessage" maxlength="1000"></textarea></div>
-          <button class="btn btn-accent" id="btnNotifyStaff" type="button">Enviar notificacion</button>
-        </div>
-      </div>
-    </section>
-
     <!-- ══════════════════ CAJA ══════════════════ -->
     <section class="panel" id="cashPanel">
       <div class="panel-title">Caja</div>
@@ -308,16 +255,12 @@
         SEND_MONTHLY_PACKAGE:'SEND_MONTHLY_PACKAGE', SEND_MONTHLY_PACKAGE_RES:'SEND_MONTHLY_PACKAGE_RES',
         SEND_QUARTERLY_PACKAGE:'SEND_QUARTERLY_PACKAGE', SEND_QUARTERLY_PACKAGE_RES:'SEND_QUARTERLY_PACKAGE_RES',
         SEND_SPECIFIC_DOCUMENT:'SEND_SPECIFIC_DOCUMENT', SEND_SPECIFIC_DOCUMENT_RES:'SEND_SPECIFIC_DOCUMENT_RES',
-        STAFF_LIST:'STAFF_LIST', STAFF_LIST_RES:'STAFF_LIST_RES',
-        STAFF_HOURS_SUMMARY:'STAFF_HOURS_SUMMARY', STAFF_HOURS_SUMMARY_RES:'STAFF_HOURS_SUMMARY_RES',
-        STAFF_NOTIFY:'STAFF_NOTIFY', STAFF_NOTIFY_RES:'STAFF_NOTIFY_RES',
         CASHIER_STATE:'CASHIER_STATE', CASHIER_STATE_RES:'CASHIER_STATE_RES',
         Z_CLOSING:'Z_CLOSING', Z_CLOSING_RES:'Z_CLOSING_RES',
         FISCAL_SUMMARY:'FISCAL_SUMMARY', FISCAL_SUMMARY_RES:'FISCAL_SUMMARY_RES',
         FISCAL_BOOK:'FISCAL_BOOK', FISCAL_BOOK_RES:'FISCAL_BOOK_RES',
         DOCUMENT_PREPARED:'DOCUMENT_PREPARED', DOCUMENT_PREPARED_RES:'DOCUMENT_PREPARED_RES',
         DOCUMENT_DOWNLOAD:'DOCUMENT_DOWNLOAD', DOCUMENT_DOWNLOAD_RES:'DOCUMENT_DOWNLOAD_RES',
-        ONLY_STAFF_ERROR:'ONLY_STAFF_ERROR', STAFF_ERROR:'STAFF_ERROR'
       };
 
       const VALID_TYPES = new Set(Object.values(MESSAGE_TYPES));
@@ -340,11 +283,6 @@
       const quarterlyYear=$('quarterlyYear'), quarterlyQuarter=$('quarterlyQuarter'), quarterlyNotes=$('quarterlyNotes');
       const specificDocId=$('specificDocId'), specificDocType=$('specificDocType'), specificNotes=$('specificNotes');
 
-      const staffBody=$('staffBody'), btnLoadStaff=$('btnLoadStaff');
-      const hoursStaffSelect=$('hoursStaffSelect'), staffHoursStart=$('staffHoursStart'), staffHoursEnd=$('staffHoursEnd');
-      const btnLoadStaffHours=$('btnLoadStaffHours'), staffHoursResult=$('staffHoursResult');
-      const notifyStaffSelect=$('notifyStaffSelect'), notifyChannel=$('notifyChannel');
-      const notifySubject=$('notifySubject'), notifyMessage=$('notifyMessage'), btnNotifyStaff=$('btnNotifyStaff');
 
       const cashSaldo=$('cashSaldo'), cashOps=$('cashOps'), cashDiaKey=$('cashDiaKey');
       const btnRefreshCash=$('btnRefreshCash'), btnZClosing=$('btnZClosing'), cashTicket=$('cashTicket');
@@ -354,7 +292,6 @@
 
       const btnLoadPrepared=$('btnLoadPrepared'), documentsBody=$('documentsBody');
 
-      let staffCache = [];
 
       function send(type, payload={}) {
         try { window.parent.postMessage({ type, payload: { ...payload, traceId } }, PARENT_ORIGIN || '*'); } catch (_) {}
@@ -461,56 +398,6 @@
         });
       });
 
-      /* ── Staff ── */
-      function fillStaffSelects(items) {
-        hoursStaffSelect.innerHTML = '<option value="">—</option>';
-        notifyStaffSelect.innerHTML = '<option value="">—</option>';
-        items.forEach((s) => {
-          const value = s.id || s.employeeId;
-          const label = s.name || s.displayName || value;
-          [hoursStaffSelect, notifyStaffSelect].forEach((sel) => {
-            const opt = document.createElement('option');
-            opt.value = value; opt.textContent = label;
-            sel.appendChild(opt);
-          });
-        });
-      }
-      function renderStaff(items) {
-        staffCache = items || [];
-        if (!staffCache.length) {
-          staffBody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--muted);">Sin empleados</td></tr>';
-          fillStaffSelects([]); return;
-        }
-        staffBody.innerHTML = '';
-        staffCache.forEach((s) => {
-          const tr = document.createElement('tr');
-          [s.name || s.displayName || '—', s.roleLabel || s.role || '—', s.email || '—', s.status || 'activo'].forEach((v) => {
-            const td = document.createElement('td'); td.textContent = String(v); tr.appendChild(td);
-          });
-          staffBody.appendChild(tr);
-        });
-        fillStaffSelects(staffCache);
-      }
-      btnLoadStaff.addEventListener('click', () => { setLoading(btnLoadStaff, true); send(MESSAGE_TYPES.STAFF_LIST, {}); });
-      btnLoadStaffHours.addEventListener('click', () => {
-        const employeeId = hoursStaffSelect.value;
-        const startDateYMD = staffHoursStart.value;
-        const endDateYMD = staffHoursEnd.value;
-        if (!employeeId || !startDateYMD || !endDateYMD) return warn('Completa empleado, desde y hasta.');
-        setLoading(btnLoadStaffHours, true);
-        send(MESSAGE_TYPES.STAFF_HOURS_SUMMARY, { employeeId, startDateYMD, endDateYMD });
-      });
-      btnNotifyStaff.addEventListener('click', () => {
-        const employeeId = notifyStaffSelect.value;
-        const subject = notifySubject.value.trim();
-        const message = notifyMessage.value.trim();
-        if (!employeeId || !subject || !message) return warn('Completa empleado, asunto y mensaje.');
-        setLoading(btnNotifyStaff, true);
-        send(MESSAGE_TYPES.STAFF_NOTIFY, {
-          employeeId, channel: notifyChannel.value || 'EMAIL', subject, message
-        });
-      });
-
       /* ── Caja ── */
       function renderCashier(state) {
         if (!state) { cashSaldo.textContent='--'; cashOps.textContent='--'; cashDiaKey.textContent='--'; return; }
@@ -602,20 +489,17 @@
         const today = contextData.today || new Intl.DateTimeFormat('sv-SE', { timeZone: contextData.timeZone || 'Europe/Madrid' }).format(new Date());
         const year = Number(today.slice(0, 4));
         monthlyYear.value = year; quarterlyYear.value = year; fiscalYear.value = year;
-        staffHoursStart.value = today; staffHoursEnd.value = today;
 
         // Visibilidad por flags
         const flags = {
           ai: contextData.enableAIAssistant !== false,
           send: contextData.enableAccountantSend !== false,
-          staff: contextData.enableStaffManagement !== false,
           cash: contextData.enableCashier !== false,
           fiscal: contextData.enableFiscal !== false,
           documents: contextData.enableDocuments !== false
         };
         $('aiPanel').style.display = flags.ai ? 'block' : 'none';
         $('sendPanel').style.display = flags.send ? 'block' : 'none';
-        $('staffPanel').style.display = flags.staff ? 'block' : 'none';
         $('cashPanel').style.display = flags.cash ? 'block' : 'none';
         $('fiscalPanel').style.display = flags.fiscal ? 'block' : 'none';
         $('documentsPanel').style.display = flags.documents ? 'block' : 'none';
@@ -668,25 +552,6 @@
             if (ok) { info('Documento enviado al gestor.'); toggleForms(null); }
             else err(error?.message || 'No se pudo enviar el documento.');
             break;
-          case 'STAFF_LIST_RES':
-            setLoading(btnLoadStaff, false);
-            if (ok) renderStaff(data?.items || data?.employees || data || []);
-            else err(error?.message || 'No se pudo cargar el equipo.');
-            break;
-          case 'STAFF_HOURS_SUMMARY_RES':
-            setLoading(btnLoadStaffHours, false);
-            if (ok && data) {
-              const h = Number(data.horasTrabajadasDecimal || data.totalHoras || 0);
-              staffHoursResult.textContent = `Horas trabajadas: ${h}h` +
-                (data.horasPausaDecimal != null ? ` | Pausas: ${Number(data.horasPausaDecimal)}h` : '') +
-                (data.totalFichajesProcesados != null ? ` | Fichajes: ${Number(data.totalFichajesProcesados)}` : '');
-            } else staffHoursResult.textContent = error?.message || 'Sin datos.';
-            break;
-          case 'STAFF_NOTIFY_RES':
-            setLoading(btnNotifyStaff, false);
-            if (ok) { info('Aviso enviado.'); notifySubject.value=''; notifyMessage.value=''; }
-            else err(error?.message || 'No se pudo enviar el aviso.');
-            break;
           case 'CASHIER_STATE_RES':
             if (ok) renderCashier(data);
             break;
@@ -713,10 +578,6 @@
           case 'DOCUMENT_DOWNLOAD_RES':
             if (ok && data?.url) window.open(data.url, '_blank');
             else if (!ok) err(error?.message || 'No se pudo descargar.');
-            break;
-          case MESSAGE_TYPES.ONLY_STAFF_ERROR:
-          case MESSAGE_TYPES.STAFF_ERROR:
-            err(error?.message || 'Error en la solicitud.');
             break;
         }
       }
@@ -747,7 +608,6 @@
             enableCashier: false,
             enableInventory: false,
             enableScheduleQuery: false,
-            enableStaffManagement: false,
             enableAIAssistant: false,
             enableAccountantSend: false,
             enableFiscal: false,
