@@ -579,6 +579,7 @@ export const createManagerPackageVersion = webMethod(
     const traceId = makeTraceId("doc-create");
     let claim = null;
     let snapshotInserted = false;
+    let snapshotInsertUncertain = false;
     try {
       await requireMarianManager(traceId);
 
@@ -677,15 +678,18 @@ export const createManagerPackageVersion = webMethod(
         }
 
         try {
+          snapshotInsertUncertain = true;
           saved = await withTimeout(
             dalInsert(DOCS_COL, snapshot),
             CMS_TIMEOUT_MS,
             "insertManagerPackageSnapshot"
           );
           snapshotInserted = true;
+          snapshotInsertUncertain = false;
           break;
         } catch (error) {
           if (!_isDuplicatePackageInsertError(error)) throw error;
+          snapshotInsertUncertain = false;
           // Create-only insert + unique _id. A competing version is reread;
           // never use save/upsert and never overwrite a prior snapshot.
         }
@@ -718,7 +722,7 @@ export const createManagerPackageVersion = webMethod(
 
       return _packageSnapshotResult(saved, false);
     } catch (err) {
-      if (claim && !snapshotInserted) {
+      if (claim && !snapshotInserted && !snapshotInsertUncertain) {
         await dalRemove(CONTROL_COL, claim._id).catch((cleanupError) => {
           log.error("PACKAGE_OPERATION_CLAIM_CLEANUP_FAILED", {
             traceId,
