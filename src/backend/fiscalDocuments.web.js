@@ -171,9 +171,16 @@ function _invoiceValue(invoice, keys, fallbackKey) {
 // claves fisicas canonicas; cero grafias alias aqui.
 const _rf = (m, key) => _safeTrim(readMovementField(m, key));
 
+function _csvCell(value) {
+  const text = String(value ?? "");
+  // Neutralize spreadsheet formulas in untrusted text cells.
+  const safe = /^[\\s\\u0000-\\u001F]*[=+\\-@]/.test(text) ? `'${text}` : text;
+  return `"${safe.replace(/"/g, '""')}"`;
+}
+
 function _buildCsvFromInvoices(invoices) {
   if (!Array.isArray(invoices) || invoices.length === 0) return "";
-  const header = "Numero;Fecha;Tipo;Base;Cuota;Total;FormaPago;Hash\n";
+  const header = "Numero;Fecha;Tipo;Base;Cuota;Total;FormaPago;Hash\\n";
   const rows = invoices.map((inv) => {
     const number = _safeTrim(_invoiceValue(inv, ["invoiceNumber", "numSerieFactura"], "numSerieFactura"));
     const date = _safeTrim(_invoiceValue(inv, ["fechaExpedicion", "fechaOperacion"], "fechaOperacion"));
@@ -183,8 +190,17 @@ function _buildCsvFromInvoices(invoices) {
     const total = _roundMoney(Number(_invoiceValue(inv, ["totalAmount", "accountingAmount"], "totalAmount")) || 0);
     const method = _safeTrim(_invoiceValue(inv, ["paymentMethod"], "paymentMethod"));
     const hash = _safeTrim(_invoiceValue(inv, ["hashCompleto", "recordHash", "hash"], "recordHash"));
-    return `"${number}";"${date}";"${type}";${base};${tax};${total};"${method}";"${hash}"`;
-  }).join("\n");
+    return [
+      _csvCell(number),
+      _csvCell(date),
+      _csvCell(type),
+      String(base),
+      String(tax),
+      String(total),
+      _csvCell(method),
+      _csvCell(hash),
+    ].join(";");
+  }).join("\\n");
   return header + rows;
 }
 
