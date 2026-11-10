@@ -806,9 +806,20 @@ export const getPreparedManagerPackages = webMethod(
         CMS_TIMEOUT_MS,
         "preparedPackages"
       );
+      const items = (res?.items || []).map((doc) => ({
+        id: doc._id,
+        periodType: doc.periodType,
+        periodLabel: `T${doc.fiscalQuarter}/${doc.fiscalYear}`,
+        fiscalYear: doc.fiscalYear,
+        fiscalQuarter: doc.fiscalQuarter,
+        packageVersion: doc.packageVersion,
+        packageStatus: doc.packageStatus,
+        snapshotHash: doc.snapshotHash,
+        createdAt: doc.createdAt || doc._createdDate || null,
+      }));
       return {
         status: "SUCCESS",
-        data: { items: res?.items || [] },
+        data: { items, traceId },
         error: null,
       };
     } catch (err) {
@@ -881,7 +892,6 @@ export const downloadManagerPackageVersion = webMethod(
           documentId,
           csvContent,
           summaryText,
-          summary: doc.summaryData || {},
           invoiceCount: invoices.length,
           createdAt: doc._createdDate || doc.closeDate,
         },
