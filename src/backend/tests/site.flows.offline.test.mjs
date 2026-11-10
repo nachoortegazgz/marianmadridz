@@ -920,3 +920,106 @@ test('FLOW-CAJA-07 devoluciones y reembolsos reducen caja y conservan cadena fis
     }
   }
 });
+
+
+test('FLOW-CAJA-11 simulation cash state blocks manual writes, state display and Z close', async () => {
+  wixDataMock._reset();
+  const operationDate = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Madrid' });
+  wixDataMock._store.set('CajaActual', [{
+    _id: 'SINGLE_ITEM_ID',
+    singletonKey: 'CAJA_PRINCIPAL',
+    isOpen: true,
+    cashRegisterStatus: 'SIMULACION',
+    operationDate,
+    netAmount: 300,
+    cashAmount: 300,
+    sequenceCounters: { seqGlobal: 0, appliedMovementIds: [] },
+  }]);
+  await seedStaff({ resourceId: GUID_ADMIN_RESOURCE });
+  setMember({ _id: GUID_MEMBER, contactId: GUID_CONTACT, loginEmail: 'marta@test.local' });
+  const { cajas } = await freshImports();
+
+  const before = (wixDataMock._store.get('MovimientosCaja') || []).length;
+  const tx = await cajas.registerManualTransaction({
+    totalAmount: 25,
+    paymentMethod: 'EFECTIVO',
+    movementType: 'VENTA',
+    transactionId: 'blocked-simulation-cash-001',
+  });
+  assert.equal(tx.status, 'ERROR');
+  assert.equal(tx.error.code, 'CASH_REGISTER_SIMULATION_STATE');
+  assert.equal((wixDataMock._store.get('MovimientosCaja') || []).length, before);
+
+  const state = await cajas.getCashierState({});
+  assert.equal(state.status, 'ERROR');
+  assert.equal(state.error.code, 'CASH_REGISTER_SIMULATION_STATE');
+  assert.equal(state.data, null);
+
+  const closing = await cajas.registerZClosingInternal(operationDate, {
+    traceId: 'blocked-simulation-z-001',
+  });
+  assert.equal(closing.status, 'ERROR');
+  assert.equal(closing.error.code, 'CASH_REGISTER_SIMULATION_STATE');
+  assert.equal((wixDataMock._store.get('HistoricoCierresZ') || []).length, 0);
+
+  const projection = await cajas.updateCajaActualFromMovement({
+    _id: 'simulation-projection-movement',
+    transactionId: 'simulation-projection-movement',
+    accountingAmount: 10,
+    paymentMethod: 'EFECTIVO',
+  }, 'trace-simulation-projection-001');
+  assert.equal(projection.status, 'PENDING_RECONCILIATION');
+  const register = wixDataMock._store.get('CajaActual')[0];
+  assert.equal(register.cashRegisterStatus, 'SIMULACION');
+  assert.equal(register.cashAmount, 300);
+});
+
+test('FLOW-CAJA-12 explicit smoke rows are excluded from live fiscal sequence, count and integrity audit', async () => {
+  wixDataMock._reset();
+  seedCajaPrincipal();
+  await seedStaff({ resourceId: GUID_ADMIN_RESOURCE });
+  setMember({ _id: GUID_MEMBER, contactId: GUID_CONTACT, loginEmail: 'marta@test.local' });
+  const { cajas } = await freshImports();
+  await setupFiscalSecrets();
+  const operationDate = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Madrid' });
+  wixDataMock._store.set('MovimientosCaja', [{
+    _id: 'smoke-movement-existing',
+    sequenceNumber: 0,
+    fechaExpedicionFactura: operationDate,
+    fiscalPeriod: operationDate.slice(0, 7),
+    recordSource: 'SMOKE_TEST',
+    eventType: 'SIMULATED_PAYMENT',
+    movementType: 'VENTA_POS_SIMULADA',
+    accountingAmount: 25,
+    amount: 25,
+    totalAmount: 25,
+    taxBase: 20.66,
+    taxAmount: 4.34,
+    paymentMethod: 'EFECTIVO',
+    tipoImpositivo: 0.21,
+    previousRecordHash: 'SIMULATED_PREVIOUS_HASH',
+    hash: 'SIMULATED_HASH',
+    traceId: 'SMOKE_TEST',
+  }]);
+
+  const tx = await cajas.registerManualTransaction({
+    totalAmount: 25,
+    tipoFactura: 'F2',
+    operationDescription: 'Venta QA de aislamiento de ledger',
+    paymentMethod: 'EFECTIVO',
+    movementType: 'VENTA',
+    transactionId: 'real-after-smoke-001',
+  });
+  assert.equal(tx.status, 'SUCCESS', JSON.stringify(tx.error));
+  assert.equal(tx.data.sequenceNumber, 1);
+  assert.equal(tx.data.previousRecordHash, '0'.repeat(64));
+
+  const state = await cajas.getCashierState({});
+  assert.equal(state.status, 'SUCCESS', JSON.stringify(state.error));
+  assert.equal(state.data.totalOperations, 1);
+
+  const audit = await cajas.verifyFiscalHashChainIntegrity({ limit: 20 });
+  assert.equal(audit.status, 'SUCCESS', JSON.stringify(audit));
+  assert.equal(audit.data.checked, 1);
+  assert.equal(audit.data.breaksCount, 0);
+});
