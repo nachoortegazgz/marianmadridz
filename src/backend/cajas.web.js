@@ -48,6 +48,7 @@ import {
     readTaxBase,
     readTaxAmount,
 } from "backend/data";
+import { isExplicitSimulationLedgerRecord } from "backend/validation";
 
 
 export { readInvoiceNumber, readInvoiceIssueDate };
@@ -87,6 +88,11 @@ const log = logger;
 // ============================================================================
 
 const CASH_REGISTER_ID = SINGLETONS.CAJA_PRINCIPAL;
+
+function _isSimulationCashRegister(cashRegister) {
+    return _safeTrim(cashRegister?.cashRegisterStatus).toUpperCase() === "SIMULACION";
+}
+
 
 const VAT_ACCRUAL_DEVENGADO = "DEVENGADO";
 const VAT_ACCRUAL_ANTICIPADO = "ANTICIPADO";
@@ -451,10 +457,12 @@ async function _computeCurrentHash(previousHash, payloadStr) {
 
 async function _getLastMovement() {
     const res = await dalQuery(MOVIMIENTOS_CAJA_COL)
+        .gt("sequenceNumber", 0)
+        .ne("recordSource", "SMOKE_TEST")
         .descending("sequenceNumber")
-        .limit(1)
+        .limit(20)
         .find(STRONG_READ);
-    return res?.items?.[0] || null;
+    return (res?.items || []).find((item) => !isExplicitSimulationLedgerRecord(item)) || null;
 }
 
 async function _assertPeriodNotClosed(operationDate, traceId) {
@@ -620,6 +628,10 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
             }
         }
 
+        const currentCashRegister = await getCashRegisterSingleton();
+        if (_isSimulationCashRegister(currentCashRegister)) {
+            return { status: "ERROR", data: null, error: { code: "CASH_REGISTER_SIMULATION_STATE", message: "La caja actual contiene estado de simulacion; no se permiten movimientos reales." } };
+        }
         const operationDate = new Date().toLocaleDateString("sv-SE", { timeZone: SDK_CONFIG.TZ });
         await _assertPeriodNotClosed(operationDate, traceId);
 
@@ -981,6 +993,9 @@ async function _updateCajaActual(movement, traceId) {
         for (let attempt = 0; attempt < 4; attempt += 1) {
             let cashRegister = await getCashRegisterSingleton();
             const isNew = !cashRegister;
+            if (_isSimulationCashRegister(cashRegister)) {
+                throw new Error("CAJA_ACTUAL_SIMULATION_STATE");
+            }
             if (!cashRegister) {
                 cashRegister = {
                     _id: CASH_REGISTER_ID,
@@ -1154,9 +1169,14 @@ export const getCashierState = webMethod(Permissions.SiteMember, async (options 
     try {
         await requireCajero(traceId);
         const cashRegister = await getCashRegisterSingleton();
+        if (_isSimulationCashRegister(cashRegister)) {
+            return { status: "ERROR", data: null, error: { code: "CASH_REGISTER_SIMULATION_STATE", message: "El saldo mostrado pertenece a una caja de simulacion y no es un saldo operativo." } };
+        }
         const day = diaKey || new Date().toLocaleDateString("sv-SE", { timeZone: SDK_CONFIG.TZ });
         const res = await dalQuery(MOVIMIENTOS_CAJA_COL)
             .eq("fechaExpedicionFactura", day)
+            .gt("sequenceNumber", 0)
+            .ne("recordSource", "SMOKE_TEST")
             .limit(1)
             .find(STRONG_READ);
         const totalOperations = (res.items || []).length > 0
@@ -1191,6 +1211,8 @@ async function _countMovementsOfDay(diaKey) {
     let count = 0;
     let res = await dalQuery(MOVIMIENTOS_CAJA_COL)
         .eq("fechaExpedicionFactura", diaKey)
+        .gt("sequenceNumber", 0)
+        .ne("recordSource", "SMOKE_TEST")
         .limit(LEDGER_PAGE_SIZE)
         .find();
     count += (res.items || []).length;
@@ -1213,6 +1235,10 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
     let retainLedgerLock = false;
     try {
         if (authorizeCashier) await requireCajero(traceId);
+        const currentCashRegister = await getCashRegisterSingleton();
+        if (_isSimulationCashRegister(currentCashRegister)) {
+            return { status: "ERROR", data: null, error: { code: "CASH_REGISTER_SIMULATION_STATE", message: "No se puede cerrar una caja que contiene estado de simulacion." } };
+        }
         await validateFiscalConfig(traceId);
         const cleanDiaKey = _readDate(diaKey);
         if (!cleanDiaKey) {
@@ -1234,6 +1260,8 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
         for (const dateField of ["fechaExpedicionFactura", ...MOVEMENT_HISTORICAL_READ_ALIASES.fechaExpedicionFactura]) {
             const query = dalQuery(MOVIMIENTOS_CAJA_COL)
                 .eq(dateField, cleanDiaKey)
+                .gt("sequenceNumber", 0)
+                .ne("recordSource", "SMOKE_TEST")
                 .ascending("sequenceNumber")
                 .limit(LEDGER_PAGE_SIZE);
             let res = await query.find();
@@ -1257,6 +1285,7 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
                 error: { code: "Z_MOVEMENT_PAGE_LIMIT", message: "No se puede cerrar un periodo con movimientos sin auditar." },
             };
         }
+        allMovements = allMovements.filter((movement) => !isExplicitSimulationLedgerRecord(movement));
         allMovements.sort((a, b) => (Number(a.sequenceNumber) || 0) - (Number(b.sequenceNumber) || 0));
 
         if (allMovements.length === 0) {
@@ -1311,6 +1340,8 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
         let previousMovement = null;
         if (Number.isFinite(firstSequence) && firstSequence > 1) {
             const predecessorResult = await dalQuery(MOVIMIENTOS_CAJA_COL)
+                .gt("sequenceNumber", 0)
+                .ne("recordSource", "SMOKE_TEST")
                 .lt("sequenceNumber", firstSequence)
                 .descending("sequenceNumber")
                 .limit(1)
@@ -1520,6 +1551,8 @@ export async function verifyFiscalHashChainIntegrity(options = {}) {
     const breaks = [];
     try {
         let movements = await dalQuery(MOVIMIENTOS_CAJA_COL)
+            .gt("sequenceNumber", 0)
+            .ne("recordSource", "SMOKE_TEST")
             .ascending("sequenceNumber")
             .limit(batchSize)
             .find();
@@ -1528,17 +1561,18 @@ export async function verifyFiscalHashChainIntegrity(options = {}) {
         let expectedPreviousHash = GENESIS_HASH;
         let hasMore = false;
         let page = 1;
-        const firstSequence = Number(movements.items?.[0]?.sequenceNumber);
+        const firstPageItems = (movements.items || []).filter((item) => !isExplicitSimulationLedgerRecord(item));
+        const firstSequence = Number(firstPageItems[0]?.sequenceNumber);
         if (Number.isFinite(firstSequence) && firstSequence > 1) {
             breaks.push({
-                movementId: movements.items?.[0]?._id || null,
-                numSerieFactura: readInvoiceNumber(movements.items?.[0] || {}),
+                movementId: firstPageItems[0]?._id || null,
+                numSerieFactura: readInvoiceNumber(firstPageItems[0] || {}),
                 reason: "GLOBAL_PREDECESSOR_MISSING",
                 firstSequence,
             });
         }
         while (true) {
-            for (const mov of movements.items || []) {
+            for (const mov of (movements.items || []).filter((item) => !isExplicitSimulationLedgerRecord(item))) {
                 checked += 1;
                 if (!mov.hash || !mov.previousRecordHash) {
                     breaks.push({

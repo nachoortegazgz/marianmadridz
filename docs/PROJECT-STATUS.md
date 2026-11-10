@@ -135,3 +135,10 @@ Referencia: [Auditoría de preparación Veri*Factu](qa/2026-11-09-verifactu-read
 Consulta live de Wix CMS (solo lectura): `ServiciosCatalogo` 95/95, `ComplementosCatalogo` 36/36 y `MapaStaff` 3/3 no tienen campo `status` en el esquema ni en los registros consultados. `MapaStaff.active` sí existe y se conserva como parte del contrato de correlación de identidad; `associatedWixIdentity.connection.status` es un estado nativo de conexión de Wix Members/Bookings y también se conserva. No se ha realizado ninguna migración ni escritura CMS.
 
 Se retira `src/backend/staffManager.web.js`, módulo sin consumidores en el repositorio que únicamente exponía stubs fail-closed. La página ZONA STAFF sigue siendo placeholder y su conexión a los WebMethods canónicos continúa pendiente en [issue #224](https://github.com/nachoortegazgz/marianmadridz/issues/224). Evidencia detallada: [auditoría de status de catálogos y personal](qa/2026-11-10-phase2-catalog-status-audit.md).
+
+
+## 9. Integridad de caja y ledgers — auditoría live 2026-11-10
+
+Wix CMS live (solo lectura) confirma cuatro filas `SMOKE_TEST` con `sequenceNumber=0` en `MovimientosCaja`, un registro `SMOKE_TEST` no balanceado en `LibroAsientosContablesDetalle`, y `CajaActual.cashRegisterStatus=SIMULACION` con 300 € y contadores de secuencia a cero. El agregador fiscal y varios lectores/heads no excluían estas filas; el código de esta rama añade exclusión por marcadores explícitos y secuencia positiva. La caja en estado SIMULACION queda fail-closed para estado operativo, movimientos manuales, proyección y cierre Z. No se modifican ni borran ledgers.
+
+Otros hallazgos sin intervención en esta rama: dos fichajes QA en `RegistrosHorariosStaff` carecen de firma HMAC; 54/55 proyecciones `CitasF2` no tienen `sourceEventId`; `HistoricoCierresZ` y `PaquetesGestoria` están vacíos. Evidencia y límites: [auditoría live de contaminación de ledgers](qa/2026-11-10-smoke-ledger-contamination-audit.md). No declarar caja/contabilidad/fiscalidad funcionales ni publicar hasta completar runtime QA y resolver las anomalías históricas mediante procedimientos trazables.

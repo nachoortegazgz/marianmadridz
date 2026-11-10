@@ -221,3 +221,54 @@ test('FISCAL-PAYMENT-01 transfer and Wix Payments use distinct payment buckets',
   assert.equal(state.breakdownByPaymentMethod.transferencia, 50);
   assert.equal(state.breakdownByPaymentMethod.online, 20);
 });
+
+
+test('FISCAL-SMOKE-01 explicit smoke-test movements are excluded from quarterly totals', async () => {
+  wixDataMock._reset();
+  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.DATOS_FISCALES, [
+    { recordType: IC.RECORD_TYPE.CONFIG_SISTEMA, taxId: 'B12345678', legalName: 'Marian Madrid', thirdPartyType: 'EMISOR' },
+  ]);
+  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA, [
+    {
+      _id: 'smoke-movement-001',
+      fiscalPeriod: '2026-11',
+      sequenceNumber: 0,
+      recordSource: 'SMOKE_TEST',
+      eventType: 'SIMULATED_PAYMENT',
+      movementType: 'VENTA_POS_SIMULADA',
+      accountingAmount: 25,
+      taxBase: 20.66,
+      taxAmount: 4.34,
+      totalAmount: 25,
+      paymentMethod: 'EFECTIVO',
+      tipoImpositivo: 0.21,
+      hash: 'SIMULATED_HASH',
+      previousRecordHash: 'SIMULATED_PREVIOUS_HASH',
+    },
+    {
+      _id: 'real-movement-001',
+      fiscalPeriod: '2026-11',
+      sequenceNumber: 1,
+      recordSource: 'INTERNAL',
+      eventType: 'VENTA_LINEA',
+      movementType: 'VENTA_ONLINE',
+      accountingAmount: 27.71,
+      taxBase: 22.9,
+      taxAmount: 4.81,
+      totalAmount: 27.71,
+      paymentMethod: 'WIX_PAYMENTS',
+      tipoImpositivo: 0.21,
+      hash: 'a'.repeat(64),
+      previousRecordHash: '0'.repeat(64),
+    },
+  ]);
+
+  const result = await FA.getQuarterlyTaxSummaryInternal(2026, 4, { traceId: 'trace-fiscal-smoke-001' });
+
+  assert.equal(result.status, 'SUCCESS', JSON.stringify(result.error));
+  assert.equal(result.data.totalOperaciones, 1);
+  assert.equal(result.data.totalOperacionesFiscales, 1);
+  assert.equal(result.data.totales.totalVentasBrutas, 27.71);
+  assert.equal(result.data.borradorIva.baseImponibleRegistrada, 22.9);
+  assert.equal(result.data.borradorIva.cuotaIvaRegistrada, 4.81);
+});

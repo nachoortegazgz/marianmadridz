@@ -36,6 +36,7 @@ import {
 } from "backend/dataAccess";
 
 import { readMovementField, readMovementHash } from "backend/data";
+import { isExplicitSimulationLedgerRecord } from "backend/validation";
 
 import {
   BUSINESS_COLLECTIONS,
@@ -153,6 +154,7 @@ function _initTaxAccumulator(months) {
 
 function _accumulatePage(items, state) {
   for (const m of items) {
+    if (isExplicitSimulationLedgerRecord(m)) continue;
     state.totalOperations++;
     const accountingAmount = Number(m.accountingAmount || 0);
     const taxableAmount = _signedFiscalValue(m, _readTaxableAmount);
@@ -222,6 +224,8 @@ async function _fetchQuarterMovements(months, options = {}) {
   let res = await withTimeout(
     dalQuery(MOVIMIENTOS_CAJA_COL)
       .hasSome("fiscalPeriod", months)
+      .gt("sequenceNumber", 0)
+      .ne("recordSource", "SMOKE_TEST")
       .ascending("sequenceNumber")
       .limit(pageSize)
       .find(),
