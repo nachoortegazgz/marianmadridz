@@ -41,6 +41,14 @@ export const STAFF = Object.freeze({
 // cobertura completa de los nombres via Bookings Staff Members API.
 export const STAFF_DEFAULT_NAME = "STAFF";
 
+// Los writers de jornada permanecen cerrados hasta implementar y validar
+// idempotencia, serialización por empleado/día y transiciones concurrentes.
+// El UI disabled no es una barrera de seguridad para WebMethods públicos.
+export const STAFF_CLOCKING_CONFIG = Object.freeze({
+  WRITES_ENABLED: false,
+  ADJUSTMENTS_ENABLED: false,
+});
+
 export const BUSINESS_COLLECTIONS = Object.freeze({
   CAJA_ACTUAL: "CajaActual",
   CITAS_F2: "CitasF2",

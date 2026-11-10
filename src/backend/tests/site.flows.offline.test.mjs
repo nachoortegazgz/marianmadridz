@@ -228,59 +228,41 @@ test('FLOW-SEC-04 only the canonical owner role can operate the cash register', 
 // FLOW-HOR: fichaje horario completo (horario.web.js) - RD 8/2019
 // ===========================================================================
 
-test('FLOW-HOR-01 flujo continuo: contexto -> fichar ENTRADA -> estado jornada -> historial -> firma valida', async () => {
+test('FLOW-HOR-01 context is read-only while timeclock writer remains fail-closed', async () => {
   wixDataMock._reset();
   await seedStaff();
   setMember({ _id: GUID_MEMBER, contactId: GUID_CONTACT, loginEmail: 'marta@test.local' });
-  const { horario, engine } = await freshImports();
+  const { horario } = await freshImports();
 
-  // Paso 1: contexto staff via webMethod con payload correcto
   const ctxRes = await horario.getMyStaffContext({ traceId: 'flow-hor-ctx' });
   assert.strictEqual(ctxRes.status, 'OK');
   assert.strictEqual(ctxRes.data.resourceId, GUID_RESOURCE);
 
-  // Paso 2: fichar ENTRADA (payload canonico clockEventType)
   const inRes = await horario.registrarFichaje({ clockEventType: 'ENTRADA', userAgent: 'offline-test' });
-  assert.strictEqual(inRes.status, 'OK', JSON.stringify(inRes.error));
-  assert.ok(inRes.data.id, 'registro persistido con id');
+  assert.strictEqual(inRes.status, 'ERROR');
+  assert.strictEqual(inRes.error.code, 'CLOCKING_WRITES_DISABLED');
+  assert.strictEqual((wixDataMock._store.get('RegistrosHorariosStaff') || []).length, 0);
 
-  // Paso 3: la fila escrita es canonical (schema v8.1) y esta firmada
-  const rows = wixDataMock._store.get('RegistrosHorariosStaff') || [];
-  assert.strictEqual(rows.length, 1);
-  const row = rows[0];
-  assert.strictEqual(row.clockEventType, 'ENTRADA');
-  assert.strictEqual(row.recordType, 'REGULAR');
-  assert.strictEqual(row.registeredBy, 'SELF');
-  assert.ok(row.dayKey && /^\d{4}-\d{2}-\d{2}$/.test(row.dayKey));
-  assert.ok(typeof row.signature === 'string' && row.signature.length === 64);
+  const state = await horario.getEstadoJornada({});
+  assert.strictEqual(state.status, 'OK');
+  assert.strictEqual(state.data.estado, 'SIN_INICIAR');
+  assert.strictEqual(state.data.totalFichajes, 0);
 
-  // Paso 4: integridad RD 8/2019 - verificacion HMAC del registro firmado
-  assert.strictEqual(await engine.verifyTimeclockSignature(row), true);
-  // alteracion -> firma invalida (append-only integrity)
-  assert.strictEqual(await engine.verifyTimeclockSignature({ ...row, clockEventType: 'SALIDA' }), false);
-
-  // Paso 5: estado de jornada consume el registro anterior (flujo continuo)
-  const estado = await horario.getEstadoJornada({});
-  assert.strictEqual(estado.status, 'OK');
-  assert.ok(estado.data, 'jornada abierta visible');
-
-  // Paso 6: historial del dia incluye el fichaje
-  const hist = await horario.getHistorialFichajes({ dayKey: row.dayKey });
-  assert.strictEqual(hist.status, 'OK');
-  const items = hist.data?.items || hist.data || [];
-  assert.ok(items.length >= 1, 'historial contiene el fichaje');
-  assert.equal(items[0].integrityStatus, 'VERIFIED');
-  assert.equal(Object.prototype.hasOwnProperty.call(items[0], 'signature'), false);
+  const history = await horario.getHistorialFichajes({ dayKey: state.data.dayKey });
+  assert.strictEqual(history.status, 'OK');
+  assert.strictEqual((history.data?.items || []).length, 0);
 });
 
-test('FLOW-HOR-02 payload invalido => rechazo controlado SIN escritura', async () => {
+test('FLOW-HOR-02 staff writer is blocked before validating or inserting a command', async () => {
+  wixDataMock._reset();
+  await seedStaff();
+  setMember({ _id: GUID_MEMBER, contactId: GUID_CONTACT, loginEmail: 'marta@test.local' });
   const { horario } = await freshImports();
   const before = (wixDataMock._store.get('RegistrosHorariosStaff') || []).length;
-  const bad = await horario.registrarFichaje({ clockEventType: 'NOEXISTE' });
-  assert.strictEqual(bad.status, 'ERROR');
-  assert.ok(bad.error.code, 'error code presente');
-  const after = (wixDataMock._store.get('RegistrosHorariosStaff') || []).length;
-  assert.strictEqual(after, before, 'rechazo antes de insert');
+  const result = await horario.registrarFichaje({ clockEventType: 'NOEXISTE' });
+  assert.strictEqual(result.status, 'ERROR');
+  assert.strictEqual(result.error.code, 'CLOCKING_WRITES_DISABLED');
+  assert.strictEqual((wixDataMock._store.get('RegistrosHorariosStaff') || []).length, before);
 });
 
 test('FLOW-HOR-03 miembro sin ficha staff => NOT_STAFF (no 500)', async () => {
@@ -304,7 +286,7 @@ test('FLOW-STAFF-01 native staff identity and site-member ID resolve through can
   assert.strictEqual(await staffApi.getSiteMemberIdByContactId(GUID_CONTACT), GUID_MEMBER);
 });
 
-test('FLOW-HOR-04 manager adjustment writes the verified target site-member ID', async () => {
+test('FLOW-HOR-04 manager timeclock adjustments remain fail-closed until append-only correction QA', async () => {
   wixDataMock._reset();
   await seedStaff({ resourceId: GUID_ADMIN_RESOURCE });
   setMember({ _id: GUID_MEMBER, contactId: GUID_CONTACT, loginEmail: 'marta@test.local' });
@@ -316,11 +298,9 @@ test('FLOW-HOR-04 manager adjustment writes the verified target site-member ID',
     adjustmentReason: 'Corrección de fichaje en prueba',
     traceId: 'flow-hor-adjustment',
   });
-  assert.strictEqual(result.status, 'OK', JSON.stringify(result.error));
-  const rows = wixDataMock._store.get('RegistrosHorariosStaff') || [];
-  assert.strictEqual(rows.length, 1);
-  assert.strictEqual(rows[0].memberId, GUID_MEMBER);
-  assert.strictEqual(rows[0].registeredByMemberId, GUID_MEMBER);
+  assert.strictEqual(result.status, 'ERROR');
+  assert.strictEqual(result.error.code, 'CLOCKING_ADJUSTMENTS_DISABLED');
+  assert.strictEqual((wixDataMock._store.get('RegistrosHorariosStaff') || []).length, 0);
 });
 
 // ===========================================================================
