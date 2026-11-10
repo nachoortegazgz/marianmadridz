@@ -96,9 +96,6 @@ $w.onReady(async () => {
             const cashierRes = await getCashierState({ traceId }).catch(() => null);
 
             return {
-                isMarianManager: true,
-                isAdmin: access.isAdmin === true,
-                isCajero: access.isCajero === true,
                 memberName:
                     member.profile?.nickname ||
                     member.contactDetails?.firstName ||
