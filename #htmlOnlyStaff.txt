@@ -186,7 +186,7 @@
 
     </div>
 
-    <div class="footer" id="footerInfo">Only Staff | Marian Madrid Peluqueria y Estetica</div>
+    <div class="footer" id="footerInfo">Personal | Marian Madrid Peluquería y Estética</div>
   </div>
 
   <script>
@@ -361,7 +361,7 @@
           return;
         }
 
-        const memberName = contextData.memberName || contextData.employeeName || 'EMPLEADO';
+        const memberName = contextData.memberName || 'EMPLEADO';
         const roleLabel = contextData.roleLabel || 'EQUIPO';
         userInfo.textContent = 'Sesión activa: ' + memberName + ' | ' + roleLabel + ' | PERSONAL';
         roleBadge.textContent = roleLabel;
