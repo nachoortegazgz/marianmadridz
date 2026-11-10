@@ -478,22 +478,68 @@ export const getHistorialFichajes = webMethod(
                 return { status: "ERROR", data: null, error: { code: "NOT_STAFF" } };
             }
 
-            const limit = Math.min(Number(options?.limit) || 30, 100);
-            let query = dalQuery(REGISTROS_COL)
-                .eq(F.RESOURCE_ID, ctx.resourceId);
+            const startDateYMD = _safeTrim(options?.startDateYMD);
+            const endDateYMD = _safeTrim(options?.endDateYMD);
+            let rawItems = [];
 
-            if (_safeTrim(options?.monthKey)) {
-                query = query.eq(F.MONTH_KEY, _safeTrim(options.monthKey));
+            if (startDateYMD || endDateYMD) {
+                const start = startDateYMD || endDateYMD;
+                const end = endDateYMD || startDateYMD;
+                const dayKeys = _getDayKeysInRange(start, end, 92);
+                if (!dayKeys) {
+                    return {
+                        status: "ERROR",
+                        data: null,
+                        error: { code: "INVALID_DATE_RANGE", message: "Rango de historial inválido o superior a 92 días." },
+                        traceId,
+                    };
+                }
+                const limit = Math.min(Number(options?.limit) || 500, 500);
+                const monthKeys = [...new Set(dayKeys.map((dayKey) => dayKey.slice(0, 7)))];
+                const monthResults = await Promise.all(monthKeys.map((monthKey) =>
+                    dalQuery(REGISTROS_COL)
+                        .eq(F.RESOURCE_ID, ctx.resourceId)
+                        .eq(F.MONTH_KEY, monthKey)
+                        .descending(F.RECORDED_AT)
+                        .limit(1000)
+                        .find()
+                ));
+                if (monthResults.some((result) => typeof result?.hasNext === "function" && result.hasNext())) {
+                    return {
+                        status: "ERROR",
+                        data: null,
+                        error: { code: "TIMECLOCK_DATASET_LIMIT_EXCEEDED", message: "El historial supera el límite de lectura segura." },
+                        traceId,
+                    };
+                }
+                rawItems = monthResults
+                    .flatMap((result) => result?.items || [])
+                    .filter((record) => record[F.DAY_KEY] >= start && record[F.DAY_KEY] <= end)
+                    .sort((a, b) => new Date(b[F.RECORDED_AT]) - new Date(a[F.RECORDED_AT]));
+                if (rawItems.length > limit) {
+                    return {
+                        status: "ERROR",
+                        data: null,
+                        error: { code: "TIMECLOCK_HISTORY_LIMIT_EXCEEDED", message: "El historial supera el máximo de filas solicitado; reduce el rango." },
+                        traceId,
+                    };
+                }
+            } else {
+                const limit = Math.min(Number(options?.limit) || 30, 100);
+                let query = dalQuery(REGISTROS_COL)
+                    .eq(F.RESOURCE_ID, ctx.resourceId);
+                if (_safeTrim(options?.monthKey)) {
+                    query = query.eq(F.MONTH_KEY, _safeTrim(options.monthKey));
+                }
+                const res = await query
+                    .descending(F.RECORDED_AT)
+                    .limit(limit)
+                    .find();
+                rawItems = res?.items || [];
             }
-
-            const res = await query
-                .descending(F.RECORDED_AT)
-                .limit(limit)
-                .find();
 
             // DTO whitelist: nunca signature/meta completos, nunca deviceIpAddress.
             // La integridad se expone como estado, sin filtrar el HMAC ni datos del dispositivo.
-            const rawItems = res?.items || [];
             const integrity = await _getTimeclockIntegrity(rawItems);
             const items = rawItems.map((f, index) => ({
                 registradoEn: f[F.RECORDED_AT],
