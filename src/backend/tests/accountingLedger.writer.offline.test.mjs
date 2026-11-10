@@ -118,3 +118,32 @@ describe("accounting ledger writer", () => {
     }
   });
 });
+
+
+  it("ACC-LEDGER-08 does not chain a new accounting entry from an explicitly marked smoke-test row", async () => {
+    wixDataMock._seed(ACCOUNTING_COL, [{
+      _id: "simulated-accounting-row",
+      entryId: "SIM-ACCOUNTING-001",
+      recordTimestamp: new Date(Date.now() + 60000),
+      lineNumber: 1,
+      accountCode: "SIMULATED",
+      debitAmount: 25,
+      creditAmount: 0,
+      sourceMovementId: "smoke-source-001",
+      origenTipo: "SMOKE_TEST",
+      origenRegistro: "SMOKE_TEST",
+      recordHash: "SIMULATED_DETAIL_HASH",
+      previousRecordHash: "SIMULATED_PREVIOUS_DETAIL_HASH",
+      traceId: "SMOKE_TEST",
+    }]);
+
+    const result = await appendAccountingEntry(entry("ACC-QA-ENTRY-AFTER-SMOKE"), "trace-acc-after-smoke");
+
+    assert.equal(result.status, "SUCCESS", JSON.stringify(result.error));
+    const rows = wixDataMock._store.get(ACCOUNTING_COL)
+      .filter((row) => row.entryId === "ACC-QA-ENTRY-AFTER-SMOKE")
+      .sort((a, b) => Number(a.lineNumber) - Number(b.lineNumber));
+    assert.equal(rows.length, 2);
+    assert.equal(rows[0].previousRecordHash, "0".repeat(64));
+    assert.notEqual(rows[0].previousRecordHash, "SIMULATED_PREVIOUS_DETAIL_HASH");
+  });
