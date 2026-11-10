@@ -21,6 +21,7 @@ import {
     CLOCK_REGISTERED_BY,
     REGISTROS_HORARIOS_FIELDS as F,
     SDK_CONFIG,
+    SECRETS,
 } from "backend/internalConfig";
 
 import {
@@ -37,6 +38,7 @@ import {
 
 import { requireAdmin } from "backend/security";
 import { signTimeclockRecord, verifyTimeclockSignature } from "backend/securityEngine";
+import { getSecretValue } from "backend/secretAccess";
 /* HOR-R3-03 (DUP-02): _safeTrim importado de mmUtils (SSOT). Helper local
  * eliminado. */
 import { makeTraceId, _safeTrim } from "public/mmUtils";
@@ -97,7 +99,18 @@ function _getDayKeysInRange(startValue, endValue, maxDays = 31) {
 
 async function _getTimeclockIntegrity(records) {
     const items = Array.isArray(records) ? records : [];
-    const verified = await Promise.all(items.map((record) => verifyTimeclockSignature(record)));
+    if (items.length === 0) {
+        return { allVerified: true, unverifiedCount: 0, verified: [] };
+    }
+    const key = await getSecretValue(SECRETS.FISCAL_KEY);
+    if (!key) {
+        return {
+            allVerified: false,
+            unverifiedCount: items.length,
+            verified: items.map(() => false),
+        };
+    }
+    const verified = await Promise.all(items.map((record) => verifyTimeclockSignature(record, key)));
     return {
         allVerified: verified.every(Boolean),
         unverifiedCount: verified.filter((value) => !value).length,
