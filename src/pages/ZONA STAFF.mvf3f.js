@@ -5,10 +5,8 @@ VERSION: v5004.0-staff-readonly-hours-history
 =============================================================================
 */
 
-import { location } from "@wix/site-location";
 import {
   MESSAGE_TYPES,
-  URLS,
   UI,
   makeTraceId,
   _safeTrim,
@@ -118,12 +116,6 @@ $w.onReady(async () => {
      ──────────────────────────────────────────────────────────────────── */
   const staffData = accessRes.data || {};
 
-  const isAdmin = staffData.isAdmin === true;
-  const isCajero =
-    staffData.isCajero === true ||
-    staffData.canOperateCashier === true ||
-    staffData.canCashier === true;
-
   const memberName =
     staffData.memberName ||
     staffData.contactName ||
@@ -133,9 +125,7 @@ $w.onReady(async () => {
   const employeeName =
     staffData.employeeName || staffData.employeeId || null;
 
-  const roleLabel =
-    staffData.roleLabel ||
-    (isAdmin ? "ADMINISTRACION" : isCajero ? "CAJA" : "EQUIPO");
+  const roleLabel = staffData.roleLabel || "EQUIPO";
 
   /* ────────────────────────────────────────────────────────────────────
      3) Localización (fecha ISO ymd "hoy" en Europe/Madrid)
@@ -161,7 +151,7 @@ $w.onReady(async () => {
      5) Bridge con el widget HTML
      ──────────────────────────────────────────────────────────────────── */
   bridge = createWidgetBridge(widget, {
-    allowedTypes: [MESSAGE_TYPES.READY, MESSAGE_TYPES.CONTEXT, MESSAGE_TYPES.NAV, "GET_STATE", "GET_HISTORY", "HOURS_CALC"],
+    allowedTypes: [MESSAGE_TYPES.READY, MESSAGE_TYPES.CONTEXT, "GET_STATE", "GET_HISTORY", "HOURS_CALC"],
     slug: "only-staff",
     traceId,
     handshakeTimeoutMs: UI.HANDSHAKE_TIMEOUT_MS,
@@ -172,57 +162,44 @@ $w.onReady(async () => {
        El widget se guía por estos flags para mostrar/ocultar paneles.
        ───────────────────────────────────────────────────────────────── */
     onContextReady: async () => {
-      const [staffContext, stateResult] = await Promise.all([
-        withTimeout(
-          () => getMyStaffContext({ traceId }),
-          UI.FRONTEND_API_TIMEOUT_MS,
-          "getMyStaffContext"
-        ).catch(() => null),
-        withTimeout(
-          () => getEstadoJornada({ dayKey: today, traceId }),
-          UI.FRONTEND_API_TIMEOUT_MS,
-          "getEstadoJornada"
-        ).catch(() => null),
-      ]);
+      const staffContext = await withTimeout(
+        () => getMyStaffContext({ traceId }),
+        UI.FRONTEND_API_TIMEOUT_MS,
+        "getMyStaffContext"
+      ).catch(() => null);
       const hasStaffContext = staffContext?.status === "OK" && !!staffContext.data?.resourceId;
+
+      const stateResult = hasStaffContext
+        ? await withTimeout(
+            () => getEstadoJornada({ dayKey: today, traceId }),
+            UI.FRONTEND_API_TIMEOUT_MS,
+            "getEstadoJornada"
+          ).catch(() => null)
+        : null;
+
       const resolvedName = staffContext?.data?.displayName || memberName || employeeName;
       const initialState = stateResult?.status === "OK"
         ? _mapClockState(stateResult.data)
         : { estadoActual: "REVISIÓN", ultimoFichaje: null, integrityStatus: "UNVERIFIED" };
 
       return {
-        isAuthorized,
+        isAuthorized: isAuthorized && hasStaffContext,
         panelType: "PERSONAL",
-        // Los fichajes de escritura siguen deshabilitados hasta cerrar transición,
-        // idempotencia y concurrencia. La consulta de historial/horas es read-only.
-        enableClocking: false,
-        enableBreaks: false,
-        enableCashier: false,
-        enableInventory: false,
+        enableStateQuery: hasStaffContext,
+        enableHistory: hasStaffContext,
         enableScheduleQuery: hasStaffContext,
-        cashierMode: "DISABLED",
-        isAdmin,
-        isCajero,
-        currencyCode: "EUR",
         timeZone: TZ,
         today,
         memberName: resolvedName,
         employeeName: resolvedName,
         roleLabel: staffContext?.data?.rolWebsite || roleLabel,
         estadoInicial: initialState,
-        calendarUrl: "/mi-calendario",
       };
     },
 
-    /* El widget de staff permanece en modo placeholder: las funciones de caja,
-       inventario y jornada están deshabilitadas y este controlador no invoca
-       WebMethods de negocio. No activar flags hasta sincronizar el HTML real y
-       definir un contrato de acciones backend probado.
-       ───────────────────────────────────────────────────────────────── */
     onWidgetMessage: async (message, reply) => {
       const type = String(message?.type || "").toUpperCase();
       const payload = message?.payload || {};
-      const target = _safeTrim(payload.target || "");
 
       if (type === "GET_STATE") {
         const result = await getEstadoJornada({ dayKey: payload.dayKey || today, traceId });
@@ -299,49 +276,7 @@ $w.onReady(async () => {
         return;
       }
 
-      /* ── Navegación (sólo el widget la pide con MM_NAV) ───────────── */
-      if (type === MESSAGE_TYPES.NAV) {
-        switch (target) {
-          case "ADMIN_PANEL":
-            location.to(URLS.ADMIN_PANEL);
-            break;
 
-          case "SERVICIOS":
-          case "HOME":
-            location.to(URLS.SERVICIOS);
-            break;
-
-          case "POS":
-          case "TPV":
-          case "POS_CHECKOUT":
-            location.to("/pos-checkout");
-            break;
-
-          case "CAJA":
-          case "CAJA_ACTUAL":
-            location.to("/caja-actual");
-            break;
-
-          /* Nuevo: calendario del miembro de staff loggeado.
-             El widget lo pide con { target: "STAFF_CALENDAR" }. */
-          case "STAFF_CALENDAR":
-          case "CALENDAR":
-          case "MI_CALENDARIO":
-            location.to("/mi-calendario"); // ruta pendiente de confirmar en Wix
-            break;
-
-          default:
-            console.warn("[only-staff] Unknown navigation target", {
-              traceId,
-              target,
-            });
-        }
-        return;
-      }
-
-      // Escrituras de fichaje, ajustes y caja permanecen deshabilitadas.
-      // El bridge no las permite en esta página hasta cerrar transición/idempotencia.
-      reply(`${type || "UNKNOWN"}_RES`, _widgetError("ACTION_NOT_ENABLED", "Esta operación no está habilitada en el panel de personal."), payload);
     },
 
     /* ─────────────────────────────────────────────────────────────────
