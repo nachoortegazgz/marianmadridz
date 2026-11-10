@@ -567,6 +567,16 @@ async function _readNextQuarterPackageVersion(year, quarter) {
   return Math.max(0, ...versions) + 1;
 }
 
+function _normalizeSnapshotJson(value) {
+  const serialized = JSON.stringify(value);
+  if (typeof serialized !== "string") {
+    throw Object.assign(new Error("PACKAGE_SNAPSHOT_SERIALIZATION_FAILED"), {
+      code: "PACKAGE_SNAPSHOT_SERIALIZATION_FAILED",
+    });
+  }
+  return JSON.parse(serialized);
+}
+
 function _buildPackageSnapshotBase({ year, quarter, version, summaryData, invoiceData, traceId }) {
   return {
     _id: _formatDocumentId(year, quarter, version),
@@ -695,8 +705,8 @@ export const createManagerPackageVersion = webMethod(
         });
       }
 
-      const summaryData = summaryRes.data;
-      const invoiceData = bookRes.data.filas;
+      const summaryData = _normalizeSnapshotJson(summaryRes.data);
+      const invoiceData = _normalizeSnapshotJson(bookRes.data.filas);
       let saved = null;
 
       for (let attempt = 0; attempt < PACKAGE_VERSION_ALLOCATION_ATTEMPTS; attempt += 1) {
