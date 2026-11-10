@@ -138,7 +138,8 @@ test("admin widget actions are explicitly allowlisted and match implemented page
   assert.ok(allowlist, "admin page must declare an explicit widget allowlist");
   assert.match(allowlist[1], /MESSAGE_TYPES\.READY/);
   assert.match(allowlist[1], /MESSAGE_TYPES\.CONTEXT/);
-  assert.match(allowlist[1], /MESSAGE_TYPES\.NAV/);
+  assert.doesNotMatch(allowlist[1], /MESSAGE_TYPES\.NAV/);
+  assert.doesNotMatch(adminHtml, /MM_NAV/);
   for (const type of [
     "CASHIER_STATE",
     "Z_CLOSING",
