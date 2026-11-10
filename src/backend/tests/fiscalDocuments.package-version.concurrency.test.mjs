@@ -101,6 +101,7 @@ test('FDOC-STORAGE-05 package list returns metadata only; download verifies hash
     '// =============================================================================\n// BLOQUE 5 - DESCARGAR VERSION'
   );
   assert.ok(prepared.includes('periodLabel'));
+  assert.ok(prepared.includes('.find(STRONG_READ)'));
   assert.ok(!prepared.includes('invoiceData'));
   assert.ok(!prepared.includes('summaryData'));
   const download = extractBlock(
