@@ -487,7 +487,12 @@ export const calcularHorasTrabajadas = webMethod(
                     }
                 }
 
-                if (entradaTs !== null) jornadasAbiertas += 1;
+                if (entradaTs !== null) {
+                    jornadasAbiertas += 1;
+                    // Cuenta solo pausas ya cerradas de una jornada abierta;
+                    // no estima ni incorpora la pausa que sigue en curso.
+                    totalMinutosPausa += minutosPausaJornada;
+                }
                 totalMinutosTrabajados += minutosTrabajados;
             }
 
