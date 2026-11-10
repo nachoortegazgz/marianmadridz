@@ -197,10 +197,10 @@ test('FDOC-STORAGE-07 every recovered or newly inserted snapshot is hash-verifie
     'async function _claimPackageOperation(operationId, period, traceId) {',
     'async function _readNextQuarterPackageVersion'
   );
-  assert.ok((claim.match(/_verifyPackageSnapshot\\(/g) || []).length >= 4);
+  assert.ok((claim.match(/_verifyPackageSnapshot\(/g) || []).length >= 4);
   const handler = extractBlock(
     'export const createManagerPackageVersion = webMethod(',
-    '// =============================================================================\\n// BLOQUE 4 - HISTORIAL DE PAQUETES'
+    '// =============================================================================\n// BLOQUE 4 - HISTORIAL DE PAQUETES'
   );
   assert.ok(handler.includes('if (!(await _verifyPackageSnapshot(saved)))'));
 });
