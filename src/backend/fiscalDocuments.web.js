@@ -145,6 +145,21 @@ function _formatDocumentId(year, quarter, version = 1) {
   return `DOC_GESTORIA_${year}_T${quarter}_PAQUETE_GESTORIA_V${vStr}`;
 }
 
+function _uuidV8FromHash(hashHex) {
+  const normalized = String(hashHex || "").replace(/[^a-f0-9]/gi, "").toLowerCase();
+  if (normalized.length < 32) {
+    throw Object.assign(new Error("UUID_HASH_INVALID"), { code: "UUID_HASH_INVALID" });
+  }
+  const variant = ((parseInt(normalized[16], 16) & 0x03) | 0x08).toString(16);
+  // UUIDv8: deterministic custom UUID derived from SHA-256, valid as Wix Data item ID.
+  return `${normalized.slice(0, 8)}-${normalized.slice(8, 12)}-8${normalized.slice(13, 16)}-${variant}${normalized.slice(17, 20)}-${normalized.slice(20, 32)}`;
+}
+
+async function _buildPackageItemId(year, quarter, version) {
+  const key = `DOC_GESTORIA|${year}|T${quarter}|V${version}`;
+  return _uuidV8FromHash(await hashSHA256(key));
+}
+
 function _invoiceValue(invoice, keys, fallbackKey) {
   for (const key of keys) {
     if (invoice && invoice[key] !== undefined && invoice[key] !== null) return invoice[key];
@@ -337,6 +352,7 @@ export const previewManagerPackage = webMethod(
         data: {
           period: { periodType: "QUARTERLY", year, quarter },
           documentIdDraft: _formatDocumentId(year, quarter, 1),
+          itemIdDraft: await _buildPackageItemId(year, quarter, 1),
           summary: summaryRes.data,
           invoiceCount: bookRes.data.filas.length,
           previewGeneratedAt: new Date(),
@@ -377,6 +393,7 @@ function _packageSnapshotResult(doc, idempotent = false) {
     status: "SUCCESS",
     data: {
       documentId: doc._id,
+      displayId: _formatDocumentId(doc.fiscalYear, doc.fiscalQuarter, doc.packageVersion),
       periodType: doc.periodType,
       fiscalYear: doc.fiscalYear,
       fiscalQuarter: doc.fiscalQuarter,
@@ -427,8 +444,8 @@ async function _completePackageOperationClaim(claim, doc) {
 }
 
 async function _claimPackageOperation(operationId, period, traceId) {
-  const operationHash = await hashSHA256(operationId);
-  const claimId = `MGR_PKG_OP_${operationHash.slice(0, 48)}`;
+  const operationHash = await hashSHA256(`MANAGER_PACKAGE_OPERATION|${operationId}`);
+  const claimId = _uuidV8FromHash(operationHash);
 
   let existing = await withTimeout(
     dalGet(CONTROL_COL, claimId, "strong"),
@@ -577,9 +594,9 @@ function _normalizeSnapshotJson(value) {
   return JSON.parse(serialized);
 }
 
-function _buildPackageSnapshotBase({ year, quarter, version, summaryData, invoiceData, traceId }) {
+function _buildPackageSnapshotBase({ itemId, year, quarter, version, summaryData, invoiceData, traceId }) {
   return {
-    _id: _formatDocumentId(year, quarter, version),
+    _id: itemId,
     periodType: "QUARTERLY",
     fiscalYear: year,
     fiscalQuarter: quarter,
@@ -711,7 +728,9 @@ export const createManagerPackageVersion = webMethod(
 
       for (let attempt = 0; attempt < PACKAGE_VERSION_ALLOCATION_ATTEMPTS; attempt += 1) {
         const version = await _readNextQuarterPackageVersion(year, quarter);
+        const itemId = await _buildPackageItemId(year, quarter, version);
         const base = _buildPackageSnapshotBase({
+          itemId,
           year,
           quarter,
           version,
@@ -864,6 +883,7 @@ export const getPreparedManagerPackages = webMethod(
       );
       const items = (res?.items || []).map((doc) => ({
         id: doc._id,
+        displayId: _formatDocumentId(doc.fiscalYear, doc.fiscalQuarter, doc.packageVersion),
         periodType: doc.periodType,
         periodLabel: `T${doc.fiscalQuarter}/${doc.fiscalYear}`,
         fiscalYear: doc.fiscalYear,
@@ -946,6 +966,7 @@ export const downloadManagerPackageVersion = webMethod(
         status: "SUCCESS",
         data: {
           documentId,
+          displayId: _formatDocumentId(doc.fiscalYear, doc.fiscalQuarter, doc.packageVersion),
           csvContent,
           summaryText,
           invoiceCount: invoices.length,
