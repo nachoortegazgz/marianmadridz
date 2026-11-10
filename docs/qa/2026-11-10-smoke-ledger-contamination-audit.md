@@ -45,3 +45,13 @@ Las filas de prueba de caja y contabilidad están identificadas por marcadores e
 - No declarar Fase 2 fiscal/contable operativa hasta superar pruebas en un entorno QA aislado, revisar la cadena AEAT oficial y validar el proceso con asesoría.
 
 **Conclusión:** el estado live no permite tratar la caja como operativa ni considerar los informes fiscales/contables actuales como libres de datos de simulación. La corrección es de lectura y fail-closed; los datos históricos permanecen intactos.
+
+
+## Fichajes sin firma: tratamiento de lectura
+
+Los dos registros `QA_LIVECMS_...` de `RegistrosHorariosStaff` carecen de firma. La rama de corrección de personal añade verificación HMAC al consumir fichajes:
+- `getHistorialFichajes` devuelve `integrityStatus=VERIFIED|UNVERIFIED` sin exponer la firma ni los metadatos privados.
+- `getEstadoJornada`, `calcularHorasTrabajadas` y `getResumenHoras` fallan cerrados con `TIMECLOCK_INTEGRITY_UNVERIFIED` si el conjunto leído contiene una firma ausente o inválida.
+- El resumen mensual falla si la consulta supera el límite de 1.000 filas; no devuelve un total parcial como válido.
+
+No se repara ni se firma retrospectivamente ninguna fila. La revisión laboral de esos registros sigue pendiente.
