@@ -63,7 +63,7 @@ import {
   CONTROL_TYPE,
   SDK_CONFIG,
 } from "backend/internalConfig";
-import { requireMarianManager } from "backend/security";
+import { requireMarianManager, rateLimiter } from "backend/security";
 import { _toPublicError } from "backend/responseUtils";
 
 import {
@@ -104,6 +104,16 @@ const RESEND_KEY_NAME = "RESEND_API_KEY";
 const RESEND_FROM_NAME = SDK_CONFIG.EMAIL.FROM_NAME;
 const RESEND_FROM_ADDRESS = SDK_CONFIG.EMAIL.FROM_ADDRESS;
 const ACCOUNTANT_SEND_ENABLED = SDK_CONFIG.EMAIL.ACCOUNTANT_SEND_ENABLED === true;
+
+async function _rateLimitManagerPackageRead(surface, traceId) {
+  const result = await rateLimiter({ surface, key: "manager" });
+  if (!result?.allowed) {
+    throw Object.assign(new Error("RATE_LIMITED"), {
+      code: "RATE_LIMITED",
+      meta: { retryAfter: result?.retryAfter || null, surface, traceId },
+    });
+  }
+}
 
 function _accountantSendDisabledResult(traceId) {
   return {
@@ -284,6 +294,7 @@ export const previewManagerPackage = webMethod(
     const traceId = makeTraceId("doc-preview");
     try {
       await requireMarianManager(traceId);
+      await _rateLimitManagerPackageRead("fiscal.previewManagerPackage", traceId);
       const year = Number(period.year);
       const quarter = Number(period.quarter);
       if (!year || !quarter || quarter < 1 || quarter > 4) {
@@ -643,6 +654,7 @@ export const createManagerPackageVersion = webMethod(
         };
       }
       claim = claimResult.claim;
+      await _rateLimitManagerPackageRead("fiscal.createManagerPackageVersion", traceId);
 
       const [summaryRes, bookRes] = await Promise.all([
         getQuarterlyTaxSummaryInternal(year, quarter, { traceId }),
