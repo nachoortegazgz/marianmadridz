@@ -23,6 +23,7 @@ import {
 import { hashSHA256, hashChain } from "backend/securityEngine";
 import { makeTraceId, _safeTrim } from "public/mmUtils";
 import { logger } from "backend/logger";
+import { isExplicitSimulationLedgerRecord } from "backend/validation";
 
 const log = logger;
 const CONTROL_COL = BUSINESS_COLLECTIONS.CONTROL_OPERATIVO;
@@ -353,11 +354,16 @@ export async function appendAccountingEntry(input, traceId) {
         }
 
         const lastResult = await dalQuery(ACCOUNTING_COL)
+            .ne("origenTipo", "SMOKE_TEST")
+            .ne("accountCode", "SIMULATED")
             .descending("recordTimestamp")
             .descending("lineNumber")
             .limit(1)
             .find(STRONG_READ);
         const lastRecord = lastResult?.items?.[0] || null;
+        if (lastRecord && isExplicitSimulationLedgerRecord(lastRecord)) {
+            throw new Error("ACCOUNTING_LEDGER_SIMULATION_HEAD_UNRESOLVED");
+        }
         let previousRecordHash = _safeTrim(lastRecord?.recordHash) || GENESIS_HASH;
         const lastTimestamp = lastRecord?.recordTimestamp
             ? new Date(lastRecord.recordTimestamp).getTime()
