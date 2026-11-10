@@ -132,9 +132,11 @@
     <!-- ══════════════════ DOCUMENTOS ══════════════════ -->
     <section class="panel" id="documentsPanel">
       <div class="panel-title">Documentos / paquetes</div>
-      <div class="btn-group" style="margin-bottom:14px;">
+      <div class="btn-group" style="margin-bottom:8px;">
+        <button class="btn btn-primary" id="btnCreateSnapshot" type="button">Crear snapshot trimestral</button>
         <button class="btn btn-outline" id="btnLoadPrepared" type="button">Paquetes preparados</button>
       </div>
+      <p class="muted" style="margin:0 0 14px;">El snapshot conserva una copia inmutable del resumen y libro trimestral. No se envía a gestoría.</p>
       <div class="scroll">
         <table class="table">
           <thead><tr><th>ID</th><th>Periodo</th><th>Estado</th><th>Accion</th></tr></thead>
@@ -159,6 +161,7 @@
         FISCAL_SUMMARY:'FISCAL_SUMMARY', FISCAL_SUMMARY_RES:'FISCAL_SUMMARY_RES',
         FISCAL_BOOK:'FISCAL_BOOK', FISCAL_BOOK_RES:'FISCAL_BOOK_RES',
         DOCUMENT_PREPARED:'DOCUMENT_PREPARED', DOCUMENT_PREPARED_RES:'DOCUMENT_PREPARED_RES',
+        CREATE_SNAPSHOT:'CREATE_SNAPSHOT', CREATE_SNAPSHOT_RES:'CREATE_SNAPSHOT_RES',
         DOCUMENT_DOWNLOAD:'DOCUMENT_DOWNLOAD', DOCUMENT_DOWNLOAD_RES:'DOCUMENT_DOWNLOAD_RES',
       };
 
@@ -182,7 +185,9 @@
       const fiscalYear=$('fiscalYear'), fiscalQuarter=$('fiscalQuarter'), fiscalResult=$('fiscalResult');
       const btnFiscalSummary=$('btnFiscalSummary'), btnFiscalBook=$('btnFiscalBook');
 
-      const btnLoadPrepared=$('btnLoadPrepared'), documentsBody=$('documentsBody');
+      const btnLoadPrepared=$('btnLoadPrepared'), btnCreateSnapshot=$('btnCreateSnapshot'), documentsBody=$('documentsBody');
+      let activeSnapshotOperationId = null;
+      let activeSnapshotPeriod = null;
 
 
       function send(type, payload={}) {
@@ -201,6 +206,29 @@
         } else {
           btn.disabled = false; btn.textContent = btn.dataset.original || btn.textContent;
         }
+      }
+
+      function createOperationUuid() {
+        if (!window.crypto || typeof window.crypto.getRandomValues !== 'function') return null;
+        const bytes = new Uint8Array(16);
+        window.crypto.getRandomValues(bytes);
+        bytes[6] = (bytes[6] & 0x0f) | 0x40;
+        bytes[8] = (bytes[8] & 0x3f) | 0x80;
+        const hex = Array.from(bytes, (value) => value.toString(16).padStart(2, '0')).join('');
+        return hex.slice(0, 8) + '-' + hex.slice(8, 12) + '-' + hex.slice(12, 16) + '-' +
+          hex.slice(16, 20) + '-' + hex.slice(20);
+      }
+
+      function downloadTextFile(filename, content, mimeType) {
+        const blob = new Blob([String(content || '')], { type: mimeType || 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = filename;
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
       }
 
       function money(v) {
@@ -284,6 +312,32 @@
         });
       }
       btnLoadPrepared.addEventListener('click', () => { setLoading(btnLoadPrepared, true); send(MESSAGE_TYPES.DOCUMENT_PREPARED, {}); });
+      btnCreateSnapshot.addEventListener('click', () => {
+        const year = Number(fiscalYear.value);
+        const quarter = Number(fiscalQuarter.value);
+        if (!Number.isInteger(year) || year < 2000 || year > 9999 ||
+            !Number.isInteger(quarter) || quarter < 1 || quarter > 4) {
+          err('Selecciona un ejercicio y trimestre válidos en el panel fiscal.');
+          return;
+        }
+        if (!window.confirm('Se creará una nueva versión inmutable del resumen y libro fiscal del trimestre. No se enviará ningún correo. ¿Continuar?')) return;
+        const periodKey = year + '-T' + quarter;
+        if (!activeSnapshotOperationId || activeSnapshotPeriod !== periodKey) {
+          activeSnapshotOperationId = createOperationUuid();
+          activeSnapshotPeriod = periodKey;
+        }
+        if (!activeSnapshotOperationId) {
+          err('El navegador no permite generar una clave segura de operación. No se ha creado ningún snapshot.');
+          return;
+        }
+        setLoading(btnCreateSnapshot, true);
+        send(MESSAGE_TYPES.CREATE_SNAPSHOT, {
+          periodType: 'QUARTERLY',
+          year,
+          quarter,
+          operationId: activeSnapshotOperationId
+        });
+      });
 
       /* ── Contexto ── */
       function applyContext(ctx) {
@@ -349,9 +403,29 @@
             if (ok) renderDocuments(data?.items || data || []);
             else err(error?.message || 'No se pudieron cargar los paquetes.');
             break;
+          case 'CREATE_SNAPSHOT_RES':
+            setLoading(btnCreateSnapshot, false);
+            if (ok) {
+              activeSnapshotOperationId = null;
+              activeSnapshotPeriod = null;
+              info('Snapshot inmutable creado: ' + (data?.documentId || 'versión registrada') + '. No se ha enviado a gestoría.');
+              setLoading(btnLoadPrepared, true);
+              send(MESSAGE_TYPES.DOCUMENT_PREPARED, {});
+            } else {
+              err(error?.message || 'No se pudo crear el snapshot. Conserva la misma operación al reintentar.');
+            }
+            break;
           case 'DOCUMENT_DOWNLOAD_RES':
-            if (ok && data?.url) window.open(data.url, '_blank');
-            else if (!ok) err(error?.message || 'No se pudo descargar.');
+            if (ok && data?.csvContent) {
+              const id = String(data.documentId || 'paquete-fiscal').replace(/[^a-zA-Z0-9_-]/g, '_');
+              downloadTextFile(id + '.csv', data.csvContent, 'text/csv;charset=utf-8');
+              info('CSV descargado: ' + id);
+            } else if (ok && data?.summaryText) {
+              const id = String(data.documentId || 'paquete-fiscal').replace(/[^a-zA-Z0-9_-]/g, '_');
+              downloadTextFile(id + '-resumen.txt', data.summaryText, 'text/plain;charset=utf-8');
+              info('Resumen descargado: ' + id);
+            } else if (!ok) err(error?.message || 'No se pudo descargar.');
+            else warn('El paquete no contiene contenido descargable.');
             break;
         }
       }
