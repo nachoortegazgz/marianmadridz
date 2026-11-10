@@ -231,15 +231,15 @@ test("staff page routes only read-only timeclock queries and keeps write actions
 });
 
 test("admin snapshot action is allowlisted and uses a stable operation UUID without enabling dispatch", () => {
-  const allowlist = adminPage.match(/allowedTypes:\\s*\\[([\\s\\S]*?)\\]/);
+  const allowlist = adminPage.match(/allowedTypes:\s*\[([\s\S]*?)\]/);
   assert.ok(allowlist);
   assert.ok(allowlist[1].includes('"CREATE_SNAPSHOT"'));
   assert.match(adminPage, /createManagerPackageVersion/);
-  assert.match(adminPage, /CREATE_SNAPSHOT:\\s*\\(\\{ payload \\}\\) => createManagerPackageVersion/);
+  assert.match(adminPage, /CREATE_SNAPSHOT:\s*\(\{ payload \}\) => createManagerPackageVersion/);
   assert.match(adminHtml, /btnCreateSnapshot/);
-  assert.match(adminHtml, /crypto\\.getRandomValues/);
+  assert.match(adminHtml, /crypto\.getRandomValues/);
   assert.match(adminHtml, /CREATE_SNAPSHOT_RES/);
-  assert.match(adminHtml, /No se enviará a gestoría/);
+  assert.match(adminHtml, /No se envía a gestoría/);
   assert.match(adminHtml, /downloadTextFile/);
-  assert.doesNotMatch(adminHtml, /window\\.open\\(data\\.url/);
+  assert.doesNotMatch(adminHtml, /window\.open\(data\.url/);
 });
