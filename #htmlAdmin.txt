@@ -133,7 +133,7 @@
     <section class="panel" id="documentsPanel">
       <div class="panel-title">Documentos / paquetes</div>
       <div class="btn-group" style="margin-bottom:8px;">
-        <button class="btn btn-primary" id="btnCreateSnapshot" type="button">Crear snapshot trimestral</button>
+        <button class="btn btn-outline" id="btnCreateSnapshot" type="button">Crear snapshot trimestral</button>
         <button class="btn btn-outline" id="btnLoadPrepared" type="button">Paquetes preparados</button>
       </div>
       <p class="muted" style="margin:0 0 14px;">El snapshot conserva una copia inmutable del resumen y libro trimestral. No se envía a gestoría.</p>
