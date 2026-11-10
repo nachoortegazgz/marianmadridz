@@ -70,17 +70,18 @@ import {
   _roundMoney,
 } from "public/mmUtils";
 import { hashSHA256 } from "backend/securityEngine";
+import { logger } from "backend/logger";
 
 // SSOT-KEYFIELD-02: lectura canonica con fallback alias (contrato unico).
 import { readMovementField, readControlPayload } from "backend/data";
 
+const log = logger;
 const CMS_TIMEOUT_MS = SDK_CONFIG.TIMEOUTS.CMS_MS;
 // Manager package snapshots have their own collection; Z closings remain isolated.
 const DOCS_COL = BUSINESS_COLLECTIONS.PAQUETES_GESTORIA;
 const DATOS_FISCALES_COL = BUSINESS_COLLECTIONS.DATOS_FISCALES;
 const CONTROL_COL = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
 const PACKAGE_MAX_ITEM_BYTES = 450 * 1024; // Wix CMS hard limit: 500 KB per item.
-const PACKAGE_OPERATION_TTL_MS = 10 * 60 * 1000;
 const PACKAGE_VERSION_ALLOCATION_ATTEMPTS = 3;
 const PACKAGE_SCHEMA_VERSION = "1.0";
 
@@ -438,16 +439,12 @@ async function _claimPackageOperation(operationId, period, traceId) {
     }
 
     const expiresAt = existing.expiresAt ? new Date(existing.expiresAt) : null;
-    if (!expiresAt || !Number.isFinite(expiresAt.getTime()) || expiresAt.getTime() > Date.now()) {
-      return { inProgress: true };
+    if (expiresAt && Number.isFinite(expiresAt.getTime()) && expiresAt.getTime() <= Date.now()) {
+      return { error: { code: "PACKAGE_SNAPSHOT_REPAIR_REQUIRED" } };
     }
-
-    // A timed-out claim can be reclaimed only after proving no snapshot was inserted.
-    await withTimeout(
-      dalRemove(CONTROL_COL, claimId),
-      CMS_TIMEOUT_MS,
-      "removeExpiredPackageOperationClaim"
-    );
+    // Never delete/reclaim an in-flight claim automatically: a stale worker
+    // could resume after lease expiry and create a second immutable snapshot.
+    return { inProgress: true };
   }
 
   const claim = {
@@ -455,7 +452,7 @@ async function _claimPackageOperation(operationId, period, traceId) {
     controlType: CONTROL_TYPE.IDEMPOTENCY,
     dedupeKey: `MANAGER_PACKAGE_CREATE:${operationId}`,
     status: "ACTIVE",
-    expiresAt: new Date(Date.now() + PACKAGE_OPERATION_TTL_MS),
+    expiresAt: null,
     payload: {
       operationId,
       periodType: period.periodType,
@@ -496,6 +493,11 @@ async function _claimPackageOperation(operationId, period, traceId) {
       return completedDoc
         ? { completedDoc }
         : { error: { code: "PACKAGE_SNAPSHOT_CLAIM_INCONSISTENT" } };
+    }
+    const recovered = await _findPackageByTraceId(payload.traceId);
+    if (recovered) {
+      await _completePackageOperationClaim(existing, recovered);
+      return { completedDoc: recovered };
     }
     return { inProgress: true };
   }
