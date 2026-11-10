@@ -188,6 +188,7 @@
       const btnLoadPrepared=$('btnLoadPrepared'), btnCreateSnapshot=$('btnCreateSnapshot'), documentsBody=$('documentsBody');
       let activeSnapshotOperationId = null;
       let activeSnapshotPeriod = null;
+      let activeDownloadButton = null;
 
 
       function send(type, payload={}) {
@@ -305,6 +306,8 @@
           b.style.cssText = 'width:auto;padding:5px 8px;margin:0;';
           b.textContent = 'Descargar';
           b.addEventListener('click', () => {
+            if (activeDownloadButton) return;
+            activeDownloadButton = b;
             setLoading(b, true);
             send(MESSAGE_TYPES.DOCUMENT_DOWNLOAD, { documentId: d.id || d._id });
           });
@@ -416,6 +419,10 @@
             }
             break;
           case 'DOCUMENT_DOWNLOAD_RES':
+            if (activeDownloadButton) {
+              setLoading(activeDownloadButton, false);
+              activeDownloadButton = null;
+            }
             if (ok && data?.csvContent) {
               const id = String(data.documentId || 'paquete-fiscal').replace(/[^a-zA-Z0-9_-]/g, '_');
               downloadTextFile(id + '.csv', data.csvContent, 'text/csv;charset=utf-8');
