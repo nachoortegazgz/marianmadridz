@@ -2,7 +2,7 @@
 
 **Revisión:** 2026-11-10  
 **Repositorio:** [nachoortegazgz/marianmadridz](https://github.com/nachoortegazgz/marianmadridz)  
-**Baseline de código:** `main` · `a193b9c9ce7657b100a7d2b279a001d0879a7cab`  
+**Baseline de código:** `main` · `5be351e06557cf0bb8900e6a4453c07f1db86b73`  
 **Sitio:** https://www.marianmadrid.es/  
 **Alcance:** estado documental y técnico contrastado con el árbol de `main`, auditorías existentes, CI y consultas live de solo lectura.
 
@@ -25,7 +25,7 @@ El repositorio contiene una solución Wix Editor/Velo con reservas Bookings V2, 
 | Stores Catalog V3 | V3 activo y APIs REST responden | `V3_CATALOG`; 24 productos visibles; 30 inventory items en una ubicación. Orders Settings: `inventoryUpdateTrigger=ON_ORDER_PAID`, `createInvoice=false`. La capa custom se ha retirado en la rama de refactorización; pendiente CI/QA. |
 | Inventario personalizado | **Retirado en PR #239; QA runtime pendiente** | Wix Stores Catalog V3: 30/30 inventory items con tracking en una ubicación. Orders Settings: `ON_ORDER_PAID`. Módulo, WebMethods y panel custom eliminados en la rama. CI offline run 42721080098: 50 suites/488 tests OK en commit previo; reejecución del HEAD actual y QA Wix E2E pendientes. No se han escrito datos ni modificado históricos. |
 | Ledger fiscal / Veri*Factu | **NO APTO para activar remisión Veri*Factu** | PR #250 incorpora `aeatHash.js` puro con vectores oficiales v0.1.2 para alta/anulación, sin consumers runtime. Siguen pendientes reconciliación de campos en writers, XML/XSD, transporte SOAP, respuesta/remisión, pruebas AEAT y aprobación legal. |
-| Registro horario | Consultas read-only implementadas; escrituras deshabilitadas | ZONA STAFF consulta contexto, estado, historial y horas. Los lectores verifican firma HMAC y secuencia; faltan runtime Wix, idempotencia/concurrencia de writers y aceptación legal/operativa. No habilitar fichajes ni ajustes. |
+| Registro horario | Consultas read-only implementadas; writers bloqueados en backend | ZONA STAFF consulta contexto, estado, historial y horas. Los lectores verifican firma HMAC y secuencia. PR #254 añade `STAFF_CLOCKING_CONFIG` y bloquea también las llamadas directas a `registrarFichaje`/`registrarAjusteHorario`; faltan idempotencia, lock persistente, transiciones/concurrencia y runtime Wix QA antes de reactivar. |
 | Paquetes de gestoría | Snapshot y envío bloqueados | `PaquetesGestoria` tiene confirmación de creación de esquema en auditoría; creación de snapshot deshabilitada por contrato/hash/tamaño/concurrencia pendientes. Envío Resend deshabilitado por configuración. |
 | Capa 3 M365 / SharePoint | Arquitectura objetivo; no implantación demostrada | No existe `exportService.js` ni jobs de exportación. PA-01…PA-07 y SharePoint no auditados en el tenant. Transporte requiere ADR. |
 | Asistente IA | No disponible; UI retirada | `aiAgent.web.js` falla cerrado con `AI_PROVIDER_NOT_CONFIGURED`. PR #252 elimina el panel IA inactivo de ZONA MARIAN; no se expone una capacidad sin proveedor configurado. |
@@ -180,3 +180,12 @@ PR #252 se ha fusionado en `main` (commit `a193b9c9ce7657b100a7d2b279a001d0879a7
 La tabla de paquetes usa el campo canónico `packageStatus`. No se eliminan estados técnicos de respuesta (`status: SUCCESS/ERROR`), estados de reservas/pagos/ledgers ni el estado de conexión nativo de Wix. La auditoría live previa confirma que `ServiciosCatalogo`, `ComplementosCatalogo` y `MapaStaff` no tienen campo `status`; tampoco se mantiene un flujo de estado comercial de personal en la UI.
 
 CI del PR #252, run #42802778737: 51 suites / 505 tests / 0 fallos; contratos SDK Cart V2 y Bookings Reader V2, y ESLint correctos. La validación se ejecutó sobre el head del PR; no equivale a runtime Wix ni a validación del commit mergeado. No se modificaron CMS, caja, ledgers, reservas, pagos ni publicación. El envío a gestoría sigue pendiente de snapshot inmutable e idempotencia (issue #223).
+
+
+## 15. Writers de jornada bloqueados también en backend — 2026-11-10
+
+PR #254 se ha fusionado en `main` (commit `5be351e06557cf0bb8900e6a4453c07f1db86b73`). La auditoría detectó que `registrarFichaje` seguía aceptando invocaciones directas de `Permissions.SiteMember` aunque el frontend mantuviera `enableClocking=false`; el writer insertaba sin idempotencia, comprobación de secuencia previa ni serialización concurrente.
+
+Se centraliza `STAFF_CLOCKING_CONFIG` en `internalConfig.js` con `WRITES_ENABLED=false` y `ADJUSTMENTS_ENABLED=false`. Ambos WebMethods fallan cerrados antes de insertar; el fichaje valida primero que la identidad corresponde a staff y el ajuste conserva el control manager. Los WebMethods read-only no cambian.
+
+CI del PR #254, run #42803615666: 51 suites / 505 tests / 0 fallos; contratos SDK Cart V2 y Bookings Reader V2 y ESLint correctos. Los flags no deben reactivarse hasta implementar `operationId`, lock persistente por empleado/día, validación de transiciones, manejo de replay/timeout y pruebas reales de concurrencia en Wix QA. No se modificaron fichajes históricos ni se escribieron datos CMS en Wix.
