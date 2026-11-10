@@ -211,3 +211,18 @@ it("ACC-LEDGER-11 rejects replay when signed metadata is altered even if line am
   assert.equal(replay.status, "ERROR");
   assert.equal(replay.error.code, "ACCOUNTING_ENTRY_REPAIR_REQUIRED");
 });
+
+
+it("ACC-LEDGER-12 marks a completed claim for repair when its ledger rows are missing", async () => {
+  const payload = entry("ACC-QA-ENTRY-012");
+  const first = await appendAccountingEntry(payload, "trace-acc-012");
+  assert.equal(first.status, "SUCCESS");
+  wixDataMock._store.get(ACCOUNTING_COL).splice(0);
+
+  const replay = await appendAccountingEntry(payload, "trace-acc-012-replay");
+  assert.equal(replay.status, "ERROR");
+  assert.equal(replay.error.code, "ACCOUNTING_ENTRY_REPAIR_REQUIRED");
+  const claim = [...wixDataMock._store.get(CONTROL_COL)]
+    .find(item => item.controlType === "DEDUPE_KEY");
+  assert.equal(claim.status, "REPAIR_REQUIRED");
+});
