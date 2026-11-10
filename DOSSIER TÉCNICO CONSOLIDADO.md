@@ -196,7 +196,7 @@ Capa de Datos — SDK @wix/data + APIs Wix (Bookings, Members, eCommerce)
 
 ## 5. Modelo de reservas: simple y dual
 
-Todos los servicios son de tipo `APPOINTMENT`. No se usan tipos `CLASS` ni `COURSE`. La arquitectura distingue dos flujos de reserva según si el servicio tiene o no fases con gap de exposición.
+Los servicios pueden ser del tipo `APPOINTMENT`, `CLASS` y `COURSE`. La arquitectura distingue dos flujos de reserva según si el servicio tiene o no fases con gap de exposición.
 
 ### Contratos críticos de Bookings V2
 
@@ -522,7 +522,7 @@ Las colecciones `WIX_APP` son de **estricta lectura**. Prohibido ejecutar `wixDa
 
 | Integración | Patrón | Notas |
 | --- | --- | --- |
-| Resend | Helper de envío en `fiscalDocuments.web.js` | Despacho a gestoría bloqueado por `ACCOUNTANT_SEND_ENABLED=false`; no existe el pipeline de exports Capa 3. Transporte de exports pendiente de ADR |
+| Resend | Helper de envío en `fiscalDocuments.web.js` | Dirección email de gestoría habilitada para pruebas durante periodo de desarrollo del sitio web: nachoortegazgz@gmail.com. Despacho a gestoría bloqueado por `ACCOUNTANT_SEND_ENABLED=false`; no existe el pipeline de exports Capa 3. Transporte de exports pendiente de ADR |
 | OpenAI API | `fetch()` backend con secreto en Wix Secrets | Timeout `AbortController` ≤ 9 s; respuesta fallback si JSON malformado |
 | Wix Payments | Proveedor de pagos nativo de Wix; gestiona pagos, payouts, reembolsos y contracargos desde su panel. | Métodos disponibles según país y configuración de la cuenta; confirmar en el panel del sitio. |
 | IONOS | DNS/correo corporativo (infraestructura externa) | No forma parte de la lógica transaccional |
