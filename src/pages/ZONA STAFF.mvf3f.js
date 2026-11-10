@@ -240,24 +240,17 @@ $w.onReady(async () => {
           reply("GET_HISTORY_RES", range.error && _widgetError(range.error.code, range.error.message), payload);
           return;
         }
-        const months = [...new Set(range.days.map((day) => day.slice(0, 7)))];
-        const monthResults = await Promise.all(months.map((monthKey) =>
-          getHistorialFichajes({ monthKey, limit: 100, traceId })
-        ));
-        const failed = monthResults.find((result) => result?.status !== "OK");
-        if (failed) {
-          reply("GET_HISTORY_RES", _widgetError(failed?.error?.code || "TIMECLOCK_HISTORY_UNAVAILABLE", failed?.error?.message || "No se pudo consultar el historial."), payload);
+        const result = await getHistorialFichajes({
+          startDateYMD: range.days[0],
+          endDateYMD: range.days[range.days.length - 1],
+          limit: 500,
+          traceId,
+        });
+        if (result?.status !== "OK") {
+          reply("GET_HISTORY_RES", _widgetError(result?.error?.code || "TIMECLOCK_HISTORY_UNAVAILABLE", result?.error?.message || "No se pudo consultar el historial."), payload);
           return;
         }
-        if (monthResults.some((result) => (result.data?.items || []).length >= 100)) {
-          reply("GET_HISTORY_RES", _widgetError("TIMECLOCK_HISTORY_LIMIT_EXCEEDED", "El historial supera el límite de lectura; reduce el rango de fechas."), payload);
-          return;
-        }
-        const start = range.days[0];
-        const end = range.days[range.days.length - 1];
-        const items = monthResults
-          .flatMap((result) => result.data?.items || [])
-          .filter((item) => item.diaClave >= start && item.diaClave <= end)
+        const items = (result.data?.items || [])
           .sort((a, b) => new Date(a.registradoEn) - new Date(b.registradoEn))
           .map((item) => ({
             fechaHora: item.registradoEn,
