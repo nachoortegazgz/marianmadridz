@@ -227,3 +227,11 @@ test("staff page maps only read-only timeclock queries and excludes nonexistent 
   assert.match(onlyStaffHtml, /sequenceStatus === 'INVALID'[\s\S]*SECUENCIA INVÁLIDA/);
   assert.match(onlyStaffHtml, /Jornadas abiertas:[\s\S]*el tiempo en curso no se incluye/);
 });
+
+
+test("staff widget has no unresolved literal DOM selectors", () => {
+  const referencedIds = Array.from(onlyStaffHtml.matchAll(/\$\('([^']+)'\)/g), (match) => match[1]);
+  const declaredIds = new Set(Array.from(onlyStaffHtml.matchAll(/\bid=["']([^"']+)["']/g), (match) => match[1]));
+  const missingIds = [...new Set(referencedIds)].filter((id) => !declaredIds.has(id));
+  assert.deepEqual(missingIds, []);
+});
