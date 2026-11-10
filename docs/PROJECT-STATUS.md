@@ -142,3 +142,8 @@ Se retira `src/backend/staffManager.web.js`, módulo sin consumidores en el repo
 Wix CMS live (solo lectura) confirma cuatro filas `SMOKE_TEST` con `sequenceNumber=0` en `MovimientosCaja`, un registro `SMOKE_TEST` no balanceado en `LibroAsientosContablesDetalle`, y `CajaActual.cashRegisterStatus=SIMULACION` con 300 € y contadores de secuencia a cero. El agregador fiscal y varios lectores/heads no excluían estas filas; el código de esta rama añade exclusión por marcadores explícitos y secuencia positiva. La caja en estado SIMULACION queda fail-closed para estado operativo, movimientos manuales, proyección y cierre Z. No se modifican ni borran ledgers.
 
 Otros hallazgos sin intervención en esta rama: dos fichajes QA en `RegistrosHorariosStaff` carecen de firma HMAC; 54/55 proyecciones `CitasF2` no tienen `sourceEventId`; `HistoricoCierresZ` y `PaquetesGestoria` están vacíos. Evidencia y límites: [auditoría live de contaminación de ledgers](qa/2026-11-10-smoke-ledger-contamination-audit.md). No declarar caja/contabilidad/fiscalidad funcionales ni publicar hasta completar runtime QA y resolver las anomalías históricas mediante procedimientos trazables.
+
+
+## 10. ZONA MARIAN — disponibilidad del TPV
+
+El panel de caja ya no se presenta como operativo por un flag estático: solo se muestra cuando `getCashierState` responde SUCCESS y `cashRegisterStatus=ABIERTA`. Con el estado live actual `SIMULACION`, la interfaz oculta el TPV. La protección backend del PR #246 permanece como segunda barrera. No se ha modificado Wix CMS ni se ha publicado el sitio.

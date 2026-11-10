@@ -156,7 +156,11 @@ $w.onReady(async () => {
                 // ── Feature flags ─────────────────────────────────────
                 enableClocking: false,        // ❌ fichaje eliminado
                 enableBreaks: false,
-                enableCashier: true,
+                // La caja solo se muestra si el backend confirma un estado operativo.
+                // CajaActual SIMULACION/CERRADA/ausente no se presenta como TPV activo.
+                enableCashier:
+                    cashierRes?.status === "SUCCESS" &&
+                    cashierRes.data?.cashRegisterStatus === "ABIERTA",
                 enableInventory: false, // Inventory managed only in Wix Stores
                 enableScheduleQuery: false,   // backend de resumen aun no implementado
                 enableStaffManagement: false, // backend real pendiente
