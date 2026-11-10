@@ -494,11 +494,27 @@ async function _claimPackageOperation(operationId, period, traceId) {
           },
         };
       }
+      if (!(await _verifyPackageSnapshot(completedDoc))) {
+        return {
+          error: {
+            code: "PACKAGE_SNAPSHOT_HASH_INVALID",
+            message: "El snapshot recuperado no supera la verificación de integridad; requiere revisión manual.",
+          },
+        };
+      }
       return { completedDoc };
     }
 
     const recovered = await _findPackageByTraceId(payload.traceId);
     if (recovered) {
+      if (!(await _verifyPackageSnapshot(recovered))) {
+        return {
+          error: {
+            code: "PACKAGE_SNAPSHOT_HASH_INVALID",
+            message: "El snapshot recuperado no supera la verificación de integridad; requiere revisión manual.",
+          },
+        };
+      }
       await _completePackageOperationClaim(existing, recovered);
       return { completedDoc: recovered };
     }
@@ -560,17 +576,34 @@ async function _claimPackageOperation(operationId, period, traceId) {
         CMS_TIMEOUT_MS,
         "readRacingCompletedPackage"
       );
-      return completedDoc
-        ? { completedDoc }
-        : {
-            error: {
-              code: "PACKAGE_SNAPSHOT_CLAIM_INCONSISTENT",
-              message: "El claim completado no tiene snapshot recuperable. Requiere reconciliación manual.",
-            },
-          };
+      if (!completedDoc) {
+        return {
+          error: {
+            code: "PACKAGE_SNAPSHOT_CLAIM_INCONSISTENT",
+            message: "El claim completado no tiene snapshot recuperable. Requiere reconciliación manual.",
+          },
+        };
+      }
+      if (!(await _verifyPackageSnapshot(completedDoc))) {
+        return {
+          error: {
+            code: "PACKAGE_SNAPSHOT_HASH_INVALID",
+            message: "El snapshot recuperado no supera la verificación de integridad; requiere revisión manual.",
+          },
+        };
+      }
+      return { completedDoc };
     }
     const recovered = await _findPackageByTraceId(payload.traceId);
     if (recovered) {
+      if (!(await _verifyPackageSnapshot(recovered))) {
+        return {
+          error: {
+            code: "PACKAGE_SNAPSHOT_HASH_INVALID",
+            message: "El snapshot recuperado no supera la verificación de integridad; requiere revisión manual.",
+          },
+        };
+      }
       await _completePackageOperationClaim(existing, recovered);
       return { completedDoc: recovered };
     }
@@ -773,6 +806,11 @@ export const createManagerPackageVersion = webMethod(
           );
           snapshotInserted = true;
           snapshotInsertUncertain = false;
+          if (!(await _verifyPackageSnapshot(saved))) {
+            throw Object.assign(new Error("El snapshot insertado no supera la verificación de integridad."), {
+              code: "PACKAGE_SNAPSHOT_HASH_INVALID",
+            });
+          }
           break;
         } catch (error) {
           if (!_isDuplicatePackageInsertError(error)) throw error;
