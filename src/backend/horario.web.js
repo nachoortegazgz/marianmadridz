@@ -21,8 +21,8 @@ import {
     CLOCK_REGISTERED_BY,
     REGISTROS_HORARIOS_FIELDS as F,
     SDK_CONFIG,
-    SECRETS,
 } from "backend/internalConfig";
+import { SECRETS } from "backend/mmSecrets";
 
 import {
     assertRegistrosHorariosStaff,
