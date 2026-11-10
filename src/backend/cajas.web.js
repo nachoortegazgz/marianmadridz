@@ -454,10 +454,6 @@ function _generateVerificationQR(numSerieFactura, nifEmisor, fechaExpedicionFact
     return `${baseUrl}?${params.join("&")}`;
 }
 
-async function _computeInternalFiscalChainHash(previousHash, payloadStr) {
-    return await hashChain(previousHash, payloadStr);
-}
-
 async function _getLastMovement() {
     const res = await dalQuery(MOVIMIENTOS_CAJA_COL)
         .gt("sequenceNumber", 0)
@@ -757,7 +753,7 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
         };
 
         const fiscalChainPayload = _buildInternalFiscalChainPayload({ ...baseMovement, previousRecordHash }, generatedAt);
-        const movementHash = await _computeInternalFiscalChainHash(previousRecordHash, fiscalChainPayload);
+        const movementHash = await hashChain(previousRecordHash, fiscalChainPayload);
 
         let digitalSignature;
         try {
