@@ -152,7 +152,7 @@
     <!-- Historial y cálculo de horas: consultas read-only. -->
     <!-- Historial y cálculo de horas -->
     <div class="grid" id="lowerGrid">
-      <div class="panel" id="historyPanel">
+      <div class="panel" id="historyPanel" style="display:none;">
         <div class="panel-title">Historial de Fichajes</div>
         <div class="row" style="margin-bottom:8px;">
           <div class="form-group"><label>Desde</label><input type="date" id="histStart" /></div>
