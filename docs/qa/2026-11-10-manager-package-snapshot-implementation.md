@@ -15,7 +15,7 @@ Habilitar en ZONA MARIAN la creación y descarga de snapshots trimestrales de ge
 - El snapshot se inserta exclusivamente mediante `dalInsert` en `PaquetesGestoria`; no usa upsert, update ni save.
 - La versión se obtiene mediante lectura fuerte y se reintenta ante colisiones de ID, con un máximo de tres intentos.
 - Se calcula `snapshotHash` SHA-256 sobre una serialización determinista del contenido canónico.
-- Se limita el tamaño serializado del item a 450 KiB para mantener margen respecto al límite oficial de Wix CMS de 500 KB por item.
+- Se limita el tamaño serializado del item a 450 KiB para mantener margen respecto al límite oficial de Wix CMS de 512 KB por item.
 - Las descargas recomputan y verifican `snapshotHash`; si no coincide, se bloquea la descarga.
 - El listado de paquetes preparados devuelve solo metadatos, no los arrays `invoiceData` ni `summaryData`.
 - ZONA MARIAN incorpora una acción explícita para crear el snapshot trimestral. El widget descarga el CSV que realmente devuelve el WebMethod, en vez de intentar abrir un `data.url` inexistente.
@@ -45,7 +45,7 @@ Tampoco se crean reservas, pedidos, pagos, cierres Z ni snapshots reales durante
 
 ### Tamaño
 
-Wix documenta un máximo de 500 KB por item CMS. El límite interno de 450 KiB deja margen para la serialización y metadatos.
+Wix documenta un máximo de 512 KB por item CMS. El límite interno de 450 KiB deja margen para la serialización y metadatos.
 
 ### Alcance funcional
 
@@ -53,7 +53,7 @@ La implementación de esta rama solo genera snapshots **trimestrales**. El agreg
 
 ## 4. Fuentes oficiales Wix
 
-- [Wix Data APIs — CMS introduction](https://dev.wix.com/docs/api-reference/business-solutions/cms/introduction): máximo de 500 KB por item.
+- [Wix Data APIs — CMS introduction](https://dev.wix.com/docs/api-reference/business-solutions/cms/introduction): máximo de 512 KB por item.
 - [Insert Data Item](https://dev.wix.com/docs/api-reference/business-solutions/cms/data-items/insert-data-item): operación create-only; si el ID ya existe, la inserción falla. No es un upsert.
 
 ## 5. Validación
