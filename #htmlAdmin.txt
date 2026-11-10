@@ -268,7 +268,7 @@
         }
         items.forEach((d) => {
           const tr = document.createElement('tr');
-          [d.id || d._id || '—', d.periodLabel || d.periodType || '—', d.status || '—'].forEach((v) => {
+          [d.id || d._id || '—', d.periodLabel || d.periodType || '—', d.packageStatus || '—'].forEach((v) => {
             const td = document.createElement('td'); td.textContent = String(v); tr.appendChild(td);
           });
           const action = document.createElement('td');
