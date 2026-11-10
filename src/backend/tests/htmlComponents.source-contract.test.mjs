@@ -220,5 +220,6 @@ test("staff page routes only read-only timeclock queries and keeps write actions
   assert.match(staffPage, /calcularHorasTrabajadas/);
   assert.doesNotMatch(allowlist[1], /CLOCK|ADJUSTMENT|TPV_TX|X_COUNT|Z_CLOSING/);
   assert.match(onlyStaffHtml, /integrityStatus === 'UNVERIFIED'[\s\S]*NO VERIFICADO/);
+  assert.match(onlyStaffHtml, /sequenceStatus === 'INVALID'[\s\S]*SECUENCIA INVÁLIDA/);
   assert.match(onlyStaffHtml, /Jornadas abiertas:[\s\S]*el tiempo en curso no se incluye/);
 });
