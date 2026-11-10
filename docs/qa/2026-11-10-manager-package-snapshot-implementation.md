@@ -14,6 +14,7 @@ Habilitar en ZONA MARIAN la creación y descarga de snapshots trimestrales de ge
 - Las operaciones se deduplican mediante un claim técnico `ControlOperativo.IDEMPOTENCY`. El claim no es un ledger fiscal, contable ni laboral.
 - El snapshot se inserta exclusivamente mediante `dalInsert` en `PaquetesGestoria`; no usa upsert, update ni save.
 - La versión se obtiene mediante lectura fuerte y se reintenta ante colisiones de ID, con un máximo de tres intentos.
+- Los IDs CMS y los claims de idempotencia son GUID deterministas UUIDv8 derivados de SHA-256; el identificador legible `DOC_GESTORIA_...` se calcula para presentación y no se usa como `_id`.
 - Se calcula `snapshotHash` SHA-256 sobre una serialización determinista del contenido canónico.
 - Se limita el tamaño serializado del item a 450 KiB para mantener margen respecto al límite oficial de Wix CMS de 512 KB por item.
 - Las descargas recomputan y verifican `snapshotHash`; si no coincide, se bloquea la descarga.
