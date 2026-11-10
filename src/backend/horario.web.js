@@ -118,6 +118,29 @@ async function _getTimeclockIntegrity(records) {
     };
 }
 
+function _validateTimeclockSequence(records) {
+    let state = "OUT";
+    for (const record of records || []) {
+        const eventType = record?.[F.CLOCK_EVENT_TYPE];
+        if (eventType === CLOCK_EVENT_TYPE.ENTRADA) {
+            if (state !== "OUT") return { valid: false, state };
+            state = "WORKING";
+        } else if (eventType === CLOCK_EVENT_TYPE.PAUSA_INICIO) {
+            if (state !== "WORKING") return { valid: false, state };
+            state = "PAUSED";
+        } else if (eventType === CLOCK_EVENT_TYPE.PAUSA_FIN) {
+            if (state !== "PAUSED") return { valid: false, state };
+            state = "WORKING";
+        } else if (eventType === CLOCK_EVENT_TYPE.SALIDA) {
+            if (state !== "WORKING") return { valid: false, state };
+            state = "OUT";
+        } else {
+            return { valid: false, state };
+        }
+    }
+    return { valid: true, state };
+}
+
 /* HOR-R3-03 (DUP-02): _safeTrim local ELIMINADO. Importado de mmUtils. */
 
 // =============================================================================
@@ -305,6 +328,15 @@ export const getEstadoJornada = webMethod(
                     traceId,
                 };
             }
+            const sequence = _validateTimeclockSequence(fichajes);
+            if (!sequence.valid) {
+                return {
+                    status: "ERROR",
+                    data: null,
+                    error: { code: "TIMECLOCK_SEQUENCE_INVALID", message: "La secuencia de eventos de jornada es inconsistente y requiere revision." },
+                    traceId,
+                };
+            }
             const ultimo = fichajes[fichajes.length - 1] || null;
 
             let estado = "SIN_INICIAR";
@@ -420,6 +452,15 @@ export const calcularHorasTrabajadas = webMethod(
             let jornadasAbiertas = 0;
 
             for (const dayRecords of byDay.values()) {
+                const sequence = _validateTimeclockSequence(dayRecords);
+                if (!sequence.valid) {
+                    return {
+                        status: "ERROR",
+                        data: null,
+                        error: { code: "TIMECLOCK_SEQUENCE_INVALID", message: "La secuencia de eventos de jornada es inconsistente y requiere revision." },
+                        traceId,
+                    };
+                }
                 let minutosTrabajados = 0;
                 let minutosPausaJornada = 0;
                 let entradaTs = null;
@@ -439,10 +480,6 @@ export const calcularHorasTrabajadas = webMethod(
                         minutosPausaJornada += Math.max(0, (ts - pausaInicioTs) / 60000);
                         pausaInicioTs = null;
                     } else if (tipo === CLOCK_EVENT_TYPE.SALIDA && entradaTs !== null) {
-                        if (pausaInicioTs !== null) {
-                            minutosPausaJornada += Math.max(0, (ts - pausaInicioTs) / 60000);
-                            pausaInicioTs = null;
-                        }
                         totalMinutosPausa += minutosPausaJornada;
                         minutosTrabajados += (ts - entradaTs) / 60000 - minutosPausaJornada;
                         entradaTs = null;
