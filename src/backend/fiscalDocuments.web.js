@@ -174,13 +174,13 @@ const _rf = (m, key) => _safeTrim(readMovementField(m, key));
 function _csvCell(value) {
   const text = String(value ?? "");
   // Neutralize spreadsheet formulas in untrusted text cells.
-  const safe = /^[\\s\\u0000-\\u001F]*[=+\\-@]/.test(text) ? `'${text}` : text;
-  return `"${safe.replace(/"/g, '""')}"`;
+  const safe = /^[\s\u0000-\u001F]*[=+\-@]/.test(text) ? "'" + text : text;
+  return '"' + safe.replace(/"/g, '""') + '"';
 }
 
 function _buildCsvFromInvoices(invoices) {
   if (!Array.isArray(invoices) || invoices.length === 0) return "";
-  const header = "Numero;Fecha;Tipo;Base;Cuota;Total;FormaPago;Hash\\n";
+  const header = "Numero;Fecha;Tipo;Base;Cuota;Total;FormaPago;Hash\n";
   const rows = invoices.map((inv) => {
     const number = _safeTrim(_invoiceValue(inv, ["invoiceNumber", "numSerieFactura"], "numSerieFactura"));
     const date = _safeTrim(_invoiceValue(inv, ["fechaExpedicion", "fechaOperacion"], "fechaOperacion"));
@@ -200,7 +200,7 @@ function _buildCsvFromInvoices(invoices) {
       _csvCell(method),
       _csvCell(hash),
     ].join(";");
-  }).join("\\n");
+  }).join("\n");
   return header + rows;
 }
 
