@@ -43,26 +43,46 @@ import {
   query as dalQuery,
   getItem as dalGet,
   insertItem as dalInsert,
+  updateItem as dalUpdate,
+  removeById as dalRemove,
 } from "backend/dataAccess";
 
-import { BUSINESS_COLLECTIONS, SDK_CONFIG } from "backend/internalConfig";
+import {
+  BUSINESS_COLLECTIONS,
+  OPERATIONAL_COLLECTIONS,
+  CONTROL_TYPE,
+  SDK_CONFIG,
+} from "backend/internalConfig";
 import { requireMarianManager } from "backend/security";
 import { _toPublicError } from "backend/responseUtils";
 
 import {
-  getQuarterlyTaxSummary,
+  getQuarterlyTaxSummaryInternal,
   getLibroRegistroFacturasExpedidasInternal,
 } from "backend/fiscalAggregator.web";
 
-import { makeTraceId, _safeTrim, withTimeout, _roundMoney } from "public/mmUtils";
+import {
+  makeTraceId,
+  _safeTrim,
+  _looksLikeGuid,
+  _stableSerialize,
+  withTimeout,
+  _roundMoney,
+} from "public/mmUtils";
+import { hashSHA256 } from "backend/securityEngine";
 
 // SSOT-KEYFIELD-02: lectura canonica con fallback alias (contrato unico).
-import { readMovementField } from "backend/data";
+import { readMovementField, readControlPayload } from "backend/data";
 
 const CMS_TIMEOUT_MS = SDK_CONFIG.TIMEOUTS.CMS_MS;
 // Manager package snapshots have their own collection; Z closings remain isolated.
 const DOCS_COL = BUSINESS_COLLECTIONS.PAQUETES_GESTORIA;
 const DATOS_FISCALES_COL = BUSINESS_COLLECTIONS.DATOS_FISCALES;
+const CONTROL_COL = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
+const PACKAGE_MAX_ITEM_BYTES = 450 * 1024; // Wix CMS hard limit: 500 KB per item.
+const PACKAGE_OPERATION_TTL_MS = 10 * 60 * 1000;
+const PACKAGE_VERSION_ALLOCATION_ATTEMPTS = 3;
+const PACKAGE_SCHEMA_VERSION = "1.0";
 
 const STRONG_READ = Object.freeze({ consistencyMode: "strong" });
 
@@ -266,23 +286,36 @@ export const previewManagerPackage = webMethod(
       }
 
       const [summaryRes, bookRes] = await Promise.all([
-        getQuarterlyTaxSummary(year, quarter, { traceId }),
-        getLibroRegistroFacturasExpedidasInternal(year, quarter, {
-          traceId,
-          rateLimitKey: "manager",
-        }),
+        getQuarterlyTaxSummaryInternal(year, quarter, { traceId }),
+        getLibroRegistroFacturasExpedidasInternal(year, quarter, { traceId }),
       ]);
 
-      const summary = summaryRes?.data || null;
-      const invoices = bookRes?.data?.filas || [];
+      if (
+        summaryRes?.status !== "SUCCESS" ||
+        bookRes?.status !== "SUCCESS" ||
+        !summaryRes.data ||
+        !Array.isArray(bookRes.data?.filas) ||
+        summaryRes.data.reachedMaxPages === true ||
+        bookRes.data.reachedMaxPages === true
+      ) {
+        return {
+          status: "ERROR",
+          data: null,
+          error: {
+            code: "PACKAGE_SOURCE_DATA_INCOMPLETE",
+            message: "No se puede previsualizar un paquete si el resumen o el libro fiscal no están completos.",
+            traceId,
+          },
+        };
+      }
 
       return {
         status: "SUCCESS",
         data: {
-          period: { year, quarter },
+          period: { periodType: "QUARTERLY", year, quarter },
           documentIdDraft: _formatDocumentId(year, quarter, 1),
-          summary,
-          invoiceCount: invoices.length,
+          summary: summaryRes.data,
+          invoiceCount: bookRes.data.filas.length,
           previewGeneratedAt: new Date(),
         },
         error: null,
@@ -301,26 +334,370 @@ export const previewManagerPackage = webMethod(
 // BLOQUE 3 - CREAR VERSION DE PAQUETE
 // =============================================================================
 
+function _isDuplicatePackageInsertError(error) {
+  const code = String(error?.code || error?.errorCode || "").toUpperCase();
+  const message = String(error?.message || "").toLowerCase();
+  return [
+    "WDE0074",
+    "WD_ITEM_ALREADY_EXISTS",
+    "WDE0023",
+    "WDE0123",
+  ].includes(code) || /already exists|duplicate|duplicated values/.test(message);
+}
+
+function _packagePeriodMatches(payload, period) {
+  return payload?.periodType === period.periodType &&
+    Number(payload?.fiscalYear) === period.year &&
+    Number(payload?.fiscalQuarter) === period.quarter;
+}
+
+function _packageSnapshotResult(doc, idempotent = false) {
+  return {
+    status: "SUCCESS",
+    data: {
+      documentId: doc._id,
+      periodType: doc.periodType,
+      fiscalYear: doc.fiscalYear,
+      fiscalQuarter: doc.fiscalQuarter,
+      packageVersion: doc.packageVersion,
+      packageStatus: doc.packageStatus,
+      snapshotHash: doc.snapshotHash,
+      invoiceCount: Array.isArray(doc.invoiceData) ? doc.invoiceData.length : 0,
+      idempotent,
+    },
+    error: null,
+  };
+}
+
+async function _findPackageByTraceId(traceId) {
+  if (!traceId) return null;
+  const result = await withTimeout(
+    dalQuery(DOCS_COL).eq("traceId", traceId).limit(2).find(STRONG_READ),
+    CMS_TIMEOUT_MS,
+    "findPackageByTraceId"
+  );
+  const items = Array.isArray(result?.items) ? result.items : [];
+  if (items.length > 1) {
+    throw Object.assign(new Error("PACKAGE_TRACE_ID_NOT_UNIQUE"), {
+      code: "PACKAGE_TRACE_ID_NOT_UNIQUE",
+    });
+  }
+  return items[0] || null;
+}
+
+async function _completePackageOperationClaim(claim, doc) {
+  const payload = readControlPayload(claim);
+  return withTimeout(
+    dalUpdate(CONTROL_COL, {
+      ...claim,
+      status: "COMPLETED",
+      expiresAt: null,
+      payload: {
+        ...payload,
+        documentId: doc._id,
+        snapshotHash: doc.snapshotHash,
+        completedAt: new Date().toISOString(),
+      },
+      _updatedDate: new Date(),
+    }),
+    CMS_TIMEOUT_MS,
+    "completePackageOperationClaim"
+  );
+}
+
+async function _claimPackageOperation(operationId, period, traceId) {
+  const operationHash = await hashSHA256(operationId);
+  const claimId = `MGR_PKG_OP_${operationHash.slice(0, 48)}`;
+
+  let existing = await withTimeout(
+    dalGet(CONTROL_COL, claimId, "strong"),
+    CMS_TIMEOUT_MS,
+    "getPackageOperationClaim"
+  );
+
+  if (existing) {
+    const payload = readControlPayload(existing);
+    if (payload.operationId !== operationId || !_packagePeriodMatches(payload, period)) {
+      return { error: { code: "PACKAGE_OPERATION_ID_REUSED" } };
+    }
+
+    if (existing.status === "COMPLETED" && payload.documentId) {
+      const completedDoc = await withTimeout(
+        dalGet(DOCS_COL, payload.documentId, "strong"),
+        CMS_TIMEOUT_MS,
+        "getCompletedPackageSnapshot"
+      );
+      if (!completedDoc) return { error: { code: "PACKAGE_SNAPSHOT_CLAIM_INCONSISTENT" } };
+      return { completedDoc };
+    }
+
+    const recovered = await _findPackageByTraceId(payload.traceId);
+    if (recovered) {
+      await _completePackageOperationClaim(existing, recovered);
+      return { completedDoc: recovered };
+    }
+
+    const expiresAt = existing.expiresAt ? new Date(existing.expiresAt) : null;
+    if (!expiresAt || !Number.isFinite(expiresAt.getTime()) || expiresAt.getTime() > Date.now()) {
+      return { inProgress: true };
+    }
+
+    // A timed-out claim can be reclaimed only after proving no snapshot was inserted.
+    await withTimeout(
+      dalRemove(CONTROL_COL, claimId),
+      CMS_TIMEOUT_MS,
+      "removeExpiredPackageOperationClaim"
+    );
+  }
+
+  const claim = {
+    _id: claimId,
+    controlType: CONTROL_TYPE.IDEMPOTENCY,
+    dedupeKey: `MANAGER_PACKAGE_CREATE:${operationId}`,
+    status: "ACTIVE",
+    expiresAt: new Date(Date.now() + PACKAGE_OPERATION_TTL_MS),
+    payload: {
+      operationId,
+      periodType: period.periodType,
+      fiscalYear: period.year,
+      fiscalQuarter: period.quarter,
+      traceId,
+    },
+    traceId,
+    _createdDate: new Date(),
+    _updatedDate: new Date(),
+  };
+
+  try {
+    const saved = await withTimeout(
+      dalInsert(CONTROL_COL, claim),
+      CMS_TIMEOUT_MS,
+      "insertPackageOperationClaim"
+    );
+    return { claim: saved || claim };
+  } catch (error) {
+    if (!_isDuplicatePackageInsertError(error)) throw error;
+    existing = await withTimeout(
+      dalGet(CONTROL_COL, claimId, "strong"),
+      CMS_TIMEOUT_MS,
+      "readRacingPackageOperationClaim"
+    );
+    if (!existing) throw error;
+    const payload = readControlPayload(existing);
+    if (payload.operationId !== operationId || !_packagePeriodMatches(payload, period)) {
+      return { error: { code: "PACKAGE_OPERATION_ID_REUSED" } };
+    }
+    if (existing.status === "COMPLETED" && payload.documentId) {
+      const completedDoc = await withTimeout(
+        dalGet(DOCS_COL, payload.documentId, "strong"),
+        CMS_TIMEOUT_MS,
+        "readRacingCompletedPackage"
+      );
+      return completedDoc
+        ? { completedDoc }
+        : { error: { code: "PACKAGE_SNAPSHOT_CLAIM_INCONSISTENT" } };
+    }
+    return { inProgress: true };
+  }
+}
+
+async function _readNextQuarterPackageVersion(year, quarter) {
+  const result = await withTimeout(
+    dalQuery(DOCS_COL)
+      .eq("periodType", "QUARTERLY")
+      .eq("fiscalYear", year)
+      .eq("fiscalQuarter", quarter)
+      .limit(1000)
+      .find(STRONG_READ),
+    CMS_TIMEOUT_MS,
+    "readPackageVersions"
+  );
+  if (typeof result?.hasNext === "function" && result.hasNext()) {
+    throw Object.assign(new Error("PACKAGE_VERSION_HISTORY_LIMIT_EXCEEDED"), {
+      code: "PACKAGE_VERSION_HISTORY_LIMIT_EXCEEDED",
+    });
+  }
+  const versions = (result?.items || [])
+    .map((item) => Number(item.packageVersion))
+    .filter((value) => Number.isSafeInteger(value) && value > 0);
+  return Math.max(0, ...versions) + 1;
+}
+
+function _buildPackageSnapshotBase({ year, quarter, version, summaryData, invoiceData, traceId }) {
+  return {
+    _id: _formatDocumentId(year, quarter, version),
+    periodType: "QUARTERLY",
+    fiscalYear: year,
+    fiscalQuarter: quarter,
+    packageVersion: version,
+    summaryData,
+    invoiceData,
+    packageStatus: "PREPARED",
+    schemaVersion: PACKAGE_SCHEMA_VERSION,
+    source: "FISCAL_AGGREGATOR",
+    traceId,
+    createdAt: new Date(),
+  };
+}
+
 export const createManagerPackageVersion = webMethod(
   Permissions.SiteMember,
-  async () => {
+  async (period = {}) => {
     const traceId = makeTraceId("doc-create");
+    let claim = null;
+    let snapshotInserted = false;
     try {
       await requireMarianManager(traceId);
-      // The dedicated PaquetesGestoria collection now exists, but creation
-      // remains disabled until canonical hashing, size bounds, and concurrent
-      // version allocation are implemented and verified end to end.
+
+      const periodType = _safeTrim(period.periodType || "QUARTERLY").toUpperCase();
+      const year = Number(period.year);
+      const quarter = Number(period.quarter);
+      const operationId = _safeTrim(period.operationId);
+
+      if (periodType !== "QUARTERLY") {
+        return {
+          status: "ERROR",
+          data: null,
+          error: {
+            code: "PACKAGE_PERIOD_NOT_SUPPORTED",
+            message: "La generación de snapshots está habilitada únicamente para periodos trimestrales; el agregador mensual aún no existe.",
+            traceId,
+          },
+        };
+      }
+      if (!Number.isInteger(year) || year < 2000 || year > 9999 ||
+          !Number.isInteger(quarter) || quarter < 1 || quarter > 4) {
+        return {
+          status: "ERROR",
+          data: null,
+          error: { code: "INVALID_PERIOD", message: "Se requiere ejercicio válido y trimestre entre 1 y 4.", traceId },
+        };
+      }
+      if (!_looksLikeGuid(operationId)) {
+        return {
+          status: "ERROR",
+          data: null,
+          error: { code: "PACKAGE_OPERATION_ID_REQUIRED", message: "operationId debe ser un UUID estable para deduplicar la operación.", traceId },
+        };
+      }
+
+      const normalizedPeriod = { periodType, year, quarter };
+      const claimResult = await _claimPackageOperation(operationId, normalizedPeriod, traceId);
+      if (claimResult.error) {
+        return { status: "ERROR", data: null, error: { ...claimResult.error, traceId } };
+      }
+      if (claimResult.completedDoc) return _packageSnapshotResult(claimResult.completedDoc, true);
+      if (claimResult.inProgress) {
+        return {
+          status: "ERROR",
+          data: null,
+          error: {
+            code: "PACKAGE_SNAPSHOT_IN_PROGRESS",
+            message: "La misma operación ya está en curso. Reintenta con el mismo operationId; no generes otra operación.",
+            traceId,
+          },
+        };
+      }
+      claim = claimResult.claim;
+
+      const [summaryRes, bookRes] = await Promise.all([
+        getQuarterlyTaxSummaryInternal(year, quarter, { traceId }),
+        getLibroRegistroFacturasExpedidasInternal(year, quarter, { traceId }),
+      ]);
+
+      if (
+        summaryRes?.status !== "SUCCESS" ||
+        bookRes?.status !== "SUCCESS" ||
+        !summaryRes.data ||
+        !Array.isArray(bookRes.data?.filas) ||
+        summaryRes.data.reachedMaxPages === true ||
+        bookRes.data.reachedMaxPages === true
+      ) {
+        const sourceCode = summaryRes?.error?.code || bookRes?.error?.code || "PACKAGE_SOURCE_DATA_INCOMPLETE";
+        throw Object.assign(new Error("Los datos fiscales de origen no están completos; no se ha creado snapshot."), {
+          code: sourceCode,
+        });
+      }
+
+      const summaryData = summaryRes.data;
+      const invoiceData = bookRes.data.filas;
+      let saved = null;
+
+      for (let attempt = 0; attempt < PACKAGE_VERSION_ALLOCATION_ATTEMPTS; attempt += 1) {
+        const version = await _readNextQuarterPackageVersion(year, quarter);
+        const base = _buildPackageSnapshotBase({
+          year,
+          quarter,
+          version,
+          summaryData,
+          invoiceData,
+          traceId,
+        });
+        const snapshotHash = await hashSHA256(_stableSerialize(base));
+        const snapshot = { ...base, snapshotHash };
+        const itemBytes = Buffer.byteLength(_stableSerialize(snapshot), "utf8");
+
+        if (itemBytes > PACKAGE_MAX_ITEM_BYTES) {
+          throw Object.assign(new Error("El snapshot supera el límite interno de 450 KiB para un item CMS."), {
+            code: "PACKAGE_SNAPSHOT_SIZE_LIMIT_EXCEEDED",
+          });
+        }
+
+        try {
+          saved = await withTimeout(
+            dalInsert(DOCS_COL, snapshot),
+            CMS_TIMEOUT_MS,
+            "insertManagerPackageSnapshot"
+          );
+          snapshotInserted = true;
+          break;
+        } catch (error) {
+          if (!_isDuplicatePackageInsertError(error)) throw error;
+          // Create-only insert + unique _id. A competing version is reread;
+          // never use save/upsert and never overwrite a prior snapshot.
+        }
+      }
+
+      if (!saved) {
+        throw Object.assign(new Error("No se pudo reservar una versión única del paquete tras varios conflictos concurrentes."), {
+          code: "PACKAGE_VERSION_CONFLICT",
+        });
+      }
+
+      try {
+        await _completePackageOperationClaim(claim, saved);
+      } catch (claimError) {
+        log.error("PACKAGE_SNAPSHOT_CLAIM_COMPLETION_FAILED", {
+          traceId,
+          documentId: saved._id,
+          message: claimError?.message || String(claimError),
+        });
+        return {
+          status: "ERROR",
+          data: null,
+          error: {
+            code: "PACKAGE_SNAPSHOT_RECOVERY_REQUIRED",
+            message: "El snapshot está persistido, pero falta confirmar su idempotencia. Reintenta con el mismo operationId; no se ha creado otra versión.",
+            traceId,
+          },
+        };
+      }
+
+      return _packageSnapshotResult(saved, false);
+    } catch (err) {
+      if (claim && !snapshotInserted) {
+        await dalRemove(CONTROL_COL, claim._id).catch((cleanupError) => {
+          log.error("PACKAGE_OPERATION_CLAIM_CLEANUP_FAILED", {
+            traceId,
+            message: cleanupError?.message || String(cleanupError),
+          });
+        });
+      }
       return {
         status: "ERROR",
         data: null,
-        error: {
-          code: "PACKAGE_SNAPSHOT_IMPLEMENTATION_PENDING",
-          message: "La creación de paquetes sigue bloqueada hasta completar hash canónico, límite de tamaño y versionado concurrente seguro en PaquetesGestoria.",
-          traceId,
-        },
+        error: _toPublicError(err, "DOC_CREATE_FAIL"),
       };
-    } catch (err) {
-      return { status: "ERROR", data: null, error: _toPublicError(err, "DOC_CREATE_FAIL") };
     }
   }
 );
