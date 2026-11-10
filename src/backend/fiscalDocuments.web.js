@@ -858,7 +858,7 @@ export const getManagerPackageHistory = webMethod(
       if (year != null) q = q.eq("fiscalYear", year);
       if (periodType === "MONTHLY" && month != null) q = q.eq("fiscalMonth", month);
       if (periodType === "QUARTERLY" && quarter != null) q = q.eq("fiscalQuarter", quarter);
-      const res = await withTimeout(q.descending("_createdDate").limit(50).find(), CMS_TIMEOUT_MS, "docHistory");
+      const res = await withTimeout(q.descending("_createdDate").limit(50).find(STRONG_READ), CMS_TIMEOUT_MS, "docHistory");
       return { status: "SUCCESS", data: res?.items || [], error: null };
     } catch (err) {
       return { status: "ERROR", data: null, error: _toPublicError(err, "DOC_HIST_FAIL") };
@@ -877,7 +877,7 @@ export const getPreparedManagerPackages = webMethod(
           .eq("packageStatus", "PREPARED")
           .descending("_createdDate")
           .limit(20)
-          .find(),
+          .find(STRONG_READ),
         CMS_TIMEOUT_MS,
         "preparedPackages"
       );
