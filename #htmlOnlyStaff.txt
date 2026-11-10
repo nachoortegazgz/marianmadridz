@@ -116,29 +116,7 @@
     .history-table td { padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: middle; }
     .history-scroll { max-height: 220px; overflow-y: auto; border: 1px solid var(--line); border-radius: 10px; }
 
-    /* ── Caja / TPV ── */
-    .cash-panel { margin-bottom: 20px; }
-    .cash-mode-badge { display: inline-block; margin-left: 8px; padding: 2px 8px; border-radius: var(--radius-pill); background: var(--warning-soft); color: var(--warning); font-size: 9px; font-weight: 900; letter-spacing: .06em; text-transform: uppercase; vertical-align: middle; }
-    .cash-mode-badge:empty { display: none; }
-    .cash-state-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 16px; }
-    .cash-state-item { padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--soft); }
-    .cash-state-value { display: block; margin-top: 4px; font-family: var(--font-serif); font-size: 20px; font-weight: 500; color: var(--ink); }
-    .metric-label { margin: 0; color: var(--muted); font-size: 10px; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; }
-    .cash-tabs { display: flex; gap: 4px; margin-bottom: 14px; border-bottom: 1px solid var(--line); }
-    .cash-tab { flex: 1; padding: 10px 12px; border: none; border-bottom: 3px solid transparent; background: transparent; color: var(--muted); font-size: 11px; font-weight: 850; text-transform: uppercase; letter-spacing: .05em; cursor: pointer; transition: color .15s, border-color .15s; }
-    .cash-tab:hover { color: var(--ink); }
-    .cash-tab.active { color: var(--accent-ink); border-bottom-color: var(--accent); }
-    .ticket-box { padding: 14px; border: 1px dashed var(--line-strong); border-radius: 10px; background: #fffefb; font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; font-size: 11.5px; line-height: 1.6; color: var(--ink); }
-    .ticket-title { font-weight: 900; text-align: center; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 8px; font-family: var(--font-sans); font-size: 12px; }
-    .ticket-row { display: flex; justify-content: space-between; gap: 12px; }
-    .ticket-row span:first-child { color: var(--muted); flex-shrink: 0; }
-    .ticket-row span:last-child { text-align: right; word-break: break-all; }
-    .ticket-sep { border-top: 1px dashed var(--line-strong); margin: 8px 0; }
-    .ticket-mono { font-family: monospace; font-size: 10px; }
-    .ticket-issuer { text-align: center; font-size: 10px; color: var(--muted); margin-top: 2px; }
-
     .footer { margin-top: 24px; text-align: center; font-size: 11.5px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 14px; }
-    .employee-select { max-width: 300px; margin-bottom: 8px; }
   </style>
 </head>
 <body>
@@ -146,8 +124,8 @@
     <header class="dashboard-hero">
       <div>
         <p class="hero-eyebrow">Operacion interna</p>
-        <h1>Panel Only Staff</h1>
-        <p class="subtitle" id="userInfo">Sesion activa: Equipo | EQUIPO | TPV</p>
+        <h1>Panel de personal</h1>
+        <p class="subtitle" id="userInfo">Sesión activa: Equipo | EQUIPO | PERSONAL</p>
       </div>
       <span class="role-badge" id="roleBadge">EQUIPO</span>
     </header>
@@ -156,126 +134,23 @@
     <div class="info-banner" id="infoBanner"></div>
     <div class="warn-banner" id="warnBanner"></div>
 
-    <!-- ════════════ CUADRO DE FICHAJE (visible por defecto) ════════════ -->
-    <section class="clock-panel" id="clockPanel">
+    <!-- Estado de jornada: solo lectura hasta habilitar writers con idempotencia y concurrencia. -->
+    <section class="clock-panel" id="statePanel" style="display:none;">
       <div class="clock-panel-head">
-        <div class="panel-title">Registrar actividad</div>
-        <span class="status-time">Fichajes protegidos y trazables (RD-Ley 8/2019)</span>
+        <div class="panel-title">Estado de jornada</div>
+        <span class="status-time">Consulta de registros trazables</span>
       </div>
-      <div class="clock-status-row" id="statusBox" data-status="INACTIVO">
-        <span class="status-value inactivo" id="statusValue">Inactivo</span>
-        <span class="status-time" id="statusTime">Sin fichajes registrados hoy</span>
+      <div class="clock-status-row" id="statusBox" data-status="REVISIÓN">
+        <span class="status-value inactivo" id="statusValue">Pendiente de verificación</span>
+        <span class="status-time" id="statusTime">Estado no consultado</span>
       </div>
       <div class="btn-group">
-        <button class="btn btn-success" id="btnEntrada" type="button">Entrada</button>
-        <button class="btn btn-warn" id="btnPausaInicio" type="button">Inicio Pausa</button>
-        <button class="btn btn-success" id="btnPausaFin" type="button">Fin Pausa</button>
-        <button class="btn btn-danger" id="btnSalida" type="button">Salida</button>
-      </div>
-      <div class="btn-group" style="margin-top:8px;">
-        <button class="btn btn-outline" id="btnRefreshState" type="button">Refrescar estado</button>
-        <button class="btn btn-outline" id="btnOpenCalendar" type="button">Mi Calendario</button>
+        <button class="btn btn-outline" id="btnRefreshState" type="button">Actualizar estado</button>
       </div>
     </section>
 
-    <!-- ════════════ CUADRO DE CAJA / TPV (visible por defecto) ════════════ -->
-    <section class="panel cash-panel" id="cashPanel">
-      <div class="panel-title">Caja / TPV <span class="cash-mode-badge" id="cashModeBadge"></span></div>
-
-      <div class="cash-state-grid">
-        <div class="cash-state-item">
-          <span class="metric-label">Saldo actual</span>
-          <span class="cash-state-value" id="cashSaldo">--</span>
-        </div>
-        <div class="cash-state-item">
-          <span class="metric-label">Operaciones hoy</span>
-          <span class="cash-state-value" id="cashOps">--</span>
-        </div>
-        <div class="cash-state-item">
-          <span class="metric-label">Jornada</span>
-          <span class="cash-state-value" id="cashDiaKey">--</span>
-        </div>
-        <div class="cash-state-item">
-          <span class="metric-label">Modo</span>
-          <span class="cash-state-value" id="cashMode">--</span>
-        </div>
-      </div>
-
-      <div class="cash-tabs">
-        <button class="cash-tab active" data-tab="supplier" type="button">Pago a proveedor</button>
-        <button class="cash-tab" data-tab="withdrawal" type="button">Salida de efectivo</button>
-        <button class="cash-tab" data-tab="reports" type="button">Arqueos / Cierres</button>
-      </div>
-
-      <div class="cash-tab-content" id="tabSupplier">
-        <div class="row">
-          <div class="form-group">
-            <label>Proveedor *</label>
-            <input type="text" id="supplierName" placeholder="Nombre del proveedor" />
-          </div>
-          <div class="form-group">
-            <label>NIF / CIF</label>
-            <input type="text" id="supplierNif" placeholder="B12345678" />
-          </div>
-        </div>
-        <div class="row">
-          <div class="form-group">
-            <label>Importe (EUR) *</label>
-            <input type="number" id="supplierAmount" min="0.01" step="0.01" placeholder="0.00" />
-          </div>
-          <div class="form-group">
-            <label>Referencia factura</label>
-            <input type="text" id="supplierInvoiceRef" placeholder="FAC-2026-001" />
-          </div>
-        </div>
-        <div class="form-group">
-          <label>Concepto *</label>
-          <input type="text" id="supplierConcept" maxlength="200" placeholder="Ej: Compra de material" />
-        </div>
-        <button class="btn btn-warn" id="btnSupplierPayment" type="button">Generar ticket y registrar pago</button>
-      </div>
-
-      <div class="cash-tab-content" id="tabWithdrawal" style="display:none;">
-        <div class="row">
-          <div class="form-group">
-            <label>Importe (EUR) *</label>
-            <input type="number" id="withdrawalAmount" min="0.01" step="0.01" placeholder="0.00" />
-          </div>
-          <div class="form-group">
-            <label>Concepto *</label>
-            <input type="text" id="withdrawalConcept" maxlength="200" placeholder="Ej: Retirada a banco" />
-          </div>
-        </div>
-        <button class="btn btn-danger" id="btnWithdrawal" type="button">Registrar salida de efectivo</button>
-      </div>
-
-      <div class="cash-tab-content" id="tabReports" style="display:none;">
-        <div class="btn-group">
-          <button class="btn btn-outline" id="btnXCount" type="button">Generar Ticket X</button>
-          <button class="btn btn-danger" id="btnZClosing" type="button">Cierre Z Diario</button>
-        </div>
-        <p style="font-size:11px; color:var(--muted); margin-top:8px;">El Ticket X es un arqueo parcial sin cierre. El Cierre Z cierra la jornada y genera el informe fiscal diario.</p>
-      </div>
-
-      <div id="ticketDisplay" style="display:none; margin-top:16px;">
-        <div class="panel-title" style="font-size:13px;">Ticket generado</div>
-        <div class="ticket-box" id="ticketBox"></div>
-      </div>
-
-      <div style="margin-top:16px;">
-        <div class="panel-title" style="font-size:13px;">Movimientos recientes (MovimientosCaja)</div>
-        <div class="history-scroll">
-          <table class="history-table">
-            <thead><tr><th>Hora</th><th>Tipo</th><th>Concepto</th><th>Importe</th><th>Traza / Huella</th></tr></thead>
-            <tbody id="movementsBody">
-              <tr><td colspan="5" style="text-align:center; color:var(--muted);">Sin movimientos</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </section>
-
-    <!-- ════════════ HISTORIAL (visible) / HORAS / ADMIN (ocultos) ════════════ -->
+    <!-- Historial y cálculo de horas: consultas read-only. -->
+    <!-- Historial y cálculo de horas -->
     <div class="grid" id="lowerGrid">
       <div class="panel" id="historyPanel">
         <div class="panel-title">Historial de Fichajes</div>
@@ -309,22 +184,6 @@
         </div>
       </div>
 
-      <div class="panel" id="adminPanel" style="display:none;">
-        <div class="panel-title">Ajuste Horario (Admin)</div>
-        <div class="form-group">
-          <label>Empleado</label>
-          <select id="adjEmployee" class="employee-select"></select>
-        </div>
-        <div class="form-group">
-          <label>Fecha y Hora (referencia)</label>
-          <input type="datetime-local" id="adjDateTime" />
-        </div>
-        <div class="form-group">
-          <label>Motivo del ajuste *</label>
-          <input type="text" id="adjMotivo" placeholder="Ej: Correccion de salida" />
-        </div>
-        <button class="btn btn-warn" id="btnAdjSubmit" type="button">Registrar Ajuste</button>
-      </div>
     </div>
 
     <div class="footer" id="footerInfo">Only Staff | Marian Madrid Peluqueria y Estetica</div>
@@ -335,20 +194,27 @@
       'use strict';
 
       const MESSAGE_TYPES = {
-        READY: 'MM_READY', CONTEXT: 'MM_CONTEXT', NAV: 'MM_NAV',
-        CLOCK: 'CLOCK', GET_STATE: 'GET_STATE', GET_HISTORY: 'GET_HISTORY',
-        HOURS_CALC: 'HOURS_CALC', ADJUSTMENT: 'ADJUSTMENT',
-        TPV_TX: 'TPV_TX', CASHIER_STATE: 'CASHIER_STATE',
-        X_COUNT: 'X_COUNT', Z_CLOSING: 'Z_CLOSING',
-        CLOCK_RES: 'CLOCK_RES', GET_STATE_RES: 'GET_STATE_RES',
-        GET_HISTORY_RES: 'GET_HISTORY_RES', HOURS_CALC_RES: 'HOURS_CALC_RES',
-        ADJUSTMENT_RES: 'ADJUSTMENT_RES',
-        TPV_TX_RES: 'TPV_TX_RES', CASHIER_STATE_RES: 'CASHIER_STATE_RES',
-        X_COUNT_RES: 'X_COUNT_RES', Z_CLOSING_RES: 'Z_CLOSING_RES',
-        ONLY_STAFF_ERROR: 'ONLY_STAFF_ERROR', STAFF_ERROR: 'STAFF_ERROR'
+        READY: 'MM_READY',
+        CONTEXT: 'MM_CONTEXT',
+        GET_STATE: 'GET_STATE',
+        GET_HISTORY: 'GET_HISTORY',
+        HOURS_CALC: 'HOURS_CALC',
+        GET_STATE_RES: 'GET_STATE_RES',
+        GET_HISTORY_RES: 'GET_HISTORY_RES',
+        HOURS_CALC_RES: 'HOURS_CALC_RES',
+        ONLY_STAFF_ERROR: 'ONLY_STAFF_ERROR',
+        STAFF_ERROR: 'STAFF_ERROR'
       };
 
-      const VALID_TYPES = new Set(Object.values(MESSAGE_TYPES));
+      const VALID_TYPES = new Set([
+        MESSAGE_TYPES.READY,
+        MESSAGE_TYPES.CONTEXT,
+        MESSAGE_TYPES.GET_STATE_RES,
+        MESSAGE_TYPES.GET_HISTORY_RES,
+        MESSAGE_TYPES.HOURS_CALC_RES,
+        MESSAGE_TYPES.ONLY_STAFF_ERROR,
+        MESSAGE_TYPES.STAFF_ERROR
+      ]);
 
       let PARENT_ORIGIN = null;
       let traceId = 'staff_widget_' + Date.now().toString(36);
@@ -360,33 +226,12 @@
       const errorBanner = $('errorBanner'), infoBanner = $('infoBanner'), warnBanner = $('warnBanner');
 
       const statusBox = $('statusBox'), statusValue = $('statusValue'), statusTime = $('statusTime');
-      const btnEntrada = $('btnEntrada'), btnPausaInicio = $('btnPausaInicio'),
-            btnPausaFin = $('btnPausaFin'), btnSalida = $('btnSalida'),
-            btnRefreshState = $('btnRefreshState'), btnOpenCalendar = $('btnOpenCalendar');
-
+      const btnRefreshState = $('btnRefreshState');
       const histStart = $('histStart'), histEnd = $('histEnd'), btnLoadHistory = $('btnLoadHistory'), historyBody = $('historyBody');
-      const hoursStart = $('hoursStart'), hoursEnd = $('hoursEnd'), btnCalcHours = $('btnCalcHours'),
-            hoursResult = $('hoursResult'), quickHours = $('quickHours');
-      const adminPanel = $('adminPanel'), adjEmployee = $('adjEmployee'), adjDateTime = $('adjDateTime'),
-            adjMotivo = $('adjMotivo'), btnAdjSubmit = $('btnAdjSubmit');
-
+      const hoursStart = $('hoursStart'), hoursEnd = $('hoursEnd'), btnCalcHours = $('btnCalcHours');
+      const hoursResult = $('hoursResult'), quickHours = $('quickHours');
       const userInfo = $('userInfo'), roleBadge = $('roleBadge');
-
-      const clockPanel = $('clockPanel'), historyPanel = $('historyPanel'), hoursPanel = $('hoursPanel'),
-            cashPanel = $('cashPanel');
-
-      const cashModeBadge = $('cashModeBadge'), cashSaldo = $('cashSaldo'), cashOps = $('cashOps'),
-            cashDiaKey = $('cashDiaKey'), cashMode = $('cashMode');
-      const tabSupplier = $('tabSupplier'), tabWithdrawal = $('tabWithdrawal'), tabReports = $('tabReports');
-      const supplierName = $('supplierName'), supplierNif = $('supplierNif'),
-            supplierAmount = $('supplierAmount'), supplierInvoiceRef = $('supplierInvoiceRef'),
-            supplierConcept = $('supplierConcept'), btnSupplierPayment = $('btnSupplierPayment');
-      const withdrawalAmount = $('withdrawalAmount'), withdrawalConcept = $('withdrawalConcept'),
-            btnWithdrawal = $('btnWithdrawal');
-      const btnXCount = $('btnXCount'), btnZClosing = $('btnZClosing');
-      const ticketDisplay = $('ticketDisplay'), ticketBox = $('ticketBox');
-      const movementsBody = $('movementsBody');
-
+      const statePanel = $('statePanel'), historyPanel = $('historyPanel'), hoursPanel = $('hoursPanel');
 
       /* ── Comunicación ── */
       function _sendToVelo(type, payload = {}, messageId) {
@@ -432,116 +277,27 @@
           : { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', timeZone };
         return new Intl.DateTimeFormat('es-ES', options).format(date);
       }
-      function _formatMoney(value) {
-        const amount = Number(value);
-        if (!Number.isFinite(amount)) return '--';
-        return new Intl.NumberFormat('es-ES', {
-          style: 'currency', currency: contextData?.currencyCode || 'EUR',
-          minimumFractionDigits: 2, maximumFractionDigits: 2
-        }).format(amount);
-      }
-
-      /* ── Estado de jornada ── */
+      /* ── Estado de jornada (read-only) ── */
       function _updateStatus(state) {
         if (!state) return;
-        const estado = state.estadoActual || 'INACTIVO';
+        const estado = state.estadoActual || 'REVISIÓN';
         const map = {
           TRABAJANDO: { text: 'En jornada', cls: 'activo' },
           EN_PAUSA: { text: 'En pausa', cls: 'pausa' },
           INACTIVO: { text: 'Inactivo', cls: 'inactivo' },
-          AJUSTADO: { text: 'Ajustado', cls: 'inactivo' }
+          AJUSTADO: { text: 'Ajustado', cls: 'inactivo' },
+          REVISIÓN: { text: 'Revisión requerida', cls: 'inactivo' }
         };
         const info = map[estado] || { text: estado, cls: 'inactivo' };
         statusValue.textContent = info.text;
-        statusValue.className = `status-value ${info.cls}`;
+        statusValue.className = 'status-value ' + info.cls;
         statusBox.dataset.status = estado;
         if (state.ultimoFichaje) {
           const uf = state.ultimoFichaje;
-          statusTime.textContent = `Ultimo fichaje: ${(uf.tipo || uf.tipoFichaje || '').trim()} ${_formatMadridDate(uf.fechaHora, false)}`.trim();
-        } else { statusTime.textContent = 'Sin fichajes registrados'; }
-        btnEntrada.disabled = estado === 'TRABAJANDO' || estado === 'EN_PAUSA';
-        btnSalida.disabled = estado !== 'TRABAJANDO' && estado !== 'EN_PAUSA';
-        btnPausaInicio.disabled = estado !== 'TRABAJANDO';
-        btnPausaFin.disabled = estado !== 'EN_PAUSA';
-      }
-
-      /* ── Caja ── */
-      function _renderCashierState(state) {
-        if (!state || typeof state !== 'object') {
-          cashSaldo.textContent = '--'; cashOps.textContent = '--';
-          cashDiaKey.textContent = '--'; cashMode.textContent = contextData?.cashierMode || '--';
-          _renderMovements([]);
-          return;
+          statusTime.textContent = 'Último registro: ' + String((uf.tipo || uf.tipoFichaje || '')).trim() + ' ' + _formatMadridDate(uf.fechaHora, false);
+        } else {
+          statusTime.textContent = 'Sin registros verificados para el día';
         }
-        // DTO canónico de cajas.web.js:getCashierState.
-        cashSaldo.textContent = _formatMoney(state.netAmount);
-        cashOps.textContent = Number.isFinite(Number(state.totalOperations)) ? String(state.totalOperations) : '--';
-        cashDiaKey.textContent = state.operationDate || '--';
-        cashMode.textContent = contextData?.cashierMode || state.cashierMode || '--';
-        const movements = Array.isArray(state.movimientos) ? state.movimientos
-          : Array.isArray(state.recentMovements) ? state.recentMovements : [];
-        _renderMovements(movements);
-      }
-
-      function _renderMovements(items) {
-        const movements = Array.isArray(items) ? items : [];
-        if (!movements.length) {
-          movementsBody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--muted);">Sin movimientos</td></tr>';
-          return;
-        }
-        movementsBody.innerHTML = '';
-        movements.forEach((m) => {
-          const tr = document.createElement('tr');
-          const hora = m.hora || (m.fechaHora ? new Intl.DateTimeFormat('es-ES', { hour: '2-digit', minute: '2-digit', timeZone: contextData?.timeZone || 'Europe/Madrid' }).format(new Date(m.fechaHora)) : '');
-          const tipo = m.tipo || m.txType || '';
-          const concepto = m.concepto || m.concept || '';
-          const importe = m.importe != null ? _formatMoney(m.importe) : (m.amount != null ? _formatMoney(m.amount) : '');
-          const traza = m.traza || m.traceId || m.huella || m.fiscalFingerprint || '';
-          [hora, tipo, concepto, importe, traza].forEach((v) => {
-            const td = document.createElement('td'); td.textContent = String(v); tr.appendChild(td);
-          });
-          movementsBody.appendChild(tr);
-        });
-      }
-
-      function _renderTicket(ticket) {
-        if (!ticket) { ticketDisplay.style.display = 'none'; ticketBox.replaceChildren(); return; }
-        ticketDisplay.style.display = 'block';
-        ticketBox.replaceChildren();
-        const appendText = (tag, className, value) => {
-          const element = document.createElement(tag);
-          if (className) element.className = className;
-          element.textContent = String(value);
-          ticketBox.appendChild(element);
-          return element;
-        };
-        const appendRow = (label, value, mono = false) => {
-          const row = document.createElement('div');
-          row.className = 'ticket-row';
-          const key = document.createElement('span');
-          key.textContent = label;
-          const val = document.createElement('span');
-          if (mono) val.className = 'ticket-mono';
-          val.textContent = String(value);
-          row.append(key, val);
-          ticketBox.appendChild(row);
-        };
-        appendText('div', 'ticket-title', ticket.title || 'TICKET');
-        appendRow('Nº:', ticket.ticketNumber || '—');
-        appendRow('Fecha:', _formatMadridDate(ticket.createdAt || new Date(), false));
-        if (ticket.supplierName) appendRow('Proveedor:', ticket.supplierName);
-        if (ticket.supplierNif) appendRow('NIF:', ticket.supplierNif);
-        if (ticket.concept) appendRow('Concepto:', ticket.concept);
-        if (ticket.amount != null) appendRow('Importe:', _formatMoney(ticket.amount));
-        if (ticket.paymentMethod) appendRow('Método:', ticket.paymentMethod);
-        appendText('div', 'ticket-sep', '');
-        if (ticket.traceId) appendRow('Traza:', ticket.traceId, true);
-        if (ticket.fiscalFingerprint) appendRow('Huella fiscal:', ticket.fiscalFingerprint, true);
-        if (ticket.issuerName) {
-          appendText('div', 'ticket-sep', '');
-          appendText('div', 'ticket-issuer', ticket.issuerName);
-        }
-        if (ticket.issuerCif) appendText('div', 'ticket-issuer', 'CIF: ' + ticket.issuerCif);
       }
 
       /* ── Historial / Horas ── */
@@ -599,70 +355,41 @@
       function _renderContext(ctx) {
         contextData = ctx || {};
         if (contextData.isAuthorized !== true) {
-          [clockPanel, historyPanel, hoursPanel, cashPanel, adminPanel]
+          [statePanel, historyPanel, hoursPanel]
             .forEach((panel) => { if (panel) panel.style.display = 'none'; });
-          _showError('Acceso no autorizado o contexto no disponible.');
+          _showError('Acceso no autorizado o contexto de personal no disponible.');
           return;
         }
 
-        /* Cabecera */
         const memberName = contextData.memberName || contextData.employeeName || 'EMPLEADO';
-        const roleLabel = contextData.roleLabel || (contextData.isAdmin ? 'ADMINISTRACION' : (contextData.isCajero ? 'CAJA' : 'EQUIPO'));
-        const panelType = contextData.panelType || 'TPV';
-        userInfo.textContent = `Sesion activa: ${memberName} | ${roleLabel} | ${panelType}`;
+        const roleLabel = contextData.roleLabel || 'EQUIPO';
+        userInfo.textContent = 'Sesión activa: ' + memberName + ' | ' + roleLabel + ' | PERSONAL';
         roleBadge.textContent = roleLabel;
 
-        /* Feature flags: fail closed; the backend must explicitly enable them. */
-        const enableClocking      = contextData.enableClocking      === true;
-        const enableBreaks        = contextData.enableBreaks        === true;
-        const enableCashier       = contextData.enableCashier       === true;
-        const enableScheduleQuery = contextData.enableScheduleQuery === true;  // default OFF
-        const isAdmin   = contextData.isAdmin === true;
+        const enableStateQuery = contextData.enableStateQuery === true;
+        const enableHistory = contextData.enableHistory === true;
+        const enableScheduleQuery = contextData.enableScheduleQuery === true;
 
-        /* Visibilidad */
-        clockPanel.style.display     = enableClocking ? 'block' : 'none';
-        historyPanel.style.display   = enableClocking ? 'block' : 'none';
-        hoursPanel.style.display     = enableScheduleQuery ? 'block' : 'none';
-        cashPanel.style.display      = enableCashier ? 'block' : 'none';
-        adminPanel.style.display     = isAdmin ? 'block' : 'none';
+        statePanel.style.display = enableStateQuery ? 'block' : 'none';
+        historyPanel.style.display = enableHistory ? 'block' : 'none';
+        hoursPanel.style.display = enableScheduleQuery ? 'block' : 'none';
 
-        btnPausaInicio.style.display = enableBreaks ? '' : 'none';
-        btnPausaFin.style.display    = enableBreaks ? '' : 'none';
-
-        /* Caja: cabecera y estado inicial */
-        if (enableCashier) {
-          cashMode.textContent = contextData.cashierMode || '—';
-          cashModeBadge.textContent = contextData.cashierMode ? `(${contextData.cashierMode})` : '';
-          if (contextData.cashierState) _renderCashierState(contextData.cashierState);
-          setTimeout(() => _sendToVelo(MESSAGE_TYPES.CASHIER_STATE, {}), 700);
-        }
-
-        /* Admin: opciones de empleados */
-        if (isAdmin && Array.isArray(contextData.staffOptions)) {
-          adjEmployee.innerHTML = '';
-          contextData.staffOptions.forEach((s) => {
-            const opt = document.createElement('option');
-            opt.value = s.id || s.value;
-            opt.textContent = s.name || s.label || String(s);
-            adjEmployee.appendChild(opt);
-          });
-        }
-
-        /* Estado de jornada */
         if (contextData.estadoInicial) {
           _updateStatus(contextData.estadoInicial);
-        } else if (enableClocking) {
-          setTimeout(() => _sendToVelo(MESSAGE_TYPES.GET_STATE, {}), 500);
+        } else if (enableStateQuery) {
+          setTimeout(() => _sendToVelo(MESSAGE_TYPES.GET_STATE, {}), 300);
         }
 
-        /* Fechas por defecto */
         const today = contextData.today || new Intl.DateTimeFormat('sv-SE', { timeZone: contextData.timeZone || 'Europe/Madrid' }).format(new Date());
-        histStart.value = today; histEnd.value = today;
-        hoursStart.value = today; hoursEnd.value = today;
+        histStart.value = today;
+        histEnd.value = today;
+        hoursStart.value = today;
+        hoursEnd.value = today;
 
-        /* Cancelar fallback: contexto real ya llegó */
-        if (contextFallbackTimer) { clearTimeout(contextFallbackTimer); contextFallbackTimer = null; }
-
+        if (contextFallbackTimer) {
+          clearTimeout(contextFallbackTimer);
+          contextFallbackTimer = null;
+        }
         _hideAllBanners();
       }
 
@@ -671,29 +398,10 @@
       histStart.value = initialToday; histEnd.value = initialToday;
       hoursStart.value = initialToday; hoursEnd.value = initialToday;
 
-      /* ── Tabs de caja ── */
-      const cashTabs = document.querySelectorAll('.cash-tab');
-      cashTabs.forEach((tab) => {
-        tab.addEventListener('click', () => {
-          cashTabs.forEach((t) => t.classList.remove('active'));
-          tab.classList.add('active');
-          tabSupplier.style.display = 'none';
-          tabWithdrawal.style.display = 'none';
-          tabReports.style.display = 'none';
-          const target = tab.dataset.tab;
-          if (target === 'supplier') tabSupplier.style.display = 'block';
-          else if (target === 'withdrawal') tabWithdrawal.style.display = 'block';
-          else if (target === 'reports') tabReports.style.display = 'block';
-        });
+      btnRefreshState.addEventListener('click', () => {
+        _setLoading(btnRefreshState, true, 10000);
+        _sendToVelo(MESSAGE_TYPES.GET_STATE, {});
       });
-
-      /* ── Listeners fichaje ── */
-      btnEntrada.addEventListener('click', () => _sendToVelo(MESSAGE_TYPES.CLOCK, { tipoFichaje: 'ENTRADA' }));
-      btnSalida.addEventListener('click', () => _sendToVelo(MESSAGE_TYPES.CLOCK, { tipoFichaje: 'SALIDA' }));
-      btnPausaInicio.addEventListener('click', () => _sendToVelo(MESSAGE_TYPES.CLOCK, { tipoFichaje: 'PAUSA_INICIO' }));
-      btnPausaFin.addEventListener('click', () => _sendToVelo(MESSAGE_TYPES.CLOCK, { tipoFichaje: 'PAUSA_FIN' }));
-      btnRefreshState.addEventListener('click', () => _sendToVelo(MESSAGE_TYPES.GET_STATE, {}));
-      btnOpenCalendar.addEventListener('click', () => _sendToVelo(MESSAGE_TYPES.NAV, { target: 'STAFF_CALENDAR' }));
 
       /* ── Listeners historial / horas / admin ── */
       btnLoadHistory.addEventListener('click', () => {
@@ -707,138 +415,49 @@
         _setLoading(btnCalcHours, true);
         _sendToVelo(MESSAGE_TYPES.HOURS_CALC, { startDateYMD: start, endDateYMD: end });
       });
-      btnAdjSubmit.addEventListener('click', () => {
-        const employeeId = adjEmployee.value;
-        const motivo = (adjMotivo.value || '').trim();
-        if (!employeeId || !motivo) return _showWarn('Completa Empleado y Motivo del ajuste.');
-        _setLoading(btnAdjSubmit, true);
-        _sendToVelo(MESSAGE_TYPES.ADJUSTMENT, { employeeId, motivoAjuste: motivo });
-      });
-
-      /* ── Listeners caja (con timeout de 12s) ── */
-      btnSupplierPayment.addEventListener('click', () => {
-        const name = (supplierName.value || '').trim();
-        const nif = (supplierNif.value || '').trim();
-        const amount = Number(supplierAmount.value);
-        const concept = (supplierConcept.value || '').trim();
-        const invoiceRef = (supplierInvoiceRef.value || '').trim();
-        if (!name || !concept || !Number.isFinite(amount) || amount <= 0) {
-          _showWarn('Completa proveedor, concepto e importe válido.'); return;
-        }
-        _setLoading(btnSupplierPayment, true, 12000);
-        _sendToVelo(MESSAGE_TYPES.TPV_TX, {
-          txType: 'PAGO_PROVEEDOR',
-          supplierName: name, supplierNif: nif, amount, concept,
-          invoiceRef: invoiceRef || null, paymentMethod: 'EFECTIVO',
-          generateTicket: true, requestFiscalFingerprint: true
-        });
-      });
-
-      btnWithdrawal.addEventListener('click', () => {
-        const amount = Number(withdrawalAmount.value);
-        const concept = (withdrawalConcept.value || '').trim();
-        if (!concept || !Number.isFinite(amount) || amount <= 0) {
-          _showWarn('Completa concepto e importe válido.'); return;
-        }
-        _setLoading(btnWithdrawal, true, 12000);
-        _sendToVelo(MESSAGE_TYPES.TPV_TX, {
-          txType: 'SALIDA_EFECTIVO', amount, concept,
-          generateTicket: true, requestFiscalFingerprint: true
-        });
-      });
-
-      btnXCount.addEventListener('click', () => {
-        _setLoading(btnXCount, true, 12000);
-        _sendToVelo(MESSAGE_TYPES.X_COUNT, { includeBreakdown: true, requestFiscalFingerprint: true });
-      });
-
-      btnZClosing.addEventListener('click', () => {
-        if (!confirm('¿Confirmas el Cierre Z Diario? Esta acción cierra la jornada fiscal.')) return;
-        _setLoading(btnZClosing, true, 12000);
-        _sendToVelo(MESSAGE_TYPES.Z_CLOSING, { confirm: true, requestFiscalFingerprint: true });
-      });
-
       /* ── Respuestas ── */
       function _handleResponse(msg) {
         const type = String(msg.type || '').toUpperCase();
         const payload = msg.payload || {};
-        const data = payload.data, error = payload.error, status = payload.status;
+        const data = payload.data;
+        const error = payload.error;
+        const status = payload.status;
 
         switch (type) {
           case MESSAGE_TYPES.GET_STATE_RES:
-            if (status === 'SUCCESS' && data) { _updateStatus(data); _hideAllBanners(); }
-            else _showError(error?.message || 'No se pudo obtener el estado.');
-            break;
-
-          case MESSAGE_TYPES.CLOCK_RES:
-            _setLoading(btnEntrada, false); _setLoading(btnSalida, false);
-            _setLoading(btnPausaInicio, false); _setLoading(btnPausaFin, false);
-            if (status === 'SUCCESS') {
-              _showInfo('Fichaje registrado correctamente.');
-              setTimeout(() => _sendToVelo(MESSAGE_TYPES.GET_STATE, {}), 500);
-            } else _showError(error?.message || 'Error al registrar el fichaje.');
+            _setLoading(btnRefreshState, false);
+            if (status === 'SUCCESS' && data) {
+              _updateStatus(data);
+              _hideAllBanners();
+            } else {
+              _showError(error?.message || 'No se pudo obtener el estado de jornada.');
+            }
             break;
 
           case MESSAGE_TYPES.GET_HISTORY_RES:
-            if (status === 'SUCCESS') { _renderHistory(data || []); _hideAllBanners(); }
-            else _showError(error?.message || 'Error al cargar el historial.');
+            if (status === 'SUCCESS') {
+              _renderHistory(data || []);
+              _hideAllBanners();
+            } else {
+              _showError(error?.message || 'Error al cargar el historial.');
+            }
             break;
 
           case MESSAGE_TYPES.HOURS_CALC_RES:
             _setLoading(btnCalcHours, false);
-            if (status === 'SUCCESS') { _renderHoursResult(data); _hideAllBanners(); }
-            else _showError(error?.message || 'Error al calcular horas.');
-            break;
-
-          case MESSAGE_TYPES.ADJUSTMENT_RES:
-            _setLoading(btnAdjSubmit, false);
             if (status === 'SUCCESS') {
-              _showInfo('Ajuste registrado correctamente.');
-              adjMotivo.value = ''; adjDateTime.value = '';
-              setTimeout(() => _sendToVelo(MESSAGE_TYPES.GET_STATE, {}), 500);
-            } else _showError(error?.message || 'Error al registrar el ajuste.');
-            break;
-
-          case MESSAGE_TYPES.CASHIER_STATE_RES:
-            if (status === 'SUCCESS' && data) _renderCashierState(data);
-            break;
-
-          case MESSAGE_TYPES.TPV_TX_RES:
-            _setLoading(btnSupplierPayment, false);
-            _setLoading(btnWithdrawal, false);
-            if (status === 'SUCCESS') {
-              _showInfo('Movimiento de caja registrado correctamente.');
-              if (data?.ticket) _renderTicket(data.ticket);
-              supplierName.value = ''; supplierNif.value = ''; supplierAmount.value = '';
-              supplierConcept.value = ''; supplierInvoiceRef.value = '';
-              withdrawalAmount.value = ''; withdrawalConcept.value = '';
-              _sendToVelo(MESSAGE_TYPES.CASHIER_STATE, {});
-            } else _showError(error?.message || 'Error al registrar el movimiento de caja.');
-            break;
-
-          case MESSAGE_TYPES.X_COUNT_RES:
-            _setLoading(btnXCount, false);
-            if (status === 'SUCCESS') {
-              _showInfo('Ticket X generado correctamente.');
-              if (data?.ticket) _renderTicket(data.ticket);
-            } else _showError(error?.message || 'Error al generar Ticket X.');
-            break;
-
-          case MESSAGE_TYPES.Z_CLOSING_RES:
-            _setLoading(btnZClosing, false);
-            if (status === 'SUCCESS') {
-              _showInfo('Cierre Z Diario completado.');
-              if (data?.ticket) _renderTicket(data.ticket);
-              _sendToVelo(MESSAGE_TYPES.CASHIER_STATE, {});
-            } else _showError(error?.message || 'Error en el Cierre Z Diario.');
+              _renderHoursResult(data);
+              _hideAllBanners();
+            } else {
+              _showError(error?.message || 'Error al calcular horas.');
+            }
             break;
 
           case MESSAGE_TYPES.ONLY_STAFF_ERROR:
           case MESSAGE_TYPES.STAFF_ERROR:
-            _showError(error?.message || 'Error en la solicitud.');
-            _setLoading(btnCalcHours, false); _setLoading(btnAdjSubmit, false);
-            _setLoading(btnSupplierPayment, false); _setLoading(btnWithdrawal, false);
-            _setLoading(btnXCount, false); _setLoading(btnZClosing, false);
+            _setLoading(btnRefreshState, false);
+            _setLoading(btnCalcHours, false);
+            _showError(error?.message || 'Error en la consulta.');
             break;
         }
       }
@@ -859,25 +478,16 @@
       setTimeout(() => { if (!contextData) _sendToVelo(MESSAGE_TYPES.READY, { traceId }); }, 600);
       setTimeout(() => { if (!contextData) _sendToVelo(MESSAGE_TYPES.READY, { traceId }); }, 1800);
 
-      /* Fallback: si a los 3 s no llegó MM_CONTEXT, aplicamos defaults
-         equivalentes a lo que envía zonastaff.js v5004. Evita pantalla
-         en blanco. Cuando llegue el contexto real, sobreescribirá. */
+      /* Fallback fail-closed: sin contexto de autorización no se exponen datos. */
       contextFallbackTimer = setTimeout(() => {
         if (!contextData) {
-          console.warn('[only-staff] MM_CONTEXT no recibido, aplicando defaults');
-          // Fallback fail-closed: sin contexto de autorización no se
-          // exponen controles de jornada, caja, inventario ni administración.
+          console.warn('[only-staff] MM_CONTEXT no recibido; se mantiene el panel cerrado');
           _renderContext({
             isAuthorized: false,
-            panelType: 'TPV',
-            enableClocking: false,
-            enableBreaks: false,
-            enableCashier: false,
+            panelType: 'PERSONAL',
+            enableStateQuery: false,
+            enableHistory: false,
             enableScheduleQuery: false,
-            isAdmin: false,
-            isCajero: false,
-            cashierMode: 'DISABLED',
-            currencyCode: 'EUR',
             timeZone: 'Europe/Madrid'
           });
         }
