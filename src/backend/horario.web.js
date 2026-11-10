@@ -591,6 +591,17 @@ export const getHistorialFichajes = webMethod(
             // DTO whitelist: nunca signature/meta completos, nunca deviceIpAddress.
             // La integridad se expone como estado, sin filtrar el HMAC ni datos del dispositivo.
             const integrity = await _getTimeclockIntegrity(rawItems);
+            const recordsByDay = new Map();
+            for (const record of rawItems) {
+                const key = record[F.DAY_KEY];
+                if (!recordsByDay.has(key)) recordsByDay.set(key, []);
+                recordsByDay.get(key).push(record);
+            }
+            const invalidSequenceDays = new Set();
+            for (const [dayKey, dayRecords] of recordsByDay.entries()) {
+                const ordered = dayRecords.sort((a, b) => new Date(a[F.RECORDED_AT]) - new Date(b[F.RECORDED_AT]));
+                if (!_validateTimeclockSequence(ordered).valid) invalidSequenceDays.add(dayKey);
+            }
             const items = rawItems.map((f, index) => ({
                 registradoEn: f[F.RECORDED_AT],
                 horaRegistrada: f[F.RECORDED_TIME],
@@ -599,6 +610,7 @@ export const getHistorialFichajes = webMethod(
                 diaClave: f[F.DAY_KEY],
                 ajusteMotivo: f[F.ADJUSTMENT_REASON] || null,
                 integrityStatus: integrity.verified[index] ? "VERIFIED" : "UNVERIFIED",
+                sequenceStatus: invalidSequenceDays.has(f[F.DAY_KEY]) ? "INVALID" : "VALID",
             }));
 
             return { status: "OK", data: { items, total: items.length }, traceId };
