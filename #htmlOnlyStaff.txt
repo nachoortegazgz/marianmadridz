@@ -584,6 +584,9 @@
         appendLine(`Horas trabajadas: ${workedHours}h (${formatted})`, 'font-weight:600');
         appendLine(`Tiempo de pausa: ${Number(data.horasPausaDecimal || 0)}h`, 'color:var(--muted)');
         appendLine(`Fichajes procesados: ${Number(data.totalFichajesProcesados || 0)}`, 'font-size:12px;color:var(--muted)');
+        if (Number(data.jornadasAbiertas || 0) > 0) {
+          appendLine(`Jornadas abiertas: ${Number(data.jornadasAbiertas)} (el tiempo en curso no se incluye)`, 'font-size:12px;color:var(--muted)');
+        }
       }
 
       /* ═════════════════════════════════════════════════════════════════
