@@ -59,7 +59,7 @@ La implementación de esta rama solo genera snapshots **trimestrales**. El agreg
 
 ## 5. Validación
 
-**Pendiente de ejecutar en CI:** suite offline, contratos SDK Cart V2 / Bookings Reader V2 y ESLint sobre el head de la rama.
+**Ejecutado sobre el head actual:** workflow `42810977998` SUCCESS (`f330a32861377b0598888d7ad5c3b0f371ce1c2c`): 51 suites / 512 tests / 0 fallos; contratos SDK Cart V2 y Bookings Reader V2, y ESLint correctos.
 
 **No ejecutado:** Wix Local Editor, runtime WebMethods, permisos efectivos de `PaquetesGestoria`, inserción en CMS QA, prueba de concurrencia real y descarga desde el sitio publicado.
 
@@ -67,11 +67,11 @@ La existencia de la colección `PaquetesGestoria` y sus hooks está documentada,
 
 ## 6. Condiciones para activar
 
-1. CI verde sobre el head final.
-2. Verificación read-only de esquema y permisos de `PaquetesGestoria`.
-3. Prueba en un sitio QA aislado y descartable, con fixtures propios; nunca editar ledgers del CMS publicado.
-4. Pruebas de UUID repetido, concurrencia, colisión de versión, timeout ambiguo, hash alterado, tamaño límite y descarga.
-5. Revisión del diff y aprobación antes de integrar o desplegar.
+1. **Superado:** CI verde sobre el head actual.
+2. **Superado en lectura:** esquema y permisos de `PaquetesGestoria` verificados; `totalCount=0`.
+3. **Pendiente:** prueba en un sitio QA aislado y descartable, con fixtures propios; nunca editar ledgers del CMS publicado.
+4. **Pendiente runtime:** UUID repetido, concurrencia, colisión de versión, timeout ambiguo, hash alterado, tamaño límite y descarga.
+5. **Pendiente:** revisión final del diff y aprobación antes de integrar o desplegar.
 
 La creación de snapshots no acredita conformidad SIF/VERI*FACTU ni convierte el borrador fiscal en una declaración tributaria oficial.
 
@@ -100,6 +100,6 @@ Fuentes Wix: [Data Collections API](https://dev.wix.com/docs/api-reference/busin
 - La exportación CSV ahora escapa comillas y delimitadores en todas las columnas de texto y neutraliza prefijos de fórmula de hoja de cálculo (`=`, `+`, `-`, `@`, incluidos prefijos de control/espacio). Las columnas numéricas permanecen numéricas.
 - Se añadieron pruebas ejecutables del helper CSV para comillas, separadores y fórmulas.
 - El writer verifica `snapshotHash` antes de devolver éxito tras la inserción y también en los caminos de recuperación/idempotencia. Un snapshot no verificable queda bloqueado y no se devuelve como operación completada.
-- CI del head `7d3e9322bfbffbfeba7907c03fb76690ada84bba`: workflow `42810793068` SUCCESS; suite offline, contratos SDK Cart V2 / Bookings Reader V2 y ESLint correctos.
+- CI del head `f330a32861377b0598888d7ad5c3b0f371ce1c2c`: workflow `42810977998` SUCCESS; 51 suites / 512 tests / 0 fallos, contratos SDK Cart V2 / Bookings Reader V2 y ESLint correctos.
 
 Estas pruebas siguen siendo offline. La inserción real, los hooks, los permisos efectivos y la descarga desde un sitio QA aislado siguen pendientes.
