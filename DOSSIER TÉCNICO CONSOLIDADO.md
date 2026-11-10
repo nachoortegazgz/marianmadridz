@@ -1062,3 +1062,154 @@ La decisión del transporte de exports (Resend frente a Microsoft Graph/mecanism
 Referencia: [auditoría de implantación Capa 3](docs/audits/2026-11-09-capa3-implementation-state.md).
 
 ---
+
+# ✅ CHECKLIST DE NECESIDADES — WEB MARIANMADRID.ES
+
+## Definición funcional de características desde la perspectiva de la propietaria
+
+**Repositorio:** `nachoortegazgz/marianmadridz`
+**Perspectiva:** Marian Madrid, propietaria, estilista y autónoma.
+**Cambio respecto a la versión anterior:** la columna **“Lo que necesito”** ya no está en lenguaje coloquial, sino como **definición funcional concreta y verificable** de cada característica. El resto de columnas (“Por qué me importa”, “Cómo sabré que funciona”, “Estado”) se mantienen al servicio de la comprobación por parte de la propietaria.
+
+---
+
+### 📖 Glosario mínimo de términos usados en las definiciones
+
+| Término | Definición operativa |
+|---|---|
+| **Reserva simple** | Cita de un solo bloque continuo: el profesional está ocupado de principio a fin (ej. corte 30 min). |
+| **Reserva dual con gap** | Cita formada por **dos o tres fases**: aplicación (profesional ocupado) → **gap de exposición** (profesional libre, sillón ocupado) → acabado (profesional ocupado). El **gap libera la agenda del profesional** para aceptar otra reserva simple o corta. |
+| **Gap** | Intervalo entre fases en el que el profesional **no** está ocupado pero el recurso físico (sillón, lavacabezas) sí. |
+| **Fianza condicional** | Cobro anticipado obligatorio solo por encima de un umbral de precio; opcional o inexistente por debajo. |
+| **Política de cancelación 24 h** | Reembolso automático si la cancelación se produce con ≥24 h de antelación; retención si es posterior. |
+| **Canje parcial** | Uso de una tarjeta regalo por importe inferior al saldo, dejando remanente y estado `ACTIVE`. |
+| **Registro fiscal inalterable** | Asiento con número correlativo, base, IVA y huella encadenada que no puede editarse ni borrarse tras su emisión. |
+| **Consentimiento granular** | Casillas independientes y no premarcadas para finalidades distintas (datos de salud, imagen, cookies). |
+
+---
+
+## A. AGENDA Y OPERATIVA DEL SALÓN
+
+| ID | Lo que necesito (definición funcional) | Por qué me importa | Cómo sabré que funciona | Estado |
+|---|---|---|---|---|
+| **A-01** | **Reserva online 24/7**: la clienta selecciona servicio, profesional, fecha y hora, y confirma sin intervención del salón, en cualquier franja horaria. | Atender el teléfono con las manos llenas de tinte resta concentración y calidad. | Entro como clienta a las 22:00 y completo una reserva sin ayuda de nadie. | |
+| **A-02** | **Reserva dual con gap de tiempo**: servicio dividido en fases (aplicación / exposición / acabado) donde la fase de exposición **libera la agenda del profesional** manteniendo ocupado el recurso físico. | Si la agenda me bloquea 90 minutos seguidos por unas mechas, pierdo la mitad de la facturación del día. | Reservo un tinte largo y, durante su gap, el sistema me permite meter un corte de caballero o un secado sin conflicto. | |
+| **A-03** | **Configuración por servicio de las fases**: cada servicio define duración total, minutos de aplicación, minutos de exposición (gap) y minutos de acabado, y el backend los lee para calcular disponibilidad. | No es lo mismo un corte de 30 min que unas babylights de 90; si el sistema no distingue, o me sobra agenda o me falta. | La ficha de cada servicio muestra sus tres fases y coinciden con lo que hago en el tocador. | |
+| **A-04** | **Catálogo de servicios cortos compatibles con el gap**: servicios simples (corte express, secado, manicura) reservables **durante** la fase de exposición de una reserva dual. | El gap del tinte es dinero que hoy se pierde; con servicios cortos complementarios se factura. | Reservo tinte + corte simultáneo desde dos dispositivos y ambas citas quedan confirmadas sin conflicto. | |
+| **A-05** | **Sincronización bidireccional con Google Calendar del salón**: las citas creadas en la web aparecen en el calendario y los bloqueos del calendario se reflejan en la disponibilidad. | Necesito verlo también desde el móvil mientras estoy fuera o de camino al salón. | El calendario y la web muestran las mismas citas en menos de 1 minuto, en ambos sentidos. | |
+| **A-06** | **Panel de estado por cita**: cada cita muestra fase actual (aplicación / gap / acabado), profesional asignado y recurso físico ocupado. | No quiero que una compañera pregunte “¿esta lleva tinte?” delante de la clienta. | En el panel del salón cada cita muestra su fase y su profesional en tiempo real. | |
+
+---
+
+## B. CAJA Y DINERO
+
+| ID | Lo que necesito (definición funcional) | Por qué me importa | Cómo sabré que funciona | Estado |
+|---|---|---|---|---|
+| **B-01** | **Fianza condicional por umbral de precio**: servicios > 30-40 € exigen señal obligatoria (15 € o 20%) antes de confirmar; servicios ≤ umbral no la exigen. | Bloquear 2 horas para unas mechas de 89 € y que no aparezca es trabajar a pérdidas. | Reservo unas babylights desde fuera: sin pagar la señal, la cita no se confirma; con un corte de 25 €, sí se confirma sin señal. | |
+| **B-02** | **Pasarela de pago segura con tarjeta y Bizum** integrada en el flujo de reserva (Wix Pay / Redsys / Stripe). | Si el pago es complicado, la clienta abandona y pierdo la reserva. | Hago una reserva de prueba con tarjeta real en entorno de pruebas y el cobro se confirma. | |
+| **B-03** | **Política de cancelación 24 h con reembolso automático**: cancelación ≥24 h antes devuelve la fianza sin intervención manual. | No quiero estar devolviendo dinero a mano ni quedar mal con una clienta puntual. | Cancelo con 30 h de antelación y la devolución se ejecuta sola. | |
+| **B-04** | **Retención de fianza por cancelación tardía**: cancelación <24 h retiene la fianza como compensación, registrada como ingreso. | El hueco ya está perdido; la fianza lo cubre. | Cancelo con 2 h de antelación y el sistema no devuelve; queda registrada la retención. | |
+| **B-05** | **Descuento de fianza en ticket final**: el importe ya abonado como señal se resta automáticamente del total del servicio al cerrar la cita. | Cobrar dos veces es la vía más rápida a una reclamación. | Al cerrar el ticket de una clienta que pagó fianza, el importe a cobrar ya viene con la fianza restada. | |
+| **B-06** | **Tarjeta regalo con código único, firma criptográfica y QR**, canjeable por lectura desde móvil en el salón, con **canje parcial** (saldo remanente) y estado `ACTIVE` → `EXHAUSTED`. | Los bonos en papel se pierden, se duplican y generan discusiones. | Escaneo el QR desde el móvil y el saldo baja; si lo escaneo dos veces seguidas, la segunda no descuenta. | |
+| **B-07** | **Detección de bono manipulado o inventado**: firma inválida o saldo alterado rechazados con aviso. | Si alguien puede fabricarse un bono, pierdo dinero y credibilidad. | Pruebo con un código inventado y con un saldo manipulado: ambos se rechazan. | |
+| **B-08** | **Registro unificado de cobros** (web, salón, bono, producto) que cuadre con el cierre de caja diario. | Si la caja no cuadra con la web, es imposible saber si el negocio va bien. | El total del cierre de caja coincide con la suma de cobros online + mostrador del día. | |
+| **B-09** | **Stock de La Boutique sincronizado con el inventario físico** (fase 1: manual vía app Wix; fase 2: conexión con TPV). | Vender el último sérum online y a la vez en mostrador es una reclamación segura. | Vendo el último producto en el salón y la web deja de permitir la compra en el plazo definido. | |
+
+---
+
+## C. EQUIPO
+
+| ID | Lo que necesito (definición funcional) | Por qué me importa | Cómo sabré que funciona | Estado |
+|---|---|---|---|---|
+| **C-01** | **Usuarios individuales con roles diferenciados** (propietaria / admin / staff), con permisos por función y acceso restringido a caja y fichas sensibles. | Si todas usamos el mismo usuario, no sé quién ha tocado qué. | Doy de alta a una nueva oficiala con rol limitado y no puede ver la caja ni las fichas médicas. | |
+| **C-02** | **Ficha capilar y de salud confidencial** (`ClientHealthAndConsent`): alergias PPD, sensibilidad de cuero cabelludo e historial de fórmulas, solo accesible por admin y personal autorizado; no indexable ni accesible por API pública. | Son datos sensibles; si se filtran, es un problema legal y de confianza. | Intento abrir la ficha con un usuario no autorizado y el sistema lo bloquea. | |
+| **C-03** | **Fichaje laboral inmutable append-only** de entrada, salida y pausa, sin posibilidad de edición posterior. | La ley laboral me obliga (RD-ley 8/2019) y en una inspección no puedo demostrar nada si se puede tocar. | Ficho entrada, intento editar el registro y el sistema no me deja. | |
+| **C-04** | **Firma HMAC-SHA256 por evento de fichaje y cadena de hashes** que detecta cualquier manipulación. | Si alguien puede cambiar una hora sin dejar rastro, el registro no vale ante Inspección. | Al intentar alterar un fichaje, el sistema lo marca como manipulación y conserva el original. | |
+
+---
+
+## D. EXPERIENCIA DE LA CLIENTA
+
+| ID | Lo que necesito (definición funcional) | Por qué me importa | Cómo sabré que funciona | Estado |
+|---|---|---|---|---|
+| **D-01** | **Precios con IVA incluido visibles en todo el catálogo** y en el flujo de reserva. | La transparencia evita malentendidos en caja y atrae a quien busca un servicio concreto. | Recorro el catálogo y cada precio indica “IVA incl.”. | |
+| **D-02** | **Aviso legal obligatorio en el 100% de respuestas de la IA**: “Presupuesto y diagnóstico orientativos sujetos a valoración capilar previa en tocador”. | La IA es un reclamo, pero no puede prometer un rubio imposible sobre un tinte negro. | Pruebo el asistente varias veces y en todas aparece el aviso legal. | |
+| **D-03** | **Cuestionario previo obligatorio** a la IA: longitud del cabello, tratamientos químicos en los últimos 6 meses y necesidad principal, validados antes de llamar a la API. | Sin esos datos, la recomendación es humo y genera expectativas falsas. | Intento usar el asistente sin rellenar los campos y no me deja avanzar. | |
+| **D-04** | **Prohibición de garantizar resultados de color sin prueba de mecha** en cabellos teñidos o decolorados, verificada con test de prompt malicioso. | Un “te quedará genial” sin prueba de mecha es una reclamación esperando a ocurrir. | Le pido a la IA un rubio sobre tinte negro y me advierte de la necesidad de prueba de mecha previa. | |
+| **D-05** | **Claves de API en `wix-secrets-backend`**, sin exposición en frontend. | Si alguien roba la clave, me llega la factura de OpenAI y no sé por qué. | El asesor técnico confirma que no hay claves en el código de la web visible al navegador. | |
+| **D-06** | **Timeout de 9 s con fallback estructurado** en la IA: si tarda o devuelve JSON malformado, la web responde con mensaje alternativo sin colgarse. | Una web que se cuelga espanta a la clienta. | Simulo el fallo o la lentitud y la web responde con “vuelve a intentarlo o llámanos”. | |
+| **D-07** | **Área privada de cliente** (Wix Members): registro/login, historial de citas y compras. | La fidelización empieza por que la clienta sienta que tiene su espacio. | Entro con un usuario de prueba y veo mi historial de citas y compras. | |
+| **D-08** | **Canales de contacto operativos**: formulario web, Google Maps, teléfonos y WhatsApp directo. | Es la puerta de entrada de mucha gente que aún no se atreve a reservar. | Envío un mensaje desde el formulario y llega; el mapa apunta bien; el botón de WhatsApp abre la conversación. | |
+
+---
+
+## E. HACIENDA Y GESTORÍA
+
+| ID | Lo que necesito (definición funcional) | Por qué me importa | Cómo sabré que funciona | Estado |
+|---|---|---|---|---|
+| **E-01** | **Registro fiscal inalterable por cada venta** (reserva, bono, producto) con número correlativo sin saltos, fecha, base imponible e IVA desglosado. | La ley antifraude (Veri*factu, RD 1007/2023) ya no permite cobros sin trazabilidad. | Saco el listado del trimestre y todos los números son seguidos, sin huecos. | |
+| **E-02** | **Bloqueo de edición y borrado** de facturas emitidas. | Si se puede tocar, no vale ante Hacienda. | Intento editar una factura ya emitida y el sistema no me deja. | |
+| **E-03** | **Cálculo exacto de IVA 21% al céntimo** en cada servicio, sin desviaciones por redondeo. | El asesor no debe tener que corregir ni un céntimo. | Sumo base + IVA de varias facturas y cuadra exactamente con el total. | |
+| **E-04** | **Cadena de hashes SHA-256 (`hashChain`) entre registros fiscales**: cada asiento contiene la huella del anterior. | Es lo que garantiza que el libro es inalterable de verdad. | El asesor técnico confirma la cadena y que un cambio en una factura la rompe. | |
+| **E-05** | **QR AEAT en facturas simplificadas** apuntando al endpoint oficial `ValidarQR`. | Es el mecanismo que Hacienda está exigiendo para validar. | El QR se lee con el móvil y lleva a la web oficial con los datos correctos. | |
+| **E-06** | **Exportación CSV/Excel normalizada**: delimitador `;`, decimal `,`, UTF-8 BOM, columnas Fecha / Nº Factura / Concepto / Base / % IVA / Cuota / Total / Método de pago. | Si mi asesor tiene que picar los datos a mano, me cobra más y se pierde tiempo. | El asesor importa el archivo en A3 o Contasol sin retoques, con tildes correctas y columnas en su sitio. | |
+| **E-07** | **Fila de totales al céntimo** al final del CSV, coincidente con el detalle. | Es la prueba de que no se ha colado nada. | La suma de bases, IVAs y totales del detalle coincide exactamente con la fila de totales. | |
+| **E-08** | **NIF del emisor y, si procede, del destinatario** en cada factura. | Es obligatorio y evita rechazos y preguntas. | Reviso una factura mía y una con NIF de clienta y ambas salen completas. | |
+
+---
+
+## F. PROTECCIÓN DE DATOS Y NORMATIVA
+
+| ID | Lo que necesito (definición funcional) | Por qué me importa | Cómo sabré que funciona | Estado |
+|---|---|---|---|---|
+| **F-01** | **Consentimiento expreso, separado y no premarcado para datos de salud capilar**, con registro de fecha, hora e IP. | Son datos sensibles según el RGPD; sin consentimiento claro, hay sanción. | La casilla de salud es independiente, no viene marcada y queda registrada con fecha e IP. | |
+| **F-02** | **Consentimiento específico y revocable para uso de imagen** (“antes y después”), separado del de salud, con registro de fecha e IP. | Publicar una foto sin permiso es una reclamación segura. | La casilla de imagen es distinta, no premarcada, queda constancia y puedo retirar el consentimiento. | |
+| **F-03** | **Banner de cookies AEPD con dos botones al mismo nivel** (“Aceptar todas” / “Rechazar todas”) y bloqueo de Meta Pixel, Google Analytics y TikTok Pixel hasta consentimiento. | La AEPD exige que rechazar sea tan fácil como aceptar; si no, sanción. | Entro con navegador limpio y hasta que pulso un botón, los píxeles no cargan. | |
+| **F-04** | **Minimización de datos**: solo campos necesarios para cada finalidad en formularios y fichas. | El RGPD exige minimización; más datos = más riesgo. | Repaso formularios y fichas y no hay campos “por si acaso”. | |
+| **F-05** | **Procedimiento operativo para ejercer derechos de acceso, rectificación y supresión**. | Es un derecho de la clienta y una obligación mía. | Simulo una solicitud y hay un procedimiento claro para atenderla. | |
+| **F-06** | **Aviso Legal, Política de Privacidad y Política de Cookies visibles y coherentes** con lo que hace la web. | La LSSI-CE me obliga y la coherencia con el banner es imprescindible. | Los tres enlaces son accesibles desde cualquier página y su contenido coincide con el funcionamiento real. | |
+| **F-07** | **Cláusula de desistimiento de 14 días con excepción Art. 103** para cosméticos desprecintados en Términos y Condiciones. | Es la excepción legal y hay que decirlo por escrito. | Leo los Términos y aparece la cláusula tal cual, sin ambigüedad. | |
+
+---
+
+## G. CRECIMIENTO DEL NEGOCIO
+
+| ID | Lo que necesito (definición funcional) | Por qué me importa | Cómo sabré que funciona | Estado |
+|---|---|---|---|---|
+| **G-01** | **Upselling en checkout**: sugerencia de hidratante exprés (+12 €) al reservar Corte de Autor. | El upselling bien hecho sube el ticket medio sin fricción. | Reservo un corte como clienta y me aparece la sugerencia con un clic. | |
+| **G-02** | **Venta cruzada con descuento**: champú matizador al 10% al comprar bono de mechas. | Vendo más producto y fidelizo. | Compro un bono y veo la sugerencia del champú con el descuento aplicado. | |
+| **G-03** | **Promociones programables en horas valle** (ej. 15% en cortes martes 10-13 h). | Los martes por la mañana están flojos y necesito llenarlos. | Programo una promo y compruebo que en la franja indicada el precio aparece con descuento. | |
+| **G-04** | **Recordatorio automático WhatsApp/SMS a las 4-5 semanas** del tinte o corte, con enlace directo a reservar. | La clienta fiel vuelve sola si se le recuerda con cariño. | Tras una cita, recibo el recordatorio en plazo y el enlace funciona. | |
+| **G-05** | **Confirmación de cita y recordatorio 24 h antes** con enlace para cancelar o modificar. | Reduce no-shows y descarga el teléfono. | Reservo y recibo ambos mensajes con el enlace operativo. | |
+| **G-06** | **Bonos y suscripciones** (4 peinados al mes, bono barba) con redención de sesiones sin duplicar citas. | Es ingreso recurrente y fideliza. | Contrato un bono como clienta y voy gastando sesiones sin duplicar citas. | |
+| **G-07** | **Blog e integración de redes** (Instagram, TikTok, Facebook, YouTube) con contenido vivo. | La marca se construye también fuera de la reserva. | Navego por la web y veo contenido actualizado y enlaces a redes. | |
+
+---
+
+## H. TRANQUILIDAD Y CRITERIO FINAL DE ÉXITO
+
+| ID | Lo que necesito (definición funcional) | Por qué me importa | Cómo sabré que funciona | Estado |
+|---|---|---|---|---|
+| **H-01** | **Operativa diaria completa sin fricción**: reserva dual con gap, fianza, canje de bono por QR y cierre de caja en una sola jornada real. | Si la web me da más trabajo que alivio, no me sirve. | Hago una semana real con el sistema y no echo de menos el papel ni el teléfono. | |
+| **H-02** | **Antirregresión**: cada cambio va acompañado de prueba de que lo anterior sigue funcionando. | No quiero que un arreglo de hoy me tumbe la caja de mañana. | Cada cambio llega con prueba documentada de que el flujo previo sigue operativo. | |
+| **H-03** | **Documento de estado legible por la propietaria** (`CALIDAD_CERO_DEUDA.md` o equivalente) actualizado tras cada refactor. | Necesito saber en qué punto estamos sin tecnicismos. | Existe el documento, lo entiendo y está actualizado a la última versión. | |
+| **H-04** | **Sesión presencial de aceptación** con Marian delante, cubriendo reserva dual, bono por QR y CSV para el asesor. | Quiero verlo funcionar con mis clientas y mis servicios reales, no en teoría. | Hacemos la sesión, probamos los tres flujos y yo doy el visto bueno firmado. | |
+
+---
+
+## 🎯 USO POR PARTE DEL MODELO IA VERIFICADOR
+
+1. **La columna “Lo que necesito” ya es una definición funcional cerrada**: cada fila responde a una característica concreta (reserva dual con gap, fianza condicional, canje parcial, registro fiscal inalterable…). El verificador debe comprobar **esa definición**, no una interpretación libre.
+2. **Evidencia obligatoria**: un requisito solo pasa a ✅ si existe prueba verificable (archivo real en `src/`, test ejecutado, archivo CSV revisado por el asesor, acta de sesión). El “estado declarado” en los dossiers **no es evidencia**.
+3. **Prioridad para la propietaria**:
+   - 🔴 **Antes de abrir al público:** bloques **A, B, C, E, F** completos (reserva dual con gap, fianza, fichaje, fiscalidad y RGPD).
+   - 🟡 **Optimización comercial:** bloque **D** y **G-01, G-02, G-04, G-05**.
+   - 🟢 **Medio plazo:** **G-03, G-06, G-07**.
+4. **Criterio final de apto:** bloques A–F completos + sesión presencial del bloque H + documento de estado legible por Marian (H-03).
+5. **Si algo no es verificable**, se marca **⚠️ no comprobable aún** y se escala a revisión humana. Nunca se inventa un ✅.
+
+---
+
+## 📌 Nota sobre el repositorio
+
+Se trabaja sobre **`nachoortegazgz/marianmadridz`**. Los dossiers originales citaban el repositorio con sufijo (`marianmadridXXXXX`) y describían módulos con nombres que el propio dossier reconoce como “solución greenfield no auditada” (`bookingsEngine.web.js`, `aiConsultant.web.js`, `giftCards.web.js`, etc.). Esa lista de nombres **no es prueba** de que existan en el repositorio. La verificación de cada fila debe hacerse contra el árbol real de `src/` (backend y pages), no contra los nombres de los dossiers.
