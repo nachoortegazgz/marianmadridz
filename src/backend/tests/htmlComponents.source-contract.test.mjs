@@ -119,10 +119,9 @@ test("confirmation navigation uses canonical URL constants re-exported by mmUtil
 });
 
 
-test("staff admin navigation targets the published ZONA MARIAN route", () => {
-  assert.match(bridge, /ADMIN_PANEL: "\/zona-marian"/);
-  assert.match(staffPage, /case "ADMIN_PANEL":[\s\S]*?location\.to\(URLS\.ADMIN_PANEL\)/);
-  assert.doesNotMatch(staffPage, /location\.to\("\/administracion"\)/);
+test("staff widget has no navigation to unimplemented or unrelated routes", () => {
+  assert.doesNotMatch(staffPage, /MESSAGE_TYPES\.NAV|location\.to|URLS/);
+  assert.doesNotMatch(onlyStaffHtml, /MM_NAV|btnOpenCalendar|STAFF_CALENDAR|POS_CHECKOUT|CAJA_ACTUAL/);
 });
 
 
