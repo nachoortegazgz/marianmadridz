@@ -216,3 +216,19 @@ Cambios propuestos:
 - No se inspeccionó visualmente el contenido de los HTML Components que no están sincronizados al repositorio.
 - La ausencia de una ruta en ListStaticPages no prueba por sí sola un 404 para páginas gestionadas por apps.
 - La auditoría no certifica pagos, reservas, stock, seguridad runtime, RGPD ni cumplimiento fiscal.
+
+
+## Addendum — 2026-11-10: ZONA STAFF reducida a capacidades verificables
+
+La consulta read-only de Wix Ricos Site Context API devuelve 9 páginas estáticas y 2 dinámicas, con `published=true`. Confirma `/onlystaff` (ZONA STAFF) y `/zona-marian` (ZONA MARIAN). No devuelve páginas estáticas ni dinámicas para `/pos-checkout`, `/caja-actual` o `/mi-calendario`. La documentación oficial advierte que el listado excluye páginas secundarias gestionadas por Wix Apps; estos tres destinos no se han identificado como rutas nativas de una app, por lo que no se deben inventar ni enlazar.
+
+En la rama `fix/staff-readonly-surface-20261110` se elimina del snapshot de `#htmlOnlyStaff.txt`:
+
+- El panel de caja/TPV, pagos a proveedores, salidas, Ticket X y Cierre Z (responsabilidad de ZONA MARIAN; el widget staff no tenía handlers backend).
+- Los botones de entrada, pausa y salida, y el panel de ajustes de personal (writers deshabilitados en backend).
+- El botón y handler de calendario que apuntaba a `/mi-calendario`.
+- Las ramas de navegación a `/pos-checkout` y `/caja-actual`, y el protocolo de mensajes de caja/fichaje/escritura no implementado.
+
+Se conservan tres operaciones read-only: estado de jornada, historial de fichajes y cálculo de horas. El backend solo habilita las tres cuando `getMyStaffContext` devuelve un `resourceId` válido; la consulta de estado se realiza después de resolver el contexto, no en paralelo si no existe personal asociado. El widget mantiene fallback fail-closed y los paneles permanecen ocultos hasta recibir contexto autorizado. El historial pasa a tener su propio flag `enableHistory`, independiente de los writers de fichaje.
+
+**Límite:** el cambio es código propuesto en rama, no una edición del HTML en Wix Editor ni una publicación. La versión UI del Editor es más reciente que el snapshot Git; antes de desplegar hay que comparar/sincronizar el HTML real del Editor, ejecutar el contrato de mensajes en Wix Local Editor y validar los tres WebMethods read-only con una cuenta de personal QA. No se han creado páginas ni escrito datos en Wix.
