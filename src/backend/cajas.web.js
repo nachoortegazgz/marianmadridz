@@ -324,7 +324,10 @@ function _formatAEATDateTimeMadrid(date) {
     return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}:${parts.second}${madridOffset}`;
 }
 
-function _buildAEATPayload(movement, generatedAt) {
+// This is the project's internal fiscal-ledger chain payload, not the AEAT v0.1.2
+// hash input. Preserve its exact output to avoid changing existing chain semantics.
+// The official pure AEAT builder remains isolated in backend/aeatHash.js.
+function _buildInternalFiscalChainPayload(movement, generatedAt) {
     const fields = [
         ["IDEmisorFactura", movement.nifEmisor || ""],
         ["NumSerieFactura", movement.numSerieFactura || ""],
@@ -451,7 +454,7 @@ function _generateVerificationQR(numSerieFactura, nifEmisor, fechaExpedicionFact
     return `${baseUrl}?${params.join("&")}`;
 }
 
-async function _computeCurrentHash(previousHash, payloadStr) {
+async function _computeInternalFiscalChainHash(previousHash, payloadStr) {
     return await hashChain(previousHash, payloadStr);
 }
 
@@ -753,8 +756,8 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
             issuerInvoiceNumber,
         };
 
-        const aeatPayload = _buildAEATPayload({ ...baseMovement, previousRecordHash }, generatedAt);
-        const movementHash = await _computeCurrentHash(previousRecordHash, aeatPayload);
+        const fiscalChainPayload = _buildInternalFiscalChainPayload({ ...baseMovement, previousRecordHash }, generatedAt);
+        const movementHash = await _computeInternalFiscalChainHash(previousRecordHash, fiscalChainPayload);
 
         let digitalSignature;
         try {
@@ -825,7 +828,7 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
             previousRecordHash,
             hash: movementHash,
             digitalSignature,
-            aeatPayload,
+            aeatPayload: fiscalChainPayload,
             verificationQR,
             hashAlgorithm: "SHA-256",
             signatureAlgorithm: "RSASSA-PKCS1-v1_5-SHA-256",
