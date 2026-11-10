@@ -128,3 +128,10 @@ Referencia: [Auditoría de preparación Veri*Factu](qa/2026-11-09-verifactu-read
 
 ---
 *Este estado corresponde a la revisión del repositorio y las evidencias disponibles el 9 de noviembre de 2026. Debe actualizarse cuando cambien main, la configuración Wix o el resultado de las pruebas.*
+
+
+## 8. Auditoría de catálogo y retirada de stubs — 2026-11-10
+
+Consulta live de Wix CMS (solo lectura): `ServiciosCatalogo` 95/95, `ComplementosCatalogo` 36/36 y `MapaStaff` 3/3 no tienen campo `status` en el esquema ni en los registros consultados. `MapaStaff.active` sí existe y se conserva como parte del contrato de correlación de identidad; `associatedWixIdentity.connection.status` es un estado nativo de conexión de Wix Members/Bookings y también se conserva. No se ha realizado ninguna migración ni escritura CMS.
+
+Se retira `src/backend/staffManager.web.js`, módulo sin consumidores en el repositorio que únicamente exponía stubs fail-closed. La página ZONA STAFF sigue siendo placeholder y su conexión a los WebMethods canónicos continúa pendiente en [issue #224](https://github.com/nachoortegazgz/marianmadridz/issues/224). Evidencia detallada: [auditoría de status de catálogos y personal](qa/2026-11-10-phase2-catalog-status-audit.md).
