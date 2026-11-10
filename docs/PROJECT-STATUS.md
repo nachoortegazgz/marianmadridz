@@ -2,7 +2,7 @@
 
 **Revisión:** 2026-11-10  
 **Repositorio:** [nachoortegazgz/marianmadridz](https://github.com/nachoortegazgz/marianmadridz)  
-**Baseline de código:** `main` · `3b26df214530a740e23dca8a501b99cce844e310`  
+**Baseline de código:** `main` · `a193b9c9ce7657b100a7d2b279a001d0879a7cab`  
 **Sitio:** https://www.marianmadrid.es/  
 **Alcance:** estado documental y técnico contrastado con el árbol de `main`, auditorías existentes, CI y consultas live de solo lectura.
 
@@ -10,7 +10,7 @@
 
 ## 1. Resumen ejecutivo
 
-El repositorio contiene una solución Wix Editor/Velo con reservas Bookings V2, saga dual, checkout eCommerce Cart V2, proyección de pedidos, ledgers fiscal/laboral, Wix Stores Catalog V3 y controles de seguridad. PR #235 mantiene la recuperación fiscal idempotente de pedidos pagados dentro del alcance Bookings-only. La retirada del inventario personalizado está integrada; Wix Stores Catalog V3 queda como autoridad única del stock. ZONA STAFF incorpora consultas read-only de identidad, estado, historial y horas, sin habilitar fichajes ni caja. PR #250 añade un builder AEAT v0.1.2 aislado con vectores oficiales para alta y anulación; no está conectado a writers ni certifica Veri*Factu. Las consultas REST nativas de Stores V3, Bookings y Gift Cards son de solo lectura. Wix Orders Settings confirma `inventoryUpdateTrigger=ON_ORDER_PAID` y `createInvoice=false`. Bookings V2 contiene 94 servicios: 70 tarifas fijas, 24 auxiliares sin precio, siete servicios visibles >100 EUR y ningún depósito configurado.
+El repositorio contiene una solución Wix Editor/Velo con reservas Bookings V2, saga dual, checkout eCommerce Cart V2, proyección de pedidos, ledgers fiscal/laboral, Wix Stores Catalog V3 y controles de seguridad. PR #235 mantiene la recuperación fiscal idempotente de pedidos pagados dentro del alcance Bookings-only. La retirada del inventario personalizado está integrada; Wix Stores Catalog V3 queda como autoridad única del stock. ZONA STAFF incorpora consultas read-only de identidad, estado, historial y horas, sin habilitar fichajes ni caja. PR #250 añade un builder AEAT v0.1.2 aislado con vectores oficiales para alta y anulación; no está conectado a writers ni certifica Veri*Factu. PR #252 elimina de ZONA MARIAN los paneles sin backend operativo (gestión de personal, IA y envío a gestoría) y sus handlers huérfanos; se conservan solo acciones conectadas y permitidas. Las consultas REST nativas de Stores V3, Bookings y Gift Cards son de solo lectura. Wix Orders Settings confirma `inventoryUpdateTrigger=ON_ORDER_PAID` y `createInvoice=false`. Bookings V2 contiene 94 servicios: 70 tarifas fijas, 24 auxiliares sin precio, siete servicios visibles >100 EUR y ningún depósito configurado.
 
 **No existe certificación E2E del runtime Velo ni evidencia de que el HEAD actual de `main` esté publicado.** No se deben equiparar el código fusionado, CI offline, las respuestas REST de Wix ni la publicación del sitio.
 
@@ -28,7 +28,7 @@ El repositorio contiene una solución Wix Editor/Velo con reservas Bookings V2, 
 | Registro horario | Consultas read-only implementadas; escrituras deshabilitadas | ZONA STAFF consulta contexto, estado, historial y horas. Los lectores verifican firma HMAC y secuencia; faltan runtime Wix, idempotencia/concurrencia de writers y aceptación legal/operativa. No habilitar fichajes ni ajustes. |
 | Paquetes de gestoría | Snapshot y envío bloqueados | `PaquetesGestoria` tiene confirmación de creación de esquema en auditoría; creación de snapshot deshabilitada por contrato/hash/tamaño/concurrencia pendientes. Envío Resend deshabilitado por configuración. |
 | Capa 3 M365 / SharePoint | Arquitectura objetivo; no implantación demostrada | No existe `exportService.js` ni jobs de exportación. PA-01…PA-07 y SharePoint no auditados en el tenant. Transporte requiere ADR. |
-| Asistente IA | Deshabilitado de forma segura | `aiAgent.web.js` falla cerrado con `AI_PROVIDER_NOT_CONFIGURED`; ZONA MARIAN mantiene `enableAIAssistant=false`. Copy público actual requiere comprobación visual. |
+| Asistente IA | No disponible; UI retirada | `aiAgent.web.js` falla cerrado con `AI_PROVIDER_NOT_CONFIGURED`. PR #252 elimina el panel IA inactivo de ZONA MARIAN; no se expone una capacidad sin proveedor configurado. |
 | Gift Cards | App nativa instalada; personalización no implementada | Wix Gift Cards tiene 1 producto nativo configurado y 0 tarjetas emitidas. No existe `giftCards.web.js`, writer propio, QR scanner ni HMAC personalizado en `src/`. |
 | Wix Invoices | **V1 activa; adopción de Invoices V2 recomendada cuando Wix la habilite** | GetSiteContext confirma app V1; `POST /invoices/v4/invoices/query` devuelve 428 `INVOICES_API_UNAVAILABLE`; `GET /invoices/v4/invoices-settings` devuelve 200. Wix gestiona el rollout automáticamente. No añadir un paquete Invoices V2 independiente no confirmado ni crear adapter hasta que el CRUD esté habilitado; seguir SDK universal/REST oficial. No sustituye SIF/Veri*Factu. QA: [compatibilidad Invoices V2](qa/2026-11-09-catalog-v3-invoices-compatibility.md). |
 | Wix Forms & Payments | 4 esquemas nativos activos | Contacto mapea nombre/email/teléfono a CRM. Caja manual, control X y fichaje no tienen trigger backend; Wix Automations v2 devuelve 0 workflows activos y 0 borradores para `wix_form_app-form_submitted`. |
@@ -171,3 +171,12 @@ El cálculo de horas valida secuencias de eventos por día, admite múltiples se
 PR #250 se ha fusionado en `main` mediante squash (merge commit `3b26df214530a740e23dca8a501b99cce844e310`). Añade `src/backend/aeatHash.js` con builders separados para `RegistroAlta` y `RegistroAnulacion`, SHA-256 en mayúsculas y vectores oficiales AEAT v0.1.2. La primera ejecución CI detectó regex de importes con escape doble; se corrigió antes de fusionar. Run #42801308683: 51 suites / 503 tests / 0 fallos, contratos SDK Cart V2 y Bookings Reader V2 correctos y ESLint correcto.
 
 El helper permanece aislado y no está conectado a `cajas.web.js` ni `eventLog.js`. No se ha cambiado `hashChain` compartido con contabilidad, no se han recalculado hashes históricos y no se han modificado ledgers. Antes de integrar writers se deben mapear sus snapshots inmutables, diferenciar los contratos de alta/anulación y probar secuencia, concurrencia y persistencia. Esto no certifica el SIF ni habilita remisiones AEAT.
+
+
+## 14. Limpieza de ZONA MARIAN y contratos de estado — 2026-11-10
+
+PR #252 se ha fusionado en `main` (commit `a193b9c9ce7657b100a7d2b279a001d0879a7cab`). El widget ya no contiene los paneles de gestión de personal, IA ni envío a gestoría que estaban inactivos o carecían de backend/contrato habilitado. Se retiraron sus mensajes, listeners, variables, handlers y referencias. El controlador ZONA MARIAN conserva solo acciones de la allowlist activa: estado de caja, cierre Z, resumen fiscal, libro de facturas, paquetes preparados y descarga.
+
+La tabla de paquetes usa el campo canónico `packageStatus`. No se eliminan estados técnicos de respuesta (`status: SUCCESS/ERROR`), estados de reservas/pagos/ledgers ni el estado de conexión nativo de Wix. La auditoría live previa confirma que `ServiciosCatalogo`, `ComplementosCatalogo` y `MapaStaff` no tienen campo `status`; tampoco se mantiene un flujo de estado comercial de personal en la UI.
+
+CI del PR #252, run #42802778737: 51 suites / 505 tests / 0 fallos; contratos SDK Cart V2 y Bookings Reader V2, y ESLint correctos. La validación se ejecutó sobre el head del PR; no equivale a runtime Wix ni a validación del commit mergeado. No se modificaron CMS, caja, ledgers, reservas, pagos ni publicación. El envío a gestoría sigue pendiente de snapshot inmutable e idempotencia (issue #223).
