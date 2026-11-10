@@ -1097,7 +1097,7 @@ test('FLOW-HOR-06 bounded cross-month range aggregates multiple shifts and pause
       memberId: GUID_MEMBER,
       staffName: 'Marta',
       recordedAt,
-      recordedTime: recordedAt.toISOString().slice(11, 19),
+      recordedTime: iso.slice(11, 19),
       dayKey,
       monthKey,
       clockEventType,
