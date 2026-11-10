@@ -297,7 +297,7 @@
         }
         items.forEach((d) => {
           const tr = document.createElement('tr');
-          [d.id || d._id || '—', d.periodLabel || d.periodType || '—', d.packageStatus || '—'].forEach((v) => {
+          [d.displayId || d.id || d._id || '—', d.periodLabel || d.periodType || '—', d.packageStatus || '—'].forEach((v) => {
             const td = document.createElement('td'); td.textContent = String(v); tr.appendChild(td);
           });
           const action = document.createElement('td');
@@ -424,7 +424,7 @@
               activeDownloadButton = null;
             }
             if (ok && data?.csvContent) {
-              const id = String(data.documentId || 'paquete-fiscal').replace(/[^a-zA-Z0-9_-]/g, '_');
+              const id = String(data.displayId || data.documentId || 'paquete-fiscal').replace(/[^a-zA-Z0-9_-]/g, '_');
               downloadTextFile(id + '.csv', data.csvContent, 'text/csv;charset=utf-8');
               info('CSV descargado: ' + id);
             } else if (ok && data?.summaryText) {
