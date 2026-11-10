@@ -193,7 +193,7 @@ CI del PR #254, run #42803615666: 51 suites / 505 tests / 0 fallos; contratos SD
 
 ## 16. Snapshots trimestrales inmutables de gestoría — 2026-11-10
 
-PR #256 propone habilitar la creación de snapshots trimestrales en `PaquetesGestoria`. El writer exige `requireMarianManager`, `operationId` UUID, claim idempotente en `ControlOperativo`, hash SHA-256 determinista, límite de 450 KiB y versionado create-only mediante `dalInsert`. Las colisiones de versión se reintentan con lectura fuerte; un timeout ambiguo conserva el claim para recuperar el documento por `traceId`. No se usa upsert ni se modifica una versión existente.
+PR #256 propone habilitar la creación de snapshots trimestrales en `PaquetesGestoria`. El writer exige `requireMarianManager`, `operationId` UUID, claim idempotente en `ControlOperativo`, hash SHA-256 determinista, límite de 450 KiB y versionado create-only mediante `dalInsert`. Los IDs CMS son GUID UUIDv8 deterministas derivados de SHA-256; el código legible `DOC_GESTORIA_...` se presenta aparte. Las colisiones de versión se reintentan con lectura fuerte; un timeout ambiguo conserva el claim para recuperar el documento por `traceId`. No se usa upsert ni se modifica una versión existente.
 
 ZONA MARIAN incorpora el botón de creación trimestral y la descarga del CSV que devuelve el WebMethod. El listado de paquetes solo expone metadatos y la descarga verifica la huella antes de generar el fichero. La previsualización usa agregadores internos bajo autorización de Marian Manager y rate limit.
 
