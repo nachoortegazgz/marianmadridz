@@ -6,8 +6,8 @@ Revision: 2026-11-09
 1. AUTORIDAD Y FUENTES
 
 1.1. Orden de autoridad
-1) Documentacion oficial vigente de Wix, Wix Apps y SDKs integrados.
-2) Dossier Tecnico Consolidado y Dossier de Flujos End-to-End.
+1) SSOT. Documentacion oficial vigente de Wix, Wix Apps y SDKs integrados. Comprueba que consultas la version correcta recomendada y actualizada de cada documento.
+2) Referencia. Dossier Tecnico Consolidado y Dossier de Flujos End-to-End.
 3) Este documento.
 4) Necesidades Web y criterios de aceptacion.
 
