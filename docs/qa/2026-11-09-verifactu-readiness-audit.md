@@ -220,3 +220,20 @@ Fuentes oficiales:
 - **Inferido/recomendado:** separar persistencia fiscal y estado de transporte; reconciliación recuperable por ausencia de transacción multi-colección documentada; gateway desacoplado del custodio.
 - **Pendiente:** CI de PR #208; spike de autenticación TLS/certificado en Wix; esquema CMS exacto y diseño de persistencia; forma jurídica/tributación del obligado; representante y certificado; matriz fiscal; declaración responsable y E2E AEAT.
 - **No realizado:** escrituras CMS, remisiones AEAT, facturas reales, cobros, carga de certificados, modificación funcional o despliegue.
+
+
+## 12. Actualización de separación de contratos — 2026-11-10
+
+PR #250 incorpora `src/backend/aeatHash.js`, un builder puro AEAT v0.1.2 con vectores oficiales para `RegistroAlta` y `RegistroAnulacion`. La suite `aeatHash.contract.test.mjs` valida cinco casos. **Este helper continúa deliberadamente sin consumidores runtime**: no se ha conectado a los writers ni se han recalculado registros históricos.
+
+La revisión de los dos writers confirma que sus funciones locales construyen un payload de cadena fiscal interna y lo pasan a `securityEngine.hashChain()`:
+
+- `cajas.web.js`: `_buildInternalFiscalChainPayload` + `_computeInternalFiscalChainHash`; su contenido incluye campos no pertenecientes a la entrada oficial AEAT de alta.
+- `eventLog.js`: `_buildInternalFiscalChainPayload`; contiene los ocho campos base, pero también campos de dominio adicionales que no pertenecen a la entrada oficial de huella.
+- Ambos siguen usando la cadena interna del proyecto; ninguno invoca `computeAeatAltaHash` ni `computeAeatAnulacionHash`.
+
+La propiedad persistida `aeatPayload` se conserva por compatibilidad con el hook de `data.js`, que la mueve a `payloadFiscal.aeatPayload`. Su nombre histórico no acredita que el contenido sea el input oficial AEAT. La nueva nomenclatura de las funciones privadas evita confundir la cadena interna con la huella de conformidad.
+
+El cambio de nomenclatura no modifica el orden, contenido ni serialización del payload, el algoritmo `hashChain`, las firmas, los hashes almacenados ni los registros CMS. No se han hecho escrituras ni remisiones AEAT.
+
+**Decisión vigente:** no conectar el helper oficial hasta resolver SIF emisor, series y transición de cadena, mapa de campos de cada writer, XML/XSD y aprobación legal. La huella AEAT correcta en un vector unitario no certifica el sistema completo.
