@@ -56,6 +56,7 @@ test('FDOC-STORAGE-02 snapshot creation is idempotent and uses create-only inser
     'PACKAGE_SNAPSHOT_RECOVERY_REQUIRED',
   ]) assert.ok(source.includes(contract), 'Missing idempotency contract: ' + contract);
   assert.ok(handler.includes('dalInsert(DOCS_COL, snapshot)'));
+  assert.ok(!source.includes('"WDE0123"'));
   assert.doesNotMatch(handler, /dalSave|dalUpdate\(DOCS_COL|dalRemove\(DOCS_COL/);
 });
 
