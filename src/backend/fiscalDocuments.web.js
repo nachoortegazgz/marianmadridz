@@ -363,8 +363,6 @@ function _isDuplicatePackageInsertError(error) {
   return [
     "WDE0074",
     "WD_ITEM_ALREADY_EXISTS",
-    "WDE0023",
-    "WDE0123",
   ].includes(code) || /already exists|duplicate|duplicated values/.test(message);
 }
 
@@ -607,7 +605,7 @@ export const createManagerPackageVersion = webMethod(
       const periodType = _safeTrim(period.periodType || "QUARTERLY").toUpperCase();
       const year = Number(period.year);
       const quarter = Number(period.quarter);
-      const operationId = _safeTrim(period.operationId);
+      const operationId = _safeTrim(period.operationId).toLowerCase();
 
       if (periodType !== "QUARTERLY") {
         return {
