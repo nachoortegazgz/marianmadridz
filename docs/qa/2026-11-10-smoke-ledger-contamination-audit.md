@@ -55,3 +55,12 @@ Los dos registros `QA_LIVECMS_...` de `RegistrosHorariosStaff` carecen de firma.
 - El resumen mensual falla si la consulta supera el límite de 1.000 filas; no devuelve un total parcial como válido.
 
 No se repara ni se firma retrospectivamente ninguna fila. La revisión laboral de esos registros sigue pendiente.
+
+
+## ZONA STAFF: consulta de jornada en modo solo lectura
+
+La rama `feat/staff-readonly-hours-history-bridge-20261110` conecta el widget con `getMyStaffContext`, `getEstadoJornada`, `getHistorialFichajes` y `calcularHorasTrabajadas`. El panel de historial/horas se habilita únicamente cuando el backend resuelve una ficha staff; los botones de fichaje, ajustes, caja e inventario permanecen deshabilitados.
+
+Los DTO del bridge se adaptan explícitamente a los nombres que consume `#htmlOnlyStaff.txt`. Historial etiqueta los registros sin firma como `NO VERIFICADO`. Las consultas de rango son acotadas (92 días para historial, 31 para cálculo) y el cálculo se realiza en una única llamada backend, con soporte de varios meses y suma de pausas por jornadas/sesiones.
+
+La escritura de fichajes sigue bloqueada: `registrarFichaje` todavía necesita transición de estado, idempotencia y exclusión mutua/concurrencia antes de habilitarse.
