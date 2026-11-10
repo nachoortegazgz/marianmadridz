@@ -239,5 +239,6 @@ test("admin snapshot action is allowlisted and uses a stable operation UUID with
   assert.ok(adminHtml.includes("CREATE_SNAPSHOT_RES"));
   assert.ok(adminHtml.includes("No se envía a gestoría"));
   assert.ok(adminHtml.includes("downloadTextFile"));
+  assert.ok(adminHtml.includes("activeDownloadButton = null"));
   assert.ok(!adminHtml.includes("window.open(data.url"));
 });
