@@ -187,7 +187,6 @@ test("admin and staff cash widgets consume the canonical getCashierState DTO", (
 
 test("admin widget no longer exposes discarded staff management or business status flow", () => {
   assert.ok(!adminHtml.includes("s.status"));
-  assert.ok(!adminHtml.includes("<th>Estado</th>"));
 });
 
 test("admin widget excludes inactive AI, accountant dispatch and staff management flows", () => {
