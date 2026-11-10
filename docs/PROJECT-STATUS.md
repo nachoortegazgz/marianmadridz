@@ -147,3 +147,8 @@ Otros hallazgos sin intervención en esta rama: dos fichajes QA en `RegistrosHor
 ## 10. ZONA MARIAN — disponibilidad del TPV
 
 El panel de caja ya no se presenta como operativo por un flag estático: solo se muestra cuando `getCashierState` responde SUCCESS y `cashRegisterStatus=ABIERTA`. Con el estado live actual `SIMULACION`, la interfaz oculta el TPV. La protección backend del PR #246 permanece como segunda barrera. No se ha modificado Wix CMS ni se ha publicado el sitio.
+
+
+## 11. Integridad de lectura de fichajes
+
+Los lectores de jornada y horas verifican ahora la firma HMAC antes de calcular o devolver estados operativos. Historial muestra `integrityStatus` por fila sin exponer el HMAC; cálculos/estado fallan cerrados ante registros sin firma o firma inválida. El resumen mensual también rechaza datasets truncados. Los dos registros QA históricos sin firma permanecen intactos y requieren revisión; no se han generado fichajes ni correcciones.
