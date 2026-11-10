@@ -411,7 +411,7 @@
             if (ok) {
               activeSnapshotOperationId = null;
               activeSnapshotPeriod = null;
-              info('Snapshot inmutable creado: ' + (data?.documentId || 'versión registrada') + '. No se ha enviado a gestoría.');
+              info('Snapshot inmutable creado: ' + (data?.displayId || data?.documentId || 'versión registrada') + '. No se ha enviado a gestoría.');
               setLoading(btnLoadPrepared, true);
               send(MESSAGE_TYPES.DOCUMENT_PREPARED, {});
             } else {
