@@ -22,6 +22,7 @@ import {
     REGISTROS_HORARIOS_FIELDS as F,
     SDK_CONFIG,
 } from "backend/internalConfig";
+import { SECRETS } from "backend/mmSecrets";
 
 import {
     assertRegistrosHorariosStaff,
@@ -37,6 +38,7 @@ import {
 
 import { requireAdmin } from "backend/security";
 import { signTimeclockRecord, verifyTimeclockSignature } from "backend/securityEngine";
+import { getSecretValue } from "backend/secretAccess";
 /* HOR-R3-03 (DUP-02): _safeTrim importado de mmUtils (SSOT). Helper local
  * eliminado. */
 import { makeTraceId, _safeTrim } from "public/mmUtils";
@@ -75,14 +77,68 @@ function _getMadridTime(d) {
     return date.toTimeString().slice(0, 8); // HH:MM:SS
 }
 
+function _getDayKeysInRange(startValue, endValue, maxDays = 31) {
+    const startKey = _safeTrim(startValue || "");
+    const endKey = _safeTrim(endValue || startKey);
+    const parse = (value) => {
+        const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+        if (!match) return null;
+        const date = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
+        return date.toISOString().slice(0, 10) === value ? date : null;
+    };
+    const start = parse(startKey);
+    const end = parse(endKey);
+    if (!start || !end || end.getTime() < start.getTime()) return null;
+    const days = [];
+    for (let time = start.getTime(); time <= end.getTime(); time += 86400000) {
+        days.push(new Date(time).toISOString().slice(0, 10));
+        if (days.length > maxDays) return null;
+    }
+    return days;
+}
+
 async function _getTimeclockIntegrity(records) {
     const items = Array.isArray(records) ? records : [];
-    const verified = await Promise.all(items.map((record) => verifyTimeclockSignature(record)));
+    if (items.length === 0) {
+        return { allVerified: true, unverifiedCount: 0, verified: [] };
+    }
+    const key = await getSecretValue(SECRETS.FISCAL_KEY);
+    if (!key) {
+        return {
+            allVerified: false,
+            unverifiedCount: items.length,
+            verified: items.map(() => false),
+        };
+    }
+    const verified = await Promise.all(items.map((record) => verifyTimeclockSignature(record, key)));
     return {
         allVerified: verified.every(Boolean),
         unverifiedCount: verified.filter((value) => !value).length,
         verified,
     };
+}
+
+function _validateTimeclockSequence(records) {
+    let state = "OUT";
+    for (const record of records || []) {
+        const eventType = record?.[F.CLOCK_EVENT_TYPE];
+        if (eventType === CLOCK_EVENT_TYPE.ENTRADA) {
+            if (state !== "OUT") return { valid: false, state };
+            state = "WORKING";
+        } else if (eventType === CLOCK_EVENT_TYPE.PAUSA_INICIO) {
+            if (state !== "WORKING") return { valid: false, state };
+            state = "PAUSED";
+        } else if (eventType === CLOCK_EVENT_TYPE.PAUSA_FIN) {
+            if (state !== "PAUSED") return { valid: false, state };
+            state = "WORKING";
+        } else if (eventType === CLOCK_EVENT_TYPE.SALIDA) {
+            if (state !== "WORKING") return { valid: false, state };
+            state = "OUT";
+        } else {
+            return { valid: false, state };
+        }
+    }
+    return { valid: true, state };
 }
 
 /* HOR-R3-03 (DUP-02): _safeTrim local ELIMINADO. Importado de mmUtils. */
@@ -272,6 +328,15 @@ export const getEstadoJornada = webMethod(
                     traceId,
                 };
             }
+            const sequence = _validateTimeclockSequence(fichajes);
+            if (!sequence.valid) {
+                return {
+                    status: "ERROR",
+                    data: null,
+                    error: { code: "TIMECLOCK_SEQUENCE_INVALID", message: "La secuencia de eventos de jornada es inconsistente y requiere revision." },
+                    traceId,
+                };
+            }
             const ultimo = fichajes[fichajes.length - 1] || null;
 
             let estado = "SIN_INICIAR";
@@ -326,15 +391,41 @@ export const calcularHorasTrabajadas = webMethod(
                 return { status: "ERROR", data: null, error: { code: "NOT_STAFF" } };
             }
 
-            const dayKey = _safeTrim(options?.dayKey) || _getMadridDayKey();
+            const startDayKey = _safeTrim(options?.startDateYMD || options?.dayKey) || _getMadridDayKey();
+            const endDayKey = _safeTrim(options?.endDateYMD) || startDayKey;
+            const dayKeys = _getDayKeysInRange(startDayKey, endDayKey, 31);
+            if (!dayKeys) {
+                return {
+                    status: "ERROR",
+                    data: null,
+                    error: { code: "INVALID_DATE_RANGE", message: "Rango de fechas inválido o superior a 31 días." },
+                    traceId,
+                };
+            }
 
-            const res = await dalQuery(REGISTROS_COL)
-                .eq(F.RESOURCE_ID, ctx.resourceId)
-                .eq(F.DAY_KEY, dayKey)
-                .ascending(F.RECORDED_AT)
-                .find();
+            const monthKeys = [...new Set(dayKeys.map((dayKey) => dayKey.slice(0, 7)))];
+            const monthResults = await Promise.all(monthKeys.map((monthKey) =>
+                dalQuery(REGISTROS_COL)
+                    .eq(F.RESOURCE_ID, ctx.resourceId)
+                    .eq(F.MONTH_KEY, monthKey)
+                    .ascending(F.RECORDED_AT)
+                    .limit(1000)
+                    .find()
+            ));
+            if (monthResults.some((result) => typeof result?.hasNext === "function" && result.hasNext())) {
+                return {
+                    status: "ERROR",
+                    data: null,
+                    error: { code: "TIMECLOCK_DATASET_LIMIT_EXCEEDED", message: "El rango supera el límite de lectura segura." },
+                    traceId,
+                };
+            }
 
-            const fichajes = res?.items || [];
+            const fichajes = monthResults
+                .flatMap((result) => result?.items || [])
+                .filter((record) => record[F.DAY_KEY] >= startDayKey && record[F.DAY_KEY] <= endDayKey)
+                .sort((a, b) => new Date(a[F.RECORDED_AT]) - new Date(b[F.RECORDED_AT]));
+
             const integrity = await _getTimeclockIntegrity(fichajes);
             if (!integrity.allVerified) {
                 return {
@@ -348,37 +439,80 @@ export const calcularHorasTrabajadas = webMethod(
                     traceId,
                 };
             }
-            let minutosTrabajados = 0;
-            let entradaTs = null;
-            let pausaInicioTs = null;
-            let minutosPausa = 0;
 
-            for (const f of fichajes) {
-                const tipo = f[F.CLOCK_EVENT_TYPE];
-                const ts = new Date(f[F.RECORDED_AT]).getTime();
-
-                if (tipo === CLOCK_EVENT_TYPE.ENTRADA) {
-                    entradaTs = ts;
-                    minutosPausa = 0;
-                } else if (tipo === CLOCK_EVENT_TYPE.PAUSA_INICIO) {
-                    pausaInicioTs = ts;
-                } else if (tipo === CLOCK_EVENT_TYPE.PAUSA_FIN && pausaInicioTs) {
-                    minutosPausa += (ts - pausaInicioTs) / 60000;
-                    pausaInicioTs = null;
-                } else if (tipo === CLOCK_EVENT_TYPE.SALIDA && entradaTs) {
-                    minutosTrabajados += (ts - entradaTs) / 60000 - minutosPausa;
-                    entradaTs = null;
-                    minutosPausa = 0;
-                }
+            const byDay = new Map();
+            for (const record of fichajes) {
+                const key = record[F.DAY_KEY];
+                if (!byDay.has(key)) byDay.set(key, []);
+                byDay.get(key).push(record);
             }
 
+            let totalMinutosTrabajados = 0;
+            let totalMinutosPausa = 0;
+            let jornadasAbiertas = 0;
+
+            for (const dayRecords of byDay.values()) {
+                const sequence = _validateTimeclockSequence(dayRecords);
+                if (!sequence.valid) {
+                    return {
+                        status: "ERROR",
+                        data: null,
+                        error: { code: "TIMECLOCK_SEQUENCE_INVALID", message: "La secuencia de eventos de jornada es inconsistente y requiere revision." },
+                        traceId,
+                    };
+                }
+                let minutosTrabajados = 0;
+                let minutosPausaJornada = 0;
+                let entradaTs = null;
+                let pausaInicioTs = null;
+
+                for (const record of dayRecords) {
+                    const tipo = record[F.CLOCK_EVENT_TYPE];
+                    const ts = new Date(record[F.RECORDED_AT]).getTime();
+
+                    if (tipo === CLOCK_EVENT_TYPE.ENTRADA) {
+                        entradaTs = ts;
+                        pausaInicioTs = null;
+                        minutosPausaJornada = 0;
+                    } else if (tipo === CLOCK_EVENT_TYPE.PAUSA_INICIO && entradaTs !== null && pausaInicioTs === null) {
+                        pausaInicioTs = ts;
+                    } else if (tipo === CLOCK_EVENT_TYPE.PAUSA_FIN && pausaInicioTs !== null) {
+                        minutosPausaJornada += Math.max(0, (ts - pausaInicioTs) / 60000);
+                        pausaInicioTs = null;
+                    } else if (tipo === CLOCK_EVENT_TYPE.SALIDA && entradaTs !== null) {
+                        totalMinutosPausa += minutosPausaJornada;
+                        minutosTrabajados += (ts - entradaTs) / 60000 - minutosPausaJornada;
+                        entradaTs = null;
+                        minutosPausaJornada = 0;
+                    }
+                }
+
+                if (entradaTs !== null) {
+                    jornadasAbiertas += 1;
+                    // Cuenta solo pausas ya cerradas de una jornada abierta;
+                    // no estima ni incorpora la pausa que sigue en curso.
+                    totalMinutosPausa += minutosPausaJornada;
+                }
+                totalMinutosTrabajados += minutosTrabajados;
+            }
+
+            const minutosTrabajadosRedondeados = Math.max(0, Math.round(totalMinutosTrabajados));
+            const minutosPausaRedondeados = Math.max(0, Math.round(totalMinutosPausa));
             return {
                 status: "OK",
                 data: {
-                    dayKey,
-                    minutosTrabajados: Math.max(0, Math.round(minutosTrabajados)),
-                    horasTrabajadas: (Math.max(0, minutosTrabajados) / 60).toFixed(2),
-                    jornadaCerrada: entradaTs === null,
+                    dayKey: startDayKey === endDayKey ? startDayKey : null,
+                    startDateYMD: startDayKey,
+                    endDateYMD: endDayKey,
+                    minutosTrabajados: minutosTrabajadosRedondeados,
+                    horasTrabajadas: (minutosTrabajadosRedondeados / 60).toFixed(2),
+                    minutosPausa: minutosPausaRedondeados,
+                    horasPausa: (minutosPausaRedondeados / 60).toFixed(2),
+                    totalFichajesProcesados: fichajes.length,
+                    diasProcesados: dayKeys.length,
+                    jornadasAbiertas,
+                    jornadaCerrada: jornadasAbiertas === 0,
+                    integrityStatus: "VERIFIED",
                 },
                 traceId,
             };
@@ -399,23 +533,80 @@ export const getHistorialFichajes = webMethod(
                 return { status: "ERROR", data: null, error: { code: "NOT_STAFF" } };
             }
 
-            const limit = Math.min(Number(options?.limit) || 30, 100);
-            let query = dalQuery(REGISTROS_COL)
-                .eq(F.RESOURCE_ID, ctx.resourceId);
+            const startDateYMD = _safeTrim(options?.startDateYMD);
+            const endDateYMD = _safeTrim(options?.endDateYMD);
+            let rawItems = [];
 
-            if (_safeTrim(options?.monthKey)) {
-                query = query.eq(F.MONTH_KEY, _safeTrim(options.monthKey));
+            if (startDateYMD || endDateYMD) {
+                const start = startDateYMD || endDateYMD;
+                const end = endDateYMD || startDateYMD;
+                const dayKeys = _getDayKeysInRange(start, end, 92);
+                if (!dayKeys) {
+                    return {
+                        status: "ERROR",
+                        data: null,
+                        error: { code: "INVALID_DATE_RANGE", message: "Rango de historial inválido o superior a 92 días." },
+                        traceId,
+                    };
+                }
+                const limit = Math.min(Number(options?.limit) || 500, 500);
+                const monthKeys = [...new Set(dayKeys.map((dayKey) => dayKey.slice(0, 7)))];
+                const monthResults = await Promise.all(monthKeys.map((monthKey) =>
+                    dalQuery(REGISTROS_COL)
+                        .eq(F.RESOURCE_ID, ctx.resourceId)
+                        .eq(F.MONTH_KEY, monthKey)
+                        .descending(F.RECORDED_AT)
+                        .limit(1000)
+                        .find()
+                ));
+                if (monthResults.some((result) => typeof result?.hasNext === "function" && result.hasNext())) {
+                    return {
+                        status: "ERROR",
+                        data: null,
+                        error: { code: "TIMECLOCK_DATASET_LIMIT_EXCEEDED", message: "El historial supera el límite de lectura segura." },
+                        traceId,
+                    };
+                }
+                rawItems = monthResults
+                    .flatMap((result) => result?.items || [])
+                    .filter((record) => record[F.DAY_KEY] >= start && record[F.DAY_KEY] <= end)
+                    .sort((a, b) => new Date(b[F.RECORDED_AT]) - new Date(a[F.RECORDED_AT]));
+                if (rawItems.length > limit) {
+                    return {
+                        status: "ERROR",
+                        data: null,
+                        error: { code: "TIMECLOCK_HISTORY_LIMIT_EXCEEDED", message: "El historial supera el máximo de filas solicitado; reduce el rango." },
+                        traceId,
+                    };
+                }
+            } else {
+                const limit = Math.min(Number(options?.limit) || 30, 100);
+                let query = dalQuery(REGISTROS_COL)
+                    .eq(F.RESOURCE_ID, ctx.resourceId);
+                if (_safeTrim(options?.monthKey)) {
+                    query = query.eq(F.MONTH_KEY, _safeTrim(options.monthKey));
+                }
+                const res = await query
+                    .descending(F.RECORDED_AT)
+                    .limit(limit)
+                    .find();
+                rawItems = res?.items || [];
             }
-
-            const res = await query
-                .descending(F.RECORDED_AT)
-                .limit(limit)
-                .find();
 
             // DTO whitelist: nunca signature/meta completos, nunca deviceIpAddress.
             // La integridad se expone como estado, sin filtrar el HMAC ni datos del dispositivo.
-            const rawItems = res?.items || [];
             const integrity = await _getTimeclockIntegrity(rawItems);
+            const recordsByDay = new Map();
+            for (const record of rawItems) {
+                const key = record[F.DAY_KEY];
+                if (!recordsByDay.has(key)) recordsByDay.set(key, []);
+                recordsByDay.get(key).push(record);
+            }
+            const invalidSequenceDays = new Set();
+            for (const [dayKey, dayRecords] of recordsByDay.entries()) {
+                const ordered = dayRecords.sort((a, b) => new Date(a[F.RECORDED_AT]) - new Date(b[F.RECORDED_AT]));
+                if (!_validateTimeclockSequence(ordered).valid) invalidSequenceDays.add(dayKey);
+            }
             const items = rawItems.map((f, index) => ({
                 registradoEn: f[F.RECORDED_AT],
                 horaRegistrada: f[F.RECORDED_TIME],
@@ -424,6 +615,7 @@ export const getHistorialFichajes = webMethod(
                 diaClave: f[F.DAY_KEY],
                 ajusteMotivo: f[F.ADJUSTMENT_REASON] || null,
                 integrityStatus: integrity.verified[index] ? "VERIFIED" : "UNVERIFIED",
+                sequenceStatus: invalidSequenceDays.has(f[F.DAY_KEY]) ? "INVALID" : "VALID",
             }));
 
             return { status: "OK", data: { items, total: items.length }, traceId };

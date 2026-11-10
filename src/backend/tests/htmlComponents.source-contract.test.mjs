@@ -155,7 +155,7 @@ test("admin widget actions are explicitly allowlisted and match implemented page
   }
 });
 
-test("staff widget remains fail-closed and bridge only accepts navigation", () => {
+test("staff widget remains fail-closed for writes while read-only queries are permitted", () => {
   const allowlist = staffPage.match(/allowedTypes:\s*\[([\s\S]*?)\]/);
   assert.ok(allowlist, "staff page must declare an explicit widget allowlist");
   assert.match(allowlist[1], /MESSAGE_TYPES\.READY/);
@@ -203,4 +203,23 @@ test("admin cashier panel is available only when backend reports an open operati
   assert.match(adminPage, /enableCashier:\s*cashierRes\?\.status === "SUCCESS" &&\s*cashierRes\.data\?\.cashRegisterStatus === "ABIERTA"/);
   assert.doesNotMatch(adminPage, /enableCashier:\s*true/);
   assert.match(adminPage, /cashierRes\?\.status === "SUCCESS" \? cashierRes\.data : null/);
+});
+
+
+test("staff page routes only read-only timeclock queries and keeps write actions disabled", () => {
+  const allowlist = staffPage.match(/allowedTypes:\s*\[([\s\S]*?)\]/);
+  assert.ok(allowlist, "staff page must declare an explicit message allowlist");
+  for (const type of ["GET_STATE", "GET_HISTORY", "HOURS_CALC"]) {
+    assert.ok(allowlist[1].includes('"'+type+'"'), type + " must be allowed");
+    assert.match(staffPage, new RegExp('type === "' + type + '"'));
+  }
+  assert.match(staffPage, /enableScheduleQuery:\s*hasStaffContext/);
+  assert.match(staffPage, /enableClocking:\s*false/);
+  assert.match(staffPage, /getMyStaffContext/);
+  assert.match(staffPage, /getHistorialFichajes/);
+  assert.match(staffPage, /calcularHorasTrabajadas/);
+  assert.doesNotMatch(allowlist[1], /CLOCK|ADJUSTMENT|TPV_TX|X_COUNT|Z_CLOSING/);
+  assert.match(onlyStaffHtml, /integrityStatus === 'UNVERIFIED'[\s\S]*NO VERIFICADO/);
+  assert.match(onlyStaffHtml, /sequenceStatus === 'INVALID'[\s\S]*SECUENCIA INVÁLIDA/);
+  assert.match(onlyStaffHtml, /Jornadas abiertas:[\s\S]*el tiempo en curso no se incluye/);
 });

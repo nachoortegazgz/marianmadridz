@@ -555,7 +555,12 @@
           const tr = document.createElement('tr');
           const fecha = item.fechaHora ? _formatMadridDate(item.fechaHora, true) : item.diaKey || '';
           const hora = item.hora || (item.fechaHora ? new Intl.DateTimeFormat('es-ES', { hour: '2-digit', minute: '2-digit', timeZone: contextData?.timeZone || 'Europe/Madrid' }).format(new Date(item.fechaHora)) : '');
-          [fecha, hora, item.tipo || item.tipoFichaje || ''].forEach((value) => {
+          const tipoBase = item.tipo || item.tipoFichaje || '';
+          const integrityLabel = item.integrityStatus === 'UNVERIFIED'
+            ? ' · NO VERIFICADO'
+            : (item.sequenceStatus === 'INVALID' ? ' · SECUENCIA INVÁLIDA' : '');
+          const tipo = tipoBase + integrityLabel;
+          [fecha, hora, tipo].forEach((value) => {
             const td = document.createElement('td'); td.textContent = String(value); tr.appendChild(td);
           });
           historyBody.appendChild(tr);
@@ -582,6 +587,9 @@
         appendLine(`Horas trabajadas: ${workedHours}h (${formatted})`, 'font-weight:600');
         appendLine(`Tiempo de pausa: ${Number(data.horasPausaDecimal || 0)}h`, 'color:var(--muted)');
         appendLine(`Fichajes procesados: ${Number(data.totalFichajesProcesados || 0)}`, 'font-size:12px;color:var(--muted)');
+        if (Number(data.jornadasAbiertas || 0) > 0) {
+          appendLine(`Jornadas abiertas: ${Number(data.jornadasAbiertas)} (el tiempo en curso no se incluye)`, 'font-size:12px;color:var(--muted)');
+        }
       }
 
       /* ═════════════════════════════════════════════════════════════════

@@ -1,7 +1,7 @@
 /*
 =============================================================================
 MODULE: pages/zonastaff.js
-VERSION: v5003.0-staff-pos-cashier-calendar
+VERSION: v5004.0-staff-readonly-hours-history
 =============================================================================
 */
 
@@ -16,9 +16,59 @@ import {
 } from "public/mmUtils";
 import { createWidgetBridge } from "public/widgetBridge";
 import { checkStaffCollaboratorAccess } from "backend/security.web.js";
+import {
+  getMyStaffContext,
+  getEstadoJornada,
+  getHistorialFichajes,
+  calcularHorasTrabajadas,
+} from "backend/horario.web.js";
 
 let bridge = null;
 let isAuthorized = false;
+
+function _parseYmd(value) {
+  const raw = _safeTrim(value || "");
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(raw);
+  if (!match) return null;
+  const date = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
+  return date.toISOString().slice(0, 10) === raw ? date : null;
+}
+
+function _getYmdRange(startValue, endValue, maxDays) {
+  const start = _parseYmd(startValue);
+  const end = _parseYmd(endValue);
+  if (!start || !end || end.getTime() < start.getTime()) {
+    return { error: { code: "INVALID_DATE_RANGE", message: "Selecciona un rango de fechas válido." } };
+  }
+  const days = [];
+  for (let time = start.getTime(); time <= end.getTime(); time += 86400000) {
+    days.push(new Date(time).toISOString().slice(0, 10));
+    if (days.length > maxDays) {
+      return { error: { code: "DATE_RANGE_TOO_LARGE", message: `El rango máximo permitido es de ${maxDays} días.` } };
+    }
+  }
+  return { days };
+}
+
+function _mapClockState(data) {
+  const stateMap = {
+    SIN_INICIAR: "INACTIVO",
+    EN_JORNADA: "TRABAJANDO",
+    EN_PAUSA: "EN_PAUSA",
+    JORNADA_FINALIZADA: "INACTIVO",
+  };
+  return {
+    estadoActual: stateMap[data?.estado] || "REVISIÓN",
+    ultimoFichaje: data?.ultimoEvento
+      ? { tipo: data.ultimoEvento.tipo, fechaHora: data.ultimoEvento.registradoEn }
+      : null,
+    totalFichajes: Number(data?.totalFichajes) || 0,
+  };
+}
+
+function _widgetError(code, message) {
+  return { status: "ERROR", data: null, error: { code, message } };
+}
 
 $w.onReady(async () => {
   const traceId = makeTraceId("only-staff");
@@ -111,7 +161,7 @@ $w.onReady(async () => {
      5) Bridge con el widget HTML
      ──────────────────────────────────────────────────────────────────── */
   bridge = createWidgetBridge(widget, {
-    allowedTypes: [MESSAGE_TYPES.READY, MESSAGE_TYPES.CONTEXT, MESSAGE_TYPES.NAV],
+    allowedTypes: [MESSAGE_TYPES.READY, MESSAGE_TYPES.CONTEXT, MESSAGE_TYPES.NAV, "GET_STATE", "GET_HISTORY", "HOURS_CALC"],
     slug: "only-staff",
     traceId,
     handshakeTimeoutMs: UI.HANDSHAKE_TIMEOUT_MS,
@@ -121,48 +171,133 @@ $w.onReady(async () => {
        CONTEXT: lo que recibe el widget al hacer handshake.
        El widget se guía por estos flags para mostrar/ocultar paneles.
        ───────────────────────────────────────────────────────────────── */
-    onContextReady: async () => ({
-      isAuthorized,
+    onContextReady: async () => {
+      const [staffContext, stateResult] = await Promise.all([
+        withTimeout(
+          () => getMyStaffContext({ traceId }),
+          UI.FRONTEND_API_TIMEOUT_MS,
+          "getMyStaffContext"
+        ).catch(() => null),
+        withTimeout(
+          () => getEstadoJornada({ dayKey: today, traceId }),
+          UI.FRONTEND_API_TIMEOUT_MS,
+          "getEstadoJornada"
+        ).catch(() => null),
+      ]);
+      const hasStaffContext = staffContext?.status === "OK" && !!staffContext.data?.resourceId;
+      const resolvedName = staffContext?.data?.displayName || memberName || employeeName;
+      const initialState = stateResult?.status === "OK"
+        ? _mapClockState(stateResult.data)
+        : { estadoActual: "REVISIÓN", ultimoFichaje: null, integrityStatus: "UNVERIFIED" };
 
-      // Tipo de panel (visible en cabecera del widget)
-      panelType: "TPV",
-
-      // ── Feature flags ───────────────────────────────────────────────
-      enableClocking: false,       // deshabilitado: el bridge no invoca WebMethods de fichaje
-      enableBreaks: false,         // deshabilitado hasta integrar fichajes
-      enableCashier: false,        // deshabilitado: no hay handler conectado en esta pagina
-      enableInventory: false,      // panel de inventario oculto
-      enableScheduleQuery: false,  // panel de cálculo de horas oculto
-
-      // ── Caja ────────────────────────────────────────────────────────
-      cashierMode: "DISABLED",     // sin handler backend operativo
-      isAdmin,
-      isCajero,
-
-      // ── Localización ────────────────────────────────────────────────
-      currencyCode: "EUR",
-      timeZone: TZ,
-      today,
-
-      // ── Identidad (para cabecera "Sesion activa: …") ────────────────
-      memberName,
-      employeeName,
-      roleLabel,
-
-      // ── Navegación / calendario ─────────────────────────────────────
-      // Ruta pendiente de confirmar en el inventario publicado de Wix.
-      calendarUrl: "/mi-calendario",
-    }),
+      return {
+        isAuthorized,
+        panelType: "PERSONAL",
+        // Los fichajes de escritura siguen deshabilitados hasta cerrar transición,
+        // idempotencia y concurrencia. La consulta de historial/horas es read-only.
+        enableClocking: false,
+        enableBreaks: false,
+        enableCashier: false,
+        enableInventory: false,
+        enableScheduleQuery: hasStaffContext,
+        cashierMode: "DISABLED",
+        isAdmin,
+        isCajero,
+        currencyCode: "EUR",
+        timeZone: TZ,
+        today,
+        memberName: resolvedName,
+        employeeName: resolvedName,
+        roleLabel: staffContext?.data?.rolWebsite || roleLabel,
+        estadoInicial: initialState,
+        calendarUrl: "/mi-calendario",
+      };
+    },
 
     /* El widget de staff permanece en modo placeholder: las funciones de caja,
        inventario y jornada están deshabilitadas y este controlador no invoca
        WebMethods de negocio. No activar flags hasta sincronizar el HTML real y
        definir un contrato de acciones backend probado.
        ───────────────────────────────────────────────────────────────── */
-    onWidgetMessage: async (message) => {
+    onWidgetMessage: async (message, reply) => {
       const type = String(message?.type || "").toUpperCase();
       const payload = message?.payload || {};
       const target = _safeTrim(payload.target || "");
+
+      if (type === "GET_STATE") {
+        const result = await getEstadoJornada({ dayKey: payload.dayKey || today, traceId });
+        if (result?.status !== "OK") {
+          reply("GET_STATE_RES", _widgetError(result?.error?.code || "TIMECLOCK_STATE_UNAVAILABLE", result?.error?.message || "No se pudo verificar el estado de jornada."), payload);
+          return;
+        }
+        reply("GET_STATE_RES", { status: "SUCCESS", data: _mapClockState(result.data) }, payload);
+        return;
+      }
+
+      if (type === "GET_HISTORY") {
+        const range = _getYmdRange(payload.startDateYMD, payload.endDateYMD, 92);
+        if (range.error) {
+          reply("GET_HISTORY_RES", range.error && _widgetError(range.error.code, range.error.message), payload);
+          return;
+        }
+        const result = await getHistorialFichajes({
+          startDateYMD: range.days[0],
+          endDateYMD: range.days[range.days.length - 1],
+          limit: 500,
+          traceId,
+        });
+        if (result?.status !== "OK") {
+          reply("GET_HISTORY_RES", _widgetError(result?.error?.code || "TIMECLOCK_HISTORY_UNAVAILABLE", result?.error?.message || "No se pudo consultar el historial."), payload);
+          return;
+        }
+        const items = (result.data?.items || [])
+          .sort((a, b) => new Date(a.registradoEn) - new Date(b.registradoEn))
+          .map((item) => ({
+            fechaHora: item.registradoEn,
+            hora: item.horaRegistrada,
+            diaKey: item.diaClave,
+            tipo: item.fichajeEventoTipo,
+            integrityStatus: item.integrityStatus,
+            sequenceStatus: item.sequenceStatus,
+          }));
+        reply("GET_HISTORY_RES", { status: "SUCCESS", data: items }, payload);
+        return;
+      }
+
+      if (type === "HOURS_CALC") {
+        const range = _getYmdRange(payload.startDateYMD, payload.endDateYMD, 31);
+        if (range.error) {
+          reply("HOURS_CALC_RES", _widgetError(range.error.code, range.error.message), payload);
+          return;
+        }
+        const result = await calcularHorasTrabajadas({
+          startDateYMD: range.days[0],
+          endDateYMD: range.days[range.days.length - 1],
+          traceId,
+        });
+        if (result?.status !== "OK") {
+          reply("HOURS_CALC_RES", _widgetError(result?.error?.code || "TIMECLOCK_HOURS_UNAVAILABLE", result?.error?.message || "No se pudieron calcular las horas."), payload);
+          return;
+        }
+        const workedMinutes = Number(result.data?.minutosTrabajados) || 0;
+        const pauseMinutes = Number(result.data?.minutosPausa) || 0;
+        const eventCount = Number(result.data?.totalFichajesProcesados) || 0;
+        const workedHours = Number((workedMinutes / 60).toFixed(2));
+        const pauseHours = Number((pauseMinutes / 60).toFixed(2));
+        const timeFormatted = `${Math.floor(workedMinutes / 60)}h ${workedMinutes % 60}m`;
+        reply("HOURS_CALC_RES", {
+          status: "SUCCESS",
+          data: {
+            horasTrabajadasDecimal: workedHours,
+            tiempoFormateado: timeFormatted,
+            horasPausaDecimal: pauseHours,
+            totalFichajesProcesados: eventCount,
+            jornadasAbiertas: Number(result.data?.jornadasAbiertas) || 0,
+            integrityStatus: result.data?.integrityStatus || "UNVERIFIED",
+          },
+        }, payload);
+        return;
+      }
 
       /* ── Navegación (sólo el widget la pide con MM_NAV) ───────────── */
       if (type === MESSAGE_TYPES.NAV) {
@@ -204,22 +339,9 @@ $w.onReady(async () => {
         return;
       }
 
-      // La zona staff es un placeholder: estos mensajes solo se registran
-      // para diagnóstico. No existe en esta página un enrutamiento de caja.
-      const CASHIER_TYPES = new Set([
-        "TPV_TX",
-        "X_COUNT",
-        "Z_CLOSING",
-        "CASHIER_STATE",
-      ]);
-
-      if (CASHIER_TYPES.has(type)) {
-        console.debug("[only-staff] cashier message (not routed)", {
-          traceId,
-          type,
-          txType: payload.txType || null,
-        });
-      }
+      // Escrituras de fichaje, ajustes y caja permanecen deshabilitadas.
+      // El bridge no las permite en esta página hasta cerrar transición/idempotencia.
+      reply(`${type || "UNKNOWN"}_RES`, _widgetError("ACTION_NOT_ENABLED", "Esta operación no está habilitada en el panel de personal."), payload);
     },
 
     /* ─────────────────────────────────────────────────────────────────

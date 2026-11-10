@@ -1061,7 +1061,7 @@ test('FLOW-HOR-05 unsigned legacy timeclock rows are visible as unverified and e
   assert.equal(hours.status, 'ERROR');
   assert.equal(hours.error.code, 'TIMECLOCK_INTEGRITY_UNVERIFIED');
 
-  const history = await horario.getHistorialFichajes({ monthKey });
+  const history = await horario.getHistorialFichajes({ startDateYMD: dayKey, endDateYMD: dayKey });
   assert.equal(history.status, 'OK');
   assert.equal(history.data.items.length, 1);
   assert.equal(history.data.items[0].integrityStatus, 'UNVERIFIED');
@@ -1070,4 +1070,166 @@ test('FLOW-HOR-05 unsigned legacy timeclock rows are visible as unverified and e
   const summary = await horario.getResumenHoras({ monthKey });
   assert.equal(summary.status, 'ERROR');
   assert.equal(summary.error.code, 'TIMECLOCK_INTEGRITY_UNVERIFIED');
+});
+
+
+test('FLOW-HOR-06 bounded cross-month range aggregates multiple shifts and pauses in one read', async () => {
+  wixDataMock._reset();
+  await seedStaff();
+  setMember({ _id: GUID_MEMBER, contactId: GUID_CONTACT, loginEmail: 'marta@test.local' });
+  await setupFiscalSecrets();
+  const { horario, engine } = await freshImports();
+
+  const definitions = [
+    ['2026-10-31T09:00:00+01:00', '2026-10-31', '2026-10', 'ENTRADA'],
+    ['2026-10-31T12:00:00+01:00', '2026-10-31', '2026-10', 'PAUSA_INICIO'],
+    ['2026-10-31T12:30:00+01:00', '2026-10-31', '2026-10', 'PAUSA_FIN'],
+    ['2026-10-31T13:00:00+01:00', '2026-10-31', '2026-10', 'SALIDA'],
+    ['2026-11-01T14:00:00+01:00', '2026-11-01', '2026-11', 'ENTRADA'],
+    ['2026-11-01T17:00:00+01:00', '2026-11-01', '2026-11', 'SALIDA'],
+  ];
+  const records = [];
+  for (let index = 0; index < definitions.length; index += 1) {
+    const [iso, dayKey, monthKey, clockEventType] = definitions[index];
+    const recordedAt = new Date(iso);
+    const record = {
+      resourceId: GUID_RESOURCE,
+      memberId: GUID_MEMBER,
+      staffName: 'Marta',
+      recordedAt,
+      recordedTime: iso.slice(11, 19),
+      dayKey,
+      monthKey,
+      clockEventType,
+      recordType: 'REGULAR',
+      registeredBy: 'SELF',
+      registeredByMemberId: GUID_MEMBER,
+      adjustmentReason: null,
+      deviceIpAddress: null,
+      meta: {},
+      traceId: 'trace-timeclock-range-' + index,
+    };
+    record.signature = await engine.signTimeclockRecord(record);
+    records.push(record);
+  }
+  wixDataMock._store.set('RegistrosHorariosStaff', records);
+
+  const result = await horario.calcularHorasTrabajadas({
+    startDateYMD: '2026-10-31',
+    endDateYMD: '2026-11-01',
+  });
+  assert.equal(result.status, 'OK', JSON.stringify(result.error));
+  assert.equal(result.data.minutosTrabajados, 390);
+  assert.equal(result.data.minutosPausa, 30);
+  assert.equal(result.data.totalFichajesProcesados, 6);
+  assert.equal(result.data.diasProcesados, 2);
+  assert.equal(result.data.jornadasAbiertas, 0);
+
+  const history = await horario.getHistorialFichajes({
+    startDateYMD: '2026-10-31',
+    endDateYMD: '2026-11-01',
+    limit: 500,
+  });
+  assert.equal(history.status, 'OK', JSON.stringify(history.error));
+  assert.equal(history.data.items.length, 6);
+  assert.ok(history.data.items.every((item) => item.integrityStatus === 'VERIFIED'));
+});
+
+
+test('FLOW-HOR-07 signed but invalid event sequence is surfaced and cannot produce hours', async () => {
+  wixDataMock._reset();
+  await seedStaff();
+  setMember({ _id: GUID_MEMBER, contactId: GUID_CONTACT, loginEmail: 'marta@test.local' });
+  await setupFiscalSecrets();
+  const { horario, engine } = await freshImports();
+  const now = new Date();
+  const dayKey = now.toLocaleDateString('sv-SE', { timeZone: 'Europe/Madrid' });
+  const monthKey = dayKey.slice(0, 7);
+  const record = {
+    resourceId: GUID_RESOURCE,
+    memberId: GUID_MEMBER,
+    staffName: 'Marta',
+    recordedAt: now,
+    recordedTime: now.toLocaleTimeString('sv-SE', { timeZone: 'Europe/Madrid', hour12: false }),
+    dayKey,
+    monthKey,
+    clockEventType: 'PAUSA_FIN',
+    recordType: 'REGULAR',
+    registeredBy: 'SELF',
+    registeredByMemberId: GUID_MEMBER,
+    adjustmentReason: null,
+    deviceIpAddress: null,
+    meta: {},
+    traceId: 'trace-timeclock-invalid-sequence-001',
+  };
+  record.signature = await engine.signTimeclockRecord(record);
+  wixDataMock._store.set('RegistrosHorariosStaff', [record]);
+
+  const state = await horario.getEstadoJornada({ dayKey });
+  assert.equal(state.status, 'ERROR');
+  assert.equal(state.error.code, 'TIMECLOCK_SEQUENCE_INVALID');
+
+  const hours = await horario.calcularHorasTrabajadas({ dayKey });
+  assert.equal(hours.status, 'ERROR');
+  assert.equal(hours.error.code, 'TIMECLOCK_SEQUENCE_INVALID');
+
+  const history = await horario.getHistorialFichajes({
+    startDateYMD: dayKey,
+    endDateYMD: dayKey,
+    limit: 500,
+  });
+  assert.equal(history.status, 'OK');
+  assert.equal(history.data.items[0].integrityStatus, 'VERIFIED');
+  assert.equal(history.data.items[0].sequenceStatus, 'INVALID');
+});
+
+
+
+test('FLOW-HOR-08 counts completed pauses but excludes in-progress time for an open shift', async () => {
+  wixDataMock._reset();
+  await seedStaff();
+  setMember({ _id: GUID_MEMBER, contactId: GUID_CONTACT, loginEmail: 'marta@test.local' });
+  await setupFiscalSecrets();
+  const { horario, engine } = await freshImports();
+
+  const definitions = [
+    ['2026-11-10T09:00:00+01:00', 'ENTRADA'],
+    ['2026-11-10T10:00:00+01:00', 'PAUSA_INICIO'],
+    ['2026-11-10T10:15:00+01:00', 'PAUSA_FIN'],
+  ];
+  const records = [];
+  for (let index = 0; index < definitions.length; index += 1) {
+    const [iso, clockEventType] = definitions[index];
+    const recordedAt = new Date(iso);
+    const record = {
+      resourceId: GUID_RESOURCE,
+      memberId: GUID_MEMBER,
+      staffName: 'Marta',
+      recordedAt,
+      recordedTime: iso.slice(11, 19),
+      dayKey: '2026-11-10',
+      monthKey: '2026-11',
+      clockEventType,
+      recordType: 'REGULAR',
+      registeredBy: 'SELF',
+      registeredByMemberId: GUID_MEMBER,
+      adjustmentReason: null,
+      deviceIpAddress: null,
+      meta: {},
+      traceId: 'trace-timeclock-open-shift-' + index,
+    };
+    record.signature = await engine.signTimeclockRecord(record);
+    records.push(record);
+  }
+  wixDataMock._store.set('RegistrosHorariosStaff', records);
+
+  const result = await horario.calcularHorasTrabajadas({
+    startDateYMD: '2026-11-10',
+    endDateYMD: '2026-11-10',
+  });
+  assert.equal(result.status, 'OK', JSON.stringify(result.error));
+  assert.equal(result.data.minutosTrabajados, 0);
+  assert.equal(result.data.minutosPausa, 15);
+  assert.equal(result.data.jornadasAbiertas, 1);
+  assert.equal(result.data.integrityStatus, 'VERIFIED');
 });
