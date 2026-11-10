@@ -276,17 +276,18 @@ $w.onReady(async () => {
           reply("HOURS_CALC_RES", _widgetError(range.error.code, range.error.message), payload);
           return;
         }
-        const dayResults = await Promise.all(range.days.map((dayKey) =>
-          calcularHorasTrabajadas({ dayKey, traceId })
-        ));
-        const failed = dayResults.find((result) => result?.status !== "OK");
-        if (failed) {
-          reply("HOURS_CALC_RES", _widgetError(failed?.error?.code || "TIMECLOCK_HOURS_UNAVAILABLE", failed?.error?.message || "No se pudieron calcular las horas."), payload);
+        const result = await calcularHorasTrabajadas({
+          startDateYMD: range.days[0],
+          endDateYMD: range.days[range.days.length - 1],
+          traceId,
+        });
+        if (result?.status !== "OK") {
+          reply("HOURS_CALC_RES", _widgetError(result?.error?.code || "TIMECLOCK_HOURS_UNAVAILABLE", result?.error?.message || "No se pudieron calcular las horas."), payload);
           return;
         }
-        const workedMinutes = dayResults.reduce((sum, result) => sum + (Number(result.data?.minutosTrabajados) || 0), 0);
-        const pauseMinutes = dayResults.reduce((sum, result) => sum + (Number(result.data?.minutosPausa) || 0), 0);
-        const eventCount = dayResults.reduce((sum, result) => sum + (Number(result.data?.totalFichajesProcesados) || 0), 0);
+        const workedMinutes = Number(result.data?.minutosTrabajados) || 0;
+        const pauseMinutes = Number(result.data?.minutosPausa) || 0;
+        const eventCount = Number(result.data?.totalFichajesProcesados) || 0;
         const workedHours = Number((workedMinutes / 60).toFixed(2));
         const pauseHours = Number((pauseMinutes / 60).toFixed(2));
         const timeFormatted = `${Math.floor(workedMinutes / 60)}h ${workedMinutes % 60}m`;
@@ -297,8 +298,8 @@ $w.onReady(async () => {
             tiempoFormateado: timeFormatted,
             horasPausaDecimal: pauseHours,
             totalFichajesProcesados: eventCount,
-            jornadasAbiertas: dayResults.filter((result) => result.data?.jornadaCerrada === false).length,
-            integrityStatus: "VERIFIED",
+            jornadasAbiertas: Number(result.data?.jornadasAbiertas) || 0,
+            integrityStatus: result.data?.integrityStatus || "UNVERIFIED",
           },
         }, payload);
         return;
