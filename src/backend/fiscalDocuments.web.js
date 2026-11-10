@@ -82,6 +82,7 @@ const DOCS_COL = BUSINESS_COLLECTIONS.PAQUETES_GESTORIA;
 const DATOS_FISCALES_COL = BUSINESS_COLLECTIONS.DATOS_FISCALES;
 const CONTROL_COL = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
 const PACKAGE_MAX_ITEM_BYTES = 450 * 1024; // Wix CMS hard limit: 500 KB per item.
+const PACKAGE_OPERATION_TTL_MS = 10 * 60 * 1000;
 const PACKAGE_VERSION_ALLOCATION_ATTEMPTS = 3;
 const PACKAGE_SCHEMA_VERSION = "1.0";
 
@@ -137,7 +138,7 @@ const _rf = (m, key) => _safeTrim(readMovementField(m, key));
 
 function _buildCsvFromInvoices(invoices) {
   if (!Array.isArray(invoices) || invoices.length === 0) return "";
-  const header = "Numero;Fecha;Tipo;Base;Cuota;Total;FormaPago;Hash\\n";
+  const header = "Numero;Fecha;Tipo;Base;Cuota;Total;FormaPago;Hash\n";
   const rows = invoices.map((inv) => {
     const number = _safeTrim(_invoiceValue(inv, ["invoiceNumber", "numSerieFactura"], "numSerieFactura"));
     const date = _safeTrim(_invoiceValue(inv, ["fechaExpedicion", "fechaOperacion"], "fechaOperacion"));
@@ -148,7 +149,7 @@ function _buildCsvFromInvoices(invoices) {
     const method = _safeTrim(_invoiceValue(inv, ["paymentMethod"], "paymentMethod"));
     const hash = _safeTrim(_invoiceValue(inv, ["hashCompleto", "recordHash", "hash"], "recordHash"));
     return `"${number}";"${date}";"${type}";${base};${tax};${total};"${method}";"${hash}"`;
-  }).join("\\n");
+  }).join("\n");
   return header + rows;
 }
 
@@ -452,7 +453,7 @@ async function _claimPackageOperation(operationId, period, traceId) {
     controlType: CONTROL_TYPE.IDEMPOTENCY,
     dedupeKey: `MANAGER_PACKAGE_CREATE:${operationId}`,
     status: "ACTIVE",
-    expiresAt: null,
+    expiresAt: new Date(Date.now() + PACKAGE_OPERATION_TTL_MS),
     payload: {
       operationId,
       periodType: period.periodType,
@@ -540,6 +541,36 @@ function _buildPackageSnapshotBase({ year, quarter, version, summaryData, invoic
     traceId,
     createdAt: new Date(),
   };
+}
+
+function _packageSnapshotHashPayload(doc) {
+  return {
+    _id: doc?._id,
+    periodType: doc?.periodType,
+    fiscalYear: Number(doc?.fiscalYear),
+    fiscalQuarter: Number(doc?.fiscalQuarter),
+    packageVersion: Number(doc?.packageVersion),
+    summaryData: doc?.summaryData,
+    invoiceData: doc?.invoiceData,
+    packageStatus: doc?.packageStatus,
+    schemaVersion: doc?.schemaVersion,
+    source: doc?.source,
+    traceId: doc?.traceId,
+    createdAt: doc?.createdAt,
+  };
+}
+
+async function _verifyPackageSnapshot(doc) {
+  if (
+    !doc?._id ||
+    doc.packageStatus !== "PREPARED" ||
+    !doc.summaryData ||
+    !Array.isArray(doc.invoiceData) ||
+    !/^[a-f0-9]{64}$/i.test(_safeTrim(doc.snapshotHash))
+  ) return false;
+
+  const expected = await hashSHA256(_stableSerialize(_packageSnapshotHashPayload(doc)));
+  return expected.toLowerCase() === _safeTrim(doc.snapshotHash).toLowerCase();
 }
 
 export const createManagerPackageVersion = webMethod(
@@ -825,6 +856,17 @@ export const downloadManagerPackageVersion = webMethod(
           error: {
             code: "DOC_NOT_FOUND",
             message: "Document version not found",
+          },
+        };
+      }
+      if (!(await _verifyPackageSnapshot(doc))) {
+        return {
+          status: "ERROR",
+          data: null,
+          error: {
+            code: "PACKAGE_SNAPSHOT_HASH_INVALID",
+            message: "La huella del snapshot no coincide; se bloquea la descarga y se requiere revisión.",
+            traceId,
           },
         };
       }
