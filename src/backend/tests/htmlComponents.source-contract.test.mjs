@@ -235,10 +235,12 @@ test("admin snapshot action is allowlisted and uses a stable operation UUID with
   assert.ok(adminPage.includes('"CREATE_SNAPSHOT"'));
   assert.ok(adminPage.includes("CREATE_SNAPSHOT: ({ payload }) => createManagerPackageVersion(payload || {})"));
   assert.ok(adminHtml.includes("btnCreateSnapshot"));
+  assert.ok(adminHtml.includes("d.displayId || d.id"));
   assert.ok(adminHtml.includes("crypto.getRandomValues"));
   assert.ok(adminHtml.includes("CREATE_SNAPSHOT_RES"));
   assert.ok(adminHtml.includes("No se envía a gestoría"));
   assert.ok(adminHtml.includes("downloadTextFile"));
+  assert.ok(adminHtml.includes("data.displayId || data.documentId"));
   assert.ok(adminHtml.includes("activeDownloadButton = null"));
   assert.ok(!adminHtml.includes("window.open(data.url"));
 });
