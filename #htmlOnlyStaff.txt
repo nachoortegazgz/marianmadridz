@@ -62,7 +62,6 @@
     }
     .clock-panel { padding: 20px; margin-bottom: 20px; }
     .panel { padding: 20px; }
-    .panel.soft { background: var(--soft); }
 
     .clock-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 14px; }
     .panel-title { font-size: 15px; font-weight: 800; margin-bottom: 14px; border-bottom: 1px solid var(--line); padding-bottom: 10px; color: var(--ink); }
@@ -105,9 +104,6 @@
     .btn:disabled { cursor: not-allowed; opacity: .55; }
     .btn-outline { background: transparent; border-color: var(--line-strong); color: var(--ink-secondary); }
     .btn-outline:hover { background: var(--soft); border-color: var(--navy); }
-    .btn-success { background: var(--success); } .btn-success:hover { background: var(--success-hover); }
-    .btn-danger { background: var(--danger); } .btn-danger:hover { background: var(--danger-hover); }
-    .btn-warn { background: var(--accent); } .btn-warn:hover { background: var(--accent-hover); }
     .btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
     .btn-group .btn { flex: 1 1 120px; }
 
