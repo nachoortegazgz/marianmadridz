@@ -190,3 +190,17 @@ test('FDOC-CSV-01 text cells escape delimiters, quotes and neutralize spreadshee
   assert.ok(builder.includes('.join(";")'));
   assert.ok(builder.includes('.join("\\n")'));
 });
+
+
+test('FDOC-STORAGE-07 every recovered or newly inserted snapshot is hash-verified before success', () => {
+  const claim = extractBlock(
+    'async function _claimPackageOperation(operationId, period, traceId) {',
+    'async function _readNextQuarterPackageVersion'
+  );
+  assert.ok((claim.match(/_verifyPackageSnapshot\\(/g) || []).length >= 4);
+  const handler = extractBlock(
+    'export const createManagerPackageVersion = webMethod(',
+    '// =============================================================================\\n// BLOQUE 4 - HISTORIAL DE PAQUETES'
+  );
+  assert.ok(handler.includes('if (!(await _verifyPackageSnapshot(saved)))'));
+});
