@@ -60,6 +60,8 @@ test('FDOC-STORAGE-03 canonical hash and 450 KiB cap protect immutable CMS snaps
   assert.match(source, /Buffer\.byteLength\(_stableSerialize\(snapshot\), "utf8"\)/);
   assert.match(source, /hashSHA256\(_stableSerialize\(base\)\)/);
   assert.match(source, /PACKAGE_VERSION_ALLOCATION_ATTEMPTS/);
+  assert.match(source, /snapshotInsertUncertain/);
+  assert.match(source, /!snapshotInserted && !snapshotInsertUncertain/);
   assert.match(source, /dalQuery\(DOCS_COL\)[\s\S]*?\.limit\(1000\)[\s\S]*?find\(STRONG_READ\)/);
   assert.match(source, /_verifyPackageSnapshot\(doc\)/);
 });
@@ -102,7 +104,7 @@ test('FDOC-STORAGE-06 CSV output uses real line breaks and preview uses manager-
   assert.match(preview, /summaryRes\?\.status !== "SUCCESS"/);
 });
 
-test('FDOC-STORAGE-03 accountant dispatch remains disabled in canonical configuration', () => {
+test('FDOC-DISPATCH-03 accountant dispatch remains disabled in canonical configuration', () => {
   assert.ok(config.includes('ACCOUNTANT_SEND_ENABLED: false'));
   assert.ok(source.includes('ACCOUNTANT_SEND_ENABLED = SDK_CONFIG.EMAIL.ACCOUNTANT_SEND_ENABLED === true'));
   assert.ok(source.includes('ACCOUNTANT_SEND_DISABLED'));
