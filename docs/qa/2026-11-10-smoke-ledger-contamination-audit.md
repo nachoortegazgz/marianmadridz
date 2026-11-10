@@ -64,3 +64,6 @@ La rama `feat/staff-readonly-hours-history-bridge-20261110` conecta el widget co
 Los DTO del bridge se adaptan explícitamente a los nombres que consume `#htmlOnlyStaff.txt`. Historial etiqueta los registros sin firma como `NO VERIFICADO`. Las consultas de rango son acotadas (92 días para historial, 31 para cálculo) y el cálculo se realiza en una única llamada backend, con soporte de varios meses y suma de pausas por jornadas/sesiones.
 
 La escritura de fichajes sigue bloqueada: `registrarFichaje` todavía necesita transición de estado, idempotencia y exclusión mutua/concurrencia antes de habilitarse.
+
+
+La lectura de jornada también valida la secuencia semántica de eventos (ENTRADA → PAUSA_INICIO → PAUSA_FIN → SALIDA; se permiten varias sesiones completas al día). Estado y cálculo rechazan secuencias inválidas; el historial las etiqueta `SECUENCIA INVÁLIDA`. El cálculo suma correctamente pausas de varias sesiones y declara las jornadas abiertas cuyo tiempo en curso no se incluye.
