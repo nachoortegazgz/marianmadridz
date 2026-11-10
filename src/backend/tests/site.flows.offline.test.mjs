@@ -269,6 +269,8 @@ test('FLOW-HOR-01 flujo continuo: contexto -> fichar ENTRADA -> estado jornada -
   assert.strictEqual(hist.status, 'OK');
   const items = hist.data?.items || hist.data || [];
   assert.ok(items.length >= 1, 'historial contiene el fichaje');
+  assert.equal(items[0].integrityStatus, 'VERIFIED');
+  assert.equal(Object.prototype.hasOwnProperty.call(items[0], 'signature'), false);
 });
 
 test('FLOW-HOR-02 payload invalido => rechazo controlado SIN escritura', async () => {
@@ -1023,4 +1025,49 @@ test('FLOW-CAJA-12 explicit smoke rows are excluded from live fiscal sequence, c
   assert.equal(audit.status, 'SUCCESS', JSON.stringify(audit));
   assert.equal(audit.data.checked, 1);
   assert.equal(audit.data.breaksCount, 0);
+});
+
+
+test('FLOW-HOR-05 unsigned legacy timeclock rows are visible as unverified and excluded from calculations', async () => {
+  wixDataMock._reset();
+  await seedStaff();
+  setMember({ _id: GUID_MEMBER, contactId: GUID_CONTACT, loginEmail: 'marta@test.local' });
+  const { horario } = await freshImports();
+  const now = new Date();
+  const dayKey = now.toLocaleDateString('sv-SE', { timeZone: 'Europe/Madrid' });
+  const monthKey = dayKey.slice(0, 7);
+  wixDataMock._store.set('RegistrosHorariosStaff', [{
+    _id: 'legacy-unsigned-clock-001',
+    resourceId: GUID_RESOURCE,
+    memberId: GUID_MEMBER,
+    staffName: 'Marta',
+    recordedAt: now,
+    recordedTime: now.toTimeString().slice(0, 8),
+    dayKey,
+    monthKey,
+    clockEventType: 'ENTRADA',
+    recordType: 'REGULAR',
+    registeredBy: 'SELF',
+    registeredByMemberId: GUID_MEMBER,
+    adjustmentReason: null,
+    traceId: 'QA_LIVECMS_UNSIGNED_TIME_001',
+  }]);
+
+  const state = await horario.getEstadoJornada({ dayKey });
+  assert.equal(state.status, 'ERROR');
+  assert.equal(state.error.code, 'TIMECLOCK_INTEGRITY_UNVERIFIED');
+
+  const hours = await horario.calcularHorasTrabajadas({ dayKey });
+  assert.equal(hours.status, 'ERROR');
+  assert.equal(hours.error.code, 'TIMECLOCK_INTEGRITY_UNVERIFIED');
+
+  const history = await horario.getHistorialFichajes({ monthKey });
+  assert.equal(history.status, 'OK');
+  assert.equal(history.data.items.length, 1);
+  assert.equal(history.data.items[0].integrityStatus, 'UNVERIFIED');
+  assert.equal(Object.prototype.hasOwnProperty.call(history.data.items[0], 'signature'), false);
+
+  const summary = await horario.getResumenHoras({ monthKey });
+  assert.equal(summary.status, 'ERROR');
+  assert.equal(summary.error.code, 'TIMECLOCK_INTEGRITY_UNVERIFIED');
 });
