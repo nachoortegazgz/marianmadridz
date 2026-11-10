@@ -28,7 +28,7 @@ let isAuthorized = false;
 
 function _parseYmd(value) {
   const raw = _safeTrim(value || "");
-  const match = /^(\\d{4})-(\\d{2})-(\\d{2})$/.exec(raw);
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(raw);
   if (!match) return null;
   const date = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
   return date.toISOString().slice(0, 10) === raw ? date : null;
