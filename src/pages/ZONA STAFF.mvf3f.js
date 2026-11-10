@@ -21,7 +21,6 @@ import {
   calcularHorasTrabajadas,
 } from "backend/horario.web.js";
 
-let bridge = null;
 let isAuthorized = false;
 
 function _parseYmd(value) {
@@ -60,7 +59,6 @@ function _mapClockState(data) {
     ultimoFichaje: data?.ultimoEvento
       ? { tipo: data.ultimoEvento.tipo, fechaHora: data.ultimoEvento.registradoEn }
       : null,
-    totalFichajes: Number(data?.totalFichajes) || 0,
   };
 }
 
@@ -150,7 +148,7 @@ $w.onReady(async () => {
   /* ────────────────────────────────────────────────────────────────────
      5) Bridge con el widget HTML
      ──────────────────────────────────────────────────────────────────── */
-  bridge = createWidgetBridge(widget, {
+  createWidgetBridge(widget, {
     allowedTypes: [MESSAGE_TYPES.READY, MESSAGE_TYPES.CONTEXT, "GET_STATE", "GET_HISTORY", "HOURS_CALC"],
     slug: "only-staff",
     traceId,
@@ -184,14 +182,12 @@ $w.onReady(async () => {
 
       return {
         isAuthorized: isAuthorized && hasStaffContext,
-        panelType: "PERSONAL",
-        enableStateQuery: hasStaffContext,
+            enableStateQuery: hasStaffContext,
         enableHistory: hasStaffContext,
         enableScheduleQuery: hasStaffContext,
         timeZone: TZ,
         today,
         memberName: resolvedName,
-        employeeName: resolvedName,
         roleLabel: staffContext?.data?.rolWebsite || roleLabel,
         estadoInicial: initialState,
       };
