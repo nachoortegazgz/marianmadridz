@@ -13,7 +13,6 @@ import { location } from "@wix/site-location";
 import { checkStaffCollaboratorAccess } from "backend/security.web.js";
 import {
     getCashierState,
-    registerManualTransaction,
     registerZClosing,
 } from "backend/cajas.web.js";
 import {
@@ -21,15 +20,8 @@ import {
     getLibroRegistroFacturasExpedidas,
 } from "backend/fiscalAggregator.web.js";
 import {
-    previewManagerPackage,
-    createManagerPackageVersion,
-    getManagerPackageHistory,
     getPreparedManagerPackages,
     downloadManagerPackageVersion,
-    // NUEVO — envio a gestor
-    listAccountantRecipients,
-    sendManagerPackageToAccountant,
-    sendSpecificDocumentToAccountant,
 } from "backend/fiscalDocuments.web.js";
 
 import { makeTraceId, URLS, MESSAGE_TYPES } from "public/mmUtils";
@@ -43,9 +35,6 @@ const ACTIONS = {
     CASHIER_STATE: ({ payload, traceId }) =>
         getCashierState({ traceId, diaKey: payload?.diaKey || null }),
 
-    TPV_TX: ({ payload, traceId }) =>
-        registerManualTransaction({ ...(payload || {}), traceId }),
-
     Z_CLOSING: ({ payload, traceId }) =>
         registerZClosing(payload?.diaKey || null, { traceId }),
 
@@ -56,41 +45,8 @@ const ACTIONS = {
     FISCAL_BOOK: ({ payload, traceId }) =>
         getLibroRegistroFacturasExpedidas(payload?.year, payload?.quarter, { traceId }),
 
-    // ── Documentos (existentes) ─────────────────────────────────────
-    DOCUMENT_PREVIEW: ({ payload }) => previewManagerPackage(payload || {}),
-    DOCUMENT_CREATE: ({ payload }) => createManagerPackageVersion(payload || {}),
-    DOCUMENT_HISTORY: ({ payload }) => getManagerPackageHistory(payload || {}),
     DOCUMENT_PREPARED: () => getPreparedManagerPackages(),
     DOCUMENT_DOWNLOAD: ({ payload }) => downloadManagerPackageVersion(payload || {}),
-
-    // ── Envío a gestor (NUEVO) ──────────────────────────────────────
-    ACCOUNTANT_RECIPIENTS: ({ traceId }) =>
-        listAccountantRecipients({ traceId }),
-
-    SEND_MONTHLY_PACKAGE: ({ payload, traceId }) =>
-        sendManagerPackageToAccountant({
-            documentId: payload?.documentId,
-            recipientId: payload?.recipientId,
-            notes: payload?.notes || null,
-            traceId,
-        }),
-
-    SEND_QUARTERLY_PACKAGE: ({ payload, traceId }) =>
-        sendManagerPackageToAccountant({
-            documentId: payload?.documentId,
-            recipientId: payload?.recipientId,
-            notes: payload?.notes || null,
-            traceId,
-        }),
-
-    SEND_SPECIFIC_DOCUMENT: ({ payload, traceId }) =>
-        sendSpecificDocumentToAccountant({
-            documentId: payload?.documentId,
-            documentType: payload?.documentType || null,
-            recipientId: payload?.recipientId,
-            notes: payload?.notes || null,
-            traceId,
-        }),
 
 };
 
@@ -154,17 +110,11 @@ $w.onReady(async () => {
                 today: new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Madrid" }),
 
                 // ── Feature flags ─────────────────────────────────────
-                enableClocking: false,        // ❌ fichaje eliminado
-                enableBreaks: false,
                 // La caja solo se muestra si el backend confirma un estado operativo.
                 // CajaActual SIMULACION/CERRADA/ausente no se presenta como TPV activo.
                 enableCashier:
                     cashierRes?.status === "SUCCESS" &&
                     cashierRes.data?.cashRegisterStatus === "ABIERTA",
-                enableInventory: false, // Inventory managed only in Wix Stores
-                enableScheduleQuery: false,   // backend de resumen aun no implementado
-                enableAIAssistant: false,      // proveedor IA no conectado
-                enableAccountantSend: false,  // despacho bloqueado hasta cerrar snapshot inmutable
                 enableFiscal: true,
                 enableDocuments: true,
 
