@@ -363,7 +363,7 @@ function _isDuplicatePackageInsertError(error) {
   return [
     "WDE0074",
     "WD_ITEM_ALREADY_EXISTS",
-  ].includes(code) || /already exists|duplicate|duplicated values/.test(message);
+  ].includes(code) || /already exists|wd_item_already_exists/.test(message);
 }
 
 function _packagePeriodMatches(payload, period) {
