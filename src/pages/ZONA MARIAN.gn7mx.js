@@ -20,6 +20,7 @@ import {
     getLibroRegistroFacturasExpedidas,
 } from "backend/fiscalAggregator.web.js";
 import {
+    createManagerPackageVersion,
     getPreparedManagerPackages,
     downloadManagerPackageVersion,
 } from "backend/fiscalDocuments.web.js";
@@ -45,6 +46,7 @@ const ACTIONS = {
     FISCAL_BOOK: ({ payload, traceId }) =>
         getLibroRegistroFacturasExpedidas(payload?.year, payload?.quarter, { traceId }),
 
+    CREATE_SNAPSHOT: ({ payload }) => createManagerPackageVersion(payload || {}),
     DOCUMENT_PREPARED: () => getPreparedManagerPackages(),
     DOCUMENT_DOWNLOAD: ({ payload }) => downloadManagerPackageVersion(payload || {}),
 
@@ -86,6 +88,7 @@ $w.onReady(async () => {
             "Z_CLOSING",
             "FISCAL_SUMMARY",
             "FISCAL_BOOK",
+            "CREATE_SNAPSHOT",
             "DOCUMENT_PREPARED",
             "DOCUMENT_DOWNLOAD",
         ],
