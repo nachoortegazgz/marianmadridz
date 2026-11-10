@@ -185,14 +185,20 @@ test("admin and staff cash widgets consume the canonical getCashierState DTO", (
   assert.match(onlyStaffHtml, /state\.operationDate/);
 });
 
+test("admin widget no longer exposes discarded staff management or business status flow", () => {
+  assert.ok(!adminHtml.includes("s.status"));
+});
+
+test("admin widget excludes inactive AI, accountant dispatch and staff management flows", () => {
+  assert.doesNotMatch(adminHtml, /aiPanel|sendPanel|AI_QUERY|ACCOUNTANT_RECIPIENTS|SEND_MONTHLY_PACKAGE|SEND_QUARTERLY_PACKAGE|SEND_SPECIFIC_DOCUMENT/);
+  assert.ok(adminHtml.includes("d.packageStatus"));
+});
+
 test("admin fallback hides unsupported capabilities and ticket output uses text nodes", () => {
   assert.match(adminHtml, /roleLabel: 'CONTEXTO NO DISPONIBLE'/);
   assert.match(adminHtml, /enableCashier:\s*false/);
   assert.match(adminHtml, /enableFiscal:\s*false/);
   assert.match(adminHtml, /enableDocuments:\s*false/);
-  assert.match(adminHtml, /enableAIAssistant:\s*false/);
-  assert.match(adminHtml, /enableStaffManagement:\s*false/);
-  assert.match(adminHtml, /enableAccountantSend:\s*false/);
   assert.doesNotMatch(adminHtml, /cashTicket\.innerHTML\s*=/);
   assert.doesNotMatch(onlyStaffHtml, /ticketBox\.innerHTML\s*=/);
   assert.doesNotMatch(onlyStaffHtml, /hoursResult\.innerHTML\s*=/);
