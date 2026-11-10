@@ -36,7 +36,7 @@ import {
 } from "backend/staff";
 
 import { requireAdmin } from "backend/security";
-import { signTimeclockRecord } from "backend/securityEngine";
+import { signTimeclockRecord, verifyTimeclockSignature } from "backend/securityEngine";
 /* HOR-R3-03 (DUP-02): _safeTrim importado de mmUtils (SSOT). Helper local
  * eliminado. */
 import { makeTraceId, _safeTrim } from "public/mmUtils";
@@ -73,6 +73,16 @@ function _getMadridMonthKey(d) {
 function _getMadridTime(d) {
     const date = d || _getMadridNow();
     return date.toTimeString().slice(0, 8); // HH:MM:SS
+}
+
+async function _getTimeclockIntegrity(records) {
+    const items = Array.isArray(records) ? records : [];
+    const verified = await Promise.all(items.map((record) => verifyTimeclockSignature(record)));
+    return {
+        allVerified: verified.every(Boolean),
+        unverifiedCount: verified.filter((value) => !value).length,
+        verified,
+    };
 }
 
 /* HOR-R3-03 (DUP-02): _safeTrim local ELIMINADO. Importado de mmUtils. */
@@ -249,6 +259,19 @@ export const getEstadoJornada = webMethod(
                 .find();
 
             const fichajes = res?.items || [];
+            const integrity = await _getTimeclockIntegrity(fichajes);
+            if (!integrity.allVerified) {
+                return {
+                    status: "ERROR",
+                    data: null,
+                    error: {
+                        code: "TIMECLOCK_INTEGRITY_UNVERIFIED",
+                        message: "Hay fichajes sin firma HMAC valida; el estado de jornada requiere revision.",
+                        details: { unverifiedCount: integrity.unverifiedCount },
+                    },
+                    traceId,
+                };
+            }
             const ultimo = fichajes[fichajes.length - 1] || null;
 
             let estado = "SIN_INICIAR";
@@ -312,6 +335,19 @@ export const calcularHorasTrabajadas = webMethod(
                 .find();
 
             const fichajes = res?.items || [];
+            const integrity = await _getTimeclockIntegrity(fichajes);
+            if (!integrity.allVerified) {
+                return {
+                    status: "ERROR",
+                    data: null,
+                    error: {
+                        code: "TIMECLOCK_INTEGRITY_UNVERIFIED",
+                        message: "No se calculan horas sobre fichajes sin firma HMAC valida.",
+                        details: { unverifiedCount: integrity.unverifiedCount },
+                    },
+                    traceId,
+                };
+            }
             let minutosTrabajados = 0;
             let entradaTs = null;
             let pausaInicioTs = null;
@@ -376,14 +412,18 @@ export const getHistorialFichajes = webMethod(
                 .limit(limit)
                 .find();
 
-            // DTO whitelist: nunca signature/meta completos, nunca deviceIpAddress
-            const items = (res?.items || []).map((f) => ({
+            // DTO whitelist: nunca signature/meta completos, nunca deviceIpAddress.
+            // La integridad se expone como estado, sin filtrar el HMAC ni datos del dispositivo.
+            const rawItems = res?.items || [];
+            const integrity = await _getTimeclockIntegrity(rawItems);
+            const items = rawItems.map((f, index) => ({
                 registradoEn: f[F.RECORDED_AT],
                 horaRegistrada: f[F.RECORDED_TIME],
                 fichajeEventoTipo: f[F.CLOCK_EVENT_TYPE],
                 registroTipo: f[F.RECORD_TYPE],
                 diaClave: f[F.DAY_KEY],
                 ajusteMotivo: f[F.ADJUSTMENT_REASON] || null,
+                integrityStatus: integrity.verified[index] ? "VERIFIED" : "UNVERIFIED",
             }));
 
             return { status: "OK", data: { items, total: items.length }, traceId };
@@ -528,6 +568,27 @@ export const getResumenHoras = webMethod(
                 .find();
 
             const fichajes = res?.items || [];
+            const integrity = await _getTimeclockIntegrity(fichajes);
+            if (!integrity.allVerified) {
+                return {
+                    status: "ERROR",
+                    data: null,
+                    error: {
+                        code: "TIMECLOCK_INTEGRITY_UNVERIFIED",
+                        message: "El resumen mensual requiere revision: hay fichajes sin firma HMAC valida.",
+                        details: { unverifiedCount: integrity.unverifiedCount },
+                    },
+                    traceId,
+                };
+            }
+            if (typeof res?.hasNext === "function" && res.hasNext()) {
+                return {
+                    status: "ERROR",
+                    data: null,
+                    error: { code: "TIMECLOCK_DATASET_LIMIT_EXCEEDED", message: "El resumen mensual supera el limite de lectura segura." },
+                    traceId,
+                };
+            }
             const porDia = {};
             let totalMinutos = 0;
 
