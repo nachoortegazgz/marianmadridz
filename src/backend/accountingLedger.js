@@ -236,23 +236,76 @@ async function _readEntryRows(entryId) {
     return Array.isArray(result?.items) ? result.items : [];
 }
 
-function _verifyEntryRows(rows, entry) {
+async function _verifyEntryRows(rows, entry) {
     if (rows.length !== entry.lines.length) return false;
     const sorted = [...rows].sort((a, b) => Number(a.lineNumber) - Number(b.lineNumber));
+    const first = sorted[0];
+    const firstTimestamp = new Date(first?.recordTimestamp);
+    if (!Number.isFinite(firstTimestamp.getTime())) return false;
+
+    // Anchor this entry to the actual ledger head immediately before its first row.
+    // A locally linked set of rows is not sufficient if its first predecessor is forged.
+    const priorResult = await dalQuery(ACCOUNTING_COL)
+        .ne("origenTipo", "SMOKE_TEST")
+        .ne("accountCode", "SIMULATED")
+        .lt("recordTimestamp", firstTimestamp)
+        .descending("recordTimestamp")
+        .descending("lineNumber")
+        .limit(1)
+        .find(STRONG_READ);
+    const prior = priorResult?.items?.[0] || null;
+    if (isExplicitSimulationLedgerRecord(prior)) return false;
+    let expectedPreviousHash = _safeTrim(prior?.recordHash) || GENESIS_HASH;
+    if (first.previousRecordHash !== expectedPreviousHash) return false;
+
     for (let index = 0; index < entry.lines.length; index += 1) {
         const expected = entry.lines[index];
         const actual = sorted[index];
+        let recordTimestamp;
+        let entryDate;
+        try {
+            recordTimestamp = new Date(actual.recordTimestamp).toISOString();
+            entryDate = new Date(actual.entryDate).toISOString();
+        } catch {
+            return false;
+        }
         if (
             Number(actual.lineNumber) !== expected.lineNumber ||
+            actual.entryId !== entry.entryId ||
             actual.accountCode !== expected.accountCode ||
             _roundMoney(actual.debitAmount) !== expected.debitAmount ||
             _roundMoney(actual.creditAmount) !== expected.creditAmount ||
             actual.sourceMovementId !== entry.sourceMovementId ||
             (actual.cashMovementId || null) !== entry.cashMovementId ||
-            !actual.recordHash ||
-            !actual.previousRecordHash
+            actual.concept !== entry.concept ||
+            actual.origenTipo !== entry.origenTipo ||
+            actual.origenRegistro !== entry.origenRegistro ||
+            entryDate !== entry.entryDate.toISOString() ||
+            actual.fiscalPeriod !== entry.fiscalPeriod ||
+            !_safeTrim(actual.traceId) ||
+            actual.previousRecordHash !== expectedPreviousHash ||
+            !/^[a-f0-9]{64}$/i.test(_safeTrim(actual.recordHash))
         ) return false;
-        if (index > 0 && actual.previousRecordHash !== sorted[index - 1].recordHash) return false;
+
+        const hashPayload = {
+            entryId: actual.entryId,
+            recordTimestamp,
+            concept: actual.concept,
+            lineNumber: Number(actual.lineNumber),
+            origenTipo: actual.origenTipo,
+            origenRegistro: actual.origenRegistro,
+            sourceMovementId: actual.sourceMovementId,
+            cashMovementId: actual.cashMovementId || null,
+            entryDate,
+            fiscalPeriod: actual.fiscalPeriod,
+            accountCode: actual.accountCode,
+            debitAmount: _roundMoney(actual.debitAmount),
+            creditAmount: _roundMoney(actual.creditAmount),
+            traceId: actual.traceId,
+        };
+        const computedHash = await hashChain(expectedPreviousHash, hashPayload);
+        if (computedHash.toLowerCase() !== _safeTrim(actual.recordHash).toLowerCase()) return false;
+        expectedPreviousHash = actual.recordHash;
     }
     return true;
 }
@@ -297,9 +350,6 @@ export async function appendAccountingEntry(input, traceId) {
         if (payload.payloadHash !== payloadHash) {
             return { status: "ERROR", data: null, error: { code: "ACCOUNTING_ENTRY_PAYLOAD_MISMATCH" } };
         }
-        if (claim.status === "COMPLETED") {
-            return { status: "SUCCESS", data: { entryId: entry.entryId, idempotent: true }, error: null };
-        }
         if (claim.status === "REPAIR_REQUIRED") {
             return { status: "ERROR", data: null, error: { code: "ACCOUNTING_ENTRY_REPAIR_REQUIRED" } };
         }
@@ -330,6 +380,7 @@ export async function appendAccountingEntry(input, traceId) {
         }
     }
 
+    const claimWasCompleted = claim.status === "COMPLETED";
     let lock = null;
     let retainLock = false;
     try {
@@ -338,17 +389,26 @@ export async function appendAccountingEntry(input, traceId) {
 
         const existingRows = await _readEntryRows(entry.entryId);
         if (existingRows.length) {
-            if (_verifyEntryRows(existingRows, entry)) {
-                await _markEntryClaim(claim, "COMPLETED", {
-                    completedAt: new Date().toISOString(),
-                    recoveredExistingRows: true,
-                });
+            if (await _verifyEntryRows(existingRows, entry)) {
+                if (!claimWasCompleted) {
+                    await _markEntryClaim(claim, "COMPLETED", {
+                        completedAt: new Date().toISOString(),
+                        recoveredExistingRows: true,
+                    });
+                }
                 return { status: "SUCCESS", data: { entryId: entry.entryId, lineCount: existingRows.length, idempotent: true }, error: null };
             }
             await _markEntryClaim(claim, "REPAIR_REQUIRED", {
                 observedLineCount: existingRows.length,
                 expectedLineCount: entry.lines.length,
                 reason: "PARTIAL_OR_MISMATCHED_ENTRY",
+            });
+            return { status: "ERROR", data: null, error: { code: "ACCOUNTING_ENTRY_REPAIR_REQUIRED" } };
+        }
+        if (claimWasCompleted) {
+            await _markEntryClaim(claim, "REPAIR_REQUIRED", {
+                reason: "COMPLETED_CLAIM_WITHOUT_ROWS",
+                expectedLineCount: entry.lines.length,
             });
             return { status: "ERROR", data: null, error: { code: "ACCOUNTING_ENTRY_REPAIR_REQUIRED" } };
         }

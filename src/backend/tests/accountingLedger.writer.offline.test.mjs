@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { wixDataMock } from "./loader.mjs";
 import * as IC from "backend/internalConfig.js";
 import { appendAccountingEntry } from "backend/accountingLedger.js";
+import { hashChain } from "backend/securityEngine.js";
 
 const ACCOUNTING_COL = IC.BUSINESS_COLLECTIONS.LIBRO_ASIENTOS_CONTABLES_DETALLE;
 const CONTROL_COL = IC.BUSINESS_COLLECTIONS.CONTROL_OPERATIVO;
@@ -22,6 +23,25 @@ function entry(entryId, debit = 121, credit = 121) {
       { lineNumber: 1, accountCode: "000001", debitAmount: debit, creditAmount: 0 },
       { lineNumber: 2, accountCode: "000002", debitAmount: 0, creditAmount: credit },
     ],
+  };
+}
+
+function hashPayloadFromRow(row) {
+  return {
+    entryId: row.entryId,
+    recordTimestamp: new Date(row.recordTimestamp).toISOString(),
+    concept: row.concept,
+    lineNumber: Number(row.lineNumber),
+    origenTipo: row.origenTipo,
+    origenRegistro: row.origenRegistro,
+    sourceMovementId: row.sourceMovementId,
+    cashMovementId: row.cashMovementId || null,
+    entryDate: new Date(row.entryDate).toISOString(),
+    fiscalPeriod: row.fiscalPeriod,
+    accountCode: row.accountCode,
+    debitAmount: Number(row.debitAmount),
+    creditAmount: Number(row.creditAmount),
+    traceId: row.traceId,
   };
 }
 
@@ -147,3 +167,62 @@ describe("accounting ledger writer", () => {
     assert.equal(rows[0].previousRecordHash, "0".repeat(64));
     assert.notEqual(rows[0].previousRecordHash, "SIMULATED_PREVIOUS_DETAIL_HASH");
   });
+
+it("ACC-LEDGER-09 rejects replay when a persisted record hash does not match its immutable payload", async () => {
+  const payload = entry("ACC-QA-ENTRY-009");
+  const first = await appendAccountingEntry(payload, "trace-acc-009");
+  assert.equal(first.status, "SUCCESS");
+  const rows = wixDataMock._store.get(ACCOUNTING_COL);
+  rows[0].recordHash = "f".repeat(64);
+
+  const replay = await appendAccountingEntry(payload, "trace-acc-009-replay");
+  assert.equal(replay.status, "ERROR");
+  assert.equal(replay.error.code, "ACCOUNTING_ENTRY_REPAIR_REQUIRED");
+});
+
+it("ACC-LEDGER-10 rejects a locally valid replay chain whose first hash is not anchored to the prior ledger head", async () => {
+  const prior = await appendAccountingEntry(entry("ACC-QA-ENTRY-010-PRIOR"), "trace-acc-010-prior");
+  assert.equal(prior.status, "SUCCESS");
+  const payload = entry("ACC-QA-ENTRY-010");
+  const first = await appendAccountingEntry(payload, "trace-acc-010");
+  assert.equal(first.status, "SUCCESS");
+
+  const allRows = wixDataMock._store.get(ACCOUNTING_COL);
+  const rows = allRows.filter(row => row.entryId === payload.entryId)
+    .sort((a, b) => Number(a.lineNumber) - Number(b.lineNumber));
+  rows[0].previousRecordHash = "1".repeat(64);
+  rows[0].recordHash = await hashChain(rows[0].previousRecordHash, hashPayloadFromRow(rows[0]));
+  rows[1].previousRecordHash = rows[0].recordHash;
+  rows[1].recordHash = await hashChain(rows[1].previousRecordHash, hashPayloadFromRow(rows[1]));
+
+  const replay = await appendAccountingEntry(payload, "trace-acc-010-replay");
+  assert.equal(replay.status, "ERROR");
+  assert.equal(replay.error.code, "ACCOUNTING_ENTRY_REPAIR_REQUIRED");
+});
+
+it("ACC-LEDGER-11 rejects replay when signed metadata is altered even if line amounts remain balanced", async () => {
+  const payload = entry("ACC-QA-ENTRY-011");
+  const first = await appendAccountingEntry(payload, "trace-acc-011");
+  assert.equal(first.status, "SUCCESS");
+  const rows = wixDataMock._store.get(ACCOUNTING_COL);
+  rows[0].concept = "Concepto alterado";
+
+  const replay = await appendAccountingEntry(payload, "trace-acc-011-replay");
+  assert.equal(replay.status, "ERROR");
+  assert.equal(replay.error.code, "ACCOUNTING_ENTRY_REPAIR_REQUIRED");
+});
+
+
+it("ACC-LEDGER-12 marks a completed claim for repair when its ledger rows are missing", async () => {
+  const payload = entry("ACC-QA-ENTRY-012");
+  const first = await appendAccountingEntry(payload, "trace-acc-012");
+  assert.equal(first.status, "SUCCESS");
+  wixDataMock._store.get(ACCOUNTING_COL).splice(0);
+
+  const replay = await appendAccountingEntry(payload, "trace-acc-012-replay");
+  assert.equal(replay.status, "ERROR");
+  assert.equal(replay.error.code, "ACCOUNTING_ENTRY_REPAIR_REQUIRED");
+  const claim = [...wixDataMock._store.get(CONTROL_COL)]
+    .find(item => item.controlType === "DEDUPE_KEY");
+  assert.equal(claim.status, "REPAIR_REQUIRED");
+});
