@@ -69,6 +69,7 @@ import {
 } from "backend/internalConfig";
 
 import { readInvoiceNumber, readInvoiceIssueDate, readFiscalPayload, readMovementField, readMovementHash, readTaxAmount, readInvoiceType, readIssuerTaxId, readRecipientTaxId } from "backend/data";
+import { isExplicitSimulationLedgerRecord } from "backend/validation";
 
 import { hashChain } from "backend/securityEngine";
 
@@ -333,10 +334,12 @@ function _buildAEATPayload(movement, generatedAt) {
 
 async function _getLastCashEvent() {
     const res = await dalQuery(MOVIMIENTOS_CAJA_COL)
+        .gt("sequenceNumber", 0)
+        .ne("recordSource", "SMOKE_TEST")
         .descending("sequenceNumber")
-        .limit(1)
+        .limit(20)
         .find({ consistencyMode: "strong" });
-    return res?.items?.[0] || null;
+    return (res?.items || []).find((item) => !isExplicitSimulationLedgerRecord(item)) || null;
 }
 
 // ============================================================================
@@ -1005,11 +1008,13 @@ export async function reconciliarProyecciones() {
     try {
         const pending = await dalQuery(MOVIMIENTOS_CAJA_COL)
             .ne("projectionStatus", PROJECTION_STATUS.OK)
+            .gt("sequenceNumber", 0)
+            .ne("recordSource", "SMOKE_TEST")
             .descending("sequenceNumber")
             .limit(PROYECCION_BATCH_LIMIT)
             .find();
 
-        for (const evento of pending.items || []) {
+        for (const evento of (pending.items || []).filter((item) => !isExplicitSimulationLedgerRecord(item))) {
             try {
                 await withTimeout(
                     () => _proyectarSegunTipoEvento(evento, traceId),
