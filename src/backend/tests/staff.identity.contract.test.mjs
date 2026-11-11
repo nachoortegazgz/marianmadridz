@@ -7,9 +7,10 @@ const staff = await import('../staff.js');
 const RESOURCE_ID = '11111111-1111-4111-8111-111111111111';
 const STAFF_MEMBER_ID = '22222222-2222-4222-8222-222222222222';
 const CONTACT_ID = '33333333-3333-4333-8333-333333333333';
-const SCHEDULE_ID = '44444444-4444-4444-8444-444444444444';
+const WORKING_HOURS_SCHEDULE_ID = '44444444-4444-4444-8444-444444444444';
+const EVENTS_SCHEDULE_ID = '55555555-5555-4555-8555-555555555555';
 
-test('STAFF-SDK-01 resolves resourceId, staff _id, contactId and schedule _id from native SDK shape', async () => {
+test('STAFF-SDK-01 separates working-hours schedule IDs from the staff events schedule ID', async () => {
   staff.invalidateStaffCache();
   const calls = [];
   mocks.sdk['bookings::staffMembers'] = {
@@ -23,8 +24,8 @@ test('STAFF-SDK-01 resolves resourceId, staff _id, contactId and schedule _id fr
           serviceProvider: true,
           resource: {
             _id: RESOURCE_ID,
-            workingHoursSchedules: [{ _id: SCHEDULE_ID }],
-            eventsSchedule: { _id: SCHEDULE_ID },
+            workingHoursSchedules: [{ _id: WORKING_HOURS_SCHEDULE_ID }],
+            eventsSchedule: { _id: EVENTS_SCHEDULE_ID },
           },
           associatedWixIdentity: {
             identificationData: { contactId: CONTACT_ID },
@@ -43,7 +44,10 @@ test('STAFF-SDK-01 resolves resourceId, staff _id, contactId and schedule _id fr
     contactId: CONTACT_ID,
     displayName: 'Ana',
     roleWebsite: '',
-    scheduleId: SCHEDULE_ID,
+    workingHoursScheduleIds: [WORKING_HOURS_SCHEDULE_ID],
+    workingHoursScheduleId: WORKING_HOURS_SCHEDULE_ID,
+    eventsScheduleId: EVENTS_SCHEDULE_ID,
+    scheduleId: EVENTS_SCHEDULE_ID,
   });
   assert.equal(calls.length, 1);
   assert.deepEqual(calls[0].query.filter, { resourceId: { $eq: RESOURCE_ID } });
@@ -52,6 +56,30 @@ test('STAFF-SDK-01 resolves resourceId, staff _id, contactId and schedule _id fr
   const byContact = await staff.findStaffByContactId(CONTACT_ID);
   assert.equal(byContact.resourceId, RESOURCE_ID);
   assert.equal(byContact.staffMemberId, STAFF_MEMBER_ID);
+  assert.equal(await staff.getStaffEventsScheduleId(RESOURCE_ID), EVENTS_SCHEDULE_ID);
+});
+
+test('STAFF-SDK-03 missing events schedule fails closed instead of using working-hours schedule', async () => {
+  staff.invalidateStaffCache();
+  mocks.sdk['bookings::staffMembers'] = {
+    queryStaffMembers: async () => ({
+      staffMembers: [{
+        _id: STAFF_MEMBER_ID,
+        resourceId: RESOURCE_ID,
+        name: 'Ana',
+        resource: {
+          workingHoursSchedules: [{ _id: WORKING_HOURS_SCHEDULE_ID }],
+        },
+      }],
+      pagingMetadata: { hasNext: false, cursors: {} },
+    }),
+  };
+
+  const result = await staff.findStaffByResourceId(RESOURCE_ID);
+  assert.equal(result.workingHoursScheduleId, WORKING_HOURS_SCHEDULE_ID);
+  assert.equal(result.eventsScheduleId, '');
+  assert.equal(result.scheduleId, '');
+  assert.equal(await staff.getStaffEventsScheduleId(RESOURCE_ID), null);
 });
 
 test('STAFF-SDK-02 disconnected staff identity never exposes a Contact ID', async () => {

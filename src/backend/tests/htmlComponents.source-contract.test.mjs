@@ -166,13 +166,22 @@ test("staff widget exposes only authorized read-only state, history and hours pa
   assert.doesNotMatch(allowlist[1], /NAV|CLOCK|ADJUSTMENT|TPV_TX|CASHIER_STATE|X_COUNT|Z_CLOSING|INVENTORY_/);
   assert.match(staffPage, /enableStateQuery:\s*hasStaffContext/);
   assert.match(staffPage, /enableHistory:\s*hasStaffContext/);
-  assert.match(staffPage, /enableScheduleQuery:\s*hasStaffContext/);
+  assert.match(staffPage, /enableHoursCalculation:\s*hasStaffContext/);
   assert.match(onlyStaffHtml, /contextData\.isAuthorized !== true/);
   assert.match(onlyStaffHtml, /statePanel\.style\.display\s*=\s*enableStateQuery/);
   assert.match(onlyStaffHtml, /historyPanel\.style\.display\s*=\s*enableHistory/);
-  assert.match(onlyStaffHtml, /hoursPanel\.style\.display\s*=\s*enableScheduleQuery/);
+  assert.match(onlyStaffHtml, /hoursPanel\.style\.display\s*=\s*enableHoursCalculation/);
   assert.doesNotMatch(onlyStaffHtml, /enableClocking|enableCashier|cashPanel|TPV_TX|CASHIER_STATE|btnOpenCalendar|btnEntrada|btnAdjSubmit|btnSupplierPayment|btnXCount|btnZClosing/);
   assert.doesNotMatch(staffPage, /location\.to|URLS|\/pos-checkout|\/caja-actual|\/mi-calendario/);
+});
+
+test("staff and Marian zones keep separate operational responsibilities", () => {
+  assert.match(adminPage, /requireMarianManager|isMarianManager/);
+  assert.doesNotMatch(adminPage, /getEstadoJornada|getHistorialFichajes|calcularHorasTrabajadas/);
+  assert.match(staffPage, /getEstadoJornada/);
+  assert.match(staffPage, /getHistorialFichajes/);
+  assert.match(staffPage, /calcularHorasTrabajadas/);
+  assert.doesNotMatch(staffPage, /getCashierState|registerZClosing|getQuarterlyTaxSummary/);
 });
 
 test("cashier DTO is consumed only by the Marian manager panel", () => {
@@ -199,7 +208,7 @@ test("admin fallback hides unsupported capabilities and ticket output uses text 
   assert.match(adminHtml, /enableCashier:\s*false/);
   assert.match(adminHtml, /enableFiscal:\s*false/);
   assert.match(adminHtml, /enableDocuments:\s*false/);
-  assert.doesNotMatch(adminHtml, /cashierMode|enableClocking|enableInventory|enableScheduleQuery/);
+  assert.doesNotMatch(adminHtml, /cashierMode|enableClocking|enableInventory|enableHoursCalculation/);
   assert.doesNotMatch(adminPage, /isMarianManager: true|isAdmin: access\.isAdmin|isCajero: access\.isCajero/);
   assert.doesNotMatch(adminHtml, /cashTicket\.innerHTML\s*=/);
   assert.doesNotMatch(onlyStaffHtml, /ticketBox\.innerHTML\s*=/);
