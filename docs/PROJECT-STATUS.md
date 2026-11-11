@@ -262,3 +262,15 @@ La revisión de 2026-11-11 añade, entre otros, estos puntos que prevalecen sobr
 - La CI offline verde no acredita Wix runtime, E2E publicado ni despliegue.
 
 La sección histórica anterior se conserva para trazabilidad; cuando contradiga estos puntos, aplicar esta actualización para el estado a 2026-11-11 y registrar la resolución definitiva en el ADR correspondiente.
+
+## Addendum — conciliación de pagos y reembolsos Wix (2026-11-11)
+
+- PR #286 sigue abierta como draft, sin merge ni despliegue. La rama añade al hardening fail-closed la conciliación de reembolsos por eventos Velo estables: wixEcom_onOrderPaymentStatusUpdated y wixEcom_onOrderUpdated.
+- La lectura de transacciones utiliza @wix/ecom.orderTransactions.listTransactionsForSingleOrder con elevación. Solo se registran refunds con todas las transacciones terminales; summary.refunded debe reconciliar con importes SUCCEEDED y las transacciones FAILED aportan cero.
+- SDK_CONFIG.CURRENCY_CODE=EUR está respaldado por las propiedades live del sitio. Los reembolsos con otra moneda se rechazan; no hay soporte multimoneda.
+- Cobertura añadida: siete pruebas unitarias y escenario offline de venta, refund pendiente, parcial mixto, total posterior, residual IVA, replay y concurrencia.
+- El último CI completo observado sobre un HEAD intermedio falló en una suite por contaminación de un mock global de orders; se retiró ese mock. La ejecución sobre el HEAD final está pendiente. No declarar validación hasta obtener CI verde y Gitleaks verde sobre el mismo HEAD.
+- Wix Runtime y E2E publicado siguen pendientes por falta de sitio QA aislado. No ejecutar webhooks, pagos, reembolsos ni escrituras fiscales sobre el sitio productivo.
+- El evento Velo onOrderTransactionsUpdated no se utiliza porque está en Developer Preview y su descripción no garantiza la transición de estado de refunds ya creados.
+- La documentación de QA está en docs/qa/QA-SIMULATION-2026-11.md y el detalle de cambios en docs/audits/2026-11-11-p0-p1-hardening.md.
+
