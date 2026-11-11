@@ -1728,12 +1728,23 @@ async function handleBooking(
             );
         } catch (error) {
             console.error(
-                "[calendario-2] No se pudo abrir ConfirmacionReserva",
+                "[calendario-2] No se pudo abrir ConfirmacionReserva; se entrega confirmación alternativa",
                 {
                     traceId,
+                    bookingId: bookingIdF1,
                     message: error?.message
                 }
             );
+            // Booking already succeeded. Never invite a retry because a visual
+            // lightbox failed; return an explicit reference in the widget.
+            reply(MESSAGE_TYPES.BOOK, {
+                ...bookingResult,
+                confirmationFallback: true,
+                confirmationReference: bookingIdF1,
+                confirmationDate: slotF1Parts.fecha,
+                confirmationTime: slotF1Parts.hora,
+                confirmationService: currentService?.title || "",
+            });
         }
     } catch (error) {
         const isTimeout =
