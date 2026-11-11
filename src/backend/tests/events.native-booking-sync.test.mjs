@@ -97,6 +97,74 @@ function seedCita(overrides = {}) {
   };
 }
 
+test("EVENT-BOOKING-CREATED-01 native creation persists a pending projection and confirmation advances it", async () => {
+  wixDataMock._reset();
+  const createdBooking = nativeBooking({ status: "CREATED", paymentStatus: "UNDEFINED" });
+  const createdResult = await events.wixBookingsV2_onBookingCreated(
+    bookingConfirmedEvent("evt-native-created-001", createdBooking)
+  );
+
+  assert.equal(createdResult.status, "OK");
+  assert.equal(createdResult.ledgerCreated, true);
+  let rows = wixDataMock._store.get("CitasF2") || [];
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].bookingStatus, "PENDING");
+  assert.equal(rows[0].paymentStatus, "NOT_PAID");
+
+  const confirmedResult = await events.wixBookingsV2_onBookingConfirmed(
+    bookingConfirmedEvent("evt-native-confirm-after-created-001", nativeBooking({ status: "CONFIRMED" }))
+  );
+  assert.equal(confirmedResult.status, "OK");
+  rows = wixDataMock._store.get("CitasF2") || [];
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].bookingStatus, "CONFIRMED");
+
+  const markers = wixDataMock._store.get("ControlOperativo") || [];
+  assert.equal(markers.filter(row => row.dedupeKey === "WEBHOOK_evt-native-created-001").length, 1);
+  assert.equal(markers.filter(row => row.dedupeKey === "WEBHOOK_evt-native-confirm-after-created-001").length, 1);
+});
+
+test("EVENT-BOOKING-CREATED-02 late creation delivery never downgrades a custom dual projection", async () => {
+  wixDataMock._reset();
+  wixDataMock._store.set("CitasF2", [seedCita({
+    bookingStatus: "CONFIRMED",
+    paymentStatus: "NOT_PAID",
+    meta: { pairToken: PAIR_TOKEN, customSaga: true },
+  })]);
+
+  const result = await events.wixBookingsV2_onBookingCreated(
+    bookingConfirmedEvent("evt-native-created-late-002", nativeBooking({ status: "CREATED" }))
+  );
+
+  assert.equal(result.status, "OK");
+  assert.equal(result.ledgerCreated, false);
+  const rows = wixDataMock._store.get("CitasF2") || [];
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].bookingType, "DUAL_F1");
+  assert.equal(rows[0].pairToken, PAIR_TOKEN);
+  assert.equal(rows[0].bookingStatus, "CONFIRMED");
+  assert.equal(rows[0].meta.customSaga, true);
+});
+
+test("EVENT-BOOKING-CREATED-03 duplicate delivery is idempotent", async () => {
+  wixDataMock._reset();
+  const event = bookingConfirmedEvent(
+    "evt-native-created-duplicate-003",
+    nativeBooking({ status: "CREATED" })
+  );
+
+  const first = await events.wixBookingsV2_onBookingCreated(event);
+  const replay = await events.wixBookingsV2_onBookingCreated(event);
+
+  assert.equal(first.status, "OK");
+  assert.equal(replay.status, "OK");
+  assert.equal(replay.duplicate, true);
+  assert.equal((wixDataMock._store.get("CitasF2") || []).length, 1);
+  assert.equal((wixDataMock._store.get("ControlOperativo") || []).filter(
+    row => row.dedupeKey === "WEBHOOK_evt-native-created-duplicate-003"
+  ).length, 1);
+});
+
 test("EVENT-BOOKING-01 native confirmation creates a canonical CitasF2 projection", async () => {
   wixDataMock._reset();
   const result = await events.wixBookingsV2_onBookingConfirmed(
