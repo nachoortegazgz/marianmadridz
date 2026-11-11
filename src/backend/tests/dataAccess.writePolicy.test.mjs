@@ -24,6 +24,17 @@ test("insert policy allows only declared collections and canonical ControlOperat
         _id: "synthetic-ledger-row",
         movementType: "COBRO",
     }));
+    assert.doesNotThrow(() => assertInsertAllowed(C.CITAS_F2, {
+        bookingId: "synthetic-booking",
+        bookingStatus: "PENDING",
+    }));
+    assert.doesNotThrow(() => assertInsertAllowed(C.REGISTROS_HORARIOS_STAFF, {
+        clockEventType: "ENTRADA",
+        staffId: "synthetic-staff",
+    }));
+    assert.throws(() => assertInsertAllowed(C.CITAS_F2, {
+        bookingStatus: "PENDING",
+    }), { code: "CMS_INSERT_BOOKING_ID_REQUIRED" });
     assert.doesNotThrow(() => assertInsertAllowed(C.DATOS_FISCALES, {
         recordType: RECORD_TYPE.TERCERO,
         taxId: "X0000000X",
@@ -57,6 +68,15 @@ test("update policy allows mutable operational state and CajaActual only", () =>
         _id: "cash-current",
         sequenceCounters: {},
     }));
+    assert.doesNotThrow(() => assertUpdateAllowed(C.CITAS_F2, {
+        _id: "projection-1",
+        bookingId: "synthetic-booking",
+        bookingStatus: "CONFIRMED",
+    }));
+    assert.throws(() => assertUpdateAllowed(C.CITAS_F2, {
+        _id: "projection-1",
+        bookingStatus: "CONFIRMED",
+    }), { code: "CMS_UPDATE_BOOKING_ID_REQUIRED" });
     assert.throws(() => assertUpdateAllowed(C.MOVIMIENTOS_CAJA, {
         _id: "immutable-ledger-row",
     }), { code: "CMS_UPDATE_COLLECTION_DENIED" });
