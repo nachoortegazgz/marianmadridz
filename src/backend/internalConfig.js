@@ -49,8 +49,9 @@ export const STAFF_CLOCKING_CONFIG = Object.freeze({
   ADJUSTMENTS_ENABLED: false,
 });
 
-// Fail-closed until fiscal issuance, signer, ledger and runtime E2E are certified.
-// This controls creation of new fiscal ledger movements and Z closings only.
+// Fail-closed production defaults until fiscal, accounting and runtime E2E
+// are certified. Simulation records are denied unless a trusted test harness
+// explicitly enables them; frontend input cannot change this policy.
 export const FISCAL_RUNTIME_POLICY = Object.freeze({
   LEDGER_WRITES_ENABLED: false,
   ACCOUNTING_LEDGER_WRITES_ENABLED: false,
