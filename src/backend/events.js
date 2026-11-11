@@ -1,7 +1,7 @@
 /*
 =============================================================================
 MODULE: backend/events.js
-VERSION: v5017-REFUND-IDEMPOTENCY-BOUNDED
+VERSION: v5018-ECOM-TRANSACTIONS-EVENT
 BASE: v5009-FISCAL-V20.1 + alineacion con internalConfig v12.0-SSOT-FINAL
       y dataAccess v2.1-UNIFIED
 RESPONSIBILITY: Wix-managed Velo backend events for Bookings V2 and
@@ -1844,7 +1844,7 @@ export async function wixEcom_onOrderCreated(eventPayload) {
 }
 
 // ============================================================================
-// WEBHOOK: ORDER PAYMENT STATUS UPDATED
+// INTERNAL PROCESSOR: PAID ORDER
 // ============================================================================
 
 async function processPaidEcommerceOrder(eventPayload) {
@@ -2483,6 +2483,8 @@ async function processCompletedEcommerceRefund(orderId, refundId, refundAmount, 
     }
 }
 
+// Wix Velo marks this event Developer Preview. Use only documented envelope fields
+// (metadata.id, entity._id); fetch current order and transaction state via @wix/ecom.
 export async function wixEcom_onOrderTransactionsUpdated(eventPayload) {
     const traceId = makeTraceId("whook-order-transactions");
     try {
