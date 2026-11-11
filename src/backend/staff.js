@@ -261,9 +261,9 @@ export async function findMarianStaff(traceId = null) {
     return _fetchStaffByResourceId(STAFF.IDS[0], traceId);
 }
 
-export async function getStaffScheduleId(resourceId, traceId = null) {
+export async function getStaffEventsScheduleId(resourceId, traceId = null) {
     const staff = await findStaffByResourceId(resourceId, traceId);
-    return staff ? _safeTrim(staff.scheduleId) || null : null;
+    return staff ? _safeTrim(staff.eventsScheduleId) || null : null;
 }
 
 export async function listStaff(traceId = null) {
