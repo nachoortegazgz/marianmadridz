@@ -1,13 +1,19 @@
 /*
 =============================================================================
 MODULE: backend/events.js
-VERSION: v5018-ECOM-TRANSACTIONS-EVENT
+VERSION: v5019-ECOM-REFUND-STATUS
 BASE: v5009-FISCAL-V20.1 + alineacion con internalConfig v12.0-SSOT-FINAL
       y dataAccess v2.1-UNIFIED
 RESPONSIBILITY: Wix-managed Velo backend events for Bookings V2 and
                 eCommerce with exact-indexed queries, bounded execution
                 and full idempotency.
 STANDARDS: G10 ASCII Strict. Cero suppressAuth. Cero COLLECTIONS alias.
+
+CAMBIOS v5019-ECOM-REFUND-STATUS:
+  REF-01: reembolso desde los eventos Velo estables onOrderPaymentStatusUpdated y
+          onOrderUpdated cuando el estado del pedido es PARTIALLY_REFUNDED o
+          FULLY_REFUNDED; consulta autoritativa de transacciones, terminalidad,
+          conciliacion de importes y guard de moneda canonica EUR.
 
 CAMBIOS DE ALINEACION v5015-ALIGNED (respecto a v5009-FISCAL-V20.1):
   ALN-01: COLLECTIONS alias eliminado. Uso de BUSINESS_COLLECTIONS y
