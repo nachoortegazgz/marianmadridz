@@ -10,6 +10,7 @@ STANDARDS: G10 ASCII Strict. Sin suppressAuth. Acceso CMS centralizado
 
 import { items } from "@wix/data";
 import { auth } from "@wix/essentials";
+import { assertBulkPatchAllowed } from "backend/dataAccessPolicy";
 
 const DATA_ACCESS_ERROR = "DATA_ACCESS_ERROR";
 
@@ -390,6 +391,11 @@ export async function bulkPatchItems(
     }
 
     const modifications = groups[0] || [];
+    assertBulkPatchAllowed(
+        collection,
+        modifications,
+        options?.condition?.filter
+    );
     const canonicalGroup = JSON.stringify(modifications);
 
     if (groups.some((group) => JSON.stringify(group || []) !== canonicalGroup)) {
