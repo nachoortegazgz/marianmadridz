@@ -146,7 +146,7 @@ test("EVENT-BOOKING-CREATED-02 late creation delivery never downgrades a custom 
   assert.equal(rows[0].meta.customSaga, true);
 });
 
-test("EVENT-BOOKING-CREATED-04 insertOnly race preserves a concurrent pending dual projection", async () => {
+test("EVENT-BOOKING-CREATED-03 insertOnly race preserves a concurrent pending dual projection", async () => {
   wixDataMock._reset();
   const originalQuery = wixDataMock.query;
   let citasQueryCount = 0;
@@ -192,7 +192,7 @@ test("EVENT-BOOKING-CREATED-04 insertOnly race preserves a concurrent pending du
   }
 });
 
-test("EVENT-BOOKING-CREATED-03 duplicate delivery is idempotent", async () => {
+test("EVENT-BOOKING-CREATED-04 duplicate delivery is idempotent", async () => {
   wixDataMock._reset();
   const event = bookingConfirmedEvent(
     "evt-native-created-duplicate-003",
