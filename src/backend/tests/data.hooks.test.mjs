@@ -140,14 +140,14 @@ test('HOOK-CMS-DATETIME-04 normalizes CajaActual DateTime fields without changin
   const item = {
     _id: 'SINGLE_ITEM_ID',
     singletonKey: 'CAJA_PRINCIPAL',
-    openedAt: '2026-11-11T08:30:00.000Z',
+    openedAt: '2026-11-11T09:30:00+01:00',
     closedAt: null,
-    lastMovementAt: { $date: '2026-11-11T08:45:00.000Z' },
+    lastMovementAt: { $date: '2026-11-11T09:45:00+01:00' },
   };
   H.CajaActual_beforeInsert(item);
   assert.ok(item.openedAt instanceof Date);
   assert.ok(item.lastMovementAt instanceof Date);
-  assert.strictEqual(item.openedAt.toISOString(), '2026-11-11T08:30:00.000Z');
+  assert.strictEqual(item.openedAt.toISOString(), '2026-11-11T08:30:00.000Z', 'the source offset must preserve the same instant');
   assert.strictEqual(item.lastMovementAt.toISOString(), '2026-11-11T08:45:00.000Z');
   assert.throws(() => H.CajaActual_beforeInsert({
     _id: 'SINGLE_ITEM_ID',
