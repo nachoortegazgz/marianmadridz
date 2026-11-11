@@ -190,3 +190,31 @@ No habilitar la caja ni desplegar mientras:
 - **Cambios en CMS:** ninguno.
 - **Cambios en Wix publicado:** ninguno.
 - **Ledgers históricos:** ninguno alterado.
+
+
+## 11. Aclaración de negocio: efectivo físico frente a movimientos económicos (2026-11-11)
+
+El propietario confirma que CajaActual debe reflejar exclusivamente el dinero que atraviesa físicamente el cajón del establecimiento. Por tanto:
+
+- Efectivo cobrado presencialmente, devoluciones en efectivo, aportaciones físicas, retiradas, pagos en efectivo a proveedores y ajustes físicos justificados pueden afectar a CajaActual cuando exista un contrato backend explícito para cada operación.
+- Tarjeta cobrada en el local, Bizum, pagos online, transferencias y gastos pagados desde banco no afectan al saldo físico de CajaActual.
+- MovimientosCaja conserva su función de registro fiscal de operaciones. No se debe filtrar ni borrar una operación fiscal porque no afecte al efectivo físico.
+- LibroAsientosContablesDetalle consolida los hechos económicos conforme a mapeos contables aprobados. Una operación en efectivo puede tener proyección física y asiento contable.
+
+### Estado de implementación — PR #284
+
+La PR #284 está abierta como draft y no se ha fusionado ni desplegado en Wix. Su cambio parcial hace que _updateCajaActual() proyecte únicamente movimientos con paymentMethod=EFECTIVO y channelType=PRESENCIAL; las operaciones no físicas no alteran saldo, contadores ni appliedMovementIds.
+
+Esta primera restricción no equivale al contrato completo de sesión ni cubre todavía aportaciones, retiradas, pagos físicos a proveedores o ajustes con dirección explícita. MOVEMENT_TYPE no contiene actualmente APORTACION, RETIRO ni PAGO_PROVEEDOR; AJUSTE no define por sí solo si la operación es entrada o salida. No ampliar enums, CMS ni asientos PGC hasta definir el contrato fiscal/contable, validación, permisos, idempotencia y pruebas.
+
+La apertura singleton en estado SIMULACION con 300 EUR es una proyección sintética de QA, no saldo inicial real conciliado. No debe habilitarse una sesión real ni modificarse ese registro sin procedimiento aprobado.
+
+### Gate actualizado
+
+Antes de implementar apertura/cierre y tipos adicionales:
+1. Resolver el contrato de cierre fiscal Z frente a arqueo físico.
+2. Definir los efectos IN/OUT/NONE y los tipos admitidos, sin aceptar la dirección desde frontend.
+3. Definir la relación de cada operación con MovimientosCaja y LibroAsientosContablesDetalle.
+4. Revisar todos los consumers, hooks, locks, cron y esquemas CMS.
+5. Añadir pruebas de idempotencia, concurrencia, fallos parciales y permisos negativos.
+6. Validar en entorno Wix QA aislado antes de activar cualquier writer.
