@@ -107,6 +107,8 @@ test("save policy is limited to the volatile DAYS_CACHE projection", () => {
 test("single-item removal requires an explicitly ephemeral ControlOperativo type", () => {
     assert.doesNotThrow(() => assertRemoveAllowed(O.CONTROL_OPERATIVO, "cache-1", T.DUAL_CACHE));
     assert.doesNotThrow(() => assertRemoveAllowed(O.CONTROL_OPERATIVO, "token-1", T.DISPLAY_TOKEN));
+    assert.doesNotThrow(() => assertRemoveAllowed(O.CONTROL_OPERATIVO, "lock-1", T.SLOT_LOCK));
+    assert.doesNotThrow(() => assertRemoveAllowed(O.CONTROL_OPERATIVO, "claim-1", T.IDEMPOTENCY));
     assert.throws(() => assertRemoveAllowed(O.CONTROL_OPERATIVO, "event-1", T.WEBHOOK_EVENT), {
         code: "CMS_REMOVE_SCOPE_DENIED",
     });
