@@ -193,7 +193,7 @@ Este addendum prevalece sobre el resumen histórico anterior de PR #286 y sobre 
 - PR #286: rama `audit/p0-p1-hardening`; HEAD previo a este addendum documental: `d30e03473fe2bfe39b93a881ef4b765fcd72691d`. CI de código: 57 suites / 548 tests / 0 fallos (run `43038637356`); Gitleaks SUCCESS (run `43038637350`). No hay revisiones humanas registradas. Los commits documentales posteriores no cambian código, pero disparan nuevos workflows de PR.
 - Se pausaron y verificaron 67 automatizaciones Wix activas: 66 email y una WhatsApp. Las cuatro automatizaciones WhatsApp están inactivas.
 - Nueve automatizaciones de email continúan activas porque Wix las marca readonly y/o disableStatusChange. No se ha podido demostrar aislamiento total de la mensajería nativa.
-- No se envió ningún mensaje. El móvil sintético `666724634` no se configuró; la acción Wix `whatsapp-send-message` no dispone de procedimiento público soportado para reconfigurar el destinatario por API.
+- No se envió ningún mensaje. El móvil sintético `el móvil sintético facilitado por el propietario (dato no versionado)` no se configuró; la acción Wix `whatsapp-send-message` no dispone de procedimiento público soportado para reconfigurar el destinatario por API.
 - La allowlist de `emailRecipientPolicy.js` solo cubre el despacho backend Resend; no gobierna automatizaciones nativas Wix.
 - El PR permanece draft y sin merge. Siguen pendientes revisión humana, QA runtime/E2E en entorno aislado para pagos/reembolsos y resolución de los nueve flujos email activos. No desplegar: los writers fiscales/contables quedan fail-closed por defecto.
 
@@ -208,7 +208,7 @@ PR #286 se fusionó en `main` mediante squash el 2026-11-11 a las 15:00:16 UTC. 
 - El merge no es despliegue. No se ha publicado código Wix ni se han mutado CMS, caja, ledgers, pedidos o pagos.
 - Writers fiscales y contables permanecen fail-closed por defecto; revisar impacto operativo antes de cualquier publicación.
 - 67 automatizaciones Wix se pausaron y verificaron (66 email y una WhatsApp); cuatro WhatsApp están inactivas. Nueve automatizaciones email siguen activas por restricciones Wix readonly/disableStatusChange.
-- No se ha enviado ningún mensaje. El móvil sintético 666724634 no se ha configurado.
+- No se ha enviado ningún mensaje. El móvil sintético el móvil sintético facilitado por el propietario (dato no versionado) no se ha configurado.
 - Pendiente antes de despliegue: runtime/E2E aislado para eventos de pago/reembolso, resolución de los nueve flujos nativos de email y ruta WhatsApp oficialmente soportada.
 
 Evidencia: [PR #286](https://github.com/nachoortegazgz/marianmadridz/pull/286), [merge commit](https://github.com/nachoortegazgz/marianmadridz/commit/0d8f6efc581bc6a3d892702ba1c32af73e829888), [auditoría de automatizaciones](docs/audits/2026-11-11-wix-automation-recipient-isolation.md).
