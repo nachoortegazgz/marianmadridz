@@ -185,3 +185,10 @@ La auditoría live de Wix Automations ya no es solo lectura. Tras autorización 
 No se ha enviado ningún email, WhatsApp ni SMS. El número sintético `666724634` permanece sin configurar. La acción nativa `whatsapp-send-message` carece de receta pública soportada para reconfigurar destinatario por API, por lo que se mantiene pausada y no se sustituye por otro canal.
 
 El guard de allowlist `emailRecipientPolicy.js` solo protege el despacho Resend del backend; no controla Wix Automations nativas. No ejecutar pruebas de envío hasta resolver los nueve flujos activos y verificar sus destinatarios. Evidencia detallada: [auditoría de aislamiento de notificaciones](../audits/2026-11-11-wix-automation-recipient-isolation.md).
+
+
+## Update 2026-11-11 — PR #286 integrada
+
+La PR #286 se fusionó en `main` por squash el 2026-11-11 15:00:16 UTC, commit `0d8f6efc581bc6a3d892702ba1c32af73e829888`. La CI offline del HEAD previo al merge pasó 57 suites / 548 tests / 0 fallos y Gitleaks SUCCESS. El merge no ejecuta Wix Runtime ni publica el código.
+
+Siguen pendientes las pruebas E2E aisladas de pagos/reembolsos. No se han creado órdenes, cobros, reembolsos, registros CMS ni comunicaciones reales. Los writers fiscales/contables siguen fail-closed. La mensajería nativa se mantiene parcialmente aislada: 67 automatizaciones pausadas, nueve flujos email aún activos por restricciones Wix; las cuatro WhatsApp están inactivas.
