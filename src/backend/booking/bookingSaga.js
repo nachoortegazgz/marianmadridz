@@ -358,7 +358,7 @@ async function _compensateCreatedBookings(createdBookings, traceId, pairToken) {
         const status = _safeTrim(
             (booking && booking[BOOKING_FIELDS.STATUS]) || (booking && booking.status)
         ).toUpperCase();
-        if (status && NON_CANCELABLE_STATUSES.has(status)) {
+        if (status && status !== "CANCELED" && NON_CANCELABLE_STATUSES.has(status)) {
             if (pairToken && booking?.phase) {
                 await updateBookingWriterIntent(pairToken, booking.phase, "TERMINAL", {
                     bookingId: String(bookingId),
@@ -375,6 +375,7 @@ async function _compensateCreatedBookings(createdBookings, traceId, pairToken) {
             continue;
         }
 
+        let revisionForQueue = null;
         try {
             const nativeResponse = await withTimeout(
                 () => getBookingForCompensationElevated(String(bookingId)),
@@ -393,6 +394,7 @@ async function _compensateCreatedBookings(createdBookings, traceId, pairToken) {
                 if (!Number.isInteger(currentRevision) || currentRevision < 1) {
                     throw new Error("REVISION_MISSING: current native booking revision unavailable");
                 }
+                revisionForQueue = currentRevision;
                 await _executeWithRetry(
                     function () {
                         return withTimeout(
@@ -456,7 +458,7 @@ async function _compensateCreatedBookings(createdBookings, traceId, pairToken) {
             }
             log.error("Compensation cancel failed; queuing in ControlOperativo", {
                 bookingId: bookingId,
-                revision: hasValidRevision ? revision : null,
+                revision: revisionForQueue,
                 traceId: traceId,
                 error: cancelErr && cancelErr.message,
             });
@@ -471,7 +473,7 @@ async function _compensateCreatedBookings(createdBookings, traceId, pairToken) {
                     compensationKind: COMPENSATION_KIND.CANCEL_BOOKING,
                     status: "PENDING",
                     attempts: 0,
-                    revision: hasValidRevision ? revision : null,
+                    revision: revisionForQueue,
                     payload: {
                         compensationKind: COMPENSATION_KIND.CANCEL_BOOKING,
                         serviceId: _safeTrim(booking && booking.serviceId),
