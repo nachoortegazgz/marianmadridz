@@ -645,6 +645,118 @@ test("EVENT-PAYMENT-09 official Wix eCommerce paid event appends WIX_PAYMENTS le
     "stable ORDER-{orderId} transaction id must prevent a second fiscal movement");
 });
 
+test("EVENT-REFUND-01 defers incomplete refunds, records successful terminal amounts and replays idempotently", async () => {
+  wixDataMock._reset();
+  seedCajaPrincipal();
+
+  const secretState = globalThis.__mmSecretsState || (globalThis.__mmSecretsState = { _map: {}, _default: "mock-secret" });
+  secretState._map.FISCAL_NIF_EMISOR = "B12345678";
+  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.DATOS_FISCALES, [{
+    _id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+    recordType: "TERCERO",
+    taxId: "B12345678",
+    legalName: "MARIAN MADRID",
+    thirdPartyType: "EMISOR",
+    address: null,
+  }]);
+  wixDataMock._seed("CitasF2", [seedCita({
+    bookingStatus: "PENDING",
+    paymentStatus: "PENDING_PAYMENT",
+    totalAmount: 45.5,
+    meta: { pairToken: PAIR_TOKEN, customSaga: true, paymentStatus: "PENDING_PAYMENT" },
+  })]);
+
+  const orderId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+  const refundId = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
+  activeOrder = {
+    _id: orderId,
+    paymentStatus: "PAID",
+    currency: "EUR",
+    taxIncludedInPrices: true,
+    taxInfo: { totalTax: { amount: "7.90" }, taxBreakdown: [] },
+    priceSummary: {
+      subtotal: { amount: "37.60" },
+      tax: { amount: "7.90" },
+      total: { amount: "45.50" },
+      totalPrice: { amount: "45.50" },
+    },
+    lineItems: [{
+      catalogReference: {
+        appId: IC.WIX_CATALOG_APP_IDS.BOOKINGS,
+        catalogItemId: BOOKING_ID,
+      },
+      productName: { original: "QA booking service" },
+      quantity: 1,
+      price: { amount: "120.00" },
+      totalPriceAfterTax: { amount: "45.50" },
+      taxInfo: {
+        taxableAmount: { amount: "37.60" },
+        taxAmount: { amount: "7.90" },
+        taxRate: "0.21",
+        taxBreakdown: [],
+      },
+    }],
+  };
+  activeOrderTransactions = { orderId, payments: [], refunds: [] };
+
+  const paid = await events.wixEcom_onOrderTransactionsUpdated({
+    metadata: { id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb1" },
+    entity: { _id: orderId },
+  });
+  assert.equal(paid.status, "OK");
+  assert.equal((wixDataMock._store.get(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA) || []).length, 1);
+
+  activeOrderTransactions = {
+    orderId,
+    payments: [],
+    refunds: [{
+      id: refundId,
+      transactions: [
+        { paymentId: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee", refundStatus: "SUCCEEDED", amount: { amount: "10.00" } },
+        { paymentId: "ffffffff-ffff-4fff-8fff-ffffffffffff", refundStatus: "PENDING", amount: { amount: "5.00" } },
+      ],
+      summary: { refunded: { amount: "10.00" } },
+    }],
+  };
+  const pending = await events.wixEcom_onOrderTransactionsUpdated({
+    metadata: { id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2" },
+    entity: { _id: orderId },
+  });
+  assert.equal(pending.status, "OK");
+  assert.equal(pending.completedRefundCount, 0);
+  assert.equal((wixDataMock._store.get(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA) || []).length, 1,
+    "a refund with a pending transaction must not append a fiscal correction");
+
+  activeOrderTransactions.refunds[0].transactions[1].refundStatus = "FAILED";
+  const completedEvent = {
+    metadata: { id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb3" },
+    entity: { _id: orderId },
+  };
+  const completed = await events.wixEcom_onOrderTransactionsUpdated(completedEvent);
+  assert.equal(completed.status, "OK");
+  assert.equal(completed.completedRefundCount, 1);
+
+  const movements = wixDataMock._store.get(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA) || [];
+  assert.equal(movements.length, 2);
+  const refundMovement = movements.find(row => row.transactionId === "REFUND-" + orderId + "-" + refundId);
+  assert.ok(refundMovement);
+  assert.equal(refundMovement.totalAmount, -10);
+  assert.equal(refundMovement.taxBase, -8.26);
+  assert.equal(refundMovement.taxAmount, -1.74);
+
+  const cita = (wixDataMock._store.get("CitasF2") || []).find(row => row.bookingId === BOOKING_ID);
+  assert.equal(cita.paymentStatus, IC.PAYMENT_STATUS.PARTIALLY_REFUNDED);
+  assert.equal(cita.bookingStatus, "PENDING");
+
+  const replay = await events.wixEcom_onOrderTransactionsUpdated({
+    metadata: { id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb4" },
+    entity: { _id: orderId },
+  });
+  assert.equal(replay.status, "OK");
+  assert.equal((wixDataMock._store.get(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA) || []).length, 2,
+    "a completed refund replay must not append a second rectification");
+});
+
 test("EVENT-BOOKING-RESCHEDULE-01 native reschedule updates only the affected CitasF2 phase and flags its dual sibling", async () => {
   wixDataMock._reset();
   wixDataMock._store.set("CitasF2", [
