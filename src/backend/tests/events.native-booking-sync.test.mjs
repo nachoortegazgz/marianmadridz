@@ -146,7 +146,53 @@ test("EVENT-BOOKING-CREATED-02 late creation delivery never downgrades a custom 
   assert.equal(rows[0].meta.customSaga, true);
 });
 
-test("EVENT-BOOKING-CREATED-03 duplicate delivery is idempotent", async () => {
+test("EVENT-BOOKING-CREATED-03 insertOnly race preserves a concurrent pending dual projection", async () => {
+  wixDataMock._reset();
+  const originalQuery = wixDataMock.query;
+  let citasQueryCount = 0;
+  wixDataMock.query = function (collection) {
+    const query = originalQuery(collection);
+    if (collection !== "CitasF2") return query;
+    const originalFind = query.find;
+    query.find = async (options) => {
+      citasQueryCount += 1;
+      if (citasQueryCount === 1) {
+        return { items: [], length: 0, total: 0, totalCount: 0 };
+      }
+      if (citasQueryCount === 2) {
+        wixDataMock._store.set("CitasF2", [seedCita({
+          bookingStatus: "PENDING",
+          paymentStatus: "NOT_PAID",
+          meta: { pairToken: PAIR_TOKEN, customSaga: true },
+        })]);
+      }
+      return originalFind(options);
+    };
+    return query;
+  };
+
+  try {
+    const result = await events.wixBookingsV2_onBookingCreated(
+      bookingConfirmedEvent(
+        "evt-native-created-insert-race-004",
+        nativeBooking({ status: "CREATED" })
+      )
+    );
+
+    assert.equal(result.status, "OK");
+    assert.equal(result.ledgerCreated, false);
+    const rows = wixDataMock._store.get("CitasF2") || [];
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0].bookingType, "DUAL_F1");
+    assert.equal(rows[0].pairToken, PAIR_TOKEN);
+    assert.equal(rows[0].bookingStatus, "PENDING");
+    assert.equal(rows[0].meta.customSaga, true);
+  } finally {
+    wixDataMock.query = originalQuery;
+  }
+});
+
+test("EVENT-BOOKING-CREATED-04 duplicate delivery is idempotent", async () => {
   wixDataMock._reset();
   const event = bookingConfirmedEvent(
     "evt-native-created-duplicate-003",
