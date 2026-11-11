@@ -344,9 +344,9 @@ test("EVENT-BOOKING-04 payment webhook updates payment without confirming a pend
     }],
   };
   activeOrderTransactions = { orderId, payments: [], refunds: [] };
-  const result = await events.wixEcom_onOrderTransactionsUpdated({
+  const result = await events.wixEcom_onOrderPaymentStatusUpdated({
     metadata: { id: "evt-order-paid-pending-004" },
-    entity: { _id: orderId },
+    data: { order: activeOrder, previousPaymentStatus: "NOT_PAID" },
   });
 
   assert.equal(result.status, "OK");
@@ -587,11 +587,7 @@ test("EVENT-PAYMENT-09 official Wix eCommerce paid event appends WIX_PAYMENTS le
 
   activeOrder = event.data.order;
   activeOrderTransactions = { orderId, payments: [], refunds: [] };
-  const transactionsEvent = {
-    metadata: { id: eventId },
-    entity: { _id: orderId },
-  };
-  const result = await events.wixEcom_onOrderTransactionsUpdated(transactionsEvent);
+  const result = await events.wixEcom_onOrderPaymentStatusUpdated(event);
   assert.equal(result.status, "OK");
 
   const movements = wixDataMock._store.get(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA) || [];
@@ -631,14 +627,14 @@ test("EVENT-PAYMENT-09 official Wix eCommerce paid event appends WIX_PAYMENTS le
     "official metadata.id must be persisted as the webhook idempotency marker"
   );
 
-  const sameEventReplay = await events.wixEcom_onOrderTransactionsUpdated(transactionsEvent);
+  const sameEventReplay = await events.wixEcom_onOrderPaymentStatusUpdated(event);
   assert.equal(sameEventReplay.status, "OK");
   assert.equal(sameEventReplay.duplicate, true);
   assert.equal((wixDataMock._store.get(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA) || []).length, 1);
 
-  const newEventReplay = await events.wixEcom_onOrderTransactionsUpdated({
-    metadata: { id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc" },
-    entity: { _id: orderId },
+  const newEventReplay = await events.wixEcom_onOrderPaymentStatusUpdated({
+    ...event,
+    metadata: { ...event.metadata, id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc" },
   });
   assert.equal(newEventReplay.status, "OK");
   assert.equal((wixDataMock._store.get(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA) || []).length, 1,
@@ -699,9 +695,9 @@ test("EVENT-REFUND-01 defers incomplete refunds, records successful terminal amo
   };
   activeOrderTransactions = { orderId, payments: [], refunds: [] };
 
-  const paid = await events.wixEcom_onOrderTransactionsUpdated({
+  const paid = await events.wixEcom_onOrderPaymentStatusUpdated({
     metadata: { id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb1" },
-    entity: { _id: orderId },
+    data: { order: activeOrder, previousPaymentStatus: "NOT_PAID" },
   });
   assert.equal(paid.status, "OK");
   assert.equal((wixDataMock._store.get(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA) || []).length, 1);
@@ -718,21 +714,24 @@ test("EVENT-REFUND-01 defers incomplete refunds, records successful terminal amo
       summary: { refunded: { amount: "10.00" } },
     }],
   };
-  const pending = await events.wixEcom_onOrderTransactionsUpdated({
-    metadata: { id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2" },
-    entity: { _id: orderId },
-  });
-  assert.equal(pending.status, "OK");
-  assert.equal(pending.completedRefundCount, 0);
+  await assert.rejects(
+    events.wixEcom_onOrderPaymentStatusUpdated({
+      metadata: { id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2" },
+      data: {
+        order: { ...activeOrder, paymentStatus: "PARTIALLY_REFUNDED" },
+        previousPaymentStatus: "PAID",
+      },
+    }),
+    /REFUND_TRANSACTIONS_PENDING/
+  );
   assert.equal((wixDataMock._store.get(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA) || []).length, 1,
     "a refund with a pending transaction must not append a fiscal correction");
 
   activeOrderTransactions.refunds[0].transactions[1].refundStatus = "FAILED";
-  const completedEvent = {
+  const completed = await events.wixEcom_onOrderUpdated({
     metadata: { id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb3" },
-    entity: { _id: orderId },
-  };
-  const completed = await events.wixEcom_onOrderTransactionsUpdated(completedEvent);
+    data: { order: { ...activeOrder, paymentStatus: "PARTIALLY_REFUNDED" } },
+  });
   assert.equal(completed.status, "OK");
   assert.equal(completed.completedRefundCount, 1);
 
@@ -748,9 +747,9 @@ test("EVENT-REFUND-01 defers incomplete refunds, records successful terminal amo
   assert.equal(cita.paymentStatus, IC.PAYMENT_STATUS.PARTIALLY_REFUNDED);
   assert.equal(cita.bookingStatus, "PENDING");
 
-  const replay = await events.wixEcom_onOrderTransactionsUpdated({
+  const replay = await events.wixEcom_onOrderUpdated({
     metadata: { id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb4" },
-    entity: { _id: orderId },
+    data: { order: { ...activeOrder, paymentStatus: "PARTIALLY_REFUNDED" } },
   });
   assert.equal(replay.status, "OK");
   assert.equal((wixDataMock._store.get(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA) || []).length, 2,
