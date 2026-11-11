@@ -156,7 +156,7 @@ Todas las suites offline usan fixtures sintéticos y mocks. No se crean reservas
 - `npm run verify:wix-ecom-order-transactions`: gate CI para comprobar que el SDK instalado exporta el método utilizado.
 
 ### Límites abiertos
-- **CI de la última modificación:** pendiente de observar el workflow sobre el HEAD final. La ejecución anterior detectó un defecto del mock de namespace y no se considera validación final.
+- **CI offline del HEAD de código 48b509f39d4e6f6b32c8bb4a23b59fcebc3886a0:** run 43034820298 SUCCESS, 56 suites / 543 tests / 0 fallos; SDK @wix/ecom orderTransactions, Bookings Reader V2 y ESLint correctos. Gitleaks full-history run 43034820526 SUCCESS. Las actualizaciones posteriores de esta auditoría son exclusivamente documentales; no cambian código ni pruebas.
 - **Runtime Wix:** pendiente. Los backend events no funcionan en Preview; requiere prueba en un sitio publicado de QA aislado.
 - **Entrega de eventos:** Wix documenta entrega asíncrona al menos una vez y posibles duplicados/desorden; se conserva idempotencia por eventId y por refundId. La documentación no detalla la política de reintentos ante errores del handler, por lo que el comportamiento de refund con varias transacciones debe verificarse en QA.
 - **Sitio QA aislado:** no disponible; no probar el webhook sobre el sitio productivo.
