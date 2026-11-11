@@ -160,7 +160,7 @@ Todas las suites offline usan fixtures sintéticos y mocks. No se crean reservas
 - **Runtime Wix:** pendiente. Los backend events no funcionan en Preview; requiere prueba en un sitio publicado de QA aislado.
 - **Entrega de eventos:** Wix documenta entrega asíncrona al menos una vez y posibles duplicados/desorden; se conserva idempotencia por eventId y por refundId. La documentación no detalla la política de reintentos ante errores del handler, por lo que el comportamiento de refund con varias transacciones debe verificarse en QA.
 - **Sitio QA aislado:** no disponible; no probar el webhook sobre el sitio productivo.
-- **Moneda:** el contrato SDK de refund expone importes como Price.amount sin código de moneda en cada transacción; el ledger actual tampoco conserva un campo canónico de moneda. No se declara conciliación de moneda completa. Antes de habilitar escrituras fiscales en runtime debe definirse el campo/contrato canónico de moneda y su compatibilidad con los movimientos históricos.
+- **Moneda:** el sitio Wix está configurado en EUR (propiedades del sitio verificadas) y `SDK_CONFIG.CURRENCY_CODE` centraliza ese valor. El procesador rechaza refunds si `order.currency` no coincide con EUR. El ledger histórico no conserva un código de moneda por movimiento; cualquier futura habilitación multi-moneda requiere ampliar el contrato del ledger y definir compatibilidad histórica.
 - **Efectos externos:** no se han ejecutado pagos, devoluciones, restock, escrituras CMS, envíos ni despliegues.
 
 ### Fuentes oficiales consultadas
