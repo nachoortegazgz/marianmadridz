@@ -364,11 +364,11 @@
 
         const enableStateQuery = contextData.enableStateQuery === true;
         const enableHistory = contextData.enableHistory === true;
-        const enableScheduleQuery = contextData.enableScheduleQuery === true;
+        const enableHoursCalculation = contextData.enableHoursCalculation === true;
 
         statePanel.style.display = enableStateQuery ? 'block' : 'none';
         historyPanel.style.display = enableHistory ? 'block' : 'none';
-        hoursPanel.style.display = enableScheduleQuery ? 'block' : 'none';
+        hoursPanel.style.display = enableHoursCalculation ? 'block' : 'none';
 
         if (contextData.estadoInicial) {
           _updateStatus(contextData.estadoInicial);
@@ -482,7 +482,7 @@
             isAuthorized: false,
             enableStateQuery: false,
             enableHistory: false,
-            enableScheduleQuery: false,
+            enableHoursCalculation: false,
             timeZone: 'Europe/Madrid'
           });
         }
