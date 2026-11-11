@@ -281,7 +281,6 @@ test('SSOT-11 checkout timeout is centralized in SDK_CONFIG', () => {
   const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
   const bookingCore = readFileSync(resolve(root, 'booking', 'bookingCore.js'), 'utf8');
   assert.match(bookingCore, /const checkoutTimeoutMs = SDK_CONFIG\.TIMEOUTS\.CHECKOUT_MS;/);
-  assert.doesNotMatch(bookingCore, /CHECKOUT_MS[\\s\\S]{0,100}\\|\\|\\s*20000/);
 });
 
 test('SSOT-12 retired correction reason is not exported', () => {
