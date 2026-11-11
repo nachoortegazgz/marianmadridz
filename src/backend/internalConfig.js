@@ -431,6 +431,48 @@ export const CONTROL_TYPE = Object.freeze({
   WEBHOOK_EVENT: "WEBHOOK_EVENT",
 });
 
+// Least-privilege policy for the only current bulkPatchItems consumers.
+// Every patch must target a mutable ControlOperativo record type and carry
+// its compare-and-swap condition. Append-only WEBHOOK_EVENT and ledgers are
+// deliberately excluded.
+export const DATA_ACCESS_BULK_PATCH_POLICY = Object.freeze({
+  [OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO]: Object.freeze({
+    [CONTROL_TYPE.RATE_LIMIT]: Object.freeze({
+      requiredConditionFields: Object.freeze(["controlType", "version"]),
+      anyConditionFields: Object.freeze([]),
+      allowedConditionFields: Object.freeze(["controlType", "version"]),
+      fields: Object.freeze({
+        payload: Object.freeze(["SET_FIELD"]),
+        requestCount: Object.freeze(["INCREMENT_FIELD"]),
+        version: Object.freeze(["INCREMENT_FIELD"]),
+        expiresAt: Object.freeze(["SET_FIELD"]),
+      }),
+    }),
+    [CONTROL_TYPE.SLOT_LOCK]: Object.freeze({
+      requiredConditionFields: Object.freeze(["controlType"]),
+      anyConditionFields: Object.freeze(["version", "expiresAt"]),
+      allowedConditionFields: Object.freeze(["controlType", "version", "expiresAt"]),
+      fields: Object.freeze({
+        expiresAt: Object.freeze(["SET_FIELD"]),
+        heartbeatAt: Object.freeze(["SET_FIELD"]),
+        payload: Object.freeze(["SET_FIELD"]),
+        version: Object.freeze(["SET_FIELD", "INCREMENT_FIELD"]),
+        serviceId: Object.freeze(["SET_FIELD"]),
+      }),
+    }),
+    [CONTROL_TYPE.SYSTEM_FLAG]: Object.freeze({
+      requiredConditionFields: Object.freeze(["controlType", "version"]),
+      anyConditionFields: Object.freeze([]),
+      allowedConditionFields: Object.freeze(["controlType", "version"]),
+      fields: Object.freeze({
+        payload: Object.freeze(["SET_FIELD"]),
+        version: Object.freeze(["INCREMENT_FIELD"]),
+        traceId: Object.freeze(["SET_FIELD"]),
+      }),
+    }),
+  }),
+});
+
 // Estados de proyeccion del log fiscal (eventLog.js).
 export const PROJECTION_STATUS = Object.freeze({
   OK: "OK",
