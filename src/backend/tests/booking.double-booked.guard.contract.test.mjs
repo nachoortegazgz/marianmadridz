@@ -48,7 +48,10 @@ test('COMPENSATION-QUEUE-01 producer matches cron query and lifecycle contract',
   assert.match(producer, /controlType:\s*CONTROL_TYPE\.COMPENSATION/);
   assert.match(producer, /status:\s*"PENDING"/);
   assert.match(producer, /attempts:\s*0/);
-  assert.match(producer, /revision:\s*hasValidRevision\s*\?\s*revision\s*:\s*null/);
+  assert.match(producer, /revision:\s*revisionForQueue/);
+  assert.doesNotMatch(producer, /hasValidRevision/);
+  assert.match(source, /getBookingForCompensationElevated/);
+  assert.match(source, /currentRevision\s*=\s*Number\(nativeBooking\?\.revision\)/);
 
   const jobStart = cron.indexOf('export async function runPendingCompensationsJob()');
   const jobEnd = cron.indexOf('// =============================================================================\n// CRON 4:', jobStart);
