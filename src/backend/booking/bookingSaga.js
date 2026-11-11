@@ -414,7 +414,7 @@ async function _compensateCreatedBookings(createdBookings, traceId, pairToken) {
 
             // Only mark the CMS projection canceled after Wix confirms the
             // native cancellation (or a fresh read proves it was already canceled).
-            await _updateCitaSafe(
+            const projectionUpdate = await _updateCitaSafe(
                 String(bookingId),
                 function (cita) {
                     let meta = cita && cita.meta;
@@ -435,6 +435,10 @@ async function _compensateCreatedBookings(createdBookings, traceId, pairToken) {
                 traceId,
                 "saga_compensate_cita"
             );
+
+            if (!projectionUpdate?.updated) {
+                throw new Error("CITA_COMPENSATION_PROJECTION_PENDING: native booking canceled but CitasF2 update not confirmed");
+            }
 
             if (pairToken && booking?.phase) {
                 await updateBookingWriterIntent(pairToken, booking.phase, "COMPENSATED", {
@@ -480,7 +484,7 @@ async function _compensateCreatedBookings(createdBookings, traceId, pairToken) {
                         phase: (booking && booking.phase) || "UNKNOWN",
                         status: "PENDING",
                         compensationStatus: COMPENSATION_STATUS.PENDING,
-                        revision: hasValidRevision ? revision : null,
+                        revision: revisionForQueue,
                         attempts: 0,
                         lastError: (cancelErr && cancelErr.message) || "UNKNOWN",
                     },
