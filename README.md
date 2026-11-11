@@ -62,6 +62,7 @@ CI verde no equivale a E2E ni a publicación. No afirmar que una función está 
 
 ## Documentación
 
+- [Referencia operativa de Wix Dashboard, Wix Apps y secretos](docs/WIX-DASHBOARD-APPS-SECRETS-REFERENCE.md): estado live observado, configuración objetivo por app, trazabilidad backend/CMS y catálogo de secretos con formatos de ejemplo seguros.
 - [Registro de decisiones de negocio y arquitectura](docs/DECISION-LOG.md)
 - [ADR — Depósitos y gestión nativa de inventario](docs/adr/2026-11-10-deposit-and-native-inventory.md)
 - [QA — Retirada de inventario personalizado](docs/qa/2026-11-10-native-inventory-retirement.md) oficial
