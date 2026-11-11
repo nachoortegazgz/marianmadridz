@@ -1,4 +1,4 @@
-> **Nota de vigencia — 2026-11-11:** esta auditoría recoge el último inventario y cambios confirmados de Wix Automations en la fecha indicada. Una consulta live posterior devuelve el sitio **Published**, pero no se ha repetido la lectura de Automations después de ese cambio de estado. Los nueve emails que Wix no permitió pausar siguen siendo un bloqueo hasta una nueva lectura y evidencia de aislamiento. Consultar [referencia maestra QA](../qa/2026-11-11-qa-master-reference.md) antes de cualquier prueba. No inferir que el aislamiento sigue intacto ni activar triggers.
+> **Reauditoría live — 2026-11-11:** después de confirmar que el sitio está **Published**, se volvió a consultar Wix Automations V2 y las acciones email en modo solo lectura. Estado actual: 149 automatizaciones no archivadas, 27 ACTIVE y 122 INACTIVE; nueve automatizaciones email siguen activas (10 acciones: ocho dirigidas al contacto que dispara el trigger y dos al propietario); cuatro automatizaciones WhatsApp y ocho SMS están inactivas. Dos notificaciones internas de Bookings siguen activas. No se ejecutaron triggers ni se enviaron mensajes. Ver [referencia maestra QA](../qa/2026-11-11-qa-master-reference.md).
 
 ---
 
@@ -10,7 +10,7 @@ Se auditó la configuración de Wix Automations del sitio `www.marianmadrid.es` 
 
 Allowlist de correo declarada para el despacho backend QA:
 - Cualquier dirección del dominio exacto `@marianmadrid.es`.
-- La dirección exacta `nachoortegazgz@gmail.com`.
+- Un buzón de pruebas privado controlado; la dirección concreta no se almacena en documentación versionada.
 
 Esta allowlist de código **no gobierna las automatizaciones nativas Wix**. No se envió ningún email, WhatsApp ni SMS durante esta intervención.
 
@@ -43,7 +43,7 @@ La configuración nativa de esos nueve flujos sigue fuera del control de la allo
 
 ## WhatsApp y móvil sintético
 
-El propietario indicó el móvil sintético `666724634` como destino QA. La acción Wix existente `whatsapp-send-message` no dispone de una receta pública soportada para reconfigurar por API su destinatario estático; la guía oficial de configuración de acciones la identifica como no soportada/deprecated para nuevas configuraciones públicas. No se inventó un esquema ni se sustituyó por Wix Inbox, que no equivale a WhatsApp.
+El propietario indicó un móvil sintético como destino QA; el número concreto no se almacena en documentación versionada. La acción Wix existente `whatsapp-send-message` no dispone de una receta pública soportada para reconfigurar por API su destinatario estático; la guía oficial de configuración de acciones la identifica como no soportada/deprecated para nuevas configuraciones públicas. No se inventó un esquema ni se sustituyó por Wix Inbox, que no equivale a WhatsApp.
 
 Decisión: mantener inactivas las automatizaciones WhatsApp existentes hasta disponer de una integración/acción oficial soportada y poder configurar el número sintético de forma verificable. El número no se configuró y no recibió mensajes.
 
@@ -68,5 +68,6 @@ Decisión: mantener inactivas las automatizaciones WhatsApp existentes hasta dis
 ## Estado
 
 - **Verificado:** 67 cambios de estado confirmados por lectura posterior; cuatro automatizaciones WhatsApp inactivas; nueve flujos email siguen activos y bloqueados por Wix.
-- **Verificado:** cero mensajes enviados durante la auditoría.
-- **Pendiente:** aislamiento verificable de los nueve flujos nativos; integración WhatsApp soportada que acepte el móvil sintético; semántica de ejecuciones en curso.
+- **Verificado:** cero mensajes enviados durante la auditoría inicial y la reauditoría live posterior.
+- **Verificado en reauditoría live:** 149 automatizaciones; 27 ACTIVE, 122 INACTIVE; nueve flujos email activos con diez acciones (ocho TRIGGER_CONTACT/dinámicas y dos SITE_OWNER); cuatro flujos WhatsApp y ocho SMS inactivos; dos notificaciones internas de Bookings activas.
+- **Pendiente:** aislar los nueve flujos nativos email sin interrumpir comunicaciones críticas; integración WhatsApp soportada; semántica de ejecuciones en curso.
