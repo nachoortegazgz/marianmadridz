@@ -151,3 +151,45 @@ El propietario declara que ServiciosCatalogo gobierna la configuración de servi
 **Separación del writer fiscal:** `eventLog.js` mantiene la estructura de fecha local requerida dentro de `payloadFiscal`, pero escribe `recordTimestamp` y `generationTimestamp` del documento CMS como objetos `Date`. No se reutiliza un objeto de componentes de fecha como valor de un campo CMS Date and Time.
 
 **Reversión:** revertir los cambios de hooks y pruebas de esta rama restaura el contrato previo sin modificar datos CMS. No hay despliegue ni limpieza de datos asociada.
+
+
+## 8. Reconciliación del informe de bugs — 2026-11-12
+
+La auditoría estática recibida se ha contrastado con `main` en `9f3b4366aacc720f6712ab47ac828af94fc63cff`, el estado Wix live consultado y los contratos oficiales vigentes. No se han tratado las hipótesis como hechos ni se han realizado escrituras Wix/CMS.
+
+| Bug | Resultado de reauditoría | Decisión |
+|---|---|---|
+| 01 — `FISCAL_RUNTIME_POLICY` cerrado | Flag deliberado y documentado como fail-closed; el informe confunde bloqueo de seguridad con defecto. | Mantener cerrado hasta certificación runtime y gates fiscales. |
+| 02 — Proyección Bookings → `CitasF2` | Código de handlers `BOOKING_CREATED` y `BOOKING_CONFIRMED` y proyector idempotente existen en main. Incidente de reserva sintética sin marcador sigue sin causa runtime demostrada. | Mantener como incidente abierto; revisar entrega/event logs y SHA publicado solo en entorno aislado. No crear otra reserva de prueba. |
+| 03 — `CajaActual` SIMULACION | Estado sintético de QA documentado; el guard evita mezclarlo con operación real. | No resetear ni borrar saldo sin inventario, conciliación y autorización específica. |
+| 04 — writers de jornada deshabilitados | Flag deliberado hasta idempotencia, serialización por empleado/día y transiciones concurrentes. El flag por sí solo no demuestra incumplimiento legal si existe otro sistema de registro válido. | Mantener fail-closed; certificar el sistema completo y revisar alternativa laboral vigente. |
+| 05 — remitente Resend `.com` | Confirmado en `internalConfig.js`; el informe no aporta evidencia verificable de que `noreply@marianmadrid.es` esté verificado en Resend. | Corregir solo después de lectura del dominio/identidad verificada en Resend. No cambiar remitente por inferencia. |
+| 06 — envío a gestoría deshabilitado | Flag deliberado, dependiente de entrega persistente e idempotente. | Mantener deshabilitado hasta pruebas aisladas de despacho y reconciliación. |
+| 07 — proyección de efectivo físico parcial | Confirmado como alcance parcial. BUS-009 define qué debe reflejar CajaActual; TEC-026 deja pendiente clasificador confiable IN/OUT/NONE. PR #284 es parcial y no está integrada según la documentación del repositorio. | No añadir tipos ni mutar saldos hasta cerrar enums, validación, esquema, mapping contable y pruebas. |
+| 08 — sincronización ServiciosCatalogo/Bookings | TEC-027 registra SSOT declarada por el propietario; sincronización técnica pendiente de auditoría. | No cambiar la autoridad ni inventar sincronización. Auditar contratos y mecanismo de reconciliación antes de implementar. |
+| 09 — automatizaciones email nativas | Reauditoría de PR #296 documenta nueve automatizaciones email activas con diez acciones; el backend Resend no las controla. | Mantener bloqueado E2E de reservas sobre Published; no desactivar automatizaciones ni clonar sitio sin autorización/decisión de entorno. |
+| 10 — `CHECKOUT_MS` | Defecto confirmado: consumidor lee una clave inexistente y cae a literal local. | Corregido en esta rama: timeout 20.000 ms centralizado en `SDK_CONFIG.TIMEOUTS.CHECKOUT_MS`, fallback local retirado y test añadido. |
+| 11 — `CORRECTION_REASON.NUMERO_SERIE` | Export zombie: no hay consumidor ejecutable; `events.js` documenta expresamente que el motivo vigente es `OTRAS`. | Corregido en esta rama: se elimina la clave sin consumidor y se añade test negativo. |
+| 12 — reconstrucción fiscal de pedidos sin `taxInfo` | El código exige información fiscal de pedido y línea; la alternativa sugerida de reconstruir IVA desde catálogo no está acreditada y puede alterar el tratamiento fiscal de anticipos/depósitos. | Mantener revisión manual/fail-closed hasta disponer de payload real, contrato fiscal aprobado y prueba aislada. |
+| 13 — aliases históricos de fecha | El cierre consulta campo canónico y alias histórico, deduplica por `_id` y ordena por secuencia. El alias puede proteger registros históricos. | No retirar sin auditoría de todos los registros históricos y plan de migración trazable. |
+| 14 — `.contains()` | Falso en el HEAD auditado: `getMovimientoByBooking` usa `hasSome` para arrays y `eq` para compatibilidad exacta; no contiene la tercera query descrita. | Sin cambio. |
+| 15 — `LEDGER_IDEMPOTENCY` sin purga | La exclusión de la purga corta es intencional: es claim durable, tiene writer activo y se excluye expresamente de la limpieza de 24 h. | No añadir a purga de 90 días ni reutilizar `IDEMPOTENCY`; sería una regresión de idempotencia. |
+| 16 — lecturas fuertes DAL | Falso: DAL traduce `consistencyMode: "strong"` a `consistentRead: true`, el contrato documentado por Wix Data. | Sin cambio; se conserva la traducción y su política. |
+| 17 — `previousRecordHash` | No es bug: el payload de la cadena interna usa la huella anterior como entrada del movimiento actual; el comentario de código separa explícitamente este contrato del hash AEAT. | Sin cambio de semántica fiscal. |
+| 18 — PR #296 | PR #296 continúa Draft y pendiente de revisión; no debe fusionarse automáticamente. PR #299 sí está integrada en main (merge commit actual). | Mantener #296 separada hasta revisión documental y CI de su HEAD. |
+| 19 — `DUAL_CACHE` | No hay writer activo para snapshots nuevos, pero existe cron de limpieza defensiva de registros expirados y datos legacy potenciales. No se ha probado cero filas live. | Mantener cleanup hasta consulta live read-only y análisis histórico; no retirar solo por ausencia de writer. |
+| 20 — Node.js Wix CLI | Requisito oficial Wix CLI for Sites: Node.js 24.22.1 o superior. El workflow ya usa 24.22.1 y README lo declara. No se ha comprobado la versión del equipo local en esta auditoría. | Contrato de CI/documentación correcto; comprobar entorno local antes de ejecutar CLI. |
+
+### Cambios de código aplicados en la rama de esta auditoría
+
+- `SDK_CONFIG.TIMEOUTS.CHECKOUT_MS = 20000` pasa a ser la única fuente de timeout de checkout; se elimina el literal fallback de `bookingCore.js`.
+- Se retira `CORRECTION_REASON.NUMERO_SERIE`, sin consumidores funcionales; `OTRAS` permanece como valor utilizado por `events.js`.
+- Se añaden pruebas de regresión para ambos contratos.
+
+### Estado operativo y límites
+
+- Wix live: Published; Wix Editor clásico, Velo habilitado, Stores Catalog V3, Invoices V1, zona `Europe/Madrid`, moneda EUR (lectura de contexto 2026-11-12).
+- PR #299 ya está integrada en main; por tanto, la anotación histórica de que seguía Draft ha quedado superada.
+- Las automatizaciones email nativas activas impiden considerar aisladas las pruebas runtime de reservas en el sitio publicado.
+- No se han creado reservas/pedidos/pagos, enviado comunicaciones, ejecutado automatizaciones, modificado CMS ni cambiado configuración Wix.
+- La CI de esta rama debe ejecutarse antes de considerar los dos cambios de código validados. No se declara runtime/E2E.
