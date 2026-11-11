@@ -1907,7 +1907,7 @@ export async function wixEcom_onOrderPaymentStatusUpdated(eventPayload) {
             "FULLY_REFUNDED",
         ].includes(paymentStatus);
         if (isRefundedStatus) {
-            const refundResult = await processOrderRefundTransactions(orderId, traceId);
+            const refundResult = await processOrderRefundTransactions(orderId, order?.currency, traceId);
             if (eventId) await markEventAsProcessed(eventId, "ORDER_REFUND_STATUS_UPDATED");
             return { status: "OK", orderId, ...refundResult };
         }
@@ -2208,7 +2208,11 @@ export async function wixEcom_onOrderPaymentStatusUpdated(eventPayload) {
 // WIX ECOMMERCE TRANSACTION PROCESSORS
 // ============================================================================
 
-async function processOrderRefundTransactions(orderId, traceId) {
+async function processOrderRefundTransactions(orderId, orderCurrency, traceId) {
+    if (String(orderCurrency || "").trim().toUpperCase() !== SDK_CONFIG.CURRENCY_CODE) {
+        throw new Error("REFUND_CURRENCY_UNSUPPORTED");
+    }
+
     const transactionsResponse = await withTimeout(
         listTransactionsForSingleOrderElevated(orderId),
         API_TIMEOUT_MS,
