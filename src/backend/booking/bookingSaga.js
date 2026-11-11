@@ -330,7 +330,7 @@ async function _bestEffortUnlockAll(lockKeys, lockOwnerId, lockVersions, lockTok
                 expectedVersion: versions[keys[i]],
                 expectedLockToken: tokens[keys[i]],
             });
-            if (!released?.ok) {
+            if (!released?.ok && released?.alreadyReleased !== true) {
                 log.warn("_bestEffortUnlockAll: lock release not confirmed", {
                     key: keys[i],
                     reason: released?.reason || "LOCK_RELEASE_FAILED",
