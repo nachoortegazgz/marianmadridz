@@ -12,8 +12,8 @@
 
 - PR #284 está mergeada en GitHub; la integración no acredita despliegue en Wix. Su cobertura de caja sigue limitada a EFECTIVO + PRESENCIAL.
 - PR #286 está abierta como draft en `audit/p0-p1-hardening`. Protege por defecto los writers fiscales y contables, mantiene las recuperaciones en cola mientras los writers están deshabilitados y añade escaneo Gitleaks.
-- CI offline del head `d0530449cfc6ccd063743ce707b4d18bdee0a89b`: run `42986821012`, 54 suites / 533 tests / 0 fallos. Gitleaks: run `42986820996`, SUCCESS.
-- Tras ese checkpoint se añadieron un contrato estático de imports frontend/backend y telemetría de recuperaciones omitidas. Esas modificaciones posteriores aún requieren CI sobre el nuevo HEAD; el resultado anterior no las cubre.
+- CI offline del head `edceb4fdadc273a5cd27b59d7ba446baf60f8bb3`: run `43001943879`, 55 suites / 534 tests / 0 fallos; contratos SDK Wix, Bookings Reader V2 y ESLint correctos.
+- Gitleaks full-history sobre el mismo HEAD: run `43001943895`, SUCCESS.
 - La regla oficial `@wix/cli/no-invalid-backend-import` continúa desactivada por incompatibilidad de carga del plugin. El nuevo contrato cubre únicamente el límite estático de imports frontend y no equivale a la regla oficial.
 - No hay certificación Wix Runtime/Preview/E2E ni evidencia de despliegue del HEAD. No fusionar ni desplegar hasta disponer de QA Wix aislado y autorización explícita.
 
