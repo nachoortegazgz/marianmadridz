@@ -2519,8 +2519,9 @@ export async function wixEcom_onOrderTransactionsUpdated(eventPayload) {
         // Payment reconciliation runs before refund projections so a replayed
         // paid-order event cannot overwrite a refund state written moments later.
         const paymentStatus = String(order?.paymentStatus || "").trim().toUpperCase();
+        let paymentResult = null;
         if (["PAID", "FULLY_PAID", "PAID_FULL"].includes(paymentStatus)) {
-            await processPaidEcommerceOrder({
+            paymentResult = await processPaidEcommerceOrder({
                 metadata: { id: eventId },
                 data: { order },
             });
@@ -2541,6 +2542,7 @@ export async function wixEcom_onOrderTransactionsUpdated(eventPayload) {
             eventId,
             orderId,
             completedRefundCount: completedRefunds.length,
+            duplicate: paymentResult?.duplicate === true,
         };
     } catch (error) {
         _handleError(error, "wixEcom_onOrderTransactionsUpdated", traceId);
