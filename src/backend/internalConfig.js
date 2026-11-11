@@ -49,6 +49,12 @@ export const STAFF_CLOCKING_CONFIG = Object.freeze({
   ADJUSTMENTS_ENABLED: false,
 });
 
+// Fail-closed until fiscal issuance, signer, ledger and runtime E2E are certified.
+// This controls creation of new fiscal ledger movements and Z closings only.
+export const FISCAL_RUNTIME_POLICY = Object.freeze({
+  LEDGER_WRITES_ENABLED: false,
+});
+
 export const BUSINESS_COLLECTIONS = Object.freeze({
   CAJA_ACTUAL: "CajaActual",
   CITAS_F2: "CitasF2",
