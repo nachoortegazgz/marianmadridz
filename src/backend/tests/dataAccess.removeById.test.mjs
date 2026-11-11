@@ -56,14 +56,16 @@ test("removeById fails closed when the target does not exist", async () => {
 test("conditional delete prevents a type change between strong read and deletion", async () => {
     seedControl(CONTROL_TYPE.DUAL_CACHE);
     const originalGet = wixDataMock.get;
-    let changed = false;
+    let readCount = 0;
 
     wixDataMock.get = async (collection, id) => {
         const result = await originalGet(collection, id);
-        if (!changed && collection === COLLECTION && id === "control-target") {
-            changed = true;
-            const rows = wixDataMock._store.get(COLLECTION);
-            rows[0].controlType = CONTROL_TYPE.DISPLAY_TOKEN;
+        if (collection === COLLECTION && id === "control-target") {
+            readCount += 1;
+            if (readCount === 2) {
+                const rows = wixDataMock._store.get(COLLECTION);
+                rows[0].controlType = CONTROL_TYPE.DISPLAY_TOKEN;
+            }
         }
         return result;
     };
