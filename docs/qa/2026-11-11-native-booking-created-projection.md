@@ -34,8 +34,8 @@ Evitar que una reserva creada por Wix Bookings quede fuera de la proyección ope
 
 ## Validación
 
-- Revisión estática del diff y contratos: pendiente de completar tras abrir el PR.
-- Suite offline, contratos SDK y ESLint: pendiente de CI.
+- Revisión estática del diff y contratos: realizada; no sustituye la ejecución de CI.
+- Suite offline, contratos SDK y ESLint: pendiente de CI del PR de corrección de carrera.
 - Wix Local Editor, prueba visual y ejecución real de webMethods: no ejecutadas; requieren entorno Wix.
 - Publicación Velo en Wix: no realizada.
 
