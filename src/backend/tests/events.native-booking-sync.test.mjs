@@ -754,6 +754,21 @@ test("EVENT-REFUND-01 defers incomplete refunds, records successful terminal amo
   assert.equal(replay.status, "OK");
   assert.equal((wixDataMock._store.get(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA) || []).length, 2,
     "a completed refund replay must not append a second rectification");
+
+  const concurrentResults = await Promise.all([
+    events.wixEcom_onOrderUpdated({
+      metadata: { id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb5" },
+      data: { order: { ...activeOrder, paymentStatus: "PARTIALLY_REFUNDED" } },
+    }),
+    events.wixEcom_onOrderUpdated({
+      metadata: { id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb6" },
+      data: { order: { ...activeOrder, paymentStatus: "PARTIALLY_REFUNDED" } },
+    }),
+  ]);
+  assert.equal(concurrentResults.every(result => result.status === "OK"), true);
+  const finalMovements = wixDataMock._store.get(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA) || [];
+  assert.equal(finalMovements.length, 2, "concurrent refund events must not duplicate the fiscal rectification");
+  assert.equal(finalMovements.filter(row => row.transactionId === "REFUND-" + orderId + "-" + refundId).length, 1);
 });
 
 test("EVENT-BOOKING-RESCHEDULE-01 native reschedule updates only the affected CitasF2 phase and flags its dual sibling", async () => {
