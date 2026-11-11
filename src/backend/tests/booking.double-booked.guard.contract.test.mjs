@@ -63,6 +63,8 @@ test('COMPENSATION-QUEUE-01 producer matches cron query and lifecycle contract',
   assert.match(job, /status:\s*COMPENSATION_STATUS\.EXECUTED/);
   assert.match(job, /status:\s*payload\.status/);
   assert.match(job, /attempts,/);
-  assert.match(cron, /CANCEL_BOOKING requires a valid revision/);
-  assert.match(cron, /revision:\s*String\(revision\)/);
+  assert.match(cron, /CANCEL_BOOKING current native revision unavailable/);
+  assert.match(cron, /getBookingElevated\(bookingId\)/);
+  assert.match(cron, /revision:\s*String\(currentRevision\)/);
+  assert.doesNotMatch(cron, /Number\(payload\.revision\s*\|\|\s*comp\?\.revision\)/);
 });
