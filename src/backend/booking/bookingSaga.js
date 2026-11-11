@@ -444,7 +444,7 @@ async function _compensateCreatedBookings(createdBookings, traceId, pairToken) {
                 traceId,
                 "saga_compensate_cita"
             );
-            if (!projectionUpdate?.updated) {
+            if (!projectionUpdate?.updated && projectionUpdate?.reason !== "NOT_FOUND") {
                 throw new Error("CITA_COMPENSATION_PROJECTION_PENDING: native booking canceled but CitasF2 update not confirmed");
             }
 
