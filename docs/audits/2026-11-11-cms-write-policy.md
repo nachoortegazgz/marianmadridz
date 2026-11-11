@@ -9,7 +9,7 @@ Constrain elevated mutation primitives in `dataAccess.js` to observed, reviewed 
 Repository-wide code search and direct consumer inspection found:
 
 - `insertItem`: only direct caller in `security.js` for `ControlOperativo/RATE_LIMIT`; aliases `dalInsert` are used by audit, cash, fiscal ledger, accounting, events, booking control, and fiscal-document snapshot modules.
-- `updateItem`: called only through `dalUpdate` in `crons.js`, `fiscalLedgerLock.js`, `accountingLedger.js`, `cajas.web.js`, `events.js`, and `fiscalDocuments.web.js`. Observed target collections are only `ControlOperativo` and `CajaActual`.
+- `updateItem`: called through `dalUpdate` in `crons.js`, `fiscalLedgerLock.js`, `accountingLedger.js`, `cajas.web.js`, `events.js`, and `fiscalDocuments.web.js`; `bookingCore.js` also captures the wrapper for `ControlOperativo` transaction state and `CitasF2` booking projections. Observed target collections are `ControlOperativo`, `CajaActual`, and `CitasF2`.
 - `saveItem`: one consumer in `reservas.web.js`, writing the volatile `DAYS_CACHE` control record.
 - `removeById`: four consumers in `reservas.web.js`, deleting only `DUAL_CACHE`, `DAYS_CACHE`, and `DISPLAY_TOKEN` control records.
 - `bulkRemove`: consumers only in `crons.js`; all target `ControlOperativo` and use a `controlType` equality condition plus an expiry/terminal timestamp and optional status.
@@ -18,8 +18,8 @@ Repository-wide code search and direct consumer inspection found:
 
 ## Policy implemented
 
-- Insert: allowlisted collections only. Control records require a canonical `controlType`; fiscal third-party records require a canonical `recordType`.
-- Update: only `ControlOperativo` mutable control types and `CajaActual`. Append-only ledgers are not updateable through this primitive. `WEBHOOK_EVENT` is explicitly not updateable.
+- Insert: allowlisted collections only. Control records require a canonical `controlType`; `CitasF2` projections require `bookingId`; fiscal records require a canonical `recordType`. Attendance records remain insert-only.
+- Update: only `ControlOperativo` mutable control types, `CajaActual`, and `CitasF2` projection rows with both `_id` and `bookingId`. Append-only ledgers are not updateable through this primitive. `WEBHOOK_EVENT` is explicitly not updateable.
 - Save/upsert: only `ControlOperativo/DAYS_CACHE`.
 - Single remove: only ephemeral `ControlOperativo` types, with the expected type supplied by the caller.
 - Bulk remove: only `ControlOperativo`, with a purgeable `controlType` and a constrained filter vocabulary.
