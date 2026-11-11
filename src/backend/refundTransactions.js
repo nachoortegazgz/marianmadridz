@@ -62,7 +62,20 @@ export function resolveCompletedRefunds(orderTransactions) {
         const successfulTransactions = transactions.filter((transaction) =>
             String(transaction?.refundStatus || "").trim().toUpperCase() === "SUCCEEDED"
         );
-        if (!successfulTransactions.length) continue;
+        if (!successfulTransactions.length) {
+            const summaryAmount = refund?.summary?.refunded?.amount;
+            if (summaryAmount !== undefined && summaryAmount !== null) {
+                const summaryCents = _amountToCents(
+                    summaryAmount,
+                    "summary.refunded",
+                    true
+                );
+                if (summaryCents !== 0) {
+                    throw new Error("REFUND_SUMMARY_AMOUNT_MISMATCH");
+                }
+            }
+            continue;
+        }
 
         const successfulCents = successfulTransactions.reduce(
             (sum, transaction) =>
