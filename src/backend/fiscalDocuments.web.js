@@ -1217,8 +1217,22 @@ export const sendManagerPackageToAccountant = webMethod(
         withTimeout(dalGet(DOCS_COL, documentId, "strong"), CMS_TIMEOUT_MS, "getPackageSnapshot"),
         _resolveRecipientById(recipientId),
       ]);
-      if (!doc || doc.closingType !== "PAQUETE_GESTORIA" || !Array.isArray(doc.invoiceData) || !doc.summaryData) {
-        return { status: "ERROR", data: null, error: { code: "PACKAGE_SNAPSHOT_NOT_FOUND", message: "A complete persisted package snapshot is required." } };
+      if (
+        !doc ||
+        !["MONTHLY", "QUARTERLY"].includes(_safeTrim(doc.periodType).toUpperCase()) ||
+        doc.packageStatus !== "PREPARED" ||
+        !Array.isArray(doc.invoiceData) ||
+        !doc.summaryData ||
+        !(await _verifyPackageSnapshot(doc))
+      ) {
+        return {
+          status: "ERROR",
+          data: null,
+          error: {
+            code: "PACKAGE_SNAPSHOT_NOT_FOUND",
+            message: "A complete, prepared and hash-verified persisted package snapshot is required.",
+          },
+        };
       }
       if (!recipient?.email) return { status: "ERROR", data: null, error: { code: "RECIPIENT_NOT_FOUND", message: "The accountant recipient is not configured in DatosFiscales." } };
 
