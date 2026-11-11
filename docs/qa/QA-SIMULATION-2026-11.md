@@ -176,3 +176,12 @@ Todas las suites offline usan fixtures sintéticos y mocks. No se crean reservas
 - Se ha localizado la API oficial Duplicate Site. Wix indica que no copia pedidos, contactos, facturas ni configuración de apps de terceros; la documentación no garantiza que todas las colecciones CMS personalizadas estén vacías. No se duplica producción para evitar copiar datos personales o ledgers a un entorno de pruebas.
 - No se ha creado un nuevo sitio, asignado dominio, activado plan ni instalado apps. La validación runtime permanece bloqueada hasta disponer de un sitio QA vacío con las apps necesarias y sin datos productivos.
 - Referencia: [Wix Duplicate Site API](https://dev.wix.com/docs/api-reference/account-level/sites/site-actions/duplicate-site).
+
+
+## Update 2026-11-11 — aislamiento de notificaciones nativas Wix
+
+La auditoría live de Wix Automations ya no es solo lectura. Tras autorización del propietario se confirmaron 67 cambios de estado (66 automatizaciones email y una WhatsApp) de activas a `INACTIVE`. Las cuatro automatizaciones WhatsApp están ahora inactivas. Nueve automatizaciones email siguen activas porque Wix devuelve restricciones `readonly` y/o `disableStatusChange`; por tanto, no se considera aislada toda la mensajería nativa.
+
+No se ha enviado ningún email, WhatsApp ni SMS. El número sintético `666724634` permanece sin configurar. La acción nativa `whatsapp-send-message` carece de receta pública soportada para reconfigurar destinatario por API, por lo que se mantiene pausada y no se sustituye por otro canal.
+
+El guard de allowlist `emailRecipientPolicy.js` solo protege el despacho Resend del backend; no controla Wix Automations nativas. No ejecutar pruebas de envío hasta resolver los nueve flujos activos y verificar sus destinatarios. Evidencia detallada: [auditoría de aislamiento de notificaciones](../audits/2026-11-11-wix-automation-recipient-isolation.md).
