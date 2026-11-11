@@ -12,6 +12,8 @@ Repositorio canónico del sitio **Marian Madrid Peluquería y Estética** (\`www
 
 ## Documentos raíz
 
+0. [Referencia maestra QA y estado de aislamiento](docs/qa/2026-11-11-qa-master-reference.md): autoridad consultiva para estado Wix live, canales de comunicación, cliente sintético, pagos simulados y gates de pruebas.
+
 0. [Estado actual y guía operativa consolidada](ESTADO_ACTUAL_PROYECTO.md): punto de partida recomendado para conocer arquitectura, decisiones, bloqueos y plan priorizado.
 
 1. [Directrices de arquitectura, desarrollo y QA](DIRECTRICES_DESARROLLO_CODIGO.txt): reglas obligatorias y límites.
