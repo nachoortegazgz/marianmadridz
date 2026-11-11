@@ -116,6 +116,7 @@ export async function acquireWebhookEventClaim({
                 ownerToken,
                 version: 1,
                 status: WEBHOOK_CLAIM_STATUS.IN_PROGRESS,
+                payload: initial.payload,
             },
         };
     } catch (insertError) {
