@@ -96,6 +96,8 @@ import {
 
 const log = logger;
 
+const getBookingForCompensationElevated = auth.elevate(bookings.getBooking);
+
 const LOCK_TTL_MS =
     Number(CONCURRENCY && CONCURRENCY.MS_TTL_MUTEX) || 300000;
 const HEARTBEAT_MS = Number(CONCURRENCY && CONCURRENCY.MS_LATIDO) || 15000;
@@ -356,7 +358,7 @@ async function _compensateCreatedBookings(createdBookings, traceId, pairToken) {
         const status = _safeTrim(
             (booking && booking[BOOKING_FIELDS.STATUS]) || (booking && booking.status)
         ).toUpperCase();
-        if (status && NON_CANCELABLE_STATUSES.has(status)) {
+        if (status && status !== "CANCELED" && NON_CANCELABLE_STATUSES.has(status)) {
             if (pairToken && booking?.phase) {
                 await updateBookingWriterIntent(pairToken, booking.phase, "TERMINAL", {
                     bookingId: String(bookingId),
@@ -373,57 +375,80 @@ async function _compensateCreatedBookings(createdBookings, traceId, pairToken) {
             continue;
         }
 
-        const revisionRaw =
-            booking && booking.revision !== undefined
-                ? booking.revision
-                : booking && booking.revisionNumber !== undefined
-                    ? booking.revisionNumber
-                    : NaN;
-        const revision = Number(revisionRaw);
-        const hasValidRevision = Number.isInteger(revision) && revision > 0;
-
-        if (!hasValidRevision) {
-            log.error("Compensation will require manual intervention: revision missing", {
-                bookingId: String(bookingId),
-                phase: (booking && booking.phase) || null,
-                traceId: traceId,
-                rawRevision:
-                    booking && booking.revision !== undefined
-                        ? booking.revision
-                        : booking && booking.revisionNumber !== undefined
-                            ? booking.revisionNumber
-                            : "MISSING",
-            });
-        }
-
-        const cancelBody = hasValidRevision ? { revision: String(revision) } : {};
-
+        let revisionForQueue = null;
         try {
-            if (!hasValidRevision) {
-                throw new Error("REVISION_MISSING: manual compensation required");
-            }
-            await _executeWithRetry(
-                function () {
-                    return withTimeout(
-                        function () {
-                            return cancelBookingElevated(bookingId, cancelBody);
-                        },
-                        API_TIMEOUT_MS,
-                        "cancelBookingCompensation"
-                    );
-                },
-                2,
-                300
+            const nativeResponse = await withTimeout(
+                () => getBookingForCompensationElevated(String(bookingId)),
+                API_TIMEOUT_MS,
+                "getBookingForCompensation"
             );
+            const nativeBooking = nativeResponse?.booking || nativeResponse;
+            const nativeBookingId = _safeTrim(nativeBooking?.id || nativeBooking?._id);
+            if (nativeBookingId !== String(bookingId)) {
+                throw new Error("COMPENSATION_BOOKING_NOT_FOUND: native booking identity mismatch");
+            }
+
+            const nativeStatus = _safeTrim(nativeBooking?.status || "").toUpperCase();
+            if (nativeStatus !== "CANCELED") {
+                const currentRevision = Number(nativeBooking?.revision);
+                if (!Number.isInteger(currentRevision) || currentRevision < 1) {
+                    throw new Error("REVISION_MISSING: current native booking revision unavailable");
+                }
+                revisionForQueue = currentRevision;
+                await _executeWithRetry(
+                    function () {
+                        return withTimeout(
+                            function () {
+                                return cancelBookingElevated(bookingId, {
+                                    revision: String(currentRevision),
+                                });
+                            },
+                            API_TIMEOUT_MS,
+                            "cancelBookingCompensation"
+                        );
+                    },
+                    2,
+                    300
+                );
+            }
+
+            // Only mark the CMS projection canceled after Wix confirms the
+            // native cancellation (or a fresh read proves it was already canceled).
+            const projectionUpdate = await _updateCitaSafe(
+                String(bookingId),
+                function (cita) {
+                    let meta = cita && cita.meta;
+                    if (typeof meta === "string") {
+                        try { meta = JSON.parse(meta); } catch (_) { meta = {}; }
+                    }
+                    if (!meta || typeof meta !== "object" || Array.isArray(meta)) meta = {};
+                    return Object.assign({}, cita, {
+                        bookingStatus: "CANCELED",
+                        meta: Object.assign({}, meta, {
+                            compensated: true,
+                            compensatedAt: new Date().toISOString(),
+                            compensationTraceId: _safeTrim(traceId),
+                            compensationNativeStatus: "CANCELED",
+                        }),
+                    });
+                },
+                traceId,
+                "saga_compensate_cita"
+            );
+            if (!projectionUpdate?.updated) {
+                throw new Error("CITA_COMPENSATION_PROJECTION_PENDING: native booking canceled but CitasF2 update not confirmed");
+            }
+
             if (pairToken && booking?.phase) {
                 await updateBookingWriterIntent(pairToken, booking.phase, "COMPENSATED", {
                     bookingId: String(bookingId),
                     compensatedAt: new Date().toISOString(),
+                    nativeStatus: "CANCELED",
                 }, traceId);
             }
-            log.info("Compensated booking cancelled", {
+            log.info("Compensated booking cancellation verified", {
                 bookingId: bookingId,
-                revision: revision,
+                alreadyCanceled: nativeStatus === "CANCELED",
                 traceId: traceId,
             });
         } catch (cancelErr) {
@@ -436,7 +461,7 @@ async function _compensateCreatedBookings(createdBookings, traceId, pairToken) {
             }
             log.error("Compensation cancel failed; queuing in ControlOperativo", {
                 bookingId: bookingId,
-                revision: hasValidRevision ? revision : null,
+                revision: revisionForQueue,
                 traceId: traceId,
                 error: cancelErr && cancelErr.message,
             });
@@ -795,10 +820,10 @@ async function _cancelCitasByPairToken(pairToken, traceId) {
                         meta = {};
                     }
                     return Object.assign({}, cita, {
-                        bookingStatus: "CANCELED",
+                        // Do not mark canceled until native Bookings cancellation is verified.
                         meta: Object.assign({}, meta, {
-                            compensated: true,
-                            compensatedAt: new Date().toISOString(),
+                            compensationRequested: true,
+                            compensationRequestedAt: new Date().toISOString(),
                             compensationTraceId: _safeTrim(traceId),
                         }),
                     });
@@ -808,7 +833,7 @@ async function _cancelCitasByPairToken(pairToken, traceId) {
             );
 
             if (updateResult && updateResult.updated) {
-                log.info("Compensated CitaF2 marked CANCELED", {
+                log.info("CitaF2 compensation request recorded; native cancel still required", {
                     citaId: item._id,
                     bookingId: bookingId,
                     traceId: traceId,
