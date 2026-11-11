@@ -526,7 +526,7 @@ Las colecciones `WIX_APP` son de **estricta lectura**. Prohibido ejecutar `wixDa
 
 | Integración | Patrón | Notas |
 | --- | --- | --- |
-| Resend | Helper de envío en `fiscalDocuments.web.js` | Dirección email de gestoría habilitada para pruebas durante periodo de desarrollo del sitio web: nachoortegazgz@gmail.com. Despacho a gestoría bloqueado por `ACCOUNTANT_SEND_ENABLED=false`; no existe el pipeline de exports Capa 3. Transporte de exports pendiente de ADR |
+| Resend | Helper de envío en `fiscalDocuments.web.js` | Dirección email de gestoría habilitada para pruebas durante periodo de desarrollo del sitio web: el buzón de pruebas controlado por el propietario (dato no versionado). Despacho a gestoría bloqueado por `ACCOUNTANT_SEND_ENABLED=false`; no existe el pipeline de exports Capa 3. Transporte de exports pendiente de ADR |
 | OpenAI API | `fetch()` backend con secreto en Wix Secrets | Timeout `AbortController` ≤ 9 s; respuesta fallback si JSON malformado |
 | Wix Payments | Proveedor de pagos nativo de Wix; gestiona pagos, payouts, reembolsos y contracargos desde su panel. | Métodos disponibles según país y configuración de la cuenta; confirmar en el panel del sitio. |
 | IONOS | DNS/correo corporativo (infraestructura externa) | No forma parte de la lógica transaccional |
