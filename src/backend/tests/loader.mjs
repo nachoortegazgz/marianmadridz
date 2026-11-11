@@ -1067,7 +1067,7 @@ export async function load(url, context, nextLoad) {
     // @wix/data (API v2, usado por dataAccess.js) -> adaptador v2 sobre el
     // mismo store del mock. 'wix-data' (builder legacy v1) -> mock clasico.
     if (url === 'mock:wix-auth') {
-      return { format: 'module', source: 'export const elevate = (fn) => fn;\\n', shortCircuit: true };
+      return { format: 'module', source: 'export const elevate = (fn) => fn;\n', shortCircuit: true };
     }
     if (url === 'mock:@wix/data') {
       return { format: 'module', source: WIX_DATA_V2_SOURCE, shortCircuit: true };
