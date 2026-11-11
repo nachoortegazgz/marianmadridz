@@ -122,7 +122,6 @@ const elevatedGet = auth.elevate(items.get);
 const elevatedInsert = auth.elevate(items.insert);
 const elevatedUpdate = auth.elevate(items.update);
 const elevatedSave = auth.elevate(items.save);
-const elevatedRemove = auth.elevate(items.remove);
 const elevatedQuery = auth.elevate(items.query);
 const elevatedBulkPatch = auth.elevate(items.bulkPatch);
 const elevatedBulkRemove = auth.elevate(items.bulkRemove);
