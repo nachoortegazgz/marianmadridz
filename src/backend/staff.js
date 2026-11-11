@@ -5,11 +5,11 @@ VERSION: v9-ARIDGES
 BASE: v8.2-SSOT-MASTER.
 RESPONSIBILITY: Resolver perfiles nativos de personal mediante Bookings Staff
   API y Contacts API. MapaStaff conserva el cruce CMS staffMemberId ->
-  resourceId/scheduleId para proyecciones operativas; no sustituye los perfiles
+  resourceId/eventsScheduleId para proyecciones operativas; no sustituye los perfiles
   nativos ni la resolucion de contactId.
 STANDARDS: G10 ASCII Strict. Minimo codigo.
 IDENTITY: staffMemberId identifica al profesional Bookings; resourceId
-  identifica el recurso de agenda; scheduleId identifica su calendario.
+  identifica el recurso; eventsScheduleId identifica su calendario de eventos y\n  workingHoursScheduleIds identifica las referencias de horarios laborales.
 =============================================================================
 */
 import { staffMembers } from "@wix/bookings";
@@ -88,9 +88,15 @@ function _normalizeStaffMember(staff) {
     const contactId = identityStatus === "CONNECTED"
         ? _safeTrim(identificationData.contactId || "")
         : "";
-    const workingHours = Array.isArray(resource.workingHoursSchedules)
-        ? resource.workingHoursSchedules[0]
-        : null;
+    const workingHoursSchedules = Array.isArray(resource.workingHoursSchedules)
+        ? resource.workingHoursSchedules
+        : [];
+    const workingHoursScheduleIds = workingHoursSchedules
+        .map((schedule) => _safeTrim(schedule?._id || schedule?.id || ""))
+        .filter(Boolean);
+    const eventsScheduleId = _safeTrim(
+        resource.eventsSchedule?._id || resource.eventsSchedule?.id || ""
+    );
     const resourceId = _safeTrim(staff.resourceId || "");
 
     const normalized = {
@@ -99,11 +105,12 @@ function _normalizeStaffMember(staff) {
         contactId,
         displayName: _safeTrim(staff.name || ""),
         roleWebsite: _safeTrim(STAFF.WEBSITE_ROLE_BY_RESOURCE_ID[resourceId] || ""),
-        scheduleId: _safeTrim(
-            workingHours?._id ||
-            resource.eventsSchedule?._id ||
-            ""
-        ),
+        workingHoursScheduleIds,
+        workingHoursScheduleId: workingHoursScheduleIds[0] || "",
+        eventsScheduleId,
+        // Backward-compatible slot fallback: Bookings staff events schedule.
+        // Never substitute a working-hours schedule ID for this contract.
+        scheduleId: eventsScheduleId,
     };
 
     return normalized.resourceId ? normalized : null;
