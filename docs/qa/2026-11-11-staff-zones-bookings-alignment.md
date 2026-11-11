@@ -3,7 +3,7 @@
 **Fecha:** 2026-11-11  
 **Base:** `main` al iniciar la rama `fix/staff-zone-bookings-alignment-2026-11-11`  
 **Ámbito:** controladores Velo, widgets HTML, resolución de identidad Bookings y separación de responsabilidades.  
-**Fuera de alcance:** auditoría de seguridad CMS (pausada), escritura de datos Wix, creación/cancelación de reservas, fichajes reales, pagos y publicación del sitio.
+**Fuera de alcance:** auditoría de seguridad CMS (pausada), escritura de datos Wix, creación/cancelación de reservas, fichajes reales y pagos.
 
 ## 1. Resultado ejecutivo
 
@@ -89,17 +89,19 @@ No se añade agenda de citas en ZONA STAFF ni supervisión de fichajes en ZONA M
 - [x] Revisión de la semántica oficial de Wix para `eventsSchedule`.
 - [x] Pruebas de contrato actualizadas.
 - [x] Separación de responsabilidades de ambas zonas congelada por test.
-- [x] Suite CI: 53 suites / 526 tests / 526 pass / 0 fail (run 42955207213, job 130308627671).
+- [x] Suite CI en HEAD de PR: 53 suites / 526 tests / 526 pass / 0 fail (run 42955345785, job 130308995961).
 - [x] Contratos SDK: eCommerce Cart V2, Wix Data y Bookings Reader V2.
 - [x] ESLint: correcto.
 - [ ] Wix Local Editor / E2E visual: no disponible en este entorno.
 - [ ] Validación runtime en sitio publicado: no ejecutada.
 - [ ] Prueba real de reserva o fichaje: no ejecutada ni necesaria para este cambio.
 - [x] No se modificaron datos CMS, perfiles de staff, horarios, reservas, pagos, caja ni ledgers.
-- [x] No se enviaron comunicaciones ni se publicó Velo en Wix.
+- [x] No se enviaron comunicaciones.
+- [x] PR #277 fusionada en `main` mediante squash: `a24e7740d31bad8c622664efc3781018284b11f4`.
+- [ ] Publicación Velo en Wix: pendiente. Entorno actual Node.js 22.16.0 (requisito CLI oficial >=24.22.1), sin Wix CLI instalado ni checkout local; no se ha abierto Local Editor ni ejecutado `wix preview` / `wix publish`.
 
 ## 6. Riesgos y reversión
 
 El cambio afecta únicamente al fallback interno de resolución de calendario cuando un slot no aporta `scheduleId`. Los slots que ya aportan el identificador nativo mantienen prioridad y no se reescriben. La reversión consiste en revertir el commit de la rama si CI detecta incompatibilidad; no requiere ni autoriza modificar datos históricos o configuración de Wix.
 
-**Estado:** CI offline y lint aprobados; revisión funcional de código completada. PR abierta para revisión. La validación visual/runtime en Wix sigue pendiente; no se declara desplegado ni certificado el comportamiento publicado.
+**Estado:** implementación integrada en `main`; CI offline, contratos SDK y lint aprobados. El cambio NO está publicado en Wix y NO está certificado en runtime. Para cerrar el hito de producción es necesario preparar un entorno compatible con Wix CLI for Sites (Node.js >=24.22.1), confirmar la vinculación GitHub del sitio, reconciliar `wix.lock` mediante el flujo soportado sin actualizar dependencias innecesarias, ejecutar Local Editor y `wix preview`, y solo entonces publicar el commit de `main` con `wix publish` y realizar E2E aislado.
