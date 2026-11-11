@@ -34,7 +34,7 @@ No CMS data, ledgers, bookings, cash balances, or Wix runtime configuration were
 
 ## Validation — current PR head 6b49254c7b8134c906aefc15b1460ce4fcddb314
 
-- GitHub Actions runs **#728** (temporary validation PR) and **#729** (PR #289): completed successfully on the current PR head.
+- GitHub Actions runs **#730** (temporary validation PR) and **#731** (PR #289): completed successfully on the current PR head.
 - Offline regression: **61 suites, 573 tests passed, 0 failed**.
 - Wix SDK contract checks: passed.
 - Wix eCommerce Order Transactions contract: passed.
