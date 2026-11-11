@@ -854,6 +854,7 @@ paymentStatesManualRequired: result.paymentStatesManualRequired,
 processed: result.processed,
 failed: result.failed,
 manualRequired: result.manualRequired,
+skippedByPolicy: result.skippedByPolicy,
 traceId,
 });
 } catch (err) {
