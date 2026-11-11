@@ -60,6 +60,7 @@ import { extendedBookings } from "@wix/bookings";
 import { auth } from "@wix/essentials";
 import { resolveCompletedRefunds } from "backend/refundTransactions";
 import { getSecretValue } from "backend/secretAccess";
+import { runWithWebhookEventClaim } from "backend/webhookEventClaims";
 
 import {
     query as dalQuery,
@@ -1167,7 +1168,7 @@ export async function reconcilePaidCitasFromLedgerInternal(recoveryData, traceId
 // WEBHOOK: BOOKING CONFIRMED
 // ============================================================================
 
-export async function wixBookingsV2_onBookingConfirmed(eventPayload) {
+async function _handleWixBookingsV2_onBookingConfirmed(eventPayload) {
     const traceId = makeTraceId("whook-conf");
     try {
         const event = await _readWixBackendEvent(
@@ -1238,7 +1239,7 @@ export async function wixBookingsV2_onBookingConfirmed(eventPayload) {
  * or precedes this delivery, a late creation event must not downgrade it.
  * ============================================================================
  */
-export async function wixBookingsV2_onBookingCreated(eventPayload) {
+async function _handleWixBookingsV2_onBookingCreated(eventPayload) {
     const traceId = makeTraceId("whook-created");
     try {
         const event = await _readWixBackendEvent(eventPayload, "BOOKING_CREATED");
@@ -1395,7 +1396,7 @@ async function _upsertDualCancellationFlag(pairToken, traceId, triggerBookingId,
  * repair alert for its sibling; never move the sibling without availability
  * validation and the dual-reschedule journal/lock protocol.
  */
-export async function wixBookingsV2_onBookingRescheduled(eventPayload) {
+async function _handleWixBookingsV2_onBookingRescheduled(eventPayload) {
     const traceId = makeTraceId("whook-reschedule");
     try {
         const event = await _readWixBackendEvent(eventPayload, "BOOKING_RESCHEDULED");
@@ -1580,7 +1581,7 @@ export async function wixBookingsV2_onBookingRescheduled(eventPayload) {
 }
 
 
-export async function wixBookingsV2_onBookingCanceled(eventPayload) {
+async function _handleWixBookingsV2_onBookingCanceled(eventPayload) {
     const traceId = makeTraceId("whook-cancel");
     try {
         const event = await _readWixBackendEvent(eventPayload, "BOOKING_CANCELED");
@@ -1816,7 +1817,7 @@ export async function wixBookingsV2_onBookingCanceled(eventPayload) {
 // WEBHOOK: ORDER CREATED — persist idempotency marker; Wix owns native inventory
 // ============================================================================
 
-export async function wixEcom_onOrderCreated(eventPayload) {
+async function _handleWixEcom_onOrderCreated(eventPayload) {
     const traceId = makeTraceId("whook-order-created");
     try {
         const event = await _readWixBackendEvent(eventPayload, "ORDER_CREATED");
@@ -1824,7 +1825,7 @@ export async function wixEcom_onOrderCreated(eventPayload) {
         const order = event?.order || event?.data?.order || event;
         const orderId = _safeTrim(order?._id || order?.id);
         if (!_looksLikeGuid(orderId)) return { status: "OK", skipped: "ORDER_ID_MISSING" };
-        const eventId = _safeTrim(event?.eventId || event?._id || event?.metadata?.id) || `order-created-${orderId}`;
+        const eventId = _safeTrim(event?.metadata?.id || event?.eventId || event?._id) || `order-created-${orderId}`;
         if (await isEventProcessed(eventId)) return { status: "OK", duplicate: true };
         if (await isOrderCreatedReconciled(orderId)) {
             return { status: "OK", reconciled: true, orderId };
@@ -1853,7 +1854,7 @@ export async function wixEcom_onOrderCreated(eventPayload) {
 // WEBHOOK: ORDER PAYMENT STATUS UPDATED
 // ============================================================================
 
-export async function wixEcom_onOrderPaymentStatusUpdated(eventPayload) {
+async function _handleWixEcom_onOrderPaymentStatusUpdated(eventPayload) {
     const traceId = makeTraceId("whook-pay-status");
     try {
         const event = await _readWixBackendEvent(
@@ -2547,7 +2548,7 @@ async function processCompletedEcommerceRefund(orderId, refundId, refundAmount, 
 }
 
 // Stable Velo order-updated fallback: recheck only orders already marked refunded.
-export async function wixEcom_onOrderUpdated(eventPayload) {
+async function _handleWixEcom_onOrderUpdated(eventPayload) {
     const traceId = makeTraceId("whook-order-updated-refund");
     try {
         const event = _readWixBackendEvent(eventPayload, "ORDER_UPDATED");
@@ -2583,7 +2584,7 @@ export async function wixEcom_onOrderUpdated(eventPayload) {
 // WEBHOOK: ORDER CANCELED
 // ============================================================================
 
-export async function wixEcom_onOrderCanceled(eventPayload) {
+async function _handleWixEcom_onOrderCanceled(eventPayload) {
     const traceId = makeTraceId("whook-order-cancel");
     try {
         const event = await _readWixBackendEvent(eventPayload, "ORDER_CANCELED");
@@ -2595,7 +2596,7 @@ export async function wixEcom_onOrderCanceled(eventPayload) {
         if (orderId === "unknown") return { status: "OK" };
 
         const eventId =
-            event?.eventId || event?._id || `cancel-order-${orderId}`;
+            event?.metadata?.id || event?.eventId || event?._id || `cancel-order-${orderId}`;
         const alreadyProcessed = await isEventProcessed(eventId);
         if (alreadyProcessed) {
             log.info("EVENT_DUPLICATE_IGNORED", {
@@ -3158,4 +3159,85 @@ export async function reconcileUnknownTransaction(txId, traceId) {
         });
         return { ok: false, reason: (error && error.message) || "RECONCILE_FAILED" };
     }
+}
+
+
+// ============================================================================
+// ATOMIC EVENT CLAIM BOUNDARY
+// Every Wix event handler acquires a durable, event-type-scoped claim before
+// any domain side effect. The legacy WEBHOOK_EVENT marker remains append-only.
+ // ============================================================================
+async function _runClaimedWixEvent(eventPayload, eventType, handler) {
+    const eventId = _safeTrim(eventPayload?.metadata?.id || "");
+    if (!eventId) throw new Error("WIX_EVENT_METADATA_ID_REQUIRED");
+    return runWithWebhookEventClaim({
+        eventId,
+        eventType,
+        traceId: makeTraceId("webhook-claim"),
+        handler: () => handler(eventPayload),
+    });
+}
+
+export function wixBookingsV2_onBookingConfirmed(eventPayload) {
+    return _runClaimedWixEvent(
+        eventPayload,
+        "BOOKING_CONFIRMED",
+        _handleWixBookingsV2_onBookingConfirmed
+    );
+}
+
+export function wixBookingsV2_onBookingCreated(eventPayload) {
+    return _runClaimedWixEvent(
+        eventPayload,
+        "BOOKING_CREATED",
+        _handleWixBookingsV2_onBookingCreated
+    );
+}
+
+export function wixBookingsV2_onBookingRescheduled(eventPayload) {
+    return _runClaimedWixEvent(
+        eventPayload,
+        "BOOKING_RESCHEDULED",
+        _handleWixBookingsV2_onBookingRescheduled
+    );
+}
+
+export function wixBookingsV2_onBookingCanceled(eventPayload) {
+    return _runClaimedWixEvent(
+        eventPayload,
+        "BOOKING_CANCELED",
+        _handleWixBookingsV2_onBookingCanceled
+    );
+}
+
+export function wixEcom_onOrderCreated(eventPayload) {
+    return _runClaimedWixEvent(
+        eventPayload,
+        "ORDER_CREATED",
+        _handleWixEcom_onOrderCreated
+    );
+}
+
+export function wixEcom_onOrderPaymentStatusUpdated(eventPayload) {
+    return _runClaimedWixEvent(
+        eventPayload,
+        "ORDER_PAYMENT_STATUS_UPDATED",
+        _handleWixEcom_onOrderPaymentStatusUpdated
+    );
+}
+
+export function wixEcom_onOrderUpdated(eventPayload) {
+    return _runClaimedWixEvent(
+        eventPayload,
+        "ORDER_UPDATED",
+        _handleWixEcom_onOrderUpdated
+    );
+}
+
+export function wixEcom_onOrderCanceled(eventPayload) {
+    return _runClaimedWixEvent(
+        eventPayload,
+        "ORDER_CANCELED",
+        _handleWixEcom_onOrderCanceled
+    );
 }
