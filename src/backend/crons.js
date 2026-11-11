@@ -420,7 +420,7 @@ if (kind === "CANCEL_BOOKING") {
  }
 
  // Update CitasF2 only after native cancellation is confirmed.
- await _updateCitaSafe(
+ const projectionUpdate = await _updateCitaSafe(
  bookingId,
  (cita) => {
  let meta = cita?.meta;
@@ -442,6 +442,9 @@ if (kind === "CANCEL_BOOKING") {
  traceId,
  "cron_compensate_cita"
  );
+ if (!projectionUpdate?.updated) {
+ throw new Error("CITA_COMPENSATION_PROJECTION_PENDING: native booking canceled but CitasF2 update not confirmed");
+ }
 
  return {
  ok: true,
