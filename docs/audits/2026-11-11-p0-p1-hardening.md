@@ -77,7 +77,7 @@ No fusionar si falla CI. No desplegar a Wix por el mero hecho de que CI offline 
 - Gate CI para verificar la disponibilidad de orderTransactions.listTransactionsForSingleOrder en el @wix/ecom instalado.
 
 ### Estado de validación
-- HEAD documental actual al crear este addendum: 4c93353b8d386ed5afc5a023a82b67b497b2dc91.
+- HEAD documental actual: e79ec396388f86c08fec6ee5871bce43f3fd8604.
 - La ejecución CI anterior sobre e986f8be detectó un fallo de aislamiento del mock global de orders en events.native-booking-sync; el mock se retiró. Esa ejecución no valida el estado actual.
 - La ejecución de calidad iniciada sobre b14c64a7 fue cancelada por actualizaciones posteriores y no cuenta como resultado.
 - CI y Gitleaks deben repetirse sobre el HEAD final después de cerrar los cambios.
