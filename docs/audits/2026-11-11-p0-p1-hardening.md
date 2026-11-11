@@ -48,9 +48,9 @@ No se añade un `requireIdempotencyKey` genérico ni una búsqueda-antes-de-inse
 
 ## Validación
 
-- Gitleaks full-history con acciones fijadas a SHA: run `42986820996` completado con éxito sobre el head anterior.
-- Backend offline quality sobre el head anterior `d0530449cfc6ccd063743ce707b4d18bdee0a89b`: run `42986821012` SUCCESS, 54 suites / 533 tests / 0 fallos; contratos SDK Wix, Bookings Reader V2 y ESLint correctos.
-- Después de ese run se añadieron el contrato de imports frontend/backend y la telemetría `skippedByPolicy` con su aserción. **La nueva revisión aún necesita CI sobre su SHA actualizado**; no se reutiliza el resultado anterior como evidencia de la nueva cabeza.
+- Gitleaks full-history con acciones fijadas a SHA: run `43001943895` SUCCESS sobre el HEAD `edceb4fdadc273a5cd27b59d7ba446baf60f8bb3`.
+- Backend offline quality sobre ese mismo HEAD: run `43001943879` SUCCESS, 55 suites / 534 tests / 0 fallos; contratos SDK Wix, Bookings Reader V2 y ESLint correctos.
+- Los dos resultados corresponden al HEAD final de esta rama en el momento de la ejecución; los cambios posteriores requerirán repetir ambos gates.
 - El escáner de imports es un control estático parcial, no se presenta como equivalente completo a `@wix/cli/no-invalid-backend-import`.
 - Wix Runtime, Preview y E2E visual no están disponibles en este entorno. No se ha certificado runtime ni despliegue.
 - No se han ejecutado pruebas locales: el contenedor no dispone del checkout del repositorio ni de la toolchain Wix compatible.
