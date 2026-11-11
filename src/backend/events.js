@@ -1950,6 +1950,9 @@ async function _handleWixEcom_onOrderPaymentStatusUpdated(eventPayload) {
         const finalLedgerAmount = resolveOrderLedgerAmount(order);
         const transactionId = `ORDER-${orderId}`;
 
+        // A failed strong read is not evidence that the ledger row is absent.
+        // Propagate the error so Wix retries the claimed webhook instead of
+        // risking a second append-only movement for the same order.
         const existingLedgerRes = await withTimeout(
             dalQuery(MOVIMIENTOS_CAJA_COL)
                 .eq("transactionId", transactionId)
@@ -1957,7 +1960,7 @@ async function _handleWixEcom_onOrderPaymentStatusUpdated(eventPayload) {
                 .find(STRONG_READ),
             API_TIMEOUT_MS,
             "checkExistingLedgerPreflight"
-        ).catch(() => ({ items: [] }));
+        );
 
         if (existingLedgerRes?.items?.length > 0) {
             // Recover a possible interruption after fiscal movement insertion.
