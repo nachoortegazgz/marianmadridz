@@ -274,3 +274,17 @@ test('SSOT-10 suppression flag gone + elevation centralized in dataAccess', () =
   assert.ok(!/from ["']wix-data["']/.test(da),
     'dataAccess.js must not import the legacy wix-data module');
 });
+
+
+test('SSOT-11 checkout timeout is centralized in SDK_CONFIG', () => {
+  assert.strictEqual(SDK_CONFIG.TIMEOUTS.CHECKOUT_MS, 20000);
+  const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+  const bookingCore = readFileSync(resolve(root, 'booking', 'bookingCore.js'), 'utf8');
+  assert.match(bookingCore, /const checkoutTimeoutMs = SDK_CONFIG\.TIMEOUTS\.CHECKOUT_MS;/);
+  assert.doesNotMatch(bookingCore, /CHECKOUT_MS[\\s\\S]{0,100}\\|\\|\\s*20000/);
+});
+
+test('SSOT-12 retired correction reason is not exported', () => {
+  assert.deepStrictEqual(Object.keys(IC.CORRECTION_REASON), ['OTRAS']);
+  assert.strictEqual(IC.CORRECTION_REASON.NUMERO_SERIE, undefined);
+});
