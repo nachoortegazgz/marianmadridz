@@ -41,6 +41,7 @@ test("P0-FISCAL-01 fiscal ledger writers are disabled by canonical fail-closed p
   const zWriter = cajas.slice(zStart, zEnd);
   const zGuard = zWriter.indexOf('FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED !== true');
   assert.ok(zGuard >= 0, "shared Z writer must fail closed for public and internal callers");
+  assert.ok(zWriter.indexOf("if (authorizeCashier) await requireCajero(traceId);") < zGuard, "public Z writer must authorize before revealing the disabled policy");
   for (const operation of ["getCashRegisterSingleton(", "validateFiscalConfig(", "acquireFiscalLedgerLock(", "dalInsert(HISTORICO_CIERRES_Z_COL"]) {
     const index = zWriter.indexOf(operation);
     assert.ok(index > zGuard, "Z fiscal guard must precede " + operation);
