@@ -5,11 +5,13 @@ VERSION: v9-ARIDGES
 BASE: v8.2-SSOT-MASTER.
 RESPONSIBILITY: Resolver perfiles nativos de personal mediante Bookings Staff
   API y Contacts API. MapaStaff conserva el cruce CMS staffMemberId ->
-  resourceId/eventsScheduleId para proyecciones operativas; no sustituye los perfiles
-  nativos ni la resolucion de contactId.
+  resourceId/scheduleId para proyecciones operativas; no sustituye los perfiles
+  nativos ni la resolucion de contactId. La normalizacion separa los IDs de
+  horarios laborales y calendario de eventos.
 STANDARDS: G10 ASCII Strict. Minimo codigo.
 IDENTITY: staffMemberId identifica al profesional Bookings; resourceId
-  identifica el recurso; eventsScheduleId identifica su calendario de eventos y\n  workingHoursScheduleIds identifica las referencias de horarios laborales.
+  identifica el recurso; eventsScheduleId identifica el calendario de eventos;
+  workingHoursScheduleIds identifica las referencias de horarios laborales.
 =============================================================================
 */
 import { staffMembers } from "@wix/bookings";
