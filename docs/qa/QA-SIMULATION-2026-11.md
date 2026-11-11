@@ -138,35 +138,34 @@ Todas las suites offline usan fixtures sintéticos y mocks. No se crean reservas
 - **No verificado:** transacción real de Wix Payments, recepción del webhook por el runtime Wix publicado, escritura real en CMS/agenda de un entorno QA, conciliación de payouts/reembolsos y desglose fiscal de IVA del pedido.
 - **Siguiente condición para E2E remoto:** disponer de un sitio Wix QA separado con Bookings y Wix Payments configurado en modo de prueba, y alinear/sincronizar primero la UI del Editor con el repositorio. No usar el sitio productivo para reservas o pagos sintéticos.
 
-## Update 2026-11-11 — migración al evento Velo de transacciones eCommerce
+## Update 2026-11-11 — conciliación de reembolsos con eventos Velo estables
 
 ### Contrato implementado en rama
-- Se sustituye el registro de pagos/reembolsos basado en exports no documentados (`wixEcom_onOrderPaymentStatusUpdated`, `wixEcom_onOrderRefunded`) por el handler Velo documentado `wixEcom_onOrderTransactionsUpdated`.
-- El handler consume únicamente `event.metadata.id` y `event.entity._id`, consulta el pedido y recupera las transacciones mediante `@wix/ecom.orderTransactions.listTransactionsForSingleOrder`.
-- La disponibilidad del método SDK se añade como gate CI independiente: `npm run verify:wix-ecom-order-transactions`.
-- El procesador de reembolso solo acepta refunds con todas sus transacciones en estado terminal (`SUCCEEDED` o `FAILED`). Si existe una transacción pendiente, iniciada, programada o desconocida, difiere la rectificación.
-- Para un refund terminal, el importe fiscal debe coincidir exactamente con `summary.refunded.amount` y con la suma de importes de transacciones `SUCCEEDED`. Las transacciones `FAILED` no aportan importe. La discrepancia falla de forma cerrada.
-- Se conserva el writer fiscal existente: identidad `REFUND-{orderId}-{refundId}`, límite acumulado bajo lock fiscal, prorrateo de IVA y residual en el último reembolso. Wix conserva la autoridad sobre el restock nativo.
+- Se conserva `wixEcom_onOrderPaymentStatusUpdated`, evento Velo estable que informa del pedido y del estado de pago anterior.
+- Se añade `wixEcom_onOrderUpdated` como segundo disparador para pedidos cuyo estado de pago ya sea `PARTIALLY_REFUNDED` o `FULLY_REFUNDED`.
+- Ambos flujos consultan `@wix/ecom.orderTransactions.listTransactionsForSingleOrder` con elevación y validan que la respuesta corresponda al mismo pedido.
+- El procesador fiscal solo acepta refunds con todas sus transacciones en estado terminal (`SUCCEEDED` o `FAILED`). Si existe alguna transacción pendiente, iniciada, programada, desconocida o sin transacciones, la ejecución falla de forma cerrada y no marca el evento como procesado.
+- Para un refund terminal, `summary.refunded.amount` debe coincidir exactamente con la suma de los importes de transacciones `SUCCEEDED`. Las transacciones `FAILED` no aportan importe. La discrepancia bloquea el writer.
+- Se conserva la identidad `REFUND-{orderId}-{refundId}`, el límite acumulado bajo lock fiscal, el prorrateo de IVA y el residual en el último reembolso. Wix conserva la autoridad sobre el restock nativo.
+- No se usa `wixEcom_onOrderTransactionsUpdated`: aunque está documentado en Velo, aparece como Developer Preview y su descripción no garantiza una notificación cuando cambia el estado de una transacción de refund ya creada.
 
 ### Cobertura añadida
 - `refundTransactions.test.mjs`: seis pruebas unitarias de estados pendientes, fallidos, mixtos, discrepancia de resumen, identidad y cantidades inválidas.
 - `events.native-booking-sync.test.mjs`: escenario integrado offline de venta original, refund pendiente, refund terminal mixto (éxito + fallo), prorrateo de IVA, actualización de CitasF2 y replay sin duplicidad.
-- `events.backend-events.contract.test.mjs` y `events.order-id-validation.contract.test.mjs`: contratos del handler y retirada de exports de evento no documentados.
+- `events.backend-events.contract.test.mjs` y `events.order-id-validation.contract.test.mjs`: contratos de los dos eventos Velo estables y ausencia de writers de inventario custom.
+- `npm run verify:wix-ecom-order-transactions`: gate CI para comprobar que el SDK instalado exporta el método utilizado.
 
 ### Límites abiertos
-- **CI de esta modificación:** pendiente de ejecución en la PR; no declarar los tests como pasados hasta observar el workflow.
-- **Runtime Wix:** pendiente. `onOrderTransactionsUpdated` figura en la documentación Velo como Developer Preview y los backend events no funcionan en Preview.
+- **CI de la última modificación:** pendiente de observar el workflow sobre el HEAD final. La ejecución anterior detectó un defecto del mock de namespace y no se considera validación final.
+- **Runtime Wix:** pendiente. Los backend events no funcionan en Preview; requiere prueba en un sitio publicado de QA aislado.
+- **Entrega de eventos:** Wix documenta entrega asíncrona al menos una vez y posibles duplicados/desorden; se conserva idempotencia por eventId y por refundId. La documentación no detalla la política de reintentos ante errores del handler, por lo que el comportamiento de refund con varias transacciones debe verificarse en QA.
 - **Sitio QA aislado:** no disponible; no probar el webhook sobre el sitio productivo.
 - **Moneda:** el contrato SDK de refund expone importes como Price.amount sin código de moneda en cada transacción; el ledger actual tampoco conserva un campo canónico de moneda. No se declara conciliación de moneda completa. Antes de habilitar escrituras fiscales en runtime debe definirse el campo/contrato canónico de moneda y su compatibilidad con los movimientos históricos.
 - **Efectos externos:** no se han ejecutado pagos, devoluciones, restock, escrituras CMS, envíos ni despliegues.
 
 ### Fuentes oficiales consultadas
-- [Velo — onOrderTransactionsUpdated](https://dev.wix.com/docs/velo/events-service-plugins/e-commerce/events/on-order-transactions-updated).
+- [Velo — onOrderPaymentStatusUpdated](https://dev.wix.com/docs/velo/events-service-plugins/e-commerce/events/on-order-payment-status-updated).
+- [Velo — onOrderUpdated](https://dev.wix.com/docs/velo/events-service-plugins/e-commerce/events/on-order-updated).
 - [Wix eCommerce — List Transactions For Single Order](https://dev.wix.com/docs/api-reference/business-solutions/e-commerce/orders/order-transactions/list-transactions-for-single-order).
-- [Velo — wix-auth elevate](https://dev.wix.com/docs/velo/apis/wix-auth/elevate).
-
-### Bloqueo adicional de contrato — notificación de finalización
-- La descripción Velo de `onOrderTransactionsUpdated` indica que se dispara al añadir un pago o reembolso, o al actualizar un pago existente. No declara expresamente que se vuelva a disparar cuando cambia el estado de una transacción de reembolso ya creada.
-- El evento específico `Order Transactions Refund Completed` sí garantiza que todas las transacciones del refund alcanzaron estado final, pero su documentación corresponde a la suscripción de eventos de aplicaciones; no se ha verificado un handler Velo estable equivalente.
-- Por tanto, el handler de esta rama puede procesar un refund cuando una invocación observa estados terminales, pero **no se ha demostrado que Wix vaya a invocarlo en la transición a esos estados**. Esta brecha bloquea la activación productiva de la contabilización automática de reembolsos.
-- No se añade un cron de polling ni un webhook externo sin definir antes su cobertura de órdenes, cursor de reconciliación, permisos, límites de API, reintentos e idempotencia. No se debe ocultar el gap mediante una suposición sobre el comportamiento de Wix.
+- [Wix eCommerce — Order payment status enum](https://dev.wix.com/docs/api-reference/business-solutions/e-commerce/orders/orders/get-order).
+- [Wix — Backend events and event delivery](https://dev.wix.com/docs/overview/backend-services/events).
