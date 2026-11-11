@@ -101,10 +101,8 @@ export async function acquireWebhookEventClaim({
         status: WEBHOOK_CLAIM_STATUS.IN_PROGRESS,
         ownerToken,
         version: 1,
-        attempt: 1,
-        leaseExpiresAt,
         traceId: ownerToken,
-        payload: { eventType: type },
+        payload: { eventType: type, attempt: 1, leaseExpiresAt },
     };
 
     try {
@@ -130,7 +128,7 @@ export async function acquireWebhookEventClaim({
             return { status: "COMPLETED", claimId };
         }
 
-        const existingLease = new Date(existing.leaseExpiresAt);
+        const existingLease = new Date(existing.payload?.leaseExpiresAt);
         if (
             existing.status === WEBHOOK_CLAIM_STATUS.IN_PROGRESS &&
             Number.isFinite(existingLease.getTime()) &&
@@ -159,11 +157,15 @@ export async function acquireWebhookEventClaim({
             ownerToken: previousOwner,
             version,
         };
+        const nextPayload = {
+            ...(existing.payload || {}),
+            attempt: Number(existing.payload?.attempt || 1) + 1,
+            leaseExpiresAt,
+        };
         const recovered = await compareAndSwap(previous, [
             { fieldPath: "status", action: "SET_FIELD", value: WEBHOOK_CLAIM_STATUS.IN_PROGRESS },
             { fieldPath: "ownerToken", action: "SET_FIELD", value: ownerToken },
-            { fieldPath: "leaseExpiresAt", action: "SET_FIELD", value: leaseExpiresAt },
-            { fieldPath: "attempt", action: "INCREMENT_FIELD", value: 1 },
+            { fieldPath: "payload", action: "SET_FIELD", value: nextPayload },
             { fieldPath: "version", action: "INCREMENT_FIELD", value: 1 },
             { fieldPath: "traceId", action: "SET_FIELD", value: ownerToken },
         ]);
@@ -178,6 +180,7 @@ export async function acquireWebhookEventClaim({
                 ownerToken,
                 version: version + 1,
                 status: WEBHOOK_CLAIM_STATUS.IN_PROGRESS,
+                payload: nextPayload,
             },
         };
     }
@@ -187,10 +190,18 @@ export async function completeWebhookEventClaim(claim, now = new Date()) {
     if (!claim || claim.status !== WEBHOOK_CLAIM_STATUS.IN_PROGRESS) {
         throw claimError("WEBHOOK_CLAIM_HANDLE_INVALID");
     }
+    const completedAt = normalizeNow(now);
     const completed = await compareAndSwap(claim, [
         { fieldPath: "status", action: "SET_FIELD", value: WEBHOOK_CLAIM_STATUS.COMPLETED },
-        { fieldPath: "completedAt", action: "SET_FIELD", value: normalizeNow(now) },
-        { fieldPath: "leaseExpiresAt", action: "SET_FIELD", value: normalizeNow(now) },
+        {
+            fieldPath: "payload",
+            action: "SET_FIELD",
+            value: {
+                ...(claim.payload || {}),
+                completedAt,
+                leaseExpiresAt: completedAt,
+            },
+        },
         { fieldPath: "version", action: "INCREMENT_FIELD", value: 1 },
     ]);
     if (!completed) throw claimError("WEBHOOK_CLAIM_LOST");
@@ -200,11 +211,19 @@ export async function completeWebhookEventClaim(claim, now = new Date()) {
 export async function releaseWebhookEventClaim(claim, error, now = new Date()) {
     if (!claim || claim.status !== WEBHOOK_CLAIM_STATUS.IN_PROGRESS) return false;
     const errorCode = String(error?.code || "HANDLER_FAILED").slice(0, 80);
+    const failedAt = normalizeNow(now);
     return compareAndSwap(claim, [
         { fieldPath: "status", action: "SET_FIELD", value: WEBHOOK_CLAIM_STATUS.FAILED_RETRYABLE },
-        { fieldPath: "failedAt", action: "SET_FIELD", value: normalizeNow(now) },
-        { fieldPath: "lastErrorCode", action: "SET_FIELD", value: errorCode },
-        { fieldPath: "leaseExpiresAt", action: "SET_FIELD", value: normalizeNow(now) },
+        {
+            fieldPath: "payload",
+            action: "SET_FIELD",
+            value: {
+                ...(claim.payload || {}),
+                failedAt,
+                lastErrorCode: errorCode,
+                leaseExpiresAt: failedAt,
+            },
+        },
         { fieldPath: "version", action: "INCREMENT_FIELD", value: 1 },
     ]);
 }
