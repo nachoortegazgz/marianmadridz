@@ -1,6 +1,6 @@
 # Marian Madrid — Wix Editor + Velo
 
-Repositorio canónico del sitio **Marian Madrid Peluquería y Estética** (\`www.marianmadrid.es\`), destinado a QA, pruebas previas y simulacros controlados antes de cambios en el sitio real. El proyecto se construye sobre Wix y sus Wix Apps nativas, con Microsoft 365 como capa documental externa.
+Repositorio canónico del sitio **Marian Madrid Peluquería y Estética** (`www.marianmadrid.es`). El repositorio contiene código, documentación y pruebas QA; **el sitio Wix asociado informa actualmente Published y no está acreditado como entorno QA aislado**. No confundir la finalidad QA del repositorio con el estado de publicación del sitio. El proyecto se construye sobre Wix y sus Wix Apps nativas, con Microsoft 365 como capa documental externa.
 
 ## Arquitectura y fuente de verdad
 
