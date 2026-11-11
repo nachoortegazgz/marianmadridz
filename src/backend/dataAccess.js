@@ -10,7 +10,15 @@ STANDARDS: G10 ASCII Strict. Sin suppressAuth. Acceso CMS centralizado
 
 import { items } from "@wix/data";
 import { auth } from "@wix/essentials";
-import { assertBulkPatchAllowed } from "backend/dataAccessPolicy";
+import {
+    assertBulkPatchAllowed,
+    assertInsertAllowed,
+    assertUpdateAllowed,
+    assertSaveAllowed,
+    assertRemoveAllowed,
+    assertBulkRemoveAllowed,
+    assertBulkMutationDisabled,
+} from "backend/dataAccessPolicy";
 
 const DATA_ACCESS_ERROR = "DATA_ACCESS_ERROR";
 
@@ -306,37 +314,42 @@ export async function getItem(collection, id, consistency) {
 }
 
 export function insertItem(collection, item) {
+    assertInsertAllowed(collection, item);
     return elevatedInsert(collection, item);
 }
 
 export function updateItem(collection, item) {
+    assertUpdateAllowed(collection, item);
     return elevatedUpdate(collection, item);
 }
 
 export function saveItem(collection, item) {
+    assertSaveAllowed(collection, item);
     return elevatedSave(collection, item);
 }
 
-export async function removeById(collection, idOrItem) {
+export async function removeById(collection, idOrItem, options = {}) {
     const id = idOrItem && typeof idOrItem === "object"
         ? idOrItem._id || idOrItem.id
         : idOrItem;
 
     if (!id) throw dataAccessError("REMOVE_ID_REQUIRED");
+    assertRemoveAllowed(collection, id, options.expectedControlType);
 
     await elevatedRemove(collection, id);
     return { _id: id };
 }
 
-export function bulkInsert(collection, records) {
-    return elevatedBulkInsert(collection, records);
+export function bulkInsert() {
+    assertBulkMutationDisabled("BULK_INSERT");
 }
 
-export function bulkUpdate(collection, records) {
-    return elevatedBulkUpdate(collection, records);
+export function bulkUpdate() {
+    assertBulkMutationDisabled("BULK_UPDATE");
 }
 
 export function bulkRemove(collection, ids, options) {
+    assertBulkRemoveAllowed(collection, ids, options);
     return elevatedBulkRemove(collection, ids, options);
 }
 
