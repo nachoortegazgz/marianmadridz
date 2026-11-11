@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
     acquireWebhookEventClaim,
+    getWebhookEventClaimId,
     completeWebhookEventClaim,
     releaseWebhookEventClaim,
     runWithWebhookEventClaim,
@@ -19,6 +20,16 @@ function claimCount() {
 }
 
 test.beforeEach(() => wixDataMock._reset());
+
+
+test("claim identity is deterministic and scoped by event type", async () => {
+    const first = await getWebhookEventClaimId(EVENT_ID, "BOOKING_CONFIRMED");
+    const replay = await getWebhookEventClaimId(EVENT_ID, "BOOKING_CONFIRMED");
+    const otherType = await getWebhookEventClaimId(EVENT_ID, "BOOKING_CANCELED");
+
+    assert.equal(first, replay);
+    assert.notEqual(first, otherType);
+});
 
 test("concurrent deliveries acquire exactly one event claim", async () => {
     const [first, second] = await Promise.all([
