@@ -25,7 +25,7 @@ Evitar que una reserva creada por Wix Bookings quede fuera de la proyección ope
 6. El evento `BOOKING_CONFIRMED` mantiene la transición a `CONFIRMED` y su comportamiento previo.
 7. Se añaden pruebas de creación, orden creación→confirmación, entrega tardía sobre una fila dual y repetición idempotente; además se protege el export del handler mediante test contractual.
 
-## Archvos modificados
+## Archivos modificados
 
 - `src/backend/events.js`
 - `src/backend/tests/events.native-booking-sync.test.mjs`
