@@ -174,3 +174,17 @@ Si dos documentos discrepan, no borrar la historia: registrar qué afirmación q
 ---
 
 **Estado de esta guía:** consolidación documental. No declara el sitio listo para producción, no certifica fiscalidad y no acredita publicación de los últimos commits.
+
+
+## Addendum de estado — PR #286 y notificaciones Wix (2026-11-11)
+
+Este addendum prevalece sobre el resumen histórico anterior de PR #286 y sobre cualquier referencia a que la auditoría de automatizaciones fue exclusivamente read-only.
+
+- PR #286: rama `audit/p0-p1-hardening`; HEAD previo a este addendum documental: `d30e03473fe2bfe39b93a881ef4b765fcd72691d`. CI de código: 57 suites / 548 tests / 0 fallos (run `43038637356`); Gitleaks SUCCESS (run `43038637350`). No hay revisiones humanas registradas. Los commits documentales posteriores no cambian código, pero disparan nuevos workflows de PR.
+- Se pausaron y verificaron 67 automatizaciones Wix activas: 66 email y una WhatsApp. Las cuatro automatizaciones WhatsApp están inactivas.
+- Nueve automatizaciones de email continúan activas porque Wix las marca readonly y/o disableStatusChange. No se ha podido demostrar aislamiento total de la mensajería nativa.
+- No se envió ningún mensaje. El móvil sintético `666724634` no se configuró; la acción Wix `whatsapp-send-message` no dispone de procedimiento público soportado para reconfigurar el destinatario por API.
+- La allowlist de `emailRecipientPolicy.js` solo cubre el despacho backend Resend; no gobierna automatizaciones nativas Wix.
+- El PR permanece draft y sin merge. Siguen pendientes revisión humana, QA runtime/E2E en entorno aislado para pagos/reembolsos y resolución de los nueve flujos email activos. No desplegar: los writers fiscales/contables quedan fail-closed por defecto.
+
+Evidencia: [auditoría de aislamiento de notificaciones](docs/audits/2026-11-11-wix-automation-recipient-isolation.md) y [auditoría P0/P1](docs/audits/2026-11-11-p0-p1-hardening.md).
