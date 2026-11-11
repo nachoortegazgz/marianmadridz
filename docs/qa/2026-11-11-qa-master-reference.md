@@ -260,4 +260,4 @@ Documentación oficial Wix consultada:
 - `src/backend/tests/staff.identity.contract.test.mjs`: `STAFF-SDK-04` simula 20 páginas con cursor pendiente y demuestra que la fila encontrada en la primera página no se devuelve como resultado completo ni por búsqueda de recurso ni por listado global.
 - `docs/DECISION-LOG.md`: decisión TEC-030, justificación y reversión.
 
-**Estado:** cambio propuesto en rama. Prueba automatizada añadida pero no ejecutada localmente; CI del PR pendiente. No se ha modificado Wix, CMS, automatizaciones ni datos de negocio.
+**Estado:** CI GitHub Actions verde en el commit `6c0510a30b80b76f2f79cc6573082a0df4c825e2`: `npm test` ejecutó 62 suites y 579 tests (0 fallos); contratos Wix eCommerce Cart V2, Order Transactions y Bookings Reader V2 correctos; ESLint correcto; Gitleaks full-history correcto. No se ejecutó localmente por falta de conectividad de red. Runtime Wix sigue pendiente. No se ha modificado Wix, CMS, automatizaciones ni datos de negocio.
