@@ -111,3 +111,12 @@ Detalle, IDs, restricciones y decisión: [auditoría de aislamiento de notificac
 La CI offline del HEAD `d30e03473fe2bfe39b93a881ef4b765fcd72691d` pasó: run `43038637356`, 57 suites / 548 tests / 0 fallos; Gitleaks run `43038637350` SUCCESS. No hay revisiones humanas registradas. Siguen pendientes la revisión humana completa, la validación Wix runtime/E2E aislada de pagos/reembolsos y la resolución/aislamiento de los nueve flujos de email nativos activos. La pausa de WhatsApp sí está verificada, pero no existe todavía una ruta WhatsApp soportada configurada al móvil sintético.
 
 El PR permanece draft y sin merge. La CI offline no acredita ejecución de eventos, permisos ni persistencia en Wix Runtime. No se debe desplegar el código: los writers fiscales/contables quedan fail-closed por defecto y el entorno Wix runtime no ha sido validado.
+
+
+## Cierre de PR #286 — merge en main (2026-11-11)
+
+PR #286 se integró mediante squash en `main` el 2026-11-11 15:00:16 UTC; merge commit `0d8f6efc581bc6a3d892702ba1c32af73e829888`. El estado de draft/abierto descrito en el addendum previo queda superado.
+
+CI del HEAD anterior al merge: run `43043480302` SUCCESS (57 suites / 548 tests / 0 fallos); Gitleaks run `43043480366` SUCCESS; contratos SDK Wix, Order Transactions, Bookings Reader V2 y ESLint SUCCESS.
+
+El merge no equivale a publicación. No se ha desplegado código Wix ni se han mutado CMS, pagos, pedidos o ledgers. Writers fiscales/contables continúan deshabilitados por defecto. Runtime/E2E aislado de reembolsos y resolución de nueve automatizaciones nativas de email activas siguen siendo gates previos al despliegue.
