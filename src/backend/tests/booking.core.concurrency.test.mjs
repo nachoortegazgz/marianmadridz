@@ -259,6 +259,14 @@ test('BCORE-LOCK-06 unlock only by owner; foreign unlock skipped, missing ok', a
   });
   assert.strictEqual(staleRelease.ok, false, 'stale release cannot alter the tombstone');
   assert.strictEqual(staleRelease.reason, BC.ERROR_CODES.LOCK_CONFLICT);
+  assert.strictEqual(staleRelease.alreadyReleased, true, 'same owner/token can recognize the existing tombstone without mutating it');
+  const idempotentRelease = await BC._unlockSlotKey(key, 'owner-1', {
+    expectedVersion: releasedRow.version,
+    expectedLockToken: acquired.lockToken,
+  });
+  assert.strictEqual(idempotentRelease.ok, true);
+  assert.strictEqual(idempotentRelease.alreadyReleased, true);
+  assert.strictEqual((wixDataMock._store.get(CONTROL) || [])[0].version, releasedRow.version, 'idempotent release does not increment tombstone revision');
   wixDataMock._store.set(CONTROL, []);
   const missing = await BC._unlockSlotKey(key, 'owner-1');
   assert.deepStrictEqual(missing, { ok: true, missing: true });
