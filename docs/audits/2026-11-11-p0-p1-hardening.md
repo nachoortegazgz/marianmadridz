@@ -87,7 +87,7 @@ No fusionar si falla CI. No desplegar a Wix por el mero hecho de que CI offline 
 - La conciliación multimoneda no está habilitada; el ledger histórico no almacena moneda por movimiento. Solo se admiten pedidos en la moneda canónica EUR.
 
 ### Bloqueos antes de merge
-1. Revisión humana completa del diff y de los 100 commits del PR; preferir squash merge cuando proceda.
+1. Revisión humana completa del diff y de los 107 commits del PR; preferir squash merge cuando proceda.
 2. Validar en un sitio QA aislado la transición PAID → PARTIALLY_REFUNDED → FULLY_REFUNDED, refunds con varias transacciones, estados pendientes/fallidos, eventos duplicados y desordenados.
 3. Confirmar el comportamiento de entrega/reintento de eventos Velo ante errores y transacciones aún pendientes.
 4. No fusionar ni desplegar mientras el sitio QA aislado no exista y no se haya verificado el runtime.
