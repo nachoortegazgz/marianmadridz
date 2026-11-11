@@ -229,7 +229,7 @@ export async function acquireFiscalLedgerLock(traceId, options = {}) {
 
             if (Number.isFinite(expiresAt.getTime()) && expiresAt.getTime() <= now.getTime()) {
                 try {
-                    await dalRemove(CONTROL_COL, LOCK_ID);
+                    await dalRemove(CONTROL_COL, LOCK_ID, { expectedControlType: CONTROL_TYPE.SLOT_LOCK });
                     continue;
                 } catch (error) {
                     if (_isNotFound(error)) continue;
@@ -328,7 +328,7 @@ export async function releaseFiscalLedgerLock(lock) {
         return { released: false, reason: "OWNERSHIP_CHANGED" };
     }
     try {
-        await dalRemove(CONTROL_COL, LOCK_ID);
+        await dalRemove(CONTROL_COL, LOCK_ID, { expectedControlType: CONTROL_TYPE.SLOT_LOCK });
         return { released: true };
     } catch (error) {
         if (_isNotFound(error)) return { released: true, missing: true };
