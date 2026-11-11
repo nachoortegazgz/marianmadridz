@@ -136,3 +136,18 @@ El propietario declara que ServiciosCatalogo gobierna la configuración de servi
 **Decisión de alcance:** no se elimina el límite ni se amplía por conjetura. Tampoco se cambia el contrato público (`null`/`[]`) ni la autorización. Los errores de consulta siguen denegando la resolución de identidad; el log interno añade `errorCode` para diferenciar un fallo técnico de un directorio realmente vacío. La prueba sintética verifica que ni `findStaffByResourceId()` ni `listStaff()` devuelven la fila parcial cuando queda un cursor después de la página 20.
 
 **Reversión:** revertir el commit de esta tanda restaura el comportamiento previo sin tocar datos CMS ni configuración Wix.
+
+
+## 7. Decisión técnica — contrato CMS Date and Time (2026-11-11)
+
+| ID | Decisión | Justificación / consecuencia | Estado |
+|---|---|---|---|
+| TEC-031 | Los campos CMS `DATETIME` se normalizan en el hook de escritura a objetos JavaScript `Date`, conservando el instante recibido. Los campos CMS `DATE` continúan siendo cadenas `YYYY-MM-DD`; no se convierten a `Date`. | Evita persistir cadenas ISO en campos Date and Time y evita desplazar horas por conversiones regionales. Se aplica a los hooks existentes de `CajaActual`, `MovimientosCaja`, `ControlOperativo`, `HistoricoCierresZ`, `PaquetesGestoria` y todos los campos DateTime de `CitasF2`; `RegistrosHorariosStaff.recordedAt` ya estaba normalizado. | Implementado en rama; CI pendiente |
+
+**Evidencia de auditoría live:** 44 colecciones CMS inventariadas, 15 `NATIVE`. `CajaActual.openedAt` está informado; los vacíos de `closedAt`/`lastMovementAt` se observaron en una caja `SIMULACION` y no se rellenan. Cuatro movimientos `SMOKE_TEST`, un asiento contable `SMOKE_TEST` y dos fichajes QA sin firma se conservan sin modificación. Los valores ausentes en registros append-only no se reconstruyen ni se sobrescriben.
+
+**Contrato de representación:** Wix documenta Date and Time en el formato JSON `{"$date":"YYYY-MM-DDTHH:mm:ss.sssZ"}`. En código Velo el límite de escritura utiliza `Date`; la respuesta REST puede serializarlo como ISO 8601. La normalización no altera el instante y no aplica `Europe/Madrid` como conversión adicional. Los campos `DATE` (`fechaOperacion`, `fechaExpedicionFactura`, `operationDate`) permanecen en su contrato de fecha sin hora.
+
+**Separación del writer fiscal:** `eventLog.js` mantiene la estructura de fecha local requerida dentro de `payloadFiscal`, pero escribe `recordTimestamp` y `generationTimestamp` del documento CMS como objetos `Date`. No se reutiliza un objeto de componentes de fecha como valor de un campo CMS Date and Time.
+
+**Reversión:** revertir los cambios de hooks y pruebas de esta rama restaura el contrato previo sin modificar datos CMS. No hay despliegue ni limpieza de datos asociada.

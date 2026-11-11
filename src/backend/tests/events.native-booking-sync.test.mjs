@@ -593,6 +593,12 @@ test("EVENT-PAYMENT-09 official Wix eCommerce paid event appends WIX_PAYMENTS le
   const movements = wixDataMock._store.get(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA) || [];
   assert.equal(movements.length, 1, "paid webhook must append a ledger movement; recovery/control state: " + JSON.stringify(wixDataMock._store.get(IC.OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO) || []));
   const movement = movements[0];
+  assert.ok(movement.recordTimestamp instanceof Date, "CMS recordTimestamp must be a DateTime value");
+  assert.ok(movement.generationTimestamp instanceof Date, "CMS generationTimestamp must be a DateTime value");
+  assert.ok(Number.isFinite(movement.recordTimestamp.getTime()));
+  assert.ok(Number.isFinite(movement.generationTimestamp.getTime()));
+  assert.ok(movement.payloadFiscal?.generationTimestamp && typeof movement.payloadFiscal.generationTimestamp === "object",
+    "the fiscal payload keeps its separate generation timestamp structure");
   const cajaRows = wixDataMock._store.get(IC.BUSINESS_COLLECTIONS.CAJA_ACTUAL) || [];
   assert.equal(cajaRows.length, 1, "fiscal sequence must remain on the only CajaActual item");
   assert.equal(cajaRows[0]._id, "SINGLE_ITEM_ID");

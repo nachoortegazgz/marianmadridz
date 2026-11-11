@@ -170,10 +170,15 @@ function _normalizeCmsDateTime(item, fieldName) {
         dateValue = value.$date;
     }
     const normalized = dateValue instanceof Date ? dateValue : new Date(dateValue);
-    if (Number.isNaN(normalized.getTime())) {
+    if (!(normalized instanceof Date) || Number.isNaN(normalized.getTime())) {
         _schemaError(`${fieldName} debe ser una fecha/hora válida (DATETIME)`);
     }
     item[fieldName] = normalized;
+    return item;
+}
+
+function _normalizeCmsDateTimes(item, fieldNames) {
+    for (const fieldName of fieldNames) _normalizeCmsDateTime(item, fieldName);
     return item;
 }
 
@@ -426,6 +431,7 @@ function _validateFiscalPayload(item) {
 
 export function MovimientosCaja_beforeInsert(item) {
     if (!item || typeof item !== "object") return item;
+    _normalizeCmsDateTimes(item, ["generationTimestamp", "recordTimestamp", "fechaEnvioAEAT"]);
 
     // Normalize the CMS's uppercase physical identifiers into the internal
     // domain names before validation. The final persisted item is converted
@@ -543,11 +549,13 @@ export function LibroAsientosContablesDetalle_beforeRemove() {
 
 export function HistoricoCierresZ_beforeInsert(item) {
     if (!item || typeof item !== "object") return item;
+    _normalizeCmsDateTimes(item, ["closedAt", "verifiedAt", "sentAt"]);
     if (!_safeTrim(item.traceId)) _schemaError("traceId obligatorio en HistoricoCierresZ (trazabilidad del cierre)");
     return item;
 }
 
 export function HistoricoCierresZ_beforeUpdate(item, context) {
+    _normalizeCmsDateTime(item, "verifiedAt");
     const previous = context?.previous || context?.original || {};
     const hasSnapshot = Boolean(context && (context.previous || context.original));
     const changes = Object.keys(item || {})
@@ -569,6 +577,7 @@ export function HistoricoCierresZ_beforeRemove() {
 // never written back into a package; every package is a new append-only item.
 export function PaquetesGestoria_beforeInsert(item) {
     if (!item || typeof item !== "object") _schemaError("PaquetesGestoria item invalido");
+    _normalizeCmsDateTime(item, "createdAt");
     const periodType = _safeTrim(item.periodType).toUpperCase();
     const year = Number(item.fiscalYear);
     const month = item.fiscalMonth == null ? null : Number(item.fiscalMonth);
@@ -629,6 +638,7 @@ export function RegistrosHorariosStaff_beforeRemove() {
 
 export function CajaActual_beforeInsert(item) {
     if (!item || typeof item !== "object") return item;
+    _normalizeCmsDateTimes(item, ["openedAt", "closedAt", "lastMovementAt"]);
     const key = _safeTrim(item.singletonKey || item._id);
     if (key !== "CAJA_PRINCIPAL") {
         _schemaError("CajaActual es SINGLE_ITEM: solo admite el singleton 'CAJA_PRINCIPAL'");
@@ -637,6 +647,7 @@ export function CajaActual_beforeInsert(item) {
 }
 
 export function CajaActual_beforeUpdate(item, context) {
+    _normalizeCmsDateTimes(item, ["openedAt", "closedAt", "lastMovementAt"]);
     const previous = context?.original || {};
     const prevSeq = { ...(previous?.sequenceCounters || {}) };
     const nextSeq = { ...(item?.sequenceCounters || {}) };
@@ -858,6 +869,10 @@ export function readControlPayload(doc) {
 }
 
 export function ControlOperativo_beforeInsert(item) {
+    _normalizeCmsDateTimes(item, [
+        "occurredAt", "expiresAt", "slotStart", "slotEnd",
+        "windowStart", "processedAt", "heartbeatAt", "operationDate",
+    ]);
     assertCanonicalControlFields(item);
     // Insert recibe el registro completo: proteger el discriminador y los
     // invariantes minimos del control antes de persistirlo.
@@ -881,6 +896,10 @@ export async function ControlOperativo_beforeUpdate(item) {
     }
 
     const normalized = { ...original, ...item };
+    _normalizeCmsDateTimes(normalized, [
+        "occurredAt", "expiresAt", "slotStart", "slotEnd",
+        "windowStart", "processedAt", "heartbeatAt", "operationDate",
+    ]);
     assertCanonicalControlFields(normalized);
     if (normalized.controlType !== original.controlType) {
         _fiscalError("ControlOperativo.controlType es inmutable");
@@ -916,8 +935,10 @@ export async function ControlOperativo_beforeRemove(itemId) {
 // the booking saga's point-of-use validation. Wix binds hooks to the physical
 // collection ID (not its display name); QA uses a generated collection ID.
 function _validateCitasF2Write(item) {
-    _normalizeCmsDateTime(item, "slotStart");
-    _normalizeCmsDateTime(item, "slotEnd");
+    _normalizeCmsDateTimes(item, [
+        "slotStart", "slotEnd", "noShowAt", "canceledAt",
+        "privacyNoticeAcceptedAt", "invoicingDate",
+    ]);
     assertCitasF2(item);
     return item;
 }

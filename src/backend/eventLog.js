@@ -639,6 +639,7 @@ export async function registrarEventoEconomico(input) {
 
     const previousRecordHash = _safeTrim(readMovementHash(previous)) || GENESIS_HASH;
     const recordTimestamp = _formatAEATDateTimeMadrid(ts);
+    const cmsRecordTimestamp = new Date(ts);
 
     // 5. Construir movimiento base (SSOT-KEYFIELD-02: claves fisicas canonicas
     // literales AEAT; los aliases historical del caller ya fueron promovidos por
@@ -780,8 +781,10 @@ export async function registrarEventoEconomico(input) {
         ...baseMovement,
         hash: movementHash,
         previousRecordHash,
-        recordTimestamp,
-        generationTimestamp: _buildGenerationTimestamp(ts),
+        // CMS DATETIME fields require Date objects. The fiscal payload keeps
+        // its own Madrid-local serialization in _buildFiscalPayloadSnapshot.
+        recordTimestamp: cmsRecordTimestamp,
+        generationTimestamp: new Date(ts),
         desgloseDetallado: fiscalPayload.desgloseDetallado,
         // SSOT Apartado 5: payloadFiscal es la clave canonica del snapshot
         // inmutable (incluye el sistema informatico emisor); cero claves
