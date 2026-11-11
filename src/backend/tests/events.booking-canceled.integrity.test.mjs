@@ -66,7 +66,7 @@ test('BOOKING_CANCELED propagates CitasF2 read failures instead of treating them
     wixBookingsV2_onBookingCanceled(canceledEvent()),
     /CMS_READ_UNAVAILABLE/,
   );
-  assert.equal((wixDataMock._store.get(CONTROL_COLLECTION) || []).some((row) => row.eventId === EVENT_ID), false);
+  assert.equal((wixDataMock._store.get(CONTROL_COLLECTION) || []).some((row) => row.controlType === IC.CONTROL_TYPE.WEBHOOK_EVENT && row.eventId === EVENT_ID), false);
 });
 
 
