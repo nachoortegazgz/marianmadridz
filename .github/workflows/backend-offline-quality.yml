@@ -61,6 +61,10 @@ jobs:
         if: always()
         run: npm run verify:wix-ecom-cart-v2
 
+      - name: Verify Wix eCommerce Order Transactions SDK contract
+        if: always()
+        run: npm run verify:wix-ecom-order-transactions
+
       - name: Verify Wix Bookings Reader V2 SDK contract
         if: always()
         run: npm run verify:wix-bookings-reader-v2
