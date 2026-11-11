@@ -1249,13 +1249,13 @@ async function _countMovementsOfDay(diaKey) {
 
 async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) {
     const traceId = _safeTrim(options?.traceId) || makeTraceId("z-close");
-    if (FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED !== true) {
-        return { status: "ERROR", data: null, error: { code: "FISCAL_LEDGER_WRITES_DISABLED", message: "La escritura fiscal permanece deshabilitada hasta completar la certificacion de runtime." }, traceId };
-    }
     let ledgerLock = null;
     let retainLedgerLock = false;
     try {
         if (authorizeCashier) await requireCajero(traceId);
+        if (FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED !== true) {
+            return { status: "ERROR", data: null, error: { code: "FISCAL_LEDGER_WRITES_DISABLED", message: "La escritura fiscal permanece deshabilitada hasta completar la certificacion de runtime." }, traceId };
+        }
         const currentCashRegister = await getCashRegisterSingleton();
         if (_isSimulationCashRegister(currentCashRegister)) {
             return { status: "ERROR", data: null, error: { code: "CASH_REGISTER_SIMULATION_STATE", message: "No se puede cerrar una caja que contiene estado de simulacion." } };
