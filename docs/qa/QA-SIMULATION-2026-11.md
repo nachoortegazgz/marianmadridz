@@ -151,7 +151,7 @@ Todas las suites offline usan fixtures sintéticos y mocks. No se crean reservas
 
 ### Cobertura añadida
 - `refundTransactions.test.mjs`: seis pruebas unitarias de estados pendientes, fallidos, mixtos, discrepancia de resumen, identidad y cantidades inválidas.
-- `events.native-booking-sync.test.mjs`: escenario integrado offline de venta original, refund pendiente, refund terminal mixto (éxito + fallo), prorrateo de IVA, actualización de CitasF2 y replay sin duplicidad.
+- `events.native-booking-sync.test.mjs`: escenario integrado offline de venta original, refund pendiente, rechazo de moneda no canónica, refund terminal mixto (éxito + fallo), prorrateo de IVA, actualización de CitasF2, replay y concurrencia sin duplicidad.
 - `events.backend-events.contract.test.mjs` y `events.order-id-validation.contract.test.mjs`: contratos de los dos eventos Velo estables y ausencia de writers de inventario custom.
 - `npm run verify:wix-ecom-order-transactions`: gate CI para comprobar que el SDK instalado exporta el método utilizado.
 
