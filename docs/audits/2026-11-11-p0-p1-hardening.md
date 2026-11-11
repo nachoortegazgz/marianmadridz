@@ -91,3 +91,23 @@ No fusionar si falla CI. No desplegar a Wix por el mero hecho de que CI offline 
 2. Validar en un sitio QA aislado la transición PAID → PARTIALLY_REFUNDED → FULLY_REFUNDED, refunds con varias transacciones, estados pendientes/fallidos, eventos duplicados y desordenados.
 3. Confirmar el comportamiento de entrega/reintento de eventos Velo ante errores y transacciones aún pendientes.
 4. No fusionar ni desplegar mientras el sitio QA aislado no exista y no se haya verificado el runtime.
+
+
+## Addendum operativo — aislamiento de automatizaciones nativas Wix (2026-11-11)
+
+La auditoría de notificaciones dejó de ser solo lectura tras la autorización expresa del propietario. Se intentó pausar 76 automatizaciones activas objetivo (75 con email y una con WhatsApp), conservando el objeto de configuración completo y cambiando únicamente `configuration.status`.
+
+- 67 cambios confirmados por lectura posterior: 66 email y 1 WhatsApp.
+- Nueve automatizaciones de email permanecen activas por restricciones Wix `readonly` y/o `disableStatusChange`; no se forzó ni se modificó su estructura.
+- Las cuatro automatizaciones WhatsApp están inactivas (tres ya lo estaban y una se pausó).
+- Cero emails, WhatsApp o SMS enviados.
+- El número sintético `666724634` no se configuró ni recibió mensajes: la acción nativa `whatsapp-send-message` no tiene una receta pública soportada para editar destinatarios mediante API.
+- El guard backend Resend no intercepta las automatizaciones nativas Wix. El aislamiento de notificaciones no está completo mientras los nueve flujos sigan activos.
+
+Detalle, IDs, restricciones y decisión: [auditoría de aislamiento de notificaciones](2026-11-11-wix-automation-recipient-isolation.md).
+
+### Criterio actualizado de merge
+
+La CI offline del HEAD `d30e03473fe2bfe39b93a881ef4b765fcd72691d` pasó: run `43038637356`, 57 suites / 548 tests / 0 fallos; Gitleaks run `43038637350` SUCCESS. No hay revisiones humanas registradas. Siguen pendientes la revisión humana completa, la validación Wix runtime/E2E aislada de pagos/reembolsos y la resolución/aislamiento de los nueve flujos de email nativos activos. La pausa de WhatsApp sí está verificada, pero no existe todavía una ruta WhatsApp soportada configurada al móvil sintético.
+
+El PR permanece draft y sin merge. La CI offline no acredita ejecución de eventos, permisos ni persistencia en Wix Runtime. No se debe desplegar el código: los writers fiscales/contables quedan fail-closed por defecto y el entorno Wix runtime no ha sido validado.
