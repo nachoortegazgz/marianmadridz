@@ -128,8 +128,8 @@ test("EVENT-BOOKING-CREATED-01 native creation persists a pending projection and
   assert.equal(rows[0].bookingStatus, "CONFIRMED");
 
   const markers = wixDataMock._store.get("ControlOperativo") || [];
-  assert.equal(markers.filter(row => row.dedupeKey === "WEBHOOK_evt-native-created-001").length, 1);
-  assert.equal(markers.filter(row => row.dedupeKey === "WEBHOOK_evt-native-confirm-after-created-001").length, 1);
+  assert.equal(markers.filter(row => row.controlType === IC.CONTROL_TYPE.WEBHOOK_EVENT && row.eventId === "evt-native-created-001").length, 1);
+  assert.equal(markers.filter(row => row.controlType === IC.CONTROL_TYPE.WEBHOOK_EVENT && row.eventId === "evt-native-confirm-after-created-001").length, 1);
 });
 
 test("EVENT-BOOKING-CREATED-02 late creation delivery never downgrades a custom dual projection", async () => {
@@ -619,7 +619,7 @@ test("EVENT-PAYMENT-09 official Wix eCommerce paid event appends WIX_PAYMENTS le
 
   const controlRows = wixDataMock._store.get(IC.OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO) || [];
   assert.equal(
-    controlRows.filter(row => row.dedupeKey === "WEBHOOK_" + eventId).length,
+    controlRows.filter(row => row.controlType === IC.CONTROL_TYPE.WEBHOOK_EVENT && row.eventId === eventId).length,
     1,
     "official metadata.id must be persisted as the webhook idempotency marker"
   );
