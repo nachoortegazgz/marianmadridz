@@ -18,7 +18,7 @@ test("EVENT-ORDER-GUID-01 order-created webhook uses the imported canonical GUID
 
 
 test("EVENT-ORDER-NATIVE-STOCK-01 order-created webhook records idempotency without custom inventory operations", () => {
-    const start = source.indexOf("export async function wixEcom_onOrderCreated");
+    const start = source.indexOf("async function _handleWixEcom_onOrderCreated");
     const end = source.indexOf("// WEBHOOK: ORDER PAYMENT STATUS UPDATED", start);
     assert.ok(start >= 0 && end > start, "order-created handler must remain discoverable");
     const handler = source.slice(start, end);
