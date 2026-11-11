@@ -60,7 +60,7 @@ test('HOOK-CITAS-01 validates canonical enums, traceId and pairToken', () => {
   assert.throws(() => H.CitasF2_beforeRemove({}), /cancelacion formal/);
 });
 
-test('HOOK-CMS-DATETIME-01 normalizes CitasF2 slot dates to Date objects', () => {
+test('HOOK-CMS-DATETIME-01 normalizes all CitasF2 DateTime fields to Date objects', () => {
   const item = {
     bookingId: '11111111-1111-4111-8111-111111111111',
     scheduleId: '22222222-2222-4222-8222-222222222222',
@@ -70,10 +70,15 @@ test('HOOK-CMS-DATETIME-01 normalizes CitasF2 slot dates to Date objects', () =>
     traceId: 'trace-citas-datetime',
     slotStart: '2026-11-12T08:30:00.000Z',
     slotEnd: '2026-11-12T09:00:00.000Z',
+    noShowAt: '2026-11-12T09:10:00.000Z',
+    canceledAt: '2026-11-12T09:15:00.000Z',
+    privacyNoticeAcceptedAt: '2026-11-12T08:20:00.000Z',
+    invoicingDate: '2026-11-12T09:20:00.000Z',
   };
   H.CitasF2_beforeInsert(item);
-  assert.ok(item.slotStart instanceof Date);
-  assert.ok(item.slotEnd instanceof Date);
+  for (const field of ['slotStart', 'slotEnd', 'noShowAt', 'canceledAt', 'privacyNoticeAcceptedAt', 'invoicingDate']) {
+    assert.ok(item[field] instanceof Date, `${field} must be a Date`);
+  }
   assert.strictEqual(item.slotStart.toISOString(), '2026-11-12T08:30:00.000Z');
   assert.strictEqual(item.slotEnd.toISOString(), '2026-11-12T09:00:00.000Z');
   assert.throws(() => H.CitasF2_beforeInsert({ ...item, slotStart: 'not-a-date' }), /DATETIME/);
@@ -131,6 +136,29 @@ function cajaBase() {
   };
 }
 
+test('HOOK-CMS-DATETIME-04 normalizes CajaActual DateTime fields without changing the instant', () => {
+  const item = {
+    _id: 'SINGLE_ITEM_ID',
+    singletonKey: 'CAJA_PRINCIPAL',
+    openedAt: '2026-11-11T08:30:00.000Z',
+    closedAt: null,
+    lastMovementAt: { $date: '2026-11-11T08:45:00.000Z' },
+  };
+  H.CajaActual_beforeInsert(item);
+  assert.ok(item.openedAt instanceof Date);
+  assert.ok(item.lastMovementAt instanceof Date);
+  assert.strictEqual(item.openedAt.toISOString(), '2026-11-11T08:30:00.000Z');
+  assert.strictEqual(item.lastMovementAt.toISOString(), '2026-11-11T08:45:00.000Z');
+  assert.throws(() => H.CajaActual_beforeInsert({
+    _id: 'SINGLE_ITEM_ID',
+    singletonKey: 'CAJA_PRINCIPAL',
+    openedAt: 'not-a-date',
+  }), /DATETIME/);
+  const update = { _id: 'SINGLE_ITEM_ID', singletonKey: 'CAJA_PRINCIPAL', closedAt: '2026-11-11T10:00:00.000Z' };
+  H.CajaActual_beforeUpdate(update, { original: { singletonKey: 'CAJA_PRINCIPAL' } });
+  assert.ok(update.closedAt instanceof Date);
+});
+
 test('HOOK-CAJA-00 permits projection idempotency metadata on CajaActual principal', () => {
   const previous = { _id: 'CAJA_PRINCIPAL', sequenceCounters: { seqGlobal: 5, appliedMovementIds: ['movement-1'] } };
   const next = { _id: 'CAJA_PRINCIPAL', sequenceCounters: { seqGlobal: 5, appliedMovementIds: ['movement-1', 'movement-2'] } };
@@ -151,6 +179,26 @@ test('HOOK-CAJA-02 rejects missing schemaVersion', () => {
 
 test('HOOK-CAJA-04 accepts valid baseline', () => {
   assert.doesNotThrow(() => H.MovimientosCaja_beforeInsert(cajaBase()));
+});
+
+test('HOOK-CMS-DATETIME-05 normalizes MovimientosCaja DateTime fields only', () => {
+  const item = {
+    ...cajaBase(),
+    recordTimestamp: '2026-11-11T08:30:00.000Z',
+    generationTimestamp: new Date('2026-11-11T08:31:00.000Z'),
+    fechaEnvioAEAT: { $date: '2026-11-11T08:32:00.000Z' },
+    fechaOperacion: '2026-11-11',
+  };
+  H.MovimientosCaja_beforeInsert(item);
+  for (const field of ['recordTimestamp', 'generationTimestamp', 'fechaEnvioAEAT']) {
+    assert.ok(item[field] instanceof Date, `${field} must be a Date`);
+  }
+  assert.strictEqual(item.recordTimestamp.toISOString(), '2026-11-11T08:30:00.000Z');
+  assert.strictEqual(item.fechaOperacion, '2026-11-11', 'CMS DATE remains a YYYY-MM-DD string');
+  assert.throws(() => H.MovimientosCaja_beforeInsert({
+    ...cajaBase(),
+    recordTimestamp: 'not-a-date',
+  }), /DATETIME/);
 });
 
 test('HOOK-CAJA-03 update/remove remain forbidden', () => {
@@ -205,6 +253,25 @@ test('HOOK-CAJA-07 persists exact CMS field IDs and OBJECT payloads', () => {
   assert.ok(!('customerEmail' in item));
   assert.equal(H.readIssuerTaxId(item), 'B12345678');
   assert.equal(H.readRecipientTaxId(item), '12345678Z');
+});
+
+test('HOOK-CMS-DATETIME-06 normalizes ControlOperativo DateTime fields', () => {
+  const item = {
+    controlType: 'IDEMPOTENCY',
+    dedupeKey: 'IDEMPOTENCY:qa-date',
+    traceId: 'trace-control-datetime',
+    expiresAt: '2026-11-12T12:00:00.000Z',
+    occurredAt: '2026-11-12T11:00:00.000Z',
+    operationDate: '2026-11-12T11:00:00.000Z',
+  };
+  H.ControlOperativo_beforeInsert(item);
+  for (const field of ['expiresAt', 'occurredAt', 'operationDate']) assert.ok(item[field] instanceof Date);
+  assert.throws(() => H.ControlOperativo_beforeInsert({
+    controlType: 'IDEMPOTENCY',
+    dedupeKey: 'IDEMPOTENCY:qa-date-invalid',
+    traceId: 'trace-control-datetime-invalid',
+    expiresAt: 'invalid',
+  }), /DATETIME/);
 });
 
 test('HOOK-CONTROL-01 rejects retired ControlOperativo fields on new writes', () => {
@@ -286,7 +353,14 @@ test('HOOK-FISCAL-CONFIG-03 legacy aliases are normalized and removed before per
 
 test('HOOK-CIERREZ-01 insert needs traceId; update limited to signature fields', () => {
   assert.throws(() => H.HistoricoCierresZ_beforeInsert({}), /traceId/);
-  assert.doesNotThrow(() => H.HistoricoCierresZ_beforeInsert({ traceId: 't1' }));
+  const closing = {
+    traceId: 't1',
+    closedAt: '2026-11-11T20:00:00.000Z',
+    verifiedAt: '2026-11-11T20:01:00.000Z',
+    sentAt: '2026-11-11T20:02:00.000Z',
+  };
+  H.HistoricoCierresZ_beforeInsert(closing);
+  for (const field of ['closedAt', 'verifiedAt', 'sentAt']) assert.ok(closing[field] instanceof Date);
   assert.doesNotThrow(() => H.HistoricoCierresZ_beforeUpdate({
     _id: 'x', closingSignature: 'sig', csvAEAT: 'csv',
   }));
@@ -367,12 +441,15 @@ test('HOOK-PACKAGE-01 validates immutable accountant package snapshot inserts', 
     summaryData: { totalOperaciones: 1 },
     invoiceData: [{ invoiceNumber: 'F-1' }],
     packageStatus: 'PREPARED',
+    createdAt: '2026-11-11T20:05:00.000Z',
     snapshotHash: 'a'.repeat(64),
     schemaVersion: '1.0',
     source: 'FISCAL_AGGREGATOR',
     traceId: 'trace-package-1',
   };
   assert.strictEqual(H.PaquetesGestoria_beforeInsert(valid), valid);
+  assert.ok(valid.createdAt instanceof Date);
+  assert.strictEqual(valid.createdAt.toISOString(), '2026-11-11T20:05:00.000Z');
   assert.throws(() => H.PaquetesGestoria_beforeInsert({ ...valid, snapshotHash: 'invalid' }), /SHA-256/);
   assert.throws(() => H.PaquetesGestoria_beforeInsert({ ...valid, fiscalMonth: 2 }), /no admite fiscalMonth/);
 });
