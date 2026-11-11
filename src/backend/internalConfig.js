@@ -498,7 +498,10 @@ export const DATA_ACCESS_WRITE_POLICY = Object.freeze({
     BUSINESS_COLLECTIONS.CAJA_ACTUAL,
     BUSINESS_COLLECTIONS.CITAS_F2,
   ]),
-  saveCollections: Object.freeze([BUSINESS_COLLECTIONS.CONTROL_OPERATIVO]),
+  saveCollections: Object.freeze([
+    BUSINESS_COLLECTIONS.CONTROL_OPERATIVO,
+    BUSINESS_COLLECTIONS.CAJA_ACTUAL,
+  ]),
   removeCollections: Object.freeze([BUSINESS_COLLECTIONS.CONTROL_OPERATIVO]),
   bulkRemoveCollections: Object.freeze([BUSINESS_COLLECTIONS.CONTROL_OPERATIVO]),
   mutableControlTypes: Object.freeze([
