@@ -31,6 +31,29 @@ test("EVENT-ORDER-NATIVE-STOCK-01 order-created webhook records idempotency with
 });
 
 
+test("EVENT-WEBHOOK-CLAIM-01 all eight Wix event exports acquire a metadata.id claim before domain handling", () => {
+    const eventHandlers = [
+        ["wixBookingsV2_onBookingConfirmed", "BOOKING_CONFIRMED", "_handleWixBookingsV2_onBookingConfirmed"],
+        ["wixBookingsV2_onBookingCreated", "BOOKING_CREATED", "_handleWixBookingsV2_onBookingCreated"],
+        ["wixBookingsV2_onBookingRescheduled", "BOOKING_RESCHEDULED", "_handleWixBookingsV2_onBookingRescheduled"],
+        ["wixBookingsV2_onBookingCanceled", "BOOKING_CANCELED", "_handleWixBookingsV2_onBookingCanceled"],
+        ["wixEcom_onOrderCreated", "ORDER_CREATED", "_handleWixEcom_onOrderCreated"],
+        ["wixEcom_onOrderPaymentStatusUpdated", "ORDER_PAYMENT_STATUS_UPDATED", "_handleWixEcom_onOrderPaymentStatusUpdated"],
+        ["wixEcom_onOrderUpdated", "ORDER_UPDATED", "_handleWixEcom_onOrderUpdated"],
+        ["wixEcom_onOrderCanceled", "ORDER_CANCELED", "_handleWixEcom_onOrderCanceled"],
+    ];
+    assert.match(source, /async function _runClaimedWixEvent\(eventPayload, eventType, handler\)/);
+    assert.match(source, /eventPayload\?\.metadata\?\.id/);
+    assert.match(source, /return runWithWebhookEventClaim\([\s\S]*?handler:\s*\(\)\s*=>\s*handler\(eventPayload\)/);
+    for (const [name, eventType, handler] of eventHandlers) {
+        const start = source.indexOf(`export async function ${name}`);
+        const next = source.indexOf("\\nexport ", start + 10);
+        const wrapper = source.slice(start, next < 0 ? source.length : next);
+        assert.ok(start >= 0, `${name} must be exported`);
+        assert.match(wrapper, new RegExp(`_runClaimedWixEvent\\(\\s*eventPayload,\\s*"${eventType}",\\s*${handler}`));
+    }
+});
+
 test("EVENT-WEBHOOK-RETRY-02 booking and eCommerce persistence handlers never acknowledge caught failures", () => {
     const handlerNames = [
         "_handleWixBookingsV2_onBookingConfirmed",
@@ -43,8 +66,8 @@ test("EVENT-WEBHOOK-RETRY-02 booking and eCommerce persistence handlers never ac
     ];
     for (const name of handlerNames) {
         const start = source.indexOf(`async function ${name}`);
-        const next = source.indexOf("\nexport ", start + 10);
-        assert.ok(start >= 0, `${name} must be exported`);
+        const next = source.indexOf("\n// ============================================================================", start + 10);
+        assert.ok(start >= 0, `${name} must exist as an internal domain handler`);
         const handler = source.slice(start, next < 0 ? source.length : next);
         const catchIndex = handler.lastIndexOf("catch (error)");
         assert.ok(catchIndex >= 0, `${name} must handle/log errors`);
