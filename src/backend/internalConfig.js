@@ -140,6 +140,7 @@ export const SDK_CONFIG = Object.freeze({
   TIMEOUTS: Object.freeze({
     CMS_MS: 15000,
     API_MS: 15000,
+    CHECKOUT_MS: 20000,
     WEBHOOK_MS: 30000,
   }),
 
@@ -606,7 +607,6 @@ export const COMPENSATION_STATUS = Object.freeze({
 
 // Motivos de correccion contable (events.js).
 export const CORRECTION_REASON = Object.freeze({
-  NUMERO_SERIE: "NUMERO_SERIE",
   OTRAS: "OTRAS",
 });
 
