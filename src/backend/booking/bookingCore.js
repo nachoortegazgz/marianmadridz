@@ -1586,6 +1586,60 @@ function _normalizeMeta(rawMeta, overrides) {
     return Object.assign({}, meta, overrides);
 }
 
+function _isBookingUniqueCollision(error) {
+    const candidates = [
+        error?.code,
+        error?.details?.code,
+        error?.cause?.code,
+        error?.message,
+    ].map((value) => String(value || "").toUpperCase());
+    return candidates.some((value) =>
+        value.includes("WDE0123") || value.includes("WD_ITEM_ALREADY_EXISTS")
+    );
+}
+
+function _assertCompatibleBookingProjection(existingDoc, incomingDoc, traceId) {
+    const fields = [
+        [BOOKING_FIELDS.BOOKING_ID, "bookingId"],
+        [BOOKING_FIELDS.SERVICE_ID, "serviceId"],
+        [BOOKING_FIELDS.RESOURCE_ID, "resourceId"],
+        [BOOKING_FIELDS.SCHEDULE_ID, "scheduleId"],
+    ];
+    for (const [field, label] of fields) {
+        const existingValue = _safeTrim(existingDoc?.[field] || "");
+        const incomingValue = _safeTrim(incomingDoc?.[field] || "");
+        if (existingValue && incomingValue && existingValue !== incomingValue) {
+            throw createBookingError(
+                ERROR_CODES.DATABASE_ERROR,
+                "Conflicting native booking projection; refusing to overwrite a different booking identity.",
+                { bookingId: incomingDoc[BOOKING_FIELDS.BOOKING_ID], field: label, traceId }
+            );
+        }
+    }
+
+    const existingPairToken = _safeTrim(existingDoc?.[BOOKING_FIELDS.PAIR_TOKEN] || "");
+    const incomingPairToken = _safeTrim(incomingDoc?.[BOOKING_FIELDS.PAIR_TOKEN] || "");
+    if (existingPairToken && incomingPairToken && existingPairToken !== incomingPairToken) {
+        throw createBookingError(
+            ERROR_CODES.DATABASE_ERROR,
+            "Booking pairToken conflict; refusing to merge different booking operations.",
+            { bookingId: incomingDoc[BOOKING_FIELDS.BOOKING_ID], traceId }
+        );
+    }
+
+    for (const field of [BOOKING_FIELDS.SLOT_START, BOOKING_FIELDS.SLOT_END]) {
+        const existingDate = _toDateSafe(existingDoc?.[field]);
+        const incomingDate = _toDateSafe(incomingDoc?.[field]);
+        if (existingDate && incomingDate && existingDate.getTime() !== incomingDate.getTime()) {
+            throw createBookingError(
+                ERROR_CODES.DATABASE_ERROR,
+                "Booking slot conflict; refusing to overwrite a different native slot.",
+                { bookingId: incomingDoc[BOOKING_FIELDS.BOOKING_ID], field, traceId }
+            );
+        }
+    }
+}
+
 export async function _persistBooking(params, traceId) {
     const p = params || {};
     const traceIdClean = _safeTrim(traceId || p.traceId);
@@ -1713,16 +1767,12 @@ export async function _persistBooking(params, traceId) {
         }),
         [BOOKING_FIELDS.TRACE_ID]: traceIdClean,
     };
-    const existing = await elevatedQueryFind(CITAS_COL, function (q) {
-        return q.eq(BOOKING_FIELDS.BOOKING_ID, bookingId).limit(1);
-    }).catch(function () {
-        return null;
-    });
-    if (existing && Array.isArray(existing.items) && existing.items.length > 0) {
-        const existingDoc = existing.items[0];
+    const reconcileExisting = async (existingDoc) => {
+        _assertCompatibleBookingProjection(existingDoc, doc, traceIdClean);
         if (p.insertOnly === true) {
-            return { created: false, item: existingDoc, existing: true };
+            return { created: false, item: existingDoc, existing: true, reconciled: false };
         }
+
         const incomingRevision = Number(doc[BOOKING_FIELDS.REVISION]) || 1;
         const currentRevision = Number(existingDoc[BOOKING_FIELDS.REVISION]) || 1;
         if (incomingRevision < currentRevision) {
@@ -1730,23 +1780,61 @@ export async function _persistBooking(params, traceId) {
                 ERROR_CODES.DATABASE_ERROR,
                 "Booking revision conflict",
                 {
-                    bookingId: bookingId,
-                    currentRevision: currentRevision,
-                    incomingRevision: incomingRevision,
+                    bookingId,
+                    currentRevision,
+                    incomingRevision,
                     traceId: traceIdClean,
                 }
             );
         }
+
         const updated = Object.assign({}, existingDoc, doc);
+        const existingStatus = _safeTrim(existingDoc?.[BOOKING_FIELDS.STATUS] || "").toUpperCase();
+        const incomingStatus = _safeTrim(doc?.[BOOKING_FIELDS.STATUS] || "").toUpperCase();
+        if (
+            ["CONFIRMED", "CANCELED", "COMPLETED", "NO_SHOW"].includes(existingStatus) &&
+            incomingStatus === "PENDING"
+        ) {
+            updated[BOOKING_FIELDS.STATUS] = existingDoc[BOOKING_FIELDS.STATUS];
+        }
+        const existingPayment = _safeTrim(existingDoc?.[BOOKING_FIELDS.PAYMENT_STATUS] || "").toUpperCase();
+        const incomingPayment = _safeTrim(doc?.[BOOKING_FIELDS.PAYMENT_STATUS] || "").toUpperCase();
+        if (["PAID", "PARTIALLY_PAID", "REFUNDED", "PARTIALLY_REFUNDED"].includes(existingPayment) &&
+            !["PAID", "PARTIALLY_PAID", "REFUNDED", "PARTIALLY_REFUNDED"].includes(incomingPayment)) {
+            updated[BOOKING_FIELDS.PAYMENT_STATUS] = existingDoc[BOOKING_FIELDS.PAYMENT_STATUS];
+        }
+
         delete updated._createdDate;
         delete updated._updatedDate;
         delete updated._owner;
         delete updated.status;
         const item = await elevatedUpdate(CITAS_COL, updated);
-        return { created: false, item: item };
+        return { created: false, item, existing: true, reconciled: true };
+    };
+
+    // A failed strong read is not equivalent to "no projection". Fail closed.
+    const existing = await elevatedQueryFind(CITAS_COL, function (q) {
+        return q.eq(BOOKING_FIELDS.BOOKING_ID, bookingId).limit(1);
+    });
+    if (Array.isArray(existing?.items) && existing.items.length > 0) {
+        return reconcileExisting(existing.items[0]);
     }
-    const item = await elevatedInsert(CITAS_COL, doc);
-    return { created: true, item: item };
+
+    try {
+        const item = await elevatedInsert(CITAS_COL, doc);
+        return { created: true, item };
+    } catch (insertError) {
+        if (!_isBookingUniqueCollision(insertError)) throw insertError;
+
+        // Webhook and saga can race on the unique bookingId index. Recover the
+        // winning row and reconcile its identity instead of failing the saga.
+        const winner = await elevatedQueryFind(CITAS_COL, function (q) {
+            return q.eq(BOOKING_FIELDS.BOOKING_ID, bookingId).limit(1);
+        });
+        const winnerDoc = Array.isArray(winner?.items) ? winner.items[0] : null;
+        if (!winnerDoc) throw insertError;
+        return reconcileExisting(winnerDoc);
+    }
 }
 
 export async function _findExistingCitasForSlot(params) {
