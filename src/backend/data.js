@@ -169,7 +169,7 @@ function _normalizeCmsDateTime(item, fieldName) {
     if (value && typeof value === "object" && !(value instanceof Date) && value.$date) {
         dateValue = value.$date;
     }
-    const normalized = dateValue instanceof Date ? value : new Date(dateValue);
+    const normalized = dateValue instanceof Date ? dateValue : new Date(dateValue);
     if (!(normalized instanceof Date) || Number.isNaN(normalized.getTime())) {
         _schemaError(`${fieldName} debe ser una fecha/hora válida (DATETIME)`);
     }
