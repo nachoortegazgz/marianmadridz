@@ -2570,7 +2570,7 @@ export async function wixEcom_onOrderUpdated(eventPayload) {
             return { status: "OK", duplicate: true };
         }
 
-        const refundResult = await processOrderRefundTransactions(orderId, traceId);
+        const refundResult = await processOrderRefundTransactions(orderId, order?.currency, traceId);
         await markEventAsProcessed(eventId, "ORDER_REFUND_ORDER_UPDATED");
         return { status: "OK", orderId, ...refundResult };
     } catch (error) {
