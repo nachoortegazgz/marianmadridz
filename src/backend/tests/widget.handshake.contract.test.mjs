@@ -18,8 +18,11 @@ test("widget postMessage uses an explicit parent origin and fails closed when un
   assert.ok(calendar.includes('target==="*"'));
 });
 
-test("bridge allowlist includes the canonical custom domain", () => {
+test("bridge allowlist includes the canonical custom domain and member profile response", () => {
   assert.ok(bridge.includes('".marianmadrid.es"'));
+  assert.ok(bridge.includes('PROFILE: "MM_PROFILE"'));
+  assert.ok(calendar.includes('PROFILE: "MM_PROFILE"'));
+  assert.ok(calendar.includes('m.type===MESSAGE_TYPES.PROFILE'));
 });
 
 test("duplicate READY messages do not republish context", () => {
