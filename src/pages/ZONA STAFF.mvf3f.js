@@ -184,7 +184,7 @@ $w.onReady(async () => {
         isAuthorized: isAuthorized && hasStaffContext,
         enableStateQuery: hasStaffContext,
         enableHistory: hasStaffContext,
-        enableScheduleQuery: hasStaffContext,
+        enableHoursCalculation: hasStaffContext,
         timeZone: TZ,
         today,
         memberName: resolvedName,
