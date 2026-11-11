@@ -241,4 +241,12 @@ SharePoint será exclusivamente repositorio de evidencia. Nunca modificará ni g
 - `docs/audits/2026-11-11-wix-automation-recipient-isolation.md`: inventario y cambios de aislamiento de notificaciones.
 - `docs/qa/QA-SIMULATION-2026-11.md`: fixtures y cobertura mock.
 
+Documentación oficial Wix consultada:
+- [Duplicate Site API](https://dev.wix.com/docs/api-reference/account-level/sites/site-actions/duplicate-site).
+- [Duplicating Your Site](https://support.wix.com/en/article/duplicating-your-site-1472847).
+- [CMS Sandbox and Live Collections](https://support.wix.com/en/article/cms-about-sandbox-and-live-collections-and-syncing).
+- [Creating a Wix Test Contact](https://support.wix.com/en/article/wix-contacts-creating-a-test-contact).
+- [Previewing the Checkout Process](https://support.wix.com/en/article/previewing-the-checkout-process-2).
+- [Query Automations](https://dev.wix.com/docs/api-reference/business-management/automations/automations/automations-v2/query-automations) y [Get Automation Email Action](https://dev.wix.com/docs/api-reference/business-management/marketing/emails/automation-email-action/get-automation-email-action).
+
 **Regla final:** hasta que exista un sitio Wix QA independiente o una autorización expresa y un plan seguro para cambiar el estado del sitio publicado, las pruebas de negocio se limitan a mocks offline y lecturas que no disparen efectos externos.
