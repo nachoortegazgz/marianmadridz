@@ -23,3 +23,13 @@ test("EVENTS-VELO-02 keeps Bookings V2 Velo event handler exports", () => {
   assert.match(source, /export async function wixBookingsV2_onBookingRescheduled/);
   assert.match(source, /export async function wixBookingsV2_onBookingCanceled/);
 });
+
+test("EVENTS-VELO-03 eCommerce payments and refunds use the current Velo order-transactions event", () => {
+  assert.match(source, /export async function wixEcom_onOrderTransactionsUpdated/);
+  assert.match(source, /event\?\.metadata\?\.id/);
+  assert.match(source, /event\?\.entity\?\._id/);
+  assert.match(source, /listTransactionsForSingleOrderElevated/);
+  assert.match(source, /resolveCompletedRefunds\(orderTransactionsRecord\)/);
+  assert.doesNotMatch(source, /export async function wixEcom_onOrderRefunded/);
+  assert.doesNotMatch(source, /export async function wixEcom_onOrderPaymentStatusUpdated/);
+});
