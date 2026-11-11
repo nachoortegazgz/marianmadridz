@@ -1076,6 +1076,9 @@ export async function _unlockSlotKey(slotClave, lockOwnerId, options = {}) {
         currentPayload.lockStatus || existing.lockStatus || ""
     ).toUpperCase();
     if (currentLockStatus === "RELEASED") {
+        if (existing.version !== undefined && existing.version !== null && expectedVersion !== existing.version) {
+            return { ok: false, reason: ERROR_CODES.LOCK_CONFLICT, alreadyReleased: true };
+        }
         return { ok: true, alreadyReleased: true, version: existing.version };
     }
     if (existing.version !== undefined && existing.version !== null && expectedVersion !== existing.version) {
