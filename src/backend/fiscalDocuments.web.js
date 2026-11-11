@@ -1255,3 +1255,188 @@ export const sendManagerPackageToAccountant = webMethod(
           (periodType === "QUARTERLY" && (!Number.isInteger(quarter) || quarter < 1 || quarter > 4))) {
         return { status: "ERROR", data: null, error: { code: "PACKAGE_PERIOD_INVALID", message: "The stored package period is invalid." } };
       }
+
+      const csvContent = _buildCsvFromInvoices(doc.invoiceData);
+      const lines = [
+        "Paquete fiscal de gestoria - Marian Madrid",
+        "",
+        `Ejercicio: ${year}`,
+        `Periodo: ${periodLabel}`,
+        `Documento referencia: ${documentId}`,
+        `Version: ${doc.packageVersion}`,
+        `Facturas incluidas: ${doc.invoiceData.length}`,
+        ...(notes ? ["", "Notas:", notes] : []),
+        "",
+        "Resumen:",
+        _buildSummaryText(doc.summaryData),
+        "",
+        "--",
+        "Enviado desde el panel de administracion de Marian Madrid.",
+      ];
+      const attachments = csvContent ? [{ filename: `${documentId}.csv`, content: _toBase64(csvContent) }] : [];
+      const dispatch = await _dispatchEmailViaResend({
+        to: recipient.email,
+        subject: `Marian Madrid - Paquete ${periodLabel}`,
+        text: lines.join("\\n"),
+        attachments,
+        traceId,
+      });
+      return {
+        status: "SUCCESS",
+        data: { sent: true, documentId, periodType, year, month, quarter, recipientId, recipientEmail: recipient.email, invoiceCount: doc.invoiceData.length, provider: dispatch.provider, messageId: dispatch.messageId, traceId },
+        error: null,
+      };
+    } catch (err) {
+      if (err?.code === "RESEND_NOT_CONFIGURED") return { status: "ERROR", data: null, error: { code: "RESEND_NOT_CONFIGURED", message: err.message } };
+      return { status: "ERROR", data: null, error: _toPublicError(err, "SEND_PACKAGE_FAIL") };
+    }
+  }
+);
+
+// =============================================================================
+// BLOQUE 9 - ENVIO DE DOCUMENTO CONCRETO
+// =============================================================================
+
+export const sendSpecificDocumentToAccountant = webMethod(
+  Permissions.SiteMember,
+  async (params = {}) => {
+    const traceId = makeTraceId("doc-send-doc");
+    try {
+      await requireMarianManager(traceId);
+
+      if (!ACCOUNTANT_SEND_ENABLED) {
+        return _accountantSendDisabledResult(traceId);
+      }
+
+      const documentId = _safeTrim(params.documentId);
+      const documentType = _safeTrim(params.documentType) || null;
+      const recipientId = _safeTrim(params.recipientId);
+      const notes = _safeTrim(params.notes) || null;
+
+      if (!documentId) {
+        return {
+          status: "ERROR",
+          data: null,
+          error: {
+            code: "DOC_ID_REQUIRED",
+            message: "documentId required",
+          },
+        };
+      }
+      if (!recipientId) {
+        return {
+          status: "ERROR",
+          data: null,
+          error: {
+            code: "RECIPIENT_REQUIRED",
+            message: "recipientId required",
+          },
+        };
+      }
+
+      const recipient = await _resolveRecipientById(recipientId);
+      if (!recipient || !recipient.email) {
+        return {
+          status: "ERROR",
+          data: null,
+          error: {
+            code: "RECIPIENT_NOT_FOUND",
+            message:
+              "El destinatario no existe o no tiene email configurado en DatosFiscales",
+          },
+        };
+      }
+
+      const doc = await withTimeout(
+        dalGet(DOCS_COL, documentId, "strong"),
+        CMS_TIMEOUT_MS,
+        "getSpecificDoc"
+      );
+
+      if (!doc) {
+        return {
+          status: "ERROR",
+          data: null,
+          error: {
+            code: "DOC_NOT_FOUND",
+            message: "Documento no encontrado",
+          },
+        };
+      }
+
+      const invoices = Array.isArray(doc.invoiceData) ? doc.invoiceData : [];
+      const csvContent = _buildCsvFromInvoices(invoices);
+      const summaryText = _buildSummaryText(doc.summaryData);
+
+      const subject = `Marian Madrid - Documento ${documentId}`;
+      const lines = [];
+      lines.push(`Documento: ${documentId}`);
+      if (documentType) lines.push(`Tipo: ${documentType}`);
+      if (doc.fiscalYear != null) lines.push(`Ejercicio: ${doc.fiscalYear}`);
+      if (doc.packageVersion != null)
+        lines.push(`Version: ${doc.packageVersion}`);
+      if (notes) {
+        lines.push("");
+        lines.push("Notas:");
+        lines.push(notes);
+      }
+      lines.push("");
+      lines.push("Resumen:");
+      lines.push(summaryText);
+      lines.push("");
+      lines.push("--");
+      lines.push(
+        "Enviado desde el panel de administracion de Marian Madrid."
+      );
+
+      const attachments = csvContent
+        ? [
+            {
+              filename: `${documentId}.csv`,
+              content: _toBase64(csvContent),
+            },
+          ]
+        : [];
+
+      const dispatch = await _dispatchEmailViaResend({
+        to: recipient.email,
+        subject,
+        text: lines.join("\n"),
+        attachments,
+        traceId,
+      });
+
+      return {
+        status: "SUCCESS",
+        data: {
+          sent: true,
+          documentId,
+          documentType,
+          recipientId,
+          recipientEmail: recipient.email,
+          invoiceCount: invoices.length,
+          provider: dispatch.provider,
+          messageId: dispatch.messageId,
+          traceId,
+        },
+        error: null,
+      };
+    } catch (err) {
+      if (err?.code === "RESEND_NOT_CONFIGURED") {
+        return {
+          status: "ERROR",
+          data: null,
+          error: {
+            code: "RESEND_NOT_CONFIGURED",
+            message: err.message,
+          },
+        };
+      }
+      return {
+        status: "ERROR",
+        data: null,
+        error: _toPublicError(err, "SEND_DOCUMENT_FAIL"),
+      };
+    }
+  }
+);
