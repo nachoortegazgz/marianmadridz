@@ -91,3 +91,17 @@ test("REFUND-TX-06 rejects malformed successful transaction amounts", () => {
         /REFUND_AMOUNT_INVALID/
     );
 });
+
+test("REFUND-TX-07 rejects a positive summary when every refund transaction failed", () => {
+    assert.throws(
+        () => resolveCompletedRefunds({
+            refunds: [refund({
+                transactions: [
+                    { refundStatus: "FAILED", amount: { amount: "10.00" } },
+                ],
+                summary: { refunded: { amount: "10.00" } },
+            })],
+        }),
+        /REFUND_SUMMARY_AMOUNT_MISMATCH/
+    );
+});
