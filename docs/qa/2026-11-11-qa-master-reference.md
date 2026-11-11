@@ -12,7 +12,7 @@
 
 Por tanto, el dominio público no puede utilizarse para pruebas que creen reservas, pedidos, pagos, reembolsos, contactos o comunicaciones hasta que exista aislamiento demostrable. El hecho de que el repositorio se utilice para QA no convierte automáticamente el sitio Wix publicado en QA.
 
-**Recomendación preferente:** mantener `www.marianmadrid.es` intacto y crear un sitio Wix QA separado, sin dominio público ni audiencia de clientes, con configuración y credenciales independientes. No copiar datos personales ni ledgers de producción. Si se pretende convertir el sitio actual en QA, primero debe autorizarse expresamente su despublicación y aceptarse el impacto sobre clientes y operativa. Esta referencia no realiza ninguna de esas acciones.
+**Recomendación preferente:** mantener `www.marianmadrid.es` intacto y crear un sitio Wix QA separado, sin dominio público ni audiencia de clientes, con configuración y credenciales independientes. La búsqueda de sitios Wix por nombre “Marian” devolvió un único sitio: el Published actual; no existe otro QA separado identificado. La duplicación oficial no copia contactos/miembros, pedidos/facturas, campañas ni triggered emails, secretos Velo ni configuración de apps de terceros; la copia queda sin dominio ni capacidades Premium y algunas apps Premium aparecen sin activar. No está documentado que todas las definiciones/estados de Automations se omitan: habrá que reconsultarlas en la copia antes de permitir cualquier trigger. No copiar datos personales ni ledgers de producción. Si se pretende convertir el sitio actual en QA, primero debe autorizarse expresamente su despublicación y aceptarse el impacto sobre clientes y operativa. Esta referencia no realiza ninguna de esas acciones.
 
 ## 2. Autoridad documental y cómo resolver contradicciones
 
@@ -123,6 +123,10 @@ La suite offline documenta un escenario Wix eCommerce/Velo `OrderPaymentStatusUp
 
 Esta cobertura acredita el contrato mock descrito, no la cuenta de pagos, la pasarela conectada, la aceptación del emisor ni el webhook en runtime.
 
+**Restricción Wix documentada para pruebas de checkout:** el test order nativo solo está disponible para Wix Stores/Wix Restaurants, no para Wix Bookings. Para evitar un cargo, Wix indica usar el método de pago manual. Si se usa otro método de pago, la operación cobra realmente el importe y las comisiones del proveedor. Por tanto, no usar el checkout de `www.marianmadrid.es` como simulador de Payments ni intentar una prueba con el método real. El sandbox del proveedor debe acreditarse por separado; hasta entonces, solo mock offline.
+
+**Contacto de prueba Wix:** el flujo nativo “Generate Test Contact” crea un contacto de prueba, pero Wix indica que los emails generados durante las pruebas se envían a la persona que creó el contacto (máximo cinco contactos por sitio). No es un sink silencioso. Usarlo solo en un sitio QA aislado y con autorización explícita para recibir esos emails.
+
 ### 6.2 Diseño de simulación requerido
 
 El agente simulado de pagos debe ser determinista, sin red ni credenciales reales, y devolver respuestas tipadas separadas del evento webhook. Casos mínimos:
@@ -172,12 +176,13 @@ SharePoint será exclusivamente repositorio de evidencia. Nunca modificará ni g
 5. Mantener los writers fiscales, contables, laborales y de caja bloqueados.
 
 **Gate 1 — entorno independiente**
-1. Crear sitio Wix QA separado, sin dominio de clientes.
-2. Configurar Bookings, Stores V3, Members y Payments con IDs/credenciales de test independientes.
-3. Revisar las automatizaciones heredadas y desactivarlas o redirigirlas solo mediante mecanismos soportados y verificables.
-4. Sembrar datos sintéticos mínimos; no clonar CMS ni ledgers productivos.
-5. Configurar sinks de email/SMS y mocks de WhatsApp; no activar canales reales.
-6. Confirmar que ningún secreto de producción está disponible en QA.
+1. Crear una copia QA mediante el método oficial Wix Duplicate Site (`POST /site-actions/v1/sites/duplicate`), que requiere permiso/API key de nivel cuenta. La copia no tendrá dominio ni capacidades Premium.
+2. Confirmar qué apps se han copiado y activar solo las necesarias; algunas apps Premium aparecen desactivadas.
+3. Reconsultar el inventario de Automations y sus acciones/destinatarios en la copia. No inferir que los triggers se han deshabilitado solo porque no se copian triggered emails.
+4. Confirmar que no se copiaron contactos/miembros, pedidos/facturas, email campaigns/triggered emails, secretos Velo ni settings de apps de terceros; comprobarlo mediante lectura posterior.
+5. Configurar Bookings, Stores V3 y Members con datos sintéticos. No asumir Payments disponible ni conectado en la copia.
+6. Usar mocks/sinks para email y SMS y mock de transporte para WhatsApp; no activar canales reales.
+7. Confirmar que ningún secreto de producción está disponible en QA.
 
 **Gate 2 — pruebas offline**
 1. Ejecutar `npm ci`, `npm run lint`, `npm test`, `npm run test:layer1` y `npm run test:layer2`.
@@ -206,8 +211,8 @@ SharePoint será exclusivamente repositorio de evidencia. Nunca modificará ni g
 |---|---|---|
 | P0 | Sitio Wix publicado, no aislado | Bloquea E2E que genere eventos |
 | P0 | Nueve automatizaciones email no pausables en última auditoría | Bloquea triggers con posible envío |
-| P0 | Estado actual de Automations no releído tras la última consulta de sitio | Requiere auditoría live de solo lectura antes de pruebas |
-| P0 | Sandbox de pagos no acreditado | Solo mock offline |
+| P0 | Nueve automatizaciones email siguen activas y ocho pueden dirigirse al contacto que dispara el trigger | Bloquea cualquier evento que alcance esos flujos en el sitio Published |
+| P0 | Sandbox de pagos no acreditado; Wix test order no es un sandbox PSP | Solo mock offline; test order manual solo para Stores/Restaurants, nunca para Bookings ni con un método de pago real |
 | P0 | CMS productivo y ledgers append-only | No insertar ni modificar datos de negocio para QA |
 | P1 | WhatsApp QA no configurado; acción nativa no soportada para reconfigurar destinatario | Solo mock hasta integración oficial |
 | P1 | Cliente sintético no creado en un entorno aislado | Fixtures offline únicamente |
@@ -219,8 +224,8 @@ SharePoint será exclusivamente repositorio de evidencia. Nunca modificará ni g
 - **Verificado históricamente:** auditoría de Automations del 2026-11-11 confirma 67 pausas, cuatro WhatsApp inactivas y nueve emails activos bloqueados por Wix.
 - **Verificado en tests offline:** escenario mock de evento Wix Payments descrito en `QA-SIMULATION-2026-11.md`.
 - **Declarado:** Nacho Pitt como identidad sintética QA.
-- **No verificado:** estado actual de Automations tras la consulta Published; aislamiento de destinatarios; sandbox PSP; envío real de email/WhatsApp; creación de contacto en un sitio QA separado; runtime E2E.
-- **No ejecutado en esta actualización:** escrituras Wix, creación de sitio, publicación/despublicación, cambio de automatizaciones, reserva, pedido, pago, refund, email, SMS, WhatsApp, SharePoint o despliegue.
+- **No verificado:** sandbox PSP; configuración y automatizaciones de una futura copia QA; envío real de email/WhatsApp; creación de contacto en un sitio QA separado; runtime E2E.
+- **No ejecutado en esta actualización:** duplicación de sitio, escrituras CMS, publicación/despublicación, cambio de automatizaciones, reserva, pedido, pago, refund, email, SMS, WhatsApp, SharePoint o despliegue.
 
 ## 11. Documentos de referencia
 
