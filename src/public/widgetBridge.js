@@ -12,7 +12,7 @@
 export const PROTOCOL_VERSION = 1;
 export const MESSAGE_TYPES = Object.freeze({
     READY: "MM_READY", CONTEXT: "MM_CONTEXT", AVAIL: "MM_AVAIL",
-    SELECT: "MM_SELECT", BOOK: "MM_BOOK", NAV: "MM_NAV"
+    SELECT: "MM_SELECT", BOOK: "MM_BOOK", NAV: "MM_NAV", PROFILE: "MM_PROFILE"
 });
 export const PROTOCOL_URLS = Object.freeze({
     HOME: "/",

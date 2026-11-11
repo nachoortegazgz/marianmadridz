@@ -48,7 +48,10 @@ test('COMPENSATION-QUEUE-01 producer matches cron query and lifecycle contract',
   assert.match(producer, /controlType:\s*CONTROL_TYPE\.COMPENSATION/);
   assert.match(producer, /status:\s*"PENDING"/);
   assert.match(producer, /attempts:\s*0/);
-  assert.match(producer, /revision:\s*hasValidRevision\s*\?\s*revision\s*:\s*null/);
+  assert.match(producer, /revision:\s*revisionForQueue/);
+  assert.doesNotMatch(producer, /hasValidRevision/);
+  assert.match(source, /getBookingForCompensationElevated/);
+  assert.match(source, /currentRevision\s*=\s*Number\(nativeBooking\?\.revision\)/);
 
   const jobStart = cron.indexOf('export async function runPendingCompensationsJob()');
   const jobEnd = cron.indexOf('// =============================================================================\n// CRON 4:', jobStart);
@@ -60,6 +63,8 @@ test('COMPENSATION-QUEUE-01 producer matches cron query and lifecycle contract',
   assert.match(job, /status:\s*COMPENSATION_STATUS\.EXECUTED/);
   assert.match(job, /status:\s*payload\.status/);
   assert.match(job, /attempts,/);
-  assert.match(cron, /CANCEL_BOOKING requires a valid revision/);
-  assert.match(cron, /revision:\s*String\(revision\)/);
+  assert.match(cron, /CANCEL_BOOKING current native revision unavailable/);
+  assert.match(cron, /getBookingElevated\(bookingId\)/);
+  assert.match(cron, /revision:\s*String\(currentRevision\)/);
+  assert.doesNotMatch(cron, /Number\(payload\.revision\s*\|\|\s*comp\?\.revision\)/);
 });

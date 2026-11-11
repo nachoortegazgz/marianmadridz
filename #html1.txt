@@ -283,7 +283,13 @@ function handleMessage(e){
     if(p.status==="SUCCESS"){
       state.completed=true;state.processing=false;
       const requiresPayment=p.data?.requiresPayment===true;
-      showStatus(requiresPayment?"Reserva creada. Redirigiendo al pago...":"La reserva se ha confirmado.");
+      if(p.confirmationFallback===true){
+        const ref=text(p.confirmationReference);
+        const date=text(p.confirmationDate),time=text(p.confirmationTime);
+        showStatus(`Reserva confirmada. Referencia: ${ref||"consulta con el salón"}.${date&&time? ` Cita: ${date} a las ${time}.`:""} ${text(p.confirmationService)}. No repitas la reserva.`);
+      }else{
+        showStatus(requiresPayment?"Reserva creada. Redirigiendo al pago...":"La reserva se ha confirmado.");
+      }
       el("btnConfirm").textContent=requiresPayment?"Redirigiendo...":"Cita confirmada";
       updateConfirmButton();
     }else{

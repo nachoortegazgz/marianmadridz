@@ -105,6 +105,13 @@ mocks.sdk['@wix/bookings::bookings'] = {
       },
     };
   },
+  getBooking: async (bookingId) => ({
+    booking: {
+      id: bookingId,
+      revision: 2,
+      status: cancellationCalls.some((call) => call.bookingId === bookingId) ? 'CANCELED' : 'CONFIRMED',
+    },
+  }),
   cancelBooking: async (bookingId, options) => {
     cancellationCalls.push({ bookingId, options });
     return { booking: { id: bookingId, status: 'CANCELED' } };
@@ -239,7 +246,7 @@ test('QA-DUAL-BOOKING-02 F2 Writer failure compensates the already-created F1 bo
   assert.equal(confirmationCalls.length, 0, 'confirmation must not run after F2 creation fails');
   assert.equal(cancellationCalls.length, 1, 'partial saga must compensate F1');
   assert.equal(cancellationCalls[0].bookingId, BOOKING_F1_ID);
-  assert.equal(cancellationCalls[0].options.revision, '1');
+  assert.equal(cancellationCalls[0].options.revision, '2', 'compensation uses the freshly-read native revision');
   assert.equal((wixDataMock._store.get('CitasF2') || []).length, 0, 'persistence is not reached when F2 Writer fails');
   assert.ok(slotsState.calls.some((call) => call.serviceId === F1_SERVICE_ID));
   assert.ok(slotsState.calls.some((call) => call.serviceId === F2_SERVICE_ID));

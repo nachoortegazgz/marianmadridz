@@ -259,6 +259,14 @@ test('BCORE-LOCK-06 unlock only by owner; foreign unlock skipped, missing ok', a
   });
   assert.strictEqual(staleRelease.ok, false, 'stale release cannot alter the tombstone');
   assert.strictEqual(staleRelease.reason, BC.ERROR_CODES.LOCK_CONFLICT);
+  assert.strictEqual(staleRelease.alreadyReleased, true, 'same owner/token can recognize the existing tombstone without mutating it');
+  const idempotentRelease = await BC._unlockSlotKey(key, 'owner-1', {
+    expectedVersion: releasedRow.version,
+    expectedLockToken: acquired.lockToken,
+  });
+  assert.strictEqual(idempotentRelease.ok, true);
+  assert.strictEqual(idempotentRelease.alreadyReleased, true);
+  assert.strictEqual((wixDataMock._store.get(CONTROL) || [])[0].version, releasedRow.version, 'idempotent release does not increment tombstone revision');
   wixDataMock._store.set(CONTROL, []);
   const missing = await BC._unlockSlotKey(key, 'owner-1');
   assert.deepStrictEqual(missing, { ok: true, missing: true });
@@ -483,6 +491,49 @@ test('BCORE-PER-05 same bookingId upsert keeps single row; lower revision reject
     () => BC._persistBooking(Object.assign({}, p, { revision: 1 }), 'tr-c'),
     (e) => /revision conflict/i.test(e.message)
   );
+});
+
+test('BCORE-PER-06 unique-index webhook race reconciles the winning native projection', async () => {
+  wixDataMock._reset();
+  const bookingId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+  const base = baseParams({ bookingId, bookingType: 'SIMPLE', bookingStatus: 'CONFIRMED' });
+  const seeded = await BC._persistBooking(base, 'tr-webhook');
+  const webhookProjection = { ...seeded.item, bookingType: 'SIMPLE', pairToken: '', bookingStatus: 'CONFIRMED' };
+
+  wixDataMock._reset();
+  const originalInsert = wixDataMock.insert;
+  let injectedWinner = false;
+  wixDataMock.insert = async (collection, item) => {
+    if (collection === CITAS && !injectedWinner) {
+      injectedWinner = true;
+      await originalInsert(collection, webhookProjection);
+      const collision = new Error('duplicate bookingId');
+      collision.code = 'WDE0123';
+      throw collision;
+    }
+    return originalInsert(collection, item);
+  };
+
+  let result;
+  try {
+    result = await BC._persistBooking(baseParams({
+      bookingId,
+      bookingType: 'DUAL_F2',
+      pairToken: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+      revision: 1,
+      bookingStatus: 'PENDING',
+    }), 'tr-saga');
+  } finally {
+    wixDataMock.insert = originalInsert;
+  }
+
+  assert.strictEqual(result.created, false);
+  assert.strictEqual(result.reconciled, true);
+  assert.strictEqual(result.item.bookingType, 'DUAL_F2', 'saga enriches the webhook SIMPLE projection');
+  assert.strictEqual(result.item.pairToken, 'dddddddd-dddd-4ddd-8ddd-dddddddddddd');
+  assert.strictEqual(result.item.bookingStatus, 'CONFIRMED', 'confirmed native state is not downgraded');
+  const rows = wixDataMock._store.get(CITAS) || [];
+  assert.strictEqual(rows.filter((row) => row.bookingId === bookingId).length, 1);
 });
 
 // ---------------------------------------------------------------------------
