@@ -58,3 +58,35 @@ No se añade un `requireIdempotencyKey` genérico ni una búsqueda-antes-de-inse
 ## Criterio de cierre
 
 No fusionar si falla CI. No desplegar a Wix por el mero hecho de que CI offline pase. La activación de writers requiere pruebas de integración/runtime en un sitio QA aislado, revisión de permisos, idempotencia, concurrencia y recuperación, y autorización explícita.
+
+
+## Addendum — conciliación de reembolsos eCommerce (2026-11-11)
+
+### Cambios de esta rama
+- Se conserva el evento Velo estable wixEcom_onOrderPaymentStatusUpdated para pagos y se amplía para detectar PARTIALLY_REFUNDED/FULLY_REFUNDED.
+- Se añade wixEcom_onOrderUpdated como segundo disparador, filtrado a pedidos parcialmente o totalmente reembolsados.
+- La lectura autoritativa se realiza con @wix/ecom.orderTransactions.listTransactionsForSingleOrder y auth.elevate.
+- El helper puro backend/refundTransactions.js solo acepta refunds con todas las transacciones terminales. Concilia summary.refunded.amount con la suma de transacciones SUCCEEDED; FAILED aporta cero. Un resumen positivo sin transacciones satisfactorias o una discrepancia se rechaza.
+- El writer conserva REFUND-{orderId}-{refundId}, límite acumulado, lock fiscal, prorrateo y residual en el último reembolso.
+- SDK_CONFIG.CURRENCY_CODE=EUR refleja la moneda verificada del sitio; el procesador rechaza cualquier order.currency distinto.
+- No se activa el evento Velo onOrderTransactionsUpdated, que figura como Developer Preview y no garantiza expresamente una notificación en cada cambio de estado de un refund ya creado.
+
+### Pruebas añadidas
+- Siete pruebas unitarias para estados, importes, identidades, resumen inconsistente y fallos.
+- Prueba integrada offline de venta, refund pendiente, moneda incorrecta, reembolso parcial mixto, reembolso total posterior, residual exacto de IVA, estado CitasF2, replay y concurrencia.
+- Gate CI para verificar la disponibilidad de orderTransactions.listTransactionsForSingleOrder en el @wix/ecom instalado.
+
+### Estado de validación
+- HEAD documental actual al crear este addendum: 4c93353b8d386ed5afc5a023a82b67b497b2dc91.
+- La ejecución CI anterior sobre e986f8be detectó un fallo de aislamiento del mock global de orders en events.native-booking-sync; el mock se retiró. Esa ejecución no valida el estado actual.
+- La ejecución de calidad iniciada sobre b14c64a7 fue cancelada por actualizaciones posteriores y no cuenta como resultado.
+- CI y Gitleaks deben repetirse sobre el HEAD final después de cerrar los cambios.
+- Wix Runtime, E2E publicado y QA aislado siguen pendientes. No hay escrituras CMS, pagos, reembolsos ni despliegues reales.
+- La conciliación multimoneda no está habilitada; el ledger histórico no almacena moneda por movimiento. Solo se admiten pedidos en la moneda canónica EUR.
+
+### Bloqueos antes de merge
+1. CI offline y Gitleaks verdes sobre el HEAD final.
+2. Revisión humana del diff completo.
+3. Validar en un sitio QA aislado la transición PAID → PARTIALLY_REFUNDED → FULLY_REFUNDED, refunds con varias transacciones, estados pendientes/fallidos, eventos duplicados y desordenados.
+4. Confirmar el comportamiento de entrega/reintento de eventos Velo ante errores y transacciones aún pendientes.
+5. No fusionar ni desplegar mientras el sitio QA aislado no exista y no se haya verificado el runtime.
