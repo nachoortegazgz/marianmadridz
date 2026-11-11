@@ -89,7 +89,9 @@ No se añade agenda de citas en ZONA STAFF ni supervisión de fichajes en ZONA M
 - [x] Revisión de la semántica oficial de Wix para `eventsSchedule`.
 - [x] Pruebas de contrato actualizadas.
 - [x] Separación de responsabilidades de ambas zonas congelada por test.
-- [ ] Suite CI: pendiente de ejecución asociada a la PR.
+- [x] Suite CI: 53 suites / 526 tests / 526 pass / 0 fail (run 42955207213, job 130308627671).
+- [x] Contratos SDK: eCommerce Cart V2, Wix Data y Bookings Reader V2.
+- [x] ESLint: correcto.
 - [ ] Wix Local Editor / E2E visual: no disponible en este entorno.
 - [ ] Validación runtime en sitio publicado: no ejecutada.
 - [ ] Prueba real de reserva o fichaje: no ejecutada ni necesaria para este cambio.
@@ -100,4 +102,4 @@ No se añade agenda de citas en ZONA STAFF ni supervisión de fichajes en ZONA M
 
 El cambio afecta únicamente al fallback interno de resolución de calendario cuando un slot no aporta `scheduleId`. Los slots que ya aportan el identificador nativo mantienen prioridad y no se reescriben. La reversión consiste en revertir el commit de la rama si CI detecta incompatibilidad; no requiere ni autoriza modificar datos históricos o configuración de Wix.
 
-**Estado:** cambios de código preparados para revisión por PR; no se declara validado hasta que CI termine y se revise el diff.
+**Estado:** CI offline y lint aprobados; revisión funcional de código completada. PR abierta para revisión. La validación visual/runtime en Wix sigue pendiente; no se declara desplegado ni certificado el comportamiento publicado.
