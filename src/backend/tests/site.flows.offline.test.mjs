@@ -715,21 +715,21 @@ test('FLOW-CAJA-03 rejects ONLINE as a payment method on new ledger writes', asy
 });
 
 
-test('FLOW-CAJA-05 CajaActual applies each persisted movement exactly once', async () => {
+test('FLOW-CAJA-05 CajaActual projects only presencial cash movements and is idempotent', async () => {
   wixDataMock._reset();
   const { cajas } = await freshImports();
   const movement = {
     _id: '11111111-1111-4111-8111-111111111111',
     transactionId: 'cash-projection-once-001',
     accountingAmount: 35,
-    paymentMethod: 'WIX_PAYMENTS',
+    paymentMethod: 'EFECTIVO',
+    channelType: 'PRESENCIAL',
     movementType: 'VENTA',
     totalAmount: 35,
-    accountingAmount: 35,
-    operationDescription: 'Cobro online de prueba (SIMULACION PREVIA A DESPLIEGUE REAL)',
+    operationDescription: 'Cobro presencial en efectivo de prueba',
     currency: 'EUR',
-    resourceId: 'online',
-    staffResourceId: 'online',
+    resourceId: 'cashier',
+    staffResourceId: 'cashier',
     traceId: 'trace-caja-projection-001',
   };
 
@@ -742,10 +742,12 @@ test('FLOW-CAJA-05 CajaActual applies each persisted movement exactly once', asy
   assert.strictEqual(replay.status, 'SUCCESS');
   assert.strictEqual(replay.idempotent, true);
   assert.ok(register, 'CajaActual principal debe quedar persistida');
-  assert.strictEqual(register.otherAmount, 35, 'un cobro online se proyecta una sola vez');
+  assert.strictEqual(register.cashAmount, 35);
+  assert.strictEqual(register.cardAmount, 0);
+  assert.strictEqual(register.voucherAmount, 0);
+  assert.strictEqual(register.otherAmount, 0);
   assert.strictEqual(register.netAmount, 35);
   assert.strictEqual(register.salesCount, 1);
-  assert.ok(register.sequenceCounters.appliedMovementIds.includes(movement._id));
   assert.deepStrictEqual(register.sequenceCounters.appliedMovementIds, [movement._id]);
 });
 
@@ -787,10 +789,10 @@ test('FLOW-CAJA-06 CajaActual resolves singletonKey when Wix assigned a differen
   assert.strictEqual(rows.length, 1, 'no debe crear un segundo singleton');
   assert.strictEqual(register._id, 'SINGLE_ITEM_ID', 'debe conservar el _id físico de Wix');
   assert.strictEqual(register.cashAmount, 300, 'el cobro online no altera efectivo');
-  assert.strictEqual(register.otherAmount, 35);
-  assert.strictEqual(register.netAmount, 335);
-  assert.strictEqual(register.salesCount, 1);
-  assert.deepStrictEqual(register.sequenceCounters.appliedMovementIds, [movement._id]);
+  assert.strictEqual(register.otherAmount, 0);
+  assert.strictEqual(register.netAmount, 300);
+  assert.strictEqual(register.salesCount, 0);
+  assert.deepStrictEqual(register.sequenceCounters.appliedMovementIds, []);
 });
 
 test('FLOW-CAJA-04 transactionId concurrente no crea movimientos duplicados', async () => {
