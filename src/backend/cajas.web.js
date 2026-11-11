@@ -524,6 +524,11 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
             return { status: "ERROR", data: null, error: { code: "INVALID_PAYMENT_METHOD", message: "Forma de pago invalida" } };
         }
 
+        const channelType = _safeTrim(payload?.channelType).toUpperCase();
+        if (channelType && !Object.values(CHANNEL_TYPE).includes(channelType)) {
+            return { status: "ERROR", data: null, error: { code: "INVALID_CHANNEL_TYPE", message: "Canal de operacion invalido" } };
+        }
+
         const movementType = _safeTrim(payload?.movementType || payload?.tipoMovimiento || "VENTA").toUpperCase();
         const isRefundMovement = [
             MOVEMENT_TYPE.REEMBOLSO,
@@ -710,7 +715,7 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
             movementType,
             eventType,
             paymentMethod,
-            channelType: _safeTrim(inDto.channelType).toUpperCase() || null,
+            channelType: channelType || null,
             amount: taxableBaseOrNonSubjectAmount,
             totalAmount: amount,
             taxBase: taxableBaseOrNonSubjectAmount,
