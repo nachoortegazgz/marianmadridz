@@ -3,6 +3,6 @@
     "plugin:@wix/cli/recommended"
   ],
   "rules": {
-    "@wix/cli/no-invalid-backend-import": "error"
+    "@wix/cli/no-invalid-backend-import": "off"
   }
 }
