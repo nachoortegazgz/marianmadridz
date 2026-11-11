@@ -18,9 +18,10 @@ CAMBIOS v5019-ECOM-REFUND-STATUS:
 CAMBIOS DE ALINEACION v5015-ALIGNED (respecto a v5009-FISCAL-V20.1):
   ALN-01: COLLECTIONS alias eliminado. Uso de BUSINESS_COLLECTIONS y
           OPERATIONAL_COLLECTIONS.
-  ALN-02: PROCESSED_WEBHOOK_EVENTS (coleccion inexistente en v12.0) se
-          consolida en ControlOperativo con controlType = WEBHOOK_EVENT.
-          El _id se mantiene como normalizacion del eventId (<=100 chars).
+  ALN-02: WEBHOOK_EVENT permanece append-only como marcador de auditoria.
+          WEBHOOK_CLAIM adquiere exclusividad antes de los efectos de dominio
+          mediante _id SHA-256(eventType,eventId), lease y CAS owner/version.
+          El marcador WEBHOOK_EVENT usa tambien identidad hash tipada.
   ALN-03: BOOKING_STATUS.CANCELED -> BOOKING_STATUS.CANCELED
           (enum Wix nativo correcto en v12.0).
   ALN-04: AEAT_INVOICE_TYPE -> TIPO_FACTURA.
