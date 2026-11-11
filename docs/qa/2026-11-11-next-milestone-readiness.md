@@ -83,6 +83,7 @@ The dedicated `DUAL_RESCHEDULE` reconciler remains unimplemented. The existing c
 - Se separan los identificadores nativos `workingHoursScheduleIds` y `eventsScheduleId`; el fallback de `bookingCore` usa explícitamente el calendario de eventos y mantiene la prioridad del `scheduleId` recibido en el slot.
 - El contrato del widget ZONA STAFF usa `enableHoursCalculation` en vez de `enableScheduleQuery`.
 - Pruebas congelan la separación entre autoservicio laboral de ZONA STAFF y supervisión/caja/fiscalidad de ZONA MARIAN.
+- Contraste H-04 completado: el Dossier y las Directrices vigentes asignan RBAC a `internalConfig.STAFF.WEBSITE_ROLE_BY_RESOURCE_ID`; `MapaStaff.rolWebsite` queda como dato de referencia y no autoridad de autorización.
 - CI sobre el HEAD final de PR: 53 suites / 526 tests / 0 fallos; contratos SDK Wix y ESLint correctos.
 - Informe de detalle: `docs/qa/2026-11-11-staff-zones-bookings-alignment.md`.
 
