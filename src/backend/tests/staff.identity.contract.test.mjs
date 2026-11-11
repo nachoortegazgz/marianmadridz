@@ -24,8 +24,8 @@ test('STAFF-SDK-01 separates working-hours schedule IDs from the staff events sc
           serviceProvider: true,
           resource: {
             _id: RESOURCE_ID,
-            workingHoursSchedules: [{ _id: SCHEDULE_ID }],
-            eventsSchedule: { _id: SCHEDULE_ID },
+            workingHoursSchedules: [{ _id: WORKING_HOURS_SCHEDULE_ID }],
+            eventsSchedule: { _id: EVENTS_SCHEDULE_ID },
           },
           associatedWixIdentity: {
             identificationData: { contactId: CONTACT_ID },
@@ -44,7 +44,10 @@ test('STAFF-SDK-01 separates working-hours schedule IDs from the staff events sc
     contactId: CONTACT_ID,
     displayName: 'Ana',
     roleWebsite: '',
-    scheduleId: SCHEDULE_ID,
+    workingHoursScheduleIds: [WORKING_HOURS_SCHEDULE_ID],
+    workingHoursScheduleId: WORKING_HOURS_SCHEDULE_ID,
+    eventsScheduleId: EVENTS_SCHEDULE_ID,
+    scheduleId: EVENTS_SCHEDULE_ID,
   });
   assert.equal(calls.length, 1);
   assert.deepEqual(calls[0].query.filter, { resourceId: { $eq: RESOURCE_ID } });
@@ -52,7 +55,8 @@ test('STAFF-SDK-01 separates working-hours schedule IDs from the staff events sc
 
   const byContact = await staff.findStaffByContactId(CONTACT_ID);
   assert.equal(byContact.resourceId, RESOURCE_ID);
-  assert.equal(byContact.staffMemberId, STAFF_MEMBER_ID);\n  assert.equal(await staff.getStaffEventsScheduleId(RESOURCE_ID), EVENTS_SCHEDULE_ID);
+  assert.equal(byContact.staffMemberId, STAFF_MEMBER_ID);
+  assert.equal(await staff.getStaffEventsScheduleId(RESOURCE_ID), EVENTS_SCHEDULE_ID);
 });
 
 test('STAFF-SDK-03 missing events schedule fails closed instead of using working-hours schedule', async () => {
