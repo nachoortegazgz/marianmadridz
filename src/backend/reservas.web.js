@@ -1131,13 +1131,12 @@ async function _getBookedMinutesByResourceForDay(dateYMD, resourceIds, traceId) 
     }
 
     const minutes = {};
-    const knownBookingIds = new Set();
+    const customProjectionByBookingId = new Map();
+    const nativeBookingIds = new Set();
     ids.forEach((rid) => (minutes[rid] = 0));
 
     for (const item of customItems) {
         const bookingId = _safeTrim(item?.bookingId);
-        if (bookingId) knownBookingIds.add(bookingId);
-
         const resourceId = _safeTrim(item?.resourceId);
         if (!resourceId || minutes[resourceId] === undefined) continue;
         const status = String(item?.bookingStatus || "").trim().toUpperCase();
@@ -1148,7 +1147,11 @@ async function _getBookedMinutesByResourceForDay(dateYMD, resourceIds, traceId) 
         const start = _toDateSafe(item?.slotStart);
         const end = _toDateSafe(item?.slotEnd);
         if (!start || !end || end.getTime() <= start.getTime()) continue;
-        minutes[resourceId] += _minutesBetweenUtcDates(start, end);
+        const bookedMinutes = _minutesBetweenUtcDates(start, end);
+        minutes[resourceId] += bookedMinutes;
+        if (bookingId) {
+            customProjectionByBookingId.set(bookingId, { resourceId, bookedMinutes });
+        }
     }
 
     try {
@@ -1200,8 +1203,20 @@ async function _getBookedMinutesByResourceForDay(dateYMD, resourceIds, traceId) 
             for (const entry of bookings) {
                 const booking = entry?.booking || {};
                 const bookingId = _safeTrim(booking.id);
-                if (!bookingId || knownBookingIds.has(bookingId)) continue;
-                knownBookingIds.add(bookingId);
+                if (!bookingId || nativeBookingIds.has(bookingId)) continue;
+                nativeBookingIds.add(bookingId);
+
+                // Wix Bookings is the SSOT for native appointments. Replace a
+                // same-ID CMS projection with the current native resource/time;
+                // otherwise a stale resourceId can bias daily workload ranking.
+                const projection = customProjectionByBookingId.get(bookingId);
+                if (projection) {
+                    minutes[projection.resourceId] = Math.max(
+                        0,
+                        minutes[projection.resourceId] - projection.bookedMinutes
+                    );
+                    customProjectionByBookingId.delete(bookingId);
+                }
 
                 const status = String(booking.status || "").trim().toUpperCase();
                 if (!["CREATED", "PENDING", "CONFIRMED", "COMPLETED"].includes(status)) continue;
