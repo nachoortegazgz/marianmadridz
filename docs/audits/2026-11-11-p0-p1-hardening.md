@@ -13,13 +13,13 @@
 1. `.github/workflows/backend-offline-quality.yml`: el workflow de calidad se ejecuta también en `push` a `main`, además de pull requests y ejecución manual.
 2. `.eslintrc.json`: `@wix/cli/no-invalid-backend-import` permanece en `off`. Al activarla como `error`, ESLint 8.25.0 + `@wix/eslint-plugin-cli` 1.0.2 falla al cargar la regla con `TypeError [ERR_INVALID_ARG_TYPE]: The "to" argument must be of type string. Received undefined` en `accountingLedger.js`. No se mantiene una configuración que rompe el gate completo; reactivación pendiente de compatibilidad verificada o sustitución por una regla estática propia.
 
-3. `src/backend/internalConfig.js`: nueva política canónica `FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED=false` y `ALLOW_SIMULATION_RECORDS=false`.
+3. `src/backend/internalConfig.js`: nueva política canónica `FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED=false`, `ACCOUNTING_LEDGER_WRITES_ENABLED=false` y `ALLOW_SIMULATION_RECORDS=false`.
 4. `src/backend/cajas.web.js`: bloqueo fail-closed en `registerManualTransaction` y en `_registerZClosing`, compartido por la entrada pública y el cron interno.
 5. `src/backend/eventLog.js`: bloqueo fail-closed en `registrarEventoEconomico`, antes de upsert de terceros, lock y persistencia; cubre eventos de pedidos, reembolsos y rectificaciones que pasan por este writer.
 6. Los escritores manual y de eventos rechazan `isExplicitSimulationLedgerRecord(...)` salvo que `ALLOW_SIMULATION_RECORDS` esté explícitamente activado. En producción permanece `false`; el harness offline lo activa solo para fixtures sintéticos.
-7. `src/backend/tests/operational-writers.fail-closed.contract.test.mjs`: contratos de orden de guardas frente a efectos secundarios y confirmación de que fichajes/ajustes siguen bloqueados.
-8. `src/backend/tests/loader.mjs`: el harness offline inyecta `LEDGER_WRITES_ENABLED=true` solo al importar `internalConfig.js`, para probar los happy paths existentes. La prueba contractual lee el archivo fuente y exige el default productivo `false`.
-9. `.github/workflows/secret-scan.yml`: Gitleaks full-history scan en PR/push a `main` y ejecución manual; sin comentarios automáticos ni artefactos de resultados.
+9. `src/backend/tests/operational-writers.fail-closed.contract.test.mjs`: contratos de orden de guardas frente a efectos secundarios y confirmación de que fichajes/ajustes siguen bloqueados.
+10. `src/backend/tests/loader.mjs`: el harness offline inyecta `LEDGER_WRITES_ENABLED=true` solo al importar `internalConfig.js`, para probar los happy paths existentes. La prueba contractual lee el archivo fuente y exige el default productivo `false`.
+11. `.github/workflows/secret-scan.yml`: Gitleaks full-history scan en PR/push a `main` y ejecución manual; sin comentarios automáticos ni artefactos de resultados.
 
 ## Controles existentes confirmados
 
@@ -36,7 +36,7 @@ No se añadió `process.env`: su disponibilidad y semántica no están acreditad
 
 ### P0/P1 caja y fichajes
 
-No se añadió un interruptor operacional global: podría bloquear compensaciones y recuperaciones legítimas. Fichajes ya tienen flags canónicos desactivados y se añadió una prueba contractual de que los guards preceden a firma e inserción. Los escritores de caja fiscal quedan deshabilitados por la política nueva. No se bloquea el proyector de caja por separado: no puede recibir una operación nueva sin pasar por uno de los escritores fiscalmente bloqueados.
+No se añadió un interruptor operacional global: podría bloquear compensaciones y recuperaciones legítimas. Fichajes ya tienen flags canónicos desactivados y se añadió una prueba contractual de que los guards preceden a firma e inserción. Los escritores de caja fiscal y el writer contable append-only quedan deshabilitados por la política nueva. No se bloquea el proyector de caja por separado: no puede recibir una operación nueva sin pasar por uno de los escritores fiscalmente bloqueados.
 
 ### P1 reservas y proyecciones
 
