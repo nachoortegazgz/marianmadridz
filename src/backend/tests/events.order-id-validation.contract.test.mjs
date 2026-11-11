@@ -19,7 +19,7 @@ test("EVENT-ORDER-GUID-01 order-created webhook uses the imported canonical GUID
 
 test("EVENT-ORDER-NATIVE-STOCK-01 order-created webhook records idempotency without custom inventory operations", () => {
     const start = source.indexOf("export async function wixEcom_onOrderCreated");
-    const end = source.indexOf("// INTERNAL PROCESSOR: PAID ORDER", start);
+    const end = source.indexOf("// WEBHOOK: ORDER PAYMENT STATUS UPDATED", start);
     assert.ok(start >= 0 && end > start, "order-created handler must remain discoverable");
     const handler = source.slice(start, end);
 
@@ -78,8 +78,8 @@ test("EVENT-ORDER-NATIVE-STOCK-03 stable payment and order-update handlers route
     assert.match(paymentHandler, /PARTIALLY_REFUNDED/);
     assert.match(refundProcessor, /resolveCompletedRefunds/);
     assert.match(orderUpdatedHandler, /processOrderRefundTransactions/);
-    assert.match(source, /registrarEventoEconomico\\(fiscalPayload\\)/);
-    assert.match(source, /queueFiscalRecovery\\(/);
+    assert.match(source, /registrarEventoEconomico\(fiscalPayload\)/);
+    assert.match(source, /queueFiscalRecovery\(/);
     assert.doesNotMatch(source, /export async function wixEcom_onOrderRefunded/);
     assert.doesNotMatch(source, /export async function wixEcom_onOrderTransactionsUpdated/);
 });
