@@ -49,11 +49,9 @@ FIXES APLICADOS v5009-FISCAL (heredados):
 =============================================================================
 */
 
-import { orders } from "@wix/ecom";
+import { orders, orderTransactions } from "@wix/ecom";
 import { extendedBookings } from "@wix/bookings";
 import { auth } from "@wix/essentials";
-import { orderTransactions } from "wix-ecom-backend";
-import { elevate } from "wix-auth";
 import { resolveCompletedRefunds } from "backend/refundTransactions";
 import { getSecretValue } from "backend/secretAccess";
 
@@ -285,7 +283,7 @@ export function resolveOrderFiscalTaxData(order) {
 const log = logger;
 const queryExtendedBookingsElevated = auth.elevate(extendedBookings.queryExtendedBookings);
 const getOrderElevated = auth.elevate(orders.getOrder);
-const listTransactionsForSingleOrderElevated = elevate(orderTransactions.listTransactionsForSingleOrder);
+const listTransactionsForSingleOrderElevated = auth.elevate(orderTransactions.listTransactionsForSingleOrder);
 const READER_V2_PAGE_LIMIT = 100;
 const READER_V2_MAX_PAGES = 5;
 
