@@ -12,10 +12,11 @@ async function read(name) {
 }
 
 test("P0-FISCAL-01 fiscal ledger writers are disabled by canonical fail-closed policy", async () => {
-  const [config, cajas, eventLog] = await Promise.all([
+  const [config, cajas, eventLog, accounting] = await Promise.all([
     read("internalConfig.js"),
     read("cajas.web.js"),
     read("eventLog.js"),
+    read("accountingLedger.js"),
   ]);
 
   assert.match(config, /FISCAL_RUNTIME_POLICY\s*=\s*Object\.freeze\(\{[\s\S]*?LEDGER_WRITES_ENABLED:\s*false,[\s\S]*?ALLOW_SIMULATION_RECORDS:\s*false/s);
@@ -57,6 +58,17 @@ test("P0-FISCAL-01 fiscal ledger writers are disabled by canonical fail-closed p
     assert.ok(index > eventGuard, "event fiscal guard must precede " + operation);
   }
   assert.match(eventWriter.slice(eventGuard), /FISCAL_LEDGER_WRITES_DISABLED/);
+
+  const accountingStart = accounting.indexOf("export async function appendAccountingEntry");
+  const accountingWriter = accounting.slice(accountingStart);
+  const accountingGuard = accountingWriter.indexOf("FISCAL_RUNTIME_POLICY.ACCOUNTING_LEDGER_WRITES_ENABLED !== true");
+  assert.ok(accountingGuard >= 0, "accounting ledger writer must fail closed");
+  assert.ok(accountingWriter.indexOf("ACCOUNTING_LEDGER_WRITES_DISABLED") > accountingGuard);
+  const accountingSimulationGuard = accountingWriter.indexOf("FISCAL_RUNTIME_POLICY.ALLOW_SIMULATION_RECORDS !== true");
+  assert.ok(accountingSimulationGuard > accountingGuard, "accounting writer must reject simulation data after write policy check");
+  assert.ok(accountingWriter.indexOf("isExplicitSimulationLedgerRecord(input)") > accountingSimulationGuard);
+  assert.ok(accountingWriter.indexOf("_normalizeEntry(input, traceId)") > accountingSimulationGuard);
+  assert.ok(accountingWriter.indexOf("dalInsert(ACCOUNTING_COL") > accountingSimulationGuard);
   const eventSimulationGuard = eventWriter.indexOf("FISCAL_RUNTIME_POLICY.ALLOW_SIMULATION_RECORDS !== true");
   assert.ok(eventSimulationGuard >= 0, "event writer must reject explicit simulation records");
   assert.ok(eventWriter.indexOf("isExplicitSimulationLedgerRecord(input)") > eventSimulationGuard);
