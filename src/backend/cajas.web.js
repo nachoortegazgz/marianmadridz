@@ -25,6 +25,7 @@ import {
     OPERATIONAL_COLLECTIONS,
     SINGLETONS,
     SDK_CONFIG,
+    FISCAL_RUNTIME_POLICY,
     MOVEMENT_TYPE,
     PAYMENT_METHOD,
     CHANNEL_TYPE,
@@ -511,6 +512,9 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
         );
 
         await requireCajero(traceId);
+        if (FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED !== true) {
+            return { status: "ERROR", data: null, error: { code: "FISCAL_LEDGER_WRITES_DISABLED", message: "La escritura fiscal permanece deshabilitada hasta completar la certificacion de runtime." } };
+        }
         await validateFiscalConfig(traceId);
         const { nifEmisor } = await _getFiscalKeys();
 
@@ -1242,6 +1246,9 @@ async function _countMovementsOfDay(diaKey) {
 
 async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) {
     const traceId = _safeTrim(options?.traceId) || makeTraceId("z-close");
+    if (FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED !== true) {
+        return { status: "ERROR", data: null, error: { code: "FISCAL_LEDGER_WRITES_DISABLED", message: "La escritura fiscal permanece deshabilitada hasta completar la certificacion de runtime." }, traceId };
+    }
     let ledgerLock = null;
     let retainLedgerLock = false;
     try {
