@@ -56,6 +56,7 @@ import {
     BUSINESS_COLLECTIONS,
     OPERATIONAL_COLLECTIONS,
     SDK_CONFIG,
+    FISCAL_RUNTIME_POLICY,
     MOVEMENT_TYPE,
     IVA_RATES,
     TIPO_FACTURA,
@@ -465,6 +466,18 @@ function _buildFiscalPayloadSnapshot({
 // ============================================================================
 
 export async function registrarEventoEconomico(input) {
+    const traceId = _safeTrim(input?.traceId) || makeTraceId("evento");
+    if (FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED !== true) {
+        return {
+            status: "ERROR",
+            data: null,
+            error: {
+                code: "FISCAL_LEDGER_WRITES_DISABLED",
+                message: "La escritura fiscal permanece deshabilitada hasta completar la certificacion de runtime.",
+                traceId,
+            },
+        };
+    }
     // SSOT-KEYFIELD-02 / HOOK-CAJA-06: normalizacion destructiva de la
     // entrada (unica implementacion en internalConfig.normalizeMovementKeys,
     // compartida con el hook data.MovimientosCaja_beforeInsert). Los writers
@@ -474,7 +487,6 @@ export async function registrarEventoEconomico(input) {
     // motor trabaja SOLO con claves canonicas; ningun alias alcanza al doc.
     input = normalizeMovementKeys({ ...input });
 
-    const traceId = input.traceId || makeTraceId("evento");
     const ts = new Date();
 
     // 1. Resolver tercero (nifDestinatario/nifEmisor ya canonicos tras la
