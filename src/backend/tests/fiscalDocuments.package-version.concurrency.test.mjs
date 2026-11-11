@@ -132,6 +132,16 @@ test('FDOC-DISPATCH-03 accountant dispatch remains disabled in canonical configu
   assert.ok(source.includes('ACCOUNTANT_SEND_DISABLED'));
 });
 
+test('FDOC-DISPATCH-04 package dispatch requires a prepared, hash-verified persisted snapshot', () => {
+  const handler = extractBlock(
+    'export const sendManagerPackageToAccountant = webMethod(',
+    '// BLOQUE 9 - ENVIO DE DOCUMENTO CONCRETO'
+  );
+  assert.ok(handler.includes('doc.packageStatus !== "PREPARED"'));
+  assert.ok(handler.includes('!(await _verifyPackageSnapshot(doc))'));
+  assert.ok(!handler.includes('doc.closingType'));
+  assert.ok(handler.indexOf('_verifyPackageSnapshot(doc)') < handler.indexOf('_dispatchEmailViaResend('));
+});
 test('FDOC-DISPATCH-01 package dispatch checks the disabled guard before lookup or email dispatch', () => {
   const handler = extractBlock(
     'export const sendManagerPackageToAccountant = webMethod(',
