@@ -1,3 +1,7 @@
+> **Aviso de vigencia — 2026-11-11:** Este dossier es una especificación de diseño de Capa 3, no evidencia de que SharePoint, Power Automate o las exportaciones estén implantados. Prevalece [la referencia maestra QA](docs/qa/2026-11-11-qa-master-reference.md) para el estado actual. No existe evidencia de `exportService.js` ni jobs periódicos de exportación; el despacho Resend a gestoría está bloqueado y el tenant M365/SharePoint no está auditado. Wix CMS sigue siendo SSOT y Capa 3 no puede escribir en Capa 1.
+
+---
+
 # Dossier de flujos end-to-end — Capa 1 → Capa 3
 
 **Proyecto:** Marian Madrid · https://www.marianmadrid.es/  
