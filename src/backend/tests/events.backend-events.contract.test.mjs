@@ -18,6 +18,7 @@ test("EVENTS-VELO-01 consumes Wix-managed event objects without raw webhook veri
 });
 
 test("EVENTS-VELO-02 keeps Bookings V2 Velo event handler exports", () => {
+  assert.match(source, /export async function wixBookingsV2_onBookingCreated/);
   assert.match(source, /export async function wixBookingsV2_onBookingConfirmed/);
   assert.match(source, /export async function wixBookingsV2_onBookingRescheduled/);
   assert.match(source, /export async function wixBookingsV2_onBookingCanceled/);
