@@ -69,8 +69,12 @@ function _isRecord(value) {
     return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
-function _assertControlRecord(item, allowedTypes, errorCode) {
-    if (!_isRecord(item) || !item._id || !allowedTypes.includes(item.controlType)) {
+function _assertControlRecord(item, allowedTypes, errorCode, requireId = true) {
+    if (
+        !_isRecord(item) ||
+        (requireId && !item._id) ||
+        !allowedTypes.includes(item.controlType)
+    ) {
         throw _policyError(errorCode);
     }
     if (CONTROL_OPERATIVO_NON_CANONICAL_FIELDS.some((field) =>
@@ -85,7 +89,7 @@ export function assertInsertAllowed(collection, item) {
         throw _policyError("CMS_INSERT_COLLECTION_DENIED");
     }
     if (collection === BUSINESS_COLLECTIONS.CONTROL_OPERATIVO) {
-        _assertControlRecord(item, Object.values(CONTROL_TYPE), "CMS_INSERT_CONTROL_TYPE_INVALID");
+        _assertControlRecord(item, Object.values(CONTROL_TYPE), "CMS_INSERT_CONTROL_TYPE_INVALID", false);
     }
     if (collection === BUSINESS_COLLECTIONS.DATOS_FISCALES &&
         !Object.values(RECORD_TYPE).includes(item.recordType)) {
