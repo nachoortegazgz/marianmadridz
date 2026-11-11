@@ -118,7 +118,7 @@ Una reserva sintética autorizada creada el 2026-11-11 quedó CONFIRMED en Wix B
 
 ### P1 — Caja física y sesión
 
-- Revisar la PR #284 como cambio independiente; no fusionar ni desplegar sin autorización explícita.
+- PR #284 está mergeada en GitHub; su merge no acredita despliegue en Wix. Mantener pendiente la validación de los casos IN/OUT/NONE y no activar operaciones reales sin autorización y pruebas runtime.
 - Completar contrato de clasificación backend IN/OUT/NONE, enums, validación, CMS, tratamiento fiscal/contable y pruebas para aportación, retirada, proveedor y ajuste.
 - Resolver sesión de caja: apertura sin creación implícita, permisos específicos, locks, idempotencia, responsable autenticado y precedencia entre cierre manual y cron.
 - Separar cierre fiscal Z de arqueo físico y definir evidencia append-only para ambos.
