@@ -702,6 +702,19 @@ test("EVENT-REFUND-01 defers incomplete refunds, records successful terminal amo
   assert.equal(paid.status, "OK");
   assert.equal((wixDataMock._store.get(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA) || []).length, 1);
 
+  await assert.rejects(
+    events.wixEcom_onOrderPaymentStatusUpdated({
+      metadata: { id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb7" },
+      data: {
+        order: { ...activeOrder, currency: "USD", paymentStatus: "PARTIALLY_REFUNDED" },
+        previousPaymentStatus: "PAID",
+      },
+    }),
+    /REFUND_CURRENCY_UNSUPPORTED/
+  );
+  assert.equal((wixDataMock._store.get(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA) || []).length, 1,
+    "refunds outside the canonical EUR site currency must not append a fiscal correction");
+
   activeOrderTransactions = {
     orderId,
     payments: [],
