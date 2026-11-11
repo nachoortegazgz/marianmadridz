@@ -753,32 +753,57 @@ test("EVENT-REFUND-01 defers incomplete refunds, records successful terminal amo
   assert.equal(refundMovement.taxBase, -8.26);
   assert.equal(refundMovement.taxAmount, -1.74);
 
-  const cita = (wixDataMock._store.get("CitasF2") || []).find(row => row.bookingId === BOOKING_ID);
+  let cita = (wixDataMock._store.get("CitasF2") || []).find(row => row.bookingId === BOOKING_ID);
   assert.equal(cita.paymentStatus, IC.PAYMENT_STATUS.PARTIALLY_REFUNDED);
   assert.equal(cita.bookingStatus, "PENDING");
 
-  const replay = await events.wixEcom_onOrderUpdated({
+  const secondRefundId = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
+  activeOrderTransactions.refunds.push({
+    id: secondRefundId,
+    transactions: [
+      { paymentId: "99999999-9999-4999-8999-999999999999", refundStatus: "SUCCEEDED", amount: { amount: "35.50" } },
+    ],
+    summary: { refunded: { amount: "35.50" } },
+  });
+  const fullyRefunded = await events.wixEcom_onOrderUpdated({
     metadata: { id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb4" },
-    data: { order: { ...activeOrder, paymentStatus: "PARTIALLY_REFUNDED" } },
+    data: { order: { ...activeOrder, paymentStatus: "FULLY_REFUNDED" } },
+  });
+  assert.equal(fullyRefunded.status, "OK");
+  assert.equal(fullyRefunded.completedRefundCount, 2);
+  let finalMovements = wixDataMock._store.get(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA) || [];
+  assert.equal(finalMovements.length, 3);
+  const finalRefundMovement = finalMovements.find(row => row.transactionId === "REFUND-" + orderId + "-" + secondRefundId);
+  assert.ok(finalRefundMovement);
+  assert.equal(finalRefundMovement.totalAmount, -35.5);
+  assert.equal(finalRefundMovement.taxBase, -29.34);
+  assert.equal(finalRefundMovement.taxAmount, -6.16);
+  cita = (wixDataMock._store.get("CitasF2") || []).find(row => row.bookingId === BOOKING_ID);
+  assert.equal(cita.paymentStatus, IC.PAYMENT_STATUS.REFUNDED);
+
+  const replay = await events.wixEcom_onOrderUpdated({
+    metadata: { id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb5" },
+    data: { order: { ...activeOrder, paymentStatus: "FULLY_REFUNDED" } },
   });
   assert.equal(replay.status, "OK");
-  assert.equal((wixDataMock._store.get(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA) || []).length, 2,
+  assert.equal((wixDataMock._store.get(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA) || []).length, 3,
     "a completed refund replay must not append a second rectification");
 
   const concurrentResults = await Promise.all([
     events.wixEcom_onOrderUpdated({
-      metadata: { id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb5" },
-      data: { order: { ...activeOrder, paymentStatus: "PARTIALLY_REFUNDED" } },
+      metadata: { id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb6" },
+      data: { order: { ...activeOrder, paymentStatus: "FULLY_REFUNDED" } },
     }),
     events.wixEcom_onOrderUpdated({
-      metadata: { id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb6" },
-      data: { order: { ...activeOrder, paymentStatus: "PARTIALLY_REFUNDED" } },
+      metadata: { id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb7" },
+      data: { order: { ...activeOrder, paymentStatus: "FULLY_REFUNDED" } },
     }),
   ]);
   assert.equal(concurrentResults.every(result => result.status === "OK"), true);
-  const finalMovements = wixDataMock._store.get(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA) || [];
-  assert.equal(finalMovements.length, 2, "concurrent refund events must not duplicate the fiscal rectification");
+  finalMovements = wixDataMock._store.get(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA) || [];
+  assert.equal(finalMovements.length, 3, "concurrent refund events must not duplicate fiscal rectifications");
   assert.equal(finalMovements.filter(row => row.transactionId === "REFUND-" + orderId + "-" + refundId).length, 1);
+  assert.equal(finalMovements.filter(row => row.transactionId === "REFUND-" + orderId + "-" + secondRefundId).length, 1);
 });
 
 test("EVENT-BOOKING-RESCHEDULE-01 native reschedule updates only the affected CitasF2 phase and flags its dual sibling", async () => {
