@@ -1048,6 +1048,18 @@ export async function resolve(specifier, context, nextResolve) {
 }
 
 export async function load(url, context, nextLoad) {
+  // Offline tests exercise the writer happy paths using synthetic data. The
+  // production source remains fail-closed (false); this test-only loader
+  // injects an enabled policy into the imported module so existing behavioral
+  // suites can continue testing serialization, idempotency and projections.
+  // The contract suite reads internalConfig.js from disk and asserts the
+  // production default is false.
+  const internalConfigUrl = pathToFileURL(path.join(BACKEND_DIR, "internalConfig.js")).href;
+  if (url === internalConfigUrl) {
+    const source = fs.readFileSync(path.join(BACKEND_DIR, "internalConfig.js"), "utf8")
+      .replace("LEDGER_WRITES_ENABLED: false", "LEDGER_WRITES_ENABLED: true");
+    return { format: "module", source, shortCircuit: true };
+  }
   if (url.startsWith('mock:wix-data') || url === 'mock:@wix/data' || url === 'mock:@wix/essentials') {
     // @wix/data (API v2, usado por dataAccess.js) -> adaptador v2 sobre el
     // mismo store del mock. 'wix-data' (builder legacy v1) -> mock clasico.
