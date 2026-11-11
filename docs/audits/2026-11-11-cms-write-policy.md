@@ -41,4 +41,9 @@ No CMS data, ledgers, bookings, cash balances, or Wix runtime configuration were
 
 ## E2E booking environment status
 
-The Wix connection resolves one site: `Marian Madrid Peluquería y Estética` (`188bed94-177c-4bc9-a9f0-35080d874f3e`), published at `https://www.marianmadrid.es/`, with Velo and Wix Bookings installed. It does not expose a separate isolated QA site. Therefore no booking create/cancel/reschedule operation was issued against the published site's CMS. This is an explicit environment blocker, not a passed E2E test.
+The Wix account exposes three sites:
+- `Marian Madrid Peluquería y Estética` (`188bed94-177c-4bc9-a9f0-35080d874f3e`): published, Velo enabled, Wix Bookings installed. This is the business site and is not an isolated QA environment.
+- `My Site` (`b1d218ce-2eae-436f-b8c7-ab8220b47977`): draft, Studio Two, Velo disabled, no Wix Bookings.
+- `ortega nacho cv web` (`e54e4214-efc1-4bc9-bfbf-cede68ccaa1d`): published with Velo, but no Wix Bookings and unrelated to the Marian Madrid test data.
+
+No available site combines isolation, Velo, and Wix Bookings. Therefore no booking create/cancel/reschedule operation was issued against the published business site's CMS. This is an explicit environment blocker, not a passed E2E test.
