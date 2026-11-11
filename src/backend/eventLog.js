@@ -467,6 +467,17 @@ function _buildFiscalPayloadSnapshot({
 
 export async function registrarEventoEconomico(input) {
     const traceId = _safeTrim(input?.traceId) || makeTraceId("evento");
+    if (FISCAL_RUNTIME_POLICY.ALLOW_SIMULATION_RECORDS !== true && isExplicitSimulationLedgerRecord(input)) {
+        return {
+            status: "ERROR",
+            data: null,
+            error: {
+                code: "TEST_DATA_NOT_ALLOWED_IN_PRODUCTION",
+                message: "Los registros de simulacion no pueden persistirse en el ledger operativo.",
+                traceId,
+            },
+        };
+    }
     if (FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED !== true) {
         return {
             status: "ERROR",
