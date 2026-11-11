@@ -2,7 +2,7 @@
 
 La referencia consultiva vigente es [docs/qa/2026-11-11-qa-master-reference.md](docs/qa/2026-11-11-qa-master-reference.md). Esta revisión live de Wix devuelve el sitio como **Published**, no Draft. Este dato prevalece sobre estados anteriores de este documento. El sitio no se considera QA aislado; no ejecutar E2E que genere reservas, pagos, contactos o comunicaciones hasta disponer de un sitio QA separado o autorización expresa con aislamiento demostrado.
 
-PR #294 está MERGED en main mediante `3aed055c9622da71505f5f9927b35f6516e6b906`. Los estados de PR, CI y Wix descritos en el resto de este documento son históricos cuando no coincidan con la referencia maestra. No interpretar CI offline como validación Wix Runtime.
+PR #294 está MERGED en main mediante `3aed055c9622da71505f5f9927b35f6516e6b906`. PR #295 está MERGED en main mediante `b799412a1722b2dfacd1b21a198ebcb68fc03af2`; PR #296 permanece abierta en Draft con las correcciones de reauditoría posteriores, aún no integradas. Los estados de PR, CI y Wix descritos en el resto de este documento son históricos cuando no coincidan con la referencia maestra. No interpretar CI offline como validación Wix Runtime.
 
 Reauditoría live posterior a la consulta Published: 149 automatizaciones no archivadas (27 ACTIVE, 122 INACTIVE); nueve automatizaciones email activas con diez acciones (ocho dirigidas al contacto del trigger y dos al propietario); cuatro automatizaciones WhatsApp y ocho SMS inactivas; dos notificaciones internas de Bookings activas. No se ejecutaron triggers ni se enviaron mensajes. El email nativo sigue sin estar aislado.
 
