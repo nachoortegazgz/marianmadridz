@@ -287,3 +287,14 @@ La sección histórica anterior se conserva para trazabilidad; cuando contradiga
 - No desplegar: el código mantiene los writers fiscales/contables fail-closed y no existe evidencia de validación Wix Runtime del HEAD.
 
 Evidencia: [auditoría de aislamiento de notificaciones](audits/2026-11-11-wix-automation-recipient-isolation.md) y [auditoría P0/P1](audits/2026-11-11-p0-p1-hardening.md).
+
+
+## Addendum post-merge PR #286 — 2026-11-11
+
+PR #286 se fusionó en `main` por squash el 2026-11-11 15:00:16 UTC. Merge commit `0d8f6efc581bc6a3d892702ba1c32af73e829888`. Los addenda previos que describen PR #286 como draft/abierta quedan superados.
+
+La CI offline del HEAD anterior al merge pasó: 57 suites / 548 tests / 0 fallos; contratos Wix SDK, Order Transactions, Bookings Reader V2, ESLint y Gitleaks correctos. La integración no acredita Wix Runtime ni despliegue. No se ha publicado el código ni se han mutado datos Wix.
+
+Se mantienen los guards fiscales/contables fail-closed. No desplegar hasta validar runtime/E2E de pagos y reembolsos en entorno aislado y revisar el efecto operativo de los writers bloqueados. La auditoría Wix de notificaciones verificó 67 pausas (66 email, una WhatsApp); nueve automatizaciones email siguen activas por restricciones Wix. Las cuatro WhatsApp están inactivas; cero mensajes enviados. El móvil sintético 666724634 sigue sin configurar.
+
+Detalle: [PR #286](https://github.com/nachoortegazgz/marianmadridz/pull/286), [merge commit](https://github.com/nachoortegazgz/marianmadridz/commit/0d8f6efc581bc6a3d892702ba1c32af73e829888), [auditoría de aislamiento de notificaciones](audits/2026-11-11-wix-automation-recipient-isolation.md).
