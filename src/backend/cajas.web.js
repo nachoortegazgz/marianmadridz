@@ -544,6 +544,9 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
         const transactionId = _safeTrim(payload?.transactionId) || null;
 
         const inDto = normalizeMovementKeys({ ...(payload || {}) });
+        if (FISCAL_RUNTIME_POLICY.ALLOW_SIMULATION_RECORDS !== true && isExplicitSimulationLedgerRecord(inDto)) {
+            return { status: "ERROR", data: null, error: { code: "TEST_DATA_NOT_ALLOWED_IN_PRODUCTION", message: "Los registros de simulacion no pueden persistirse en el ledger operativo." }, traceId };
+        }
         const eventType = _safeTrim(inDto.eventType).toUpperCase() || (
             [MOVEMENT_TYPE.REEMBOLSO, MOVEMENT_TYPE.DEVOLUCION, MOVEMENT_TYPE.DEVOLUCION_SERVICIO].includes(movementType)
                 ? EVENT_TYPE.RECTIFICATIVA
