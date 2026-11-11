@@ -795,7 +795,7 @@ test('FLOW-CAJA-06 CajaActual resolves singletonKey when Wix assigned a differen
   assert.strictEqual(register.otherAmount, 0);
   assert.strictEqual(register.netAmount, 300);
   assert.strictEqual(register.salesCount, 0);
-  assert.deepStrictEqual(register.sequenceCounters.appliedMovementIds, []);
+  assert.strictEqual(register.sequenceCounters.appliedMovementIds, undefined);
 });
 
 test('FLOW-CAJA-04 transactionId concurrente no crea movimientos duplicados', async () => {
