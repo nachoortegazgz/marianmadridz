@@ -215,7 +215,7 @@ test("EVENT-BOOKING-CREATED-04 duplicate delivery is idempotent", async () => {
   assert.equal(replay.duplicate, true);
   assert.equal((wixDataMock._store.get("CitasF2") || []).length, 1);
   assert.equal((wixDataMock._store.get("ControlOperativo") || []).filter(
-    row => row.dedupeKey === "WEBHOOK_evt-native-created-duplicate-003"
+    row => row.controlType === IC.CONTROL_TYPE.WEBHOOK_EVENT && row.eventId === "evt-native-created-duplicate-003" && row.payload?.eventType === "BOOKING_CREATED"
   ).length, 1);
 });
 
@@ -251,7 +251,7 @@ test("EVENT-BOOKING-01 native confirmation creates a canonical CitasF2 projectio
   ]);
 
   const markers = wixDataMock._store.get("ControlOperativo") || [];
-  assert.equal(markers.filter(row => row.dedupeKey === "WEBHOOK_evt-native-confirm-001").length, 1);
+  assert.equal(markers.filter(row => row.controlType === IC.CONTROL_TYPE.WEBHOOK_EVENT && row.eventId === "evt-native-confirm-001" && row.payload?.eventType === "BOOKING_CONFIRMED").length, 1);
 });
 
 test("EVENT-BOOKING-02 confirmation preserves custom dual row when webhook omits resource", async () => {
@@ -388,6 +388,7 @@ test("EVENT-BOOKING-05 order cancellation matches the Bookings catalog GUID and 
   ]);
 
   const result = await events.wixEcom_onOrderCanceled({
+    metadata: { id: "order-canceled-dual-event-005" },
     order: {
       _id: "order-canceled-dual-005",
       lineItems: [{
