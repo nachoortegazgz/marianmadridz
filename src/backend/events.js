@@ -52,6 +52,9 @@ FIXES APLICADOS v5009-FISCAL (heredados):
 import { orders } from "@wix/ecom";
 import { extendedBookings } from "@wix/bookings";
 import { auth } from "@wix/essentials";
+import { orderTransactions } from "wix-ecom-backend";
+import { elevate } from "wix-auth";
+import { resolveCompletedRefunds } from "backend/refundTransactions";
 import { getSecretValue } from "backend/secretAccess";
 
 import {
@@ -282,6 +285,7 @@ export function resolveOrderFiscalTaxData(order) {
 const log = logger;
 const queryExtendedBookingsElevated = auth.elevate(extendedBookings.queryExtendedBookings);
 const getOrderElevated = auth.elevate(orders.getOrder);
+const listTransactionsForSingleOrderElevated = elevate(orderTransactions.listTransactionsForSingleOrder);
 const READER_V2_PAGE_LIMIT = 100;
 const READER_V2_MAX_PAGES = 5;
 
@@ -1845,7 +1849,7 @@ export async function wixEcom_onOrderCreated(eventPayload) {
 // WEBHOOK: ORDER PAYMENT STATUS UPDATED
 // ============================================================================
 
-export async function wixEcom_onOrderPaymentStatusUpdated(eventPayload) {
+async function processPaidEcommerceOrder(eventPayload) {
     const traceId = makeTraceId("whook-pay-status");
     try {
         const event = await _readWixBackendEvent(
@@ -2177,7 +2181,7 @@ export async function wixEcom_onOrderPaymentStatusUpdated(eventPayload) {
     } catch (error) {
         const normalized = _handleError(
             error,
-            "wixEcom_onOrderPaymentStatusUpdated",
+            "processPaidEcommerceOrder",
             traceId
         );
         await logAuditEventWithTimeout(
@@ -2194,53 +2198,17 @@ export async function wixEcom_onOrderPaymentStatusUpdated(eventPayload) {
 }
 
 // ============================================================================
-// WEBHOOK: ORDER REFUNDED
+// WIX ECOMMERCE TRANSACTION PROCESSORS
 // ============================================================================
 
-export async function wixEcom_onOrderRefunded(eventPayload) {
-    const traceId = makeTraceId("whook-refund");
+async function processCompletedEcommerceRefund(orderId, refundId, refundAmount, traceId) {
     try {
-        const event = await _readWixBackendEvent(eventPayload, "ORDER_REFUND_UPDATED") ||
-            await _readWixBackendEvent(eventPayload, "ORDER_REFUNDED");
-        if (!event) return { status: "REJECTED", reason: "INVALID_WIX_EVENT" };
-
-        const orderId = String(
-            event?.orderId ||
-            event?.entityId ||
-            event?.actionEvent?.body?.orderId ||
-            event?.order?._id ||
-            event?.data?.order?._id ||
-            ""
-        ).trim() || "unknown";
-        const refundObj =
-            event?.actionEvent?.body?.refund ||
-            event?.refund ||
-            event?.data?.refund ||
-            null;
-        if (!refundObj || orderId === "unknown") return { status: "OK" };
-
-        // WIX-BOUNDARY: contrato oficial eCom Refund.money = { amount, currency }.
-        const officialRefundMoney = refundObj?.amount;
-        const rawAmount =
-            typeof officialRefundMoney === "object" &&
-            officialRefundMoney !== null
-                ? Number(officialRefundMoney.amount ?? 0)
-                : officialRefundMoney ?? 0;
-        const refundAmount = Number(rawAmount) || 0;
-        if (refundAmount <= 0) return { status: "OK" };
-
-        const refundId = String(refundObj?._id || refundObj?.id || "").trim();
-        if (!refundId) {
-            await logAuditEventWithTimeout(
-                "REFUND_ID_MISSING",
-                "ERROR",
-                `Refund without stable identifier for order ${orderId}`,
-                { orderId, traceId },
-                traceId,
-                orderId,
-                "backend/events.js"
-            );
-            return { status: "OK" };
+        orderId = _safeTrim(orderId);
+        refundId = _safeTrim(refundId);
+        refundAmount = Number(refundAmount);
+        if (!orderId || !refundId) throw new Error("REFUND_IDENTITY_INVALID");
+        if (!Number.isFinite(refundAmount) || refundAmount <= 0) {
+            throw new Error("REFUND_AMOUNT_INVALID");
         }
 
         const transactionId = `REFUND-${orderId}-${refundId}`;
@@ -2512,13 +2480,74 @@ export async function wixEcom_onOrderRefunded(eventPayload) {
 
         return { status: "OK" };
     } catch (error) {
-        _handleError(error, "wixEcom_onOrderRefunded", traceId);
+        _handleError(error, "processCompletedEcommerceRefund", traceId);
         throw error;
     }
 }
 
-export async function wixEcom_onOrderRefundUpdated(eventPayload) {
-    return wixEcom_onOrderRefunded(eventPayload);
+export async function wixEcom_onOrderTransactionsUpdated(eventPayload) {
+    const traceId = makeTraceId("whook-order-transactions");
+    try {
+        const event = _readWixBackendEvent(eventPayload, "ORDER_TRANSACTIONS_UPDATED");
+        if (!event) return { status: "REJECTED", reason: "INVALID_WIX_EVENT" };
+
+        const eventId = _safeTrim(event?.metadata?.id);
+        const orderId = _safeTrim(event?.entity?._id);
+        if (!eventId) throw new Error("ORDER_TRANSACTIONS_EVENT_ID_MISSING");
+        if (!_looksLikeGuid(orderId)) {
+            return { status: "OK", skipped: "ORDER_ID_MISSING" };
+        }
+
+        const [orderResponse, transactionsResponse] = await Promise.all([
+            withTimeout(getOrderElevated(orderId), API_TIMEOUT_MS, "orderTransactions:getOrder"),
+            withTimeout(
+                listTransactionsForSingleOrderElevated(orderId),
+                API_TIMEOUT_MS,
+                "orderTransactions:listTransactionsForSingleOrder"
+            ),
+        ]);
+
+        const order = orderResponse?.order || orderResponse;
+        if (!order || _safeTrim(order?._id || order?.id) !== orderId) {
+            throw new Error("ORDER_TRANSACTIONS_ORDER_ID_MISMATCH");
+        }
+
+        const orderTransactionsRecord =
+            transactionsResponse?.orderTransactions || transactionsResponse;
+        if (_safeTrim(orderTransactionsRecord?.orderId) !== orderId) {
+            throw new Error("ORDER_TRANSACTIONS_RESPONSE_ID_MISMATCH");
+        }
+
+        // Payment reconciliation runs before refund projections so a replayed
+        // paid-order event cannot overwrite a refund state written moments later.
+        const paymentStatus = String(order?.paymentStatus || "").trim().toUpperCase();
+        if (["PAID", "FULLY_PAID", "PAID_FULL"].includes(paymentStatus)) {
+            await processPaidEcommerceOrder({
+                metadata: { id: eventId },
+                data: { order },
+            });
+        }
+
+        const completedRefunds = resolveCompletedRefunds(orderTransactionsRecord);
+        for (const refund of completedRefunds) {
+            await processCompletedEcommerceRefund(
+                orderId,
+                refund.refundId,
+                refund.refundAmount,
+                traceId
+            );
+        }
+
+        return {
+            status: "OK",
+            eventId,
+            orderId,
+            completedRefundCount: completedRefunds.length,
+        };
+    } catch (error) {
+        _handleError(error, "wixEcom_onOrderTransactionsUpdated", traceId);
+        throw error;
+    }
 }
 
 // ============================================================================
