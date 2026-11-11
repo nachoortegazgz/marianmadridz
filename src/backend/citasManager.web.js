@@ -241,7 +241,7 @@ function _isOnlinePaymentAllowed(cita) {
 
 async function _getCurrentMemberInfo() {
     try {
-        const response = await members.getCurrentMember();
+        const response = await members.getCurrentMember({ fieldsets: ["FULL"] });
         const member = response?.member || response;
         if (!member || member.status === "ERROR") return null;
         return member;
@@ -256,6 +256,43 @@ function _getMemberId(member) {
         member._id || member.id || member.memberId || ""
     );
 }
+
+/**
+ * Returns only the authenticated member's booking contact fields.
+ * Identity is resolved server-side; no member/contact IDs are accepted from the browser.
+ */
+export const getBookingMemberProfile = webMethod(
+    Permissions.SiteMember,
+    async () => {
+        const member = await _getCurrentMemberInfo();
+        const memberId = _getMemberId(member);
+        const contactId = _safeTrim(member?.contactId || "");
+        if (!memberId || !_looksLikeGuid(contactId)) {
+            return {
+                status: "ERROR",
+                data: null,
+                error: { code: "AUTH_REQUIRED", message: "Inicia sesión para cargar tus datos." },
+            };
+        }
+
+        const contact = member?.contact || member?.contactDetails || {};
+        const firstName = _safeTrim(contact.firstName || "");
+        const lastName = _safeTrim(contact.lastName || "");
+        const email = _safeTrim(
+            (Array.isArray(contact.emails) ? contact.emails[0] : "") ||
+            member?.loginEmail || ""
+        ).toLowerCase();
+        const phone = _safeTrim(
+            (Array.isArray(contact.phones) ? contact.phones[0] : "") || ""
+        );
+
+        return {
+            status: "SUCCESS",
+            data: { firstName, lastName, email, phone },
+            error: null,
+        };
+    }
+);
 
 async function _getStaffAccess(resourceId, traceId = null) {
     const id = _safeTrim(resourceId);
@@ -279,7 +316,7 @@ async function _getStaffAccess(resourceId, traceId = null) {
     }
 }
 
-function _validateProcessBookingPayload(payload, traceId, sessionMemberId = "", sessionContactId = "") {
+function _validateProcessBookingPayload(payload, traceId, sessionMemberId = "", sessionContactId = "", sessionMember = null) {
     if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
         throw createBookingError(
             ERROR_CODES.INVALID_PAYLOAD,
@@ -288,9 +325,24 @@ function _validateProcessBookingPayload(payload, traceId, sessionMemberId = "", 
         );
     }
 
-    const requiredText = ["serviceId", "email", "firstName", "phone"];
-    for (const field of requiredText) {
-        if (!_safeTrim(payload[field])) {
+    const memberContact = sessionMember?.contact || sessionMember?.contactDetails || {};
+    const firstName = _safeTrim(payload.firstName || memberContact.firstName || "");
+    const lastName = _safeTrim(payload.lastName || memberContact.lastName || "");
+    const email = _safeTrim(
+        payload.email ||
+        (Array.isArray(memberContact.emails) ? memberContact.emails[0] : "") ||
+        sessionMember?.loginEmail ||
+        ""
+    ).toLowerCase();
+    const phone = _safeTrim(
+        payload.phone ||
+        (Array.isArray(memberContact.phones) ? memberContact.phones[0] : "") ||
+        ""
+    );
+
+    const requiredValues = { serviceId: _safeTrim(payload.serviceId), email, firstName, phone };
+    for (const [field, value] of Object.entries(requiredValues)) {
+        if (!value) {
             throw createBookingError(
                 ERROR_CODES.INVALID_PAYLOAD,
                 `${field} is required.`,
@@ -338,10 +390,10 @@ function _validateProcessBookingPayload(payload, traceId, sessionMemberId = "", 
         resourceId: _safeTrim(payload.resourceId || ""),
         slotF1: payload.slotF1,
         slotF2: payload.slotF2 || null,
-        email: _safeTrim(payload.email),
-        firstName: _safeTrim(payload.firstName),
-        lastName: _safeTrim(payload.lastName || ""),
-        phone: _safeTrim(payload.phone),
+        email,
+        firstName,
+        lastName,
+        phone,
         appointmentNote: _safeTrim(payload.appointmentNote || "").slice(0, 200),
         channelType: channelRaw,
         rgpdConsent: true,
@@ -384,7 +436,8 @@ export const processDualBooking = webMethod(
                 unsafePayload,
                 traceId,
                 sessionMemberId,
-                sessionContactId
+                sessionContactId,
+                sessionMember
             );
 
             await _rateLimitOrThrow(
