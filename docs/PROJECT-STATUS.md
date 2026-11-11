@@ -274,3 +274,16 @@ La sección histórica anterior se conserva para trazabilidad; cuando contradiga
 - El evento Velo onOrderTransactionsUpdated no se utiliza porque está en Developer Preview y su descripción no garantiza la transición de estado de refunds ya creados.
 - La documentación de QA está en docs/qa/QA-SIMULATION-2026-11.md y el detalle de cambios en docs/audits/2026-11-11-p0-p1-hardening.md.
 
+
+
+## Addendum — estado real de PR #286 y automatizaciones Wix (2026-11-11)
+
+- CI del HEAD de código `d30e03473fe2bfe39b93a881ef4b765fcd72691d`: backend offline quality run `43038637356`, 57 suites / 548 tests / 0 fallos; Gitleaks run `43038637350` SUCCESS. No hay revisiones humanas registradas. Los commits posteriores son documentales y requieren que CI vuelva a ejecutarse.
+- PR #286 permanece abierta como draft, sin merge ni despliegue.
+- La auditoría de automatizaciones Wix aplicó cambios de estado: 67 activas se pausaron y verificaron (66 email y una WhatsApp). Las cuatro automatizaciones WhatsApp están inactivas.
+- Nueve automatizaciones de email siguen activas por restricciones Wix `readonly` y/o `disableStatusChange`. La allowlist Resend no gobierna los envíos nativos Wix.
+- No se envió email, WhatsApp ni SMS. El móvil sintético `666724634` no se configuró porque la acción nativa WhatsApp no tiene una receta pública soportada para modificar destinatarios por API.
+- Pendiente: revisión humana completa; runtime/E2E aislado de eventos de pago/reembolso; aislamiento de los nueve flujos email restantes; decisión e implementación de una integración WhatsApp oficialmente soportada.
+- No desplegar: el código mantiene los writers fiscales/contables fail-closed y no existe evidencia de validación Wix Runtime del HEAD.
+
+Evidencia: [auditoría de aislamiento de notificaciones](audits/2026-11-11-wix-automation-recipient-isolation.md) y [auditoría P0/P1](audits/2026-11-11-p0-p1-hardening.md).
