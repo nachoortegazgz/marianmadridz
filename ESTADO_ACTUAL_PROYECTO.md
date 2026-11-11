@@ -1,3 +1,13 @@
+## Addendum prioritario — referencia QA y estado Wix live (2026-11-11)
+
+La referencia consultiva vigente es [docs/qa/2026-11-11-qa-master-reference.md](docs/qa/2026-11-11-qa-master-reference.md). Esta revisión live de Wix devuelve el sitio como **Published**, no Draft. Este dato prevalece sobre estados anteriores de este documento. El sitio no se considera QA aislado; no ejecutar E2E que genere reservas, pagos, contactos o comunicaciones hasta disponer de un sitio QA separado o autorización expresa con aislamiento demostrado.
+
+PR #294 está MERGED en main mediante `3aed055c9622da71505f5f9927b35f6516e6b906`. Los estados de PR, CI y Wix descritos en el resto de este documento son históricos cuando no coincidan con la referencia maestra. No interpretar CI offline como validación Wix Runtime.
+
+Última auditoría disponible de Wix Automations: 67 automatizaciones pausadas (66 email y 1 WhatsApp), cuatro WhatsApp inactivas y nueve emails todavía activos por restricciones readonly/disableStatusChange. Este inventario no se ha vuelto a leer tras la consulta actual Published. No enviar mensajes ni activar triggers.
+
+---
+
 # Marian Madrid — Estado actual y guía operativa del proyecto
 
 **Fecha de corte:** 2026-11-11  
