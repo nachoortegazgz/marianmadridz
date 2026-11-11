@@ -188,3 +188,17 @@ Este addendum prevalece sobre el resumen histórico anterior de PR #286 y sobre 
 - El PR permanece draft y sin merge. Siguen pendientes revisión humana, QA runtime/E2E en entorno aislado para pagos/reembolsos y resolución de los nueve flujos email activos. No desplegar: los writers fiscales/contables quedan fail-closed por defecto.
 
 Evidencia: [auditoría de aislamiento de notificaciones](docs/audits/2026-11-11-wix-automation-recipient-isolation.md) y [auditoría P0/P1](docs/audits/2026-11-11-p0-p1-hardening.md).
+
+
+## Cierre de integración PR #286 — 2026-11-11
+
+PR #286 se fusionó en `main` mediante squash el 2026-11-11 a las 15:00:16 UTC. Merge commit: `0d8f6efc581bc6a3d892702ba1c32af73e829888`. Esta actualización prevalece sobre los addenda previos que describían el PR como draft/abierto.
+
+- CI del HEAD previo al merge: 57 suites / 548 tests / 0 fallos; contratos SDK Wix, Order Transactions, Bookings Reader V2, ESLint y Gitleaks SUCCESS.
+- El merge no es despliegue. No se ha publicado código Wix ni se han mutado CMS, caja, ledgers, pedidos o pagos.
+- Writers fiscales y contables permanecen fail-closed por defecto; revisar impacto operativo antes de cualquier publicación.
+- 67 automatizaciones Wix se pausaron y verificaron (66 email y una WhatsApp); cuatro WhatsApp están inactivas. Nueve automatizaciones email siguen activas por restricciones Wix readonly/disableStatusChange.
+- No se ha enviado ningún mensaje. El móvil sintético 666724634 no se ha configurado.
+- Pendiente antes de despliegue: runtime/E2E aislado para eventos de pago/reembolso, resolución de los nueve flujos nativos de email y ruta WhatsApp oficialmente soportada.
+
+Evidencia: [PR #286](https://github.com/nachoortegazgz/marianmadridz/pull/286), [merge commit](https://github.com/nachoortegazgz/marianmadridz/commit/0d8f6efc581bc6a3d892702ba1c32af73e829888), [auditoría de automatizaciones](docs/audits/2026-11-11-wix-automation-recipient-isolation.md).
