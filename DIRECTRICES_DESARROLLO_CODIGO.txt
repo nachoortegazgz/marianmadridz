@@ -1,6 +1,6 @@
 ## Addendum operativo — 2026-11-11
 
-Las directrices de arquitectura y desarrollo permanecen vigentes. Para estado del sitio y límites de QA, aplicar [la referencia maestra QA](docs/qa/2026-11-11-qa-master-reference.md): Wix informa actualmente **Published**; el aislamiento de Automations no está completo ni revalidado después de esa lectura. Hasta disponer de un sitio QA independiente, limitar pruebas de negocio a mocks offline y lecturas sin efectos externos. Nunca usar el correo backend allowlist como garantía de aislamiento de Wix Automations nativas.
+Las directrices de arquitectura y desarrollo permanecen vigentes. Para estado del sitio y límites de QA, aplicar [la referencia maestra QA](docs/qa/2026-11-11-qa-master-reference.md): Wix informa actualmente **Published**. La reauditoría live confirma 149 automatizaciones: 27 activas, 122 inactivas; nueve flujos email activos (10 acciones: ocho dirigidas al contacto del trigger y dos al propietario); cuatro flujos WhatsApp y ocho SMS inactivos. El email nativo no está aislado. Hasta disponer de un sitio QA independiente, limitar pruebas de negocio a mocks offline y lecturas sin efectos externos. Nunca usar el correo backend allowlist como garantía de aislamiento de Wix Automations nativas.
 
 ---
 

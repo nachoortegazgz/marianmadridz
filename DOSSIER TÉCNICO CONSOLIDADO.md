@@ -1,4 +1,4 @@
-> **Aviso de vigencia — 2026-11-11:** Este dossier describe arquitectura, contratos y decisiones; no es un estado live autónomo. Para el estado actual de Wix, QA, comunicaciones, pagos simulados y límites de ejecución, prevalece [la referencia maestra QA](docs/qa/2026-11-11-qa-master-reference.md). La consulta Wix actual devuelve **Published**. No asumir que el sitio está aislado ni usar este dossier para autorizar pruebas E2E. Cualquier baseline o afirmación de implementación de capítulos históricos debe contrastarse con `main`, la auditoría correspondiente y pruebas ejecutadas. La arquitectura de Capa 3 es diseño, no implantación.
+> **Aviso de vigencia — 2026-11-11:** Este dossier describe arquitectura, contratos y decisiones; no es un estado live autónomo. Para el estado actual de Wix, QA, comunicaciones, pagos simulados y límites de ejecución, prevalece [la referencia maestra QA](docs/qa/2026-11-11-qa-master-reference.md). La consulta Wix actual devuelve **Published**. No asumir que el sitio está aislado ni usar este dossier para autorizar pruebas E2E. La reauditoría live confirma 149 automatizaciones no archivadas (27 activas, 122 inactivas), nueve flujos email activos con diez acciones y ocho rutas al contacto que dispara el trigger; cuatro flujos WhatsApp y ocho SMS están inactivos. No ejecutar triggers de email en el sitio Published. Cualquier baseline o afirmación de implementación de capítulos históricos debe contrastarse con `main`, la auditoría correspondiente y pruebas ejecutadas. La arquitectura de Capa 3 es diseño, no implantación.
 
 ---
 
@@ -526,7 +526,7 @@ Las colecciones `WIX_APP` son de **estricta lectura**. Prohibido ejecutar `wixDa
 
 | Integración | Patrón | Notas |
 | --- | --- | --- |
-| Resend | Helper de envío en `fiscalDocuments.web.js` | Dirección email de gestoría habilitada para pruebas durante periodo de desarrollo del sitio web: nachoortegazgz@gmail.com. Despacho a gestoría bloqueado por `ACCOUNTANT_SEND_ENABLED=false`; no existe el pipeline de exports Capa 3. Transporte de exports pendiente de ADR |
+| Resend | Helper de envío en `fiscalDocuments.web.js` | Dirección email de gestoría habilitada para pruebas durante periodo de desarrollo del sitio web: el buzón de pruebas controlado por el propietario (dato no versionado). Despacho a gestoría bloqueado por `ACCOUNTANT_SEND_ENABLED=false`; no existe el pipeline de exports Capa 3. Transporte de exports pendiente de ADR |
 | OpenAI API | `fetch()` backend con secreto en Wix Secrets | Timeout `AbortController` ≤ 9 s; respuesta fallback si JSON malformado |
 | Wix Payments | Proveedor de pagos nativo de Wix; gestiona pagos, payouts, reembolsos y contracargos desde su panel. | Métodos disponibles según país y configuración de la cuenta; confirmar en el panel del sitio. |
 | IONOS | DNS/correo corporativo (infraestructura externa) | No forma parte de la lógica transaccional |
