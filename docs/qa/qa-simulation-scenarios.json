@@ -435,6 +435,56 @@
         "AEAT submission and verification QR remain disabled"
       ],
       "limitation": "This isolated helper is not connected to registerManualTransaction or production CMS. It does not create a legal invoice, X.509 signature or AEAT-valid hash."
+    },
+    {
+      "scenarioId": "QA-PSP-OUTCOME-MATRIX-001",
+      "name": "Matriz determinista de resultados PSP y fallo de preflight del ledger",
+      "status": "MOCK_COVERED",
+      "testFiles": [
+        "src/backend/tests/events.native-booking-sync.test.mjs"
+      ],
+      "traceId": "trace-qa-psp-outcome-matrix-001",
+      "fixture": {
+        "provider": "WIX_PAYMENTS",
+        "outcomes": [
+          "PENDING",
+          "NOT_PAID",
+          "FAILED",
+          "CANCELED",
+          "PARTIALLY_PAID"
+        ],
+        "syntheticCmsReadFailure": true,
+        "paymentExecution": false
+      },
+      "assertions": [
+        "pending and failed provider outcomes never append a sale movement",
+        "pending and failed outcomes never mark CitasF2 as PAID",
+        "a failed strong read of MovimientosCaja propagates and does not masquerade as an empty ledger",
+        "failed webhook claim remains retryable",
+        "no payment provider call or CMS runtime write"
+      ]
+    },
+    {
+      "scenarioId": "QA-EXTERNAL-AGENT-CONTRACT-001",
+      "name": "Contrato del agente externo no configurado",
+      "status": "MOCK_COVERED",
+      "testFiles": [
+        "src/backend/tests/externalAgentContracts.test.mjs"
+      ],
+      "traceId": "trace-qa-agent-contract-001",
+      "fixture": {
+        "provider": "AI_AGENT",
+        "providerConfigured": false,
+        "networkExecution": false,
+        "syntheticOnly": true
+      },
+      "assertions": [
+        "agent returns AI_PROVIDER_NOT_CONFIGURED",
+        "no fabricated provider output is returned",
+        "traceId is preserved when valid",
+        "no external transport or secret lookup is invoked"
+      ],
+      "limitation": "The current repository has no configured external AI provider adapter. This test verifies the fail-closed contract; it does not simulate a real provider response or an agent automation."
     }
   ]
 }
