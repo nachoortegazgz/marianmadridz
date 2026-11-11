@@ -73,3 +73,41 @@ The dedicated `DUAL_RESCHEDULE` reconciler remains unimplemented. The existing c
 - No emails, WhatsApp messages, Power Automate flows, or SharePoint uploads were sent.
 - No secrets or production data were read for this report.
 - This is a repository audit and design gate, not runtime QA or legal/fiscal certification.
+
+
+## Hito — Alineación ZONA STAFF / ZONA MARIAN / Wix Bookings (2026-11-11)
+
+### Resultado integrado en Git
+
+- PR #277 fusionada mediante squash: `a24e7740d31bad8c622664efc3781018284b11f4`.
+- Se separan los identificadores nativos `workingHoursScheduleIds` y `eventsScheduleId`; el fallback de `bookingCore` usa explícitamente el calendario de eventos y mantiene la prioridad del `scheduleId` recibido en el slot.
+- El contrato del widget ZONA STAFF usa `enableHoursCalculation` en vez de `enableScheduleQuery`.
+- Pruebas congelan la separación entre autoservicio laboral de ZONA STAFF y supervisión/caja/fiscalidad de ZONA MARIAN.
+- CI sobre el HEAD final de PR: 53 suites / 526 tests / 0 fallos; contratos SDK Wix y ESLint correctos.
+- Informe de detalle: `docs/qa/2026-11-11-staff-zones-bookings-alignment.md`.
+
+### Estado de cierre
+
+| Entregable | Estado |
+|---|---|
+| Cambios de código en Git | Completado |
+| Integración en `main` | Completado |
+| Suite offline / SDK / lint | Completado |
+| Wix Local Editor | Pendiente |
+| Wix Preview y E2E runtime | Pendiente |
+| Publicación Velo en Wix | Pendiente |
+| Verificación posterior en producción | Pendiente |
+
+### Bloqueo de publicación verificado
+
+El entorno de ejecución disponible tiene Node.js 22.16.0, no tiene Wix CLI instalado ni checkout local del repositorio. La documentación oficial de Wix para Git Integration & Wix CLI for Sites exige Node.js 24.22.1 o superior y establece el flujo Local Editor → preview → `wix publish`. El sitio está identificado como Wix Editor con Velo habilitado; no se debe sustituir ese flujo por REST Publish Site ni por el despliegue de Wix Headless.
+
+Antes de publicar:
+1. Disponer de entorno local o cloud IDE con Node.js >=24.22.1, Git y Wix CLI for Sites autenticado.
+2. Confirmar en el Editor que el sitio está conectado al repositorio correcto de Wix Git Integration y que el checkout corresponde al código real del sitio. No asumir que el repositorio de aplicación actual es el repo Wix conectado.
+3. Revisar/reconciliar `wix.lock` desde el repo real del sitio y con la versión de Node soportada; no actualizar dependencias por rutina ni introducir cambios de paquetes sin ADR y pruebas.
+4. Ejecutar Local Editor, Wix preview y E2E aislado de las dos zonas; no crear reservas, fichajes, pagos ni movimientos reales.
+5. Publicar desde `origin/main` con `wix publish` solo si las validaciones pasan y existe reversión reproducible.
+6. Verificar las páginas y contratos publicados tras el despliegue.
+
+**Conclusión del hito:** completado en repositorio e integración continua; no completado en producción. No se ha modificado el sitio Wix ni sus datos operativos.
