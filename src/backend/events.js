@@ -1844,7 +1844,7 @@ export async function wixEcom_onOrderCreated(eventPayload) {
 }
 
 // ============================================================================
-// INTERNAL PROCESSOR: PAID ORDER
+// WEBHOOK: ORDER PAYMENT STATUS UPDATED
 // ============================================================================
 
 export async function wixEcom_onOrderPaymentStatusUpdated(eventPayload) {
