@@ -28,6 +28,22 @@ Definir el contrato seguro para convertir `CajaActual` en una proyección operat
 | `src/pages/ZONA MARIAN.gn7mx.js` | El acceso a ZONA MARIAN exige `isMarianManager === true`. | No se debe rebajar este control. La operativa autorizada de caja debe integrarse en ZONA STAFF o una superficie separada con permisos mínimos. |
 | `src/backend/data.js` | `CajaActual_beforeUpdate` no impone transiciones ni responsables; `HistoricoCierresZ_beforeUpdate` es append-only salvo recuperación de firma/verificación. | Las garantías deben residir en WebMethods/backend y en los contratos de persistencia; los hooks actuales no son una barrera de autorización suficiente. |
 
+### 2.1 Esquema CMS live — consulta de solo lectura (2026-11-11)
+
+La API oficial de Data Collections devuelve estos esquemas y permisos efectivos:
+
+| Colección | Revisión | Permisos efectivos | Campos relevantes |
+|---|---:|---|---|
+| `CajaActual` | 48 | ADMIN en read/insert/update/remove | Ya existen `openedBy`, `closedBy`, `openedAt`, `closedAt`, `openingAmount`, `expectedCash`, `countedCash`, `difference`, `differenceReason`, `staffResourceId`, `traceId`. No es necesario añadir estos campos para la primera versión de apertura/cierre. |
+| `MovimientosCaja` | 76 | ADMIN en read/insert/update/remove | Campos fiscales obligatorios incluyen `hash`, `amount`, `numSerieFactura`, `sequenceNumber`, `transactionId`, `previousRecordHash`, `recordTimestamp`, `schemaVersion`, `traceId`, `movementType`, `totalAmount`, `paymentMethod`, `channelType`, `operationDescription`, `staffResourceId`, `tipoFactura`, `fechaExpedicionFactura`, `tipoImpositivo`, `fiscalPeriod`. |
+| `HistoricoCierresZ` | 36 | ADMIN en read/insert/update/remove | Campos obligatorios incluyen `closeDate`, `fiscalPeriod`, `totalTaxAmount`, `totalTaxBase`, `totalOnline`, `totalBizum`, `totalCard`, `totalCash`, `closedBy`, `recordDomain`, `operationDate`, `traceId`. No existen campos específicos de arqueo físico en esta colección. |
+| `ControlOperativo` | 27 | ADMIN en read/insert/update/remove | Incluye `controlType`, `dedupeKey`, `traceId`, `status`, `version`, `payload`, `operationDate` y metadatos de reintento/rate limit. |
+
+**Hallazgo de contrato P1 — Z:** el objeto `zRecord` construido en `_registerZClosing()` no incluye al menos los campos CMS obligatorios `closeDate`, `totalTaxAmount`, `totalTaxBase`, `closedBy` y `recordDomain`; usa `netTaxAmount` y `netTaxableAmount` en lugar de los dos nombres requeridos. El proyector `eventLog.js::_proyectarCierreZ()` tampoco incluye todos los campos obligatorios de la colección. La inspección estática confirma la discrepancia; el resultado real de inserción en runtime Wix no se ha ejecutado en esta fase. No declarar el cierre Z operativo hasta reconciliar ambos contratos con el esquema live y probar el insert.
+
+La consulta live confirmó una fila en `CajaActual` con `cashRegisterStatus=SIMULACION`, `openingAmount=300`, `cashAmount=300`, `expectedCash=300`, `countedCash=0`, y ninguna fila en `HistoricoCierresZ`. La fila simulada permanece intacta.
+
+
 ## 3. Identidades autorizadas
 
 La autorización de sesión de caja queda limitada a:
@@ -73,7 +89,7 @@ Los movimientos ONLINE no deben abrir ni incrementar la caja física. Se excluye
 
 ### 6.1 Cierre fiscal frente a cierre físico
 
-El actual `HistoricoCierresZ` es un cierre fiscal de movimientos. El recuento físico del cajón (efectivo esperado, contado y diferencia) no está representado en el registro Z actual. Hay dos alternativas:
+El actual `HistoricoCierresZ` es un cierre fiscal de movimientos y no contiene el recuento físico del cajón. `CajaActual` sí dispone ya de `openingAmount`, `expectedCash`, `countedCash`, `difference` y `differenceReason`; esos campos son una proyección mutable, no evidencia histórica. Hay dos alternativas para persistir la evidencia del cierre físico:
 
 - **Preferida para el diseño actual:** añadir campos de arqueo y responsable solo a futuros registros Z, manteniendo inmutables los registros existentes y definiendo con precisión qué campos entran en `closingHash` y en la firma.
 - Separar sesión/cierre físico en un registro append-only específico y mantener `HistoricoCierresZ` como cierre fiscal. Esta alternativa requiere justificar una nueva colección y su relación idempotente con el Z diario.
@@ -92,7 +108,7 @@ No deben registrarse como venta ni como ajuste genérico por conveniencia.
 
 ### 6.3 Saldo de arranque y registros existentes
 
-La fila live de `CajaActual` se encuentra en `SIMULACION` y contiene 300 EUR. Está bloqueada por código y no se considera saldo operativo. No se cambia a `ABIERTA` ni `CERRADA`, no se borra y no se reescribe hasta definir una retirada/aislamiento trazable. Tampoco se reconstruye un saldo inicial a partir de los movimientos fiscales sin conciliación.
+La fila live de `CajaActual` se encuentra en `SIMULACION` y contiene 300 EUR. Está bloqueada por código y no se considera saldo operativo. No se cambia a `ABIERTA` ni `CERRADA`, no se borra y no se reescribe hasta definir una retirada/aislamiento trazable. Tampoco se reconstruye un saldo inicial a partir de los movimientos fiscales sin conciliación. El esquema ya contiene los campos de efectivo inicial/esperado/contado/diferencia; no se añaden campos duplicados a `CajaActual`.
 
 ### 6.4 Terminal e IP
 
@@ -123,9 +139,12 @@ La fila live de `CajaActual` se encuentra en `SIMULACION` y contiene 300 EUR. Es
 - [x] No se han modificado datos, permisos CMS ni ledgers.
 
 ### Hito 1 — Contrato de sesión y esquema (siguiente gate)
-- [ ] Inspeccionar esquema CMS live y todos los consumidores del Z/hash.
+- [x] Consultar esquemas live de `CajaActual`, `MovimientosCaja`, `HistoricoCierresZ` y `ControlOperativo` (revisiones 48/76/36/27); permisos ADMIN en las cuatro colecciones.
+- [x] Confirmar que `CajaActual` ya contiene campos de apertura/cierre y arqueo físico.
+- [x] Detectar discrepancia entre campos CMS obligatorios de `HistoricoCierresZ` y los dos writers actuales; runtime insert pendiente.
+- [ ] Completar el inventario de todos los consumidores del cierre/hash y probar ambos writers en entorno aislado.
 - [ ] Decidir si cierre físico se incorpora a `HistoricoCierresZ` o se separa.
-- [ ] Definir campos canónicos: responsable, fecha/hora, efectivo inicial, esperado, contado, diferencia, motivo, terminal e idempotency key.
+- [ ] Definir contrato de responsable, fecha/hora, terminal e idempotency key; reutilizar campos físicos existentes de `CajaActual`.
 - [ ] Definir tratamiento de días sin movimientos y precedencia entre cierre manual y cron.
 - [ ] Definir tratamiento de `SIMULACION` mediante aislamiento/retirada trazable.
 - [ ] Aprobar el contrato de `APORTACION`/`RETIRO` y su tratamiento fiscal/contable.
@@ -166,7 +185,8 @@ No habilitar la caja ni desplegar mientras:
 - **Verificado:** inspección estática de los archivos citados en `main` y consulta read-only previa del CMS live.
 - **Documentado:** autorización explícita de Andrea y Alba para abrir/cerrar.
 - **Inferido:** no se infiere autorización para cobros, devoluciones, pagos, ajustes ni acceso fiscal.
-- **Pendiente:** ejecución de Vitest/CI para cualquier cambio de código (este ADR no cambia código), esquema live completo, contrato de sesión, runtime QA y despliegue.
+- **Verificado:** consulta read-only del esquema CMS live (revisiones 48/76/36/27) y de la fila actual de `CajaActual` / ausencia de filas Z; discrepancia de campos obligatorios Z detectada por comparación estática.
+- **Pendiente:** CI de este PR documental; prueba runtime del insert Z; inventario completo de consumidores/hash; contrato de sesión, decisión cierre físico/fiscal, retirada de `SIMULACION`, runtime QA y despliegue.
 - **Cambios en CMS:** ninguno.
 - **Cambios en Wix publicado:** ninguno.
 - **Ledgers históricos:** ninguno alterado.
