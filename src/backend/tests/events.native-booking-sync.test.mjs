@@ -329,7 +329,7 @@ test("EVENT-BOOKING-04 payment webhook updates payment without confirming a pend
     }),
   ]);
 
-  const orderId = "order-paid-pending-004";
+  const orderId = "44444444-4444-4444-8444-444444444444";
   activeOrder = {
     _id: orderId,
     paymentStatus: "PAID",
@@ -360,7 +360,7 @@ test("EVENT-BOOKING-04 payment webhook updates payment without confirming a pend
     assert.equal(row.bookingStatus, "PENDING");
     assert.equal(row.paymentStatus, "PAID");
     assert.equal(row.meta.paymentStatus, "PAID");
-    assert.equal(row.meta.orderId, "order-paid-pending-004");
+    assert.equal(row.meta.orderId, orderId);
     assert.equal(row.pairToken, PAIR_TOKEN);
   }
   assert.equal(f1.bookingType, "DUAL_F1");
