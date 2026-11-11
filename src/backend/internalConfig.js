@@ -165,6 +165,9 @@ export const SDK_CONFIG = Object.freeze({
     FROM_ADDRESS: "noreply@marianmadrid.com",
     // Fail-closed: activar solo tras persistencia inmutable e idempotencia del despacho.
     ACCOUNTANT_SEND_ENABLED: false,
+    // QA recipient allowlist: exact business domain plus the named internal Gmail mailbox.
+    ALLOWED_RECIPIENT_DOMAINS: Object.freeze(["marianmadrid.es"]),
+    ALLOWED_RECIPIENT_EMAILS: Object.freeze(["nachoortegazgz@gmail.com"]),
   }),
 });
 
