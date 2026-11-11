@@ -83,3 +83,46 @@ Este registro centraliza las decisiones explícitas del propietario y las decisi
 
 ---
 *Actualizado 2026-11-10. Toda decisión futura que altere importes, umbrales, tratamiento de cancelaciones, autoridad de datos o contratos debe añadirse aquí y al ADR afectado.*
+
+
+## 5. Decisiones y aclaraciones posteriores — 2026-11-11
+
+Las siguientes decisiones/contratos se incorporan después de la consolidación inicial. Se distingue la instrucción de negocio de la implementación y de su validación.
+
+| ID | Decisión / contrato | Autoridad | Estado |
+|---|---|---|---|
+| BUS-009 | CajaActual refleja únicamente flujos que atraviesan físicamente el cajón: cobros en efectivo en el local, entradas/salidas de efectivo, pagos locales a proveedores en efectivo, retiradas, devoluciones en efectivo y ajustes justificados. | Propietario, 2026-11-11 | Decisión de negocio aprobada |
+| TEC-024 | Separar tres conceptos: MovimientosCaja conserva su contrato de registro fiscal de operaciones; CajaActual es una proyección mutable del efectivo físico; LibroAsientosContablesDetalle consolida los hechos económicos. Una operación en efectivo puede generar registros en las capas correspondientes sin que estas se confundan. | Arquitectura / aclaración del propietario | Adoptada como modelo objetivo |
+| TEC-025 | Tarjeta, Bizum, online, transferencias y pagos desde banco no afectan a CajaActual, aunque deban quedar reflejados en los registros fiscales/contables que correspondan. | Propietario, 2026-11-11 | Aprobada |
+| TEC-026 | La proyección física no debe deducirse solo de paymentMethod si el contrato no expresa también el canal y el efecto físico. La dirección IN/OUT/NONE debe derivarse en backend de tipos/contexto confiables; el frontend no puede decidirla. | Recomendación técnica | Pendiente de contrato completo y esquema |
+| TEC-027 | ServiciosCatalogo es la SSOT declarada para la configuración de servicios sincronizada con Wix Bookings. name está vinculado a Complementos catálogo para los complementos del servicio; staffMembers define el personal elegible para el servicio. La disponibilidad horaria real continúa dependiendo de horarios, bloqueos y reservas nativas de Bookings. | Propietario, 2026-11-11 | Requisito de negocio declarado; implementación y sincronización pendientes de auditoría |
+| TEC-028 | La proyección de una reserva nativa debe ser idempotente y preservarse el estado más avanzado frente a eventos tardíos. | Implementación PR #280/#281 | Integrado en esas PR; CI offline verde; runtime Wix pendiente |
+
+### Caja física — alcance exacto de la implementación actual
+
+La PR #284 (fix(caja): project only explicit physical cash movements) implementa una primera restricción: _updateCajaActual() solo proyecta paymentMethod=EFECTIVO y channelType=PRESENCIAL. Los movimientos no físicos no alteran saldo, contadores ni appliedMovementIds; netAmount deriva de cashAmount; registerManualTransaction() valida y persiste el channelType canónico cuando el consumidor lo proporciona.
+
+**Límite importante:** esta PR no implementa todavía el clasificador completo IN/OUT/NONE. Los tipos APORTACION, RETIRO y PAGO_PROVEEDOR no forman parte del enum actual; AJUSTE no determina por sí solo la dirección. No añadirlos sin contrato fiscal/contable, validación, esquema CMS y pruebas. Tampoco se automatizan asientos PGC sin mapeos aprobados.
+
+La PR #284 está abierta como draft, sin merge ni despliegue Wix. Su CI final documentada (run 42973918957, commit 9523abd151566cc84665992d4cb581168be1d3ae) pasó 53 suites y 530 tests, contratos Wix SDK, Bookings Reader V2 y ESLint. No se ejecutó Wix Local Editor ni E2E visual publicado.
+
+### Reservas — incidente de proyección
+
+El 2026-11-11 se creó una única reserva sintética nativa autorizada (213a10f1-9d4e-44ed-b682-a459bd7ed88d) para el 2026-11-12 a las 09:00 Europe/Madrid, servicio Corte Clásico y recurso Alba Staff. Wix devolvió estado CONFIRMED, pago OFFLINE, sin pedido/cargo. Dos lecturas posteriores no encontraron proyección correspondiente en CitasF2 ni marcador WEBHOOK_EVENT en ControlOperativo.
+
+La causa permanece **no determinada**: posible divergencia entre código publicado y repositorio, evento no entregado o fallo del handler/persistencia. No hay acceso verificable a logs runtime ni al SHA exacto publicado. No cancelar, reparar, hacer backfill ni crear otra reserva de prueba hasta aislar el fallo. Se preserva la anotación QA a8a8bde9-44d6-4fea-b04c-3bf89c1ff84c y la reserva sintética.
+
+### Estado de ServiciosCatalogo
+
+El propietario declara que ServiciosCatalogo gobierna la configuración de servicios en Wix Bookings, incluyendo complementos relacionados con Complementos catálogo y personal elegible mediante staffMembers. A fecha de esta actualización esto es un **contrato declarado**, no una sincronización técnicamente verificada. Antes de modificarlo deben revisarse esquemas live, IDs, todos los consumidores/escritores, contratos oficiales Bookings, triggers, estrategia de reconciliación e idempotencia. Retirar un staff de un servicio no implica eliminar su perfil, horario general ni reservas históricas.
+
+### Otras verificaciones y límites recientes
+
+- DatosFiscales: permisos efectivos configurados como PRIVILEGED en lectura/escritura/borrado y verificados mediante read-after-write. Persiste discrepancia entre esquema CMS (active) y validadores/contratos del código; no corregir por inferencia.
+- Caja singleton: estado SIMULACION, apertura marcada en 300 EUR atribuida a Marian; no es una apertura real ni debe tratarse como saldo físico conciliado. Los registros QA y los ledgers históricos se preservan.
+- Wix Bookings: staff Marian, Andrea y Alba contrastados con sus perfiles, recursos y schedules; esto no acredita disponibilidad en cualquier franja.
+- Capa 3: sigue siendo arquitectura objetivo; no se ha demostrado tenant M365 auditado, flujos Power Automate activos ni E2E hacia SharePoint.
+- El contrato AEAT/hash interno no certifica Veri*Factu. La remisión sigue bloqueada hasta completar el SIF, series, facturación, XML/XSD, transporte, respuestas y revisión legal.
+
+---
+*Esta sección registra decisiones y estado a 2026-11-11. No equivale a autorización de despliegue ni a validación en producción.*
