@@ -55,7 +55,7 @@ Se añadió Gitleaks Action v3.0.0 y actions/checkout v6 están fijadas a SHA de
 - No hay checkout local ni Wix CLI en este entorno; la validación se ejecuta mediante GitHub Actions.
 - El primer intento con la regla Wix reactivada falló al cargar el plugin (run `42985830795`); la regla se revirtió a `off` para restaurar la capacidad de lint.
 - La suite offline de ese intento registró 522 pass / 10 fail en dos suites porque el harness heredado importaba el nuevo flag productivo `false`; el harness se corrigió para inyectar `true` solo en pruebas, mientras el contrato estático comprueba el default `false`.
-- Gitleaks full-history: run `42986042556` completado con éxito.
+- Gitleaks full-history con acciones fijadas a SHA: run `42986393386` completado con éxito.
 - Backend offline quality: run `42986042849` pendiente al redactar esta actualización; registrar su resultado final antes de cerrar la PR.
 - No se ha accedido a Wix Runtime, no se han mutado CMS/ledgers y no se ha publicado el sitio.
 
