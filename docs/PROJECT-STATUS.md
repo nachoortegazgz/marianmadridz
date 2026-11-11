@@ -2,7 +2,7 @@
 
 Consultar primero [Referencia maestra QA y estado de aislamiento](qa/2026-11-11-qa-master-reference.md). La consulta Wix live actual devuelve **Published**; no asumir que el sitio es Draft ni que está aislado. La reauditoría live del 2026-11-11 confirma 149 automatizaciones no archivadas: 27 activas y 122 inactivas; nueve automatizaciones email siguen activas con diez acciones (ocho dirigidas al contacto del trigger y dos al propietario); cuatro flujos WhatsApp y ocho SMS están inactivos. No ejecutar triggers email en este sitio Published.
 
-PR #294 está fusionada en main mediante `3aed055c9622da71505f5f9927b35f6516e6b906`. Las tablas y baselines anteriores de este documento son históricos y no deben usarse sin reconciliación. No ejecutar reservas/pagos/comunicaciones E2E en el sitio Published.
+PR #294 está fusionada en main mediante `3aed055c9622da71505f5f9927b35f6516e6b906`. PR #295 está fusionada en main mediante `b799412a1722b2dfacd1b21a198ebcb68fc03af2`; PR #296 permanece abierta en Draft con las correcciones de reauditoría posteriores, aún no integradas. Las tablas y baselines anteriores de este documento son históricos y no deben usarse sin reconciliación. No ejecutar reservas/pagos/comunicaciones E2E en el sitio Published.
 
 ---
 
