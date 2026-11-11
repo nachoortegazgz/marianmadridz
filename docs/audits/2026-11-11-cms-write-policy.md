@@ -39,11 +39,24 @@ No CMS data, ledgers, bookings, cash balances, or Wix runtime configuration were
 - CI is required before merge.
 - Wix Runtime validation is still required for deployed permission/hook behavior.
 
-## E2E booking environment status
+## P1 — persisted-type-safe single deletion
 
-The Wix account exposes three sites:
-- `Marian Madrid Peluquería y Estética` (`188bed94-177c-4bc9-a9f0-35080d874f3e`): published, Velo enabled, Wix Bookings installed. This is the business site and is not an isolated QA environment.
-- `My Site` (`b1d218ce-2eae-436f-b8c7-ab8220b47977`): draft, Studio Two, Velo disabled, no Wix Bookings.
-- `ortega nacho cv web` (`e54e4214-efc1-4bc9-bfbf-cede68ccaa1d`): published with Velo, but no Wix Bookings and unrelated to the Marian Madrid test data.
+`removeById()` now performs a strong read of the target and compares its persisted `controlType` with the caller's `expectedControlType`. It then delegates to a single-item `bulkRemove` with a server-side condition requiring the same `controlType`. The strong read is an explicit fail-closed validation; the conditional delete is the race barrier. If the SDK result does not confirm removal of the exact ID, the function throws rather than reporting success.
 
-No available site combines isolation, Velo, and Wix Bookings. Therefore no booking create/cancel/reschedule operation was issued against the published business site's CMS. This is an explicit environment blocker, not a passed E2E test.
+Offline tests cover matching type, mismatched type, missing target, and a type change injected between the strong read and conditional delete. Wix documents the optional condition on Bulk Remove Data Items; runtime behavior remains to be confirmed in the site's Wix environment.
+
+## P0 — fenced Wix event claims
+
+The eight Bookings/eCommerce Velo handlers now enter a common claim boundary before executing domain logic. The claim ID is deterministic SHA-256 over the exact `metadata.id` and event type. A unique insert acquires the claim; a duplicate delivery sees `BUSY` or `COMPLETED`. Claims use a 10-minute lease and owner-token/version compare-and-swap transitions. Failed handlers release to `FAILED_RETRYABLE`; an interrupted handler can be recovered after lease expiry. A stale owner cannot complete or release a claim after a newer owner has advanced its version.
+
+`WEBHOOK_EVENT` remains append-only and is written only after the existing domain handler succeeds. Its new marker identity is event-type-scoped and hashed; reads retain a legacy-key fallback. The claim prevents concurrent execution of the same event, while domain writers still need their own idempotency keys for safe recovery after a process crash between a side effect and claim completion. This is not a claim that arbitrary external side effects become exactly-once.
+
+## E2E booking environment status — refreshed 2026-11-11
+
+The Wix site `Marian Madrid Peluquería y Estética` (`188bed94-177c-4bc9-a9f0-35080d874f3e`) is verified as **Draft**, with **Velo enabled** and **Wix Bookings installed**. Draft mode does not suppress Wix Automations.
+
+Read-only inspection found 149 automations, 27 ACTIVE, including two directly triggered by Bookings:
+- `0c84478b-1061-4117-a91c-2f83cbfe184c` — “Notify me when someone books one of my services”.
+- `bbd81479-88d1-490b-9742-8cc3552bbfba` — “Notify me when I need to review a booking request”.
+
+No booking, CMS, payment, cash, fiscal, accounting, email, WhatsApp or Wix runtime configuration mutation was performed. Writer E2E remains blocked until outbound side effects are explicitly neutralized and the QA execution path is controlled.
