@@ -22,9 +22,9 @@ Evitar que una reserva creada por Wix Bookings quede fuera de la proyección ope
 2. El handler valida `metadata.id`, GUID de reserva y estado nativo permitido (`CREATED`, `PENDING` o `CONFIRMED`).
 3. Persiste la proyección inicial como `PENDING` (o `CONFIRMED` si Wix ya entrega ese estado).
 4. La marca `WEBHOOK_EVENT` se escribe solo después de persistir correctamente la proyección. Si ya existe la marca pero falta la fila, el handler intenta reparar la proyección.
-5. `_syncNativeBookingToCitas` recibe un estado objetivo controlado. Una entrega tardía de `BOOKING_CREATED` no degrada una fila `CONFIRMED`; las filas existentes de la saga dual conservan su tipo, `pairToken` y metadata.
+5. `_syncNativeBookingToCitas` recibe un estado objetivo controlado. Una entrega tardía de `BOOKING_CREATED` no degrada una fila `CONFIRMED`; tampoco convierte a `CONFIRMED` una fila `PENDING` de la saga dual que gane una carrera entre la lectura inicial y el insert (`insertOnly`). Las filas duales conservan su tipo, `pairToken` y metadata.
 6. El evento `BOOKING_CONFIRMED` mantiene la transición a `CONFIRMED` y su comportamiento previo.
-7. Se añaden pruebas de creación, orden creación→confirmación, entrega tardía sobre una fila dual y repetición idempotente; además se protege el export del handler mediante test contractual.
+7. Se añaden pruebas de creación, orden creación→confirmación, entrega tardía sobre una fila dual, carrera de inserción `insertOnly` y repetición idempotente; además se protege el export del handler mediante test contractual.
 
 ## Archivos modificados
 
