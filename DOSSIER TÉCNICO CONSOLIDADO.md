@@ -1213,3 +1213,40 @@ Referencia: [auditoría de implantación Capa 3](docs/audits/2026-11-09-capa3-im
 ## 📌 Nota sobre el repositorio
 
 Se trabaja sobre **`nachoortegazgz/marianmadridz`**. Los dossiers originales citaban el repositorio con sufijo (`marianmadridXXXXX`) y describían módulos con nombres que el propio dossier reconoce como “solución greenfield no auditada” (`bookingsEngine.web.js`, `aiConsultant.web.js`, `giftCards.web.js`, etc.). Esa lista de nombres **no es prueba** de que existan en el repositorio. La verificación de cada fila debe hacerse contra el árbol real de `src/` (backend y pages), no contra los nombres de los dossiers.
+
+
+---
+
+## Addendum de estado y decisiones — 2026-11-11
+
+Este addendum actualiza el estado de las áreas que han cambiado desde la revisión histórica del dossier. Para la visión transversal y el plan priorizado, consultar también [ESTADO_ACTUAL_PROYECTO.md](ESTADO_ACTUAL_PROYECTO.md).
+
+### Reservas nativas y proyección CitasF2
+
+PR #280 incorpora el handler Velo wixBookingsV2_onBookingCreated para proyectar la creación nativa como PENDING o CONFIRMED según el estado recibido. PR #281 protege una carrera: un evento BOOKING_CREATED tardío no debe degradar una proyección ya confirmada. CI offline final documentada: 53 suites / 530 tests, 0 fallos.
+
+La prueba sintética autorizada del 2026-11-11 (booking 213a10f1-9d4e-44ed-b682-a459bd7ed88d) quedó CONFIRMED en Wix, pero no produjo fila CitasF2 ni marcador WEBHOOK_EVENT en dos lecturas posteriores. Causa no determinada; no se ha verificado el SHA de Velo publicado ni hay evidencia runtime suficiente. Preservar reserva y anotación QA; no cancelar, hacer backfill ni crear otra reserva de prueba hasta aislar el fallo.
+
+### Caja física: separación de responsabilidades
+
+Decisión del propietario, 2026-11-11:
+- CajaActual representa únicamente entradas/salidas reales de efectivo físico del cajón.
+- Tarjeta, Bizum, online, transferencia y pagos bancarios no afectan a CajaActual, aunque deban registrarse en los ledgers fiscales/contables correspondientes.
+- MovimientosCaja conserva su contrato actual de registro fiscal de operaciones; no es sinónimo de saldo físico.
+- LibroAsientosContablesDetalle consolida hechos económicos según reglas aprobadas.
+
+PR #284 aplica parcialmente el criterio: _updateCajaActual() proyecta solo paymentMethod=EFECTIVO y channelType=PRESENCIAL. Los movimientos no físicos no alteran saldo, contadores ni appliedMovementIds. La PR está abierta/draft, sin merge ni despliegue Wix. No implementa aún un clasificador completo IN/OUT/NONE ni los tipos APORTACION, RETIRO, PAGO_PROVEEDOR o la dirección de AJUSTE. No crear enums ni mapeos PGC por inferencia. CI final: run 42973918957, 53 suites / 530 tests, contratos Wix SDK, Bookings Reader V2 y ESLint PASS; no Wix Local Editor ni E2E visual publicado.
+
+La fila live de CajaActual en estado SIMULACION con apertura marcada en 300 EUR es sintética y no constituye una apertura real ni un saldo físico conciliado. No reescribirla ni borrarla; preservar también anotaciones QA y ledgers históricos.
+
+### ServiciosCatalogo como SSOT declarada
+
+El propietario ha definido ServiciosCatalogo como fuente de verdad de la configuración de servicios que debe sincronizarse con Wix Bookings. El campo name se relaciona con Complementos catálogo para los complementos del servicio; staffMembers identifica el personal elegible para ese servicio.
+
+Este contrato es una declaración de negocio pendiente de verificación en esquemas live, registros, código consumidor/escritor, IDs nativos, eventos y mecanismo de sincronización. No implica que la sincronización esté implementada. La elegibilidad de staff no equivale a disponibilidad temporal: Bookings combina horarios, bloqueos/eventos y reservas. Retirar una asignación de servicio no debe borrar el perfil, los horarios generales ni reservas históricas. Toda sincronización futura debe ser idempotente y preservar referencias canónicas.
+
+### Fiscalidad y DatosFiscales
+
+Se verificaron permisos efectivos PRIVILEGED de DatosFiscales mediante lectura posterior a la configuración. Persiste una discrepancia entre el esquema CMS (campo active) y las listas/validaciones de campos del código. No modificar el contrato hasta reconciliar esquema, consumidores y política de dominio.
+
+El contrato puro AEAT/hash no certifica Veri*Factu ni habilita remisión. La activación continúa bloqueada por la definición del SIF, series, factura/IVA, rectificaciones, XML/XSD, transporte, respuestas, pruebas oficiales y revisión legal.
