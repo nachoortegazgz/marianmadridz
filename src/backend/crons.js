@@ -417,6 +417,15 @@ if (kind === "CANCEL_BOOKING") {
  API_TIMEOUT_MS,
  "cron:cancelBookingCompensation"
  );
+ const verifiedResponse = await withTimeout(
+ () => getBookingElevated(bookingId),
+ API_TIMEOUT_MS,
+ "cron:verifyBookingCompensation"
+ );
+ const verifiedBooking = verifiedResponse?.booking || verifiedResponse;
+ if (_safeTrim(verifiedBooking?.status || "").toUpperCase() !== "CANCELED") {
+ throw new Error("NATIVE_CANCELLATION_NOT_CONFIRMED: Wix booking status is not CANCELED");
+ }
  }
 
  const projectionUpdate = await _updateCitaSafe(
