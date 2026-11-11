@@ -410,6 +410,15 @@ async function _compensateCreatedBookings(createdBookings, traceId, pairToken) {
                     2,
                     300
                 );
+                const verifiedResponse = await withTimeout(
+                    () => getBookingForCompensationElevated(String(bookingId)),
+                    API_TIMEOUT_MS,
+                    "verifyBookingCompensation"
+                );
+                const verifiedBooking = verifiedResponse?.booking || verifiedResponse;
+                if (_safeTrim(verifiedBooking?.status || "").toUpperCase() !== "CANCELED") {
+                    throw new Error("NATIVE_CANCELLATION_NOT_CONFIRMED: Wix booking status is not CANCELED");
+                }
             }
 
             // Only mark the CMS projection canceled after Wix confirms the
