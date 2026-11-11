@@ -849,7 +849,7 @@ export const createManagerPackageVersion = webMethod(
       return _packageSnapshotResult(saved, false);
     } catch (err) {
       if (claim && !snapshotInserted && !snapshotInsertUncertain) {
-        await dalRemove(CONTROL_COL, claim._id).catch((cleanupError) => {
+        await dalRemove(CONTROL_COL, claim._id, { expectedControlType: CONTROL_TYPE.IDEMPOTENCY }).catch((cleanupError) => {
           log.error("PACKAGE_OPERATION_CLAIM_CLEANUP_FAILED", {
             traceId,
             message: cleanupError?.message || String(cleanupError),
