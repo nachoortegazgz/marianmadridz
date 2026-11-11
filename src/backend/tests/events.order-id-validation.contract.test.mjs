@@ -47,7 +47,7 @@ test("EVENT-WEBHOOK-CLAIM-01 all eight Wix event exports acquire a metadata.id c
     assert.match(source, /return runWithWebhookEventClaim\([\s\S]*?handler:\s*\(\)\s*=>\s*handler\(eventPayload\)/);
     for (const [name, eventType, handler] of eventHandlers) {
         const start = source.indexOf(`export async function ${name}`);
-        const next = source.indexOf("\\nexport ", start + 10);
+        const next = source.indexOf("\nexport ", start + 10);
         const wrapper = source.slice(start, next < 0 ? source.length : next);
         assert.ok(start >= 0, `${name} must be exported`);
         assert.match(wrapper, new RegExp(`_runClaimedWixEvent\\(\\s*eventPayload,\\s*"${eventType}",\\s*${handler}`));
