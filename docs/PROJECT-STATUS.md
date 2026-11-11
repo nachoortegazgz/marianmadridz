@@ -8,6 +8,16 @@
 
 > Este documento es el índice de estado. No sustituye las decisiones de arquitectura, los contratos de código ni los informes de auditoría. Una capacidad solo se considera operativa cuando existe evidencia del nivel de validación que se indica.
 
+## Addendum de hardening — 2026-11-11
+
+- PR #284 está mergeada en GitHub; la integración no acredita despliegue en Wix. Su cobertura de caja sigue limitada a EFECTIVO + PRESENCIAL.
+- PR #286 está abierta como draft en `audit/p0-p1-hardening`. Protege por defecto los writers fiscales y contables, mantiene las recuperaciones en cola mientras los writers están deshabilitados y añade escaneo Gitleaks.
+- CI offline del head `d0530449cfc6ccd063743ce707b4d18bdee0a89b`: run `42986821012`, 54 suites / 533 tests / 0 fallos. Gitleaks: run `42986820996`, SUCCESS.
+- Tras ese checkpoint se añadieron un contrato estático de imports frontend/backend y telemetría de recuperaciones omitidas. Esas modificaciones posteriores aún requieren CI sobre el nuevo HEAD; el resultado anterior no las cubre.
+- La regla oficial `@wix/cli/no-invalid-backend-import` continúa desactivada por incompatibilidad de carga del plugin. El nuevo contrato cubre únicamente el límite estático de imports frontend y no equivale a la regla oficial.
+- No hay certificación Wix Runtime/Preview/E2E ni evidencia de despliegue del HEAD. No fusionar ni desplegar hasta disponer de QA Wix aislado y autorización explícita.
+
+
 ## 1. Resumen ejecutivo
 
 El repositorio contiene una solución Wix Editor/Velo con reservas Bookings V2, saga dual, checkout Cart V2, proyección de pedidos y ledgers fiscal/laboral. La retirada del inventario custom está integrada y Wix Stores Catalog V3 es la autoridad de stock. ZONA STAFF tiene consultas read-only integradas; writers laborales y caja siguen bloqueados. PR #250 incorpora el contrato puro AEAT v0.1.2 con vectores oficiales, sin conexión a writers ni certificación Veri*Factu. PR #252 retira paneles inactivos de ZONA MARIAN. PR #259 limita Staff a consultas verificables. PR #264 endurece replay del ledger contable. PR #256 implementa snapshots trimestrales inmutables, sin envío a gestoría. Wix Invoices sigue en V1 y su API V2 devolvió 428 en la última prueba documentada. Bookings V2 contiene 94 servicios: 70 tarifas fijas, 24 auxiliares sin precio, siete servicios visibles >100 EUR y ningún depósito configurado.
