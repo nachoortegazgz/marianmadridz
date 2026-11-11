@@ -150,3 +150,35 @@ test('SECWEB-MEMBER-01 manager identity matches canonical Wix contactId and fail
     staff.invalidateStaffCache();
   }
 });
+
+test('STAFF-SDK-04 pagination cap never returns an apparently complete partial staff result', async () => {
+  staff.invalidateStaffCache();
+  let calls = 0;
+  mocks.sdk['bookings::staffMembers'] = {
+    queryStaffMembers: async () => {
+      calls += 1;
+      return {
+        staffMembers: calls === 1 ? [{
+          _id: STAFF_MEMBER_ID,
+          resourceId: RESOURCE_ID,
+          name: 'Ana',
+          resource: {},
+        }] : [],
+        pagingMetadata: {
+          hasNext: true,
+          cursors: { next: 'cursor-' + calls },
+        },
+      };
+    },
+  };
+
+  const byResource = await staff.findStaffByResourceId(RESOURCE_ID);
+  assert.equal(byResource, null);
+  assert.equal(calls, 20);
+
+  staff.invalidateStaffCache();
+  calls = 0;
+  const all = await staff.listStaff();
+  assert.deepEqual(all, []);
+  assert.equal(calls, 20);
+});

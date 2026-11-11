@@ -126,3 +126,13 @@ El propietario declara que ServiciosCatalogo gobierna la configuración de servi
 
 ---
 *Esta sección registra decisiones y estado a 2026-11-11. No equivale a autorización de despliegue ni a validación en producción.*
+
+## 6. Decisión técnica — paginación de Bookings Staff Members (2026-11-11)
+
+| ID | Decisión | Justificación / consecuencia | Estado |
+|---|---|---|---|
+| TEC-030 | Si `queryStaffMembers` conserva `pagingMetadata.cursors.next` al alcanzar el límite defensivo de 20 páginas, la consulta debe fallar con `STAFF_PAGINATION_LIMIT_EXCEEDED`; nunca se devuelve el subconjunto como si fuera completo. Los resolvers mantienen el comportamiento fail-closed y registran el código del error. | El límite de 2.000 perfiles es una protección de coste/tiempo, no una prueba de que existan menos perfiles. Un cursor pendiente demuestra que el resultado está truncado. Se conserva el límite y se hace explícita la truncación. | Implementado en rama; CI pendiente |
+
+**Decisión de alcance:** no se elimina el límite ni se amplía por conjetura. Tampoco se cambia el contrato público (`null`/`[]`) ni la autorización. Los errores de consulta siguen denegando la resolución de identidad; el log interno añade `errorCode` para diferenciar un fallo técnico de un directorio realmente vacío. La prueba sintética verifica que ni `findStaffByResourceId()` ni `listStaff()` devuelven la fila parcial cuando queda un cursor después de la página 20.
+
+**Reversión:** revertir el commit de esta tanda restaura el comportamiento previo sin tocar datos CMS ni configuración Wix.
