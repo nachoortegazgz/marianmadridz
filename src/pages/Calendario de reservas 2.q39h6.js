@@ -90,7 +90,7 @@ import {
 } from "public/mmUtils";
 
 import { createWidgetBridge } from "public/widgetBridge";
-import { processDualBooking } from "backend/citasManager.web.js";
+import { processDualBooking, getBookingMemberProfile } from "backend/citasManager.web.js";
 import wixMembersFrontend from "wix-members-frontend";
 
 let currentServiceId = null;
@@ -1824,6 +1824,14 @@ $w.onReady(() => {
             onWidgetMessage: async (message, reply) => {
                 const type = _getMessageType(message);
                 const payload = _getPayload(message);
+
+                if (type === MESSAGE_TYPES.READY) {
+                    const profileResult = await getBookingMemberProfile().catch(() => null);
+                    if (profileResult?.status === "SUCCESS" && profileResult.data) {
+                        reply("MM_PROFILE", profileResult.data);
+                    }
+                    return;
+                }
 
                 if (type === MESSAGE_TYPES.NAV) {
                     const handled = await handleNavigation(payload);
