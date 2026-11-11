@@ -27,6 +27,7 @@ import {
     SDK_CONFIG,
     MOVEMENT_TYPE,
     PAYMENT_METHOD,
+    CHANNEL_TYPE,
     IVA_RATES,
     CASH_REGISTER_STATUS,
     TIPO_FACTURA,
@@ -523,6 +524,11 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
             return { status: "ERROR", data: null, error: { code: "INVALID_PAYMENT_METHOD", message: "Forma de pago invalida" } };
         }
 
+        const channelType = _safeTrim(payload?.channelType).toUpperCase();
+        if (channelType && !Object.values(CHANNEL_TYPE).includes(channelType)) {
+            return { status: "ERROR", data: null, error: { code: "INVALID_CHANNEL_TYPE", message: "Canal de operacion invalido" } };
+        }
+
         const movementType = _safeTrim(payload?.movementType || payload?.tipoMovimiento || "VENTA").toUpperCase();
         const isRefundMovement = [
             MOVEMENT_TYPE.REEMBOLSO,
@@ -709,6 +715,7 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
             movementType,
             eventType,
             paymentMethod,
+            channelType: channelType || null,
             amount: taxableBaseOrNonSubjectAmount,
             totalAmount: amount,
             taxBase: taxableBaseOrNonSubjectAmount,
@@ -983,6 +990,17 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
 // CAJA_PRINCIPAL as a getItem(_id) argument. Fail closed on duplicates.
 async function _updateCajaActual(movement, traceId) {
     try {
+        const method = _safeTrim(movement?.paymentMethod).toUpperCase();
+        const channelType = _safeTrim(movement?.channelType).toUpperCase();
+        if (method !== PAYMENT_METHOD.EFECTIVO || channelType !== CHANNEL_TYPE.PRESENCIAL) {
+            return {
+                status: "SUCCESS",
+                skipped: true,
+                reason: "NO_PHYSICAL_CASH_EFFECT",
+                movementId: _safeTrim(movement?._id || movement?.transactionId) || null,
+            };
+        }
+
         const movementKey = _safeTrim(movement?._id || movement?.transactionId);
         if (!movementKey) throw new Error("CAJA_MOVEMENT_ID_REQUIRED");
 
@@ -1020,17 +1038,11 @@ async function _updateCajaActual(movement, traceId) {
             }
 
             const amount = Number(movement.accountingAmount) || 0;
-            const method = _safeTrim(movement.paymentMethod).toUpperCase();
-            if (method === PAYMENT_METHOD.EFECTIVO) cashRegister[CAJA_KEYS.CASH] = _roundMoney((cashRegister[CAJA_KEYS.CASH] || 0) + amount);
-            else if (method === PAYMENT_METHOD.TARJETA) cashRegister[CAJA_KEYS.CARD] = _roundMoney((cashRegister[CAJA_KEYS.CARD] || 0) + amount);
-            else if (method === PAYMENT_METHOD.BIZUM) cashRegister[CAJA_KEYS.BIZUM] = _roundMoney((cashRegister[CAJA_KEYS.BIZUM] || 0) + amount);
-            else if (ONLINE_PAYMENT_METHODS.includes(method)) cashRegister[CAJA_KEYS.ONLINE] = _roundMoney((cashRegister[CAJA_KEYS.ONLINE] || 0) + amount);
+            cashRegister[CAJA_KEYS.CASH] = _roundMoney((cashRegister[CAJA_KEYS.CASH] || 0) + amount);
 
             sequenceCounters.appliedMovementIds = [...appliedMovementIds, movementKey];
             cashRegister.sequenceCounters = sequenceCounters;
-            cashRegister[CAJA_KEYS.TOTAL] = _roundMoney(
-                (cashRegister[CAJA_KEYS.CASH] || 0) + (cashRegister[CAJA_KEYS.CARD] || 0) +
-                (cashRegister[CAJA_KEYS.BIZUM] || 0) + (cashRegister[CAJA_KEYS.ONLINE] || 0));
+            cashRegister[CAJA_KEYS.TOTAL] = _roundMoney(cashRegister[CAJA_KEYS.CASH] || 0);
             cashRegister[CAJA_KEYS.OPERATIONS] = Number(cashRegister[CAJA_KEYS.OPERATIONS] || 0) + 1;
             cashRegister[CAJA_KEYS.LAST_MOVEMENT_AT] = new Date();
             cashRegister._updatedDate = new Date();

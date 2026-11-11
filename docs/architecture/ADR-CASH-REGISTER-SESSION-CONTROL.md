@@ -190,3 +190,29 @@ No habilitar la caja ni desplegar mientras:
 - **Cambios en CMS:** ninguno.
 - **Cambios en Wix publicado:** ninguno.
 - **Ledgers históricos:** ninguno alterado.
+
+
+## 10. Decisión de negocio confirmada — proyección exclusiva de efectivo físico (2026-11-11)
+
+La instrucción de negocio posterior establece que `CajaActual` representa exclusivamente los flujos que atraviesan el cajón físico. Por tanto:
+
+- Solo un movimiento con `paymentMethod=EFECTIVO` y `channelType=PRESENCIAL` puede proyectarse en `CajaActual`.
+- Tarjeta, Bizum, pagos online, transferencias y gastos pagados por banco no alteran la proyección física.
+- `MovimientosCaja` conserva su responsabilidad de registro económico/fiscal. No se eliminan ni filtran sus registros por el hecho de no afectar al cajón.
+- `LibroAsientosContablesDetalle` conserva su responsabilidad de consolidación contable; la existencia de un movimiento de caja no autoriza a duplicar asientos ni a inventar mapeos PGC.
+
+La implementación inicial falla de forma conservadora: un movimiento sin canal explícito no se proyecta. El escritor manual persiste `channelType` cuando el consumidor lo proporciona. No se infiere el canal a partir de un nombre de recurso, texto libre o dato aportado como identidad por el frontend.
+
+### Límites pendientes de contrato
+
+- `MOVEMENT_TYPE` no contiene actualmente `APORTACION`, `RETIRO` ni `PAGO_PROVEEDOR`. El ADR original ya identificaba esa discrepancia. No se añaden aquí: requieren definición fiscal, dirección física IN/OUT, validación, esquema y pruebas propias.
+- `AJUSTE` no define de forma inequívoca el sentido físico. No se deduce la salida de efectivo a partir de un importe positivo.
+- El cierre Z y su writer paralelo presentan discrepancias de esquema/ownership ya descritas en la auditoría. Este cambio no altera su consolidación fiscal.
+- No existe en el código inspeccionado un WebMethod de apertura operativa con persistencia de responsable ni una resolución confirmada de `openedBy/closedBy` a nombre visible. No se inventa esa API en esta intervención.
+
+### Criterio de aceptación para la proyección
+
+1. EFECTIVO + PRESENCIAL modifica únicamente `cashAmount` y `netAmount`, y se deduplica por ID persistido.
+2. TARJETA/BIZUM/WIX_PAYMENTS/TRANSFERENCIA no cambia saldo, contadores ni IDs aplicados.
+3. Canal ausente o no canónico no se considera efectivo físico.
+4. El ledger fiscal mantiene todos los registros que le corresponden, independientemente de la proyección de caja.
