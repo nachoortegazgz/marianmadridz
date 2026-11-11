@@ -151,6 +151,14 @@ async function _queryStaffMembers({ filter = null, traceId = null } = {}) {
 
         const nextCursor = _safeTrim(response?.pagingMetadata?.cursors?.next || "");
         if (!nextCursor) break;
+        if (page === MAX_STAFF_PAGES - 1) {
+            const error = new Error(
+                "Bookings Staff Members pagination exceeded " + MAX_STAFF_PAGES + " pages; results are incomplete."
+            );
+            error.code = "STAFF_PAGINATION_LIMIT_EXCEEDED";
+            error.traceId = traceId;
+            throw error;
+        }
         cursor = nextCursor;
     }
 
@@ -181,6 +189,7 @@ async function _fetchStaffByResourceId(resourceId, traceId) {
         log.warn("_fetchStaffByResourceId failed", {
             resourceId: id,
             traceId,
+            errorCode: error?.code || null,
             error: error?.message,
         });
         return null;
@@ -201,7 +210,11 @@ async function _fetchAllStaff(traceId) {
         _cacheSet(cacheKey, all);
         return all;
     } catch (error) {
-        log.warn("_fetchAllStaff failed", { traceId, error: error?.message });
+        log.warn("_fetchAllStaff failed", {
+            traceId,
+            errorCode: error?.code || null,
+            error: error?.message,
+        });
         return [];
     }
 }

@@ -251,3 +251,13 @@ Documentación oficial Wix consultada:
 - [Query Automations](https://dev.wix.com/docs/api-reference/business-management/automations/automations/automations-v2/query-automations) y [Get Automation Email Action](https://dev.wix.com/docs/api-reference/business-management/marketing/emails/automation-email-action/get-automation-email-action).
 
 **Regla final:** hasta que exista un sitio Wix QA independiente o una autorización expresa y un plan seguro para cambiar el estado del sitio publicado, las pruebas de negocio se limitan a mocks offline y lecturas que no disparen efectos externos.
+
+## 12. Corrección de QA offline — paginación de personal (2026-11-11)
+
+**Cambio en rama:** `fix/staff-pagination-fail-closed-2026-11-11`.
+
+- `src/backend/staff.js`: si la página 20 conserva un cursor `next`, lanza `STAFF_PAGINATION_LIMIT_EXCEEDED` en vez de aceptar una lista truncada. Los resolvers públicos mantienen `null`/`[]` y el cierre seguro; los logs registran también `errorCode`.
+- `src/backend/tests/staff.identity.contract.test.mjs`: `STAFF-SDK-04` simula 20 páginas con cursor pendiente y demuestra que la fila encontrada en la primera página no se devuelve como resultado completo ni por búsqueda de recurso ni por listado global.
+- `docs/DECISION-LOG.md`: decisión TEC-030, justificación y reversión.
+
+**Estado:** CI GitHub Actions verde en el commit `6c0510a30b80b76f2f79cc6573082a0df4c825e2`: `npm test` ejecutó 62 suites y 579 tests (0 fallos); contratos Wix eCommerce Cart V2, Order Transactions y Bookings Reader V2 correctos; ESLint correcto; Gitleaks full-history correcto. No se ejecutó localmente por falta de conectividad de red. Runtime Wix sigue pendiente. No se ha modificado Wix, CMS, automatizaciones ni datos de negocio.

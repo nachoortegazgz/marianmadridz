@@ -45,7 +45,7 @@ Este registro centraliza las decisiones explícitas del propietario y las decisi
 | TEC-013 | La configuración nativa de pedidos queda como autoridad del inventario; estado live `ON_ORDER_PAID`. | Wix Orders Settings GET, 2026-11-10, HTTP 200; sin mutaciones. | Verificado live; no se ha cambiado |
 | TEC-014 | No activar depósitos hasta resolver discrepancia `inPerson` entre esquema REST Services V2 y Wix Help Center. | Esquema REST: `inPerson=false` con depósito; Wix Help: depósito online y resto en persona. | Bloqueo documentado; sin cambios en servicios |
 | TEC-015 | La auditoría de Bookings detecta 7 servicios visibles >100 EUR y ningún depósito activo. | Query Services V2: 94 resultados, 70 FIXED, 24 NO_FEE, 0 VARIED, 0 depósitos. | Verificado live, solo lectura |
-| TEC-016 | Los webhooks de pedido/pago/cancelación/reembolso no deben invocar writers de stock; cron marca todos los pedidos con referencias de catálogo completas sin distinguir Bookings/Stores/mixtos. | Wix Orders Settings `ON_ORDER_PAID`; Wix gestiona el stock y el cron solo conserva idempotencia. | Implementado en rama; CI pendiente |
+| TEC-016 | Los webhooks de pedido/pago/cancelación/reembolso no deben invocar writers de stock; cron marca todos los pedidos con referencias de catálogo completas sin distinguir Bookings/Stores/mixtos. | Wix Orders Settings `ON_ORDER_PAID`; Wix gestiona el stock y el cron solo conserva idempotencia. | Implementado en rama; CI offline verde en run 43102321871: 62 suites, 579 tests, 0 fallos; contratos SDK y ESLint verdes. Runtime Wix pendiente |
 | TEC-017 | No borrar ni mutar `MovimientosInventario` existente; conservar hooks `beforeUpdate`/`beforeRemove` append-only. | El histórico puede contener evidencia QA/operativa que debe preservarse. | Aprobado y conservado |
 | TEC-019 | Usar `WIX_CATALOG_OWNER` como autoridad en marcador `ORDER_CREATED` para pedidos Bookings/Stores/mixtos. | `WIX_STORES_NATIVE` sería semánticamente incorrecto para pedidos Bookings. | Corrección en PR #241; CI run 42722015208 verde |
 | TEC-020 | El restock se ejecuta exclusivamente por las opciones nativas Wix: `restockAllItems=true` al cancelar antes de fulfillment; `sideEffects.restock.lineItems` por línea/cantidad al reembolsar devoluciones reales. | Wix Cancel Order y Refund Payments exponen esos side effects explícitos; no hay writer custom. | Adoptada; verificación operativa pendiente |
@@ -126,3 +126,13 @@ El propietario declara que ServiciosCatalogo gobierna la configuración de servi
 
 ---
 *Esta sección registra decisiones y estado a 2026-11-11. No equivale a autorización de despliegue ni a validación en producción.*
+
+## 6. Decisión técnica — paginación de Bookings Staff Members (2026-11-11)
+
+| ID | Decisión | Justificación / consecuencia | Estado |
+|---|---|---|---|
+| TEC-030 | Si `queryStaffMembers` conserva `pagingMetadata.cursors.next` al alcanzar el límite defensivo de 20 páginas, la consulta debe fallar con `STAFF_PAGINATION_LIMIT_EXCEEDED`; nunca se devuelve el subconjunto como si fuera completo. Los resolvers mantienen el comportamiento fail-closed y registran el código del error. | El límite de 2.000 perfiles es una protección de coste/tiempo, no una prueba de que existan menos perfiles. Un cursor pendiente demuestra que el resultado está truncado. Se conserva el límite y se hace explícita la truncación. | Implementado en rama; CI pendiente |
+
+**Decisión de alcance:** no se elimina el límite ni se amplía por conjetura. Tampoco se cambia el contrato público (`null`/`[]`) ni la autorización. Los errores de consulta siguen denegando la resolución de identidad; el log interno añade `errorCode` para diferenciar un fallo técnico de un directorio realmente vacío. La prueba sintética verifica que ni `findStaffByResourceId()` ni `listStaff()` devuelven la fila parcial cuando queda un cursor después de la página 20.
+
+**Reversión:** revertir el commit de esta tanda restaura el comportamiento previo sin tocar datos CMS ni configuración Wix.
