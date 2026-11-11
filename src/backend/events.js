@@ -3184,7 +3184,7 @@ async function _runClaimedWixEvent(eventPayload, eventType, handler) {
     });
 }
 
-export function wixBookingsV2_onBookingConfirmed(eventPayload) {
+export async function wixBookingsV2_onBookingConfirmed(eventPayload) {
     return _runClaimedWixEvent(
         eventPayload,
         "BOOKING_CONFIRMED",
@@ -3192,7 +3192,7 @@ export function wixBookingsV2_onBookingConfirmed(eventPayload) {
     );
 }
 
-export function wixBookingsV2_onBookingCreated(eventPayload) {
+export async function wixBookingsV2_onBookingCreated(eventPayload) {
     return _runClaimedWixEvent(
         eventPayload,
         "BOOKING_CREATED",
@@ -3200,7 +3200,7 @@ export function wixBookingsV2_onBookingCreated(eventPayload) {
     );
 }
 
-export function wixBookingsV2_onBookingRescheduled(eventPayload) {
+export async function wixBookingsV2_onBookingRescheduled(eventPayload) {
     return _runClaimedWixEvent(
         eventPayload,
         "BOOKING_RESCHEDULED",
@@ -3208,7 +3208,7 @@ export function wixBookingsV2_onBookingRescheduled(eventPayload) {
     );
 }
 
-export function wixBookingsV2_onBookingCanceled(eventPayload) {
+export async function wixBookingsV2_onBookingCanceled(eventPayload) {
     return _runClaimedWixEvent(
         eventPayload,
         "BOOKING_CANCELED",
@@ -3216,7 +3216,7 @@ export function wixBookingsV2_onBookingCanceled(eventPayload) {
     );
 }
 
-export function wixEcom_onOrderCreated(eventPayload) {
+export async function wixEcom_onOrderCreated(eventPayload) {
     return _runClaimedWixEvent(
         eventPayload,
         "ORDER_CREATED",
@@ -3224,7 +3224,7 @@ export function wixEcom_onOrderCreated(eventPayload) {
     );
 }
 
-export function wixEcom_onOrderPaymentStatusUpdated(eventPayload) {
+export async function wixEcom_onOrderPaymentStatusUpdated(eventPayload) {
     return _runClaimedWixEvent(
         eventPayload,
         "ORDER_PAYMENT_STATUS_UPDATED",
@@ -3232,7 +3232,7 @@ export function wixEcom_onOrderPaymentStatusUpdated(eventPayload) {
     );
 }
 
-export function wixEcom_onOrderUpdated(eventPayload) {
+export async function wixEcom_onOrderUpdated(eventPayload) {
     return _runClaimedWixEvent(
         eventPayload,
         "ORDER_UPDATED",
@@ -3240,7 +3240,7 @@ export function wixEcom_onOrderUpdated(eventPayload) {
     );
 }
 
-export function wixEcom_onOrderCanceled(eventPayload) {
+export async function wixEcom_onOrderCanceled(eventPayload) {
     return _runClaimedWixEvent(
         eventPayload,
         "ORDER_CANCELED",
