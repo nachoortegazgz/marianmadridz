@@ -519,7 +519,7 @@ test('BCORE-PER-06 unique-index webhook race reconciles the winning native proje
     result = await BC._persistBooking(baseParams({
       bookingId,
       bookingType: 'DUAL_F2',
-      pairToken: 'pair-token-qa-001',
+      pairToken: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
       revision: 1,
       bookingStatus: 'PENDING',
     }), 'tr-saga');
@@ -530,7 +530,7 @@ test('BCORE-PER-06 unique-index webhook race reconciles the winning native proje
   assert.strictEqual(result.created, false);
   assert.strictEqual(result.reconciled, true);
   assert.strictEqual(result.item.bookingType, 'DUAL_F2', 'saga enriches the webhook SIMPLE projection');
-  assert.strictEqual(result.item.pairToken, 'pair-token-qa-001');
+  assert.strictEqual(result.item.pairToken, 'dddddddd-dddd-4ddd-8ddd-dddddddddddd');
   assert.strictEqual(result.item.bookingStatus, 'CONFIRMED', 'confirmed native state is not downgraded');
   const rows = wixDataMock._store.get(CITAS) || [];
   assert.strictEqual(rows.filter((row) => row.bookingId === bookingId).length, 1);
