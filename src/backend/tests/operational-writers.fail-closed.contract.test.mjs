@@ -75,6 +75,19 @@ test("P0-FISCAL-01 fiscal ledger writers are disabled by canonical fail-closed p
   assert.ok(eventWriter.indexOf("_upsertDatosFiscales(") > eventSimulationGuard);
 });
 
+test("P0-FISCAL-02 recovery cron preserves fiscal queues while their writers are disabled", async () => {
+  const crons = await read("crons.js");
+  assert.match(crons, /FISCAL_RUNTIME_POLICY/);
+  const jobStart = crons.indexOf("export async function runPendingCompensationsJob");
+  const job = crons.slice(jobStart);
+  const policyGuard = job.indexOf("if (writerDisabled)");
+  assert.ok(policyGuard >= 0);
+  assert.ok(job.indexOf("result.skippedByPolicy++") > policyGuard);
+  assert.ok(job.indexOf("continue;") > policyGuard);
+  assert.ok(job.indexOf("_runOneCompensation(comp, traceId)") > policyGuard,
+    "disabled fiscal/accounting recovery must be skipped before invoking writers");
+});
+
 test("P1-CLOCK-01 timeclock writes and adjustments remain disabled before signing or persistence", async () => {
   const [config, horario] = await Promise.all([
     read("internalConfig.js"),
