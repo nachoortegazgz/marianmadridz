@@ -170,7 +170,7 @@ test("staff widget exposes only authorized read-only state, history and hours pa
   assert.match(onlyStaffHtml, /contextData\.isAuthorized !== true/);
   assert.match(onlyStaffHtml, /statePanel\.style\.display\s*=\s*enableStateQuery/);
   assert.match(onlyStaffHtml, /historyPanel\.style\.display\s*=\s*enableHistory/);
-  assert.match(onlyStaffHtml, /hoursPanel\.style\.display\s*=\s*enableScheduleQuery/);
+  assert.match(onlyStaffHtml, /hoursPanel\.style\.display\s*=\s*enableHoursCalculation/);
   assert.doesNotMatch(onlyStaffHtml, /enableClocking|enableCashier|cashPanel|TPV_TX|CASHIER_STATE|btnOpenCalendar|btnEntrada|btnAdjSubmit|btnSupplierPayment|btnXCount|btnZClosing/);
   assert.doesNotMatch(staffPage, /location\.to|URLS|\/pos-checkout|\/caja-actual|\/mi-calendario/);
 });
