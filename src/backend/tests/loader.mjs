@@ -640,6 +640,7 @@ export const orders = new Proxy({}, {
     return _ordersRootMethods.get(name);
   },
 });
+export const orderTransactions = _makeNamespaceStub('orderTransactions');
 export const elevate = fnProxy;
 export const createClient = () => fnProxy;
 export const getSecret = async () => "mock-secret";
@@ -1062,9 +1063,12 @@ export async function load(url, context, nextLoad) {
       .replace("ALLOW_SIMULATION_RECORDS: false", "ALLOW_SIMULATION_RECORDS: true");
     return { format: "module", source, shortCircuit: true };
   }
-  if (url.startsWith('mock:wix-data') || url === 'mock:@wix/data' || url === 'mock:@wix/essentials') {
+  if (url.startsWith('mock:wix-data') || url === 'mock:@wix/data' || url === 'mock:@wix/essentials' || url === 'mock:wix-auth') {
     // @wix/data (API v2, usado por dataAccess.js) -> adaptador v2 sobre el
     // mismo store del mock. 'wix-data' (builder legacy v1) -> mock clasico.
+    if (url === 'mock:wix-auth') {
+      return { format: 'module', source: 'export const elevate = (fn) => fn;\\n', shortCircuit: true };
+    }
     if (url === 'mock:@wix/data') {
       return { format: 'module', source: WIX_DATA_V2_SOURCE, shortCircuit: true };
     }
