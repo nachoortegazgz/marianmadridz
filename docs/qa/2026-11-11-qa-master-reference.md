@@ -12,7 +12,7 @@
 
 Por tanto, el dominio público no puede utilizarse para pruebas que creen reservas, pedidos, pagos, reembolsos, contactos o comunicaciones hasta que exista aislamiento demostrable. El hecho de que el repositorio se utilice para QA no convierte automáticamente el sitio Wix publicado en QA.
 
-**Recomendación preferente:** mantener `www.marianmadrid.es` intacto y crear un sitio Wix QA separado, sin dominio público ni audiencia de clientes, con configuración y credenciales independientes. La búsqueda de sitios Wix por nombre “Marian” devolvió un único sitio: el Published actual; no existe otro QA separado identificado. La duplicación oficial no copia contactos/miembros, pedidos/facturas, campañas ni triggered emails, secretos Velo ni configuración de apps de terceros; la copia queda sin dominio ni capacidades Premium y algunas apps Premium aparecen sin activar. No está documentado que todas las definiciones/estados de Automations se omitan: habrá que reconsultarlas en la copia antes de permitir cualquier trigger. No copiar datos personales ni ledgers de producción. Si se pretende convertir el sitio actual en QA, primero debe autorizarse expresamente su despublicación y aceptarse el impacto sobre clientes y operativa. Esta referencia no realiza ninguna de esas acciones.
+**Recomendación preferente:** mantener `www.marianmadrid.es` intacto y crear un sitio Wix QA separado, sin dominio público ni audiencia de clientes, con configuración y credenciales independientes. La búsqueda de sitios Wix por nombre “Marian” devolvió un único sitio: el Published actual; no existe otro QA separado identificado. La duplicación oficial no copia contactos/miembros, pedidos/facturas, campañas ni triggered emails, secretos Velo ni configuración de apps de terceros; la copia queda sin dominio ni capacidades Premium y algunas apps Premium aparecen sin activar. **La documentación consultada no confirma si la duplicación copia los registros de colecciones CMS personalizadas.** Dado que existen ledgers append-only que no pueden borrarse, no duplicar el sitio hasta que Wix confirme ese comportamiento o se opte por crear un sitio QA vacío y reconstruir solo esquema/código/datos sintéticos. Tampoco está documentado que todas las definiciones/estados de Automations se omitan: habrá que reconsultarlas antes de permitir cualquier trigger. No copiar datos personales ni ledgers de producción. Si se pretende convertir el sitio actual en QA, primero debe autorizarse expresamente su despublicación y aceptarse el impacto sobre clientes y operativa. Esta referencia no realiza ninguna de esas acciones.
 
 ## 2. Autoridad documental y cómo resolver contradicciones
 
@@ -176,13 +176,16 @@ SharePoint será exclusivamente repositorio de evidencia. Nunca modificará ni g
 5. Mantener los writers fiscales, contables, laborales y de caja bloqueados.
 
 **Gate 1 — entorno independiente**
-1. Crear una copia QA mediante el método oficial Wix Duplicate Site (`POST /site-actions/v1/sites/duplicate`), que requiere permiso/API key de nivel cuenta. La copia no tendrá dominio ni capacidades Premium.
-2. Confirmar qué apps se han copiado y activar solo las necesarias; algunas apps Premium aparecen desactivadas.
-3. Reconsultar el inventario de Automations y sus acciones/destinatarios en la copia. No inferir que los triggers se han deshabilitado solo porque no se copian triggered emails.
-4. Confirmar que no se copiaron contactos/miembros, pedidos/facturas, email campaigns/triggered emails, secretos Velo ni settings de apps de terceros; comprobarlo mediante lectura posterior.
-5. Configurar Bookings, Stores V3 y Members con datos sintéticos. No asumir Payments disponible ni conectado en la copia.
-6. Usar mocks/sinks para email y SMS y mock de transporte para WhatsApp; no activar canales reales.
-7. Confirmar que ningún secreto de producción está disponible en QA.
+1. Preferir un sitio Wix QA vacío, sin dominio ni plan de pago, y reconstruir únicamente páginas/esquemas necesarios, código y fixtures sintéticos.
+2. Usar Wix Duplicate Site (`POST /site-actions/v1/sites/duplicate`, permiso/API key de nivel cuenta) solo después de confirmación oficial de que no copia registros CMS personalizados; no asumirlo.
+3. Si se crea una copia, confirmar qué apps se han copiado y activar solo las necesarias; algunas apps Premium aparecen desactivadas.
+4. Reconsultar el inventario de Automations y sus acciones/destinatarios en la copia. No inferir que los triggers se han deshabilitado solo porque no se copian triggered emails.
+5. Confirmar mediante lectura posterior que no existen contactos/miembros, pedidos/facturas, campañas/triggered emails, secretos Velo, settings de apps de terceros ni datos CMS de producción.
+6. Configurar Bookings, Stores V3 y Members con datos sintéticos. No asumir Payments disponible ni conectado en la copia.
+7. Usar mocks/sinks para email y SMS y mock de transporte para WhatsApp; no activar canales reales.
+8. Confirmar que ningún secreto de producción está disponible en QA.
+
+**CMS Sandbox (alcance limitado):** Wix permite un sandbox de colecciones separado de Live, accesible desde el Editor; está desactivado por defecto y no afecta Live salvo que se sincronice. Sirve para contenido/preview CMS, no es un entorno aislado de Bookings, pagos, automatizaciones ni canales externos. No sincronizar Sandbox con Live durante QA.
 
 **Gate 2 — pruebas offline**
 1. Ejecutar `npm ci`, `npm run lint`, `npm test`, `npm run test:layer1` y `npm run test:layer2`.
