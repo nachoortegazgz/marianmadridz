@@ -120,10 +120,14 @@ export function assertUpdateAllowed(collection, item) {
 }
 
 export function assertSaveAllowed(collection, item) {
-    if (!DATA_ACCESS_WRITE_POLICY.saveCollections.includes(collection)) {
+    if (!DATA_ACCESS_WRITE_POLICY.saveCollections.includes(collection) || !_isRecord(item)) {
         throw _policyError("CMS_SAVE_COLLECTION_DENIED");
     }
-    _assertControlRecord(item, [CONTROL_TYPE.DAYS_CACHE], "CMS_SAVE_CONTROL_TYPE_DENIED");
+    if (collection === BUSINESS_COLLECTIONS.CONTROL_OPERATIVO) {
+        _assertControlRecord(item, [CONTROL_TYPE.DAYS_CACHE], "CMS_SAVE_CONTROL_TYPE_DENIED");
+    } else if (collection === BUSINESS_COLLECTIONS.CAJA_ACTUAL && !item._id) {
+        throw _policyError("CMS_SAVE_ID_REQUIRED");
+    }
 }
 
 export function assertRemoveAllowed(collection, id, expectedControlType) {
