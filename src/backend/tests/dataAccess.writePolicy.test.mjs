@@ -89,7 +89,7 @@ test("update policy allows mutable operational state and CajaActual only", () =>
     }), { code: "CMS_UPDATE_CONTROL_TYPE_DENIED" });
 });
 
-test("save policy is limited to the volatile DAYS_CACHE projection", () => {
+test("save policy is limited to DAYS_CACHE and identified CajaActual records", () => {
     assert.doesNotThrow(() => assertSaveAllowed(O.CONTROL_OPERATIVO, {
         _id: "days-cache-1",
         controlType: T.DAYS_CACHE,
@@ -102,8 +102,9 @@ test("save policy is limited to the volatile DAYS_CACHE projection", () => {
     assert.throws(() => assertSaveAllowed(C.CAJA_ACTUAL, {
         cashRegisterStatus: "CERRADA",
     }), { code: "CMS_SAVE_ID_REQUIRED" });
-    assert.throws(() => assertSaveAllowed(C.CAJA_ACTUAL, {
-        _id: "cash-current",
+    assert.throws(() => assertSaveAllowed(C.CITAS_F2, {
+        _id: "projection-1",
+        bookingId: "booking-1",
     }), { code: "CMS_SAVE_COLLECTION_DENIED" });
     assert.throws(() => assertSaveAllowed(O.CONTROL_OPERATIVO, {
         _id: "event-1",
