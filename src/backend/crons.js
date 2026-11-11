@@ -72,7 +72,7 @@ import { logger } from "backend/logger";
 import { notifyOperationalAlert } from "backend/audit";
 import { verifyFiscalHashChainIntegrity } from "backend/cajas.web";
 import { registrarEventoEconomico } from "backend/eventLog";
-import { _completeTransaction, cancelBookingElevated } from "backend/booking/bookingCore";
+import { _completeTransaction, cancelBookingElevated, _updateCitaSafe } from "backend/booking/bookingCore";
 import {
     reconcileUnknownTransaction,
     reconcilePaidCitasFromLedgerInternal,
@@ -385,23 +385,70 @@ reason: "CajaActual requiere conciliacion contra MovimientosCaja; no aplicar inc
 }
 
 if (kind === "CANCEL_BOOKING") {
-if (!bookingId || !_looksLikeGuid(bookingId)) {
-throw new Error("CANCEL_BOOKING requires a valid bookingId GUID");
-}
-const revision = Number(payload.revision || comp?.revision);
-if (!Number.isInteger(revision) || revision < 1) {
-throw new Error("CANCEL_BOOKING requires a valid revision; manual reconciliation required");
-}
-await withTimeout(
-() =>
-cancelBookingElevated(bookingId, {
-revision: String(revision),
-// CRON-08: cero suppressAuth. auth.elevate ya eleva.
-}),
-API_TIMEOUT_MS,
-"cron:cancelBookingCompensation"
-);
-return { ok: true, action: "CANCEL_BOOKING", bookingId };
+ if (!bookingId || !_looksLikeGuid(bookingId)) {
+ throw new Error("CANCEL_BOOKING requires a valid bookingId GUID");
+ }
+
+ // The queued revision is diagnostic only. Read the current native booking
+ // immediately before cancellation to avoid stale-revision INVALID_REVISION.
+ const nativeResponse = await withTimeout(
+ () => getBookingElevated(bookingId),
+ API_TIMEOUT_MS,
+ "cron:getBookingForCompensation"
+ );
+ const nativeBooking = nativeResponse?.booking || nativeResponse;
+ const nativeBookingId = _safeTrim(nativeBooking?.id || nativeBooking?._id);
+ if (nativeBookingId !== bookingId) {
+ throw new Error("CANCEL_BOOKING native booking not found or identity mismatch");
+ }
+
+ const nativeStatus = _safeTrim(nativeBooking?.status || "").toUpperCase();
+ if (nativeStatus !== "CANCELED") {
+ const currentRevision = Number(nativeBooking?.revision);
+ if (!Number.isInteger(currentRevision) || currentRevision < 1) {
+ throw new Error("CANCEL_BOOKING current native revision unavailable; manual reconciliation required");
+ }
+ await withTimeout(
+ () =>
+ cancelBookingElevated(bookingId, {
+ revision: String(currentRevision),
+ // CRON-08: auth.elevate ya eleva; no suppressAuth.
+ }),
+ API_TIMEOUT_MS,
+ "cron:cancelBookingCompensation"
+ );
+ }
+
+ // Update CitasF2 only after native cancellation is confirmed.
+ await _updateCitaSafe(
+ bookingId,
+ (cita) => {
+ let meta = cita?.meta;
+ if (typeof meta === "string") {
+ try { meta = JSON.parse(meta); } catch (_) { meta = {}; }
+ }
+ if (!meta || typeof meta !== "object" || Array.isArray(meta)) meta = {};
+ return {
+ ...cita,
+ bookingStatus: BOOKING_STATUS.CANCELED,
+ meta: {
+ ...meta,
+ compensated: true,
+ compensatedAt: new Date().toISOString(),
+ compensationNativeStatus: "CANCELED",
+ },
+ };
+ },
+ traceId,
+ "cron_compensate_cita"
+ );
+
+ return {
+ ok: true,
+ action: "CANCEL_BOOKING",
+ bookingId,
+ alreadyCanceled: nativeStatus === "CANCELED",
+ };
 }
 
 if (kind === "FISCAL_LEDGER" || kind === "RESYNC_LEDGER_ACCOUNTING") {
