@@ -2,7 +2,8 @@
 
 **Fecha de revisión:** 2026-11-11  
 **Repositorio:** `nachoortegazgz/marianmadridz`  
-**Baseline documental:** merge de PR #294 · `3aed055c9622da71505f5f9927b35f6516e6b906`  
+**Baseline main:** merge de PR #295 · `b799412a1722b2dfacd1b21a198ebcb68fc03af2`
+**PR #296:** abierta en Draft; contiene la reauditoría live y las correcciones documentales posteriores, aún no integradas.  
 **Sitio Wix:** `188bed94-177c-4bc9-a9f0-35080d874f3e` · https://www.marianmadrid.es/  
 **Estado de esta referencia:** documento consultivo vigente; no equivale a certificación E2E ni autoriza operaciones reales.
 
