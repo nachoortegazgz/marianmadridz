@@ -39,7 +39,7 @@ La API oficial de Data Collections devuelve estos esquemas y permisos efectivos:
 | `HistoricoCierresZ` | 36 | ADMIN en read/insert/update/remove | Campos obligatorios incluyen `closeDate`, `fiscalPeriod`, `totalTaxAmount`, `totalTaxBase`, `totalOnline`, `totalBizum`, `totalCard`, `totalCash`, `closedBy`, `recordDomain`, `operationDate`, `traceId`. No existen campos específicos de arqueo físico en esta colección. |
 | `ControlOperativo` | 27 | ADMIN en read/insert/update/remove | Incluye `controlType`, `dedupeKey`, `traceId`, `status`, `version`, `payload`, `operationDate` y metadatos de reintento/rate limit. |
 
-**Hallazgo de contrato P1 — Z:** el objeto `zRecord` construido en `_registerZClosing()` no incluye al menos los campos CMS obligatorios `closeDate`, `totalTaxAmount`, `totalTaxBase`, `closedBy` y `recordDomain`; usa `netTaxAmount` y `netTaxableAmount` en lugar de los dos nombres requeridos. El proyector `eventLog.js::_proyectarCierreZ()` tampoco incluye todos los campos obligatorios de la colección. La inspección estática confirma la discrepancia; el resultado real de inserción en runtime Wix no se ha ejecutado en esta fase. No declarar el cierre Z operativo hasta reconciliar ambos contratos con el esquema live y probar el insert.
+**Hallazgo de contrato P1 — Z:** el objeto `zRecord` construido en `_registerZClosing()` no incluye al menos los campos CMS obligatorios `closeDate`, `totalTaxAmount`, `totalTaxBase`, `closedBy` y `recordDomain`; usa `netTaxAmount` y `netTaxableAmount` en lugar de los dos nombres requeridos. El proyector `eventLog.js::_proyectarCierreZ()` tampoco incluye todos los campos obligatorios de la colección. Ambos caminos construyen el mismo ID determinista `Z_<fecha>` con payloads distintos: `_registerZClosing()` y `_proyectarCierreZ()`. Si ambos se ejecutan para el mismo día, existe riesgo de colisión/idempotencia ambigua; además, `_assertPeriodNotClosed()` trata la mera existencia del ID como periodo cerrado. La inspección estática confirma la discrepancia; el resultado real de inserción en runtime Wix no se ha ejecutado en esta fase. No declarar el cierre Z operativo hasta reconciliar los dos writers, su ownership del ID, los campos obligatorios y las pruebas runtime.
 
 La consulta live confirmó una fila en `CajaActual` con `cashRegisterStatus=SIMULACION`, `openingAmount=300`, `cashAmount=300`, `expectedCash=300`, `countedCash=0`, y ninguna fila en `HistoricoCierresZ`. La fila simulada permanece intacta.
 
@@ -124,7 +124,7 @@ La fila live de `CajaActual` se encuentra en `SIMULACION` y contiene 300 EUR. Es
 - `src/backend/internalConfig.js`: constantes de autorización y enums canónicos, sin duplicar identidad innecesariamente.
 - `src/backend/validation.js`: validación centralizada de payloads/estados.
 - `src/backend/data.js`: hooks y protección de transiciones; no sustituye autorización backend.
-- `src/backend/fiscalLedgerLock.js`, `dataAccess.js`, `eventLog.js`, `events.js`, `crons.js`: locks, writers y cron.
+- `src/backend/fiscalLedgerLock.js`, `dataAccess.js`, `eventLog.js`, `events.js`, `crons.js`: locks, writers y cron. Debe resolverse la colisión potencial de `Z_<fecha>` entre `_registerZClosing()` y `_proyectarCierreZ()`.
 - `src/pages/ZONA STAFF.mvf3f.js` y widget HTML asociado: contrato de UI y allowlist.
 - Tests de seguridad, proyección, escritores, Z y contrato HTML/widget.
 - Esquemas CMS live de `CajaActual`, `MovimientosCaja`, `HistoricoCierresZ` y `ControlOperativo`.
