@@ -1161,21 +1161,10 @@ test("EVENT-PAYMENT-10 a failed strong ledger preflight read fails closed and ne
   activeOrder = order;
   activeOrderTransactions = { orderId, payments: [], refunds: [] };
 
-  const originalQuery = wixDataMock.query;
-  let preflightFailed = false;
-  wixDataMock.query = function (collection) {
-    const query = originalQuery(collection);
-    if (collection !== IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA) return query;
-    const originalFind = query.find;
-    query.find = async (...args) => {
-      if (!preflightFailed) {
-        preflightFailed = true;
-        throw new Error("SYNTHETIC_LEDGER_READ_FAILURE");
-      }
-      return originalFind(...args);
-    };
-    return query;
-  };
+  const preflightError = new Error("SYNTHETIC_LEDGER_READ_FAILURE");
+  // dataAccess captures the elevated query function at module initialization;
+  // the harness exposes _findErrors specifically for deterministic late faults.
+  wixDataMock._findErrors.set(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA, preflightError);
 
   try {
     await assert.rejects(
@@ -1186,10 +1175,14 @@ test("EVENT-PAYMENT-10 a failed strong ledger preflight read fails closed and ne
       /SYNTHETIC_LEDGER_READ_FAILURE/
     );
   } finally {
-    wixDataMock.query = originalQuery;
+    wixDataMock._findErrors.delete(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA);
   }
 
-  assert.equal(preflightFailed, true, "the injected failure must hit the existing-ledger strong read");
+  assert.equal(
+    wixDataMock._calls.some(call => call.op === "query" && call.collection === IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA),
+    true,
+    "the injected failure must hit the existing-ledger strong read"
+  );
   assert.equal((wixDataMock._store.get(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA) || []).length, 0,
     "a read failure must not be interpreted as an empty ledger");
   const claims = (wixDataMock._store.get(IC.OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO) || [])
