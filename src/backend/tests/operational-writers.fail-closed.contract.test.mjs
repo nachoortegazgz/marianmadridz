@@ -86,6 +86,7 @@ test("P0-FISCAL-02 recovery cron preserves fiscal queues while their writers are
   assert.ok(job.indexOf("continue;") > policyGuard);
   assert.ok(job.indexOf("_runOneCompensation(comp, traceId)") > policyGuard,
     "disabled fiscal/accounting recovery must be skipped before invoking writers");
+  assert.match(job, /skippedByPolicy:\s*result\.skippedByPolicy/);
 });
 
 test("P1-CLOCK-01 timeclock writes and adjustments remain disabled before signing or persistence", async () => {
