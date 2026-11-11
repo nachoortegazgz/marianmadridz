@@ -847,7 +847,7 @@ async function _syncNativeBookingToCitas(booking, eventId, traceId, options = {}
 
     // If the custom saga inserted the richer row between our read and write,
     // insertOnly leaves it untouched. Refresh only its confirmed status.
-    if (!write?.created) {
+    if (!write?.created && targetBookingStatus === BOOKING_STATUS.CONFIRMED) {
         await _updateCitaStatus(bookingId, BOOKING_STATUS.CONFIRMED, traceId);
     }
     return { ok: true, created: Boolean(write?.created), existing: !write?.created, bookingId, serviceId };
