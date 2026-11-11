@@ -95,6 +95,13 @@ test("save policy is limited to the volatile DAYS_CACHE projection", () => {
         controlType: T.DAYS_CACHE,
         payload: {},
     }));
+    assert.doesNotThrow(() => assertSaveAllowed(C.CAJA_ACTUAL, {
+        _id: "cash-current",
+        cashRegisterStatus: "CERRADA",
+    }));
+    assert.throws(() => assertSaveAllowed(C.CAJA_ACTUAL, {
+        cashRegisterStatus: "CERRADA",
+    }), { code: "CMS_SAVE_ID_REQUIRED" });
     assert.throws(() => assertSaveAllowed(C.CAJA_ACTUAL, {
         _id: "cash-current",
     }), { code: "CMS_SAVE_COLLECTION_DENIED" });
