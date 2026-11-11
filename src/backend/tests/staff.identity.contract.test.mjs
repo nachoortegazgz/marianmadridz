@@ -7,9 +7,10 @@ const staff = await import('../staff.js');
 const RESOURCE_ID = '11111111-1111-4111-8111-111111111111';
 const STAFF_MEMBER_ID = '22222222-2222-4222-8222-222222222222';
 const CONTACT_ID = '33333333-3333-4333-8333-333333333333';
-const SCHEDULE_ID = '44444444-4444-4444-8444-444444444444';
+const WORKING_HOURS_SCHEDULE_ID = '44444444-4444-4444-8444-444444444444';
+const EVENTS_SCHEDULE_ID = '55555555-5555-4555-8555-555555555555';
 
-test('STAFF-SDK-01 resolves resourceId, staff _id, contactId and schedule _id from native SDK shape', async () => {
+test('STAFF-SDK-01 separates working-hours schedule IDs from the staff events schedule ID', async () => {
   staff.invalidateStaffCache();
   const calls = [];
   mocks.sdk['bookings::staffMembers'] = {
@@ -51,7 +52,7 @@ test('STAFF-SDK-01 resolves resourceId, staff _id, contactId and schedule _id fr
 
   const byContact = await staff.findStaffByContactId(CONTACT_ID);
   assert.equal(byContact.resourceId, RESOURCE_ID);
-  assert.equal(byContact.staffMemberId, STAFF_MEMBER_ID);
+  assert.equal(byContact.staffMemberId, STAFF_MEMBER_ID);\n  assert.equal(await staff.getStaffEventsScheduleId(RESOURCE_ID), EVENTS_SCHEDULE_ID);
 });
 
 test('STAFF-SDK-02 disconnected staff identity never exposes a Contact ID', async () => {
