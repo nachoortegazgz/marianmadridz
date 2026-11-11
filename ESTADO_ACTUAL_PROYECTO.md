@@ -4,7 +4,7 @@ La referencia consultiva vigente es [docs/qa/2026-11-11-qa-master-reference.md](
 
 PR #294 está MERGED en main mediante `3aed055c9622da71505f5f9927b35f6516e6b906`. Los estados de PR, CI y Wix descritos en el resto de este documento son históricos cuando no coincidan con la referencia maestra. No interpretar CI offline como validación Wix Runtime.
 
-Última auditoría disponible de Wix Automations: 67 automatizaciones pausadas (66 email y 1 WhatsApp), cuatro WhatsApp inactivas y nueve emails todavía activos por restricciones readonly/disableStatusChange. Este inventario no se ha vuelto a leer tras la consulta actual Published. No enviar mensajes ni activar triggers.
+Reauditoría live posterior a la consulta Published: 149 automatizaciones no archivadas (27 ACTIVE, 122 INACTIVE); nueve automatizaciones email activas con diez acciones (ocho dirigidas al contacto del trigger y dos al propietario); cuatro automatizaciones WhatsApp y ocho SMS inactivas; dos notificaciones internas de Bookings activas. No se ejecutaron triggers ni se enviaron mensajes. El email nativo sigue sin estar aislado.
 
 ---
 
