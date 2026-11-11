@@ -164,3 +164,9 @@ Todas las suites offline usan fixtures sintéticos y mocks. No se crean reservas
 - [Velo — onOrderTransactionsUpdated](https://dev.wix.com/docs/velo/events-service-plugins/e-commerce/events/on-order-transactions-updated).
 - [Wix eCommerce — List Transactions For Single Order](https://dev.wix.com/docs/api-reference/business-solutions/e-commerce/orders/order-transactions/list-transactions-for-single-order).
 - [Velo — wix-auth elevate](https://dev.wix.com/docs/velo/apis/wix-auth/elevate).
+
+### Bloqueo adicional de contrato — notificación de finalización
+- La descripción Velo de `onOrderTransactionsUpdated` indica que se dispara al añadir un pago o reembolso, o al actualizar un pago existente. No declara expresamente que se vuelva a disparar cuando cambia el estado de una transacción de reembolso ya creada.
+- El evento específico `Order Transactions Refund Completed` sí garantiza que todas las transacciones del refund alcanzaron estado final, pero su documentación corresponde a la suscripción de eventos de aplicaciones; no se ha verificado un handler Velo estable equivalente.
+- Por tanto, el handler de esta rama puede procesar un refund cuando una invocación observa estados terminales, pero **no se ha demostrado que Wix vaya a invocarlo en la transición a esos estados**. Esta brecha bloquea la activación productiva de la contabilización automática de reembolsos.
+- No se añade un cron de polling ni un webhook externo sin definir antes su cobertura de órdenes, cursor de reconciliación, permisos, límites de API, reintentos e idempotencia. No se debe ocultar el gap mediante una suposición sobre el comportamiento de Wix.
