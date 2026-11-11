@@ -186,3 +186,24 @@ Capa 3 solo podrá declararse operativa cuando:
 
 ---
 *Revisión documental: 2026-11-09. No se ha accedido al tenant M365 en esta intervención ni se han creado flujos, archivos, correos o datos CMS.*
+
+
+---
+
+## Addendum — decisiones transversales actualizadas (2026-11-11)
+
+### Autoridad de servicios Bookings
+
+El propietario declara ServiciosCatalogo como SSOT de configuración de servicios sincronizada con Wix Bookings. El campo name se relaciona con Complementos catálogo y contiene los complementos ofrecidos por cada servicio; staffMembers determina el personal elegible. Esta relación aún no está verificada en el esquema/código live ni acredita que exista un proceso de sincronización. Antes de implementarlo, auditar IDs, consumidores, triggers, contratos oficiales Bookings, idempotencia y semántica de retirada. La elegibilidad no garantiza disponibilidad horaria: esta depende además de working hours, eventos/bloqueos y reservas.
+
+### Caja física y ledgers
+
+La aclaración de negocio del 2026-11-11 establece que CajaActual refleja solo efectivo que atraviesa físicamente el cajón. Tarjeta, Bizum, online, transferencias y pagos bancarios no modifican el saldo físico. MovimientosCaja mantiene su función de registro fiscal de operaciones y LibroAsientosContablesDetalle consolida los hechos económicos; no deben confundirse las tres capas.
+
+La PR #284 implementa únicamente el filtro inicial EFECTIVO + PRESENCIAL en la proyección, y sigue abierta/draft, sin despliegue. No están cubiertos todavía aportaciones, retiradas, pagos físicos a proveedores ni ajustes con dirección inequívoca. No habilitar flujos de Capa 3 para reconstruir ni corregir estos datos: SharePoint continúa siendo exclusivamente repositorio documental y Capa 3 no escribe en Capa 1.
+
+### Estado de implantación
+
+No se ha demostrado tenant M365 auditado, flujos Power Automate activos ni E2E Wix → transporte → SharePoint. Los planes PA-01…PA-07 siguen siendo nombres de diseño, no automatizaciones activas. Mantener el orden de gates: auditoría tenant/licencias/DLP/permisos, ADR de transporte, contrato de exportación y minimización, implementación, QA sintético, aceptación de gestoría y despliegue autorizado.
+
+La guía transversal vigente es [ESTADO_ACTUAL_PROYECTO.md](ESTADO_ACTUAL_PROYECTO.md); el estado detallado se mantiene en [docs/PROJECT-STATUS.md](docs/PROJECT-STATUS.md).
