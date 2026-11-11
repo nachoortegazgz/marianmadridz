@@ -30,14 +30,19 @@ Repository-wide code search and direct consumer inspection found:
 
 This is an application-layer guard over the centralized elevated data access module. It does not replace Wix CMS collection permissions, collection hooks, backend RBAC, or schema validation. Direct CMS access outside this module must remain prohibited and separately audited.
 
-No CMS data, ledgers, bookings, cash balances, or Wix runtime configuration were changed. No deployment or merge was performed.
+No CMS data, ledgers, bookings, cash balances, or Wix runtime configuration were changed. No deployment or merge was performed. A temporary draft PR #293 was used only to trigger CI on the exact commit; its purpose is complete and it will be closed without merging.
 
-## Validation
+## Validation — current PR head 6e3529bdce1e50f7a5b0e07275f665e7eb1ffb97
 
-- Added offline policy tests for all six mutation families.
-- Existing `bulkPatchItems` tests remain intact.
-- CI is required before merge.
-- Wix Runtime validation is still required for deployed permission/hook behavior.
+- GitHub Actions run **#727**: completed successfully on the current PR head.
+- Offline regression: **61 suites, 573 tests passed, 0 failed**.
+- Wix SDK contract checks: passed.
+- Wix eCommerce Order Transactions contract: passed.
+- Wix Bookings Reader V2 contract: passed.
+- ESLint: passed.
+- Secret scanning run **#151**: passed.
+- The preceding run on head `446fe0a` exposed test expectations that still assumed the old marker layout; those tests now distinguish `WEBHOOK_CLAIM` from append-only `WEBHOOK_EVENT` and use the event-type-scoped marker identity.
+- Wix Runtime validation is still required for the conditional CMS delete, conditional claim transitions, collection hooks, and actual event payload delivery. No writer E2E has been executed in Wix.
 
 ## P1 — persisted-type-safe single deletion
 
