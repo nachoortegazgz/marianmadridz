@@ -20,7 +20,7 @@ Repository-wide code search and direct consumer inspection found:
 
 - Insert: allowlisted collections only. Control records require a canonical `controlType`; `CitasF2` projections require `bookingId`; fiscal records require a canonical `recordType`. Attendance records and fiscal/accounting ledgers remain insert-only.
 - Update: only `ControlOperativo` mutable control types, `CajaActual`, and `CitasF2` projection rows with both `_id` and `bookingId`. Append-only ledgers are not updateable through this primitive. `WEBHOOK_EVENT` is explicitly not updateable.
-- Save/upsert: only `ControlOperativo/DAYS_CACHE`.
+- Save/upsert: only `ControlOperativo/DAYS_CACHE` and `CajaActual` with an explicit `_id`.
 - Single remove: only ephemeral `ControlOperativo` types and scoped lease/claim cleanup (`SLOT_LOCK`, `IDEMPOTENCY`), with the expected type supplied by the caller.
 - Bulk remove: only `ControlOperativo`, with a purgeable `controlType` and a constrained filter vocabulary.
 - Bulk insert/update: disabled because no approved consumer exists.
