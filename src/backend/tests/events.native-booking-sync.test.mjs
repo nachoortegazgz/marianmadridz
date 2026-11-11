@@ -462,7 +462,9 @@ test("EVENT-BOOKING-08 refuses ambiguous active MapaStaff mappings", async () =>
     /MAPA_STAFF_ACTIVE_MAPPING_AMBIGUOUS/
   );
   assert.equal((wixDataMock._store.get("CitasF2") || []).length, 0);
-  assert.equal((wixDataMock._store.get("ControlOperativo") || []).length, 0);
+  const controls = wixDataMock._store.get("ControlOperativo") || [];
+  assert.equal(controls.filter(row => row.controlType === IC.CONTROL_TYPE.WEBHOOK_EVENT).length, 0);
+  assert.equal(controls.filter(row => row.controlType === IC.CONTROL_TYPE.WEBHOOK_CLAIM && row.status === IC.WEBHOOK_CLAIM_STATUS.FAILED_RETRYABLE).length, 1);
 });
 
 test("EVENT-BOOKING-06 native Bookings V2 cancellation consumes metadata.id + data.booking._id", async () => {
@@ -495,7 +497,7 @@ test("EVENT-BOOKING-06 native Bookings V2 cancellation consumes metadata.id + da
   assert.equal(rows[0].bookingStatus, "CANCELED");
 
   const markers = wixDataMock._store.get("ControlOperativo") || [];
-  assert.equal(markers.filter(row => row.dedupeKey === "WEBHOOK_evt-native-cancel-006").length, 1);
+  assert.equal(markers.filter(row => row.controlType === IC.CONTROL_TYPE.WEBHOOK_EVENT && row.eventId === "evt-native-cancel-006" && row.payload?.eventType === "BOOKING_CANCELED").length, 1);
 });
 
 
@@ -1099,7 +1101,7 @@ test("EVENT-ORDER-NATIVE-STOCK-10 order-created marks mixed Wix catalog orders w
   assert.equal(replay.duplicate, true);
 
   const markers = wixDataMock._store.get(IC.OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO) || [];
-  const marker = markers.find(row => row.eventId === eventId);
+  const marker = markers.find(row => row.controlType === IC.CONTROL_TYPE.WEBHOOK_EVENT && row.eventId === eventId);
   assert.ok(marker);
   assert.equal(marker.payload?.metadata?.inventoryAuthority, "WIX_CATALOG_OWNER");
   assert.equal(marker.payload?.metadata?.inventoryAction, "NO_CUSTOM_STOCK_WRITE");
