@@ -661,7 +661,11 @@ async function _resolveStaffResourceFromMapaStaff(staffMemberId) {
     return { ok: true, resourceId, scheduleId };
 }
 
-async function _syncNativeBookingToCitas(booking, eventId, traceId) {
+async function _syncNativeBookingToCitas(booking, eventId, traceId, options = {}) {
+    const targetBookingStatus = options.bookingStatus || BOOKING_STATUS.CONFIRMED;
+    if (![BOOKING_STATUS.PENDING, BOOKING_STATUS.CONFIRMED].includes(targetBookingStatus)) {
+        return { ok: false, reason: "NATIVE_BOOKING_PROJECTION_STATUS_INVALID" };
+    }
     const bookingId = _safeTrim(booking?.id || booking?._id);
     const bookedEntity = booking?.bookedEntity || {};
     const slot = bookedEntity.slot || bookedEntity.item?.slot || {};
@@ -694,7 +698,9 @@ async function _syncNativeBookingToCitas(booking, eventId, traceId) {
         const existingResourceId = _safeTrim(existingCita?.resourceId || "");
         const existingScheduleId = _safeTrim(existingCita?.scheduleId || "");
         if (_looksLikeGuid(existingResourceId) && _looksLikeGuid(existingScheduleId)) {
-            await _updateCitaStatus(bookingId, BOOKING_STATUS.CONFIRMED, traceId);
+            if (targetBookingStatus === BOOKING_STATUS.CONFIRMED) {
+                await _updateCitaStatus(bookingId, BOOKING_STATUS.CONFIRMED, traceId);
+            }
             return {
                 ok: true,
                 created: false,
@@ -726,7 +732,9 @@ async function _syncNativeBookingToCitas(booking, eventId, traceId) {
                 ...cita,
                 resourceId: resolvedResourceId,
                 scheduleId: resolvedScheduleId,
-                [BOOKING_FIELDS.STATUS]: BOOKING_STATUS.CONFIRMED,
+                ...(targetBookingStatus === BOOKING_STATUS.CONFIRMED
+                    ? { [BOOKING_FIELDS.STATUS]: BOOKING_STATUS.CONFIRMED }
+                    : {}),
             }),
             traceId,
             "events_reconcileExistingCitaResource"
@@ -828,7 +836,7 @@ async function _syncNativeBookingToCitas(booking, eventId, traceId) {
         startDate,
         endDate,
         bookingType: BOOKING_TYPE.SIMPLE,
-        bookingStatus: _safeTrim(booking?.status || BOOKING_STATUS.CONFIRMED).toUpperCase(),
+        bookingStatus: targetBookingStatus,
         paymentStatus,
         totalAmount: hasExactAmount ? parsedAmount : 0,
         contactDetails: booking?.contactDetails || {},
@@ -1212,6 +1220,81 @@ export async function wixBookingsV2_onBookingConfirmed(eventPayload) {
         return { status: "OK", eventId, ledgerCreated: syncResult.created };
     } catch (error) {
         _handleError(error, "wixBookingsV2_onBookingConfirmed", traceId);
+        throw error;
+    }
+}
+
+// ============================================================================
+/* WEBHOOK: BOOKING CREATED
+ * Persist native booking creation as PENDING. If a confirmation event races
+ * or precedes this delivery, a late creation event must not downgrade it.
+ * ============================================================================
+ */
+export async function wixBookingsV2_onBookingCreated(eventPayload) {
+    const traceId = makeTraceId("whook-created");
+    try {
+        const event = await _readWixBackendEvent(eventPayload, "BOOKING_CREATED");
+        if (!event) return { status: "REJECTED", reason: "INVALID_WIX_EVENT" };
+
+        const { eventId, bookingId, booking } = _normalizeBookingsEvent(event);
+        const nativeStatus = _safeTrim(booking?.status || "").toUpperCase();
+        const valid = Boolean(
+            eventId &&
+            _looksLikeGuid(bookingId) &&
+            ["CREATED", "PENDING", "CONFIRMED"].includes(nativeStatus)
+        );
+        if (!valid) {
+            log.warn("EVENT_INVALID_STRUCTURE_REJECTED", { eventId, bookingId, nativeStatus });
+            throw new Error("INVALID_BOOKING_CREATED_EVENT");
+        }
+
+        const alreadyProcessed = await isEventProcessed(eventId);
+        if (alreadyProcessed) {
+            const existingProjection = await dalQuery(CITAS_COL)
+                .eq(BOOKING_FIELDS.BOOKING_ID, bookingId)
+                .limit(1)
+                .find(STRONG_READ)
+                .catch(() => null);
+            if (existingProjection?.items?.length) {
+                return { status: "OK", duplicate: true };
+            }
+            log.warn("BOOKING_CREATED_LEDGER_REPAIR", { eventId, bookingId, traceId });
+        }
+
+        const targetBookingStatus = nativeStatus === BOOKING_STATUS.CONFIRMED
+            ? BOOKING_STATUS.CONFIRMED
+            : BOOKING_STATUS.PENDING;
+        const syncResult = await _syncNativeBookingToCitas(
+            booking,
+            eventId,
+            traceId,
+            { bookingStatus: targetBookingStatus }
+        );
+        if (!syncResult.ok) {
+            log.error("BOOKING_CREATED_LEDGER_SYNC_FAILED", {
+                eventId,
+                bookingId,
+                traceId,
+                reason: syncResult.reason,
+                missing: syncResult.missing,
+            });
+            const syncError = new Error(syncResult.reason || "BOOKING_CREATED_LEDGER_SYNC_FAILED");
+            syncError.details = { missing: syncResult.missing || [] };
+            throw syncError;
+        }
+
+        if (!alreadyProcessed) {
+            await markEventAsProcessed(eventId, "BOOKING_CREATED", traceId, {
+                bookingId,
+                serviceId: syncResult.serviceId,
+                ledgerCreated: syncResult.created,
+                ledgerSource: syncResult.created ? "WIX_BOOKINGS_NATIVE" : "EXISTING_CITASF2",
+                nativeStatus,
+            });
+        }
+        return { status: "OK", eventId, ledgerCreated: syncResult.created };
+    } catch (error) {
+        _handleError(error, "wixBookingsV2_onBookingCreated", traceId);
         throw error;
     }
 }
