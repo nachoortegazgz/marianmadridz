@@ -1,7 +1,15 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { wixDataMock } from "./loader.mjs";
+import { wixDataMock, mocks } from "./loader.mjs";
 import * as IC from "backend/internalConfig.js";
+
+let activeOrder = null;
+let activeOrderTransactions = { orderId: "", payments: [], refunds: [] };
+mocks.sdk["@wix/ecom::orderTransactions"] = {
+  listTransactionsForSingleOrder: async (orderId) => ({
+    orderTransactions: { ...activeOrderTransactions, orderId },
+  }),
+};
 
 const events = await import("backend/events.js");
 
@@ -318,21 +326,24 @@ test("EVENT-BOOKING-04 payment webhook updates payment without confirming a pend
     }),
   ]);
 
+  const orderId = "44444444-4444-4444-8444-444444444444";
+  activeOrder = {
+    _id: orderId,
+    paymentStatus: "PAID",
+    priceSummary: { total: { amount: "0.00" } },
+    lineItems: [{
+      catalogReference: {
+        appId: "13d21c63-b5ec-5912-8397-c3a5ddb27a97",
+        catalogItemId: BOOKING_ID,
+      },
+      quantity: 1,
+      price: { amount: "0.00" },
+    }],
+  };
+  activeOrderTransactions = { orderId, payments: [], refunds: [] };
   const result = await events.wixEcom_onOrderPaymentStatusUpdated({
-    id: "evt-order-paid-pending-004",
-    order: {
-      _id: "order-paid-pending-004",
-      paymentStatus: "PAID",
-      priceSummary: { total: { amount: "0.00" } },
-      lineItems: [{
-        catalogReference: {
-          appId: "13d21c63-b5ec-5912-8397-c3a5ddb27a97",
-          catalogItemId: BOOKING_ID,
-        },
-        quantity: 1,
-        price: { amount: "0.00" },
-      }],
-    },
+    metadata: { id: "evt-order-paid-pending-004" },
+    data: { order: activeOrder, previousPaymentStatus: "NOT_PAID" },
   });
 
   assert.equal(result.status, "OK");
@@ -346,7 +357,7 @@ test("EVENT-BOOKING-04 payment webhook updates payment without confirming a pend
     assert.equal(row.bookingStatus, "PENDING");
     assert.equal(row.paymentStatus, "PAID");
     assert.equal(row.meta.paymentStatus, "PAID");
-    assert.equal(row.meta.orderId, "order-paid-pending-004");
+    assert.equal(row.meta.orderId, orderId);
     assert.equal(row.pairToken, PAIR_TOKEN);
   }
   assert.equal(f1.bookingType, "DUAL_F1");
@@ -571,6 +582,8 @@ test("EVENT-PAYMENT-09 official Wix eCommerce paid event appends WIX_PAYMENTS le
     },
   };
 
+  activeOrder = event.data.order;
+  activeOrderTransactions = { orderId, payments: [], refunds: [] };
   const result = await events.wixEcom_onOrderPaymentStatusUpdated(event);
   assert.equal(result.status, "OK");
 
@@ -623,6 +636,174 @@ test("EVENT-PAYMENT-09 official Wix eCommerce paid event appends WIX_PAYMENTS le
   assert.equal(newEventReplay.status, "OK");
   assert.equal((wixDataMock._store.get(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA) || []).length, 1,
     "stable ORDER-{orderId} transaction id must prevent a second fiscal movement");
+});
+
+test("EVENT-REFUND-01 defers incomplete refunds, records successful terminal amounts and replays idempotently", async () => {
+  wixDataMock._reset();
+  seedCajaPrincipal();
+
+  const secretState = globalThis.__mmSecretsState || (globalThis.__mmSecretsState = { _map: {}, _default: "mock-secret" });
+  secretState._map.FISCAL_NIF_EMISOR = "B12345678";
+  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.DATOS_FISCALES, [{
+    _id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+    recordType: "TERCERO",
+    taxId: "B12345678",
+    legalName: "MARIAN MADRID",
+    thirdPartyType: "EMISOR",
+    address: null,
+  }]);
+  wixDataMock._seed("CitasF2", [seedCita({
+    bookingStatus: "PENDING",
+    paymentStatus: "PENDING_PAYMENT",
+    totalAmount: 45.5,
+    meta: { pairToken: PAIR_TOKEN, customSaga: true, paymentStatus: "PENDING_PAYMENT" },
+  })]);
+
+  const orderId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+  const refundId = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
+  activeOrder = {
+    _id: orderId,
+    paymentStatus: "PAID",
+    currency: "EUR",
+    taxIncludedInPrices: true,
+    taxInfo: { totalTax: { amount: "7.90" }, taxBreakdown: [] },
+    priceSummary: {
+      subtotal: { amount: "37.60" },
+      tax: { amount: "7.90" },
+      total: { amount: "45.50" },
+      totalPrice: { amount: "45.50" },
+    },
+    lineItems: [{
+      catalogReference: {
+        appId: IC.WIX_CATALOG_APP_IDS.BOOKINGS,
+        catalogItemId: BOOKING_ID,
+      },
+      productName: { original: "QA booking service" },
+      quantity: 1,
+      price: { amount: "120.00" },
+      totalPriceAfterTax: { amount: "45.50" },
+      taxInfo: {
+        taxableAmount: { amount: "37.60" },
+        taxAmount: { amount: "7.90" },
+        taxRate: "0.21",
+        taxBreakdown: [],
+      },
+    }],
+  };
+  activeOrderTransactions = { orderId, payments: [], refunds: [] };
+
+  const paid = await events.wixEcom_onOrderPaymentStatusUpdated({
+    metadata: { id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb1" },
+    data: { order: activeOrder, previousPaymentStatus: "NOT_PAID" },
+  });
+  assert.equal(paid.status, "OK");
+  assert.equal((wixDataMock._store.get(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA) || []).length, 1);
+
+  await assert.rejects(
+    events.wixEcom_onOrderPaymentStatusUpdated({
+      metadata: { id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb7" },
+      data: {
+        order: { ...activeOrder, currency: "USD", paymentStatus: "PARTIALLY_REFUNDED" },
+        previousPaymentStatus: "PAID",
+      },
+    }),
+    /REFUND_CURRENCY_UNSUPPORTED/
+  );
+  assert.equal((wixDataMock._store.get(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA) || []).length, 1,
+    "refunds outside the canonical EUR site currency must not append a fiscal correction");
+
+  activeOrderTransactions = {
+    orderId,
+    payments: [],
+    refunds: [{
+      id: refundId,
+      transactions: [
+        { paymentId: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee", refundStatus: "SUCCEEDED", amount: { amount: "10.00" } },
+        { paymentId: "ffffffff-ffff-4fff-8fff-ffffffffffff", refundStatus: "PENDING", amount: { amount: "5.00" } },
+      ],
+      summary: { refunded: { amount: "10.00" } },
+    }],
+  };
+  await assert.rejects(
+    events.wixEcom_onOrderPaymentStatusUpdated({
+      metadata: { id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2" },
+      data: {
+        order: { ...activeOrder, paymentStatus: "PARTIALLY_REFUNDED" },
+        previousPaymentStatus: "PAID",
+      },
+    }),
+    /REFUND_TRANSACTIONS_PENDING/
+  );
+  assert.equal((wixDataMock._store.get(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA) || []).length, 1,
+    "a refund with a pending transaction must not append a fiscal correction");
+
+  activeOrderTransactions.refunds[0].transactions[1].refundStatus = "FAILED";
+  const completed = await events.wixEcom_onOrderUpdated({
+    metadata: { id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb3" },
+    data: { order: { ...activeOrder, paymentStatus: "PARTIALLY_REFUNDED" } },
+  });
+  assert.equal(completed.status, "OK");
+  assert.equal(completed.completedRefundCount, 1);
+
+  const movements = wixDataMock._store.get(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA) || [];
+  assert.equal(movements.length, 2);
+  const refundMovement = movements.find(row => row.transactionId === "REFUND-" + orderId + "-" + refundId);
+  assert.ok(refundMovement);
+  assert.equal(refundMovement.totalAmount, -10);
+  assert.equal(refundMovement.taxBase, -8.26);
+  assert.equal(refundMovement.taxAmount, -1.74);
+
+  let cita = (wixDataMock._store.get("CitasF2") || []).find(row => row.bookingId === BOOKING_ID);
+  assert.equal(cita.paymentStatus, IC.PAYMENT_STATUS.PARTIALLY_REFUNDED);
+  assert.equal(cita.bookingStatus, "PENDING");
+
+  const secondRefundId = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
+  activeOrderTransactions.refunds.push({
+    id: secondRefundId,
+    transactions: [
+      { paymentId: "99999999-9999-4999-8999-999999999999", refundStatus: "SUCCEEDED", amount: { amount: "35.50" } },
+    ],
+    summary: { refunded: { amount: "35.50" } },
+  });
+  const fullyRefunded = await events.wixEcom_onOrderUpdated({
+    metadata: { id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb4" },
+    data: { order: { ...activeOrder, paymentStatus: "FULLY_REFUNDED" } },
+  });
+  assert.equal(fullyRefunded.status, "OK");
+  assert.equal(fullyRefunded.completedRefundCount, 2);
+  let finalMovements = wixDataMock._store.get(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA) || [];
+  assert.equal(finalMovements.length, 3);
+  const finalRefundMovement = finalMovements.find(row => row.transactionId === "REFUND-" + orderId + "-" + secondRefundId);
+  assert.ok(finalRefundMovement);
+  assert.equal(finalRefundMovement.totalAmount, -35.5);
+  assert.equal(finalRefundMovement.taxBase, -29.34);
+  assert.equal(finalRefundMovement.taxAmount, -6.16);
+  cita = (wixDataMock._store.get("CitasF2") || []).find(row => row.bookingId === BOOKING_ID);
+  assert.equal(cita.paymentStatus, IC.PAYMENT_STATUS.REFUNDED);
+
+  const replay = await events.wixEcom_onOrderUpdated({
+    metadata: { id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb5" },
+    data: { order: { ...activeOrder, paymentStatus: "FULLY_REFUNDED" } },
+  });
+  assert.equal(replay.status, "OK");
+  assert.equal((wixDataMock._store.get(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA) || []).length, 3,
+    "a completed refund replay must not append a second rectification");
+
+  const concurrentResults = await Promise.all([
+    events.wixEcom_onOrderUpdated({
+      metadata: { id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb6" },
+      data: { order: { ...activeOrder, paymentStatus: "FULLY_REFUNDED" } },
+    }),
+    events.wixEcom_onOrderUpdated({
+      metadata: { id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb7" },
+      data: { order: { ...activeOrder, paymentStatus: "FULLY_REFUNDED" } },
+    }),
+  ]);
+  assert.equal(concurrentResults.every(result => result.status === "OK"), true);
+  finalMovements = wixDataMock._store.get(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA) || [];
+  assert.equal(finalMovements.length, 3, "concurrent refund events must not duplicate fiscal rectifications");
+  assert.equal(finalMovements.filter(row => row.transactionId === "REFUND-" + orderId + "-" + refundId).length, 1);
+  assert.equal(finalMovements.filter(row => row.transactionId === "REFUND-" + orderId + "-" + secondRefundId).length, 1);
 });
 
 test("EVENT-BOOKING-RESCHEDULE-01 native reschedule updates only the affected CitasF2 phase and flags its dual sibling", async () => {

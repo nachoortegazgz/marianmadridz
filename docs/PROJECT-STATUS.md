@@ -8,6 +8,16 @@
 
 > Este documento es el índice de estado. No sustituye las decisiones de arquitectura, los contratos de código ni los informes de auditoría. Una capacidad solo se considera operativa cuando existe evidencia del nivel de validación que se indica.
 
+## Addendum de hardening — 2026-11-11
+
+- PR #284 está mergeada en GitHub; la integración no acredita despliegue en Wix. Su cobertura de caja sigue limitada a EFECTIVO + PRESENCIAL.
+- PR #286 está abierta como draft en `audit/p0-p1-hardening`. Protege por defecto los writers fiscales y contables, mantiene las recuperaciones en cola mientras los writers están deshabilitados y añade escaneo Gitleaks.
+- CI offline del head `edceb4fdadc273a5cd27b59d7ba446baf60f8bb3`: run `43001943879`, 55 suites / 534 tests / 0 fallos; contratos SDK Wix, Bookings Reader V2 y ESLint correctos.
+- Gitleaks full-history sobre el mismo HEAD: run `43001943895`, SUCCESS.
+- La regla oficial `@wix/cli/no-invalid-backend-import` continúa desactivada por incompatibilidad de carga del plugin. El nuevo contrato cubre únicamente el límite estático de imports frontend y no equivale a la regla oficial.
+- No hay certificación Wix Runtime/Preview/E2E ni evidencia de despliegue del HEAD. No fusionar ni desplegar hasta disponer de QA Wix aislado y autorización explícita.
+
+
 ## 1. Resumen ejecutivo
 
 El repositorio contiene una solución Wix Editor/Velo con reservas Bookings V2, saga dual, checkout Cart V2, proyección de pedidos y ledgers fiscal/laboral. La retirada del inventario custom está integrada y Wix Stores Catalog V3 es la autoridad de stock. ZONA STAFF tiene consultas read-only integradas; writers laborales y caja siguen bloqueados. PR #250 incorpora el contrato puro AEAT v0.1.2 con vectores oficiales, sin conexión a writers ni certificación Veri*Factu. PR #252 retira paneles inactivos de ZONA MARIAN. PR #259 limita Staff a consultas verificables. PR #264 endurece replay del ledger contable. PR #256 implementa snapshots trimestrales inmutables, sin envío a gestoría. Wix Invoices sigue en V1 y su API V2 devolvió 428 en la última prueba documentada. Bookings V2 contiene 94 servicios: 70 tarifas fijas, 24 auxiliares sin precio, siete servicios visibles >100 EUR y ningún depósito configurado.
@@ -246,9 +256,34 @@ La guía ejecutiva consolidada y vigente para la siguiente intervención es [EST
 La revisión de 2026-11-11 añade, entre otros, estos puntos que prevalecen sobre cualquier texto histórico incompatible de este documento:
 - CajaActual representa exclusivamente el efectivo físico del cajón. Tarjeta, Bizum, online, transferencias y pagos bancarios no alteran su saldo.
 - MovimientosCaja conserva su función de registro fiscal de operaciones; no se convierte en un ledger exclusivo de efectivo. LibroAsientosContablesDetalle consolida los hechos económicos según contratos contables aprobados.
-- La implementación parcial de esta regla está en la PR #284, abierta y no desplegada. Solo proyecta actualmente EFECTIVO + PRESENCIAL; no cubre todavía aportaciones, retiradas, pagos físicos a proveedores ni ajustes.
+- La implementación parcial de esta regla se integró mediante la PR #284 (mergeada en GitHub; el despliegue Wix no está acreditado). Solo proyecta actualmente EFECTIVO + PRESENCIAL; no cubre todavía aportaciones, retiradas, pagos físicos a proveedores ni ajustes.
 - La creación de una reserva nativa de prueba el 2026-11-11 no produjo su proyección CitasF2 ni marcador WEBHOOK_EVENT. La causa no está aislada; no realizar backfill, cancelación ni más reservas de prueba hasta resolverla.
 - ServiciosCatalogo se declara por el propietario SSOT de la configuración de servicios hacia Wix Bookings, pero el mapeo de name/complementos y staffMembers aún requiere auditoría de esquema, consumidores y sincronización real.
 - La CI offline verde no acredita Wix runtime, E2E publicado ni despliegue.
 
 La sección histórica anterior se conserva para trazabilidad; cuando contradiga estos puntos, aplicar esta actualización para el estado a 2026-11-11 y registrar la resolución definitiva en el ADR correspondiente.
+
+## Addendum — conciliación de pagos y reembolsos Wix (2026-11-11)
+
+- PR #286 sigue abierta como draft, sin merge ni despliegue. La rama añade al hardening fail-closed la conciliación de reembolsos por eventos Velo estables: wixEcom_onOrderPaymentStatusUpdated y wixEcom_onOrderUpdated.
+- La lectura de transacciones utiliza @wix/ecom.orderTransactions.listTransactionsForSingleOrder con elevación. Solo se registran refunds con todas las transacciones terminales; summary.refunded debe reconciliar con importes SUCCEEDED y las transacciones FAILED aportan cero.
+- SDK_CONFIG.CURRENCY_CODE=EUR está respaldado por las propiedades live del sitio. Los reembolsos con otra moneda se rechazan; no hay soporte multimoneda.
+- Cobertura añadida: siete pruebas unitarias y escenario offline de venta, refund pendiente, parcial mixto, total posterior, residual IVA, replay y concurrencia.
+- CI offline SUCCESS sobre el HEAD de código 48b509f (run 43034820298): 56 suites / 543 tests / 0 fallos; SDK @wix/ecom orderTransactions, Bookings Reader V2 y ESLint correctos. Gitleaks full-history SUCCESS (run 43034820526). Las actualizaciones posteriores son exclusivamente documentales; el código validado no ha cambiado.
+- Wix Runtime y E2E publicado siguen pendientes por falta de sitio QA aislado. La cuenta tiene el sitio productivo Marian Madrid y el sitio personal ortega nacho cv web (Velo enabled, plan Free), pero el segundo no replica Bookings/Stores/Members. No se duplica producción porque Wix no garantiza que el duplicado excluya CMS personalizado; no ejecutar webhooks, pagos, reembolsos ni escrituras fiscales sobre producción.
+- El evento Velo onOrderTransactionsUpdated no se utiliza porque está en Developer Preview y su descripción no garantiza la transición de estado de refunds ya creados.
+- La documentación de QA está en docs/qa/QA-SIMULATION-2026-11.md y el detalle de cambios en docs/audits/2026-11-11-p0-p1-hardening.md.
+
+
+
+## Addendum — estado real de PR #286 y automatizaciones Wix (2026-11-11)
+
+- CI del HEAD de código `d30e03473fe2bfe39b93a881ef4b765fcd72691d`: backend offline quality run `43038637356`, 57 suites / 548 tests / 0 fallos; Gitleaks run `43038637350` SUCCESS. No hay revisiones humanas registradas. Los commits posteriores son documentales y requieren que CI vuelva a ejecutarse.
+- PR #286 permanece abierta como draft, sin merge ni despliegue.
+- La auditoría de automatizaciones Wix aplicó cambios de estado: 67 activas se pausaron y verificaron (66 email y una WhatsApp). Las cuatro automatizaciones WhatsApp están inactivas.
+- Nueve automatizaciones de email siguen activas por restricciones Wix `readonly` y/o `disableStatusChange`. La allowlist Resend no gobierna los envíos nativos Wix.
+- No se envió email, WhatsApp ni SMS. El móvil sintético `666724634` no se configuró porque la acción nativa WhatsApp no tiene una receta pública soportada para modificar destinatarios por API.
+- Pendiente: revisión humana completa; runtime/E2E aislado de eventos de pago/reembolso; aislamiento de los nueve flujos email restantes; decisión e implementación de una integración WhatsApp oficialmente soportada.
+- No desplegar: el código mantiene los writers fiscales/contables fail-closed y no existe evidencia de validación Wix Runtime del HEAD.
+
+Evidencia: [auditoría de aislamiento de notificaciones](audits/2026-11-11-wix-automation-recipient-isolation.md) y [auditoría P0/P1](audits/2026-11-11-p0-p1-hardening.md).

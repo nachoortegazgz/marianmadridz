@@ -640,6 +640,34 @@ export const orders = new Proxy({}, {
     return _ordersRootMethods.get(name);
   },
 });
+const _orderTransactionsMethods = new Map();
+const _currentOrderTransactionsMock = (name) => {
+  const namespace = sdkNamespaceState[MODULE_KEY + '::orderTransactions'] ||
+    sdkNamespaceState['@wix/ecom::orderTransactions'] ||
+    sdkNamespaceState['orderTransactions'] || null;
+  if (namespace && typeof namespace[name] === 'function') return namespace[name];
+  const directKey = MODULE_KEY + '::orderTransactions::' + name;
+  if (typeof sdkNamespaceState[directKey] === 'function') return sdkNamespaceState[directKey];
+  return null;
+};
+export const orderTransactions = new Proxy({}, {
+  get: (_target, property) => {
+    if (property === 'then') return undefined;
+    const name = String(property);
+    if (!_orderTransactionsMethods.has(name)) {
+      _orderTransactionsMethods.set(name, (...args) => {
+        const method = _currentOrderTransactionsMock(name);
+        if (typeof method !== 'function') {
+          const error = new Error('Missing @wix/ecom orderTransactions mock: ' + name);
+          error.code = 'MISSING_ECOM_ORDER_TRANSACTIONS_MOCK';
+          throw error;
+        }
+        return method(...args);
+      });
+    }
+    return _orderTransactionsMethods.get(name);
+  },
+});
 export const elevate = fnProxy;
 export const createClient = () => fnProxy;
 export const getSecret = async () => "mock-secret";
@@ -1048,6 +1076,20 @@ export async function resolve(specifier, context, nextResolve) {
 }
 
 export async function load(url, context, nextLoad) {
+  // Offline tests exercise the writer happy paths using synthetic data. The
+  // production source remains fail-closed (false); this test-only loader
+  // injects an enabled policy into the imported module so existing behavioral
+  // suites can continue testing serialization, idempotency and projections.
+  // The contract suite reads internalConfig.js from disk and asserts the
+  // production default is false.
+  const internalConfigUrl = pathToFileURL(path.join(BACKEND_DIR, "internalConfig.js")).href;
+  if (url === internalConfigUrl) {
+    const source = fs.readFileSync(path.join(BACKEND_DIR, "internalConfig.js"), "utf8")
+      .replace("LEDGER_WRITES_ENABLED: false", "LEDGER_WRITES_ENABLED: true")
+      .replace("ACCOUNTING_LEDGER_WRITES_ENABLED: false", "ACCOUNTING_LEDGER_WRITES_ENABLED: true")
+      .replace("ALLOW_SIMULATION_RECORDS: false", "ALLOW_SIMULATION_RECORDS: true");
+    return { format: "module", source, shortCircuit: true };
+  }
   if (url.startsWith('mock:wix-data') || url === 'mock:@wix/data' || url === 'mock:@wix/essentials') {
     // @wix/data (API v2, usado por dataAccess.js) -> adaptador v2 sobre el
     // mismo store del mock. 'wix-data' (builder legacy v1) -> mock clasico.

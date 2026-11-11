@@ -1,6 +1,9 @@
 name: Backend offline quality gates
 
 on:
+  push:
+    branches:
+      - main
   pull_request:
     branches:
       - main
@@ -57,6 +60,10 @@ jobs:
       - name: Verify installed Wix SDK contracts
         if: always()
         run: npm run verify:wix-ecom-cart-v2
+
+      - name: Verify Wix eCommerce Order Transactions SDK contract
+        if: always()
+        run: npm run verify:wix-ecom-order-transactions
 
       - name: Verify Wix Bookings Reader V2 SDK contract
         if: always()

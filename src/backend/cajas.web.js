@@ -25,6 +25,7 @@ import {
     OPERATIONAL_COLLECTIONS,
     SINGLETONS,
     SDK_CONFIG,
+    FISCAL_RUNTIME_POLICY,
     MOVEMENT_TYPE,
     PAYMENT_METHOD,
     CHANNEL_TYPE,
@@ -511,6 +512,9 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
         );
 
         await requireCajero(traceId);
+        if (FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED !== true) {
+            return { status: "ERROR", data: null, error: { code: "FISCAL_LEDGER_WRITES_DISABLED", message: "La escritura fiscal permanece deshabilitada hasta completar la certificacion de runtime." }, traceId };
+        }
         await validateFiscalConfig(traceId);
         const { nifEmisor } = await _getFiscalKeys();
 
@@ -540,6 +544,9 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
         const transactionId = _safeTrim(payload?.transactionId) || null;
 
         const inDto = normalizeMovementKeys({ ...(payload || {}) });
+        if (FISCAL_RUNTIME_POLICY.ALLOW_SIMULATION_RECORDS !== true && isExplicitSimulationLedgerRecord(inDto)) {
+            return { status: "ERROR", data: null, error: { code: "TEST_DATA_NOT_ALLOWED_IN_PRODUCTION", message: "Los registros de simulacion no pueden persistirse en el ledger operativo." }, traceId };
+        }
         const eventType = _safeTrim(inDto.eventType).toUpperCase() || (
             [MOVEMENT_TYPE.REEMBOLSO, MOVEMENT_TYPE.DEVOLUCION, MOVEMENT_TYPE.DEVOLUCION_SERVICIO].includes(movementType)
                 ? EVENT_TYPE.RECTIFICATIVA
@@ -1246,6 +1253,9 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
     let retainLedgerLock = false;
     try {
         if (authorizeCashier) await requireCajero(traceId);
+        if (FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED !== true) {
+            return { status: "ERROR", data: null, error: { code: "FISCAL_LEDGER_WRITES_DISABLED", message: "La escritura fiscal permanece deshabilitada hasta completar la certificacion de runtime." }, traceId };
+        }
         const currentCashRegister = await getCashRegisterSingleton();
         if (_isSimulationCashRegister(currentCashRegister)) {
             return { status: "ERROR", data: null, error: { code: "CASH_REGISTER_SIMULATION_STATE", message: "No se puede cerrar una caja que contiene estado de simulacion." } };

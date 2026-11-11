@@ -137,3 +137,51 @@ Todas las suites offline usan fixtures sintéticos y mocks. No se crean reservas
 - **Verificado:** el flujo backend de pago y persistencia simulado en memoria; idempotencia; actualización dual de CitasF2; ledger append-only; CI offline.
 - **No verificado:** transacción real de Wix Payments, recepción del webhook por el runtime Wix publicado, escritura real en CMS/agenda de un entorno QA, conciliación de payouts/reembolsos y desglose fiscal de IVA del pedido.
 - **Siguiente condición para E2E remoto:** disponer de un sitio Wix QA separado con Bookings y Wix Payments configurado en modo de prueba, y alinear/sincronizar primero la UI del Editor con el repositorio. No usar el sitio productivo para reservas o pagos sintéticos.
+
+## Update 2026-11-11 — conciliación de reembolsos con eventos Velo estables
+
+### Contrato implementado en rama
+- Se conserva `wixEcom_onOrderPaymentStatusUpdated`, evento Velo estable que informa del pedido y del estado de pago anterior.
+- Se añade `wixEcom_onOrderUpdated` como segundo disparador para pedidos cuyo estado de pago ya sea `PARTIALLY_REFUNDED` o `FULLY_REFUNDED`.
+- Ambos flujos consultan `@wix/ecom.orderTransactions.listTransactionsForSingleOrder` con elevación y validan que la respuesta corresponda al mismo pedido.
+- El procesador fiscal solo acepta refunds con todas sus transacciones en estado terminal (`SUCCEEDED` o `FAILED`). Si existe alguna transacción pendiente, iniciada, programada, desconocida o sin transacciones, la ejecución falla de forma cerrada y no marca el evento como procesado.
+- Para un refund terminal, `summary.refunded.amount` debe coincidir exactamente con la suma de los importes de transacciones `SUCCEEDED`. Las transacciones `FAILED` no aportan importe. La discrepancia bloquea el writer.
+- Se conserva la identidad `REFUND-{orderId}-{refundId}`, el límite acumulado bajo lock fiscal, el prorrateo de IVA y el residual en el último reembolso. Wix conserva la autoridad sobre el restock nativo.
+- No se usa `wixEcom_onOrderTransactionsUpdated`: aunque está documentado en Velo, aparece como Developer Preview y su descripción no garantiza una notificación cuando cambia el estado de una transacción de refund ya creada.
+
+### Cobertura añadida
+- `refundTransactions.test.mjs`: seis pruebas unitarias de estados pendientes, fallidos, mixtos, discrepancia de resumen, identidad y cantidades inválidas.
+- `events.native-booking-sync.test.mjs`: escenario integrado offline de venta original, refund pendiente, rechazo de moneda no canónica, refund terminal mixto (éxito + fallo), prorrateo de IVA, actualización de CitasF2, replay y concurrencia sin duplicidad.
+- `events.backend-events.contract.test.mjs` y `events.order-id-validation.contract.test.mjs`: contratos de los dos eventos Velo estables y ausencia de writers de inventario custom.
+- `npm run verify:wix-ecom-order-transactions`: gate CI para comprobar que el SDK instalado exporta el método utilizado.
+
+### Límites abiertos
+- **CI offline del HEAD de código 48b509f39d4e6f6b32c8bb4a23b59fcebc3886a0:** run 43034820298 SUCCESS, 56 suites / 543 tests / 0 fallos; SDK @wix/ecom orderTransactions, Bookings Reader V2 y ESLint correctos. Gitleaks full-history run 43034820526 SUCCESS. Las actualizaciones posteriores de esta auditoría son exclusivamente documentales; no cambian código ni pruebas.
+- **Runtime Wix:** pendiente. Los backend events no funcionan en Preview; requiere prueba en un sitio publicado de QA aislado.
+- **Entrega de eventos:** Wix documenta entrega asíncrona al menos una vez y posibles duplicados/desorden; se conserva idempotencia por eventId y por refundId. La documentación no detalla la política de reintentos ante errores del handler, por lo que el comportamiento de refund con varias transacciones debe verificarse en QA.
+- **Sitio QA aislado:** no disponible; no probar el webhook sobre el sitio productivo.
+- **Moneda:** el sitio Wix está configurado en EUR (propiedades del sitio verificadas) y `SDK_CONFIG.CURRENCY_CODE` centraliza ese valor. El procesador rechaza refunds si `order.currency` no coincide con EUR. El ledger histórico no conserva un código de moneda por movimiento; cualquier futura habilitación multi-moneda requiere ampliar el contrato del ledger y definir compatibilidad histórica.
+- **Efectos externos:** no se han ejecutado pagos, devoluciones, restock, escrituras CMS, envíos ni despliegues.
+
+### Fuentes oficiales consultadas
+- [Velo — onOrderPaymentStatusUpdated](https://dev.wix.com/docs/velo/events-service-plugins/e-commerce/events/on-order-payment-status-updated).
+- [Velo — onOrderUpdated](https://dev.wix.com/docs/velo/events-service-plugins/e-commerce/events/on-order-updated).
+- [Wix eCommerce — List Transactions For Single Order](https://dev.wix.com/docs/api-reference/business-solutions/e-commerce/orders/order-transactions/list-transactions-for-single-order).
+- [Wix eCommerce — Order payment status enum](https://dev.wix.com/docs/api-reference/business-solutions/e-commerce/orders/orders/get-order).
+- [Wix — Backend events and event delivery](https://dev.wix.com/docs/overview/backend-services/events).
+
+### Inventario de sitios y bloqueo de QA (verificación 2026-11-11)
+- Wix devuelve dos sitios en la cuenta: Marian Madrid (producción) y ortega nacho cv web (personal).
+- El sitio personal tiene Velo habilitado y plan Free, pero su conjunto de apps (Forms & Payments, Hotels, Invoices V1, Portfolio y Video) no replica el stack requerido de Marian Madrid (Bookings, Stores y Members). No es un entorno QA equivalente y no se modifica.
+- Se ha localizado la API oficial Duplicate Site. Wix indica que no copia pedidos, contactos, facturas ni configuración de apps de terceros; la documentación no garantiza que todas las colecciones CMS personalizadas estén vacías. No se duplica producción para evitar copiar datos personales o ledgers a un entorno de pruebas.
+- No se ha creado un nuevo sitio, asignado dominio, activado plan ni instalado apps. La validación runtime permanece bloqueada hasta disponer de un sitio QA vacío con las apps necesarias y sin datos productivos.
+- Referencia: [Wix Duplicate Site API](https://dev.wix.com/docs/api-reference/account-level/sites/site-actions/duplicate-site).
+
+
+## Update 2026-11-11 — aislamiento de notificaciones nativas Wix
+
+La auditoría live de Wix Automations ya no es solo lectura. Tras autorización del propietario se confirmaron 67 cambios de estado (66 automatizaciones email y una WhatsApp) de activas a `INACTIVE`. Las cuatro automatizaciones WhatsApp están ahora inactivas. Nueve automatizaciones email siguen activas porque Wix devuelve restricciones `readonly` y/o `disableStatusChange`; por tanto, no se considera aislada toda la mensajería nativa.
+
+No se ha enviado ningún email, WhatsApp ni SMS. El número sintético `666724634` permanece sin configurar. La acción nativa `whatsapp-send-message` carece de receta pública soportada para reconfigurar destinatario por API, por lo que se mantiene pausada y no se sustituye por otro canal.
+
+El guard de allowlist `emailRecipientPolicy.js` solo protege el despacho Resend del backend; no controla Wix Automations nativas. No ejecutar pruebas de envío hasta resolver los nueve flujos activos y verificar sus destinatarios. Evidencia detallada: [auditoría de aislamiento de notificaciones](../audits/2026-11-11-wix-automation-recipient-isolation.md).

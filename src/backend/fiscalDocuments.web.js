@@ -80,6 +80,7 @@ import {
   _roundMoney,
 } from "public/mmUtils";
 import { hashSHA256 } from "backend/securityEngine";
+import { areAllowedEmailRecipients } from "backend/emailRecipientPolicy";
 import { logger } from "backend/logger";
 
 // SSOT-KEYFIELD-02: lectura canonica con fallback alias (contrato unico).
@@ -1147,6 +1148,13 @@ async function _dispatchEmailViaResend({
   attachments,
   traceId,
 }) {
+  if (!areAllowedEmailRecipients(to)) {
+    throw Object.assign(
+      new Error("Email recipient is outside the authorized QA allowlist."),
+      { code: "EMAIL_RECIPIENT_NOT_ALLOWED" }
+    );
+  }
+
   const apiKey = await _getResendApiKey();
   if (!apiKey) {
     throw Object.assign(

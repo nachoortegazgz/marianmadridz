@@ -38,7 +38,7 @@ test("EVENT-WEBHOOK-RETRY-02 booking and eCommerce persistence handlers never ac
         "wixBookingsV2_onBookingCanceled",
         "wixEcom_onOrderCreated",
         "wixEcom_onOrderPaymentStatusUpdated",
-        "wixEcom_onOrderRefunded",
+        "wixEcom_onOrderUpdated",
         "wixEcom_onOrderCanceled",
     ];
     for (const name of handlerNames) {
@@ -62,19 +62,24 @@ test("EVENT-ORDER-NATIVE-STOCK-02 eCommerce events no longer import the custom i
 });
 
 
-test("EVENT-ORDER-NATIVE-STOCK-03 payment, refund and cancel handlers do not mirror stock into CMS", () => {
-    const handlers = [
-        ["wixEcom_onOrderPaymentStatusUpdated", "WEBHOOK: ORDER REFUNDED"],
-        ["wixEcom_onOrderRefunded", "WEBHOOK: ORDER CANCELED"],
-        ["wixEcom_onOrderCanceled", null],
-    ];
-    for (const [name, nextMarker] of handlers) {
-        const start = source.indexOf(`export async function ${name}`);
-        const end = nextMarker ? source.indexOf(nextMarker, start) : source.length;
-        assert.ok(start >= 0 && end > start, `${name} must remain discoverable`);
-        const handler = source.slice(start, end);
-        assert.doesNotMatch(handler, /MovimientosInventario|InventarioStockVenta|syncRestockedOrderInventoryInternal|releaseOrderInventoryInternal|syncPaidOrderInventoryInternal/);
+test("EVENT-ORDER-NATIVE-STOCK-03 stable payment and order-update handlers route refunds without custom stock writes", () => {
+    const paymentStart = source.indexOf("export async function wixEcom_onOrderPaymentStatusUpdated");
+    const processorStart = source.indexOf("// WIX ECOMMERCE TRANSACTION PROCESSORS", paymentStart);
+    const orderUpdatedStart = source.indexOf("export async function wixEcom_onOrderUpdated", processorStart);
+    const cancelStart = source.indexOf("// WEBHOOK: ORDER CANCELED", orderUpdatedStart);
+    assert.ok(paymentStart >= 0 && processorStart > paymentStart);
+    assert.ok(orderUpdatedStart > processorStart && cancelStart > orderUpdatedStart);
+    const paymentHandler = source.slice(paymentStart, processorStart);
+    const refundProcessor = source.slice(processorStart, orderUpdatedStart);
+    const orderUpdatedHandler = source.slice(orderUpdatedStart, cancelStart);
+    for (const block of [paymentHandler, refundProcessor, orderUpdatedHandler]) {
+        assert.doesNotMatch(block, /MovimientosInventario|InventarioStockVenta|syncRestockedOrderInventoryInternal|releaseOrderInventoryInternal|syncPaidOrderInventoryInternal/);
     }
+    assert.match(paymentHandler, /PARTIALLY_REFUNDED/);
+    assert.match(refundProcessor, /resolveCompletedRefunds/);
+    assert.match(orderUpdatedHandler, /processOrderRefundTransactions/);
     assert.match(source, /registrarEventoEconomico\(fiscalPayload\)/);
     assert.match(source, /queueFiscalRecovery\(/);
+    assert.doesNotMatch(source, /export async function wixEcom_onOrderRefunded/);
+    assert.doesNotMatch(source, /export async function wixEcom_onOrderTransactionsUpdated/);
 });

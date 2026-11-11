@@ -49,6 +49,15 @@ export const STAFF_CLOCKING_CONFIG = Object.freeze({
   ADJUSTMENTS_ENABLED: false,
 });
 
+// Fail-closed production defaults until fiscal, accounting and runtime E2E
+// are certified. Simulation records are denied unless a trusted test harness
+// explicitly enables them; frontend input cannot change this policy.
+export const FISCAL_RUNTIME_POLICY = Object.freeze({
+  LEDGER_WRITES_ENABLED: false,
+  ACCOUNTING_LEDGER_WRITES_ENABLED: false,
+  ALLOW_SIMULATION_RECORDS: false,
+});
+
 export const BUSINESS_COLLECTIONS = Object.freeze({
   CAJA_ACTUAL: "CajaActual",
   CITAS_F2: "CitasF2",
@@ -123,6 +132,9 @@ export const API = Object.freeze({
  * =========================================================================*/
 export const SDK_CONFIG = Object.freeze({
   TZ: "Europe/Madrid",
+  // Canonical Wix site currency verified from the live site properties.
+  // Refund writers fail closed for orders outside this currency.
+  CURRENCY_CODE: "EUR",
   LOCATION_ID: "7a12abfd-bf30-4847-bcdf-00dc573d4802",
 
   TIMEOUTS: Object.freeze({
@@ -153,6 +165,9 @@ export const SDK_CONFIG = Object.freeze({
     FROM_ADDRESS: "noreply@marianmadrid.com",
     // Fail-closed: activar solo tras persistencia inmutable e idempotencia del despacho.
     ACCOUNTANT_SEND_ENABLED: false,
+    // QA recipient allowlist: exact business domain plus the named internal Gmail mailbox.
+    ALLOWED_RECIPIENT_DOMAINS: Object.freeze(["marianmadrid.es"]),
+    ALLOWED_RECIPIENT_EMAILS: Object.freeze(["nachoortegazgz@gmail.com"]),
   }),
 });
 

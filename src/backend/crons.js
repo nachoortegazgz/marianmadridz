@@ -63,6 +63,7 @@ PAYMENT_STATUS,
 BOOKING_FIELDS,
 CONCURRENCY,
 SDK_CONFIG,
+FISCAL_RUNTIME_POLICY,
 normalizeBookingType,
 BOOKING_TYPE,
 } from "backend/internalConfig";
@@ -716,6 +717,7 @@ paymentStatesManualRequired: 0,
 processed: 0,
 failed: 0,
 manualRequired: 0,
+skippedByPolicy: 0,
 errors: [],
 };
 
@@ -759,8 +761,16 @@ new Date(b?._createdDate || 0).getTime()
 
 for (const comp of compensationItems) {
 try {
-const outcome = await _runOneCompensation(comp, traceId);
 const payload = readControlPayload(comp);
+const compensationKind = _safeTrim(payload.compensationKind || payload.kind || comp?.kind).toUpperCase();
+const writerDisabled =
+    (compensationKind === "FISCAL_LEDGER" && FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED !== true) ||
+    (compensationKind === "RESYNC_LEDGER_ACCOUNTING" && FISCAL_RUNTIME_POLICY.ACCOUNTING_LEDGER_WRITES_ENABLED !== true);
+if (writerDisabled) {
+    result.skippedByPolicy++;
+    continue;
+}
+const outcome = await _runOneCompensation(comp, traceId);
 if (outcome?.manualReconciliationRequired === true) {
 payload.status = "MANUAL_RECONCILIATION_REQUIRED";
 payload.compensationStatus = "MANUAL_RECONCILIATION_REQUIRED";
@@ -844,6 +854,7 @@ paymentStatesManualRequired: result.paymentStatesManualRequired,
 processed: result.processed,
 failed: result.failed,
 manualRequired: result.manualRequired,
+skippedByPolicy: result.skippedByPolicy,
 traceId,
 });
 } catch (err) {

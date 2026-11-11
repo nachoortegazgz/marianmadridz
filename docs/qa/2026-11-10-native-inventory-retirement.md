@@ -35,8 +35,8 @@ No se cambian las colecciones ni los datos existentes. Los hooks de protección 
 
 ## 4. Integridad fiscal y datos
 
-- `wixEcom_onOrderPaymentStatusUpdated` mantiene el registro económico, recuperación fiscal, proyección de caja y actualización de pagos Bookings.
-- `wixEcom_onOrderRefunded` mantiene el ledger de reembolso y su idempotencia; Wix aplica restock solo si el refund solicita `sideEffects.restock.lineItems`.
+- `wixEcom_onOrderPaymentStatusUpdated` mantiene el registro económico del pago y activa la conciliación fiscal cuando el estado pasa a `PARTIALLY_REFUNDED` o `FULLY_REFUNDED`.
+- `wixEcom_onOrderUpdated` proporciona un segundo disparador para pedidos ya marcados como parcialmente o totalmente reembolsados. Ambos consultan `@wix/ecom.orderTransactions.listTransactionsForSingleOrder`; solo se procesa el importe agregado de transacciones `SUCCEEDED` cuando todas las transacciones del refund son terminales. Wix conserva la autoridad de restock mediante sus efectos nativos.
 - `Cancel Order` requiere `restockAllItems=true` para restock; no asumir que toda cancelación repone stock.
 - `wixEcom_onOrderCanceled` mantiene la cancelación de reservas Bookings; no libera stock desde CMS.
 - No se insertan nuevos registros en `MovimientosInventario`; sus hooks `beforeUpdate` y `beforeRemove` siguen protegiendo el histórico.

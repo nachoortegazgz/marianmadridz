@@ -16,8 +16,8 @@ El proyecto utiliza Wix Editor con Velo y Wix Apps nativas. El repositorio GitHu
 ### Situación de cambios recientes
 
 - PR #280 y #281: integradas según el historial de trabajo; incorporan proyección de creación de reserva y protección de carrera para preservar el estado CONFIRMED frente a eventos BOOKING_CREATED tardíos. CI final: 53 suites / 530 tests, 0 fallos.
-- PR #284: **abierta, draft y no desplegada**. Primera corrección de la proyección de caja física; CI final verde (53 suites / 530 tests). No representa la solución completa de todos los tipos de efectivo.
-- Esta actualización documental se realiza en una rama separada y no cambia código funcional, CMS, Wix ni datos de producción.
+- PR #284: **mergeada en GitHub**. Primera corrección de la proyección de caja física; CI final verde (53 suites / 530 tests). No representa la solución completa de todos los tipos de efectivo ni acredita despliegue Wix.
+- PR #286: **abierta como draft**, rama `audit/p0-p1-hardening`. Además del hardening fail-closed fiscal/contable, incorpora conciliación de reembolsos con eventos Velo estables, lectura de transacciones SDK, guard de moneda EUR, siete pruebas unitarias y escenario offline parcial→total con IVA, replay y concurrencia. CI offline SUCCESS en el HEAD de código `48b509f` (56 suites / 543 tests / 0 fallos; run `43034820298`); contratos SDK Wix, Bookings Reader V2 y ESLint correctos. Gitleaks full-history SUCCESS (run `43034820526`). Los commits posteriores son documentales. No fusionada ni desplegada.
 
 ## 2. Arquitectura y fuentes de verdad
 
@@ -118,7 +118,7 @@ Una reserva sintética autorizada creada el 2026-11-11 quedó CONFIRMED en Wix B
 
 ### P1 — Caja física y sesión
 
-- Revisar la PR #284 como cambio independiente; no fusionar ni desplegar sin autorización explícita.
+- PR #284 está mergeada en GitHub; su merge no acredita despliegue en Wix. Mantener pendiente la validación de los casos IN/OUT/NONE y no activar operaciones reales sin autorización y pruebas runtime.
 - Completar contrato de clasificación backend IN/OUT/NONE, enums, validación, CMS, tratamiento fiscal/contable y pruebas para aportación, retirada, proveedor y ajuste.
 - Resolver sesión de caja: apertura sin creación implícita, permisos específicos, locks, idempotencia, responsable autenticado y precedencia entre cierre manual y cron.
 - Separar cierre fiscal Z de arqueo físico y definir evidencia append-only para ambos.
@@ -174,3 +174,17 @@ Si dos documentos discrepan, no borrar la historia: registrar qué afirmación q
 ---
 
 **Estado de esta guía:** consolidación documental. No declara el sitio listo para producción, no certifica fiscalidad y no acredita publicación de los últimos commits.
+
+
+## Addendum de estado — PR #286 y notificaciones Wix (2026-11-11)
+
+Este addendum prevalece sobre el resumen histórico anterior de PR #286 y sobre cualquier referencia a que la auditoría de automatizaciones fue exclusivamente read-only.
+
+- PR #286: rama `audit/p0-p1-hardening`; HEAD previo a este addendum documental: `d30e03473fe2bfe39b93a881ef4b765fcd72691d`. CI de código: 57 suites / 548 tests / 0 fallos (run `43038637356`); Gitleaks SUCCESS (run `43038637350`). No hay revisiones humanas registradas. Los commits documentales posteriores no cambian código, pero disparan nuevos workflows de PR.
+- Se pausaron y verificaron 67 automatizaciones Wix activas: 66 email y una WhatsApp. Las cuatro automatizaciones WhatsApp están inactivas.
+- Nueve automatizaciones de email continúan activas porque Wix las marca readonly y/o disableStatusChange. No se ha podido demostrar aislamiento total de la mensajería nativa.
+- No se envió ningún mensaje. El móvil sintético `666724634` no se configuró; la acción Wix `whatsapp-send-message` no dispone de procedimiento público soportado para reconfigurar el destinatario por API.
+- La allowlist de `emailRecipientPolicy.js` solo cubre el despacho backend Resend; no gobierna automatizaciones nativas Wix.
+- El PR permanece draft y sin merge. Siguen pendientes revisión humana, QA runtime/E2E en entorno aislado para pagos/reembolsos y resolución de los nueve flujos email activos. No desplegar: los writers fiscales/contables quedan fail-closed por defecto.
+
+Evidencia: [auditoría de aislamiento de notificaciones](docs/audits/2026-11-11-wix-automation-recipient-isolation.md) y [auditoría P0/P1](docs/audits/2026-11-11-p0-p1-hardening.md).
