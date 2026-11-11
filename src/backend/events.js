@@ -468,9 +468,11 @@ function _normalizeBookingsEvent(event) {
 async function isEventProcessed(eventId, eventType) {
     if (!eventId) return false;
     const normalizedId = _normalizeIdPart(String(eventId), 100);
-    const normalizedType = _normalizeIdPart(String(eventType || ""), 40);
-    const webhookKeys = normalizedType
-        ? [`WEBHOOK_${normalizedType}_${normalizedId}`, `WEBHOOK_${normalizedId}`]
+    const claimId = eventType
+        ? await getWebhookEventClaimId(eventId, eventType)
+        : null;
+    const webhookKeys = claimId
+        ? [`WEBHOOK_${claimId.slice(4)}`, `WEBHOOK_${normalizedId}`]
         : [`WEBHOOK_${normalizedId}`];
 
     for (const webhookKey of webhookKeys) {
@@ -499,10 +501,8 @@ async function isOrderCreatedReconciled(orderId) {
 
 async function markEventAsProcessed(eventId, eventType, traceId, metadata = {}) {
     if (!eventId || !eventType) return;
-    const normalizedId = _normalizeIdPart(String(eventId), 100);
-    const normalizedType = _normalizeIdPart(String(eventType), 40);
-    const webhookKey = `WEBHOOK_${normalizedType}_${normalizedId}`;
     const claimId = await getWebhookEventClaimId(eventId, eventType);
+    const webhookKey = `WEBHOOK_${claimId.slice(4)}`;
     const markerId = "WHE_" + claimId.slice(4);
     const expiresAt = new Date(Date.now() + EVENT_TTL_HOURS * 3600 * 1000);
 
