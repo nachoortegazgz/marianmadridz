@@ -1,3 +1,11 @@
+## Addendum de vigencia — 2026-11-11
+
+Consultar primero [Referencia maestra QA y estado de aislamiento](qa/2026-11-11-qa-master-reference.md). La consulta Wix live actual devuelve **Published**; no asumir que el sitio es Draft ni que está aislado. El inventario de Automations disponible es histórico del 2026-11-11: nueve automatizaciones email quedaron activas por restricciones Wix, cuatro WhatsApp inactivas y no se identificaron SMS activos. Hace falta releer la configuración antes de cualquier prueba.
+
+PR #294 está fusionada en main mediante `3aed055c9622da71505f5f9927b35f6516e6b906`. Las tablas y baselines anteriores de este documento son históricos y no deben usarse sin reconciliación. No ejecutar reservas/pagos/comunicaciones E2E en el sitio Published.
+
+---
+
 # Estado actual del proyecto — Marian Madrid
 
 **Revisión:** 2026-11-11  
