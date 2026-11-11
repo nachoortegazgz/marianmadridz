@@ -428,10 +428,18 @@ export const CONTROL_TYPE = Object.freeze({
   SLOT_LOCK: "SLOT_LOCK",
   RATE_LIMIT: "RATE_LIMIT",
   SYSTEM_FLAG: "SYSTEM_FLAG",
+  WEBHOOK_CLAIM: "WEBHOOK_CLAIM",
   WEBHOOK_EVENT: "WEBHOOK_EVENT",
 });
 
-// Least-privilege policy for the only current bulkPatchItems consumers.
+export const WEBHOOK_CLAIM_STATUS = Object.freeze({
+  IN_PROGRESS: "IN_PROGRESS",
+  COMPLETED: "COMPLETED",
+  FAILED_RETRYABLE: "FAILED_RETRYABLE",
+});
+
+// Least-privilege policy for mutable operational CAS consumers.
+// WEBHOOK_EVENT remains append-only; only WEBHOOK_CLAIM stores mutable claim state.
 // Every patch must target a mutable ControlOperativo record type and carry
 // its compare-and-swap condition. Append-only WEBHOOK_EVENT and ledgers are
 // deliberately excluded.
@@ -468,6 +476,22 @@ export const DATA_ACCESS_BULK_PATCH_POLICY = Object.freeze({
         payload: Object.freeze(["SET_FIELD"]),
         version: Object.freeze(["INCREMENT_FIELD"]),
         traceId: Object.freeze(["SET_FIELD"]),
+      }),
+    }),
+    [CONTROL_TYPE.WEBHOOK_CLAIM]: Object.freeze({
+      requiredConditionFields: Object.freeze(["controlType", "status", "ownerToken", "version"]),
+      anyConditionFields: Object.freeze([]),
+      allowedConditionFields: Object.freeze(["controlType", "status", "ownerToken", "version"]),
+      fields: Object.freeze({
+        status: Object.freeze(["SET_FIELD"]),
+        ownerToken: Object.freeze(["SET_FIELD"]),
+        leaseExpiresAt: Object.freeze(["SET_FIELD"]),
+        attempt: Object.freeze(["INCREMENT_FIELD"]),
+        version: Object.freeze(["INCREMENT_FIELD"]),
+        traceId: Object.freeze(["SET_FIELD"]),
+        completedAt: Object.freeze(["SET_FIELD"]),
+        failedAt: Object.freeze(["SET_FIELD"]),
+        lastErrorCode: Object.freeze(["SET_FIELD"]),
       }),
     }),
   }),
