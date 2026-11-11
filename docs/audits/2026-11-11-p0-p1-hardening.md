@@ -13,12 +13,13 @@
 1. `.github/workflows/backend-offline-quality.yml`: el workflow de calidad se ejecuta también en `push` a `main`, además de pull requests y ejecución manual.
 2. `.eslintrc.json`: `@wix/cli/no-invalid-backend-import` permanece en `off`. Al activarla como `error`, ESLint 8.25.0 + `@wix/eslint-plugin-cli` 1.0.2 falla al cargar la regla con `TypeError [ERR_INVALID_ARG_TYPE]: The "to" argument must be of type string. Received undefined` en `accountingLedger.js`. No se mantiene una configuración que rompe el gate completo; reactivación pendiente de compatibilidad verificada o sustitución por una regla estática propia.
 
-3. `src/backend/internalConfig.js`: nueva política canónica `FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED=false`.
+3. `src/backend/internalConfig.js`: nueva política canónica `FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED=false` y `ALLOW_SIMULATION_RECORDS=false`.
 4. `src/backend/cajas.web.js`: bloqueo fail-closed en `registerManualTransaction` y en `_registerZClosing`, compartido por la entrada pública y el cron interno.
 5. `src/backend/eventLog.js`: bloqueo fail-closed en `registrarEventoEconomico`, antes de upsert de terceros, lock y persistencia; cubre eventos de pedidos, reembolsos y rectificaciones que pasan por este writer.
-6. `src/backend/tests/operational-writers.fail-closed.contract.test.mjs`: contratos de orden de guardas frente a efectos secundarios y confirmación de que fichajes/ajustes siguen bloqueados.
-7. `src/backend/tests/loader.mjs`: el harness offline inyecta `LEDGER_WRITES_ENABLED=true` solo al importar `internalConfig.js`, para probar los happy paths existentes. La prueba contractual lee el archivo fuente y exige el default productivo `false`.
-8. `.github/workflows/secret-scan.yml`: Gitleaks full-history scan en PR/push a `main` y ejecución manual; sin comentarios automáticos ni artefactos de resultados.
+6. Los escritores manual y de eventos rechazan `isExplicitSimulationLedgerRecord(...)` salvo que `ALLOW_SIMULATION_RECORDS` esté explícitamente activado. En producción permanece `false`; el harness offline lo activa solo para fixtures sintéticos.
+7. `src/backend/tests/operational-writers.fail-closed.contract.test.mjs`: contratos de orden de guardas frente a efectos secundarios y confirmación de que fichajes/ajustes siguen bloqueados.
+8. `src/backend/tests/loader.mjs`: el harness offline inyecta `LEDGER_WRITES_ENABLED=true` solo al importar `internalConfig.js`, para probar los happy paths existentes. La prueba contractual lee el archivo fuente y exige el default productivo `false`.
+9. `.github/workflows/secret-scan.yml`: Gitleaks full-history scan en PR/push a `main` y ejecución manual; sin comentarios automáticos ni artefactos de resultados.
 
 ## Controles existentes confirmados
 
@@ -31,7 +32,7 @@
 
 ### P0 fiscal
 
-No se añadió `process.env`: su disponibilidad y semántica no están acreditadas en Wix Velo. Se añadió un flag canónico fail-closed en backend y se conectó a los tres escritores identificados: manual, evento económico (incluye webhooks de pedido/refund) y cierre Z. La política no bloquea lectores, reconciliación de eventos ya persistidos ni cola de recuperación. Antes de activar debe probarse en Wix QA aislado y revisarse cualquier nuevo writer.
+No se añadió `process.env`: su disponibilidad y semántica no están acreditadas en Wix Velo. Se añadió un flag canónico fail-closed en backend y se conectó a los tres escritores identificados: manual, evento económico (incluye webhooks de pedido/refund) y cierre Z. La política no bloquea lectores, reconciliación de eventos ya persistidos ni cola de recuperación. Los marcadores de simulación se rechazan antes de upsert/persistencia salvo en el harness offline. Antes de activar debe probarse en Wix QA aislado y revisarse cualquier nuevo writer.
 
 ### P0/P1 caja y fichajes
 
