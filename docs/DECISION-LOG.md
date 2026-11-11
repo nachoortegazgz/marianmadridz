@@ -148,4 +148,6 @@ El propietario declara que ServiciosCatalogo gobierna la configuración de servi
 
 **Contrato de representación:** Wix documenta Date and Time en el formato JSON `{"$date":"YYYY-MM-DDTHH:mm:ss.sssZ"}`. En código Velo el límite de escritura utiliza `Date`; la respuesta REST puede serializarlo como ISO 8601. La normalización no altera el instante y no aplica `Europe/Madrid` como conversión adicional. Los campos `DATE` (`fechaOperacion`, `fechaExpedicionFactura`, `operationDate`) permanecen en su contrato de fecha sin hora.
 
+**Separación del writer fiscal:** `eventLog.js` mantiene la estructura de fecha local requerida dentro de `payloadFiscal`, pero escribe `recordTimestamp` y `generationTimestamp` del documento CMS como objetos `Date`. No se reutiliza un objeto de componentes de fecha como valor de un campo CMS Date and Time.
+
 **Reversión:** revertir los cambios de hooks y pruebas de esta rama restaura el contrato previo sin modificar datos CMS. No hay despliegue ni limpieza de datos asociada.
