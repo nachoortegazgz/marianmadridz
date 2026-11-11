@@ -47,7 +47,7 @@ No se añadió un filtro por substring `SMOKE_TEST`: es evadible y puede rechaza
 
 ### Escaneo de secretos
 
-Se añadió Gitleaks Action v3.0.0 en workflow separado con checkout de historial completo. La acción informa resultado de análisis en GitHub Actions; se desactivaron comentarios y artefactos. La primera ejecución del workflow terminó con éxito (run `42986042556`).
+Se añadió Gitleaks Action v3.0.0 y actions/checkout v6 están fijadas a SHA de commit verificados, con checkout de historial completo. La acción informa resultado de análisis en GitHub Actions; se desactivaron comentarios y artefactos. La primera ejecución del workflow terminó con éxito (run `42986042556`).
 
 ## Validación
 
