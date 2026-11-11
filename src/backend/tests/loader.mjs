@@ -640,7 +640,34 @@ export const orders = new Proxy({}, {
     return _ordersRootMethods.get(name);
   },
 });
-export const orderTransactions = _makeNamespaceStub('orderTransactions');
+const _orderTransactionsMethods = new Map();
+const _currentOrderTransactionsMock = (name) => {
+  const namespace = sdkNamespaceState[MODULE_KEY + '::orderTransactions'] ||
+    sdkNamespaceState['@wix/ecom::orderTransactions'] ||
+    sdkNamespaceState['orderTransactions'] || null;
+  if (namespace && typeof namespace[name] === 'function') return namespace[name];
+  const directKey = MODULE_KEY + '::orderTransactions::' + name;
+  if (typeof sdkNamespaceState[directKey] === 'function') return sdkNamespaceState[directKey];
+  return null;
+};
+export const orderTransactions = new Proxy({}, {
+  get: (_target, property) => {
+    if (property === 'then') return undefined;
+    const name = String(property);
+    if (!_orderTransactionsMethods.has(name)) {
+      _orderTransactionsMethods.set(name, (...args) => {
+        const method = _currentOrderTransactionsMock(name);
+        if (typeof method !== 'function') {
+          const error = new Error('Missing @wix/ecom orderTransactions mock: ' + name);
+          error.code = 'MISSING_ECOM_ORDER_TRANSACTIONS_MOCK';
+          throw error;
+        }
+        return method(...args);
+      });
+    }
+    return _orderTransactionsMethods.get(name);
+  },
+});
 export const elevate = fnProxy;
 export const createClient = () => fnProxy;
 export const getSecret = async () => "mock-secret";
