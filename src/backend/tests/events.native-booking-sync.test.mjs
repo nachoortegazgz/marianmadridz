@@ -1111,3 +1111,132 @@ test("EVENT-ORDER-NATIVE-STOCK-10 order-created marks mixed Wix catalog orders w
   assert.equal((wixDataMock._store.get(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_INVENTARIO) || []).length, 0);
   assert.equal((wixDataMock._store.get(IC.BUSINESS_COLLECTIONS.INVENTARIO_STOCK_VENTA) || []).length, 0);
 });
+
+
+test("EVENT-PAYMENT-10 a failed strong ledger preflight read fails closed and never appends a second movement", async () => {
+  wixDataMock._reset();
+  seedCajaPrincipal();
+
+  const secretState = globalThis.__mmSecretsState || (globalThis.__mmSecretsState = { _map: {}, _default: "mock-secret" });
+  secretState._map.FISCAL_NIF_EMISOR = "B12345678";
+  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.DATOS_FISCALES, [{
+    _id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+    recordType: "TERCERO",
+    taxId: "B12345678",
+    legalName: "MARIAN MADRID",
+    thirdPartyType: "EMISOR",
+    address: null,
+  }]);
+
+  const orderId = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
+  const eventId = "ffffffff-ffff-4fff-8fff-ffffffffffff";
+  const order = {
+    _id: orderId,
+    paymentStatus: "PAID",
+    currency: "EUR",
+    taxIncludedInPrices: true,
+    taxInfo: { totalTax: { amount: "7.90" }, taxBreakdown: [] },
+    priceSummary: {
+      subtotal: { amount: "37.60" },
+      tax: { amount: "7.90" },
+      total: { amount: "45.50" },
+      totalPrice: { amount: "45.50" },
+    },
+    lineItems: [{
+      catalogReference: {
+        appId: IC.WIX_CATALOG_APP_IDS.STORES,
+        catalogItemId: "11111111-1111-4111-8111-111111111111",
+      },
+      productName: { original: "QA synthetic store item" },
+      quantity: 1,
+      totalPriceAfterTax: { amount: "45.50" },
+      taxInfo: {
+        taxableAmount: { amount: "37.60" },
+        taxAmount: { amount: "7.90" },
+        taxRate: "0.21",
+        taxBreakdown: [],
+      },
+    }],
+  };
+  activeOrder = order;
+  activeOrderTransactions = { orderId, payments: [], refunds: [] };
+
+  const originalQuery = wixDataMock.query;
+  let preflightFailed = false;
+  wixDataMock.query = function (collection) {
+    const query = originalQuery(collection);
+    if (collection !== IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA) return query;
+    const originalFind = query.find;
+    query.find = async (...args) => {
+      if (!preflightFailed) {
+        preflightFailed = true;
+        throw new Error("SYNTHETIC_LEDGER_READ_FAILURE");
+      }
+      return originalFind(...args);
+    };
+    return query;
+  };
+
+  try {
+    await assert.rejects(
+      events.wixEcom_onOrderPaymentStatusUpdated({
+        metadata: { id: eventId },
+        data: { order, previousPaymentStatus: "PENDING" },
+      }),
+      /SYNTHETIC_LEDGER_READ_FAILURE/
+    );
+  } finally {
+    wixDataMock.query = originalQuery;
+  }
+
+  assert.equal(preflightFailed, true, "the injected failure must hit the existing-ledger strong read");
+  assert.equal((wixDataMock._store.get(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA) || []).length, 0,
+    "a read failure must not be interpreted as an empty ledger");
+  const claims = (wixDataMock._store.get(IC.OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO) || [])
+    .filter(row => row.controlType === IC.CONTROL_TYPE.WEBHOOK_CLAIM);
+  assert.equal(claims.length, 1);
+  assert.equal(claims[0].status, IC.WEBHOOK_CLAIM_STATUS.FAILED_RETRYABLE,
+    "the failed event claim must remain retryable");
+});
+
+
+test("EVENT-PAYMENT-11 pending and failed PSP outcomes never create fiscal movements", async () => {
+  const orderId = "22222222-2222-4222-8222-222222222222";
+  const outcomes = ["PENDING", "NOT_PAID", "FAILED", "CANCELED", "PARTIALLY_PAID"];
+
+  for (const [index, paymentStatus] of outcomes.entries()) {
+    wixDataMock._reset();
+    wixDataMock._seed("CitasF2", [seedCita({
+      bookingStatus: "PENDING",
+      paymentStatus: "PENDING_PAYMENT",
+      meta: { pairToken: PAIR_TOKEN, customSaga: true, paymentStatus: "PENDING_PAYMENT" },
+    })]);
+    const order = {
+      _id: orderId,
+      paymentStatus,
+      currency: "EUR",
+      priceSummary: { total: { amount: "45.50" } },
+      lineItems: [{
+        catalogReference: {
+          appId: IC.WIX_CATALOG_APP_IDS.BOOKINGS,
+          catalogItemId: BOOKING_ID,
+        },
+        quantity: 1,
+        price: { amount: "45.50" },
+      }],
+    };
+    activeOrder = order;
+    activeOrderTransactions = { orderId, payments: [], refunds: [] };
+
+    const result = await events.wixEcom_onOrderPaymentStatusUpdated({
+      metadata: { id: "psp-outcome-" + index + "-" + paymentStatus },
+      data: { order, previousPaymentStatus: "PENDING" },
+    });
+
+    assert.equal(result.status, "OK", paymentStatus);
+    assert.equal((wixDataMock._store.get(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA) || []).length, 0,
+      paymentStatus + " must not append a sale movement");
+    const cita = (wixDataMock._store.get("CitasF2") || []).find(row => row.bookingId === BOOKING_ID);
+    assert.equal(cita.paymentStatus, "PENDING_PAYMENT", paymentStatus + " must not mark the booking paid");
+  }
+});
