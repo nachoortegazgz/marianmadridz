@@ -192,29 +192,27 @@ No habilitar la caja ni desplegar mientras:
 - **Ledgers históricos:** ninguno alterado.
 
 
-## 11. Aclaración de negocio: efectivo físico frente a movimientos económicos (2026-11-11)
+## 10. Decisión de negocio confirmada — proyección exclusiva de efectivo físico (2026-11-11)
 
-El propietario confirma que CajaActual debe reflejar exclusivamente el dinero que atraviesa físicamente el cajón del establecimiento. Por tanto:
+La instrucción de negocio posterior establece que `CajaActual` representa exclusivamente los flujos que atraviesan el cajón físico. Por tanto:
 
-- Efectivo cobrado presencialmente, devoluciones en efectivo, aportaciones físicas, retiradas, pagos en efectivo a proveedores y ajustes físicos justificados pueden afectar a CajaActual cuando exista un contrato backend explícito para cada operación.
-- Tarjeta cobrada en el local, Bizum, pagos online, transferencias y gastos pagados desde banco no afectan al saldo físico de CajaActual.
-- MovimientosCaja conserva su función de registro fiscal de operaciones. No se debe filtrar ni borrar una operación fiscal porque no afecte al efectivo físico.
-- LibroAsientosContablesDetalle consolida los hechos económicos conforme a mapeos contables aprobados. Una operación en efectivo puede tener proyección física y asiento contable.
+- Solo un movimiento con `paymentMethod=EFECTIVO` y `channelType=PRESENCIAL` puede proyectarse en `CajaActual`.
+- Tarjeta, Bizum, pagos online, transferencias y gastos pagados por banco no alteran la proyección física.
+- `MovimientosCaja` conserva su responsabilidad de registro económico/fiscal. No se eliminan ni filtran sus registros por el hecho de no afectar al cajón.
+- `LibroAsientosContablesDetalle` conserva su responsabilidad de consolidación contable; la existencia de un movimiento de caja no autoriza a duplicar asientos ni a inventar mapeos PGC.
 
-### Estado de implementación — PR #284
+La implementación inicial falla de forma conservadora: un movimiento sin canal explícito no se proyecta. El escritor manual persiste `channelType` cuando el consumidor lo proporciona. No se infiere el canal a partir de un nombre de recurso, texto libre o dato aportado como identidad por el frontend.
 
-La PR #284 está abierta como draft y no se ha fusionado ni desplegado en Wix. Su cambio parcial hace que _updateCajaActual() proyecte únicamente movimientos con paymentMethod=EFECTIVO y channelType=PRESENCIAL; las operaciones no físicas no alteran saldo, contadores ni appliedMovementIds.
+### Límites pendientes de contrato
 
-Esta primera restricción no equivale al contrato completo de sesión ni cubre todavía aportaciones, retiradas, pagos físicos a proveedores o ajustes con dirección explícita. MOVEMENT_TYPE no contiene actualmente APORTACION, RETIRO ni PAGO_PROVEEDOR; AJUSTE no define por sí solo si la operación es entrada o salida. No ampliar enums, CMS ni asientos PGC hasta definir el contrato fiscal/contable, validación, permisos, idempotencia y pruebas.
+- `MOVEMENT_TYPE` no contiene actualmente `APORTACION`, `RETIRO` ni `PAGO_PROVEEDOR`. El ADR original ya identificaba esa discrepancia. No se añaden aquí: requieren definición fiscal, dirección física IN/OUT, validación, esquema y pruebas propias.
+- `AJUSTE` no define de forma inequívoca el sentido físico. No se deduce la salida de efectivo a partir de un importe positivo.
+- El cierre Z y su writer paralelo presentan discrepancias de esquema/ownership ya descritas en la auditoría. Este cambio no altera su consolidación fiscal.
+- No existe en el código inspeccionado un WebMethod de apertura operativa con persistencia de responsable ni una resolución confirmada de `openedBy/closedBy` a nombre visible. No se inventa esa API en esta intervención.
 
-La apertura singleton en estado SIMULACION con 300 EUR es una proyección sintética de QA, no saldo inicial real conciliado. No debe habilitarse una sesión real ni modificarse ese registro sin procedimiento aprobado.
+### Criterio de aceptación para la proyección
 
-### Gate actualizado
-
-Antes de implementar apertura/cierre y tipos adicionales:
-1. Resolver el contrato de cierre fiscal Z frente a arqueo físico.
-2. Definir los efectos IN/OUT/NONE y los tipos admitidos, sin aceptar la dirección desde frontend.
-3. Definir la relación de cada operación con MovimientosCaja y LibroAsientosContablesDetalle.
-4. Revisar todos los consumers, hooks, locks, cron y esquemas CMS.
-5. Añadir pruebas de idempotencia, concurrencia, fallos parciales y permisos negativos.
-6. Validar en entorno Wix QA aislado antes de activar cualquier writer.
+1. EFECTIVO + PRESENCIAL modifica únicamente `cashAmount` y `netAmount`, y se deduplica por ID persistido.
+2. TARJETA/BIZUM/WIX_PAYMENTS/TRANSFERENCIA no cambia saldo, contadores ni IDs aplicados.
+3. Canal ausente o no canónico no se considera efectivo físico.
+4. El ledger fiscal mantiene todos los registros que le corresponden, independientemente de la proyección de caja.
