@@ -60,7 +60,7 @@ import { extendedBookings } from "@wix/bookings";
 import { auth } from "@wix/essentials";
 import { resolveCompletedRefunds } from "backend/refundTransactions";
 import { getSecretValue } from "backend/secretAccess";
-import { runWithWebhookEventClaim } from "backend/webhookEventClaims";
+import { runWithWebhookEventClaim, getWebhookEventClaimId } from "backend/webhookEventClaims";
 
 import {
     query as dalQuery,
@@ -465,18 +465,23 @@ function _normalizeBookingsEvent(event) {
 // IDEMPOTENCY (ALN-02: ControlOperativo con controlType=WEBHOOK_EVENT)
 // ============================================================================
 
-async function isEventProcessed(eventId) {
+async function isEventProcessed(eventId, eventType) {
     if (!eventId) return false;
     const normalizedId = _normalizeIdPart(String(eventId), 100);
-    const webhookKey = `WEBHOOK_${normalizedId}`;
+    const normalizedType = _normalizeIdPart(String(eventType || ""), 40);
+    const webhookKeys = normalizedType
+        ? [`WEBHOOK_${normalizedType}_${normalizedId}`, `WEBHOOK_${normalizedId}`]
+        : [`WEBHOOK_${normalizedId}`];
 
-    const existing = await dalQuery(CONTROL_OPERATIVO_COL)
-        .eq("controlType", CONTROL_TYPE.WEBHOOK_EVENT)
-        .eq("dedupeKey", webhookKey)
-        .limit(1)
-        .find(STRONG_READ);
-
-    return Boolean(existing?.items?.length);
+    for (const webhookKey of webhookKeys) {
+        const existing = await dalQuery(CONTROL_OPERATIVO_COL)
+            .eq("controlType", CONTROL_TYPE.WEBHOOK_EVENT)
+            .eq("dedupeKey", webhookKey)
+            .limit(1)
+            .find(STRONG_READ);
+        if (existing?.items?.length) return true;
+    }
+    return false;
 }
 
 async function isOrderCreatedReconciled(orderId) {
@@ -493,13 +498,17 @@ async function isOrderCreatedReconciled(orderId) {
 }
 
 async function markEventAsProcessed(eventId, eventType, traceId, metadata = {}) {
-    if (!eventId) return;
+    if (!eventId || !eventType) return;
     const normalizedId = _normalizeIdPart(String(eventId), 100);
-    const webhookKey = `WEBHOOK_${normalizedId}`;
+    const normalizedType = _normalizeIdPart(String(eventType), 40);
+    const webhookKey = `WEBHOOK_${normalizedType}_${normalizedId}`;
+    const claimId = await getWebhookEventClaimId(eventId, eventType);
+    const markerId = "WHE_" + claimId.slice(4);
     const expiresAt = new Date(Date.now() + EVENT_TTL_HOURS * 3600 * 1000);
 
     try {
         await dalInsert(CONTROL_OPERATIVO_COL, {
+            _id: markerId,
             controlType: CONTROL_TYPE.WEBHOOK_EVENT,
             serviceId: _looksLikeGuid(metadata?.serviceId) ? _safeTrim(metadata.serviceId) : undefined,
             dedupeKey: webhookKey,
@@ -518,14 +527,11 @@ async function markEventAsProcessed(eventId, eventType, traceId, metadata = {}) 
         log.debug("EVENT_MARKED_PROCESSED", { eventId, eventType });
         return true;
     } catch (err) {
-        // A failed insert is treated as a duplicate only when the exact key
-        // can be read back. Otherwise propagate the persistence failure.
-        const existing = await dalQuery(CONTROL_OPERATIVO_COL)
-            .eq("controlType", CONTROL_TYPE.WEBHOOK_EVENT)
-            .eq("dedupeKey", webhookKey)
-            .limit(1)
-            .find(STRONG_READ);
-        if (existing?.items?.length) {
+        const existing = await dalGet(CONTROL_OPERATIVO_COL, markerId, STRONG_READ);
+        if (
+            existing?.controlType === CONTROL_TYPE.WEBHOOK_EVENT &&
+            existing?.dedupeKey === webhookKey
+        ) {
             log.debug("EVENT_INSERT_CONFLICT_CONFIRMED", { eventId, eventType });
             return true;
         }
@@ -1186,7 +1192,7 @@ async function _handleWixBookingsV2_onBookingConfirmed(eventPayload) {
             throw new Error("INVALID_BOOKING_CONFIRMED_EVENT");
         }
 
-        const alreadyProcessed = await isEventProcessed(eventId);
+        const alreadyProcessed = await isEventProcessed(eventId, "BOOKING_CONFIRMED");
         if (alreadyProcessed && bookingId !== "unknown") {
             const existingLedger = await dalQuery(CITAS_COL)
                 .eq(BOOKING_FIELDS.BOOKING_ID, bookingId)
@@ -1257,7 +1263,7 @@ async function _handleWixBookingsV2_onBookingCreated(eventPayload) {
             throw new Error("INVALID_BOOKING_CREATED_EVENT");
         }
 
-        const alreadyProcessed = await isEventProcessed(eventId);
+        const alreadyProcessed = await isEventProcessed(eventId, "BOOKING_CREATED");
         if (alreadyProcessed) {
             const existingProjection = await dalQuery(CITAS_COL)
                 .eq(BOOKING_FIELDS.BOOKING_ID, bookingId)
@@ -1442,7 +1448,7 @@ async function _handleWixBookingsV2_onBookingRescheduled(eventPayload) {
             Number.isFinite(currentRevision) &&
             currentRevision > incomingRevision
         ) {
-            const alreadyProcessed = await isEventProcessed(eventId);
+            const alreadyProcessed = await isEventProcessed(eventId, "BOOKING_RESCHEDULED");
             if (!alreadyProcessed) {
                 await markEventAsProcessed(eventId, "BOOKING_RESCHEDULED", traceId, {
                     bookingId,
@@ -1549,7 +1555,7 @@ async function _handleWixBookingsV2_onBookingRescheduled(eventPayload) {
             }
         }
 
-        const alreadyProcessed = await isEventProcessed(eventId);
+        const alreadyProcessed = await isEventProcessed(eventId, "BOOKING_RESCHEDULED");
         if (!alreadyProcessed) {
             await markEventAsProcessed(eventId, "BOOKING_RESCHEDULED", traceId, {
                 bookingId,
@@ -1597,7 +1603,7 @@ async function _handleWixBookingsV2_onBookingCanceled(eventPayload) {
             throw new Error("INVALID_BOOKING_CANCELED_EVENT");
         }
 
-        const alreadyProcessed = await isEventProcessed(eventId);
+        const alreadyProcessed = await isEventProcessed(eventId, "BOOKING_CANCELED");
         if (alreadyProcessed) {
             // Do not silently skip a replay when CMS status is stale.
             // Reconcile status below; fiscal writes remain idempotent by transactionId.
@@ -1826,7 +1832,7 @@ async function _handleWixEcom_onOrderCreated(eventPayload) {
         const orderId = _safeTrim(order?._id || order?.id);
         if (!_looksLikeGuid(orderId)) return { status: "OK", skipped: "ORDER_ID_MISSING" };
         const eventId = _safeTrim(event?.metadata?.id || event?.eventId || event?._id) || `order-created-${orderId}`;
-        if (await isEventProcessed(eventId)) return { status: "OK", duplicate: true };
+        if (await isEventProcessed(eventId, "ORDER_CREATED")) return { status: "OK", duplicate: true };
         if (await isOrderCreatedReconciled(orderId)) {
             return { status: "OK", reconciled: true, orderId };
         }
@@ -1865,7 +1871,7 @@ async function _handleWixEcom_onOrderPaymentStatusUpdated(eventPayload) {
 
         const eventId = event?.metadata?.id || event?.id || event?.eventId || event?._id;
         if (eventId) {
-            const alreadyProcessed = await isEventProcessed(eventId);
+            const alreadyProcessed = await isEventProcessed(eventId, "ORDER_PAYMENT_STATUS_UPDATED");
             if (alreadyProcessed) {
                 log.info("EVENT_DUPLICATE_IGNORED", {
                     eventId,
@@ -2567,7 +2573,7 @@ async function _handleWixEcom_onOrderUpdated(eventPayload) {
             return { status: "OK", skipped: "ORDER_NOT_REFUNDED" };
         }
 
-        if (await isEventProcessed(eventId)) {
+        if (await isEventProcessed(eventId, "ORDER_UPDATED")) {
             return { status: "OK", duplicate: true };
         }
 
@@ -2597,7 +2603,7 @@ async function _handleWixEcom_onOrderCanceled(eventPayload) {
 
         const eventId =
             event?.metadata?.id || event?.eventId || event?._id || `cancel-order-${orderId}`;
-        const alreadyProcessed = await isEventProcessed(eventId);
+        const alreadyProcessed = await isEventProcessed(eventId, "ORDER_CANCELED");
         if (alreadyProcessed) {
             log.info("EVENT_DUPLICATE_IGNORED", {
                 eventId,
