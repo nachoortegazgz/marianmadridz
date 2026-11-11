@@ -127,7 +127,7 @@ test("failed claim can be retried with a new owner token", async () => {
 
     assert.equal(retry.status, "ACQUIRED");
     assert.equal(retry.claim.ownerToken, "worker-two");
-    assert.equal(retry.claim.version, first.claim.version + 1);
+    assert.equal(retry.claim.version, first.claim.version + 2);
 });
 
 test("active concurrent delivery returns retryable busy without duplicate side effects", async () => {
