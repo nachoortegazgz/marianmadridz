@@ -945,7 +945,9 @@ test("EVENT-BOOKING-RESCHEDULE-03 missing CitasF2 projection is retriable and ne
     /RESCHEDULED_BOOKING_CITASF2_NOT_FOUND/
   );
   assert.equal((wixDataMock._store.get("CitasF2") || []).length, 0);
-  assert.equal((wixDataMock._store.get("ControlOperativo") || []).length, 0);
+  const controlRows = wixDataMock._store.get("ControlOperativo") || [];
+  assert.equal(controlRows.filter(row => row.controlType === IC.CONTROL_TYPE.WEBHOOK_EVENT).length, 0);
+  assert.equal(controlRows.filter(row => row.controlType === IC.CONTROL_TYPE.WEBHOOK_CLAIM && row.status === IC.WEBHOOK_CLAIM_STATUS.FAILED_RETRYABLE).length, 1);
 });
 
 test("EVENT-BOOKING-RESCHEDULE-04 older native reschedule revision cannot roll a newer CitasF2 slot back", async () => {
