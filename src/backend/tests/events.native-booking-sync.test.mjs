@@ -5,9 +5,6 @@ import * as IC from "backend/internalConfig.js";
 
 let activeOrder = null;
 let activeOrderTransactions = { orderId: "", payments: [], refunds: [] };
-mocks.sdk["@wix/ecom::orders"] = {
-  getOrder: async (orderId) => ({ order: activeOrder ? { ...activeOrder, _id: activeOrder._id || orderId } : null }),
-};
 mocks.sdk["@wix/ecom::orderTransactions"] = {
   listTransactionsForSingleOrder: async (orderId) => ({
     orderTransactions: { ...activeOrderTransactions, orderId },
