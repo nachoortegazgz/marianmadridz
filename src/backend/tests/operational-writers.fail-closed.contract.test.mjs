@@ -12,9 +12,10 @@ async function read(name) {
 }
 
 test("P0-FISCAL-01 fiscal ledger writers are disabled by canonical fail-closed policy", async () => {
-  const [config, cajas] = await Promise.all([
+  const [config, cajas, eventLog] = await Promise.all([
     read("internalConfig.js"),
     read("cajas.web.js"),
+    read("eventLog.js"),
   ]);
 
   assert.match(config, /FISCAL_RUNTIME_POLICY\s*=\s*Object\.freeze\(\{\s*LEDGER_WRITES_ENABLED:\s*false/s);
@@ -41,6 +42,16 @@ test("P0-FISCAL-01 fiscal ledger writers are disabled by canonical fail-closed p
     assert.ok(index > zGuard, "Z fiscal guard must precede " + operation);
   }
   assert.match(zWriter.slice(zGuard), /FISCAL_LEDGER_WRITES_DISABLED/);
+
+  const eventStart = eventLog.indexOf("export async function registrarEventoEconomico");
+  const eventWriter = eventLog.slice(eventStart);
+  const eventGuard = eventWriter.indexOf("FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED !== true");
+  assert.ok(eventGuard >= 0, "native event/refund fiscal writer must fail closed");
+  for (const operation of ["_upsertDatosFiscales(", "acquireFiscalLedgerLock(", "dalInsert(MOVIMIENTOS_CAJA_COL"]) {
+    const index = eventWriter.indexOf(operation);
+    assert.ok(index > eventGuard, "event fiscal guard must precede " + operation);
+  }
+  assert.match(eventWriter.slice(eventGuard), /FISCAL_LEDGER_WRITES_DISABLED/);
 });
 
 test("P1-CLOCK-01 timeclock writes and adjustments remain disabled before signing or persistence", async () => {
