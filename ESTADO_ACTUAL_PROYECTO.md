@@ -16,8 +16,8 @@ El proyecto utiliza Wix Editor con Velo y Wix Apps nativas. El repositorio GitHu
 ### Situación de cambios recientes
 
 - PR #280 y #281: integradas según el historial de trabajo; incorporan proyección de creación de reserva y protección de carrera para preservar el estado CONFIRMED frente a eventos BOOKING_CREATED tardíos. CI final: 53 suites / 530 tests, 0 fallos.
-- PR #284: **abierta, draft y no desplegada**. Primera corrección de la proyección de caja física; CI final verde (53 suites / 530 tests). No representa la solución completa de todos los tipos de efectivo.
-- Esta actualización documental se realiza en una rama separada y no cambia código funcional, CMS, Wix ni datos de producción.
+- PR #284: **mergeada en GitHub**. Primera corrección de la proyección de caja física; CI final verde (53 suites / 530 tests). No representa la solución completa de todos los tipos de efectivo ni acredita despliegue Wix.
+- PR #286: **abierta como draft**, rama `audit/p0-p1-hardening`. Añade política fail-closed a escritores fiscales/contables, pausa segura de recuperaciones, escaneo Gitleaks y contratos offline. El run `42986821012` validó un head anterior (`d0530449`); las últimas correcciones añadidas después requieren CI nuevo. No fusionada ni desplegada.
 
 ## 2. Arquitectura y fuentes de verdad
 
