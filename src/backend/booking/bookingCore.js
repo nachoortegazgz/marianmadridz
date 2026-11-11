@@ -37,7 +37,7 @@ import {
     bulkPatchItems,
     removeById as dalRemove
 } from "backend/dataAccess";
-import { getStaffScheduleId } from "backend/staff";
+import { getStaffEventsScheduleId } from "backend/staff";
 // MATRIZ v15: helper de lectura dual del payload canonico de ControlOperativo.
 import { readControlPayload } from "backend/data";
 import { logger } from "backend/logger";
@@ -560,12 +560,12 @@ function _isRevisionConflictError(error) {
 }
 
 // =============================================================================
-// BLOQUE 6 - SCHEDULEID
+// BLOQUE 6 - STAFF EVENTS SCHEDULE ID
 // =============================================================================
 async function _resolveScheduleIdByResourceId(resourceId) {
     const id = _safeTrim(resourceId);
     if (!id || !_looksLikeGuid(id)) return null;
-    const scheduleId = await getStaffScheduleId(id);
+    const scheduleId = await getStaffEventsScheduleId(id);
     return scheduleId && _looksLikeGuid(scheduleId) ? scheduleId : null;
 }
 
