@@ -237,3 +237,18 @@ Fase 2 **no está completada**. Bloqueos principales:
 6. **Despacho documental:** snapshots trimestrales implementados, pero sin agregador mensual, envío, confirmación persistida ni recuperación idempotente ([#223](https://github.com/nachoortegazgz/marianmadridz/issues/223)).
 
 **Restricciones mantenidas:** sin cambios de permisos CMS en producción, sin inserciones en ledgers, sin reservas/pagos reales, sin comunicaciones a clientes, sin envío a gestoría y sin publicación. Los registros históricos no se recalculan ni sobrescriben.
+
+
+## Actualización de estado — 2026-11-11
+
+La guía ejecutiva consolidada y vigente para la siguiente intervención es [ESTADO_ACTUAL_PROYECTO.md](ESTADO_ACTUAL_PROYECTO.md). Resume arquitectura, decisiones, estado de las reservas, caja física, catálogo de servicios, fiscalidad, Capa 3, validación y plan priorizado. Esta guía no sustituye los contratos detallados ni los ADR.
+
+La revisión de 2026-11-11 añade, entre otros, estos puntos que prevalecen sobre cualquier texto histórico incompatible de este documento:
+- CajaActual representa exclusivamente el efectivo físico del cajón. Tarjeta, Bizum, online, transferencias y pagos bancarios no alteran su saldo.
+- MovimientosCaja conserva su función de registro fiscal de operaciones; no se convierte en un ledger exclusivo de efectivo. LibroAsientosContablesDetalle consolida los hechos económicos según contratos contables aprobados.
+- La implementación parcial de esta regla está en la PR #284, abierta y no desplegada. Solo proyecta actualmente EFECTIVO + PRESENCIAL; no cubre todavía aportaciones, retiradas, pagos físicos a proveedores ni ajustes.
+- La creación de una reserva nativa de prueba el 2026-11-11 no produjo su proyección CitasF2 ni marcador WEBHOOK_EVENT. La causa no está aislada; no realizar backfill, cancelación ni más reservas de prueba hasta resolverla.
+- ServiciosCatalogo se declara por el propietario SSOT de la configuración de servicios hacia Wix Bookings, pero el mapeo de name/complementos y staffMembers aún requiere auditoría de esquema, consumidores y sincronización real.
+- La CI offline verde no acredita Wix runtime, E2E publicado ni despliegue.
+
+La sección histórica anterior se conserva para trazabilidad; cuando contradiga estos puntos, aplicar esta actualización para el estado a 2026-11-11 y registrar la resolución definitiva en el ADR correspondiente.
