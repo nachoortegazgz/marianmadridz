@@ -2536,8 +2536,7 @@ async function processCompletedEcommerceRefund(orderId, refundId, refundAmount, 
     }
 }
 
-// Wix Velo marks this event Developer Preview. Use only documented envelope fields
-// (metadata.id, entity._id); fetch current order and transaction state via @wix/ecom.
+// Stable Velo order-updated fallback: recheck only orders already marked refunded.
 export async function wixEcom_onOrderUpdated(eventPayload) {
     const traceId = makeTraceId("whook-order-updated-refund");
     try {
