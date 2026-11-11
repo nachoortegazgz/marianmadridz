@@ -269,7 +269,7 @@ La sección histórica anterior se conserva para trazabilidad; cuando contradiga
 - La lectura de transacciones utiliza @wix/ecom.orderTransactions.listTransactionsForSingleOrder con elevación. Solo se registran refunds con todas las transacciones terminales; summary.refunded debe reconciliar con importes SUCCEEDED y las transacciones FAILED aportan cero.
 - SDK_CONFIG.CURRENCY_CODE=EUR está respaldado por las propiedades live del sitio. Los reembolsos con otra moneda se rechazan; no hay soporte multimoneda.
 - Cobertura añadida: siete pruebas unitarias y escenario offline de venta, refund pendiente, parcial mixto, total posterior, residual IVA, replay y concurrencia.
-- El último CI completo observado sobre un HEAD intermedio falló en una suite por contaminación de un mock global de orders; se retiró ese mock. La ejecución sobre el HEAD final está pendiente. No declarar validación hasta obtener CI verde y Gitleaks verde sobre el mismo HEAD.
+- CI offline SUCCESS sobre el HEAD de código 48b509f (run 43034820298): 56 suites / 543 tests / 0 fallos; SDK @wix/ecom orderTransactions, Bookings Reader V2 y ESLint correctos. Gitleaks full-history SUCCESS (run 43034820526). Las actualizaciones posteriores son exclusivamente documentales; el código validado no ha cambiado.
 - Wix Runtime y E2E publicado siguen pendientes por falta de sitio QA aislado. No ejecutar webhooks, pagos, reembolsos ni escrituras fiscales sobre el sitio productivo.
 - El evento Velo onOrderTransactionsUpdated no se utiliza porque está en Developer Preview y su descripción no garantiza la transición de estado de refunds ya creados.
 - La documentación de QA está en docs/qa/QA-SIMULATION-2026-11.md y el detalle de cambios en docs/audits/2026-11-11-p0-p1-hardening.md.
