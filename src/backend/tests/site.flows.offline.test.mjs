@@ -785,7 +785,8 @@ test('FLOW-CAJA-06 CajaActual resolves singletonKey when Wix assigned a differen
 
   assert.strictEqual(first.status, 'SUCCESS');
   assert.strictEqual(replay.status, 'SUCCESS');
-  assert.strictEqual(replay.idempotent, true);
+  assert.strictEqual(first.skipped, true);
+  assert.strictEqual(replay.skipped, true);
   assert.strictEqual(rows.length, 1, 'no debe crear un segundo singleton');
   assert.strictEqual(register._id, 'SINGLE_ITEM_ID', 'debe conservar el _id físico de Wix');
   assert.strictEqual(register.cashAmount, 300, 'el cobro online no altera efectivo');
