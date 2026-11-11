@@ -51,7 +51,8 @@ const MESSAGE_TYPES = Object.freeze({
   CONTEXT: "MM_CONTEXT",
   AVAIL: "MM_AVAIL",
   BOOK: "MM_BOOK",
-  NAV: "MM_NAV"
+  NAV: "MM_NAV",
+  PROFILE: "MM_PROFILE"
 });
 
 /* SEC-01 / BOOK-TIMEOUT-02:
@@ -256,6 +257,14 @@ function handleMessage(e){
     }
     if(p.action==="days"){state.days=(Array.isArray(p.data)?p.data:[]).map(x=>text(x?.dateYMD||x?.dateYmd||x)).filter(x=>/^\d{4}-\d{2}-\d{2}$/.test(x));renderCalendar()}
     else if(p.action==="slots")renderSlots(Array.isArray(p.data)?p.data:p.data?.slots||[])
+  }
+  else if(m.type===MESSAGE_TYPES.PROFILE){
+    const firstName=text(p.firstName),lastName=text(p.lastName);
+    const fullName=[firstName,lastName].filter(Boolean).join(" ");
+    if(fullName&&!text(el("inputName").value))el("inputName").value=fullName;
+    if(text(p.email)&&!text(el("inputEmail").value))el("inputEmail").value=text(p.email);
+    if(text(p.phone)&&!text(el("inputPhone").value))el("inputPhone").value=text(p.phone);
+    updateConfirmButton();
   }
   else if(m.type===MESSAGE_TYPES.BOOK){
     clearTimeout(bookingTimer);
