@@ -246,7 +246,7 @@ La guía ejecutiva consolidada y vigente para la siguiente intervención es [EST
 La revisión de 2026-11-11 añade, entre otros, estos puntos que prevalecen sobre cualquier texto histórico incompatible de este documento:
 - CajaActual representa exclusivamente el efectivo físico del cajón. Tarjeta, Bizum, online, transferencias y pagos bancarios no alteran su saldo.
 - MovimientosCaja conserva su función de registro fiscal de operaciones; no se convierte en un ledger exclusivo de efectivo. LibroAsientosContablesDetalle consolida los hechos económicos según contratos contables aprobados.
-- La implementación parcial de esta regla está en la PR #284, abierta y no desplegada. Solo proyecta actualmente EFECTIVO + PRESENCIAL; no cubre todavía aportaciones, retiradas, pagos físicos a proveedores ni ajustes.
+- La implementación parcial de esta regla se integró mediante la PR #284 (mergeada en GitHub; el despliegue Wix no está acreditado). Solo proyecta actualmente EFECTIVO + PRESENCIAL; no cubre todavía aportaciones, retiradas, pagos físicos a proveedores ni ajustes.
 - La creación de una reserva nativa de prueba el 2026-11-11 no produjo su proyección CitasF2 ni marcador WEBHOOK_EVENT. La causa no está aislada; no realizar backfill, cancelación ni más reservas de prueba hasta resolverla.
 - ServiciosCatalogo se declara por el propietario SSOT de la configuración de servicios hacia Wix Bookings, pero el mapeo de name/complementos y staffMembers aún requiere auditoría de esquema, consumidores y sincronización real.
 - La CI offline verde no acredita Wix runtime, E2E publicado ni despliegue.
