@@ -18,7 +18,7 @@ test("P0-FISCAL-01 fiscal ledger writers are disabled by canonical fail-closed p
     read("eventLog.js"),
   ]);
 
-  assert.match(config, /FISCAL_RUNTIME_POLICY\s*=\s*Object\.freeze\(\{\s*LEDGER_WRITES_ENABLED:\s*false/s);
+  assert.match(config, /FISCAL_RUNTIME_POLICY\s*=\s*Object\.freeze\(\{[\s\S]*?LEDGER_WRITES_ENABLED:\s*false,[\s\S]*?ALLOW_SIMULATION_RECORDS:\s*false/s);
   assert.match(cajas, /FISCAL_RUNTIME_POLICY/);
 
   const manualStart = cajas.indexOf("export const registerManualTransaction");
@@ -31,6 +31,10 @@ test("P0-FISCAL-01 fiscal ledger writers are disabled by canonical fail-closed p
     assert.ok(index > manualGuard, "fiscal guard must precede " + operation);
   }
   assert.match(manual.slice(manualGuard), /FISCAL_LEDGER_WRITES_DISABLED/);
+  const manualSimulationGuard = manual.indexOf("FISCAL_RUNTIME_POLICY.ALLOW_SIMULATION_RECORDS !== true");
+  assert.ok(manualSimulationGuard >= 0, "manual writer must reject explicit simulation records");
+  assert.ok(manual.indexOf("isExplicitSimulationLedgerRecord(inDto)") > manualSimulationGuard);
+  assert.ok(manual.indexOf("dalInsert(MOVIMIENTOS_CAJA_COL") > manualSimulationGuard);
 
   const zStart = cajas.indexOf("async function _registerZClosing");
   const zEnd = cajas.indexOf("export const registerZClosing", zStart);
@@ -52,6 +56,10 @@ test("P0-FISCAL-01 fiscal ledger writers are disabled by canonical fail-closed p
     assert.ok(index > eventGuard, "event fiscal guard must precede " + operation);
   }
   assert.match(eventWriter.slice(eventGuard), /FISCAL_LEDGER_WRITES_DISABLED/);
+  const eventSimulationGuard = eventWriter.indexOf("FISCAL_RUNTIME_POLICY.ALLOW_SIMULATION_RECORDS !== true");
+  assert.ok(eventSimulationGuard >= 0, "event writer must reject explicit simulation records");
+  assert.ok(eventWriter.indexOf("isExplicitSimulationLedgerRecord(input)") > eventSimulationGuard);
+  assert.ok(eventWriter.indexOf("_upsertDatosFiscales(") > eventSimulationGuard);
 });
 
 test("P1-CLOCK-01 timeclock writes and adjustments remain disabled before signing or persistence", async () => {
