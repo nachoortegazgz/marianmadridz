@@ -33,16 +33,16 @@ test("EVENT-ORDER-NATIVE-STOCK-01 order-created webhook records idempotency with
 
 test("EVENT-WEBHOOK-RETRY-02 booking and eCommerce persistence handlers never acknowledge caught failures", () => {
     const handlerNames = [
-        "wixBookingsV2_onBookingConfirmed",
-        "wixBookingsV2_onBookingRescheduled",
-        "wixBookingsV2_onBookingCanceled",
-        "wixEcom_onOrderCreated",
-        "wixEcom_onOrderPaymentStatusUpdated",
-        "wixEcom_onOrderUpdated",
-        "wixEcom_onOrderCanceled",
+        "_handleWixBookingsV2_onBookingConfirmed",
+        "_handleWixBookingsV2_onBookingRescheduled",
+        "_handleWixBookingsV2_onBookingCanceled",
+        "_handleWixEcom_onOrderCreated",
+        "_handleWixEcom_onOrderPaymentStatusUpdated",
+        "_handleWixEcom_onOrderUpdated",
+        "_handleWixEcom_onOrderCanceled",
     ];
     for (const name of handlerNames) {
-        const start = source.indexOf(`export async function ${name}`);
+        const start = source.indexOf(`async function ${name}`);
         const next = source.indexOf("\nexport ", start + 10);
         assert.ok(start >= 0, `${name} must be exported`);
         const handler = source.slice(start, next < 0 ? source.length : next);
@@ -63,9 +63,9 @@ test("EVENT-ORDER-NATIVE-STOCK-02 eCommerce events no longer import the custom i
 
 
 test("EVENT-ORDER-NATIVE-STOCK-03 stable payment and order-update handlers route refunds without custom stock writes", () => {
-    const paymentStart = source.indexOf("export async function wixEcom_onOrderPaymentStatusUpdated");
+    const paymentStart = source.indexOf("async function _handleWixEcom_onOrderPaymentStatusUpdated");
     const processorStart = source.indexOf("// WIX ECOMMERCE TRANSACTION PROCESSORS", paymentStart);
-    const orderUpdatedStart = source.indexOf("export async function wixEcom_onOrderUpdated", processorStart);
+    const orderUpdatedStart = source.indexOf("async function _handleWixEcom_onOrderUpdated", processorStart);
     const cancelStart = source.indexOf("// WEBHOOK: ORDER CANCELED", orderUpdatedStart);
     assert.ok(paymentStart >= 0 && processorStart > paymentStart);
     assert.ok(orderUpdatedStart > processorStart && cancelStart > orderUpdatedStart);
