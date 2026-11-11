@@ -110,6 +110,7 @@ function seedCajaPrincipal() {
     operationDate,
     openingAmount: 300,
     cashAmount: 300,
+    netAmount: 300,
     totalInAmount: 300,
     expectedCash: 300,
     cardAmount: 0,
@@ -871,6 +872,7 @@ test('FLOW-CAJA-07 devoluciones y reembolsos reducen caja y conservan cadena fis
         movementType,
         operationDescription: `Devolucion simulada ${movementType} (SIMULACION PREVIA A DESPLIEGUE REAL)`,
         paymentMethod: 'EFECTIVO',
+        channelType: 'PRESENCIAL',
         transactionId: `facsimil-refund-${movementType.toLowerCase()}`,
         correctionReason: 'OTRAS',
         previousInvoiceId: 'FACSIMIL-FAC-2026-00001',
@@ -953,6 +955,7 @@ test('FLOW-CAJA-11 simulation cash state blocks manual writes, state display and
     transactionId: 'simulation-projection-movement',
     accountingAmount: 10,
     paymentMethod: 'EFECTIVO',
+    channelType: 'PRESENCIAL',
   }, 'trace-simulation-projection-001');
   assert.equal(projection.status, 'PENDING_RECONCILIATION');
   const register = wixDataMock._store.get('CajaActual')[0];
