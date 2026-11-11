@@ -77,16 +77,17 @@ No fusionar si falla CI. No desplegar a Wix por el mero hecho de que CI offline 
 - Gate CI para verificar la disponibilidad de orderTransactions.listTransactionsForSingleOrder en el @wix/ecom instalado.
 
 ### Estado de validación
-- HEAD documental actual: e79ec396388f86c08fec6ee5871bce43f3fd8604.
-- La ejecución CI anterior sobre e986f8be detectó un fallo de aislamiento del mock global de orders en events.native-booking-sync; el mock se retiró. Esa ejecución no valida el estado actual.
-- La ejecución de calidad iniciada sobre b14c64a7 fue cancelada por actualizaciones posteriores y no cuenta como resultado.
-- CI y Gitleaks deben repetirse sobre el HEAD final después de cerrar los cambios.
+- HEAD de código validado: 48b509f39d4e6f6b32c8bb4a23b59fcebc3886a0.
+- Backend offline quality run 43034820298: SUCCESS, 56 suites / 543 tests / 0 fallos.
+- Contratos SDK Wix, incluido @wix/ecom.orderTransactions.listTransactionsForSingleOrder, Bookings Reader V2 y ESLint: SUCCESS.
+- Gitleaks full-history run 43034820526: SUCCESS sobre el mismo HEAD de código.
+- Las ejecuciones anteriores con fallo/cancelación (e986f8be y b14c64a7) quedan superadas por el resultado verde de 48b509f.
+- Las actualizaciones posteriores a 48b509f en este informe y QA-SIMULATION son exclusivamente documentales; no modifican código ni pruebas.
 - Wix Runtime, E2E publicado y QA aislado siguen pendientes. No hay escrituras CMS, pagos, reembolsos ni despliegues reales.
 - La conciliación multimoneda no está habilitada; el ledger histórico no almacena moneda por movimiento. Solo se admiten pedidos en la moneda canónica EUR.
 
 ### Bloqueos antes de merge
-1. CI offline y Gitleaks verdes sobre el HEAD final.
-2. Revisión humana del diff completo.
-3. Validar en un sitio QA aislado la transición PAID → PARTIALLY_REFUNDED → FULLY_REFUNDED, refunds con varias transacciones, estados pendientes/fallidos, eventos duplicados y desordenados.
-4. Confirmar el comportamiento de entrega/reintento de eventos Velo ante errores y transacciones aún pendientes.
-5. No fusionar ni desplegar mientras el sitio QA aislado no exista y no se haya verificado el runtime.
+1. Revisión humana completa del diff y de los 100 commits del PR; preferir squash merge cuando proceda.
+2. Validar en un sitio QA aislado la transición PAID → PARTIALLY_REFUNDED → FULLY_REFUNDED, refunds con varias transacciones, estados pendientes/fallidos, eventos duplicados y desordenados.
+3. Confirmar el comportamiento de entrega/reintento de eventos Velo ante errores y transacciones aún pendientes.
+4. No fusionar ni desplegar mientras el sitio QA aislado no exista y no se haya verificado el runtime.
