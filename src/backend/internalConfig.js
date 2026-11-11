@@ -473,6 +473,55 @@ export const DATA_ACCESS_BULK_PATCH_POLICY = Object.freeze({
   }),
 });
 
+
+/*
+ * Elevated CMS write policy. Append-only ledgers are insert-only; mutable
+ * operational writes are restricted to ControlOperativo and CajaActual.
+ * Bulk insert/update remain disabled until a real consumer has a reviewed
+ * contract. Keep this list synchronized with dataAccessPolicy.js tests.
+ */
+export const DATA_ACCESS_WRITE_POLICY = Object.freeze({
+  insertCollections: Object.freeze([
+    BUSINESS_COLLECTIONS.CONTROL_OPERATIVO,
+    BUSINESS_COLLECTIONS.DATOS_FISCALES,
+    BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA,
+    BUSINESS_COLLECTIONS.HISTORICO_CIERRES_Z,
+    BUSINESS_COLLECTIONS.LIBRO_ASIENTOS_CONTABLES_DETALLE,
+    BUSINESS_COLLECTIONS.CAJA_ACTUAL,
+    BUSINESS_COLLECTIONS.PAQUETES_GESTORIA,
+  ]),
+  updateCollections: Object.freeze([
+    BUSINESS_COLLECTIONS.CONTROL_OPERATIVO,
+    BUSINESS_COLLECTIONS.CAJA_ACTUAL,
+  ]),
+  saveCollections: Object.freeze([BUSINESS_COLLECTIONS.CONTROL_OPERATIVO]),
+  removeCollections: Object.freeze([BUSINESS_COLLECTIONS.CONTROL_OPERATIVO]),
+  bulkRemoveCollections: Object.freeze([BUSINESS_COLLECTIONS.CONTROL_OPERATIVO]),
+  mutableControlTypes: Object.freeze([
+    CONTROL_TYPE.ALERT,
+    CONTROL_TYPE.COMPENSATION,
+    CONTROL_TYPE.DEDUPE_KEY,
+    CONTROL_TYPE.IDEMPOTENCY,
+    CONTROL_TYPE.SYSTEM_FLAG,
+  ]),
+  removableControlTypes: Object.freeze([
+    CONTROL_TYPE.DAYS_CACHE,
+    CONTROL_TYPE.DISPLAY_TOKEN,
+    CONTROL_TYPE.DUAL_CACHE,
+  ]),
+  purgeControlTypes: Object.freeze([
+    CONTROL_TYPE.ALERT,
+    CONTROL_TYPE.COMPENSATION,
+    CONTROL_TYPE.DAYS_CACHE,
+    CONTROL_TYPE.DISPLAY_TOKEN,
+    CONTROL_TYPE.DUAL_CACHE,
+    CONTROL_TYPE.IDEMPOTENCY,
+    CONTROL_TYPE.RATE_LIMIT,
+    CONTROL_TYPE.SLOT_LOCK,
+    CONTROL_TYPE.SYSTEM_FLAG,
+  ]),
+});
+
 // Estados de proyeccion del log fiscal (eventLog.js).
 export const PROJECTION_STATUS = Object.freeze({
   OK: "OK",
