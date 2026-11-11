@@ -169,3 +169,10 @@ Todas las suites offline usan fixtures sintéticos y mocks. No se crean reservas
 - [Wix eCommerce — List Transactions For Single Order](https://dev.wix.com/docs/api-reference/business-solutions/e-commerce/orders/order-transactions/list-transactions-for-single-order).
 - [Wix eCommerce — Order payment status enum](https://dev.wix.com/docs/api-reference/business-solutions/e-commerce/orders/orders/get-order).
 - [Wix — Backend events and event delivery](https://dev.wix.com/docs/overview/backend-services/events).
+
+### Inventario de sitios y bloqueo de QA (verificación 2026-11-11)
+- Wix devuelve dos sitios en la cuenta: Marian Madrid (producción) y ortega nacho cv web (personal).
+- El sitio personal tiene Velo habilitado y plan Free, pero su conjunto de apps (Forms & Payments, Hotels, Invoices V1, Portfolio y Video) no replica el stack requerido de Marian Madrid (Bookings, Stores y Members). No es un entorno QA equivalente y no se modifica.
+- Se ha localizado la API oficial Duplicate Site. Wix indica que no copia pedidos, contactos, facturas ni configuración de apps de terceros; la documentación no garantiza que todas las colecciones CMS personalizadas estén vacías. No se duplica producción para evitar copiar datos personales o ledgers a un entorno de pruebas.
+- No se ha creado un nuevo sitio, asignado dominio, activado plan ni instalado apps. La validación runtime permanece bloqueada hasta disponer de un sitio QA vacío con las apps necesarias y sin datos productivos.
+- Referencia: [Wix Duplicate Site API](https://dev.wix.com/docs/api-reference/account-level/sites/site-actions/duplicate-site).
