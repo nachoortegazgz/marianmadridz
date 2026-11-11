@@ -44,7 +44,7 @@ test('BOOKING_CANCELED persists CitasF2 before marking the webhook processed', a
   const cita = wixDataMock._store.get(CITA_COLLECTION).find((row) => row.bookingId === BOOKING_ID);
   assert.equal(cita.bookingStatus, IC.CITAS_BOOKING_STATUS.CANCELED);
   const eventRows = wixDataMock._store.get(CONTROL_COLLECTION) || [];
-  assert.equal(eventRows.filter((row) => row.eventId === EVENT_ID).length, 1);
+  assert.equal(eventRows.filter((row) => row.controlType === IC.CONTROL_TYPE.WEBHOOK_EVENT && row.eventId === EVENT_ID).length, 1);
 });
 
 test('BOOKING_CANCELED does not mark the event processed when CitasF2 is missing', async () => {
@@ -55,7 +55,7 @@ test('BOOKING_CANCELED does not mark the event processed when CitasF2 is missing
     wixBookingsV2_onBookingCanceled(canceledEvent()),
     /CITASF2_CANCEL_SYNC_FAILED:NOT_FOUND/,
   );
-  assert.equal((wixDataMock._store.get(CONTROL_COLLECTION) || []).some((row) => row.eventId === EVENT_ID), false);
+  assert.equal((wixDataMock._store.get(CONTROL_COLLECTION) || []).some((row) => row.controlType === IC.CONTROL_TYPE.WEBHOOK_EVENT && row.eventId === EVENT_ID), false);
 });
 
 test('BOOKING_CANCELED propagates CitasF2 read failures instead of treating them as missing', async () => {
@@ -66,7 +66,7 @@ test('BOOKING_CANCELED propagates CitasF2 read failures instead of treating them
     wixBookingsV2_onBookingCanceled(canceledEvent()),
     /CMS_READ_UNAVAILABLE/,
   );
-  assert.equal((wixDataMock._store.get(CONTROL_COLLECTION) || []).some((row) => row.eventId === EVENT_ID), false);
+  assert.equal((wixDataMock._store.get(CONTROL_COLLECTION) || []).some((row) => row.controlType === IC.CONTROL_TYPE.WEBHOOK_EVENT && row.eventId === EVENT_ID), false);
 });
 
 

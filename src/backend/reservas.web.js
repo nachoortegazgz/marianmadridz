@@ -1589,7 +1589,7 @@ export async function _cleanExpiredDualSlotsInternal({ limit = 100, traceId = nu
     );
     let removed = 0;
     for (const item of result?.items || []) {
-        await withTimeout(removeById(CONTROL_COL, item._id), WATCHDOG_TIMEOUT_MS, "cleanExpiredDualSlotsRemove").catch(() => null);
+        await withTimeout(removeById(CONTROL_COL, item._id, { expectedControlType: CT_DUAL_CACHE }), WATCHDOG_TIMEOUT_MS, "cleanExpiredDualSlotsRemove").catch(() => null);
         removed += 1;
     }
     log.info("Expired dual cache entries cleaned", { removed, traceId });
@@ -1856,7 +1856,7 @@ async function _removeDualCacheForDay(serviceId, dateYmd, resourceId, traceId) {
     let removed = 0;
     while (page) {
         const items = page.items || [];
-        await Promise.allSettled(items.map((item) => removeById(CONTROL_COL, item._id).catch(() => null)));
+        await Promise.allSettled(items.map((item) => removeById(CONTROL_COL, item._id, { expectedControlType: CT_DUAL_CACHE }).catch(() => null)));
         removed += items.length;
         if (!page.hasNext || !page.hasNext()) break;
         page = await withTimeout(page.next(), WATCHDOG_TIMEOUT_MS, "invalidateDualCacheNext").catch(() => null);
@@ -1903,7 +1903,7 @@ export async function _invalidateCachesInternal(serviceId, dateYMD, resourceId, 
         }
 
         await Promise.allSettled(
-            idsToRemove.map((id) => removeById(CONTROL_COL, id).catch(() => null))
+            idsToRemove.map((id) => removeById(CONTROL_COL, id, { expectedControlType: CT_DAYS_CACHE }).catch(() => null))
         );
     } catch (e) {
         log.warn("_invalidateCachesInternal: days cache cleanup skipped", {
@@ -2240,7 +2240,7 @@ async function _validateAndConsumeDisplayToken(token, traceId) {
 
 async function _consumeDisplayToken(tokenId, traceId) {
     try {
-        await removeById(CONTROL_COL, tokenId);
+        await removeById(CONTROL_COL, tokenId, { expectedControlType: CT_DISPLAY_TOKEN });
         return true;
     } catch (e) {
         log.warn("_consumeDisplayToken rejected (fail-closed)", {

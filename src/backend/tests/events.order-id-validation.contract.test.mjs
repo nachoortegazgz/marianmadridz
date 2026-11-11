@@ -18,7 +18,7 @@ test("EVENT-ORDER-GUID-01 order-created webhook uses the imported canonical GUID
 
 
 test("EVENT-ORDER-NATIVE-STOCK-01 order-created webhook records idempotency without custom inventory operations", () => {
-    const start = source.indexOf("export async function wixEcom_onOrderCreated");
+    const start = source.indexOf("async function _handleWixEcom_onOrderCreated");
     const end = source.indexOf("// WEBHOOK: ORDER PAYMENT STATUS UPDATED", start);
     assert.ok(start >= 0 && end > start, "order-created handler must remain discoverable");
     const handler = source.slice(start, end);
@@ -31,20 +31,43 @@ test("EVENT-ORDER-NATIVE-STOCK-01 order-created webhook records idempotency with
 });
 
 
-test("EVENT-WEBHOOK-RETRY-02 booking and eCommerce persistence handlers never acknowledge caught failures", () => {
-    const handlerNames = [
-        "wixBookingsV2_onBookingConfirmed",
-        "wixBookingsV2_onBookingRescheduled",
-        "wixBookingsV2_onBookingCanceled",
-        "wixEcom_onOrderCreated",
-        "wixEcom_onOrderPaymentStatusUpdated",
-        "wixEcom_onOrderUpdated",
-        "wixEcom_onOrderCanceled",
+test("EVENT-WEBHOOK-CLAIM-01 all eight Wix event exports acquire a metadata.id claim before domain handling", () => {
+    const eventHandlers = [
+        ["wixBookingsV2_onBookingConfirmed", "BOOKING_CONFIRMED", "_handleWixBookingsV2_onBookingConfirmed"],
+        ["wixBookingsV2_onBookingCreated", "BOOKING_CREATED", "_handleWixBookingsV2_onBookingCreated"],
+        ["wixBookingsV2_onBookingRescheduled", "BOOKING_RESCHEDULED", "_handleWixBookingsV2_onBookingRescheduled"],
+        ["wixBookingsV2_onBookingCanceled", "BOOKING_CANCELED", "_handleWixBookingsV2_onBookingCanceled"],
+        ["wixEcom_onOrderCreated", "ORDER_CREATED", "_handleWixEcom_onOrderCreated"],
+        ["wixEcom_onOrderPaymentStatusUpdated", "ORDER_PAYMENT_STATUS_UPDATED", "_handleWixEcom_onOrderPaymentStatusUpdated"],
+        ["wixEcom_onOrderUpdated", "ORDER_UPDATED", "_handleWixEcom_onOrderUpdated"],
+        ["wixEcom_onOrderCanceled", "ORDER_CANCELED", "_handleWixEcom_onOrderCanceled"],
     ];
-    for (const name of handlerNames) {
+    assert.match(source, /async function _runClaimedWixEvent\(eventPayload, eventType, handler\)/);
+    assert.match(source, /eventPayload\?\.metadata\?\.id/);
+    assert.match(source, /return runWithWebhookEventClaim\([\s\S]*?handler:\s*\(\)\s*=>\s*handler\(eventPayload\)/);
+    for (const [name, eventType, handler] of eventHandlers) {
         const start = source.indexOf(`export async function ${name}`);
         const next = source.indexOf("\nexport ", start + 10);
+        const wrapper = source.slice(start, next < 0 ? source.length : next);
         assert.ok(start >= 0, `${name} must be exported`);
+        assert.match(wrapper, new RegExp(`_runClaimedWixEvent\\(\\s*eventPayload,\\s*"${eventType}",\\s*${handler}`));
+    }
+});
+
+test("EVENT-WEBHOOK-RETRY-02 booking and eCommerce persistence handlers never acknowledge caught failures", () => {
+    const handlerNames = [
+        "_handleWixBookingsV2_onBookingConfirmed",
+        "_handleWixBookingsV2_onBookingRescheduled",
+        "_handleWixBookingsV2_onBookingCanceled",
+        "_handleWixEcom_onOrderCreated",
+        "_handleWixEcom_onOrderPaymentStatusUpdated",
+        "_handleWixEcom_onOrderUpdated",
+        "_handleWixEcom_onOrderCanceled",
+    ];
+    for (const name of handlerNames) {
+        const start = source.indexOf(`async function ${name}`);
+        const next = source.indexOf("\n// ============================================================================", start + 10);
+        assert.ok(start >= 0, `${name} must exist as an internal domain handler`);
         const handler = source.slice(start, next < 0 ? source.length : next);
         const catchIndex = handler.lastIndexOf("catch (error)");
         assert.ok(catchIndex >= 0, `${name} must handle/log errors`);
@@ -63,9 +86,9 @@ test("EVENT-ORDER-NATIVE-STOCK-02 eCommerce events no longer import the custom i
 
 
 test("EVENT-ORDER-NATIVE-STOCK-03 stable payment and order-update handlers route refunds without custom stock writes", () => {
-    const paymentStart = source.indexOf("export async function wixEcom_onOrderPaymentStatusUpdated");
+    const paymentStart = source.indexOf("async function _handleWixEcom_onOrderPaymentStatusUpdated");
     const processorStart = source.indexOf("// WIX ECOMMERCE TRANSACTION PROCESSORS", paymentStart);
-    const orderUpdatedStart = source.indexOf("export async function wixEcom_onOrderUpdated", processorStart);
+    const orderUpdatedStart = source.indexOf("async function _handleWixEcom_onOrderUpdated", processorStart);
     const cancelStart = source.indexOf("// WEBHOOK: ORDER CANCELED", orderUpdatedStart);
     assert.ok(paymentStart >= 0 && processorStart > paymentStart);
     assert.ok(orderUpdatedStart > processorStart && cancelStart > orderUpdatedStart);

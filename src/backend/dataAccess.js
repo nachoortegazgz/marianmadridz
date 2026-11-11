@@ -10,7 +10,15 @@ STANDARDS: G10 ASCII Strict. Sin suppressAuth. Acceso CMS centralizado
 
 import { items } from "@wix/data";
 import { auth } from "@wix/essentials";
-import { assertBulkPatchAllowed } from "backend/dataAccessPolicy";
+import {
+    assertBulkPatchAllowed,
+    assertInsertAllowed,
+    assertUpdateAllowed,
+    assertSaveAllowed,
+    assertRemoveAllowed,
+    assertBulkRemoveAllowed,
+    assertBulkMutationDisabled,
+} from "backend/dataAccessPolicy";
 
 const DATA_ACCESS_ERROR = "DATA_ACCESS_ERROR";
 
@@ -114,11 +122,8 @@ const elevatedGet = auth.elevate(items.get);
 const elevatedInsert = auth.elevate(items.insert);
 const elevatedUpdate = auth.elevate(items.update);
 const elevatedSave = auth.elevate(items.save);
-const elevatedRemove = auth.elevate(items.remove);
 const elevatedQuery = auth.elevate(items.query);
-const elevatedBulkInsert = auth.elevate(items.bulkInsert);
 const elevatedBulkPatch = auth.elevate(items.bulkPatch);
-const elevatedBulkUpdate = auth.elevate(items.bulkUpdate);
 const elevatedBulkRemove = auth.elevate(items.bulkRemove);
 const elevatedQueryReferencedItems = auth.elevate(
     items.queryReferencedItems
@@ -306,37 +311,68 @@ export async function getItem(collection, id, consistency) {
 }
 
 export function insertItem(collection, item) {
+    assertInsertAllowed(collection, item);
     return elevatedInsert(collection, item);
 }
 
 export function updateItem(collection, item) {
+    assertUpdateAllowed(collection, item);
     return elevatedUpdate(collection, item);
 }
 
 export function saveItem(collection, item) {
+    assertSaveAllowed(collection, item);
     return elevatedSave(collection, item);
 }
 
-export async function removeById(collection, idOrItem) {
+export async function removeById(collection, idOrItem, options = {}) {
     const id = idOrItem && typeof idOrItem === "object"
         ? idOrItem._id || idOrItem.id
         : idOrItem;
+    const expectedControlType = options.expectedControlType;
 
     if (!id) throw dataAccessError("REMOVE_ID_REQUIRED");
+    assertRemoveAllowed(collection, id, expectedControlType);
 
-    await elevatedRemove(collection, id);
+    const existing = await getItem(collection, id, CONSISTENCY.STRONG);
+    if (!existing) throw dataAccessError("REMOVE_TARGET_NOT_FOUND");
+    if (existing.controlType !== expectedControlType) {
+        throw dataAccessError("REMOVE_CONTROL_TYPE_MISMATCH");
+    }
+
+    // The condition is evaluated by Wix as part of the delete operation.
+    // The strong read above provides an explicit fail-closed type check; it is
+    // not the concurrency guarantee. The conditional bulk remove prevents a
+    // type change between that read and the actual deletion from being erased.
+    const result = await elevatedBulkRemove(collection, [id], {
+        condition: {
+            filter: {
+                controlType: { $eq: expectedControlType },
+            },
+        },
+    });
+    const removed = Array.isArray(result?.removedItemIds)
+        ? result.removedItemIds.includes(id)
+        : Array.isArray(result?.results) &&
+            result.results.some((entry) =>
+                entry?.itemMetadata?.id === id &&
+                entry?.itemMetadata?.success === true
+            );
+    if (!removed) throw dataAccessError("REMOVE_CONDITION_NOT_MET");
+
     return { _id: id };
 }
 
-export function bulkInsert(collection, records) {
-    return elevatedBulkInsert(collection, records);
+export function bulkInsert() {
+    assertBulkMutationDisabled("BULK_INSERT");
 }
 
-export function bulkUpdate(collection, records) {
-    return elevatedBulkUpdate(collection, records);
+export function bulkUpdate() {
+    assertBulkMutationDisabled("BULK_UPDATE");
 }
 
 export function bulkRemove(collection, ids, options) {
+    assertBulkRemoveAllowed(collection, ids, options);
     return elevatedBulkRemove(collection, ids, options);
 }
 

@@ -428,10 +428,18 @@ export const CONTROL_TYPE = Object.freeze({
   SLOT_LOCK: "SLOT_LOCK",
   RATE_LIMIT: "RATE_LIMIT",
   SYSTEM_FLAG: "SYSTEM_FLAG",
+  WEBHOOK_CLAIM: "WEBHOOK_CLAIM",
   WEBHOOK_EVENT: "WEBHOOK_EVENT",
 });
 
-// Least-privilege policy for the only current bulkPatchItems consumers.
+export const WEBHOOK_CLAIM_STATUS = Object.freeze({
+  IN_PROGRESS: "IN_PROGRESS",
+  COMPLETED: "COMPLETED",
+  FAILED_RETRYABLE: "FAILED_RETRYABLE",
+});
+
+// Least-privilege policy for mutable operational CAS consumers.
+// WEBHOOK_EVENT remains append-only; only WEBHOOK_CLAIM stores mutable claim state.
 // Every patch must target a mutable ControlOperativo record type and carry
 // its compare-and-swap condition. Append-only WEBHOOK_EVENT and ledgers are
 // deliberately excluded.
@@ -470,7 +478,77 @@ export const DATA_ACCESS_BULK_PATCH_POLICY = Object.freeze({
         traceId: Object.freeze(["SET_FIELD"]),
       }),
     }),
+    [CONTROL_TYPE.WEBHOOK_CLAIM]: Object.freeze({
+      requiredConditionFields: Object.freeze(["controlType", "status", "ownerToken", "version"]),
+      anyConditionFields: Object.freeze([]),
+      allowedConditionFields: Object.freeze(["controlType", "status", "ownerToken", "version"]),
+      fields: Object.freeze({
+        status: Object.freeze(["SET_FIELD"]),
+        ownerToken: Object.freeze(["SET_FIELD"]),
+        payload: Object.freeze(["SET_FIELD"]),
+        version: Object.freeze(["INCREMENT_FIELD"]),
+        traceId: Object.freeze(["SET_FIELD"]),
+      }),
+    }),
   }),
+});
+
+
+/*
+ * Elevated CMS write policy. Append-only ledgers are insert-only; mutable
+ * operational writes are restricted to ControlOperativo, CajaActual and
+ * the mutable CitasF2 booking projection.
+ * Bulk insert/update remain disabled until a real consumer has a reviewed
+ * contract. Keep this list synchronized with dataAccessPolicy.js tests.
+ */
+export const DATA_ACCESS_WRITE_POLICY = Object.freeze({
+  insertCollections: Object.freeze([
+    BUSINESS_COLLECTIONS.CONTROL_OPERATIVO,
+    BUSINESS_COLLECTIONS.CITAS_F2,
+    BUSINESS_COLLECTIONS.DATOS_FISCALES,
+    BUSINESS_COLLECTIONS.REGISTROS_HORARIOS_STAFF,
+    BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA,
+    BUSINESS_COLLECTIONS.HISTORICO_CIERRES_Z,
+    BUSINESS_COLLECTIONS.LIBRO_ASIENTOS_CONTABLES_DETALLE,
+    BUSINESS_COLLECTIONS.CAJA_ACTUAL,
+    BUSINESS_COLLECTIONS.PAQUETES_GESTORIA,
+  ]),
+  updateCollections: Object.freeze([
+    BUSINESS_COLLECTIONS.CONTROL_OPERATIVO,
+    BUSINESS_COLLECTIONS.CAJA_ACTUAL,
+    BUSINESS_COLLECTIONS.CITAS_F2,
+  ]),
+  saveCollections: Object.freeze([
+    BUSINESS_COLLECTIONS.CONTROL_OPERATIVO,
+    BUSINESS_COLLECTIONS.CAJA_ACTUAL,
+  ]),
+  removeCollections: Object.freeze([BUSINESS_COLLECTIONS.CONTROL_OPERATIVO]),
+  bulkRemoveCollections: Object.freeze([BUSINESS_COLLECTIONS.CONTROL_OPERATIVO]),
+  mutableControlTypes: Object.freeze([
+    CONTROL_TYPE.ALERT,
+    CONTROL_TYPE.COMPENSATION,
+    CONTROL_TYPE.DEDUPE_KEY,
+    CONTROL_TYPE.IDEMPOTENCY,
+    CONTROL_TYPE.SYSTEM_FLAG,
+  ]),
+  removableControlTypes: Object.freeze([
+    CONTROL_TYPE.DAYS_CACHE,
+    CONTROL_TYPE.DISPLAY_TOKEN,
+    CONTROL_TYPE.DUAL_CACHE,
+    CONTROL_TYPE.IDEMPOTENCY,
+    CONTROL_TYPE.SLOT_LOCK,
+  ]),
+  purgeControlTypes: Object.freeze([
+    CONTROL_TYPE.ALERT,
+    CONTROL_TYPE.COMPENSATION,
+    CONTROL_TYPE.DAYS_CACHE,
+    CONTROL_TYPE.DISPLAY_TOKEN,
+    CONTROL_TYPE.DUAL_CACHE,
+    CONTROL_TYPE.IDEMPOTENCY,
+    CONTROL_TYPE.RATE_LIMIT,
+    CONTROL_TYPE.SLOT_LOCK,
+    CONTROL_TYPE.SYSTEM_FLAG,
+  ]),
 });
 
 // Estados de proyeccion del log fiscal (eventLog.js).

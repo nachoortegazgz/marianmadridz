@@ -47,6 +47,20 @@ test("bulk patch policy allows the current dual-reschedule journal CAS contract"
     }));
 });
 
+test("bulk patch policy allows fenced WEBHOOK_CLAIM state transitions only", () => {
+    assert.doesNotThrow(() => assertBulkPatchAllowed(collection, [
+        { fieldPath: "status", action: "SET_FIELD", value: "COMPLETED" },
+        { fieldPath: "ownerToken", action: "SET_FIELD", value: "worker-token" },
+        { fieldPath: "payload", action: "SET_FIELD", value: { completedAt: new Date() } },
+        { fieldPath: "version", action: "INCREMENT_FIELD", value: 1 },
+    ], {
+        controlType: { $eq: CONTROL_TYPE.WEBHOOK_CLAIM },
+        status: { $eq: "IN_PROGRESS" },
+        ownerToken: { $eq: "worker-token" },
+        version: { $eq: 3 },
+    }));
+});
+
 test("bulk patch policy denies business, fiscal and append-only collections", () => {
     for (const target of ["CitasF2", "MovimientosCaja", "ControlOperativo"]) {
         if (target === "ControlOperativo") {

@@ -128,8 +128,8 @@ test("EVENT-BOOKING-CREATED-01 native creation persists a pending projection and
   assert.equal(rows[0].bookingStatus, "CONFIRMED");
 
   const markers = wixDataMock._store.get("ControlOperativo") || [];
-  assert.equal(markers.filter(row => row.dedupeKey === "WEBHOOK_evt-native-created-001").length, 1);
-  assert.equal(markers.filter(row => row.dedupeKey === "WEBHOOK_evt-native-confirm-after-created-001").length, 1);
+  assert.equal(markers.filter(row => row.controlType === IC.CONTROL_TYPE.WEBHOOK_EVENT && row.eventId === "evt-native-created-001").length, 1);
+  assert.equal(markers.filter(row => row.controlType === IC.CONTROL_TYPE.WEBHOOK_EVENT && row.eventId === "evt-native-confirm-after-created-001").length, 1);
 });
 
 test("EVENT-BOOKING-CREATED-02 late creation delivery never downgrades a custom dual projection", async () => {
@@ -215,7 +215,7 @@ test("EVENT-BOOKING-CREATED-04 duplicate delivery is idempotent", async () => {
   assert.equal(replay.duplicate, true);
   assert.equal((wixDataMock._store.get("CitasF2") || []).length, 1);
   assert.equal((wixDataMock._store.get("ControlOperativo") || []).filter(
-    row => row.dedupeKey === "WEBHOOK_evt-native-created-duplicate-003"
+    row => row.controlType === IC.CONTROL_TYPE.WEBHOOK_EVENT && row.eventId === "evt-native-created-duplicate-003" && row.payload?.eventType === "BOOKING_CREATED"
   ).length, 1);
 });
 
@@ -251,7 +251,7 @@ test("EVENT-BOOKING-01 native confirmation creates a canonical CitasF2 projectio
   ]);
 
   const markers = wixDataMock._store.get("ControlOperativo") || [];
-  assert.equal(markers.filter(row => row.dedupeKey === "WEBHOOK_evt-native-confirm-001").length, 1);
+  assert.equal(markers.filter(row => row.controlType === IC.CONTROL_TYPE.WEBHOOK_EVENT && row.eventId === "evt-native-confirm-001" && row.payload?.eventType === "BOOKING_CONFIRMED").length, 1);
 });
 
 test("EVENT-BOOKING-02 confirmation preserves custom dual row when webhook omits resource", async () => {
@@ -388,6 +388,7 @@ test("EVENT-BOOKING-05 order cancellation matches the Bookings catalog GUID and 
   ]);
 
   const result = await events.wixEcom_onOrderCanceled({
+    metadata: { id: "order-canceled-dual-event-005" },
     order: {
       _id: "order-canceled-dual-005",
       lineItems: [{
@@ -462,7 +463,9 @@ test("EVENT-BOOKING-08 refuses ambiguous active MapaStaff mappings", async () =>
     /MAPA_STAFF_ACTIVE_MAPPING_AMBIGUOUS/
   );
   assert.equal((wixDataMock._store.get("CitasF2") || []).length, 0);
-  assert.equal((wixDataMock._store.get("ControlOperativo") || []).length, 0);
+  const controls = wixDataMock._store.get("ControlOperativo") || [];
+  assert.equal(controls.filter(row => row.controlType === IC.CONTROL_TYPE.WEBHOOK_EVENT).length, 0);
+  assert.equal(controls.filter(row => row.controlType === IC.CONTROL_TYPE.WEBHOOK_CLAIM && row.status === IC.WEBHOOK_CLAIM_STATUS.FAILED_RETRYABLE).length, 1);
 });
 
 test("EVENT-BOOKING-06 native Bookings V2 cancellation consumes metadata.id + data.booking._id", async () => {
@@ -495,7 +498,7 @@ test("EVENT-BOOKING-06 native Bookings V2 cancellation consumes metadata.id + da
   assert.equal(rows[0].bookingStatus, "CANCELED");
 
   const markers = wixDataMock._store.get("ControlOperativo") || [];
-  assert.equal(markers.filter(row => row.dedupeKey === "WEBHOOK_evt-native-cancel-006").length, 1);
+  assert.equal(markers.filter(row => row.controlType === IC.CONTROL_TYPE.WEBHOOK_EVENT && row.eventId === "evt-native-cancel-006" && row.payload?.eventType === "BOOKING_CANCELED").length, 1);
 });
 
 
@@ -619,7 +622,7 @@ test("EVENT-PAYMENT-09 official Wix eCommerce paid event appends WIX_PAYMENTS le
 
   const controlRows = wixDataMock._store.get(IC.OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO) || [];
   assert.equal(
-    controlRows.filter(row => row.dedupeKey === "WEBHOOK_" + eventId).length,
+    controlRows.filter(row => row.controlType === IC.CONTROL_TYPE.WEBHOOK_EVENT && row.eventId === eventId).length,
     1,
     "official metadata.id must be persisted as the webhook idempotency marker"
   );
@@ -943,7 +946,9 @@ test("EVENT-BOOKING-RESCHEDULE-03 missing CitasF2 projection is retriable and ne
     /RESCHEDULED_BOOKING_CITASF2_NOT_FOUND/
   );
   assert.equal((wixDataMock._store.get("CitasF2") || []).length, 0);
-  assert.equal((wixDataMock._store.get("ControlOperativo") || []).length, 0);
+  const controlRows = wixDataMock._store.get("ControlOperativo") || [];
+  assert.equal(controlRows.filter(row => row.controlType === IC.CONTROL_TYPE.WEBHOOK_EVENT).length, 0);
+  assert.equal(controlRows.filter(row => row.controlType === IC.CONTROL_TYPE.WEBHOOK_CLAIM && row.status === IC.WEBHOOK_CLAIM_STATUS.FAILED_RETRYABLE).length, 1);
 });
 
 test("EVENT-BOOKING-RESCHEDULE-04 older native reschedule revision cannot roll a newer CitasF2 slot back", async () => {
@@ -1099,7 +1104,7 @@ test("EVENT-ORDER-NATIVE-STOCK-10 order-created marks mixed Wix catalog orders w
   assert.equal(replay.duplicate, true);
 
   const markers = wixDataMock._store.get(IC.OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO) || [];
-  const marker = markers.find(row => row.eventId === eventId);
+  const marker = markers.find(row => row.controlType === IC.CONTROL_TYPE.WEBHOOK_EVENT && row.eventId === eventId);
   assert.ok(marker);
   assert.equal(marker.payload?.metadata?.inventoryAuthority, "WIX_CATALOG_OWNER");
   assert.equal(marker.payload?.metadata?.inventoryAction, "NO_CUSTOM_STOCK_WRITE");

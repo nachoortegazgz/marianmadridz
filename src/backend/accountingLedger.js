@@ -147,7 +147,7 @@ async function _acquireAccountingLedgerLock(traceId, waitMs = ACCOUNTING_LEDGER_
             const existingOwner = String(_readPayload(existing).lockOwnerId || "");
             if (Number.isFinite(expiresAt.getTime()) && expiresAt.getTime() <= now.getTime()) {
                 try {
-                    await dalRemove(CONTROL_COL, ACCOUNTING_LEDGER_LOCK_CONFIG.ID);
+                    await dalRemove(CONTROL_COL, ACCOUNTING_LEDGER_LOCK_CONFIG.ID, { expectedControlType: CONTROL_TYPE.SLOT_LOCK });
                     continue;
                 } catch (error) {
                     if (_isNotFound(error)) continue;
@@ -220,7 +220,7 @@ async function _releaseAccountingLedgerLock(lock) {
         return { released: false, reason: "OWNERSHIP_CHANGED" };
     }
     try {
-        await dalRemove(CONTROL_COL, ACCOUNTING_LEDGER_LOCK_CONFIG.ID);
+        await dalRemove(CONTROL_COL, ACCOUNTING_LEDGER_LOCK_CONFIG.ID, { expectedControlType: CONTROL_TYPE.SLOT_LOCK });
         return { released: true };
     } catch (error) {
         if (_isNotFound(error)) return { released: true, missing: true };
