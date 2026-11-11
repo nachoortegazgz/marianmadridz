@@ -762,6 +762,7 @@ test('FLOW-CAJA-06 CajaActual resolves singletonKey when Wix assigned a differen
     operationDate: '2026-11-06',
     openingAmount: 300,
     cashAmount: 300,
+    netAmount: 300,
     totalInAmount: 300,
     expectedCash: 300,
     cardAmount: 0,
