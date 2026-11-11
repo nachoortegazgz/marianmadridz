@@ -493,6 +493,49 @@ test('BCORE-PER-05 same bookingId upsert keeps single row; lower revision reject
   );
 });
 
+test('BCORE-PER-06 unique-index webhook race reconciles the winning native projection', async () => {
+  wixDataMock._reset();
+  const bookingId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+  const base = baseParams({ bookingId, bookingType: 'SIMPLE', bookingStatus: 'CONFIRMED' });
+  const seeded = await BC._persistBooking(base, 'tr-webhook');
+  const webhookProjection = { ...seeded.item, bookingType: 'SIMPLE', pairToken: '', bookingStatus: 'CONFIRMED' };
+
+  wixDataMock._reset();
+  const originalInsert = wixDataMock.insert;
+  let injectedWinner = false;
+  wixDataMock.insert = async (collection, item) => {
+    if (collection === CITAS && !injectedWinner) {
+      injectedWinner = true;
+      await originalInsert(collection, webhookProjection);
+      const collision = new Error('duplicate bookingId');
+      collision.code = 'WDE0123';
+      throw collision;
+    }
+    return originalInsert(collection, item);
+  };
+
+  let result;
+  try {
+    result = await BC._persistBooking(baseParams({
+      bookingId,
+      bookingType: 'DUAL_F2',
+      pairToken: 'pair-token-qa-001',
+      revision: 1,
+      bookingStatus: 'PENDING',
+    }), 'tr-saga');
+  } finally {
+    wixDataMock.insert = originalInsert;
+  }
+
+  assert.strictEqual(result.created, false);
+  assert.strictEqual(result.reconciled, true);
+  assert.strictEqual(result.item.bookingType, 'DUAL_F2', 'saga enriches the webhook SIMPLE projection');
+  assert.strictEqual(result.item.pairToken, 'pair-token-qa-001');
+  assert.strictEqual(result.item.bookingStatus, 'CONFIRMED', 'confirmed native state is not downgraded');
+  const rows = wixDataMock._store.get(CITAS) || [];
+  assert.strictEqual(rows.filter((row) => row.bookingId === bookingId).length, 1);
+});
+
 // ---------------------------------------------------------------------------
 // ENUMS EN FRONTERA WIX <-> CMS (CORE-11/20)
 // ---------------------------------------------------------------------------
