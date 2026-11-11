@@ -26,6 +26,8 @@
 - `src/backend/internalConfig.js` declara `STAFF_CLOCKING_CONFIG.WRITES_ENABLED=false` y `ADJUSTMENTS_ENABLED=false`.
 - `src/backend/horario.web.js` importa la configuración canónica; la cobertura de cada WebMethod y de cada rama de escritura debe revisarse mediante pruebas antes de considerar certificado el bloqueo.
 - `src/backend/booking/bookingCore.js` y `booking/bookingSaga.js` ya implementan locks, tokens de pareja, estados de escritor y replay inspection. No se introduce un segundo mecanismo de idempotencia genérico.
+- `bookingSaga.js` deriva un pairToken de servicio/slot/identidad, calcula `payloadHash` y resuelve replay antes de consultar disponibilidad; payload distinto se rechaza y operaciones en curso devuelven estado ocupado.
+- El webhook nativo conserva el `eventId` de Wix en `CitasF2.meta.eventId` y mantiene un marcador `WEBHOOK_EVENT` por evento; no se añade un campo CMS `sourceEventId` sin acreditar que el esquema lo contempla.
 - `src/backend/fiscalDocuments.web.js` mantiene `ACCOUNTANT_SEND_ENABLED=false`; el despacho Resend ya está bloqueado por configuración.
 
 ## Riesgos pendientes — no implementados deliberadamente
