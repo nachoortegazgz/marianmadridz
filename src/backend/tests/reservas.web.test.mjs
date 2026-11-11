@@ -1215,6 +1215,46 @@ test('RES-BAL-03 native Wix bookings count once with custom ledger deduplication
   assert.ok(Array.isArray(filter.$and), 'native query is restricted to the Madrid-day UTC range');
 });
 
+test('RES-BAL-05 native resource overrides stale CitasF2 resource in daily workload', async () => {
+  resetState();
+  await invalidateStaffCache();
+  const stA = guid();
+  const stB = guid();
+  const row = baseServiceRow({});
+  seedService(row);
+  wixDataMock._seed(CITAS_COL, [{
+    _id: 'c-stale',
+    bookingId: 'native-mismatch',
+    dateYmd: '2026-10-24',
+    bookingStatus: 'CONFIRMED',
+    paymentStatus: 'NOT_PAID',
+    resourceId: stA,
+    slotStart: new Date('2026-10-24T08:00:00Z'),
+    slotEnd: new Date('2026-10-24T09:00:00Z'),
+  }]);
+  seedStaffApi([
+    { resourceId: stA, name: 'Ana', role: 'STYLIST' },
+    { resourceId: stB, name: 'Bea', role: 'STYLIST' },
+  ]);
+  nativeBookingsState.bookings = [{
+    id: 'native-mismatch',
+    status: 'CONFIRMED',
+    paymentStatus: 'UNDEFINED',
+    startDate: '2026-10-24T08:00:00.000Z',
+    endDate: '2026-10-24T10:00:00.000Z',
+    bookedEntity: { slot: { resource: { _id: stB } } },
+  }];
+  slotsState.responses.set(row.serviceId, [
+    availSlot('2026-10-24T11:00:00', '2026-10-24T12:00:00', [stA, stB]),
+  ]);
+
+  const result = await RW._getCertifiedDualSlotsInternal(row.serviceId, '', '2026-10-24');
+
+  assert.strictEqual(result.status, 'SUCCESS');
+  assert.strictEqual(result.data[0].resourceId, stA,
+    'the native booking contributes 120 minutes to B, not the stale 60-minute CMS row to A');
+});
+
 test('RES-BAL-04 native reader failure refuses assignment with incomplete daily load', async () => {
   resetState();
   await invalidateStaffCache();
