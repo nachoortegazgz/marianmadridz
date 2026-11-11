@@ -208,7 +208,7 @@ test("admin fallback hides unsupported capabilities and ticket output uses text 
   assert.match(adminHtml, /enableCashier:\s*false/);
   assert.match(adminHtml, /enableFiscal:\s*false/);
   assert.match(adminHtml, /enableDocuments:\s*false/);
-  assert.doesNotMatch(adminHtml, /cashierMode|enableClocking|enableInventory|enableScheduleQuery/);
+  assert.doesNotMatch(adminHtml, /cashierMode|enableClocking|enableInventory|enableHoursCalculation/);
   assert.doesNotMatch(adminPage, /isMarianManager: true|isAdmin: access\.isAdmin|isCajero: access\.isCajero/);
   assert.doesNotMatch(adminHtml, /cashTicket\.innerHTML\s*=/);
   assert.doesNotMatch(onlyStaffHtml, /ticketBox\.innerHTML\s*=/);
