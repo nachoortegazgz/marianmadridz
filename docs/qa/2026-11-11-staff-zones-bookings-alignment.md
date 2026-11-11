@@ -66,6 +66,15 @@ El método `bookingCore._resolveScheduleIdForResource()` conserva primero el `sc
    - Contrato del nuevo flag del widget.
    - Separación de responsabilidades entre ZONA STAFF y ZONA MARIAN.
 
+## 3.1 Roles de negocio — contraste documental
+
+La revisión final de los documentos vigentes en `main` confirma que no queda deriva documental que requiera otra modificación:
+- `DOSSIER TÉCNICO CONSOLIDADO.md` atribuye el RBAC efectivo a `internalConfig.STAFF.WEBSITE_ROLE_BY_RESOURCE_ID`; los campos históricos `rolWebsite` / `rolBookings` en `MapaStaff` son de referencia y no gobiernan la autorización.
+- `DIRECTRICES_DESARROLLO_CODIGO.txt` confirma que `security.js` resuelve roles mediante Wix Members, Bookings Staff Members API y `STAFF.WEBSITE_ROLE_BY_RESOURCE_ID`.
+- En runtime, `roleWebsite` del contexto staff procede del mapeo canónico por `resourceId`, no de `serviceProvider` ni de un rol inferido del perfil nativo.
+
+La conciliación documental H-04 queda verificada. No se ha cambiado `MapaStaff` ni se han escrito datos CMS.
+
 ## 4. Decisión de arquitectura
 
 | Capacidad | Autoridad |
