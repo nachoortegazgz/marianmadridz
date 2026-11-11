@@ -1,3 +1,7 @@
+> **Aviso de vigencia — 2026-11-11:** Este dossier describe arquitectura, contratos y decisiones; no es un estado live autónomo. Para el estado actual de Wix, QA, comunicaciones, pagos simulados y límites de ejecución, prevalece [la referencia maestra QA](docs/qa/2026-11-11-qa-master-reference.md). La consulta Wix actual devuelve **Published**. No asumir que el sitio está aislado ni usar este dossier para autorizar pruebas E2E. Cualquier baseline o afirmación de implementación de capítulos históricos debe contrastarse con `main`, la auditoría correspondiente y pruebas ejecutadas. La arquitectura de Capa 3 es diseño, no implantación.
+
+---
+
 # DOSSIER TÉCNICO CONSOLIDADO — Marian Madrid
 
 **Revisión documental:** 2026-11-10  

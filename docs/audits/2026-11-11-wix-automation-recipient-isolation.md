@@ -1,3 +1,7 @@
+> **Nota de vigencia — 2026-11-11:** esta auditoría recoge el último inventario y cambios confirmados de Wix Automations en la fecha indicada. Una consulta live posterior devuelve el sitio **Published**, pero no se ha repetido la lectura de Automations después de ese cambio de estado. Los nueve emails que Wix no permitió pausar siguen siendo un bloqueo hasta una nueva lectura y evidencia de aislamiento. Consultar [referencia maestra QA](../qa/2026-11-11-qa-master-reference.md) antes de cualquier prueba. No inferir que el aislamiento sigue intacto ni activar triggers.
+
+---
+
 # Auditoría de aislamiento de notificaciones Wix — 2026-11-11
 
 ## Alcance y autorización

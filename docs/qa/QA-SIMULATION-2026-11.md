@@ -1,3 +1,7 @@
+> **Nota de vigencia — 2026-11-11:** este pack conserva evidencia histórica y escenarios offline. Para estado live, aislamiento de comunicaciones, datos sintéticos y gates de ejecución, prevalece [la referencia maestra QA](2026-11-11-qa-master-reference.md). Wix informa actualmente que el sitio está **Published**; no ejecutar E2E de negocio en él. Los resultados mock no demuestran runtime ni proveedor real.
+
+---
+
 # QA simulation phase — evidence pack
 
 - Date: 2026-11-05

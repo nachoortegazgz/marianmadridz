@@ -1,3 +1,9 @@
+## Addendum operativo — 2026-11-11
+
+Las directrices de arquitectura y desarrollo permanecen vigentes. Para estado del sitio y límites de QA, aplicar [la referencia maestra QA](docs/qa/2026-11-11-qa-master-reference.md): Wix informa actualmente **Published**; el aislamiento de Automations no está completo ni revalidado después de esa lectura. Hasta disponer de un sitio QA independiente, limitar pruebas de negocio a mocks offline y lecturas sin efectos externos. Nunca usar el correo backend allowlist como garantía de aislamiento de Wix Automations nativas.
+
+---
+
 DIRECTRICES DE ARQUITECTURA, DESARROLLO Y QA
 Proyecto: Marian Madrid — www.marianmadrid.es
 Repositorio: nachoortegazgz/marianmadridz

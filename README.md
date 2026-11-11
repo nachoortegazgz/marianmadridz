@@ -1,6 +1,6 @@
 # Marian Madrid — Wix Editor + Velo
 
-Repositorio canónico del sitio **Marian Madrid Peluquería y Estética** (\`www.marianmadrid.es\`), destinado a QA, pruebas previas y simulacros controlados antes de cambios en el sitio real. El proyecto se construye sobre Wix y sus Wix Apps nativas, con Microsoft 365 como capa documental externa.
+Repositorio canónico del sitio **Marian Madrid Peluquería y Estética** (`www.marianmadrid.es`). El repositorio contiene código, documentación y pruebas QA; **el sitio Wix asociado informa actualmente Published y no está acreditado como entorno QA aislado**. No confundir la finalidad QA del repositorio con el estado de publicación del sitio. El proyecto se construye sobre Wix y sus Wix Apps nativas, con Microsoft 365 como capa documental externa.
 
 ## Arquitectura y fuente de verdad
 
@@ -12,12 +12,14 @@ Repositorio canónico del sitio **Marian Madrid Peluquería y Estética** (\`www
 
 ## Documentos raíz
 
-0. [Estado actual y guía operativa consolidada](ESTADO_ACTUAL_PROYECTO.md): punto de partida recomendado para conocer arquitectura, decisiones, bloqueos y plan priorizado.
+1. [Referencia maestra QA y estado de aislamiento](docs/qa/2026-11-11-qa-master-reference.md): autoridad consultiva para estado Wix live, canales de comunicación, cliente sintético, pagos simulados y gates de pruebas.
 
-1. [Directrices de arquitectura, desarrollo y QA](DIRECTRICES_DESARROLLO_CODIGO.txt): reglas obligatorias y límites.
-2. [Dossier técnico consolidado](DOSSIER%20TÉCNICO%20CONSOLIDADO.md): arquitectura, contratos, módulos, CMS y estado técnico verificado.
-3. [Flujos end-to-end Capa 3](DOSSIER%20FLUJOS%20END%20TO%20END%20CAPA%203.md): diseño documental Wix–M365 y despliegue pendiente.
-4. [Estado actual del proyecto](docs/PROJECT-STATUS.md): estado verificado, bloqueos y prioridades.
+2. [Estado actual y guía operativa consolidada](ESTADO_ACTUAL_PROYECTO.md): punto de partida recomendado para conocer arquitectura, decisiones, bloqueos y plan priorizado.
+
+3. [Directrices de arquitectura, desarrollo y QA](DIRECTRICES_DESARROLLO_CODIGO.txt): reglas obligatorias y límites.
+4. [Dossier técnico consolidado](DOSSIER%20TÉCNICO%20CONSOLIDADO.md): arquitectura, contratos, módulos, CMS y estado técnico verificado.
+5. [Flujos end-to-end Capa 3](DOSSIER%20FLUJOS%20END%20TO%20END%20CAPA%203.md): diseño documental Wix–M365 y despliegue pendiente.
+6. [Estado actual del proyecto](docs/PROJECT-STATUS.md): estado verificado, bloqueos y prioridades.
 
 El código, la configuración viva de Wix, los contratos oficiales de las APIs y las pruebas ejecutadas tienen prioridad sobre afirmaciones históricas de los documentos. Registrar siempre fecha, rama/SHA y evidencia. El estado de implementación y los bloqueos se mantienen en [docs/PROJECT-STATUS.md](docs/PROJECT-STATUS.md).
 
