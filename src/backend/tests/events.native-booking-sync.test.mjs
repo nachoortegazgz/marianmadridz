@@ -1,7 +1,18 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { wixDataMock } from "./loader.mjs";
+import { wixDataMock, mocks } from "./loader.mjs";
 import * as IC from "backend/internalConfig.js";
+
+let activeOrder = null;
+let activeOrderTransactions = { orderId: "", payments: [], refunds: [] };
+mocks.sdk["@wix/ecom::orders"] = {
+  getOrder: async (orderId) => ({ order: activeOrder ? { ...activeOrder, _id: activeOrder._id || orderId } : null }),
+};
+mocks.sdk["wix-ecom-backend::orderTransactions"] = {
+  listTransactionsForSingleOrder: async (orderId) => ({
+    orderTransactions: { ...activeOrderTransactions, orderId },
+  }),
+};
 
 const events = await import("backend/events.js");
 
@@ -318,21 +329,24 @@ test("EVENT-BOOKING-04 payment webhook updates payment without confirming a pend
     }),
   ]);
 
-  const result = await events.wixEcom_onOrderPaymentStatusUpdated({
-    id: "evt-order-paid-pending-004",
-    order: {
-      _id: "order-paid-pending-004",
-      paymentStatus: "PAID",
-      priceSummary: { total: { amount: "0.00" } },
-      lineItems: [{
-        catalogReference: {
-          appId: "13d21c63-b5ec-5912-8397-c3a5ddb27a97",
-          catalogItemId: BOOKING_ID,
-        },
-        quantity: 1,
-        price: { amount: "0.00" },
-      }],
-    },
+  const orderId = "order-paid-pending-004";
+  activeOrder = {
+    _id: orderId,
+    paymentStatus: "PAID",
+    priceSummary: { total: { amount: "0.00" } },
+    lineItems: [{
+      catalogReference: {
+        appId: "13d21c63-b5ec-5912-8397-c3a5ddb27a97",
+        catalogItemId: BOOKING_ID,
+      },
+      quantity: 1,
+      price: { amount: "0.00" },
+    }],
+  };
+  activeOrderTransactions = { orderId, payments: [], refunds: [] };
+  const result = await events.wixEcom_onOrderTransactionsUpdated({
+    metadata: { id: "evt-order-paid-pending-004" },
+    entity: { _id: orderId },
   });
 
   assert.equal(result.status, "OK");
@@ -571,7 +585,13 @@ test("EVENT-PAYMENT-09 official Wix eCommerce paid event appends WIX_PAYMENTS le
     },
   };
 
-  const result = await events.wixEcom_onOrderPaymentStatusUpdated(event);
+  activeOrder = event.data.order;
+  activeOrderTransactions = { orderId, payments: [], refunds: [] };
+  const transactionsEvent = {
+    metadata: { id: eventId },
+    entity: { _id: orderId },
+  };
+  const result = await events.wixEcom_onOrderTransactionsUpdated(transactionsEvent);
   assert.equal(result.status, "OK");
 
   const movements = wixDataMock._store.get(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA) || [];
@@ -611,14 +631,14 @@ test("EVENT-PAYMENT-09 official Wix eCommerce paid event appends WIX_PAYMENTS le
     "official metadata.id must be persisted as the webhook idempotency marker"
   );
 
-  const sameEventReplay = await events.wixEcom_onOrderPaymentStatusUpdated(event);
+  const sameEventReplay = await events.wixEcom_onOrderTransactionsUpdated(transactionsEvent);
   assert.equal(sameEventReplay.status, "OK");
   assert.equal(sameEventReplay.duplicate, true);
   assert.equal((wixDataMock._store.get(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA) || []).length, 1);
 
-  const newEventReplay = await events.wixEcom_onOrderPaymentStatusUpdated({
-    ...event,
-    metadata: { ...event.metadata, id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc" },
+  const newEventReplay = await events.wixEcom_onOrderTransactionsUpdated({
+    metadata: { id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc" },
+    entity: { _id: orderId },
   });
   assert.equal(newEventReplay.status, "OK");
   assert.equal((wixDataMock._store.get(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA) || []).length, 1,
