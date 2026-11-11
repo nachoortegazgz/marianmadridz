@@ -53,6 +53,7 @@ export const STAFF_CLOCKING_CONFIG = Object.freeze({
 // This controls creation of new fiscal ledger movements and Z closings only.
 export const FISCAL_RUNTIME_POLICY = Object.freeze({
   LEDGER_WRITES_ENABLED: false,
+  ALLOW_SIMULATION_RECORDS: false,
 });
 
 export const BUSINESS_COLLECTIONS = Object.freeze({
