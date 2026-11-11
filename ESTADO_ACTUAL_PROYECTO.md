@@ -17,7 +17,7 @@ El proyecto utiliza Wix Editor con Velo y Wix Apps nativas. El repositorio GitHu
 
 - PR #280 y #281: integradas según el historial de trabajo; incorporan proyección de creación de reserva y protección de carrera para preservar el estado CONFIRMED frente a eventos BOOKING_CREATED tardíos. CI final: 53 suites / 530 tests, 0 fallos.
 - PR #284: **mergeada en GitHub**. Primera corrección de la proyección de caja física; CI final verde (53 suites / 530 tests). No representa la solución completa de todos los tipos de efectivo ni acredita despliegue Wix.
-- PR #286: **abierta como draft**, rama `audit/p0-p1-hardening`. Además del hardening fail-closed fiscal/contable, incorpora conciliación de reembolsos con eventos Velo estables, lectura de transacciones SDK, guard de moneda EUR, siete pruebas unitarias y escenario offline parcial→total con IVA, replay y concurrencia. La última ejecución CI sobre un HEAD intermedio falló por aislamiento de un mock global; se corrigió y el resultado del HEAD final está pendiente. Gitleaks SUCCESS en un HEAD intermedio; debe repetirse en el final. No fusionada ni desplegada.
+- PR #286: **abierta como draft**, rama `audit/p0-p1-hardening`. Además del hardening fail-closed fiscal/contable, incorpora conciliación de reembolsos con eventos Velo estables, lectura de transacciones SDK, guard de moneda EUR, siete pruebas unitarias y escenario offline parcial→total con IVA, replay y concurrencia. CI offline SUCCESS en el HEAD de código `48b509f` (56 suites / 543 tests / 0 fallos; run `43034820298`); contratos SDK Wix, Bookings Reader V2 y ESLint correctos. Gitleaks full-history SUCCESS (run `43034820526`). Los commits posteriores son documentales. No fusionada ni desplegada.
 
 ## 2. Arquitectura y fuentes de verdad
 
