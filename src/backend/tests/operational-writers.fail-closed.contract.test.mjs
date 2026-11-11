@@ -19,7 +19,7 @@ test("P0-FISCAL-01 fiscal ledger writers are disabled by canonical fail-closed p
     read("accountingLedger.js"),
   ]);
 
-  assert.match(config, /FISCAL_RUNTIME_POLICY\s*=\s*Object\.freeze\(\{[\s\S]*?LEDGER_WRITES_ENABLED:\s*false,[\s\S]*?ALLOW_SIMULATION_RECORDS:\s*false/s);
+  assert.match(config, /FISCAL_RUNTIME_POLICY\s*=\s*Object\.freeze\(\{[\s\S]*?LEDGER_WRITES_ENABLED:\s*false,[\s\S]*?ACCOUNTING_LEDGER_WRITES_ENABLED:\s*false,[\s\S]*?ALLOW_SIMULATION_RECORDS:\s*false/s);
   assert.match(cajas, /FISCAL_RUNTIME_POLICY/);
 
   const manualStart = cajas.indexOf("export const registerManualTransaction");
