@@ -1057,7 +1057,8 @@ export async function load(url, context, nextLoad) {
   const internalConfigUrl = pathToFileURL(path.join(BACKEND_DIR, "internalConfig.js")).href;
   if (url === internalConfigUrl) {
     const source = fs.readFileSync(path.join(BACKEND_DIR, "internalConfig.js"), "utf8")
-      .replace("LEDGER_WRITES_ENABLED: false", "LEDGER_WRITES_ENABLED: true");
+      .replace("LEDGER_WRITES_ENABLED: false", "LEDGER_WRITES_ENABLED: true")
+      .replace("ALLOW_SIMULATION_RECORDS: false", "ALLOW_SIMULATION_RECORDS: true");
     return { format: "module", source, shortCircuit: true };
   }
   if (url.startsWith('mock:wix-data') || url === 'mock:@wix/data' || url === 'mock:@wix/essentials') {
