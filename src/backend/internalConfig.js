@@ -132,6 +132,9 @@ export const API = Object.freeze({
  * =========================================================================*/
 export const SDK_CONFIG = Object.freeze({
   TZ: "Europe/Madrid",
+  // Canonical Wix site currency verified from the live site properties.
+  // Refund writers fail closed for orders outside this currency.
+  CURRENCY_CODE: "EUR",
   LOCATION_ID: "7a12abfd-bf30-4847-bcdf-00dc573d4802",
 
   TIMEOUTS: Object.freeze({
