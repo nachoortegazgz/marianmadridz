@@ -53,34 +53,55 @@ La instalación de una app no demuestra que una función esté configurada, habi
 
 ## 4. Aislamiento de email, WhatsApp y SMS
 
-### 4.1 Última auditoría disponible de Wix Automations
+### 4.1 Reauditoría live posterior a la confirmación Published
 
-La auditoría de aislamiento fechada 2026-11-11 registró:
-- 149 automatizaciones inventariadas: 94 activas y 55 inactivas al inicio.
-- Se intentó pausar 76 automatizaciones objetivo: 75 de email y 1 de WhatsApp.
-- 67 cambios se confirmaron por lectura posterior: 66 email y 1 WhatsApp pasaron a `INACTIVE`.
-- Cuatro automatizaciones WhatsApp quedaron inactivas (tres ya lo estaban y una se pausó).
-- Nueve automatizaciones de email permanecieron activas porque Wix las marcó `readonly` y/o `disableStatusChange`.
-- No se identificaron automatizaciones SMS activas en ese inventario.
-- No se envió ningún email, WhatsApp ni SMS.
+**Verificado mediante lectura oficial read-only de Wix Automations V2 el 2026-11-11:**
+- 149 automatizaciones no archivadas: **27 ACTIVE y 122 INACTIVE**.
+- 9 automatizaciones email permanecen ACTIVE, con **10 acciones email** en total.
+- En las 10 acciones email: **8 están dirigidas al contacto que dispara el trigger** (`TRIGGER_CONTACT` o audiencia dinámica `explicitData_triggerMainContact`) y **2 al propietario del sitio** (`SITE_OWNER`). No se copiaron direcciones de email ni datos de contacto a la evidencia.
+- Las nueve automatizaciones email siguen restringidas: seis tienen `disableStatusChange=true`, cuatro `readonly=true` y una reúne ambas restricciones.
+- **Cuatro automatizaciones con acción WhatsApp y ocho con acción SMS están INACTIVE**; no se encontró ninguna acción WhatsApp/SMS activa en las 149 automatizaciones consultadas.
+- Dos notificaciones internas de Bookings siguen ACTIVE: “Notify me when someone books one of my services” y “Notify me when I need to review a booking request”. Sus acciones son notificaciones de plataforma (`ping_platform-send_a_notification`), no WhatsApp ni email al cliente.
+- No se ejecutó ningún trigger ni se envió email, WhatsApp o SMS. Esta reauditoría no modificó configuraciones.
 
-**Límite temporal:** no se ha vuelto a leer la configuración completa de Automations después de la consulta live actual que devuelve el sitio Published. Los recuentos anteriores son el último estado auditado, no una garantía del estado actual. Antes de cualquier E2E hay que repetir inventario, leer destinatarios y triggers, y comprobar los estados actuales.
+**Consecuencia:** el sitio Published no está aislado para QA. Ocho acciones email pueden dirigirse a clientes reales si se disparan sus triggers. Las dos acciones SITE_OWNER también pueden enviar a un buzón real no validado como sink. No ejecutar eventos que alcancen estos flujos.
 
-### 4.2 Restricciones
+Automatizaciones email que permanecen activas:
+- Notify customer when you save their card details.
+- Notify owner on a new voicemail.
+- Notify clients when their saved card was charged.
+- Send an email to proceed with a task.
+- Send email confirmation to site members.
+- Send subscription confirmation email.
+- Aria Assistant send an email (dos acciones).
+- cms items limit warning email.
+- Send site members a reset password email.
+
+### 4.2 Auditoría y cambios históricos
+
+La auditoría de aislamiento inicial del 2026-11-11 registró:
+- 149 automatizaciones: 94 activas y 55 inactivas antes de la intervención.
+- 75 automatizaciones activas con acciones email y una automatización WhatsApp objetivo.
+- 67 cambios confirmados por lectura posterior: 66 email y 1 WhatsApp pasaron a `INACTIVE`.
+- Las cuatro automatizaciones WhatsApp quedaron inactivas (tres ya lo estaban y una se pausó).
+- Nueve automatizaciones email permanecieron activas por restricciones Wix.
+- No se enviaron mensajes durante la intervención.
+
+### 4.3 Restricciones y límites
 
 - La allowlist `emailRecipientPolicy.js` protege únicamente el despacho backend Resend; no intercepta Wix Automations nativas.
-- Nueve automatizaciones email no quedaron aisladas en la última auditoría. No ejecutar triggers que puedan alcanzarlas.
-- Las cuatro automatizaciones WhatsApp estaban inactivas en la última auditoría; no se ha acreditado una integración soportada para cambiar el destinatario al móvil sintético.
-- El móvil QA `666724634` no se configuró y no recibió mensajes.
-- No se identificaron automatizaciones SMS activas en la última auditoría; volver a verificar antes de probar.
-- No sustituir WhatsApp por Wix Inbox, email o SMS y declarar que se ha probado WhatsApp: son canales distintos.
-- No activar automatizaciones para pruebas hasta acreditar aislamiento de todos los destinatarios, incluidos destinatarios dinámicos, SITE_OWNER, usuarios/roles Wix y destinatarios CUSTOM.
+- Las nueve automatizaciones email activas no quedaron aisladas. No ejecutar triggers que puedan alcanzarlas.
+- Los flujos de email incluyen mensajes transaccionales/críticos (p. ej. confirmación de miembros, contraseña y cobro de tarjeta). No desactivarlos a ciegas: podría romper comunicaciones necesarias para clientes reales.
+- WhatsApp y SMS nativos están inactivos en el inventario actual. No reactivarlos para pruebas.
+- No se ha acreditado una integración oficialmente soportada que permita redirigir WhatsApp al móvil sintético.
+- No sustituir WhatsApp por Wix Inbox, email o SMS y declarar que se ha probado WhatsApp.
+- No activar automatizaciones para QA hasta acreditar aislamiento de destinatarios dinámicos, SITE_OWNER, usuarios/roles Wix y destinatarios CUSTOM.
 
-### 4.3 Política QA de comunicaciones
+### 4.4 Política QA de comunicaciones
 
-Para pruebas automáticas: usar un sink/mock que no entregue mensajes. Direcciones reservadas bajo `.example.test` para fixtures; no utilizar direcciones de clientes. Para pruebas manuales de entrega, solo usar un buzón de pruebas controlado y autorizado, tras neutralizar todos los triggers nativos que puedan enviar a terceros. No usar una dirección real como si fuera un sink.
+Para pruebas automáticas: usar un sink/mock que no entregue mensajes. Direcciones reservadas bajo `.example.test` para fixtures; no utilizar direcciones reales como si fueran sinks. Para pruebas manuales de entrega, usar solo un buzón controlado y autorizado, después de neutralizar todos los triggers nativos que puedan enviar a terceros.
 
-No se autoriza por este documento ningún envío real. Mantener desactivado el despacho a gestoría y cualquier transporte externo no aislado.
+No se autoriza por esta referencia ningún envío real. Mantener bloqueado el despacho a gestoría y cualquier transporte externo no aislado.
 
 ## 5. Cliente sintético y datos de prueba
 
