@@ -237,6 +237,9 @@ export function assertRegistrosHorariosStaff(item) {
     if (!item.traceId || !String(item.traceId).trim()) {
         throw new Error("SCHEMA_VIOLATION: RegistrosHorariosStaff requires traceId");
     }
+    if (!/^[a-f0-9]{64}$/i.test(String(item.signature ?? "").trim())) {
+        throw new Error("SCHEMA_VIOLATION: RegistrosHorariosStaff requires a 64-character HMAC signature");
+    }
 
     // AJUSTE requiere adjustmentReason (RD 8/2019)
     if (item.recordType === RECORD_TYPE_HORARIOS.AJUSTE) {
