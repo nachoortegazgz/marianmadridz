@@ -10,7 +10,7 @@
 
 El informe recibido detecta algunos defectos reales, pero no es una lista segura de cambios directos. De los veinte puntos:
 
-- **2 correcciones de código listas y aplicadas en esta rama:** BUG-10 y BUG-11.
+- **2 correcciones de código aplicadas y fusionadas en `main`:** BUG-10 y BUG-11 (PR #300, merge commit `c508c69dc9788c8b93b8fc4cbc0c89b2554e6fff`).
 - **Bloqueos deliberados que deben mantenerse:** BUG-01, BUG-04 y BUG-06.
 - **Incidentes o requisitos reales pendientes de evidencia/runtime/decisión:** BUG-02, BUG-03, BUG-05, BUG-07, BUG-08 y BUG-09.
 - **Propuestas de corrección inseguras o prematuras:** BUG-12, BUG-13, BUG-15, BUG-17 y BUG-19.
@@ -42,7 +42,7 @@ El informe recibido detecta algunos defectos reales, pero no es una lista segura
 | BUG-19 | Limpieza defensiva legacy | No hay writer activo para nuevos snapshots DUAL_CACHE, pero existe un cron que limpia registros expirados. No se ha probado que CMS live tenga cero filas; mantener hasta consulta read-only y análisis histórico. |
 | BUG-20 | Requisito oficial correcto; máquina local pendiente | Wix anunció el 22-10-2026 Node.js 24.22.1+ para Wix CLI. El workflow del repositorio ya usa 24.22.1 y README lo declara. No se comprobó la versión instalada en el equipo local. |
 
-## Correcciones de código aplicadas en esta rama
+## Correcciones de código aplicadas en PR #300 y fusionadas en `main`
 
 1. `src/backend/internalConfig.js`
    - Añadido `SDK_CONFIG.TIMEOUTS.CHECKOUT_MS: 20000`.
@@ -66,9 +66,10 @@ El informe recibido detecta algunos defectos reales, pero no es una lista segura
 ## Validación y despliegue
 
 - Los cambios de esta rama son código y documentación; no se han escrito datos Wix/CMS ni modificado configuración del sitio.
-- La CI debe ejecutarse sobre el HEAD de esta rama. Hasta obtener resultado, las dos correcciones se consideran implementadas pero **pendientes de validación CI**.
-- No se ha ejecutado Wix Runtime, Preview, E2E ni publicación.
-- No se ha fusionado ni desplegado la rama.
+- PR #300 se fusionó en `main` mediante `c508c69dc9788c8b93b8fc4cbc0c89b2554e6fff`.
+- CI sobre el HEAD de PR `a8f04705872a120f31fb9dc25c984a7148830eb5`: `Backend offline quality gates` (run `43123426512`) y `Secret scanning` (run `43123426492`) finalizaron con `success`. La suite offline completa, contratos SDK Wix, ESLint y escaneo Gitleaks finalizaron correctamente.
+- Los workflows están asociados al HEAD validado de la PR; no se encontraron runs asociados directamente al merge commit. No se infiere una segunda ejecución post-merge.
+- No se ha ejecutado Wix Runtime, Preview, E2E ni publicación. La fusión GitHub no implica despliegue Wix.
 
 ## Fuentes oficiales
 
