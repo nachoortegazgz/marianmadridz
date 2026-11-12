@@ -23,7 +23,7 @@ Site: marianmadrid.es. Site ID: 188bed94-177c-4bc9-a9f0-35080d874f3e.
 
 Code change: CATALOG_ENTRY_TYPE is now canonical in internalConfig.js. The ServiciosCatalogo insert/update hook infers SERVICE only from a valid serviceId without pricingPlanId, infers PRICING_PLAN only from a valid pricingPlanId without serviceId, and rejects ambiguous/incomplete identities.
 
-The 93 existing metadata cells were not patched in production. Wix Bulk Patch Data Items triggers a Data Item Updated event for each item; active automation side effects have not been proven isolated. A conditional patch remains pending that isolation check.
+The 93 existing metadata cells were patched in production using Wix Bulk Patch Data Items, conditional on catalogEntryType being absent, serviceId being present and pricingPlanId being absent. The Wix automation inventory returned 149 automations, 27 active, and no active CMS Data Item Updated trigger; the repository has no ServiciosCatalogo afterUpdate hook. Patch result: 93 successes, 0 failures. Strong read-after-write confirmed 95 rows total: 94 SERVICE, 1 PRICING_PLAN, 0 missing.
 
 ### MovimientosCaja and fiscal read paths
 
@@ -38,7 +38,7 @@ Risk: the five unmarked simulated rows pass the old recordSource != SMOKE_TEST a
 
 Code change: isExplicitSimulationLedgerRecord() now recognizes movementType values beginning SIMULATED_ and explicit Spanish simulated suffixes _SIMULADO / _SIMULADA. The booking receipt lookup also excludes such rows. Existing head readers and fiscal aggregation already use this classifier.
 
-Historical rows remain unchanged. MovimientosCaja is append-only; no record was updated, deleted, re-sequenced, re-hashed or backfilled. The fiscal runtime write policy remains fail-closed.
+Historical rows remain unchanged. MovimientosCaja is append-only; no record was updated, deleted, re-sequenced, re-hashed or backfilled. A read-only classification pass identifies 9/10 rows as simulated and 1 as non-simulated; the single non-simulated row has sequence 1, a 64-hex hash and a 64-hex genesis predecessor. No duplicate non-simulated sequence was found. The fiscal runtime write policy remains fail-closed.
 
 ### LibroAsientosContablesDetalle
 
@@ -83,10 +83,10 @@ No CitasF2 row was fabricated or backfilled. No event-handler rewrite was made w
 
 ## Safety and limitations
 
-- CMS audit was read-only. No CMS rows, reservations, payments, orders, refunds, invoices, cash, accounting or labor records were changed.
+- The initial CMS audit was read-only. The only subsequent production mutation was a conditional metadata patch to 93 ServiciosCatalogo rows, changing catalogEntryType to SERVICE. No reservations, payments, orders, refunds, invoices, cash, accounting or labor records were changed.
 - No append-only ledger was repaired by overwrite or deletion.
 - No published Wix runtime or browser E2E was run.
-- The 93 catalog metadata cells remain empty in production until the Data Item Updated/automation side-effect boundary is proven safe.
+- The 93 catalog metadata cells were normalized to SERVICE and verified by a strong read-after-write. No other catalog fields were changed.
 - The CitasF2 event-delivery issue remains open pending deployed Velo SHA and backend event logs.
 - This branch is not deployed.
 
