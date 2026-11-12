@@ -75,3 +75,42 @@ El informe recibido detecta algunos defectos reales, pero no es una lista segura
 
 - Wix Data — consistencia eventual y `consistentRead`: https://dev.wix.com/docs/studio-two/code-your-site/work-with-data/data-api/about-the-data-api
 - Wix CLI — Node.js 24.22.1+ (changelog 22-10-2026): https://dev.wix.com/docs/changelog/
+
+
+## Reauditoría del backlog pendiente — 2026-11-12
+
+**HEAD de referencia:** `ea65ad1f54bdf1389ee7c598fc726dc223c44a22`.  
+**Método:** inspección read-only de árbol, código, issues, PRs, workflows y resultados de CI. No se han ejecutado operaciones Wix ni se han cambiado permisos/configuración.
+
+| Issue | Estado verificado en el repositorio | Acción segura en esta intervención |
+|---|---|---|
+| #290 — claims de webhooks | Implementado y fusionado en PR #289; ocho handlers usan `WEBHOOK_CLAIM`, con lease/CAS/fencing. | Sin cambio adicional de código. Runtime Wix y recuperación tras fallo siguen pendientes. |
+| #291 — borrado condicionado | Implementado y fusionado en PR #289; lectura fuerte, comparación de `controlType` persistido y `bulkRemove` condicionado. | Sin cambio adicional de código. Validación runtime de la condición Wix pendiente. |
+| #159 — display token | Emisión idempotente integrada en PR #178. | Solo queda QA runtime de consumo/concurrencia y auditoría de consumidores externos. |
+| #162 — reprogramación dual | Journal y locks CAS integrados; cron legado excluye `DUAL_RESCHEDULE`. No existe reconciliador específico que compare F1/F2 con slots destino y proyección CMS. | No añadir escritor automático: falta lease/CAS de reconciliación y validación del contrato de proyección condicional. Mantener `REPAIR_REQUIRED` fail-closed. |
+| #164 — bridge calendario | Validación de `event.source` y origen confiable presente en el HTML versionado. | Solo QA de navegador/Wix Preview pendiente. |
+| #173 — Capa 3 | No existe `src/backend/exports/exportService.js` ni jobs de exportación en `jobs.config`; no se ha acreditado Power Automate/SharePoint. | No crear un pipeline con remitentes, secretos, rutas o permisos no verificados. Requiere acceso y contratos M365 autorizados. |
+| #188 — Mis reservas/pedidos | La lógica versionada y sus contratos están parcialmente implementados; asociación final miembro/pedido y comportamiento nativo requieren E2E autenticado. | No generar reservas ni pagos en el sitio. Requiere entorno aislado y cuentas QA. |
+| #209 — SIF/Veri*Factu | Bloqueo P0 fiscal documentado; configuración, integración AEAT, certificación y tratamiento de anticipos no acreditados. | Mantener escritores y cobros bloqueados. No inferir tipos impositivos ni activar facturación. |
+| #210 — protección de `main` | API GitHub: `protected=false`, protección deshabilitada y `/rulesets` devuelve lista vacía. | Riesgo P1 confirmado. La conexión GitHub disponible permite lectura, no crear rulesets/protección; requiere administración del repositorio. |
+| #211 — campaña E2E | Escenarios offline existentes; no equivalen a pagos, webhooks ni automatizaciones runtime. | No ejecutar operaciones comerciales ni comunicaciones externas. |
+| #223 — paquete gestoría | Snapshot trimestral append-only, hash e idempotencia integrados; envío Resend permanece deshabilitado. Agregador mensual y ledger durable de despacho siguen pendientes. | No habilitar envío. No implementar mensualidad sin confirmar requisito y contrato; no crear evidencias ficticias. |
+| #224 — ZONA STAFF | Consultas de estado/historial/horas; writers de fichaje/caja siguen deshabilitados. | Mantener flags cerrados hasta idempotencia, concurrencia, RBAC y QA laboral. |
+| #237 — inventario | Inventario personalizado retirado; Wix Stores Catalog V3 es autoridad. Históricos preservados. | Solo QA runtime de venta/cancelación/reembolso; no escribir stock ni tocar históricos. |
+| #261 — inserción CMS en ledgers | Riesgo de permisos `CMS_EDITOR` observado en auditoría Wix; hooks no acreditan por sí solos procedencia backend para inserciones. | No cambiar permisos live sin QA de escritores elevados y autorización específica. |
+
+### Resultado de la ejecución de pruebas sobre el HEAD actual
+
+En el push de `main` con SHA `ea65ad1f54bdf1389ee7c598fc726dc223c44a22`:
+
+- Workflow `Backend offline quality gates`, run `43124945971`: **62 suites, 584 tests, 0 fallos**.
+- Contratos SDK Cart V2/Data, eCommerce Order Transactions y Bookings Reader V2: correctos.
+- ESLint: correcto.
+- Workflow `Secret scanning`, run `43124945757`: Gitleaks full-history scan correcto.
+- La suite offline no valida semántica runtime de Wix, entrega de eventos, configuración de permisos, pagos ni automatizaciones.
+
+### Resultado de esta reauditoría
+
+No se ha encontrado un fallo nuevo en la suite offline actual. No se han aplicado cambios de lógica adicionales porque los pendientes identificados requieren contratos aún no cerrados, datos/entorno Wix, permisos administrativos o decisiones fiscales/operativas. Introducir escrituras o activar procesos ahora reduciría las garantías existentes.
+
+**Limitaciones de ejecución:** el entorno de trabajo no dispone de un checkout local del repositorio ni de conectividad directa a GitHub para ejecutar `npm test` localmente. La ejecución de pruebas se ha verificado mediante los logs de GitHub Actions del HEAD indicado. No se ha ejecutado Wix Runtime, Preview, E2E ni despliegue.
