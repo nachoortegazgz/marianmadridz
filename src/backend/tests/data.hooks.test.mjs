@@ -377,11 +377,7 @@ test('HOOK-CIERREZ-01 insert needs traceId; update limited to signature fields',
 test('HOOK-CLOCK-01 insert requires canonical fields and HMAC signature', () => {
   /* DEC-IC-02: el alias TIMECLOCK_TYPE fue eliminado; consumidores usan
      CLOCK_EVENT_TYPE directamente (SSOT). */
-  assert.throws(() => H.RegistrosHorariosStaff_beforeInsert({
-    clockEventType: IC.CLOCK_EVENT_TYPE.ENTRADA,
-  }), /traceId/);
-
-  const valid = {
+  const base = {
     resourceId: 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeee0001',
     memberId: 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeee0002',
     recordedAt: '2026-11-12T09:00:00.000Z',
@@ -389,9 +385,14 @@ test('HOOK-CLOCK-01 insert requires canonical fields and HMAC signature', () => 
     monthKey: '2026-11',
     clockEventType: IC.CLOCK_EVENT_TYPE.ENTRADA,
     recordType: IC.RECORD_TYPE_HORARIOS.REGULAR,
-    traceId: 't1',
     signature: 'a'.repeat(64),
   };
+  assert.throws(() => H.RegistrosHorariosStaff_beforeInsert({
+    clockEventType: IC.CLOCK_EVENT_TYPE.ENTRADA,
+  }), /resourceId/);
+  assert.throws(() => H.RegistrosHorariosStaff_beforeInsert(base), /traceId/);
+
+  const valid = { ...base, traceId: 't1' };
   assert.strictEqual(H.RegistrosHorariosStaff_beforeInsert(valid), valid);
   assert.ok(valid.recordedAt instanceof Date);
   assert.throws(() => H.RegistrosHorariosStaff_beforeInsert({ ...valid, signature: '' }), /HMAC signature/);
