@@ -16,7 +16,7 @@ import {
     normalizeMovementKeys,
     OPERATIONAL_COLLECTIONS,
 } from "backend/internalConfig";
-import { assertCitasF2, assertControlOperativo, assertCanonicalControlFields } from "backend/validation";
+import { assertCitasF2, assertControlOperativo, assertCanonicalControlFields, assertRegistrosHorariosStaff } from "backend/validation";
 import { CONSISTENCY, getItem } from "backend/dataAccess";
 
 import { logger } from "backend/logger";
@@ -621,7 +621,7 @@ export function PaquetesGestoria_beforeRemove() {
 export function RegistrosHorariosStaff_beforeInsert(item) {
     if (!item || typeof item !== "object") return item;
     _normalizeCmsDateTime(item, "recordedAt");
-    if (!_safeTrim(item.traceId)) _schemaError("traceId obligatorio en RegistrosHorariosStaff (RD 8/2019 trazabilidad)");
+    assertRegistrosHorariosStaff(item);
     return item;
 }
 
