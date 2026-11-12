@@ -3,6 +3,7 @@ function _safeText(value) {
 }
 
 function _instant(value) {
+    if (value === null || value === undefined || value === "") return null;
     if (value instanceof Date) {
         return Number.isFinite(value.getTime()) ? value.getTime() : null;
     }
