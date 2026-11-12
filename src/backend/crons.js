@@ -80,8 +80,9 @@ import {
     reconcileConfirmedNativeBookingProjectionInternal,
 } from "backend/events";
 
-const log = logger;
 import { assessDualRescheduleReadState } from "backend/booking/dualRescheduleReconciliation";
+
+const log = logger;
 const API_TIMEOUT_MS =
 SDK_CONFIG.TIMEOUTS.API_MS;
 const MAX_COMPENSATION_ATTEMPTS =
