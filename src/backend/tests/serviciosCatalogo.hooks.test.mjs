@@ -49,7 +49,7 @@ test("CATALOG-TYPE-03 infers PRICING_PLAN only when serviceId is absent", () => 
 
 test("CATALOG-TYPE-04 rejects ambiguous or incomplete catalog identity", () => {
   assert.throws(() => ServiciosCatalogo_beforeInsert({ _id: SERVICE_ID }), /catalogEntryType no se puede inferir/);
-  assert.throws(() => ServiciosCatalogo_beforeInsert(dualService({ pricingPlanId: F2_SERVICE_ID })), /SERVICE requiere/);
+  assert.throws(() => ServiciosCatalogo_beforeInsert(dualService({ catalogEntryType: "SERVICE", pricingPlanId: F2_SERVICE_ID })), /SERVICE requiere/);
   assert.throws(() => ServiciosCatalogo_beforeInsert({
     _id: SERVICE_ID, catalogEntryType: "PRICING_PLAN", serviceId: SERVICE_ID,
     pricingPlanId: F2_SERVICE_ID,
