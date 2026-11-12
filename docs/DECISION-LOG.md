@@ -195,3 +195,20 @@ La auditoría estática recibida se ha contrastado con `main` en `9f3b4366aacc72
 - PR #300 se fusionó en `main` mediante `c508c69dc9788c8b93b8fc4cbc0c89b2554e6fff`.
 - CI sobre el HEAD validado de PR `a8f04705872a120f31fb9dc25c984a7148830eb5`: suite offline completa, contratos SDK Wix, ESLint y Gitleaks finalizaron con `success` (runs `43123426512` y `43123426492`). No se encontraron runs asociados directamente al merge commit.
 - No se declara Wix Runtime/Preview/E2E ni publicación; la fusión GitHub no implica despliegue Wix.
+
+
+## 9. Reauditoría de correcciones pendientes — 2026-11-12
+
+**HEAD auditado:** `ea65ad1f54bdf1389ee7c598fc726dc223c44a22`.
+
+- La CI de ese HEAD ejecutó **62 suites / 584 tests / 0 fallos**; contratos SDK Wix, ESLint y Gitleaks también finalizaron correctamente (runs `43124945971` y `43124945757`).
+- PR #289 ya integra los claims de webhooks y el borrado CMS condicionado. #159, #164 y #237 tienen sus correcciones de código integradas; sus pendientes son runtime/consumidores externos, no defectos offline reproducidos.
+- #162 sigue sin reconciliador específico del journal dual; mantener la reparación fail-closed hasta disponer de comparación exacta Bookings Reader V2 + proyección CMS y reclamación CAS segura.
+- #173 sigue sin pipeline Capa 3 verificable; no implementar Resend/SharePoint/Power Automate sin credenciales, destinos, propietarios y contratos externos comprobados.
+- #209 mantiene bloqueo P0 fiscal. #223 mantiene el despacho a gestoría deshabilitado; snapshot trimestral está implementado, pero mensualidad y evidencia durable de despacho siguen pendientes.
+- #224 mantiene los escritores de jornada/caja deshabilitados. #261 requiere revisión y QA de permisos CMS antes de modificar configuración live.
+- #188 y #211 requieren QA runtime aislado; no se ejecutan reservas, pagos, reembolsos ni comunicaciones en producción.
+- #210: la API de GitHub confirma `main.protected=false`, protección deshabilitada y ningún ruleset. La conexión disponible es de lectura para rulesets/protección; esta configuración debe aplicarla un administrador del repositorio. No se ha cambiado.
+- #290, #291 y #237 no deben interpretarse como correcciones pendientes de código: sus issues permanecen abiertas exclusivamente por los gates runtime descritos en sus respectivos registros.
+
+**Decisión:** no introducir cambios adicionales de lógica en esta reauditoría. No hay fallo offline reproducido y los pendientes requieren evidencia runtime, autorización de configuración, contratos externos o definición fiscal/operativa. Mantener las protecciones fail-closed.
