@@ -67,7 +67,7 @@ FISCAL_RUNTIME_POLICY,
 normalizeBookingType,
 BOOKING_TYPE,
 } from "backend/internalConfig";
-import { makeTraceId, _safeTrim, _looksLikeGuid, withTimeout } from "public/mmUtils";
+import { makeTraceId, _safeTrim, _looksLikeGuid, withTimeout, getUtcDateFromMadridLocal } from "public/mmUtils";
 import { readControlPayload } from "backend/data";
 import { logger } from "backend/logger";
 import { notifyOperationalAlert } from "backend/audit";
@@ -81,6 +81,7 @@ import {
 } from "backend/events";
 
 const log = logger;
+import { assessDualRescheduleReadState } from "backend/booking/dualRescheduleReconciliation";
 const API_TIMEOUT_MS =
 SDK_CONFIG.TIMEOUTS.API_MS;
 const MAX_COMPENSATION_ATTEMPTS =
@@ -1079,6 +1080,190 @@ result.errors.push({ query: "main", error: err?.message });
 }
 
 return result;
+}
+
+// =============================================================================
+// READ-ONLY DIAGNOSTIC: inspectDualRescheduleJournalsReadOnly
+// =============================================================================
+/**
+ * Inspects DUAL_RESCHEDULE journals against Wix Bookings Reader V2 and the
+ * CitasF2 projection. This function is intentionally NOT scheduled.
+ * It performs reads only: no booking writer, CMS update, alert or rollback.
+ */
+export async function inspectDualRescheduleJournalsReadOnly(options = {}) {
+    const traceId = makeTraceId("cron-dual-reschedule-readonly");
+    const batchSize = Math.max(1, Math.min(Number(options.batchSize) || 100, 100));
+    const maxPages = Math.max(1, Math.min(Number(options.maxPages) || 10, 10));
+    const result = {
+        inspected: 0,
+        targetStateConfirmed: 0,
+        repairRequired: 0,
+        skippedCompleted: 0,
+        failed: 0,
+        truncated: false,
+        records: [],
+        errors: [],
+    };
+    const bookingIdField = BOOKING_FIELDS?.BOOKING_ID || "bookingId";
+    const serviceIdField = BOOKING_FIELDS?.SERVICE_ID || "serviceId";
+    const resourceIdField = BOOKING_FIELDS?.RESOURCE_ID || "resourceId";
+    const slotStartField = BOOKING_FIELDS?.SLOT_START || "slotStart";
+    const slotEndField = BOOKING_FIELDS?.SLOT_END || "slotEnd";
+    const statusField = BOOKING_FIELDS?.STATUS || "bookingStatus";
+
+    async function readNativeBooking(bookingId) {
+        const response = await withTimeout(
+            queryExtendedBookingsElevated({
+                filter: { "booking.id": bookingId },
+                cursorPaging: { limit: 2 },
+            }),
+            API_TIMEOUT_MS,
+            "queryExtendedBookingsDualReschedule"
+        );
+        const rows = Array.isArray(response?.extendedBookings) ? response.extendedBookings : [];
+        if (rows.length !== 1) {
+            return { booking: null, reason: rows.length ? "NATIVE_BOOKING_AMBIGUOUS" : "NATIVE_BOOKING_NOT_FOUND" };
+        }
+        const booking = rows[0]?.booking;
+        const returnedId = _safeTrim(booking?.id || booking?._id);
+        if (!booking || returnedId !== bookingId) {
+            return { booking: null, reason: "NATIVE_BOOKING_ID_MISMATCH" };
+        }
+        return rows[0];
+    }
+
+    try {
+        let page = 0;
+        for (; page < maxPages; page++) {
+            const journalsResult = await dalQuery(OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO)
+                .eq("controlType", CONTROL_TYPE.SYSTEM_FLAG)
+                .startsWith("dedupeKey", "DUAL_RESCHEDULE_")
+                .ascending("_createdDate")
+                .limit(batchSize)
+                .skip(page * batchSize)
+                .find({ consistencyMode: "strong" });
+            const journals = Array.isArray(journalsResult?.items) ? journalsResult.items : [];
+            if (!journals.length) break;
+
+            for (const journal of journals) {
+                const payload = readControlPayload(journal);
+                if (payload?.operationType !== "DUAL_RESCHEDULE") continue;
+                const journalStatus = _safeTrim(payload.status).toUpperCase();
+                if (journalStatus === "COMPLETED") {
+                    result.skippedCompleted++;
+                    continue;
+                }
+                result.inspected++;
+
+                const pairToken = _safeTrim(payload.pairToken || journal?.pairToken);
+                const f1BookingId = _safeTrim(payload.f1BookingId);
+                const f2BookingId = _safeTrim(payload.f2BookingId);
+                if (!pairToken || !f1BookingId || !f2BookingId || f1BookingId === f2BookingId) {
+                    result.failed++;
+                    result.records.push({
+                        journalId: journal?._id || null,
+                        journalStatus,
+                        assessment: { status: "REPAIR_REQUIRED", mismatches: ["JOURNAL_IDENTITY_INCOMPLETE"] },
+                    });
+                    continue;
+                }
+
+                try {
+                    const [pairResult, f1Outcome, f2Outcome] = await Promise.allSettled([
+                        dalQuery(BUSINESS_COLLECTIONS.CITAS_F2)
+                            .eq("pairToken", pairToken)
+                            .limit(10)
+                            .find({ consistencyMode: "strong" }),
+                        readNativeBooking(f1BookingId),
+                        readNativeBooking(f2BookingId),
+                    ]);
+                    if (pairResult.status !== "fulfilled") throw pairResult.reason;
+                    const pairRows = Array.isArray(pairResult.value?.items) ? pairResult.value.items : [];
+                    const f1Rows = pairRows.filter(row => _safeTrim(row?.[bookingIdField]) === f1BookingId);
+                    const f2Rows = pairRows.filter(row => _safeTrim(row?.[bookingIdField]) === f2BookingId);
+                    const f1Cita = f1Rows.length === 1 ? f1Rows[0] : null;
+                    const f2Cita = f2Rows.length === 1 ? f2Rows[0] : null;
+
+                    const targetF1Start = getUtcDateFromMadridLocal(payload?.targetF1?.localStartDate);
+                    const targetF1End = getUtcDateFromMadridLocal(payload?.targetF1?.localEndDate);
+                    const targetF2Start = getUtcDateFromMadridLocal(payload?.targetF2?.localStartDate);
+                    const targetF2End = getUtcDateFromMadridLocal(payload?.targetF2?.localEndDate);
+                    const targetF1 = {
+                        serviceId: _safeTrim(payload?.targetF1?.serviceId),
+                        startUtc: targetF1Start,
+                        endUtc: targetF1End,
+                    };
+                    const targetF2 = {
+                        serviceId: _safeTrim(payload?.targetF2?.serviceId),
+                        startUtc: targetF2Start,
+                        endUtc: targetF2End,
+                    };
+                    const normalizeCita = (row) => row ? ({
+                        slotStart: row[slotStartField],
+                        slotEnd: row[slotEndField],
+                        serviceId: row[serviceIdField],
+                        resourceId: row[resourceIdField],
+                        status: row[statusField],
+                    }) : null;
+                    const assessment = assessDualRescheduleReadState({
+                        f1Booking: f1Outcome.status === "fulfilled" ? f1Outcome.value : null,
+                        f2Booking: f2Outcome.status === "fulfilled" ? f2Outcome.value : null,
+                        f1Cita: normalizeCita(f1Cita),
+                        f2Cita: normalizeCita(f2Cita),
+                        targetF1,
+                        targetF2,
+                        resourceId: payload.selectedResourceId,
+                    });
+                    const mismatches = [...assessment.mismatches];
+                    if (pairRows.length !== 2 || f1Rows.length !== 1 || f2Rows.length !== 1) {
+                        mismatches.push("CMS_DUAL_PAIR_CARDINALITY_MISMATCH");
+                    }
+                    if (f1Outcome.status === "rejected") mismatches.push("F1_NATIVE_READ_FAILED");
+                    if (f2Outcome.status === "rejected") mismatches.push("F2_NATIVE_READ_FAILED");
+                    const finalAssessment = mismatches.length
+                        ? { status: "REPAIR_REQUIRED", mismatches: Array.from(new Set(mismatches)) }
+                        : assessment;
+                    if (finalAssessment.status === "TARGET_STATE_CONFIRMED_READ_ONLY") {
+                        result.targetStateConfirmed++;
+                    } else {
+                        result.repairRequired++;
+                    }
+                    result.records.push({
+                        journalId: journal?._id || null,
+                        journalStatus,
+                        pairToken,
+                        f1BookingId,
+                        f2BookingId,
+                        assessment: finalAssessment,
+                    });
+                } catch (error) {
+                    result.failed++;
+                    if (result.errors.length < 10) {
+                        result.errors.push({ journalId: journal?._id || null, error: error?.message || "UNKNOWN" });
+                    }
+                }
+            }
+            if (journals.length < batchSize) break;
+        }
+        result.truncated = page >= maxPages;
+        log.info("inspectDualRescheduleJournalsReadOnly completed", {
+            inspected: result.inspected,
+            targetStateConfirmed: result.targetStateConfirmed,
+            repairRequired: result.repairRequired,
+            skippedCompleted: result.skippedCompleted,
+            failed: result.failed,
+            truncated: result.truncated,
+            traceId,
+        });
+    } catch (error) {
+        result.failed++;
+        result.errors.push({ query: "main", error: error?.message || "UNKNOWN" });
+        log.error("inspectDualRescheduleJournalsReadOnly failed", {
+            error: error?.message || "UNKNOWN",
+            traceId,
+        });
+    }
+    return result;
 }
 
 // =============================================================================
