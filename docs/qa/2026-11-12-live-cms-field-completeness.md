@@ -38,7 +38,7 @@ Risk: the five unmarked simulated rows pass the old recordSource != SMOKE_TEST a
 
 Code change: isExplicitSimulationLedgerRecord() now recognizes movementType values beginning SIMULATED_ and explicit Spanish simulated suffixes _SIMULADO / _SIMULADA. The booking receipt lookup also excludes such rows. Existing head readers and fiscal aggregation already use this classifier.
 
-Historical rows remain unchanged. MovimientosCaja is append-only; no record was updated, deleted, re-sequenced, re-hashed or backfilled. A read-only classification pass identifies 9/10 rows as simulated and 1 as non-simulated; the single non-simulated row has sequence 1, a 64-hex hash and a 64-hex genesis predecessor. No duplicate non-simulated sequence was found. The fiscal runtime write policy remains fail-closed.
+Historical rows remain unchanged. MovimientosCaja is append-only; no record was updated, deleted, re-sequenced, re-hashed or backfilled. A read-only classification pass identifies 9/10 rows as simulated and 1 as non-simulated; all 9 simulated rows have fiscalPeriod=2026-11, and 5 have positive sequenceNumber values. The current main-branch fiscal query filters sequenceNumber>0 and recordSource!=SMOKE_TEST; those 5 unmarked rows pass that query and the old classifier does not exclude them. Therefore the November 2026 fiscal aggregation is at risk of including synthetic amounts until the PR306 classifier is deployed. The single non-simulated row has sequence 1, a 64-hex hash and a 64-hex genesis predecessor. No duplicate non-simulated sequence was found. The fiscal runtime write policy remains fail-closed.
 
 ### LibroAsientosContablesDetalle
 
