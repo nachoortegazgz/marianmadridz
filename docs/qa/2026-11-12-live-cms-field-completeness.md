@@ -23,7 +23,7 @@ Site: marianmadrid.es. Site ID: 188bed94-177c-4bc9-a9f0-35080d874f3e.
 
 Code change: CATALOG_ENTRY_TYPE is now canonical in internalConfig.js. The ServiciosCatalogo insert/update hook infers SERVICE only from a valid serviceId without pricingPlanId, infers PRICING_PLAN only from a valid pricingPlanId without serviceId, and rejects ambiguous/incomplete identities.
 
-The 93 existing metadata cells were patched in production using Wix Bulk Patch Data Items, conditional on catalogEntryType being absent, serviceId being present and pricingPlanId being absent. The Wix automation inventory returned 149 automations, 27 active, and no active CMS Data Item Updated trigger; the repository has no ServiciosCatalogo afterUpdate hook. Patch result: 93 successes, 0 failures. Strong read-after-write confirmed 95 rows total: 94 SERVICE, 1 PRICING_PLAN, 0 missing.
+The 93 existing metadata cells were patched in production using Wix Bulk Patch Data Items, conditional on catalogEntryType being absent, serviceId being present and pricingPlanId being absent. The Wix automation inventory returned 149 automations, 27 active, and no active CMS Data Item Updated trigger; the repository has no ServiciosCatalogo afterUpdate hook. Patch result: 93 successes, 0 failures. Strong read-after-write confirmed 95 rows total: 94 SERVICE, 1 PRICING_PLAN, 0 missing. A subsequent count check confirmed unchanged totals in CitasF2 (0), ControlOperativo (11), MovimientosCaja (10), LibroAsientosContablesDetalle (1), RegistrosHorariosStaff (2) and CajaActual (1).
 
 ### MovimientosCaja and fiscal read paths
 
@@ -90,6 +90,13 @@ No CitasF2 row was fabricated or backfilled. No event-handler rewrite was made w
 - The CitasF2 event-delivery issue remains open pending deployed Velo SHA and backend event logs.
 - This branch is not deployed.
 
-## Change control
+## Validation and change control
 
-PR #303 is Draft and not merged/deployed. CI for the first PR head is not sufficient to validate subsequent commits; the final head requires a fresh CI run before review/merge.
+GitHub Actions for code head da38a03e3452a011f381777e5290219810c3cba7:
+
+- Backend offline quality gates: 64 suites, 593 tests, 0 failures.
+- Wix SDK Cart V2/Data, eCommerce Order Transactions and Bookings Reader V2 contracts: success.
+- ESLint: success.
+- Secret scanning / Gitleaks: success.
+
+PR #306 is Draft, open, not merged and not deployed. CI validates the code head; the subsequent documentation-only commit does not change executable files.
