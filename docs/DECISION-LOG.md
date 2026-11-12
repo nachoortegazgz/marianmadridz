@@ -168,8 +168,8 @@ La auditoría estática recibida se ha contrastado con `main` en `9f3b4366aacc72
 | 07 — proyección de efectivo físico parcial | Confirmado como alcance parcial. BUS-009 define qué debe reflejar CajaActual; TEC-026 deja pendiente clasificador confiable IN/OUT/NONE. PR #284 es parcial y no está integrada según la documentación del repositorio. | No añadir tipos ni mutar saldos hasta cerrar enums, validación, esquema, mapping contable y pruebas. |
 | 08 — sincronización ServiciosCatalogo/Bookings | TEC-027 registra SSOT declarada por el propietario; sincronización técnica pendiente de auditoría. | No cambiar la autoridad ni inventar sincronización. Auditar contratos y mecanismo de reconciliación antes de implementar. |
 | 09 — automatizaciones email nativas | Reauditoría de PR #296 documenta nueve automatizaciones email activas con diez acciones; el backend Resend no las controla. | Mantener bloqueado E2E de reservas sobre Published; no desactivar automatizaciones ni clonar sitio sin autorización/decisión de entorno. |
-| 10 — `CHECKOUT_MS` | Defecto confirmado: consumidor lee una clave inexistente y cae a literal local. | Corregido en esta rama: timeout 20.000 ms centralizado en `SDK_CONFIG.TIMEOUTS.CHECKOUT_MS`, fallback local retirado y test añadido. |
-| 11 — `CORRECTION_REASON.NUMERO_SERIE` | Export zombie: no hay consumidor ejecutable; `events.js` documenta expresamente que el motivo vigente es `OTRAS`. | Corregido en esta rama: se elimina la clave sin consumidor y se añade test negativo. |
+| 10 — `CHECKOUT_MS` | Defecto confirmado: consumidor lee una clave inexistente y cae a literal local. | Corregido y fusionado mediante PR #300: timeout 20.000 ms centralizado en `SDK_CONFIG.TIMEOUTS.CHECKOUT_MS`, fallback local retirado y test añadido. |
+| 11 — `CORRECTION_REASON.NUMERO_SERIE` | Export zombie: no hay consumidor ejecutable; `events.js` documenta expresamente que el motivo vigente es `OTRAS`. | Corregido y fusionado mediante PR #300: se elimina la clave sin consumidor y se añade test negativo. |
 | 12 — reconstrucción fiscal de pedidos sin `taxInfo` | El código exige información fiscal de pedido y línea; la alternativa sugerida de reconstruir IVA desde catálogo no está acreditada y puede alterar el tratamiento fiscal de anticipos/depósitos. | Mantener revisión manual/fail-closed hasta disponer de payload real, contrato fiscal aprobado y prueba aislada. |
 | 13 — aliases históricos de fecha | El cierre consulta campo canónico y alias histórico, deduplica por `_id` y ordena por secuencia. El alias puede proteger registros históricos. | No retirar sin auditoría de todos los registros históricos y plan de migración trazable. |
 | 14 — `.contains()` | Falso en el HEAD auditado: `getMovimientoByBooking` usa `hasSome` para arrays y `eq` para compatibilidad exacta; no contiene la tercera query descrita. | Sin cambio. |
@@ -180,7 +180,7 @@ La auditoría estática recibida se ha contrastado con `main` en `9f3b4366aacc72
 | 19 — `DUAL_CACHE` | No hay writer activo para snapshots nuevos, pero existe cron de limpieza defensiva de registros expirados y datos legacy potenciales. No se ha probado cero filas live. | Mantener cleanup hasta consulta live read-only y análisis histórico; no retirar solo por ausencia de writer. |
 | 20 — Node.js Wix CLI | Requisito oficial Wix CLI for Sites: Node.js 24.22.1 o superior. El workflow ya usa 24.22.1 y README lo declara. No se ha comprobado la versión del equipo local en esta auditoría. | Contrato de CI/documentación correcto; comprobar entorno local antes de ejecutar CLI. |
 
-### Cambios de código aplicados en la rama de esta auditoría
+### Cambios de código aplicados en PR #300 y fusionados en `main`
 
 - `SDK_CONFIG.TIMEOUTS.CHECKOUT_MS = 20000` pasa a ser la única fuente de timeout de checkout; se elimina el literal fallback de `bookingCore.js`.
 - Se retira `CORRECTION_REASON.NUMERO_SERIE`, sin consumidores funcionales; `OTRAS` permanece como valor utilizado por `events.js`.
@@ -192,4 +192,6 @@ La auditoría estática recibida se ha contrastado con `main` en `9f3b4366aacc72
 - PR #299 ya está integrada en main; por tanto, la anotación histórica de que seguía Draft ha quedado superada.
 - Las automatizaciones email nativas activas impiden considerar aisladas las pruebas runtime de reservas en el sitio publicado.
 - No se han creado reservas/pedidos/pagos, enviado comunicaciones, ejecutado automatizaciones, modificado CMS ni cambiado configuración Wix.
-- La CI de esta rama debe ejecutarse antes de considerar los dos cambios de código validados. No se declara runtime/E2E.
+- PR #300 se fusionó en `main` mediante `c508c69dc9788c8b93b8fc4cbc0c89b2554e6fff`.
+- CI sobre el HEAD validado de PR `a8f04705872a120f31fb9dc25c984a7148830eb5`: suite offline completa, contratos SDK Wix, ESLint y Gitleaks finalizaron con `success` (runs `43123426512` y `43123426492`). No se encontraron runs asociados directamente al merge commit.
+- No se declara Wix Runtime/Preview/E2E ni publicación; la fusión GitHub no implica despliegue Wix.
