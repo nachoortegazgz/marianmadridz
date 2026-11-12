@@ -10,12 +10,13 @@ STANDARDS: G10 ASCII Strict. Cero suppressAuth. Historical fields are read-only;
 */
 
 import {
+    CATALOG_ENTRY_TYPE,
     FISCAL_ROLE,
     MOVEMENT_HISTORICAL_READ_ALIASES,
     normalizeMovementKeys,
     OPERATIONAL_COLLECTIONS,
 } from "backend/internalConfig";
-import { assertCitasF2, assertControlOperativo, assertCanonicalControlFields } from "backend/validation";
+import { assertCitasF2, assertControlOperativo, assertCanonicalControlFields, assertRegistrosHorariosStaff } from "backend/validation";
 import { CONSISTENCY, getItem } from "backend/dataAccess";
 
 import { logger } from "backend/logger";
@@ -620,7 +621,7 @@ export function PaquetesGestoria_beforeRemove() {
 export function RegistrosHorariosStaff_beforeInsert(item) {
     if (!item || typeof item !== "object") return item;
     _normalizeCmsDateTime(item, "recordedAt");
-    if (!_safeTrim(item.traceId)) _schemaError("traceId obligatorio en RegistrosHorariosStaff (RD 8/2019 trazabilidad)");
+    assertRegistrosHorariosStaff(item);
     return item;
 }
 
@@ -689,6 +690,33 @@ function _validateServiciosCatalogoSchema(item = {}) {
     if (!item.codigoImpuesto && item.taxCode) item.codigoImpuesto = item.taxCode;
     delete item.naturalezaItem;
     delete item.taxCode;
+
+    const serviceReference = _safeTrim(item.serviceId);
+    const pricingPlanReference = _safeTrim(item.pricingPlanId);
+    let catalogEntryType = _safeTrim(item.catalogEntryType).toUpperCase();
+    if (!catalogEntryType) {
+        if (serviceReference && _isGuid(serviceReference) && !pricingPlanReference) {
+            catalogEntryType = CATALOG_ENTRY_TYPE.SERVICE;
+        } else if (!serviceReference && pricingPlanReference && _isGuid(pricingPlanReference)) {
+            catalogEntryType = CATALOG_ENTRY_TYPE.PRICING_PLAN;
+        } else {
+            _schemaError("catalogEntryType no se puede inferir sin una identidad unica de servicio o plan");
+        }
+        item.catalogEntryType = catalogEntryType;
+    } else {
+        item.catalogEntryType = catalogEntryType;
+    }
+    if (!Object.values(CATALOG_ENTRY_TYPE).includes(catalogEntryType)) {
+        _schemaError("catalogEntryType invalido");
+    }
+    if (catalogEntryType === CATALOG_ENTRY_TYPE.SERVICE &&
+        (!_isGuid(serviceReference) || pricingPlanReference)) {
+        _schemaError("SERVICE requiere serviceId GUID y no admite pricingPlanId");
+    }
+    if (catalogEntryType === CATALOG_ENTRY_TYPE.PRICING_PLAN &&
+        (!_isGuid(pricingPlanReference) || serviceReference)) {
+        _schemaError("PRICING_PLAN requiere pricingPlanId GUID y no admite serviceId");
+    }
 
     const serviceId = _safeTrim(item.serviceId || item._id);
     const linkedPhases = _safeTrim(item.linkedPhases);

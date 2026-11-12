@@ -108,7 +108,17 @@ test('HOOK-CMS-DATETIME-QA-01 binds conversion and guards to physical QA collect
 });
 
 test('HOOK-CMS-DATETIME-03 normalizes timeclock recordedAt', () => {
-  const item = { traceId: 'trace-timeclock-datetime', recordedAt: '2026-11-05T10:10:00.000Z' };
+  const item = {
+    resourceId: 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeee0001',
+    memberId: 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeee0002',
+    traceId: 'trace-timeclock-datetime',
+    recordedAt: '2026-11-05T10:10:00.000Z',
+    dayKey: '2026-11-05',
+    monthKey: '2026-11',
+    clockEventType: IC.CLOCK_EVENT_TYPE.ENTRADA,
+    recordType: IC.RECORD_TYPE_HORARIOS.REGULAR,
+    signature: 'a'.repeat(64),
+  };
   H.RegistrosHorariosStaff_beforeInsert(item);
   assert.ok(item.recordedAt instanceof Date);
   assert.strictEqual(item.recordedAt.toISOString(), '2026-11-05T10:10:00.000Z');
@@ -374,15 +384,29 @@ test('HOOK-CIERREZ-01 insert needs traceId; update limited to signature fields',
 // RegistrosHorariosStaff (RD 8/2019) — CONSERVED as append-only minimal guard
 // -----------------------------------------------------------------------------
 
-test('HOOK-CLOCK-01 insert requires traceId', () => {
+test('HOOK-CLOCK-01 insert requires canonical fields and HMAC signature', () => {
   /* DEC-IC-02: el alias TIMECLOCK_TYPE fue eliminado; consumidores usan
      CLOCK_EVENT_TYPE directamente (SSOT). */
+  const base = {
+    resourceId: 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeee0001',
+    memberId: 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeee0002',
+    recordedAt: '2026-11-12T09:00:00.000Z',
+    dayKey: '2026-11-12',
+    monthKey: '2026-11',
+    clockEventType: IC.CLOCK_EVENT_TYPE.ENTRADA,
+    recordType: IC.RECORD_TYPE_HORARIOS.REGULAR,
+    signature: 'a'.repeat(64),
+  };
   assert.throws(() => H.RegistrosHorariosStaff_beforeInsert({
     clockEventType: IC.CLOCK_EVENT_TYPE.ENTRADA,
-  }), /traceId/);
-  assert.doesNotThrow(() => H.RegistrosHorariosStaff_beforeInsert({
-    clockEventType: IC.CLOCK_EVENT_TYPE.ENTRADA, traceId: 't1',
-  }));
+  }), /resourceId/);
+  assert.throws(() => H.RegistrosHorariosStaff_beforeInsert(base), /traceId/);
+
+  const valid = { ...base, traceId: 't1' };
+  assert.strictEqual(H.RegistrosHorariosStaff_beforeInsert(valid), valid);
+  assert.ok(valid.recordedAt instanceof Date);
+  assert.throws(() => H.RegistrosHorariosStaff_beforeInsert({ ...valid, signature: '' }), /HMAC signature/);
+  assert.throws(() => H.RegistrosHorariosStaff_beforeInsert({ ...valid, dayKey: '' }), /dayKey/);
 });
 
 test('HOOK-CLOCK-02 update/remove forbidden (RD 8/2019)', () => {

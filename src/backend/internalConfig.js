@@ -58,6 +58,11 @@ export const FISCAL_RUNTIME_POLICY = Object.freeze({
   ALLOW_SIMULATION_RECORDS: false,
 });
 
+export const CATALOG_ENTRY_TYPE = Object.freeze({
+  SERVICE: "SERVICE",
+  PRICING_PLAN: "PRICING_PLAN",
+});
+
 export const BUSINESS_COLLECTIONS = Object.freeze({
   CAJA_ACTUAL: "CajaActual",
   CITAS_F2: "CitasF2",

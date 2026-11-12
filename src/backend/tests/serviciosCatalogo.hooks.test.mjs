@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { ServiciosCatalogo_beforeInsert } from "../data.js";
+import { ServiciosCatalogo_beforeInsert, ServiciosCatalogo_beforeUpdate } from "../data.js";
 
 const SERVICE_ID = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeee0001";
 const F2_SERVICE_ID = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeee0002";
@@ -19,6 +19,49 @@ function dualService(overrides = {}) {
     ...overrides,
   };
 }
+
+test("CATALOG-TYPE-01 infers SERVICE only from a unique serviceId", () => {
+  const item = dualService();
+  assert.equal(ServiciosCatalogo_beforeInsert(item), item);
+  assert.equal(item.catalogEntryType, "SERVICE");
+});
+
+test("CATALOG-TYPE-02 preserves an explicit pricing plan identity", () => {
+  const item = {
+    _id: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeee0003",
+    catalogEntryType: "PRICING_PLAN",
+    pricingPlanId: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeee0004",
+    sessionCount: 5,
+  };
+  assert.equal(ServiciosCatalogo_beforeInsert(item), item);
+  assert.equal(item.catalogEntryType, "PRICING_PLAN");
+});
+
+test("CATALOG-TYPE-03 infers PRICING_PLAN only when serviceId is absent", () => {
+  const item = {
+    _id: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeee0005",
+    pricingPlanId: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeee0006",
+    sessionCount: 5,
+  };
+  assert.equal(ServiciosCatalogo_beforeInsert(item), item);
+  assert.equal(item.catalogEntryType, "PRICING_PLAN");
+});
+
+test("CATALOG-TYPE-04 rejects ambiguous or incomplete catalog identity", () => {
+  assert.throws(() => ServiciosCatalogo_beforeInsert({ _id: SERVICE_ID }), /catalogEntryType no se puede inferir/);
+  assert.throws(() => ServiciosCatalogo_beforeInsert(dualService({ catalogEntryType: "SERVICE", pricingPlanId: F2_SERVICE_ID })), /SERVICE requiere/);
+  assert.throws(() => ServiciosCatalogo_beforeInsert({
+    _id: SERVICE_ID, catalogEntryType: "PRICING_PLAN", serviceId: SERVICE_ID,
+    pricingPlanId: F2_SERVICE_ID,
+  }), /PRICING_PLAN requiere/);
+  assert.throws(() => ServiciosCatalogo_beforeInsert(dualService({ catalogEntryType: "UNKNOWN" })), /catalogEntryType invalido/);
+});
+
+test("CATALOG-TYPE-05 beforeUpdate normalizes legacy service rows", () => {
+  const item = dualService({ catalogEntryType: "" });
+  assert.equal(ServiciosCatalogo_beforeUpdate(item), item);
+  assert.equal(item.catalogEntryType, "SERVICE");
+});
 
 test("CATALOG-DURATION-01 accepts an exact sum of dual service phases", () => {
   const item = dualService();

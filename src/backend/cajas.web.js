@@ -1701,6 +1701,9 @@ export const getMovimientoByBooking = webMethod(
                 });
             }
 
+            // Simulation-marked rows are historical QA evidence, never a fiscal receipt.
+            items = items.filter((movement) => !isExplicitSimulationLedgerRecord(movement));
+
             if (items.length === 0) {
                 return {
                     status: "ERROR",
