@@ -62,6 +62,8 @@ CI verde no equivale a E2E ni a publicación. No afirmar que una función está 
 
 ## Documentación
 
+- [Reconciliación del informe técnico de bugs (2026-11-12)](docs/audits/2026-11-12-report-bugs-reconciliation.md)
+
 - [Registro de decisiones de negocio y arquitectura](docs/DECISION-LOG.md)
 - [ADR — Depósitos y gestión nativa de inventario](docs/adr/2026-11-10-deposit-and-native-inventory.md)
 - [QA — Retirada de inventario personalizado](docs/qa/2026-11-10-native-inventory-retirement.md) oficial

@@ -266,9 +266,7 @@ export async function createBookingCartCheckout(bookingId, traceId, memberIdenti
         );
     }
 
-    const checkoutTimeoutMs =
-        Number(SDK_CONFIG && SDK_CONFIG.TIMEOUTS && SDK_CONFIG.TIMEOUTS.CHECKOUT_MS) ||
-        20000;
+    const checkoutTimeoutMs = SDK_CONFIG.TIMEOUTS.CHECKOUT_MS;
     const apiTimeoutMs =
         Number(SDK_CONFIG && SDK_CONFIG.TIMEOUTS && SDK_CONFIG.TIMEOUTS.API_MS) ||
         15000;
