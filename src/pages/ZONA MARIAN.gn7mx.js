@@ -109,11 +109,9 @@ $w.onReady(async () => {
                 today: new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Madrid" }),
 
                 // ── Feature flags ─────────────────────────────────────
-                // La caja solo se muestra si el backend confirma un estado operativo.
-                // CajaActual SIMULACION/CERRADA/ausente no se presenta como TPV activo.
-                enableCashier:
-                    cashierRes?.status === "SUCCESS" &&
-                    cashierRes.data?.cashRegisterStatus === "ABIERTA",
+                // La lectura de caja se muestra también cuando está CERRADA para
+                // consultar apertura/cierre y la última sesión. SIMULACION sigue bloqueada.
+                enableCashier: cashierRes?.status === "SUCCESS",
                 enableFiscal: true,
                 enableDocuments: true,
 
