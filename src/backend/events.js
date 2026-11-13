@@ -953,6 +953,8 @@ async function _updateCitaStatus(bookingId, newStatus, traceId) {
     );
 }
 
+// Canonical booking/payment identifiers live on CitasF2 root keyfields.
+// Keep old metadata readable at legacy boundaries, but never propagate duplicates on writes.
 function _withoutCanonicalCitaMeta(rawMeta) {
     const meta = rawMeta && typeof rawMeta === "object" && !Array.isArray(rawMeta)
         ? { ...rawMeta }
