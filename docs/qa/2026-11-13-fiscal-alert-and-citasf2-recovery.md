@@ -3,6 +3,7 @@
 **Fecha:** 2026-11-13  
 **Repositorio:** `nachoortegazgz/marianmadridz`  
 **Baseline revisada:** `fc9cb29c5a3fd74a6dae8eff3e2f5e4da2fbb499`  
+**Main actualizado:** `9d96655943af045406632435b299a84da39e23b0`  
 **Sitio Wix:** `188bed94-177c-4bc9-a9f0-35080d874f3e`  
 **Tipo de acceso:** lectura real de Wix CMS y Bookings Reader V2; sin escritura ni ejecucion de Velo.
 
@@ -57,7 +58,7 @@ Esta recomputacion aun requiere validacion en Wix Runtime publicado. Si la repre
 En `src/backend/crons.js`, `systemHealthCheck` ahora:
 
 1. Ejecuta la auditoria fiscal ya existente.
-2. Solo intenta resolver alertas FISCAL_CHAIN_CORRUPTED cuando el resultado es SUCCESS, complete=true, hasMore=false y breaksCount=0.
+2. Solo intenta resolver alertas FISCAL_CHAIN_CORRUPTED cuando el resultado es SUCCESS, complete=true, hasMore=false, breaksCount=0, hashContentComplete=true, hashesVerified=checked y checked>0.
 3. Actualiza exclusivamente registros ALERT que sigan OPEN y sean del tipo FISCAL_CHAIN_CORRUPTED.
 4. Conserva el payload historico completo y agrega `resolvedAt` y un objeto `resolution` con traceId, cantidad revisada y evidencia de auditoria completa.
 5. Si la auditoria es parcial, falla o reproduce rupturas, no resuelve ninguna alerta.
@@ -73,11 +74,11 @@ Se amplian las pruebas de `crons.jobsConfigParity.test.mjs` para cubrir:
 - Conservacion del payload original y trazabilidad de la resolucion.
 - Fail-closed: una ruptura reproducida, un digest incorrecto, un contenido no reconstruible o un ledger vacio mantienen la alerta OPEN.
 
-La validacion definitiva depende del workflow CI asociado al PR. No se declara la prueba superada hasta disponer del resultado de ese workflow.
+**CI verificado sobre el HEAD exacto del PR #313:** 66 suites, 606 pruebas correctas, 0 fallos. Contratos Wix SDK (Cart V2, Order Transactions y Bookings Reader V2), ESLint y Gitleaks completados correctamente. Workflow: https://github.com/nachoortegazgz/marianmadridz/actions/runs/43450798929. El PR #313 se integro mediante squash en `9d96655943af045406632435b299a84da39e23b0`.
 
 ## 6. Despliegue y cierre del hito
 
-- La rama/PR contiene solo la correccion de ciclo de vida de la alerta fiscal, sus pruebas y esta evidencia.
+- PR #311 integra el ciclo de vida trazable de la alerta; PR #313 añade la verificacion del contenido SHA-256, las guardas fail-closed y sus pruebas.
 - El merge sincroniza el codigo con Wix Editor conforme al procedimiento operativo declarado por el propietario.
 - La publicacion Wix sigue siendo manual. No se ha publicado ni ejecutado codigo en produccion.
 - Tras publicar, `systemHealthCheck` ejecutara la resolucion en su siguiente ejecucion programada (07:00 Europe/Madrid), siempre que la auditoria completa siga limpia.
@@ -98,5 +99,5 @@ El hito de repositorio queda completado cuando el PR este integrado y CI verde. 
 
 - [Wix Bookings Reader V2 — Query Extended Bookings](https://dev.wix.com/docs/api-reference/business-solutions/bookings/bookings/bookings-reader-v2/query-extended-bookings)
 - [Wix Bookings Reader V2 — Supported Filters](https://dev.wix.com/docs/api-reference/business-solutions/bookings/bookings/bookings-reader-v2/supported-filters)
-- [Cron y reconciliador en el repositorio](https://github.com/nachoortegazgz/marianmadridz/blob/fc9cb29c5a3fd74a6dae8eff3e2f5e4da2fbb499/src/backend/crons.js)
-- [Configuracion de jobs](https://github.com/nachoortegazgz/marianmadridz/blob/fc9cb29c5a3fd74a6dae8eff3e2f5e4da2fbb499/src/backend/jobs.config)
+- [Cron y reconciliador en el repositorio](https://github.com/nachoortegazgz/marianmadridz/blob/9d96655943af045406632435b299a84da39e23b0/src/backend/crons.js)
+- [Configuracion de jobs](https://github.com/nachoortegazgz/marianmadridz/blob/9d96655943af045406632435b299a84da39e23b0/src/backend/jobs.config)
