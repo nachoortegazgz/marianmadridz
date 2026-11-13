@@ -1678,7 +1678,7 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
         if (cashRegister) {
             cashRegister.cashRegisterStatus = CASH_REGISTER_STATUS.CERRADA;
             cashRegister.closedAt = saved?.closedAt instanceof Date ? saved.closedAt : new Date();
-            if (closingActor?.resourceId) cashRegister.closedBy = closingActor.resourceId;
+            cashRegister.closedBy = closingActor?.resourceId || "SYSTEM";
             cashRegister._updatedDate = new Date();
             await dalSave(CAJA_ACTUAL_COL, cashRegister);
         }
