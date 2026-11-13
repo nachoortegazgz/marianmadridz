@@ -434,6 +434,7 @@ test('FLOW-CAJA-01 flujo continuo: venta EFECTIVO -> caja incrementada -> cierre
   // invariante que se queria probar.
   const txAfterZ = await cajas.registerManualTransaction({
     totalAmount: 10, tipoFactura: 'F2', operationDescription: 'Venta posterior a cierre (SIMULACION PREVIA A DESPLIEGUE REAL)', paymentMethod: 'EFECTIVO',
+    channelType: 'PRESENCIAL',
     transactionId: 'offline-tx-postz-' + Date.now(),
   });
   assert.strictEqual(txAfterZ.status, 'ERROR', 'periodo cerrado debe bloquear: ' + JSON.stringify(txAfterZ));
@@ -766,6 +767,7 @@ test('FLOW-CAJA-05 CajaActual projects presencial cash movements and is idempote
     currency: 'EUR',
     resourceId: 'cashier',
     staffResourceId: 'cashier',
+    recordTimestamp: new Date(),
     traceId: 'trace-caja-projection-001',
   };
 
