@@ -1244,7 +1244,7 @@ async function _getBookedMinutesByResourceForDay(dateYMD, resourceIds, traceId) 
                 // native snapshot omits it, retain the existing custom saga
                 // projection rather than silently dropping known staff load.
                 const projection = customProjectionByBookingId.get(bookingId);
-                const replaceProjection = !isLoadCountable || isRefunded || Boolean(resourceId);
+                const replaceProjection = !isLoadCountable || isRefunded || _looksLikeGuid(resourceId);
                 if (projection && replaceProjection) {
                     minutes[projection.resourceId] = Math.max(
                         0,
