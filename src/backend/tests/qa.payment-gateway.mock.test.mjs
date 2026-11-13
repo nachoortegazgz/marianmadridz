@@ -102,10 +102,16 @@ test('QA-PSP-04 capture requires authorization, respects amount and is idempoten
   assert.equal(first.capturedMinor, 2500);
   assert.equal(first.simulated, true);
 
+  const overAuthorized = await gateway.authorize({
+    amount: 30,
+    currency: 'EUR',
+    idempotencyKey: 'authorize-over-capture-001',
+  });
   await assert.rejects(
     gateway.capture({
-      ...captureRequest,
-      amount: 26,
+      transactionId: overAuthorized.transactionId,
+      amount: 31,
+      currency: 'EUR',
       idempotencyKey: 'capture-over-authorized-001',
     }),
     /QA_PAYMENT_CAPTURE_MISMATCH/
