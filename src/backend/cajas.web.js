@@ -1570,6 +1570,7 @@ export async function verifyFiscalHashChainIntegrity(options = {}) {
     const traceId = options.traceId || makeTraceId("hash-audit");
     const batchSize = Number(options.limit) || LEDGER_PAGE_SIZE;
     const breaks = [];
+    const unverifiable = [];
     try {
         let movements = await dalQuery(MOVIMIENTOS_CAJA_COL)
             .gt("sequenceNumber", 0)
@@ -1579,6 +1580,7 @@ export async function verifyFiscalHashChainIntegrity(options = {}) {
             .find();
 
         let checked = 0;
+        let hashesVerified = 0;
         let expectedPreviousHash = GENESIS_HASH;
         let hasMore = false;
         let page = 1;
@@ -1595,26 +1597,69 @@ export async function verifyFiscalHashChainIntegrity(options = {}) {
         while (true) {
             for (const mov of (movements.items || []).filter((item) => !isExplicitSimulationLedgerRecord(item))) {
                 checked += 1;
-                if (!mov.hash || !mov.previousRecordHash) {
+                const movementId = mov?._id || null;
+                const invoiceNumber = readInvoiceNumber(mov);
+                const hash = _safeTrim(mov?.hash).toLowerCase();
+                const previousRecordHash = _safeTrim(mov?.previousRecordHash).toLowerCase();
+
+                if (!/^[a-f0-9]{64}$/.test(hash) || !/^[a-f0-9]{64}$/.test(previousRecordHash)) {
                     breaks.push({
-                        movementId: mov._id,
-                        numSerieFactura: readInvoiceNumber(mov),
-                        reason: "HASH_FIELDS_MISSING",
-                        hasHash: Boolean(mov.hash),
-                        hasPreviousRecordHash: Boolean(mov.previousRecordHash),
+                        movementId,
+                        numSerieFactura: invoiceNumber,
+                        reason: "HASH_FIELDS_MISSING_OR_INVALID",
+                        hasHash: Boolean(hash),
+                        hasPreviousRecordHash: Boolean(previousRecordHash),
                     });
-                    expectedPreviousHash = mov.hash || expectedPreviousHash;
+                    expectedPreviousHash = hash || expectedPreviousHash;
                     continue;
                 }
-                if (mov.previousRecordHash !== expectedPreviousHash) {
+
+                if (previousRecordHash !== expectedPreviousHash) {
                     breaks.push({
-                        movementId: mov._id,
-                        numSerieFactura: readInvoiceNumber(mov),
+                        movementId,
+                        numSerieFactura: invoiceNumber,
+                        reason: "PREDECESSOR_HASH_MISMATCH",
                         expected: expectedPreviousHash,
-                        actual: mov.previousRecordHash,
+                        actual: previousRecordHash,
                     });
                 }
-                expectedPreviousHash = mov.hash;
+
+                const rawTimestamp = readMovementField(mov, "recordTimestamp");
+                const generatedAt = rawTimestamp instanceof Date
+                    ? rawTimestamp
+                    : new Date(rawTimestamp || "");
+                if (!rawTimestamp || Number.isNaN(generatedAt.getTime())) {
+                    unverifiable.push({
+                        movementId,
+                        numSerieFactura: invoiceNumber,
+                        reason: "HASH_TIMESTAMP_UNAVAILABLE",
+                    });
+                    expectedPreviousHash = hash;
+                    continue;
+                }
+
+                // Rebuild the exact internal fiscal payload from canonical fields.
+                // The CMS hook may store physical field names (e.g. NIFEmisor);
+                // normalizeMovementKeys handles historical aliases and
+                // readMovementField resolves the physical SSOT fields.
+                const normalizedMovement = normalizeMovementKeys({ ...mov });
+                for (const field of ["nifEmisor", "nifDestinatario", "irpfWithholdingAmount"]) {
+                    const value = readMovementField(mov, field);
+                    if (value !== undefined && value !== null) normalizedMovement[field] = value;
+                }
+                const hashPayload = _buildInternalFiscalChainPayload(normalizedMovement, generatedAt);
+                const computedHash = (await hashChain(previousRecordHash, hashPayload)).toLowerCase();
+                if (computedHash !== hash) {
+                    breaks.push({
+                        movementId,
+                        numSerieFactura: invoiceNumber,
+                        reason: "HASH_CONTENT_MISMATCH",
+                    });
+                } else {
+                    hashesVerified++;
+                }
+
+                expectedPreviousHash = hash;
             }
             if (!movements.hasNext()) break;
             if (page >= MAX_LEDGER_BATCH_PAGES) {
@@ -1629,14 +1674,28 @@ export async function verifyFiscalHashChainIntegrity(options = {}) {
             await logAuditEvent("FISCAL_CHAIN_CORRUPTED", "CRITICAL", `Detectadas ${breaks.length} rupturas en la cadena de facturas`, { breaksCount: breaks.length, details: breaks.slice(0, 5) }, traceId, "system", "backend/cajas.web.js");
         }
 
+        const hashContentComplete = unverifiable.length === 0 && hashesVerified === checked;
+        const complete = !hasMore && hashContentComplete;
         return {
             status: breaks.length > 0
                 ? "INTEGRITY_COMPROMISED"
-                : hasMore ? "PARTIAL" : "SUCCESS",
-            data: { checked, breaksCount: breaks.length, breaks, complete: !hasMore, hasMore },
+                : !complete ? "PARTIAL" : "SUCCESS",
+            data: {
+                checked,
+                hashesVerified,
+                hashContentComplete,
+                unverifiableCount: unverifiable.length,
+                unverifiable: unverifiable.slice(0, 10),
+                breaksCount: breaks.length,
+                breaks,
+                complete,
+                hasMore,
+            },
             error: hasMore
                 ? { code: "AUDIT_PAGE_LIMIT", message: "Auditoria parcial: quedan movimientos por comprobar." }
-                : null,
+                : unverifiable.length > 0
+                    ? { code: "AUDIT_HASH_CONTENT_UNVERIFIABLE", message: "No se pudo reconstruir el contenido firmado de todos los movimientos." }
+                    : null,
         };
     } catch (err) {
         log.error("verifyFiscalHashChainIntegrity failed", { traceId, error: err?.message });
