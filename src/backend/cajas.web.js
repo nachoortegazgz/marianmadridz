@@ -1112,13 +1112,7 @@ async function _updateCajaActual(movement, traceId) {
             if (_safeTrim(movement.movementType).toUpperCase() === MOVEMENT_TYPE.VENTA) {
                 cashRegister[CAJA_KEYS.OPERATIONS] = Number(cashRegister[CAJA_KEYS.OPERATIONS] || 0) + 1;
             }
-            if (movement.recordTimestamp) {
-                const movementTimestamp = new Date(movement.recordTimestamp);
-                if (Number.isNaN(movementTimestamp.getTime())) {
-                    throw new Error("CAJA_MOVEMENT_TIMESTAMP_INVALID");
-                }
-                cashRegister[CAJA_KEYS.LAST_MOVEMENT_AT] = movementTimestamp;
-            }
+            cashRegister[CAJA_KEYS.LAST_MOVEMENT_AT] = sourceTimestamp;
             cashRegister.traceId = _safeTrim(movement.traceId) || traceId;
             cashRegister.staffResourceId = _safeTrim(movement.staffResourceId) || null;
             const movementDate = readOperationDate(movement);
