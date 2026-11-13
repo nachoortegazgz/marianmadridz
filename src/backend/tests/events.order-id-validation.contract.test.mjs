@@ -34,8 +34,8 @@ test("EVENT-ORDER-NATIVE-STOCK-01 order-created webhook records idempotency with
 test("EVENT-WEBHOOK-CLAIM-01 all eight Wix event exports acquire a metadata.id claim before domain handling", () => {
     const eventHandlers = [
         ["wixBookingsV2_onBookingConfirmed", "BOOKING_CONFIRMED", "_handleWixBookingsV2_onBookingConfirmed"],
-        ["wixBookingsV2_onBookingCreated", "BOOKING_CREATED", "_handleWixBookingsV2_onBookingCreated"],
-        ["wixBookingsV2_onBookingRescheduled", "BOOKING_RESCHEDULED", "_handleWixBookingsV2_onBookingRescheduled"],
+        ["wixBookings_onBookingCreated", "BOOKING_CREATED", "_handleWixBookingsV2_onBookingCreated"],
+        ["wixBookings_onBookingRescheduled", "BOOKING_RESCHEDULED", "_handleWixBookingsV2_onBookingRescheduled"],
         ["wixBookingsV2_onBookingCanceled", "BOOKING_CANCELED", "_handleWixBookingsV2_onBookingCanceled"],
         ["wixEcom_onOrderCreated", "ORDER_CREATED", "_handleWixEcom_onOrderCreated"],
         ["wixEcom_onOrderPaymentStatusUpdated", "ORDER_PAYMENT_STATUS_UPDATED", "_handleWixEcom_onOrderPaymentStatusUpdated"],
