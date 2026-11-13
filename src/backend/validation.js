@@ -135,22 +135,39 @@ export function assertDatosFiscales(item) {
 
     assertValidEnum(item.recordType, RECORD_TYPE, "recordType");
 
-    if (!item.taxId || !String(item.taxId).trim()) {
-        throw new Error("SCHEMA_VIOLATION: DatosFiscales requires taxId");
+    if (Number(item.schemaVersion) !== 1) {
+        throw new Error("SCHEMA_VIOLATION: DatosFiscales.schemaVersion must be 1");
     }
-    if (!isValidNifOrEuVat(item.taxId)) {
-        throw new Error("SCHEMA_VIOLATION: DatosFiscales.taxId must be valid NIF/NIE/CIF/VAT-UE");
-    }
-    if (!item.legalName || !String(item.legalName).trim()) {
-        throw new Error("SCHEMA_VIOLATION: DatosFiscales requires legalName");
+    if (!item.traceId || !String(item.traceId).trim()) {
+        throw new Error("SCHEMA_VIOLATION: DatosFiscales.traceId is required");
     }
 
-    assertValidEnum(item.thirdPartyType, THIRD_PARTY_TYPE, "thirdPartyType");
+    if (item.recordType === RECORD_TYPE.CONFIG_SISTEMA) {
+        if (item.taxId && !isValidNifOrEuVat(item.taxId)) {
+            throw new Error("SCHEMA_VIOLATION: DatosFiscales.taxId must be valid NIF/NIE/CIF/VAT-UE when supplied");
+        }
+        if (item.legalName != null && item.legalName !== "" &&
+            !String(item.legalName).trim()) {
+            throw new Error("SCHEMA_VIOLATION: DatosFiscales.legalName must be non-empty when supplied");
+        }
+        if (item.thirdPartyType != null && item.thirdPartyType !== "") {
+            throw new Error("SCHEMA_VIOLATION: CONFIG_SISTEMA.thirdPartyType must be null");
+        }
+    } else {
+        if (!item.taxId || !String(item.taxId).trim()) {
+            throw new Error("SCHEMA_VIOLATION: DatosFiscales requires taxId");
+        }
+        if (!isValidNifOrEuVat(item.taxId)) {
+            throw new Error("SCHEMA_VIOLATION: DatosFiscales.taxId must be valid NIF/NIE/CIF/VAT-UE");
+        }
+        if (!item.legalName || !String(item.legalName).trim()) {
+            throw new Error("SCHEMA_VIOLATION: DatosFiscales requires legalName");
+        }
+        assertValidEnum(item.thirdPartyType, THIRD_PARTY_TYPE, "thirdPartyType");
+    }
 
     // DatosFiscales has no bookingsResourceId/memberId columns. Staff identity
     // is resolved through Bookings Staff API, not persisted in this fiscal master.
-
-    // Campo 'active' prohibido en DatosFiscales
     if ("active" in item) {
         throw new Error("SCHEMA_VIOLATION: DatosFiscales.active is forbidden");
     }
