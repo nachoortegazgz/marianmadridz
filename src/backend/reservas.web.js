@@ -473,7 +473,7 @@ export async function _getServiceBySlugOrIdInternal(slugOrId, externalTraceId = 
             // authoritative; ambiguous bases are rejected rather than guessed.
             let matches = exactMatches;
             if (matches.length === 0) {
-                const wixSuffix = /^(.*)-([1-9]\\d*)$/.exec(clean);
+                const wixSuffix = /^(.*)-([1-9]\d*)$/.exec(clean);
                 const canonicalBaseSlug = _safeTrim(wixSuffix?.[1] || "");
                 if (canonicalBaseSlug) {
                     matches = catalogRows.filter((row) =>
