@@ -77,6 +77,9 @@ test("update policy allows mutable state and all append-only ledgers during temp
         _id: "projection-1",
         bookingStatus: "CONFIRMED",
     }), { code: "CMS_UPDATE_BOOKING_ID_REQUIRED" });
+    assert.throws(() => assertUpdateAllowed(C.MOVIMIENTOS_CAJA, {
+        amount: 1,
+    }), { code: "CMS_UPDATE_ID_REQUIRED" });
     for (const collection of [
         C.MOVIMIENTOS_CAJA,
         C.MOVIMIENTOS_INVENTARIO,
