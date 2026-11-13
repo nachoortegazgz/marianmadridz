@@ -39,7 +39,20 @@ El cron `reconcileMissingConfirmedBookingProjections` ya existe en `src/backend/
 
 La antiguedad de la alerta y la ausencia actual de rupturas son compatibles con una alerta obsoleta generada antes de las correcciones del clasificador, pero no prueban por si solas el origen historico. No se cambia su estado desde una llamada REST directa.
 
-## 3. Correccion incorporada al repositorio
+## 3. Revalidacion criptografica de contenido
+
+La inspeccion posterior de la fila genuina live confirmo que `aeatPayload` no esta disponible como campo independiente. La fila conserva los campos fiscales canonicos/legacy y `recordTimestamp`, por lo que el verificador se ha endurecido para reconstruir el mismo payload interno con el builder canonico, normalizar los nombres fisicos CMS y recalcular SHA-256 mediante `hashChain`.
+
+El verificador ahora distingue:
+- Ruptura real de continuidad o discrepancia del digest: `INTEGRITY_COMPROMISED` y alerta critica.
+- Registro cuyo contenido no puede reconstruirse: `PARTIAL`; no permite resolver alertas.
+- Auditoria completa con al menos un registro genuino y todos los hashes recalculados correctamente: `SUCCESS`.
+
+La resolucion de alertas exige `hashContentComplete=true` y `hashesVerified=checked`, ademas de cero rupturas. No basta con que `previousRecordHash` coincida con el hash anterior.
+
+Esta recomputacion aun requiere validacion en Wix Runtime publicado. Si la representacion CMS historica no reproduce el hash original, la auditoria quedara PARTIAL o INTEGRITY_COMPROMISED y la alerta seguira OPEN; no se corregira el ledger mediante sobrescritura.
+
+## 4. Correccion incorporada al repositorio
 
 En `src/backend/crons.js`, `systemHealthCheck` ahora:
 
@@ -52,17 +65,17 @@ En `src/backend/crons.js`, `systemHealthCheck` ahora:
 
 No se modifica MovimientosCaja, LibroAsientosContablesDetalle, HistoricoCierresZ ni ningun otro ledger append-only.
 
-## 4. Pruebas incorporadas
+## 5. Pruebas incorporadas
 
 Se amplian las pruebas de `crons.jobsConfigParity.test.mjs` para cubrir:
 
 - Resolucion de alerta historica solo tras auditoria completa y limpia.
 - Conservacion del payload original y trazabilidad de la resolucion.
-- Fail-closed: una ruptura reproducida o un ledger vacio mantienen la alerta OPEN.
+- Fail-closed: una ruptura reproducida, un digest incorrecto, un contenido no reconstruible o un ledger vacio mantienen la alerta OPEN.
 
 La validacion definitiva depende del workflow CI asociado al PR. No se declara la prueba superada hasta disponer del resultado de ese workflow.
 
-## 5. Despliegue y cierre del hito
+## 6. Despliegue y cierre del hito
 
 - La rama/PR contiene solo la correccion de ciclo de vida de la alerta fiscal, sus pruebas y esta evidencia.
 - El merge sincroniza el codigo con Wix Editor conforme al procedimiento operativo declarado por el propietario.
@@ -71,7 +84,7 @@ La validacion definitiva depende del workflow CI asociado al PR. No se declara l
 - El cron de proyeccion de reservas continuara ejecutandose a los minutos 15 y 45. Su resultado debe verificarse mediante logs Velo y una nueva lectura de CitasF2/ControlOperativo.
 - Los 17 casos sin recurso resoluble y el caso PAID permanecen sujetos a revision; no se completan mediante inferencias.
 
-## 6. Criterio de aceptacion pendiente
+## 7. Criterio de aceptacion pendiente
 
 El hito de repositorio queda completado cuando el PR este integrado y CI verde. El hito operativo Wix permanecera **PENDIENTE DE PUBLICACION Y RUNTIME** hasta verificar:
 
