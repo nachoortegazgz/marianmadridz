@@ -1,6 +1,6 @@
 ## Addendum operativo — 2026-11-11
 
-Las directrices de arquitectura y desarrollo permanecen vigentes. Para estado del sitio y límites de QA, aplicar [la referencia maestra QA](docs/qa/2026-11-11-qa-master-reference.md): Wix informa actualmente **Published**. La reauditoría live confirma 149 automatizaciones: 27 activas, 122 inactivas; nueve flujos email activos (10 acciones: ocho dirigidas al contacto del trigger y dos al propietario); cuatro flujos WhatsApp y ocho SMS inactivos. El email nativo no está aislado. Hasta disponer de un sitio QA independiente, limitar pruebas de negocio a mocks offline y lecturas sin efectos externos. Nunca usar el correo backend allowlist como garantía de aislamiento de Wix Automations nativas.
+Las directrices de arquitectura y desarrollo permanecen vigentes. Para estado del sitio, CMS y límites de QA, aplicar [ESTADO_ACTUAL_PROYECTO.md](ESTADO_ACTUAL_PROYECTO.md). Existe un sitio Wix QA independiente en estado Draft, pero su aislamiento de automatizaciones, notificaciones, pagos, webhooks, permisos e integraciones no está certificado. Hasta cerrar esa matriz, limitar las pruebas de negocio a mocks offline y lecturas sin efectos externos. El estado histórico de automatizaciones del sitio principal no debe extrapolarse al sitio QA. Nunca usar el correo backend allowlist como garantía de aislamiento de Wix Automations nativas.
 
 ---
 
@@ -209,3 +209,48 @@ FIN DEL DOCUMENTO
 - Depósito de reserva: 15 EUR solo para servicios >100 EUR; Wix Bookings nativo es primera opción. No configurar hasta resolver discrepancia de contrato REST vs Wix Help sobre inPerson y verificar la capacidad de la cuenta.
 - Cancelación/reprogramación gratuita con 24 h; devolución íntegra si cancela el negocio. No retención automática tardía/no-show sin revisión jurídica de proporcionalidad.
 - Registro central de decisiones: docs/DECISION-LOG.md y ADR docs/adr/2026-11-10-deposit-and-native-inventory.md.
+
+
+---
+
+ADDENDUM DE CONTROL DE CAMBIOS, PUBLICACIÓN Y QA — 2026-11-13
+
+Estas directrices prevalecen sobre las instrucciones de QA del addendum 2026-11-11 cuando difieran respecto a la existencia del sitio QA independiente.
+
+## Repositorio y publicación
+
+- GitHub `main` consultado: `738eb78faaa48502532c83c3e4b8b53db1144950`.
+- El sitio principal Wix figura Published y Velo enabled; el propietario declara que el sitio se ha actualizado y publicado.
+- No se dispone de un release/deployment ID que vincule el runtime publicado con el SHA actual de GitHub. No confundir “sitio Published” con “SHA publicado demostrado”.
+- El HEAD documental `738eb78...` no tiene estados combinados ni workflow runs asociados en la consulta. Los resultados de CI de PR #330 son históricos y no certifican automáticamente el HEAD actual.
+- Volver al proceso obligatorio rama → cambios delimitados → pruebas → diff → PR → CI/revisión → merge. Los commits documentales directos a main realizados en el corte anterior fueron una desviación de proceso; no repetirla.
+
+## Entorno QA
+
+- Existe un sitio Wix separado: `Marian Madrid QA - Aislado 2026-11`, Site ID `50b39f33-e753-4331-ab35-b2ed43dc97f7`, estado Draft, Wix Editor, Velo enabled.
+- El CMS QA tiene 43 colecciones (15 NATIVE, 28 WIX_APP), frente a 44 en producción (15 NATIVE, 29 WIX_APP). QA tiene CitasF2=0 y ControlOperativo=0; producción tiene CitasF2=1 y ControlOperativo=3. QA no dispone de cinco colecciones Stores/* presentes en producción y contiene cuatro colecciones WixForms/* adicionales.
+- La separación por Site ID está verificada, pero el aislamiento completo no: auditar automatizaciones, acciones y destinatarios de email/SMS/WhatsApp, pagos, webhooks, integraciones, permisos, Bookings y M365 antes de ejecutar casos E2E.
+- La lectura anterior de 18 automatizaciones desactivadas y 10 activas por restricciones corresponde al sitio principal. No extrapolar ese estado al nuevo sitio QA.
+- No usar el sitio Published para pruebas con side effects. No disparar automatizaciones readonly/activas ni la herramienta Test Automation sin análisis del efecto.
+
+## Estado CMS y restricciones
+
+- Producción: 44 colecciones (15 NATIVE, 29 WIX_APP). Recuentos actuales NATIVE: CajaActual 1; CitasF2 1; ComplementosCatalogo 36; ControlOperativo 3; DatosFiscales 1; HistoricoCierresZ 0; InventarioStockVenta 1; LibroAsientosContablesDetalle 0; MapaStaff 3; MovimientosCaja 0; MovimientosInventario 1; PaquetesGestoria 0; RegistroIntegracion 0; RegistrosHorariosStaff 2; ServiciosCatalogo 95.
+- Wix Stores Catalog V3 es la autoridad del inventario comercial; Wix Invoices V1 en producción.
+- CitasF2 sigue con una proyección `CONFIRMED / NOT_PAID`; la última lectura nativa Bookings Reader V2 registrada devolvió `CANCELED / NOT_PAID` para el mismo bookingId. No editar manualmente la proyección ni borrar la reserva; resolver mediante handler/evento y reconciliación idempotente demostrada.
+- Mantener writers fiscales, contables y laborales deshabilitados; mantener `ACCOUNTANT_SEND_ENABLED=false`. No realizar pagos, reembolsos, movimientos de caja, cierres, asientos, fichajes ni exports reales durante QA.
+- SharePoint / Power Automate Capa 3 no está verificado live.
+
+## Regla de evidencia
+
+Todo informe separa explícitamente:
+- Verificado por lectura live.
+- Declarado por el propietario.
+- Verificado en código.
+- Verificado en CI (SHA y workflow).
+- Verificado en Wix Preview/QA.
+- Verificado en producción.
+- Inferido o pendiente.
+
+Una publicación solo se certifica como correspondiente al código cuando existe una referencia comprobable del artefacto/SHA desplegado o una verificación equivalente reproducible. No elevar una declaración a verificación.
+

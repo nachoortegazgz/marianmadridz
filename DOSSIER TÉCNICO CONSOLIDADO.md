@@ -1,4 +1,4 @@
-> **Aviso de vigencia — 2026-11-11:** Este dossier describe arquitectura, contratos y decisiones; no es un estado live autónomo. Para el estado actual de Wix, QA, comunicaciones, pagos simulados y límites de ejecución, prevalece [la referencia maestra QA](docs/qa/2026-11-11-qa-master-reference.md). La consulta Wix actual devuelve **Published**. No asumir que el sitio está aislado ni usar este dossier para autorizar pruebas E2E. La reauditoría live confirma 149 automatizaciones no archivadas (27 activas, 122 inactivas), nueve flujos email activos con diez acciones y ocho rutas al contacto que dispara el trigger; cuatro flujos WhatsApp y ocho SMS están inactivos. No ejecutar triggers de email en el sitio Published. Cualquier baseline o afirmación de implementación de capítulos históricos debe contrastarse con `main`, la auditoría correspondiente y pruebas ejecutadas. La arquitectura de Capa 3 es diseño, no implantación.
+> **Aviso de vigencia — 2026-11-11:** Este dossier describe arquitectura, contratos y decisiones; no es un estado live autónomo. Para el estado actual de Wix, QA, CMS, comunicaciones, pagos simulados y límites de ejecución, prevalece [ESTADO_ACTUAL_PROYECTO.md](ESTADO_ACTUAL_PROYECTO.md). La consulta Wix actual devuelve **Published**. No asumir que el sitio está aislado ni usar este dossier para autorizar pruebas E2E. La reauditoría live confirma 149 automatizaciones no archivadas (27 activas, 122 inactivas), nueve flujos email activos con diez acciones y ocho rutas al contacto que dispara el trigger; cuatro flujos WhatsApp y ocho SMS están inactivos. No ejecutar triggers de email en el sitio Published. Cualquier baseline o afirmación de implementación de capítulos históricos debe contrastarse con `main`, la auditoría correspondiente y pruebas ejecutadas. La arquitectura de Capa 3 es diseño, no implantación.
 
 ---
 
@@ -1254,3 +1254,62 @@ Este contrato es una declaración de negocio pendiente de verificación en esque
 Se verificaron permisos efectivos PRIVILEGED de DatosFiscales mediante lectura posterior a la configuración. Persiste una discrepancia entre el esquema CMS (campo active) y las listas/validaciones de campos del código. No modificar el contrato hasta reconciliar esquema, consumidores y política de dominio.
 
 El contrato puro AEAT/hash no certifica Veri*Factu ni habilita remisión. La activación continúa bloqueada por la definición del SIF, series, factura/IVA, rectificaciones, XML/XSD, transporte, respuestas, pruebas oficiales y revisión legal.
+
+
+---
+
+# ADDENDUM DE VIGENCIA — 2026-11-13
+
+Este addendum actualiza el estado técnico operativo y prevalece sobre descripciones históricas de estado, runtime, catálogo, CMS y QA que contradigan sus datos. La arquitectura e invariantes del dossier siguen vigentes.
+
+## Estado de repositorio y Wix
+
+- GitHub `main` consultado: `738eb78faaa48502532c83c3e4b8b53db1144950`.
+- Wix Site Context confirma sitio principal Published, Wix Editor, Velo enabled, Europe/Madrid, EUR; el propietario declara que Wix se ha actualizado y publicado.
+- No se dispone de release/deployment ID ni evidencia que vincule exactamente el SHA actual de GitHub con el runtime publicado. El estado Published está verificado; la identidad exacta del código desplegado sigue pendiente.
+- Existe un sitio Wix QA separado, ID `50b39f33-e753-4331-ab35-b2ed43dc97f7`, en estado Draft. La separación de Site ID está verificada; el aislamiento de automatizaciones, notificaciones, pagos, webhooks, permisos e integraciones no está certificado.
+- Wix Stores del sitio principal usa Catalog V3; Wix Invoices usa V1.
+
+## Inventario CMS producción — lectura live 2026-11-13
+
+44 colecciones: 15 NATIVE y 29 WIX_APP. Recuentos actuales de las 15 NATIVE:
+
+| Colección | Elementos | Observación |
+|---|---:|---|
+| CajaActual | 1 | Sentinel SIMULACION |
+| CitasF2 | 1 | Proyección; divergencia P1 con Bookings |
+| ComplementosCatalogo | 36 | Catálogo |
+| ControlOperativo | 3 | Recuento live actual; sustituye el cero de cortes previos |
+| DatosFiscales | 1 | Placeholder; falta CONFIG_SISTEMA |
+| HistoricoCierresZ | 0 | Append-only |
+| InventarioStockVenta | 1 | Legacy; no SSOT de stock |
+| LibroAsientosContablesDetalle | 0 | Append-only; writer deshabilitado |
+| MapaStaff | 3 | Correlación staff/recurso |
+| MovimientosCaja | 0 | Append-only; writer deshabilitado |
+| MovimientosInventario | 1 | Legacy; no nuevas escrituras |
+| PaquetesGestoria | 0 | Append-only |
+| RegistroIntegracion | 0 | Sin consumidor/writer activo demostrado |
+| RegistrosHorariosStaff | 2 | Sintéticos QA sin HMAC; writer deshabilitado |
+| ServiciosCatalogo | 95 | 94 servicios + 1 plan |
+
+Las 29 WIX_APP se agrupan en Bookings (3), Blog (3), CampaignManager (2), Forms (1), Locations (1), Marketing (1), Members (4), StoreCatalog (8), Stores (5) y eCommerce (1). Sus IDs completos y nombres están en `ESTADO_ACTUAL_PROYECTO.md`. Son propiedad de Wix Apps y no se mutan desde esta intervención.
+
+## Sitio QA: paridad incompleta
+
+La lectura CMS del sitio QA devuelve 43 colecciones (15 NATIVE, 28 WIX_APP). Las 15 NATIVE existen. Recuentos diferentes respecto a producción: CitasF2 0 frente a 1 y ControlOperativo 0 frente a 3; los otros 13 recuentos coinciden en el corte. QA contiene cuatro colecciones WIX_APP `WixForms/*` adicionales y carece de las cinco colecciones `Stores/*` presentes en producción. No certificar E2E de Store/eCommerce en QA hasta resolver y documentar esa diferencia y auditar efectos externos.
+
+## CitasF2 — contrato y bloqueo
+
+- Revisión 42, 31 campos físicos, 1 item.
+- Campos físicos y contrato canónico raíz se mantienen como documentados en la sección de esquema anterior: `bookingId`, `bookingStatus`, `paymentStatus`, `orderId`, `cashMovementId`, `serviceId`, `resourceId`, `scheduleId`, `slotStart`, `slotEnd`, `timeZone`, `traceId`.
+- Lectura actual del item: `bookingId=3effa046-5b9d-429b-9f9c-af2f3d6c9994`, `bookingStatus=CONFIRMED`, `paymentStatus=NOT_PAID`, `meta.nativeBookingStatus=CONFIRMED`.
+- La última lectura Bookings Reader V2 registrada en el corte QA anterior devolvió la reserva nativa CANCELED / NOT_PAID. Mantener bloqueo P1 hasta repetir la lectura nativa tras la publicación declarada y verificar el handler/evento de cancelación.
+- No corregir manualmente la proyección, no borrar reservas y no backfill por inferencia.
+
+## Límites y pendientes no negociables
+
+- Mantener deshabilitados `FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED`, `ACCOUNTING_LEDGER_WRITES_ENABLED` y `STAFF_CLOCKING_CONFIG.WRITES_ENABLED`.
+- Mantener `ACCOUNTANT_SEND_ENABLED=false`; no activar cobros, reembolsos, ledgers, cierres, fichajes ni exports reales.
+- SharePoint / Power Automate Capa 3 no está acreditado como flujo operativo live.
+- El commit documental actual `738eb78...` no tiene estados combinados ni workflow runs asociados en la consulta. Los resultados históricos de PR #330 no certifican este HEAD.
+- Pendientes P0–P4, lista de colecciones completa, diferencias QA/prod y estado de validación se mantienen centralizados en `ESTADO_ACTUAL_PROYECTO.md`.

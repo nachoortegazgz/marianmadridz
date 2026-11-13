@@ -1,6 +1,8 @@
 # Marian Madrid — Wix Editor + Velo
 
-Repositorio canónico del sitio **Marian Madrid Peluquería y Estética** (`www.marianmadrid.es`). El repositorio contiene código, documentación y pruebas QA. **Corte 2026-11-13 20:51 CET:** PR #330 fusionada sobre el baseline funcional `3df4b4cf174d80dfd22406bbd758b2eddd7aaa44`; después se añadieron commits exclusivamente documentales a main. Consultar GitHub para el HEAD documental vivo; sitio Wix Published; no está acreditado que el HEAD de main esté publicado ni que el sitio principal sea QA aislado. CitasF2 tiene 31 campos físicos, revisión live 42 y un item; la reserva nativa asociada está CANCELED mientras la proyección sigue CONFIRMED (bloqueo P1). El estado y checklist vigentes están en `ESTADO_ACTUAL_PROYECTO.md`.
+> **Estado vigente 2026-11-13:** GitHub `main` HEAD `738eb78faaa48502532c83c3e4b8b53db1144950`. Wix Site Context confirma el sitio principal **Published** y Velo enabled; el propietario declara que el código se ha actualizado y publicado. No se ha obtenido un identificador de release que vincule el runtime Wix con ese SHA. Existe un sitio Wix QA independiente en estado Draft (`50b39f33-e753-4331-ab35-b2ed43dc97f7`), pero su aislamiento y paridad CMS no están certificados. CMS producción: 44 colecciones (15 NATIVE, 29 WIX_APP); CMS QA: 43 (15 NATIVE, 28 WIX_APP). La referencia de estado, inventario y checklist es [ESTADO_ACTUAL_PROYECTO.md](ESTADO_ACTUAL_PROYECTO.md), cuyo addendum vigente prevalece sobre los estados históricos de los demás documentos.
+
+Repositorio canónico del sitio **Marian Madrid Peluquería y Estética** (`www.marianmadrid.es`). El repositorio contiene código, documentación y pruebas QA.
 
 ## Arquitectura y fuente de verdad
 
