@@ -61,15 +61,20 @@ GitHub Actions on PR #302 head 7785166fdb63ec4fe764a9ee76a28567700310ab:
 - ESLint: success.
 - Secret scanning / Gitleaks: run 43126443532 — success.
 
+Both recorded workflow runs were rechecked in GitHub and their jobs report `completed / success`. These are PR-head checks; they do not establish a post-merge workflow, Wix runtime execution or deployment.
+
 ## Remaining limitations
 
 - No Wix Preview, Wix Runtime, live CMS query, or isolated QA booking was executed.
 - Live CitasF2 field values and effective permissions were not read or changed.
 - The inspector must be exercised against synthetic QA bookings in an isolated environment before operational use.
 - This does not implement automatic recovery, writer retries, compensation, or alert persistence.
+- The published Wix site is not proven to contain this code. Do not invoke the inspector against production or treat it as operational until isolated QA validates it.
 
 ## Change control
 
 PR: [#302 — read-only dual reschedule journal inspector](https://github.com/nachoortegazgz/marianmadridz/pull/302)
 
-State: Draft, open, not merged, not deployed.
+Merged to `main` in merge commit `25071d8f647869e9eb4bf1064b582b735213e121` on 2026-11-13. The previous “Draft, open, not merged” status was stale and is corrected here.
+
+**Deployment state: NOT VERIFIED.** Wix site context reports Published but does not expose the deployed Velo SHA. The last reported Wix site update predates this merge. No Wix Preview, runtime, live CMS or browser E2E validation has been performed.
