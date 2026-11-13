@@ -16,12 +16,12 @@ Repositorio canónico del sitio **Marian Madrid Peluquería y Estética** (`www.
 
 2. [Hito QA 2026-11-13 — conciliacion fiscal y diagnostico de CitasF2](docs/qa/2026-11-13-fiscal-alert-and-citasf2-recovery.md): evidencia live read-only, correccion del ciclo de vida de alertas fiscales y validacion pendiente en Wix Runtime.
 
-2. [Estado actual y guía operativa consolidada](ESTADO_ACTUAL_PROYECTO.md): punto de partida recomendado para conocer arquitectura, decisiones, bloqueos y plan priorizado.
+3. [Estado actual y guía operativa consolidada](ESTADO_ACTUAL_PROYECTO.md): punto de partida recomendado para conocer arquitectura, decisiones, bloqueos y plan priorizado.
 
-3. [Directrices de arquitectura, desarrollo y QA](DIRECTRICES_DESARROLLO_CODIGO.txt): reglas obligatorias y límites.
-4. [Dossier técnico consolidado](DOSSIER%20TÉCNICO%20CONSOLIDADO.md): arquitectura, contratos, módulos, CMS y estado técnico verificado.
-5. [Flujos end-to-end Capa 3](DOSSIER%20FLUJOS%20END%20TO%20END%20CAPA%203.md): diseño documental Wix–M365 y despliegue pendiente.
-6. [Estado actual del proyecto](docs/PROJECT-STATUS.md): estado verificado, bloqueos y prioridades.
+4. [Directrices de arquitectura, desarrollo y QA](DIRECTRICES_DESARROLLO_CODIGO.txt): reglas obligatorias y límites.
+5. [Dossier técnico consolidado](DOSSIER%20TÉCNICO%20CONSOLIDADO.md): arquitectura, contratos, módulos, CMS y estado técnico verificado.
+6. [Flujos end-to-end Capa 3](DOSSIER%20FLUJOS%20END%20TO%20END%20CAPA%203.md): diseño documental Wix–M365 y despliegue pendiente.
+7. [Estado actual del proyecto](docs/PROJECT-STATUS.md): estado verificado, bloqueos y prioridades.
 
 El código, la configuración viva de Wix, los contratos oficiales de las APIs y las pruebas ejecutadas tienen prioridad sobre afirmaciones históricas de los documentos. Registrar siempre fecha, rama/SHA y evidencia. El estado de implementación y los bloqueos se mantienen en [docs/PROJECT-STATUS.md](docs/PROJECT-STATUS.md).
 
