@@ -558,7 +558,7 @@ export const confirmPayment = webMethod(
                         meta.paymentStatus ||
                         ""
                     ).toUpperCase() === PAYMENT_STATUS.PAID &&
-                    _safeTrim(meta.orderId || "") === orderId
+                    _safeTrim(cita?.[FIELD_ORDER_ID] || meta.orderId || "") === orderId
                 );
             });
 
@@ -921,13 +921,10 @@ async function _setCitasPaymentState(
                     ...currentCita,
                     [FIELD_PAYMENT_STATUS]: paymentState,
                     [FIELD_CASH_MOVEMENT_ID]: cashMovementId || null,
+                    [FIELD_ORDER_ID]: orderId || null,
                     [FIELD_TRACE_ID]: traceId,
                     meta: {
                         ...meta,
-                        paymentStatus: paymentState,
-                        cashMovementId: cashMovementId || null,
-                        orderId: orderId || null,
-                        traceId,
                         fechaConfirmacionPago: new Date(),
                     },
                 };
