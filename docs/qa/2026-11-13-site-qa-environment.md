@@ -204,7 +204,7 @@ Antes de cualquier despliegue real:
 | Bookings Writer V2 create/confirm/cancel con cliente sintético | Verificado por respuestas API; reserva cancelada |
 | Proyección automática CitasF2 para el booking de prueba | No verificada; query devolvió 0 filas |
 | Cliente sintético como contacto CRM persistido | Pendiente de comprobar |
-| Simulador PSP offline en memoria | Implementado en tests; 6/6 PASS en ejecución aislada local; CI pendiente |
+| Simulador PSP offline en memoria | Implementado en tests; 6/6 PASS local y CI |
 | Simulador PSP accesible desde runtime/UI | No implementado (intencional: no existe sandbox PSP acreditado) |
 | Pago OFFLINE Bookings sin cargo | Verificado en prueba runtime; no es pago PSP |
 | Comunicación a gestoría | Bloqueada por flag; no enviada |
@@ -214,4 +214,11 @@ Antes de cualquier despliegue real:
 | E2E completo en navegador | Pendiente |
 | Restauración preproducción | Documentada, no ejecutada |
 
-**Criterio:** el sitio dispone de aislamiento parcial de automatizaciones, permisos CMS ajustados y una prueba nativa de Bookings cancelada. El simulador PSP es offline; su suite aislada local ejecutó 6/6 pruebas PASS. CI del PR sigue pendiente. La ausencia de proyección CitasF2, los diez flujos Wix bloqueados y la falta de un sink de gestoría impiden certificar el sitio como entorno QA completo. No autoriza un despliegue real.
+**Criterio:** el sitio dispone de aislamiento parcial de automatizaciones, permisos CMS ajustados y una prueba nativa de Bookings cancelada. El simulador PSP es offline; su suite aislada local ejecutó 6/6 pruebas PASS. En CI del PR #330:
+- Layer 1: 23 suites, 294 PASS, 0 FAIL.
+- Layer 2: 17 suites, 239 PASS, 0 FAIL.
+- Regresión completa: 67 suites, 617 PASS, 0 FAIL.
+- Contratos SDK Wix Bookings Reader V2, eCommerce Cart V2 y Order Transactions: PASS.
+- ESLint: PASS.
+- Gitleaks full-history: PASS.
+Ejecuciones: backend quality gates `43487412879`; secret scanning `43487413018`. La ausencia de proyección CitasF2, los diez flujos Wix bloqueados y la falta de un sink de gestoría impiden certificar el sitio como entorno QA completo. No autoriza un despliegue real.
