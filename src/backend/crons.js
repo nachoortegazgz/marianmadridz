@@ -930,8 +930,10 @@ async function _resolveVerifiedFiscalChainAlerts(chainResult, traceId) {
         audit?.complete !== true ||
         audit?.hasMore !== false ||
         audit?.breaksCount !== 0 ||
+        audit?.hashContentComplete !== true ||
         !Number.isFinite(Number(audit?.checked)) ||
-        Number(audit.checked) < 1
+        Number(audit.checked) < 1 ||
+        Number(audit.hashesVerified) !== Number(audit.checked)
     ) {
         return { resolved: 0, failed: 0, skipped: true, reason: "FISCAL_AUDIT_NOT_COMPLETE_CLEAN_AND_NONEMPTY" };
     }

@@ -15,6 +15,7 @@ invocan directamente (semantica Velo equivalente).
 
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert';
+import { hashChain } from 'backend/securityEngine';
 
 import { wixDataMock, mocks } from './loader.mjs';
 
@@ -589,13 +590,34 @@ test('FLOW-CAJA-09 fiscal hash audit checks more than one page before returning 
   const movements = [];
   let previousRecordHash = '0'.repeat(64);
   for (let sequenceNumber = 1; sequenceNumber <= 205; sequenceNumber += 1) {
-    const hash = `hash-${sequenceNumber}`;
+    const numSerieFactura = `FAC-2026-${String(sequenceNumber).padStart(5, '0')}`;
+    const recordTimestamp = new Date('2026-11-13T11:00:00.000Z');
+    const hashPayload = [
+      ['IDEmisorFactura', ''],
+      ['NumSerieFactura', numSerieFactura],
+      ['FechaExpedicionFactura', '13-11-2026'],
+      ['TipoFactura', 'F1'],
+      ['BaseImponibleOImporteNoSujeto', '10.00'],
+      ['CuotaRepercutida', '2.10'],
+      ['ImporteTotal', '12.10'],
+      ['Huella', previousRecordHash],
+      ['FechaHoraHusoGenRegistro', '2026-11-13T12:00:00+01:00'],
+    ].map(([key, value]) => `${key}=${value}`).join('&');
+    const hash = await hashChain(previousRecordHash, hashPayload);
     movements.push({
       _id: `audit-page-${sequenceNumber}`,
       sequenceNumber,
+      recordSource: 'LIVE',
+      movementType: 'VENTA_ONLINE',
       previousRecordHash,
       hash,
-      numSerieFactura: `FAC-2026-${String(sequenceNumber).padStart(5, '0')}`,
+      numSerieFactura,
+      fechaExpedicionFactura: '2026-11-13',
+      tipoFactura: 'F1',
+      taxBase: 10,
+      taxAmount: 2.1,
+      totalAmount: 12.1,
+      recordTimestamp,
     });
     previousRecordHash = hash;
   }
