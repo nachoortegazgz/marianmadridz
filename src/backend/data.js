@@ -964,7 +964,7 @@ export async function ControlOperativo_beforeRemove(itemId) {
 // collection ID (not its display name); QA uses a generated collection ID.
 function _validateCitasF2Write(item) {
     _normalizeCmsDateTimes(item, [
-        "slotStart", "slotEnd", "noShowAt", "canceledAt",
+        "slotStart", "slotEnd", "canceledAt",
         "privacyNoticeAcceptedAt", "invoicingDate",
     ]);
     assertCitasF2(item);
