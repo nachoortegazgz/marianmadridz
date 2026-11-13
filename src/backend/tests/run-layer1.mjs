@@ -13,6 +13,7 @@ const suites = [
   'citasManager.dual-reschedule-locking.test.mjs',
   'security.rateLimiter.test.mjs',
   'booking.cart-v2.checkout.test.mjs',
+  'qa.payment-gateway.mock.test.mjs',
   'members.sdk.contract.test.mjs',
   'booking.members-required.contract.test.mjs',
   'staff.identity.contract.test.mjs',
