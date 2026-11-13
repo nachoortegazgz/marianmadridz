@@ -784,7 +784,7 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
             projectionStatus: "PROYECTADO",
             recordSource: channelType === CHANNEL_TYPE.PRESENCIAL
                 ? "MANUAL_PRESENCIAL_AUTHENTICATED"
-                : "INTERNAL",
+                : (_safeTrim(inDto.recordSource) || "INTERNAL"),
             staffResourceId: resourceId,
             resourceId,
             linkedBookingIds: _linkedBookingValue(inDto.linkedBookingIds),
