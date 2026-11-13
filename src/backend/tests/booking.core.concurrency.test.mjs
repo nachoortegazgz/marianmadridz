@@ -493,6 +493,20 @@ test('BCORE-PER-03 dual booking type without pairToken rejected', async () => {
   );
 });
 
+test('BCORE-PER-03B non-GUID serviceId or resourceId rejected before write', async () => {
+  for (const overrides of [
+    { serviceId: 'invalid-service' },
+    { resourceId: 'invalid-resource' },
+  ]) {
+    wixDataMock._reset();
+    await assert.rejects(
+      () => BC._persistBooking(baseParams(overrides), 'tr-invalid-id'),
+      (error) => error.code === BC.ERROR_CODES.INVALID_PAYLOAD
+    );
+    assert.equal((wixDataMock._store.get(CITAS) || []).length, 0);
+  }
+});
+
 test('BCORE-PER-04 non-GUID scheduleId rejected before write', async () => {
   wixDataMock._reset();
   await assert.rejects(
