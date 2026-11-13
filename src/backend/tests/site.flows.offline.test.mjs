@@ -877,6 +877,7 @@ test('FLOW-CAJA-04 transactionId concurrente no crea movimientos duplicados', as
     tipoFactura: 'F2',
     operationDescription: 'Prueba idempotencia concurrente',
     paymentMethod: 'EFECTIVO',
+    channelType: 'PRESENCIAL',
     transactionId,
   };
 
