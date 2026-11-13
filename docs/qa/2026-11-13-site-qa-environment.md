@@ -245,7 +245,7 @@ Lectura live posterior de Wix Data Collections API y Data Items API:
 - El estado no se corrigió: Bookings nativo CANCELED / NOT_PAID frente a CitasF2 CONFIRMED / NOT_PAID. Sigue siendo bloqueo P1.
 
 GitHub:
-- PR #330 fusionada; HEAD main observado 3df4b4cf174d80dfd22406bbd758b2eddd7aaa44.
+- PR #330 fusionada; baseline funcional integrado 3df4b4cf174d80dfd22406bbd758b2eddd7aaa44. Tras cinco commits documentales, HEAD main es 8b3155afcd1f51b404b48d547f86eb98aac2019f.
 - PR #331 cerrada sin merge.
 - No se ha publicado Velo a Wix. La web continúa Published, pero la publicación del código de main no está demostrada.
 
