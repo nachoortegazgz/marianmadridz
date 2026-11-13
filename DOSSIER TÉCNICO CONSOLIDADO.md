@@ -1334,3 +1334,14 @@ La rama `fix/caja-actual-last-operation-projection` adapta parcialmente los fluj
 - El cierre Z manual resuelve y guarda `closedBy` desde backend.
 
 **No equivale a implementación completa:** el esquema CMS no persiste aún `lastMovementId`/`lastOperation`; la referencia se devuelve en lectura. No hay WebMethod de apertura ni origen reconciliado para saldo inicial. `lineItems` y pagos mixtos siguen sin contrato. No se han activado escritores ni alterado CMS/live.
+
+
+## Addendum — maestros MASTER DatosFiscales y MapaStaff (2026-11-14)
+
+La revisión live de Wix Data API confirma `DatosFiscales` rev. 19 y `MapaStaff` rev. 24. `DatosFiscales` incorpora `commercialName`, `postalCode`, `province`, `schemaVersion`, `traceId`; `fechaInicioVerifactu` es ahora `DATE`. `MapaStaff` incorpora `traceId`. Los registros existentes fueron releídos tras la mutación: 1 placeholder fiscal QA y 3 mapeos de staff. El placeholder se mantiene separado del emisor. Los tres mapeos mantienen roles canónicos y `thirdPartyId` vacío.
+
+El código de la rama `feat/master-collections-schema-alignment` alinea los hooks/validator de `DatosFiscales` con un `CONFIG_SISTEMA` que puede mantener pendientes los campos fiscales no acreditados, reserva el ID `CONFIG_SISTEMA_FISCAL`, exige `schemaVersion=1` y `traceId`, y evita que `eventLog.js` rellene `legalName` desde el nombre comercial. El writer de terceros persiste `schemaVersion` y `traceId`.
+
+No se ha creado todavía el singleton `CONFIG_SISTEMA`: falta verificar taxId, legalName y taxRegime con documentación fiscal/gestoría, y el código de protección aún no está desplegado. Veri*Factu y los writers fiscales permanecen desactivados.
+
+**Compatibilidad pendiente:** `MapaStaff` conserva `staffMemberId`, `scheduleId`, `active`, `sourceSystem` y su relación con `ServiciosCatalogo`; el fallback actual de `events.js` consume staffMemberId/active/scheduleId. No eliminarlos hasta sustituir ese consumidor y aprobar el ADR de `active`. La unicidad memberId/resourceId solo está verificada en el snapshot, no garantizada frente a concurrencia. Campos heredados de DatosFiscales se mantienen donde contienen datos QA o tienen consumidores. No se han borrado las colecciones 12–16 por falta de IDs/nombres inequívocos.
