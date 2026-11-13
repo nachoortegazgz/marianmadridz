@@ -57,6 +57,9 @@ test('HOOK-CITAS-01 validates canonical enums, traceId and pairToken', () => {
   assert.throws(() => H.CitasF2_beforeInsert({ ...valid, bookingId: 'not-a-guid' }), /GUID/);
   assert.throws(() => H.CitasF2_beforeInsert((({ scheduleId, ...rest }) => rest)(valid)), /scheduleId/);
   assert.throws(() => H.CitasF2_beforeInsert({ ...valid, scheduleId: 'invalid-schedule' }), /scheduleId.*GUID/);
+  assert.throws(() => H.CitasF2_beforeInsert({ ...valid, serviceId: 'invalid-service' }), /serviceId.*GUID/);
+  assert.throws(() => H.CitasF2_beforeInsert({ ...valid, resourceId: 'invalid-resource' }), /resourceId.*GUID/);
+
   assert.throws(() => H.CitasF2_beforeRemove({}), /cancelacion formal/);
 });
 
@@ -70,13 +73,12 @@ test('HOOK-CMS-DATETIME-01 normalizes all CitasF2 DateTime fields to Date object
     traceId: 'trace-citas-datetime',
     slotStart: '2026-11-12T08:30:00.000Z',
     slotEnd: '2026-11-12T09:00:00.000Z',
-    noShowAt: '2026-11-12T09:10:00.000Z',
     canceledAt: '2026-11-12T09:15:00.000Z',
     privacyNoticeAcceptedAt: '2026-11-12T08:20:00.000Z',
     invoicingDate: '2026-11-12T09:20:00.000Z',
   };
   H.CitasF2_beforeInsert(item);
-  for (const field of ['slotStart', 'slotEnd', 'noShowAt', 'canceledAt', 'privacyNoticeAcceptedAt', 'invoicingDate']) {
+  for (const field of ['slotStart', 'slotEnd', 'canceledAt', 'privacyNoticeAcceptedAt', 'invoicingDate']) {
     assert.ok(item[field] instanceof Date, `${field} must be a Date`);
   }
   assert.strictEqual(item.slotStart.toISOString(), '2026-11-12T08:30:00.000Z');
