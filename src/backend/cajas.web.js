@@ -1062,6 +1062,12 @@ async function _updateCajaActual(movement, traceId) {
 
         const movementKey = _safeTrim(movement?._id);
         if (!movementKey) throw new Error("CAJA_MOVEMENT_ID_REQUIRED");
+        const sourceTimestamp = movement?.recordTimestamp
+            ? new Date(movement.recordTimestamp)
+            : null;
+        if (!sourceTimestamp || Number.isNaN(sourceTimestamp.getTime())) {
+            throw new Error("CAJA_MOVEMENT_TIMESTAMP_REQUIRED");
+        }
 
         // A movement may contribute to a session only after an explicit
         // opening. Never create or reopen CajaActual as a side effect of a sale.
