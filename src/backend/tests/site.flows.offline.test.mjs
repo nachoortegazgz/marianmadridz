@@ -393,6 +393,10 @@ test('FLOW-CAJA-01 flujo continuo: venta EFECTIVO -> caja incrementada -> cierre
   const z = await cajas.registerZClosing(diaKey, {});
   assert.strictEqual(z.status, 'SUCCESS', JSON.stringify(z.error));
   assert.ok(z.data._id.startsWith('Z_'));
+  const closedState = await cajas.getCashierState({});
+  assert.equal(closedState.status, 'SUCCESS');
+  assert.equal(closedState.data.closedBy, GUID_ADMIN_RESOURCE, 'responsable de cierre resuelto por backend');
+  assert.equal(closedState.data.closedByName, 'Marta');
 
   // Paso 3b: segundo cierre Z mismo dia => Z_ALREADY_CLOSED (invariantismo)
   const z2 = await cajas.registerZClosing(diaKey, {});
