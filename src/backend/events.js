@@ -953,6 +953,18 @@ async function _updateCitaStatus(bookingId, newStatus, traceId) {
     );
 }
 
+// Canonical booking/payment identifiers live on CitasF2 root keyfields.
+// Keep legacy metadata readable at read boundaries; canonical writers must never recreate duplicates.
+function _withoutCanonicalCitaMeta(rawMeta) {
+    const meta = rawMeta && typeof rawMeta === "object" && !Array.isArray(rawMeta)
+        ? { ...rawMeta }
+        : {};
+    for (const key of ["bookingStatus", "paymentStatus", "orderId", "cashMovementId"]) {
+        delete meta[key];
+    }
+    return meta;
+}
+
 async function _markCitasRefundedByBookingIds(
     bookingIds,
     orderId,
@@ -966,7 +978,7 @@ async function _markCitasRefundedByBookingIds(
             _updateCitaSafe(
                 bookingId,
                 (cita) => {
-                    const meta = cita.meta || {};
+                    const meta = _withoutCanonicalCitaMeta(cita.meta);
                     const paymentState = fullyRefunded
                         ? PAYMENT_STATUS.REFUNDED
                         : PAYMENT_STATUS.PARTIALLY_REFUNDED;
@@ -976,10 +988,9 @@ async function _markCitasRefundedByBookingIds(
                             ? { [BOOKING_FIELDS.STATUS]: BOOKING_STATUS.REFUNDED }
                             : {}),
                         [BOOKING_FIELDS.PAYMENT_STATUS]: paymentState,
+                        [BOOKING_FIELDS.ORDER_ID]: orderId || null,
                         meta: {
                             ...meta,
-                            paymentStatus: paymentState,
-                            orderId: orderId || null,
                             refundId: refundId || null,
                             fechaReembolso: new Date(),
                         },
@@ -1009,10 +1020,11 @@ async function _markCitasPaidByBookingIds(bookingIds, orderId, traceId) {
             _updateCitaSafe(
                 bookingId,
                 (cita) => {
-                    const meta = cita.meta || {};
+                    const legacyMeta = cita.meta || {};
+                    const meta = _withoutCanonicalCitaMeta(legacyMeta);
                     const alreadyPaid =
                         String(
-                            meta.paymentStatus || cita.paymentStatus || ""
+                            cita[BOOKING_FIELDS.PAYMENT_STATUS] || legacyMeta.paymentStatus || ""
                         ).toUpperCase() === PAYMENT_STATUS.PAID;
                     if (alreadyPaid) return null;
                     return {
@@ -1021,10 +1033,9 @@ async function _markCitasPaidByBookingIds(bookingIds, orderId, traceId) {
                         // Only the native BOOKING_CONFIRMED webhook may confirm
                         // an appointment; receiving payment must preserve PENDING.
                         [BOOKING_FIELDS.PAYMENT_STATUS]: PAYMENT_STATUS.PAID,
+                        [BOOKING_FIELDS.ORDER_ID]: orderId || null,
                         meta: {
                             ...meta,
-                            paymentStatus: PAYMENT_STATUS.PAID,
-                            orderId: orderId || null,
                             fechaConfirmacionPago: new Date(),
                         },
                     };
@@ -1058,19 +1069,19 @@ async function _markCitasPendingLedgerByBookingIds(bookingIds, orderId, traceId)
             _updateCitaSafe(
                 bookingId,
                 (cita) => {
-                    const meta = cita.meta || {};
+                    const legacyMeta = cita.meta || {};
+                    const meta = _withoutCanonicalCitaMeta(legacyMeta);
                     const currentPaymentState = String(
-                        meta.paymentStatus || cita.paymentStatus || ""
+                        cita[BOOKING_FIELDS.PAYMENT_STATUS] || legacyMeta.paymentStatus || ""
                     ).toUpperCase();
                     if (currentPaymentState === PAYMENT_STATUS.PAID) return null;
                     return {
                         ...cita,
                         [BOOKING_FIELDS.PAYMENT_STATUS]:
                             PAYMENT_STATUS.PENDING_LEDGER,
+                        [BOOKING_FIELDS.ORDER_ID]: orderId || null,
                         meta: {
                             ...meta,
-                            paymentStatus: PAYMENT_STATUS.PENDING_LEDGER,
-                            orderId: orderId || null,
                             fechaPagoRecibido: new Date(),
                         },
                     };
