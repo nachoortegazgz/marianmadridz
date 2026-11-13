@@ -135,3 +135,14 @@ Sin escrituras Wix, pagos, reservas, stock, caja, ledgers ni publicación.
 5. Confirmar no duplicados por bookingId y estado/slot coherente con Bookings Reader V2.
 
 **Estado:** auditoría de colecciones completada; corrección de handlers integrada en `main`; runtime de reservas y cierre fiscal/contable siguen pendientes.
+
+
+## Addendum — corrección live de maestros MASTER (2026-11-14)
+
+Wix Data API, lectura posterior a las mutaciones:
+- `DatosFiscales`: revisión 19. Campos añadidos `commercialName`, `postalCode`, `province`, `schemaVersion`, `traceId`; `fechaInicioVerifactu=DATE`. La única fila sigue siendo `TERCERO/PROVEEDOR` con etiqueta QA_ONLY; ahora tiene schemaVersion 1 y traceId. No existe CONFIG_SISTEMA.
+- `MapaStaff`: revisión 24. Campo traceId añadido y presente en los tres registros. staffName normalizado; roles y resourceIds coinciden con el esquema facilitado. thirdPartyId vacío en los tres. No se alteran memberId ni otros identificadores.
+
+No se ha rellenado taxId, legalName ni taxRegime del sistema. El singleton CONFIG_SISTEMA no se crea hasta disponer de evidencia fiscal oficial y sincronizar/publicar el guard actualizado. No se ha activado Veri*Factu ni ningún writer.
+
+Los campos heredados se conservan de forma temporal: en MapaStaff, events.js aún consume staffMemberId, active y scheduleId; en DatosFiscales, parte de los campos heredados mantiene el marcador QA o sigue consumida por eventLog. La unicidad de memberId/resourceId es cierta en el snapshot leído, pero no está aún garantizada ante concurrencia. No se han eliminado colecciones 12–16 porque no se han proporcionado IDs/nombres que permitan identificarlas inequívocamente.
