@@ -1602,11 +1602,13 @@ export async function verifyFiscalHashChainIntegrity(options = {}) {
                 const hash = _safeTrim(mov?.hash).toLowerCase();
                 const previousRecordHash = _safeTrim(mov?.previousRecordHash).toLowerCase();
 
-                if (!/^[a-f0-9]{64}$/.test(hash) || !/^[a-f0-9]{64}$/.test(previousRecordHash)) {
+                const hashFieldsMissing = !hash || !previousRecordHash;
+                const hashFieldsInvalid = !/^[a-f0-9]{64}$/.test(hash) || !/^[a-f0-9]{64}$/.test(previousRecordHash);
+                if (hashFieldsMissing || hashFieldsInvalid) {
                     breaks.push({
                         movementId,
                         numSerieFactura: invoiceNumber,
-                        reason: "HASH_FIELDS_MISSING_OR_INVALID",
+                        reason: hashFieldsMissing ? "HASH_FIELDS_MISSING" : "HASH_FIELDS_INVALID",
                         hasHash: Boolean(hash),
                         hasPreviousRecordHash: Boolean(previousRecordHash),
                     });
