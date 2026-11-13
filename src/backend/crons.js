@@ -933,7 +933,7 @@ async function _resolveVerifiedFiscalChainAlerts(chainResult, traceId) {
         !Number.isFinite(Number(audit?.checked)) ||
         Number(audit.checked) < 1
     ) {
-        return { resolved: 0, failed: 0, skipped: true, reason: "FISCAL_AUDIT_NOT_COMPLETE_AND_CLEAN" };
+        return { resolved: 0, failed: 0, skipped: true, reason: "FISCAL_AUDIT_NOT_COMPLETE_CLEAN_AND_NONEMPTY" };
     }
 
     const response = await dalQuery(OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO)
@@ -993,8 +993,9 @@ async function _resolveVerifiedFiscalChainAlerts(chainResult, traceId) {
 // CRON 6: systemHealthCheck - 0 7 * * *
 // =============================================================================
 /**
-* CRON-14: eliminada inserción en COLLECTIONS.ALERTAS_OPERATIVAS.
-* Solo log de issues.
+* CRON-14: no usa colecciones legacy de alertas.
+* Registra issues y resuelve alertas fiscales historicas solo tras una
+* auditoria completa, limpia y con al menos un movimiento genuino verificado.
 */
 export async function systemHealthCheck() {
 const traceId = makeTraceId("cron-health");
