@@ -105,16 +105,17 @@ La reserva fue cancelada inmediatamente, por lo que no debe quedar ocupando el s
 
 No existe evidencia de un sandbox PSP configurado en este sitio. La prueba nativa de pedido de Wix no está disponible para Wix Bookings; Wix documenta que el test order es para Wix Stores / Wix Restaurants. La modalidad de pago manual/offline evita un cargo, pero no simula una transacción de pasarela.
 
-La simulación de éxito, rechazo, pendiente y reintento de PSP debe implementarse como adaptador mock de backend QA, sin llamar a Wix Payments ni crear transacciones reales. El simulador debe:
-- estar habilitado únicamente para el Site ID QA autorizado;
-- generar IDs y trazas marcados como sintéticos;
-- no emitir recibos fiscales, facturas ni remisiones AEAT;
-- no insertar en ledgers fiscales/contables ni cambiar stock;
-- no permitir que el frontend establezca por sí mismo un estado `PAID`;
-- probar webhooks mediante fixtures firmados/mocks, sin simular una firma real del proveedor;
-- tener un flag independiente y fail-closed por defecto.
+Se ha añadido `src/backend/tests/fixtures/qaPaymentGateway.mock.mjs` y su suite `src/backend/tests/qa.payment-gateway.mock.test.mjs`. Es un doble PSP en memoria, exclusivamente bajo `src/backend/tests/`, sin cliente HTTP, secretos, Wix SDK, CMS, webhooks, ledgers ni stock. Simula:
+- autorización APPROVED → AUTHORIZED;
+- PENDING, DECLINED y TIMEOUT;
+- captura condicionada a autorización;
+- reembolsos parciales y totales limitados al importe capturado;
+- idempotencia y rechazo de reutilización conflictiva de claves;
+- validación de importe, precisión, moneda EUR, entorno QA, flag habilitado y coincidencia del identificador de sitio.
 
-Hasta que ese adaptador y sus pruebas estén integrados, usar únicamente mocks offline o pagos manuales sin marcar como transacción PSP.
+El simulador **no está conectado al runtime del sitio ni a la UI** y no produce un estado Wix `PAID`. Es una herramienta de pruebas offline; no es un sandbox PSP ni una transacción de prueba de Wix Payments. La suite se ha añadido al gate Layer 1 y al manifest QA. Su resultado queda pendiente de CI.
+
+No se ha habilitado ningún flag de pagos en el backend productivo. Los pagos fiscales y contables siguen fail-closed. Para probar el flujo de webhook y ledger, se mantienen las suites offline existentes con payloads Wix oficiales simulados; no se ejecutan contra CMS live.
 
 ## 7. Automatizaciones y canales externos
 
@@ -203,7 +204,9 @@ Antes de cualquier despliegue real:
 | Bookings Writer V2 create/confirm/cancel con cliente sintético | Verificado por respuestas API; reserva cancelada |
 | Proyección automática CitasF2 para el booking de prueba | No verificada; query devolvió 0 filas |
 | Cliente sintético como contacto CRM persistido | Pendiente de comprobar |
-| Simulador PSP backend | Pendiente de implementación; solo pago OFFLINE sin cargo probado |
+| Simulador PSP offline en memoria | Implementado en tests; pendiente de CI |
+| Simulador PSP accesible desde runtime/UI | No implementado (intencional: no existe sandbox PSP acreditado) |
+| Pago OFFLINE Bookings sin cargo | Verificado en prueba runtime; no es pago PSP |
 | Comunicación a gestoría | Bloqueada por flag; no enviada |
 | 18 automatizaciones modificables | INACTIVE, verificado por read-back |
 | 10 automatizaciones bloqueadas | ACTIVE; triggers excluidos de QA |
@@ -211,4 +214,4 @@ Antes de cualquier despliegue real:
 | E2E completo en navegador | Pendiente |
 | Restauración preproducción | Documentada, no ejecutada |
 
-**Criterio:** este documento registra una adaptación parcial de permisos Wix y las tareas de aislamiento pendientes. No certifica el sitio como entorno QA completo ni autoriza un despliegue real.
+**Criterio:** el sitio dispone de aislamiento parcial de automatizaciones, permisos CMS ajustados y una prueba nativa de Bookings cancelada. El simulador PSP es offline y aún no tiene CI acreditado. La ausencia de proyección CitasF2, los diez flujos Wix bloqueados y la falta de un sink de gestoría impiden certificar el sitio como entorno QA completo. No autoriza un despliegue real.
