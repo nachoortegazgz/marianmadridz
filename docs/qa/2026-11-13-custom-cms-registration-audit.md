@@ -29,6 +29,13 @@ Wix devuelve 44 colecciones: 15 `NATIVE` y 29 `WIX_APP`. Las colecciones `WIX_AP
 
 Los permisos de colección devueltos por Data Collections V2 son `ADMIN` para insert/update/remove/read en las 15 colecciones. Esto no sustituye la auditoría separada de permisos efectivos de Content Manager (issue #261).
 
+### Discrepancia de recuentos entre cortes
+
+El recuento actual se repitió con dos métodos REST independientes (`Count Data Items` y `Query Data Items`, ambos con `consistentRead=true`). Ambos devuelven cero para `ControlOperativo`, `MovimientosCaja` y `LibroAsientosContablesDetalle`.
+
+Esto contradice el informe live del 2026-11-12 (`docs/qa/2026-11-12-live-cms-field-completeness.md`), que había devuelto respectivamente 11, 10 y 1 filas para el mismo Site ID. No se puede concluir que esos registros hayan sido eliminados, ni que la lectura anterior fuese incorrecta. Queda abierta una discrepancia de procedencia/identidad del conjunto de datos: hay que comparar IDs internos de colección, sitio/contexto de autorización, revisiones y el método exacto de lectura usado en ambos cortes. Por el principio append-only, no se ejecuta ninguna restauración, recreación o escritura compensatoria hasta reconciliar esta discrepancia.
+
+
 ## 2. Reservas — incidencia P1
 
 Lectura paginada de Bookings Reader V2: 346 reservas (73 CONFIRMED, 255 CANCELED, 18 CREATED). `CitasF2` contiene cero filas.
