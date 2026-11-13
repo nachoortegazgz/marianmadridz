@@ -1334,3 +1334,14 @@ La rama `fix/caja-actual-last-operation-projection` adapta parcialmente los fluj
 - El cierre Z manual resuelve y guarda `closedBy` desde backend.
 
 **No equivale a implementación completa:** el esquema CMS no persiste aún `lastMovementId`/`lastOperation`; la referencia se devuelve en lectura. No hay WebMethod de apertura ni origen reconciliado para saldo inicial. `lineItems` y pagos mixtos siguen sin contrato. No se han activado escritores ni alterado CMS/live.
+
+
+## Addendum — ventana temporal de edición/borrado append-only (2026-11-14)
+
+La rama `chore/temporary-append-only-mutation-window` incorpora una excepción temporal de desarrollo para permitir update/remove individual en los ledgers y snapshots append-only identificados por el repositorio: `MovimientosCaja`, `LibroAsientosContablesDetalle`, `RegistrosHorariosStaff`, `MovimientosInventario`, `HistoricoCierresZ`, `PaquetesGestoria` y `ControlOperativo/WEBHOOK_EVENT`.
+
+La SSOT de esta ventana es `APPEND_ONLY_MUTATION_WINDOW` en `src/backend/internalConfig.js`. Los hooks `data.js` y la política de escritura `dataAccessPolicy.js` consultan la misma decisión. La validación de nuevas inserciones permanece activa. No se habilitan operaciones bulk. Las reglas de autorización y permisos CMS continúan aplicándose independientemente de los hooks.
+
+**Estado:** habilitada solo en la rama de trabajo; no publicada en Wix ni aplicada a permisos o datos live. La excepción no es una dispensa legal y no debe emplearse para alterar o borrar registros reales sujetos a obligaciones de conservación.
+
+**Gate de despliegue:** antes de cualquier publicación productiva hay que restaurar `APPEND_ONLY_MUTATION_WINDOW.ENABLED=false`, quitar los ledgers de las allowlists de update/remove, recuperar las pruebas de bloqueo, ejecutar CI y validar el bloqueo efectivo en Wix Local Editor. No considerar esta rama apta para producción mientras la ventana esté abierta.
