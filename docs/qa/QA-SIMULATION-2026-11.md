@@ -35,7 +35,7 @@ This pack makes the QA fixtures repeatable and traceable. The machine-readable s
 | Staff identity, authorization and signed timeclock | `site.flows.e2e.test.mjs` | Mock covered |
 | Cash transaction, close Z and hash chain | `site.flows.e2e.test.mjs` | Mock covered with mock signer only |\n| Refund / service refund / reimbursement, negative accounting sign, cash projection replay and chain integrity | `site.flows.e2e.test.mjs` (`FLOW-CAJA-07`) | Mock covered for `REEMBOLSO`, `DEVOLUCION`, `DEVOLUCION_SERVICIO`; signer remains mock-only |\n| FACSIMIL series, chained digest, signature-shaped invalid placeholder and tamper detection | `fiscalFacsimile.test.mjs` | Isolated helper mock covered; no CMS writes, real signer, QR or AEAT path |
 | Order total resolution | `orderLedgerAmount.test.mjs` | Mock/unit covered |
-| Inventory sale/refund/idempotency/lock release | `inventory.movement.flow.test.mjs`, `inventory.lock.release.test.mjs` | Offline flow covered; Wix Stores reconciliation still needs integration validation |
+| Wix Stores ORDER_CREATED + order reconciliation (Bookings/Stores/mixed) | `events.native-booking-sync.test.mjs`, `crons.jobsConfigParity.test.mjs` | Mock covered for idempotency markers and no custom stock writes; no product checkout or native stock decrement/refund |\n| Product checkout, PSP payment, stock decrement and refund/restock | No current automated suite | `MANUAL_QA_REQUIRED`; isolated Wix QA site and PSP sandbox required |
 | Wix Automations delivery, public forms/CRM, rescheduling, Gift Cards | No evidenced E2E suite | Manual/integration work remains |
 
 The manifest test `qa.simulation-manifest.test.mjs` checks stable IDs, unique traces, existence of referenced tests, synthetic fixtures and explicit limitation labels. It is included in Layer 1 and the canonical `npm test` discovery.
@@ -54,7 +54,7 @@ All suites use `src/backend/tests/loader.mjs`; they do not call Wix services. A 
 
 1. Add an integrated `processDualBooking` failure test: F1 created, F2 Writer V2 fails, native F1 cancellation attempted, both CitasF2 projections reconciled, locks released, idempotency state finalized; assert original error and compensation errors separately.
 2. Add end-to-end reschedule semantics, including dual pair consistency and old-slot release.
-3. Extend the inventory flow tests to Wix Stores order/refund event payloads and reconciliation queue replay; stock movement, idempotency, refund restock, negative-stock guard and lock release are now covered offline.
+3. Implement and execute a dedicated isolated Wix Stores checkout/inventory/refund suite. Current `npm test` does not include the previously referenced `inventory.movement.flow.test.mjs` or `inventory.lock.release.test.mjs`; therefore sale/refund stock deltas, negative-stock guard and inventory lock release are NOT evidenced by the current CI run. The existing tests cover only ORDER_CREATED idempotency markers and the rule that Wix owns native stock.
 4. Payment webhook is now covered offline with an official Velo event-shaped fixture. Refund-state behavior and a real Wix Payments sandbox transaction remain pending; never invoke a live payment provider from automated CI.
 5. Inventory Wix Automations and test recipient/trigger/template configuration in isolated QA without sending to real customers.
 6. Test form-to-CRM routing and marketing opt-in/withdrawal separately; use only reserved `.example.test` addresses.
@@ -270,3 +270,13 @@ Verificación posterior con `consistentRead=true`:
 - No se tocaron movimientos ni ledgers.
 
 **No corregidos por inmutabilidad:** los dos `RegistrosHorariosStaff.recordedAt` y el `MovimientosInventario.recordTimestamp` siguen serializados como cadenas ISO pese a que el esquema declara DATETIME. Los fichajes además carecen de HMAC de 64 hex; la validación backend los rechaza y la colección es append-only. No se sobrescriben ni se fabrican firmas retrospectivas. Requieren rectificación firmada autorizada.
+
+
+## 2026-11-13 — cobertura específica de tienda online y reservas PSP
+
+La revisión de los archivos realmente incluidos en `src/backend/tests/run-all.mjs` detectó que las referencias históricas a `inventory.movement.flow.test.mjs` y `inventory.lock.release.test.mjs` no corresponden a archivos presentes en la rama `main` ni a suites ejecutadas por CI. Se corrige la matriz para no atribuir cobertura inexistente.
+
+- **Mock cubierto:** evento `ORDER_CREATED` idempotente y reconciliación de pedidos con catálogos Bookings, Stores y mixtos; referencias incompletas van a revisión; Wix conserva la autoridad de inventario; no se escriben movimientos de stock propios.
+- **Pendiente manual:** compra real de producto físico, decremento nativo de inventario, cancelación/refund y reposición.
+- **Pendiente manual:** reserva online con checkout Cart V2 y resultados PSP de sandbox en runtime Wix.
+- Los dos escenarios manuales quedan explícitamente en `qa-simulation-scenarios.json`, sin fingir que los mocks ejecutan checkout o PSP.
