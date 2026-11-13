@@ -3,7 +3,7 @@
 **Fecha:** 2026-11-13  
 **Sitio:** Marian Madrid — `188bed94-177c-4bc9-a9f0-35080d874f3e`  
 **Colección:** `CitasF2`  
-**Revisión CMS:** 33 → 37  
+**Revisión CMS:** 33 → 41  
 **PR de código:** [#330](https://github.com/nachoortegazgz/marianmadridz/pull/330)  
 **Estado de código:** pendiente de CI y revisión; no publicado.
 
