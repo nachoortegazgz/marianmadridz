@@ -485,6 +485,81 @@
         "no external transport or secret lookup is invoked"
       ],
       "limitation": "The current repository has no configured external AI provider adapter. This test verifies the fail-closed contract; it does not simulate a real provider response or an agent automation."
+    },
+    {
+      "scenarioId": "QA-STORE-ORDER-MARKER-001",
+      "name": "Evento ORDER_CREATED de Wix Stores y conciliación de catálogos",
+      "status": "MOCK_COVERED",
+      "testFiles": [
+        "src/backend/tests/events.native-booking-sync.test.mjs",
+        "src/backend/tests/crons.jobsConfigParity.test.mjs"
+      ],
+      "traceId": "trace-qa-store-order-marker-001",
+      "fixture": {
+        "storesCatalogAppId": "215238eb-22a5-4c36-9e7b-e7c08025e04e",
+        "orderCompositions": [
+          "BOOKINGS_ONLY",
+          "STORES_ONLY",
+          "MIXED"
+        ],
+        "incompleteCatalogReference": true,
+        "paymentExecution": false,
+        "customStockWrites": false,
+        "inventoryAuthority": "WIX_CATALOG_OWNER"
+      },
+      "assertions": [
+        "ORDER_CREATED event persists one idempotency marker",
+        "duplicate ORDER_CREATED delivery is ignored",
+        "native order reconciler covers Bookings, Stores and mixed catalog references",
+        "incomplete catalog references are sent to review instead of inventing a product identity",
+        "custom MovimientosInventario and InventarioStockVenta remain untouched"
+      ],
+      "limitation": "Only event marker and scheduled order reconciliation are tested with mocks. No product checkout, PSP payment, native stock decrement or refund/restock is executed."
+    },
+    {
+      "scenarioId": "QA-STORE-CHECKOUT-INVENTORY-001",
+      "name": "Compra de producto físico, pago y stock nativo Wix Stores",
+      "status": "MANUAL_QA_REQUIRED",
+      "testFiles": [],
+      "traceId": "trace-qa-store-checkout-inventory-001",
+      "fixture": {
+        "productType": "PHYSICAL",
+        "currency": "EUR",
+        "paymentExecution": false,
+        "targetEnvironment": "ISOLATED_WIX_QA_SITE",
+        "inventoryAuthority": "WIX_STORES"
+      },
+      "assertions": [
+        "physical product checkout completes with a PSP sandbox method",
+        "one native order is created and paid",
+        "native Wix Stores inventory decrements exactly once",
+        "cancel/refund restores stock exactly once",
+        "webhook and order reconciliation remain idempotent",
+        "no custom inventory or fiscal movement is duplicated"
+      ],
+      "limitation": "No isolated Wix QA site or verified PSP sandbox is available. The Published site must not be used for synthetic product purchases or refunds."
+    },
+    {
+      "scenarioId": "QA-BOOKING-ONLINE-PSP-E2E-001",
+      "name": "Reserva online con checkout y resultado PSP real de sandbox",
+      "status": "MANUAL_QA_REQUIRED",
+      "testFiles": [],
+      "traceId": "trace-qa-booking-online-psp-e2e-001",
+      "fixture": {
+        "currency": "EUR",
+        "paymentExecution": false,
+        "targetEnvironment": "ISOLATED_WIX_QA_SITE",
+        "provider": "WIX_PAYMENTS_SANDBOX"
+      },
+      "assertions": [
+        "online booking is created and projected once",
+        "Cart V2 calculates the authoritative amount",
+        "sandbox PSP success, failure and timeout outcomes are handled",
+        "official payment webhook updates payment without incorrectly confirming booking state",
+        "one fiscal ledger movement is appended for a confirmed payment",
+        "duplicate webhook delivery creates no second ledger movement"
+      ],
+      "limitation": "Current tests mock the Wix event envelope and CMS only. No isolated Wix runtime or PSP sandbox transaction has been executed."
     }
   ]
 }
