@@ -3,7 +3,7 @@
 **Fecha:** 2026-11-13  
 **Repositorio:** `nachoortegazgz/marianmadridz`  
 **Baseline revisada:** `fc9cb29c5a3fd74a6dae8eff3e2f5e4da2fbb499`  
-**Main actualizado al checkpoint documental:** `3d8408dabefe2f0154b0196ca54fd53f76c9f1eb` (incluye PR #316; PR #315 permanece como commit de la correccion fiscal)  
+**Main actual:** `2482c76fd676505a3d6bdbe4400ca2114c532071` (merge PR #317; PR #317 es exclusivamente documental)  
 **Sitio Wix:** `188bed94-177c-4bc9-a9f0-35080d874f3e`  
 **Tipo de acceso:** lectura real de Wix CMS y Bookings Reader V2; sin escritura ni ejecucion de Velo.
 
@@ -87,8 +87,8 @@ Se amplian las pruebas de `crons.jobsConfigParity.test.mjs` y `site.flows.offlin
 
 - PR #311 integra el ciclo de vida trazable de la alerta; PR #313 añade la verificacion del contenido SHA-256 y las guardas fail-closed; PR #315 alinea el builder EventLog con el verificador y prueba el contrato real online; PR #316 actualiza la documentacion QA consolidada.
 - El merge sincroniza el codigo con Wix Editor conforme al procedimiento operativo declarado por el propietario.
-- La publicacion Wix sigue siendo manual. No se ha publicado ni ejecutado codigo en produccion.
-- Tras publicar, `systemHealthCheck` ejecutara la resolucion en su siguiente ejecucion programada (07:00 Europe/Madrid), siempre que la auditoria completa siga limpia.
+- El propietario comunicó la publicación en Wix el 2026-11-13. Wix confirma el estado Published y metadata actualizada a las 15:43; no hay evidencia del SHA exacto de Velo que está ejecutándose.
+- Tras publicar, `systemHealthCheck` solo resolverá la alerta si su auditoría completa del ledger devuelve SUCCESS. La expresión `0 7 * * *` de `jobs.config` se interpreta en UTC según la documentación oficial de Wix (08:00 Europe/Madrid en invierno), no debe documentarse como 07:00 hora local.
 - El cron de proyeccion de reservas continuara ejecutandose a los minutos 15 y 45. Su resultado debe verificarse mediante logs Velo y una nueva lectura de CitasF2/ControlOperativo.
 - Los 17 casos sin recurso resoluble y el caso PAID permanecen sujetos a revision; no se completan mediante inferencias.
 
@@ -106,5 +106,20 @@ El hito de repositorio queda completado cuando el PR este integrado y CI verde. 
 
 - [Wix Bookings Reader V2 — Query Extended Bookings](https://dev.wix.com/docs/api-reference/business-solutions/bookings/bookings/bookings-reader-v2/query-extended-bookings)
 - [Wix Bookings Reader V2 — Supported Filters](https://dev.wix.com/docs/api-reference/business-solutions/bookings/bookings/bookings-reader-v2/supported-filters)
-- [Cron y reconciliador en el repositorio](https://github.com/nachoortegazgz/marianmadridz/blob/3d8408dabefe2f0154b0196ca54fd53f76c9f1eb/src/backend/crons.js)
-- [Configuracion de jobs](https://github.com/nachoortegazgz/marianmadridz/blob/f07d6cb0bf1e5152cb4bc1d4e442713f1c920691/src/backend/jobs.config)
+- [Cron y reconciliador en el repositorio](https://github.com/nachoortegazgz/marianmadridz/blob/2482c76fd676505a3d6bdbe4400ca2114c532071/src/backend/crons.js)
+- [Configuracion de jobs](https://github.com/nachoortegazgz/marianmadridz/blob/2482c76fd676505a3d6bdbe4400ca2114c532071/src/backend/jobs.config)
+
+
+## 6. Verificación posterior a la publicación — 2026-11-13 16:47:36 Europe/Madrid
+
+- PR #317 integrado en main: merge commit `2482c76fd676505a3d6bdbe4400ca2114c532071`. Su diff es documental; no modifica backend, eventos ni configuración de jobs.
+- Wix GetSiteContext: Published, Velo enabled; metadata actualizada 15:43.
+- CMS read-only con `consistentRead=true`: `CitasF2=0`, `ControlOperativo=11`, `MovimientosCaja=10`.
+- La alerta `FISCAL_CHAIN_CORRUPTED` continúa `OPEN/CRITICAL`.
+- No hay marcadores `WEBHOOK_EVENT`; no se observan alertas de revisión creadas por el reconciliador.
+- El código fuente de main contiene el reconciliador exportado y su programación `15,45 * * * *`. La programación Wix usa UTC según documentación oficial; el primer slot posterior a la metadata de publicación fue 16:15 Europe/Madrid. La lectura de 16:47 no muestra el efecto esperado.
+- No se ejecutó el cron manualmente, no se invocó Velo, no se insertaron proyecciones ni alertas y no se modificaron reservas, pagos, caja o ledgers.
+
+**Estado:** publicación comunicada y estado Published verificado; ejecución efectiva del job y SHA Velo publicado pendientes de evidencia runtime.
+
+**Referencia oficial de programación:** [Wix — Schedule Recurring Jobs](https://dev.wix.com/docs/develop-websites/articles/workspace-tools/developer-tools/recurring-jobs/schedule-recurring-jobs), que indica que las expresiones cron de `jobs.config` se interpretan en UTC y que los cambios de programación requieren publicar el sitio.
