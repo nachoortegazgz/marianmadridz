@@ -621,8 +621,9 @@ test("EVENT-PAYMENT-09 official Wix eCommerce paid event appends WIX_PAYMENTS le
   assert.equal(citas.length, 2);
   for (const row of citas) {
     assert.equal(row.paymentStatus, IC.PAYMENT_STATUS.PAID);
-    assert.equal(row.meta.paymentStatus, IC.PAYMENT_STATUS.PAID);
-    assert.equal(row.meta.orderId, orderId);
+    assert.equal(row.orderId, orderId);
+    assert.equal(Object.hasOwn(row.meta, "paymentStatus"), false);
+    assert.equal(Object.hasOwn(row.meta, "orderId"), false);
     assert.equal(row.bookingStatus, "PENDING", "payment must not approve/confirm the appointment");
     assert.equal(row.pairToken, PAIR_TOKEN);
   }
