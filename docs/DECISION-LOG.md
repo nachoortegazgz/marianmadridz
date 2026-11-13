@@ -226,3 +226,16 @@ La decisión TEC-032 amplía el alcance de la proyección sin convertirla en led
 - `paymentMethod` es actualmente singular en `MovimientosCaja`. No se inventa un contrato para pagos mixtos: antes de aceptarlos debe definirse cómo se representa el desglose y cómo se reconcilia exactamente con el total y con los movimientos fuente.
 
 Esta decisión es contractual/documental. No acredita que el backend o el esquema CMS ya estén adaptados. La implementación requiere auditoría de consumidores, contrato de proyección, migración compatible, idempotencia y pruebas de regresión/concurrencia.
+
+### TEC-032 — progreso de alineación backend/frontend (2026-11-13)
+
+**Implementado en esta rama, pendiente de CI y revisión:**
+- `registerManualTransaction` exige canal explícito para operaciones manuales; solo infiere `ONLINE` para `VENTA_ONLINE` o `WIX_PAYMENTS`. En `PRESENCIAL`, `staffResourceId` y la clave de rate limit se derivan de `getMyStaffContext()`; el `resourceId` del navegador se ignora.
+- `_updateCajaActual()` proyecta `EFECTIVO`, `TARJETA` y `BIZUM` presenciales en una sesión ya abierta. El efectivo modifica `cashAmount`; tarjeta y Bizum actualizan `cardAmount` y `voucherAmount`. `netAmount` continúa representando exclusivamente efectivo físico.
+- La proyección no crea ni abre un singleton automáticamente. Caja inexistente, cerrada, simulada o sin `openedAt` devuelve proyección pendiente y encola reconciliación; no altera el saldo.
+- `getCashierState()` calcula importes y número de movimientos por medio de pago desde `MovimientosCaja` dentro de la ventana de sesión, y entrega la última operación con ID fuente, actor resuelto, instante, importes, hash anterior/hash, secuencia, firma y traceId. El HTML de ZONA MARIAN presenta esos datos y separa el efectivo físico de los cobros de sesión.
+- El cierre Z manual persiste `closedBy` en `CajaActual` a partir del contexto autenticado del backend. No se admite un actor enviado por el frontend.
+
+**Pendiente / no implementado:** `CajaActual` aún no persiste un campo dedicado `lastMovementId` ni un snapshot completo de última operación; el detalle y la referencia se reconstruyen en el DTO de lectura desde el ledger. Los contadores por método también se calculan desde `MovimientosCaja`. No existe todavía WebMethod seguro de apertura que establezca `openedBy/openedAt` ni un procedimiento de saldo inicial reconciliado. `lineItems` sigue sin contrato interno; conceptos/unidades no se exponen. Pagos mixtos siguen bloqueados. No se ha migrado el esquema CMS.
+
+**Gates intactos:** `LEDGER_WRITES_ENABLED=false`, `ACCOUNTING_LEDGER_WRITES_ENABLED=false`; la caja `SIMULACION` permanece bloqueada. Esta rama no escribe CMS live ni publica Wix.
