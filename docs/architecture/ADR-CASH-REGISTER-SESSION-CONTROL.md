@@ -238,3 +238,22 @@ El resumen de última operación debe incluir, cuando conste en el movimiento fu
 El propietario acepta la recomendación de conservar cada ticket en `MovimientosCaja` y mantener en `CajaActual` el resumen de la última operación, los acumulados de la sesión y las referencias a los movimientos fuente. Este addendum prevalece sobre cualquier frase anterior de este ADR que excluya por completo tarjeta/Bizum de `CajaActual`; la exclusión se aplica únicamente al saldo físico del cajón.
 
 Estado de este addendum: decisión de negocio aprobada; implementación pendiente. No se ha modificado el CMS, el código de producción ni los registros históricos.
+
+## 12. Progreso de implementación TEC-032 — 2026-11-13
+
+La rama `fix/caja-actual-last-operation-projection` incorpora una primera alineación ejecutable de backend y superficie ZONA MARIAN:
+
+1. El escritor manual requiere `channelType` explícito, salvo la inferencia controlada `ONLINE` para `VENTA_ONLINE`/`WIX_PAYMENTS`. Para `PRESENCIAL`, el actor se obtiene con `getMyStaffContext()`; el `resourceId` recibido del navegador no se usa como identidad ni para rate limiting.
+2. El proyector acepta `EFECTIVO`, `TARJETA` y `BIZUM` solo en `PRESENCIAL` y con sesión existente `ABIERTA` y `openedAt` válido. No crea ni reabre `CajaActual`. Si la sesión no existe/no está abierta/es simulada, la proyección queda pendiente y genera una compensación para reconciliación.
+3. `cashAmount` y `netAmount` conservan el efectivo físico; `cardAmount` y `voucherAmount` acumulan tarjeta y Bizum respectivamente. Los reembolsos mantienen el signo del `accountingAmount` del movimiento fuente. Los pagos online/transferencias no incrementan la sesión física.
+4. `getCashierState()` devuelve un resumen de sesión calculado desde `MovimientosCaja` en el intervalo `openedAt`–`closedAt`, con número e importe neto por medio, más `lastOperation` y `sourceMovementIds`. El actor visible se resuelve desde `staffResourceId` mediante Bookings Staff API. Huellas y timestamps se leen del movimiento original; no se generan valores retrospectivos.
+5. El cierre Z manual guarda `closedBy` en `CajaActual` desde la identidad backend. El panel `#htmlAdmin.txt` representa efectivo físico, acumulados de efectivo/tarjeta/Bizum, responsables/horas de sesión y huellas de la última operación.
+
+### 12.1 Límites aún abiertos
+
+- El esquema CMS no contiene un campo dedicado para `lastMovementId` ni un objeto `lastOperation`. Por ahora la referencia/detalle se reconstruye en lectura; no se afirma que estén persistidos en `CajaActual`. Los acumulados por método existen en los campos actuales, pero los contadores por método se derivan del ledger.
+- No se ha implementado apertura de sesión. `openedBy/openedAt` deben establecerse mediante un WebMethod con permiso específico, lock, idempotencia y saldo inicial reconciliado; no se usa la fila `SIMULACION`.
+- `lineItems` no tiene contrato interno validado y no se expone como conceptos/unidades verificados. `paymentMethod` sigue siendo singular; pagos mixtos no admitidos.
+- No se han cambiado permisos CMS ni esquema CMS. Los escritores fiscales/contables siguen deshabilitados. No se ejecutó Wix Local Editor ni E2E runtime.
+
+Esta fase no habilita caja real ni despliegue. Los cambios requieren CI y revisión antes de considerar el código integrable.
