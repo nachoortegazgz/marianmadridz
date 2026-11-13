@@ -321,7 +321,9 @@
         }
         appendDetailRow(cashLastOperationBody, 'Operación', op.movementType);
         appendDetailRow(cashLastOperationBody, 'Concepto', op.description);
-        appendDetailRow(cashLastOperationBody, 'Operador', op.actor?.displayName || op.actor?.resourceId);
+        appendDetailRow(cashLastOperationBody, 'Operador', op.actor?.verificationStatus === 'VERIFIED_BACKEND'
+          ? (op.actor.displayName || op.actor.resourceId)
+          : 'Autoría no verificada en el registro fuente');
         appendDetailRow(cashLastOperationBody, 'Fecha y hora', formatInstant(op.operationTimestamp));
         appendDetailRow(cashLastOperationBody, 'Importe neto', money(op.amount));
         appendDetailRow(cashLastOperationBody, 'Medio de pago', op.paymentMethod);
