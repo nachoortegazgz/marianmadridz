@@ -606,6 +606,49 @@
         "projection remains in review and no CitasF2 row is created"
       ],
       "limitation": "The scenario is offline mock coverage. It does not assign a professional to existing live bookings or validate a live Wix booking flow."
+    },
+    {
+      "scenarioId": "QA-LIVE-PAID-ORDER-LEDGER-RECONCILIATION-001",
+      "name": "Conciliación controlada de pedidos Wix PAID y proyección fiscal",
+      "status": "MANUAL_QA_REQUIRED",
+      "testFiles": [],
+      "traceId": "trace-qa-live-paid-order-ledger-reconciliation-001",
+      "fixture": {
+        "observedPaidOrders": 4,
+        "approvedPaymentTransactions": 4,
+        "bookingsLinked": 3,
+        "canceledPaidBookings": 2,
+        "cashLedgerRows": 0,
+        "productionWrites": false
+      },
+      "assertions": [
+        "confirm Wix order payment method and transaction status from native transaction records",
+        "resolve every booking catalog reference to a native booking and preserve its current status",
+        "review CANCELED plus PAID bookings against refund transaction history and cancellation policy",
+        "classify incomplete catalog references as manual review without inventing appId or catalogItemId",
+        "do not create fiscal movements, accounting entries, refunds or booking status changes until approved reconciliation evidence exists",
+        "verify ledger writer remains fail-closed while fiscal and PGC approvals are outstanding"
+      ],
+      "limitation": "Live read-only evidence only. No production booking, payment, refund, cash movement or accounting entry is created or changed."
+    },
+    {
+      "scenarioId": "QA-ENV-AUTOMATION-ISOLATION-001",
+      "name": "Aislamiento del sitio QA frente a automatizaciones preinstaladas bloqueadas",
+      "status": "MANUAL_QA_REQUIRED",
+      "testFiles": [],
+      "traceId": "trace-qa-env-automation-isolation-001",
+      "fixture": {
+        "activeLockedAutomations": 13,
+        "automationMutations": false,
+        "testAutomationInvoked": false
+      },
+      "assertions": [
+        "enumerate all active automations and read settings.readonly and settings.disableStatusChange",
+        "do not bypass locks or invoke Test Automation for preinstalled platform automations",
+        "block E2E scenarios with external side effects while any relevant automation remains active",
+        "require Wix-supported isolation or owner-side neutralization before enabling side-effect tests"
+      ],
+      "limitation": "The current QA copy remains partially isolated. No external-effect test is authorized or considered validated."
     }
   ]
 }
