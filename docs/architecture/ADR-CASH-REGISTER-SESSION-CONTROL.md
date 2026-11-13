@@ -257,3 +257,5 @@ La rama `fix/caja-actual-last-operation-projection` incorpora una primera alinea
 - No se han cambiado permisos CMS ni esquema CMS. Los escritores fiscales/contables siguen deshabilitados. No se ejecutó Wix Local Editor ni E2E runtime.
 
 Esta fase no habilita caja real ni despliegue. Los cambios requieren CI y revisión antes de considerar el código integrable.
+
+**Aclaración de persistencia y precisión:** los IDs de los movimientos proyectados se conservan en `CajaActual.sequenceCounters.appliedMovementIds` como conjunto de deduplicación/referencias; no se ha añadido una columna `lastMovementId`. `staffResourceId`, `traceId` y `lastMovementAt` se actualizan con la última operación. El DTO `lastOperation` completa hash, firma, secuencia y referencias leyendo el movimiento fuente. El proyector exige `recordTimestamp` válido y no sustituye una marca temporal ausente por la hora de ejecución. `salesCount` solo aumenta para `MOVEMENT_TYPE.VENTA`; el número por medio se obtiene del ledger.
