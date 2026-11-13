@@ -22,6 +22,9 @@ const suites = [
   'site.flows.offline.test.mjs',
   'orderLedgerAmount.test.mjs',
   'events.booking-canceled.integrity.test.mjs',
+  'events.native-booking-sync.test.mjs',
+  'events.order-id-validation.contract.test.mjs',
+  'operational-writers.fail-closed.contract.test.mjs',
   'unit.ssot.v5011.test.mjs',
 ];
 
