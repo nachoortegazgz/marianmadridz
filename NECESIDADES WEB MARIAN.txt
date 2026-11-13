@@ -1,6 +1,6 @@
 ## Aviso de vigencia — 2026-11-11
 
-Este documento recoge necesidades y criterios de aceptación de negocio. Las etiquetas históricas "declarado", "implementado" o "verificado" no equivalen a evidencia vigente. Para saber qué existe realmente, qué está cubierto por mocks y qué requiere Wix Runtime, consultar [la referencia maestra QA](docs/qa/2026-11-11-qa-master-reference.md), el estado técnico y la evidencia de cada prueba. El sitio Wix está actualmente **Published** y no debe tratarse como entorno QA aislado. No ejecutar pruebas que generen reservas, pagos, comunicaciones o datos de cliente sobre ese sitio.
+Este documento recoge necesidades y criterios de aceptación de negocio. Las etiquetas históricas "declarado", "implementado" o "verificado" no equivalen a evidencia vigente. Para saber qué existe realmente, qué está cubierto por mocks y qué requiere Wix Runtime, consultar [ESTADO_ACTUAL_PROYECTO.md](ESTADO_ACTUAL_PROYECTO.md) y la evidencia de cada prueba. El sitio Wix está actualmente **Published** y no debe tratarse como entorno QA aislado. No ejecutar pruebas que generen reservas, pagos, comunicaciones o datos de cliente sobre ese sitio.
 
 ---
 
