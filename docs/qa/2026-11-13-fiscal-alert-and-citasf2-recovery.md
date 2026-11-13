@@ -87,7 +87,7 @@ Se amplian las pruebas de `crons.jobsConfigParity.test.mjs` y `site.flows.offlin
 
 - PR #311 integra el ciclo de vida trazable de la alerta; PR #313 añade la verificacion del contenido SHA-256 y las guardas fail-closed; PR #315 alinea el builder EventLog con el verificador y prueba el contrato real online; PR #316 actualiza la documentacion QA consolidada.
 - El merge sincroniza el codigo con Wix Editor conforme al procedimiento operativo declarado por el propietario.
-- La publicacion Wix sigue siendo manual. No se ha publicado ni ejecutado codigo en produccion.
+- El propietario comunicó la publicación en Wix el 2026-11-13. Wix confirma el estado Published y metadata actualizada a las 15:43; no hay evidencia del SHA exacto de Velo que está ejecutándose.
 - Tras publicar, `systemHealthCheck` solo resolverá la alerta si su auditoría completa del ledger devuelve SUCCESS. La expresión `0 7 * * *` de `jobs.config` se interpreta en UTC según la documentación oficial de Wix (08:00 Europe/Madrid en invierno), no debe documentarse como 07:00 hora local.
 - El cron de proyeccion de reservas continuara ejecutandose a los minutos 15 y 45. Su resultado debe verificarse mediante logs Velo y una nueva lectura de CitasF2/ControlOperativo.
 - Los 17 casos sin recurso resoluble y el caso PAID permanecen sujetos a revision; no se completan mediante inferencias.
@@ -106,8 +106,8 @@ El hito de repositorio queda completado cuando el PR este integrado y CI verde. 
 
 - [Wix Bookings Reader V2 — Query Extended Bookings](https://dev.wix.com/docs/api-reference/business-solutions/bookings/bookings/bookings-reader-v2/query-extended-bookings)
 - [Wix Bookings Reader V2 — Supported Filters](https://dev.wix.com/docs/api-reference/business-solutions/bookings/bookings/bookings-reader-v2/supported-filters)
-- [Cron y reconciliador en el repositorio](https://github.com/nachoortegazgz/marianmadridz/blob/3d8408dabefe2f0154b0196ca54fd53f76c9f1eb/src/backend/crons.js)
-- [Configuracion de jobs](https://github.com/nachoortegazgz/marianmadridz/blob/f07d6cb0bf1e5152cb4bc1d4e442713f1c920691/src/backend/jobs.config)
+- [Cron y reconciliador en el repositorio](https://github.com/nachoortegazgz/marianmadridz/blob/2482c76fd676505a3d6bdbe4400ca2114c532071/src/backend/crons.js)
+- [Configuracion de jobs](https://github.com/nachoortegazgz/marianmadridz/blob/2482c76fd676505a3d6bdbe4400ca2114c532071/src/backend/jobs.config)
 
 
 ## 6. Verificación posterior a la publicación — 2026-11-13 16:47:36 Europe/Madrid
