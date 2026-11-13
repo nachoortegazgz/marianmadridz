@@ -1103,7 +1103,9 @@ async function _updateCajaActual(movement, traceId) {
             cashRegister[CAJA_KEYS.TOTAL] = _roundMoney(Number(cashRegister[CAJA_KEYS.CASH]) || 0);
             sequenceCounters.appliedMovementIds = [...appliedMovementIds, movementKey];
             cashRegister.sequenceCounters = sequenceCounters;
-            cashRegister[CAJA_KEYS.OPERATIONS] = Number(cashRegister[CAJA_KEYS.OPERATIONS] || 0) + 1;
+            if (_safeTrim(movement.movementType).toUpperCase() === MOVEMENT_TYPE.VENTA) {
+                cashRegister[CAJA_KEYS.OPERATIONS] = Number(cashRegister[CAJA_KEYS.OPERATIONS] || 0) + 1;
+            }
             if (movement.recordTimestamp) {
                 const movementTimestamp = new Date(movement.recordTimestamp);
                 if (Number.isNaN(movementTimestamp.getTime())) {
