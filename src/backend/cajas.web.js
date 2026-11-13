@@ -782,7 +782,9 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
             nifEmisor,
             schemaVersion: LEDGER_SCHEMA_VERSION,
             projectionStatus: "PROYECTADO",
-            recordSource: _safeTrim(inDto.recordSource) || "INTERNAL",
+            recordSource: channelType === CHANNEL_TYPE.PRESENCIAL
+                ? "MANUAL_PRESENCIAL_AUTHENTICATED"
+                : "INTERNAL",
             staffResourceId: resourceId,
             resourceId,
             linkedBookingIds: _linkedBookingValue(inDto.linkedBookingIds),
@@ -1323,15 +1325,20 @@ export const getCashierState = webMethod(Permissions.SiteMember, async (options 
         const sessionSummary = await _readCashierSessionSummary(cashRegister);
         const lastMovement = sessionSummary?.lastMovement || null;
         const lastActorId = _safeTrim(lastMovement?.staffResourceId);
+        const actorVerified = lastMovement?.recordSource === "MANUAL_PRESENCIAL_AUTHENTICATED";
         const [openedByName, closedByName, lastActorName] = await Promise.all([
             _resolveStaffDisplayName(cashRegister?.openedBy),
             _resolveStaffDisplayName(cashRegister?.closedBy),
-            _resolveStaffDisplayName(lastActorId),
+            actorVerified ? _resolveStaffDisplayName(lastActorId) : Promise.resolve(null),
         ]);
         const lastOperation = lastMovement ? {
             movementId: lastMovement._id,
             sourceMovementIds: [lastMovement._id],
-            actor: lastActorId ? { resourceId: lastActorId, displayName: lastActorName } : null,
+            actor: {
+                resourceId: lastActorId || null,
+                displayName: actorVerified ? lastActorName : null,
+                verificationStatus: actorVerified ? "VERIFIED_BACKEND" : "UNVERIFIED_SOURCE",
+            },
             operationTimestamp: lastMovement.recordTimestamp || null,
             operationDate: readOperationDate(lastMovement) || null,
             movementType: lastMovement.movementType || null,
