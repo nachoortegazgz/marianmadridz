@@ -111,9 +111,9 @@
         <div class="state-item"><span class="state-label">Jornada</span><span class="state-value" id="cashDiaKey">--</span></div>
       </div>
       <div class="state-grid" aria-label="Acumulados de cobros de la sesión">
-        <div class="state-item"><span class="state-label">Efectivo cobrado</span><span class="state-value" id="cashSessionCash">--</span><span class="state-label" id="cashSessionCashCount">-- tickets</span></div>
-        <div class="state-item"><span class="state-label">Tarjeta cobrada</span><span class="state-value" id="cashSessionCard">--</span><span class="state-label" id="cashSessionCardCount">-- tickets</span></div>
-        <div class="state-item"><span class="state-label">Bizum cobrado</span><span class="state-value" id="cashSessionBizum">--</span><span class="state-label" id="cashSessionBizumCount">-- tickets</span></div>
+        <div class="state-item"><span class="state-label">Neto efectivo</span><span class="state-value" id="cashSessionCash">--</span><span class="state-label" id="cashSessionCashCount">-- tickets</span></div>
+        <div class="state-item"><span class="state-label">Neto tarjeta</span><span class="state-value" id="cashSessionCard">--</span><span class="state-label" id="cashSessionCardCount">-- tickets</span></div>
+        <div class="state-item"><span class="state-label">Neto Bizum</span><span class="state-value" id="cashSessionBizum">--</span><span class="state-label" id="cashSessionBizumCount">-- tickets</span></div>
       </div>
       <div class="cash-detail" id="cashSessionMeta">
         <div class="cash-detail-title">Sesión de caja</div>
@@ -300,9 +300,9 @@
         cashSessionCash.textContent = money(cash.amount);
         cashSessionCard.textContent = money(card.amount);
         cashSessionBizum.textContent = money(bizum.amount);
-        cashSessionCashCount.textContent = String(Number(cash.ticketCount) || 0) + ' tickets';
-        cashSessionCardCount.textContent = String(Number(card.ticketCount) || 0) + ' tickets';
-        cashSessionBizumCount.textContent = String(Number(bizum.ticketCount) || 0) + ' tickets';
+        cashSessionCashCount.textContent = String(Number(cash.ticketCount) || 0) + ' movimientos';
+        cashSessionCardCount.textContent = String(Number(card.ticketCount) || 0) + ' movimientos';
+        cashSessionBizumCount.textContent = String(Number(bizum.ticketCount) || 0) + ' movimientos';
 
         cashSessionMetaBody.replaceChildren();
         appendDetailRow(cashSessionMetaBody, 'Estado de sesión', state.cashRegisterStatus);
