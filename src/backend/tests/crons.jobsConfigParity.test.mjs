@@ -14,6 +14,7 @@ Runs offline via tests/loader.mjs mocks. G10 ASCII strict.
 import test from 'node:test';
 import assert from 'node:assert';
 import { hashChain } from 'backend/securityEngine';
+import { buildEventLogFiscalChainPayload } from 'backend/fiscalHashPayload';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -58,6 +59,33 @@ async function makeFiscalHashMovement(overrides = {}) {
     ...overrides,
   };
 }
+
+async function makeEventLogFiscalHashMovement(overrides = {}) {
+  const previousRecordHash = '0'.repeat(64);
+  const recordTimestamp = new Date('2026-11-13T11:00:00.000Z');
+  const movement = {
+    _id: 'verified-eventlog-movement',
+    sequenceNumber: 1,
+    recordSource: 'INTERNAL',
+    eventType: 'VENTA_LINEA',
+    movementType: 'VENTA_ONLINE',
+    channelType: 'ONLINE',
+    paymentMethod: 'WIX_PAYMENTS',
+    previousRecordHash,
+    numSerieFactura: 'QA-EVENT-001',
+    fechaExpedicionFactura: '2026-11-13',
+    tipoFactura: 'F2',
+    nifEmisor: 'B12345678',
+    taxAmount: 2.1,
+    totalAmount: 12.1,
+    recordTimestamp,
+    ...overrides,
+  };
+  const payload = buildEventLogFiscalChainPayload(movement, recordTimestamp);
+  movement.hash = await hashChain(previousRecordHash, payload);
+  return movement;
+}
+
 
 
 test('CRON-PARITY-01 every jobs.config functionName is exported by crons.js', () => {
@@ -812,4 +840,30 @@ test('CRON-FISCAL-ALERT-04 keeps fiscal alerts OPEN when stored movement content
   const newFiscalAlert = (wixDataMock._store.get(C) || [])
     .find(row => row._id !== 'legacy-fiscal-chain-alert' && row.alertType === 'FISCAL_CHAIN_CORRUPTED');
   assert.ok(newFiscalAlert, 'a content hash mismatch must emit a fiscal integrity alert');
+});
+
+
+test('CRON-FISCAL-ALERT-05 verifies ONLINE EventLog movements with the EventLog payload contract', async () => {
+  wixDataMock._reset();
+  const C = IC.OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
+  wixDataMock._seed(C, [{
+    _id: 'legacy-fiscal-chain-alert',
+    controlType: IC.CONTROL_TYPE.ALERT,
+    alertType: 'FISCAL_CHAIN_CORRUPTED',
+    status: IC.CONTROL_STATUS.OPEN,
+    dedupeKey: 'legacy-fiscal-chain-alert',
+    traceId: 'trace-original-fiscal-alert',
+    payload: { eventType: 'FISCAL_CHAIN_CORRUPTED', data: { breaksCount: 6 } },
+  }]);
+  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA, [
+    await makeEventLogFiscalHashMovement(),
+  ]);
+
+  const result = await CR.systemHealthCheck();
+  assert.equal(result.fiscalChain, 'SUCCESS');
+  assert.equal(result.fiscalAlertResolution.resolved, 1);
+
+  const alert = (wixDataMock._store.get(C) || [])
+    .find(row => row._id === 'legacy-fiscal-chain-alert');
+  assert.equal(alert.status, IC.CONTROL_STATUS.RESOLVED);
 });
