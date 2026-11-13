@@ -13,7 +13,14 @@ import {
     OPERATIONAL_COLLECTIONS as O,
     CONTROL_TYPE as T,
     RECORD_TYPE,
+    APPEND_ONLY_MUTATION_WINDOW,
 } from "backend/internalConfig";
+
+test("temporary append-only mutation window is explicit and requires production restoration", () => {
+    assert.equal(APPEND_ONLY_MUTATION_WINDOW.ENABLED, true);
+    assert.equal(APPEND_ONLY_MUTATION_WINDOW.TEMPORARY, true);
+    assert.equal(APPEND_ONLY_MUTATION_WINDOW.RESTORE_BEFORE_PRODUCTION, true);
+});
 
 test("insert policy allows only declared collections and canonical ControlOperativo types", () => {
     assert.doesNotThrow(() => assertInsertAllowed(O.CONTROL_OPERATIVO, {
@@ -57,7 +64,7 @@ test("insert policy rejects unknown fiscal record types", () => {
     }), { code: "CMS_INSERT_FISCAL_RECORD_TYPE_INVALID" });
 });
 
-test("update policy allows mutable operational state and CajaActual only", () => {
+test("update policy allows mutable state and all append-only ledgers during temporary window", () => {
     assert.doesNotThrow(() => assertUpdateAllowed(O.CONTROL_OPERATIVO, {
         _id: "control-1",
         controlType: T.COMPENSATION,
@@ -78,12 +85,24 @@ test("update policy allows mutable operational state and CajaActual only", () =>
         bookingStatus: "CONFIRMED",
     }), { code: "CMS_UPDATE_BOOKING_ID_REQUIRED" });
     assert.throws(() => assertUpdateAllowed(C.MOVIMIENTOS_CAJA, {
-        _id: "immutable-ledger-row",
-    }), { code: "CMS_UPDATE_COLLECTION_DENIED" });
-    assert.throws(() => assertUpdateAllowed(O.CONTROL_OPERATIVO, {
+        amount: 1,
+    }), { code: "CMS_UPDATE_ID_REQUIRED" });
+    for (const collection of [
+        C.MOVIMIENTOS_CAJA,
+        C.MOVIMIENTOS_INVENTARIO,
+        C.LIBRO_ASIENTOS_CONTABLES_DETALLE,
+        C.REGISTROS_HORARIOS_STAFF,
+        C.HISTORICO_CIERRES_Z,
+        C.PAQUETES_GESTORIA,
+    ]) {
+        assert.doesNotThrow(() => assertUpdateAllowed(collection, {
+            _id: "temporary-ledger-row",
+        }));
+    }
+    assert.doesNotThrow(() => assertUpdateAllowed(O.CONTROL_OPERATIVO, {
         _id: "webhook-1",
         controlType: T.WEBHOOK_EVENT,
-    }), { code: "CMS_UPDATE_CONTROL_TYPE_DENIED" });
+    }));
     assert.throws(() => assertUpdateAllowed(O.CONTROL_OPERATIVO, {
         controlType: T.SYSTEM_FLAG,
     }), { code: "CMS_UPDATE_CONTROL_TYPE_DENIED" });
@@ -112,20 +131,25 @@ test("save policy is limited to DAYS_CACHE and identified CajaActual records", (
     }), { code: "CMS_SAVE_CONTROL_TYPE_DENIED" });
 });
 
-test("single-item removal requires an explicitly ephemeral ControlOperativo type", () => {
+test("single-item removal allows ledgers during temporary window and keeps ControlOperativo scoped", () => {
     assert.doesNotThrow(() => assertRemoveAllowed(O.CONTROL_OPERATIVO, "cache-1", T.DUAL_CACHE));
     assert.doesNotThrow(() => assertRemoveAllowed(O.CONTROL_OPERATIVO, "token-1", T.DISPLAY_TOKEN));
     assert.doesNotThrow(() => assertRemoveAllowed(O.CONTROL_OPERATIVO, "lock-1", T.SLOT_LOCK));
     assert.doesNotThrow(() => assertRemoveAllowed(O.CONTROL_OPERATIVO, "claim-1", T.IDEMPOTENCY));
-    assert.throws(() => assertRemoveAllowed(O.CONTROL_OPERATIVO, "event-1", T.WEBHOOK_EVENT), {
-        code: "CMS_REMOVE_SCOPE_DENIED",
-    });
+    assert.doesNotThrow(() => assertRemoveAllowed(O.CONTROL_OPERATIVO, "event-1", T.WEBHOOK_EVENT));
     assert.throws(() => assertRemoveAllowed(O.CONTROL_OPERATIVO, "cache-1"), {
         code: "CMS_REMOVE_SCOPE_DENIED",
     });
-    assert.throws(() => assertRemoveAllowed(C.MOVIMIENTOS_CAJA, "ledger-1", T.DUAL_CACHE), {
-        code: "CMS_REMOVE_SCOPE_DENIED",
-    });
+    for (const collection of [
+        C.MOVIMIENTOS_CAJA,
+        C.MOVIMIENTOS_INVENTARIO,
+        C.LIBRO_ASIENTOS_CONTABLES_DETALLE,
+        C.REGISTROS_HORARIOS_STAFF,
+        C.HISTORICO_CIERRES_Z,
+        C.PAQUETES_GESTORIA,
+    ]) {
+        assert.doesNotThrow(() => assertRemoveAllowed(collection, "temporary-ledger-row"));
+    }
 });
 
 test("bulk removal permits only bounded purgeable ControlOperativo types", () => {

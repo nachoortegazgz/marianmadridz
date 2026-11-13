@@ -15,6 +15,7 @@ import {
     MOVEMENT_HISTORICAL_READ_ALIASES,
     normalizeMovementKeys,
     OPERATIONAL_COLLECTIONS,
+    APPEND_ONLY_MUTATION_WINDOW,
 } from "backend/internalConfig";
 import { assertCitasF2, assertControlOperativo, assertCanonicalControlFields, assertRegistrosHorariosStaff } from "backend/validation";
 import { CONSISTENCY, getItem } from "backend/dataAccess";
@@ -280,6 +281,11 @@ function _fiscalError(message) {
     throw new Error(`FISCAL_VIOLATION: ${message}`);
 }
 
+function _appendOnlyMutationWindowOpen() {
+    return APPEND_ONLY_MUTATION_WINDOW.ENABLED === true &&
+        APPEND_ONLY_MUTATION_WINDOW.TEMPORARY === true;
+}
+
 function _roundItem(value) {
     const n = Number(value);
     return Number.isFinite(n) ? Math.round((n + Number.EPSILON) * 100) / 100 : 0;
@@ -518,29 +524,35 @@ export function MovimientosCaja_beforeInsert(item) {
     return item;
 }
 
-export function MovimientosCaja_beforeUpdate() {
+export function MovimientosCaja_beforeUpdate(item) {
+    if (_appendOnlyMutationWindowOpen()) return item;
     _fiscalError("Modificacion de MovimientosCaja prohibida por normativa fiscal (append-only). Use eventType=AJUSTE.");
 }
 
 export function MovimientosCaja_beforeRemove() {
+    if (_appendOnlyMutationWindowOpen()) return;
     _fiscalError("Borrado de MovimientosCaja prohibido por normativa fiscal");
 }
 
 // Los movimientos de inventario y los asientos son ledgers append-only.
 // Las correcciones se registran como nuevos movimientos/asientos rectificativos.
-export function MovimientosInventario_beforeUpdate() {
+export function MovimientosInventario_beforeUpdate(item) {
+    if (_appendOnlyMutationWindowOpen()) return item;
     _fiscalError("Modificacion de MovimientosInventario prohibida (append-only). Registre un nuevo movimiento rectificativo.");
 }
 
 export function MovimientosInventario_beforeRemove() {
+    if (_appendOnlyMutationWindowOpen()) return;
     _fiscalError("Borrado de MovimientosInventario prohibido: ledger de inventario append-only.");
 }
 
-export function LibroAsientosContablesDetalle_beforeUpdate() {
+export function LibroAsientosContablesDetalle_beforeUpdate(item) {
+    if (_appendOnlyMutationWindowOpen()) return item;
     _fiscalError("Modificacion de LibroAsientosContablesDetalle prohibida (append-only). Registre un nuevo asiento rectificativo.");
 }
 
 export function LibroAsientosContablesDetalle_beforeRemove() {
+    if (_appendOnlyMutationWindowOpen()) return;
     _fiscalError("Borrado de LibroAsientosContablesDetalle prohibido: ledger contable append-only.");
 }
 
@@ -557,6 +569,7 @@ export function HistoricoCierresZ_beforeInsert(item) {
 
 export function HistoricoCierresZ_beforeUpdate(item, context) {
     _normalizeCmsDateTime(item, "verifiedAt");
+    if (_appendOnlyMutationWindowOpen()) return item;
     const previous = context?.previous || context?.original || {};
     const hasSnapshot = Boolean(context && (context.previous || context.original));
     const changes = Object.keys(item || {})
@@ -571,6 +584,7 @@ export function HistoricoCierresZ_beforeUpdate(item, context) {
 }
 
 export function HistoricoCierresZ_beforeRemove() {
+    if (_appendOnlyMutationWindowOpen()) return;
     _fiscalError("Borrado de HistoricoCierresZ prohibido: registro fiscal append-only");
 }
 
@@ -606,11 +620,13 @@ export function PaquetesGestoria_beforeInsert(item) {
     return item;
 }
 
-export function PaquetesGestoria_beforeUpdate() {
+export function PaquetesGestoria_beforeUpdate(item) {
+    if (_appendOnlyMutationWindowOpen()) return item;
     _fiscalError("Modificacion de PaquetesGestoria prohibida: snapshot append-only");
 }
 
 export function PaquetesGestoria_beforeRemove() {
+    if (_appendOnlyMutationWindowOpen()) return;
     _fiscalError("Borrado de PaquetesGestoria prohibido: snapshot append-only");
 }
 
@@ -625,11 +641,13 @@ export function RegistrosHorariosStaff_beforeInsert(item) {
     return item;
 }
 
-export function RegistrosHorariosStaff_beforeUpdate() {
+export function RegistrosHorariosStaff_beforeUpdate(item) {
+    if (_appendOnlyMutationWindowOpen()) return item;
     _fiscalError("Modificacion de RegistrosHorariosStaff prohibida: registro horario append-only (RD 8/2019).");
 }
 
 export function RegistrosHorariosStaff_beforeRemove() {
+    if (_appendOnlyMutationWindowOpen()) return;
     _fiscalError("Borrado de RegistrosHorariosStaff prohibido: registro horario append-only (RD 8/2019)");
 }
 
@@ -919,7 +937,7 @@ export async function ControlOperativo_beforeUpdate(item) {
     );
     if (!original) _schemaError("ControlOperativo update target not found");
 
-    if (APPEND_ONLY_CONTROL_TYPES.has(original.controlType)) {
+    if (APPEND_ONLY_CONTROL_TYPES.has(original.controlType) && !_appendOnlyMutationWindowOpen()) {
         _fiscalError(`ControlOperativo/${original.controlType} es append-only: modificacion prohibida`);
     }
 
@@ -948,7 +966,7 @@ export async function ControlOperativo_beforeRemove(itemId) {
         CONSISTENCY.STRONG
     );
     if (!original) _schemaError("ControlOperativo remove target not found");
-    if (APPEND_ONLY_CONTROL_TYPES.has(original.controlType)) {
+    if (APPEND_ONLY_CONTROL_TYPES.has(original.controlType) && !_appendOnlyMutationWindowOpen()) {
         _fiscalError(`ControlOperativo/${original.controlType} es append-only: borrado prohibido`);
     }
     return id;

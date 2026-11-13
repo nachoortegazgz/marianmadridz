@@ -212,9 +212,9 @@ test('HOOK-CMS-DATETIME-05 normalizes MovimientosCaja DateTime fields only', () 
   }), /DATETIME/);
 });
 
-test('HOOK-CAJA-03 update/remove remain forbidden', () => {
-  assert.throws(() => H.MovimientosCaja_beforeUpdate({}), /FISCAL_VIOLATION/);
-  assert.throws(() => H.MovimientosCaja_beforeRemove({}), /FISCAL_VIOLATION/);
+test('HOOK-CAJA-03 temporary mutation window allows update/remove', () => {
+  assert.doesNotThrow(() => H.MovimientosCaja_beforeUpdate({ _id: 'qa-caja-1' }));
+  assert.doesNotThrow(() => H.MovimientosCaja_beforeRemove('qa-caja-1'));
 });
 
 test('HOOK-CAJA-05 rejects write without hash (ledger integrity)', () => {
@@ -362,7 +362,7 @@ test('HOOK-FISCAL-CONFIG-03 legacy aliases are normalized and removed before per
 // HistoricoCierresZ — CONSERVED (update restricted to signature fields)
 // -----------------------------------------------------------------------------
 
-test('HOOK-CIERREZ-01 insert needs traceId; update limited to signature fields', () => {
+test('HOOK-CIERREZ-01 insert needs traceId; temporary window allows arbitrary update/remove', () => {
   assert.throws(() => H.HistoricoCierresZ_beforeInsert({}), /traceId/);
   const closing = {
     traceId: 't1',
@@ -375,10 +375,10 @@ test('HOOK-CIERREZ-01 insert needs traceId; update limited to signature fields',
   assert.doesNotThrow(() => H.HistoricoCierresZ_beforeUpdate({
     _id: 'x', closingSignature: 'sig', csvAEAT: 'csv',
   }));
-  assert.throws(() => H.HistoricoCierresZ_beforeUpdate({
+  assert.doesNotThrow(() => H.HistoricoCierresZ_beforeUpdate({
     _id: 'x', totalImporte: 999,
-  }), /signature\/verification/);
-  assert.throws(() => H.HistoricoCierresZ_beforeRemove({}), /append-only/);
+  }));
+  assert.doesNotThrow(() => H.HistoricoCierresZ_beforeRemove('x'));
 });
 
 // -----------------------------------------------------------------------------
@@ -410,9 +410,9 @@ test('HOOK-CLOCK-01 insert requires canonical fields and HMAC signature', () => 
   assert.throws(() => H.RegistrosHorariosStaff_beforeInsert({ ...valid, dayKey: '' }), /dayKey/);
 });
 
-test('HOOK-CLOCK-02 update/remove forbidden (RD 8/2019)', () => {
-  assert.throws(() => H.RegistrosHorariosStaff_beforeUpdate({}), /append-only/);
-  assert.throws(() => H.RegistrosHorariosStaff_beforeRemove({}), /append-only/);
+test('HOOK-CLOCK-02 temporary mutation window allows update/remove', () => {
+  assert.doesNotThrow(() => H.RegistrosHorariosStaff_beforeUpdate({ _id: 'qa-clock-1' }));
+  assert.doesNotThrow(() => H.RegistrosHorariosStaff_beforeRemove('qa-clock-1'));
 });
 
 // keep wixDataMock referenced so loader seeds reset between suites
@@ -445,14 +445,14 @@ test('HOOK-CAJA-SINGLE-01 enforces the CajaActual single-item principal', () => 
 // -----------------------------------------------------------------------------
 // Capa 2 — inventory and accounting ledgers are immutable append-only records.
 // -----------------------------------------------------------------------------
-test('HOOK-INVENTORY-LEDGER-01 blocks update and remove of MovimientosInventario', () => {
-  assert.throws(() => H.MovimientosInventario_beforeUpdate({}), /append-only/);
-  assert.throws(() => H.MovimientosInventario_beforeRemove({}), /append-only/);
+test('HOOK-INVENTORY-LEDGER-01 temporary mutation window allows update/remove', () => {
+  assert.doesNotThrow(() => H.MovimientosInventario_beforeUpdate({ _id: 'qa-inventory-1' }));
+  assert.doesNotThrow(() => H.MovimientosInventario_beforeRemove('qa-inventory-1'));
 });
 
-test('HOOK-ACCOUNTING-LEDGER-01 blocks update and remove of LibroAsientosContablesDetalle', () => {
-  assert.throws(() => H.LibroAsientosContablesDetalle_beforeUpdate({}), /append-only/);
-  assert.throws(() => H.LibroAsientosContablesDetalle_beforeRemove({}), /append-only/);
+test('HOOK-ACCOUNTING-LEDGER-01 temporary mutation window allows update/remove', () => {
+  assert.doesNotThrow(() => H.LibroAsientosContablesDetalle_beforeUpdate({ _id: 'qa-accounting-1' }));
+  assert.doesNotThrow(() => H.LibroAsientosContablesDetalle_beforeRemove('qa-accounting-1'));
 });
 
 
@@ -497,7 +497,7 @@ test('HOOK-PACKAGE-02 monthly package requires month and forbids quarter', () =>
   assert.throws(() => H.PaquetesGestoria_beforeInsert({ ...valid, fiscalQuarter: 1 }), /no admite fiscalQuarter/);
 });
 
-test('HOOK-PACKAGE-03 update and remove are forbidden', () => {
-  assert.throws(() => H.PaquetesGestoria_beforeUpdate({}), /append-only/);
-  assert.throws(() => H.PaquetesGestoria_beforeRemove({}), /append-only/);
+test('HOOK-PACKAGE-03 temporary mutation window allows update/remove', () => {
+  assert.doesNotThrow(() => H.PaquetesGestoria_beforeUpdate({ _id: 'qa-package-1' }));
+  assert.doesNotThrow(() => H.PaquetesGestoria_beforeRemove('qa-package-1'));
 });

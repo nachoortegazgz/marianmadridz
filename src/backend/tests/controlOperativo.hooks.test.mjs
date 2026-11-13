@@ -109,7 +109,7 @@ describe("ControlOperativo hooks", () => {
     );
   });
 
-  it("prevents updates and type changes to an immutable webhook event", async () => {
+  it("allows temporary webhook-event edits but keeps controlType immutable", async () => {
     const original = {
       _id: "event-1",
       ...base(CONTROL_TYPE.WEBHOOK_EVENT),
@@ -117,12 +117,11 @@ describe("ControlOperativo hooks", () => {
     };
     seed(original);
 
-    await assert.rejects(
+    await assert.doesNotReject(
       ControlOperativo_beforeUpdate({
         _id: original._id,
         status: CONTROL_STATUS.CLOSED,
-      }),
-      /append-only/
+      })
     );
 
     await assert.rejects(
@@ -132,11 +131,11 @@ describe("ControlOperativo hooks", () => {
         resourceId: RESOURCE_ID,
         expiresAt: new Date(Date.now() + 60000),
       }),
-      /append-only/
+      /controlType es inmutable/
     );
   });
 
-  it("prevents removal by Wix beforeRemove itemId contract", async () => {
+  it("allows temporary removal by Wix beforeRemove itemId contract", async () => {
     const original = {
       _id: "event-2",
       ...base(CONTROL_TYPE.WEBHOOK_EVENT),
@@ -144,9 +143,8 @@ describe("ControlOperativo hooks", () => {
     };
     seed(original);
 
-    await assert.rejects(
-      ControlOperativo_beforeRemove(original._id),
-      /append-only/
+    await assert.doesNotReject(
+      ControlOperativo_beforeRemove(original._id)
     );
   });
 
