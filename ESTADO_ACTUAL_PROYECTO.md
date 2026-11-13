@@ -1,3 +1,166 @@
+# ESTADO VIGENTE CONSOLIDADO — 2026-11-13 20:51 CET
+
+**Repositorio:** [nachoortegazgz/marianmadridz](https://github.com/nachoortegazgz/marianmadridz)  
+**HEAD de main verificado:** 3df4b4cf174d80dfd22406bbd758b2eddd7aaa44  
+**Sitio Wix:** https://www.marianmadrid.es/ · Site ID 188bed94-177c-4bc9-a9f0-35080d874f3e  
+**Estado Wix leído en esta revisión:** Published · Wix Editor · Velo enabled · Europe/Madrid · EUR  
+**Estado de despliegue Velo:** no se ha acreditado que el código de main esté publicado en el sitio. El merge GitHub no equivale a Wix Publish.
+
+> Este addendum prevalece sobre los estados históricos anteriores de este documento. Es una consolidación documental basada en el HEAD de GitHub, las auditorías QA del 13-11 y una lectura CMS live realizada a las 20:51 CET. No se han ejecutado mutaciones CMS ni cambios de código Wix durante esta consolidación.
+
+## 1. Resumen ejecutivo y estado Git
+
+- PR #330 está **MERGED** en main. El commit actual de main es 3df4b4cf174d80dfd22406bbd758b2eddd7aaa44 (merge de PR #330).
+- PR #331 está **CLOSED / NOT MERGED**. Su rama qa/2026-11-13-citasf2-keyfields permanece en GitHub; no debe fusionarse ni aplicarse sin comparar con lo ya integrado por PR #330.
+- PR #330 integra los simuladores offline PSP y sink de email QA, cambios de handlers/contratos y la alineación del modelo CitasF2 descrita en su cuerpo de PR y auditoría.
+- Resultados registrados para PR #330: Layer 1, 23 suites / 294 PASS; Layer 2, 18 suites / 243 PASS; regresión completa, 68 suites / 621 PASS; contratos Wix Bookings Reader V2, eCommerce Cart V2 y Order Transactions PASS; ESLint PASS; Gitleaks full-history PASS. Referencias registradas: workflows 43488515192 y 43488515254. La asociación exacta de esos runs al SHA de código que se integró debe confirmarse en GitHub Actions antes de afirmar que el HEAD actual de main tiene CI verde.
+- La última lectura de estado de Wix confirma Published. No hay evidencia de sincronización/publicación del HEAD actual de main en Wix Runtime.
+
+## 2. Inventario CMS live
+
+Lectura live de Data Collections API del 13-11-2026 20:51 CET: **44 colecciones: 15 NATIVE y 29 WIX_APP**. No se han modificado colecciones Wix App.
+
+### 2.1 Colecciones NATIVE
+
+| Colección | Registros en último corte disponible | Clasificación / estado |
+|---|---:|---|
+| CajaActual | 1 | Singleton SIMULACION; no representa caja real |
+| CitasF2 | 1 | Proyección de reserva; discrepancia P1 con Bookings |
+| ComplementosCatalogo | 36 | Catálogo maestro |
+| ControlOperativo | 0 | Sin filas en el corte auditado |
+| DatosFiscales | 1 | Tercero placeholder; falta CONFIG_SISTEMA |
+| HistoricoCierresZ | 0 | Ledger append-only; sin cierres |
+| InventarioStockVenta | 1 | Legacy; no es SSOT de stock |
+| LibroAsientosContablesDetalle | 0 | Ledger append-only; writer deshabilitado |
+| MapaStaff | 3 | Tres mapeos activos |
+| MovimientosCaja | 0 | Ledger append-only; writer fiscal fail-closed |
+| MovimientosInventario | 1 | Legacy; conservar histórico, sin nuevas escrituras |
+| PaquetesGestoria | 0 | Registro documental append-only; sin paquetes |
+| RegistroIntegracion | 0 | Colección adicional fuera de BUSINESS_COLLECTIONS; sin consumidor/writer activo demostrado |
+| RegistrosHorariosStaff | 2 | Filas sintéticas QA sin HMAC; writer deshabilitado |
+| ServiciosCatalogo | 95 | 94 servicios + 1 plan |
+
+**Nota sobre recuentos:** los recuentos de las colecciones distintas de CitasF2 corresponden al corte de auditoría CMS del 13-11 anterior a la proyección de la reserva sintética. CitasF2 se releyó de nuevo a las 20:51 y devuelve un item. El recuento cero previo de CitasF2 queda superado por esta lectura posterior. La discrepancia anterior de ControlOperativo, MovimientosCaja y LibroAsientosContablesDetalle entre cortes sigue abierta; no inferir borrado ni restaurar datos sin reconciliar procedencia e identidad de colección.
+
+### 2.2 Colecciones WIX_APP — 29, solo lectura
+
+- Bookings: Bookings/Schedule, Bookings/Services, Bookings/Staff.
+- Blog: Blog/Categories, Blog/Posts, Blog/Tags.
+- CampaignManager: CampaignManager/campaigns, CampaignManager/userConfig.
+- Forms: Forms/subscribers03.
+- Locations: Locations/Locations.
+- Marketing: Marketing/Coupons.
+- Members: Members/Badges, Members/FullData, Members/PrivateMembersData, Members/PublicData.
+- StoreCatalog: StoreCatalog/Brands, StoreCatalog/Categories, StoreCatalog/Info sections, StoreCatalog/Inventory, StoreCatalog/Product options & modifiers, StoreCatalog/Products, StoreCatalog/Ribbons, StoreCatalog/Variants.
+- Stores: Stores/Collections, Stores/InventoryItems, Stores/Orders, Stores/Products, Stores/Variants.
+- eCommerce: eCommerce/Orders.
+
+Las colecciones WIX_APP son propiedad de sus aplicaciones. No crear, eliminar ni modificar sus campos desde esta intervención. Wix Stores está en Catalog V3; Wix Invoices continúa en V1.
+
+### 2.3 Permisos CMS personalizados — último estado documentado
+
+La lectura posterior de Data Permissions API v1 del 13-11 documentó:
+- 10 colecciones con CRUD para CMS_EDITOR: CajaActual, CitasF2, ComplementosCatalogo, ControlOperativo, DatosFiscales, InventarioStockVenta, MapaStaff, MovimientosInventario, ServiciosCatalogo y RegistroIntegracion.
+- 3 colecciones con lectura CMS_EDITOR y escritura/eliminación PRIVILEGED: HistoricoCierresZ, PaquetesGestoria y RegistrosHorariosStaff.
+- 2 colecciones completamente PRIVILEGED: LibroAsientosContablesDetalle y MovimientosCaja.
+- La efectividad con una identidad colaboradora CMS_EDITOR sigue pendiente. Data Collections API v2 mostrando ADMIN no sustituye esa prueba de permisos efectivos.
+
+Los ledgers append-only siguen protegidos. No habilitar CRUD efectivo de escritura sobre HistoricoCierresZ, PaquetesGestoria, RegistrosHorariosStaff, LibroAsientosContablesDetalle o MovimientosCaja.
+
+## 3. CitasF2 — esquema live y contrato canónico
+
+Lectura live de Data Collections API y Query Data Items, 13-11-2026 20:51 CET:
+- Collection ID: CitasF2; display name: CITAS_F2; tipo NATIVE.
+- Revisión actual: 42; campos físicos: 31; items: 1 de 1.
+- La auditoría de migración documenta revisión 33 → 41; la lectura actual devuelve revisión 42. No se infiere qué operación incrementó la revisión sin historial adicional.
+- Campos físicos actuales (31): _createdDate, _id, _owner, _updatedDate, bookingId, bookingStatus, bookingType, cancellationReason, cashMovementId, catalogId, contactDetails, dateYmd, fiscalData, invoicingDate, meta, orderId, pairToken, paymentStatus, privacyNoticeAcceptedAt, privacyNoticePurpose, privacyNoticeVersion, resourceId, revision, scheduleId, serviceId, slotEnd, slotStart, thirdPartyId, timeZone, totalAmount y traceId.
+- Campos eliminados tras búsqueda de consumidores y comprobación de ausencia de valores: noShowReason, noShowAt, sourceEventId y canceledAt.
+- orderId TEXT existe como campo raíz canónico. cashMovementId y timeZone también están definidos en raíz.
+- El contrato canónico raíz para referencias/estado incluye bookingId, bookingStatus, paymentStatus, orderId, cashMovementId, serviceId, resourceId, scheduleId, slotStart, slotEnd, timeZone y traceId.
+- Los escritores integrados en PR #330 persisten referencias/estados en raíz y evitan duplicar bookingStatus, paymentStatus, orderId y cashMovementId dentro de meta. Los lectores conservan fallback root-first a meta para registros históricos.
+- El item histórico actual no contiene timeZone, orderId ni cashMovementId en raíz porque se creó antes de los writers actualizados y no hubo un pago/pedido asociado. No rellenar esos valores por inferencia.
+- meta conserva datos de evento/contexto como source, eventId, nativeBookingStatus, contactId, resourceIdSource y otros metadatos. La lectura actual no muestra copias meta.bookingStatus, meta.paymentStatus, meta.orderId ni meta.cashMovementId.
+
+### Incidencia P1 de sincronización no resuelta
+
+El único item CitasF2 tiene bookingId 3effa046-5b9d-429b-9f9c-af2f3d6c9994, bookingStatus CONFIRMED y paymentStatus NOT_PAID. La reserva nativa Bookings Reader V2 para ese mismo bookingId permanece CANCELED / NOT_PAID. La proyección conserva meta.nativeBookingStatus=CONFIRMED y un eventId de confirmación. La lectura actual confirma que la divergencia continúa.
+
+No modificar manualmente bookingStatus en CitasF2, no borrar el booking nativo y no ejecutar backfill/reconciliación manual para ocultar el defecto. Debe determinarse si el handler de cancelación no se ejecutó, no está publicado o falló al persistir; el origen exacto no está demostrado.
+
+### Contratos que requieren cierre
+
+- La frontera de alta valida GUID para bookingId, serviceId, resourceId y scheduleId; las actualizaciones históricas pueden omitir serviceId/resourceId cuando faltan en registros antiguos.
+- slot.scheduleId y resource.eventsScheduleId fueron observados como GUID distintos en la reserva de prueba. El código mantiene prioridad para slot.scheduleId y fallback a eventsScheduleId. Verificar el contrato de origen con payload real y cerrar ADR/prueba antes de normalizar históricos.
+- El contacto CRM sintético existe, pero la proyección conserva meta.contactId=null; no se ha validado la vinculación Booking–CRM.
+
+## 4. Estado operativo de QA y límites
+
+- El sitio principal continúa Published; no es un entorno QA aislado por el mero hecho de usar datos sintéticos.
+- Se desactivaron y verificaron 18 automatizaciones mutables. Otras 10 siguen ACTIVE por readonly/disableStatusChange; no disparar sus triggers durante QA. La prueba Test Automation puede ejecutar acciones reales incluso si una automatización está INACTIVE.
+- No se han enviado emails/SMS/WhatsApp. El despacho real a gestoría continúa bloqueado por ACCOUNTANT_SEND_ENABLED=false.
+- El doble PSP y el sink de gestoría son fixtures en memoria bajo tests; no se conectan a runtime, red, CMS, webhooks ni proveedores reales.
+- Writers fiscales, contables y laborales siguen fail-closed. No se han habilitado cobros, reembolsos, ledgers, fichajes ni exportaciones reales.
+- SharePoint / Power Automate Capa 3 no están acreditados como flujo operativo live.
+- No existe certificación E2E completa en navegador/runtime.
+- No se ha publicado código Wix como parte de PR #330.
+
+## 5. Checklist de tareas pendientes
+
+### P0 — Integridad fiscal, contable y laboral
+- [ ] Mantener FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED=false, ACCOUNTING_LEDGER_WRITES_ENABLED=false y STAFF_CLOCKING_CONFIG.WRITES_ENABLED=false hasta aprobación y pruebas runtime.
+- [ ] Resolver la configuración fiscal de emisor: DatosFiscales carece de CONFIG_SISTEMA; no usar el tercero placeholder como emisor.
+- [ ] Reconciliar los recuentos discrepantes de ControlOperativo, MovimientosCaja y LibroAsientosContablesDetalle entre los cortes 12-11 y 13-11. No recrear ni restaurar filas por inferencia.
+- [ ] Resolver tratamiento fiscal de anticipos/fianzas, series, rectificaciones, SIF/Veri*Factu y aprobación del asesor antes de activar cobros o remisión.
+- [ ] Mantener inmutabilidad append-only; corregir solo mediante nuevos registros rectificativos trazables.
+
+### P1 — Reservas, Bookings y CitasF2
+- [ ] Verificar qué SHA de Velo está realmente publicado y compararlo con main 3df4b4cf174d80dfd22406bbd758b2eddd7aaa44.
+- [ ] Revisar delivery, suscripción, export names, logs runtime y ejecución del handler wixBookingsV2_onBookingCanceled; determinar la causa de CANCELED nativo frente a CONFIRMED en CitasF2.
+- [ ] Revisar el cron reconcileMissingConfirmedBookingProjections y sus trazas sin invocarlo manualmente ni generar escrituras durante el diagnóstico.
+- [ ] Diseñar reconciliación idempotente con precondiciones, evidencia, estrategia de no duplicidad y rollback antes de reparar cualquier proyección.
+- [ ] Resolver contrato slot.scheduleId frente a eventsScheduleId y cubrirlo con fixtures de payload oficial.
+- [ ] Decidir si el vínculo Booking–CRM debe resolverse en el flujo de creación; no completar contactId por inferencia.
+- [ ] Ejecutar E2E de reservas simples/duales, cancelación, reprogramación, concurrencia y compensación solo en sitio aislado o con autorización y plan de reversión.
+
+### P1 — Permisos y entorno QA
+- [ ] Probar permisos efectivos con una identidad colaboradora CMS_EDITOR.
+- [ ] Mantener excluidos los 10 triggers de automatizaciones que siguen ACTIVE y revisar su aislamiento soportado por Wix.
+- [ ] Definir procedimiento controlado para restaurar las 18 automatizaciones desactivadas, verificando destinatarios y configuración antes de activarlas.
+- [ ] Confirmar que el sitio QA aislado 50b39f33-e753-4331-ab35-b2ed43dc97f7 tiene datos/configuración y canales realmente separados antes de usarlo para E2E.
+- [ ] No ejecutar Test Automation ni crear miembros, guardar tarjetas, cobros, tareas de agente, voicemail o triggers de umbral CMS.
+
+### P2 — Capa 3 e integraciones
+- [ ] Auditar tenant M365, licencias, DLP, identidades, permisos SharePoint y disponibilidad de Power Automate.
+- [ ] Aprobar ADR de transporte, minimización, retención e idempotencia antes de conectar Wix → Power Automate → SharePoint.
+- [ ] Verificar snapshot persistido, hash, destinatario allowlisted e idempotencia antes de habilitar email real a gestoría.
+- [ ] Mantener ACCOUNTANT_SEND_ENABLED=false hasta aprobación y pruebas de sink/integración.
+
+### P3 — Repositorio, CI y toolchain
+- [ ] Confirmar en GitHub Actions el SHA exacto cubierto por los runs 43488515192 y 43488515254 y comprobar CI del HEAD actual de main.
+- [ ] Revisar el diff integrado de PR #330 y confirmar que no quedan cambios equivalentes pendientes en la rama/PR #331 cerrada.
+- [ ] No fusionar ni cherry-pickear qa/2026-11-13-citasf2-keyfields sin comparar su diff contra main.
+- [ ] Verificar entorno Node soportado por Wix CLI for Sites y reconciliar lockfile con el gestor oficial antes de sincronizar.
+- [ ] Mantener tests offline, contratos SDK y lint como gates; no presentarlos como prueba Wix Runtime.
+
+### P4 — Cierre documental
+- [ ] Tras resolver cada bloqueo, actualizar este documento y el informe QA asociado con fecha, SHA, evidencia y resultado.
+- [ ] Mantener DOSSIER TÉCNICO y DOSSIER FLUJOS como diseño/contratos; no interpretar requisitos declarados como funcionalidad probada.
+- [ ] No eliminar campos, colecciones, ramas ni históricos sin búsqueda de consumidores, comprobación de datos, revisión de contratos y estrategia de reversión.
+
+## 6. Restricciones de esta consolidación
+
+Esta actualización solo modifica documentación del repositorio. No se ha modificado Wix CMS, código de runtime, automatizaciones, pagos, ledgers, reservas ni datos CRM. No se ha publicado ni desplegado nada. Cualquier tarea de la checklist requiere autorización específica y validación proporcional al riesgo.
+
+## 7. Documentos de evidencia
+
+- [Auditoría de colecciones CMS](docs/qa/2026-11-13-custom-cms-registration-audit.md).
+- [Auditoría y migración CitasF2](docs/qa/2026-11-13-citasf2-keyfields.md).
+- [Adaptaciones temporales de QA](docs/qa/2026-11-13-site-qa-environment.md).
+- [Registro de decisiones](docs/DECISION-LOG.md).
+- [Directrices de desarrollo](DIRECTRICES_DESARROLLO_CODIGO.txt).
+
+---
+
 ## Addendum prioritario — referencia QA y estado Wix live (2026-11-11)
 
 La referencia consultiva vigente es [docs/qa/2026-11-11-qa-master-reference.md](docs/qa/2026-11-11-qa-master-reference.md). Esta revisión live de Wix devuelve el sitio como **Published**, no Draft. Este dato prevalece sobre estados anteriores de este documento. El sitio no se considera QA aislado; no ejecutar E2E que genere reservas, pagos, contactos o comunicaciones hasta disponer de un sitio QA separado o autorización expresa con aislamiento demostrado.
