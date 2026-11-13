@@ -1,6 +1,6 @@
 # Marian Madrid — Wix Editor + Velo
 
-Repositorio canónico del sitio **Marian Madrid Peluquería y Estética** (`www.marianmadrid.es`). El repositorio contiene código, documentación y pruebas QA; **el sitio Wix asociado informa actualmente Published y no está acreditado como entorno QA aislado**. No confundir la finalidad QA del repositorio con el estado de publicación del sitio. El proyecto se construye sobre Wix y sus Wix Apps nativas, con Microsoft 365 como capa documental externa.
+Repositorio canónico del sitio **Marian Madrid Peluquería y Estética** (`www.marianmadrid.es`). El repositorio contiene código, documentación y pruebas QA. **Corte 2026-11-13 20:51 CET:** main en `3df4b4cf174d80dfd22406bbd758b2eddd7aaa44`; PR #330 fusionada; sitio Wix Published; no está acreditado que el HEAD de main esté publicado ni que el sitio principal sea QA aislado. CitasF2 tiene 31 campos físicos, revisión live 42 y un item; la reserva nativa asociada está CANCELED mientras la proyección sigue CONFIRMED (bloqueo P1). El estado y checklist vigentes están en `ESTADO_ACTUAL_PROYECTO.md`.
 
 ## Arquitectura y fuente de verdad
 
@@ -12,11 +12,15 @@ Repositorio canónico del sitio **Marian Madrid Peluquería y Estética** (`www.
 
 ## Documentos raíz
 
-1. [Referencia maestra QA y estado de aislamiento](docs/qa/2026-11-11-qa-master-reference.md): autoridad consultiva para estado Wix live, canales de comunicación, cliente sintético, pagos simulados y gates de pruebas.
+1. [Estado vigente consolidado y checklist](ESTADO_ACTUAL_PROYECTO.md): autoridad de continuidad a 2026-11-13; incluye HEAD, estado Wix live, inventario CMS, contrato CitasF2, bloqueos y checklist priorizado.
 
-2. [Hito QA 2026-11-13 — conciliacion fiscal y diagnostico de CitasF2](docs/qa/2026-11-13-fiscal-alert-and-citasf2-recovery.md): evidencia live read-only, correccion del ciclo de vida de alertas fiscales y validacion pendiente en Wix Runtime.
+2. [Auditoría y migración CitasF2](docs/qa/2026-11-13-citasf2-keyfields.md): esquema físico, campos canónicos, poda de campos huérfanos y estado de sincronización.
 
-3. [Estado actual y guía operativa consolidada](ESTADO_ACTUAL_PROYECTO.md): punto de partida recomendado para conocer arquitectura, decisiones, bloqueos y plan priorizado.
+3. [Adaptaciones temporales para QA](docs/qa/2026-11-13-site-qa-environment.md): permisos CMS, reserva sintética, automatizaciones, simuladores y límites de aislamiento.
+
+4. [Auditoría de persistencia CMS](docs/qa/2026-11-13-custom-cms-registration-audit.md): inventario NATIVE/WIX_APP y estado de persistencia por dominio.
+
+5. [Referencia maestra QA del 11-11](docs/qa/2026-11-11-qa-master-reference.md): evidencia histórica de aislamiento y restricciones previas.
 
 4. [Directrices de arquitectura, desarrollo y QA](DIRECTRICES_DESARROLLO_CODIGO.txt): reglas obligatorias y límites.
 5. [Dossier técnico consolidado](DOSSIER%20TÉCNICO%20CONSOLIDADO.md): arquitectura, contratos, módulos, CMS y estado técnico verificado.
@@ -78,4 +82,4 @@ CI verde no equivale a E2E ni a publicación. No afirmar que una función está 
 
 ## Última actualización documental
 
-Revisión consolidada de estado, decisiones y plan a 2026-11-11: [ESTADO_ACTUAL_PROYECTO.md](ESTADO_ACTUAL_PROYECTO.md). El estado detallado y la evidencia histórica se mantienen en `docs/PROJECT-STATUS.md` y `docs/DECISION-LOG.md`. La PR #284 sobre proyección de caja física sigue separada, abierta y sin despliegue Wix.
+Última consolidación: 2026-11-13 20:51 CET. `ESTADO_ACTUAL_PROYECTO.md` es el punto de entrada vigente. `docs/PROJECT-STATUS.md` conserva el estado histórico previo y debe leerse con el addendum de vigencia que remite al documento raíz.
