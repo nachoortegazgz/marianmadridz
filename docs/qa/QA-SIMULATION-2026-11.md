@@ -423,3 +423,114 @@ Regresión añadida: `RES-BAL-07` en `src/backend/tests/reservas.web.test.mjs`. 
 Validación CI ejecutada sobre el código corregido (commit `50b27e3d5cb8ed91bdbe1bde1d9ed0ad91447a17`): Layer 1 22 suites / 288 PASS / 0 FAIL; Layer 2 17 suites / 239 PASS / 0 FAIL; regresión completa 66 suites / 611 PASS / 0 FAIL; contratos SDK Wix Bookings Reader V2, eCommerce Cart V2 y Order Transactions PASS; ESLint PASS; Gitleaks full-history PASS. Runs: [Backend offline quality gates](https://github.com/nachoortegazgz/marianmadridz/actions/runs/43473842712) · [Secret scanning](https://github.com/nachoortegazgz/marianmadridz/actions/runs/43473842768).
 
 Esta validación es offline/mock y no acredita por sí sola el comportamiento en Wix Runtime.
+
+
+## 2026-11-13 — conciliación ampliada de Layer 2 (producción, solo lectura)
+
+### Alcance y fuentes consultadas
+
+Corte de producción del sitio `188bed94-177c-4bc9-a9f0-35080d874f3e`. Lecturas paginadas de:
+- eCommerce Search Orders (31 pedidos).
+- Order Transactions List for Multiple Orders (pagos y reembolsos).
+- Bookings Reader V2 con `withEcomOrder`, `withEcomTransactions`, `withBookingFeeDetails` y `withBookingPolicySettings`.
+- Order Invoices List for Multiple Orders.
+- Wix Data CMS con `consistentRead: true` para las colecciones nativas de Layer 2 y sus controles.
+
+No se realizaron escrituras CMS, cobros, devoluciones, cambios de reservas, cambios de stock ni ejecuciones de cron.
+
+### 1. Pedidos y transacciones
+
+31 pedidos:
+- 4 `APPROVED/PAID`.
+- 25 `APPROVED/NOT_PAID`.
+- 2 `CANCELED/NOT_PAID`.
+
+Los cuatro pedidos pagados cuadran exactamente con cuatro transacciones `APPROVED`:
+
+| Pedido | Total EUR | Método devuelto por Wix | Booking | Estado booking |
+| --- | ---: | --- | --- | --- |
+| #10031 | 27,71 | Cash | No | — |
+| #10030 | 18,15 | Cash | Sí | CONFIRMED/PAID |
+| #10018 | 204,50 | Cash | Sí | CANCELED/PAID |
+| #10017 | 14,00 | Other Payment Method | Sí | CANCELED/PAID |
+| **Total** | **264,36** | | | |
+
+Suma de transacciones aprobadas: **264,36 EUR**, igual al total de los cuatro pedidos. No se devolvió ninguna transacción en la respuesta de Order Transactions (`refunds=[]` para los cuatro pedidos).
+
+Precaución de clasificación: los métodos se devuelven como `Cash` (250,36 EUR) y `Other Payment Method` (14,00 EUR), pero las cuatro transacciones indican `offlinePayment=false`. No se clasifican automáticamente como efectivo físico ni como ingreso bancario conciliado. Se necesita el justificante/medio real de cobro externo.
+
+Anomalía adicional no incluida en los cuatro pedidos pagados: el pedido #10001 está `NOT_PAID` y tiene una transacción de tarjeta `APPROVED` por **0,00 EUR**, con tarjeta guardada. No se cuenta como venta ni como cobro de importe positivo.
+
+### 2. Reservas pagadas y canceladas
+
+Bookings Reader V2 devuelve **16 reservas PAID**:
+- 15 `CANCELED/PAID`.
+- 1 `CONFIRMED/PAID`.
+
+Cruce inequívoco por `extendedBooking.order.id`:
+- #10030 → booking `359e606d-bdd7-453d-bd5c-b62ba8eb94a2`: CONFIRMED/PAID.
+- #10017 → booking `aa57457e-84d1-44fd-8893-7a60eb40833e`: CANCELED/PAID.
+- #10018 → booking `d8a28bac-5976-4a0c-87ba-9287b788b0d7`: CANCELED/PAID.
+
+Las otras **13 reservas CANCELED/PAID no tienen `order.id` eCommerce asociado** en Bookings Reader V2. No se puede atribuir su cobro a un pedido o transacción concreta con la evidencia disponible.
+
+Para las dos reservas canceladas vinculadas a #10017 y #10018:
+- `cancellationFeeEnabled=false` en el snapshot de política.
+- Sin `bookingFeeDetails` aplicado ni `additionalFees`.
+- Sin reembolso en las transacciones de los pedidos.
+
+No se deduce automáticamente el derecho ni la obligación de devolución a partir de estos campos; queda pendiente validar términos aceptados, momento de cancelación y evidencia de prestación/no prestación. Para las otras 13 reservas no se devolvió snapshot de política ni asociación eCommerce.
+
+### 3. Referencias de factura
+
+Order Invoices devuelve asociación para #10017 y #10018, con `appId=1380b703-ce81-ff05-f115-39571d94dfcd`. No devuelve asociación para #10030 ni #10031.
+
+El `appId` asociado no coincide con el ID canónico de Wix Invoices V1 documentado en el dossier (`13ee94c1-b635-8505-3391-97919052c16f`). No se identifica ni se etiqueta esa referencia como factura fiscal válida sin verificar la aplicación emisora y el documento real. La API consultada solo acredita el vínculo de referencia orden-factura.
+
+### 4. Incidencias fiscales de catálogo
+
+**Pedido #10017 — tipo de IVA del 10 % en “CORTE MINI (HASTA 12 AÑOS)”.**
+Wix devuelve base 12,73 EUR, cuota 1,27 EUR y total 14,00 EUR (10 %). La AEAT publica para 2026 un tipo del **21 % para servicios de peluquería**. El concepto es un servicio de corte; se clasifica como incidencia fiscal prioritaria para revisión del gestor. No se recalcula ni rectifica automáticamente el pedido histórico. Fuente: [AEAT — Tipos impositivos IVA 2026](https://sede.agenciatributaria.gob.es/static_files/Sede/Tema/IVA/IVA_reper/Tipos_IVA_2026_26_02_2026.pdf).
+
+El servicio de #10017 no aparece en las 95 filas actuales de `ServiciosCatalogo` ni en la consulta de `Bookings/Services`; no existe configuración maestra vigente que explique el 10 %.
+
+**Pedido #10018 — línea “EXTRA” de 5,00 EUR.**
+La línea es `CUSTOM_AMOUNT_ITEM`, sin `catalogReference.appId` ni `catalogItemId`. Además, `taxDetails.taxRate=0` mientras `taxInfo.taxRate=0.2100`; la cuota devuelta es 0,87 EUR. El total de pedido cuadra, pero la identidad del concepto y los metadatos de impuesto no son coherentes. Mantener en revisión manual, sin fabricar identidad de catálogo.
+
+El servicio/pack de #10018 tampoco aparece en los catálogos actuales consultados. El servicio de #10030 sí existe en `ServiciosCatalogo` y `Bookings/Services`, con `tipoImpositivo=0.21`.
+
+### 5. CMS y controles fiscales/contables
+
+Lecturas consistentes del corte:
+- `MovimientosCaja`: **0**.
+- `LibroAsientosContablesDetalle`: **0**.
+- `HistoricoCierresZ`: **0**.
+- `ControlOperativo`: **0**.
+- `RegistroIntegracion`: **0**.
+- `PaquetesGestoria`: **0**.
+- `CitasF2`: **0**.
+- `DatosFiscales`: 1 registro, pero es `recordType=TERCERO` / `thirdPartyType=PROVEEDOR`, con razón social placeholder QA. No existe el singleton `recordType=CONFIG_SISTEMA` requerido por el dossier para la configuración fiscal del sistema.
+- `CajaActual`: un singleton `SIMULACION`, abierto, con apertura/esperado 300 EUR, ventas 0, saldo efectivo 0 y secuencia 0. No es caja operativa y no debe compararse con los pedidos reales.
+- `InventarioStockVenta` y `MovimientosInventario`: una fila sintética QA cada una; no hay movimiento comercial real acreditado.
+- `RegistrosHorariosStaff`: dos filas sintéticas QA; no acreditan jornada real y carecen de firma HMAC.
+
+La política del código sigue fail-closed:
+- `FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED=false`.
+- `FISCAL_RUNTIME_POLICY.ACCOUNTING_LEDGER_WRITES_ENABLED=false`.
+- `FISCAL_RUNTIME_POLICY.ALLOW_SIMULATION_RECORDS=false`.
+
+`registrarEventoEconomico` devuelve `FISCAL_LEDGER_WRITES_DISABLED` mientras esa política permanezca desactivada. El webhook de pago encola recuperación cuando falla el registro fiscal, pero en este corte no existen marcadores en `ControlOperativo` ni `RegistroIntegracion` que permitan acreditar que los eventos de estos cuatro pedidos se procesaron. Sin acceso a logs no se puede concluir si el webhook no llegó, falló o fue procesado en otro estado.
+
+### 6. Resultado de conciliación y decisión
+
+- **Pedido ↔ transacción Wix:** conciliado para los cuatro pedidos PAID por 264,36 EUR.
+- **Transacción ↔ banco/efectivo real:** no conciliado; falta justificante bancario/TPV/caja y `offlinePayment=false` impide asumir efectivo físico.
+- **Pedido ↔ reserva:** conciliado para tres reservas vinculadas; las otras 13 reservas PAID/CANCELED carecen de pedido eCommerce identificable.
+- **Cancelaciones pagadas:** dos vinculadas sin reembolso registrado y con `cancellationFeeEnabled=false`; 13 adicionales sin vínculo eCommerce. No emitir devoluciones sin verificar obligación y medio original.
+- **Pedido ↔ factura:** vínculo devuelto para dos pedidos por appId no identificado; dos pedidos sin vínculo.
+- **Pedido ↔ ledger fiscal/PGC:** no conciliado; 264,36 EUR sin movimiento fiscal visible y sin asiento contable.
+- **IVA:** incidencia prioritaria en #10017 (10 % en servicio de peluquería) y metadatos contradictorios en línea EXTRA de #10018.
+- **Configuración fiscal:** falta `DatosFiscales.CONFIG_SISTEMA`; no activar Veri*Factu ni escritores.
+
+**Decisión: Layer 2 permanece NO CERRADA.** La lectura de fuentes comerciales y transacciones está conciliada; el cierre fiscal, bancario, contable y de cancelaciones no. No se deben crear movimientos retroactivos, asientos, rectificaciones, reembolsos ni cambios de configuración hasta recibir validación del gestor y evidencia del medio de cobro. Las correcciones de registros append-only deberán ser nuevos registros rectificativos trazables, nunca edición/borrado.
+
