@@ -1000,6 +1000,34 @@ test('FLOW-CAJA-07 devoluciones y reembolsos reducen caja y conservan cadena fis
 });
 
 
+test('FLOW-CAJA-10B manual presencial writer requires an explicitly open session', async () => {
+  wixDataMock._reset();
+  await seedStaff({ resourceId: GUID_ADMIN_RESOURCE });
+  setMember({ _id: GUID_MEMBER, contactId: GUID_CONTACT, loginEmail: 'marta@test.local' });
+  const { cajas } = await freshImports();
+  await setupFiscalSecrets();
+
+  const missingChannel = await cajas.registerManualTransaction({
+    totalAmount: 20,
+    paymentMethod: 'EFECTIVO',
+    transactionId: 'cash-missing-channel-001',
+  });
+  assert.equal(missingChannel.status, 'ERROR');
+  assert.equal(missingChannel.error.code, 'CHANNEL_TYPE_REQUIRED');
+
+  const noSession = await cajas.registerManualTransaction({
+    totalAmount: 20,
+    paymentMethod: 'EFECTIVO',
+    channelType: 'PRESENCIAL',
+    transactionId: 'cash-no-session-001',
+  });
+  assert.equal(noSession.status, 'ERROR');
+  assert.equal(noSession.error.code, 'CAJA_SESSION_NOT_OPEN');
+  assert.equal((wixDataMock._store.get('MovimientosCaja') || []).length, 0);
+  assert.equal((wixDataMock._store.get('CajaActual') || []).length, 0);
+  setMember(null);
+});
+
 test('FLOW-CAJA-11 simulation cash state blocks manual writes, state display and Z close', async () => {
   wixDataMock._reset();
   const operationDate = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Madrid' });
