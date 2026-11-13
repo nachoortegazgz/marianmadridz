@@ -420,4 +420,6 @@ Corrección mínima:
 
 Regresión añadida: `RES-BAL-07` en `src/backend/tests/reservas.web.test.mjs`. Fixture sintética: proyección de 60 minutos para A, snapshot nativo sin recurso y reserva nativa independiente de 30 minutos para B; el resultado esperado asigna el siguiente slot a B. La prueba no modifica datos Wix ni altera asignaciones históricas.
 
-Estado: corrección estática preparada; validación CI pendiente. No acredita por sí sola el comportamiento en Wix Runtime.
+Validación CI ejecutada sobre el código corregido (commit `50b27e3d5cb8ed91bdbe1bde1d9ed0ad91447a17`): Layer 1 22 suites / 288 PASS / 0 FAIL; Layer 2 17 suites / 239 PASS / 0 FAIL; regresión completa 66 suites / 611 PASS / 0 FAIL; contratos SDK Wix Bookings Reader V2, eCommerce Cart V2 y Order Transactions PASS; ESLint PASS; Gitleaks full-history PASS. Runs: [Backend offline quality gates](https://github.com/nachoortegazgz/marianmadridz/actions/runs/43473842712) · [Secret scanning](https://github.com/nachoortegazgz/marianmadridz/actions/runs/43473842768).
+
+Esta validación es offline/mock y no acredita por sí sola el comportamiento en Wix Runtime.
