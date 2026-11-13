@@ -36,9 +36,9 @@ The 93 existing metadata cells were patched in production using Wix Bulk Patch D
 
 Risk: the five unmarked simulated rows pass the old recordSource != SMOKE_TEST and sequenceNumber > 0 query filters. Because the classifier did not inspect movementType, fiscal aggregation and other readers could count them or use them as the ledger head.
 
-Code change: isExplicitSimulationLedgerRecord() now recognizes movementType values beginning SIMULATED_ and explicit Spanish simulated suffixes _SIMULADO / _SIMULADA. The booking receipt lookup also excludes such rows. Existing head readers and fiscal aggregation already use this classifier.
+Code change in PR #306: isExplicitSimulationLedgerRecord() now recognizes movementType values beginning SIMULATED_ and explicit Spanish simulated suffixes _SIMULADO / _SIMULADA. The booking receipt lookup and quarterly tax summary exclude such rows. A follow-up source review found that getLibroRegistroFacturasExpedidasInternal() did not apply the classifier when constructing issued-sales ledger rows. PR #308 adds the same classifier guard before projecting each row. Current GitHub main therefore excludes explicitly simulated movements in both fiscal summary and issued-sales ledger paths; this does not establish that the code is deployed to Wix.
 
-Historical rows remain unchanged. MovimientosCaja is append-only; no record was updated, deleted, re-sequenced, re-hashed or backfilled. A read-only classification pass identifies 9/10 rows as simulated and 1 as non-simulated; all 9 simulated rows have fiscalPeriod=2026-11, and 5 have positive sequenceNumber values. The current main-branch fiscal query filters sequenceNumber>0 and recordSource!=SMOKE_TEST; those 5 unmarked rows pass that query and the old classifier does not exclude them. Therefore the November 2026 fiscal aggregation remains at risk of including synthetic amounts until the PR306 classifier is deployed to the Wix production site. Merging the code to GitHub main does not deploy it to Wix. The single non-simulated row has sequence 1, a 64-hex hash and a 64-hex genesis predecessor. No duplicate non-simulated sequence was found. The fiscal runtime write policy remains fail-closed.
+Historical rows remain unchanged. MovimientosCaja is append-only; no record was updated, deleted, re-sequenced, re-hashed or backfilled. A read-only classification pass identifies 9/10 rows as simulated and 1 as non-simulated; all 9 simulated rows have fiscalPeriod=2026-11, and 5 have positive sequenceNumber values. The five unmarked rows pass the query's sequenceNumber>0 and recordSource!=SMOKE_TEST filters, so exclusion must be enforced by the canonical classifier in every fiscal read path. PR #306 fixed the classifier and quarterly summary; PR #308 closes the issued-sales ledger omission. Both paths are now protected in GitHub main. The November 2026 fiscal reports remain blocked until the exact deployed Velo code is proven and a controlled, read-only runtime validation confirms both paths exclude all nine synthetic rows. Merging to GitHub main does not deploy code to Wix. The single non-simulated row has sequence 1, a 64-hex hash and a 64-hex genesis predecessor. No duplicate non-simulated sequence was found. The fiscal runtime write policy remains fail-closed.
 
 ### LibroAsientosContablesDetalle
 
@@ -79,7 +79,8 @@ No CitasF2 row was fabricated or backfilled. No event-handler rewrite was made w
 - src/backend/data.js: catalog type normalization and full staff timeclock insert validation.
 - src/backend/validation.js: simulation movement classification and timeclock HMAC validation.
 - src/backend/cajas.web.js: excludes simulation records from fiscal receipt lookup.
-- Tests: catalog hook, simulation classifier, fiscal aggregator, receipt filtering and timeclock CMS hook.
+- src/backend/fiscalAggregator.web.js: PR #308 excludes explicit simulation rows from the issued-sales ledger.
+- Tests: catalog hook, simulation classifier, fiscal summary and issued-sales ledger exclusion, receipt filtering and timeclock CMS hook.
 
 ## Safety and limitations
 
@@ -88,7 +89,9 @@ No CitasF2 row was fabricated or backfilled. No event-handler rewrite was made w
 - No published Wix runtime or browser E2E was run.
 - The 93 catalog metadata cells were normalized to SERVICE and verified by a strong read-after-write. No other catalog fields were changed.
 - The CitasF2 event-delivery issue remains open pending deployed Velo SHA and backend event logs.
-- PR #306 was merged to main at commit `82302003d998d48f7c172780ad60ee5c885930e9`. The merged Velo code has not been deployed to the Wix production site; no Wix runtime or browser E2E validation has been performed.
+- PR #306 was merged to main at commit `82302003d998d48f7c172780ad60ee5c885930e9`.
+- PR #308 was merged to main at commit `893d9f61b71e9403f062a846840fbf7c538764a0`; its only executable change is the classifier guard in the issued-sales ledger, plus regression coverage.
+- The exact Velo SHA deployed to Wix remains unverified. No Wix runtime or browser E2E validation has been performed.
 
 ## Validation and change control
 
@@ -99,4 +102,12 @@ GitHub Actions for PR code head `da38a03e3452a011f381777e5290219810c3cba7` and t
 - ESLint: success.
 - Secret scanning / Gitleaks: success; post-merge run `43129843094` completed successfully.
 
-PR #306 is merged and closed. The executable code was validated on the PR head and again by the post-merge workflow. The merge commit is `82302003d998d48f7c172780ad60ee5c885930e9`. GitHub CI does not prove that this Velo code is deployed to Wix; Wix deployment and runtime validation remain pending.
+PR #306 is merged and closed. Its executable code was validated on the PR head and by the post-merge workflow (64 suites / 593 tests).
+
+PR #308 is merged and closed at `893d9f61b71e9403f062a846840fbf7c538764a0`. GitHub Actions on PR head `6a3bc78aa262296cad2ed6e2f3794be0c372395b` completed successfully:
+- Backend offline quality gates: 64 suites, 594 tests, 0 failures (run `43431198987`).
+- Wix SDK Cart V2/Data, eCommerce Order Transactions and Bookings Reader V2 contracts: success.
+- ESLint: success.
+- Secret scanning / Gitleaks: success (run `43431199020`).
+
+These PR checks validate the merged code tree but do not prove Wix deployment. No post-merge Actions run was returned by the available commit-run query, and Wix deployment, runtime validation and browser E2E remain pending.
