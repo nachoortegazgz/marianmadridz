@@ -131,7 +131,7 @@ describe("ControlOperativo hooks", () => {
         resourceId: RESOURCE_ID,
         expiresAt: new Date(Date.now() + 60000),
       }),
-      /controlType is immutable/
+      /controlType es inmutable/
     );
   });
 
