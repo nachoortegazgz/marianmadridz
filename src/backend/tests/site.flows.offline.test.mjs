@@ -796,6 +796,7 @@ test('FLOW-CAJA-05 CajaActual projects presencial cash movements and is idempote
   assert.strictEqual(register.voucherAmount, 0);
   assert.strictEqual(register.otherAmount, 0);
   assert.strictEqual(register.netAmount, 335);
+  assert.strictEqual(register.expectedCash, 335, 'expectedCash debe conciliar con el efectivo físico esperado');
   assert.strictEqual(register.salesCount, 1);
   assert.deepStrictEqual(register.sequenceCounters.appliedMovementIds, [movement._id]);
 });
@@ -823,6 +824,7 @@ test('FLOW-CAJA-05B card and Bizum update session totals without changing physic
   const { cajas } = await freshImports();
   const registerBefore = wixDataMock._store.get('CajaActual')[0];
   const originalCash = registerBefore.cashAmount;
+  const originalExpectedCash = registerBefore.expectedCash;
 
   for (const [method, amountField] of [['TARJETA', 'cardAmount'], ['BIZUM', 'voucherAmount']]) {
     const movement = {
@@ -843,6 +845,7 @@ test('FLOW-CAJA-05B card and Bizum update session totals without changing physic
     assert.equal(replay.idempotent, true);
     assert.equal(register[amountField], 42.5);
     assert.equal(register.cashAmount, originalCash, method + ' nunca modifica el efectivo físico');
+    assert.equal(register.expectedCash, originalExpectedCash, method + ' nunca modifica el efectivo esperado');
     assert.equal(register.netAmount, originalCash);
   }
 });
@@ -995,6 +998,7 @@ test('FLOW-CAJA-07 devoluciones y reembolsos reducen caja y conservan cadena fis
       assert.ok(cashRegister, 'CajaActual singleton conservado');
       assert.strictEqual(cashRegister._id, 'SINGLE_ITEM_ID');
       assert.strictEqual(cashRegister.cashAmount, 87.90, 'el reembolso resta efectivo');
+      assert.strictEqual(cashRegister.expectedCash, 87.90, 'expectedCash concilia tras el reembolso');
       assert.strictEqual(cashRegister.netAmount, 87.90, 'netAmount concilia con el efectivo disponible');
       assert.deepStrictEqual(cashRegister.sequenceCounters.appliedMovementIds, [result.data._id]);
 
