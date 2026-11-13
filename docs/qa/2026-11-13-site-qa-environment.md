@@ -87,9 +87,11 @@ Se usó la API oficial Bookings Writer V2, sin omitir validación de disponibili
 | Estado | `CREATED` → `CONFIRMED / NOT_PAID` → `CANCELED / NOT_PAID` |
 | SMS y notificación al participante | Desactivados |
 
-La cancelación devolvió `CANCELED`, revisión 3. No se solicitó reembolso ni se generó cargo. La consulta inmediata de `CitasF2` por `bookingId` devolvió cero filas. Por tanto, la prueba acredita el ciclo nativo de Bookings, pero **no** acredita la proyección automática CitasF2 ni el handler publicado. El GET final de reserva no devolvió un objeto utilizable; el estado final se apoya en la respuesta de cancelación. Debe investigarse la ausencia de proyección antes de declarar validado el flujo end-to-end.
+La cancelación devolvió `CANCELED`, revisión 3. No se solicitó reembolso ni se generó cargo. La lectura posterior con Bookings Reader V2 confirmó `CANCELED / NOT_PAID`. La proyección `CitasF2` apareció de forma asíncrona con ID `4f78a93b-8df6-4edd-a1ae-2026e26ad292`, pero mantuvo `bookingStatus=CONFIRMED` y `meta.nativeBookingStatus=CONFIRMED`, con `_updatedDate=2026-11-13T18:50:26.220Z`. Una segunda lectura confirmó la inconsistencia: Bookings nativo `CANCELED` frente a CitasF2 `CONFIRMED`.
 
-La reserva fue cancelada inmediatamente, por lo que no debe quedar ocupando el slot. No borrar el registro nativo por CMS; conservar su estado CANCELED como evidencia QA.
+Por tanto, la prueba acredita creación, confirmación sin pago y cancelación nativas, así como la proyección del evento de confirmación; **falla la reconciliación de cancelación en runtime**. El contrato unitario del handler pasa en CI, pero no demuestra que el handler correcto esté publicado y ejecutándose en Wix. No se modificó manualmente CitasF2 para no ocultar el fallo. El registro queda conservado como evidencia QA y debe reconciliarse por el backend/event handler antes de cerrar H1.
+
+La reserva nativa está cancelada y no ocupa el slot. No borrar el registro nativo por CMS; conservar su estado CANCELED como evidencia QA.
 
 ## 5. Cliente sintético y gestoría
 
@@ -202,7 +204,7 @@ Antes de cualquier despliegue real:
 | Efectividad real con identidad CMS_EDITOR | Pendiente |
 | Permisos de colecciones Wix App | No modificados |
 | Bookings Writer V2 create/confirm/cancel con cliente sintético | Verificado por respuestas API; reserva cancelada |
-| Proyección automática CitasF2 para el booking de prueba | No verificada; query devolvió 0 filas |
+| Proyección CitasF2 para el booking de prueba | Creada asíncronamente, pero inconsistente: Bookings CANCELED vs CitasF2 CONFIRMED |
 | Cliente sintético como contacto CRM persistido | Pendiente de comprobar |
 | Simulador PSP offline en memoria | Implementado en tests; 6/6 PASS local y CI |
 | Simulador PSP accesible desde runtime/UI | No implementado (intencional: no existe sandbox PSP acreditado) |
@@ -221,4 +223,4 @@ Antes de cualquier despliegue real:
 - Contratos SDK Wix Bookings Reader V2, eCommerce Cart V2 y Order Transactions: PASS.
 - ESLint: PASS.
 - Gitleaks full-history: PASS.
-Ejecuciones: backend quality gates `43487412879`; secret scanning `43487413018`. La ausencia de proyección CitasF2, los diez flujos Wix bloqueados y la falta de un sink de gestoría impiden certificar el sitio como entorno QA completo. No autoriza un despliegue real.
+Ejecuciones: backend quality gates `43487412879`; secret scanning `43487413018`. La proyección CitasF2 desactualizada (CONFIRMED frente a Bookings CANCELED), los diez flujos Wix bloqueados y la falta de un sink de gestoría impiden certificar el sitio como entorno QA completo. No autoriza un despliegue real.
