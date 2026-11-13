@@ -560,6 +560,52 @@
         "duplicate webhook delivery creates no second ledger movement"
       ],
       "limitation": "Current tests mock the Wix event envelope and CMS only. No isolated Wix runtime or PSP sandbox transaction has been executed."
+    },
+    {
+      "scenarioId": "QA-SERVICE-DYNAMIC-SLUG-SUFFIX-001",
+      "name": "Resolución de ruta dinámica Wix con sufijo numérico",
+      "status": "MOCK_COVERED",
+      "testFiles": [
+        "src/backend/tests/reservas.web.test.mjs"
+      ],
+      "traceId": "trace-qa-service-dynamic-slug-suffix-001",
+      "fixture": {
+        "canonicalCmsSlug": "balayage-signature-degradado-natural",
+        "requestedDynamicPathSlug": "balayage-signature-degradado-natural-1",
+        "environment": "offline-mocks-only"
+      },
+      "assertions": [
+        "exact canonical slug lookup retains priority",
+        "numeric Wix dynamic-page suffix resolves only to a unique canonical CMS slug",
+        "duplicate canonical slug candidates return SERVICE_LOOKUP_AMBIGUOUS",
+        "no CMS record or dynamic-page URL is rewritten"
+      ],
+      "limitation": "This verifies the backend resolver with mocks. It does not prove the Wix Editor dynamic item page is published or that the browser route renders in Wix Runtime."
+    },
+    {
+      "scenarioId": "QA-BOOKING-UNASSIGNED-STAFF-REVIEW-001",
+      "name": "Reserva confirmada sin recurso ni identidad explícita de profesional",
+      "status": "MOCK_COVERED",
+      "testFiles": [
+        "src/backend/tests/reservas.web.test.mjs",
+        "src/backend/tests/crons.booking-projection-reconciliation.test.mjs"
+      ],
+      "traceId": "trace-qa-booking-unassigned-staff-review-001",
+      "fixture": {
+        "bookingStatus": "CONFIRMED",
+        "resourceId": null,
+        "staffMemberId": null,
+        "selectionMethod": "NO_SELECTION",
+        "paymentStatus": "NOT_PAID",
+        "cmsWrite": false
+      },
+      "assertions": [
+        "NO_SELECTION is not interpreted as a customer instruction to choose no professional",
+        "without BookedResource or explicit staffMemberId mapping, no staff resource is inferred",
+        "unassigned native booking contributes no minutes to an individual staff workload",
+        "projection remains in review and no CitasF2 row is created"
+      ],
+      "limitation": "The scenario is offline mock coverage. It does not assign a professional to existing live bookings or validate a live Wix booking flow."
     }
   ]
 }
