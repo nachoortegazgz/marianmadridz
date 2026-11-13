@@ -280,17 +280,22 @@ name:MULTI_REFERENCE
 
 La API devuelve `displayName` para cada campo. En la mayoría de los campos NATIVE, el valor es exactamente igual a `key`; por tanto, no están aplicadas de forma general las reglas de traducción de etiquetas del estándar N1–N5.
 
-Etiquetas que sí difieren del key (muestras completas observadas en el esquema NATIVE):
+Diferencias exhaustivas entre `key` y `displayName` identificadas en la lectura de las 15 colecciones NATIVE:
+
 | Colección | Key | Etiqueta CMS (`displayName`) |
 |---|---|---|
-| Campos de sistema | `_id` | `ID` |
-| Campos de sistema | `_createdDate` | `Created Date` |
-| Campos de sistema | `_updatedDate` | `Updated Date` |
-| Campos de sistema | `_owner` | `Owner` |
+| Todas las NATIVE | `_id` | `ID` |
+| Todas las NATIVE | `_createdDate` | `Created Date` |
+| Todas las NATIVE | `_updatedDate` | `Updated Date` |
+| Todas las NATIVE | `_owner` | `Owner` |
 | `ControlOperativo` | `eventType` | `Event Type` |
 | `ControlOperativo` | `occurredAt` | `Occurred At` |
 | `ControlOperativo` | `operationDate` | `Operationdate` |
 | `DatosFiscales` | `recordType` | `Tipo de registro` |
+| `DatosFiscales` | `streetNumber` | `Número fiscal` |
+| `DatosFiscales` | `businessDescription` | `Descripción del negocio` |
+| `DatosFiscales` | `currency` | `Moneda` |
+| `DatosFiscales` | `phone` | `Teléfono fiscal` |
 | `DatosFiscales` | `taxId` | `NIF / VAT` |
 | `DatosFiscales` | `legalName` | `Razón social / nombre legal` |
 | `DatosFiscales` | `thirdPartyType` | `Tipo de tercero` |
@@ -298,6 +303,13 @@ Etiquetas que sí difieren del key (muestras completas observadas en el esquema 
 | `DatosFiscales` | `taxRegime` | `Régimen fiscal` |
 | `DatosFiscales` | `verifactuEnabled` | `Veri*Factu habilitado` |
 | `DatosFiscales` | `verifactuVersion` | `Versión Veri*Factu` |
+| `DatosFiscales` | `tipoUsoPosibleMultiOT` | `Uso posible de múltiples OT` |
+| `DatosFiscales` | `indicadorMultiplesOT` | `Indicador de múltiples OT` |
+| `DatosFiscales` | `fechaInicioVerifactu` | `Fecha de inicio Veri*Factu` |
+| `DatosFiscales` | `email` | `Email` |
+| `DatosFiscales` | `name` | `Nombre` |
+| `DatosFiscales` | `label` | `Etiqueta` |
+| `DatosFiscales` | `nif` | `NIF de contacto` |
 | `DatosFiscales` | `gestorEmail` | `Email gestoría` |
 | `DatosFiscales` | `gestorName` | `Nombre gestoría` |
 | `DatosFiscales` | `gestorNombre` | `Nombre gestoría (compatibilidad)` |
@@ -306,13 +318,18 @@ Etiquetas que sí difieren del key (muestras completas observadas en el esquema 
 | `PaquetesGestoria` | `invoiceData` | `Facturas snapshot` |
 | `PaquetesGestoria` | `periodType` | `Tipo de periodo` |
 | `PaquetesGestoria` | `fiscalYear` | `Ejercicio fiscal` |
+| `PaquetesGestoria` | `fiscalMonth` | `Mes fiscal` |
+| `PaquetesGestoria` | `fiscalQuarter` | `Trimestre fiscal` |
+| `PaquetesGestoria` | `packageVersion` | `Version del paquete` |
+| `PaquetesGestoria` | `summaryData` | `Resumen fiscal snapshot` |
 | `PaquetesGestoria` | `packageStatus` | `Estado del paquete` |
 | `PaquetesGestoria` | `snapshotHash` | `SHA-256 snapshot` |
+| `PaquetesGestoria` | `schemaVersion` | `Version del esquema` |
+| `PaquetesGestoria` | `source` | `Origen del snapshot` |
 | `PaquetesGestoria` | `traceId` | `Trace ID` |
-| `RegistrosHorariosStaff` | `notes` | `notes` (descripción CMS: “Obligatorio si AJUSTE”) |
-| `MovimientosCaja` | `NIFEmisor` | `NIFEmisor` |
-| `MovimientosCaja` | `NIFDestinatario` | `NIFDestinatario` |
+| `PaquetesGestoria` | `createdAt` | `Fecha de creacion` |
 
+En las demás parejas key/displayName de campos NATIVE, los nombres coinciden exactamente en el corte.
 La tabla anterior no representa las etiquetas del frontend. Para documentar etiquetas visibles de la web hay que revisar cada formulario, repeater, tabla, widget y DTO que exponga el dato.
 
 ## 5. Colecciones WIX_APP — inventario y propiedad
