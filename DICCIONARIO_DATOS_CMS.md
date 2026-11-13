@@ -682,3 +682,11 @@ Cada actualización debe incluir fecha/corte, entorno, revisión CMS, evidencia 
 **Límite del esquema observado:** la revisión física 49 no contiene un bloque explícito de última operación, IDs fuente ni acumulado Bizum dedicado. Este addendum describe el contrato objetivo, no afirma que los campos existan. La migración requiere definir keys/tipos CMS, revisar consumidores, actualizar validación/DTOs/WebMethods/hooks/tests y comprobar la compatibilidad de `sequenceCounters` y `fiscalLedgerLock.js`. No ejecutar cambios CMS en esta actualización documental.
 
 **Pagos mixtos y conceptos:** `MovimientosCaja.paymentMethod` es TEXT singular y `lineItems` es OBJECT sin contrato interno acreditado. No aceptar un desglose mixto ni mostrar cantidades como validadas hasta definir la estructura canónica, reglas de suma y pruebas de reconciliación. Cada movimiento fuente y su hash permanecen inmutables.
+
+### Estado de implementación del contrato CajaActual — 2026-11-13
+
+El código de la rama de trabajo reutiliza los campos físicos ya observados: `cashAmount` (efectivo físico), `netAmount` (mismo saldo físico), `cardAmount` (acumulado tarjeta), `voucherAmount` (acumulado Bizum según `CAJA_KEYS.BIZUM`), `staffResourceId`, `traceId` y `lastMovementAt`. La proyección se limita a cobros presenciales y a una sesión previamente abierta. No se crea ni se abre el singleton por efecto de un movimiento.
+
+`getCashierState()` añade al DTO de lectura `sessionPayments` y `lastOperation`, derivados de los movimientos originales de `MovimientosCaja` entre `openedAt` y `closedAt`. `lastOperation.sourceMovementIds` referencia el `_id` original. Esto es una composición de lectura: **no significa que `lastOperation` o `lastMovementId` estén persistidos en `CajaActual`**. Los contadores por medio de pago se calculan desde el ledger, no se almacenan en columnas nuevas.
+
+`openedBy`/`openedAt` siguen dependiendo de un flujo de apertura aún no implementado. El cierre Z manual guarda `closedBy` desde contexto backend, sujeto a que el writer continúe bloqueado por política. No hay migración CMS en esta rama. El esquema de la revisión 49 sigue siendo la autoridad física hasta que se apruebe y ejecute una migración.
