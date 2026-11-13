@@ -104,6 +104,16 @@ export function assertUpdateAllowed(collection, item) {
     if (!DATA_ACCESS_WRITE_POLICY.updateCollections.includes(collection) || !_isRecord(item)) {
         throw _policyError("CMS_UPDATE_COLLECTION_DENIED");
     }
+    if ([
+        BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA,
+        BUSINESS_COLLECTIONS.MOVIMIENTOS_INVENTARIO,
+        BUSINESS_COLLECTIONS.LIBRO_ASIENTOS_CONTABLES_DETALLE,
+        BUSINESS_COLLECTIONS.REGISTROS_HORARIOS_STAFF,
+        BUSINESS_COLLECTIONS.HISTORICO_CIERRES_Z,
+        BUSINESS_COLLECTIONS.PAQUETES_GESTORIA,
+    ].includes(collection) && !item._id) {
+        throw _policyError("CMS_UPDATE_ID_REQUIRED");
+    }
     if (collection === BUSINESS_COLLECTIONS.CONTROL_OPERATIVO) {
         _assertControlRecord(
             item,
