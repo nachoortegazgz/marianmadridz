@@ -287,3 +287,61 @@ test('FISCAL-SMOKE-01 explicit smoke-test movements are excluded from quarterly 
   assert.equal(result.data.borradorIva.baseImponibleRegistrada, 22.9);
   assert.equal(result.data.borradorIva.cuotaIvaRegistrada, 4.81);
 });
+
+test('FISCAL-SMOKE-02 explicit simulated movements are excluded from issued-sales ledger', async () => {
+  wixDataMock._reset();
+  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA, [
+    {
+      _id: 'unmarked-simulated-ledger-001',
+      fiscalPeriod: '2026-11',
+      sequenceNumber: 5,
+      recordSource: '',
+      eventType: 'RESERVA_CONFIRMADA',
+      movementType: 'SIMULATED_PAYMENT',
+      accountingAmount: 999,
+      taxBase: 825.62,
+      taxAmount: 173.38,
+      tipoImpositivo: 0.21,
+      hash: 'b'.repeat(64),
+      previousRecordHash: 'a'.repeat(64),
+    },
+    {
+      _id: 'spanish-simulated-ledger-001',
+      fiscalPeriod: '2026-11',
+      sequenceNumber: 6,
+      recordSource: '',
+      eventType: 'RESERVA_CONFIRMADA',
+      movementType: 'VENTA_POS_SIMULADA',
+      accountingAmount: 250,
+      taxBase: 206.61,
+      taxAmount: 43.39,
+      tipoImpositivo: 0.21,
+      hash: 'c'.repeat(64),
+      previousRecordHash: 'b'.repeat(64),
+    },
+    {
+      _id: 'real-sales-ledger-001',
+      fiscalPeriod: '2026-11',
+      sequenceNumber: 1,
+      recordSource: 'INTERNAL',
+      eventType: 'VENTA_LINEA',
+      movementType: 'VENTA_ONLINE',
+      accountingAmount: 27.71,
+      taxBase: 22.9,
+      taxAmount: 4.81,
+      tipoImpositivo: 0.21,
+      hash: 'a'.repeat(64),
+      previousRecordHash: '0'.repeat(64),
+    },
+  ]);
+
+  const result = await FA.getLibroRegistroFacturasExpedidasInternal(2026, 4, {
+    traceId: 'trace-fiscal-sales-ledger-simulation-001',
+  });
+
+  assert.equal(result.status, 'SUCCESS', JSON.stringify(result.error));
+  assert.equal(result.data.totalRegistros, 1);
+  assert.equal(result.data.filas.length, 1);
+  assert.equal(result.data.filas[0].movementType, 'VENTA_ONLINE');
+  assert.equal(result.data.filas[0].totalAmount, 27.71);
+});

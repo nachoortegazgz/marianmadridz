@@ -386,6 +386,7 @@ export async function getLibroRegistroFacturasExpedidasInternal(year, quarter, o
   let orderIndex = 1;
 
   for (const m of fetchResult.items) {
+    if (isExplicitSimulationLedgerRecord(m)) continue;
     const accountingAmount = Number(m.accountingAmount || 0);
     const movementType = _readMovementType(m).toUpperCase();
     const operationNature = _readOperationNature(m);
