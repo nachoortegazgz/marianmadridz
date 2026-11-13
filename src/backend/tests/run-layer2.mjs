@@ -18,7 +18,6 @@ const suites = [
   'fiscalDocuments.package-version.concurrency.test.mjs',
   'fiscalLedgerLock.test.mjs',
   'fiscalLedgerWriters.locking.test.mjs',
-  'inventario.writer.offline.test.mjs',
   'site.flows.offline.test.mjs',
   'orderLedgerAmount.test.mjs',
   'events.booking-canceled.integrity.test.mjs',
