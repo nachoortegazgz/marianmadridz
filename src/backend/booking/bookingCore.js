@@ -1677,6 +1677,13 @@ export async function _persistBooking(params, traceId) {
             { traceId: traceIdClean, bookingId: bookingId }
         );
     }
+    if (!_looksLikeGuid(serviceId) || !_looksLikeGuid(resourceId)) {
+        throw createBookingError(
+            ERROR_CODES.INVALID_PAYLOAD,
+            "serviceId and resourceId must be valid GUIDs for new CitasF2 bookings",
+            { traceId: traceIdClean, bookingId }
+        );
+    }
     const scheduleIdClean = _safeTrim(p.scheduleId);
     if (!scheduleIdClean || !_looksLikeGuid(scheduleIdClean)) {
         throw createBookingError(
