@@ -241,3 +241,18 @@ Esta decisión es contractual/documental. No acredita que el backend o el esquem
 **Gates intactos:** `LEDGER_WRITES_ENABLED=false`, `ACCOUNTING_LEDGER_WRITES_ENABLED=false`; la caja `SIMULACION` permanece bloqueada. Esta rama no escribe CMS live ni publica Wix.
 
 Para los movimientos presenciales manuales nuevos, backend asigna `recordSource=MANUAL_PRESENCIAL_AUTHENTICATED` y resuelve `staffResourceId` desde la identidad autenticada. La UI solo marca el operador como verificado cuando el origen contiene esa marca backend; los registros históricos se identifican como autoría no verificada.
+
+
+### TEC-034 — alineación de maestros DatosFiscales y MapaStaff (2026-11-14)
+
+**CMS live, verificado por Wix Data API:**
+- `DatosFiscales` revisión 19: añadidos `commercialName`, `postalCode`, `province`, `schemaVersion` y `traceId`; `fechaInicioVerifactu` cambia a tipo `DATE` después de verificar ausencia de valores previos.
+- `MapaStaff` revisión 24: añadido `traceId`; los tres registros conservan sus IDs y roles, se normaliza `staffName` y se vacía `thirdPartyId` donde no existía vínculo fiscal GUID explícito.
+- La fila existente de DatosFiscales sigue siendo un placeholder QA TERCERO/PROVEEDOR. No se transforma en CONFIG_SISTEMA ni se reutiliza su identidad fiscal. No se crea el singleton hasta disponer de taxId, legalName y taxRegime oficiales y desplegar el guard que evita inferir identidad legal.
+- No se borraron campos heredados ni colecciones. MapaStaff conserva temporalmente staffMemberId/scheduleId/active porque events.js los consume en el fallback de proyección; active queda sujeto a ADR. La relación CMS ServiciosCatalogo_staffMembers permanece.
+- Las tres filas MapaStaff son únicas por memberId y resourceId en el snapshot, pero no existe aún garantía de unicidad frente a escrituras concurrentes; queda pendiente un mecanismo de escritura validado.
+- Los campos heredados de DatosFiscales que siguen consumidos por eventLog (tipoUsoPosibleMultiOT e indicadorMultiplesOT) no se eliminan en esta intervención.
+
+**Código en rama de trabajo:** hooks y validator permiten CONFIG_SISTEMA incompleto en los campos fiscales no verificados, fijan el ID singleton CONFIG_SISTEMA_FISCAL y exigen schemaVersion/traceId. eventLog persiste schemaVersion/traceId en nuevos terceros y deja de inferir legalName desde el nombre comercial. No publicado.
+
+**Límites:** los datos fiscales no verificados permanecen vacíos; Veri*Factu sigue desactivado; escritores fiscales/contables siguen fail-closed. Las colecciones numeradas 12–16 no se borran porque el mensaje de esquema no aporta sus IDs/nombres y no hay correspondencia inequívoca con el inventario live.
