@@ -73,6 +73,8 @@ El código exportaba los dos primeros con prefijo `wixBookingsV2_`, que no coinc
 
 La lectura adicional de Wix Tax Settings devuelve `taxIncludedInItemPrices=false` (ajuste global efectivo del checkout). Sin embargo, los otros 93 servicios y los 36 complementos personalizados tienen `taxIncluded=true`; Rayos V es el único sin valor. Esto es una discrepancia entre metadato CMS y ajuste global, no una base para sobrescribir el catálogo: el ajuste global de Wix gobierna el cálculo del checkout, y el código backend examinado no consume `taxIncluded` para calcular el impuesto. Se mantiene como incidencia de contrato/datos; no se cambia el precio ni el IVA.
 
+Hay además una comparación directa: **Barba Perfecta: Arreglo y Perfilado** tiene `taxIncluded=true` en `ServiciosCatalogo`, mientras su línea del pedido pagado #10030 devuelve `taxInfo.taxIncludedInPrice=false`. En cambio, las líneas Bookings de #10017 y #10018 devuelven `true`. La evidencia confirma que el flag fiscal efectivo puede diferir por línea y que el metadato CMS no debe tratarse como autoridad de checkout. El backend fiscal utiliza el desglose fiscal de la línea/pedido Wix. La discrepancia requiere decisión de negocio/gestor sobre la semántica del campo personalizado; no se actualiza ni el catálogo ni el ajuste global.
+
 ### ComplementosCatalogo
 
 36 filas; `addonId`, `sku`, nombre, precio, `taxIncluded` y `tipoImpositivo` están poblados en todos los registros examinados. Sin duplicados de addonId ni SKU.
