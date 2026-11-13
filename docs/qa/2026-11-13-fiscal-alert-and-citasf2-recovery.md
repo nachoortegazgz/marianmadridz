@@ -42,7 +42,11 @@ La antiguedad de la alerta y la ausencia actual de rupturas son compatibles con 
 
 ## 3. Revalidacion criptografica de contenido
 
-La inspeccion posterior de la fila genuina live confirmo que `aeatPayload` no esta disponible como campo independiente. La fila conserva los campos fiscales canonicos/legacy y `recordTimestamp`, por lo que el verificador se ha endurecido para reconstruir el mismo payload interno con el builder canonico, normalizar los nombres fisicos CMS y recalcular SHA-256 mediante `hashChain`.
+La inspeccion posterior de la fila genuina live confirmo que `aeatPayload` no esta disponible como campo independiente; el snapshot AEAT se conserva bajo `payloadFiscal`. La fila tiene `eventType=VENTA_LINEA` y `channelType=ONLINE`, por lo que fue escrita por `eventLog.registrarEventoEconomico`, no por el writer TPV de `cajas.web.js`.
+
+Se detecto una diferencia real entre contratos internos: `eventLog.js` firma el campo `CuotaTotal`; `cajas.web.js` firma `BaseImponibleOImporteNoSujeto` y `CuotaRepercutida`. La primera recomputacion con el builder de caja no coincidio. Una segunda recomputacion read-only del movimiento live con el payload exacto de EventLog reprodujo el SHA-256 almacenado (coincidencia exacta), sin modificar el ledger.
+
+Para evitar divergencias futuras, el builder EventLog se ha extraido a `backend/fiscalHashPayload.js` y es compartido por el writer EventLog y el verificador. La auditoria selecciona ese contrato para movimientos `channelType=ONLINE`; el resto conserva el builder de caja. La normalizacion de campos CMS y `recordTimestamp` se mantiene.
 
 El verificador ahora distingue:
 - Ruptura real de continuidad o discrepancia del digest: `INTEGRITY_COMPROMISED` y alerta critica.
@@ -54,6 +58,8 @@ La resolucion de alertas exige `hashContentComplete=true` y `hashesVerified=chec
 Esta recomputacion aun requiere validacion en Wix Runtime publicado. Si la representacion CMS historica no reproduce el hash original, la auditoria quedara PARTIAL o INTEGRITY_COMPROMISED y la alerta seguira OPEN; no se corregira el ledger mediante sobrescritura.
 
 ## 4. Correccion incorporada al repositorio
+
+El builder de hash usado por EventLog se centraliza en `src/backend/fiscalHashPayload.js`; `eventLog.js` lo invoca para generar movimientos y `cajas.web.js` lo reutiliza en la auditoria de registros online. Esto elimina el falso positivo detectado al reconstruir una venta online con el formato de caja.
 
 En `src/backend/crons.js`, `systemHealthCheck` ahora:
 
@@ -68,13 +74,14 @@ No se modifica MovimientosCaja, LibroAsientosContablesDetalle, HistoricoCierresZ
 
 ## 5. Pruebas incorporadas
 
-Se amplian las pruebas de `crons.jobsConfigParity.test.mjs` para cubrir:
+Se amplian las pruebas de `crons.jobsConfigParity.test.mjs` y `site.flows.offline.test.mjs` para cubrir:
 
 - Resolucion de alerta historica solo tras auditoria completa y limpia.
+- Reconstruccion del payload EventLog online con `CuotaTotal` y coincidencia del hash.
 - Conservacion del payload original y trazabilidad de la resolucion.
 - Fail-closed: una ruptura reproducida, un digest incorrecto, un contenido no reconstruible o un ledger vacio mantienen la alerta OPEN.
 
-**CI verificado sobre el HEAD exacto del PR #313:** 66 suites, 606 pruebas correctas, 0 fallos. Contratos Wix SDK (Cart V2, Order Transactions y Bookings Reader V2), ESLint y Gitleaks completados correctamente. Workflow: https://github.com/nachoortegazgz/marianmadridz/actions/runs/43450798929. El PR #313 se integro mediante squash en `9d96655943af045406632435b299a84da39e23b0`.
+**CI verificado sobre el HEAD exacto del PR #313:** 66 suites, 606 pruebas correctas, 0 fallos. Contratos Wix SDK (Cart V2, Order Transactions y Bookings Reader V2), ESLint y Gitleaks completados correctamente. Workflow: https://github.com/nachoortegazgz/marianmadridz/actions/runs/43450798929. El PR #313 se integro mediante squash en `9d96655943af045406632435b299a84da39e23b0`. La correccion posterior del contrato EventLog esta en revision en PR #315; su CI es requisito antes de cerrar el hito de repositorio.
 
 ## 6. Despliegue y cierre del hito
 

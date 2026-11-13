@@ -51,6 +51,7 @@ import {
     readTaxAmount,
 } from "backend/data";
 import { isExplicitSimulationLedgerRecord } from "backend/validation";
+import { buildEventLogFiscalChainPayload } from "backend/fiscalHashPayload";
 
 
 export { readInvoiceNumber, readInvoiceIssueDate };
@@ -1649,7 +1650,11 @@ export async function verifyFiscalHashChainIntegrity(options = {}) {
                     const value = readMovementField(mov, field);
                     if (value !== undefined && value !== null) normalizedMovement[field] = value;
                 }
-                const hashPayload = _buildInternalFiscalChainPayload(normalizedMovement, generatedAt);
+                const isOnlineEventLogMovement =
+                    _safeTrim(mov?.channelType).toUpperCase() === CHANNEL_TYPE.ONLINE;
+                const hashPayload = isOnlineEventLogMovement
+                    ? buildEventLogFiscalChainPayload(normalizedMovement, generatedAt)
+                    : _buildInternalFiscalChainPayload(normalizedMovement, generatedAt);
                 const computedHash = (await hashChain(previousRecordHash, hashPayload)).toLowerCase();
                 if (computedHash !== hash) {
                     breaks.push({
