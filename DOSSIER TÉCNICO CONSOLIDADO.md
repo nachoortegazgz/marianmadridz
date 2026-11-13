@@ -1324,3 +1324,13 @@ La lectura CMS del sitio QA devuelve 43 colecciones (15 NATIVE, 28 WIX_APP). Las
 El proyector debe separar dos dimensiones: (a) actividad económica/pagos presenciales de la sesión, al menos EFECTIVO/TARJETA/BIZUM; (b) delta físico de efectivo, solo cuando el movimiento lo declare de forma canónica y validada. El actor se resuelve en backend; los timestamps y huellas se toman del movimiento original. No se aceptan valores de identidad, dirección física ni totales autoritativos desde el frontend.
 
 No se ha implementado ni validado este contrato en runtime en esta actualización. Requiere migración CMS compatible, validación centralizada, revisión de todos los consumidores, lock/idempotencia, pruebas unitarias/integración/concurrencia/reconstrucción y QA Wix aislado. Los escritores fiscales/contables siguen fail-closed.
+
+### Estado de código CajaActual / TEC-032 (2026-11-13)
+
+La rama `fix/caja-actual-last-operation-projection` adapta parcialmente los flujos:
+- El escritor manual exige canal explícito (con inferencia ONLINE limitada a `VENTA_ONLINE`/`WIX_PAYMENTS`) y resuelve el actor presencial desde `getMyStaffContext()`, sin confiar en `resourceId` del frontend.
+- La proyección incluye cobros presenciales EFECTIVO/TARJETA/BIZUM solo si existe sesión abierta con `openedAt`; no crea sesión implícitamente. `cashAmount/netAmount` siguen siendo efectivo físico; `cardAmount` y `voucherAmount` son acumulados netos de tarjeta y Bizum.
+- El DTO de lectura deriva acumulados y tickets por medio desde `MovimientosCaja`, y entrega la última operación con ID fuente, actor, instante y campos de huella/traza. El panel de ZONA MARIAN muestra el detalle.
+- El cierre Z manual resuelve y guarda `closedBy` desde backend.
+
+**No equivale a implementación completa:** el esquema CMS no persiste aún `lastMovementId`/`lastOperation`; la referencia se devuelve en lectura. No hay WebMethod de apertura ni origen reconciliado para saldo inicial. `lineItems` y pagos mixtos siguen sin contrato. No se han activado escritores ni alterado CMS/live.
