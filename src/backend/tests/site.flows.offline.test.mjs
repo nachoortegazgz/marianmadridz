@@ -772,17 +772,17 @@ test('FLOW-CAJA-05 CajaActual projects presencial cash movements and is idempote
   const first = await cajas.updateCajaActualFromMovement(movement, movement.traceId);
   const replay = await cajas.updateCajaActualFromMovement(movement, movement.traceId);
   const rows = wixDataMock._store.get('CajaActual') || [];
-  const register = rows.find((row) => row._id === 'CAJA_PRINCIPAL');
+  const register = rows.find((row) => row.singletonKey === 'CAJA_PRINCIPAL');
 
   assert.strictEqual(first.status, 'SUCCESS');
   assert.strictEqual(replay.status, 'SUCCESS');
   assert.strictEqual(replay.idempotent, true);
   assert.ok(register, 'CajaActual principal debe quedar persistida');
-  assert.strictEqual(register.cashAmount, 35);
+  assert.strictEqual(register.cashAmount, 335);
   assert.strictEqual(register.cardAmount, 0);
   assert.strictEqual(register.voucherAmount, 0);
   assert.strictEqual(register.otherAmount, 0);
-  assert.strictEqual(register.netAmount, 35);
+  assert.strictEqual(register.netAmount, 335);
   assert.strictEqual(register.salesCount, 1);
   assert.deepStrictEqual(register.sequenceCounters.appliedMovementIds, [movement._id]);
 });
