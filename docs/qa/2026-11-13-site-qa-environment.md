@@ -102,8 +102,11 @@ La reserva nativa está cancelada y no ocupa el slot. No borrar el registro nati
 - `SDK_CONFIG.EMAIL.ACCOUNTANT_SEND_ENABLED` sigue en `false`.
 - La allowlist Resend existente no sustituye el control de destinatarios de las automatizaciones nativas Wix.
 - No se ha habilitado el despacho de emails ni se ha ejecutado ningún envío.
-- El registro CMS de gestoría fue localizado en `DatosFiscales`, pero no se ha probado el envío a un sink controlado.
-- Antes de enviar, el flujo debe demostrar snapshot persistido, hash verificado, destinatario exacto en allowlist, idempotencia del despacho y traza de resultado.
+- El registro CMS de gestoría fue localizado en `DatosFiscales`; su dirección pertenece a la allowlist exacta del backend. No se replica el email en este documento.
+- `ACCOUNTANT_SEND_ENABLED=false` sigue bloqueando el envío real.
+- Se ha añadido `src/backend/tests/fixtures/qaManagerEmailSink.mock.mjs` y `src/backend/tests/qa.manager-email-sink.mock.test.mjs`: sink en memoria que acepta únicamente `qa-gestoria@example.test` y cliente sintético `Nacho Pitt / qa.simple@example.test`, exige ID de paquete, hash SHA-256 y traceId, y garantiza idempotencia sin red ni Resend.
+- La suite aislada local ejecutó 4/4 PASS y se añadió al gate Layer 2 y al manifest QA.
+- Este sink no invoca `fiscalDocuments.web.js` ni demuestra el envío real; el despacho real sigue bloqueado. Antes de habilitarlo, el flujo debe demostrar snapshot persistido, hash verificado, destinatario exacto en allowlist, idempotencia del despacho y traza de resultado.
 
 ## 6. Pagos simulados
 
@@ -211,7 +214,8 @@ Antes de cualquier despliegue real:
 | Simulador PSP offline en memoria | Implementado en tests; 6/6 PASS local y CI |
 | Simulador PSP accesible desde runtime/UI | No implementado (intencional: no existe sandbox PSP acreditado) |
 | Pago OFFLINE Bookings sin cargo | Verificado en prueba runtime; no es pago PSP |
-| Comunicación a gestoría | Bloqueada por flag; no enviada |
+| Sink QA de gestoría en memoria | 4/4 PASS local; CI pendiente |
+| Despacho real a gestoría | Bloqueado por flag; no enviado |
 | 18 automatizaciones modificables | INACTIVE, verificado por read-back |
 | 10 automatizaciones bloqueadas | ACTIVE; triggers excluidos de QA |
 | Efectividad real con identidad CMS_EDITOR | Pendiente |
@@ -225,4 +229,4 @@ Antes de cualquier despliegue real:
 - Contratos SDK Wix Bookings Reader V2, eCommerce Cart V2 y Order Transactions: PASS.
 - ESLint: PASS.
 - Gitleaks full-history: PASS.
-Ejecuciones: backend quality gates `43487412879`; secret scanning `43487413018`. La proyección CitasF2 desactualizada (CONFIRMED frente a Bookings CANCELED), los diez flujos Wix bloqueados y la falta de un sink de gestoría impiden certificar el sitio como entorno QA completo. No autoriza un despliegue real.
+Ejecuciones: backend quality gates `43487412879`; secret scanning `43487413018`. La proyección CitasF2 desactualizada (CONFIRMED frente a Bookings CANCELED), los diez flujos Wix bloqueados y la ausencia de despacho real de gestoría impiden certificar el sitio como entorno QA completo. No autoriza un despliegue real.
