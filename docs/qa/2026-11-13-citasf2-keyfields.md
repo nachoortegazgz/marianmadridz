@@ -14,8 +14,8 @@ Lectura consistente de Data Collections API y Data Items API:
 - 1 item en CitasF2.
 - 1 item leído de 1; sin páginas adicionales.
 - ID del item: `4f78a93b-8df6-4edd-a1ae-2026e26ad292`.
-- Los campos `noShowReason`, `noShowAt` y `sourceEventId` no contenían valores en ningún item.
-- Búsqueda de código en el repositorio: sin consumidores activos de `noShowReason` ni `sourceEventId`; `noShowAt` solo aparecía en normalización de hook y fixture de prueba, sin writer/reader de negocio.
+- Los campos `noShowReason`, `noShowAt`, `sourceEventId` y `canceledAt` no contenían valores en ningún item.
+- Búsqueda de código en el repositorio: sin consumidores activos de `noShowReason`, `sourceEventId` ni `canceledAt`; `noShowAt` solo aparecía en normalización de hook y fixture de prueba, sin writer/reader de negocio. `canceledAt` solo estaba declarado en BOOKING_FIELDS y en normalización de fechas, sin writer/reader; `cancellationReason` se conserva porque WEB-09 de la matriz de trazabilidad lo declara como dato del flujo de cancelación.
 
 La API oficial Delete Data Collection Field elimina también todos los valores del campo en todos los items. La eliminación se ejecutó únicamente después de comprobar el recuento completo y ausencia de valores.
 
@@ -28,13 +28,13 @@ La API oficial Delete Data Collection Field elimina también todos los valores d
 | `timeZone` | TEXT | TEXT | Conservado; el writer ahora lo persiste desde `SDK_CONFIG.TZ` |
 | `noShowReason` | TEXT | Ausente | Eliminado: huérfano sin valores |
 | `noShowAt` | DATETIME | Ausente | Eliminado: huérfano sin valores |
-| `sourceEventId` | TEXT | Ausente | Eliminado: huérfano sin valores |
+| `sourceEventId` | TEXT | Ausente | Eliminado: huérfano sin valores |\n| `canceledAt` | DATETIME | Ausente | Eliminado: sin consumidores activos ni valores |
 
 Revisiones Wix: 34 tras crear `orderId`; 35 tras eliminar `noShowReason`; 36 tras eliminar `noShowAt`; 37 tras eliminar `sourceEventId`. Lectura final confirmó `orderId: TEXT` y ausencia de los tres campos eliminados.
 
 ## 3. Campos preservados deliberadamente
 
-Se mantienen `privacyNoticePurpose`, `privacyNoticeAcceptedAt`, `privacyNoticeVersion` porque tienen escritores activos; `cancellationReason` y `canceledAt` por su relación con el ciclo de cancelación; `thirdPartyId`, `fiscalData` e `invoicingDate` por el vínculo fiscal/tercero/caja documentado. No se ha podado ningún campo de una colección Wix App.
+Se mantiene `cancellationReason` porque figura en el contrato de flujo WEB-09. Se mantienen `privacyNoticePurpose`, `privacyNoticeAcceptedAt`, `privacyNoticeVersion` porque tienen escritores activos; `cancellationReason` y `canceledAt` por su relación con el ciclo de cancelación; `thirdPartyId`, `fiscalData` e `invoicingDate` por el vínculo fiscal/tercero/caja documentado. No se ha podado ningún campo de una colección Wix App.
 
 ## 4. Consolidación de campos duplicados
 
@@ -80,7 +80,7 @@ La reserva nativa de Wix sigue en `CANCELED / NOT_PAID`, mientras la proyección
 **Verificado en Wix:**
 - Revisión final de colección 37.
 - `orderId` existe y es TEXT.
-- Los tres campos eliminados no existen.
+- Los cuatro campos eliminados no existen.
 - Los duplicados `meta.bookingStatus` y `meta.paymentStatus` ya no están en el item.
 - Los valores raíz `bookingStatus` y `paymentStatus` se conservaron sin cambios.
 - No se ha publicado código.
