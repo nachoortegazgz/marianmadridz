@@ -1058,7 +1058,7 @@ async function _markCitasPendingLedgerByBookingIds(bookingIds, orderId, traceId)
                 (cita) => {
                     const meta = cita.meta || {};
                     const currentPaymentState = String(
-                        meta.paymentStatus || cita.paymentStatus || ""
+                        cita[BOOKING_FIELDS.PAYMENT_STATUS] || meta.paymentStatus || ""
                     ).toUpperCase();
                     if (currentPaymentState === PAYMENT_STATUS.PAID) return null;
                     return {
