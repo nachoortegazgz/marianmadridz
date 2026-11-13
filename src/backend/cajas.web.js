@@ -565,8 +565,6 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
             }
             resourceId = staffContext.resourceId;
         }
-        await _rateLimitOrThrow("cajas.registerManualTransaction", resourceId, traceId);
-
         const movementType = requestedMovementType;
         const isRefundMovement = [
             MOVEMENT_TYPE.REEMBOLSO,
@@ -677,6 +675,10 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
         if (_isSimulationCashRegister(currentCashRegister)) {
             return { status: "ERROR", data: null, error: { code: "CASH_REGISTER_SIMULATION_STATE", message: "La caja actual contiene estado de simulacion; no se permiten movimientos reales." } };
         }
+        // Idempotent retries return the original movement before consuming the
+        // per-operator rate limit; only new operations are rate-limited.
+        await _rateLimitOrThrow("cajas.registerManualTransaction", resourceId, traceId);
+
         const operationDate = new Date().toLocaleDateString("sv-SE", { timeZone: SDK_CONFIG.TZ });
         await _assertPeriodNotClosed(operationDate, traceId);
         if (channelType === CHANNEL_TYPE.PRESENCIAL && !_hasOpenCashierSession(currentCashRegister)) {
