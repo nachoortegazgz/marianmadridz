@@ -677,6 +677,13 @@ test('CRON-FISCAL-ALERT-01 resolves an old fiscal alert only after a complete cl
       data: { breaksCount: 6 },
     },
   }]);
+  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA, [{
+    _id: 'verified-live-movement',
+    sequenceNumber: 1,
+    recordSource: 'LIVE',
+    hash: 'a'.repeat(64),
+    previousRecordHash: '0'.repeat(64),
+  }]);
 
   const result = await CR.systemHealthCheck();
   assert.equal(result.fiscalChain, 'SUCCESS');
@@ -715,6 +722,30 @@ test('CRON-FISCAL-ALERT-02 keeps fiscal alerts OPEN when the chain audit reprodu
 
   const result = await CR.systemHealthCheck();
   assert.equal(result.fiscalChain, 'INTEGRITY_COMPROMISED');
+  assert.equal(result.fiscalAlertResolution.resolved, 0);
+  assert.equal(result.fiscalAlertResolution.skipped, true);
+
+  const alert = (wixDataMock._store.get(C) || [])
+    .find(row => row._id === 'legacy-fiscal-chain-alert');
+  assert.equal(alert.status, IC.CONTROL_STATUS.OPEN);
+});
+
+
+test('CRON-FISCAL-ALERT-03 does not resolve a historical fiscal alert from an empty ledger scan', async () => {
+  wixDataMock._reset();
+  const C = IC.OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
+  wixDataMock._seed(C, [{
+    _id: 'legacy-fiscal-chain-alert',
+    controlType: IC.CONTROL_TYPE.ALERT,
+    alertType: 'FISCAL_CHAIN_CORRUPTED',
+    status: IC.CONTROL_STATUS.OPEN,
+    dedupeKey: 'legacy-fiscal-chain-alert',
+    traceId: 'trace-original-fiscal-alert',
+    payload: { eventType: 'FISCAL_CHAIN_CORRUPTED', data: { breaksCount: 6 } },
+  }]);
+
+  const result = await CR.systemHealthCheck();
+  assert.equal(result.fiscalChain, 'SUCCESS');
   assert.equal(result.fiscalAlertResolution.resolved, 0);
   assert.equal(result.fiscalAlertResolution.skipped, true);
 
