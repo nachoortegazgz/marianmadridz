@@ -1080,9 +1080,13 @@ async function _updateCajaActual(movement, traceId) {
             sequenceCounters.appliedMovementIds = [...appliedMovementIds, movementKey];
             cashRegister.sequenceCounters = sequenceCounters;
             cashRegister[CAJA_KEYS.OPERATIONS] = Number(cashRegister[CAJA_KEYS.OPERATIONS] || 0) + 1;
-            cashRegister[CAJA_KEYS.LAST_MOVEMENT_AT] = movement.recordTimestamp
-                ? new Date(movement.recordTimestamp)
-                : new Date();
+            if (movement.recordTimestamp) {
+                const movementTimestamp = new Date(movement.recordTimestamp);
+                if (Number.isNaN(movementTimestamp.getTime())) {
+                    throw new Error("CAJA_MOVEMENT_TIMESTAMP_INVALID");
+                }
+                cashRegister[CAJA_KEYS.LAST_MOVEMENT_AT] = movementTimestamp;
+            }
             cashRegister.traceId = _safeTrim(movement.traceId) || traceId;
             cashRegister.staffResourceId = _safeTrim(movement.staffResourceId) || null;
             const movementDate = readOperationDate(movement);
@@ -1218,7 +1222,7 @@ async function _readCashierSessionSummary(cashRegister) {
         : new Date(cashRegister?.openedAt || "");
     if (!cashRegister?.openedAt || Number.isNaN(openedAt.getTime())) return null;
 
-    const query = dalQuery(MOVIMIENTOS_CAJA_COL)
+    let query = dalQuery(MOVIMIENTOS_CAJA_COL)
         .gte("recordTimestamp", openedAt)
         .eq("channelType", CHANNEL_TYPE.PRESENCIAL)
         .in("paymentMethod", [PAYMENT_METHOD.EFECTIVO, PAYMENT_METHOD.TARJETA, PAYMENT_METHOD.BIZUM])
@@ -1226,6 +1230,10 @@ async function _readCashierSessionSummary(cashRegister) {
         .ne("recordSource", "SMOKE_TEST")
         .descending("sequenceNumber")
         .limit(LEDGER_PAGE_SIZE);
+    if (cashRegister.closedAt) {
+        const closedAt = cashRegister.closedAt instanceof Date ? cashRegister.closedAt : new Date(cashRegister.closedAt);
+        if (!Number.isNaN(closedAt.getTime())) query = query.lte("recordTimestamp", closedAt);
+    }
 
     let res = await query.find(STRONG_READ);
     const summary = {
