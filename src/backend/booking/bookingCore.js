@@ -1581,7 +1581,7 @@ function _minimizeContactDetails(contactDetails) {
     return out;
 }
 
-function _normalizeMeta(rawMeta, overrides) {
+function _normalizeMeta(rawMeta) {
     let meta = rawMeta;
     if (typeof meta === "string") {
         try {
@@ -1591,7 +1591,16 @@ function _normalizeMeta(rawMeta, overrides) {
         }
     }
     if (!meta || typeof meta !== "object" || Array.isArray(meta)) meta = {};
-    return Object.assign({}, meta, overrides);
+    const normalized = { ...meta };
+    for (const field of [
+        "bookingStatus",
+        "paymentStatus",
+        "orderId",
+        "cashMovementId",
+    ]) {
+        delete normalized[field];
+    }
+    return normalized;
 }
 
 function _isBookingUniqueCollision(error) {
@@ -1761,6 +1770,9 @@ export async function _persistBooking(params, traceId) {
         [BOOKING_FIELDS.STATUS]: bookingStatus,
         [BOOKING_FIELDS.PAYMENT_STATUS]: paymentStatus,
         [BOOKING_FIELDS.TOTAL_AMOUNT]: totalAmount,
+        [BOOKING_FIELDS.ORDER_ID]: _safeTrim(p.orderId || metaObj.orderId || "") || null,
+        [BOOKING_FIELDS.CASH_MOVEMENT_ID]: _safeTrim(p.cashMovementId || metaObj.cashMovementId || "") || null,
+        [BOOKING_FIELDS.TIME_ZONE]: SDK_CONFIG.TZ,
         [BOOKING_FIELDS.CONTACT_DETAILS]: _minimizeContactDetails(
             p.contactDetails
         ),
@@ -1769,10 +1781,7 @@ export async function _persistBooking(params, traceId) {
             ? _toDateSafe(p.privacyNoticeAcceptedAt)
             : null,
         privacyNoticePurpose: _safeTrim(p.privacyNoticePurpose || "") || null,
-        [BOOKING_FIELDS.META]: _normalizeMeta(p.meta, {
-            bookingStatus: bookingStatus,
-            paymentStatus: paymentStatus,
-        }),
+        [BOOKING_FIELDS.META]: _normalizeMeta(p.meta),
         [BOOKING_FIELDS.TRACE_ID]: traceIdClean,
     };
     const reconcileExisting = async (existingDoc) => {
