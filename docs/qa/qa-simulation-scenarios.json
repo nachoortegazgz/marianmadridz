@@ -634,7 +634,8 @@
         "review order #10017 10% VAT on a hairdressing service against the 2026 AEAT rate before any rectifying fiscal record",
         "hold order #10018 custom amount line for missing catalog identity and conflicting tax metadata",
         "verify order-invoice app identity and document status; an order-invoice reference alone is not proof of a valid fiscal invoice",
-        "require the DatosFiscales CONFIG_SISTEMA singleton and approved PGC mapping before enabling fiscal or accounting writers"
+        "require the DatosFiscales CONFIG_SISTEMA singleton and approved PGC mapping before enabling fiscal or accounting writers",
+        "record the common createdByAppId for the 13 PAID/CANCELED bookings without eCommerce orders and leave its origin/payment method unresolved until identified"
       ],
       "limitation": "Live read-only evidence only. Four PAID orders reconcile to four APPROVED Wix transactions for EUR 264.36, but no matching fiscal/accounting ledger entries are visible. Fifteen native bookings are PAID/CANCELED (two linked to paid orders and thirteen without an eCommerce order link). VAT and catalog exceptions remain open. No production booking, payment, refund, cash movement or accounting entry is created or changed."
     },
