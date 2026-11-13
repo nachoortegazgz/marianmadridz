@@ -475,6 +475,37 @@ test('RES-LOOK-01F ambiguous normalized title lookup fails closed', async () => 
   assert.strictEqual(result.status, 'ERROR');
   assert.strictEqual(result.error.code, 'SERVICE_LOOKUP_AMBIGUOUS');
 });
+test('RES-LOOK-01G Wix numeric dynamic-page suffix resolves one canonical CMS slug', async () => {
+  resetState();
+  await invalidateStaffCache();
+  const row = baseServiceRow({
+    slug: 'balayage-signature-degradado-natural',
+    title: 'Balayage Signature',
+  });
+  seedService(row);
+
+  const result = await RW._getServiceBySlugOrIdInternal(row.slug + '-1');
+
+  assert.strictEqual(result.status, 'SUCCESS');
+  assert.strictEqual(result.data.serviceId, row.serviceId);
+  assert.strictEqual(result.data.slug, row.slug);
+});
+
+test('RES-LOOK-01H Wix numeric suffix with duplicate canonical slugs fails closed', async () => {
+  resetState();
+  await invalidateStaffCache();
+  const canonicalSlug = 'balayage-signature-' + seq;
+  const first = baseServiceRow({ slug: canonicalSlug, title: 'Balayage Signature A' });
+  const second = baseServiceRow({ slug: canonicalSlug, title: 'Balayage Signature B' });
+  seedService(first);
+  seedService(second);
+
+  const result = await RW._getServiceBySlugOrIdInternal(canonicalSlug + '-1');
+
+  assert.strictEqual(result.status, 'ERROR');
+  assert.strictEqual(result.error.code, 'SERVICE_LOOKUP_AMBIGUOUS');
+});
+
 
 test('RES-LOOK-01B dual service: linkedPhases GUID preserved end-to-end (v10.6)', async () => {
   resetState();
@@ -1253,6 +1284,42 @@ test('RES-BAL-05 native resource overrides stale CitasF2 resource in daily workl
   assert.strictEqual(result.status, 'SUCCESS');
   assert.strictEqual(result.data[0].resourceId, stA,
     'the native booking contributes 120 minutes to B, not the stale 60-minute CMS row to A');
+});
+
+test('RES-BAL-06 unassigned native booking without staff identity does not bias any candidate load', async () => {
+  resetState();
+  await invalidateStaffCache();
+  const stA = guid();
+  const stB = guid();
+  const row = baseServiceRow({});
+  seedService(row);
+  seedStaffApi([
+    { resourceId: stA, name: 'Ana', role: 'STYLIST' },
+    { resourceId: stB, name: 'Bea', role: 'STYLIST' },
+  ]);
+  nativeBookingsState.bookings = [{
+    id: 'native-unassigned-no-selection',
+    status: 'CONFIRMED',
+    paymentStatus: 'NOT_PAID',
+    startDate: '2026-10-23T08:00:00.000Z',
+    endDate: '2026-10-23T18:00:00.000Z',
+    staffMemberId: null,
+    bookedEntity: {
+      slot: {
+        resourceSelections: [{ selectionMethod: 'NO_SELECTION' }],
+      },
+    },
+  }];
+  slotsState.responses.set(row.serviceId, [
+    availSlot('2026-10-23T10:00:00', '2026-10-23T11:00:00', [stA, stB]),
+  ]);
+
+  const result = await RW._getCertifiedDualSlotsInternal(row.serviceId, '', '2026-10-23');
+
+  assert.strictEqual(result.status, 'SUCCESS');
+  assert.strictEqual(result.data[0].resourceId, stA,
+    'the unassigned booking is not retrospectively attributed to either staff member');
+  assert.strictEqual(nativeBookingsState.calls.length, 1);
 });
 
 test('RES-BAL-04 native reader failure refuses assignment with incomplete daily load', async () => {
