@@ -11,14 +11,14 @@ Evitar que una reserva creada por Wix Bookings quede fuera de la proyección ope
 - En la ventana auditada de 30 días se leyeron 44 reservas nativas: 6 `CONFIRMED` y 38 `CANCELED`.
 - `CitasF2` devolvió 0 registros.
 - `ControlOperativo` no contenía marcadores `WEBHOOK_EVENT` en la consulta de auditoría.
-- El repositorio `main` exportaba handlers para `wixBookingsV2_onBookingConfirmed`, `wixBookingsV2_onBookingRescheduled` y `wixBookingsV2_onBookingCanceled`, pero no para `wixBookingsV2_onBookingCreated`.
+- El repositorio `main` exportaba handlers para `wixBookingsV2_onBookingConfirmed`, `wixBookings_onBookingRescheduled` y `wixBookingsV2_onBookingCanceled`, pero no para `wixBookings_onBookingCreated`.
 - Wix documenta el evento Bookings V2 `onBookingCreated` como evento que se dispara al crear una reserva. El contrato del evento confirmado existente se mantiene.
 
 **Límite causal:** la ausencia de proyecciones y marcadores no demuestra por sí sola que el webhook confirmado no se ejecutara. También puede depender del código realmente publicado, de la configuración/registro de eventos o de diferencias entre `main` y el código desplegado. Este cambio cubre la fase de creación; no declara resuelta la causa de los registros históricos.
 
 ## Cambio implementado
 
-1. Se añade `wixBookingsV2_onBookingCreated` en `src/backend/events.js`.
+1. Se añade `wixBookings_onBookingCreated` en `src/backend/events.js`.
 2. El handler valida `metadata.id`, GUID de reserva y estado nativo permitido (`CREATED`, `PENDING` o `CONFIRMED`).
 3. Persiste la proyección inicial como `PENDING` (o `CONFIRMED` si Wix ya entrega ese estado).
 4. La marca `WEBHOOK_EVENT` se escribe solo después de persistir correctamente la proyección. Si ya existe la marca pero falta la fila, el handler intenta reparar la proyección.

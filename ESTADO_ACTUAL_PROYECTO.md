@@ -71,7 +71,7 @@ Este contrato está **declarado**, no auditado todavía en código/esquema/sincr
 
 ### 3.3 Reservas: integridad de proyecciones
 
-PR #280/#281 añaden el handler wixBookingsV2_onBookingCreated y protegen una carrera en la que un evento de creación tardío podía degradar una proyección ya confirmada. La lógica está cubierta por CI offline, pero el runtime Wix sigue sin certificación.
+PR #280/#281 añaden el handler wixBookings_onBookingCreated y protegen una carrera en la que un evento de creación tardío podía degradar una proyección ya confirmada. La lógica está cubierta por CI offline, pero el runtime Wix sigue sin certificación.
 
 Una reserva sintética autorizada creada el 2026-11-11 quedó CONFIRMED en Wix Bookings, pero no apareció en CitasF2 ni generó marcador WEBHOOK_EVENT tras dos lecturas. La causa está sin determinar (código publicado divergente, evento no entregado o fallo de handler/persistencia). Se conserva la reserva y su anotación QA. **No cancelar, backfill, reparar ni crear otra reserva de prueba** hasta resolver la causa y definir un procedimiento seguro.
 

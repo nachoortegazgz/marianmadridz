@@ -87,7 +87,7 @@ Las páginas personalizadas identificadas son `Calendario de reservas 2.q39h6.js
 
 
 ### Reprogramación nativa Wix Bookings — protección de reservas duales
-- La documentación oficial SDK confirma el evento Bookings V2 `onBookingRescheduled`, disparado cuando una reserva se reprograma. El handler Velo correspondiente se incorpora como `wixBookingsV2_onBookingRescheduled`.
+- La documentación oficial SDK confirma el evento Bookings V2 `onBookingRescheduled`, disparado cuando una reserva se reprograma. El handler Velo correspondiente se incorpora como `wixBookings_onBookingRescheduled`.
 - El handler actualiza exclusivamente la fase cuyo booking fue reprogramado en Wix: `slotStart`, `slotEnd`, `dateYmd`, `resourceId`, `scheduleId`, `serviceId` y `revision`. No altera el estado de pago, estado de reserva, pedido ni ledger fiscal.
 - Para una reserva dual, el evento no contiene el `pairToken` interno de CitasF2. El handler detecta la pareja desde CMS y abre una alerta deduplicada `DUAL_BOOKING_NATIVE_RESCHEDULE_MISMATCH`. No mueve automáticamente la otra fase porque debe pasar por el lock/journal y la validación de disponibilidad del flujo dual.
 - Si no existe la proyección CitasF2, el handler devuelve `RETRY_REQUIRED`; no crea un registro fiscal/pago parcial a partir de un evento de reprogramación.

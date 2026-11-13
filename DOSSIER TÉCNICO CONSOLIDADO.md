@@ -1227,7 +1227,7 @@ Este addendum actualiza el estado de las áreas que han cambiado desde la revisi
 
 ### Reservas nativas y proyección CitasF2
 
-PR #280 incorpora el handler Velo wixBookingsV2_onBookingCreated para proyectar la creación nativa como PENDING o CONFIRMED según el estado recibido. PR #281 protege una carrera: un evento BOOKING_CREATED tardío no debe degradar una proyección ya confirmada. CI offline final documentada: 53 suites / 530 tests, 0 fallos.
+PR #280 incorpora el handler Velo wixBookings_onBookingCreated para proyectar la creación nativa como PENDING o CONFIRMED según el estado recibido. PR #281 protege una carrera: un evento BOOKING_CREATED tardío no debe degradar una proyección ya confirmada. CI offline final documentada: 53 suites / 530 tests, 0 fallos.
 
 La prueba sintética autorizada del 2026-11-11 (booking 213a10f1-9d4e-44ed-b682-a459bd7ed88d) quedó CONFIRMED en Wix, pero no produjo fila CitasF2 ni marcador WEBHOOK_EVENT en dos lecturas posteriores. Causa no determinada; no se ha verificado el SHA de Velo publicado ni hay evidencia runtime suficiente. Preservar reserva y anotación QA; no cancelar, hacer backfill ni crear otra reserva de prueba hasta aislar el fallo.
 

@@ -17,11 +17,13 @@ test("EVENTS-VELO-01 consumes Wix-managed event objects without raw webhook veri
   assert.doesNotMatch(source, /rawBody/);
 });
 
-test("EVENTS-VELO-02 keeps Bookings V2 Velo event handler exports", () => {
-  assert.match(source, /export async function wixBookingsV2_onBookingCreated/);
+test("EVENTS-VELO-02 uses the exact Velo Bookings V2 event handler names", () => {
+  assert.match(source, /export async function wixBookings_onBookingCreated/);
   assert.match(source, /export async function wixBookingsV2_onBookingConfirmed/);
-  assert.match(source, /export async function wixBookingsV2_onBookingRescheduled/);
+  assert.match(source, /export async function wixBookings_onBookingRescheduled/);
   assert.match(source, /export async function wixBookingsV2_onBookingCanceled/);
+  assert.doesNotMatch(source, /export async function wixBookingsV2_onBookingCreated/);
+  assert.doesNotMatch(source, /export async function wixBookingsV2_onBookingRescheduled/);
 });
 
 test("EVENTS-VELO-03 refunds use stable order payment-status and order-updated events", () => {

@@ -108,7 +108,7 @@ function seedCita(overrides = {}) {
 test("EVENT-BOOKING-CREATED-01 native creation persists a pending projection and confirmation advances it", async () => {
   wixDataMock._reset();
   const createdBooking = nativeBooking({ status: "CREATED", paymentStatus: "UNDEFINED" });
-  const createdResult = await events.wixBookingsV2_onBookingCreated(
+  const createdResult = await events.wixBookings_onBookingCreated(
     bookingConfirmedEvent("evt-native-created-001", createdBooking)
   );
 
@@ -140,7 +140,7 @@ test("EVENT-BOOKING-CREATED-02 late creation delivery never downgrades a custom 
     meta: { pairToken: PAIR_TOKEN, customSaga: true },
   })]);
 
-  const result = await events.wixBookingsV2_onBookingCreated(
+  const result = await events.wixBookings_onBookingCreated(
     bookingConfirmedEvent("evt-native-created-late-002", nativeBooking({ status: "CREATED" }))
   );
 
@@ -180,7 +180,7 @@ test("EVENT-BOOKING-CREATED-03 insertOnly race preserves a concurrent pending du
   };
 
   try {
-    const result = await events.wixBookingsV2_onBookingCreated(
+    const result = await events.wixBookings_onBookingCreated(
       bookingConfirmedEvent(
         "evt-native-created-insert-race-004",
         nativeBooking({ status: "CREATED" })
@@ -207,8 +207,8 @@ test("EVENT-BOOKING-CREATED-04 duplicate delivery is idempotent", async () => {
     nativeBooking({ status: "CREATED" })
   );
 
-  const first = await events.wixBookingsV2_onBookingCreated(event);
-  const replay = await events.wixBookingsV2_onBookingCreated(event);
+  const first = await events.wixBookings_onBookingCreated(event);
+  const replay = await events.wixBookings_onBookingCreated(event);
 
   assert.equal(first.status, "OK");
   assert.equal(replay.status, "OK");
@@ -835,7 +835,7 @@ test("EVENT-BOOKING-RESCHEDULE-01 native reschedule updates only the affected Ci
     }),
   ]);
 
-  const result = await events.wixBookingsV2_onBookingRescheduled({
+  const result = await events.wixBookings_onBookingRescheduled({
     metadata: { id: "native-reschedule-event-01" },
     data: {
       booking: {
@@ -908,7 +908,7 @@ test("EVENT-BOOKING-RESCHEDULE-02 duplicate native reschedule event is idempoten
     payload: { eventType: "BOOKING_RESCHEDULED" },
   }]);
 
-  const result = await events.wixBookingsV2_onBookingRescheduled({
+  const result = await events.wixBookings_onBookingRescheduled({
     metadata: { id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa02" },
     data: {
       booking: {
@@ -937,7 +937,7 @@ test("EVENT-BOOKING-RESCHEDULE-02 duplicate native reschedule event is idempoten
 test("EVENT-BOOKING-RESCHEDULE-03 missing CitasF2 projection is retriable and never creates a partial row", async () => {
   wixDataMock._reset();
   await assert.rejects(
-    events.wixBookingsV2_onBookingRescheduled({
+    events.wixBookings_onBookingRescheduled({
       metadata: { id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa03" },
       data: {
         booking: {
@@ -967,7 +967,7 @@ test("EVENT-BOOKING-RESCHEDULE-04 older native reschedule revision cannot roll a
       dateYmd: "2026-11-12",
     }),
   ]);
-  const result = await events.wixBookingsV2_onBookingRescheduled({
+  const result = await events.wixBookings_onBookingRescheduled({
     metadata: { id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa04" },
     data: {
       booking: {
