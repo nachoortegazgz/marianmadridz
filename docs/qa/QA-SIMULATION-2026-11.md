@@ -319,3 +319,74 @@ Reglas:
 Pruebas añadidas: `RES-LOOK-01G` (resolución única) y `RES-LOOK-01H` (ambigüedad fail-closed).
 
 **Límite:** la corrección del resolver y sus pruebas offline no sustituyen una comprobación visual de la ruta en Wix Runtime. No se ha publicado código ni cambiado el Editor.
+
+
+## 2026-11-13 — puerta de cierre de capas 1 y 2 (segundo corte live)
+
+### Alcance y evidencia live de solo lectura
+
+Consulta paginada completa de Bookings Reader V2:
+
+- 346 reservas: 73 `CONFIRMED`, 255 `CANCELED`, 18 `CREATED`.
+- 73/73 reservas confirmadas mantienen correspondencia exacta por `slot.eventId` con Calendar V3 (auditoría previa del mismo corte).
+- 17/73 confirmadas no exponen `slot.resource` ni `staffMemberId`; todas muestran `resourceSelections.selectionMethod=NO_SELECTION`.
+- Las 17 reservas sin identidad de profesional fueron creadas entre agosto y octubre de 2026. No se puede deducir una asignación individual ni convertir el algoritmo actual de balanceo en una fuente histórica.
+- `CitasF2`: 0 filas. `ControlOperativo`: 0 filas en la lectura fuerte actual.
+
+Consulta eCommerce:
+
+- 31 pedidos, 4 con `paymentStatus=PAID`; las cuatro transacciones asociadas figuran `APPROVED`.
+- Los métodos que devuelve Wix son `Cash` en tres transacciones y `Other Payment Method` en una. No se deben reinterpretar como pagos online con tarjeta sin documentación adicional.
+- Tres líneas de pedido referencian reservas: una reserva está `CONFIRMED/PAID` y dos `CANCELED/PAID`.
+- Un pedido mixto contiene además una línea `EXTRA` sin `catalogReference.appId` ni `catalogItemId`. Se mantiene en revisión.
+- `MovimientosCaja`: 0 filas. `LibroAsientosContablesDetalle`: 0 filas en la última consulta live documentada; repetir la lectura antes de cualquier reconciliación.
+- No se ha inferido que las dos reservas canceladas requieran devolución. Se necesita revisar transacción, motivo, política y eventual reembolso antes de cualquier asiento rectificativo.
+
+Estado de caja y políticas:
+
+- `CajaActual` conserva el sentinel `SIMULACION`; no convertirlo en caja operativa.
+- `FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED=false`.
+- `FISCAL_RUNTIME_POLICY.ACCOUNTING_LEDGER_WRITES_ENABLED=false`.
+- `STAFF_CLOCKING_CONFIG.WRITES_ENABLED=false`.
+- Estas políticas son fail-closed y deben permanecer así hasta la certificación fiscal/contable y la validación runtime.
+
+### Aislamiento del sitio QA
+
+Consulta actual de Automations V2 en el sitio QA:
+
+- 119 automatizaciones: 106 INACTIVE y 13 ACTIVE.
+- Las 13 activas son preinstaladas y tienen `settings.readonly=true` o `settings.disableStatusChange=true`.
+- Algunas pertenecen a notificaciones de Bookings, tarjetas guardadas/cargadas, formularios, gift cards y servicios de plataforma.
+- No se sortea el bloqueo ni se ejecuta `Test Automation`, porque puede disparar acciones reales.
+- El sitio QA sigue parcialmente aislado y no es apto para pruebas E2E que puedan generar comunicaciones o efectos externos.
+
+### Cambios de calidad de CI
+
+Se añaden gates explícitos `npm run test:layer1` y `npm run test:layer2` antes del runner completo `npm test`.
+
+Cobertura focal añadida a los runners:
+- Capa 1: reconciliación de proyecciones de reservas nativas.
+- Capa 2: sincronización de pago/reserva eCommerce, validación de identidad de pedido y política fail-closed de writers operativos.
+
+La suite completa sigue siendo el gate canónico. La CI de esta rama debe confirmar los nuevos gates antes de integrar.
+
+### Decisión de cierre
+
+**Capa 1: NO CERRADA.** El contrato offline y el algoritmo de balanceo están cubiertos, pero `CitasF2` y `ControlOperativo` están vacíos en la lectura live, no hay evidencia de ejecución de reconciliación y no se ha validado el flujo de reserva publicado en Wix Runtime. Las 17 reservas históricas sin identidad permanecen en revisión.
+
+**Capa 2: NO CERRADA.** Los writers fiscales, contables y de fichaje están deshabilitados por política; la caja continúa en SIMULACION; existen cuatro pedidos PAID con transacciones APPROVED sin proyección de ledger visible; la asignación contable automática carece de aprobación PGC; y no se han probado runtime ni conciliaciones con datos reales.
+
+No se han escrito datos en producción, creado transacciones, alterado ledgers, ejecutado crons, activado automatizaciones ni publicado cambios.
+
+
+### Corrección del runner de capa 2 detectada por CI
+
+La primera ejecución de PR #322 detectó una referencia obsoleta en `run-layer2.mjs`: `inventario.writer.offline.test.mjs` no existe en el árbol del repositorio. Se elimina esa referencia; no se crea un test ficticio ni se rebautiza otro archivo. La cobertura de flujos de inventario existente permanece en `site.flows.offline.test.mjs`, `inventario.web.js` y las suites generales del runner canónico.
+
+Resultado de esa primera ejecución:
+- Layer 1: 22 suites, 287 PASS, 0 FAIL.
+- Layer 2: 17 suites válidas, 239 PASS, 0 FAIL; el gate falló por el archivo inexistente (0 tests en esa entrada).
+- SDK Cart V2, Order Transactions, Bookings Reader V2 y ESLint: PASS.
+- La regresión completa `npm test` quedó omitida por el fallo previo del gate Layer 2.
+
+La corrección queda pendiente de una nueva ejecución de CI antes de integrar.
