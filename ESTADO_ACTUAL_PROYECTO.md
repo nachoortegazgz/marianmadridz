@@ -1,8 +1,8 @@
 # ESTADO VIGENTE CONSOLIDADO — 2026-11-13 20:51 CET
 
 **Repositorio:** [nachoortegazgz/marianmadridz](https://github.com/nachoortegazgz/marianmadridz)  
-**HEAD de main tras la consolidación documental:** 8b3155afcd1f51b404b48d547f86eb98aac2019f  
-**Baseline funcional integrado por PR #330, anterior a los commits documentales:** 3df4b4cf174d80dfd22406bbd758b2eddd7aaa44  
+**Baseline funcional integrado por PR #330:** 3df4b4cf174d80dfd22406bbd758b2eddd7aaa44  
+**Estado posterior:** se añadieron commits exclusivamente documentales a main; consultar GitHub para el HEAD documental actual.  
 **Sitio Wix:** https://www.marianmadrid.es/ · Site ID 188bed94-177c-4bc9-a9f0-35080d874f3e  
 **Estado Wix leído en esta revisión:** Published · Wix Editor · Velo enabled · Europe/Madrid · EUR  
 **Estado de despliegue Velo:** no se ha acreditado que el código de main esté publicado en el sitio. El merge GitHub no equivale a Wix Publish.
@@ -11,7 +11,7 @@
 
 ## 1. Resumen ejecutivo y estado Git
 
-- PR #330 está **MERGED** en main. El merge funcional registrado es 3df4b4cf174d80dfd22406bbd758b2eddd7aaa44. Después se añadieron cinco commits exclusivamente documentales; el HEAD de main al finalizar esta consolidación es 8b3155afcd1f51b404b48d547f86eb98aac2019f.
+- PR #330 está **MERGED** en main. El merge funcional registrado es 3df4b4cf174d80dfd22406bbd758b2eddd7aaa44. Después se añadieron commits exclusivamente documentales; el HEAD documental vivo se consulta directamente en GitHub.
 - PR #331 está **CLOSED / NOT MERGED**. Su rama qa/2026-11-13-citasf2-keyfields permanece en GitHub; no debe fusionarse ni aplicarse sin comparar con lo ya integrado por PR #330.
 - PR #330 integra los simuladores offline PSP y sink de email QA, cambios de handlers/contratos y la alineación del modelo CitasF2 descrita en su cuerpo de PR y auditoría.
 - Resultados registrados para PR #330: Layer 1, 23 suites / 294 PASS; Layer 2, 18 suites / 243 PASS; regresión completa, 68 suites / 621 PASS; contratos Wix Bookings Reader V2, eCommerce Cart V2 y Order Transactions PASS; ESLint PASS; Gitleaks full-history PASS. Referencias registradas: workflows 43488515192 y 43488515254. La asociación exacta de esos runs al SHA de código que se integró debe confirmarse en GitHub Actions antes de afirmar que el HEAD actual de main tiene CI verde.
@@ -115,7 +115,7 @@ No modificar manualmente bookingStatus en CitasF2, no borrar el booking nativo y
 - [ ] Mantener inmutabilidad append-only; corregir solo mediante nuevos registros rectificativos trazables.
 
 ### P1 — Reservas, Bookings y CitasF2
-- [ ] Verificar qué SHA de Velo está realmente publicado y compararlo con el baseline funcional integrado 3df4b4cf174d80dfd22406bbd758b2eddd7aaa44; el HEAD documental de main es 8b3155afcd1f51b404b48d547f86eb98aac2019f.
+- [ ] Verificar qué SHA de Velo está realmente publicado y compararlo con el baseline funcional integrado 3df4b4cf174d80dfd22406bbd758b2eddd7aaa44; el HEAD documental vivo de main se consulta en GitHub.
 - [ ] Revisar delivery, suscripción, export names, logs runtime y ejecución del handler wixBookingsV2_onBookingCanceled; determinar la causa de CANCELED nativo frente a CONFIRMED en CitasF2.
 - [ ] Revisar el cron reconcileMissingConfirmedBookingProjections y sus trazas sin invocarlo manualmente ni generar escrituras durante el diagnóstico.
 - [ ] Diseñar reconciliación idempotente con precondiciones, evidencia, estrategia de no duplicidad y rollback antes de reparar cualquier proyección.
