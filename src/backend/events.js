@@ -1018,10 +1018,11 @@ async function _markCitasPaidByBookingIds(bookingIds, orderId, traceId) {
             _updateCitaSafe(
                 bookingId,
                 (cita) => {
-                    const meta = cita.meta || {};
+                    const legacyMeta = cita.meta || {};
+                    const meta = _withoutCanonicalCitaMeta(legacyMeta);
                     const alreadyPaid =
                         String(
-                            cita[BOOKING_FIELDS.PAYMENT_STATUS] || meta.paymentStatus || ""
+                            cita[BOOKING_FIELDS.PAYMENT_STATUS] || legacyMeta.paymentStatus || ""
                         ).toUpperCase() === PAYMENT_STATUS.PAID;
                     if (alreadyPaid) return null;
                     return {
@@ -1066,9 +1067,10 @@ async function _markCitasPendingLedgerByBookingIds(bookingIds, orderId, traceId)
             _updateCitaSafe(
                 bookingId,
                 (cita) => {
-                    const meta = cita.meta || {};
+                    const legacyMeta = cita.meta || {};
+                    const meta = _withoutCanonicalCitaMeta(legacyMeta);
                     const currentPaymentState = String(
-                        cita[BOOKING_FIELDS.PAYMENT_STATUS] || meta.paymentStatus || ""
+                        cita[BOOKING_FIELDS.PAYMENT_STATUS] || legacyMeta.paymentStatus || ""
                     ).toUpperCase();
                     if (currentPaymentState === PAYMENT_STATUS.PAID) return null;
                     return {
