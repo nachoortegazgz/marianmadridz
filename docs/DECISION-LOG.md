@@ -239,3 +239,5 @@ Esta decisión es contractual/documental. No acredita que el backend o el esquem
 **Pendiente / no implementado:** `CajaActual` aún no persiste un campo dedicado `lastMovementId` ni un snapshot completo de última operación; el detalle y la referencia se reconstruyen en el DTO de lectura desde el ledger. Los contadores por método también se calculan desde `MovimientosCaja`. No existe todavía WebMethod seguro de apertura que establezca `openedBy/openedAt` ni un procedimiento de saldo inicial reconciliado. `lineItems` sigue sin contrato interno; conceptos/unidades no se exponen. Pagos mixtos siguen bloqueados. No se ha migrado el esquema CMS.
 
 **Gates intactos:** `LEDGER_WRITES_ENABLED=false`, `ACCOUNTING_LEDGER_WRITES_ENABLED=false`; la caja `SIMULACION` permanece bloqueada. Esta rama no escribe CMS live ni publica Wix.
+
+Para los movimientos presenciales manuales nuevos, backend asigna `recordSource=MANUAL_PRESENCIAL_AUTHENTICATED` y resuelve `staffResourceId` desde la identidad autenticada. La UI solo marca el operador como verificado cuando el origen contiene esa marca backend; los registros históricos se identifican como autoría no verificada.
