@@ -13,7 +13,14 @@ import {
     OPERATIONAL_COLLECTIONS as O,
     CONTROL_TYPE as T,
     RECORD_TYPE,
+    APPEND_ONLY_MUTATION_WINDOW,
 } from "backend/internalConfig";
+
+test("temporary append-only mutation window is explicit and requires production restoration", () => {
+    assert.equal(APPEND_ONLY_MUTATION_WINDOW.ENABLED, true);
+    assert.equal(APPEND_ONLY_MUTATION_WINDOW.TEMPORARY, true);
+    assert.equal(APPEND_ONLY_MUTATION_WINDOW.RESTORE_BEFORE_PRODUCTION, true);
+});
 
 test("insert policy allows only declared collections and canonical ControlOperativo types", () => {
     assert.doesNotThrow(() => assertInsertAllowed(O.CONTROL_OPERATIVO, {
