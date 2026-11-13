@@ -407,3 +407,17 @@ Ejecución final en el head de integración:
 - Gitleaks full-history: PASS.
 
 Este resultado valida los contratos y regresiones offline. No acredita ejecución de Wix Runtime, entrega de webhooks, ejecución de crons, checkout/PSP sandbox, fichajes reales ni certificación fiscal/contable. La decisión de cierre de capas 1 y 2 permanece **NO CERRADA** por los bloqueos live descritos arriba.
+
+
+## 2026-11-13 — RES-BAL-07: conservar carga de proyección con recurso nativo omitido
+
+La revisión estática de `_getBookedMinutesByResourceForDay` detectó que la deduplicación restaba siempre la proyección `CitasF2` al encontrar el mismo `bookingId` en Bookings Reader, incluso cuando el snapshot nativo no contenía `slot.resource._id`. En ese caso no se añadía carga nativa y se perdían minutos de un recurso conocido en la proyección de la saga.
+
+Corrección mínima:
+- Bookings sigue prevaleciendo cuando devuelve un recurso nativo, reemplazando recurso y duración de la proyección.
+- Si el estado nativo es contable pero omite el recurso, se conserva la proyección existente y no se atribuye carga a ningún otro profesional.
+- Reservas canceladas/no contables y reembolsadas siguen retirando su proyección del cálculo.
+
+Regresión añadida: `RES-BAL-07` en `src/backend/tests/reservas.web.test.mjs`. Fixture sintética: proyección de 60 minutos para A, snapshot nativo sin recurso y reserva nativa independiente de 30 minutos para B; el resultado esperado asigna el siguiente slot a B. La prueba no modifica datos Wix ni altera asignaciones históricas.
+
+Estado: corrección estática preparada; validación CI pendiente. No acredita por sí sola el comportamiento en Wix Runtime.
