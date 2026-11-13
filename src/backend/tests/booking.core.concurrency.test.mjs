@@ -448,7 +448,33 @@ test('BCORE-PER-01 valid simple booking persists canonical CitasF2 doc', async (
   assert.strictEqual(doc.privacyNoticeVersion, 'notice-test-v1');
   assert.strictEqual(doc.privacyNoticeAcceptedAt.toISOString(), acceptedAt.toISOString());
   assert.strictEqual(doc.privacyNoticePurpose, 'GESTION_RESERVA');
+  assert.strictEqual(doc.timeZone, 'Europe/Madrid');
+  assert.equal(Object.hasOwn(doc.meta, 'bookingStatus'), false);
+  assert.equal(Object.hasOwn(doc.meta, 'paymentStatus'), false);
   assert.ok(doc.meta && typeof doc.meta === 'object');
+});
+
+test('BCORE-PER-01B canonical CitasF2 references are root fields, not duplicated in meta', async () => {
+  wixDataMock._reset();
+  const orderId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+  const cashMovementId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+  const result = await BC._persistBooking(baseParams({
+    orderId,
+    cashMovementId,
+    meta: {
+      bookingStatus: 'PENDING',
+      paymentStatus: 'NOT_PAID',
+      orderId,
+      cashMovementId,
+      customSaga: true,
+    },
+  }), 'tr-canonical-refs');
+  assert.equal(result.item.orderId, orderId);
+  assert.equal(result.item.cashMovementId, cashMovementId);
+  assert.equal(result.item.meta.customSaga, true);
+  for (const key of ['bookingStatus', 'paymentStatus', 'orderId', 'cashMovementId']) {
+    assert.equal(Object.hasOwn(result.item.meta, key), false);
+  }
 });
 
 test('BCORE-PER-02 missing traceId rejected (SSOT-12 audit trail)', async () => {
