@@ -76,6 +76,13 @@
     .state-item{padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--soft)}
     .state-label{color:var(--muted);font-size:10px;font-weight:900;letter-spacing:.1em;text-transform:uppercase}
     .state-value{display:block;margin-top:4px;font-family:var(--font-serif);font-size:20px;font-weight:500}
+    .cash-detail{margin-top:14px;padding:14px;border:1px solid var(--line);border-radius:10px;background:#fff}
+    .cash-detail-title{font-size:12px;font-weight:900;margin-bottom:8px;color:var(--ink)}
+    .cash-detail-row{display:grid;grid-template-columns:150px minmax(0,1fr);gap:8px;padding:5px 0;border-bottom:1px solid var(--line);font-size:11px}
+    .cash-detail-row:last-child{border-bottom:0}
+    .cash-detail-label{color:var(--muted);font-weight:800}
+    .cash-detail-value{overflow-wrap:anywhere;color:var(--ink)}
+    .cash-hash{font-family:var(--font-mono);font-size:10px}
 
     .footer{margin-top:24px;text-align:center;font-size:11.5px;color:var(--muted);border-top:1px solid var(--line);padding-top:14px}
   </style>
@@ -102,6 +109,19 @@
         <div class="state-item"><span class="state-label">Saldo</span><span class="state-value" id="cashSaldo">--</span></div>
         <div class="state-item"><span class="state-label">Operaciones</span><span class="state-value" id="cashOps">--</span></div>
         <div class="state-item"><span class="state-label">Jornada</span><span class="state-value" id="cashDiaKey">--</span></div>
+      </div>
+      <div class="state-grid" aria-label="Acumulados de cobros de la sesión">
+        <div class="state-item"><span class="state-label">Neto efectivo</span><span class="state-value" id="cashSessionCash">--</span><span class="state-label" id="cashSessionCashCount">-- tickets</span></div>
+        <div class="state-item"><span class="state-label">Neto tarjeta</span><span class="state-value" id="cashSessionCard">--</span><span class="state-label" id="cashSessionCardCount">-- tickets</span></div>
+        <div class="state-item"><span class="state-label">Neto Bizum</span><span class="state-value" id="cashSessionBizum">--</span><span class="state-label" id="cashSessionBizumCount">-- tickets</span></div>
+      </div>
+      <div class="cash-detail" id="cashSessionMeta">
+        <div class="cash-detail-title">Sesión de caja</div>
+        <div id="cashSessionMetaBody">Sin datos de sesión.</div>
+      </div>
+      <div class="cash-detail" id="cashLastOperation">
+        <div class="cash-detail-title">Última operación</div>
+        <div id="cashLastOperationBody">Sin operaciones registradas en esta sesión.</div>
       </div>
       <div class="btn-group">
         <button class="btn btn-outline" id="btnRefreshCash" type="button">Refrescar</button>
@@ -180,6 +200,9 @@
 
 
       const cashSaldo=$('cashSaldo'), cashOps=$('cashOps'), cashDiaKey=$('cashDiaKey');
+      const cashSessionCash=$('cashSessionCash'), cashSessionCard=$('cashSessionCard'), cashSessionBizum=$('cashSessionBizum');
+      const cashSessionCashCount=$('cashSessionCashCount'), cashSessionCardCount=$('cashSessionCardCount'), cashSessionBizumCount=$('cashSessionBizumCount');
+      const cashSessionMetaBody=$('cashSessionMetaBody'), cashLastOperationBody=$('cashLastOperationBody');
       const btnRefreshCash=$('btnRefreshCash'), btnZClosing=$('btnZClosing'), cashTicket=$('cashTicket');
 
       const fiscalYear=$('fiscalYear'), fiscalQuarter=$('fiscalQuarter'), fiscalResult=$('fiscalResult');
@@ -239,12 +262,77 @@
       }
 
         /* ── Caja ── */
+      function appendDetailRow(parent, label, value, className) {
+        const row = document.createElement('div');
+        row.className = 'cash-detail-row';
+        const key = document.createElement('span');
+        key.className = 'cash-detail-label';
+        key.textContent = label;
+        const val = document.createElement('span');
+        val.className = 'cash-detail-value' + (className ? ' ' + className : '');
+        val.textContent = value == null || value === '' ? '—' : String(value);
+        row.append(key, val);
+        parent.appendChild(row);
+      }
+      function formatInstant(value) {
+        if (!value) return '—';
+        const date = new Date(value);
+        return Number.isNaN(date.getTime()) ? '—' : new Intl.DateTimeFormat('es-ES', {
+          dateStyle: 'medium', timeStyle: 'medium', timeZone: 'Europe/Madrid'
+        }).format(date);
+      }
       function renderCashier(state) {
-        if (!state) { cashSaldo.textContent='--'; cashOps.textContent='--'; cashDiaKey.textContent='--'; return; }
-        // DTO canónico de cajas.web.js:getCashierState.
+        if (!state) {
+          btnZClosing.disabled = true;
+          cashSaldo.textContent='--'; cashOps.textContent='--'; cashDiaKey.textContent='--';
+          cashSessionCash.textContent='--'; cashSessionCard.textContent='--'; cashSessionBizum.textContent='--';
+          cashSessionCashCount.textContent='-- tickets'; cashSessionCardCount.textContent='-- tickets'; cashSessionBizumCount.textContent='-- tickets';
+          cashSessionMetaBody.textContent='Sin datos de sesión.'; cashLastOperationBody.textContent='Sin operaciones registradas en esta sesión.';
+          return;
+        }
+        btnZClosing.disabled = state.cashRegisterStatus !== 'ABIERTA';
         cashSaldo.textContent = money(state.netAmount);
         cashOps.textContent = Number.isFinite(Number(state.totalOperations)) ? String(state.totalOperations) : '--';
         cashDiaKey.textContent = state.operationDate || '--';
+
+        const payments = state.sessionPayments || {};
+        const cash = payments.EFECTIVO || {}, card = payments.TARJETA || {}, bizum = payments.BIZUM || {};
+        cashSessionCash.textContent = money(cash.amount);
+        cashSessionCard.textContent = money(card.amount);
+        cashSessionBizum.textContent = money(bizum.amount);
+        cashSessionCashCount.textContent = String(Number(cash.ticketCount) || 0) + ' movimientos';
+        cashSessionCardCount.textContent = String(Number(card.ticketCount) || 0) + ' movimientos';
+        cashSessionBizumCount.textContent = String(Number(bizum.ticketCount) || 0) + ' movimientos';
+
+        cashSessionMetaBody.replaceChildren();
+        appendDetailRow(cashSessionMetaBody, 'Estado de sesión', state.cashRegisterStatus);
+        appendDetailRow(cashSessionMetaBody, 'Responsable apertura', state.openedByName || state.openedBy);
+        appendDetailRow(cashSessionMetaBody, 'Apertura', formatInstant(state.openedAt));
+        appendDetailRow(cashSessionMetaBody, 'Responsable cierre', state.closedByName || state.closedBy);
+        appendDetailRow(cashSessionMetaBody, 'Cierre', formatInstant(state.closedAt));
+        appendDetailRow(cashSessionMetaBody, 'Efectivo físico actual', money(state.cashAmount));
+        appendDetailRow(cashSessionMetaBody, 'Efectivo esperado', money(state.expectedCash));
+
+        cashLastOperationBody.replaceChildren();
+        const op = state.lastOperation;
+        if (!op) {
+          cashLastOperationBody.textContent = 'Sin operaciones presenciales trazables en esta sesión.';
+          return;
+        }
+        appendDetailRow(cashLastOperationBody, 'Operación', op.movementType);
+        appendDetailRow(cashLastOperationBody, 'Concepto', op.description);
+        appendDetailRow(cashLastOperationBody, 'Operador', op.actor?.verificationStatus === 'VERIFIED_BACKEND'
+          ? (op.actor.displayName || op.actor.resourceId)
+          : 'Autoría no verificada en el registro fuente');
+        appendDetailRow(cashLastOperationBody, 'Fecha y hora', formatInstant(op.operationTimestamp));
+        appendDetailRow(cashLastOperationBody, 'Importe neto', money(op.amount));
+        appendDetailRow(cashLastOperationBody, 'Medio de pago', op.paymentMethod);
+        appendDetailRow(cashLastOperationBody, 'Movimiento fuente', op.movementId, 'cash-hash');
+        appendDetailRow(cashLastOperationBody, 'Secuencia', op.sequenceNumber);
+        appendDetailRow(cashLastOperationBody, 'Huella', op.hash, 'cash-hash');
+        appendDetailRow(cashLastOperationBody, 'Huella anterior', op.previousRecordHash, 'cash-hash');
+        appendDetailRow(cashLastOperationBody, 'Firma', op.digitalSignature, 'cash-hash');
+        appendDetailRow(cashLastOperationBody, 'Traza', op.traceId, 'cash-hash');
       }
       function renderTicket(t) {
         if (!t) { cashTicket.style.display='none'; cashTicket.replaceChildren(); return; }

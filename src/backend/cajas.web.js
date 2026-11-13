@@ -57,7 +57,8 @@ import { buildEventLogFiscalChainPayload } from "backend/fiscalHashPayload";
 export { readInvoiceNumber, readInvoiceIssueDate };
 
 import { SECRETS } from "backend/mmSecrets";
-import { requireCajero, rateLimiter } from "backend/security";
+import { getMyStaffContext, requireCajero, rateLimiter } from "backend/security";
+import { findStaffByResourceId } from "backend/staff";
 import { hashSHA256, hashChain } from "backend/securityEngine";
 
 import {
@@ -94,6 +95,16 @@ const CASH_REGISTER_ID = SINGLETONS.CAJA_PRINCIPAL;
 
 function _isSimulationCashRegister(cashRegister) {
     return _safeTrim(cashRegister?.cashRegisterStatus).toUpperCase() === "SIMULACION";
+}
+
+function _hasOpenCashierSession(cashRegister) {
+    if (!cashRegister ||
+        _safeTrim(cashRegister.cashRegisterStatus).toUpperCase() !== CASH_REGISTER_STATUS.ABIERTA ||
+        cashRegister.isOpen === false) return false;
+    const openedAt = cashRegister.openedAt instanceof Date
+        ? cashRegister.openedAt
+        : new Date(cashRegister.openedAt || "");
+    return !Number.isNaN(openedAt.getTime()) && !cashRegister.closedAt;
 }
 
 
@@ -506,12 +517,6 @@ function _resolveFiscalBase({ amount, taxRate, withholdingBase, irpfWithholdingA
 export const registerManualTransaction = webMethod(Permissions.SiteMember, async (payload) => {
     const traceId = payload?.traceId || makeTraceId("manual-tx");
     try {
-        await _rateLimitOrThrow(
-            "cajas.registerManualTransaction",
-            _safeTrim(payload?.resourceId) || "CAJA_LOCAL",
-            traceId
-        );
-
         await requireCajero(traceId);
         if (FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED !== true) {
             return { status: "ERROR", data: null, error: { code: "FISCAL_LEDGER_WRITES_DISABLED", message: "La escritura fiscal permanece deshabilitada hasta completar la certificacion de runtime." }, traceId };
@@ -529,19 +534,44 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
             return { status: "ERROR", data: null, error: { code: "INVALID_PAYMENT_METHOD", message: "Forma de pago invalida" } };
         }
 
-        const channelType = _safeTrim(payload?.channelType).toUpperCase();
-        if (channelType && !Object.values(CHANNEL_TYPE).includes(channelType)) {
+        const requestedMovementType = _safeTrim(payload?.movementType || payload?.tipoMovimiento || MOVEMENT_TYPE.VENTA).toUpperCase();
+        const requestedChannelType = _safeTrim(payload?.channelType).toUpperCase();
+        const channelType = requestedChannelType || (
+            requestedMovementType === MOVEMENT_TYPE.VENTA_ONLINE || paymentMethod === PAYMENT_METHOD.WIX_PAYMENTS
+                ? CHANNEL_TYPE.ONLINE
+                : ""
+        );
+        if (!channelType) {
+            return { status: "ERROR", data: null, error: { code: "CHANNEL_TYPE_REQUIRED", message: "El canal PRESENCIAL u ONLINE debe declararse explícitamente." }, traceId };
+        }
+        if (!Object.values(CHANNEL_TYPE).includes(channelType)) {
             return { status: "ERROR", data: null, error: { code: "INVALID_CHANNEL_TYPE", message: "Canal de operacion invalido" } };
         }
 
-        const movementType = _safeTrim(payload?.movementType || payload?.tipoMovimiento || "VENTA").toUpperCase();
+        // Actor identity is derived from the authenticated member, never from
+        // a resourceId supplied by the browser. Non-presential system flows
+        // keep a non-personal source label.
+        let resourceId = channelType === CHANNEL_TYPE.PRESENCIAL ? "" :
+            (channelType === CHANNEL_TYPE.ONLINE ? "ONLINE" : "CAJA_LOCAL");
+        if (channelType === CHANNEL_TYPE.PRESENCIAL) {
+            const staffContext = await getMyStaffContext(traceId);
+            if (!staffContext?.resourceId) {
+                return {
+                    status: "ERROR",
+                    data: null,
+                    error: { code: "STAFF_CONTEXT_REQUIRED", message: "No se pudo resolver el operador autenticado." },
+                    traceId,
+                };
+            }
+            resourceId = staffContext.resourceId;
+        }
+        const movementType = requestedMovementType;
         const isRefundMovement = [
             MOVEMENT_TYPE.REEMBOLSO,
             MOVEMENT_TYPE.DEVOLUCION,
             MOVEMENT_TYPE.DEVOLUCION_SERVICIO,
         ].includes(movementType);
         const operationDescription = _cleanText(payload?.operationDescription || payload?.description || "Venta mostrador", 500);
-        const resourceId = _safeTrim(payload?.resourceId || "CAJA_LOCAL");
         const transactionId = _safeTrim(payload?.transactionId) || null;
 
         const inDto = normalizeMovementKeys({ ...(payload || {}) });
@@ -645,8 +675,15 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
         if (_isSimulationCashRegister(currentCashRegister)) {
             return { status: "ERROR", data: null, error: { code: "CASH_REGISTER_SIMULATION_STATE", message: "La caja actual contiene estado de simulacion; no se permiten movimientos reales." } };
         }
+        // Idempotent retries return the original movement before consuming the
+        // per-operator rate limit; only new operations are rate-limited.
+        await _rateLimitOrThrow("cajas.registerManualTransaction", resourceId, traceId);
+
         const operationDate = new Date().toLocaleDateString("sv-SE", { timeZone: SDK_CONFIG.TZ });
         await _assertPeriodNotClosed(operationDate, traceId);
+        if (channelType === CHANNEL_TYPE.PRESENCIAL && !_hasOpenCashierSession(currentCashRegister)) {
+            return { status: "ERROR", data: null, error: { code: "CAJA_SESSION_NOT_OPEN", message: "No se pueden registrar cobros presenciales sin una sesión de caja abierta y con hora de apertura válida." }, traceId };
+        }
 
         const taxRate = Number(inDto.tipoImpositivo) || IVA_RATES.GENERAL;
         const fiscalCalc = _resolveFiscalBase({
@@ -696,6 +733,15 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
         // Revalidate after acquiring the shared lock: a Z close may have
         // completed while this writer was waiting.
         await _assertPeriodNotClosed(operationDate, traceId);
+        if (channelType === CHANNEL_TYPE.PRESENCIAL) {
+            const lockedCashRegister = await getCashRegisterSingleton();
+            if (_isSimulationCashRegister(lockedCashRegister)) {
+                return { status: "ERROR", data: null, error: { code: "CASH_REGISTER_SIMULATION_STATE", message: "La caja actual contiene estado de simulacion; no se permiten movimientos reales." }, traceId };
+            }
+            if (!_hasOpenCashierSession(lockedCashRegister)) {
+                return { status: "ERROR", data: null, error: { code: "CAJA_SESSION_NOT_OPEN", message: "La sesión de caja se cerró o no está abierta; no se ha insertado el movimiento." }, traceId };
+            }
+        }
 
         const lastMovement = await _getLastMovement();
         let seq;
@@ -736,7 +782,9 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
             nifEmisor,
             schemaVersion: LEDGER_SCHEMA_VERSION,
             projectionStatus: "PROYECTADO",
-            recordSource: _safeTrim(inDto.recordSource) || "INTERNAL",
+            recordSource: channelType === CHANNEL_TYPE.PRESENCIAL
+                ? "MANUAL_PRESENCIAL_AUTHENTICATED"
+                : (_safeTrim(inDto.recordSource) || "INTERNAL"),
             staffResourceId: resourceId,
             resourceId,
             linkedBookingIds: _linkedBookingValue(inDto.linkedBookingIds),
@@ -1000,41 +1048,46 @@ async function _updateCajaActual(movement, traceId) {
     try {
         const method = _safeTrim(movement?.paymentMethod).toUpperCase();
         const channelType = _safeTrim(movement?.channelType).toUpperCase();
-        if (method !== PAYMENT_METHOD.EFECTIVO || channelType !== CHANNEL_TYPE.PRESENCIAL) {
+        const supportedMethods = [
+            PAYMENT_METHOD.EFECTIVO,
+            PAYMENT_METHOD.TARJETA,
+            PAYMENT_METHOD.BIZUM,
+        ];
+        if (channelType !== CHANNEL_TYPE.PRESENCIAL || !supportedMethods.includes(method)) {
             return {
                 status: "SUCCESS",
                 skipped: true,
-                reason: "NO_PHYSICAL_CASH_EFFECT",
+                reason: "OUTSIDE_PHYSICAL_SESSION_SCOPE",
                 movementId: _safeTrim(movement?._id || movement?.transactionId) || null,
             };
         }
 
-        const movementKey = _safeTrim(movement?._id || movement?.transactionId);
+        const movementKey = _safeTrim(movement?._id);
         if (!movementKey) throw new Error("CAJA_MOVEMENT_ID_REQUIRED");
+        const sourceTimestamp = movement?.recordTimestamp
+            ? new Date(movement.recordTimestamp)
+            : null;
+        if (!sourceTimestamp || Number.isNaN(sourceTimestamp.getTime())) {
+            throw new Error("CAJA_MOVEMENT_TIMESTAMP_REQUIRED");
+        }
 
-        // CajaActual is a mutable projection. Use the CMS revision on updates
-        // and retain the movement ID in the same write as the balance change.
-        // This makes retries idempotent and concurrent updates recoverable.
+        // A movement may contribute to a session only after an explicit
+        // opening. Never create or reopen CajaActual as a side effect of a sale.
         for (let attempt = 0; attempt < 4; attempt += 1) {
-            let cashRegister = await getCashRegisterSingleton();
-            const isNew = !cashRegister;
+            const cashRegister = await getCashRegisterSingleton();
             if (_isSimulationCashRegister(cashRegister)) {
                 throw new Error("CAJA_ACTUAL_SIMULATION_STATE");
             }
-            if (!cashRegister) {
-                cashRegister = {
-                    _id: CASH_REGISTER_ID,
-                    [CAJA_KEYS.SINGLETON_KEY]: SINGLETONS.CAJA_PRINCIPAL,
-                    [CAJA_KEYS.OPERATION_DATE]: readOperationDate(movement) || new Date().toLocaleDateString("sv-SE", { timeZone: SDK_CONFIG.TZ }),
-                    [CAJA_KEYS.STATUS]: CASH_REGISTER_STATUS.ABIERTA,
-                    [CAJA_KEYS.TOTAL]: 0, [CAJA_KEYS.CASH]: 0, [CAJA_KEYS.CARD]: 0,
-                    [CAJA_KEYS.BIZUM]: 0, [CAJA_KEYS.ONLINE]: 0,
-                    [CAJA_KEYS.OPERATIONS]: 0,
-                    sequenceCounters: {},
-                    [CAJA_KEYS.OPENED_AT]: new Date(), [CAJA_KEYS.CLOSED_AT]: null,
-                    [CAJA_KEYS.LAST_MOVEMENT_AT]: new Date(),
-                    _createdDate: new Date(), _updatedDate: new Date(),
-                };
+            if (!cashRegister ||
+                _safeTrim(cashRegister.cashRegisterStatus).toUpperCase() !== CASH_REGISTER_STATUS.ABIERTA ||
+                cashRegister.isOpen === false) {
+                throw new Error("CAJA_SESSION_NOT_OPEN");
+            }
+            const openedAt = cashRegister.openedAt instanceof Date
+                ? cashRegister.openedAt
+                : new Date(cashRegister.openedAt || "");
+            if (Number.isNaN(openedAt.getTime())) {
+                throw new Error("CAJA_SESSION_OPENED_AT_REQUIRED");
             }
 
             const sequenceCounters = { ...(cashRegister.sequenceCounters || {}) };
@@ -1045,23 +1098,37 @@ async function _updateCajaActual(movement, traceId) {
                 return { status: "SUCCESS", idempotent: true, movementId: movementKey };
             }
 
-            const amount = Number(movement.accountingAmount) || 0;
-            cashRegister[CAJA_KEYS.CASH] = _roundMoney((cashRegister[CAJA_KEYS.CASH] || 0) + amount);
+            const amount = _roundMoney(Number(movement.accountingAmount) || 0);
+            const amountField = method === PAYMENT_METHOD.EFECTIVO
+                ? CAJA_KEYS.CASH
+                : method === PAYMENT_METHOD.TARJETA
+                    ? CAJA_KEYS.CARD
+                    : CAJA_KEYS.BIZUM;
 
+            cashRegister[amountField] = _roundMoney((Number(cashRegister[amountField]) || 0) + amount);
+            // Only cash changes the expected physical drawer balance. Card
+            // and Bizum update session payment totals, never physical cash.
+            if (method === PAYMENT_METHOD.EFECTIVO) {
+                cashRegister.expectedCash = _roundMoney(Number(cashRegister[CAJA_KEYS.CASH]) || 0);
+            }
+            // netAmount is the physical cash balance, never the sum of all
+            // payment methods.
+            cashRegister[CAJA_KEYS.TOTAL] = _roundMoney(Number(cashRegister[CAJA_KEYS.CASH]) || 0);
             sequenceCounters.appliedMovementIds = [...appliedMovementIds, movementKey];
             cashRegister.sequenceCounters = sequenceCounters;
-            cashRegister[CAJA_KEYS.TOTAL] = _roundMoney(cashRegister[CAJA_KEYS.CASH] || 0);
-            cashRegister[CAJA_KEYS.OPERATIONS] = Number(cashRegister[CAJA_KEYS.OPERATIONS] || 0) + 1;
-            cashRegister[CAJA_KEYS.LAST_MOVEMENT_AT] = new Date();
+            if (_safeTrim(movement.movementType).toUpperCase() === MOVEMENT_TYPE.VENTA) {
+                cashRegister[CAJA_KEYS.OPERATIONS] = Number(cashRegister[CAJA_KEYS.OPERATIONS] || 0) + 1;
+            }
+            cashRegister[CAJA_KEYS.LAST_MOVEMENT_AT] = sourceTimestamp;
+            cashRegister.traceId = _safeTrim(movement.traceId) || traceId;
+            cashRegister.staffResourceId = _safeTrim(movement.staffResourceId) || null;
+            const movementDate = readOperationDate(movement);
+            if (movementDate) cashRegister[CAJA_KEYS.OPERATION_DATE] = movementDate;
             cashRegister._updatedDate = new Date();
 
             try {
-                if (isNew) {
-                    await dalInsert(CAJA_ACTUAL_COL, cashRegister);
-                } else {
-                    await dalUpdate(CAJA_ACTUAL_COL, cashRegister);
-                }
-                return { status: "SUCCESS", idempotent: false, movementId: movementKey };
+                await dalUpdate(CAJA_ACTUAL_COL, cashRegister);
+                return { status: "SUCCESS", idempotent: false, movementId: movementKey, paymentMethod: method };
             } catch (writeError) {
                 if (attempt === 3) throw writeError;
                 await new Promise((resolve) => setTimeout(resolve, 25 * (attempt + 1)));
@@ -1076,7 +1143,7 @@ async function _updateCajaActual(movement, traceId) {
                 transactionId: movement?.transactionId || null,
                 totalAmount: Number(movement?.accountingAmount) || 0,
                 paymentMethod: movement?.paymentMethod || null,
-                operationDescription: "Sincronizacion de saldo tras fallo en _updateCajaActual",
+                operationDescription: "Sincronizacion de sesion tras fallo en proyeccion CajaActual",
                 phase: "WAIT_FOR_CAJA_RESYNC",
                 origin: "UPDATE_CAJA_FAILED",
                 traceId,
@@ -1088,7 +1155,6 @@ async function _updateCajaActual(movement, traceId) {
         return { status: "PENDING_RECONCILIATION", error: err?.message || "UNKNOWN" };
     }
 }
-
 export async function updateCajaActualFromMovement(movement, traceId) {
     return _updateCajaActual(movement, traceId || movement?.traceId || makeTraceId("caja-projection"));
 }
@@ -1183,6 +1249,66 @@ export async function queueFiscalRecovery(recoveryData) {
 // GET CASHIER STATE
 // ============================================================================
 
+async function _readCashierSessionSummary(cashRegister) {
+    const openedAt = cashRegister?.openedAt instanceof Date
+        ? cashRegister.openedAt
+        : new Date(cashRegister?.openedAt || "");
+    if (!cashRegister?.openedAt || Number.isNaN(openedAt.getTime())) return null;
+
+    let query = dalQuery(MOVIMIENTOS_CAJA_COL)
+        .gte("recordTimestamp", openedAt)
+        .eq("channelType", CHANNEL_TYPE.PRESENCIAL)
+        .in("paymentMethod", [PAYMENT_METHOD.EFECTIVO, PAYMENT_METHOD.TARJETA, PAYMENT_METHOD.BIZUM])
+        .gt("sequenceNumber", 0)
+        .ne("recordSource", "SMOKE_TEST")
+        .descending("sequenceNumber")
+        .limit(LEDGER_PAGE_SIZE);
+    if (cashRegister.closedAt) {
+        const closedAt = cashRegister.closedAt instanceof Date ? cashRegister.closedAt : new Date(cashRegister.closedAt);
+        if (!Number.isNaN(closedAt.getTime())) query = query.lte("recordTimestamp", closedAt);
+    }
+
+    let res = await query.find(STRONG_READ);
+    const summary = {
+        EFECTIVO: { amount: 0, ticketCount: 0 },
+        TARJETA: { amount: 0, ticketCount: 0 },
+        BIZUM: { amount: 0, ticketCount: 0 },
+    };
+    let lastMovement = null;
+    let page = 1;
+
+    while (true) {
+        for (const movement of (res.items || []).filter((item) => !isExplicitSimulationLedgerRecord(item))) {
+            const method = _safeTrim(movement.paymentMethod).toUpperCase();
+            if (!summary[method] || !movement._id) continue;
+            summary[method].amount = _roundMoney(
+                summary[method].amount + (Number(movement.accountingAmount) || 0)
+            );
+            summary[method].ticketCount += 1;
+            if (!lastMovement) lastMovement = movement;
+        }
+        if (!res.hasNext()) break;
+        if (page >= MAX_LEDGER_BATCH_PAGES) {
+            throw new Error("CAJA_SESSION_MOVEMENT_PAGE_LIMIT");
+        }
+        res = await res.next();
+        page += 1;
+    }
+
+    return { payments: summary, lastMovement };
+}
+
+async function _resolveStaffDisplayName(resourceId) {
+    const id = _safeTrim(resourceId);
+    if (!id) return null;
+    try {
+        const staff = await findStaffByResourceId(id);
+        return staff?.displayName || id;
+    } catch (_) {
+        return id;
+    }
+}
+
 export const getCashierState = webMethod(Permissions.SiteMember, async (options = {}) => {
     const { traceId, diaKey } = options;
     try {
@@ -1201,6 +1327,36 @@ export const getCashierState = webMethod(Permissions.SiteMember, async (options 
         const totalOperations = (res.items || []).length > 0
             ? await _countMovementsOfDay(day)
             : 0;
+        const sessionSummary = await _readCashierSessionSummary(cashRegister);
+        const lastMovement = sessionSummary?.lastMovement || null;
+        const lastActorId = _safeTrim(lastMovement?.staffResourceId);
+        const actorVerified = lastMovement?.recordSource === "MANUAL_PRESENCIAL_AUTHENTICATED";
+        const [openedByName, closedByName, lastActorName] = await Promise.all([
+            _resolveStaffDisplayName(cashRegister?.openedBy),
+            _resolveStaffDisplayName(cashRegister?.closedBy),
+            actorVerified ? _resolveStaffDisplayName(lastActorId) : Promise.resolve(null),
+        ]);
+        const lastOperation = lastMovement ? {
+            movementId: lastMovement._id,
+            sourceMovementIds: [lastMovement._id],
+            actor: {
+                resourceId: lastActorId || null,
+                displayName: actorVerified ? lastActorName : null,
+                verificationStatus: actorVerified ? "VERIFIED_BACKEND" : "UNVERIFIED_SOURCE",
+            },
+            operationTimestamp: lastMovement.recordTimestamp || null,
+            operationDate: readOperationDate(lastMovement) || null,
+            movementType: lastMovement.movementType || null,
+            description: lastMovement.operationDescription || null,
+            amount: Number(lastMovement.accountingAmount ?? lastMovement.totalAmount) || 0,
+            paymentMethod: lastMovement.paymentMethod || null,
+            hash: lastMovement.hash || null,
+            previousRecordHash: lastMovement.previousRecordHash || null,
+            sequenceNumber: Number(lastMovement.sequenceNumber) || null,
+            recordTimestamp: lastMovement.recordTimestamp || null,
+            digitalSignature: lastMovement.digitalSignature || null,
+            traceId: lastMovement.traceId || null,
+        } : null;
         return {
             status: "SUCCESS",
             data: {
@@ -1216,8 +1372,19 @@ export const getCashierState = webMethod(Permissions.SiteMember, async (options 
                 salesCount: cashRegister?.[CAJA_KEYS.OPERATIONS] ?? 0,
                 totalOperations,
                 openedAt: cashRegister?.[CAJA_KEYS.OPENED_AT] ?? null,
+                openedBy: cashRegister?.openedBy ?? null,
+                openingAmount: cashRegister?.openingAmount ?? null,
+                expectedCash: cashRegister?.expectedCash ?? null,
+                countedCash: cashRegister?.countedCash ?? null,
+                difference: cashRegister?.difference ?? null,
+                differenceReason: cashRegister?.differenceReason ?? null,
+                openedByName,
                 closedAt: cashRegister?.[CAJA_KEYS.CLOSED_AT] ?? null,
+                closedBy: cashRegister?.closedBy ?? null,
+                closedByName,
                 lastMovementAt: cashRegister?.[CAJA_KEYS.LAST_MOVEMENT_AT] ?? null,
+                lastOperation,
+                sessionPayments: sessionSummary?.payments || null,
             },
             error: null,
         };
@@ -1252,8 +1419,15 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
     const traceId = _safeTrim(options?.traceId) || makeTraceId("z-close");
     let ledgerLock = null;
     let retainLedgerLock = false;
+    let closingActor = null;
     try {
-        if (authorizeCashier) await requireCajero(traceId);
+        if (authorizeCashier) {
+            await requireCajero(traceId);
+            closingActor = await getMyStaffContext(traceId);
+            if (!closingActor?.resourceId) {
+                return { status: "ERROR", data: null, error: { code: "STAFF_CONTEXT_REQUIRED", message: "No se pudo resolver al responsable autenticado del cierre." }, traceId };
+            }
+        }
         if (FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED !== true) {
             return { status: "ERROR", data: null, error: { code: "FISCAL_LEDGER_WRITES_DISABLED", message: "La escritura fiscal permanece deshabilitada hasta completar la certificacion de runtime." }, traceId };
         }
@@ -1503,7 +1677,8 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
         const cashRegister = await getCashRegisterSingleton();
         if (cashRegister) {
             cashRegister.cashRegisterStatus = CASH_REGISTER_STATUS.CERRADA;
-            cashRegister.closedAt = new Date();
+            cashRegister.closedAt = saved?.closedAt instanceof Date ? saved.closedAt : new Date();
+            cashRegister.closedBy = closingActor?.resourceId || "SYSTEM";
             cashRegister._updatedDate = new Date();
             await dalSave(CAJA_ACTUAL_COL, cashRegister);
         }

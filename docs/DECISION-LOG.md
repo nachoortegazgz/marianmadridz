@@ -91,12 +91,13 @@ Las siguientes decisiones/contratos se incorporan después de la consolidación 
 
 | ID | Decisión / contrato | Autoridad | Estado |
 |---|---|---|---|
-| BUS-009 | CajaActual refleja únicamente flujos que atraviesan físicamente el cajón: cobros en efectivo en el local, entradas/salidas de efectivo, pagos locales a proveedores en efectivo, retiradas, devoluciones en efectivo y ajustes justificados. | Propietario, 2026-11-11 | Decisión de negocio aprobada |
-| TEC-024 | Separar tres conceptos: MovimientosCaja conserva su contrato de registro fiscal de operaciones; CajaActual es una proyección mutable del efectivo físico; LibroAsientosContablesDetalle consolida los hechos económicos. Una operación en efectivo puede generar registros en las capas correspondientes sin que estas se confundan. | Arquitectura / aclaración del propietario | Adoptada como modelo objetivo |
-| TEC-025 | Tarjeta, Bizum, online, transferencias y pagos desde banco no afectan a CajaActual, aunque deban quedar reflejados en los registros fiscales/contables que correspondan. | Propietario, 2026-11-11 | Aprobada |
+| BUS-009 | El saldo físico de CajaActual refleja únicamente flujos que atraviesan físicamente el cajón: cobros en efectivo en el local, entradas/salidas de efectivo, pagos locales a proveedores en efectivo, retiradas, devoluciones en efectivo y ajustes justificados. El resumen de sesión puede mostrar operaciones presenciales no monetarias sin alterar ese saldo físico. | Propietario, 2026-11-11; aclaración 2026-11-13 | Vigente con alcance delimitado por TEC-032 |
+| TEC-024 | Separar tres conceptos: MovimientosCaja conserva su contrato de registro fiscal de operaciones; CajaActual es una proyección mutable de la sesión operativa y del saldo físico del cajón; LibroAsientosContablesDetalle consolida los hechos económicos. Una operación puede generar registros en las capas correspondientes sin que estas se confundan. | Arquitectura / aclaración del propietario; ampliada por TEC-032 | Vigente, ampliada |
+| TEC-025 | Tarjeta, Bizum, online, transferencias y pagos desde banco no alteran el saldo de efectivo físico. La exclusión absoluta de esos medios del resumen de CajaActual queda supersedida por TEC-032: los cobros presenciales con tarjeta y Bizum se reflejan en acumulados y última operación, sin modificar el efectivo físico. | Propietario, 2026-11-11 | Parcialmente vigente; alcance de proyección supersedido por TEC-032 |
 | TEC-026 | La proyección física no debe deducirse solo de paymentMethod si el contrato no expresa también el canal y el efecto físico. La dirección IN/OUT/NONE debe derivarse en backend de tipos/contexto confiables; el frontend no puede decidirla. | Recomendación técnica | Pendiente de contrato completo y esquema |
 | TEC-027 | ServiciosCatalogo es la SSOT declarada para la configuración de servicios sincronizada con Wix Bookings. name está vinculado a Complementos catálogo para los complementos del servicio; staffMembers define el personal elegible para el servicio. La disponibilidad horaria real continúa dependiendo de horarios, bloqueos y reservas nativas de Bookings. | Propietario, 2026-11-11 | Requisito de negocio declarado; implementación y sincronización pendientes de auditoría |
 | TEC-028 | La proyección de una reserva nativa debe ser idempotente y preservarse el estado más avanzado frente a eventos tardíos. | Implementación PR #280/#281 | Integrado en esas PR; CI offline verde; runtime Wix pendiente |
+| TEC-032 | `MovimientosCaja` conserva cada ticket/movimiento original como ledger append-only. `CajaActual` es una proyección mutable de sesión: mantiene el resumen de la última operación, acumulados de la sesión por medio de pago y el saldo de efectivo físico por separado. La última operación incluye actor resuelto en backend, instante exacto, conceptos/unidades cuando estén validados, importes, huella y trazabilidad, y referencias a los `_id` de los movimientos fuente. Los cobros PRESENCIAL con TARJETA o BIZUM actualizan resumen/acumulados de sesión, pero no `cashAmount` ni el saldo físico; solo los movimientos con efecto físico explícito actualizan ese saldo. Los movimientos ONLINE y los pagos bancarios no se incorporan a la sesión física salvo decisión posterior. No se duplica ni reescribe el ticket fuente. | Propietario, 2026-11-13; recomendación técnica aceptada | Decisión aprobada; contrato CMS/backend y pruebas pendientes |
 
 ### Caja física — alcance exacto de la implementación actual
 
@@ -212,3 +213,31 @@ La auditoría estática recibida se ha contrastado con `main` en `9f3b4366aacc72
 - #290, #291 y #237 no deben interpretarse como correcciones pendientes de código: sus issues permanecen abiertas exclusivamente por los gates runtime descritos en sus respectivos registros.
 
 **Decisión:** no introducir cambios adicionales de lógica en esta reauditoría. No hay fallo offline reproducido y los pendientes requieren evidencia runtime, autorización de configuración, contratos externos o definición fiscal/operativa. Mantener las protecciones fail-closed.
+
+### CajaActual — interpretación vigente tras TEC-032 (2026-11-13)
+
+La decisión TEC-032 amplía el alcance de la proyección sin convertirla en ledger ni confundir cobros con efectivo físico:
+
+- `MovimientosCaja` es la fuente histórica de cada ticket/movimiento. Cada registro es append-only; las rectificaciones se incorporan como nuevos registros trazables.
+- `CajaActual` mantiene el estado actual de la sesión, el resumen de la última operación y acumulados de sesión por medio de pago. Debe conservar referencias a los `_id` de los movimientos fuente, no copias históricas de todos los tickets.
+- El último resumen debe poder presentar operador autenticado resuelto en backend, fecha/hora exacta, tipo y descripción de operación, conceptos/unidades validados, importes, desglose de pago, `hash`, `previousRecordHash`, `sequenceNumber`, `recordTimestamp`, `digitalSignature` y `traceId`, siempre que existan en el movimiento fuente. No se fabrican valores ausentes.
+- Los cobros presenciales con `TARJETA` y `BIZUM` actualizan la actividad y los acumulados de sesión, pero nunca el saldo físico de efectivo. `cashAmount`/`expectedCash` solo cambian por movimientos con efecto físico explícito y validado.
+- Los movimientos `ONLINE`, transferencias y pagos desde banco quedan en sus ledgers correspondientes; no se incorporan a la sesión física por inferencia.
+- `paymentMethod` es actualmente singular en `MovimientosCaja`. No se inventa un contrato para pagos mixtos: antes de aceptarlos debe definirse cómo se representa el desglose y cómo se reconcilia exactamente con el total y con los movimientos fuente.
+
+Esta decisión es contractual/documental. No acredita que el backend o el esquema CMS ya estén adaptados. La implementación requiere auditoría de consumidores, contrato de proyección, migración compatible, idempotencia y pruebas de regresión/concurrencia.
+
+### TEC-032 — progreso de alineación backend/frontend (2026-11-13)
+
+**Implementado en esta rama, pendiente de CI y revisión:**
+- `registerManualTransaction` exige canal explícito para operaciones manuales; solo infiere `ONLINE` para `VENTA_ONLINE` o `WIX_PAYMENTS`. En `PRESENCIAL`, `staffResourceId` y la clave de rate limit se derivan de `getMyStaffContext()`; el `resourceId` del navegador se ignora.
+- `_updateCajaActual()` proyecta `EFECTIVO`, `TARJETA` y `BIZUM` presenciales en una sesión ya abierta. El efectivo modifica `cashAmount`; tarjeta y Bizum actualizan `cardAmount` y `voucherAmount`. `netAmount` continúa representando exclusivamente efectivo físico.
+- La proyección no crea ni abre un singleton automáticamente. Caja inexistente, cerrada, simulada o sin `openedAt` devuelve proyección pendiente y encola reconciliación; no altera el saldo.
+- `getCashierState()` calcula importes y número de movimientos por medio de pago desde `MovimientosCaja` dentro de la ventana de sesión, y entrega la última operación con ID fuente, actor resuelto, instante, importes, hash anterior/hash, secuencia, firma y traceId. El HTML de ZONA MARIAN presenta esos datos y separa el efectivo físico de los cobros de sesión.
+- El cierre Z manual persiste `closedBy` en `CajaActual` a partir del contexto autenticado del backend. No se admite un actor enviado por el frontend.
+
+**Pendiente / no implementado:** `CajaActual` aún no persiste un campo dedicado `lastMovementId` ni un snapshot completo de última operación; el detalle y la referencia se reconstruyen en el DTO de lectura desde el ledger. Los contadores por método también se calculan desde `MovimientosCaja`. No existe todavía WebMethod seguro de apertura que establezca `openedBy/openedAt` ni un procedimiento de saldo inicial reconciliado. `lineItems` sigue sin contrato interno; conceptos/unidades no se exponen. Pagos mixtos siguen bloqueados. No se ha migrado el esquema CMS.
+
+**Gates intactos:** `LEDGER_WRITES_ENABLED=false`, `ACCOUNTING_LEDGER_WRITES_ENABLED=false`; la caja `SIMULACION` permanece bloqueada. Esta rama no escribe CMS live ni publica Wix.
+
+Para los movimientos presenciales manuales nuevos, backend asigna `recordSource=MANUAL_PRESENCIAL_AUTHENTICATED` y resuelve `staffResourceId` desde la identidad autenticada. La UI solo marca el operador como verificado cuando el origen contiene esa marca backend; los registros históricos se identifican como autoría no verificada.

@@ -192,27 +192,74 @@ No habilitar la caja ni desplegar mientras:
 - **Ledgers históricos:** ninguno alterado.
 
 
-## 10. Decisión de negocio confirmada — proyección exclusiva de efectivo físico (2026-11-11)
+## 10. Decisión de negocio confirmada — sesión operativa y efectivo físico (2026-11-13)
 
-La instrucción de negocio posterior establece que `CajaActual` representa exclusivamente los flujos que atraviesan el cajón físico. Por tanto:
+La decisión anterior del 2026-11-11 se mantiene únicamente para el **saldo físico** del cajón. Su interpretación como exclusión absoluta de tarjeta y Bizum de toda `CajaActual` queda supersedida por TEC-032 de `docs/DECISION-LOG.md`.
 
-- Solo un movimiento con `paymentMethod=EFECTIVO` y `channelType=PRESENCIAL` puede proyectarse en `CajaActual`.
-- Tarjeta, Bizum, pagos online, transferencias y gastos pagados por banco no alteran la proyección física.
-- `MovimientosCaja` conserva su responsabilidad de registro económico/fiscal. No se eliminan ni filtran sus registros por el hecho de no afectar al cajón.
-- `LibroAsientosContablesDetalle` conserva su responsabilidad de consolidación contable; la existencia de un movimiento de caja no autoriza a duplicar asientos ni a inventar mapeos PGC.
+### 10.1 Responsabilidad de cada colección
 
-La implementación inicial falla de forma conservadora: un movimiento sin canal explícito no se proyecta. El escritor manual persiste `channelType` cuando el consumidor lo proporciona. No se infiere el canal a partir de un nombre de recurso, texto libre o dato aportado como identidad por el frontend.
+- `MovimientosCaja` conserva cada ticket/movimiento original y es la fuente histórica/fiscal append-only. No se actualiza ni elimina; las rectificaciones se registran mediante nuevos movimientos enlazados.
+- `CajaActual` es un singleton mutable de proyección de la sesión. Muestra estado de apertura/cierre, responsables y marcas temporales; resumen de la última operación; acumulados de sesión por medio de pago; saldo físico esperado/contado y diferencias de arqueo.
+- `LibroAsientosContablesDetalle` consolida los hechos económicos según reglas aprobadas. La proyección no crea asientos ni inventa mapeos PGC.
 
-### Límites pendientes de contrato
+### 10.2 Qué se proyecta
 
-- `MOVEMENT_TYPE` no contiene actualmente `APORTACION`, `RETIRO` ni `PAGO_PROVEEDOR`. El ADR original ya identificaba esa discrepancia. No se añaden aquí: requieren definición fiscal, dirección física IN/OUT, validación, esquema y pruebas propias.
-- `AJUSTE` no define de forma inequívoca el sentido físico. No se deduce la salida de efectivo a partir de un importe positivo.
-- El cierre Z y su writer paralelo presentan discrepancias de esquema/ownership ya descritas en la auditoría. Este cambio no altera su consolidación fiscal.
-- No existe en el código inspeccionado un WebMethod de apertura operativa con persistencia de responsable ni una resolución confirmada de `openedBy/closedBy` a nombre visible. No se inventa esa API en esta intervención.
+- Los cobros `PRESENCIAL` en `EFECTIVO`, `TARJETA` y `BIZUM` forman parte de la actividad y acumulados de la sesión.
+- Solo un movimiento cuyo efecto físico esté explícitamente definido, validado y autorizado modifica `cashAmount`, `expectedCash` y el neto físico. Un cobro con tarjeta o Bizum nunca incrementa el efectivo del cajón.
+- Los movimientos `ONLINE`, transferencias y pagos desde banco permanecen en sus registros fiscales/contables; no se incorporan a la sesión física por inferencia.
+- El proyector debe ser idempotente, derivar la dirección física en backend y no aceptar del frontend ni el actor ni una decisión de efecto físico como autoridad.
 
-### Criterio de aceptación para la proyección
+### 10.3 Resumen de última operación y referencias
 
-1. EFECTIVO + PRESENCIAL modifica únicamente `cashAmount` y `netAmount`, y se deduplica por ID persistido.
-2. TARJETA/BIZUM/WIX_PAYMENTS/TRANSFERENCIA no cambia saldo, contadores ni IDs aplicados.
-3. Canal ausente o no canónico no se considera efectivo físico.
-4. El ledger fiscal mantiene todos los registros que le corresponden, independientemente de la proyección de caja.
+El resumen de última operación debe incluir, cuando conste en el movimiento fuente: actor autenticado resuelto por `security.getMyStaffContext()` (o mecanismo canónico vigente), instante exacto de backend, tipo y descripción, conceptos/unidades validados, importe, desglose de medios de pago, identificadores de movimientos fuente, `hash`, `previousRecordHash`, `sequenceNumber`, `recordTimestamp`, `digitalSignature` y `traceId`. El resumen es una vista derivada; el ticket original permanece en `MovimientosCaja`.
+
+`CajaActual` debe conservar referencias a los `_id` de los movimientos originales asociados a la última operación. Los acumulados de sesión se actualizan de forma idempotente desde esos movimientos, sin duplicar tickets ni convertir la proyección en un segundo ledger. La sesión debe poder mostrar, al menos, importes y número de tickets/cobros en efectivo, tarjeta y Bizum. Los campos físicos existentes deben reutilizarse solo después de verificar su semántica y consumidores; los campos nuevos requieren esquema CMS aprobado.
+
+### 10.4 Límites y bloqueos pendientes
+
+- `paymentMethod` en `MovimientosCaja` es actualmente singular. No asumir que `lineItems` representa un desglose de pago. Los pagos mixtos quedan bloqueados hasta definir un contrato canónico que reconcilie importes y referencias sin duplicar el hecho fiscal.
+- `lineItems` existe como `OBJECT`, pero su estructura interna y validación de unidades no están acreditadas. No mostrar conceptos/unidades como dato validado hasta definir y probar el contrato.
+- `MOVEMENT_TYPE` no contiene necesariamente `APORTACION`, `RETIRO` ni `PAGO_PROVEEDOR`; verificar enum vigente antes de cualquier implementación. `AJUSTE` no determina por sí solo dirección física.
+- La apertura/cierre manual, el responsable de cierre, el saldo inicial reconciliado, el cron Z y la retirada/aislamiento del singleton `SIMULACION` siguen sujetos a los gates anteriores. No se altera el histórico para rellenar datos ausentes.
+- No se crean campos CMS en esta actualización documental ni se habilitan escritores.
+
+### 10.5 Criterios de aceptación de la proyección objetivo
+
+1. Cada ticket/movimiento original se inserta una sola vez en `MovimientosCaja`; `CajaActual` guarda solo resumen, acumulados y referencias a los IDs fuente.
+2. Un cobro presencial en tarjeta o Bizum incrementa sus acumulados de sesión, pero no modifica el efectivo físico.
+3. Un cobro en efectivo presencial incrementa el acumulado de efectivo y el saldo físico únicamente por su delta físico validado.
+4. La última operación muestra actor backend, instante exacto, importes, conceptos validados y huellas/trazas del movimiento fuente; los datos ausentes permanecen ausentes.
+5. Reintentos/replays no duplican acumulados ni referencias; la proyección se puede reconstruir desde el ledger sin mutarlo.
+6. La suma del desglose de pago coincide con el importe de la operación; cualquier diferencia o contrato mixto no soportado falla de forma cerrada.
+7. El ledger fiscal mantiene todos los registros que le corresponden, independientemente de qué campos se proyecten en la sesión.
+
+## 11. Addendum de decisión — TEC-032 (2026-11-13)
+
+El propietario acepta la recomendación de conservar cada ticket en `MovimientosCaja` y mantener en `CajaActual` el resumen de la última operación, los acumulados de la sesión y las referencias a los movimientos fuente. Este addendum prevalece sobre cualquier frase anterior de este ADR que excluya por completo tarjeta/Bizum de `CajaActual`; la exclusión se aplica únicamente al saldo físico del cajón.
+
+Estado de este addendum: decisión de negocio aprobada; implementación pendiente. No se ha modificado el CMS, el código de producción ni los registros históricos.
+
+## 12. Progreso de implementación TEC-032 — 2026-11-13
+
+La rama `fix/caja-actual-last-operation-projection` incorpora una primera alineación ejecutable de backend y superficie ZONA MARIAN:
+
+1. El escritor manual requiere `channelType` explícito, salvo la inferencia controlada `ONLINE` para `VENTA_ONLINE`/`WIX_PAYMENTS`. Para `PRESENCIAL`, el actor se obtiene con `getMyStaffContext()`; el `resourceId` recibido del navegador no se usa como identidad ni para rate limiting.
+2. El proyector acepta `EFECTIVO`, `TARJETA` y `BIZUM` solo en `PRESENCIAL` y con sesión existente `ABIERTA` y `openedAt` válido. No crea ni reabre `CajaActual`. Si la sesión no existe/no está abierta/es simulada, la proyección queda pendiente y genera una compensación para reconciliación.
+3. `cashAmount` y `netAmount` conservan el efectivo físico; `cardAmount` y `voucherAmount` acumulan tarjeta y Bizum respectivamente. Los reembolsos mantienen el signo del `accountingAmount` del movimiento fuente. Los pagos online/transferencias no incrementan la sesión física.
+4. `getCashierState()` devuelve un resumen de sesión calculado desde `MovimientosCaja` en el intervalo `openedAt`–`closedAt`, con número e importe neto por medio, más `lastOperation` y `sourceMovementIds`. El actor visible se resuelve desde `staffResourceId` mediante Bookings Staff API. Huellas y timestamps se leen del movimiento original; no se generan valores retrospectivos.
+5. El cierre Z manual guarda `closedBy` en `CajaActual` desde la identidad backend. El panel `#htmlAdmin.txt` representa efectivo físico, acumulados de efectivo/tarjeta/Bizum, responsables/horas de sesión y huellas de la última operación.
+
+### 12.1 Límites aún abiertos
+
+- El esquema CMS no contiene un campo dedicado para `lastMovementId` ni un objeto `lastOperation`. Por ahora la referencia/detalle se reconstruye en lectura; no se afirma que estén persistidos en `CajaActual`. Los acumulados por método existen en los campos actuales, pero los contadores por método se derivan del ledger.
+- No se ha implementado apertura de sesión. `openedBy/openedAt` deben establecerse mediante un WebMethod con permiso específico, lock, idempotencia y saldo inicial reconciliado; no se usa la fila `SIMULACION`.
+- `lineItems` no tiene contrato interno validado y no se expone como conceptos/unidades verificados. `paymentMethod` sigue siendo singular; pagos mixtos no admitidos.
+- No se han cambiado permisos CMS ni esquema CMS. Los escritores fiscales/contables siguen deshabilitados. No se ejecutó Wix Local Editor ni E2E runtime.
+
+Esta fase no habilita caja real ni despliegue. Los cambios requieren CI y revisión antes de considerar el código integrable.
+
+**Aclaración de persistencia y precisión:** los IDs de los movimientos proyectados se conservan en `CajaActual.sequenceCounters.appliedMovementIds` como conjunto de deduplicación/referencias; no se ha añadido una columna `lastMovementId`. `staffResourceId`, `traceId` y `lastMovementAt` se actualizan con la última operación. El DTO `lastOperation` completa hash, firma, secuencia y referencias leyendo el movimiento fuente. El proyector exige `recordTimestamp` válido y no sustituye una marca temporal ausente por la hora de ejecución. `salesCount` solo aumenta para `MOVEMENT_TYPE.VENTA`; el número por medio se obtiene del ledger.
+
+Los nuevos movimientos manuales `PRESENCIAL` marcan `recordSource=MANUAL_PRESENCIAL_AUTHENTICATED`, valor asignado exclusivamente por backend. `getCashierState()` solo presenta nombre de operador como `VERIFIED_BACKEND` para ese origen. Registros históricos o de origen distinto se muestran como autoría no verificada; no se infiere identidad fiable a partir de un `staffResourceId` legado.
+
+En cierres Z ejecutados por un miembro autorizado, `CajaActual.closedBy` conserva su `resourceId` autenticado. En cierres internos programados, el valor es `SYSTEM`; no se atribuye el cierre a un operador humano inexistente.
