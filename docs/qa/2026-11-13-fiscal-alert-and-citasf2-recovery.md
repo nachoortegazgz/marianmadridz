@@ -3,7 +3,7 @@
 **Fecha:** 2026-11-13  
 **Repositorio:** `nachoortegazgz/marianmadridz`  
 **Baseline revisada:** `fc9cb29c5a3fd74a6dae8eff3e2f5e4da2fbb499`  
-**Main actualizado:** `9d96655943af045406632435b299a84da39e23b0`  
+**Main actualizado:** `f07d6cb0bf1e5152cb4bc1d4e442713f1c920691`  
 **Sitio Wix:** `188bed94-177c-4bc9-a9f0-35080d874f3e`  
 **Tipo de acceso:** lectura real de Wix CMS y Bookings Reader V2; sin escritura ni ejecucion de Velo.
 
@@ -44,9 +44,9 @@ La antiguedad de la alerta y la ausencia actual de rupturas son compatibles con 
 
 La inspeccion posterior de la fila genuina live confirmo que `aeatPayload` no esta disponible como campo independiente; el snapshot AEAT se conserva bajo `payloadFiscal`. La fila tiene `eventType=VENTA_LINEA` y `channelType=ONLINE`, por lo que fue escrita por `eventLog.registrarEventoEconomico`, no por el writer TPV de `cajas.web.js`.
 
-Se detecto una diferencia real entre contratos internos: `eventLog.js` firma el campo `CuotaTotal`; `cajas.web.js` firma `BaseImponibleOImporteNoSujeto` y `CuotaRepercutida`. La primera recomputacion con el builder de caja no coincidio. Una segunda recomputacion read-only del movimiento live con el payload exacto de EventLog reprodujo el SHA-256 almacenado (coincidencia exacta), sin modificar el ledger.
+Se detecto una diferencia real entre contratos internos: `eventLog.js` firma el campo `CuotaTotal`; `cajas.web.js` firma `BaseImponibleOImporteNoSujeto` y `CuotaRepercutida`. La primera recomputacion con el builder de caja no coincidio. Una segunda recomputacion read-only del movimiento live con el payload exacto de EventLog reprodujo el SHA-256 almacenado (coincidencia exacta), sin modificar el ledger. El payload se valido sobre el registro real `FAC-2026-00001`; la comparacion con el contrato de caja no coincidia, y la comparacion EventLog si.
 
-Para evitar divergencias futuras, el builder EventLog se ha extraido a `backend/fiscalHashPayload.js` y es compartido por el writer EventLog y el verificador. La auditoria selecciona ese contrato para movimientos `channelType=ONLINE`; el resto conserva el builder de caja. La normalizacion de campos CMS y `recordTimestamp` se mantiene.
+Para evitar divergencias futuras, el builder EventLog se ha extraido a `backend/fiscalHashPayload.js` y es compartido por el writer EventLog y el verificador. La auditoria selecciona ese contrato para movimientos `channelType=ONLINE`; el resto conserva el builder de caja. La normalizacion de campos CMS y `recordTimestamp` se mantiene. PR #315 esta integrado en `main` (`f07d6cb0bf1e5152cb4bc1d4e442713f1c920691`).
 
 El verificador ahora distingue:
 - Ruptura real de continuidad o discrepancia del digest: `INTEGRITY_COMPROMISED` y alerta critica.
@@ -81,11 +81,11 @@ Se amplian las pruebas de `crons.jobsConfigParity.test.mjs` y `site.flows.offlin
 - Conservacion del payload original y trazabilidad de la resolucion.
 - Fail-closed: una ruptura reproducida, un digest incorrecto, un contenido no reconstruible o un ledger vacio mantienen la alerta OPEN.
 
-**CI verificado sobre el HEAD exacto del PR #313:** 66 suites, 606 pruebas correctas, 0 fallos. Contratos Wix SDK (Cart V2, Order Transactions y Bookings Reader V2), ESLint y Gitleaks completados correctamente. Workflow: https://github.com/nachoortegazgz/marianmadridz/actions/runs/43450798929. El PR #313 se integro mediante squash en `9d96655943af045406632435b299a84da39e23b0`. La correccion posterior del contrato EventLog esta en revision en PR #315; su CI es requisito antes de cerrar el hito de repositorio.
+**CI verificado sobre el HEAD exacto del PR #315:** 66 suites, 607 pruebas correctas, 0 fallos. Contratos Wix SDK (Cart V2, Order Transactions y Bookings Reader V2), ESLint y Gitleaks completados correctamente. Workflow: https://github.com/nachoortegazgz/marianmadridz/actions/runs/43452373744. El PR #315 se integro mediante squash en `f07d6cb0bf1e5152cb4bc1d4e442713f1c920691`.
 
 ## 6. Despliegue y cierre del hito
 
-- PR #311 integra el ciclo de vida trazable de la alerta; PR #313 añade la verificacion del contenido SHA-256, las guardas fail-closed y sus pruebas.
+- PR #311 integra el ciclo de vida trazable de la alerta; PR #313 añade la verificacion del contenido SHA-256 y las guardas fail-closed; PR #315 alinea el builder EventLog con el verificador y prueba el contrato real online.
 - El merge sincroniza el codigo con Wix Editor conforme al procedimiento operativo declarado por el propietario.
 - La publicacion Wix sigue siendo manual. No se ha publicado ni ejecutado codigo en produccion.
 - Tras publicar, `systemHealthCheck` ejecutara la resolucion en su siguiente ejecucion programada (07:00 Europe/Madrid), siempre que la auditoria completa siga limpia.
@@ -106,5 +106,5 @@ El hito de repositorio queda completado cuando el PR este integrado y CI verde. 
 
 - [Wix Bookings Reader V2 — Query Extended Bookings](https://dev.wix.com/docs/api-reference/business-solutions/bookings/bookings/bookings-reader-v2/query-extended-bookings)
 - [Wix Bookings Reader V2 — Supported Filters](https://dev.wix.com/docs/api-reference/business-solutions/bookings/bookings/bookings-reader-v2/supported-filters)
-- [Cron y reconciliador en el repositorio](https://github.com/nachoortegazgz/marianmadridz/blob/9d96655943af045406632435b299a84da39e23b0/src/backend/crons.js)
-- [Configuracion de jobs](https://github.com/nachoortegazgz/marianmadridz/blob/9d96655943af045406632435b299a84da39e23b0/src/backend/jobs.config)
+- [Cron y reconciliador en el repositorio](https://github.com/nachoortegazgz/marianmadridz/blob/f07d6cb0bf1e5152cb4bc1d4e442713f1c920691/src/backend/crons.js)
+- [Configuracion de jobs](https://github.com/nachoortegazgz/marianmadridz/blob/f07d6cb0bf1e5152cb4bc1d4e442713f1c920691/src/backend/jobs.config)
