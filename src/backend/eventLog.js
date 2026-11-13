@@ -69,10 +69,11 @@ import {
     normalizeMovementKeys,
 } from "backend/internalConfig";
 
-import { readInvoiceNumber, readInvoiceIssueDate, readFiscalPayload, readMovementField, readMovementHash, readTaxAmount, readInvoiceType, readIssuerTaxId, readRecipientTaxId } from "backend/data";
+import { readInvoiceNumber, readInvoiceIssueDate, readFiscalPayload, readMovementField, readMovementHash, readInvoiceType } from "backend/data";
 import { isExplicitSimulationLedgerRecord } from "backend/validation";
 
 import { hashChain } from "backend/securityEngine";
+import { buildEventLogFiscalChainPayload } from "backend/fiscalHashPayload";
 
 import {
     makeTraceId,
@@ -269,60 +270,7 @@ function _buildGenerationTimestamp(date) {
 // is consumed by securityEngine.hashChain(). Keep its output stable for
 // existing records. The official AEAT builder remains isolated in aeatHash.js.
 function _buildInternalFiscalChainPayload(movement, generatedAt) {
-    const nifDestinatario = _safeTrim(readRecipientTaxId(movement));
-    const recipientLegalName = _safeTrim(movement.recipientLegalName);
-    const numSerieFactura = _safeTrim(readInvoiceNumber(movement));
-    const fechaExpedicionFactura = _safeTrim(readInvoiceIssueDate(movement));
-    const tipoFactura = readInvoiceType(movement) || TIPO_FACTURA.F1;
-    // Cuota: canon SSOT es taxAmount; cuotaTotal es alias de lectura
-    // tolerado SOLO para docs historicos (MOVEMENT_HISTORICAL_READ_ALIASES).
-    const taxAmount = readTaxAmount(movement);
-    const totalAmount = Number(movement.totalAmount ?? 0);
-    const previousRecordHash = _safeTrim(movement.previousRecordHash);
-    const nifEmisor = _safeTrim(readIssuerTaxId(movement));
-    const tipoRectificativa = _safeTrim(readMovementField(movement, "tipoRectificativa"));
-    const previousInvoiceId = _safeTrim(movement.previousInvoiceId);
-    const correctionReason = _safeTrim(movement.correctionReason);
-    const vatAccrualStatus = _safeTrim(movement.vatAccrualStatus);
-    const linkedAdvanceId = _safeTrim(movement.linkedAdvanceId);
-    const irpfWithholdingAmount = Number(movement.irpfWithholdingAmount || 0);
-    const withholdingBase = Number(movement.withholdingBase || 0);
-    const fiscalRole = _safeTrim(movement.fiscalRole);
-    const surchargeAmount = Number(movement.surchargeAmount ?? 0);
-    const bankReconciliationReference = _safeTrim(movement.bankReconciliationReference);
-
-    const fields = [
-        ["IDEmisorFactura", nifEmisor || ""],
-        ["NumSerieFactura", numSerieFactura || ""],
-        ["FechaExpedicionFactura", _formatAEATDate(fechaExpedicionFactura)],
-        ["TipoFactura", tipoFactura],
-        ["CuotaTotal", String(taxAmount.toFixed(2))],
-        ["ImporteTotal", String(totalAmount.toFixed(2))],
-        ["Huella", previousRecordHash || ""],
-        ["FechaHoraHusoGenRegistro", _formatAEATDateTimeMadrid(generatedAt)],
-    ];
-
-    if (nifDestinatario) fields.push(["NIFDestinatario", nifDestinatario.slice(0, 20)]);
-    if (recipientLegalName) fields.push(["NombreRazonDestinatario", recipientLegalName.slice(0, 200)]);
-    if (bankReconciliationReference) fields.push(["ReferenciaBancaria", bankReconciliationReference.slice(0, 60)]);
-
-    if (vatAccrualStatus === VAT_ACCRUAL_APLICACION_ANTICIPO) {
-        fields.push(["TipoRectificativa", "I"]);
-        if (linkedAdvanceId) fields.push(["IdAnticipoVinculado", linkedAdvanceId.slice(0, 120)]);
-    }
-
-    if (tipoRectificativa) fields.push(["TipoRectificativa", tipoRectificativa.slice(0, 4)]);
-    if (irpfWithholdingAmount > 0) {
-        fields.push(["ImporteRetencionIRPF", String(irpfWithholdingAmount.toFixed(2))]);
-        if (withholdingBase > 0) fields.push(["BaseImponibleRetencion", String(withholdingBase.toFixed(2))]);
-        if (fiscalRole) fields.push(["RolFiscal", fiscalRole.slice(0, 10)]);
-    }
-
-    if (surchargeAmount > 0) fields.push(["ImporteRecargoEquivalencia", String(surchargeAmount.toFixed(2))]);
-    if (correctionReason) fields.push(["MotivoRectificacion", correctionReason.slice(0, 4)]);
-    if (previousInvoiceId) fields.push(["IdFacturaRectificada", previousInvoiceId.slice(0, 120)]);
-
-    return fields.map(([k, v]) => `${k}=${v}`).join("&");
+    return buildEventLogFiscalChainPayload(movement, generatedAt);
 }
 
 // ============================================================================
