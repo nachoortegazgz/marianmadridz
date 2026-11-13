@@ -3196,7 +3196,7 @@ export async function wixBookingsV2_onBookingConfirmed(eventPayload) {
     );
 }
 
-export async function wixBookingsV2_onBookingCreated(eventPayload) {
+export async function wixBookings_onBookingCreated(eventPayload) {
     return _runClaimedWixEvent(
         eventPayload,
         "BOOKING_CREATED",
@@ -3204,7 +3204,7 @@ export async function wixBookingsV2_onBookingCreated(eventPayload) {
     );
 }
 
-export async function wixBookingsV2_onBookingRescheduled(eventPayload) {
+export async function wixBookings_onBookingRescheduled(eventPayload) {
     return _runClaimedWixEvent(
         eventPayload,
         "BOOKING_RESCHEDULED",
