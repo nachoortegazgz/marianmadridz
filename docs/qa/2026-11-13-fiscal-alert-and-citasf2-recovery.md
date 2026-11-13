@@ -121,3 +121,5 @@ El hito de repositorio queda completado cuando el PR este integrado y CI verde. 
 - No se ejecutó el cron manualmente, no se invocó Velo, no se insertaron proyecciones ni alertas y no se modificaron reservas, pagos, caja o ledgers.
 
 **Estado:** publicación comunicada y estado Published verificado; ejecución efectiva del job y SHA Velo publicado pendientes de evidencia runtime.
+
+**Referencia oficial de programación:** [Wix — Schedule Recurring Jobs](https://dev.wix.com/docs/develop-websites/articles/workspace-tools/developer-tools/recurring-jobs/schedule-recurring-jobs), que indica que las expresiones cron de `jobs.config` se interpretan en UTC y que los cambios de programación requieren publicar el sitio.
