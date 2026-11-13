@@ -283,12 +283,14 @@
       }
       function renderCashier(state) {
         if (!state) {
+          btnZClosing.disabled = true;
           cashSaldo.textContent='--'; cashOps.textContent='--'; cashDiaKey.textContent='--';
           cashSessionCash.textContent='--'; cashSessionCard.textContent='--'; cashSessionBizum.textContent='--';
           cashSessionCashCount.textContent='-- tickets'; cashSessionCardCount.textContent='-- tickets'; cashSessionBizumCount.textContent='-- tickets';
           cashSessionMetaBody.textContent='Sin datos de sesión.'; cashLastOperationBody.textContent='Sin operaciones registradas en esta sesión.';
           return;
         }
+        btnZClosing.disabled = state.cashRegisterStatus !== 'ABIERTA';
         cashSaldo.textContent = money(state.netAmount);
         cashOps.textContent = Number.isFinite(Number(state.totalOperations)) ? String(state.totalOperations) : '--';
         cashDiaKey.textContent = state.operationDate || '--';
@@ -303,6 +305,7 @@
         cashSessionBizumCount.textContent = String(Number(bizum.ticketCount) || 0) + ' tickets';
 
         cashSessionMetaBody.replaceChildren();
+        appendDetailRow(cashSessionMetaBody, 'Estado de sesión', state.cashRegisterStatus);
         appendDetailRow(cashSessionMetaBody, 'Responsable apertura', state.openedByName || state.openedBy);
         appendDetailRow(cashSessionMetaBody, 'Apertura', formatInstant(state.openedAt));
         appendDetailRow(cashSessionMetaBody, 'Responsable cierre', state.closedByName || state.closedBy);
