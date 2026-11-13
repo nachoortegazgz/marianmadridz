@@ -196,3 +196,77 @@ El guard de allowlist `emailRecipientPolicy.js` solo protege el despacho Resend 
 La PR #286 se fusionó en `main` por squash el 2026-11-11 15:00:16 UTC, commit `0d8f6efc581bc6a3d892702ba1c32af73e829888`. La CI offline del HEAD previo al merge pasó 57 suites / 548 tests / 0 fallos y Gitleaks SUCCESS. El merge no ejecuta Wix Runtime ni publica el código.
 
 Siguen pendientes las pruebas E2E aisladas de pagos/reembolsos. No se han creado órdenes, cobros, reembolsos, registros CMS ni comunicaciones reales. Los writers fiscales/contables siguen fail-closed. La mensajería nativa se mantiene parcialmente aislada: 67 automatizaciones pausadas, nueve flujos email aún activos por restricciones Wix; las cuatro WhatsApp están inactivas.
+
+
+## Reauditoría live read-only y cobertura offline — 2026-11-13
+
+**Baseline de repositorio:** `main` = `7bca12931ce8a5c22e15427ba13edfdf2ee9b664`.
+**Entorno:** sitio Published `188bed94-177c-4bc9-a9f0-35080d874f3e`, no aislado para QA. Todas las consultas siguientes fueron de solo lectura. No se crearon reservas, pedidos, pagos, reembolsos, movimientos, notificaciones ni contactos.
+
+### A. Reservas nativas y proyección
+
+- Bookings Reader V2: 346 reservas leídas en 4 páginas; 73 CONFIRMED, 255 CANCELED, 18 CREATED; 0 IDs duplicados.
+- De las 73 CONFIRMED: 22 paymentStatus UNDEFINED, 49 NOT_PAID, 1 EXEMPT y 1 PAID.
+- Contraste con el writer actual `reconcileConfirmedNativeBookingProjectionInternal`: 55 reservas tienen serviceId, resourceId, scheduleId, startDate y endDate completos y estado financiero que permite proyección; 17 no tienen resourceId; 1 PAID queda excluida y exige conciliación de ledger.
+- CMS `CitasF2`: 0 filas. No se ejecutó el cron ni se insertaron las 55 proyecciones.
+- `MapaStaff`: 3 mapeos activos; los 56 resourceId presentes en reservas confirmadas coinciden con mapeos activos. Los 17 casos sin resource no se completan por inferencia.
+
+### B. Pedidos eCommerce y ventas
+
+- Wix eCommerce Search Orders: 31 pedidos, 0 IDs duplicados; 29 APPROVED y 2 CANCELED; 4 PAID y 27 NOT_PAID.
+- Los 4 pedidos PAID suman 264,36 EUR según el total autoritativo del pedido. No se ha creado ningún movimiento fiscal a partir de esta lectura.
+- 32 líneas referencian el catálogo Wix Bookings, 2 el catálogo Wix Stores y 1 línea (`EXTRA`, pedido 10018) carece de `catalogReference.appId` y `catalogItemId`. No se inventa una referencia de catálogo.
+- El pedido 10018 mezcla una línea Stores, una Bookings y una línea EXTRA sin referencia. Debe quedar en revisión; no se fuerza su clasificación como venta exclusiva de producto o servicio.
+- `MovimientosCaja`: 0 filas en dos lecturas independientes (con y sin `consistentRead`). Esto no concuerda con el checkpoint documental anterior, que registraba 10 filas; la discrepancia de origen/entorno queda ABIERTA. No se declara ausencia fiscal definitiva ni se crean movimientos.
+- `ControlOperativo`: 0 filas en la lectura repetida actual; también difiere del checkpoint anterior de 11 filas. No hay evidencia CMS de marcadores `WEBHOOK_EVENT` ni de ejecución del reconciliador.
+- El writer fiscal y de simulación sigue protegido por `FISCAL_RUNTIME_POLICY` (`LEDGER_WRITES_ENABLED=false`, `ACCOUNTING_LEDGER_WRITES_ENABLED=false`, `ALLOW_SIMULATION_RECORDS=false`). No se puede usar el sitio Published para generar ventas de prueba.
+
+### C. Tienda online e inventario nativo
+
+- Wix Stores Catalog V3: 24 productos visibles.
+- Inventario V3: 30 registros; todos los valores `quantity` devueltos son numéricos; no se detectan productos sin registro de inventario ni referencias huérfanas a producto.
+- La colección propia `InventarioStockVenta` contiene 1 fila QA sintética con todos los campos operativos presentes; `stockAvailable=8` coincide con `stockOnHand=10 - stockReserved=2`. El SKU QA no corresponde a un producto vendible Wix y no se añade un `productId` inventado.
+- `MovimientosInventario` contiene 1 movimiento QA append-only: quantity=2, quantityDelta=-2, stockBefore=12, stockAfter=10, token y traceId presentes. Se conserva sin modificación.
+
+### D. Catálogo y datos horarios
+
+- `ServiciosCatalogo`: 95 filas: 94 SERVICE y 1 PRICING_PLAN. Una fila SERVICE (Rayos V) no tiene SKU; el validador vigente no exige SKU para SERVICE, por lo que no se clasifica como error de contrato ni se genera un SKU arbitrario.
+- `ComplementosCatalogo`: 36 filas; todos tienen addonId y SKU.
+- `RegistrosHorariosStaff`: 2 filas de QA (ENTRADA/SALIDA) con resourceId, memberId, clockEventType, recordType, recordedAt, dayKey, monthKey y traceId presentes. Ambas carecen de `signature`; el validador `assertRegistrosHorariosStaff` exige HMAC de 64 caracteres hexadecimales. Son registros horarios append-only: no se actualizan ni eliminan ni se fabrica una firma retrospectiva. Requieren rectificación trazable mediante el flujo autorizado de fichaje/firma, no edición directa.
+- `CajaActual`: singleton único en estado `SIMULACION`, traceId QA y contadores cero. Se conserva en estado fail-closed; no se convierte a ABIERTA/CERRADA ni se modifica para habilitar operaciones.
+
+### E. Pruebas sintéticas ejecutables y límites
+
+El repositorio ya contiene suites offline con mocks para:
+- Reserva simple Writer V2 + CitasF2 + replay idempotente (`qa.simple-booking.writer.offline.test.mjs`).
+- Eventos nativos de Bookings, creación/confirmación, duplicados, carreras insertOnly, pagos y reembolsos (`events.native-booking-sync.test.mjs`).
+- Cálculo de importes y datos fiscales de pedidos (`orderLedgerAmount.test.mjs`).
+- Inventario, venta, devolución, idempotencia y locks (suites inventory registradas en el manifiesto QA).
+- Manifiesto de escenarios sintéticos y referencias a tests (`qa.simulation-manifest.test.mjs`).
+
+**No se ejecuta E2E de negocio en el sitio Published.** La referencia maestra QA del 2026-11-11 confirma que no existe un sitio QA independiente equivalente y que siguen activas automatizaciones email con destinatarios dinámicos. Wix Preview tampoco valida backend events. Los mocks no demuestran runtime, proveedor de pagos, webhook ni notificaciones.
+
+**Validación CI de esta actualización:** completada en el PR #319, commit `cc667ecda57a52594fb79a8747e304041800952e`. `npm test`: 66 suites, 607 tests aprobados, 0 fallos; contratos Wix eCommerce Cart V2, Order Transactions y Bookings Reader V2: SUCCESS; ESLint: SUCCESS; Gitleaks full-history: SUCCESS, sin secretos detectados. Workflow run #822 y secret scan #246.
+
+### F. Acciones bloqueadas por integridad
+
+1. No rellenar automáticamente los 17 resourceId ausentes; falta dato fuente de staff.
+2. No registrar los 4 pedidos PAID en ledger desde una simulación; se requiere reconciliación fiscal real y payload autoritativo.
+3. No inventar catalogReference para la línea EXTRA del pedido 10018.
+4. No reparar firma horaria ausente editando el registro append-only; solo rectificación firmada autorizada.
+5. No borrar ni reescribir filas QA de MovimientosInventario o RegistrosHorariosStaff.
+6. No sincronizar CMS Sandbox con Live ni disparar Automations en el sitio Published.
+
+**Estado final:** auditoría de lectura ejecutada; pruebas offline existentes identificadas; ejecución CI de esta revisión pendiente; pruebas runtime de reservas/pagos/tienda bloqueadas hasta disponer de un sitio QA aislado y sandbox de pago acreditado.
+
+
+### G. Corrección de tipo CMS ejecutada — 2026-11-13 16:15 UTC
+
+Se corrigió únicamente `CajaActual.openedAt` mediante Wix Data Patch API con condición CAS sobre `singletonKey=CAJA_PRINCIPAL`, `cashRegisterStatus=SIMULACION` y el valor ISO original exacto. Se persistió como `{"$date":"2026-11-11T05:10:31.144Z"}`, acorde al campo CMS `DATETIME`.
+
+Verificación posterior con `consistentRead=true`:
+- `openedAt` es objeto `$date`.
+- `cashRegisterStatus=SIMULACION`, `isOpen=true`, `openingAmount=300`, `cashAmount=0`, `salesAmount=0`, `salesCount=0`, `currentSequence=0` y contadores siguen intactos.
+- No se tocaron movimientos ni ledgers.
+
+**No corregidos por inmutabilidad:** los dos `RegistrosHorariosStaff.recordedAt` y el `MovimientosInventario.recordTimestamp` siguen serializados como cadenas ISO pese a que el esquema declara DATETIME. Los fichajes además carecen de HMAC de 64 hex; la validación backend los rechaza y la colección es append-only. No se sobrescriben ni se fabrican firmas retrospectivas. Requieren rectificación firmada autorizada.
