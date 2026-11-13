@@ -58,7 +58,7 @@ Se amplian las pruebas de `crons.jobsConfigParity.test.mjs` para cubrir:
 
 - Resolucion de alerta historica solo tras auditoria completa y limpia.
 - Conservacion del payload original y trazabilidad de la resolucion.
-- Fail-closed: una ruptura reproducida mantiene la alerta OPEN.
+- Fail-closed: una ruptura reproducida o un ledger vacio mantienen la alerta OPEN.
 
 La validacion definitiva depende del workflow CI asociado al PR. No se declara la prueba superada hasta disponer del resultado de ese workflow.
 
