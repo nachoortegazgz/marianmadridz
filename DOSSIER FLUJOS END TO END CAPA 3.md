@@ -256,3 +256,9 @@ Existe un sitio Wix independiente en estado Draft (Site ID `50b39f33-e753-4331-a
 La referencia única de prioridades y estado es `ESTADO_ACTUAL_PROYECTO.md`.
 
 La Capa 3 solo podrá consumir una vista/exportación aprobada de los datos ya consolidados en Capa 1. No calculará ni corregirá acumulados, no reconstruirá tickets y no escribirá referencias o saldos en `CajaActual`/`MovimientosCaja`. Los exports deben minimizar datos personales y excluir secretos y datos de tarjeta.
+
+### Estado de integración caja — TEC-032 (2026-11-13)
+
+La rama de alineación añade una lectura de sesión desde `MovimientosCaja` y presenta el DTO en ZONA MARIAN. Capa 1 conserva los tickets originales; Capa 2 proyecta EFECTIVO/TARJETA/BIZUM presenciales solo dentro de una sesión abierta. El efectivo físico se mantiene separado de tarjeta/Bizum. El actor presencial procede de identidad autenticada backend; el frontend solo representa el DTO.
+
+La última operación y los IDs fuente se reconstruyen para la lectura; todavía no existe persistencia de un snapshot/referencia `lastMovementId` en `CajaActual`. La apertura de sesión, el saldo inicial reconciliado, el contrato de conceptos y los pagos mixtos siguen pendientes. Capa 3 no calcula ni modifica acumulados y solo podrá consumir una exportación aprobada. Escritores y despliegue permanecen bloqueados.
