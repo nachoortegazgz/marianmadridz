@@ -660,3 +660,65 @@ test('CRON-ORDER-CREATED-03 rejects native order rows without a valid GUID', asy
   assert.equal((wixDataMock._store.get(IC.OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO) || []).length, 0);
   delete mocks.sdk['@wix/ecom::orders'];
 });
+
+
+test('CRON-FISCAL-ALERT-01 resolves an old fiscal alert only after a complete clean chain audit', async () => {
+  wixDataMock._reset();
+  const C = IC.OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
+  wixDataMock._seed(C, [{
+    _id: 'legacy-fiscal-chain-alert',
+    controlType: IC.CONTROL_TYPE.ALERT,
+    alertType: 'FISCAL_CHAIN_CORRUPTED',
+    status: IC.CONTROL_STATUS.OPEN,
+    dedupeKey: 'legacy-fiscal-chain-alert',
+    traceId: 'trace-original-fiscal-alert',
+    payload: {
+      eventType: 'FISCAL_CHAIN_CORRUPTED',
+      data: { breaksCount: 6 },
+    },
+  }]);
+
+  const result = await CR.systemHealthCheck();
+  assert.equal(result.fiscalChain, 'SUCCESS');
+  assert.equal(result.fiscalAlertResolution.resolved, 1);
+  assert.equal(result.fiscalAlertResolution.failed, 0);
+
+  const alert = (wixDataMock._store.get(C) || [])
+    .find(row => row._id === 'legacy-fiscal-chain-alert');
+  assert.equal(alert.status, IC.CONTROL_STATUS.RESOLVED);
+  assert.equal(alert.payload.data.breaksCount, 6, 'historical alert evidence must remain intact');
+  assert.equal(alert.payload.resolution.eventType, 'FISCAL_CHAIN_VERIFIED');
+  assert.equal(alert.payload.resolution.breaksCount, 0);
+  assert.equal(alert.payload.resolution.complete, true);
+  assert.ok(alert.payload.resolvedAt);
+});
+
+test('CRON-FISCAL-ALERT-02 keeps fiscal alerts OPEN when the chain audit reproduces a break', async () => {
+  wixDataMock._reset();
+  const C = IC.OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
+  wixDataMock._seed(C, [{
+    _id: 'legacy-fiscal-chain-alert',
+    controlType: IC.CONTROL_TYPE.ALERT,
+    alertType: 'FISCAL_CHAIN_CORRUPTED',
+    status: IC.CONTROL_STATUS.OPEN,
+    dedupeKey: 'legacy-fiscal-chain-alert',
+    traceId: 'trace-original-fiscal-alert',
+    payload: { eventType: 'FISCAL_CHAIN_CORRUPTED', data: { breaksCount: 6 } },
+  }]);
+  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA, [{
+    _id: 'broken-live-movement',
+    sequenceNumber: 2,
+    recordSource: 'LIVE',
+    hash: 'b'.repeat(64),
+    previousRecordHash: 'c'.repeat(64),
+  }]);
+
+  const result = await CR.systemHealthCheck();
+  assert.equal(result.fiscalChain, 'INTEGRITY_COMPROMISED');
+  assert.equal(result.fiscalAlertResolution.resolved, 0);
+  assert.equal(result.fiscalAlertResolution.skipped, true);
+
+  const alert = (wixDataMock._store.get(C) || [])
+    .find(row => row._id === 'legacy-fiscal-chain-alert');
+  assert.equal(alert.status, IC.CONTROL_STATUS.OPEN);
+});
