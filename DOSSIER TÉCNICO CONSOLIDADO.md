@@ -284,7 +284,7 @@ El CMS propio tiene **13 colecciones NATIVE** activas. Las 20 colecciones `WIX_A
 | Colección | Tipo | Rol |
 | --- | --- | --- |
 | `DatosFiscales` | MASTER mutable | Maestro de terceros + singleton `CONFIG_SISTEMA` Veri\*Factu |
-| `CajaActual` | SINGLETON mutable | Estado en tiempo real del cajón físico |
+| `CajaActual` | SINGLETON mutable | Proyección de la sesión operativa, resumen de última operación, acumulados por medio de pago y saldo en tiempo real del efectivo físico |
 | `MovimientosCaja` | LEDGER append-only | Registro fiscal inalterable (Veri\*Factu) |
 | `CitasF2` | LEDGER con updates controlados | Proyección interna de reservas |
 | `LibroAsientosContablesDetalle` | LEDGER append-only | Contabilidad de doble partida (PGC) |
@@ -1231,15 +1231,18 @@ PR #280 incorpora el handler Velo wixBookings_onBookingCreated para proyectar la
 
 La prueba sintética autorizada del 2026-11-11 (booking 213a10f1-9d4e-44ed-b682-a459bd7ed88d) quedó CONFIRMED en Wix, pero no produjo fila CitasF2 ni marcador WEBHOOK_EVENT en dos lecturas posteriores. Causa no determinada; no se ha verificado el SHA de Velo publicado ni hay evidencia runtime suficiente. Preservar reserva y anotación QA; no cancelar, hacer backfill ni crear otra reserva de prueba hasta aislar el fallo.
 
-### Caja física: separación de responsabilidades
+### Caja y sesión operativa: separación de responsabilidades
 
-Decisión del propietario, 2026-11-11:
-- CajaActual representa únicamente entradas/salidas reales de efectivo físico del cajón.
-- Tarjeta, Bizum, online, transferencia y pagos bancarios no afectan a CajaActual, aunque deban registrarse en los ledgers fiscales/contables correspondientes.
-- MovimientosCaja conserva su contrato actual de registro fiscal de operaciones; no es sinónimo de saldo físico.
-- LibroAsientosContablesDetalle consolida hechos económicos según reglas aprobadas.
+Decisión inicial del propietario, 2026-11-11, delimitada por la decisión posterior TEC-032 (2026-11-13):
+- `MovimientosCaja` conserva cada ticket/movimiento original como ledger append-only y fuente histórica/fiscal.
+- `CajaActual` es un singleton mutable que proyecta el estado de sesión, el resumen de la última operación, los acumulados de sesión por medio de pago y, de forma separada, el saldo del efectivo físico.
+- Los cobros presenciales en efectivo, tarjeta y Bizum deben aparecer en la actividad/acumulados de sesión. Tarjeta y Bizum no incrementan el saldo físico.
+- `cashAmount`/`expectedCash` solo cambian por movimientos cuyo efecto físico esté definido y validado en backend. ONLINE, transferencias y pagos bancarios no se incorporan a la sesión física por inferencia.
+- `LibroAsientosContablesDetalle` consolida hechos económicos según reglas aprobadas; no se crean asientos ni mapeos PGC por efecto de la proyección.
 
-PR #284 aplica parcialmente el criterio: _updateCajaActual() proyecta solo paymentMethod=EFECTIVO y channelType=PRESENCIAL. Los movimientos no físicos no alteran saldo, contadores ni appliedMovementIds. La PR está abierta/draft, sin merge ni despliegue Wix. No implementa aún un clasificador completo IN/OUT/NONE ni los tipos APORTACION, RETIRO, PAGO_PROVEEDOR o la dirección de AJUSTE. No crear enums ni mapeos PGC por inferencia. CI final: run 42973918957, 53 suites / 530 tests, contratos Wix SDK, Bookings Reader V2 y ESLint PASS; no Wix Local Editor ni E2E visual publicado.
+Cada ticket permanece en `MovimientosCaja`; `CajaActual` guarda referencias a los IDs fuente asociados a la última operación y no duplica el histórico. El resumen de última operación incluye, cuando existan en el origen, actor autenticado resuelto en backend, fecha/hora exacta, tipo/descripción, conceptos/unidades validados, importe/desglose, hash, hash anterior, secuencia, timestamp de registro, firma y traceId. Los acumulados mínimos distinguen efectivo, tarjeta y Bizum por importe y número de tickets/cobros.
+
+**Estado:** decisión documental aprobada; implementación pendiente. El esquema físico documentado de `CajaActual` no contiene aún todos los campos del resumen/referencias ni un acumulado Bizum dedicado. `MovimientosCaja.paymentMethod` es singular y `lineItems` carece de contrato interno acreditado: los pagos mixtos y la presentación de unidades permanecen bloqueados hasta definir y probar sus contratos. No se afirma que la PR #284 o el código actual implementen TEC-032; su alcance previo era exclusivamente efectivo físico. No añadir enums ni mapeos PGC por inferencia.
 
 La fila live de CajaActual en estado SIMULACION con apertura marcada en 300 EUR es sintética y no constituye una apertura real ni un saldo físico conciliado. No reescribirla ni borrarla; preservar también anotaciones QA y ledgers históricos.
 
@@ -1313,3 +1316,11 @@ La lectura CMS del sitio QA devuelve 43 colecciones (15 NATIVE, 28 WIX_APP). Las
 - SharePoint / Power Automate Capa 3 no está acreditado como flujo operativo live.
 - El commit documental actual `738eb78...` no tiene estados combinados ni workflow runs asociados en la consulta. Los resultados históricos de PR #330 no certifican este HEAD.
 - Pendientes P0–P4, lista de colecciones completa, diferencias QA/prod y estado de validación se mantienen centralizados en `ESTADO_ACTUAL_PROYECTO.md`.
+
+### Addendum de arquitectura — TEC-032: proyección de sesión y tickets fuente (2026-11-13)
+
+`MovimientosCaja` sigue siendo el ledger de origen y conserva cada ticket individual sin updates/removes. `CajaActual` no se convierte en un ledger paralelo: contiene una proyección mutable y reconstruible con estado de sesión, responsable de apertura/cierre, resumen de última operación, acumulados por medio de pago y saldo físico separado. El resumen referencia los `_id` originales. Los acumulados y el resumen se actualizan de forma idempotente después de persistir el movimiento fuente.
+
+El proyector debe separar dos dimensiones: (a) actividad económica/pagos presenciales de la sesión, al menos EFECTIVO/TARJETA/BIZUM; (b) delta físico de efectivo, solo cuando el movimiento lo declare de forma canónica y validada. El actor se resuelve en backend; los timestamps y huellas se toman del movimiento original. No se aceptan valores de identidad, dirección física ni totales autoritativos desde el frontend.
+
+No se ha implementado ni validado este contrato en runtime en esta actualización. Requiere migración CMS compatible, validación centralizada, revisión de todos los consumidores, lock/idempotencia, pruebas unitarias/integración/concurrencia/reconstrucción y QA Wix aislado. Los escritores fiscales/contables siguen fail-closed.
