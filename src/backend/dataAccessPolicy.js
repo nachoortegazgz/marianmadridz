@@ -131,11 +131,11 @@ export function assertSaveAllowed(collection, item) {
 }
 
 export function assertRemoveAllowed(collection, id, expectedControlType) {
-    if (
-        !DATA_ACCESS_WRITE_POLICY.removeCollections.includes(collection) ||
-        !id ||
-        !DATA_ACCESS_WRITE_POLICY.removableControlTypes.includes(expectedControlType)
-    ) {
+    if (!DATA_ACCESS_WRITE_POLICY.removeCollections.includes(collection) || !id) {
+        throw _policyError("CMS_REMOVE_SCOPE_DENIED");
+    }
+    if (collection === BUSINESS_COLLECTIONS.CONTROL_OPERATIVO &&
+        !DATA_ACCESS_WRITE_POLICY.removableControlTypes.includes(expectedControlType)) {
         throw _policyError("CMS_REMOVE_SCOPE_DENIED");
     }
 }
