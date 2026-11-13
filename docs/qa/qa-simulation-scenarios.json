@@ -697,6 +697,34 @@
         "require Wix-supported isolation or owner-side neutralization before enabling side-effect tests"
       ],
       "limitation": "The current QA copy remains partially isolated. No external-effect test is authorized or considered validated."
+    },
+    {
+      "scenarioId": "QA-MANAGER-EMAIL-SINK-001",
+      "name": "Comunicación de paquete sintético a gestoría mediante sink QA en memoria",
+      "status": "MOCK_COVERED",
+      "testFiles": [
+        "src/backend/tests/qa.manager-email-sink.mock.test.mjs"
+      ],
+      "traceId": "trace-qa-manager-email-001",
+      "fixture": {
+        "provider": "QA_MEMORY_SINK",
+        "recipient": "qa-gestoria@example.test",
+        "customerName": "Nacho Pitt",
+        "customerEmail": "qa.simple@example.test",
+        "packageEvidence": "synthetic-sha256",
+        "networkAccess": false,
+        "resendCall": false,
+        "emailExecution": false
+      },
+      "assertions": [
+        "manager sink requires explicit QA environment, enabled flag and matching QA site identifier",
+        "only reserved .example.test recipient and synthetic customer email are accepted",
+        "synthetic customer name and email are included in the message body",
+        "package ID, SHA-256 snapshot hash and trace ID are required",
+        "same package/hash/recipient replay is idempotent and conflicting content is rejected",
+        "message remains in memory and no email provider, secret, Wix API or network is called"
+      ],
+      "limitation": "No se prueba el despacho real de fiscalDocuments.web.js ni se habilita ACCOUNTANT_SEND_ENABLED. La entrega real a gestoría permanece bloqueada."
     }
   ]
 }
