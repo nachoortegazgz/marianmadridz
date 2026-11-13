@@ -390,3 +390,20 @@ Resultado de esa primera ejecución:
 - La regresión completa `npm test` quedó omitida por el fallo previo del gate Layer 2.
 
 La corrección queda pendiente de una nueva ejecución de CI antes de integrar.
+
+
+### Resultado definitivo de CI tras corregir el runner (PR #322)
+
+PR #322 quedó integrada en `main` con commit `24f3ce7ce5cce2c48f19e36f241cbc502869afd1`.
+
+Ejecución final en el head de integración:
+- Layer 1: 22 suites, 287 PASS, 0 FAIL.
+- Layer 2: 17 suites, 239 PASS, 0 FAIL.
+- Regresión completa: 66 suites, 610 PASS, 0 FAIL.
+- Wix eCommerce Cart V2 SDK contract: PASS.
+- Wix eCommerce Order Transactions SDK contract: PASS.
+- Wix Bookings Reader V2 SDK contract: PASS.
+- ESLint: PASS.
+- Gitleaks full-history: PASS.
+
+Este resultado valida los contratos y regresiones offline. No acredita ejecución de Wix Runtime, entrega de webhooks, ejecución de crons, checkout/PSP sandbox, fichajes reales ni certificación fiscal/contable. La decisión de cierre de capas 1 y 2 permanece **NO CERRADA** por los bloqueos live descritos arriba.
