@@ -280,3 +280,42 @@ La revisión de los archivos realmente incluidos en `src/backend/tests/run-all.m
 - **Pendiente manual:** compra real de producto físico, decremento nativo de inventario, cancelación/refund y reposición.
 - **Pendiente manual:** reserva online con checkout Cart V2 y resultados PSP de sandbox en runtime Wix.
 - Los dos escenarios manuales quedan explícitamente en `qa-simulation-scenarios.json`, sin fingir que los mocks ejecutan checkout o PSP.
+
+
+## 2026-11-13 — conciliación del balanceo de profesionales y rutas dinámicas
+
+### Balanceo diario y reservas sin recurso
+
+La revisión del contrato de Bookings Reader V2 se amplió para comprobar tanto el recurso nativo del slot como la identidad explícita `staffMemberId` que consume el reconciliador de eventos.
+
+Resultado de lectura live, solo lectura, de las 17 reservas CONFIRMED inicialmente observadas sin recurso:
+
+- 17/17 tienen `resourceId` ausente.
+- 17/17 tienen `staffMemberId` ausente.
+- 17/17 presentan `resourceSelections.selectionMethod=NO_SELECTION`.
+- 0/17 pueden resolverse mediante los tres mapeos activos de `MapaStaff`.
+- No se asigna ningún profesional por nombre, horario, servicio, recurso predeterminado ni por el balanceo actual.
+
+**Interpretación corregida:** `NO_SELECTION` describe el método de selección de recurso; no demuestra que el cliente haya solicitado una reserva sin profesional. La ausencia simultánea de `slot.resource` y `staffMemberId` sí impide reconstruir una asignación individual fiable. Estos 17 casos deben permanecer en revisión, sin backfill inferido.
+
+El backend ya aplica ese principio:
+- `src/backend/reservas.web.js`: el ranking se calcula únicamente sobre recursos disponibles para el slot; carga diaria = minutos reservados.
+- `src/backend/events.js`: `_syncNativeBookingToCitas` prioriza el recurso del slot y solo utiliza `MapaStaff` cuando existe un `staffMemberId` explícito.
+- `reconcileConfirmedNativeBookingProjectionInternal` exige reserva CONFIRMED y excluye estados financieros que requieren conciliación de ledger.
+- `src/backend/tests/crons.booking-projection-reconciliation.test.mjs` ya verifica que una reserva sin recurso no se proyecta.
+- Se añade `RES-BAL-06`: una reserva nativa sin recurso ni identidad explícita no se atribuye retrospectivamente a ninguno de los profesionales ni sesga el ranking.
+
+### Rutas dinámicas de servicios
+
+Se implementa un fallback controlado para las rutas de página dinámica Wix que añaden sufijo numérico de colisión (`slug-1`, `slug-2`, etc.) cuando el CMS conserva el slug canónico sin sufijo.
+
+Reglas:
+1. La búsqueda exacta de slug/título mantiene prioridad.
+2. El fallback elimina únicamente un sufijo numérico terminal y busca exclusivamente por el slug canónico.
+3. Solo se acepta una coincidencia única.
+4. Si hay más de una coincidencia, devuelve `SERVICE_LOOKUP_AMBIGUOUS`.
+5. No modifica el CMS ni reescribe URLs.
+
+Pruebas añadidas: `RES-LOOK-01G` (resolución única) y `RES-LOOK-01H` (ambigüedad fail-closed).
+
+**Límite:** la corrección del resolver y sus pruebas offline no sustituyen una comprobación visual de la ruta en Wix Runtime. No se ha publicado código ni cambiado el Editor.
