@@ -97,6 +97,16 @@ function _isSimulationCashRegister(cashRegister) {
     return _safeTrim(cashRegister?.cashRegisterStatus).toUpperCase() === "SIMULACION";
 }
 
+function _hasOpenCashierSession(cashRegister) {
+    if (!cashRegister ||
+        _safeTrim(cashRegister.cashRegisterStatus).toUpperCase() !== CASH_REGISTER_STATUS.ABIERTA ||
+        cashRegister.isOpen === false) return false;
+    const openedAt = cashRegister.openedAt instanceof Date
+        ? cashRegister.openedAt
+        : new Date(cashRegister.openedAt || "");
+    return !Number.isNaN(openedAt.getTime()) && !cashRegister.closedAt;
+}
+
 
 const VAT_ACCRUAL_DEVENGADO = "DEVENGADO";
 const VAT_ACCRUAL_ANTICIPADO = "ANTICIPADO";
@@ -669,6 +679,9 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
         }
         const operationDate = new Date().toLocaleDateString("sv-SE", { timeZone: SDK_CONFIG.TZ });
         await _assertPeriodNotClosed(operationDate, traceId);
+        if (channelType === CHANNEL_TYPE.PRESENCIAL && !_hasOpenCashierSession(currentCashRegister)) {
+            return { status: "ERROR", data: null, error: { code: "CAJA_SESSION_NOT_OPEN", message: "No se pueden registrar cobros presenciales sin una sesión de caja abierta y con hora de apertura válida." }, traceId };
+        }
 
         const taxRate = Number(inDto.tipoImpositivo) || IVA_RATES.GENERAL;
         const fiscalCalc = _resolveFiscalBase({
@@ -718,6 +731,15 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
         // Revalidate after acquiring the shared lock: a Z close may have
         // completed while this writer was waiting.
         await _assertPeriodNotClosed(operationDate, traceId);
+        if (channelType === CHANNEL_TYPE.PRESENCIAL) {
+            const lockedCashRegister = await getCashRegisterSingleton();
+            if (_isSimulationCashRegister(lockedCashRegister)) {
+                return { status: "ERROR", data: null, error: { code: "CASH_REGISTER_SIMULATION_STATE", message: "La caja actual contiene estado de simulacion; no se permiten movimientos reales." }, traceId };
+            }
+            if (!_hasOpenCashierSession(lockedCashRegister)) {
+                return { status: "ERROR", data: null, error: { code: "CAJA_SESSION_NOT_OPEN", message: "La sesión de caja se cerró o no está abierta; no se ha insertado el movimiento." }, traceId };
+            }
+        }
 
         const lastMovement = await _getLastMovement();
         let seq;
