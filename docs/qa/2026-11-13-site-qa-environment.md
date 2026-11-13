@@ -97,8 +97,10 @@ La reserva nativa está cancelada y no ocupa el slot. No borrar el registro nati
 
 ## 5. Cliente sintético y gestoría
 
-- Identidad sintética ya declarada en la documentación QA: **Nacho Pitt**.
-- El registro actual de `DatosFiscales` contiene un tercero sintético identificado como gestoría y un email de pruebas ya presente en el registro. El valor exacto se mantiene en el CMS y no se replica aquí.
+- Identidad sintética: **Nacho Pitt**.
+- Se creó el contacto CRM sintético con ID `ac14ecc8-1dde-4b73-97d5-9e2248ee481c`; Get Contact V4 confirmó nombre, revisión 1 y email principal presente.
+- El booking de prueba se creó antes de ese contacto y su proyección registra `meta.contactId=null`; por tanto, el contacto CRM existe, pero no está vinculado a la reserva ya cancelada. No se debe afirmar que la relación Booking–CRM está validada.
+- El registro actual de `DatosFiscales` contiene un tercero sintético identificado como gestoría. Su dirección está en la allowlist exacta del backend; el valor se mantiene en el CMS y no se replica aquí.
 - `SDK_CONFIG.EMAIL.ACCOUNTANT_SEND_ENABLED` sigue en `false`.
 - La allowlist Resend existente no sustituye el control de destinatarios de las automatizaciones nativas Wix.
 - No se ha habilitado el despacho de emails ni se ha ejecutado ningún envío.
@@ -210,11 +212,11 @@ Antes de cualquier despliegue real:
 | Permisos de colecciones Wix App | No modificados |
 | Bookings Writer V2 create/confirm/cancel con cliente sintético | Verificado por respuestas API; reserva cancelada |
 | Proyección CitasF2 para el booking de prueba | Creada asíncronamente, pero inconsistente: Bookings CANCELED vs CitasF2 CONFIRMED |
-| Cliente sintético como contacto CRM persistido | Pendiente de comprobar |
+| Contacto CRM sintético Nacho Pitt | Creado y verificado por Get Contact V4; no vinculado al booking anterior |
 | Simulador PSP offline en memoria | Implementado en tests; 6/6 PASS local y CI |
 | Simulador PSP accesible desde runtime/UI | No implementado (intencional: no existe sandbox PSP acreditado) |
 | Pago OFFLINE Bookings sin cargo | Verificado en prueba runtime; no es pago PSP |
-| Sink QA de gestoría en memoria | 4/4 PASS local; CI pendiente |
+| Sink QA de gestoría en memoria | 4/4 PASS local y CI Layer 2 |
 | Despacho real a gestoría | Bloqueado por flag; no enviado |
 | 18 automatizaciones modificables | INACTIVE, verificado por read-back |
 | 10 automatizaciones bloqueadas | ACTIVE; triggers excluidos de QA |
@@ -222,11 +224,11 @@ Antes de cualquier despliegue real:
 | E2E completo en navegador | Pendiente |
 | Restauración preproducción | Documentada, no ejecutada |
 
-**Criterio:** el sitio dispone de aislamiento parcial de automatizaciones, permisos CMS ajustados y una prueba nativa de Bookings cancelada. El simulador PSP es offline; su suite aislada local ejecutó 6/6 pruebas PASS. En CI del PR #330:
+**Criterio:** el sitio dispone de aislamiento parcial de automatizaciones, permisos CMS ajustados y una prueba nativa de Bookings cancelada. El simulador PSP es offline; su suite aislada local ejecutó 6/6 pruebas PASS. En CI del PR #330, commit `0f36dc5`:
 - Layer 1: 23 suites, 294 PASS, 0 FAIL.
-- Layer 2: 17 suites, 239 PASS, 0 FAIL.
-- Regresión completa: 67 suites, 617 PASS, 0 FAIL.
+- Layer 2: 18 suites, 243 PASS, 0 FAIL.
+- Regresión completa: 68 suites, 621 PASS, 0 FAIL.
 - Contratos SDK Wix Bookings Reader V2, eCommerce Cart V2 y Order Transactions: PASS.
 - ESLint: PASS.
 - Gitleaks full-history: PASS.
-Ejecuciones: backend quality gates `43487412879`; secret scanning `43487413018`. La proyección CitasF2 desactualizada (CONFIRMED frente a Bookings CANCELED), los diez flujos Wix bloqueados y la ausencia de despacho real de gestoría impiden certificar el sitio como entorno QA completo. No autoriza un despliegue real.
+Ejecuciones: backend quality gates `43488515192`; secret scanning `43488515254`. La proyección CitasF2 desactualizada (CONFIRMED frente a Bookings CANCELED), los diez flujos Wix bloqueados y la ausencia de despacho real de gestoría impiden certificar el sitio como entorno QA completo. No autoriza un despliegue real.
