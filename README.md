@@ -4,8 +4,6 @@
 
 Repositorio canónico del sitio **Marian Madrid Peluquería y Estética** (`www.marianmadrid.es`). El repositorio contiene código, documentación y pruebas QA.
 
-Repositorio canónico del sitio **Marian Madrid Peluquería y Estética** (`www.marianmadrid.es`). El repositorio contiene código, documentación y pruebas QA. **Corte 2026-11-13 20:51 CET:** PR #330 fusionada sobre el baseline funcional `3df4b4cf174d80dfd22406bbd758b2eddd7aaa44`; después se añadieron commits exclusivamente documentales a main. Consultar GitHub para el HEAD documental vivo; sitio Wix Published; no está acreditado que el HEAD de main esté publicado ni que el sitio principal sea QA aislado. CitasF2 tiene 31 campos físicos, revisión live 42 y un item; la reserva nativa asociada está CANCELED mientras la proyección sigue CONFIRMED (bloqueo P1). El estado y checklist vigentes están en `ESTADO_ACTUAL_PROYECTO.md`.
-
 ## Arquitectura y fuente de verdad
 
 - **Wix** es el centro operativo: Bookings, Stores/eCommerce, Payments, CRM, POS/Owner y Automations, según disponibilidad real del plan, país y configuración.
