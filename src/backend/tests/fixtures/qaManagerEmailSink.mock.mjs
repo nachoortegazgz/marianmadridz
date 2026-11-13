@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 
-const EMAIL_PATTERN = /^[^\\s@]+@example\\.test$/i;
+const EMAIL_PATTERN = /^[^\s@]+@example\.test$/i;
 
 function hashId(value) {
   return createHash('sha256').update(String(value)).digest('hex').slice(0, 24);
