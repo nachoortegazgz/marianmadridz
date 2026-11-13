@@ -44,6 +44,8 @@ Se excluyeron deliberadamente por los invariantes append-only:
 
 No se debe habilitar edición o borrado manual de estos ledgers. Los registros de QA se deben identificar y corregir mediante los mecanismos de prueba y rectificación definidos por el proyecto, sin reescribir históricos.
 
+**Advertencia de permisos actual:** en la lectura Data Permissions v1 del 2026-11-13, `HistoricoCierresZ`, `PaquetesGestoria` y `RegistrosHorariosStaff` ya tenían CMS_EDITOR en las cuatro acciones. No se modificaron en esta intervención, pero eso significa que el permiso CMS por sí solo no impide que un colaborador CMS_EDITOR pueda editarlos o borrarlos. El principio append-only se mantiene en los contratos/backend, pero no está impuesto uniformemente por el ACL CMS. Antes de permitir edición CMS libre durante QA, se debe resolver esta brecha: restringir update/remove a PRIVILEGED o gestionar la limpieza mediante un procedimiento QA controlado. No se ha cambiado ese ACL porque requiere una decisión explícita sobre el alcance de limpieza de esos registros sintéticos.
+
 ### Límite de verificación
 
 La Data Permissions API v1 confirmó la configuración CMS_EDITOR tras la escritura. Data Collections API v2 sigue mostrando ADMIN en el objeto de permisos. La efectividad final debe probarse con una identidad colaboradora que tenga rol CMS Editor. No se debe afirmar que la interfaz Content Manager quedó verificada hasta realizar esa prueba.
