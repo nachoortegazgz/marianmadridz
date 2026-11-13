@@ -929,7 +929,9 @@ async function _resolveVerifiedFiscalChainAlerts(chainResult, traceId) {
         chainResult?.status !== "SUCCESS" ||
         audit?.complete !== true ||
         audit?.hasMore !== false ||
-        audit?.breaksCount !== 0
+        audit?.breaksCount !== 0 ||
+        !Number.isFinite(Number(audit?.checked)) ||
+        Number(audit.checked) < 1
     ) {
         return { resolved: 0, failed: 0, skipped: true, reason: "FISCAL_AUDIT_NOT_COMPLETE_AND_CLEAN" };
     }
