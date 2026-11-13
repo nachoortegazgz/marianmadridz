@@ -104,11 +104,11 @@ export function assertCitasF2(item) {
     if (!isValidGuid(item.bookingId)) {
         throw new Error("SCHEMA_VIOLATION: CitasF2.bookingId must be a valid GUID");
     }
-    if (!isValidGuid(item.serviceId)) {
-        throw new Error("SCHEMA_VIOLATION: CitasF2.serviceId is required and must be a valid GUID");
+    if (item.serviceId && !isValidGuid(item.serviceId)) {
+        throw new Error("SCHEMA_VIOLATION: CitasF2.serviceId must be a valid GUID when present");
     }
-    if (!isValidGuid(item.resourceId)) {
-        throw new Error("SCHEMA_VIOLATION: CitasF2.resourceId is required and must be a valid GUID");
+    if (item.resourceId && !isValidGuid(item.resourceId)) {
+        throw new Error("SCHEMA_VIOLATION: CitasF2.resourceId must be a valid GUID when present");
     }
 
     if (isDualBookingType(canonicalBookingType)) {
