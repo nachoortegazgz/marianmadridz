@@ -241,3 +241,23 @@ Esta decisión es contractual/documental. No acredita que el backend o el esquem
 **Gates intactos:** `LEDGER_WRITES_ENABLED=false`, `ACCOUNTING_LEDGER_WRITES_ENABLED=false`; la caja `SIMULACION` permanece bloqueada. Esta rama no escribe CMS live ni publica Wix.
 
 Para los movimientos presenciales manuales nuevos, backend asigna `recordSource=MANUAL_PRESENCIAL_AUTHENTICATED` y resuelve `staffResourceId` desde la identidad autenticada. La UI solo marca el operador como verificado cuando el origen contiene esa marca backend; los registros históricos se identifican como autoría no verificada.
+
+
+### TEC-033 — ventana temporal de mutación de ledgers append-only (2026-11-14)
+
+**Decisión temporal solicitada:** abrir en la rama de desarrollo una ventana global que permite operaciones individuales de actualización y borrado sobre los registros que el proyecto protegía como append-only. El alcance de código incluye:
+- `MovimientosCaja`
+- `LibroAsientosContablesDetalle`
+- `RegistrosHorariosStaff`
+- `MovimientosInventario`
+- `HistoricoCierresZ`
+- `PaquetesGestoria`
+- `ControlOperativo` cuando `controlType=WEBHOOK_EVENT`
+
+**Implementación:** `APPEND_ONLY_MUTATION_WINDOW.ENABLED=true` en `src/backend/internalConfig.js`; hooks Velo en `src/backend/data.js` y allowlists de `src/backend/dataAccessPolicy.js` alineados. Las validaciones de esquema de inserción siguen activas. Las operaciones masivas siguen bloqueadas; la excepción no autoriza bulk update/remove. Los tipos mutables de `ControlOperativo` conservan sus restricciones de contrato y el campo `controlType` no puede cambiar.
+
+**Límite de esta entrega:** solo código del repositorio en una rama draft. No se han cambiado permisos CMS live, datos CMS, Wix Apps, automatizaciones ni publicación. Los permisos de colección y las autorizaciones de backend siguen siendo capas independientes; la edición desde CMS UI no queda garantizada por este cambio.
+
+**Reversión obligatoria:** antes de cualquier despliegue productivo, establecer `APPEND_ONLY_MUTATION_WINDOW.ENABLED=false`, retirar las entradas de actualización/borrado de ledgers de `DATA_ACCESS_WRITE_POLICY`, restaurar los bloqueos de hooks y tests, ejecutar CI completo y verificar en Wix Local Editor que update/remove vuelven a bloquearse. No desplegar mientras `RESTORE_BEFORE_PRODUCTION=true` y `ENABLED=true`.
+
+**Advertencia de cumplimiento:** esta excepción de desarrollo no modifica ni suspende obligaciones legales de integridad, trazabilidad y conservación de registros fiscales, contables o laborales. No usarla para alterar o eliminar registros reales sujetos a conservación.
