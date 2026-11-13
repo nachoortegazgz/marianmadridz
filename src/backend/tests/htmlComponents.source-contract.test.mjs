@@ -191,6 +191,13 @@ test("cashier DTO is consumed only by the Marian manager panel", () => {
   assert.match(adminHtml, /money\(state\.netAmount\)/);
   assert.match(adminHtml, /state\.totalOperations/);
   assert.match(adminHtml, /state\.operationDate/);
+  assert.match(cashierBackend, /lastOperation,/);
+  assert.match(cashierBackend, /sessionPayments:/);
+  assert.match(adminHtml, /state\.sessionPayments/);
+  assert.match(adminHtml, /state\.lastOperation/);
+  assert.match(adminHtml, /op\.hash/);
+  assert.match(adminHtml, /op\.previousRecordHash/);
+  assert.match(adminHtml, /op\.traceId/);
   assert.doesNotMatch(onlyStaffHtml, /cashPanel|cashier|TPV|MovimientosCaja/);
 });
 
@@ -216,10 +223,11 @@ test("admin fallback hides unsupported capabilities and ticket output uses text 
 });
 
 
-test("admin cashier panel is available only when backend reports an open operational register", () => {
-  assert.match(adminPage, /enableCashier:\s*cashierRes\?\.status === "SUCCESS" &&\s*cashierRes\.data\?\.cashRegisterStatus === "ABIERTA"/);
+test("admin cashier session remains readable when closed; Z close is guarded unless open", () => {
+  assert.match(adminPage, /enableCashier:\s*cashierRes\?\.status === "SUCCESS"/);
   assert.doesNotMatch(adminPage, /enableCashier:\s*true/);
   assert.match(adminPage, /cashierRes\?\.status === "SUCCESS" \? cashierRes\.data : null/);
+  assert.match(adminHtml, /btnZClosing\.disabled = state\.cashRegisterStatus !== 'ABIERTA'/);
 });
 
 
