@@ -28,13 +28,14 @@ La API oficial Delete Data Collection Field elimina también todos los valores d
 | `timeZone` | TEXT | TEXT | Conservado; el writer ahora lo persiste desde `SDK_CONFIG.TZ` |
 | `noShowReason` | TEXT | Ausente | Eliminado: huérfano sin valores |
 | `noShowAt` | DATETIME | Ausente | Eliminado: huérfano sin valores |
-| `sourceEventId` | TEXT | Ausente | Eliminado: huérfano sin valores |\n| `canceledAt` | DATETIME | Ausente | Eliminado: sin consumidores activos ni valores |
+| `sourceEventId` | TEXT | Ausente | Eliminado: huérfano sin valores |
+| `canceledAt` | DATETIME | Ausente | Eliminado: sin consumidores activos ni valores |
 
 Revisiones Wix: 34 tras crear `orderId`; revisión final 41 tras la poda adicional de `canceledAt`. Lectura final confirmó `orderId: TEXT` y ausencia de los cuatro campos eliminados.
 
 ## 3. Campos preservados deliberadamente
 
-Se mantiene `cancellationReason` porque figura en el contrato de flujo WEB-09. Se mantienen `privacyNoticePurpose`, `privacyNoticeAcceptedAt`, `privacyNoticeVersion` porque tienen escritores activos; `cancellationReason` y `canceledAt` por su relación con el ciclo de cancelación; `thirdPartyId`, `fiscalData` e `invoicingDate` por el vínculo fiscal/tercero/caja documentado. No se ha podado ningún campo de una colección Wix App.
+Se mantiene `cancellationReason` porque figura en el contrato de flujo WEB-09. Se mantienen `privacyNoticePurpose`, `privacyNoticeAcceptedAt` y `privacyNoticeVersion` porque tienen escritores activos; `cancellationReason` porque figura en el contrato WEB-09; `thirdPartyId`, `fiscalData` e `invoicingDate` por el vínculo fiscal/tercero/caja documentado. No se ha podado ningún campo de una colección Wix App.
 
 ## 4. Consolidación de campos duplicados
 
@@ -78,11 +79,11 @@ La reserva nativa de Wix sigue en `CANCELED / NOT_PAID`, mientras la proyección
 ## 7. Validación y límites
 
 **Verificado en Wix:**
-- Revisión final de colección 37.
+- Revisión final de colección 41; 31 campos físicos.
 - `orderId` existe y es TEXT.
 - Los cuatro campos eliminados no existen.
 - Los duplicados `meta.bookingStatus` y `meta.paymentStatus` ya no están en el item.
-- Los valores raíz `bookingStatus` y `paymentStatus` se conservaron sin cambios. La fila histórica no tiene `timeZone`, `orderId` ni `cashMovementId` porque aún no hubo un flujo de pago; los nuevos writers de `bookingCore` rellenan `timeZone` y los writers de pago rellenan las referencias cuando existan.
+- Los valores raíz `bookingStatus` y `paymentStatus` se conservaron sin cambios. La fila histórica no tiene `timeZone`, `orderId` ni `cashMovementId` porque se creó con el runtime anterior y no hubo un flujo de pago; los nuevos writers de `bookingCore` rellenan `timeZone` y los writers de pago rellenan las referencias cuando existan.
 - No se ha publicado código.
 
 **Pendiente:**
