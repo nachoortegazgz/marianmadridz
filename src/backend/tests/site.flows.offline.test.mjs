@@ -109,6 +109,8 @@ function seedCajaPrincipal() {
     isOpen: true,
     cashRegisterStatus: 'ABIERTA',
     operationDate,
+    openedAt: new Date(Date.now() - 60_000),
+    openedBy: GUID_ADMIN_RESOURCE,
     openingAmount: 300,
     cashAmount: 300,
     netAmount: 300,
@@ -326,6 +328,8 @@ test('FLOW-CAJA-01 flujo continuo: venta EFECTIVO -> caja incrementada -> cierre
     movementType: 'VENTA',
     tipoImpositivo: 21,
     transactionId: 'offline-tx-0001',
+    channelType: 'PRESENCIAL',
+    resourceId: 'frontend-resource-id-must-be-ignored',
     linkedBookingIds: [
       'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
       'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
@@ -344,6 +348,8 @@ test('FLOW-CAJA-01 flujo continuo: venta EFECTIVO -> caja incrementada -> cierre
       JSON.stringify({ hash: mov.hash, prh: mov.previousRecordHash, sig: mov.digitalSignature }));
   assert.strictEqual(mov.recordHash, undefined, 'legacy recordHash must not persist on MovimientosCaja');
   assert.strictEqual(mov.paymentMethod, 'EFECTIVO');
+  assert.strictEqual(mov.channelType, 'PRESENCIAL');
+  assert.strictEqual(mov.staffResourceId, GUID_ADMIN_RESOURCE, 'actor debe venir de la identidad autenticada, no del frontend');
   assert.deepStrictEqual(
     persistedMovement.linkedBookingIds,
     ['aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'],
@@ -369,6 +375,12 @@ test('FLOW-CAJA-01 flujo continuo: venta EFECTIVO -> caja incrementada -> cierre
   const state = await cajas.getCashierState({});
   assert.strictEqual(state.status, 'SUCCESS');
   assert.ok((state.data.totalOperations ?? 0) >= 1, 'operaciones contabilizadas: ' + JSON.stringify(state.data));
+  assert.ok(state.data.lastOperation?.movementId === mov._id, 'última operación referencia el movimiento original');
+  assert.deepStrictEqual(state.data.lastOperation.sourceMovementIds, [mov._id]);
+  assert.strictEqual(state.data.lastOperation.actor.resourceId, GUID_ADMIN_RESOURCE);
+  assert.strictEqual(state.data.lastOperation.hash, mov.hash);
+  assert.strictEqual(state.data.sessionPayments.EFECTIVO.ticketCount, 1);
+  assert.strictEqual(state.data.sessionPayments.EFECTIVO.amount, 50);
 
   // A read failure must not be represented as a legitimate zero-operation day.
   wixDataMock._findErrors.set('MovimientosCaja', new Error('synthetic CMS read failure'));
@@ -738,8 +750,9 @@ test('FLOW-CAJA-03 rejects ONLINE as a payment method on new ledger writes', asy
 });
 
 
-test('FLOW-CAJA-05 CajaActual projects only presencial cash movements and is idempotent', async () => {
+test('FLOW-CAJA-05 CajaActual projects presencial cash movements and is idempotent', async () => {
   wixDataMock._reset();
+  seedCajaPrincipal();
   const { cajas } = await freshImports();
   const movement = {
     _id: '11111111-1111-4111-8111-111111111111',
@@ -772,6 +785,36 @@ test('FLOW-CAJA-05 CajaActual projects only presencial cash movements and is ide
   assert.strictEqual(register.netAmount, 35);
   assert.strictEqual(register.salesCount, 1);
   assert.deepStrictEqual(register.sequenceCounters.appliedMovementIds, [movement._id]);
+});
+
+test('FLOW-CAJA-05B card and Bizum update session totals without changing physical cash', async () => {
+  wixDataMock._reset();
+  seedCajaPrincipal();
+  const { cajas } = await freshImports();
+  const registerBefore = wixDataMock._store.get('CajaActual')[0];
+  const originalCash = registerBefore.cashAmount;
+
+  for (const [method, amountField] of [['TARJETA', 'cardAmount'], ['BIZUM', 'voucherAmount']]) {
+    const movement = {
+      _id: 'movement-' + method.toLowerCase() + '-001',
+      transactionId: 'transaction-' + method.toLowerCase() + '-001',
+      accountingAmount: 42.5,
+      paymentMethod: method,
+      channelType: 'PRESENCIAL',
+      movementType: 'VENTA',
+      traceId: 'trace-' + method.toLowerCase() + '-001',
+      staffResourceId: GUID_ADMIN_RESOURCE,
+      recordTimestamp: new Date(),
+    };
+    const first = await cajas.updateCajaActualFromMovement(movement, movement.traceId);
+    const replay = await cajas.updateCajaActualFromMovement(movement, movement.traceId);
+    const register = wixDataMock._store.get('CajaActual')[0];
+    assert.equal(first.status, 'SUCCESS');
+    assert.equal(replay.idempotent, true);
+    assert.equal(register[amountField], 42.5);
+    assert.equal(register.cashAmount, originalCash, method + ' nunca modifica el efectivo físico');
+    assert.equal(register.netAmount, originalCash);
+  }
 });
 
 test('FLOW-CAJA-06 CajaActual resolves singletonKey when Wix assigned a different physical _id', async () => {
@@ -876,6 +919,7 @@ test('FLOW-CAJA-07 devoluciones y reembolsos reducen caja y conservan cadena fis
       cashRegisterStatus: 'ABIERTA',
       isOpen: true,
       operationDate: '2026-11-06',
+      openedAt: new Date(Date.now() - 60_000),
       openingAmount: 100,
       cashAmount: 100,
       totalInAmount: 100,
