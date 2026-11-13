@@ -13,6 +13,7 @@ Runs offline via tests/loader.mjs mocks. G10 ASCII strict.
 */
 import test from 'node:test';
 import assert from 'node:assert';
+import { hashChain } from 'backend/securityEngine';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -24,6 +25,40 @@ const IC = await import('backend/internalConfig');
 const here = path.dirname(fileURLToPath(import.meta.url));
 const backendPath = (name) => path.resolve(here, '..', name);
 const JOBS_CONFIG_PATH = backendPath('jobs.config');
+
+async function makeFiscalHashMovement(overrides = {}) {
+  const previousRecordHash = '0'.repeat(64);
+  const recordTimestamp = new Date('2026-11-13T11:00:00.000Z');
+  const payload = [
+    ['IDEmisorFactura', ''],
+    ['NumSerieFactura', 'QA-INV-001'],
+    ['FechaExpedicionFactura', '13-11-2026'],
+    ['TipoFactura', 'F1'],
+    ['BaseImponibleOImporteNoSujeto', '10.00'],
+    ['CuotaRepercutida', '2.10'],
+    ['ImporteTotal', '12.10'],
+    ['Huella', previousRecordHash],
+    ['FechaHoraHusoGenRegistro', '2026-11-13T12:00:00+01:00'],
+  ].map(([key, value]) => `${key}=${value}`).join('&');
+  const hash = await hashChain(previousRecordHash, payload);
+  return {
+    _id: 'verified-live-movement',
+    sequenceNumber: 1,
+    recordSource: 'LIVE',
+    movementType: 'VENTA_ONLINE',
+    previousRecordHash,
+    hash,
+    numSerieFactura: 'QA-INV-001',
+    fechaExpedicionFactura: '2026-11-13',
+    tipoFactura: 'F1',
+    taxBase: 10,
+    taxAmount: 2.1,
+    totalAmount: 12.1,
+    recordTimestamp,
+    ...overrides,
+  };
+}
+
 
 test('CRON-PARITY-01 every jobs.config functionName is exported by crons.js', () => {
   const cfg = JSON.parse(fs.readFileSync(JOBS_CONFIG_PATH, 'utf8'));
@@ -677,13 +712,9 @@ test('CRON-FISCAL-ALERT-01 resolves an old fiscal alert only after a complete cl
       data: { breaksCount: 6 },
     },
   }]);
-  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA, [{
-    _id: 'verified-live-movement',
-    sequenceNumber: 1,
-    recordSource: 'LIVE',
-    hash: 'a'.repeat(64),
-    previousRecordHash: '0'.repeat(64),
-  }]);
+  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA, [
+    await makeFiscalHashMovement(),
+  ]);
 
   const result = await CR.systemHealthCheck();
   assert.equal(result.fiscalChain, 'SUCCESS');
@@ -752,4 +783,33 @@ test('CRON-FISCAL-ALERT-03 does not resolve a historical fiscal alert from an em
   const alert = (wixDataMock._store.get(C) || [])
     .find(row => row._id === 'legacy-fiscal-chain-alert');
   assert.equal(alert.status, IC.CONTROL_STATUS.OPEN);
+});
+
+
+test('CRON-FISCAL-ALERT-04 keeps fiscal alerts OPEN when stored movement content does not match its SHA-256 hash', async () => {
+  wixDataMock._reset();
+  const C = IC.OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
+  wixDataMock._seed(C, [{
+    _id: 'legacy-fiscal-chain-alert',
+    controlType: IC.CONTROL_TYPE.ALERT,
+    alertType: 'FISCAL_CHAIN_CORRUPTED',
+    status: IC.CONTROL_STATUS.OPEN,
+    dedupeKey: 'legacy-fiscal-chain-alert',
+    traceId: 'trace-original-fiscal-alert',
+    payload: { eventType: 'FISCAL_CHAIN_CORRUPTED', data: { breaksCount: 6 } },
+  }]);
+  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA, [
+    await makeFiscalHashMovement({ hash: 'b'.repeat(64) }),
+  ]);
+
+  const result = await CR.systemHealthCheck();
+  assert.equal(result.fiscalChain, 'INTEGRITY_COMPROMISED');
+  assert.equal(result.fiscalAlertResolution.resolved, 0);
+
+  const alert = (wixDataMock._store.get(C) || [])
+    .find(row => row._id === 'legacy-fiscal-chain-alert');
+  assert.equal(alert.status, IC.CONTROL_STATUS.OPEN);
+  const newFiscalAlert = (wixDataMock._store.get(C) || [])
+    .find(row => row._id !== 'legacy-fiscal-chain-alert' && row.alertType === 'FISCAL_CHAIN_CORRUPTED');
+  assert.ok(newFiscalAlert, 'a content hash mismatch must emit a fiscal integrity alert');
 });
