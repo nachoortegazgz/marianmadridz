@@ -122,7 +122,7 @@ Se ha añadido `src/backend/tests/fixtures/qaPaymentGateway.mock.mjs` y su suite
 - idempotencia y rechazo de reutilización conflictiva de claves;
 - validación de importe, precisión, moneda EUR, entorno QA, flag habilitado y coincidencia del identificador de sitio.
 
-El simulador **no está conectado al runtime del sitio ni a la UI** y no produce un estado Wix `PAID`. Es una herramienta de pruebas offline; no es un sandbox PSP ni una transacción de prueba de Wix Payments. La suite se ha añadido al gate Layer 1 y al manifest QA. Su resultado queda pendiente de CI.
+El simulador **no está conectado al runtime del sitio ni a la UI** y no produce un estado Wix `PAID`. Es una herramienta de pruebas offline; no es un sandbox PSP ni una transacción de prueba de Wix Payments. La suite se ha añadido al gate Layer 1 y al manifest QA. El informe CI de PR #330 registra el simulador dentro de Layer 1; la suite no constituye integración con runtime ni sandbox PSP real.
 
 No se ha habilitado ningún flag de pagos en el backend productivo. Los pagos fiscales y contables siguen fail-closed. Para probar el flujo de webhook y ledger, se mantienen las suites offline existentes con payloads Wix oficiales simulados; no se ejecutan contra CMS live.
 
@@ -224,7 +224,7 @@ Antes de cualquier despliegue real:
 | E2E completo en navegador | Pendiente |
 | Restauración preproducción | Documentada, no ejecutada |
 
-**Criterio:** el sitio dispone de aislamiento parcial de automatizaciones, permisos CMS ajustados y una prueba nativa de Bookings cancelada. El simulador PSP es offline; su suite aislada local ejecutó 6/6 pruebas PASS. En CI del PR #330, commit `0f36dc5`:
+**Criterio:** el sitio dispone de aislamiento parcial de automatizaciones, permisos CMS ajustados y una prueba nativa de Bookings cancelada. El simulador PSP es offline; su suite aislada local ejecutó 6/6 pruebas PASS. En los resultados CI registrados para PR #330 (la asociación exacta de los runs al SHA de código integrado debe confirmarse antes de usarlos como gate del HEAD actual):
 - Layer 1: 23 suites, 294 PASS, 0 FAIL.
 - Layer 2: 18 suites, 243 PASS, 0 FAIL.
 - Regresión completa: 68 suites, 621 PASS, 0 FAIL.
@@ -232,3 +232,21 @@ Antes de cualquier despliegue real:
 - ESLint: PASS.
 - Gitleaks full-history: PASS.
 Ejecuciones: backend quality gates `43488515192`; secret scanning `43488515254`. La proyección CitasF2 desactualizada (CONFIRMED frente a Bookings CANCELED), los diez flujos Wix bloqueados y la ausencia de despacho real de gestoría impiden certificar el sitio como entorno QA completo. No autoriza un despliegue real.
+
+
+## 10. Addendum — estado CMS y Git tras merge PR #330 (2026-11-13 20:51 CET)
+
+Lectura live posterior de Wix Data Collections API y Data Items API:
+- Inventario: 44 colecciones (15 NATIVE, 29 WIX_APP).
+- CitasF2: revisión 42, 31 campos físicos, un item.
+- Campos raíz canónicos presentes: bookingId, bookingStatus, paymentStatus, orderId, cashMovementId, serviceId, resourceId, scheduleId, slotStart, slotEnd, timeZone y traceId.
+- Campos podados: noShowReason, noShowAt, sourceEventId y canceledAt.
+- El único item no contiene copias en meta de bookingStatus, paymentStatus, orderId ni cashMovementId.
+- El estado no se corrigió: Bookings nativo CANCELED / NOT_PAID frente a CitasF2 CONFIRMED / NOT_PAID. Sigue siendo bloqueo P1.
+
+GitHub:
+- PR #330 fusionada; HEAD main observado 3df4b4cf174d80dfd22406bbd758b2eddd7aaa44.
+- PR #331 cerrada sin merge.
+- No se ha publicado Velo a Wix. La web continúa Published, pero la publicación del código de main no está demostrada.
+
+No se han realizado mutaciones Wix durante este addendum.
