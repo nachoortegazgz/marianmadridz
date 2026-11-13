@@ -953,6 +953,16 @@ async function _updateCitaStatus(bookingId, newStatus, traceId) {
     );
 }
 
+function _withoutCanonicalCitaMeta(rawMeta) {
+    const meta = rawMeta && typeof rawMeta === "object" && !Array.isArray(rawMeta)
+        ? { ...rawMeta }
+        : {};
+    for (const key of ["bookingStatus", "paymentStatus", "orderId", "cashMovementId"]) {
+        delete meta[key];
+    }
+    return meta;
+}
+
 async function _markCitasRefundedByBookingIds(
     bookingIds,
     orderId,
@@ -966,7 +976,7 @@ async function _markCitasRefundedByBookingIds(
             _updateCitaSafe(
                 bookingId,
                 (cita) => {
-                    const meta = cita.meta || {};
+                    const meta = _withoutCanonicalCitaMeta(cita.meta);
                     const paymentState = fullyRefunded
                         ? PAYMENT_STATUS.REFUNDED
                         : PAYMENT_STATUS.PARTIALLY_REFUNDED;
