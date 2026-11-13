@@ -976,10 +976,9 @@ async function _markCitasRefundedByBookingIds(
                             ? { [BOOKING_FIELDS.STATUS]: BOOKING_STATUS.REFUNDED }
                             : {}),
                         [BOOKING_FIELDS.PAYMENT_STATUS]: paymentState,
+                        [BOOKING_FIELDS.ORDER_ID]: orderId || null,
                         meta: {
                             ...meta,
-                            paymentStatus: paymentState,
-                            orderId: orderId || null,
                             refundId: refundId || null,
                             fechaReembolso: new Date(),
                         },
@@ -1012,7 +1011,7 @@ async function _markCitasPaidByBookingIds(bookingIds, orderId, traceId) {
                     const meta = cita.meta || {};
                     const alreadyPaid =
                         String(
-                            meta.paymentStatus || cita.paymentStatus || ""
+                            cita[BOOKING_FIELDS.PAYMENT_STATUS] || meta.paymentStatus || ""
                         ).toUpperCase() === PAYMENT_STATUS.PAID;
                     if (alreadyPaid) return null;
                     return {
@@ -1021,10 +1020,9 @@ async function _markCitasPaidByBookingIds(bookingIds, orderId, traceId) {
                         // Only the native BOOKING_CONFIRMED webhook may confirm
                         // an appointment; receiving payment must preserve PENDING.
                         [BOOKING_FIELDS.PAYMENT_STATUS]: PAYMENT_STATUS.PAID,
+                        [BOOKING_FIELDS.ORDER_ID]: orderId || null,
                         meta: {
                             ...meta,
-                            paymentStatus: PAYMENT_STATUS.PAID,
-                            orderId: orderId || null,
                             fechaConfirmacionPago: new Date(),
                         },
                     };
@@ -1067,10 +1065,9 @@ async function _markCitasPendingLedgerByBookingIds(bookingIds, orderId, traceId)
                         ...cita,
                         [BOOKING_FIELDS.PAYMENT_STATUS]:
                             PAYMENT_STATUS.PENDING_LEDGER,
+                        [BOOKING_FIELDS.ORDER_ID]: orderId || null,
                         meta: {
                             ...meta,
-                            paymentStatus: PAYMENT_STATUS.PENDING_LEDGER,
-                            orderId: orderId || null,
                             fechaPagoRecibido: new Date(),
                         },
                     };
