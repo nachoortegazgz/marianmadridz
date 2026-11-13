@@ -1231,11 +1231,21 @@ async function _getBookedMinutesByResourceForDay(dateYMD, resourceIds, traceId) 
                 if (!bookingId || nativeBookingIds.has(bookingId)) continue;
                 nativeBookingIds.add(bookingId);
 
-                // Wix Bookings is the SSOT for native appointments. Replace a
-                // same-ID CMS projection with the current native resource/time;
-                // otherwise a stale resourceId can bias daily workload ranking.
+                const status = String(booking.status || "").trim().toUpperCase();
+                const isLoadCountable = ["CREATED", "PENDING", "CONFIRMED", "COMPLETED"].includes(status);
+                const isRefunded = String(booking.paymentStatus || "").trim().toUpperCase() === "REFUNDED";
+
+                /* Bookings Reader V2 SDK: BookedResource usa `_id` (ADR-002). */
+                const resourceId = _safeTrim(
+                    booking?.bookedEntity?.slot?.resource?._id || ""
+                );
+
+                // Wix is authoritative when it exposes a resource. If the
+                // native snapshot omits it, retain the existing custom saga
+                // projection rather than silently dropping known staff load.
                 const projection = customProjectionByBookingId.get(bookingId);
-                if (projection) {
+                const replaceProjection = !isLoadCountable || isRefunded || _looksLikeGuid(resourceId);
+                if (projection && replaceProjection) {
                     minutes[projection.resourceId] = Math.max(
                         0,
                         minutes[projection.resourceId] - projection.bookedMinutes
@@ -1243,14 +1253,7 @@ async function _getBookedMinutesByResourceForDay(dateYMD, resourceIds, traceId) 
                     customProjectionByBookingId.delete(bookingId);
                 }
 
-                const status = String(booking.status || "").trim().toUpperCase();
-                if (!["CREATED", "PENDING", "CONFIRMED", "COMPLETED"].includes(status)) continue;
-                if (String(booking.paymentStatus || "").trim().toUpperCase() === "REFUNDED") continue;
-
-                /* Bookings Reader V2 SDK: BookedResource usa `_id` (ADR-002). */
-                const resourceId = _safeTrim(
-                    booking?.bookedEntity?.slot?.resource?._id || ""
-                );
+                if (!isLoadCountable || isRefunded) continue;
                 if (!resourceId || minutes[resourceId] === undefined) continue;
                 const start = _toDateSafe(booking.startDate);
                 const end = _toDateSafe(booking.endDate);

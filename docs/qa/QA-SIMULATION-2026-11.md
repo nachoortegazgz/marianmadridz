@@ -407,3 +407,19 @@ Ejecución final en el head de integración:
 - Gitleaks full-history: PASS.
 
 Este resultado valida los contratos y regresiones offline. No acredita ejecución de Wix Runtime, entrega de webhooks, ejecución de crons, checkout/PSP sandbox, fichajes reales ni certificación fiscal/contable. La decisión de cierre de capas 1 y 2 permanece **NO CERRADA** por los bloqueos live descritos arriba.
+
+
+## 2026-11-13 — RES-BAL-07: conservar carga de proyección con recurso nativo omitido
+
+La revisión estática de `_getBookedMinutesByResourceForDay` detectó que la deduplicación restaba siempre la proyección `CitasF2` al encontrar el mismo `bookingId` en Bookings Reader, incluso cuando el snapshot nativo no contenía `slot.resource._id`. En ese caso no se añadía carga nativa y se perdían minutos de un recurso conocido en la proyección de la saga.
+
+Corrección mínima:
+- Bookings sigue prevaleciendo cuando devuelve un recurso nativo, reemplazando recurso y duración de la proyección.
+- Si el estado nativo es contable pero omite el recurso, se conserva la proyección existente y no se atribuye carga a ningún otro profesional.
+- Reservas canceladas/no contables y reembolsadas siguen retirando su proyección del cálculo.
+
+Regresión añadida: `RES-BAL-07` en `src/backend/tests/reservas.web.test.mjs`. Fixture sintética: proyección de 60 minutos para A, snapshot nativo sin recurso y reserva nativa independiente de 30 minutos para B; el resultado esperado asigna el siguiente slot a B. La prueba no modifica datos Wix ni altera asignaciones históricas.
+
+Validación CI ejecutada sobre el código corregido (commit `50b27e3d5cb8ed91bdbe1bde1d9ed0ad91447a17`): Layer 1 22 suites / 288 PASS / 0 FAIL; Layer 2 17 suites / 239 PASS / 0 FAIL; regresión completa 66 suites / 611 PASS / 0 FAIL; contratos SDK Wix Bookings Reader V2, eCommerce Cart V2 y Order Transactions PASS; ESLint PASS; Gitleaks full-history PASS. Runs: [Backend offline quality gates](https://github.com/nachoortegazgz/marianmadridz/actions/runs/43473842712) · [Secret scanning](https://github.com/nachoortegazgz/marianmadridz/actions/runs/43473842768).
+
+Esta validación es offline/mock y no acredita por sí sola el comportamiento en Wix Runtime.
