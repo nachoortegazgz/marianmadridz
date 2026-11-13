@@ -787,6 +787,23 @@ test('FLOW-CAJA-05 CajaActual projects presencial cash movements and is idempote
   assert.deepStrictEqual(register.sequenceCounters.appliedMovementIds, [movement._id]);
 });
 
+test('FLOW-CAJA-05A projection never creates or opens CajaActual implicitly', async () => {
+  wixDataMock._reset();
+  const { cajas } = await freshImports();
+  const movement = {
+    _id: 'movement-without-session-001',
+    transactionId: 'transaction-without-session-001',
+    accountingAmount: 20,
+    paymentMethod: 'EFECTIVO',
+    channelType: 'PRESENCIAL',
+    movementType: 'VENTA',
+    traceId: 'trace-without-session-001',
+  };
+  const result = await cajas.updateCajaActualFromMovement(movement, movement.traceId);
+  assert.equal(result.status, 'PENDING_RECONCILIATION');
+  assert.equal((wixDataMock._store.get('CajaActual') || []).length, 0);
+});
+
 test('FLOW-CAJA-05B card and Bizum update session totals without changing physical cash', async () => {
   wixDataMock._reset();
   seedCajaPrincipal();
