@@ -41,6 +41,7 @@ const booking = (id, overrides = {}) => ({
 
 const CONFIRMED_VALID = booking("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1");
 const CONFIRMED_NO_RESOURCE = booking("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2", {
+  staffMemberId: null,
   bookedEntity: {
     title: "QA no resource",
     slot: {
