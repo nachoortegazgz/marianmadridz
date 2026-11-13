@@ -1,3 +1,5 @@
+> **Vigencia:** este documento conserva el estado histórico y la evidencia hasta el corte del 2026-11-11. Para el estado consolidado del 2026-11-13, inventario CMS actualizado, revisión CitasF2 y checklist vigente, consultar primero [ESTADO_ACTUAL_PROYECTO.md](../ESTADO_ACTUAL_PROYECTO.md). No utilizar los estados de PR, CI, CMS o automatizaciones de este documento como estado actual sin reconciliarlos con ese addendum.
+
 ## Addendum de vigencia — 2026-11-11
 
 Consultar primero [Referencia maestra QA y estado de aislamiento](qa/2026-11-11-qa-master-reference.md). La consulta Wix live actual devuelve **Published**; no asumir que el sitio es Draft ni que está aislado. La reauditoría live del 2026-11-11 confirma 149 automatizaciones no archivadas: 27 activas y 122 inactivas; nueve automatizaciones email siguen activas con diez acciones (ocho dirigidas al contacto del trigger y dos al propietario); cuatro flujos WhatsApp y ocho SMS están inactivos. No ejecutar triggers email en este sitio Published.
