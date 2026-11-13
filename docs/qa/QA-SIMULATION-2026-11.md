@@ -377,3 +377,16 @@ La suite completa sigue siendo el gate canónico. La CI de esta rama debe confir
 **Capa 2: NO CERRADA.** Los writers fiscales, contables y de fichaje están deshabilitados por política; la caja continúa en SIMULACION; existen cuatro pedidos PAID con transacciones APPROVED sin proyección de ledger visible; la asignación contable automática carece de aprobación PGC; y no se han probado runtime ni conciliaciones con datos reales.
 
 No se han escrito datos en producción, creado transacciones, alterado ledgers, ejecutado crons, activado automatizaciones ni publicado cambios.
+
+
+### Corrección del runner de capa 2 detectada por CI
+
+La primera ejecución de PR #322 detectó una referencia obsoleta en `run-layer2.mjs`: `inventario.writer.offline.test.mjs` no existe en el árbol del repositorio. Se elimina esa referencia; no se crea un test ficticio ni se rebautiza otro archivo. La cobertura de flujos de inventario existente permanece en `site.flows.offline.test.mjs`, `inventario.web.js` y las suites generales del runner canónico.
+
+Resultado de esa primera ejecución:
+- Layer 1: 22 suites, 287 PASS, 0 FAIL.
+- Layer 2: 17 suites válidas, 239 PASS, 0 FAIL; el gate falló por el archivo inexistente (0 tests en esa entrada).
+- SDK Cart V2, Order Transactions, Bookings Reader V2 y ESLint: PASS.
+- La regresión completa `npm test` quedó omitida por el fallo previo del gate Layer 2.
+
+La corrección queda pendiente de una nueva ejecución de CI antes de integrar.
