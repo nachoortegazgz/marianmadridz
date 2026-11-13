@@ -151,7 +151,6 @@ const COMPUTER_SYSTEM_FALLBACK = Object.freeze({
     tipoUsoPosibleSoloVerifactu: "N",
     tipoUsoPosibleMultiOT: "S",
     indicadorMultiplesOT: "S",
-    nombreRazonProductor: "Marian Madrid",
 });
 
 let _fiscalSystemCache = null;
@@ -202,8 +201,9 @@ async function _getFiscalSystemConfig(traceId) {
             COMPUTER_SYSTEM_FALLBACK.indicadorMultiplesOT
         ),
         nifProductor: _safeTrim(config?.taxId),
-        nombreRazonProductor:
-            _safeTrim(config?.legalName) || COMPUTER_SYSTEM_FALLBACK.nombreRazonProductor,
+        // Legal identity must come from the verified CONFIG_SISTEMA record.
+        // Never infer the fiscal legal name from the commercial brand or site label.
+        nombreRazonProductor: _safeTrim(config?.legalName),
         fechaInicioVerifactu: config?.fechaInicioVerifactu || null,
     });
     _fiscalSystemCacheAt = now;
@@ -313,6 +313,8 @@ async function _upsertDatosFiscales({ taxId, legalName, thirdPartyType, address 
         address: address == null ? null : (
             typeof address === "string" ? address : JSON.stringify(address)
         ),
+        schemaVersion: 1,
+        traceId: _safeTrim(traceId),
         _createdDate: new Date(),
         _updatedDate: new Date(),
     });
