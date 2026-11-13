@@ -32,9 +32,9 @@ Orden de las acciones: lectura / inserción / actualización / eliminación.
 
 Se hizo lectura posterior de los diez objetivos de permiso. Los otros seis (`CitasF2`, `ControlOperativo`, `InventarioStockVenta`, `MapaStaff`, `MovimientosInventario` y `RegistroIntegracion`) ya tenían CMS_EDITOR en las cuatro acciones y no necesitaron modificación.
 
-### Colecciones no modificadas
+### Colecciones append-only protegidas
 
-Se excluyeron deliberadamente por los invariantes append-only:
+Se conserva el invariante de inmutabilidad para:
 
 - `HistoricoCierresZ`
 - `LibroAsientosContablesDetalle`
@@ -42,9 +42,11 @@ Se excluyeron deliberadamente por los invariantes append-only:
 - `PaquetesGestoria`
 - `RegistrosHorariosStaff`
 
-No se debe habilitar edición o borrado manual de estos ledgers. Los registros de QA se deben identificar y corregir mediante los mecanismos de prueba y rectificación definidos por el proyecto, sin reescribir históricos.
+En la lectura final del 2026-11-13:
+- `HistoricoCierresZ`, `PaquetesGestoria` y `RegistrosHorariosStaff`: lectura `CMS_EDITOR`; inserción, actualización y eliminación `PRIVILEGED`.
+- `LibroAsientosContablesDetalle` y `MovimientosCaja`: las cuatro acciones `PRIVILEGED`.
 
-**Advertencia de permisos actual:** en la lectura Data Permissions v1 del 2026-11-13, `HistoricoCierresZ`, `PaquetesGestoria` y `RegistrosHorariosStaff` ya tenían CMS_EDITOR en las cuatro acciones. No se modificaron en esta intervención, pero eso significa que el permiso CMS por sí solo no impide que un colaborador CMS_EDITOR pueda editarlos o borrarlos. El principio append-only se mantiene en los contratos/backend, pero no está impuesto uniformemente por el ACL CMS. Antes de permitir edición CMS libre durante QA, se debe resolver esta brecha: restringir update/remove a PRIVILEGED o gestionar la limpieza mediante un procedimiento QA controlado. No se ha cambiado ese ACL porque requiere una decisión explícita sobre el alcance de limpieza de esos registros sintéticos.
+Se corrigió una brecha ACL preexistente: las tres primeras tenían inicialmente `CMS_EDITOR` para insertar, actualizar y eliminar. Ahora un colaborador CMS_EDITOR no puede reescribir ni borrar esos registros. Que los datos sean sintéticos no elimina la regla append-only del proyecto. La limpieza de registros en esas colecciones no se hace desde Content Manager; cualquier tratamiento debe seguir el procedimiento de QA/rectificación aprobado, sin sobrescribir históricos.
 
 ### Límite de verificación
 
@@ -200,8 +202,8 @@ Antes de cualquier despliegue real:
 
 | Elemento | Estado |
 |---|---|
-| Permisos CMS v1 en 10 colecciones objetivo | Verificado por lectura posterior |
-| Efectividad real con identidad CMS_EDITOR | Pendiente |
+| Permisos CMS v1 en 15 colecciones nativas | Verificados por lectura posterior; append-only protegido |
+| Efectividad real con identidad CMS_EDITOR | Pendiente de prueba con colaborador |
 | Permisos de colecciones Wix App | No modificados |
 | Bookings Writer V2 create/confirm/cancel con cliente sintético | Verificado por respuestas API; reserva cancelada |
 | Proyección CitasF2 para el booking de prueba | Creada asíncronamente, pero inconsistente: Bookings CANCELED vs CitasF2 CONFIRMED |
