@@ -1017,22 +1017,14 @@ export default m;
 
 const WIX_DATA_SOURCE = `
 import { wixDataMock } from ${JSON.stringify(p2u(path.join(BACKEND_DIR, 'tests/loader.mjs')).href.replace(/\\/g, '/'))};
-// LH-26 (harness, 2026-10-19): dataAccess.js eleva wixData.remove (v1). En
-// Velo real las operaciones elevated disparan IGUALMENTE los hooks de data.js
-// (R2/SSOT-14: elevate no exime hooks). El mock v1 era una poda cruda del
-// store: un cron habria purgado filas OPEN vivas y borrado el ledger
-// WEBHOOK_EVENT offline sin proteccion. Se replica aqui el guard de
-// ControlOperativo_beforeRemove (ADR-05 append-only) en la via v1.
+// LH-26 (harness): el mock v1 delega la semantica de borrado a los hooks
+// del proyecto. La ventana temporal append-only se configura en internalConfig;
+// no duplicar aqui una politica independiente que diverja del runtime.
 async function _guardedRemove(collection, idOrObj) {
   if (collection === 'ControlOperativo') {
     const id = (idOrObj && typeof idOrObj === 'object') ? idOrObj._id : idOrObj;
-    const rows = wixDataMock._store.get(collection) || [];
-    const row = rows.find((r) => r._id === id);
-    if (row && row.controlType === 'WEBHOOK_EVENT') {
-      const err = new Error('WEBHOOK_EVENT records are append-only.');
-      err.code = 'FISCAL_VIOLATION';
-      throw err;
-    }
+    const row = (wixDataMock._store.get(collection) || []).find((r) => r._id === id);
+    if (row) await DATA_HOOKS.ControlOperativo_beforeRemove(id);
   }
   return wixDataMock.remove(collection, idOrObj);
 }
