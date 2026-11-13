@@ -1037,11 +1037,24 @@ limit: 100,
 });
 result.fiscalChain = chainResult.status;
 if (chainResult.status === "SUCCESS") {
-    result.fiscalAlertResolution = await _resolveVerifiedFiscalChainAlerts(chainResult, traceId);
-    if (result.fiscalAlertResolution.failed > 0) {
+    try {
+        result.fiscalAlertResolution = await _resolveVerifiedFiscalChainAlerts(chainResult, traceId);
+        if (result.fiscalAlertResolution.failed > 0) {
+            result.issues.push({
+                type: "FISCAL_ALERT_RESOLUTION_FAILED",
+                failed: result.fiscalAlertResolution.failed,
+            });
+        }
+    } catch (resolutionError) {
+        result.fiscalAlertResolution = {
+            resolved: 0,
+            failed: 1,
+            skipped: true,
+            reason: "FISCAL_ALERT_RESOLUTION_FAILED",
+        };
         result.issues.push({
             type: "FISCAL_ALERT_RESOLUTION_FAILED",
-            failed: result.fiscalAlertResolution.failed,
+            error: resolutionError?.message || "UNKNOWN",
         });
     }
 } else {
