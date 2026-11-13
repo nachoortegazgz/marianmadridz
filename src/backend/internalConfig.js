@@ -49,6 +49,15 @@ export const STAFF_CLOCKING_CONFIG = Object.freeze({
   ADJUSTMENTS_ENABLED: false,
 });
 
+// TEMPORARY DEVELOPMENT EXCEPTION — remove before any production deployment.
+// This flag opens update/remove for append-only ledgers across this repository.
+// It does not enable fiscal/accounting writers or frontend-controlled bypasses.
+export const APPEND_ONLY_MUTATION_WINDOW = Object.freeze({
+  ENABLED: true,
+  TEMPORARY: true,
+  RESTORE_BEFORE_PRODUCTION: true,
+});
+
 // Fail-closed production defaults until fiscal, accounting and runtime E2E
 // are certified. Simulation records are denied unless a trusted test harness
 // explicitly enables them; frontend input cannot change this policy.
@@ -523,12 +532,26 @@ export const DATA_ACCESS_WRITE_POLICY = Object.freeze({
     BUSINESS_COLLECTIONS.CONTROL_OPERATIVO,
     BUSINESS_COLLECTIONS.CAJA_ACTUAL,
     BUSINESS_COLLECTIONS.CITAS_F2,
+    BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA,
+    BUSINESS_COLLECTIONS.MOVIMIENTOS_INVENTARIO,
+    BUSINESS_COLLECTIONS.LIBRO_ASIENTOS_CONTABLES_DETALLE,
+    BUSINESS_COLLECTIONS.REGISTROS_HORARIOS_STAFF,
+    BUSINESS_COLLECTIONS.HISTORICO_CIERRES_Z,
+    BUSINESS_COLLECTIONS.PAQUETES_GESTORIA,
   ]),
   saveCollections: Object.freeze([
     BUSINESS_COLLECTIONS.CONTROL_OPERATIVO,
     BUSINESS_COLLECTIONS.CAJA_ACTUAL,
   ]),
-  removeCollections: Object.freeze([BUSINESS_COLLECTIONS.CONTROL_OPERATIVO]),
+  removeCollections: Object.freeze([
+    BUSINESS_COLLECTIONS.CONTROL_OPERATIVO,
+    BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA,
+    BUSINESS_COLLECTIONS.MOVIMIENTOS_INVENTARIO,
+    BUSINESS_COLLECTIONS.LIBRO_ASIENTOS_CONTABLES_DETALLE,
+    BUSINESS_COLLECTIONS.REGISTROS_HORARIOS_STAFF,
+    BUSINESS_COLLECTIONS.HISTORICO_CIERRES_Z,
+    BUSINESS_COLLECTIONS.PAQUETES_GESTORIA,
+  ]),
   bulkRemoveCollections: Object.freeze([BUSINESS_COLLECTIONS.CONTROL_OPERATIVO]),
   mutableControlTypes: Object.freeze([
     CONTROL_TYPE.ALERT,
@@ -536,6 +559,7 @@ export const DATA_ACCESS_WRITE_POLICY = Object.freeze({
     CONTROL_TYPE.DEDUPE_KEY,
     CONTROL_TYPE.IDEMPOTENCY,
     CONTROL_TYPE.SYSTEM_FLAG,
+    CONTROL_TYPE.WEBHOOK_EVENT,
   ]),
   removableControlTypes: Object.freeze([
     CONTROL_TYPE.DAYS_CACHE,
@@ -543,6 +567,7 @@ export const DATA_ACCESS_WRITE_POLICY = Object.freeze({
     CONTROL_TYPE.DUAL_CACHE,
     CONTROL_TYPE.IDEMPOTENCY,
     CONTROL_TYPE.SLOT_LOCK,
+    CONTROL_TYPE.WEBHOOK_EVENT,
   ]),
   purgeControlTypes: Object.freeze([
     CONTROL_TYPE.ALERT,
