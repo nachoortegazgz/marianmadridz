@@ -3188,6 +3188,8 @@ async function _runClaimedWixEvent(eventPayload, eventType, handler) {
     });
 }
 
+// Wix Velo's documented module prefix is event-specific: Created/Rescheduled use wixBookings_,
+// while Confirmed/Canceled use wixBookingsV2_. Keep these exports exact; domain handlers stay internal.
 export async function wixBookingsV2_onBookingConfirmed(eventPayload) {
     return _runClaimedWixEvent(
         eventPayload,
