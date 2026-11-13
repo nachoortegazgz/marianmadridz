@@ -71,6 +71,8 @@ El código exportaba los dos primeros con prefijo `wixBookingsV2_`, que no coinc
 - Un servicio, **Rayos V** (`serviceId=1383a39a-9b14-46c4-a8c2-bc9045534a1f`), carece de `taxIncluded`. Sí tiene precio 20 EUR y `tipoImpositivo=0.21`.
 - `taxIncluded` figura en la matriz de trazabilidad de catálogo, pero el esquema físico y el hook actual no lo exigen y la búsqueda de consumidores backend no encontró uso del campo. No se infiere ni se rellena `true/false`: hay que confirmar el tratamiento de precio con el propietario/gestor y contrastarlo con el servicio nativo antes de normalizarlo.
 
+La lectura adicional de Wix Tax Settings devuelve `taxIncludedInItemPrices=false` (ajuste global efectivo del checkout). Sin embargo, los otros 93 servicios y los 36 complementos personalizados tienen `taxIncluded=true`; Rayos V es el único sin valor. Esto es una discrepancia entre metadato CMS y ajuste global, no una base para sobrescribir el catálogo: el ajuste global de Wix gobierna el cálculo del checkout, y el código backend examinado no consume `taxIncluded` para calcular el impuesto. Se mantiene como incidencia de contrato/datos; no se cambia el precio ni el IVA.
+
 ### ComplementosCatalogo
 
 36 filas; `addonId`, `sku`, nombre, precio, `taxIncluded` y `tipoImpositivo` están poblados en todos los registros examinados. Sin duplicados de addonId ni SKU.
