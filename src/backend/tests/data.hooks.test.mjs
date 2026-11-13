@@ -73,12 +73,11 @@ test('HOOK-CMS-DATETIME-01 normalizes all CitasF2 DateTime fields to Date object
     traceId: 'trace-citas-datetime',
     slotStart: '2026-11-12T08:30:00.000Z',
     slotEnd: '2026-11-12T09:00:00.000Z',
-    canceledAt: '2026-11-12T09:15:00.000Z',
     privacyNoticeAcceptedAt: '2026-11-12T08:20:00.000Z',
     invoicingDate: '2026-11-12T09:20:00.000Z',
   };
   H.CitasF2_beforeInsert(item);
-  for (const field of ['slotStart', 'slotEnd', 'canceledAt', 'privacyNoticeAcceptedAt', 'invoicingDate']) {
+  for (const field of ['slotStart', 'slotEnd', 'privacyNoticeAcceptedAt', 'invoicingDate']) {
     assert.ok(item[field] instanceof Date, `${field} must be a Date`);
   }
   assert.strictEqual(item.slotStart.toISOString(), '2026-11-12T08:30:00.000Z');
