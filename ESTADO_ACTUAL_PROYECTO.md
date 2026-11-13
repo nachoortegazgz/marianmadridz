@@ -1,4 +1,143 @@
-# ESTADO VIGENTE CONSOLIDADO — 2026-11-13 20:51 CET
+# ADDENDUM DE VIGENCIA — 2026-11-13 (corte live posterior a la publicación declarada)
+
+> **Este bloque es la referencia vigente y prevalece sobre cualquier estado anterior o contradictorio del documento.** Fuente de estado: GitHub `main`, Wix Site Context y lecturas CMS de solo lectura ejecutadas en este corte. No se han modificado colecciones, elementos CMS, automatizaciones ni configuración Wix durante esta auditoría.
+
+## 1. Estado de repositorio y publicación
+
+- Repositorio: [nachoortegazgz/marianmadridz](https://github.com/nachoortegazgz/marianmadridz).
+- Rama canónica: `main`.
+- HEAD consultado: `738eb78faaa48502532c83c3e4b8b53db1144950` — `docs: remove stale documentation-only HEAD reference`.
+- El usuario declara que el repositorio está actualizado y que Wix se ha actualizado y publicado.
+- Wix Site Context confirma que el sitio principal está **Published**, Wix Editor, Velo enabled, idioma ES, región ES, zona `Europe/Madrid`, moneda EUR; última actualización que muestra el contexto: 2026-11-13 20:00.
+- **No existe en la evidencia consultada un identificador de despliegue ni una correspondencia verificable entre el SHA `738eb78...` y el código Velo ejecutado en Wix.** Por tanto, la publicación del sitio está verificada; que el runtime publicado contenga exactamente el HEAD de GitHub queda pendiente de prueba. La declaración del propietario se conserva como tal y no se convierte en una certificación técnica.
+- Para el commit documental `738eb78...`, la consulta de estados combinados y workflow runs devolvió cero estados y cero runs asociados. No declarar CI verde para ese SHA. Los resultados históricos de PR #330 siguen siendo históricos y su asociación exacta con el SHA funcional integrado continúa pendiente.
+- PR #330: MERGED; baseline funcional registrado `3df4b4cf174d80dfd22406bbd758b2eddd7aaa44`. PR #331: CLOSED / NOT MERGED. No reabrir ni fusionar su rama sin comparar primero con `main`.
+
+## 2. Wix: sitio principal y sitio QA
+
+| Entorno | Site ID | Estado Wix | Observación |
+|---|---|---|---|
+| Producción | `188bed94-177c-4bc9-a9f0-35080d874f3e` | Published | Sitio oficial; Wix Editor; Velo enabled; EUR; Europe/Madrid |
+| QA separado | `50b39f33-e753-4331-ab35-b2ed43dc97f7` | Draft | Sitio Wix independiente creado el 2026-11-13; Wix Editor; Velo enabled; plan Free |
+
+La existencia de un segundo Site ID acredita separación de sitio, no aislamiento E2E completo. Antes de ejecutar pruebas con efectos externos en QA se deben revisar automatizaciones, acciones de email/SMS/WhatsApp, pagos, webhooks, integraciones, permisos y configuración de Bookings. No se ha certificado todavía esa matriz de aislamiento. No usar producción como sustituto del entorno QA.
+
+## 3. Inventario CMS live — producción
+
+Lectura actual de Data Collections API: **44 colecciones = 15 NATIVE + 29 WIX_APP**. Recuento de elementos por colección obtenido mediante Data Items Count API. Estos valores sustituyen los recuentos anteriores cuando difieran.
+
+| Colección NATIVE | Elementos | Estado / interpretación |
+|---|---:|---|
+| CajaActual | 1 | Sentinel SIMULACION; no representa caja real |
+| CitasF2 | 1 | Proyección de reserva; discrepancia P1 por conciliar |
+| ComplementosCatalogo | 36 | Catálogo |
+| ControlOperativo | 3 | El recuento live actual es 3; no usar el cero de cortes anteriores |
+| DatosFiscales | 1 | Placeholder/tercero; falta configuración CONFIG_SISTEMA |
+| HistoricoCierresZ | 0 | Ledger append-only; sin cierres |
+| InventarioStockVenta | 1 | Legacy; no es SSOT de stock |
+| LibroAsientosContablesDetalle | 0 | Ledger append-only; writer deshabilitado |
+| MapaStaff | 3 | Mapeos staff/recurso |
+| MovimientosCaja | 0 | Ledger append-only; writer fiscal fail-closed |
+| MovimientosInventario | 1 | Legacy; conservar histórico, sin nuevas escrituras |
+| PaquetesGestoria | 0 | Registro documental append-only |
+| RegistroIntegracion | 0 | Fuera de BUSINESS_COLLECTIONS; no se ha demostrado consumidor/writer activo |
+| RegistrosHorariosStaff | 2 | Filas sintéticas QA sin HMAC; writer deshabilitado |
+| ServiciosCatalogo | 95 | 94 servicios + 1 plan |
+
+Colecciones WIX_APP (29):  
+- Bookings: `Bookings/Schedule`, `Bookings/Services`, `Bookings/Staff`.
+- Blog: `Blog/Categories`, `Blog/Posts`, `Blog/Tags`.
+- CampaignManager: `CampaignManager/campaigns`, `CampaignManager/userConfig`.
+- Forms: `Forms/subscribers03`.
+- Locations: `Locations/Locations`.
+- Marketing: `Marketing/Coupons`.
+- Members: `Members/Badges`, `Members/FullData`, `Members/PrivateMembersData`, `Members/PublicData`.
+- StoreCatalog: `StoreCatalog/Brands`, `StoreCatalog/Categories`, `StoreCatalog/Info sections`, `StoreCatalog/Inventory`, `StoreCatalog/Product options & modifiers`, `StoreCatalog/Products`, `StoreCatalog/Ribbons`, `StoreCatalog/Variants`.
+- Stores: `Stores/Collections`, `Stores/InventoryItems`, `Stores/Orders`, `Stores/Products`, `Stores/Variants`.
+- eCommerce: `eCommerce/Orders`.
+
+Wix Stores está en **Catalog V3** y Wix Invoices en **V1** en el sitio principal. Las colecciones WIX_APP son propiedad de sus aplicaciones; no crear, modificar ni eliminar su esquema o datos mediante este proyecto salvo API y caso de uso oficial expresamente aprobados.
+
+### Recuentos live de QA y diferencias de paridad
+
+El sitio QA devuelve **43 colecciones = 15 NATIVE + 28 WIX_APP**. Sus 15 colecciones NATIVE existen y tienen los mismos recuentos que producción excepto:
+- `CitasF2`: producción 1 / QA 0.
+- `ControlOperativo`: producción 3 / QA 0.
+
+En QA aparecen cuatro colecciones `WixForms/<GUID>` adicionales y no aparecen las cinco colecciones de Stores `Stores/Collections`, `Stores/InventoryItems`, `Stores/Orders`, `Stores/Products` y `Stores/Variants`. La colección `eCommerce/Orders` sí aparece. Por tanto, QA **no tiene paridad completa de colecciones Wix App con producción** y no está listo para certificar pruebas E2E de Store/eCommerce. La lista de aplicaciones instalada no sustituye la comprobación de colecciones, configuración y automatizaciones.
+
+## 4. CitasF2 y reservas — estado vigente
+
+- Producción: colección `CitasF2`, tipo NATIVE, revisión 42, 31 campos físicos, 1 elemento.
+- Campos físicos: `_createdDate`, `_id`, `_owner`, `_updatedDate`, `bookingId`, `bookingStatus`, `bookingType`, `cancellationReason`, `cashMovementId`, `catalogId`, `contactDetails`, `dateYmd`, `fiscalData`, `invoicingDate`, `meta`, `orderId`, `pairToken`, `paymentStatus`, `privacyNoticeAcceptedAt`, `privacyNoticePurpose`, `privacyNoticeVersion`, `resourceId`, `revision`, `scheduleId`, `serviceId`, `slotEnd`, `slotStart`, `thirdPartyId`, `timeZone`, `totalAmount`, `traceId`.
+- Contrato raíz canónico: `bookingId`, `bookingStatus`, `paymentStatus`, `orderId`, `cashMovementId`, `serviceId`, `resourceId`, `scheduleId`, `slotStart`, `slotEnd`, `timeZone`, `traceId`. Lectores root-first con fallback histórico a `meta`; escritores nuevos no duplican esos estados/referencias dentro de `meta`.
+- Lectura live más reciente de la proyección: item `4f78a93b-8df6-4edd-a1ae-2026e26ad292`, bookingId `3effa046-5b9d-429b-9f9c-af2f3d6c9994`, `bookingStatus=CONFIRMED`, `paymentStatus=NOT_PAID`, `meta.nativeBookingStatus=CONFIRMED`, eventId `bec9fcee-9ce5-4015-8059-f4b1db02e614`.
+- La última lectura Bookings Reader V2 documentada en la auditoría QA del mismo corte devolvió la reserva nativa `CANCELED / NOT_PAID`. La proyección CMS y la reserva nativa no están reconciliadas; mantener P1 hasta repetir ambas lecturas sobre la versión publicada y demostrar el procesamiento del evento de cancelación.
+- No corregir el estado manualmente, no borrar la reserva nativa, no backfill por inferencia y no activar una reconciliación sin diseño idempotente, trazabilidad y aprobación.
+- El sitio QA tiene 0 elementos en CitasF2; el booking sintético de producción no se ha copiado a QA.
+
+## 5. Límites operativos vigentes
+
+- Mantener deshabilitados: `FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED=false`, `ACCOUNTING_LEDGER_WRITES_ENABLED=false`, `STAFF_CLOCKING_CONFIG.WRITES_ENABLED=false`.
+- Mantener `ACCOUNTANT_SEND_ENABLED=false`; no emitir documentos fiscales reales ni enviar exports a gestoría.
+- No habilitar pagos, reembolsos, movimientos de caja, asientos, cierres Z, fichajes ni mutaciones de inventario durante QA.
+- En producción, 18 automatizaciones mutables fueron desactivadas y verificadas en el corte QA anterior; 10 automatizaciones permanecían ACTIVE por restricciones readonly/disableStatusChange. No dispararlas. Esa lectura pertenece al sitio principal y no acredita el estado de las automatizaciones del nuevo sitio QA.
+- No se ha acreditado SharePoint/Power Automate como flujo live de Capa 3.
+- Los fixtures PSP y email QA son mocks offline en memoria; no ejecutan proveedores reales, red, CMS ni envíos externos.
+
+## 6. Checklist priorizado actualizado
+
+### P0 — Integridad fiscal, contable, laboral y seguridad
+- [ ] Mantener fail-closed todos los writers fiscales, contables y laborales.
+- [ ] Resolver `DatosFiscales.CONFIG_SISTEMA` y validar emisor con asesoría; no usar el placeholder como emisor.
+- [ ] Confirmar por lectura y trazabilidad el contenido/procedencia de las 3 filas de `ControlOperativo`; no recrear ni borrar elementos por diferencias históricas de recuento.
+- [ ] Obtener aprobación de asesoría sobre series, anticipos/fianzas, rectificaciones, SIF/Veri*Factu y procesos de facturación antes de habilitar cualquier writer o pago.
+- [ ] Mantener ledgers append-only; toda rectificación mediante nuevo registro trazable.
+
+### P1 — Reservas, Bookings y CitasF2
+- [ ] Releer Bookings Reader V2 y CitasF2 para el mismo bookingId tras la publicación declarada y documentar ambos estados con timestamp.
+- [ ] Identificar y demostrar causa de la divergencia de cancelación: versión runtime, handler/evento, persistencia o deduplicación; no asumir causa.
+- [ ] Validar Booking–CRM: el item histórico conserva `meta.contactId=null`; asociación no demostrada.
+- [ ] Confirmar contrato real de `slot.scheduleId` frente a `resource.eventsScheduleId` antes de normalizar históricos.
+- [ ] Validar reservas simples y duales, idempotencia, concurrencia, compensación y disponibilidad en el sitio QA después de certificar aislamiento.
+
+### P2 — Entorno QA, CMS y operaciones
+- [ ] Completar la matriz de aislamiento del sitio QA: automatizaciones, destinatarios, SMS/WhatsApp, pagos, webhooks, integraciones, permisos y canales.
+- [ ] Resolver la paridad QA de Stores: faltan cinco colecciones `Stores/*`; verificar app/configuración y decidir si son necesarias para los casos de prueba.
+- [ ] Validar permisos efectivos con identidad colaboradora de menor privilegio en QA; no inferirlos del rol ADMIN de API.
+- [ ] Revisar los 4 WIX_APP `WixForms/*` adicionales de QA y su finalidad; no modificarlos sin consumidor y propietario confirmados.
+- [ ] Verificar CI del SHA funcional exacto integrado; el HEAD documental `738eb78...` no tiene statuses ni workflow runs asociados en la consulta.
+- [ ] Mantener Capa 3 como pendiente hasta probar export unidireccional, recepción, idempotencia, permisos y evidencia en SharePoint.
+
+### P3 — Calidad y mantenibilidad
+- [ ] Ejecutar localmente `npm ci`, lint y suites pertinentes sobre el HEAD sincronizado; registrar SHA y resultados reales.
+- [ ] Ejecutar QA en Wix Preview del sitio QA, después de certificar aislamiento; documentar versión y casos.
+- [ ] Cerrar discrepancias de documentación histórica sin borrar evidencias ni alterar contratos.
+- [ ] Volver al flujo de trabajo rama → PR → CI → revisión → merge; no volver a actualizar documentos directamente en main.
+
+### P4 — Evolución
+- [ ] No añadir funcionalidades ni activar integraciones hasta cerrar bloqueos P0–P2 y demostrar necesidad de negocio/normativa.
+- [ ] Obtener aceptación operativa de la propietaria para los flujos de cliente y staff.
+
+## 7. Estado de validación
+
+| Área | Estado |
+|---|---|
+| GitHub main HEAD | **Verificado**: `738eb78...` |
+| Wix sitio principal Published | **Verificado** por Wix Site Context |
+| Wix publicado corresponde al SHA actual de main | **Pendiente**: no hay release/deployment SHA acreditado |
+| CMS producción 44 / 15 NATIVE / 29 WIX_APP | **Verificado** por lectura live |
+| Recuentos CMS producción | **Verificados** por Data Items Count API |
+| QA site independiente Draft | **Verificado** por Wix Site Context |
+| Paridad CMS QA ↔ producción | **No completa**: diferencias documentadas |
+| Divergencia CitasF2 ↔ Bookings | **P1 pendiente** |
+| CI del HEAD documental | **No acreditado**: cero statuses y cero runs asociados |
+| E2E runtime / SharePoint Capa 3 | **Pendiente** |
+
+
+---
+
+## Corte histórico anterior — 2026-11-13 20:51 CET (superado por el addendum vigente al inicio del documento)
 
 **Repositorio:** [nachoortegazgz/marianmadridz](https://github.com/nachoortegazgz/marianmadridz)  
 **Baseline funcional integrado por PR #330:** 3df4b4cf174d80dfd22406bbd758b2eddd7aaa44  
