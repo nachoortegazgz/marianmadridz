@@ -1106,8 +1106,13 @@ async function _updateCajaActual(movement, traceId) {
                     : CAJA_KEYS.BIZUM;
 
             cashRegister[amountField] = _roundMoney((Number(cashRegister[amountField]) || 0) + amount);
+            // Only cash changes the expected physical drawer balance. Card
+            // and Bizum update session payment totals, never physical cash.
+            if (method === PAYMENT_METHOD.EFECTIVO) {
+                cashRegister.expectedCash = _roundMoney(Number(cashRegister[CAJA_KEYS.CASH]) || 0);
+            }
             // netAmount is the physical cash balance, never the sum of all
-            // payment methods. Card and Bizum therefore cannot change it.
+            // payment methods.
             cashRegister[CAJA_KEYS.TOTAL] = _roundMoney(Number(cashRegister[CAJA_KEYS.CASH]) || 0);
             sequenceCounters.appliedMovementIds = [...appliedMovementIds, movementKey];
             cashRegister.sequenceCounters = sequenceCounters;
