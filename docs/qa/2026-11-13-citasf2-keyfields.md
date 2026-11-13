@@ -3,9 +3,9 @@
 **Fecha:** 2026-11-13  
 **Sitio:** Marian Madrid — `188bed94-177c-4bc9-a9f0-35080d874f3e`  
 **Colección:** `CitasF2`  
-**Revisión CMS:** 33 → 41  
+**Revisión CMS:** 33 → 41 (migración aplicada); lectura live posterior: 42  
 **PR de código:** [#330](https://github.com/nachoortegazgz/marianmadridz/pull/330)  
-**Estado de código:** pendiente de CI y revisión; no publicado.
+**Estado de código:** integrado en main mediante PR #330; no publicado en Wix. PR #331 cerrada sin merge.
 
 ## 1. Inventario previo y seguridad de la poda
 
@@ -31,7 +31,7 @@ La API oficial Delete Data Collection Field elimina también todos los valores d
 | `sourceEventId` | TEXT | Ausente | Eliminado: huérfano sin valores |
 | `canceledAt` | DATETIME | Ausente | Eliminado: sin consumidores activos ni valores |
 
-Revisiones Wix: 34 tras crear `orderId`; revisión final 41 tras la poda adicional de `canceledAt`. Lectura final confirmó `orderId: TEXT` y ausencia de los cuatro campos eliminados.
+Revisiones Wix durante la migración: 34 tras crear `orderId`; 41 tras la poda adicional de `canceledAt`. Una lectura live posterior del 2026-11-13 20:51 CET devuelve revisión 42, 31 campos y confirma `orderId: TEXT` y ausencia de los cuatro campos eliminados. No se infiere la causa del incremento 41 → 42.
 
 ## 3. Campos preservados deliberadamente
 
@@ -78,19 +78,28 @@ La reserva nativa de Wix sigue en `CANCELED / NOT_PAID`, mientras la proyección
 
 ## 7. Validación y límites
 
-**Verificado en Wix:**
-- Revisión final de colección 41; 31 campos físicos.
-- `orderId` existe y es TEXT.
-- Los cuatro campos eliminados no existen.
-- Los duplicados `meta.bookingStatus` y `meta.paymentStatus` ya no están en el item.
-- Los valores raíz `bookingStatus` y `paymentStatus` se conservaron sin cambios. La fila histórica no tiene `timeZone`, `orderId` ni `cashMovementId` porque se creó con el runtime anterior y no hubo un flujo de pago; los nuevos writers de `bookingCore` rellenan `timeZone` y los writers de pago rellenan las referencias cuando existan.
-- No se ha publicado código.
+**Verificado en Wix en la lectura live del 2026-11-13 20:51 CET:**
+- Colección CitasF2, displayName CITAS_F2, tipo NATIVE, revisión 42.
+- 31 campos físicos y un item (1/1; sin páginas adicionales).
+- orderId TEXT existe en raíz; cashMovementId y timeZone también están definidos en raíz.
+- Los campos noShowReason, noShowAt, sourceEventId y canceledAt no existen.
+- No hay duplicados meta.bookingStatus, meta.paymentStatus, meta.orderId ni meta.cashMovementId en el item.
+- El item conserva bookingStatus=CONFIRMED y paymentStatus=NOT_PAID; la reserva nativa correspondiente permanece CANCELED / NOT_PAID.
+- La fila histórica no contiene timeZone, orderId ni cashMovementId en raíz. No se rellenan por inferencia.
+- El sitio Wix está Published. No se ha acreditado que el código integrado esté publicado.
+
+**Verificado en GitHub:**
+- PR #330 está fusionada en main; HEAD consultado: 3df4b4cf174d80dfd22406bbd758b2eddd7aaa44.
+- PR #331 está cerrada sin merge.
+- El informe de QA registra 23 suites/294 PASS en Layer 1, 18 suites/243 PASS en Layer 2 y 68 suites/621 PASS en la regresión completa; también registra contratos SDK, ESLint y Gitleaks PASS. La asociación exacta de los workflows con el SHA de código integrado debe confirmarse antes de declarar CI del HEAD actual validado.
 
 **Pendiente:**
-- CI del PR #330 con las nuevas pruebas.
-- Revisión del diff completo.
-- Publicación manual autorizada y pruebas de runtime posteriores.
-- Migración de posibles `meta.orderId` / `meta.cashMovementId` en otros items si se incorporasen en futuras lecturas; el inventario actual contiene un solo item y no tenía esos valores.
+- Diagnosticar la reconciliación de cancelación en Wix Runtime; no parchear manualmente la proyección.
+- Confirmar SHA publicado, delivery y ejecución del handler de cancelación y del cron.
+- Confirmar el contrato slot.scheduleId frente a eventsScheduleId.
+- Probar permisos efectivos con identidad colaboradora CMS_EDITOR.
+- E2E en sitio aislado y revisión final del diff/CI del HEAD actual.
+- No ejecutar backfill, publicación ni nuevas mutaciones CMS sin plan aprobado y autorización.
 
 ## 8. Fuentes oficiales Wix
 
