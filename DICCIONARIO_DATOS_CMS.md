@@ -52,7 +52,7 @@ Recuento live documentado para producción: 44 colecciones en total (15 NATIVE y
 
 Formato: `key:TYPE`. Cuando no se indica otra cosa, el `displayName` de campo observado coincide con el `key`. Las etiquetas especiales de Wix se documentan en §4. El orden es el devuelto por Wix y no implica prioridad de negocio.
 
-### 3.1 CajaActual — revisión 49
+### 3.1 CajaActual — revisión 49 (esquema físico observado)
 
 ```text
 netAmount:NUMBER, closedBy:TEXT, sequenceCounters:OBJECT, versionState:NUMBER,
@@ -66,6 +66,10 @@ operationDate:DATE, cashRegisterStatus:TEXT, singletonKey:TEXT, isOpen:BOOLEAN,
 id:TEXT, currentSequence:NUMBER, fiscalPeriod:TEXT,
 _id:TEXT, _createdDate:DATETIME, _updatedDate:DATETIME, _owner:TEXT
 ```
+
+**Contrato objetivo de proyección (no equivale al esquema físico actual):** `CajaActual` debe representar la sesión operativa y mantener separado el saldo físico. El último resumen de operación necesita actor resuelto en backend, instante DATETIME exacto, tipo/descripción, importe, conceptos/unidades validados, desglose de pago, huellas/traza y referencias a los `_id` de `MovimientosCaja`. Los acumulados de sesión deben poder desglosarse, como mínimo, en efectivo, tarjeta y Bizum (importe y número de tickets/cobros). `cashAmount`/`expectedCash` representan efectivo físico, no el total cobrado por cualquier medio.
+
+La revisión 49 no contiene campos explícitos de última operación, referencias a movimientos fuente ni acumulado Bizum dedicado. No documentar esos datos como disponibles en CMS hasta aprobar y aplicar una migración. Los nombres/tipos candidatos, la nulabilidad, el límite de referencias y la representación de pagos mixtos requieren contrato de datos, inventario de consumidores y revisión de esquema. No añadir alias ni reutilizar campos por semejanza nominal.
 
 ### 3.2 CitasF2 — revisión 42
 
@@ -473,7 +477,7 @@ Las definiciones siguientes combinan contrato físico live y documentación/cód
 
 | Keyfield | Colección | Tipo | Significado |
 |---|---|---|---|
-| `singletonKey` | CajaActual | TEXT | Clave que identifica el registro singleton de caja; valor canónico documentado `CAJA_PRINCIPAL`. |
+| `singletonKey` | CajaActual | TEXT | Clave que identifica el registro singleton de la sesión/caja; valor canónico documentado `CAJA_PRINCIPAL`. |
 | `sequenceCounters` | CajaActual | OBJECT | Contadores de secuencia utilizados por el ledger; no editar manualmente. |
 | `currentSequence` | CajaActual | NUMBER | Secuencia actual expuesta por el registro de caja. |
 | `openingAmount` | CajaActual | NUMBER | Importe de apertura de caja física. |
@@ -614,7 +618,7 @@ Las relaciones de la tabla son semánticas/contractuales; solo las marcadas MULT
 
 - Las colecciones WIX_APP son propiedad de sus aplicaciones. No modificar directamente sus campos, tipos, datos ni permisos mediante este proyecto salvo flujo oficial aprobado.
 - Los ledgers append-only no se editan ni borran. Las rectificaciones se incorporan como nuevos registros trazables.
-- `CajaActual` es estado del efectivo físico, no saldo bancario agregado.
+- `CajaActual` es una proyección mutable de la sesión operativa y del efectivo físico. Los acumulados de tarjeta/Bizum no son efectivo ni saldo bancario; el ledger fuente sigue siendo `MovimientosCaja`.
 - `InventarioStockVenta` y `MovimientosInventario` son legacy/históricos; no son autoridad de inventario actual.
 - `RegistrosHorariosStaff` conserva datos sensibles laborales; sus writers permanecen deshabilitados hasta completar validación de seguridad, idempotencia, concurrencia y cumplimiento.
 - `MovimientosCaja`, `LibroAsientosContablesDetalle`, `HistoricoCierresZ` y `PaquetesGestoria` no deben activarse por tener un esquema creado. Los flags fiscales/contables y el envío a gestoría permanecen fail-closed.
@@ -666,3 +670,15 @@ Actualizar este diccionario cuando cambie cualquiera de estos elementos:
 - Cambio de estado legacy/append-only o política de permisos.
 
 Cada actualización debe incluir fecha/corte, entorno, revisión CMS, evidencia live, diff de código, consumidores afectados, pruebas y PR. No modificar Wix CMS como parte de una actualización documental.
+
+## 14. Addendum — contrato objetivo CajaActual / MovimientosCaja (2026-11-13)
+
+**Autoridad y cardinalidad:** cada ticket/movimiento original permanece en `MovimientosCaja` como registro append-only. `CajaActual` conserva solo el resumen de la última operación, acumulados de la sesión y referencias a los IDs originales asociados a esa operación. No se copia a `CajaActual` el histórico completo de tickets.
+
+**Datos de última operación:** actor resuelto en backend; instante exacto; tipo y descripción; conceptos/unidades cuando exista un contrato validado; importe y desglose por medio de pago; IDs fuente; `hash`, `previousRecordHash`, `sequenceNumber`, `recordTimestamp`, `digitalSignature` y `traceId` según disponibilidad del registro fuente. No reconstruir ni inventar datos ausentes.
+
+**Acumulados:** la sesión debe distinguir al menos efectivo, tarjeta y Bizum, con importes y número de tickets/cobros. `cashAmount` y `expectedCash` continúan expresando efectivo físico y solo cambian por deltas físicos explícitos validados en backend. Tarjeta y Bizum presenciales actualizan los acumulados de sesión, nunca el efectivo físico. ONLINE, transferencias y pagos bancarios no se incorporan a la sesión física por inferencia.
+
+**Límite del esquema observado:** la revisión física 49 no contiene un bloque explícito de última operación, IDs fuente ni acumulado Bizum dedicado. Este addendum describe el contrato objetivo, no afirma que los campos existan. La migración requiere definir keys/tipos CMS, revisar consumidores, actualizar validación/DTOs/WebMethods/hooks/tests y comprobar la compatibilidad de `sequenceCounters` y `fiscalLedgerLock.js`. No ejecutar cambios CMS en esta actualización documental.
+
+**Pagos mixtos y conceptos:** `MovimientosCaja.paymentMethod` es TEXT singular y `lineItems` es OBJECT sin contrato interno acreditado. No aceptar un desglose mixto ni mostrar cantidades como validadas hasta definir la estructura canónica, reglas de suma y pruebas de reconciliación. Cada movimiento fuente y su hash permanecen inmutables.
