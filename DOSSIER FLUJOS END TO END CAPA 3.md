@@ -200,11 +200,13 @@ Capa 3 solo podrá declararse operativa cuando:
 
 El propietario declara ServiciosCatalogo como SSOT de configuración de servicios sincronizada con Wix Bookings. El campo name se relaciona con Complementos catálogo y contiene los complementos ofrecidos por cada servicio; staffMembers determina el personal elegible. Esta relación aún no está verificada en el esquema/código live ni acredita que exista un proceso de sincronización. Antes de implementarlo, auditar IDs, consumidores, triggers, contratos oficiales Bookings, idempotencia y semántica de retirada. La elegibilidad no garantiza disponibilidad horaria: esta depende además de working hours, eventos/bloqueos y reservas.
 
-### Caja física y ledgers
+### Caja, sesión operativa y ledgers — decisión TEC-032 (2026-11-13)
 
-La aclaración de negocio del 2026-11-11 establece que CajaActual refleja solo efectivo que atraviesa físicamente el cajón. Tarjeta, Bizum, online, transferencias y pagos bancarios no modifican el saldo físico. MovimientosCaja mantiene su función de registro fiscal de operaciones y LibroAsientosContablesDetalle consolida los hechos económicos; no deben confundirse las tres capas.
+`MovimientosCaja` conserva cada ticket/movimiento original como ledger append-only. `CajaActual` es una proyección mutable de sesión: estado y responsables de apertura/cierre, resumen de última operación, acumulados de sesión por medio de pago y saldo de efectivo físico por separado. La proyección mantiene referencias a los IDs fuente y no duplica el histórico.
 
-La PR #284 implementa únicamente el filtro inicial EFECTIVO + PRESENCIAL en la proyección, y sigue abierta/draft, sin despliegue. No están cubiertos todavía aportaciones, retiradas, pagos físicos a proveedores ni ajustes con dirección inequívoca. No habilitar flujos de Capa 3 para reconstruir ni corregir estos datos: SharePoint continúa siendo exclusivamente repositorio documental y Capa 3 no escribe en Capa 1.
+Los cobros presenciales en efectivo, tarjeta y Bizum forman parte de la actividad/acumulados de sesión. Tarjeta y Bizum no alteran el saldo físico del cajón; `cashAmount`/`expectedCash` solo varían por deltas físicos explícitos y validados. Los movimientos ONLINE, transferencias y pagos bancarios permanecen en sus registros correspondientes y no se agregan a la sesión física por inferencia. La última operación presenta actor resuelto en backend, instante exacto, detalle validado, importe, huellas y traceId del movimiento fuente, sin rellenar datos ausentes.
+
+La decisión es documental y su implementación sigue pendiente. El esquema actual no acredita campos de última operación/referencias ni acumulado Bizum; `paymentMethod` es singular y `lineItems` no tiene estructura interna validada. Los pagos mixtos y cantidades de conceptos no se exponen como válidos hasta cerrar esos contratos y sus pruebas. La PR #284 documentaba un filtro inicial de efectivo presencial; no implementa TEC-032. No habilitar flujos de Capa 3 para reconstruir ni corregir estos datos: SharePoint continúa siendo exclusivamente repositorio documental y Capa 3 no escribe en Capa 1.
 
 ### Estado de implantación
 
@@ -252,3 +254,5 @@ Existe un sitio Wix independiente en estado Draft (Site ID `50b39f33-e753-4331-a
 - [ ] Mantener envío a gestoría deshabilitado hasta cierre formal.
 
 La referencia única de prioridades y estado es `ESTADO_ACTUAL_PROYECTO.md`.
+
+La Capa 3 solo podrá consumir una vista/exportación aprobada de los datos ya consolidados en Capa 1. No calculará ni corregirá acumulados, no reconstruirá tickets y no escribirá referencias o saldos en `CajaActual`/`MovimientosCaja`. Los exports deben minimizar datos personales y excluir secretos y datos de tarjeta.
