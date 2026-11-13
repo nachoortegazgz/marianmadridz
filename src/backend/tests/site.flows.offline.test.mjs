@@ -350,6 +350,7 @@ test('FLOW-CAJA-01 flujo continuo: venta EFECTIVO -> caja incrementada -> cierre
   assert.strictEqual(mov.paymentMethod, 'EFECTIVO');
   assert.strictEqual(mov.channelType, 'PRESENCIAL');
   assert.strictEqual(mov.staffResourceId, GUID_ADMIN_RESOURCE, 'actor debe venir de la identidad autenticada, no del frontend');
+  assert.strictEqual(mov.recordSource, 'MANUAL_PRESENCIAL_AUTHENTICATED');
   assert.deepStrictEqual(
     persistedMovement.linkedBookingIds,
     ['aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'],
@@ -379,6 +380,8 @@ test('FLOW-CAJA-01 flujo continuo: venta EFECTIVO -> caja incrementada -> cierre
   assert.ok(state.data.lastOperation?.movementId === mov._id, 'última operación referencia el movimiento original');
   assert.deepStrictEqual(state.data.lastOperation.sourceMovementIds, [mov._id]);
   assert.strictEqual(state.data.lastOperation.actor.resourceId, GUID_ADMIN_RESOURCE);
+  assert.strictEqual(state.data.lastOperation.actor.verificationStatus, 'VERIFIED_BACKEND');
+  assert.strictEqual(state.data.lastOperation.actor.displayName, 'Marta');
   assert.strictEqual(state.data.lastOperation.hash, mov.hash);
   assert.strictEqual(state.data.sessionPayments.EFECTIVO.ticketCount, 1);
   assert.strictEqual(state.data.sessionPayments.EFECTIVO.amount, 50);
