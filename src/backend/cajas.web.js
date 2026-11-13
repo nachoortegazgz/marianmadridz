@@ -524,8 +524,17 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
             return { status: "ERROR", data: null, error: { code: "INVALID_PAYMENT_METHOD", message: "Forma de pago invalida" } };
         }
 
-        const channelType = _safeTrim(payload?.channelType).toUpperCase();
-        if (channelType && !Object.values(CHANNEL_TYPE).includes(channelType)) {
+        const requestedMovementType = _safeTrim(payload?.movementType || payload?.tipoMovimiento || MOVEMENT_TYPE.VENTA).toUpperCase();
+        const requestedChannelType = _safeTrim(payload?.channelType).toUpperCase();
+        const channelType = requestedChannelType || (
+            requestedMovementType === MOVEMENT_TYPE.VENTA_ONLINE || paymentMethod === PAYMENT_METHOD.WIX_PAYMENTS
+                ? CHANNEL_TYPE.ONLINE
+                : ""
+        );
+        if (!channelType) {
+            return { status: "ERROR", data: null, error: { code: "CHANNEL_TYPE_REQUIRED", message: "El canal PRESENCIAL u ONLINE debe declararse explícitamente." }, traceId };
+        }
+        if (!Object.values(CHANNEL_TYPE).includes(channelType)) {
             return { status: "ERROR", data: null, error: { code: "INVALID_CHANNEL_TYPE", message: "Canal de operacion invalido" } };
         }
 
@@ -548,7 +557,7 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
         }
         await _rateLimitOrThrow("cajas.registerManualTransaction", resourceId, traceId);
 
-        const movementType = _safeTrim(payload?.movementType || payload?.tipoMovimiento || "VENTA").toUpperCase();
+        const movementType = requestedMovementType;
         const isRefundMovement = [
             MOVEMENT_TYPE.REEMBOLSO,
             MOVEMENT_TYPE.DEVOLUCION,
@@ -1318,6 +1327,11 @@ export const getCashierState = webMethod(Permissions.SiteMember, async (options 
                 totalOperations,
                 openedAt: cashRegister?.[CAJA_KEYS.OPENED_AT] ?? null,
                 openedBy: cashRegister?.openedBy ?? null,
+                openingAmount: cashRegister?.openingAmount ?? null,
+                expectedCash: cashRegister?.expectedCash ?? null,
+                countedCash: cashRegister?.countedCash ?? null,
+                difference: cashRegister?.difference ?? null,
+                differenceReason: cashRegister?.differenceReason ?? null,
                 openedByName,
                 closedAt: cashRegister?.[CAJA_KEYS.CLOSED_AT] ?? null,
                 closedBy: cashRegister?.closedBy ?? null,
@@ -1359,8 +1373,15 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
     const traceId = _safeTrim(options?.traceId) || makeTraceId("z-close");
     let ledgerLock = null;
     let retainLedgerLock = false;
+    let closingActor = null;
     try {
-        if (authorizeCashier) await requireCajero(traceId);
+        if (authorizeCashier) {
+            await requireCajero(traceId);
+            closingActor = await getMyStaffContext(traceId);
+            if (!closingActor?.resourceId) {
+                return { status: "ERROR", data: null, error: { code: "STAFF_CONTEXT_REQUIRED", message: "No se pudo resolver al responsable autenticado del cierre." }, traceId };
+            }
+        }
         if (FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED !== true) {
             return { status: "ERROR", data: null, error: { code: "FISCAL_LEDGER_WRITES_DISABLED", message: "La escritura fiscal permanece deshabilitada hasta completar la certificacion de runtime." }, traceId };
         }
@@ -1610,7 +1631,8 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
         const cashRegister = await getCashRegisterSingleton();
         if (cashRegister) {
             cashRegister.cashRegisterStatus = CASH_REGISTER_STATUS.CERRADA;
-            cashRegister.closedAt = new Date();
+            cashRegister.closedAt = saved?.closedAt instanceof Date ? saved.closedAt : new Date();
+            if (closingActor?.resourceId) cashRegister.closedBy = closingActor.resourceId;
             cashRegister._updatedDate = new Date();
             await dalSave(CAJA_ACTUAL_COL, cashRegister);
         }
