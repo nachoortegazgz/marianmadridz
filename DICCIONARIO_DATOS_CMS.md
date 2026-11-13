@@ -110,19 +110,26 @@ _updatedDate:DATETIME, _owner:TEXT, heartbeatAt:DATETIME, operationDate:DATETIME
 revision:NUMBER, compensationKind:TEXT
 ```
 
-### 3.5 DatosFiscales — revisión 9
+### 3.5 DatosFiscales — revisión live 19 (MASTER mutable)
+
+**Contrato MASTER objetivo:**
 
 ```text
-recordType:TEXT, streetNumber:TEXT, businessDescription:TEXT, currency:TEXT,
-phone:TEXT, taxId:TEXT, legalName:TEXT, thirdPartyType:TEXT, address:TEXT,
-taxRegime:TEXT, verifactuEnabled:BOOLEAN, verifactuVersion:TEXT,
-tipoUsoPosibleMultiOT:BOOLEAN, indicadorMultiplesOT:BOOLEAN, fechaInicioVerifactu:TEXT,
-email:TEXT, name:TEXT, label:TEXT, nif:TEXT, gestorEmail:TEXT, gestorName:TEXT,
-gestorNombre:TEXT, gestorNif:TEXT, active:BOOLEAN,
+recordType:TEXT, thirdPartyType:TEXT, taxId:TEXT, legalName:TEXT,
+commercialName:TEXT, address:TEXT, postalCode:TEXT, province:TEXT,
+email:TEXT, phone:TEXT, taxRegime:TEXT, verifactuEnabled:BOOLEAN,
+verifactuVersion:TEXT, fechaInicioVerifactu:DATE, schemaVersion:NUMBER,
+traceId:TEXT,
 _id:TEXT, _createdDate:DATETIME, _updatedDate:DATETIME, _owner:TEXT
 ```
 
-**Nota de contrato:** el esquema físico contiene `active`, pero `validation.js` prohíbe expresamente que se envíe `active` a `assertDatosFiscales`. No usar ese campo en escrituras ni deducir que está operativo. El estado live anterior registra un placeholder y ausencia de un registro `CONFIG_SISTEMA` válido; mantener la activación fiscal bloqueada.
+**Campos heredados que aún permanecen físicamente:** `streetNumber`, `businessDescription`, `currency`, `tipoUsoPosibleMultiOT`, `indicadorMultiplesOT`, `name`, `label`, `nif`, `gestorEmail`, `gestorName`, `gestorNif` y `active`. No se han borrado porque el registro QA existente conserva datos/etiquetas en parte de ellos y `eventLog.js` todavía consume las dos flags AEAT. La limpieza requiere migración de consumidores y preservación del marcador QA.
+
+**Registros live verificados:** 1 fila `TERCERO/PROVEEDOR`, expresamente marcada `QA_ONLY`; no es emisor ni configuración fiscal. Se le han añadido `schemaVersion=1` y `traceId`. No existe todavía `CONFIG_SISTEMA`. No se crea hasta desplegar el guard actualizado y obtener taxId, legalName y taxRegime de fuente fiscal oficial/gestoría. Estos datos no se infieren.
+
+**Tipos:** `fechaInicioVerifactu` se cambió de `TEXT` a `DATE` tras verificar que no existían valores previos. Nuevos campos live: `commercialName`, `postalCode`, `province`, `schemaVersion`, `traceId`.
+
+**Seguridad:** el hook y validator de la rama de trabajo permiten que `CONFIG_SISTEMA` mantenga pendientes los datos fiscales y fija el ID singleton `CONFIG_SISTEMA_FISCAL`; exige `schemaVersion=1` y `traceId`. El código aún no está publicado. Los escritores fiscales siguen fail-closed.
 
 ### 3.6 HistoricoCierresZ — revisión 37
 
@@ -173,15 +180,22 @@ _id:TEXT, _createdDate:DATETIME, _updatedDate:DATETIME, _owner:TEXT
 
 **Importante:** el esquema físico usa `sourceMovementId`; no existe `sourceEventId` en esta colección. `cashMovementId` es un campo de referencia distinto y opcional según el contrato técnico documentado. No construir un writer contable por analogía con otra colección.
 
-### 3.9 MapaStaff — revisión 23
+### 3.9 MapaStaff — revisión live 24 (MASTER mutable)
+
+**Contrato MASTER objetivo:**
 
 ```text
-displayName:TEXT, staffMemberId:TEXT, scheduleId:TEXT, thirdPartyId:TEXT,
-staffName:TEXT, rolWebsite:TEXT, rolBookings:TEXT, memberId:TEXT,
-resourceId:TEXT, active:BOOLEAN, sortOrder:NUMBER, sourceSystem:TEXT,
-schemaVersion:NUMBER, ServiciosCatalogo_staffMembers:MULTI_REFERENCE,
+memberId:TEXT, resourceId:TEXT, rolBookings:TEXT, rolWebsite:TEXT,
+staffName:TEXT, displayName:TEXT, thirdPartyId:TEXT, sortOrder:NUMBER,
+schemaVersion:NUMBER, traceId:TEXT,
 _id:TEXT, _createdDate:DATETIME, _updatedDate:DATETIME, _owner:TEXT
 ```
+
+**Compatibilidad física pendiente:** permanecen `staffMemberId`, `scheduleId`, `active`, `sourceSystem` y `ServiciosCatalogo_staffMembers`. No eliminarlos aún: `events.js` usa `staffMemberId + active` para recuperar `resourceId + scheduleId` cuando una reserva nativa no aporta esos valores. `active` queda pendiente de ADR como indica el esquema funcional. El campo multi-reference es una relación CMS existente y no se ha alterado.
+
+**Registros live verificados:** 3 filas. `staffName` normalizado a Marian Madrid, Andrea Staff y Alba Staff; `rolBookings=STAFF`; roles de negocio ADMIN/ESTILISTA/ESTILISTA; `schemaVersion=1`; `traceId` presente. `thirdPartyId` queda vacío en las tres filas hasta vínculo fiscal explícito. Los `memberId` presentes son distintos; su correspondencia con Wix Members requiere verificación directa. Los tres `resourceId` son únicos.
+
+**Pendiente de integridad:** la unicidad se comprobó en el snapshot actual, pero aún no está protegida por índices/validación de escritura. No se considera una garantía de concurrencia hasta implementar un writer/hook único y pruebas de carrera.
 
 ### 3.10 MovimientosCaja — revisión 78
 
