@@ -43,14 +43,19 @@ function _formatAEATDateTimeMadrid(date) {
         return acc;
     }, {});
 
-    const madridStr = dt.toLocaleString("en-US", {
-        timeZone: "Europe/Madrid",
-        timeZoneName: "longOffset",
-    });
-    const match = /GMT([+-])(\d{2}):?(\d{2})/.exec(madridStr);
-    const madridOffset = match
-        ? `${match[1]}${match[2]}:${match[3]}`
-        : "+00:00";
+    const madridOffset = (() => {
+        const madridStr = dt.toLocaleString("en-US", {
+            timeZone: "Europe/Madrid",
+            timeZoneName: "longOffset",
+        });
+        const match = /GMT([+-])(\\d{2}):?(\\d{2})/.exec(madridStr);
+        if (match) return `${match[1]}${match[2]}:${match[3]}`;
+        const localMadrid = new Date(dt.toLocaleString("en-US", { timeZone: "Europe/Madrid" }));
+        const diffMinutes = Math.round((localMadrid - dt) / 60000);
+        const sign = diffMinutes >= 0 ? "+" : "-";
+        const abs = Math.abs(diffMinutes);
+        return `${sign}${String(Math.floor(abs / 60)).padStart(2, "0")}:${String(abs % 60).padStart(2, "0")}`;
+    })();
 
     return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}:${parts.second}${madridOffset}`;
 }
