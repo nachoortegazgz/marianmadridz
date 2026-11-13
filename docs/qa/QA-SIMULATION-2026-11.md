@@ -474,6 +474,8 @@ Cruce inequívoco por `extendedBooking.order.id`:
 
 Las otras **13 reservas CANCELED/PAID no tienen `order.id` eCommerce asociado** en Bookings Reader V2. No se puede atribuir su cobro a un pedido o transacción concreta con la evidencia disponible.
 
+Las 13 comparten `appId` de Wix Bookings, `createdByAppId=151e476a-715e-ec33-db9a-a7ff4d51f70a`, `selectedPaymentOption=UNDEFINED` y no devuelven objeto de pedido ni transacciones eCommerce. Fueron creadas entre el 31 de mayo y el 1 de junio de 2026. Ese `createdByAppId` no aparece entre las nueve aplicaciones actualmente instaladas en el contexto del sitio. El origen técnico y el medio de pago siguen sin identificar; este patrón no demuestra que sean datos sintéticos ni que se cobraran en efectivo.
+
 Para las dos reservas canceladas vinculadas a #10017 y #10018:
 - `cancellationFeeEnabled=false` en el snapshot de política.
 - Sin `bookingFeeDetails` aplicado ni `additionalFees`.
