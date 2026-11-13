@@ -85,8 +85,8 @@ const AUDIT_SOURCE = "backend/citasManager.web.js";
 const FIELD_BOOKING_ID = BOOKING_FIELDS?.BOOKING_ID || "bookingId";
 const FIELD_STATUS = BOOKING_FIELDS?.STATUS || "bookingStatus";
 const FIELD_PAYMENT_STATUS = BOOKING_FIELDS?.PAYMENT_STATUS || "paymentStatus";
-const FIELD_CASH_MOVEMENT_ID = BOOKING_FIELDS?.CASH_MOVEMENT_ID || "cashMovementId";
-const FIELD_ORDER_ID = BOOKING_FIELDS?.ORDER_ID || "orderId";
+const FIELD_CASH_MOVEMENT_ID = BOOKING_FIELDS.CASH_MOVEMENT_ID;
+const FIELD_ORDER_ID = BOOKING_FIELDS.ORDER_ID;
 const FIELD_TRACE_ID = BOOKING_FIELDS?.TRACE_ID || "traceId";
 const FIELD_SERVICE_ID = BOOKING_FIELDS?.SERVICE_ID || "serviceId";
 const FIELD_RESOURCE_ID = BOOKING_FIELDS?.RESOURCE_ID || "resourceId";
@@ -558,7 +558,7 @@ export const confirmPayment = webMethod(
                         meta.paymentStatus ||
                         ""
                     ).toUpperCase() === PAYMENT_STATUS.PAID &&
-                    _safeTrim(meta.orderId || "") === orderId
+                    _safeTrim(cita?.[FIELD_ORDER_ID] || meta.orderId || "") === orderId
                 );
             });
 
@@ -921,13 +921,10 @@ async function _setCitasPaymentState(
                     ...currentCita,
                     [FIELD_PAYMENT_STATUS]: paymentState,
                     [FIELD_CASH_MOVEMENT_ID]: cashMovementId || null,
+                    [FIELD_ORDER_ID]: orderId || null,
                     [FIELD_TRACE_ID]: traceId,
                     meta: {
                         ...meta,
-                        paymentStatus: paymentState,
-                        cashMovementId: cashMovementId || null,
-                        orderId: orderId || null,
-                        traceId,
                         fechaConfirmacionPago: new Date(),
                     },
                 };
