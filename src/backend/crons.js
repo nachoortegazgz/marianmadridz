@@ -921,12 +921,81 @@ export async function cleanExpiredDaysCache() {
     return result;
 }
 
+// Resolve only stale fiscal-chain alerts after a complete, successful re-audit.
+// A partial scan, error, or any reproduced break must leave every alert OPEN.
+async function _resolveVerifiedFiscalChainAlerts(chainResult, traceId) {
+    const audit = chainResult?.data;
+    if (
+        chainResult?.status !== "SUCCESS" ||
+        audit?.complete !== true ||
+        audit?.hasMore !== false ||
+        audit?.breaksCount !== 0 ||
+        !Number.isFinite(Number(audit?.checked)) ||
+        Number(audit.checked) < 1
+    ) {
+        return { resolved: 0, failed: 0, skipped: true, reason: "FISCAL_AUDIT_NOT_COMPLETE_CLEAN_AND_NONEMPTY" };
+    }
+
+    const response = await dalQuery(OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO)
+        .eq("controlType", CONTROL_TYPE.ALERT)
+        .eq("alertType", "FISCAL_CHAIN_CORRUPTED")
+        .eq("status", CONTROL_STATUS.OPEN)
+        .limit(100)
+        .find({ consistencyMode: "strong" });
+    const alerts = response?.items || [];
+    const totalCount = Number(response?.totalCount ?? alerts.length);
+    if (totalCount > alerts.length) {
+        return { resolved: 0, failed: 0, skipped: true, reason: "FISCAL_ALERT_SCAN_LIMIT_REACHED" };
+    }
+
+    const resolvedAt = new Date().toISOString();
+    let resolved = 0;
+    let failed = 0;
+    for (const alert of alerts) {
+        if (
+            alert?.controlType !== CONTROL_TYPE.ALERT ||
+            alert?.alertType !== "FISCAL_CHAIN_CORRUPTED" ||
+            alert?.status !== CONTROL_STATUS.OPEN ||
+            !alert?._id
+        ) continue;
+
+        try {
+            const payload = readControlPayload(alert);
+            await dalUpdate(OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO, {
+                ...alert,
+                status: CONTROL_STATUS.RESOLVED,
+                payload: {
+                    ...payload,
+                    resolvedAt,
+                    resolution: {
+                        eventType: "FISCAL_CHAIN_VERIFIED",
+                        traceId,
+                        checked: Number(audit.checked) || 0,
+                        breaksCount: 0,
+                        complete: true,
+                    },
+                },
+            });
+            resolved++;
+        } catch (error) {
+            failed++;
+            log.error("systemHealthCheck fiscal alert resolution failed", {
+                alertId: alert._id,
+                traceId,
+                error: error?.message || "UNKNOWN",
+            });
+        }
+    }
+    return { resolved, failed, skipped: false };
+}
+
 // =============================================================================
 // CRON 6: systemHealthCheck - 0 7 * * *
 // =============================================================================
 /**
-* CRON-14: eliminada inserción en COLLECTIONS.ALERTAS_OPERATIVAS.
-* Solo log de issues.
+* CRON-14: no usa colecciones legacy de alertas.
+* Registra issues y resuelve alertas fiscales historicas solo tras una
+* auditoria completa, limpia y con al menos un movimiento genuino verificado.
 */
 export async function systemHealthCheck() {
 const traceId = makeTraceId("cron-health");
@@ -968,14 +1037,47 @@ traceId,
 limit: 100,
 });
 result.fiscalChain = chainResult.status;
-if (chainResult.status !== "SUCCESS") {
-result.issues.push({
-type: "FISCAL_CHAIN_BROKEN",
-status: chainResult.status,
-});
+if (chainResult.status === "SUCCESS") {
+    try {
+        result.fiscalAlertResolution = await _resolveVerifiedFiscalChainAlerts(chainResult, traceId);
+        if (result.fiscalAlertResolution.failed > 0) {
+            result.issues.push({
+                type: "FISCAL_ALERT_RESOLUTION_FAILED",
+                failed: result.fiscalAlertResolution.failed,
+            });
+        }
+    } catch (resolutionError) {
+        result.fiscalAlertResolution = {
+            resolved: 0,
+            failed: 1,
+            skipped: true,
+            reason: "FISCAL_ALERT_RESOLUTION_FAILED",
+        };
+        result.issues.push({
+            type: "FISCAL_ALERT_RESOLUTION_FAILED",
+            error: resolutionError?.message || "UNKNOWN",
+        });
+    }
+} else {
+    result.fiscalAlertResolution = {
+        resolved: 0,
+        failed: 0,
+        skipped: true,
+        reason: "FISCAL_AUDIT_NOT_COMPLETE_AND_CLEAN",
+    };
+    result.issues.push({
+        type: "FISCAL_CHAIN_BROKEN",
+        status: chainResult.status,
+    });
 }
 } catch (err) {
 result.fiscalChain = "ERROR";
+result.fiscalAlertResolution = {
+    resolved: 0,
+    failed: 0,
+    skipped: true,
+    reason: "FISCAL_AUDIT_FAILED",
+};
 result.issues.push({
 type: "FISCAL_CHAIN_CHECK_FAILED",
 error: err?.message,
