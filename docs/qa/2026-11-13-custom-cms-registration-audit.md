@@ -49,7 +49,7 @@ Para las 73 confirmadas:
 
 Para las 18 CREATED, 13 disponen de campos de reserva suficientes y 5 carecen de recurso. La proyección inicial depende del evento Bookings Created.
 
-### Defecto de contrato Velo corregido en esta rama
+### Defecto de contrato Velo corregido en PR #327 e integrado en main
 
 La documentación oficial de Velo define:
 - Booking Created: `wixBookings_onBookingCreated`.
@@ -57,7 +57,7 @@ La documentación oficial de Velo define:
 - Booking Confirmed: `wixBookingsV2_onBookingConfirmed`.
 - Booking Canceled: `wixBookingsV2_onBookingCanceled`.
 
-El código exportaba los dos primeros con prefijo `wixBookingsV2_`, que no coincide con el contrato de Velo. Se corrigen las exportaciones, conservando los handlers de dominio, la reclamación idempotente por `metadata.id`, el parser del payload y las escrituras actuales. Se actualizan pruebas contractuales y de integración.
+El código exportaba los dos primeros con prefijo `wixBookingsV2_`, que no coincide con el contrato de Velo. PR #327 corrige las exportaciones, conservando los handlers de dominio, la reclamación idempotente por `metadata.id`, el parser del payload y las escrituras actuales. Las pruebas contractuales y de integración se actualizaron y la PR está integrada en `main`.
 
 **Límite causal:** el nombre incorrecto explica por qué Wix no puede invocar esos dos handlers con el nombre documentado. No prueba por sí solo por qué faltan las 73 proyecciones históricas: también hay que confirmar SHA publicado, delivery y logs. El handler Confirmed ya tenía el nombre V2 correcto. La corrección no hace backfill ni crea registros por sí misma.
 
@@ -104,7 +104,7 @@ La colección existe físicamente y tiene campos genéricos para eventos/entrega
 
 ## 7. Cambios y pruebas
 
-Cambio ejecutable de esta rama:
+Cambio ejecutable integrado mediante PR #327 (merge squash `14d4d1d0a1992cfa62876b4c5c1c521314bf746a`):
 - `src/backend/events.js`: nombres Velo correctos para Created y Rescheduled.
 - `src/backend/tests/events.backend-events.contract.test.mjs`: assertions de los nombres oficiales.
 - `src/backend/tests/events.order-id-validation.contract.test.mjs`: reclamación idempotente para los nombres oficiales.
@@ -118,12 +118,20 @@ Sin escrituras Wix, pagos, reservas, stock, caja, ledgers ni publicación.
 
 ## 8. Validación y despliegue pendiente
 
-CI del PR pendiente. Después de CI verde:
-1. Integrar la PR en `main`.
-2. Sincronizar con Wix Editor y publicar manualmente por el propietario.
-3. Verificar en Wix Runtime los handlers Created/Rescheduled con una operación controlada y autorizada, o mediante logs existentes; no usar reservas reales como prueba sin un plan de reversión/compensación aprobado.
-4. Revisar la ejecución del cron de reconciliación y los logs de su traceId.
-5. Releer CMS: `CitasF2` debe mostrar únicamente las proyecciones elegibles; los 17 sin recurso y la reserva PAID deben quedar en revisión, no inventar asignaciones.
-6. Confirmar no duplicados por bookingId y estado/slot coherente con Bookings Reader V2.
+**CI verificada sobre el HEAD de PR #327 (`decb52a5044ca3aa60ea8ab9a39ea66a11696654`):**
+- Layer 1: 22 suites, 288 PASS, 0 FAIL.
+- Layer 2: 17 suites, 239 PASS, 0 FAIL.
+- Regresión completa: 66 suites, 611 PASS, 0 FAIL.
+- Contratos Wix Cart V2, Order Transactions y Bookings Reader V2: PASS.
+- ESLint: PASS.
+- Gitleaks full-history: PASS.
+- CI posterior al merge sobre `main` (`14d4d1d0a1992cfa62876b4c5c1c521314bf746a`): PASS.
 
-**Estado:** auditoría de colecciones completada; corrección de handlers en rama; runtime de reservas y cierre fiscal/contable siguen pendientes.
+**Pendiente de Wix Runtime:**
+1. Sincronizar `main` con Wix Editor y publicar manualmente por el propietario.
+2. Verificar en Runtime los handlers Created/Rescheduled mediante logs existentes o una operación controlada y autorizada; no usar reservas reales como prueba sin plan de reversión/compensación aprobado.
+3. Revisar la ejecución del cron de reconciliación y los logs de su traceId.
+4. Releer CMS: `CitasF2` debe mostrar únicamente las proyecciones elegibles; los 17 sin recurso y la reserva PAID deben quedar en revisión, no inventar asignaciones.
+5. Confirmar no duplicados por bookingId y estado/slot coherente con Bookings Reader V2.
+
+**Estado:** auditoría de colecciones completada; corrección de handlers integrada en `main`; runtime de reservas y cierre fiscal/contable siguen pendientes.
