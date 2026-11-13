@@ -916,7 +916,10 @@ async function _setCitasPaymentState(
         await _updateCitaSafe(
             bookingId,
             (currentCita) => {
-                const meta = _getCitaMeta(currentCita);
+                const meta = { ..._getCitaMeta(currentCita) };
+                for (const key of ["bookingStatus", "paymentStatus", "orderId", "cashMovementId"]) {
+                    delete meta[key];
+                }
                 return {
                     ...currentCita,
                     [FIELD_PAYMENT_STATUS]: paymentState,
