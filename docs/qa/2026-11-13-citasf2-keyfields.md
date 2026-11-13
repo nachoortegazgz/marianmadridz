@@ -30,7 +30,7 @@ La API oficial Delete Data Collection Field elimina también todos los valores d
 | `noShowAt` | DATETIME | Ausente | Eliminado: huérfano sin valores |
 | `sourceEventId` | TEXT | Ausente | Eliminado: huérfano sin valores |\n| `canceledAt` | DATETIME | Ausente | Eliminado: sin consumidores activos ni valores |
 
-Revisiones Wix: 34 tras crear `orderId`; 35 tras eliminar `noShowReason`; 36 tras eliminar `noShowAt`; 37 tras eliminar `sourceEventId`. Lectura final confirmó `orderId: TEXT` y ausencia de los tres campos eliminados.
+Revisiones Wix: 34 tras crear `orderId`; revisión final 41 tras la poda adicional de `canceledAt`. Lectura final confirmó `orderId: TEXT` y ausencia de los cuatro campos eliminados.
 
 ## 3. Campos preservados deliberadamente
 
@@ -82,7 +82,7 @@ La reserva nativa de Wix sigue en `CANCELED / NOT_PAID`, mientras la proyección
 - `orderId` existe y es TEXT.
 - Los cuatro campos eliminados no existen.
 - Los duplicados `meta.bookingStatus` y `meta.paymentStatus` ya no están en el item.
-- Los valores raíz `bookingStatus` y `paymentStatus` se conservaron sin cambios.
+- Los valores raíz `bookingStatus` y `paymentStatus` se conservaron sin cambios. La fila histórica no tiene `timeZone`, `orderId` ni `cashMovementId` porque aún no hubo un flujo de pago; los nuevos writers de `bookingCore` rellenan `timeZone` y los writers de pago rellenan las referencias cuando existan.
 - No se ha publicado código.
 
 **Pendiente:**
