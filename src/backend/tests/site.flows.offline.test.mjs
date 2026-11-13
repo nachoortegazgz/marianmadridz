@@ -366,6 +366,7 @@ test('FLOW-CAJA-01 flujo continuo: venta EFECTIVO -> caja incrementada -> cierre
   // Paso 1b: idempotencia - mismo transactionId devuelve el registro original
   const dup = await cajas.registerManualTransaction({
     totalAmount: 50.0, tipoFactura: 'F2', operationDescription: 'Reintento idempotente (SIMULACION PREVIA A DESPLIEGUE REAL)', paymentMethod: 'EFECTIVO',
+    channelType: 'PRESENCIAL',
     transactionId: 'offline-tx-0001',
   });
   assert.strictEqual(dup.status, 'SUCCESS');
@@ -709,6 +710,8 @@ test('FLOW-CAJA-10 missing hash fields never pass audit or Z close', async () =>
 
 test('FLOW-CAJA-02 payload incorrecto => rechazos deterministas sin contaminar ledger', async () => {
   const { cajas } = await freshImports();
+  await seedStaff({ resourceId: GUID_ADMIN_RESOURCE });
+  setMember({ _id: GUID_MEMBER, contactId: GUID_CONTACT, loginEmail: 'marta@test.local' });
   await setupFiscalSecrets();
   const before = (wixDataMock._store.get('MovimientosCaja') || []).length;
 
@@ -721,12 +724,13 @@ test('FLOW-CAJA-02 payload incorrecto => rechazos deterministas sin contaminar l
   assert.strictEqual(badMethod.error.code, 'INVALID_PAYMENT_METHOD');
 
   // > umbral NIF tercero sin recipientTaxId (Ley 11/2021 / Alcabala control)
-  const big = await cajas.registerManualTransaction({ totalAmount: 5000, paymentMethod: 'TRANSFERENCIA' });
+  const big = await cajas.registerManualTransaction({ totalAmount: 5000, paymentMethod: 'TRANSFERENCIA', channelType: 'ONLINE' });
   assert.strictEqual(big.status, 'ERROR');
   assert.strictEqual(big.error.code, 'RECIPIENT_TAX_ID_REQUIRED');
 
   const after = (wixDataMock._store.get('MovimientosCaja') || []).length;
   assert.strictEqual(after, before, 'ningun rechazo escribio en el ledger');
+  setMember(null);
 });
 
 test('FLOW-CAJA-03 rejects ONLINE as a payment method on new ledger writes', async () => {
@@ -1053,6 +1057,7 @@ test('FLOW-CAJA-11 simulation cash state blocks manual writes, state display and
   const tx = await cajas.registerManualTransaction({
     totalAmount: 25,
     paymentMethod: 'EFECTIVO',
+    channelType: 'PRESENCIAL',
     movementType: 'VENTA',
     transactionId: 'blocked-simulation-cash-001',
   });
@@ -1118,6 +1123,7 @@ test('FLOW-CAJA-12 explicit smoke rows are excluded from live fiscal sequence, c
     tipoFactura: 'F2',
     operationDescription: 'Venta QA de aislamiento de ledger',
     paymentMethod: 'EFECTIVO',
+    channelType: 'PRESENCIAL',
     movementType: 'VENTA',
     transactionId: 'real-after-smoke-001',
   });
