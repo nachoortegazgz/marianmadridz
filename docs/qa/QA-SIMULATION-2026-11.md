@@ -246,7 +246,7 @@ El repositorio ya contiene suites offline con mocks para:
 
 **No se ejecuta E2E de negocio en el sitio Published.** La referencia maestra QA del 2026-11-11 confirma que no existe un sitio QA independiente equivalente y que siguen activas automatizaciones email con destinatarios dinámicos. Wix Preview tampoco valida backend events. Los mocks no demuestran runtime, proveedor de pagos, webhook ni notificaciones.
 
-**Validación CI de esta actualización:** pendiente del workflow `Backend offline quality gates` que se dispara al abrir este PR. Hasta que el workflow termine, no se declara la suite ejecutada.
+**Validación CI de esta actualización:** completada en el PR #319, commit `cc667ecda57a52594fb79a8747e304041800952e`. `npm test`: 66 suites, 607 tests aprobados, 0 fallos; contratos Wix eCommerce Cart V2, Order Transactions y Bookings Reader V2: SUCCESS; ESLint: SUCCESS; Gitleaks full-history: SUCCESS, sin secretos detectados. Workflow run #822 y secret scan #246.
 
 ### F. Acciones bloqueadas por integridad
 
@@ -258,3 +258,15 @@ El repositorio ya contiene suites offline con mocks para:
 6. No sincronizar CMS Sandbox con Live ni disparar Automations en el sitio Published.
 
 **Estado final:** auditoría de lectura ejecutada; pruebas offline existentes identificadas; ejecución CI de esta revisión pendiente; pruebas runtime de reservas/pagos/tienda bloqueadas hasta disponer de un sitio QA aislado y sandbox de pago acreditado.
+
+
+### G. Corrección de tipo CMS ejecutada — 2026-11-13 16:15 UTC
+
+Se corrigió únicamente `CajaActual.openedAt` mediante Wix Data Patch API con condición CAS sobre `singletonKey=CAJA_PRINCIPAL`, `cashRegisterStatus=SIMULACION` y el valor ISO original exacto. Se persistió como `{"$date":"2026-11-11T05:10:31.144Z"}`, acorde al campo CMS `DATETIME`.
+
+Verificación posterior con `consistentRead=true`:
+- `openedAt` es objeto `$date`.
+- `cashRegisterStatus=SIMULACION`, `isOpen=true`, `openingAmount=300`, `cashAmount=0`, `salesAmount=0`, `salesCount=0`, `currentSequence=0` y contadores siguen intactos.
+- No se tocaron movimientos ni ledgers.
+
+**No corregidos por inmutabilidad:** los dos `RegistrosHorariosStaff.recordedAt` y el `MovimientosInventario.recordTimestamp` siguen serializados como cadenas ISO pese a que el esquema declara DATETIME. Los fichajes además carecen de HMAC de 64 hex; la validación backend los rechaza y la colección es append-only. No se sobrescriben ni se fabrican firmas retrospectivas. Requieren rectificación firmada autorizada.
