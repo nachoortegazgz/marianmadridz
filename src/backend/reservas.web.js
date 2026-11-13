@@ -459,11 +459,36 @@ export async function _getServiceBySlugOrIdInternal(slugOrId, externalTraceId = 
                 WATCHDOG_TIMEOUT_MS,
                 "getServiceBySlugOrId:titleFallback"
             );
-            const matches = (catalog?.items || []).filter((row) => {
+            const catalogRows = catalog?.items || [];
+            const exactMatches = catalogRows.filter((row) => {
                 const slugKey = _normalizeServiceLookupKey(_readField(row, "slug"));
                 const titleKey = _normalizeServiceLookupKey(_readField(row, "title"));
                 return slugKey === clean || titleKey === clean;
             });
+
+            // Wix can append a numeric collision suffix to a dynamic item URL
+            // (for example, canonical-slug-1) without changing the CMS slug.
+            // Only use this fallback after exact lookup failed, and only match
+            // the canonical slug field. The unique-match guard below remains
+            // authoritative; ambiguous bases are rejected rather than guessed.
+            let matches = exactMatches;
+            if (matches.length === 0) {
+                const wixSuffix = /^(.*)-([1-9]\d*)$/.exec(clean);
+                const canonicalBaseSlug = _safeTrim(wixSuffix?.[1] || "");
+                if (canonicalBaseSlug) {
+                    matches = catalogRows.filter((row) =>
+                        _normalizeServiceLookupKey(_readField(row, "slug")) === canonicalBaseSlug
+                    );
+                    if (matches.length > 0) {
+                        log.info("Service lookup matched Wix numeric dynamic-page suffix", {
+                            traceId,
+                            key: clean,
+                            canonicalBaseSlug,
+                            candidates: matches.length,
+                        });
+                    }
+                }
+            }
             const uniqueMatches = new Map(
                 matches.map((row) => [
                     _safeTrim(_readField(row, "serviceId") || row._id),
