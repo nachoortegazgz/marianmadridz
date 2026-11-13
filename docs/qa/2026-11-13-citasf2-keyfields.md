@@ -67,7 +67,7 @@ Item sintético existente:
 
 ## 5. Identificadores y validación
 
-`assertCitasF2` ahora exige GUID válido para `bookingId`, `serviceId`, `resourceId` y `scheduleId`.
+`assertCitasF2` exige GUID válido para `bookingId` y `scheduleId`; valida formato de `serviceId` y `resourceId` cuando están presentes. La frontera de alta `_persistBooking` exige los cuatro GUID para nuevas reservas. Esto evita bloquear actualizaciones de estado de proyecciones históricas incompletas, pero impide crear nuevas filas con IDs malformados.
 
 No se altera la semántica de `scheduleId`: el valor explícito del slot sigue teniendo prioridad; el fallback a `eventsScheduleId` se conserva conforme a la decisión documentada en `docs/qa/2026-11-11-staff-zones-bookings-alignment.md`. En la reserva auditada, `slot.scheduleId` y `resource.eventsScheduleId` son GUID distintos y no deben confundirse.
 
