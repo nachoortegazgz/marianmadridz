@@ -1,6 +1,9 @@
 # Diccionario de datos CMS — Marian Madrid
 
-## Addendum vigente — sitio actual, corte 2026-11-14
+## Addendum vigente — sitio QA objetivo, corte 2026-11-14
+
+> **Aclaración de entorno — 2026-11-14:** este inventario corresponde al Site ID QA `50b39f33-e753-4331-ab35-b2ed43dc97f7`, no al sitio productivo `188bed94-177c-4bc9-a9f0-35080d874f3e`. El propietario designa el primero como QA. La conexión Wix de auditoría no pudo resolverlo en esta sesión; por tanto, el inventario documenta el corte existente, pero no acredita disponibilidad runtime actual ni aislamiento de integraciones. Ver [PLAN_ACCION_QA.md](PLAN_ACCION_QA.md).
+
 
 - Sitio objeto de auditoría: `50b39f33-e753-4331-ab35-b2ed43dc97f7`.
 - Naturaleza declarada por el propietario: banco de pruebas aislado, sin actividad real.
