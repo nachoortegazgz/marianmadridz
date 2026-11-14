@@ -93,6 +93,6 @@ Documentación oficial: https://dev.wix.com/docs/api-reference/business-solution
 - Esquema físico: verificado por lectura Wix.
 - Datos del singleton: verificados por lectura Wix.
 - Código: alineación implementada en rama.
-- PR #370 está abierto pero `dirty` (109 commits ahead / 57 behind main). No hay checks para el HEAD actual; los últimos checks exitosos son del SHA 68a2f327 y no validan estos cambios.
+- PR #370 está abierto pero `dirty` (historial divergente respecto a main). No hay checks para el HEAD actual; los últimos checks exitosos son del SHA 68a2f327 y no validan estos cambios.
 - Rebase, CI sobre HEAD, revisión del diff y pruebas Wix Editor/E2E: pendientes.
 - No se ha ejecutado mutación CMS ni publicación Wix.
