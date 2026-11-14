@@ -432,7 +432,7 @@ Revision: 2026-11-09
 - Las duraciones deben ser valores numericos finitos no negativos.
 
 4.3. MapaStaff y DatosFiscales
-- MapaStaff es exclusivamente el mapa de identidades de personal: staffMemberId (Bookings Staff Member), resourceId (Bookings Resource), scheduleId (agenda) y memberId (Wix Members).
+- MapaStaff es exclusivamente el mapa de identidades de personal: staffMemberId (Bookings Staff Member), resourceId (Bookings Resource), scheduleId (agenda) y memberId (Wix Members). thirdPartyId es TEXT opaco, no es GUID ni coincide con DatosFiscales._id y no tiene consumidor localizado.
 - _id identifica el elemento CMS. resourceId no se fusiona con _id aunque coincidan en las tres filas actuales: son identidades de dominios distintos.
 - active es BOOLEAN y se usa junto con staffMemberId para la correlacion de proyecciones Bookings.
 - MapaStaff no es autoridad RBAC. security.js resuelve roles mediante Wix Members, Bookings Staff Members API e internalConfig.STAFF.WEBSITE_ROLE_BY_RESOURCE_ID.
