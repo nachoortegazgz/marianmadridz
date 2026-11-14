@@ -52,6 +52,8 @@ test("bulk patch policy allows fenced WEBHOOK_CLAIM state transitions only", () 
         { fieldPath: "status", action: "SET_FIELD", value: "COMPLETED" },
         { fieldPath: "ownerToken", action: "SET_FIELD", value: "worker-token" },
         { fieldPath: "payload", action: "SET_FIELD", value: { completedAt: new Date() } },
+        { fieldPath: "attempts", action: "SET_FIELD", value: 2 },
+        { fieldPath: "expiresAt", action: "SET_FIELD", value: new Date() },
         { fieldPath: "version", action: "INCREMENT_FIELD", value: 1 },
     ], {
         controlType: { $eq: CONTROL_TYPE.WEBHOOK_CLAIM },
