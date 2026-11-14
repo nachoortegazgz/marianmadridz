@@ -70,8 +70,8 @@ Cada nueva ejecución añadirá un identificador único y conservará SHA, tipo 
 - **Origen:** deployment Wix `686cb2af-c530-4f89-a9d7-18baa3f9eb0a`, 2026-11-14 16:07.
 - **PR #373:** integrada en `main` con merge `1b39ebb22c885f50320b7d52f5bc336cc0570ee5`; su CI posterior terminó FAIL, por lo que no se considera validada.
 - **Evidencia CI PR #373:** Gitleaks PASS. Layer 1 FAIL por export ausente `assertMapaStaffRecord` (consumido por `data.js`) y expectativa obsoleta de `CASH_REGISTER_STATUS` que omitía `SIMULACION`. La mayoría de las suites bloqueadas por el import no pudieron inicializarse.
-- **Corrección:** rama `fix/ci-regression-and-milestone-2026-11-14`, SHA validado `d95a69bc2d1292bb2d0ed714f1adf01e864a65aa`; PR #374 pendiente de integración.
+- **Corrección:** rama `fix/ci-regression-and-milestone-2026-11-14`, HEAD validado `da96c1b50f1910a287aea718bc6025d295e30e2b`; PR #374 integrada en `main` mediante merge `1de381ecb6495e17a3eae5b75b43e8493166988a`.
 - **CI final:** Layer 1 24/307 PASS; Layer 2 19/252 PASS; regresión completa 70/644 PASS; Cart V2, Order Transactions y Bookings Reader V2 PASS; ESLint PASS; Gitleaks full-history PASS.
 - **Cambios Wix/CMS:** ninguno. No se desplegó ni se usó producción.
 - **Wix Runtime/E2E:** BLOCKED_ENVIRONMENT por resolución técnica del contexto QA.
-- **Resultado:** hito de código CERRADO — CI PASS (offline). Runtime Wix y discrepancia documental MapaStaff/DatosFiscales siguen pendientes.
+- **Resultado:** hito de código CERRADO — CI PASS (offline) en HEAD de PR. CI del merge commit pendiente de confirmación. Runtime Wix y discrepancia documental MapaStaff/DatosFiscales siguen pendientes.
