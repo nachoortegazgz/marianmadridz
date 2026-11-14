@@ -324,6 +324,18 @@ export function assertRegistrosHorariosStaff(item) {
         throw new Error("SCHEMA_VIOLATION: RegistrosHorariosStaff requires memberId");
     }
 
+    for (const field of ["recordId", "source", "timeZone", "schemaVersion", "traceId"]) {
+        if (!item[field] || !String(item[field]).trim()) {
+            throw new Error(`SCHEMA_VIOLATION: RegistrosHorariosStaff requires ${field}`);
+        }
+    }
+    if (!item.workDate || Number.isNaN(new Date(item.workDate).getTime())) {
+        throw new Error("SCHEMA_VIOLATION: RegistrosHorariosStaff requires a valid workDate");
+    }
+    if (!/^[a-f0-9]{64}$/i.test(String(item.recordHash ?? "").trim())) {
+        throw new Error("SCHEMA_VIOLATION: RegistrosHorariosStaff requires a 64-character recordHash");
+    }
+
     assertValidEnum(item.clockEventType, CLOCK_EVENT_TYPE, "clockEventType");
     assertValidEnum(item.recordType, RECORD_TYPE_HORARIOS, "recordType");
 
