@@ -1,14 +1,14 @@
-> **SSOT de entorno vigente (2026-11-14):** el único sitio del proyecto es QA: `188bed94-177c-4bc9-a9f0-35080d874f3e` (`https://www.marianmadrid.es/`). El propietario confirma que nunca ha tenido actividad real, que todos los datos son sintéticos, que el cliente de pruebas es Nacho Pitt (`nachoortegazgz@gmail.com`) y que la pasarela está desconectada. No existe otro sitio QA ni un QA externo designado. Las referencias anteriores a otros Site ID o a este sitio como producción quedan supersedidas. El estado Wix Published no altera su clasificación funcional como QA. Véase [SSOT del entorno QA](./QA-ENVIRONMENT-SSOT.md).
+> **SSOT de entorno vigente (2026-11-14):** el único sitio del proyecto es QA: `188bed94-177c-4bc9-a9f0-35080d874f3e` (`https://www.marianmadrid.es/`). El propietario confirma que nunca ha tenido actividad real, que todos los datos son sintéticos, que el cliente de pruebas es Nacho Pitt (`nachoortegazgz@gmail.com`) y que la pasarela está desconectada. No existe otro sitio QA ni un QA externo designado. Las referencias anteriores a otros Site ID o a este sitio como QA quedan supersedidas. El estado Wix Published no altera su clasificación funcional como QA. Véase [SSOT del entorno QA](./QA-ENVIRONMENT-SSOT.md).
 
 ---
 
-> **Addendum de ejecución — 2026-11-14:** el simulador PSP y el email sink son dobles locales en memoria; no acreditan un sandbox externo ni Wix Runtime. La ventana global de mutabilidad CMS está cerrada y los ledgers append-only no se editan ni borran. En la comprobación actual, Wix informa producción como Published y no resuelve el Site ID QA; limitarse a offline/mock/CI, sin usar producción como fallback.
+> **Estado vigente del entorno:** el sitio `188bed94-177c-4bc9-a9f0-35080d874f3e` es el único QA. El propietario confirma que nunca ha tenido actividad real, que los datos son sintéticos y que la pasarela está desconectada. Los mocks locales no acreditan por sí solos runtime Wix ni proveedor real. Mantener sin I/O las comunicaciones, fiscalidad y operaciones de pago.
 
-> **Addendum de vigencia — 2026-11-14:** por decisión del propietario, el sitio QA objetivo es `50b39f33-e753-4331-ab35-b2ed43dc97f7`; el sitio productivo `188bed94-177c-4bc9-a9f0-35080d874f3e` queda fuera de QA. La conexión Wix de la sesión no resolvió el ID QA, por lo que Wix Runtime/E2E permanece `BLOCKED_ENVIRONMENT`. Continuar con fixtures sintéticos y mocks offline; no ejecutar pruebas de negocio sobre producción. El plan operativo vigente es [PLAN_ACCION_QA.md](../../PLAN_ACCION_QA.md) y el registro de ejecución [2026-11-14-qa-execution-log.md](./2026-11-14-qa-execution-log.md). Este addendum prevalece sobre las referencias históricas a un único sitio Published.
+> **Nota histórica supersedida:** las referencias de este pack a un QA separado o a otro Site ID ya no son operativas. La única identidad QA es `188bed94-177c-4bc9-a9f0-35080d874f3e`; el estado Wix Published no modifica su clasificación funcional. Prevalece [SSOT del entorno QA](./QA-ENVIRONMENT-SSOT.md).
 
 ---
 
-> **Nota de vigencia — 2026-11-11:** este pack conserva evidencia histórica y escenarios offline. Para estado live, aislamiento de comunicaciones, datos sintéticos y gates de ejecución, prevalece [la referencia maestra QA](2026-11-11-qa-master-reference.md). Wix informa actualmente que el sitio está **Published**; no ejecutar E2E de negocio en él. Los resultados mock no demuestran runtime ni proveedor real.
+> **Nota de vigencia — 2026-11-14:** este pack conserva resultados y consultas históricas. El único sitio es QA (`188bed94-177c-4bc9-a9f0-35080d874f3e`). No se debe interpretar una etiqueta histórica de producción como un segundo entorno ni como actividad comercial real. Los resultados mock no demuestran runtime ni proveedor real.
 
 ---
 
@@ -83,7 +83,7 @@ All suites use `src/backend/tests/loader.mjs`; they do not call Wix services. A 
 ## Update 2026-11-06 — auditoría de Capas 1 y 2
 
 ### Estado histórico de CMS tras poda (snapshot anterior)
-Lectura consistente de Wix Data Collections API (40 colecciones totales; 15 `NATIVE`). Solo se han podado colecciones propias en QA; ninguna colección `WIX_APP` ni producción.
+Lectura consistente de Wix Data Collections API (40 colecciones totales; 15 `NATIVE`). Solo se han podado colecciones propias en QA; ninguna colección `WIX_APP`.
 
 | Colección | Revisión | Campos retirados en la sesión |
 |---|---:|---|
@@ -150,7 +150,7 @@ Todas las suites offline usan fixtures sintéticos y mocks. No se crean reservas
 
 - **Verificado:** el flujo backend de pago y persistencia simulado en memoria; idempotencia; actualización dual de CitasF2; ledger append-only; CI offline.
 - **No verificado:** transacción real de Wix Payments, recepción del webhook por el runtime Wix publicado, escritura real en CMS/agenda de un banco de pruebas aislado, conciliación de payouts/reembolsos y desglose fiscal de IVA del pedido.
-- **Siguiente condición para E2E remoto:** disponer de un sitio Wix QA separado con Bookings y Wix Payments configurado en modo de prueba, y alinear/sincronizar primero la UI del Editor con el repositorio. No usar el sitio productivo para reservas o pagos sintéticos.
+- **Siguiente condición para E2E remoto:** utilizar el sitio QA único con Bookings y Wix Payments configurado en modo de prueba, y alinear/sincronizar primero la UI del Editor con el repositorio. No realizar reservas ni pagos reales; usar fixtures y mocks.
 
 ## Update 2026-11-11 — conciliación de reembolsos con eventos Velo estables
 
@@ -173,7 +173,7 @@ Todas las suites offline usan fixtures sintéticos y mocks. No se crean reservas
 - **CI offline del HEAD de código 48b509f39d4e6f6b32c8bb4a23b59fcebc3886a0:** run 43034820298 SUCCESS, 56 suites / 543 tests / 0 fallos; SDK @wix/ecom orderTransactions, Bookings Reader V2 y ESLint correctos. Gitleaks full-history run 43034820526 SUCCESS. Las actualizaciones posteriores de esta auditoría son exclusivamente documentales; no cambian código ni pruebas.
 - **Runtime Wix:** pendiente. Los backend events no funcionan en Preview; requiere prueba en un sitio publicado de QA aislado.
 - **Entrega de eventos:** Wix documenta entrega asíncrona al menos una vez y posibles duplicados/desorden; se conserva idempotencia por eventId y por refundId. La documentación no detalla la política de reintentos ante errores del handler, por lo que el comportamiento de refund con varias transacciones debe verificarse en QA.
-- **Sitio QA aislado:** no disponible; no probar el webhook sobre el sitio productivo.
+- **Sitio QA único:** disponible como identidad del proyecto; no probar webhooks con efectos externos sin mocks/aislamiento específico.
 - **Moneda:** el sitio Wix está configurado en EUR (propiedades del sitio verificadas) y `SDK_CONFIG.CURRENCY_CODE` centraliza ese valor. El procesador rechaza refunds si `order.currency` no coincide con EUR. El ledger histórico no conserva un código de moneda por movimiento; cualquier futura habilitación multi-moneda requiere ampliar el contrato del ledger y definir compatibilidad histórica.
 - **Efectos externos:** no se han ejecutado pagos, devoluciones, restock, escrituras CMS, envíos ni despliegues.
 
@@ -185,9 +185,9 @@ Todas las suites offline usan fixtures sintéticos y mocks. No se crean reservas
 - [Wix — Backend events and event delivery](https://dev.wix.com/docs/overview/backend-services/events).
 
 ### Inventario de sitios y bloqueo de QA (verificación 2026-11-11)
-- Wix devuelve dos sitios en la cuenta: Marian Madrid (producción) y ortega nacho cv web (personal).
+- Wix devuelve dos sitios en la cuenta: Marian Madrid (QA) y ortega nacho cv web (personal).
 - El sitio personal tiene Velo habilitado y plan Free, pero su conjunto de apps (Forms & Payments, Hotels, Invoices V1, Portfolio y Video) no replica el stack requerido de Marian Madrid (Bookings, Stores y Members). No es un banco de pruebas aislado equivalente y no se modifica.
-- Se ha localizado la API oficial Duplicate Site. Wix indica que no copia pedidos, contactos, facturas ni configuración de apps de terceros; la documentación no garantiza que todas las colecciones CMS personalizadas estén vacías. No se duplica producción para evitar copiar datos personales o ledgers a un entorno de pruebas.
+- Se ha localizado la API oficial Duplicate Site. Wix indica que no copia pedidos, contactos, facturas ni configuración de apps de terceros; la documentación no garantiza que todas las colecciones CMS personalizadas estén vacías. No se duplica el sitio QA: es el entorno de pruebas designado por el propietario.
 - No se ha creado un nuevo sitio, asignado dominio, activado plan ni instalado apps. La validación runtime permanece bloqueada hasta disponer de un sitio aislado vacío con las apps necesarias y sin datos productivos.
 - Referencia: [Wix Duplicate Site API](https://dev.wix.com/docs/api-reference/account-level/sites/site-actions/duplicate-site).
 
@@ -211,7 +211,7 @@ Siguen pendientes las pruebas E2E aisladas de pagos/reembolsos. No se han creado
 ## Reauditoría live read-only y cobertura offline — 2026-11-13
 
 **Baseline de repositorio:** `main` = `7bca12931ce8a5c22e15427ba13edfdf2ee9b664`.
-**Entorno:** sitio Published `188bed94-177c-4bc9-a9f0-35080d874f3e`, no aislado para QA. Todas las consultas siguientes fueron de solo lectura. No se crearon reservas, pedidos, pagos, reembolsos, movimientos, notificaciones ni contactos.
+**Entorno:** sitio QA Published `188bed94-177c-4bc9-a9f0-35080d874f3e`. Todas las consultas siguientes fueron de solo lectura. No se crearon reservas, pedidos, pagos, reembolsos, movimientos, notificaciones ni contactos.
 
 ### A. Reservas nativas y proyección
 
@@ -229,7 +229,7 @@ Siguen pendientes las pruebas E2E aisladas de pagos/reembolsos. No se han creado
 - El pedido 10018 mezcla una línea Stores, una Bookings y una línea EXTRA sin referencia. Debe quedar en revisión; no se fuerza su clasificación como venta exclusiva de producto o servicio.
 - `MovimientosCaja`: 0 filas en dos lecturas independientes (con y sin `consistentRead`). Esto no concuerda con el checkpoint documental anterior, que registraba 10 filas; la discrepancia de origen/entorno queda ABIERTA. No se declara ausencia fiscal definitiva ni se crean movimientos.
 - `ControlOperativo`: 0 filas en la lectura repetida actual; también difiere del checkpoint anterior de 11 filas. No hay evidencia CMS de marcadores `WEBHOOK_EVENT` ni de ejecución del reconciliador.
-- El writer fiscal y de simulación sigue protegido por `FISCAL_RUNTIME_POLICY` (`LEDGER_WRITES_ENABLED=false`, `ACCOUNTING_LEDGER_WRITES_ENABLED=false`, `ALLOW_SIMULATION_RECORDS=false`). No se puede usar el sitio Published para generar ventas de prueba.
+- El writer fiscal y de simulación sigue protegido por `FISCAL_RUNTIME_POLICY` (`LEDGER_WRITES_ENABLED=false`, `ACCOUNTING_LEDGER_WRITES_ENABLED=false`, `ALLOW_SIMULATION_RECORDS=false`). La pasarela está desconectada; no generar ventas reales.
 
 ### C. Tienda online e inventario nativo
 
@@ -254,7 +254,7 @@ El repositorio ya contiene suites offline con mocks para:
 - Inventario, venta, devolución, idempotencia y locks (suites inventory registradas en el manifiesto QA).
 - Manifiesto de escenarios sintéticos y referencias a tests (`qa.simulation-manifest.test.mjs`).
 
-**No se ejecuta E2E de negocio en el sitio Published.** La referencia maestra QA del 2026-11-11 confirma que no existe un sitio aislado independiente equivalente y que siguen activas automatizaciones email con destinatarios dinámicos. Wix Preview tampoco valida backend events. Los mocks no demuestran runtime, proveedor de pagos, webhook ni notificaciones.
+**No se ejecuta E2E con efectos externos reales.** Las automatizaciones y rutas de salida deben probarse con sinks/mocks offline. Wix Preview tampoco valida backend events. Los mocks no demuestran runtime, proveedor de pagos, webhook ni notificaciones.
 
 **Validación CI de esta actualización:** completada en el PR #319, commit `cc667ecda57a52594fb79a8747e304041800952e`. `npm test`: 66 suites, 607 tests aprobados, 0 fallos; contratos Wix eCommerce Cart V2, Order Transactions y Bookings Reader V2: SUCCESS; ESLint: SUCCESS; Gitleaks full-history: SUCCESS, sin secretos detectados. Workflow run #822 y secret scan #246.
 
@@ -265,7 +265,7 @@ El repositorio ya contiene suites offline con mocks para:
 3. No inventar catalogReference para la línea EXTRA del pedido 10018.
 4. No reparar firma horaria ausente editando el registro append-only; solo rectificación firmada autorizada.
 5. No borrar ni reescribir filas QA de MovimientosInventario o RegistrosHorariosStaff.
-6. No sincronizar CMS Sandbox con Live ni disparar Automations en el sitio Published.
+6. No sincronizar CMS Sandbox con Live ni disparar Automations en el sitio QA.
 
 **Estado final:** auditoría de lectura ejecutada; pruebas offline existentes identificadas; ejecución CI de esta revisión pendiente; pruebas runtime de reservas/pagos/tienda bloqueadas hasta disponer de un sitio aislado aislado y sandbox de pago acreditado.
 
