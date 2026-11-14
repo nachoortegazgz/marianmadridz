@@ -317,7 +317,7 @@ Para los movimientos presenciales manuales nuevos, backend asigna `recordSource=
 
 ### Estado de implementación y publicación
 
-El usuario declara que el código está integrado y publicado en Wix. Esta declaración se registra como **declaración del propietario**. En la consulta de GitHub de este corte, main seguía en SHA 088c5338425cad93f3a370ce76ec87dbbc0eb51a y el PR #344 (feat/consolidate-fiscal-master-mapastaff-v2) figuraba abierto y sin fusionar. Por tanto, la integración en Wix y la integración en main se documentan como estados distintos: la primera es declarada por el usuario; la segunda no está acreditada en este corte. No se dispone aquí de un identificador de publicación Wix que vincule el runtime con un SHA concreto.
+El usuario declara que el código está integrado y publicado en Wix. Esta declaración se registra como **declaración del propietario**. En la consulta de GitHub de este corte, el PR #344 (feat/consolidate-fiscal-master-mapastaff-v2) figura fusionado el 2026-11-14 mediante el merge commit f3b1311eead05282e47f538afd506fe49e227141, que es el HEAD actual de main. La integración del cambio en Git está verificada. El usuario declara además que el código está publicado en Wix; no se dispone de un identificador de publicación Wix que vincule el runtime con ese SHA concreto.
 
 **Nota de ejecución:** este addendum modifica la autoridad documental y la política de trabajo. No demuestra por sí mismo que todos los hooks, WebMethods, políticas de escritura o permisos CMS del runtime Wix hayan sido modificados para permitir todas las operaciones de edición y eliminación. Esa correspondencia debe verificarse en código y en Wix antes de afirmar que la pausa está aplicada técnicamente de extremo a extremo.
 ### TEC-036 — autoridad SSOT del usuario y pausa de append-only durante QA (2026-11-14)
@@ -327,5 +327,7 @@ El usuario declara que el código está integrado y publicado en Wix. Esta decla
 **Fase actual:** desarrollo, depuración y QA. Se pausa temporalmente append-only y cualquier prohibición genérica de editar o eliminar registros, individual o masiva, cuando el bloqueo derive exclusivamente de la inmutabilidad del registro o de una política append-only. La pausa permanece activa hasta que el usuario ordene expresamente restaurar/habilitar las protecciones para despliegue; no se restaura automáticamente.
 
 Se mantienen controles de autenticación, autorización, permisos, validación de datos, secretos y seguridad que no dependan de la inmutabilidad. Los gates funcionales independientes de writers fiscales/contables/laborales, pagos, devoluciones y comunicaciones no se consideran modificados por esta decisión.
+
+**Estado Git asociado:** PR #344 quedó fusionado el 2026-11-14 mediante f3b1311eead05282e47f538afd506fe49e227141 (HEAD de main en este corte). El usuario declara la publicación en Wix; no hay identificador de release que vincule el runtime con ese SHA.
 
 **Alcance de evidencia:** esta decisión establece la política documental y de trabajo. La aplicación efectiva en hooks, WebMethods, write policies y permisos CMS requiere comprobación técnica específica; no se presume por el mero cambio documental.
