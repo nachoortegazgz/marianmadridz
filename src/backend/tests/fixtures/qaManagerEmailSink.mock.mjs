@@ -17,11 +17,13 @@ function isHash(value) {
  */
 export function createQaManagerEmailSink(config = {}) {
   if (
-    config.environment !== 'QA' ||
+    config.environment !== 'TEST' ||
     config.enabled !== true ||
     typeof config.siteId !== 'string' ||
     !config.siteId ||
-    config.siteId !== config.qaSiteId ||
+    config.siteId !== config.testSiteId ||
+    typeof config.testRunId !== 'string' ||
+    !/^TEST-RUN-[A-Z0-9-]{1,80}$/.test(config.testRunId) ||
     typeof config.sinkRecipient !== 'string' ||
     !EMAIL_PATTERN.test(config.sinkRecipient)
   ) {
@@ -44,7 +46,13 @@ export function createQaManagerEmailSink(config = {}) {
     if (to !== config.sinkRecipient.toLowerCase() || !EMAIL_PATTERN.test(to)) {
       throw new Error('QA_MANAGER_EMAIL_RECIPIENT_NOT_SINK');
     }
-    if (!EMAIL_PATTERN.test(clientEmail) || !clientName) {
+    if (
+      !EMAIL_PATTERN.test(clientEmail) ||
+      !clientName ||
+      client.isSynthetic !== true ||
+      client.sourceEnvironment !== 'TEST' ||
+      client.testRunId !== config.testRunId
+    ) {
       throw new Error('QA_MANAGER_EMAIL_CLIENT_NOT_SYNTHETIC');
     }
     if (!subject || !text.includes(clientName) || !text.includes(clientEmail)) {
@@ -67,6 +75,10 @@ export function createQaManagerEmailSink(config = {}) {
     const result = {
       provider: 'QA_MEMORY_SINK',
       simulated: true,
+      isSynthetic: true,
+      testRunId: config.testRunId,
+      sourceEnvironment: 'TEST',
+      realPayment: false,
       deliveredToSink: true,
       messageId: 'qa_mail_' + hashId(operationKey),
       recipient: to,

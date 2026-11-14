@@ -16,8 +16,6 @@ import {
     MOVEMENT_HISTORICAL_READ_ALIASES,
     normalizeMovementKeys,
     OPERATIONAL_COLLECTIONS,
-    APPEND_ONLY_MUTATION_WINDOW,
-    ISOLATED_SITE_RECORD_MUTATIONS_ENABLED,
 } from "backend/internalConfig";
 import { assertCitasF2, assertControlOperativo, assertCanonicalControlFields, assertRegistrosHorariosStaff, assertMapaStaffRecord, assertDatosFiscalesRecord, isValidNifOrEuVat as _isValidNifOrEuVat } from "backend/validation";
 import { CONSISTENCY, getItem } from "backend/dataAccess";
@@ -272,12 +270,6 @@ function _fiscalError(message) {
     throw new Error(`FISCAL_VIOLATION: ${message}`);
 }
 
-function _appendOnlyMutationWindowOpen() {
-    return ISOLATED_SITE_RECORD_MUTATIONS_ENABLED === true ||
-        (APPEND_ONLY_MUTATION_WINDOW.ENABLED === true &&
-            APPEND_ONLY_MUTATION_WINDOW.TEMPORARY === true);
-}
-
 function _roundItem(value) {
     const n = Number(value);
     return Number.isFinite(n) ? Math.round((n + Number.EPSILON) * 100) / 100 : 0;
@@ -482,23 +474,19 @@ export function MovimientosCaja_beforeInsert(item) {
     return item;
 }
 
-export function MovimientosCaja_beforeUpdate(item) {
-    if (_appendOnlyMutationWindowOpen()) return item;
+export function MovimientosCaja_beforeUpdate() {
     _fiscalError("Modificacion de MovimientosCaja prohibida por normativa fiscal (append-only). Use eventType=AJUSTE.");
 }
 
 export function MovimientosCaja_beforeRemove() {
-    if (_appendOnlyMutationWindowOpen()) return;
     _fiscalError("Borrado de MovimientosCaja prohibido por normativa fiscal");
 }
 
-export function LibroAsientosContablesDetalle_beforeUpdate(item) {
-    if (_appendOnlyMutationWindowOpen()) return item;
+export function LibroAsientosContablesDetalle_beforeUpdate() {
     _fiscalError("Modificacion de LibroAsientosContablesDetalle prohibida (append-only). Registre un nuevo asiento rectificativo.");
 }
 
 export function LibroAsientosContablesDetalle_beforeRemove() {
-    if (_appendOnlyMutationWindowOpen()) return;
     _fiscalError("Borrado de LibroAsientosContablesDetalle prohibido: ledger contable append-only.");
 }
 
@@ -515,7 +503,6 @@ export function HistoricoCierresZ_beforeInsert(item) {
 
 export function HistoricoCierresZ_beforeUpdate(item, context) {
     _normalizeCmsDateTime(item, "verifiedAt");
-    if (_appendOnlyMutationWindowOpen()) return item;
     const previous = context?.previous || context?.original || {};
     const hasSnapshot = Boolean(context && (context.previous || context.original));
     const changes = Object.keys(item || {})
@@ -530,7 +517,6 @@ export function HistoricoCierresZ_beforeUpdate(item, context) {
 }
 
 export function HistoricoCierresZ_beforeRemove() {
-    if (_appendOnlyMutationWindowOpen()) return;
     _fiscalError("Borrado de HistoricoCierresZ prohibido: registro fiscal append-only");
 }
 
@@ -566,13 +552,11 @@ export function PaquetesGestoria_beforeInsert(item) {
     return item;
 }
 
-export function PaquetesGestoria_beforeUpdate(item) {
-    if (_appendOnlyMutationWindowOpen()) return item;
+export function PaquetesGestoria_beforeUpdate() {
     _fiscalError("Modificacion de PaquetesGestoria prohibida: snapshot append-only");
 }
 
 export function PaquetesGestoria_beforeRemove() {
-    if (_appendOnlyMutationWindowOpen()) return;
     _fiscalError("Borrado de PaquetesGestoria prohibido: snapshot append-only");
 }
 
@@ -587,13 +571,11 @@ export function RegistrosHorariosStaff_beforeInsert(item) {
     return item;
 }
 
-export function RegistrosHorariosStaff_beforeUpdate(item) {
-    if (_appendOnlyMutationWindowOpen()) return item;
+export function RegistrosHorariosStaff_beforeUpdate() {
     _fiscalError("Modificacion de RegistrosHorariosStaff prohibida: registro horario append-only (RD 8/2019).");
 }
 
 export function RegistrosHorariosStaff_beforeRemove() {
-    if (_appendOnlyMutationWindowOpen()) return;
     _fiscalError("Borrado de RegistrosHorariosStaff prohibido: registro horario append-only (RD 8/2019)");
 }
 
@@ -635,7 +617,6 @@ export function CajaActual_beforeUpdate(item, context) {
 }
 
 export function CajaActual_beforeRemove() {
-    if (ISOLATED_SITE_RECORD_MUTATIONS_ENABLED) return;
     throw new Error("SINGLETON_PROTECTED: No se puede eliminar el estado de caja");
 }
 
@@ -783,7 +764,6 @@ export function DatosFiscales_beforeUpdate(item) {
 }
 
 export function DatosFiscales_beforeRemove(item) {
-    if (ISOLATED_SITE_RECORD_MUTATIONS_ENABLED) return item;
     if (_safeTrim(item?._id) === "CONFIG_SISTEMA_FISCAL") {
         _fiscalError("SINGLETON_PROTECTED: No se puede eliminar CONFIG_SISTEMA_FISCAL");
     }
@@ -861,7 +841,7 @@ export async function ControlOperativo_beforeUpdate(item) {
     );
     if (!original) _schemaError("ControlOperativo update target not found");
 
-    if (APPEND_ONLY_CONTROL_TYPES.has(original.controlType) && !_appendOnlyMutationWindowOpen()) {
+    if (APPEND_ONLY_CONTROL_TYPES.has(original.controlType)) {
         _fiscalError(`ControlOperativo/${original.controlType} es append-only: modificacion prohibida`);
     }
 
@@ -871,7 +851,7 @@ export async function ControlOperativo_beforeUpdate(item) {
         "windowStart", "processedAt", "heartbeatAt", "operationDate",
     ]);
     assertCanonicalControlFields(normalized);
-    if (!ISOLATED_SITE_RECORD_MUTATIONS_ENABLED && normalized.controlType !== original.controlType) {
+    if (normalized.controlType !== original.controlType) {
         _fiscalError("ControlOperativo.controlType es inmutable");
     }
     assertControlOperativo(normalized);
@@ -890,7 +870,7 @@ export async function ControlOperativo_beforeRemove(itemId) {
         CONSISTENCY.STRONG
     );
     if (!original) _schemaError("ControlOperativo remove target not found");
-    if (APPEND_ONLY_CONTROL_TYPES.has(original.controlType) && !_appendOnlyMutationWindowOpen()) {
+    if (APPEND_ONLY_CONTROL_TYPES.has(original.controlType)) {
         _fiscalError(`ControlOperativo/${original.controlType} es append-only: borrado prohibido`);
     }
     return id;
@@ -914,7 +894,6 @@ function _validateCitasF2Write(item) {
 }
 
 function _blockCitasF2Remove() {
-    if (ISOLATED_SITE_RECORD_MUTATIONS_ENABLED) return;
     _fiscalError("Borrado directo de CitasF2 bloqueado: use cancelacion formal de reserva");
 }
 

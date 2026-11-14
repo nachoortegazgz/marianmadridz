@@ -4,9 +4,9 @@
 
 **Sitio único:** 50b39f33-e753-4331-ab35-b2ed43dc97f7. El propietario declara que es un banco de pruebas aislado, sin actividad real. Los registros existentes se consideran sintéticos; no se mantiene una comparación operativa con otro sitio.
 
-**Mutabilidad CMS:** ISOLATED_SITE_RECORD_MUTATIONS_ENABLED=true habilita temporalmente update/remove individual y masivo sobre las colecciones propias incluidas en ISOLATED_SITE_MUTABLE_COLLECTIONS. Operaciones masivas: IDs explícitos y máximo de 1.000 elementos. Las colecciones WIX_APP quedan excluidas. Se mantienen RBAC, permisos, validaciones, protección de secretos, allowlists de inserción y gates de efectos externos.
+**Política de mutabilidad vigente (TEC-038):** los bypasses globales de update/remove y la ventana temporal append-only han sido retirados del código. Los ledgers de caja, contabilidad, fiscalidad, jornada, cierres y eventos webhook permanecen inmutables también en QA. Bulk update está deshabilitado. Bulk remove solo admite purgas de tipos efímeros/terminales en ControlOperativo, con condiciones exactas de tipo, estado y fecha; quedan excluidos WEBHOOK_EVENT, DEDUPE_KEY, LEDGER_IDEMPOTENCY y WEBHOOK_CLAIM. CajaActual solo cambia mediante el flujo backend autorizado y con movimiento fuente; no se borra.
 
-**Límites:** esta autorización no habilita writers fiscales, contables o laborales, pagos, reembolsos, comunicaciones ni automatizaciones externas. No se ha ejecutado una mutación CMS ni una publicación Wix en la intervención actual.
+**Vigencia:** TEC-038 ya ha cerrado los bypasses globales en código y restablecido append-only en QA. No reabrirlos mediante flags ni por conveniencia de pruebas. Cualquier cambio futuro de esta garantía exige una nueva decisión explícita, análisis legal/técnico y controles server-side; no se deriva de las antiguas TEC-033/035/036/037.
 
 **Código:** la rama fix/current-site-cms-contract-alignment alinea MapaStaff como mapa de personal y DatosFiscales como maestro fiscal. CI, revisión de diff y pruebas Wix Editor/E2E están pendientes. La sincronización Editor↔Git no está acreditada.
 
@@ -247,7 +247,60 @@ Esta decisión es contractual/documental. No acredita que el backend o el esquem
 Para los movimientos presenciales manuales nuevos, backend asigna `recordSource=MANUAL_PRESENCIAL_AUTHENTICATED` y resuelve `staffResourceId` desde la identidad autenticada. La UI solo marca el operador como verificado cuando el origen contiene esa marca backend; los registros históricos se identifican como autoría no verificada.
 
 
-### TEC-033 [HISTÓRICA / SUPERADA] — primera ventana temporal de mutabilidad (2026-11-14)
+### TEC-033 — [HISTÓRICA / SUPERSEDIDA POR TEC-038] ventana temporal de mutación de ledgers append-only (2026-11-14)
+
+**Decisión temporal solicitada:** abrir en la rama de desarrollo una ventana global que permite operaciones individuales de actualización y borrado sobre los registros que el proyecto protegía como append-only. El alcance de código incluye:
+- `MovimientosCaja`
+- `LibroAsientosContablesDetalle`
+- `RegistrosHorariosStaff`
+- `MovimientosInventario`
+- `HistoricoCierresZ`
+- `PaquetesGestoria`
+- `ControlOperativo` cuando `controlType=WEBHOOK_EVENT`
+
+**Implementación:** `APPEND_ONLY_MUTATION_WINDOW.ENABLED=true` en `src/backend/internalConfig.js`; hooks Velo en `src/backend/data.js` y allowlists de `src/backend/dataAccessPolicy.js` alineados. Las validaciones de esquema de inserción siguen activas. Las operaciones masivas siguen bloqueadas; la excepción no autoriza bulk update/remove. Los tipos mutables de `ControlOperativo` conservan sus restricciones de contrato y el campo `controlType` no puede cambiar.
+
+**Límite de la ventana TEC-033:** la excepción de hooks/políticas existe solo en código de la rama draft; no se ha aplicado al runtime Wix ni a permisos CMS. Los permisos de colección y las autorizaciones backend siguen siendo capas independientes; la edición desde CMS UI no queda garantizada por esta bandera.
+
+**Cambios CMS live independientes, ejecutados el 2026-11-14 bajo autorización expresa:** se creó `CajaActual` como NATIVE revisión 3 con 25 campos de negocio y permisos ADMIN; se insertó un único `CAJA_PRINCIPAL` cerrado, con saldos actuales a cero y saldos iniciales null; se dejó ACTIVE el índice único de `singletonKey` y se sustituyó el índice compuesto obsoleto por `cashRegisterStatus_operationDateHour` (ACTIVE en readback final). Se eliminaron por ID dos registros de `RegistrosHorariosStaff` que acreditaban `meta.synthetic=true`, `doNotImportToProduction=true`, `QA_STAFF_ONLY` y notas de empleado ficticio; readback posterior: cero filas. No se tocaron movimientos de caja, asientos, cierres Z, paquetes ni registros de ControlOperativo. No se cambiaron permisos, automatizaciones ni publicación. Esta limpieza puntual no autoriza otros borrados sin identificación y revisión equivalentes.
+
+**Reversión obligatoria:** antes de cualquier despliegue productivo, establecer `APPEND_ONLY_MUTATION_WINDOW.ENABLED=false`, retirar las entradas de actualización/borrado de ledgers de `DATA_ACCESS_WRITE_POLICY`, restaurar los bloqueos de hooks y tests, ejecutar CI completo y verificar en Wix Local Editor que update/remove vuelven a bloquearse. No desplegar mientras `RESTORE_BEFORE_PRODUCTION=true` y `ENABLED=true`.
+
+**Advertencia de cumplimiento:** esta excepción de desarrollo no modifica ni suspende obligaciones legales de integridad, trazabilidad y conservación de registros fiscales, contables o laborales. No usarla para alterar o eliminar registros reales sujetos a conservación.
+
+
+### TEC-034 — alineación de maestros DatosFiscales y MapaStaff (2026-11-14)
+
+**CMS live, verificado por Wix Data API:**
+- `DatosFiscales` revisión 19: añadidos `commercialName`, `postalCode`, `province`, `schemaVersion` y `traceId`; `fechaInicioVerifactu` cambia a tipo `DATE` tras verificar ausencia de valores previos.
+- `MapaStaff` revisión 24: añadido `traceId`; los tres registros mantienen sus IDs y roles, se normaliza `staffName` y se vacía `thirdPartyId` donde no existía vínculo fiscal GUID explícito.
+- La fila existente de DatosFiscales sigue siendo un placeholder QA TERCERO/PROVEEDOR. No se transforma en emisor. No se crea CONFIG_SISTEMA hasta disponer de taxId, legalName y taxRegime oficiales y sincronizar/publicar el guard de backend que evita inferir identidad legal.
+- No se borraron campos heredados ni colecciones. MapaStaff conserva temporalmente staffMemberId/scheduleId/active porque events.js los consume en el fallback de proyección; active queda sujeto a ADR. La relación CMS ServiciosCatalogo_staffMembers permanece.
+- Las tres filas MapaStaff son únicas por memberId y resourceId en el snapshot, pero no existe aún garantía de unicidad frente a escrituras concurrentes; queda pendiente un mecanismo de escritura validado.
+- Los campos heredados de DatosFiscales que siguen consumidos por eventLog (tipoUsoPosibleMultiOT e indicadorMultiplesOT) no se eliminan en esta intervención.
+
+**Código en main:** hooks y validator permiten CONFIG_SISTEMA incompleto en los campos fiscales no verificados, fijan el ID singleton CONFIG_SISTEMA_FISCAL y exigen schemaVersion/traceId. eventLog persiste schemaVersion/traceId en nuevos terceros y deja de inferir legalName desde el nombre comercial. Sin sincronización/publicación Wix en esta intervención.
+
+**Límites:** los datos fiscales no verificados permanecen vacíos; Veri*Factu sigue desactivado; escritores fiscales/contables siguen fail-closed. Las colecciones numeradas 12–16 no se borran porque el esquema no aporta sus IDs/nombres y no hay correspondencia inequívoca con el inventario live.
+
+### TEC-035 — [HISTÓRICA / SUPERSEDIDA EN SUS PERMISOS DE QA POR TEC-038] consolidación fiscal en MapaStaff y gestoría (2026-11-14)
+
+**Decisión del propietario:** todos los datos históricos y registros existentes en el sitio son sintéticos de pruebas; el sitio no tiene actividad real. Se autoriza mantener temporalmente abierta la ventana de mutabilidad append-only hasta nueva instrucción expresa del propietario. Esta autorización se limita al entorno de QA declarado; no habilita datos reales ni despliegue productivo.
+
+**CMS live verificado tras la mutación:**
+- `MapaStaff` revisión 36, 42 campos y 5 registros: tres `STAFF`, un `TERCERO` QA sintético y un `GESTORIA`.
+- El registro `TERCERO` procedente de `DatosFiscales` conserva su ID original. No se creó `CONFIG_SISTEMA`.
+- Nuevo registro `GESTORIA`: los datos de contacto concretos se omiten de esta documentación por minimización de datos. El fixture sintético vigente es `Gestoría de Pruebas`, `gestoria.pruebas@example.test`, sin teléfono operativo y con destino real desactivado; ver `src/backend/tests/fixtures/qaSyntheticParties.mjs`. No tiene `memberId`, `staffMemberId`, `resourceId` ni roles.
+- `MapaStaff` queda con lectura `PRIVILEGED` y escritura `CMS_EDITOR`. El backend consulta mediante la capa `@wix/data` elevada. Esto evita exponer públicamente datos de contacto/fiscales.
+- `DatosFiscales` sigue presente con su fila placeholder sintética. No se elimina hasta publicar el backend migrado, verificar runtime y confirmar que no quedan consumidores activos.
+
+**Código en rama** `feat/consolidate-fiscal-master-mapastaff-v2`: constantes canónicas, validación por `recordType`, hooks CMS, upsert de terceros, lectura de configuración fiscal, destinatarios de gestoría y filtro de proyección Bookings actualizados a `MapaStaff`. Los lectores de eventos filtran `recordType=STAFF`. El DTO de destinatarios añade teléfono y dirección; no se encontró un consumidor frontend directo de `listAccountantRecipients`, por lo que no se ha inventado una UI nueva.
+
+**Pendiente:** ejecutar CI completo; revisar diff; completar documentación del esquema live; desplegar backend en Wix de forma controlada; verificar hooks y WebMethods; después retirar `DatosFiscales` y confirmar su ausencia en inventario. No se ha publicado código Wix ni se ha borrado la colección antigua en esta intervención.---
+
+## Addendum de autoridad y fase QA — 2026-11-14
+
+### Jerarquía de autoridad y SSOT
 
 La autorización inicial de esta ventana se limitaba a update/remove individuales en un subconjunto de colecciones. Queda sustituida por TEC-037, que define la mutabilidad temporal vigente del único sitio aislado, incluidas las operaciones masivas con IDs explícitos. No usar APPEND_ONLY_MUTATION_WINDOW como política vigente.
 
@@ -261,11 +314,12 @@ La propuesta anterior agrupaba STAFF, TERCERO y GESTORIA en MapaStaff. Queda des
 
 ### TEC-036 [HISTÓRICA / SUPERADA] — autoridad SSOT y mutabilidad temporal (2026-11-14)
 
-La autoridad del propietario y la política temporal de mutabilidad vigentes se describen en la cabecera de este registro y en TEC-037/TEC-038. Esta entrada conserva la decisión anterior y no define el alcance operativo actual.
+**Nota de ejecución:** este addendum modifica la autoridad documental y la política de trabajo. No demuestra por sí mismo que todos los hooks, WebMethods, políticas de escritura o permisos CMS del runtime Wix hayan sido modificados para permitir todas las operaciones de edición y eliminación. Esa correspondencia debe verificarse en código y en Wix antes de afirmar que la pausa está aplicada técnicamente de extremo a extremo.
+### TEC-036 — [HISTÓRICA / SUPERSEDIDA EN SU PAUSA APPEND-ONLY POR TEC-038] autoridad SSOT del usuario y pausa de append-only durante QA (2026-11-14)
 
 ### TEC-037 — mutabilidad temporal del sitio aislado (2026-11-14)
 
-**Decisión del propietario:** el único sitio objeto de trabajo es 50b39f33-e753-4331-ab35-b2ed43dc97f7. Es un banco de pruebas aislado y no tiene actividad real. La ventana de mutabilidad se aplica a este sitio; no existe un segundo sitio de pruebas que deba compararse con él.
+**HISTÓRICO — supersedido por TEC-038:** la autorización temporal descrita en esta decisión dejó de estar vigente. Los bypasses globales fueron retirados; no se permite reabrir append-only mediante flags. Las purgas efímeras se rigen por TEC-038.
 
 **Implementación en main:** ISOLATED_SITE_RECORD_MUTATIONS_ENABLED=true; update/remove individual y masivo para las colecciones CMS propias incluidas en ISOLATED_SITE_MUTABLE_COLLECTIONS. Las operaciones masivas requieren IDs explícitos y límite de 1.000 elementos. Las colecciones WIX_APP quedan excluidas. Se mantienen validaciones, autenticación/autorización, permisos CMS, allowlist de inserciones y gates de writers/efectos externos.
 
@@ -273,10 +327,38 @@ La autoridad del propietario y la política temporal de mutabilidad vigentes se 
 
 ### TEC-038 — separación de maestros CMS y alineación de contratos (2026-11-14)
 
-**Decisión técnica:** MapaStaff se reserva al mapeo de identidades nativas de personal (staffMemberId, resourceId, scheduleId y memberId); su thirdPartyId físico es TEXT opaco, no una FK fiscal. DatosFiscales es el maestro de terceros, gestoría y configuración fiscal. No se duplican campos fiscales en MapaStaff ni se inventan traceId/schemaVersion en DatosFiscales.
+### TEC-037 — [HISTÓRICA / SUPERSEDIDA POR TEC-038] habilitación amplia de mutaciones durante QA (2026-11-14)
 
 **Keyfields:** _id es la identidad CMS. Los identificadores nativos Wix/Bookings/Members permanecen como campos separados cuando representan entidades diferentes. En ComplementosCatalogo, addonId queda como espejo físico temporal de _id; el DTO addOnId se conserva por contrato de transporte Bookings. gestorName es el nombre canónico de gestoría; gestorNombre queda retirado del contrato de código.
 
-**Implementación en rama:** fix/current-site-cms-contract-alignment. Se actualizan constantes, validadores, hooks, política de inserción, eventLog.js, fiscalAggregator.web.js, fiscalDocuments.web.js y pruebas asociadas. No se han ejecutado mutaciones CMS ni migraciones de registros.
+**Implementación histórica integrada en main:** QA_RECORD_MUTATIONS_ENABLED=true; update/remove individual y bulk update/remove para las colecciones CMS propias incluidas en QA_MUTABLE_COLLECTIONS, incluida DatosFiscales legacy. Esta implementación fue posteriormente retirada por TEC-038 y no debe restaurarse. Las operaciones masivas requieren IDs explícitos y límite de 1.000 elementos. Se permite editar/eliminar registros antes protegidos como append-only, singleton y proyecciones con hooks de bloqueo. Se mantienen validaciones, autenticación/autorización, permisos CMS, allowlist de inserciones y gates de writers/efectos externos. Las colecciones WIX_APP no se incluyen. items.bulkUpdate() es Developer Preview de Wix y queda restringido a esta fase QA.
 
-**Pendiente:** CI completa, revisión de diff, PR, pruebas Wix Editor y E2E sintéticas. CONFIG_SISTEMA permanece ausente y los writers fiscales continúan fail-closed.
+**Estado:** PR #346 fusionado en main mediante b68e4e048ce5fc1c022fc6ffc2643d5983972107. CI PASS: Layer 1 23 suites/296 pruebas; Layer 2 18 suites/246 pruebas; regresión completa 68 suites/627 pruebas; contratos SDK, ESLint y Gitleaks PASS. La ampliación aún no se ha publicado en Wix. La excepción permanece temporal y no se restaura hasta instrucción expresa del usuario.
+
+
+---
+
+## DECISIÓN QA-2026-11-14 — uso del sitio 50b como QA y ejecución sintética
+
+**Decisión expresa del propietario:** designar `50b39f33-e753-4331-ab35-b2ed43dc97f7` como sitio QA del proyecto. Usar exclusivamente datos sintéticos, simulación offline de pasarela de pagos, pruebas automatizadas, registro de evidencias, corrección e iteración. El sitio productivo `188bed94-177c-4bc9-a9f0-35080d874f3e` no se utilizará para QA ni como fallback.
+
+**Restricciones de ejecución:** no usar clientes/gestoría reales; no enviar emails/SMS/WhatsApp; no realizar cobros, reembolsos, facturas, tickets a clientes, movimientos de stock ni llamadas AEAT/Veri*Factu/SharePoint/Power Automate. Los mocks deben ser locales/offline y sin llamadas de red. Los datos sintéticos deben identificarse con `isSynthetic`, `testRunId`, `sourceEnvironment=TEST` y `realPayment=false` cuando el contrato de la entidad admita esos campos; no añadir campos CMS sin revisar esquema y consumidores.
+
+**Estado de acceso:** la conexión Wix disponible en la sesión no resolvió el Site ID QA; solo identificó producción. Esta discrepancia se registra como `BLOCKED_ENVIRONMENT` para pruebas runtime. No invalida ni detiene la ejecución de pruebas offline/mock y CI.
+
+**Contrato de pagos mixtos:** los documentos de implementación existentes indican que el campo `paymentMethod` es singular y que el modelo de pagos mixtos no está definido. El caso mixto permanece `BLOCKED_CONTRACT` hasta definir y probar el esquema y la reconciliación. No inferir un contrato a partir de la suma de importes.
+
+**Implementación inicial de esta decisión:** documental. La ejecución posterior añade mocks y fixtures sintéticos, retira los bypasses globales y endurece la política de purgas en TEC-038 y QA-SEC-20261114-001. No se han modificado CMS, configuración Wix, automatizaciones, permisos, secretos ni publicación en esta intervención. Ver [PLAN_ACCION_QA.md](../PLAN_ACCION_QA.md).
+
+
+---
+
+## TEC-038 — cierre fail-closed de la ventana global de mutabilidad QA (2026-11-14)
+
+**Motivo:** la revisión de código de src/backend/internalConfig.js, dataAccessPolicy.js y data.js detectó que ISOLATED_SITE_RECORD_MUTATIONS_ENABLED=true habilitaba update/remove de colecciones propias y desprotegía hooks sin comprobar en esa decisión el Site ID real del runtime. La documentación afirmaba que el alcance era un sitio aislado, pero el código no acreditaba ese vínculo.
+
+**Decisión técnica de seguridad:** cerrar la ventana global hasta implementar y verificar una barrera server-side ligada al Site ID QA autorizado. Se retiran del código los bypasses globales ISOLATED_SITE_RECORD_MUTATIONS_ENABLED y APPEND_ONLY_MUTATION_WINDOW; no queda una bandera que permita reabrirlos. Los ledgers de caja, contabilidad, fiscalidad, jornada y cierres permanecen append-only también durante pruebas. Las purgas masivas se restringen a ControlOperativo mediante condiciones exactas de tipo/estado/fecha; WEBHOOK_EVENT, DEDUPE_KEY y LEDGER_IDEMPOTENCY no son purgables. Las correcciones se registran mediante nuevos movimientos/asientos rectificativos trazables. La proyección CajaActual solo puede cambiar a través de su flujo backend autorizado y con movimiento fuente; no se permite borrarla.
+
+**Alcance:** este cambio afecta al código versionado de la rama de trabajo y a sus pruebas. No modifica ni publica el runtime Wix. El contexto Wix de producción continúa indicando Published; el Site ID QA 50b39f33-e753-4331-ab35-b2ed43dc97f7 no se resuelve en la conexión actual. Por tanto, Wix Runtime/E2E sigue bloqueado y no se realizan mutaciones Wix.
+
+**Verificación pendiente:** ejecutar CI completo sobre el nuevo SHA; revisar todos los consumidores del flag; validar los hooks en Wix Local Editor cuando QA sea accesible. Esta decisión supersede la autorización TEC-037 en cuanto a la habilitación técnica global: TEC-037 se conserva como antecedente histórico, no como permiso operativo actual.

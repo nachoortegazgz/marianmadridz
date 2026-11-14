@@ -1,23 +1,37 @@
 # Marian Madrid — Wix Editor Classic + Velo
 
-Repositorio técnico del sitio Marian Madrid.
+Repositorio técnico del ecosistema digital Marian Madrid.
 
-**Sitio objeto de auditoría:** `50b39f33-e753-4331-ab35-b2ed43dc97f7`  
-**Naturaleza:** banco de pruebas aislado, sin actividad real, según declaración del propietario.  
+**QA objetivo declarado:** `50b39f33-e753-4331-ab35-b2ed43dc97f7`.  
+**Producción identificada:** `188bed94-177c-4bc9-a9f0-35080d874f3e` · [www.marianmadrid.es](https://www.marianmadrid.es/).  
 **Plataforma:** Wix Editor Classic + Velo.  
-**Código versionado:** rama `main`; el repositorio no demuestra por sí solo qué código está sincronizado en el Editor Wix.
+**Zona horaria / moneda:** `Europe/Madrid` / EUR.
 
-## Referencias técnicas
+## Estado de entorno
 
+Por instrucción expresa del propietario (SSOT), el Site ID `50b39f33-e753-4331-ab35-b2ed43dc97f7` es el destino QA definitivo del proyecto; no se volverá a pedir confirmación ni se usará producción como alternativa. El propietario declara QA despublicado y pasarela desconectada. El inventario CMS de 2026-11-14 documenta 23 colecciones (15 propias y 8 Wix Apps). El conector Wix de esta sesión no resuelve el ID QA y solo enumera producción; es una limitación de acceso de la herramienta, no una duda sobre el destino autorizado. El aislamiento runtime sigue pendiente de evidencia directa. **No ejecutar E2E de negocio sobre producción.**
+
+Mientras se resuelve el acceso QA, continuar únicamente con pruebas offline/mock y datos sintéticos. Los mocks de pago no llaman a proveedores ni acreditan transacciones reales. No enviar comunicaciones ni datos a servicios externos.
+
+## Documentos canónicos
+
+- [Plan de acción QA](PLAN_ACCION_QA.md)
+- [Directrices de desarrollo, auditoría y QA](DIRECTRICES_DESARROLLO_CODIGO.md)
 - [Base maestra del proyecto](PROJECT_BASELINE.md)
 - [Estado actual](ESTADO_ACTUAL_PROYECTO.md)
 - [Diccionario CMS](DICCIONARIO_DATOS_CMS.md)
-- [Auditoría del esquema live del sitio actual](docs/audits/2026-11-14-current-site-cms-normalization.md)
+- [Estándar detallado de desarrollo](docs/engineering/DEVELOPMENT-STANDARDS.md)
+- [Fixtures y cobertura mock](docs/qa/QA-SIMULATION-2026-11.md)
+- [Auditoría del esquema CMS QA](docs/audits/2026-11-14-current-site-cms-normalization.md)
+- [Registro de decisiones](docs/DECISION-LOG.md)
 
-## Estado crítico
+## Principios no negociables
 
-- CMS live: 23 colecciones (15 propias y 8 administradas por Wix Apps); 524 campos físicos en las colecciones propias.
-- Los registros del sitio deben tratarse como datos sintéticos/de prueba; no acreditan actividad comercial, fiscal ni laboral real.
-- Las mutaciones de registros propios están habilitadas por autorización expresa del propietario mediante `ISOLATED_SITE_RECORD_MUTATIONS_ENABLED=true`; se mantienen RBAC, permisos, validaciones, allowlists y exclusión de colecciones Wix Apps.
-- No hay evidencia de sincronización íntegra Editor ↔ Git ni de release Wix vinculado a SHA.
-- No publicar ni conectar procesos reales sin autorización expresa y revisión de los gates descritos en [PROJECT_BASELINE.md](PROJECT_BASELINE.md).
+- Wix CMS propio es SSOT transaccional; Wix Apps se operan mediante APIs oficiales.
+- Frontend sin lógica de negocio; permisos y reglas en backend/WebMethods.
+- `internalConfig.js` centraliza constantes canónicas; `validation.js` centraliza validaciones.
+- Caja: `MovimientosCaja` es fuente histórica; `CajaActual` es proyección.
+- Pagos, emails, SMS, gestoría, AEAT y demás salidas se simulan offline durante QA.
+- No utilizar datos personales o credenciales reales en fixtures.
+- No publicar ni desplegar sin autorización expresa, CI verde, diff revisado y rollback.
+- El repositorio no demuestra por sí solo qué código está sincronizado/publicado en Wix.

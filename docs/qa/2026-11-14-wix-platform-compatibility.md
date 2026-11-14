@@ -1,4 +1,6 @@
-# Compatibilidad de plataforma Wix — sitio actual
+> **Addendum de vigencia — 2026-11-14:** este informe conserva una lectura anterior de contexto Wix. La designación del propietario para QA es `50b39f33-e753-4331-ab35-b2ed43dc97f7`; declara el sitio despublicado y pasarela desconectada. El conector de auditoría actual no resuelve ese ID, por lo que el estado runtime permanece pendiente. El estado Published descrito en la sección de producción no debe extrapolarse al QA.
+
+# Compatibilidad de plataforma Wix — corte 2026-11-14
 
 **Fecha:** 2026-11-14  
 **Site ID único:** 50b39f33-e753-4331-ab35-b2ed43dc97f7  

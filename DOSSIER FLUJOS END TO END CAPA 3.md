@@ -1,12 +1,36 @@
-## Addendum vigente — sitio actual y estado de flujos (2026-11-14)
+> **Addendum de seguridad vigente — 2026-11-14:** el histórico TEC-037 que describía una pausa global de append-only queda supersedido para la ejecución actual. La ventana global de mutabilidad está cerrada en la rama QA; los ledgers permanecen inmutables. La inspección Wix de esta sesión devuelve producción como Published y no resuelve el Site ID QA; no ejecutar escrituras Wix ni E2E sobre producción. Prevalecen PLAN_ACCION_QA.md, DIRECTRICES_DESARROLLO_CODIGO.md y TEC-038 de docs/DECISION-LOG.md.
 
-- El único sitio objeto de trabajo es 50b39f33-e753-4331-ab35-b2ed43dc97f7: banco de pruebas aislado, sin actividad real, según declaración expresa del propietario.
-- Plataforma confirmada: Wix Editor Classic + Velo. No existe matriz comparativa de sitios para esta intervención.
-- CMS actual: 23 colecciones (15 NATIVE, 8 WIX_APP), 524 campos físicos NATIVE. El inventario y los tipos se detallan en DICCIONARIO_DATOS_CMS.md y docs/audits/2026-11-14-current-site-cms-normalization.md.
-- MapaStaff conserva solo el mapa de identidades de personal; thirdPartyId es TEXT opaco y no es una FK fiscal. DatosFiscales contiene los datos de terceros, gestoría y configuración fiscal; no declara traceId ni schemaVersion.
-- La rama fix/current-site-cms-contract-alignment alinea hooks, validadores, políticas y consumidores fiscales con esos contratos. PR #370 está dirty (historial divergente respecto a main), sin checks en el HEAD actual. Rebase, CI y validación Wix Editor/E2E siguen pendientes.
-- Wix CMS sigue siendo la fuente de verdad transaccional. SharePoint es exclusivamente repositorio documental de evidencia. Capa 3 no gobierna ni modifica Capa 1.
-- No se han ejecutado mutaciones CMS ni se han activado pagos, facturación, fichajes, comunicaciones o automatizaciones externas.
+## Addendum vigente — baseline 2026-11-14 (prevalece sobre bloques históricos)
+
+- Git `main` al inicio de esta reconciliación: `79b6238fe4c23206bb8e81327191ab48425e3a0d`, merge de PR #351.
+- Git `main` actual tras PR #355 (documentación): `331c572b9fbba4eaff9bf53a894e6c2377a13c22`; último baseline de código/configuración: `fde9466552b6819980475a682dc06395b57487f0`.
+- PR #352 (validadores) integrada; CI PASS en `609ccc948da3e63d3fd8aa20f5e64c7649770660` (run #1054).
+- PR #353 (retirada de inventario personalizado) integrada; CI PASS en `cdf07b5088977c4f51c231aa517b8ed607b25269` (run #1059).
+- PR #354 (política CMS residual) integrada como `fde9466552b6819980475a682dc06395b57487f0`; CI PASS en `28a11a690f0a99926921332618b6af670d45814c` (run #1068) y Gitleaks PASS (run #492).
+- Ninguna de estas intervenciones ha publicado ni desplegado código en Wix.
+- Plataforma confirmada por el propietario: **Wix Editor Classic + Velo**. GetSiteContext devuelve `Editor` en producción y QA, coherente con esa confirmación. Producción usa Stores Catalog V3 + Invoices V1; QA usa Stores Catalog V3 + Invoices V2. GetSiteContext no expone código Velo; sincronización Editor↔Git sigue pendiente.
+- PR #351 dejó una regresión en `src/backend/validation.js`: eliminó exports aún consumidos por `data.js`. La recuperación está en PR #352; CI completo PASS sobre el SHA `609ccc948da3e63d3fd8aa20f5e64c7649770660` (run #1054); commits posteriores en esta PR son solo documentación.
+- CMS live: **41 colecciones (12 NATIVE, 29 WIX_APP), 980 campos**. `MapaStaff` revisión 105 / 56 campos. `DatosFiscales`, `InventarioStockVenta` y `MovimientosInventario` no existen en el inventario live del corte; GET individual 404 / `WDE0025`.
+- Wix Stores Catalog V3 es la autoridad del stock comercial. La capa custom de inventario está retirada; las referencias a sus colecciones, exports o writers son históricas y no autorizan su recreación.
+- **TEC-038 vigente:** no existen bypasses globales de mutación en el código de esta rama. Los ledgers siguen append-only también en QA; las purgas efímeras están restringidas por tipo/estado/fecha.
+- No existe evidencia de release que vincule el runtime Wix publicado con el SHA actual de Git. No se declara validación E2E ni despliegue.
+- SharePoint / Power Automate Capa 3 sigue siendo diseño documental, no integración operativa certificada.
+
+Detalle y evidencias: [reconciliación de baseline y recuperación de validadores](docs/qa/2026-11-14-baseline-reconciliation.md).
+
+---
+
+## Vigencia operativa — fase de desarrollo y QA (2026-11-14)
+
+**Autoridad:** el usuario/propietario es la SSOT de negocio, requisitos, prioridades, criterios de aceptación y autorizaciones. Las instrucciones expresas posteriores del usuario prevalecen sobre decisiones y restricciones documentales anteriores. La documentación oficial de Wix y de las integraciones gobierna únicamente los contratos y límites técnicos de la plataforma.
+
+**Política de mutabilidad vigente (TEC-038):** los bypasses globales de update/remove y la ventana temporal append-only han sido retirados del código. Los ledgers de caja, contabilidad, fiscalidad, jornada, cierres y eventos webhook permanecen inmutables también en QA. Bulk update está deshabilitado. Bulk remove solo admite purgas de tipos efímeros/terminales en ControlOperativo, con condiciones exactas de tipo, estado y fecha; quedan excluidos WEBHOOK_EVENT, DEDUPE_KEY, LEDGER_IDEMPOTENCY y WEBHOOK_CLAIM. CajaActual solo cambia mediante el flujo backend autorizado y con movimiento fuente; no se borra.
+
+**Restauración:** esta política no se revierte automáticamente. Solo el usuario puede ordenar la restauración de append-only y de las restricciones de mutación para preparar el despliegue. No publicar a producción basándose únicamente en esta excepción de QA.
+
+**Estado Git/Wix:** PR #344–#351 están integradas en main; HEAD al inicio de la reconciliación `79b6238fe4c23206bb8e81327191ab48425e3a0d`. PR #351 introdujo una regresión al retirar validadores aún consumidos; su recuperación está en PR #352 y CI queda pendiente. La publicación del sitio está declarada/verificada como estado del sitio, pero no existe release ID que vincule runtime y SHA. No se ha publicado esta tanda.
+
+**CMS maestro:** MapaStaff revisión live 105, 56 campos físicos. Inventario live: 41 colecciones (12 NATIVE, 29 WIX_APP), 980 campos. `DatosFiscales`, `InventarioStockVenta` y `MovimientosInventario` no existen en este corte (404 / WDE0025); sus menciones en este documento son históricas salvo nueva evidencia.
 
 ---
 
@@ -29,6 +53,17 @@
 
 **Límites de ejecución:** no se han ejecutado mutaciones CMS ni migraciones de registros en esta intervención; tampoco se ha publicado código Wix. La sincronización del código Velo del Editor con Git no está acreditada.
 
+La eliminación se hizo por ID individual con condición de `traceId`; readback posterior: 0 filas restantes. Un barrido read-only de las 13 colecciones NATIVE no detectó otros candidatos con `meta.synthetic`, `doNotImportToProduction`, `runId/traceId` QA o `recordSource=SMOKE_TEST`. No se borró ningún fichaje real, movimiento de caja, asiento contable, cierre Z, paquete de gestoría ni registro de `ControlOperativo`. No se cambiaron permisos CMS ni se activaron writers.
+
+### Ventana temporal TEC-033
+
+**HISTÓRICO — TEC-033/037, supersedido por TEC-038.** El siguiente detalle describe autorizaciones temporales de mutación que ya no están vigentes. No existe habilitación global de update/remove en QA. Los ledgers permanecen inmutables; las purgas efímeras se rigen exclusivamente por la allowlist y condiciones server-side definidas en TEC-038.
+
+### Alineación backend y estado pendiente
+
+En esta rama, `cajas.web.js` y sus fixtures usan `operationDateHour`, `bizumAmount` y los cuatro campos `opening*Amount`; se ha retirado la comprobación redundante de `isOpen`. El DTO expone los cuatro saldos iniciales. **No existe todavía un WebMethod de apertura de sesión que persista esos cuatro importes**; por tanto permanecen null y la funcionalidad de apertura/saldos iniciales no está validada end-to-end. La proyección actual no se considera completa para `otherAmount` hasta probar su clasificación y conciliación desde `MovimientosCaja`.
+
+No se ha ejecutado CI completo, Wix Local Editor ni E2E en runtime. No se ha publicado ni desplegado esta rama. La mutación CMS de este corte no equivale a publicar código Wix.
 
 ---
 # Dossier de flujos end-to-end — Capa 1 → Capa 3

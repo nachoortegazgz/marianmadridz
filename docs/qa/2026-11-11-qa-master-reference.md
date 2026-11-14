@@ -1,3 +1,7 @@
+> **Addendum de vigencia — 2026-11-14:** esta referencia conserva el estado histórico del Site ID productivo `188bed94-177c-4bc9-a9f0-35080d874f3e`. Por decisión posterior del propietario, el destino QA es `50b39f33-e753-4331-ab35-b2ed43dc97f7`; producción no debe utilizarse para pruebas. El conector Wix de la sesión no pudo resolver el Site ID QA, por lo que el aislamiento runtime y E2E siguen pendientes. Para la decisión y plan actuales, prevalecen [PLAN_ACCION_QA.md](../../PLAN_ACCION_QA.md), [PROJECT_BASELINE.md](../../PROJECT_BASELINE.md) y [ESTADO_ACTUAL_PROYECTO.md](../../ESTADO_ACTUAL_PROYECTO.md).
+
+---
+
 # Referencia maestra QA y estado de aislamiento — Marian Madrid
 
 **Fecha de revisión:** 2026-11-11  

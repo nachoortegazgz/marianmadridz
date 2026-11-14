@@ -1,4 +1,6 @@
-# Retirada de contratos de inventario personalizado — estado vigente
+> **Addendum de vigencia — 2026-11-14:** la excepción de mutabilidad mencionada en este informe pertenece a un corte histórico. TEC-038 retiró los bypasses globales y mantiene los ledgers append-only también en QA. El propietario designa el Site ID `50b39f33-e753-4331-ab35-b2ed43dc97f7` como QA; la conexión Wix actual no resuelve su contexto. No usar el flag histórico como autorización de mutaciones.
+
+# Retirada de contratos de inventario personalizado — 2026-11-14
 
 **Actualización:** 2026-11-14  
 **Sitio único:** 50b39f33-e753-4331-ab35-b2ed43dc97f7, banco de pruebas aislado sin actividad real.

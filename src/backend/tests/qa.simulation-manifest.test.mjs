@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { QA_CUSTOMERS, QA_GESTORIA, QA_TEST_RUN_ID, QA_TEST_SITE_ID } from './fixtures/qaSyntheticParties.mjs';
 
 const here = fileURLToPath(new URL('.', import.meta.url));
 const root = resolve(here, '..', '..', '..');
@@ -53,4 +54,40 @@ test('QA-MANIFEST-05 incomplete scenarios are explicitly marked, never silently 
     if (item.status !== 'MOCK_COVERED') assert.ok(item.limitation, item.scenarioId + ' must explain its limitation');
     if (item.status === 'MANUAL_QA_REQUIRED') assert.equal(item.testFiles.length, 0);
   }
+});
+
+
+test('QA-MANIFEST-06 customer and gestoría fixtures are synthetic and non-operational', () => {
+  assert.equal(QA_TEST_SITE_ID, '50b39f33-e753-4331-ab35-b2ed43dc97f7');
+  assert.equal(QA_CUSTOMERS.length, 3);
+  for (const customer of QA_CUSTOMERS) {
+    assert.equal(customer.isSynthetic, true);
+    assert.equal(customer.sourceEnvironment, 'TEST');
+    assert.equal(customer.testRunId, QA_TEST_RUN_ID);
+    assert.match(customer.customerId, /^TEST-CUSTOMER-[0-9]{3}$/);
+    assert.match(customer.email, /^[^@]+@example\.test$/);
+    assert.equal(Object.hasOwn(customer, 'phone'), false);
+  }
+  assert.equal(QA_GESTORIA.name, 'Gestoría de Pruebas');
+  assert.equal(QA_GESTORIA.taxId, 'TEST-NIF-NO-VALIDO');
+  assert.equal(QA_GESTORIA.email, 'gestoria.pruebas@example.test');
+  assert.equal(QA_GESTORIA.phone, null);
+  assert.equal(QA_GESTORIA.destinationEnabled, false);
+  assert.equal(QA_GESTORIA.isSynthetic, true);
+  assert.equal(QA_GESTORIA.sourceEnvironment, 'TEST');
+  assert.equal(QA_GESTORIA.testRunId, QA_TEST_RUN_ID);
+});
+
+test('QA-MANIFEST-07 payment and manager sink scenarios carry synthetic TEST metadata', () => {
+  const payment = manifest.scenarios.find((item) => item.scenarioId === 'QA-PSP-MOCK-001');
+  const manager = manifest.scenarios.find((item) => item.scenarioId === 'QA-MANAGER-EMAIL-SINK-001');
+  assert.ok(payment && manager);
+  for (const fixture of [payment.fixture, manager.fixture]) {
+    assert.equal(fixture.sourceEnvironment, 'TEST');
+    assert.equal(fixture.testRunId, QA_TEST_RUN_ID);
+    assert.equal(fixture.isSynthetic, true);
+    assert.equal(fixture.realPayment, false);
+  }
+  assert.equal(payment.fixture.environment, 'TEST');
+  assert.equal(manager.fixture.gestoriaDestinationEnabled, false);
 });

@@ -1,4 +1,6 @@
-# Reconciliación de baseline y contratos CMS — 2026-11-14
+> **Addendum de vigencia — 2026-11-14:** la política de mutabilidad descrita más abajo es histórica. TEC-038 retiró los bypasses globales; no usar `QA_RECORD_MUTATIONS_ENABLED` como permiso actual. El propietario designa `50b39f33-e753-4331-ab35-b2ed43dc97f7` como QA y declara el sitio despublicado/pasarela desconectada; el conector actual no resuelve ese ID, limitación que no cambia el destino autorizado.
+
+# Reconciliación de baseline y recuperación de validadores — 2026-11-14
 
 ## Autoridad y alcance
 
@@ -43,8 +45,36 @@ Rama: fix/current-site-cms-contract-alignment.
 
 ## Estado de seguridad y validación
 
-- ISOLATED_SITE_RECORD_MUTATIONS_ENABLED=true permite update/remove individual y masivo sobre colecciones propias incluidas en ISOLATED_SITE_MUTABLE_COLLECTIONS; operaciones masivas requieren IDs explícitos y límite 1.000.
-- WIX_APP queda excluido. Se mantienen RBAC, permisos, validaciones, secretos, allowlists de inserción y gates de efectos externos.
-- No existe CONFIG_SISTEMA con identidad fiscal oficial verificada.
-- PR #370 está abierto pero `dirty` (historial divergente respecto a main). No hay checks para el HEAD actual; los últimos checks exitosos son del SHA 68a2f327 y no validan estos cambios. Rebase, CI sobre HEAD, lint, secret scanning, revisión del diff, pruebas Wix Editor y E2E sintéticas están pendientes.
-- No se ha ejecutado una mutación CMS, migración de registros ni publicación Wix en esta intervención.
+- 41 colecciones: 12 `NATIVE` y 29 `WIX_APP`.
+- 980 definiciones físicas de campo.
+- `MapaStaff`: revisión 105, 56 campos físicos.
+- `DatosFiscales`, `InventarioStockVenta` y `MovimientosInventario`: no aparecen en el inventario live y los GET individuales devolvieron 404 / `WDE0025`.
+- No recrear esas colecciones por referencias históricas o allowlists de QA.
+
+## Política de QA y seguridad
+
+- `QA_RECORD_MUTATIONS_ENABLED=true` permanece activa por autorización expresa del propietario.
+- Esta bandera permite update/remove en CMS propias durante QA; no habilita insert, writers fiscales/contables/laborales, pagos, reembolsos ni efectos externos.
+- La bandera es un bloqueo de producción. No se modifica en esta intervención.
+- No se ha cambiado CMS live, Wix Editor, permisos, automatizaciones, datos ni configuración de aplicaciones.
+- No se ha publicado ni desplegado código.
+
+## Inventario e integraciones
+
+- Wix Stores Catalog V3 es la autoridad operativa del catálogo/stock comercial.
+- La capa de inventario personalizado está retirada por decisión documentada en el ADR de inventario nativo. No se reactivan writers ni exports de inventario personalizados.
+- Capa 3 (SharePoint / Power Automate) continúa como diseño documental; su operación end-to-end no está certificada.
+- El documento `NECESIDADES WEB MARIAN.txt` aportado en esta conversación no está versionado en Git; su matriz de requisitos debe reconciliarse antes de tratar sus estados declarados como aceptación. Las directrices originales tampoco estaban versionadas; se ha creado `docs/engineering/DEVELOPMENT-STANDARDS.md` como versión consolidada y vigente basada en ese estándar.
+
+## Criterios de cierre de esta tanda
+
+1. Los exports importados por todos los consumidores existen y mantienen sus contratos.
+2. La suite `npm test`, `npm run test:layer1`, `npm run test:layer2` y `npm run lint` pasan en CI sobre el mismo SHA.
+3. La inspección de diff no detecta cambios en reglas de negocio ajenas al hallazgo.
+4. Se documenta el estado de CI con enlaces y SHA reales.
+5. No se publica en Wix hasta resolver el bloqueo de QA y obtener autorización expresa.
+
+
+## Addendum posterior — decisión de QA del propietario, 2026-11-14
+
+El propietario designa `50b39f33-e753-4331-ab35-b2ed43dc97f7` como entorno QA y ordena continuar pruebas con datos sintéticos y pasarela simulada. El sitio `188bed94-177c-4bc9-a9f0-35080d874f3e` es producción y queda excluido de QA. La conexión Wix de la sesión no resolvió el Site ID QA; por tanto, el bloqueo se limita a Wix Runtime/E2E. Continúan permitidas pruebas offline/mock y CI, sin llamadas a proveedores ni efectos externos. El plan vigente es [PLAN_ACCION_QA.md](../../PLAN_ACCION_QA.md). Este addendum actualiza la recomendación anterior de no duplicar producción: no se está ordenando duplicar ni modificar producción, sino utilizar el Site ID QA ya designado por el propietario, sujeto a resolver su acceso técnico.

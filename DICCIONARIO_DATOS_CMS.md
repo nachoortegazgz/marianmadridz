@@ -1,6 +1,9 @@
 # Diccionario de datos CMS — Marian Madrid
 
-## Addendum vigente — sitio actual, corte 2026-11-14
+## Addendum vigente — sitio QA objetivo, corte 2026-11-14
+
+> **Aclaración de entorno — 2026-11-14:** este inventario corresponde al Site ID QA `50b39f33-e753-4331-ab35-b2ed43dc97f7`, no al sitio productivo `188bed94-177c-4bc9-a9f0-35080d874f3e`. El propietario designa el primero como QA. La conexión Wix de auditoría no pudo resolverlo en esta sesión; por tanto, el inventario documenta el corte existente, pero no acredita disponibilidad runtime actual ni aislamiento de integraciones. Ver [PLAN_ACCION_QA.md](PLAN_ACCION_QA.md).
+
 
 - Sitio objeto de auditoría: `50b39f33-e753-4331-ab35-b2ed43dc97f7`.
 - Naturaleza declarada por el propietario: banco de pruebas aislado, sin actividad real.
@@ -1790,7 +1793,7 @@ Las relaciones de la tabla son semánticas/contractuales; solo las marcadas MULT
 
 ## 10. Permisos, inmutabilidad y límites de uso
 
-**Política temporal del sitio aislado:** según la autorización expresa del propietario y el flag `ISOLATED_SITE_RECORD_MUTATIONS_ENABLED=true`, append-only e inmutabilidad están temporalmente en pausa para las colecciones propias del proyecto. Esta excepción no habilita mutaciones en WIX_APP ni desactiva RBAC, permisos, validaciones o gates de writers fiscales/contables/laborales. Restaurar las protecciones antes de cualquier actividad real solo cuando lo ordene el propietario.
+**Política vigente (addendum 2026-11-14):** la autorización histórica de pausa append-only queda supersedida. Los bypasses globales de mutabilidad y la ventana temporal han sido retirados del código; los ledgers append-only se mantienen inmutables también en QA. Las rectificaciones se registran mediante nuevos registros trazables. Las purgas de ControlOperativo solo pueden afectar tipos efímeros/terminales con condición de tipo, estado y caducidad/retención; WEBHOOK_EVENT queda excluido.
 
 - Las colecciones WIX_APP son propiedad de sus aplicaciones. No modificar directamente sus campos, tipos, datos ni permisos mediante este proyecto salvo flujo oficial aprobado.
 - Antes de cualquier actividad real, los ledgers append-only no se editan ni borran. Las rectificaciones se incorporan como nuevos registros trazables.
@@ -1881,26 +1884,11 @@ El propietario autorizó una ventana temporal en el único sitio objeto de traba
 
 ### Inventario y campos
 
-- 23 colecciones: 15 NATIVE y 8 WIX_APP; 524 campos físicos NATIVE.
-- CajaActual: 39 campos, 1 singleton. sequenceCounters OBJECT; operationDate DATE; openingAmount NUMBER; cashRegisterStatus TEXT; id TEXT; isOpen BOOLEAN; currentSequence NUMBER. El estado leído es SIMULACION, isOpen=true e id=_id.
-- ControlOperativo: 42 campos, 0 filas. ownerToken, retryAfter y nextRetryAt no existen; traceId es el token de fencing.
-- ComplementosCatalogo: 18 campos, 36 filas. addonId=_id en 36/36; traceId vacío. name y description coinciden en texto, pero son TEXT y RICH_TEXT.
-- MapaStaff: 18 campos, 3 filas. Solo identidades de personal: staffMemberId, resourceId, scheduleId, memberId y active.
-- DatosFiscales: 28 campos, 1 placeholder. No declara traceId ni schemaVersion; fechaInicioVerifactu es TEXT; gestorName y gestorNombre coinciden en la fila.
-- ServiciosCatalogo: 42 campos, 95 filas. serviceId y pricingPlanId son IDs nativos distintos de _id CMS.
-- InventarioStockVenta y MovimientosInventario permanecen físicamente, pero sus contratos y writers están retirados.
+## 15. Addendum histórico — ventana temporal de mutabilidad (2026-11-14)
 
-### Alineación de código
+**HISTÓRICO — TEC-033/037, supersedido por TEC-038:** la rama `chore/temporary-append-only-mutation-window` llegó a autorizar update/remove temporal de ledgers. Esa excepción ya no está vigente y no debe utilizarse como permiso operativo. El código de la rama QA actual no contiene bypass global; los ledgers permanecen append-only también en QA.
 
-La rama fix/current-site-cms-contract-alignment:
-- Separa MapaStaff (identidad de personal) de DatosFiscales (maestro fiscal/de terceros).
-- Migra eventLog.js, fiscalAggregator.web.js y fiscalDocuments.web.js a DatosFiscales.
-- Usa _id como identidad CMS canónica de ComplementosCatalogo y mantiene addonId como espejo físico.
-- Usa gestorName como único nombre canónico de gestoría.
-- Alinea CajaActual con operationDate DATE, otherAmount y openingAmount; valida sequenceCounters como OBJECT y cashRegisterStatus incluye SIMULACION.
-- CI, revisión del diff, Wix Editor y E2E sintéticos siguen pendientes.
-
-No se ha mutado Wix CMS ni se ha publicado código Wix durante esta intervención. La correspondencia del código del Editor con Git sigue pendiente de acreditar.
+**Política vigente tras TEC-038:** los bypasses globales y APPEND_ONLY_MUTATION_WINDOW se han retirado del código. Los ledgers no deben entrar en allowlists de update/remove. La purga de datos efímeros se restringe por tipo/estado/fecha en ControlOperativo. Antes de publicación: CI completo, sitio QA accesible y aislamiento runtime verificado.
 
 ## Addendum de vigencia — contratos CMS del sitio actual (2026-11-14)
 
@@ -1916,7 +1904,22 @@ Este addendum sustituye los addenda históricos que describían MapaStaff como m
 
 **CajaActual:** operationDate es DATE, openingAmount es NUMBER y sequenceCounters es OBJECT. Bizum presencial se agrega en otherAmount; no existen operationDateHour ni bizumAmount. cashRegisterStatus=SIMULACION es el estado canónico del singleton; isOpen=true no gobierna sesión. id=_id; currentSequence no tiene consumidor localizado. **ControlOperativo:** ownerToken, retryAfter y nextRetryAt no existen; traceId es el fencing token canónico.
 
-**Código en la rama** fix/current-site-cms-contract-alignment: separación de validadores/hooks MapaStaff y DatosFiscales; lectores y escritores fiscales migrados a DatosFiscales; keyfield _id para complementos; gestorName como nombre canónico. PR #370 está abierto pero `dirty` (historial divergente respecto a main); no hay checks para el HEAD actual. Rebase, CI sobre HEAD y revisión del diff pendientes. No se ha mutado el CMS ni se han migrado registros.
+### Registros sintéticos eliminados
+
+Se eliminaron únicamente dos filas de `RegistrosHorariosStaff`, tras releerlas y comprobar simultáneamente `meta.synthetic=true`, `meta.doNotImportToProduction=true`, `resourceId=QA_STAFF_ONLY`, `staffName=QA EMPLEADO FICTICIO` y notas que declaran que no acreditan jornada real:
+
+- `1a4341a6-47be-490c-91a6-d04c8728e186` — `QA_LIVECMS_20261023_2000_TIME01_EXIT`.
+- `f325c0c8-35ba-4efc-ac45-a409ab439e61` — `QA_LIVECMS_20261023_2000_TIME01_ENTRY`.
+
+La eliminación se hizo por ID individual con condición de `traceId`; readback posterior: 0 filas restantes. Un barrido read-only de las 13 colecciones NATIVE no detectó otros candidatos con `meta.synthetic`, `doNotImportToProduction`, `runId/traceId` de simulación o `recordSource=SMOKE_TEST`. No se borró ningún fichaje real, movimiento de caja, asiento contable, cierre Z, paquete de gestoría ni registro de `ControlOperativo`. No se cambiaron permisos CMS ni se activaron writers.
+
+### Ventana temporal TEC-033
+
+**HISTÓRICO — TEC-033/TEC-037, supersedidas por TEC-038.** Los siguientes detalles describen autorizaciones temporales anteriores y no representan la política vigente. No existe ISOLATED_SITE_RECORD_MUTATIONS_ENABLED ni APPEND_ONLY_MUTATION_WINDOW en el código. Los ledgers permanecen append-only; bulk update está deshabilitado y bulk remove solo admite purgas efímeras/terminales condicionadas.
+
+La instrucción antigua de desactivar la ventana antes de fusionar o publicar queda sustituida: la política temporal está integrada en main para la fase de pruebas en el sitio aislado. Solo el usuario ordenará su restauración antes del despliegue. La publicación Wix de esta ampliación sigue pendiente.
+
+### Alineación backend y estado pendiente
 
 En esta rama, `cajas.web.js` y sus fixtures usan `operationDateHour`, `bizumAmount` y los cuatro campos `opening*Amount`; se ha retirado la comprobación redundante de `isOpen`. El DTO expone los cuatro saldos iniciales. **No existe todavía un WebMethod de apertura de sesión que persista esos cuatro importes**; por tanto permanecen null y la funcionalidad de apertura/saldos iniciales no está validada end-to-end. La proyección actual no se considera completa para `otherAmount` hasta probar su clasificación y conciliación desde `MovimientosCaja`.
 
