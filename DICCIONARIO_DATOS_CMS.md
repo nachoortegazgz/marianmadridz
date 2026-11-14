@@ -45,10 +45,10 @@ Recuento live verificado el 2026-11-14: 42 colecciones en total (13 NATIVE y 29 
 | `CitasF2` | `CITAS_F2` | 42 | `bookingId` | 1 | Proyección interna de reservas |
 | `ComplementosCatalogo` | `COMPLEMENTOS_CATALOGO` | 139 | `name` | 36 | Catálogo de complementos |
 | `ControlOperativo` | `CONTROL_OPERATIVO` | 37 | `controlType` | 3 | Locks, idempotencia, webhooks, alertas y control |
-| `DatosFiscales` | `DATOS_FISCALES` | 9 | `recordType` | 1 | Maestro fiscal de terceros/configuración |
+| `DatosFiscales` | `DATOS_FISCALES` | 21 | `recordType` | 1 | Legacy en retirada; conservar hasta desplegar consumidores migrados |
 | `HistoricoCierresZ` | `HISTORICO_CIERRES_Z` | 37 | `periodType` | 0 | Histórico de cierres Z |
 | `LibroAsientosContablesDetalle` | `LIBRO_ASIENTOS_CONTABLES_DETALLE` | 27 | `entryId` | 0 | Ledger contable |
-| `MapaStaff` | `MAPA_STAFF` | 23 | `displayName` | 3 | Correlación de identidades y recursos |
+| `MapaStaff` | `MAPA_STAFF` | 36 | `displayName` | 5 | Maestro mixto consultivo: STAFF, GESTORIA, TERCERO y CONFIG_SISTEMA |
 | `MovimientosCaja` | `MOVIMIENTOS_CAJA` | 78 | `numSerieFactura` | 0 | Ledger fiscal; sin movimientos en el corte live |
 
 | `PaquetesGestoria` | `Paquetes de Gestoria (append-only)` | 3 | `periodType` | 0 | Snapshot documental append-only |
@@ -151,26 +151,11 @@ _updatedDate:DATETIME, _owner:TEXT, heartbeatAt:DATETIME, operationDate:DATETIME
 revision:NUMBER, compensationKind:TEXT
 ```
 
-### 3.5 DatosFiscales — revisión live 19 (MASTER mutable)
+### 3.5 DatosFiscales — revisión live 21 (LEGACY en retirada)
 
-**Contrato MASTER objetivo:**
+La colección sigue existiendo temporalmente por compatibilidad con el runtime publicado. Su única fila es el registro QA sintético `TERCERO/PROVEEDOR`; no se utiliza como emisor ni como fuente de verdad futura. El registro se ha copiado a `MapaStaff` conservando el mismo ID. No eliminar esta colección hasta desplegar y verificar los consumidores backend migrados a `MapaStaff`.
 
-```text
-recordType:TEXT, thirdPartyType:TEXT, taxId:TEXT, legalName:TEXT,
-commercialName:TEXT, address:TEXT, postalCode:TEXT, province:TEXT,
-email:TEXT, phone:TEXT, taxRegime:TEXT, verifactuEnabled:BOOLEAN,
-verifactuVersion:TEXT, fechaInicioVerifactu:DATE, schemaVersion:NUMBER,
-traceId:TEXT,
-_id:TEXT, _createdDate:DATETIME, _updatedDate:DATETIME, _owner:TEXT
-```
-
-**Campos heredados que aún permanecen físicamente:** `streetNumber`, `businessDescription`, `currency`, `tipoUsoPosibleMultiOT`, `indicadorMultiplesOT`, `name`, `label`, `nif`, `gestorEmail`, `gestorName`, `gestorNif` y `active`. No se han borrado porque el registro QA existente conserva datos/etiquetas en parte de ellos y `eventLog.js` todavía consume las dos flags AEAT. La limpieza requiere migración de consumidores y preservación del marcador QA.
-
-**Registros live verificados:** 1 fila `TERCERO/PROVEEDOR`, expresamente marcada `QA_ONLY`; no es emisor ni configuración fiscal. Se le han añadido `schemaVersion=1` y `traceId`. No existe todavía `CONFIG_SISTEMA`. No se crea hasta desplegar el guard actualizado y obtener taxId, legalName y taxRegime de fuente fiscal oficial/gestoría. Estos datos no se infieren.
-
-**Tipos:** `fechaInicioVerifactu` se cambió de `TEXT` a `DATE` tras verificar que no existían valores previos. Nuevos campos live: `commercialName`, `postalCode`, `province`, `schemaVersion`, `traceId`.
-
-**Seguridad:** el hook y validator integrados en `main` permiten que `CONFIG_SISTEMA` mantenga pendientes los datos fiscales y fija el ID singleton `CONFIG_SISTEMA_FISCAL`; exige `schemaVersion=1` y `traceId`. El código todavía requiere sincronización/publicación controlada en Wix Editor. Los escritores fiscales siguen fail-closed.
+El esquema histórico y los datos de esta colección no deben recibir nuevas escrituras. La eliminación se realizará tras validar que `eventLog.js`, `fiscalAggregator.web.js`, `fiscalDocuments.web.js`, los hooks CMS y los tests ya no la referencian en el runtime publicado.
 
 ### 3.6 HistoricoCierresZ — revisión 37
 
@@ -221,22 +206,36 @@ _id:TEXT, _createdDate:DATETIME, _updatedDate:DATETIME, _owner:TEXT
 
 **Importante:** el esquema físico usa `sourceMovementId`; no existe `sourceEventId` en esta colección. `cashMovementId` es un campo de referencia distinto y opcional según el contrato técnico documentado. No construir un writer contable por analogía con otra colección.
 
-### 3.9 MapaStaff — revisión live 24 (MASTER mutable)
+### 3.9 MapaStaff — revisión live 36 (MASTER mixto mutable / consultivo)
 
-**Contrato MASTER objetivo:**
+**Esquema físico live: 42 campos (38 de negocio + 4 de sistema).**
 
 ```text
-memberId:TEXT, resourceId:TEXT, rolBookings:TEXT, rolWebsite:TEXT,
-staffName:TEXT, displayName:TEXT, thirdPartyId:TEXT, sortOrder:NUMBER,
-schemaVersion:NUMBER, traceId:TEXT,
+displayName:TEXT, traceId:TEXT, staffMemberId:TEXT, scheduleId:TEXT,
+thirdPartyId:TEXT, staffName:TEXT, rolWebsite:TEXT, rolBookings:TEXT,
+memberId:TEXT, resourceId:TEXT, ServiciosCatalogo_staffMembers:MULTI_REFERENCE,
+recordType:TEXT, fechaInicioVerifactu:DATE, schemaVersion:NUMBER,
+province:TEXT, postalCode:TEXT, commercialName:TEXT, streetNumber:TEXT,
+businessDescription:TEXT, currency:TEXT, phone:TEXT, taxId:TEXT,
+legalName:TEXT, thirdPartyType:TEXT, address:TEXT, taxRegime:TEXT,
+verifactuEnabled:BOOLEAN, verifactuVersion:TEXT,
+tipoUsoPosibleMultiOT:BOOLEAN, indicadorMultiplesOT:BOOLEAN, email:TEXT,
+name:TEXT, label:TEXT, nif:TEXT, gestorEmail:TEXT, gestorName:TEXT,
+gestorNif:TEXT, active:BOOLEAN,
 _id:TEXT, _createdDate:DATETIME, _updatedDate:DATETIME, _owner:TEXT
 ```
 
-**Compatibilidad física pendiente:** permanecen `staffMemberId`, `scheduleId`, `active`, `sourceSystem` y `ServiciosCatalogo_staffMembers`. No eliminarlos aún: `events.js` usa `staffMemberId + active` para recuperar `resourceId + scheduleId` cuando una reserva nativa no aporta esos valores. `active` queda pendiente de ADR como indica el esquema funcional. El campo multi-reference es una relación CMS existente y no se ha alterado.
+**Discriminador obligatorio de dominio:**
+- `STAFF`: correlación de personal Bookings. Debe conservar `staffMemberId` y `resourceId` GUID, `active` y los campos de agenda. No constituye autoridad RBAC.
+- `GESTORIA`: contacto de gestoría, sin `memberId`, `staffMemberId`, `resourceId`, `rolWebsite` ni `rolBookings`. No es usuario del sitio.
+- `TERCERO`: tercero fiscal con `taxId`, `legalName` y `thirdPartyType`.
+- `CONFIG_SISTEMA`: singleton de configuración fiscal del emisor. No existe todavía; no inferir NIF, razón social, régimen ni modo Veri*Factu.
 
-**Registros live verificados:** 3 filas. `staffName` normalizado a Marian Madrid, Andrea Staff y Alba Staff; `rolBookings=STAFF`; roles de negocio ADMIN/ESTILISTA/ESTILISTA; `schemaVersion=1`; `traceId` presente. `thirdPartyId` queda vacío en las tres filas hasta vínculo fiscal explícito. Los `memberId` presentes son distintos; su correspondencia con Wix Members requiere verificación directa. Los tres `resourceId` son únicos.
+**Registros live verificados:** 5. Tres filas `STAFF` mantienen IDs y roles previos; una fila `TERCERO` QA sintética conserva el ID de la antigua fila `DatosFiscales`; una fila `GESTORIA` contiene `NachoGest`, `Calle Burgos 25`, teléfono y email proporcionados por el propietario. No hay fila `CONFIG_SISTEMA`.
 
-**Pendiente de integridad:** la unicidad se comprobó en el snapshot actual, pero aún no está protegida por índices/validación de escritura. No se considera una garantía de concurrencia hasta implementar un writer/hook único y pruebas de carrera.
+**Permisos live:** `itemRead=PRIVILEGED`; insert/update/remove=`CMS_EDITOR`. El backend consulta mediante `@wix/data` elevado. La restricción evita exponer públicamente teléfono, email y datos fiscales de la colección.
+
+**Compatibilidad:** el lector de eventos filtra explícitamente `recordType=STAFF` además de `staffMemberId` y `active`, evitando que el registro de gestoría entre en la correlación de recursos. `ServiciosCatalogo_staffMembers` y las relaciones existentes se conservan. `thirdPartyId` sigue siendo un identificador textual; no se reescriben registros históricos que lo referencien.
 
 ### 3.10 MovimientosCaja — revisión 78
 
@@ -352,30 +351,30 @@ Diferencias exhaustivas entre `key` y `displayName` identificadas en la lectura 
 | `ControlOperativo` | `eventType` | `Event Type` |
 | `ControlOperativo` | `occurredAt` | `Occurred At` |
 | `ControlOperativo` | `operationDate` | `Operationdate` |
-| `DatosFiscales` | `recordType` | `Tipo de registro` |
-| `DatosFiscales` | `streetNumber` | `Número fiscal` |
-| `DatosFiscales` | `businessDescription` | `Descripción del negocio` |
-| `DatosFiscales` | `currency` | `Moneda` |
-| `DatosFiscales` | `phone` | `Teléfono fiscal` |
-| `DatosFiscales` | `taxId` | `NIF / VAT` |
-| `DatosFiscales` | `legalName` | `Razón social / nombre legal` |
-| `DatosFiscales` | `thirdPartyType` | `Tipo de tercero` |
-| `DatosFiscales` | `address` | `Domicilio fiscal` |
-| `DatosFiscales` | `taxRegime` | `Régimen fiscal` |
-| `DatosFiscales` | `verifactuEnabled` | `Veri*Factu habilitado` |
-| `DatosFiscales` | `verifactuVersion` | `Versión Veri*Factu` |
-| `DatosFiscales` | `tipoUsoPosibleMultiOT` | `Uso posible de múltiples OT` |
-| `DatosFiscales` | `indicadorMultiplesOT` | `Indicador de múltiples OT` |
-| `DatosFiscales` | `fechaInicioVerifactu` | `Fecha de inicio Veri*Factu` |
-| `DatosFiscales` | `email` | `Email` |
-| `DatosFiscales` | `name` | `Nombre` |
-| `DatosFiscales` | `label` | `Etiqueta` |
-| `DatosFiscales` | `nif` | `NIF de contacto` |
-| `DatosFiscales` | `gestorEmail` | `Email gestoría` |
-| `DatosFiscales` | `gestorName` | `Nombre gestoría` |
+| `MapaStaff` | `recordType` | `Tipo de registro` |
+| `MapaStaff` | `streetNumber` | `Número fiscal` |
+| `MapaStaff` | `businessDescription` | `Descripción del negocio` |
+| `MapaStaff` | `currency` | `Moneda` |
+| `MapaStaff` | `phone` | `Teléfono fiscal` |
+| `MapaStaff` | `taxId` | `NIF / VAT` |
+| `MapaStaff` | `legalName` | `Razón social / nombre legal` |
+| `MapaStaff` | `thirdPartyType` | `Tipo de tercero` |
+| `MapaStaff` | `address` | `Domicilio fiscal` |
+| `MapaStaff` | `taxRegime` | `Régimen fiscal` |
+| `MapaStaff` | `verifactuEnabled` | `Veri*Factu habilitado` |
+| `MapaStaff` | `verifactuVersion` | `Versión Veri*Factu` |
+| `MapaStaff` | `tipoUsoPosibleMultiOT` | `Uso posible de múltiples OT` |
+| `MapaStaff` | `indicadorMultiplesOT` | `Indicador de múltiples OT` |
+| `MapaStaff` | `fechaInicioVerifactu` | `Fecha de inicio Veri*Factu` |
+| `MapaStaff` | `email` | `Email` |
+| `MapaStaff` | `name` | `Nombre` |
+| `MapaStaff` | `label` | `Etiqueta` |
+| `MapaStaff` | `nif` | `NIF de contacto` |
+| `MapaStaff` | `gestorEmail` | `Email gestoría` |
+| `MapaStaff` | `gestorName` | `Nombre gestoría` |
 | `DatosFiscales` | `gestorNombre` | `Nombre gestoría (compatibilidad)` |
-| `DatosFiscales` | `gestorNif` | `NIF gestoría` |
-| `DatosFiscales` | `active` | `Activo` |
+| `MapaStaff` | `gestorNif` | `NIF gestoría` |
+| `MapaStaff` | `active` | `Activo` |
 | `PaquetesGestoria` | `invoiceData` | `Facturas snapshot` |
 | `PaquetesGestoria` | `periodType` | `Tipo de periodo` |
 | `PaquetesGestoria` | `fiscalYear` | `Ejercicio fiscal` |
@@ -644,12 +643,12 @@ Los valores se mantienen exactamente como los define el backend. Esta lista no s
 | Tipo de reserva | `CitasF2.bookingType` | `SIMPLE`, `DUAL_F1`, `DUAL_F2` |
 | Estado de reserva CMS | `CitasF2.bookingStatus` | `PENDING`, `CONFIRMED`, `COMPLETED`, `CANCELED`, `REFUNDED`, `NO_SHOW` |
 | Estado de pago CMS | `CitasF2.paymentStatus` | `NOT_PAID`, `PENDING_PAYMENT`, `PENDING_LEDGER`, `PAID`, `PARTIALLY_PAID`, `REFUNDED`, `PARTIALLY_REFUNDED`, `EXEMPT`, `UNDEFINED` |
-| Tipo de registro fiscal | `DatosFiscales.recordType` | `TERCERO`, `CONFIG_SISTEMA` |
+| Tipo de registro fiscal | `MapaStaff.recordType` | `STAFF`, `GESTORIA`, `TERCERO`, `CONFIG_SISTEMA` |
 | Rol web | `MapaStaff.rolWebsite` / configuración backend | `ADMIN`, `GESTION`, `ESTILISTA` |
 | Rol Bookings | `MapaStaff.rolBookings` | `STAFF` (valor canónico documentado) |
 | Estado de caja | `CajaActual.cashRegisterStatus` | `ABIERTA`, `CERRADA` |
 | Tipo de entrada de inventario | `InventarioStockVenta.itemNature` | El enum de escritura canónico es `SERVICIO`, `PRODUCTO`; valores históricos adicionales solo se aceptan en lectura según el código. |
-| Tipo de tercero | `DatosFiscales.thirdPartyType` | `CLIENTE`, `PROVEEDOR`, `STAFF`, `AAPP`, `MIXTO`, `EMISOR` |
+| Tipo de tercero | `MapaStaff.thirdPartyType` | `CLIENTE`, `PROVEEDOR`, `STAFF`, `AAPP`, `MIXTO`, `EMISOR` |
 
 ## 9. Relaciones lógicas entre colecciones
 
@@ -689,7 +688,7 @@ Las relaciones de la tabla son semánticas/contractuales; solo las marcadas MULT
 | ID | Hallazgo | Riesgo | Acción necesaria |
 |---|---|---|---|
 | CMS-DICT-01 | Las etiquetas CMS reales no siguen de forma general N3; predominan labels iguales al key en inglés | Baja legibilidad y divergencia con el estándar | Diseñar una matriz de etiquetas propuesta; no aplicarla sin revisión y compatibilidad |
-| CMS-DICT-02 | `DatosFiscales.active` existe en CMS, pero la validación backend prohíbe ese campo | Confusión de contrato/escritura | Resolver la discrepancia con análisis de consumidores y decisión explícita |
+| CMS-DICT-02 | `DatosFiscales` conserva un campo `active` legacy; `MapaStaff.active` se usa en STAFF/GESTORIA | Contratos distintos durante retirada | Eliminar `DatosFiscales` tras desplegar y verificar todos sus consumidores |
 | CMS-DICT-03 | `RegistroIntegracion` existe pero no pertenece a `BUSINESS_COLLECTIONS` | Posible colección sin consumidor o contrato incompleto | Verificar consumidores/writers antes de adoptarla o retirarla |
 | CMS-DICT-04 | Campos OBJECT/ARRAY no están completamente desglosados en este documento | Contrato lógico parcial | Completar desde DTOs, fixtures y productores/consumidores reales |
 | CMS-DICT-05 | IDs externos guardados como TEXT no son referencias CMS físicas | Integridad referencial depende de código | Documentar sistema propietario y validar GUID/relación en backend |
@@ -707,7 +706,7 @@ Las relaciones de la tabla son semánticas/contractuales; solo las marcadas MULT
 
 ### Evidencia de repositorio
 - `src/backend/internalConfig.js`: `BUSINESS_COLLECTIONS`, enums, flags fail-closed y constantes canónicas.
-- `src/backend/validation.js`: contratos de validación de CitasF2, DatosFiscales y ControlOperativo.
+- `src/backend/validation.js`: contratos de validación de CitasF2, MapaStaff y ControlOperativo.
 - `src/backend/citasManager.web.js`: consumidores de campos canónicos de reservas.
 - `src/backend/accountingLedger.js`: contrato de huella y append-only contable.
 - `DOSSIER TÉCNICO CONSOLIDADO.md`, sección 14 y secciones de modelo CMS/keyfields.
