@@ -12,7 +12,7 @@
 
 
 
-> **Corte live completo:** 2026-11-14. **Sitio:** `188bed94-177c-4bc9-a9f0-35080d874f3e`. Fuente: Wix Data Collections API. Inventario: 41 colecciones (12 NATIVE, 29 WIX_APP) y 980 definiciones de campo físicas. Revisiones, permisos, tipos y metadatos de las 41 colecciones se regeneran en §§2–3 desde respuestas live. Esta lectura prevalece sobre inventarios anteriores. No se modificaron colecciones ni registros.
+> **Bloque histórico:** la captura que originó los apartados siguientes corresponde a un estado/sitio anterior. No describe el CMS actual ni debe utilizarse como inventario vigente. El manifiesto live aplicable es `docs/audits/2026-11-14-current-site-cms-normalization.md`.
 >
  > Las secciones §§2–3 contienen el inventario y esquema físico live vigente y prevalecen sobre cualquier addendum histórico posterior que documente revisiones anteriores. Las secciones §§6–16 aportan glosario, contratos de código, decisiones y contexto; sus menciones a colecciones/campos ausentes del inventario actual se consideran históricas hasta nueva verificación. La fuente del esquema físico es Wix Data Collections API.
 
