@@ -16,6 +16,7 @@ import {
     normalizeMovementKeys,
     OPERATIONAL_COLLECTIONS,
     APPEND_ONLY_MUTATION_WINDOW,
+    QA_RECORD_MUTATIONS_ENABLED,
 } from "backend/internalConfig";
 import { assertCitasF2, assertControlOperativo, assertCanonicalControlFields, assertRegistrosHorariosStaff, assertMapaStaffRecord } from "backend/validation";
 import { CONSISTENCY, getItem } from "backend/dataAccess";
@@ -282,8 +283,9 @@ function _fiscalError(message) {
 }
 
 function _appendOnlyMutationWindowOpen() {
-    return APPEND_ONLY_MUTATION_WINDOW.ENABLED === true &&
-        APPEND_ONLY_MUTATION_WINDOW.TEMPORARY === true;
+    return QA_RECORD_MUTATIONS_ENABLED === true ||
+        (APPEND_ONLY_MUTATION_WINDOW.ENABLED === true &&
+            APPEND_ONLY_MUTATION_WINDOW.TEMPORARY === true);
 }
 
 function _roundItem(value) {
@@ -686,6 +688,7 @@ export function CajaActual_beforeUpdate(item, context) {
 }
 
 export function CajaActual_beforeRemove() {
+    if (QA_RECORD_MUTATIONS_ENABLED) return;
     throw new Error("SINGLETON_PROTECTED: No se puede eliminar el estado de caja");
 }
 
@@ -858,6 +861,7 @@ export function MapaStaff_beforeUpdate(item) {
 }
 
 export function MapaStaff_beforeRemove(item) {
+    if (QA_RECORD_MUTATIONS_ENABLED) return item;
     const id = _safeTrim(item?._id);
     const recType = _safeTrim(item?.recordType).toUpperCase();
     if (id === "CONFIG_SISTEMA_FISCAL" || recType === "CONFIG_SISTEMA") {
@@ -979,7 +983,7 @@ export async function ControlOperativo_beforeUpdate(item) {
         "windowStart", "processedAt", "heartbeatAt", "operationDate",
     ]);
     assertCanonicalControlFields(normalized);
-    if (normalized.controlType !== original.controlType) {
+    if (!QA_RECORD_MUTATIONS_ENABLED && normalized.controlType !== original.controlType) {
         _fiscalError("ControlOperativo.controlType es inmutable");
     }
     assertControlOperativo(normalized);
@@ -1022,6 +1026,7 @@ function _validateCitasF2Write(item) {
 }
 
 function _blockCitasF2Remove() {
+    if (QA_RECORD_MUTATIONS_ENABLED) return;
     _fiscalError("Borrado directo de CitasF2 bloqueado: use cancelacion formal de reserva");
 }
 
