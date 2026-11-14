@@ -42,6 +42,7 @@
 ### Registros sintéticos eliminados
 
 Se eliminaron únicamente dos filas de `RegistrosHorariosStaff`, tras releerlas y comprobar simultáneamente `meta.synthetic=true`, `meta.doNotImportToProduction=true`, `resourceId=QA_STAFF_ONLY`, `staffName=QA EMPLEADO FICTICIO` y notas que declaran que no acreditan jornada real:
+Los valores literales QA_STAFF_ONLY y QA_LIVECMS_* que siguen se conservan únicamente como evidencia histórica de los registros eliminados; no identifican otro sitio ni el nombre del entorno actual.
 
 - `1a4341a6-47be-490c-91a6-d04c8728e186` — `QA_LIVECMS_20261023_2000_TIME01_EXIT`.
 - `f325c0c8-35ba-4efc-ac45-a409ab439e61` — `QA_LIVECMS_20261023_2000_TIME01_ENTRY`.
