@@ -101,67 +101,128 @@ export function assertCitasF2(item) {
 // =============================================================================
 
 /**
- * Validacion fiscal obligatoria. NIF checksum por Ley 11/2021.
- * THIRD_PARTY_TYPE es el enum fiscal normativo vigente.
+ * MapaStaff is only the staff-to-Wix-Bookings identity map.
+ * Its IDs are distinct native identities; _id remains the CMS item key.
  */
-export function assertMapaStaffRecord(item) {
+export function assertMapaStaffRecord(item, { partial = false } = {}) {
     if (!item || typeof item !== "object" || Array.isArray(item)) {
         throw new Error("SCHEMA_VIOLATION: MapaStaff item must be an object");
     }
 
-    assertValidEnum(item.recordType, RECORD_TYPE, "recordType");
-
-    if (item.recordType === RECORD_TYPE.STAFF) {
-        if (!isValidGuid(item.staffMemberId) || !isValidGuid(item.resourceId)) {
-            throw new Error("SCHEMA_VIOLATION: MapaStaff STAFF requires staffMemberId and resourceId GUIDs");
+    for (const field of ["staffMemberId", "resourceId", "scheduleId"]) {
+        if (partial && !Object.prototype.hasOwnProperty.call(item, field)) continue;
+        if (!isValidGuid(item[field])) {
+            throw new Error(`SCHEMA_VIOLATION: MapaStaff.${field} must be a valid Wix GUID`);
         }
-        return true;
+    }
+    if (item.memberId != null && item.memberId !== "" && !isValidGuid(item.memberId)) {
+        throw new Error("SCHEMA_VIOLATION: MapaStaff.memberId must be a valid Wix Members GUID");
+    }
+    if (item.active != null && typeof item.active !== "boolean") {
+        throw new Error("SCHEMA_VIOLATION: MapaStaff.active must be BOOLEAN");
+    }
+    if (item.sortOrder != null && (!Number.isFinite(Number(item.sortOrder)) || Number(item.sortOrder) < 0)) {
+        throw new Error("SCHEMA_VIOLATION: MapaStaff.sortOrder must be a non-negative NUMBER");
+    }
+    if (item.schemaVersion != null && (!Number.isInteger(Number(item.schemaVersion)) || Number(item.schemaVersion) < 1)) {
+        throw new Error("SCHEMA_VIOLATION: MapaStaff.schemaVersion must be a positive integer");
     }
 
-    if (Number(item.schemaVersion) !== 1) {
-        throw new Error("SCHEMA_VIOLATION: MapaStaff.schemaVersion must be 1");
+    const retiredFields = [
+        "recordType", "taxId", "legalName", "thirdPartyType", "traceId",
+        "gestorEmail", "gestorName", "gestorNombre", "gestorNif",
+        "verifactuEnabled", "verifactuVersion", "taxRegime", "fechaInicioVerifactu",
+    ];
+    const suppliedRetired = retiredFields.filter((field) =>
+        Object.prototype.hasOwnProperty.call(item, field) && item[field] != null
+    );
+    if (suppliedRetired.length) {
+        throw new Error(`SCHEMA_VIOLATION: MapaStaff fields not in current CMS schema: ${suppliedRetired.join(", ")}`);
     }
-    if (!item.traceId || !String(item.traceId).trim()) {
-        throw new Error("SCHEMA_VIOLATION: MapaStaff.traceId is required");
+    return true;
+}
+
+/**
+ * DatosFiscales is the fiscal master. Its physical schema has no traceId or
+ * schemaVersion; event traceability belongs to the calling operation/ledger.
+ */
+export function assertDatosFiscalesRecord(item, { partial = false } = {}) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) {
+        throw new Error("SCHEMA_VIOLATION: DatosFiscales item must be an object");
     }
 
-    if (item.recordType === RECORD_TYPE.GESTORIA) {
-        const email = String(item.email || item.gestorEmail || "").trim();
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-            throw new Error("SCHEMA_VIOLATION: MapaStaff GESTORIA requires a valid contact email");
-        }
-        if (!String(item.name || item.legalName || "").trim()) {
-            throw new Error("SCHEMA_VIOLATION: MapaStaff GESTORIA requires name or legalName");
-        }
-        if ("memberId" in item || "staffMemberId" in item || "resourceId" in item ||
-            "rolWebsite" in item || "rolBookings" in item) {
-            throw new Error("SCHEMA_VIOLATION: GESTORIA cannot carry site identity or staff roles");
-        }
-        return true;
+    if (!partial || Object.prototype.hasOwnProperty.call(item, "recordType")) {
+        assertValidEnum(item.recordType, RECORD_TYPE, "recordType");
     }
 
-    if (item.recordType === RECORD_TYPE.CONFIG_SISTEMA) {
-        if (item.taxId && !isValidNifOrEuVat(item.taxId)) {
-            throw new Error("SCHEMA_VIOLATION: MapaStaff.taxId must be valid NIF/NIE/CIF/VAT-UE when supplied");
+    const retiredFields = ["traceId", "schemaVersion", "nifCif", "razonSocial", "tipoTercero"];
+    const suppliedRetired = retiredFields.filter((field) =>
+        Object.prototype.hasOwnProperty.call(item, field) && item[field] != null
+    );
+    if (suppliedRetired.length) {
+        throw new Error(`SCHEMA_VIOLATION: DatosFiscales fields not in current CMS schema: ${suppliedRetired.join(", ")}`);
+    }
+
+    const textFields = [
+        "streetNumber", "businessDescription", "currency", "phone", "taxId",
+        "legalName", "thirdPartyType", "address", "taxRegime", "verifactuVersion",
+        "fechaInicioVerifactu", "email", "name", "label", "nif", "gestorEmail",
+        "gestorName", "gestorNombre", "gestorNif",
+    ];
+    for (const field of textFields) {
+        if (item[field] != null && typeof item[field] !== "string") {
+            throw new Error(`SCHEMA_VIOLATION: DatosFiscales.${field} must be TEXT`);
         }
-        if (item.legalName != null && item.legalName !== "" &&
-            !String(item.legalName).trim()) {
-            throw new Error("SCHEMA_VIOLATION: MapaStaff.legalName must be non-empty when supplied");
+    }
+
+    for (const field of ["verifactuEnabled", "tipoUsoPosibleMultiOT", "indicadorMultiplesOT", "active"]) {
+        if (item[field] != null && typeof item[field] !== "boolean") {
+            throw new Error(`SCHEMA_VIOLATION: DatosFiscales.${field} must be BOOLEAN`);
         }
-        if (item.thirdPartyType != null && item.thirdPartyType !== "") {
-            throw new Error("SCHEMA_VIOLATION: CONFIG_SISTEMA.thirdPartyType must be null");
+    }
+
+    for (const field of ["taxId", "nif", "gestorNif"]) {
+        const value = String(item[field] ?? "").trim();
+        if (value && !isValidNifOrEuVat(value)) {
+            throw new Error(`SCHEMA_VIOLATION: DatosFiscales.${field} must be a valid NIF/NIE/CIF/VAT-UE`);
         }
-    } else {
-        if (!item.taxId || !String(item.taxId).trim()) {
-            throw new Error("SCHEMA_VIOLATION: MapaStaff TERCERO requires taxId");
+    }
+
+    for (const field of ["email", "gestorEmail"]) {
+        const value = String(item[field] ?? "").trim();
+        if (value && !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(value)) {
+            throw new Error(`SCHEMA_VIOLATION: DatosFiscales.${field} must be a valid email`);
         }
-        if (!isValidNifOrEuVat(item.taxId)) {
-            throw new Error("SCHEMA_VIOLATION: MapaStaff.taxId must be valid NIF/NIE/CIF/VAT-UE");
+    }
+
+    if (item.thirdPartyType != null && item.thirdPartyType !== "") {
+        assertValidEnum(String(item.thirdPartyType).toUpperCase(), THIRD_PARTY_TYPE, "thirdPartyType");
+    }
+
+    const recordType = item.recordType;
+    if (!partial && recordType === RECORD_TYPE.TERCERO) {
+        if (!String(item.taxId ?? "").trim() || !String(item.legalName ?? "").trim() || !item.thirdPartyType) {
+            throw new Error("SCHEMA_VIOLATION: DatosFiscales TERCERO requires taxId, legalName and thirdPartyType");
         }
-        if (!item.legalName || !String(item.legalName).trim()) {
-            throw new Error("SCHEMA_VIOLATION: MapaStaff TERCERO requires legalName");
+    }
+    if (!partial && recordType === RECORD_TYPE.CONFIG_SISTEMA) {
+        if (!String(item.taxId ?? "").trim() || !String(item.legalName ?? "").trim()) {
+            throw new Error("SCHEMA_VIOLATION: DatosFiscales CONFIG_SISTEMA requires taxId and legalName");
         }
-        assertValidEnum(item.thirdPartyType, THIRD_PARTY_TYPE, "thirdPartyType");
+    }
+    if (!partial && recordType === RECORD_TYPE.GESTORIA) {
+        if (!String(item.email || item.gestorEmail || "").trim() ||
+            !String(item.name || item.gestorName || item.legalName || "").trim()) {
+            throw new Error("SCHEMA_VIOLATION: DatosFiscales GESTORIA requires name and email");
+        }
+    }
+
+    if (item.fechaInicioVerifactu != null && item.fechaInicioVerifactu !== "") {
+        const date = String(item.fechaInicioVerifactu).trim();
+        if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(date) ||
+            Number.isNaN(Date.parse(date + "T00:00:00.000Z"))) {
+            throw new Error("SCHEMA_VIOLATION: DatosFiscales.fechaInicioVerifactu must be TEXT ISO YYYY-MM-DD");
+        }
     }
 
     return true;
