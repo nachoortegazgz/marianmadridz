@@ -75,3 +75,13 @@ Cada nueva ejecución añadirá un identificador único y conservará SHA, tipo 
 - **Cambios Wix/CMS:** ninguno. No se desplegó ni se usó producción.
 - **Wix Runtime/E2E:** BLOCKED_ENVIRONMENT por resolución técnica del contexto QA.
 - **Resultado:** hito de código CERRADO — CI PASS (offline) en HEAD de PR. CI del merge commit `1de381ecb6495e17a3eae5b75b43e8493166988a` también PASS: Layer 1 24/307; Layer 2 19/252; regresión 70/644; SDK, ESLint y Gitleaks PASS. Runtime Wix y discrepancia documental MapaStaff/DatosFiscales siguen pendientes.
+
+
+## QA-ENV-20261114-002 — revalidación de acceso al sitio QA
+
+- **Objetivo:** comprobar si la conexión Wix actual permite continuar con validación runtime/E2E sin tocar producción.
+- **GetSiteContext:** consulta del Site ID QA designado `50b39f33-e753-4331-ab35-b2ed43dc97f7`; respuesta: `No site context found` (el sitio no aparece como propiedad accesible o no hay contexto disponible).
+- **ListWixSites(limit=50):** devuelve dos sitios: `Marian Madrid Peluquería y Estética` (`188bed94-177c-4bc9-a9f0-35080d874f3e`, producción) y `ortega nacho cv web` (`e54e4214-efc1-4bc9-bfbf-cede68ccaa1d`). El Site ID QA no aparece.
+- **Decisión fail-closed:** no intentar APIs de CMS/runtime sobre producción ni sobre el sitio CV; no crear, duplicar, publicar, instalar apps ni cambiar configuración como sustituto implícito del QA designado.
+- **Resultado:** `BLOCKED_ENVIRONMENT`. El CI offline y los contratos SDK continúan PASS; runtime Wix, aislamiento de pasarelas y E2E externo no están certificados.
+- **Acción necesaria para desbloquear:** el Site ID QA debe estar compartido/propiedad de la cuenta Wix conectada con permisos suficientes, o debe designarse expresamente otro sitio QA ya accesible y acreditarse su aislamiento antes de cualquier mutación.
