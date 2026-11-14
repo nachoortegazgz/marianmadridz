@@ -805,31 +805,14 @@ function _applyConfigSistemaRules(item) {
     if (_safeTrim(item._id) !== "CONFIG_SISTEMA_FISCAL") {
         _schemaError("CONFIG_SISTEMA debe usar el ID singleton CONFIG_SISTEMA_FISCAL");
     }
-    const taxId = _safeTrim(item.taxId);
-    if (taxId && !_isValidNifOrEuVat(taxId)) {
-        _schemaError("taxId invalido en CONFIG_SISTEMA");
-    }
-    if (item.legalName != null && item.legalName !== "" && !_safeTrim(item.legalName)) {
-        _schemaError("legalName debe ser texto no vacio cuando se informa");
-    }
-    if (item.thirdPartyType != null && _safeTrim(item.thirdPartyType) !== "") {
-        _schemaError("CONFIG_SISTEMA no utiliza thirdPartyType; debe ser null");
-    }
-    for (const field of ["verifactuEnabled", "tipoUsoPosibleMultiOT", "indicadorMultiplesOT"]) {
-        if (item[field] !== undefined && item[field] !== null && typeof item[field] !== "boolean") {
-            _schemaError(`${field} debe ser BOOLEAN según el esquema CMS`);
-        }
-    }
+    if (item.taxId != null) item.taxId = _safeTrim(item.taxId);
+    if (item.thirdPartyType != null) item.thirdPartyType = _safeTrim(item.thirdPartyType);
     if (item.fechaInicioVerifactu != null && item.fechaInicioVerifactu !== "") {
         const value = _safeTrim(item.fechaInicioVerifactu);
-        const parsed = new Date(value + "T00:00:00.000Z");
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(value) ||
-            Number.isNaN(parsed.getTime()) ||
-            parsed.toISOString().slice(0, 10) !== value) {
-            _schemaError("fechaInicioVerifactu debe ser una fecha real en formato TEXT YYYY-MM-DD");
-        }
+        if (!value) _schemaError("fechaInicioVerifactu no puede contener solo espacios");
         item.fechaInicioVerifactu = value;
     }
+    assertDatosFiscalesRecord(item);
     return item;
 }
 
