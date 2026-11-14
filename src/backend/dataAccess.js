@@ -369,7 +369,7 @@ export function bulkInsert() {
     assertBulkMutationDisabled("BULK_INSERT");
 }
 
-export function bulkUpdate(collection, records, options) {
+export function bulkUpdate(collection, records, options = {}) {
     assertBulkUpdateAllowed(collection, records);
     return elevatedBulkUpdate(collection, records, options);
 }
