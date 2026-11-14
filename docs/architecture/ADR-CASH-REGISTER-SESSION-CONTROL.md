@@ -263,3 +263,26 @@ Esta fase no habilita caja real ni despliegue. Los cambios requieren CI y revisi
 Los nuevos movimientos manuales `PRESENCIAL` marcan `recordSource=MANUAL_PRESENCIAL_AUTHENTICATED`, valor asignado exclusivamente por backend. `getCashierState()` solo presenta nombre de operador como `VERIFIED_BACKEND` para ese origen. Registros históricos o de origen distinto se muestran como autoría no verificada; no se infiere identidad fiable a partir de un `staffResourceId` legado.
 
 En cierres Z ejecutados por un miembro autorizado, `CajaActual.closedBy` conserva su `resourceId` autenticado. En cierres internos programados, el valor es `SYSTEM`; no se atribuye el cierre a un operador humano inexistente.
+
+
+## 13. Addendum TEC-035 — recreación live de CajaActual y contrato con MovimientosCaja (2026-11-14)
+
+**Estado Wix verificado tras la operación:**
+- `CajaActual` no existía en el listado live previo; se ha creado como colección `NATIVE`, ID `CajaActual`, displayName `CAJA_ACTUAL`, revisión 1 y 36 campos de negocio + 4 campos de sistema.
+- Permisos de colección: `insert/update/remove/read=ADMIN`.
+- Un único elemento lógico `singletonKey=CAJA_PRINCIPAL`, ID físico Wix `04402566-25b1-4b93-8f93-5c3343c73249`, con estado `CERRADA`, `isOpen=false`, importes/contadores a cero, `sequenceCounters={}`, `operationDate=2026-11-14` y `traceId` UUID v4.
+- No se ha creado una sesión abierta, no se ha inventado saldo inicial, no se han rellenado `openedAt/openedBy`.
+- `MovimientosCaja` se mantiene intacta, revisión 78, 0 registros en el corte.
+- Índice único `CajaActual_singletonKey_unique` creado y observado en estado `BUILDING`; falta comprobar transición a `ACTIVE`.
+
+**Contrato de integración:**
+1. Cada operación/ticket se persiste una sola vez en `MovimientosCaja`. `CajaActual` no replica el histórico ni sustituye el hash fiscal; contiene estado de sesión y acumulados operativos.
+2. La inserción del movimiento y la proyección son fases distintas. La proyección debe ser idempotente por ID fuente; si falla tras insertar, devolver estado parcial y reconciliar desde el movimiento existente, nunca insertar un segundo ticket.
+3. Efectivo actualiza `cashAmount` y `expectedCash` solo por delta físico validado. Tarjeta y Bizum actualizan `cardAmount`/`voucherAmount`, nunca el saldo físico. ONLINE/transferencias quedan fuera de la caja física.
+4. El último movimiento se muestra leyendo su registro original: actor backend verificado, instante, tipo, descripción, importes y huellas únicamente cuando consten en la fuente. No confiar en actor/importe enviados por frontend.
+5. `paymentMethod` es singular; no habilitar pagos mixtos sin contrato explícito de desglose, reconciliación de suma y pruebas de idempotencia. `lineItems` no tiene todavía esquema interno acreditado.
+6. No abrir sesión automáticamente al recibir un movimiento. La apertura requiere WebMethod seguro, autorización backend, lock, saldo inicial contado/reconciliado y persistencia de `openedAt/openedBy`.
+7. La lista de IDs `sequenceCounters.appliedMovementIds` puede crecer sin límite si se mantiene durante sesiones prolongadas. Recomendación: diseñar una clave de idempotencia durable por movimiento en `ControlOperativo` o un mecanismo equivalente con unicidad/retención controlada, manteniendo la reconstrucción desde `MovimientosCaja`. No retirar el comportamiento actual hasta migrar y probar concurrencia/replays.
+8. Recomendación adicional: valorar `lastMovementId` como puntero escalar a la última fuente, no como copia de la operación. Solo introducirlo en una migración coordinada de CMS + backend + DTO + tests.
+
+**Gates:** no se han habilitado writers, no se ha activado Veri*Factu, no se ha ejecutado venta, reserva, pago, cierre Z ni automatización. La colección creada no abre la caja por sí misma. El código backend ya espera el singleton `CAJA_PRINCIPAL`; el flujo de apertura continúa pendiente. No se ha validado runtime en Wix Local Editor ni E2E publicado.
