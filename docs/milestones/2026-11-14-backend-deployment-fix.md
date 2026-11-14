@@ -1,5 +1,7 @@
 # Hito — corrección de errores de deployment backend
 
+**Estado: CERRADO — CI PASS (offline)**
+
 **Fecha:** 2026-11-14  
 **Deployment de origen:** `686cb2af-c530-4f89-a9d7-18baa3f9eb0a`  
 **Repositorio:** `nachoortegazgz/marianmadridz`
@@ -13,40 +15,54 @@ Resolver los tres errores de análisis Wix:
 
 ## Primera intervención integrada
 
-PR #373: https://github.com/nachoortegazgz/marianmadridz/pull/373
-
+PR #373: https://github.com/nachoortegazgz/marianmadridz/pull/373  
 Merge en `main`: `1b39ebb22c885f50320b7d52f5bc336cc0570ee5`.
 
 La intervención importó `assertCajaActualRecord`, corrigió su validación de `sequenceCounters` y declaró la opción `partial` del validador fiscal. Añadió pruebas específicas.
 
-## Resultado de CI de PR #373
+## Incidencias detectadas en CI de PR #373
 
 - Gitleaks full-history: PASS.
-- Layer 1: FAIL.
-- Causa bloqueante adicional: `data.js` importaba `assertMapaStaffRecord`, pero `validation.js` no exportaba ese símbolo. La suite offline mostró el fallo de carga en múltiples suites.
-- Segundo fallo independiente: `unit.ssot.v5011.test.mjs` esperaba solo `ABIERTA/CERRADA`, aunque `internalConfig.js` incluye también `SIMULACION` como sentinel explícito del banco QA.
-- Los gates posteriores de Layer 2 no llegaron a ejecutarse por el fallo de Layer 1. Los contratos SDK se ejecutaron y pasaron; ESLint se lanzó, pero el job ya estaba en estado fallido.
+- Layer 1: FAIL porque `data.js` importaba `assertMapaStaffRecord`, ausente en los exports de `validation.js`.
+- La prueba SSOT esperaba solo `ABIERTA/CERRADA`, omitiendo el sentinel QA `SIMULACION`.
+- Layer 2 no llegó a ejecutarse en ese workflow.
 
-**Conclusión:** la PR #373 fue fusionada, pero no superó CI. No se certifica como hito validado.
+La fusión de PR #373 no se consideró validación.
 
-## Corrección posterior
+## Corrección y validación final
 
-Rama: `fix/ci-regression-and-milestone-2026-11-14`.
+PR correctiva #374: https://github.com/nachoortegazgz/marianmadridz/pull/374  
+Rama: `fix/ci-regression-and-milestone-2026-11-14`  
+SHA validado: `d95a69bc2d1292bb2d0ed714f1adf01e864a65aa`.
 
-Cambios:
-1. Recuperar el export `assertMapaStaffRecord` que sigue siendo consumidor activo en los hooks de `data.js`.
-2. Validar las identidades Wix obligatorias `staffMemberId`, `resourceId`, `scheduleId`; validar `memberId` si se proporciona; mantener `thirdPartyId` como TEXT opaco, no como GUID ni FK fiscal; validar tipos de `active` y `schemaVersion`.
-3. Añadir pruebas unitarias del contrato.
-4. Actualizar la aserción del enum para reconocer `SIMULACION` como sentinel QA sin confundirlo con los estados productivos.
-5. Registrar el incidente y el estado de validación en el estado del proyecto, el registro de decisiones y el log QA.
+Correcciones implementadas:
+
+1. Restaurar el export `assertMapaStaffRecord` consumido por `data.js`.
+2. Validar `staffMemberId`, `resourceId`, `scheduleId`; validar `memberId` si se proporciona; mantener `thirdPartyId` como TEXT opaco; comprobar tipos de `active` y `schemaVersion`.
+3. Añadir pruebas del contrato MapaStaff.
+4. Alinear la prueba de estados de caja con el sentinel QA `SIMULACION`.
+5. Hacer que `CONFIG_SISTEMA` rechace `thirdPartyType` no nulo.
+6. Registrar evidencia en estado del proyecto, decisiones y log QA.
+
+**Resultado CI sobre el mismo SHA:**
+
+| Gate | Resultado |
+|---|---|
+| Layer 1 | PASS — 24 suites / 307 tests |
+| Layer 2 | PASS — 19 suites / 252 tests |
+| Regresión completa | PASS — 70 suites / 644 tests |
+| Wix SDK Cart V2 + Data | PASS |
+| Wix Order Transactions | PASS |
+| Wix Bookings Reader V2 | PASS |
+| ESLint | PASS |
+| Gitleaks full-history | PASS |
+
+**Conclusión:** el hito de código queda CERRADO — CI PASS (offline). PR #374 permanece pendiente de integración en `main` en el momento de esta actualización documental.
 
 ## Límites y riesgos pendientes
 
-- La validación de esta rama depende del CI completo; hasta PASS el hito sigue abierto.
-- Existe una discrepancia documental entre el addendum del diccionario que describe MapaStaff consolidado (42 campos) y el baseline/código de `main` que describen MapaStaff separado de DatosFiscales. No se infiere cuál está desplegado ni se migra el contrato con esta corrección.
-- Wix Runtime/E2E permanece `BLOCKED_ENVIRONMENT`: el conector no resuelve el Site ID QA en esta sesión.
+- Wix Runtime/E2E permanece `BLOCKED_ENVIRONMENT`: la conexión no resuelve el Site ID QA en esta sesión.
+- El diccionario CMS contiene un addendum que describe MapaStaff consolidado (42 campos), mientras que el baseline y el código activo mantienen el contrato separado MapaStaff/DatosFiscales. No se infiere cuál está desplegado ni se migra ese contrato con esta corrección.
 - No se han realizado escrituras CMS, pagos, cambios de permisos, publicación ni despliegue. Producción queda fuera del alcance.
 
-## Criterio de cierre
-
-El hito solo podrá marcarse **CERRADO — CI PASS** cuando la PR correctiva supere Layer 1, Layer 2, regresión completa, contratos SDK, ESLint y Gitleaks en el mismo SHA. El deployment Wix QA debe verificarse después, cuando exista acceso al contexto QA. CI offline PASS no equivale a runtime Wix validado.
+CI offline PASS acredita las pruebas versionadas y los contratos SDK comprobados; no acredita el runtime Wix ni E2E externo.
