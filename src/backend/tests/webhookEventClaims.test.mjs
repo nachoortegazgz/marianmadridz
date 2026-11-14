@@ -114,6 +114,8 @@ test("expired lease recovery fences the previous owner", async () => {
     );
     const rows = wixDataMock._store.get(BUSINESS_COLLECTIONS.CONTROL_OPERATIVO);
     assert.equal(rows[0].status, WEBHOOK_CLAIM_STATUS.COMPLETED);
+    assert.equal(rows[0].expiresAt.getTime(), BASE_TIME.getTime() + 1003);
+    assert.equal(rows[0].attempts, 1);
 });
 
 test("failed claim can be retried with a new owner token", async () => {
@@ -135,6 +137,10 @@ test("failed claim can be retried with a new owner token", async () => {
     assert.equal(retry.status, "ACQUIRED");
     assert.equal(retry.claim.ownerToken, "worker-two");
     assert.equal(retry.claim.version, first.claim.version + 2);
+    assert.equal(retry.claim.attempts, 2);
+    const row = (wixDataMock._store.get(BUSINESS_COLLECTIONS.CONTROL_OPERATIVO) || [])[0];
+    assert.equal(row.attempts, 2);
+    assert.ok(row.expiresAt instanceof Date);
 });
 
 test("active concurrent delivery returns retryable busy without duplicate side effects", async () => {
