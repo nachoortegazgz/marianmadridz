@@ -7,6 +7,8 @@ Este documento fija el estado verificado de Git y del CMS en este corte. No sust
 ## Estado verificado
 
 - Repositorio: `nachoortegazgz/marianmadridz`.
+- `main` actual tras PR #355 documental: `331c572b9fbba4eaff9bf53a894e6c2377a13c22`; último baseline de código/configuración: `fde9466552b6819980475a682dc06395b57487f0`.
+- Wix GetSiteContext: producción Editor/Velo/Stores Catalog V3/Invoices V1; QA Editor/Velo/Stores Catalog V3/Invoices V2. No se expone código Velo para comparar Editor y Git.
 - `main` en el inicio de esta intervención: `79b6238fe4c23206bb8e81327191ab48425e3a0d`, merge de PR #351.
 - PR #351 está integrada en `main`. Su cambio de `src/backend/validation.js` redujo el módulo de 17.632 a 7.100 caracteres y dejó fuera validadores que seguían siendo importados por `src/backend/data.js`.
 - PR #352 integrada en `main` mediante `c8091fd2df0ba836657032db1e2e7aa9df67758b`. CI completo PASS en `609ccc948da3e63d3fd8aa20f5e64c7649770660` (run #1054): Layer 1, Layer 2, regresión offline completa, SDK contracts y ESLint; Gitleaks PASS (run #478). No publicada en Wix.
