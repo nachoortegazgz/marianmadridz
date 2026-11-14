@@ -74,4 +74,4 @@ Cada nueva ejecución añadirá un identificador único y conservará SHA, tipo 
 - **CI final:** Layer 1 24/307 PASS; Layer 2 19/252 PASS; regresión completa 70/644 PASS; Cart V2, Order Transactions y Bookings Reader V2 PASS; ESLint PASS; Gitleaks full-history PASS.
 - **Cambios Wix/CMS:** ninguno. No se desplegó ni se usó producción.
 - **Wix Runtime/E2E:** BLOCKED_ENVIRONMENT por resolución técnica del contexto QA.
-- **Resultado:** hito de código CERRADO — CI PASS (offline) en HEAD de PR. CI del merge commit pendiente de confirmación. Runtime Wix y discrepancia documental MapaStaff/DatosFiscales siguen pendientes.
+- **Resultado:** hito de código CERRADO — CI PASS (offline) en HEAD de PR. CI del merge commit `1de381ecb6495e17a3eae5b75b43e8493166988a` también PASS: Layer 1 24/307; Layer 2 19/252; regresión 70/644; SDK, ESLint y Gitleaks PASS. Runtime Wix y discrepancia documental MapaStaff/DatosFiscales siguen pendientes.
