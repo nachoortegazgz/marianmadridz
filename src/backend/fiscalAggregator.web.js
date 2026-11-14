@@ -14,7 +14,7 @@ CAMBIOS DE ALINEACION v5015-ALIGNED (respecto a v5009-FISCAL-V20.1):
   ALN-02: wixData.query(...).find({ suppressAuth, consistentRead }) ->
           dalQuery(...).find(). Cero suppressAuth.
   ALN-03: _getBusinessTaxId migrado a dalQuery(BUSINESS_COLLECTIONS.
-          DATOS_FISCALES). El singleton CONFIG_SISTEMA se mantiene como
+          MAPA_STAFF). El singleton CONFIG_SISTEMA se mantiene como
           unica fuente canonica del NIF emisor.
   ALN-04: Paginacion: hasNext()/next() del QueryBuilder de dataAccess son
           funciones compatibles con la firma original. next() es async y
@@ -57,7 +57,7 @@ const MAX_PAGES = SDK_CONFIG?.JOBS?.FISCAL_DAILY_MAX_PAGES || 50;
 const CMS_TIMEOUT_MS = Number(SDK_CONFIG?.TIMEOUTS?.CMS_MS) || 15000;
 
 const MOVIMIENTOS_CAJA_COL = BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA;
-const DATOS_FISCALES_COL = BUSINESS_COLLECTIONS.DATOS_FISCALES;
+const MAPA_STAFF_COL = BUSINESS_COLLECTIONS.MAPA_STAFF;
 
 // =============================================================================
 // BLOQUE 0 - HELPERS DE LECTURA (SSOT-KEYFIELD-02: delegacion total a data.js)
@@ -441,7 +441,7 @@ export async function getLibroRegistroFacturasExpedidasInternal(year, quarter, o
 
 async function _getBusinessTaxId(traceId) {
   const config = await withTimeout(
-    dalQuery(DATOS_FISCALES_COL)
+    dalQuery(MAPA_STAFF_COL)
       .eq("recordType", RECORD_TYPE.CONFIG_SISTEMA)
       .limit(1)
       .find(),
@@ -455,17 +455,18 @@ async function _getBusinessTaxId(traceId) {
   // CONFIG_SISTEMA y verificar cero lecturas historical-config-read.
   // Solo lectura historica; nunca crea ni modifica configuracion.
   const historicalConfig = await withTimeout(
-    dalQuery(DATOS_FISCALES_COL).eq("thirdPartyType", "EMISOR").limit(1).find(),
+    dalQuery(MAPA_STAFF_COL).eq("recordType", RECORD_TYPE.TERCERO)
+      .eq("thirdPartyType", "EMISOR").limit(1).find(),
     CMS_TIMEOUT_MS,
     "getBusinessTaxIdHistorical"
   );
   const historicalTaxId = _safeTrim(historicalConfig?.items?.[0]?.taxId);
   if (historicalTaxId) {
-    log.warn("historical-config-read: DatosFiscales EMISOR.taxId en uso; normalizar a recordType=CONFIG_SISTEMA", { traceId });
+    log.warn("historical-config-read: MapaStaff EMISOR.taxId en uso; normalizar a recordType=CONFIG_SISTEMA", { traceId });
     return historicalTaxId.toUpperCase();
   }
   throw new Error(
-    "FISCAL_CONFIG_MISSING: no existe DatosFiscales recordType=CONFIG_SISTEMA con taxId"
+    "FISCAL_CONFIG_MISSING: no existe MapaStaff recordType=CONFIG_SISTEMA con taxId"
   );
 }
 
