@@ -670,7 +670,7 @@ test('CRON-ORDER-CREATED-01 reconciles Bookings, Stores and mixed catalog orders
   assert.equal(alerts.length, 1);
   assert.ok(markers.every(row => row.traceId && row.eventId && row.orderId));
   assert.ok(markers.every(row => row.eventType === "ORDER_CREATED_RECONCILED"));
-  assert.ok(markers.every(row => row.processedAt instanceof Date));
+  assert.ok(markers.every(row => Number.isFinite(new Date(row.processedAt).getTime())));
   assert.ok(markers.every(row => row.payload?.metadata?.inventoryAction === 'NO_CUSTOM_STOCK_WRITE'));
   assert.ok(markers.every(row => row.payload?.metadata?.inventoryAuthority === 'WIX_CATALOG_OWNER'));
   assert.equal(rows.some(row => row.orderId === mixedOrder.id && row.payload?.eventType === 'ORDER_CREATED_RECONCILED'), true);
