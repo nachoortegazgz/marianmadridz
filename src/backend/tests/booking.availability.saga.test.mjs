@@ -124,6 +124,14 @@ test('BUTIL-RES-03 flat single-resource slot requires the SDK _id field', () => 
 test('BUTIL-ADDON-01 normalizeCatalogAddOn canonical projection + fail-closed', () => {
   const n = BU.normalizeCatalogAddOn({ id: GUID_1, name: 'Cepillado', price: 15 });
   assert.deepStrictEqual(n, { addOnId: GUID_1, name: 'Cepillado', price: 15 });
+  assert.deepStrictEqual(
+    BU.normalizeCatalogAddOn({ _id: GUID_1, addonId: GUID_1, name: 'Cepillado', price: 15 }),
+    { addOnId: GUID_1, name: 'Cepillado', price: 15 }
+  );
+  assert.strictEqual(
+    BU.normalizeCatalogAddOn({ _id: GUID_1, addonId: GUID_2, name: 'Cepillado', price: 15 }),
+    null
+  );
   assert.strictEqual(BU.normalizeCatalogAddOn({ id: GUID_1, name: '', price: 15 }), null);
   assert.strictEqual(BU.normalizeCatalogAddOn({ id: GUID_1, name: 'X', price: -1 }), null);
   assert.strictEqual(BU.normalizeCatalogAddOn({ id: 'not-guid', name: 'X', price: 1 }), null);
