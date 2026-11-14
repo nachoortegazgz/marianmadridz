@@ -49,12 +49,13 @@ export const STAFF_CLOCKING_CONFIG = Object.freeze({
   ADJUSTMENTS_ENABLED: false,
 });
 
-// TEMPORARY ISOLATED-SITE POLICY: allow update/remove on project-owned CMS records.
-// Does not enable inserts, fiscal writers, external effects, or bypass auth/RBAC.
-export const ISOLATED_SITE_RECORD_MUTATIONS_ENABLED = true;
+// Fail-closed default: broad update/remove remains disabled until a trusted
+// server-side site-identity gate proves the executing site is the authorized QA
+// site. A frontend flag or unscoped "isolated site" constant is not isolation.
+export const ISOLATED_SITE_RECORD_MUTATIONS_ENABLED = false;
 export const APPEND_ONLY_MUTATION_WINDOW = Object.freeze({
-  ENABLED: ISOLATED_SITE_RECORD_MUTATIONS_ENABLED,
-  TEMPORARY: true,
+  ENABLED: false,
+  TEMPORARY: false,
   RESTORE_BEFORE_REAL_OPERATIONS: true,
 });
 
