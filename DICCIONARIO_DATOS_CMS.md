@@ -129,7 +129,7 @@ _id:TEXT, _createdDate:DATETIME, _updatedDate:DATETIME, _owner:TEXT
 
 **Tipos:** `fechaInicioVerifactu` se cambió de `TEXT` a `DATE` tras verificar que no existían valores previos. Nuevos campos live: `commercialName`, `postalCode`, `province`, `schemaVersion`, `traceId`.
 
-**Seguridad:** el hook y validator de la rama de trabajo permiten que `CONFIG_SISTEMA` mantenga pendientes los datos fiscales y fija el ID singleton `CONFIG_SISTEMA_FISCAL`; exige `schemaVersion=1` y `traceId`. El código aún no está publicado. Los escritores fiscales siguen fail-closed.
+**Seguridad:** el hook y validator integrados en `main` permiten que `CONFIG_SISTEMA` mantenga pendientes los datos fiscales y fija el ID singleton `CONFIG_SISTEMA_FISCAL`; exige `schemaVersion=1` y `traceId`. El código todavía requiere sincronización/publicación controlada en Wix Editor. Los escritores fiscales siguen fail-closed.
 
 ### 3.6 HistoricoCierresZ — revisión 37
 
