@@ -10,7 +10,7 @@
 - Campos físicos de negocio de `CajaActual`: `singletonKey:TEXT`, `operationDateHour:DATETIME`, `cashRegisterStatus:TEXT`, `staffResourceId:TEXT`, `traceId:TEXT`, `openedAt:DATETIME`, `closedAt:DATETIME`, `openingCashAmount:NUMBER`, `openingCardAmount:NUMBER`, `openingBizumAmount:NUMBER`, `openingOtherAmount:NUMBER`, `cashAmount:NUMBER`, `cardAmount:NUMBER`, `bizumAmount:NUMBER`, `otherAmount:NUMBER`, `salesCount:NUMBER`, `netAmount:NUMBER`, `expectedCash:NUMBER`, `countedCash:NUMBER`, `difference:NUMBER`, `differenceReason:TEXT`, `lastMovementAt:DATETIME`, `sequenceCounters:OBJECT`, `openedBy:TEXT`, `closedBy:TEXT`.
 - No existen en el nuevo esquema `operationDate`, `openingAmount`, `voucherAmount` ni `isOpen`. `cashRegisterStatus` es el único estado de sesión.
 - Singleton único: `_id=18d8bbf8-ddd5-4ad9-8253-f2a5c285ef19`, `singletonKey=CAJA_PRINCIPAL`, `cashRegisterStatus=CERRADA`. Saldos actuales: 0 en efectivo/tarjeta/Bizum/otros. Saldos iniciales: null (no se ha abierto sesión). `operationDateHour` permanece null; no hay operación económica ni sesión abierta.
-- Índice único `CajaActual_singletonKey_unique`: ACTIVE. Índice anterior `cashRegisterStatus_operationDate`: DROPPING. Índice corregido `cashRegisterStatus_operationDateHour`: BUILDING en el último readback; falta confirmar que ambos procesos terminan en estado final.
+- Índice único `CajaActual_singletonKey_unique`: ACTIVE. Índice anterior `cashRegisterStatus_operationDate`: ya no aparece en el inventario final. Índice corregido `cashRegisterStatus_operationDateHour`: ACTIVE en el readback final.
 - `MovimientosCaja`: revisión 78, 0 elementos; no modificada. `LibroAsientosContablesDetalle`: 0. `RegistrosHorariosStaff`: revisión 11, 0 tras limpieza. `HistoricoCierresZ`: 0. `PaquetesGestoria`: 0. `ControlOperativo`: 3 elementos. `MovimientosInventario` no figura en el inventario live de 42 colecciones; la fila histórica que lo describía como colección presente queda pendiente de reconciliación documental.
 
 ### Registros sintéticos eliminados
@@ -20,7 +20,7 @@ Se eliminaron únicamente dos filas de `RegistrosHorariosStaff`, tras releerlas 
 - `1a4341a6-47be-490c-91a6-d04c8728e186` — `QA_LIVECMS_20261023_2000_TIME01_EXIT`.
 - `f325c0c8-35ba-4efc-ac45-a409ab439e61` — `QA_LIVECMS_20261023_2000_TIME01_ENTRY`.
 
-La eliminación se hizo por ID individual con condición de `traceId`; readback posterior: 0 filas restantes. No se borró ningún fichaje real, movimiento de caja, asiento contable, cierre Z, paquete de gestoría ni registro de `ControlOperativo`. No se cambiaron permisos CMS ni se activaron writers.
+La eliminación se hizo por ID individual con condición de `traceId`; readback posterior: 0 filas restantes. Un barrido read-only de las 13 colecciones NATIVE no detectó otros candidatos con `meta.synthetic`, `doNotImportToProduction`, `runId/traceId` QA o `recordSource=SMOKE_TEST`. No se borró ningún fichaje real, movimiento de caja, asiento contable, cierre Z, paquete de gestoría ni registro de `ControlOperativo`. No se cambiaron permisos CMS ni se activaron writers.
 
 ### Ventana temporal TEC-033
 
