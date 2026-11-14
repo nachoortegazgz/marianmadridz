@@ -17,17 +17,6 @@ function _policyError(code) {
 
 export function assertBulkPatchAllowed(collection, modifications, conditionFilter) {
     const collectionPolicy = DATA_ACCESS_BULK_PATCH_POLICY[collection];
-    if (QA_RECORD_MUTATIONS_ENABLED) {
-        if (
-            !Object.values(BUSINESS_COLLECTIONS).includes(collection) ||
-            !_isRecord(conditionFilter) ||
-            !Array.isArray(modifications) ||
-            modifications.length === 0
-        ) {
-            throw _policyError("BULK_PATCH_POLICY_INPUT_INVALID");
-        }
-        return;
-    }
     if (!collectionPolicy) {
         throw _policyError("BULK_PATCH_POLICY_COLLECTION_DENIED");
     }
