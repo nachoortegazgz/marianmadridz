@@ -7,7 +7,7 @@
 ### CMS verificado tras los cambios
 
 - Inventario live: **42 colecciones** (13 `NATIVE`, 29 `WIX_APP`). `CajaActual` es `NATIVE`, revisión **64**, con **59 campos personalizados + 4 de sistema (63 físicos)**. El diccionario raíz §3.1 contiene el esquema y la definición de cada campo.
-- Permisos live leídos: `insert/update/remove=ADMIN`, `read=ANYONE`; este permiso de lectura queda señalado para revisión de privacidad/seguridad. Capa 3 no obtiene permiso para leer directamente la colección ni para modificarla.
+- Política temporal: las 13 colecciones NATIVE tienen `itemRead=ANYONE`; permisos de escritura preservados. Las 29 WIX_APP conservan permisos definidos por Wix Apps (23 ANYONE, 6 restringidas). Capa 3 no obtiene permiso para leer directamente la colección ni para modificarla. La exposición de lectura es temporal, autorizada por el responsable y debe revertirse antes de despliegue.
 - El esquema incluye apertura, último ticket/conceptos, precios/impuestos, pago, trazabilidad, referencias fiscales y acumulados de sesión. Su presencia no acredita que los writers/DTOs estén implementados ni validados.
 - Estado del singleton: el último readback anterior a esta edición documentaba `CAJA_PRINCIPAL` cerrado y sin sesión abierta. El elemento no se ha releído en esta actualización; el estado y los saldos actuales quedan pendientes de readback.
 - Índice único `CajaActual_singletonKey_unique`: ACTIVE. Índice anterior `cashRegisterStatus_operationDate`: ya no aparece en el inventario final. Índice corregido `cashRegisterStatus_operationDateHour`: ACTIVE en el readback final.
