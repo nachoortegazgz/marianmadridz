@@ -68,6 +68,7 @@ El CSV contiene esos encabezados. Eso no demuestra que las columnas sigan existi
 - `src/backend/validation.js`: validación específica de los campos obligatorios del claim.
 - `src/backend/tests/webhookEventClaims.test.mjs`: pruebas de persistencia canónica y recuperación de formato legacy.
 - `src/backend/tests/controlOperativo.hooks.test.mjs`: pruebas del contrato del hook CMS.
+- `src/backend/tests/dataAccess.bulkPatch.policy.test.mjs`: prueba de autorización CAS de los nuevos campos top-level.
 
 ## 6. Validación pendiente
 
