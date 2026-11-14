@@ -140,7 +140,7 @@ export function assertMapaStaffRecord(item, { partial = false } = {}) {
     }
     if (item.ServiciosCatalogo_staffMembers != null &&
         (!Array.isArray(item.ServiciosCatalogo_staffMembers) ||
-            item.ServiciosCatalogo_staffMembers.some((id) => !isValidGuid(id)))) {
+            item.ServiciosCatalogo_staffMembers.some((id) => typeof id !== "string" || !id.trim()))) {
         throw new Error("SCHEMA_VIOLATION: MapaStaff.ServiciosCatalogo_staffMembers must be an array of Wix CMS IDs");
     }
 
