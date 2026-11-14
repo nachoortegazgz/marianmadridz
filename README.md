@@ -1,10 +1,11 @@
 ## Estado de ingeniería — reconciliación 2026-11-14
 
-- `main` actual: `fde9466552b6819980475a682dc06395b57487f0` (PR #354 integrada; PR #353 y PR #352 también integradas).
+- `main` actual: `331c572b9fbba4eaff9bf53a894e6c2377a13c22` (merge documental PR #355; último baseline de código/configuración: `fde9466552b6819980475a682dc06395b57487f0`; PR #352–#354 integradas).
 - PR #352: validadores restaurados; CI PASS en `609ccc948da3e63d3fd8aa20f5e64c7649770660` (run #1054).
 - PR #353: contratos de inventario personalizado retirados; CI PASS en `cdf07b5088977c4f51c231aa517b8ed607b25269` (run #1059).
 - PR #354: política CMS residual corregida; CI PASS en `28a11a690f0a99926921332618b6af670d45814c` (run #1068) y Gitleaks PASS (run #492).
 - Ninguna intervención ha publicado ni desplegado código en Wix.
+- Wix GetSiteContext: producción `Editor` + Velo + Stores Catalog V3 + Invoices V1; QA `Editor` + Velo + Stores Catalog V3 + Invoices V2. La fuente del Editor no está expuesta por esta lectura; sincronización Editor↔Git sigue pendiente.
 - CMS live: 41 colecciones (12 NATIVE / 29 WIX_APP), 980 campos. No existen live `DatosFiscales`, `InventarioStockVenta` ni `MovimientosInventario`.
 - `QA_RECORD_MUTATIONS_ENABLED=true`: solo fase QA; producción bloqueada. No se ha publicado esta tanda.
 - No hay release Wix vinculado al SHA de Git ni certificación E2E runtime. Capa 3 no está operativa certificada.
@@ -17,7 +18,7 @@ Evidencia: [reconciliación de baseline 2026-11-14](docs/qa/2026-11-14-baseline-
 
 **Gobierno del proyecto:** el usuario/propietario es la SSOT de negocio, prioridades y autorizaciones. Durante desarrollo y QA están en pausa append-only y las prohibiciones genéricas de editar/eliminar registros (individuales y masivas) hasta nueva instrucción expresa del usuario para preparar el despliegue. Se mantienen autenticación, autorización, permisos y validaciones. La política documental no certifica por sí sola que todos los guards del runtime Wix hayan sido retirados.
 
-**Estado Git verificado:** main=`fde9466552b6819980475a682dc06395b57487f0` (PR #352, #353 y #354 integradas). PR #352 recupera los validadores que PR #351 retiró accidentalmente; CI completo verde en `c7388cb122368906b1cee20cae0f6d127900553b` (run #1048). No hay release Wix que vincule el runtime con el SHA de Git.
+**Estado Git verificado:** main=`331c572b9fbba4eaff9bf53a894e6c2377a13c22` (PR #355 documental; último código/configuración `fde9466552b6819980475a682dc06395b57487f0`; PR #352–#354 integradas). PR #352 recupera los validadores que PR #351 retiró accidentalmente; CI completo verde en `c7388cb122368906b1cee20cae0f6d127900553b` (run #1048). No hay release Wix que vincule el runtime con el SHA de Git.
 # Marian Madrid — Wix Editor + Velo
 
 > **Contexto de plataforma:** el sitio principal consta como Published en el último contexto Wix documentado; eso no acredita que ejecute el SHA actual de Git. El sitio QA independiente está en Draft, pero su aislamiento y paridad CMS no están certificados. El inventario live vigente es 41 colecciones (12 NATIVE, 29 WIX_APP).
