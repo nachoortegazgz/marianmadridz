@@ -14,7 +14,7 @@
 
 # Diccionario de datos CMS — Marian Madrid
 
-> **Corte de esquema:** 2026-11-14. **Entorno de referencia:** producción Wix, Site ID `188bed94-177c-4bc9-a9f0-35080d874f3e`. **Fuente del esquema:** Wix Data Collections API, lectura directa de `GET /data/v2/collections/CajaActual` y del inventario `GET /data/v2/collections`. **CajaActual:** revisión live 64, 59 campos personalizados + 4 campos de sistema (63 físicos). Política temporal de permisos de lectura aplicada: las 13 colecciones `NATIVE` tienen `itemRead=ANYONE`; se preservaron los permisos de escritura existentes. Las 29 `WIX_APP` están sujetas a permisos definidos por cada aplicación.
+> **Corte de esquema:** 2026-11-14. **Entorno de referencia:** sitio Marian Madrid publicado, Site ID `188bed94-177c-4bc9-a9f0-35080d874f3e`. **Fuente del esquema:** lectura directa Wix Data Collections API `GET /data/v2/collections/CajaActual`. **CajaActual:** revisión live 9; 78 campos personalizados + 4 campos de sistema (82 físicos). **Permisos devueltos por Wix:** `read=ANYONE`, `insert=ADMIN`, `update=ADMIN`, `remove=ADMIN`. Esta evidencia sustituye los valores históricos de revisión, cardinalidad y permisos de CajaActual documentados anteriormente. No se extrapolan estos permisos al resto de colecciones.
 >
 > El addendum de vigencia al inicio y §16 prevalecen sobre las tablas históricas que aún mencionen colecciones retiradas, revisiones antiguas o el contrato anterior de `CajaActual`. La fuente del esquema es Wix Data Collections API; los contratos de negocio se contrastan con el código de la rama identificada.
 
@@ -41,7 +41,7 @@ Recuento live verificado el 2026-11-14: 42 colecciones en total (13 NATIVE y 29 
 
 | ID de colección | Nombre visible CMS | Revisión de esquema | Campo de presentación | Elementos | Clasificación/uso |
 |---|---|---:|---|---:|---|
-| `CajaActual` | `CAJA_ACTUAL` | 64 | `singletonKey` | 1 | Proyección de sesión y último ticket; 59 campos personalizados |
+| `CajaActual` | `CAJA_ACTUAL` | 9 | `singletonKey` | No consultado en esta lectura | Snapshot operativo de caja, sesión, última operación, POS y ticket; 78 campos personalizados |
 | `CitasF2` | `CITAS_F2` | 42 | `bookingId` | 1 | Proyección interna de reservas |
 | `ComplementosCatalogo` | `COMPLEMENTOS_CATALOGO` | 139 | `name` | 36 | Catálogo de complementos |
 | `ControlOperativo` | `CONTROL_OPERATIVO` | 37 | `controlType` | 3 | Locks, idempotencia, webhooks, alertas y control |
@@ -69,146 +69,48 @@ Recuento live verificado el 2026-11-14: 42 colecciones en total (13 NATIVE y 29 
 
 Formato: `key:TYPE`. Cuando no se indica otra cosa, el `displayName` de campo observado coincide con el `key`. Las etiquetas especiales de Wix se documentan en §4. El orden es el devuelto por Wix y no implica prioridad de negocio.
 
-### 3.1 CajaActual — revisión live 64 (lectura Wix Data Collections API, 2026-11-14)
+### 3.1 CajaActual — revisión live 9 (lectura Wix Data Collections API, 2026-11-14)
 
-**Esquema físico verificado. 63 campos físicos: 59 operativos personalizados + 4 campos de sistema Wix.** La revisión de colección devuelta por Wix es `64`; no debe confundirse con el número de campos.
+**Esquema físico verificado. 82 campos físicos: 78 personalizados + 4 campos de sistema Wix.** Revisión de colección `9`; no debe confundirse con el número de campos. Última actualización de esquema devuelta por Wix: `2026-11-14T04:11:13.578Z`.
 
 ```text
-singletonKey:TEXT, operationDateHour:DATETIME, cashRegisterStatus:TEXT,
-staffResourceId:TEXT, traceId:TEXT, openedAt:DATETIME,
-openingCashAmount:NUMBER, openingCardAmount:NUMBER, openingBizumAmount:NUMBER,
-openingOtherAmount:NUMBER, openedBy:TEXT, closedAt:DATETIME, closedBy:TEXT,
-lastMovementAt:DATETIME, sequenceCounters:OBJECT,
-ticketNumber:TEXT, ticketIssuedAt:DATETIME, ticketType:TEXT,
-ticketSeries:TEXT, ticketSequence:NUMBER, conceptList:ARRAY_STRING,
-conceptOperations:OBJECT, conceptQuantities:OBJECT, lineItems:OBJECT,
-customerName:TEXT, customerTaxId:TEXT, customerAddress:TEXT,
-netPrice:NUMBER, discountAmount:NUMBER, roundingAmount:NUMBER,
-taxableBaseTotal:NUMBER, appliedTax:NUMBER, taxTotal:NUMBER,
-pvp:NUMBER, totalSum:NUMBER, ticketTotal:NUMBER,
-paymentMethod:TEXT, paymentBreakdown:OBJECT, amountReceived:NUMBER,
-changeReturned:NUMBER, paymentStatus:TEXT, paymentReference:TEXT,
-cashMovementId:TEXT, ticketSyncStatus:TEXT, fiscalText:TEXT,
-verifactuReference:TEXT, verificationQr:TEXT, ticketXControlReference:TEXT,
-cierreZReference:TEXT, netAmount:NUMBER, cashAmount:NUMBER,
+singletonKey:TEXT, closedAt:DATETIME, closedBy:TEXT, cierreZReference:TEXT,
+openedAt:DATETIME, openedBy:TEXT, operationDateHour:DATETIME,
+cashRegisterStatus:TEXT, openingCashAmount:NUMBER, openingCardAmount:NUMBER,
+openingBizumAmount:NUMBER, openingOtherAmount:NUMBER, cashAmount:NUMBER,
 cardAmount:NUMBER, bizumAmount:NUMBER, otherAmount:NUMBER,
-salesCount:NUMBER, expectedCash:NUMBER, countedCash:NUMBER,
-difference:NUMBER, differenceReason:TEXT,
+cashMovementId:TEXT, lastMovementAt:DATETIME, snapshotUpdatedAt:DATETIME,
+snapshotSource:TEXT, snapshotVersion:NUMBER, salesCount:NUMBER,
+expectedCash:NUMBER, countedCash:NUMBER, difference:NUMBER,
+differenceReason:TEXT, sequenceCounters:OBJECT, ticketSequence:NUMBER,
+lastOperationId:TEXT, lastOperationType:TEXT, lastOperationAmount:NUMBER,
+lastOperationPaymentMethod:TEXT, lastOperationAt:DATETIME,
+lastOperationStatus:TEXT, traceId:TEXT, posIntegrationStatus:TEXT,
+ticketSyncStatus:TEXT, orderId:TEXT, checkoutId:TEXT, paymentId:TEXT,
+transactionId:TEXT, paymentReference:TEXT, paymentStatus:TEXT,
+paymentMethod:TEXT, paymentBreakdown:OBJECT, amountReceived:NUMBER,
+changeReturned:NUMBER, posPaymentStatus:TEXT, posPaymentMethod:TEXT,
+posPaymentProvider:TEXT, posAmount:NUMBER, posCurrency:TEXT,
+posPaidAt:DATETIME, ticketNumber:TEXT, ticketIssuedAt:DATETIME,
+ticketType:TEXT, ticketSeries:TEXT, lineItems:OBJECT,
+conceptOperations:OBJECT, conceptQuantities:OBJECT, customerName:TEXT,
+customerTaxId:TEXT, customerAddress:TEXT, netPrice:NUMBER,
+discountAmount:NUMBER, roundingAmount:NUMBER, taxableBaseTotal:NUMBER,
+appliedTax:NUMBER, taxTotal:NUMBER, ticketTotal:NUMBER, fiscalText:TEXT,
+verifactuReference:TEXT, verificationQr:TEXT, ticketXControlReference:TEXT,
+contactId:TEXT, catalogItemId:TEXT, serviceId:TEXT, bookingId:TEXT,
 _id:TEXT, _createdDate:DATETIME, _updatedDate:DATETIME, _owner:TEXT
 ```
 
-**Permisos live devueltos por Wix:** `itemRead=ANYONE`, `itemInsert=CMS_EDITOR`, `itemUpdate=CMS_EDITOR`, `itemRemove=CMS_EDITOR`. La lectura pública se ha configurado temporalmente por instrucción expresa del responsable del proyecto. La colección contiene campos para datos personales y referencias de pago/fiscales (`customerName`, `customerTaxId`, `customerAddress`, `paymentReference`): los registros existentes pueden quedar accesibles mediante consultas compatibles con esos permisos. No se han cambiado los permisos de escritura.
+**Permisos live devueltos por Wix:** `read=ANYONE`, `insert=ADMIN`, `update=ADMIN`, `remove=ADMIN`. La lectura ANYONE permite acceso de lectura a nivel de colección según el permiso CMS; no equivale a que todas las rutas frontend expongan necesariamente todos los campos. Aun así, por la presencia de campos de cliente, identificadores de pago y datos fiscales, se clasifica como riesgo P1 y debe revisarse la necesidad de lectura pública antes de cualquier despliegue. No se ha modificado ningún permiso en esta intervención.
 
-#### 3.1.1 Identificación y sesión
+**Diferencias frente al esquema anterior documentado:** el esquema live actual ya no devuelve `staffResourceId`, `conceptList`, `pvp`, `totalSum` ni `netAmount`; sí devuelve campos de snapshot (`snapshotUpdatedAt`, `snapshotSource`, `snapshotVersion`), última operación (`lastOperation*`), integración POS (`pos*`), referencias de checkout/pago/transacción (`checkoutId`, `paymentId`, `transactionId`) y referencias de contacto/catálogo/servicio/reserva (`contactId`, `catalogItemId`, `serviceId`, `bookingId`). La búsqueda de consumidores en `main` sí confirma discrepancia activa: `src/backend/cajas.web.js` conserva `CAJA_KEYS.TOTAL = "netAmount"` (línea 167), escribe `cashRegister.staffResourceId` (línea 1122), expone `netAmount` en la respuesta del estado de caja (línea 1364) y los tests offline esperan esa propiedad; `src/backend/eventLog.js` escribe `staffResourceId` en `MovimientosCaja` (línea 698), que es otra colección y no debe confundirse con CajaActual. El campo `staffResourceId` de CajaActual no está en el esquema live. Los campos nuevos de snapshot, última operación, POS, pago y referencias no aparecieron en las búsquedas de consumidores del código inspeccionado. Esta diferencia no prueba que Wix rechace escrituras (Wix advierte que el esquema de colección no se aplica estrictamente a cada dato), pero sí implica que el contrato declarado en CMS y el contrato usado por el backend no están sincronizados. No se cambia código en esta actualización documental; se registra como pendiente P1 de reconciliación con pruebas runtime y revisión de todos los consumidores.
 
-| Campo | Tipo | Definición | Dependencias |
-|---|---|---|---|
-| `singletonKey` | TEXT | Identificador único de la caja principal. | Debe mantenerse como `CAJA_PRINCIPAL`. |
-| `operationDateHour` | DATETIME | Fecha y hora de referencia de la operación. | Se relaciona con apertura, movimientos y última operación. |
-| `cashRegisterStatus` | TEXT | Estado de la caja: abierta, cerrada o pendiente, según el estado operativo definido. | Depende de `openedAt` y `closedAt`; los valores admitidos por el writer deben contrastarse con su enum backend. |
-| `staffResourceId` | TEXT | Identificador del empleado o recurso responsable. | Relacionado con `openedBy`, `closedBy` y personal de Wix Bookings. |
-| `traceId` | TEXT | Identificador global de trazabilidad. | Relaciona apertura, ticket y movimiento de caja. |
-| `openedAt` | DATETIME | Fecha y hora de apertura. | Inicia la sesión de caja. |
-| `openedBy` | TEXT | Persona que abrió la caja. | Depende del usuario o empleado autenticado. |
-| `closedAt` | DATETIME | Fecha y hora de cierre. | Solo debe completarse al cerrar la sesión. |
-| `closedBy` | TEXT | Persona que cerró la caja. | Depende del usuario que realiza el cierre. |
-| `lastMovementAt` | DATETIME | Fecha y hora del último movimiento registrado. | Se actualiza con cada venta, devolución o ajuste. |
-| `sequenceCounters` | OBJECT | Contadores de numeración operativa. | Alimenta `ticketSequence` y otros contadores. |
+**Límite de implementación:** el esquema CMS prueba la existencia y tipo declarado de los campos, no la validación estricta de valores, su obligatoriedad de negocio ni la existencia de writers/DTOs/consumidores. No se ha consultado el registro de elementos en esta intervención ni se ha comprobado su cardinalidad actual.
 
-#### 3.1.2 Importes iniciales de apertura
+**Contrato operativo declarado por el proyecto:** `CajaActual` es una proyección mutable de sesión/estado y última operación, no un ledger histórico. La clasificación exacta de importes y la relación con `MovimientosCaja` deben seguir los contratos backend y pruebas vigentes; la mera presencia de campos no certifica comportamiento.
 
-| Campo | Tipo | Definición | Dependencias |
-|---|---|---|---|
-| `openingCashAmount` | NUMBER | Efectivo existente al abrir. | Base inicial de `cashAmount` y `expectedCash`. |
-| `openingCardAmount` | NUMBER | Importe inicial atribuido a tarjeta. | Se suma al snapshot inicial. |
-| `openingBizumAmount` | NUMBER | Importe inicial atribuido a Bizum. | Se suma al snapshot inicial. |
-| `openingOtherAmount` | NUMBER | Importe inicial de otros medios. | Se suma al snapshot inicial. |
-
-#### 3.1.3 Último ticket y conceptos
-
-| Campo | Tipo | Definición | Dependencias |
-|---|---|---|---|
-| `ticketNumber` | TEXT | Número visible del ticket. | Depende de `ticketSeries` y `ticketSequence`. |
-| `ticketIssuedAt` | DATETIME | Fecha y hora de emisión. | Debe coincidir con la operación cobrada. |
-| `ticketType` | TEXT | Tipo de documento: ticket o factura simplificada. | Determina requisitos fiscales. |
-| `ticketSeries` | TEXT | Serie documental del ticket. | Forma parte de la numeración correlativa. |
-| `ticketSequence` | NUMBER | Número secuencial dentro de la serie. | Depende de `sequenceCounters`. |
-| `conceptList` | ARRAY_STRING | Lista resumida de conceptos vendidos. | Deriva de `lineItems`. |
-| `conceptOperations` | OBJECT | Operaciones realizadas sobre cada concepto. | Depende de los conceptos y cantidades. |
-| `conceptQuantities` | OBJECT | Cantidades por concepto. | Se relaciona con `lineItems` y precios. |
-| `lineItems` | OBJECT | Detalle completo de líneas del ticket. | Fuente de conceptos, cantidades, precios e impuestos; la estructura interna requiere contrato backend. |
-| `customerName` | TEXT | Nombre del cliente, si se solicita. | Asociado al ticket o factura. |
-| `customerTaxId` | TEXT | NIF del cliente, si se requiere factura. | Depende del tipo de documento. |
-| `customerAddress` | TEXT | Dirección fiscal del cliente. | Depende de los datos fiscales del cliente. |
-
-#### 3.1.4 Precios, descuentos e impuestos
-
-| Campo | Tipo | Definición | Dependencias |
-|---|---|---|---|
-| `netPrice` | NUMBER | Precio neto de una operación o referencia. | Relacionado con conceptos y líneas. |
-| `discountAmount` | NUMBER | Descuento aplicado. | Reduce la base imponible o el total según la regla fiscal. |
-| `roundingAmount` | NUMBER | Ajuste por redondeo. | Interviene en el cálculo del total final. |
-| `taxableBaseTotal` | NUMBER | Base imponible total. | Deriva de líneas menos descuentos. |
-| `appliedTax` | NUMBER | Tipo o porcentaje de impuesto aplicado. | Determina `taxTotal`. |
-| `taxTotal` | NUMBER | Importe total de impuestos. | Depende de `taxableBaseTotal` y `appliedTax`. |
-| `pvp` | NUMBER | Precio de venta al público. | Puede representar el precio final por concepto o línea. |
-| `totalSum` | NUMBER | Suma de importes de las líneas. | Deriva de `lineItems`. |
-| `ticketTotal` | NUMBER | Total final a pagar. | Depende de base, impuestos, descuentos y redondeo. |
-
-#### 3.1.5 Pago
-
-| Campo | Tipo | Definición | Dependencias |
-|---|---|---|---|
-| `paymentMethod` | TEXT | Método principal de pago. | Se detalla en `paymentBreakdown`. |
-| `paymentBreakdown` | OBJECT | Desglose entre efectivo, tarjeta, Bizum y otros. | Debe coincidir con importes recibidos. |
-| `amountReceived` | NUMBER | Total recibido del cliente. | Se compara con `ticketTotal`. |
-| `changeReturned` | NUMBER | Cambio entregado. | Normalmente: recibido menos total. |
-| `paymentStatus` | TEXT | Estado del pago: pendiente, pagado, rechazado, etc. | Condiciona la creación del movimiento de caja. |
-| `paymentReference` | TEXT | Referencia externa de tarjeta, Bizum o pasarela. | Depende del método de pago. |
-
-#### 3.1.6 Trazabilidad y controles
-
-| Campo | Tipo | Definición | Dependencias |
-|---|---|---|---|
-| `cashMovementId` | TEXT | Identificador del movimiento de caja generado. | Relaciona el ticket con `MovimientosCaja`. |
-| `ticketSyncStatus` | TEXT | Estado de sincronización del ticket. | Depende de la integración con los procesos externos. |
-| `ticketXControlReference` | TEXT | Referencia del control parcial TicketX. | Relaciona el ticket con controles parciales. |
-| `cierreZReference` | TEXT | Referencia del cierre Z asociado. | Se completa al incluir la operación en un cierre. |
-| `fiscalText` | TEXT | Texto fiscal mostrado en el documento. | Depende de la configuración fiscal aplicada. |
-| `verifactuReference` | TEXT | Referencia de registro Veri*Factu. | Solo procede si Veri*Factu está configurado. |
-| `verificationQr` | TEXT | Código o contenido QR de verificación. | Depende de la emisión fiscal correspondiente. |
-
-#### 3.1.7 Estado actual del cajón
-
-| Campo | Tipo | Definición | Dependencias |
-|---|---|---|---|
-| `netAmount` | NUMBER | Neto físico o acumulado de caja. | Se calcula a partir de movimientos y pagos. |
-| `cashAmount` | NUMBER | Efectivo actual del cajón. | Parte de la apertura más movimientos en efectivo. |
-| `cardAmount` | NUMBER | Total acumulado cobrado con tarjeta. | Depende de `paymentBreakdown`. |
-| `bizumAmount` | NUMBER | Total acumulado cobrado por Bizum. | Depende de `paymentBreakdown`. |
-| `otherAmount` | NUMBER | Total acumulado mediante otros medios. | Depende de `paymentBreakdown`. |
-| `salesCount` | NUMBER | Número de ventas realizadas. | Se incrementa con cada ticket pagado. |
-| `expectedCash` | NUMBER | Efectivo que debería existir físicamente. | Depende de apertura, ventas, retiradas y entradas de efectivo. |
-| `countedCash` | NUMBER | Efectivo contado físicamente. | Se introduce durante un arqueo. |
-| `difference` | NUMBER | Diferencia entre efectivo contado y esperado. | Normalmente: `countedCash - expectedCash`. |
-| `differenceReason` | TEXT | Motivo de la diferencia detectada. | Depende de `difference` y del control realizado. |
-
-#### 3.1.8 Campos internos de Wix
-
-| Campo | Tipo | Definición | Dependencias |
-|---|---|---|---|
-| `_id` | TEXT | Identificador interno del elemento CMS. | Generado y gestionado por Wix. |
-| `_createdDate` | DATETIME | Fecha de creación del elemento. | Gestionada por Wix. |
-| `_updatedDate` | DATETIME | Fecha de última modificación. | Se actualiza automáticamente en cada cambio. |
-| `_owner` | TEXT | Propietario interno del elemento. | Gestionado por Wix. |
-
-**Cardinalidad:** 59 campos personalizados + 4 de sistema = 63 campos físicos. Las dependencias descritas son relaciones funcionales de negocio; no son referencias CMS formales entre colecciones.
-
-**Límite de implementación:** la presencia de un campo en CMS no acredita que exista un writer que lo persista, un DTO que lo exponga o un consumidor que lo utilice. En particular, el WebMethod seguro de apertura, la persistencia de los cuatro importes iniciales y la escritura/lectura integral de ticket, conceptos, pago y referencias fiscales deben validarse en backend y E2E antes de considerarse operativos.
-
-**Contrato operativo:** `CajaActual` es una proyección mutable de la sesión y del último ticket, no un ledger append-only. `MovimientosCaja` conserva cada movimiento/ticket como fuente histórica inmutable. Las relaciones de texto como `cashMovementId` no son referencias CMS formales salvo que el esquema las declare expresamente.
-
-**Exposición temporal autorizada — P1:** `CajaActual` y el resto de colecciones `NATIVE` permiten lectura `ANYONE`. No cargar datos personales, fiscales, laborales, contables ni de pago reales durante esta fase. La política debe revertirse antes de cualquier despliegue. Validar además el acceso efectivo con identidad visitante y revisar rutas backend que consulten estas colecciones.
+**Cardinalidad y campos de sistema:** 78 campos personalizados + `_id`, `_createdDate`, `_updatedDate` y `_owner` = 82 campos físicos. La Data Collections API devuelve `_id` como TEXT, las fechas de sistema como DATETIME y `_owner` como TEXT.
 
 ### 3.2 CitasF2 — revisión 42
 
