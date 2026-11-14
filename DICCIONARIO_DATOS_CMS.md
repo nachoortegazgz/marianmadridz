@@ -70,7 +70,7 @@ _id:TEXT, _createdDate:DATETIME, _updatedDate:DATETIME, _owner:TEXT
 
 **Permisos live:** `insert/update/remove/read=ADMIN`. Colección `NATIVE`, displayName `CAJA_ACTUAL`, revisión 1. Se creó un único registro lógico `singletonKey=CAJA_PRINCIPAL` (ID físico Wix `04402566-25b1-4b93-8f93-5c3343c73249`), con `cashRegisterStatus=CERRADA`, `isOpen=false`, saldos y contadores a cero, `sequenceCounters={}`, `operationDate=2026-11-14` y `traceId` UUID v4. No se rellenaron `openedAt/openedBy`, no se declaró saldo de apertura y no se abrió la caja.
 
-**Índice de singleton:** se solicitó el índice único `CajaActual_singletonKey_unique`; estado observado tras la creación: `BUILDING`. No debe considerarse garantía de unicidad hasta verificar `ACTIVE`. El backend mantiene además la comprobación fail-closed de duplicados (consulta hasta dos registros y error si encuentra más de uno).
+**Índice de singleton:** se solicitó el índice único `CajaActual_singletonKey_unique`; estado verificado en lectura posterior: `ACTIVE`; el índice único está operativo. El backend mantiene además la comprobación fail-closed de duplicados (consulta hasta dos registros y error si encuentra más de uno).
 
 **Contrato operativo:** `CajaActual` es una proyección mutable de una sola sesión, no un ledger. `MovimientosCaja` conserva cada movimiento/ticket individual como fuente histórica. En el corte live la colección `MovimientosCaja` mantiene revisión 78 y 0 registros; no se ha insertado ni modificado ningún movimiento durante la recreación.
 
