@@ -67,3 +67,16 @@ Fuentes:
 **BLOCKED_ENVIRONMENT**
 
 La consulta es verificable y read-only. No se modificó ninguna automatización, app, trigger, acción, contacto, reserva, pedido, pago, CMS ni configuración del sitio.
+
+
+## Addendum de revalidación — 2026-11-14
+
+Se repitió la consulta paginada Wix Automations V2 en el Site ID QA. Resultado: 150 automatizaciones; 10 ACTIVE y 140 INACTIVE; paginación completa. El estado operativo se leyó desde configuration.status. Las 10 activas siguen siendo PREINSTALLED y cada una conserva al menos uno de los locks settings.readonly o settings.disableStatusChange.
+
+La lectura completa de la guía oficial Wix **Automations Activation Status** confirma la regla operativa: antes de desactivar, consultar el objeto completo y detener la operación si settings.disableStatusChange o settings.readonly es true. La guía no autoriza sortear estos bloqueos. Por tanto, no se ejecutó PATCH ni se alteró el estado.
+
+Evidencia CI y documentación integrada:
+- PR #381: merge 1c4f9c3322f323bc32012c8c042eb2c47aaaed44; workflow 43627893841 completed/success.
+- PR #380: merge e2150647e6203b5c964a0d414c5b0a5295a374fe; Secret scanning y Backend offline quality gates completed/success.
+
+**Conclusión sin cambios:** las automatizaciones continúan activas y bloqueadas por el propietario de la app. Runtime/E2E que pueda dispararlas sigue BLOCKED_EXTERNAL_SIDE_EFFECTS. Continuar únicamente con offline/mock y lecturas read-only hasta que Wix/proveedor habilite un procedimiento soportado o aporte aislamiento equivalente verificable.
