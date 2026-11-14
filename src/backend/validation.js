@@ -105,7 +105,7 @@ export function assertCitasF2(item) {
  * CajaActual mirrors the current physical CMS schema. The sequenceCounters
  * field is OBJECT; accepting a JSON string would silently corrupt projections.
  */
-export function assertCajaActualRecord(item, { partial = false } = {}) {
+export function assertCajaActualRecord(item) {
     if (!item || typeof item !== "object" || Array.isArray(item)) {
         throw new Error("SCHEMA_VIOLATION: CajaActual item must be an object");
     }
