@@ -1905,13 +1905,13 @@ Este addendum sustituye los addenda históricos que describían MapaStaff como m
 
 **Esquema vigente leído en Wix Data API:** 23 colecciones (15 NATIVE y 8 WIX_APP), 524 campos NATIVE. MapaStaff tiene 18 campos/3 filas; DatosFiscales 28 campos/1 fila; ComplementosCatalogo 18 campos/36 filas; CajaActual 39 campos/1 fila; ControlOperativo 42 campos/0 filas.
 
-**MapaStaff:** exclusivamente mapeo de identidad staff. Campos nativos relevantes: staffMemberId, resourceId, scheduleId y memberId. active es BOOLEAN. No existe recordType ni hay campos fiscales. _id es la clave del elemento CMS; resourceId conserva la identidad Bookings aunque coincida con _id en las tres filas.
+**MapaStaff:** exclusivamente mapeo de identidad staff. Campos nativos relevantes: staffMemberId, resourceId, scheduleId y memberId. active es BOOLEAN. thirdPartyId es TEXT opaco, no es GUID ni coincide con DatosFiscales._id y no tiene consumidor localizado; no tratarlo como FK. No existe recordType ni hay campos fiscales. _id es la clave del elemento CMS; resourceId conserva la identidad Bookings aunque coincida con _id en las tres filas.
 
 **DatosFiscales:** maestro de terceros, gestoría y configuración fiscal. Declara recordType, taxId, legalName, thirdPartyType, address, verifactuEnabled, verifactuVersion, tipoUsoPosibleMultiOT, indicadorMultiplesOT, fechaInicioVerifactu (TEXT), gestorEmail, gestorName y gestorNombre. No declara traceId ni schemaVersion. gestorName es el keyfield canónico; gestorNombre queda retirado del contrato de código y pendiente de eliminación física.
 
 **ComplementosCatalogo:** _id es el keyfield CMS canónico. addonId se conserva como espejo requerido por el esquema actual. El DTO addOnId se mantiene exclusivamente como contrato de transporte Bookings. name y description no se fusionan por tener tipos TEXT y RICH_TEXT. traceId está vacío y no tiene consumidor identificado.
 
-**CajaActual y ControlOperativo:** sequenceCounters es OBJECT; ticketSequence no existe. ownerToken, retryAfter y nextRetryAt no son campos del esquema vigente; traceId es el fencing token canónico.
+**CajaActual:** operationDate es DATE, openingAmount es NUMBER y sequenceCounters es OBJECT. Bizum presencial se agrega en otherAmount; no existen operationDateHour ni bizumAmount. cashRegisterStatus=SIMULACION es el estado canónico del singleton; isOpen=true no gobierna sesión. id=_id; currentSequence no tiene consumidor localizado. **ControlOperativo:** ownerToken, retryAfter y nextRetryAt no existen; traceId es el fencing token canónico.
 
 **Código en la rama** fix/current-site-cms-contract-alignment: separación de validadores/hooks MapaStaff y DatosFiscales; lectores y escritores fiscales migrados a DatosFiscales; keyfield _id para complementos; gestorName como nombre canónico. Cambios pendientes de CI y revisión PR. No se ha mutado el CMS ni se han migrado registros.
 
