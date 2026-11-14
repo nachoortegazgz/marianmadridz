@@ -1,3 +1,46 @@
+## Addendum de vigencia técnica — 2026-11-14
+
+Los requisitos de negocio de este documento se conservan; los estados históricos no acreditan funcionamiento actual. Para el estado de código, CMS, QA y publicación prevalece [ESTADO_ACTUAL_PROYECTO.md](ESTADO_ACTUAL_PROYECTO.md).
+
+La caja debe conservar dos estados económicos distintos: (1) saldos iniciales por efectivo, tarjeta, Bizum y otros medios en el instante de apertura; (2) saldos actuales calculados a partir de la apertura y de los movimientos aplicados. `operationDateHour` debe almacenar fecha y hora. `cashRegisterStatus` es el único estado de sesión. La implementación CMS de estos campos está pendiente; no dar el requisito por operativo.
+
+La ventana temporal TEC-033 solo permite pruebas controladas de registros sintéticos en una rama de desarrollo; no altera obligaciones de conservación ni permite borrar registros reales. No ejecutar pruebas con efectos externos en el sitio Published.
+
+## Addendum de vigencia — 2026-11-14
+
+**Rama de trabajo:** `chore/temporary-append-only-mutation-window`. Este addendum describe exclusivamente el estado documental y de código de esta rama; no implica merge en `main`, despliegue Wix, publicación ni mutación CMS live.
+
+### Ventana temporal de mutabilidad para QA (TEC-033)
+
+La rama habilita temporalmente update/remove individual sobre los registros de las colecciones que el proyecto protegía como append-only: `MovimientosCaja`, `LibroAsientosContablesDetalle`, `RegistrosHorariosStaff`, `MovimientosInventario`, `HistoricoCierresZ`, `PaquetesGestoria` y `ControlOperativo` únicamente cuando `controlType=WEBHOOK_EVENT`.
+
+La habilitación está centralizada en `APPEND_ONLY_MUTATION_WINDOW` de `src/backend/internalConfig.js` (`ENABLED=true`, `TEMPORARY=true`, `RESTORE_BEFORE_PRODUCTION=true`). Los hooks de `src/backend/data.js` y las allowlists de `src/backend/dataAccessPolicy.js` están alineados con esa bandera. La validación de esquema de inserción y los controles de tipo/identidad permanecen activos. Las operaciones bulk de inserción, actualización y borrado continúan bloqueadas; la excepción se limita a operaciones individuales autorizadas por la política backend.
+
+**Límite de seguridad:** la excepción es de código en una rama de trabajo, no una dispensa legal ni una autorización para alterar datos reales. No se han cambiado permisos CMS, colecciones, registros, automatizaciones ni configuración Wix. Tampoco se ha eliminado ningún registro sintético en esta intervención. La edición desde Content Manager/Wix UI no se considera validada por esta bandera. Antes de borrar un elemento, debe acreditarse que es sintético mediante marcadores y trazabilidad inequívocos; si existe duda sobre su origen, se conserva.
+
+**Gates que siguen cerrados:** `FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED=false`, `ACCOUNTING_LEDGER_WRITES_ENABLED=false` y `ALLOW_SIMULATION_RECORDS=false`. La ventana de mutabilidad no habilita writers fiscales, contables, laborales ni pagos. No ejecutar pruebas E2E con efectos externos en el sitio Published.
+
+**Cierre obligatorio antes de integrar o publicar:** establecer `APPEND_ONLY_MUTATION_WINDOW.ENABLED=false`; retirar las allowlists temporales de update/remove; restaurar pruebas que exigen `FISCAL_VIOLATION`; ejecutar CI completo y verificar en Wix Local Editor que los hooks vuelven a bloquear update/remove. No publicar ni desplegar mientras la bandera esté habilitada.
+
+### Corrección del contrato CMS `CajaActual`
+
+La colección `CajaActual` fue recreada en Wix como `NATIVE`, revisión 1, con un índice único activo sobre `singletonKey` y un único elemento `CAJA_PRINCIPAL`. El elemento permanece `cashRegisterStatus=CERRADA`, `isOpen=false`, sin sesión abierta ni saldo inicial de apertura. `MovimientosCaja` no fue modificada.
+
+El esquema live leído tras la creación conserva todavía el contrato anterior: `operationDate:DATE`, `openingAmount:NUMBER`, `voucherAmount:NUMBER` e `isOpen:BOOLEAN`; no constan todavía `operationDateHour`, los cuatro campos de saldo inicial por medio de pago ni `bizumAmount`. Los intentos posteriores de añadir campos/actualizar la colección devolvieron `WDE0025`; por tanto, **la migración correctiva del esquema no está aplicada**. No describir los campos objetivo como existentes en Wix.
+
+Contrato objetivo aprobado para la siguiente migración controlada:
+- `operationDateHour:DATETIME`: instante de operación con fecha y hora.
+- Saldos de apertura: `openingCashAmount`, `openingCardAmount`, `openingBizumAmount`, `openingOtherAmount` (NUMBER).
+- Saldos actuales: `cashAmount`, `cardAmount`, `bizumAmount`, `otherAmount` (NUMBER).
+- `cashRegisterStatus` es el único estado de sesión; `isOpen` es redundante.
+- Retirada diferida de `operationDate`, `openingAmount`, `voucherAmount` e `isOpen` solo después de migrar todos los consumidores y validar compatibilidad.
+
+Los cuatro importes de apertura se registran al abrir una sesión real; no se deben rellenar con ceros por defecto en una caja cerrada. Los saldos actuales se inicializan desde los importes de apertura y se proyectan aplicando de forma idempotente los movimientos válidos de `MovimientosCaja`. El ledger fuente no se modifica. El código de la rama de alineación de caja todavía requiere completar el contrato de apertura, validación, DTO, conciliación y pruebas; los cambios parciales de nombres no equivalen a migración funcional.
+
+**Secuencia requerida:** (1) resolver el contrato REST Wix para añadir/actualizar campos y obtener readback; (2) revisar consumidores y tipos; (3) completar backend/DTO/validadores/tests; (4) migrar únicamente valores demostrables; (5) retirar campos legacy tras búsqueda completa y CI; (6) validar en Wix QA aislado. No publicar mientras el esquema CMS y el código no compartan el mismo contrato.
+
+---
+
 ## Aviso de vigencia — 2026-11-11
 
 Este documento recoge necesidades y criterios de aceptación de negocio. Las etiquetas históricas "declarado", "implementado" o "verificado" no equivalen a evidencia vigente. Para saber qué existe realmente, qué está cubierto por mocks y qué requiere Wix Runtime, consultar [ESTADO_ACTUAL_PROYECTO.md](ESTADO_ACTUAL_PROYECTO.md) y la evidencia de cada prueba. El sitio Wix está actualmente **Published** y no debe tratarse como entorno QA aislado. No ejecutar pruebas que generen reservas, pagos, comunicaciones o datos de cliente sobre ese sitio.
