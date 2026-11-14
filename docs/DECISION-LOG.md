@@ -278,3 +278,18 @@ Para los movimientos presenciales manuales nuevos, backend asigna `recordSource=
 **Código en main:** hooks y validator permiten CONFIG_SISTEMA incompleto en los campos fiscales no verificados, fijan el ID singleton CONFIG_SISTEMA_FISCAL y exigen schemaVersion/traceId. eventLog persiste schemaVersion/traceId en nuevos terceros y deja de inferir legalName desde el nombre comercial. Sin sincronización/publicación Wix en esta intervención.
 
 **Límites:** los datos fiscales no verificados permanecen vacíos; Veri*Factu sigue desactivado; escritores fiscales/contables siguen fail-closed. Las colecciones numeradas 12–16 no se borran porque el esquema no aporta sus IDs/nombres y no hay correspondencia inequívoca con el inventario live.
+
+### TEC-035 — consolidación fiscal en MapaStaff y gestoría (2026-11-14)
+
+**Decisión del propietario:** todos los datos históricos y registros existentes en el sitio son sintéticos de pruebas; el sitio no tiene actividad real. Se autoriza mantener temporalmente abierta la ventana de mutabilidad append-only hasta nueva instrucción expresa del propietario. Esta autorización se limita al entorno de QA declarado; no habilita datos reales ni despliegue productivo.
+
+**CMS live verificado tras la mutación:**
+- `MapaStaff` revisión 36, 42 campos y 5 registros: tres `STAFF`, un `TERCERO` QA sintético y un `GESTORIA`.
+- El registro `TERCERO` procedente de `DatosFiscales` conserva su ID original. No se creó `CONFIG_SISTEMA`.
+- Nuevo registro `GESTORIA`: razón social/nombre `NachoGest`, dirección `Calle Burgos 25`, teléfono `666724634`, email `nachoortegazgz@gmail.com`. No tiene `memberId`, `staffMemberId`, `resourceId` ni roles.
+- `MapaStaff` queda con lectura `PRIVILEGED` y escritura `CMS_EDITOR`. El backend consulta mediante la capa `@wix/data` elevada. Esto evita exponer públicamente datos de contacto/fiscales.
+- `DatosFiscales` sigue presente con su fila placeholder sintética. No se elimina hasta publicar el backend migrado, verificar runtime y confirmar que no quedan consumidores activos.
+
+**Código en rama** `feat/consolidate-fiscal-master-mapastaff-20261114`: constantes canónicas, validación por `recordType`, hooks CMS, upsert de terceros, lectura de configuración fiscal, destinatarios de gestoría y filtro de proyección Bookings actualizados a `MapaStaff`. Los lectores de eventos filtran `recordType=STAFF`. El DTO de destinatarios añade teléfono y dirección; no se encontró un consumidor frontend directo de `listAccountantRecipients`, por lo que no se ha inventado una UI nueva.
+
+**Pendiente:** ejecutar CI completo; revisar diff; completar documentación del esquema live; desplegar backend en Wix de forma controlada; verificar hooks y WebMethods; después retirar `DatosFiscales` y confirmar su ausencia en inventario. No se ha publicado código Wix ni se ha borrado la colección antigua en esta intervención.
