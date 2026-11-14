@@ -131,7 +131,7 @@ function seedCajaPrincipal() {
 async function setupFiscalSecrets() {
   const state = globalThis.__mmSecretsState || (globalThis.__mmSecretsState = { _map: {}, _default: 'mock-secret' });
   state._map.SECRET_FISCALKEY = 'A'.repeat(40);
-  state._map.FISCAL_NIF_EMISOR = 'B12345678';
+  state._map.FISCAL_NIF_EMISOR = 'B12345674';
   // LH-19 (FLOW-CAJA-01): el signer X.509 delegado es un microservicio externo;
   // en offline offline se mockea su contrato HTTP (POST {hash,...} -> {signature}).
   state._map.FISCAL_SIGNER_ENDPOINT = 'https://signer.mock.local/sign';
