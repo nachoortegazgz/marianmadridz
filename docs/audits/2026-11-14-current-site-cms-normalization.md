@@ -139,33 +139,58 @@ La igualdad de importes/contadores en un singleton simulado o en una única fila
 - `DatosFiscales.fechaInicioVerifactu` es TEXT y está vacío; no hay evidencia de formato real que permita cambiar su tipo.
 - No se debe almacenar `N/A` en campos tipados; la no aplicabilidad se expresa omitiendo el valor o usando null cuando el contrato lo permita.
 
-## 6. Discrepancia bloqueante: MapaStaff frente a DatosFiscales
+## 6. Contratos backend alineados con el esquema físico
 
-El esquema actual de `MapaStaff` solo declara 18 campos de identidad/relación de personal; no declara `recordType`, `taxId`, `legalName`, `thirdPartyType`, `traceId` ni los campos de configuración fiscal. Sin embargo:
-- `events.js` filtraba por `recordType=STAFF`; esa condición no existe en el esquema y se elimina en la rama de alineación. La consulta conserva `staffMemberId` y `active`.
-- `data.js`, `validation.js`, `dataAccessPolicy.js` y `eventLog.js` aún modelan `MapaStaff` como maestro combinado de staff y datos fiscales.
-- `fiscalDocuments.web.js` consulta `MapaStaff` para gestores, mientras la colección física `DatosFiscales` sí contiene `gestorEmail`, `gestorName`, `taxId`, `legalName` y `thirdPartyType`.
-- `DatosFiscales` no declara `traceId` ni `schemaVersion`, que algunos contratos de código esperan.
+### 6.1 MapaStaff — mapa de identidades de personal
 
-No se mueve ningún writer fiscal ni se habilita ninguna escritura. La decisión pendiente es consolidar el maestro fiscal en `DatosFiscales` y mantener `MapaStaff` exclusivamente para el mapa de identidad Bookings/Members, o ampliar físicamente `MapaStaff`. La opción recomendada es separar responsabilidades: `MapaStaff` para personal y `DatosFiscales` para datos fiscales/terceros, con migración y tests antes de habilitar escritores.
+- MapaStaff contiene exclusivamente el mapeo entre identidades nativas de personal: staffMemberId (Bookings Staff Member), resourceId (Bookings Resource), scheduleId (agenda) y memberId (Wix Members).
+- _id es la identidad del elemento CMS. Aunque resourceId = _id en las tres filas leídas, los campos no se fusionan: uno identifica el registro CMS y el otro el recurso nativo consumido por Bookings.
+- active es BOOLEAN y el lector de proyección filtra staffMemberId + active=true.
+- El validador y los hooks MapaStaff_beforeInsert/MapaStaff_beforeUpdate validan exclusivamente esos campos de personal. No esperan recordType, traceId ni campos fiscales.
+- MapaStaff no es autoridad RBAC; la autorización sigue resolviéndose en backend con las APIs nativas Wix Members/Bookings.
+
+### 6.2 DatosFiscales — maestro fiscal y de terceros
+
+- DatosFiscales es la colección física para recordType, taxId, legalName, thirdPartyType, address y datos de gestoría.
+- Los valores admitidos de recordType son TERCERO, GESTORIA y CONFIG_SISTEMA. El registro actual es un placeholder TERCERO/PROVEEDOR; no constituye identidad fiscal real ni configura al emisor.
+- DatosFiscales no declara traceId ni schemaVersion. Los writers no deben inventar esos campos: la trazabilidad permanece en el ledger/operación que origina la escritura.
+- fechaInicioVerifactu es TEXT, no DATE. El validador exige formato ISO YYYY-MM-DD cuando el valor se informa.
+- gestorName es el nombre canónico. gestorNombre es un espejo físico detectado en el único registro. Los lectores nuevos solo consumen gestorName; el hook de actualización elimina el espejo únicamente si ambos valores coinciden y falla cerrado ante divergencias.
+- eventLog.js inserta terceros en DatosFiscales usando solo campos declarados. fiscalAggregator.web.js consulta allí CONFIG_SISTEMA y el adaptador histórico TERCERO/EMISOR. fiscalDocuments.web.js obtiene los destinatarios de gestoría desde la misma colección.
+- No existe fila CONFIG_SISTEMA ni datos fiscales oficiales verificados. Los writers fiscales siguen fail-closed; alinear el contrato no habilita facturación ni envíos.
+
+### 6.3 ComplementosCatalogo — identidad CMS y contrato Bookings
+
+- _id es el keyfield canónico del elemento CMS.
+- addonId se mantiene como espejo físico requerido por el esquema actual. El hook adopta su valor como _id solo cuando Wix no ha asignado todavía el ID; si ambos existen, exige igualdad.
+- El DTO de transporte a Wix Bookings conserva addOnId porque es el nombre del campo del contrato nativo. No se confunde con el keyfield físico CMS.
+- traceId está vacío en las 36 filas y no tiene consumidor específico localizado; queda como candidato de retirada física tras revisar automatizaciones y vistas CMS.
+- name y description tienen el mismo texto, pero son TEXT y RICH_TEXT respectivamente. No se fusionan por igualdad de valores.
+
+### 6.4 Otros contratos confirmados
+
+- CajaActual.sequenceCounters es OBJECT y el código lo trata como objeto. ticketSequence no existe en el esquema actual ni tiene consumidor activo en src/.
+- ControlOperativo.ownerToken, retryAfter y nextRetryAt no son campos físicos canónicos; el token de fencing es traceId.
+- ServiciosCatalogo.serviceId y pricingPlanId son identificadores nativos distintos de _id CMS y entre sí. No se consolidan.
+- DatosFiscales.gestorNombre, CajaActual.id y ComplementosCatalogo.addonId son candidatos a retirada física solo después de completar la migración de valores/consumidores y revisar contratos externos.
 
 ## 7. Cambios de código incluidos en la rama
 
-- El lector de proyección Bookings deja de filtrar por el inexistente `MapaStaff.recordType`.
-- La normalización de complementos prioriza `_id`, mantiene el DTO `addOnId` y rechaza que `addonId` difiera de `_id`.
-- El hook de complementos comprueba la igualdad entre `addonId` y `_id` cuando ambos están presentes.
-- Los nombres internos de la ventana de mutabilidad se renombran para describir el sitio aislado, no un segundo entorno.
-- Se eliminan los exports de hooks CitasF2 asociados a un ID generado que no existe en el inventario actual; se conservan los hooks canónicos CitasF2.
-- Los mensajes runtime y comentarios ya no identifican el sitio como un entorno separado.
-- No se modifica Wix CMS ni se borran campos/registros.
+- internalConfig.js: DatosFiscales se incorpora a BUSINESS_COLLECTIONS; RECORD_TYPE queda limitado a los tipos fiscales de esa colección.
+- validation.js y data.js: validación separada de MapaStaff y DatosFiscales; no se exigen campos inexistentes y se validan los tipos físicos BOOLEAN, TEXT, NUMBER y GUID.
+- dataAccessPolicy.js: la validación de recordType se aplica a inserciones de DatosFiscales, no a MapaStaff.
+- eventLog.js: upsert de terceros y lectura de configuración migrados a DatosFiscales; no se persisten traceId ni schemaVersion allí.
+- fiscalAggregator.web.js: lectura de NIF emisor migrada a DatosFiscales; ausencia de CONFIG_SISTEMA sigue provocando error fail-closed.
+- fiscalDocuments.web.js: lectura de destinatarios migrada a DatosFiscales; gestorName es el único nombre consumido.
+- ComplementosCatalogo: _id pasa a ser la identidad primaria del hook; addonId se mantiene solo como espejo requerido por el esquema físico.
+- Pruebas actualizadas para validar la separación de maestros, tipos de campo y keyfield canónico.
+- No se ha modificado Wix CMS, no se han migrado registros y no se han eliminado definiciones de campo.
 
 ## 8. Validación y límites
 
-- Verificado: lectura de inventario, tipos, recuentos y perfiles de valores del sitio actual.
-- Verificado: igualdad exacta de los pares de campos indicados en las filas comparadas.
-- Verificado: PR #361, #362, #363 y #364 integradas en `main`; último merge `55c53e596455995767bede8fba87f6900ba379ac`.
-- Verificado: CI offline Layer 1, Layer 2, regresión completa, contratos Wix Data/eCommerce Transactions/Bookings Reader V2 y ESLint: PASS en runs #1122, #1124, #1126 y #1128.
-- Verificado: secret scanning PASS en runs #546, #548, #550 y #552.
-- Pendiente: pruebas de runtime en Wix Editor y E2E.
-- Pendiente: reconciliación completa de writers fiscales y hooks MapaStaff/DatosFiscales.
-- No se ha publicado ni desplegado código Wix; tampoco se ha modificado el CMS live.
+- Verificado por lectura Wix: 23 colecciones (15 NATIVE y 8 WIX_APP), 524 campos físicos NATIVE; MapaStaff 18 campos/3 filas y DatosFiscales 28 campos/1 fila.
+- Verificado por lectura Wix: CajaActual.sequenceCounters es objeto; ticketSequence y ControlOperativo.ownerToken no existen; ComplementosCatalogo.addonId = _id en 36/36; DatosFiscales.gestorName = gestorNombre en 1/1.
+- Verificado estáticamente en la rama: los consumidores fiscales apuntan a DatosFiscales; los hooks de MapaStaff solo validan identidades de personal.
+- Pendiente: ejecutar suite CI completa, lint y análisis de seguridad tras los cambios de esta rama.
+- Pendiente: validación de hooks/WebMethods en Wix Editor, pruebas de lectura/escritura sintéticas y E2E.
+- No se ha publicado código Wix ni se ha modificado el CMS del sitio.
