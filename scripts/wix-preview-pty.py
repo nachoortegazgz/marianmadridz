@@ -111,11 +111,11 @@ def self_test() -> None:
     )
     success = clean_output(
         "Creating preview deployment...\n"
-        "Your preview deployment is now available at https://wix.to/QA123"
+        "Your preview deployment is now available at https://wix.to/DEMO123"
     )
     assert selector_ready(selector)
     assert PREVIEW_SUCCESS_RE.search(success)
-    assert preview_url(success) == "https://wix.to/QA123"
+    assert preview_url(success) == "https://wix.to/DEMO123"
     assert not preview_url("NonInteractiveTerminal https://github.com/example")
     assert PIPELINE_ERROR_RE.search("Code: PUBLISH_PIPELINE_TASK_NOT_FOUND")
     assert not PREVIEW_SUCCESS_RE.search(

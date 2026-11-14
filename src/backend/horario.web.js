@@ -248,7 +248,7 @@ export const registrarFichaje = webMethod(
             if (STAFF_CLOCKING_CONFIG.WRITES_ENABLED !== true) {
                 return _writerDisabled(
                     "CLOCKING_WRITES_DISABLED",
-                    "Los fichajes permanecerán deshabilitados hasta validar idempotencia, secuencia y concurrencia en Wix QA.",
+                    "Los fichajes permanecerán deshabilitados hasta validar idempotencia, secuencia y concurrencia en el sitio de pruebas aislado.",
                     traceId
                 );
             }
@@ -654,7 +654,7 @@ export const registrarAjusteHorario = webMethod(
             if (STAFF_CLOCKING_CONFIG.ADJUSTMENTS_ENABLED !== true) {
                 return _writerDisabled(
                     "CLOCKING_ADJUSTMENTS_DISABLED",
-                    "Los ajustes de jornada permanecerán deshabilitados hasta validar el flujo rectificativo append-only y sus permisos en Wix QA.",
+                    "Los ajustes de jornada permanecerán deshabilitados hasta validar el flujo rectificativo append-only y sus permisos en el sitio de pruebas aislado.",
                     traceId
                 );
             }
