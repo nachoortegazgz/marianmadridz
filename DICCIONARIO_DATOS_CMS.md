@@ -1913,7 +1913,7 @@ Este addendum sustituye los addenda históricos que describían MapaStaff como m
 
 **CajaActual:** operationDate es DATE, openingAmount es NUMBER y sequenceCounters es OBJECT. Bizum presencial se agrega en otherAmount; no existen operationDateHour ni bizumAmount. cashRegisterStatus=SIMULACION es el estado canónico del singleton; isOpen=true no gobierna sesión. id=_id; currentSequence no tiene consumidor localizado. **ControlOperativo:** ownerToken, retryAfter y nextRetryAt no existen; traceId es el fencing token canónico.
 
-**Código en la rama** fix/current-site-cms-contract-alignment: separación de validadores/hooks MapaStaff y DatosFiscales; lectores y escritores fiscales migrados a DatosFiscales; keyfield _id para complementos; gestorName como nombre canónico. Cambios pendientes de CI y revisión PR. No se ha mutado el CMS ni se han migrado registros.
+**Código en la rama** fix/current-site-cms-contract-alignment: separación de validadores/hooks MapaStaff y DatosFiscales; lectores y escritores fiscales migrados a DatosFiscales; keyfield _id para complementos; gestorName como nombre canónico. PR #370 está abierto pero `dirty` (109 commits ahead / 57 behind main); no hay checks para el HEAD actual. Rebase, CI sobre HEAD y revisión del diff pendientes. No se ha mutado el CMS ni se han migrado registros.
 
 ## Addendum de autoridad y pruebas en el sitio aislado — 2026-11-14
 
