@@ -36,3 +36,33 @@ test("VALIDATION-FISCAL-02 DatosFiscales third-party validation uses the shared 
         thirdPartyType: "CLIENTE",
     }), /taxId/);
 });
+
+
+test("VALIDATION-CAJA-01 validates CajaActual object schema without MapaStaff requirements", () => {
+    assert.equal(V.assertCajaActualRecord({
+        singletonKey: "CAJA_PRINCIPAL",
+        sequenceCounters: { seqGlobal: 3, appliedMovementIds: ["movement-1"] },
+    }), true);
+    assert.throws(
+        () => V.assertCajaActualRecord({ sequenceCounters: '{"seqGlobal":3}' }),
+        /sequenceCounters must be an OBJECT/
+    );
+    assert.throws(
+        () => V.assertCajaActualRecord({ sequenceCounters: { appliedMovementIds: "movement-1" } }),
+        /appliedMovementIds must be an ARRAY/
+    );
+});
+
+test("VALIDATION-FISCAL-03 supports partial DatosFiscales updates while validating supplied fields", () => {
+    assert.equal(V.assertDatosFiscalesRecord({
+        recordType: "TERCERO",
+        taxId: "12345678Z",
+    }, { partial: true }), true);
+    assert.throws(
+        () => V.assertDatosFiscalesRecord({
+            recordType: "TERCERO",
+            taxId: "12345678A",
+        }, { partial: true }),
+        /valid taxId/
+    );
+});
