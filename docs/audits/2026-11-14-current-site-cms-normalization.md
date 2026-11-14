@@ -194,6 +194,7 @@ La igualdad de importes/contadores en un singleton simulado o en una única fila
 - Verificado por lectura Wix: 23 colecciones (15 NATIVE y 8 WIX_APP), 524 campos físicos NATIVE; MapaStaff 18 campos/3 filas y DatosFiscales 28 campos/1 fila.
 - Verificado por lectura Wix: CajaActual tiene 39 campos y sequenceCounters es objeto; operationDate es DATE; operationDateHour, bizumAmount, ticketSequence y los cuatro opening*Amount no existen; ControlOperativo.ownerToken no existe; ComplementosCatalogo.addonId = _id en 36/36; DatosFiscales.gestorName = gestorNombre en 1/1.
 - Verificado estáticamente en la rama: los consumidores fiscales apuntan a DatosFiscales; los hooks de MapaStaff solo validan identidades de personal.
-- Pendiente: ejecutar suite CI completa, lint y análisis de seguridad tras los cambios de esta rama.
+- PR #370 está abierto pero `dirty` (109 commits ahead / 57 behind main). No hay checks asociados al HEAD actual; los últimos checks exitosos son del SHA 68a2f327 y no validan cambios posteriores.
+- Pendiente: rebase/reconciliación, suite CI completa sobre HEAD, lint, análisis de seguridad y revisión del diff.
 - Pendiente: validación de hooks/WebMethods en Wix Editor, pruebas de lectura/escritura sintéticas y E2E.
 - No se ha publicado código Wix ni se ha modificado el CMS del sitio.
