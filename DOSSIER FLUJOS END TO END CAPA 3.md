@@ -1,44 +1,40 @@
-> **Addendum de vigencia — 2026-11-14:** los flujos Capa 3 siguen siendo diseño, no integración operativa certificada. TEC-033 habilita temporalmente update/remove individual de ciertos ledgers solo en una rama de QA; no cambia la autoridad de Wix CMS, no habilita writers y no autoriza que SharePoint/Power Automate borre o corrija datos de Capa 1. La migración de `CajaActual` permanece pendiente; Capa 3 no calcula ni altera sus saldos.
+> **Vigencia 2026-11-14:** Capa 3 sigue siendo diseño, no integración operativa certificada. Wix CMS mantiene la autoridad transaccional. `CajaActual` live tiene el esquema corregido y singleton cerrado; Capa 3 no calcula ni modifica sus saldos. TEC-033 es una excepción de código temporal en una rama de QA y no concede a SharePoint/Power Automate permisos de escritura o borrado sobre Capa 1.
 
-## Addendum de vigencia — 2026-11-14
+## Estado live y limpieza QA — corte 2026-11-14
 
-**Rama de trabajo:** `chore/temporary-append-only-mutation-window`. Este addendum describe exclusivamente el estado documental y de código de esta rama; no implica merge en `main`, despliegue Wix, publicación ni mutación CMS live.
+**Sitio:** `188bed94-177c-4bc9-a9f0-35080d874f3e`. **Rama de código:** `chore/temporary-append-only-mutation-window`. Este estado supersede los inventarios y addenda anteriores que contradigan estos datos.
 
-### Ventana temporal de mutabilidad para QA (TEC-033)
+### CMS verificado tras los cambios
 
-La rama habilita temporalmente update/remove individual sobre los registros de las colecciones que el proyecto protegía como append-only: `MovimientosCaja`, `LibroAsientosContablesDetalle`, `RegistrosHorariosStaff`, `MovimientosInventario`, `HistoricoCierresZ`, `PaquetesGestoria` y `ControlOperativo` únicamente cuando `controlType=WEBHOOK_EVENT`.
+- Inventario live: **42 colecciones**. `CajaActual` existe como `NATIVE`, revisión **3**, 25 campos de negocio + 4 campos de sistema (29 físicos), permisos ADMIN en insert/update/remove/read.
+- Campos físicos de negocio de `CajaActual`: `singletonKey:TEXT`, `operationDateHour:DATETIME`, `cashRegisterStatus:TEXT`, `staffResourceId:TEXT`, `traceId:TEXT`, `openedAt:DATETIME`, `closedAt:DATETIME`, `openingCashAmount:NUMBER`, `openingCardAmount:NUMBER`, `openingBizumAmount:NUMBER`, `openingOtherAmount:NUMBER`, `cashAmount:NUMBER`, `cardAmount:NUMBER`, `bizumAmount:NUMBER`, `otherAmount:NUMBER`, `salesCount:NUMBER`, `netAmount:NUMBER`, `expectedCash:NUMBER`, `countedCash:NUMBER`, `difference:NUMBER`, `differenceReason:TEXT`, `lastMovementAt:DATETIME`, `sequenceCounters:OBJECT`, `openedBy:TEXT`, `closedBy:TEXT`.
+- No existen en el nuevo esquema `operationDate`, `openingAmount`, `voucherAmount` ni `isOpen`. `cashRegisterStatus` es el único estado de sesión.
+- Singleton único: `_id=18d8bbf8-ddd5-4ad9-8253-f2a5c285ef19`, `singletonKey=CAJA_PRINCIPAL`, `cashRegisterStatus=CERRADA`. Saldos actuales: 0 en efectivo/tarjeta/Bizum/otros. Saldos iniciales: null (no se ha abierto sesión). `operationDateHour` permanece null; no hay operación económica ni sesión abierta.
+- Índice único `CajaActual_singletonKey_unique`: ACTIVE. Índice anterior `cashRegisterStatus_operationDate`: DROPPING. Índice corregido `cashRegisterStatus_operationDateHour`: BUILDING en el último readback; falta confirmar que ambos procesos terminan en estado final.
+- `MovimientosCaja`: revisión 78, 0 elementos; no modificada. `LibroAsientosContablesDetalle`: 0. `RegistrosHorariosStaff`: revisión 11, 0 tras limpieza. `HistoricoCierresZ`: 0. `PaquetesGestoria`: 0. `ControlOperativo`: 3 elementos. `MovimientosInventario` no figura en el inventario live de 42 colecciones; la fila histórica que lo describía como colección presente queda pendiente de reconciliación documental.
 
-La habilitación está centralizada en `APPEND_ONLY_MUTATION_WINDOW` de `src/backend/internalConfig.js` (`ENABLED=true`, `TEMPORARY=true`, `RESTORE_BEFORE_PRODUCTION=true`). Los hooks de `src/backend/data.js` y las allowlists de `src/backend/dataAccessPolicy.js` están alineados con esa bandera. La validación de esquema de inserción y los controles de tipo/identidad permanecen activos. Las operaciones bulk de inserción, actualización y borrado continúan bloqueadas; la excepción se limita a operaciones individuales autorizadas por la política backend.
+### Registros sintéticos eliminados
 
-**Límite de seguridad:** la excepción es de código en una rama de trabajo, no una dispensa legal ni una autorización para alterar datos reales. No se han cambiado permisos CMS, colecciones, registros, automatizaciones ni configuración Wix. Tampoco se ha eliminado ningún registro sintético en esta intervención. La edición desde Content Manager/Wix UI no se considera validada por esta bandera. Antes de borrar un elemento, debe acreditarse que es sintético mediante marcadores y trazabilidad inequívocos; si existe duda sobre su origen, se conserva.
+Se eliminaron únicamente dos filas de `RegistrosHorariosStaff`, tras releerlas y comprobar simultáneamente `meta.synthetic=true`, `meta.doNotImportToProduction=true`, `resourceId=QA_STAFF_ONLY`, `staffName=QA EMPLEADO FICTICIO` y notas que declaran que no acreditan jornada real:
 
-**Gates que siguen cerrados:** `FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED=false`, `ACCOUNTING_LEDGER_WRITES_ENABLED=false` y `ALLOW_SIMULATION_RECORDS=false`. La ventana de mutabilidad no habilita writers fiscales, contables, laborales ni pagos. No ejecutar pruebas E2E con efectos externos en el sitio Published.
+- `1a4341a6-47be-490c-91a6-d04c8728e186` — `QA_LIVECMS_20261023_2000_TIME01_EXIT`.
+- `f325c0c8-35ba-4efc-ac45-a409ab439e61` — `QA_LIVECMS_20261023_2000_TIME01_ENTRY`.
 
-**Cierre obligatorio antes de integrar o publicar:** establecer `APPEND_ONLY_MUTATION_WINDOW.ENABLED=false`; retirar las allowlists temporales de update/remove; restaurar pruebas que exigen `FISCAL_VIOLATION`; ejecutar CI completo y verificar en Wix Local Editor que los hooks vuelven a bloquear update/remove. No publicar ni desplegar mientras la bandera esté habilitada.
+La eliminación se hizo por ID individual con condición de `traceId`; readback posterior: 0 filas restantes. No se borró ningún fichaje real, movimiento de caja, asiento contable, cierre Z, paquete de gestoría ni registro de `ControlOperativo`. No se cambiaron permisos CMS ni se activaron writers.
 
-### Corrección del contrato CMS `CajaActual`
+### Ventana temporal TEC-033
 
-La colección `CajaActual` fue recreada en Wix como `NATIVE`, revisión 1, con un índice único activo sobre `singletonKey` y un único elemento `CAJA_PRINCIPAL`. El elemento permanece `cashRegisterStatus=CERRADA`, `isOpen=false`, sin sesión abierta ni saldo inicial de apertura. `MovimientosCaja` no fue modificada.
+En esta rama `APPEND_ONLY_MUTATION_WINDOW.ENABLED=true`, `TEMPORARY=true`, `RESTORE_BEFORE_PRODUCTION=true`. Permite update/remove individual en `MovimientosCaja`, `LibroAsientosContablesDetalle`, `RegistrosHorariosStaff`, `MovimientosInventario`, `HistoricoCierresZ`, `PaquetesGestoria` y `ControlOperativo/WEBHOOK_EVENT`. Bulk insert/update/remove siguen bloqueados; las validaciones de inserción y los controles de autorización/tipo continúan activos. La bandera solo afecta a los hooks/políticas de esta rama; no cambia los permisos CMS ni el runtime publicado.
 
-El esquema live leído tras la creación conserva todavía el contrato anterior: `operationDate:DATE`, `openingAmount:NUMBER`, `voucherAmount:NUMBER` e `isOpen:BOOLEAN`; no constan todavía `operationDateHour`, los cuatro campos de saldo inicial por medio de pago ni `bizumAmount`. Los intentos posteriores de añadir campos/actualizar la colección devolvieron `WDE0025`; por tanto, **la migración correctiva del esquema no está aplicada**. No describir los campos objetivo como existentes en Wix.
+Los gates `LEDGER_WRITES_ENABLED=false`, `ACCOUNTING_LEDGER_WRITES_ENABLED=false` y `ALLOW_SIMULATION_RECORDS=false` permanecen cerrados. No publicar ni fusionar esta rama mientras la ventana esté activa. Antes de integrar: desactivar la bandera, retirar allowlists temporales, restaurar pruebas `FISCAL_VIOLATION`, ejecutar CI completo y verificar hooks en Wix Local Editor.
 
-Contrato objetivo aprobado para la siguiente migración controlada:
-- `operationDateHour:DATETIME`: instante de operación con fecha y hora.
-- Saldos de apertura: `openingCashAmount`, `openingCardAmount`, `openingBizumAmount`, `openingOtherAmount` (NUMBER).
-- Saldos actuales: `cashAmount`, `cardAmount`, `bizumAmount`, `otherAmount` (NUMBER).
-- `cashRegisterStatus` es el único estado de sesión; `isOpen` es redundante.
-- Retirada diferida de `operationDate`, `openingAmount`, `voucherAmount` e `isOpen` solo después de migrar todos los consumidores y validar compatibilidad.
+### Alineación backend y estado pendiente
 
-Los cuatro importes de apertura se registran al abrir una sesión real; no se deben rellenar con ceros por defecto en una caja cerrada. Los saldos actuales se inicializan desde los importes de apertura y se proyectan aplicando de forma idempotente los movimientos válidos de `MovimientosCaja`. El ledger fuente no se modifica. El código de la rama de alineación de caja todavía requiere completar el contrato de apertura, validación, DTO, conciliación y pruebas; los cambios parciales de nombres no equivalen a migración funcional.
+En esta rama, `cajas.web.js` y sus fixtures usan `operationDateHour`, `bizumAmount` y los cuatro campos `opening*Amount`; se ha retirado la comprobación redundante de `isOpen`. El DTO expone los cuatro saldos iniciales. **No existe todavía un WebMethod de apertura de sesión que persista esos cuatro importes**; por tanto permanecen null y la funcionalidad de apertura/saldos iniciales no está validada end-to-end. La proyección actual no se considera completa para `otherAmount` hasta probar su clasificación y conciliación desde `MovimientosCaja`.
 
-**Secuencia requerida:** (1) resolver el contrato REST Wix para añadir/actualizar campos y obtener readback; (2) revisar consumidores y tipos; (3) completar backend/DTO/validadores/tests; (4) migrar únicamente valores demostrables; (5) retirar campos legacy tras búsqueda completa y CI; (6) validar en Wix QA aislado. No publicar mientras el esquema CMS y el código no compartan el mismo contrato.
-
----
-
-> **Aviso de vigencia — 2026-11-11:** Este dossier es una especificación de diseño de Capa 3, no evidencia de que SharePoint, Power Automate o las exportaciones estén implantados. Prevalece [ESTADO_ACTUAL_PROYECTO.md](ESTADO_ACTUAL_PROYECTO.md) para el estado actual. No existe evidencia de `exportService.js` ni jobs periódicos de exportación; el despacho Resend a gestoría está bloqueado y el tenant M365/SharePoint no está auditado. Wix CMS sigue siendo SSOT y Capa 3 no puede escribir en Capa 1.
+No se ha ejecutado CI completo, Wix Local Editor ni E2E en runtime. No se ha publicado ni desplegado esta rama. La mutación CMS de este corte no equivale a publicar código Wix.
 
 ---
-
 # Dossier de flujos end-to-end — Capa 1 → Capa 3
 
 **Proyecto:** Marian Madrid · https://www.marianmadrid.es/  
