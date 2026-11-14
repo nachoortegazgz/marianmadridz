@@ -9,7 +9,7 @@ Este documento fija el estado verificado de Git y del CMS en este corte. No sust
 - Repositorio: `nachoortegazgz/marianmadridz`.
 - `main` en el inicio de esta intervención: `79b6238fe4c23206bb8e81327191ab48425e3a0d`, merge de PR #351.
 - PR #351 está integrada en `main`. Su cambio de `src/backend/validation.js` redujo el módulo de 17.632 a 7.100 caracteres y dejó fuera validadores que seguían siendo importados por `src/backend/data.js`.
-- PR #352: reparación en la rama `fix/control-operativo-canonical-validation`. CI completo PASS en `c7388cb122368906b1cee20cae0f6d127900553b` (run #1048): Layer 1, Layer 2, regresión offline completa, SDK contracts y ESLint; Gitleaks PASS (run #472). No publicada en Wix.
+- PR #352: reparación en la rama `fix/control-operativo-canonical-validation`. CI completo PASS en `609ccc948da3e63d3fd8aa20f5e64c7649770660` (run #1054): Layer 1, Layer 2, regresión offline completa, SDK contracts y ESLint; Gitleaks PASS (run #478). No publicada en Wix.
 - No se dispone de un identificador Wix que vincule el runtime publicado con el SHA actual de Git.
 
 ## Hallazgo P1 — regresión de validadores
