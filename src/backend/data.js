@@ -17,7 +17,7 @@ import {
     OPERATIONAL_COLLECTIONS,
     APPEND_ONLY_MUTATION_WINDOW,
 } from "backend/internalConfig";
-import { assertCitasF2, assertControlOperativo, assertCanonicalControlFields, assertRegistrosHorariosStaff, assertDatosFiscales } from "backend/validation";
+import { assertCitasF2, assertControlOperativo, assertCanonicalControlFields, assertRegistrosHorariosStaff, assertMapaStaffRecord } from "backend/validation";
 import { CONSISTENCY, getItem } from "backend/dataAccess";
 
 import { logger } from "backend/logger";
@@ -803,9 +803,10 @@ export function MapaStaff_beforeInsert(item) {
     if (!item || typeof item !== "object") return item;
 
     const recordTypeEarly = _safeTrim(item.recordType).toUpperCase();
-    if (recordTypeEarly === "STAFF") return assertDatosFiscales(item) && item;
-    if (recordTypeEarly === "GESTORIA") return assertDatosFiscales(item) && item;
+    if (recordTypeEarly === "STAFF") return assertMapaStaffRecord(item) && item;
+    if (recordTypeEarly === "GESTORIA") return assertMapaStaffRecord(item) && item;
     if (recordTypeEarly === "CONFIG_SISTEMA") return _applyConfigSistemaRules(item);
+    if (recordTypeEarly !== "TERCERO") _schemaError("recordType invalido para MapaStaff");
 
     // Normalize input aliases and remove them before persisting physical CMS keys.
     if (!item.taxId && item.nifCif) item.taxId = item.nifCif;
@@ -831,8 +832,9 @@ export function MapaStaff_beforeInsert(item) {
 export function MapaStaff_beforeUpdate(item) {
     if (!item || typeof item !== "object") return item;
     const recordType = _safeTrim(item.recordType).toUpperCase();
-    if (recordType === "STAFF" || recordType === "GESTORIA") return assertDatosFiscales(item) && item;
+    if (recordType === "STAFF" || recordType === "GESTORIA") return assertMapaStaffRecord(item) && item;
     if (recordType === "CONFIG_SISTEMA") return _applyConfigSistemaRules(item);
+    if (recordType !== "TERCERO") _schemaError("recordType invalido para MapaStaff");
 
     if (!item.taxId && item.nifCif) item.taxId = item.nifCif;
     if (!item.legalName && item.razonSocial) item.legalName = item.razonSocial;
@@ -840,9 +842,9 @@ export function MapaStaff_beforeUpdate(item) {
     delete item.nifCif;
     delete item.razonSocial;
     delete item.tipoTercero;
-    for (const field of MAPA_STAFF_NON_SCHEMA_FIELDS) {
+    for (const field of MAPA_STAFF_FISCAL_FORBIDDEN_FIELDS) {
         if (item[field] !== undefined && item[field] !== null) {
-            _schemaError(`Campo "${field}" no existe en el esquema físico MapaStaff`);
+            _schemaError(`Campo "${field}" no permitido en registros fiscales MapaStaff`);
         }
     }
     const taxId = _safeTrim(item.taxId);
@@ -870,7 +872,7 @@ export function MapaStaff_beforeRemove(item) {
 // BLOQUE 14 - MAESTRO MapaStaff: singleton CONFIG_SISTEMA (SSOT V2, v5011)
 // =============================================================================
 
-const MAPA_STAFF_NON_SCHEMA_FIELDS = [
+const MAPA_STAFF_FISCAL_FORBIDDEN_FIELDS = [
     "producerTaxId", "producerLegalName", "computerSystemId",
     "installationNumber", "possibleUseMultiOT", "possibleUseOnlyVerifactu",
     "multipleOTIndicator", "verifactuStartDate", "nifProductor",
@@ -889,9 +891,9 @@ function _assertMapaStaffVersionAndTrace(item) {
 }
 
 function _applyConfigSistemaRules(item) {
-    for (const field of MAPA_STAFF_NON_SCHEMA_FIELDS) {
+    for (const field of MAPA_STAFF_FISCAL_FORBIDDEN_FIELDS) {
         if (item[field] !== undefined && item[field] !== null) {
-            _schemaError(`Campo "${field}" no existe en el esquema físico MapaStaff; use taxId/legalName y los campos declarados`);
+            _schemaError(`Campo "${field}" no permitido en registros fiscales MapaStaff; use taxId/legalName y los campos declarados`);
         }
     }
     if (!item._id) item._id = "CONFIG_SISTEMA_FISCAL";

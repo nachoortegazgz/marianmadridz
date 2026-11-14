@@ -339,7 +339,7 @@ test('HOOK-FISCAL-CONFIG-01 CONFIG_SISTEMA accepts pending fiscal identity witho
   );
   assert.throws(
     () => H.MapaStaff_beforeInsert({ ...config, nifProductor: 'B12345678' }),
-    /no existe en el esquema físico/
+    /no permitido en registros fiscales MapaStaff/
   );
 });
 

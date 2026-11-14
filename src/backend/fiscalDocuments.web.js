@@ -1065,10 +1065,12 @@ export const listAccountantRecipients = webMethod(
 
       const items = [];
       const seenEmails = new Set();
+      const recipients = (res?.items || [])
+        .map((record) => _extractGestorFromRecord(record))
+        .filter(Boolean)
+        .sort((a, b) => Number(b.source === "DEDICATED") - Number(a.source === "DEDICATED"));
 
-      for (const record of res?.items || []) {
-        const gestor = _extractGestorFromRecord(record);
-        if (!gestor) continue;
+      for (const gestor of recipients) {
         const emailKey = gestor.email.toLowerCase();
         if (seenEmails.has(emailKey)) continue;
         seenEmails.add(emailKey);
