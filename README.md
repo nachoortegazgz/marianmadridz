@@ -19,7 +19,7 @@ Evidencia: [reconciliación de baseline 2026-11-14](docs/qa/2026-11-14-baseline-
 **Gobierno del proyecto:** el usuario/propietario es la SSOT de negocio, prioridades y autorizaciones. Durante desarrollo y QA están en pausa append-only y las prohibiciones genéricas de editar/eliminar registros (individuales y masivas) hasta nueva instrucción expresa del usuario para preparar el despliegue. Se mantienen autenticación, autorización, permisos y validaciones. La política documental no certifica por sí sola que todos los guards del runtime Wix hayan sido retirados.
 
 **Estado Git verificado:** main=`331c572b9fbba4eaff9bf53a894e6c2377a13c22` (PR #355 documental; último código/configuración `fde9466552b6819980475a682dc06395b57487f0`; PR #352–#354 integradas). PR #352 recupera los validadores que PR #351 retiró accidentalmente; CI completo verde en `c7388cb122368906b1cee20cae0f6d127900553b` (run #1048). No hay release Wix que vincule el runtime con el SHA de Git.
-# Marian Madrid — Wix Editor + Velo
+# Marian Madrid — Wix Editor Classic + Velo
 
 > **Contexto de plataforma:** el sitio principal consta como Published en el último contexto Wix documentado; eso no acredita que ejecute el SHA actual de Git. El sitio QA independiente está en Draft, pero su aislamiento y paridad CMS no están certificados. El inventario live vigente es 41 colecciones (12 NATIVE, 29 WIX_APP).
 
@@ -53,7 +53,7 @@ Repositorio canónico del sitio **Marian Madrid Peluquería y Estética** (`www.
 1. [Estado vigente consolidado](ESTADO_ACTUAL_PROYECTO.md): autoridad de continuidad, bloqueos y checklist.
 2. [Reconciliación de baseline 2026-11-14](docs/qa/2026-11-14-baseline-reconciliation.md): regresión de validadores, inventario CMS y límites de publicación.
 3. [Auditoría de retirada de inventario personalizado](docs/qa/2026-11-14-retired-inventory-contract-audit.md): evidencia de colecciones ausentes y limpieza de constantes/hooks.
-4. [Compatibilidad de plataforma Wix](docs/qa/2026-11-14-wix-platform-compatibility.md): Editor Type, Velo, versiones de Apps y límites de sincronización.
+4. [Compatibilidad de plataforma Wix](docs/qa/2026-11-14-wix-platform-compatibility.md): Wix Editor Classic, Velo, versiones de Apps y límites de sincronización.
 5. [Estándar de desarrollo y QA — Cero deuda](docs/engineering/DEVELOPMENT-STANDARDS.md): reglas de alias, legacy, APIs deprecated, código muerto, obsolescencia y validación.
 6. [Auditoría y migración CitasF2](docs/qa/2026-11-13-citasf2-keyfields.md): esquema físico y campos canónicos.
 7. [Adaptaciones temporales para QA](docs/qa/2026-11-13-site-qa-environment.md): entorno, permisos y límites de aislamiento.
