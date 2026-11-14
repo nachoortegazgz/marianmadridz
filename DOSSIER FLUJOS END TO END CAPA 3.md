@@ -2,7 +2,7 @@
 
 ---
 
-> **Addendum de seguridad vigente — 2026-11-14:** el histórico TEC-037 que describía una pausa global de append-only queda supersedido para la ejecución actual. La ventana global de mutabilidad está cerrada en la rama QA; los ledgers permanecen inmutables. La inspección Wix de esta sesión devuelve producción como Published y no resuelve el Site ID QA; no ejecutar escrituras Wix ni E2E sobre producción. Prevalecen PLAN_ACCION_QA.md, DIRECTRICES_DESARROLLO_CODIGO.md y TEC-038 de docs/DECISION-LOG.md.
+> **Estado vigente del entorno — 2026-11-14:** el único sitio QA es `188bed94-177c-4bc9-a9f0-35080d874f3e`. Wix lo informa Published; el propietario confirma que nunca ha tenido actividad real, que sus datos son sintéticos y que la pasarela está desconectada. Las referencias históricas a otro Site ID o a un supuesto QA separado quedan supersedidas. Prevalecen la SSOT del entorno, PLAN_ACCION_QA.md y TEC-038.
 
 ## Addendum vigente — baseline 2026-11-14 (prevalece sobre bloques históricos)
 
@@ -12,7 +12,7 @@
 - PR #353 (retirada de inventario personalizado) integrada; CI PASS en `cdf07b5088977c4f51c231aa517b8ed607b25269` (run #1059).
 - PR #354 (política CMS residual) integrada como `fde9466552b6819980475a682dc06395b57487f0`; CI PASS en `28a11a690f0a99926921332618b6af670d45814c` (run #1068) y Gitleaks PASS (run #492).
 - Ninguna de estas intervenciones ha publicado ni desplegado código en Wix.
-- Plataforma confirmada por el propietario: **Wix Editor Classic + Velo**. GetSiteContext devuelve `Editor` en producción y QA, coherente con esa confirmación. Producción usa Stores Catalog V3 + Invoices V1; QA usa Stores Catalog V3 + Invoices V2. GetSiteContext no expone código Velo; sincronización Editor↔Git sigue pendiente.
+- Plataforma confirmada: **Wix Editor Classic + Velo**. GetSiteContext devuelve `Editor`, Velo, Stores Catalog V3 e Invoices V1 en el único sitio QA. GetSiteContext no expone código Velo; sincronización Editor↔Git sigue pendiente.
 - PR #351 dejó una regresión en `src/backend/validation.js`: eliminó exports aún consumidos por `data.js`. La recuperación está en PR #352; CI completo PASS sobre el SHA `609ccc948da3e63d3fd8aa20f5e64c7649770660` (run #1054); commits posteriores en esta PR son solo documentación.
 - CMS live: **41 colecciones (12 NATIVE, 29 WIX_APP), 980 campos**. `MapaStaff` revisión 105 / 56 campos. `DatosFiscales`, `InventarioStockVenta` y `MovimientosInventario` no existen en el inventario live del corte; GET individual 404 / `WDE0025`.
 - Wix Stores Catalog V3 es la autoridad del stock comercial. La capa custom de inventario está retirada; las referencias a sus colecciones, exports o writers son históricas y no autorizan su recreación.
@@ -40,7 +40,7 @@ Detalle y evidencias: [reconciliación de baseline y recuperación de validadore
 
 ## Estado operativo y de esquema — 2026-11-14
 
-**Sitio único:** 50b39f33-e753-4331-ab35-b2ed43dc97f7. Banco de pruebas aislado, sin actividad real, según declaración expresa del propietario. No se mantiene otro sitio como entorno de comparación.
+**Sitio QA único:** `188bed94-177c-4bc9-a9f0-35080d874f3e`. El propietario confirma que nunca ha tenido actividad real; todos los datos son sintéticos. No existe otro sitio QA ni entorno de comparación.
 
 **CMS actual:** 23 colecciones (15 NATIVE, 8 WIX_APP), 524 campos físicos NATIVE. Wix CMS conserva la autoridad transaccional. SharePoint es solo repositorio documental de evidencia; Capa 3 no modifica ni gobierna Capa 1.
 
@@ -309,7 +309,7 @@ Lectura CMS live 2026-11-13:
 
 ## Sitio actual
 
-El único sitio objeto de trabajo es 50b39f33-e753-4331-ab35-b2ed43dc97f7. Es un banco de pruebas aislado y no tiene actividad real. No se mantiene un sitio paralelo ni se comparan inventarios entre sitios. Las pruebas de integraciones y efectos externos deben permanecer sintéticas y bajo autorización expresa.
+El único sitio objeto de trabajo es 188bed94-177c-4bc9-a9f0-35080d874f3e. Es el entorno QA y no ha tenido actividad real. No se mantiene un sitio paralelo ni se comparan inventarios entre sitios. Las pruebas de integraciones y efectos externos deben permanecer sintéticas y bajo autorización expresa.
 ## Checklist de cierre Capa 3
 
 - [ ] Definir contrato de export con campos mínimos, minimización de datos, periodo, formato, hash, traceId e idempotency key.
