@@ -1,3 +1,19 @@
+## Actualización de ejecución — 2026-11-15: mutabilidad QA aún no implementada
+
+La decisión QA-2026-11-15-TEMP-MUTABILITY supersede la regla append-only durante el desarrollo exclusivamente en el sitio QA. La revisión de código de `main` confirma que la autorización todavía no está implementada en la capa de acceso: `src/backend/dataAccessPolicy.js` rechaza update/remove de las colecciones declaradas append-only y `bulkUpdate` permanece fail-closed. El estado correcto es **autorizado por decisión, no habilitado técnicamente**.
+
+### Trabajo técnico bloqueante
+1. Confirmar mediante API Wix/Velo oficial cómo verificar en backend el Site ID efectivo del runtime. No aceptar un Site ID enviado por frontend ni inferirlo del dominio.
+2. Implementar la excepción únicamente para ADMIN, el Site ID QA exacto y colecciones propias explícitamente revisadas; mantener cerrados los endpoints genéricos y no abrir permisos ANYONE.
+3. Excluir siempre `ControlOperativo/WEBHOOK_EVENT`, `WEBHOOK_CLAIM`, claves de deduplicación/idempotencia, colecciones `WIX_APP` y cualquier colección no revisada.
+4. Incorporar pruebas negativas de sitio distinto, usuario no ADMIN, colección fuera de allowlist, ID no sintético y concurrencia; backup/export y auditoría antes de cada operación destructiva.
+5. Mantener deshabilitados los writers comerciales/fiscales/laborales y todos los efectos externos. No ejecutar runtime E2E que pueda activar las siete automatizaciones Wix preinstaladas ACTIVE.
+6. Reintroducir append-only, rectificaciones trazables y bloqueo update/remove antes de cualquier transición a actividad real.
+
+**No se han cambiado permisos CMS ni registros Wix, no se ha desplegado código y no se ha validado persistencia runtime.**
+
+---
+
 > **SSOT de entorno vigente (2026-11-14):** el único sitio del proyecto es QA: `188bed94-177c-4bc9-a9f0-35080d874f3e` (`https://www.marianmadrid.es/`). El propietario confirma que nunca ha tenido actividad real, que todos los datos son sintéticos, que el cliente de pruebas es Nacho Pitt (`nacho.pitt@example.test`) y que la pasarela está desconectada. No existe otro sitio QA ni un QA externo designado. Las referencias anteriores a otros Site ID o a este sitio como producción quedan supersedidas. El estado Wix Published no altera su clasificación funcional como QA. Véase [SSOT del entorno QA](docs/qa/QA-ENVIRONMENT-SSOT.md).
 
 ---
