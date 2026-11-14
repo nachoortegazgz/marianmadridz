@@ -63,3 +63,14 @@ Cada nueva ejecución añadirá un identificador único y conservará SHA, tipo 
 - Añadida auditoría `docs/audits/2026-11-14-tpv-contract-gap-audit.md` con siete gaps verificados y límites.
 - No se modifica writer fiscal, enum de producción, CMS, proyección CajaActual, cierre Z ni pagos reales.
 - Estado de ejecución: **pendiente CI** en el corte de este registro. No declarar la suite PASS hasta ver el run.
+
+## QA-CODE-20261114-002
+
+- **Tipo:** corrección de regresión backend y cierre de errores de deployment.
+- **Origen:** deployment Wix `686cb2af-c530-4f89-a9d7-18baa3f9eb0a`, 2026-11-14 16:07.
+- **PR #373:** integrada en `main` con merge `1b39ebb22c885f50320b7d52f5bc336cc0570ee5`; su CI posterior terminó FAIL, por lo que no se considera validada.
+- **Evidencia CI PR #373:** Gitleaks PASS. Layer 1 FAIL por export ausente `assertMapaStaffRecord` (consumido por `data.js`) y expectativa obsoleta de `CASH_REGISTER_STATUS` que omitía `SIMULACION`. La mayoría de las suites bloqueadas por el import no pudieron inicializarse.
+- **Corrección en curso:** rama `fix/ci-regression-and-milestone-2026-11-14`; restaura el validador nativo MapaStaff y añade pruebas; alinea la prueba de enum con el sentinel QA. CI completo pendiente.
+- **Cambios Wix/CMS:** ninguno. No se desplegó ni se usó producción.
+- **Wix Runtime/E2E:** BLOCKED_ENVIRONMENT por resolución técnica del contexto QA.
+- **Resultado provisional:** código de corrección preparado; hito no cerrado hasta CI PASS y comprobación posterior en el deployment QA.
