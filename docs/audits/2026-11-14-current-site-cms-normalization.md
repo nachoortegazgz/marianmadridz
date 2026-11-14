@@ -166,6 +166,7 @@ La rama de alineación separa ambas responsabilidades:
 - Verificado mediante lectura de registros: CajaActual.sequenceCounters es objeto JSON; ticketSequence no está en el esquema; ControlOperativo.ownerToken no está en el esquema; addonId coincide con _id en 36/36; resourceId coincide con _id en 3/3.
 - Verificado: PR #361–#366 integradas en main; HEAD de main 13b9ae095214e0c601f255fa75d629680c539933.
 - PR #367: CI offline PASS, run #1137: Layer 1 23 suites/296 tests, Layer 2 18 suites/244 tests, regresión completa 69 suites/631 tests, 0 fallos. Wix SDK contracts, eCommerce Order Transactions SDK contract, Bookings Reader V2 SDK contract y ESLint: PASS. Secret scanning run #561: PASS.
-- Pendiente: merge de PR #367, validación en Wix Local Editor y pruebas E2E.
+- PR #367 integrada en main mediante merge `dfdee00d8ebc535427c95d49cae91b4c557e4209`.
+- Pendiente: validación en Wix Local Editor y pruebas E2E.
 - No se ha modificado el CMS ni se ha publicado/desplegado código Wix.
 
