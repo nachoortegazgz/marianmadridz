@@ -190,8 +190,8 @@ test('HOOK-CMS-DATETIME-05 normalizes MovimientosCaja DateTime fields only', () 
 });
 
 test('HOOK-CAJA-03 temporary mutation window allows update/remove', () => {
-  assert.doesNotThrow(() => H.MovimientosCaja_beforeUpdate({ _id: 'qa-caja-1' }));
-  assert.doesNotThrow(() => H.MovimientosCaja_beforeRemove('qa-caja-1'));
+  assert.doesNotThrow(() => H.MovimientosCaja_beforeUpdate({ _id: 'synthetic-caja-1' }));
+  assert.doesNotThrow(() => H.MovimientosCaja_beforeRemove('synthetic-caja-1'));
 });
 
 test('HOOK-CAJA-05 rejects write without hash (ledger integrity)', () => {
@@ -223,7 +223,7 @@ test('HOOK-CAJA-07 persists exact CMS field IDs and OBJECT payloads', () => {
     irpfWithholdingAmount: 15,
     lineItems: [{ productId: 'p1', variantId: 'v1' }],
     aeatPayload: 'NumSerieFactura=FAC-1',
-    customerEmail: 'qa@example.test',
+    customerEmail: 'synthetic@example.test',
   };
   H.MovimientosCaja_beforeInsert(item);
   assert.equal(item.NIFEmisor, 'B12345674');
@@ -236,7 +236,7 @@ test('HOOK-CAJA-07 persists exact CMS field IDs and OBJECT payloads', () => {
   assert.ok(!('irpfWithholdingAmount' in item));
   assert.deepEqual(item.lineItems, { items: [{ productId: 'p1', variantId: 'v1' }] });
   assert.equal(item.payloadFiscal.aeatPayload, 'NumSerieFactura=FAC-1');
-  assert.equal(item.payloadFiscal.customerEmail, 'qa@example.test');
+  assert.equal(item.payloadFiscal.customerEmail, 'synthetic@example.test');
   assert.ok(!('aeatPayload' in item));
   assert.ok(!('customerEmail' in item));
   assert.equal(H.readIssuerTaxId(item), 'B12345674');
@@ -246,7 +246,7 @@ test('HOOK-CAJA-07 persists exact CMS field IDs and OBJECT payloads', () => {
 test('HOOK-CMS-DATETIME-06 normalizes ControlOperativo DateTime fields', () => {
   const item = {
     controlType: 'IDEMPOTENCY',
-    dedupeKey: 'IDEMPOTENCY:qa-date',
+    dedupeKey: 'IDEMPOTENCY:synthetic-date',
     traceId: 'trace-control-datetime',
     expiresAt: '2026-11-12T12:00:00.000Z',
     occurredAt: '2026-11-12T11:00:00.000Z',
@@ -256,7 +256,7 @@ test('HOOK-CMS-DATETIME-06 normalizes ControlOperativo DateTime fields', () => {
   for (const field of ['expiresAt', 'occurredAt', 'operationDate']) assert.ok(item[field] instanceof Date);
   assert.throws(() => H.ControlOperativo_beforeInsert({
     controlType: 'IDEMPOTENCY',
-    dedupeKey: 'IDEMPOTENCY:qa-date-invalid',
+    dedupeKey: 'IDEMPOTENCY:synthetic-date-invalid',
     traceId: 'trace-control-datetime-invalid',
     expiresAt: 'invalid',
   }), /DATETIME/);
@@ -265,11 +265,11 @@ test('HOOK-CMS-DATETIME-06 normalizes ControlOperativo DateTime fields', () => {
 test('HOOK-CONTROL-01 rejects retired ControlOperativo fields on new writes', () => {
   const base = {
     controlType: 'IDEMPOTENCY',
-    dedupeKey: 'IDEMPOTENCY:qa-owner',
+    dedupeKey: 'IDEMPOTENCY:synthetic-owner',
     traceId: 'trace-control-01',
     attempts: 2,
     expiresAt: new Date('2026-11-05T12:00:00.000Z'),
-    payload: { lockOwnerId: 'qa-owner' },
+    payload: { lockOwnerId: 'synthetic-owner' },
   };
   for (const field of [
     'payloadJson', 'attempt', 'leaseExpiresAt', 'leasesExpireAt',
@@ -425,8 +425,8 @@ test('HOOK-CLOCK-01 insert requires canonical fields and HMAC signature', () => 
 });
 
 test('HOOK-CLOCK-02 temporary mutation window allows update/remove', () => {
-  assert.doesNotThrow(() => H.RegistrosHorariosStaff_beforeUpdate({ _id: 'qa-clock-1' }));
-  assert.doesNotThrow(() => H.RegistrosHorariosStaff_beforeRemove('qa-clock-1'));
+  assert.doesNotThrow(() => H.RegistrosHorariosStaff_beforeUpdate({ _id: 'synthetic-clock-1' }));
+  assert.doesNotThrow(() => H.RegistrosHorariosStaff_beforeRemove('synthetic-clock-1'));
 });
 
 // keep wixDataMock referenced so loader seeds reset between suites
@@ -460,8 +460,8 @@ test('HOOK-CAJA-SINGLE-01 enforces the CajaActual single-item principal', () => 
 // Capa 2 — inventory and accounting ledgers are immutable append-only records.
 // -----------------------------------------------------------------------------
 test('HOOK-ACCOUNTING-LEDGER-01 temporary mutation window allows update/remove', () => {
-  assert.doesNotThrow(() => H.LibroAsientosContablesDetalle_beforeUpdate({ _id: 'qa-accounting-1' }));
-  assert.doesNotThrow(() => H.LibroAsientosContablesDetalle_beforeRemove('qa-accounting-1'));
+  assert.doesNotThrow(() => H.LibroAsientosContablesDetalle_beforeUpdate({ _id: 'synthetic-accounting-1' }));
+  assert.doesNotThrow(() => H.LibroAsientosContablesDetalle_beforeRemove('synthetic-accounting-1'));
 });
 
 
