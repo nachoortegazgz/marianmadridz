@@ -169,19 +169,21 @@ La igualdad de importes/contadores en un singleton simulado o en una única fila
 
 ### 6.4 Otros contratos confirmados
 
-- CajaActual.sequenceCounters es OBJECT y el código lo trata como objeto. ticketSequence no existe en el esquema actual ni tiene consumidor activo en src/.
+- CajaActual tiene 39 campos: operationDate DATE, openingAmount NUMBER, cashAmount/cardAmount/otherAmount, sequenceCounters OBJECT, cashRegisterStatus TEXT, isOpen BOOLEAN, id TEXT y currentSequence NUMBER. No existen operationDateHour, bizumAmount ni los cuatro opening*Amount. Wix DATE se persiste como String ISO YYYY-MM-DD.
+- El singleton actual tiene cashRegisterStatus=SIMULACION e isOpen=true; no son equivalentes. El backend usa cashRegisterStatus como autoridad de sesión. id=_id; currentSequence=0 y no tiene consumidor localizado. openingAmount y expectedCash coinciden en importe en la fila sintética, pero no se fusionan.
 - ControlOperativo.ownerToken, retryAfter y nextRetryAt no son campos físicos canónicos; el token de fencing es traceId.
 - ServiciosCatalogo.serviceId y pricingPlanId son identificadores nativos distintos de _id CMS y entre sí. No se consolidan.
 - DatosFiscales.gestorNombre, CajaActual.id y ComplementosCatalogo.addonId son candidatos a retirada física solo después de completar la migración de valores/consumidores y revisar contratos externos.
 
 ## 7. Cambios de código incluidos en la rama
 
-- internalConfig.js: DatosFiscales se incorpora a BUSINESS_COLLECTIONS; RECORD_TYPE queda limitado a los tipos fiscales de esa colección.
-- validation.js y data.js: validación separada de MapaStaff y DatosFiscales; no se exigen campos inexistentes y se validan los tipos físicos BOOLEAN, TEXT, NUMBER y GUID.
+- internalConfig.js: DatosFiscales se incorpora a BUSINESS_COLLECTIONS; RECORD_TYPE queda limitado a los tipos fiscales de esa colección; CASH_REGISTER_STATUS incorpora SIMULACION como sentinel del sitio aislado.
+- validation.js y data.js: validación separada de MapaStaff y DatosFiscales; assertCajaActualRecord valida el esquema físico de CajaActual y sequenceCounters como OBJECT; no se exigen campos inexistentes.
 - dataAccessPolicy.js: la validación de recordType se aplica a inserciones de DatosFiscales, no a MapaStaff.
 - eventLog.js: upsert de terceros y lectura de configuración migrados a DatosFiscales; no se persisten traceId ni schemaVersion allí.
 - fiscalAggregator.web.js: lectura de NIF emisor migrada a DatosFiscales; ausencia de CONFIG_SISTEMA sigue provocando error fail-closed.
 - fiscalDocuments.web.js: lectura de destinatarios migrada a DatosFiscales; gestorName es el único nombre consumido.
+- cajas.web.js: usa operationDate DATE (ISO YYYY-MM-DD), acumula BIZUM en otherAmount y proyecta openingAmount; deja de escribir/leer operationDateHour, bizumAmount y opening*Amount inexistentes.
 - ComplementosCatalogo: _id pasa a ser la identidad primaria del hook; addonId se mantiene solo como espejo requerido por el esquema físico.
 - Pruebas actualizadas para validar la separación de maestros, tipos de campo y keyfield canónico.
 - No se ha modificado Wix CMS, no se han migrado registros y no se han eliminado definiciones de campo.
@@ -189,7 +191,7 @@ La igualdad de importes/contadores en un singleton simulado o en una única fila
 ## 8. Validación y límites
 
 - Verificado por lectura Wix: 23 colecciones (15 NATIVE y 8 WIX_APP), 524 campos físicos NATIVE; MapaStaff 18 campos/3 filas y DatosFiscales 28 campos/1 fila.
-- Verificado por lectura Wix: CajaActual.sequenceCounters es objeto; ticketSequence y ControlOperativo.ownerToken no existen; ComplementosCatalogo.addonId = _id en 36/36; DatosFiscales.gestorName = gestorNombre en 1/1.
+- Verificado por lectura Wix: CajaActual tiene 39 campos y sequenceCounters es objeto; operationDate es DATE; operationDateHour, bizumAmount, ticketSequence y los cuatro opening*Amount no existen; ControlOperativo.ownerToken no existe; ComplementosCatalogo.addonId = _id en 36/36; DatosFiscales.gestorName = gestorNombre en 1/1.
 - Verificado estáticamente en la rama: los consumidores fiscales apuntan a DatosFiscales; los hooks de MapaStaff solo validan identidades de personal.
 - Pendiente: ejecutar suite CI completa, lint y análisis de seguridad tras los cambios de esta rama.
 - Pendiente: validación de hooks/WebMethods en Wix Editor, pruebas de lectura/escritura sintéticas y E2E.
