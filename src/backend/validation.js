@@ -324,6 +324,18 @@ export function assertRegistrosHorariosStaff(item) {
         throw new Error("SCHEMA_VIOLATION: RegistrosHorariosStaff requires memberId");
     }
 
+    for (const field of ["recordId", "source", "timeZone", "schemaVersion", "traceId"]) {
+        if (!item[field] || !String(item[field]).trim()) {
+            throw new Error(`SCHEMA_VIOLATION: RegistrosHorariosStaff requires ${field}`);
+        }
+    }
+    if (!item.workDate || Number.isNaN(new Date(item.workDate).getTime())) {
+        throw new Error("SCHEMA_VIOLATION: RegistrosHorariosStaff requires a valid workDate");
+    }
+    if (!/^[a-f0-9]{64}$/i.test(String(item.recordHash ?? "").trim())) {
+        throw new Error("SCHEMA_VIOLATION: RegistrosHorariosStaff requires a 64-character recordHash");
+    }
+
     assertValidEnum(item.clockEventType, CLOCK_EVENT_TYPE, "clockEventType");
     assertValidEnum(item.recordType, RECORD_TYPE_HORARIOS, "recordType");
 
@@ -475,21 +487,17 @@ export function isExplicitSimulationLedgerRecord(item) {
     const recordSource = upper(item.recordSource);
     const eventType = upper(item.eventType);
     const movementType = upper(item.movementType);
-    const origenTipo = upper(item.origenTipo);
-    const accountCode = upper(item.accountCode);
+    const accountCode = upper(item.desgloseDetallado?.accountCode);
     const hash = upper(item.hash);
     const previousRecordHash = upper(item.previousRecordHash);
-    const recordHash = upper(item.recordHash);
     const simulatedMovementType = movementType.startsWith("SIMULATED_") ||
         /(?:^|_)SIMULAD[AO]$/.test(movementType);
     return recordSource === "SMOKE_TEST" ||
         eventType.startsWith("SIMULATED_") ||
         simulatedMovementType ||
-        origenTipo === "SMOKE_TEST" ||
         accountCode === "SIMULATED" ||
         hash === "SIMULATED_HASH" ||
-        previousRecordHash === "SIMULATED_PREVIOUS_HASH" ||
-        recordHash === "SIMULATED_DETAIL_HASH";
+        previousRecordHash === "SIMULATED_PREVIOUS_HASH";
 }
 
 
