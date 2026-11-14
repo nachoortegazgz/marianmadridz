@@ -20,13 +20,13 @@ Detalle y evidencias: [reconciliación de baseline y recuperación de validadore
 
 **Restauración:** esta política no se revierte automáticamente. Solo el usuario puede ordenar la restauración de append-only y de las restricciones de mutación para preparar el despliegue. No publicar a producción basándose únicamente en esta excepción de QA.
 
-**Estado Git/Wix:** PR #344, PR #345 y PR #346 están integrados en main; HEAD actual b19a8f676d7be157d457588f6acf5332c2a34d32; merge del código QA PR #346: b68e4e048ce5fc1c022fc6ffc2643d5983972107. CI de PR #346: Layer 1 23 suites/296 pruebas, Layer 2 18 suites/246 pruebas, regresión completa 68 suites/627 pruebas; SDK contracts, ESLint y Gitleaks correctos. El usuario declara que la versión base anterior está publicada en Wix; la ampliación de mutaciones QA está integrada en Git pero aún no publicada en Wix. No se dispone de release Wix vinculado a SHA.
+**Estado Git/Wix:** PR #344–#351 están integradas en main; HEAD al inicio de la reconciliación `79b6238fe4c23206bb8e81327191ab48425e3a0d`. PR #351 introdujo una regresión al retirar validadores aún consumidos; su recuperación está en PR #352 y CI queda pendiente. La publicación del sitio está declarada/verificada como estado del sitio, pero no existe release ID que vincule runtime y SHA. No se ha publicado esta tanda.
 
-**CMS maestro:** MapaStaff revisión 36, 42 campos y 5 registros (3 STAFF, 1 TERCERO, 1 GESTORIA). DatosFiscales permanece como colección legacy con un placeholder QA; su retirada requiere verificar runtime y consumidores tras publicar el backend migrado.
+**CMS maestro:** MapaStaff revisión live 105, 56 campos físicos. Inventario live: 41 colecciones (12 NATIVE, 29 WIX_APP), 980 campos. `DatosFiscales`, `InventarioStockVenta` y `MovimientosInventario` no existen en este corte (404 / WDE0025); sus menciones en este documento son históricas salvo nueva evidencia.
 
 ---
 
-> **Vigencia 2026-11-14:** prevalece el corte live de [ESTADO_ACTUAL_PROYECTO.md](ESTADO_ACTUAL_PROYECTO.md). `CajaActual` tiene el esquema live revisado (revisión 64; 59 campos personalizados + 4 de sistema); no se han abierto sesiones ni escrito movimientos. TEC-033 habilita update/remove individual solo en la rama de QA; los writers permanecen fail-closed. El WebMethod de apertura y la validación E2E siguen pendientes. No publicar esta rama.
+> **HISTÓRICO — superado por el addendum vigente:** el siguiente bloque describe un corte anterior de CMS y TEC-033. El esquema live actual se encuentra en `DICCIONARIO_DATOS_CMS.md` §§2–3; la política de QA vigente es TEC-037 (`QA_RECORD_MUTATIONS_ENABLED=true`).
 
 ## Registro histórico — estado live y limpieza QA (superado por el addendum vigente)
 
@@ -1468,9 +1468,9 @@ El usuario declara que el código está integrado y publicado en Wix. Esta decla
 
 **Restauración:** esta política no se revierte automáticamente. Solo el usuario puede ordenar la restauración de append-only y de las restricciones de mutación para preparar el despliegue. No publicar a producción basándose únicamente en esta excepción de QA.
 
-**Estado Git/Wix:** PR #344, PR #345 y PR #346 están integrados en main; HEAD actual b19a8f676d7be157d457588f6acf5332c2a34d32; merge del código QA PR #346: b68e4e048ce5fc1c022fc6ffc2643d5983972107. CI de PR #346: Layer 1 23 suites/296 pruebas, Layer 2 18 suites/246 pruebas, regresión completa 68 suites/627 pruebas; SDK contracts, ESLint y Gitleaks correctos. El usuario declara que la versión base anterior está publicada en Wix; la ampliación de mutaciones QA está integrada en Git pero aún no publicada en Wix. No se dispone de release Wix vinculado a SHA.
+**Estado Git/Wix:** PR #344–#351 están integradas en main; HEAD al inicio de la reconciliación `79b6238fe4c23206bb8e81327191ab48425e3a0d`. PR #351 introdujo una regresión al retirar validadores aún consumidos; su recuperación está en PR #352 y CI queda pendiente. La publicación del sitio está declarada/verificada como estado del sitio, pero no existe release ID que vincule runtime y SHA. No se ha publicado esta tanda.
 
-**CMS maestro:** MapaStaff revisión 36, 42 campos y 5 registros (3 STAFF, 1 TERCERO, 1 GESTORIA). DatosFiscales permanece como colección legacy con un placeholder QA; su retirada requiere verificar runtime y consumidores tras publicar el backend migrado.
+**CMS maestro:** MapaStaff revisión live 105, 56 campos físicos. Inventario live: 41 colecciones (12 NATIVE, 29 WIX_APP), 980 campos. `DatosFiscales`, `InventarioStockVenta` y `MovimientosInventario` no existen en este corte (404 / WDE0025); sus menciones en este documento son históricas salvo nueva evidencia.
 
 ---
 
@@ -1803,9 +1803,9 @@ El usuario declara que el código está integrado y publicado en Wix. Esta decla
 
 **Restauración:** esta política no se revierte automáticamente. Solo el usuario puede ordenar la restauración de append-only y de las restricciones de mutación para preparar el despliegue. No publicar a producción basándose únicamente en esta excepción de QA.
 
-**Estado Git/Wix:** PR #344, PR #345 y PR #346 están integrados en main; HEAD actual b19a8f676d7be157d457588f6acf5332c2a34d32; merge del código QA PR #346: b68e4e048ce5fc1c022fc6ffc2643d5983972107. CI de PR #346: Layer 1 23 suites/296 pruebas, Layer 2 18 suites/246 pruebas, regresión completa 68 suites/627 pruebas; SDK contracts, ESLint y Gitleaks correctos. El usuario declara que la versión base anterior está publicada en Wix; la ampliación de mutaciones QA está integrada en Git pero aún no publicada en Wix. No se dispone de release Wix vinculado a SHA.
+**Estado Git/Wix:** PR #344–#351 están integradas en main; HEAD al inicio de la reconciliación `79b6238fe4c23206bb8e81327191ab48425e3a0d`. PR #351 introdujo una regresión al retirar validadores aún consumidos; su recuperación está en PR #352 y CI queda pendiente. La publicación del sitio está declarada/verificada como estado del sitio, pero no existe release ID que vincule runtime y SHA. No se ha publicado esta tanda.
 
-**CMS maestro:** MapaStaff revisión 36, 42 campos y 5 registros (3 STAFF, 1 TERCERO, 1 GESTORIA). DatosFiscales permanece como colección legacy con un placeholder QA; su retirada requiere verificar runtime y consumidores tras publicar el backend migrado.
+**CMS maestro:** MapaStaff revisión live 105, 56 campos físicos. Inventario live: 41 colecciones (12 NATIVE, 29 WIX_APP), 980 campos. `DatosFiscales`, `InventarioStockVenta` y `MovimientosInventario` no existen en este corte (404 / WDE0025); sus menciones en este documento son históricas salvo nueva evidencia.
 
 ---
 
