@@ -33,7 +33,7 @@ test('QA-MAIL-01 manager email sink is fail-closed outside the explicit TEST con
     { ...QA_CONFIG, environment: 'QA' },
     { ...QA_CONFIG, siteId: 'different-site' },
     { ...QA_CONFIG, testSiteId: '' },
-    { ...QA_CONFIG, sinkRecipient: 'nachoortegazgz@gmail.com' },
+    { ...QA_CONFIG, sinkRecipient: 'external@example.invalid' },
   ]) {
     assert.throws(() => createQaManagerEmailSink(config), /QA_MANAGER_EMAIL_SINK_DISABLED/);
   }
@@ -85,11 +85,11 @@ test('QA-MAIL-04 real recipients, real customer addresses and incomplete evidenc
   const message = validMessage();
 
   await assert.rejects(
-    sink.send({ ...message, to: 'nachoortegazgz@gmail.com' }),
+    sink.send({ ...message, to: 'external@example.invalid' }),
     /QA_MANAGER_EMAIL_RECIPIENT_NOT_SINK/
   );
   await assert.rejects(
-    sink.send({ ...message, client: { ...message.client, email: 'client@gmail.com' } }),
+    sink.send({ ...message, client: { ...message.client, email: 'cliente@example.invalid' } }),
     /QA_MANAGER_EMAIL_CLIENT_NOT_SYNTHETIC/
   );
   await assert.rejects(
