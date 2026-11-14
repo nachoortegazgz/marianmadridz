@@ -1,7 +1,7 @@
 # Estándar de desarrollo y QA — Cero deuda
 
 **Versión consolidada:** 2026-11-14  
-**Fuente:** `DIRECTRICES_DESARROLLO_CODIGO.txt` aportado por el propietario. Esta versión incorpora el estado y la nomenclatura vigente del repositorio; el archivo fuente adjunto aún no está versionado en Git.
+**Fuente:** `docs/engineering/DEVELOPMENT-STANDARDS.md` aportado por el propietario. Esta versión incorpora el estado y la nomenclatura vigente del repositorio; el archivo fuente adjunto aún no está versionado en Git.
 
 ## Objetivo
 
@@ -86,7 +86,7 @@ Criterios de aceptación por intervención:
 
 Un workflow verde solo acredita las pruebas que ejecutó. No equivale a aceptación E2E del sitio publicado ni demuestra que el runtime Wix coincida con el SHA de Git.
 
-**Estado de la tanda de recuperación de validadores:** PR #352; Capa 1 y Capa 2 pasaron en una ejecución, pero la regresión completa detectó una aserción de texto en un test nuevo. Esa expectativa se corrigió; la nueva ejecución queda pendiente de resultado. Gitleaks pasó en las ejecuciones observadas. No declarar esta tanda cerrada hasta CI verde sobre el HEAD final.
+**Estado de la tanda de recuperación de validadores:** PR #352; CI final verificado en `c7388cb122368906b1cee20cae0f6d127900553b` (run #1048): Capa 1, Capa 2, regresión offline completa, SDK contracts, ESLint y Gitleaks PASS. No se ha publicado en Wix.
 
 ## 5. Proceso de auditoría
 
