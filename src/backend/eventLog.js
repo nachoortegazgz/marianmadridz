@@ -158,7 +158,7 @@ let _fiscalSystemCacheAt = 0;
 const FISCAL_SYSTEM_CACHE_TTL_MS =
     Number(SDK_CONFIG?.SECURITY?.SECRET_CACHE_TTL_MS) || 300000;
 
-// MapaStaff stores BOOLEAN flags; AEAT payloads represent them as S/N.
+// DatosFiscales stores BOOLEAN flags; AEAT payloads represent them as S/N.
 function _toAeatFlag(value, fallback) {
     if (typeof value === "boolean") return value ? "S" : "N";
     const normalized = _safeTrim(value).toUpperCase();
@@ -201,7 +201,7 @@ async function _getFiscalSystemConfig(traceId) {
             COMPUTER_SYSTEM_FALLBACK.indicadorMultiplesOT
         ),
         nifProductor: _safeTrim(config?.taxId),
-        // Legal identity must come from the verified CONFIG_SISTEMA record.
+        // Legal identity must come from the verified DatosFiscales CONFIG_SISTEMA record.
         // Never infer the fiscal legal name from the commercial brand or site label.
         nombreRazonProductor: _safeTrim(config?.legalName),
         fechaInicioVerifactu: config?.fechaInicioVerifactu || null,
