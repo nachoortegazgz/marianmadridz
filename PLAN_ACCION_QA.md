@@ -25,7 +25,7 @@ Por instrucción expresa del propietario, el sitio `188bed94-177c-4bc9-a9f0-3508
 6. **Sin efectos externos:** no emitir facturas, tickets a clientes, emails, SMS, WhatsApp, campañas, mensajes de Bookings, exportaciones a gestoría, SharePoint, Power Automate, AEAT o Veri*Factu. Los destinos externos se sustituyen por sinks/mocks sin entrega.
 7. **Sin efectos externos reales:** ninguna prueba ejecuta cobros, reembolsos, comunicaciones, transmisiones fiscales ni operaciones con terceros; usar mocks/sinks offline.
 8. **Trazabilidad:** cada ejecución tiene `testRunId`, `scenarioId`, `traceId`, commit SHA, resultado, artefactos y fecha/hora Europe/Madrid. Los registros de evidencia no incluyen PII ni secretos.
-9. **Integridad:** los ledgers append-only permanecen inmutables también en QA. Las correcciones económicas se representan mediante nuevos movimientos rectificativos trazables; nunca se editan ni borran movimientos, asientos, cierres o registros laborales. La limpieza de pruebas solo podrá afectar a estado efímero no ledger y tras comprobar entorno, IDs y alcance. Los bypasses globales de mutabilidad han sido retirados del código. No reintroducirlos ni crear flags para forzar una prueba; toda purga debe ajustarse a la allowlist y condiciones server-side.
+9. **Mutabilidad temporal QA:** por decisión del propietario de 2026-11-15, se suspende temporalmente append-only para permitir corrección de registros sintéticos. Las operaciones update/remove se implementarán solo en backend, con autorización ADMIN, allowlist de colecciones, Site ID QA exacto, backup, auditoría y rollback. No abrir permisos ANYONE/anónimos ni modificar directamente colecciones WIX_APP. La política anterior queda supersedida solo en QA mientras esta ventana esté aprobada.
 10. **Sin publicación:** esta rama documental no autoriza Preview, Publish, release ni despliegue.
 
 ## 3. Modelo de datos de prueba
@@ -223,3 +223,17 @@ La identidad y clasificación del único sitio QA se rigen por [SSOT del entorno
 - **H0 / H4 Wix Runtime:** BLOQUEADO. Lectura oficial Wix Automations V2: 150 automatizaciones, 10 activas y 140 inactivas. Las diez activas son preinstaladas y todas tienen readonly o disableStatusChange; no se pueden desactivar mediante API sin vulnerar locks.
 - **Decisión:** continuar solo offline/mock y read-only. No ejecutar flujos que disparen reservas, miembros, pagos guardados, formularios, tareas o notificaciones. Solicitar a Wix/proveedor neutralización soportada; repetir inventario y demostrar aislamiento antes de Runtime/E2E.
 - Evidencia: docs/audits/2026-11-14-qa-automations-isolation.md y docs/milestones/2026-11-14-qa-offline-fixtures-complete-runtime-isolation-blocked.md.
+
+
+## Tarea P0 preproducción — restauración de garantías de integridad
+
+Antes de cualquier despliegue o actividad real:
+- [ ] Restaurar append-only e inmutabilidad en todos los ledgers afectados.
+- [ ] Sustituir correcciones directas por nuevos registros rectificativos trazables.
+- [ ] Restaurar permisos mínimos y bloqueos de update/remove en CMS y backend.
+- [ ] Revalidar autorización server-side, idempotencia, hash, cadena de integridad y auditoría.
+- [ ] Ejecutar pruebas negativas de acceso no autorizado y de mutación/borrado.
+- [ ] Confirmar backup, recuperación y revisión de datos QA antes de cerrar la ventana temporal.
+- [ ] Bloquear release/publicación real mientras quede cualquier control pendiente.
+
+La tarea se considera abierta hasta que exista evidencia CI y validación en el entorno correspondiente. La decisión documental no equivale a implementación.
