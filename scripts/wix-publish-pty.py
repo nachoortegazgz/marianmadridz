@@ -110,7 +110,7 @@ def self_test() -> None:
         "What would you like to publish?\n❯ Latest commit from origin/main\n  Local code"
     )
     confirmation = clean_output(
-        "Creating preview deployment...\nPreview: https://wix.to/QA123\n"
+        "Creating preview deployment...\nPreview: https://wix.to/DEMO123\n"
         "If you're sure you want to publish, press y."
     )
     success = clean_output(
@@ -125,7 +125,7 @@ def self_test() -> None:
     )
     assert publication_blocker(editor_warning)
     assert not confirmation_ready(
-        "Preview: https://wix.to/QA123\n" + editor_warning + " UI version: 15941",
+        "Preview: https://wix.to/DEMO123\n" + editor_warning + " UI version: 15941",
         "15941",
     )
     assert publication_blocker("UI version: 15940", "15941")
