@@ -110,7 +110,7 @@ test("P1-CLOCK-01 timeclock writes and adjustments remain disabled before signin
   const clock = horario.slice(clockStart, clockEnd);
   const clockGuard = clock.indexOf("STAFF_CLOCKING_CONFIG.WRITES_ENABLED !== true");
   assert.ok(clockGuard >= 0);
-  assert.ok(clock.indexOf("signTimeclockRecord(") > clockGuard);
+  assert.ok(clock.indexOf("_sealTimeclockRecord(") > clockGuard);
   assert.ok(clock.indexOf("insert(REGISTROS_COL") > clockGuard);
 
   const adjustmentStart = horario.indexOf("export const registrarAjusteHorario");
@@ -118,6 +118,6 @@ test("P1-CLOCK-01 timeclock writes and adjustments remain disabled before signin
   const adjustment = horario.slice(adjustmentStart, adjustmentEnd);
   const adjustmentGuard = adjustment.indexOf("STAFF_CLOCKING_CONFIG.ADJUSTMENTS_ENABLED !== true");
   assert.ok(adjustmentGuard >= 0);
-  assert.ok(adjustment.indexOf("signTimeclockRecord(") > adjustmentGuard);
+  assert.ok(adjustment.indexOf("_sealTimeclockRecord(") > adjustmentGuard);
   assert.ok(adjustment.indexOf("insert(REGISTROS_COL") > adjustmentGuard);
 });
