@@ -1,4 +1,4 @@
-> **SSOT de entorno vigente (2026-11-14):** el único sitio del proyecto es QA: `188bed94-177c-4bc9-a9f0-35080d874f3e` (`https://www.marianmadrid.es/`). El propietario confirma que nunca ha tenido actividad real, que todos los datos son sintéticos, que el cliente de pruebas es Nacho Pitt (`nachoortegazgz@gmail.com`) y que la pasarela está desconectada. No existe otro sitio QA ni un QA externo designado. Las referencias anteriores a otros Site ID o a este sitio como producción quedan supersedidas. El estado Wix Published no altera su clasificación funcional como QA. Véase [SSOT del entorno QA](qa/QA-ENVIRONMENT-SSOT.md).
+> **SSOT de entorno vigente (2026-11-14):** el único sitio del proyecto es QA: `188bed94-177c-4bc9-a9f0-35080d874f3e` (`https://www.marianmadrid.es/`). El propietario confirma que nunca ha tenido actividad real, que todos los datos son sintéticos, que el cliente de pruebas es Nacho Pitt (`nacho.pitt@example.test`) y que la pasarela está desconectada. No existe otro sitio QA ni un QA externo designado. Las referencias anteriores a otros Site ID o a este sitio como producción quedan supersedidas. El estado Wix Published no altera su clasificación funcional como QA. Véase [SSOT del entorno QA](qa/QA-ENVIRONMENT-SSOT.md).
 
 ---
 
@@ -410,3 +410,26 @@ Este addendum conserva el registro de una designación intermedia y de la discre
 **Decisión expresa del propietario:** el Site ID `188bed94-177c-4bc9-a9f0-35080d874f3e` es el único entorno QA de Marian Madrid y se utiliza para pruebas previas al despliegue real. El sitio nunca ha tenido actividad real; los datos son sintéticos; el cliente sintético designado es Nacho Pitt (`nachoortegazgz@gmail.com`) y la pasarela está desconectada. No existe QA externo ni segundo sitio QA. Esta decisión supersede las designaciones anteriores de entorno y las descripciones de este sitio como producción. El estado Wix Published es un metadato técnico y no cambia la clasificación funcional QA.
 
 **Restricciones:** no cobros, reembolsos, comunicaciones, transmisiones fiscales ni efectos externos reales. Usar mocks/sinks offline. Mantener append-only: una pausa de writers no permite modificar ni borrar registros existentes. La ejecución runtime con efectos potenciales requiere comprobar antes la ruta concreta y mantenerla aislada.
+
+
+## Decisión del propietario — ventana temporal de mutabilidad QA (2026-11-15)
+
+**ID:** QA-2026-11-15-TEMP-MUTABILITY  
+**Estado:** APROBADA COMO POLÍTICA QA; implementación técnica pendiente.
+
+El propietario ordena suspender temporalmente la política append-only de los ledgers en el único sitio QA para permitir corrección de registros sintéticos y acelerar el desarrollo. Esta decisión supersede, solo en QA y desde 2026-11-15, TEC-038 y cualquier instrucción documental anterior que prohíba toda operación update/remove en esos ledgers. Los documentos históricos se conservan como evidencia, pero no gobiernan la operación QA mientras esta excepción esté vigente.
+
+**Alcance inicial verificado en Wix live:** `MovimientosCaja`, `LibroAsientosContablesDetalle`, `RegistrosHorariosStaff`, `HistoricoCierresZ`, `PaquetesGestoria` y los tipos mutables de `ControlOperativo`. `MovimientosInventario` no existe como colección propia live; no se creará un ledger paralelo al stock nativo de Wix. `ControlOperativo/WEBHOOK_EVENT` queda excluido de update/remove por ser la barrera de deduplicación y replay de webhooks.
+
+**Condiciones de implementación:**
+- El propietario declara ser el único usuario con acceso al desarrollo QA; aun así, cada WebMethod invocable desde frontend debe conservar autorización ADMIN cuando realice mantenimiento.
+- Mutaciones solo desde backend, con autorización ADMIN comprobada en servidor y allowlist explícita por colección.
+- No abrir permisos de lectura/escritura a ANYONE ni acceso anónimo; conservar el mínimo privilegio.
+- No usar acceso directo a colecciones nativas WIX_APP; respetar APIs oficiales.
+- Antes de corregir/eliminar datos, verificar que son sintéticos, exportar backup, delimitar IDs, auditar cada cambio y disponer de rollback.
+- Mantener desactivados pagos, comunicaciones, emisión/transmisión fiscal y cualquier efecto externo.
+- No activar automáticamente writers de negocio; habilitar únicamente operaciones administrativas de corrección aprobadas.
+
+**Tarea obligatoria antes de producción:** reintroducir y verificar append-only/inmutabilidad, rectificaciones mediante nuevos registros, permisos mínimos, autorización backend, idempotencia, hash/trazabilidad, auditoría y bloqueo de update/remove. La publicación real queda bloqueada hasta cerrar esta tarea y sus pruebas.
+
+**Estado real:** decisión documental registrada; no acredita que el código, los permisos live de Wix o los datos hayan sido modificados. Cada colección requiere auditoría de consumidores, esquema, permisos y pruebas antes de retirar sus bloqueos.
