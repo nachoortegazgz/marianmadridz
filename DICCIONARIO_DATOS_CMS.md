@@ -1,38 +1,16 @@
-## Addendum vigente — baseline 2026-11-14 (prevalece sobre bloques históricos)
-
-- Git `main` al inicio de esta reconciliación: `79b6238fe4c23206bb8e81327191ab48425e3a0d`, merge de PR #351.
-- Git `main` actual tras PR #355 (documentación): `331c572b9fbba4eaff9bf53a894e6c2377a13c22`; último baseline de código/configuración: `fde9466552b6819980475a682dc06395b57487f0`.
-- PR #352 (validadores) integrada; CI PASS en `609ccc948da3e63d3fd8aa20f5e64c7649770660` (run #1054).
-- PR #353 (retirada de inventario personalizado) integrada; CI PASS en `cdf07b5088977c4f51c231aa517b8ed607b25269` (run #1059).
-- PR #354 (política CMS residual) integrada como `fde9466552b6819980475a682dc06395b57487f0`; CI PASS en `28a11a690f0a99926921332618b6af670d45814c` (run #1068) y Gitleaks PASS (run #492).
-- Ninguna de estas intervenciones ha publicado ni desplegado código en Wix.
-- Plataforma confirmada por el propietario: **Wix Editor Classic + Velo**. GetSiteContext devuelve `Editor` en producción y QA, coherente con esa confirmación. Producción usa Stores Catalog V3 + Invoices V1; QA usa Stores Catalog V3 + Invoices V2. GetSiteContext no expone código Velo; sincronización Editor↔Git sigue pendiente.
-- PR #351 dejó una regresión en `src/backend/validation.js`: eliminó exports aún consumidos por `data.js`. La recuperación está en PR #352; CI completo PASS sobre el SHA `609ccc948da3e63d3fd8aa20f5e64c7649770660` (run #1054); commits posteriores en esta PR son solo documentación.
-- CMS live: **41 colecciones (12 NATIVE, 29 WIX_APP), 980 campos**. `MapaStaff` revisión 105 / 56 campos. `DatosFiscales`, `InventarioStockVenta` y `MovimientosInventario` no existen en el inventario live del corte; GET individual 404 / `WDE0025`.
-- Wix Stores Catalog V3 es la autoridad del stock comercial. La capa custom de inventario está retirada; las referencias a sus colecciones, exports o writers son históricas y no autorizan su recreación.
-- `QA_RECORD_MUTATIONS_ENABLED=true` sigue activa durante QA por instrucción del propietario. Es un bloqueo para producción; no se ha restaurado ni publicado.
-- No existe evidencia de release que vincule el runtime Wix publicado con el SHA actual de Git. No se declara validación E2E ni despliegue.
-- SharePoint / Power Automate Capa 3 sigue siendo diseño documental, no integración operativa certificada.
-
-Detalle y evidencias: [reconciliación de baseline y recuperación de validadores](docs/qa/2026-11-14-baseline-reconciliation.md).
-
----
-
-## Vigencia operativa — fase de desarrollo y QA (2026-11-14)
-
-**Autoridad:** el usuario/propietario es la SSOT de negocio, requisitos, prioridades, criterios de aceptación y autorizaciones. Las instrucciones expresas posteriores del usuario prevalecen sobre decisiones y restricciones documentales anteriores. La documentación oficial de Wix y de las integraciones gobierna únicamente los contratos y límites técnicos de la plataforma.
-
-**Mutabilidad CMS durante QA:** append-only e inmutabilidad están temporalmente en pausa. Se habilitan update y remove individuales y masivos para todas las colecciones CMS propias del proyecto, incluidas las históricamente tratadas como ledgers. Las operaciones masivas deben identificar explícitamente los registros por ID. No se habilitan escrituras en colecciones propiedad de Wix Apps ni se eluden autenticación, autorización/RBAC, permisos, validaciones de esquema, integridad técnica, secretos o límites de plataforma. La inserción mantiene su allowlist; los writers fiscales/contables/laborales, pagos, reembolsos, comunicaciones y efectos externos conservan sus gates funcionales independientes.
-
-**Restauración:** esta política no se revierte automáticamente. Solo el usuario puede ordenar la restauración de append-only y de las restricciones de mutación para preparar el despliegue. No publicar a producción basándose únicamente en esta excepción de QA.
-
-**Estado Git/Wix:** PR #344–#351 están integradas en main; HEAD verificado en este corte: `79b6238fe4c23206bb8e81327191ab48425e3a0d`. El merge del código QA PR #346 es `b68e4e048ce5fc1c022fc6ffc2643d5983972107`. CI de PR #346: Layer 1 23 suites/296 pruebas, Layer 2 18 suites/246 pruebas, regresión completa 68 suites/627 pruebas; SDK contracts, ESLint y Gitleaks correctos. El usuario declara que la versión base anterior está publicada en Wix; la ampliación de mutaciones QA está integrada en Git pero aún no publicada en Wix. No se dispone de release Wix vinculado a SHA.
-
-**CMS maestro:** MapaStaff revisión live 105, 56 campos físicos (incluidos 4 campos de sistema). El inventario live actual no devuelve `DatosFiscales`; una consulta individual devuelve HTTP 404 / `WDE0025` (la colección no existe). El número y tipo de registros de MapaStaff no se han consultado en este corte.
-
----
-
 # Diccionario de datos CMS — Marian Madrid
+
+## Addendum vigente — sitio actual, corte 2026-11-14
+
+- Sitio objeto de auditoría: `50b39f33-e753-4331-ab35-b2ed43dc97f7`.
+- Naturaleza declarada por el propietario: banco de pruebas aislado, sin actividad real.
+- Inventario live: 23 colecciones (15 NATIVE, 8 WIX_APP); 524 campos físicos NATIVE.
+- El manifiesto de campos, tipos, revisiones y recuentos vigente es `docs/audits/2026-11-14-current-site-cms-normalization.md`.
+- Las menciones a otros sitios, estados anteriores y comparativas de entornos que permanecen en este documento son evidencia histórica; no describen el CMS objeto de trabajo.
+- Los registros del sitio se consideran sintéticos/de prueba; no acreditan operaciones comerciales, fiscales ni laborales reales.
+- No se ha modificado el CMS durante esta auditoría.
+
+
 
 > **Corte live completo:** 2026-11-14. **Sitio:** `188bed94-177c-4bc9-a9f0-35080d874f3e`. Fuente: Wix Data Collections API. Inventario: 41 colecciones (12 NATIVE, 29 WIX_APP) y 980 definiciones de campo físicas. Revisiones, permisos, tipos y metadatos de las 41 colecciones se regeneran en §§2–3 desde respuestas live. Esta lectura prevalece sobre inventarios anteriores. No se modificaron colecciones ni registros.
 >
@@ -55,7 +33,7 @@ Se documentan:
 4. Los campos `_id`, `_createdDate`, `_updatedDate` y `_owner` son campos de sistema de Wix cuando aparecen marcados como tales.
 5. El esquema CMS describe tipos, pero Wix advierte que no constituye por sí mismo una validación estricta de cada valor escrito. Las validaciones del backend siguen siendo obligatorias.
 
-## 2. Inventario live de todas las colecciones CMS
+## 2. Inventario histórico — corte anterior, no aplicable al sitio actual
 
 | ID canónico de colección | Nombre visible | Tipo | Revisión | Campos | App de origen | ownerAppId |
 |---|---|---:|---:|---:|---|---|
@@ -105,7 +83,7 @@ Se documentan:
 
 Para NATIVE Wix no devuelve ownerAppId: son colecciones CMS propias del proyecto. Para WIX_APP se conserva el identificador literal devuelto por Wix; SiteMembers es un valor simbólico y en Locations/Locations el propietario no viene informado. La atribución por prefijo es funcional y no sustituye el owner ID.
 
-## 3. Esquema físico live completo — campos, tipos, descripción, origen, IDs y enums
+## 3. Esquema físico histórico — corte anterior, no aplicable al sitio actual
 
 `key` identifica el campo CMS. El ID canónico de colección y `ownerAppId` identifican el recurso y la aplicación propietaria. Las referencias se muestran solo cuando Wix declara REFERENCE/MULTI_REFERENCE. Los campos TEXT terminados en Id no se consideran referencias tipadas sin evidencia adicional.
 
