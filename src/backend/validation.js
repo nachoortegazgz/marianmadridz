@@ -215,9 +215,7 @@ export function assertControlOperativo(item) {
             throw new Error("SCHEMA_VIOLATION: WEBHOOK_CLAIM requires eventType");
         }
         assertValidEnum(item.status, WEBHOOK_CLAIM_STATUS, "status");
-        if (!item.ownerToken || !String(item.ownerToken).trim()) {
-            throw new Error("SCHEMA_VIOLATION: WEBHOOK_CLAIM requires ownerToken");
-        }
+        // traceId is the canonical CMS fencing token; ownerToken was removed from the schema.
         if (!Number.isSafeInteger(Number(item.version)) || Number(item.version) < 1) {
             throw new Error("SCHEMA_VIOLATION: WEBHOOK_CLAIM requires version >= 1");
         }
