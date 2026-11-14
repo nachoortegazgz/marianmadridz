@@ -111,7 +111,7 @@ export function assertInsertAllowed(collection, item) {
         throw _policyError("CMS_INSERT_BOOKING_ID_REQUIRED");
     }
     if (collection === BUSINESS_COLLECTIONS.DATOS_FISCALES &&
-        !Object.values(RECORD_TYPE).includes(item.recordType)) {
+        ![RECORD_TYPE.TERCERO, RECORD_TYPE.GESTORIA, RECORD_TYPE.CONFIG_SISTEMA].includes(item.recordType)) {
         throw _policyError("CMS_INSERT_FISCAL_RECORD_TYPE_INVALID");
     }
 }

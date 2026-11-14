@@ -212,7 +212,7 @@ async function _getFiscalSystemConfig(traceId) {
             COMPUTER_SYSTEM_FALLBACK.indicadorMultiplesOT
         ),
         nifProductor: _safeTrim(config?.taxId),
-        // Legal identity must come from the verified CONFIG_SISTEMA record.
+        // Legal identity must come from the verified DatosFiscales CONFIG_SISTEMA record.
         // Never infer the fiscal legal name from the commercial brand or site label.
         nombreRazonProductor: _safeTrim(config?.legalName),
         fechaInicioVerifactu: _toFiscalStartDateText(config?.fechaInicioVerifactu),
@@ -314,8 +314,7 @@ async function _upsertDatosFiscales({ taxId, legalName, thirdPartyType, address 
 
     if (existing?.items?.[0]) return existing.items[0];
 
-    // DatosFiscales stores the third-party fiscal identity. Event traceability
-    // stays in the calling ledger; traceId/schemaVersion are not CMS fields.
+    // `DatosFiscales.address` is the declared TEXT field for the fiscal address.
     return await dalInsert(DATOS_FISCALES_COL, {
         recordType: RECORD_TYPE.TERCERO,
         taxId: normalizedTaxId,
@@ -466,7 +465,7 @@ export async function registrarEventoEconomico(input) {
         thirdPartyType: input.thirdPartyType || (
             input.nifDestinatario ? THIRD_PARTY_TYPE.CLIENTE : THIRD_PARTY_TYPE.EMISOR
         ),
-        // DatosFiscales.address is the physical TEXT field.
+        // SSOT-KEYFIELD: DatosFiscales.address is the physical TEXT field.
         address: input.recipientAddress || null,
     });
 

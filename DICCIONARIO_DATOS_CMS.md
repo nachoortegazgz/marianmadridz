@@ -4,25 +4,28 @@
 
 - Sitio objeto de auditoría: `50b39f33-e753-4331-ab35-b2ed43dc97f7`.
 - Naturaleza declarada por el propietario: banco de pruebas aislado, sin actividad real.
-- Inventario live: 23 colecciones (15 NATIVE, 8 WIX_APP); 524 campos físicos NATIVE.
-- El manifiesto de campos, tipos, revisiones y recuentos vigente es `docs/audits/2026-11-14-current-site-cms-normalization.md`.
-- Los inventarios y addenda antiguos se conservan como trazabilidad histórica; no describen el esquema vigente ni implican la existencia de otro sitio objeto de trabajo.
+- Inventario del sitio actual: 23 colecciones (15 NATIVE, 8 WIX_APP); 524 campos físicos NATIVE.
+- El manifiesto de campos, tipos, revisiones, recuentos y contratos de identidad vigente es `docs/audits/2026-11-14-current-site-cms-normalization.md`.
+- Las menciones a otros sitios, estados anteriores y comparativas de entornos que permanecen en este documento son evidencia histórica; no describen el CMS objeto de trabajo.
 - Los registros del sitio se consideran sintéticos/de prueba; no acreditan operaciones comerciales, fiscales ni laborales reales.
+- Contrato actual: `MapaStaff` es exclusivamente el mapa de identidades Wix Bookings/Members; `DatosFiscales` es el maestro fiscal. Los campos no presentes en el esquema físico no se pueden exigir ni persistir desde los hooks.
+- Claves: `_id` identifica el registro CMS; `serviceId`, `pricingPlanId`, `staffMemberId`, `resourceId`, `scheduleId` y `memberId` conservan sus identidades nativas de dominio y no se sustituyen por `_id`.
+- En `ComplementosCatalogo`, `_id` es la fuente de identidad y el DTO de reserva lo proyecta como `addOnId`; la columna física `addonId` permanece hasta que su obligatoriedad CMS sea retirada de forma controlada.
 - No se ha modificado el CMS durante esta auditoría.
 
 
 
-> **Bloque histórico:** la captura que originó los apartados siguientes corresponde a un estado/sitio anterior. No describe el CMS actual ni debe utilizarse como inventario vigente. El manifiesto live aplicable es `docs/audits/2026-11-14-current-site-cms-normalization.md`.
+> **Bloque histórico:** la captura que originó los apartados siguientes corresponde a un estado/sitio anterior. No describe el CMS actual ni debe utilizarse como inventario vigente. El manifiesto del sitio actual aplicable es `docs/audits/2026-11-14-current-site-cms-normalization.md`.
 >
- > Las secciones §§2–3 también corresponden a esa captura histórica y no deben usarse como inventario actual. El inventario y esquema vigentes están en el addendum actual al final del documento y en docs/audits/2026-11-14-current-site-cms-normalization.md. Las secciones §§6–16 aportan glosario y contratos; sus menciones a campos ausentes deben contrastarse con el manifiesto vigente.
+ > Las secciones §§2–3 contienen el inventario y esquema físico de un corte histórico anterior; no prevalecen sobre el manifiesto del sitio actual. Las secciones §§6–16 aportan glosario, contratos de código, decisiones y contexto; sus menciones a colecciones/campos ausentes del inventario actual se consideran históricas hasta nueva verificación. La fuente del esquema físico es Wix Data Collections API.
 
 
 
 ## 1. Alcance y criterio de lectura
 
 Se documentan:
-- Las 12 colecciones `NATIVE` de la captura histórica, con revisión, nombre visible CMS, campo de presentación y campos físicos observados.
-- Las 29 colecciones `WIX_APP` de la captura histórica, con nombre visible, propietario de aplicación, campo de presentación y número de campos. Sus esquemas son administrados por Wix Apps y no se redefinen aquí.
+- Las colecciones `NATIVE` del corte histórico, con revisión, nombre visible CMS, campo de presentación y todos los campos físicos observados. No constituyen el inventario vigente del sitio actual.
+- Las 29 colecciones `WIX_APP`, con nombre visible, propietario de aplicación, campo de presentación y número de campos. Sus esquemas son administrados por Wix Apps y no se redefinen aquí.
 - Los keyfields de negocio y sus significados cuando están respaldados por el esquema, `internalConfig.js`, `validation.js` o documentación técnica del repositorio.
 - Las reglas de nomenclatura que el dossier define como estándar y las diferencias reales que aparecen en CMS.
 
@@ -1915,7 +1918,49 @@ Este addendum sustituye los addenda históricos que describían MapaStaff como m
 
 **Código en la rama** fix/current-site-cms-contract-alignment: separación de validadores/hooks MapaStaff y DatosFiscales; lectores y escritores fiscales migrados a DatosFiscales; keyfield _id para complementos; gestorName como nombre canónico. PR #370 está abierto pero `dirty` (historial divergente respecto a main); no hay checks para el HEAD actual. Rebase, CI sobre HEAD y revisión del diff pendientes. No se ha mutado el CMS ni se han migrado registros.
 
-## Addendum de autoridad y pruebas en el sitio aislado — 2026-11-14
+En esta rama, `cajas.web.js` y sus fixtures usan `operationDateHour`, `bizumAmount` y los cuatro campos `opening*Amount`; se ha retirado la comprobación redundante de `isOpen`. El DTO expone los cuatro saldos iniciales. **No existe todavía un WebMethod de apertura de sesión que persista esos cuatro importes**; por tanto permanecen null y la funcionalidad de apertura/saldos iniciales no está validada end-to-end. La proyección actual no se considera completa para `otherAmount` hasta probar su clasificación y conciliación desde `MovimientosCaja`.
+
+No se ha ejecutado CI completo, Wix Local Editor ni E2E en runtime. No se ha publicado ni desplegado esta rama. La mutación CMS de este corte no equivale a publicar código Wix.
+
+---
+
+
+## Addendum de vigencia — consolidación fiscal en MapaStaff (2026-11-14)
+
+Este addendum prevalece sobre las secciones históricas que describen `DatosFiscales` como maestro activo o `MapaStaff` como una colección exclusivamente de mapeo staff.
+
+**CMS live verificado:** `MapaStaff` revisión 36, 42 campos, 5 registros. Se añadieron al esquema los campos fiscales y de contacto que existían en `DatosFiscales`, más `recordType` y `active`. `DatosFiscales` permanece live en revisión 21 con 1 registro sintético hasta que se publique el backend migrado; su retirada aún no se ha ejecutado.
+
+**Esquema de MapaStaff (42 campos físicos; 38 de negocio + 4 de sistema):**
+
+```text
+displayName:TEXT, traceId:TEXT, staffMemberId:TEXT, scheduleId:TEXT,
+thirdPartyId:TEXT, staffName:TEXT, rolWebsite:TEXT, rolBookings:TEXT,
+memberId:TEXT, resourceId:TEXT, ServiciosCatalogo_staffMembers:MULTI_REFERENCE,
+recordType:TEXT, fechaInicioVerifactu:DATE, schemaVersion:NUMBER,
+province:TEXT, postalCode:TEXT, commercialName:TEXT, streetNumber:TEXT,
+businessDescription:TEXT, currency:TEXT, phone:TEXT, taxId:TEXT,
+legalName:TEXT, thirdPartyType:TEXT, address:TEXT, taxRegime:TEXT,
+verifactuEnabled:BOOLEAN, verifactuVersion:TEXT,
+tipoUsoPosibleMultiOT:BOOLEAN, indicadorMultiplesOT:BOOLEAN, email:TEXT,
+name:TEXT, label:TEXT, nif:TEXT, gestorEmail:TEXT, gestorName:TEXT,
+gestorNif:TEXT, active:BOOLEAN,
+_id:TEXT, _createdDate:DATETIME, _updatedDate:DATETIME, _owner:TEXT
+```
+
+**Valores `recordType` live:**
+- `STAFF`: tres registros, conservan sus IDs y roles previos; `active=true`.
+- `TERCERO`: un registro sintético de pruebas migrado desde `DatosFiscales` conservando su ID.
+- `GESTORIA`: un registro `NachoGest` con dirección `Calle Burgos 25`, teléfono `666724634` y email `nachoortegazgz@gmail.com`; sin `memberId`, `staffMemberId`, `resourceId` ni roles.
+- `CONFIG_SISTEMA`: no existe registro; no inferir identidad fiscal, régimen ni configuración Veri*Factu.
+
+**Permisos live:** `itemRead=PRIVILEGED`; insert/update/remove=`CMS_EDITOR`. El backend consulta mediante la capa `@wix/data` elevada. No dar acceso público a los datos de contacto/fiscales.
+
+**Código en rama** `feat/consolidate-fiscal-master-mapastaff-v2`: el backend valida los cuatro tipos; `events.js` filtra `recordType=STAFF`; los lectores/escritores fiscales y destinatarios de gestoría usan `MapaStaff`. El DTO de destinatarios incorpora teléfono y dirección. No se identificó consumidor frontend directo de `listAccountantRecipients`; no se añadió una UI nueva sin requisito.
+
+**Retirada de DatosFiscales:** mantener la colección antigua sin nuevas escrituras hasta publicar el backend migrado, comprobar hooks/WebMethods en runtime y verificar que no quedan consumidores activos. Después eliminarla y hacer readback del inventario. No eliminarla antes del despliegue.---
+
+## Addendum de autoridad y fase de pruebas aisladas — 2026-11-14
 
 ### Jerarquía de autoridad y SSOT
 

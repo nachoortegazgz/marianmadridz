@@ -132,8 +132,7 @@ export async function acquireWebhookEventClaim({
             return { status: "COMPLETED", claimId };
         }
 
-        // Read legacy nested lease once for compatibility; all new writes use the CMS expiresAt field.
-        const existingLease = new Date(existing.expiresAt || existing.payload?.leaseExpiresAt);
+        const existingLease = new Date(existing.expiresAt);
         if (
             existing.status === WEBHOOK_CLAIM_STATUS.IN_PROGRESS &&
             Number.isFinite(existingLease.getTime()) &&
@@ -162,17 +161,12 @@ export async function acquireWebhookEventClaim({
             traceId: previousTraceId,
             version,
         };
-        const storedAttempts = existing.attempts !== undefined && existing.attempts !== null && existing.attempts !== ""
-            ? existing.attempts
-            : (existing.payload?.attempt ?? 1);
-        const previousAttempts = Number(storedAttempts);
+        const previousAttempts = Number(existing.attempts);
         if (!Number.isSafeInteger(previousAttempts) || previousAttempts < 1) {
             throw claimError("WEBHOOK_CLAIM_ATTEMPTS_INVALID");
         }
         const attempts = previousAttempts + 1;
-        const nextPayload = { ...(existing.payload || {}) };
-        delete nextPayload.attempt;
-        delete nextPayload.leaseExpiresAt;
+        const nextPayload = existing.payload || {};
         const recovered = await compareAndSwap(previous, [
             { fieldPath: "status", action: "SET_FIELD", value: WEBHOOK_CLAIM_STATUS.IN_PROGRESS },
             { fieldPath: "traceId", action: "SET_FIELD", value: claimTraceId },

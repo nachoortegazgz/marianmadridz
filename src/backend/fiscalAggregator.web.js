@@ -13,8 +13,8 @@ CAMBIOS DE ALINEACION v5015-ALIGNED (respecto a v5009-FISCAL-V20.1):
   ALN-01: COLLECTIONS alias eliminado. Uso de BUSINESS_COLLECTIONS.
   ALN-02: wixData.query(...).find({ suppressAuth, consistentRead }) ->
           dalQuery(...).find(). Cero suppressAuth.
-  ALN-03: _getBusinessTaxId migrado a dalQuery(BUSINESS_COLLECTIONS.
-          DATOS_FISCALES). El singleton CONFIG_SISTEMA se mantiene como
+  ALN-03: _getBusinessTaxId lee BUSINESS_COLLECTIONS.DATOS_FISCALES.
+          El singleton CONFIG_SISTEMA se mantiene como
           unica fuente canonica del NIF emisor.
   ALN-04: Paginacion: hasNext()/next() del QueryBuilder de dataAccess son
           funciones compatibles con la firma original. next() es async y

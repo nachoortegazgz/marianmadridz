@@ -513,7 +513,7 @@ test("EVENT-PAYMENT-09 official Wix eCommerce paid event appends WIX_PAYMENTS le
   const secretState = globalThis.__mmSecretsState || (globalThis.__mmSecretsState = { _map: {}, _default: "mock-secret" });
   secretState._map.FISCAL_NIF_EMISOR = "B12345674";
 
-  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.MAPA_STAFF, [{
+  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.DATOS_FISCALES, [{
     _id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
     recordType: "TERCERO",
     taxId: "B12345674",
@@ -658,7 +658,7 @@ test("EVENT-REFUND-01 defers incomplete refunds, records successful terminal amo
 
   const secretState = globalThis.__mmSecretsState || (globalThis.__mmSecretsState = { _map: {}, _default: "mock-secret" });
   secretState._map.FISCAL_NIF_EMISOR = "B12345674";
-  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.MAPA_STAFF, [{
+  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.DATOS_FISCALES, [{
     _id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
     recordType: "TERCERO",
     taxId: "B12345674",
@@ -1128,7 +1128,7 @@ test("EVENT-PAYMENT-10 a failed strong ledger preflight read fails closed and ne
 
   const secretState = globalThis.__mmSecretsState || (globalThis.__mmSecretsState = { _map: {}, _default: "mock-secret" });
   secretState._map.FISCAL_NIF_EMISOR = "B12345674";
-  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.MAPA_STAFF, [{
+  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.DATOS_FISCALES, [{
     _id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
     recordType: "TERCERO",
     taxId: "B12345674",

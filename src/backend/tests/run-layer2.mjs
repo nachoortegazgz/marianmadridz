@@ -24,6 +24,7 @@ const suites = [
   'events.booking-canceled.integrity.test.mjs',
   'events.native-booking-sync.test.mjs',
   'events.order-id-validation.contract.test.mjs',
+  'webhookEventClaims.test.mjs',
   'operational-writers.fail-closed.contract.test.mjs',
   'unit.ssot.v5011.test.mjs',
 ];

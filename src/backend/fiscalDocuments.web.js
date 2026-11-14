@@ -127,7 +127,7 @@ function _accountantSendDisabledResult(traceId) {
   };
 }
 
-// Canonical physical recordType value declared by DatosFiscales.
+// Marcadores canonicos para identificar un item dedicado a gestor.
 const GESTORIA_RECORD_TYPE_MARKERS = Object.freeze(["GESTORIA"]);
 
 // =============================================================================
@@ -283,9 +283,9 @@ function _extractGestorFromRecord(record) {
     return {
       id: String(record._id),
       email,
-      name: _safeTrim(record.name || record.nombre || record.gestorName || record.legalName || ""),
+      name: _safeTrim(record.name || record.gestorName || record.legalName || ""),
       label:
-        _safeTrim(record.label || record.name || record.nombre || record.gestorName || record.legalName) ||
+        _safeTrim(record.label || record.name || record.gestorName || record.legalName) ||
         email,
       nif: _safeTrim(record.nif || record.gestorNif || "") || null,
       phone: _safeTrim(record.phone || "") || null,

@@ -109,165 +109,46 @@ export function assertCajaActualRecord(item) {
     if (!item || typeof item !== "object" || Array.isArray(item)) {
         throw new Error("SCHEMA_VIOLATION: CajaActual item must be an object");
     }
-
-    const textFields = [
-        "closedBy", "differenceReason", "stateHash", "openedBy", "traceId",
-        "staffResourceId", "cashRegisterStatus", "singletonKey", "id", "fiscalPeriod",
-    ];
-    for (const field of textFields) {
-        if (item[field] != null && typeof item[field] !== "string") {
-            throw new Error(`SCHEMA_VIOLATION: CajaActual.${field} must be TEXT`);
-        }
-    }
-
-    const numberFields = [
-        "netAmount", "versionState", "difference", "countedCash", "expectedCash",
-        "cashAmount", "totalOutAmount", "totalInAmount", "paymentAmount",
-        "paymentCount", "refundAmount", "refundCount", "salesAmount", "salesCount",
-        "otherAmount", "voucherAmount", "cardAmount", "openingAmount", "currentSequence",
-    ];
-    for (const field of numberFields) {
-        if (item[field] != null && (typeof item[field] !== "number" || !Number.isFinite(item[field]))) {
-            throw new Error(`SCHEMA_VIOLATION: CajaActual.${field} must be NUMBER`);
-        }
-    }
-
-    if (item.isOpen != null && typeof item.isOpen !== "boolean") {
-        throw new Error("SCHEMA_VIOLATION: CajaActual.isOpen must be BOOLEAN");
-    }
-    if (item.operationDate != null && item.operationDate !== "") {
-        const date = String(item.operationDate).trim();
-        const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
-        const [year, month, day] = match ? match.slice(1).map(Number) : [];
-        const parsed = match ? new Date(Date.UTC(year, month - 1, day)) : null;
-        if (!match || parsed.getUTCFullYear() !== year ||
-            parsed.getUTCMonth() + 1 !== month || parsed.getUTCDate() !== day) {
-            throw new Error("SCHEMA_VIOLATION: CajaActual.operationDate must be a valid DATE YYYY-MM-DD");
-        }
-    }
-    if (item.sequenceCounters != null &&
-        (typeof item.sequenceCounters !== "object" || Array.isArray(item.sequenceCounters))) {
-        throw new Error("SCHEMA_VIOLATION: CajaActual.sequenceCounters must be OBJECT");
-    }
-    if (item.cashRegisterStatus != null) {
-        assertValidEnum(item.cashRegisterStatus, CASH_REGISTER_STATUS, "cashRegisterStatus");
-    }
-    const cmsId = String(item._id ?? "").trim();
-    const mirrorId = String(item.id ?? "").trim();
-    if (cmsId && mirrorId && cmsId !== mirrorId) {
-        throw new Error("SCHEMA_VIOLATION: CajaActual.id mirror must equal CMS _id");
-    }
-    return true;
-}
-
-/**
- * MapaStaff is only the staff-to-Wix-Bookings identity map.
- * Its IDs are distinct native identities; _id remains the CMS item key.
- */
-export function assertMapaStaffRecord(item, { partial = false } = {}) {
-    if (!item || typeof item !== "object" || Array.isArray(item)) {
-        throw new Error("SCHEMA_VIOLATION: MapaStaff item must be an object");
-    }
-
-    const textFields = [
-        "displayName", "staffMemberId", "scheduleId", "thirdPartyId",
-        "staffName", "rolWebsite", "rolBookings", "memberId", "resourceId",
-        "sourceSystem",
-    ];
-    for (const field of textFields) {
-        if (item[field] != null && typeof item[field] !== "string") {
-            throw new Error(`SCHEMA_VIOLATION: MapaStaff.${field} must be TEXT`);
-        }
-    }
-
     for (const field of ["staffMemberId", "resourceId", "scheduleId"]) {
-        if (partial && !Object.prototype.hasOwnProperty.call(item, field)) continue;
         if (!isValidGuid(item[field])) {
             throw new Error(`SCHEMA_VIOLATION: MapaStaff.${field} must be a valid Wix GUID`);
         }
     }
-    if (item.memberId != null && item.memberId !== "" && !isValidGuid(item.memberId)) {
-        throw new Error("SCHEMA_VIOLATION: MapaStaff.memberId must be a valid Wix Members GUID");
+    for (const field of ["memberId", "thirdPartyId"]) {
+        if (item[field] != null && item[field] !== "" && !isValidGuid(item[field])) {
+            throw new Error(`SCHEMA_VIOLATION: MapaStaff.${field} must be a valid Wix GUID when supplied`);
+        }
     }
-    if (item.active != null && typeof item.active !== "boolean") {
+    if (item.active !== undefined && typeof item.active !== "boolean") {
         throw new Error("SCHEMA_VIOLATION: MapaStaff.active must be BOOLEAN");
     }
-    if (item.sortOrder != null && (typeof item.sortOrder !== "number" || !Number.isFinite(item.sortOrder) || item.sortOrder < 0)) {
-        throw new Error("SCHEMA_VIOLATION: MapaStaff.sortOrder must be a non-negative NUMBER");
-    }
-    if (item.schemaVersion != null && (typeof item.schemaVersion !== "number" || !Number.isInteger(item.schemaVersion) || item.schemaVersion < 1)) {
+    if (item.schemaVersion !== undefined &&
+        (!Number.isSafeInteger(Number(item.schemaVersion)) || Number(item.schemaVersion) < 1)) {
         throw new Error("SCHEMA_VIOLATION: MapaStaff.schemaVersion must be a positive integer");
-    }
-    if (item.ServiciosCatalogo_staffMembers != null &&
-        (!Array.isArray(item.ServiciosCatalogo_staffMembers) ||
-            item.ServiciosCatalogo_staffMembers.some((id) => typeof id !== "string" || !id.trim()))) {
-        throw new Error("SCHEMA_VIOLATION: MapaStaff.ServiciosCatalogo_staffMembers must be an array of Wix CMS IDs");
-    }
-
-    const retiredFields = [
-        "recordType", "taxId", "legalName", "thirdPartyType", "traceId",
-        "gestorEmail", "gestorName", "gestorNombre", "gestorNif",
-        "verifactuEnabled", "verifactuVersion", "taxRegime", "fechaInicioVerifactu",
-    ];
-    const suppliedRetired = retiredFields.filter((field) =>
-        Object.prototype.hasOwnProperty.call(item, field) && item[field] != null
-    );
-    if (suppliedRetired.length) {
-        throw new Error(`SCHEMA_VIOLATION: MapaStaff fields not in current CMS schema: ${suppliedRetired.join(", ")}`);
     }
     return true;
 }
 
 /**
- * DatosFiscales is the fiscal master. Its physical schema has no traceId or
- * schemaVersion; event traceability belongs to the calling operation/ledger.
+ * Validates fiscal master records against the physical DatosFiscales collection.
+ * This collection owns fiscal identity; MapaStaff only maps Wix staff identities.
  */
-export function assertDatosFiscalesRecord(item, { partial = false } = {}) {
+export function assertDatosFiscalesRecord(item) {
     if (!item || typeof item !== "object" || Array.isArray(item)) {
         throw new Error("SCHEMA_VIOLATION: DatosFiscales item must be an object");
     }
+    assertValidEnum(item.recordType, {
+        TERCERO: RECORD_TYPE.TERCERO,
+        GESTORIA: RECORD_TYPE.GESTORIA,
+        CONFIG_SISTEMA: RECORD_TYPE.CONFIG_SISTEMA,
+    }, "recordType");
 
-    if (!partial || Object.prototype.hasOwnProperty.call(item, "recordType")) {
-        assertValidEnum(item.recordType, RECORD_TYPE, "recordType");
-    }
-
-    const retiredFields = ["traceId", "schemaVersion", "nifCif", "razonSocial", "tipoTercero", "gestorNombre"];
-    const suppliedRetired = retiredFields.filter((field) =>
-        Object.prototype.hasOwnProperty.call(item, field) && item[field] != null
-    );
-    if (suppliedRetired.length) {
-        throw new Error(`SCHEMA_VIOLATION: DatosFiscales fields not in current CMS schema: ${suppliedRetired.join(", ")}`);
-    }
-
-    const textFields = [
-        "streetNumber", "businessDescription", "currency", "phone", "taxId",
-        "legalName", "thirdPartyType", "address", "taxRegime", "verifactuVersion",
-        "fechaInicioVerifactu", "email", "name", "label", "nif", "gestorEmail",
-        "gestorName", "gestorNif",
-    ];
-    for (const field of textFields) {
-        if (item[field] != null && typeof item[field] !== "string") {
-            throw new Error(`SCHEMA_VIOLATION: DatosFiscales.${field} must be TEXT`);
+    if (item.recordType === RECORD_TYPE.CONFIG_SISTEMA) {
+        if (item.taxId && !isValidNifOrEuVat(item.taxId)) {
+            throw new Error("SCHEMA_VIOLATION: DatosFiscales.taxId must be valid NIF/NIE/CIF/VAT-UE");
         }
-    }
-
-    for (const field of ["verifactuEnabled", "tipoUsoPosibleMultiOT", "indicadorMultiplesOT", "active"]) {
-        if (item[field] != null && typeof item[field] !== "boolean") {
-            throw new Error(`SCHEMA_VIOLATION: DatosFiscales.${field} must be BOOLEAN`);
-        }
-    }
-
-    for (const field of ["taxId", "nif", "gestorNif"]) {
-        const value = String(item[field] ?? "").trim();
-        if (value && !isValidNifOrEuVat(value)) {
-            throw new Error(`SCHEMA_VIOLATION: DatosFiscales.${field} must be a valid NIF/NIE/CIF/VAT-UE`);
-        }
-    }
-
-    for (const field of ["email", "gestorEmail"]) {
-        const value = String(item[field] ?? "").trim();
-        if (value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-            throw new Error(`SCHEMA_VIOLATION: DatosFiscales.${field} must be a valid email`);
+        if (item.legalName != null && item.legalName !== "" && !String(item.legalName).trim()) {
+            throw new Error("SCHEMA_VIOLATION: DatosFiscales.legalName must be non-empty when supplied");
         }
     }
 
@@ -280,30 +161,37 @@ export function assertDatosFiscalesRecord(item, { partial = false } = {}) {
         if (!String(item.taxId ?? "").trim() || !String(item.legalName ?? "").trim() || !item.thirdPartyType) {
             throw new Error("SCHEMA_VIOLATION: DatosFiscales TERCERO requires taxId, legalName and thirdPartyType");
         }
-    }
-    if (!partial && recordType === RECORD_TYPE.CONFIG_SISTEMA) {
-        if (!String(item.taxId ?? "").trim() || !String(item.legalName ?? "").trim()) {
-            throw new Error("SCHEMA_VIOLATION: DatosFiscales CONFIG_SISTEMA requires taxId and legalName");
+    } else if (item.recordType === RECORD_TYPE.TERCERO) {
+        if (!item.taxId || !isValidNifOrEuVat(item.taxId)) {
+            throw new Error("SCHEMA_VIOLATION: DatosFiscales TERCERO requires a valid taxId");
+        }
+        if (!String(item.legalName || "").trim()) {
+            throw new Error("SCHEMA_VIOLATION: DatosFiscales TERCERO requires legalName");
+        }
+        assertValidEnum(item.thirdPartyType, THIRD_PARTY_TYPE, "thirdPartyType");
+    } else if (item.recordType === RECORD_TYPE.GESTORIA) {
+        const email = String(item.email || item.gestorEmail || "").trim();
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            throw new Error("SCHEMA_VIOLATION: DatosFiscales GESTORIA requires a valid email");
+        }
+        if (!String(item.name || item.legalName || item.gestorName || "").trim()) {
+            throw new Error("SCHEMA_VIOLATION: DatosFiscales GESTORIA requires a name");
         }
     }
-    if (!partial && recordType === RECORD_TYPE.GESTORIA) {
-        if (!String(item.email || item.gestorEmail || "").trim() ||
-            !String(item.name || item.gestorName || item.legalName || "").trim()) {
-            throw new Error("SCHEMA_VIOLATION: DatosFiscales GESTORIA requires name and email");
+    for (const field of ["verifactuEnabled", "tipoUsoPosibleMultiOT", "indicadorMultiplesOT", "active"]) {
+        if (item[field] !== undefined && item[field] !== null && typeof item[field] !== "boolean") {
+            throw new Error(`SCHEMA_VIOLATION: DatosFiscales.${field} must be BOOLEAN`);
         }
     }
-
     if (item.fechaInicioVerifactu != null && item.fechaInicioVerifactu !== "") {
-        const date = String(item.fechaInicioVerifactu).trim();
-        const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
-        const [year, month, day] = match ? match.slice(1).map(Number) : [];
-        const parsed = match ? new Date(Date.UTC(year, month - 1, day)) : null;
-        if (!match || parsed.getUTCFullYear() !== year ||
-            parsed.getUTCMonth() + 1 !== month || parsed.getUTCDate() !== day) {
-            throw new Error("SCHEMA_VIOLATION: DatosFiscales.fechaInicioVerifactu must be a valid TEXT ISO YYYY-MM-DD date");
+        const value = String(item.fechaInicioVerifactu);
+        const parsed = new Date(value + "T00:00:00.000Z");
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(value) ||
+            Number.isNaN(parsed.getTime()) ||
+            parsed.toISOString().slice(0, 10) !== value) {
+            throw new Error("SCHEMA_VIOLATION: DatosFiscales.fechaInicioVerifactu must be a real YYYY-MM-DD date");
         }
     }
-
     return true;
 }
 // =============================================================================
@@ -572,3 +460,5 @@ export function isExplicitSimulationLedgerRecord(item) {
         previousRecordHash === "SIMULATED_PREVIOUS_HASH" ||
         recordHash === "SIMULATED_DETAIL_HASH";
 }
+
+

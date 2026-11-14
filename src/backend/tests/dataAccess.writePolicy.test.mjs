@@ -48,8 +48,8 @@ test("retired custom inventory collections are excluded from the canonical CMS a
     assert.equal(Object.hasOwn(C, "MOVIMIENTOS_INVENTARIO"), false);
     assert.equal(ISOLATED_SITE_MUTABLE_COLLECTIONS.includes("InventarioStockVenta"), false);
     assert.equal(ISOLATED_SITE_MUTABLE_COLLECTIONS.includes("MovimientosInventario"), false);
-    // DatosFiscales is the canonical fiscal master within the project-owned CMS scope.
-    assert.equal(ISOLATED_SITE_MUTABLE_COLLECTIONS.includes("DatosFiscales"), true);
+    // DatosFiscales is a canonical project-owned collection in the current site.
+    assert.equal(ISOLATED_SITE_MUTABLE_COLLECTIONS.includes(C.DATOS_FISCALES), true);
 });
 
 test("insert policy allows only declared collections and canonical ControlOperativo types", () => {
@@ -76,12 +76,11 @@ test("insert policy allows only declared collections and canonical ControlOperat
         staffMemberId: "0114748d-2806-3928-9b97-ff0d09853759",
         resourceId: "e556070a-6d6a-402e-8422-11133033ea76",
         scheduleId: "06af20d4-1ec3-49fa-9075-f0691dfa7fd4",
+        active: true,
     }));
     assert.doesNotThrow(() => assertInsertAllowed(C.DATOS_FISCALES, {
         recordType: RECORD_TYPE.TERCERO,
-        taxId: "12345678Z",
-        legalName: "Entidad de prueba",
-        thirdPartyType: "CLIENTE",
+        taxId: "X0000000X",
     }));
     assert.throws(() => assertInsertAllowed("UnknownCollection", {}), {
         code: "CMS_INSERT_COLLECTION_DENIED",
@@ -95,7 +94,7 @@ test("insert policy allows only declared collections and canonical ControlOperat
     }), { code: "CMS_WRITE_NON_CANONICAL_CONTROL_FIELD" });
 });
 
-test("insert policy rejects unknown fiscal record types in DatosFiscales", () => {
+test("insert policy rejects unknown fiscal record types", () => {
     assert.throws(() => assertInsertAllowed(C.DATOS_FISCALES, {
         recordType: "INVOICE_LEDGER",
     }), { code: "CMS_INSERT_FISCAL_RECORD_TYPE_INVALID" });

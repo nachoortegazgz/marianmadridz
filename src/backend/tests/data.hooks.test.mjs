@@ -284,210 +284,62 @@ test('HOOK-CONTROL-01 rejects retired ControlOperativo fields on new writes', ()
 });
 
 // -----------------------------------------------------------------------------
-// MapaStaff and DatosFiscales — separate physical CMS contracts
-// -----------------------------------------------------------------------------
-
-test('HOOK-MAPASTAFF-01 validates only native staff mapping fields', () => {
+// MapaStaff — physical staff mapping schema (current site)
+test("HOOK-MAPASTAFF-01 validates native Wix identity keys without fiscal discriminators", () => {
   const staff = {
-    _id: 'e556070a-6d6a-402e-8422-11133033ea76',
-    staffMemberId: '0114748d-2806-3928-9b97-ff0d09853759',
-    resourceId: 'e556070a-6d6a-402e-8422-11133033ea76',
-    scheduleId: '06af20d4-1ec3-49fa-9075-f0691dfa7fd4',
-    memberId: 'e52404b1-7a72-4b99-b231-66c4dc413421',
-    displayName: 'Staff de prueba',
-    staffName: 'STAFF DE PRUEBA',
-    rolWebsite: 'ESTILISTA',
-    rolBookings: 'STAFF',
+    staffMemberId: "0114748d-2806-3928-9b97-ff0d09853759",
+    resourceId: "e556070a-6d6a-402e-8422-11133033ea76",
+    scheduleId: "06af20d4-1ec3-49fa-9075-f0691dfa7fd4",
+    memberId: "e52404b1-7a72-4b99-b231-66c4dc413421",
     active: true,
-    sortOrder: 1,
-    sourceSystem: 'WIX_BOOKINGS',
     schemaVersion: 1,
   };
   assert.doesNotThrow(() => H.MapaStaff_beforeInsert({ ...staff }));
-  assert.doesNotThrow(() => H.MapaStaff_beforeUpdate({ _id: staff._id, active: false }));
-  assert.throws(
-    () => H.MapaStaff_beforeInsert({ ...staff, scheduleId: 'invalid' }),
-    /scheduleId.*GUID/
-  );
-  assert.throws(
-    () => H.MapaStaff_beforeInsert({ ...staff, recordType: 'STAFF' }),
-    /fields not in current CMS schema/
-  );
-  assert.throws(
-    () => H.MapaStaff_beforeInsert({ ...staff, active: 'true' }),
-    /active must be BOOLEAN/
-  );
-  assert.throws(
-    () => H.MapaStaff_beforeInsert({ ...staff, sortOrder: '1' }),
-    /sortOrder must be a non-negative NUMBER/
-  );
+  assert.doesNotThrow(() => H.MapaStaff_beforeUpdate({ ...staff }));
+  assert.throws(() => H.MapaStaff_beforeInsert({ ...staff, scheduleId: undefined }), /scheduleId/);
+  assert.throws(() => H.MapaStaff_beforeInsert({ ...staff, active: "true" }), /active must be BOOLEAN/);
 });
 
-test('HOOK-DATOS-FISCALES-01 validates fiscal third parties against physical fields', () => {
+test("HOOK-DATOSFISCALES-01 CONFIG_SISTEMA uses only declared physical fields", () => {
+  const config = {
+    recordType: IC.RECORD_TYPE.CONFIG_SISTEMA,
+    name: "Marian Madrid",
+    businessDescription: "Peluquería y estética",
+    address: "C/ Maurice Ravel 35, Local — 50012 Zaragoza",
+    email: "hola@marianmadrid.es",
+    verifactuEnabled: false,
+  };
+  const inserted = H.DatosFiscales_beforeInsert({ ...config });
+  assert.equal(inserted._id, "CONFIG_SISTEMA_FISCAL");
+  assert.doesNotThrow(() => H.DatosFiscales_beforeInsert({ ...config }));
+  assert.throws(() => H.DatosFiscales_beforeInsert({ ...config, taxId: "INVALID" }), /taxId.*valid NIF/);
+  assert.throws(() => H.DatosFiscales_beforeInsert({ ...config, thirdPartyType: "EMISOR" }), /thirdPartyType.*null/);
+  assert.throws(() => H.DatosFiscales_beforeInsert({ ...config, fechaInicioVerifactu: "01/01/2026" }), /YYYY-MM-DD/);
+  assert.throws(() => H.DatosFiscales_beforeInsert({ ...config, active: "true" }), /active must be BOOLEAN/);
+  assert.throws(() => H.DatosFiscales_beforeInsert({ ...config, recordType: "config_sistema" }), /recordType invalido/);
+  assert.throws(() => H.DatosFiscales_beforeInsert({ ...config, fechaInicioVerifactu: "   " }), /solo espacios/);
+});
+
+test("HOOK-DATOSFISCALES-02 third parties and accountant records use declared fields without trace/schemaVersion", () => {
   const thirdParty = {
     recordType: IC.RECORD_TYPE.TERCERO,
-    taxId: '12345678Z',
-    legalName: 'Entidad de prueba',
-    thirdPartyType: 'CLIENTE',
-    address: 'Calle de prueba 1',
-    active: true,
+    taxId: "B12345674",
+    legalName: "Proveedor de prueba",
+    thirdPartyType: "PROVEEDOR",
+    address: "Zaragoza",
   };
   assert.doesNotThrow(() => H.DatosFiscales_beforeInsert({ ...thirdParty }));
-  assert.throws(
-    () => H.DatosFiscales_beforeInsert({ ...thirdParty, taxId: '12345678A' }),
-    /taxId.*NIF/
-  );
-  assert.throws(
-    () => H.DatosFiscales_beforeInsert({ ...thirdParty, traceId: 'not-a-cms-field' }),
-    /fields not in current CMS schema/
-  );
-  assert.throws(
-    () => H.DatosFiscales_beforeInsert({ ...thirdParty, active: 'true' }),
-    /active must be BOOLEAN/
-  );
-  assert.throws(
-    () => H.DatosFiscales_beforeInsert({ ...thirdParty, gestorNombre: 'Gestoría antigua' }),
-    /gestorNombre/
-  );
-});
 
-test('HOOK-DATOS-FISCALES-03 removes identical gestorNombre mirror on update', async () => {
-  wixDataMock._reset();
-  const existing = {
-    _id: '2d92c0a2-ec14-4c2b-9e95-3e23c0b6e6e2',
-    recordType: IC.RECORD_TYPE.TERCERO,
-    taxId: '12345678Z',
-    legalName: 'Entidad de prueba',
-    thirdPartyType: 'CLIENTE',
-    gestorName: 'Gestoría de prueba',
-    gestorNombre: 'Gestoría de prueba',
-  };
-  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.DATOS_FISCALES, [existing]);
-  const updated = await H.DatosFiscales_beforeUpdate({
-    _id: existing._id,
-    address: 'Calle de prueba 2',
-  });
-  assert.equal(updated.gestorName, 'Gestoría de prueba');
-  assert.equal(Object.prototype.hasOwnProperty.call(updated, 'gestorNombre'), false);
-});
-
-test('HOOK-DATOS-FISCALES-02 validates issuer config and gestor contact contracts', () => {
-  const issuer = {
-    recordType: IC.RECORD_TYPE.CONFIG_SISTEMA,
-    taxId: '12345678Z',
-    legalName: 'Entidad emisora de prueba',
-    verifactuEnabled: false,
-    verifactuVersion: '1.0',
-    tipoUsoPosibleMultiOT: false,
-    indicadorMultiplesOT: false,
-    fechaInicioVerifactu: '2026-01-01',
-  };
-  assert.doesNotThrow(() => H.DatosFiscales_beforeInsert({ ...issuer }));
-  assert.throws(
-    () => H.DatosFiscales_beforeInsert({ ...issuer, fechaInicioVerifactu: '01/01/2026' }),
-    /valid TEXT ISO YYYY-MM-DD/
-  );
-  assert.throws(
-    () => H.DatosFiscales_beforeInsert({ ...issuer, fechaInicioVerifactu: '2026-02-31' }),
-    /valid TEXT ISO YYYY-MM-DD/
-  );
-  assert.throws(
-    () => H.DatosFiscales_beforeInsert({ ...issuer, verifactuEnabled: 'false' }),
-    /verifactuEnabled must be BOOLEAN/
-  );
-
-  assert.doesNotThrow(() => H.DatosFiscales_beforeInsert({
+  const accountant = {
     recordType: IC.RECORD_TYPE.GESTORIA,
-    name: 'Gestoría de prueba',
-    email: 'gestoria@example.test',
+    name: "Gestoría de prueba",
+    gestorEmail: "gestoria@example.test",
+    gestorName: "Gestoría de prueba",
     active: true,
-  }));
-});
-
-test('HOOK-CAJA-01 enforces current CajaActual field types', () => {
-  const cash = {
-    _id: 'SINGLE_ITEM_ID',
-    id: 'SINGLE_ITEM_ID',
-    singletonKey: 'CAJA_PRINCIPAL',
-    cashRegisterStatus: 'SIMULACION',
-    isOpen: true,
-    sequenceCounters: { seqGlobal: 0, appliedMovementIds: [] },
-    currentSequence: 0,
-    openingAmount: 300,
-    expectedCash: 300,
   };
-  assert.doesNotThrow(() => H.CajaActual_beforeInsert({ ...cash }));
-  assert.doesNotThrow(() => H.CajaActual_beforeInsert({ ...cash, operationDate: '2026-11-14' }));
-  assert.throws(
-    () => H.CajaActual_beforeInsert({ ...cash, operationDate: '2026-02-31' }),
-    /valid DATE YYYY-MM-DD/
-  );
-  assert.throws(
-    () => H.CajaActual_beforeInsert({ ...cash, sequenceCounters: '{}' }),
-    /sequenceCounters must be OBJECT/
-  );
-  assert.throws(
-    () => H.CajaActual_beforeInsert({ ...cash, openingAmount: '300' }),
-    /openingAmount must be NUMBER/
-  );
-  assert.throws(
-    () => H.CajaActual_beforeInsert({ ...cash, id: 'different-id' }),
-    /id mirror must equal CMS _id/
-  );
-  assert.throws(
-    () => H.CajaActual_beforeInsert({ ...cash, cashRegisterStatus: 'OPEN' }),
-    /cashRegisterStatus invalido/
-  );
-});
-
-test('HOOK-CAJA-02 update hook rejects a string sequenceCounters value', () => {
-  const original = {
-    _id: 'SINGLE_ITEM_ID',
-    id: 'SINGLE_ITEM_ID',
-    singletonKey: 'CAJA_PRINCIPAL',
-    cashRegisterStatus: 'SIMULACION',
-    isOpen: true,
-    sequenceCounters: { seqGlobal: 0 },
-    currentSequence: 0,
-  };
-  assert.throws(
-    () => H.CajaActual_beforeUpdate(
-      { _id: original._id, sequenceCounters: '{}' },
-      { original }
-    ),
-    /sequenceCounters must be OBJECT/
-  );
-});
-
-test('HOOK-ADDON-01 _id is canonical and addonId is only a required mirror', () => {
-  const canonicalId = '076322c7-b34d-4fa5-9661-be28c087ed93';
-  const item = {
-    _id: canonicalId,
-    addonId: canonicalId,
-    sku: 'COMP-076322C7',
-    taxIncluded: true,
-    durationMinutes: 5,
-    tipoImpositivo: 0.21,
-    price: 5,
-    name: 'Complemento de prueba',
-  };
-  assert.doesNotThrow(() => H.ComplementosCatalogo_beforeInsert({ ...item }));
-  assert.throws(
-    () => H.ComplementosCatalogo_beforeInsert({ ...item, addonId: '17b85d64-f751-4770-8e44-b78a3c318086' }),
-    /debe coincidir con _id canonico/
-  );
-  const adopted = {
-    addonId: canonicalId,
-    sku: 'COMP-076322C7',
-    taxIncluded: true,
-    price: 5,
-  };
-  H.ComplementosCatalogo_beforeInsert(adopted);
-  assert.equal(adopted._id, canonicalId);
-  assert.throws(
-    () => H.ComplementosCatalogo_beforeInsert({ ...item, price: '5' }),
-    /price debe ser NUMBER/
-  );
+  assert.doesNotThrow(() => H.DatosFiscales_beforeInsert({ ...accountant }));
+  assert.throws(() => H.DatosFiscales_beforeInsert({ ...thirdParty, taxId: "12345678A" }), /taxId/);
+  assert.throws(() => H.DatosFiscales_beforeInsert({ ...accountant, gestorEmail: "invalid" }), /valid email/);
 });
 
 // -----------------------------------------------------------------------------

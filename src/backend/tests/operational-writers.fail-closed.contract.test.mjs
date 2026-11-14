@@ -53,9 +53,9 @@ test("P0-FISCAL-01 fiscal ledger writers are disabled by canonical fail-closed p
   const thirdPartyStart = eventLog.indexOf("async function _upsertDatosFiscales(");
   const thirdPartyEnd = eventLog.indexOf("async function _getServicioCatalogo(", thirdPartyStart);
   const thirdPartyUpsert = eventLog.slice(thirdPartyStart, thirdPartyEnd);
-  assert.match(thirdPartyUpsert, /recordType:\s*RECORD_TYPE\.TERCERO/);
-  assert.doesNotMatch(thirdPartyUpsert, /schemaVersion:/);
-  assert.doesNotMatch(thirdPartyUpsert, /traceId:/);
+  assert.match(thirdPartyUpsert, /dalQuery\(DATOS_FISCALES_COL\)/);
+  assert.match(thirdPartyUpsert, /dalInsert\(DATOS_FISCALES_COL/);
+  assert.doesNotMatch(thirdPartyUpsert, /schemaVersion|traceId:/);
   assert.doesNotMatch(eventLog, /nombreRazonProductor:\s*["']Marian Madrid["']/,
     "legalName must not be inferred from the commercial brand");
 

@@ -78,6 +78,7 @@ export const BUSINESS_COLLECTIONS = Object.freeze({
   DATOS_FISCALES: "DatosFiscales",
   COMPLEMENTOS_CATALOGO: "ComplementosCatalogo",
   CONTROL_OPERATIVO: "ControlOperativo",
+  DATOS_FISCALES: "DatosFiscales",
   HISTORICO_CIERRES_Z: "HistoricoCierresZ",
   PAQUETES_GESTORIA: "PaquetesGestoria",
   LIBRO_ASIENTOS_CONTABLES_DETALLE: "LibroAsientosContablesDetalle",
@@ -87,7 +88,7 @@ export const BUSINESS_COLLECTIONS = Object.freeze({
   SERVICIOS_CATALOGO: "ServiciosCatalogo",
 });
 
-// All project-owned collections in the isolated site are explicitly in scope for the temporary owner-authorized mutation window.
+// The fiscal identity master is a project-owned collection in the current site.
 export const ISOLATED_SITE_MUTABLE_COLLECTIONS = Object.freeze([
   ...Object.values(BUSINESS_COLLECTIONS),
 ]);
