@@ -103,7 +103,7 @@ test("expired lease recovery fences the previous owner", async () => {
 
     assert.equal(recovered.status, "ACQUIRED");
     assert.equal(recovered.claim.version, first.claim.version + 1);
-    assert.equal(recovered.claim.ownerToken, "worker-two");
+    assert.equal(recovered.claim.traceId, "worker-two");
     await assert.rejects(
         completeWebhookEventClaim(first.claim, new Date(BASE_TIME.getTime() + 1002)),
         { code: "WEBHOOK_CLAIM_LOST" }
@@ -135,7 +135,7 @@ test("failed claim can be retried with a new owner token", async () => {
     });
 
     assert.equal(retry.status, "ACQUIRED");
-    assert.equal(retry.claim.ownerToken, "worker-two");
+    assert.equal(retry.claim.traceId, "worker-two");
     assert.equal(retry.claim.version, first.claim.version + 2);
     assert.equal(retry.claim.attempts, 2);
     const row = (wixDataMock._store.get(BUSINESS_COLLECTIONS.CONTROL_OPERATIVO) || [])[0];
@@ -190,7 +190,6 @@ test("legacy nested lease and attempt are read once and migrated to canonical fi
         eventId: EVENT_ID,
         eventType: EVENT_TYPE,
         status: WEBHOOK_CLAIM_STATUS.FAILED_RETRYABLE,
-        ownerToken: "worker-old",
         version: 4,
         attempts: "",
         expiresAt: "",
