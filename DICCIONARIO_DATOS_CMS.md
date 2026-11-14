@@ -73,7 +73,7 @@ _id:TEXT, _createdDate:DATETIME, _updatedDate:DATETIME, _owner:TEXT
 
 **Contrato de proyección:** los saldos iniciales de efectivo, tarjeta, Bizum y otros se persisten al abrir una sesión real; no se rellenan con cero en una caja cerrada. Los saldos actuales se inicializan desde esos importes y se proyectan mediante movimientos válidos de `MovimientosCaja`. El efectivo físico se mantiene separado de tarjeta/Bizum/otros. El ledger fuente no se modifica.
 
-**Límite de implementación:** el esquema CMS está corregido, pero todavía no existe un WebMethod de apertura que persista los cuatro saldos iniciales. Los campos de apertura permanecen null; no declarar el flujo de apertura ni la conciliación completa como operativos hasta implementar y probar ese writer.
+**Límite de implementación:** el esquema CMS está corregido, pero todavía no existe un WebMethod de apertura que persista los cuatro saldos iniciales. **Desfase de despliegue:** el runtime Published no está acreditado con este contrato ni con esta rama. El backend/DTO actualizado existe solo en Git; no se ha desplegado. Aunque Wix Data no aplica el esquema como validación estricta de cada payload, el comportamiento del código publicado frente al esquema nuevo no se ha probado. No ejecutar operaciones de caja en live hasta completar CI, validación en QA aislado y despliegue autorizado. Los campos de apertura permanecen null; no declarar el flujo de apertura ni la conciliación completa como operativos hasta implementar y probar ese writer.
 
 ### 3.2 CitasF2 — revisión 42
 
