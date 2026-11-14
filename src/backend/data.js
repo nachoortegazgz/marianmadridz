@@ -17,7 +17,7 @@ import {
     OPERATIONAL_COLLECTIONS,
     APPEND_ONLY_MUTATION_WINDOW,
 } from "backend/internalConfig";
-import { assertCitasF2, assertControlOperativo, assertCanonicalControlFields, assertRegistrosHorariosStaff, assertMapaStaff } from "backend/validation";
+import { assertCitasF2, assertControlOperativo, assertCanonicalControlFields, assertRegistrosHorariosStaff, assertDatosFiscales } from "backend/validation";
 import { CONSISTENCY, getItem } from "backend/dataAccess";
 
 import { logger } from "backend/logger";
@@ -839,7 +839,7 @@ export function MapaStaff_beforeUpdate(item) {
     delete item.nifCif;
     delete item.razonSocial;
     delete item.tipoTercero;
-    for (const field of DATOS_FISCALES_NON_SCHEMA_FIELDS) {
+    for (const field of MAPA_STAFF_NON_SCHEMA_FIELDS) {
         if (item[field] !== undefined && item[field] !== null) {
             _schemaError(`Campo "${field}" no existe en el esquema físico MapaStaff`);
         }
@@ -868,7 +868,7 @@ export function MapaStaff_beforeRemove(item) {
 // BLOQUE 14 - DATOS FISCALES: singleton CONFIG_SISTEMA (SSOT V2, v5011)
 // =============================================================================
 
-const DATOS_FISCALES_NON_SCHEMA_FIELDS = [
+const MAPA_STAFF_NON_SCHEMA_FIELDS = [
     "producerTaxId", "producerLegalName", "computerSystemId",
     "installationNumber", "possibleUseMultiOT", "possibleUseOnlyVerifactu",
     "multipleOTIndicator", "verifactuStartDate", "nifProductor",
@@ -887,7 +887,7 @@ function _assertMapaStaffVersionAndTrace(item) {
 }
 
 function _applyConfigSistemaRules(item) {
-    for (const field of DATOS_FISCALES_NON_SCHEMA_FIELDS) {
+    for (const field of MAPA_STAFF_NON_SCHEMA_FIELDS) {
         if (item[field] !== undefined && item[field] !== null) {
             _schemaError(`Campo "${field}" no existe en el esquema físico MapaStaff; use taxId/legalName y los campos declarados`);
         }
