@@ -3,7 +3,8 @@
 - Git `main` al inicio de esta reconciliación: `79b6238fe4c23206bb8e81327191ab48425e3a0d`, merge de PR #351.
 - Git `main` actual tras PR #352: `c8091fd2df0ba836657032db1e2e7aa9df67758b` (merge de la recuperación de validadores).
 - PR #352 quedó integrada; CI completo PASS en el SHA de código `609ccc948da3e63d3fd8aa20f5e64c7649770660` (run #1054). No se ha publicado en Wix.
-- PR #353 retira contratos ejecutables de inventario personalizado; validación pendiente de CI.
+- PR #353 quedó integrada en `main` como `c16ed0b605a8d548f79158aa0dbd702666eea829`; retiró constantes y hooks de inventario personalizado.
+- PR #354 corrige una referencia residual a `BUSINESS_COLLECTIONS.MOVIMIENTOS_INVENTARIO` en `DATA_ACCESS_WRITE_POLICY.removeCollections`; CI pendiente.
 - PR #351 dejó una regresión en `src/backend/validation.js`: eliminó exports aún consumidos por `data.js`. La recuperación está en PR #352; CI completo PASS sobre el SHA `609ccc948da3e63d3fd8aa20f5e64c7649770660` (run #1054); commits posteriores en esta PR son solo documentación.
 - CMS live: **41 colecciones (12 NATIVE, 29 WIX_APP), 980 campos**. `MapaStaff` revisión 105 / 56 campos. `DatosFiscales`, `InventarioStockVenta` y `MovimientosInventario` no existen en el inventario live del corte; GET individual 404 / `WDE0025`.
 - Wix Stores Catalog V3 es la autoridad del stock comercial. La capa custom de inventario está retirada; las referencias a sus colecciones, exports o writers son históricas y no autorizan su recreación.
