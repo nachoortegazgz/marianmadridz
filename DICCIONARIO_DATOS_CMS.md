@@ -17,7 +17,7 @@
 
 > **Bloque histórico:** la captura que originó los apartados siguientes corresponde a un estado/sitio anterior. No describe el CMS actual ni debe utilizarse como inventario vigente. El manifiesto del sitio actual aplicable es `docs/audits/2026-11-14-current-site-cms-normalization.md`.
 >
- > Las secciones §§2–3 contienen el inventario y esquema físico live vigente y prevalecen sobre cualquier addendum histórico posterior que documente revisiones anteriores. Las secciones §§6–16 aportan glosario, contratos de código, decisiones y contexto; sus menciones a colecciones/campos ausentes del inventario actual se consideran históricas hasta nueva verificación. La fuente del esquema físico es Wix Data Collections API.
+ > Las secciones §§2–3 contienen el inventario y esquema físico de un corte histórico anterior; no prevalecen sobre el manifiesto del sitio actual. Las secciones §§6–16 aportan glosario, contratos de código, decisiones y contexto; sus menciones a colecciones/campos ausentes del inventario actual se consideran históricas hasta nueva verificación. La fuente del esquema físico es Wix Data Collections API.
 
 
 
@@ -1949,7 +1949,7 @@ _id:TEXT, _createdDate:DATETIME, _updatedDate:DATETIME, _owner:TEXT
 
 **Valores `recordType` live:**
 - `STAFF`: tres registros, conservan sus IDs y roles previos; `active=true`.
-- `TERCERO`: un registro QA sintético migrado desde `DatosFiscales` conservando su ID.
+- `TERCERO`: un registro sintético de pruebas migrado desde `DatosFiscales` conservando su ID.
 - `GESTORIA`: un registro `NachoGest` con dirección `Calle Burgos 25`, teléfono `666724634` y email `nachoortegazgz@gmail.com`; sin `memberId`, `staffMemberId`, `resourceId` ni roles.
 - `CONFIG_SISTEMA`: no existe registro; no inferir identidad fiscal, régimen ni configuración Veri*Factu.
 
@@ -1959,7 +1959,7 @@ _id:TEXT, _createdDate:DATETIME, _updatedDate:DATETIME, _owner:TEXT
 
 **Retirada de DatosFiscales:** mantener la colección antigua sin nuevas escrituras hasta publicar el backend migrado, comprobar hooks/WebMethods en runtime y verificar que no quedan consumidores activos. Después eliminarla y hacer readback del inventario. No eliminarla antes del despliegue.---
 
-## Addendum de autoridad y fase QA — 2026-11-14
+## Addendum de autoridad y fase de pruebas aisladas — 2026-11-14
 
 ### Jerarquía de autoridad y SSOT
 
