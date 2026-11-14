@@ -351,6 +351,26 @@ test('HOOK-DATOS-FISCALES-01 validates fiscal third parties against physical fie
   );
 });
 
+test('HOOK-DATOS-FISCALES-03 removes identical gestorNombre mirror on update', async () => {
+  wixDataMock._reset();
+  const existing = {
+    _id: '2d92c0a2-ec14-4c2b-9e95-3e23c0b6e6e2',
+    recordType: IC.RECORD_TYPE.TERCERO,
+    taxId: '12345678Z',
+    legalName: 'Entidad de prueba',
+    thirdPartyType: 'CLIENTE',
+    gestorName: 'Gestoría de prueba',
+    gestorNombre: 'Gestoría de prueba',
+  };
+  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.DATOS_FISCALES, [existing]);
+  const updated = await H.DatosFiscales_beforeUpdate({
+    _id: existing._id,
+    address: 'Calle de prueba 2',
+  });
+  assert.equal(updated.gestorName, 'Gestoría de prueba');
+  assert.equal(Object.prototype.hasOwnProperty.call(updated, 'gestorNombre'), false);
+});
+
 test('HOOK-DATOS-FISCALES-02 validates issuer config and gestor contact contracts', () => {
   const issuer = {
     recordType: IC.RECORD_TYPE.CONFIG_SISTEMA,
