@@ -1,3 +1,14 @@
+# Addendum de estado — 2026-11-14
+
+Rama de trabajo `chore/temporary-append-only-mutation-window`; no representa un despliegue ni una publicación.
+
+- **Mutabilidad QA:** TEC-033 está habilitada solo en esta rama para update/remove individual de los ledgers enumerados; bulk sigue bloqueado. Los gates de writers fiscales/contables y simulación permanecen false.
+- **CMS live:** inventario de 42 colecciones. `CajaActual` NATIVE revisión 3, 25 campos de negocio + 4 de sistema, singleton `CAJA_PRINCIPAL` cerrado, current balances 0 y opening balances null. El índice único singleton y el índice compuesto corregido están ACTIVE; el índice compuesto anterior ya no aparece en el inventario final.
+- **Limpieza:** se eliminaron dos fichajes sintéticos de `RegistrosHorariosStaff` identificados con `meta.synthetic=true` y `doNotImportToProduction=true`; readback 0 registros. No se borró ningún registro económico, contable o laboral real.
+- **Colecciones:** `MovimientosCaja` 0 elementos, `LibroAsientosContablesDetalle` 0, `HistoricoCierresZ` 0, `PaquetesGestoria` 0, `ControlOperativo` 3. `MovimientosInventario` no aparece en el inventario live actual.
+- **Código:** backend/fixtures de esta rama alineados con los nombres nuevos; no existe aún WebMethod de apertura que persista saldos iniciales. CI completo, Wix Local Editor y E2E pendientes.
+- **Despliegue:** no publicar ni fusionar mientras TEC-033 esté habilitada. **Desfase de despliegue:** el runtime Published no está acreditado con este contrato ni con esta rama. El backend/DTO actualizado existe solo en Git; no se ha desplegado. Aunque Wix Data no aplica el esquema como validación estricta de cada payload, el comportamiento del código publicado frente al esquema nuevo no se ha probado. No ejecutar operaciones de caja en live hasta completar CI, validación en QA aislado y despliegue autorizado.
+
 # ADDENDUM DE VIGENCIA — 2026-11-13 (corte live posterior a la publicación declarada)
 
 > **Este bloque es la referencia vigente y prevalece sobre cualquier estado anterior o contradictorio del documento.** Fuente de estado: GitHub `main`, Wix Site Context y lecturas CMS de solo lectura ejecutadas en este corte. No se han modificado colecciones, elementos CMS, automatizaciones ni configuración Wix durante esta auditoría.

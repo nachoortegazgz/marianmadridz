@@ -1,6 +1,10 @@
+# Estado operativo — actualización 2026-11-14
+
+La rama `chore/temporary-append-only-mutation-window` contiene TEC-033 y los cambios de alineación de nombres/DTO de `CajaActual`. No está fusionada en `main`, ni publicada ni desplegada en Wix. En CMS live sí se creó `CajaActual` con el esquema corregido y se eliminaron dos fichajes inequívocamente sintéticos; no se cambiaron permisos ni se activaron writers. El inventario live tras el cambio es de 42 colecciones. **Desfase de despliegue:** el runtime Published no está acreditado con este contrato ni con esta rama. El backend/DTO actualizado existe solo en Git; no se ha desplegado. Aunque Wix Data no aplica el esquema como validación estricta de cada payload, el comportamiento del código publicado frente al esquema nuevo no se ha probado. No ejecutar operaciones de caja en live hasta completar CI, validación en QA aislado y despliegue autorizado. El detalle y los límites están en [ESTADO_ACTUAL_PROYECTO.md](ESTADO_ACTUAL_PROYECTO.md) y [DICCIONARIO_DATOS_CMS.md](DICCIONARIO_DATOS_CMS.md).
+
 # Marian Madrid — Wix Editor + Velo
 
-> **Estado vigente 2026-11-13:** GitHub `main` en el corte PR #332: `84c06313d5d82da6952e38deab8bae271aed67cf`. Wix Site Context confirma el sitio principal **Published** y Velo enabled; el propietario declara que el código se ha actualizado y publicado. No se ha obtenido un identificador de release que vincule el runtime Wix con ese SHA. Existe un sitio Wix QA independiente en estado Draft (`50b39f33-e753-4331-ab35-b2ed43dc97f7`), pero su aislamiento y paridad CMS no están certificados. CMS producción: 44 colecciones (15 NATIVE, 29 WIX_APP); CMS QA: 43 (15 NATIVE, 28 WIX_APP). La referencia de estado, inventario y checklist es [ESTADO_ACTUAL_PROYECTO.md](ESTADO_ACTUAL_PROYECTO.md), cuyo addendum vigente prevalece sobre los estados históricos de los demás documentos.
+> **Estado vigente 2026-11-13:** GitHub `main` en el corte PR #332: `84c06313d5d82da6952e38deab8bae271aed67cf`. Wix Site Context confirma el sitio principal **Published** y Velo enabled; el propietario declara que el código se ha actualizado y publicado. No se ha obtenido un identificador de release que vincule el runtime Wix con ese SHA. Existe un sitio Wix QA independiente en estado Draft (`50b39f33-e753-4331-ab35-b2ed43dc97f7`), pero su aislamiento y paridad CMS no están certificados. CMS producción tras el corte 2026-11-14: 42 colecciones (13 NATIVE, 29 WIX_APP). El sitio QA Draft conserva inventario y aislamiento pendientes de reauditoría. La referencia de estado, inventario y checklist es [ESTADO_ACTUAL_PROYECTO.md](ESTADO_ACTUAL_PROYECTO.md), cuyo addendum vigente prevalece sobre los estados históricos de los demás documentos.
 
 Repositorio canónico del sitio **Marian Madrid Peluquería y Estética** (`www.marianmadrid.es`). El repositorio contiene código, documentación y pruebas QA.
 
@@ -14,9 +18,9 @@ Repositorio canónico del sitio **Marian Madrid Peluquería y Estética** (`www.
 
 ## Documentos raíz
 
-0. [Diccionario de datos CMS](DICCIONARIO_DATOS_CMS.md): esquema físico live de las 15 colecciones NATIVE, inventario de las 29 WIX_APP, keyfields, etiquetas CMS, nomenclatura, glosario, relaciones y límites de uso.
+0. [Diccionario de datos CMS](DICCIONARIO_DATOS_CMS.md): esquema físico live de las 13 colecciones NATIVE, inventario de las 29 WIX_APP, keyfields, etiquetas CMS, nomenclatura, glosario, relaciones y límites de uso.
 
-1. [Estado vigente consolidado y checklist](ESTADO_ACTUAL_PROYECTO.md): autoridad de continuidad a 2026-11-13; incluye HEAD, estado Wix live, inventario CMS, contrato CitasF2, bloqueos y checklist priorizado.
+1. [Estado vigente consolidado y checklist](ESTADO_ACTUAL_PROYECTO.md): autoridad de continuidad a 2026-11-14; incluye HEAD, estado Wix live, inventario CMS, contrato CitasF2, bloqueos y checklist priorizado.
 
 2. [Auditoría y migración CitasF2](docs/qa/2026-11-13-citasf2-keyfields.md): esquema físico, campos canónicos, poda de campos huérfanos y estado de sincronización.
 
@@ -86,4 +90,4 @@ CI verde no equivale a E2E ni a publicación. No afirmar que una función está 
 
 ## Última actualización documental
 
-Última consolidación: 2026-11-13 20:51 CET. `ESTADO_ACTUAL_PROYECTO.md` es el punto de entrada vigente. `docs/PROJECT-STATUS.md` conserva el estado histórico previo y debe leerse con el addendum de vigencia que remite al documento raíz.
+Última consolidación: 2026-11-14; ver addendum superior para el corte live y el estado de la rama. `ESTADO_ACTUAL_PROYECTO.md` es el punto de entrada vigente. `docs/PROJECT-STATUS.md` conserva el estado histórico previo y debe leerse con el addendum de vigencia que remite al documento raíz.

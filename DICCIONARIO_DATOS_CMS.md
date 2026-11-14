@@ -2,7 +2,9 @@
 
 > **Corte de esquema:** 2026-11-14. **Entorno de referencia:** producción Wix, Site ID `188bed94-177c-4bc9-a9f0-35080d874f3e`. **Fuente del esquema:** Wix Data Collections API, lectura `GET /wix-data/v2/collections/{dataCollectionId}` por colección. **Cambio live:** recreación de `CajaActual` (revisión 1) e inicialización de un singleton cerrado sin saldo operativo; `MovimientosCaja` no fue modificado.
 >
-> Este documento describe el esquema físico observado y los contratos de keyfields acreditados en el repositorio. No es una propuesta de migración. No modificar nombres, tipos, etiquetas, referencias, índices ni permisos CMS sin análisis de consumidores, aprobación y PR.
+> El addendum de vigencia al inicio y §16 prevalecen sobre las tablas históricas que aún mencionen colecciones retiradas, revisiones antiguas o el contrato anterior de `CajaActual`. La fuente del esquema es Wix Data Collections API; los contratos de negocio se contrastan con el código de la rama identificada.
+
+
 
 ## 1. Alcance y criterio de lectura
 
@@ -30,16 +32,17 @@ Recuento live verificado el 2026-11-14: 43 colecciones en total (14 NATIVE y 29 
 | `ComplementosCatalogo` | `COMPLEMENTOS_CATALOGO` | 139 | `name` | 36 | Catálogo de complementos |
 | `ControlOperativo` | `CONTROL_OPERATIVO` | 37 | `controlType` | 3 | Locks, idempotencia, webhooks, alertas y control |
 | `DatosFiscales` | `DATOS_FISCALES` | 9 | `recordType` | 1 | Maestro fiscal de terceros/configuración |
-| `HistoricoCierresZ` | `HISTORICO_CIERRES_Z` | 37 | `periodType` | 0 | Histórico de cierres Z; append-only |
-| `InventarioStockVenta` | `INVENTARIO_STOCK_VENTA` | 20 | `name` | 1 | Maestro/proyección legacy; no SSOT de stock |
-| `LibroAsientosContablesDetalle` | `LIBRO_ASIENTOS_CONTABLES_DETALLE` | 27 | `entryId` | 0 | Ledger contable append-only |
+| `HistoricoCierresZ` | `HISTORICO_CIERRES_Z` | 37 | `periodType` | 0 | Histórico de cierres Z |
+| `LibroAsientosContablesDetalle` | `LIBRO_ASIENTOS_CONTABLES_DETALLE` | 27 | `entryId` | 0 | Ledger contable |
 | `MapaStaff` | `MAPA_STAFF` | 23 | `displayName` | 3 | Correlación de identidades y recursos |
 | `MovimientosCaja` | `MOVIMIENTOS_CAJA` | 78 | `numSerieFactura` | 0 | Ledger fiscal; sin movimientos en el corte live |
 
 | `PaquetesGestoria` | `Paquetes de Gestoria (append-only)` | 3 | `periodType` | 0 | Snapshot documental append-only |
 | `RegistroIntegracion` | `REGISTRO_INTEGRACION` | 2 | `eventId` | 0 | Registro de integración; fuera de BUSINESS_COLLECTIONS |
-| `RegistrosHorariosStaff` | `REGISTROS_HORARIOS_STAFF` | 11 | `resourceId` | 2 | Registro horario; writer deshabilitado |
+| `RegistrosHorariosStaff` | `REGISTROS_HORARIOS_STAFF` | 11 | `resourceId` | 0 | Registro horario; writer deshabilitado |
 | `ServiciosCatalogo` | `SERVICIOS_CATALOGO` | 195 | `slug` | 95 | Catálogo canónico de servicios y planes |
+
+
 
 **Advertencia de autoridad**
 - Wix CMS es la fuente de verdad transaccional propia del ecosistema.
@@ -728,3 +731,43 @@ La rama de desarrollo `chore/temporary-append-only-mutation-window` abre tempora
 Este estado temporal contradice deliberadamente la regla ordinaria de la sección 10 solo dentro de la rama de trabajo. No se ha aplicado a Wix live ni a los permisos de las colecciones. No hay bulk update/remove. La validación de inserciones permanece activa. No utilizar para alterar o eliminar datos reales sujetos a conservación legal.
 
 **Reactivación previa a producción:** `APPEND_ONLY_MUTATION_WINDOW.ENABLED=false`; retirar ledgers de las allowlists de update/remove; restaurar tests que esperan `FISCAL_VIOLATION`; ejecutar CI completo y verificar hooks/permisos en Wix Local Editor. La publicación está bloqueada mientras esta excepción siga activa.
+
+
+## 16. Addendum — estado live corregido y limpieza QA (2026-11-14)
+
+## Estado live y limpieza QA — corte 2026-11-14
+
+**Sitio:** `188bed94-177c-4bc9-a9f0-35080d874f3e`. **Rama de código:** `chore/temporary-append-only-mutation-window`. Este estado supersede los inventarios y addenda anteriores que contradigan estos datos.
+
+### CMS verificado tras los cambios
+
+- Inventario live: **42 colecciones**. `CajaActual` existe como `NATIVE`, revisión **3**, 25 campos de negocio + 4 campos de sistema (29 físicos), permisos ADMIN en insert/update/remove/read.
+- Campos físicos de negocio de `CajaActual`: `singletonKey:TEXT`, `operationDateHour:DATETIME`, `cashRegisterStatus:TEXT`, `staffResourceId:TEXT`, `traceId:TEXT`, `openedAt:DATETIME`, `closedAt:DATETIME`, `openingCashAmount:NUMBER`, `openingCardAmount:NUMBER`, `openingBizumAmount:NUMBER`, `openingOtherAmount:NUMBER`, `cashAmount:NUMBER`, `cardAmount:NUMBER`, `bizumAmount:NUMBER`, `otherAmount:NUMBER`, `salesCount:NUMBER`, `netAmount:NUMBER`, `expectedCash:NUMBER`, `countedCash:NUMBER`, `difference:NUMBER`, `differenceReason:TEXT`, `lastMovementAt:DATETIME`, `sequenceCounters:OBJECT`, `openedBy:TEXT`, `closedBy:TEXT`.
+- No existen en el nuevo esquema `operationDate`, `openingAmount`, `voucherAmount` ni `isOpen`. `cashRegisterStatus` es el único estado de sesión.
+- Singleton único: `_id=18d8bbf8-ddd5-4ad9-8253-f2a5c285ef19`, `singletonKey=CAJA_PRINCIPAL`, `cashRegisterStatus=CERRADA`. Saldos actuales: 0 en efectivo/tarjeta/Bizum/otros. Saldos iniciales: null (no se ha abierto sesión). `operationDateHour` permanece null; no hay operación económica ni sesión abierta.
+- Índice único `CajaActual_singletonKey_unique`: ACTIVE. Índice anterior `cashRegisterStatus_operationDate`: ya no aparece en el inventario final. Índice corregido `cashRegisterStatus_operationDateHour`: ACTIVE en el readback final.
+- `MovimientosCaja`: revisión 78, 0 elementos; no modificada. `LibroAsientosContablesDetalle`: 0. `RegistrosHorariosStaff`: revisión 11, 0 tras limpieza. `HistoricoCierresZ`: 0. `PaquetesGestoria`: 0. `ControlOperativo`: 3 elementos. `MovimientosInventario` no figura en el inventario live de 42 colecciones; la fila histórica que lo describía como colección presente queda pendiente de reconciliación documental.
+
+### Registros sintéticos eliminados
+
+Se eliminaron únicamente dos filas de `RegistrosHorariosStaff`, tras releerlas y comprobar simultáneamente `meta.synthetic=true`, `meta.doNotImportToProduction=true`, `resourceId=QA_STAFF_ONLY`, `staffName=QA EMPLEADO FICTICIO` y notas que declaran que no acreditan jornada real:
+
+- `1a4341a6-47be-490c-91a6-d04c8728e186` — `QA_LIVECMS_20261023_2000_TIME01_EXIT`.
+- `f325c0c8-35ba-4efc-ac45-a409ab439e61` — `QA_LIVECMS_20261023_2000_TIME01_ENTRY`.
+
+La eliminación se hizo por ID individual con condición de `traceId`; readback posterior: 0 filas restantes. Un barrido read-only de las 13 colecciones NATIVE no detectó otros candidatos con `meta.synthetic`, `doNotImportToProduction`, `runId/traceId` QA o `recordSource=SMOKE_TEST`. No se borró ningún fichaje real, movimiento de caja, asiento contable, cierre Z, paquete de gestoría ni registro de `ControlOperativo`. No se cambiaron permisos CMS ni se activaron writers.
+
+### Ventana temporal TEC-033
+
+En esta rama `APPEND_ONLY_MUTATION_WINDOW.ENABLED=true`, `TEMPORARY=true`, `RESTORE_BEFORE_PRODUCTION=true`. Permite update/remove individual en `MovimientosCaja`, `LibroAsientosContablesDetalle`, `RegistrosHorariosStaff`, `MovimientosInventario`, `HistoricoCierresZ`, `PaquetesGestoria` y `ControlOperativo/WEBHOOK_EVENT`. Bulk insert/update/remove siguen bloqueados; las validaciones de inserción y los controles de autorización/tipo continúan activos. La bandera solo afecta a los hooks/políticas de esta rama; no cambia los permisos CMS ni el runtime publicado.
+
+Los gates `LEDGER_WRITES_ENABLED=false`, `ACCOUNTING_LEDGER_WRITES_ENABLED=false` y `ALLOW_SIMULATION_RECORDS=false` permanecen cerrados. No publicar ni fusionar esta rama mientras la ventana esté activa. Antes de integrar: desactivar la bandera, retirar allowlists temporales, restaurar pruebas `FISCAL_VIOLATION`, ejecutar CI completo y verificar hooks en Wix Local Editor.
+
+### Alineación backend y estado pendiente
+
+En esta rama, `cajas.web.js` y sus fixtures usan `operationDateHour`, `bizumAmount` y los cuatro campos `opening*Amount`; se ha retirado la comprobación redundante de `isOpen`. El DTO expone los cuatro saldos iniciales. **No existe todavía un WebMethod de apertura de sesión que persista esos cuatro importes**; por tanto permanecen null y la funcionalidad de apertura/saldos iniciales no está validada end-to-end. La proyección actual no se considera completa para `otherAmount` hasta probar su clasificación y conciliación desde `MovimientosCaja`.
+
+No se ha ejecutado CI completo, Wix Local Editor ni E2E en runtime. No se ha publicado ni desplegado esta rama. La mutación CMS de este corte no equivale a publicar código Wix.
+
+---
+
