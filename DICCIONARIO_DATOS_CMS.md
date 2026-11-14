@@ -8,7 +8,7 @@
 
 **Estado Git/Wix:** PR #344–#349 están integradas en main; HEAD verificado en este corte: `9268ee3006f7e12ccc883e5535739c0fa76c827d`. El merge del código QA PR #346 es `b68e4e048ce5fc1c022fc6ffc2643d5983972107`. CI de PR #346: Layer 1 23 suites/296 pruebas, Layer 2 18 suites/246 pruebas, regresión completa 68 suites/627 pruebas; SDK contracts, ESLint y Gitleaks correctos. El usuario declara que la versión base anterior está publicada en Wix; la ampliación de mutaciones QA está integrada en Git pero aún no publicada en Wix. No se dispone de release Wix vinculado a SHA.
 
-**CMS maestro:** MapaStaff revisión live 105, 56 campos físicos (52 personalizados + 4 campos de sistema). El inventario live actual no devuelve `DatosFiscales`; una consulta individual devuelve HTTP 404 / `WDE0025` (la colección no existe). El número y tipo de registros de MapaStaff no se han consultado en este corte.
+**CMS maestro:** MapaStaff revisión live 105, 56 campos físicos (incluidos 4 campos de sistema). El inventario live actual no devuelve `DatosFiscales`; una consulta individual devuelve HTTP 404 / `WDE0025` (la colección no existe). El número y tipo de registros de MapaStaff no se han consultado en este corte.
 
 ---
 
@@ -16,7 +16,7 @@
 
 > **Corte live completo:** 2026-11-14. **Sitio:** `188bed94-177c-4bc9-a9f0-35080d874f3e`. Fuente: Wix Data Collections API. Inventario: 41 colecciones (12 NATIVE, 29 WIX_APP) y 980 definiciones de campo físicas. Revisiones, permisos, tipos y metadatos de las 41 colecciones se regeneran en §§2–3 desde respuestas live. Esta lectura prevalece sobre inventarios anteriores. No se modificaron colecciones ni registros.
 >
-> Las secciones §§2–3 contienen el inventario y esquema físico live vigente y prevalecen sobre cualquier addendum histórico que documente revisiones anteriores. Las secciones §§6–16 aportan glosario, contratos de código, decisiones y contexto; sus menciones a colecciones/campos ausentes del inventario actual se consideran históricas hasta nueva verificación. La fuente del esquema físico es Wix Data Collections API.
+ > Las secciones §§2–3 contienen el inventario y esquema físico live vigente y prevalecen sobre cualquier addendum histórico posterior que documente revisiones anteriores. Las secciones §§6–16 aportan glosario, contratos de código, decisiones y contexto; sus menciones a colecciones/campos ausentes del inventario actual se consideran históricas hasta nueva verificación. La fuente del esquema físico es Wix Data Collections API.
 
 
 
@@ -81,13 +81,13 @@ Se documentan:
 | `Stores/Products` | Products | WIX_APP | 7 | 35 | Wix Stores / eCommerce | `1380b703-ce81-ff05-f115-39571d94dfcd` |
 | `Stores/Variants` | Variants | WIX_APP | 0 | 12 | Wix Stores / eCommerce | `1380b703-ce81-ff05-f115-39571d94dfcd` |
 
-**Corte Wix live:** 41 colecciones (12 NATIVE, 29 WIX_APP). `DatosFiscales`, `InventarioStockVenta` y `MovimientosInventario` no aparecen en el inventario live; sus menciones restantes son históricas/legacy y no acreditan existencia física actual.
+**Corte Wix live:** 41 colecciones (12 NATIVE, 29 WIX_APP). DatosFiscales, InventarioStockVenta y MovimientosInventario no aparecen en el inventario live; sus menciones restantes son históricas/legacy y no acreditan existencia física actual.
 
-Para NATIVE Wix no devuelve ownerAppId: son colecciones CMS propias del proyecto. Para WIX_APP se conserva el identificador literal devuelto por Wix; `SiteMembers` es un valor simbólico y en `Locations/Locations` el propietario no viene informado. La atribución por prefijo es funcional y no sustituye el owner ID.
+Para NATIVE Wix no devuelve ownerAppId: son colecciones CMS propias del proyecto. Para WIX_APP se conserva el identificador literal devuelto por Wix; SiteMembers es un valor simbólico y en Locations/Locations el propietario no viene informado. La atribución por prefijo es funcional y no sustituye el owner ID.
 
 ## 3. Esquema físico live completo — campos, tipos, descripción, origen, IDs y enums
 
-`key` identifica el campo CMS. El ID canónico de colección y `ownerAppId` identifican el recurso y la aplicación propietaria. Las referencias se muestran solo cuando Wix declara `REFERENCE`/`MULTI_REFERENCE`. Los campos TEXT terminados en Id no se consideran referencias tipadas sin evidencia adicional.
+`key` identifica el campo CMS. El ID canónico de colección y `ownerAppId` identifican el recurso y la aplicación propietaria. Las referencias se muestran solo cuando Wix declara REFERENCE/MULTI_REFERENCE. Los campos TEXT terminados en Id no se consideran referencias tipadas sin evidencia adicional.
 
 Cuando existe `description`, se copia el texto Wix. Cuando no existe, se declara que la descripción funcional no está configurada en CMS; la etiqueta Wix se mantiene en columna separada. No se inventan definiciones de negocio. La subestructura OBJECT/ARRAY resume los metadatos anidados que devolvió Wix. Los enums del proyecto se identifican con su fuente y no implican validación CMS automática.
 
@@ -1459,7 +1459,7 @@ Para completar las descripciones funcionales pendientes se debe contrastar cada 
 | Wix Stores Catalog V3 | `215238eb-22a5-4c36-9e7b-e7c08025e04e` | `StoreCatalog/Brands`, `StoreCatalog/Categories`, `StoreCatalog/Info sections`, `StoreCatalog/Inventory`, `StoreCatalog/Product options & modifiers`, `StoreCatalog/Products`, `StoreCatalog/Ribbons`, `StoreCatalog/Variants` |
 | Wix Locations | No informado por Wix | `Locations/Locations` |
 
-Los IDs `ownerAppId` son identificadores de aplicación; no son IDs de colección, elemento, recurso Bookings, miembro o producto. Para el dato en sí, la clave de campo es `key`, la colección se identifica por su `id` y una referencia tipada apunta al `referencedCollectionId` exacto. Los IDs de elementos nativos se almacenan en campos como `serviceId`, `resourceId`, `memberId`, `bookingId` o `productId`; solo se atribuyen a un sistema nativo cuando lo acredita el contrato de campo o el código.
+Los IDs `ownerAppId` son identificadores de aplicación; no son IDs de colección, de elemento, de recurso Bookings, de miembro ni de producto. Para el dato en sí, la clave del campo es `key`, la colección se identifica por su `id` y una referencia tipada apunta al `referencedCollectionId` exacto. Los IDs de elementos nativos se almacenan en campos como `serviceId`, `resourceId`, `memberId`, `bookingId` o `productId`; solo se atribuyen a un sistema nativo cuando lo acredita el contrato de campo o el código.
 ### 5.1 Mapa de IDs nativos de entidades
 
 | Campo de referencia | Aplicación nativa | ID/campo canónico de destino | Observación |
