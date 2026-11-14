@@ -420,6 +420,7 @@ test("EVENT-BOOKING-07 maps staffMemberId to resourceId and scheduleId for a new
   wixDataMock._reset();
   wixDataMock._store.set("MapaStaff", [{
     _id: "mapa-staff-1",
+    recordType: "STAFF",
     staffMemberId: STAFF_MEMBER_ID,
     resourceId: RESOURCE_ID,
     scheduleId: SCHEDULE_ID,
@@ -450,8 +451,8 @@ test("EVENT-BOOKING-07 maps staffMemberId to resourceId and scheduleId for a new
 test("EVENT-BOOKING-08 refuses ambiguous active MapaStaff mappings", async () => {
   wixDataMock._reset();
   wixDataMock._store.set("MapaStaff", [
-    { _id: "mapa-staff-a", staffMemberId: STAFF_MEMBER_ID, resourceId: RESOURCE_ID, scheduleId: SCHEDULE_ID, active: true },
-    { _id: "mapa-staff-b", staffMemberId: STAFF_MEMBER_ID, resourceId: "99999999-9999-4999-8999-999999999999", scheduleId: SCHEDULE_ID, active: true },
+    { _id: "mapa-staff-a", recordType: "STAFF", staffMemberId: STAFF_MEMBER_ID, resourceId: RESOURCE_ID, scheduleId: SCHEDULE_ID, active: true },
+    { _id: "mapa-staff-b", recordType: "STAFF", staffMemberId: STAFF_MEMBER_ID, resourceId: "99999999-9999-4999-8999-999999999999", scheduleId: SCHEDULE_ID, active: true },
   ]);
   const booking = nativeBooking({
     _id: "77777777-7777-4777-8777-777777777777",
@@ -512,7 +513,7 @@ test("EVENT-PAYMENT-09 official Wix eCommerce paid event appends WIX_PAYMENTS le
   const secretState = globalThis.__mmSecretsState || (globalThis.__mmSecretsState = { _map: {}, _default: "mock-secret" });
   secretState._map.FISCAL_NIF_EMISOR = "B12345678";
 
-  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.DATOS_FISCALES, [{
+  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.MAPA_STAFF, [{
     _id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
     recordType: "TERCERO",
     taxId: "B12345678",
@@ -657,7 +658,7 @@ test("EVENT-REFUND-01 defers incomplete refunds, records successful terminal amo
 
   const secretState = globalThis.__mmSecretsState || (globalThis.__mmSecretsState = { _map: {}, _default: "mock-secret" });
   secretState._map.FISCAL_NIF_EMISOR = "B12345678";
-  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.DATOS_FISCALES, [{
+  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.MAPA_STAFF, [{
     _id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
     recordType: "TERCERO",
     taxId: "B12345678",
@@ -1129,7 +1130,7 @@ test("EVENT-PAYMENT-10 a failed strong ledger preflight read fails closed and ne
 
   const secretState = globalThis.__mmSecretsState || (globalThis.__mmSecretsState = { _map: {}, _default: "mock-secret" });
   secretState._map.FISCAL_NIF_EMISOR = "B12345678";
-  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.DATOS_FISCALES, [{
+  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.MAPA_STAFF, [{
     _id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
     recordType: "TERCERO",
     taxId: "B12345678",
