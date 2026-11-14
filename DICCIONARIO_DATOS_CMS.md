@@ -8,7 +8,7 @@
 
 **Estado Git/Wix:** PR #344, PR #345 y PR #346 están integrados en main; HEAD actual b19a8f676d7be157d457588f6acf5332c2a34d32; merge del código QA PR #346: b68e4e048ce5fc1c022fc6ffc2643d5983972107. CI de PR #346: Layer 1 23 suites/296 pruebas, Layer 2 18 suites/246 pruebas, regresión completa 68 suites/627 pruebas; SDK contracts, ESLint y Gitleaks correctos. El usuario declara que la versión base anterior está publicada en Wix; la ampliación de mutaciones QA está integrada en Git pero aún no publicada en Wix. No se dispone de release Wix vinculado a SHA.
 
-**CMS maestro:** MapaStaff revisión 36, 42 campos y 5 registros (3 STAFF, 1 TERCERO, 1 GESTORIA). DatosFiscales permanece como colección legacy con un placeholder QA; su retirada requiere verificar runtime y consumidores tras publicar el backend migrado.
+**CMS maestro:** MapaStaff revisión live 105, 56 campos físicos (incluidos 4 campos de sistema). El inventario live actual no devuelve `DatosFiscales`; una consulta individual devuelve HTTP 404 / `WDE0025` (la colección no existe). El número y tipo de registros de MapaStaff no se han consultado en este corte.
 
 ---
 
@@ -16,14 +16,14 @@
 
 > **Corte live completo:** 2026-11-14. **Sitio:** `188bed94-177c-4bc9-a9f0-35080d874f3e`. Fuente: Wix Data Collections API. Inventario: 41 colecciones (12 NATIVE, 29 WIX_APP) y 980 definiciones de campo físicas. Revisiones, permisos, tipos y metadatos de las 41 colecciones se regeneran en §§2–3 desde respuestas live. Esta lectura prevalece sobre inventarios anteriores. No se modificaron colecciones ni registros.
 >
-> El addendum de vigencia al inicio y §16 prevalecen sobre las tablas históricas que aún mencionen colecciones retiradas, revisiones antiguas o el contrato anterior de `CajaActual`. La fuente del esquema es Wix Data Collections API; los contratos de negocio se contrastan con el código de la rama identificada.
+ > Las secciones §§2–3 contienen el inventario y esquema físico live vigente y prevalecen sobre cualquier addendum histórico posterior que documente revisiones anteriores. Las secciones §§6–16 aportan glosario, contratos de código, decisiones y contexto; sus menciones a colecciones/campos ausentes del inventario actual se consideran históricas hasta nueva verificación. La fuente del esquema físico es Wix Data Collections API.
 
 
 
 ## 1. Alcance y criterio de lectura
 
 Se documentan:
-- Las 13 colecciones `NATIVE` del sitio de producción, con revisión live, nombre visible CMS, campo de presentación y todos los campos físicos observados.
+- Las 12 colecciones `NATIVE` del sitio de producción, con revisión live, nombre visible CMS, campo de presentación y todos los campos físicos observados.
 - Las 29 colecciones `WIX_APP`, con nombre visible, propietario de aplicación, campo de presentación y número de campos. Sus esquemas son administrados por Wix Apps y no se redefinen aquí.
 - Los keyfields de negocio y sus significados cuando están respaldados por el esquema, `internalConfig.js`, `validation.js` o documentación técnica del repositorio.
 - Las reglas de nomenclatura que el dossier define como estándar y las diferencias reales que aparecen en CMS.
@@ -1460,6 +1460,31 @@ Para completar las descripciones funcionales pendientes se debe contrastar cada 
 | Wix Locations | No informado por Wix | `Locations/Locations` |
 
 Los IDs `ownerAppId` son identificadores de aplicación; no son IDs de colección, de elemento, de recurso Bookings, de miembro ni de producto. Para el dato en sí, la clave del campo es `key`, la colección se identifica por su `id` y una referencia tipada apunta al `referencedCollectionId` exacto. Los IDs de elementos nativos se almacenan en campos como `serviceId`, `resourceId`, `memberId`, `bookingId` o `productId`; solo se atribuyen a un sistema nativo cuando lo acredita el contrato de campo o el código.
+### 5.1 Mapa de IDs nativos de entidades
+
+| Campo de referencia | Aplicación nativa | ID/campo canónico de destino | Observación |
+|---|---|---|---|
+| `CitasF2.bookingId` | Wix Bookings | `Bookings` booking ID | ID de reserva nativa; distinto de `CitasF2._id`. |
+| `CitasF2.serviceId`, `ServiciosCatalogo.serviceId` | Wix Bookings | `Bookings/Services._id` | ID nativo de servicio; el maestro `ServiciosCatalogo` conserva su propio `_id`. |
+| `CitasF2.resourceId`, `MapaStaff.resourceId`, `RegistrosHorariosStaff.resourceId` | Wix Bookings | `resourceId` del recurso/staff | No confundir con `Bookings/Staff._id`, `MapaStaff.staffMemberId` ni `memberId`. |
+| `MapaStaff.staffMemberId` | Wix Bookings | `Bookings/Staff._id` / Staff Member ID | ID nativo del miembro del staff; distinto de `resourceId`. |
+| `MapaStaff.scheduleId`, `CitasF2.scheduleId` | Wix Bookings | `Bookings/Schedule._id` | ID de agenda nativa, cuando se utiliza. |
+| `MapaStaff.memberId`, `RegistrosHorariosStaff.memberId` | Wix Members | ID nativo de Site Member (`Members/PrivateMembersData._id` / API Members) | No es ID de staff ni recurso Bookings. |
+| `ServiciosCatalogo.pricingPlanId` | Wix Pricing Plans | ID nativo del plan | Pricing Plans no aparece como colección CMS en este inventario; resolver mediante API nativa. |
+| `ServiciosCatalogo.locationId` | Wix Locations | `Locations/Locations._id` | ID de sede/ubicación nativa. |
+| `Locations/Locations._id` | Wix Locations | `_id` de Locations | Identificador nativo de la ubicación. |
+| `StoreCatalog/Inventory.productId` | Wix Stores Catalog V3 | `StoreCatalog/Products._id` | ID del producto Catalog V3. |
+| `StoreCatalog/Inventory.variantId`, `StoreCatalog/Variants.variantId` | Wix Stores Catalog V3 | `StoreCatalog/Variants.variantId` | ID de variante; no es el ID de producto. |
+| `StoreCatalog/Inventory.productV3Ref` | Wix Stores Catalog V3 | `StoreCatalog/Products` | Referencia CMS tipada confirmada por Wix (`REFERENCE`). |
+| `Stores/Products.inventoryItem` | Wix Stores | `Stores/InventoryItems._id` | Referencia CMS tipada confirmada por Wix. |
+| `Stores/Products._id`, `Stores/Variants._id`, `Stores/InventoryItems._id` | Wix Stores | `_id` de la colección correspondiente | IDs de entidades Wix Stores; no intercambiables con Catalog V3. |
+| `Blog/Posts.author` | Wix Members / Wix Blog | `Members/PublicData._id` | Referencia CMS tipada confirmada por Wix. |
+| `Blog/Posts.mainCategory`, `Blog/Posts.categories` | Wix Blog | `Blog/Categories._id` | Referencia CMS tipada confirmada por Wix. |
+| `Blog/Posts.tags` | Wix Blog | `Blog/Tags._id` | Referencia CMS tipada confirmada por Wix. |
+| `Bookings/Schedule.service` | Wix Bookings | `Bookings/Services._id` | Referencia CMS tipada confirmada por Wix. |
+
+Los campos no incluidos en esta tabla no tienen un mapeo de ID nativo suficientemente demostrado por metadatos Wix o por el contrato consultado. No derivar IDs de un nombre de campo por semejanza.
+
 ## 6. Keyfields canónicos y glosario
 
 Las definiciones siguientes combinan contrato físico live y documentación/código del repositorio. Cuando un campo tiene un significado técnico exacto, se conserva ese significado; no se infiere un uso fiscal, contable o legal adicional.
@@ -1721,8 +1746,10 @@ Las relaciones de la tabla son semánticas/contractuales; solo las marcadas MULT
 
 ## 10. Permisos, inmutabilidad y límites de uso
 
+**Política vigente de desarrollo/QA:** según la autorización expresa del propietario y el flag `QA_RECORD_MUTATIONS_ENABLED=true`, append-only e inmutabilidad están temporalmente en pausa para las colecciones propias del proyecto. Esta excepción no habilita mutaciones en WIX_APP ni desactiva RBAC, permisos, validaciones o gates de writers fiscales/contables/laborales. Restaurar las protecciones antes de producción solo cuando lo ordene el propietario.
+
 - Las colecciones WIX_APP son propiedad de sus aplicaciones. No modificar directamente sus campos, tipos, datos ni permisos mediante este proyecto salvo flujo oficial aprobado.
-- Los ledgers append-only no se editan ni borran. Las rectificaciones se incorporan como nuevos registros trazables.
+- Para producción, los ledgers append-only no se editan ni borran. Las rectificaciones se incorporan como nuevos registros trazables.
 - `CajaActual` es una proyección mutable de la sesión operativa y del efectivo físico. Los acumulados de tarjeta/Bizum no son efectivo ni saldo bancario; el ledger fuente sigue siendo `MovimientosCaja`.
 - `InventarioStockVenta` y `MovimientosInventario` son legacy/históricos; no son autoridad de inventario actual.
 - `RegistrosHorariosStaff` conserva datos sensibles laborales; sus writers permanecen deshabilitados hasta completar validación de seguridad, idempotencia, concurrencia y cumplimiento.
@@ -1734,9 +1761,9 @@ Las relaciones de la tabla son semánticas/contractuales; solo las marcadas MULT
 | ID | Hallazgo | Riesgo | Acción necesaria |
 |---|---|---|---|
 | CMS-DICT-01 | Las etiquetas CMS reales no siguen de forma general N3; predominan labels iguales al key en inglés | Baja legibilidad y divergencia con el estándar | Diseñar una matriz de etiquetas propuesta; no aplicarla sin revisión y compatibilidad |
-| CMS-DICT-02 | `DatosFiscales` conserva un campo `active` legacy; `MapaStaff.active` se usa en STAFF/GESTORIA | Contratos distintos durante retirada | Eliminar `DatosFiscales` tras desplegar y verificar todos sus consumidores |
+| CMS-DICT-02 | `DatosFiscales` no aparece en el inventario live y su GET individual devuelve 404 / `WDE0025`; aún hay referencias históricas en código/documentación | Riesgo de consumidores que esperan una colección inexistente | Auditar/eliminar referencias legacy solo tras búsqueda de consumidores, tests y diff revisado; no recrear la colección por inferencia |
 | CMS-DICT-03 | `RegistroIntegracion` existe pero no pertenece a `BUSINESS_COLLECTIONS` | Posible colección sin consumidor o contrato incompleto | Verificar consumidores/writers antes de adoptarla o retirarla |
-| CMS-DICT-04 | Campos OBJECT/ARRAY no están completamente desglosados en este documento | Contrato lógico parcial | Completar desde DTOs, fixtures y productores/consumidores reales |
+| CMS-DICT-04 | El esquema live resume la subestructura OBJECT/ARRAY en los campos anidados que Wix devuelve en metadatos; no certifica toda la forma de payload de runtime | Contrato lógico parcial | Completar estructuras profundas contrastando DTOs, fixtures, productores/consumidores y APIs nativas |
 | CMS-DICT-05 | IDs externos guardados como TEXT no son referencias CMS físicas | Integridad referencial depende de código | Documentar sistema propietario y validar GUID/relación en backend |
 | CMS-DICT-06 | Esquemas CMS no sustituyen validación runtime | Datos mal tipados pueden persistir por rutas no protegidas | Mantener validación centralizada y tests de contrato |
 
@@ -1744,9 +1771,9 @@ Las relaciones de la tabla son semánticas/contractuales; solo las marcadas MULT
 
 ### Evidencia Wix live
 - Sitio producción: `188bed94-177c-4bc9-a9f0-35080d874f3e`.
-- Wix Data Collections API: listado de colecciones y lectura individual de las 44 colecciones.
-- Para las 15 NATIVE se conservaron keys, displayNames y tipos físicos; revisión de esquema incluida en §2.
-- Para las 29 WIX_APP se conservaron ID, displayName, ownerAppId, revision, displayField y fieldCount.
+- Wix Data Collections API: listado live y lectura individual de las 41 colecciones (12 NATIVE y 29 WIX_APP), con campos, tipos, descripciones CMS, required, referencias tipadas, metadatos OBJECT/ARRAY, revisiones, displayField, ownerAppId y permisos.
+- Se verificaron por GET individual los IDs `DatosFiscales`, `InventarioStockVenta` y `MovimientosInventario`: HTTP 404 / `WDE0025`.
+- El catálogo conserva las claves de campo y sus `displayName`; las descripciones se copian solo cuando Wix las declara. La ausencia de descripción no se suple con una suposición.
 - Recuentos de elementos: Data Items Count API, corte de auditoría 2026-11-13.
 - Ninguna mutación Wix durante la generación.
 
