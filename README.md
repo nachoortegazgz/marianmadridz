@@ -1,120 +1,23 @@
-## Estado de ingeniería — reconciliación 2026-11-14
-
-- `main` actual: `331c572b9fbba4eaff9bf53a894e6c2377a13c22` (merge documental PR #355; último baseline de código/configuración: `fde9466552b6819980475a682dc06395b57487f0`; PR #352–#354 integradas).
-- PR #352: validadores restaurados; CI PASS en `609ccc948da3e63d3fd8aa20f5e64c7649770660` (run #1054).
-- PR #353: contratos de inventario personalizado retirados; CI PASS en `cdf07b5088977c4f51c231aa517b8ed607b25269` (run #1059).
-- PR #354: política CMS residual corregida; CI PASS en `28a11a690f0a99926921332618b6af670d45814c` (run #1068) y Gitleaks PASS (run #492).
-- Ninguna intervención ha publicado ni desplegado código en Wix.
-- Wix GetSiteContext: producción `Editor` + Velo + Stores Catalog V3 + Invoices V1; QA `Editor` + Velo + Stores Catalog V3 + Invoices V2. La fuente del Editor no está expuesta por esta lectura; sincronización Editor↔Git sigue pendiente.
-- CMS live: 41 colecciones (12 NATIVE / 29 WIX_APP), 980 campos. No existen live `DatosFiscales`, `InventarioStockVenta` ni `MovimientosInventario`.
-- `QA_RECORD_MUTATIONS_ENABLED=true`: solo fase QA; producción bloqueada. No se ha publicado esta tanda.
-- No hay release Wix vinculado al SHA de Git ni certificación E2E runtime. Capa 3 no está operativa certificada.
-
-Evidencia: [reconciliación de baseline 2026-11-14](docs/qa/2026-11-14-baseline-reconciliation.md).
-
----
-
-# Estado operativo — actualización 2026-11-14
-
-**Gobierno del proyecto:** el usuario/propietario es la SSOT de negocio, prioridades y autorizaciones. Durante desarrollo y QA están en pausa append-only y las prohibiciones genéricas de editar/eliminar registros (individuales y masivas) hasta nueva instrucción expresa del usuario para preparar el despliegue. Se mantienen autenticación, autorización, permisos y validaciones. La política documental no certifica por sí sola que todos los guards del runtime Wix hayan sido retirados.
-
-**Estado Git verificado:** main=`331c572b9fbba4eaff9bf53a894e6c2377a13c22` (PR #355 documental; último código/configuración `fde9466552b6819980475a682dc06395b57487f0`; PR #352–#354 integradas). PR #352 recupera los validadores que PR #351 retiró accidentalmente; CI completo verde en `c7388cb122368906b1cee20cae0f6d127900553b` (run #1048). No hay release Wix que vincule el runtime con el SHA de Git.
 # Marian Madrid — Wix Editor Classic + Velo
 
-> **Contexto de plataforma:** el sitio principal consta como Published en el último contexto Wix documentado; eso no acredita que ejecute el SHA actual de Git. El sitio QA independiente está en Draft, pero su aislamiento y paridad CMS no están certificados. El inventario live vigente es 41 colecciones (12 NATIVE, 29 WIX_APP).
+Repositorio canónico del sitio https://www.marianmadrid.es/.
 
-Repositorio canónico del sitio **Marian Madrid Peluquería y Estética** (`www.marianmadrid.es`). El repositorio contiene código, documentación y pruebas QA.
+**Referencia única de contexto y directrices:** [PROJECT_BASELINE.md](PROJECT_BASELINE.md). Consultar ese documento antes de cualquier intervención técnica.
 
-## Vigencia operativa — fase de desarrollo y QA (2026-11-14)
+## Referencias técnicas
+- [Estado actual](ESTADO_ACTUAL_PROYECTO.md) — snapshot operativo conciso.
+- [Diccionario CMS](DICCIONARIO_DATOS_CMS.md) — inventario y esquema live del corte 2026-11-14.
+- [Dossier técnico](DOSSIER%20T%C3%89CNICO%20CONSOLIDADO.md) — detalle de arquitectura y contratos.
+- [Flujos Capa 3](DOSSIER%20FLUJOS%20END%20TO%20END%20CAPA%203.md) — diseño documental, no certificación operativa.
+- [Compatibilidad Wix](docs/qa/2026-11-14-wix-platform-compatibility.md).
+- [Reconciliación Git/CI/CMS](docs/qa/2026-11-14-baseline-reconciliation.md).
 
-**Autoridad:** el usuario/propietario es la SSOT de negocio, requisitos, prioridades, criterios de aceptación y autorizaciones. Las instrucciones expresas posteriores del usuario prevalecen sobre decisiones y restricciones documentales anteriores. La documentación oficial de Wix y de las integraciones gobierna únicamente los contratos y límites técnicos de la plataforma.
+## Estado crítico
+- Plataforma confirmada: **Wix Editor Classic + Velo**.
+- Git `main` verificado en el corte: `ee2a2f8aee6a00cbe3733b4b8d6325a6cb54bb51`.
+- La sincronización del código Velo Editor ↔ GitHub no está verificada.
+- `QA_RECORD_MUTATIONS_ENABLED=true`: QA solamente; bloquea publicación en producción.
+- No hay release Wix vinculado a SHA ni certificación E2E runtime.
+- No publicar ni desplegar sin autorización expresa y cumplimiento de los gates de [PROJECT_BASELINE.md](PROJECT_BASELINE.md).
 
-**Mutabilidad CMS durante QA:** append-only e inmutabilidad están temporalmente en pausa. Se habilitan update y remove individuales y masivos para todas las colecciones CMS propias del proyecto, incluidas las históricamente tratadas como ledgers. Las operaciones masivas deben identificar explícitamente los registros por ID. No se habilitan escrituras en colecciones propiedad de Wix Apps ni se eluden autenticación, autorización/RBAC, permisos, validaciones de esquema, integridad técnica, secretos o límites de plataforma. La inserción mantiene su allowlist; los writers fiscales/contables/laborales, pagos, reembolsos, comunicaciones y efectos externos conservan sus gates funcionales independientes.
-
-**Restauración:** esta política no se revierte automáticamente. Solo el usuario puede ordenar la restauración de append-only y de las restricciones de mutación para preparar el despliegue. No publicar a producción basándose únicamente en esta excepción de QA.
-
-**Estado Git/Wix:** PR #344, PR #345 y PR #346 están integrados en main; HEAD actual b19a8f676d7be157d457588f6acf5332c2a34d32; merge del código QA PR #346: b68e4e048ce5fc1c022fc6ffc2643d5983972107. CI de PR #346: Layer 1 23 suites/296 pruebas, Layer 2 18 suites/246 pruebas, regresión completa 68 suites/627 pruebas; SDK contracts, ESLint y Gitleaks correctos. El usuario declara que la versión base anterior está publicada en Wix; la ampliación de mutaciones QA está integrada en Git pero aún no publicada en Wix. No se dispone de release Wix vinculado a SHA.
-
-**CMS maestro:** MapaStaff revisión 36, 42 campos y 5 registros (3 STAFF, 1 TERCERO, 1 GESTORIA). DatosFiscales permanece como colección legacy con un placeholder QA; su retirada requiere verificar runtime y consumidores tras publicar el backend migrado.
-
----
-
-## Arquitectura y fuente de verdad
-
-- **Wix** es el centro operativo: Bookings, Stores/eCommerce, Payments, CRM, POS/Owner y Automations, según disponibilidad real del plan, país y configuración.
-- **Velo** se limita a lógica imprescindible cuya necesidad esté demostrada y que Wix no cubra. La reserva dual F1–gap–F2 es el caso propio identificado; debe conservar revalidación, mismo profesional, idempotencia y compensación.
-- **Microsoft 365** aporta archivo documental mediante SharePoint y, si la licencia lo permite sin coste adicional, Power Automate. Flujo previsto unidireccional Wix backend → Power Automate → SharePoint.
-- No se incorporan proveedores, middleware ni servicios de pago/fiscalidad/email/IA externos por defecto. Cualquier excepción requiere justificar necesidad, alternativas, coste total y aprobación expresa.
-- No duplicar en CMS propio funciones que Wix ya gestione suficientemente. Antes de retirar módulos o datos, auditar consumidores, históricos, automatizaciones y rollback.
-
-## Documentos raíz
-
-0. [Diccionario de datos CMS](DICCIONARIO_DATOS_CMS.md): esquema físico live de las 12 colecciones NATIVE, inventario de las 29 WIX_APP y contratos de campos.
-1. [Estado vigente consolidado](ESTADO_ACTUAL_PROYECTO.md): autoridad de continuidad, bloqueos y checklist.
-2. [Reconciliación de baseline 2026-11-14](docs/qa/2026-11-14-baseline-reconciliation.md): regresión de validadores, inventario CMS y límites de publicación.
-3. [Auditoría de retirada de inventario personalizado](docs/qa/2026-11-14-retired-inventory-contract-audit.md): evidencia de colecciones ausentes y limpieza de constantes/hooks.
-4. [Compatibilidad de plataforma Wix](docs/qa/2026-11-14-wix-platform-compatibility.md): Wix Editor Classic, Velo, versiones de Apps y límites de sincronización.
-5. [Estándar de desarrollo y QA — Cero deuda](docs/engineering/DEVELOPMENT-STANDARDS.md): reglas de alias, legacy, APIs deprecated, código muerto, obsolescencia y validación.
-6. [Auditoría y migración CitasF2](docs/qa/2026-11-13-citasf2-keyfields.md): esquema físico y campos canónicos.
-7. [Adaptaciones temporales para QA](docs/qa/2026-11-13-site-qa-environment.md): entorno, permisos y límites de aislamiento.
-8. [Auditoría de persistencia CMS](docs/qa/2026-11-13-custom-cms-registration-audit.md): inventario NATIVE/WIX_APP y estado por dominio.
-9. [Referencia maestra QA del 11-11](docs/qa/2026-11-11-qa-master-reference.md): evidencia histórica de aislamiento y restricciones previas.
-10. [Dossier técnico consolidado](DOSSIER%20TÉCNICO%20CONSOLIDADO.md): arquitectura, contratos y módulos.
-11. [Flujos end-to-end Capa 3](DOSSIER%20FLUJOS%20END%20TO%20END%20CAPA%203.md): diseño documental Wix–Microsoft 365; no certifica operación.
-12. [Estado técnico histórico por dominio](docs/PROJECT-STATUS.md): evidencia hasta 2026-11-11; el estado vigente está en `ESTADO_ACTUAL_PROYECTO.md`.
-
-El código, la configuración viva de Wix, los contratos oficiales de las APIs y las pruebas ejecutadas prevalecen sobre afirmaciones históricas. Registrar siempre fecha, rama/SHA y evidencia.
-## Entorno de desarrollo
-
-- Proyecto Wix Editor clásico con Velo y Wix CLI for Sites.
-- Node.js mínimo: **24.22.1**, conforme a la documentación de Wix CLI for Sites consultada.
-- Instalar dependencias con \`npm ci\`; usar Wix CLI for Sites para gestionar paquetes Wix.
-- No editar manualmente artefactos generados por Wix CLI.
-- Comandos de validación disponibles: \`npm run lint\`, \`npm test\`, \`npm run test:layer1\`, \`npm run test:layer2\`.
-
-## GitHub Actions y rutas de trabajo
-
-- Los workflows usan runners alojados por GitHub (\`ubuntu-latest\`) y \`actions/checkout\` descarga el commit del evento dentro del workspace del runner.
-- La ruta operativa debe obtenerse dinámicamente con \`\${{ github.workspace }}\` o mediante rutas relativas al repositorio. No codificar rutas absolutas del equipo local ni rutas internas fijas del runner.
-- La ruta local \`C:\Users\nacho\marianmadridz\` pertenece únicamente al clon de desarrollo en Windows. No es accesible desde GitHub-hosted runners y no se debe pasar al workflow.
-- En un run observado, GitHub situó este repositorio en \`/home/runner/work/marianmadridz/marianmadridz\`. Es una ruta de ejecución del runner, no una ruta contractual: puede cambiar según el runner y el contexto.
-- El workflow \`.github/workflows/backend-offline-quality.yml\` ejecuta QA offline (Layer 1/2, regresión, contratos SDK y ESLint). **No inicia Wix Preview, Wix Publish ni otros despliegues.**
-- El workflow comprueba que la raíz Git del checkout coincide con \`$GITHUB_WORKSPACE\`.
-
-## Criterio de validación
-
-Distinguir siempre:
-- **Pruebas offline:** mocks y fixtures; no prueban Wix runtime.
-- **QA/Preview:** Wix Preview se inicia y valida manualmente por el propietario, fuera de GitHub Actions.
-- **E2E real:** flujo completo ejecutado en navegador/runtime, con sus integraciones reales y resultado comprobado.
-
-CI verde no equivale a E2E ni a publicación. No afirmar que una función está operativa sin evidencia.
-
-## Seguridad, Preview y publicación
-
-- **Wix Preview:** ejecución exclusivamente manual por el propietario mediante Wix Editor o Wix CLI for Sites.
-- **Wix Publish:** publicación exclusivamente manual y autorizada por el propietario mediante Wix Editor o Wix CLI for Sites.
-- **GitHub Actions no contiene workflows de Wix Preview ni Wix Publish.** Los cambios en \`main\` no deben iniciar despliegues Wix; GitHub Actions conserva únicamente las comprobaciones de calidad automatizadas.
-- Antes de publicar, ejecutar las pruebas offline pertinentes, revisar la sincronización del código y de la versión UI del Editor y confirmar el destino Wix.
-- No tocar producción ni CMS de producción fuera del proceso manual controlado y sin autorización explícita.
-- No crear reservas, pagos, devoluciones, movimientos económicos, emails ni automatizaciones activas sin autorización.
-- No solicitar ni exponer secretos. No sortear controles de seguridad.
-- No borrar código, colecciones o campos sin auditoría de consumidores, impacto, histórico y rollback.
-
-## Documentación
-
-- [Reconciliación del informe técnico de bugs (2026-11-12)](docs/audits/2026-11-12-report-bugs-reconciliation.md)
-
-- [Registro de decisiones de negocio y arquitectura](docs/DECISION-LOG.md)
-- [ADR — Depósitos y gestión nativa de inventario](docs/adr/2026-11-10-deposit-and-native-inventory.md)
-- [QA — Retirada de inventario personalizado](docs/qa/2026-11-10-native-inventory-retirement.md) oficial
-
-- [Wix CLI for Sites: configuración](https://dev.wix.com/docs/develop-websites/articles/workspace-tools/developer-tools/git-integration-wix-cli-for-sites/setting-up-git-integration-wix-cli-for-sites)
-- [Estructura del repositorio Wix](https://dev.wix.com/docs/develop-websites/articles/workspace-tools/developer-tools/git-integration-wix-cli-for-sites/git-hub-repository-file-structure)
-- [Paquetes npm con Wix CLI](https://dev.wix.com/docs/develop-websites/articles/coding-with-velo/packages/work-with-npm-packages-with-the-wix-cli)
-- [Comandos Wix CLI for Sites](https://dev.wix.com/docs/develop-websites/articles/workspace-tools/developer-tools/git-integration-wix-cli-for-sites/wix-cli-for-sites-commands)
-
-
-## Última actualización documental
-
-Última consolidación: 2026-11-14; ver addendum superior para el corte live y el estado de la rama. `ESTADO_ACTUAL_PROYECTO.md` es el punto de entrada vigente. `docs/PROJECT-STATUS.md` conserva el estado histórico previo y debe leerse con el addendum de vigencia que remite al documento raíz.
+Los informes históricos y PRs permanecen como trazabilidad en Git; no son instrucciones vigentes salvo que la base maestra los cite expresamente.
