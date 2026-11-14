@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { QA_TEST_SITE_ID } from './qaSyntheticParties.mjs';
 
 const PAYMENT_METHODS = new Set([
   'EFECTIVO',
@@ -112,8 +113,8 @@ export function createQaTpvSimulator(config = {}) {
   if (
     config.environment !== 'TEST' ||
     config.enabled !== true ||
-    config.siteId !== config.testSiteId ||
-    config.testSiteId !== '50b39f33-e753-4331-ab35-b2ed43dc97f7' ||
+    config.siteId !== QA_TEST_SITE_ID ||
+    config.testSiteId !== QA_TEST_SITE_ID ||
     typeof config.testRunId !== 'string' ||
     !/^TEST-RUN-[A-Z0-9-]{1,80}$/.test(config.testRunId)
   ) {

@@ -714,8 +714,8 @@
       "fixture": {
         "provider": "QA_MEMORY_SINK",
         "recipient": "gestoria.pruebas@example.test",
-        "customerName": "Cliente Prueba Uno",
-        "customerEmail": "cliente.prueba.001@example.test",
+        "customerName": "Nacho Pitt",
+        "customerEmail": "nacho.pitt@example.test",
         "sourceEnvironment": "TEST",
         "testRunId": "TEST-RUN-OFFLINE-001",
         "isSynthetic": true,

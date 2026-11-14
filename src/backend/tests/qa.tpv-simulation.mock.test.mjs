@@ -23,7 +23,7 @@ test('QA-TPV-01 simulator fails closed unless owner-designated QA TEST context i
   for (const override of [
     { enabled: false },
     { environment: 'PRODUCTION' },
-    { siteId: '188bed94-177c-4bc9-a9f0-35080d874f3e' },
+    { siteId: '50b39f33-e753-4331-ab35-b2ed43dc97f7' },
     { testSiteId: 'different-site' },
     { testRunId: 'invalid' },
   ]) {
