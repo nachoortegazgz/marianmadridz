@@ -914,6 +914,21 @@ export function ComplementosCatalogo_beforeUpdate(item) { return _validateComple
 function _validateComplementosCatalogo(item) {
     if (!item || typeof item !== "object") return item;
 
+    if (item._id != null && typeof item._id !== "string") {
+        _schemaError("_id debe ser TEXT en ComplementosCatalogo");
+    }
+    if (item.addonId != null && typeof item.addonId !== "string") {
+        _schemaError("addonId debe ser TEXT en ComplementosCatalogo");
+    }
+    if (item.sku != null && typeof item.sku !== "string") {
+        _schemaError("sku debe ser TEXT en ComplementosCatalogo");
+    }
+    for (const field of ["itemNature", "codigoImpuesto", "claveRegimen", "cuentaContableIngreso"]) {
+        if (item[field] != null && typeof item[field] !== "string") {
+            _schemaError(`${field} debe ser TEXT en ComplementosCatalogo`);
+        }
+    }
+
     const cmsId = _safeTrim(item._id);
     const mirrorId = _safeTrim(item.addonId);
     const canonicalId = cmsId || mirrorId;
@@ -945,6 +960,14 @@ function _validateComplementosCatalogo(item) {
     }
     if (item.traceId != null && item.traceId !== "") {
         _schemaError("traceId no tiene contrato activo en ComplementosCatalogo");
+    }
+    if (item.name != null && typeof item.name !== "string") {
+        _schemaError("name debe ser TEXT en ComplementosCatalogo");
+    }
+    if (item.ServiciosCatalogo_name != null &&
+        (!Array.isArray(item.ServiciosCatalogo_name) ||
+            item.ServiciosCatalogo_name.some((id) => typeof id !== "string"))) {
+        _schemaError("ServiciosCatalogo_name debe ser MULTI_REFERENCE en ComplementosCatalogo");
     }
     return item;
 }
