@@ -5,7 +5,7 @@ const V = await import("backend/validation");
 const IC = await import("backend/internalConfig");
 
 test("VALIDATION-ENUM-01 accepts canonical enum values and rejects unknown values", () => {
-    assert.equal(V.assertValidEnum(IC.RECORD_TYPE.STAFF, IC.RECORD_TYPE, "recordType"), true);
+    assert.equal(V.assertValidEnum(IC.RECORD_TYPE.TERCERO, IC.RECORD_TYPE, "recordType"), true);
     assert.throws(
         () => V.assertValidEnum("NOT_A_RECORD_TYPE", IC.RECORD_TYPE, "recordType"),
         /recordType invalido/
@@ -21,14 +21,16 @@ test("VALIDATION-FISCAL-01 validates Spanish NIF/NIE/CIF and EU VAT using shared
     assert.equal(V.isValidNifOrEuVat(""), false);
 });
 
-test("VALIDATION-FISCAL-02 MapaStaff third-party validation uses the shared fiscal helper", () => {
-    assert.equal(V.assertMapaStaffFiscalIdentity({
+test("VALIDATION-FISCAL-02 DatosFiscales validates third-party identity", () => {
+    assert.equal(V.assertDatosFiscalesRecord({
+        recordType: IC.RECORD_TYPE.TERCERO,
         taxId: "12345678Z",
         legalName: "Entidad de prueba",
         thirdPartyType: "CLIENTE",
     }), true);
 
-    assert.throws(() => V.assertMapaStaffFiscalIdentity({
+    assert.throws(() => V.assertDatosFiscalesRecord({
+        recordType: IC.RECORD_TYPE.TERCERO,
         taxId: "12345678A",
         legalName: "Entidad de prueba",
         thirdPartyType: "CLIENTE",
