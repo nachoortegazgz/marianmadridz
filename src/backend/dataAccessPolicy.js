@@ -2,6 +2,7 @@ import {
     DATA_ACCESS_BULK_PATCH_POLICY,
     DATA_ACCESS_WRITE_POLICY,
     BUSINESS_COLLECTIONS,
+    QA_MUTABLE_COLLECTIONS,
     CONTROL_TYPE,
     CONTROL_OPERATIVO_NON_CANONICAL_FIELDS,
     RECORD_TYPE,
@@ -117,7 +118,7 @@ export function assertInsertAllowed(collection, item) {
 }
 
 export function assertUpdateAllowed(collection, item) {
-    if (!_isRecord(item) || !Object.values(BUSINESS_COLLECTIONS).includes(collection)) {
+    if (!_isRecord(item) || !QA_MUTABLE_COLLECTIONS.includes(collection)) {
         throw _policyError("CMS_UPDATE_COLLECTION_DENIED");
     }
     if (QA_RECORD_MUTATIONS_ENABLED) {
@@ -163,7 +164,7 @@ export function assertSaveAllowed(collection, item) {
 }
 
 export function assertRemoveAllowed(collection, id, expectedControlType) {
-    if (!id || !Object.values(BUSINESS_COLLECTIONS).includes(collection)) {
+    if (!id || !QA_MUTABLE_COLLECTIONS.includes(collection)) {
         throw _policyError("CMS_REMOVE_SCOPE_DENIED");
     }
     if (QA_RECORD_MUTATIONS_ENABLED) return;
@@ -183,7 +184,7 @@ export function assertRemoveAllowed(collection, id, expectedControlType) {
 export function assertBulkUpdateAllowed(collection, records) {
     if (
         !QA_RECORD_MUTATIONS_ENABLED ||
-        !Object.values(BUSINESS_COLLECTIONS).includes(collection) ||
+        !QA_MUTABLE_COLLECTIONS.includes(collection) ||
         !Array.isArray(records) ||
         records.length === 0 ||
         records.length > 1000 ||
@@ -196,7 +197,7 @@ export function assertBulkUpdateAllowed(collection, records) {
 export function assertBulkRemoveAllowed(collection, ids) {
     if (
         !QA_RECORD_MUTATIONS_ENABLED ||
-        !Object.values(BUSINESS_COLLECTIONS).includes(collection) ||
+        !QA_MUTABLE_COLLECTIONS.includes(collection) ||
         !Array.isArray(ids) ||
         ids.length === 0 ||
         ids.length > 1000 ||
