@@ -44,7 +44,7 @@ test("VALIDATION-CAJA-01 validates CajaActual object schema without MapaStaff re
         sequenceCounters: { seqGlobal: 3, appliedMovementIds: ["movement-1"] },
     }), true);
     assert.throws(
-        () => V.assertCajaActualRecord({ sequenceCounters: "{\\"seqGlobal\\":3}" }),
+        () => V.assertCajaActualRecord({ sequenceCounters: '{"seqGlobal":3}' }),
         /sequenceCounters must be an OBJECT/
     );
     assert.throws(
