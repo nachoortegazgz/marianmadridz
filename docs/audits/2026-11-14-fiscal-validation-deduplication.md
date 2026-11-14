@@ -23,4 +23,4 @@ La centralización hace efectiva también la validación BOOLEAN de `active`, qu
 
 ## Validación
 
-Pendiente de CI en esta rama: suite de hooks CMS, regresión completa, ESLint y secret scanning. No se han modificado CMS, registros, configuración Wix ni despliegues.
+CI ejecutada sobre `021d8e9cfc8427ff92e6d4d4ab55becf73d71521`: Layer 1 23 suites/296 tests PASS; Layer 2 19 suites/252 tests PASS; regresión completa 69 suites/631 tests PASS; Wix SDK contracts, eCommerce Order Transactions SDK, Bookings Reader V2, ESLint y secret scanning PASS. No se han modificado CMS, registros, configuración Wix ni despliegues.
