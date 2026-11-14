@@ -667,20 +667,33 @@ export const REGISTROS_HORARIOS_FIELDS = Object.freeze({
   RESOURCE_ID: "resourceId",
   MEMBER_ID: "memberId",
   STAFF_NAME: "staffName",
-  RECORDED_AT: "recordedAt",
-  RECORDED_TIME: "recordedTime",
-  DAY_KEY: "dayKey",
-  MONTH_KEY: "monthKey",
+  RECORD_ID: "recordId",
   CLOCK_EVENT_TYPE: "clockEventType",
   RECORD_TYPE: "recordType",
+  SOURCE: "source",
+  RECORDED_AT: "recordedAt",
+  RECORDED_TIME: "recordedTime",
+  WORK_DATE: "workDate",
+  DAY_KEY: "dayKey",
+  MONTH_KEY: "monthKey",
+  TIME_ZONE: "timeZone",
   REGISTERED_BY: "registeredBy",
   REGISTERED_BY_MEMBER_ID: "registeredByMemberId",
   ADJUSTMENT_REASON: "adjustmentReason",
   DEVICE_IP_ADDRESS: "deviceIpAddress",
   META: "meta",
+  RECORD_HASH: "recordHash",
+  SCHEMA_VERSION: "schemaVersion",
   TRACE_ID: "traceId",
   SIGNATURE: "signature",
+  PREVIOUS_RECORD_HASH: "previousRecordHash",
 });
+
+export const CLOCK_RECORD_SOURCE = Object.freeze({
+  WIX_WEB_METHOD: "WIX_WEB_METHOD",
+});
+
+export const TIMECLOCK_SCHEMA_VERSION = "1";
 
 // Campos logicos de booking normalizados (bookingCore.js / bookingSaga.js /
 // citasManager.web.js / events.js).

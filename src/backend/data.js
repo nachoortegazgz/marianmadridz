@@ -566,7 +566,7 @@ export function PaquetesGestoria_beforeRemove() {
 
 export function RegistrosHorariosStaff_beforeInsert(item) {
     if (!item || typeof item !== "object") return item;
-    _normalizeCmsDateTime(item, "recordedAt");
+    _normalizeCmsDateTimes(item, ["recordedAt", "recordedTime"]);
     assertRegistrosHorariosStaff(item);
     return item;
 }

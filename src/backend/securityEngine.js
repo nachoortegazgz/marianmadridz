@@ -142,7 +142,7 @@ export function timingSafeEqual(first, second) {
 // mutables post-firma). La verificacion recomputa la firma y compara en
 // tiempo constante. Clave: SECRET_FISCALKEY (dominio fiscal/laboral).
 
-const TIMECLOCK_SIGNED_FIELDS = Object.freeze([
+const TIMECLOCK_LEGACY_SIGNED_FIELDS = Object.freeze([
     "clockEventType",
     "dayKey",
     "memberId",
@@ -155,11 +155,43 @@ const TIMECLOCK_SIGNED_FIELDS = Object.freeze([
     "traceId",
 ]);
 
+const TIMECLOCK_V1_SIGNED_FIELDS = Object.freeze([
+    "recordId",
+    "resourceId",
+    "memberId",
+    "staffName",
+    "clockEventType",
+    "recordType",
+    "source",
+    "recordedAt",
+    "recordedTime",
+    "workDate",
+    "dayKey",
+    "monthKey",
+    "timeZone",
+    "registeredBy",
+    "registeredByMemberId",
+    "adjustmentReason",
+    "deviceIpAddress",
+    "meta",
+    "previousRecordHash",
+    "recordHash",
+    "schemaVersion",
+    "traceId",
+]);
+
 function _timeclockCanonicalPayload(record) {
+    const fields = record?.schemaVersion === "1"
+        ? TIMECLOCK_V1_SIGNED_FIELDS
+        : TIMECLOCK_LEGACY_SIGNED_FIELDS;
     const parts = [];
-    for (const field of TIMECLOCK_SIGNED_FIELDS) {
+    for (const field of fields) {
         const value = record?.[field];
-        parts.push(`${field}=${value === undefined || value === null ? "" : String(value)}`);
+        const canonicalValue = value instanceof Date
+            ? value.toISOString()
+            : value === undefined || value === null ? ""
+                : typeof value === "object" ? JSON.stringify(value) : String(value);
+        parts.push(`${field}=${canonicalValue}`);
     }
     return parts.join("|");
 }
