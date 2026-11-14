@@ -1,7 +1,7 @@
 ## Estado de ingeniería — reconciliación 2026-11-14
 
 - `main` baseline: `79b6238fe4c23206bb8e81327191ab48425e3a0d` (PR #351 integrada).
-- PR #351 dejó incompleta la recuperación de validadores compartidos; PR #352 restaura los contratos. CI completo PASS en `c7388cb122368906b1cee20cae0f6d127900553b` (run #1048).
+- PR #351 dejó incompleta la recuperación de validadores compartidos; PR #352 restaura los contratos. CI completo PASS en `609ccc948da3e63d3fd8aa20f5e64c7649770660` (run #1054); commits posteriores en esta PR son solo documentación.
 - CMS live: 41 colecciones (12 NATIVE / 29 WIX_APP), 980 campos. No existen live `DatosFiscales`, `InventarioStockVenta` ni `MovimientosInventario`.
 - `QA_RECORD_MUTATIONS_ENABLED=true`: solo fase QA; producción bloqueada. No se ha publicado esta tanda.
 - No hay release Wix vinculado al SHA de Git ni certificación E2E runtime. Capa 3 no está operativa certificada.
