@@ -9,38 +9,38 @@ const ACCOUNTING_COL = IC.BUSINESS_COLLECTIONS.LIBRO_ASIENTOS_CONTABLES_DETALLE;
 const CONTROL_COL = IC.BUSINESS_COLLECTIONS.CONTROL_OPERATIVO;
 const SOURCE_MOVEMENT_ID = "aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa";
 
-function entry(entryId, debit = 121, credit = 121) {
+function entry(journalEntryId, debit = 121, credit = 121) {
   return {
-    entryId,
-    sourceMovementId: SOURCE_MOVEMENT_ID,
-    concept: "Asiento QA sintético",
-    origenTipo: "MOVIMIENTO_CAJA",
-    origenRegistro: "MovimientosCaja",
-    entryDate: "2026-11-06",
+    journalEntryId,
+    documentId: SOURCE_MOVEMENT_ID,
+    operationDescription: "Asiento QA sintético",
+    movementType: "MOVIMIENTO_CAJA",
+    recordSource: "MovimientosCaja",
+    fechaOperacion: "2026-11-06",
     fiscalPeriod: "2026-11",
-    traceId: `trace-${entryId}`,
+    traceId: `trace-${journalEntryId}`,
     lines: [
-      { lineNumber: 1, accountCode: "000001", debitAmount: debit, creditAmount: 0 },
-      { lineNumber: 2, accountCode: "000002", debitAmount: 0, creditAmount: credit },
+      { sequenceNumber: 1, accountCode: "000001", debitAmount: debit, creditAmount: 0 },
+      { sequenceNumber: 2, accountCode: "000002", debitAmount: 0, creditAmount: credit },
     ],
   };
 }
 
 function hashPayloadFromRow(row) {
   return {
-    entryId: row.entryId,
+    journalEntryId: row.journalEntryId,
     recordTimestamp: new Date(row.recordTimestamp).toISOString(),
-    concept: row.concept,
-    lineNumber: Number(row.lineNumber),
-    origenTipo: row.origenTipo,
-    origenRegistro: row.origenRegistro,
-    sourceMovementId: row.sourceMovementId,
+    operationDescription: row.operationDescription,
+    sequenceNumber: Number(row.sequenceNumber),
+    movementType: row.movementType,
+    recordSource: row.recordSource,
+    documentId: row.documentId,
     cashMovementId: row.cashMovementId || null,
-    entryDate: new Date(row.entryDate).toISOString(),
+    fechaOperacion: new Date(row.fechaOperacion).toISOString(),
     fiscalPeriod: row.fiscalPeriod,
-    accountCode: row.accountCode,
-    debitAmount: Number(row.debitAmount),
-    creditAmount: Number(row.creditAmount),
+    accountCode: row.desgloseDetallado.accountCode,
+    debitAmount: Number(row.desgloseDetallado.debitAmount),
+    creditAmount: Number(row.desgloseDetallado.creditAmount),
     traceId: row.traceId,
   };
 }
@@ -58,11 +58,11 @@ describe("accounting ledger writer", () => {
     assert.equal(result.status, "SUCCESS");
     const rows = wixDataMock._store.get(ACCOUNTING_COL);
     assert.equal(rows.length, 2);
-    assert.equal(rows[0].debitAmount + rows[0].creditAmount, 121);
-    assert.equal(rows[1].debitAmount + rows[1].creditAmount, 121);
+    assert.equal(rows[0].desgloseDetallado.debitAmount + rows[0].desgloseDetallado.creditAmount, 121);
+    assert.equal(rows[1].desgloseDetallado.debitAmount + rows[1].desgloseDetallado.creditAmount, 121);
     assert.equal(rows[0].previousRecordHash, "0".repeat(64));
-    assert.equal(rows[1].previousRecordHash, rows[0].recordHash);
-    assert.equal(rows.every((row) => /^[a-f0-9]{64}$/i.test(row.recordHash)), true);
+    assert.equal(rows[1].previousRecordHash, rows[0].hash);
+    assert.equal(rows.every((row) => /^[a-f0-9]{64}$/i.test(row.hash)), true);
   });
 
   it("ACC-LEDGER-02 replays the same entry idempotently without duplicate lines", async () => {
@@ -84,7 +84,7 @@ describe("accounting ledger writer", () => {
     assert.equal(wixDataMock._store.get(ACCOUNTING_COL).length, 0);
   });
 
-  it("ACC-LEDGER-04 rejects reuse of entryId with a different payload", async () => {
+  it("ACC-LEDGER-04 rejects reuse of journalEntryId with a different payload", async () => {
     const first = await appendAccountingEntry(entry("ACC-QA-ENTRY-004"), "trace-acc-004");
     const conflicting = await appendAccountingEntry(entry("ACC-QA-ENTRY-004", 99, 99), "trace-acc-004-conflict");
 
@@ -97,9 +97,9 @@ describe("accounting ledger writer", () => {
   it("ACC-LEDGER-06 non-cash entries do not fabricate a cashMovementId", async () => {
     const payload = {
       ...entry("ACC-QA-ENTRY-006"),
-      sourceMovementId: "supplier-invoice-source-006",
-      origenTipo: "FACTURA_RECIBIDA",
-      origenRegistro: "DOCUMENTO_PROVEEDOR",
+      documentId: "supplier-invoice-source-006",
+      movementType: "FACTURA_RECIBIDA",
+      recordSource: "DOCUMENTO_PROVEEDOR",
     };
     const result = await appendAccountingEntry(payload, "trace-acc-006");
 
@@ -143,16 +143,14 @@ describe("accounting ledger writer", () => {
   it("ACC-LEDGER-08 does not chain a new accounting entry from an explicitly marked smoke-test row", async () => {
     wixDataMock._seed(ACCOUNTING_COL, [{
       _id: "simulated-accounting-row",
-      entryId: "SIM-ACCOUNTING-001",
+      journalEntryId: "SIM-ACCOUNTING-001",
       recordTimestamp: new Date(Date.now() + 60000),
-      lineNumber: 1,
-      accountCode: "SIMULATED",
-      debitAmount: 25,
-      creditAmount: 0,
-      sourceMovementId: "smoke-source-001",
-      origenTipo: "SMOKE_TEST",
-      origenRegistro: "SMOKE_TEST",
-      recordHash: "SIMULATED_DETAIL_HASH",
+      sequenceNumber: 1,
+      desgloseDetallado: { accountCode: "SIMULATED", debitAmount: 25, creditAmount: 0 },
+      documentId: "smoke-source-001",
+      movementType: "SMOKE_TEST",
+      recordSource: "SMOKE_TEST",
+      hash: "SIMULATED_DETAIL_HASH",
       previousRecordHash: "SIMULATED_PREVIOUS_DETAIL_HASH",
       traceId: "SMOKE_TEST",
     }]);
@@ -161,8 +159,8 @@ describe("accounting ledger writer", () => {
 
     assert.equal(result.status, "SUCCESS", JSON.stringify(result.error));
     const rows = wixDataMock._store.get(ACCOUNTING_COL)
-      .filter((row) => row.entryId === "ACC-QA-ENTRY-AFTER-SMOKE")
-      .sort((a, b) => Number(a.lineNumber) - Number(b.lineNumber));
+      .filter((row) => row.journalEntryId === "ACC-QA-ENTRY-AFTER-SMOKE")
+      .sort((a, b) => Number(a.sequenceNumber) - Number(b.sequenceNumber));
     assert.equal(rows.length, 2);
     assert.equal(rows[0].previousRecordHash, "0".repeat(64));
     assert.notEqual(rows[0].previousRecordHash, "SIMULATED_PREVIOUS_DETAIL_HASH");
@@ -188,12 +186,12 @@ it("ACC-LEDGER-10 rejects a locally valid replay chain whose first hash is not a
   assert.equal(first.status, "SUCCESS");
 
   const allRows = wixDataMock._store.get(ACCOUNTING_COL);
-  const rows = allRows.filter(row => row.entryId === payload.entryId)
-    .sort((a, b) => Number(a.lineNumber) - Number(b.lineNumber));
+  const rows = allRows.filter(row => row.journalEntryId === payload.journalEntryId)
+    .sort((a, b) => Number(a.sequenceNumber) - Number(b.sequenceNumber));
   rows[0].previousRecordHash = "1".repeat(64);
   rows[0].recordHash = await hashChain(rows[0].previousRecordHash, hashPayloadFromRow(rows[0]));
   rows[1].previousRecordHash = rows[0].recordHash;
-  rows[1].recordHash = await hashChain(rows[1].previousRecordHash, hashPayloadFromRow(rows[1]));
+  rows[1].hash = await hashChain(rows[1].previousRecordHash, hashPayloadFromRow(rows[1]));
 
   const replay = await appendAccountingEntry(payload, "trace-acc-010-replay");
   assert.equal(replay.status, "ERROR");
@@ -205,7 +203,7 @@ it("ACC-LEDGER-11 rejects replay when signed metadata is altered even if line am
   const first = await appendAccountingEntry(payload, "trace-acc-011");
   assert.equal(first.status, "SUCCESS");
   const rows = wixDataMock._store.get(ACCOUNTING_COL);
-  rows[0].concept = "Concepto alterado";
+  rows[0].operationDescription = "Concepto alterado";
 
   const replay = await appendAccountingEntry(payload, "trace-acc-011-replay");
   assert.equal(replay.status, "ERROR");
