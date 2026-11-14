@@ -8,7 +8,7 @@ test("VALIDATION-ENUM-01 accepts canonical enum values and rejects unknown value
     assert.equal(V.assertValidEnum(IC.RECORD_TYPE.STAFF, IC.RECORD_TYPE, "recordType"), true);
     assert.throws(
         () => V.assertValidEnum("NOT_A_RECORD_TYPE", IC.RECORD_TYPE, "recordType"),
-        /recordType=.*not in/
+        /recordType invalido/
     );
 });
 
