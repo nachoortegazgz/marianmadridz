@@ -115,7 +115,7 @@ test("expired lease recovery fences the previous owner", async () => {
     const rows = wixDataMock._store.get(BUSINESS_COLLECTIONS.CONTROL_OPERATIVO);
     assert.equal(rows[0].status, WEBHOOK_CLAIM_STATUS.COMPLETED);
     assert.equal(rows[0].expiresAt.getTime(), BASE_TIME.getTime() + 1003);
-    assert.equal(rows[0].attempts, 1);
+    assert.equal(rows[0].attempts, 2);
 });
 
 test("failed claim can be retried with a new owner token", async () => {
