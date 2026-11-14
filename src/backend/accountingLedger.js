@@ -509,7 +509,7 @@ export async function appendAccountingEntry(input, traceId) {
             } catch (error) {
                 if (_isDuplicate(error)) {
                     const byId = await dalGet(ACCOUNTING_COL, row._id, "strong");
-                    if (byId && byId.recordHash === recordHash) {
+                    if (byId && byId.hash === recordHash) {
                         inserted.push(byId);
                         previousRecordHash = recordHash;
                         continue;
