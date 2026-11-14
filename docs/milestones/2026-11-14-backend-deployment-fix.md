@@ -66,9 +66,9 @@ Correcciones implementadas:
 
 ## Límites y riesgos pendientes
 
-- Wix Runtime/E2E permanece `BLOCKED_ENVIRONMENT`: la conexión no resuelve el Site ID QA en esta sesión.
+- Wix Runtime/E2E no se ejecutó en el corte del hito. El `BLOCKED_ENVIRONMENT` por resolución de una designación anterior queda supersedido por la identidad QA confirmada `188bed94-177c-4bc9-a9f0-35080d874f3e`.
 - El diccionario CMS contiene un addendum que describe MapaStaff consolidado (42 campos), mientras que el baseline y el código activo mantienen el contrato separado MapaStaff/DatosFiscales. No se infiere cuál está desplegado ni se migra ese contrato con esta corrección.
-- No se han realizado escrituras CMS, pagos, cambios de permisos, publicación ni despliegue. Producción queda fuera del alcance.
+- No se han realizado escrituras CMS, pagos, cambios de permisos, publicación ni despliegue. No se han ejecutado efectos externos reales.
 
 CI offline PASS acredita las pruebas versionadas y los contratos SDK comprobados; no acredita el runtime Wix ni E2E externo.
 
