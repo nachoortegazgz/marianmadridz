@@ -1614,10 +1614,10 @@ Las definiciones siguientes combinan contrato físico live y documentación/cód
 | `cardAmount` / `bizumAmount` / `otherAmount` | CajaActual | NUMBER | Acumulados actuales por medio de pago; no equivalen a efectivo físico. |
 | `ticketNumber` / `ticketSeries` / `ticketSequence` | CajaActual | TEXT / TEXT / NUMBER | Identificación y secuencia del último ticket. |
 | `cashMovementId` | CajaActual | TEXT | Identificador textual del movimiento asociado en `MovimientosCaja`. |
-| `taxId` | DatosFiscales | TEXT | NIF/NIE/CIF/VAT-UE del tercero; validado por `assertDatosFiscales`. |
-| `legalName` | DatosFiscales | TEXT | Razón social/nombre legal del tercero. |
-| `recordType` | DatosFiscales | TEXT | Discriminador fiscal; `RECORD_TYPE` contempla `TERCERO` y `CONFIG_SISTEMA`. |
-| `thirdPartyType` | DatosFiscales | TEXT | Tipo de tercero según enum fiscal del backend. |
+| `taxId` | MapaStaff | TEXT | NIF/NIE/CIF/VAT-UE del tercero; validado por `assertMapaStaffFiscalIdentity`. |
+| `legalName` | MapaStaff | TEXT | Razón social/nombre legal del tercero. |
+| `recordType` | MapaStaff | TEXT | Discriminador fiscal; `RECORD_TYPE` contempla `TERCERO` y `CONFIG_SISTEMA`. |
+| `thirdPartyType` | MapaStaff | TEXT | Tipo de tercero según enum fiscal del backend. |
 | `numSerieFactura` | MovimientosCaja | TEXT | Número de serie/número correlativo de factura o ticket. |
 | `sequenceNumber` | MovimientosCaja | NUMBER | Secuencia numérica del ledger, alimentada desde los contadores de CajaActual. |
 | `transactionId` | MovimientosCaja | TEXT | Identidad de la transacción para idempotencia del hecho económico. |
