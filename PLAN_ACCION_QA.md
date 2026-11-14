@@ -211,3 +211,10 @@ Vigente hasta nueva orden. Aplicar en todo el trabajo QA:
 ### Implementación técnica y gate de seguridad
 
 **Estado: pendiente de implementación y validación.** No basta con cambiar flags en `internalConfig.js`: se han identificado rutas de checkout/writers Bookings y handlers de eventos Wix que no quedan cubiertas por el gate `FISCAL_RUNTIME_POLICY` de caja. Antes de desplegar debe existir un kill switch server-side que cubra todos los writers y efectos externos, con tests negativos por ruta. Mantener QA offline/mock mientras no se demuestre el aislamiento del Site ID QA designado. No desplegar ni publicar como parte de esta tarea.
+
+
+### Actualización de Site ID designado por el propietario
+
+El propietario ha designado `188bed94-177c-4bc9-a9f0-35080d874f3e` como sitio que pretende utilizar para QA. La consulta de contexto Wix identifica ese ID como `https://www.marianmadrid.es/`, **Published**, dominio personalizado y con Bookings, Forms & Payments, Gift Cards, Invoices y Stores instalados.
+
+Esta identificación contradice la premisa de aislamiento QA. Estado: **BLOCKED_ENVIRONMENT / PRODUCTION_SITE_DESIGNATED_AS_QA**. No ejecutar runtime/E2E ni escrituras sobre ese sitio mientras siga publicado y no exista evidencia verificable de aislamiento de clientes, cobros, reservas, notificaciones y demás efectos externos. La designación se registra, pero no convierte por sí sola un sitio publicado en un entorno seguro de pruebas.
