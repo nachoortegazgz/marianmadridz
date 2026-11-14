@@ -85,7 +85,7 @@ Se documentan:
 | `Stores/Products` | Products | WIX_APP | 7 | 35 | Wix Stores / eCommerce | `1380b703-ce81-ff05-f115-39571d94dfcd` |
 | `Stores/Variants` | Variants | WIX_APP | 0 | 12 | Wix Stores / eCommerce | `1380b703-ce81-ff05-f115-39571d94dfcd` |
 
-**Corte Wix live:** 41 colecciones (12 NATIVE, 29 WIX_APP). DatosFiscales, InventarioStockVenta y MovimientosInventario no aparecen en el inventario live; sus menciones restantes son históricas/legacy y no acreditan existencia física actual.
+**Corte histórico de la tabla anterior:** 41 colecciones (12 NATIVE, 29 WIX_APP). La ausencia de DatosFiscales, InventarioStockVenta y MovimientosInventario corresponde únicamente a aquella captura; el inventario vigente está documentado en el addendum actual.
 
 Para NATIVE Wix no devuelve ownerAppId: son colecciones CMS propias del proyecto. Para WIX_APP se conserva el identificador literal devuelto por Wix; SiteMembers es un valor simbólico y en Locations/Locations el propietario no viene informado. La atribución por prefijo es funcional y no sustituye el owner ID.
 
@@ -763,7 +763,7 @@ Este inventario de 42 campos es el contrato físico de referencia del repositori
 | `traceId` | Trace ID | `TEXT` | UUID v4 de trazabilidad de la última mutación relevante. | No declarado | — | — | No declarado en esquema CMS |
 | `staffMemberId` | staffMemberId | `TEXT` | Canonical native Wix Bookings staff member ID; distinct from resourceId. | No declarado | — | — | No declarado en esquema CMS |
 | `scheduleId` | scheduleId | `TEXT` | Native Wix Bookings schedule ID. | No declarado | — | — | No declarado en esquema CMS |
-| `thirdPartyId` | thirdPartyId | `TEXT` | Optional DatosFiscales reference; remains empty until formally linked. | No declarado | — | — | No declarado en esquema CMS |
+| `thirdPartyId` | thirdPartyId | `TEXT` | Campo legacy opaco; el valor no es GUID ni coincide con _id de DatosFiscales y no tiene consumidor localizado en src/. No tratar como FK. Candidato a retirada física tras revisar integraciones/vistas. | No declarado | — | — | No declarado en esquema CMS |
 | `rolWebsite` | rolWebsite | `TEXT` | Canonical business authorization role: ADMIN, GESTION, or ESTILISTA. | No declarado | — | — | ROL_WEBSITE: ADMIN, GESTION, ESTILISTA |
 | `rolBookings` | rolBookings | `TEXT` | Native Wix Bookings staff role; canonical value STAFF. | No declarado | — | — | Wix Bookings staff role: STAFF |
 | `memberId` | memberId | `TEXT` | Canonical Wix site-member ID verified from Members API. | No declarado | — | — | No declarado en esquema CMS |
@@ -1550,7 +1550,7 @@ Las definiciones siguientes combinan contrato físico live y documentación/cód
 | `catalogId` | CitasF2, MovimientosCaja, MovimientosInventario | TEXT | Igual que key | Referencia de catálogo usada por el dominio que genera la operación. En MovimientosInventario, la descripción CMS precisa que es el productId del maestro histórico InventarioStockVenta; no sustituirlo por el ID de Stores. |
 | `orderId` | CitasF2, ControlOperativo, MovimientosCaja, MovimientosInventario, LibroAsientosContablesDetalle | TEXT | Igual que key | ID de pedido nativo de Wix eCommerce/Stores relacionado con la operación. No confundir con transactionId. |
 | `refundId` | ControlOperativo, MovimientosCaja, MovimientosInventario | TEXT | Igual que key | Identificador del reembolso nativo asociado al evento/movimiento. |
-| `thirdPartyId` | CitasF2, DatosFiscales (según relaciones del proyecto), MovimientosCaja, MovimientosInventario, MapaStaff | TEXT | Igual que key | Referencia a tercero fiscal/CRM cuando el contrato del módulo lo utiliza. La relación concreta depende del flujo; no equivale a memberId. |
+| `thirdPartyId` | CitasF2, DatosFiscales, MovimientosCaja, MovimientosInventario | TEXT | Igual que key | En los payloads fiscales, debe contener DatosFiscales._id; el hook comprueba formato GUID, no existencia referencial. No equivale a memberId. MapaStaff.thirdPartyId es un campo legacy opaco y no forma parte de esta relación. |
 | `pairToken` | CitasF2, ControlOperativo, MovimientosCaja | TEXT | Igual que key | Token compartido que vincula las dos reservas de una cita dual (DUAL_F1 y DUAL_F2). |
 | `transactionId` | ControlOperativo, MovimientosCaja | TEXT | Igual que key | Identificador de transacción/operación usado para evitar duplicados y correlacionar el hecho económico. La unicidad debe comprobarse en el contrato/índice concreto; no asumirla por el nombre. |
 | `eventId` | ControlOperativo, RegistroIntegracion | TEXT | Igual que key | Identificador del evento recibido o registrado. En ControlOperativo participa en el registro/deduplicación de eventos. |
@@ -1636,20 +1636,21 @@ Las definiciones siguientes combinan contrato físico live y documentación/cód
 |---|---|---|---|
 | `singletonKey` | CajaActual | TEXT | Clave que identifica el registro singleton de la sesión/caja; valor canónico documentado `CAJA_PRINCIPAL`. |
 | `sequenceCounters` | CajaActual | OBJECT | Contadores de secuencia utilizados por el ledger; no editar manualmente. |
-| `operationDateHour` | CajaActual | DATETIME | Fecha y hora de referencia de la operación. |
-| `openingCashAmount` / `openingCardAmount` / `openingBizumAmount` / `openingOtherAmount` | CajaActual | NUMBER | Saldos iniciales por medio de pago registrados en la apertura. |
+| `operationDate` | CajaActual | DATE | Fecha de referencia operativa de la caja. |
+| `openingAmount` | CajaActual | NUMBER | Saldo de apertura; se mantiene separado de expectedCash aunque coincidan en la fila sintética actual. |
 | `cashAmount` | CajaActual | NUMBER | Importe de efectivo físico reflejado en la caja. |
 | `expectedCash` | CajaActual | NUMBER | Efectivo esperado según movimientos físicos registrados. |
 | `countedCash` | CajaActual | NUMBER | Efectivo contado físicamente en el arqueo. |
 | `difference` / `differenceReason` | CajaActual | NUMBER / TEXT | Diferencia de arqueo y explicación asociada. |
-| `cashRegisterStatus` | CajaActual | TEXT | Estado de apertura/cierre de la caja física; `isOpen` no existe en el esquema actual. |
-| `cardAmount` / `bizumAmount` / `otherAmount` | CajaActual | NUMBER | Acumulados actuales por medio de pago; no equivalen a efectivo físico. |
-| `ticketNumber` / `ticketSeries` / `ticketSequence` | CajaActual | TEXT / TEXT / NUMBER | Identificación y secuencia del último ticket. |
-| `cashMovementId` | CajaActual | TEXT | Identificador textual del movimiento asociado en `MovimientosCaja`. |
-| `taxId` | MapaStaff | TEXT | NIF/NIE/CIF/VAT-UE del tercero; validado por `assertMapaStaffFiscalIdentity`. |
-| `legalName` | MapaStaff | TEXT | Razón social/nombre legal del tercero. |
-| `recordType` | MapaStaff | TEXT | Discriminador fiscal; `RECORD_TYPE` contempla `TERCERO` y `CONFIG_SISTEMA`. |
-| `thirdPartyType` | MapaStaff | TEXT | Tipo de tercero según enum fiscal del backend. |
+| `cashRegisterStatus` | CajaActual | TEXT | Estado canónico de la caja. El sitio aislado usa `SIMULACION`; el código trata ese sentinel de forma explícita. |
+| `cardAmount` / `otherAmount` / `voucherAmount` | CajaActual | NUMBER | Acumulados por concepto; no equivalen a efectivo físico ni prueban un desglose de Bizum. |
+| `currentSequence` | CajaActual | NUMBER | Campo físico presente; no se localizó consumidor activo en src/. Candidato a retirada tras revisar contratos externos. |
+| `id` | CajaActual | TEXT | Espejo físico de `_id` en el singleton leído; el keyfield CMS sigue siendo `_id`. |
+| `isOpen` | CajaActual | BOOLEAN | Campo físico no canónico; el singleton actual tiene isOpen=true y cashRegisterStatus=SIMULACION. El backend gobierna por cashRegisterStatus. |
+| `taxId` | DatosFiscales | TEXT | NIF/NIE/CIF/VAT-UE del tercero; validado por `assertDatosFiscalesRecord`. |
+| `legalName` | DatosFiscales | TEXT | Razón social/nombre legal del tercero o emisor. |
+| `recordType` | DatosFiscales | TEXT | Discriminador fiscal: `TERCERO`, `GESTORIA`, `CONFIG_SISTEMA`. |
+| `thirdPartyType` | DatosFiscales | TEXT | Tipo de tercero según enum fiscal del backend. |
 | `numSerieFactura` | MovimientosCaja | TEXT | Número de serie/número correlativo de factura o ticket. |
 | `sequenceNumber` | MovimientosCaja | NUMBER | Secuencia numérica del ledger, alimentada desde los contadores de CajaActual. |
 | `transactionId` | MovimientosCaja | TEXT | Identidad de la transacción para idempotencia del hecho económico. |
@@ -1744,15 +1745,15 @@ Los siguientes valores están respaldados por enums de backend o descripciones C
 | `CitasF2.paymentStatus` | CITAS_PAYMENT_STATUS: NOT_PAID, PENDING_PAYMENT, PENDING_LEDGER, PAID, PARTIALLY_PAID, REFUNDED, PARTIALLY_REFUNDED, EXEMPT, UNDEFINED |
 | `CitasF2.bookingType` | BOOKING_TYPE: SIMPLE, DUAL_F1, DUAL_F2 |
 | `ControlOperativo.controlType` | CONTROL_TYPE: ALERT, COMPENSATION, DAYS_CACHE, DISPLAY_TOKEN, DUAL_CACHE, DEDUPE_KEY, LEDGER_IDEMPOTENCY, IDEMPOTENCY, SLOT_LOCK, RATE_LIMIT, SYSTEM_FLAG, WEBHOOK_CLAIM, WEBHOOK_EVENT |
-| `CajaActual.cashRegisterStatus` | CASH_REGISTER_STATUS: ABIERTA, CERRADA |
-| `CajaActual.paymentMethod` | PAYMENT_METHOD: EFECTIVO, TARJETA, BIZUM, TRANSFERENCIA, WIX_PAYMENTS |
-| `CajaActual.lastOperationPaymentMethod` | PAYMENT_METHOD: EFECTIVO, TARJETA, BIZUM, TRANSFERENCIA, WIX_PAYMENTS |
-| `CajaActual.lastOperationType` | MOVEMENT_TYPE: VENTA, VENTA_ONLINE, ANTICIPO, REEMBOLSO, DEVOLUCION, DEVOLUCION_SERVICIO, PROPINA, AJUSTE |
-| `MapaStaff.recordType` | RECORD_TYPE: STAFF, GESTORIA, TERCERO, CONFIG_SISTEMA |
-| `MapaStaff.thirdPartyType` | THIRD_PARTY_TYPE: CLIENTE, STAFF, PROVEEDOR, EMISOR |
+| `CajaActual.cashRegisterStatus` | CASH_REGISTER_STATUS: ABIERTA, CERRADA, SIMULACION |
+
+
+
+| `DatosFiscales.recordType` | RECORD_TYPE: GESTORIA, TERCERO, CONFIG_SISTEMA |
+| `DatosFiscales.thirdPartyType` | THIRD_PARTY_TYPE: CLIENTE, STAFF, PROVEEDOR, EMISOR |
 | `MapaStaff.rolWebsite` | ROL_WEBSITE: ADMIN, GESTION, ESTILISTA |
 | `MapaStaff.rolBookings` | Wix Bookings staff role: STAFF |
-| `MapaStaff.identityType` | Descripción CMS: STAFF_MEMBER, BUSINESS_FISCAL_IDENTITY, ACCOUNTING_FIRM |
+
 | `RegistrosHorariosStaff.clockEventType` | CLOCK_EVENT_TYPE: ENTRADA, SALIDA, PAUSA_INICIO, PAUSA_FIN |
 | `RegistrosHorariosStaff.recordType` | RECORD_TYPE_HORARIOS: REGULAR, AJUSTE |
 | `ServiciosCatalogo.catalogEntryType` | CATALOG_ENTRY_TYPE: SERVICE, PRICING_PLAN |
@@ -1795,7 +1796,7 @@ Las relaciones de la tabla son semánticas/contractuales; solo las marcadas MULT
 **Política vigente (addendum 2026-11-14):** la autorización histórica de pausa append-only queda supersedida. Los bypasses globales de mutabilidad y la ventana temporal han sido retirados del código; los ledgers append-only se mantienen inmutables también en QA. Las rectificaciones se registran mediante nuevos registros trazables. Las purgas de ControlOperativo solo pueden afectar tipos efímeros/terminales con condición de tipo, estado y caducidad/retención; WEBHOOK_EVENT queda excluido.
 
 - Las colecciones WIX_APP son propiedad de sus aplicaciones. No modificar directamente sus campos, tipos, datos ni permisos mediante este proyecto salvo flujo oficial aprobado.
-- Para producción, los ledgers append-only no se editan ni borran. Las rectificaciones se incorporan como nuevos registros trazables.
+- Antes de cualquier actividad real, los ledgers append-only no se editan ni borran. Las rectificaciones se incorporan como nuevos registros trazables.
 - `CajaActual` es una proyección mutable de la sesión operativa y del efectivo físico. Los acumulados de tarjeta/Bizum no son efectivo ni saldo bancario; el ledger fuente sigue siendo `MovimientosCaja`.
 - `InventarioStockVenta` y `MovimientosInventario` son legacy/históricos; no son autoridad de inventario actual.
 - `RegistrosHorariosStaff` conserva datos sensibles laborales; sus writers permanecen deshabilitados hasta completar validación de seguridad, idempotencia, concurrencia y cumplimiento.
@@ -1807,7 +1808,7 @@ Las relaciones de la tabla son semánticas/contractuales; solo las marcadas MULT
 | ID | Hallazgo | Riesgo | Acción necesaria |
 |---|---|---|---|
 | CMS-DICT-01 | Las etiquetas CMS reales no siguen de forma general N3; predominan labels iguales al key en inglés | Baja legibilidad y divergencia con el estándar | Diseñar una matriz de etiquetas propuesta; no aplicarla sin revisión y compatibilidad |
-| CMS-DICT-02 | `DatosFiscales` no aparece en el inventario live y su GET individual devuelve 404 / `WDE0025`; aún hay referencias históricas en código/documentación | Riesgo de consumidores que esperan una colección inexistente | Auditar/eliminar referencias legacy solo tras búsqueda de consumidores, tests y diff revisado; no recrear la colección por inferencia |
+| CMS-DICT-02 | `DatosFiscales` existe en el sitio actual con 28 campos y una fila placeholder; el código se alinea con ese esquema | No existe todavía configuración fiscal oficial | Mantener CONFIG_SISTEMA ausente y writers fail-closed hasta recibir datos oficiales y superar pruebas |
 | CMS-DICT-03 | `RegistroIntegracion` existe pero no pertenece a `BUSINESS_COLLECTIONS` | Posible colección sin consumidor o contrato incompleto | Verificar consumidores/writers antes de adoptarla o retirarla |
 | CMS-DICT-04 | El esquema live resume la subestructura OBJECT/ARRAY en los campos anidados que Wix devuelve en metadatos; no certifica toda la forma de payload de runtime | Contrato lógico parcial | Completar estructuras profundas contrastando DTOs, fixtures, productores/consumidores y APIs nativas |
 | CMS-DICT-05 | IDs externos guardados como TEXT no son referencias CMS físicas | Integridad referencial depende de código | Documentar sistema propietario y validar GUID/relación en backend |
@@ -1816,9 +1817,9 @@ Las relaciones de la tabla son semánticas/contractuales; solo las marcadas MULT
 ## 12. Fuentes y método
 
 ### Evidencia Wix live
-- Sitio producción: `188bed94-177c-4bc9-a9f0-35080d874f3e`.
-- Wix Data Collections API: listado live y lectura individual de las 41 colecciones (12 NATIVE y 29 WIX_APP), con campos, tipos, descripciones CMS, required, referencias tipadas, metadatos OBJECT/ARRAY, revisiones, displayField, ownerAppId y permisos.
-- Se verificaron por GET individual los IDs `DatosFiscales`, `InventarioStockVenta` y `MovimientosInventario`: HTTP 404 / `WDE0025`.
+- Sitio objeto de trabajo: `50b39f33-e753-4331-ab35-b2ed43dc97f7` (banco de pruebas aislado, sin actividad real).
+- Wix Data Collections API: listado live y lectura individual de las 23 colecciones (15 NATIVE y 8 WIX_APP), con campos, tipos, required, referencias tipadas, revisiones y metadatos disponibles.
+- DatosFiscales existe en el inventario actual; InventarioStockVenta y MovimientosInventario existen físicamente, pero sus contratos/writers están retirados.
 - El catálogo conserva las claves de campo y sus `displayName`; las descripciones se copian solo cuando Wix las declara. La ausencia de descripción no se suple con una suposición.
 - Recuentos de elementos: Data Items Count API, corte de auditoría 2026-11-13.
 - Ninguna mutación Wix durante la generación.
@@ -1829,7 +1830,7 @@ Las relaciones de la tabla son semánticas/contractuales; solo las marcadas MULT
 - `src/backend/citasManager.web.js`: consumidores de campos canónicos de reservas.
 - `src/backend/accountingLedger.js`: contrato de huella y append-only contable.
 - `DOSSIER TÉCNICO CONSOLIDADO.md`, sección 14 y secciones de modelo CMS/keyfields.
-- `docs/qa/2026-11-13-citasf2-keyfields.md` y `docs/qa/2026-11-13-site-qa-environment.md`.
+- `docs/qa/2026-11-13-citasf2-keyfields.md` y `docs/audits/2026-11-13-current-site-isolation.md`.
 
 ### Documentación oficial Wix
 - [Wix Data APIs — Introduction](https://dev.wix.com/docs/api-reference/business-solutions/cms/introduction)
@@ -1847,34 +1848,41 @@ Actualizar este diccionario cuando cambie cualquiera de estos elementos:
 - Cambio de SSOT, propietario del dato o sistema externo de origen.
 - Cambio de estado legacy/append-only o política de permisos.
 
-Cada actualización debe incluir fecha/corte, entorno, revisión CMS, evidencia live, diff de código, consumidores afectados, pruebas y PR. No modificar Wix CMS como parte de una actualización documental.
+Cada actualización debe incluir fecha/corte, sitio, revisión CMS, evidencia de lectura, diff de código, consumidores afectados, pruebas y PR. No modificar Wix CMS como parte de una actualización documental.
 
-## 14. Addendum histórico — contrato objetivo CajaActual / MovimientosCaja (2026-11-13)
+## 14. Contrato vigente CajaActual y MovimientosCaja — 2026-11-14
 
-> **Vigencia:** este addendum describe el diseño y las limitaciones observadas antes de la edición actual de CMS. Sus afirmaciones sobre revisión 49, ausencia de campos de ticket o ausencia de acumulado Bizum quedan supersedidas por el esquema live de revisión 64 documentado en §3.1 y §16. La presencia física de esos campos no acredita su implementación en backend.
+El esquema físico vigente de CajaActual es revisión 1 con 39 campos. El manifiesto completo y la evidencia están en docs/audits/2026-11-14-cajaactual-live-schema-audit.md.
 
-**Autoridad y cardinalidad:** cada ticket/movimiento original permanece en `MovimientosCaja` como registro append-only. `CajaActual` conserva solo el resumen de la última operación, acumulados de la sesión y referencias a los IDs originales asociados a esa operación. No se copia a `CajaActual` el histórico completo de tickets.
+- operationDate es DATE; el backend escribe una cadena ISO YYYY-MM-DD.
+- sequenceCounters es OBJECT; no se acepta una cadena JSON.
+- cashAmount, cardAmount y otherAmount son los buckets físicos de la proyección. Bizum presencial se acumula en otherAmount; el medio de pago exacto permanece en MovimientosCaja.
+- openingAmount es el único saldo de apertura físico. No existen los cuatro campos opening*Amount.
+- cashRegisterStatus es la autoridad del estado; SIMULACION es un sentinel explícito del banco de pruebas. isOpen es BOOLEAN, pero el singleton actual tiene isOpen=true y cashRegisterStatus=SIMULACION; no son equivalentes y el backend no usa isOpen para autorizar sesiones.
+- id coincide con _id en el singleton; _id sigue siendo la identidad CMS. currentSequence no tiene consumidor activo localizado; ambos campos quedan como candidatos de limpieza sujetos a revisión de automatizaciones/vistas.
+- openingAmount y expectedCash coinciden en valor en la fila sintética actual, pero conservan semánticas diferentes y no se fusionan.
 
-**Datos de última operación:** actor resuelto en backend; instante exacto; tipo y descripción; conceptos/unidades cuando exista un contrato validado; importe y desglose por medio de pago; IDs fuente; `hash`, `previousRecordHash`, `sequenceNumber`, `recordTimestamp`, `digitalSignature` y `traceId` según disponibilidad del registro fuente. No reconstruir ni inventar datos ausentes.
+Los nombres operationDateHour, bizumAmount y los cuatro opening*Amount pertenecen a capturas históricas y no forman parte del esquema vigente.
 
-**Acumulados:** la sesión debe distinguir al menos efectivo, tarjeta y Bizum, con importes y número de tickets/cobros. `cashAmount` y `expectedCash` continúan expresando efectivo físico y solo cambian por deltas físicos explícitos validados en backend. Tarjeta y Bizum presenciales actualizan los acumulados de sesión, nunca el efectivo físico. ONLINE, transferencias y pagos bancarios no se incorporan a la sesión física por inferencia.
+## 15. Política temporal de mutabilidad del sitio aislado — 2026-11-14
 
-**Límite histórico de implementación:** en el corte de revisión 49 faltaban campos de ticket, conceptos y acumulado Bizum. La revisión live 64 ya contiene `ticketNumber`, `ticketIssuedAt`, `ticketType`, `ticketSeries`, `ticketSequence`, campos de conceptos, precios, pago, referencias y `bizumAmount`. Sigue pendiente demostrar qué campos escriben/leen los módulos actuales; la migración de esquema no equivale a completar consumidores, validaciones, DTOs, WebMethods, hooks ni pruebas.
+El propietario autorizó una ventana temporal en el único sitio objeto de trabajo, que es un banco de pruebas aislado y no tiene actividad real.
 
-**Pagos mixtos y conceptos:** `MovimientosCaja.paymentMethod` es TEXT singular y `lineItems` es OBJECT sin contrato interno acreditado. No aceptar un desglose mixto ni mostrar cantidades como validadas hasta definir la estructura canónica, reglas de suma y pruebas de reconciliación. Cada movimiento fuente y su hash permanecen inmutables.
+- ISOLATED_SITE_RECORD_MUTATIONS_ENABLED=true.
+- update/remove individual y masivo solo sobre colecciones propias incluidas en ISOLATED_SITE_MUTABLE_COLLECTIONS.
+- Las operaciones masivas requieren IDs explícitos y máximo de 1.000 elementos.
+- Las colecciones WIX_APP quedan excluidas.
+- Se mantienen RBAC, permisos, validaciones, secretos, allowlists de inserción y gates de writers/efectos externos.
+- La ventana no habilita pagos, reembolsos, facturación, fichajes, comunicaciones ni automatizaciones externas.
+- No se han ejecutado mutaciones CMS ni migraciones de registros en esta intervención.
 
-### Estado de implementación del contrato CajaActual — 2026-11-13
+## 16. Estado vigente del único sitio — 2026-11-14
 
-El código de la rama de trabajo reutiliza los campos físicos ya observados: `cashAmount` (efectivo físico), `netAmount` (mismo saldo físico), `cardAmount` (acumulado tarjeta), `bizumAmount` (acumulado Bizum), `staffResourceId`, `traceId` y `lastMovementAt`. La proyección se limita a cobros presenciales y a una sesión previamente abierta. No se crea ni se abre el singleton por efecto de un movimiento.
+**Sitio:** 50b39f33-e753-4331-ab35-b2ed43dc97f7.  
+**Plataforma:** Wix Editor Classic + Velo.  
+**Naturaleza:** banco de pruebas aislado, sin actividad real, según declaración expresa del propietario.
 
-`getCashierState()` añade al DTO de lectura `sessionPayments` y `lastOperation`, derivados de los movimientos originales de `MovimientosCaja` entre `openedAt` y `closedAt`. `lastOperation.sourceMovementIds` referencia el `_id` original. Esto es una composición de lectura: **no significa que `lastOperation` o `lastMovementId` estén persistidos en `CajaActual`**. Los contadores por medio de pago se calculan desde el ledger, no se almacenan en columnas nuevas.
-
-`openedBy`/`openedAt` siguen dependiendo de un flujo de apertura aún no implementado. El cierre Z manual guarda `closedBy` desde contexto backend, sujeto a que el writer continúe bloqueado por política. No hay migración CMS en esta rama. La revisión 49 es un corte histórico; la autoridad física vigente es la revisión 64 verificada en §3.1.
-
-**Aclaración de campos reutilizados:** `sequenceCounters.appliedMovementIds` conserva los IDs de movimientos ya aplicados para deduplicación y referencia; `staffResourceId`, `traceId` y `lastMovementAt` reflejan el último movimiento proyectado. No existe columna física `lastMovementId` ni objeto `lastOperation` en la revisión 64. El proyector exige `recordTimestamp` válido. `salesCount` no representa todos los pagos; el contador por medio se deriva de `MovimientosCaja`.
-
-`recordSource=MANUAL_PRESENCIAL_AUTHENTICATED` identifica movimientos presenciales manuales cuyo `staffResourceId` se obtuvo en backend desde la identidad autenticada. El frontend no puede asignar este valor. Los registros anteriores o de otro origen no se consideran autoría verificada aunque su `staffResourceId` pueda resolverse a un perfil.
-
+### Inventario y campos
 
 ## 15. Addendum histórico — ventana temporal de mutabilidad (2026-11-14)
 
@@ -1882,24 +1890,19 @@ El código de la rama de trabajo reutiliza los campos físicos ya observados: `c
 
 **Política vigente tras TEC-038:** los bypasses globales y APPEND_ONLY_MUTATION_WINDOW se han retirado del código. Los ledgers no deben entrar en allowlists de update/remove. La purga de datos efímeros se restringe por tipo/estado/fecha en ControlOperativo. Antes de publicación: CI completo, sitio QA accesible y aislamiento runtime verificado.
 
+## Addendum de vigencia — contratos CMS del sitio actual (2026-11-14)
 
-## 16. Addendum histórico — estado anterior y limpieza de datos sintéticos (2026-11-14)
+Este addendum sustituye los addenda históricos que describían MapaStaff como maestro fiscal o DatosFiscales como colección retirada.
 
-## Estado histórico y limpieza de datos sintéticos — corte 2026-11-14
+**Esquema vigente leído en Wix Data API:** 23 colecciones (15 NATIVE y 8 WIX_APP), 524 campos NATIVE. MapaStaff tiene 18 campos/3 filas; DatosFiscales 28 campos/1 fila; ComplementosCatalogo 18 campos/36 filas; CajaActual 39 campos/1 fila; ControlOperativo 42 campos/0 filas.
 
-**Sitio:** `188bed94-177c-4bc9-a9f0-35080d874f3e`. **Rama de código:** `chore/temporary-append-only-mutation-window`. Este estado supersede los inventarios y addenda anteriores que contradigan estos datos.
+**MapaStaff:** exclusivamente mapeo de identidad staff. Campos nativos relevantes: staffMemberId, resourceId, scheduleId y memberId. active es BOOLEAN. thirdPartyId es TEXT opaco, no es GUID ni coincide con DatosFiscales._id y no tiene consumidor localizado; no tratarlo como FK. No existe recordType ni hay campos fiscales. _id es la clave del elemento CMS; resourceId conserva la identidad Bookings aunque coincida con _id en las tres filas.
 
-### CMS verificado tras los cambios — HISTÓRICO, sustituido por §§2–3
+**DatosFiscales:** maestro de terceros, gestoría y configuración fiscal. Declara recordType, taxId, legalName, thirdPartyType, address, verifactuEnabled, verifactuVersion, tipoUsoPosibleMultiOT, indicadorMultiplesOT, fechaInicioVerifactu (TEXT), gestorEmail, gestorName y gestorNombre. No declara traceId ni schemaVersion. gestorName es el keyfield canónico; gestorNombre queda retirado del contrato de código y pendiente de eliminación física.
 
-> Este bloque conserva el corte anterior de 42 colecciones/revisión 64 de CajaActual. No representa el esquema live actual. La consulta completa del 2026-11-14 devuelve 41 colecciones (12 NATIVE, 29 WIX_APP), CajaActual revisión 13 y 80 campos; prevalecen §§2–3.
+**ComplementosCatalogo:** _id es el keyfield CMS canónico. addonId se conserva como espejo requerido por el esquema actual. El DTO addOnId se mantiene exclusivamente como contrato de transporte Bookings. name y description no se fusionan por tener tipos TEXT y RICH_TEXT. traceId está vacío y no tiene consumidor identificado.
 
-- Inventario live histórico: **42 colecciones** (13 `NATIVE`, 29 `WIX_APP`). `CajaActual` era `NATIVE`, revisión **64**, con **59 campos personalizados + 4 de sistema (63 físicos)**.
-- **Permisos temporales:** las 13 `NATIVE` tienen `itemRead=ANYONE`; los permisos de insert/update/remove se preservaron sin cambios. En las 29 `WIX_APP`, Wix mantiene permisos definidos por las aplicaciones; 23 ya tenían lectura `ANYONE` y 6 mantienen restricciones de aplicación: `eCommerce/Orders`, `Forms/subscribers03`, `Marketing/Coupons`, `Members/PrivateMembersData`, `Stores/InventoryItems`, `Stores/Orders`. La documentación oficial indica que las colecciones de aplicaciones tienen permisos fijos.
-- El esquema completo, con tipos y definiciones, queda documentado en §3.1.
-- Los campos `operationDate`, `openingAmount`, `voucherAmount` e `isOpen` no existen en el esquema actual; sus sustitutos incluyen `operationDateHour`, los cuatro `opening*Amount` y `bizumAmount`.
-- Estado del elemento singleton: el último readback documentado antes de esta revisión registraba `singletonKey=CAJA_PRINCIPAL` y caja cerrada. No se ha releído el elemento durante esta actualización de permisos; no se certifican aquí sus saldos ni su estado actual.
-- Índice único `CajaActual_singletonKey_unique`: ACTIVE. Índice anterior `cashRegisterStatus_operationDate`: ya no aparece en el inventario final. Índice corregido `cashRegisterStatus_operationDateHour`: ACTIVE en el readback final.
-- `MovimientosCaja`: revisión 78, 0 elementos; no modificada. `LibroAsientosContablesDetalle`: 0. `RegistrosHorariosStaff`: revisión 11, 0 tras limpieza. `HistoricoCierresZ`: 0. `PaquetesGestoria`: 0. `ControlOperativo`: 3 elementos. `MovimientosInventario` no figura en el inventario live de 42 colecciones; la fila histórica que lo describía como colección presente queda pendiente de reconciliación documental.
+**CajaActual:** operationDate es DATE, openingAmount es NUMBER y sequenceCounters es OBJECT. Bizum presencial se agrega en otherAmount; no existen operationDateHour ni bizumAmount. cashRegisterStatus=SIMULACION es el estado canónico del singleton; isOpen=true no gobierna sesión. id=_id; currentSequence no tiene consumidor localizado. **ControlOperativo:** ownerToken, retryAfter y nextRetryAt no existen; traceId es el fencing token canónico.
 
 ### Registros sintéticos eliminados
 
@@ -1964,25 +1967,17 @@ _id:TEXT, _createdDate:DATETIME, _updatedDate:DATETIME, _owner:TEXT
 
 ### Jerarquía de autoridad y SSOT
 
-1. **USUARIO / PROPIETARIO DEL PROYECTO — SSOT de negocio y gobierno.** El usuario es la única fuente de verdad para objetivos, requisitos, prioridades, criterios de aceptación, decisiones funcionales y autorizaciones del proyecto. Sus instrucciones expresas prevalecen sobre cualquier regla, restricción, supuesto o estado histórico de esta documentación. Las decisiones relevantes se registran en el Decision Log para trazabilidad; el registro no sustituye ni limita la autoridad del usuario.
-2. **Documentación oficial vigente de Wix y de cada integración — autoridad técnica.** Define contratos, APIs, permisos, límites y comportamiento de plataforma. Se aplica para ejecutar la decisión del usuario de forma técnicamente válida; si una limitación oficial impide cumplirla, se informa y se propone alternativa, sin cambiar unilateralmente el requisito.
-3. **Decisiones expresas del usuario registradas en el repositorio.** Son la memoria documental de las decisiones vigentes. Si un registro antiguo contradice una instrucción posterior, prevalece la instrucción posterior del usuario.
-4. **Dossier Técnico Consolidado, Dossier de Flujos, Directrices, Necesidades Web, diccionario CMS y estado del proyecto.** Son documentación derivada y subordinada a los niveles anteriores. No pueden crear autorizaciones, bloqueos o requisitos nuevos por inferencia.
-5. **Código, configuración Wix, CMS y pruebas.** Acreditan el estado implementado, no la autoridad para redefinir requisitos. Las diferencias entre lo solicitado, documentado e implementado se registran como discrepancias verificables.
+1. El propietario es la fuente de verdad de negocio, requisitos, prioridades, criterios de aceptación y autorizaciones.
+2. La documentación oficial vigente de Wix y de cada integración define contratos, APIs, permisos y límites técnicos.
+3. Las decisiones expresas posteriores del propietario prevalecen sobre cualquier registro histórico contradictorio.
+4. Los dossiers, directrices, necesidades web, diccionario y estado del proyecto son documentación derivada; no crean autorizaciones por inferencia.
+5. Código, configuración Wix, CMS y pruebas acreditan el estado implementado, no la autoridad para redefinir requisitos.
 
-### Política temporal de desarrollo y pruebas
+### Naturaleza y mutabilidad del sitio actual
 
-**Vigencia:** fase actual de desarrollo, depuración y pruebas, hasta que el usuario ordene expresamente habilitar las protecciones para el despliegue.
+El único sitio objeto de trabajo es 50b39f33-e753-4331-ab35-b2ed43dc97f7. Es un banco de pruebas aislado, sin actividad real, según declaración expresa del propietario. Los registros presentes se tratan como sintéticos.
 
-- Queda **en pausa la política append-only** durante esta fase. Ninguna colección o registro se considerará intocable únicamente por estar etiquetado como ledger, histórico, fiscal, contable, laboral, documental o append-only.
-- Queda **en pausa toda prohibición genérica de edición o eliminación de registros**, tanto individual como masiva, cuando la única causa del bloqueo sea la inmutabilidad/append-only o una restricción temporal de mutabilidad del sitio aislado. La edición y eliminación forman parte de las operaciones permitidas durante las pruebas.
-- No se exigirán registros rectificativos como única vía de corrección durante esta fase de pruebas en el sitio aislado. Esa regla se reconsiderará cuando el usuario habilite expresamente las protecciones previas al despliegue.
-- Se mantienen las validaciones de esquema y tipos, la autenticación, autorización y permisos de acceso, la protección de secretos, la separación de capas, los controles de seguridad no relacionados con la inmutabilidad y la trazabilidad técnica de las pruebas. Esta pausa no autoriza accesos anónimos ni saltarse controles de identidad.
-- No se habilitan por esta decisión writers fiscales, contables, laborales, pagos, devoluciones, comunicaciones ni automatizaciones externas que tengan gates funcionales independientes. Esos gates solo se modificarán por instrucción expresa o por una decisión técnica aprobada por el usuario.
-- La pausa es temporal y **no se revierte automáticamente**. Solo el usuario puede ordenar la restauración y habilitación de las protecciones para despliegue. Antes de una publicación productiva, el estado de las protecciones debe revisarse con el usuario y quedar expresamente autorizado.
+ISOLATED_SITE_RECORD_MUTATIONS_ENABLED=true permite update/remove individuales y masivos en colecciones propias incluidas en ISOLATED_SITE_MUTABLE_COLLECTIONS. Las operaciones masivas requieren IDs explícitos y un máximo de 1.000 elementos. Las colecciones WIX_APP quedan excluidas. Se mantienen autenticación, autorización/RBAC, permisos CMS, validaciones, protección de secretos, allowlists de inserción y gates funcionales de writers/efectos externos.
 
-### Estado de implementación y publicación
+La política temporal no habilita por sí misma pagos, reembolsos, facturación, fichajes, comunicaciones ni automatizaciones externas. No se han ejecutado mutaciones CMS ni publicado código Wix en esta intervención. La sincronización Editor↔Git y el SHA ejecutado por Wix siguen pendientes de acreditar.
 
-El usuario declara que el código está integrado y publicado en Wix. Esta declaración se registra como **declaración del propietario**. En la consulta de GitHub de este corte, el PR #344 (feat/consolidate-fiscal-master-mapastaff-v2) figura fusionado el 2026-11-14 mediante el merge commit f3b1311eead05282e47f538afd506fe49e227141, que es el HEAD actual de main. La integración del cambio en Git está verificada. El usuario declara además que el código está publicado en Wix; no se dispone de un identificador de publicación Wix que vincule el runtime con ese SHA concreto.
-
-**Nota de ejecución:** este addendum modifica la autoridad documental y la política de trabajo. No demuestra por sí mismo que todos los hooks, WebMethods, políticas de escritura o permisos CMS del runtime Wix hayan sido modificados para permitir todas las operaciones de edición y eliminación. Esa correspondencia debe verificarse en código y en Wix antes de afirmar que la pausa está aplicada técnicamente de extremo a extremo.

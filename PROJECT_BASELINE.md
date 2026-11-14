@@ -30,14 +30,15 @@ El plan ejecutable, escenarios y criterios de evidencia están en [PLAN_ACCION_Q
 - La correspondencia entre los archivos Velo del Editor Classic y Git no está verificada.
 - No existe evidencia de release Wix que vincule runtime con un SHA de Git.
 - No se ha autorizado publicación ni conexión a operaciones reales.
-- Ninguna de las PR #361–#364 ha desplegado o publicado cambios en Wix.
+- No se ha publicado código Wix en esta intervención.
+
 
 ### CMS
 - 23 colecciones: 15 NATIVE y 8 WIX_APP.
 - 524 campos físicos en colecciones NATIVE.
 - 140 registros en las colecciones propias en el corte leído.
 - El inventario completo y los tipos físicos vigentes están en `docs/audits/2026-11-14-current-site-cms-normalization.md`; el diccionario raíz enlaza ese corte y marca los bloques anteriores como históricos.
-- `CajaActual`: 39 campos, 1 registro; `sequenceCounters` es OBJECT y está almacenado como objeto. `ticketSequence` no existe. `id` coincide con `_id` en el singleton leído; candidato a retirar tras comprobar consumidores.
+- `CajaActual`: 39 campos, 1 registro; operationDate DATE, openingAmount NUMBER y sequenceCounters OBJECT. cashRegisterStatus=SIMULACION; isOpen=true es inconsistente y no gobierna sesión. id=_id y currentSequence=0 son candidatos de retirada tras revisar consumidores externos.
 - `ControlOperativo`: 42 campos, 0 registros; `ownerToken` no existe. `traceId` es el token de fencing canónico.
 - `ComplementosCatalogo`: 18 campos, 36 registros; `addonId = _id` en todos. `traceId` está vacío. `name = description` en todos los registros, pero los tipos TEXT/RICH_TEXT y el uso de presentación son distintos; no borrar sin revisar UI y consumidores.
 - `MapaStaff`: 18 campos, 3 registros; maestro exclusivo de identidad staff. El código valida `staffMemberId`, `resourceId`, `scheduleId` y los IDs opcionales `memberId`/`thirdPartyId`; no exige `recordType`, `traceId` ni campos fiscales. `resourceId = _id` en los tres registros, pero no se fusionan: el primero es ID nativo de recurso Bookings y el segundo ID CMS.
@@ -113,6 +114,9 @@ Los requisitos funcionales son declaraciones de alcance, no prueba de implementa
 - `DIRECTRICES_DESARROLLO_CODIGO.md`: directrices raíz vigentes.
 - `PLAN_ACCION_QA.md`: fases, simuladores, escenarios, gates y registro de ejecución.
 
-## 7. Regla de mantenimiento
+## 6. Estado de la rama de alineación
 
-Actualizar esta base solo ante evidencia nueva o decisión expresa del propietario. Registrar fecha, fuente y alcance. Mantener los informes históricos como evidencia, sin presentarlos como estado live actual.
+- Rama de trabajo: fix/current-site-cms-contract-alignment.
+- Alcance: separación de contratos MapaStaff / DatosFiscales, keyfield _id para complementos, validación de tipos y actualización documental.
+- Estado: cambios en rama, pendientes de CI, revisión de diff y PR.
+- No se han ejecutado mutaciones CMS, migraciones de registros ni publicación Wix.

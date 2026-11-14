@@ -1326,6 +1326,17 @@ Se verificaron permisos efectivos PRIVILEGED de DatosFiscales mediante lectura p
 
 El contrato puro AEAT/hash no certifica Veri*Factu ni habilita remisión. La activación continúa bloqueada por la definición del SIF, series, factura/IVA, rectificaciones, XML/XSD, transporte, respuestas, pruebas oficiales y revisión legal.
 
+- Sitio único de trabajo: 50b39f33-e753-4331-ab35-b2ed43dc97f7. Es un banco de pruebas aislado, sin actividad real, según declaración expresa del propietario. Los registros se tratan como sintéticos.
+- Plataforma: Wix Editor Classic + Velo. No se mantiene una comparación operativa con otro sitio.
+- CMS verificado: 23 colecciones (15 NATIVE, 8 WIX_APP), 524 campos físicos NATIVE. El manifiesto vigente está en DICCIONARIO_DATOS_CMS.md y docs/audits/2026-11-14-current-site-cms-normalization.md.
+- MapaStaff es exclusivamente el mapa de identidad de personal: staffMemberId, resourceId, scheduleId y memberId. thirdPartyId es TEXT opaco, no es GUID ni coincide con DatosFiscales._id y no tiene consumidor localizado. No contiene recordType ni campos fiscales.
+- DatosFiscales es el maestro fiscal y de terceros. No declara traceId ni schemaVersion; fechaInicioVerifactu es TEXT. No existe CONFIG_SISTEMA con identidad fiscal oficial verificada.
+- ComplementosCatalogo usa _id como identidad CMS; addonId queda como espejo físico requerido por el esquema actual. addOnId se mantiene como campo de transporte Bookings.
+- CajaActual: operationDate DATE, openingAmount NUMBER, sequenceCounters OBJECT; Bizum presencial se agrega en otherAmount. cashRegisterStatus=SIMULACION; isOpen=true no gobierna la sesión.
+- La rama fix/current-site-cms-contract-alignment separa validadores/hooks, migra eventLog.js, fiscalAggregator.web.js y fiscalDocuments.web.js a DatosFiscales, alinea CajaActual y actualiza pruebas/documentación.
+- La rama aún requiere rebase, CI completa sobre HEAD, revisión del diff y pruebas Wix Editor/E2E sintéticas. PR #370 no es mergeable en su estado actual. No se ha mutado el CMS ni se ha publicado código Wix.
+- Wix Stores Catalog V3 sigue siendo la autoridad prevista del inventario comercial; InventarioStockVenta y MovimientosInventario permanecen como colecciones físicas legacy sin writers activos.
+- Capa 3 (SharePoint/Power Automate) sigue siendo diseño documental, no integración operativa certificada.
 
 ---
 
@@ -1482,17 +1493,9 @@ El usuario declara que el código está integrado y publicado en Wix. Esta decla
 
 ## Addendum de vigencia técnica — 2026-11-14
 
-Los requisitos de negocio se conservan; los estados históricos no acreditan funcionamiento actual. Prevalece [ESTADO_ACTUAL_PROYECTO.md](ESTADO_ACTUAL_PROYECTO.md) para el estado real de código, CMS y QA.
+El estado de CMS, los contratos de código y los límites de validación están consolidados en ESTADO_ACTUAL_PROYECTO.md y docs/audits/2026-11-14-current-site-cms-normalization.md. El código versionado en Git no acredita por sí solo el código ejecutado por Wix. La sincronización Editor↔Git, CI de la rama actual y pruebas Wix Editor/E2E siguen pendientes.
 
-El esquema live de `CajaActual` está en revisión 64 y contiene 59 campos personalizados + 4 campos de sistema (63 físicos): sesión/apertura, último ticket y conceptos, precios/impuestos, pago, trazabilidad y acumulados. `cashRegisterStatus` es el único estado de sesión; `operationDateHour:DATETIME` y los cuatro campos `opening*Amount` están definidos. Tipos y dependencias: `DICCIONARIO_DATOS_CMS.md` §3.1. El último readback previo documentaba el singleton cerrado, con saldos iniciales null y saldos actuales a cero; este estado no se ha vuelto a comprobar en el corte de revisión 64. La presencia de esos campos en CMS no acredita su persistencia desde backend: sigue pendiente el WebMethod seguro de apertura y la validación E2E de apertura, ticket, conceptos, pagos y referencias. El permiso live `read=ANYONE` está pendiente de revisión de seguridad.
-
-TEC-033 permite pruebas controladas de registros sintéticos en una rama de desarrollo. Se han eliminado dos fichajes QA explícitamente sintéticos; no se han borrado datos reales ni activado writers. El sitio Published no es un entorno de E2E aislado. **Desfase de despliegue:** el runtime Published no está acreditado con este contrato ni con esta rama. El backend/DTO actualizado existe solo en Git; no se ha desplegado. Aunque Wix Data no aplica el esquema como validación estricta de cada payload, el comportamiento del código publicado frente al esquema nuevo no se ha probado. No ejecutar operaciones de caja en live hasta completar CI, validación en QA aislado y despliegue autorizado.
-
-## Aviso de vigencia — 2026-11-11
-
-Este documento recoge necesidades y criterios de aceptación de negocio. Las etiquetas históricas "declarado", "implementado" o "verificado" no equivalen a evidencia vigente. Para saber qué existe realmente, qué está cubierto por mocks y qué requiere Wix Runtime, consultar [ESTADO_ACTUAL_PROYECTO.md](ESTADO_ACTUAL_PROYECTO.md) y la evidencia de cada prueba. El sitio Wix está actualmente **Published** y no debe tratarse como entorno QA aislado. No ejecutar pruebas que generen reservas, pagos, comunicaciones o datos de cliente sobre ese sitio.
-
----
+El sitio actual es un banco de pruebas aislado y no tiene actividad real. No habilitar pagos, facturación, fichajes, comunicaciones ni automatizaciones externas sin los datos oficiales, las pruebas correspondientes y autorización expresa.
 
 # HOJA DE CUMPLIMIENTO — WEB MARIANMADRID.ES
 
@@ -1533,7 +1536,7 @@ El sitio web no debe ser un escaparate estático. Debe ser una **herramienta de 
 | RF-01 | Reserva online 24/7 | La clienta debe poder reservar sin depender del teléfono. | Flujo completo de selección de servicio, fecha, hora y confirmación funcional en producción. | PARCIAL; Wix Bookings devuelve servicios y disponibilidad en lectura. No se ha ejecutado creación de reserva, confirmación ni checkout E2E. |
 | RF-02 | Tiempos fraccionados / solapables | Un servicio con fases (ej. Babylights: 150 min configurados en CMS/Bookings al 09-11-2026) debe dividirse en fases: aplicación (staff ocupado), exposición (staff liberado, sillón ocupado), lavado/peinado (staff ocupado). | El algoritmo de disponibilidad libera la agenda durante la fase de exposición para permitir cortes rápidos o servicios cortos simultáneos. | VERIFICADO EN CÓDIGO; `reservas.web.js` y saga dual presentes. Lectura Wix: 94/94 servicios CMS↔Bookings y 24/24 vínculos F2 coherentes. E2E runtime pendiente. |
 | RF-03 | Configuración de fases por servicio | Cada servicio debe permitir configurar: duración total, minutos de aplicación, minutos de exposición, minutos de acabado. | Campos personalizados en Wix Bookings operativos y leídos correctamente por el backend. | PARCIAL; campos de fases en CMS y servicios nativos conciliados en lectura. Falta probar configuración/edición desde Wix y runtime. |
-| RF-04 | Servicios cortos compatibles/complementos | Debe existir catálogo de complementos (ejemplo: secado, manicura) reservables durante la fase de exposición. | Verificado en pruebas: reserva simultánea de tinte + corte sin conflicto de agenda. | PENDIENTE; el catálogo de complementos aparece en código, pero no se ha ejecutado la reserva simultánea de servicios en Wix QA. |
+| RF-04 | Servicios cortos compatibles/complementos | Debe existir catálogo de complementos (ejemplo: secado, manicura) reservables durante la fase de exposición. | Verificado en pruebas: reserva simultánea de tinte + corte sin conflicto de agenda. | PENDIENTE; el catálogo de complementos aparece en código, pero no se ha ejecutado la reserva simultánea de servicios en Wix Editor. |
 | RF-05 | Sincronización con Google Calendar | La agenda debe sincronizarse con el calendario del salón. | Wix Bookings configurado con sincronización activa. | PENDIENTE DE VERIFICAR; Wix Bookings está instalado, pero no se ha comprobado la sincronización Google Calendar en la configuración del sitio. |
 
 ### 2.2. Fianza online / Anti no-shows (Prioridad 🔴 Crítica)
@@ -1548,8 +1551,8 @@ El sitio web no debe ser un escaparate estático. Debe ser una **herramienta de 
 **Auditoría de servicios y depósitos nativos (Wix REST read-only, 2026-11-10):** 94/94 servicios consultados; 70 `FIXED`, 24 `NO_FEE` (auxiliares F2 ocultos), 0 `VARIED`; 0 depósitos activos. Siete servicios visibles superan 100 EUR; sus IDs, precios y configuración actual están en `docs/adr/2026-11-10-deposit-and-native-inventory.md`. Todos muestran `online=true` e `inPerson=true`; no se detecta `requireManualApproval=true`. No se ha modificado ningún servicio.
 
 | RF-07 | Pasarela de pago segura | Integración mediante Wix Payments, proveedor de pagos nativo de Wix. Los métodos concretos se limitan a los que estén disponibles y habilitados para España y esta cuenta. | Pago procesado por Wix Payments y confirmación recibida mediante el flujo nativo de Wix eCommerce/webhook. | Declarado por el propietario; activación y métodos de la cuenta pendientes de comprobación en el panel. |
-| RF-08 | Política de cancelación | Cancelación con ≥24 h: devolución íntegra del anticipo o reprogramación sin coste. Reprogramación con ≥24 h: transferir el anticipo íntegro a la nueva cita. Si cancela el negocio: devolución íntegra. Menos de 24 h/no-show: revisión manual, sin retención ni devolución automática hasta revisión jurídica. | Política Wix Bookings 1440 minutos; devolución/traslado del anticipo y webhook deben probarse en QA. | PARCIAL; 1440 minutos aparece en la política nativa. No se ha probado refund ni webhook E2E. No activar retención automática. |
-| RF-09 | Aplicación de la fianza al saldo | El depósito nativo pagado online forma parte del precio del servicio; el cliente abona únicamente el saldo pendiente en persona. | Wix Bookings muestra depósito y saldo pendiente coherentes; el pago inicial y el saldo no duplican ingresos ni IVA. | NATIVO SOPORTADO POR WIX; configuración por servicio y conciliación fiscal/ledger pendientes de QA. No implementar un segundo cobro/descuento personalizado. |
+| RF-08 | Política de cancelación | Cancelación con ≥24 h: devolución íntegra del anticipo o reprogramación sin coste. Reprogramación con ≥24 h: transferir el anticipo íntegro a la nueva cita. Si cancela el negocio: devolución íntegra. Menos de 24 h/no-show: revisión manual, sin retención ni devolución automática hasta revisión jurídica. | Política Wix Bookings 1440 minutos; devolución/traslado del anticipo y webhook deben probarse en Wix Editor en el sitio aislado. | PARCIAL; 1440 minutos aparece en la política nativa. No se ha probado refund ni webhook E2E. No activar retención automática. |
+| RF-09 | Aplicación de la fianza al saldo | El depósito nativo pagado online forma parte del precio del servicio; el cliente abona únicamente el saldo pendiente en persona. | Wix Bookings muestra depósito y saldo pendiente coherentes; el pago inicial y el saldo no duplican ingresos ni IVA. | NATIVO SOPORTADO POR WIX; configuración por servicio y conciliación fiscal/ledger pendientes de pruebas. No implementar un segundo cobro/descuento personalizado. |
 
 ### 2.3. Asistente de IA capilar (Prioridad 🟡 Media)
 
@@ -1579,7 +1582,7 @@ El sitio web no debe ser un escaparate estático. Debe ser una **herramienta de 
 | ID | Requisito | Descripción | Criterio de aceptación | Estado de verificación |
 |---|---|---|---|---|
 | RF-23 | Catálogo de productos | Venta de cosmética/capilar con precios y stock. | Wix Stores configurado. | VERIFICADO NATIVO EN LECTURA; Wix Stores Catalog V3 responde, con 24 productos visibles. Checkout E2E pendiente. |
-| RF-24 | Gestión y sincronización de stock | Stock y disponibilidad comercial gestionados exclusivamente en Wix Stores Catalog V3 y sus herramientas nativas (panel/app Wix). | El checkout nativo deduce stock al pago; cancelaciones previas a fulfillment restock en Wix si procede; reembolsos solo reponen unidades devueltas y vendibles. Sin proyecciones ni movimientos custom. | MÓDULO CUSTOM RETIRADO EN PR #238; 30/30 inventory items con tracking en una ubicación; Orders Settings `ON_ORDER_PAID`. QA de checkout/cancelación/refund nativo pendiente. |
+| RF-24 | Gestión y sincronización de stock | Stock y disponibilidad comercial gestionados exclusivamente en Wix Stores Catalog V3 y sus herramientas nativas (panel/app Wix). | El checkout nativo deduce stock al pago; cancelaciones previas a fulfillment restock en Wix si procede; reembolsos solo reponen unidades devueltas y vendibles. Sin proyecciones ni movimientos custom. | MÓDULO CUSTOM RETIRADO EN PR #238; 30/30 inventory items con tracking en una ubicación; Orders Settings `ON_ORDER_PAID`. pruebas de checkout/cancelación/refund nativo pendientes. |
 | RF-25 | Upselling en checkout | Sugerir tratamiento hidratante exprés (+12 €) al reservar Corte de Autor; champú matizador con 10% dto. al comprar bono de mechas. | ⚠️ No declarado en código — **requiere verificación/implementación** |
 | RF-26 | Derecho de desistimiento 14 días | Excepción del Art. 103 para cosméticos desprecintados debe estar explícita en Términos y Condiciones. | ⚠️ No declarado — **requiere verificación** |
 
@@ -1673,12 +1676,12 @@ El sitio web no debe ser un escaparate estático. Debe ser una **herramienta de 
 | RT-12 | `PaidTransactions` | Libro inalterable de auditoría Ley Antifraude. | ✅ Declarado |
 | RT-13 | `GiftCards` | Registro de bonos, firmas y saldos. | NO IMPLEMENTADO EN CÓDIGO PROPIO; la app Wix Gift Cards está instalada, pero no existe colección/writer propio `GiftCards` en `src/`. |
 | RT-14 | `ClientHealthAndConsent` | Fichas médicas capilares confidenciales. | ✅ Declarado |
-| RT-15 | `CitasF2` | Reservas con fases duales y estados; depósito gestionado por Wix Bookings nativo. | La colección no es autoridad del cobro del depósito. Conciliación de pago/depósito pendiente de QA. |
+| RT-15 | `CitasF2` | Reservas con fases duales y estados; depósito gestionado por Wix Bookings nativo. | La colección no es autoridad del cobro del depósito. Conciliación de pago/depósito pendiente de pruebas. |
 | RT-16 | `MovimientosCaja` | Movimientos fiscales con hash chain. | ✅ Declarado (matriz CMS) |
 | RT-17 | `MapaStaff` | Maestro mixto consultivo: STAFF, GESTORIA, TERCERO y CONFIG_SISTEMA; NIF, régimen y Veri*factu. | Migrado live; retirada de DatosFiscales pendiente de despliegue backend |
 | RT-18 | `HistoricoCierresZ` | Cierres con totales, hashes y firmas. | ✅ Declarado (matriz CMS) |
 | RT-19 | `LibroAsientosContablesDetalle` | Asientos contables con debe/haber. | ✅ Declarado (matriz CMS) |
-| RT-20 | `InventarioStockVenta` | Proyección personalizada de stock (LEGACY, no SSOT). | Módulo y writers retirados y fusionados en PR #238; no crear/actualizar maestros. Datos existentes preservados; CI offline verde, QA Wix runtime pendiente. |
+| RT-20 | `InventarioStockVenta` | Proyección personalizada de stock (LEGACY, no SSOT). | Módulo y writers retirados y fusionados en PR #238; no crear/actualizar maestros. Datos existentes preservados; CI offline verde, pruebas runtime en Wix Editor pendientes. |
 | RT-21 | `MovimientosInventario` | Histórico de movimientos personalizado (LEGACY append-only, no SSOT de stock). | No generar nuevos movimientos de stock. Hooks append-only preservan filas existentes sin editar ni borrar; su archivo/retención requiere decisión separada. |
 | RT-22 | `ControlOperativo` | Control de reintentos, alertas, deduplicación. | ✅ Declarado (matriz CMS) |
 | RT-23 | `RegistrosHorariosStaff` | Fichajes con firma y trazabilidad. | ✅ Declarado (matriz CMS) |
@@ -1727,54 +1730,58 @@ El sitio se considerará **APTO PARA PRODUCCIÓN** cuando se cumplan **TODOS** l
 
 ---
 
-ADDENDUM DE ESTADO Y CRITERIOS DE ACEPTACIÓN — 2026-11-13
+ADDENDUM DE ESTADO Y CRITERIOS DE ACEPTACIÓN — 2026-11-14
 
-Este addendum actualiza el estado de implementación y aceptación. Los requisitos funcionales y legales del documento siguen describiendo necesidades de negocio; un estado histórico “declarado” o un nombre de módulo no demuestra que la función esté operativa en Wix Runtime.
+Este bloque describe el sitio y la rama objeto de trabajo. Los inventarios anteriores se conservan únicamente como historia y no definen el esquema actual.
 
 ## Estado del ecosistema
 
-- Repositorio canónico: `nachoortegazgz/marianmadridz`; HEAD de `main` consultado: `738eb78faaa48502532c83c3e4b8b53db1144950`.
-- El sitio principal Wix está Published y Velo enabled. El propietario declara que ha actualizado y publicado Wix. No se ha acreditado técnicamente que el runtime publicado corresponda exactamente a ese SHA.
-- Existe un sitio Wix QA independiente, Draft, Site ID `50b39f33-e753-4331-ab35-b2ed43dc97f7`; no se debe tratar como QA E2E certificado hasta verificar automatizaciones, notificaciones, pagos, webhooks, permisos e integraciones.
-- CMS producción: 44 colecciones (15 NATIVE, 29 WIX_APP). CMS QA: 43 (15 NATIVE, 28 WIX_APP), con paridad incompleta de colecciones Wix App.
-- Wix Stores producción utiliza Catalog V3; Wix Invoices V1.
+- Sitio único: 50b39f33-e753-4331-ab35-b2ed43dc97f7. Banco de pruebas aislado, sin actividad real, según declaración del propietario.
+- Plataforma: Wix Editor Classic + Velo.
+- Repositorio canónico: nachoortegazgz/marianmadridz. Rama de alineación: fix/current-site-cms-contract-alignment.
+- CMS actual: 23 colecciones (15 NATIVE, 8 WIX_APP), 524 campos NATIVE.
+- MapaStaff: 18 campos, exclusivamente identidades de personal; no contiene recordType ni campos fiscales.
+- DatosFiscales: 28 campos, una fila placeholder; no contiene traceId ni schemaVersion. No existe CONFIG_SISTEMA.
+- ComplementosCatalogo: _id es identidad CMS; addonId es espejo físico temporal. El DTO addOnId pertenece al transporte Bookings.
+- CajaActual: operationDate DATE, openingAmount NUMBER, sequenceCounters OBJECT; Bizum presencial se acumula en otherAmount. operationDateHour, bizumAmount y los cuatro opening*Amount no existen. ControlOperativo.ownerToken, retryAfter y nextRetryAt no existen.
+- Wix Stores Catalog V3 es la autoridad de stock comercial. Los contratos de inventario personalizado permanecen retirados.
 
 ## Criterio de clasificación obligatorio
 
-Cada requisito RF/RL/RT debe clasificarse en una de estas categorías, con evidencia y fecha:
-1. **Implementado en código:** existe código identificable; no implica runtime operativo.
-2. **Verificado en CI:** suite y commit exactos, resultado y workflow identificados.
-3. **Verificado en Wix Preview/QA:** sitio, versión, caso y resultado reproducible.
-4. **Verificado en producción:** caso real autorizado y evidencia del resultado.
-5. **Declarado/documentado:** figura en documentación o configuración, pero no ha superado una prueba ejecutada.
-6. **No implementado / pendiente / no aplicable:** justificarlo; no inferir cumplimiento.
+Cada requisito RF/RL/RT debe clasificarse con evidencia y fecha:
+1. Implementado en código: existe código identificable; no implica runtime operativo.
+2. Verificado en CI: suite y commit exactos, resultado y workflow identificados.
+3. Verificado en Wix Editor: caso y resultado reproducible.
+4. Verificado en operación real: solo tras autorización expresa y evidencia del resultado.
+5. Declarado/documentado: figura en documentación o configuración, pero no ha superado una prueba ejecutada.
+6. No implementado / pendiente / no aplicable: justificarlo; no inferir cumplimiento.
 
 No marcar como cumplido un requisito legal o de negocio únicamente por existir una colección, un campo, un módulo o una prueba mock.
 
 ## Bloqueos y criterios de aceptación vigentes
 
-- Reserva/proyección: CitasF2 contiene 1 item `CONFIRMED / NOT_PAID`; la última lectura Bookings Reader V2 registrada para el mismo bookingId era `CANCELED / NOT_PAID`. Mantener P1 hasta reconciliar la lectura nativa y la proyección tras la publicación declarada.
-- Fiscal/contable/laboral: writers permanecen deshabilitados. `MapaStaff` conserva el tercero placeholder QA; falta `CONFIG_SISTEMA`. `DatosFiscales` permanece temporalmente por compatibilidad hasta publicar el backend migrado. No emitir, cobrar, exportar ni escribir ledgers hasta aprobación de asesoría y QA runtime.
-- Capa 3: SharePoint / Power Automate no están acreditados como flujo operativo live.
-- Inventario: Wix Stores Catalog V3 es la autoridad operativa; colecciones legacy personalizadas no deben convertirse en fuente de stock.
-- Entorno QA: existe un segundo sitio Wix Draft, pero no tiene paridad completa de CMS Apps y su aislamiento externo no está certificado.
-- El detalle de inventario, checklist P0–P4 y evidencia se mantiene en `ESTADO_ACTUAL_PROYECTO.md`.
+- Fiscal/contable/laboral: writers permanecen fail-closed. No existe CONFIG_SISTEMA con identidad fiscal oficial verificada.
+- La rama actual separa MapaStaff y DatosFiscales y migra los consumidores fiscales; CI y revisión del diff pendientes.
+- Capa 3: SharePoint / Power Automate no están acreditados como flujo operativo.
+- La correspondencia entre el código Velo del Editor y Git no está acreditada mediante exportación/hash.
+- La retirada física de campos espejo requiere revisar automatizaciones, vistas CMS y contratos externos.
+- El detalle del esquema, pruebas y bloqueos se mantiene en ESTADO_ACTUAL_PROYECTO.md.
 
-## Checklist mínimo antes de declarar APTO
+## Checklist mínimo antes de declarar apto
 
 - [ ] Mapear cada RF/RL/RT a código, contrato, consumidor y prueba existente.
-- [ ] Ejecutar CI sobre el SHA exacto candidato; registrar suites, tests y workflow URLs.
-- [ ] Vincular la versión publicada de Wix al SHA o artefacto exacto; no basta el estado Published.
-- [ ] Validar en el sitio QA aislamiento de automatizaciones, emails, SMS/WhatsApp, pagos, webhooks y permisos.
-- [ ] Cerrar la divergencia Bookings ↔ CitasF2 y validar reservas simples/duales, concurrencia e idempotencia.
-- [ ] Validar privacidad, consentimientos, roles y minimización de datos en runtime.
-- [ ] Obtener aprobación de asesoría para los procesos fiscales, contables y laborales antes de habilitar escritores.
-- [ ] Validar export y archivo Capa 3 end-to-end sin retorno de datos a Capa 1.
+- [ ] Ejecutar CI sobre el SHA exacto candidato y registrar suites/workflow.
+- [ ] Vincular el código Velo del Editor con Git mediante exportación y comparación.
+- [ ] Validar hooks/WebMethods en Wix Editor y pruebas sintéticas.
+- [ ] Validar reservas simples/duales, concurrencia e idempotencia.
+- [ ] Validar privacidad, consentimientos, roles y minimización de datos.
+- [ ] Obtener aprobación de asesoría para procesos fiscales, contables y laborales.
+- [ ] Validar exportación documental end-to-end sin retorno de datos a Capa 1.
 - [ ] Obtener aceptación operativa de la propietaria.
 
 ---
 
-## Addendum de autoridad y fase QA — 2026-11-14
+## Addendum de autoridad y pruebas en sitio aislado — 2026-11-14
 
 ### Jerarquía de autoridad y SSOT
 
@@ -1786,11 +1793,11 @@ No marcar como cumplido un requisito legal o de negocio únicamente por existir 
 
 ### Política temporal de desarrollo y pruebas
 
-**Vigencia:** fase actual de desarrollo, depuración y QA, hasta que el usuario ordene expresamente habilitar las protecciones para el despliegue.
+**Vigencia:** fase actual de desarrollo, depuración y pruebas, hasta que el usuario ordene expresamente habilitar las protecciones para el despliegue.
 
 - Queda **en pausa la política append-only** durante esta fase. Ninguna colección o registro se considerará intocable únicamente por estar etiquetado como ledger, histórico, fiscal, contable, laboral, documental o append-only.
-- Queda **en pausa toda prohibición genérica de edición o eliminación de registros**, tanto individual como masiva, cuando la única causa del bloqueo sea la inmutabilidad/append-only o una restricción temporal de QA. La edición y eliminación forman parte de las operaciones permitidas durante las pruebas.
-- No se exigirán registros rectificativos como única vía de corrección durante esta fase de QA. Esa regla se reconsiderará cuando el usuario habilite expresamente las protecciones previas al despliegue.
+- Queda **en pausa toda prohibición genérica de edición o eliminación de registros**, tanto individual como masiva, cuando la única causa del bloqueo sea la inmutabilidad/append-only o una restricción temporal de mutabilidad del sitio aislado. La edición y eliminación forman parte de las operaciones permitidas durante las pruebas.
+- No se exigirán registros rectificativos como única vía de corrección durante esta fase de pruebas. Esa regla se reconsiderará cuando el usuario habilite expresamente las protecciones previas al despliegue.
 - Se mantienen las validaciones de esquema y tipos, la autenticación, autorización y permisos de acceso, la protección de secretos, la separación de capas, los controles de seguridad no relacionados con la inmutabilidad y la trazabilidad técnica de las pruebas. Esta pausa no autoriza accesos anónimos ni saltarse controles de identidad.
 - No se habilitan por esta decisión writers fiscales, contables, laborales, pagos, devoluciones, comunicaciones ni automatizaciones externas que tengan gates funcionales independientes. Esos gates solo se modificarán por instrucción expresa o por una decisión técnica aprobada por el usuario.
 - La pausa es temporal y **no se revierte automáticamente**. Solo el usuario puede ordenar la restauración y habilitación de las protecciones para despliegue. Antes de una publicación productiva, el estado de las protecciones debe revisarse con el usuario y quedar expresamente autorizado.
@@ -1801,13 +1808,13 @@ El usuario declara que el código está integrado y publicado en Wix. Esta decla
 
 **Nota de ejecución:** este addendum modifica la autoridad documental y la política de trabajo. No demuestra por sí mismo que todos los hooks, WebMethods, políticas de escritura o permisos CMS del runtime Wix hayan sido modificados para permitir todas las operaciones de edición y eliminación. Esa correspondencia debe verificarse en código y en Wix antes de afirmar que la pausa está aplicada técnicamente de extremo a extremo.
 
-## Vigencia operativa — fase de desarrollo y QA (2026-11-14)
+## Vigencia operativa — fase de desarrollo y pruebas (2026-11-14)
 
 **Autoridad:** el usuario/propietario es la SSOT de negocio, requisitos, prioridades, criterios de aceptación y autorizaciones. Las instrucciones expresas posteriores del usuario prevalecen sobre decisiones y restricciones documentales anteriores. La documentación oficial de Wix y de las integraciones gobierna únicamente los contratos y límites técnicos de la plataforma.
 
 **Política de mutabilidad vigente (TEC-038):** los bypasses globales de update/remove y la ventana temporal append-only han sido retirados del código. Los ledgers de caja, contabilidad, fiscalidad, jornada, cierres y eventos webhook permanecen inmutables también en QA. Bulk update está deshabilitado. Bulk remove solo admite purgas de tipos efímeros/terminales en ControlOperativo, con condiciones exactas de tipo, estado y fecha; quedan excluidos WEBHOOK_EVENT, DEDUPE_KEY, LEDGER_IDEMPOTENCY y WEBHOOK_CLAIM. CajaActual solo cambia mediante el flujo backend autorizado y con movimiento fuente; no se borra.
 
-**Restauración:** esta política no se revierte automáticamente. Solo el usuario puede ordenar la restauración de append-only y de las restricciones de mutación para preparar el despliegue. No publicar a producción basándose únicamente en esta excepción de QA.
+**Restauración:** esta política no se revierte automáticamente. Solo el usuario puede ordenar la restauración de append-only y de las restricciones de mutación para preparar el despliegue. No iniciar actividad real basándose únicamente en esta excepción temporal del sitio aislado.
 
 **Estado Git/Wix:** PR #344–#351 están integradas en main; HEAD al inicio de la reconciliación `79b6238fe4c23206bb8e81327191ab48425e3a0d`. PR #351 introdujo una regresión al retirar validadores aún consumidos; su recuperación está en PR #352 y CI queda pendiente. La publicación del sitio está declarada/verificada como estado del sitio, pero no existe release ID que vincule runtime y SHA. No se ha publicado esta tanda.
 
@@ -1815,13 +1822,13 @@ El usuario declara que el código está integrado y publicado en Wix. Esta decla
 
 ---
 
-## Addendum obligatorio — estado QA/CMS (2026-11-14)
+## Addendum histórico — mutabilidad del CMS
 
-**HISTÓRICO — TEC-033, sustituida por TEC-037.** Ya no se limita la mutación a update/remove individuales ni se mantiene bulk bloqueado. La política QA actual habilita update/remove individual y masivo en colecciones CMS propias, incluidos ledgers; los IDs deben ser explícitos. Se mantienen la autenticación, autorización, permisos, validaciones, allowlist de inserción y gates funcionales de writers/efectos externos. Solo el usuario ordenará restaurar append-only antes del despliegue.
+La política vigente del sitio aislado se documenta en TEC-037 y en ESTADO_ACTUAL_PROYECTO.md. ISOLATED_SITE_RECORD_MUTATIONS_ENABLED=true permite update/remove individual y masivo sobre colecciones propias, con IDs explícitos y límite de 1.000 elementos. WIX_APP queda excluido; se mantienen RBAC, permisos, validaciones, allowlist de inserción y gates de efectos externos.
 
-`CajaActual` live está en revisión 64: 59 campos personalizados + 4 campos de sistema (63 físicos), con datos de sesión, apertura, ticket/conceptos, importes/impuestos, pago, trazabilidad y saldos por medio. `cashRegisterStatus` es el único estado de sesión; `isOpen` no existe en el esquema. El permiso CMS `read=ANYONE` requiere revisión de seguridad antes de almacenar datos reales de cliente. No existe todavía WebMethod de apertura para persistir los saldos iniciales. El esquema y las dependencias por campo están en [DICCIONARIO_DATOS_CMS.md](DICCIONARIO_DATOS_CMS.md) §3.1; el estado de pruebas y despliegue está en [ESTADO_ACTUAL_PROYECTO.md](ESTADO_ACTUAL_PROYECTO.md). **Desfase de despliegue:** el runtime Published no está acreditado con este contrato ni con esta rama. El backend/DTO actualizado existe solo en Git; no se ha desplegado. Aunque Wix Data no aplica el esquema como validación estricta de cada payload, el comportamiento del código publicado frente al esquema nuevo no se ha probado. No ejecutar operaciones de caja en live hasta completar CI, validación en QA aislado y despliegue autorizado.
+El estado físico vigente de CajaActual es 39 campos, no el inventario histórico de revisión 64. La definición actual está en DICCIONARIO_DATOS_CMS.md y en la auditoría de 2026-11-14. La existencia de campos CMS no demuestra que un WebMethod los persista o consuma.
 
-DIRECTRICES DE ARQUITECTURA, DESARROLLO Y QA
+DIRECTRICES DE ARQUITECTURA, DESARROLLO Y PRUEBAS
 Proyecto: Marian Madrid — www.marianmadrid.es
 Repositorio: nachoortegazgz/marianmadridz
 Revision: 2026-11-09
@@ -1898,15 +1905,15 @@ Revision: 2026-11-09
 - Si se informa un total distinto, la escritura se rechaza.
 - Las duraciones deben ser valores numericos finitos no negativos.
 
-4.3. MapaStaff
-- MapaStaff es un maestro mixto consultivo con recordType obligatorio: STAFF, GESTORIA, TERCERO o CONFIG_SISTEMA.
-- STAFF conserva la correlacion staffMemberId -> resourceId/scheduleId; los lectores deben filtrar recordType=STAFF y active=true.
-- GESTORIA almacena datos de contacto y gestion; no es usuario del sitio, no tiene memberId/resourceId ni roles.
-- TERCERO y CONFIG_SISTEMA conservan el contrato fiscal; CONFIG_SISTEMA no se crea por inferencia.
+4.3. MapaStaff y DatosFiscales
+- MapaStaff es exclusivamente el mapa de identidades de personal: staffMemberId (Bookings Staff Member), resourceId (Bookings Resource), scheduleId (agenda) y memberId (Wix Members). thirdPartyId es TEXT opaco, no es GUID ni coincide con DatosFiscales._id y no tiene consumidor localizado.
+- _id identifica el elemento CMS. resourceId no se fusiona con _id aunque coincidan en las tres filas actuales: son identidades de dominios distintos.
+- active es BOOLEAN y se usa junto con staffMemberId para la correlacion de proyecciones Bookings.
 - MapaStaff no es autoridad RBAC. security.js resuelve roles mediante Wix Members, Bookings Staff Members API e internalConfig.STAFF.WEBSITE_ROLE_BY_RESOURCE_ID.
-- La lectura CMS es PRIVILEGED; las consultas backend pasan por dataAccess elevado. No exponer datos de contacto/fiscales desde frontend ni permisos ANYONE.
-- Los hooks CMS y validation.js validan los discriminadores y sus campos especificos.
-- DatosFiscales permanece legacy hasta que el backend actualizado se publique y se verifique; eliminarla despues de la comprobacion de consumidores.
+- DatosFiscales es el maestro de terceros, gestoría y configuración fiscal. recordType admite TERCERO, GESTORIA y CONFIG_SISTEMA.
+- DatosFiscales no declara traceId ni schemaVersion; fechaInicioVerifactu es TEXT. No escribir campos no declarados.
+- gestorName es el campo canónico de nombre de gestoría; gestorNombre es un espejo físico en retirada controlada.
+- Los hooks y validation.js mantienen contratos separados. Los escritores fiscales siguen fail-closed mientras no exista CONFIG_SISTEMA con identidad fiscal oficial verificada.
 4.4. Datos historicos fiscales
 - Los documentos fiscales append-only no se reescriben para normalizar nombres de campo.
 - Los lectores de `MovimientosCaja`, `ControlOperativo` y `CitasF2` pueden interpretar valores historicos exclusivamente en lectura, con `warn` trazable y fecha `REVIEW-BY`.
@@ -1931,7 +1938,7 @@ Revision: 2026-11-09
 - Un resultado incierto de Writer bloquea el reintento ciego y requiere reconciliacion por identidad e idempotencia.
 - Los webhooks se deduplican por eventId antes de mutar datos.
 - Los claims durables de DEDUPE_KEY y LEDGER_IDEMPOTENCY no se purgan con la retencion corta de IDEMPOTENCY.
-- DISPLAY_TOKEN se consume mediante eliminacion condicionada; la garantia de concurrencia debe probarse en Wix QA.
+- DISPLAY_TOKEN se consume mediante eliminacion condicionada; la garantia de concurrencia debe probarse en Wix Editor.
 
 7. TESTING Y CRITERIOS DE ACEPTACION
 
@@ -1964,7 +1971,7 @@ Los mocks offline no acreditan comportamiento de Wix CMS, permisos efectivos, ho
 9) Preparar reversibilidad.
 10) Abrir PR para revision.
 11) Fusionar solo con aprobacion.
-12) Desplegar Wix solo con autorizacion expresa y QA aprobado.
+12) Desplegar Wix solo con autorizacion expresa y validación aprobada.
 13) Verificar el resultado en el entorno destino.
 
 No fusionar ni desplegar con pruebas fallidas, riesgos criticos abiertos o sin estrategia de recuperacion. No modificar workflows de CI sin necesidad demostrada y aprobacion.
@@ -2024,7 +2031,7 @@ FIN DEL DOCUMENTO
 - Orders Settings live: inventoryUpdateTrigger=ON_ORDER_PAID. Los webhooks de eCommerce no reservan, descuentan, reponen ni proyectan stock en CMS.
 - Los handlers eCommerce mantienen idempotencia, ledger fiscal, estado de reservas y reembolsos, pero no realizan escrituras de inventario.
 - Excepción temporal de desarrollo TEC-033 (2026-11-14): los hooks append-only permiten update/remove individual en la rama `chore/temporary-append-only-mutation-window`. Esta excepción no se publica; antes del despliegue productivo se restaura ENABLED=false y las allowlists/hooks append-only. No usar sobre datos reales sujetos a conservación legal.
-- La capa custom inventario.web.js, sus WebMethods, el panel de staff y los tests de su writer se retiran cuando no quedan consumidores. La retirada requiere CI y QA Wix de venta, cancelación y reembolso.
+- La capa custom inventario.web.js, sus WebMethods, el panel de staff y los tests de su writer se retiran cuando no quedan consumidores. La retirada requiere CI y Wix Editor para venta, cancelación y reembolso.
 - Depósito de reserva: 15 EUR solo para servicios >100 EUR; Wix Bookings nativo es primera opción. No configurar hasta resolver discrepancia de contrato REST vs Wix Help sobre inPerson y verificar la capacidad de la cuenta.
 - Cancelación/reprogramación gratuita con 24 h; devolución íntegra si cancela el negocio. No retención automática tardía/no-show sin revisión jurídica de proporcionalidad.
 - Registro central de decisiones: docs/DECISION-LOG.md y ADR docs/adr/2026-11-10-deposit-and-native-inventory.md.
@@ -2032,9 +2039,9 @@ FIN DEL DOCUMENTO
 
 ---
 
-ADDENDUM DE CONTROL DE CAMBIOS, PUBLICACIÓN Y QA — 2026-11-13
+ADDENDUM DE CONTROL DE CAMBIOS, PUBLICACIÓN Y PRUEBAS — 2026-11-13
 
-Estas directrices prevalecen sobre las instrucciones de QA del addendum 2026-11-11 cuando difieran respecto a la existencia del sitio QA independiente.
+Estas directrices prevalecen sobre las instrucciones de pruebas del addendum 2026-11-11 cuando difieran respecto a la naturaleza aislada del sitio actual.
 
 ## Repositorio y publicación
 
@@ -2044,20 +2051,15 @@ Estas directrices prevalecen sobre las instrucciones de QA del addendum 2026-11-
 - El HEAD documental `738eb78...` no tiene estados combinados ni workflow runs asociados en la consulta. Los resultados de CI de PR #330 son históricos y no certifican automáticamente el HEAD actual.
 - Volver al proceso obligatorio rama → cambios delimitados → pruebas → diff → PR → CI/revisión → merge. Los commits documentales directos a main realizados en el corte anterior fueron una desviación de proceso; no repetirla.
 
-## Entorno QA
+## Estado del sitio actual
 
-- Existe un sitio Wix separado: `Marian Madrid QA - Aislado 2026-11`, Site ID `50b39f33-e753-4331-ab35-b2ed43dc97f7`, estado Draft, Wix Editor, Velo enabled.
-- El CMS QA tiene 43 colecciones (15 NATIVE, 28 WIX_APP), frente a 44 en producción (15 NATIVE, 29 WIX_APP). QA tiene CitasF2=0 y ControlOperativo=0; producción tiene CitasF2=1 y ControlOperativo=3. QA no dispone de cinco colecciones Stores/* presentes en producción y contiene cuatro colecciones WixForms/* adicionales.
-- La separación por Site ID está verificada, pero el aislamiento completo no: auditar automatizaciones, acciones y destinatarios de email/SMS/WhatsApp, pagos, webhooks, integraciones, permisos, Bookings y M365 antes de ejecutar casos E2E.
-- La lectura anterior de 18 automatizaciones desactivadas y 10 activas por restricciones corresponde al sitio principal. No extrapolar ese estado al nuevo sitio QA.
-- No usar el sitio Published para pruebas con side effects. No disparar automatizaciones readonly/activas ni la herramienta Test Automation sin análisis del efecto.
-
+El único sitio objeto de trabajo es 50b39f33-e753-4331-ab35-b2ed43dc97f7. Es un banco de pruebas aislado, sin actividad real. No se presupone la existencia de un sitio de staging adicional ni se extrapolan configuraciones de otros sitios. Las automatizaciones, conexiones y efectos externos se mantienen bajo sus gates independientes y deben verificarse antes de habilitar cualquier actividad real.
 ## Estado CMS y restricciones
 
 - Producción: inventario CMS sujeto a actualización tras TEC-035. MapaStaff revision 36 / 5 registros; DatosFiscales legacy revision 21 / 1 placeholder. Recuentos NATIVE: CajaActual 1; CitasF2 1; ComplementosCatalogo 36; ControlOperativo 3; DatosFiscales 1; HistoricoCierresZ 0; InventarioStockVenta 1; LibroAsientosContablesDetalle 0; MapaStaff 3; MovimientosCaja 0; MovimientosInventario 1; PaquetesGestoria 0; RegistroIntegracion 0; RegistrosHorariosStaff 2; ServiciosCatalogo 95.
 - Wix Stores Catalog V3 es la autoridad del inventario comercial; Wix Invoices V1 en producción.
 - CitasF2 sigue con una proyección `CONFIRMED / NOT_PAID`; la última lectura nativa Bookings Reader V2 registrada devolvió `CANCELED / NOT_PAID` para el mismo bookingId. No editar manualmente la proyección ni borrar la reserva; resolver mediante handler/evento y reconciliación idempotente demostrada.
-- Mantener writers fiscales, contables y laborales deshabilitados; mantener `ACCOUNTANT_SEND_ENABLED=false`. No realizar pagos, reembolsos, movimientos de caja, cierres, asientos, fichajes ni exports reales durante QA.
+- Mantener writers fiscales, contables y laborales deshabilitados; mantener `ACCOUNTANT_SEND_ENABLED=false`. No realizar pagos, reembolsos, movimientos de caja, cierres, asientos, fichajes ni exports reales durante las pruebas en el sitio aislado.
 - SharePoint / Power Automate Capa 3 no está verificado live.
 
 ## Regla de evidencia
@@ -2067,7 +2069,7 @@ Todo informe separa explícitamente:
 - Declarado por el propietario.
 - Verificado en código.
 - Verificado en CI (SHA y workflow).
-- Verificado en Wix Preview/QA.
+- Verificado en Wix Preview del sitio aislado.
 - Verificado en producción.
 - Inferido o pendiente.
 
@@ -2075,7 +2077,7 @@ Una publicación solo se certifica como correspondiente al código cuando existe
 
 ---
 
-## Addendum de autoridad y fase QA — 2026-11-14
+## Addendum de autoridad y pruebas en sitio aislado — 2026-11-14
 
 ### Jerarquía de autoridad y SSOT
 
@@ -2087,11 +2089,11 @@ Una publicación solo se certifica como correspondiente al código cuando existe
 
 ### Política temporal de desarrollo y pruebas
 
-**Vigencia:** fase actual de desarrollo, depuración y QA, hasta que el usuario ordene expresamente habilitar las protecciones para el despliegue.
+**Vigencia:** fase actual de desarrollo, depuración y pruebas, hasta que el usuario ordene expresamente habilitar las protecciones para el despliegue.
 
 - Queda **en pausa la política append-only** durante esta fase. Ninguna colección o registro se considerará intocable únicamente por estar etiquetado como ledger, histórico, fiscal, contable, laboral, documental o append-only.
-- Queda **en pausa toda prohibición genérica de edición o eliminación de registros**, tanto individual como masiva, cuando la única causa del bloqueo sea la inmutabilidad/append-only o una restricción temporal de QA. La edición y eliminación forman parte de las operaciones permitidas durante las pruebas.
-- No se exigirán registros rectificativos como única vía de corrección durante esta fase de QA. Esa regla se reconsiderará cuando el usuario habilite expresamente las protecciones previas al despliegue.
+- Queda **en pausa toda prohibición genérica de edición o eliminación de registros**, tanto individual como masiva, cuando la única causa del bloqueo sea la inmutabilidad/append-only o una restricción temporal de mutabilidad del sitio aislado. La edición y eliminación forman parte de las operaciones permitidas durante las pruebas.
+- No se exigirán registros rectificativos como única vía de corrección durante esta fase de pruebas. Esa regla se reconsiderará cuando el usuario habilite expresamente las protecciones previas al despliegue.
 - Se mantienen las validaciones de esquema y tipos, la autenticación, autorización y permisos de acceso, la protección de secretos, la separación de capas, los controles de seguridad no relacionados con la inmutabilidad y la trazabilidad técnica de las pruebas. Esta pausa no autoriza accesos anónimos ni saltarse controles de identidad.
 - No se habilitan por esta decisión writers fiscales, contables, laborales, pagos, devoluciones, comunicaciones ni automatizaciones externas que tengan gates funcionales independientes. Esos gates solo se modificarán por instrucción expresa o por una decisión técnica aprobada por el usuario.
 - La pausa es temporal y **no se revierte automáticamente**. Solo el usuario puede ordenar la restauración y habilitación de las protecciones para despliegue. Antes de una publicación productiva, el estado de las protecciones debe revisarse con el usuario y quedar expresamente autorizado.

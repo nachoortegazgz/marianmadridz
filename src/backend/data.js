@@ -10,6 +10,7 @@ STANDARDS: G10 ASCII Strict. Cero suppressAuth. Historical fields are read-only;
 */
 
 import {
+    BUSINESS_COLLECTIONS,
     CATALOG_ENTRY_TYPE,
     FISCAL_ROLE,
     MOVEMENT_HISTORICAL_READ_ALIASES,
@@ -585,6 +586,7 @@ export function RegistrosHorariosStaff_beforeRemove() {
 export function CajaActual_beforeInsert(item) {
     if (!item || typeof item !== "object") return item;
     _normalizeCmsDateTimes(item, ["openedAt", "closedAt", "lastMovementAt"]);
+    assertCajaActualRecord(item);
     const key = _safeTrim(item.singletonKey || item._id);
     if (key !== "CAJA_PRINCIPAL") {
         _schemaError("CajaActual es SINGLE_ITEM: solo admite el singleton 'CAJA_PRINCIPAL'");
@@ -595,8 +597,10 @@ export function CajaActual_beforeInsert(item) {
 export function CajaActual_beforeUpdate(item, context) {
     _normalizeCmsDateTimes(item, ["openedAt", "closedAt", "lastMovementAt"]);
     const previous = context?.original || {};
+    const merged = { ...previous, ...item };
+    assertCajaActualRecord(merged);
     const prevSeq = { ...(previous?.sequenceCounters || {}) };
-    const nextSeq = { ...(item?.sequenceCounters || {}) };
+    const nextSeq = { ...((item?.sequenceCounters ?? previous?.sequenceCounters) || {}) };
 
     // The single CajaActual principal stores both fiscal counters and
     // projection idempotency metadata; keep appliedMovementIds independent.
@@ -915,12 +919,62 @@ export function ComplementosCatalogo_beforeUpdate(item) { return _validateComple
 
 function _validateComplementosCatalogo(item) {
     if (!item || typeof item !== "object") return item;
-    const addonId = _safeTrim(item.addonId);
+
+    if (item._id != null && typeof item._id !== "string") {
+        _schemaError("_id debe ser TEXT en ComplementosCatalogo");
+    }
+    if (item.addonId != null && typeof item.addonId !== "string") {
+        _schemaError("addonId debe ser TEXT en ComplementosCatalogo");
+    }
+    if (item.sku != null && typeof item.sku !== "string") {
+        _schemaError("sku debe ser TEXT en ComplementosCatalogo");
+    }
+    for (const field of ["itemNature", "codigoImpuesto", "claveRegimen", "cuentaContableIngreso"]) {
+        if (item[field] != null && typeof item[field] !== "string") {
+            _schemaError(`${field} debe ser TEXT en ComplementosCatalogo`);
+        }
+    }
+
     const cmsId = _safeTrim(item._id);
-    if (!addonId) _schemaError("addonId obligatorio en ComplementosCatalogo");
-    if (cmsId && addonId !== cmsId) _schemaError("addonId debe coincidir con _id en ComplementosCatalogo");
+    const mirrorId = _safeTrim(item.addonId);
+    const canonicalId = cmsId || mirrorId;
+    if (!canonicalId) _schemaError("_id canonico (o addonId legado para adopcion) obligatorio en ComplementosCatalogo");
+    if (cmsId && mirrorId && cmsId !== mirrorId) {
+        _schemaError("addonId espejo debe coincidir con _id canonico en ComplementosCatalogo");
+    }
+
+    // addonId remains a required physical mirror until its CMS field is retired.
+    if (!cmsId) item._id = canonicalId;
+    if (!mirrorId) item.addonId = canonicalId;
+
     if (!_safeTrim(item.sku)) _schemaError("sku obligatorio en ComplementosCatalogo");
-    if (item.price !== undefined && Number(item.price) < 0) _schemaError("price no puede ser negativo en ComplementosCatalogo");
+    if (item.price !== undefined &&
+        (typeof item.price !== "number" || !Number.isFinite(item.price) || item.price < 0)) {
+        _schemaError("price debe ser NUMBER finito no negativo en ComplementosCatalogo");
+    }
+    if (item.durationMinutes !== undefined &&
+        (typeof item.durationMinutes !== "number" || !Number.isFinite(item.durationMinutes) || item.durationMinutes < 0)) {
+        _schemaError("durationMinutes debe ser NUMBER finito no negativo en ComplementosCatalogo");
+    }
+    if (item.taxIncluded !== undefined && typeof item.taxIncluded !== "boolean") {
+        _schemaError("taxIncluded debe ser BOOLEAN en ComplementosCatalogo");
+    }
+    if (item.tipoImpositivo !== undefined &&
+        (typeof item.tipoImpositivo !== "number" || !Number.isFinite(item.tipoImpositivo) ||
+            item.tipoImpositivo < 0 || item.tipoImpositivo > 1)) {
+        _schemaError("tipoImpositivo debe ser una tasa NUMBER entre 0 y 1 en ComplementosCatalogo");
+    }
+    if (item.traceId != null && item.traceId !== "") {
+        _schemaError("traceId no tiene contrato activo en ComplementosCatalogo");
+    }
+    if (item.name != null && typeof item.name !== "string") {
+        _schemaError("name debe ser TEXT en ComplementosCatalogo");
+    }
+    if (item.ServiciosCatalogo_name != null &&
+        (!Array.isArray(item.ServiciosCatalogo_name) ||
+            item.ServiciosCatalogo_name.some((id) => typeof id !== "string"))) {
+        _schemaError("ServiciosCatalogo_name debe ser MULTI_REFERENCE en ComplementosCatalogo");
+    }
     return item;
 }
 

@@ -53,7 +53,7 @@ export const STAFF_CLOCKING_CONFIG = Object.freeze({
 // collection-specific policy; fiscal, accounting, labor and webhook ledgers
 // remain append-only in every environment.
 
-// Fail-closed production defaults until fiscal, accounting and runtime E2E
+// Fail-closed real-operation defaults until fiscal, accounting and runtime E2E
 // are certified. Simulation records are denied unless a trusted test harness
 // explicitly enables them; frontend input cannot change this policy.
 export const FISCAL_RUNTIME_POLICY = Object.freeze({
@@ -70,6 +70,7 @@ export const CATALOG_ENTRY_TYPE = Object.freeze({
 export const BUSINESS_COLLECTIONS = Object.freeze({
   CAJA_ACTUAL: "CajaActual",
   CITAS_F2: "CitasF2",
+  DATOS_FISCALES: "DatosFiscales",
   COMPLEMENTOS_CATALOGO: "ComplementosCatalogo",
   CONTROL_OPERATIVO: "ControlOperativo",
   DATOS_FISCALES: "DatosFiscales",
@@ -127,7 +128,6 @@ export const FORBIDDEN_COLLECTIONS = Object.freeze([
 ]);
 
 export const RECORD_TYPE = Object.freeze({
-  STAFF: "STAFF",
   GESTORIA: "GESTORIA",
   TERCERO: "TERCERO",
   CONFIG_SISTEMA: "CONFIG_SISTEMA",
@@ -313,6 +313,8 @@ export const SINGLETONS = Object.freeze({
 export const CASH_REGISTER_STATUS = Object.freeze({
   ABIERTA: "ABIERTA",
   CERRADA: "CERRADA",
+  // Explicit simulation sentinel used only by the isolated test bank.
+  SIMULACION: "SIMULACION",
 });
 
 // Tipos de cita internos (ledger CitasF2). CERO-ALIAS v13.0: el dominio de

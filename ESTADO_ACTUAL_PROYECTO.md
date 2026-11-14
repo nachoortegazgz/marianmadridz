@@ -1,8 +1,8 @@
 # Estado actual del proyecto — Marian Madrid
 
 **Fecha de corte:** 2026-11-14  
-**Sitio objeto de auditoría:** `50b39f33-e753-4331-ab35-b2ed43dc97f7`  
-**Naturaleza del sitio:** banco de pruebas aislado, sin actividad real, según declaración del propietario.  
+**Sitio objeto de trabajo:** 50b39f33-e753-4331-ab35-b2ed43dc97f7  
+**Naturaleza:** banco de pruebas aislado, sin actividad real, según declaración expresa del propietario.  
 **Plataforma:** Wix Editor Classic + Velo.  
 **Repositorio:** `nachoortegazgz/marianmadridz`.
 
@@ -67,5 +67,5 @@ Se ha incorporado un simulador TPV sintético puro, sin persistencia ni llamadas
 - [Directrices de desarrollo](DIRECTRICES_DESARROLLO_CODIGO.md)
 
 - [Base maestra](PROJECT_BASELINE.md)
-- [Diccionario de datos CMS](DICCIONARIO_DATOS_CMS.md)
-- [Auditoría de esquema y contratos](docs/audits/2026-11-14-current-site-cms-normalization.md)
+- [Diccionario CMS](DICCIONARIO_DATOS_CMS.md)
+- [Auditoría del esquema y contratos](docs/audits/2026-11-14-current-site-cms-normalization.md)

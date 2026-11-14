@@ -4,46 +4,46 @@
 
 ## Autoridad y alcance
 
-Este documento fija el estado verificado de Git y del CMS en este corte. No sustituye decisiones del propietario ni certifica el runtime publicado. La documentación oficial de Wix define los contratos técnicos. Los documentos históricos se conservan como evidencia, pero no prevalecen sobre este corte.
+El único sitio objeto de trabajo es 50b39f33-e753-4331-ab35-b2ed43dc97f7, Wix Editor Classic + Velo. El propietario declara que es un banco de pruebas aislado y que no tiene actividad real. No existe una matriz de comparación con otro sitio para esta intervención.
 
-## Estado verificado
+El código Velo del Editor no queda vinculado a un SHA de Git por la mera lectura de Wix GetSiteContext. La correspondencia Editor↔Git requiere exportación y comparación.
 
-- Repositorio: `nachoortegazgz/marianmadridz`.
-- `main` actual tras PR #355 documental: `331c572b9fbba4eaff9bf53a894e6c2377a13c22`; último baseline de código/configuración: `fde9466552b6819980475a682dc06395b57487f0`.
-- Wix GetSiteContext: producción Editor/Velo/Stores Catalog V3/Invoices V1; QA Editor/Velo/Stores Catalog V3/Invoices V2. No se expone código Velo para comparar Editor y Git.
-- `main` en el inicio de esta intervención: `79b6238fe4c23206bb8e81327191ab48425e3a0d`, merge de PR #351.
-- PR #351 está integrada en `main`. Su cambio de `src/backend/validation.js` redujo el módulo de 17.632 a 7.100 caracteres y dejó fuera validadores que seguían siendo importados por `src/backend/data.js`.
-- PR #352 integrada en `main` mediante `c8091fd2df0ba836657032db1e2e7aa9df67758b`. CI completo PASS en `609ccc948da3e63d3fd8aa20f5e64c7649770660` (run #1054): Layer 1, Layer 2, regresión offline completa, SDK contracts y ESLint; Gitleaks PASS (run #478). No publicada en Wix.
-- PR #353 quedó integrada como `c16ed0b605a8d548f79158aa0dbd702666eea829`; retiró constantes y hooks de inventario personalizado.
-- PR #354 integrada en `main` como `fde9466552b6819980475a682dc06395b57487f0`; eliminó la referencia residual de `DATA_ACCESS_WRITE_POLICY.removeCollections`. CI PASS en `28a11a690f0a99926921332618b6af670d45814c` (run #1068) y Gitleaks PASS (run #492).
-- No se dispone de un identificador Wix que vincule el runtime publicado con el SHA actual de Git.
+## CMS verificado
 
-## Hallazgo P1 — regresión de validadores
+Fuente: Wix Data Collections API, lectura de colecciones y campos.
 
-La versión previa a PR #351, recuperada del commit `b68e4e048ce5fc1c022fc6ffc2643d5983972107`, exportaba:
+- 23 colecciones: 15 NATIVE y 8 WIX_APP.
+- 524 definiciones físicas de campo NATIVE.
+- MapaStaff: 18 campos, 3 registros; solo identidad de personal.
+- DatosFiscales: 28 campos, 1 registro placeholder; no declara traceId ni schemaVersion.
+- CajaActual: 39 campos, 1 singleton; operationDate DATE, openingAmount NUMBER, sequenceCounters OBJECT, cashRegisterStatus TEXT, isOpen BOOLEAN, id TEXT y currentSequence NUMBER.
+- ComplementosCatalogo: 18 campos, 36 registros; addonId=_id en 36/36.
+- ControlOperativo: 42 campos, 0 registros; traceId es fencing token; ownerToken, retryAfter y nextRetryAt no existen.
+- ServiciosCatalogo: 42 campos, 95 registros; serviceId y pricingPlanId son identificadores nativos distintos de _id CMS.
+- InventarioStockVenta y MovimientosInventario permanecen físicamente, pero sus contratos y writers están retirados.
 
-- `assertCitasF2`
-- `assertMapaStaffRecord`
-- `assertCanonicalControlFields`
-- `assertControlOperativo`
-- `assertRegistrosHorariosStaff`
-- `assertValidEnum`
-- `isValidNifOrEuVat`
-- `isExplicitSimulationLedgerRecord`
+## Hallazgos de contrato y datos
 
-La versión integrada por PR #351 conservó solo `assertValidEnum`, `isValidNifOrEuVat`, `assertDatosFiscales` y `assertMapaStaffRecord`. Esto dejó contratos consumidos por `data.js` sin export y sustituyó la validación fiscal robusta anterior por una comprobación estructural más permisiva para VAT-UE.
+1. MapaStaff no es maestro fiscal. Su contrato se limita a staffMemberId, resourceId, scheduleId, memberId y active.
+2. DatosFiscales es el maestro de terceros, gestoría y configuración fiscal. CONFIG_SISTEMA no existe; los writers fiscales permanecen fail-closed.
+3. ComplementosCatalogo usa _id como keyfield CMS canónico. addonId permanece como espejo físico requerido por el esquema actual; addOnId es el campo de transporte Bookings.
+4. CajaActual.sequenceCounters es OBJECT. operationDateHour y bizumAmount no existen; operationDate DATE y otherAmount son los campos físicos. Bizum se agrega en otherAmount y el detalle queda en MovimientosCaja.
+5. CajaActual cashRegisterStatus=SIMULACION e isOpen=true; el backend gobierna por cashRegisterStatus. id=_id; currentSequence=0 no tiene consumidor localizado.
+6. gestorName es el nombre canónico de gestoría; gestorNombre solo se conserva como espejo físico y se elimina en una actualización si coincide.
+7. ServiciosCatalogo.serviceId y pricingPlanId son IDs nativos diferentes de _id CMS; no se fusionan.
 
-## Reparación propuesta en PR #352
+## Alineación de código
 
-- Recuperar la implementación completa de validadores del commit previo conocido y probado.
-- Conservar el helper fiscal nuevo, renombrado como `assertMapaStaffFiscalIdentity`, para no referenciar una colección `DatosFiscales` inexistente.
-- Mantener el uso del validador fiscal compartido en `data.js`.
-- Actualizar la prueba de contrato para usar el nombre canónico.
-- No alterar enums, esquema CMS, permisos, writers, datos ni política temporal de QA.
+Rama: fix/current-site-cms-contract-alignment.
 
-## CMS live — corte 2026-11-14
+- internalConfig.js separa RECORD_TYPE fiscal de MapaStaff y añade SIMULACION a CASH_REGISTER_STATUS.
+- validation.js y data.js mantienen validadores independientes para MapaStaff, DatosFiscales y CajaActual.
+- dataAccessPolicy.js aplica RECORD_TYPE a DatosFiscales, no a MapaStaff.
+- eventLog.js, fiscalAggregator.web.js y fiscalDocuments.web.js consumen DatosFiscales.
+- cajas.web.js escribe operationDate como DATE ISO YYYY-MM-DD, agrega Bizum en otherAmount y proyecta openingAmount.
+- ComplementosCatalogo usa _id como identidad CMS y addonId como espejo físico.
 
-Fuente: `DICCIONARIO_DATOS_CMS.md`, generado desde Wix Data Collections API en el corte indicado.
+## Estado de seguridad y validación
 
 - 41 colecciones: 12 `NATIVE` y 29 `WIX_APP`.
 - 980 definiciones físicas de campo.

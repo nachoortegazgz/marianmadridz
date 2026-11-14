@@ -2,51 +2,43 @@
 
 # Retirada de contratos de inventario personalizado — 2026-11-14
 
+**Actualización:** 2026-11-14  
+**Sitio único:** 50b39f33-e753-4331-ab35-b2ed43dc97f7, banco de pruebas aislado sin actividad real.
+
 ## Objetivo
 
-Eliminar referencias ejecutables a las colecciones personalizadas de inventario retiradas, sin modificar Wix Stores ni datos CMS. La autoridad operativa del catálogo y stock comercial es Wix Stores Catalog V3.
+Evitar que el backend gobierne el stock comercial mediante colecciones personalizadas cuando Wix Stores Catalog V3 es la autoridad del catálogo e inventario.
 
-## Evidencia
+## Estado CMS actual
 
-- El inventario CMS live del 2026-11-14 contiene 41 colecciones (12 NATIVE / 29 WIX_APP).
-- `InventarioStockVenta` y `MovimientosInventario` no aparecen en el inventario live; las consultas individuales devolvieron 404 / `WDE0025`.
-- No existe `src/backend/inventario.web.js`.
-- La búsqueda global de consumidores encontró únicamente:
-  - constantes en `internalConfig.js`;
-  - guardas append-only y allowlists en `dataAccessPolicy.js`;
-  - hooks `MovimientosInventario_beforeUpdate/Remove` en `data.js`;
-  - fixtures y aserciones en pruebas.
-- No se encontró writer activo ni consumidor de negocio que dependa de esas colecciones. Las pruebas de eventos ya verifican el marcador `inventoryAuthority=WIX_CATALOG_OWNER` y `inventoryAction=NO_CUSTOM_STOCK_WRITE`.
+- Inventario total: 23 colecciones (15 NATIVE, 8 WIX_APP).
+- InventarioStockVenta y MovimientosInventario permanecen físicamente en CMS.
+- Sus contratos de aplicación, constantes operativas, writers y hooks están retirados.
+- No se deben recrear, volver a incluir en allowlists ni utilizar para escrituras de stock.
+- DatosFiscales sí existe en el CMS actual (28 campos). Las capturas antiguas que lo declaraban ausente están superadas.
 
-## Cambios integrados en PR #353 (`c16ed0b605a8d548f79158aa0dbd702666eea829`)
+## Evidencia de código
 
-- Eliminar `INVENTARIO_STOCK_VENTA` y `MOVIMIENTOS_INVENTARIO` de `BUSINESS_COLLECTIONS`.
-- Retirarlas de `BUSINESS_COLLECTIONS`, `updateCollections` y de la lista privada de ledgers append-only. La lista `removeCollections` conservó una referencia residual que se corrige en PR #354.
-- Renombrar la lista privada `APPEND_ONLY_MUTABLE_COLLECTIONS` a `APPEND_ONLY_COLLECTIONS`, que describe correctamente su función.
-- Eliminar los hooks append-only de `MovimientosInventario`, ya que la colección no existe live.
-- Eliminar pruebas que simulaban mutaciones de un ledger inexistente y aserciones vacías contra colecciones no registradas.
-- Añadir prueba de regresión que impide reintroducir las colecciones retiradas en la allowlist canónica.
+- No existe src/backend/inventario.web.js.
+- La búsqueda global de consumidores de los contratos retirados no encontró un writer de negocio activo.
+- Los eventos de pedidos mantienen los marcadores inventoryAuthority=WIX_CATALOG_OWNER e inventoryAction=NO_CUSTOM_STOCK_WRITE.
+- PR #353 retiró los contratos/hook de inventario personalizado.
+- PR #354 eliminó la referencia residual BUSINESS_COLLECTIONS.MOVIMIENTOS_INVENTARIO de DATA_ACCESS_WRITE_POLICY.removeCollections.
 
-## Excepción preservada
+## Política de mutabilidad actual
 
-`DatosFiscales` permanece únicamente en `QA_MUTABLE_COLLECTIONS` por la autorización explícita del propietario para el ámbito de QA. El CMS live devolvió 404 / `WDE0025`; no hay writer actual. Se conserva como excepción temporal separada y con revisión prevista para 2026-11-21. No debe recrearse por esta allowlist.
-
-## Corrección residual en PR #354
-
-La integración #353 eliminó el identificador de `BUSINESS_COLLECTIONS`, pero dejó una referencia a `BUSINESS_COLLECTIONS.MOVIMIENTOS_INVENTARIO` dentro de `DATA_ACCESS_WRITE_POLICY.removeCollections`. Al no existir ya la constante, el array contenía un elemento `undefined`. PR #354 elimina esa referencia y deja alineadas las listas de update/remove.
+ISOLATED_SITE_RECORD_MUTATIONS_ENABLED=true habilita temporalmente update/remove sobre colecciones propias permitidas por ISOLATED_SITE_MUTABLE_COLLECTIONS, con IDs explícitos y límite de 1.000 elementos para operaciones masivas. Las colecciones WIX_APP quedan excluidas. Esta política no reintroduce los contratos de inventario retirados ni autoriza escrituras en Wix Stores.
 
 ## Límites
 
-- No se modifica Wix CMS ni se recrean/eliminan colecciones.
-- No se modifica Wix Stores Catalog V3 ni sus inventarios.
-- No se alteran ledgers fiscales, contables o laborales existentes.
-- No se cambia `QA_RECORD_MUTATIONS_ENABLED=true`.
-- No se publica ni despliega en Wix.
-- PR #354 integrada en `main` como `fde9466552b6819980475a682dc06395b57487f0`; CI PASS en `28a11a690f0a99926921332618b6af670d45814c` (run #1068) y Gitleaks PASS (run #492). La limpieza principal de hooks/constantes de PR #353 también está integrada.
+- No se han eliminado las colecciones físicas InventarioStockVenta ni MovimientosInventario.
+- No se ha modificado Wix Stores Catalog V3.
+- No se han mutado registros CMS ni publicado código Wix en esta intervención.
+- PR #370 está abierto pero dirty; rebase y CI sobre HEAD actual pendientes.
 
 ## Criterios de aceptación
 
-1. Ningún consumidor de producción referencia las constantes o hooks de inventario personalizado.
-2. La política de escritura ya no autoriza colecciones retiradas.
-3. La prueba de arquitectura confirma que las colecciones no pertenecen a la allowlist.
-4. Capa 1, Capa 2, regresión offline, SDK contracts, ESLint y Gitleaks pasan sobre el SHA final.
+1. Ningún consumidor de src/ referencia los contratos retirados.
+2. Ninguna allowlist autoriza writers de inventario personalizado.
+3. Wix Stores Catalog V3 conserva la autoridad de stock.
+4. Las pruebas de arquitectura y CI se ejecutan sobre el SHA final de la rama antes de merge o publicación.

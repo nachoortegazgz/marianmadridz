@@ -167,6 +167,17 @@ function _toAeatFlag(value, fallback) {
     return fallback;
 }
 
+function _toFiscalStartDateText(value) {
+    const date = _safeTrim(value);
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+    if (!match) return null;
+    const [year, month, day] = match.slice(1).map(Number);
+    const parsed = new Date(Date.UTC(year, month - 1, day));
+    return parsed.getUTCFullYear() === year &&
+        parsed.getUTCMonth() + 1 === month &&
+        parsed.getUTCDate() === day ? date : null;
+}
+
 async function _getFiscalSystemConfig(traceId) {
     const now = Date.now();
     if (_fiscalSystemCache && now - _fiscalSystemCacheAt < FISCAL_SYSTEM_CACHE_TTL_MS) {
@@ -204,7 +215,7 @@ async function _getFiscalSystemConfig(traceId) {
         // Legal identity must come from the verified DatosFiscales CONFIG_SISTEMA record.
         // Never infer the fiscal legal name from the commercial brand or site label.
         nombreRazonProductor: _safeTrim(config?.legalName),
-        fechaInicioVerifactu: config?.fechaInicioVerifactu || null,
+        fechaInicioVerifactu: _toFiscalStartDateText(config?.fechaInicioVerifactu),
     });
     _fiscalSystemCacheAt = now;
     return _fiscalSystemCache;

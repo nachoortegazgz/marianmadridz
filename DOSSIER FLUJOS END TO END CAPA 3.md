@@ -34,27 +34,24 @@ Detalle y evidencias: [reconciliación de baseline y recuperación de validadore
 
 ---
 
-> **HISTÓRICO — superado por el addendum vigente:** Capa 3 continúa siendo diseño documental, no integración operativa certificada. Wix CMS mantiene la autoridad transaccional; SharePoint solo conserva evidencia. El estado de CMS y la política QA vigentes se describen en el addendum superior y en `DICCIONARIO_DATOS_CMS.md`.
+## Estado operativo y de esquema — 2026-11-14
 
-## Registro histórico — estado live y limpieza QA (superado por el addendum vigente)
+**Sitio único:** 50b39f33-e753-4331-ab35-b2ed43dc97f7. Banco de pruebas aislado, sin actividad real, según declaración expresa del propietario. No se mantiene otro sitio como entorno de comparación.
 
-**Sitio:** `188bed94-177c-4bc9-a9f0-35080d874f3e`. **Rama de código:** `chore/temporary-append-only-mutation-window`. Este estado supersede los inventarios y addenda anteriores que contradigan estos datos.
+**CMS actual:** 23 colecciones (15 NATIVE, 8 WIX_APP), 524 campos físicos NATIVE. Wix CMS conserva la autoridad transaccional. SharePoint es solo repositorio documental de evidencia; Capa 3 no modifica ni gobierna Capa 1.
 
-### CMS verificado tras los cambios
+**Política temporal:** ISOLATED_SITE_RECORD_MUTATIONS_ENABLED=true permite update/remove individual y masivo en colecciones propias incluidas en ISOLATED_SITE_MUTABLE_COLLECTIONS, con IDs explícitos y límite de 1.000 elementos. Las colecciones WIX_APP quedan excluidas. Se mantienen RBAC, permisos, validaciones, secretos, allowlists de inserción y gates de writers/efectos externos. Esta ventana no habilita pagos, facturación, fichajes ni comunicaciones.
 
-- Inventario live: **42 colecciones** (13 `NATIVE`, 29 `WIX_APP`). `CajaActual` es `NATIVE`, revisión **64**, con **59 campos personalizados + 4 de sistema (63 físicos)**. El diccionario raíz §3.1 contiene el esquema y la definición de cada campo.
-- Política temporal: las 13 colecciones NATIVE tienen `itemRead=ANYONE`; permisos de escritura preservados. Las 29 WIX_APP conservan permisos definidos por Wix Apps (23 ANYONE, 6 restringidas). Capa 3 no obtiene permiso para leer directamente la colección ni para modificarla. La exposición de lectura es temporal, autorizada por el responsable y debe revertirse antes de despliegue.
-- El esquema incluye apertura, último ticket/conceptos, precios/impuestos, pago, trazabilidad, referencias fiscales y acumulados de sesión. Su presencia no acredita que los writers/DTOs estén implementados ni validados.
-- Estado del singleton: el último readback anterior a esta edición documentaba `CAJA_PRINCIPAL` cerrado y sin sesión abierta. El elemento no se ha releído en esta actualización; el estado y los saldos actuales quedan pendientes de readback.
-- Índice único `CajaActual_singletonKey_unique`: ACTIVE. Índice anterior `cashRegisterStatus_operationDate`: ya no aparece en el inventario final. Índice corregido `cashRegisterStatus_operationDateHour`: ACTIVE en el readback final.
-- `MovimientosCaja`: revisión 78, 0 elementos; no modificada. `LibroAsientosContablesDetalle`: 0. `RegistrosHorariosStaff`: revisión 11, 0 tras limpieza. `HistoricoCierresZ`: 0. `PaquetesGestoria`: 0. `ControlOperativo`: 3 elementos. `MovimientosInventario` no figura en el inventario live de 42 colecciones; la fila histórica que lo describía como colección presente queda pendiente de reconciliación documental.
+**Contratos CMS relevantes:**
+- MapaStaff: 18 campos, solo identidad de personal (staffMemberId, resourceId, scheduleId, memberId y active). thirdPartyId es TEXT opaco y no es una FK fiscal.
+- DatosFiscales: 28 campos, maestro de terceros/gestoría/configuración; no declara traceId ni schemaVersion. CONFIG_SISTEMA no existe.
+- CajaActual: 39 campos; operationDate DATE, openingAmount NUMBER, sequenceCounters OBJECT, cashRegisterStatus TEXT, isOpen BOOLEAN, id TEXT y currentSequence NUMBER. El singleton tiene cashRegisterStatus=SIMULACION e isOpen=true; el backend gobierna por cashRegisterStatus. Bizum presencial se agrega en otherAmount y el detalle permanece en MovimientosCaja.
+- ComplementosCatalogo: _id es la identidad CMS; addonId es espejo físico temporal. addOnId es contrato de transporte Bookings.
+- ControlOperativo: 42 campos, sin registros actuales; traceId es fencing token y ownerToken/retryAfter/nextRetryAt no existen.
 
-### Registros sintéticos eliminados
+**Código:** rama fix/current-site-cms-contract-alignment. Alinea maestros, hooks, validadores, fiscal consumers y proyección CajaActual con el esquema físico. CI, revisión de diff, Wix Editor y E2E sintéticos siguen pendientes.
 
-Se eliminaron únicamente dos filas de `RegistrosHorariosStaff`, tras releerlas y comprobar simultáneamente `meta.synthetic=true`, `meta.doNotImportToProduction=true`, `resourceId=QA_STAFF_ONLY`, `staffName=QA EMPLEADO FICTICIO` y notas que declaran que no acreditan jornada real:
-
-- `1a4341a6-47be-490c-91a6-d04c8728e186` — `QA_LIVECMS_20261023_2000_TIME01_EXIT`.
-- `f325c0c8-35ba-4efc-ac45-a409ab439e61` — `QA_LIVECMS_20261023_2000_TIME01_ENTRY`.
+**Límites de ejecución:** no se han ejecutado mutaciones CMS ni migraciones de registros en esta intervención; tampoco se ha publicado código Wix. La sincronización del código Velo del Editor con Git no está acreditada.
 
 La eliminación se hizo por ID individual con condición de `traceId`; readback posterior: 0 filas restantes. Un barrido read-only de las 13 colecciones NATIVE no detectó otros candidatos con `meta.synthetic`, `doNotImportToProduction`, `runId/traceId` QA o `recordSource=SMOKE_TEST`. No se borró ningún fichaje real, movimiento de caja, asiento contable, cierre Z, paquete de gestoría ni registro de `ControlOperativo`. No se cambiaron permisos CMS ni se activaron writers.
 
@@ -94,7 +91,7 @@ No se ha ejecutado CI completo, Wix Local Editor ni E2E en runtime. No se ha pub
 - No aplicar retención automática por cancelación tardía o inasistencia hasta disponer de condiciones transparentes y revisión jurídica de proporcionalidad.
 - Configurar primero el depósito nativo de Wix Bookings a nivel de servicio. La documentación Wix exige pago online y, si el depósito es inferior al total, habilitar pago presencial; la función no está disponible para todas las cuentas y no se puede combinar con aprobación manual. Los pagos manuales pueden omitir el depósito, por lo que no se habilitará esa alternativa para servicios sujetos a fianza.
 - Para servicios de precio variable, verificar cada variante: si una misma configuración nativa obliga a depositar también por variantes de 100 EUR o menos, separar los servicios/variantes de forma nativa o diseñar una solución específica solo tras probar la limitación. No introducir lógica personalizada por anticipado.
-- Confirmación de la reserva, importe de anticipo, saldo pendiente, pago, devolución y ledger fiscal deben reconciliarse en QA antes de activar.
+- Confirmación de la reserva, importe de anticipo, saldo pendiente, pago, devolución y ledger fiscal deben reconciliarse en el sitio aislado antes de activar.
 - El anticipo de 15 EUR genera devengo de IVA al cobro por el importe percibido (LIVA art. 75.Dos) y obligación de factura por pago anticipado (RD 1619/2012 art. 2.1). No activar hasta que el SIF/Veri*Factu registre correctamente el anticipo y su devolución; issue P0 #209.
 
 
@@ -227,7 +224,7 @@ Los cuatro primeros flujos de exportación recurrente desde Wix requerirían job
 4. **Snapshot de gestoría:** completar hash, límites, concurrencia, idempotencia y ledger de despacho; mantener flag desactivado hasta validar.
 5. **Implementación backend:** un único módulo de exportación, lectura paginada y jobs específicos; no duplicar lógica de dominio.
 6. **Flujos PA:** configurar únicamente los aprobados, con control de duplicados y fallos.
-7. **E2E QA:** datos sintéticos, tenant de prueba, archivos de prueba y acceso de solo lectura.
+7. **E2E en el sitio aislado:** datos sintéticos, tenant de prueba, archivos de prueba y acceso de solo lectura.
 8. **Aprobación operativa:** gestoría valida formatos y Marian valida el circuito.
 9. **Activación:** despliegue autorizado, monitorización y runbook de recuperación.
 
@@ -277,7 +274,7 @@ La decisión es documental y su implementación sigue pendiente. El esquema actu
 
 ### Estado de implantación
 
-No se ha demostrado tenant M365 auditado, flujos Power Automate activos ni E2E Wix → transporte → SharePoint. Los planes PA-01…PA-07 siguen siendo nombres de diseño, no automatizaciones activas. Mantener el orden de gates: auditoría tenant/licencias/DLP/permisos, ADR de transporte, contrato de exportación y minimización, implementación, QA sintético, aceptación de gestoría y despliegue autorizado.
+No se ha demostrado tenant M365 auditado, flujos Power Automate activos ni E2E Wix → transporte → SharePoint. Los planes PA-01…PA-07 siguen siendo nombres de diseño, no automatizaciones activas. Mantener el orden de gates: auditoría tenant/licencias/DLP/permisos, ADR de transporte, contrato de exportación y minimización, implementación, prueba sintética, aceptación de gestoría y despliegue autorizado.
 
 La guía transversal vigente es [ESTADO_ACTUAL_PROYECTO.md](ESTADO_ACTUAL_PROYECTO.md); el estado detallado se mantiene en [docs/PROJECT-STATUS.md](docs/PROJECT-STATUS.md).
 
@@ -294,7 +291,7 @@ Este addendum actualiza la relación entre Capa 1 y Capa 3. El diseño de flujos
 - **Capa 3:** SharePoint es exclusivamente repositorio documental de evidencia. No gobierna ni modifica Capa 1.
 - **Estado de implementación:** SharePoint Online / Power Automate no están acreditados como flujo live. No se ha verificado una cadena end-to-end de export desde Wix, recepción, depósito documental, permisos, retención, idempotencia y evidencia de entrega.
 - No habilitar cron/export, Resend, destinatarios de gestoría ni automatizaciones de transferencia por asumir que el diseño del dossier está implementado.
-- `ACCOUNTANT_SEND_ENABLED=false`; no enviar documentos, datos fiscales o laborales a gestoría durante QA.
+- `ACCOUNTANT_SEND_ENABLED=false`; no enviar documentos, datos fiscales o laborales a gestoría durante las pruebas en el sitio aislado.
 - Los writers fiscales, contables y laborales permanecen deshabilitados. No generar registros reales ni alterar ledgers append-only.
 
 ## Estado de Capa 1 relevante para los exports
@@ -303,18 +300,17 @@ Lectura CMS live 2026-11-13:
 - Producción: 44 colecciones (15 NATIVE, 29 WIX_APP).
 - CitasF2: 1 elemento, revisión 42; su proyección mantiene `CONFIRMED / NOT_PAID`. La última lectura nativa Bookings Reader V2 documentada para el mismo bookingId devolvió `CANCELED / NOT_PAID`; divergencia P1 sin reconciliar.
 - HistoricoCierresZ: 0; MovimientosCaja: 0; LibroAsientosContablesDetalle: 0; PaquetesGestoria: 0; no hay base de datos live que demuestre paquetes o exports fiscales/contables operativos.
-- RegistrosHorariosStaff: 2 elementos sintéticos QA sin HMAC; writer deshabilitado.
+- RegistrosHorariosStaff: 2 elementos sintéticos de prueba sin HMAC; writer deshabilitado.
 - MovimientosInventario e InventarioStockVenta son históricos/legacy; no deben alimentar nuevos exports de inventario sin decisión y contrato explícitos.
 
-## Sitio QA separado
+## Sitio actual
 
-Existe un sitio Wix independiente en estado Draft (Site ID `50b39f33-e753-4331-ab35-b2ed43dc97f7`). Su CMS devuelve 43 colecciones; faltan cinco colecciones Stores/* frente a producción y hay cuatro colecciones WixForms/* adicionales. No se certifica paridad ni aislamiento externo. Antes de probar exports o integraciones en QA, auditar automatizaciones, email/SMS/WhatsApp, pagos, webhooks, destinatarios, permisos y conexiones M365.
-
+El único sitio objeto de trabajo es 50b39f33-e753-4331-ab35-b2ed43dc97f7. Es un banco de pruebas aislado y no tiene actividad real. No se mantiene un sitio paralelo ni se comparan inventarios entre sitios. Las pruebas de integraciones y efectos externos deben permanecer sintéticas y bajo autorización expresa.
 ## Checklist de cierre Capa 3
 
 - [ ] Definir contrato de export con campos mínimos, minimización de datos, periodo, formato, hash, traceId e idempotency key.
 - [ ] Verificar lectura autorizada desde Wix CMS y excluir colecciones Wix App no necesarias y datos personales no pertinentes.
-- [ ] Implementar y probar primero en entorno QA aislado; no ejecutar envíos reales.
+- [ ] Implementar y probar primero en entorno sitio aislado; no ejecutar envíos reales.
 - [ ] Probar fallos/reintentos, duplicados, archivos parciales, integridad de contenido, permisos y retención en SharePoint.
 - [ ] Demostrar unidireccionalidad Capa 1 → Capa 3 y ausencia de escrituras de retorno.
 - [ ] Obtener aprobación del responsable y gestoría antes de activar destinatarios o automatizaciones.
@@ -331,7 +327,7 @@ La rama de alineación añade una lectura de sesión desde `MovimientosCaja` y p
 La última operación y los IDs fuente se reconstruyen para la lectura; todavía no existe persistencia de un snapshot/referencia `lastMovementId` en `CajaActual`. La apertura de sesión, el saldo inicial reconciliado, el contrato de conceptos y los pagos mixtos siguen pendientes. Capa 3 no calcula ni modifica acumulados y solo podrá consumir una exportación aprobada. Escritores y despliegue permanecen bloqueados.
 ---
 
-## Addendum de autoridad y fase QA — 2026-11-14
+## Addendum de autoridad y pruebas en sitio aislado — 2026-11-14
 
 ### Jerarquía de autoridad y SSOT
 
@@ -343,11 +339,11 @@ La última operación y los IDs fuente se reconstruyen para la lectura; todavía
 
 ### Política temporal de desarrollo y pruebas
 
-**Vigencia:** fase actual de desarrollo, depuración y QA, hasta que el usuario ordene expresamente habilitar las protecciones para el despliegue.
+**Vigencia:** fase actual de desarrollo, depuración y pruebas, hasta que el usuario ordene expresamente habilitar las protecciones para el despliegue.
 
 - Queda **en pausa la política append-only** durante esta fase. Ninguna colección o registro se considerará intocable únicamente por estar etiquetado como ledger, histórico, fiscal, contable, laboral, documental o append-only.
-- Queda **en pausa toda prohibición genérica de edición o eliminación de registros**, tanto individual como masiva, cuando la única causa del bloqueo sea la inmutabilidad/append-only o una restricción temporal de QA. La edición y eliminación forman parte de las operaciones permitidas durante las pruebas.
-- No se exigirán registros rectificativos como única vía de corrección durante esta fase de QA. Esa regla se reconsiderará cuando el usuario habilite expresamente las protecciones previas al despliegue.
+- Queda **en pausa toda prohibición genérica de edición o eliminación de registros**, tanto individual como masiva, cuando la única causa del bloqueo sea la inmutabilidad/append-only o una restricción temporal de mutabilidad del sitio aislado. La edición y eliminación forman parte de las operaciones permitidas durante las pruebas.
+- No se exigirán registros rectificativos como única vía de corrección durante esta fase de pruebas. Esa regla se reconsiderará cuando el usuario habilite expresamente las protecciones previas al despliegue.
 - Se mantienen las validaciones de esquema y tipos, la autenticación, autorización y permisos de acceso, la protección de secretos, la separación de capas, los controles de seguridad no relacionados con la inmutabilidad y la trazabilidad técnica de las pruebas. Esta pausa no autoriza accesos anónimos ni saltarse controles de identidad.
 - No se habilitan por esta decisión writers fiscales, contables, laborales, pagos, devoluciones, comunicaciones ni automatizaciones externas que tengan gates funcionales independientes. Esos gates solo se modificarán por instrucción expresa o por una decisión técnica aprobada por el usuario.
 - La pausa es temporal y **no se revierte automáticamente**. Solo el usuario puede ordenar la restauración y habilitación de las protecciones para despliegue. Antes de una publicación productiva, el estado de las protecciones debe revisarse con el usuario y quedar expresamente autorizado.

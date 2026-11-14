@@ -19,6 +19,7 @@ import {
     RECORD_TYPE_HORARIOS,
     RECORD_TYPE,
     THIRD_PARTY_TYPE,
+    CASH_REGISTER_STATUS,
     isValidGuid,
     normalizeBookingType,
     isDualBookingType,
@@ -101,12 +102,12 @@ export function assertCitasF2(item) {
 // =============================================================================
 
 /**
- * Validacion fiscal obligatoria. NIF checksum por Ley 11/2021.
- * THIRD_PARTY_TYPE es el enum fiscal normativo vigente.
+ * CajaActual mirrors the current physical CMS schema. The sequenceCounters
+ * field is OBJECT; accepting a JSON string would silently corrupt projections.
  */
-export function assertMapaStaffRecord(item) {
+export function assertCajaActualRecord(item) {
     if (!item || typeof item !== "object" || Array.isArray(item)) {
-        throw new Error("SCHEMA_VIOLATION: MapaStaff item must be an object");
+        throw new Error("SCHEMA_VIOLATION: CajaActual item must be an object");
     }
     for (const field of ["staffMemberId", "resourceId", "scheduleId"]) {
         if (!isValidGuid(item[field])) {
@@ -149,8 +150,16 @@ export function assertDatosFiscalesRecord(item) {
         if (item.legalName != null && item.legalName !== "" && !String(item.legalName).trim()) {
             throw new Error("SCHEMA_VIOLATION: DatosFiscales.legalName must be non-empty when supplied");
         }
-        if (item.thirdPartyType != null && item.thirdPartyType !== "") {
-            throw new Error("SCHEMA_VIOLATION: CONFIG_SISTEMA.thirdPartyType must be null");
+    }
+
+    if (item.thirdPartyType != null && item.thirdPartyType !== "") {
+        assertValidEnum(String(item.thirdPartyType).toUpperCase(), THIRD_PARTY_TYPE, "thirdPartyType");
+    }
+
+    const recordType = item.recordType;
+    if (!partial && recordType === RECORD_TYPE.TERCERO) {
+        if (!String(item.taxId ?? "").trim() || !String(item.legalName ?? "").trim() || !item.thirdPartyType) {
+            throw new Error("SCHEMA_VIOLATION: DatosFiscales TERCERO requires taxId, legalName and thirdPartyType");
         }
     } else if (item.recordType === RECORD_TYPE.TERCERO) {
         if (!item.taxId || !isValidNifOrEuVat(item.taxId)) {
