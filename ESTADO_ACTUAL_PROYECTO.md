@@ -8,6 +8,8 @@
 
 ## Estado verificado
 
+- Repositorio `main`: PR #361–#364 integradas; último merge `55c53e596455995767bede8fba87f6900ba379ac`.
+- CI offline, contratos SDK, ESLint y secret scanning de las cuatro intervenciones: PASS.
 - CMS live: 23 colecciones, 15 NATIVE y 8 WIX_APP.
 - Colecciones propias: 524 definiciones de campo; 140 registros en el corte leído.
 - Los registros existentes deben tratarse como sintéticos/de prueba; no son evidencia de operaciones reales.
