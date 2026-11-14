@@ -375,3 +375,29 @@ La propuesta anterior agrupaba STAFF, TERCERO y GESTORIA en MapaStaff. Queda des
 **Alcance:** este cambio afecta al código versionado de la rama de trabajo y a sus pruebas. No modifica ni publica el runtime Wix. El contexto Wix de producción continúa indicando Published; el Site ID QA 50b39f33-e753-4331-ab35-b2ed43dc97f7 no se resuelve en la conexión actual. Por tanto, Wix Runtime/E2E sigue bloqueado y no se realizan mutaciones Wix.
 
 **Verificación pendiente:** ejecutar CI completo sobre el nuevo SHA; revisar todos los consumidores del flag; validar los hooks en Wix Local Editor cuando QA sea accesible. Esta decisión supersede la autorización TEC-037 en cuanto a la habilitación técnica global: TEC-037 se conserva como antecedente histórico, no como permiso operativo actual.
+
+
+---
+
+## DECISIÓN QA-2026-11-14-B — modo desarrollo global y datos exclusivamente sintéticos
+
+**Autoridad:** instrucción expresa del propietario del proyecto, vigente hasta nueva orden. Esta decisión supersede las reglas anteriores únicamente en los puntos de QA que contradigan expresamente su contenido; no autoriza operaciones reales ni publicación.
+
+**Regla operativa vigente:**
+1. Modo desarrollo global hasta nueva orden.
+2. Todos los registros creados o utilizados en QA deben ser sintéticos; no se importan, copian ni reutilizan datos reales.
+3. No se ejecuta actividad real: reservas reales, pedidos, cobros, reembolsos, comunicaciones, movimientos de stock ni operaciones externas.
+4. Los ledgers append-only pueden pausarse durante QA. La implementación inicial será fail-closed: no se habilitan escrituras de ledger por defecto. Pausar escrituras significa no insertar nuevos registros; nunca actualizar, borrar ni sobrescribir registros existentes.
+5. Los bloqueos de preparación fiscal se presentan como warnings no bloqueantes en flujos sintéticos de QA. Esta relajación no alcanza a validaciones estructurales, tipos, autorización, trazabilidad, idempotencia, integridad/hash ni controles de seguridad.
+6. Veri*Factu, generación/envío de registros fiscales y cualquier transmisión a AEAT permanecen desactivados.
+7. Envíos de email/SMS/WhatsApp, notificaciones, pagos/PSP, webhooks con efectos de dominio, SharePoint y Power Automate permanecen desactivados o sustituidos por mocks/sinks offline sin I/O.
+
+**Interpretación técnica obligatoria:** «modo desarrollo global» es una política de comportamiento del sistema, no una autorización para inferir el entorno por nombre de sitio, dominio, frontend o variable controlable por el cliente. La aplicación debe fallar cerrada si no puede demostrar que la ejecución es sintética y no puede alcanzar servicios reales.
+
+**Precedencia y límites:** la pausa de ledger es una excepción operativa temporal de QA respecto a la obligación de producir nuevos asientos, no una excepción a la inmutabilidad de los registros ya persistidos. Los warnings fiscales describen carencias de preparación fiscal; no convierten errores de esquema, integridad, conciliación, seguridad o autorización en resultados aceptables. No se emitirán documentos fiscales ni se transmitirán datos fiscales.
+
+**Estado de implementación al registrar esta decisión:** DOCUMENTAL / PENDIENTE DE IMPLEMENTACIÓN. La revisión de `main` confirma que `FISCAL_RUNTIME_POLICY` mantiene `LEDGER_WRITES_ENABLED=false`, `ACCOUNTING_LEDGER_WRITES_ENABLED=false` y `ALLOW_SIMULATION_RECORDS=false`; `dataAccessPolicy.js` conserva protecciones append-only; `cajas.web.js` consulta el gate de ledger, pero existen writers de Bookings/checkout y handlers de eventos Wix con rutas de efectos independientes. Por tanto, cambiar solo `internalConfig.js` no constituye un kill switch global verificable.
+
+**Gate previo a cualquier despliegue:** inventariar y cubrir con una política central server-side todos los writers CMS, Bookings, eCommerce, eventos, crons, email, fiscalidad e integraciones; pruebas negativas que demuestren que cada ruta rechaza o deriva a mocks sin I/O; ejecución CI completa; acceso verificable al Site ID QA designado `50b39f33-e753-4331-ab35-b2ed43dc97f7`; comprobación de aislamiento de PSP y servicios externos. No usar producción ni otro sitio como sustituto.
+
+**No autorizado por esta decisión:** desplegar, publicar, activar una pasarela, enviar comunicaciones, emitir/transmitir información fiscal, cambiar permisos/secrets o escribir en Wix CMS. Hasta superar el gate, la ejecución permitida continúa siendo offline/mock.
