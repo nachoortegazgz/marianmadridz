@@ -11,13 +11,15 @@ Este documento describe un único sitio objeto de trabajo. No se mantiene una ma
 ## 1. Estado actual verificado
 
 ### Git y Wix
-- Rama de referencia: `main`, con PR #361–#364 integradas; último merge `55c53e596455995767bede8fba87f6900ba379ac`.
-- CI offline, contratos SDK, ESLint y secret scanning de las cuatro intervenciones: PASS (runs #1122, #1124, #1126, #1128; secret scanning #546, #548, #550, #552).
-- GitHub es la referencia del código versionado, no prueba del código ejecutado por Wix.
+- Main actual: 1a721aeca86e61b02d184ac8ec94f20871073272.
+- Rama de trabajo: fix/current-site-cms-contract-alignment, HEAD a8a44cb8e75fd3c9d57fe3279a02ae47411b50a6.
+- PR #370 está abierto, pero GitHub informa mergeable=false / mergeable_state=dirty. La rama está 109 commits por delante y 57 por detrás de main; requiere reconciliación/rebase antes de cualquier merge.
+- No hay checks asociados al HEAD a8a44. Los últimos checks exitosos del PR corresponden a 68a2f3276cef07b7470c25247e79dc570b140873 y no validan los cambios posteriores.
 - La correspondencia entre los archivos Velo del Editor Classic y Git no está verificada.
 - No existe evidencia de release Wix que vincule runtime con un SHA de Git.
 - No se ha autorizado publicación ni conexión a operaciones reales.
-- Ninguna de las PR #361–#364 ha desplegado o publicado cambios en Wix.
+- No se ha publicado código Wix en esta intervención.
+
 
 ### CMS
 - 23 colecciones: 15 NATIVE y 8 WIX_APP.
