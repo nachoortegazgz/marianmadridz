@@ -46,6 +46,15 @@ test("insert policy allows only declared collections and canonical ControlOperat
         recordType: RECORD_TYPE.TERCERO,
         taxId: "X0000000X",
     }));
+    assert.doesNotThrow(() => assertInsertAllowed(C.MAPA_STAFF, {
+        recordType: RECORD_TYPE.GESTORIA,
+        name: "NachoGest",
+        email: "gestoria@example.test",
+    }));
+    assert.doesNotThrow(() => assertInsertAllowed(C.MAPA_STAFF, {
+        recordType: RECORD_TYPE.STAFF,
+        staffMemberId: "synthetic-staff-member",
+    }));
     assert.throws(() => assertInsertAllowed("UnknownCollection", {}), {
         code: "CMS_INSERT_COLLECTION_DENIED",
     });
