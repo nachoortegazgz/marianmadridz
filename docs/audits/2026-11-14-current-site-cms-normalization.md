@@ -165,7 +165,7 @@ La rama de alineación separa ambas responsabilidades:
 - Verificado mediante lectura API: 23 colecciones del sitio actual (15 NATIVE, 8 WIX_APP), 524 campos NATIVE y 140 registros propios en el corte.
 - Verificado mediante lectura de registros: CajaActual.sequenceCounters es objeto JSON; ticketSequence no está en el esquema; ControlOperativo.ownerToken no está en el esquema; addonId coincide con _id en 36/36; resourceId coincide con _id en 3/3.
 - Verificado: PR #361–#366 integradas en main; HEAD de main 13b9ae095214e0c601f255fa75d629680c539933.
-- Esta rama contiene cambios de código y tests, pero CI aún no se ha ejecutado para ella.
-- Pendiente: CI completo, revisión del diff, Wix Local Editor y pruebas E2E.
+- PR #367: CI offline PASS, run #1137: Layer 1 23 suites/296 tests, Layer 2 18 suites/244 tests, regresión completa 69 suites/631 tests, 0 fallos. Wix SDK contracts, eCommerce Order Transactions SDK contract, Bookings Reader V2 SDK contract y ESLint: PASS. Secret scanning run #561: PASS.
+- Pendiente: merge de PR #367, validación en Wix Local Editor y pruebas E2E.
 - No se ha modificado el CMS ni se ha publicado/desplegado código Wix.
 
