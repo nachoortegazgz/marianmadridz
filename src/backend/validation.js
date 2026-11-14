@@ -15,9 +15,8 @@ CORRECCIONES v12.0-MINIMAL:
     CODIGO_IMPUESTO, CHANNEL_TYPE, MOVEMENT_TYPE, PAYMENT_METHOD,
     CATALOG_STATES, CASH_REGISTER_STATUS).
   VAL-04 (P2): Logger import eliminado. Validation es pura.
-  VAL-05 (P0): assertMapaStaff ELIMINADO en R2 (DUP-03: MapaStaff no existe
-    en CMS KEY FIELDS; staff.js v9 resuelve identidad via Bookings Staff API
-    y ya no consume este hook).
+  VAL-05 (P0): assertDatosFiscales valida ahora las variantes no-staff
+    del maestro mixto MapaStaff; la identidad staff sigue siendo Bookings API.
 MANTENIDO (consumidores activos verificados):
   - assertValidEnum: usado por todos los asserts y callers externos
   - assertCitasF2: consumido por data.js CitasF2_beforeInsert/beforeUpdate
@@ -129,52 +128,67 @@ export function assertCitasF2(item) {
  * THIRD_PARTY_TYPE es el enum fiscal normativo vigente.
  */
 export function assertDatosFiscales(item) {
-    if (!item || typeof item !== "object") {
-        throw new Error("SCHEMA_VIOLATION: DatosFiscales item must be an object");
+    if (!item || typeof item !== "object" || Array.isArray(item)) {
+        throw new Error("SCHEMA_VIOLATION: MapaStaff item must be an object");
     }
 
     assertValidEnum(item.recordType, RECORD_TYPE, "recordType");
 
+    if (item.recordType === RECORD_TYPE.STAFF) {
+        if (!isValidGuid(item.staffMemberId) || !isValidGuid(item.resourceId)) {
+            throw new Error("SCHEMA_VIOLATION: MapaStaff STAFF requires staffMemberId and resourceId GUIDs");
+        }
+        return true;
+    }
+
     if (Number(item.schemaVersion) !== 1) {
-        throw new Error("SCHEMA_VIOLATION: DatosFiscales.schemaVersion must be 1");
+        throw new Error("SCHEMA_VIOLATION: MapaStaff.schemaVersion must be 1");
     }
     if (!item.traceId || !String(item.traceId).trim()) {
-        throw new Error("SCHEMA_VIOLATION: DatosFiscales.traceId is required");
+        throw new Error("SCHEMA_VIOLATION: MapaStaff.traceId is required");
+    }
+
+    if (item.recordType === RECORD_TYPE.GESTORIA) {
+        const email = String(item.email || item.gestorEmail || "").trim();
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            throw new Error("SCHEMA_VIOLATION: MapaStaff GESTORIA requires a valid contact email");
+        }
+        if (!String(item.name || item.legalName || "").trim()) {
+            throw new Error("SCHEMA_VIOLATION: MapaStaff GESTORIA requires name or legalName");
+        }
+        if ("memberId" in item || "staffMemberId" in item || "resourceId" in item ||
+            "rolWebsite" in item || "rolBookings" in item) {
+            throw new Error("SCHEMA_VIOLATION: GESTORIA cannot carry site identity or staff roles");
+        }
+        return true;
     }
 
     if (item.recordType === RECORD_TYPE.CONFIG_SISTEMA) {
         if (item.taxId && !isValidNifOrEuVat(item.taxId)) {
-            throw new Error("SCHEMA_VIOLATION: DatosFiscales.taxId must be valid NIF/NIE/CIF/VAT-UE when supplied");
+            throw new Error("SCHEMA_VIOLATION: MapaStaff.taxId must be valid NIF/NIE/CIF/VAT-UE when supplied");
         }
         if (item.legalName != null && item.legalName !== "" &&
             !String(item.legalName).trim()) {
-            throw new Error("SCHEMA_VIOLATION: DatosFiscales.legalName must be non-empty when supplied");
+            throw new Error("SCHEMA_VIOLATION: MapaStaff.legalName must be non-empty when supplied");
         }
         if (item.thirdPartyType != null && item.thirdPartyType !== "") {
             throw new Error("SCHEMA_VIOLATION: CONFIG_SISTEMA.thirdPartyType must be null");
         }
     } else {
         if (!item.taxId || !String(item.taxId).trim()) {
-            throw new Error("SCHEMA_VIOLATION: DatosFiscales requires taxId");
+            throw new Error("SCHEMA_VIOLATION: MapaStaff TERCERO requires taxId");
         }
         if (!isValidNifOrEuVat(item.taxId)) {
-            throw new Error("SCHEMA_VIOLATION: DatosFiscales.taxId must be valid NIF/NIE/CIF/VAT-UE");
+            throw new Error("SCHEMA_VIOLATION: MapaStaff.taxId must be valid NIF/NIE/CIF/VAT-UE");
         }
         if (!item.legalName || !String(item.legalName).trim()) {
-            throw new Error("SCHEMA_VIOLATION: DatosFiscales requires legalName");
+            throw new Error("SCHEMA_VIOLATION: MapaStaff TERCERO requires legalName");
         }
         assertValidEnum(item.thirdPartyType, THIRD_PARTY_TYPE, "thirdPartyType");
     }
 
-    // DatosFiscales has no bookingsResourceId/memberId columns. Staff identity
-    // is resolved through Bookings Staff API, not persisted in this fiscal master.
-    if ("active" in item) {
-        throw new Error("SCHEMA_VIOLATION: DatosFiscales.active is forbidden");
-    }
-
     return true;
 }
-
 // =============================================================================
 // CONTROL OPERATIVO
 // =============================================================================
