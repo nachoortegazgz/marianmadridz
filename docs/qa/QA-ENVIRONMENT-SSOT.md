@@ -19,3 +19,13 @@
 
 ---
 
+
+## Desalineación técnica pendiente — fixtures offline
+
+La inspección estática de la rama detecta que los fixtures de código todavía conservan el identificador anterior en:
+
+- `src/backend/tests/fixtures/qaSyntheticParties.mjs` — `QA_TEST_SITE_ID`.
+- `src/backend/tests/qa.simulation-manifest.test.mjs` — aserción de `QA_TEST_SITE_ID`.
+- `src/backend/tests/fixtures/qaTpvSimulation.mock.mjs` — validación del `testSiteId`.
+
+Estos puntos siguen usando una identidad anterior y no están alineados con el sitio QA único `188bed94-177c-4bc9-a9f0-35080d874f3e`. **No se deben ejecutar ni considerar alineados con el sitio actual los escenarios que dependan de esa identidad hasta corregir el contrato y sus pruebas en una intervención de código independiente.** Esta PR es documental y no modifica runtime ni fixtures.
