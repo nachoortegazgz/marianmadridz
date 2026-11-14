@@ -4,7 +4,7 @@
 
 **Autoridad:** el usuario/propietario es la SSOT de negocio, requisitos, prioridades, criterios de aceptación y autorizaciones. Las instrucciones expresas posteriores del usuario prevalecen sobre decisiones y restricciones documentales anteriores. La documentación oficial de Wix y de las integraciones gobierna únicamente los contratos y límites técnicos de la plataforma.
 
-**Mutabilidad CMS durante QA:** append-only e inmutabilidad están temporalmente en pausa. Se habilitan update y remove individuales y masivos para todas las colecciones CMS propias del proyecto, incluidas las históricamente tratadas como ledgers. Las operaciones masivas deben identificar explícitamente los registros por ID. No se habilitan escrituras en colecciones propiedad de Wix Apps ni se eluden autenticación, autorización/RBAC, permisos, validaciones de esquema, integridad técnica, secretos o límites de plataforma. La inserción mantiene su allowlist; los writers fiscales/contables/laborales, pagos, reembolsos, comunicaciones y efectos externos conservan sus gates funcionales independientes.
+**Política de mutabilidad vigente (TEC-038):** los bypasses globales de update/remove y la ventana temporal append-only han sido retirados del código. Los ledgers de caja, contabilidad, fiscalidad, jornada, cierres y eventos webhook permanecen inmutables también en QA. Bulk update está deshabilitado. Bulk remove solo admite purgas de tipos efímeros/terminales en ControlOperativo, con condiciones exactas de tipo, estado y fecha; quedan excluidos WEBHOOK_EVENT, DEDUPE_KEY, LEDGER_IDEMPOTENCY y WEBHOOK_CLAIM. CajaActual solo cambia mediante el flujo backend autorizado y con movimiento fuente; no se borra.
 
 **Restauración:** esta política no se revierte automáticamente. Solo el usuario puede ordenar la restauración de append-only y de las restricciones de mutación para preparar el despliegue. No publicar a producción basándose únicamente en esta excepción de QA.
 
@@ -338,7 +338,7 @@ El usuario declara que el código está integrado y publicado en Wix. Esta decla
 
 **Decisión del usuario:** el usuario/propietario del proyecto es la SSOT de negocio y gobierno. Sus instrucciones expresas prevalecen sobre documentación histórica, decisiones anteriores y supuestos. La documentación del repositorio es derivada y debe actualizarse para reflejar las instrucciones vigentes.
 
-**Fase actual:** desarrollo, depuración y QA. Se pausa temporalmente append-only y cualquier prohibición genérica de editar o eliminar registros, individual o masiva, cuando el bloqueo derive exclusivamente de la inmutabilidad del registro o de una política append-only. La pausa permanece activa hasta que el usuario ordene expresamente restaurar/habilitar las protecciones para despliegue; no se restaura automáticamente.
+**HISTÓRICO — supersedido por TEC-038:** la autorización temporal descrita en esta decisión dejó de estar vigente. Los bypasses globales fueron retirados; no se permite reabrir append-only mediante flags. Las purgas efímeras se rigen por TEC-038.
 
 Se mantienen controles de autenticación, autorización, permisos, validación de datos, secretos y seguridad que no dependan de la inmutabilidad. Los gates funcionales independientes de writers fiscales/contables/laborales, pagos, devoluciones y comunicaciones no se consideran modificados por esta decisión.
 
