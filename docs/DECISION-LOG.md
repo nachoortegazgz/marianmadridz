@@ -353,3 +353,18 @@ Se mantienen controles de autenticación, autorización, permisos, validación d
 **Implementación integrada en main:** QA_RECORD_MUTATIONS_ENABLED=true; update/remove individual y bulk update/remove para las colecciones CMS propias incluidas en QA_MUTABLE_COLLECTIONS, incluida DatosFiscales legacy. Las operaciones masivas requieren IDs explícitos y límite de 1.000 elementos. Se permite editar/eliminar registros antes protegidos como append-only, singleton y proyecciones con hooks de bloqueo. Se mantienen validaciones, autenticación/autorización, permisos CMS, allowlist de inserciones y gates de writers/efectos externos. Las colecciones WIX_APP no se incluyen. items.bulkUpdate() es Developer Preview de Wix y queda restringido a esta fase QA.
 
 **Estado:** PR #346 fusionado en main mediante b68e4e048ce5fc1c022fc6ffc2643d5983972107. CI PASS: Layer 1 23 suites/296 pruebas; Layer 2 18 suites/246 pruebas; regresión completa 68 suites/627 pruebas; contratos SDK, ESLint y Gitleaks PASS. La ampliación aún no se ha publicado en Wix. La excepción permanece temporal y no se restaura hasta instrucción expresa del usuario.
+
+
+---
+
+## DECISIÓN QA-2026-11-14 — uso del sitio 50b como QA y ejecución sintética
+
+**Decisión expresa del propietario:** designar `50b39f33-e753-4331-ab35-b2ed43dc97f7` como sitio QA del proyecto. Usar exclusivamente datos sintéticos, simulación offline de pasarela de pagos, pruebas automatizadas, registro de evidencias, corrección e iteración. El sitio productivo `188bed94-177c-4bc9-a9f0-35080d874f3e` no se utilizará para QA ni como fallback.
+
+**Restricciones de ejecución:** no usar clientes/gestoría reales; no enviar emails/SMS/WhatsApp; no realizar cobros, reembolsos, facturas, tickets a clientes, movimientos de stock ni llamadas AEAT/Veri*Factu/SharePoint/Power Automate. Los mocks deben ser locales/offline y sin llamadas de red. Los datos sintéticos deben identificarse con `isSynthetic`, `testRunId`, `sourceEnvironment=TEST` y `realPayment=false` cuando el contrato de la entidad admita esos campos; no añadir campos CMS sin revisar esquema y consumidores.
+
+**Estado de acceso:** la conexión Wix disponible en la sesión no resolvió el Site ID QA; solo identificó producción. Esta discrepancia se registra como `BLOCKED_ENVIRONMENT` para pruebas runtime. No invalida ni detiene la ejecución de pruebas offline/mock y CI.
+
+**Contrato de pagos mixtos:** los documentos de implementación existentes indican que el campo `paymentMethod` es singular y que el modelo de pagos mixtos no está definido. El caso mixto permanece `BLOCKED_CONTRACT` hasta definir y probar el esquema y la reconciliación. No inferir un contrato a partir de la suma de importes.
+
+**Implementación de esta decisión:** documental en esta rama; no se han modificado código, CMS, configuración Wix, automatizaciones, permisos, secretos ni publicación. Ver [PLAN_ACCION_QA.md](../PLAN_ACCION_QA.md).
