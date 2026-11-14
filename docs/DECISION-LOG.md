@@ -269,61 +269,14 @@ Para los movimientos presenciales manuales nuevos, backend asigna `recordSource=
 **Advertencia de cumplimiento:** esta excepción de desarrollo no modifica ni suspende obligaciones legales de integridad, trazabilidad y conservación de registros fiscales, contables o laborales. No usarla para alterar o eliminar registros reales sujetos a conservación.
 
 
-### TEC-034 [HISTÓRICA] — alineación de maestros DatosFiscales y MapaStaff (2026-11-14)
+### TEC-034 [HISTÓRICA / SUPERADA] — snapshot previo de esquema CMS (2026-11-14)
 
-**CMS live, verificado por Wix Data API:**
-- `DatosFiscales` revisión 19: añadidos `commercialName`, `postalCode`, `province`, `schemaVersion` y `traceId`; `fechaInicioVerifactu` cambia a tipo `DATE` tras verificar ausencia de valores previos.
-- `MapaStaff` revisión 24: añadido `traceId`; los tres registros mantienen sus IDs y roles, se normaliza `staffName` y se vacía `thirdPartyId` donde no existía vínculo fiscal GUID explícito.
-- La fila existente de DatosFiscales sigue siendo un placeholder sintético TERCERO/PROVEEDOR. No se transforma en emisor. No se crea CONFIG_SISTEMA hasta disponer de taxId, legalName y taxRegime oficiales y sincronizar/publicar el guard de backend que evita inferir identidad legal.
-- No se borraron campos heredados ni colecciones. MapaStaff conserva temporalmente staffMemberId/scheduleId/active porque events.js los consume en el fallback de proyección; active queda sujeto a ADR. La relación CMS ServiciosCatalogo_staffMembers permanece.
-- Las tres filas MapaStaff son únicas por memberId y resourceId en el snapshot, pero no existe aún garantía de unicidad frente a escrituras concurrentes; queda pendiente un mecanismo de escritura validado.
-- Los campos heredados de DatosFiscales que siguen consumidos por eventLog (tipoUsoPosibleMultiOT e indicadorMultiplesOT) no se eliminan en esta intervención.
+Este registro conserva una lectura anterior del CMS. Sus revisiones, campos y tipos no describen el esquema vigente. La lectura actual del único sitio objeto de trabajo está en docs/audits/2026-11-14-current-site-cms-normalization.md y DICCIONARIO_DATOS_CMS.md. En particular, DatosFiscales no declara schemaVersion ni traceId y fechaInicioVerifactu es TEXT; MapaStaff tiene 18 campos y no contiene campos fiscales.
 
-**Código en main:** hooks y validator permiten CONFIG_SISTEMA incompleto en los campos fiscales no verificados, fijan el ID singleton CONFIG_SISTEMA_FISCAL y exigen schemaVersion/traceId. eventLog persiste schemaVersion/traceId en nuevos terceros y deja de inferir legalName desde el nombre comercial. Sin sincronización/publicación Wix en esta intervención.
+### TEC-035 [HISTÓRICA / SUPERADA] — propuesta anterior de maestro mixto (2026-11-14)
 
-**Límites:** los datos fiscales no verificados permanecen vacíos; Veri*Factu sigue desactivado; escritores fiscales/contables siguen fail-closed. Las colecciones numeradas 12–16 no se borran porque el esquema no aporta sus IDs/nombres y no hay correspondencia inequívoca con el inventario live.
+La propuesta anterior agrupaba STAFF, TERCERO y GESTORIA en MapaStaff. Queda descartada por el esquema físico actual: MapaStaff se limita a identidades de personal y DatosFiscales es el maestro fiscal/de terceros. No usar este modelo ni desplegar la rama antigua feat/consolidate-fiscal-master-mapastaff-v2.
 
-### TEC-035 [HISTÓRICA / SUPERADA] — consolidación fiscal en MapaStaff y gestoría (2026-11-14)
-
-**Decisión del propietario:** todos los datos históricos y registros existentes en el sitio son sintéticos de pruebas; el sitio no tiene actividad real. Se autoriza mantener temporalmente abierta la ventana de mutabilidad append-only hasta nueva instrucción expresa del propietario. Esta autorización se limita al sitio aislado declarado; no habilita datos reales ni despliegue productivo.
-
-**CMS live verificado tras la mutación:**
-- `MapaStaff` revisión 36, 42 campos y 5 registros: tres `STAFF`, un `TERCERO` prueba sintética y un `GESTORIA`.
-- El registro `TERCERO` procedente de `DatosFiscales` conserva su ID original. No se creó `CONFIG_SISTEMA`.
-- Nuevo registro `GESTORIA`: razón social/nombre `NachoGest`, dirección `Calle Burgos 25`, teléfono `666724634`, email `nachoortegazgz@gmail.com`. No tiene `memberId`, `staffMemberId`, `resourceId` ni roles.
-- `MapaStaff` queda con lectura `PRIVILEGED` y escritura `CMS_EDITOR`. El backend consulta mediante la capa `@wix/data` elevada. Esto evita exponer públicamente datos de contacto/fiscales.
-- `DatosFiscales` sigue presente con su fila placeholder sintética. No se elimina hasta publicar el backend migrado, verificar runtime y confirmar que no quedan consumidores activos.
-
-**Código en rama** `feat/consolidate-fiscal-master-mapastaff-v2`: constantes canónicas, validación por `recordType`, hooks CMS, upsert de terceros, lectura de configuración fiscal, destinatarios de gestoría y filtro de proyección Bookings actualizados a `MapaStaff`. Los lectores de eventos filtran `recordType=STAFF`. El DTO de destinatarios añade teléfono y dirección; no se encontró un consumidor frontend directo de `listAccountantRecipients`, por lo que no se ha inventado una UI nueva.
-
-**Pendiente:** ejecutar CI completo; revisar diff; completar documentación del esquema live; desplegar backend en Wix de forma controlada; verificar hooks y WebMethods; después retirar `DatosFiscales` y confirmar su ausencia en inventario. No se ha publicado código Wix ni se ha borrado la colección antigua en esta intervención.---
-
-## Addendum de autoridad y fase de pruebas — 2026-11-14
-
-### Jerarquía de autoridad y SSOT
-
-1. **USUARIO / PROPIETARIO DEL PROYECTO — SSOT de negocio y gobierno.** El usuario es la única fuente de verdad para objetivos, requisitos, prioridades, criterios de aceptación, decisiones funcionales y autorizaciones del proyecto. Sus instrucciones expresas prevalecen sobre cualquier regla, restricción, supuesto o estado histórico de esta documentación. Las decisiones relevantes se registran en el Decision Log para trazabilidad; el registro no sustituye ni limita la autoridad del usuario.
-2. **Documentación oficial vigente de Wix y de cada integración — autoridad técnica.** Define contratos, APIs, permisos, límites y comportamiento de plataforma. Se aplica para ejecutar la decisión del usuario de forma técnicamente válida; si una limitación oficial impide cumplirla, se informa y se propone alternativa, sin cambiar unilateralmente el requisito.
-3. **Decisiones expresas del usuario registradas en el repositorio.** Son la memoria documental de las decisiones vigentes. Si un registro antiguo contradice una instrucción posterior, prevalece la instrucción posterior del usuario.
-4. **Dossier Técnico Consolidado, Dossier de Flujos, Directrices, Necesidades Web, diccionario CMS y estado del proyecto.** Son documentación derivada y subordinada a los niveles anteriores. No pueden crear autorizaciones, bloqueos o requisitos nuevos por inferencia.
-5. **Código, configuración Wix, CMS y pruebas.** Acreditan el estado implementado, no la autoridad para redefinir requisitos. Las diferencias entre lo solicitado, documentado e implementado se registran como discrepancias verificables.
-
-### Política temporal de desarrollo y pruebas
-
-**Vigencia:** fase actual de desarrollo, depuración y pruebas, hasta que el usuario ordene expresamente habilitar las protecciones para el despliegue.
-
-- Queda **en pausa la política append-only** durante esta fase. Ninguna colección o registro se considerará intocable únicamente por estar etiquetado como ledger, histórico, fiscal, contable, laboral, documental o append-only.
-- Queda **en pausa toda prohibición genérica de edición o eliminación de registros**, tanto individual como masiva, cuando la única causa del bloqueo sea la inmutabilidad/append-only o una restricción temporal del sitio aislado. La edición y eliminación forman parte de las operaciones permitidas durante las pruebas.
-- No se exigirán registros rectificativos como única vía de corrección durante esta fase de pruebas. Esa regla se reconsiderará cuando el usuario habilite expresamente las protecciones previas al despliegue.
-- Se mantienen las validaciones de esquema y tipos, la autenticación, autorización y permisos de acceso, la protección de secretos, la separación de capas, los controles de seguridad no relacionados con la inmutabilidad y la trazabilidad técnica de las pruebas. Esta pausa no autoriza accesos anónimos ni saltarse controles de identidad.
-- No se habilitan por esta decisión writers fiscales, contables, laborales, pagos, devoluciones, comunicaciones ni automatizaciones externas que tengan gates funcionales independientes. Esos gates solo se modificarán por instrucción expresa o por una decisión técnica aprobada por el usuario.
-- La pausa es temporal y **no se revierte automáticamente**. Solo el usuario puede ordenar la restauración y habilitación de las protecciones para despliegue. Antes de una publicación productiva, el estado de las protecciones debe revisarse con el usuario y quedar expresamente autorizado.
-
-### Estado de implementación y publicación
-
-El usuario declara que el código está integrado y publicado en Wix. Esta declaración se registra como **declaración del propietario**. En la consulta de GitHub de este corte, el PR #344 (feat/consolidate-fiscal-master-mapastaff-v2) figura fusionado el 2026-11-14 mediante el merge commit f3b1311eead05282e47f538afd506fe49e227141, que es el HEAD actual de main. La integración del cambio en Git está verificada. El usuario declara además que el código está publicado en Wix; no se dispone de un identificador de publicación Wix que vincule el runtime con ese SHA concreto.
-
-**Nota de ejecución:** este addendum modifica la autoridad documental y la política de trabajo. No demuestra por sí mismo que todos los hooks, WebMethods, políticas de escritura o permisos CMS del runtime Wix hayan sido modificados para permitir todas las operaciones de edición y eliminación. Esa correspondencia debe verificarse en código y en Wix antes de afirmar que la pausa está aplicada técnicamente de extremo a extremo.
 ### TEC-036 [HISTÓRICA] — autoridad SSOT del usuario y pausa de append-only en pruebas (2026-11-14)
 
 **Decisión del usuario:** el usuario/propietario del proyecto es la SSOT de negocio y gobierno. Sus instrucciones expresas prevalecen sobre documentación histórica, decisiones anteriores y supuestos. La documentación del repositorio es derivada y debe actualizarse para reflejar las instrucciones vigentes.
