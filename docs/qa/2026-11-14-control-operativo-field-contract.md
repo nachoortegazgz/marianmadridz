@@ -71,6 +71,7 @@ El CSV contiene encabezados adicionales, pero no demuestra que esas columnas exi
 ## 5. Archivos modificados
 
 - `src/backend/webhookEventClaims.js`: lease y contador pasan a campos canónicos top-level; fencing por `traceId`; lectura transitoria compatible con filas legacy.
+- `src/backend/README.md`: actualizar el contrato documental de fencing de `ownerToken` a `traceId`.
 - `src/backend/booking/bookingCore.js`: persiste `pairToken`, `slotStart` y `slotEnd` en controles de transacción/bloqueo.
 - `src/backend/events.js` y `src/backend/crons.js`: persisten `eventType` y `processedAt` superiores en `WEBHOOK_EVENT`, incluidos los marcadores de reconciliación de pedidos.
 - `src/backend/internalConfig.js`: política CAS de `WEBHOOK_CLAIM` permite `attempts` y `expiresAt`.
