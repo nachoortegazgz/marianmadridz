@@ -1,3 +1,7 @@
+> **Procedencia de evidencia:** este informe conserva observaciones y snapshots de una revisión anterior. La designación vigente identifica `188bed94-177c-4bc9-a9f0-35080d874f3e` como el único sitio QA, pero no convierte automáticamente los datos CMS, settings o recuentos históricos en evidencia del estado actual de ese sitio. Repetir lecturas de solo lectura en el Site ID vigente antes de cualquier mutación. No existe otro sitio QA ni un QA externo designado.
+
+---
+
 > **Nota de vigencia — 2026-11-14:** este documento conserva el resultado de CI del SHA ad15d311fec06aa3f54afe6c5f1f0f923aef9f45. No valida el HEAD actual de fix/current-site-cms-contract-alignment. PR #370 está dirty y no tiene checks asociados al HEAD actual; rebase y CI pendientes. El sitio objeto de trabajo es el banco de pruebas aislado 50b39f33-e753-4331-ab35-b2ed43dc97f7, sin actividad real.
 
 # Contrato condicional de ControlOperativo — revisión del CSV sintético
