@@ -135,6 +135,24 @@ test('QA-TPV-06 duplicate operation is idempotent and conflicting key reuse is r
   );
 });
 
+test('QA-TPV-08 fractional minor-unit line totals are rejected instead of silently rounded', () => {
+  const simulator = createQaTpvSimulator(config);
+  assert.throws(
+    () => simulator.simulateSale({
+      idempotencyKey: 'qa-sub-cent',
+      totalAmount: 0.01,
+      lineItems: [{
+        quantity: 0.5,
+        pvpUnitario: 0.01,
+        taxBase: 0.01,
+        taxAmount: 0,
+      }],
+      tenders: [{ method: 'EFECTIVO', amount: 0.01 }],
+    }),
+    /QA_TPV_LINE_PRECISION/
+  );
+});
+
 test('QA-TPV-07 decimal quantity and precision are handled in minor currency units', () => {
   const simulator = createQaTpvSimulator(config);
   const result = simulator.simulateSale({
