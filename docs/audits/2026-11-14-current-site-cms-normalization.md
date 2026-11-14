@@ -1,3 +1,6 @@
+
+
+> **Nota de procedencia del inventario CMS:** la designación del sitio como QA no transfiere automáticamente a este sitio los snapshots CMS de inventarios anteriores. Los recuentos, esquemas y ejemplos históricos de este documento se conservan como evidencia documental, pero no se consideran baseline vigente del Site ID `188bed94-177c-4bc9-a9f0-35080d874f3e` hasta repetir una lectura de solo lectura contra ese sitio. No realizar escrituras ni migraciones basándose únicamente en esos snapshots.
 > **SSOT de entorno vigente (2026-11-14):** el único sitio del proyecto es QA: `188bed94-177c-4bc9-a9f0-35080d874f3e` (`https://www.marianmadrid.es/`). El propietario confirma que nunca ha tenido actividad real, que todos los datos son sintéticos, que el cliente de pruebas es Nacho Pitt (`nachoortegazgz@gmail.com`) y que la pasarela está desconectada. No existe otro sitio QA ni un QA externo designado. Las referencias anteriores a otros Site ID o a este sitio como producción quedan supersedidas. El estado Wix Published no altera su clasificación funcional como QA. Véase [SSOT del entorno QA](./QA-ENVIRONMENT-SSOT.md).
 
 ---
