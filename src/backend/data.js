@@ -17,7 +17,7 @@ import {
     OPERATIONAL_COLLECTIONS,
     APPEND_ONLY_MUTATION_WINDOW,
 } from "backend/internalConfig";
-import { assertCitasF2, assertControlOperativo, assertCanonicalControlFields, assertRegistrosHorariosStaff } from "backend/validation";
+import { assertCitasF2, assertControlOperativo, assertCanonicalControlFields, assertRegistrosHorariosStaff, assertDatosFiscales } from "backend/validation";
 import { CONSISTENCY, getItem } from "backend/dataAccess";
 
 import { logger } from "backend/logger";
@@ -388,7 +388,7 @@ function _validateFiscalPayload(item) {
 
     if (eventType !== "CIERRE_Z") {
         if (item.thirdPartyId != null && item.thirdPartyId !== "" && !_isGuid(item.thirdPartyId)) {
-            _schemaError("thirdPartyId debe ser un GUID valido (FK DatosFiscales)");
+            _schemaError("thirdPartyId debe ser un GUID valido (FK MapaStaff)");
         }
         // Contraparte/logistica: VENTA_LINEA/COMPRA_LINEA exigen al menos una
         // de las dos referencias operativas canonicas (producto del catalogo
@@ -796,13 +796,15 @@ function _validateServiciosCatalogoSchema(item = {}) {
 }
 
 // =============================================================================
-// BLOQUE 11 - DATOS FISCALES
+// BLOQUE 11 - MAESTRO MapaStaff
 // =============================================================================
 
-export function DatosFiscales_beforeInsert(item) {
+export function MapaStaff_beforeInsert(item) {
     if (!item || typeof item !== "object") return item;
 
     const recordTypeEarly = _safeTrim(item.recordType).toUpperCase();
+    if (recordTypeEarly === "STAFF") return assertDatosFiscales(item) && item;
+    if (recordTypeEarly === "GESTORIA") return assertDatosFiscales(item) && item;
     if (recordTypeEarly === "CONFIG_SISTEMA") return _applyConfigSistemaRules(item);
 
     // Normalize input aliases and remove them before persisting physical CMS keys.
@@ -816,18 +818,20 @@ export function DatosFiscales_beforeInsert(item) {
     const taxId = _safeTrim(item.taxId);
     if (!taxId || !_isValidNifOrEuVat(taxId)) _schemaError("taxId obligatorio y valido (espanol o VAT UE)");
     if (!_safeTrim(item.legalName)) _schemaError("legalName obligatoria");
-    _assertDatosFiscalesVersionAndTrace(item);
+    _assertMapaStaffVersionAndTrace(item);
 
     const type = _safeTrim(item.thirdPartyType).toUpperCase();
     if (!type || !VALID_THIRD_PARTY_TYPES.has(type)) {
         _schemaError("thirdPartyType invalido (CLIENTE, PROVEEDOR, STAFF, AAPP, MIXTO, EMISOR)");
     }
+    assertDatosFiscales(item);
     return item;
 }
 
-export function DatosFiscales_beforeUpdate(item) {
+export function MapaStaff_beforeUpdate(item) {
     if (!item || typeof item !== "object") return item;
     const recordType = _safeTrim(item.recordType).toUpperCase();
+    if (recordType === "STAFF" || recordType === "GESTORIA") return assertDatosFiscales(item) && item;
     if (recordType === "CONFIG_SISTEMA") return _applyConfigSistemaRules(item);
 
     if (!item.taxId && item.nifCif) item.taxId = item.nifCif;
@@ -836,36 +840,37 @@ export function DatosFiscales_beforeUpdate(item) {
     delete item.nifCif;
     delete item.razonSocial;
     delete item.tipoTercero;
-    for (const field of DATOS_FISCALES_NON_SCHEMA_FIELDS) {
+    for (const field of MAPA_STAFF_NON_SCHEMA_FIELDS) {
         if (item[field] !== undefined && item[field] !== null) {
-            _schemaError(`Campo "${field}" no existe en el esquema físico DatosFiscales`);
+            _schemaError(`Campo "${field}" no existe en el esquema físico MapaStaff`);
         }
     }
     const taxId = _safeTrim(item.taxId);
     if (taxId && !_isValidNifOrEuVat(taxId)) _schemaError("taxId invalido en update");
-    _assertDatosFiscalesVersionAndTrace(item);
+    _assertMapaStaffVersionAndTrace(item);
     for (const field of ["verifactuEnabled", "tipoUsoPosibleMultiOT", "indicadorMultiplesOT"]) {
         if (item[field] !== undefined && item[field] !== null && typeof item[field] !== "boolean") {
             _schemaError(`${field} debe ser BOOLEAN según el esquema CMS`);
         }
     }
+    assertDatosFiscales(item);
     return item;
 }
 
-export function DatosFiscales_beforeRemove(item) {
+export function MapaStaff_beforeRemove(item) {
     const id = _safeTrim(item?._id);
     const recType = _safeTrim(item?.recordType).toUpperCase();
     if (id === "CONFIG_SISTEMA_FISCAL" || recType === "CONFIG_SISTEMA") {
-        _fiscalError("SINGLETON_PROTECTED: No se puede eliminar el singleton CONFIG_SISTEMA de DatosFiscales");
+        _fiscalError("SINGLETON_PROTECTED: No se puede eliminar el singleton CONFIG_SISTEMA de MapaStaff");
     }
     return item;
 }
 
 // =============================================================================
-// BLOQUE 14 - DATOS FISCALES: singleton CONFIG_SISTEMA (SSOT V2, v5011)
+// BLOQUE 14 - MAESTRO MapaStaff: singleton CONFIG_SISTEMA (SSOT V2, v5011)
 // =============================================================================
 
-const DATOS_FISCALES_NON_SCHEMA_FIELDS = [
+const MAPA_STAFF_NON_SCHEMA_FIELDS = [
     "producerTaxId", "producerLegalName", "computerSystemId",
     "installationNumber", "possibleUseMultiOT", "possibleUseOnlyVerifactu",
     "multipleOTIndicator", "verifactuStartDate", "nifProductor",
@@ -874,19 +879,19 @@ const DATOS_FISCALES_NON_SCHEMA_FIELDS = [
     "resourceIdBookings", "memberId", "registrationTraceId", "active",
 ];
 
-function _assertDatosFiscalesVersionAndTrace(item) {
+function _assertMapaStaffVersionAndTrace(item) {
     if (Number(item.schemaVersion) !== 1) {
-        _schemaError("schemaVersion debe ser 1 en DatosFiscales");
+        _schemaError("schemaVersion debe ser 1 en MapaStaff");
     }
     if (!_safeTrim(item.traceId)) {
-        _schemaError("traceId obligatorio en DatosFiscales");
+        _schemaError("traceId obligatorio en MapaStaff");
     }
 }
 
 function _applyConfigSistemaRules(item) {
-    for (const field of DATOS_FISCALES_NON_SCHEMA_FIELDS) {
+    for (const field of MAPA_STAFF_NON_SCHEMA_FIELDS) {
         if (item[field] !== undefined && item[field] !== null) {
-            _schemaError(`Campo "${field}" no existe en el esquema físico DatosFiscales; use taxId/legalName y los campos declarados`);
+            _schemaError(`Campo "${field}" no existe en el esquema físico MapaStaff; use taxId/legalName y los campos declarados`);
         }
     }
     if (!item._id) item._id = "CONFIG_SISTEMA_FISCAL";
@@ -903,7 +908,7 @@ function _applyConfigSistemaRules(item) {
     if (item.thirdPartyType != null && _safeTrim(item.thirdPartyType) !== "") {
         _schemaError("CONFIG_SISTEMA no utiliza thirdPartyType; debe ser null");
     }
-    _assertDatosFiscalesVersionAndTrace(item);
+    _assertMapaStaffVersionAndTrace(item);
     for (const field of ["verifactuEnabled", "tipoUsoPosibleMultiOT", "indicadorMultiplesOT"]) {
         if (item[field] !== undefined && item[field] !== null && typeof item[field] !== "boolean") {
             _schemaError(`${field} debe ser BOOLEAN según el esquema CMS`);
