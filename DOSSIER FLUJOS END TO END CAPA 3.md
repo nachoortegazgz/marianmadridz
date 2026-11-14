@@ -26,7 +26,7 @@
 
 > **HISTÓRICO — superado por el addendum vigente:** Capa 3 continúa siendo diseño documental, no integración operativa certificada. Wix CMS mantiene la autoridad transaccional; SharePoint solo conserva evidencia. El estado de CMS y la política vigente del sitio aislados se describen en el addendum superior y en `DICCIONARIO_DATOS_CMS.md`.
 
-## Registro histórico — estado live y limpieza QA (superado por el addendum vigente)
+## Registro histórico — limpieza de registros sintéticos (superado por el addendum vigente)
 
 **Sitio:** `188bed94-177c-4bc9-a9f0-35080d874f3e`. **Rama de código:** `chore/temporary-append-only-mutation-window`. Este estado supersede los inventarios y addenda anteriores que contradigan estos datos.
 
@@ -52,7 +52,7 @@ La eliminación se hizo por ID individual con condición de `traceId`; readback 
 
 **HISTÓRICO — TEC-033, sustituida por TEC-037.** El siguiente detalle describe la excepción inicial, limitada a update/remove individuales de determinados ledgers, y ya no representa la política vigente. La política actual está definida por `ISOLATED_SITE_RECORD_MUTATIONS_ENABLED=true`: update/remove individual y masivo en colecciones CMS propias, incluidos registros históricamente append-only. Las operaciones masivas requieren IDs explícitos. No se reactivan gates de inserción, writers fiscales/contables/laborales ni efectos externos.
 
-La instrucción antigua de desactivar la ventana antes de fusionar o publicar queda sustituida: la política temporal está integrada en main para la fase de QA. Solo el usuario ordenará su restauración antes del despliegue. La publicación Wix de esta ampliación sigue pendiente.
+La instrucción antigua de desactivar la ventana antes de fusionar o publicar queda sustituida: la política temporal está integrada en main para la fase de pruebas. Solo el usuario ordenará su restauración antes del despliegue. La publicación Wix de esta ampliación sigue pendiente.
 
 ### Alineación backend y estado pendiente
 
@@ -219,7 +219,7 @@ Los cuatro primeros flujos de exportación recurrente desde Wix requerirían job
 4. **Snapshot de gestoría:** completar hash, límites, concurrencia, idempotencia y ledger de despacho; mantener flag desactivado hasta validar.
 5. **Implementación backend:** un único módulo de exportación, lectura paginada y jobs específicos; no duplicar lógica de dominio.
 6. **Flujos PA:** configurar únicamente los aprobados, con control de duplicados y fallos.
-7. **E2E QA:** datos sintéticos, tenant de prueba, archivos de prueba y acceso de solo lectura.
+7. **E2E en el sitio aislado:** datos sintéticos, tenant de prueba, archivos de prueba y acceso de solo lectura.
 8. **Aprobación operativa:** gestoría valida formatos y Marian valida el circuito.
 9. **Activación:** despliegue autorizado, monitorización y runbook de recuperación.
 
@@ -269,7 +269,7 @@ La decisión es documental y su implementación sigue pendiente. El esquema actu
 
 ### Estado de implantación
 
-No se ha demostrado tenant M365 auditado, flujos Power Automate activos ni E2E Wix → transporte → SharePoint. Los planes PA-01…PA-07 siguen siendo nombres de diseño, no automatizaciones activas. Mantener el orden de gates: auditoría tenant/licencias/DLP/permisos, ADR de transporte, contrato de exportación y minimización, implementación, QA sintético, aceptación de gestoría y despliegue autorizado.
+No se ha demostrado tenant M365 auditado, flujos Power Automate activos ni E2E Wix → transporte → SharePoint. Los planes PA-01…PA-07 siguen siendo nombres de diseño, no automatizaciones activas. Mantener el orden de gates: auditoría tenant/licencias/DLP/permisos, ADR de transporte, contrato de exportación y minimización, implementación, prueba sintética, aceptación de gestoría y despliegue autorizado.
 
 La guía transversal vigente es [ESTADO_ACTUAL_PROYECTO.md](ESTADO_ACTUAL_PROYECTO.md); el estado detallado se mantiene en [docs/PROJECT-STATUS.md](docs/PROJECT-STATUS.md).
 
@@ -295,7 +295,7 @@ Lectura CMS live 2026-11-13:
 - Producción: 44 colecciones (15 NATIVE, 29 WIX_APP).
 - CitasF2: 1 elemento, revisión 42; su proyección mantiene `CONFIRMED / NOT_PAID`. La última lectura nativa Bookings Reader V2 documentada para el mismo bookingId devolvió `CANCELED / NOT_PAID`; divergencia P1 sin reconciliar.
 - HistoricoCierresZ: 0; MovimientosCaja: 0; LibroAsientosContablesDetalle: 0; PaquetesGestoria: 0; no hay base de datos live que demuestre paquetes o exports fiscales/contables operativos.
-- RegistrosHorariosStaff: 2 elementos sintéticos QA sin HMAC; writer deshabilitado.
+- RegistrosHorariosStaff: 2 elementos sintéticos de prueba sin HMAC; writer deshabilitado.
 - MovimientosInventario e InventarioStockVenta son históricos/legacy; no deben alimentar nuevos exports de inventario sin decisión y contrato explícitos.
 
 ## Sitio actual
@@ -305,7 +305,7 @@ El único sitio objeto de trabajo es 50b39f33-e753-4331-ab35-b2ed43dc97f7. Es un
 
 - [ ] Definir contrato de export con campos mínimos, minimización de datos, periodo, formato, hash, traceId e idempotency key.
 - [ ] Verificar lectura autorizada desde Wix CMS y excluir colecciones Wix App no necesarias y datos personales no pertinentes.
-- [ ] Implementar y probar primero en entorno QA aislado; no ejecutar envíos reales.
+- [ ] Implementar y probar primero en entorno sitio aislado; no ejecutar envíos reales.
 - [ ] Probar fallos/reintentos, duplicados, archivos parciales, integridad de contenido, permisos y retención en SharePoint.
 - [ ] Demostrar unidireccionalidad Capa 1 → Capa 3 y ausencia de escrituras de retorno.
 - [ ] Obtener aprobación del responsable y gestoría antes de activar destinatarios o automatizaciones.
