@@ -806,6 +806,7 @@ export function MapaStaff_beforeInsert(item) {
     if (recordTypeEarly === "STAFF") return assertMapaStaffRecord(item) && item;
     if (recordTypeEarly === "GESTORIA") return assertMapaStaffRecord(item) && item;
     if (recordTypeEarly === "CONFIG_SISTEMA") return _applyConfigSistemaRules(item);
+    if (recordTypeEarly !== "TERCERO") _schemaError("recordType invalido para MapaStaff");
 
     // Normalize input aliases and remove them before persisting physical CMS keys.
     if (!item.taxId && item.nifCif) item.taxId = item.nifCif;
@@ -824,7 +825,6 @@ export function MapaStaff_beforeInsert(item) {
     if (!type || !VALID_THIRD_PARTY_TYPES.has(type)) {
         _schemaError("thirdPartyType invalido (CLIENTE, PROVEEDOR, STAFF, AAPP, MIXTO, EMISOR)");
     }
-    assertMapaStaffRecord(item);
     return item;
 }
 
@@ -833,6 +833,7 @@ export function MapaStaff_beforeUpdate(item) {
     const recordType = _safeTrim(item.recordType).toUpperCase();
     if (recordType === "STAFF" || recordType === "GESTORIA") return assertMapaStaffRecord(item) && item;
     if (recordType === "CONFIG_SISTEMA") return _applyConfigSistemaRules(item);
+    if (recordType !== "TERCERO") _schemaError("recordType invalido para MapaStaff");
 
     if (!item.taxId && item.nifCif) item.taxId = item.nifCif;
     if (!item.legalName && item.razonSocial) item.legalName = item.razonSocial;
@@ -853,7 +854,6 @@ export function MapaStaff_beforeUpdate(item) {
             _schemaError(`${field} debe ser BOOLEAN según el esquema CMS`);
         }
     }
-    assertMapaStaffRecord(item);
     return item;
 }
 
