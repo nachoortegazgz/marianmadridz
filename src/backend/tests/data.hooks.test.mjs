@@ -312,9 +312,12 @@ test("HOOK-DATOSFISCALES-01 CONFIG_SISTEMA uses only declared physical fields", 
   const inserted = H.DatosFiscales_beforeInsert({ ...config });
   assert.equal(inserted._id, "CONFIG_SISTEMA_FISCAL");
   assert.doesNotThrow(() => H.DatosFiscales_beforeInsert({ ...config }));
-  assert.throws(() => H.DatosFiscales_beforeInsert({ ...config, taxId: "INVALID" }), /taxId invalido/);
+  assert.throws(() => H.DatosFiscales_beforeInsert({ ...config, taxId: "INVALID" }), /taxId.*valid NIF/);
   assert.throws(() => H.DatosFiscales_beforeInsert({ ...config, thirdPartyType: "EMISOR" }), /thirdPartyType.*null/);
   assert.throws(() => H.DatosFiscales_beforeInsert({ ...config, fechaInicioVerifactu: "01/01/2026" }), /YYYY-MM-DD/);
+  assert.throws(() => H.DatosFiscales_beforeInsert({ ...config, active: "true" }), /active must be BOOLEAN/);
+  assert.throws(() => H.DatosFiscales_beforeInsert({ ...config, recordType: "config_sistema" }), /recordType invalido/);
+  assert.throws(() => H.DatosFiscales_beforeInsert({ ...config, fechaInicioVerifactu: "   " }), /solo espacios/);
 });
 
 test("HOOK-DATOSFISCALES-02 third parties and accountant records use declared fields without trace/schemaVersion", () => {
