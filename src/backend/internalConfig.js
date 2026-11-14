@@ -317,6 +317,8 @@ export const SINGLETONS = Object.freeze({
 export const CASH_REGISTER_STATUS = Object.freeze({
   ABIERTA: "ABIERTA",
   CERRADA: "CERRADA",
+  // Explicit simulation sentinel used only by the isolated test bank.
+  SIMULACION: "SIMULACION",
 });
 
 // Tipos de cita internos (ledger CitasF2). CERO-ALIAS v13.0: el dominio de
