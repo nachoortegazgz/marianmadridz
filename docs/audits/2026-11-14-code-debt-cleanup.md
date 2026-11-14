@@ -33,7 +33,7 @@ El esquema físico canónico de `ControlOperativo` declara `expiresAt` (DATETIME
 ## Validación y límites
 
 - Evidencia estática: diff limitado a módulo, prueba, runner de Capa 2 y README de backend.
-- Pendiente en esta rama: CI completa, ESLint, contratos SDK y secret scanning.
+- CI ejecutada sobre el commit `9c6fdeb070669292d0907272c2a064a623abbdd8`: Layer 1 23 suites/296 tests PASS; Layer 2 19 suites/252 tests PASS; regresión completa 69 suites/631 tests PASS; Wix SDK contracts, eCommerce Order Transactions SDK, Bookings Reader V2, ESLint y secret scanning PASS.
 - No se han modificado colecciones, registros CMS, configuración Wix ni despliegues.
 - La eliminación se limita al fallback de claims; no altera el tratamiento de `WEBHOOK_EVENT` ni otros controles operativos.
 
