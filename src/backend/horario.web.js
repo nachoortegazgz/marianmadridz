@@ -118,6 +118,9 @@ async function _sealTimeclockRecord(record) {
         registeredBy: record[F.REGISTERED_BY],
         registeredByMemberId: record[F.REGISTERED_BY_MEMBER_ID],
         adjustmentReason: record[F.ADJUSTMENT_REASON] || null,
+        deviceIpAddress: record[F.DEVICE_IP_ADDRESS] || null,
+        meta: record[F.META] || null,
+        previousRecordHash: record[F.PREVIOUS_RECORD_HASH] || null,
         schemaVersion: record[F.SCHEMA_VERSION],
         traceId: record[F.TRACE_ID],
     };
