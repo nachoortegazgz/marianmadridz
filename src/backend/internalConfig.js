@@ -58,7 +58,7 @@ export const APPEND_ONLY_MUTATION_WINDOW = Object.freeze({
   RESTORE_BEFORE_REAL_OPERATIONS: true,
 });
 
-// Fail-closed production defaults until fiscal, accounting and runtime E2E
+// Fail-closed real-operation defaults until fiscal, accounting and runtime E2E
 // are certified. Simulation records are denied unless a trusted test harness
 // explicitly enables them; frontend input cannot change this policy.
 export const FISCAL_RUNTIME_POLICY = Object.freeze({
