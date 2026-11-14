@@ -12,7 +12,7 @@ Este documento describe un único sitio objeto de trabajo. No se mantiene una ma
 
 ### Git y Wix
 - Main actual: 1a721aeca86e61b02d184ac8ec94f20871073272.
-- Rama de trabajo: fix/current-site-cms-contract-alignment, HEAD a8a44cb8e75fd3c9d57fe3279a02ae47411b50a6.
+- Rama de trabajo: fix/current-site-cms-contract-alignment.
 - PR #370 está abierto, pero GitHub informa mergeable=false / mergeable_state=dirty. La rama está 109 commits por delante y 57 por detrás de main; requiere reconciliación/rebase antes de cualquier merge.
 - No hay checks asociados al HEAD a8a44. Los últimos checks exitosos del PR corresponden a 68a2f3276cef07b7470c25247e79dc570b140873 y no validan los cambios posteriores.
 - La correspondencia entre los archivos Velo del Editor Classic y Git no está verificada.
