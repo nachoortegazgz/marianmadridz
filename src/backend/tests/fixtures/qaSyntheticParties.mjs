@@ -1,13 +1,13 @@
 // Synthetic-only identities for offline QA. No real phone numbers or fiscal identifiers.
 export const QA_TEST_RUN_ID = "TEST-RUN-OFFLINE-001";
-export const QA_TEST_SITE_ID = "50b39f33-e753-4331-ab35-b2ed43dc97f7";
+export const QA_TEST_SITE_ID = "188bed94-177c-4bc9-a9f0-35080d874f3e";
 
 export const QA_CUSTOMERS = Object.freeze([
   Object.freeze({
     customerId: "TEST-CUSTOMER-001",
-    firstName: "Cliente",
-    lastName: "Prueba Uno",
-    email: "cliente.prueba.001@example.test",
+    firstName: "Nacho",
+    lastName: "Pitt",
+    email: "nacho.pitt@example.test",
     isSynthetic: true,
     sourceEnvironment: "TEST",
     testRunId: QA_TEST_RUN_ID,
