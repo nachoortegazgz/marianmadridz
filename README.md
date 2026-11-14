@@ -14,7 +14,7 @@ Evidencia: [reconciliación de baseline 2026-11-14](docs/qa/2026-11-14-baseline-
 
 **Gobierno del proyecto:** el usuario/propietario es la SSOT de negocio, prioridades y autorizaciones. Durante desarrollo y QA están en pausa append-only y las prohibiciones genéricas de editar/eliminar registros (individuales y masivas) hasta nueva instrucción expresa del usuario para preparar el despliegue. Se mantienen autenticación, autorización, permisos y validaciones. La política documental no certifica por sí sola que todos los guards del runtime Wix hayan sido retirados.
 
-**Estado Git verificado:** main=`79b6238fe4c23206bb8e81327191ab48425e3a0d` (PR #351 integrada). PR #352 recupera los validadores que PR #351 retiró accidentalmente; está pendiente de CI y revisión. No hay release Wix que vincule el runtime con el SHA de Git.
+**Estado Git verificado:** main=`79b6238fe4c23206bb8e81327191ab48425e3a0d` (PR #351 integrada). PR #352 recupera los validadores que PR #351 retiró accidentalmente; CI completo verde en `c7388cb122368906b1cee20cae0f6d127900553b` (run #1048). No hay release Wix que vincule el runtime con el SHA de Git.
 # Marian Madrid — Wix Editor + Velo
 
 > **Contexto de plataforma:** el sitio principal consta como Published en el último contexto Wix documentado; eso no acredita que ejecute el SHA actual de Git. El sitio QA independiente está en Draft, pero su aislamiento y paridad CMS no están certificados. El inventario live vigente es 41 colecciones (12 NATIVE, 29 WIX_APP).
