@@ -269,7 +269,7 @@ Se recrea en Wix CMS la colección `CajaActual` porque no aparecía en el invent
 
 `MovimientosCaja` permanece sin cambios (revisión 78; 0 elementos en el corte). Cada ticket/movimiento sigue siendo fuente en `MovimientosCaja`; `CajaActual` solo proyecta sesión, saldos por medio y estado operativo. La proyección no debe duplicar el ledger, y su reintento se resuelve por ID fuente.
 
-Se creó índice único `CajaActual_singletonKey_unique`, estado `BUILDING` en la última lectura; verificar `ACTIVE` antes de tratarlo como garantía de unicidad. Se mantienen checks backend fail-closed para detectar duplicados.
+Se creó índice único `CajaActual_singletonKey_unique`, estado `ACTIVE` en la lectura posterior; la unicidad de `singletonKey` queda protegida por el índice CMS. Se mantienen checks backend fail-closed para detectar duplicados.
 
 **Recomendaciones registradas:** no admitir pagos mixtos hasta definir `paymentBreakdown`; no usar `lineItems` hasta validar su esquema; separar efectivo físico de tarjeta/Bizum; añadir un futuro `lastMovementId` solo como puntero y con migración coordinada; sustituir progresivamente el array potencialmente ilimitado `sequenceCounters.appliedMovementIds` por idempotencia durable indexada en `ControlOperativo`. Apertura de sesión, saldo inicial y responsables siguen pendientes de un flujo backend autorizado.
 
