@@ -18,7 +18,7 @@ import {
     APPEND_ONLY_MUTATION_WINDOW,
     QA_RECORD_MUTATIONS_ENABLED,
 } from "backend/internalConfig";
-import { assertCitasF2, assertControlOperativo, assertCanonicalControlFields, assertRegistrosHorariosStaff, assertMapaStaffRecord } from "backend/validation";
+import { assertCitasF2, assertControlOperativo, assertCanonicalControlFields, assertRegistrosHorariosStaff, assertDatosFiscales, assertMapaStaffRecord } from "backend/validation";
 import { CONSISTENCY, getItem } from "backend/dataAccess";
 
 import { logger } from "backend/logger";
