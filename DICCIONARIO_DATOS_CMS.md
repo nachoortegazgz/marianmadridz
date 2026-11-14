@@ -1882,7 +1882,7 @@ La rama de desarrollo `chore/temporary-append-only-mutation-window` abre tempora
 
 Este estado temporal contradice deliberadamente la regla ordinaria de la sección 10 solo dentro de la rama de trabajo. No se ha aplicado a Wix live ni a los permisos de las colecciones. No hay bulk update/remove. La validación de inserciones permanece activa. No utilizar para alterar o eliminar datos reales sujetos a conservación legal.
 
-**Reactivación previa a producción:** `APPEND_ONLY_MUTATION_WINDOW.ENABLED=false`; retirar ledgers de las allowlists de update/remove; restaurar tests que esperan `FISCAL_VIOLATION`; ejecutar CI completo y verificar hooks/permisos en Wix Local Editor. La publicación está bloqueada mientras esta excepción siga activa.
+**Política vigente tras TEC-038:** los bypasses globales y APPEND_ONLY_MUTATION_WINDOW se han retirado del código. Los ledgers no deben entrar en allowlists de update/remove. La purga de datos efímeros se restringe por tipo/estado/fecha en ControlOperativo. Antes de publicación: CI completo, sitio QA accesible y aislamiento runtime verificado.
 
 
 ## 16. Addendum histórico — estado anterior y limpieza de datos sintéticos (2026-11-14)
@@ -1914,7 +1914,7 @@ La eliminación se hizo por ID individual con condición de `traceId`; readback 
 
 ### Ventana temporal TEC-033
 
-**HISTÓRICO — TEC-033, sustituida por TEC-037.** El siguiente detalle describe la excepción inicial, limitada a update/remove individuales de determinados ledgers, y ya no representa la política vigente. La política actual está definida por `ISOLATED_SITE_RECORD_MUTATIONS_ENABLED=true`: update/remove individual y masivo en colecciones CMS propias, incluidos registros históricamente append-only. Las operaciones masivas requieren IDs explícitos. No se reactivan gates de inserción, writers fiscales/contables/laborales ni efectos externos.
+**HISTÓRICO — TEC-033/TEC-037, supersedidas por TEC-038.** Los siguientes detalles describen autorizaciones temporales anteriores y no representan la política vigente. No existe ISOLATED_SITE_RECORD_MUTATIONS_ENABLED ni APPEND_ONLY_MUTATION_WINDOW en el código. Los ledgers permanecen append-only; bulk update está deshabilitado y bulk remove solo admite purgas efímeras/terminales condicionadas.
 
 La instrucción antigua de desactivar la ventana antes de fusionar o publicar queda sustituida: la política temporal está integrada en main para la fase de pruebas en el sitio aislado. Solo el usuario ordenará su restauración antes del despliegue. La publicación Wix de esta ampliación sigue pendiente.
 
