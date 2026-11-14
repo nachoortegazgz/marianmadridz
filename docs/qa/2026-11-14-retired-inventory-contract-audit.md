@@ -40,7 +40,7 @@ La integración #353 eliminó el identificador de `BUSINESS_COLLECTIONS`, pero d
 - No se alteran ledgers fiscales, contables o laborales existentes.
 - No se cambia `QA_RECORD_MUTATIONS_ENABLED=true`.
 - No se publica ni despliega en Wix.
-- La validación de la corrección residual queda pendiente de CI en PR #354. La limpieza principal de hooks/constantes de PR #353 ya está integrada.
+- PR #354 integrada en `main` como `fde9466552b6819980475a682dc06395b57487f0`; CI PASS en `28a11a690f0a99926921332618b6af670d45814c` (run #1068) y Gitleaks PASS (run #492). La limpieza principal de hooks/constantes de PR #353 también está integrada.
 
 ## Criterios de aceptación
 
