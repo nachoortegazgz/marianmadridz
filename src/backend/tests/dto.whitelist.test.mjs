@@ -102,7 +102,7 @@ test('DTO-01 getConfirmedBookingForDisplay returns whitelisted DTO only', async 
     internalNotes: 'notas internas',
     tipoImpositivo: 21,
     payloadFiscal: { x: 1 },
-    nifEmisor: 'B12345678',
+    nifEmisor: 'B12345674',
     previousRecordHash: 'abc',
   }]);
   // RES-30/31: la superficie publica de display exige token opaco.
