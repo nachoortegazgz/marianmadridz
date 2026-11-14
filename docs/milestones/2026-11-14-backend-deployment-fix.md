@@ -58,7 +58,7 @@ Correcciones implementadas:
 | ESLint | PASS |
 | Gitleaks full-history | PASS |
 
-**Conclusión:** PR #374 está integrada en `main`. El CI completo del HEAD de PR pasó; el workflow del merge commit está pendiente de confirmación. El hito de código queda CERRADO — CI PASS (offline), sin equivalencia a runtime Wix.
+**Conclusión:** PR #374 está integrada en `main`. El CI completo pasó tanto en el HEAD de PR como en el merge commit `1de381ecb6495e17a3eae5b75b43e8493166988a`: Layer 1 24/307; Layer 2 19/252; regresión completa 70/644; contratos SDK, ESLint y Gitleaks PASS. El hito de código queda CERRADO — CI PASS (offline), sin equivalencia a runtime Wix.
 
 ## Límites y riesgos pendientes
 
