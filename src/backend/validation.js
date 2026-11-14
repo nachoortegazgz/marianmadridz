@@ -27,6 +27,28 @@ const DNI_LETTERS = "TRWAGMYFPDXBNJZSQVHLCKE";
  * No normaliza silenciosamente el valor: los escritores deben entregar
  * exactamente el literal definido por internalConfig.
  */
+/**
+ * Rechaza campos retirados del contrato de ControlOperativo.
+ * La lista de campos no canonicos se mantiene en internalConfig como SSOT.
+ * No transforma ni elimina datos: falla de forma explicita en el limite CMS.
+ */
+export function assertCanonicalControlFields(item) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) {
+        throw new Error("SCHEMA_VIOLATION: ControlOperativo item must be an object");
+    }
+
+    const retiredFields = CONTROL_OPERATIVO_NON_CANONICAL_FIELDS.filter((field) =>
+        Object.prototype.hasOwnProperty.call(item, field)
+    );
+    if (retiredFields.length > 0) {
+        throw new Error(
+            `SCHEMA_VIOLATION: ControlOperativo fields not allowed: ${retiredFields.join(", ")}`
+        );
+    }
+
+    return true;
+}
+
 export function assertValidEnum(value, enumObject, fieldName) {
     const allowedValues = enumObject && typeof enumObject === "object"
         ? Object.values(enumObject)
