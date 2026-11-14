@@ -1,3 +1,5 @@
+> **Addendum de vigencia — 2026-11-14:** la política de mutabilidad descrita más abajo es histórica. TEC-038 retiró los bypasses globales; no usar `QA_RECORD_MUTATIONS_ENABLED` como permiso actual. El propietario designa `50b39f33-e753-4331-ab35-b2ed43dc97f7` como QA y declara el sitio despublicado/pasarela desconectada; el conector actual no resuelve ese ID, limitación que no cambia el destino autorizado.
+
 # Reconciliación de baseline y recuperación de validadores — 2026-11-14
 
 ## Autoridad y alcance
@@ -71,3 +73,8 @@ Fuente: `DICCIONARIO_DATOS_CMS.md`, generado desde Wix Data Collections API en e
 3. La inspección de diff no detecta cambios en reglas de negocio ajenas al hallazgo.
 4. Se documenta el estado de CI con enlaces y SHA reales.
 5. No se publica en Wix hasta resolver el bloqueo de QA y obtener autorización expresa.
+
+
+## Addendum posterior — decisión de QA del propietario, 2026-11-14
+
+El propietario designa `50b39f33-e753-4331-ab35-b2ed43dc97f7` como entorno QA y ordena continuar pruebas con datos sintéticos y pasarela simulada. El sitio `188bed94-177c-4bc9-a9f0-35080d874f3e` es producción y queda excluido de QA. La conexión Wix de la sesión no resolvió el Site ID QA; por tanto, el bloqueo se limita a Wix Runtime/E2E. Continúan permitidas pruebas offline/mock y CI, sin llamadas a proveedores ni efectos externos. El plan vigente es [PLAN_ACCION_QA.md](../../PLAN_ACCION_QA.md). Este addendum actualiza la recomendación anterior de no duplicar producción: no se está ordenando duplicar ni modificar producción, sino utilizar el Site ID QA ya designado por el propietario, sujeto a resolver su acceso técnico.

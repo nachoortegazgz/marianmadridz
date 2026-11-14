@@ -1,3 +1,9 @@
+> **Addendum de ejecución — 2026-11-14:** el simulador PSP y el email sink son dobles locales en memoria; no acreditan un sandbox externo ni Wix Runtime. La ventana global de mutabilidad CMS está cerrada y los ledgers append-only no se editan ni borran. En la comprobación actual, Wix informa producción como Published y no resuelve el Site ID QA; limitarse a offline/mock/CI, sin usar producción como fallback.
+
+> **Addendum de vigencia — 2026-11-14:** por decisión del propietario, el sitio QA objetivo es `50b39f33-e753-4331-ab35-b2ed43dc97f7`; el sitio productivo `188bed94-177c-4bc9-a9f0-35080d874f3e` queda fuera de QA. La conexión Wix de la sesión no resolvió el ID QA, por lo que Wix Runtime/E2E permanece `BLOCKED_ENVIRONMENT`. Continuar con fixtures sintéticos y mocks offline; no ejecutar pruebas de negocio sobre producción. El plan operativo vigente es [PLAN_ACCION_QA.md](../../PLAN_ACCION_QA.md) y el registro de ejecución [2026-11-14-qa-execution-log.md](./2026-11-14-qa-execution-log.md). Este addendum prevalece sobre las referencias históricas a un único sitio Published.
+
+---
+
 > **Nota de vigencia — 2026-11-11:** este pack conserva evidencia histórica y escenarios offline. Para estado live, aislamiento de comunicaciones, datos sintéticos y gates de ejecución, prevalece [la referencia maestra QA](2026-11-11-qa-master-reference.md). Wix informa actualmente que el sitio está **Published**; no ejecutar E2E de negocio en él. Los resultados mock no demuestran runtime ni proveedor real.
 
 ---
@@ -536,3 +542,12 @@ La política del código sigue fail-closed:
 
 **Decisión: Layer 2 permanece NO CERRADA.** La lectura de fuentes comerciales y transacciones está conciliada; el cierre fiscal, bancario, contable y de cancelaciones no. No se deben crear movimientos retroactivos, asientos, rectificaciones, reembolsos ni cambios de configuración hasta recibir validación del gestor y evidencia del medio de cobro. Las correcciones de registros append-only deberán ser nuevos registros rectificativos trazables, nunca edición/borrado.
 
+
+
+## Addendum — TEST metadata and synthetic identities (2026-11-14)
+
+- PSP mock: `src/backend/tests/fixtures/qaPaymentGateway.mock.mjs` solo acepta environment TEST, testSiteId coincidente y testRunId con prefijo TEST-RUN-. Authorization/capture/refund devuelven isSynthetic=true, sourceEnvironment=TEST, testRunId y realPayment=false.
+- Email sink: `src/backend/tests/fixtures/qaManagerEmailSink.mock.mjs` solo acepta clientes sintéticos con testRunId coincidente y destinatarios example.test; guarda en memoria y no envía correo.
+- Identidades: `src/backend/tests/fixtures/qaSyntheticParties.mjs` contiene tres clientes sintéticos y Gestoría de Pruebas con TEST-NIF-NO-VALIDO, teléfono null y destino real desactivado.
+- Cobertura: PSP 7/7, email sink 4/4, manifiesto sintético 7/7 en CI #43606822535.
+- No conectado a Wix Payments ni a Wix Automations. No escribir en CMS live desde estos mocks.

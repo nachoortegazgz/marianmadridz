@@ -49,14 +49,9 @@ export const STAFF_CLOCKING_CONFIG = Object.freeze({
   ADJUSTMENTS_ENABLED: false,
 });
 
-// TEMPORARY ISOLATED-SITE POLICY: allow update/remove on project-owned CMS records.
-// Does not enable inserts, fiscal writers, external effects, or bypass auth/RBAC.
-export const ISOLATED_SITE_RECORD_MUTATIONS_ENABLED = true;
-export const APPEND_ONLY_MUTATION_WINDOW = Object.freeze({
-  ENABLED: ISOLATED_SITE_RECORD_MUTATIONS_ENABLED,
-  TEMPORARY: true,
-  RESTORE_BEFORE_REAL_OPERATIONS: true,
-});
+// No global CMS mutation override is exported. Every mutation must pass the
+// collection-specific policy; fiscal, accounting, labor and webhook ledgers
+// remain append-only in every environment.
 
 // Fail-closed production defaults until fiscal, accounting and runtime E2E
 // are certified. Simulation records are denied unless a trusted test harness

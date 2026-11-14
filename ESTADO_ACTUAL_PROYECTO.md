@@ -6,6 +6,22 @@
 **Plataforma:** Wix Editor Classic + Velo.  
 **Repositorio:** `nachoortegazgz/marianmadridz`.
 
+## Trabajo QA TPV — 2026-11-14
+
+Se ha incorporado un simulador TPV sintético puro, sin persistencia ni llamadas externas, con validación de líneas, desglose de medios, pendientes, céntimos e idempotencia. La suite se incluye en Layer 1. La auditoría `docs/audits/2026-11-14-tpv-contract-gap-audit.md` documenta que el writer real aún no acepta todos los medios de negocio, no concilia `OTROS` en proyección/cierre y mantiene bloqueadas las escrituras fiscales. No se ha habilitado el writer real. CI del cambio TPV pendiente en el corte actual.
+
+## Addendum operativo QA — 2026-11-14
+
+**Decisión del propietario:** el Site ID `50b39f33-e753-4331-ab35-b2ed43dc97f7` se utilizará como entorno QA del proyecto con datos sintéticos y pagos simulados. El Site ID productivo `188bed94-177c-4bc9-a9f0-35080d874f3e` queda expresamente fuera de las pruebas.
+
+**Estado técnico:** el inventario CMS QA está documentado en `docs/audits/2026-11-14-current-site-cms-normalization.md` (23 colecciones: 15 NATIVE y 8 WIX_APP). La conexión Wix disponible en esta sesión no pudo resolver el ID QA y solo identificó producción. Esto no cuestiona la decisión SSOT del propietario ni cambia el destino de trabajo; representa una limitación técnica del conector. El acceso runtime y el aislamiento de todas las integraciones no están verificados. No se han ejecutado pruebas Wix Runtime/E2E ni se ha usado producción como sustituto.
+
+**Trabajo en curso:** auditoría y limpieza de código/documentación, fixtures sintéticos, mocks offline de pagos y comunicaciones, pruebas automatizadas, CI, correcciones en ramas/PR y registro de evidencias. No esperar a resolver el conector para completar H1-H3. El adaptador de pago mock no debe realizar llamadas de red ni equivaler a una operación real.
+
+**Gates:** mantener bloqueados cobros, reembolsos reales, facturación, tickets a clientes, emails/SMS/WhatsApp, gestoría, SharePoint/Power Automate, AEAT/Veri*Factu y escrituras fuera de QA. La bandera de mutaciones de QA no elimina gates funcionales independientes.
+
+**Plan canónico:** [PLAN_ACCION_QA.md](PLAN_ACCION_QA.md). **Directrices raíz:** [DIRECTRICES_DESARROLLO_CODIGO.md](DIRECTRICES_DESARROLLO_CODIGO.md).
+
 ## Estado verificado
 
 - Repositorio `main`: PR #361–#366 integradas; último merge `13b9ae095214e0c601f255fa75d629680c539933`. PR #367 alinea los contratos CMS; CI offline PASS (run #1137: 69 suites/631 tests) y secret scanning PASS (#561). Integrada en main mediante PR #367, merge `dfdee00d8ebc535427c95d49cae91b4c557e4209`.
@@ -40,12 +56,15 @@
 
 ## Política de cambios
 
-- Mutaciones update/remove sobre colecciones propias habilitadas por autorización expresa mediante `ISOLATED_SITE_RECORD_MUTATIONS_ENABLED=true`.
+- Los bypasses globales de mutabilidad QA se han retirado del código. Los ledgers append-only permanecen inmutables; bulk remove queda limitado a purgas efímeras condicionadas. No hay barrera runtime por Site ID verificada.
 - Colecciones Wix Apps excluidas; autenticación, autorización, permisos, validación de esquema y gates de efectos externos permanecen activos.
 - No se ejecutan operaciones reales ni se interpretan datos sintéticos como actividad real.
 - No se modifica el CMS en esta intervención; cambios de código/documentación se integran mediante PR y CI.
 
 ## Evidencias
+
+- [Plan de acción QA](PLAN_ACCION_QA.md)
+- [Directrices de desarrollo](DIRECTRICES_DESARROLLO_CODIGO.md)
 
 - [Base maestra](PROJECT_BASELINE.md)
 - [Diccionario de datos CMS](DICCIONARIO_DATOS_CMS.md)

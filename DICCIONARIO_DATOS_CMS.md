@@ -1,6 +1,9 @@
 # Diccionario de datos CMS — Marian Madrid
 
-## Addendum vigente — sitio actual, corte 2026-11-14
+## Addendum vigente — sitio QA objetivo, corte 2026-11-14
+
+> **Aclaración de entorno — 2026-11-14:** este inventario corresponde al Site ID QA `50b39f33-e753-4331-ab35-b2ed43dc97f7`, no al sitio productivo `188bed94-177c-4bc9-a9f0-35080d874f3e`. El propietario designa el primero como QA. La conexión Wix de auditoría no pudo resolverlo en esta sesión; por tanto, el inventario documenta el corte existente, pero no acredita disponibilidad runtime actual ni aislamiento de integraciones. Ver [PLAN_ACCION_QA.md](PLAN_ACCION_QA.md).
+
 
 - Sitio objeto de auditoría: `50b39f33-e753-4331-ab35-b2ed43dc97f7`.
 - Naturaleza declarada por el propietario: banco de pruebas aislado, sin actividad real.
@@ -1789,7 +1792,7 @@ Las relaciones de la tabla son semánticas/contractuales; solo las marcadas MULT
 
 ## 10. Permisos, inmutabilidad y límites de uso
 
-**Política temporal del sitio aislado de pruebas:** según la autorización expresa del propietario y el flag `ISOLATED_SITE_RECORD_MUTATIONS_ENABLED=true`, append-only e inmutabilidad están temporalmente en pausa para las colecciones propias del proyecto. Esta excepción no habilita mutaciones en WIX_APP ni desactiva RBAC, permisos, validaciones o gates de writers fiscales/contables/laborales. Restaurar las protecciones antes de producción solo cuando lo ordene el propietario.
+**Política vigente (addendum 2026-11-14):** la autorización histórica de pausa append-only queda supersedida. Los bypasses globales de mutabilidad y la ventana temporal han sido retirados del código; los ledgers append-only se mantienen inmutables también en QA. Las rectificaciones se registran mediante nuevos registros trazables. Las purgas de ControlOperativo solo pueden afectar tipos efímeros/terminales con condición de tipo, estado y caducidad/retención; WEBHOOK_EVENT queda excluido.
 
 - Las colecciones WIX_APP son propiedad de sus aplicaciones. No modificar directamente sus campos, tipos, datos ni permisos mediante este proyecto salvo flujo oficial aprobado.
 - Para producción, los ledgers append-only no se editan ni borran. Las rectificaciones se incorporan como nuevos registros trazables.
@@ -1873,13 +1876,11 @@ El código de la rama de trabajo reutiliza los campos físicos ya observados: `c
 `recordSource=MANUAL_PRESENCIAL_AUTHENTICATED` identifica movimientos presenciales manuales cuyo `staffResourceId` se obtuvo en backend desde la identidad autenticada. El frontend no puede asignar este valor. Los registros anteriores o de otro origen no se consideran autoría verificada aunque su `staffResourceId` pueda resolverse a un perfil.
 
 
-## 15. Addendum — estado temporal de mutabilidad (2026-11-14)
+## 15. Addendum histórico — ventana temporal de mutabilidad (2026-11-14)
 
-La rama de desarrollo `chore/temporary-append-only-mutation-window` abre temporalmente update/remove individual para `MovimientosCaja`, `LibroAsientosContablesDetalle`, `RegistrosHorariosStaff`, `MovimientosInventario`, `HistoricoCierresZ`, `PaquetesGestoria` y los registros `ControlOperativo` de tipo `WEBHOOK_EVENT`.
+**HISTÓRICO — TEC-033/037, supersedido por TEC-038:** la rama `chore/temporary-append-only-mutation-window` llegó a autorizar update/remove temporal de ledgers. Esa excepción ya no está vigente y no debe utilizarse como permiso operativo. El código de la rama QA actual no contiene bypass global; los ledgers permanecen append-only también en QA.
 
-Este estado temporal contradice deliberadamente la regla ordinaria de la sección 10 solo dentro de la rama de trabajo. No se ha aplicado a Wix live ni a los permisos de las colecciones. No hay bulk update/remove. La validación de inserciones permanece activa. No utilizar para alterar o eliminar datos reales sujetos a conservación legal.
-
-**Reactivación previa a producción:** `APPEND_ONLY_MUTATION_WINDOW.ENABLED=false`; retirar ledgers de las allowlists de update/remove; restaurar tests que esperan `FISCAL_VIOLATION`; ejecutar CI completo y verificar hooks/permisos en Wix Local Editor. La publicación está bloqueada mientras esta excepción siga activa.
+**Política vigente tras TEC-038:** los bypasses globales y APPEND_ONLY_MUTATION_WINDOW se han retirado del código. Los ledgers no deben entrar en allowlists de update/remove. La purga de datos efímeros se restringe por tipo/estado/fecha en ControlOperativo. Antes de publicación: CI completo, sitio QA accesible y aislamiento runtime verificado.
 
 
 ## 16. Addendum histórico — estado anterior y limpieza de datos sintéticos (2026-11-14)
@@ -1911,7 +1912,7 @@ La eliminación se hizo por ID individual con condición de `traceId`; readback 
 
 ### Ventana temporal TEC-033
 
-**HISTÓRICO — TEC-033, sustituida por TEC-037.** El siguiente detalle describe la excepción inicial, limitada a update/remove individuales de determinados ledgers, y ya no representa la política vigente. La política actual está definida por `ISOLATED_SITE_RECORD_MUTATIONS_ENABLED=true`: update/remove individual y masivo en colecciones CMS propias, incluidos registros históricamente append-only. Las operaciones masivas requieren IDs explícitos. No se reactivan gates de inserción, writers fiscales/contables/laborales ni efectos externos.
+**HISTÓRICO — TEC-033/TEC-037, supersedidas por TEC-038.** Los siguientes detalles describen autorizaciones temporales anteriores y no representan la política vigente. No existe ISOLATED_SITE_RECORD_MUTATIONS_ENABLED ni APPEND_ONLY_MUTATION_WINDOW en el código. Los ledgers permanecen append-only; bulk update está deshabilitado y bulk remove solo admite purgas efímeras/terminales condicionadas.
 
 La instrucción antigua de desactivar la ventana antes de fusionar o publicar queda sustituida: la política temporal está integrada en main para la fase de pruebas en el sitio aislado. Solo el usuario ordenará su restauración antes del despliegue. La publicación Wix de esta ampliación sigue pendiente.
 

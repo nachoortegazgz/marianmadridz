@@ -49,17 +49,25 @@ function storeIdempotent(cache, key, fingerprint, result) {
  */
 export function createQaPaymentGateway(config = {}) {
   if (
-    config.environment !== 'QA' ||
+    config.environment !== 'TEST' ||
     config.enabled !== true ||
     typeof config.siteId !== 'string' ||
     !config.siteId ||
-    config.siteId !== config.qaSiteId
+    config.siteId !== config.testSiteId ||
+    typeof config.testRunId !== 'string' ||
+    !/^TEST-RUN-[A-Z0-9-]{1,80}$/.test(config.testRunId)
   ) {
     throw new Error('QA_PAYMENT_SIMULATOR_DISABLED');
   }
 
   const operations = new Map();
   const transactions = new Map();
+  const simulationMetadata = Object.freeze({
+    isSynthetic: true,
+    testRunId: config.testRunId,
+    sourceEnvironment: 'TEST',
+    realPayment: false,
+  });
 
   function validateRequest({ amount, currency, idempotencyKey }) {
     const amountMinor = toMinorUnits(amount);
@@ -89,6 +97,7 @@ export function createQaPaymentGateway(config = {}) {
     const result = {
       provider: 'QA_MOCK',
       simulated: true,
+      ...simulationMetadata,
       transactionId,
       status,
       amountMinor: request.amountMinor,
@@ -128,6 +137,7 @@ export function createQaPaymentGateway(config = {}) {
     const result = {
       provider: 'QA_MOCK',
       simulated: true,
+      ...simulationMetadata,
       transactionId,
       status: 'CAPTURED',
       capturedMinor: transaction.capturedMinor,
@@ -163,6 +173,7 @@ export function createQaPaymentGateway(config = {}) {
     const result = {
       provider: 'QA_MOCK',
       simulated: true,
+      ...simulationMetadata,
       transactionId,
       status: transaction.status,
       refundedMinor: transaction.refundedMinor,

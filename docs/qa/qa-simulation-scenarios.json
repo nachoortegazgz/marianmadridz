@@ -219,7 +219,11 @@
       "traceId": "trace-qa-psp-mock-clean-001",
       "fixture": {
         "provider": "QA_MOCK",
-        "environment": "QA",
+        "environment": "TEST",
+        "sourceEnvironment": "TEST",
+        "testRunId": "TEST-RUN-OFFLINE-001",
+        "isSynthetic": true,
+        "realPayment": false,
         "currency": "EUR",
         "amountMinor": 4000,
         "authorizationOutcomes": [
@@ -241,7 +245,8 @@
         "webhookDispatch": false
       },
       "assertions": [
-        "simulator requires an explicit QA environment, enabled flag and matching QA site identifier",
+        "simulator requires an explicit TEST environment, enabled flag, matching synthetic test site identifier and testRunId",
+        "authorization, capture and refund results carry isSynthetic=true, sourceEnvironment=TEST, testRunId and realPayment=false",
         "authorization outcomes are deterministic and carry simulated=true",
         "idempotency replays return the same response and conflicting key reuse is rejected",
         "capture requires an authorized transaction and cannot exceed the authorized amount",
@@ -708,16 +713,22 @@
       "traceId": "trace-qa-manager-email-001",
       "fixture": {
         "provider": "QA_MEMORY_SINK",
-        "recipient": "qa-gestoria@example.test",
-        "customerName": "Nacho Pitt",
-        "customerEmail": "qa.simple@example.test",
+        "recipient": "gestoria.pruebas@example.test",
+        "customerName": "Cliente Prueba Uno",
+        "customerEmail": "cliente.prueba.001@example.test",
+        "sourceEnvironment": "TEST",
+        "testRunId": "TEST-RUN-OFFLINE-001",
+        "isSynthetic": true,
+        "realPayment": false,
+        "gestoriaTaxId": "TEST-NIF-NO-VALIDO",
+        "gestoriaDestinationEnabled": false,
         "packageEvidence": "synthetic-sha256",
         "networkAccess": false,
         "resendCall": false,
         "emailExecution": false
       },
       "assertions": [
-        "manager sink requires explicit QA environment, enabled flag and matching QA site identifier",
+        "manager sink requires explicit TEST environment, enabled flag, matching synthetic test site identifier and testRunId",
         "only reserved .example.test recipient and synthetic customer email are accepted",
         "synthetic customer name and email are included in the message body",
         "package ID, SHA-256 snapshot hash and trace ID are required",

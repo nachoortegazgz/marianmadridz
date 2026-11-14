@@ -1,3 +1,5 @@
+> **Addendum de seguridad vigente — 2026-11-14:** el histórico TEC-037 que describía una pausa global de append-only queda supersedido para la ejecución actual. La ventana global de mutabilidad está cerrada en la rama QA; los ledgers permanecen inmutables. La inspección Wix de esta sesión devuelve producción como Published y no resuelve el Site ID QA; no ejecutar escrituras Wix ni E2E sobre producción. Prevalecen PLAN_ACCION_QA.md, DIRECTRICES_DESARROLLO_CODIGO.md y TEC-038 de docs/DECISION-LOG.md.
+
 ## Addendum vigente — baseline 2026-11-14 (prevalece sobre bloques históricos)
 
 - Git `main` al inicio de esta reconciliación: `79b6238fe4c23206bb8e81327191ab48425e3a0d`, merge de PR #351.
@@ -10,7 +12,7 @@
 - PR #351 dejó una regresión en `src/backend/validation.js`: eliminó exports aún consumidos por `data.js`. La recuperación está en PR #352; CI completo PASS sobre el SHA `609ccc948da3e63d3fd8aa20f5e64c7649770660` (run #1054); commits posteriores en esta PR son solo documentación.
 - CMS live: **41 colecciones (12 NATIVE, 29 WIX_APP), 980 campos**. `MapaStaff` revisión 105 / 56 campos. `DatosFiscales`, `InventarioStockVenta` y `MovimientosInventario` no existen en el inventario live del corte; GET individual 404 / `WDE0025`.
 - Wix Stores Catalog V3 es la autoridad del stock comercial. La capa custom de inventario está retirada; las referencias a sus colecciones, exports o writers son históricas y no autorizan su recreación.
-- `QA_RECORD_MUTATIONS_ENABLED=true` sigue activa durante QA por instrucción del propietario. Es un bloqueo para producción; no se ha restaurado ni publicado.
+- **TEC-038 vigente:** no existe `QA_RECORD_MUTATIONS_ENABLED`, `ISOLATED_SITE_RECORD_MUTATIONS_ENABLED` ni `APPEND_ONLY_MUTATION_WINDOW` en el código de esta rama. Los ledgers siguen append-only también en QA; no reintroducir bypasses globales.
 - No existe evidencia de release que vincule el runtime Wix publicado con el SHA actual de Git. No se declara validación E2E ni despliegue.
 - SharePoint / Power Automate Capa 3 sigue siendo diseño documental, no integración operativa certificada.
 
@@ -22,7 +24,7 @@ Detalle y evidencias: [reconciliación de baseline y recuperación de validadore
 
 **Autoridad:** el usuario/propietario es la SSOT de negocio, requisitos, prioridades, criterios de aceptación y autorizaciones. Las instrucciones expresas posteriores del usuario prevalecen sobre decisiones y restricciones documentales anteriores. La documentación oficial de Wix y de las integraciones gobierna únicamente los contratos y límites técnicos de la plataforma.
 
-**Mutabilidad CMS durante QA:** append-only e inmutabilidad están temporalmente en pausa. Se habilitan update y remove individuales y masivos para todas las colecciones CMS propias del proyecto, incluidas las históricamente tratadas como ledgers. Las operaciones masivas deben identificar explícitamente los registros por ID. No se habilitan escrituras en colecciones propiedad de Wix Apps ni se eluden autenticación, autorización/RBAC, permisos, validaciones de esquema, integridad técnica, secretos o límites de plataforma. La inserción mantiene su allowlist; los writers fiscales/contables/laborales, pagos, reembolsos, comunicaciones y efectos externos conservan sus gates funcionales independientes.
+**Política de mutabilidad vigente (TEC-038):** los bypasses globales de update/remove y la ventana temporal append-only han sido retirados del código. Los ledgers de caja, contabilidad, fiscalidad, jornada, cierres y eventos webhook permanecen inmutables también en QA. Bulk update está deshabilitado. Bulk remove solo admite purgas de tipos efímeros/terminales en ControlOperativo, con condiciones exactas de tipo, estado y fecha; quedan excluidos WEBHOOK_EVENT, DEDUPE_KEY, LEDGER_IDEMPOTENCY y WEBHOOK_CLAIM. CajaActual solo cambia mediante el flujo backend autorizado y con movimiento fuente; no se borra.
 
 **Restauración:** esta política no se revierte automáticamente. Solo el usuario puede ordenar la restauración de append-only y de las restricciones de mutación para preparar el despliegue. No publicar a producción basándose únicamente en esta excepción de QA.
 
@@ -32,7 +34,7 @@ Detalle y evidencias: [reconciliación de baseline y recuperación de validadore
 
 ---
 
-> **HISTÓRICO — superado por el addendum vigente:** el siguiente bloque describe un corte anterior de CMS y TEC-033. El esquema live actual se encuentra en `DICCIONARIO_DATOS_CMS.md` §§2–3; la política de QA vigente es TEC-037 (`QA_RECORD_MUTATIONS_ENABLED=true`).
+> **HISTÓRICO — superado por el addendum vigente:** el siguiente bloque describe un corte anterior de CMS y TEC-033. El esquema live actual se encuentra en `DICCIONARIO_DATOS_CMS.md` §§2–3; la política de QA vigente es TEC-038; TEC-033/035/036/037 son antecedentes históricos y no conceden permisos de mutación.
 
 ## Registro histórico — estado live y limpieza QA (superado por el addendum vigente)
 
@@ -59,9 +61,7 @@ La eliminación se hizo por ID individual con condición de `traceId`; readback 
 
 ### Ventana temporal TEC-033
 
-**HISTÓRICO — TEC-033, sustituida por TEC-037.** El siguiente detalle describe la excepción inicial, limitada a update/remove individuales de determinados ledgers, y ya no representa la política vigente. La política actual está definida por `QA_RECORD_MUTATIONS_ENABLED=true`: update/remove individual y masivo en colecciones CMS propias, incluidos registros históricamente append-only. Las operaciones masivas requieren IDs explícitos. No se reactivan gates de inserción, writers fiscales/contables/laborales ni efectos externos.
-
-La instrucción antigua de desactivar la ventana antes de fusionar o publicar queda sustituida: la política temporal está integrada en main para la fase de QA. Solo el usuario ordenará su restauración antes del despliegue. La publicación Wix de esta ampliación sigue pendiente.
+**HISTÓRICO — TEC-033/037, supersedido por TEC-038.** El siguiente detalle describe autorizaciones temporales de mutación que ya no están vigentes. No existe habilitación global de update/remove en QA. Los ledgers permanecen inmutables; las purgas efímeras se rigen exclusivamente por la allowlist y condiciones server-side definidas en TEC-038. No usar este bloque como autorización de cambios.
 
 ### Alineación backend y estado pendiente
 
@@ -1410,11 +1410,11 @@ La rama `fix/caja-actual-last-operation-projection` adapta parcialmente los fluj
 
 La rama `chore/temporary-append-only-mutation-window` incorpora una excepción temporal de desarrollo para permitir update/remove individual en los ledgers y snapshots append-only identificados por el repositorio: `MovimientosCaja`, `LibroAsientosContablesDetalle`, `RegistrosHorariosStaff`, `MovimientosInventario`, `HistoricoCierresZ`, `PaquetesGestoria` y `ControlOperativo/WEBHOOK_EVENT`.
 
-La SSOT de esta ventana es `APPEND_ONLY_MUTATION_WINDOW` en `src/backend/internalConfig.js`. Los hooks `data.js` y la política de escritura `dataAccessPolicy.js` consultan la misma decisión. La validación de nuevas inserciones permanece activa. No se habilitan operaciones bulk. Las reglas de autorización y permisos CMS continúan aplicándose independientemente de los hooks.
+**HISTÓRICO TEC-033/037 — supersedido por TEC-038:** la antigua SSOT APPEND_ONLY_MUTATION_WINDOW y sus bypasses ya no existen en el código. Los hooks y dataAccessPolicy aplican ahora inmutabilidad sin excepción global. La purga masiva queda limitada a condiciones allowlisted de ControlOperativo.
 
 **Estado:** habilitada solo en la rama de trabajo; no publicada en Wix ni aplicada a permisos o datos live. La excepción no es una dispensa legal y no debe emplearse para alterar o borrar registros reales sujetos a obligaciones de conservación.
 
-**Gate de despliegue:** antes de cualquier publicación productiva hay que restaurar `APPEND_ONLY_MUTATION_WINDOW.ENABLED=false`, quitar los ledgers de las allowlists de update/remove, recuperar las pruebas de bloqueo, ejecutar CI y validar el bloqueo efectivo en Wix Local Editor. No considerar esta rama apta para producción mientras la ventana esté abierta.
+**Gate de despliegue vigente:** no existe ventana global que restaurar. Antes de publicar se requiere CI completo, validación de aislamiento runtime QA, revisión de purgas efímeras y pruebas de hooks en Wix Local Editor. La ausencia de un sitio QA accesible mantiene bloqueado Wix Runtime/E2E y cualquier publicación.
 
 
 ## Addendum — maestros MASTER DatosFiscales y MapaStaff (2026-11-14)
@@ -1470,7 +1470,7 @@ El usuario declara que el código está integrado y publicado en Wix. Esta decla
 
 **Autoridad:** el usuario/propietario es la SSOT de negocio, requisitos, prioridades, criterios de aceptación y autorizaciones. Las instrucciones expresas posteriores del usuario prevalecen sobre decisiones y restricciones documentales anteriores. La documentación oficial de Wix y de las integraciones gobierna únicamente los contratos y límites técnicos de la plataforma.
 
-**Mutabilidad CMS durante QA:** append-only e inmutabilidad están temporalmente en pausa. Se habilitan update y remove individuales y masivos para todas las colecciones CMS propias del proyecto, incluidas las históricamente tratadas como ledgers. Las operaciones masivas deben identificar explícitamente los registros por ID. No se habilitan escrituras en colecciones propiedad de Wix Apps ni se eluden autenticación, autorización/RBAC, permisos, validaciones de esquema, integridad técnica, secretos o límites de plataforma. La inserción mantiene su allowlist; los writers fiscales/contables/laborales, pagos, reembolsos, comunicaciones y efectos externos conservan sus gates funcionales independientes.
+**Política de mutabilidad vigente (TEC-038):** los bypasses globales de update/remove y la ventana temporal append-only han sido retirados del código. Los ledgers de caja, contabilidad, fiscalidad, jornada, cierres y eventos webhook permanecen inmutables también en QA. Bulk update está deshabilitado. Bulk remove solo admite purgas de tipos efímeros/terminales en ControlOperativo, con condiciones exactas de tipo, estado y fecha; quedan excluidos WEBHOOK_EVENT, DEDUPE_KEY, LEDGER_IDEMPOTENCY y WEBHOOK_CLAIM. CajaActual solo cambia mediante el flujo backend autorizado y con movimiento fuente; no se borra.
 
 **Restauración:** esta política no se revierte automáticamente. Solo el usuario puede ordenar la restauración de append-only y de las restricciones de mutación para preparar el despliegue. No publicar a producción basándose únicamente en esta excepción de QA.
 
@@ -1805,7 +1805,7 @@ El usuario declara que el código está integrado y publicado en Wix. Esta decla
 
 **Autoridad:** el usuario/propietario es la SSOT de negocio, requisitos, prioridades, criterios de aceptación y autorizaciones. Las instrucciones expresas posteriores del usuario prevalecen sobre decisiones y restricciones documentales anteriores. La documentación oficial de Wix y de las integraciones gobierna únicamente los contratos y límites técnicos de la plataforma.
 
-**Mutabilidad CMS durante QA:** append-only e inmutabilidad están temporalmente en pausa. Se habilitan update y remove individuales y masivos para todas las colecciones CMS propias del proyecto, incluidas las históricamente tratadas como ledgers. Las operaciones masivas deben identificar explícitamente los registros por ID. No se habilitan escrituras en colecciones propiedad de Wix Apps ni se eluden autenticación, autorización/RBAC, permisos, validaciones de esquema, integridad técnica, secretos o límites de plataforma. La inserción mantiene su allowlist; los writers fiscales/contables/laborales, pagos, reembolsos, comunicaciones y efectos externos conservan sus gates funcionales independientes.
+**Política de mutabilidad vigente (TEC-038):** los bypasses globales de update/remove y la ventana temporal append-only han sido retirados del código. Los ledgers de caja, contabilidad, fiscalidad, jornada, cierres y eventos webhook permanecen inmutables también en QA. Bulk update está deshabilitado. Bulk remove solo admite purgas de tipos efímeros/terminales en ControlOperativo, con condiciones exactas de tipo, estado y fecha; quedan excluidos WEBHOOK_EVENT, DEDUPE_KEY, LEDGER_IDEMPOTENCY y WEBHOOK_CLAIM. CajaActual solo cambia mediante el flujo backend autorizado y con movimiento fuente; no se borra.
 
 **Restauración:** esta política no se revierte automáticamente. Solo el usuario puede ordenar la restauración de append-only y de las restricciones de mutación para preparar el despliegue. No publicar a producción basándose únicamente en esta excepción de QA.
 

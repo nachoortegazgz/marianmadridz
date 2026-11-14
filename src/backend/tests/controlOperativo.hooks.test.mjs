@@ -151,7 +151,7 @@ describe("ControlOperativo hooks", () => {
     );
   });
 
-  it("allows temporary webhook-event edits and controlType changes during QA", async () => {
+  it("keeps webhook-event records append-only during QA", async () => {
     const original = {
       _id: "event-1",
       ...base(CONTROL_TYPE.WEBHOOK_EVENT),
@@ -161,24 +161,26 @@ describe("ControlOperativo hooks", () => {
     };
     seed(original);
 
-    await assert.doesNotReject(
+    await assert.rejects(
       ControlOperativo_beforeUpdate({
         _id: original._id,
         status: CONTROL_STATUS.CLOSED,
-      })
+      }),
+      /append-only/
     );
 
-    await assert.doesNotReject(
+    await assert.rejects(
       ControlOperativo_beforeUpdate({
         _id: original._id,
         controlType: CONTROL_TYPE.SLOT_LOCK,
         resourceId: RESOURCE_ID,
         expiresAt: new Date(Date.now() + 60000),
-      })
+      }),
+      /append-only/
     );
   });
 
-  it("allows temporary removal by Wix beforeRemove itemId contract", async () => {
+  it("rejects removal of webhook-event evidence during QA", async () => {
     const original = {
       _id: "event-2",
       ...base(CONTROL_TYPE.WEBHOOK_EVENT),
@@ -186,8 +188,9 @@ describe("ControlOperativo hooks", () => {
     };
     seed(original);
 
-    await assert.doesNotReject(
-      ControlOperativo_beforeRemove(original._id)
+    await assert.rejects(
+      ControlOperativo_beforeRemove(original._id),
+      /append-only/
     );
   });
 

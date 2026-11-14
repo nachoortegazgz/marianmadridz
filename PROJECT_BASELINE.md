@@ -1,12 +1,25 @@
 # Base maestra del proyecto — Marian Madrid
 
-**Vigencia:** 2026-11-14  
+**Vigencia:** 2026-11-14 · addendum operativo QA  
 **Sitio:** `50b39f33-e753-4331-ab35-b2ed43dc97f7`  
 **Naturaleza:** banco de pruebas aislado, sin actividad real, según declaración expresa del propietario.  
 **Plataforma confirmada:** Wix Editor Classic + Velo.  
 **Repositorio:** https://github.com/nachoortegazgz/marianmadridz
 
 Este documento describe un único sitio objeto de trabajo. No se mantiene una matriz comparativa de entornos. Los registros presentes deben considerarse sintéticos hasta que exista evidencia expresa en contrario.
+
+## Addendum de decisión y estado de QA — 2026-11-14
+
+- **Decisión expresa y SSOT del propietario:** utilizar el sitio `50b39f33-e753-4331-ab35-b2ed43dc97f7` como entorno QA del proyecto, con datos sintéticos y simulación de pagos. Esta decisión es definitiva para el proyecto; no volver a solicitar confirmación ni plantear producción como alternativa.
+- **Producción separada:** `188bed94-177c-4bc9-a9f0-35080d874f3e` (`www.marianmadrid.es`) permanece fuera del alcance de QA.
+- **Discrepancia de acceso:** el inventario CMS del sitio QA está documentado en el corte 2026-11-14, pero la conexión Wix disponible en esta sesión no resolvió el Site ID QA y solo listó producción; esto es una limitación del conector, no una ambigüedad de autorización o de destino. No declarar acceso runtime ni aislamiento efectivo hasta reconciliar la conexión. No ejecutar pruebas Wix contra producción como alternativa.
+- **Continuidad de trabajo:** avanzar con pruebas offline/mock, fixtures sintéticos, auditoría estática, CI y correcciones en ramas/PR. Wix Runtime/E2E queda `BLOCKED_ENVIRONMENT` por limitación de acceso técnico al contexto QA; las tareas offline, de código, contratos y CI continúan sin esperar a resolverla.
+- **Pagos:** usar adaptador mock local sin red, sin PSP, sin Wix Payments y sin banco. `TEST_PAYMENT_CONFIRMED` solo es un resultado interno de simulación.
+- **Comunicaciones y gestoría:** sinks offline sin entrega. No emitir facturas/tickets reales ni invocar AEAT/Veri*Factu, SharePoint o Power Automate desde escenarios QA.
+- **Datos:** no importar PII. Emails bajo `.example.test`; no utilizar teléfonos operativos. Los datos de gestoría son fixtures internos no válidos para procesos fiscales.
+- **Mutaciones:** la autorización/documentación de mutaciones QA no habilita por sí sola los writers fiscales/contables/laborales, pagos, reembolsos o efectos externos, que conservan sus gates independientes.
+
+El plan ejecutable, escenarios y criterios de evidencia están en [PLAN_ACCION_QA.md](PLAN_ACCION_QA.md). Este addendum prevalece sobre frases anteriores de este documento que presenten el aislamiento como verificado o permitan inferir acceso runtime.
 
 ## 1. Estado actual verificado
 
@@ -34,12 +47,11 @@ Este documento describe un único sitio objeto de trabajo. No se mantiene una ma
 - `InventarioStockVenta` y `MovimientosInventario` están presentes físicamente en este sitio, pero sus contratos/writers están retirados. Su presencia no autoriza reactivar inventario custom: Stores Catalog V3 sigue siendo la autoridad prevista para stock comercial.
 
 ### Mutabilidad y seguridad
-- `ISOLATED_SITE_RECORD_MUTATIONS_ENABLED=true` permite update/remove individuales y masivos en colecciones propias incluidas en `ISOLATED_SITE_MUTABLE_COLLECTIONS`.
-- Las operaciones masivas requieren IDs explícitos y límite de 1.000 registros.
-- Las colecciones WIX_APP están excluidas.
-- Se mantienen autenticación, autorización/RBAC, permisos CMS, validaciones, allowlists de inserción, secretos y gates de efectos externos.
-- Los writers fiscales/contables/laborales y los efectos externos continúan fail-closed. Los registros sintéticos no se usan para habilitar flujos reales.
-- La ventana de mutabilidad debe cerrarse y restaurarse la política append-only antes de cualquier actividad real.
+- Se han retirado del código los bypasses globales de update/remove y la ventana temporal append-only; no existe un flag que pueda abrirlos desde configuración.
+- Los ledgers MovimientosCaja, LibroAsientosContablesDetalle, HistoricoCierresZ, RegistrosHorariosStaff y PaquetesGestoria permanecen append-only también en QA.
+- CajaActual es una proyección mutable únicamente a través del flujo backend autorizado y vinculada a movimientos fuente; no se habilita su borrado.
+- Bulk update está deshabilitado. Bulk remove solo admite purgas condicionadas por tipo, estado terminal y fecha de expiración/retención en ControlOperativo; WEBHOOK_EVENT y claims durables están excluidos.
+- La identidad QA no está acreditada por la conexión Wix actual; no existe todavía una barrera runtime por Site ID. Las colecciones WIX_APP se operan exclusivamente mediante sus APIs oficiales y los efectos externos siguen fail-closed.
 
 ## 2. Alcance funcional
 
@@ -80,6 +92,9 @@ Los requisitos funcionales son declaraciones de alcance, no prueba de implementa
 
 ## 5. Bloqueos abiertos
 
+0. Resolver la discrepancia de acceso del Site ID QA `50b39f33-e753-4331-ab35-b2ed43dc97f7`; no redirigir pruebas a producción `188bed94-177c-4bc9-a9f0-35080d874f3e`. Mantener H4 Wix Runtime/E2E bloqueado y avanzar con mocks offline.
+
+
 1. Probar en Wix Local Editor y ejecutar E2E; la integración en Git está cerrada, el despliegue Wix no.
 2. Probar en Wix Editor los hooks de MapaStaff y DatosFiscales, junto con las lecturas de identidad fiscal y destinatarios de gestoría.
 3. Completar búsqueda de consumidores para los candidatos físicos: CajaActual.id, ComplementosCatalogo.addonId, DatosFiscales.gestorNombre y ComplementosCatalogo.traceId.
@@ -95,7 +110,8 @@ Los requisitos funcionales son declaraciones de alcance, no prueba de implementa
 - `DOSSIER TÉCNICO CONSOLIDADO.md`: arquitectura y contratos detallados; validar cada sección contra el CMS actual.
 - `DOSSIER FLUJOS END TO END CAPA 3.md`: diseño documental; no implica operación certificada.
 - `NECESIDADES WEB MARIAN.txt`: requisitos declarados, no estado técnico.
-- `DIRECTRICES_DESARROLLO_CODIGO.txt`: directrices de desarrollo.
+- `DIRECTRICES_DESARROLLO_CODIGO.md`: directrices raíz vigentes.
+- `PLAN_ACCION_QA.md`: fases, simuladores, escenarios, gates y registro de ejecución.
 
 ## 7. Regla de mantenimiento
 
