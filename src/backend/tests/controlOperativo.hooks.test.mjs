@@ -13,6 +13,7 @@ import {
 import {
   CONTROL_TYPE,
   CONTROL_STATUS,
+  WEBHOOK_CLAIM_STATUS,
   OPERATIONAL_COLLECTIONS,
 } from "../internalConfig.js";
 import { wixDataMock } from "./loader.mjs";
@@ -42,6 +43,28 @@ describe("ControlOperativo hooks", () => {
       expiresAt: new Date(Date.now() + 60000),
     };
     assert.deepEqual(ControlOperativo_beforeInsert(validLock), validLock);
+
+    const validClaim = {
+      ...base(CONTROL_TYPE.WEBHOOK_CLAIM),
+      eventId: "wix-event-001",
+      eventType: "BOOKING_CONFIRMED",
+      status: WEBHOOK_CLAIM_STATUS.IN_PROGRESS,
+      ownerToken: "worker-001",
+      version: 1,
+      attempts: 1,
+      expiresAt: new Date(Date.now() + 60000),
+      payload: { eventType: "BOOKING_CONFIRMED" },
+    };
+    assert.deepEqual(ControlOperativo_beforeInsert(validClaim), validClaim);
+
+    assert.throws(
+      () => ControlOperativo_beforeInsert({ ...validClaim, attempts: undefined }),
+      /attempts/
+    );
+    assert.throws(
+      () => ControlOperativo_beforeInsert({ ...validClaim, expiresAt: undefined }),
+      /expiresAt/
+    );
 
     assert.throws(
       () => ControlOperativo_beforeInsert({ ...base("INVALID_TYPE") }),
