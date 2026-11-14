@@ -193,3 +193,30 @@ test('QA-PSP-06 invalid amounts, currency, precision, outcomes and idempotency k
     /QA_PAYMENT_INVALID_OUTCOME/
   );
 });
+
+test('QA-PSP-07 concurrent duplicate operations are idempotent within one mock process', async () => {
+  const gateway = createQaPaymentGateway(QA_CONFIG);
+  const authorizationRequest = {
+    amount: 22.50,
+    currency: 'EUR',
+    idempotencyKey: 'qa-concurrent-authorize-001',
+    outcome: 'APPROVED',
+  };
+  const authorizations = await Promise.all(
+    Array.from({ length: 8 }, () => gateway.authorize(authorizationRequest))
+  );
+  for (const result of authorizations) assert.deepEqual(result, authorizations[0]);
+
+  const captureRequest = {
+    transactionId: authorizations[0].transactionId,
+    amount: 22.50,
+    currency: 'EUR',
+    idempotencyKey: 'qa-concurrent-capture-001',
+  };
+  const captures = await Promise.all(
+    Array.from({ length: 8 }, () => gateway.capture(captureRequest))
+  );
+  for (const result of captures) assert.deepEqual(result, captures[0]);
+  assert.equal(captures[0].status, 'CAPTURED');
+  assert.equal(captures[0].capturedMinor, 2250);
+});
