@@ -796,7 +796,7 @@ function _validateServiciosCatalogoSchema(item = {}) {
 }
 
 // =============================================================================
-// BLOQUE 11 - DATOS FISCALES
+// BLOQUE 11 - MAESTRO MapaStaff
 // =============================================================================
 
 export function MapaStaff_beforeInsert(item) {
@@ -865,7 +865,7 @@ export function MapaStaff_beforeRemove(item) {
 }
 
 // =============================================================================
-// BLOQUE 14 - DATOS FISCALES: singleton CONFIG_SISTEMA (SSOT V2, v5011)
+// BLOQUE 14 - MAESTRO MapaStaff: singleton CONFIG_SISTEMA (SSOT V2, v5011)
 // =============================================================================
 
 const MAPA_STAFF_NON_SCHEMA_FIELDS = [
