@@ -17,6 +17,7 @@ import {
     assertSaveAllowed,
     assertRemoveAllowed,
     assertBulkRemoveAllowed,
+    assertBulkUpdateAllowed,
     assertBulkMutationDisabled,
 } from "backend/dataAccessPolicy";
 
@@ -124,6 +125,7 @@ const elevatedUpdate = auth.elevate(items.update);
 const elevatedSave = auth.elevate(items.save);
 const elevatedQuery = auth.elevate(items.query);
 const elevatedBulkPatch = auth.elevate(items.bulkPatch);
+const elevatedBulkUpdate = auth.elevate(items.bulkUpdate);
 const elevatedBulkRemove = auth.elevate(items.bulkRemove);
 const elevatedQueryReferencedItems = auth.elevate(
     items.queryReferencedItems
@@ -367,8 +369,9 @@ export function bulkInsert() {
     assertBulkMutationDisabled("BULK_INSERT");
 }
 
-export function bulkUpdate() {
-    assertBulkMutationDisabled("BULK_UPDATE");
+export function bulkUpdate(collection, records, options) {
+    assertBulkUpdateAllowed(collection, records);
+    return elevatedBulkUpdate(collection, records, options);
 }
 
 export function bulkRemove(collection, ids, options) {
