@@ -12,7 +12,7 @@
 - PR #351 dejó una regresión en `src/backend/validation.js`: eliminó exports aún consumidos por `data.js`. La recuperación está en PR #352; CI completo PASS sobre el SHA `609ccc948da3e63d3fd8aa20f5e64c7649770660` (run #1054); commits posteriores en esta PR son solo documentación.
 - CMS live: **41 colecciones (12 NATIVE, 29 WIX_APP), 980 campos**. `MapaStaff` revisión 105 / 56 campos. `DatosFiscales`, `InventarioStockVenta` y `MovimientosInventario` no existen en el inventario live del corte; GET individual 404 / `WDE0025`.
 - Wix Stores Catalog V3 es la autoridad del stock comercial. La capa custom de inventario está retirada; las referencias a sus colecciones, exports o writers son históricas y no autorizan su recreación.
-- `QA_RECORD_MUTATIONS_ENABLED=true` sigue activa durante QA por instrucción del propietario. Es un bloqueo para producción; no se ha restaurado ni publicado.
+- **TEC-038 vigente:** no existen bypasses globales de mutación en el código de esta rama. Los ledgers siguen append-only también en QA; las purgas efímeras están restringidas por tipo/estado/fecha.
 - No existe evidencia de release que vincule el runtime Wix publicado con el SHA actual de Git. No se declara validación E2E ni despliegue.
 - SharePoint / Power Automate Capa 3 sigue siendo diseño documental, no integración operativa certificada.
 
@@ -60,9 +60,7 @@ La eliminación se hizo por ID individual con condición de `traceId`; readback 
 
 ### Ventana temporal TEC-033
 
-**HISTÓRICO — TEC-033, sustituida por TEC-037.** El siguiente detalle describe la excepción inicial, limitada a update/remove individuales de determinados ledgers, y ya no representa la política vigente. La política actual está definida por `QA_RECORD_MUTATIONS_ENABLED=true`: update/remove individual y masivo en colecciones CMS propias, incluidos registros históricamente append-only. Las operaciones masivas requieren IDs explícitos. No se reactivan gates de inserción, writers fiscales/contables/laborales ni efectos externos.
-
-La instrucción antigua de desactivar la ventana antes de fusionar o publicar queda sustituida: la política temporal está integrada en main para la fase de QA. Solo el usuario ordenará su restauración antes del despliegue. La publicación Wix de esta ampliación sigue pendiente.
+**HISTÓRICO — TEC-033/037, supersedido por TEC-038.** El siguiente detalle describe autorizaciones temporales de mutación que ya no están vigentes. No existe habilitación global de update/remove en QA. Los ledgers permanecen inmutables; las purgas efímeras se rigen exclusivamente por la allowlist y condiciones server-side definidas en TEC-038.
 
 ### Alineación backend y estado pendiente
 
