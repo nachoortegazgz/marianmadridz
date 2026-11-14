@@ -40,3 +40,16 @@ Cada nueva ejecución añadirá un identificador único y conservará SHA, tipo 
 - PSP mock: requiere environment TEST, testSiteId y testRunId; todas las respuestas de autorización/captura/reembolso llevan isSynthetic=true, sourceEnvironment=TEST y realPayment=false.
 - Email sink: solo acepta destinatario gestoria.pruebas@example.test y clientes sintéticos con testRunId coincidente; no realiza I/O.
 - Limitación: fixture y sink son offline/in-memory. No acreditan desconexión de proveedores Wix en runtime ni habilitan escritura CMS.
+
+
+## CI-20261114-43606822535 — regresión offline tras TEC-038
+
+- SHA validado: f4c85855cfd8480e529ff4bc46be6a5193ed019e.
+- Layer 1: 23 suites, 299 tests, 0 fallos.
+- Layer 2: 19 suites, 252 tests, 0 fallos.
+- Regresión completa: 69 suites, 633 tests, 0 fallos.
+- Contratos Wix SDK: PASS (@wix/ecom cartV2, @wix/data items.patch/bulkPatch, eCommerce order transactions, Bookings Reader V2).
+- ESLint: PASS.
+- Secret scanning: run 43606822521 PASS.
+- Suites relevantes: data.hooks 29/29; dataAccess.writePolicy 9/9; crons.jobsConfigParity 29/29; site.flows.offline 31/31; qa.payment-gateway.mock 7/7; qa.manager-email-sink.mock 4/4; qa.simulation-manifest 7/7.
+- Limitación: todas las pruebas son offline/mock; no demuestran aislamiento de Wix Runtime, permisos CMS efectivos, desconexión de PSP ni ausencia de automatizaciones externas en el sitio.
