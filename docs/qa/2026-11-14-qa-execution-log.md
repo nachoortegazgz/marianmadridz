@@ -27,7 +27,7 @@ Cada nueva ejecución añadirá un identificador único y conservará SHA, tipo 
 - Tipo: corrección de seguridad de código + pruebas de política.
 - Rama: docs/qa-operating-model-2026-11-14.
 - Hallazgo P0: ISOLATED_SITE_RECORD_MUTATIONS_ENABLED=true permitía update/remove global de colecciones propias y desactivaba guards de CajaActual/CitasF2 sin una comprobación server-side del Site ID en esa ruta.
-- Corrección aplicada en rama: ventana global cerrada (ISOLATED_SITE_RECORD_MUTATIONS_ENABLED=false, APPEND_ONLY_MUTATION_WINDOW.ENABLED=false); ledgers append-only vuelven a denegar update/remove; bulk update/remove denegados.
+- Corrección aplicada en rama: se retiran los bypasses globales de mutabilidad y la ventana temporal; hooks append-only son incondicionales. Bulk update deshabilitado; bulk remove restringido a purgas condicionadas de tipos efímeros/terminales, excluyendo WEBHOOK_EVENT y claims durables.
 - Pruebas modificadas: política de escritura ahora exige ledgers inmutables y ventana global cerrada; simulador PSP añade concurrencia/idempotencia dentro de un único proceso mock.
 - Validación: pendiente de CI sobre el SHA resultante. No declarar PASS antes de resultados.
 - Wix: GetSiteContext sigue devolviendo producción como Published; Site ID QA no resoluble. Sin escrituras Wix/CMS, pagos, comunicaciones ni publicación.
