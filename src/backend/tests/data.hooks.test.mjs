@@ -310,22 +310,32 @@ test('HOOK-CONTROL-01 rejects retired ControlOperativo fields on new writes', ()
 // DatosFiscales — schema físico CMS (rev. 10)
 // -----------------------------------------------------------------------------
 
-test('HOOK-FISCAL-CONFIG-01 accepts physical CMS fields and BOOLEAN flags', () => {
+test('HOOK-FISCAL-CONFIG-01 CONFIG_SISTEMA accepts pending fiscal identity without inference', () => {
   const config = {
     recordType: IC.RECORD_TYPE.CONFIG_SISTEMA,
-    taxId: 'B12345678',
-    legalName: 'Marian Madrid',
-    thirdPartyType: 'EMISOR',
-    verifactuEnabled: true,
-    verifactuVersion: '1.0',
-    tipoUsoPosibleMultiOT: true,
-    indicadorMultiplesOT: false,
-    fechaInicioVerifactu: '2026-01-01',
+    commercialName: 'Marian Madrid Peluquería y Estética',
+    address: 'C/ Maurice Ravel 35, Local — 50012 Zaragoza',
+    postalCode: '50012',
+    province: 'Zaragoza',
+    email: 'hola@marianmadrid.es',
+    verifactuEnabled: false,
+    schemaVersion: 1,
+    traceId: 'trace-config-sistema-001',
   };
+  const inserted = H.DatosFiscales_beforeInsert({ ...config });
+  assert.equal(inserted._id, 'CONFIG_SISTEMA_FISCAL');
   assert.doesNotThrow(() => H.DatosFiscales_beforeInsert({ ...config }));
   assert.throws(
-    () => H.DatosFiscales_beforeInsert({ ...config, tipoUsoPosibleMultiOT: 'S' }),
-    /BOOLEAN/
+    () => H.DatosFiscales_beforeInsert({ ...config, taxId: 'INVALID' }),
+    /taxId invalido/
+  );
+  assert.throws(
+    () => H.DatosFiscales_beforeInsert({ ...config, thirdPartyType: 'EMISOR' }),
+    /thirdPartyType.*null/
+  );
+  assert.throws(
+    () => H.DatosFiscales_beforeInsert({ ...config, fechaInicioVerifactu: '01/01/2026' }),
+    /DATE ISO/
   );
   assert.throws(
     () => H.DatosFiscales_beforeInsert({ ...config, nifProductor: 'B12345678' }),
@@ -333,13 +343,24 @@ test('HOOK-FISCAL-CONFIG-01 accepts physical CMS fields and BOOLEAN flags', () =
   );
 });
 
-test('HOOK-FISCAL-CONFIG-02 staff fiscal master does not require absent identity columns', () => {
-  assert.doesNotThrow(() => H.DatosFiscales_beforeInsert({
+test('HOOK-FISCAL-CONFIG-02 third-party fiscal rows require identity, schemaVersion and traceId', () => {
+  const thirdParty = {
     recordType: IC.RECORD_TYPE.TERCERO,
     taxId: 'B12345678',
     legalName: 'Staff fiscal identity',
     thirdPartyType: 'STAFF',
-  }));
+    schemaVersion: 1,
+    traceId: 'trace-tercero-001',
+  };
+  assert.doesNotThrow(() => H.DatosFiscales_beforeInsert({ ...thirdParty }));
+  assert.throws(
+    () => H.DatosFiscales_beforeInsert({ ...thirdParty, traceId: '' }),
+    /traceId obligatorio/
+  );
+  assert.throws(
+    () => H.DatosFiscales_beforeInsert({ ...thirdParty, schemaVersion: 2 }),
+    /schemaVersion debe ser 1/
+  );
 });
 
 test('HOOK-FISCAL-CONFIG-03 legacy aliases are normalized and removed before persistence', () => {
@@ -348,6 +369,8 @@ test('HOOK-FISCAL-CONFIG-03 legacy aliases are normalized and removed before per
     nifCif: 'B12345678',
     razonSocial: 'Proveedor',
     tipoTercero: 'PROVEEDOR',
+    schemaVersion: 1,
+    traceId: 'trace-tercero-legacy-001',
   };
   assert.doesNotThrow(() => H.DatosFiscales_beforeInsert(item));
   assert.equal(item.taxId, 'B12345678');

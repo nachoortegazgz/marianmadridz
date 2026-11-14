@@ -510,11 +510,10 @@ export const DATA_ACCESS_BULK_PATCH_POLICY = Object.freeze({
 
 
 /*
- * Elevated CMS write policy. Append-only ledgers are insert-only; mutable
- * operational writes are restricted to ControlOperativo, CajaActual and
- * the mutable CitasF2 booking projection.
- * Bulk insert/update remain disabled until a real consumer has a reviewed
- * contract. Keep this list synchronized with dataAccessPolicy.js tests.
+ * Elevated CMS write policy. Normal operation is insert-only for append-only
+ * ledgers. TEC-033 temporarily adds individual update/remove for those
+ * collections; APPEND_ONLY_MUTATION_WINDOW must be disabled before production.
+ * Bulk insert/update/remove remain disabled. Keep synchronized with tests.
  */
 export const DATA_ACCESS_WRITE_POLICY = Object.freeze({
   insertCollections: Object.freeze([

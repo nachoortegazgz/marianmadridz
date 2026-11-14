@@ -13,7 +13,14 @@ import {
     OPERATIONAL_COLLECTIONS as O,
     CONTROL_TYPE as T,
     RECORD_TYPE,
+    APPEND_ONLY_MUTATION_WINDOW,
 } from "backend/internalConfig";
+
+test("temporary append-only mutation window is explicit and requires production restoration", () => {
+    assert.equal(APPEND_ONLY_MUTATION_WINDOW.ENABLED, true);
+    assert.equal(APPEND_ONLY_MUTATION_WINDOW.TEMPORARY, true);
+    assert.equal(APPEND_ONLY_MUTATION_WINDOW.RESTORE_BEFORE_PRODUCTION, true);
+});
 
 test("insert policy allows only declared collections and canonical ControlOperativo types", () => {
     assert.doesNotThrow(() => assertInsertAllowed(O.CONTROL_OPERATIVO, {
@@ -77,6 +84,9 @@ test("update policy allows mutable state and all append-only ledgers during temp
         _id: "projection-1",
         bookingStatus: "CONFIRMED",
     }), { code: "CMS_UPDATE_BOOKING_ID_REQUIRED" });
+    assert.throws(() => assertUpdateAllowed(C.MOVIMIENTOS_CAJA, {
+        amount: 1,
+    }), { code: "CMS_UPDATE_ID_REQUIRED" });
     for (const collection of [
         C.MOVIMIENTOS_CAJA,
         C.MOVIMIENTOS_INVENTARIO,

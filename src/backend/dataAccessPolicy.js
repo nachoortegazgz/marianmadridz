@@ -5,6 +5,7 @@ import {
     CONTROL_TYPE,
     CONTROL_OPERATIVO_NON_CANONICAL_FIELDS,
     RECORD_TYPE,
+    APPEND_ONLY_MUTATION_WINDOW,
 } from "backend/internalConfig";
 
 function _policyError(code) {
@@ -69,6 +70,20 @@ function _isRecord(value) {
     return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
+const APPEND_ONLY_MUTABLE_COLLECTIONS = Object.freeze([
+    BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA,
+    BUSINESS_COLLECTIONS.MOVIMIENTOS_INVENTARIO,
+    BUSINESS_COLLECTIONS.LIBRO_ASIENTOS_CONTABLES_DETALLE,
+    BUSINESS_COLLECTIONS.REGISTROS_HORARIOS_STAFF,
+    BUSINESS_COLLECTIONS.HISTORICO_CIERRES_Z,
+    BUSINESS_COLLECTIONS.PAQUETES_GESTORIA,
+]);
+
+function _temporaryMutationWindowOpen() {
+    return APPEND_ONLY_MUTATION_WINDOW.ENABLED === true &&
+        APPEND_ONLY_MUTATION_WINDOW.TEMPORARY === true;
+}
+
 function _assertControlRecord(item, allowedTypes, errorCode, requireId = true) {
     if (
         !_isRecord(item) ||
@@ -104,7 +119,16 @@ export function assertUpdateAllowed(collection, item) {
     if (!DATA_ACCESS_WRITE_POLICY.updateCollections.includes(collection) || !_isRecord(item)) {
         throw _policyError("CMS_UPDATE_COLLECTION_DENIED");
     }
+    if (APPEND_ONLY_MUTABLE_COLLECTIONS.includes(collection)) {
+        if (!_temporaryMutationWindowOpen()) {
+            throw _policyError("CMS_UPDATE_COLLECTION_DENIED");
+        }
+        if (!item._id) throw _policyError("CMS_UPDATE_ID_REQUIRED");
+    }
     if (collection === BUSINESS_COLLECTIONS.CONTROL_OPERATIVO) {
+        if (item.controlType === CONTROL_TYPE.WEBHOOK_EVENT && !_temporaryMutationWindowOpen()) {
+            throw _policyError("CMS_UPDATE_CONTROL_TYPE_DENIED");
+        }
         _assertControlRecord(
             item,
             DATA_ACCESS_WRITE_POLICY.mutableControlTypes,
@@ -134,8 +158,12 @@ export function assertRemoveAllowed(collection, id, expectedControlType) {
     if (!DATA_ACCESS_WRITE_POLICY.removeCollections.includes(collection) || !id) {
         throw _policyError("CMS_REMOVE_SCOPE_DENIED");
     }
-    if (collection === BUSINESS_COLLECTIONS.CONTROL_OPERATIVO &&
-        !DATA_ACCESS_WRITE_POLICY.removableControlTypes.includes(expectedControlType)) {
+    if (collection === BUSINESS_COLLECTIONS.CONTROL_OPERATIVO) {
+        if (!DATA_ACCESS_WRITE_POLICY.removableControlTypes.includes(expectedControlType) ||
+            (expectedControlType === CONTROL_TYPE.WEBHOOK_EVENT && !_temporaryMutationWindowOpen())) {
+            throw _policyError("CMS_REMOVE_SCOPE_DENIED");
+        }
+    } else if (APPEND_ONLY_MUTABLE_COLLECTIONS.includes(collection) && !_temporaryMutationWindowOpen()) {
         throw _policyError("CMS_REMOVE_SCOPE_DENIED");
     }
 }
