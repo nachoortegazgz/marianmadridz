@@ -475,21 +475,17 @@ export function isExplicitSimulationLedgerRecord(item) {
     const recordSource = upper(item.recordSource);
     const eventType = upper(item.eventType);
     const movementType = upper(item.movementType);
-    const origenTipo = upper(item.origenTipo);
-    const accountCode = upper(item.accountCode);
+    const accountCode = upper(item.desgloseDetallado?.accountCode);
     const hash = upper(item.hash);
     const previousRecordHash = upper(item.previousRecordHash);
-    const recordHash = upper(item.recordHash);
     const simulatedMovementType = movementType.startsWith("SIMULATED_") ||
         /(?:^|_)SIMULAD[AO]$/.test(movementType);
     return recordSource === "SMOKE_TEST" ||
         eventType.startsWith("SIMULATED_") ||
         simulatedMovementType ||
-        origenTipo === "SMOKE_TEST" ||
         accountCode === "SIMULATED" ||
         hash === "SIMULATED_HASH" ||
-        previousRecordHash === "SIMULATED_PREVIOUS_HASH" ||
-        recordHash === "SIMULATED_DETAIL_HASH";
+        previousRecordHash === "SIMULATED_PREVIOUS_HASH";
 }
 
 
