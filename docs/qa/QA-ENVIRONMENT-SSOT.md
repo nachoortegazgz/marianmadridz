@@ -9,7 +9,10 @@
 - **Cliente sintético canónico:** Nacho Pitt — `nachoortegazgz@gmail.com`.
 - **Pagos:** pasarela desconectada. No se realizan cobros, capturas, reembolsos ni operaciones bancarias reales.
 - **Fiscalidad y comunicaciones:** el propietario declara desactivados Veri*Factu, AEAT, emisión/transmisión fiscal, email, SMS, WhatsApp, campañas y comunicaciones a clientes. No obstante, la auditoría read-only Wix del 2026-11-14 detecta 10 automatizaciones preinstaladas ACTIVE con acciones de email/notificación y bloqueos de modificación. Por tanto, el estado efectivo de aislamiento de comunicaciones NO está acreditado; mantener Runtime/E2E que pueda dispararlas bloqueado hasta resolverlo.
-- **Ledgers:** se aplica la política SSOT vigente de QA; si sus writers están pausados, no se insertan nuevos registros. Nunca se habilita update/remove ni sobrescritura de registros append-only.
+- **Mutabilidad temporal QA (decisión del propietario, 2026-11-15):** queda suspendida temporalmente la regla append-only para facilitar el desarrollo y la corrección de datos sintéticos. Se autoriza preparar y habilitar operaciones controladas de lectura/corrección y update/remove sobre colecciones de dominio QA, sujetas a allowlist explícita y autorización backend de ADMIN. Esta excepción no autoriza permisos públicos, acceso anónimo, cambios en colecciones nativas WIX_APP por acceso directo, ni operaciones con efectos externos. La activación técnica en código/CMS se considera pendiente hasta verificar colección, esquema, permisos, consumidores y pruebas.
+- **Colecciones en alcance inicial de revisión:** `MovimientosCaja`, `LibroAsientosContablesDetalle`, `RegistrosHorariosStaff`, `MovimientosInventario`, `HistoricoCierresZ`, `PaquetesGestoria` y `ControlOperativo/WEBHOOK_EVENT`. La allowlist final debe confirmar existencia y keyfields live antes de habilitar cada una.
+- **Datos existentes:** solo se podrán corregir o eliminar registros confirmados como sintéticos del sitio QA, con respaldo/export previo, alcance explícito, registro de auditoría y mecanismo de reversión. No se presume que todo registro de cualquier colección sea descartable.
+- **Reintroducción preproducción (obligatoria):** antes del primer despliegue real deben restablecerse append-only e inmutabilidad de ledgers, rectificaciones trazables, permisos mínimos, controles de acceso, validación de identidad/autorización backend, idempotencia, integridad/hash, auditoría y bloqueos de mutación/borrado. La retirada temporal debe constar como riesgo abierto hasta cerrar esta tarea.
 - **Seguridad:** el estado Wix `Published` y el dominio personalizado son metadatos de publicación; no cambian la clasificación funcional del sitio como QA ni acreditan actividad real. Toda operación de prueba debe seguir siendo sintética y no producir efectos externos.
 - **No usar:** identificadores de sitios anteriores, sitios auxiliares o entornos de terceros como destino alternativo de QA. Las designaciones anteriores quedan supersedidas y no son operativas.
 
@@ -35,3 +38,20 @@ PR #379 integrada en main mediante squash commit 27348a20bfb913fde43761d4c92dd46
 La consulta read-only de Wix Automations V2 devolvió 150 automatizaciones: 10 ACTIVE, 140 INACTIVE, 0 archivadas. Las diez activas son preinstaladas y todas están bloqueadas por settings.readonly o settings.disableStatusChange. Varias ejecutan acciones de email/notificación. No se modificó ninguna.
 
 Ver auditoría read-only de automatizaciones en docs/audits/2026-11-14-qa-automations-isolation.md. Los flujos que puedan disparar esos triggers quedan bloqueados para Runtime/E2E hasta neutralización soportada por Wix/proveedor y nueva lectura de verificación. No sortear locks ni desinstalar apps a ciegas.
+
+
+## Decisión vigente — mutabilidad temporal de datos QA (2026-11-15)
+
+Por instrucción expresa del propietario, la restricción append-only queda suspendida temporalmente en el entorno QA para acelerar el desarrollo y permitir correcciones de datos sintéticos. Esta decisión supersede, exclusivamente para QA y desde esta fecha, las reglas anteriores que prohibían toda corrección/update/remove de ledgers.
+
+La decisión no elimina la obligación de:
+- mantener las operaciones de mutación exclusivamente en backend y autorizadas para ADMIN;
+- aplicar allowlist por colección y validar Site ID QA exacto;
+- preservar permisos CMS privados y no abrir acceso anónimo/público;
+- realizar backup/export previo, registrar auditoría y definir rollback;
+- mantener desactivados pagos, comunicaciones, emisión/transmisión fiscal y efectos externos;
+- no modificar directamente colecciones nativas WIX_APP fuera de sus APIs oficiales.
+
+**Tarea preproducción obligatoria:** reintroducir y probar las garantías de append-only, inmutabilidad, rectificación mediante nuevos registros, permisos mínimos, autorización backend, idempotencia, hash/trazabilidad y bloqueo de update/remove. No se autoriza despliegue real mientras esta tarea esté abierta.
+
+**Estado de implementación:** decisión SSOT registrada en esta rama; no implica que los bloqueos ya hayan sido retirados del código ni que se hayan cambiado permisos live de Wix. La implementación requiere revisión técnica y validación por colección.
