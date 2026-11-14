@@ -97,10 +97,18 @@ test("insert policy allows only declared collections and canonical ControlOperat
     }), { code: "CMS_WRITE_NON_CANONICAL_CONTROL_FIELD" });
 });
 
-test("insert policy rejects unknown fiscal record types", () => {
-    assert.throws(() => assertInsertAllowed(C.MAPA_STAFF, {
+test("insert policy rejects unknown fiscal record types in DatosFiscales", () => {
+    assert.throws(() => assertInsertAllowed(C.DATOS_FISCALES, {
         recordType: "INVOICE_LEDGER",
     }), { code: "CMS_INSERT_FISCAL_RECORD_TYPE_INVALID" });
+});
+
+test("MapaStaff insert policy does not require a fiscal recordType", () => {
+    assert.doesNotThrow(() => assertInsertAllowed(C.MAPA_STAFF, {
+        staffMemberId: "0114748d-2806-3928-9b97-ff0d09853759",
+        resourceId: "e556070a-6d6a-402e-8422-11133033ea76",
+        scheduleId: "06af20d4-1ec3-49fa-9075-f0691dfa7fd4",
+    }));
 });
 
 test("update policy allows mutable state and all append-only ledgers during temporary window", () => {
