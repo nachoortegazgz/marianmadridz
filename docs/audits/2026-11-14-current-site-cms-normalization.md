@@ -180,7 +180,7 @@ La igualdad de importes/contadores en un singleton simulado o en una única fila
 
 - internalConfig.js: DatosFiscales se incorpora a BUSINESS_COLLECTIONS; RECORD_TYPE queda limitado a los tipos fiscales de esa colección; CASH_REGISTER_STATUS incorpora SIMULACION como sentinel del sitio aislado.
 - validation.js y data.js: validación separada de MapaStaff y DatosFiscales; assertCajaActualRecord valida el esquema físico de CajaActual y sequenceCounters como OBJECT; no se exigen campos inexistentes.
-- dataAccessPolicy.js: la validación de recordType se aplica a inserciones de DatosFiscales, no a MapaStaff. thirdPartyId de los payloads fiscales referencia lógicamente DatosFiscales._id; no MapaStaff.
+- dataAccessPolicy.js: la validación de recordType se aplica a inserciones de DatosFiscales, no a MapaStaff. thirdPartyId de los payloads fiscales debe contener DatosFiscales._id; el hook valida formato GUID, no existencia referencial; no apunta a MapaStaff.
 - eventLog.js: upsert de terceros y lectura de configuración migrados a DatosFiscales; no se persisten traceId ni schemaVersion allí.
 - fiscalAggregator.web.js: lectura de NIF emisor migrada a DatosFiscales; ausencia de CONFIG_SISTEMA sigue provocando error fail-closed.
 - fiscalDocuments.web.js: lectura de destinatarios migrada a DatosFiscales; gestorName es el único nombre consumido.
