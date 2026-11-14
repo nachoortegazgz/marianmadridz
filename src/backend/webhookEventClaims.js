@@ -151,7 +151,7 @@ export async function acquireWebhookEventClaim({
         }
 
         const version = Number(existing.version);
-        const previousTraceId = String(existing.traceId ?? existing.ownerToken ?? "").trim();
+        const previousTraceId = String(existing.traceId ?? "").trim();
         if (!Number.isSafeInteger(version) || version < 1 || !previousTraceId) {
             throw claimError("WEBHOOK_CLAIM_FENCE_INVALID");
         }
@@ -180,7 +180,6 @@ export async function acquireWebhookEventClaim({
             { fieldPath: "attempts", action: "SET_FIELD", value: attempts },
             { fieldPath: "expiresAt", action: "SET_FIELD", value: expiresAt },
             { fieldPath: "version", action: "INCREMENT_FIELD", value: 1 },
-
         ]);
         if (!recovered) return { status: "BUSY", claimId };
 
