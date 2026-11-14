@@ -77,6 +77,22 @@ describe("ControlOperativo hooks", () => {
       () => ControlOperativo_beforeInsert(base(CONTROL_TYPE.WEBHOOK_EVENT)),
       /eventId/
     );
+    const validEvent = {
+      ...base(CONTROL_TYPE.WEBHOOK_EVENT),
+      eventId: "wix-event-002",
+      eventType: "BOOKING_CONFIRMED",
+      processedAt: new Date(),
+      payload: { eventType: "BOOKING_CONFIRMED" },
+    };
+    assert.deepEqual(ControlOperativo_beforeInsert(validEvent), validEvent);
+    assert.throws(
+      () => ControlOperativo_beforeInsert({ ...validEvent, eventType: undefined }),
+      /eventType/
+    );
+    assert.throws(
+      () => ControlOperativo_beforeInsert({ ...validEvent, processedAt: undefined }),
+      /processedAt/
+    );
     assert.throws(
       () => ControlOperativo_beforeInsert({
         ...base(CONTROL_TYPE.SLOT_LOCK),
@@ -140,6 +156,8 @@ describe("ControlOperativo hooks", () => {
       _id: "event-1",
       ...base(CONTROL_TYPE.WEBHOOK_EVENT),
       eventId: "wix-event-1",
+      eventType: "BOOKING_CONFIRMED",
+      processedAt: new Date(),
     };
     seed(original);
 
