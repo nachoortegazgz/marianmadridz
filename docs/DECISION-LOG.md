@@ -401,3 +401,18 @@ La propuesta anterior agrupaba STAFF, TERCERO y GESTORIA en MapaStaff. Queda des
 **Gate previo a cualquier despliegue:** inventariar y cubrir con una política central server-side todos los writers CMS, Bookings, eCommerce, eventos, crons, email, fiscalidad e integraciones; pruebas negativas que demuestren que cada ruta rechaza o deriva a mocks sin I/O; ejecución CI completa; acceso verificable al Site ID QA designado `50b39f33-e753-4331-ab35-b2ed43dc97f7`; comprobación de aislamiento de PSP y servicios externos. No usar producción ni otro sitio como sustituto.
 
 **No autorizado por esta decisión:** desplegar, publicar, activar una pasarela, enviar comunicaciones, emitir/transmitir información fiscal, cambiar permisos/secrets o escribir en Wix CMS. Hasta superar el gate, la ejecución permitida continúa siendo offline/mock.
+
+
+---
+
+## ADDENDUM QA-2026-11-14-C — actualización del Site ID designado por el propietario
+
+El propietario designa ahora `188bed94-177c-4bc9-a9f0-35080d874f3e` como identificador del sitio que pretende utilizar para QA, sustituyendo como designación vigente al ID QA anterior `50b39f33-e753-4331-ab35-b2ed43dc97f7`.
+
+**Comprobación de Wix realizada tras la instrucción:** `GetSiteContext` resuelve el ID nuevo como **Marian Madrid Peluquería y Estética**, URL `https://www.marianmadrid.es/`, estado **Published**, dominio personalizado y plan Premium. El sitio tiene Wix Bookings, Wix Forms & Payments, Wix Gift Cards, Wix Invoices V1 y Wix Stores Catalog V3, entre otras apps.
+
+**Discrepancia crítica:** el ID designado coincide con el sitio publicado en el dominio oficial, previamente identificado como producción. La designación del propietario queda registrada, pero no demuestra aislamiento de QA ni desactiva tráfico, reservas, pagos, notificaciones o integraciones reales.
+
+**Decisión de seguridad:** `BLOCKED_ENVIRONMENT / PRODUCTION_SITE_DESIGNATED_AS_QA`. No ejecutar pruebas runtime, escrituras CMS, reservas sintéticas en el sitio, cambios de configuración, desconexión de pasarelas, publicación ni operaciones de verificación que puedan generar efectos. No tratar el sitio como aislado hasta disponer de evidencia técnica de aislamiento y autorización específica para intervenir sobre un sitio actualmente publicado.
+
+La regla global de desarrollo y cero actividad real sigue vigente. Para continuar las pruebas runtime se requiere un sitio QA separado/no publicado o un mecanismo de aislamiento verificable que impida efectos a clientes reales.
