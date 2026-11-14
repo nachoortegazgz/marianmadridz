@@ -28,7 +28,7 @@ Detalle y evidencias: [reconciliación de baseline y recuperación de validadore
 
 > **Vigencia 2026-11-14:** Capa 3 sigue siendo diseño, no integración operativa certificada. Wix CMS mantiene la autoridad transaccional. `CajaActual` live tiene el esquema corregido y singleton cerrado; Capa 3 no calcula ni modifica sus saldos. TEC-033 es una excepción de código temporal en una rama de QA y no concede a SharePoint/Power Automate permisos de escritura o borrado sobre Capa 1.
 
-## Estado live y limpieza QA — corte 2026-11-14
+## Registro histórico — estado live y limpieza QA (superado por el addendum vigente)
 
 **Sitio:** `188bed94-177c-4bc9-a9f0-35080d874f3e`. **Rama de código:** `chore/temporary-append-only-mutation-window`. Este estado supersede los inventarios y addenda anteriores que contradigan estos datos.
 
