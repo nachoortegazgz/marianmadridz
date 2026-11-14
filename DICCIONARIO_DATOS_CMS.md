@@ -35,7 +35,7 @@ Recuento live verificado el 2026-11-14: 43 colecciones en total (14 NATIVE y 29 
 | `LibroAsientosContablesDetalle` | `LIBRO_ASIENTOS_CONTABLES_DETALLE` | 27 | `entryId` | 0 | Ledger contable append-only |
 | `MapaStaff` | `MAPA_STAFF` | 23 | `displayName` | 3 | Correlación de identidades y recursos |
 | `MovimientosCaja` | `MOVIMIENTOS_CAJA` | 78 | `numSerieFactura` | 0 | Ledger fiscal; sin movimientos en el corte live |
-| `MovimientosInventario` | `MOVIMIENTOS_INVENTARIO` | 29 | `movementToken` | 1 | Histórico de movimientos; legacy |
+
 | `PaquetesGestoria` | `Paquetes de Gestoria (append-only)` | 3 | `periodType` | 0 | Snapshot documental append-only |
 | `RegistroIntegracion` | `REGISTRO_INTEGRACION` | 2 | `eventId` | 0 | Registro de integración; fuera de BUSINESS_COLLECTIONS |
 | `RegistrosHorariosStaff` | `REGISTROS_HORARIOS_STAFF` | 11 | `resourceId` | 2 | Registro horario; writer deshabilitado |
@@ -43,7 +43,7 @@ Recuento live verificado el 2026-11-14: 43 colecciones en total (14 NATIVE y 29 
 
 **Advertencia de autoridad**
 - Wix CMS es la fuente de verdad transaccional propia del ecosistema.
-- Wix Stores usa Catalog V3 como autoridad operativa del catálogo/stock comercial. `InventarioStockVenta` y `MovimientosInventario` se consideran legacy; conservar datos históricos y no reactivar writers por inferencia.
+- Wix Stores usa Catalog V3 como autoridad operativa del catálogo/stock comercial. `InventarioStockVenta` se observa como colección legacy. `MovimientosInventario` no aparece en el inventario live del 2026-11-14 ni responde al GET por ese ID; la sección 3.11 queda como esquema histórico del dossier, no como colección actualmente disponible. No recrearla ni reactivar writers sin confirmar ID, necesidad y consumidores.
 - `ServiciosCatalogo` está definido por el proyecto como maestro propio de configuración de servicios y planes; su sincronización completa con Wix Bookings debe probarse, no presumirse.
 - `RegistroIntegracion` existe físicamente, pero no forma parte de `BUSINESS_COLLECTIONS` en `internalConfig.js`; no se ha demostrado un consumidor/writer activo.
 - `HistoricoCierresZ`, `MovimientosCaja`, `LibroAsientosContablesDetalle`, `PaquetesGestoria` y `RegistrosHorariosStaff` deben tratarse conforme a sus restricciones de inmutabilidad/append-only y flags fail-closed. No editar ni borrar registros históricos.
@@ -240,7 +240,9 @@ _id:TEXT, _createdDate:DATETIME, _updatedDate:DATETIME, _owner:TEXT
 
 **Convención histórica:** el campo canónico de huella de este ledger es `hash`; `recordHash` no es el campo físico de `MovimientosCaja`. No intercambiarlo con `recordHash` del ledger contable.
 
-### 3.11 MovimientosInventario — revisión 29 (histórico/legacy)
+### 3.11 MovimientosInventario — esquema histórico (no localizado en Wix live 2026-11-14)
+
+El ID `MovimientosInventario` no aparece en la lista live de colecciones y `GET /collections/MovimientosInventario` devuelve WDE0025. El siguiente esquema se conserva únicamente como evidencia histórica del dossier; no debe tratarse como esquema físico actual ni utilizarse para nuevas escrituras.
 
 ```text
 variantId:TEXT, orderId:TEXT, productId:TEXT, stockApplied:BOOLEAN,
