@@ -172,10 +172,9 @@ export function assertDatosFiscalesRecord(item, { partial = false } = {}) {
         if (item.legalName != null && item.legalName !== "" && !String(item.legalName).trim()) {
             throw new Error("SCHEMA_VIOLATION: DatosFiscales.legalName must be non-empty when supplied");
         }
-    }
-
-    if (item.thirdPartyType != null && item.thirdPartyType !== "") {
-        assertValidEnum(String(item.thirdPartyType).toUpperCase(), THIRD_PARTY_TYPE, "thirdPartyType");
+        if (item.thirdPartyType != null && item.thirdPartyType !== "") {
+            throw new Error("SCHEMA_VIOLATION: CONFIG_SISTEMA.thirdPartyType must be null");
+        }
     }
 
     if (item.recordType === RECORD_TYPE.TERCERO) {
