@@ -36,7 +36,7 @@
 - Política temporal: las 13 colecciones NATIVE tienen `itemRead=ANYONE`; permisos de escritura preservados. Las 29 WIX_APP conservan permisos definidos por Wix Apps (23 ANYONE, 6 restringidas). Capa 3 no obtiene permiso para leer directamente la colección ni para modificarla. La exposición de lectura es temporal, autorizada por el responsable y debe revertirse antes de despliegue.
 - El esquema incluye apertura, último ticket/conceptos, precios/impuestos, pago, trazabilidad, referencias fiscales y acumulados de sesión. Su presencia no acredita que los writers/DTOs estén implementados ni validados.
 - Estado del singleton: el último readback anterior a esta edición documentaba `CAJA_PRINCIPAL` cerrado y sin sesión abierta. El elemento no se ha releído en esta actualización; el estado y los saldos actuales quedan pendientes de readback.
-- Índice único `CajaActual_singletonKey_unique`: ACTIVE. Índice anterior `cashRegisterStatus_operationDate`: ya no aparece en el inventario final. Índice corregido `cashRegisterStatus_operationDateHour`: ACTIVE en el readback final.
+- Índice único `CajaActual_singletonKey_unique`: ACTIVE. Índice anterior `cashRegisterStatus_operationDate`: ya no aparece en el inventario final. El índice `cashRegisterStatus_operationDateHour` aparece en una captura anterior, pero operationDateHour no existe en el esquema vigente; readback/retirada del índice pendiente.
 - `MovimientosCaja`: revisión 78, 0 elementos; no modificada. `LibroAsientosContablesDetalle`: 0. `RegistrosHorariosStaff`: revisión 11, 0 tras limpieza. `HistoricoCierresZ`: 0. `PaquetesGestoria`: 0. `ControlOperativo`: 3 elementos. `MovimientosInventario` no figura en el inventario live de 42 colecciones; la fila histórica que lo describía como colección presente queda pendiente de reconciliación documental.
 
 ### Registros sintéticos eliminados
@@ -57,7 +57,7 @@ La instrucción antigua de desactivar la ventana antes de fusionar o publicar qu
 
 ### Alineación backend y estado pendiente
 
-En esta rama, `cajas.web.js` y sus fixtures usan `operationDateHour`, `bizumAmount` y los cuatro campos `opening*Amount`; se ha retirado la comprobación redundante de `isOpen`. El DTO expone los cuatro saldos iniciales. **No existe todavía un WebMethod de apertura de sesión que persista esos cuatro importes**; por tanto permanecen null y la funcionalidad de apertura/saldos iniciales no está validada end-to-end. La proyección actual no se considera completa para `otherAmount` hasta probar su clasificación y conciliación desde `MovimientosCaja`.
+En la rama fix/current-site-cms-contract-alignment, cajas.web.js usa operationDate (DATE, ISO YYYY-MM-DD), otherAmount para Bizum presencial y openingAmount como único saldo de apertura físico. El DTO no expone operationDateHour, bizumAmount ni los cuatro opening*Amount inexistentes. La apertura de sesión y la persistencia de openingAmount siguen pendientes de prueba end-to-end; la clasificación Bizum→otherAmount debe superar conciliación sintética con MovimientosCaja.
 
 No se ha ejecutado CI completo, Wix Local Editor ni E2E en runtime. No se ha publicado ni desplegado esta rama. La mutación CMS de este corte no equivale a publicar código Wix.
 
