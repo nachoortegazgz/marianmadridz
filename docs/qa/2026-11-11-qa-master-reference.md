@@ -2,7 +2,7 @@
 
 ---
 
-> **Addendum de vigencia — 2026-11-14:** esta referencia conserva el estado histórico del Site ID productivo `188bed94-177c-4bc9-a9f0-35080d874f3e`. Por decisión posterior del propietario, el destino QA es `50b39f33-e753-4331-ab35-b2ed43dc97f7`; producción no debe utilizarse para pruebas. El conector Wix de la sesión no pudo resolver el Site ID QA, por lo que el aislamiento runtime y E2E siguen pendientes. Para la decisión y plan actuales, prevalecen [PLAN_ACCION_QA.md](../../PLAN_ACCION_QA.md), [PROJECT_BASELINE.md](../../PROJECT_BASELINE.md) y [ESTADO_ACTUAL_PROYECTO.md](../../ESTADO_ACTUAL_PROYECTO.md).
+> **Estado vigente — 2026-11-14:** esta referencia conserva información histórica. El único sitio QA es `188bed94-177c-4bc9-a9f0-35080d874f3e`; el propietario confirma ausencia total de actividad real, datos sintéticos y pasarela desconectada. Las propuestas históricas de crear un QA separado quedan supersedidas. Prevalece [SSOT del entorno QA](./QA-ENVIRONMENT-SSOT.md).
 
 ---
 
@@ -21,7 +21,7 @@
 
 Por tanto, el dominio público no puede utilizarse para pruebas que creen reservas, pedidos, pagos, reembolsos, contactos o comunicaciones hasta que exista aislamiento demostrable. El hecho de que el repositorio se utilice para QA no convierte automáticamente el sitio Wix publicado en QA.
 
-**Recomendación preferente:** mantener `www.marianmadrid.es` intacto y crear un sitio Wix QA separado, sin dominio público ni audiencia de clientes, con configuración y credenciales independientes. La búsqueda de sitios Wix por nombre “Marian” devolvió un único sitio: el Published actual; no existe otro QA separado identificado. La duplicación oficial no copia contactos/miembros, pedidos/facturas, campañas ni triggered emails, secretos Velo ni configuración de apps de terceros; la copia queda sin dominio ni capacidades Premium y algunas apps Premium aparecen sin activar. **La documentación consultada no confirma si la duplicación copia los registros de colecciones CMS personalizadas.** Dado que existen ledgers append-only que no pueden borrarse, no duplicar el sitio hasta que Wix confirme ese comportamiento o se opte por crear un sitio QA vacío y reconstruir solo esquema/código/datos sintéticos. Tampoco está documentado que todas las definiciones/estados de Automations se omitan: habrá que reconsultarlas antes de permitir cualquier trigger. No copiar datos personales ni ledgers de producción. Si se pretende convertir el sitio actual en QA, primero debe autorizarse expresamente su despublicación y aceptarse el impacto sobre clientes y operativa. Esta referencia no realiza ninguna de esas acciones.
+**Recomendación preferente:** mantener `www.marianmadrid.es` intacto y crear un sitio Wix QA separado, sin dominio público ni audiencia de clientes, con configuración y credenciales independientes. La decisión vigente es utilizar `188bed94-177c-4bc9-a9f0-35080d874f3e` como único entorno QA. No se designa un sitio Wix adicional ni un QA externo. Los metadatos Published y dominio personalizado no alteran esta clasificación. Cualquier prueba con efectos externos debe utilizar mocks/sinks offline y mantenerse sin I/O real.
 
 ## 2. Autoridad documental y cómo resolver contradicciones
 
@@ -156,12 +156,12 @@ El test debe verificar: importe y moneda autoritativos; identidad del pedido; re
 | Agente | Modo QA permitido | Evidencia exigida |
 |---|---|---|
 | Wix Payments / PSP | Mock offline o sandbox oficial independiente | Contrato oficial, modo test confirmado, IDs de transacción de prueba y ausencia de cargos reales |
-| Wix Bookings | Fixture offline; runtime solo en sitio QA separado | IDs sintéticos, reserva nativa y proyección reconciliadas |
+| Wix Bookings | Fixture offline; runtime solo en el sitio QA único con los gates específicos | IDs sintéticos, reserva nativa y proyección reconciliadas |
 | Wix Stores/eCommerce | Mock offline; sandbox si está disponible y separado | Pedido, líneas, total, pago, stock y refund reconciliados |
 | Email/Resend | Sink/mock sin entrega; envío manual solo a inbox controlado | Recipient allowlist, plantilla/versionado, traceId y evidencia de no entrega a terceros |
 | WhatsApp/SMS | Mock de transporte; no usar acción deprecated ni canal sustitutivo | Integración oficialmente soportada, destino QA verificable y prueba de no envío a terceros |
 | CRM/Forms/Members | Fixtures; runtime solo con contacto sintético aislado | Consentimiento, minimización, ownership y routing |
-| M365/Power Automate/SharePoint | Mock de export; tenant QA separado | Conexiones, DLP, permisos, idempotencia y archivo de prueba |
+| M365/Power Automate/SharePoint | Mock de export; tenant de pruebas con conexiones mock/offline | Conexiones, DLP, permisos, idempotencia y archivo de prueba |
 
 ## 7. Estado de Capa 3 — M365 / SharePoint
 
@@ -236,7 +236,7 @@ SharePoint será exclusivamente repositorio de evidencia. Nunca modificará ni g
 - **Verificado históricamente:** auditoría de Automations del 2026-11-11 confirma 67 pausas, cuatro WhatsApp inactivas y nueve emails activos bloqueados por Wix.
 - **Verificado en tests offline:** escenario mock de evento Wix Payments descrito en `QA-SIMULATION-2026-11.md`.
 - **Declarado:** Nacho Pitt como identidad sintética QA.
-- **No verificado:** sandbox PSP; configuración y automatizaciones de una futura copia QA; envío real de email/WhatsApp; creación de contacto en un sitio QA separado; runtime E2E.
+- **No verificado:** sandbox PSP; configuración y automatizaciones de una futura copia QA; envío real de email/WhatsApp; creación de contacto en el sitio QA único; runtime E2E.
 - **No ejecutado en esta actualización:** duplicación de sitio, escrituras CMS, publicación/despublicación, cambio de automatizaciones, reserva, pedido, pago, refund, email, SMS, WhatsApp, SharePoint o despliegue.
 
 ## 11. Documentos de referencia
