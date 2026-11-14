@@ -1125,7 +1125,7 @@ async function _updateCajaActual(movement, traceId) {
             cashRegister[CAJA_KEYS.LAST_MOVEMENT_AT] = sourceTimestamp;
             cashRegister.traceId = _safeTrim(movement.traceId) || traceId;
             cashRegister.staffResourceId = _safeTrim(movement.staffResourceId) || null;
-            cashRegister[CAJA_KEYS.OPERATION_DATE] = _toWixDateOnly(sourceTimestamp);
+            cashRegister[CAJA_KEYS.OPERATION_DATE] = _toWixDateOnly(movement?.operationDate || sourceTimestamp);
             cashRegister._updatedDate = new Date();
 
             try {
