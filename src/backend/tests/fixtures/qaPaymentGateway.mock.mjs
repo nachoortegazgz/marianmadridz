@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { QA_TEST_SITE_ID } from './qaSyntheticParties.mjs';
 
 const AUTHORIZATION_OUTCOMES = Object.freeze({
   APPROVED: 'AUTHORIZED',
@@ -53,7 +54,8 @@ export function createQaPaymentGateway(config = {}) {
     config.enabled !== true ||
     typeof config.siteId !== 'string' ||
     !config.siteId ||
-    config.siteId !== config.testSiteId ||
+    config.siteId !== QA_TEST_SITE_ID ||
+    config.testSiteId !== QA_TEST_SITE_ID ||
     typeof config.testRunId !== 'string' ||
     !/^TEST-RUN-[A-Z0-9-]{1,80}$/.test(config.testRunId)
   ) {
