@@ -3,7 +3,7 @@
 Rama de trabajo `chore/temporary-append-only-mutation-window`; no representa un despliegue ni una publicación.
 
 - **Mutabilidad QA:** TEC-033 está habilitada solo en esta rama para update/remove individual de los ledgers enumerados; bulk sigue bloqueado. Los gates de writers fiscales/contables y simulación permanecen false.
-- **CMS live:** inventario de 42 colecciones. `CajaActual` NATIVE revisión 3, 25 campos de negocio + 4 de sistema, singleton `CAJA_PRINCIPAL` cerrado, current balances 0 y opening balances null. El índice único singleton y el índice compuesto corregido están ACTIVE; el índice compuesto anterior ya no aparece en el inventario final.
+- **CMS live:** inventario de 42 colecciones. `CajaActual` NATIVE revisión 64, 59 campos personalizados + 4 de sistema (63 físicos). Permisos live: `insert/update/remove=ADMIN`, `read=ANYONE`; este último queda como riesgo potencial de privacidad por los campos de NIF, dirección y referencia de pago. No se ha probado acceso efectivo visitante ni se han cambiado permisos. Esquema detallado: `DICCIONARIO_DATOS_CMS.md` §3.1.
 - **Limpieza:** se eliminaron dos fichajes sintéticos de `RegistrosHorariosStaff` identificados con `meta.synthetic=true` y `doNotImportToProduction=true`; readback 0 registros. No se borró ningún registro económico, contable o laboral real.
 - **Colecciones:** `MovimientosCaja` 0 elementos, `LibroAsientosContablesDetalle` 0, `HistoricoCierresZ` 0, `PaquetesGestoria` 0, `ControlOperativo` 3. `MovimientosInventario` no aparece en el inventario live actual.
 - **Código:** backend/fixtures de esta rama alineados con los nombres nuevos; no existe aún WebMethod de apertura que persista saldos iniciales. CI completo, Wix Local Editor y E2E pendientes.
