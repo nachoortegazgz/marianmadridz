@@ -198,8 +198,8 @@ test("bulk update/remove allow explicit IDs for all project-owned business colle
     assert.throws(() => assertBulkRemoveAllowed(C.CAJA_ACTUAL, []), {
         code: "CMS_BULK_REMOVE_SCOPE_DENIED",
     });
-    assert.doesNotThrow(() => assertBulkUpdateAllowed("DatosFiscales", [{ _id: "legacy-qa-row" }]));
-    assert.doesNotThrow(() => assertBulkRemoveAllowed("DatosFiscales", ["legacy-qa-row"]));
+    assert.doesNotThrow(() => assertBulkUpdateAllowed("DatosFiscales", [{ _id: "legacy-synthetic-row" }]));
+    assert.doesNotThrow(() => assertBulkRemoveAllowed("DatosFiscales", ["legacy-synthetic-row"]));
     assert.throws(() => assertBulkUpdateAllowed("WixAppCollection", [{ _id: "isolated-row-1" }]), {
         code: "CMS_BULK_UPDATE_SCOPE_DENIED",
     });
@@ -208,7 +208,7 @@ test("bulk update/remove allow explicit IDs for all project-owned business colle
     });
 });
 
-test("bulk insert remains disabled during QA mutation window", () => {
+test("bulk insert remains disabled during isolated-site mutation window", () => {
     assert.throws(() => assertBulkMutationDisabled("BULK_INSERT"), {
         code: "CMS_BULK_INSERT_DISABLED_NO_APPROVED_CONSUMERS",
     });

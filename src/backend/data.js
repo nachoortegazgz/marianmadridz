@@ -964,7 +964,7 @@ export async function ControlOperativo_beforeRemove(itemId) {
 // CitasF2 is a mutable booking projection, not an append-only ledger.
 // Keep the SSOT structural guard at the CMS boundary as a second barrier to
 // the booking saga's point-of-use validation. Wix binds hooks to the physical
-// collection ID (not its display name); QA uses a generated collection ID.
+// collection ID (not its display name); the current site uses the canonical CitasF2 ID.
 function _validateCitasF2Write(item) {
     _normalizeCmsDateTimes(item, [
         "slotStart", "slotEnd",
@@ -989,21 +989,6 @@ export function CitasF2_beforeUpdate(item) {
 }
 
 export function CitasF2_beforeRemove() {
-    return _blockCitasF2Remove();
-}
-
-// QA collection ID: QA_LIVECMS_20261023_2000_BOOKING_DUAL.
-// Without these exact exports Wix does not associate the CitasF2 hooks with
-// this collection, so the Date conversion and structural guard never run.
-export function QA_LIVECMS_20261023_2000_BOOKING_DUAL_beforeInsert(item) {
-    return _validateCitasF2Write(item);
-}
-
-export function QA_LIVECMS_20261023_2000_BOOKING_DUAL_beforeUpdate(item) {
-    return _validateCitasF2Write(item);
-}
-
-export function QA_LIVECMS_20261023_2000_BOOKING_DUAL_beforeRemove() {
     return _blockCitasF2Remove();
 }
 

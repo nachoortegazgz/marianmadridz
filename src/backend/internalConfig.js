@@ -519,7 +519,7 @@ export const DATA_ACCESS_BULK_PATCH_POLICY = Object.freeze({
 
 
 /*
- * QA mutation policy: update/remove are enabled for project-owned collections.
+ * Isolated-site mutation policy: update/remove are enabled for project-owned collections.
  * Insert remains allowlisted; bulk insert stays disabled. Bulk update/remove
  * require explicit IDs and remain scoped to project-owned collections.
  */

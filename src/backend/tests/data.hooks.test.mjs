@@ -85,29 +85,6 @@ test('HOOK-CMS-DATETIME-01 normalizes all CitasF2 DateTime fields to Date object
   assert.throws(() => H.CitasF2_beforeInsert({ ...item, slotStart: 'not-a-date' }), /DATETIME/);
 });
 
-test('HOOK-CMS-DATETIME-QA-01 binds conversion and guards to physical QA collection ID', () => {
-  const item = {
-    bookingId: '11111111-1111-4111-8111-111111111111',
-    scheduleId: '22222222-2222-4222-8222-222222222222',
-    bookingType: 'SIMPLE',
-    bookingStatus: 'PENDING',
-    paymentStatus: 'NOT_PAID',
-    traceId: 'trace-citas-qa-datetime',
-    slotStart: '2026-11-12T08:30:00.000Z',
-    slotEnd: '2026-11-12T09:00:00.000Z',
-  };
-  H.QA_LIVECMS_20261023_2000_BOOKING_DUAL_beforeInsert(item);
-  assert.ok(item.slotStart instanceof Date);
-  assert.ok(item.slotEnd instanceof Date);
-  assert.strictEqual(item.slotStart.toISOString(), '2026-11-12T08:30:00.000Z');
-  assert.strictEqual(item.slotEnd.toISOString(), '2026-11-12T09:00:00.000Z');
-
-  assert.throws(() => H.QA_LIVECMS_20261023_2000_BOOKING_DUAL_beforeInsert({
-    ...item, slotStart: 'not-a-date',
-  }), /DATETIME/);
-  assert.doesNotThrow(() => H.QA_LIVECMS_20261023_2000_BOOKING_DUAL_beforeRemove({}));
-});
-
 test('HOOK-CMS-DATETIME-03 normalizes timeclock recordedAt', () => {
   const item = {
     resourceId: 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeee0001',
@@ -213,8 +190,8 @@ test('HOOK-CMS-DATETIME-05 normalizes MovimientosCaja DateTime fields only', () 
 });
 
 test('HOOK-CAJA-03 temporary mutation window allows update/remove', () => {
-  assert.doesNotThrow(() => H.MovimientosCaja_beforeUpdate({ _id: 'qa-caja-1' }));
-  assert.doesNotThrow(() => H.MovimientosCaja_beforeRemove('qa-caja-1'));
+  assert.doesNotThrow(() => H.MovimientosCaja_beforeUpdate({ _id: 'synthetic-caja-1' }));
+  assert.doesNotThrow(() => H.MovimientosCaja_beforeRemove('synthetic-caja-1'));
 });
 
 test('HOOK-CAJA-05 rejects write without hash (ledger integrity)', () => {
@@ -246,7 +223,7 @@ test('HOOK-CAJA-07 persists exact CMS field IDs and OBJECT payloads', () => {
     irpfWithholdingAmount: 15,
     lineItems: [{ productId: 'p1', variantId: 'v1' }],
     aeatPayload: 'NumSerieFactura=FAC-1',
-    customerEmail: 'qa@example.test',
+    customerEmail: 'synthetic@example.test',
   };
   H.MovimientosCaja_beforeInsert(item);
   assert.equal(item.NIFEmisor, 'B12345674');
@@ -259,7 +236,7 @@ test('HOOK-CAJA-07 persists exact CMS field IDs and OBJECT payloads', () => {
   assert.ok(!('irpfWithholdingAmount' in item));
   assert.deepEqual(item.lineItems, { items: [{ productId: 'p1', variantId: 'v1' }] });
   assert.equal(item.payloadFiscal.aeatPayload, 'NumSerieFactura=FAC-1');
-  assert.equal(item.payloadFiscal.customerEmail, 'qa@example.test');
+  assert.equal(item.payloadFiscal.customerEmail, 'synthetic@example.test');
   assert.ok(!('aeatPayload' in item));
   assert.ok(!('customerEmail' in item));
   assert.equal(H.readIssuerTaxId(item), 'B12345674');
@@ -269,7 +246,7 @@ test('HOOK-CAJA-07 persists exact CMS field IDs and OBJECT payloads', () => {
 test('HOOK-CMS-DATETIME-06 normalizes ControlOperativo DateTime fields', () => {
   const item = {
     controlType: 'IDEMPOTENCY',
-    dedupeKey: 'IDEMPOTENCY:qa-date',
+    dedupeKey: 'IDEMPOTENCY:synthetic-date',
     traceId: 'trace-control-datetime',
     expiresAt: '2026-11-12T12:00:00.000Z',
     occurredAt: '2026-11-12T11:00:00.000Z',
@@ -279,7 +256,7 @@ test('HOOK-CMS-DATETIME-06 normalizes ControlOperativo DateTime fields', () => {
   for (const field of ['expiresAt', 'occurredAt', 'operationDate']) assert.ok(item[field] instanceof Date);
   assert.throws(() => H.ControlOperativo_beforeInsert({
     controlType: 'IDEMPOTENCY',
-    dedupeKey: 'IDEMPOTENCY:qa-date-invalid',
+    dedupeKey: 'IDEMPOTENCY:synthetic-date-invalid',
     traceId: 'trace-control-datetime-invalid',
     expiresAt: 'invalid',
   }), /DATETIME/);
@@ -288,11 +265,11 @@ test('HOOK-CMS-DATETIME-06 normalizes ControlOperativo DateTime fields', () => {
 test('HOOK-CONTROL-01 rejects retired ControlOperativo fields on new writes', () => {
   const base = {
     controlType: 'IDEMPOTENCY',
-    dedupeKey: 'IDEMPOTENCY:qa-owner',
+    dedupeKey: 'IDEMPOTENCY:synthetic-owner',
     traceId: 'trace-control-01',
     attempts: 2,
     expiresAt: new Date('2026-11-05T12:00:00.000Z'),
-    payload: { lockOwnerId: 'qa-owner' },
+    payload: { lockOwnerId: 'synthetic-owner' },
   };
   for (const field of [
     'payloadJson', 'attempt', 'leaseExpiresAt', 'leasesExpireAt',
@@ -448,8 +425,8 @@ test('HOOK-CLOCK-01 insert requires canonical fields and HMAC signature', () => 
 });
 
 test('HOOK-CLOCK-02 temporary mutation window allows update/remove', () => {
-  assert.doesNotThrow(() => H.RegistrosHorariosStaff_beforeUpdate({ _id: 'qa-clock-1' }));
-  assert.doesNotThrow(() => H.RegistrosHorariosStaff_beforeRemove('qa-clock-1'));
+  assert.doesNotThrow(() => H.RegistrosHorariosStaff_beforeUpdate({ _id: 'synthetic-clock-1' }));
+  assert.doesNotThrow(() => H.RegistrosHorariosStaff_beforeRemove('synthetic-clock-1'));
 });
 
 // keep wixDataMock referenced so loader seeds reset between suites
@@ -483,8 +460,8 @@ test('HOOK-CAJA-SINGLE-01 enforces the CajaActual single-item principal', () => 
 // Capa 2 — inventory and accounting ledgers are immutable append-only records.
 // -----------------------------------------------------------------------------
 test('HOOK-ACCOUNTING-LEDGER-01 temporary mutation window allows update/remove', () => {
-  assert.doesNotThrow(() => H.LibroAsientosContablesDetalle_beforeUpdate({ _id: 'qa-accounting-1' }));
-  assert.doesNotThrow(() => H.LibroAsientosContablesDetalle_beforeRemove('qa-accounting-1'));
+  assert.doesNotThrow(() => H.LibroAsientosContablesDetalle_beforeUpdate({ _id: 'synthetic-accounting-1' }));
+  assert.doesNotThrow(() => H.LibroAsientosContablesDetalle_beforeRemove('synthetic-accounting-1'));
 });
 
 
