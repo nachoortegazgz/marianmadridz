@@ -185,7 +185,7 @@ async function _getFiscalSystemConfig(traceId) {
         });
     }
     _fiscalSystemCache = Object.freeze({
-        // MapaStaff no declara columnas para nombre/id del sistema ni
+        // DatosFiscales no declara columnas para nombre/id del sistema ni
         // numeroInstalacion; esos valores proceden solo del fallback tecnico.
         sistemaInformaticoNombre: COMPUTER_SYSTEM_FALLBACK.sistemaInformaticoNombre,
         idSistemaInformatico: COMPUTER_SYSTEM_FALLBACK.idSistemaInformatico,
