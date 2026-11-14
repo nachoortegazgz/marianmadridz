@@ -1,3 +1,5 @@
+> **Addendum de ejecución — 2026-11-14:** el simulador PSP y el email sink son dobles locales en memoria; no acreditan un sandbox externo ni Wix Runtime. La ventana global de mutabilidad CMS está cerrada y los ledgers append-only no se editan ni borran. En la comprobación actual, Wix informa producción como Published y no resuelve el Site ID QA; limitarse a offline/mock/CI, sin usar producción como fallback.
+
 > **Addendum de vigencia — 2026-11-14:** por decisión del propietario, el sitio QA objetivo es `50b39f33-e753-4331-ab35-b2ed43dc97f7`; el sitio productivo `188bed94-177c-4bc9-a9f0-35080d874f3e` queda fuera de QA. La conexión Wix de la sesión no resolvió el ID QA, por lo que Wix Runtime/E2E permanece `BLOCKED_ENVIRONMENT`. Continuar con fixtures sintéticos y mocks offline; no ejecutar pruebas de negocio sobre producción. El plan operativo vigente es [PLAN_ACCION_QA.md](../../PLAN_ACCION_QA.md) y el registro de ejecución [2026-11-14-qa-execution-log.md](./2026-11-14-qa-execution-log.md). Este addendum prevalece sobre las referencias históricas a un único sitio Published.
 
 ---
