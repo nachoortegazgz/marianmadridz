@@ -8,26 +8,35 @@
 
 ## Estado verificado
 
-- Repositorio `main`: PR #361–#364 integradas; último merge `55c53e596455995767bede8fba87f6900ba379ac`.
+- Repositorio `main`: PR #361–#366 integradas; último merge `13b9ae095214e0c601f255fa75d629680c539933`. La alineación de contratos de esta sesión está en `fix/current-site-cms-field-alignment`, pendiente de CI y revisión.
 - CI offline, contratos SDK, ESLint y secret scanning de las cuatro intervenciones: PASS.
-- CMS live: 23 colecciones, 15 NATIVE y 8 WIX_APP.
+- CMS del sitio actual: 23 colecciones, 15 NATIVE y 8 WIX_APP.
 - Colecciones propias: 524 definiciones de campo; 140 registros en el corte leído.
 - Los registros existentes deben tratarse como sintéticos/de prueba; no son evidencia de operaciones reales.
 - `CajaActual.sequenceCounters` es OBJECT y su valor leído es objeto; `ticketSequence` no existe en el esquema actual.
 - `ControlOperativo.ownerToken` no existe; `traceId` es la clave canónica de fencing.
-- `MapaStaff` tiene 18 campos y 3 filas activas. No declara `recordType` ni campos fiscales; los tres registros contienen `staffMemberId`, `resourceId`, `scheduleId`, `memberId` y `active`.
-- `DatosFiscales` existe físicamente con 28 campos y un registro placeholder. No debe tratarse como identidad fiscal real.
+- `MapaStaff` tiene 18 campos y 3 filas activas. Es exclusivamente el mapa de identidades Wix Bookings/Members; contiene `staffMemberId`, `resourceId`, `scheduleId`, `memberId` y `active`. No declara campos fiscales ni `recordType`.
+- `DatosFiscales` existe físicamente con 28 campos y un registro sintético placeholder. Es la colección canónica para identidad fiscal, terceros y configuración fiscal; el registro actual no acredita identidad fiscal real.
 - `ComplementosCatalogo` tiene 36 filas; `addonId` coincide con `_id` en las 36. `name` y `description` contienen el mismo texto en las 36, con tipos TEXT y RICH_TEXT.
 - `InventarioStockVenta` y `MovimientosInventario` existen físicamente, pero son colecciones legacy sin writers activos en el código actual; no se reactiva su uso.
 
-## Bloqueos y discrepancias
+## Contratos alineados en la rama actual
 
-1. El lector de eventos de personal consultaba `MapaStaff.recordType`, campo que no existe. La rama de corrección elimina ese filtro y conserva `staffMemberId` + `active`.
-2. Los hooks y validadores de `MapaStaff`, además de `eventLog.js` y `fiscalDocuments.web.js`, siguen esperando discriminadores/campos fiscales que no están en el esquema actual de `MapaStaff`. No se cambia ese flujo sin decidir y probar la fuente fiscal canónica.
-3. `DatosFiscales` no declara `traceId` ni `schemaVersion`; el contrato de sus writers debe reconciliarse antes de habilitar escrituras fiscales.
-4. `ComplementosCatalogo.addonId` es un espejo de `_id`; el código de lectura pasa a priorizar `_id` y rechazar divergencias. La columna física no se elimina en esta intervención.
-5. La sincronización del código del Editor Wix con Git no está verificada.
-6. No hay certificación E2E de runtime ni despliegue asociado a SHA.
+- MapaStaff: hooks y validador limitados al esquema de personal. Validan GUIDs nativos staffMemberId, resourceId y scheduleId y, si están informados, memberId / thirdPartyId. No exigen recordType, traceId ni schemaVersion.
+- DatosFiscales: declarado en BUSINESS_COLLECTIONS y usado por los lectores/escritores fiscales y el directorio de gestoría. Sus contratos ya no persisten traceId ni schemaVersion porque esos campos no existen en el esquema físico.
+- ComplementosCatalogo: _id es la identidad CMS de origen; el DTO interno addOnId conserva el nombre del contrato de reserva. addonId permanece como espejo físico porque el campo sigue siendo obligatorio en CMS y se valida su igualdad con _id.
+- ControlOperativo: traceId es el fencing token canónico; ownerToken no existe en el esquema.
+- CajaActual.sequenceCounters es OBJECT y se lee como objeto JSON; ticketSequence no existe.
+- No se fusionan MapaStaff.resourceId con _id: aunque coinciden en las tres filas, representan el ID nativo de recurso Bookings y el ID de registro CMS. Tampoco se fusionan serviceId y pricingPlanId.
+
+## Bloqueos y discrepancias pendientes
+
+1. ComplementosCatalogo.addonId sigue siendo obligatorio físicamente. Su retirada requiere cambiar el esquema y revisar todos los escritores externos/CMS.
+2. CajaActual.id coincide con _id en el singleton leído; queda pendiente completar la búsqueda de consumidores antes de retirar el campo.
+3. DatosFiscales.gestorName y gestorNombre coinciden en el único registro leído. gestorName queda como keyfield canónico propuesto; la columna duplicada no se borra en este cambio.
+4. ComplementosCatalogo.name y description tienen el mismo texto, pero tipos TEXT y RICH_TEXT. Se conservan por semántica de etiqueta y contenido.
+5. La sincronización entre el código versionado y los archivos del Editor Wix no está verificada.
+6. Las pruebas runtime en el Editor y E2E siguen pendientes.
 
 ## Política de cambios
 
