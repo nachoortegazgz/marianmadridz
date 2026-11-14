@@ -505,6 +505,7 @@ async function markEventAsProcessed(eventId, eventType, traceId, metadata = {}) 
     const claimId = await getWebhookEventClaimId(eventId, eventType);
     const webhookKey = `WEBHOOK_${claimId.slice(4)}`;
     const markerId = "WHE_" + claimId.slice(4);
+    const processedAt = new Date();
     const expiresAt = new Date(Date.now() + EVENT_TTL_HOURS * 3600 * 1000);
 
     try {
@@ -514,12 +515,14 @@ async function markEventAsProcessed(eventId, eventType, traceId, metadata = {}) 
             serviceId: _looksLikeGuid(metadata?.serviceId) ? _safeTrim(metadata.serviceId) : undefined,
             dedupeKey: webhookKey,
             eventId: String(eventId),
+            eventType: String(eventType),
             status: CONTROL_STATUS.COMPLETED,
+            processedAt,
             expiresAt,
             payload: {
                 eventType,
                 traceId,
-                processedAt: new Date().toISOString(),
+                processedAt: processedAt.toISOString(),
                 metadata,
             },
             traceId: _safeTrim(traceId) || makeTraceId("webhook"),

@@ -500,6 +500,48 @@ Cuando existe `description`, se copia el texto Wix. Cuando no existe, se declara
 | `revision` | revision | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
 | `compensationKind` | compensationKind | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
 
+#### Aplicabilidad de campos por `controlType` — revisión del CSV sintético (2026-11-14)
+
+Este inventario de 42 campos es el contrato físico de referencia del repositorio. La exportación CSV aportada contiene además encabezados que no pertenecen a este esquema. No se deben recrear campos CMS por el mero hecho de aparecer en una exportación.
+
+**Convención de celdas vacías**
+
+- `N/A` es una anotación de auditoría/exportación: significa que el campo no aplica a ese tipo de control.
+- En Wix CMS se conserva el campo ausente o `null` según el contrato del writer. Nunca se escribe el texto `N/A` en un campo `DATETIME`, `NUMBER` u `OBJECT`, ni se usa como sustituto de un dato.
+- Un campo aplicable que debería tener valor y está vacío es un defecto de persistencia, no un N/A.
+- No se añaden valores ficticios para completar visualmente una fila.
+
+**Campos comunes**
+
+| Campo | Regla |
+|---|---|
+| `controlType` | Obligatorio; discriminador del registro. |
+| `dedupeKey` | Obligatorio; identidad idempotente/determinista del control. |
+| `traceId` | Obligatorio; correlación y, en `WEBHOOK_CLAIM`, token canónico de fencing CAS. |
+| `payload` | Contenedor estructurado de datos específicos; no sustituye los campos superiores expresamente definidos para consulta/indexación. |
+
+**Matriz para los tipos presentes en el CSV**
+
+| controlType | Campos superiores aplicables | Vacíos intencionados / N/A en exportación |
+|---|---|---|
+| `IDEMPOTENCY` | `pairToken`, `serviceId`, `expiresAt`, `heartbeatAt`, `attempts`, `payload`; `bookingId` cuando la operación ya identifica una reserva. | `operationDate`, `slotStart`, `slotEnd`, `resourceId` superior cuando el resultado vive en `payload.result` y puede representar una reserva dual; campos de rate limit, webhook y alertas. |
+| `RATE_LIMIT` | `requesterKey`, `surface`, `requestCount`, `windowStart`, `version`, `status`, `expiresAt`, `payload`. | `bookingId`, `resourceId`, `serviceId`, `slotStart`, `slotEnd`, `eventId`, `eventType`, `processedAt`, campos fiscales/compensación. `retryAfter` y `nextRetryAt` no pertenecen al esquema. |
+| `DAYS_CACHE` | `serviceId`, `dateYmd` (clave de mes `YYYY-MM`), `expiresAt`, `payload`. | `resourceId` superior: la clave representa un conjunto/hash de recursos; la ubicación y el rango se conservan en `payload`. También son N/A los campos de transacción, rate limit, webhook y alertas. |
+| `WEBHOOK_CLAIM` | `eventId`, `eventType`, `status`, `traceId`, `version`, `attempts`, `expiresAt`, `payload`. `serviceId` es condicional si el productor lo conoce y el contrato del evento lo requiere. | `ownerToken`, `attempt` y `leaseExpiresAt` son nombres retirados/no canónicos; no se escriben. `slotStart`, `slotEnd`, `operationDate`, importes y campos de rate limit son N/A. |
+| `WEBHOOK_EVENT` | `eventId`, `eventType`, `status`, `traceId`, `expiresAt`, `processedAt`, `payload`; `serviceId` solo si metadata aporta un GUID válido. `eventType` y `processedAt` se duplican en `payload` para consulta indexada y trazabilidad. | `bookingId`, `resourceId`, `slotStart`, `slotEnd`, `operationDate`, campos de rate limit y de transacción salvo que un contrato específico los incorpore. |
+| `SLOT_LOCK` de reserva | `resourceId`, `serviceId`, `slotStart`, `slotEnd`, `expiresAt`, `heartbeatAt`, `version`, `payload`. Los instantes se derivan de los minutos epoch codificados en `dedupeKey`. | Campos de webhook, rate limit, transacción y alertas. En locks fiscales/contables (también `SLOT_LOCK`), `slotStart` y `slotEnd` son N/A porque no bloquean una cita concreta. |
+
+**Discrepancias del CSV y tratamiento**
+
+- `ownerToken`, `retryAfter` y `nextRetryAt` no están entre los 42 campos del inventario CMS. `ownerToken` se sustituye por el campo canónico `traceId` para fencing; los otros dos no se persisten.
+- `attempt` y `leaseExpiresAt` no son campos canónicos. Los intentos se guardan en `attempts` y el lease en `expiresAt`.
+- En las filas `WEBHOOK_EVENT`, el CSV deja vacío el campo superior `eventType` aunque existe `payload.eventType`. El writer debe duplicar `eventType` arriba; también persistirá `processedAt` como `DATETIME` superior, manteniendo la copia ISO en payload.
+- En las filas de `SLOT_LOCK` de reserva, `slotStart` y `slotEnd` se pueden recuperar de forma exacta desde la clave determinista. El writer debe persistirlos como `DATETIME`; no deben quedar vacíos.
+- En las transacciones `IDEMPOTENCY`, `pairToken` es campo superior y coincide con la identidad del control; debe persistirse explícitamente.
+- El valor `1970-01-01T00:00:00Z` en un `SLOT_LOCK` liberado es el sentinel terminal observado en el CSV; no se reemplaza por N/A ni por la fecha actual.
+
+**Límite de alcance:** esta matriz cubre los seis tipos que aparecen en el CSV sintético. No define la aplicabilidad de `ALERT`, `COMPENSATION`, `DISPLAY_TOKEN`, `DUAL_CACHE`, `DEDUPE_KEY`, `LEDGER_IDEMPOTENCY` ni `SYSTEM_FLAG` sin revisar sus writers y consumidores.
+
 ### eCommerce/Orders — Orders
 
 - Origen: **Wix Stores / eCommerce** · Tipo `WIX_APP` · ID canónico de colección `eCommerce/Orders` · ownerAppId=`1380b703-ce81-ff05-f115-39571d94dfcd`.

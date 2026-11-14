@@ -58,7 +58,7 @@ function claimCondition(claim) {
     return {
         controlType: { $eq: CONTROL_TYPE.WEBHOOK_CLAIM },
         status: { $eq: claim.status },
-        ownerToken: { $eq: claim.ownerToken },
+        traceId: { $eq: claim.traceId },
         version: { $eq: claim.version },
     };
 }
@@ -83,15 +83,15 @@ export async function acquireWebhookEventClaim({
 }) {
     const id = String(eventId ?? "").trim();
     const type = String(eventType ?? "").trim().toUpperCase();
-    const ownerToken = String(traceId ?? "").trim();
-    if (!id || id.length > MAX_EVENT_ID_LENGTH || !type || !ownerToken) {
+    const claimTraceId = String(traceId ?? "").trim();
+    if (!id || id.length > MAX_EVENT_ID_LENGTH || !type || !claimTraceId) {
         throw claimError("WEBHOOK_CLAIM_IDENTITY_INVALID");
     }
 
     const clock = normalizeNow(now);
     const leaseDuration = normalizeLeaseMs(leaseMs);
     const claimId = await getWebhookEventClaimId(id, type);
-    const leaseExpiresAt = new Date(clock.getTime() + leaseDuration);
+    const expiresAt = new Date(clock.getTime() + leaseDuration);
     const initial = {
         _id: claimId,
         controlType: CONTROL_TYPE.WEBHOOK_CLAIM,
@@ -99,10 +99,11 @@ export async function acquireWebhookEventClaim({
         eventId: id,
         eventType: type,
         status: WEBHOOK_CLAIM_STATUS.IN_PROGRESS,
-        ownerToken,
+        traceId: claimTraceId,
         version: 1,
-        traceId: ownerToken,
-        payload: { eventType: type, attempt: 1, leaseExpiresAt },
+        attempts: 1,
+        expiresAt,
+        payload: { eventType: type },
     };
 
     try {
@@ -113,8 +114,10 @@ export async function acquireWebhookEventClaim({
                 _id: claimId,
                 eventId: id,
                 eventType: type,
-                ownerToken,
+                traceId: claimTraceId,
                 version: 1,
+                attempts: 1,
+                expiresAt,
                 status: WEBHOOK_CLAIM_STATUS.IN_PROGRESS,
                 payload: initial.payload,
             },
@@ -129,7 +132,8 @@ export async function acquireWebhookEventClaim({
             return { status: "COMPLETED", claimId };
         }
 
-        const existingLease = new Date(existing.payload?.leaseExpiresAt);
+        // Read legacy nested lease once for compatibility; all new writes use the CMS expiresAt field.
+        const existingLease = new Date(existing.expiresAt || existing.payload?.leaseExpiresAt);
         if (
             existing.status === WEBHOOK_CLAIM_STATUS.IN_PROGRESS &&
             Number.isFinite(existingLease.getTime()) &&
@@ -147,28 +151,35 @@ export async function acquireWebhookEventClaim({
         }
 
         const version = Number(existing.version);
-        const previousOwner = String(existing.ownerToken ?? "");
-        if (!Number.isSafeInteger(version) || version < 1 || !previousOwner) {
+        const previousTraceId = String(existing.traceId ?? "").trim();
+        if (!Number.isSafeInteger(version) || version < 1 || !previousTraceId) {
             throw claimError("WEBHOOK_CLAIM_FENCE_INVALID");
         }
 
         const previous = {
             _id: claimId,
             status: existing.status,
-            ownerToken: previousOwner,
+            traceId: previousTraceId,
             version,
         };
-        const nextPayload = {
-            ...(existing.payload || {}),
-            attempt: Number(existing.payload?.attempt || 1) + 1,
-            leaseExpiresAt,
-        };
+        const storedAttempts = existing.attempts !== undefined && existing.attempts !== null && existing.attempts !== ""
+            ? existing.attempts
+            : (existing.payload?.attempt ?? 1);
+        const previousAttempts = Number(storedAttempts);
+        if (!Number.isSafeInteger(previousAttempts) || previousAttempts < 1) {
+            throw claimError("WEBHOOK_CLAIM_ATTEMPTS_INVALID");
+        }
+        const attempts = previousAttempts + 1;
+        const nextPayload = { ...(existing.payload || {}) };
+        delete nextPayload.attempt;
+        delete nextPayload.leaseExpiresAt;
         const recovered = await compareAndSwap(previous, [
             { fieldPath: "status", action: "SET_FIELD", value: WEBHOOK_CLAIM_STATUS.IN_PROGRESS },
-            { fieldPath: "ownerToken", action: "SET_FIELD", value: ownerToken },
+            { fieldPath: "traceId", action: "SET_FIELD", value: claimTraceId },
             { fieldPath: "payload", action: "SET_FIELD", value: nextPayload },
+            { fieldPath: "attempts", action: "SET_FIELD", value: attempts },
+            { fieldPath: "expiresAt", action: "SET_FIELD", value: expiresAt },
             { fieldPath: "version", action: "INCREMENT_FIELD", value: 1 },
-            { fieldPath: "traceId", action: "SET_FIELD", value: ownerToken },
         ]);
         if (!recovered) return { status: "BUSY", claimId };
 
@@ -178,8 +189,10 @@ export async function acquireWebhookEventClaim({
                 _id: claimId,
                 eventId: id,
                 eventType: type,
-                ownerToken,
+                traceId: claimTraceId,
                 version: version + 1,
+                attempts,
+                expiresAt,
                 status: WEBHOOK_CLAIM_STATUS.IN_PROGRESS,
                 payload: nextPayload,
             },
@@ -200,9 +213,9 @@ export async function completeWebhookEventClaim(claim, now = new Date()) {
             value: {
                 ...(claim.payload || {}),
                 completedAt,
-                leaseExpiresAt: completedAt,
             },
         },
+        { fieldPath: "expiresAt", action: "SET_FIELD", value: completedAt },
         { fieldPath: "version", action: "INCREMENT_FIELD", value: 1 },
     ]);
     if (!completed) throw claimError("WEBHOOK_CLAIM_LOST");
@@ -222,9 +235,9 @@ export async function releaseWebhookEventClaim(claim, error, now = new Date()) {
                 ...(claim.payload || {}),
                 failedAt,
                 lastErrorCode: errorCode,
-                leaseExpiresAt: failedAt,
             },
         },
+        { fieldPath: "expiresAt", action: "SET_FIELD", value: failedAt },
         { fieldPath: "version", action: "INCREMENT_FIELD", value: 1 },
     ]);
 }

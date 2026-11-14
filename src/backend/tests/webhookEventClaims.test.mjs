@@ -50,6 +50,13 @@ test("concurrent deliveries acquire exactly one event claim", async () => {
     assert.equal([first, second].filter((item) => item.status === "ACQUIRED").length, 1);
     assert.equal([first, second].filter((item) => item.status === "BUSY").length, 1);
     assert.equal(claimCount(), 1);
+
+    const row = (wixDataMock._store.get(BUSINESS_COLLECTIONS.CONTROL_OPERATIVO) || [])
+        .find((item) => item.controlType === "WEBHOOK_CLAIM");
+    assert.equal(row.attempts, 1);
+    assert.ok(row.expiresAt instanceof Date);
+    assert.equal(Object.hasOwn(row.payload, "attempt"), false);
+    assert.equal(Object.hasOwn(row.payload, "leaseExpiresAt"), false);
 });
 
 test("completed event replay is rejected before the handler runs", async () => {
@@ -96,7 +103,7 @@ test("expired lease recovery fences the previous owner", async () => {
 
     assert.equal(recovered.status, "ACQUIRED");
     assert.equal(recovered.claim.version, first.claim.version + 1);
-    assert.equal(recovered.claim.ownerToken, "worker-two");
+    assert.equal(recovered.claim.traceId, "worker-two");
     await assert.rejects(
         completeWebhookEventClaim(first.claim, new Date(BASE_TIME.getTime() + 1002)),
         { code: "WEBHOOK_CLAIM_LOST" }
@@ -107,6 +114,8 @@ test("expired lease recovery fences the previous owner", async () => {
     );
     const rows = wixDataMock._store.get(BUSINESS_COLLECTIONS.CONTROL_OPERATIVO);
     assert.equal(rows[0].status, WEBHOOK_CLAIM_STATUS.COMPLETED);
+    assert.equal(rows[0].expiresAt.getTime(), BASE_TIME.getTime() + 1003);
+    assert.equal(rows[0].attempts, 2);
 });
 
 test("failed claim can be retried with a new owner token", async () => {
@@ -126,8 +135,12 @@ test("failed claim can be retried with a new owner token", async () => {
     });
 
     assert.equal(retry.status, "ACQUIRED");
-    assert.equal(retry.claim.ownerToken, "worker-two");
+    assert.equal(retry.claim.traceId, "worker-two");
     assert.equal(retry.claim.version, first.claim.version + 2);
+    assert.equal(retry.claim.attempts, 2);
+    const row = (wixDataMock._store.get(BUSINESS_COLLECTIONS.CONTROL_OPERATIVO) || [])[0];
+    assert.equal(row.attempts, 2);
+    assert.ok(row.expiresAt instanceof Date);
 });
 
 test("active concurrent delivery returns retryable busy without duplicate side effects", async () => {
@@ -168,7 +181,45 @@ test("active concurrent delivery returns retryable busy without duplicate side e
     assert.equal(sideEffects, 1);
 });
 
-test("claim requires a stable event identity and owner token", async () => {
+test("legacy nested lease and attempt are read once and migrated to canonical fields", async () => {
+    const claimId = await getWebhookEventClaimId(EVENT_ID, EVENT_TYPE);
+    wixDataMock._seed(BUSINESS_COLLECTIONS.CONTROL_OPERATIVO, [{
+        _id: claimId,
+        controlType: "WEBHOOK_CLAIM",
+        dedupeKey: claimId,
+        eventId: EVENT_ID,
+        eventType: EVENT_TYPE,
+        status: WEBHOOK_CLAIM_STATUS.FAILED_RETRYABLE,
+        version: 4,
+        attempts: "",
+        expiresAt: "",
+        traceId: "worker-old",
+        payload: {
+            eventType: EVENT_TYPE,
+            attempt: 3,
+            leaseExpiresAt: new Date(BASE_TIME.getTime() - 1000),
+        },
+    }]);
+
+    const recovered = await acquireWebhookEventClaim({
+        eventId: EVENT_ID,
+        eventType: EVENT_TYPE,
+        traceId: "worker-new",
+        now: BASE_TIME,
+        leaseMs: 2000,
+    });
+
+    assert.equal(recovered.status, "ACQUIRED");
+    assert.equal(recovered.claim.attempts, 4);
+    const row = (wixDataMock._store.get(BUSINESS_COLLECTIONS.CONTROL_OPERATIVO) || [])[0];
+    assert.equal(row.attempts, 4);
+    assert.ok(row.expiresAt instanceof Date);
+    assert.equal(row.expiresAt.getTime(), BASE_TIME.getTime() + 2000);
+    assert.equal(Object.hasOwn(row.payload, "attempt"), false);
+    assert.equal(Object.hasOwn(row.payload, "leaseExpiresAt"), false);
+});
+
+test("claim requires a stable event identity and traceId fencing token", async () => {
     await assert.rejects(
         acquireWebhookEventClaim({ eventId: "", eventType: EVENT_TYPE, traceId: "worker" }),
         { code: "WEBHOOK_CLAIM_IDENTITY_INVALID" }

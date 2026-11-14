@@ -13,6 +13,7 @@ import {
 import {
   CONTROL_TYPE,
   CONTROL_STATUS,
+  WEBHOOK_CLAIM_STATUS,
   OPERATIONAL_COLLECTIONS,
 } from "../internalConfig.js";
 import { wixDataMock } from "./loader.mjs";
@@ -43,6 +44,31 @@ describe("ControlOperativo hooks", () => {
     };
     assert.deepEqual(ControlOperativo_beforeInsert(validLock), validLock);
 
+    const validClaim = {
+      ...base(CONTROL_TYPE.WEBHOOK_CLAIM),
+      eventId: "wix-event-001",
+      eventType: "BOOKING_CONFIRMED",
+      status: WEBHOOK_CLAIM_STATUS.IN_PROGRESS,
+      version: 1,
+      attempts: 1,
+      expiresAt: new Date(Date.now() + 60000),
+      payload: { eventType: "BOOKING_CONFIRMED" },
+    };
+    assert.deepEqual(ControlOperativo_beforeInsert(validClaim), validClaim);
+
+    assert.throws(
+      () => ControlOperativo_beforeInsert({ ...validClaim, attempts: undefined }),
+      /attempts/
+    );
+    assert.throws(
+      () => ControlOperativo_beforeInsert({ ...validClaim, expiresAt: undefined }),
+      /expiresAt/
+    );
+    assert.throws(
+      () => ControlOperativo_beforeInsert({ ...validClaim, ownerToken: "retired-token" }),
+      /ownerToken/
+    );
+
     assert.throws(
       () => ControlOperativo_beforeInsert({ ...base("INVALID_TYPE") }),
       /controlType/
@@ -50,6 +76,22 @@ describe("ControlOperativo hooks", () => {
     assert.throws(
       () => ControlOperativo_beforeInsert(base(CONTROL_TYPE.WEBHOOK_EVENT)),
       /eventId/
+    );
+    const validEvent = {
+      ...base(CONTROL_TYPE.WEBHOOK_EVENT),
+      eventId: "wix-event-002",
+      eventType: "BOOKING_CONFIRMED",
+      processedAt: new Date(),
+      payload: { eventType: "BOOKING_CONFIRMED" },
+    };
+    assert.deepEqual(ControlOperativo_beforeInsert(validEvent), validEvent);
+    assert.throws(
+      () => ControlOperativo_beforeInsert({ ...validEvent, eventType: undefined }),
+      /eventType/
+    );
+    assert.throws(
+      () => ControlOperativo_beforeInsert({ ...validEvent, processedAt: undefined }),
+      /processedAt/
     );
     assert.throws(
       () => ControlOperativo_beforeInsert({
@@ -114,6 +156,8 @@ describe("ControlOperativo hooks", () => {
       _id: "event-1",
       ...base(CONTROL_TYPE.WEBHOOK_EVENT),
       eventId: "wix-event-1",
+      eventType: "BOOKING_CONFIRMED",
+      processedAt: new Date(),
     };
     seed(original);
 

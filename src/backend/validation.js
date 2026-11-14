@@ -14,6 +14,7 @@ import {
     CITAS_PAYMENT_STATUS,
     BOOKING_TYPE,
     CONTROL_TYPE,
+    WEBHOOK_CLAIM_STATUS,
     CLOCK_EVENT_TYPE,
     RECORD_TYPE_HORARIOS,
     RECORD_TYPE,
@@ -198,10 +199,39 @@ export function assertControlOperativo(item) {
         throw new Error("SCHEMA_VIOLATION: ControlOperativo requires traceId");
     }
 
-    // WEBHOOK_EVENT requiere eventId
+    // WEBHOOK_EVENT: eventType y processedAt también se duplican en campos CMS indexables.
     if (item.controlType === CONTROL_TYPE.WEBHOOK_EVENT) {
         if (!item.eventId || !String(item.eventId).trim()) {
             throw new Error("SCHEMA_VIOLATION: WEBHOOK_EVENT requires eventId");
+        }
+        if (!item.eventType || !String(item.eventType).trim()) {
+            throw new Error("SCHEMA_VIOLATION: WEBHOOK_EVENT requires eventType");
+        }
+        const processedAt = new Date(item.processedAt);
+        if (!item.processedAt || Number.isNaN(processedAt.getTime())) {
+            throw new Error("SCHEMA_VIOLATION: WEBHOOK_EVENT requires a valid processedAt date");
+        }
+    }
+
+    // WEBHOOK_CLAIM mantiene el lease y el contador en campos CMS canonicos.
+    if (item.controlType === CONTROL_TYPE.WEBHOOK_CLAIM) {
+        if (!item.eventId || !String(item.eventId).trim()) {
+            throw new Error("SCHEMA_VIOLATION: WEBHOOK_CLAIM requires eventId");
+        }
+        if (!item.eventType || !String(item.eventType).trim()) {
+            throw new Error("SCHEMA_VIOLATION: WEBHOOK_CLAIM requires eventType");
+        }
+        assertValidEnum(item.status, WEBHOOK_CLAIM_STATUS, "status");
+        // traceId is the canonical CMS fencing token; ownerToken was removed from the schema.
+        if (!Number.isSafeInteger(Number(item.version)) || Number(item.version) < 1) {
+            throw new Error("SCHEMA_VIOLATION: WEBHOOK_CLAIM requires version >= 1");
+        }
+        if (!Number.isSafeInteger(Number(item.attempts)) || Number(item.attempts) < 1) {
+            throw new Error("SCHEMA_VIOLATION: WEBHOOK_CLAIM requires attempts >= 1");
+        }
+        const expiresAt = new Date(item.expiresAt);
+        if (!item.expiresAt || Number.isNaN(expiresAt.getTime())) {
+            throw new Error("SCHEMA_VIOLATION: WEBHOOK_CLAIM requires a valid expiresAt date");
         }
     }
 
