@@ -67,3 +67,10 @@ Correcciones implementadas:
 - No se han realizado escrituras CMS, pagos, cambios de permisos, publicación ni despliegue. Producción queda fuera del alcance.
 
 CI offline PASS acredita las pruebas versionadas y los contratos SDK comprobados; no acredita el runtime Wix ni E2E externo.
+
+## Revalidación del entorno QA (2026-11-14)
+
+- `GetSiteContext` para el Site ID QA designado `50b39f33-e753-4331-ab35-b2ed43dc97f7` no devuelve contexto.
+- `ListWixSites(limit=50)` devuelve únicamente el sitio de producción Marian Madrid (`188bed94-177c-4bc9-a9f0-35080d874f3e`) y el sitio CV (`e54e4214-efc1-4bc9-bfbf-cede68ccaa1d`). El QA designado no aparece en la cuenta conectada.
+- No se ha usado producción ni el sitio CV como sustituto. No se ha realizado ninguna operación Wix/CMS, publicación ni prueba de pasarela.
+- **Estado final de este hito:** código y documentación integrados en `main`; CI offline PASS. Runtime Wix/E2E permanece `BLOCKED_ENVIRONMENT` hasta que el QA designado sea accesible y su aislamiento se pueda verificar.
