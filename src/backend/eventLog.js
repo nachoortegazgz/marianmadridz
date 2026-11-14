@@ -169,7 +169,7 @@ function _toAeatFlag(value, fallback) {
 
 function _toFiscalStartDateText(value) {
     const date = _safeTrim(value);
-    if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(date)) return null;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
     return Number.isNaN(Date.parse(date + "T00:00:00.000Z")) ? null : date;
 }
 
