@@ -21,7 +21,7 @@ CAMBIOS v5017-ALIGNED-DATOSFISCALES (respecto a v5016):
   ALN-DF-01: Eliminada la dependencia de BUSINESS_COLLECTIONS.GESTORES_FISCALES
              (coleccion no declarada en internalConfig v12). El origen de
              verdad de destinatarios es BUSINESS_COLLECTIONS.MAPA_STAFF.
-  ALN-DF-02: listAccountantRecipients consulta MapaStaff y extrae
+  ALN-DF-02: listAccountantRecipients consulta DatosFiscales y extrae
              gestores por DOS patrones tolerados en paralelo:
                A) item dedicado con recordType "GESTOR" | "GESTORIA" |
                   "GESTOR_FISCAL" | "ACCOUNTANT" + campo email.
@@ -90,7 +90,7 @@ const log = logger;
 const CMS_TIMEOUT_MS = SDK_CONFIG.TIMEOUTS.CMS_MS;
 // Manager package snapshots have their own collection; Z closings remain isolated.
 const DOCS_COL = BUSINESS_COLLECTIONS.PAQUETES_GESTORIA;
-const MAPA_STAFF_COL = BUSINESS_COLLECTIONS.MAPA_STAFF;
+const DATOS_FISCALES_COL = BUSINESS_COLLECTIONS.DATOS_FISCALES;
 const CONTROL_COL = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
 const PACKAGE_MAX_ITEM_BYTES = 450 * 1024; // Wix CMS hard limit: 500 KB per item.
 const PACKAGE_OPERATION_TTL_MS = 10 * 60 * 1000;
@@ -276,7 +276,7 @@ function _isGestorRecordType(record) {
   return candidates.some((v) => GESTORIA_RECORD_TYPE_MARKERS.includes(v));
 }
 
-// Extrae un destinatario de un item de MapaStaff. Devuelve null si el
+// Extrae un destinatario de un item de DatosFiscales. Devuelve null si el
 // item no contiene datos de gestor utiles. Tolera los DOS patrones en
 // paralelo: registro dedicado (recordType=GESTOR) o campos embebidos
 // gestorEmail/gestorName en cualquier item.
@@ -1055,7 +1055,7 @@ export const listAccountantRecipients = webMethod(
       await requireMarianManager(traceId);
 
       const res = await withTimeout(
-        dalQuery(MAPA_STAFF_COL)
+        dalQuery(DATOS_FISCALES_COL)
           .descending("_updatedDate")
           .limit(100)
           .find(),
@@ -1101,7 +1101,7 @@ export const listAccountantRecipients = webMethod(
   }
 );
 
-// Resuelve un destinatario por id en MapaStaff. Los ids del patron B
+// Resuelve un destinatario por id en DatosFiscales. Los ids del patron B
 // viajan como `<recordId>#gestor`; los del patron A como `<recordId>`.
 async function _resolveRecipientById(recipientId) {
   if (!recipientId) return null;
@@ -1111,7 +1111,7 @@ async function _resolveRecipientById(recipientId) {
 
   try {
     const record = await withTimeout(
-      dalGet(MAPA_STAFF_COL, docId, "strong"),
+      dalGet(DATOS_FISCALES_COL, docId, "strong"),
       CMS_TIMEOUT_MS,
       "getRecipient"
     );
