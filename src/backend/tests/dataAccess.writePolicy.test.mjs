@@ -198,8 +198,8 @@ test("bulk update/remove allow explicit IDs for all project-owned business colle
     assert.throws(() => assertBulkRemoveAllowed(C.CAJA_ACTUAL, []), {
         code: "CMS_BULK_REMOVE_SCOPE_DENIED",
     });
-    assert.doesNotThrow(() => assertBulkUpdateAllowed("DatosFiscales", [{ _id: "legacy-qa-row" }]));
-    assert.doesNotThrow(() => assertBulkRemoveAllowed("DatosFiscales", ["legacy-qa-row"]));
+    assert.doesNotThrow(() => assertBulkUpdateAllowed("DatosFiscales", [{ _id: "legacy-synthetic-row" }]));
+    assert.doesNotThrow(() => assertBulkRemoveAllowed("DatosFiscales", ["legacy-synthetic-row"]));
     assert.throws(() => assertBulkUpdateAllowed("WixAppCollection", [{ _id: "isolated-row-1" }]), {
         code: "CMS_BULK_UPDATE_SCOPE_DENIED",
     });
