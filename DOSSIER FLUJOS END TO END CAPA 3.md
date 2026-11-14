@@ -1,3 +1,5 @@
+> **Addendum de seguridad vigente — 2026-11-14:** el histórico TEC-037 que describía una pausa global de append-only queda supersedido para la ejecución actual. La ventana global de mutabilidad está cerrada en la rama QA; los ledgers permanecen inmutables. La inspección Wix de esta sesión devuelve producción como Published y no resuelve el Site ID QA; no ejecutar escrituras Wix ni E2E sobre producción. Prevalecen PLAN_ACCION_QA.md, DIRECTRICES_DESARROLLO_CODIGO.md y TEC-038 de docs/DECISION-LOG.md.
+
 ## Addendum vigente — baseline 2026-11-14 (prevalece sobre bloques históricos)
 
 - Git `main` al inicio de esta reconciliación: `79b6238fe4c23206bb8e81327191ab48425e3a0d`, merge de PR #351.
