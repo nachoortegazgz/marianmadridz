@@ -32,11 +32,18 @@ Lectura de solo contexto mediante Wix GetSiteContext para el sitio principal y e
 
 ## Hallazgos y consecuencias
 
-### P1 — discrepancia entre plataforma declarada y plataforma live
+### Plataforma confirmada: Wix Editor Classic
 
-El rol/documentación de proyecto describe Wix Studio, pero Wix devuelve `Editor Type: Editor` para el sitio principal y para el QA. No hay evidencia en esta lectura de que el sitio principal sea Wix Studio o Studio Two.
+El propietario confirma expresamente que el sitio está construido en **Wix Editor Classic**. Este dato resuelve la aparente discrepancia con el campo `Editor Type: Editor` devuelto por Wix para producción y QA. No existe un bloqueo de plataforma ni una necesidad de migración a Wix Studio.
 
-Consecuencia: no asumir disponibilidad de workflows, export/import o herramientas exclusivas de Wix Studio. La base actual debe tratarse como Wix Editor/Velo hasta que el propietario confirme otra cosa. No migrar de editor ni reconstruir el sitio por esta discrepancia sin decisión explícita.
+Consecuencias:
+- La plataforma objetivo y baseline de compatibilidad es Wix Editor Classic + Velo.
+- El valor `Editor` de GetSiteContext es coherente con la confirmación del propietario.
+- No se utilizarán flujos, herramientas ni capacidades exclusivas de Wix Studio como requisito de implementación.
+- Las referencias genéricas a Wix Studio en documentos antiguos deben interpretarse como deuda documental y corregirse cuando describan la plataforma de este sitio.
+- La sincronización del código Velo del Editor con GitHub sigue pendiente: GetSiteContext no expone los archivos fuente y esta confirmación de plataforma no demuestra igualdad de código/runtime.
+
+No se propone migración ni reconstrucción del sitio.
 
 ### P1 — versiones de Wix Invoices distintas entre entornos
 
