@@ -168,7 +168,7 @@ export function assertDatosFiscalesRecord(item, { partial = false } = {}) {
         const email = String(item.email || item.gestorEmail || "").trim();
         const name = String(item.name || item.legalName || item.gestorName || "").trim();
         if (!partial || email) {
-            if (!/^[^\s@]+@[^\s@]+\\.[^\s@]+$/.test(email)) {
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
                 throw new Error("SCHEMA_VIOLATION: DatosFiscales GESTORIA requires a valid email");
             }
         }
