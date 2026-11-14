@@ -150,14 +150,11 @@ export function assertDatosFiscales(item) {
 
     if (item.recordType === RECORD_TYPE.GESTORIA) {
         const email = String(item.email || item.gestorEmail || "").trim();
-        if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) {
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
             throw new Error("SCHEMA_VIOLATION: MapaStaff GESTORIA requires a valid contact email");
         }
         if (!String(item.name || item.legalName || "").trim()) {
             throw new Error("SCHEMA_VIOLATION: MapaStaff GESTORIA requires name or legalName");
-        }
-        if (!String(item.email || item.gestorEmail || "").trim()) {
-            throw new Error("SCHEMA_VIOLATION: MapaStaff GESTORIA requires contact email");
         }
         if ("memberId" in item || "staffMemberId" in item || "resourceId" in item ||
             "rolWebsite" in item || "rolBookings" in item) {
