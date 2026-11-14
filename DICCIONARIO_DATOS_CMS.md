@@ -1,13 +1,13 @@
 # Diccionario de datos CMS — Marian Madrid
 
-> **Corte de esquema:** 2026-11-13. **Entorno de referencia:** producción Wix, Site ID `188bed94-177c-4bc9-a9f0-35080d874f3e`. **Fuente del esquema:** Wix Data Collections API, lectura `GET /wix-data/v2/collections/{dataCollectionId}` por colección. **Cambios realizados en Wix durante esta documentación:** ninguno.
+> **Corte de esquema:** 2026-11-14. **Entorno de referencia:** producción Wix, Site ID `188bed94-177c-4bc9-a9f0-35080d874f3e`. **Fuente del esquema:** Wix Data Collections API, lectura `GET /wix-data/v2/collections/{dataCollectionId}` por colección. **Cambio live:** recreación de `CajaActual` (revisión 1) e inicialización de un singleton cerrado sin saldo operativo; `MovimientosCaja` no fue modificado.
 >
 > Este documento describe el esquema físico observado y los contratos de keyfields acreditados en el repositorio. No es una propuesta de migración. No modificar nombres, tipos, etiquetas, referencias, índices ni permisos CMS sin análisis de consumidores, aprobación y PR.
 
 ## 1. Alcance y criterio de lectura
 
 Se documentan:
-- Las 15 colecciones `NATIVE` del sitio de producción, con revisión live, nombre visible CMS, campo de presentación y todos los campos físicos observados.
+- Las 14 colecciones `NATIVE` del sitio de producción, con revisión live, nombre visible CMS, campo de presentación y todos los campos físicos observados.
 - Las 29 colecciones `WIX_APP`, con nombre visible, propietario de aplicación, campo de presentación y número de campos. Sus esquemas son administrados por Wix Apps y no se redefinen aquí.
 - Los keyfields de negocio y sus significados cuando están respaldados por el esquema, `internalConfig.js`, `validation.js` o documentación técnica del repositorio.
 - Las reglas de nomenclatura que el dossier define como estándar y las diferencias reales que aparecen en CMS.
@@ -21,11 +21,11 @@ Se documentan:
 
 ## 2. Inventario de colecciones NATIVE
 
-Recuento live documentado para producción: 44 colecciones en total (15 NATIVE y 29 WIX_APP). Los recuentos de elementos son una lectura separada de Data Items Count API del mismo corte.
+Recuento live verificado el 2026-11-14: 43 colecciones en total (14 NATIVE y 29 WIX_APP). Los recuentos de elementos proceden de Data Items Count API.
 
 | ID de colección | Nombre visible CMS | Revisión de esquema | Campo de presentación | Elementos | Clasificación/uso |
 |---|---|---:|---|---:|---|
-| `CajaActual` | `CAJA_ACTUAL` | 49 | `singletonKey` | 1 | Estado de caja física; singleton |
+| `CajaActual` | `CAJA_ACTUAL` | 1 | `singletonKey` | 1 | Estado de caja física; singleton recreado y cerrado |
 | `CitasF2` | `CITAS_F2` | 42 | `bookingId` | 1 | Proyección interna de reservas |
 | `ComplementosCatalogo` | `COMPLEMENTOS_CATALOGO` | 139 | `name` | 36 | Catálogo de complementos |
 | `ControlOperativo` | `CONTROL_OPERATIVO` | 37 | `controlType` | 3 | Locks, idempotencia, webhooks, alertas y control |
@@ -34,8 +34,8 @@ Recuento live documentado para producción: 44 colecciones en total (15 NATIVE y
 | `InventarioStockVenta` | `INVENTARIO_STOCK_VENTA` | 20 | `name` | 1 | Maestro/proyección legacy; no SSOT de stock |
 | `LibroAsientosContablesDetalle` | `LIBRO_ASIENTOS_CONTABLES_DETALLE` | 27 | `entryId` | 0 | Ledger contable append-only |
 | `MapaStaff` | `MAPA_STAFF` | 23 | `displayName` | 3 | Correlación de identidades y recursos |
-| `MovimientosCaja` | `MOVIMIENTOS_CAJA` | 78 | `numSerieFactura` | 0 | Ledger fiscal append-only |
-| `MovimientosInventario` | `MOVIMIENTOS_INVENTARIO` | 29 | `movementToken` | 1 | Histórico de movimientos; legacy |
+| `MovimientosCaja` | `MOVIMIENTOS_CAJA` | 78 | `numSerieFactura` | 0 | Ledger fiscal; sin movimientos en el corte live |
+
 | `PaquetesGestoria` | `Paquetes de Gestoria (append-only)` | 3 | `periodType` | 0 | Snapshot documental append-only |
 | `RegistroIntegracion` | `REGISTRO_INTEGRACION` | 2 | `eventId` | 0 | Registro de integración; fuera de BUSINESS_COLLECTIONS |
 | `RegistrosHorariosStaff` | `REGISTROS_HORARIOS_STAFF` | 11 | `resourceId` | 2 | Registro horario; writer deshabilitado |
@@ -43,7 +43,7 @@ Recuento live documentado para producción: 44 colecciones en total (15 NATIVE y
 
 **Advertencia de autoridad**
 - Wix CMS es la fuente de verdad transaccional propia del ecosistema.
-- Wix Stores usa Catalog V3 como autoridad operativa del catálogo/stock comercial. `InventarioStockVenta` y `MovimientosInventario` se consideran legacy; conservar datos históricos y no reactivar writers por inferencia.
+- Wix Stores usa Catalog V3 como autoridad operativa del catálogo/stock comercial. `InventarioStockVenta` se observa como colección legacy. `MovimientosInventario` no aparece en el inventario live del 2026-11-14 ni responde al GET por ese ID; la sección 3.11 queda como esquema histórico del dossier, no como colección actualmente disponible. No recrearla ni reactivar writers sin confirmar ID, necesidad y consumidores.
 - `ServiciosCatalogo` está definido por el proyecto como maestro propio de configuración de servicios y planes; su sincronización completa con Wix Bookings debe probarse, no presumirse.
 - `RegistroIntegracion` existe físicamente, pero no forma parte de `BUSINESS_COLLECTIONS` en `internalConfig.js`; no se ha demostrado un consumidor/writer activo.
 - `HistoricoCierresZ`, `MovimientosCaja`, `LibroAsientosContablesDetalle`, `PaquetesGestoria` y `RegistrosHorariosStaff` deben tratarse conforme a sus restricciones de inmutabilidad/append-only y flags fail-closed. No editar ni borrar registros históricos.
@@ -52,24 +52,33 @@ Recuento live documentado para producción: 44 colecciones en total (15 NATIVE y
 
 Formato: `key:TYPE`. Cuando no se indica otra cosa, el `displayName` de campo observado coincide con el `key`. Las etiquetas especiales de Wix se documentan en §4. El orden es el devuelto por Wix y no implica prioridad de negocio.
 
-### 3.1 CajaActual — revisión 49 (esquema físico observado)
+### 3.1 CajaActual — revisión live 1 (recreada el 2026-11-14)
 
 ```text
-netAmount:NUMBER, closedBy:TEXT, sequenceCounters:OBJECT, versionState:NUMBER,
-stateHash:TEXT, lastMovementAt:DATETIME, differenceReason:TEXT, difference:NUMBER,
-countedCash:NUMBER, expectedCash:NUMBER, cashAmount:NUMBER, totalOutAmount:NUMBER,
-totalInAmount:NUMBER, paymentAmount:NUMBER, paymentCount:NUMBER, refundAmount:NUMBER,
-refundCount:NUMBER, salesAmount:NUMBER, salesCount:NUMBER, otherAmount:NUMBER,
-voucherAmount:NUMBER, cardAmount:NUMBER, openedBy:TEXT, openingAmount:NUMBER,
-closedAt:DATETIME, openedAt:DATETIME, traceId:TEXT, staffResourceId:TEXT,
-operationDate:DATE, cashRegisterStatus:TEXT, singletonKey:TEXT, isOpen:BOOLEAN,
-id:TEXT, currentSequence:NUMBER, fiscalPeriod:TEXT,
+singletonKey:TEXT, operationDate:DATE, cashRegisterStatus:TEXT,
+staffResourceId:TEXT, fiscalPeriod:TEXT, currentSequence:NUMBER,
+initialAmount:NUMBER, id:TEXT, isOpen:BOOLEAN, traceId:TEXT,
+openedAt:DATETIME, closedAt:DATETIME, openingAmount:NUMBER,
+cashAmount:NUMBER, cardAmount:NUMBER, voucherAmount:NUMBER, otherAmount:NUMBER,
+salesCount:NUMBER, salesAmount:NUMBER, refundCount:NUMBER, refundAmount:NUMBER,
+paymentCount:NUMBER, paymentAmount:NUMBER, totalInAmount:NUMBER, totalOutAmount:NUMBER,
+netAmount:NUMBER, expectedCash:NUMBER, countedCash:NUMBER, difference:NUMBER,
+differenceReason:TEXT, lastMovementAt:DATETIME, stateHash:TEXT,
+versionState:NUMBER, sequenceCounters:OBJECT, openedBy:TEXT, closedBy:TEXT,
 _id:TEXT, _createdDate:DATETIME, _updatedDate:DATETIME, _owner:TEXT
 ```
 
-**Contrato objetivo de proyección (no equivale al esquema físico actual):** `CajaActual` debe representar la sesión operativa y mantener separado el saldo físico. El último resumen de operación necesita actor resuelto en backend, instante DATETIME exacto, tipo/descripción, importe, conceptos/unidades validados, desglose de pago, huellas/traza y referencias a los `_id` de `MovimientosCaja`. Los acumulados de sesión deben poder desglosarse, como mínimo, en efectivo, tarjeta y Bizum (importe y número de tickets/cobros). `cashAmount`/`expectedCash` representan efectivo físico, no el total cobrado por cualquier medio.
+**Permisos live:** `insert/update/remove/read=ADMIN`. Colección `NATIVE`, displayName `CAJA_ACTUAL`, revisión 1. Se creó un único registro lógico `singletonKey=CAJA_PRINCIPAL` (ID físico Wix `04402566-25b1-4b93-8f93-5c3343c73249`), con `cashRegisterStatus=CERRADA`, `isOpen=false`, saldos y contadores a cero, `sequenceCounters={}`, `operationDate=2026-11-14` y `traceId` UUID v4. No se rellenaron `openedAt/openedBy`, no se declaró saldo de apertura y no se abrió la caja.
 
-La revisión 49 no contiene campos explícitos de última operación, referencias a movimientos fuente ni acumulado Bizum dedicado. No documentar esos datos como disponibles en CMS hasta aprobar y aplicar una migración. Los nombres/tipos candidatos, la nulabilidad, el límite de referencias y la representación de pagos mixtos requieren contrato de datos, inventario de consumidores y revisión de esquema. No añadir alias ni reutilizar campos por semejanza nominal.
+**Índice de singleton:** se solicitó el índice único `CajaActual_singletonKey_unique`; estado verificado en lectura posterior: `ACTIVE`; el índice único está operativo. El backend mantiene además la comprobación fail-closed de duplicados (consulta hasta dos registros y error si encuentra más de uno).
+
+**Contrato operativo:** `CajaActual` es una proyección mutable de una sola sesión, no un ledger. `MovimientosCaja` conserva cada movimiento/ticket individual como fuente histórica. En el corte live la colección `MovimientosCaja` mantiene revisión 78 y 0 registros; no se ha insertado ni modificado ningún movimiento durante la recreación.
+
+`cashAmount` y `expectedCash` representan efectivo físico; `cardAmount` y `voucherAmount` acumulan tarjeta y Bizum respectivamente; `netAmount` sigue representando efectivo físico. `otherAmount` no debe utilizarse para incorporar pagos online a la caja física por inferencia. `sequenceCounters` contiene el estado de secuencia y la deduplicación de IDs de movimientos aplicados según el contrato backend.
+
+**Límite persistente:** el esquema no incorpora `lastMovementId` ni un objeto `lastOperation`. El detalle de última operación se compone en el DTO de lectura desde el movimiento original en `MovimientosCaja`; `sequenceCounters.appliedMovementIds`, `staffResourceId`, `traceId` y `lastMovementAt` conservan las referencias/metadatos que el backend actualiza. Los contadores por método se derivan del ledger. No se copia a `CajaActual` el histórico completo de tickets.
+
+**Pendiente de contrato/migración:** `paymentMethod` en `MovimientosCaja` sigue siendo singular y `lineItems` es `OBJECT` sin esquema interno validado. No se habilitan pagos mixtos ni se exponen conceptos/unidades como validados. Una futura columna `lastMovementId` puede ser útil como puntero explícito a la última operación, pero solo debe añadirse junto con actualización del proyector, lector, tests y estrategia de reconstrucción; no duplicar el ticket completo en la proyección.
 
 ### 3.2 CitasF2 — revisión 42
 
@@ -231,7 +240,9 @@ _id:TEXT, _createdDate:DATETIME, _updatedDate:DATETIME, _owner:TEXT
 
 **Convención histórica:** el campo canónico de huella de este ledger es `hash`; `recordHash` no es el campo físico de `MovimientosCaja`. No intercambiarlo con `recordHash` del ledger contable.
 
-### 3.11 MovimientosInventario — revisión 29 (histórico/legacy)
+### 3.11 MovimientosInventario — esquema histórico (no localizado en Wix live 2026-11-14)
+
+El ID `MovimientosInventario` no aparece en la lista live de colecciones y `GET /collections/MovimientosInventario` devuelve WDE0025. El siguiente esquema se conserva únicamente como evidencia histórica del dossier; no debe tratarse como esquema físico actual ni utilizarse para nuevas escrituras.
 
 ```text
 variantId:TEXT, orderId:TEXT, productId:TEXT, stockApplied:BOOLEAN,
