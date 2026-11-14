@@ -1,3 +1,15 @@
+## Estado de ingeniería — reconciliación 2026-11-14
+
+- `main` baseline: `79b6238fe4c23206bb8e81327191ab48425e3a0d` (PR #351 integrada).
+- PR #351 dejó incompleta la recuperación de validadores compartidos; PR #352 restaura contratos y añade pruebas, pendiente de CI.
+- CMS live: 41 colecciones (12 NATIVE / 29 WIX_APP), 980 campos. No existen live `DatosFiscales`, `InventarioStockVenta` ni `MovimientosInventario`.
+- `QA_RECORD_MUTATIONS_ENABLED=true`: solo fase QA; producción bloqueada. No se ha publicado esta tanda.
+- No hay release Wix vinculado al SHA de Git ni certificación E2E runtime. Capa 3 no está operativa certificada.
+
+Evidencia: [reconciliación de baseline 2026-11-14](docs/qa/2026-11-14-baseline-reconciliation.md).
+
+---
+
 # Estado operativo — actualización 2026-11-14
 
 **Gobierno del proyecto:** el usuario/propietario es la SSOT de negocio, prioridades y autorizaciones. Durante desarrollo y QA están en pausa append-only y las prohibiciones genéricas de editar/eliminar registros (individuales y masivas) hasta nueva instrucción expresa del usuario para preparar el despliegue. Se mantienen autenticación, autorización, permisos y validaciones. La política documental no certifica por sí sola que todos los guards del runtime Wix hayan sido retirados.
@@ -5,7 +17,7 @@
 **Estado declarado:** el usuario indica que el código está integrado y publicado en Wix. **Estado Git verificado en este corte:** main=b19a8f676d7be157d457588f6acf5332c2a34d32; PR #344, PR #345, PR #346 y PR #347 están fusionados. El usuario declara la publicación en Wix, pero no se ha acreditado un identificador de release que vincule el runtime con ese SHA. Lee el addendum vigente en ESTADO_ACTUAL_PROYECTO.md.
 # Marian Madrid — Wix Editor + Velo
 
-> **Estado vigente 2026-11-13:** GitHub `main` en el corte PR #332: `84c06313d5d82da6952e38deab8bae271aed67cf`. Wix Site Context confirma el sitio principal **Published** y Velo enabled; el propietario declara que el código se ha actualizado y publicado. No se ha obtenido un identificador de release que vincule el runtime Wix con ese SHA. Existe un sitio Wix QA independiente en estado Draft (`50b39f33-e753-4331-ab35-b2ed43dc97f7`), pero su aislamiento y paridad CMS no están certificados. CMS producción tras el corte 2026-11-14: 42 colecciones (13 NATIVE, 29 WIX_APP). El sitio QA Draft conserva inventario y aislamiento pendientes de reauditoría. La referencia de estado, inventario y checklist es [ESTADO_ACTUAL_PROYECTO.md](ESTADO_ACTUAL_PROYECTO.md), cuyo addendum vigente prevalece sobre los estados históricos de los demás documentos.
+> **Estado vigente 2026-11-13:** GitHub `main` en el corte PR #332: `84c06313d5d82da6952e38deab8bae271aed67cf`. Wix Site Context confirma el sitio principal **Published** y Velo enabled; el propietario declara que el código se ha actualizado y publicado. No se ha obtenido un identificador de release que vincule el runtime Wix con ese SHA. Existe un sitio Wix QA independiente en estado Draft (`50b39f33-e753-4331-ab35-b2ed43dc97f7`), pero su aislamiento y paridad CMS no están certificados. CMS producción tras el corte 2026-11-14: 41 colecciones (12 NATIVE, 29 WIX_APP). El sitio QA Draft conserva inventario y aislamiento pendientes de reauditoría. La referencia de estado, inventario y checklist es [ESTADO_ACTUAL_PROYECTO.md](ESTADO_ACTUAL_PROYECTO.md), cuyo addendum vigente prevalece sobre los estados históricos de los demás documentos.
 
 Repositorio canónico del sitio **Marian Madrid Peluquería y Estética** (`www.marianmadrid.es`). El repositorio contiene código, documentación y pruebas QA.
 
@@ -33,7 +45,7 @@ Repositorio canónico del sitio **Marian Madrid Peluquería y Estética** (`www.
 
 ## Documentos raíz
 
-0. [Diccionario de datos CMS](DICCIONARIO_DATOS_CMS.md): esquema físico live de las 13 colecciones NATIVE, inventario de las 29 WIX_APP, keyfields, etiquetas CMS, nomenclatura, glosario, relaciones y límites de uso.
+0. [Diccionario de datos CMS](DICCIONARIO_DATOS_CMS.md): esquema físico live de las 12 colecciones NATIVE, inventario de las 29 WIX_APP, keyfields, etiquetas CMS, nomenclatura, glosario, relaciones y límites de uso.
 
 1. [Estado vigente consolidado y checklist](ESTADO_ACTUAL_PROYECTO.md): autoridad de continuidad a 2026-11-14; incluye HEAD, estado Wix live, inventario CMS, contrato CitasF2, bloqueos y checklist priorizado.
 
