@@ -49,7 +49,11 @@ function validateLines(lineItems) {
     const quantity = normalizeQuantity(line?.quantity);
     const unitMinor = toMinorUnits(line?.pvpUnitario, 'QA_TPV_INVALID_UNIT_PRICE');
     if (unitMinor <= 0) throw new Error('QA_TPV_INVALID_UNIT_PRICE');
-    const subtotalMinor = Math.round(quantity * unitMinor);
+    const rawSubtotalMinor = quantity * unitMinor;
+    const subtotalMinor = Math.round(rawSubtotalMinor);
+    if (Math.abs(rawSubtotalMinor - subtotalMinor) > 1e-7) {
+      throw new Error('QA_TPV_LINE_PRECISION');
+    }
     const taxBaseMinor = toMinorUnits(line?.taxBase, 'QA_TPV_INVALID_TAX_BASE');
     const taxMinor = toMinorUnits(line?.taxAmount, 'QA_TPV_INVALID_TAX_AMOUNT');
     if (taxBaseMinor + taxMinor !== subtotalMinor) {
