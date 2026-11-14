@@ -154,7 +154,7 @@ La rama de alineación separa ambas responsabilidades:
 
 - _id es la clave primaria del registro CMS. Para ComplementosCatalogo, el código obtiene la identidad desde _id y la proyecta como addOnId en el DTO de reservas. addonId permanece como espejo físico porque la columna sigue siendo obligatoria en CMS; el hook comprueba igualdad cuando ambos valores están disponibles.
 - CajaActual.id coincide con _id en el singleton leído. No se ha retirado la columna; queda pendiente confirmar que no haya consumidores externos.
-- DatosFiscales.gestorName y gestorNombre coinciden en el único registro leído. gestorName queda como keyfield canónico; la retirada física de gestorNombre queda pendiente de migración de datos y comprobación de consumidores.
+- DatosFiscales.gestorName y gestorNombre coinciden en el único registro leído; el código usa solo gestorName. taxId está informado y nif vacío; no son dos valores duplicados. name y legalName están ambos informados pero difieren; gestorEmail está informado y email vacío, por lo que son campos de finalidades distintas.
 - MapaStaff.resourceId coincide con _id en las tres filas, pero no es duplicado semántico: resourceId es la identidad nativa de Wix Bookings Resource y _id la identidad del registro CMS. Se conservan ambos.
 - ServiciosCatalogo.serviceId y pricingPlanId identifican entidades nativas diferentes; no se sustituyen por _id ni se fusionan.
 - ComplementosCatalogo.name y description coinciden textualmente en las 36 filas, pero TEXT y RICH_TEXT son contratos distintos de etiqueta y contenido; se conservan.
