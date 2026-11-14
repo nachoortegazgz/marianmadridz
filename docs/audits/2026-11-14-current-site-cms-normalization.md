@@ -8,7 +8,7 @@
 # Auditoría de esquema CMS y normalización — sitio actual
 
 **Fecha de lectura:** 2026-11-14  
-**Site ID:** `50b39f33-e753-4331-ab35-b2ed43dc97f7`  
+**Site ID del corte histórico:** referencia anterior de entorno, supersedida  
 **Plataforma:** Wix Editor Classic + Velo  
 **Alcance:** lectura de Data Collections API y lectura de registros CMS. No se ejecutaron escrituras, migraciones ni borrados.
 
