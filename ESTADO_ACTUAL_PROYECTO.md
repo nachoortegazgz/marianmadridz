@@ -1,38 +1,41 @@
 # Estado actual del proyecto — Marian Madrid
 
-**Corte:** 2026-11-14  
-**Fuente de autoridad operativa:** [PROJECT_BASELINE.md](PROJECT_BASELINE.md). Este documento es un resumen ejecutivo; no duplicar aquí el historial de sesiones ni addenda antiguos.
+**Fecha de corte:** 2026-11-14  
+**Sitio objeto de auditoría:** `50b39f33-e753-4331-ab35-b2ed43dc97f7`  
+**Naturaleza del sitio:** banco de pruebas aislado, sin actividad real, según declaración del propietario.  
+**Plataforma:** Wix Editor Classic + Velo.  
+**Repositorio:** `nachoortegazgz/marianmadridz`.
 
 ## Estado verificado
 
-- **Plataforma:** Wix Editor Classic + Velo, confirmada por el propietario.
-- **Repositorio:** `nachoortegazgz/marianmadridz`, rama `main`, HEAD `ee2a2f8aee6a00cbe3733b4b8d6325a6cb54bb51` (PR #357 integrada).
-- **Producción:** Site ID `188bed94-177c-4bc9-a9f0-35080d874f3e`, Published, Velo habilitado, Stores Catalog V3, Invoices V1.
-- **QA:** Site ID `50b39f33-e753-4331-ab35-b2ed43dc97f7`, Draft, Velo habilitado, Stores Catalog V3, Invoices V2.
-- **CMS producción:** 41 colecciones (12 NATIVE, 29 WIX_APP), 980 campos según inventario live del 2026-11-14.
-- **Stock comercial:** Wix Stores Catalog V3; inventario custom retirado.
-- **Capa 3:** SharePoint/Power Automate solo diseño documental; no operativa certificada.
+- CMS live: 23 colecciones, 15 NATIVE y 8 WIX_APP.
+- Colecciones propias: 524 definiciones de campo; 140 registros en el corte leído.
+- Los registros existentes deben tratarse como sintéticos/de prueba; no son evidencia de operaciones reales.
+- `CajaActual.sequenceCounters` es OBJECT y su valor leído es objeto; `ticketSequence` no existe en el esquema actual.
+- `ControlOperativo.ownerToken` no existe; `traceId` es la clave canónica de fencing.
+- `MapaStaff` tiene 18 campos y 3 filas activas. No declara `recordType` ni campos fiscales; los tres registros contienen `staffMemberId`, `resourceId`, `scheduleId`, `memberId` y `active`.
+- `DatosFiscales` existe físicamente con 28 campos y un registro placeholder. No debe tratarse como identidad fiscal real.
+- `ComplementosCatalogo` tiene 36 filas; `addonId` coincide con `_id` en las 36. `name` y `description` contienen el mismo texto en las 36, con tipos TEXT y RICH_TEXT.
+- `InventarioStockVenta` y `MovimientosInventario` existen físicamente, pero son colecciones legacy sin writers activos en el código actual; no se reactiva su uso.
 
-## Bloqueos
+## Bloqueos y discrepancias
 
-1. No está demostrada la igualdad del código Velo en Wix Editor con GitHub `main`; falta exportación/copia reproducible del Editor y diff/hash por archivo.
-2. QA no tiene aislamiento integral certificado.
-3. Invoices difiere entre producción (V1) y QA (V2).
-4. `QA_RECORD_MUTATIONS_ENABLED=true` sigue activa y bloquea producción.
-5. No existe release Wix vinculado al SHA ni certificación E2E del runtime.
+1. El lector de eventos de personal consultaba `MapaStaff.recordType`, campo que no existe. La rama de corrección elimina ese filtro y conserva `staffMemberId` + `active`.
+2. Los hooks y validadores de `MapaStaff`, además de `eventLog.js` y `fiscalDocuments.web.js`, siguen esperando discriminadores/campos fiscales que no están en el esquema actual de `MapaStaff`. No se cambia ese flujo sin decidir y probar la fuente fiscal canónica.
+3. `DatosFiscales` no declara `traceId` ni `schemaVersion`; el contrato de sus writers debe reconciliarse antes de habilitar escrituras fiscales.
+4. `ComplementosCatalogo.addonId` es un espejo de `_id`; el código de lectura pasa a priorizar `_id` y rechazar divergencias. La columna física no se elimina en esta intervención.
+5. La sincronización del código del Editor Wix con Git no está verificada.
+6. No hay certificación E2E de runtime ni despliegue asociado a SHA.
 
 ## Política de cambios
 
-- No publicar ni desplegar sin autorización expresa.
-- No cambiar CMS, permisos, apps o datos fuera del alcance autorizado.
-- Mantener auth/RBAC, validación, secretos, idempotencia y límites de plataforma.
-- Restaurar protecciones de mutabilidad antes de producción; la excepción QA no es política productiva.
-- Validar cambios con diff revisado, CI, pruebas proporcionales al riesgo y rollback.
-- Consultar [PROJECT_BASELINE.md](PROJECT_BASELINE.md) para arquitectura, prioridades, requisitos y fuentes de autoridad.
+- Mutaciones update/remove sobre colecciones propias habilitadas por autorización expresa mediante `ISOLATED_SITE_RECORD_MUTATIONS_ENABLED=true`.
+- Colecciones Wix Apps excluidas; autenticación, autorización, permisos, validación de esquema y gates de efectos externos permanecen activos.
+- No se ejecutan operaciones reales ni se interpretan datos sintéticos como actividad real.
+- No se modifica el CMS live en esta intervención; cambios de código/documentación se someten a PR y CI.
 
-## Evidencias detalladas
-- [Diccionario CMS](DICCIONARIO_DATOS_CMS.md).
-- [Compatibilidad de plataforma Wix](docs/qa/2026-11-14-wix-platform-compatibility.md).
-- [Reconciliación de baseline](docs/qa/2026-11-14-baseline-reconciliation.md).
+## Evidencias
 
-Los estados históricos se conservan en commits, PRs e informes fechados para auditoría; no deben copiarse como estado actual.
+- [Base maestra](PROJECT_BASELINE.md)
+- [Diccionario de datos CMS](DICCIONARIO_DATOS_CMS.md)
+- [Auditoría de esquema y contratos](docs/audits/2026-11-14-current-site-cms-normalization.md)

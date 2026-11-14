@@ -11,20 +11,20 @@ import {
 } from "backend/dataAccessPolicy";
 import {
     BUSINESS_COLLECTIONS as C,
-    QA_MUTABLE_COLLECTIONS,
+    ISOLATED_SITE_MUTABLE_COLLECTIONS,
     OPERATIONAL_COLLECTIONS as O,
     CONTROL_TYPE as T,
     RECORD_TYPE,
     APPEND_ONLY_MUTATION_WINDOW,
-    QA_RECORD_MUTATIONS_ENABLED,
+    ISOLATED_SITE_RECORD_MUTATIONS_ENABLED,
     DATA_ACCESS_WRITE_POLICY,
 } from "backend/internalConfig";
 
-test("QA record mutation policy enables update/remove without enabling insert", () => {
-    assert.equal(QA_RECORD_MUTATIONS_ENABLED, true);
+test("isolated-site mutation policy enables update/remove without enabling insert", () => {
+    assert.equal(ISOLATED_SITE_RECORD_MUTATIONS_ENABLED, true);
     assert.equal(APPEND_ONLY_MUTATION_WINDOW.ENABLED, true);
     assert.equal(APPEND_ONLY_MUTATION_WINDOW.TEMPORARY, true);
-    assert.equal(APPEND_ONLY_MUTATION_WINDOW.RESTORE_BEFORE_PRODUCTION, true);
+    assert.equal(APPEND_ONLY_MUTATION_WINDOW.RESTORE_BEFORE_REAL_OPERATIONS, true);
 });
 
 test("all CMS write-policy collection lists contain unique canonical strings", () => {
@@ -46,10 +46,10 @@ test("all CMS write-policy collection lists contain unique canonical strings", (
 test("retired custom inventory collections are excluded from the canonical CMS allowlist", () => {
     assert.equal(Object.hasOwn(C, "INVENTARIO_STOCK_VENTA"), false);
     assert.equal(Object.hasOwn(C, "MOVIMIENTOS_INVENTARIO"), false);
-    assert.equal(QA_MUTABLE_COLLECTIONS.includes("InventarioStockVenta"), false);
-    assert.equal(QA_MUTABLE_COLLECTIONS.includes("MovimientosInventario"), false);
-    // DatosFiscales remains a separate, owner-authorized QA compatibility scope.
-    assert.equal(QA_MUTABLE_COLLECTIONS.includes("DatosFiscales"), true);
+    assert.equal(ISOLATED_SITE_MUTABLE_COLLECTIONS.includes("InventarioStockVenta"), false);
+    assert.equal(ISOLATED_SITE_MUTABLE_COLLECTIONS.includes("MovimientosInventario"), false);
+    // DatosFiscales remains a separate, owner-authorized isolated-site compatibility scope.
+    assert.equal(ISOLATED_SITE_MUTABLE_COLLECTIONS.includes("DatosFiscales"), true);
 });
 
 test("insert policy allows only declared collections and canonical ControlOperativo types", () => {
@@ -188,9 +188,9 @@ test("single-item removal allows ledgers during temporary window and keeps Contr
 });
 
 test("bulk update/remove allow explicit IDs for all project-owned business collections", () => {
-    for (const collection of QA_MUTABLE_COLLECTIONS) {
-        assert.doesNotThrow(() => assertBulkUpdateAllowed(collection, [{ _id: "qa-row-1", value: true }]));
-        assert.doesNotThrow(() => assertBulkRemoveAllowed(collection, ["qa-row-1"]));
+    for (const collection of ISOLATED_SITE_MUTABLE_COLLECTIONS) {
+        assert.doesNotThrow(() => assertBulkUpdateAllowed(collection, [{ _id: "isolated-row-1", value: true }]));
+        assert.doesNotThrow(() => assertBulkRemoveAllowed(collection, ["isolated-row-1"]));
     }
     assert.throws(() => assertBulkUpdateAllowed(C.CAJA_ACTUAL, [{ value: true }]), {
         code: "CMS_BULK_UPDATE_SCOPE_DENIED",
@@ -200,10 +200,10 @@ test("bulk update/remove allow explicit IDs for all project-owned business colle
     });
     assert.doesNotThrow(() => assertBulkUpdateAllowed("DatosFiscales", [{ _id: "legacy-qa-row" }]));
     assert.doesNotThrow(() => assertBulkRemoveAllowed("DatosFiscales", ["legacy-qa-row"]));
-    assert.throws(() => assertBulkUpdateAllowed("WixAppCollection", [{ _id: "qa-row-1" }]), {
+    assert.throws(() => assertBulkUpdateAllowed("WixAppCollection", [{ _id: "isolated-row-1" }]), {
         code: "CMS_BULK_UPDATE_SCOPE_DENIED",
     });
-    assert.throws(() => assertBulkRemoveAllowed("WixAppCollection", ["qa-row-1"]), {
+    assert.throws(() => assertBulkRemoveAllowed("WixAppCollection", ["isolated-row-1"]), {
         code: "CMS_BULK_REMOVE_SCOPE_DENIED",
     });
 });

@@ -3,8 +3,8 @@
 MODULE: backend/data.js
 VERSION: v5016-CANONICAL-READ
 REPO: https://github.com/nachoortegazgz/marianmadridz.git
-RESPONSIBILITY: Política temporal de mutación QA y validación estricta de
-                esquemas CMS.
+RESPONSIBILITY: Política temporal de mutación del sitio aislado y validación
+                estricta de esquemas CMS.
 STANDARDS: G10 ASCII Strict. Cero suppressAuth. Historical fields are read-only; persisted fields are canonical.
 =============================================================================
 */
@@ -16,7 +16,7 @@ import {
     normalizeMovementKeys,
     OPERATIONAL_COLLECTIONS,
     APPEND_ONLY_MUTATION_WINDOW,
-    QA_RECORD_MUTATIONS_ENABLED,
+    ISOLATED_SITE_RECORD_MUTATIONS_ENABLED,
 } from "backend/internalConfig";
 import { assertCitasF2, assertControlOperativo, assertCanonicalControlFields, assertRegistrosHorariosStaff, assertMapaStaffFiscalIdentity, assertMapaStaffRecord, isValidNifOrEuVat as _isValidNifOrEuVat } from "backend/validation";
 import { CONSISTENCY, getItem } from "backend/dataAccess";
@@ -276,7 +276,7 @@ function _fiscalError(message) {
 }
 
 function _appendOnlyMutationWindowOpen() {
-    return QA_RECORD_MUTATIONS_ENABLED === true ||
+    return ISOLATED_SITE_RECORD_MUTATIONS_ENABLED === true ||
         (APPEND_ONLY_MUTATION_WINDOW.ENABLED === true &&
             APPEND_ONLY_MUTATION_WINDOW.TEMPORARY === true);
 }
@@ -635,7 +635,7 @@ export function CajaActual_beforeUpdate(item, context) {
 }
 
 export function CajaActual_beforeRemove() {
-    if (QA_RECORD_MUTATIONS_ENABLED) return;
+    if (ISOLATED_SITE_RECORD_MUTATIONS_ENABLED) return;
     throw new Error("SINGLETON_PROTECTED: No se puede eliminar el estado de caja");
 }
 
@@ -810,7 +810,7 @@ export function MapaStaff_beforeUpdate(item) {
 }
 
 export function MapaStaff_beforeRemove(item) {
-    if (QA_RECORD_MUTATIONS_ENABLED) return item;
+    if (ISOLATED_SITE_RECORD_MUTATIONS_ENABLED) return item;
     const id = _safeTrim(item?._id);
     const recType = _safeTrim(item?.recordType).toUpperCase();
     if (id === "CONFIG_SISTEMA_FISCAL" || recType === "CONFIG_SISTEMA") {
@@ -932,7 +932,7 @@ export async function ControlOperativo_beforeUpdate(item) {
         "windowStart", "processedAt", "heartbeatAt", "operationDate",
     ]);
     assertCanonicalControlFields(normalized);
-    if (!QA_RECORD_MUTATIONS_ENABLED && normalized.controlType !== original.controlType) {
+    if (!ISOLATED_SITE_RECORD_MUTATIONS_ENABLED && normalized.controlType !== original.controlType) {
         _fiscalError("ControlOperativo.controlType es inmutable");
     }
     assertControlOperativo(normalized);
@@ -975,7 +975,7 @@ function _validateCitasF2Write(item) {
 }
 
 function _blockCitasF2Remove() {
-    if (QA_RECORD_MUTATIONS_ENABLED) return;
+    if (ISOLATED_SITE_RECORD_MUTATIONS_ENABLED) return;
     _fiscalError("Borrado directo de CitasF2 bloqueado: use cancelacion formal de reserva");
 }
 
@@ -1016,7 +1016,10 @@ export function ComplementosCatalogo_beforeUpdate(item) { return _validateComple
 
 function _validateComplementosCatalogo(item) {
     if (!item || typeof item !== "object") return item;
-    if (!_safeTrim(item.addonId)) _schemaError("addonId obligatorio en ComplementosCatalogo");
+    const addonId = _safeTrim(item.addonId);
+    const cmsId = _safeTrim(item._id);
+    if (!addonId) _schemaError("addonId obligatorio en ComplementosCatalogo");
+    if (cmsId && addonId !== cmsId) _schemaError("addonId debe coincidir con _id en ComplementosCatalogo");
     if (!_safeTrim(item.sku)) _schemaError("sku obligatorio en ComplementosCatalogo");
     if (item.price !== undefined && Number(item.price) < 0) _schemaError("price no puede ser negativo en ComplementosCatalogo");
     return item;

@@ -265,7 +265,10 @@ function applyImage(value, title) {
 
 function normalizeAddOn(addon) {
   if (!addon || typeof addon !== "object") return null;
-  const addonId = refId(addon.addonId || addon._id || addon.id);
+  const cmsId = refId(addon._id);
+  const mirroredId = refId(addon.addonId);
+  if (cmsId && mirroredId && cmsId !== mirroredId) return null;
+  const addonId = cmsId || mirroredId || refId(addon.id);
   if (!addonId) return null;
   // PATCH C: ComplementosCatalogo.description es RICH_TEXT en CMS.
   // Strip defensivo de tags bien formados (<p>, </p>, <br/>, <!---->) y

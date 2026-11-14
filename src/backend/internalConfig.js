@@ -49,13 +49,13 @@ export const STAFF_CLOCKING_CONFIG = Object.freeze({
   ADJUSTMENTS_ENABLED: false,
 });
 
-// TEMPORARY QA POLICY: allow update/remove on project-owned CMS records.
+// TEMPORARY ISOLATED-SITE POLICY: allow update/remove on project-owned CMS records.
 // Does not enable inserts, fiscal writers, external effects, or bypass auth/RBAC.
-export const QA_RECORD_MUTATIONS_ENABLED = true;
+export const ISOLATED_SITE_RECORD_MUTATIONS_ENABLED = true;
 export const APPEND_ONLY_MUTATION_WINDOW = Object.freeze({
-  ENABLED: QA_RECORD_MUTATIONS_ENABLED,
+  ENABLED: ISOLATED_SITE_RECORD_MUTATIONS_ENABLED,
   TEMPORARY: true,
-  RESTORE_BEFORE_PRODUCTION: true,
+  RESTORE_BEFORE_REAL_OPERATIONS: true,
 });
 
 // Fail-closed production defaults until fiscal, accounting and runtime E2E
@@ -86,8 +86,8 @@ export const BUSINESS_COLLECTIONS = Object.freeze({
   SERVICIOS_CATALOGO: "ServiciosCatalogo",
 });
 
-// Legacy QA scope retained only by explicit owner authorization. CMS live returned 404 / WDE0025 on 2026-11-14; no active writer exists. review-by: 2026-11-21.
-export const QA_MUTABLE_COLLECTIONS = Object.freeze([
+// DatosFiscales exists in the current site but remains outside the canonical business-collection group until its fiscal writer contract is aligned. It is included in the owner-authorized isolated-site mutation scope; fiscal writers remain fail-closed.
+export const ISOLATED_SITE_MUTABLE_COLLECTIONS = Object.freeze([
   ...Object.values(BUSINESS_COLLECTIONS),
   "DatosFiscales",
 ]);
@@ -188,7 +188,7 @@ export const SDK_CONFIG = Object.freeze({
     FROM_ADDRESS: "noreply@marianmadrid.com",
     // Fail-closed: activar solo tras persistencia inmutable e idempotencia del despacho.
     ACCOUNTANT_SEND_ENABLED: false,
-    // QA recipient allowlist: exact business domain plus the named internal Gmail mailbox.
+    // Restricted recipient allowlist: exact business domain plus the named internal Gmail mailbox.
     ALLOWED_RECIPIENT_DOMAINS: Object.freeze(["marianmadrid.es"]),
     ALLOWED_RECIPIENT_EMAILS: Object.freeze(["nachoortegazgz@gmail.com"]),
   }),

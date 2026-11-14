@@ -424,7 +424,6 @@ test("EVENT-BOOKING-07 maps staffMemberId to resourceId and scheduleId for a new
   wixDataMock._reset();
   wixDataMock._store.set("MapaStaff", [{
     _id: "mapa-staff-1",
-    recordType: "STAFF",
     staffMemberId: STAFF_MEMBER_ID,
     resourceId: RESOURCE_ID,
     scheduleId: SCHEDULE_ID,
@@ -437,7 +436,7 @@ test("EVENT-BOOKING-07 maps staffMemberId to resourceId and scheduleId for a new
     id: "88888888-8888-4888-8888-888888888888",
     staffMemberId: STAFF_MEMBER_ID,
     bookedEntity: {
-      title: "QA booking mapped staff",
+      title: "synthetic booking mapped staff",
       slot: { serviceId: SERVICE_ID, startDate: "2026-10-22T09:00:00.000Z", endDate: "2026-10-22T09:30:00.000Z" },
     },
   });
@@ -455,8 +454,8 @@ test("EVENT-BOOKING-07 maps staffMemberId to resourceId and scheduleId for a new
 test("EVENT-BOOKING-08 refuses ambiguous active MapaStaff mappings", async () => {
   wixDataMock._reset();
   wixDataMock._store.set("MapaStaff", [
-    { _id: "mapa-staff-a", recordType: "STAFF", staffMemberId: STAFF_MEMBER_ID, resourceId: RESOURCE_ID, scheduleId: SCHEDULE_ID, active: true },
-    { _id: "mapa-staff-b", recordType: "STAFF", staffMemberId: STAFF_MEMBER_ID, resourceId: "99999999-9999-4999-8999-999999999999", scheduleId: SCHEDULE_ID, active: true },
+    { _id: "mapa-staff-a", staffMemberId: STAFF_MEMBER_ID, resourceId: RESOURCE_ID, scheduleId: SCHEDULE_ID, active: true },
+    { _id: "mapa-staff-b", staffMemberId: STAFF_MEMBER_ID, resourceId: "99999999-9999-4999-8999-999999999999", scheduleId: SCHEDULE_ID, active: true },
   ]);
   const booking = nativeBooking({
     _id: "77777777-7777-4777-8777-777777777777",
