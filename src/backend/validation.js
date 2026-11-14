@@ -137,7 +137,7 @@ export function assertCajaActualRecord(item, { partial = false } = {}) {
     }
     if (item.operationDate != null && item.operationDate !== "") {
         const date = String(item.operationDate).trim();
-        const match = /^(\\d{4})-(\\d{2})-(\\d{2})$/.exec(date);
+        const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
         const [year, month, day] = match ? match.slice(1).map(Number) : [];
         const parsed = match ? new Date(Date.UTC(year, month - 1, day)) : null;
         if (!match || parsed.getUTCFullYear() !== year ||
