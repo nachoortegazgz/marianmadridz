@@ -9,7 +9,7 @@
 # Sitio actual — aislamiento y política de pruebas
 
 **Fecha de actualización:** 2026-11-14  
-**Site ID único:** 50b39f33-e753-4331-ab35-b2ed43dc97f7  
+**Site ID de este corte histórico:** referencia anterior de entorno, supersedida  
 **Plataforma:** Wix Editor Classic + Velo  
 **Naturaleza:** banco de pruebas aislado, sin actividad real, según declaración expresa del propietario.
 
