@@ -6,7 +6,7 @@
 
 **Restauración:** esta política no se revierte automáticamente. Solo el usuario puede ordenar la restauración de append-only y de las restricciones de mutación para preparar el despliegue. No publicar a producción basándose únicamente en esta excepción de QA.
 
-**Estado Git/Wix:** PR #344, PR #345 y PR #346 están integrados en main; HEAD actual b19a8f676d7be157d457588f6acf5332c2a34d32; merge del código QA PR #346: b68e4e048ce5fc1c022fc6ffc2643d5983972107. CI de PR #346: Layer 1 23 suites/296 pruebas, Layer 2 18 suites/246 pruebas, regresión completa 68 suites/627 pruebas; SDK contracts, ESLint y Gitleaks correctos. El usuario declara que la versión base anterior está publicada en Wix; la ampliación de mutaciones QA está integrada en Git pero aún no publicada en Wix. No se dispone de release Wix vinculado a SHA.
+**Estado Git/Wix:** PR #344–#349 están integradas en main; HEAD verificado en este corte: `9268ee3006f7e12ccc883e5535739c0fa76c827d`. El merge del código QA PR #346 es `b68e4e048ce5fc1c022fc6ffc2643d5983972107`. CI de PR #346: Layer 1 23 suites/296 pruebas, Layer 2 18 suites/246 pruebas, regresión completa 68 suites/627 pruebas; SDK contracts, ESLint y Gitleaks correctos. El usuario declara que la versión base anterior está publicada en Wix; la ampliación de mutaciones QA está integrada en Git pero aún no publicada en Wix. No se dispone de release Wix vinculado a SHA.
 
 **CMS maestro:** MapaStaff revisión live 105, 56 campos físicos (52 personalizados + 4 campos de sistema). El inventario live actual no devuelve `DatosFiscales`; una consulta individual devuelve HTTP 404 / `WDE0025` (la colección no existe). El número y tipo de registros de MapaStaff no se han consultado en este corte.
 
