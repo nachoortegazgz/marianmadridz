@@ -385,6 +385,12 @@ test('HOOK-CLOCK-01 insert requires canonical fields and HMAC signature', () => 
   const base = {
     resourceId: 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeee0001',
     memberId: 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeee0002',
+    recordId: 'clock-record-qa-002',
+    source: IC.CLOCK_RECORD_SOURCE.WIX_WEB_METHOD,
+    workDate: new Date('2026-11-12T00:00:00.000Z'),
+    timeZone: IC.SDK_CONFIG.TZ,
+    recordHash: 'b'.repeat(64),
+    schemaVersion: IC.TIMECLOCK_SCHEMA_VERSION,
     recordedAt: '2026-11-12T09:00:00.000Z',
     dayKey: '2026-11-12',
     monthKey: '2026-11',
