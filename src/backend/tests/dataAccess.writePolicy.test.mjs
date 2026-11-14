@@ -11,6 +11,7 @@ import {
 } from "backend/dataAccessPolicy";
 import {
     BUSINESS_COLLECTIONS as C,
+    QA_MUTABLE_COLLECTIONS,
     OPERATIONAL_COLLECTIONS as O,
     CONTROL_TYPE as T,
     RECORD_TYPE,
@@ -163,7 +164,7 @@ test("single-item removal allows ledgers during temporary window and keeps Contr
 });
 
 test("bulk update/remove allow explicit IDs for all project-owned business collections", () => {
-    for (const collection of Object.values(C)) {
+    for (const collection of QA_MUTABLE_COLLECTIONS) {
         assert.doesNotThrow(() => assertBulkUpdateAllowed(collection, [{ _id: "qa-row-1", value: true }]));
         assert.doesNotThrow(() => assertBulkRemoveAllowed(collection, ["qa-row-1"]));
     }
@@ -173,6 +174,8 @@ test("bulk update/remove allow explicit IDs for all project-owned business colle
     assert.throws(() => assertBulkRemoveAllowed(C.CAJA_ACTUAL, []), {
         code: "CMS_BULK_REMOVE_SCOPE_DENIED",
     });
+    assert.doesNotThrow(() => assertBulkUpdateAllowed("DatosFiscales", [{ _id: "legacy-qa-row" }]));
+    assert.doesNotThrow(() => assertBulkRemoveAllowed("DatosFiscales", ["legacy-qa-row"]));
     assert.throws(() => assertBulkUpdateAllowed("WixAppCollection", [{ _id: "qa-row-1" }]), {
         code: "CMS_BULK_UPDATE_SCOPE_DENIED",
     });
