@@ -155,7 +155,7 @@ El proyecto corre íntegramente en la infraestructura de Wix. No es multi-tenant
 
 | Capa | Tecnología |
 | --- | --- |
-| Editor y hosting | Wix Editor / Studio (cloud, SSL/HTTPS automático) |
+| Editor y hosting | Wix Editor Classic (cloud, SSL/HTTPS automático) |
 | Runtime backend | Node.js en sandbox Velo / Wix JavaScript SDK v2 |
 | Capa de datos | Wix CMS (respaldado internamente por MongoDB) |
 | Frontend | SDK client-side `$w` + widgets HTML vía `postMessage` |
@@ -1502,7 +1502,7 @@ Este documento recoge necesidades y criterios de aceptación de negocio. Las eti
 **Titular:** Marian Madrid (Propietaria y Directora)
 **Desarrollador:** Nacho Ortega (Arquitectura Wix & Velo)
 **Repositorio de referencia:** nachoortegazgz/marianmadridz
-**Entorno:** Wix Studio / Velo (Node.js)
+**Entorno:** Wix Editor Classic / Velo (Node.js)
 **Fecha de revisión:** 09-11-2026
 **Estado:** Requisitos conservados; estados actualizados con inspección de `main` `cad48c04` y consultas Wix read-only. Las pruebas runtime siguen pendientes.
 

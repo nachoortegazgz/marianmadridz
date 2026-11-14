@@ -6,7 +6,7 @@
 - PR #353 (retirada de inventario personalizado) integrada; CI PASS en `cdf07b5088977c4f51c231aa517b8ed607b25269` (run #1059).
 - PR #354 (política CMS residual) integrada como `fde9466552b6819980475a682dc06395b57487f0`; CI PASS en `28a11a690f0a99926921332618b6af670d45814c` (run #1068) y Gitleaks PASS (run #492).
 - Ninguna de estas intervenciones ha publicado ni desplegado código en Wix.
-- Wix GetSiteContext: producción `Editor` + Velo + Stores Catalog V3 + Invoices V1; QA `Editor` + Velo + Stores Catalog V3 + Invoices V2. GetSiteContext no expone código Velo; sincronización Editor↔Git pendiente.
+- Plataforma confirmada por el propietario: **Wix Editor Classic + Velo**. GetSiteContext devuelve `Editor` en producción y QA, coherente con esa confirmación. Producción usa Stores Catalog V3 + Invoices V1; QA usa Stores Catalog V3 + Invoices V2. GetSiteContext no expone código Velo; sincronización Editor↔Git sigue pendiente.
 - PR #351 dejó una regresión en `src/backend/validation.js`: eliminó exports aún consumidos por `data.js`. La recuperación está en PR #352; CI completo PASS sobre el SHA `609ccc948da3e63d3fd8aa20f5e64c7649770660` (run #1054); commits posteriores en esta PR son solo documentación.
 - CMS live: **41 colecciones (12 NATIVE, 29 WIX_APP), 980 campos**. `MapaStaff` revisión 105 / 56 campos. `DatosFiscales`, `InventarioStockVenta` y `MovimientosInventario` no existen en el inventario live del corte; GET individual 404 / `WDE0025`.
 - Wix Stores Catalog V3 es la autoridad del stock comercial. La capa custom de inventario está retirada; las referencias a sus colecciones, exports o writers son históricas y no autorizan su recreación.

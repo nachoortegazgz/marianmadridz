@@ -28,7 +28,7 @@ La documentación oficial de Wix indica que actualmente no existe una opción gl
 - [Wix Bookings Request: Requiring Login or Registration Before Booking a Service](https://support.wix.com/en/article/wix-bookings-request-requiring-login-or-registration-before-booking-a-service)
 - [Wix Bookings: Allowing Clients to Become Site Members](https://support.wix.com/en/article/wix-bookings-allowing-clients-to-become-site-members)
 
-**Acción manual obligatoria antes de considerar cubiertas todas las reservas:** en Wix Studio, revisar Pages & Menu y restringir a miembros todas las páginas de reserva nativas y la página personalizada de calendario/reserva. Confirmar también que no quedan enlaces públicos alternativos a páginas de reserva nativas. La configuración viva de acceso de esas páginas no es legible ni modificable mediante el conector Wix disponible en esta tarea; queda pendiente de verificación por el propietario en el Editor.
+**Acción manual obligatoria antes de considerar cubiertas todas las reservas:** en Wix Editor Classic, revisar el panel de páginas y menú y restringir a miembros todas las páginas de reserva nativas y la página personalizada de calendario/reserva. Confirmar también que no quedan enlaces públicos alternativos a páginas de reserva nativas. La configuración viva de acceso de esas páginas no es legible ni modificable mediante el conector Wix disponible en esta tarea; queda pendiente de verificación por el propietario en el Editor.
 
 
 ## Auditoría de integración con Wix Members, Bookings y Stores — 2026-11-09
@@ -46,7 +46,7 @@ El árbol de páginas sincronizado en `src/pages/` incluye controladores sin ló
 - `Página de servicio.af54v.js`
 - `Formulario de reserva.yfzoa.js`
 
-Son superficies asociadas al flujo nativo de Wix Bookings. La ausencia de lógica en sus controladores no bloquea el comportamiento gestionado por Wix. Si permanecen activas y accesibles, pueden ofrecer una ruta de reserva independiente del WebMethod personalizado. En Wix Studio se debe restringir su acceso a miembros o desactivar las rutas de reserva que no se quieran ofrecer, y probar la URL directa sin sesión.
+Son superficies asociadas al flujo nativo de Wix Bookings. La ausencia de lógica en sus controladores no bloquea el comportamiento gestionado por Wix. Si permanecen activas y accesibles, pueden ofrecer una ruta de reserva independiente del WebMethod personalizado. En Wix Editor Classic se debe restringir su acceso a miembros o desactivar las rutas de reserva que no se quieran ofrecer, y probar la URL directa sin sesión.
 
 Las páginas personalizadas identificadas son `Calendario de reservas 2.q39h6.js` y `Pagina de servicio 2.xnfr4.js`. La primera queda protegida por el login nativo de esta PR y por el WebMethod `Permissions.SiteMember`; la segunda debe revisarse para asegurar que no enlaza a una ruta nativa pública.
 

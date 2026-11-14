@@ -2,7 +2,7 @@
 
 - Fecha: 2026-11-09
 - Estado: PROPUESTA TÉCNICA — NO APROBADA PARA IMPLEMENTACIÓN
-- Alcance: SIF propio de Marian Madrid en Wix Studio / Velo
+- Alcance: SIF propio de Marian Madrid en Wix Editor Classic / Velo
 - Dependencias: auditoría `docs/qa/2026-11-09-verifactu-readiness-audit.md`
 
 ## 1. Decisión que se propone

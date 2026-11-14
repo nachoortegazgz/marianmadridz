@@ -326,7 +326,7 @@ const STRONG_READ = Object.freeze({ consistencyMode: "strong" });
 // ============================================================================
 
 /*
- * Wix Studio Velo event handlers receive the platform-delivered event object.
+ * Wix Editor Classic Velo event handlers receive the platform-delivered event object.
  * Wix verifies and decodes the signed delivery before invoking this handler.
  * This module does not expose an HTTP webhook endpoint and accepts no raw JWT.
  */
