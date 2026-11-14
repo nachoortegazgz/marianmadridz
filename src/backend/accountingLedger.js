@@ -287,7 +287,7 @@ async function _verifyEntryRows(rows, entry) {
         try {
             recordTimestamp = new Date(actual.recordTimestamp).toISOString();
             fechaOperacion = _safeTrim(actual.fechaOperacion).slice(0, 10);
-            if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(fechaOperacion)) return false;
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(fechaOperacion)) return false;
         } catch {
             return false;
         }
@@ -471,7 +471,7 @@ export async function appendAccountingEntry(input, traceId) {
                 recordSource: entry.recordSource,
                 documentId: entry.documentId,
                 cashMovementId: entry.cashMovementId,
-                fechaOperacion: entry.fechaOperacion.toISOString(),
+                fechaOperacion: entry.fechaOperacion,
                 fiscalPeriod: entry.fiscalPeriod,
                 accountCode: line.accountCode,
                 debitAmount: line.debitAmount,
