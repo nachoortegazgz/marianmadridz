@@ -104,6 +104,9 @@ export const CONTROL_OPERATIVO_NON_CANONICAL_FIELDS = Object.freeze([
   "attempt",
   "leaseExpiresAt",
   "leasesExpireAt",
+  "ownerToken",
+  "retryAfter",
+  "nextRetryAt",
   "createdAt",
   "updatedAt",
 ]);
@@ -499,12 +502,11 @@ export const DATA_ACCESS_BULK_PATCH_POLICY = Object.freeze({
       }),
     }),
     [CONTROL_TYPE.WEBHOOK_CLAIM]: Object.freeze({
-      requiredConditionFields: Object.freeze(["controlType", "status", "ownerToken", "version"]),
+      requiredConditionFields: Object.freeze(["controlType", "status", "traceId", "version"]),
       anyConditionFields: Object.freeze([]),
-      allowedConditionFields: Object.freeze(["controlType", "status", "ownerToken", "version"]),
+      allowedConditionFields: Object.freeze(["controlType", "status", "traceId", "version"]),
       fields: Object.freeze({
         status: Object.freeze(["SET_FIELD"]),
-        ownerToken: Object.freeze(["SET_FIELD"]),
         payload: Object.freeze(["SET_FIELD"]),
         attempts: Object.freeze(["SET_FIELD"]),
         expiresAt: Object.freeze(["SET_FIELD"]),
