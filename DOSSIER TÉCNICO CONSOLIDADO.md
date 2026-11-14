@@ -1,4 +1,4 @@
-> **Vigencia 2026-11-14:** prevalece el corte live de [ESTADO_ACTUAL_PROYECTO.md](ESTADO_ACTUAL_PROYECTO.md). `CajaActual` ya existe con el esquema corregido (revisión 3) y un singleton cerrado; no se han abierto sesiones ni escrito movimientos. TEC-033 habilita update/remove individual solo en la rama de QA; los writers permanecen fail-closed. El WebMethod de apertura y la validación E2E siguen pendientes. No publicar esta rama.
+> **Vigencia 2026-11-14:** prevalece el corte live de [ESTADO_ACTUAL_PROYECTO.md](ESTADO_ACTUAL_PROYECTO.md). `CajaActual` tiene el esquema live revisado (revisión 64; 59 campos personalizados + 4 de sistema); no se han abierto sesiones ni escrito movimientos. TEC-033 habilita update/remove individual solo en la rama de QA; los writers permanecen fail-closed. El WebMethod de apertura y la validación E2E siguen pendientes. No publicar esta rama.
 
 ## Estado live y limpieza QA — corte 2026-11-14
 
@@ -6,10 +6,11 @@
 
 ### CMS verificado tras los cambios
 
-- Inventario live: **42 colecciones**. `CajaActual` existe como `NATIVE`, revisión **3**, 25 campos de negocio + 4 campos de sistema (29 físicos), permisos ADMIN en insert/update/remove/read.
-- Campos físicos de negocio de `CajaActual`: `singletonKey:TEXT`, `operationDateHour:DATETIME`, `cashRegisterStatus:TEXT`, `staffResourceId:TEXT`, `traceId:TEXT`, `openedAt:DATETIME`, `closedAt:DATETIME`, `openingCashAmount:NUMBER`, `openingCardAmount:NUMBER`, `openingBizumAmount:NUMBER`, `openingOtherAmount:NUMBER`, `cashAmount:NUMBER`, `cardAmount:NUMBER`, `bizumAmount:NUMBER`, `otherAmount:NUMBER`, `salesCount:NUMBER`, `netAmount:NUMBER`, `expectedCash:NUMBER`, `countedCash:NUMBER`, `difference:NUMBER`, `differenceReason:TEXT`, `lastMovementAt:DATETIME`, `sequenceCounters:OBJECT`, `openedBy:TEXT`, `closedBy:TEXT`.
-- No existen en el nuevo esquema `operationDate`, `openingAmount`, `voucherAmount` ni `isOpen`. `cashRegisterStatus` es el único estado de sesión.
-- Singleton único: `_id=18d8bbf8-ddd5-4ad9-8253-f2a5c285ef19`, `singletonKey=CAJA_PRINCIPAL`, `cashRegisterStatus=CERRADA`. Saldos actuales: 0 en efectivo/tarjeta/Bizum/otros. Saldos iniciales: null (no se ha abierto sesión). `operationDateHour` permanece null; no hay operación económica ni sesión abierta.
+- Inventario live: **42 colecciones** (13 `NATIVE`, 29 `WIX_APP`). `CajaActual` es `NATIVE`, revisión **64**, con **59 campos personalizados + 4 de sistema (63 físicos)**.
+- El esquema completo y los tipos de los 59 campos están en `DICCIONARIO_DATOS_CMS.md` §3.1.
+- Política temporal de lectura: `itemRead=ANYONE` en las 13 colecciones NATIVE, con los permisos de escritura conservados. Las 29 colecciones WIX_APP mantienen la política fijada por Wix Apps; 23 permiten ANYONE y 6 mantienen restricciones de aplicación.
+- Riesgo P1 explícitamente aceptado por el responsable durante desarrollo: la lectura pública puede exponer datos personales, fiscales, contables, laborales y de pagos. No introducir datos reales sensibles. Revertir restricciones antes de despliegue. `operationDate`, `openingAmount`, `voucherAmount` e `isOpen` no existen en el esquema actual.
+- Estado del singleton: el último readback anterior a esta edición documentaba `CAJA_PRINCIPAL` cerrado y sin sesión abierta. El elemento no se ha releído en esta actualización; el estado y los saldos actuales quedan pendientes de readback.
 - Índice único `CajaActual_singletonKey_unique`: ACTIVE. Índice anterior `cashRegisterStatus_operationDate`: ya no aparece en el inventario final. Índice corregido `cashRegisterStatus_operationDateHour`: ACTIVE en el readback final.
 - `MovimientosCaja`: revisión 78, 0 elementos; no modificada. `LibroAsientosContablesDetalle`: 0. `RegistrosHorariosStaff`: revisión 11, 0 tras limpieza. `HistoricoCierresZ`: 0. `PaquetesGestoria`: 0. `ControlOperativo`: 3 elementos. `MovimientosInventario` no figura en el inventario live de 42 colecciones; la fila histórica que lo describía como colección presente queda pendiente de reconciliación documental.
 
@@ -1358,15 +1359,17 @@ El proyector debe separar dos dimensiones: (a) actividad económica/pagos presen
 
 No se ha implementado ni validado este contrato en runtime en esta actualización. Requiere migración CMS compatible, validación centralizada, revisión de todos los consumidores, lock/idempotencia, pruebas unitarias/integración/concurrencia/reconstrucción y QA Wix aislado. Los escritores fiscales/contables siguen fail-closed.
 
-### Estado de código CajaActual / TEC-032 (2026-11-13)
+### Estado histórico de código CajaActual / TEC-032 (2026-11-13)
+
+> El análisis de esquema de este addendum corresponde a un corte anterior. El CMS live actual es revisión 64 y dispone de los 59 campos descritos en `DICCIONARIO_DATOS_CMS.md` §3.1. La existencia de columnas nuevas no acredita que el código de esta rama las persista o consuma.
 
 La rama `fix/caja-actual-last-operation-projection` adapta parcialmente los flujos:
 - El escritor manual exige canal explícito (con inferencia ONLINE limitada a `VENTA_ONLINE`/`WIX_PAYMENTS`) y resuelve el actor presencial desde `getMyStaffContext()`, sin confiar en `resourceId` del frontend.
-- La proyección incluye cobros presenciales EFECTIVO/TARJETA/BIZUM solo si existe sesión abierta con `openedAt`; no crea sesión implícitamente. `cashAmount/netAmount` siguen siendo efectivo físico; `cardAmount` y `voucherAmount` son acumulados netos de tarjeta y Bizum.
+- La proyección incluye cobros presenciales EFECTIVO/TARJETA/BIZUM solo si existe sesión abierta con `openedAt`; no crea sesión implícitamente. `cashAmount/netAmount` siguen siendo efectivo físico; `cardAmount` y `bizumAmount` son acumulados netos de tarjeta y Bizum.
 - El DTO de lectura deriva acumulados y tickets por medio desde `MovimientosCaja`, y entrega la última operación con ID fuente, actor, instante y campos de huella/traza. El panel de ZONA MARIAN muestra el detalle.
 - El cierre Z manual resuelve y guarda `closedBy` desde backend.
 
-**No equivale a implementación completa:** el esquema CMS no persiste aún `lastMovementId`/`lastOperation`; la referencia se devuelve en lectura. No hay WebMethod de apertura ni origen reconciliado para saldo inicial. `lineItems` y pagos mixtos siguen sin contrato. No se han activado escritores ni alterado CMS/live.
+**No equivale a implementación completa:** el esquema CMS revisión 64 no persiste aún `lastMovementId` ni un objeto `lastOperation`; la referencia se devuelve en lectura. No hay WebMethod de apertura validado que persista los cuatro importes iniciales. `lineItems` y pagos mixtos siguen sin contrato. No se han activado escritores en esta intervención documental. El esquema CMS live fue editado fuera de este cambio y se ha releído en revisión 64.
 
 
 ## Addendum — ventana temporal de edición/borrado append-only (2026-11-14)
