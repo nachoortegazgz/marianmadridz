@@ -20,12 +20,13 @@
 ---
 
 
-## Desalineación técnica pendiente — fixtures offline
+## Alineación técnica de fixtures offline — intervención en curso
 
-La inspección estática de la rama detecta que los fixtures de código todavía conservan el identificador anterior en:
+La identidad del sitio y el cliente canónico ya están reflejados en la rama `fix/qa-site-fixtures-188bed94-2026-11-14` en:
 
-- `src/backend/tests/fixtures/qaSyntheticParties.mjs` — `QA_TEST_SITE_ID`; además contiene tres identidades genéricas `Cliente Prueba Uno/Dos/Tres`, no el cliente canónico Nacho Pitt.
-- `src/backend/tests/qa.simulation-manifest.test.mjs` — aserción de `QA_TEST_SITE_ID`.
-- `src/backend/tests/fixtures/qaTpvSimulation.mock.mjs` — validación del `testSiteId`.
+- `src/backend/tests/fixtures/qaSyntheticParties.mjs`: Site ID QA único y cliente sintético Nacho Pitt.
+- `src/backend/tests/qa.simulation-manifest.test.mjs`: aserciones del Site ID y la identidad sintética.
+- `src/backend/tests/fixtures/qaTpvSimulation.mock.mjs`, `qaPaymentGateway.mock.mjs` y `qaManagerEmailSink.mock.mjs`: validación fail-closed contra el Site ID canónico.
+- Pruebas de los tres simuladores y manifiesto: el identificador anterior queda rechazado; el email operativo de la fixture usa un dominio reservado `.example.test`, nunca la dirección real designada por el propietario.
 
-Estos puntos siguen usando una identidad anterior y no están alineados con el sitio QA único `188bed94-177c-4bc9-a9f0-35080d874f3e`. **No se deben ejecutar ni considerar alineados con el sitio actual los escenarios que dependan de esa identidad hasta corregir el contrato y sus pruebas en una intervención de código independiente. La fixture de clientes también debe alinearse con Nacho Pitt y su email designado, manteniendo todos los envíos deshabilitados.** Esta PR es documental y no modifica runtime ni fixtures.
+**Estado:** cambios propuestos en rama, pendientes de CI, revisión de diff y merge. No se afirma que estén validados hasta completar esas comprobaciones. Los simuladores permanecen in-memory/offline y no realizan llamadas a proveedores, CMS, red ni comunicaciones.
