@@ -99,8 +99,7 @@ function _isSimulationCashRegister(cashRegister) {
 
 function _hasOpenCashierSession(cashRegister) {
     if (!cashRegister ||
-        _safeTrim(cashRegister.cashRegisterStatus).toUpperCase() !== CASH_REGISTER_STATUS.ABIERTA ||
-        cashRegister.isOpen === false) return false;
+        _safeTrim(cashRegister.cashRegisterStatus).toUpperCase() !== CASH_REGISTER_STATUS.ABIERTA) return false;
     const openedAt = cashRegister.openedAt instanceof Date
         ? cashRegister.openedAt
         : new Date(cashRegister.openedAt || "");
@@ -163,12 +162,12 @@ const STRONG_READ = Object.freeze({ consistencyMode: "strong" });
 // CajaActual keys are canonical and shared by sequence and register projections.
 const CAJA_KEYS = Object.freeze({
     SINGLETON_KEY: "singletonKey",
-    OPERATION_DATE: "operationDate",
+    OPERATION_DATE: "operationDateHour",
     STATUS: "cashRegisterStatus",
     TOTAL: "netAmount",
     CASH: "cashAmount",
     CARD: "cardAmount",
-    BIZUM: "voucherAmount",
+    BIZUM: "bizumAmount",
     ONLINE: "otherAmount",
     OPERATIONS: "salesCount",
     OPENED_AT: "openedAt",
@@ -1079,8 +1078,7 @@ async function _updateCajaActual(movement, traceId) {
                 throw new Error("CAJA_ACTUAL_SIMULATION_STATE");
             }
             if (!cashRegister ||
-                _safeTrim(cashRegister.cashRegisterStatus).toUpperCase() !== CASH_REGISTER_STATUS.ABIERTA ||
-                cashRegister.isOpen === false) {
+                _safeTrim(cashRegister.cashRegisterStatus).toUpperCase() !== CASH_REGISTER_STATUS.ABIERTA) {
                 throw new Error("CAJA_SESSION_NOT_OPEN");
             }
             const openedAt = cashRegister.openedAt instanceof Date
@@ -1122,8 +1120,7 @@ async function _updateCajaActual(movement, traceId) {
             cashRegister[CAJA_KEYS.LAST_MOVEMENT_AT] = sourceTimestamp;
             cashRegister.traceId = _safeTrim(movement.traceId) || traceId;
             cashRegister.staffResourceId = _safeTrim(movement.staffResourceId) || null;
-            const movementDate = readOperationDate(movement);
-            if (movementDate) cashRegister[CAJA_KEYS.OPERATION_DATE] = movementDate;
+            cashRegister[CAJA_KEYS.OPERATION_DATE] = sourceTimestamp;
             cashRegister._updatedDate = new Date();
 
             try {
@@ -1362,18 +1359,21 @@ export const getCashierState = webMethod(Permissions.SiteMember, async (options 
             data: {
                 _id: cashRegister?._id || CASH_REGISTER_ID,
                 singletonKey: cashRegister?.[CAJA_KEYS.SINGLETON_KEY] || SINGLETONS.CAJA_PRINCIPAL,
-                operationDate: cashRegister?.[CAJA_KEYS.OPERATION_DATE] || day,
+                operationDateHour: cashRegister?.[CAJA_KEYS.OPERATION_DATE] ?? null,
                 cashRegisterStatus: cashRegister?.[CAJA_KEYS.STATUS] || CASH_REGISTER_STATUS.CERRADA,
                 netAmount: cashRegister?.[CAJA_KEYS.TOTAL] ?? 0,
                 cashAmount: cashRegister?.[CAJA_KEYS.CASH] ?? 0,
                 cardAmount: cashRegister?.[CAJA_KEYS.CARD] ?? 0,
-                voucherAmount: cashRegister?.[CAJA_KEYS.BIZUM] ?? 0,
+                bizumAmount: cashRegister?.[CAJA_KEYS.BIZUM] ?? 0,
                 otherAmount: cashRegister?.[CAJA_KEYS.ONLINE] ?? 0,
                 salesCount: cashRegister?.[CAJA_KEYS.OPERATIONS] ?? 0,
                 totalOperations,
                 openedAt: cashRegister?.[CAJA_KEYS.OPENED_AT] ?? null,
                 openedBy: cashRegister?.openedBy ?? null,
-                openingAmount: cashRegister?.openingAmount ?? null,
+                openingCashAmount: cashRegister?.openingCashAmount ?? null,
+                openingCardAmount: cashRegister?.openingCardAmount ?? null,
+                openingBizumAmount: cashRegister?.openingBizumAmount ?? null,
+                openingOtherAmount: cashRegister?.openingOtherAmount ?? null,
                 expectedCash: cashRegister?.expectedCash ?? null,
                 countedCash: cashRegister?.countedCash ?? null,
                 difference: cashRegister?.difference ?? null,
