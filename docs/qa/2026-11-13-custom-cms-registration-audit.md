@@ -14,7 +14,7 @@ El contenido anterior de este archivo describía un snapshot de CMS y una clasif
 
 ## Alcance vigente
 
-- Sitio único: 50b39f33-e753-4331-ab35-b2ed43dc97f7.
+- Sitio al que se refiere este corte histórico: referencia anterior de entorno, supersedida. No constituye baseline del sitio QA vigente `188bed94-177c-4bc9-a9f0-35080d874f3e`.
 - Naturaleza: banco de pruebas aislado, sin actividad real, según declaración expresa del propietario.
 - Plataforma: Wix Editor Classic + Velo.
 - Inventario actual: 23 colecciones (15 NATIVE, 8 WIX_APP), 524 campos físicos NATIVE.
