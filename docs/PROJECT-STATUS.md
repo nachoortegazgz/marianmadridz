@@ -13,7 +13,7 @@ El sitio es el único objeto de trabajo. No se mantiene una matriz de comparaci�
 ### CMS verificado
 
 - 23 colecciones: 15 NATIVE y 8 WIX_APP; 524 campos físicos NATIVE.
-- CajaActual: 39 campos, 1 registro; sequenceCounters OBJECT y ticketSequence ausente.
+- CajaActual: 39 campos, 1 registro; operationDate DATE, openingAmount NUMBER, sequenceCounters OBJECT y otherAmount. cashRegisterStatus=SIMULACION; isOpen=true no es autoridad.
 - ControlOperativo: 42 campos, 0 registros; ownerToken, retryAfter y nextRetryAt ausentes; traceId es fencing token.
 - ComplementosCatalogo: 18 campos, 36 registros; addonId = _id en 36/36.
 - MapaStaff: 18 campos, 3 registros; mapa de identidades de personal, sin recordType ni campos fiscales.
