@@ -57,7 +57,7 @@ const MAX_PAGES = SDK_CONFIG?.JOBS?.FISCAL_DAILY_MAX_PAGES || 50;
 const CMS_TIMEOUT_MS = Number(SDK_CONFIG?.TIMEOUTS?.CMS_MS) || 15000;
 
 const MOVIMIENTOS_CAJA_COL = BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA;
-const MAPA_STAFF_COL = BUSINESS_COLLECTIONS.MAPA_STAFF;
+const DATOS_FISCALES_COL = BUSINESS_COLLECTIONS.DATOS_FISCALES;
 
 // =============================================================================
 // BLOQUE 0 - HELPERS DE LECTURA (SSOT-KEYFIELD-02: delegacion total a data.js)
@@ -441,7 +441,7 @@ export async function getLibroRegistroFacturasExpedidasInternal(year, quarter, o
 
 async function _getBusinessTaxId(traceId) {
   const config = await withTimeout(
-    dalQuery(MAPA_STAFF_COL)
+    dalQuery(DATOS_FISCALES_COL)
       .eq("recordType", RECORD_TYPE.CONFIG_SISTEMA)
       .limit(1)
       .find(),
@@ -462,11 +462,11 @@ async function _getBusinessTaxId(traceId) {
   );
   const historicalTaxId = _safeTrim(historicalConfig?.items?.[0]?.taxId);
   if (historicalTaxId) {
-    log.warn("historical-config-read: MapaStaff EMISOR.taxId en uso; normalizar a recordType=CONFIG_SISTEMA", { traceId });
+    log.warn("historical-config-read: DatosFiscales EMISOR.taxId en uso; normalizar a recordType=CONFIG_SISTEMA", { traceId });
     return historicalTaxId.toUpperCase();
   }
   throw new Error(
-    "FISCAL_CONFIG_MISSING: no existe MapaStaff recordType=CONFIG_SISTEMA con taxId"
+    "FISCAL_CONFIG_MISSING: no existe DatosFiscales recordType=CONFIG_SISTEMA con taxId"
   );
 }
 
