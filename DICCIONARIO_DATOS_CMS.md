@@ -6,7 +6,7 @@
 
 ## Addendum vigente — sitio QA objetivo, corte 2026-11-14
 
-> **Aclaración de entorno — 2026-11-14:** este inventario corresponde al único sitio QA `188bed94-177c-4bc9-a9f0-35080d874f3e` (`https://www.marianmadrid.es/`). Todos los datos son sintéticos y el sitio nunca ha tenido actividad real, según declaración del propietario. Véase [SSOT del entorno QA](docs/qa/QA-ENVIRONMENT-SSOT.md).
+> **Aclaración de entorno — 2026-11-14:** este documento conserva un inventario CMS histórico. La designación vigente del sitio QA es `188bed94-177c-4bc9-a9f0-35080d874f3e` (`https://www.marianmadrid.es/`), pero los esquemas y recuentos de este snapshot no se han revalidado contra ese Site ID. No usarlo como baseline vigente para mutaciones sin una nueva lectura CMS. Véase [SSOT del entorno QA](docs/qa/QA-ENVIRONMENT-SSOT.md).
 
 
 - Sitio objeto de auditoría: `188bed94-177c-4bc9-a9f0-35080d874f3e`.
@@ -1985,3 +1985,6 @@ ISOLATED_SITE_RECORD_MUTATIONS_ENABLED=true permite update/remove individuales y
 
 La política temporal no habilita por sí misma pagos, reembolsos, facturación, fichajes, comunicaciones ni automatizaciones externas. No se han ejecutado mutaciones CMS ni publicado código Wix en esta intervención. La sincronización Editor↔Git y el SHA ejecutado por Wix siguen pendientes de acreditar.
 
+
+
+> **Nota de procedencia del inventario CMS:** la designación del sitio como QA no transfiere automáticamente a este sitio los snapshots CMS de inventarios anteriores. Los recuentos, esquemas y ejemplos históricos de este documento se conservan como evidencia documental, pero no se consideran baseline vigente del Site ID `188bed94-177c-4bc9-a9f0-35080d874f3e` hasta repetir una lectura de solo lectura contra ese sitio. No realizar escrituras ni migraciones basándose únicamente en esos snapshots.
