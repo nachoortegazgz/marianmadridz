@@ -2045,8 +2045,10 @@ export async function reconcileUnmarkedOrderCreatedEvents() {
                     controlType: CONTROL_TYPE.WEBHOOK_EVENT,
                     dedupeKey: `WEBHOOK_${eventId}`,
                     eventId,
+                    eventType: "ORDER_CREATED_RECONCILED",
                     orderId,
                     status: CONTROL_STATUS.COMPLETED,
+                    processedAt: now,
                     expiresAt: new Date(now.getTime() +
                         ORDER_RECONCILIATION_MARKER_TTL_HOURS * 60 * 60 * 1000),
                     payload: {
