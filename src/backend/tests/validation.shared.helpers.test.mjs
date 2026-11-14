@@ -22,13 +22,13 @@ test("VALIDATION-FISCAL-01 validates Spanish NIF/NIE/CIF and EU VAT using shared
 });
 
 test("VALIDATION-FISCAL-02 MapaStaff third-party validation uses the shared fiscal helper", () => {
-    assert.equal(V.assertDatosFiscales({
+    assert.equal(V.assertMapaStaffFiscalIdentity({
         taxId: "12345678Z",
         legalName: "Entidad de prueba",
         thirdPartyType: "CLIENTE",
     }), true);
 
-    assert.throws(() => V.assertDatosFiscales({
+    assert.throws(() => V.assertMapaStaffFiscalIdentity({
         taxId: "12345678A",
         legalName: "Entidad de prueba",
         thirdPartyType: "CLIENTE",
