@@ -794,6 +794,22 @@ export function parseResourceIdFromSlotKey(slotKey) {
     return _looksLikeGuid(resourceId) ? resourceId : "";
 }
 
+function _parseSlotRangeFromSlotKey(slotKey) {
+    const parts = String(slotKey || "").split("_");
+    if (parts.length !== 5 || parts[0] !== "slot") return null;
+    const startEpochMin = Number(parts[3]);
+    const endEpochMin = Number(parts[4]);
+    if (
+        !Number.isSafeInteger(startEpochMin) ||
+        !Number.isSafeInteger(endEpochMin) ||
+        endEpochMin <= startEpochMin
+    ) return null;
+    const slotStart = new Date(startEpochMin * 60000);
+    const slotEnd = new Date(endEpochMin * 60000);
+    if (Number.isNaN(slotStart.getTime()) || Number.isNaN(slotEnd.getTime())) return null;
+    return { slotStart, slotEnd };
+}
+
 export const _buildLockKeys = buildLockKeys;
 export function buildLockKeys(phases, resourceId) {
     const keys = (Array.isArray(phases) ? phases : [])
@@ -834,6 +850,7 @@ export function safeLockId(key) {
 
 export function _buildSlotLockControl(slotClave, lockOwnerId, ttlMs, serviceId) {
     const resourceId = parseResourceIdFromSlotKey(slotClave);
+    const slotRange = _parseSlotRangeFromSlotKey(slotClave);
     const resolvedServiceId = _safeTrim(serviceId);
     const ttl = Number(ttlMs);
     const now = new Date();
@@ -843,6 +860,7 @@ export function _buildSlotLockControl(slotClave, lockOwnerId, ttlMs, serviceId) 
         dedupeKey: String(slotClave),
         serviceId: resolvedServiceId,
         resourceId,
+        ...(slotRange || {}),
         expiresAt: new Date(
             now.getTime() + (Number.isFinite(ttl) && ttl > 0 ? ttl : MUTEX_TTL_MS)
         ),
