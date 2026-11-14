@@ -19,7 +19,7 @@ import {
     APPEND_ONLY_MUTATION_WINDOW,
     ISOLATED_SITE_RECORD_MUTATIONS_ENABLED,
 } from "backend/internalConfig";
-import { assertCitasF2, assertControlOperativo, assertCanonicalControlFields, assertRegistrosHorariosStaff, assertMapaStaffRecord, assertDatosFiscalesRecord } from "backend/validation";
+import { assertCitasF2, assertControlOperativo, assertCanonicalControlFields, assertRegistrosHorariosStaff, assertCajaActualRecord, assertMapaStaffRecord, assertDatosFiscalesRecord } from "backend/validation";
 import { CONSISTENCY, getItem } from "backend/dataAccess";
 
 import { logger } from "backend/logger";
@@ -604,6 +604,7 @@ export function RegistrosHorariosStaff_beforeRemove() {
 export function CajaActual_beforeInsert(item) {
     if (!item || typeof item !== "object") return item;
     _normalizeCmsDateTimes(item, ["openedAt", "closedAt", "lastMovementAt"]);
+    assertCajaActualRecord(item);
     const key = _safeTrim(item.singletonKey || item._id);
     if (key !== "CAJA_PRINCIPAL") {
         _schemaError("CajaActual es SINGLE_ITEM: solo admite el singleton 'CAJA_PRINCIPAL'");
@@ -614,8 +615,10 @@ export function CajaActual_beforeInsert(item) {
 export function CajaActual_beforeUpdate(item, context) {
     _normalizeCmsDateTimes(item, ["openedAt", "closedAt", "lastMovementAt"]);
     const previous = context?.original || {};
+    const merged = { ...previous, ...item };
+    assertCajaActualRecord(merged, { partial: true });
     const prevSeq = { ...(previous?.sequenceCounters || {}) };
-    const nextSeq = { ...(item?.sequenceCounters || {}) };
+    const nextSeq = { ...((item?.sequenceCounters ?? previous?.sequenceCounters) || {}) };
 
     // The single CajaActual principal stores both fiscal counters and
     // projection idempotency metadata; keep appliedMovementIds independent.
