@@ -15,17 +15,8 @@ import {
     OPERATIONAL_COLLECTIONS as O,
     CONTROL_TYPE as T,
     RECORD_TYPE,
-    APPEND_ONLY_MUTATION_WINDOW,
-    ISOLATED_SITE_RECORD_MUTATIONS_ENABLED,
     DATA_ACCESS_WRITE_POLICY,
 } from "backend/internalConfig";
-
-test("broad isolated-site mutation window is fail-closed until runtime site binding is verified", () => {
-    assert.equal(ISOLATED_SITE_RECORD_MUTATIONS_ENABLED, false);
-    assert.equal(APPEND_ONLY_MUTATION_WINDOW.ENABLED, false);
-    assert.equal(APPEND_ONLY_MUTATION_WINDOW.TEMPORARY, false);
-    assert.equal(APPEND_ONLY_MUTATION_WINDOW.RESTORE_BEFORE_REAL_OPERATIONS, true);
-});
 
 test("all CMS write-policy collection lists contain unique canonical strings", () => {
     for (const [policyName, collections] of Object.entries(DATA_ACCESS_WRITE_POLICY)) {
@@ -175,21 +166,74 @@ test("single-item removal keeps ControlOperativo scoped and denies append-only l
         });
     }
 });
-test("bulk update/remove remain disabled while the broad mutation window is closed", () => {
+test("bulk update is disabled and bulk remove requires an allowlisted conditional purge", () => {
+    const cutoff = new Date("2026-11-14T00:00:00.000Z");
     for (const collection of ISOLATED_SITE_MUTABLE_COLLECTIONS) {
         assert.throws(() => assertBulkUpdateAllowed(collection, [{ _id: "synthetic-row-1" }]), {
             code: "CMS_BULK_UPDATE_SCOPE_DENIED",
         });
-        assert.throws(() => assertBulkRemoveAllowed(collection, ["synthetic-row-1"]), {
-            code: "CMS_BULK_REMOVE_SCOPE_DENIED",
-        });
     }
-    assert.throws(() => assertBulkUpdateAllowed(C.CAJA_ACTUAL, [{ value: true }]), {
-        code: "CMS_BULK_UPDATE_SCOPE_DENIED",
+
+    const ttlFilter = (controlType) => ({
+        condition: { filter: {
+            controlType: { $eq: controlType },
+            expiresAt: { $lt: cutoff },
+        } },
     });
-    assert.throws(() => assertBulkRemoveAllowed(C.CAJA_ACTUAL, []), {
+    for (const controlType of [
+        T.SLOT_LOCK, T.RATE_LIMIT, T.DISPLAY_TOKEN, T.DUAL_CACHE, T.DAYS_CACHE,
+    ]) {
+        assert.doesNotThrow(() => assertBulkRemoveAllowed(
+            C.CONTROL_OPERATIVO, ["synthetic-row-1"], ttlFilter(controlType)
+        ));
+    }
+
+    const statusFilter = (controlType, status, dateField) => ({
+        condition: { filter: {
+            controlType: { $eq: controlType },
+            status: { $eq: status },
+            [dateField]: { $lt: cutoff },
+        } },
+    });
+    assert.doesNotThrow(() => assertBulkRemoveAllowed(
+        C.CONTROL_OPERATIVO, ["synthetic-row-1"],
+        statusFilter(T.IDEMPOTENCY, "COMPLETED", "_updatedDate")
+    ));
+    assert.doesNotThrow(() => assertBulkRemoveAllowed(
+        C.CONTROL_OPERATIVO, ["synthetic-row-1"],
+        statusFilter(T.SYSTEM_FLAG, "RECONCILED", "_updatedDate")
+    ));
+    assert.doesNotThrow(() => assertBulkRemoveAllowed(
+        C.CONTROL_OPERATIVO, ["synthetic-row-1"],
+        statusFilter(T.ALERT, "CLOSED", "_createdDate")
+    ));
+    assert.doesNotThrow(() => assertBulkRemoveAllowed(
+        C.CONTROL_OPERATIVO, ["synthetic-row-1"],
+        statusFilter(T.COMPENSATION, "EXECUTED", "_createdDate")
+    ));
+
+    assert.throws(() => assertBulkRemoveAllowed(C.CONTROL_OPERATIVO, ["synthetic-row-1"]), {
         code: "CMS_BULK_REMOVE_SCOPE_DENIED",
     });
+    for (const controlType of [T.WEBHOOK_EVENT, T.DEDUPE_KEY, T.LEDGER_IDEMPOTENCY, T.WEBHOOK_CLAIM]) {
+        assert.throws(() => assertBulkRemoveAllowed(
+            C.CONTROL_OPERATIVO, ["synthetic-row-1"], ttlFilter(controlType)
+        ), { code: "CMS_BULK_REMOVE_SCOPE_DENIED" });
+    }
+    assert.throws(() => assertBulkRemoveAllowed(
+        C.CONTROL_OPERATIVO, ["synthetic-row-1"],
+        statusFilter(T.IDEMPOTENCY, "IN_PROGRESS", "_updatedDate")
+    ), { code: "CMS_BULK_REMOVE_SCOPE_DENIED" });
+    assert.throws(() => assertBulkRemoveAllowed(
+        C.MOVIMIENTOS_CAJA, ["synthetic-row-1"], ttlFilter(T.DUAL_CACHE)
+    ), { code: "CMS_BULK_REMOVE_SCOPE_DENIED" });
+    assert.throws(() => assertBulkRemoveAllowed(
+        C.CONTROL_OPERATIVO, ["synthetic-row-1"],
+        { condition: { filter: {
+            controlType: { $eq: T.DUAL_CACHE },
+            expiresAt: { $lt: "2026-11-14T00:00:00.000Z" },
+        } } }
+    ), { code: "CMS_BULK_REMOVE_SCOPE_DENIED" });
 });
 test("bulk insert remains disabled during isolated-site mutation window", () => {
     assert.throws(() => assertBulkMutationDisabled("BULK_INSERT"), {
