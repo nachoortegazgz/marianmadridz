@@ -24,7 +24,7 @@ Este documento describe un único sitio objeto de trabajo. No se mantiene una ma
 - 524 campos físicos en colecciones NATIVE.
 - 140 registros en las colecciones propias en el corte leído.
 - El inventario completo y los tipos físicos vigentes están en `docs/audits/2026-11-14-current-site-cms-normalization.md`; el diccionario raíz enlaza ese corte y marca los bloques anteriores como históricos.
-- `CajaActual`: 39 campos, 1 registro; `sequenceCounters` es OBJECT y está almacenado como objeto. `ticketSequence` no existe. `id` coincide con `_id` en el singleton leído; candidato a retirar tras comprobar consumidores.
+- `CajaActual`: 39 campos, 1 registro; operationDate DATE, openingAmount NUMBER y sequenceCounters OBJECT. cashRegisterStatus=SIMULACION; isOpen=true es inconsistente y no gobierna sesión. id=_id y currentSequence=0 son candidatos de retirada tras revisar consumidores externos.
 - `ControlOperativo`: 42 campos, 0 registros; `ownerToken` no existe. `traceId` es el token de fencing canónico.
 - `ComplementosCatalogo`: 18 campos, 36 registros; `addonId = _id` en todos. `traceId` está vacío. `name = description` en todos los registros, pero los tipos TEXT/RICH_TEXT y el uso de presentación son distintos; no borrar sin revisar UI y consumidores.
 - `MapaStaff`: 18 campos, 3 registros; incluye `staffMemberId`, `resourceId`, `scheduleId`, `memberId`, `active`. No incluye `recordType`, `traceId` ni campos fiscales. `resourceId = _id` en los tres registros; ambos identificadores tienen consumidores y su consolidación física requiere migración.
