@@ -61,6 +61,8 @@ No reintroducir por rellenado automático:
 
 El CSV contiene esos encabezados. Eso no demuestra que las columnas sigan existiendo en el esquema live: la comprobación del esquema debe hacerse contra Wix CMS, no contra los encabezados de una exportación.
 
+**Discrepancia adicional de esquema:** el CSV incluye `ownerToken` y las filas `WEBHOOK_CLAIM` tienen valores; sin embargo, el snapshot `DICCIONARIO_DATOS_CMS.md` consultado en esta revisión declara `ControlOperativo` revisión 39 / 42 campos y no enumera `ownerToken`. El código y la política CAS dependen de ese campo para el fencing. La exportación aporta evidencia de uso, pero no sustituye el readback live del esquema. Antes de probar en Wix debe confirmarse que `ownerToken` existe como campo TEXT en el entorno objetivo; no renombrarlo ni retirarlo por inferencia.
+
 ## 5. Archivos modificados
 
 - `src/backend/webhookEventClaims.js`: lease y contador pasan a campos canónicos top-level; lectura transitoria compatible con filas legacy.
