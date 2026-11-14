@@ -65,7 +65,7 @@ test('QA-MANIFEST-06 customer and gestoría fixtures are synthetic and non-opera
     assert.equal(customer.sourceEnvironment, 'TEST');
     assert.equal(customer.testRunId, QA_TEST_RUN_ID);
     assert.match(customer.customerId, /^TEST-CUSTOMER-[0-9]{3}$/);
-    assert.match(customer.email, /^[^@]+@example\\.test$/);
+    assert.match(customer.email, /^[^@]+@example\.test$/);
     assert.equal(Object.hasOwn(customer, 'phone'), false);
   }
   assert.equal(QA_GESTORIA.name, 'Gestoría de Pruebas');
