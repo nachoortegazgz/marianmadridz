@@ -273,7 +273,7 @@ La autoridad del propietario y la política temporal de mutabilidad vigentes se 
 
 ### TEC-038 — separación de maestros CMS y alineación de contratos (2026-11-14)
 
-**Decisión técnica:** MapaStaff se reserva al mapeo de identidades nativas de personal (staffMemberId, resourceId, scheduleId y memberId). DatosFiscales es el maestro de terceros, gestoría y configuración fiscal. No se duplican campos fiscales en MapaStaff ni se inventan traceId/schemaVersion en DatosFiscales.
+**Decisión técnica:** MapaStaff se reserva al mapeo de identidades nativas de personal (staffMemberId, resourceId, scheduleId y memberId); su thirdPartyId físico es TEXT opaco, no una FK fiscal. DatosFiscales es el maestro de terceros, gestoría y configuración fiscal. No se duplican campos fiscales en MapaStaff ni se inventan traceId/schemaVersion en DatosFiscales.
 
 **Keyfields:** _id es la identidad CMS. Los identificadores nativos Wix/Bookings/Members permanecen como campos separados cuando representan entidades diferentes. En ComplementosCatalogo, addonId queda como espejo físico temporal de _id; el DTO addOnId se conserva por contrato de transporte Bookings. gestorName es el nombre canónico de gestoría; gestorNombre queda retirado del contrato de código.
 
