@@ -355,13 +355,13 @@ La propuesta anterior agrupaba STAFF, TERCERO y GESTORIA en MapaStaff. Queda des
 
 ---
 
-## DECISIÓN QA-2026-11-14 — uso del sitio 50b como QA y ejecución sintética
+## DECISIÓN QA-2026-11-14 — designación inicial de entorno (supersedida)
 
-**Decisión expresa del propietario:** designar `ID QA anterior (supersedido)` como sitio QA del proyecto. Usar exclusivamente datos sintéticos, simulación offline de pasarela de pagos, pruebas automatizadas, registro de evidencias, corrección e iteración. El sitio productivo `188bed94-177c-4bc9-a9f0-35080d874f3e` no se utilizará para QA ni como fallback.
+**Registro histórico:** la designación inicial de entorno de este apartado queda supersedida por QA-2026-11-14-D. No identifica el sitio QA vigente ni autoriza el uso de otro sitio. La política de datos sintéticos y ausencia de efectos externos se mantiene.
 
 **Restricciones de ejecución:** no usar clientes/gestoría reales; no enviar emails/SMS/WhatsApp; no realizar cobros, reembolsos, facturas, tickets a clientes, movimientos de stock ni llamadas AEAT/Veri*Factu/SharePoint/Power Automate. Los mocks deben ser locales/offline y sin llamadas de red. Los datos sintéticos deben identificarse con `isSynthetic`, `testRunId`, `sourceEnvironment=TEST` y `realPayment=false` cuando el contrato de la entidad admita esos campos; no añadir campos CMS sin revisar esquema y consumidores.
 
-**Estado de acceso:** la conexión Wix disponible en la sesión no resolvió el Site ID QA; solo identificó producción. Esta discrepancia se registra como `BLOCKED_ENVIRONMENT` para pruebas runtime. No invalida ni detiene la ejecución de pruebas offline/mock y CI.
+**Estado de acceso en aquel corte:** la conexión no resolvió la designación inicial. Este resultado es histórico y queda supersedido por la consulta posterior de GetSiteContext al sitio QA único `188bed94-177c-4bc9-a9f0-35080d874f3e`.
 
 **Contrato de pagos mixtos:** los documentos de implementación existentes indican que el campo `paymentMethod` es singular y que el modelo de pagos mixtos no está definido. El caso mixto permanece `BLOCKED_CONTRACT` hasta definir y probar el esquema y la reconciliación. No inferir un contrato a partir de la suma de importes.
 
@@ -376,7 +376,7 @@ La propuesta anterior agrupaba STAFF, TERCERO y GESTORIA en MapaStaff. Queda des
 
 **Decisión técnica de seguridad:** cerrar la ventana global hasta implementar y verificar una barrera server-side ligada al Site ID QA autorizado. Se retiran del código los bypasses globales ISOLATED_SITE_RECORD_MUTATIONS_ENABLED y APPEND_ONLY_MUTATION_WINDOW; no queda una bandera que permita reabrirlos. Los ledgers de caja, contabilidad, fiscalidad, jornada y cierres permanecen append-only también durante pruebas. Las purgas masivas se restringen a ControlOperativo mediante condiciones exactas de tipo/estado/fecha; WEBHOOK_EVENT, DEDUPE_KEY y LEDGER_IDEMPOTENCY no son purgables. Las correcciones se registran mediante nuevos movimientos/asientos rectificativos trazables. La proyección CajaActual solo puede cambiar a través de su flujo backend autorizado y con movimiento fuente; no se permite borrarla.
 
-**Alcance:** este cambio afecta al código versionado de la rama de trabajo y a sus pruebas. No modifica ni publica el runtime Wix. El contexto Wix de producción continúa indicando Published; el Site ID QA ID QA anterior (supersedido) no se resuelve en la conexión actual. Por tanto, Wix Runtime/E2E sigue bloqueado y no se realizan mutaciones Wix.
+**Alcance:** este cambio afecta al código versionado de la rama de trabajo y a sus pruebas. No modifica ni publica el runtime Wix. El contexto Wix del sitio QA único indica Published. El resultado de resolución anterior queda supersedido por GetSiteContext posterior. No se realizan mutaciones Wix en este hito.
 
 **Verificación pendiente:** ejecutar CI completo sobre el nuevo SHA; revisar todos los consumidores del flag; validar los hooks en Wix Local Editor cuando QA sea accesible. Esta decisión supersede la autorización TEC-037 en cuanto a la habilitación técnica global: TEC-037 se conserva como antecedente histórico, no como permiso operativo actual.
 
@@ -402,25 +402,16 @@ La propuesta anterior agrupaba STAFF, TERCERO y GESTORIA en MapaStaff. Queda des
 
 **Estado de implementación al registrar esta decisión:** DOCUMENTAL / PENDIENTE DE IMPLEMENTACIÓN. La revisión de `main` confirma que `FISCAL_RUNTIME_POLICY` mantiene `LEDGER_WRITES_ENABLED=false`, `ACCOUNTING_LEDGER_WRITES_ENABLED=false` y `ALLOW_SIMULATION_RECORDS=false`; `dataAccessPolicy.js` conserva protecciones append-only; `cajas.web.js` consulta el gate de ledger, pero existen writers de Bookings/checkout y handlers de eventos Wix con rutas de efectos independientes. Por tanto, cambiar solo `internalConfig.js` no constituye un kill switch global verificable.
 
-**Gate previo a cualquier despliegue:** inventariar y cubrir con una política central server-side todos los writers CMS, Bookings, eCommerce, eventos, crons, email, fiscalidad e integraciones; pruebas negativas que demuestren que cada ruta rechaza o deriva a mocks sin I/O; ejecución CI completa; acceso verificable al Site ID QA designado `ID QA anterior (supersedido)`; comprobación de aislamiento de PSP y servicios externos. No usar producción ni otro sitio como sustituto.
+**Gate previo a cualquier despliegue:** inventariar y cubrir con una política central server-side todos los writers CMS, Bookings, eCommerce, eventos, crons, email, fiscalidad e integraciones; pruebas negativas que demuestren que cada ruta rechaza o deriva a mocks sin I/O; ejecución CI completa; alineación de los fixtures offline con el Site ID QA único; comprobación específica de los sinks/mocks y de las rutas que puedan producir efectos externos.
 
 **No autorizado por esta decisión:** desplegar, publicar, activar una pasarela, enviar comunicaciones, emitir/transmitir información fiscal, cambiar permisos/secrets o escribir en Wix CMS. Hasta superar el gate, la ejecución permitida continúa siendo offline/mock.
 
 
 ---
 
-## ADDENDUM QA-2026-11-14-C — actualización del Site ID designado por el propietario
+## ADDENDUM QA-2026-11-14-C — designación intermedia (supersedida por QA-2026-11-14-D)
 
-El propietario designa ahora `188bed94-177c-4bc9-a9f0-35080d874f3e` como identificador del sitio que pretende utilizar para QA, sustituyendo como designación vigente al ID QA anterior `ID QA anterior (supersedido)`.
-
-**Comprobación de Wix realizada tras la instrucción:** `GetSiteContext` resuelve el ID nuevo como **Marian Madrid Peluquería y Estética**, URL `https://www.marianmadrid.es/`, estado **Published**, dominio personalizado y plan Premium. El sitio tiene Wix Bookings, Wix Forms & Payments, Wix Gift Cards, Wix Invoices V1 y Wix Stores Catalog V3, entre otras apps.
-
-**Discrepancia crítica:** el ID designado coincide con el sitio publicado en el dominio oficial, previamente identificado como producción. La designación del propietario queda registrada, pero no demuestra aislamiento de QA ni desactiva tráfico, reservas, pagos, notificaciones o integraciones reales.
-
-**Decisión de seguridad:** `BLOCKED_ENVIRONMENT / PRODUCTION_SITE_DESIGNATED_AS_QA`. No ejecutar pruebas runtime, escrituras CMS, reservas sintéticas en el sitio, cambios de configuración, desconexión de pasarelas, publicación ni operaciones de verificación que puedan generar efectos. No tratar el sitio como aislado hasta disponer de evidencia técnica de aislamiento y autorización específica para intervenir sobre un sitio actualmente publicado.
-
-La regla global de desarrollo y cero actividad real sigue vigente. Para continuar las pruebas runtime se requiere un sitio QA separado/no publicado o un mecanismo de aislamiento verificable que impida efectos a clientes reales.
-
+Este addendum conserva el registro de una designación intermedia y de la discrepancia que se planteó al consultar Wix. Queda expresamente supersedido: el propietario confirma que el sitio `188bed94-177c-4bc9-a9f0-35080d874f3e` es el único entorno QA, que nunca ha tenido actividad real, que sus datos son sintéticos y que la pasarela está desconectada. No se requiere crear ni designar un sitio QA separado. El estado Wix Published es un metadato técnico, no una clasificación de actividad comercial.
 
 ## DECISIÓN QA-2026-11-14-D — sitio QA único vigente
 
