@@ -2,6 +2,10 @@
 
 ---
 
+> **Procedencia de evidencia:** este informe conserva observaciones y snapshots de una revisión anterior. La designación vigente identifica `188bed94-177c-4bc9-a9f0-35080d874f3e` como el único sitio QA, pero no convierte automáticamente los datos CMS, settings o recuentos históricos en evidencia del estado actual de ese sitio. Repetir lecturas de solo lectura en el Site ID vigente antes de cualquier mutación. No existe otro sitio QA ni un QA externo designado.
+
+---
+
 # Sitio actual — aislamiento y política de pruebas
 
 **Fecha de actualización:** 2026-11-14  
