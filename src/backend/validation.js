@@ -199,10 +199,17 @@ export function assertControlOperativo(item) {
         throw new Error("SCHEMA_VIOLATION: ControlOperativo requires traceId");
     }
 
-    // WEBHOOK_EVENT requiere eventId
+    // WEBHOOK_EVENT: eventType y processedAt también se duplican en campos CMS indexables.
     if (item.controlType === CONTROL_TYPE.WEBHOOK_EVENT) {
         if (!item.eventId || !String(item.eventId).trim()) {
             throw new Error("SCHEMA_VIOLATION: WEBHOOK_EVENT requires eventId");
+        }
+        if (!item.eventType || !String(item.eventType).trim()) {
+            throw new Error("SCHEMA_VIOLATION: WEBHOOK_EVENT requires eventType");
+        }
+        const processedAt = new Date(item.processedAt);
+        if (!item.processedAt || Number.isNaN(processedAt.getTime())) {
+            throw new Error("SCHEMA_VIOLATION: WEBHOOK_EVENT requires a valid processedAt date");
         }
     }
 
