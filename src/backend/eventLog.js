@@ -296,6 +296,7 @@ async function _upsertMapaStaff({ taxId, legalName, thirdPartyType, address }, t
     if (!normalizedTaxId) return null;
 
     const existing = await dalQuery(MAPA_STAFF_COL)
+        .eq("recordType", RECORD_TYPE.TERCERO)
         .eq("taxId", normalizedTaxId)
         .limit(1)
         .find();
