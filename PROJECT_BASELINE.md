@@ -47,11 +47,11 @@ El plan ejecutable, escenarios y criterios de evidencia están en [PLAN_ACCION_Q
 - `InventarioStockVenta` y `MovimientosInventario` están presentes físicamente en este sitio, pero sus contratos/writers están retirados. Su presencia no autoriza reactivar inventario custom: Stores Catalog V3 sigue siendo la autoridad prevista para stock comercial.
 
 ### Mutabilidad y seguridad
-- En la rama QA, ISOLATED_SITE_RECORD_MUTATIONS_ENABLED=false y APPEND_ONLY_MUTATION_WINDOW.ENABLED=false: la ventana global de update/remove está cerrada.
+- Se han retirado del código los bypasses globales de update/remove y la ventana temporal append-only; no existe un flag que pueda abrirlos desde configuración.
 - Los ledgers MovimientosCaja, LibroAsientosContablesDetalle, HistoricoCierresZ, RegistrosHorariosStaff y PaquetesGestoria permanecen append-only también en QA.
 - CajaActual es una proyección mutable únicamente a través del flujo backend autorizado y vinculada a movimientos fuente; no se habilita su borrado.
-- La identidad QA no está acreditada por la conexión Wix actual; no existe todavía una barrera runtime por Site ID que permita habilitar mutabilidad global de forma segura.
-- Las colecciones WIX_APP se operan exclusivamente mediante sus APIs oficiales. Los writers fiscales/contables/laborales y efectos externos siguen fail-closed.
+- Bulk update está deshabilitado. Bulk remove solo admite purgas condicionadas por tipo, estado terminal y fecha de expiración/retención en ControlOperativo; WEBHOOK_EVENT y claims durables están excluidos.
+- La identidad QA no está acreditada por la conexión Wix actual; no existe todavía una barrera runtime por Site ID. Las colecciones WIX_APP se operan exclusivamente mediante sus APIs oficiales y los efectos externos siguen fail-closed.
 
 ## 2. Alcance funcional
 
