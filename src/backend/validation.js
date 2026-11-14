@@ -4,7 +4,7 @@ MODULE: backend/validation.js
 RESPONSIBILITY: Pure validation for CMS write boundaries and fiscal identity.
 CONTRACT: Validators return true or throw SCHEMA_VIOLATION; no logging or I/O.
 DEPENDENCIES: backend/internalConfig only.
-DOMAINS: CitasF2, MapaStaff, ControlOperativo, RegistrosHorariosStaff,
+DOMAINS: CitasF2, MapaStaff, DatosFiscales, ControlOperativo, RegistrosHorariosStaff,
          canonical enums and Spanish/EU tax identifiers.
 =============================================================================
 */
@@ -174,9 +174,14 @@ export function assertDatosFiscalesRecord(item) {
             throw new Error(`SCHEMA_VIOLATION: DatosFiscales.${field} must be BOOLEAN`);
         }
     }
-    if (item.fechaInicioVerifactu != null && item.fechaInicioVerifactu !== "" &&
-        !/^\d{4}-\d{2}-\d{2}$/.test(String(item.fechaInicioVerifactu))) {
-        throw new Error("SCHEMA_VIOLATION: DatosFiscales.fechaInicioVerifactu must be YYYY-MM-DD TEXT");
+    if (item.fechaInicioVerifactu != null && item.fechaInicioVerifactu !== "") {
+        const value = String(item.fechaInicioVerifactu);
+        const parsed = new Date(value + "T00:00:00.000Z");
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(value) ||
+            Number.isNaN(parsed.getTime()) ||
+            parsed.toISOString().slice(0, 10) !== value) {
+            throw new Error("SCHEMA_VIOLATION: DatosFiscales.fechaInicioVerifactu must be a real YYYY-MM-DD date");
+        }
     }
     return true;
 }
