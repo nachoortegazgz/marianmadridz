@@ -219,7 +219,7 @@ test("legacy nested lease and attempt are read once and migrated to canonical fi
     assert.equal(Object.hasOwn(row.payload, "leaseExpiresAt"), false);
 });
 
-test("claim requires a stable event identity and owner token", async () => {
+test("claim requires a stable event identity and traceId fencing token", async () => {
     await assert.rejects(
         acquireWebhookEventClaim({ eventId: "", eventType: EVENT_TYPE, traceId: "worker" }),
         { code: "WEBHOOK_CLAIM_IDENTITY_INVALID" }
