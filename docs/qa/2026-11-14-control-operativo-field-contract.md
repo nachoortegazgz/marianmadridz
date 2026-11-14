@@ -10,7 +10,7 @@
 - Fuente de datos: CSV sintético aportado por el propietario en la conversación.
 - Código de contraste: rama `main` en el momento de crear esta corrección.
 - Alcance: revisión de celdas vacías por `controlType` y corrección del contrato de `WEBHOOK_CLAIM`.
-- Límite: el CSV no acredita por sí solo el esquema live actual de Wix ni permite inferir que todas las filas existan en producción.
+- Límite: el CSV no acredita por sí solo el esquema live actual de Wix ni permite inferir que todas las filas existan en el CMS actual del sitio QA.
 
 ## 1. Resultado del análisis
 
