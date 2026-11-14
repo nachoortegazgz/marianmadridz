@@ -542,3 +542,12 @@ La política del código sigue fail-closed:
 
 **Decisión: Layer 2 permanece NO CERRADA.** La lectura de fuentes comerciales y transacciones está conciliada; el cierre fiscal, bancario, contable y de cancelaciones no. No se deben crear movimientos retroactivos, asientos, rectificaciones, reembolsos ni cambios de configuración hasta recibir validación del gestor y evidencia del medio de cobro. Las correcciones de registros append-only deberán ser nuevos registros rectificativos trazables, nunca edición/borrado.
 
+
+
+## Addendum — TEST metadata and synthetic identities (2026-11-14)
+
+- PSP mock: `src/backend/tests/fixtures/qaPaymentGateway.mock.mjs` solo acepta environment TEST, testSiteId coincidente y testRunId con prefijo TEST-RUN-. Authorization/capture/refund devuelven isSynthetic=true, sourceEnvironment=TEST, testRunId y realPayment=false.
+- Email sink: `src/backend/tests/fixtures/qaManagerEmailSink.mock.mjs` solo acepta clientes sintéticos con testRunId coincidente y destinatarios example.test; guarda en memoria y no envía correo.
+- Identidades: `src/backend/tests/fixtures/qaSyntheticParties.mjs` contiene tres clientes sintéticos y Gestoría de Pruebas con TEST-NIF-NO-VALIDO, teléfono null y destino real desactivado.
+- Cobertura: PSP 7/7, email sink 4/4, manifiesto sintético 7/7 en CI #43606822535.
+- No conectado a Wix Payments ni a Wix Automations. No escribir en CMS live desde estos mocks.
