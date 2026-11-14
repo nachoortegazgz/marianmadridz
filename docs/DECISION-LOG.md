@@ -13,13 +13,13 @@
 - CI sobre el HEAD de PR #374 (`da96c1b50f1910a287aea718bc6025d295e30e2b`): Layer 1 **24 suites / 307 tests PASS**; Layer 2 **19 suites / 252 tests PASS**; regresión completa **70 suites / 644 tests PASS**; Cart V2, Order Transactions y Bookings Reader V2 PASS; ESLint PASS; Gitleaks full-history PASS. CI del merge commit `1de381ecb6495e17a3eae5b75b43e8493166988a` también PASS (Layer 1 24/307; Layer 2 19/252; regresión 70/644; SDK, ESLint y Gitleaks PASS).
 - La corrección restaura `assertMapaStaffRecord`, mantiene `thirdPartyId` como TEXT opaco y corrige la regla de `CONFIG_SISTEMA.thirdPartyType = null`.
 - PR #374 integrada en `main` mediante merge `1de381ecb6495e17a3eae5b75b43e8493166988a`.
-- **Wix Runtime/E2E:** BLOCKED_ENVIRONMENT confirmado por `GetSiteContext` sin resultado para el QA ID designado y `ListWixSites` mostrando únicamente producción y otro sitio no designado. Se prohíbe sustituir QA por producción o por un sitio distinto sin decisión explícita y verificación de aislamiento.
+- **Wix Runtime/E2E:** la comprobación de acceso fallida registrada en este corte es histórica y queda supersedida. La consulta posterior GetSiteContext confirma el único sitio QA `188bed94-177c-4bc9-a9f0-35080d874f3e` como Published con dominio personalizado.
 - **Discrepancia documental pendiente:** el diccionario CMS contiene un addendum de consolidación fiscal de MapaStaff (42 campos), mientras que el baseline y el código activo describen el contrato separado MapaStaff/DatosFiscales. No desplegar ni migrar ese contrato hasta reconciliar evidencia live, rama de implementación y retirada de DatosFiscales.
 
 
-## Vigencia operativa — sitio aislado actual (2026-11-14)
+## Vigencia operativa — designación histórica supersedida (2026-11-14)
 
-**Sitio único:** 50b39f33-e753-4331-ab35-b2ed43dc97f7. El propietario declara que es un banco de pruebas aislado, sin actividad real. Los registros existentes se consideran sintéticos; no se mantiene una comparación operativa con otro sitio.
+**Sitio que se identificó entonces:** referencia anterior de entorno, supersedida por la decisión QA-2026-11-14-D. La única identidad operativa vigente es `188bed94-177c-4bc9-a9f0-35080d874f3e`.
 
 **Política de mutabilidad vigente (TEC-038):** los bypasses globales de update/remove y la ventana temporal append-only han sido retirados del código. Los ledgers de caja, contabilidad, fiscalidad, jornada, cierres y eventos webhook permanecen inmutables también en QA. Bulk update está deshabilitado. Bulk remove solo admite purgas de tipos efímeros/terminales en ControlOperativo, con condiciones exactas de tipo, estado y fecha; quedan excluidos WEBHOOK_EVENT, DEDUPE_KEY, LEDGER_IDEMPOTENCY y WEBHOOK_CLAIM. CajaActual solo cambia mediante el flujo backend autorizado y con movimiento fuente; no se borra.
 
@@ -357,7 +357,7 @@ La propuesta anterior agrupaba STAFF, TERCERO y GESTORIA en MapaStaff. Queda des
 
 ## DECISIÓN QA-2026-11-14 — uso del sitio 50b como QA y ejecución sintética
 
-**Decisión expresa del propietario:** designar `50b39f33-e753-4331-ab35-b2ed43dc97f7` como sitio QA del proyecto. Usar exclusivamente datos sintéticos, simulación offline de pasarela de pagos, pruebas automatizadas, registro de evidencias, corrección e iteración. El sitio productivo `188bed94-177c-4bc9-a9f0-35080d874f3e` no se utilizará para QA ni como fallback.
+**Decisión expresa del propietario:** designar `ID QA anterior (supersedido)` como sitio QA del proyecto. Usar exclusivamente datos sintéticos, simulación offline de pasarela de pagos, pruebas automatizadas, registro de evidencias, corrección e iteración. El sitio productivo `188bed94-177c-4bc9-a9f0-35080d874f3e` no se utilizará para QA ni como fallback.
 
 **Restricciones de ejecución:** no usar clientes/gestoría reales; no enviar emails/SMS/WhatsApp; no realizar cobros, reembolsos, facturas, tickets a clientes, movimientos de stock ni llamadas AEAT/Veri*Factu/SharePoint/Power Automate. Los mocks deben ser locales/offline y sin llamadas de red. Los datos sintéticos deben identificarse con `isSynthetic`, `testRunId`, `sourceEnvironment=TEST` y `realPayment=false` cuando el contrato de la entidad admita esos campos; no añadir campos CMS sin revisar esquema y consumidores.
 
@@ -376,7 +376,7 @@ La propuesta anterior agrupaba STAFF, TERCERO y GESTORIA en MapaStaff. Queda des
 
 **Decisión técnica de seguridad:** cerrar la ventana global hasta implementar y verificar una barrera server-side ligada al Site ID QA autorizado. Se retiran del código los bypasses globales ISOLATED_SITE_RECORD_MUTATIONS_ENABLED y APPEND_ONLY_MUTATION_WINDOW; no queda una bandera que permita reabrirlos. Los ledgers de caja, contabilidad, fiscalidad, jornada y cierres permanecen append-only también durante pruebas. Las purgas masivas se restringen a ControlOperativo mediante condiciones exactas de tipo/estado/fecha; WEBHOOK_EVENT, DEDUPE_KEY y LEDGER_IDEMPOTENCY no son purgables. Las correcciones se registran mediante nuevos movimientos/asientos rectificativos trazables. La proyección CajaActual solo puede cambiar a través de su flujo backend autorizado y con movimiento fuente; no se permite borrarla.
 
-**Alcance:** este cambio afecta al código versionado de la rama de trabajo y a sus pruebas. No modifica ni publica el runtime Wix. El contexto Wix de producción continúa indicando Published; el Site ID QA 50b39f33-e753-4331-ab35-b2ed43dc97f7 no se resuelve en la conexión actual. Por tanto, Wix Runtime/E2E sigue bloqueado y no se realizan mutaciones Wix.
+**Alcance:** este cambio afecta al código versionado de la rama de trabajo y a sus pruebas. No modifica ni publica el runtime Wix. El contexto Wix de producción continúa indicando Published; el Site ID QA ID QA anterior (supersedido) no se resuelve en la conexión actual. Por tanto, Wix Runtime/E2E sigue bloqueado y no se realizan mutaciones Wix.
 
 **Verificación pendiente:** ejecutar CI completo sobre el nuevo SHA; revisar todos los consumidores del flag; validar los hooks en Wix Local Editor cuando QA sea accesible. Esta decisión supersede la autorización TEC-037 en cuanto a la habilitación técnica global: TEC-037 se conserva como antecedente histórico, no como permiso operativo actual.
 
@@ -402,7 +402,7 @@ La propuesta anterior agrupaba STAFF, TERCERO y GESTORIA en MapaStaff. Queda des
 
 **Estado de implementación al registrar esta decisión:** DOCUMENTAL / PENDIENTE DE IMPLEMENTACIÓN. La revisión de `main` confirma que `FISCAL_RUNTIME_POLICY` mantiene `LEDGER_WRITES_ENABLED=false`, `ACCOUNTING_LEDGER_WRITES_ENABLED=false` y `ALLOW_SIMULATION_RECORDS=false`; `dataAccessPolicy.js` conserva protecciones append-only; `cajas.web.js` consulta el gate de ledger, pero existen writers de Bookings/checkout y handlers de eventos Wix con rutas de efectos independientes. Por tanto, cambiar solo `internalConfig.js` no constituye un kill switch global verificable.
 
-**Gate previo a cualquier despliegue:** inventariar y cubrir con una política central server-side todos los writers CMS, Bookings, eCommerce, eventos, crons, email, fiscalidad e integraciones; pruebas negativas que demuestren que cada ruta rechaza o deriva a mocks sin I/O; ejecución CI completa; acceso verificable al Site ID QA designado `50b39f33-e753-4331-ab35-b2ed43dc97f7`; comprobación de aislamiento de PSP y servicios externos. No usar producción ni otro sitio como sustituto.
+**Gate previo a cualquier despliegue:** inventariar y cubrir con una política central server-side todos los writers CMS, Bookings, eCommerce, eventos, crons, email, fiscalidad e integraciones; pruebas negativas que demuestren que cada ruta rechaza o deriva a mocks sin I/O; ejecución CI completa; acceso verificable al Site ID QA designado `ID QA anterior (supersedido)`; comprobación de aislamiento de PSP y servicios externos. No usar producción ni otro sitio como sustituto.
 
 **No autorizado por esta decisión:** desplegar, publicar, activar una pasarela, enviar comunicaciones, emitir/transmitir información fiscal, cambiar permisos/secrets o escribir en Wix CMS. Hasta superar el gate, la ejecución permitida continúa siendo offline/mock.
 
@@ -411,7 +411,7 @@ La propuesta anterior agrupaba STAFF, TERCERO y GESTORIA en MapaStaff. Queda des
 
 ## ADDENDUM QA-2026-11-14-C — actualización del Site ID designado por el propietario
 
-El propietario designa ahora `188bed94-177c-4bc9-a9f0-35080d874f3e` como identificador del sitio que pretende utilizar para QA, sustituyendo como designación vigente al ID QA anterior `50b39f33-e753-4331-ab35-b2ed43dc97f7`.
+El propietario designa ahora `188bed94-177c-4bc9-a9f0-35080d874f3e` como identificador del sitio que pretende utilizar para QA, sustituyendo como designación vigente al ID QA anterior `ID QA anterior (supersedido)`.
 
 **Comprobación de Wix realizada tras la instrucción:** `GetSiteContext` resuelve el ID nuevo como **Marian Madrid Peluquería y Estética**, URL `https://www.marianmadrid.es/`, estado **Published**, dominio personalizado y plan Premium. El sitio tiene Wix Bookings, Wix Forms & Payments, Wix Gift Cards, Wix Invoices V1 y Wix Stores Catalog V3, entre otras apps.
 
