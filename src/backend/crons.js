@@ -1702,12 +1702,13 @@ export async function cleanExpiredBookingControl() {
             const payload = readControlPayload(item);
             const payloadStatus = _safeTrim(payload.status).toUpperCase();
             const rootStatus = _safeTrim(item.status).toUpperCase();
-            const status = payloadStatus || rootStatus;
+            const status = rootStatus;
             const terminalAt = new Date(
                 payload.terminalAt || payload.completedAt || payload.reconciledAt ||
                 payload.resolvedAt || item?._updatedDate || ""
             );
             if (
+                !rootStatus ||
                 (payloadStatus && rootStatus && payloadStatus !== rootStatus) ||
                 !eligibleStatuses[item.controlType]?.has(status) ||
                 !Number.isFinite(terminalAt.getTime()) ||
@@ -1716,9 +1717,9 @@ export async function cleanExpiredBookingControl() {
                 result.skipped++;
                 continue;
             }
-            const key = item.controlType;
+            const key = item.controlType + ":" + status;
             if (!groups.has(key)) groups.set(key, {
-                controlType: item.controlType, ids: [],
+                controlType: item.controlType, status, ids: [],
             });
             groups.get(key).ids.push(item._id);
         }
@@ -1728,6 +1729,7 @@ export async function cleanExpiredBookingControl() {
                 const removal = await dalBulkRemove(collection, ids, {
                     condition: { filter: {
                         controlType: { $eq: group.controlType },
+                        status: { $eq: group.status },
                         _updatedDate: { $lt: cutoff },
                     } },
                 });
