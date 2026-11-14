@@ -368,3 +368,16 @@ Se mantienen controles de autenticación, autorización, permisos, validación d
 **Contrato de pagos mixtos:** los documentos de implementación existentes indican que el campo `paymentMethod` es singular y que el modelo de pagos mixtos no está definido. El caso mixto permanece `BLOCKED_CONTRACT` hasta definir y probar el esquema y la reconciliación. No inferir un contrato a partir de la suma de importes.
 
 **Implementación de esta decisión:** documental en esta rama; no se han modificado código, CMS, configuración Wix, automatizaciones, permisos, secretos ni publicación. Ver [PLAN_ACCION_QA.md](../PLAN_ACCION_QA.md).
+
+
+---
+
+## TEC-038 — cierre fail-closed de la ventana global de mutabilidad QA (2026-11-14)
+
+**Motivo:** la revisión de código de src/backend/internalConfig.js, dataAccessPolicy.js y data.js detectó que ISOLATED_SITE_RECORD_MUTATIONS_ENABLED=true habilitaba update/remove de colecciones propias y desprotegía hooks sin comprobar en esa decisión el Site ID real del runtime. La documentación afirmaba que el alcance era un sitio aislado, pero el código no acreditaba ese vínculo.
+
+**Decisión técnica de seguridad:** cerrar la ventana global hasta implementar y verificar una barrera server-side ligada al Site ID QA autorizado. En la rama QA se fija ISOLATED_SITE_RECORD_MUTATIONS_ENABLED=false y APPEND_ONLY_MUTATION_WINDOW.ENABLED=false. Los ledgers de caja, contabilidad, fiscalidad, jornada y cierres permanecen append-only también durante pruebas. Las correcciones se registran mediante nuevos movimientos/asientos rectificativos trazables. La proyección CajaActual solo puede cambiar a través de su flujo backend autorizado y con movimiento fuente; no se permite borrarla.
+
+**Alcance:** este cambio afecta al código versionado de la rama de trabajo y a sus pruebas. No modifica ni publica el runtime Wix. El contexto Wix de producción continúa indicando Published; el Site ID QA 50b39f33-e753-4331-ab35-b2ed43dc97f7 no se resuelve en la conexión actual. Por tanto, Wix Runtime/E2E sigue bloqueado y no se realizan mutaciones Wix.
+
+**Verificación pendiente:** ejecutar CI completo sobre el nuevo SHA; revisar todos los consumidores del flag; validar los hooks en Wix Local Editor cuando QA sea accesible. Esta decisión supersede la autorización TEC-037 en cuanto a la habilitación técnica global: TEC-037 se conserva como antecedente histórico, no como permiso operativo actual.
