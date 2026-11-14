@@ -129,7 +129,7 @@ function _accountantSendDisabledResult(traceId) {
 }
 
 // Marcadores canonicos para identificar un item dedicado a gestor.
-const GESTOR_RECORD_TYPE_MARKERS = Object.freeze([
+const GESTORIA_RECORD_TYPE_MARKERS = Object.freeze([
   "GESTOR",
   "GESTORIA",
   "GESTOR_FISCAL",
@@ -273,7 +273,7 @@ function _isGestorRecordType(record) {
   ]
     .filter(Boolean)
     .map((v) => String(v).trim().toUpperCase());
-  return candidates.some((v) => GESTOR_RECORD_TYPE_MARKERS.includes(v));
+  return candidates.some((v) => GESTORIA_RECORD_TYPE_MARKERS.includes(v));
 }
 
 // Extrae un destinatario de un item de MapaStaff. Devuelve null si el
