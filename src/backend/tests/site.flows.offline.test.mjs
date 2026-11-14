@@ -1046,7 +1046,7 @@ test('FLOW-CAJA-11 simulation cash state blocks manual writes, state display and
     _id: 'SINGLE_ITEM_ID',
     singletonKey: 'CAJA_PRINCIPAL',
     cashRegisterStatus: 'SIMULACION',
-    operationDateHour: new Date(),
+    operationDate,
     netAmount: 300,
     cashAmount: 300,
     sequenceCounters: { seqGlobal: 0, appliedMovementIds: [] },
