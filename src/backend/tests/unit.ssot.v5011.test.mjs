@@ -57,8 +57,8 @@ test('UNIT-ENUM-01 booking enums aligned with canonical SSOT', async () => {
   assert.strictEqual(IC.BOOKING_STATUS.UPDATED, undefined);
   assert.ok(!Object.values(IC.BOOKING_STATUS).includes('UPDATED'));
   assert.strictEqual(IC.BOOKING_STATUS.PENDING_PAYMENT, undefined);
-  assert.deepStrictEqual(Object.keys(IC.CASH_REGISTER_STATUS).sort(), ['ABIERTA', 'CERRADA']);
-  assert.deepStrictEqual(Object.values(IC.CASH_REGISTER_STATUS).sort(), ['ABIERTA', 'CERRADA']);
+  // SIMULACION is an explicit QA-only sentinel; production states remain ABIERTA/CERRADA.\n  assert.deepStrictEqual(Object.keys(IC.CASH_REGISTER_STATUS).sort(), ['ABIERTA', 'CERRADA', 'SIMULACION']);
+  assert.deepStrictEqual(Object.values(IC.CASH_REGISTER_STATUS).sort(), ['ABIERTA', 'CERRADA', 'SIMULACION']);
   // AUDIT-2026-10-14: IC.LEGACY_BOOKING_STATUS_VALUES fue erradicado por
   // DEC-IC-03; la traduccion Wix->CMS vive exclusivamente en
   // bookingCore._toCmsBookingStatus. Se conserva la intencion original
