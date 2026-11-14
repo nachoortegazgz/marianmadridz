@@ -85,7 +85,7 @@ El CSV contiene encabezados adicionales, pero no demuestra que esas columnas exi
 
 ## 6. Validación
 
-<badge>CI PASS</badge>
+**CI: PASS**
 
 En el HEAD `ad15d311fec06aa3f54afe6c5f1f0f923aef9f45`:
 
