@@ -1,7 +1,8 @@
 ## Estado de ingeniería — reconciliación 2026-11-14
 
-- `main` baseline: `79b6238fe4c23206bb8e81327191ab48425e3a0d` (PR #351 integrada).
-- PR #351 dejó incompleta la recuperación de validadores compartidos; PR #352 restaura los contratos. CI completo PASS en `609ccc948da3e63d3fd8aa20f5e64c7649770660` (run #1054); commits posteriores en esta PR son solo documentación.
+- `main` actual: `c8091fd2df0ba836657032db1e2e7aa9df67758b` (PR #352 integrada; baseline previo a la reparación: `79b6238fe4c23206bb8e81327191ab48425e3a0d`).
+- PR #352 recuperó los validadores eliminados por PR #351; CI completo PASS en `609ccc948da3e63d3fd8aa20f5e64c7649770660` (run #1054). No se ha publicado en Wix.
+- PR #353 elimina contratos ejecutables de inventario personalizado retirado; CI pendiente.
 - CMS live: 41 colecciones (12 NATIVE / 29 WIX_APP), 980 campos. No existen live `DatosFiscales`, `InventarioStockVenta` ni `MovimientosInventario`.
 - `QA_RECORD_MUTATIONS_ENABLED=true`: solo fase QA; producción bloqueada. No se ha publicado esta tanda.
 - No hay release Wix vinculado al SHA de Git ni certificación E2E runtime. Capa 3 no está operativa certificada.
@@ -48,14 +49,15 @@ Repositorio canónico del sitio **Marian Madrid Peluquería y Estética** (`www.
 0. [Diccionario de datos CMS](DICCIONARIO_DATOS_CMS.md): esquema físico live de las 12 colecciones NATIVE, inventario de las 29 WIX_APP y contratos de campos.
 1. [Estado vigente consolidado](ESTADO_ACTUAL_PROYECTO.md): autoridad de continuidad, bloqueos y checklist.
 2. [Reconciliación de baseline 2026-11-14](docs/qa/2026-11-14-baseline-reconciliation.md): regresión de validadores, inventario CMS y límites de publicación.
-3. [Estándar de desarrollo y QA — Cero deuda](docs/engineering/DEVELOPMENT-STANDARDS.md): reglas de alias, legacy, APIs deprecated, código muerto, obsolescencia y validación.
-4. [Auditoría y migración CitasF2](docs/qa/2026-11-13-citasf2-keyfields.md): esquema físico y campos canónicos.
-5. [Adaptaciones temporales para QA](docs/qa/2026-11-13-site-qa-environment.md): entorno, permisos y límites de aislamiento.
-6. [Auditoría de persistencia CMS](docs/qa/2026-11-13-custom-cms-registration-audit.md): inventario NATIVE/WIX_APP y estado por dominio.
-7. [Referencia maestra QA del 11-11](docs/qa/2026-11-11-qa-master-reference.md): evidencia histórica de aislamiento y restricciones previas.
-8. [Dossier técnico consolidado](DOSSIER%20TÉCNICO%20CONSOLIDADO.md): arquitectura, contratos y módulos.
-9. [Flujos end-to-end Capa 3](DOSSIER%20FLUJOS%20END%20TO%20END%20CAPA%203.md): diseño documental Wix–Microsoft 365; no certifica operación.
-10. [Estado técnico histórico por dominio](docs/PROJECT-STATUS.md): evidencia hasta 2026-11-11; el estado vigente está en `ESTADO_ACTUAL_PROYECTO.md`.
+3. [Auditoría de retirada de inventario personalizado](docs/qa/2026-11-14-retired-inventory-contract-audit.md): evidencia de colecciones ausentes y limpieza de constantes/hooks.
+4. [Estándar de desarrollo y QA — Cero deuda](docs/engineering/DEVELOPMENT-STANDARDS.md): reglas de alias, legacy, APIs deprecated, código muerto, obsolescencia y validación.
+5. [Auditoría y migración CitasF2](docs/qa/2026-11-13-citasf2-keyfields.md): esquema físico y campos canónicos.
+6. [Adaptaciones temporales para QA](docs/qa/2026-11-13-site-qa-environment.md): entorno, permisos y límites de aislamiento.
+7. [Auditoría de persistencia CMS](docs/qa/2026-11-13-custom-cms-registration-audit.md): inventario NATIVE/WIX_APP y estado por dominio.
+8. [Referencia maestra QA del 11-11](docs/qa/2026-11-11-qa-master-reference.md): evidencia histórica de aislamiento y restricciones previas.
+9. [Dossier técnico consolidado](DOSSIER%20TÉCNICO%20CONSOLIDADO.md): arquitectura, contratos y módulos.
+10. [Flujos end-to-end Capa 3](DOSSIER%20FLUJOS%20END%20TO%20END%20CAPA%203.md): diseño documental Wix–Microsoft 365; no certifica operación.
+11. [Estado técnico histórico por dominio](docs/PROJECT-STATUS.md): evidencia hasta 2026-11-11; el estado vigente está en `ESTADO_ACTUAL_PROYECTO.md`.
 
 El código, la configuración viva de Wix, los contratos oficiales de las APIs y las pruebas ejecutadas prevalecen sobre afirmaciones históricas. Registrar siempre fecha, rama/SHA y evidencia.
 ## Entorno de desarrollo
