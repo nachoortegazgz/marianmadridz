@@ -1780,3 +1780,304 @@ No marcar como cumplido un requisito legal o de negocio únicamente por existir 
 El usuario declara que el código está integrado y publicado en Wix. Esta declaración se registra como **declaración del propietario**. En la consulta de GitHub de este corte, el PR #344 (feat/consolidate-fiscal-master-mapastaff-v2) figura fusionado el 2026-11-14 mediante el merge commit f3b1311eead05282e47f538afd506fe49e227141, que es el HEAD actual de main. La integración del cambio en Git está verificada. El usuario declara además que el código está publicado en Wix; no se dispone de un identificador de publicación Wix que vincule el runtime con ese SHA concreto.
 
 **Nota de ejecución:** este addendum modifica la autoridad documental y la política de trabajo. No demuestra por sí mismo que todos los hooks, WebMethods, políticas de escritura o permisos CMS del runtime Wix hayan sido modificados para permitir todas las operaciones de edición y eliminación. Esa correspondencia debe verificarse en código y en Wix antes de afirmar que la pausa está aplicada técnicamente de extremo a extremo.
+
+## Vigencia operativa — fase de desarrollo y QA (2026-11-14)
+
+**Autoridad:** el usuario/propietario es la SSOT de negocio, requisitos, prioridades, criterios de aceptación y autorizaciones. Las instrucciones expresas posteriores del usuario prevalecen sobre decisiones y restricciones documentales anteriores. La documentación oficial de Wix y de las integraciones gobierna únicamente los contratos y límites técnicos de la plataforma.
+
+**Mutabilidad CMS durante QA:** append-only e inmutabilidad están temporalmente en pausa. Se habilitan update y remove individuales y masivos para todas las colecciones CMS propias del proyecto, incluidas las históricamente tratadas como ledgers. Las operaciones masivas deben identificar explícitamente los registros por ID. No se habilitan escrituras en colecciones propiedad de Wix Apps ni se eluden autenticación, autorización/RBAC, permisos, validaciones de esquema, integridad técnica, secretos o límites de plataforma. La inserción mantiene su allowlist; los writers fiscales/contables/laborales, pagos, reembolsos, comunicaciones y efectos externos conservan sus gates funcionales independientes.
+
+**Restauración:** esta política no se revierte automáticamente. Solo el usuario puede ordenar la restauración de append-only y de las restricciones de mutación para preparar el despliegue. No publicar a producción basándose únicamente en esta excepción de QA.
+
+**Estado Git/Wix:** PR #344, PR #345 y PR #346 están integrados en main; HEAD actual b19a8f676d7be157d457588f6acf5332c2a34d32; merge del código QA PR #346: b68e4e048ce5fc1c022fc6ffc2643d5983972107. CI de PR #346: Layer 1 23 suites/296 pruebas, Layer 2 18 suites/246 pruebas, regresión completa 68 suites/627 pruebas; SDK contracts, ESLint y Gitleaks correctos. El usuario declara que la versión base anterior está publicada en Wix; la ampliación de mutaciones QA está integrada en Git pero aún no publicada en Wix. No se dispone de release Wix vinculado a SHA.
+
+**CMS maestro:** MapaStaff revisión 36, 42 campos y 5 registros (3 STAFF, 1 TERCERO, 1 GESTORIA). DatosFiscales permanece como colección legacy con un placeholder QA; su retirada requiere verificar runtime y consumidores tras publicar el backend migrado.
+
+---
+
+## Addendum obligatorio — estado QA/CMS (2026-11-14)
+
+**HISTÓRICO — TEC-033, sustituida por TEC-037.** Ya no se limita la mutación a update/remove individuales ni se mantiene bulk bloqueado. La política QA actual habilita update/remove individual y masivo en colecciones CMS propias, incluidos ledgers; los IDs deben ser explícitos. Se mantienen la autenticación, autorización, permisos, validaciones, allowlist de inserción y gates funcionales de writers/efectos externos. Solo el usuario ordenará restaurar append-only antes del despliegue.
+
+`CajaActual` live está en revisión 64: 59 campos personalizados + 4 campos de sistema (63 físicos), con datos de sesión, apertura, ticket/conceptos, importes/impuestos, pago, trazabilidad y saldos por medio. `cashRegisterStatus` es el único estado de sesión; `isOpen` no existe en el esquema. El permiso CMS `read=ANYONE` requiere revisión de seguridad antes de almacenar datos reales de cliente. No existe todavía WebMethod de apertura para persistir los saldos iniciales. El esquema y las dependencias por campo están en [DICCIONARIO_DATOS_CMS.md](DICCIONARIO_DATOS_CMS.md) §3.1; el estado de pruebas y despliegue está en [ESTADO_ACTUAL_PROYECTO.md](ESTADO_ACTUAL_PROYECTO.md). **Desfase de despliegue:** el runtime Published no está acreditado con este contrato ni con esta rama. El backend/DTO actualizado existe solo en Git; no se ha desplegado. Aunque Wix Data no aplica el esquema como validación estricta de cada payload, el comportamiento del código publicado frente al esquema nuevo no se ha probado. No ejecutar operaciones de caja en live hasta completar CI, validación en QA aislado y despliegue autorizado.
+
+DIRECTRICES DE ARQUITECTURA, DESARROLLO Y QA
+Proyecto: Marian Madrid — www.marianmadrid.es
+Repositorio: nachoortegazgz/marianmadridz
+Revision: 2026-11-09
+
+1. AUTORIDAD Y FUENTES
+
+1.1. Orden de autoridad
+1) SSOT. Documentacion oficial vigente de Wix, Wix Apps y SDKs integrados. Comprueba que consultas la version correcta recomendada y actualizada de cada documento.
+2) Referencia. Dossier Tecnico Consolidado y Dossier de Flujos End-to-End.
+3) Este documento.
+4) Necesidades Web y criterios de aceptacion.
+
+1.2. Resolucion de contradicciones
+- El contrato oficial del proveedor prevalece sobre comentarios o ejemplos internos.
+- El codigo ejecutable y sus pruebas describen el comportamiento implementado.
+- El dossier debe reflejar el comportamiento comprobado, no definir contratos distintos.
+- Cada decision debe registrar la opcion elegida y su razon tecnica. No mantener instrucciones incompatibles.
+
+2. INVARIANTES DE ARQUITECTURA
+
+- Wix CMS es la fuente de verdad transaccional.
+- SharePoint custodia evidencia documental y no gobierna transacciones.
+- La Capa 3 no modifica ni dirige datos de la Capa 1.
+- El frontend presenta y recoge datos; la logica de negocio reside en backend y WebMethods.
+- Las constantes compartidas se centralizan en internalConfig.js.
+- Las validaciones puras se centralizan en validation.js.
+- La autenticacion, autorizacion y permisos se comprueban en backend.
+- Los secretos nunca se incluyen en frontend, DTOs ni logs.
+- Los eventos, webhooks y procesos asincronos son idempotentes.
+- Los ledgers fiscales, contables y laborales son append-only. Las rectificaciones se registran como nuevos documentos trazables.
+- No se realizan escrituras de prueba en datos reales del CMS.
+
+3. CONTRATOS WIX ADOPTADOS
+
+3.1. Web Modules
+- Los modulos de acceso frontend usan archivos .web.js.
+- Cada WebMethod declara su permiso mediante webMethod(Permissions.Anyone), Permissions.SiteMember o Permissions.Admin, segun el caso de uso.
+- La autorizacion de negocio se vuelve a comprobar dentro del backend.
+- processDualBooking exige Permissions.SiteMember y resuelve memberId/contactId desde la sesion Wix.
+- No se utiliza permissions.json porque el backend no contiene modulos .jsw. La autorizacion de los modulos .web.js se define en cada WebMethod.
+
+3.2. Backend events
+- `events.js` contiene manejadores Velo gestionados por Wix.
+- Wix entrega al handler el objeto de evento ya verificado y decodificado.
+- Los eventos se procesan como handlers Velo; no se implementa un endpoint HTTP de recepción de webhooks.
+- Los handlers de este sitio aceptan objetos de evento y no procesan JWT raw.
+- La verificacion manual de JWT pertenece a endpoints HTTP autoalojados; este proyecto no implementa esa ruta.
+- La entrega puede repetirse o llegar fuera de orden. La deduplicacion se realiza mediante eventId y ControlOperativo.WEBHOOK_EVENT.
+
+3.3. Wix Bookings V2
+- La disponibilidad usa timeZone.
+- La creacion de reservas usa timezone.
+- Los objetos Writer usan resource._id y location._id conforme al contrato SDK adoptado.
+- La saga dual crea dos reservas independientes F1/F2 con pairToken y SLOT_LOCK.
+- El Writer conserva las validaciones nativas de disponibilidad y opcion de pago. No se habilitan bypasses en la saga dual.
+- No se utiliza createMultiServiceBooking para el servicio con gap de exposicion.
+- rescheduleBooking recibe bookingId, slot y options; revision pertenece a options.
+
+4. CMS Y VALIDACION
+
+4.1. ControlOperativo
+- beforeInsert normaliza y ejecuta assertControlOperativo.
+- beforeUpdate recupera el registro persistido mediante lectura fuerte, fusiona la modificacion, impide cambiar controlType, protege tipos inmutables y valida el resultado completo.
+- beforeRemove recibe itemId; recupera el registro y bloquea la eliminacion de WEBHOOK_EVENT.
+- Toda operacion de parche atomico valida sus invariantes en el writer antes de ejecutar el cambio y usa condiciones de version cuando corresponda.
+- WEBHOOK_EVENT es inmutable.
+- SLOT_LOCK exige resourceId GUID y expiresAt valido.
+- WEBHOOK_EVENT exige eventId.
+- Todos los controles exigen controlType, dedupeKey y traceId.
+
+4.2. ServiciosCatalogo
+- En servicios duales, totalDuration es la suma exacta de phase1Duration, exposureDuration y phase2Duration.
+- Si totalDuration no se informa y las fases suman un valor positivo, el hook calcula el total.
+- Si se informa un total distinto, la escritura se rechaza.
+- Las duraciones deben ser valores numericos finitos no negativos.
+
+4.3. MapaStaff
+- MapaStaff es un maestro mixto consultivo con recordType obligatorio: STAFF, GESTORIA, TERCERO o CONFIG_SISTEMA.
+- STAFF conserva la correlacion staffMemberId -> resourceId/scheduleId; los lectores deben filtrar recordType=STAFF y active=true.
+- GESTORIA almacena datos de contacto y gestion; no es usuario del sitio, no tiene memberId/resourceId ni roles.
+- TERCERO y CONFIG_SISTEMA conservan el contrato fiscal; CONFIG_SISTEMA no se crea por inferencia.
+- MapaStaff no es autoridad RBAC. security.js resuelve roles mediante Wix Members, Bookings Staff Members API e internalConfig.STAFF.WEBSITE_ROLE_BY_RESOURCE_ID.
+- La lectura CMS es PRIVILEGED; las consultas backend pasan por dataAccess elevado. No exponer datos de contacto/fiscales desde frontend ni permisos ANYONE.
+- Los hooks CMS y validation.js validan los discriminadores y sus campos especificos.
+- DatosFiscales permanece legacy hasta que el backend actualizado se publique y se verifique; eliminarla despues de la comprobacion de consumidores.
+4.4. Datos historicos fiscales
+- Los documentos fiscales append-only no se reescriben para normalizar nombres de campo.
+- Los lectores de `MovimientosCaja`, `ControlOperativo` y `CitasF2` pueden interpretar valores historicos exclusivamente en lectura, con `warn` trazable y fecha `REVIEW-BY`.
+- Los campos `ONLINE` de `paymentMethod`, `payloadJson` y `meta.paymentMethod` no se aceptan en escrituras nuevas.
+- Toda escritura nueva utiliza `WIX_PAYMENTS`, `payload` y `channelType` como contratos canonicos.
+- No se retira un lector historico hasta verificar el contenido CMS y demostrar cero lecturas.
+
+5. SEGURIDAD Y PRIVACIDAD
+
+- No confiar en IDs, roles, permisos, importes ni propiedad enviados por el navegador.
+- Validar en backend identidad Wix, propiedad del recurso y rol requerido.
+- Aplicar minimo privilegio y usar elevation solo para operaciones de sistema justificadas.
+- No exponer hashes fiscales, claves, tokens bearer, PII innecesaria ni notas internas.
+- Los tokens de visualizacion son opacos, ligados a una reserva, de un solo uso y con caducidad.
+- Los errores publicos no deben permitir enumerar reservas, miembros ni datos fiscales.
+
+6. CONCURRENCIA E IDEMPOTENCIA
+
+- Las reservas simples y duales revalidan disponibilidad en servidor.
+- SLOT_LOCK usa version, lockToken y expiracion.
+- La saga dual mantiene journal de reprogramacion en ControlOperativo con estados propios del dominio.
+- Un resultado incierto de Writer bloquea el reintento ciego y requiere reconciliacion por identidad e idempotencia.
+- Los webhooks se deduplican por eventId antes de mutar datos.
+- Los claims durables de DEDUPE_KEY y LEDGER_IDEMPOTENCY no se purgan con la retencion corta de IDEMPOTENCY.
+- DISPLAY_TOKEN se consume mediante eliminacion condicionada; la garantia de concurrencia debe probarse en Wix QA.
+
+7. TESTING Y CRITERIOS DE ACEPTACION
+
+Cada cambio debe incluir pruebas proporcionales al riesgo:
+- Unitarias de validacion y transformacion.
+- Contratos de SDK y WebMethods.
+- Integracion de acceso CMS y hooks.
+- Regresion de reservas, pagos y sagas.
+- Idempotencia y concurrencia.
+- Seguridad y permisos.
+- Pruebas end-to-end en Wix Preview y en sitio publicado cuando proceda.
+
+Los mocks offline no acreditan comportamiento de Wix CMS, permisos efectivos, hooks ni concurrencia real. El informe debe separar:
+- Verificado en codigo.
+- Verificado en CI.
+- Verificado en Wix Preview.
+- Verificado en sitio publicado.
+- Pendiente de comprobar.
+
+8. CONTROL DE CAMBIOS
+
+1) Identificar HEAD y estado del repositorio.
+2) Crear rama de trabajo.
+3) Localizar consumidores, contratos y dependencias.
+4) Consultar documentacion oficial vigente.
+5) Definir comportamiento y pruebas de aceptacion.
+6) Implementar el cambio minimo.
+7) Ejecutar lint y suites pertinentes.
+8) Revisar diff y resultados de CI.
+9) Preparar reversibilidad.
+10) Abrir PR para revision.
+11) Fusionar solo con aprobacion.
+12) Desplegar Wix solo con autorizacion expresa y QA aprobado.
+13) Verificar el resultado en el entorno destino.
+
+No fusionar ni desplegar con pruebas fallidas, riesgos criticos abiertos o sin estrategia de recuperacion. No modificar workflows de CI sin necesidad demostrada y aprobacion.
+
+9. DECISIONES CONSOLIDADAS DE LA REVISION CAPA 1 — 2026-11-09
+
+- ControlOperativo: validacion completa en insercion y actualizacion; update fusiona el estado persistido y la modificacion; remove recibe itemId y consulta el registro.
+- Journal dual: mantiene su enum especifico en booking/dualRescheduleJournal.js; no se mezcla con CONTROL_STATUS.
+- MapaStaff: maestro consultivo mixto; solo los registros STAFF participan en la correlacion de eventos nativos; nunca gobierna RBAC.
+- Eventos Wix: se consumen como objetos Velo verificados por la plataforma; no se procesa JWT dentro de events.js.
+- Permisos: .web.js controla acceso en cada webMethod; no existe manifiesto permissions.json aplicable al backend actual.
+- Control types: DEDUPE_KEY y LEDGER_IDEMPOTENCY se conservan porque tienen productores activos y retencion duradera.
+- Servicios duales: `totalDuration` debe coincidir exactamente con la suma de las tres fases; si se omite, el hook lo calcula.
+- BOOKING_STATUS.UPDATED no existe como estado. CANCELED es la grafia canonica.
+- PAYMENT_STATUS.NOT_PAID es el valor persistido; no se utiliza UNPAID en el contrato CMS.
+- Los lectores de documentos fiscales y de proyecciones operativas historicas se conservan en modo lectura, con aviso trazable y `REVIEW-BY`; no pueden generar escrituras con valores o nombres anteriores.
+
+10. VALIDACION PENDIENTE EN WIX
+
+La implementacion en GitHub no acredita por si sola el comportamiento del runtime. Antes de fusionar o desplegar deben ejecutarse:
+- Hook ControlOperativo_beforeUpdate con heartbeat, renovacion, liberacion y parche parcial.
+- Hook ControlOperativo_beforeRemove con WEBHOOK_EVENT y SLOT_LOCK.
+- Invocacion anonima y autenticada de processDualBooking.
+- Doble consumo simultaneo de DISPLAY_TOKEN.
+- Reprogramacion dual: bulkPatch, fencing, heartbeat, expiracion y recuperacion.
+- Entrega repetida y desordenada de eventos Bookings/eCommerce.
+- Duracion exacta de servicios duales mediante CMS.
+
+
+
+11. CHECKPOINT DE VALIDACION GITHUB — 2026-11-09
+
+- Rama: fix/capa1-audit-final-2026-11-09.
+- Commit validado: 5dbc3df90fc22f7eb9e4a5359b5dc6f0b3569708.
+- GitHub Actions run: 42656024671 — SUCCESS.
+- Regresion offline: 50 suites, 477 tests, 0 fallos.
+- Contratos SDK: Wix eCommerce Cart V2, Wix Data items.patch/items.bulkPatch y Bookings Reader V2 — SUCCESS.
+- ESLint: ejecucion SUCCESS.
+- Runtime Wix: pendiente; CI offline no acredita hooks, permisos, concurrencia ni eventos en sitio publicado.
+- Workflow CI usa actions/checkout@v5 y actions/setup-node@v5 con Node 24.22.1.
+
+12. BLOQUEO DE HERRAMIENTA DE LINT
+
+- El paquete oficial @wix/eslint-plugin-cli@1.0.2 declara peerDependency eslint ^8.0.0.
+- La version instalada eslint@8.25.0 esta fuera de soporte y npm marca tambien dependencias transitivas de esa cadena.
+- No se fuerza la instalacion de ESLint 10 ni se ignora la incompatibilidad de peerDependencies: hacerlo ocultaria un contrato no soportado.
+- Se conserva el plugin Wix actual hasta disponer de una version compatible mantenida o una sustitucion validada que conserve las reglas necesarias para el proyecto.
+- Este bloqueo afecta exclusivamente a la herramienta de desarrollo; no cambia el runtime Wix ni el codigo funcional.
+- El criterio de cierre de cero dependencias sin soporte queda pendiente de resolver este bloqueo. No se declara cumplimiento total de ese criterio.
+
+FIN DEL DOCUMENTO
+
+
+13. DECISIONES VINCULANTES — 2026-11-10
+
+- Wix Stores Catalog V3 y sus herramientas nativas son la única autoridad operativa del inventario comercial.
+- Orders Settings live: inventoryUpdateTrigger=ON_ORDER_PAID. Los webhooks de eCommerce no reservan, descuentan, reponen ni proyectan stock en CMS.
+- Los handlers eCommerce mantienen idempotencia, ledger fiscal, estado de reservas y reembolsos, pero no realizan escrituras de inventario.
+- Excepción temporal de desarrollo TEC-033 (2026-11-14): los hooks append-only permiten update/remove individual en la rama `chore/temporary-append-only-mutation-window`. Esta excepción no se publica; antes del despliegue productivo se restaura ENABLED=false y las allowlists/hooks append-only. No usar sobre datos reales sujetos a conservación legal.
+- La capa custom inventario.web.js, sus WebMethods, el panel de staff y los tests de su writer se retiran cuando no quedan consumidores. La retirada requiere CI y QA Wix de venta, cancelación y reembolso.
+- Depósito de reserva: 15 EUR solo para servicios >100 EUR; Wix Bookings nativo es primera opción. No configurar hasta resolver discrepancia de contrato REST vs Wix Help sobre inPerson y verificar la capacidad de la cuenta.
+- Cancelación/reprogramación gratuita con 24 h; devolución íntegra si cancela el negocio. No retención automática tardía/no-show sin revisión jurídica de proporcionalidad.
+- Registro central de decisiones: docs/DECISION-LOG.md y ADR docs/adr/2026-11-10-deposit-and-native-inventory.md.
+
+
+---
+
+ADDENDUM DE CONTROL DE CAMBIOS, PUBLICACIÓN Y QA — 2026-11-13
+
+Estas directrices prevalecen sobre las instrucciones de QA del addendum 2026-11-11 cuando difieran respecto a la existencia del sitio QA independiente.
+
+## Repositorio y publicación
+
+- GitHub `main` consultado: `738eb78faaa48502532c83c3e4b8b53db1144950`.
+- El sitio principal Wix figura Published y Velo enabled; el propietario declara que el sitio se ha actualizado y publicado.
+- No se dispone de un release/deployment ID que vincule el runtime publicado con el SHA actual de GitHub. No confundir “sitio Published” con “SHA publicado demostrado”.
+- El HEAD documental `738eb78...` no tiene estados combinados ni workflow runs asociados en la consulta. Los resultados de CI de PR #330 son históricos y no certifican automáticamente el HEAD actual.
+- Volver al proceso obligatorio rama → cambios delimitados → pruebas → diff → PR → CI/revisión → merge. Los commits documentales directos a main realizados en el corte anterior fueron una desviación de proceso; no repetirla.
+
+## Entorno QA
+
+- Existe un sitio Wix separado: `Marian Madrid QA - Aislado 2026-11`, Site ID `50b39f33-e753-4331-ab35-b2ed43dc97f7`, estado Draft, Wix Editor, Velo enabled.
+- El CMS QA tiene 43 colecciones (15 NATIVE, 28 WIX_APP), frente a 44 en producción (15 NATIVE, 29 WIX_APP). QA tiene CitasF2=0 y ControlOperativo=0; producción tiene CitasF2=1 y ControlOperativo=3. QA no dispone de cinco colecciones Stores/* presentes en producción y contiene cuatro colecciones WixForms/* adicionales.
+- La separación por Site ID está verificada, pero el aislamiento completo no: auditar automatizaciones, acciones y destinatarios de email/SMS/WhatsApp, pagos, webhooks, integraciones, permisos, Bookings y M365 antes de ejecutar casos E2E.
+- La lectura anterior de 18 automatizaciones desactivadas y 10 activas por restricciones corresponde al sitio principal. No extrapolar ese estado al nuevo sitio QA.
+- No usar el sitio Published para pruebas con side effects. No disparar automatizaciones readonly/activas ni la herramienta Test Automation sin análisis del efecto.
+
+## Estado CMS y restricciones
+
+- Producción: inventario CMS sujeto a actualización tras TEC-035. MapaStaff revision 36 / 5 registros; DatosFiscales legacy revision 21 / 1 placeholder. Recuentos NATIVE: CajaActual 1; CitasF2 1; ComplementosCatalogo 36; ControlOperativo 3; DatosFiscales 1; HistoricoCierresZ 0; InventarioStockVenta 1; LibroAsientosContablesDetalle 0; MapaStaff 3; MovimientosCaja 0; MovimientosInventario 1; PaquetesGestoria 0; RegistroIntegracion 0; RegistrosHorariosStaff 2; ServiciosCatalogo 95.
+- Wix Stores Catalog V3 es la autoridad del inventario comercial; Wix Invoices V1 en producción.
+- CitasF2 sigue con una proyección `CONFIRMED / NOT_PAID`; la última lectura nativa Bookings Reader V2 registrada devolvió `CANCELED / NOT_PAID` para el mismo bookingId. No editar manualmente la proyección ni borrar la reserva; resolver mediante handler/evento y reconciliación idempotente demostrada.
+- Mantener writers fiscales, contables y laborales deshabilitados; mantener `ACCOUNTANT_SEND_ENABLED=false`. No realizar pagos, reembolsos, movimientos de caja, cierres, asientos, fichajes ni exports reales durante QA.
+- SharePoint / Power Automate Capa 3 no está verificado live.
+
+## Regla de evidencia
+
+Todo informe separa explícitamente:
+- Verificado por lectura live.
+- Declarado por el propietario.
+- Verificado en código.
+- Verificado en CI (SHA y workflow).
+- Verificado en Wix Preview/QA.
+- Verificado en producción.
+- Inferido o pendiente.
+
+Una publicación solo se certifica como correspondiente al código cuando existe una referencia comprobable del artefacto/SHA desplegado o una verificación equivalente reproducible. No elevar una declaración a verificación.
+
+---
+
+## Addendum de autoridad y fase QA — 2026-11-14
+
+### Jerarquía de autoridad y SSOT
+
+1. **USUARIO / PROPIETARIO DEL PROYECTO — SSOT de negocio y gobierno.** El usuario es la única fuente de verdad para objetivos, requisitos, prioridades, criterios de aceptación, decisiones funcionales y autorizaciones del proyecto. Sus instrucciones expresas prevalecen sobre cualquier regla, restricción, supuesto o estado histórico de esta documentación. Las decisiones relevantes se registran en el Decision Log para trazabilidad; el registro no sustituye ni limita la autoridad del usuario.
+2. **Documentación oficial vigente de Wix y de cada integración — autoridad técnica.** Define contratos, APIs, permisos, límites y comportamiento de plataforma. Se aplica para ejecutar la decisión del usuario de forma técnicamente válida; si una limitación oficial impide cumplirla, se informa y se propone alternativa, sin cambiar unilateralmente el requisito.
+3. **Decisiones expresas del usuario registradas en el repositorio.** Son la memoria documental de las decisiones vigentes. Si un registro antiguo contradice una instrucción posterior, prevalece la instrucción posterior del usuario.
+4. **Dossier Técnico Consolidado, Dossier de Flujos, Directrices, Necesidades Web, diccionario CMS y estado del proyecto.** Son documentación derivada y subordinada a los niveles anteriores. No pueden crear autorizaciones, bloqueos o requisitos nuevos por inferencia.
+5. **Código, configuración Wix, CMS y pruebas.** Acreditan el estado implementado, no la autoridad para redefinir requisitos. Las diferencias entre lo solicitado, documentado e implementado se registran como discrepancias verificables.
+
+### Política temporal de desarrollo y pruebas
+
+**Vigencia:** fase actual de desarrollo, depuración y QA, hasta que el usuario ordene expresamente habilitar las protecciones para el despliegue.
+
+- Queda **en pausa la política append-only** durante esta fase. Ninguna colección o registro se considerará intocable únicamente por estar etiquetado como ledger, histórico, fiscal, contable, laboral, documental o append-only.
+- Queda **en pausa toda prohibición genérica de edición o eliminación de registros**, tanto individual como masiva, cuando la única causa del bloqueo sea la inmutabilidad/append-only o una restricción temporal de QA. La edición y eliminación forman parte de las operaciones permitidas durante las pruebas.
+- No se exigirán registros rectificativos como única vía de corrección durante esta fase de QA. Esa regla se reconsiderará cuando el usuario habilite expresamente las protecciones previas al despliegue.
+- Se mantienen las validaciones de esquema y tipos, la autenticación, autorización y permisos de acceso, la protección de secretos, la separación de capas, los controles de seguridad no relacionados con la inmutabilidad y la trazabilidad técnica de las pruebas. Esta pausa no autoriza accesos anónimos ni saltarse controles de identidad.
+- No se habilitan por esta decisión writers fiscales, contables, laborales, pagos, devoluciones, comunicaciones ni automatizaciones externas que tengan gates funcionales independientes. Esos gates solo se modificarán por instrucción expresa o por una decisión técnica aprobada por el usuario.
+- La pausa es temporal y **no se revierte automáticamente**. Solo el usuario puede ordenar la restauración y habilitación de las protecciones para despliegue. Antes de una publicación productiva, el estado de las protecciones debe revisarse con el usuario y quedar expresamente autorizado.
+
+### Estado de implementación y publicación
+
+El usuario declara que el código está integrado y publicado en Wix. Esta declaración se registra como **declaración del propietario**. En la consulta de GitHub de este corte, el PR #344 (feat/consolidate-fiscal-master-mapastaff-v2) figura fusionado el 2026-11-14 mediante el merge commit f3b1311eead05282e47f538afd506fe49e227141, que es el HEAD actual de main. La integración del cambio en Git está verificada. El usuario declara además que el código está publicado en Wix; no se dispone de un identificador de publicación Wix que vincule el runtime con ese SHA concreto.
+
+**Nota de ejecución:** este addendum modifica la autoridad documental y la política de trabajo. No demuestra por sí mismo que todos los hooks, WebMethods, políticas de escritura o permisos CMS del runtime Wix hayan sido modificados para permitir todas las operaciones de edición y eliminación. Esa correspondencia debe verificarse en código y en Wix antes de afirmar que la pausa está aplicada técnicamente de extremo a extremo.
