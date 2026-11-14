@@ -23,8 +23,7 @@ CAMBIOS v5017-ALIGNED-DATOSFISCALES (respecto a v5016):
              verdad de destinatarios es BUSINESS_COLLECTIONS.DATOS_FISCALES.
   ALN-DF-02: listAccountantRecipients consulta DatosFiscales y extrae
              gestores por DOS patrones tolerados en paralelo:
-               A) item dedicado con recordType "GESTOR" | "GESTORIA" |
-                  "GESTOR_FISCAL" | "ACCOUNTANT" + campo email.
+               A) item dedicado con recordType "GESTORIA" + campo email.
                B) campos embebidos gestorEmail/gestorName en cualquier
                   item (p.ej. el registro fiscal del negocio).
   ALN-DF-03: _resolveRecipientById maneja los dos patrones. Los ids del
