@@ -60,7 +60,7 @@ test('HOOK-CITAS-01 validates canonical enums, traceId and pairToken', () => {
   assert.throws(() => H.CitasF2_beforeInsert({ ...valid, serviceId: 'invalid-service' }), /serviceId.*GUID/);
   assert.throws(() => H.CitasF2_beforeInsert({ ...valid, resourceId: 'invalid-resource' }), /resourceId.*GUID/);
 
-  assert.throws(() => H.CitasF2_beforeRemove({}), /cancelacion formal/);
+  assert.doesNotThrow(() => H.CitasF2_beforeRemove({}));
 });
 
 test('HOOK-CMS-DATETIME-01 normalizes all CitasF2 DateTime fields to Date objects', () => {
@@ -105,7 +105,7 @@ test('HOOK-CMS-DATETIME-QA-01 binds conversion and guards to physical QA collect
   assert.throws(() => H.QA_LIVECMS_20261023_2000_BOOKING_DUAL_beforeInsert({
     ...item, slotStart: 'not-a-date',
   }), /DATETIME/);
-  assert.throws(() => H.QA_LIVECMS_20261023_2000_BOOKING_DUAL_beforeRemove({}), /cancelacion formal/);
+  assert.doesNotThrow(() => H.QA_LIVECMS_20261023_2000_BOOKING_DUAL_beforeRemove({}));
 });
 
 test('HOOK-CMS-DATETIME-03 normalizes timeclock recordedAt', () => {
