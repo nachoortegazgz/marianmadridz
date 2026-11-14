@@ -111,6 +111,7 @@ Los importes de los escenarios son fixtures de negocio, no transacciones ni resu
 ### H1 — Baseline y contratos
 - Fijar SHA Git, versión del Editor, configuración Wix y corte CMS.
 - Comparar módulos, imports/exports, schemas, permisos, índices y consumidores.
+- No mezclar snapshots: la auditoría CMS del QA 50b registra CajaActual revisión 1 con netAmount y staffResourceId; la auditoría live de producción 188b describe otro esquema. Resolver cualquier discrepancia contra el sitio QA real antes de tocar contratos.
 - Confirmar contratos de caja, movimientos, pagos, impuestos, idempotencia, reversiones y cierres.
 - Resolver la divergencia de pago mixto antes de habilitar el caso.
 - Gate: matriz requisito → módulo → contrato → prueba.
@@ -159,16 +160,20 @@ Cada ejecución se documenta en `docs/qa/` con:
 
 Estados permitidos: `NOT_RUN`, `PASS`, `FAIL`, `BLOCKED_ENVIRONMENT`, `BLOCKED_CONTRACT`, `MOCK_ONLY`. Nunca marcar PASS runtime basándose en mocks.
 
-## 8. Estado inicial de este plan
+## 8. Estado de ejecución — 2026-11-14
 
-- Decisión de usar Site ID `50b39f33-e753-4331-ab35-b2ed43dc97f7` como QA: **declarada por el propietario**.
-- Inventario CMS 23 colecciones / 15 NATIVE / 8 WIX_APP: **documentado en auditoría de 2026-11-14**.
-- Resolución del Site ID QA mediante la conexión Wix disponible en esta sesión: **pendiente/no resuelta**.
-- Site ID producción `188bed94-177c-4bc9-a9f0-35080d874f3e`: **identificado y publicado**; fuera del alcance de QA.
-- Pasarela simulada local: **diseño especificado; implementación pendiente de auditoría de código**.
-- Datos sintéticos y fixtures: **hay pack offline histórico; debe reconciliarse con este plan**.
-- Pruebas Wix Runtime/E2E: **no ejecutadas en esta intervención**.
-- Cambios CMS, configuración Wix, pagos, comunicaciones y publicación: **no realizados**.
+- Decisión de usar Site ID QA 50b39f33-e753-4331-ab35-b2ed43dc97f7: **declarada por el propietario** y respaldada por inventario CMS de 23 colecciones (15 NATIVE, 8 WIX_APP).
+- Acceso actual Wix: **no resuelto** por GetSiteContext/ListWixSites en la conexión disponible; solo se resuelve el sitio de producción 188bed94-177c-4bc9-a9f0-35080d874f3e.
+- Estado QA despublicado y pasarela desconectada: **declarado por el propietario; pendiente de verificación directa**. El contexto de producción continúa devolviendo Published. No confundir ambos sitios.
+- Producción 188bed94-177c-4bc9-a9-f0-35080d874f3e: **fuera del alcance de pruebas**; no usar como fallback.
+- PSP mock: **implementado como doble offline/in-memory**, requiere environment TEST, testSiteId sintético coincidente y testRunId; 7 pruebas. No está conectado a Wix Payments ni acredita sandbox del proveedor.
+- Email sink: **implementado offline/in-memory**, 4 pruebas; solo acepta destinatarios example.test y clientes con marcadores sintéticos coincidentes.
+- Datos sintéticos: **fixture creado** con tres clientes example.test y Gestoría de Pruebas, TEST-NIF-NO-VALIDO, sin teléfono operativo y destino real desactivado.
+- CMS mutation safety: **bypasses globales retirados**; hooks de ledgers incondicionalmente append-only; bulk update deshabilitado; bulk remove limitado a purgas ControlOperativo condicionadas por tipo/estado/fecha.
+- CI run #43606822535: **PASS** — Layer 1: 23 suites/299 tests; Layer 2: 19 suites/252 tests; regresión completa: 69 suites/633 tests; Wix SDK contracts y ESLint PASS.
+- Secret scanning run #43606822521: **PASS**.
+- Wix Runtime/E2E: **BLOCKED_ENVIRONMENT**; no se ejecutó Preview, escrituras CMS, pagos, emails, SMS, integraciones externas ni publicación.
+- Siguiente gate: recuperar acceso verificable al QA 50b y auditar su configuración de pagos/automatizaciones/permisos antes de habilitar pruebas runtime.
 
 ## 9. Referencias
 
