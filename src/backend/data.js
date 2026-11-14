@@ -18,7 +18,7 @@ import {
     APPEND_ONLY_MUTATION_WINDOW,
     QA_RECORD_MUTATIONS_ENABLED,
 } from "backend/internalConfig";
-import { assertCitasF2, assertControlOperativo, assertCanonicalControlFields, assertRegistrosHorariosStaff, assertDatosFiscales, assertMapaStaffRecord } from "backend/validation";
+import { assertCitasF2, assertControlOperativo, assertCanonicalControlFields, assertRegistrosHorariosStaff, assertDatosFiscales, assertMapaStaffRecord, isValidNifOrEuVat as _isValidNifOrEuVat } from "backend/validation";
 import { CONSISTENCY, getItem } from "backend/dataAccess";
 
 import { logger } from "backend/logger";
@@ -225,14 +225,7 @@ const ALLOWED_Z_UPDATE_FIELDS = new Set([
     "_updatedDate",
 ]);
 
-const NIF_LETRAS_DNI = "TRWAGMYFPDXBNJZSQVHLCKE";
 const LEDGER_SCHEMA_VERSION_AEAT = "LEDGER_V5_FISCAL";
-
-const EU_VAT_PREFIXES_LOCAL = Object.freeze([
-    "AT", "BE", "BG", "CY", "CZ", "DE", "DK", "EE", "EL", "ES",
-    "FI", "FR", "HR", "HU", "IE", "IT", "LT", "LU", "LV", "MT",
-    "NL", "PL", "PT", "RO", "SE", "SI", "SK", "XI",
-]);
 
 const VALID_THIRD_PARTY_TYPES = new Set([
     "CLIENTE", "PROVEEDOR", "STAFF", "AAPP", "MIXTO", "EMISOR",
@@ -296,40 +289,6 @@ function _roundItem(value) {
 function _isV5Fiscal(item) {
     return _safeTrim(item?.schemaVersion) === LEDGER_SCHEMA_VERSION_AEAT;
 }
-
-function _isValidNifEspanol(nif) {
-    const clean = _safeTrim(nif).toUpperCase().replace(/[-\s]/g, "");
-    if (!clean || clean.length < 8) return false;
-
-    if (/^\d{8}[A-Z]$/.test(clean)) {
-        const numero = Number(clean.slice(0, 8));
-        return clean.charAt(8) === NIF_LETRAS_DNI[numero % 23];
-    }
-    if (/^[XYZ]\d{7}[A-Z]$/.test(clean)) {
-        const prefijo = { X: "0", Y: "1", Z: "2" }[clean.charAt(0)];
-        const numero = Number(prefijo + clean.slice(1, 8));
-        return clean.charAt(8) === NIF_LETRAS_DNI[numero % 23];
-    }
-    if (/^[ABCDEFGHJKLMNPQRSUVW]\d{7}[0-9A-J]$/.test(clean)) {
-        return true;
-    }
-    return false;
-}
-
-function _isValidNifOrEuVat(nif) {
-    const clean = _safeTrim(nif).toUpperCase().replace(/[-\s]/g, "");
-    if (!clean) return false;
-    if (_isValidNifEspanol(clean)) return true;
-    if (clean.length >= 8 && clean.length <= 14) {
-        const prefix = clean.slice(0, 2);
-        if (EU_VAT_PREFIXES_LOCAL.includes(prefix)) {
-            const body = clean.slice(2);
-            if (/^[A-Z0-9]{5,12}$/.test(body)) return true;
-        }
-    }
-    return false;
-}
-
 
 function _readBreakdownBaseAndTax(item) {
     let base = 0;
