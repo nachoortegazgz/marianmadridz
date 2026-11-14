@@ -75,7 +75,7 @@ async function makeEventLogFiscalHashMovement(overrides = {}) {
     numSerieFactura: 'QA-EVENT-001',
     fechaExpedicionFactura: '2026-11-13',
     tipoFactura: 'F2',
-    nifEmisor: 'B12345678',
+    nifEmisor: 'B12345674',
     taxAmount: 2.1,
     totalAmount: 12.1,
     recordTimestamp,

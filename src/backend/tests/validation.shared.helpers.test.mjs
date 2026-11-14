@@ -15,20 +15,20 @@ test("VALIDATION-ENUM-01 accepts canonical enum values and rejects unknown value
 test("VALIDATION-FISCAL-01 validates Spanish NIF/NIE/CIF and EU VAT using shared helper", () => {
     assert.equal(V.isValidNifOrEuVat("12345678Z"), true);
     assert.equal(V.isValidNifOrEuVat("X1234567L"), true);
-    assert.equal(V.isValidNifOrEuVat("B12345678"), true);
+    assert.equal(V.isValidNifOrEuVat("B12345674"), true);
     assert.equal(V.isValidNifOrEuVat("DE123456789"), true);
     assert.equal(V.isValidNifOrEuVat("12345678A"), false);
     assert.equal(V.isValidNifOrEuVat(""), false);
 });
 
 test("VALIDATION-FISCAL-02 MapaStaff third-party validation uses the shared fiscal helper", () => {
-    assert.equal(V.assertDatosFiscales({
+    assert.equal(V.assertMapaStaffFiscalIdentity({
         taxId: "12345678Z",
         legalName: "Entidad de prueba",
         thirdPartyType: "CLIENTE",
     }), true);
 
-    assert.throws(() => V.assertDatosFiscales({
+    assert.throws(() => V.assertMapaStaffFiscalIdentity({
         taxId: "12345678A",
         legalName: "Entidad de prueba",
         thirdPartyType: "CLIENTE",

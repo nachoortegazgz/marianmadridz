@@ -240,7 +240,7 @@ test('HOOK-CAJA-07 persists exact CMS field IDs and OBJECT payloads', () => {
     ...cajaBase(),
     totalAmount: 15,
     fiscalRole: 'RECEPTOR',
-    nifEmisor: 'B12345678',
+    nifEmisor: 'B12345674',
     nifDestinatario: '12345678Z',
     irpfWithholdingRate: 0.15,
     irpfWithholdingAmount: 15,
@@ -249,7 +249,7 @@ test('HOOK-CAJA-07 persists exact CMS field IDs and OBJECT payloads', () => {
     customerEmail: 'qa@example.test',
   };
   H.MovimientosCaja_beforeInsert(item);
-  assert.equal(item.NIFEmisor, 'B12345678');
+  assert.equal(item.NIFEmisor, 'B12345674');
   assert.equal(item.NIFDestinatario, '12345678Z');
   assert.equal(item.IRPFWithholdingRate, 0.15);
   assert.equal(item.IRPFWithholdingAmount, 15);
@@ -262,7 +262,7 @@ test('HOOK-CAJA-07 persists exact CMS field IDs and OBJECT payloads', () => {
   assert.equal(item.payloadFiscal.customerEmail, 'qa@example.test');
   assert.ok(!('aeatPayload' in item));
   assert.ok(!('customerEmail' in item));
-  assert.equal(H.readIssuerTaxId(item), 'B12345678');
+  assert.equal(H.readIssuerTaxId(item), 'B12345674');
   assert.equal(H.readRecipientTaxId(item), '12345678Z');
 });
 
@@ -338,7 +338,7 @@ test('HOOK-FISCAL-CONFIG-01 CONFIG_SISTEMA accepts pending fiscal identity witho
     /DATE ISO/
   );
   assert.throws(
-    () => H.MapaStaff_beforeInsert({ ...config, nifProductor: 'B12345678' }),
+    () => H.MapaStaff_beforeInsert({ ...config, nifProductor: 'B12345674' }),
     /no permitido en registros fiscales MapaStaff/
   );
 });
@@ -346,7 +346,7 @@ test('HOOK-FISCAL-CONFIG-01 CONFIG_SISTEMA accepts pending fiscal identity witho
 test('HOOK-FISCAL-CONFIG-02 third-party fiscal rows require identity, schemaVersion and traceId', () => {
   const thirdParty = {
     recordType: IC.RECORD_TYPE.TERCERO,
-    taxId: 'B12345678',
+    taxId: 'B12345674',
     legalName: 'Staff fiscal identity',
     thirdPartyType: 'STAFF',
     schemaVersion: 1,
@@ -380,14 +380,14 @@ test('HOOK-FISCAL-CONFIG-02 third-party fiscal rows require identity, schemaVers
 test('HOOK-FISCAL-CONFIG-03 legacy aliases are normalized and removed before persistence', () => {
   const item = {
     recordType: IC.RECORD_TYPE.TERCERO,
-    nifCif: 'B12345678',
+    nifCif: 'B12345674',
     razonSocial: 'Proveedor',
     tipoTercero: 'PROVEEDOR',
     schemaVersion: 1,
     traceId: 'trace-tercero-legacy-001',
   };
   assert.doesNotThrow(() => H.MapaStaff_beforeInsert(item));
-  assert.equal(item.taxId, 'B12345678');
+  assert.equal(item.taxId, 'B12345674');
   assert.equal(item.legalName, 'Proveedor');
   assert.equal(item.thirdPartyType, 'PROVEEDOR');
   assert.ok(!('nifCif' in item));

@@ -1,3 +1,17 @@
+## Addendum vigente — baseline 2026-11-14 (prevalece sobre bloques históricos)
+
+- Git `main` al inicio de esta reconciliación: `79b6238fe4c23206bb8e81327191ab48425e3a0d`, merge de PR #351.
+- PR #351 dejó una regresión en `src/backend/validation.js`: eliminó exports aún consumidos por `data.js`. La recuperación está en PR #352; CI completo PASS sobre el SHA `609ccc948da3e63d3fd8aa20f5e64c7649770660` (run #1054); commits posteriores en esta PR son solo documentación.
+- CMS live: **41 colecciones (12 NATIVE, 29 WIX_APP), 980 campos**. `MapaStaff` revisión 105 / 56 campos. `DatosFiscales`, `InventarioStockVenta` y `MovimientosInventario` no existen en el inventario live del corte; GET individual 404 / `WDE0025`.
+- Wix Stores Catalog V3 es la autoridad del stock comercial. La capa custom de inventario está retirada; las referencias a sus colecciones, exports o writers son históricas y no autorizan su recreación.
+- `QA_RECORD_MUTATIONS_ENABLED=true` sigue activa durante QA por instrucción del propietario. Es un bloqueo para producción; no se ha restaurado ni publicado.
+- No existe evidencia de release que vincule el runtime Wix publicado con el SHA actual de Git. No se declara validación E2E ni despliegue.
+- SharePoint / Power Automate Capa 3 sigue siendo diseño documental, no integración operativa certificada.
+
+Detalle y evidencias: [reconciliación de baseline y recuperación de validadores](docs/qa/2026-11-14-baseline-reconciliation.md).
+
+---
+
 ## Vigencia operativa — fase de desarrollo y QA (2026-11-14)
 
 **Autoridad:** el usuario/propietario es la SSOT de negocio, requisitos, prioridades, criterios de aceptación y autorizaciones. Las instrucciones expresas posteriores del usuario prevalecen sobre decisiones y restricciones documentales anteriores. La documentación oficial de Wix y de las integraciones gobierna únicamente los contratos y límites técnicos de la plataforma.
@@ -6,7 +20,7 @@
 
 **Restauración:** esta política no se revierte automáticamente. Solo el usuario puede ordenar la restauración de append-only y de las restricciones de mutación para preparar el despliegue. No publicar a producción basándose únicamente en esta excepción de QA.
 
-**Estado Git/Wix:** PR #344–#349 están integradas en main; HEAD verificado en este corte: `9268ee3006f7e12ccc883e5535739c0fa76c827d`. El merge del código QA PR #346 es `b68e4e048ce5fc1c022fc6ffc2643d5983972107`. CI de PR #346: Layer 1 23 suites/296 pruebas, Layer 2 18 suites/246 pruebas, regresión completa 68 suites/627 pruebas; SDK contracts, ESLint y Gitleaks correctos. El usuario declara que la versión base anterior está publicada en Wix; la ampliación de mutaciones QA está integrada en Git pero aún no publicada en Wix. No se dispone de release Wix vinculado a SHA.
+**Estado Git/Wix:** PR #344–#351 están integradas en main; HEAD verificado en este corte: `79b6238fe4c23206bb8e81327191ab48425e3a0d`. El merge del código QA PR #346 es `b68e4e048ce5fc1c022fc6ffc2643d5983972107`. CI de PR #346: Layer 1 23 suites/296 pruebas, Layer 2 18 suites/246 pruebas, regresión completa 68 suites/627 pruebas; SDK contracts, ESLint y Gitleaks correctos. El usuario declara que la versión base anterior está publicada en Wix; la ampliación de mutaciones QA está integrada en Git pero aún no publicada en Wix. No se dispone de release Wix vinculado a SHA.
 
 **CMS maestro:** MapaStaff revisión live 105, 56 campos físicos (incluidos 4 campos de sistema). El inventario live actual no devuelve `DatosFiscales`; una consulta individual devuelve HTTP 404 / `WDE0025` (la colección no existe). El número y tipo de registros de MapaStaff no se han consultado en este corte.
 
@@ -1600,10 +1614,10 @@ Las definiciones siguientes combinan contrato físico live y documentación/cód
 | `cardAmount` / `bizumAmount` / `otherAmount` | CajaActual | NUMBER | Acumulados actuales por medio de pago; no equivalen a efectivo físico. |
 | `ticketNumber` / `ticketSeries` / `ticketSequence` | CajaActual | TEXT / TEXT / NUMBER | Identificación y secuencia del último ticket. |
 | `cashMovementId` | CajaActual | TEXT | Identificador textual del movimiento asociado en `MovimientosCaja`. |
-| `taxId` | DatosFiscales | TEXT | NIF/NIE/CIF/VAT-UE del tercero; validado por `assertDatosFiscales`. |
-| `legalName` | DatosFiscales | TEXT | Razón social/nombre legal del tercero. |
-| `recordType` | DatosFiscales | TEXT | Discriminador fiscal; `RECORD_TYPE` contempla `TERCERO` y `CONFIG_SISTEMA`. |
-| `thirdPartyType` | DatosFiscales | TEXT | Tipo de tercero según enum fiscal del backend. |
+| `taxId` | MapaStaff | TEXT | NIF/NIE/CIF/VAT-UE del tercero; validado por `assertMapaStaffFiscalIdentity`. |
+| `legalName` | MapaStaff | TEXT | Razón social/nombre legal del tercero. |
+| `recordType` | MapaStaff | TEXT | Discriminador fiscal; `RECORD_TYPE` contempla `TERCERO` y `CONFIG_SISTEMA`. |
+| `thirdPartyType` | MapaStaff | TEXT | Tipo de tercero según enum fiscal del backend. |
 | `numSerieFactura` | MovimientosCaja | TEXT | Número de serie/número correlativo de factura o ticket. |
 | `sequenceNumber` | MovimientosCaja | NUMBER | Secuencia numérica del ledger, alimentada desde los contadores de CajaActual. |
 | `transactionId` | MovimientosCaja | TEXT | Identidad de la transacción para idempotencia del hecho económico. |

@@ -72,10 +72,10 @@ test('READ-06 fiscal aggregator prefers canonical ledger hash over historical al
 test('TAXID-01 business tax id reads MapaStaff CONFIG_SISTEMA taxId', async () => {
   wixDataMock._reset();
   wixDataMock._seed(IC.BUSINESS_COLLECTIONS.MAPA_STAFF, [
-    { recordType: IC.RECORD_TYPE.CONFIG_SISTEMA, taxId: 'B12345678', legalName: 'Marian Madrid', thirdPartyType: 'EMISOR' },
+    { recordType: IC.RECORD_TYPE.CONFIG_SISTEMA, taxId: 'B12345674', legalName: 'Marian Madrid', thirdPartyType: 'EMISOR' },
   ]);
   const id = await T.getBusinessTaxId('trace-taxid-1');
-  assert.strictEqual(id, 'B12345678');
+  assert.strictEqual(id, 'B12345674');
   /* FIXTURE-FIX (2026-10-13): fiscalAggregator.web.js resuelve wix-data por la
      via dataAccess (API v2), que el mock registra como op 'query_v2'; el op
      'query' corresponde al builder historical v1. Se aceptan ambos para no
@@ -226,7 +226,7 @@ test('FISCAL-PAYMENT-01 transfer and Wix Payments use distinct payment buckets',
 test('FISCAL-SMOKE-01 explicit smoke-test movements are excluded from quarterly totals', async () => {
   wixDataMock._reset();
   wixDataMock._seed(IC.BUSINESS_COLLECTIONS.MAPA_STAFF, [
-    { recordType: IC.RECORD_TYPE.CONFIG_SISTEMA, taxId: 'B12345678', legalName: 'Marian Madrid', thirdPartyType: 'EMISOR' },
+    { recordType: IC.RECORD_TYPE.CONFIG_SISTEMA, taxId: 'B12345674', legalName: 'Marian Madrid', thirdPartyType: 'EMISOR' },
   ]);
   wixDataMock._seed(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA, [
     {

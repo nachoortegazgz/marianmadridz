@@ -18,7 +18,7 @@ import {
     APPEND_ONLY_MUTATION_WINDOW,
     QA_RECORD_MUTATIONS_ENABLED,
 } from "backend/internalConfig";
-import { assertCitasF2, assertControlOperativo, assertCanonicalControlFields, assertRegistrosHorariosStaff, assertDatosFiscales, assertMapaStaffRecord, isValidNifOrEuVat as _isValidNifOrEuVat } from "backend/validation";
+import { assertCitasF2, assertControlOperativo, assertCanonicalControlFields, assertRegistrosHorariosStaff, assertMapaStaffFiscalIdentity, assertMapaStaffRecord, isValidNifOrEuVat as _isValidNifOrEuVat } from "backend/validation";
 import { CONSISTENCY, getItem } from "backend/dataAccess";
 
 import { logger } from "backend/logger";
@@ -787,7 +787,7 @@ export function MapaStaff_beforeInsert(item) {
     if (!type || !VALID_THIRD_PARTY_TYPES.has(type)) {
         _schemaError("thirdPartyType invalido (CLIENTE, PROVEEDOR, STAFF, AAPP, MIXTO, EMISOR)");
     }
-    assertDatosFiscales(item);
+    assertMapaStaffFiscalIdentity(item);
     return item;
 }
 
@@ -817,7 +817,7 @@ export function MapaStaff_beforeUpdate(item) {
             _schemaError(`${field} debe ser BOOLEAN según el esquema CMS`);
         }
     }
-    assertDatosFiscales(item);
+    assertMapaStaffFiscalIdentity(item);
     return item;
 }
 

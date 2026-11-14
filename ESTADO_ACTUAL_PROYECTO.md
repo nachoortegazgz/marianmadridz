@@ -1,3 +1,17 @@
+## Addendum vigente — baseline 2026-11-14 (prevalece sobre bloques históricos)
+
+- Git `main` al inicio de esta reconciliación: `79b6238fe4c23206bb8e81327191ab48425e3a0d`, merge de PR #351.
+- PR #351 dejó una regresión en `src/backend/validation.js`: eliminó exports aún consumidos por `data.js`. La recuperación está en PR #352; CI completo PASS sobre el SHA `609ccc948da3e63d3fd8aa20f5e64c7649770660` (run #1054); commits posteriores en esta PR son solo documentación.
+- CMS live: **41 colecciones (12 NATIVE, 29 WIX_APP), 980 campos**. `MapaStaff` revisión 105 / 56 campos. `DatosFiscales`, `InventarioStockVenta` y `MovimientosInventario` no existen en el inventario live del corte; GET individual 404 / `WDE0025`.
+- Wix Stores Catalog V3 es la autoridad del stock comercial. La capa custom de inventario está retirada; las referencias a sus colecciones, exports o writers son históricas y no autorizan su recreación.
+- `QA_RECORD_MUTATIONS_ENABLED=true` sigue activa durante QA por instrucción del propietario. Es un bloqueo para producción; no se ha restaurado ni publicado.
+- No existe evidencia de release que vincule el runtime Wix publicado con el SHA actual de Git. No se declara validación E2E ni despliegue.
+- SharePoint / Power Automate Capa 3 sigue siendo diseño documental, no integración operativa certificada.
+
+Detalle y evidencias: [reconciliación de baseline y recuperación de validadores](docs/qa/2026-11-14-baseline-reconciliation.md).
+
+---
+
 ## Vigencia operativa — fase de desarrollo y QA (2026-11-14)
 
 **Autoridad:** el usuario/propietario es la SSOT de negocio, requisitos, prioridades, criterios de aceptación y autorizaciones. Las instrucciones expresas posteriores del usuario prevalecen sobre decisiones y restricciones documentales anteriores. La documentación oficial de Wix y de las integraciones gobierna únicamente los contratos y límites técnicos de la plataforma.
@@ -6,9 +20,9 @@
 
 **Restauración:** esta política no se revierte automáticamente. Solo el usuario puede ordenar la restauración de append-only y de las restricciones de mutación para preparar el despliegue. No publicar a producción basándose únicamente en esta excepción de QA.
 
-**Estado Git/Wix:** PR #344, PR #345 y PR #346 están integrados en main; HEAD actual b19a8f676d7be157d457588f6acf5332c2a34d32; merge del código QA PR #346: b68e4e048ce5fc1c022fc6ffc2643d5983972107. CI de PR #346: Layer 1 23 suites/296 pruebas, Layer 2 18 suites/246 pruebas, regresión completa 68 suites/627 pruebas; SDK contracts, ESLint y Gitleaks correctos. El usuario declara que la versión base anterior está publicada en Wix; la ampliación de mutaciones QA está integrada en Git pero aún no publicada en Wix. No se dispone de release Wix vinculado a SHA.
+**Estado Git/Wix:** PR #344–#351 están integradas en main; HEAD al inicio de la reconciliación `79b6238fe4c23206bb8e81327191ab48425e3a0d`. PR #351 introdujo una regresión al retirar validadores aún consumidos; su recuperación está en PR #352 y CI queda pendiente. La publicación del sitio está declarada/verificada como estado del sitio, pero no existe release ID que vincule runtime y SHA. No se ha publicado esta tanda.
 
-**CMS maestro:** MapaStaff revisión 36, 42 campos y 5 registros (3 STAFF, 1 TERCERO, 1 GESTORIA). DatosFiscales permanece como colección legacy con un placeholder QA; su retirada requiere verificar runtime y consumidores tras publicar el backend migrado.
+**CMS maestro:** MapaStaff revisión live 105, 56 campos físicos. Inventario live: 41 colecciones (12 NATIVE, 29 WIX_APP), 980 campos. `DatosFiscales`, `InventarioStockVenta` y `MovimientosInventario` no existen en este corte (404 / WDE0025); sus menciones en este documento son históricas salvo nueva evidencia.
 
 ---
 
@@ -334,7 +348,7 @@ Esta actualización solo modifica documentación del repositorio. No se ha modif
 - [Auditoría y migración CitasF2](docs/qa/2026-11-13-citasf2-keyfields.md).
 - [Adaptaciones temporales de QA](docs/qa/2026-11-13-site-qa-environment.md).
 - [Registro de decisiones](docs/DECISION-LOG.md).
-- [Directrices de desarrollo](DIRECTRICES_DESARROLLO_CODIGO.txt).
+- [Directrices de desarrollo](docs/engineering/DEVELOPMENT-STANDARDS.md).
 
 ---
 
@@ -512,7 +526,7 @@ Una reserva sintética autorizada creada el 2026-11-11 quedó CONFIRMED en Wix B
 ## 9. Documentación canónica y jerarquía
 
 1. [README](README.md): punto de entrada e índice.
-2. [Directrices de desarrollo](DIRECTRICES_DESARROLLO_CODIGO.txt): reglas obligatorias de ingeniería y QA.
+2. [Directrices de desarrollo](docs/engineering/DEVELOPMENT-STANDARDS.md): reglas obligatorias de ingeniería y QA.
 3. [Dossier técnico consolidado](DOSSIER%20TÉCNICO%20CONSOLIDADO.md): contratos y arquitectura técnica detallada.
 4. [Dossier flujos Capa 1 → Capa 3](DOSSIER%20FLUJOS%20END%20TO%20END%20CAPA%203.md): arquitectura documental y límites de Capa 3.
 5. [Estado detallado del proyecto](docs/PROJECT-STATUS.md): auditorías y evidencia histórica por dominio.
