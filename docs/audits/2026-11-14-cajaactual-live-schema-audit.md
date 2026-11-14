@@ -1,3 +1,7 @@
+> **SSOT de entorno vigente (2026-11-14):** el único sitio del proyecto es QA: `188bed94-177c-4bc9-a9f0-35080d874f3e` (`https://www.marianmadrid.es/`). El propietario confirma que nunca ha tenido actividad real, que todos los datos son sintéticos, que el cliente de pruebas es Nacho Pitt (`nachoortegazgz@gmail.com`) y que la pasarela está desconectada. No existe otro sitio QA ni un QA externo designado. Las referencias anteriores a otros Site ID o a este sitio como producción quedan supersedidas. El estado Wix Published no altera su clasificación funcional como QA. Véase [SSOT del entorno QA](../qa/QA-ENVIRONMENT-SSOT.md).
+
+---
+
 > **Alcance corregido:** esta auditoría corresponde al sitio productivo 188bed94-177c-4bc9-a9f0-35080d874f3e y no al sitio QA 50b39f33-e753-4331-ab35-b2ed43dc97f7. El snapshot CMS QA de 2026-11-14 registra CajaActual revisión 1 con netAmount y staffResourceId; por tanto, la ausencia de esos campos en el esquema de producción no demuestra un defecto del contrato QA. No aplicar cambios basados en esta auditoría a QA ni a producción sin volver a leer el esquema del sitio objetivo.
 
 # Auditoría de esquema live — CajaActual
