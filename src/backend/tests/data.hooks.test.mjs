@@ -89,18 +89,28 @@ test('HOOK-CMS-DATETIME-03 normalizes timeclock recordedAt', () => {
   const item = {
     resourceId: 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeee0001',
     memberId: 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeee0002',
-    traceId: 'trace-timeclock-datetime',
-    recordedAt: '2026-11-05T10:10:00.000Z',
-    dayKey: '2026-11-05',
-    monthKey: '2026-11',
+    recordId: 'clock-record-qa-001',
     clockEventType: IC.CLOCK_EVENT_TYPE.ENTRADA,
     recordType: IC.RECORD_TYPE_HORARIOS.REGULAR,
+    source: IC.CLOCK_RECORD_SOURCE.WIX_WEB_METHOD,
+    recordedAt: '2026-11-05T10:10:00.000Z',
+    recordedTime: '2026-11-05T10:10:00.000Z',
+    workDate: new Date('2026-11-05T00:00:00.000Z'),
+    dayKey: '2026-11-05',
+    monthKey: '2026-11',
+    timeZone: IC.SDK_CONFIG.TZ,
+    schemaVersion: IC.TIMECLOCK_SCHEMA_VERSION,
+    recordHash: 'b'.repeat(64),
+    traceId: 'trace-timeclock-datetime',
     signature: 'a'.repeat(64),
   };
   H.RegistrosHorariosStaff_beforeInsert(item);
   assert.ok(item.recordedAt instanceof Date);
+  assert.ok(item.recordedTime instanceof Date);
   assert.strictEqual(item.recordedAt.toISOString(), '2026-11-05T10:10:00.000Z');
-  assert.throws(() => H.RegistrosHorariosStaff_beforeInsert({ ...item, recordedAt: 'invalid' }), /DATETIME/);
+  assert.strictEqual(item.recordedTime.toISOString(), '2026-11-05T10:10:00.000Z');
+  assert.throws(() => H.RegistrosHorariosStaff_beforeInsert({ ...item, recordedTime: 'invalid' }), /DATETIME/);
+  assert.throws(() => H.RegistrosHorariosStaff_beforeInsert({ ...item, recordHash: 'invalid' }), /recordHash/);
 });
 
 // -----------------------------------------------------------------------------
@@ -375,6 +385,12 @@ test('HOOK-CLOCK-01 insert requires canonical fields and HMAC signature', () => 
   const base = {
     resourceId: 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeee0001',
     memberId: 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeee0002',
+    recordId: 'clock-record-qa-002',
+    source: IC.CLOCK_RECORD_SOURCE.WIX_WEB_METHOD,
+    workDate: new Date('2026-11-12T00:00:00.000Z'),
+    timeZone: IC.SDK_CONFIG.TZ,
+    recordHash: 'b'.repeat(64),
+    schemaVersion: IC.TIMECLOCK_SCHEMA_VERSION,
     recordedAt: '2026-11-12T09:00:00.000Z',
     dayKey: '2026-11-12',
     monthKey: '2026-11',
