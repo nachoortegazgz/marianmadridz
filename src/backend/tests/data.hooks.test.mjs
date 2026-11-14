@@ -417,6 +417,11 @@ test('HOOK-CAJA-01 enforces current CajaActual field types', () => {
     expectedCash: 300,
   };
   assert.doesNotThrow(() => H.CajaActual_beforeInsert({ ...cash }));
+  assert.doesNotThrow(() => H.CajaActual_beforeInsert({ ...cash, operationDate: '2026-11-14' }));
+  assert.throws(
+    () => H.CajaActual_beforeInsert({ ...cash, operationDate: '2026-02-31' }),
+    /valid DATE YYYY-MM-DD/
+  );
   assert.throws(
     () => H.CajaActual_beforeInsert({ ...cash, sequenceCounters: '{}' }),
     /sequenceCounters must be OBJECT/
