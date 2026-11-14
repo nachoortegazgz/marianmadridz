@@ -1,6 +1,6 @@
 // Synthetic-only identities for offline QA. No real phone numbers or fiscal identifiers.
 export const QA_TEST_RUN_ID = "TEST-RUN-OFFLINE-001";
-export const QA_TEST_SITE_ID = "site-qa-synthetic";
+export const QA_TEST_SITE_ID = "50b39f33-e753-4331-ab35-b2ed43dc97f7";
 
 export const QA_CUSTOMERS = Object.freeze([
   Object.freeze({
