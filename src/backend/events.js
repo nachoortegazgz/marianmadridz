@@ -653,6 +653,7 @@ async function _resolveStaffResourceFromMapaStaff(staffMemberId) {
     }
 
     const result = await dalQuery(MAPA_STAFF_COL)
+        .eq("recordType", "STAFF")
         .eq("staffMemberId", id)
         .eq("active", true)
         .limit(2)

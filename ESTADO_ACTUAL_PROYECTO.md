@@ -526,3 +526,12 @@ PR #286 se fusionó en `main` mediante squash el 2026-11-11 a las 15:00:16 UTC. 
 - Pendiente antes de despliegue: runtime/E2E aislado para eventos de pago/reembolso, resolución de los nueve flujos nativos de email y ruta WhatsApp oficialmente soportada.
 
 Evidencia: [PR #286](https://github.com/nachoortegazgz/marianmadridz/pull/286), [merge commit](https://github.com/nachoortegazgz/marianmadridz/commit/0d8f6efc581bc6a3d892702ba1c32af73e829888), [auditoría de automatizaciones](docs/audits/2026-11-11-wix-automation-recipient-isolation.md).
+
+## Addendum TEC-035 — consolidación MapaStaff / GESTORIA (2026-11-14)
+
+- El propietario confirma que los registros históricos del sitio son sintéticos de pruebas y que no existe actividad real. La ventana temporal append-only sigue autorizada hasta nueva instrucción expresa; no se han habilitado writers fiscales/contables ni operaciones reales.
+- `MapaStaff`: revisión 36, 42 campos, 5 registros (3 STAFF, 1 TERCERO QA, 1 GESTORIA). Los tres IDs staff y roles se conservaron. El registro TERCERO QA se migró conservando su ID original.
+- `GESTORIA`: NachoGest, Calle Burgos 25, 666724634, nachoortegazgz@gmail.com. Sin identidad Wix ni roles.
+- Permisos MapaStaff: lectura PRIVILEGED; insert/update/remove CMS_EDITOR. Backend consulta mediante `@wix/data` elevado.
+- `DatosFiscales` sigue live como legacy con un placeholder QA; no se elimina hasta desplegar el backend actualizado y verificar hooks/WebMethods.
+- Código migrado en rama `feat/consolidate-fiscal-master-mapastaff-v2`. CI, Wix Local Editor, publicación Wix y E2E pendientes.

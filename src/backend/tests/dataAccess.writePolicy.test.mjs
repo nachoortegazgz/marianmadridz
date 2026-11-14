@@ -42,9 +42,18 @@ test("insert policy allows only declared collections and canonical ControlOperat
     assert.throws(() => assertInsertAllowed(C.CITAS_F2, {
         bookingStatus: "PENDING",
     }), { code: "CMS_INSERT_BOOKING_ID_REQUIRED" });
-    assert.doesNotThrow(() => assertInsertAllowed(C.DATOS_FISCALES, {
+    assert.doesNotThrow(() => assertInsertAllowed(C.MAPA_STAFF, {
         recordType: RECORD_TYPE.TERCERO,
         taxId: "X0000000X",
+    }));
+    assert.doesNotThrow(() => assertInsertAllowed(C.MAPA_STAFF, {
+        recordType: RECORD_TYPE.GESTORIA,
+        name: "NachoGest",
+        email: "gestoria@example.test",
+    }));
+    assert.doesNotThrow(() => assertInsertAllowed(C.MAPA_STAFF, {
+        recordType: RECORD_TYPE.STAFF,
+        staffMemberId: "synthetic-staff-member",
     }));
     assert.throws(() => assertInsertAllowed("UnknownCollection", {}), {
         code: "CMS_INSERT_COLLECTION_DENIED",
@@ -59,7 +68,7 @@ test("insert policy allows only declared collections and canonical ControlOperat
 });
 
 test("insert policy rejects unknown fiscal record types", () => {
-    assert.throws(() => assertInsertAllowed(C.DATOS_FISCALES, {
+    assert.throws(() => assertInsertAllowed(C.MAPA_STAFF, {
         recordType: "INVOICE_LEDGER",
     }), { code: "CMS_INSERT_FISCAL_RECORD_TYPE_INVALID" });
 });

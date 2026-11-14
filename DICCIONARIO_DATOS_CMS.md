@@ -890,3 +890,38 @@ No se ha ejecutado CI completo, Wix Local Editor ni E2E en runtime. No se ha pub
 
 ---
 
+
+## Addendum de vigencia — consolidación fiscal en MapaStaff (2026-11-14)
+
+Este addendum prevalece sobre las secciones históricas que describen `DatosFiscales` como maestro activo o `MapaStaff` como una colección exclusivamente de mapeo staff.
+
+**CMS live verificado:** `MapaStaff` revisión 36, 42 campos, 5 registros. Se añadieron al esquema los campos fiscales y de contacto que existían en `DatosFiscales`, más `recordType` y `active`. `DatosFiscales` permanece live en revisión 21 con 1 registro QA sintético hasta que se publique el backend migrado; su retirada aún no se ha ejecutado.
+
+**Esquema de MapaStaff (42 campos físicos; 38 de negocio + 4 de sistema):**
+
+```text
+displayName:TEXT, traceId:TEXT, staffMemberId:TEXT, scheduleId:TEXT,
+thirdPartyId:TEXT, staffName:TEXT, rolWebsite:TEXT, rolBookings:TEXT,
+memberId:TEXT, resourceId:TEXT, ServiciosCatalogo_staffMembers:MULTI_REFERENCE,
+recordType:TEXT, fechaInicioVerifactu:DATE, schemaVersion:NUMBER,
+province:TEXT, postalCode:TEXT, commercialName:TEXT, streetNumber:TEXT,
+businessDescription:TEXT, currency:TEXT, phone:TEXT, taxId:TEXT,
+legalName:TEXT, thirdPartyType:TEXT, address:TEXT, taxRegime:TEXT,
+verifactuEnabled:BOOLEAN, verifactuVersion:TEXT,
+tipoUsoPosibleMultiOT:BOOLEAN, indicadorMultiplesOT:BOOLEAN, email:TEXT,
+name:TEXT, label:TEXT, nif:TEXT, gestorEmail:TEXT, gestorName:TEXT,
+gestorNif:TEXT, active:BOOLEAN,
+_id:TEXT, _createdDate:DATETIME, _updatedDate:DATETIME, _owner:TEXT
+```
+
+**Valores `recordType` live:**
+- `STAFF`: tres registros, conservan sus IDs y roles previos; `active=true`.
+- `TERCERO`: un registro QA sintético migrado desde `DatosFiscales` conservando su ID.
+- `GESTORIA`: un registro `NachoGest` con dirección `Calle Burgos 25`, teléfono `666724634` y email `nachoortegazgz@gmail.com`; sin `memberId`, `staffMemberId`, `resourceId` ni roles.
+- `CONFIG_SISTEMA`: no existe registro; no inferir identidad fiscal, régimen ni configuración Veri*Factu.
+
+**Permisos live:** `itemRead=PRIVILEGED`; insert/update/remove=`CMS_EDITOR`. El backend consulta mediante la capa `@wix/data` elevada. No dar acceso público a los datos de contacto/fiscales.
+
+**Código en rama** `feat/consolidate-fiscal-master-mapastaff-v2`: el backend valida los cuatro tipos; `events.js` filtra `recordType=STAFF`; los lectores/escritores fiscales y destinatarios de gestoría usan `MapaStaff`. El DTO de destinatarios incorpora teléfono y dirección. No se identificó consumidor frontend directo de `listAccountantRecipients`; no se añadió una UI nueva sin requisito.
+
+**Retirada de DatosFiscales:** mantener la colección antigua sin nuevas escrituras hasta publicar el backend migrado, comprobar hooks/WebMethods en runtime y verificar que no quedan consumidores activos. Después eliminarla y hacer readback del inventario. No eliminarla antes del despliegue.
