@@ -10,7 +10,7 @@
 
 - 23 colecciones: 15 NATIVE y 8 WIX_APP; 524 campos físicos en las colecciones NATIVE.
 - Los registros presentes se consideran sintéticos/de prueba; no acreditan operaciones comerciales, fiscales ni laborales reales.
-- CajaActual: 39 campos, 1 registro. sequenceCounters es OBJECT y el valor leído es objeto JSON; ticketSequence no existe. id coincide con _id en el singleton leído.
+- CajaActual: 39 campos, 1 registro. operationDate es DATE, openingAmount NUMBER y sequenceCounters OBJECT. cashRegisterStatus=SIMULACION; isOpen=true no es autoridad. id=_id; currentSequence=0 sin consumidor localizado.
 - ControlOperativo: 42 campos, 0 registros. ownerToken, retryAfter y nextRetryAt no existen; traceId es el token de fencing canónico.
 - ComplementosCatalogo: 18 campos, 36 registros. addonId coincide con _id en 36/36; traceId está vacío. name y description coinciden en texto, pero son TEXT y RICH_TEXT.
 - MapaStaff: 18 campos, 3 registros. Contiene staffMemberId, resourceId, scheduleId, memberId y active; no declara recordType, traceId ni campos fiscales.
