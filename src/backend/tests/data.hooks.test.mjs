@@ -95,7 +95,7 @@ test('HOOK-CMS-DATETIME-03 normalizes timeclock recordedAt', () => {
     source: IC.CLOCK_RECORD_SOURCE.WIX_WEB_METHOD,
     recordedAt: '2026-11-05T10:10:00.000Z',
     recordedTime: '2026-11-05T10:10:00.000Z',
-    workDate: new Date('2026-11-05T00:00:00.000Z'),
+    workDate: '2026-11-05',
     dayKey: '2026-11-05',
     monthKey: '2026-11',
     timeZone: IC.SDK_CONFIG.TZ,
@@ -107,6 +107,8 @@ test('HOOK-CMS-DATETIME-03 normalizes timeclock recordedAt', () => {
   H.RegistrosHorariosStaff_beforeInsert(item);
   assert.ok(item.recordedAt instanceof Date);
   assert.ok(item.recordedTime instanceof Date);
+  assert.strictEqual(typeof item.workDate, 'string');
+  assert.strictEqual(item.workDate, '2026-11-05');
   assert.strictEqual(item.recordedAt.toISOString(), '2026-11-05T10:10:00.000Z');
   assert.strictEqual(item.recordedTime.toISOString(), '2026-11-05T10:10:00.000Z');
   assert.throws(() => H.RegistrosHorariosStaff_beforeInsert({ ...item, recordedTime: 'invalid' }), /DATETIME/);
@@ -387,7 +389,7 @@ test('HOOK-CLOCK-01 insert requires canonical fields and HMAC signature', () => 
     memberId: 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeee0002',
     recordId: 'clock-record-qa-002',
     source: IC.CLOCK_RECORD_SOURCE.WIX_WEB_METHOD,
-    workDate: new Date('2026-11-12T00:00:00.000Z'),
+    workDate: '2026-11-12',
     timeZone: IC.SDK_CONFIG.TZ,
     recordHash: 'b'.repeat(64),
     schemaVersion: IC.TIMECLOCK_SCHEMA_VERSION,
