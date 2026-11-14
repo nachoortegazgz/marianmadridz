@@ -1824,7 +1824,7 @@ Las relaciones de la tabla son semánticas/contractuales; solo las marcadas MULT
 - `src/backend/citasManager.web.js`: consumidores de campos canónicos de reservas.
 - `src/backend/accountingLedger.js`: contrato de huella y append-only contable.
 - `DOSSIER TÉCNICO CONSOLIDADO.md`, sección 14 y secciones de modelo CMS/keyfields.
-- `docs/qa/2026-11-13-citasf2-keyfields.md` y `docs/qa/2026-11-13-site-qa-environment.md`.
+- `docs/qa/2026-11-13-citasf2-keyfields.md` y `docs/audits/2026-11-13-current-site-isolation.md`.
 
 ### Documentación oficial Wix
 - [Wix Data APIs — Introduction](https://dev.wix.com/docs/api-reference/business-solutions/cms/introduction)
