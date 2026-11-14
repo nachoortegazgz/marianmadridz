@@ -1,3 +1,17 @@
+## Addendum vigente — baseline 2026-11-14 (prevalece sobre bloques históricos)
+
+- Git `main` al inicio de esta reconciliación: `79b6238fe4c23206bb8e81327191ab48425e3a0d`, merge de PR #351.
+- PR #351 dejó una regresión en `src/backend/validation.js`: eliminó exports aún consumidos por `data.js`. La recuperación está en PR #352 y no se considera validada hasta CI verde.
+- CMS live: **41 colecciones (12 NATIVE, 29 WIX_APP), 980 campos**. `MapaStaff` revisión 105 / 56 campos. `DatosFiscales`, `InventarioStockVenta` y `MovimientosInventario` no existen en el inventario live del corte; GET individual 404 / `WDE0025`.
+- Wix Stores Catalog V3 es la autoridad del stock comercial. La capa custom de inventario está retirada; las referencias a sus colecciones, exports o writers son históricas y no autorizan su recreación.
+- `QA_RECORD_MUTATIONS_ENABLED=true` sigue activa durante QA por instrucción del propietario. Es un bloqueo para producción; no se ha restaurado ni publicado.
+- No existe evidencia de release que vincule el runtime Wix publicado con el SHA actual de Git. No se declara validación E2E ni despliegue.
+- SharePoint / Power Automate Capa 3 sigue siendo diseño documental, no integración operativa certificada.
+
+Detalle y evidencias: [reconciliación de baseline y recuperación de validadores](docs/qa/2026-11-14-baseline-reconciliation.md).
+
+---
+
 ## Vigencia operativa — fase de desarrollo y QA (2026-11-14)
 
 **Autoridad:** el usuario/propietario es la SSOT de negocio, requisitos, prioridades, criterios de aceptación y autorizaciones. Las instrucciones expresas posteriores del usuario prevalecen sobre decisiones y restricciones documentales anteriores. La documentación oficial de Wix y de las integraciones gobierna únicamente los contratos y límites técnicos de la plataforma.
