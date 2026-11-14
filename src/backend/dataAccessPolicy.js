@@ -110,8 +110,8 @@ export function assertInsertAllowed(collection, item) {
     if (collection === BUSINESS_COLLECTIONS.CITAS_F2 && !item.bookingId) {
         throw _policyError("CMS_INSERT_BOOKING_ID_REQUIRED");
     }
-    if (collection === BUSINESS_COLLECTIONS.MAPA_STAFF &&
-        !Object.values(RECORD_TYPE).includes(item.recordType)) {
+    if (collection === BUSINESS_COLLECTIONS.DATOS_FISCALES &&
+        ![RECORD_TYPE.TERCERO, RECORD_TYPE.GESTORIA, RECORD_TYPE.CONFIG_SISTEMA].includes(item.recordType)) {
         throw _policyError("CMS_INSERT_FISCAL_RECORD_TYPE_INVALID");
     }
 }
