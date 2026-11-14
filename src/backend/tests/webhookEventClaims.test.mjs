@@ -118,7 +118,7 @@ test("expired lease recovery fences the previous owner", async () => {
     assert.equal(rows[0].attempts, 2);
 });
 
-test("failed claim can be retried with a new owner token", async () => {
+test("failed claim can be retried with a new fencing token", async () => {
     const first = await acquireWebhookEventClaim({
         eventId: EVENT_ID,
         eventType: EVENT_TYPE,
@@ -181,7 +181,7 @@ test("active concurrent delivery returns retryable busy without duplicate side e
     assert.equal(sideEffects, 1);
 });
 
-test("legacy nested lease and attempt are read once and migrated to canonical fields", async () => {
+test("claim recovery rejects legacy nested lease and attempt fields", async () => {
     const claimId = await getWebhookEventClaimId(EVENT_ID, EVENT_TYPE);
     wixDataMock._seed(BUSINESS_COLLECTIONS.CONTROL_OPERATIVO, [{
         _id: claimId,
@@ -189,7 +189,7 @@ test("legacy nested lease and attempt are read once and migrated to canonical fi
         dedupeKey: claimId,
         eventId: EVENT_ID,
         eventType: EVENT_TYPE,
-        status: WEBHOOK_CLAIM_STATUS.FAILED_RETRYABLE,
+        status: WEBHOOK_CLAIM_STATUS.IN_PROGRESS,
         version: 4,
         attempts: "",
         expiresAt: "",
@@ -197,28 +197,26 @@ test("legacy nested lease and attempt are read once and migrated to canonical fi
         payload: {
             eventType: EVENT_TYPE,
             attempt: 3,
-            leaseExpiresAt: new Date(BASE_TIME.getTime() - 1000),
+            leaseExpiresAt: new Date(BASE_TIME.getTime() + 60_000),
         },
     }]);
 
-    const recovered = await acquireWebhookEventClaim({
-        eventId: EVENT_ID,
-        eventType: EVENT_TYPE,
-        traceId: "worker-new",
-        now: BASE_TIME,
-        leaseMs: 2000,
-    });
+    await assert.rejects(
+        acquireWebhookEventClaim({
+            eventId: EVENT_ID,
+            eventType: EVENT_TYPE,
+            traceId: "worker-new",
+            now: BASE_TIME,
+        }),
+        { code: "WEBHOOK_CLAIM_ATTEMPTS_INVALID" }
+    );
 
-    assert.equal(recovered.status, "ACQUIRED");
-    assert.equal(recovered.claim.attempts, 4);
     const row = (wixDataMock._store.get(BUSINESS_COLLECTIONS.CONTROL_OPERATIVO) || [])[0];
-    assert.equal(row.attempts, 4);
-    assert.ok(row.expiresAt instanceof Date);
-    assert.equal(row.expiresAt.getTime(), BASE_TIME.getTime() + 2000);
-    assert.equal(Object.hasOwn(row.payload, "attempt"), false);
-    assert.equal(Object.hasOwn(row.payload, "leaseExpiresAt"), false);
+    assert.equal(row.attempts, "");
+    assert.equal(row.expiresAt, "");
+    assert.equal(row.payload.attempt, 3);
+    assert.ok(row.payload.leaseExpiresAt instanceof Date);
 });
-
 test("claim requires a stable event identity and traceId fencing token", async () => {
     await assert.rejects(
         acquireWebhookEventClaim({ eventId: "", eventType: EVENT_TYPE, traceId: "worker" }),
