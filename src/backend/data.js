@@ -616,7 +616,7 @@ export function CajaActual_beforeUpdate(item, context) {
     _normalizeCmsDateTimes(item, ["openedAt", "closedAt", "lastMovementAt"]);
     const previous = context?.original || {};
     const merged = { ...previous, ...item };
-    assertCajaActualRecord(merged, { partial: true });
+    assertCajaActualRecord(merged);
     const prevSeq = { ...(previous?.sequenceCounters || {}) };
     const nextSeq = { ...((item?.sequenceCounters ?? previous?.sequenceCounters) || {}) };
 
