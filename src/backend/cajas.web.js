@@ -162,13 +162,12 @@ const STRONG_READ = Object.freeze({ consistencyMode: "strong" });
 // CajaActual keys are canonical and shared by sequence and register projections.
 const CAJA_KEYS = Object.freeze({
     SINGLETON_KEY: "singletonKey",
-    OPERATION_DATE: "operationDateHour",
+    OPERATION_DATE: "operationDate",
     STATUS: "cashRegisterStatus",
     TOTAL: "netAmount",
     CASH: "cashAmount",
     CARD: "cardAmount",
-    BIZUM: "bizumAmount",
-    ONLINE: "otherAmount",
+    OTHER: "otherAmount",
     OPERATIONS: "salesCount",
     OPENED_AT: "openedAt",
     CLOSED_AT: "closedAt",
@@ -178,6 +177,12 @@ const CAJA_KEYS = Object.freeze({
 // ============================================================================
 // HELPERS
 // ============================================================================
+
+function _toWixDateOnly(value) {
+    const date = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(date.getTime())) throw new Error("CAJA_OPERATION_DATE_INVALID");
+    return date.toISOString().slice(0, 10);
+}
 
 function _normalizeLinkedBookingIds(value) {
     const values = Array.isArray(value) ? value : String(value || "").split(",");
@@ -1101,11 +1106,11 @@ async function _updateCajaActual(movement, traceId) {
                 ? CAJA_KEYS.CASH
                 : method === PAYMENT_METHOD.TARJETA
                     ? CAJA_KEYS.CARD
-                    : CAJA_KEYS.BIZUM;
+                    : CAJA_KEYS.OTHER;
 
             cashRegister[amountField] = _roundMoney((Number(cashRegister[amountField]) || 0) + amount);
             // Only cash changes the expected physical drawer balance. Card
-            // and Bizum update session payment totals, never physical cash.
+            // and Bizum update card/other buckets, never physical cash. The method\n            // detail remains in MovimientosCaja; CajaActual has no Bizum field.
             if (method === PAYMENT_METHOD.EFECTIVO) {
                 cashRegister.expectedCash = _roundMoney(Number(cashRegister[CAJA_KEYS.CASH]) || 0);
             }
@@ -1120,7 +1125,7 @@ async function _updateCajaActual(movement, traceId) {
             cashRegister[CAJA_KEYS.LAST_MOVEMENT_AT] = sourceTimestamp;
             cashRegister.traceId = _safeTrim(movement.traceId) || traceId;
             cashRegister.staffResourceId = _safeTrim(movement.staffResourceId) || null;
-            cashRegister[CAJA_KEYS.OPERATION_DATE] = sourceTimestamp;
+            cashRegister[CAJA_KEYS.OPERATION_DATE] = _toWixDateOnly(sourceTimestamp);
             cashRegister._updatedDate = new Date();
 
             try {
@@ -1359,21 +1364,17 @@ export const getCashierState = webMethod(Permissions.SiteMember, async (options 
             data: {
                 _id: cashRegister?._id || CASH_REGISTER_ID,
                 singletonKey: cashRegister?.[CAJA_KEYS.SINGLETON_KEY] || SINGLETONS.CAJA_PRINCIPAL,
-                operationDateHour: cashRegister?.[CAJA_KEYS.OPERATION_DATE] ?? null,
+                operationDate: cashRegister?.[CAJA_KEYS.OPERATION_DATE] ?? null,
                 cashRegisterStatus: cashRegister?.[CAJA_KEYS.STATUS] || CASH_REGISTER_STATUS.CERRADA,
                 netAmount: cashRegister?.[CAJA_KEYS.TOTAL] ?? 0,
                 cashAmount: cashRegister?.[CAJA_KEYS.CASH] ?? 0,
                 cardAmount: cashRegister?.[CAJA_KEYS.CARD] ?? 0,
-                bizumAmount: cashRegister?.[CAJA_KEYS.BIZUM] ?? 0,
-                otherAmount: cashRegister?.[CAJA_KEYS.ONLINE] ?? 0,
+                otherAmount: cashRegister?.[CAJA_KEYS.OTHER] ?? 0,
                 salesCount: cashRegister?.[CAJA_KEYS.OPERATIONS] ?? 0,
                 totalOperations,
                 openedAt: cashRegister?.[CAJA_KEYS.OPENED_AT] ?? null,
                 openedBy: cashRegister?.openedBy ?? null,
-                openingCashAmount: cashRegister?.openingCashAmount ?? null,
-                openingCardAmount: cashRegister?.openingCardAmount ?? null,
-                openingBizumAmount: cashRegister?.openingBizumAmount ?? null,
-                openingOtherAmount: cashRegister?.openingOtherAmount ?? null,
+                openingAmount: cashRegister?.openingAmount ?? null,
                 expectedCash: cashRegister?.expectedCash ?? null,
                 countedCash: cashRegister?.countedCash ?? null,
                 difference: cashRegister?.difference ?? null,
