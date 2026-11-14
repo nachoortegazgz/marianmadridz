@@ -27,30 +27,30 @@ function nativeBooking(overrides = {}) {
     status: "CONFIRMED",
     paymentStatus: "UNDEFINED",
     selectedPaymentOption: "OFFLINE",
-    internalBusinessNote: "NOTA INTERNA QA EN AGENDA",
+    internalBusinessNote: "NOTA INTERNA SINTÉTICA EN AGENDA",
     formSubmissionId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
     startDate: "2026-10-22T09:00:00.000Z",
     endDate: "2026-10-22T09:30:00.000Z",
     bookedEntity: {
-      title: "QA Corte Clásico",
+      title: "Servicio de prueba",
       slot: {
         serviceId: SERVICE_ID,
         scheduleId: SCHEDULE_ID,
         startDate: "2026-10-22T09:00:00.000Z",
         endDate: "2026-10-22T09:30:00.000Z",
-        resource: { id: RESOURCE_ID, name: "QA Staff" },
+        resource: { id: RESOURCE_ID, name: "Personal de prueba" },
         location: { id: "66666666-6666-4666-8666-666666666666", locationType: "BUSINESS" },
       },
     },
     contactDetails: {
-      firstName: "QA",
+      firstName: "Test",
       lastName: "Native Booking",
-      email: "qa.native.booking@example.com",
+      email: "synthetic.native.booking@example.invalid",
       phone: "+34600000000",
       contactId: "77777777-7777-4777-8777-777777777777",
     },
     additionalFields: [
-      { id: "88888888-8888-4888-8888-888888888888", label: "Observaciones", value: "NOTA QA: conservar en el registro" },
+      { id: "88888888-8888-4888-8888-888888888888", label: "Observaciones", value: "NOTA SINTÉTICA: conservar en el registro" },
     ],
     ...overrides,
   };
@@ -99,7 +99,7 @@ function seedCita(overrides = {}) {
     bookingStatus: "PENDING",
     paymentStatus: "NOT_PAID",
     totalAmount: 42,
-    contactDetails: { firstName: "QA", email: "qa.native.booking@example.com" },
+    contactDetails: { firstName: "Test", email: "synthetic.native.booking@example.invalid" },
     meta: { pairToken: PAIR_TOKEN, customSaga: true },
     traceId: "trace-custom-saga",
     revision: 2,
@@ -250,10 +250,10 @@ test("EVENT-BOOKING-01 native confirmation creates a canonical CitasF2 projectio
   assert.equal(row.meta.channelType, "PRESENCIAL");
   assert.equal(row.meta.contactId, "77777777-7777-4777-8777-777777777777");
   assert.equal(row.meta.amountReconciliationRequired, true);
-  assert.equal(row.meta.appointmentNote, "NOTA INTERNA QA EN AGENDA");
+  assert.equal(row.meta.appointmentNote, "NOTA INTERNA SINTÉTICA EN AGENDA");
   assert.equal(row.meta.formSubmissionId, "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
   assert.deepEqual(row.meta.appointmentNotes, [
-    { label: "Observaciones", value: "NOTA QA: conservar en el registro" },
+    { label: "Observaciones", value: "NOTA SINTÉTICA: conservar en el registro" },
   ]);
 
   const markers = wixDataMock._store.get("ControlOperativo") || [];
@@ -267,7 +267,7 @@ test("EVENT-BOOKING-02 confirmation preserves custom dual row when webhook omits
   const booking = nativeBooking({
     id: BOOKING_ID,
     status: "CONFIRMED",
-    bookedEntity: { title: "QA Corte Clásico", slot: { serviceId: SERVICE_ID } },
+    bookedEntity: { title: "Servicio de prueba", slot: { serviceId: SERVICE_ID } },
   });
   const result = await events.wixBookingsV2_onBookingConfirmed(
     bookingConfirmedEvent("evt-native-confirm-002", booking)
@@ -460,7 +460,7 @@ test("EVENT-BOOKING-08 refuses ambiguous active MapaStaff mappings", async () =>
   const booking = nativeBooking({
     _id: "77777777-7777-4777-8777-777777777777",
     staffMemberId: STAFF_MEMBER_ID,
-    bookedEntity: { title: "QA ambiguous mapping", slot: { serviceId: SERVICE_ID } },
+    bookedEntity: { title: "Synthetic ambiguous mapping", slot: { serviceId: SERVICE_ID } },
   });
 
   await assert.rejects(
@@ -576,7 +576,7 @@ test("EVENT-PAYMENT-09 official Wix eCommerce paid event appends WIX_PAYMENTS le
             appId: IC.WIX_CATALOG_APP_IDS.BOOKINGS,
             catalogItemId: BOOKING_ID,
           },
-          productName: { original: "QA booking service" },
+          productName: { original: "Synthetic booking service" },
           quantity: 1,
           price: { amount: "120.00" },
           totalPriceAfterTax: { amount: "45.50" },
@@ -695,7 +695,7 @@ test("EVENT-REFUND-01 defers incomplete refunds, records successful terminal amo
         appId: IC.WIX_CATALOG_APP_IDS.BOOKINGS,
         catalogItemId: BOOKING_ID,
       },
-      productName: { original: "QA booking service" },
+      productName: { original: "Synthetic booking service" },
       quantity: 1,
       price: { amount: "120.00" },
       totalPriceAfterTax: { amount: "45.50" },
@@ -1006,13 +1006,13 @@ test("EVENT-BOOKING-09 native SDK resource _id is accepted by the CitasF2 projec
   const booking = nativeBooking({
     id: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
     bookedEntity: {
-      title: "QA booking SDK resource id",
+      title: "Synthetic booking SDK resource id",
       slot: {
         serviceId: SERVICE_ID,
         scheduleId: SCHEDULE_ID,
         startDate: "2026-10-22T09:00:00.000Z",
         endDate: "2026-10-22T09:30:00.000Z",
-        resource: { _id: RESOURCE_ID, name: "QA SDK Staff" },
+        resource: { _id: RESOURCE_ID, name: "Synthetic SDK Staff" },
       },
     },
   });
@@ -1032,13 +1032,13 @@ test("EVENT-BOOKING-10 controlled reconciliation projects confirmed unpaid booki
     status: "CONFIRMED",
     paymentStatus: "NOT_PAID",
     bookedEntity: {
-      title: "QA booking reconciliation",
+      title: "Synthetic booking reconciliation",
       slot: {
         serviceId: SERVICE_ID,
         scheduleId: SCHEDULE_ID,
         startDate: "2026-10-22T09:00:00.000Z",
         endDate: "2026-10-22T09:30:00.000Z",
-        resource: { _id: RESOURCE_ID, name: "QA SDK Staff" },
+        resource: { _id: RESOURCE_ID, name: "Synthetic SDK Staff" },
       },
     },
   });
@@ -1159,7 +1159,7 @@ test("EVENT-PAYMENT-10 a failed strong ledger preflight read fails closed and ne
         appId: IC.WIX_CATALOG_APP_IDS.STORES,
         catalogItemId: "11111111-1111-4111-8111-111111111111",
       },
-      productName: { original: "QA synthetic store item" },
+      productName: { original: "Synthetic store item" },
       quantity: 1,
       totalPriceAfterTax: { amount: "45.50" },
       taxInfo: {
