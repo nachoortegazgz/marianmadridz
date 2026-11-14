@@ -50,18 +50,19 @@ test("P0-FISCAL-01 fiscal ledger writers are disabled by canonical fail-closed p
   assert.match(zWriter.slice(zGuard), /FISCAL_LEDGER_WRITES_DISABLED/);
 
   const eventStart = eventLog.indexOf("export async function registrarEventoEconomico");
-  const thirdPartyStart = eventLog.indexOf("async function _upsertMapaStaff(");
+  const thirdPartyStart = eventLog.indexOf("async function _upsertDatosFiscales(");
   const thirdPartyEnd = eventLog.indexOf("async function _getServicioCatalogo(", thirdPartyStart);
   const thirdPartyUpsert = eventLog.slice(thirdPartyStart, thirdPartyEnd);
-  assert.match(thirdPartyUpsert, /schemaVersion:\s*1/);
-  assert.match(thirdPartyUpsert, /traceId:\s*_safeTrim\(traceId\)/);
+  assert.match(thirdPartyUpsert, /dalQuery\(DATOS_FISCALES_COL\)/);
+  assert.match(thirdPartyUpsert, /dalInsert\(DATOS_FISCALES_COL/);
+  assert.doesNotMatch(thirdPartyUpsert, /schemaVersion|traceId:/);
   assert.doesNotMatch(eventLog, /nombreRazonProductor:\s*["']Marian Madrid["']/,
     "legalName must not be inferred from the commercial brand");
 
   const eventWriter = eventLog.slice(eventStart);
   const eventGuard = eventWriter.indexOf("FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED !== true");
   assert.ok(eventGuard >= 0, "native event/refund fiscal writer must fail closed");
-  for (const operation of ["_upsertMapaStaff(", "acquireFiscalLedgerLock(", "dalInsert(MOVIMIENTOS_CAJA_COL"]) {
+  for (const operation of ["_upsertDatosFiscales(", "acquireFiscalLedgerLock(", "dalInsert(MOVIMIENTOS_CAJA_COL"]) {
     const index = eventWriter.indexOf(operation);
     assert.ok(index > eventGuard, "event fiscal guard must precede " + operation);
   }
