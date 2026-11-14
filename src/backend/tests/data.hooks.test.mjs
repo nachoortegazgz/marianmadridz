@@ -353,6 +353,20 @@ test('HOOK-FISCAL-CONFIG-02 third-party fiscal rows require identity, schemaVers
     traceId: 'trace-tercero-001',
   };
   assert.doesNotThrow(() => H.MapaStaff_beforeInsert({ ...thirdParty }));
+  const gestor = {
+    recordType: IC.RECORD_TYPE.GESTORIA,
+    name: 'NachoGest',
+    legalName: 'NachoGest',
+    address: 'Calle Burgos 25',
+    phone: '666724634',
+    email: 'nachoortegazgz@gmail.com',
+    active: true,
+    schemaVersion: 1,
+    traceId: 'trace-gestoria-001',
+  };
+  assert.doesNotThrow(() => H.MapaStaff_beforeInsert({ ...gestor }));
+  assert.throws(() => H.MapaStaff_beforeInsert({ ...gestor, memberId: 'member-1' }), /site identity or staff roles/);
+
   assert.throws(
     () => H.MapaStaff_beforeInsert({ ...thirdParty, traceId: '' }),
     /traceId obligatorio/
