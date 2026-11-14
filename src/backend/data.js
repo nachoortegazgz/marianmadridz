@@ -495,18 +495,6 @@ export function MovimientosCaja_beforeRemove() {
     _fiscalError("Borrado de MovimientosCaja prohibido por normativa fiscal");
 }
 
-// Los movimientos de inventario y los asientos son ledgers append-only.
-// Las correcciones se registran como nuevos movimientos/asientos rectificativos.
-export function MovimientosInventario_beforeUpdate(item) {
-    if (_appendOnlyMutationWindowOpen()) return item;
-    _fiscalError("Modificacion de MovimientosInventario prohibida (append-only). Registre un nuevo movimiento rectificativo.");
-}
-
-export function MovimientosInventario_beforeRemove() {
-    if (_appendOnlyMutationWindowOpen()) return;
-    _fiscalError("Borrado de MovimientosInventario prohibido: ledger de inventario append-only.");
-}
-
 export function LibroAsientosContablesDetalle_beforeUpdate(item) {
     if (_appendOnlyMutationWindowOpen()) return item;
     _fiscalError("Modificacion de LibroAsientosContablesDetalle prohibida (append-only). Registre un nuevo asiento rectificativo.");
