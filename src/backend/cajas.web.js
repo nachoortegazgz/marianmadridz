@@ -1110,7 +1110,7 @@ async function _updateCajaActual(movement, traceId) {
 
             cashRegister[amountField] = _roundMoney((Number(cashRegister[amountField]) || 0) + amount);
             // Only cash changes the expected physical drawer balance. Card
-            // and Bizum update card/other buckets, never physical cash. The method\n            // detail remains in MovimientosCaja; CajaActual has no Bizum field.
+            // and Bizum update card/other buckets, never physical cash.\n            // Method detail remains in MovimientosCaja; CajaActual has no Bizum field.
             if (method === PAYMENT_METHOD.EFECTIVO) {
                 cashRegister.expectedCash = _roundMoney(Number(cashRegister[CAJA_KEYS.CASH]) || 0);
             }
