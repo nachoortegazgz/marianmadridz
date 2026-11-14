@@ -10,7 +10,7 @@ El contenido anterior de este informe se obtuvo sobre un snapshot de sitio anter
 
 ## Alcance vigente
 
-- Sitio único: 50b39f33-e753-4331-ab35-b2ed43dc97f7.
+- Sitio al que se refiere este corte histórico: referencia anterior de entorno, supersedida. No identifica el QA vigente `188bed94-177c-4bc9-a9f0-35080d874f3e`.
 - Naturaleza declarada: banco de pruebas aislado, sin actividad real.
 - La consulta GetSiteContext del 2026-11-14 no pudo resolver el Site ID.
 - No se ha realizado una lectura actual de Wix Automations para este sitio en esta intervención.
