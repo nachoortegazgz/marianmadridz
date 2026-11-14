@@ -36,7 +36,7 @@
 - Pagos se simulan mediante adaptadores locales/offline sin llamadas a proveedores. MOCK no equivale a SANDBOX ni a pago confirmado.
 - Email, SMS, WhatsApp, gestoría, SharePoint, Power Automate, AEAT y Veri*Factu se sustituyen por sinks/mocks sin entrega.
 - Ninguna prueba debe producir cargos, facturas reales, tickets a clientes, cambios de stock real o comunicaciones externas.
-- La pausa de append-only/mutaciones declarada para QA no elimina gates independientes de writers fiscales/contables/laborales, pagos, reembolsos ni efectos externos.
+- Los ledgers fiscales, contables, laborales y de caja append-only son inmutables también en QA; las correcciones se registran mediante nuevos asientos/movimientos rectificativos trazables. No se suspende esta garantía para facilitar pruebas.
 - No borrar ni reiniciar datos sin identificar el entorno, allowlist, alcance y plan de recuperación.
 
 ## Desarrollo y cambios
