@@ -1,7 +1,7 @@
 ## Addendum vigente — baseline 2026-11-14 (prevalece sobre bloques históricos)
 
 - Git `main` al inicio de esta reconciliación: `79b6238fe4c23206bb8e81327191ab48425e3a0d`, merge de PR #351.
-- PR #351 dejó una regresión en `src/backend/validation.js`: eliminó exports aún consumidos por `data.js`. La recuperación está en PR #352 y no se considera validada hasta CI verde.
+- PR #351 dejó una regresión en `src/backend/validation.js`: eliminó exports aún consumidos por `data.js`. La recuperación está en PR #352; CI completo verde sobre el SHA de código `c7388cb122368906b1cee20cae0f6d127900553b` (run #1048).
 - CMS live: **41 colecciones (12 NATIVE, 29 WIX_APP), 980 campos**. `MapaStaff` revisión 105 / 56 campos. `DatosFiscales`, `InventarioStockVenta` y `MovimientosInventario` no existen en el inventario live del corte; GET individual 404 / `WDE0025`.
 - Wix Stores Catalog V3 es la autoridad del stock comercial. La capa custom de inventario está retirada; las referencias a sus colecciones, exports o writers son históricas y no autorizan su recreación.
 - `QA_RECORD_MUTATIONS_ENABLED=true` sigue activa durante QA por instrucción del propietario. Es un bloqueo para producción; no se ha restaurado ni publicado.
