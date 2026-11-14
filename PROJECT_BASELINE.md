@@ -47,12 +47,11 @@ El plan ejecutable, escenarios y criterios de evidencia están en [PLAN_ACCION_Q
 - `InventarioStockVenta` y `MovimientosInventario` están presentes físicamente en este sitio, pero sus contratos/writers están retirados. Su presencia no autoriza reactivar inventario custom: Stores Catalog V3 sigue siendo la autoridad prevista para stock comercial.
 
 ### Mutabilidad y seguridad
-- `ISOLATED_SITE_RECORD_MUTATIONS_ENABLED=true` permite update/remove individuales y masivos en colecciones propias incluidas en `ISOLATED_SITE_MUTABLE_COLLECTIONS`.
-- Las operaciones masivas requieren IDs explícitos y límite de 1.000 registros.
-- Las colecciones WIX_APP están excluidas.
-- Se mantienen autenticación, autorización/RBAC, permisos CMS, validaciones, allowlists de inserción, secretos y gates de efectos externos.
-- Los writers fiscales/contables/laborales y los efectos externos continúan fail-closed. Los registros sintéticos no se usan para habilitar flujos reales.
-- La ventana de mutabilidad debe cerrarse y restaurarse la política append-only antes de cualquier actividad real.
+- En la rama QA, ISOLATED_SITE_RECORD_MUTATIONS_ENABLED=false y APPEND_ONLY_MUTATION_WINDOW.ENABLED=false: la ventana global de update/remove está cerrada.
+- Los ledgers MovimientosCaja, LibroAsientosContablesDetalle, HistoricoCierresZ, RegistrosHorariosStaff y PaquetesGestoria permanecen append-only también en QA.
+- CajaActual es una proyección mutable únicamente a través del flujo backend autorizado y vinculada a movimientos fuente; no se habilita su borrado.
+- La identidad QA no está acreditada por la conexión Wix actual; no existe todavía una barrera runtime por Site ID que permita habilitar mutabilidad global de forma segura.
+- Las colecciones WIX_APP se operan exclusivamente mediante sus APIs oficiales. Los writers fiscales/contables/laborales y efectos externos siguen fail-closed.
 
 ## 2. Alcance funcional
 
