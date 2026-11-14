@@ -21,14 +21,16 @@ test("VALIDATION-FISCAL-01 validates Spanish NIF/NIE/CIF and EU VAT using shared
     assert.equal(V.isValidNifOrEuVat(""), false);
 });
 
-test("VALIDATION-FISCAL-02 MapaStaff third-party validation uses the shared fiscal helper", () => {
-    assert.equal(V.assertMapaStaffFiscalIdentity({
+test("VALIDATION-FISCAL-02 DatosFiscales third-party validation uses the shared fiscal helper", () => {
+    assert.equal(V.assertDatosFiscalesRecord({
+        recordType: "TERCERO",
         taxId: "12345678Z",
         legalName: "Entidad de prueba",
         thirdPartyType: "CLIENTE",
     }), true);
 
-    assert.throws(() => V.assertMapaStaffFiscalIdentity({
+    assert.throws(() => V.assertDatosFiscalesRecord({
+        recordType: "TERCERO",
         taxId: "12345678A",
         legalName: "Entidad de prueba",
         thirdPartyType: "CLIENTE",
