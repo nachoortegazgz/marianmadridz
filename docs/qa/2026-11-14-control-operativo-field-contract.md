@@ -39,7 +39,7 @@ La revisión del esquema raíz revela además que `ownerToken` no pertenece a lo
 
 ### WEBHOOK_EVENT
 
-El CSV deja vacío el campo superior `eventType`, aunque `payload.eventType` existe. El diccionario CMS describe expresamente `eventType` como duplicado superior para consultas indexadas. El writer ahora persiste `eventType` y `processedAt` también en campos superiores, conservando las copias del payload. El hook valida ambos valores.
+El CSV deja vacío el campo superior `eventType`, aunque `payload.eventType` existe. El diccionario CMS describe expresamente `eventType` como duplicado superior para consultas indexadas. Los dos writers identificados (`events.js` y `crons.js`) ahora persisten `eventType` y `processedAt` también en campos superiores, conservando las copias del payload. El hook valida ambos valores.
 
 ### SLOT_LOCK de reserva
 
@@ -72,7 +72,7 @@ El CSV contiene encabezados adicionales, pero no demuestra que esas columnas exi
 
 - `src/backend/webhookEventClaims.js`: lease y contador pasan a campos canónicos top-level; fencing por `traceId`; lectura transitoria compatible con filas legacy.
 - `src/backend/booking/bookingCore.js`: persiste `pairToken`, `slotStart` y `slotEnd` en controles de transacción/bloqueo.
-- `src/backend/events.js`: persiste `eventType` y `processedAt` superiores en `WEBHOOK_EVENT`.
+- `src/backend/events.js` y `src/backend/crons.js`: persisten `eventType` y `processedAt` superiores en `WEBHOOK_EVENT`, incluidos los marcadores de reconciliación de pedidos.
 - `src/backend/internalConfig.js`: política CAS de `WEBHOOK_CLAIM` permite `attempts` y `expiresAt`.
 - `src/backend/validation.js`: validación específica de `WEBHOOK_CLAIM` y `WEBHOOK_EVENT`.
 - `src/backend/tests/webhookEventClaims.test.mjs`: pruebas de persistencia canónica y recuperación de formato legacy.
@@ -80,6 +80,7 @@ El CSV contiene encabezados adicionales, pero no demuestra que esas columnas exi
 - `src/backend/tests/dataAccess.bulkPatch.policy.test.mjs`: prueba de autorización CAS de los campos top-level canónicos.
 - `src/backend/tests/booking.core.concurrency.test.mjs`: pruebas de rango del slot y `pairToken`.
 - `src/backend/tests/events.native-booking-sync.test.mjs`: pruebas de `eventType` y `processedAt` superiores.
+- `src/backend/tests/crons.jobsConfigParity.test.mjs`: prueba de los campos superiores en marcadores de reconciliación.
 
 ## 6. Validación pendiente
 
