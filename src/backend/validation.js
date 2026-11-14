@@ -19,6 +19,7 @@ import {
     RECORD_TYPE_HORARIOS,
     RECORD_TYPE,
     THIRD_PARTY_TYPE,
+    CASH_REGISTER_STATUS,
     isValidGuid,
     normalizeBookingType,
     isDualBookingType,
@@ -99,6 +100,55 @@ export function assertCitasF2(item) {
 // =============================================================================
 // DATOS FISCALES (Ley 11/2021, Veri*Factu)
 // =============================================================================
+
+/**
+ * CajaActual mirrors the current physical CMS schema. The sequenceCounters
+ * field is OBJECT; accepting a JSON string would silently corrupt projections.
+ */
+export function assertCajaActualRecord(item, { partial = false } = {}) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) {
+        throw new Error("SCHEMA_VIOLATION: CajaActual item must be an object");
+    }
+
+    const textFields = [
+        "closedBy", "differenceReason", "stateHash", "openedBy", "traceId",
+        "staffResourceId", "cashRegisterStatus", "singletonKey", "id", "fiscalPeriod",
+    ];
+    for (const field of textFields) {
+        if (item[field] != null && typeof item[field] !== "string") {
+            throw new Error(`SCHEMA_VIOLATION: CajaActual.${field} must be TEXT`);
+        }
+    }
+
+    const numberFields = [
+        "netAmount", "versionState", "difference", "countedCash", "expectedCash",
+        "cashAmount", "totalOutAmount", "totalInAmount", "paymentAmount",
+        "paymentCount", "refundAmount", "refundCount", "salesAmount", "salesCount",
+        "otherAmount", "voucherAmount", "cardAmount", "openingAmount", "currentSequence",
+    ];
+    for (const field of numberFields) {
+        if (item[field] != null && (typeof item[field] !== "number" || !Number.isFinite(item[field]))) {
+            throw new Error(`SCHEMA_VIOLATION: CajaActual.${field} must be NUMBER`);
+        }
+    }
+
+    if (item.isOpen != null && typeof item.isOpen !== "boolean") {
+        throw new Error("SCHEMA_VIOLATION: CajaActual.isOpen must be BOOLEAN");
+    }
+    if (item.sequenceCounters != null &&
+        (typeof item.sequenceCounters !== "object" || Array.isArray(item.sequenceCounters))) {
+        throw new Error("SCHEMA_VIOLATION: CajaActual.sequenceCounters must be OBJECT");
+    }
+    if (item.cashRegisterStatus != null) {
+        assertValidEnum(item.cashRegisterStatus, CASH_REGISTER_STATUS, "cashRegisterStatus");
+    }
+    const cmsId = String(item._id ?? "").trim();
+    const mirrorId = String(item.id ?? "").trim();
+    if (cmsId && mirrorId && cmsId !== mirrorId) {
+        throw new Error("SCHEMA_VIOLATION: CajaActual.id mirror must equal CMS _id");
+    }
+    return true;
+}
 
 /**
  * MapaStaff is only the staff-to-Wix-Bookings identity map.
