@@ -19,6 +19,8 @@ import {
     CLOCK_EVENT_TYPE,
     RECORD_TYPE_HORARIOS,
     CLOCK_REGISTERED_BY,
+    CLOCK_RECORD_SOURCE,
+    TIMECLOCK_SCHEMA_VERSION,
     STAFF_CLOCKING_CONFIG,
     REGISTROS_HORARIOS_FIELDS as F,
     SDK_CONFIG,
@@ -38,7 +40,7 @@ import {
 } from "backend/staff";
 
 import { requireAdmin } from "backend/security";
-import { signTimeclockRecord, verifyTimeclockSignature } from "backend/securityEngine";
+import { hashSHA256, signTimeclockRecord, verifyTimeclockSignature } from "backend/securityEngine";
 import { getSecretValue } from "backend/secretAccess";
 /* HOR-R3-03 (DUP-02): _safeTrim importado de mmUtils (SSOT). Helper local
  * eliminado. */
@@ -62,29 +64,70 @@ function _writerDisabled(code, message, traceId) {
 // =============================================================================
 
 function _getMadridNow() {
-    return new Date(
-        new Date().toLocaleString("en-US", { timeZone: SDK_CONFIG.TZ })
-    );
+    // Keep the real instant; derive calendar keys explicitly in Europe/Madrid.
+    return new Date();
 }
 
-function _getMadridDayKey(d) {
-    const date = d || _getMadridNow();
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    return `${y}-${m}-${day}`;
+function _getMadridDayKey(value) {
+    const date = value instanceof Date ? value : _getMadridNow();
+    const parts = new Intl.DateTimeFormat("en-GB", {
+        timeZone: SDK_CONFIG.TZ,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+    }).formatToParts(date);
+    const part = (type) => parts.find((item) => item.type === type)?.value || "";
+    return `${part("year")}-${part("month")}-${part("day")}`;
 }
 
-function _getMadridMonthKey(d) {
-    const date = d || _getMadridNow();
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, "0");
-    return `${y}-${m}`;
+function _getMadridMonthKey(value) {
+    return _getMadridDayKey(value).slice(0, 7);
 }
 
-function _getMadridTime(d) {
-    const date = d || _getMadridNow();
-    return date.toTimeString().slice(0, 8); // HH:MM:SS
+function _getMadridTime(value) {
+    // CMS declares recordedTime as DATETIME, not a TEXT clock string.
+    return value instanceof Date ? value : _getMadridNow();
+}
+
+function _getMadridDateOnly(value) {
+    const [year, month, day] = _getMadridDayKey(value).split("-").map(Number);
+    return new Date(Date.UTC(year, month - 1, day));
+}
+
+async function _sealTimeclockRecord(record) {
+    record[F.RECORD_ID] = makeTraceId("clock-record");
+    record[F.SOURCE] = CLOCK_RECORD_SOURCE.WIX_WEB_METHOD;
+    record[F.WORK_DATE] = _getMadridDateOnly(record[F.RECORDED_AT]);
+    record[F.TIME_ZONE] = SDK_CONFIG.TZ;
+    record[F.SCHEMA_VERSION] = TIMECLOCK_SCHEMA_VERSION;
+
+    const hashPayload = {
+        recordId: record[F.RECORD_ID],
+        resourceId: record[F.RESOURCE_ID],
+        memberId: record[F.MEMBER_ID],
+        staffName: record[F.STAFF_NAME] || null,
+        clockEventType: record[F.CLOCK_EVENT_TYPE],
+        recordType: record[F.RECORD_TYPE],
+        source: record[F.SOURCE],
+        recordedAt: record[F.RECORDED_AT],
+        recordedTime: record[F.RECORDED_TIME],
+        workDate: record[F.WORK_DATE],
+        dayKey: record[F.DAY_KEY],
+        monthKey: record[F.MONTH_KEY],
+        timeZone: record[F.TIME_ZONE],
+        registeredBy: record[F.REGISTERED_BY],
+        registeredByMemberId: record[F.REGISTERED_BY_MEMBER_ID],
+        adjustmentReason: record[F.ADJUSTMENT_REASON] || null,
+        deviceIpAddress: record[F.DEVICE_IP_ADDRESS] || null,
+        meta: record[F.META] || null,
+        previousRecordHash: record[F.PREVIOUS_RECORD_HASH] || null,
+        schemaVersion: record[F.SCHEMA_VERSION],
+        traceId: record[F.TRACE_ID],
+    };
+    record[F.RECORD_HASH] = await hashSHA256(JSON.stringify(hashPayload));
+    record[F.SIGNATURE] = await signTimeclockRecord(record);
+    assertRegistrosHorariosStaff(record);
+    return record;
 }
 
 function _getDayKeysInRange(startValue, endValue, maxDays = 31) {
@@ -280,11 +323,7 @@ export const registrarFichaje = webMethod(
                 [F.TRACE_ID]: traceId,
             };
 
-            // Firma HMAC de integridad (RD 8/2019)
-            record[F.SIGNATURE] = await signTimeclockRecord(record);
-
-            // Validacion centralizada (SSOT-07)
-            assertRegistrosHorariosStaff(record);
+            await _sealTimeclockRecord(record);
 
             const saved = await insert(REGISTROS_COL, record);
 
@@ -741,8 +780,7 @@ export const registrarAjusteHorario = webMethod(
                 [F.TRACE_ID]: traceId,
             };
 
-            record[F.SIGNATURE] = await signTimeclockRecord(record);
-            assertRegistrosHorariosStaff(record);
+            await _sealTimeclockRecord(record);
 
             const saved = await insert(REGISTROS_COL, record);
 
