@@ -60,7 +60,7 @@ test('HOOK-CITAS-01 validates canonical enums, traceId and pairToken', () => {
   assert.throws(() => H.CitasF2_beforeInsert({ ...valid, serviceId: 'invalid-service' }), /serviceId.*GUID/);
   assert.throws(() => H.CitasF2_beforeInsert({ ...valid, resourceId: 'invalid-resource' }), /resourceId.*GUID/);
 
-  assert.doesNotThrow(() => H.CitasF2_beforeRemove({}));
+  assert.throws(() => H.CitasF2_beforeRemove({}), /cancelacion formal/);
 });
 
 test('HOOK-CMS-DATETIME-01 normalizes all CitasF2 DateTime fields to Date objects', () => {
@@ -189,9 +189,9 @@ test('HOOK-CMS-DATETIME-05 normalizes MovimientosCaja DateTime fields only', () 
   }), /DATETIME/);
 });
 
-test('HOOK-CAJA-03 temporary mutation window allows update/remove', () => {
-  assert.doesNotThrow(() => H.MovimientosCaja_beforeUpdate({ _id: 'synthetic-caja-1' }));
-  assert.doesNotThrow(() => H.MovimientosCaja_beforeRemove('synthetic-caja-1'));
+test('HOOK-CAJA-03 preserves append-only integrity for cash movements', () => {
+  assert.throws(() => H.MovimientosCaja_beforeUpdate({ _id: 'synthetic-caja-1' }), /append-only/);
+  assert.throws(() => H.MovimientosCaja_beforeRemove('synthetic-caja-1'), /Borrado de MovimientosCaja/);
 });
 
 test('HOOK-CAJA-05 rejects write without hash (ledger integrity)', () => {
@@ -346,7 +346,7 @@ test("HOOK-DATOSFISCALES-02 third parties and accountant records use declared fi
 // HistoricoCierresZ — CONSERVED (update restricted to signature fields)
 // -----------------------------------------------------------------------------
 
-test('HOOK-CIERREZ-01 insert needs traceId; temporary window allows arbitrary update/remove', () => {
+test('HOOK-CIERREZ-01 insert needs traceId; updates are restricted to recovery fields and removal is blocked', () => {
   assert.throws(() => H.HistoricoCierresZ_beforeInsert({}), /traceId/);
   const closing = {
     traceId: 't1',
@@ -359,10 +359,10 @@ test('HOOK-CIERREZ-01 insert needs traceId; temporary window allows arbitrary up
   assert.doesNotThrow(() => H.HistoricoCierresZ_beforeUpdate({
     _id: 'x', closingSignature: 'sig', csvAEAT: 'csv',
   }));
-  assert.doesNotThrow(() => H.HistoricoCierresZ_beforeUpdate({
+  assert.throws(() => H.HistoricoCierresZ_beforeUpdate({
     _id: 'x', totalImporte: 999,
-  }));
-  assert.doesNotThrow(() => H.HistoricoCierresZ_beforeRemove('x'));
+  }), /append-only/);
+  assert.throws(() => H.HistoricoCierresZ_beforeRemove('x'), /append-only/);
 });
 
 // -----------------------------------------------------------------------------
@@ -394,9 +394,9 @@ test('HOOK-CLOCK-01 insert requires canonical fields and HMAC signature', () => 
   assert.throws(() => H.RegistrosHorariosStaff_beforeInsert({ ...valid, dayKey: '' }), /dayKey/);
 });
 
-test('HOOK-CLOCK-02 temporary mutation window allows update/remove', () => {
-  assert.doesNotThrow(() => H.RegistrosHorariosStaff_beforeUpdate({ _id: 'synthetic-clock-1' }));
-  assert.doesNotThrow(() => H.RegistrosHorariosStaff_beforeRemove('synthetic-clock-1'));
+test('HOOK-CLOCK-02 preserves append-only integrity for timeclock records', () => {
+  assert.throws(() => H.RegistrosHorariosStaff_beforeUpdate({ _id: 'synthetic-clock-1' }), /append-only/);
+  assert.throws(() => H.RegistrosHorariosStaff_beforeRemove('synthetic-clock-1'), /append-only/);
 });
 
 // keep wixDataMock referenced so loader seeds reset between suites
@@ -429,9 +429,9 @@ test('HOOK-CAJA-SINGLE-01 enforces the CajaActual single-item principal', () => 
 // -----------------------------------------------------------------------------
 // Capa 2 — inventory and accounting ledgers are immutable append-only records.
 // -----------------------------------------------------------------------------
-test('HOOK-ACCOUNTING-LEDGER-01 temporary mutation window allows update/remove', () => {
-  assert.doesNotThrow(() => H.LibroAsientosContablesDetalle_beforeUpdate({ _id: 'synthetic-accounting-1' }));
-  assert.doesNotThrow(() => H.LibroAsientosContablesDetalle_beforeRemove('synthetic-accounting-1'));
+test('HOOK-ACCOUNTING-LEDGER-01 preserves append-only integrity', () => {
+  assert.throws(() => H.LibroAsientosContablesDetalle_beforeUpdate({ _id: 'synthetic-accounting-1' }), /append-only/);
+  assert.throws(() => H.LibroAsientosContablesDetalle_beforeRemove('synthetic-accounting-1'), /append-only/);
 });
 
 
@@ -476,7 +476,7 @@ test('HOOK-PACKAGE-02 monthly package requires month and forbids quarter', () =>
   assert.throws(() => H.PaquetesGestoria_beforeInsert({ ...valid, fiscalQuarter: 1 }), /no admite fiscalQuarter/);
 });
 
-test('HOOK-PACKAGE-03 temporary mutation window allows update/remove', () => {
-  assert.doesNotThrow(() => H.PaquetesGestoria_beforeUpdate({ _id: 'synthetic-package-1' }));
-  assert.doesNotThrow(() => H.PaquetesGestoria_beforeRemove('synthetic-package-1'));
+test('HOOK-PACKAGE-03 preserves immutable gestoría package snapshots', () => {
+  assert.throws(() => H.PaquetesGestoria_beforeUpdate({ _id: 'synthetic-package-1' }), /append-only/);
+  assert.throws(() => H.PaquetesGestoria_beforeRemove('synthetic-package-1'), /append-only/);
 });
