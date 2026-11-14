@@ -235,9 +235,12 @@ export function assertDatosFiscalesRecord(item, { partial = false } = {}) {
 
     if (item.fechaInicioVerifactu != null && item.fechaInicioVerifactu !== "") {
         const date = String(item.fechaInicioVerifactu).trim();
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(date) ||
-            Number.isNaN(Date.parse(date + "T00:00:00.000Z"))) {
-            throw new Error("SCHEMA_VIOLATION: DatosFiscales.fechaInicioVerifactu must be TEXT ISO YYYY-MM-DD");
+        const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+        const [year, month, day] = match ? match.slice(1).map(Number) : [];
+        const parsed = match ? new Date(Date.UTC(year, month - 1, day)) : null;
+        if (!match || parsed.getUTCFullYear() !== year ||
+            parsed.getUTCMonth() + 1 !== month || parsed.getUTCDate() !== day) {
+            throw new Error("SCHEMA_VIOLATION: DatosFiscales.fechaInicioVerifactu must be a valid TEXT ISO YYYY-MM-DD date");
         }
     }
 
