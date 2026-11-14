@@ -237,3 +237,12 @@ Antes de cualquier despliegue o actividad real:
 - [ ] Bloquear release/publicación real mientras quede cualquier control pendiente.
 
 La tarea se considera abierta hasta que exista evidencia CI y validación en el entorno correspondiente. La decisión documental no equivale a implementación.
+
+
+## Hito técnico — alineación CMS contable y laboral (2026-11-15)
+
+- PR #388 integrada en `main` (squash `beeb3ed0e28533cdaf10aa5858e36f4bc713480c`).
+- Esquemas live releídos: `LibroAsientosContablesDetalle` revisión 7, 103 campos; `RegistrosHorariosStaff` revisión 1, 47 campos.
+- Contratos corregidos: `fechaOperacion` y `workDate` como DATE `YYYY-MM-DD`; `recordedAt`/`recordedTime` como DATETIME; `cashMovementId` dentro de `desgloseDetallado` OBJECT.
+- CI run 1310: 70 suites / 644 tests PASS; Layer 1 307 PASS; Layer 2 252 PASS; SDK contracts, ESLint y Secret scanning PASS.
+- Estado: código alineado e integrado, pero writers contable/laboral siguen deshabilitados. No hay validación de persistencia runtime ni escrituras Wix. La ejecución de E2E sigue bloqueada por automatizaciones activas con acciones potenciales de notificación.
