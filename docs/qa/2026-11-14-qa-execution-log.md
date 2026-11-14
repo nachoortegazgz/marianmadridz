@@ -28,7 +28,15 @@ Cada nueva ejecución añadirá un identificador único y conservará SHA, tipo 
 - Rama: docs/qa-operating-model-2026-11-14.
 - Hallazgo P0: ISOLATED_SITE_RECORD_MUTATIONS_ENABLED=true permitía update/remove global de colecciones propias y desactivaba guards de CajaActual/CitasF2 sin una comprobación server-side del Site ID en esa ruta.
 - Corrección aplicada en rama: se retiran los bypasses globales de mutabilidad y la ventana temporal; hooks append-only son incondicionales. Bulk update deshabilitado; bulk remove restringido a purgas condicionadas de tipos efímeros/terminales, excluyendo WEBHOOK_EVENT y claims durables.
-- Pruebas modificadas: política de escritura ahora exige ledgers inmutables y ventana global cerrada; simulador PSP añade concurrencia/idempotencia dentro de un único proceso mock.
+- Pruebas modificadas: política de escritura exige ledgers inmutables y purga bulk allowlisted; simulador PSP añade concurrencia/idempotencia dentro de un único proceso mock y metadata sintética TEST.
 - Validación: pendiente de CI sobre el SHA resultante. No declarar PASS antes de resultados.
 - Wix: GetSiteContext sigue devolviendo producción como Published; Site ID QA no resoluble. Sin escrituras Wix/CMS, pagos, comunicaciones ni publicación.
 - Limitación: la prueba de concurrencia del mock es in-process y no acredita concurrencia distribuida ni idempotencia persistente.
+
+
+## QA-TEST-DATA-20261114-001
+
+- Fixture sintético: tres clientes ficticios en example.test y una Gestoría de Pruebas con TEST-NIF-NO-VALIDO, sin teléfono operativo y destino real desactivado.
+- PSP mock: requiere environment TEST, testSiteId y testRunId; todas las respuestas de autorización/captura/reembolso llevan isSynthetic=true, sourceEnvironment=TEST y realPayment=false.
+- Email sink: solo acepta destinatario gestoria.pruebas@example.test y clientes sintéticos con testRunId coincidente; no realiza I/O.
+- Limitación: fixture y sink son offline/in-memory. No acreditan desconexión de proveedores Wix en runtime ni habilitan escritura CMS.
