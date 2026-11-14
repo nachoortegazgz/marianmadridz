@@ -20,7 +20,7 @@ CAMBIOS v5018-IDEMPOTENT-IMMUTABLE-SNAPSHOT (respecto a v5017):
 CAMBIOS v5017-ALIGNED-DATOSFISCALES (respecto a v5016):
   ALN-DF-01: Eliminada la dependencia de BUSINESS_COLLECTIONS.GESTORES_FISCALES
              (coleccion no declarada en internalConfig v12). El origen de
-             verdad de destinatarios es BUSINESS_COLLECTIONS.MAPA_STAFF.
+             verdad de destinatarios es BUSINESS_COLLECTIONS.DATOS_FISCALES.
   ALN-DF-02: listAccountantRecipients consulta DatosFiscales y extrae
              gestores por DOS patrones tolerados en paralelo:
                A) item dedicado con recordType "GESTOR" | "GESTORIA" |
@@ -257,7 +257,7 @@ function _toBase64(text) {
 }
 
 // =============================================================================
-// BLOQUE 1b - HELPERS DE GESTOR (MapaStaff)
+// BLOQUE 1b - HELPERS DE GESTOR (DatosFiscales)
 // =============================================================================
 
 function _isGestorRecordType(record) {
@@ -276,7 +276,7 @@ function _isGestorRecordType(record) {
   return candidates.some((v) => GESTORIA_RECORD_TYPE_MARKERS.includes(v));
 }
 
-// Extrae un destinatario de un item de MapaStaff. Devuelve null si el
+// Extrae un destinatario de un item de DatosFiscales. Devuelve null si el
 // item no contiene datos de gestor utiles. Tolera los DOS patrones en
 // paralelo: registro dedicado (recordType=GESTOR) o campos embebidos
 // gestorEmail/gestorName en cualquier item.
@@ -1044,7 +1044,7 @@ export const downloadManagerPackageVersion = webMethod(
 );
 
 // =============================================================================
-// BLOQUE 6 - DESTINATARIOS DE GESTORIA (via MapaStaff)
+// BLOQUE 6 - DESTINATARIOS DE GESTORIA (via DatosFiscales)
 // =============================================================================
 
 export const listAccountantRecipients = webMethod(
@@ -1101,7 +1101,7 @@ export const listAccountantRecipients = webMethod(
   }
 );
 
-// Resuelve un destinatario por id en MapaStaff. Los ids del patron B
+// Resuelve un destinatario por id en DatosFiscales. Los ids del patron B
 // viajan como `<recordId>#gestor`; los del patron A como `<recordId>`.
 async function _resolveRecipientById(recipientId) {
   if (!recipientId) return null;
@@ -1111,7 +1111,7 @@ async function _resolveRecipientById(recipientId) {
 
   try {
     const record = await withTimeout(
-      dalGet(MAPA_STAFF_COL, docId, "strong"),
+      dalGet(DATOS_FISCALES_COL, docId, "strong"),
       CMS_TIMEOUT_MS,
       "getRecipient"
     );
@@ -1252,7 +1252,7 @@ export const sendManagerPackageToAccountant = webMethod(
           },
         };
       }
-      if (!recipient?.email) return { status: "ERROR", data: null, error: { code: "RECIPIENT_NOT_FOUND", message: "The accountant recipient is not configured in MapaStaff." } };
+      if (!recipient?.email) return { status: "ERROR", data: null, error: { code: "RECIPIENT_NOT_FOUND", message: "The accountant recipient is not configured in DatosFiscales." } };
 
       const periodType = _safeTrim(doc.periodType || "QUARTERLY").toUpperCase();
       const year = Number(doc.fiscalYear);
@@ -1352,7 +1352,7 @@ export const sendSpecificDocumentToAccountant = webMethod(
           error: {
             code: "RECIPIENT_NOT_FOUND",
             message:
-              "El destinatario no existe o no tiene email configurado en MapaStaff",
+              "El destinatario no existe o no tiene email configurado en DatosFiscales",
           },
         };
       }
