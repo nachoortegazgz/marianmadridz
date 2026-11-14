@@ -155,12 +155,17 @@ No se mueve ningún writer fiscal ni se habilita ninguna escritura. La decisión
 - La normalización de complementos prioriza `_id`, mantiene el DTO `addOnId` y rechaza que `addonId` difiera de `_id`.
 - El hook de complementos comprueba la igualdad entre `addonId` y `_id` cuando ambos están presentes.
 - Los nombres internos de la ventana de mutabilidad se renombran para describir el sitio aislado, no un segundo entorno.
+- Se eliminan los exports de hooks CitasF2 asociados a un ID generado que no existe en el inventario actual; se conservan los hooks canónicos CitasF2.
+- Los mensajes runtime y comentarios ya no identifican el sitio como un entorno separado.
 - No se modifica Wix CMS ni se borran campos/registros.
 
 ## 8. Validación y límites
 
 - Verificado: lectura de inventario, tipos, recuentos y perfiles de valores del sitio actual.
 - Verificado: igualdad exacta de los pares de campos indicados en las filas comparadas.
-- Pendiente: ejecución de CI de la rama, pruebas de runtime en Wix Editor y E2E.
+- Verificado: PR #361, #362, #363 y #364 integradas en `main`; último merge `55c53e596455995767bede8fba87f6900ba379ac`.
+- Verificado: CI offline Layer 1, Layer 2, regresión completa, contratos Wix Data/eCommerce Transactions/Bookings Reader V2 y ESLint: PASS en runs #1122, #1124, #1126 y #1128.
+- Verificado: secret scanning PASS en runs #546, #548, #550 y #552.
+- Pendiente: pruebas de runtime en Wix Editor y E2E.
 - Pendiente: reconciliación completa de writers fiscales y hooks MapaStaff/DatosFiscales.
-- No se ha publicado ni desplegado código.
+- No se ha publicado ni desplegado código Wix; tampoco se ha modificado el CMS live.

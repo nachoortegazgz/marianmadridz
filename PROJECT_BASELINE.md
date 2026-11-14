@@ -11,11 +11,13 @@ Este documento describe un único sitio objeto de trabajo. No se mantiene una ma
 ## 1. Estado actual verificado
 
 ### Git y Wix
-- Rama de referencia: `main`.
+- Rama de referencia: `main`, con PR #361–#364 integradas; último merge `55c53e596455995767bede8fba87f6900ba379ac`.
+- CI offline, contratos SDK, ESLint y secret scanning de las cuatro intervenciones: PASS (runs #1122, #1124, #1126, #1128; secret scanning #546, #548, #550, #552).
 - GitHub es la referencia del código versionado, no prueba del código ejecutado por Wix.
 - La correspondencia entre los archivos Velo del Editor Classic y Git no está verificada.
 - No existe evidencia de release Wix que vincule runtime con un SHA de Git.
 - No se ha autorizado publicación ni conexión a operaciones reales.
+- Ninguna de las PR #361–#364 ha desplegado o publicado cambios en Wix.
 
 ### CMS
 - 23 colecciones: 15 NATIVE y 8 WIX_APP.
