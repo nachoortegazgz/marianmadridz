@@ -11,7 +11,7 @@ Este documento describe un único sitio objeto de trabajo. No se mantiene una ma
 ## 1. Estado actual verificado
 
 ### Git y Wix
-- Rama de referencia: `main`, con PR #361–#366 integradas; último merge `13b9ae095214e0c601f255fa75d629680c539933`. Rama actual de alineación: `fix/current-site-cms-field-alignment` (CI pendiente).
+- Rama de referencia: `main`, con PR #361–#366 integradas; último merge `13b9ae095214e0c601f255fa75d629680c539933`. PR #367 (`fix/current-site-cms-field-alignment`): CI offline PASS, run #1137 (69 suites, 631 tests), secret scanning PASS #561; pendiente de merge.
 - CI offline, contratos SDK, ESLint y secret scanning de las cuatro intervenciones: PASS (runs #1122, #1124, #1126, #1128; secret scanning #546, #548, #550, #552).
 - GitHub es la referencia del código versionado, no prueba del código ejecutado por Wix.
 - La correspondencia entre los archivos Velo del Editor Classic y Git no está verificada.
@@ -80,7 +80,7 @@ Los requisitos funcionales son declaraciones de alcance, no prueba de implementa
 
 ## 5. Bloqueos abiertos
 
-1. Validar CI completo de la rama fix/current-site-cms-field-alignment y revisar el diff antes de integrar.
+1. Integrar PR #367 tras la revisión final del diff; CI offline y secret scanning ya pasan.
 2. Probar en Wix Editor los hooks de MapaStaff y DatosFiscales, junto con las lecturas de identidad fiscal y destinatarios de gestoría.
 3. Completar búsqueda de consumidores para los candidatos físicos: CajaActual.id, ComplementosCatalogo.addonId, DatosFiscales.gestorNombre y ComplementosCatalogo.traceId.
 4. Mantener MapaStaff.resourceId porque no es semánticamente equivalente a _id CMS, aunque los valores actuales coincidan.
