@@ -25,6 +25,7 @@ test('QA-PSP-01 simulator is fail-closed outside the explicitly enabled TEST con
     { ...QA_CONFIG, enabled: false },
     { ...QA_CONFIG, environment: 'QA' },
     { ...QA_CONFIG, siteId: 'different-site' },
+    { ...QA_CONFIG, siteId: '50b39f33-e753-4331-ab35-b2ed43dc97f7' },
     { ...QA_CONFIG, testSiteId: '' },
     { ...QA_CONFIG, testRunId: 'not-a-test-run' },
   ]) {
