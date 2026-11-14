@@ -4,15 +4,18 @@
 
 - Sitio objeto de auditoría: `50b39f33-e753-4331-ab35-b2ed43dc97f7`.
 - Naturaleza declarada por el propietario: banco de pruebas aislado, sin actividad real.
-- Inventario live: 23 colecciones (15 NATIVE, 8 WIX_APP); 524 campos físicos NATIVE.
-- El manifiesto de campos, tipos, revisiones y recuentos vigente es `docs/audits/2026-11-14-current-site-cms-normalization.md`.
+- Inventario del sitio actual: 23 colecciones (15 NATIVE, 8 WIX_APP); 524 campos físicos NATIVE.
+- El manifiesto de campos, tipos, revisiones, recuentos y contratos de identidad vigente es `docs/audits/2026-11-14-current-site-cms-normalization.md`.
 - Las menciones a otros sitios, estados anteriores y comparativas de entornos que permanecen en este documento son evidencia histórica; no describen el CMS objeto de trabajo.
 - Los registros del sitio se consideran sintéticos/de prueba; no acreditan operaciones comerciales, fiscales ni laborales reales.
+- Contrato actual: `MapaStaff` es exclusivamente el mapa de identidades Wix Bookings/Members; `DatosFiscales` es el maestro fiscal. Los campos no presentes en el esquema físico no se pueden exigir ni persistir desde los hooks.
+- Claves: `_id` identifica el registro CMS; `serviceId`, `pricingPlanId`, `staffMemberId`, `resourceId`, `scheduleId` y `memberId` conservan sus identidades nativas de dominio y no se sustituyen por `_id`.
+- En `ComplementosCatalogo`, `_id` es la fuente de identidad y el DTO de reserva lo proyecta como `addOnId`; la columna física `addonId` permanece hasta que su obligatoriedad CMS sea retirada de forma controlada.
 - No se ha modificado el CMS durante esta auditoría.
 
 
 
-> **Bloque histórico:** la captura que originó los apartados siguientes corresponde a un estado/sitio anterior. No describe el CMS actual ni debe utilizarse como inventario vigente. El manifiesto live aplicable es `docs/audits/2026-11-14-current-site-cms-normalization.md`.
+> **Bloque histórico:** la captura que originó los apartados siguientes corresponde a un estado/sitio anterior. No describe el CMS actual ni debe utilizarse como inventario vigente. El manifiesto del sitio actual aplicable es `docs/audits/2026-11-14-current-site-cms-normalization.md`.
 >
  > Las secciones §§2–3 contienen el inventario y esquema físico live vigente y prevalecen sobre cualquier addendum histórico posterior que documente revisiones anteriores. Las secciones §§6–16 aportan glosario, contratos de código, decisiones y contexto; sus menciones a colecciones/campos ausentes del inventario actual se consideran históricas hasta nueva verificación. La fuente del esquema físico es Wix Data Collections API.
 
@@ -21,7 +24,7 @@
 ## 1. Alcance y criterio de lectura
 
 Se documentan:
-- Las 12 colecciones `NATIVE` del sitio de producción, con revisión live, nombre visible CMS, campo de presentación y todos los campos físicos observados.
+- Las colecciones `NATIVE` del corte histórico, con revisión, nombre visible CMS, campo de presentación y todos los campos físicos observados. No constituyen el inventario vigente del sitio actual.
 - Las 29 colecciones `WIX_APP`, con nombre visible, propietario de aplicación, campo de presentación y número de campos. Sus esquemas son administrados por Wix Apps y no se redefinen aquí.
 - Los keyfields de negocio y sus significados cuando están respaldados por el esquema, `internalConfig.js`, `validation.js` o documentación técnica del repositorio.
 - Las reglas de nomenclatura que el dossier define como estándar y las diferencias reales que aparecen en CMS.
