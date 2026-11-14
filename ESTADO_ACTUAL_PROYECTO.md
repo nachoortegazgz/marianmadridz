@@ -6,7 +6,7 @@
 
 **Restauración:** esta política no se revierte automáticamente. Solo el usuario puede ordenar la restauración de append-only y de las restricciones de mutación para preparar el despliegue. No publicar a producción basándose únicamente en esta excepción de QA.
 
-**Estado Git/Wix:** PR #344, PR #345 y PR #346 están integrados en main; HEAD actual b68e4e048ce5fc1c022fc6ffc2643d5983972107. CI de PR #346: Layer 1 23 suites/296 pruebas, Layer 2 18 suites/246 pruebas, regresión completa 68 suites/627 pruebas; SDK contracts, ESLint y Gitleaks correctos. El usuario declara que la versión base anterior está publicada en Wix; la ampliación de mutaciones QA está integrada en Git pero aún no publicada en Wix. No se dispone de release Wix vinculado a SHA.
+**Estado Git/Wix:** PR #344, PR #345 y PR #346 están integrados en main; HEAD actual b19a8f676d7be157d457588f6acf5332c2a34d32; merge del código QA PR #346: b68e4e048ce5fc1c022fc6ffc2643d5983972107. CI de PR #346: Layer 1 23 suites/296 pruebas, Layer 2 18 suites/246 pruebas, regresión completa 68 suites/627 pruebas; SDK contracts, ESLint y Gitleaks correctos. El usuario declara que la versión base anterior está publicada en Wix; la ampliación de mutaciones QA está integrada en Git pero aún no publicada en Wix. No se dispone de release Wix vinculado a SHA.
 
 **CMS maestro:** MapaStaff revisión 36, 42 campos y 5 registros (3 STAFF, 1 TERCERO, 1 GESTORIA). DatosFiscales permanece como colección legacy con un placeholder QA; su retirada requiere verificar runtime y consumidores tras publicar el backend migrado.
 
@@ -17,7 +17,7 @@
 > Este bloque prevalece sobre los estados históricos posteriores e inferiores del documento. El usuario/propietario es la SSOT de negocio y gobierno. Durante desarrollo y QA se pausa append-only y toda prohibición genérica de editar/eliminar registros, individual o masiva, hasta instrucción expresa del usuario para restaurar las protecciones antes del despliegue. Se mantienen controles de identidad, permisos, validación y seguridad no vinculados a la inmutabilidad.
 
 - **Declaración del usuario:** código integrado y publicado en Wix.
-- **Git verificado en este corte:** main=b68e4e048ce5fc1c022fc6ffc2643d5983972107; PR #344, #345 y #346 están fusionados. La ampliación QA de mutaciones está integrada en Git; su publicación Wix sigue pendiente.
+- **Git verificado en este corte:** main=b19a8f676d7be157d457588f6acf5332c2a34d32; PR #344, #345, #346 y #347 están fusionados. La ampliación QA de mutaciones está integrada en Git; su publicación Wix sigue pendiente.
 - **Runtime:** no se ha obtenido identificador de release que vincule el runtime Wix con un SHA. La declaración de publicación se conserva como declaración del propietario.
 - **Mutabilidad:** PR #346 está fusionado en main. CI completo validado: 68 suites/627 pruebas; Layer 1 296, Layer 2 246; contratos SDK, ESLint y Gitleaks correctos. La política está aplicada en el código de Git, no en el runtime Wix hasta publicación autorizada.
 - **Restauración:** no automática. Solo por instrucción expresa del usuario para preparar el despliegue.
