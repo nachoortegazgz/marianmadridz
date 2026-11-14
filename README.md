@@ -1,6 +1,6 @@
 # Estado operativo — actualización 2026-11-14
 
-La rama de trabajo `chore/temporary-append-only-mutation-window` contiene una ventana temporal de mutabilidad para QA (TEC-033) y documentación de la migración pendiente de `CajaActual`. Esta rama no equivale a `main`, no está publicada y no ha cambiado Wix live. Los ledgers siguen protegidos en el sitio publicado; no se han borrado registros sintéticos ni modificado permisos CMS. Consulta [ESTADO_ACTUAL_PROYECTO.md](ESTADO_ACTUAL_PROYECTO.md) para límites y gates, y [DICCIONARIO_DATOS_CMS.md](DICCIONARIO_DATOS_CMS.md) para el estado físico/objetivo de `CajaActual`.
+La rama `chore/temporary-append-only-mutation-window` contiene TEC-033 y los cambios de alineación de nombres/DTO de `CajaActual`. No está fusionada en `main`, ni publicada ni desplegada en Wix. En CMS live sí se creó `CajaActual` con el esquema corregido y se eliminaron dos fichajes inequívocamente sintéticos; no se cambiaron permisos ni se activaron writers. El inventario live tras el cambio es de 42 colecciones. El detalle y los límites están en [ESTADO_ACTUAL_PROYECTO.md](ESTADO_ACTUAL_PROYECTO.md) y [DICCIONARIO_DATOS_CMS.md](DICCIONARIO_DATOS_CMS.md).
 
 # Marian Madrid — Wix Editor + Velo
 
