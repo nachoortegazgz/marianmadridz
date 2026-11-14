@@ -56,28 +56,28 @@ function _roundMoney(value) {
 }
 
 function _normalizeEntry(input, traceId) {
-    const entryId = _safeTrim(input?.entryId);
-    const sourceMovementId = _safeTrim(input?.sourceMovementId);
-    const concept = _safeTrim(input?.concept);
-    const origenTipo = _safeTrim(input?.origenTipo);
-    const origenRegistro = _safeTrim(input?.origenRegistro);
-    const entryDateText = _safeTrim(input?.entryDate).slice(0, 10);
+    const journalEntryId = _safeTrim(input?.journalEntryId);
+    const documentId = _safeTrim(input?.documentId);
+    const operationDescription = _safeTrim(input?.operationDescription);
+    const movementType = _safeTrim(input?.movementType);
+    const recordSource = _safeTrim(input?.recordSource);
+    const fechaOperacionText = _safeTrim(input?.fechaOperacion).slice(0, 10);
     const fiscalPeriod = _safeTrim(input?.fiscalPeriod);
     const lines = Array.isArray(input?.lines) ? input.lines : [];
 
-    if (entryId.length < 8 || entryId.length > 128) {
+    if (journalEntryId.length < 8 || journalEntryId.length > 128) {
         return { ok: false, code: "ACCOUNTING_ENTRY_ID_INVALID" };
     }
-    if (!sourceMovementId || sourceMovementId.length > 128) {
+    if (!documentId || documentId.length > 128) {
         return { ok: false, code: "ACCOUNTING_SOURCE_MOVEMENT_REQUIRED" };
     }
-    if (!concept || concept.length > 250 || !origenTipo || origenTipo.length > 50 ||
-        !origenRegistro || origenRegistro.length > 100) {
+    if (!operationDescription || operationDescription.length > 250 || !movementType || movementType.length > 50 ||
+        !recordSource || recordSource.length > 100) {
         return { ok: false, code: "ACCOUNTING_ENTRY_METADATA_INVALID" };
     }
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(entryDateText) ||
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(fechaOperacionText) ||
         !/^\d{4}-\d{2}$/.test(fiscalPeriod) ||
-        entryDateText.slice(0, 7) !== fiscalPeriod) {
+        fechaOperacionText.slice(0, 7) !== fiscalPeriod) {
         return { ok: false, code: "ACCOUNTING_FISCAL_PERIOD_INVALID" };
     }
     if (lines.length < 2 || lines.length > MAX_LINES) {
@@ -85,19 +85,19 @@ function _normalizeEntry(input, traceId) {
     }
 
     const normalizedLines = lines.map((line) => ({
-        lineNumber: Number(line?.lineNumber),
+        sequenceNumber: Number(line?.sequenceNumber),
         accountCode: _safeTrim(line?.accountCode),
         debitAmount: _roundMoney(line?.debitAmount),
         creditAmount: _roundMoney(line?.creditAmount),
-    })).sort((a, b) => a.lineNumber - b.lineNumber);
+    })).sort((a, b) => a.sequenceNumber - b.sequenceNumber);
 
     const seenLineNumbers = new Set();
     for (let index = 0; index < normalizedLines.length; index += 1) {
         const line = normalizedLines[index];
         if (
-            !Number.isSafeInteger(line.lineNumber) ||
-            line.lineNumber !== index + 1 ||
-            seenLineNumbers.has(line.lineNumber) ||
+            !Number.isSafeInteger(line.sequenceNumber) ||
+            line.sequenceNumber !== index + 1 ||
+            seenLineNumbers.has(line.sequenceNumber) ||
             !/^\d{6}$/.test(line.accountCode) ||
             !Number.isFinite(line.debitAmount) ||
             !Number.isFinite(line.creditAmount) ||
@@ -108,7 +108,7 @@ function _normalizeEntry(input, traceId) {
         ) {
             return { ok: false, code: "ACCOUNTING_LINE_INVALID" };
         }
-        seenLineNumbers.add(line.lineNumber);
+        seenLineNumbers.add(line.sequenceNumber);
     }
 
     const totalDebit = _roundMoney(normalizedLines.reduce((sum, line) => sum + line.debitAmount, 0));
@@ -120,13 +120,13 @@ function _normalizeEntry(input, traceId) {
     return {
         ok: true,
         value: {
-            entryId,
-            sourceMovementId,
+            journalEntryId,
+            documentId,
             cashMovementId: _safeTrim(input?.cashMovementId) || null,
-            concept,
-            origenTipo,
-            origenRegistro,
-            entryDate: new Date(`${entryDateText}T12:00:00.000Z`),
+            operationDescription,
+            movementType,
+            recordSource,
+            fechaOperacion: new Date(`${fechaOperacionText}T12:00:00.000Z`),
             fiscalPeriod,
             lines: normalizedLines,
             totalDebit,
@@ -228,10 +228,29 @@ async function _releaseAccountingLedgerLock(lock) {
     }
 }
 
-async function _readEntryRows(entryId) {
+function _toCanonicalAccountingRow(row) {
+    const detail = row?.desgloseDetallado && typeof row.desgloseDetallado === "object" &&
+        !Array.isArray(row.desgloseDetallado) ? row.desgloseDetallado : {};
+    return {
+        ...row,
+        journalEntryId: row?.journalEntryId,
+        sequenceNumber: row?.sequenceNumber,
+        documentId: row?.documentId,
+        operationDescription: row?.operationDescription,
+        movementType: row?.movementType,
+        recordSource: row?.recordSource,
+        fechaOperacion: row?.fechaOperacion,
+        accountCode: detail.accountCode,
+        debitAmount: detail.debitAmount,
+        creditAmount: detail.creditAmount,
+        recordHash: row?.hash,
+    };
+}
+
+async function _readEntryRows(journalEntryId) {
     const result = await dalQuery(ACCOUNTING_COL)
-        .eq("entryId", entryId)
-        .ascending("lineNumber")
+        .eq("journalEntryId", journalEntryId)
+        .ascending("sequenceNumber")
         .limit(MAX_LINES + 1)
         .find(STRONG_READ);
     return Array.isArray(result?.items) ? result.items : [];
@@ -239,7 +258,7 @@ async function _readEntryRows(entryId) {
 
 async function _verifyEntryRows(rows, entry) {
     if (rows.length !== entry.lines.length) return false;
-    const sorted = [...rows].sort((a, b) => Number(a.lineNumber) - Number(b.lineNumber));
+    const sorted = rows.map(_toCanonicalAccountingRow).sort((a, b) => Number(a.sequenceNumber) - Number(b.sequenceNumber));
     const first = sorted[0];
     const firstTimestamp = new Date(first?.recordTimestamp);
     if (!Number.isFinite(firstTimestamp.getTime())) return false;
@@ -247,41 +266,41 @@ async function _verifyEntryRows(rows, entry) {
     // Anchor this entry to the actual ledger head immediately before its first row.
     // A locally linked set of rows is not sufficient if its first predecessor is forged.
     const priorResult = await dalQuery(ACCOUNTING_COL)
-        .ne("origenTipo", "SMOKE_TEST")
-        .ne("accountCode", "SIMULATED")
+        .ne("movementType", "SMOKE_TEST")
+        .ne("recordSource", "SMOKE_TEST")
         .lt("recordTimestamp", firstTimestamp)
         .descending("recordTimestamp")
-        .descending("lineNumber")
+        .descending("sequenceNumber")
         .limit(1)
         .find(STRONG_READ);
     const prior = priorResult?.items?.[0] || null;
     if (isExplicitSimulationLedgerRecord(prior)) return false;
-    let expectedPreviousHash = _safeTrim(prior?.recordHash) || GENESIS_HASH;
+    let expectedPreviousHash = _safeTrim(prior?.hash) || GENESIS_HASH;
     if (first.previousRecordHash !== expectedPreviousHash) return false;
 
     for (let index = 0; index < entry.lines.length; index += 1) {
         const expected = entry.lines[index];
         const actual = sorted[index];
         let recordTimestamp;
-        let entryDate;
+        let fechaOperacion;
         try {
             recordTimestamp = new Date(actual.recordTimestamp).toISOString();
-            entryDate = new Date(actual.entryDate).toISOString();
+            fechaOperacion = new Date(actual.fechaOperacion).toISOString();
         } catch {
             return false;
         }
         if (
-            Number(actual.lineNumber) !== expected.lineNumber ||
-            actual.entryId !== entry.entryId ||
+            Number(actual.sequenceNumber) !== expected.sequenceNumber ||
+            actual.journalEntryId !== entry.journalEntryId ||
             actual.accountCode !== expected.accountCode ||
             _roundMoney(actual.debitAmount) !== expected.debitAmount ||
             _roundMoney(actual.creditAmount) !== expected.creditAmount ||
-            actual.sourceMovementId !== entry.sourceMovementId ||
+            actual.documentId !== entry.documentId ||
             (actual.cashMovementId || null) !== entry.cashMovementId ||
-            actual.concept !== entry.concept ||
-            actual.origenTipo !== entry.origenTipo ||
-            actual.origenRegistro !== entry.origenRegistro ||
-            entryDate !== entry.entryDate.toISOString() ||
+            actual.operationDescription !== entry.operationDescription ||
+            actual.movementType !== entry.movementType ||
+            actual.recordSource !== entry.recordSource ||
+            fechaOperacion !== entry.fechaOperacion.toISOString() ||
             actual.fiscalPeriod !== entry.fiscalPeriod ||
             !_safeTrim(actual.traceId) ||
             actual.previousRecordHash !== expectedPreviousHash ||
@@ -289,15 +308,15 @@ async function _verifyEntryRows(rows, entry) {
         ) return false;
 
         const hashPayload = {
-            entryId: actual.entryId,
+            journalEntryId: actual.journalEntryId,
             recordTimestamp,
-            concept: actual.concept,
-            lineNumber: Number(actual.lineNumber),
-            origenTipo: actual.origenTipo,
-            origenRegistro: actual.origenRegistro,
-            sourceMovementId: actual.sourceMovementId,
+            operationDescription: actual.operationDescription,
+            sequenceNumber: Number(actual.sequenceNumber),
+            movementType: actual.movementType,
+            recordSource: actual.recordSource,
+            documentId: actual.documentId,
             cashMovementId: actual.cashMovementId || null,
-            entryDate,
+            fechaOperacion,
             fiscalPeriod: actual.fiscalPeriod,
             accountCode: actual.accountCode,
             debitAmount: _roundMoney(actual.debitAmount),
@@ -346,9 +365,9 @@ export async function appendAccountingEntry(input, traceId) {
     delete idempotencyEntry.traceId;
     const payloadHash = await hashSHA256(JSON.stringify({
         ...idempotencyEntry,
-        entryDate: entry.entryDate.toISOString(),
+        fechaOperacion: entry.fechaOperacion.toISOString(),
     }));
-    const claimDigest = await hashSHA256(entry.entryId);
+    const claimDigest = await hashSHA256(entry.journalEntryId);
     const claimId = `ACC_ENTRY_${claimDigest.slice(0, 48)}`;
     const now = new Date();
     let claim = await dalGet(CONTROL_COL, claimId, "strong");
@@ -365,12 +384,12 @@ export async function appendAccountingEntry(input, traceId) {
             claim = await dalInsert(CONTROL_COL, {
                 _id: claimId,
                 controlType: CONTROL_TYPE.DEDUPE_KEY,
-                dedupeKey: `ACCOUNTING_ENTRY:${entry.entryId}`,
+                dedupeKey: `ACCOUNTING_ENTRY:${entry.journalEntryId}`,
                 status: "PENDING",
                 payload: {
                     payloadHash,
-                    entryId: entry.entryId,
-                    sourceMovementId: entry.sourceMovementId,
+                    journalEntryId: entry.journalEntryId,
+                    documentId: entry.documentId,
                     expectedLines: entry.lines.length,
                     lines: entry.lines,
                 },
@@ -394,7 +413,7 @@ export async function appendAccountingEntry(input, traceId) {
         lock = await _acquireAccountingLedgerLock(entry.traceId);
         await _assertAccountingLedgerLock(lock);
 
-        const existingRows = await _readEntryRows(entry.entryId);
+        const existingRows = await _readEntryRows(entry.journalEntryId);
         if (existingRows.length) {
             if (await _verifyEntryRows(existingRows, entry)) {
                 if (!claimWasCompleted) {
@@ -403,7 +422,7 @@ export async function appendAccountingEntry(input, traceId) {
                         recoveredExistingRows: true,
                     });
                 }
-                return { status: "SUCCESS", data: { entryId: entry.entryId, lineCount: existingRows.length, idempotent: true }, error: null };
+                return { status: "SUCCESS", data: { journalEntryId: entry.journalEntryId, lineCount: existingRows.length, idempotent: true }, error: null };
             }
             await _markEntryClaim(claim, "REPAIR_REQUIRED", {
                 observedLineCount: existingRows.length,
@@ -421,17 +440,17 @@ export async function appendAccountingEntry(input, traceId) {
         }
 
         const lastResult = await dalQuery(ACCOUNTING_COL)
-            .ne("origenTipo", "SMOKE_TEST")
-            .ne("accountCode", "SIMULATED")
+            .ne("movementType", "SMOKE_TEST")
+            .ne("recordSource", "SMOKE_TEST")
             .descending("recordTimestamp")
-            .descending("lineNumber")
+            .descending("sequenceNumber")
             .limit(1)
             .find(STRONG_READ);
         const lastRecord = lastResult?.items?.[0] || null;
         if (lastRecord && isExplicitSimulationLedgerRecord(lastRecord)) {
             throw new Error("ACCOUNTING_LEDGER_SIMULATION_HEAD_UNRESOLVED");
         }
-        let previousRecordHash = _safeTrim(lastRecord?.recordHash) || GENESIS_HASH;
+        let previousRecordHash = _safeTrim(lastRecord?.hash) || GENESIS_HASH;
         const lastTimestamp = lastRecord?.recordTimestamp
             ? new Date(lastRecord.recordTimestamp).getTime()
             : 0;
@@ -442,15 +461,15 @@ export async function appendAccountingEntry(input, traceId) {
             const line = entry.lines[index];
             const recordTimestamp = new Date(timestampBase + index);
             const hashPayload = {
-                entryId: entry.entryId,
+                journalEntryId: entry.journalEntryId,
                 recordTimestamp: recordTimestamp.toISOString(),
-                concept: entry.concept,
-                lineNumber: line.lineNumber,
-                origenTipo: entry.origenTipo,
-                origenRegistro: entry.origenRegistro,
-                sourceMovementId: entry.sourceMovementId,
+                operationDescription: entry.operationDescription,
+                sequenceNumber: line.sequenceNumber,
+                movementType: entry.movementType,
+                recordSource: entry.recordSource,
+                documentId: entry.documentId,
                 cashMovementId: entry.cashMovementId,
-                entryDate: entry.entryDate.toISOString(),
+                fechaOperacion: entry.fechaOperacion.toISOString(),
                 fiscalPeriod: entry.fiscalPeriod,
                 accountCode: line.accountCode,
                 debitAmount: line.debitAmount,
@@ -458,24 +477,29 @@ export async function appendAccountingEntry(input, traceId) {
                 traceId: entry.traceId,
             };
             const recordHash = await hashChain(previousRecordHash, hashPayload);
-            const rowDigest = await hashSHA256(`${entry.entryId}|${line.lineNumber}`);
+            const rowDigest = await hashSHA256(`${entry.journalEntryId}|${line.sequenceNumber}`);
             const row = {
                 _id: `ACC_${rowDigest.slice(0, 48)}`,
-                entryId: entry.entryId,
+                journalEntryId: entry.journalEntryId,
                 recordTimestamp,
-                concept: entry.concept,
-                lineNumber: line.lineNumber,
-                origenTipo: entry.origenTipo,
-                origenRegistro: entry.origenRegistro,
-                sourceMovementId: entry.sourceMovementId,
+                operationDescription: entry.operationDescription,
+                sequenceNumber: line.sequenceNumber,
+                movementType: entry.movementType,
+                recordSource: entry.recordSource,
+                documentId: entry.documentId,
                 cashMovementId: entry.cashMovementId,
-                entryDate: entry.entryDate,
+                fechaOperacion: entry.fechaOperacion,
                 fiscalPeriod: entry.fiscalPeriod,
-                accountCode: line.accountCode,
-                debitAmount: line.debitAmount,
-                creditAmount: line.creditAmount,
+                amount: Math.max(line.debitAmount, line.creditAmount),
+                accountingAmount: line.debitAmount - line.creditAmount,
+                accountingSign: line.debitAmount > 0 ? 1 : -1,
+                desgloseDetallado: {
+                    accountCode: line.accountCode,
+                    debitAmount: line.debitAmount,
+                    creditAmount: line.creditAmount,
+                },
                 previousRecordHash,
-                recordHash,
+                hash: recordHash,
                 traceId: entry.traceId,
                 _createdDate: recordTimestamp,
             };
@@ -491,7 +515,7 @@ export async function appendAccountingEntry(input, traceId) {
                         continue;
                     }
                 }
-                const observed = await _readEntryRows(entry.entryId).catch(() => null);
+                const observed = await _readEntryRows(entry.journalEntryId).catch(() => null);
                 if (observed === null) retainLock = true;
                 await _markEntryClaim(claim, "REPAIR_REQUIRED", {
                     reason: "ACCOUNTING_LEDGER_INSERT_UNCERTAIN",
@@ -501,7 +525,7 @@ export async function appendAccountingEntry(input, traceId) {
                 });
                 return {
                     status: "ERROR",
-                    data: { entryId: entry.entryId, insertedLineCount: inserted.length },
+                    data: { journalEntryId: entry.journalEntryId, insertedLineCount: inserted.length },
                     error: { code: "ACCOUNTING_ENTRY_REPAIR_REQUIRED" },
                 };
             }
@@ -516,13 +540,13 @@ export async function appendAccountingEntry(input, traceId) {
         });
         return {
             status: "SUCCESS",
-            data: { entryId: entry.entryId, lineCount: inserted.length, idempotent: false },
+            data: { journalEntryId: entry.journalEntryId, lineCount: inserted.length, idempotent: false },
             error: null,
         };
     } catch (error) {
         log.error("appendAccountingEntry failed", {
             traceId: entry.traceId,
-            entryId: entry.entryId,
+            journalEntryId: entry.journalEntryId,
             error: error?.message,
             code: error?.code,
         });
