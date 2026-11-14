@@ -1,93 +1,97 @@
-# Auditoría de esquema live — CajaActual
+# CajaActual — esquema físico vigente y alineación backend
 
-**Fecha de consulta:** 2026-11-14.
-**Sitio:** Marian Madrid, `188bed94-177c-4bc9-a9f0-35080d874f3e`.
-**Entorno:** sitio publicado de referencia.
-**Fuente primaria:** Wix Data Collections API, `GET https://www.wixapis.com/data/v2/collections/CajaActual`.
-**Resultado:** HTTP 200, lectura únicamente; no se modificó CMS.
+**Fecha de lectura:** 2026-11-14  
+**Sitio:** 50b39f33-e753-4331-ab35-b2ed43dc97f7 (banco de pruebas aislado, sin actividad real).  
+**Fuente:** Wix Data Collections API, GET /data/v2/collections/CajaActual.  
+**Revisión de colección:** 1. **39 campos**, incluidos los campos de sistema.
 
-## 1. Definición devuelta por Wix
+Este documento sustituye la captura histórica de CajaActual que describía operationDateHour, bizumAmount y los cuatro opening*Amount. Esos campos no existen en el esquema físico vigente.
 
-| Propiedad | Valor live |
+## 1. Manifiesto físico verificado
+
+| Campo | Tipo Wix |
 |---|---|
-| ID | `CajaActual` |
-| Nombre visible | `CAJA_ACTUAL` |
-| Tipo | `NATIVE` |
-| Revisión | `9` |
-| Última actualización | `2026-11-14T04:11:13.578Z` |
-| Campo de presentación | `singletonKey` |
-| Campos totales | 82 |
-| Campos personalizados | 78 |
-| Campos de sistema | 4 (`_id`, `_createdDate`, `_updatedDate`, `_owner`) |
+| netAmount | NUMBER |
+| closedBy | TEXT |
+| sequenceCounters | OBJECT |
+| versionState | NUMBER |
+| stateHash | TEXT |
+| lastMovementAt | DATETIME |
+| differenceReason | TEXT |
+| difference | NUMBER |
+| countedCash | NUMBER |
+| expectedCash | NUMBER |
+| cashAmount | NUMBER |
+| totalOutAmount | NUMBER |
+| totalInAmount | NUMBER |
+| paymentAmount | NUMBER |
+| paymentCount | NUMBER |
+| refundAmount | NUMBER |
+| refundCount | NUMBER |
+| salesAmount | NUMBER |
+| salesCount | NUMBER |
+| otherAmount | NUMBER |
+| voucherAmount | NUMBER |
+| cardAmount | NUMBER |
+| openedBy | TEXT |
+| openingAmount | NUMBER |
+| closedAt | DATETIME |
+| openedAt | DATETIME |
+| traceId | TEXT |
+| staffResourceId | TEXT |
+| operationDate | DATE |
+| cashRegisterStatus | TEXT |
+| singletonKey | TEXT |
+| isOpen | BOOLEAN |
+| id | TEXT |
+| currentSequence | NUMBER |
+| fiscalPeriod | TEXT |
+| _id | TEXT |
+| _createdDate | DATETIME |
+| _updatedDate | DATETIME |
+| _owner | TEXT |
 
-Permisos devueltos: `read=ANYONE`, `insert=ADMIN`, `update=ADMIN`, `remove=ADMIN`.
+## 2. Valores del singleton leídos
 
-## 2. Esquema físico
+- singletonKey = CAJA_PRINCIPAL.
+- cashRegisterStatus = SIMULACION.
+- isOpen = true; no coincide semánticamente con cashRegisterStatus=SIMULACION. El backend gobierna la sesión por cashRegisterStatus y no consume isOpen.
+- id coincide con _id.
+- sequenceCounters es un objeto JSON, no una cadena.
+- currentSequence = 0; no se localizó consumidor activo en src/.
+- openingAmount y expectedCash contienen el mismo importe en la fila sintética actual, pero representan conceptos distintos y no se fusionan.
+- operationDate es DATE. No existe operationDateHour.
+- No existen bizumAmount, openingCashAmount, openingCardAmount, openingBizumAmount ni openingOtherAmount.
 
-```text
-singletonKey:TEXT, closedAt:DATETIME, closedBy:TEXT, cierreZReference:TEXT,
-openedAt:DATETIME, openedBy:TEXT, operationDateHour:DATETIME,
-cashRegisterStatus:TEXT, openingCashAmount:NUMBER, openingCardAmount:NUMBER,
-openingBizumAmount:NUMBER, openingOtherAmount:NUMBER, cashAmount:NUMBER,
-cardAmount:NUMBER, bizumAmount:NUMBER, otherAmount:NUMBER,
-cashMovementId:TEXT, lastMovementAt:DATETIME, snapshotUpdatedAt:DATETIME,
-snapshotSource:TEXT, snapshotVersion:NUMBER, salesCount:NUMBER,
-expectedCash:NUMBER, countedCash:NUMBER, difference:NUMBER,
-differenceReason:TEXT, sequenceCounters:OBJECT, ticketSequence:NUMBER,
-lastOperationId:TEXT, lastOperationType:TEXT, lastOperationAmount:NUMBER,
-lastOperationPaymentMethod:TEXT, lastOperationAt:DATETIME,
-lastOperationStatus:TEXT, traceId:TEXT, posIntegrationStatus:TEXT,
-ticketSyncStatus:TEXT, orderId:TEXT, checkoutId:TEXT, paymentId:TEXT,
-transactionId:TEXT, paymentReference:TEXT, paymentStatus:TEXT,
-paymentMethod:TEXT, paymentBreakdown:OBJECT, amountReceived:NUMBER,
-changeReturned:NUMBER, posPaymentStatus:TEXT, posPaymentMethod:TEXT,
-posPaymentProvider:TEXT, posAmount:NUMBER, posCurrency:TEXT,
-posPaidAt:DATETIME, ticketNumber:TEXT, ticketIssuedAt:DATETIME,
-ticketType:TEXT, ticketSeries:TEXT, lineItems:OBJECT,
-conceptOperations:OBJECT, conceptQuantities:OBJECT, customerName:TEXT,
-customerTaxId:TEXT, customerAddress:TEXT, netPrice:NUMBER,
-discountAmount:NUMBER, roundingAmount:NUMBER, taxableBaseTotal:NUMBER,
-appliedTax:NUMBER, taxTotal:NUMBER, ticketTotal:NUMBER, fiscalText:TEXT,
-verifactuReference:TEXT, verificationQr:TEXT, ticketXControlReference:TEXT,
-contactId:TEXT, catalogItemId:TEXT, serviceId:TEXT, bookingId:TEXT,
-_id:TEXT, _createdDate:DATETIME, _updatedDate:DATETIME, _owner:TEXT
-```
+## 3. Contrato de código alineado en la rama
 
-## 3. Diferencias respecto al diccionario anterior
+Rama: fix/current-site-cms-contract-alignment.
 
-El esquema anterior documentaba revisión 64 y 59 campos personalizados. La lectura live actual devuelve revisión 9 y 78 campos personalizados. Los siguientes campos del esquema anterior ya no aparecen en la respuesta live: `staffResourceId`, `conceptList`, `pvp`, `totalSum`, `netAmount`. La respuesta actual incorpora, entre otros, `snapshotUpdatedAt`, `snapshotSource`, `snapshotVersion`, `lastOperationId`, `lastOperationType`, `lastOperationAmount`, `lastOperationPaymentMethod`, `lastOperationAt`, `lastOperationStatus`, `posIntegrationStatus`, `posPaymentStatus`, `posPaymentMethod`, `posPaymentProvider`, `posAmount`, `posCurrency`, `posPaidAt`, `checkoutId`, `paymentId`, `transactionId`, `contactId`, `catalogItemId`, `serviceId` y `bookingId`.
+- CAJA_KEYS.OPERATION_DATE apunta a operationDate.
+- cajas.web.js persiste operationDate como fecha ISO YYYY-MM-DD, derivada de movement.operationDate cuando existe o del timestamp fuente.
+- PAYMENT_METHOD.BIZUM se acumula en otherAmount, único bucket físico disponible para métodos no efectivo/tarjeta en CajaActual. El detalle del medio de pago permanece en MovimientosCaja.
+- El DTO devuelve operationDate, otherAmount y openingAmount. No expone bizumAmount, operationDateHour ni los cuatro opening*Amount inexistentes.
+- assertCajaActualRecord valida tipos NUMBER, BOOLEAN, OBJECT, DATE y el espejo id = _id cuando ambos están presentes.
+- CASH_REGISTER_STATUS reconoce ABIERTA, CERRADA y SIMULACION. SIMULACION es un sentinel del banco de pruebas; no representa una sesión abierta.
 
-## 4. Discrepancia de contrato con el código del repositorio
+## 4. Decisiones y candidatos de limpieza
 
-Revisión estática sobre `main` (HEAD consultado: `906918b3468c4490797e30509a8156c550ba6b2b`):
+- _id es el keyfield CMS. id es un espejo físico sin consumidor localizado; su retirada requiere revisar automatizaciones/vistas CMS.
+- cashRegisterStatus es el estado canónico. isOpen no tiene consumidor localizado y contradice el valor SIMULACION; candidato a retirada tras revisar automatizaciones/vistas CMS.
+- currentSequence no tiene consumidor localizado; sequenceCounters es el objeto usado por el backend. Candidato a retirada tras revisar contratos externos.
+- openingAmount y expectedCash no se fusionan aunque coincidan en el registro actual.
+- No se modifica el esquema Wix ni el registro singleton en esta intervención.
 
-- `src/backend/cajas.web.js:167` define `CAJA_KEYS.TOTAL = "netAmount"`, campo ausente del esquema live.
-- `src/backend/cajas.web.js:1122` escribe `cashRegister.staffResourceId`, campo ausente del esquema live.
-- `src/backend/cajas.web.js:1364` devuelve `netAmount` desde la proyección de CajaActual.
-- `src/backend/tests/site.flows.offline.test.mjs` contiene fixtures y aserciones sobre `netAmount`; las pruebas offline no demuestran que el esquema publicado de Wix acepte/retenga esa propiedad.
-- `src/backend/eventLog.js:695-702` escribe `staffResourceId` en `MovimientosCaja`; es un contrato de otra colección y no se debe trasladar automáticamente a CajaActual.
-- Las búsquedas de código realizadas para `snapshotUpdatedAt`, `snapshotSource`, `snapshotVersion`, `lastOperationId`, `posPaymentStatus`, `checkoutId`, `paymentId` y `transactionId` no devolvieron consumidores en el índice consultado.
+## 5. Formato oficial de Wix
 
-**Interpretación:** el contrato físico de CajaActual en Wix y parte del contrato usado por backend/tests están desalineados. Esto no demuestra un fallo de escritura: la documentación Wix indica que el esquema CMS no se aplica estrictamente a todos los valores almacenados. Sí impide afirmar que la definición CMS y el modelo de código están sincronizados.
+Wix Data define el tipo DATE como String en formato ISO 8601 YYYY-MM-DD. El tipo DATETIME utiliza un objeto $date con fecha y hora ISO 8601. La implementación diferencia ambos tipos.
 
-## 5. Riesgo y decisión
+Documentación oficial: https://dev.wix.com/docs/api-reference/business-solutions/cms/data-types-in-wix-data
 
-**P1 — pendiente de reconciliación.** No modificar código ni datos por inferencia. Antes de cambiar el modelo:
+## 6. Estado de validación
 
-1. Inspeccionar todos los consumidores y writers de CajaActual, incluyendo `dataAccess`, validadores, WebMethods, crons, hooks y pruebas.
-2. Determinar con evidencia si `netAmount` es alias de negocio que debe mantenerse, sustituirse o eliminarse; no inferirlo por su ausencia en el esquema.
-3. Determinar si `staffResourceId` debe existir en CajaActual o si la identidad debe resolverse desde otra proyección.
-4. Acordar qué campos nuevos son realmente parte del contrato de negocio y si requieren persistencia o solo están declarados en CMS.
-5. Definir migración de esquema y compatibilidad, con pruebas unitarias, integración, regresión, concurrencia e idempotencia.
-6. Validar persistencia y lectura en Wix QA aislado antes de cualquier publicación.
-
-**Seguridad:** `read=ANYONE` junto a campos de identificación de cliente, datos fiscales y referencias de pago es un riesgo P1. No se cambiaron permisos; evaluar necesidad de lectura pública y revisar los caminos de acceso efectivos. No usar datos personales reales mientras esta configuración permanezca.
-
-## 6. Alcance de la validación
-
-- Verificado: lectura de la definición live mediante Wix API, HTTP 200; revisión, fechas, permisos, cardinalidad y claves/tipos de campos.
-- Verificado: búsqueda estática de los consumidores señalados en el código y tests de `main`.
-- No ejecutado: Wix Local Editor, runtime WebMethods, escrituras/lecturas de prueba, E2E, prueba de acceso visitante, ni suite CI nueva.
-- No realizado: cambios de código, cambios CMS, publicación o despliegue.
-
-**Estado:** auditoría documental basada en esquema live; no certifica comportamiento runtime.
+- Esquema físico: verificado por lectura Wix.
+- Datos del singleton: verificados por lectura Wix.
+- Código: alineación implementada en rama.
+- CI, revisión de diff y pruebas Wix Editor/E2E: pendientes.
+- No se ha ejecutado mutación CMS ni publicación Wix.
