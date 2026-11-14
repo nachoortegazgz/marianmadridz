@@ -4,7 +4,7 @@ MODULE: backend/validation.js
 RESPONSIBILITY: Pure validation for CMS write boundaries and fiscal identity.
 CONTRACT: Validators return true or throw SCHEMA_VIOLATION; no logging or I/O.
 DEPENDENCIES: backend/internalConfig only.
-DOMAINS: CitasF2, MapaStaff, ControlOperativo, RegistrosHorariosStaff,
+DOMAINS: CitasF2, MapaStaff, DatosFiscales, ControlOperativo, RegistrosHorariosStaff,
          canonical enums and Spanish/EU tax identifiers.
 =============================================================================
 */
@@ -108,62 +108,81 @@ export function assertMapaStaffRecord(item) {
     if (!item || typeof item !== "object" || Array.isArray(item)) {
         throw new Error("SCHEMA_VIOLATION: MapaStaff item must be an object");
     }
-
-    assertValidEnum(item.recordType, RECORD_TYPE, "recordType");
-
-    if (item.recordType === RECORD_TYPE.STAFF) {
-        if (!isValidGuid(item.staffMemberId) || !isValidGuid(item.resourceId)) {
-            throw new Error("SCHEMA_VIOLATION: MapaStaff STAFF requires staffMemberId and resourceId GUIDs");
+    for (const field of ["staffMemberId", "resourceId", "scheduleId"]) {
+        if (!isValidGuid(item[field])) {
+            throw new Error(`SCHEMA_VIOLATION: MapaStaff.${field} must be a valid Wix GUID`);
         }
-        return true;
     }
+    for (const field of ["memberId", "thirdPartyId"]) {
+        if (item[field] != null && item[field] !== "" && !isValidGuid(item[field])) {
+            throw new Error(`SCHEMA_VIOLATION: MapaStaff.${field} must be a valid Wix GUID when supplied`);
+        }
+    }
+    if (item.active !== undefined && typeof item.active !== "boolean") {
+        throw new Error("SCHEMA_VIOLATION: MapaStaff.active must be BOOLEAN");
+    }
+    if (item.schemaVersion !== undefined &&
+        (!Number.isSafeInteger(Number(item.schemaVersion)) || Number(item.schemaVersion) < 1)) {
+        throw new Error("SCHEMA_VIOLATION: MapaStaff.schemaVersion must be a positive integer");
+    }
+    return true;
+}
 
-    if (Number(item.schemaVersion) !== 1) {
-        throw new Error("SCHEMA_VIOLATION: MapaStaff.schemaVersion must be 1");
+/**
+ * Validates fiscal master records against the physical DatosFiscales collection.
+ * This collection owns fiscal identity; MapaStaff only maps Wix staff identities.
+ */
+export function assertDatosFiscalesRecord(item) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) {
+        throw new Error("SCHEMA_VIOLATION: DatosFiscales item must be an object");
     }
-    if (!item.traceId || !String(item.traceId).trim()) {
-        throw new Error("SCHEMA_VIOLATION: MapaStaff.traceId is required");
-    }
-
-    if (item.recordType === RECORD_TYPE.GESTORIA) {
-        const email = String(item.email || item.gestorEmail || "").trim();
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-            throw new Error("SCHEMA_VIOLATION: MapaStaff GESTORIA requires a valid contact email");
-        }
-        if (!String(item.name || item.legalName || "").trim()) {
-            throw new Error("SCHEMA_VIOLATION: MapaStaff GESTORIA requires name or legalName");
-        }
-        if ("memberId" in item || "staffMemberId" in item || "resourceId" in item ||
-            "rolWebsite" in item || "rolBookings" in item) {
-            throw new Error("SCHEMA_VIOLATION: GESTORIA cannot carry site identity or staff roles");
-        }
-        return true;
-    }
+    assertValidEnum(item.recordType, {
+        TERCERO: RECORD_TYPE.TERCERO,
+        GESTORIA: RECORD_TYPE.GESTORIA,
+        CONFIG_SISTEMA: RECORD_TYPE.CONFIG_SISTEMA,
+    }, "recordType");
 
     if (item.recordType === RECORD_TYPE.CONFIG_SISTEMA) {
         if (item.taxId && !isValidNifOrEuVat(item.taxId)) {
-            throw new Error("SCHEMA_VIOLATION: MapaStaff.taxId must be valid NIF/NIE/CIF/VAT-UE when supplied");
+            throw new Error("SCHEMA_VIOLATION: DatosFiscales.taxId must be valid NIF/NIE/CIF/VAT-UE");
         }
-        if (item.legalName != null && item.legalName !== "" &&
-            !String(item.legalName).trim()) {
-            throw new Error("SCHEMA_VIOLATION: MapaStaff.legalName must be non-empty when supplied");
+        if (item.legalName != null && item.legalName !== "" && !String(item.legalName).trim()) {
+            throw new Error("SCHEMA_VIOLATION: DatosFiscales.legalName must be non-empty when supplied");
         }
         if (item.thirdPartyType != null && item.thirdPartyType !== "") {
             throw new Error("SCHEMA_VIOLATION: CONFIG_SISTEMA.thirdPartyType must be null");
         }
-    } else {
-        if (!item.taxId || !String(item.taxId).trim()) {
-            throw new Error("SCHEMA_VIOLATION: MapaStaff TERCERO requires taxId");
+    } else if (item.recordType === RECORD_TYPE.TERCERO) {
+        if (!item.taxId || !isValidNifOrEuVat(item.taxId)) {
+            throw new Error("SCHEMA_VIOLATION: DatosFiscales TERCERO requires a valid taxId");
         }
-        if (!isValidNifOrEuVat(item.taxId)) {
-            throw new Error("SCHEMA_VIOLATION: MapaStaff.taxId must be valid NIF/NIE/CIF/VAT-UE");
-        }
-        if (!item.legalName || !String(item.legalName).trim()) {
-            throw new Error("SCHEMA_VIOLATION: MapaStaff TERCERO requires legalName");
+        if (!String(item.legalName || "").trim()) {
+            throw new Error("SCHEMA_VIOLATION: DatosFiscales TERCERO requires legalName");
         }
         assertValidEnum(item.thirdPartyType, THIRD_PARTY_TYPE, "thirdPartyType");
+    } else if (item.recordType === RECORD_TYPE.GESTORIA) {
+        const email = String(item.email || item.gestorEmail || "").trim();
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            throw new Error("SCHEMA_VIOLATION: DatosFiscales GESTORIA requires a valid email");
+        }
+        if (!String(item.name || item.legalName || item.gestorName || "").trim()) {
+            throw new Error("SCHEMA_VIOLATION: DatosFiscales GESTORIA requires a name");
+        }
     }
-
+    for (const field of ["verifactuEnabled", "tipoUsoPosibleMultiOT", "indicadorMultiplesOT", "active"]) {
+        if (item[field] !== undefined && item[field] !== null && typeof item[field] !== "boolean") {
+            throw new Error(`SCHEMA_VIOLATION: DatosFiscales.${field} must be BOOLEAN`);
+        }
+    }
+    if (item.fechaInicioVerifactu != null && item.fechaInicioVerifactu !== "") {
+        const value = String(item.fechaInicioVerifactu);
+        const parsed = new Date(value + "T00:00:00.000Z");
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(value) ||
+            Number.isNaN(parsed.getTime()) ||
+            parsed.toISOString().slice(0, 10) !== value) {
+            throw new Error("SCHEMA_VIOLATION: DatosFiscales.fechaInicioVerifactu must be a real YYYY-MM-DD date");
+        }
+    }
     return true;
 }
 // =============================================================================
@@ -434,31 +453,3 @@ export function isExplicitSimulationLedgerRecord(item) {
 }
 
 
-/**
- * Valida la identidad fiscal de terceros almacenados en MapaStaff.
- * No depende de una colección DatosFiscales, retirada del CMS live.
- */
-export function assertMapaStaffFiscalIdentity(item) {
-    if (!item || typeof item !== "object" || Array.isArray(item)) {
-        throw new Error("SCHEMA_VIOLATION: MapaStaff fiscal identity must be an object");
-    }
-
-    const taxId = String(item.taxId ?? "").trim();
-    const legalName = String(item.legalName ?? "").trim();
-    const thirdPartyType = String(item.thirdPartyType ?? "").trim();
-
-    if (taxId && !isValidNifOrEuVat(taxId)) {
-        throw new Error("SCHEMA_VIOLATION: MapaStaff.taxId must be valid NIF/NIE/CIF/VAT-UE");
-    }
-    if (!taxId && item.taxId !== undefined && item.taxId !== null && item.taxId !== "") {
-        throw new Error("SCHEMA_VIOLATION: MapaStaff.taxId cannot be empty");
-    }
-    if (!legalName) {
-        throw new Error("SCHEMA_VIOLATION: MapaStaff.legalName is required");
-    }
-    if (thirdPartyType && !Object.values(THIRD_PARTY_TYPE).includes(thirdPartyType.toUpperCase())) {
-        throw new Error("SCHEMA_VIOLATION: MapaStaff.thirdPartyType is invalid");
-    }
-
-    return true;
-}

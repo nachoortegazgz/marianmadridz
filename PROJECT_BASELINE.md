@@ -11,7 +11,7 @@ Este documento describe un único sitio objeto de trabajo. No se mantiene una ma
 ## 1. Estado actual verificado
 
 ### Git y Wix
-- Rama de referencia: `main`, con PR #361–#364 integradas; último merge `55c53e596455995767bede8fba87f6900ba379ac`.
+- Rama de referencia: `main`, con PR #361–#366 integradas; último merge `13b9ae095214e0c601f255fa75d629680c539933`. PR #367 (`fix/current-site-cms-field-alignment`): CI offline PASS, run #1137 (69 suites, 631 tests), secret scanning PASS #561; pendiente de merge.
 - CI offline, contratos SDK, ESLint y secret scanning de las cuatro intervenciones: PASS (runs #1122, #1124, #1126, #1128; secret scanning #546, #548, #550, #552).
 - GitHub es la referencia del código versionado, no prueba del código ejecutado por Wix.
 - La correspondencia entre los archivos Velo del Editor Classic y Git no está verificada.
@@ -27,8 +27,8 @@ Este documento describe un único sitio objeto de trabajo. No se mantiene una ma
 - `CajaActual`: 39 campos, 1 registro; `sequenceCounters` es OBJECT y está almacenado como objeto. `ticketSequence` no existe. `id` coincide con `_id` en el singleton leído; candidato a retirar tras comprobar consumidores.
 - `ControlOperativo`: 42 campos, 0 registros; `ownerToken` no existe. `traceId` es el token de fencing canónico.
 - `ComplementosCatalogo`: 18 campos, 36 registros; `addonId = _id` en todos. `traceId` está vacío. `name = description` en todos los registros, pero los tipos TEXT/RICH_TEXT y el uso de presentación son distintos; no borrar sin revisar UI y consumidores.
-- `MapaStaff`: 18 campos, 3 registros; incluye `staffMemberId`, `resourceId`, `scheduleId`, `memberId`, `active`. No incluye `recordType`, `traceId` ni campos fiscales. `resourceId = _id` en los tres registros; ambos identificadores tienen consumidores y su consolidación física requiere migración.
-- `DatosFiscales`: 28 campos, 1 registro placeholder; contiene `recordType`, `taxId`, `legalName`, `thirdPartyType`, `address`, `gestorName` y `gestorNombre`. Los dos últimos coinciden en el registro leído. No existe `traceId` ni `schemaVersion`.
+- `MapaStaff`: 18 campos, 3 registros; maestro exclusivo de identidad staff. El código valida `staffMemberId`, `resourceId`, `scheduleId` y los IDs opcionales `memberId`/`thirdPartyId`; no exige `recordType`, `traceId` ni campos fiscales. `resourceId = _id` en los tres registros, pero no se fusionan: el primero es ID nativo de recurso Bookings y el segundo ID CMS.
+- `DatosFiscales`: 28 campos, 1 registro sintético placeholder; maestro fiscal canónico para `recordType`, `taxId`, `legalName`, `thirdPartyType`, `address` y datos de gestoría. `gestorName` y `gestorNombre` coinciden; el código usa solo `gestorName`. `taxId` está informado y `nif` vacío; `name`/`legalName` difieren y `gestorEmail`/`email` tienen funciones distintas. No existe `traceId` ni `schemaVersion`; el código deja de persistirlos.
 - `ServiciosCatalogo`: 42 campos, 95 registros (94 SERVICE y 1 PRICING_PLAN). `serviceId` y `pricingPlanId` son IDs nativos distintos de `_id` CMS. No fusionar identidades diferentes.
 - `RegistrosHorariosStaff`: 21 campos, 2 filas sintéticas sin firma; no acreditan jornada real.
 - `InventarioStockVenta` y `MovimientosInventario` están presentes físicamente en este sitio, pero sus contratos/writers están retirados. Su presencia no autoriza reactivar inventario custom: Stores Catalog V3 sigue siendo la autoridad prevista para stock comercial.
@@ -80,13 +80,12 @@ Los requisitos funcionales son declaraciones de alcance, no prueba de implementa
 
 ## 5. Bloqueos abiertos
 
-1. Resolver el contrato de `MapaStaff`: el esquema live es de personal, mientras varios validadores/writers siguen esperando registros fiscales y `recordType`.
-2. Definir `DatosFiscales` como colección fiscal canónica y alinear sus campos con los writers antes de habilitarlos; no inventar `traceId`/`schemaVersion` ni asumir que existen.
-3. Decidir la retirada física de duplicados demostrados: `ComplementosCatalogo.addonId`, `DatosFiscales.gestorNombre`, `CajaActual.id`, `MapaStaff.resourceId` y campos sin uso, después de migrar consumidores.
-4. Obtener copia/exportación reproducible del código Velo actual y comparar hashes/diff con Git.
-5. Ejecutar pruebas en el Editor Wix y E2E controladas antes de cualquier operación real.
-6. Validar obligaciones legales con normativa vigente y asesoría competente.
-7. Mantener integraciones externas deshabilitadas hasta autorización y pruebas.
+1. Integrar PR #367 tras la revisión final del diff; CI offline y secret scanning ya pasan.
+2. Probar en Wix Editor los hooks de MapaStaff y DatosFiscales, junto con las lecturas de identidad fiscal y destinatarios de gestoría.
+3. Completar búsqueda de consumidores para los candidatos físicos: CajaActual.id, ComplementosCatalogo.addonId, DatosFiscales.gestorNombre y ComplementosCatalogo.traceId.
+4. Mantener MapaStaff.resourceId porque no es semánticamente equivalente a _id CMS, aunque los valores actuales coincidan.
+5. Obtener exportación reproducible de Velo desde Editor Classic y comparar con Git.
+6. Ejecutar E2E en el sitio aislado antes de cualquier autorización de actividad real.
 
 ## 6. Fuentes de referencia
 
