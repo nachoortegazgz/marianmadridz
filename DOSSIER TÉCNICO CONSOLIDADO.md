@@ -77,7 +77,7 @@ El sitio web no debe ser un escaparate estático. Debe ser una **herramienta de 
 **Auditoría de servicios y depósitos nativos (Wix REST read-only, 2026-11-10):** 94/94 servicios consultados; 70 `FIXED`, 24 `NO_FEE` (auxiliares F2 ocultos), 0 `VARIED`; 0 depósitos activos. Siete servicios visibles superan 100 EUR; sus IDs, precios y configuración actual están en `docs/adr/2026-11-10-deposit-and-native-inventory.md`. Todos muestran `online=true` e `inPerson=true`; no se detecta `requireManualApproval=true`. No se ha modificado ningún servicio.
 
 | RF-07 | Pasarela de pago segura | Integración mediante Wix Payments, proveedor de pagos nativo de Wix. Los métodos concretos se limitan a los que estén disponibles y habilitados para España y esta cuenta. | Pago procesado por Wix Payments y confirmación recibida mediante el flujo nativo de Wix eCommerce/webhook. | Declarado por el propietario; activación y métodos de la cuenta pendientes de comprobación en el panel. |
-| RF-08 | Política de cancelación | Cancelación con ≥24 h: devolución íntegra del anticipo o reprogramación sin coste. Reprogramación con ≥24 h: transferir el anticipo íntegro a la nueva cita. Si cancela el negocio: devolución íntegra. Menos de 24 h/no-show: revisión manual, sin retención ni devolución automática hasta revisión jurídica. | Política Wix Bookings 1440 minutos; devolución/traslado del anticipo y webhook deben probarse en QA. | PARCIAL; 1440 minutos aparece en la política nativa. No se ha probado refund ni webhook E2E. No activar retención automática. |
+| RF-08 | Política de cancelación | Cancelación con ≥24 h: devolución íntegra del anticipo o reprogramación sin coste. Reprogramación con ≥24 h: transferir el anticipo íntegro a la nueva cita. Si cancela el negocio: devolución íntegra. Menos de 24 h/no-show: revisión manual, sin retención ni devolución automática hasta revisión jurídica. | Política Wix Bookings 1440 minutos; devolución/traslado del anticipo y webhook deben probarse en Wix Editor en el sitio aislado. | PARCIAL; 1440 minutos aparece en la política nativa. No se ha probado refund ni webhook E2E. No activar retención automática. |
 | RF-09 | Aplicación de la fianza al saldo | El depósito nativo pagado online forma parte del precio del servicio; el cliente abona únicamente el saldo pendiente en persona. | Wix Bookings muestra depósito y saldo pendiente coherentes; el pago inicial y el saldo no duplican ingresos ni IVA. | NATIVO SOPORTADO POR WIX; configuración por servicio y conciliación fiscal/ledger pendientes de pruebas. No implementar un segundo cobro/descuento personalizado. |
 
 ### 2.3. Asistente de IA capilar (Prioridad 🟡 Media)
@@ -207,7 +207,7 @@ El sitio web no debe ser un escaparate estático. Debe ser una **herramienta de 
 | RT-17 | `MapaStaff` | Maestro mixto consultivo: STAFF, GESTORIA, TERCERO y CONFIG_SISTEMA; NIF, régimen y Veri*factu. | Migrado live; retirada de DatosFiscales pendiente de despliegue backend |
 | RT-18 | `HistoricoCierresZ` | Cierres con totales, hashes y firmas. | ✅ Declarado (matriz CMS) |
 | RT-19 | `LibroAsientosContablesDetalle` | Asientos contables con debe/haber. | ✅ Declarado (matriz CMS) |
-| RT-20 | `InventarioStockVenta` | Proyección personalizada de stock (LEGACY, no SSOT). | Módulo y writers retirados y fusionados en PR #238; no crear/actualizar maestros. Datos existentes preservados; CI offline verde, QA Wix runtime pendiente. |
+| RT-20 | `InventarioStockVenta` | Proyección personalizada de stock (LEGACY, no SSOT). | Módulo y writers retirados y fusionados en PR #238; no crear/actualizar maestros. Datos existentes preservados; CI offline verde, pruebas runtime en Wix Editor pendientes. |
 | RT-21 | `MovimientosInventario` | Histórico de movimientos personalizado (LEGACY append-only, no SSOT de stock). | No generar nuevos movimientos de stock. Hooks append-only preservan filas existentes sin editar ni borrar; su archivo/retención requiere decisión separada. |
 | RT-22 | `ControlOperativo` | Control de reintentos, alertas, deduplicación. | ✅ Declarado (matriz CMS) |
 | RT-23 | `RegistrosHorariosStaff` | Fichajes con firma y trazabilidad. | ✅ Declarado (matriz CMS) |
@@ -565,9 +565,9 @@ FIN DEL DOCUMENTO
 
 ---
 
-ADDENDUM DE CONTROL DE CAMBIOS, PUBLICACIÓN Y QA — 2026-11-13
+ADDENDUM DE CONTROL DE CAMBIOS, PUBLICACIÓN Y PRUEBAS — 2026-11-13
 
-Estas directrices prevalecen sobre las instrucciones de QA del addendum 2026-11-11 cuando difieran respecto a la existencia del sitio actual independiente.
+Estas directrices prevalecen sobre las instrucciones de pruebas del addendum 2026-11-11 cuando difieran respecto a la naturaleza aislada del sitio actual.
 
 ## Repositorio y publicación
 
@@ -595,7 +595,7 @@ Todo informe separa explícitamente:
 - Declarado por el propietario.
 - Verificado en código.
 - Verificado en CI (SHA y workflow).
-- Verificado en Wix Preview/QA.
+- Verificado en Wix Preview del sitio aislado.
 - Verificado en producción.
 - Inferido o pendiente.
 
