@@ -10,21 +10,21 @@
 
 ---
 
-## Vigencia operativa — fase de desarrollo y QA (2026-11-14)
+## Vigencia operativa — fase de desarrollo y pruebas (2026-11-14)
 
 **Autoridad:** el usuario/propietario es la SSOT de negocio, requisitos, prioridades, criterios de aceptación y autorizaciones. Las instrucciones expresas posteriores del usuario prevalecen sobre decisiones y restricciones documentales anteriores. La documentación oficial de Wix y de las integraciones gobierna únicamente los contratos y límites técnicos de la plataforma.
 
 **Mutabilidad CMS durante las pruebas en el sitio aislado:** append-only e inmutabilidad están temporalmente en pausa. Se habilitan update y remove individuales y masivos para todas las colecciones CMS propias del proyecto, incluidas las históricamente tratadas como ledgers. Las operaciones masivas deben identificar explícitamente los registros por ID. No se habilitan escrituras en colecciones propiedad de Wix Apps ni se eluden autenticación, autorización/RBAC, permisos, validaciones de esquema, integridad técnica, secretos o límites de plataforma. La inserción mantiene su allowlist; los writers fiscales/contables/laborales, pagos, reembolsos, comunicaciones y efectos externos conservan sus gates funcionales independientes.
 
-**Restauración:** esta política no se revierte automáticamente. Solo el usuario puede ordenar la restauración de append-only y de las restricciones de mutación para preparar el despliegue. No publicar a producción basándose únicamente en esta excepción temporal del sitio aislado.
+**Restauración:** esta política no se revierte automáticamente. Solo el usuario puede ordenar la restauración de append-only y de las restricciones de mutación para preparar el despliegue. No iniciar actividad real basándose únicamente en esta excepción temporal del sitio aislado.
 
 **Estado Git/Wix:** PR #344–#351 están integradas en main; HEAD al inicio de la reconciliación `79b6238fe4c23206bb8e81327191ab48425e3a0d`. PR #351 introdujo una regresión al retirar validadores aún consumidos; su recuperación está en PR #352 y CI queda pendiente. La publicación del sitio está declarada/verificada como estado del sitio, pero no existe release ID que vincule runtime y SHA. No se ha publicado esta tanda.
 
-**CMS maestro:** MapaStaff revisión live 105, 56 campos físicos. Inventario live: 41 colecciones (12 NATIVE, 29 WIX_APP), 980 campos. `DatosFiscales`, `InventarioStockVenta` y `MovimientosInventario` no existen en este corte (404 / WDE0025); sus menciones en este documento son históricas salvo nueva evidencia.
+**CMS maestro:** 23 colecciones (15 NATIVE, 8 WIX_APP), 524 campos físicos NATIVE. MapaStaff tiene 18 campos y DatosFiscales 28; ambos contratos están descritos en la auditoría del sitio actual.
 
 ---
 
-> **HISTÓRICO — superado por el addendum vigente:** Capa 3 continúa siendo diseño documental, no integración operativa certificada. Wix CMS mantiene la autoridad transaccional; SharePoint solo conserva evidencia. El estado de CMS y la política QA vigentes se describen en el addendum superior y en `DICCIONARIO_DATOS_CMS.md`.
+> **HISTÓRICO — superado por el addendum vigente:** Capa 3 continúa siendo diseño documental, no integración operativa certificada. Wix CMS mantiene la autoridad transaccional; SharePoint solo conserva evidencia. El estado de CMS y la política vigente del sitio aislados se describen en el addendum superior y en `DICCIONARIO_DATOS_CMS.md`.
 
 ## Registro histórico — estado live y limpieza QA (superado por el addendum vigente)
 
