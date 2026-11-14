@@ -1403,4 +1403,31 @@ No se ha creado todavía el singleton `CONFIG_SISTEMA`: falta verificar taxId, l
 
 **Código en rama** `feat/consolidate-fiscal-master-mapastaff-v2`: `internalConfig.js`, `validation.js`, `data.js`, `dataAccessPolicy.js`, `eventLog.js`, `fiscalAggregator.web.js`, `fiscalDocuments.web.js`, `events.js` y tests asociados alineados con el maestro mixto. `events.js` filtra explícitamente `recordType=STAFF`, para evitar que la gestoría se interprete como recurso de Bookings. RBAC sigue dependiendo de Wix Members/Bookings y `internalConfig.STAFF.WEBSITE_ROLE_BY_RESOURCE_ID`; MapaStaff no gobierna permisos.
 
-**Compatibilidad y secuencia de retirada:** `DatosFiscales` permanece temporalmente con su placeholder QA porque el runtime Wix publicado todavía puede ejecutar código anterior. Eliminarla antes de publicar el backend migrado produciría fallos en consultas y hooks. La retirada se ejecutará solo después de CI, revisión del diff, despliegue autorizado y pruebas read-after-write de los WebMethods y hooks. No se ha publicado código Wix ni se ha eliminado la colección en este corte.
+**Compatibilidad y secuencia de retirada:** `DatosFiscales` permanece temporalmente con su placeholder QA porque el runtime Wix publicado todavía puede ejecutar código anterior. Eliminarla antes de publicar el backend migrado produciría fallos en consultas y hooks. La retirada se ejecutará solo después de CI, revisión del diff, despliegue autorizado y pruebas read-after-write de los WebMethods y hooks. No se ha publicado código Wix ni se ha eliminado la colección en este corte.---
+
+## Addendum de autoridad y fase QA — 2026-11-14
+
+### Jerarquía de autoridad y SSOT
+
+1. **USUARIO / PROPIETARIO DEL PROYECTO — SSOT de negocio y gobierno.** El usuario es la única fuente de verdad para objetivos, requisitos, prioridades, criterios de aceptación, decisiones funcionales y autorizaciones del proyecto. Sus instrucciones expresas prevalecen sobre cualquier regla, restricción, supuesto o estado histórico de esta documentación. Las decisiones relevantes se registran en el Decision Log para trazabilidad; el registro no sustituye ni limita la autoridad del usuario.
+2. **Documentación oficial vigente de Wix y de cada integración — autoridad técnica.** Define contratos, APIs, permisos, límites y comportamiento de plataforma. Se aplica para ejecutar la decisión del usuario de forma técnicamente válida; si una limitación oficial impide cumplirla, se informa y se propone alternativa, sin cambiar unilateralmente el requisito.
+3. **Decisiones expresas del usuario registradas en el repositorio.** Son la memoria documental de las decisiones vigentes. Si un registro antiguo contradice una instrucción posterior, prevalece la instrucción posterior del usuario.
+4. **Dossier Técnico Consolidado, Dossier de Flujos, Directrices, Necesidades Web, diccionario CMS y estado del proyecto.** Son documentación derivada y subordinada a los niveles anteriores. No pueden crear autorizaciones, bloqueos o requisitos nuevos por inferencia.
+5. **Código, configuración Wix, CMS y pruebas.** Acreditan el estado implementado, no la autoridad para redefinir requisitos. Las diferencias entre lo solicitado, documentado e implementado se registran como discrepancias verificables.
+
+### Política temporal de desarrollo y pruebas
+
+**Vigencia:** fase actual de desarrollo, depuración y QA, hasta que el usuario ordene expresamente habilitar las protecciones para el despliegue.
+
+- Queda **en pausa la política append-only** durante esta fase. Ninguna colección o registro se considerará intocable únicamente por estar etiquetado como ledger, histórico, fiscal, contable, laboral, documental o append-only.
+- Queda **en pausa toda prohibición genérica de edición o eliminación de registros**, tanto individual como masiva, cuando la única causa del bloqueo sea la inmutabilidad/append-only o una restricción temporal de QA. La edición y eliminación forman parte de las operaciones permitidas durante las pruebas.
+- No se exigirán registros rectificativos como única vía de corrección durante esta fase de QA. Esa regla se reconsiderará cuando el usuario habilite expresamente las protecciones previas al despliegue.
+- Se mantienen las validaciones de esquema y tipos, la autenticación, autorización y permisos de acceso, la protección de secretos, la separación de capas, los controles de seguridad no relacionados con la inmutabilidad y la trazabilidad técnica de las pruebas. Esta pausa no autoriza accesos anónimos ni saltarse controles de identidad.
+- No se habilitan por esta decisión writers fiscales, contables, laborales, pagos, devoluciones, comunicaciones ni automatizaciones externas que tengan gates funcionales independientes. Esos gates solo se modificarán por instrucción expresa o por una decisión técnica aprobada por el usuario.
+- La pausa es temporal y **no se revierte automáticamente**. Solo el usuario puede ordenar la restauración y habilitación de las protecciones para despliegue. Antes de una publicación productiva, el estado de las protecciones debe revisarse con el usuario y quedar expresamente autorizado.
+
+### Estado de implementación y publicación
+
+El usuario declara que el código está integrado y publicado en Wix. Esta declaración se registra como **declaración del propietario**. En la consulta de GitHub de este corte, main seguía en SHA 088c5338425cad93f3a370ce76ec87dbbc0eb51a y el PR #344 (feat/consolidate-fiscal-master-mapastaff-v2) figuraba abierto y sin fusionar. Por tanto, la integración en Wix y la integración en main se documentan como estados distintos: la primera es declarada por el usuario; la segunda no está acreditada en este corte. No se dispone aquí de un identificador de publicación Wix que vincule el runtime con un SHA concreto.
+
+**Nota de ejecución:** este addendum modifica la autoridad documental y la política de trabajo. No demuestra por sí mismo que todos los hooks, WebMethods, políticas de escritura o permisos CMS del runtime Wix hayan sido modificados para permitir todas las operaciones de edición y eliminación. Esa correspondencia debe verificarse en código y en Wix antes de afirmar que la pausa está aplicada técnicamente de extremo a extremo.
