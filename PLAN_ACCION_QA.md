@@ -30,7 +30,7 @@ Por instrucción expresa del propietario, el sitio `188bed94-177c-4bc9-a9f0-3508
 
 ## 3. Modelo de datos de prueba
 
-El inventario del sitio QA del corte 2026-11-14 declara 23 colecciones (15 NATIVE y 8 WIX_APP), con 524 campos físicos NATIVE y 140 registros. Fuente: `docs/audits/2026-11-14-current-site-cms-normalization.md`. Este inventario corresponde al único sitio QA designado.
+El inventario CMS documentado en `docs/audits/2026-11-14-current-site-cms-normalization.md` es un snapshot histórico de una designación anterior. La nueva SSOT identifica el sitio QA, pero no transfiere ni valida automáticamente esos esquemas/recuentos. Repetir lectura de solo lectura sobre el sitio `188bed94-177c-4bc9-a9f0-35080d874f3e` antes de cualquier escritura o migración.
 
 Colecciones de dominio que deben verificarse y, cuando corresponda, aislarse en QA:
 
@@ -121,7 +121,7 @@ Los importes de los escenarios son fixtures de negocio, no transacciones ni resu
 ### H1 — Baseline y contratos
 - Fijar SHA Git, versión del Editor, configuración Wix y corte CMS.
 - Comparar módulos, imports/exports, schemas, permisos, índices y consumidores.
-- No mezclar cortes históricos con la SSOT actual: las referencias a un Site ID anterior no identifican un segundo QA ni constituyen baseline vigente. Los contratos se validan contra el sitio QA único `188bed94-177c-4bc9-a9f0-35080d874f3e`.
+- No mezclar cortes históricos con la SSOT actual: los snapshots CMS anteriores no constituyen baseline vigente del sitio QA `188bed94-177c-4bc9-a9f0-35080d874f3e`. Repetir la lectura de esquemas y permisos antes de operar.
 - Confirmar contratos de caja, movimientos, pagos, impuestos, idempotencia, reversiones y cierres.
 - Resolver la divergencia de pago mixto antes de habilitar el caso.
 - Gate: matriz requisito → módulo → contrato → prueba.
