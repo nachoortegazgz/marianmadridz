@@ -83,14 +83,21 @@ El CSV contiene encabezados adicionales, pero no demuestra que esas columnas exi
 - `src/backend/tests/events.native-booking-sync.test.mjs`: pruebas de `eventType` y `processedAt` superiores.
 - `src/backend/tests/crons.jobsConfigParity.test.mjs`: prueba de los campos superiores en marcadores de reconciliación.
 
-## 6. Validación pendiente
+## 6. Validación
 
-La corrección está en una rama Git y requiere CI completo. No se ha ejecutado Wix Local Editor, no se ha escrito en CMS live y no se ha publicado en Wix. Antes de darla por terminada deben pasar:
+**CI: PASS**
 
-- Suite de claims webhook: alta, concurrencia, expiración, recuperación, fencing por `traceId`, fallo/reintento y finalización.
-- Hooks CMS: rechazo de claims incompletos.
-- Política CAS: aceptación de `attempts` y `expiresAt` solo bajo el fencing vigente.
-- Suite backend completa y revisión del diff.
-- Prueba sintética controlada en QA Wix y readback de los campos top-level.
+En el HEAD `ad15d311fec06aa3f54afe6c5f1f0f923aef9f45`:
 
-No modificar filas reales para completar columnas vacías: los registros legacy se normalizan en el siguiente ciclo de recuperación autorizado, y la prueba live debe usar datos sintéticos identificados.
+- Layer 1: 23 suites, 296 pruebas PASS.
+- Layer 2: 18 suites, 245 pruebas PASS.
+- Regresión offline completa: 69 suites, 632 pruebas PASS, 0 FAIL.
+- Contratos SDK Wix (Data, eCommerce Transactions y Bookings Reader V2): PASS.
+- ESLint: PASS.
+- Gitleaks / Secret scanning: PASS.
+
+Pruebas focalizadas incluidas: claims webhook (8), hooks ControlOperativo (8), concurrencia booking/slot (42), reconciliación de pedidos (29) y sincronización de eventos nativos (24).
+
+**Pendiente fuera de CI:** no se ha ejecutado Wix Local Editor, no se ha leído el esquema live de Wix ni se ha hecho E2E contra el sitio QA. No se ha escrito en CMS live ni publicado en Wix. El resultado acredita regresión offline y contratos SDK, no runtime Wix.
+
+No modificar filas reales para completar columnas vacías: las filas históricas no se backfillean en esta intervención. Las pruebas live deben usar registros sintéticos identificados y el entorno QA autorizado.
