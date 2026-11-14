@@ -2,6 +2,9 @@
 
 ---
 
+
+> **Validez del inventario:** los snapshots de CMS, catálogo y aplicaciones que aparecen en el cuerpo de este documento son históricos. La SSOT actual designa `188bed94-177c-4bc9-a9f0-35080d874f3e` como único QA, pero no demuestra que esos recuentos o esquemas pertenezcan al corte actual de ese Site ID. No usarlos como baseline para escrituras, migraciones o E2E hasta repetir una lectura de solo lectura contra el sitio vigente.
+
 > **Estado vigente del entorno — 2026-11-14:** el único sitio QA es `188bed94-177c-4bc9-a9f0-35080d874f3e`. Wix lo informa Published; el propietario confirma que nunca ha tenido actividad real, que sus datos son sintéticos y que la pasarela está desconectada. Las referencias históricas a otro Site ID o a un supuesto entorno QA separado quedan supersedidas. Prevalecen la SSOT del entorno, PLAN_ACCION_QA.md, DIRECTRICES_DESARROLLO_CODIGO.md y TEC-038.
 
 ## Addendum vigente — baseline 2026-11-14 (prevalece sobre bloques históricos)
