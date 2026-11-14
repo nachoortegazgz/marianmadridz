@@ -91,7 +91,7 @@ function _getMadridTime(value) {
 
 function _getMadridDateOnly(value) {
     const [year, month, day] = _getMadridDayKey(value).split("-").map(Number);
-    return new Date(Date.UTC(year, month - 1, day));
+    return `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
 async function _sealTimeclockRecord(record) {
