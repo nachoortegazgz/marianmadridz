@@ -107,19 +107,16 @@ function seedCajaPrincipal() {
     _id: 'SINGLE_ITEM_ID',
     singletonKey: 'CAJA_PRINCIPAL',
     cashRegisterStatus: 'ABIERTA',
-    operationDateHour: new Date(),
+    operationDate,
     openedAt: new Date(Date.now() - 60_000),
     openedBy: GUID_ADMIN_RESOURCE,
-    openingCashAmount: 300,
-    openingCardAmount: 0,
-    openingBizumAmount: 0,
-    openingOtherAmount: 0,
+    openingAmount: 300,
     cashAmount: 300,
     netAmount: 300,
     totalInAmount: 300,
     expectedCash: 300,
     cardAmount: 0,
-    bizumAmount: 0,
+
     otherAmount: 0,
     salesCount: 0,
     sequenceCounters: {},
@@ -795,7 +792,7 @@ test('FLOW-CAJA-05 CajaActual projects presencial cash movements and is idempote
   assert.ok(register, 'CajaActual principal debe quedar persistida');
   assert.strictEqual(register.cashAmount, 335);
   assert.strictEqual(register.cardAmount, 0);
-  assert.strictEqual(register.bizumAmount, 0);
+  assert.strictEqual(register.otherAmount, 0);
   assert.strictEqual(register.otherAmount, 0);
   assert.strictEqual(register.netAmount, 335);
   assert.strictEqual(register.expectedCash, 335, 'expectedCash debe conciliar con el efectivo físico esperado');
@@ -828,7 +825,7 @@ test('FLOW-CAJA-05B card and Bizum update session totals without changing physic
   const originalCash = registerBefore.cashAmount;
   const originalExpectedCash = registerBefore.expectedCash;
 
-  for (const [method, amountField] of [['TARJETA', 'cardAmount'], ['BIZUM', 'bizumAmount']]) {
+  for (const [method, amountField] of [['TARJETA', 'cardAmount'], ['BIZUM', 'otherAmount']]) {
     const movement = {
       _id: 'movement-' + method.toLowerCase() + '-001',
       transactionId: 'transaction-' + method.toLowerCase() + '-001',
@@ -858,17 +855,14 @@ test('FLOW-CAJA-06 CajaActual resolves singletonKey when Wix assigned a differen
     _id: 'SINGLE_ITEM_ID',
     singletonKey: 'CAJA_PRINCIPAL',
     cashRegisterStatus: 'ABIERTA',
-    operationDateHour: new Date('2026-11-06T09:00:00.000Z'),
-    openingCashAmount: 300,
-    openingCardAmount: 0,
-    openingBizumAmount: 0,
-    openingOtherAmount: 0,
+    operationDate: '2026-11-06',
+    openingAmount: 300,
     cashAmount: 300,
     netAmount: 300,
     totalInAmount: 300,
     expectedCash: 300,
     cardAmount: 0,
-    bizumAmount: 0,
+
     otherAmount: 0,
     salesCount: 0,
     sequenceCounters: {},
@@ -955,18 +949,15 @@ test('FLOW-CAJA-07 devoluciones y reembolsos reducen caja y conservan cadena fis
       _id: 'SINGLE_ITEM_ID',
       singletonKey: 'CAJA_PRINCIPAL',
       cashRegisterStatus: 'ABIERTA',
-      operationDateHour: new Date('2026-11-06T09:00:00.000Z'),
+      operationDate: '2026-11-06',
       openedAt: new Date(Date.now() - 60_000),
-      openingCashAmount: 100,
-      openingCardAmount: 0,
-      openingBizumAmount: 0,
-      openingOtherAmount: 0,
+      openingAmount: 100,
       cashAmount: 100,
       totalInAmount: 100,
       netAmount: 100,
       expectedCash: 100,
       cardAmount: 0,
-      bizumAmount: 0,
+
       otherAmount: 0,
       salesCount: 0,
       sequenceCounters: {},
