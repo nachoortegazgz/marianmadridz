@@ -15,12 +15,12 @@ CORRECCIONES v12.0-MINIMAL:
     CODIGO_IMPUESTO, CHANNEL_TYPE, MOVEMENT_TYPE, PAYMENT_METHOD,
     CATALOG_STATES, CASH_REGISTER_STATUS).
   VAL-04 (P2): Logger import eliminado. Validation es pura.
-  VAL-05 (P0): assertDatosFiscales valida ahora las variantes no-staff
+  VAL-05 (P0): assertMapaStaffRecord valida ahora las variantes no-staff
     del maestro mixto MapaStaff; la identidad staff sigue siendo Bookings API.
 MANTENIDO (consumidores activos verificados):
   - assertValidEnum: usado por todos los asserts y callers externos
   - assertCitasF2: consumido por data.js CitasF2_beforeInsert/beforeUpdate
-  - assertDatosFiscales: consumido por data.js/handlers fiscales
+  - assertMapaStaffRecord: consumido por data.js/handlers fiscales
   - assertControlOperativo: consumido por data.js ControlOperativo hooks
   - assertRegistrosHorariosStaff: consumido por data.js + horario.web.js
   - isValidNifOrEuVat: validacion fiscal obligatoria (Ley 11/2021)
@@ -127,7 +127,7 @@ export function assertCitasF2(item) {
  * Validacion fiscal obligatoria. NIF checksum por Ley 11/2021.
  * THIRD_PARTY_TYPE es el enum fiscal normativo vigente.
  */
-export function assertDatosFiscales(item) {
+export function assertMapaStaffRecord(item) {
     if (!item || typeof item !== "object" || Array.isArray(item)) {
         throw new Error("SCHEMA_VIOLATION: MapaStaff item must be an object");
     }
