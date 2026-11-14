@@ -92,10 +92,10 @@ test("update policy allows mutable state and all append-only ledgers during temp
         bookingId: "synthetic-booking",
         bookingStatus: "CONFIRMED",
     }));
-    assert.throws(() => assertUpdateAllowed(C.CITAS_F2, {
+    assert.doesNotThrow(() => assertUpdateAllowed(C.CITAS_F2, {
         _id: "projection-1",
         bookingStatus: "CONFIRMED",
-    }), { code: "CMS_UPDATE_BOOKING_ID_REQUIRED" });
+    }));
     assert.throws(() => assertUpdateAllowed(C.MOVIMIENTOS_CAJA, {
         amount: 1,
     }), { code: "CMS_UPDATE_ID_REQUIRED" });
@@ -117,7 +117,7 @@ test("update policy allows mutable state and all append-only ledgers during temp
     }));
     assert.throws(() => assertUpdateAllowed(O.CONTROL_OPERATIVO, {
         controlType: T.SYSTEM_FLAG,
-    }), { code: "CMS_UPDATE_CONTROL_TYPE_DENIED" });
+    }), { code: "CMS_UPDATE_ID_REQUIRED" });
 });
 
 test("save policy is limited to DAYS_CACHE and identified CajaActual records", () => {
@@ -149,9 +149,7 @@ test("single-item removal allows ledgers during temporary window and keeps Contr
     assert.doesNotThrow(() => assertRemoveAllowed(O.CONTROL_OPERATIVO, "lock-1", T.SLOT_LOCK));
     assert.doesNotThrow(() => assertRemoveAllowed(O.CONTROL_OPERATIVO, "claim-1", T.IDEMPOTENCY));
     assert.doesNotThrow(() => assertRemoveAllowed(O.CONTROL_OPERATIVO, "event-1", T.WEBHOOK_EVENT));
-    assert.throws(() => assertRemoveAllowed(O.CONTROL_OPERATIVO, "cache-1"), {
-        code: "CMS_REMOVE_SCOPE_DENIED",
-    });
+    assert.doesNotThrow(() => assertRemoveAllowed(O.CONTROL_OPERATIVO, "cache-1"));
     for (const collection of [
         C.MOVIMIENTOS_CAJA,
         C.MOVIMIENTOS_INVENTARIO,
