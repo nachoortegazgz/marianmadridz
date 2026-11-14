@@ -14,6 +14,7 @@ import {
     CITAS_PAYMENT_STATUS,
     BOOKING_TYPE,
     CONTROL_TYPE,
+    WEBHOOK_CLAIM_STATUS,
     CLOCK_EVENT_TYPE,
     RECORD_TYPE_HORARIOS,
     RECORD_TYPE,
@@ -202,6 +203,30 @@ export function assertControlOperativo(item) {
     if (item.controlType === CONTROL_TYPE.WEBHOOK_EVENT) {
         if (!item.eventId || !String(item.eventId).trim()) {
             throw new Error("SCHEMA_VIOLATION: WEBHOOK_EVENT requires eventId");
+        }
+    }
+
+    // WEBHOOK_CLAIM mantiene el lease y el contador en campos CMS canonicos.
+    if (item.controlType === CONTROL_TYPE.WEBHOOK_CLAIM) {
+        if (!item.eventId || !String(item.eventId).trim()) {
+            throw new Error("SCHEMA_VIOLATION: WEBHOOK_CLAIM requires eventId");
+        }
+        if (!item.eventType || !String(item.eventType).trim()) {
+            throw new Error("SCHEMA_VIOLATION: WEBHOOK_CLAIM requires eventType");
+        }
+        assertValidEnum(item.status, WEBHOOK_CLAIM_STATUS, "status");
+        if (!item.ownerToken || !String(item.ownerToken).trim()) {
+            throw new Error("SCHEMA_VIOLATION: WEBHOOK_CLAIM requires ownerToken");
+        }
+        if (!Number.isSafeInteger(Number(item.version)) || Number(item.version) < 1) {
+            throw new Error("SCHEMA_VIOLATION: WEBHOOK_CLAIM requires version >= 1");
+        }
+        if (!Number.isSafeInteger(Number(item.attempts)) || Number(item.attempts) < 1) {
+            throw new Error("SCHEMA_VIOLATION: WEBHOOK_CLAIM requires attempts >= 1");
+        }
+        const expiresAt = new Date(item.expiresAt);
+        if (!item.expiresAt || Number.isNaN(expiresAt.getTime())) {
+            throw new Error("SCHEMA_VIOLATION: WEBHOOK_CLAIM requires a valid expiresAt date");
         }
     }
 
