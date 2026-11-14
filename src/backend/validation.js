@@ -33,17 +33,14 @@ import {
  * Lanza Error con codigo SCHEMA_VIOLATION si no lo es.
  * Acepta undefined/null como valido solo si allowEmpty === true.
  */
-export function assertValidEnum(value, enumObj, fieldName, allowEmpty = false) {
-    if (value === undefined || value === null || value === "") {
-        if (allowEmpty) return true;
-        throw new Error(`SCHEMA_VIOLATION: ${fieldName} is required`);
-    }
-    const v = String(value).trim().toUpperCase();
-    const validValues = Object.values(enumObj).map(String);
-    if (!validValues.includes(v)) {
-        throw new Error(
-            `SCHEMA_VIOLATION: ${fieldName}="${v}" not in [${validValues.join(",")}]`
-        );
+export function assertValidEnum(value, enumObject, fieldName) {
+    const allowedValues = enumObject && typeof enumObject === "object"
+        ? Object.values(enumObject)
+        : [];
+
+    if (allowedValues.length === 0 || !allowedValues.includes(value)) {
+        const allowed = allowedValues.length > 0 ? allowedValues.join("|") : "enum no configurado";
+        throw new Error(`SCHEMA_VIOLATION: ${fieldName} invalido (${allowed})`);
     }
     return true;
 }
