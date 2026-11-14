@@ -257,7 +257,7 @@ Esta decisión es contractual/documental. No acredita que el backend o el esquem
 Para los movimientos presenciales manuales nuevos, backend asigna `recordSource=MANUAL_PRESENCIAL_AUTHENTICATED` y resuelve `staffResourceId` desde la identidad autenticada. La UI solo marca el operador como verificado cuando el origen contiene esa marca backend; los registros históricos se identifican como autoría no verificada.
 
 
-### TEC-033 — ventana temporal de mutación de ledgers append-only (2026-11-14)
+### TEC-033 — [HISTÓRICA / SUPERSEDIDA POR TEC-038] ventana temporal de mutación de ledgers append-only (2026-11-14)
 
 **Decisión temporal solicitada:** abrir en la rama de desarrollo una ventana global que permite operaciones individuales de actualización y borrado sobre los registros que el proyecto protegía como append-only. El alcance de código incluye:
 - `MovimientosCaja`
@@ -293,14 +293,14 @@ Para los movimientos presenciales manuales nuevos, backend asigna `recordSource=
 
 **Límites:** los datos fiscales no verificados permanecen vacíos; Veri*Factu sigue desactivado; escritores fiscales/contables siguen fail-closed. Las colecciones numeradas 12–16 no se borran porque el esquema no aporta sus IDs/nombres y no hay correspondencia inequívoca con el inventario live.
 
-### TEC-035 — consolidación fiscal en MapaStaff y gestoría (2026-11-14)
+### TEC-035 — [HISTÓRICA / SUPERSEDIDA EN SUS PERMISOS DE QA POR TEC-038] consolidación fiscal en MapaStaff y gestoría (2026-11-14)
 
 **Decisión del propietario:** todos los datos históricos y registros existentes en el sitio son sintéticos de pruebas; el sitio no tiene actividad real. Se autoriza mantener temporalmente abierta la ventana de mutabilidad append-only hasta nueva instrucción expresa del propietario. Esta autorización se limita al entorno de QA declarado; no habilita datos reales ni despliegue productivo.
 
 **CMS live verificado tras la mutación:**
 - `MapaStaff` revisión 36, 42 campos y 5 registros: tres `STAFF`, un `TERCERO` QA sintético y un `GESTORIA`.
 - El registro `TERCERO` procedente de `DatosFiscales` conserva su ID original. No se creó `CONFIG_SISTEMA`.
-- Nuevo registro `GESTORIA`: razón social/nombre `NachoGest`, dirección `Calle Burgos 25`, teléfono `666724634`, email `nachoortegazgz@gmail.com`. No tiene `memberId`, `staffMemberId`, `resourceId` ni roles.
+- Nuevo registro `GESTORIA`: los datos de contacto concretos se omiten de esta documentación por minimización de datos. El fixture sintético vigente es `Gestoría de Pruebas`, `gestoria.pruebas@example.test`, sin teléfono operativo y con destino real desactivado; ver `src/backend/tests/fixtures/qaSyntheticParties.mjs`. No tiene `memberId`, `staffMemberId`, `resourceId` ni roles.
 - `MapaStaff` queda con lectura `PRIVILEGED` y escritura `CMS_EDITOR`. El backend consulta mediante la capa `@wix/data` elevada. Esto evita exponer públicamente datos de contacto/fiscales.
 - `DatosFiscales` sigue presente con su fila placeholder sintética. No se elimina hasta publicar el backend migrado, verificar runtime y confirmar que no quedan consumidores activos.
 
@@ -334,7 +334,7 @@ Para los movimientos presenciales manuales nuevos, backend asigna `recordSource=
 El usuario declara que el código está integrado y publicado en Wix. Esta declaración se registra como **declaración del propietario**. En la consulta de GitHub de este corte, el PR #344 (feat/consolidate-fiscal-master-mapastaff-v2) figura fusionado el 2026-11-14 mediante el merge commit f3b1311eead05282e47f538afd506fe49e227141, que es el HEAD actual de main. La integración del cambio en Git está verificada. El usuario declara además que el código está publicado en Wix; no se dispone de un identificador de publicación Wix que vincule el runtime con ese SHA concreto.
 
 **Nota de ejecución:** este addendum modifica la autoridad documental y la política de trabajo. No demuestra por sí mismo que todos los hooks, WebMethods, políticas de escritura o permisos CMS del runtime Wix hayan sido modificados para permitir todas las operaciones de edición y eliminación. Esa correspondencia debe verificarse en código y en Wix antes de afirmar que la pausa está aplicada técnicamente de extremo a extremo.
-### TEC-036 — autoridad SSOT del usuario y pausa de append-only durante QA (2026-11-14)
+### TEC-036 — [HISTÓRICA / SUPERSEDIDA EN SU PAUSA APPEND-ONLY POR TEC-038] autoridad SSOT del usuario y pausa de append-only durante QA (2026-11-14)
 
 **Decisión del usuario:** el usuario/propietario del proyecto es la SSOT de negocio y gobierno. Sus instrucciones expresas prevalecen sobre documentación histórica, decisiones anteriores y supuestos. La documentación del repositorio es derivada y debe actualizarse para reflejar las instrucciones vigentes.
 
@@ -346,11 +346,11 @@ Se mantienen controles de autenticación, autorización, permisos, validación d
 
 **Alcance de evidencia:** esta decisión establece la política documental y de trabajo. La aplicación efectiva en hooks, WebMethods, write policies y permisos CMS requiere comprobación técnica específica; no se presume por el mero cambio documental.
 
-### TEC-037 — habilitación amplia de mutaciones durante QA (2026-11-14)
+### TEC-037 — [HISTÓRICA / SUPERSEDIDA POR TEC-038] habilitación amplia de mutaciones durante QA (2026-11-14)
 
 **Decisión del usuario:** suspender durante desarrollo y QA las restricciones append-only y cualquier bloqueo genérico de edición/eliminación de registros, incluidas operaciones individuales y masivas, hasta que el usuario ordene restaurarlas para el despliegue.
 
-**Implementación integrada en main:** QA_RECORD_MUTATIONS_ENABLED=true; update/remove individual y bulk update/remove para las colecciones CMS propias incluidas en QA_MUTABLE_COLLECTIONS, incluida DatosFiscales legacy. Las operaciones masivas requieren IDs explícitos y límite de 1.000 elementos. Se permite editar/eliminar registros antes protegidos como append-only, singleton y proyecciones con hooks de bloqueo. Se mantienen validaciones, autenticación/autorización, permisos CMS, allowlist de inserciones y gates de writers/efectos externos. Las colecciones WIX_APP no se incluyen. items.bulkUpdate() es Developer Preview de Wix y queda restringido a esta fase QA.
+**Implementación histórica integrada en main:** QA_RECORD_MUTATIONS_ENABLED=true; update/remove individual y bulk update/remove para las colecciones CMS propias incluidas en QA_MUTABLE_COLLECTIONS, incluida DatosFiscales legacy. Esta implementación fue posteriormente retirada por TEC-038 y no debe restaurarse. Las operaciones masivas requieren IDs explícitos y límite de 1.000 elementos. Se permite editar/eliminar registros antes protegidos como append-only, singleton y proyecciones con hooks de bloqueo. Se mantienen validaciones, autenticación/autorización, permisos CMS, allowlist de inserciones y gates de writers/efectos externos. Las colecciones WIX_APP no se incluyen. items.bulkUpdate() es Developer Preview de Wix y queda restringido a esta fase QA.
 
 **Estado:** PR #346 fusionado en main mediante b68e4e048ce5fc1c022fc6ffc2643d5983972107. CI PASS: Layer 1 23 suites/296 pruebas; Layer 2 18 suites/246 pruebas; regresión completa 68 suites/627 pruebas; contratos SDK, ESLint y Gitleaks PASS. La ampliación aún no se ha publicado en Wix. La excepción permanece temporal y no se restaura hasta instrucción expresa del usuario.
 
@@ -367,7 +367,7 @@ Se mantienen controles de autenticación, autorización, permisos, validación d
 
 **Contrato de pagos mixtos:** los documentos de implementación existentes indican que el campo `paymentMethod` es singular y que el modelo de pagos mixtos no está definido. El caso mixto permanece `BLOCKED_CONTRACT` hasta definir y probar el esquema y la reconciliación. No inferir un contrato a partir de la suma de importes.
 
-**Implementación de esta decisión:** documental en esta rama; no se han modificado código, CMS, configuración Wix, automatizaciones, permisos, secretos ni publicación. Ver [PLAN_ACCION_QA.md](../PLAN_ACCION_QA.md).
+**Implementación inicial de esta decisión:** documental. La ejecución posterior añade mocks y fixtures sintéticos, retira los bypasses globales y endurece la política de purgas en TEC-038 y QA-SEC-20261114-001. No se han modificado CMS, configuración Wix, automatizaciones, permisos, secretos ni publicación en esta intervención. Ver [PLAN_ACCION_QA.md](../PLAN_ACCION_QA.md).
 
 
 ---
