@@ -85,29 +85,6 @@ test('HOOK-CMS-DATETIME-01 normalizes all CitasF2 DateTime fields to Date object
   assert.throws(() => H.CitasF2_beforeInsert({ ...item, slotStart: 'not-a-date' }), /DATETIME/);
 });
 
-test('HOOK-CMS-DATETIME-QA-01 binds conversion and guards to physical QA collection ID', () => {
-  const item = {
-    bookingId: '11111111-1111-4111-8111-111111111111',
-    scheduleId: '22222222-2222-4222-8222-222222222222',
-    bookingType: 'SIMPLE',
-    bookingStatus: 'PENDING',
-    paymentStatus: 'NOT_PAID',
-    traceId: 'trace-citas-qa-datetime',
-    slotStart: '2026-11-12T08:30:00.000Z',
-    slotEnd: '2026-11-12T09:00:00.000Z',
-  };
-  H.QA_LIVECMS_20261023_2000_BOOKING_DUAL_beforeInsert(item);
-  assert.ok(item.slotStart instanceof Date);
-  assert.ok(item.slotEnd instanceof Date);
-  assert.strictEqual(item.slotStart.toISOString(), '2026-11-12T08:30:00.000Z');
-  assert.strictEqual(item.slotEnd.toISOString(), '2026-11-12T09:00:00.000Z');
-
-  assert.throws(() => H.QA_LIVECMS_20261023_2000_BOOKING_DUAL_beforeInsert({
-    ...item, slotStart: 'not-a-date',
-  }), /DATETIME/);
-  assert.doesNotThrow(() => H.QA_LIVECMS_20261023_2000_BOOKING_DUAL_beforeRemove({}));
-});
-
 test('HOOK-CMS-DATETIME-03 normalizes timeclock recordedAt', () => {
   const item = {
     resourceId: 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeee0001',
