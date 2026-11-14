@@ -35,8 +35,8 @@ function hashPayloadFromRow(row) {
     movementType: row.movementType,
     recordSource: row.recordSource,
     documentId: row.documentId,
-    cashMovementId: row.cashMovementId || null,
-    fechaOperacion: new Date(row.fechaOperacion).toISOString(),
+    cashMovementId: row.desgloseDetallado.cashMovementId || null,
+    fechaOperacion: String(row.fechaOperacion).slice(0, 10),
     fiscalPeriod: row.fiscalPeriod,
     accountCode: row.desgloseDetallado.accountCode,
     debitAmount: Number(row.desgloseDetallado.debitAmount),
@@ -106,7 +106,7 @@ describe("accounting ledger writer", () => {
     assert.equal(result.status, "SUCCESS");
     const rows = wixDataMock._store.get(ACCOUNTING_COL);
     assert.equal(rows.length, 2);
-    assert.equal(rows.every((row) => row.cashMovementId == null), true);
+    assert.equal(rows.every((row) => row.desgloseDetallado.cashMovementId == null), true);
   });
 
   it("ACC-LEDGER-07 cashMovementId is stored only when explicitly supplied", async () => {
@@ -119,7 +119,7 @@ describe("accounting ledger writer", () => {
     assert.equal(result.status, "SUCCESS");
     const rows = wixDataMock._store.get(ACCOUNTING_COL);
     assert.equal(rows.length, 2);
-    assert.equal(rows.every((row) => row.cashMovementId === "physical-cash-movement-007"), true);
+    assert.equal(rows.every((row) => row.desgloseDetallado.cashMovementId === "physical-cash-movement-007"), true);
   });
 
   it("ACC-LEDGER-05 serializes concurrent entries into one unbroken global hash chain", async () => {
