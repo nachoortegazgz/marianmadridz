@@ -88,6 +88,12 @@ export const BUSINESS_COLLECTIONS = Object.freeze({
   SERVICIOS_CATALOGO: "ServiciosCatalogo",
 });
 
+// Legacy CMS collection retained temporarily for QA cleanup/migration.
+export const QA_MUTABLE_COLLECTIONS = Object.freeze([
+  ...Object.values(BUSINESS_COLLECTIONS),
+  "DatosFiscales",
+]);
+
 // Operational lock and idempotency state is centralized in ControlOperativo.
 export const OPERATIONAL_COLLECTIONS = Object.freeze({
   CONTROL_OPERATIVO: "ControlOperativo",
