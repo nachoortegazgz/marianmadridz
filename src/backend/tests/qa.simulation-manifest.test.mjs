@@ -58,7 +58,7 @@ test('QA-MANIFEST-05 incomplete scenarios are explicitly marked, never silently 
 
 
 test('QA-MANIFEST-06 customer and gestoría fixtures are synthetic and non-operational', () => {
-  assert.equal(QA_TEST_SITE_ID, 'site-qa-synthetic');
+  assert.equal(QA_TEST_SITE_ID, '50b39f33-e753-4331-ab35-b2ed43dc97f7');
   assert.equal(QA_CUSTOMERS.length, 3);
   for (const customer of QA_CUSTOMERS) {
     assert.equal(customer.isSynthetic, true);
