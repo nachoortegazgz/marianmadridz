@@ -32,6 +32,7 @@ test('QA-MAIL-01 manager email sink is fail-closed outside the explicit TEST con
     { ...QA_CONFIG, enabled: false },
     { ...QA_CONFIG, environment: 'QA' },
     { ...QA_CONFIG, siteId: 'different-site' },
+    { ...QA_CONFIG, siteId: '50b39f33-e753-4331-ab35-b2ed43dc97f7' },
     { ...QA_CONFIG, testSiteId: '' },
     { ...QA_CONFIG, sinkRecipient: 'external@example.invalid' },
   ]) {
