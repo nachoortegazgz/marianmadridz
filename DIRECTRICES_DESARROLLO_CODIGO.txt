@@ -82,12 +82,14 @@ Revision: 2026-11-09
 - Las duraciones deben ser valores numericos finitos no negativos.
 
 4.3. MapaStaff
-- MapaStaff no es autoridad RBAC.
-- security.js resuelve roles mediante Wix Members, Bookings Staff Members API e internalConfig.STAFF.WEBSITE_ROLE_BY_RESOURCE_ID.
-- MapaStaff se utiliza como correlacion staffMemberId -> resourceId/scheduleId cuando un evento nativo no aporta esos identificadores.
-- La resolucion exige exactamente una fila activa y GUID validos. Cero o varias coincidencias producen fallo cerrado.
-- No se declaran hooks CMS para MapaStaff en data.js.
-
+- MapaStaff es un maestro mixto consultivo con recordType obligatorio: STAFF, GESTORIA, TERCERO o CONFIG_SISTEMA.
+- STAFF conserva la correlacion staffMemberId -> resourceId/scheduleId; los lectores deben filtrar recordType=STAFF y active=true.
+- GESTORIA almacena datos de contacto y gestion; no es usuario del sitio, no tiene memberId/resourceId ni roles.
+- TERCERO y CONFIG_SISTEMA conservan el contrato fiscal; CONFIG_SISTEMA no se crea por inferencia.
+- MapaStaff no es autoridad RBAC. security.js resuelve roles mediante Wix Members, Bookings Staff Members API e internalConfig.STAFF.WEBSITE_ROLE_BY_RESOURCE_ID.
+- La lectura CMS es PRIVILEGED; las consultas backend pasan por dataAccess elevado. No exponer datos de contacto/fiscales desde frontend ni permisos ANYONE.
+- Los hooks CMS y validation.js validan los discriminadores y sus campos especificos.
+- DatosFiscales permanece legacy hasta que el backend actualizado se publique y se verifique; eliminarla despues de la comprobacion de consumidores.
 4.4. Datos historicos fiscales
 - Los documentos fiscales append-only no se reescriben para normalizar nombres de campo.
 - Los lectores de `MovimientosCaja`, `ControlOperativo` y `CitasF2` pueden interpretar valores historicos exclusivamente en lectura, con `warn` trazable y fecha `REVIEW-BY`.
@@ -154,7 +156,7 @@ No fusionar ni desplegar con pruebas fallidas, riesgos criticos abiertos o sin e
 
 - ControlOperativo: validacion completa en insercion y actualizacion; update fusiona el estado persistido y la modificacion; remove recibe itemId y consulta el registro.
 - Journal dual: mantiene su enum especifico en booking/dualRescheduleJournal.js; no se mezcla con CONTROL_STATUS.
-- MapaStaff: solo correlacion de identidad de eventos nativos; no participa en RBAC.
+- MapaStaff: maestro consultivo mixto; solo los registros STAFF participan en la correlacion de eventos nativos; nunca gobierna RBAC.
 - Eventos Wix: se consumen como objetos Velo verificados por la plataforma; no se procesa JWT dentro de events.js.
 - Permisos: .web.js controla acceso en cada webMethod; no existe manifiesto permissions.json aplicable al backend actual.
 - Control types: DEDUPE_KEY y LEDGER_IDEMPOTENCY se conservan porque tienen productores activos y retencion duradera.
