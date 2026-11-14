@@ -824,9 +824,11 @@ function _applyConfigSistemaRules(item) {
     }
     if (item.fechaInicioVerifactu != null && item.fechaInicioVerifactu !== "") {
         const value = _safeTrim(item.fechaInicioVerifactu);
+        const parsed = new Date(value + "T00:00:00.000Z");
         if (!/^\d{4}-\d{2}-\d{2}$/.test(value) ||
-            Number.isNaN(Date.parse(value + "T00:00:00.000Z"))) {
-            _schemaError("fechaInicioVerifactu debe ser TEXT con formato YYYY-MM-DD");
+            Number.isNaN(parsed.getTime()) ||
+            parsed.toISOString().slice(0, 10) !== value) {
+            _schemaError("fechaInicioVerifactu debe ser una fecha real en formato TEXT YYYY-MM-DD");
         }
         item.fechaInicioVerifactu = value;
     }
