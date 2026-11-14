@@ -6,7 +6,7 @@
 
 **Restauración:** esta política no se revierte automáticamente. Solo el usuario puede ordenar la restauración de append-only y de las restricciones de mutación para preparar el despliegue. No publicar a producción basándose únicamente en esta excepción de QA.
 
-**Estado Git/Wix:** PR #344 y PR #345 están integrados en main; merge commit de documentación c7bd27faaba833d816e77be56183257393f1aa48. El usuario declara que la versión anterior está publicada en Wix. Los cambios de esta rama habilitan la política ampliada de mutaciones y aún no están fusionados ni publicados. No se ha acreditado un release Wix por SHA.
+**Estado Git/Wix:** PR #344, PR #345 y PR #346 están integrados en main; HEAD actual b68e4e048ce5fc1c022fc6ffc2643d5983972107. CI de PR #346: Layer 1 23 suites/296 pruebas, Layer 2 18 suites/246 pruebas, regresión completa 68 suites/627 pruebas; SDK contracts, ESLint y Gitleaks correctos. El usuario declara que la versión base anterior está publicada en Wix; la ampliación de mutaciones QA está integrada en Git pero aún no publicada en Wix. No se dispone de release Wix vinculado a SHA.
 
 **CMS maestro:** MapaStaff revisión 36, 42 campos y 5 registros (3 STAFF, 1 TERCERO, 1 GESTORIA). DatosFiscales permanece como colección legacy con un placeholder QA; su retirada requiere verificar runtime y consumidores tras publicar el backend migrado.
 
@@ -19,7 +19,7 @@
 - **Declaración del usuario:** código integrado y publicado en Wix.
 - **Git verificado en este corte:** main=c7bd27faaba833d816e77be56183257393f1aa48; PR #344 y PR #345 están fusionados. La integración en Git está verificada; la publicación Wix es declarada por el usuario, sin vínculo técnico acreditado entre runtime y SHA.
 - **Runtime:** no se ha obtenido identificador de release que vincule el runtime Wix con un SHA. La declaración de publicación se conserva como declaración del propietario.
-- **Mutabilidad:** la política de proyecto permite editar/eliminar durante QA incluso registros históricamente append-only. La aplicación efectiva de la política en hooks, WebMethods, write policies y permisos CMS está pendiente de validación técnica; no afirmar que el runtime ya permite operaciones masivas o todas las mutaciones sin probarlo.
+- **Mutabilidad:** PR #346 está fusionado en main. CI completo validado: 68 suites/627 pruebas; Layer 1 296, Layer 2 246; contratos SDK, ESLint y Gitleaks correctos. La política está aplicada en el código de Git, no en el runtime Wix hasta publicación autorizada.
 - **Restauración:** no automática. Solo por instrucción expresa del usuario para preparar el despliegue.
 
 # Addendum de estado — 2026-11-14
