@@ -17,6 +17,7 @@ import {
     RECORD_TYPE,
     APPEND_ONLY_MUTATION_WINDOW,
     QA_RECORD_MUTATIONS_ENABLED,
+    DATA_ACCESS_WRITE_POLICY,
 } from "backend/internalConfig";
 
 test("QA record mutation policy enables update/remove without enabling insert", () => {
@@ -24,6 +25,22 @@ test("QA record mutation policy enables update/remove without enabling insert", 
     assert.equal(APPEND_ONLY_MUTATION_WINDOW.ENABLED, true);
     assert.equal(APPEND_ONLY_MUTATION_WINDOW.TEMPORARY, true);
     assert.equal(APPEND_ONLY_MUTATION_WINDOW.RESTORE_BEFORE_PRODUCTION, true);
+});
+
+test("all CMS write-policy collection lists contain unique canonical strings", () => {
+    for (const [policyName, collections] of Object.entries(DATA_ACCESS_WRITE_POLICY)) {
+        if (!policyName.endsWith("Collections")) continue;
+        assert.ok(Array.isArray(collections), `${policyName} must be an array`);
+        assert.ok(
+            collections.every((collection) => typeof collection === "string" && collection.trim().length > 0),
+            `${policyName} must not contain undefined or empty collection IDs`
+        );
+        assert.equal(
+            new Set(collections).size,
+            collections.length,
+            `${policyName} must not contain duplicate collection IDs`
+        );
+    }
 });
 
 test("retired custom inventory collections are excluded from the canonical CMS allowlist", () => {
