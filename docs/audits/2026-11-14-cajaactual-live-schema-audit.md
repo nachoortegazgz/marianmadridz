@@ -2,12 +2,12 @@
 
 ---
 
-> **Alcance corregido:** esta auditoría corresponde al sitio productivo 188bed94-177c-4bc9-a9f0-35080d874f3e y no al sitio QA 50b39f33-e753-4331-ab35-b2ed43dc97f7. El snapshot CMS QA de 2026-11-14 registra CajaActual revisión 1 con netAmount y staffResourceId; por tanto, la ausencia de esos campos en el esquema de producción no demuestra un defecto del contrato QA. No aplicar cambios basados en esta auditoría a QA ni a producción sin volver a leer el esquema del sitio objetivo.
+> **Alcance vigente:** esta auditoría corresponde al único sitio QA `188bed94-177c-4bc9-a9f0-35080d874f3e`. La comparación anterior con otro Site ID queda supersedida y no debe utilizarse como referencia de un segundo entorno. El contrato debe validarse contra el esquema actual del sitio QA antes de cualquier cambio.
 
 # Auditoría de esquema live — CajaActual
 
 **Fecha de lectura:** 2026-11-14  
-**Sitio:** 50b39f33-e753-4331-ab35-b2ed43dc97f7 (banco de pruebas aislado, sin actividad real).  
+**Sitio:** `188bed94-177c-4bc9-a9f0-35080d874f3e` (entorno QA único, sin actividad real según declaración del propietario).  
 **Fuente:** Wix Data Collections API, GET /data/v2/collections/CajaActual.  
 **Revisión de colección:** 1. **39 campos**, incluidos los campos de sistema.
 
