@@ -172,6 +172,9 @@ const TIMECLOCK_V1_SIGNED_FIELDS = Object.freeze([
     "registeredBy",
     "registeredByMemberId",
     "adjustmentReason",
+    "deviceIpAddress",
+    "meta",
+    "previousRecordHash",
     "recordHash",
     "schemaVersion",
     "traceId",
@@ -186,7 +189,8 @@ function _timeclockCanonicalPayload(record) {
         const value = record?.[field];
         const canonicalValue = value instanceof Date
             ? value.toISOString()
-            : value === undefined || value === null ? "" : String(value);
+            : value === undefined || value === null ? ""
+                : typeof value === "object" ? JSON.stringify(value) : String(value);
         parts.push(`${field}=${canonicalValue}`);
     }
     return parts.join("|");
