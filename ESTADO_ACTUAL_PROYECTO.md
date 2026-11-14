@@ -8,7 +8,7 @@
 
 ## Estado verificado
 
-- Repositorio `main`: PR #361–#366 integradas; último merge `13b9ae095214e0c601f255fa75d629680c539933`. La alineación de contratos de esta sesión está en `fix/current-site-cms-field-alignment`, pendiente de CI y revisión.
+- Repositorio `main`: PR #361–#366 integradas; último merge `13b9ae095214e0c601f255fa75d629680c539933`. PR #367 alinea los contratos CMS; CI offline PASS (run #1137: 69 suites/631 tests) y secret scanning PASS (#561). Pendiente de integrar en main.
 - CI offline, contratos SDK, ESLint y secret scanning de las cuatro intervenciones: PASS.
 - CMS del sitio actual: 23 colecciones, 15 NATIVE y 8 WIX_APP.
 - Colecciones propias: 524 definiciones de campo; 140 registros en el corte leído.
@@ -43,7 +43,7 @@
 - Mutaciones update/remove sobre colecciones propias habilitadas por autorización expresa mediante `ISOLATED_SITE_RECORD_MUTATIONS_ENABLED=true`.
 - Colecciones Wix Apps excluidas; autenticación, autorización, permisos, validación de esquema y gates de efectos externos permanecen activos.
 - No se ejecutan operaciones reales ni se interpretan datos sintéticos como actividad real.
-- No se modifica el CMS live en esta intervención; cambios de código/documentación se someten a PR y CI.
+- No se modifica el CMS en esta intervención; cambios de código/documentación se integran mediante PR y CI.
 
 ## Evidencias
 
