@@ -49,7 +49,6 @@ describe("ControlOperativo hooks", () => {
       eventId: "wix-event-001",
       eventType: "BOOKING_CONFIRMED",
       status: WEBHOOK_CLAIM_STATUS.IN_PROGRESS,
-      ownerToken: "worker-001",
       version: 1,
       attempts: 1,
       expiresAt: new Date(Date.now() + 60000),
@@ -64,6 +63,10 @@ describe("ControlOperativo hooks", () => {
     assert.throws(
       () => ControlOperativo_beforeInsert({ ...validClaim, expiresAt: undefined }),
       /expiresAt/
+    );
+    assert.throws(
+      () => ControlOperativo_beforeInsert({ ...validClaim, ownerToken: "retired-token" }),
+      /ownerToken/
     );
 
     assert.throws(
