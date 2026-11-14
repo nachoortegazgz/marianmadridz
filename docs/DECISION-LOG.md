@@ -247,27 +247,9 @@ Esta decisión es contractual/documental. No acredita que el backend o el esquem
 Para los movimientos presenciales manuales nuevos, backend asigna `recordSource=MANUAL_PRESENCIAL_AUTHENTICATED` y resuelve `staffResourceId` desde la identidad autenticada. La UI solo marca el operador como verificado cuando el origen contiene esa marca backend; los registros históricos se identifican como autoría no verificada.
 
 
-### TEC-033 — ventana temporal de mutación de ledgers append-only (2026-11-14)
+### TEC-033 [HISTÓRICA / SUPERADA] — primera ventana temporal de mutabilidad (2026-11-14)
 
-**Decisión temporal solicitada:** abrir en la rama de desarrollo una ventana global que permite operaciones individuales de actualización y borrado sobre los registros que el proyecto protegía como append-only. El alcance de código incluye:
-- `MovimientosCaja`
-- `LibroAsientosContablesDetalle`
-- `RegistrosHorariosStaff`
-- `MovimientosInventario`
-- `HistoricoCierresZ`
-- `PaquetesGestoria`
-- `ControlOperativo` cuando `controlType=WEBHOOK_EVENT`
-
-**Implementación:** `APPEND_ONLY_MUTATION_WINDOW.ENABLED=true` en `src/backend/internalConfig.js`; hooks Velo en `src/backend/data.js` y allowlists de `src/backend/dataAccessPolicy.js` alineados. Las validaciones de esquema de inserción siguen activas. Las operaciones masivas siguen bloqueadas; la excepción no autoriza bulk update/remove. Los tipos mutables de `ControlOperativo` conservan sus restricciones de contrato y el campo `controlType` no puede cambiar.
-
-**Límite de la ventana TEC-033:** la excepción de hooks/políticas existe solo en código de la rama draft; no se ha aplicado al runtime Wix ni a permisos CMS. Los permisos de colección y las autorizaciones backend siguen siendo capas independientes; la edición desde CMS UI no queda garantizada por esta bandera.
-
-**Cambios CMS live independientes, ejecutados el 2026-11-14 bajo autorización expresa:** se creó `CajaActual` como NATIVE revisión 3 con 25 campos de negocio y permisos ADMIN; se insertó un único `CAJA_PRINCIPAL` cerrado, con saldos actuales a cero y saldos iniciales null; se dejó ACTIVE el índice único de `singletonKey` y se sustituyó el índice compuesto obsoleto por `cashRegisterStatus_operationDateHour` (ACTIVE en readback final). Se eliminaron por ID dos registros de `RegistrosHorariosStaff` que acreditaban `meta.synthetic=true`, `doNotImportToProduction=true`, `QA_STAFF_ONLY` y notas de empleado ficticio; readback posterior: cero filas. No se tocaron movimientos de caja, asientos, cierres Z, paquetes ni registros de ControlOperativo. No se cambiaron permisos, automatizaciones ni publicación. Esta limpieza puntual no autoriza otros borrados sin identificación y revisión equivalentes.
-
-**Reversión obligatoria:** antes de cualquier despliegue productivo, establecer `APPEND_ONLY_MUTATION_WINDOW.ENABLED=false`, retirar las entradas de actualización/borrado de ledgers de `DATA_ACCESS_WRITE_POLICY`, restaurar los bloqueos de hooks y tests, ejecutar CI completo y verificar en Wix Local Editor que update/remove vuelven a bloquearse. No desplegar mientras `RESTORE_BEFORE_PRODUCTION=true` y `ENABLED=true`.
-
-**Advertencia de cumplimiento:** esta excepción de desarrollo no modifica ni suspende obligaciones legales de integridad, trazabilidad y conservación de registros fiscales, contables o laborales. No usarla para alterar o eliminar registros reales sujetos a conservación.
-
+La autorización inicial de esta ventana se limitaba a update/remove individuales en un subconjunto de colecciones. Queda sustituida por TEC-037, que define la mutabilidad temporal vigente del único sitio aislado, incluidas las operaciones masivas con IDs explícitos. No usar APPEND_ONLY_MUTATION_WINDOW como política vigente.
 
 ### TEC-034 [HISTÓRICA / SUPERADA] — snapshot previo de esquema CMS (2026-11-14)
 
@@ -277,17 +259,9 @@ Este registro conserva una lectura anterior del CMS. Sus revisiones, campos y ti
 
 La propuesta anterior agrupaba STAFF, TERCERO y GESTORIA en MapaStaff. Queda descartada por el esquema físico actual: MapaStaff se limita a identidades de personal y DatosFiscales es el maestro fiscal/de terceros. No usar este modelo ni desplegar la rama antigua feat/consolidate-fiscal-master-mapastaff-v2.
 
-### TEC-036 [HISTÓRICA] — autoridad SSOT del usuario y pausa de append-only en pruebas (2026-11-14)
+### TEC-036 [HISTÓRICA / SUPERADA] — autoridad SSOT y mutabilidad temporal (2026-11-14)
 
-**Decisión del usuario:** el usuario/propietario del proyecto es la SSOT de negocio y gobierno. Sus instrucciones expresas prevalecen sobre documentación histórica, decisiones anteriores y supuestos. La documentación del repositorio es derivada y debe actualizarse para reflejar las instrucciones vigentes.
-
-**Fase histórica:** desarrollo, depuración y pruebas. Se pausa temporalmente append-only y cualquier prohibición genérica de editar o eliminar registros, individual o masiva, cuando el bloqueo derive exclusivamente de la inmutabilidad del registro o de una política append-only. La pausa permanece activa hasta que el usuario ordene expresamente restaurar/habilitar las protecciones para despliegue; no se restaura automáticamente.
-
-Se mantienen controles de autenticación, autorización, permisos, validación de datos, secretos y seguridad que no dependan de la inmutabilidad. Los gates funcionales independientes de writers fiscales/contables/laborales, pagos, devoluciones y comunicaciones no se consideran modificados por esta decisión.
-
-**Estado Git asociado:** PR #344 quedó fusionado el 2026-11-14 mediante f3b1311eead05282e47f538afd506fe49e227141 (HEAD de main en este corte). El usuario declara la publicación en Wix; no hay identificador de release que vincule el runtime con ese SHA.
-
-**Alcance de evidencia:** esta decisión establece la política documental y de trabajo. La aplicación efectiva en hooks, WebMethods, write policies y permisos CMS requiere comprobación técnica específica; no se presume por el mero cambio documental.
+La autoridad del propietario y la política temporal de mutabilidad vigentes se describen en la cabecera de este registro y en TEC-037/TEC-038. Esta entrada conserva la decisión anterior y no define el alcance operativo actual.
 
 ### TEC-037 — mutabilidad temporal del sitio aislado (2026-11-14)
 
