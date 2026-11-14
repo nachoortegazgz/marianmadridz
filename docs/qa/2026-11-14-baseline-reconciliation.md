@@ -1,3 +1,5 @@
+> **Addendum de vigencia — 2026-11-14:** la política de mutabilidad descrita más abajo es histórica. TEC-038 retiró los bypasses globales; no usar `QA_RECORD_MUTATIONS_ENABLED` como permiso actual. El propietario designa `50b39f33-e753-4331-ab35-b2ed43dc97f7` como QA y declara el sitio despublicado/pasarela desconectada; el conector actual no resuelve ese ID, limitación que no cambia el destino autorizado.
+
 # Reconciliación de baseline y recuperación de validadores — 2026-11-14
 
 ## Autoridad y alcance
