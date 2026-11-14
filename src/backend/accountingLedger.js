@@ -126,7 +126,7 @@ function _normalizeEntry(input, traceId) {
             operationDescription,
             movementType,
             recordSource,
-            fechaOperacion: new Date(`${fechaOperacionText}T12:00:00.000Z`),
+            fechaOperacion: fechaOperacionText,
             fiscalPeriod,
             lines: normalizedLines,
             totalDebit,
@@ -243,6 +243,7 @@ function _toCanonicalAccountingRow(row) {
         accountCode: detail.accountCode,
         debitAmount: detail.debitAmount,
         creditAmount: detail.creditAmount,
+        cashMovementId: detail.cashMovementId || null,
         recordHash: row?.hash,
     };
 }
@@ -285,7 +286,8 @@ async function _verifyEntryRows(rows, entry) {
         let fechaOperacion;
         try {
             recordTimestamp = new Date(actual.recordTimestamp).toISOString();
-            fechaOperacion = new Date(actual.fechaOperacion).toISOString();
+            fechaOperacion = _safeTrim(actual.fechaOperacion).slice(0, 10);
+            if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(fechaOperacion)) return false;
         } catch {
             return false;
         }
@@ -300,7 +302,7 @@ async function _verifyEntryRows(rows, entry) {
             actual.operationDescription !== entry.operationDescription ||
             actual.movementType !== entry.movementType ||
             actual.recordSource !== entry.recordSource ||
-            fechaOperacion !== entry.fechaOperacion.toISOString() ||
+            fechaOperacion !== entry.fechaOperacion ||
             actual.fiscalPeriod !== entry.fiscalPeriod ||
             !_safeTrim(actual.traceId) ||
             actual.previousRecordHash !== expectedPreviousHash ||
@@ -365,7 +367,7 @@ export async function appendAccountingEntry(input, traceId) {
     delete idempotencyEntry.traceId;
     const payloadHash = await hashSHA256(JSON.stringify({
         ...idempotencyEntry,
-        fechaOperacion: entry.fechaOperacion.toISOString(),
+        fechaOperacion: entry.fechaOperacion,
     }));
     const claimDigest = await hashSHA256(entry.journalEntryId);
     const claimId = `ACC_ENTRY_${claimDigest.slice(0, 48)}`;
@@ -487,7 +489,6 @@ export async function appendAccountingEntry(input, traceId) {
                 movementType: entry.movementType,
                 recordSource: entry.recordSource,
                 documentId: entry.documentId,
-                cashMovementId: entry.cashMovementId,
                 fechaOperacion: entry.fechaOperacion,
                 fiscalPeriod: entry.fiscalPeriod,
                 amount: Math.max(line.debitAmount, line.creditAmount),
@@ -497,6 +498,7 @@ export async function appendAccountingEntry(input, traceId) {
                     accountCode: line.accountCode,
                     debitAmount: line.debitAmount,
                     creditAmount: line.creditAmount,
+                    cashMovementId: entry.cashMovementId,
                 },
                 previousRecordHash,
                 hash: recordHash,
