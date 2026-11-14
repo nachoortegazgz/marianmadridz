@@ -86,7 +86,7 @@ Criterios de aceptación por intervención:
 
 Un workflow verde solo acredita las pruebas que ejecutó. No equivale a aceptación E2E del sitio publicado ni demuestra que el runtime Wix coincida con el SHA de Git.
 
-**Estado de la tanda de recuperación de validadores:** PR #352; CI final verificado en `c7388cb122368906b1cee20cae0f6d127900553b` (run #1048): Capa 1, Capa 2, regresión offline completa, SDK contracts, ESLint y Gitleaks PASS. No se ha publicado en Wix.
+**Estado de la tanda de recuperación de validadores:** PR #352; CI final verificado en `609ccc948da3e63d3fd8aa20f5e64c7649770660` (run #1054): Capa 1, Capa 2, regresión offline completa, SDK contracts, ESLint y Gitleaks PASS. No se ha publicado en Wix.
 
 ## 5. Proceso de auditoría
 
