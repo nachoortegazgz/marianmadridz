@@ -16,7 +16,7 @@ El sitio es el único objeto de trabajo. No se mantiene una matriz de comparaci�
 - CajaActual: 39 campos, 1 registro; operationDate DATE, openingAmount NUMBER, sequenceCounters OBJECT y otherAmount. cashRegisterStatus=SIMULACION; isOpen=true no es autoridad.
 - ControlOperativo: 42 campos, 0 registros; ownerToken, retryAfter y nextRetryAt ausentes; traceId es fencing token.
 - ComplementosCatalogo: 18 campos, 36 registros; addonId = _id en 36/36.
-- MapaStaff: 18 campos, 3 registros; mapa de identidades de personal, sin recordType ni campos fiscales.
+- MapaStaff: 18 campos, 3 registros; mapa de identidades de personal. thirdPartyId es TEXT opaco, no coincide con DatosFiscales._id y no tiene consumidor localizado.
 - DatosFiscales: 28 campos, 1 placeholder; recordType, taxId, legalName, thirdPartyType y datos de gestoría; sin traceId ni schemaVersion.
 - ServiciosCatalogo: 42 campos, 95 registros; serviceId y pricingPlanId son identificadores nativos distintos de _id CMS.
 - InventarioStockVenta y MovimientosInventario permanecen físicamente, pero sus contratos y writers están retirados.
