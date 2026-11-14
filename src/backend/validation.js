@@ -168,7 +168,7 @@ export function assertDatosFiscalesRecord(item, { partial = false } = {}) {
         const email = String(item.email || item.gestorEmail || "").trim();
         const name = String(item.name || item.legalName || item.gestorName || "").trim();
         if (!partial || email) {
-            if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) {
+            if (!/^[^\s@]+@[^\s@]+\\.[^\s@]+$/.test(email)) {
                 throw new Error("SCHEMA_VIOLATION: DatosFiscales GESTORIA requires a valid email");
             }
         }
@@ -187,7 +187,7 @@ export function assertDatosFiscalesRecord(item, { partial = false } = {}) {
     if (item.fechaInicioVerifactu != null && item.fechaInicioVerifactu !== "") {
         const value = String(item.fechaInicioVerifactu);
         const parsed = new Date(value + "T00:00:00.000Z");
-        if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(value) ||
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(value) ||
             Number.isNaN(parsed.getTime()) ||
             parsed.toISOString().slice(0, 10) !== value) {
             throw new Error("SCHEMA_VIOLATION: DatosFiscales.fechaInicioVerifactu must be a real YYYY-MM-DD date");
