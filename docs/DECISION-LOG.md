@@ -357,15 +357,7 @@ La propuesta anterior agrupaba STAFF, TERCERO y GESTORIA en MapaStaff. Queda des
 
 ## DECISIÓN QA-2026-11-14 — designación inicial de entorno (supersedida)
 
-**Registro histórico:** la designación inicial de entorno de este apartado queda supersedida por QA-2026-11-14-D. No identifica el sitio QA vigente ni autoriza el uso de otro sitio. La política de datos sintéticos y ausencia de efectos externos se mantiene.
-
-**Restricciones de ejecución:** no usar clientes/gestoría reales; no enviar emails/SMS/WhatsApp; no realizar cobros, reembolsos, facturas, tickets a clientes, movimientos de stock ni llamadas AEAT/Veri*Factu/SharePoint/Power Automate. Los mocks deben ser locales/offline y sin llamadas de red. Los datos sintéticos deben identificarse con `isSynthetic`, `testRunId`, `sourceEnvironment=TEST` y `realPayment=false` cuando el contrato de la entidad admita esos campos; no añadir campos CMS sin revisar esquema y consumidores.
-
-**Estado de acceso en aquel corte:** la conexión no resolvió la designación inicial. Este resultado es histórico y queda supersedido por la consulta posterior de GetSiteContext al sitio QA único `188bed94-177c-4bc9-a9f0-35080d874f3e`.
-
-**Contrato de pagos mixtos:** los documentos de implementación existentes indican que el campo `paymentMethod` es singular y que el modelo de pagos mixtos no está definido. El caso mixto permanece `BLOCKED_CONTRACT` hasta definir y probar el esquema y la reconciliación. No inferir un contrato a partir de la suma de importes.
-
-**Implementación inicial de esta decisión:** documental. La ejecución posterior añade mocks y fixtures sintéticos, retira los bypasses globales y endurece la política de purgas en TEC-038 y QA-SEC-20261114-001. No se han modificado CMS, configuración Wix, automatizaciones, permisos, secretos ni publicación en esta intervención. Ver [PLAN_ACCION_QA.md](../PLAN_ACCION_QA.md).
+Este apartado conserva únicamente el antecedente documental de una designación inicial que ya no está vigente. No identifica el sitio QA actual ni autoriza un segundo entorno. La única identidad operativa es `188bed94-177c-4bc9-a9f0-35080d874f3e`, conforme a QA-2026-11-14-D. La política de datos sintéticos y cero efectos externos se mantiene.
 
 
 ---
