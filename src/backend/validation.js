@@ -13,6 +13,67 @@ import {
     CONTROL_OPERATIVO_NON_CANONICAL_FIELDS,
 } from "backend/internalConfig";
 
+
+const EU_VAT_PREFIXES = Object.freeze([
+    "AT", "BE", "BG", "CY", "CZ", "DE", "DK", "EE", "EL", "ES",
+    "FI", "FR", "HR", "HU", "IE", "IT", "LT", "LU", "LV", "MT",
+    "NL", "PL", "PT", "RO", "SE", "SI", "SK", "XI",
+]);
+
+const DNI_LETTERS = "TRWAGMYFPDXBNJZSQVHLCKE";
+
+/**
+ * Comprueba que un valor pertenece al enum canónico recibido.
+ * No normaliza silenciosamente el valor: los escritores deben entregar
+ * exactamente el literal definido por internalConfig.
+ */
+export function assertValidEnum(value, enumObject, fieldName) {
+    const allowedValues = enumObject && typeof enumObject === "object"
+        ? Object.values(enumObject)
+        : [];
+
+    if (allowedValues.length === 0 || !allowedValues.includes(value)) {
+        const allowed = allowedValues.length > 0 ? allowedValues.join("|") : "enum no configurado";
+        throw new Error(`SCHEMA_VIOLATION: ${fieldName} invalido (${allowed})`);
+    }
+    return true;
+}
+
+function _isValidSpanishTaxId(value) {
+    const clean = String(value ?? "").trim().toUpperCase().replace(/[-\\s]/g, "");
+    if (!clean || clean.length < 8) return false;
+
+    if (/^\\d{8}[A-Z]$/.test(clean)) {
+        const number = Number(clean.slice(0, 8));
+        return clean.charAt(8) === DNI_LETTERS[number % 23];
+    }
+    if (/^[XYZ]\\d{7}[A-Z]$/.test(clean)) {
+        const prefix = { X: "0", Y: "1", Z: "2" }[clean.charAt(0)];
+        const number = Number(prefix + clean.slice(1, 8));
+        return clean.charAt(8) === DNI_LETTERS[number % 23];
+    }
+    // Se conserva el contrato estructural previo para CIF/NIF de persona jurídica.
+    return /^[ABCDEFGHJKLMNPQRSUVW]\\d{7}[0-9A-J]$/.test(clean);
+}
+
+/**
+ * Validador fiscal compartido. Mantiene el mismo contrato de NIF/NIE/CIF y
+ * VAT-UE que utilizaban los hooks de data.js; no depende de una colección CMS.
+ */
+export function isValidNifOrEuVat(value) {
+    const clean = String(value ?? "").trim().toUpperCase().replace(/[-\\s]/g, "");
+    if (!clean) return false;
+    if (_isValidSpanishTaxId(clean)) return true;
+
+    if (clean.length >= 8 && clean.length <= 14) {
+        const prefix = clean.slice(0, 2);
+        if (EU_VAT_PREFIXES.includes(prefix)) {
+            return /^[A-Z0-9]{5,12}$/.test(clean.slice(2));
+        }
+    }
+    return false;
+}
+
 // =============================================================================
 // DATOS FISCALES (Ley 11/2021, Veri*Factu)
 // =============================================================================
