@@ -1786,7 +1786,7 @@ Las relaciones de la tabla son semánticas/contractuales; solo las marcadas MULT
 
 ## 10. Permisos, inmutabilidad y límites de uso
 
-**Política vigente de desarrollo/QA:** según la autorización expresa del propietario y el flag `QA_RECORD_MUTATIONS_ENABLED=true`, append-only e inmutabilidad están temporalmente en pausa para las colecciones propias del proyecto. Esta excepción no habilita mutaciones en WIX_APP ni desactiva RBAC, permisos, validaciones o gates de writers fiscales/contables/laborales. Restaurar las protecciones antes de producción solo cuando lo ordene el propietario.
+**Política temporal del sitio aislado de pruebas:** según la autorización expresa del propietario y el flag `ISOLATED_SITE_RECORD_MUTATIONS_ENABLED=true`, append-only e inmutabilidad están temporalmente en pausa para las colecciones propias del proyecto. Esta excepción no habilita mutaciones en WIX_APP ni desactiva RBAC, permisos, validaciones o gates de writers fiscales/contables/laborales. Restaurar las protecciones antes de producción solo cuando lo ordene el propietario.
 
 - Las colecciones WIX_APP son propiedad de sus aplicaciones. No modificar directamente sus campos, tipos, datos ni permisos mediante este proyecto salvo flujo oficial aprobado.
 - Para producción, los ledgers append-only no se editan ni borran. Las rectificaciones se incorporan como nuevos registros trazables.
@@ -1879,9 +1879,9 @@ Este estado temporal contradice deliberadamente la regla ordinaria de la secció
 **Reactivación previa a producción:** `APPEND_ONLY_MUTATION_WINDOW.ENABLED=false`; retirar ledgers de las allowlists de update/remove; restaurar tests que esperan `FISCAL_VIOLATION`; ejecutar CI completo y verificar hooks/permisos en Wix Local Editor. La publicación está bloqueada mientras esta excepción siga activa.
 
 
-## 16. Addendum — estado live corregido y limpieza QA (2026-11-14)
+## 16. Addendum histórico — estado anterior y limpieza de datos sintéticos (2026-11-14)
 
-## Estado live y limpieza QA — corte 2026-11-14
+## Estado histórico y limpieza de datos sintéticos — corte 2026-11-14
 
 **Sitio:** `188bed94-177c-4bc9-a9f0-35080d874f3e`. **Rama de código:** `chore/temporary-append-only-mutation-window`. Este estado supersede los inventarios y addenda anteriores que contradigan estos datos.
 
@@ -1904,13 +1904,13 @@ Se eliminaron únicamente dos filas de `RegistrosHorariosStaff`, tras releerlas 
 - `1a4341a6-47be-490c-91a6-d04c8728e186` — `QA_LIVECMS_20261023_2000_TIME01_EXIT`.
 - `f325c0c8-35ba-4efc-ac45-a409ab439e61` — `QA_LIVECMS_20261023_2000_TIME01_ENTRY`.
 
-La eliminación se hizo por ID individual con condición de `traceId`; readback posterior: 0 filas restantes. Un barrido read-only de las 13 colecciones NATIVE no detectó otros candidatos con `meta.synthetic`, `doNotImportToProduction`, `runId/traceId` QA o `recordSource=SMOKE_TEST`. No se borró ningún fichaje real, movimiento de caja, asiento contable, cierre Z, paquete de gestoría ni registro de `ControlOperativo`. No se cambiaron permisos CMS ni se activaron writers.
+La eliminación se hizo por ID individual con condición de `traceId`; readback posterior: 0 filas restantes. Un barrido read-only de las 13 colecciones NATIVE no detectó otros candidatos con `meta.synthetic`, `doNotImportToProduction`, `runId/traceId` de simulación o `recordSource=SMOKE_TEST`. No se borró ningún fichaje real, movimiento de caja, asiento contable, cierre Z, paquete de gestoría ni registro de `ControlOperativo`. No se cambiaron permisos CMS ni se activaron writers.
 
 ### Ventana temporal TEC-033
 
-**HISTÓRICO — TEC-033, sustituida por TEC-037.** El siguiente detalle describe la excepción inicial, limitada a update/remove individuales de determinados ledgers, y ya no representa la política vigente. La política actual está definida por `QA_RECORD_MUTATIONS_ENABLED=true`: update/remove individual y masivo en colecciones CMS propias, incluidos registros históricamente append-only. Las operaciones masivas requieren IDs explícitos. No se reactivan gates de inserción, writers fiscales/contables/laborales ni efectos externos.
+**HISTÓRICO — TEC-033, sustituida por TEC-037.** El siguiente detalle describe la excepción inicial, limitada a update/remove individuales de determinados ledgers, y ya no representa la política vigente. La política actual está definida por `ISOLATED_SITE_RECORD_MUTATIONS_ENABLED=true`: update/remove individual y masivo en colecciones CMS propias, incluidos registros históricamente append-only. Las operaciones masivas requieren IDs explícitos. No se reactivan gates de inserción, writers fiscales/contables/laborales ni efectos externos.
 
-La instrucción antigua de desactivar la ventana antes de fusionar o publicar queda sustituida: la política temporal está integrada en main para la fase de QA. Solo el usuario ordenará su restauración antes del despliegue. La publicación Wix de esta ampliación sigue pendiente.
+La instrucción antigua de desactivar la ventana antes de fusionar o publicar queda sustituida: la política temporal está integrada en main para la fase de pruebas en el sitio aislado. Solo el usuario ordenará su restauración antes del despliegue. La publicación Wix de esta ampliación sigue pendiente.
 
 ### Alineación backend y estado pendiente
 
@@ -1925,7 +1925,7 @@ No se ha ejecutado CI completo, Wix Local Editor ni E2E en runtime. No se ha pub
 
 Este addendum prevalece sobre las secciones históricas que describen `DatosFiscales` como maestro activo o `MapaStaff` como una colección exclusivamente de mapeo staff.
 
-**CMS live verificado:** `MapaStaff` revisión 36, 42 campos, 5 registros. Se añadieron al esquema los campos fiscales y de contacto que existían en `DatosFiscales`, más `recordType` y `active`. `DatosFiscales` permanece live en revisión 21 con 1 registro QA sintético hasta que se publique el backend migrado; su retirada aún no se ha ejecutado.
+**CMS live verificado:** `MapaStaff` revisión 36, 42 campos, 5 registros. Se añadieron al esquema los campos fiscales y de contacto que existían en `DatosFiscales`, más `recordType` y `active`. `DatosFiscales` permanece live en revisión 21 con 1 registro sintético hasta que se publique el backend migrado; su retirada aún no se ha ejecutado.
 
 **Esquema de MapaStaff (42 campos físicos; 38 de negocio + 4 de sistema):**
 
@@ -1968,11 +1968,11 @@ _id:TEXT, _createdDate:DATETIME, _updatedDate:DATETIME, _owner:TEXT
 
 ### Política temporal de desarrollo y pruebas
 
-**Vigencia:** fase actual de desarrollo, depuración y QA, hasta que el usuario ordene expresamente habilitar las protecciones para el despliegue.
+**Vigencia:** fase actual de desarrollo, depuración y pruebas, hasta que el usuario ordene expresamente habilitar las protecciones para el despliegue.
 
 - Queda **en pausa la política append-only** durante esta fase. Ninguna colección o registro se considerará intocable únicamente por estar etiquetado como ledger, histórico, fiscal, contable, laboral, documental o append-only.
-- Queda **en pausa toda prohibición genérica de edición o eliminación de registros**, tanto individual como masiva, cuando la única causa del bloqueo sea la inmutabilidad/append-only o una restricción temporal de QA. La edición y eliminación forman parte de las operaciones permitidas durante las pruebas.
-- No se exigirán registros rectificativos como única vía de corrección durante esta fase de QA. Esa regla se reconsiderará cuando el usuario habilite expresamente las protecciones previas al despliegue.
+- Queda **en pausa toda prohibición genérica de edición o eliminación de registros**, tanto individual como masiva, cuando la única causa del bloqueo sea la inmutabilidad/append-only o una restricción temporal de mutabilidad del sitio aislado. La edición y eliminación forman parte de las operaciones permitidas durante las pruebas.
+- No se exigirán registros rectificativos como única vía de corrección durante esta fase de pruebas en el sitio aislado. Esa regla se reconsiderará cuando el usuario habilite expresamente las protecciones previas al despliegue.
 - Se mantienen las validaciones de esquema y tipos, la autenticación, autorización y permisos de acceso, la protección de secretos, la separación de capas, los controles de seguridad no relacionados con la inmutabilidad y la trazabilidad técnica de las pruebas. Esta pausa no autoriza accesos anónimos ni saltarse controles de identidad.
 - No se habilitan por esta decisión writers fiscales, contables, laborales, pagos, devoluciones, comunicaciones ni automatizaciones externas que tengan gates funcionales independientes. Esos gates solo se modificarán por instrucción expresa o por una decisión técnica aprobada por el usuario.
 - La pausa es temporal y **no se revierte automáticamente**. Solo el usuario puede ordenar la restauración y habilitación de las protecciones para despliegue. Antes de una publicación productiva, el estado de las protecciones debe revisarse con el usuario y quedar expresamente autorizado.
