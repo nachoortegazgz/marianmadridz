@@ -1,4 +1,4 @@
-> **SSOT de entorno vigente (2026-11-14):** el único sitio del proyecto es QA: `188bed94-177c-4bc9-a9f0-35080d874f3e` (`https://www.marianmadrid.es/`). El propietario confirma que nunca ha tenido actividad real, que todos los datos son sintéticos, que el cliente de pruebas es Nacho Pitt (`nachoortegazgz@gmail.com`) y que la pasarela está desconectada. No existe otro sitio QA ni un QA externo designado. Las referencias anteriores a otros Site ID o a este sitio como producción quedan supersedidas. El estado Wix Published no altera su clasificación funcional como QA. Véase [SSOT del entorno QA](qa/QA-ENVIRONMENT-SSOT.md).
+> **SSOT de entorno vigente (2026-11-14):** el único sitio del proyecto es QA: `188bed94-177c-4bc9-a9f0-35080d874f3e` (`https://www.marianmadrid.es/`). El propietario confirma que nunca ha tenido actividad real, que todos los datos son sintéticos, que el cliente de pruebas es Nacho Pitt (`nacho.pitt@example.test`) y que la pasarela está desconectada. No existe otro sitio QA ni un QA externo designado. Las referencias anteriores a otros Site ID o a este sitio como producción quedan supersedidas. El estado Wix Published no altera su clasificación funcional como QA. Véase [SSOT del entorno QA](qa/QA-ENVIRONMENT-SSOT.md).
 
 ---
 
@@ -419,9 +419,10 @@ Este addendum conserva el registro de una designación intermedia y de la discre
 
 El propietario ordena suspender temporalmente la política append-only de los ledgers en el único sitio QA para permitir corrección de registros sintéticos y acelerar el desarrollo. Esta decisión supersede, solo en QA y desde 2026-11-15, TEC-038 y cualquier instrucción documental anterior que prohíba toda operación update/remove en esos ledgers. Los documentos históricos se conservan como evidencia, pero no gobiernan la operación QA mientras esta excepción esté vigente.
 
-**Alcance inicial a verificar en Wix live:** `MovimientosCaja`, `LibroAsientosContablesDetalle`, `RegistrosHorariosStaff`, `MovimientosInventario`, `HistoricoCierresZ`, `PaquetesGestoria` y `ControlOperativo/WEBHOOK_EVENT`.
+**Alcance inicial verificado en Wix live:** `MovimientosCaja`, `LibroAsientosContablesDetalle`, `RegistrosHorariosStaff`, `HistoricoCierresZ`, `PaquetesGestoria` y los tipos mutables de `ControlOperativo`. `MovimientosInventario` no existe como colección propia live; no se creará un ledger paralelo al stock nativo de Wix. `ControlOperativo/WEBHOOK_EVENT` queda excluido de update/remove por ser la barrera de deduplicación y replay de webhooks.
 
 **Condiciones de implementación:**
+- El propietario declara ser el único usuario con acceso al desarrollo QA; aun así, cada WebMethod invocable desde frontend debe conservar autorización ADMIN cuando realice mantenimiento.
 - Mutaciones solo desde backend, con autorización ADMIN comprobada en servidor y allowlist explícita por colección.
 - No abrir permisos de lectura/escritura a ANYONE ni acceso anónimo; conservar el mínimo privilegio.
 - No usar acceso directo a colecciones nativas WIX_APP; respetar APIs oficiales.
