@@ -40,20 +40,20 @@ export function assertValidEnum(value, enumObject, fieldName) {
 }
 
 function _isValidSpanishTaxId(value) {
-    const clean = String(value ?? "").trim().toUpperCase().replace(/[-\\s]/g, "");
+    const clean = String(value ?? "").trim().toUpperCase().replace(/[-\s]/g, "");
     if (!clean || clean.length < 8) return false;
 
-    if (/^\\d{8}[A-Z]$/.test(clean)) {
+    if (/^\d{8}[A-Z]$/.test(clean)) {
         const number = Number(clean.slice(0, 8));
         return clean.charAt(8) === DNI_LETTERS[number % 23];
     }
-    if (/^[XYZ]\\d{7}[A-Z]$/.test(clean)) {
+    if (/^[XYZ]\d{7}[A-Z]$/.test(clean)) {
         const prefix = { X: "0", Y: "1", Z: "2" }[clean.charAt(0)];
         const number = Number(prefix + clean.slice(1, 8));
         return clean.charAt(8) === DNI_LETTERS[number % 23];
     }
     // Se conserva el contrato estructural previo para CIF/NIF de persona jurídica.
-    return /^[ABCDEFGHJKLMNPQRSUVW]\\d{7}[0-9A-J]$/.test(clean);
+    return /^[ABCDEFGHJKLMNPQRSUVW]\d{7}[0-9A-J]$/.test(clean);
 }
 
 /**
@@ -61,7 +61,7 @@ function _isValidSpanishTaxId(value) {
  * VAT-UE que utilizaban los hooks de data.js; no depende de una colección CMS.
  */
 export function isValidNifOrEuVat(value) {
-    const clean = String(value ?? "").trim().toUpperCase().replace(/[-\\s]/g, "");
+    const clean = String(value ?? "").trim().toUpperCase().replace(/[-\s]/g, "");
     if (!clean) return false;
     if (_isValidSpanishTaxId(clean)) return true;
 
