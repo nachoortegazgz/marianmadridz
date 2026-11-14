@@ -1247,6 +1247,7 @@ function _buildTransactionControl(pairToken, state, existingDoc) {
     const doc = {
         _id: String(pairToken),
         controlType: CONTROL_TYPE.IDEMPOTENCY,
+        pairToken: String(pairToken),
         serviceId: serviceId,
         dedupeKey: TX_DEDUPE_PREFIX + String(pairToken),
         payload: payload,
