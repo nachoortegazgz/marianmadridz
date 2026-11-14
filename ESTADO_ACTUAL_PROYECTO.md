@@ -20,13 +20,20 @@
 
 ## Alineación de código en la rama actual
 
-- Rama: fix/current-site-cms-contract-alignment.
+- Rama: fix/current-site-cms-contract-alignment; HEAD a8a44cb8e75fd3c9d57fe3279a02ae47411b50a6.
 - internalConfig.js incorpora DatosFiscales a BUSINESS_COLLECTIONS y delimita RECORD_TYPE a los registros fiscales.
 - validation.js y data.js separan MapaStaff (identidad de personal) de DatosFiscales (maestro fiscal).
 - dataAccessPolicy.js aplica la validación de recordType a DatosFiscales, no a MapaStaff.
 - eventLog.js, fiscalAggregator.web.js y fiscalDocuments.web.js leen/escriben el maestro fiscal en DatosFiscales usando únicamente campos físicos declarados.
 - ComplementosCatalogo usa _id como identidad CMS canónica y mantiene addonId como espejo físico mientras la columna exista.
+- cajas.web.js usa operationDate DATE ISO YYYY-MM-DD, acumula Bizum en otherAmount y devuelve openingAmount; no consume operationDateHour, bizumAmount ni los cuatro opening*Amount inexistentes.
 - gestorName queda como nombre canónico; gestorNombre deja de ser consumido y solo se elimina durante una actualización si ambos valores existentes coinciden.
+
+## Estado de integración Git
+
+- PR #370 está abierto pero no es mergeable (`dirty`): 109 commits ahead y 57 behind `main`.
+- No hay checks para HEAD a8a44cb. Los últimos checks exitosos corresponden a 68a2f327 y no cubren los cambios posteriores.
+- Rebase/reconciliación y CI sobre el SHA actual siguen pendientes. No fusionar ni publicar hasta resolverlos.
 
 ## Seguridad y límites operativos
 
