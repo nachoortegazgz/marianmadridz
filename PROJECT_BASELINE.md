@@ -80,24 +80,15 @@ Los requisitos funcionales son declaraciones de alcance, no prueba de implementa
 
 ## 5. Bloqueos abiertos
 
-1. Resolver el contrato de `MapaStaff`: el esquema live es de personal, mientras varios validadores/writers siguen esperando registros fiscales y `recordType`.
-2. Definir `DatosFiscales` como colección fiscal canónica y alinear sus campos con los writers antes de habilitarlos; no inventar `traceId`/`schemaVersion` ni asumir que existen.
-3. Decidir la retirada física de duplicados demostrados: `ComplementosCatalogo.addonId`, `DatosFiscales.gestorNombre`, `CajaActual.id`, `MapaStaff.resourceId` y campos sin uso, después de migrar consumidores.
-4. Obtener copia/exportación reproducible del código Velo actual y comparar hashes/diff con Git.
-5. Ejecutar pruebas en el Editor Wix y E2E controladas antes de cualquier operación real.
-6. Validar obligaciones legales con normativa vigente y asesoría competente.
-7. Mantener integraciones externas deshabilitadas hasta autorización y pruebas.
+1. No existe registro CONFIG_SISTEMA con identidad fiscal oficial verificada en DatosFiscales; mantener los writers fiscales/contables fail-closed.
+2. La correspondencia del código Velo del Editor con Git no está acreditada mediante exportación/hash. El repositorio es la referencia del código versionado, no prueba del runtime.
+3. La retirada física de ComplementosCatalogo.addonId, ComplementosCatalogo.traceId, DatosFiscales.gestorNombre y CajaActual.id requiere revisar consumidores externos, automatizaciones, vistas CMS y contratos de Wix antes de eliminar definiciones.
+4. MapaStaff.resourceId no se fusiona con _id: coinciden en las tres filas leídas, pero representan la identidad del recurso Bookings y la identidad del elemento CMS.
+5. No hay validación runtime/E2E completa de los hooks y WebMethods del contrato actualizado.
 
-## 6. Fuentes de referencia
+## 6. Estado de la rama de alineación
 
-- `DICCIONARIO_DATOS_CMS.md`: índice y contexto histórico del esquema.
-- `docs/audits/2026-11-14-current-site-cms-normalization.md`: inventario live vigente, tipos y hallazgos de normalización.
-- `ESTADO_ACTUAL_PROYECTO.md`: resumen operativo.
-- `DOSSIER TÉCNICO CONSOLIDADO.md`: arquitectura y contratos detallados; validar cada sección contra el CMS actual.
-- `DOSSIER FLUJOS END TO END CAPA 3.md`: diseño documental; no implica operación certificada.
-- `NECESIDADES WEB MARIAN.txt`: requisitos declarados, no estado técnico.
-- `DIRECTRICES_DESARROLLO_CODIGO.txt`: directrices de desarrollo.
-
-## 7. Regla de mantenimiento
-
-Actualizar esta base solo ante evidencia nueva o decisión expresa del propietario. Registrar fecha, fuente y alcance. Mantener los informes históricos como evidencia, sin presentarlos como estado live actual.
+- Rama de trabajo: fix/current-site-cms-contract-alignment.
+- Alcance: separación de contratos MapaStaff / DatosFiscales, keyfield _id para complementos, validación de tipos y actualización documental.
+- Estado: cambios en rama, pendientes de CI, revisión de diff y PR.
+- No se han ejecutado mutaciones CMS, migraciones de registros ni publicación Wix.
