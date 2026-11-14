@@ -1,5 +1,18 @@
 # Registro de decisiones — Marian Madrid
 
+## Hito técnico — corrección de deployment backend (2026-11-14)
+
+**CERRADO — CI PASS (offline)**
+
+- PR #373 quedó integrada en `main` mediante merge `1b39ebb22c885f50320b7d52f5bc336cc0570ee5`; su CI inicial falló por el export ausente `assertMapaStaffRecord` y una aserción desactualizada de `CASH_REGISTER_STATUS`.
+- PR correctiva #374: https://github.com/nachoortegazgz/marianmadridz/pull/374. SHA validado: `d95a69bc2d1292bb2d0ed714f1adf01e864a65aa`.
+- CI sobre ese SHA: Layer 1 **24 suites / 307 tests PASS**; Layer 2 **19 suites / 252 tests PASS**; regresión completa **70 suites / 644 tests PASS**; Cart V2, Order Transactions y Bookings Reader V2 PASS; ESLint PASS; Gitleaks full-history PASS.
+- La corrección restaura `assertMapaStaffRecord`, mantiene `thirdPartyId` como TEXT opaco y corrige la regla de `CONFIG_SISTEMA.thirdPartyType = null`.
+- PR #374 está pendiente de integración en `main`.
+- **Wix Runtime/E2E:** BLOCKED_ENVIRONMENT por falta de contexto QA resoluble. No se usó producción, no se publicó y no se ejecutaron escrituras CMS.
+- **Discrepancia documental pendiente:** el diccionario CMS contiene un addendum de consolidación fiscal de MapaStaff (42 campos), mientras que el baseline y el código activo describen el contrato separado MapaStaff/DatosFiscales. No desplegar ni migrar ese contrato hasta reconciliar evidencia live, rama de implementación y retirada de DatosFiscales.
+
+
 ## Vigencia operativa — sitio aislado actual (2026-11-14)
 
 **Sitio único:** 50b39f33-e753-4331-ab35-b2ed43dc97f7. El propietario declara que es un banco de pruebas aislado, sin actividad real. Los registros existentes se consideran sintéticos; no se mantiene una comparación operativa con otro sitio.

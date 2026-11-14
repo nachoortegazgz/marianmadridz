@@ -102,6 +102,37 @@ export function assertCitasF2(item) {
 // =============================================================================
 
 /**
+ * Valida el contrato operativo vigente de MapaStaff.
+ * Los identificadores Wix conservan sus dominios: staffMemberId, resourceId,
+ * scheduleId y memberId no son intercambiables. thirdPartyId es un campo TEXT
+ * legado opaco y no se interpreta como GUID ni como FK fiscal.
+ */
+export function assertMapaStaffRecord(item) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) {
+        throw new Error("SCHEMA_VIOLATION: MapaStaff item must be an object");
+    }
+    for (const field of ["staffMemberId", "resourceId", "scheduleId"]) {
+        if (!isValidGuid(item[field])) {
+            throw new Error(`SCHEMA_VIOLATION: MapaStaff.${field} is required and must be a valid Wix GUID`);
+        }
+    }
+    if (item.memberId != null && item.memberId !== "" && !isValidGuid(item.memberId)) {
+        throw new Error("SCHEMA_VIOLATION: MapaStaff.memberId must be a valid Wix GUID when supplied");
+    }
+    if (item.thirdPartyId != null && typeof item.thirdPartyId !== "string") {
+        throw new Error("SCHEMA_VIOLATION: MapaStaff.thirdPartyId must be TEXT when supplied");
+    }
+    if (item.active !== undefined && typeof item.active !== "boolean") {
+        throw new Error("SCHEMA_VIOLATION: MapaStaff.active must be BOOLEAN");
+    }
+    if (item.schemaVersion !== undefined &&
+        (!Number.isSafeInteger(Number(item.schemaVersion)) || Number(item.schemaVersion) < 1)) {
+        throw new Error("SCHEMA_VIOLATION: MapaStaff.schemaVersion must be a positive integer");
+    }
+    return true;
+}
+
+/**
  * CajaActual mirrors the current physical CMS schema. The sequenceCounters
  * field is OBJECT; accepting a JSON string would silently corrupt projections.
  */
@@ -141,10 +172,9 @@ export function assertDatosFiscalesRecord(item, { partial = false } = {}) {
         if (item.legalName != null && item.legalName !== "" && !String(item.legalName).trim()) {
             throw new Error("SCHEMA_VIOLATION: DatosFiscales.legalName must be non-empty when supplied");
         }
-    }
-
-    if (item.thirdPartyType != null && item.thirdPartyType !== "") {
-        assertValidEnum(String(item.thirdPartyType).toUpperCase(), THIRD_PARTY_TYPE, "thirdPartyType");
+        if (item.thirdPartyType != null && item.thirdPartyType !== "") {
+            throw new Error("SCHEMA_VIOLATION: CONFIG_SISTEMA.thirdPartyType must be null");
+        }
     }
 
     if (item.recordType === RECORD_TYPE.TERCERO) {
