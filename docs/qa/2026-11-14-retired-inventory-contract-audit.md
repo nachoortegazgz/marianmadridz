@@ -7,7 +7,7 @@
 # Retirada de contratos de inventario personalizado — 2026-11-14
 
 **Actualización:** 2026-11-14  
-**Sitio único:** 50b39f33-e753-4331-ab35-b2ed43dc97f7, banco de pruebas aislado sin actividad real.
+**Sitio al que se refiere este corte histórico:** referencia anterior de entorno, supersedida; no es el Site ID QA vigente.
 
 ## Objetivo
 
