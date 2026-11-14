@@ -372,6 +372,37 @@ test('HOOK-DATOS-FISCALES-02 validates issuer config and gestor contact contract
   }));
 });
 
+test('HOOK-ADDON-01 _id is canonical and addonId is only a required mirror', () => {
+  const canonicalId = '076322c7-b34d-4fa5-9661-be28c087ed93';
+  const item = {
+    _id: canonicalId,
+    addonId: canonicalId,
+    sku: 'COMP-076322C7',
+    taxIncluded: true,
+    durationMinutes: 5,
+    tipoImpositivo: 0.21,
+    price: 5,
+    name: 'Complemento de prueba',
+  };
+  assert.doesNotThrow(() => H.ComplementosCatalogo_beforeInsert({ ...item }));
+  assert.throws(
+    () => H.ComplementosCatalogo_beforeInsert({ ...item, addonId: '17b85d64-f751-4770-8e44-b78a3c318086' }),
+    /debe coincidir con _id canonico/
+  );
+  const adopted = {
+    addonId: canonicalId,
+    sku: 'COMP-076322C7',
+    taxIncluded: true,
+    price: 5,
+  };
+  H.ComplementosCatalogo_beforeInsert(adopted);
+  assert.equal(adopted._id, canonicalId);
+  assert.throws(
+    () => H.ComplementosCatalogo_beforeInsert({ ...item, price: '5' }),
+    /price debe ser NUMBER/
+  );
+});
+
 // -----------------------------------------------------------------------------
 // HistoricoCierresZ — CONSERVED (update restricted to signature fields)
 // -----------------------------------------------------------------------------
