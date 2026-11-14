@@ -120,13 +120,15 @@ export function assertUpdateAllowed(collection, item) {
         throw _policyError("CMS_UPDATE_COLLECTION_DENIED");
     }
     if (collection === BUSINESS_COLLECTIONS.CONTROL_OPERATIVO) {
+        if (!item._id) throw _policyError("CMS_UPDATE_ID_REQUIRED");
         if (item.controlType === CONTROL_TYPE.WEBHOOK_EVENT) {
             throw _policyError("CMS_UPDATE_CONTROL_TYPE_DENIED");
         }
         _assertControlRecord(
             item,
             DATA_ACCESS_WRITE_POLICY.mutableControlTypes,
-            "CMS_UPDATE_CONTROL_TYPE_DENIED"
+            "CMS_UPDATE_CONTROL_TYPE_DENIED",
+            false
         );
     } else if (collection === BUSINESS_COLLECTIONS.CAJA_ACTUAL) {
         if (!item._id) throw _policyError("CMS_UPDATE_ID_REQUIRED");
