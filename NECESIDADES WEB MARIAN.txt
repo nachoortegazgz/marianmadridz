@@ -4,7 +4,7 @@ Los requisitos de negocio se conservan; los estados históricos no acreditan fun
 
 El esquema live de `CajaActual` ya distingue `operationDateHour:DATETIME`, saldos iniciales de efectivo/tarjeta/Bizum/otros y saldos actuales de esos cuatro medios. `cashRegisterStatus` es el único estado de sesión. El singleton está cerrado: saldos iniciales null y saldos actuales a cero. La persistencia de importes de apertura aún no está implementada porque falta el WebMethod seguro de apertura y su validación E2E.
 
-TEC-033 permite pruebas controladas de registros sintéticos en una rama de desarrollo. Se han eliminado dos fichajes QA explícitamente sintéticos; no se han borrado datos reales ni activado writers. El sitio Published no es un entorno de E2E aislado.
+TEC-033 permite pruebas controladas de registros sintéticos en una rama de desarrollo. Se han eliminado dos fichajes QA explícitamente sintéticos; no se han borrado datos reales ni activado writers. El sitio Published no es un entorno de E2E aislado. **Desfase de despliegue:** el runtime Published no está acreditado con este contrato ni con esta rama. El backend/DTO actualizado existe solo en Git; no se ha desplegado. Aunque Wix Data no aplica el esquema como validación estricta de cada payload, el comportamiento del código publicado frente al esquema nuevo no se ha probado. No ejecutar operaciones de caja en live hasta completar CI, validación en QA aislado y despliegue autorizado.
 
 ## Aviso de vigencia — 2026-11-11
 
