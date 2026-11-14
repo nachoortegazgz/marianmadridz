@@ -13,7 +13,7 @@
 - CajaActual: 39 campos, 1 registro. operationDate es DATE, openingAmount NUMBER y sequenceCounters OBJECT. cashRegisterStatus=SIMULACION; isOpen=true no es autoridad. id=_id; currentSequence=0 sin consumidor localizado.
 - ControlOperativo: 42 campos, 0 registros. ownerToken, retryAfter y nextRetryAt no existen; traceId es el token de fencing canónico.
 - ComplementosCatalogo: 18 campos, 36 registros. addonId coincide con _id en 36/36; traceId está vacío. name y description coinciden en texto, pero son TEXT y RICH_TEXT.
-- MapaStaff: 18 campos, 3 registros. Contiene staffMemberId, resourceId, scheduleId, memberId y active; no declara recordType, traceId ni campos fiscales.
+- MapaStaff: 18 campos, 3 registros. Contiene staffMemberId, resourceId, scheduleId, memberId y active. thirdPartyId es TEXT opaco, no es GUID ni coincide con DatosFiscales._id y no tiene consumidor localizado; no tratarlo como FK. No declara recordType ni campos fiscales.
 - DatosFiscales: 28 campos, 1 registro placeholder. Contiene recordType, taxId, legalName, thirdPartyType, address y gestorName/gestorNombre. No declara traceId ni schemaVersion; fechaInicioVerifactu es TEXT.
 - ServiciosCatalogo: 42 campos, 95 registros (94 SERVICE y 1 PRICING_PLAN). serviceId y pricingPlanId son IDs nativos distintos de _id CMS.
 - InventarioStockVenta y MovimientosInventario existen físicamente con registros sintéticos, pero sus contratos y writers están retirados; no se reactiva inventario custom.
