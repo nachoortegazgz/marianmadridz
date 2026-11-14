@@ -53,3 +53,13 @@ Cada nueva ejecución añadirá un identificador único y conservará SHA, tipo 
 - Secret scanning: run 43606822521 PASS.
 - Suites relevantes: data.hooks 29/29; dataAccess.writePolicy 9/9; crons.jobsConfigParity 29/29; site.flows.offline 31/31; qa.payment-gateway.mock 7/7; qa.manager-email-sink.mock 4/4; qa.simulation-manifest 7/7.
 - Limitación: todas las pruebas son offline/mock; no demuestran aislamiento de Wix Runtime, permisos CMS efectivos, desconexión de PSP ni ausencia de automatizaciones externas en el sitio.
+
+
+## QA-TPV-20261114 — motor sintético aislado
+
+- Añadido `src/backend/tests/fixtures/qaTpvSimulation.mock.mjs`: simulador puro/in-memory sin I/O.
+- Añadida suite `src/backend/tests/qa.tpv-simulation.mock.test.mjs`: 8 escenarios previstos (fail-closed, efectivo, mixto, OTROS/OTROS_PENDIENTE, validaciones, idempotencia, cantidades fraccionarias y fracciones de céntimo).
+- Incluido en `run-layer1.mjs` para que el gate enfocado lo ejecute.
+- Añadida auditoría `docs/audits/2026-11-14-tpv-contract-gap-audit.md` con siete gaps verificados y límites.
+- No se modifica writer fiscal, enum de producción, CMS, proyección CajaActual, cierre Z ni pagos reales.
+- Estado de ejecución: **pendiente CI** en el corte de este registro. No declarar la suite PASS hasta ver el run.
