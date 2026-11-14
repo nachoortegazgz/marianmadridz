@@ -16,10 +16,10 @@ Eliminar referencias ejecutables a las colecciones personalizadas de inventario 
   - fixtures y aserciones en pruebas.
 - No se encontró writer activo ni consumidor de negocio que dependa de esas colecciones. Las pruebas de eventos ya verifican el marcador `inventoryAuthority=WIX_CATALOG_OWNER` y `inventoryAction=NO_CUSTOM_STOCK_WRITE`.
 
-## Cambios delimitados en PR #353
+## Cambios integrados en PR #353 (`c16ed0b605a8d548f79158aa0dbd702666eea829`)
 
 - Eliminar `INVENTARIO_STOCK_VENTA` y `MOVIMIENTOS_INVENTARIO` de `BUSINESS_COLLECTIONS`.
-- Retirarlas de las listas de insert/update/remove y de la lista privada de ledgers append-only.
+- Retirarlas de `BUSINESS_COLLECTIONS`, `updateCollections` y de la lista privada de ledgers append-only. La lista `removeCollections` conservó una referencia residual que se corrige en PR #354.
 - Renombrar la lista privada `APPEND_ONLY_MUTABLE_COLLECTIONS` a `APPEND_ONLY_COLLECTIONS`, que describe correctamente su función.
 - Eliminar los hooks append-only de `MovimientosInventario`, ya que la colección no existe live.
 - Eliminar pruebas que simulaban mutaciones de un ledger inexistente y aserciones vacías contra colecciones no registradas.
@@ -29,6 +29,10 @@ Eliminar referencias ejecutables a las colecciones personalizadas de inventario 
 
 `DatosFiscales` permanece únicamente en `QA_MUTABLE_COLLECTIONS` por la autorización explícita del propietario para el ámbito de QA. El CMS live devolvió 404 / `WDE0025`; no hay writer actual. Se conserva como excepción temporal separada y con revisión prevista para 2026-11-21. No debe recrearse por esta allowlist.
 
+## Corrección residual en PR #354
+
+La integración #353 eliminó el identificador de `BUSINESS_COLLECTIONS`, pero dejó una referencia a `BUSINESS_COLLECTIONS.MOVIMIENTOS_INVENTARIO` dentro de `DATA_ACCESS_WRITE_POLICY.removeCollections`. Al no existir ya la constante, el array contenía un elemento `undefined`. PR #354 elimina esa referencia y deja alineadas las listas de update/remove.
+
 ## Límites
 
 - No se modifica Wix CMS ni se recrean/eliminan colecciones.
@@ -36,7 +40,7 @@ Eliminar referencias ejecutables a las colecciones personalizadas de inventario 
 - No se alteran ledgers fiscales, contables o laborales existentes.
 - No se cambia `QA_RECORD_MUTATIONS_ENABLED=true`.
 - No se publica ni despliega en Wix.
-- La validación queda pendiente de CI en PR #353.
+- La validación de la corrección residual queda pendiente de CI en PR #354. La limpieza principal de hooks/constantes de PR #353 ya está integrada.
 
 ## Criterios de aceptación
 
