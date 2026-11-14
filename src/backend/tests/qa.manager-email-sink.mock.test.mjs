@@ -63,7 +63,7 @@ test('QA-MAIL-02 synthetic client data is delivered only to the in-memory manage
   assert.equal(message.client.sourceEnvironment, 'TEST');
   assert.equal(message.client.testRunId, QA_TEST_RUN_ID);
   assert.match(message.text, /Nacho Pitt/);
-  assert.match(message.text, /cliente\.prueba\.001@example\.test/);
+  assert.match(message.text, /nacho\\.pitt@example\\.test/);
 });
 
 test('QA-MAIL-03 dispatch is idempotent and rejects conflicting reuse of package evidence', async () => {
