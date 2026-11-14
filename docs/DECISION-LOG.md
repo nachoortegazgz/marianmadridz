@@ -279,7 +279,7 @@ Para los movimientos presenciales manuales nuevos, backend asigna `recordSource=
 **Advertencia de cumplimiento:** esta excepción de desarrollo no modifica ni suspende obligaciones legales de integridad, trazabilidad y conservación de registros fiscales, contables o laborales. No usarla para alterar o eliminar registros reales sujetos a conservación.
 
 
-### TEC-034 — alineación de maestros DatosFiscales y MapaStaff (2026-11-14)
+### TEC-034 [HISTÓRICA] — alineación de maestros DatosFiscales y MapaStaff (2026-11-14)
 
 **CMS live, verificado por Wix Data API:**
 - `DatosFiscales` revisión 19: añadidos `commercialName`, `postalCode`, `province`, `schemaVersion` y `traceId`; `fechaInicioVerifactu` cambia a tipo `DATE` tras verificar ausencia de valores previos.
@@ -293,7 +293,7 @@ Para los movimientos presenciales manuales nuevos, backend asigna `recordSource=
 
 **Límites:** los datos fiscales no verificados permanecen vacíos; Veri*Factu sigue desactivado; escritores fiscales/contables siguen fail-closed. Las colecciones numeradas 12–16 no se borran porque el esquema no aporta sus IDs/nombres y no hay correspondencia inequívoca con el inventario live.
 
-### TEC-035 — consolidación fiscal en MapaStaff y gestoría (2026-11-14)
+### TEC-035 [HISTÓRICA / SUPERADA] — consolidación fiscal en MapaStaff y gestoría (2026-11-14)
 
 **Decisión del propietario:** todos los datos históricos y registros existentes en el sitio son sintéticos de pruebas; el sitio no tiene actividad real. Se autoriza mantener temporalmente abierta la ventana de mutabilidad append-only hasta nueva instrucción expresa del propietario. Esta autorización se limita al entorno de QA declarado; no habilita datos reales ni despliegue productivo.
 
@@ -334,7 +334,7 @@ Para los movimientos presenciales manuales nuevos, backend asigna `recordSource=
 El usuario declara que el código está integrado y publicado en Wix. Esta declaración se registra como **declaración del propietario**. En la consulta de GitHub de este corte, el PR #344 (feat/consolidate-fiscal-master-mapastaff-v2) figura fusionado el 2026-11-14 mediante el merge commit f3b1311eead05282e47f538afd506fe49e227141, que es el HEAD actual de main. La integración del cambio en Git está verificada. El usuario declara además que el código está publicado en Wix; no se dispone de un identificador de publicación Wix que vincule el runtime con ese SHA concreto.
 
 **Nota de ejecución:** este addendum modifica la autoridad documental y la política de trabajo. No demuestra por sí mismo que todos los hooks, WebMethods, políticas de escritura o permisos CMS del runtime Wix hayan sido modificados para permitir todas las operaciones de edición y eliminación. Esa correspondencia debe verificarse en código y en Wix antes de afirmar que la pausa está aplicada técnicamente de extremo a extremo.
-### TEC-036 — autoridad SSOT del usuario y pausa de append-only durante QA (2026-11-14)
+### TEC-036 [HISTÓRICA] — autoridad SSOT del usuario y pausa de append-only en pruebas (2026-11-14)
 
 **Decisión del usuario:** el usuario/propietario del proyecto es la SSOT de negocio y gobierno. Sus instrucciones expresas prevalecen sobre documentación histórica, decisiones anteriores y supuestos. La documentación del repositorio es derivada y debe actualizarse para reflejar las instrucciones vigentes.
 
@@ -346,10 +346,20 @@ Se mantienen controles de autenticación, autorización, permisos, validación d
 
 **Alcance de evidencia:** esta decisión establece la política documental y de trabajo. La aplicación efectiva en hooks, WebMethods, write policies y permisos CMS requiere comprobación técnica específica; no se presume por el mero cambio documental.
 
-### TEC-037 — habilitación amplia de mutaciones durante QA (2026-11-14)
+### TEC-037 — mutabilidad temporal del sitio aislado (2026-11-14)
 
-**Decisión del usuario:** suspender durante desarrollo y QA las restricciones append-only y cualquier bloqueo genérico de edición/eliminación de registros, incluidas operaciones individuales y masivas, hasta que el usuario ordene restaurarlas para el despliegue.
+**Decisión del propietario:** el único sitio objeto de trabajo es 50b39f33-e753-4331-ab35-b2ed43dc97f7. Es un banco de pruebas aislado y no tiene actividad real. La ventana de mutabilidad se aplica a este sitio; no existe un segundo sitio de pruebas que deba compararse con él.
 
-**Implementación integrada en main:** QA_RECORD_MUTATIONS_ENABLED=true; update/remove individual y bulk update/remove para las colecciones CMS propias incluidas en QA_MUTABLE_COLLECTIONS, incluida DatosFiscales legacy. Las operaciones masivas requieren IDs explícitos y límite de 1.000 elementos. Se permite editar/eliminar registros antes protegidos como append-only, singleton y proyecciones con hooks de bloqueo. Se mantienen validaciones, autenticación/autorización, permisos CMS, allowlist de inserciones y gates de writers/efectos externos. Las colecciones WIX_APP no se incluyen. items.bulkUpdate() es Developer Preview de Wix y queda restringido a esta fase QA.
+**Implementación en main:** ISOLATED_SITE_RECORD_MUTATIONS_ENABLED=true; update/remove individual y masivo para las colecciones CMS propias incluidas en ISOLATED_SITE_MUTABLE_COLLECTIONS. Las operaciones masivas requieren IDs explícitos y límite de 1.000 elementos. Las colecciones WIX_APP quedan excluidas. Se mantienen validaciones, autenticación/autorización, permisos CMS, allowlist de inserciones y gates de writers/efectos externos.
 
-**Estado:** PR #346 fusionado en main mediante b68e4e048ce5fc1c022fc6ffc2643d5983972107. CI PASS: Layer 1 23 suites/296 pruebas; Layer 2 18 suites/246 pruebas; regresión completa 68 suites/627 pruebas; contratos SDK, ESLint y Gitleaks PASS. La ampliación aún no se ha publicado en Wix. La excepción permanece temporal y no se restaura hasta instrucción expresa del usuario.
+**Límite:** la mutabilidad no habilita writers fiscales, contables o laborales, pagos, reembolsos, comunicaciones ni automatizaciones externas. La política no se restaura automáticamente; solo el propietario puede ordenar su restauración antes de cualquier actividad real.
+
+### TEC-038 — separación de maestros CMS y alineación de contratos (2026-11-14)
+
+**Decisión técnica:** MapaStaff se reserva al mapeo de identidades nativas de personal (staffMemberId, resourceId, scheduleId y memberId). DatosFiscales es el maestro de terceros, gestoría y configuración fiscal. No se duplican campos fiscales en MapaStaff ni se inventan traceId/schemaVersion en DatosFiscales.
+
+**Keyfields:** _id es la identidad CMS. Los identificadores nativos Wix/Bookings/Members permanecen como campos separados cuando representan entidades diferentes. En ComplementosCatalogo, addonId queda como espejo físico temporal de _id; el DTO addOnId se conserva por contrato de transporte Bookings. gestorName es el nombre canónico de gestoría; gestorNombre queda retirado del contrato de código.
+
+**Implementación en rama:** fix/current-site-cms-contract-alignment. Se actualizan constantes, validadores, hooks, política de inserción, eventLog.js, fiscalAggregator.web.js, fiscalDocuments.web.js y pruebas asociadas. No se han ejecutado mutaciones CMS ni migraciones de registros.
+
+**Pendiente:** CI completa, revisión de diff, PR, pruebas Wix Editor y E2E sintéticas. CONFIG_SISTEMA permanece ausente y los writers fiscales continúan fail-closed.
