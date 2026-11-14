@@ -4,7 +4,7 @@ MODULE: backend/validation.js
 RESPONSIBILITY: Pure validation for CMS write boundaries and fiscal identity.
 CONTRACT: Validators return true or throw SCHEMA_VIOLATION; no logging or I/O.
 DEPENDENCIES: backend/internalConfig only.
-DOMAINS: CitasF2, MapaStaff, ControlOperativo, RegistrosHorariosStaff,
+DOMAINS: CitasF2, MapaStaff, DatosFiscales, ControlOperativo, RegistrosHorariosStaff,
          canonical enums and Spanish/EU tax identifiers.
 =============================================================================
 */
