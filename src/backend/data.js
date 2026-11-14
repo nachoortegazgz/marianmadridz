@@ -3,8 +3,8 @@
 MODULE: backend/data.js
 VERSION: v5016-CANONICAL-READ
 REPO: https://github.com/nachoortegazgz/marianmadridz.git
-RESPONSIBILITY: Hooks de inmutabilidad, protecciones append-only y
-                validacion estricta de esquemas CMS.
+RESPONSIBILITY: Política temporal de mutación QA y validación estricta de
+                esquemas CMS.
 STANDARDS: G10 ASCII Strict. Cero suppressAuth. Historical fields are read-only; persisted fields are canonical.
 =============================================================================
 */
