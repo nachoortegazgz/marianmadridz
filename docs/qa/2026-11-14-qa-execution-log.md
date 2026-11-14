@@ -11,10 +11,11 @@
 - **Cambios de código:** ninguno.
 - **Cambios Wix/CMS:** ninguno.
 - **Pagos/comunicaciones:** ninguna llamada ni envío.
-- **Pruebas unitarias/CI:** NOT_RUN en esta ejecución; no se dispone de resultado de workflow para el HEAD de la rama en la consulta realizada.
+- **Pruebas CI:** PASS en GitHub Actions sobre HEAD previo `4e258a5617f4a64e5ce3604826b4ce2b29f9389e`: Layer 1 = 23 suites / 296 tests; Layer 2 = 19 suites / 252 tests; regresión completa = 69 suites / 631 tests; 0 fallos. SDK contracts (Cart V2, Order Transactions, Bookings Reader V2) PASS; ESLint PASS; Gitleaks full-history PASS (run #579). Workflow offline quality run #1155 (`43604832916`).
 - **Wix Runtime/E2E:** BLOCKED_ENVIRONMENT; el Site ID QA no fue resuelto por la conexión Wix de esta sesión.
 - **Riesgos abiertos:** discrepancia de acceso al sitio QA; aislamiento efectivo de apps/automatizaciones/proveedores pendiente; contrato de pago mixto pendiente.
-- **Siguiente paso:** esperar CI de PR #372; corregir cualquier fallo; después continuar auditoría de código y pruebas offline/mock. No usar producción como fallback.
+- **Alcance del PASS:** acredita solo pruebas offline/mock y contratos/lint ejecutados por el workflow. No acredita Wix Runtime, sandbox PSP, aislamiento de automatizaciones ni E2E externo.
+- **Siguiente paso:** continuar auditoría de código y ampliar escenarios sintéticos; desbloquear Wix Runtime solo cuando se resuelva el acceso QA. No usar producción como fallback.
 
 ## Convención de registros
 
