@@ -1,12 +1,25 @@
 # Base maestra del proyecto — Marian Madrid
 
-**Vigencia:** 2026-11-14  
+**Vigencia:** 2026-11-14 · addendum operativo QA  
 **Sitio:** `50b39f33-e753-4331-ab35-b2ed43dc97f7`  
 **Naturaleza:** banco de pruebas aislado, sin actividad real, según declaración expresa del propietario.  
 **Plataforma confirmada:** Wix Editor Classic + Velo.  
 **Repositorio:** https://github.com/nachoortegazgz/marianmadridz
 
 Este documento describe un único sitio objeto de trabajo. No se mantiene una matriz comparativa de entornos. Los registros presentes deben considerarse sintéticos hasta que exista evidencia expresa en contrario.
+
+## Addendum de decisión y estado de QA — 2026-11-14
+
+- **Decisión expresa del propietario:** utilizar el sitio `50b39f33-e753-4331-ab35-b2ed43dc97f7` como entorno QA del proyecto, con datos sintéticos y simulación de pagos. No volver a plantear como alternativa operativa el uso de producción.
+- **Producción separada:** `188bed94-177c-4bc9-a9f0-35080d874f3e` (`www.marianmadrid.es`) permanece fuera del alcance de QA.
+- **Discrepancia de acceso:** el inventario CMS del sitio QA está documentado en el corte 2026-11-14, pero la conexión Wix disponible en esta sesión no resolvió el Site ID QA y solo listó producción. No declarar acceso runtime ni aislamiento efectivo hasta reconciliar la conexión. No ejecutar pruebas Wix contra producción como alternativa.
+- **Continuidad de trabajo:** avanzar con pruebas offline/mock, fixtures sintéticos, auditoría estática, CI y correcciones en ramas/PR. Wix Runtime/E2E queda `BLOCKED_ENVIRONMENT` hasta que el ID QA sea resoluble.
+- **Pagos:** usar adaptador mock local sin red, sin PSP, sin Wix Payments y sin banco. `TEST_PAYMENT_CONFIRMED` solo es un resultado interno de simulación.
+- **Comunicaciones y gestoría:** sinks offline sin entrega. No emitir facturas/tickets reales ni invocar AEAT/Veri*Factu, SharePoint o Power Automate desde escenarios QA.
+- **Datos:** no importar PII. Emails bajo `.example.test`; no utilizar teléfonos operativos. Los datos de gestoría son fixtures internos no válidos para procesos fiscales.
+- **Mutaciones:** la autorización/documentación de mutaciones QA no habilita por sí sola los writers fiscales/contables/laborales, pagos, reembolsos o efectos externos, que conservan sus gates independientes.
+
+El plan ejecutable, escenarios y criterios de evidencia están en [PLAN_ACCION_QA.md](PLAN_ACCION_QA.md). Este addendum prevalece sobre frases anteriores de este documento que presenten el aislamiento como verificado o permitan inferir acceso runtime.
 
 ## 1. Estado actual verificado
 
@@ -80,6 +93,9 @@ Los requisitos funcionales son declaraciones de alcance, no prueba de implementa
 
 ## 5. Bloqueos abiertos
 
+0. Resolver la discrepancia de acceso del Site ID QA `50b39f33-e753-4331-ab35-b2ed43dc97f7`; no redirigir pruebas a producción `188bed94-177c-4bc9-a9f0-35080d874f3e`. Mantener H4 Wix Runtime/E2E bloqueado y avanzar con mocks offline.
+
+
 1. Probar en Wix Local Editor y ejecutar E2E; la integración en Git está cerrada, el despliegue Wix no.
 2. Probar en Wix Editor los hooks de MapaStaff y DatosFiscales, junto con las lecturas de identidad fiscal y destinatarios de gestoría.
 3. Completar búsqueda de consumidores para los candidatos físicos: CajaActual.id, ComplementosCatalogo.addonId, DatosFiscales.gestorNombre y ComplementosCatalogo.traceId.
@@ -95,7 +111,8 @@ Los requisitos funcionales son declaraciones de alcance, no prueba de implementa
 - `DOSSIER TÉCNICO CONSOLIDADO.md`: arquitectura y contratos detallados; validar cada sección contra el CMS actual.
 - `DOSSIER FLUJOS END TO END CAPA 3.md`: diseño documental; no implica operación certificada.
 - `NECESIDADES WEB MARIAN.txt`: requisitos declarados, no estado técnico.
-- `DIRECTRICES_DESARROLLO_CODIGO.txt`: directrices de desarrollo.
+- `DIRECTRICES_DESARROLLO_CODIGO.md`: directrices raíz vigentes.
+- `PLAN_ACCION_QA.md`: fases, simuladores, escenarios, gates y registro de ejecución.
 
 ## 7. Regla de mantenimiento
 
