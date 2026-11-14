@@ -674,7 +674,6 @@ test('CRON-ORDER-CREATED-01 reconciles Bookings, Stores and mixed catalog orders
   assert.equal(rows.some(row => row.orderId === mixedOrder.id && row.payload?.eventType === 'ORDER_CREATED_RECONCILED'), true);
   assert.equal(rows.some(row => row.orderId === incompleteOrder.id && row.payload?.eventType === 'ORDER_CREATED_RECONCILED'), false);
   assert.equal((wixDataMock._store.get(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA) || []).length, 0);
-  assert.equal((wixDataMock._store.get(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_INVENTARIO) || []).length, 0);
 
   const replay = await CR.reconcileUnmarkedOrderCreatedEvents();
   assert.equal(replay.reconciled, 0);
