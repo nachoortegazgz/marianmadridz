@@ -192,6 +192,8 @@ test("legacy nested lease and attempt are read once and migrated to canonical fi
         status: WEBHOOK_CLAIM_STATUS.FAILED_RETRYABLE,
         ownerToken: "worker-old",
         version: 4,
+        attempts: "",
+        expiresAt: "",
         traceId: "worker-old",
         payload: {
             eventType: EVENT_TYPE,
