@@ -1,6 +1,6 @@
 # Diccionario de datos CMS — Marian Madrid
 
-> **Corte de esquema:** 2026-11-14. **Entorno de referencia:** producción Wix, Site ID `188bed94-177c-4bc9-a9f0-35080d874f3e`. **Fuente del esquema:** Wix Data Collections API, lectura directa de `GET /data/v2/collections/CajaActual` y del inventario `GET /data/v2/collections`. **CajaActual:** revisión live 64, 59 campos personalizados + 4 campos de sistema (63 físicos); permisos `insert/update/remove=ADMIN`, `read=ANYONE`.
+> **Corte de esquema:** 2026-11-14. **Entorno de referencia:** producción Wix, Site ID `188bed94-177c-4bc9-a9f0-35080d874f3e`. **Fuente del esquema:** Wix Data Collections API, lectura directa de `GET /data/v2/collections/CajaActual` y del inventario `GET /data/v2/collections`. **CajaActual:** revisión live 64, 59 campos personalizados + 4 campos de sistema (63 físicos). Política temporal de permisos de lectura aplicada: las 13 colecciones `NATIVE` tienen `itemRead=ANYONE`; se preservaron los permisos de escritura existentes. Las 29 `WIX_APP` están sujetas a permisos definidos por cada aplicación.
 >
 > El addendum de vigencia al inicio y §16 prevalecen sobre las tablas históricas que aún mencionen colecciones retiradas, revisiones antiguas o el contrato anterior de `CajaActual`. La fuente del esquema es Wix Data Collections API; los contratos de negocio se contrastan con el código de la rama identificada.
 
@@ -83,7 +83,7 @@ difference:NUMBER, differenceReason:TEXT,
 _id:TEXT, _createdDate:DATETIME, _updatedDate:DATETIME, _owner:TEXT
 ```
 
-**Permisos live devueltos por Wix:** `insert=ADMIN`, `update=ADMIN`, `remove=ADMIN`, `read=ANYONE`. La lectura pública configurada es un hallazgo de seguridad: el esquema contiene campos de datos personales y referencias de pago/fiscales (`customerName`, `customerTaxId`, `customerAddress`, `paymentReference`). La configuración no demuestra por sí sola que existan valores sensibles expuestos; falta probar el acceso efectivo con identidad visitante y revisar los datos almacenados. No se han cambiado permisos en esta actualización documental.
+**Permisos live devueltos por Wix:** `itemRead=ANYONE`, `itemInsert=CMS_EDITOR`, `itemUpdate=CMS_EDITOR`, `itemRemove=CMS_EDITOR`. La lectura pública se ha configurado temporalmente por instrucción expresa del responsable del proyecto. La colección contiene campos para datos personales y referencias de pago/fiscales (`customerName`, `customerTaxId`, `customerAddress`, `paymentReference`): los registros existentes pueden quedar accesibles mediante consultas compatibles con esos permisos. No se han cambiado los permisos de escritura.
 
 #### 3.1.1 Identificación y sesión
 
@@ -194,7 +194,7 @@ _id:TEXT, _createdDate:DATETIME, _updatedDate:DATETIME, _owner:TEXT
 
 **Contrato operativo:** `CajaActual` es una proyección mutable de la sesión y del último ticket, no un ledger append-only. `MovimientosCaja` conserva cada movimiento/ticket como fuente histórica inmutable. Las relaciones de texto como `cashMovementId` no son referencias CMS formales salvo que el esquema las declare expresamente.
 
-**Seguridad pendiente P1:** el permiso de lectura `ANYONE` debe revisarse antes de introducir datos reales de clientes o referencias de pago/fiscales. Validar lectura con identidad visitante, inspeccionar reglas backend y restringir permisos si el diseño de acceso lo exige. No se han modificado permisos en este cambio documental.
+**Exposición temporal autorizada — P1:** `CajaActual` y el resto de colecciones `NATIVE` permiten lectura `ANYONE`. No cargar datos personales, fiscales, laborales, contables ni de pago reales durante esta fase. La política debe revertirse antes de cualquier despliegue. Validar además el acceso efectivo con identidad visitante y revisar rutas backend que consulten estas colecciones.
 
 ### 3.2 CitasF2 — revisión 42
 
@@ -860,9 +860,10 @@ Este estado temporal contradice deliberadamente la regla ordinaria de la secció
 ### CMS verificado tras los cambios
 
 - Inventario live: **42 colecciones** (13 `NATIVE`, 29 `WIX_APP`). `CajaActual` es `NATIVE`, revisión **64**, con **59 campos personalizados + 4 de sistema (63 físicos)**.
-- El esquema completo, con tipos y definiciones, queda documentado en §3.1. Permisos live: `insert/update/remove=ADMIN`, `read=ANYONE`.
+- **Permisos temporales:** las 13 `NATIVE` tienen `itemRead=ANYONE`; los permisos de insert/update/remove se preservaron sin cambios. En las 29 `WIX_APP`, Wix mantiene permisos definidos por las aplicaciones; 23 ya tenían lectura `ANYONE` y 6 mantienen restricciones de aplicación: `eCommerce/Orders`, `Forms/subscribers03`, `Marketing/Coupons`, `Members/PrivateMembersData`, `Stores/InventoryItems`, `Stores/Orders`. La documentación oficial indica que las colecciones de aplicaciones tienen permisos fijos.
+- El esquema completo, con tipos y definiciones, queda documentado en §3.1.
 - Los campos `operationDate`, `openingAmount`, `voucherAmount` e `isOpen` no existen en el esquema actual; sus sustitutos incluyen `operationDateHour`, los cuatro `opening*Amount` y `bizumAmount`.
-- Estado del elemento singleton: el último readback documentado antes de esta revisión registraba `singletonKey=CAJA_PRINCIPAL` y caja cerrada. No se ha releído el elemento durante esta actualización de esquema; no se certifican aquí sus saldos ni su estado actual.
+- Estado del elemento singleton: el último readback documentado antes de esta revisión registraba `singletonKey=CAJA_PRINCIPAL` y caja cerrada. No se ha releído el elemento durante esta actualización de permisos; no se certifican aquí sus saldos ni su estado actual.
 - Índice único `CajaActual_singletonKey_unique`: ACTIVE. Índice anterior `cashRegisterStatus_operationDate`: ya no aparece en el inventario final. Índice corregido `cashRegisterStatus_operationDateHour`: ACTIVE en el readback final.
 - `MovimientosCaja`: revisión 78, 0 elementos; no modificada. `LibroAsientosContablesDetalle`: 0. `RegistrosHorariosStaff`: revisión 11, 0 tras limpieza. `HistoricoCierresZ`: 0. `PaquetesGestoria`: 0. `ControlOperativo`: 3 elementos. `MovimientosInventario` no figura en el inventario live de 42 colecciones; la fila histórica que lo describía como colección presente queda pendiente de reconciliación documental.
 
