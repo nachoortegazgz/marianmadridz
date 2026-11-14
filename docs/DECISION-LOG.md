@@ -35,7 +35,7 @@
 | ID | Decisión | Justificación / consecuencia | Estado |
 |---|---|---|---|
 | TEC-001 | Wix Bookings nativo es la primera opción para depósitos. No crear writer/checkout propio mientras la capacidad nativa cubra el caso. | Wix Services V2 documenta depósitos por servicio. Sin embargo, el esquema REST actual declara `inPerson=false` con `deposit=true`, mientras Wix Help indica depósito online y saldo en persona. | Preferencia adoptada; discrepancia contractual bloquea configuración |
-| TEC-002 | Configurar depósito nativo desde el panel Wix como «depósito online y resto en persona»; no ofrecer pago manual alternativo ni aprobación manual. Mantener `fullUpfrontPaymentAllowed=false`. | Wix Help (25-03-2026) describe expresamente depósito online + resto presencial; API Services V2 exige `deposit=true`, `online=true`, `inPerson=false`. Interpretación: `inPerson=false` deshabilita el pago íntegro en persona, no el saldo de la modalidad depósito. Esta semántica debe confirmarse en Wix Editor. | Configuración objetivo definida; función y comportamiento de la cuenta pendientes de QA |
+| TEC-002 | Configurar depósito nativo desde el panel Wix como «depósito online y resto en persona»; no ofrecer pago manual alternativo ni aprobación manual. Mantener `fullUpfrontPaymentAllowed=false`. | Wix Help (25-03-2026) describe expresamente depósito online + resto presencial; API Services V2 exige `deposit=true`, `online=true`, `inPerson=false`. Interpretación: `inPerson=false` deshabilita el pago íntegro en persona, no el saldo de la modalidad depósito. Esta semántica debe confirmarse en Wix Editor. | Configuración objetivo definida; función y comportamiento de la cuenta pendientes de pruebas |
 | TEC-003 | No combinar depósitos con aprobación manual de reservas. | Wix documenta incompatibilidad entre depósitos y aprobación manual. | Regla de configuración |
 | TEC-004 | Clasificar precios y variantes antes de configurar depósitos. Si un servicio variable contiene variantes a ambos lados del umbral y Wix no permite condición por variante, separar la oferta nativamente. | Lectura live: 94 servicios, 70 FIXED, 24 NO_FEE, 0 VARIED; 7 visibles >100 EUR; 0 depósitos activos. | Clasificación completada; 7 servicios elegibles fijos |
 | TEC-005 | Wix Stores Catalog V3 y las herramientas nativas Wix son la única autoridad operativa del stock comercial. | El checkout nativo valida disponibilidad y deduce inventario cuando el seguimiento está activado. | Aprobada |
@@ -149,7 +149,7 @@ El propietario declara que ServiciosCatalogo gobierna la configuración de servi
 |---|---|---|---|
 | TEC-031 | Los campos CMS `DATETIME` se normalizan en el hook de escritura a objetos JavaScript `Date`, conservando el instante recibido. Los campos CMS `DATE` continúan siendo cadenas `YYYY-MM-DD`; no se convierten a `Date`. | Evita persistir cadenas ISO en campos Date and Time y evita desplazar horas por conversiones regionales. Se aplica a los hooks existentes de `CajaActual`, `MovimientosCaja`, `ControlOperativo`, `HistoricoCierresZ`, `PaquetesGestoria` y todos los campos DateTime de `CitasF2`; `RegistrosHorariosStaff.recordedAt` ya estaba normalizado. | Implementado en rama; CI pendiente |
 
-**Evidencia de auditoría live:** 44 colecciones CMS inventariadas, 15 `NATIVE`. `CajaActual.openedAt` está informado; los vacíos de `closedAt`/`lastMovementAt` se observaron en una caja `SIMULACION` y no se rellenan. Cuatro movimientos `SMOKE_TEST`, un asiento contable `SMOKE_TEST` y dos fichajes QA sin firma se conservan sin modificación. Los valores ausentes en registros append-only no se reconstruyen ni se sobrescriben.
+**Evidencia de auditoría live:** 44 colecciones CMS inventariadas, 15 `NATIVE`. `CajaActual.openedAt` está informado; los vacíos de `closedAt`/`lastMovementAt` se observaron en una caja `SIMULACION` y no se rellenan. Cuatro movimientos `SMOKE_TEST`, un asiento contable `SMOKE_TEST` y dos fichajes sintéticos sin firma se conservan sin modificación. Los valores ausentes en registros append-only no se reconstruyen ni se sobrescriben.
 
 **Contrato de representación:** Wix documenta Date and Time en el formato JSON `{"$date":"YYYY-MM-DDTHH:mm:ss.sssZ"}`. En código Velo el límite de escritura utiliza `Date`; la respuesta REST puede serializarlo como ISO 8601. La normalización no altera el instante y no aplica `Europe/Madrid` como conversión adicional. Los campos `DATE` (`fechaOperacion`, `fechaExpedicionFactura`, `operationDate`) permanecen en su contrato de fecha sin hora.
 
@@ -166,7 +166,7 @@ La auditoría estática recibida se ha contrastado con `main` en `9f3b4366aacc72
 |---|---|---|
 | 01 — `FISCAL_RUNTIME_POLICY` cerrado | Flag deliberado y documentado como fail-closed; el informe confunde bloqueo de seguridad con defecto. | Mantener cerrado hasta certificación runtime y gates fiscales. |
 | 02 — Proyección Bookings → `CitasF2` | Código de handlers `BOOKING_CREATED` y `BOOKING_CONFIRMED` y proyector idempotente existen en main. Incidente de reserva sintética sin marcador sigue sin causa runtime demostrada. | Mantener como incidente abierto; revisar entrega/event logs y SHA publicado solo en entorno aislado. No crear otra reserva de prueba. |
-| 03 — `CajaActual` SIMULACION | Estado sintético de QA documentado; el guard evita mezclarlo con operación real. | No resetear ni borrar saldo sin inventario, conciliación y autorización específica. |
+| 03 — `CajaActual` SIMULACION | Estado sintético documentado; el guard evita mezclarlo con operación real. | No resetear ni borrar saldo sin inventario, conciliación y autorización específica. |
 | 04 — writers de jornada deshabilitados | Flag deliberado hasta idempotencia, serialización por empleado/día y transiciones concurrentes. El flag por sí solo no demuestra incumplimiento legal si existe otro sistema de registro válido. | Mantener fail-closed; certificar el sistema completo y revisar alternativa laboral vigente. |
 | 05 — remitente Resend `.com` | Confirmado en `internalConfig.js`; el informe no aporta evidencia verificable de que `noreply@marianmadrid.es` esté verificado en Resend. | Corregir solo después de lectura del dominio/identidad verificada en Resend. No cambiar remitente por inferencia. |
 | 06 — envío a gestoría deshabilitado | Flag deliberado, dependiente de entrega persistente e idempotente. | Mantener deshabilitado hasta pruebas aisladas de despacho y reconciliación. |
@@ -211,7 +211,7 @@ La auditoría estática recibida se ha contrastado con `main` en `9f3b4366aacc72
 - #162 sigue sin reconciliador específico del journal dual; mantener la reparación fail-closed hasta disponer de comparación exacta Bookings Reader V2 + proyección CMS y reclamación CAS segura.
 - #173 sigue sin pipeline Capa 3 verificable; no implementar Resend/SharePoint/Power Automate sin credenciales, destinos, propietarios y contratos externos comprobados.
 - #209 mantiene bloqueo P0 fiscal. #223 mantiene el despacho a gestoría deshabilitado; snapshot trimestral está implementado, pero mensualidad y evidencia durable de despacho siguen pendientes.
-- #224 mantiene los escritores de jornada/caja deshabilitados. #261 requiere revisión y QA de permisos CMS antes de modificar configuración live.
+- #224 mantiene los escritores de jornada/caja deshabilitados. #261 requiere revisión y validación de permisos CMS antes de modificar configuración live.
 - #188 y #211 requieren runtime del sitio aislado aislado; no se ejecutan reservas, pagos, reembolsos ni comunicaciones en producción.
 - #210: la API de GitHub confirma `main.protected=false`, protección deshabilitada y ningún ruleset. La conexión disponible es de lectura para rulesets/protección; esta configuración debe aplicarla un administrador del repositorio. No se ha cambiado.
 - #290, #291 y #237 no deben interpretarse como correcciones pendientes de código: sus issues permanecen abiertas exclusivamente por los gates runtime descritos en sus respectivos registros.
@@ -285,7 +285,7 @@ Para los movimientos presenciales manuales nuevos, backend asigna `recordSource=
 
 ### TEC-035 [HISTÓRICA / SUPERADA] — consolidación fiscal en MapaStaff y gestoría (2026-11-14)
 
-**Decisión del propietario:** todos los datos históricos y registros existentes en el sitio son sintéticos de pruebas; el sitio no tiene actividad real. Se autoriza mantener temporalmente abierta la ventana de mutabilidad append-only hasta nueva instrucción expresa del propietario. Esta autorización se limita al entorno de QA declarado; no habilita datos reales ni despliegue productivo.
+**Decisión del propietario:** todos los datos históricos y registros existentes en el sitio son sintéticos de pruebas; el sitio no tiene actividad real. Se autoriza mantener temporalmente abierta la ventana de mutabilidad append-only hasta nueva instrucción expresa del propietario. Esta autorización se limita al sitio aislado declarado; no habilita datos reales ni despliegue productivo.
 
 **CMS live verificado tras la mutación:**
 - `MapaStaff` revisión 36, 42 campos y 5 registros: tres `STAFF`, un `TERCERO` prueba sintética y un `GESTORIA`.
@@ -310,11 +310,11 @@ Para los movimientos presenciales manuales nuevos, backend asigna `recordSource=
 
 ### Política temporal de desarrollo y pruebas
 
-**Vigencia:** fase actual de desarrollo, depuración y QA, hasta que el usuario ordene expresamente habilitar las protecciones para el despliegue.
+**Vigencia:** fase actual de desarrollo, depuración y pruebas, hasta que el usuario ordene expresamente habilitar las protecciones para el despliegue.
 
 - Queda **en pausa la política append-only** durante esta fase. Ninguna colección o registro se considerará intocable únicamente por estar etiquetado como ledger, histórico, fiscal, contable, laboral, documental o append-only.
-- Queda **en pausa toda prohibición genérica de edición o eliminación de registros**, tanto individual como masiva, cuando la única causa del bloqueo sea la inmutabilidad/append-only o una restricción temporal de QA. La edición y eliminación forman parte de las operaciones permitidas durante las pruebas.
-- No se exigirán registros rectificativos como única vía de corrección durante esta fase de QA. Esa regla se reconsiderará cuando el usuario habilite expresamente las protecciones previas al despliegue.
+- Queda **en pausa toda prohibición genérica de edición o eliminación de registros**, tanto individual como masiva, cuando la única causa del bloqueo sea la inmutabilidad/append-only o una restricción temporal del sitio aislado. La edición y eliminación forman parte de las operaciones permitidas durante las pruebas.
+- No se exigirán registros rectificativos como única vía de corrección durante esta fase de pruebas. Esa regla se reconsiderará cuando el usuario habilite expresamente las protecciones previas al despliegue.
 - Se mantienen las validaciones de esquema y tipos, la autenticación, autorización y permisos de acceso, la protección de secretos, la separación de capas, los controles de seguridad no relacionados con la inmutabilidad y la trazabilidad técnica de las pruebas. Esta pausa no autoriza accesos anónimos ni saltarse controles de identidad.
 - No se habilitan por esta decisión writers fiscales, contables, laborales, pagos, devoluciones, comunicaciones ni automatizaciones externas que tengan gates funcionales independientes. Esos gates solo se modificarán por instrucción expresa o por una decisión técnica aprobada por el usuario.
 - La pausa es temporal y **no se revierte automáticamente**. Solo el usuario puede ordenar la restauración y habilitación de las protecciones para despliegue. Antes de una publicación productiva, el estado de las protecciones debe revisarse con el usuario y quedar expresamente autorizado.
