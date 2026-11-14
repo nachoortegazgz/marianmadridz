@@ -20,12 +20,13 @@
 
 ## Alineación de código en la rama actual
 
-- Rama: fix/current-site-cms-contract-alignment; HEAD a8a44cb8e75fd3c9d57fe3279a02ae47411b50a6.
+- Rama: fix/current-site-cms-contract-alignment.
 - internalConfig.js incorpora DatosFiscales a BUSINESS_COLLECTIONS y delimita RECORD_TYPE a los registros fiscales.
 - validation.js y data.js separan MapaStaff (identidad de personal) de DatosFiscales (maestro fiscal).
 - dataAccessPolicy.js aplica la validación de recordType a DatosFiscales, no a MapaStaff.
 - eventLog.js, fiscalAggregator.web.js y fiscalDocuments.web.js leen/escriben el maestro fiscal en DatosFiscales usando únicamente campos físicos declarados.
 - ComplementosCatalogo usa _id como identidad CMS canónica y mantiene addonId como espejo físico mientras la columna exista.
+- cajas.web.js alinea CajaActual con operationDate DATE ISO YYYY-MM-DD, otherAmount y openingAmount; no usa operationDateHour, bizumAmount ni opening*Amount inexistentes.
 - cajas.web.js usa operationDate DATE ISO YYYY-MM-DD, acumula Bizum en otherAmount y devuelve openingAmount; no consume operationDateHour, bizumAmount ni los cuatro opening*Amount inexistentes.
 - gestorName queda como nombre canónico; gestorNombre deja de ser consumido y solo se elimina durante una actualización si ambos valores existentes coinciden.
 
