@@ -118,7 +118,6 @@ export function assertUpdateAllowed(collection, item) {
     }
     if (APPEND_ONLY_COLLECTIONS.includes(collection)) {
         throw _policyError("CMS_UPDATE_COLLECTION_DENIED");
-        if (!item._id) throw _policyError("CMS_UPDATE_ID_REQUIRED");
     }
     if (collection === BUSINESS_COLLECTIONS.CONTROL_OPERATIVO) {
         if (item.controlType === CONTROL_TYPE.WEBHOOK_EVENT) {
