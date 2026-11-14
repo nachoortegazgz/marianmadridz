@@ -58,7 +58,7 @@ function claimCondition(claim) {
     return {
         controlType: { $eq: CONTROL_TYPE.WEBHOOK_CLAIM },
         status: { $eq: claim.status },
-        ownerToken: { $eq: claim.ownerToken },
+        traceId: { $eq: claim.traceId },
         version: { $eq: claim.version },
     };
 }
@@ -83,8 +83,8 @@ export async function acquireWebhookEventClaim({
 }) {
     const id = String(eventId ?? "").trim();
     const type = String(eventType ?? "").trim().toUpperCase();
-    const ownerToken = String(traceId ?? "").trim();
-    if (!id || id.length > MAX_EVENT_ID_LENGTH || !type || !ownerToken) {
+    const claimTraceId = String(traceId ?? "").trim();
+    if (!id || id.length > MAX_EVENT_ID_LENGTH || !type || !claimTraceId) {
         throw claimError("WEBHOOK_CLAIM_IDENTITY_INVALID");
     }
 
@@ -99,11 +99,10 @@ export async function acquireWebhookEventClaim({
         eventId: id,
         eventType: type,
         status: WEBHOOK_CLAIM_STATUS.IN_PROGRESS,
-        ownerToken,
+        traceId: claimTraceId,
         version: 1,
         attempts: 1,
         expiresAt,
-        traceId: ownerToken,
         payload: { eventType: type },
     };
 
@@ -115,7 +114,7 @@ export async function acquireWebhookEventClaim({
                 _id: claimId,
                 eventId: id,
                 eventType: type,
-                ownerToken,
+                traceId: claimTraceId,
                 version: 1,
                 attempts: 1,
                 expiresAt,
@@ -152,15 +151,15 @@ export async function acquireWebhookEventClaim({
         }
 
         const version = Number(existing.version);
-        const previousOwner = String(existing.ownerToken ?? "");
-        if (!Number.isSafeInteger(version) || version < 1 || !previousOwner) {
+        const previousTraceId = String(existing.traceId ?? existing.ownerToken ?? "").trim();
+        if (!Number.isSafeInteger(version) || version < 1 || !previousTraceId) {
             throw claimError("WEBHOOK_CLAIM_FENCE_INVALID");
         }
 
         const previous = {
             _id: claimId,
             status: existing.status,
-            ownerToken: previousOwner,
+            traceId: previousTraceId,
             version,
         };
         const storedAttempts = existing.attempts !== undefined && existing.attempts !== null && existing.attempts !== ""
@@ -176,12 +175,12 @@ export async function acquireWebhookEventClaim({
         delete nextPayload.leaseExpiresAt;
         const recovered = await compareAndSwap(previous, [
             { fieldPath: "status", action: "SET_FIELD", value: WEBHOOK_CLAIM_STATUS.IN_PROGRESS },
-            { fieldPath: "ownerToken", action: "SET_FIELD", value: ownerToken },
+            { fieldPath: "traceId", action: "SET_FIELD", value: claimTraceId },
             { fieldPath: "payload", action: "SET_FIELD", value: nextPayload },
             { fieldPath: "attempts", action: "SET_FIELD", value: attempts },
             { fieldPath: "expiresAt", action: "SET_FIELD", value: expiresAt },
             { fieldPath: "version", action: "INCREMENT_FIELD", value: 1 },
-            { fieldPath: "traceId", action: "SET_FIELD", value: ownerToken },
+
         ]);
         if (!recovered) return { status: "BUSY", claimId };
 
@@ -191,7 +190,7 @@ export async function acquireWebhookEventClaim({
                 _id: claimId,
                 eventId: id,
                 eventType: type,
-                ownerToken,
+                traceId: claimTraceId,
                 version: version + 1,
                 attempts,
                 expiresAt,
