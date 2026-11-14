@@ -33,7 +33,8 @@ La fusión de PR #373 no se consideró validación.
 
 PR correctiva #374: https://github.com/nachoortegazgz/marianmadridz/pull/374  
 Rama: `fix/ci-regression-and-milestone-2026-11-14`  
-SHA validado: `d95a69bc2d1292bb2d0ed714f1adf01e864a65aa`.
+HEAD validado: `da96c1b50f1910a287aea718bc6025d295e30e2b`.  
+Merge en `main`: `1de381ecb6495e17a3eae5b75b43e8493166988a`.
 
 Correcciones implementadas:
 
@@ -57,7 +58,7 @@ Correcciones implementadas:
 | ESLint | PASS |
 | Gitleaks full-history | PASS |
 
-**Conclusión:** el hito de código queda CERRADO — CI PASS (offline). PR #374 permanece pendiente de integración en `main` en el momento de esta actualización documental.
+**Conclusión:** PR #374 está integrada en `main`. El CI completo del HEAD de PR pasó; el workflow del merge commit está pendiente de confirmación. El hito de código queda CERRADO — CI PASS (offline), sin equivalencia a runtime Wix.
 
 ## Límites y riesgos pendientes
 
