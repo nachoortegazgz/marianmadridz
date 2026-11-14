@@ -2,12 +2,26 @@
 
 **Gobierno del proyecto:** el usuario/propietario es la SSOT de negocio, prioridades y autorizaciones. Durante desarrollo y QA están en pausa append-only y las prohibiciones genéricas de editar/eliminar registros (individuales y masivas) hasta nueva instrucción expresa del usuario para preparar el despliegue. Se mantienen autenticación, autorización, permisos y validaciones. La política documental no certifica por sí sola que todos los guards del runtime Wix hayan sido retirados.
 
-**Estado declarado:** el usuario indica que el código está integrado y publicado en Wix. **Estado Git verificado en este corte:** main=f3b1311eead05282e47f538afd506fe49e227141; PR #344 está fusionado. El usuario declara la publicación en Wix, pero no se ha acreditado un identificador de release que vincule el runtime con ese SHA. Lee el addendum vigente en ESTADO_ACTUAL_PROYECTO.md.
+**Estado declarado:** el usuario indica que el código está integrado y publicado en Wix. **Estado Git verificado en este corte:** main=c7bd27faaba833d816e77be56183257393f1aa48; PR #344 y PR #345 están fusionados. El usuario declara la publicación en Wix, pero no se ha acreditado un identificador de release que vincule el runtime con ese SHA. Lee el addendum vigente en ESTADO_ACTUAL_PROYECTO.md.
 # Marian Madrid — Wix Editor + Velo
 
 > **Estado vigente 2026-11-13:** GitHub `main` en el corte PR #332: `84c06313d5d82da6952e38deab8bae271aed67cf`. Wix Site Context confirma el sitio principal **Published** y Velo enabled; el propietario declara que el código se ha actualizado y publicado. No se ha obtenido un identificador de release que vincule el runtime Wix con ese SHA. Existe un sitio Wix QA independiente en estado Draft (`50b39f33-e753-4331-ab35-b2ed43dc97f7`), pero su aislamiento y paridad CMS no están certificados. CMS producción tras el corte 2026-11-14: 42 colecciones (13 NATIVE, 29 WIX_APP). El sitio QA Draft conserva inventario y aislamiento pendientes de reauditoría. La referencia de estado, inventario y checklist es [ESTADO_ACTUAL_PROYECTO.md](ESTADO_ACTUAL_PROYECTO.md), cuyo addendum vigente prevalece sobre los estados históricos de los demás documentos.
 
 Repositorio canónico del sitio **Marian Madrid Peluquería y Estética** (`www.marianmadrid.es`). El repositorio contiene código, documentación y pruebas QA.
+
+## Vigencia operativa — fase de desarrollo y QA (2026-11-14)
+
+**Autoridad:** el usuario/propietario es la SSOT de negocio, requisitos, prioridades, criterios de aceptación y autorizaciones. Las instrucciones expresas posteriores del usuario prevalecen sobre decisiones y restricciones documentales anteriores. La documentación oficial de Wix y de las integraciones gobierna únicamente los contratos y límites técnicos de la plataforma.
+
+**Mutabilidad CMS durante QA:** append-only e inmutabilidad están temporalmente en pausa. Se habilitan update y remove individuales y masivos para todas las colecciones CMS propias del proyecto, incluidas las históricamente tratadas como ledgers. Las operaciones masivas deben identificar explícitamente los registros por ID. No se habilitan escrituras en colecciones propiedad de Wix Apps ni se eluden autenticación, autorización/RBAC, permisos, validaciones de esquema, integridad técnica, secretos o límites de plataforma. La inserción mantiene su allowlist; los writers fiscales/contables/laborales, pagos, reembolsos, comunicaciones y efectos externos conservan sus gates funcionales independientes.
+
+**Restauración:** esta política no se revierte automáticamente. Solo el usuario puede ordenar la restauración de append-only y de las restricciones de mutación para preparar el despliegue. No publicar a producción basándose únicamente en esta excepción de QA.
+
+**Estado Git/Wix:** PR #344 y PR #345 están integrados en main; merge commit de documentación c7bd27faaba833d816e77be56183257393f1aa48. El usuario declara que la versión anterior está publicada en Wix. Los cambios de esta rama habilitan la política ampliada de mutaciones y aún no están fusionados ni publicados. No se ha acreditado un release Wix por SHA.
+
+**CMS maestro:** MapaStaff revisión 36, 42 campos y 5 registros (3 STAFF, 1 TERCERO, 1 GESTORIA). DatosFiscales permanece como colección legacy con un placeholder QA; su retirada requiere verificar runtime y consumidores tras publicar el backend migrado.
+
+---
 
 ## Arquitectura y fuente de verdad
 

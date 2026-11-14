@@ -1,5 +1,19 @@
 # Registro de decisiones de negocio y arquitectura — Marian Madrid
 
+## Vigencia operativa — fase de desarrollo y QA (2026-11-14)
+
+**Autoridad:** el usuario/propietario es la SSOT de negocio, requisitos, prioridades, criterios de aceptación y autorizaciones. Las instrucciones expresas posteriores del usuario prevalecen sobre decisiones y restricciones documentales anteriores. La documentación oficial de Wix y de las integraciones gobierna únicamente los contratos y límites técnicos de la plataforma.
+
+**Mutabilidad CMS durante QA:** append-only e inmutabilidad están temporalmente en pausa. Se habilitan update y remove individuales y masivos para todas las colecciones CMS propias del proyecto, incluidas las históricamente tratadas como ledgers. Las operaciones masivas deben identificar explícitamente los registros por ID. No se habilitan escrituras en colecciones propiedad de Wix Apps ni se eluden autenticación, autorización/RBAC, permisos, validaciones de esquema, integridad técnica, secretos o límites de plataforma. La inserción mantiene su allowlist; los writers fiscales/contables/laborales, pagos, reembolsos, comunicaciones y efectos externos conservan sus gates funcionales independientes.
+
+**Restauración:** esta política no se revierte automáticamente. Solo el usuario puede ordenar la restauración de append-only y de las restricciones de mutación para preparar el despliegue. No publicar a producción basándose únicamente en esta excepción de QA.
+
+**Estado Git/Wix:** PR #344 y PR #345 están integrados en main; merge commit de documentación c7bd27faaba833d816e77be56183257393f1aa48. El usuario declara que la versión anterior está publicada en Wix. Los cambios de esta rama habilitan la política ampliada de mutaciones y aún no están fusionados ni publicados. No se ha acreditado un release Wix por SHA.
+
+**CMS maestro:** MapaStaff revisión 36, 42 campos y 5 registros (3 STAFF, 1 TERCERO, 1 GESTORIA). DatosFiscales permanece como colección legacy con un placeholder QA; su retirada requiere verificar runtime y consumidores tras publicar el backend migrado.
+
+---
+
 **Fecha de consolidación:** 2026-11-10  
 **Repositorio:** `nachoortegazgz/marianmadridz`  
 **Estado:** decisiones y límites documentados; no equivale a despliegue ni validación E2E.
@@ -331,3 +345,11 @@ Se mantienen controles de autenticación, autorización, permisos, validación d
 **Estado Git asociado:** PR #344 quedó fusionado el 2026-11-14 mediante f3b1311eead05282e47f538afd506fe49e227141 (HEAD de main en este corte). El usuario declara la publicación en Wix; no hay identificador de release que vincule el runtime con ese SHA.
 
 **Alcance de evidencia:** esta decisión establece la política documental y de trabajo. La aplicación efectiva en hooks, WebMethods, write policies y permisos CMS requiere comprobación técnica específica; no se presume por el mero cambio documental.
+
+### TEC-037 — habilitación amplia de mutaciones durante QA (2026-11-14)
+
+**Decisión del usuario:** suspender durante desarrollo y QA las restricciones append-only y cualquier bloqueo genérico de edición/eliminación de registros, incluidas operaciones individuales y masivas, hasta que el usuario ordene restaurarlas para el despliegue.
+
+**Implementación propuesta en esta rama:** QA_RECORD_MUTATIONS_ENABLED=true; update/remove individual para las colecciones CMS propias del proyecto; bulk update/remove con IDs explícitos y límite de 1.000 elementos por operación, conforme al contrato SDK documentado. Se permite editar/eliminar registros que antes se protegían como append-only, así como los singleton/proyecciones con hooks de bloqueo. Se mantienen validaciones de estructura, autenticación/autorización, permisos CMS, allowlist de inserciones y gates de writers/efectos externos. Las colecciones WIX_APP no se incluyen.
+
+**Estado:** código y pruebas modificados en rama qa/temporary-record-mutations; pendiente de CI, revisión del diff y validación de contratos/runtime Wix. No se ha publicado esta ampliación en Wix. La excepción permanece temporal y no se restaura hasta instrucción expresa del usuario.

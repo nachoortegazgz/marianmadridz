@@ -1,3 +1,17 @@
+## Vigencia operativa — fase de desarrollo y QA (2026-11-14)
+
+**Autoridad:** el usuario/propietario es la SSOT de negocio, requisitos, prioridades, criterios de aceptación y autorizaciones. Las instrucciones expresas posteriores del usuario prevalecen sobre decisiones y restricciones documentales anteriores. La documentación oficial de Wix y de las integraciones gobierna únicamente los contratos y límites técnicos de la plataforma.
+
+**Mutabilidad CMS durante QA:** append-only e inmutabilidad están temporalmente en pausa. Se habilitan update y remove individuales y masivos para todas las colecciones CMS propias del proyecto, incluidas las históricamente tratadas como ledgers. Las operaciones masivas deben identificar explícitamente los registros por ID. No se habilitan escrituras en colecciones propiedad de Wix Apps ni se eluden autenticación, autorización/RBAC, permisos, validaciones de esquema, integridad técnica, secretos o límites de plataforma. La inserción mantiene su allowlist; los writers fiscales/contables/laborales, pagos, reembolsos, comunicaciones y efectos externos conservan sus gates funcionales independientes.
+
+**Restauración:** esta política no se revierte automáticamente. Solo el usuario puede ordenar la restauración de append-only y de las restricciones de mutación para preparar el despliegue. No publicar a producción basándose únicamente en esta excepción de QA.
+
+**Estado Git/Wix:** PR #344 y PR #345 están integrados en main; merge commit de documentación c7bd27faaba833d816e77be56183257393f1aa48. El usuario declara que la versión anterior está publicada en Wix. Los cambios de esta rama habilitan la política ampliada de mutaciones y aún no están fusionados ni publicados. No se ha acreditado un release Wix por SHA.
+
+**CMS maestro:** MapaStaff revisión 36, 42 campos y 5 registros (3 STAFF, 1 TERCERO, 1 GESTORIA). DatosFiscales permanece como colección legacy con un placeholder QA; su retirada requiere verificar runtime y consumidores tras publicar el backend migrado.
+
+---
+
 > **Vigencia 2026-11-14:** Capa 3 sigue siendo diseño, no integración operativa certificada. Wix CMS mantiene la autoridad transaccional. `CajaActual` live tiene el esquema corregido y singleton cerrado; Capa 3 no calcula ni modifica sus saldos. TEC-033 es una excepción de código temporal en una rama de QA y no concede a SharePoint/Power Automate permisos de escritura o borrado sobre Capa 1.
 
 ## Estado live y limpieza QA — corte 2026-11-14

@@ -49,11 +49,11 @@ export const STAFF_CLOCKING_CONFIG = Object.freeze({
   ADJUSTMENTS_ENABLED: false,
 });
 
-// TEMPORARY DEVELOPMENT EXCEPTION — remove before any production deployment.
-// This flag opens update/remove for append-only ledgers across this repository.
-// It does not enable fiscal/accounting writers or frontend-controlled bypasses.
+// TEMPORARY QA POLICY: allow update/remove on project-owned CMS records.
+// Does not enable inserts, fiscal writers, external effects, or bypass auth/RBAC.
+export const QA_RECORD_MUTATIONS_ENABLED = true;
 export const APPEND_ONLY_MUTATION_WINDOW = Object.freeze({
-  ENABLED: true,
+  ENABLED: QA_RECORD_MUTATIONS_ENABLED,
   TEMPORARY: true,
   RESTORE_BEFORE_PRODUCTION: true,
 });
@@ -87,6 +87,12 @@ export const BUSINESS_COLLECTIONS = Object.freeze({
   REGISTROS_HORARIOS_STAFF: "RegistrosHorariosStaff",
   SERVICIOS_CATALOGO: "ServiciosCatalogo",
 });
+
+// Legacy CMS collection retained temporarily for QA cleanup/migration.
+export const QA_MUTABLE_COLLECTIONS = Object.freeze([
+  ...Object.values(BUSINESS_COLLECTIONS),
+  "DatosFiscales",
+]);
 
 // Operational lock and idempotency state is centralized in ControlOperativo.
 export const OPERATIONAL_COLLECTIONS = Object.freeze({
@@ -511,10 +517,9 @@ export const DATA_ACCESS_BULK_PATCH_POLICY = Object.freeze({
 
 
 /*
- * Elevated CMS write policy. Normal operation is insert-only for append-only
- * ledgers. TEC-033 temporarily adds individual update/remove for those
- * collections; APPEND_ONLY_MUTATION_WINDOW must be disabled before production.
- * Bulk insert/update/remove remain disabled. Keep synchronized with tests.
+ * QA mutation policy: update/remove are enabled for project-owned collections.
+ * Insert remains allowlisted; bulk insert stays disabled. Bulk update/remove
+ * require explicit IDs and remain scoped to project-owned collections.
  */
 export const DATA_ACCESS_WRITE_POLICY = Object.freeze({
   insertCollections: Object.freeze([

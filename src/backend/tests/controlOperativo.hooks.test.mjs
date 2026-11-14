@@ -109,7 +109,7 @@ describe("ControlOperativo hooks", () => {
     );
   });
 
-  it("allows temporary webhook-event edits but keeps controlType immutable", async () => {
+  it("allows temporary webhook-event edits and controlType changes during QA", async () => {
     const original = {
       _id: "event-1",
       ...base(CONTROL_TYPE.WEBHOOK_EVENT),
@@ -124,14 +124,13 @@ describe("ControlOperativo hooks", () => {
       })
     );
 
-    await assert.rejects(
+    await assert.doesNotReject(
       ControlOperativo_beforeUpdate({
         _id: original._id,
         controlType: CONTROL_TYPE.SLOT_LOCK,
         resourceId: RESOURCE_ID,
         expiresAt: new Date(Date.now() + 60000),
-      }),
-      /controlType es inmutable/
+      })
     );
   });
 
