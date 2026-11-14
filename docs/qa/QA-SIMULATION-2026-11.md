@@ -1,8 +1,8 @@
-> **Nota de vigencia — 2026-11-11:** este pack conserva evidencia histórica y escenarios offline. Para estado live, aislamiento de comunicaciones, datos sintéticos y gates de ejecución, prevalece [la referencia maestra QA](2026-11-11-qa-master-reference.md). Wix informa actualmente que el sitio está **Published**; no ejecutar E2E de negocio en él. Los resultados mock no demuestran runtime ni proveedor real.
+> **Nota de vigencia — 2026-11-14:** este archivo es un pack de escenarios y evidencias de pruebas, no una definición de un entorno separado. El único sitio Wix objeto de trabajo es 50b39f33-e753-4331-ab35-b2ed43dc97f7, declarado por el propietario como banco de pruebas aislado y sin actividad real. La última consulta GetSiteContext no pudo resolver el Site ID; no se debe inferir Published/Draft ni aislamiento de comunicaciones. Para el estado actual, consultar [la referencia del sitio aislado](../audits/2026-11-13-current-site-isolation.md). Los resultados mock no demuestran runtime ni proveedor real.
 
 ---
 
-# QA simulation phase — evidence pack
+# simulation testing phase — evidence pack
 
 - Date: 2026-11-05
 - Repository: `nachoortegazgz/marianmadridz`
@@ -12,7 +12,7 @@
 
 ## Purpose
 
-This pack makes the QA fixtures repeatable and traceable. The machine-readable source is [qa-simulation-scenarios.json](./qa-simulation-scenarios.json). Each scenario has a stable `scenarioId`, `traceId`, fixture data, expected assertions, test references and an explicit coverage status.
+This pack makes the test fixtures repeatable and traceable. The machine-readable source is [qa-simulation-scenarios.json](./qa-simulation-scenarios.json). Each scenario has a stable `scenarioId`, `traceId`, fixture data, expected assertions, test references and an explicit coverage status.
 
 ## Status meanings
 
@@ -21,7 +21,7 @@ This pack makes the QA fixtures repeatable and traceable. The machine-readable s
 | `MOCK_COVERED` | A named automated test exercises the stated contract with offline mocks. It is not proof of Wix runtime behavior. |
 | `PARTIAL_MOCK_COVERAGE` | Only part of the end-to-end flow is exercised. |
 | `CONTRACT_ONLY` | A source/contract assertion exists; the business flow is not fully simulated. |
-| `MANUAL_QA_REQUIRED` | No automated scenario is currently evidenced; run only in an isolated QA setup with external sends/payments disabled. |
+| `MANUAL_QA_REQUIRED` | No automated scenario is currently evidenced; run only in an isolated test-bank setup with external sends/payments disabled. |
 
 ## Automated evidence map
 
@@ -35,7 +35,7 @@ This pack makes the QA fixtures repeatable and traceable. The machine-readable s
 | Staff identity, authorization and signed timeclock | `site.flows.e2e.test.mjs` | Mock covered |
 | Cash transaction, close Z and hash chain | `site.flows.e2e.test.mjs` | Mock covered with mock signer only |\n| Refund / service refund / reimbursement, negative accounting sign, cash projection replay and chain integrity | `site.flows.e2e.test.mjs` (`FLOW-CAJA-07`) | Mock covered for `REEMBOLSO`, `DEVOLUCION`, `DEVOLUCION_SERVICIO`; signer remains mock-only |\n| FACSIMIL series, chained digest, signature-shaped invalid placeholder and tamper detection | `fiscalFacsimile.test.mjs` | Isolated helper mock covered; no CMS writes, real signer, QR or AEAT path |
 | Order total resolution | `orderLedgerAmount.test.mjs` | Mock/unit covered |
-| Wix Stores ORDER_CREATED + order reconciliation (Bookings/Stores/mixed) | `events.native-booking-sync.test.mjs`, `crons.jobsConfigParity.test.mjs` | Mock covered for idempotency markers and no custom stock writes; no product checkout or native stock decrement/refund |\n| Product checkout, PSP payment, stock decrement and refund/restock | No current automated suite | `MANUAL_QA_REQUIRED`; isolated Wix QA site and PSP sandbox required |
+| Wix Stores ORDER_CREATED + order reconciliation (Bookings/Stores/mixed) | `events.native-booking-sync.test.mjs`, `crons.jobsConfigParity.test.mjs` | Mock covered for idempotency markers and no custom stock writes; no product checkout or native stock decrement/refund |\n| Product checkout, PSP payment, stock decrement and refund/restock | No current automated suite | `MANUAL_QA_REQUIRED`; isolated Wix isolated site and PSP sandbox required |
 | Wix Automations delivery, public forms/CRM, rescheduling, Gift Cards | No evidenced E2E suite | Manual/integration work remains |
 
 The manifest test `qa.simulation-manifest.test.mjs` checks stable IDs, unique traces, existence of referenced tests, synthetic fixtures and explicit limitation labels. It is included in Layer 1 and the canonical `npm test` discovery.
@@ -50,7 +50,7 @@ npm run test:layer2
 
 All suites use `src/backend/tests/loader.mjs`; they do not call Wix services. A green result proves only the behavior exercised by the mocks and assertions.
 
-## Required remaining QA work
+## Required remaining validation work
 
 1. Add an integrated `processDualBooking` failure test: F1 created, F2 Writer V2 fails, native F1 cancellation attempted, both CitasF2 projections reconciled, locks released, idempotency state finalized; assert original error and compensation errors separately.
 2. Add end-to-end reschedule semantics, including dual pair consistency and old-slot release.
@@ -59,7 +59,7 @@ All suites use `src/backend/tests/loader.mjs`; they do not call Wix services. A 
 5. Inventory Wix Automations and test recipient/trigger/template configuration in isolated QA without sending to real customers.
 6. Test form-to-CRM routing and marketing opt-in/withdrawal separately; use only reserved `.example.test` addresses.
 7. Verify Gift Card issue/redeem/refund only if the feature is configured and the Wix test surface supports it.
-8. Browser E2E: use an isolated QA site, sandbox/test payment method, test inbox and cleanup plan. This requires the user-operated Wix Preview; this workflow must not launch Preview or Publish.
+8. Browser E2E: use an current isolated Wix site, sandbox/test payment method, test inbox and cleanup plan. This requires the user-operated Wix Preview; this workflow must not launch Preview or Publish.
 
 ## Safety and release gates
 
@@ -72,7 +72,7 @@ All suites use `src/backend/tests/loader.mjs`; they do not call Wix services. A 
 
 ## Update 2026-11-06 — auditoría de Capas 1 y 2
 
-### Estado de CMS QA tras poda
+### Estado histórico de CMS tras poda (snapshot anterior)
 Lectura consistente de Wix Data Collections API (40 colecciones totales; 15 `NATIVE`). Solo se han podado colecciones propias en QA; ninguna colección `WIX_APP` ni producción.
 
 | Colección | Revisión | Campos retirados en la sesión |
@@ -96,7 +96,7 @@ Total: 11 campos eliminados físicamente y verificados ausentes en lecturas post
 
 ### Límites que siguen abiertos
 - Saga dual integrada: falta probar F1 creado + F2 Writer V2 fallido + cancelación nativa de F1 + reconciliación de ambas proyecciones + liberación de locks/idempotencia.
-- Pago confirmado: cubierto offline con evento Wix Velo `metadata.id` + `data.order`, ledger WIX_PAYMENTS, actualización dual CitasF2 e idempotencia. No se ejecuta proveedor ni transacción real; falta validación integrada en sitio QA aislado.
+- Pago confirmado: cubierto offline con evento Wix Velo `metadata.id` + `data.order`, ledger WIX_PAYMENTS, actualización dual CitasF2 e idempotencia. No se ejecuta proveedor ni transacción real; falta validación integrada en sitio aislado aislado.
 - Reprogramación completa simple/dual y liberación del slot anterior: sin escenario integrado certificado.
 - Wix Stores: la venta/devolución/idempotencia offline está cubierta; reconciliación real con Stores requiere integración QA.
 - Wix Automations, formularios/CRM, marketing opt-in/baja y Gift Cards: no hay evidencia E2E automatizada.
@@ -131,7 +131,7 @@ Todas las suites offline usan fixtures sintéticos y mocks. No se crean reservas
 
 ### Límite del entorno
 
-- La conexión Wix devuelve un único sitio Marian Madrid, el sitio publicado asociado a `www.marianmadrid.es`. La búsqueda de sitios con nombre QA no devuelve ninguno. No hay evidencia de un sitio QA aislado con Wix Bookings y Wix Payments.
+- La conexión Wix devuelve un único sitio Marian Madrid, el sitio publicado asociado a `www.marianmadrid.es`. La búsqueda de sitios con nombre QA no devuelve ninguno. No hay evidencia de un sitio aislado aislado con Wix Bookings y Wix Payments.
 - Por protección de datos e integridad, el simulacro usa `wixDataMock`; no ha creado citas reales, órdenes, pagos, asientos ni documentos en el CMS productivo.
 - Wix documenta que los backend events no funcionan en Preview. Por tanto, el Preview no sirve para validar este webhook ni el recorrido real de pago. Fuente: [Wix Velo — onOrderPaymentStatusUpdated](https://dev.wix.com/docs/velo/events-service-plugins/e-commerce/events/on-order-payment-status-updated).
 - El workflow de publicación posterior a la integración [run #42541096013](https://github.com/nachoortegazgz/marianmadridz/actions/runs/42541096013) **falló de forma segura antes de publicar**: el CLI creó el Preview `https://wix.to/JwIx2SH`, mostró que el Editor contiene cambios de diseño más recientes y abortó la publicación. `wix.config.json` mantiene `uiVersion=15941`. El dominio productivo no se considera actualizado por este run.
@@ -139,7 +139,7 @@ Todas las suites offline usan fixtures sintéticos y mocks. No se crean reservas
 ### Estado final
 
 - **Verificado:** el flujo backend de pago y persistencia simulado en memoria; idempotencia; actualización dual de CitasF2; ledger append-only; CI offline.
-- **No verificado:** transacción real de Wix Payments, recepción del webhook por el runtime Wix publicado, escritura real en CMS/agenda de un entorno QA, conciliación de payouts/reembolsos y desglose fiscal de IVA del pedido.
+- **No verificado:** transacción real de Wix Payments, recepción del webhook por el runtime Wix publicado, escritura real en CMS/agenda de un banco de pruebas aislado, conciliación de payouts/reembolsos y desglose fiscal de IVA del pedido.
 - **Siguiente condición para E2E remoto:** disponer de un sitio Wix QA separado con Bookings y Wix Payments configurado en modo de prueba, y alinear/sincronizar primero la UI del Editor con el repositorio. No usar el sitio productivo para reservas o pagos sintéticos.
 
 ## Update 2026-11-11 — conciliación de reembolsos con eventos Velo estables
@@ -176,9 +176,9 @@ Todas las suites offline usan fixtures sintéticos y mocks. No se crean reservas
 
 ### Inventario de sitios y bloqueo de QA (verificación 2026-11-11)
 - Wix devuelve dos sitios en la cuenta: Marian Madrid (producción) y ortega nacho cv web (personal).
-- El sitio personal tiene Velo habilitado y plan Free, pero su conjunto de apps (Forms & Payments, Hotels, Invoices V1, Portfolio y Video) no replica el stack requerido de Marian Madrid (Bookings, Stores y Members). No es un entorno QA equivalente y no se modifica.
+- El sitio personal tiene Velo habilitado y plan Free, pero su conjunto de apps (Forms & Payments, Hotels, Invoices V1, Portfolio y Video) no replica el stack requerido de Marian Madrid (Bookings, Stores y Members). No es un banco de pruebas aislado equivalente y no se modifica.
 - Se ha localizado la API oficial Duplicate Site. Wix indica que no copia pedidos, contactos, facturas ni configuración de apps de terceros; la documentación no garantiza que todas las colecciones CMS personalizadas estén vacías. No se duplica producción para evitar copiar datos personales o ledgers a un entorno de pruebas.
-- No se ha creado un nuevo sitio, asignado dominio, activado plan ni instalado apps. La validación runtime permanece bloqueada hasta disponer de un sitio QA vacío con las apps necesarias y sin datos productivos.
+- No se ha creado un nuevo sitio, asignado dominio, activado plan ni instalado apps. La validación runtime permanece bloqueada hasta disponer de un sitio aislado vacío con las apps necesarias y sin datos productivos.
 - Referencia: [Wix Duplicate Site API](https://dev.wix.com/docs/api-reference/account-level/sites/site-actions/duplicate-site).
 
 
@@ -244,7 +244,7 @@ El repositorio ya contiene suites offline con mocks para:
 - Inventario, venta, devolución, idempotencia y locks (suites inventory registradas en el manifiesto QA).
 - Manifiesto de escenarios sintéticos y referencias a tests (`qa.simulation-manifest.test.mjs`).
 
-**No se ejecuta E2E de negocio en el sitio Published.** La referencia maestra QA del 2026-11-11 confirma que no existe un sitio QA independiente equivalente y que siguen activas automatizaciones email con destinatarios dinámicos. Wix Preview tampoco valida backend events. Los mocks no demuestran runtime, proveedor de pagos, webhook ni notificaciones.
+**No se ejecuta E2E de negocio en el sitio Published.** La referencia maestra QA del 2026-11-11 confirma que no existe un sitio aislado independiente equivalente y que siguen activas automatizaciones email con destinatarios dinámicos. Wix Preview tampoco valida backend events. Los mocks no demuestran runtime, proveedor de pagos, webhook ni notificaciones.
 
 **Validación CI de esta actualización:** completada en el PR #319, commit `cc667ecda57a52594fb79a8747e304041800952e`. `npm test`: 66 suites, 607 tests aprobados, 0 fallos; contratos Wix eCommerce Cart V2, Order Transactions y Bookings Reader V2: SUCCESS; ESLint: SUCCESS; Gitleaks full-history: SUCCESS, sin secretos detectados. Workflow run #822 y secret scan #246.
 
@@ -257,7 +257,7 @@ El repositorio ya contiene suites offline con mocks para:
 5. No borrar ni reescribir filas QA de MovimientosInventario o RegistrosHorariosStaff.
 6. No sincronizar CMS Sandbox con Live ni disparar Automations en el sitio Published.
 
-**Estado final:** auditoría de lectura ejecutada; pruebas offline existentes identificadas; ejecución CI de esta revisión pendiente; pruebas runtime de reservas/pagos/tienda bloqueadas hasta disponer de un sitio QA aislado y sandbox de pago acreditado.
+**Estado final:** auditoría de lectura ejecutada; pruebas offline existentes identificadas; ejecución CI de esta revisión pendiente; pruebas runtime de reservas/pagos/tienda bloqueadas hasta disponer de un sitio aislado aislado y sandbox de pago acreditado.
 
 
 ### G. Corrección de tipo CMS ejecutada — 2026-11-13 16:15 UTC
@@ -350,15 +350,15 @@ Estado de caja y políticas:
 - `STAFF_CLOCKING_CONFIG.WRITES_ENABLED=false`.
 - Estas políticas son fail-closed y deben permanecer así hasta la certificación fiscal/contable y la validación runtime.
 
-### Aislamiento del sitio QA
+### Aislamiento del sitio aislado
 
-Consulta actual de Automations V2 en el sitio QA:
+Consulta actual de Automations V2 en el sitio aislado:
 
 - 119 automatizaciones: 106 INACTIVE y 13 ACTIVE.
 - Las 13 activas son preinstaladas y tienen `settings.readonly=true` o `settings.disableStatusChange=true`.
 - Algunas pertenecen a notificaciones de Bookings, tarjetas guardadas/cargadas, formularios, gift cards y servicios de plataforma.
 - No se sortea el bloqueo ni se ejecuta `Test Automation`, porque puede disparar acciones reales.
-- El sitio QA sigue parcialmente aislado y no es apto para pruebas E2E que puedan generar comunicaciones o efectos externos.
+- El sitio aislado sigue parcialmente aislado y no es apto para pruebas E2E que puedan generar comunicaciones o efectos externos.
 
 ### Cambios de calidad de CI
 
