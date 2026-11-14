@@ -189,8 +189,8 @@ test("single-item removal allows ledgers during temporary window and keeps Contr
 
 test("bulk update/remove allow explicit IDs for all project-owned business collections", () => {
     for (const collection of ISOLATED_SITE_MUTABLE_COLLECTIONS) {
-        assert.doesNotThrow(() => assertBulkUpdateAllowed(collection, [{ _id: "qa-row-1", value: true }]));
-        assert.doesNotThrow(() => assertBulkRemoveAllowed(collection, ["qa-row-1"]));
+        assert.doesNotThrow(() => assertBulkUpdateAllowed(collection, [{ _id: "isolated-row-1", value: true }]));
+        assert.doesNotThrow(() => assertBulkRemoveAllowed(collection, ["isolated-row-1"]));
     }
     assert.throws(() => assertBulkUpdateAllowed(C.CAJA_ACTUAL, [{ value: true }]), {
         code: "CMS_BULK_UPDATE_SCOPE_DENIED",
@@ -200,10 +200,10 @@ test("bulk update/remove allow explicit IDs for all project-owned business colle
     });
     assert.doesNotThrow(() => assertBulkUpdateAllowed("DatosFiscales", [{ _id: "legacy-qa-row" }]));
     assert.doesNotThrow(() => assertBulkRemoveAllowed("DatosFiscales", ["legacy-qa-row"]));
-    assert.throws(() => assertBulkUpdateAllowed("WixAppCollection", [{ _id: "qa-row-1" }]), {
+    assert.throws(() => assertBulkUpdateAllowed("WixAppCollection", [{ _id: "isolated-row-1" }]), {
         code: "CMS_BULK_UPDATE_SCOPE_DENIED",
     });
-    assert.throws(() => assertBulkRemoveAllowed("WixAppCollection", ["qa-row-1"]), {
+    assert.throws(() => assertBulkRemoveAllowed("WixAppCollection", ["isolated-row-1"]), {
         code: "CMS_BULK_REMOVE_SCOPE_DENIED",
     });
 });
