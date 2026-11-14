@@ -1640,6 +1640,7 @@ Las definiciones siguientes combinan contrato físico live y documentación/cód
 | `cardAmount` / `otherAmount` / `voucherAmount` | CajaActual | NUMBER | Acumulados por concepto; no equivalen a efectivo físico ni prueban un desglose de Bizum. |
 | `currentSequence` | CajaActual | NUMBER | Campo físico presente; no se localizó consumidor activo en src/. Candidato a retirada tras revisar contratos externos. |
 | `id` | CajaActual | TEXT | Espejo físico de `_id` en el singleton leído; el keyfield CMS sigue siendo `_id`. |
+| `isOpen` | CajaActual | BOOLEAN | Campo físico no canónico; el singleton actual tiene isOpen=true y cashRegisterStatus=SIMULACION. El backend gobierna por cashRegisterStatus. |
 | `taxId` | DatosFiscales | TEXT | NIF/NIE/CIF/VAT-UE del tercero; validado por `assertDatosFiscalesRecord`. |
 | `legalName` | DatosFiscales | TEXT | Razón social/nombre legal del tercero o emisor. |
 | `recordType` | DatosFiscales | TEXT | Discriminador fiscal: `TERCERO`, `GESTORIA`, `CONFIG_SISTEMA`. |
@@ -1738,10 +1739,10 @@ Los siguientes valores están respaldados por enums de backend o descripciones C
 | `CitasF2.paymentStatus` | CITAS_PAYMENT_STATUS: NOT_PAID, PENDING_PAYMENT, PENDING_LEDGER, PAID, PARTIALLY_PAID, REFUNDED, PARTIALLY_REFUNDED, EXEMPT, UNDEFINED |
 | `CitasF2.bookingType` | BOOKING_TYPE: SIMPLE, DUAL_F1, DUAL_F2 |
 | `ControlOperativo.controlType` | CONTROL_TYPE: ALERT, COMPENSATION, DAYS_CACHE, DISPLAY_TOKEN, DUAL_CACHE, DEDUPE_KEY, LEDGER_IDEMPOTENCY, IDEMPOTENCY, SLOT_LOCK, RATE_LIMIT, SYSTEM_FLAG, WEBHOOK_CLAIM, WEBHOOK_EVENT |
-| `CajaActual.cashRegisterStatus` | CASH_REGISTER_STATUS: ABIERTA, CERRADA |
-| `CajaActual.paymentMethod` | PAYMENT_METHOD: EFECTIVO, TARJETA, BIZUM, TRANSFERENCIA, WIX_PAYMENTS |
-| `CajaActual.lastOperationPaymentMethod` | PAYMENT_METHOD: EFECTIVO, TARJETA, BIZUM, TRANSFERENCIA, WIX_PAYMENTS |
-| `CajaActual.lastOperationType` | MOVEMENT_TYPE: VENTA, VENTA_ONLINE, ANTICIPO, REEMBOLSO, DEVOLUCION, DEVOLUCION_SERVICIO, PROPINA, AJUSTE |
+| `CajaActual.cashRegisterStatus` | CASH_REGISTER_STATUS: ABIERTA, CERRADA, SIMULACION |
+
+
+
 | `DatosFiscales.recordType` | RECORD_TYPE: GESTORIA, TERCERO, CONFIG_SISTEMA |
 | `DatosFiscales.thirdPartyType` | THIRD_PARTY_TYPE: CLIENTE, STAFF, PROVEEDOR, EMISOR |
 | `MapaStaff.rolWebsite` | ROL_WEBSITE: ADMIN, GESTION, ESTILISTA |
@@ -1894,7 +1895,7 @@ Este estado temporal contradice deliberadamente la regla ordinaria de la secció
 - El esquema completo, con tipos y definiciones, queda documentado en §3.1.
 - Los campos `operationDate`, `openingAmount`, `voucherAmount` e `isOpen` no existen en el esquema actual; sus sustitutos incluyen `operationDateHour`, los cuatro `opening*Amount` y `bizumAmount`.
 - Estado del elemento singleton: el último readback documentado antes de esta revisión registraba `singletonKey=CAJA_PRINCIPAL` y caja cerrada. No se ha releído el elemento durante esta actualización de permisos; no se certifican aquí sus saldos ni su estado actual.
-- Índice único `CajaActual_singletonKey_unique`: ACTIVE. Índice anterior `cashRegisterStatus_operationDate`: ya no aparece en el inventario final. Índice corregido `cashRegisterStatus_operationDateHour`: ACTIVE en el readback final.
+- Índice único `CajaActual_singletonKey_unique`: ACTIVE. Índice anterior `cashRegisterStatus_operationDate`: ya no aparece en el inventario final. El índice `cashRegisterStatus_operationDateHour` corresponde a un campo retirado y queda pendiente de readback/retirada; el campo físico vigente es operationDate DATE.
 - `MovimientosCaja`: revisión 78, 0 elementos; no modificada. `LibroAsientosContablesDetalle`: 0. `RegistrosHorariosStaff`: revisión 11, 0 tras limpieza. `HistoricoCierresZ`: 0. `PaquetesGestoria`: 0. `ControlOperativo`: 3 elementos. `MovimientosInventario` no figura en el inventario live de 42 colecciones; la fila histórica que lo describía como colección presente queda pendiente de reconciliación documental.
 
 ### Registros sintéticos eliminados
