@@ -757,7 +757,7 @@ Este inventario de 42 campos es el contrato físico de referencia del repositori
 | `traceId` | Trace ID | `TEXT` | UUID v4 de trazabilidad de la última mutación relevante. | No declarado | — | — | No declarado en esquema CMS |
 | `staffMemberId` | staffMemberId | `TEXT` | Canonical native Wix Bookings staff member ID; distinct from resourceId. | No declarado | — | — | No declarado en esquema CMS |
 | `scheduleId` | scheduleId | `TEXT` | Native Wix Bookings schedule ID. | No declarado | — | — | No declarado en esquema CMS |
-| `thirdPartyId` | thirdPartyId | `TEXT` | Optional DatosFiscales reference; remains empty until formally linked. | No declarado | — | — | No declarado en esquema CMS |
+| `thirdPartyId` | thirdPartyId | `TEXT` | Campo legacy opaco; el valor no es GUID ni coincide con _id de DatosFiscales y no tiene consumidor localizado en src/. No tratar como FK. Candidato a retirada física tras revisar integraciones/vistas. | No declarado | — | — | No declarado en esquema CMS |
 | `rolWebsite` | rolWebsite | `TEXT` | Canonical business authorization role: ADMIN, GESTION, or ESTILISTA. | No declarado | — | — | ROL_WEBSITE: ADMIN, GESTION, ESTILISTA |
 | `rolBookings` | rolBookings | `TEXT` | Native Wix Bookings staff role; canonical value STAFF. | No declarado | — | — | Wix Bookings staff role: STAFF |
 | `memberId` | memberId | `TEXT` | Canonical Wix site-member ID verified from Members API. | No declarado | — | — | No declarado en esquema CMS |
@@ -1544,7 +1544,7 @@ Las definiciones siguientes combinan contrato físico live y documentación/cód
 | `catalogId` | CitasF2, MovimientosCaja, MovimientosInventario | TEXT | Igual que key | Referencia de catálogo usada por el dominio que genera la operación. En MovimientosInventario, la descripción CMS precisa que es el productId del maestro histórico InventarioStockVenta; no sustituirlo por el ID de Stores. |
 | `orderId` | CitasF2, ControlOperativo, MovimientosCaja, MovimientosInventario, LibroAsientosContablesDetalle | TEXT | Igual que key | ID de pedido nativo de Wix eCommerce/Stores relacionado con la operación. No confundir con transactionId. |
 | `refundId` | ControlOperativo, MovimientosCaja, MovimientosInventario | TEXT | Igual que key | Identificador del reembolso nativo asociado al evento/movimiento. |
-| `thirdPartyId` | CitasF2, DatosFiscales (según relaciones del proyecto), MovimientosCaja, MovimientosInventario, MapaStaff | TEXT | Igual que key | Referencia a tercero fiscal/CRM cuando el contrato del módulo lo utiliza. La relación concreta depende del flujo; no equivale a memberId. |
+| `thirdPartyId` | CitasF2, DatosFiscales, MovimientosCaja, MovimientosInventario | TEXT | Igual que key | En los payloads fiscales, referencia lógica a DatosFiscales._id. No equivale a memberId. MapaStaff.thirdPartyId es un campo legacy opaco y no forma parte de esta relación. |
 | `pairToken` | CitasF2, ControlOperativo, MovimientosCaja | TEXT | Igual que key | Token compartido que vincula las dos reservas de una cita dual (DUAL_F1 y DUAL_F2). |
 | `transactionId` | ControlOperativo, MovimientosCaja | TEXT | Igual que key | Identificador de transacción/operación usado para evitar duplicados y correlacionar el hecho económico. La unicidad debe comprobarse en el contrato/índice concreto; no asumirla por el nombre. |
 | `eventId` | ControlOperativo, RegistroIntegracion | TEXT | Igual que key | Identificador del evento recibido o registrado. En ControlOperativo participa en el registro/deduplicación de eventos. |
