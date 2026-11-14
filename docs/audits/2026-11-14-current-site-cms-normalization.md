@@ -146,6 +146,7 @@ La igualdad de importes/contadores en un singleton simulado o en una única fila
 - MapaStaff contiene exclusivamente el mapeo entre identidades nativas de personal: staffMemberId (Bookings Staff Member), resourceId (Bookings Resource), scheduleId (agenda) y memberId (Wix Members).
 - _id es la identidad del elemento CMS. Aunque resourceId = _id en las tres filas leídas, los campos no se fusionan: uno identifica el registro CMS y el otro el recurso nativo consumido por Bookings.
 - active es BOOLEAN y el lector de proyección filtra staffMemberId + active=true.
+- MapaStaff.thirdPartyId es TEXT opaco: el valor no es GUID, no coincide con _id de DatosFiscales y no tiene consumidor localizado en src/. No tratarlo como FK; candidato a retirada física tras revisar vistas/integraciones.
 - El validador y los hooks MapaStaff_beforeInsert/MapaStaff_beforeUpdate validan exclusivamente esos campos de personal. No esperan recordType, traceId ni campos fiscales.
 - MapaStaff no es autoridad RBAC; la autorización sigue resolviéndose en backend con las APIs nativas Wix Members/Bookings.
 
@@ -179,7 +180,7 @@ La igualdad de importes/contadores en un singleton simulado o en una única fila
 
 - internalConfig.js: DatosFiscales se incorpora a BUSINESS_COLLECTIONS; RECORD_TYPE queda limitado a los tipos fiscales de esa colección; CASH_REGISTER_STATUS incorpora SIMULACION como sentinel del sitio aislado.
 - validation.js y data.js: validación separada de MapaStaff y DatosFiscales; assertCajaActualRecord valida el esquema físico de CajaActual y sequenceCounters como OBJECT; no se exigen campos inexistentes.
-- dataAccessPolicy.js: la validación de recordType se aplica a inserciones de DatosFiscales, no a MapaStaff.
+- dataAccessPolicy.js: la validación de recordType se aplica a inserciones de DatosFiscales, no a MapaStaff. thirdPartyId de los payloads fiscales referencia lógicamente DatosFiscales._id; no MapaStaff.
 - eventLog.js: upsert de terceros y lectura de configuración migrados a DatosFiscales; no se persisten traceId ni schemaVersion allí.
 - fiscalAggregator.web.js: lectura de NIF emisor migrada a DatosFiscales; ausencia de CONFIG_SISTEMA sigue provocando error fail-closed.
 - fiscalDocuments.web.js: lectura de destinatarios migrada a DatosFiscales; gestorName es el único nombre consumido.
