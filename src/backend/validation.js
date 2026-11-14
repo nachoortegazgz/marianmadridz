@@ -1,32 +1,11 @@
 /*
 =============================================================================
 MODULE: backend/validation.js
-AERSION: v12.0-MINIMAL
-BASE: v11.0-SSOT-CLEAN + alineacion con internalConfig v12 y CMS KEY FIELDS.
-RESPONSIBILITY: Aalidacion centralizada de enums, NIFs y schemas CMS.
-  Funciones puras: lanzan Error, no loguean. El logging lo hace el caller.
-STANDARDS: G10 ASCII Strict. Minimo codigo. Cero duplicacion.
-CORRECCIONES v12.0-MINIMAL:
-  VAL-01 (P0): assertCitasF2 valida contra CITAS_BOOKING_STATUS y
-    CITAS_PAYMENT_STATUS (enums CMS persistidos). CitasF2 persiste CANCELED.
-  VAL-02 (P1): isValidGuid duplicado eliminado. Usar isValidGuid de
-    internalConfig o _looksLikeGuid de mmUtils.
-  VAL-03 (P1): Imports muertos eliminados (COMPENSATION_KIND, ITEM_NATURE,
-    CODIGO_IMPUESTO, CHANNEL_TYPE, MOVEMENT_TYPE, PAYMENT_METHOD,
-    CATALOG_STATES, CASH_REGISTER_STATUS).
-  VAL-04 (P2): Logger import eliminado. Validation es pura.
-  VAL-05 (P0): assertMapaStaffRecord valida ahora las variantes no-staff
-    del maestro mixto MapaStaff; la identidad staff sigue siendo Bookings API.
-MANTENIDO (consumidores activos verificados):
-  - assertValidEnum: usado por todos los asserts y callers externos
-  - assertCitasF2: consumido por data.js CitasF2_beforeInsert/beforeUpdate
-  - assertMapaStaffRecord: consumido por data.js/handlers fiscales
-  - assertControlOperativo: consumido por data.js ControlOperativo hooks
-  - assertRegistrosHorariosStaff: consumido por data.js + horario.web.js
-  - isValidNifOrEuVat: validacion fiscal obligatoria (Ley 11/2021)
-  - THIRD_PARTY_TYPE: enum fiscal normativo activo
-DEPENDENCIAS: backend/internalConfig (enums). Cero dependencias de
-  logger, mmUtils, dataAccess ni wix-data. Hoja pura.
+RESPONSIBILITY: Pure validation for CMS write boundaries and fiscal identity.
+CONTRACT: Validators return true or throw SCHEMA_VIOLATION; no logging or I/O.
+DEPENDENCIES: backend/internalConfig only.
+DOMAINS: CitasF2, MapaStaff, ControlOperativo, RegistrosHorariosStaff,
+         canonical enums and Spanish/EU tax identifiers.
 =============================================================================
 */
 
