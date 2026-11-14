@@ -269,7 +269,7 @@ Este bloque describe el sitio y la rama objeto de trabajo. Los inventarios anter
 - MapaStaff: 18 campos, exclusivamente identidades de personal; no contiene recordType ni campos fiscales.
 - DatosFiscales: 28 campos, una fila placeholder; no contiene traceId ni schemaVersion. No existe CONFIG_SISTEMA.
 - ComplementosCatalogo: _id es identidad CMS; addonId es espejo físico temporal. El DTO addOnId pertenece al transporte Bookings.
-- CajaActual.sequenceCounters es OBJECT; ticketSequence no existe. ControlOperativo.ownerToken, retryAfter y nextRetryAt no existen.
+- CajaActual: operationDate DATE, openingAmount NUMBER, sequenceCounters OBJECT; Bizum presencial se acumula en otherAmount. operationDateHour, bizumAmount y los cuatro opening*Amount no existen. ControlOperativo.ownerToken, retryAfter y nextRetryAt no existen.
 - Wix Stores Catalog V3 es la autoridad de stock comercial. Los contratos de inventario personalizado permanecen retirados.
 
 ## Criterio de clasificación obligatorio
