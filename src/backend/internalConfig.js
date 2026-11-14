@@ -75,6 +75,7 @@ export const CATALOG_ENTRY_TYPE = Object.freeze({
 export const BUSINESS_COLLECTIONS = Object.freeze({
   CAJA_ACTUAL: "CajaActual",
   CITAS_F2: "CitasF2",
+  DATOS_FISCALES: "DatosFiscales",
   COMPLEMENTOS_CATALOGO: "ComplementosCatalogo",
   CONTROL_OPERATIVO: "ControlOperativo",
   HISTORICO_CIERRES_Z: "HistoricoCierresZ",
@@ -86,10 +87,9 @@ export const BUSINESS_COLLECTIONS = Object.freeze({
   SERVICIOS_CATALOGO: "ServiciosCatalogo",
 });
 
-// DatosFiscales exists in the current site but remains outside the canonical business-collection group until its fiscal writer contract is aligned. It is included in the owner-authorized isolated-site mutation scope; fiscal writers remain fail-closed.
+// All project-owned collections in the isolated site are explicitly in scope for the temporary owner-authorized mutation window.
 export const ISOLATED_SITE_MUTABLE_COLLECTIONS = Object.freeze([
   ...Object.values(BUSINESS_COLLECTIONS),
-  "DatosFiscales",
 ]);
 
 // Operational lock and idempotency state is centralized in ControlOperativo.
@@ -132,7 +132,6 @@ export const FORBIDDEN_COLLECTIONS = Object.freeze([
 ]);
 
 export const RECORD_TYPE = Object.freeze({
-  STAFF: "STAFF",
   GESTORIA: "GESTORIA",
   TERCERO: "TERCERO",
   CONFIG_SISTEMA: "CONFIG_SISTEMA",
@@ -528,6 +527,7 @@ export const DATA_ACCESS_WRITE_POLICY = Object.freeze({
     BUSINESS_COLLECTIONS.CONTROL_OPERATIVO,
     BUSINESS_COLLECTIONS.CITAS_F2,
     BUSINESS_COLLECTIONS.MAPA_STAFF,
+    BUSINESS_COLLECTIONS.DATOS_FISCALES,
     BUSINESS_COLLECTIONS.REGISTROS_HORARIOS_STAFF,
     BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA,
     BUSINESS_COLLECTIONS.HISTORICO_CIERRES_Z,
