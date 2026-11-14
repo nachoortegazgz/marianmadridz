@@ -128,14 +128,8 @@ function _accountantSendDisabledResult(traceId) {
   };
 }
 
-// Marcadores canonicos para identificar un item dedicado a gestor.
-const GESTORIA_RECORD_TYPE_MARKERS = Object.freeze([
-  "GESTOR",
-  "GESTORIA",
-  "GESTOR_FISCAL",
-  "GESTOR-FISCAL",
-  "ACCOUNTANT",
-]);
+// Canonical physical recordType value declared by DatosFiscales.
+const GESTORIA_RECORD_TYPE_MARKERS = Object.freeze(["GESTORIA"]);
 
 // =============================================================================
 // BLOQUE 1 - HELPERS GENERALES
