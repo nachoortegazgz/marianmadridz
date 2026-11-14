@@ -317,6 +317,10 @@ test('HOOK-MAPASTAFF-01 validates only native staff mapping fields', () => {
     () => H.MapaStaff_beforeInsert({ ...staff, active: 'true' }),
     /active must be BOOLEAN/
   );
+  assert.throws(
+    () => H.MapaStaff_beforeInsert({ ...staff, sortOrder: '1' }),
+    /sortOrder must be a non-negative NUMBER/
+  );
 });
 
 test('HOOK-DATOS-FISCALES-01 validates fiscal third parties against physical fields', () => {
@@ -340,6 +344,10 @@ test('HOOK-DATOS-FISCALES-01 validates fiscal third parties against physical fie
   assert.throws(
     () => H.DatosFiscales_beforeInsert({ ...thirdParty, active: 'true' }),
     /active must be BOOLEAN/
+  );
+  assert.throws(
+    () => H.DatosFiscales_beforeInsert({ ...thirdParty, gestorNombre: 'Gestoría antigua' }),
+    /gestorNombre/
   );
 });
 
