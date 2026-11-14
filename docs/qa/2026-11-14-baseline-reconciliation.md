@@ -58,7 +58,7 @@ Fuente: `DICCIONARIO_DATOS_CMS.md`, generado desde Wix Data Collections API en e
 - Wix Stores Catalog V3 es la autoridad operativa del catálogo/stock comercial.
 - La capa de inventario personalizado está retirada por decisión documentada en el ADR de inventario nativo. No se reactivan writers ni exports de inventario personalizados.
 - Capa 3 (SharePoint / Power Automate) continúa como diseño documental; su operación end-to-end no está certificada.
-- El documento de necesidades y las directrices aportados en esta conversación no se encuentran como archivos versionados en la raíz de `main`; su incorporación y reconciliación editorial quedan pendientes.
+- El documento `NECESIDADES WEB MARIAN.txt` aportado en esta conversación no está versionado en Git; su matriz de requisitos debe reconciliarse antes de tratar sus estados declarados como aceptación. Las directrices originales tampoco estaban versionadas; se ha creado `docs/engineering/DEVELOPMENT-STANDARDS.md` como versión consolidada y vigente basada en ese estándar.
 
 ## Criterios de cierre de esta tanda
 
