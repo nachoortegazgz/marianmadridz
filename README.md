@@ -1,23 +1,23 @@
 # Marian Madrid — Wix Editor Classic + Velo
 
-Repositorio canónico del sitio https://www.marianmadrid.es/.
+Repositorio técnico del sitio Marian Madrid.
 
-**Referencia única de contexto y directrices:** [PROJECT_BASELINE.md](PROJECT_BASELINE.md). Consultar ese documento antes de cualquier intervención técnica.
+**Sitio objeto de auditoría:** `50b39f33-e753-4331-ab35-b2ed43dc97f7`  
+**Naturaleza:** banco de pruebas aislado, sin actividad real, según declaración del propietario.  
+**Plataforma:** Wix Editor Classic + Velo.  
+**Código versionado:** rama `main`; el repositorio no demuestra por sí solo qué código está sincronizado en el Editor Wix.
 
 ## Referencias técnicas
-- [Estado actual](ESTADO_ACTUAL_PROYECTO.md) — snapshot operativo conciso.
-- [Diccionario CMS](DICCIONARIO_DATOS_CMS.md) — inventario y esquema live del corte 2026-11-14.
-- [Dossier técnico](DOSSIER%20T%C3%89CNICO%20CONSOLIDADO.md) — detalle de arquitectura y contratos.
-- [Flujos Capa 3](DOSSIER%20FLUJOS%20END%20TO%20END%20CAPA%203.md) — diseño documental, no certificación operativa.
-- [Compatibilidad Wix](docs/qa/2026-11-14-wix-platform-compatibility.md).
-- [Reconciliación Git/CI/CMS](docs/qa/2026-11-14-baseline-reconciliation.md).
+
+- [Base maestra del proyecto](PROJECT_BASELINE.md)
+- [Estado actual](ESTADO_ACTUAL_PROYECTO.md)
+- [Diccionario CMS](DICCIONARIO_DATOS_CMS.md)
+- [Auditoría del esquema live del sitio actual](docs/audits/2026-11-14-current-site-cms-normalization.md)
 
 ## Estado crítico
-- Plataforma confirmada: **Wix Editor Classic + Velo**.
-- Git `main` verificado en el corte: `ee2a2f8aee6a00cbe3733b4b8d6325a6cb54bb51`.
-- La sincronización del código Velo Editor ↔ GitHub no está verificada.
-- `QA_RECORD_MUTATIONS_ENABLED=true`: QA solamente; bloquea publicación en producción.
-- No hay release Wix vinculado a SHA ni certificación E2E runtime.
-- No publicar ni desplegar sin autorización expresa y cumplimiento de los gates de [PROJECT_BASELINE.md](PROJECT_BASELINE.md).
 
-Los informes históricos y PRs permanecen como trazabilidad en Git; no son instrucciones vigentes salvo que la base maestra los cite expresamente.
+- CMS live: 23 colecciones (15 propias y 8 administradas por Wix Apps); 524 campos físicos en las colecciones propias.
+- Los registros del sitio deben tratarse como datos sintéticos/de prueba; no acreditan actividad comercial, fiscal ni laboral real.
+- Las mutaciones de registros propios están habilitadas por autorización expresa del propietario mediante `ISOLATED_SITE_RECORD_MUTATIONS_ENABLED=true`; se mantienen RBAC, permisos, validaciones, allowlists y exclusión de colecciones Wix Apps.
+- No hay evidencia de sincronización íntegra Editor ↔ Git ni de release Wix vinculado a SHA.
+- No publicar ni conectar procesos reales sin autorización expresa y revisión de los gates descritos en [PROJECT_BASELINE.md](PROJECT_BASELINE.md).
