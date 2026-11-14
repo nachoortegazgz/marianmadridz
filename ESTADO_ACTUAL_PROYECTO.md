@@ -6,6 +6,10 @@
 **Plataforma:** Wix Editor Classic + Velo.  
 **Repositorio:** `nachoortegazgz/marianmadridz`.
 
+## Trabajo QA TPV — 2026-11-14
+
+Se ha incorporado un simulador TPV sintético puro, sin persistencia ni llamadas externas, con validación de líneas, desglose de medios, pendientes, céntimos e idempotencia. La suite se incluye en Layer 1. La auditoría `docs/audits/2026-11-14-tpv-contract-gap-audit.md` documenta que el writer real aún no acepta todos los medios de negocio, no concilia `OTROS` en proyección/cierre y mantiene bloqueadas las escrituras fiscales. No se ha habilitado el writer real. CI del cambio TPV pendiente en el corte actual.
+
 ## Addendum operativo QA — 2026-11-14
 
 **Decisión del propietario:** el Site ID `50b39f33-e753-4331-ab35-b2ed43dc97f7` se utilizará como entorno QA del proyecto con datos sintéticos y pagos simulados. El Site ID productivo `188bed94-177c-4bc9-a9f0-35080d874f3e` queda expresamente fuera de las pruebas.
