@@ -62,4 +62,13 @@ La firma HMAC v1 cubre los campos canónicos nuevos y el campo `registeredBy` re
 
 ## Validación
 
-Pruebas previstas en CI: writer contable offline (partida doble, replay, cadena, concurrencia e integridad), hooks CMS de fichaje y contratos fail-closed. El resultado de CI se documentará cuando finalice; hasta entonces no se declara validado.
+**Resultado CI verificado (2026-11-15, run 1310): PASS.** Layer 1: 24 suites / 307 tests; Layer 2: 19 suites / 252 tests; regresión completa: 70 suites / 644 tests, 0 fallos. Contratos SDK Wix, ESLint y Secret scanning también PASS. La ejecución cubre mocks/offline y contratos; no equivale a persistencia runtime en Wix.
+
+
+## Estado de integración
+
+- PR #388 integrada en `main` mediante squash commit `beeb3ed0e28533cdaf10aa5858e36f4bc713480c`.
+- La integración actualiza contratos de writer/validación, no habilita escrituras de negocio.
+- `ACCOUNTING_LEDGER_WRITES_ENABLED=false`, `STAFF_CLOCKING_CONFIG.WRITES_ENABLED=false` y `ADJUSTMENTS_ENABLED=false` permanecen cerrados.
+- No se ejecutaron escrituras CMS, pruebas runtime, pagos, comunicaciones ni despliegues.
+- Pendiente: pruebas Wix Local Editor y runtime aislado cuando se haya demostrado que las automatizaciones activas no pueden producir efectos externos.
