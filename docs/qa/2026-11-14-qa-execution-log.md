@@ -113,3 +113,23 @@ Cada nueva ejecución añadirá un identificador único y conservará SHA, tipo 
 - Se identificaron acciones activas de email y notificación. No se modificó ninguna automatización ni se intentó sortear locks.
 - Resultado de aislamiento: BLOCKED_EXTERNAL_SIDE_EFFECTS. No ejecutar Runtime/E2E que dispare estos triggers hasta neutralización soportada y relectura de verificación.
 - Evidencia detallada: docs/audits/2026-11-14-qa-automations-isolation.md.
+
+
+## QA-CI-20261114-381 — diagnóstico de regresión integrado
+
+- PR #381 integrada en main mediante merge commit 1c4f9c3322f323bc32012c8c042eb2c47aaaed44.
+- Workflow run 43627893841: completed / success.
+- Job Layer 1 and 2 QA, offline regression, SDK contract and lint: success.
+- Layer 1 focused gate: PASS; Layer 2 focused gate: PASS; complete offline regression: PASS; Wix SDK contracts (Cart V2, Order Transactions, Bookings Reader V2): PASS; ESLint: PASS.
+- El paso de diagnóstico individual quedó preparado para ejecutar también qa.manager-email-sink.mock.test.mjs cuando falle una suite.
+- PR #380 (auditoría documental de aislamiento) también quedó integrada; sus workflows Secret scanning y Backend offline quality gates finalizaron success.
+- No hubo cambios ni despliegue en Wix Runtime, CMS, automatizaciones o datos del sitio.
+
+## QA-AUTOMATIONS-20261114-002 — revalidación read-only y regla oficial de bloqueo
+
+- Repetida Query Automations V2 en el Site ID QA, con paginación completa: 150 automatizaciones, 10 ACTIVE y 140 INACTIVE; sin páginas pendientes.
+- Se confirmó que el estado está en configuration.status (no en status de primer nivel).
+- Las mismas 10 automatizaciones activas son PREINSTALLED y todas conservan readonly=true o disableStatusChange=true.
+- La documentación oficial Wix Automations Activation Status indica expresamente detenerse ante cualquiera de esos locks y no ejecutar PATCH de desactivación.
+- No se intentó ninguna mutación ni se modificó ninguna automatización.
+- Estado: BLOCKED_EXTERNAL_SIDE_EFFECTS; únicamente offline/mock y read-only.
