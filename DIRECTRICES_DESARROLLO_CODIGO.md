@@ -1,3 +1,7 @@
+> **SSOT de entorno vigente (2026-11-14):** el único sitio del proyecto es QA: `188bed94-177c-4bc9-a9f0-35080d874f3e` (`https://www.marianmadrid.es/`). El propietario confirma que nunca ha tenido actividad real, que todos los datos son sintéticos, que el cliente de pruebas es Nacho Pitt (`nachoortegazgz@gmail.com`) y que la pasarela está desconectada. No existe otro sitio QA ni un QA externo designado. Las referencias anteriores a otros Site ID o a este sitio como producción quedan supersedidas. El estado Wix Published no altera su clasificación funcional como QA. Véase [SSOT del entorno QA](docs/qa/QA-ENVIRONMENT-SSOT.md).
+
+---
+
 # Directrices de desarrollo, auditoría y QA — Marian Madrid
 
 **Estado:** estándar raíz del proyecto.  
@@ -28,16 +32,14 @@
 
 ## Seguridad QA
 
-- Site ID QA autorizado: `50b39f33-e753-4331-ab35-b2ed43dc97f7`, según decisión del propietario y baseline documental.
-- Site ID producción: `188bed94-177c-4bc9-a9f0-35080d874f3e`; no usarlo como fallback de QA.
+- Site ID QA único autorizado: `188bed94-177c-4bc9-a9f0-35080d874f3e` — `https://www.marianmadrid.es/`, por decisión expresa del propietario.
+- El sitio se creó exclusivamente para QA previo al despliegue real; nunca ha tenido actividad real y todos los datos son sintéticos.
+- Cliente sintético de prueba: Nacho Pitt (`nachoortegazgz@gmail.com`). Pasarela desconectada.
+- No existe otro sitio QA ni QA externo designado. Las designaciones anteriores quedan supersedidas.
+- El estado Wix Published es metadato técnico; no altera la clasificación funcional QA.
 - Backend valida identidad de sitio, entorno y allowlists antes de operar. Configuración ausente o contradictoria => fail-closed.
 - No confiar en una constante de frontend, query param, cookie o selector UI para definir TEST.
 - Datos sintéticos exclusivamente; no copiar PII, credenciales, clientes, pedidos, reservas ni datos fiscales reales.
-- Pagos se simulan mediante adaptadores locales/offline sin llamadas a proveedores. MOCK no equivale a SANDBOX ni a pago confirmado.
-- Email, SMS, WhatsApp, gestoría, SharePoint, Power Automate, AEAT y Veri*Factu se sustituyen por sinks/mocks sin entrega.
-- Ninguna prueba debe producir cargos, facturas reales, tickets a clientes, cambios de stock real o comunicaciones externas.
-- Los ledgers fiscales, contables, laborales y de caja append-only son inmutables también en QA; las correcciones se registran mediante nuevos asientos/movimientos rectificativos trazables. No se suspende esta garantía para facilitar pruebas.
-- No borrar ni reiniciar datos sin identificar el entorno, allowlist, alcance y plan de recuperación.
 
 ## Desarrollo y cambios
 

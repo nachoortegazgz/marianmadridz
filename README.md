@@ -1,15 +1,18 @@
+> **SSOT de entorno vigente (2026-11-14):** el único sitio del proyecto es QA: `188bed94-177c-4bc9-a9f0-35080d874f3e` (`https://www.marianmadrid.es/`). El propietario confirma que nunca ha tenido actividad real, que todos los datos son sintéticos, que el cliente de pruebas es Nacho Pitt (`nachoortegazgz@gmail.com`) y que la pasarela está desconectada. No existe otro sitio QA ni un QA externo designado. Las referencias anteriores a otros Site ID o a este sitio como producción quedan supersedidas. El estado Wix Published no altera su clasificación funcional como QA. Véase [SSOT del entorno QA](docs/qa/QA-ENVIRONMENT-SSOT.md).
+
+---
+
 # Marian Madrid — Wix Editor Classic + Velo
 
 Repositorio técnico del ecosistema digital Marian Madrid.
 
-**QA objetivo declarado:** `50b39f33-e753-4331-ab35-b2ed43dc97f7`.  
-**Producción identificada:** `188bed94-177c-4bc9-a9f0-35080d874f3e` · [www.marianmadrid.es](https://www.marianmadrid.es/).  
+**Sitio QA único:** `188bed94-177c-4bc9-a9f0-35080d874f3e` · [www.marianmadrid.es](https://www.marianmadrid.es/).
 **Plataforma:** Wix Editor Classic + Velo.  
 **Zona horaria / moneda:** `Europe/Madrid` / EUR.
 
 ## Estado de entorno
 
-Por instrucción expresa del propietario (SSOT), el Site ID `50b39f33-e753-4331-ab35-b2ed43dc97f7` es el destino QA definitivo del proyecto; no se volverá a pedir confirmación ni se usará producción como alternativa. El propietario declara QA despublicado y pasarela desconectada. El inventario CMS de 2026-11-14 documenta 23 colecciones (15 propias y 8 Wix Apps). El conector Wix de esta sesión no resuelve el ID QA y solo enumera producción; es una limitación de acceso de la herramienta, no una duda sobre el destino autorizado. El aislamiento runtime sigue pendiente de evidencia directa. **No ejecutar E2E de negocio sobre producción.**
+Por instrucción expresa del propietario, `188bed94-177c-4bc9-a9f0-35080d874f3e` es el único sitio QA del proyecto. Fue creado para pruebas previas al despliegue real, nunca ha tenido actividad real y todos sus datos son sintéticos. Cliente de prueba: Nacho Pitt (`nachoortegazgz@gmail.com`). La pasarela está desconectada. No existe otro sitio QA ni un QA externo designado. El estado Wix Published es un metadato técnico y no cambia esta clasificación.
 
 Mientras se resuelve el acceso QA, continuar únicamente con pruebas offline/mock y datos sintéticos. Los mocks de pago no llaman a proveedores ni acreditan transacciones reales. No enviar comunicaciones ni datos a servicios externos.
 

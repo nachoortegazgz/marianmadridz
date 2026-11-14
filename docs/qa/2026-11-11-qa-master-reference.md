@@ -1,4 +1,8 @@
-> **Addendum de vigencia — 2026-11-14:** esta referencia conserva el estado histórico del Site ID productivo `188bed94-177c-4bc9-a9f0-35080d874f3e`. Por decisión posterior del propietario, el destino QA es `50b39f33-e753-4331-ab35-b2ed43dc97f7`; producción no debe utilizarse para pruebas. El conector Wix de la sesión no pudo resolver el Site ID QA, por lo que el aislamiento runtime y E2E siguen pendientes. Para la decisión y plan actuales, prevalecen [PLAN_ACCION_QA.md](../../PLAN_ACCION_QA.md), [PROJECT_BASELINE.md](../../PROJECT_BASELINE.md) y [ESTADO_ACTUAL_PROYECTO.md](../../ESTADO_ACTUAL_PROYECTO.md).
+> **SSOT de entorno vigente (2026-11-14):** el único sitio del proyecto es QA: `188bed94-177c-4bc9-a9f0-35080d874f3e` (`https://www.marianmadrid.es/`). El propietario confirma que nunca ha tenido actividad real, que todos los datos son sintéticos, que el cliente de pruebas es Nacho Pitt (`nachoortegazgz@gmail.com`) y que la pasarela está desconectada. No existe otro sitio QA ni un QA externo designado. Las referencias anteriores a otros Site ID o a este sitio como producción quedan supersedidas. El estado Wix Published no altera su clasificación funcional como QA. Véase [SSOT del entorno QA](./QA-ENVIRONMENT-SSOT.md).
+
+---
+
+> **Estado vigente — 2026-11-14:** esta referencia conserva información histórica. El único sitio QA es `188bed94-177c-4bc9-a9f0-35080d874f3e`; el propietario confirma ausencia total de actividad real, datos sintéticos y pasarela desconectada. Las propuestas históricas de crear un QA separado quedan supersedidas. Prevalece [SSOT del entorno QA](./QA-ENVIRONMENT-SSOT.md).
 
 ---
 
@@ -13,11 +17,11 @@
 
 ## 1. Decisión ejecutiva
 
-**El sitio Wix está actualmente Published. No está acreditado como entorno QA aislado.** La consulta live de contexto Wix devuelve Published, Wix Editor, Velo habilitado, zona horaria `Europe/Madrid`, moneda EUR, Bookings instalado, Stores Catalog V3, Invoices V1, Members Area, Gift Cards, Blog y Forms & Payments.
+**El sitio Wix `188bed94-177c-4bc9-a9f0-35080d874f3e` es el único entorno QA del proyecto.** GetSiteContext devuelve Published, Wix Editor, Velo habilitado, zona horaria `Europe/Madrid`, moneda EUR, Bookings, Stores Catalog V3, Invoices V1, Members Area, Gift Cards, Blog y Forms & Payments. El propietario confirma que nunca ha tenido actividad real, que los datos son sintéticos y que la pasarela está desconectada.
 
-Por tanto, el dominio público no puede utilizarse para pruebas que creen reservas, pedidos, pagos, reembolsos, contactos o comunicaciones hasta que exista aislamiento demostrable. El hecho de que el repositorio se utilice para QA no convierte automáticamente el sitio Wix publicado en QA.
+El estado Published describe la publicación técnica del sitio, no actividad comercial real. Las pruebas con efectos externos reales permanecen prohibidas; usar mocks/sinks offline.
 
-**Recomendación preferente:** mantener `www.marianmadrid.es` intacto y crear un sitio Wix QA separado, sin dominio público ni audiencia de clientes, con configuración y credenciales independientes. La búsqueda de sitios Wix por nombre “Marian” devolvió un único sitio: el Published actual; no existe otro QA separado identificado. La duplicación oficial no copia contactos/miembros, pedidos/facturas, campañas ni triggered emails, secretos Velo ni configuración de apps de terceros; la copia queda sin dominio ni capacidades Premium y algunas apps Premium aparecen sin activar. **La documentación consultada no confirma si la duplicación copia los registros de colecciones CMS personalizadas.** Dado que existen ledgers append-only que no pueden borrarse, no duplicar el sitio hasta que Wix confirme ese comportamiento o se opte por crear un sitio QA vacío y reconstruir solo esquema/código/datos sintéticos. Tampoco está documentado que todas las definiciones/estados de Automations se omitan: habrá que reconsultarlas antes de permitir cualquier trigger. No copiar datos personales ni ledgers de producción. Si se pretende convertir el sitio actual en QA, primero debe autorizarse expresamente su despublicación y aceptarse el impacto sobre clientes y operativa. Esta referencia no realiza ninguna de esas acciones.
+**Criterio vigente:** `188bed94-177c-4bc9-a9f0-35080d874f3e` es el único entorno QA. No se creará ni designará un sitio Wix QA separado. El estado Published y el dominio personalizado son metadatos técnicos que no cambian la clasificación funcional. Toda prueba con efectos externos utilizará mocks/sinks offline sin I/O real.
 
 ## 2. Autoridad documental y cómo resolver contradicciones
 
@@ -69,7 +73,7 @@ La instalación de una app no demuestra que una función esté configurada, habi
 - Dos notificaciones internas de Bookings siguen ACTIVE: “Notify me when someone books one of my services” y “Notify me when I need to review a booking request”. Sus acciones son notificaciones de plataforma (`ping_platform-send_a_notification`), no WhatsApp ni email al cliente.
 - No se ejecutó ningún trigger ni se envió email, WhatsApp o SMS. Esta reauditoría no modificó configuraciones.
 
-**Consecuencia:** el sitio Published no está aislado para QA. Ocho acciones email pueden dirigirse a clientes reales si se disparan sus triggers. Las dos acciones SITE_OWNER también pueden enviar a un buzón real no validado como sink. No ejecutar eventos que alcancen estos flujos.
+**Consecuencia vigente:** el sitio es QA, pero el estado de las automatizaciones requiere verificación específica. Ocho acciones email identificadas en la auditoría histórica podrían dirigirse al contacto que dispare el trigger y dos acciones SITE_OWNER podrían enviar a un buzón no validado como sink. Aunque el propietario confirma que nunca ha existido actividad real, no ejecutar esos triggers hasta sustituirlos por sinks offline y comprobar la configuración actual.
 
 Automatizaciones email que permanecen activas:
 - Notify customer when you save their card details.
@@ -115,7 +119,7 @@ No se autoriza por esta referencia ningún envío real. Mantener bloqueado el de
 - Email y teléfono de contacto son datos potencialmente entregables: no incluirlos en Git, logs, capturas públicas ni fixtures de CI.
 - Para CI/offline, usar identificadores y direcciones reservadas `.example.test`, sin teléfono enrutable y sin datos personales reales.
 - En un sitio QA aislado, crear un único miembro/contacto sintético con datos de destino controlados y sin consentimiento de marketing por defecto.
-- No crear ni modificar el contacto en el sitio Published actual.
+- No crear ni modificar contactos reales ni disparar triggers de comunicaciones; utilizar fixtures sintéticos y sinks offline.
 - No asociar el cliente sintético a datos reales, reservas reales, pagos, documentos fiscales o históricos.
 
 El cliente QA debe poder identificarse inequívocamente como sintético en cada registro y traza; los datos de QA no deben confundirse con actividad económica real.
@@ -152,12 +156,12 @@ El test debe verificar: importe y moneda autoritativos; identidad del pedido; re
 | Agente | Modo QA permitido | Evidencia exigida |
 |---|---|---|
 | Wix Payments / PSP | Mock offline o sandbox oficial independiente | Contrato oficial, modo test confirmado, IDs de transacción de prueba y ausencia de cargos reales |
-| Wix Bookings | Fixture offline; runtime solo en sitio QA separado | IDs sintéticos, reserva nativa y proyección reconciliadas |
+| Wix Bookings | Fixture offline; runtime solo en el sitio QA único con los gates específicos | IDs sintéticos, reserva nativa y proyección reconciliadas |
 | Wix Stores/eCommerce | Mock offline; sandbox si está disponible y separado | Pedido, líneas, total, pago, stock y refund reconciliados |
 | Email/Resend | Sink/mock sin entrega; envío manual solo a inbox controlado | Recipient allowlist, plantilla/versionado, traceId y evidencia de no entrega a terceros |
 | WhatsApp/SMS | Mock de transporte; no usar acción deprecated ni canal sustitutivo | Integración oficialmente soportada, destino QA verificable y prueba de no envío a terceros |
 | CRM/Forms/Members | Fixtures; runtime solo con contacto sintético aislado | Consentimiento, minimización, ownership y routing |
-| M365/Power Automate/SharePoint | Mock de export; tenant QA separado | Conexiones, DLP, permisos, idempotencia y archivo de prueba |
+| M365/Power Automate/SharePoint | Mock de export; tenant de pruebas con conexiones mock/offline | Conexiones, DLP, permisos, idempotencia y archivo de prueba |
 
 ## 7. Estado de Capa 3 — M365 / SharePoint
 
@@ -219,7 +223,7 @@ SharePoint será exclusivamente repositorio de evidencia. Nunca modificará ni g
 |---|---|---|
 | P0 | Sitio Wix publicado, no aislado | Bloquea E2E que genere eventos |
 | P0 | Nueve automatizaciones email no pausables en última auditoría | Bloquea triggers con posible envío |
-| P0 | Nueve automatizaciones email siguen activas y ocho pueden dirigirse al contacto que dispara el trigger | Bloquea cualquier evento que alcance esos flujos en el sitio Published |
+| P0 | Nueve automatizaciones email siguen activas y ocho pueden dirigirse al contacto que dispara el trigger | Bloquea cualquier evento que pueda alcanzar esos flujos de comunicación hasta verificar los sinks offline |
 | P0 | Sandbox de pagos no acreditado; Wix test order no es un sandbox PSP | Solo mock offline; test order manual solo para Stores/Restaurants, nunca para Bookings ni con un método de pago real |
 | P0 | CMS productivo y ledgers append-only | No insertar ni modificar datos de negocio para QA |
 | P1 | WhatsApp QA no configurado; acción nativa no soportada para reconfigurar destinatario | Solo mock hasta integración oficial |
@@ -232,7 +236,7 @@ SharePoint será exclusivamente repositorio de evidencia. Nunca modificará ni g
 - **Verificado históricamente:** auditoría de Automations del 2026-11-11 confirma 67 pausas, cuatro WhatsApp inactivas y nueve emails activos bloqueados por Wix.
 - **Verificado en tests offline:** escenario mock de evento Wix Payments descrito en `QA-SIMULATION-2026-11.md`.
 - **Declarado:** Nacho Pitt como identidad sintética QA.
-- **No verificado:** sandbox PSP; configuración y automatizaciones de una futura copia QA; envío real de email/WhatsApp; creación de contacto en un sitio QA separado; runtime E2E.
+- **No verificado:** sandbox PSP; configuración y automatizaciones del sitio QA vigente; envío real de email/WhatsApp; creación de contacto sintético en el sitio QA único; runtime E2E.
 - **No ejecutado en esta actualización:** duplicación de sitio, escrituras CMS, publicación/despublicación, cambio de automatizaciones, reserva, pedido, pago, refund, email, SMS, WhatsApp, SharePoint o despliegue.
 
 ## 11. Documentos de referencia

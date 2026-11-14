@@ -1,3 +1,7 @@
+> **SSOT de entorno vigente (2026-11-14):** el único sitio del proyecto es QA: `188bed94-177c-4bc9-a9f0-35080d874f3e` (`https://www.marianmadrid.es/`). El propietario confirma que nunca ha tenido actividad real, que todos los datos son sintéticos, que el cliente de pruebas es Nacho Pitt (`nachoortegazgz@gmail.com`) y que la pasarela está desconectada. No existe otro sitio QA ni un QA externo designado. Las referencias anteriores a otros Site ID o a este sitio como producción quedan supersedidas. El estado Wix Published no altera su clasificación funcional como QA. Véase [SSOT del entorno QA](docs/qa/QA-ENVIRONMENT-SSOT.md).
+
+---
+
 # Estado actual del proyecto — Marian Madrid
 
 ## Hito técnico — corrección de deployment backend (2026-11-14)
@@ -9,12 +13,12 @@
 - CI sobre el HEAD de PR #374 (`da96c1b50f1910a287aea718bc6025d295e30e2b`): Layer 1 **24 suites / 307 tests PASS**; Layer 2 **19 suites / 252 tests PASS**; regresión completa **70 suites / 644 tests PASS**; Cart V2, Order Transactions y Bookings Reader V2 PASS; ESLint PASS; Gitleaks full-history PASS. CI del merge commit `1de381ecb6495e17a3eae5b75b43e8493166988a` también PASS (Layer 1 24/307; Layer 2 19/252; regresión 70/644; SDK, ESLint y Gitleaks PASS).
 - La corrección restaura `assertMapaStaffRecord`, mantiene `thirdPartyId` como TEXT opaco y corrige la regla de `CONFIG_SISTEMA.thirdPartyType = null`.
 - PR #374 integrada en `main` mediante merge `1de381ecb6495e17a3eae5b75b43e8493166988a`.
-- **Wix Runtime/E2E:** BLOCKED_ENVIRONMENT confirmado el 2026-11-14: `GetSiteContext(50b39f33-e753-4331-ab35-b2ed43dc97f7)` devolvió “No site context found”; `ListWixSites(limit=50)` devolvió solo `Marian Madrid Peluquería y Estética` (`188bed94-177c-4bc9-a9f0-35080d874f3e`, producción) y `ortega nacho cv web` (`e54e4214-efc1-4bc9-bfbf-cede68ccaa1d`). El Site ID QA designado no aparece en la lista. No se usó producción ni otro sitio como sustituto; no se publicó ni se ejecutaron escrituras CMS.
+- **Entorno QA:** el único sitio es `188bed94-177c-4bc9-a9f0-35080d874f3e` (`https://www.marianmadrid.es/`). Wix GetSiteContext confirma que está Published, con dominio personalizado, Editor y Velo. El propietario confirma que fue creado para QA, nunca ha tenido actividad real y todos sus datos son sintéticos. Runtime/E2E con efectos externos no se ha ejecutado ni se declara validado.
 - **Discrepancia documental pendiente:** el diccionario CMS contiene un addendum de consolidación fiscal de MapaStaff (42 campos), mientras que el baseline y el código activo describen el contrato separado MapaStaff/DatosFiscales. No desplegar ni migrar ese contrato hasta reconciliar evidencia live, rama de implementación y retirada de DatosFiscales.
 
 
 **Fecha de corte:** 2026-11-14  
-**Sitio objeto de trabajo:** 50b39f33-e753-4331-ab35-b2ed43dc97f7  
+**Sitio objeto de trabajo:** 188bed94-177c-4bc9-a9f0-35080d874f3e
 **Naturaleza:** banco de pruebas aislado, sin actividad real, según declaración expresa del propietario.  
 **Plataforma:** Wix Editor Classic + Velo.  
 **Repositorio:** `nachoortegazgz/marianmadridz`.
@@ -25,9 +29,9 @@ Se ha incorporado un simulador TPV sintético puro, sin persistencia ni llamadas
 
 ## Addendum operativo QA — 2026-11-14
 
-**Decisión del propietario:** el Site ID `50b39f33-e753-4331-ab35-b2ed43dc97f7` se utilizará como entorno QA del proyecto con datos sintéticos y pagos simulados. El Site ID productivo `188bed94-177c-4bc9-a9f0-35080d874f3e` queda expresamente fuera de las pruebas.
+**Decisión del propietario:** el Site ID `188bed94-177c-4bc9-a9f0-35080d874f3e` es el único entorno QA del proyecto. No existe otro sitio QA ni un QA externo designado. El cliente sintético canónico es Nacho Pitt (`nachoortegazgz@gmail.com`) y la pasarela está desconectada.
 
-**Estado técnico:** el inventario CMS QA está documentado en `docs/audits/2026-11-14-current-site-cms-normalization.md` (23 colecciones: 15 NATIVE y 8 WIX_APP). La conexión Wix disponible en esta sesión no pudo resolver el ID QA y solo identificó producción. Esto no cuestiona la decisión SSOT del propietario ni cambia el destino de trabajo; representa una limitación técnica del conector. El acceso runtime y el aislamiento de todas las integraciones no están verificados. No se han ejecutado pruebas Wix Runtime/E2E ni se ha usado producción como sustituto.
+**Estado técnico:** existe un inventario CMS histórico en `docs/audits/2026-11-14-current-site-cms-normalization.md`, pero sus 23 colecciones y esquemas no están revalidados contra el sitio QA vigente. Repetir lectura CMS de solo lectura antes de escrituras o migraciones. GetSiteContext confirma el sitio QA y sus metadatos; no certifica aislamiento de todas las integraciones ni validación runtime/E2E. No se han ejecutado pruebas Wix Runtime/E2E.
 
 **Trabajo en curso:** auditoría y limpieza de código/documentación, fixtures sintéticos, mocks offline de pagos y comunicaciones, pruebas automatizadas, CI, correcciones en ramas/PR y registro de evidencias. No esperar a resolver el conector para completar H1-H3. El adaptador de pago mock no debe realizar llamadas de red ni equivaler a una operación real.
 

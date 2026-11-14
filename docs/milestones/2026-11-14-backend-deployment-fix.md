@@ -1,3 +1,7 @@
+> **SSOT de entorno vigente (2026-11-14):** el único sitio del proyecto es QA: `188bed94-177c-4bc9-a9f0-35080d874f3e` (`https://www.marianmadrid.es/`). El propietario confirma que nunca ha tenido actividad real, que todos los datos son sintéticos, que el cliente de pruebas es Nacho Pitt (`nachoortegazgz@gmail.com`) y que la pasarela está desconectada. No existe otro sitio QA ni un QA externo designado. Las referencias anteriores a otros Site ID o a este sitio como producción quedan supersedidas. El estado Wix Published no altera su clasificación funcional como QA. Véase [SSOT del entorno QA](./QA-ENVIRONMENT-SSOT.md).
+
+---
+
 # Hito — corrección de errores de deployment backend
 
 **Estado: CERRADO — CI PASS (offline)**
@@ -62,15 +66,14 @@ Correcciones implementadas:
 
 ## Límites y riesgos pendientes
 
-- Wix Runtime/E2E permanece `BLOCKED_ENVIRONMENT`: la conexión no resuelve el Site ID QA en esta sesión.
+- Wix Runtime/E2E no se ejecutó en el corte del hito. El `BLOCKED_ENVIRONMENT` por resolución de una designación anterior queda supersedido por la identidad QA confirmada `188bed94-177c-4bc9-a9f0-35080d874f3e`.
 - El diccionario CMS contiene un addendum que describe MapaStaff consolidado (42 campos), mientras que el baseline y el código activo mantienen el contrato separado MapaStaff/DatosFiscales. No se infiere cuál está desplegado ni se migra ese contrato con esta corrección.
-- No se han realizado escrituras CMS, pagos, cambios de permisos, publicación ni despliegue. Producción queda fuera del alcance.
+- No se han realizado escrituras CMS, pagos, cambios de permisos, publicación ni despliegue. No se han ejecutado efectos externos reales.
 
 CI offline PASS acredita las pruebas versionadas y los contratos SDK comprobados; no acredita el runtime Wix ni E2E externo.
 
-## Revalidación del entorno QA (2026-11-14)
+## Revalidación del entorno QA — actualización posterior (2026-11-14)
 
-- `GetSiteContext` para el Site ID QA designado `50b39f33-e753-4331-ab35-b2ed43dc97f7` no devuelve contexto.
-- `ListWixSites(limit=50)` devuelve únicamente el sitio de producción Marian Madrid (`188bed94-177c-4bc9-a9f0-35080d874f3e`) y el sitio CV (`e54e4214-efc1-4bc9-bfbf-cede68ccaa1d`). El QA designado no aparece en la cuenta conectada.
-- No se ha usado producción ni el sitio CV como sustituto. No se ha realizado ninguna operación Wix/CMS, publicación ni prueba de pasarela.
-- **Estado final de este hito:** código y documentación integrados en `main`; CI offline PASS. Runtime Wix/E2E permanece `BLOCKED_ENVIRONMENT` hasta que el QA designado sea accesible y su aislamiento se pueda verificar.
+La comprobación de acceso que aparece en el registro anterior se refiere a una designación de entorno que el propietario ha sustituido. La decisión vigente identifica `188bed94-177c-4bc9-a9f0-35080d874f3e` (`https://www.marianmadrid.es/`) como el único sitio QA. El propietario confirma que nunca ha tenido actividad real, que los datos son sintéticos y que la pasarela está desconectada. Wix informa el sitio como Published; este metadato no altera la clasificación funcional QA.
+
+No se realizaron escrituras CMS, pagos, cambios de permisos, publicación ni despliegue durante el hito. CI offline PASS acredita solo las pruebas versionadas y los contratos SDK comprobados; no acredita runtime Wix ni E2E con efectos externos.

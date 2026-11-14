@@ -1,3 +1,7 @@
+> **SSOT de entorno vigente (2026-11-14):** el único sitio del proyecto es QA: `188bed94-177c-4bc9-a9f0-35080d874f3e` (`https://www.marianmadrid.es/`). El propietario confirma que nunca ha tenido actividad real, que todos los datos son sintéticos, que el cliente de pruebas es Nacho Pitt (`nachoortegazgz@gmail.com`) y que la pasarela está desconectada. No existe otro sitio QA ni un QA externo designado. Las referencias anteriores a otros Site ID o a este sitio como producción quedan supersedidas. El estado Wix Published no altera su clasificación funcional como QA. Véase [SSOT del entorno QA](qa/QA-ENVIRONMENT-SSOT.md).
+
+---
+
 # Registro de decisiones — Marian Madrid
 
 ## Hito técnico — corrección de deployment backend (2026-11-14)
@@ -9,13 +13,13 @@
 - CI sobre el HEAD de PR #374 (`da96c1b50f1910a287aea718bc6025d295e30e2b`): Layer 1 **24 suites / 307 tests PASS**; Layer 2 **19 suites / 252 tests PASS**; regresión completa **70 suites / 644 tests PASS**; Cart V2, Order Transactions y Bookings Reader V2 PASS; ESLint PASS; Gitleaks full-history PASS. CI del merge commit `1de381ecb6495e17a3eae5b75b43e8493166988a` también PASS (Layer 1 24/307; Layer 2 19/252; regresión 70/644; SDK, ESLint y Gitleaks PASS).
 - La corrección restaura `assertMapaStaffRecord`, mantiene `thirdPartyId` como TEXT opaco y corrige la regla de `CONFIG_SISTEMA.thirdPartyType = null`.
 - PR #374 integrada en `main` mediante merge `1de381ecb6495e17a3eae5b75b43e8493166988a`.
-- **Wix Runtime/E2E:** BLOCKED_ENVIRONMENT confirmado por `GetSiteContext` sin resultado para el QA ID designado y `ListWixSites` mostrando únicamente producción y otro sitio no designado. Se prohíbe sustituir QA por producción o por un sitio distinto sin decisión explícita y verificación de aislamiento.
+- **Wix Runtime/E2E:** la comprobación de acceso fallida registrada en este corte es histórica y queda supersedida. La consulta posterior GetSiteContext confirma el único sitio QA `188bed94-177c-4bc9-a9f0-35080d874f3e` como Published con dominio personalizado.
 - **Discrepancia documental pendiente:** el diccionario CMS contiene un addendum de consolidación fiscal de MapaStaff (42 campos), mientras que el baseline y el código activo describen el contrato separado MapaStaff/DatosFiscales. No desplegar ni migrar ese contrato hasta reconciliar evidencia live, rama de implementación y retirada de DatosFiscales.
 
 
-## Vigencia operativa — sitio aislado actual (2026-11-14)
+## Vigencia operativa — designación histórica supersedida (2026-11-14)
 
-**Sitio único:** 50b39f33-e753-4331-ab35-b2ed43dc97f7. El propietario declara que es un banco de pruebas aislado, sin actividad real. Los registros existentes se consideran sintéticos; no se mantiene una comparación operativa con otro sitio.
+**Sitio que se identificó entonces:** referencia anterior de entorno, supersedida por la decisión QA-2026-11-14-D. La única identidad operativa vigente es `188bed94-177c-4bc9-a9f0-35080d874f3e`.
 
 **Política de mutabilidad vigente (TEC-038):** los bypasses globales de update/remove y la ventana temporal append-only han sido retirados del código. Los ledgers de caja, contabilidad, fiscalidad, jornada, cierres y eventos webhook permanecen inmutables también en QA. Bulk update está deshabilitado. Bulk remove solo admite purgas de tipos efímeros/terminales en ControlOperativo, con condiciones exactas de tipo, estado y fecha; quedan excluidos WEBHOOK_EVENT, DEDUPE_KEY, LEDGER_IDEMPOTENCY y WEBHOOK_CLAIM. CajaActual solo cambia mediante el flujo backend autorizado y con movimiento fuente; no se borra.
 
@@ -351,17 +355,9 @@ La propuesta anterior agrupaba STAFF, TERCERO y GESTORIA en MapaStaff. Queda des
 
 ---
 
-## DECISIÓN QA-2026-11-14 — uso del sitio 50b como QA y ejecución sintética
+## DECISIÓN QA-2026-11-14 — designación inicial de entorno (supersedida)
 
-**Decisión expresa del propietario:** designar `50b39f33-e753-4331-ab35-b2ed43dc97f7` como sitio QA del proyecto. Usar exclusivamente datos sintéticos, simulación offline de pasarela de pagos, pruebas automatizadas, registro de evidencias, corrección e iteración. El sitio productivo `188bed94-177c-4bc9-a9f0-35080d874f3e` no se utilizará para QA ni como fallback.
-
-**Restricciones de ejecución:** no usar clientes/gestoría reales; no enviar emails/SMS/WhatsApp; no realizar cobros, reembolsos, facturas, tickets a clientes, movimientos de stock ni llamadas AEAT/Veri*Factu/SharePoint/Power Automate. Los mocks deben ser locales/offline y sin llamadas de red. Los datos sintéticos deben identificarse con `isSynthetic`, `testRunId`, `sourceEnvironment=TEST` y `realPayment=false` cuando el contrato de la entidad admita esos campos; no añadir campos CMS sin revisar esquema y consumidores.
-
-**Estado de acceso:** la conexión Wix disponible en la sesión no resolvió el Site ID QA; solo identificó producción. Esta discrepancia se registra como `BLOCKED_ENVIRONMENT` para pruebas runtime. No invalida ni detiene la ejecución de pruebas offline/mock y CI.
-
-**Contrato de pagos mixtos:** los documentos de implementación existentes indican que el campo `paymentMethod` es singular y que el modelo de pagos mixtos no está definido. El caso mixto permanece `BLOCKED_CONTRACT` hasta definir y probar el esquema y la reconciliación. No inferir un contrato a partir de la suma de importes.
-
-**Implementación inicial de esta decisión:** documental. La ejecución posterior añade mocks y fixtures sintéticos, retira los bypasses globales y endurece la política de purgas en TEC-038 y QA-SEC-20261114-001. No se han modificado CMS, configuración Wix, automatizaciones, permisos, secretos ni publicación en esta intervención. Ver [PLAN_ACCION_QA.md](../PLAN_ACCION_QA.md).
+Este apartado conserva únicamente el antecedente documental de una designación inicial que ya no está vigente. No identifica el sitio QA actual ni autoriza un segundo entorno. La única identidad operativa es `188bed94-177c-4bc9-a9f0-35080d874f3e`, conforme a QA-2026-11-14-D. La política de datos sintéticos y cero efectos externos se mantiene.
 
 
 ---
@@ -372,6 +368,45 @@ La propuesta anterior agrupaba STAFF, TERCERO y GESTORIA en MapaStaff. Queda des
 
 **Decisión técnica de seguridad:** cerrar la ventana global hasta implementar y verificar una barrera server-side ligada al Site ID QA autorizado. Se retiran del código los bypasses globales ISOLATED_SITE_RECORD_MUTATIONS_ENABLED y APPEND_ONLY_MUTATION_WINDOW; no queda una bandera que permita reabrirlos. Los ledgers de caja, contabilidad, fiscalidad, jornada y cierres permanecen append-only también durante pruebas. Las purgas masivas se restringen a ControlOperativo mediante condiciones exactas de tipo/estado/fecha; WEBHOOK_EVENT, DEDUPE_KEY y LEDGER_IDEMPOTENCY no son purgables. Las correcciones se registran mediante nuevos movimientos/asientos rectificativos trazables. La proyección CajaActual solo puede cambiar a través de su flujo backend autorizado y con movimiento fuente; no se permite borrarla.
 
-**Alcance:** este cambio afecta al código versionado de la rama de trabajo y a sus pruebas. No modifica ni publica el runtime Wix. El contexto Wix de producción continúa indicando Published; el Site ID QA 50b39f33-e753-4331-ab35-b2ed43dc97f7 no se resuelve en la conexión actual. Por tanto, Wix Runtime/E2E sigue bloqueado y no se realizan mutaciones Wix.
+**Alcance:** este cambio afecta al código versionado de la rama de trabajo y a sus pruebas. No modifica ni publica el runtime Wix. El contexto Wix del sitio QA único indica Published. El resultado de resolución anterior queda supersedido por GetSiteContext posterior. No se realizan mutaciones Wix en este hito.
 
 **Verificación pendiente:** ejecutar CI completo sobre el nuevo SHA; revisar todos los consumidores del flag; validar los hooks en Wix Local Editor cuando QA sea accesible. Esta decisión supersede la autorización TEC-037 en cuanto a la habilitación técnica global: TEC-037 se conserva como antecedente histórico, no como permiso operativo actual.
+
+
+---
+
+## DECISIÓN QA-2026-11-14-B — modo desarrollo global y datos exclusivamente sintéticos
+
+**Autoridad:** instrucción expresa del propietario del proyecto, vigente hasta nueva orden. Esta decisión supersede las reglas anteriores únicamente en los puntos de QA que contradigan expresamente su contenido; no autoriza operaciones reales ni publicación.
+
+**Regla operativa vigente:**
+1. Modo desarrollo global hasta nueva orden.
+2. Todos los registros creados o utilizados en QA deben ser sintéticos; no se importan, copian ni reutilizan datos reales.
+3. No se ejecuta actividad real: reservas reales, pedidos, cobros, reembolsos, comunicaciones, movimientos de stock ni operaciones externas.
+4. Los ledgers append-only pueden pausarse durante QA. La implementación inicial será fail-closed: no se habilitan escrituras de ledger por defecto. Pausar escrituras significa no insertar nuevos registros; nunca actualizar, borrar ni sobrescribir registros existentes.
+5. Los bloqueos de preparación fiscal se presentan como warnings no bloqueantes en flujos sintéticos de QA. Esta relajación no alcanza a validaciones estructurales, tipos, autorización, trazabilidad, idempotencia, integridad/hash ni controles de seguridad.
+6. Veri*Factu, generación/envío de registros fiscales y cualquier transmisión a AEAT permanecen desactivados.
+7. Envíos de email/SMS/WhatsApp, notificaciones, pagos/PSP, webhooks con efectos de dominio, SharePoint y Power Automate permanecen desactivados o sustituidos por mocks/sinks offline sin I/O.
+
+**Interpretación técnica obligatoria:** «modo desarrollo global» es una política de comportamiento del sistema, no una autorización para inferir el entorno por nombre de sitio, dominio, frontend o variable controlable por el cliente. La aplicación debe fallar cerrada si no puede demostrar que la ejecución es sintética y no puede alcanzar servicios reales.
+
+**Precedencia y límites:** la pausa de ledger es una excepción operativa temporal de QA respecto a la obligación de producir nuevos asientos, no una excepción a la inmutabilidad de los registros ya persistidos. Los warnings fiscales describen carencias de preparación fiscal; no convierten errores de esquema, integridad, conciliación, seguridad o autorización en resultados aceptables. No se emitirán documentos fiscales ni se transmitirán datos fiscales.
+
+**Estado de implementación al registrar esta decisión:** DOCUMENTAL / PENDIENTE DE IMPLEMENTACIÓN. La revisión de `main` confirma que `FISCAL_RUNTIME_POLICY` mantiene `LEDGER_WRITES_ENABLED=false`, `ACCOUNTING_LEDGER_WRITES_ENABLED=false` y `ALLOW_SIMULATION_RECORDS=false`; `dataAccessPolicy.js` conserva protecciones append-only; `cajas.web.js` consulta el gate de ledger, pero existen writers de Bookings/checkout y handlers de eventos Wix con rutas de efectos independientes. Por tanto, cambiar solo `internalConfig.js` no constituye un kill switch global verificable.
+
+**Gate previo a cualquier despliegue:** inventariar y cubrir con una política central server-side todos los writers CMS, Bookings, eCommerce, eventos, crons, email, fiscalidad e integraciones; pruebas negativas que demuestren que cada ruta rechaza o deriva a mocks sin I/O; ejecución CI completa; alineación de los fixtures offline con el Site ID QA único; comprobación específica de los sinks/mocks y de las rutas que puedan producir efectos externos.
+
+**No autorizado por esta decisión:** desplegar, publicar, activar una pasarela, enviar comunicaciones, emitir/transmitir información fiscal, cambiar permisos/secrets o escribir en Wix CMS. Hasta superar el gate, la ejecución permitida continúa siendo offline/mock.
+
+
+---
+
+## ADDENDUM QA-2026-11-14-C — designación intermedia (supersedida por QA-2026-11-14-D)
+
+Este addendum conserva el registro de una designación intermedia y de la discrepancia que se planteó al consultar Wix. Queda expresamente supersedido: el propietario confirma que el sitio `188bed94-177c-4bc9-a9f0-35080d874f3e` es el único entorno QA, que nunca ha tenido actividad real, que sus datos son sintéticos y que la pasarela está desconectada. No se requiere crear ni designar un sitio QA separado. El estado Wix Published es un metadato técnico, no una clasificación de actividad comercial.
+
+## DECISIÓN QA-2026-11-14-D — sitio QA único vigente
+
+**Decisión expresa del propietario:** el Site ID `188bed94-177c-4bc9-a9f0-35080d874f3e` es el único entorno QA de Marian Madrid y se utiliza para pruebas previas al despliegue real. El sitio nunca ha tenido actividad real; los datos son sintéticos; el cliente sintético designado es Nacho Pitt (`nachoortegazgz@gmail.com`) y la pasarela está desconectada. No existe QA externo ni segundo sitio QA. Esta decisión supersede las designaciones anteriores de entorno y las descripciones de este sitio como producción. El estado Wix Published es un metadato técnico y no cambia la clasificación funcional QA.
+
+**Restricciones:** no cobros, reembolsos, comunicaciones, transmisiones fiscales ni efectos externos reales. Usar mocks/sinks offline. Mantener append-only: una pausa de writers no permite modificar ni borrar registros existentes. La ejecución runtime con efectos potenciales requiere comprobar antes la ruta concreta y mantenerla aislada.

@@ -1,9 +1,13 @@
-> **Addendum de vigencia — 2026-11-14:** la excepción de mutabilidad mencionada en este informe pertenece a un corte histórico. TEC-038 retiró los bypasses globales y mantiene los ledgers append-only también en QA. El propietario designa el Site ID `50b39f33-e753-4331-ab35-b2ed43dc97f7` como QA; la conexión Wix actual no resuelve su contexto. No usar el flag histórico como autorización de mutaciones.
+> **Procedencia de evidencia:** este informe conserva observaciones y snapshots de una revisión anterior. La designación vigente identifica `188bed94-177c-4bc9-a9f0-35080d874f3e` como el único sitio QA, pero no convierte automáticamente los datos CMS, settings o recuentos históricos en evidencia del estado actual de ese sitio. Repetir lecturas de solo lectura en el Site ID vigente antes de cualquier mutación. No existe otro sitio QA ni un QA externo designado.
+
+---
+
+> **Addendum de vigencia — 2026-11-14:** la excepción de mutabilidad mencionada en este informe pertenece a un corte histórico. TEC-038 retiró los bypasses globales y mantiene los ledgers append-only también en QA. La designación de entorno de este corte es histórica y queda supersedida por el único sitio QA vigente `188bed94-177c-4bc9-a9f0-35080d874f3e`. No usar el flag histórico como autorización de mutaciones.
 
 # Retirada de contratos de inventario personalizado — 2026-11-14
 
 **Actualización:** 2026-11-14  
-**Sitio único:** 50b39f33-e753-4331-ab35-b2ed43dc97f7, banco de pruebas aislado sin actividad real.
+**Sitio al que se refiere este corte histórico:** referencia anterior de entorno, supersedida; no es el Site ID QA vigente.
 
 ## Objetivo
 

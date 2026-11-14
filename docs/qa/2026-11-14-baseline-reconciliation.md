@@ -1,10 +1,18 @@
-> **Addendum de vigencia — 2026-11-14:** la política de mutabilidad descrita más abajo es histórica. TEC-038 retiró los bypasses globales; no usar `QA_RECORD_MUTATIONS_ENABLED` como permiso actual. El propietario designa `50b39f33-e753-4331-ab35-b2ed43dc97f7` como QA y declara el sitio despublicado/pasarela desconectada; el conector actual no resuelve ese ID, limitación que no cambia el destino autorizado.
+> **SSOT de entorno vigente (2026-11-14):** el único sitio del proyecto es QA: `188bed94-177c-4bc9-a9f0-35080d874f3e` (`https://www.marianmadrid.es/`). El propietario confirma que nunca ha tenido actividad real, que todos los datos son sintéticos, que el cliente de pruebas es Nacho Pitt (`nachoortegazgz@gmail.com`) y que la pasarela está desconectada. No existe otro sitio QA ni un QA externo designado. Las referencias anteriores a otros Site ID o a este sitio como producción quedan supersedidas. El estado Wix Published no altera su clasificación funcional como QA. Véase [SSOT del entorno QA](./QA-ENVIRONMENT-SSOT.md).
+
+---
+
+> **Procedencia de evidencia:** este informe conserva observaciones y snapshots de una revisión anterior. La designación vigente identifica `188bed94-177c-4bc9-a9f0-35080d874f3e` como el único sitio QA, pero no convierte automáticamente los datos CMS, settings o recuentos históricos en evidencia del estado actual de ese sitio. Repetir lecturas de solo lectura en el Site ID vigente antes de cualquier mutación. No existe otro sitio QA ni un QA externo designado.
+
+---
+
+> **Addendum de vigencia — 2026-11-14:** TEC-038 retiró los bypasses globales; los ledgers permanecen append-only. El único sitio QA es `188bed94-177c-4bc9-a9f0-35080d874f3e`, con datos sintéticos y pasarela desconectada según declaración del propietario. Las designaciones anteriores quedan supersedidas.
 
 # Reconciliación de baseline y recuperación de validadores — 2026-11-14
 
 ## Autoridad y alcance
 
-El único sitio objeto de trabajo es 50b39f33-e753-4331-ab35-b2ed43dc97f7, Wix Editor Classic + Velo. El propietario declara que es un banco de pruebas aislado y que no tiene actividad real. No existe una matriz de comparación con otro sitio para esta intervención.
+El único sitio objeto de trabajo es `188bed94-177c-4bc9-a9f0-35080d874f3e`, Wix Editor Classic + Velo. El propietario confirma que es QA y que nunca ha tenido actividad real; todos los datos son sintéticos.
 
 El código Velo del Editor no queda vinculado a un SHA de Git por la mera lectura de Wix GetSiteContext. La correspondencia Editor↔Git requiere exportación y comparación.
 
@@ -77,4 +85,4 @@ Rama: fix/current-site-cms-contract-alignment.
 
 ## Addendum posterior — decisión de QA del propietario, 2026-11-14
 
-El propietario designa `50b39f33-e753-4331-ab35-b2ed43dc97f7` como entorno QA y ordena continuar pruebas con datos sintéticos y pasarela simulada. El sitio `188bed94-177c-4bc9-a9f0-35080d874f3e` es producción y queda excluido de QA. La conexión Wix de la sesión no resolvió el Site ID QA; por tanto, el bloqueo se limita a Wix Runtime/E2E. Continúan permitidas pruebas offline/mock y CI, sin llamadas a proveedores ni efectos externos. El plan vigente es [PLAN_ACCION_QA.md](../../PLAN_ACCION_QA.md). Este addendum actualiza la recomendación anterior de no duplicar producción: no se está ordenando duplicar ni modificar producción, sino utilizar el Site ID QA ya designado por el propietario, sujeto a resolver su acceso técnico.
+El propietario confirma que `188bed94-177c-4bc9-a9f0-35080d874f3e` es el único entorno QA, con datos sintéticos y pasarela desconectada. No existe otro QA ni sitio externo de pruebas. La identidad y clasificación quedan fijadas en [SSOT del entorno QA](./QA-ENVIRONMENT-SSOT.md).

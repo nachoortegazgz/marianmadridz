@@ -1,9 +1,16 @@
-> **Addendum de vigencia — 2026-11-14:** este informe conserva una lectura anterior de contexto Wix. La designación del propietario para QA es `50b39f33-e753-4331-ab35-b2ed43dc97f7`; declara el sitio despublicado y pasarela desconectada. El conector de auditoría actual no resuelve ese ID, por lo que el estado runtime permanece pendiente. El estado Published descrito en la sección de producción no debe extrapolarse al QA.
+> **SSOT de entorno vigente (2026-11-14):** el único sitio del proyecto es QA: `188bed94-177c-4bc9-a9f0-35080d874f3e` (`https://www.marianmadrid.es/`). El propietario confirma que nunca ha tenido actividad real, que todos los datos son sintéticos, que el cliente de pruebas es Nacho Pitt (`nachoortegazgz@gmail.com`) y que la pasarela está desconectada. No existe otro sitio QA ni un QA externo designado. Las referencias anteriores a otros Site ID o a este sitio como producción quedan supersedidas. El estado Wix Published no altera su clasificación funcional como QA. Véase [SSOT del entorno QA](./QA-ENVIRONMENT-SSOT.md).
+
+---
+
+
+> **Validez del inventario:** los snapshots de CMS, catálogo y aplicaciones que aparecen en el cuerpo de este documento son históricos. La SSOT actual designa `188bed94-177c-4bc9-a9f0-35080d874f3e` como único QA, pero no demuestra que esos recuentos o esquemas pertenezcan al corte actual de ese Site ID. No usarlos como baseline para escrituras, migraciones o E2E hasta repetir una lectura de solo lectura contra el sitio vigente.
+
+> **Estado vigente:** el único sitio QA es `188bed94-177c-4bc9-a9f0-35080d874f3e`. GetSiteContext consultado el 2026-11-14 confirma URL `https://www.marianmadrid.es/`, estado Published, dominio personalizado, Wix Editor y Velo habilitado. El propietario confirma que el sitio nunca ha tenido actividad real, que los datos son sintéticos y que la pasarela está desconectada.
 
 # Compatibilidad de plataforma Wix — corte 2026-11-14
 
 **Fecha:** 2026-11-14  
-**Site ID único:** 50b39f33-e753-4331-ab35-b2ed43dc97f7  
+**Site ID único:** 188bed94-177c-4bc9-a9f0-35080d874f3e  
 **Uso declarado:** banco de pruebas aislado, sin actividad real.
 
 ## Estado de plataforma conocido
@@ -20,7 +27,7 @@ La última lectura de contexto disponible en el historial del proyecto registró
 - Wix Invoices V2.
 - Wix Members Area, Gift Cards, Blog y Forms & Payments.
 
-La consulta GetSiteContext repetida el 2026-11-14 no devolvió contexto para este Site ID. Por tanto, el estado Published/Draft, el plan Premium, las propiedades y el inventario actual de aplicaciones quedan pendientes de nueva lectura contextual. No se infieren a partir de la captura histórica.
+GetSiteContext del 2026-11-14 sí resolvió el Site ID único y confirmó los metadatos de publicación y las aplicaciones instaladas. El estado Published no cambia la clasificación funcional QA declarada por el propietario.
 
 ## Compatibilidad de APIs
 

@@ -1,12 +1,16 @@
+> **SSOT de entorno vigente (2026-11-14):** el único sitio del proyecto es QA: `188bed94-177c-4bc9-a9f0-35080d874f3e` (`https://www.marianmadrid.es/`). El propietario confirma que nunca ha tenido actividad real, que todos los datos son sintéticos, que el cliente de pruebas es Nacho Pitt (`nachoortegazgz@gmail.com`) y que la pasarela está desconectada. No existe otro sitio QA ni un QA externo designado. Las referencias anteriores a otros Site ID o a este sitio como producción quedan supersedidas. El estado Wix Published no altera su clasificación funcional como QA. Véase [SSOT del entorno QA](docs/qa/QA-ENVIRONMENT-SSOT.md).
+
+---
+
 # Diccionario de datos CMS — Marian Madrid
 
 ## Addendum vigente — sitio QA objetivo, corte 2026-11-14
 
-> **Aclaración de entorno — 2026-11-14:** este inventario corresponde al Site ID QA `50b39f33-e753-4331-ab35-b2ed43dc97f7`, no al sitio productivo `188bed94-177c-4bc9-a9f0-35080d874f3e`. El propietario designa el primero como QA. La conexión Wix de auditoría no pudo resolverlo en esta sesión; por tanto, el inventario documenta el corte existente, pero no acredita disponibilidad runtime actual ni aislamiento de integraciones. Ver [PLAN_ACCION_QA.md](PLAN_ACCION_QA.md).
+> **Aclaración de entorno — 2026-11-14:** este documento conserva un inventario CMS histórico. La designación vigente del sitio QA es `188bed94-177c-4bc9-a9f0-35080d874f3e` (`https://www.marianmadrid.es/`), pero los esquemas y recuentos de este snapshot no se han revalidado contra ese Site ID. No usarlo como baseline vigente para mutaciones sin una nueva lectura CMS. Véase [SSOT del entorno QA](docs/qa/QA-ENVIRONMENT-SSOT.md).
 
 
-- Sitio objeto de auditoría: `50b39f33-e753-4331-ab35-b2ed43dc97f7`.
-- Naturaleza declarada por el propietario: banco de pruebas aislado, sin actividad real.
+- Sitio objeto de auditoría: `188bed94-177c-4bc9-a9f0-35080d874f3e`.
+- Naturaleza declarada por el propietario: único entorno QA, sin actividad real.
 - Inventario del sitio actual: 23 colecciones (15 NATIVE, 8 WIX_APP); 524 campos físicos NATIVE.
 - El manifiesto de campos, tipos, revisiones, recuentos y contratos de identidad vigente es `docs/audits/2026-11-14-current-site-cms-normalization.md`.
 - Las menciones a otros sitios, estados anteriores y comparativas de entornos que permanecen en este documento son evidencia histórica; no describen el CMS objeto de trabajo.
@@ -1817,7 +1821,7 @@ Las relaciones de la tabla son semánticas/contractuales; solo las marcadas MULT
 ## 12. Fuentes y método
 
 ### Evidencia Wix live
-- Sitio objeto de trabajo: `50b39f33-e753-4331-ab35-b2ed43dc97f7` (banco de pruebas aislado, sin actividad real).
+- Sitio objeto de trabajo: `188bed94-177c-4bc9-a9f0-35080d874f3e` (único entorno QA, sin actividad real).
 - Wix Data Collections API: listado live y lectura individual de las 23 colecciones (15 NATIVE y 8 WIX_APP), con campos, tipos, required, referencias tipadas, revisiones y metadatos disponibles.
 - DatosFiscales existe en el inventario actual; InventarioStockVenta y MovimientosInventario existen físicamente, pero sus contratos/writers están retirados.
 - El catálogo conserva las claves de campo y sus `displayName`; las descripciones se copian solo cuando Wix las declara. La ausencia de descripción no se suple con una suposición.
@@ -1878,9 +1882,9 @@ El propietario autorizó una ventana temporal en el único sitio objeto de traba
 
 ## 16. Estado vigente del único sitio — 2026-11-14
 
-**Sitio:** 50b39f33-e753-4331-ab35-b2ed43dc97f7.  
+**Sitio:** 188bed94-177c-4bc9-a9f0-35080d874f3e.  
 **Plataforma:** Wix Editor Classic + Velo.  
-**Naturaleza:** banco de pruebas aislado, sin actividad real, según declaración expresa del propietario.
+**Naturaleza:** único entorno QA, sin actividad real, según declaración expresa del propietario.
 
 ### Inventario y campos
 
@@ -1975,9 +1979,12 @@ _id:TEXT, _createdDate:DATETIME, _updatedDate:DATETIME, _owner:TEXT
 
 ### Naturaleza y mutabilidad del sitio actual
 
-El único sitio objeto de trabajo es 50b39f33-e753-4331-ab35-b2ed43dc97f7. Es un banco de pruebas aislado, sin actividad real, según declaración expresa del propietario. Los registros presentes se tratan como sintéticos.
+El único sitio objeto de trabajo es 188bed94-177c-4bc9-a9f0-35080d874f3e. Es un único entorno QA, sin actividad real, según declaración expresa del propietario. Los registros presentes se tratan como sintéticos.
 
 ISOLATED_SITE_RECORD_MUTATIONS_ENABLED=true permite update/remove individuales y masivos en colecciones propias incluidas en ISOLATED_SITE_MUTABLE_COLLECTIONS. Las operaciones masivas requieren IDs explícitos y un máximo de 1.000 elementos. Las colecciones WIX_APP quedan excluidas. Se mantienen autenticación, autorización/RBAC, permisos CMS, validaciones, protección de secretos, allowlists de inserción y gates funcionales de writers/efectos externos.
 
 La política temporal no habilita por sí misma pagos, reembolsos, facturación, fichajes, comunicaciones ni automatizaciones externas. No se han ejecutado mutaciones CMS ni publicado código Wix en esta intervención. La sincronización Editor↔Git y el SHA ejecutado por Wix siguen pendientes de acreditar.
 
+
+
+> **Nota de procedencia del inventario CMS:** la designación del sitio como QA no transfiere automáticamente a este sitio los snapshots CMS de inventarios anteriores. Los recuentos, esquemas y ejemplos históricos de este documento se conservan como evidencia documental, pero no se consideran baseline vigente del Site ID `188bed94-177c-4bc9-a9f0-35080d874f3e` hasta repetir una lectura de solo lectura contra ese sitio. No realizar escrituras ni migraciones basándose únicamente en esos snapshots.

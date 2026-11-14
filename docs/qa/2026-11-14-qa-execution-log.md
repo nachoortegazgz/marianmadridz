@@ -1,3 +1,7 @@
+> **SSOT de entorno vigente (2026-11-14):** el único sitio del proyecto es QA: `188bed94-177c-4bc9-a9f0-35080d874f3e` (`https://www.marianmadrid.es/`). El propietario confirma que nunca ha tenido actividad real, que todos los datos son sintéticos, que el cliente de pruebas es Nacho Pitt (`nachoortegazgz@gmail.com`) y que la pasarela está desconectada. No existe otro sitio QA ni un QA externo designado. Las referencias anteriores a otros Site ID o a este sitio como producción quedan supersedidas. El estado Wix Published no altera su clasificación funcional como QA. Véase [SSOT del entorno QA](./QA-ENVIRONMENT-SSOT.md).
+
+---
+
 # Registro de ejecución QA — 2026-11-14
 
 ## QA-DOCS-20261114-001
@@ -12,7 +16,7 @@
 - **Cambios Wix/CMS:** ninguno.
 - **Pagos/comunicaciones:** ninguna llamada ni envío.
 - **Pruebas CI:** PASS en GitHub Actions sobre HEAD previo `4e258a5617f4a64e5ce3604826b4ce2b29f9389e`: Layer 1 = 23 suites / 296 tests; Layer 2 = 19 suites / 252 tests; regresión completa = 69 suites / 631 tests; 0 fallos. SDK contracts (Cart V2, Order Transactions, Bookings Reader V2) PASS; ESLint PASS; Gitleaks full-history PASS (run #579). Workflow offline quality run #1155 (`43604832916`).
-- **Wix Runtime/E2E:** BLOCKED_ENVIRONMENT; el Site ID QA no fue resuelto por la conexión Wix de esta sesión.
+- **Wix Runtime/E2E en aquel corte:** BLOCKED_ENVIRONMENT por una designación anterior; estado histórico supersedido tras confirmar el Site ID QA único `188bed94-177c-4bc9-a9f0-35080d874f3e`.
 - **Riesgos abiertos:** discrepancia de acceso al sitio QA; aislamiento efectivo de apps/automatizaciones/proveedores pendiente; contrato de pago mixto pendiente.
 - **Alcance del PASS:** acredita solo pruebas offline/mock y contratos/lint ejecutados por el workflow. No acredita Wix Runtime, sandbox PSP, aislamiento de automatizaciones ni E2E externo.
 - **Siguiente paso:** continuar auditoría de código y ampliar escenarios sintéticos; desbloquear Wix Runtime solo cuando se resuelva el acceso QA. No usar producción como fallback.
@@ -73,15 +77,15 @@ Cada nueva ejecución añadirá un identificador único y conservará SHA, tipo 
 - **Corrección:** rama `fix/ci-regression-and-milestone-2026-11-14`, HEAD validado `da96c1b50f1910a287aea718bc6025d295e30e2b`; PR #374 integrada en `main` mediante merge `1de381ecb6495e17a3eae5b75b43e8493166988a`.
 - **CI final:** Layer 1 24/307 PASS; Layer 2 19/252 PASS; regresión completa 70/644 PASS; Cart V2, Order Transactions y Bookings Reader V2 PASS; ESLint PASS; Gitleaks full-history PASS.
 - **Cambios Wix/CMS:** ninguno. No se desplegó ni se usó producción.
-- **Wix Runtime/E2E:** BLOCKED_ENVIRONMENT por resolución técnica del contexto QA.
+- **Wix Runtime/E2E en el corte histórico:** BLOCKED_ENVIRONMENT por resolución de una designación anterior; no es el estado vigente de identidad del sitio.
 - **Resultado:** hito de código CERRADO — CI PASS (offline) en HEAD de PR. CI del merge commit `1de381ecb6495e17a3eae5b75b43e8493166988a` también PASS: Layer 1 24/307; Layer 2 19/252; regresión 70/644; SDK, ESLint y Gitleaks PASS. Runtime Wix y discrepancia documental MapaStaff/DatosFiscales siguen pendientes.
 
 
-## QA-ENV-20261114-002 — revalidación de acceso al sitio QA
+## QA-ENV-20261114-002 — comprobación histórica de una designación anterior (supersedida)
 
-- **Objetivo:** comprobar si la conexión Wix actual permite continuar con validación runtime/E2E sin tocar producción.
-- **GetSiteContext:** consulta del Site ID QA designado `50b39f33-e753-4331-ab35-b2ed43dc97f7`; respuesta: `No site context found` (el sitio no aparece como propiedad accesible o no hay contexto disponible).
-- **ListWixSites(limit=50):** devuelve dos sitios: `Marian Madrid Peluquería y Estética` (`188bed94-177c-4bc9-a9f0-35080d874f3e`, producción) y `ortega nacho cv web` (`e54e4214-efc1-4bc9-bfbf-cede68ccaa1d`). El Site ID QA no aparece.
+- **Objetivo:** comprobar si la conexión Wix actual permite continuar con validación runtime/E2E sin generar efectos externos.
+- **GetSiteContext:** consulta de una designación anterior de entorno; respuesta histórica `No site context found`. Esta referencia no identifica el sitio QA vigente.
+- **ListWixSites(limit=50):** devolvió el sitio Marian Madrid y otro sitio personal. La clasificación de Marian Madrid como producción que se anotó entonces queda supersedida por la declaración expresa posterior del propietario: es el único sitio QA.
 - **Decisión fail-closed:** no intentar APIs de CMS/runtime sobre producción ni sobre el sitio CV; no crear, duplicar, publicar, instalar apps ni cambiar configuración como sustituto implícito del QA designado.
-- **Resultado:** `BLOCKED_ENVIRONMENT`. El CI offline y los contratos SDK continúan PASS; runtime Wix, aislamiento de pasarelas y E2E externo no están certificados.
-- **Acción necesaria para desbloquear:** el Site ID QA debe estar compartido/propiedad de la cuenta Wix conectada con permisos suficientes, o debe designarse expresamente otro sitio QA ya accesible y acreditarse su aislamiento antes de cualquier mutación.
+- **Resultado histórico:** `BLOCKED_ENVIRONMENT` por la designación anterior. Queda supersedido; la identidad QA vigente es `188bed94-177c-4bc9-a9f0-35080d874f3e`. No se declara validación runtime/E2E.
+- **Acción histórica supersedida:** ya no es necesario compartir ni designar otro sitio QA. La identidad vigente es `188bed94-177c-4bc9-a9f0-35080d874f3e`; la validación de efectos externos se limita a mocks/offline y a los gates específicos.

@@ -1,4 +1,11 @@
-> **Addendum de seguridad vigente — 2026-11-14:** el histórico TEC-037 que describía una pausa global de append-only queda supersedido para la ejecución actual. La ventana global de mutabilidad está cerrada en la rama QA; los ledgers permanecen inmutables. La inspección Wix de esta sesión devuelve producción como Published y no resuelve el Site ID QA; no ejecutar escrituras Wix ni E2E sobre producción. Prevalecen PLAN_ACCION_QA.md, DIRECTRICES_DESARROLLO_CODIGO.md y TEC-038 de docs/DECISION-LOG.md.
+> **SSOT de entorno vigente (2026-11-14):** el único sitio del proyecto es QA: `188bed94-177c-4bc9-a9f0-35080d874f3e` (`https://www.marianmadrid.es/`). El propietario confirma que nunca ha tenido actividad real, que todos los datos son sintéticos, que el cliente de pruebas es Nacho Pitt (`nachoortegazgz@gmail.com`) y que la pasarela está desconectada. No existe otro sitio QA ni un QA externo designado. Las referencias anteriores a otros Site ID o a este sitio como producción quedan supersedidas. El estado Wix Published no altera su clasificación funcional como QA. Véase [SSOT del entorno QA](docs/qa/QA-ENVIRONMENT-SSOT.md).
+
+---
+
+
+> **Validez del inventario:** los snapshots de CMS, catálogo y aplicaciones que aparecen en el cuerpo de este documento son históricos. La SSOT actual designa `188bed94-177c-4bc9-a9f0-35080d874f3e` como único QA, pero no demuestra que esos recuentos o esquemas pertenezcan al corte actual de ese Site ID. No usarlos como baseline para escrituras, migraciones o E2E hasta repetir una lectura de solo lectura contra el sitio vigente.
+
+> **Estado vigente del entorno — 2026-11-14:** el único sitio QA es `188bed94-177c-4bc9-a9f0-35080d874f3e`. Wix lo informa Published; el propietario confirma que nunca ha tenido actividad real, que sus datos son sintéticos y que la pasarela está desconectada. Las referencias históricas a otro Site ID o a un supuesto entorno QA separado quedan supersedidas. Prevalecen la SSOT del entorno, PLAN_ACCION_QA.md, DIRECTRICES_DESARROLLO_CODIGO.md y TEC-038.
 
 ## Addendum vigente — baseline 2026-11-14 (prevalece sobre bloques históricos)
 
@@ -8,7 +15,7 @@
 - PR #353 (retirada de inventario personalizado) integrada; CI PASS en `cdf07b5088977c4f51c231aa517b8ed607b25269` (run #1059).
 - PR #354 (política CMS residual) integrada como `fde9466552b6819980475a682dc06395b57487f0`; CI PASS en `28a11a690f0a99926921332618b6af670d45814c` (run #1068) y Gitleaks PASS (run #492).
 - Ninguna de estas intervenciones ha publicado ni desplegado código en Wix.
-- Wix GetSiteContext: producción `Editor` + Velo + Stores Catalog V3 + Invoices V1; QA `Editor` + Velo + Stores Catalog V3 + Invoices V2. GetSiteContext no expone código Velo; sincronización Editor↔Git pendiente.
+- Wix GetSiteContext del único sitio QA: `Editor`, Velo, Stores Catalog V3 e Invoices V1. GetSiteContext no expone código Velo; sincronización Editor↔Git pendiente.
 - PR #351 dejó una regresión en `src/backend/validation.js`: eliminó exports aún consumidos por `data.js`. La recuperación está en PR #352; CI completo PASS sobre el SHA `609ccc948da3e63d3fd8aa20f5e64c7649770660` (run #1054); commits posteriores en esta PR son solo documentación.
 - CMS live: **41 colecciones (12 NATIVE, 29 WIX_APP), 980 campos**. `MapaStaff` revisión 105 / 56 campos. `DatosFiscales`, `InventarioStockVenta` y `MovimientosInventario` no existen en el inventario live del corte; GET individual 404 / `WDE0025`.
 - Wix Stores Catalog V3 es la autoridad del stock comercial. La capa custom de inventario está retirada; las referencias a sus colecciones, exports o writers son históricas y no autorizan su recreación.
@@ -1326,7 +1333,7 @@ Se verificaron permisos efectivos PRIVILEGED de DatosFiscales mediante lectura p
 
 El contrato puro AEAT/hash no certifica Veri*Factu ni habilita remisión. La activación continúa bloqueada por la definición del SIF, series, factura/IVA, rectificaciones, XML/XSD, transporte, respuestas, pruebas oficiales y revisión legal.
 
-- Sitio único de trabajo: 50b39f33-e753-4331-ab35-b2ed43dc97f7. Es un banco de pruebas aislado, sin actividad real, según declaración expresa del propietario. Los registros se tratan como sintéticos.
+- Sitio único de trabajo: `188bed94-177c-4bc9-a9f0-35080d874f3e`. El propietario confirma que es QA y no ha tenido actividad real; los registros son sintéticos.
 - Plataforma: Wix Editor Classic + Velo. No se mantiene una comparación operativa con otro sitio.
 - CMS verificado: 23 colecciones (15 NATIVE, 8 WIX_APP), 524 campos físicos NATIVE. El manifiesto vigente está en DICCIONARIO_DATOS_CMS.md y docs/audits/2026-11-14-current-site-cms-normalization.md.
 - MapaStaff es exclusivamente el mapa de identidad de personal: staffMemberId, resourceId, scheduleId y memberId. thirdPartyId es TEXT opaco, no es GUID ni coincide con DatosFiscales._id y no tiene consumidor localizado. No contiene recordType ni campos fiscales.
@@ -1349,10 +1356,10 @@ Este addendum actualiza el estado técnico operativo y prevalece sobre descripci
 - GitHub `main` consultado: `738eb78faaa48502532c83c3e4b8b53db1144950`.
 - Wix Site Context confirma sitio principal Published, Wix Editor, Velo enabled, Europe/Madrid, EUR; el propietario declara que Wix se ha actualizado y publicado.
 - No se dispone de release/deployment ID ni evidencia que vincule exactamente el SHA actual de GitHub con el runtime publicado. El estado Published está verificado; la identidad exacta del código desplegado sigue pendiente.
-- Existe un sitio Wix QA separado, ID `50b39f33-e753-4331-ab35-b2ed43dc97f7`, en estado Draft. La separación de Site ID está verificada; el aislamiento de automatizaciones, notificaciones, pagos, webhooks, permisos e integraciones no está certificado.
+- La afirmación histórica de un segundo sitio QA en estado Draft queda supersedida. El único sitio QA designado es `188bed94-177c-4bc9-a9f0-35080d874f3e`, que Wix informa como Published.
 - Wix Stores del sitio principal usa Catalog V3; Wix Invoices usa V1.
 
-## Inventario CMS producción — lectura live 2026-11-13
+## Inventario CMS del sitio QA — lectura histórica 2026-11-13
 
 44 colecciones: 15 NATIVE y 29 WIX_APP. Recuentos actuales de las 15 NATIVE:
 
@@ -1378,7 +1385,7 @@ Las 29 WIX_APP se agrupan en Bookings (3), Blog (3), CampaignManager (2), Forms 
 
 ## Sitio QA: paridad incompleta
 
-La lectura CMS del sitio QA devuelve 43 colecciones (15 NATIVE, 28 WIX_APP). Las 15 NATIVE existen. Recuentos diferentes respecto a producción: CitasF2 0 frente a 1 y ControlOperativo 0 frente a 3; los otros 13 recuentos coinciden en el corte. QA contiene cuatro colecciones WIX_APP `WixForms/*` adicionales y carece de las cinco colecciones `Stores/*` presentes en producción. No certificar E2E de Store/eCommerce en QA hasta resolver y documentar esa diferencia y auditar efectos externos.
+La lectura CMS de este sitio QA devuelve 43 colecciones (15 NATIVE, 28 WIX_APP). Esta lectura es un corte histórico del mismo entorno y no debe interpretarse como comparación con un segundo sitio QA.
 
 ## CitasF2 — contrato y bloqueo
 
@@ -1736,7 +1743,7 @@ Este bloque describe el sitio y la rama objeto de trabajo. Los inventarios anter
 
 ## Estado del ecosistema
 
-- Sitio único: 50b39f33-e753-4331-ab35-b2ed43dc97f7. Banco de pruebas aislado, sin actividad real, según declaración del propietario.
+- Sitio único: 188bed94-177c-4bc9-a9f0-35080d874f3e. Banco de pruebas aislado, sin actividad real, según declaración del propietario.
 - Plataforma: Wix Editor Classic + Velo.
 - Repositorio canónico: nachoortegazgz/marianmadridz. Rama de alineación: fix/current-site-cms-contract-alignment.
 - CMS actual: 23 colecciones (15 NATIVE, 8 WIX_APP), 524 campos NATIVE.
@@ -2053,11 +2060,11 @@ Estas directrices prevalecen sobre las instrucciones de pruebas del addendum 202
 
 ## Estado del sitio actual
 
-El único sitio objeto de trabajo es 50b39f33-e753-4331-ab35-b2ed43dc97f7. Es un banco de pruebas aislado, sin actividad real. No se presupone la existencia de un sitio de staging adicional ni se extrapolan configuraciones de otros sitios. Las automatizaciones, conexiones y efectos externos se mantienen bajo sus gates independientes y deben verificarse antes de habilitar cualquier actividad real.
+El único sitio objeto de trabajo es 188bed94-177c-4bc9-a9f0-35080d874f3e. Es el entorno QA del proyecto y no ha tenido actividad real, según declaración expresa del propietario. No se presupone la existencia de un sitio de staging adicional ni se extrapolan configuraciones de otros sitios. Las automatizaciones, conexiones y efectos externos se mantienen bajo sus gates independientes y deben verificarse antes de habilitar cualquier actividad real.
 ## Estado CMS y restricciones
 
 - Producción: inventario CMS sujeto a actualización tras TEC-035. MapaStaff revision 36 / 5 registros; DatosFiscales legacy revision 21 / 1 placeholder. Recuentos NATIVE: CajaActual 1; CitasF2 1; ComplementosCatalogo 36; ControlOperativo 3; DatosFiscales 1; HistoricoCierresZ 0; InventarioStockVenta 1; LibroAsientosContablesDetalle 0; MapaStaff 3; MovimientosCaja 0; MovimientosInventario 1; PaquetesGestoria 0; RegistroIntegracion 0; RegistrosHorariosStaff 2; ServiciosCatalogo 95.
-- Wix Stores Catalog V3 es la autoridad del inventario comercial; Wix Invoices V1 en producción.
+- Wix Stores Catalog V3 es la autoridad del inventario comercial; Wix Invoices V1 en el sitio QA.
 - CitasF2 sigue con una proyección `CONFIRMED / NOT_PAID`; la última lectura nativa Bookings Reader V2 registrada devolvió `CANCELED / NOT_PAID` para el mismo bookingId. No editar manualmente la proyección ni borrar la reserva; resolver mediante handler/evento y reconciliación idempotente demostrada.
 - Mantener writers fiscales, contables y laborales deshabilitados; mantener `ACCOUNTANT_SEND_ENABLED=false`. No realizar pagos, reembolsos, movimientos de caja, cierres, asientos, fichajes ni exports reales durante las pruebas en el sitio aislado.
 - SharePoint / Power Automate Capa 3 no está verificado live.

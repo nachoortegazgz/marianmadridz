@@ -1,7 +1,11 @@
+> **SSOT de entorno vigente (2026-11-14):** el único sitio del proyecto es QA: `188bed94-177c-4bc9-a9f0-35080d874f3e` (`https://www.marianmadrid.es/`). El propietario confirma que nunca ha tenido actividad real, que todos los datos son sintéticos, que el cliente de pruebas es Nacho Pitt (`nachoortegazgz@gmail.com`) y que la pasarela está desconectada. No existe otro sitio QA ni un QA externo designado. Las referencias anteriores a otros Site ID o a este sitio como producción quedan supersedidas. El estado Wix Published no altera su clasificación funcional como QA. Véase [SSOT del entorno QA](docs/qa/QA-ENVIRONMENT-SSOT.md).
+
+---
+
 # Base maestra del proyecto — Marian Madrid
 
 **Vigencia:** 2026-11-14 · addendum operativo QA  
-**Sitio:** `50b39f33-e753-4331-ab35-b2ed43dc97f7`  
+**Sitio QA único:** `188bed94-177c-4bc9-a9f0-35080d874f3e`  
 **Naturaleza:** banco de pruebas aislado, sin actividad real, según declaración expresa del propietario.  
 **Plataforma confirmada:** Wix Editor Classic + Velo.  
 **Repositorio:** https://github.com/nachoortegazgz/marianmadridz
@@ -10,10 +14,9 @@ Este documento describe un único sitio objeto de trabajo. No se mantiene una ma
 
 ## Addendum de decisión y estado de QA — 2026-11-14
 
-- **Decisión expresa y SSOT del propietario:** utilizar el sitio `50b39f33-e753-4331-ab35-b2ed43dc97f7` como entorno QA del proyecto, con datos sintéticos y simulación de pagos. Esta decisión es definitiva para el proyecto; no volver a solicitar confirmación ni plantear producción como alternativa.
-- **Producción separada:** `188bed94-177c-4bc9-a9f0-35080d874f3e` (`www.marianmadrid.es`) permanece fuera del alcance de QA.
-- **Discrepancia de acceso:** el inventario CMS del sitio QA está documentado en el corte 2026-11-14, pero la conexión Wix disponible en esta sesión no resolvió el Site ID QA y solo listó producción; esto es una limitación del conector, no una ambigüedad de autorización o de destino. No declarar acceso runtime ni aislamiento efectivo hasta reconciliar la conexión. No ejecutar pruebas Wix contra producción como alternativa.
-- **Continuidad de trabajo:** avanzar con pruebas offline/mock, fixtures sintéticos, auditoría estática, CI y correcciones en ramas/PR. Wix Runtime/E2E queda `BLOCKED_ENVIRONMENT` por limitación de acceso técnico al contexto QA; las tareas offline, de código, contratos y CI continúan sin esperar a resolverla.
+- **Decisión expresa y SSOT del propietario:** el sitio `188bed94-177c-4bc9-a9f0-35080d874f3e` es el único entorno QA, con datos sintéticos, cliente de prueba Nacho Pitt (`nachoortegazgz@gmail.com`) y pasarela desconectada. Nunca ha tenido actividad real. No existe otro sitio QA ni QA externo.
+
+- **Continuidad de trabajo:** avanzar con pruebas offline/mock, fixtures sintéticos, auditoría estática, CI y correcciones. Runtime/E2E con efectos externos no se considera validado hasta comprobar cada ruta de salida.
 - **Pagos:** usar adaptador mock local sin red, sin PSP, sin Wix Payments y sin banco. `TEST_PAYMENT_CONFIRMED` solo es un resultado interno de simulación.
 - **Comunicaciones y gestoría:** sinks offline sin entrega. No emitir facturas/tickets reales ni invocar AEAT/Veri*Factu, SharePoint o Power Automate desde escenarios QA.
 - **Datos:** no importar PII. Emails bajo `.example.test`; no utilizar teléfonos operativos. Los datos de gestoría son fixtures internos no válidos para procesos fiscales.
@@ -93,7 +96,7 @@ Los requisitos funcionales son declaraciones de alcance, no prueba de implementa
 
 ## 5. Bloqueos abiertos
 
-0. Resolver la discrepancia de acceso del Site ID QA `50b39f33-e753-4331-ab35-b2ed43dc97f7`; no redirigir pruebas a producción `188bed94-177c-4bc9-a9f0-35080d874f3e`. Mantener H4 Wix Runtime/E2E bloqueado y avanzar con mocks offline.
+0. Mantener el Site ID QA único `188bed94-177c-4bc9-a9f0-35080d874f3e` como destino de validación. No designar un segundo QA ni un QA externo. Las pruebas con efectos externos permanecen offline/mock hasta verificar sus controles.
 
 
 1. Probar en Wix Local Editor y ejecutar E2E; la integración en Git está cerrada, el despliegue Wix no.

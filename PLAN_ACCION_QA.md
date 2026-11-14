@@ -1,18 +1,19 @@
+> **SSOT de entorno vigente (2026-11-14):** el único sitio del proyecto es QA: `188bed94-177c-4bc9-a9f0-35080d874f3e` (`https://www.marianmadrid.es/`). El propietario confirma que nunca ha tenido actividad real, que todos los datos son sintéticos, que el cliente de pruebas es Nacho Pitt (`nachoortegazgz@gmail.com`) y que la pasarela está desconectada. No existe otro sitio QA ni un QA externo designado. Las referencias anteriores a otros Site ID o a este sitio como producción quedan supersedidas. El estado Wix Published no altera su clasificación funcional como QA. Véase [SSOT del entorno QA](docs/qa/QA-ENVIRONMENT-SSOT.md).
+
+---
+
 # Plan de acción QA — Marian Madrid
 
 **Fecha:** 2026-11-14  
 **Repositorio:** `nachoortegazgz/marianmadridz`  
 **Rama documental:** `docs/qa-operating-model-2026-11-14`  
-**Entorno QA objetivo declarado:** `50b39f33-e753-4331-ab35-b2ed43dc97f7`  
-**Producción conocida:** `188bed94-177c-4bc9-a9f0-35080d874f3e` — `https://www.marianmadrid.es/`
+**Entorno QA único:** `188bed94-177c-4bc9-a9f0-35080d874f3e` — `https://www.marianmadrid.es/`  
 
 ## 1. Decisión operativa
 
-Por instrucción expresa del propietario, el sitio `50b39f33-e753-4331-ab35-b2ed43dc97f7` queda designado como **entorno QA objetivo del proyecto**. Se trabajará con datos sintéticos y simulación de proveedores. El sitio de producción `188bed94-177c-4bc9-a9-f0-35080d874f3e` queda fuera del alcance de pruebas y no se utilizará como sustituto si QA no está disponible.
+Por instrucción expresa del propietario, el sitio `188bed94-177c-4bc9-a9f0-35080d874f3e` es el **único entorno QA oficial** del proyecto. Fue creado para pruebas previas al despliegue real; nunca ha tenido actividad real y no la tiene actualmente. Todos los datos son sintéticos, el cliente de prueba canónico es Nacho Pitt (`nachoortegazgz@gmail.com`) y la pasarela está desconectada. No existe otro sitio QA ni un QA externo designado.
 
-**Distinción de estado:** la designación del propietario y el inventario CMS del sitio QA constan en el repositorio. En la comprobación de acceso Wix más reciente disponible para esta sesión, el conector solo resolvió el sitio de producción y no pudo resolver el ID QA. Por tanto, la identidad/configuración QA está **declarada/documentada**, pero el acceso runtime y el aislamiento efectivo siguen **pendientes de verificación**. No se declara certificado el banco de pruebas hasta superar los gates de este plan.
-
-La falta de acceso a QA no detiene el trabajo offline: se mantienen fixtures sintéticos, mocks, pruebas unitarias, contratos, regresión y revisión documental. No se redirigen esas pruebas a producción.
+**Estado del entorno:** Wix identifica el sitio como Published y con dominio personalizado. Este es un metadato técnico de publicación; no cambia su clasificación funcional como QA ni contradice la declaración del propietario de que nunca ha existido actividad real. La identidad del entorno queda fijada por esta SSOT. Las pruebas que puedan producir efectos externos siguen usando mocks/sinks offline y requieren controles específicos.
 
 ## 2. Invariantes de seguridad
 
@@ -22,14 +23,14 @@ La falta de acceso a QA no detiene el trabajo offline: se mantienen fixtures sin
 4. **Datos sintéticos:** no importar, copiar ni reutilizar contactos, miembros, reservas, pedidos, pagos, datos fiscales o credenciales reales. Usar identificadores sintéticos y emails bajo dominios reservados como `.example.test`; no efectuar llamadas telefónicas ni entregas de correo.
 5. **Pasarela simulada:** el adaptador de pago de QA es local/offline y determinista. No invoca Wix Payments, PSP, bancos, Bizum ni endpoints de cobro/refund. Respuestas de simulación como `TEST_PAYMENT_CONFIRMED` son estados internos y no acreditan liquidación real.
 6. **Sin efectos externos:** no emitir facturas, tickets a clientes, emails, SMS, WhatsApp, campañas, mensajes de Bookings, exportaciones a gestoría, SharePoint, Power Automate, AEAT o Veri*Factu. Los destinos externos se sustituyen por sinks/mocks sin entrega.
-7. **No tocar producción:** ninguna prueba crea o modifica reservas, pedidos, stock, caja, asientos, cierres, clientes o automatizaciones del Site ID de producción.
+7. **Sin efectos externos reales:** ninguna prueba ejecuta cobros, reembolsos, comunicaciones, transmisiones fiscales ni operaciones con terceros; usar mocks/sinks offline.
 8. **Trazabilidad:** cada ejecución tiene `testRunId`, `scenarioId`, `traceId`, commit SHA, resultado, artefactos y fecha/hora Europe/Madrid. Los registros de evidencia no incluyen PII ni secretos.
 9. **Integridad:** los ledgers append-only permanecen inmutables también en QA. Las correcciones económicas se representan mediante nuevos movimientos rectificativos trazables; nunca se editan ni borran movimientos, asientos, cierres o registros laborales. La limpieza de pruebas solo podrá afectar a estado efímero no ledger y tras comprobar entorno, IDs y alcance. Los bypasses globales de mutabilidad han sido retirados del código. No reintroducirlos ni crear flags para forzar una prueba; toda purga debe ajustarse a la allowlist y condiciones server-side.
 10. **Sin publicación:** esta rama documental no autoriza Preview, Publish, release ni despliegue.
 
 ## 3. Modelo de datos de prueba
 
-El inventario del sitio QA del corte 2026-11-14 declara 23 colecciones (15 NATIVE y 8 WIX_APP), con 524 campos físicos NATIVE y 140 registros. Fuente: `docs/audits/2026-11-14-current-site-cms-normalization.md`. Este inventario no se extrapola al sitio de producción.
+El inventario CMS documentado en `docs/audits/2026-11-14-current-site-cms-normalization.md` es un snapshot histórico de una designación anterior. La nueva SSOT identifica el sitio QA, pero no transfiere ni valida automáticamente esos esquemas/recuentos. Repetir lectura de solo lectura sobre el sitio `188bed94-177c-4bc9-a9f0-35080d874f3e` antes de cualquier escritura o migración.
 
 Colecciones de dominio que deben verificarse y, cuando corresponda, aislarse en QA:
 
@@ -120,7 +121,7 @@ Los importes de los escenarios son fixtures de negocio, no transacciones ni resu
 ### H1 — Baseline y contratos
 - Fijar SHA Git, versión del Editor, configuración Wix y corte CMS.
 - Comparar módulos, imports/exports, schemas, permisos, índices y consumidores.
-- No mezclar snapshots: la auditoría CMS del QA 50b registra CajaActual revisión 1 con netAmount y staffResourceId; la auditoría live de producción 188b describe otro esquema. Resolver cualquier discrepancia contra el sitio QA real antes de tocar contratos.
+- No mezclar cortes históricos con la SSOT actual: los snapshots CMS anteriores no constituyen baseline vigente del sitio QA `188bed94-177c-4bc9-a9f0-35080d874f3e`. Repetir la lectura de esquemas y permisos antes de operar.
 - Confirmar contratos de caja, movimientos, pagos, impuestos, idempotencia, reversiones y cierres.
 - Resolver la divergencia de pago mixto antes de habilitar el caso.
 - Gate: matriz requisito → módulo → contrato → prueba.
@@ -171,18 +172,14 @@ Estados permitidos: `NOT_RUN`, `PASS`, `FAIL`, `BLOCKED_ENVIRONMENT`, `BLOCKED_C
 
 ## 8. Estado de ejecución — 2026-11-14
 
-- Decisión de usar Site ID QA 50b39f33-e753-4331-ab35-b2ed43dc97f7: **declarada por el propietario** y respaldada por inventario CMS de 23 colecciones (15 NATIVE, 8 WIX_APP).
-- Identidad del destino QA: **autorizada y fijada por SSOT del propietario** en `50b39f33-e753-4331-ab35-b2ed43dc97f7`; no volver a solicitar confirmación ni proponer producción como alternativa. Acceso del conector Wix: **limitación técnica de esta sesión**, GetSiteContext/ListWixSites no resuelven QA y solo enumeran producción.
-- Estado QA despublicado y pasarela desconectada: **declarado por el propietario y aceptado como premisa operativa**. No extrapolar el estado Published observado en producción al QA. La comprobación directa de settings de QA queda pendiente por limitación del conector.
-- Producción 188bed94-177c-4bc9-a9-f0-35080d874f3e: **fuera del alcance de pruebas**; no usar como fallback.
-- PSP mock: **implementado como doble offline/in-memory**, requiere environment TEST, testSiteId sintético coincidente y testRunId; 7 pruebas. No está conectado a Wix Payments ni acredita sandbox del proveedor.
-- Email sink: **implementado offline/in-memory**, 4 pruebas; solo acepta destinatarios example.test y clientes con marcadores sintéticos coincidentes.
-- Datos sintéticos: **fixture creado** con tres clientes example.test y Gestoría de Pruebas, TEST-NIF-NO-VALIDO, sin teléfono operativo y destino real desactivado.
-- CMS mutation safety: **bypasses globales retirados**; hooks de ledgers incondicionalmente append-only; bulk update deshabilitado; bulk remove limitado a purgas ControlOperativo condicionadas por tipo/estado/fecha.
-- CI run #43606822535: **PASS** — Layer 1: 23 suites/299 tests; Layer 2: 19 suites/252 tests; regresión completa: 69 suites/633 tests; Wix SDK contracts y ESLint PASS.
-- Secret scanning run #43606822521: **PASS**.
-- Wix Runtime/E2E: **BLOCKED_ENVIRONMENT**; no se ejecutó Preview, escrituras CMS, pagos, emails, SMS, integraciones externas ni publicación.
-- Siguiente gate técnico: conseguir contexto/API de lectura del Site ID QA sin recurrir a producción; después inventariar settings de pagos, automatizaciones, permisos y conexiones. Mientras tanto continuar H1-H3 offline y no bloquear correcciones estáticas/CI.
+- Sitio QA único: `188bed94-177c-4bc9-a9f0-35080d874f3e` — `https://www.marianmadrid.es/`.
+- Finalidad y ausencia de actividad real histórica/actual: declaradas expresamente por el propietario.
+- Datos: sintéticos exclusivamente. Cliente sintético: Nacho Pitt (`nachoortegazgz@gmail.com`).
+- Pasarela: desconectada, según declaración del propietario.
+- Contexto Wix consultado: sitio Published, dominio personalizado, Wix Editor y Velo habilitado; apps de Bookings, Forms & Payments, Gift Cards, Hotels, Invoices V1 y Stores Catalog V3.
+- CI offline, mocks y contratos SDK: consultar los resultados asociados al SHA de cada ejecución; no extrapolar un PASS offline a runtime/E2E.
+- Runtime/E2E: no ejecutado en esta intervención. Las rutas que puedan activar comunicaciones, cobros, fiscalidad o integraciones externas permanecen limitadas a mocks/offline hasta comprobar el aislamiento específico.
+- No existe un segundo sitio QA ni se utiliza un QA externo.
 
 ## 9. Referencias
 
@@ -193,3 +190,26 @@ Estados permitidos: `NOT_RUN`, `PASS`, `FAIL`, `BLOCKED_ENVIRONMENT`, `BLOCKED_C
 - [Fixtures y cobertura mock](docs/qa/QA-SIMULATION-2026-11.md)
 - [Inventario CMS QA](docs/audits/2026-11-14-current-site-cms-normalization.md)
 - [Referencia maestra QA histórica](docs/qa/2026-11-11-qa-master-reference.md)
+
+
+---
+
+## Regla SSOT vigente del propietario — modo desarrollo global
+
+Vigente hasta nueva orden. Aplicar en todo el trabajo QA:
+
+- Modo desarrollo global; solo registros y fixtures sintéticos. Prohibido importar o reutilizar datos reales.
+- Ninguna actividad real: reservas/pedidos, cobros/reembolsos, comunicaciones, stock o integraciones externas.
+- Veri*Factu, generación/envío fiscal y transmisiones AEAT desactivados.
+- Email, SMS, WhatsApp, SharePoint y Power Automate deben usar sinks/mocks offline sin I/O.
+- Los ledgers pueden pausarse: la opción inicial es mantener sus writers cerrados. La pausa impide nuevas inserciones; nunca habilita update/remove de registros existentes.
+- Los bloqueos de preparación fiscal en escenarios sintéticos se muestran como warnings no bloqueantes. No relajar validación de esquema, hash/trazabilidad, conciliación, autorización, idempotencia ni seguridad.
+
+### Implementación técnica y gate de seguridad
+
+**Estado: pendiente de implementación y validación.** No basta con cambiar flags en `internalConfig.js`: se han identificado rutas de checkout/writers Bookings y handlers de eventos Wix que no quedan cubiertas por el gate `FISCAL_RUNTIME_POLICY` de caja. Antes de desplegar debe existir un kill switch server-side que cubra todos los writers y efectos externos, con tests negativos por ruta. Mantener QA offline/mock mientras no se demuestre el aislamiento del Site ID QA designado. No desplegar ni publicar como parte de esta tarea.
+
+
+### Identidad vigente del entorno
+
+La identidad y clasificación del único sitio QA se rigen por [SSOT del entorno QA](docs/qa/QA-ENVIRONMENT-SSOT.md). Los addenda anteriores que identificaban otro sitio como QA o clasificaban este sitio como producción quedan supersedidos.

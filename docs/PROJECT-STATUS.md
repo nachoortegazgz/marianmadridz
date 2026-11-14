@@ -1,8 +1,12 @@
+> **SSOT de entorno vigente (2026-11-14):** el único sitio del proyecto es QA: `188bed94-177c-4bc9-a9f0-35080d874f3e` (`https://www.marianmadrid.es/`). El propietario confirma que nunca ha tenido actividad real, que todos los datos son sintéticos, que el cliente de pruebas es Nacho Pitt (`nachoortegazgz@gmail.com`) y que la pasarela está desconectada. No existe otro sitio QA ni un QA externo designado. Las referencias anteriores a otros Site ID o a este sitio como producción quedan supersedidas. El estado Wix Published no altera su clasificación funcional como QA. Véase [SSOT del entorno QA](qa/QA-ENVIRONMENT-SSOT.md).
+
+---
+
 # Estado del proyecto — sitio Marian Madrid
 
 **Corte:** 2026-11-14  
-**Sitio único de trabajo:** 50b39f33-e753-4331-ab35-b2ed43dc97f7  
-**Naturaleza:** banco de pruebas aislado, sin actividad real, según declaración expresa del propietario.  
+**Sitio QA único de trabajo:** 188bed94-177c-4bc9-a9f0-35080d874f3e  
+**Naturaleza:** entorno QA previo al despliegue real; nunca ha tenido actividad real y sus datos son sintéticos, según declaración expresa del propietario.  
 **Plataforma:** Wix Editor Classic + Velo.  
 **Repositorio:** nachoortegazgz/marianmadridz.
 
@@ -49,3 +53,6 @@ PR #370 está abierto pero GitHub informa `dirty` (historial divergente respecto
 ## Decisiones
 
 Consultar [DECISION-LOG.md](DECISION-LOG.md). Las entradas históricas se conservan para trazabilidad; TEC-037 y TEC-038 describen la política y arquitectura vigentes.
+
+
+> **Nota de baseline CMS:** los inventarios y recuentos CMS que acompañan este estado son snapshots históricos; no constituyen baseline vigente del Site ID `188bed94-177c-4bc9-a9f0-35080d874f3e` hasta repetir una lectura de solo lectura contra el sitio QA actual.
