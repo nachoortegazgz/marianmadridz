@@ -455,8 +455,8 @@ test("EVENT-BOOKING-07 maps staffMemberId to resourceId and scheduleId for a new
 test("EVENT-BOOKING-08 refuses ambiguous active MapaStaff mappings", async () => {
   wixDataMock._reset();
   wixDataMock._store.set("MapaStaff", [
-    { _id: "mapa-staff-a", recordType: "STAFF", staffMemberId: STAFF_MEMBER_ID, resourceId: RESOURCE_ID, scheduleId: SCHEDULE_ID, active: true },
-    { _id: "mapa-staff-b", recordType: "STAFF", staffMemberId: STAFF_MEMBER_ID, resourceId: "99999999-9999-4999-8999-999999999999", scheduleId: SCHEDULE_ID, active: true },
+    { _id: "mapa-staff-a", staffMemberId: STAFF_MEMBER_ID, resourceId: RESOURCE_ID, scheduleId: SCHEDULE_ID, active: true },
+    { _id: "mapa-staff-b", staffMemberId: STAFF_MEMBER_ID, resourceId: "99999999-9999-4999-8999-999999999999", scheduleId: SCHEDULE_ID, active: true },
   ]);
   const booking = nativeBooking({
     _id: "77777777-7777-4777-8777-777777777777",
