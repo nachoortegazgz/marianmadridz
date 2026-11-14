@@ -29,7 +29,7 @@ CAMBIOS DE ALINEACION v5015-ALIGNED (respecto a v5009-FISCAL-V20.1):
           (sistemaInformaticoNombre, idSistemaInformatico,
           numeroInstalacion, tipoUsoPosibleSoloVerifactu, etc.). Se
           define COMPUTER_SYSTEM_FALLBACK local; _getFiscalSystemConfig
-          lee del singleton MapaStaff y rellena con el fallback.
+          lee del singleton DatosFiscales y rellena con el fallback.
   ALN-08: wixData.query/get/insert/save -> dalQuery/dalGet/dalInsert/
           dalSave (dataAccess v2.1).
   ALN-09: _buildFiscalPayloadSnapshot usa el resultado resuelto de
@@ -167,6 +167,12 @@ function _toAeatFlag(value, fallback) {
     return fallback;
 }
 
+function _toFiscalStartDateText(value) {
+    const date = _safeTrim(value);
+    if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(date)) return null;
+    return Number.isNaN(Date.parse(date + "T00:00:00.000Z")) ? null : date;
+}
+
 async function _getFiscalSystemConfig(traceId) {
     const now = Date.now();
     if (_fiscalSystemCache && now - _fiscalSystemCacheAt < FISCAL_SYSTEM_CACHE_TTL_MS) {
@@ -204,7 +210,7 @@ async function _getFiscalSystemConfig(traceId) {
         // Legal identity must come from the verified CONFIG_SISTEMA record.
         // Never infer the fiscal legal name from the commercial brand or site label.
         nombreRazonProductor: _safeTrim(config?.legalName),
-        fechaInicioVerifactu: config?.fechaInicioVerifactu || null,
+        fechaInicioVerifactu: _toFiscalStartDateText(config?.fechaInicioVerifactu),
     });
     _fiscalSystemCacheAt = now;
     return _fiscalSystemCache;
