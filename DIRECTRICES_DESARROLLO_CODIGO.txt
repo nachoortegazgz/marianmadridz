@@ -82,12 +82,14 @@ Revision: 2026-11-09
 - Las duraciones deben ser valores numericos finitos no negativos.
 
 4.3. MapaStaff
-- MapaStaff no es autoridad RBAC.
-- security.js resuelve roles mediante Wix Members, Bookings Staff Members API e internalConfig.STAFF.WEBSITE_ROLE_BY_RESOURCE_ID.
-- MapaStaff se utiliza como correlacion staffMemberId -> resourceId/scheduleId cuando un evento nativo no aporta esos identificadores.
-- La resolucion exige exactamente una fila activa y GUID validos. Cero o varias coincidencias producen fallo cerrado.
-- No se declaran hooks CMS para MapaStaff en data.js.
-
+- MapaStaff es un maestro mixto consultivo con recordType obligatorio: STAFF, GESTORIA, TERCERO o CONFIG_SISTEMA.
+- STAFF conserva la correlacion staffMemberId -> resourceId/scheduleId; los lectores deben filtrar recordType=STAFF y active=true.
+- GESTORIA almacena datos de contacto y gestion; no es usuario del sitio, no tiene memberId/resourceId ni roles.
+- TERCERO y CONFIG_SISTEMA conservan el contrato fiscal; CONFIG_SISTEMA no se crea por inferencia.
+- MapaStaff no es autoridad RBAC. security.js resuelve roles mediante Wix Members, Bookings Staff Members API e internalConfig.STAFF.WEBSITE_ROLE_BY_RESOURCE_ID.
+- La lectura CMS es PRIVILEGED; las consultas backend pasan por dataAccess elevado. No exponer datos de contacto/fiscales desde frontend ni permisos ANYONE.
+- Los hooks CMS y validation.js validan los discriminadores y sus campos especificos.
+- DatosFiscales permanece legacy hasta que el backend actualizado se publique y se verifique; eliminarla despues de la comprobacion de consumidores.
 4.4. Datos historicos fiscales
 - Los documentos fiscales append-only no se reescriben para normalizar nombres de campo.
 - Los lectores de `MovimientosCaja`, `ControlOperativo` y `CitasF2` pueden interpretar valores historicos exclusivamente en lectura, con `warn` trazable y fecha `REVIEW-BY`.
@@ -154,7 +156,7 @@ No fusionar ni desplegar con pruebas fallidas, riesgos criticos abiertos o sin e
 
 - ControlOperativo: validacion completa en insercion y actualizacion; update fusiona el estado persistido y la modificacion; remove recibe itemId y consulta el registro.
 - Journal dual: mantiene su enum especifico en booking/dualRescheduleJournal.js; no se mezcla con CONTROL_STATUS.
-- MapaStaff: solo correlacion de identidad de eventos nativos; no participa en RBAC.
+- MapaStaff: maestro consultivo mixto; solo los registros STAFF participan en la correlacion de eventos nativos; nunca gobierna RBAC.
 - Eventos Wix: se consumen como objetos Velo verificados por la plataforma; no se procesa JWT dentro de events.js.
 - Permisos: .web.js controla acceso en cada webMethod; no existe manifiesto permissions.json aplicable al backend actual.
 - Control types: DEDUPE_KEY y LEDGER_IDEMPOTENCY se conservan porque tienen productores activos y retencion duradera.
@@ -235,7 +237,7 @@ Estas directrices prevalecen sobre las instrucciones de QA del addendum 2026-11-
 
 ## Estado CMS y restricciones
 
-- Producción: 44 colecciones (15 NATIVE, 29 WIX_APP). Recuentos actuales NATIVE: CajaActual 1; CitasF2 1; ComplementosCatalogo 36; ControlOperativo 3; DatosFiscales 1; HistoricoCierresZ 0; InventarioStockVenta 1; LibroAsientosContablesDetalle 0; MapaStaff 3; MovimientosCaja 0; MovimientosInventario 1; PaquetesGestoria 0; RegistroIntegracion 0; RegistrosHorariosStaff 2; ServiciosCatalogo 95.
+- Producción: inventario CMS sujeto a actualización tras TEC-035. MapaStaff revision 36 / 5 registros; DatosFiscales legacy revision 21 / 1 placeholder. Recuentos NATIVE: CajaActual 1; CitasF2 1; ComplementosCatalogo 36; ControlOperativo 3; DatosFiscales 1; HistoricoCierresZ 0; InventarioStockVenta 1; LibroAsientosContablesDetalle 0; MapaStaff 3; MovimientosCaja 0; MovimientosInventario 1; PaquetesGestoria 0; RegistroIntegracion 0; RegistrosHorariosStaff 2; ServiciosCatalogo 95.
 - Wix Stores Catalog V3 es la autoridad del inventario comercial; Wix Invoices V1 en producción.
 - CitasF2 sigue con una proyección `CONFIRMED / NOT_PAID`; la última lectura nativa Bookings Reader V2 registrada devolvió `CANCELED / NOT_PAID` para el mismo bookingId. No editar manualmente la proyección ni borrar la reserva; resolver mediante handler/evento y reconciliación idempotente demostrada.
 - Mantener writers fiscales, contables y laborales deshabilitados; mantener `ACCOUNTANT_SEND_ENABLED=false`. No realizar pagos, reembolsos, movimientos de caja, cierres, asientos, fichajes ni exports reales durante QA.
