@@ -14,15 +14,15 @@
 
 > **Bloque histórico:** la captura que originó los apartados siguientes corresponde a un estado/sitio anterior. No describe el CMS actual ni debe utilizarse como inventario vigente. El manifiesto live aplicable es `docs/audits/2026-11-14-current-site-cms-normalization.md`.
 >
- > Las secciones §§2–3 contienen el inventario y esquema físico live vigente y prevalecen sobre cualquier addendum histórico posterior que documente revisiones anteriores. Las secciones §§6–16 aportan glosario, contratos de código, decisiones y contexto; sus menciones a colecciones/campos ausentes del inventario actual se consideran históricas hasta nueva verificación. La fuente del esquema físico es Wix Data Collections API.
+ > Las secciones §§2–3 también corresponden a esa captura histórica y no deben usarse como inventario actual. El inventario y esquema vigentes están en el addendum actual al final del documento y en docs/audits/2026-11-14-current-site-cms-normalization.md. Las secciones §§6–16 aportan glosario y contratos; sus menciones a campos ausentes deben contrastarse con el manifiesto vigente.
 
 
 
 ## 1. Alcance y criterio de lectura
 
 Se documentan:
-- Las 12 colecciones `NATIVE` del sitio de producción, con revisión live, nombre visible CMS, campo de presentación y todos los campos físicos observados.
-- Las 29 colecciones `WIX_APP`, con nombre visible, propietario de aplicación, campo de presentación y número de campos. Sus esquemas son administrados por Wix Apps y no se redefinen aquí.
+- Las 12 colecciones `NATIVE` de la captura histórica, con revisión, nombre visible CMS, campo de presentación y campos físicos observados.
+- Las 29 colecciones `WIX_APP` de la captura histórica, con nombre visible, propietario de aplicación, campo de presentación y número de campos. Sus esquemas son administrados por Wix Apps y no se redefinen aquí.
 - Los keyfields de negocio y sus significados cuando están respaldados por el esquema, `internalConfig.js`, `validation.js` o documentación técnica del repositorio.
 - Las reglas de nomenclatura que el dossier define como estándar y las diferencias reales que aparecen en CMS.
 
@@ -79,7 +79,7 @@ Se documentan:
 | `Stores/Products` | Products | WIX_APP | 7 | 35 | Wix Stores / eCommerce | `1380b703-ce81-ff05-f115-39571d94dfcd` |
 | `Stores/Variants` | Variants | WIX_APP | 0 | 12 | Wix Stores / eCommerce | `1380b703-ce81-ff05-f115-39571d94dfcd` |
 
-**Corte Wix live:** 41 colecciones (12 NATIVE, 29 WIX_APP). DatosFiscales, InventarioStockVenta y MovimientosInventario no aparecen en el inventario live; sus menciones restantes son históricas/legacy y no acreditan existencia física actual.
+**Corte histórico de la tabla anterior:** 41 colecciones (12 NATIVE, 29 WIX_APP). La ausencia de DatosFiscales, InventarioStockVenta y MovimientosInventario corresponde únicamente a aquella captura; el inventario vigente está documentado en el addendum actual.
 
 Para NATIVE Wix no devuelve ownerAppId: son colecciones CMS propias del proyecto. Para WIX_APP se conserva el identificador literal devuelto por Wix; SiteMembers es un valor simbólico y en Locations/Locations el propietario no viene informado. La atribución por prefijo es funcional y no sustituye el owner ID.
 
@@ -1630,16 +1630,16 @@ Las definiciones siguientes combinan contrato físico live y documentación/cód
 |---|---|---|---|
 | `singletonKey` | CajaActual | TEXT | Clave que identifica el registro singleton de la sesión/caja; valor canónico documentado `CAJA_PRINCIPAL`. |
 | `sequenceCounters` | CajaActual | OBJECT | Contadores de secuencia utilizados por el ledger; no editar manualmente. |
-| `operationDateHour` | CajaActual | DATETIME | Fecha y hora de referencia de la operación. |
-| `openingCashAmount` / `openingCardAmount` / `openingBizumAmount` / `openingOtherAmount` | CajaActual | NUMBER | Saldos iniciales por medio de pago registrados en la apertura. |
+| `operationDate` | CajaActual | DATE | Fecha de referencia operativa de la caja. |
+| `openingAmount` | CajaActual | NUMBER | Saldo de apertura; se mantiene separado de expectedCash aunque coincidan en la fila sintética actual. |
 | `cashAmount` | CajaActual | NUMBER | Importe de efectivo físico reflejado en la caja. |
 | `expectedCash` | CajaActual | NUMBER | Efectivo esperado según movimientos físicos registrados. |
 | `countedCash` | CajaActual | NUMBER | Efectivo contado físicamente en el arqueo. |
 | `difference` / `differenceReason` | CajaActual | NUMBER / TEXT | Diferencia de arqueo y explicación asociada. |
-| `cashRegisterStatus` | CajaActual | TEXT | Estado de apertura/cierre de la caja física; `isOpen` no existe en el esquema actual. |
-| `cardAmount` / `bizumAmount` / `otherAmount` | CajaActual | NUMBER | Acumulados actuales por medio de pago; no equivalen a efectivo físico. |
-| `ticketNumber` / `ticketSeries` / `ticketSequence` | CajaActual | TEXT / TEXT / NUMBER | Identificación y secuencia del último ticket. |
-| `cashMovementId` | CajaActual | TEXT | Identificador textual del movimiento asociado en `MovimientosCaja`. |
+| `cashRegisterStatus` | CajaActual | TEXT | Estado canónico de la caja. El sitio aislado usa `SIMULACION`; el código trata ese sentinel de forma explícita. |
+| `cardAmount` / `otherAmount` / `voucherAmount` | CajaActual | NUMBER | Acumulados por concepto; no equivalen a efectivo físico ni prueban un desglose de Bizum. |
+| `currentSequence` | CajaActual | NUMBER | Campo físico presente; no se localizó consumidor activo en src/. Candidato a retirada tras revisar contratos externos. |
+| `id` | CajaActual | TEXT | Espejo físico de `_id` en el singleton leído; el keyfield CMS sigue siendo `_id`. |
 | `taxId` | DatosFiscales | TEXT | NIF/NIE/CIF/VAT-UE del tercero; validado por `assertDatosFiscalesRecord`. |
 | `legalName` | DatosFiscales | TEXT | Razón social/nombre legal del tercero o emisor. |
 | `recordType` | DatosFiscales | TEXT | Discriminador fiscal: `TERCERO`, `GESTORIA`, `CONFIG_SISTEMA`. |
