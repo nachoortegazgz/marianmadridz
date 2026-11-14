@@ -347,7 +347,7 @@ function _validateFiscalPayload(item) {
 
     if (eventType !== "CIERRE_Z") {
         if (item.thirdPartyId != null && item.thirdPartyId !== "" && !_isGuid(item.thirdPartyId)) {
-            _schemaError("thirdPartyId debe ser un GUID valido (FK MapaStaff)");
+            _schemaError("thirdPartyId debe ser un GUID valido (FK DatosFiscales)");
         }
         // Contraparte/logistica: VENTA_LINEA/COMPRA_LINEA exigen al menos una
         // de las dos referencias operativas canonicas (producto del catalogo
