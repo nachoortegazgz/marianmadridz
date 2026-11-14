@@ -72,9 +72,8 @@ function _isRecord(value) {
     return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
-const APPEND_ONLY_MUTABLE_COLLECTIONS = Object.freeze([
+const APPEND_ONLY_COLLECTIONS = Object.freeze([
     BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA,
-    BUSINESS_COLLECTIONS.MOVIMIENTOS_INVENTARIO,
     BUSINESS_COLLECTIONS.LIBRO_ASIENTOS_CONTABLES_DETALLE,
     BUSINESS_COLLECTIONS.REGISTROS_HORARIOS_STAFF,
     BUSINESS_COLLECTIONS.HISTORICO_CIERRES_Z,
@@ -128,7 +127,7 @@ export function assertUpdateAllowed(collection, item) {
     if (!DATA_ACCESS_WRITE_POLICY.updateCollections.includes(collection)) {
         throw _policyError("CMS_UPDATE_COLLECTION_DENIED");
     }
-    if (APPEND_ONLY_MUTABLE_COLLECTIONS.includes(collection)) {
+    if (APPEND_ONLY_COLLECTIONS.includes(collection)) {
         if (!_temporaryMutationWindowOpen()) {
             throw _policyError("CMS_UPDATE_COLLECTION_DENIED");
         }
@@ -176,7 +175,7 @@ export function assertRemoveAllowed(collection, id, expectedControlType) {
             (expectedControlType === CONTROL_TYPE.WEBHOOK_EVENT && !_temporaryMutationWindowOpen())) {
             throw _policyError("CMS_REMOVE_SCOPE_DENIED");
         }
-    } else if (APPEND_ONLY_MUTABLE_COLLECTIONS.includes(collection) && !_temporaryMutationWindowOpen()) {
+    } else if (APPEND_ONLY_COLLECTIONS.includes(collection) && !_temporaryMutationWindowOpen()) {
         throw _policyError("CMS_REMOVE_SCOPE_DENIED");
     }
 }
