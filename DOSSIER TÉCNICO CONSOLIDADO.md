@@ -7,8 +7,9 @@
 ### CMS verificado tras los cambios
 
 - Inventario live: **42 colecciones** (13 `NATIVE`, 29 `WIX_APP`). `CajaActual` es `NATIVE`, revisión **64**, con **59 campos personalizados + 4 de sistema (63 físicos)**.
-- El esquema completo y los tipos de los 59 campos están en `DICCIONARIO_DATOS_CMS.md` §3.1. Permisos live leídos: `insert/update/remove=ADMIN`, `read=ANYONE`.
-- El permiso `read=ANYONE` constituye riesgo de exposición potencial porque la colección contiene campos para NIF, dirección y referencias de pago. No se ha probado acceso efectivo de visitante ni se han cambiado permisos. `operationDate`, `openingAmount`, `voucherAmount` e `isOpen` no existen en el esquema actual.
+- El esquema completo y los tipos de los 59 campos están en `DICCIONARIO_DATOS_CMS.md` §3.1.
+- Política temporal de lectura: `itemRead=ANYONE` en las 13 colecciones NATIVE, con los permisos de escritura conservados. Las 29 colecciones WIX_APP mantienen la política fijada por Wix Apps; 23 permiten ANYONE y 6 mantienen restricciones de aplicación.
+- Riesgo P1 explícitamente aceptado por el responsable durante desarrollo: la lectura pública puede exponer datos personales, fiscales, contables, laborales y de pagos. No introducir datos reales sensibles. Revertir restricciones antes de despliegue. `operationDate`, `openingAmount`, `voucherAmount` e `isOpen` no existen en el esquema actual.
 - Estado del singleton: el último readback anterior a esta edición documentaba `CAJA_PRINCIPAL` cerrado y sin sesión abierta. El elemento no se ha releído en esta actualización; el estado y los saldos actuales quedan pendientes de readback.
 - Índice único `CajaActual_singletonKey_unique`: ACTIVE. Índice anterior `cashRegisterStatus_operationDate`: ya no aparece en el inventario final. Índice corregido `cashRegisterStatus_operationDateHour`: ACTIVE en el readback final.
 - `MovimientosCaja`: revisión 78, 0 elementos; no modificada. `LibroAsientosContablesDetalle`: 0. `RegistrosHorariosStaff`: revisión 11, 0 tras limpieza. `HistoricoCierresZ`: 0. `PaquetesGestoria`: 0. `ControlOperativo`: 3 elementos. `MovimientosInventario` no figura en el inventario live de 42 colecciones; la fila histórica que lo describía como colección presente queda pendiente de reconciliación documental.
