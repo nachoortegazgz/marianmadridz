@@ -507,6 +507,6 @@ test('HOOK-PACKAGE-02 monthly package requires month and forbids quarter', () =>
 });
 
 test('HOOK-PACKAGE-03 temporary mutation window allows update/remove', () => {
-  assert.doesNotThrow(() => H.PaquetesGestoria_beforeUpdate({ _id: 'qa-package-1' }));
-  assert.doesNotThrow(() => H.PaquetesGestoria_beforeRemove('qa-package-1'));
+  assert.doesNotThrow(() => H.PaquetesGestoria_beforeUpdate({ _id: 'synthetic-package-1' }));
+  assert.doesNotThrow(() => H.PaquetesGestoria_beforeRemove('synthetic-package-1'));
 });
