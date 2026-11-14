@@ -837,7 +837,7 @@ export async function ControlOperativo_beforeUpdate(item) {
     );
     if (!original) _schemaError("ControlOperativo update target not found");
 
-    if (APPEND_ONLY_CONTROL_TYPES.has(original.controlType) && !_appendOnlyMutationWindowOpen()) {
+    if (APPEND_ONLY_CONTROL_TYPES.has(original.controlType)) {
         _fiscalError(`ControlOperativo/${original.controlType} es append-only: modificacion prohibida`);
     }
 
@@ -866,7 +866,7 @@ export async function ControlOperativo_beforeRemove(itemId) {
         CONSISTENCY.STRONG
     );
     if (!original) _schemaError("ControlOperativo remove target not found");
-    if (APPEND_ONLY_CONTROL_TYPES.has(original.controlType) && !_appendOnlyMutationWindowOpen()) {
+    if (APPEND_ONLY_CONTROL_TYPES.has(original.controlType)) {
         _fiscalError(`ControlOperativo/${original.controlType} es append-only: borrado prohibido`);
     }
     return id;
