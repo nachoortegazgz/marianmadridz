@@ -1,5 +1,16 @@
 # Estado actual del proyecto — Marian Madrid
 
+## Hito técnico — corrección de deployment backend (2026-11-14)
+
+- PR #373 quedó integrada en `main` mediante merge `1b39ebb22c885f50320b7d52f5bc336cc0570ee5`.
+- La ejecución CI de esa PR terminó **FAIL**: Gitleaks PASS; regresión Layer 1 FAIL. El diagnóstico identificó un export consumido por `data.js` (`assertMapaStaffRecord`) ausente en `validation.js`, además de una aserción obsoleta que excluía el sentinel QA `CASH_REGISTER_STATUS.SIMULACION`.
+- La corrección original de los tres `no-undef` quedó incorporada, pero la fusión no equivale a validación: el workflow no superó el gate.
+- Rama correctiva actual: `fix/ci-regression-and-milestone-2026-11-14`. Restaura el validador MapaStaff conforme al contrato operativo separado del código actual, mantiene `thirdPartyId` como TEXT opaco, y actualiza pruebas para el sentinel de simulación.
+- **Estado de validación de esta corrección:** pendiente del CI completo de la PR correctiva. No declarar hito cerrado hasta PASS.
+- **Wix Runtime/E2E:** BLOCKED_ENVIRONMENT por falta de contexto QA resoluble en la conexión. No se usó producción, no se publicó y no se ejecutaron escrituras CMS.
+- **Discrepancia documental pendiente:** el diccionario CMS contiene un addendum de consolidación fiscal de MapaStaff (42 campos), mientras que `PROJECT_BASELINE.md`, `DECISION-LOG.md` y el código activo de `main` describen el contrato separado MapaStaff/DatosFiscales. No se debe desplegar ni migrar ese contrato hasta reconciliar evidencia live, rama de implementación y plan de retirada de DatosFiscales.
+
+
 **Fecha de corte:** 2026-11-14  
 **Sitio objeto de trabajo:** 50b39f33-e753-4331-ab35-b2ed43dc97f7  
 **Naturaleza:** banco de pruebas aislado, sin actividad real, según declaración expresa del propietario.  
