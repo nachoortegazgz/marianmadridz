@@ -14,7 +14,7 @@
 
 # Diccionario de datos CMS — Marian Madrid
 
-> **Corte de esquema:** 2026-11-14. **Entorno de referencia:** sitio Marian Madrid publicado, Site ID `188bed94-177c-4bc9-a9f0-35080d874f3e`. **Fuente del esquema:** lectura directa Wix Data Collections API `GET /data/v2/collections/CajaActual`. **CajaActual:** revisión live 9; 78 campos personalizados + 4 campos de sistema (82 físicos). **Permisos devueltos por Wix:** `read=ANYONE`, `insert=ADMIN`, `update=ADMIN`, `remove=ADMIN`. Esta evidencia sustituye los valores históricos de revisión, cardinalidad y permisos de CajaActual documentados anteriormente. No se extrapolan estos permisos al resto de colecciones.
+> **Corte live completo:** 2026-11-14. **Sitio:** `188bed94-177c-4bc9-a9f0-35080d874f3e`. Fuente: Wix Data Collections API. Inventario: 41 colecciones (12 NATIVE, 29 WIX_APP) y 980 definiciones de campo físicas. Revisiones, permisos, tipos y metadatos de las 41 colecciones se regeneran en §§2–3 desde respuestas live. Esta lectura prevalece sobre inventarios anteriores. No se modificaron colecciones ni registros.
 >
 > El addendum de vigencia al inicio y §16 prevalecen sobre las tablas históricas que aún mencionen colecciones retiradas, revisiones antiguas o el contrato anterior de `CajaActual`. La fuente del esquema es Wix Data Collections API; los contratos de negocio se contrastan con el código de la rama identificada.
 
@@ -35,401 +35,1431 @@ Se documentan:
 4. Los campos `_id`, `_createdDate`, `_updatedDate` y `_owner` son campos de sistema de Wix cuando aparecen marcados como tales.
 5. El esquema CMS describe tipos, pero Wix advierte que no constituye por sí mismo una validación estricta de cada valor escrito. Las validaciones del backend siguen siendo obligatorias.
 
-## 2. Inventario de colecciones NATIVE
+## 2. Inventario live de todas las colecciones CMS
 
-Recuento live verificado el 2026-11-14: 42 colecciones en total (13 NATIVE y 29 WIX_APP). Los recuentos de elementos proceden de Data Items Count API.
+| ID canónico de colección | Nombre visible | Tipo | Revisión | Campos | App de origen | ownerAppId |
+|---|---|---:|---:|---:|---|---|
+| `Blog/Categories` | Categories | WIX_APP | 4 | 11 | Wix Blog | `14bcded7-0066-7c35-14d7-466cb3f09103` |
+| `Blog/Posts` | Posts | WIX_APP | 0 | 27 | Wix Blog | `14bcded7-0066-7c35-14d7-466cb3f09103` |
+| `Blog/Tags` | Tags | WIX_APP | 0 | 7 | Wix Blog | `14bcded7-0066-7c35-14d7-466cb3f09103` |
+| `Bookings/Schedule` | Schedule | WIX_APP | 0 | 5 | Wix Bookings | `13d21c63-b5ec-5912-8397-c3a5ddb27a97` |
+| `Bookings/Services` | Services | WIX_APP | 5 | 20 | Wix Bookings | `13d21c63-b5ec-5912-8397-c3a5ddb27a97` |
+| `Bookings/Staff` | Staff | WIX_APP | 0 | 3 | Wix Bookings | `13d21c63-b5ec-5912-8397-c3a5ddb27a97` |
+| `CajaActual` | CAJA_ACTUAL | NATIVE | 13 | 80 | CMS propio del proyecto | `No informado` |
+| `CampaignManager/campaigns` | Campaign Manager | WIX_APP | 0 | 32 | Wix Campaign Manager | `7fdf5576-9d52-4c0a-9840-6e226f2ec415` |
+| `CampaignManager/userConfig` | User Config | WIX_APP | 0 | 5 | Wix Campaign Manager | `7fdf5576-9d52-4c0a-9840-6e226f2ec415` |
+| `CitasF2` | CITAS_F2 | NATIVE | 44 | 31 | CMS propio del proyecto | `No informado` |
+| `ComplementosCatalogo` | COMPLEMENTOS_CATALOGO | NATIVE | 141 | 18 | CMS propio del proyecto | `No informado` |
+| `ControlOperativo` | CONTROL_OPERATIVO | NATIVE | 39 | 42 | CMS propio del proyecto | `No informado` |
+| `eCommerce/Orders` | Orders | WIX_APP | 0 | 45 | Wix Stores / eCommerce | `1380b703-ce81-ff05-f115-39571d94dfcd` |
+| `Forms/subscribers03` | Subscriptions | WIX_APP | 0 | 6 | Wix Forms | `14ce1214-b278-a7e4-1373-00cebd1bef7c` |
+| `HistoricoCierresZ` | HISTORICO_CIERRES_Z | NATIVE | 39 | 62 | CMS propio del proyecto | `No informado` |
+| `LibroAsientosContablesDetalle` | LIBRO_ASIENTOS_CONTABLES_DETALLE | NATIVE | 29 | 27 | CMS propio del proyecto | `No informado` |
+| `Locations/Locations` | Locations | WIX_APP | 6 | 17 | Wix Locations | `No informado` |
+| `MapaStaff` | MAPA_STAFF | NATIVE | 105 | 56 | CMS propio del proyecto | `No informado` |
+| `Marketing/Coupons` | Coupons | WIX_APP | 0 | 23 | Wix Marketing / Coupons | `14d7032a-0a65-5270-cca7-30f599708fed` |
+| `Members/Badges` | Badges | WIX_APP | 0 | 11 | Wix Members | `SiteMembers` |
+| `Members/FullData` | FullData | WIX_APP | 0 | 28 | Wix Members | `SiteMembers` |
+| `Members/PrivateMembersData` | PrivateMembersData | WIX_APP | 4 | 15 | Wix Members | `SiteMembers` |
+| `Members/PublicData` | PublicData | WIX_APP | 0 | 12 | Wix Members | `SiteMembers` |
+| `MovimientosCaja` | MOVIMIENTOS_CAJA | NATIVE | 80 | 88 | CMS propio del proyecto | `No informado` |
+| `PaquetesGestoria` | Paquetes de Gestoria (append-only) | NATIVE | 5 | 17 | CMS propio del proyecto | `No informado` |
+| `RegistroIntegracion` | REGISTRO_INTEGRACION | NATIVE | 4 | 21 | CMS propio del proyecto | `No informado` |
+| `RegistrosHorariosStaff` | REGISTROS_HORARIOS_STAFF | NATIVE | 14 | 21 | CMS propio del proyecto | `No informado` |
+| `ServiciosCatalogo` | SERVICIOS_CATALOGO | NATIVE | 199 | 44 | CMS propio del proyecto | `No informado` |
+| `StoreCatalog/Brands` | Brands | WIX_APP | 0 | 6 | Wix Stores Catalog V3 | `215238eb-22a5-4c36-9e7b-e7c08025e04e` |
+| `StoreCatalog/Categories` | Categories | WIX_APP | 0 | 17 | Wix Stores Catalog V3 | `215238eb-22a5-4c36-9e7b-e7c08025e04e` |
+| `StoreCatalog/Info sections` | Info Sections | WIX_APP | 0 | 9 | Wix Stores Catalog V3 | `215238eb-22a5-4c36-9e7b-e7c08025e04e` |
+| `StoreCatalog/Inventory` | Inventory | WIX_APP | 0 | 17 | Wix Stores Catalog V3 | `215238eb-22a5-4c36-9e7b-e7c08025e04e` |
+| `StoreCatalog/Product options & modifiers` | Product Options Modifiers | WIX_APP | 0 | 12 | Wix Stores Catalog V3 | `215238eb-22a5-4c36-9e7b-e7c08025e04e` |
+| `StoreCatalog/Products` | Products | WIX_APP | 0 | 42 | Wix Stores Catalog V3 | `215238eb-22a5-4c36-9e7b-e7c08025e04e` |
+| `StoreCatalog/Ribbons` | Ribbons | WIX_APP | 0 | 6 | Wix Stores Catalog V3 | `215238eb-22a5-4c36-9e7b-e7c08025e04e` |
+| `StoreCatalog/Variants` | Variants | WIX_APP | 0 | 16 | Wix Stores Catalog V3 | `215238eb-22a5-4c36-9e7b-e7c08025e04e` |
+| `Stores/Collections` | Collections | WIX_APP | 0 | 5 | Wix Stores / eCommerce | `1380b703-ce81-ff05-f115-39571d94dfcd` |
+| `Stores/InventoryItems` | InventoryItems | WIX_APP | 0 | 6 | Wix Stores / eCommerce | `1380b703-ce81-ff05-f115-39571d94dfcd` |
+| `Stores/Orders` | Orders | WIX_APP | 0 | 23 | Wix Stores / eCommerce | `1380b703-ce81-ff05-f115-39571d94dfcd` |
+| `Stores/Products` | Products | WIX_APP | 7 | 35 | Wix Stores / eCommerce | `1380b703-ce81-ff05-f115-39571d94dfcd` |
+| `Stores/Variants` | Variants | WIX_APP | 0 | 12 | Wix Stores / eCommerce | `1380b703-ce81-ff05-f115-39571d94dfcd` |
 
-| ID de colección | Nombre visible CMS | Revisión de esquema | Campo de presentación | Elementos | Clasificación/uso |
-|---|---|---:|---|---:|---|
-| `CajaActual` | `CAJA_ACTUAL` | 9 | `singletonKey` | No consultado en esta lectura | Snapshot operativo de caja, sesión, última operación, POS y ticket; 78 campos personalizados |
-| `CitasF2` | `CITAS_F2` | 42 | `bookingId` | 1 | Proyección interna de reservas |
-| `ComplementosCatalogo` | `COMPLEMENTOS_CATALOGO` | 139 | `name` | 36 | Catálogo de complementos |
-| `ControlOperativo` | `CONTROL_OPERATIVO` | 37 | `controlType` | 3 | Locks, idempotencia, webhooks, alertas y control |
-| `DatosFiscales` | `DATOS_FISCALES` | 21 | `recordType` | 1 | Legacy en retirada; conservar hasta desplegar consumidores migrados |
-| `HistoricoCierresZ` | `HISTORICO_CIERRES_Z` | 37 | `periodType` | 0 | Histórico de cierres Z |
-| `LibroAsientosContablesDetalle` | `LIBRO_ASIENTOS_CONTABLES_DETALLE` | 27 | `entryId` | 0 | Ledger contable |
-| `MapaStaff` | `MAPA_STAFF` | 36 | `displayName` | 5 | Maestro mixto consultivo: STAFF, GESTORIA, TERCERO y CONFIG_SISTEMA |
-| `MovimientosCaja` | `MOVIMIENTOS_CAJA` | 78 | `numSerieFactura` | 0 | Ledger fiscal; sin movimientos en el corte live |
+**Corte Wix live:** 41 colecciones (12 NATIVE, 29 WIX_APP). DatosFiscales, InventarioStockVenta y MovimientosInventario no aparecen en el inventario live; sus menciones restantes son históricas/legacy y no acreditan existencia física actual.
 
-| `PaquetesGestoria` | `Paquetes de Gestoria (append-only)` | 3 | `periodType` | 0 | Snapshot documental append-only |
-| `RegistroIntegracion` | `REGISTRO_INTEGRACION` | 2 | `eventId` | 0 | Registro de integración; fuera de BUSINESS_COLLECTIONS |
-| `RegistrosHorariosStaff` | `REGISTROS_HORARIOS_STAFF` | 11 | `resourceId` | 0 | Registro horario; writer deshabilitado |
-| `ServiciosCatalogo` | `SERVICIOS_CATALOGO` | 195 | `slug` | 95 | Catálogo canónico de servicios y planes |
+Para NATIVE Wix no devuelve ownerAppId: son colecciones CMS propias del proyecto. Para WIX_APP se conserva el identificador literal devuelto por Wix; SiteMembers es un valor simbólico y en Locations/Locations el propietario no viene informado. La atribución por prefijo es funcional y no sustituye el owner ID.
 
+## 3. Esquema físico live completo — campos, tipos, descripción, origen, IDs y enums
 
+`key` identifica el campo CMS. El ID canónico de colección y `ownerAppId` identifican el recurso y la aplicación propietaria. Las referencias se muestran solo cuando Wix declara REFERENCE/MULTI_REFERENCE. Los campos TEXT terminados en Id no se consideran referencias tipadas sin evidencia adicional.
 
-**Advertencia de autoridad**
-- Wix CMS es la fuente de verdad transaccional propia del ecosistema.
-- Wix Stores usa Catalog V3 como autoridad operativa del catálogo/stock comercial. `InventarioStockVenta` se observa como colección legacy. `MovimientosInventario` no aparece en el inventario live del 2026-11-14 ni responde al GET por ese ID; la sección 3.11 queda como esquema histórico del dossier, no como colección actualmente disponible. No recrearla ni reactivar writers sin confirmar ID, necesidad y consumidores.
-- `ServiciosCatalogo` está definido por el proyecto como maestro propio de configuración de servicios y planes; su sincronización completa con Wix Bookings debe probarse, no presumirse.
-- `RegistroIntegracion` existe físicamente, pero no forma parte de `BUSINESS_COLLECTIONS` en `internalConfig.js`; no se ha demostrado un consumidor/writer activo.
-- `HistoricoCierresZ`, `MovimientosCaja`, `LibroAsientosContablesDetalle`, `PaquetesGestoria` y `RegistrosHorariosStaff` deben tratarse conforme a sus restricciones de inmutabilidad/append-only y flags fail-closed. No editar ni borrar registros históricos.
+Cuando existe `description`, se copia el texto Wix. Cuando no existe, se declara que la descripción funcional no está configurada en CMS; la etiqueta Wix se mantiene en columna separada. No se inventan definiciones de negocio. La subestructura OBJECT/ARRAY resume los metadatos anidados que devolvió Wix. Los enums del proyecto se identifican con su fuente y no implican validación CMS automática.
 
-## 3. Esquema físico de colecciones NATIVE
+### Blog/Categories — Categories
 
-Formato: `key:TYPE`. Cuando no se indica otra cosa, el `displayName` de campo observado coincide con el `key`. Las etiquetas especiales de Wix se documentan en §4. El orden es el devuelto por Wix y no implica prioridad de negocio.
+- Origen: **Wix Blog** · Tipo `WIX_APP` · ID canónico de colección `Blog/Categories` · ownerAppId=`14bcded7-0066-7c35-14d7-466cb3f09103`.
+- Revisión: `4` · Campos: **11** · Campo de presentación: `slug`.
+- Permisos: `read=ANYONE, insert=ADMIN, update=ADMIN, remove=ADMIN`.
 
-### 3.1 CajaActual — revisión live 9 (lectura Wix Data Collections API, 2026-11-14)
+| Campo (key canónico) | Etiqueta Wix | Tipo de dato Wix | Descripción | Obligatorio | ID de colección referenciada | Subestructura OBJECT/ARRAY | Enum/opciones |
+|---|---|---|---|---|---|---|---|
+| `postCount` | Post Count | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `fullCategoryPageUrl` | Category Page URL | `URL` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `posts` | Posts | `MULTI_REFERENCE → Blog/Posts` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | `Blog/Posts` | — | No declarado en esquema CMS |
+| `description` | Description | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_id` | ID | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `label` | Label | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `translationId` | Translation ID | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `slug` | Slug | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `categoryPageUrl` | Category Page Slug | `URL` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `coverImage` | Cover Image | `IMAGE` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `language` | Language | `LANGUAGE` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
 
-**Esquema físico verificado. 82 campos físicos: 78 personalizados + 4 campos de sistema Wix.** Revisión de colección `9`; no debe confundirse con el número de campos. Última actualización de esquema devuelta por Wix: `2026-11-14T04:11:13.578Z`.
+### Blog/Posts — Posts
 
-```text
-singletonKey:TEXT, closedAt:DATETIME, closedBy:TEXT, cierreZReference:TEXT,
-openedAt:DATETIME, openedBy:TEXT, operationDateHour:DATETIME,
-cashRegisterStatus:TEXT, openingCashAmount:NUMBER, openingCardAmount:NUMBER,
-openingBizumAmount:NUMBER, openingOtherAmount:NUMBER, cashAmount:NUMBER,
-cardAmount:NUMBER, bizumAmount:NUMBER, otherAmount:NUMBER,
-cashMovementId:TEXT, lastMovementAt:DATETIME, snapshotUpdatedAt:DATETIME,
-snapshotSource:TEXT, snapshotVersion:NUMBER, salesCount:NUMBER,
-expectedCash:NUMBER, countedCash:NUMBER, difference:NUMBER,
-differenceReason:TEXT, sequenceCounters:OBJECT, ticketSequence:NUMBER,
-lastOperationId:TEXT, lastOperationType:TEXT, lastOperationAmount:NUMBER,
-lastOperationPaymentMethod:TEXT, lastOperationAt:DATETIME,
-lastOperationStatus:TEXT, traceId:TEXT, posIntegrationStatus:TEXT,
-ticketSyncStatus:TEXT, orderId:TEXT, checkoutId:TEXT, paymentId:TEXT,
-transactionId:TEXT, paymentReference:TEXT, paymentStatus:TEXT,
-paymentMethod:TEXT, paymentBreakdown:OBJECT, amountReceived:NUMBER,
-changeReturned:NUMBER, posPaymentStatus:TEXT, posPaymentMethod:TEXT,
-posPaymentProvider:TEXT, posAmount:NUMBER, posCurrency:TEXT,
-posPaidAt:DATETIME, ticketNumber:TEXT, ticketIssuedAt:DATETIME,
-ticketType:TEXT, ticketSeries:TEXT, lineItems:OBJECT,
-conceptOperations:OBJECT, conceptQuantities:OBJECT, customerName:TEXT,
-customerTaxId:TEXT, customerAddress:TEXT, netPrice:NUMBER,
-discountAmount:NUMBER, roundingAmount:NUMBER, taxableBaseTotal:NUMBER,
-appliedTax:NUMBER, taxTotal:NUMBER, ticketTotal:NUMBER, fiscalText:TEXT,
-verifactuReference:TEXT, verificationQr:TEXT, ticketXControlReference:TEXT,
-contactId:TEXT, catalogItemId:TEXT, serviceId:TEXT, bookingId:TEXT,
-_id:TEXT, _createdDate:DATETIME, _updatedDate:DATETIME, _owner:TEXT
-```
+- Origen: **Wix Blog** · Tipo `WIX_APP` · ID canónico de colección `Blog/Posts` · ownerAppId=`14bcded7-0066-7c35-14d7-466cb3f09103`.
+- Revisión: `0` · Campos: **27** · Campo de presentación: `slug`.
+- Permisos: `read=ANYONE, insert=ADMIN, update=ADMIN, remove=ADMIN`.
 
-**Permisos live devueltos por Wix:** `read=ANYONE`, `insert=ADMIN`, `update=ADMIN`, `remove=ADMIN`. La lectura ANYONE permite acceso de lectura a nivel de colección según el permiso CMS; no equivale a que todas las rutas frontend expongan necesariamente todos los campos. Aun así, por la presencia de campos de cliente, identificadores de pago y datos fiscales, se clasifica como riesgo P1 y debe revisarse la necesidad de lectura pública antes de cualquier despliegue. No se ha modificado ningún permiso en esta intervención.
+| Campo (key canónico) | Etiqueta Wix | Tipo de dato Wix | Descripción | Obligatorio | ID de colección referenciada | Subestructura OBJECT/ARRAY | Enum/opciones |
+|---|---|---|---|---|---|---|---|
+| `author` | Author | `REFERENCE → Members/PublicData` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | `Members/PublicData` | — | No declarado en esquema CMS |
+| `mainCategory` | Main Category | `REFERENCE → Blog/Categories` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | `Blog/Categories` | — | No declarado en esquema CMS |
+| `viewCount` | View Count | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `excerpt` | Excerpt | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `timeToRead` | Time To Read | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_id` | ID | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `tags` | Tags | `MULTI_REFERENCE → Blog/Tags` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | `Blog/Tags` | — | No declarado en esquema CMS |
+| `uuid` | UUID | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `featured` | Featured | `BOOLEAN` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `translationId` | Translation ID | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `slug` | Slug | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `coverImage` | Cover Image | `IMAGE` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `plainContent` | Plain Content | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `commentCount` | Comment Count | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `language` | Language | `LANGUAGE` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `publishedDate` | Published Date | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `pinned` | Pinned | `BOOLEAN` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `categories` | Categories | `MULTI_REFERENCE → Blog/Categories` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | `Blog/Categories` | — | No declarado en esquema CMS |
+| `richContent` | Rich Content | `RICH_CONTENT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `postPageUrl` | Post Page URL | `PAGE_LINK` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `coverImageDisplayed` | Cover Image Displayed | `BOOLEAN` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `title` | Title | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `lastPublishedDate` | Last Published Date | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `internalId` | Internal ID | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `relatedPosts` | Related Posts | `MULTI_REFERENCE → Blog/Posts` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | `Blog/Posts` | — | No declarado en esquema CMS |
+| `hashtags` | Hashtags | `ARRAY_STRING` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `likeCount` | Like Count | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
 
-**Diferencias frente al esquema anterior documentado:** el esquema live actual ya no devuelve `staffResourceId`, `conceptList`, `pvp`, `totalSum` ni `netAmount`; sí devuelve campos de snapshot (`snapshotUpdatedAt`, `snapshotSource`, `snapshotVersion`), última operación (`lastOperation*`), integración POS (`pos*`), referencias de checkout/pago/transacción (`checkoutId`, `paymentId`, `transactionId`) y referencias de contacto/catálogo/servicio/reserva (`contactId`, `catalogItemId`, `serviceId`, `bookingId`). La búsqueda de consumidores en `main` sí confirma discrepancia activa: `src/backend/cajas.web.js` conserva `CAJA_KEYS.TOTAL = "netAmount"` (línea 167), escribe `cashRegister.staffResourceId` (línea 1122), expone `netAmount` en la respuesta del estado de caja (línea 1364) y los tests offline esperan esa propiedad; `src/backend/eventLog.js` escribe `staffResourceId` en `MovimientosCaja` (línea 698), que es otra colección y no debe confundirse con CajaActual. El campo `staffResourceId` de CajaActual no está en el esquema live. Los campos nuevos de snapshot, última operación, POS, pago y referencias no aparecieron en las búsquedas de consumidores del código inspeccionado. Esta diferencia no prueba que Wix rechace escrituras (Wix advierte que el esquema de colección no se aplica estrictamente a cada dato), pero sí implica que el contrato declarado en CMS y el contrato usado por el backend no están sincronizados. No se cambia código en esta actualización documental; se registra como pendiente P1 de reconciliación con pruebas runtime y revisión de todos los consumidores.
+### Blog/Tags — Tags
 
-**Límite de implementación:** el esquema CMS prueba la existencia y tipo declarado de los campos, no la validación estricta de valores, su obligatoriedad de negocio ni la existencia de writers/DTOs/consumidores. No se ha consultado el registro de elementos en esta intervención ni se ha comprobado su cardinalidad actual.
+- Origen: **Wix Blog** · Tipo `WIX_APP` · ID canónico de colección `Blog/Tags` · ownerAppId=`14bcded7-0066-7c35-14d7-466cb3f09103`.
+- Revisión: `0` · Campos: **7** · Campo de presentación: `slug`.
+- Permisos: `read=ANYONE, insert=ADMIN, update=ADMIN, remove=ADMIN`.
 
-**Contrato operativo declarado por el proyecto:** `CajaActual` es una proyección mutable de sesión/estado y última operación, no un ledger histórico. La clasificación exacta de importes y la relación con `MovimientosCaja` deben seguir los contratos backend y pruebas vigentes; la mera presencia de campos no certifica comportamiento.
+| Campo (key canónico) | Etiqueta Wix | Tipo de dato Wix | Descripción | Obligatorio | ID de colección referenciada | Subestructura OBJECT/ARRAY | Enum/opciones |
+|---|---|---|---|---|---|---|---|
+| `postCount` | Post Count | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `posts` | Posts | `MULTI_REFERENCE → Blog/Posts` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | `Blog/Posts` | — | No declarado en esquema CMS |
+| `_id` | ID | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `label` | Label | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `slug` | Slug | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `tagPageUrl` | Tag Page URL | `URL` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `language` | Language | `LANGUAGE` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
 
-**Cardinalidad y campos de sistema:** 78 campos personalizados + `_id`, `_createdDate`, `_updatedDate` y `_owner` = 82 campos físicos. La Data Collections API devuelve `_id` como TEXT, las fechas de sistema como DATETIME y `_owner` como TEXT.
+### Bookings/Schedule — Schedule
 
-### 3.2 CitasF2 — revisión 42
+- Origen: **Wix Bookings** · Tipo `WIX_APP` · ID canónico de colección `Bookings/Schedule` · ownerAppId=`13d21c63-b5ec-5912-8397-c3a5ddb27a97`.
+- Revisión: `0` · Campos: **5** · Campo de presentación: `_id`.
+- Permisos: `read=ANYONE, insert=ADMIN, update=ADMIN, remove=ADMIN`.
 
-```text
-slotStart:DATETIME, orderId:TEXT, timeZone:TEXT, cancellationReason:TEXT,
-privacyNoticePurpose:TEXT, privacyNoticeAcceptedAt:DATETIME, privacyNoticeVersion:TEXT,
-totalAmount:NUMBER, slotEnd:DATETIME, bookingId:TEXT, traceId:TEXT, bookingType:TEXT,
-bookingStatus:TEXT, paymentStatus:TEXT, serviceId:TEXT, resourceId:TEXT, pairToken:TEXT,
-dateYmd:TEXT, scheduleId:TEXT, contactDetails:OBJECT, thirdPartyId:TEXT, catalogId:TEXT,
-cashMovementId:TEXT, fiscalData:OBJECT, invoicingDate:DATETIME, revision:NUMBER,
-_id:TEXT, meta:OBJECT, _createdDate:DATETIME, _updatedDate:DATETIME, _owner:TEXT
-```
+| Campo (key canónico) | Etiqueta Wix | Tipo de dato Wix | Descripción | Obligatorio | ID de colección referenciada | Subestructura OBJECT/ARRAY | Enum/opciones |
+|---|---|---|---|---|---|---|---|
+| `_id` | ID | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `service` | Service | `REFERENCE → Bookings/Services` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | `Bookings/Services` | — | No declarado en esquema CMS |
+| `serviceDurationInMinutes` | Service Duration in Minutes | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `serviceSchedule` | Service Schedule | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `repeatsEveryXWeeks` | Repeats Every X Weeks | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
 
-**Contrato canónico raíz:** `bookingId`, `bookingStatus`, `paymentStatus`, `orderId`, `cashMovementId`, `serviceId`, `resourceId`, `scheduleId`, `slotStart`, `slotEnd`, `timeZone`, `traceId`. Los lectores mantienen root-first y fallback a `meta` para registros históricos. Los escritores nuevos no duplican dentro de `meta` los campos de estado/referencia que tienen columna raíz canónica.
+### Bookings/Services — Services
 
-### 3.3 ComplementosCatalogo — revisión 139
+- Origen: **Wix Bookings** · Tipo `WIX_APP` · ID canónico de colección `Bookings/Services` · ownerAppId=`13d21c63-b5ec-5912-8397-c3a5ddb27a97`.
+- Revisión: `5` · Campos: **20** · Campo de presentación: `serviceName`.
+- Permisos: `read=ANYONE, insert=ADMIN, update=ADMIN, remove=ADMIN`.
 
-```text
-sku:TEXT, taxIncluded:BOOLEAN, durationMinutes:NUMBER, tipoImpositivo:NUMBER,
-addonId:TEXT, traceId:TEXT, name:TEXT, description:RICH_TEXT, _id:TEXT,
-_owner:TEXT, price:NUMBER, itemNature:TEXT, codigoImpuesto:TEXT,
-_updatedDate:DATETIME, _createdDate:DATETIME, claveRegimen:TEXT,
-cuentaContableIngreso:TEXT, ServiciosCatalogo_name:MULTI_REFERENCE
-```
+| Campo (key canónico) | Etiqueta Wix | Tipo de dato Wix | Descripción | Obligatorio | ID de colección referenciada | Subestructura OBJECT/ARRAY | Enum/opciones |
+|---|---|---|---|---|---|---|---|
+| `serviceType` | Service Type | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `servicePageUrl` | Service Page URL | `PAGE_LINK` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `description` | Service Description | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_id` | Service ID | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `serviceName` | Service Name | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `priceAmount` | Price Amount | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `tagLine` | Service Tagline | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `maxNumberOfParticipantsPerReservation` | Max Number Of Participants Per Reservation | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `paymentType` | Payment Type | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `slug` | Slug | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `partOfPricingPlan` | Part Of Pricing Plan | `BOOLEAN` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `priceSummary` | Price Summary | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `depositAmount` | Deposit Amount | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `requiresApproval` | Requires Approval | `BOOLEAN` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `currency` | Currency | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `maxSessionCapacity` | Max Session Capacity | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `bookingsFlowEntryUrl` | Booking Flow Entry URL | `PAGE_LINK` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `form` | Form Fields | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `imageURL` | Service Image | `IMAGE` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `link-services-all` | link-services-all | `PAGE_LINK` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
 
-### 3.4 ControlOperativo — revisión 37
+### Bookings/Staff — Staff
 
-```text
-eventType:TEXT, occurredAt:DATETIME, controlType:TEXT, dedupeKey:TEXT,
-traceId:TEXT, status:TEXT, eventId:TEXT, expiresAt:DATETIME, bookingId:TEXT,
-pairToken:TEXT, resourceId:TEXT, serviceId:TEXT, slotStart:DATETIME,
-slotEnd:DATETIME, dateYmd:TEXT, transactionId:TEXT, orderId:TEXT, refundId:TEXT,
-kind:TEXT, attempts:NUMBER, maxAttempts:NUMBER, lastError:TEXT, totalAmount:NUMBER,
-operationDescription:TEXT, severity:TEXT, alertType:TEXT, message:TEXT, surface:TEXT,
-requesterKey:TEXT, requestCount:NUMBER, windowStart:DATETIME, payload:OBJECT,
-version:NUMBER, processedAt:DATETIME, _id:TEXT, _createdDate:DATETIME,
-_updatedDate:DATETIME, _owner:TEXT, heartbeatAt:DATETIME, operationDate:DATETIME,
-revision:NUMBER, compensationKind:TEXT
-```
+- Origen: **Wix Bookings** · Tipo `WIX_APP` · ID canónico de colección `Bookings/Staff` · ownerAppId=`13d21c63-b5ec-5912-8397-c3a5ddb27a97`.
+- Revisión: `0` · Campos: **3** · Campo de presentación: `name`.
+- Permisos: `read=ANYONE, insert=ADMIN, update=ADMIN, remove=ADMIN`.
 
-### 3.5 DatosFiscales — revisión live 21 (LEGACY en retirada)
+| Campo (key canónico) | Etiqueta Wix | Tipo de dato Wix | Descripción | Obligatorio | ID de colección referenciada | Subestructura OBJECT/ARRAY | Enum/opciones |
+|---|---|---|---|---|---|---|---|
+| `_id` | Staff ID | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `name` | Staff Name | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `image` | Staff Image | `IMAGE` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
 
-La colección sigue existiendo temporalmente por compatibilidad con el runtime publicado. Su única fila es el registro QA sintético `TERCERO/PROVEEDOR`; no se utiliza como emisor ni como fuente de verdad futura. El registro se ha copiado a `MapaStaff` conservando el mismo ID. No eliminar esta colección hasta desplegar y verificar los consumidores backend migrados a `MapaStaff`.
+### CajaActual — CAJA_ACTUAL
 
-El esquema histórico y los datos de esta colección no deben recibir nuevas escrituras. La eliminación se realizará tras validar que `eventLog.js`, `fiscalAggregator.web.js`, `fiscalDocuments.web.js`, los hooks CMS y los tests ya no la referencian en el runtime publicado.
+- Origen: **CMS propio del proyecto** · Tipo `NATIVE` · ID canónico de colección `CajaActual` · ownerAppId=`no informado`.
+- Revisión: `13` · Campos: **80** · Campo de presentación: `singletonKey`.
+- Permisos: `read=ANYONE, insert=ADMIN, update=ADMIN, remove=ADMIN`.
 
-### 3.6 HistoricoCierresZ — revisión 37
+| Campo (key canónico) | Etiqueta Wix | Tipo de dato Wix | Descripción | Obligatorio | ID de colección referenciada | Subestructura OBJECT/ARRAY | Enum/opciones |
+|---|---|---|---|---|---|---|---|
+| `singletonKey` | singletonKey | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `closedAt` | closedAt | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `closedBy` | closedBy | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `cierreZReference` | cierreZReference | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `openedAt` | openedAt | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `openedBy` | openedBy | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `operationDateHour` | operationDateHour | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `cashRegisterStatus` | cashRegisterStatus | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | CASH_REGISTER_STATUS: ABIERTA, CERRADA |
+| `openingCashAmount` | openingCashAmount | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `openingCardAmount` | openingCardAmount | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `openingBizumAmount` | openingBizumAmount | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `openingOtherAmount` | openingOtherAmount | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `cashAmount` | cashAmount | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `cardAmount` | cardAmount | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `bizumAmount` | bizumAmount | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `otherAmount` | otherAmount | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `cashMovementId` | cashMovementId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `lastMovementAt` | lastMovementAt | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `snapshotSource` | snapshotSource | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `salesCount` | salesCount | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `expectedCash` | expectedCash | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `countedCash` | countedCash | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `difference` | difference | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `differenceReason` | differenceReason | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `sequenceCounters` | sequenceCounters | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `ticketSequence` | ticketSequence | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `lastOperationId` | lastOperationId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `lastOperationType` | lastOperationType | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | MOVEMENT_TYPE: VENTA, VENTA_ONLINE, ANTICIPO, REEMBOLSO, DEVOLUCION, DEVOLUCION_SERVICIO, PROPINA, AJUSTE |
+| `lastOperationAmount` | lastOperationAmount | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `lastOperationPaymentMethod` | lastOperationPaymentMethod | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | PAYMENT_METHOD: EFECTIVO, TARJETA, BIZUM, TRANSFERENCIA, WIX_PAYMENTS |
+| `lastOperationAt` | lastOperationAt | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `lastOperationStatus` | lastOperationStatus | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `traceId` | traceId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `posIntegrationStatus` | posIntegrationStatus | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `ticketSyncStatus` | ticketSyncStatus | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `orderId` | orderId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `checkoutId` | checkoutId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `paymentId` | paymentId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `transactionId` | transactionId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `paymentReference` | paymentReference | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `paymentStatus` | paymentStatus | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `paymentMethod` | paymentMethod | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | PAYMENT_METHOD: EFECTIVO, TARJETA, BIZUM, TRANSFERENCIA, WIX_PAYMENTS |
+| `paymentBreakdown` | paymentBreakdown | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `amountReceived` | amountReceived | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `changeReturned` | changeReturned | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `posPaymentStatus` | posPaymentStatus | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `posPaymentMethod` | posPaymentMethod | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `posPaymentProvider` | posPaymentProvider | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `posAmount` | posAmount | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `posCurrency` | posCurrency | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `posPaidAt` | posPaidAt | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `ticketNumber` | ticketNumber | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `ticketIssuedAt` | ticketIssuedAt | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `ticketType` | ticketType | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `ticketSeries` | ticketSeries | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `lineItems` | lineItems | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `conceptOperations` | conceptOperations | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `conceptQuantities` | conceptQuantities | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `customerName` | customerName | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `customerTaxId` | customerTaxId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `customerAddress` | customerAddress | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `netPrice` | netPrice | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `discountAmount` | discountAmount | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `roundingAmount` | roundingAmount | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `taxableBaseTotal` | taxableBaseTotal | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `appliedTax` | appliedTax | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `taxTotal` | taxTotal | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `ticketTotal` | ticketTotal | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `fiscalText` | fiscalText | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `verifactuReference` | verifactuReference | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `verificationQr` | verificationQr | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `ticketXControlReference` | ticketXControlReference | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `contactId` | contactId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `catalogItemId` | catalogItemId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `serviceId` | serviceId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `bookingId` | bookingId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_id` | ID | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_createdDate` | Created Date | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_updatedDate` | Updated Date | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_owner` | Owner | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
 
-```text
-totalTips:NUMBER, snapshotJSON:TEXT, closedAt:DATETIME, timeZone:TEXT,
-closingSchemaVersion:TEXT, closingSource:TEXT, auditedRecordsCount:NUMBER,
-taxTypeBreakdown:OBJECT, movementTypeBreakdown:OBJECT, endTicketNumber:TEXT,
-startTicketNumber:TEXT, totalOperations:NUMBER, totalAdjustments:NUMBER,
-closeDate:DATE, totalRefunds:NUMBER, fiscalPeriod:TEXT, totalTaxAmount:NUMBER,
-totalTaxBase:NUMBER, totalOnline:NUMBER, totalBizum:NUMBER, totalCard:NUMBER,
-totalCash:NUMBER, closedBy:TEXT, recordDomain:TEXT, closingStatus:TEXT,
-operationDate:DATE, consolidatedTotalAmount:NUMBER, grossSalesTotal:NUMBER,
-netTaxableAmount:NUMBER, netTaxAmount:NUMBER, totalesMedioPago:OBJECT,
-startSequence:NUMBER, endSequence:NUMBER, startRecordHash:TEXT, endRecordHash:TEXT,
-isIntegrityVerified:BOOLEAN, closingHash:TEXT, closingSignature:TEXT,
-closingSignatureStatus:TEXT, verifiedAt:DATETIME, approverUser:TEXT,
-estadoEnvioAEAT:TEXT, traceId:TEXT, inventoryClosingId:TEXT, fiscalYear:NUMBER,
-closingType:TEXT, sku:TEXT, wixProductId:TEXT, stockQuantity:NUMBER,
-unitCost:NUMBER, stockValue:NUMBER, cuentaContable:TEXT, summaryData:OBJECT,
-invoiceData:OBJECT, packageStatus:TEXT, packageVersion:NUMBER, sentTo:TEXT,
-sentAt:DATETIME, _id:TEXT, _createdDate:DATETIME, _updatedDate:DATETIME, _owner:TEXT
-```
+### CampaignManager/campaigns — Campaign Manager
 
-### 3.7 InventarioStockVenta — revisión 20 (legacy)
+- Origen: **Wix Campaign Manager** · Tipo `WIX_APP` · ID canónico de colección `CampaignManager/campaigns` · ownerAppId=`7fdf5576-9d52-4c0a-9840-6e226f2ec415`.
+- Revisión: `0` · Campos: **32** · Campo de presentación: `campaignType`.
+- Permisos: `read=ANYONE, insert=ADMIN, update=ADMIN, remove=ADMIN`.
 
-```text
-name:TEXT, catalogVersion:TEXT, locationId:TEXT, stockKey:TEXT,
-lastInventoryMovementId:TEXT, lastInventoryMovementAt:DATETIME, location:TEXT,
-tipoImpositivo:NUMBER, taxIncluded:BOOLEAN, price:NUMBER, sku:TEXT,
-stockOnHand:NUMBER, stockReserved:NUMBER, stockAvailable:NUMBER,
-wixProductId:TEXT, wixVariantId:TEXT, traceId:TEXT, stockId:TEXT,
-productId:TEXT, variantId:TEXT, stockMinimo:NUMBER, reorderPoint:NUMBER,
-reorderQuantity:NUMBER, needsWixReconciliation:BOOLEAN, lastSyncAt:DATETIME,
-_id:TEXT, _createdDate:DATETIME, _updatedDate:DATETIME, _owner:TEXT
-```
+| Campo (key canónico) | Etiqueta Wix | Tipo de dato Wix | Descripción | Obligatorio | ID de colección referenciada | Subestructura OBJECT/ARRAY | Enum/opciones |
+|---|---|---|---|---|---|---|---|
+| `campaignType` | Campaign type | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `promotionUiType` | Promotion UI type | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `triggerType` | Trigger type | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `frequencyType` | Frequency type | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `campaignStatus` | Status | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `timeOnPage` | Time on page | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `scrollOnPage` | Scroll on page | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `countOfPages` | Count of pages | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `campaignDateStart` | Campaign Date Start | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `campaignDateEnd` | Campaign Date End | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `campaignName` | Campaign name | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `offeringType` | Offering type | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `offeringId` | Selected offering Id | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `offeringPageId` | Offering Page offering Id | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `offeringItemId` | Offering Page item Id | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `offeringPageUrl` | Offering Page Url | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `offeringItemUrl` | Offering Item Url | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `offeringData` | Offering Data | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | name:TEXT, startTime:NUMBER, expirationTime:NUMBER, isCoupon:BOOLEAN, code:TEXT, couponMetadata:OBJECT, id:TEXT, couponDiscountType:TEXT, offer:TEXT | No declarado en esquema CMS |
+| `timeOnPageTargetPagesIds` | TimeOn PagesIds | `ARRAY_STRING` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `connectedWidgets` | Connected Widgets | `ANY` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `scrollOnPageTargetPagesIds` | ScrollOn PagesIds | `ARRAY_STRING` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `isAutomaticDiscounts` | Is Automatic Discounts | `BOOLEAN` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `isFloatingTeaser` | Floating Teaser on | `BOOLEAN` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `campaignState` | Campaign State | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `mainStateData` | Main State Data | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | campaignTitle:TEXT, campaignHeading:TEXT, campaignSubtitle:TEXT, campaignDisclaimer:TEXT | No declarado en esquema CMS |
+| `successStateData` | Success State Data | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | campaignTitle:TEXT, campaignHeading:TEXT, campaignSubtitle:TEXT, campaignDisclaimer:TEXT | No declarado en esquema CMS |
+| `campaignImage` | Image | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | name:TEXT, url:TEXT, id:TEXT, photoMetadata:OBJECT, title:TEXT | No declarado en esquema CMS |
+| `campaignLogo` | Logo | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | name:TEXT, url:TEXT, id:TEXT, photoMetadata:OBJECT, title:TEXT | No declarado en esquema CMS |
+| `_id` | ID | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_createdDate` | Created Date | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_updatedDate` | Updated Date | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_owner` | Owner | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
 
-### 3.8 LibroAsientosContablesDetalle — revisión 27
+### CampaignManager/userConfig — User Config
 
-```text
-desgloseDetallado:OBJECT, entryId:TEXT, recordTimestamp:DATETIME,
-cashMovementId:TEXT, concept:TEXT, lineNumber:NUMBER, origenTipo:TEXT,
-origenRegistro:TEXT, sourceMovementId:TEXT, entryDate:DATE, fiscalPeriod:TEXT,
-accountCode:TEXT, debitAmount:NUMBER, creditAmount:NUMBER, accountingAmount:NUMBER,
-payloadFiscal:OBJECT, recordHash:TEXT, previousRecordHash:TEXT,
-idSistemaInformatico:TEXT, bookingId:TEXT, orderId:TEXT, resourceId:TEXT, traceId:TEXT,
-_id:TEXT, _createdDate:DATETIME, _updatedDate:DATETIME, _owner:TEXT
-```
+- Origen: **Wix Campaign Manager** · Tipo `WIX_APP` · ID canónico de colección `CampaignManager/userConfig` · ownerAppId=`7fdf5576-9d52-4c0a-9840-6e226f2ec415`.
+- Revisión: `0` · Campos: **5** · Campo de presentación: `addWidget`.
+- Permisos: `read=ANYONE, insert=ADMIN, update=ADMIN, remove=ADMIN`.
 
-**Importante:** el esquema físico usa `sourceMovementId`; no existe `sourceEventId` en esta colección. `cashMovementId` es un campo de referencia distinto y opcional según el contrato técnico documentado. No construir un writer contable por analogía con otra colección.
+| Campo (key canónico) | Etiqueta Wix | Tipo de dato Wix | Descripción | Obligatorio | ID de colección referenciada | Subestructura OBJECT/ARRAY | Enum/opciones |
+|---|---|---|---|---|---|---|---|
+| `addWidget` | Add Widget | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | widgetType:TEXT, isAddWidget:BOOLEAN | No declarado en esquema CMS |
+| `_id` | ID | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_createdDate` | Created Date | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_updatedDate` | Updated Date | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_owner` | Owner | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
 
-### 3.9 MapaStaff — revisión live 36 (MASTER mixto mutable / consultivo)
+### CitasF2 — CITAS_F2
 
-**Esquema físico live: 42 campos (38 de negocio + 4 de sistema).**
+- Origen: **CMS propio del proyecto** · Tipo `NATIVE` · ID canónico de colección `CitasF2` · ownerAppId=`no informado`.
+- Revisión: `44` · Campos: **31** · Campo de presentación: `bookingId`.
+- Permisos: `read=ANYONE, insert=ADMIN, update=ADMIN, remove=ADMIN`.
 
-```text
-displayName:TEXT, traceId:TEXT, staffMemberId:TEXT, scheduleId:TEXT,
-thirdPartyId:TEXT, staffName:TEXT, rolWebsite:TEXT, rolBookings:TEXT,
-memberId:TEXT, resourceId:TEXT, ServiciosCatalogo_staffMembers:MULTI_REFERENCE,
-recordType:TEXT, fechaInicioVerifactu:DATE, schemaVersion:NUMBER,
-province:TEXT, postalCode:TEXT, commercialName:TEXT, streetNumber:TEXT,
-businessDescription:TEXT, currency:TEXT, phone:TEXT, taxId:TEXT,
-legalName:TEXT, thirdPartyType:TEXT, address:TEXT, taxRegime:TEXT,
-verifactuEnabled:BOOLEAN, verifactuVersion:TEXT,
-tipoUsoPosibleMultiOT:BOOLEAN, indicadorMultiplesOT:BOOLEAN, email:TEXT,
-name:TEXT, label:TEXT, nif:TEXT, gestorEmail:TEXT, gestorName:TEXT,
-gestorNif:TEXT, active:BOOLEAN,
-_id:TEXT, _createdDate:DATETIME, _updatedDate:DATETIME, _owner:TEXT
-```
+| Campo (key canónico) | Etiqueta Wix | Tipo de dato Wix | Descripción | Obligatorio | ID de colección referenciada | Subestructura OBJECT/ARRAY | Enum/opciones |
+|---|---|---|---|---|---|---|---|
+| `slotStart` | slotStart | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `orderId` | orderId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `timeZone` | timeZone | `TEXT` | Zona horaria usada para interpretar fechas y horas de la reserva. | No declarado | — | — | No declarado en esquema CMS |
+| `cancellationReason` | cancellationReason | `TEXT` | Motivo de cancelación, cuando se registre. | No declarado | — | — | No declarado en esquema CMS |
+| `privacyNoticePurpose` | privacyNoticePurpose | `TEXT` | Finalidad de tratamiento informada en el contexto de la reserva. | No declarado | — | — | No declarado en esquema CMS |
+| `privacyNoticeAcceptedAt` | privacyNoticeAcceptedAt | `DATETIME` | Fecha y hora de constancia de información de privacidad para la reserva; no sustituye consentimientos opcionales. | No declarado | — | — | No declarado en esquema CMS |
+| `privacyNoticeVersion` | privacyNoticeVersion | `TEXT` | Versión del aviso de privacidad mostrado para la reserva. | No declarado | — | — | No declarado en esquema CMS |
+| `totalAmount` | totalAmount | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `slotEnd` | slotEnd | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `bookingId` | bookingId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `traceId` | traceId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `bookingType` | bookingType | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | BOOKING_TYPE: SIMPLE, DUAL_F1, DUAL_F2 |
+| `bookingStatus` | bookingStatus | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | CITAS_BOOKING_STATUS: PENDING, CONFIRMED, COMPLETED, CANCELED, REFUNDED, NO_SHOW |
+| `paymentStatus` | paymentStatus | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | CITAS_PAYMENT_STATUS: NOT_PAID, PENDING_PAYMENT, PENDING_LEDGER, PAID, PARTIALLY_PAID, REFUNDED, PARTIALLY_REFUNDED, EXEMPT, UNDEFINED |
+| `serviceId` | serviceId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `resourceId` | resourceId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `pairToken` | pairToken | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `dateYmd` | dateYmd | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `scheduleId` | scheduleId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `contactDetails` | contactDetails | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `thirdPartyId` | thirdPartyId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `catalogId` | catalogId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `cashMovementId` | cashMovementId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `fiscalData` | fiscalData | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `invoicingDate` | invoicingDate | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `revision` | revision | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `_id` | ID | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `meta` | meta | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_createdDate` | Created Date | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_updatedDate` | Updated Date | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_owner` | Owner | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
 
-**Discriminador obligatorio de dominio:**
-- `STAFF`: correlación de personal Bookings. Debe conservar `staffMemberId` y `resourceId` GUID, `active` y los campos de agenda. No constituye autoridad RBAC.
-- `GESTORIA`: contacto de gestoría, sin `memberId`, `staffMemberId`, `resourceId`, `rolWebsite` ni `rolBookings`. No es usuario del sitio.
-- `TERCERO`: tercero fiscal con `taxId`, `legalName` y `thirdPartyType`.
-- `CONFIG_SISTEMA`: singleton de configuración fiscal del emisor. No existe todavía; no inferir NIF, razón social, régimen ni modo Veri*Factu.
+### ComplementosCatalogo — COMPLEMENTOS_CATALOGO
 
-**Registros live verificados:** 5. Tres filas `STAFF` mantienen IDs y roles previos; una fila `TERCERO` QA sintética conserva el ID de la antigua fila `DatosFiscales`; una fila `GESTORIA` contiene `NachoGest`, `Calle Burgos 25`, teléfono y email proporcionados por el propietario. No hay fila `CONFIG_SISTEMA`.
+- Origen: **CMS propio del proyecto** · Tipo `NATIVE` · ID canónico de colección `ComplementosCatalogo` · ownerAppId=`no informado`.
+- Revisión: `141` · Campos: **18** · Campo de presentación: `name`.
+- Permisos: `read=ANYONE, insert=ADMIN, update=ADMIN, remove=ADMIN`.
 
-**Permisos live:** `itemRead=PRIVILEGED`; insert/update/remove=`CMS_EDITOR`. El backend consulta mediante `@wix/data` elevado. La restricción evita exponer públicamente teléfono, email y datos fiscales de la colección.
+| Campo (key canónico) | Etiqueta Wix | Tipo de dato Wix | Descripción | Obligatorio | ID de colección referenciada | Subestructura OBJECT/ARRAY | Enum/opciones |
+|---|---|---|---|---|---|---|---|
+| `sku` | sku | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `taxIncluded` | taxIncluded | `BOOLEAN` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `durationMinutes` | durationMinutes | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `tipoImpositivo` | tipoImpositivo | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `addonId` | addonId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `traceId` | traceId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `name` | name | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `description` | description | `RICH_TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_id` | ID | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_owner` | Owner | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `price` | price | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `itemNature` | itemNature | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `codigoImpuesto` | codigoImpuesto | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_updatedDate` | Updated Date | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_createdDate` | Created Date | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `claveRegimen` | claveRegimen | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `cuentaContableIngreso` | cuentaContableIngreso | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `ServiciosCatalogo_name` | ServiciosCatalogo_name | `MULTI_REFERENCE → ServiciosCatalogo` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | `ServiciosCatalogo` | — | No declarado en esquema CMS |
 
-**Compatibilidad:** el lector de eventos filtra explícitamente `recordType=STAFF` además de `staffMemberId` y `active`, evitando que el registro de gestoría entre en la correlación de recursos. `ServiciosCatalogo_staffMembers` y las relaciones existentes se conservan. `thirdPartyId` sigue siendo un identificador textual; no se reescriben registros históricos que lo referencien.
+### ControlOperativo — CONTROL_OPERATIVO
 
-### 3.10 MovimientosCaja — revisión 78
+- Origen: **CMS propio del proyecto** · Tipo `NATIVE` · ID canónico de colección `ControlOperativo` · ownerAppId=`no informado`.
+- Revisión: `39` · Campos: **42** · Campo de presentación: `controlType`.
+- Permisos: `read=ANYONE, insert=ADMIN, update=ADMIN, remove=ADMIN`.
 
-```text
-resourceId:TEXT, payloadAEAT:OBJECT, NIFEmisor:TEXT, NIFDestinatario:TEXT,
-IRPFWithholdingRate:NUMBER, IRPFWithholdingAmount:NUMBER,
-baseImponibleOImporteNoSujeto:NUMBER, signatureAlgorithm:TEXT, hashAlgorithm:TEXT,
-verificationQR:TEXT, digitalSignature:TEXT, generationTimestamp:DATETIME,
-serviceIdRedeemed:TEXT, giftCardOperation:TEXT, giftCardId:TEXT, accountingSign:NUMBER,
-lineItems:OBJECT, recordSource:TEXT, desgloseDetallado:OBJECT,
-bankReconciliationReference:TEXT, vatAccrualStatus:TEXT, linkedAdvanceId:TEXT,
-article20Exempt:BOOLEAN, cashBasisRegime:BOOLEAN, nonSubjectReason:TEXT,
-issuerThirdPartyTaxId:TEXT, thirdPartyLegalName:TEXT,
-issuedByThirdPartyOrRecipient:TEXT, isB2B:BOOLEAN, issuerLegalName:TEXT,
-correctionAmount:NUMBER, issuerInvoiceNumber:TEXT, previousInvoiceIssueDate:DATE,
-previousInvoiceNumber:TEXT, correctionReason:TEXT, withholdingBase:NUMBER,
-surchargeRate:NUMBER, linkedBookingIds:ARRAY_STRING, bookingId:TEXT, hash:TEXT,
-amount:NUMBER, taxAmount:NUMBER, taxBase:NUMBER, numSerieFactura:TEXT,
-sequenceNumber:NUMBER, transactionId:TEXT, previousRecordHash:TEXT,
-recordTimestamp:DATETIME, schemaVersion:TEXT, traceId:TEXT, movementType:TEXT,
-totalAmount:NUMBER, paymentMethod:TEXT, channelType:TEXT, operationDescription:TEXT,
-staffResourceId:TEXT, tipoFactura:TEXT, fechaExpedicionFactura:DATE,
-fechaOperacion:DATE, tipoImpositivo:NUMBER, recipientLegalName:TEXT,
-recipientAddress:OBJECT, payloadFiscal:OBJECT, sistemaInformatico:OBJECT,
-estadoEnvioAEAT:TEXT, csvAEAT:TEXT, fechaEnvioAEAT:DATETIME, tipoRectificativa:TEXT,
-previousInvoiceId:TEXT, claveRegimen:TEXT, calificacionOperacion:TEXT,
-operacionExenta:BOOLEAN, inversionSujetoPasivo:BOOLEAN, surchargeAmount:NUMBER,
-fiscalRole:TEXT, eventType:TEXT, thirdPartyId:TEXT, catalogId:TEXT, pairToken:TEXT,
-orderId:TEXT, refundId:TEXT, fiscalPeriod:TEXT, accountingAmount:NUMBER,
-projectionStatus:TEXT,
-_id:TEXT, _createdDate:DATETIME, _updatedDate:DATETIME, _owner:TEXT
-```
+| Campo (key canónico) | Etiqueta Wix | Tipo de dato Wix | Descripción | Obligatorio | ID de colección referenciada | Subestructura OBJECT/ARRAY | Enum/opciones |
+|---|---|---|---|---|---|---|---|
+| `eventType` | Event Type | `TEXT` | Canonical Wix Bookings or eCommerce event type. Duplicates payload.eventType for indexed operational queries. | No declarado | — | — | No declarado en esquema CMS |
+| `occurredAt` | Occurred At | `DATETIME` | Source event occurrence timestamp. Distinct from _createdDate and payload.processedAt. | No declarado | — | — | No declarado en esquema CMS |
+| `controlType` | controlType | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | CONTROL_TYPE: ALERT, COMPENSATION, DAYS_CACHE, DISPLAY_TOKEN, DUAL_CACHE, DEDUPE_KEY, LEDGER_IDEMPOTENCY, IDEMPOTENCY, SLOT_LOCK, RATE_LIMIT, SYSTEM_FLAG, WEBHOOK_CLAIM, WEBHOOK_EVENT |
+| `dedupeKey` | dedupeKey | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `traceId` | traceId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `status` | status | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `eventId` | eventId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `expiresAt` | expiresAt | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `bookingId` | bookingId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `pairToken` | pairToken | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `resourceId` | resourceId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `serviceId` | serviceId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `slotStart` | slotStart | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `slotEnd` | slotEnd | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `dateYmd` | dateYmd | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `transactionId` | transactionId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `orderId` | orderId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `refundId` | refundId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `kind` | kind | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `attempts` | attempts | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `maxAttempts` | maxAttempts | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `lastError` | lastError | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `totalAmount` | totalAmount | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `operationDescription` | operationDescription | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `severity` | severity | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `alertType` | alertType | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `message` | message | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `surface` | surface | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `requesterKey` | requesterKey | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `requestCount` | requestCount | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `windowStart` | windowStart | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `payload` | payload | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `version` | version | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `processedAt` | processedAt | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `_id` | ID | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_createdDate` | Created Date | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_updatedDate` | Updated Date | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_owner` | Owner | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `heartbeatAt` | heartbeatAt | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `operationDate` | Operationdate | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `revision` | revision | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `compensationKind` | compensationKind | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
 
-**Convención histórica:** el campo canónico de huella de este ledger es `hash`; `recordHash` no es el campo físico de `MovimientosCaja`. No intercambiarlo con `recordHash` del ledger contable.
+### eCommerce/Orders — Orders
 
-### 3.11 MovimientosInventario — esquema histórico (no localizado en Wix live 2026-11-14)
+- Origen: **Wix Stores / eCommerce** · Tipo `WIX_APP` · ID canónico de colección `eCommerce/Orders` · ownerAppId=`1380b703-ce81-ff05-f115-39571d94dfcd`.
+- Revisión: `0` · Campos: **45** · Campo de presentación: `_id`.
+- Permisos: `read=ADMIN, insert=ADMIN, update=ADMIN, remove=ADMIN`.
 
-El ID `MovimientosInventario` no aparece en la lista live de colecciones y `GET /collections/MovimientosInventario` devuelve WDE0025. El siguiente esquema se conserva únicamente como evidencia histórica del dossier; no debe tratarse como esquema físico actual ni utilizarse para nuevas escrituras.
+| Campo (key canónico) | Etiqueta Wix | Tipo de dato Wix | Descripción | Obligatorio | ID de colección referenciada | Subestructura OBJECT/ARRAY | Enum/opciones |
+|---|---|---|---|---|---|---|---|
+| `number` | Number | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `payAfterFreeTrial` | Pay After Free Trial | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | totalAdditionalFees:OBJECT, tax:OBJECT, total:OBJECT, subtotal:OBJECT, discount:OBJECT, shipping:OBJECT | No declarado en esquema CMS |
+| `additionalFees` | Additional Fees | `ARRAY` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | Elemento OBJECT | No declarado en esquema CMS |
+| `demo` | Demo | `BOOLEAN` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `extendedFields` | Extended Fields | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | namespaces:OBJECT | No declarado en esquema CMS |
+| `recipientInfo` | Recipient Info | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | address:ADDRESS, contactDetails:OBJECT | No declarado en esquema CMS |
+| `purchaseFlowId` | Purchase Flow ID | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `currencyConversionDetails` | Currency Conversion Details | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | originalCurrency:TEXT, conversionRate:TEXT | No declarado en esquema CMS |
+| `platformFeeSummary` | Platform Fee Summary | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | total:OBJECT, totalPassOn:OBJECT, totalAbsorbed:OBJECT, fees:ARRAY | No declarado en esquema CMS |
+| `lineItems` | Line Items | `ARRAY` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | Elemento OBJECT | No declarado en esquema CMS |
+| `paymentStatus` | Payment Status | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `siteLanguage` | Site Language | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_id` | ID | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `archived` | Archived | `BOOLEAN` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `seenByAHuman` | Seen By A Human | `BOOLEAN` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_createdDate` | Created Date | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `tags` | Tags | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | privateTags:OBJECT, tags:OBJECT | No declarado en esquema CMS |
+| `shippingInfo` | Shipping Info | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | code:TEXT, cost:OBJECT, logistics:OBJECT, carrierId:TEXT, region:OBJECT, title:TEXT | No declarado en esquema CMS |
+| `activities` | Activities | `ARRAY` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | Elemento OBJECT | No declarado en esquema CMS |
+| `appliedDiscounts` | Applied Discounts | `ARRAY` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | Elemento OBJECT | No declarado en esquema CMS |
+| `customFields` | Custom Fields | `ARRAY` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | Elemento OBJECT | No declarado en esquema CMS |
+| `taxIncludedInPrices` | Tax Included In Prices | `BOOLEAN` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `businessLocation` | Business Location | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | id:TEXT, name:TEXT | No declarado en esquema CMS |
+| `_updatedDate` | Updated Date | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `attributionSource` | Attribution Source | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `weightUnit` | Weight Unit | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `priceSummary` | Price Summary | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | totalAdditionalFees:OBJECT, tax:OBJECT, total:OBJECT, subtotal:OBJECT, discount:OBJECT, shipping:OBJECT | No declarado en esquema CMS |
+| `buyerNote` | Buyer Note | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `imported` | Imported | `BOOLEAN` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `status` | Status | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `billingInfo` | Billing Info | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | address:ADDRESS, contactDetails:OBJECT | No declarado en esquema CMS |
+| `buyerInfo` | Buyer Info | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | visitorId:TEXT, memberId:TEXT, contactId:TEXT, email:TEXT | No declarado en esquema CMS |
+| `forms` | Forms | `ARRAY` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | Elemento OBJECT | No declarado en esquema CMS |
+| `purchasedDate` | Purchased Date | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `createdBy` | Created By | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | userId:TEXT, memberId:TEXT, visitorId:TEXT, appId:TEXT | No declarado en esquema CMS |
+| `taxSummary` | Tax Summary | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | totalTax:OBJECT | No declarado en esquema CMS |
+| `currency` | Currency | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `balanceSummary` | Balance Summary | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | platformFees:OBJECT, chargebackReversal:OBJECT, refunded:OBJECT, authorized:OBJECT, balance:OBJECT, cashRoundingAdjustment:OBJECT, paid:OBJECT, totalMinusPlatformFees:OBJECT, chargeback:OBJECT, pending:OBJECT, pendingRefund:OBJECT | No declarado en esquema CMS |
+| `deposit` | Deposit | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | totalAdditionalFees:OBJECT, tax:OBJECT, total:OBJECT, subtotal:OBJECT, discount:OBJECT, shipping:OBJECT | No declarado en esquema CMS |
+| `checkoutId` | Checkout ID | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `buyerLanguage` | Buyer Language | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `channelInfo` | Channel Info | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | type:TEXT, externalOrderId:TEXT, externalOrderUrl:TEXT | No declarado en esquema CMS |
+| `taxInfo` | Tax Info | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | totalTax:OBJECT, taxBreakdown:ARRAY, taxExempt:BOOLEAN, totalExempt:OBJECT | No declarado en esquema CMS |
+| `settings` | Settings | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | editableByEveryone:BOOLEAN, specificItemsCouponBehavior:TEXT, editableByOwnerApps:OBJECT, standardActions:BOOLEAN, limitedActions:BOOLEAN, customActions:OBJECT, createInvoice:BOOLEAN | No declarado en esquema CMS |
+| `fulfillmentStatus` | Fulfillment Status | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
 
-```text
-variantId:TEXT, orderId:TEXT, productId:TEXT, stockApplied:BOOLEAN,
-lineItemId:TEXT, catalogVersion:TEXT, locationId:TEXT, stockKey:TEXT,
-magnitude:NUMBER, nativeCommercialMovement:BOOLEAN, requiresWixReconciliation:BOOLEAN,
-actorMemberId:TEXT, actorEmail:TEXT, referenceId:TEXT, refundId:TEXT,
-recordTimestamp:DATETIME, catalogId:TEXT, productName:TEXT, reason:TEXT,
-movementToken:TEXT, movementType:TEXT, sku:TEXT, quantityDelta:NUMBER,
-traceId:TEXT, direction:TEXT, quantity:NUMBER, stockBefore:NUMBER, stockAfter:NUMBER,
-operationDescription:TEXT, sourceEventId:TEXT, thirdPartyId:TEXT,
-wixProductId:TEXT, wixVariantId:TEXT, movementId:TEXT,
-_id:TEXT, _createdDate:DATETIME, _updatedDate:DATETIME, _owner:TEXT
-```
+### Forms/subscribers03 — Subscriptions
 
-### 3.12 PaquetesGestoria — revisión 3
+- Origen: **Wix Forms** · Tipo `WIX_APP` · ID canónico de colección `Forms/subscribers03` · ownerAppId=`14ce1214-b278-a7e4-1373-00cebd1bef7c`.
+- Revisión: `0` · Campos: **6** · Campo de presentación: `submissionTime`.
+- Permisos: `read=ADMIN, insert=ANYONE, update=ADMIN, remove=ADMIN`.
 
-```text
-invoiceData:ARRAY, periodType:TEXT, fiscalYear:NUMBER, fiscalMonth:NUMBER,
-fiscalQuarter:NUMBER, packageVersion:NUMBER, summaryData:OBJECT,
-packageStatus:TEXT, snapshotHash:TEXT, schemaVersion:TEXT, source:TEXT,
-traceId:TEXT, createdAt:DATETIME,
-_id:TEXT, _createdDate:DATETIME, _updatedDate:DATETIME, _owner:TEXT
-```
+| Campo (key canónico) | Etiqueta Wix | Tipo de dato Wix | Descripción | Obligatorio | ID de colección referenciada | Subestructura OBJECT/ARRAY | Enum/opciones |
+|---|---|---|---|---|---|---|---|
+| `submissionTime` | Horario de envío | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `email` | Email | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_id` | ID | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_createdDate` | Created Date | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_updatedDate` | Updated Date | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_owner` | Owner | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
 
-### 3.13 RegistroIntegracion — revisión 2
+### HistoricoCierresZ — HISTORICO_CIERRES_Z
 
-```text
-eventId:TEXT, eventType:TEXT, sourceModule:TEXT, sourceCollection:TEXT,
-sourceItemId:TEXT, occurredAt:DATETIME, traceId:TEXT, correlationId:TEXT,
-idempotencyKey:TEXT, schemaVersion:TEXT, payload:OBJECT, payloadHash:TEXT,
-deliveryStatus:TEXT, deliveryAttempts:NUMBER, nextAttemptAt:DATETIME,
-deliveredAt:DATETIME, lastDeliveryError:TEXT,
-_id:TEXT, _createdDate:DATETIME, _updatedDate:DATETIME, _owner:TEXT
-```
+- Origen: **CMS propio del proyecto** · Tipo `NATIVE` · ID canónico de colección `HistoricoCierresZ` · ownerAppId=`no informado`.
+- Revisión: `39` · Campos: **62** · Campo de presentación: `recordDomain`.
+- Permisos: `read=ANYONE, insert=ADMIN, update=ADMIN, remove=ADMIN`.
 
-### 3.14 RegistrosHorariosStaff — revisión 11
+| Campo (key canónico) | Etiqueta Wix | Tipo de dato Wix | Descripción | Obligatorio | ID de colección referenciada | Subestructura OBJECT/ARRAY | Enum/opciones |
+|---|---|---|---|---|---|---|---|
+| `totalTips` | totalTips | `NUMBER` | Importe total de propinas incluidas en el cierre. | No declarado | — | — | No declarado en esquema CMS |
+| `snapshotJSON` | snapshotJSON | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `closedAt` | closedAt | `DATETIME` | Instante exacto de cierre. | No declarado | — | — | No declarado en esquema CMS |
+| `timeZone` | timeZone | `TEXT` | Zona horaria utilizada para delimitar el día operativo. | No declarado | — | — | No declarado en esquema CMS |
+| `closingSchemaVersion` | closingSchemaVersion | `TEXT` | Versión de esquema usada al generar el cierre. | No declarado | — | — | No declarado en esquema CMS |
+| `closingSource` | closingSource | `TEXT` | Origen del cierre: MANUAL o CRON. | No declarado | — | — | Descripción CMS: MANUAL, CRON |
+| `auditedRecordsCount` | auditedRecordsCount | `NUMBER` | Número de registros comprobados por la auditoría del cierre. | No declarado | — | — | No declarado en esquema CMS |
+| `taxTypeBreakdown` | taxTypeBreakdown | `OBJECT` | Desglose fiscal por tipo impositivo. | No declarado | — | — | No declarado en esquema CMS |
+| `movementTypeBreakdown` | movementTypeBreakdown | `OBJECT` | Desglose del importe por tipo de movimiento. | No declarado | — | — | No declarado en esquema CMS |
+| `endTicketNumber` | endTicketNumber | `TEXT` | Número de factura/ticket del último movimiento incluido. | No declarado | — | — | No declarado en esquema CMS |
+| `startTicketNumber` | startTicketNumber | `TEXT` | Número de factura/ticket del primer movimiento incluido. | No declarado | — | — | No declarado en esquema CMS |
+| `totalOperations` | totalOperations | `NUMBER` | Número de movimientos auditados en el cierre. | No declarado | — | — | No declarado en esquema CMS |
+| `totalAdjustments` | totalAdjustments | `NUMBER` | Importe neto de ajustes incluidos en el cierre. | No declarado | — | — | No declarado en esquema CMS |
+| `closeDate` | closeDate | `DATE` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `totalRefunds` | totalRefunds | `NUMBER` | Importe total de reembolsos incluidos en el cierre. | No declarado | — | — | No declarado en esquema CMS |
+| `fiscalPeriod` | fiscalPeriod | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `totalTaxAmount` | totalTaxAmount | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `totalTaxBase` | totalTaxBase | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `totalOnline` | totalOnline | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `totalBizum` | totalBizum | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `totalCard` | totalCard | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `totalCash` | totalCash | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `closedBy` | closedBy | `TEXT` | FK → MapaStaff.resourceId. | Sí | — | — | No declarado en esquema CMS |
+| `recordDomain` | recordDomain | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `closingStatus` | closingStatus | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `operationDate` | operationDate | `DATE` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `consolidatedTotalAmount` | consolidatedTotalAmount | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `grossSalesTotal` | grossSalesTotal | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `netTaxableAmount` | netTaxableAmount | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `netTaxAmount` | netTaxAmount | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `totalesMedioPago` | totalesMedioPago | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `startSequence` | startSequence | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `endSequence` | endSequence | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `startRecordHash` | startRecordHash | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `endRecordHash` | endRecordHash | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `isIntegrityVerified` | isIntegrityVerified | `BOOLEAN` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `closingHash` | closingHash | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `closingSignature` | closingSignature | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `closingSignatureStatus` | closingSignatureStatus | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `verifiedAt` | verifiedAt | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `approverUser` | approverUser | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `estadoEnvioAEAT` | estadoEnvioAEAT | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `traceId` | traceId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `inventoryClosingId` | inventoryClosingId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `fiscalYear` | fiscalYear | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `closingType` | closingType | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `sku` | sku | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `wixProductId` | wixProductId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `stockQuantity` | stockQuantity | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `unitCost` | unitCost | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `stockValue` | stockValue | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `cuentaContable` | cuentaContable | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `summaryData` | summaryData | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `invoiceData` | invoiceData | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `packageStatus` | packageStatus | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `packageVersion` | packageVersion | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `sentTo` | sentTo | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `sentAt` | sentAt | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `_id` | ID | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_createdDate` | Created Date | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_updatedDate` | Updated Date | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_owner` | Owner | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
 
-```text
-resourceId:TEXT, notes:TEXT, memberId:TEXT, recordedAt:DATETIME,
-clockEventType:TEXT, recordType:TEXT, traceId:TEXT, adjustmentReason:TEXT,
-signature:TEXT, recordedTime:TEXT, dayKey:TEXT, monthKey:TEXT, staffName:TEXT,
-registeredBy:TEXT, registeredByMemberId:TEXT, deviceIpAddress:TEXT, meta:OBJECT,
-_id:TEXT, _createdDate:DATETIME, _updatedDate:DATETIME, _owner:TEXT
-```
+### LibroAsientosContablesDetalle — LIBRO_ASIENTOS_CONTABLES_DETALLE
 
-### 3.15 ServiciosCatalogo — revisión 195
+- Origen: **CMS propio del proyecto** · Tipo `NATIVE` · ID canónico de colección `LibroAsientosContablesDetalle` · ownerAppId=`no informado`.
+- Revisión: `29` · Campos: **27** · Campo de presentación: `origenTipo`.
+- Permisos: `read=ANYONE, insert=ADMIN, update=ADMIN, remove=ADMIN`.
 
-```text
-sessionCount:NUMBER, staffMembers:MULTI_REFERENCE, pricingPlanId:TEXT,
-catalogEntryType:TEXT, locationId:TEXT, description:TEXT, _id:TEXT,
-serviceId:TEXT, title:TEXT, slug:TEXT, tagLine:TEXT, categoryId:TEXT,
-itemNature:TEXT, sku:TEXT, price:NUMBER, currency:TEXT, taxIncluded:BOOLEAN,
-tipoImpositivo:NUMBER, calificacionOperacion:TEXT, totalDuration:NUMBER,
-phase1Duration:NUMBER, phase2Duration:NUMBER, exposureDuration:NUMBER,
-allowCombine:BOOLEAN, linkedPhases:TEXT, location:TEXT, clientHidden:BOOLEAN,
-onlinePayment:BOOLEAN, inPersonPayment:BOOLEAN, pricingModel:TEXT, depositType:TEXT,
-depositAmount:NUMBER, margin:NUMBER, internalNotes:TEXT, category:TEXT,
-precioCosteBase:NUMBER, _createdDate:DATETIME, mainMedia:IMAGE,
-_updatedDate:DATETIME, _owner:TEXT, recomendaciones:TEXT,
-name:MULTI_REFERENCE
-```
+| Campo (key canónico) | Etiqueta Wix | Tipo de dato Wix | Descripción | Obligatorio | ID de colección referenciada | Subestructura OBJECT/ARRAY | Enum/opciones |
+|---|---|---|---|---|---|---|---|
+| `desgloseDetallado` | desgloseDetallado | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `entryId` | entryId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `recordTimestamp` | recordTimestamp | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `cashMovementId` | cashMovementId | `TEXT` | FK → MovimientosCaja. | No | — | — | No declarado en esquema CMS |
+| `concept` | concept | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `lineNumber` | lineNumber | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `origenTipo` | origenTipo | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `origenRegistro` | origenRegistro | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `sourceMovementId` | sourceMovementId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `entryDate` | entryDate | `DATE` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `fiscalPeriod` | fiscalPeriod | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `accountCode` | accountCode | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `debitAmount` | debitAmount | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `creditAmount` | creditAmount | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `accountingAmount` | accountingAmount | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `payloadFiscal` | payloadFiscal | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `recordHash` | recordHash | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `previousRecordHash` | previousRecordHash | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `idSistemaInformatico` | idSistemaInformatico | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `bookingId` | bookingId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `orderId` | orderId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `resourceId` | resourceId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `traceId` | traceId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `_id` | ID | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_createdDate` | Created Date | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_updatedDate` | Updated Date | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_owner` | Owner | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
 
-## 4. Etiquetas visibles CMS observadas
+### Locations/Locations — Locations
 
-La API devuelve `displayName` para cada campo. En la mayoría de los campos NATIVE, el valor es exactamente igual a `key`; por tanto, no están aplicadas de forma general las reglas de traducción de etiquetas del estándar N1–N5.
+- Origen: **Wix Locations** · Tipo `WIX_APP` · ID canónico de colección `Locations/Locations` · ownerAppId=`no informado`.
+- Revisión: `6` · Campos: **17** · Campo de presentación: `name`.
+- Permisos: `read=ANYONE, insert=ADMIN, update=ADMIN, remove=ADMIN`.
 
-Diferencias exhaustivas entre `key` y `displayName` identificadas en la lectura de las 15 colecciones NATIVE:
+| Campo (key canónico) | Etiqueta Wix | Tipo de dato Wix | Descripción | Obligatorio | ID de colección referenciada | Subestructura OBJECT/ARRAY | Enum/opciones |
+|---|---|---|---|---|---|---|---|
+| `businessSchedule` | Business Schedule | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | periods:ARRAY, specialHourPeriod:ARRAY | No declarado en esquema CMS |
+| `name` | Name | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `extendedFields` | Extended Fields | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | namespaces:OBJECT | No declarado en esquema CMS |
+| `email` | Email | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `description` | Description | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_id` | ID | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `archived` | Archived | `BOOLEAN` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `revision` | Revision | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `fax` | Fax | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `status` | Status | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `default` | Default | `BOOLEAN` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `locationTypes` | Location Types | `ARRAY_STRING` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `address` | Address | `ADDRESS` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `locationType` | Location Type | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `timeZone` | Time Zone | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `phone` | Phone | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `services` | services | `MULTI_REFERENCE → ServiciosCatalogo` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | `ServiciosCatalogo` | — | No declarado en esquema CMS |
 
-| Colección | Key | Etiqueta CMS (`displayName`) |
+### MapaStaff — MAPA_STAFF
+
+- Origen: **CMS propio del proyecto** · Tipo `NATIVE` · ID canónico de colección `MapaStaff` · ownerAppId=`no informado`.
+- Revisión: `105` · Campos: **56** · Campo de presentación: `staffName`.
+- Permisos: `read=ANYONE, insert=ADMIN, update=ADMIN, remove=ADMIN`.
+
+| Campo (key canónico) | Etiqueta Wix | Tipo de dato Wix | Descripción | Obligatorio | ID de colección referenciada | Subestructura OBJECT/ARRAY | Enum/opciones |
+|---|---|---|---|---|---|---|---|
+| `displayName` | displayName | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `phoneFiscal` | Teléfono fiscal | `TEXT` | Teléfono utilizado para asuntos fiscales | No declarado | — | — | No declarado en esquema CMS |
+| `phoneTrabajo` | Teléfono de trabajo | `TEXT` | Teléfono operativo o profesional | No declarado | — | — | No declarado en esquema CMS |
+| `phonePersonal` | Teléfono personal | `TEXT` | Teléfono personal de la identidad | No declarado | — | — | No declarado en esquema CMS |
+| `emailFiscal` | Email fiscal | `EMAIL` | Correo electrónico utilizado para asuntos fiscales | No declarado | — | — | No declarado en esquema CMS |
+| `emailTrabajo` | Email de trabajo | `EMAIL` | Correo electrónico operativo o profesional | No declarado | — | — | No declarado en esquema CMS |
+| `emailPersonal` | Email personal | `EMAIL` | Correo electrónico personal de la identidad | No declarado | — | — | No declarado en esquema CMS |
+| `notes` | Notas | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `verificationSource` | Fuente de verificación | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `sourceRecordId` | Identificador del registro de origen | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `sourceSystem` | Sistema de origen | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `consultativeSummary` | Resumen consultivo | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `operationalScope` | Ámbito operativo | `ARRAY_STRING` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `fiscalRole` | Rol fiscal | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `fiscalIdType` | Tipo de identificador fiscal | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `fiscalRegion` | Región fiscal | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `fiscalCountry` | País fiscal | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `contactAddress` | Dirección de contacto | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `legalEntityId` | Identificador de entidad legal | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `legalEntityType` | Tipo de entidad legal | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `isPrimaryIdentity` | Es identidad principal | `BOOLEAN` | Indica si es la identidad principal de su tipo | No declarado | — | — | No declarado en esquema CMS |
+| `identityCode` | Código de identidad | `TEXT` | Código estable para consultar la identidad dentro del ecosistema | No declarado | — | — | No declarado en esquema CMS |
+| `identityStatus` | Estado de identidad | `TEXT` | Estado consultivo de la identidad | No declarado | — | — | No declarado en esquema CMS |
+| `identityType` | Tipo de identidad | `TEXT` | STAFF_MEMBER, BUSINESS_FISCAL_IDENTITY o ACCOUNTING_FIRM | No declarado | — | — | Descripción CMS: STAFF_MEMBER, BUSINESS_FISCAL_IDENTITY, ACCOUNTING_FIRM |
+| `traceId` | Trace ID | `TEXT` | UUID v4 de trazabilidad de la última mutación relevante. | No declarado | — | — | No declarado en esquema CMS |
+| `staffMemberId` | staffMemberId | `TEXT` | Canonical native Wix Bookings staff member ID; distinct from resourceId. | No declarado | — | — | No declarado en esquema CMS |
+| `scheduleId` | scheduleId | `TEXT` | Native Wix Bookings schedule ID. | No declarado | — | — | No declarado en esquema CMS |
+| `thirdPartyId` | thirdPartyId | `TEXT` | Optional DatosFiscales reference; remains empty until formally linked. | No declarado | — | — | No declarado en esquema CMS |
+| `rolWebsite` | rolWebsite | `TEXT` | Canonical business authorization role: ADMIN, GESTION, or ESTILISTA. | No declarado | — | — | ROL_WEBSITE: ADMIN, GESTION, ESTILISTA |
+| `rolBookings` | rolBookings | `TEXT` | Native Wix Bookings staff role; canonical value STAFF. | No declarado | — | — | Wix Bookings staff role: STAFF |
+| `memberId` | memberId | `TEXT` | Canonical Wix site-member ID verified from Members API. | No declarado | — | — | No declarado en esquema CMS |
+| `resourceId` | resourceId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `ServiciosCatalogo_staffMembers` | ServiciosCatalogo_staffMembers | `MULTI_REFERENCE → ServiciosCatalogo` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | `ServiciosCatalogo` | — | No declarado en esquema CMS |
+| `_id` | ID | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_createdDate` | Created Date | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_updatedDate` | Updated Date | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_owner` | Owner | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `recordType` | Tipo de registro | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | RECORD_TYPE: STAFF, GESTORIA, TERCERO, CONFIG_SISTEMA |
+| `fechaInicioVerifactu` | Fecha de inicio Veri*Factu | `DATE` | Fecha ISO YYYY-MM-DD desde la que el sistema opera con la configuración Veri*Factu activa. | No declarado | — | — | No declarado en esquema CMS |
+| `schemaVersion` | Versión de esquema | `NUMBER` | Versión del esquema del registro para migraciones controladas. | No declarado | — | — | No declarado en esquema CMS |
+| `province` | Provincia | `TEXT` | Provincia del domicilio fiscal. | No declarado | — | — | No declarado en esquema CMS |
+| `postalCode` | Código postal | `TEXT` | Código postal del domicilio fiscal. | No declarado | — | — | No declarado en esquema CMS |
+| `streetNumber` | Número fiscal | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `businessDescription` | Descripción del negocio | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `currency` | Moneda | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `phone` | Teléfono fiscal | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `taxId` | NIF / VAT | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `legalName` | Razón social / nombre legal | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `thirdPartyType` | Tipo de tercero | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | THIRD_PARTY_TYPE: CLIENTE, STAFF, PROVEEDOR, EMISOR |
+| `address` | Domicilio fiscal | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `taxRegime` | Régimen fiscal | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `verifactuEnabled` | Veri*Factu habilitado | `BOOLEAN` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `verifactuVersion` | Versión Veri*Factu | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `tipoUsoPosibleMultiOT` | Uso posible de múltiples OT | `BOOLEAN` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `indicadorMultiplesOT` | Indicador de múltiples OT | `BOOLEAN` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `email` | Email | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+
+### Marketing/Coupons — Coupons
+
+- Origen: **Wix Marketing / Coupons** · Tipo `WIX_APP` · ID canónico de colección `Marketing/Coupons` · ownerAppId=`14d7032a-0a65-5270-cca7-30f599708fed`.
+- Revisión: `0` · Campos: **23** · Campo de presentación: `name`.
+- Permisos: `read=ADMIN, insert=ADMIN, update=ADMIN, remove=ADMIN`.
+
+| Campo (key canónico) | Etiqueta Wix | Tipo de dato Wix | Descripción | Obligatorio | ID de colección referenciada | Subestructura OBJECT/ARRAY | Enum/opciones |
+|---|---|---|---|---|---|---|---|
+| `freeShipping` | Free Shipping | `BOOLEAN` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `name` | Name | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `startTime` | Start Time | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `expirationTime` | Expiration Time | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `numberOfUsages` | Number Of Usages | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `limitedToOneItem` | Limited To One Item | `BOOLEAN` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `expired` | Expired | `BOOLEAN` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `percentOffRate` | Percent Off Rate | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `limitPerCustomer` | Limit Per Customer | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_id` | ID | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `scope` | Scope | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `buyXGetY` | Buy X Get Y | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `displayData` | Display Data | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `moneyOffAmount` | Money Off Amount | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `usageLimit` | Usage Limit | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `minimumSubtotal` | Minimum Subtotal | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `code` | Code | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_dateCreated` | Date Created | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `fixedPriceAmount` | Fixed Price Amount | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `appliesToSubscriptions` | Applies To Subscriptions | `BOOLEAN` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `type` | Type | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `appId` | App Id | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `active` | Active | `BOOLEAN` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+
+### Members/Badges — Badges
+
+- Origen: **Wix Members** · Tipo `WIX_APP` · ID canónico de colección `Members/Badges` · ownerAppId=`SiteMembers`.
+- Revisión: `0` · Campos: **11** · Campo de presentación: `title`.
+- Permisos: `read=ANYONE, insert=ADMIN, update=ADMIN, remove=ADMIN`.
+
+| Campo (key canónico) | Etiqueta Wix | Tipo de dato Wix | Descripción | Obligatorio | ID de colección referenciada | Subestructura OBJECT/ARRAY | Enum/opciones |
+|---|---|---|---|---|---|---|---|
+| `backgroundColor` | Background Color | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `description` | Description | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_id` | ID | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_createdDate` | Created Date | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `icon` | Icon | `IMAGE` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `textColor` | Text Color | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_updatedDate` | Updated Date | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `slug` | Slug | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `roleId` | Role ID | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `members` | Members | `MULTI_REFERENCE → Members/FullData` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | `Members/FullData` | — | No declarado en esquema CMS |
+| `title` | Title | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+
+### Members/FullData — FullData
+
+- Origen: **Wix Members** · Tipo `WIX_APP` · ID canónico de colección `Members/FullData` · ownerAppId=`SiteMembers`.
+- Revisión: `0` · Campos: **28** · Campo de presentación: `loginEmail`.
+- Permisos: `read=ANYONE, insert=ADMIN, update=ADMIN, remove=ADMIN`.
+
+| Campo (key canónico) | Etiqueta Wix | Tipo de dato Wix | Descripción | Obligatorio | ID de colección referenciada | Subestructura OBJECT/ARRAY | Enum/opciones |
+|---|---|---|---|---|---|---|---|
+| `customfields_system_address` | Address | `ADDRESS` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `loginEmail` | Login Email | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `custom_servicios-favoritos-extras` | SERVICIOS FAVORITOS & EXTRAS | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `custom_formula-de-color` | FORMULA DE COLOR | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `custom_gustos-y-estilos` | GUSTOS Y ESTILOS | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `privacyStatus` | Privacy Status | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_id` | ID | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_createdDate` | Creation Date | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `custom_correo-electronico` | Correo electrónico | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `aboutPlain` | About (Plain Text) | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `custom_cumpleanos` | CUMPLEAÑOS | `DATE` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `profilePhoto` | Profile Photo | `IMAGE` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `custom_checkinid` | checkInId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `aboutRich` | About (Rich Text) | `RICH_CONTENT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_updatedDate` | Last Updated | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `slug` | Slug | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `lastName` | Last Name | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `firstName` | First Name | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `customfields_contact_birthdate` | Birthdate | `DATE` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `activityStatus` | Activity Status | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `lastLoginDate` | Last Login Date | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `status` | Status | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `contactId` | Contact Id | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `custom_alergias-med` | ALERGIAS & MED | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `coverPhoto` | Cover Photo | `IMAGE` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `custom_genero` | COMENTARIO: | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `phone` | Phone | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `nickname` | Nickname | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+
+### Members/PrivateMembersData — PrivateMembersData
+
+- Origen: **Wix Members** · Tipo `WIX_APP` · ID canónico de colección `Members/PrivateMembersData` · ownerAppId=`SiteMembers`.
+- Revisión: `4` · Campos: **15** · Campo de presentación: `loginEmail`.
+- Permisos: `read=SITE_MEMBER_AUTHOR, insert=ADMIN, update=ADMIN, remove=ADMIN`.
+
+| Campo (key canónico) | Etiqueta Wix | Tipo de dato Wix | Descripción | Obligatorio | ID de colección referenciada | Subestructura OBJECT/ARRAY | Enum/opciones |
+|---|---|---|---|---|---|---|---|
+| `name` | Name | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `lastLogin` | Last Login Date | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `loginEmail` | Login Email | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_id` | ID | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_createdDate` | Creation Date | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_updatedDate` | Last Updated | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `slug` | Slug | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `phones` | Phones | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `lastName` | Last Name | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `firstName` | First Name | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `mainPhone` | Main Phone | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `language` | Language | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `status` | Status | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `picture` | Picture | `IMAGE` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `nickname` | Nickname | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+
+### Members/PublicData — PublicData
+
+- Origen: **Wix Members** · Tipo `WIX_APP` · ID canónico de colección `Members/PublicData` · ownerAppId=`SiteMembers`.
+- Revisión: `0` · Campos: **12** · Campo de presentación: `nickname`.
+- Permisos: `read=ANYONE, insert=ADMIN, update=ADMIN, remove=ADMIN`.
+
+| Campo (key canónico) | Etiqueta Wix | Tipo de dato Wix | Descripción | Obligatorio | ID de colección referenciada | Subestructura OBJECT/ARRAY | Enum/opciones |
+|---|---|---|---|---|---|---|---|
+| `_id` | ID | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_createdDate` | Created Date | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `custom_correo-electronico` | Correo electrónico | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `aboutPlain` | About (Plain Text) | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `profilePhoto` | Profile Photo | `IMAGE` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `aboutRich` | About (Rich Text) | `RICH_CONTENT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_updatedDate` | Updated Date | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `slug` | Slug | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `customfields_system_firstname` | First Name | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `coverPhoto` | Cover Photo | `IMAGE` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `title` | Title | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `nickname` | Nickname | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+
+### MovimientosCaja — MOVIMIENTOS_CAJA
+
+- Origen: **CMS propio del proyecto** · Tipo `NATIVE` · ID canónico de colección `MovimientosCaja` · ownerAppId=`no informado`.
+- Revisión: `80` · Campos: **88** · Campo de presentación: `numSerieFactura`.
+- Permisos: `read=ANYONE, insert=ADMIN, update=ADMIN, remove=ADMIN`.
+
+| Campo (key canónico) | Etiqueta Wix | Tipo de dato Wix | Descripción | Obligatorio | ID de colección referenciada | Subestructura OBJECT/ARRAY | Enum/opciones |
+|---|---|---|---|---|---|---|---|
+| `resourceId` | resourceId | `TEXT` | Recurso nativo asociado a la operación, si aplica. | No declarado | — | — | No declarado en esquema CMS |
+| `payloadAEAT` | payloadAEAT | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `NIFEmisor` | NIFEmisor | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `NIFDestinatario` | NIFDestinatario | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `IRPFWithholdingRate` | IRPFWithholdingRate | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `IRPFWithholdingAmount` | IRPFWithholdingAmount | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `baseImponibleOImporteNoSujeto` | baseImponibleOImporteNoSujeto | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `signatureAlgorithm` | signatureAlgorithm | `TEXT` | Algoritmo de firma usado por el firmador. | No declarado | — | — | No declarado en esquema CMS |
+| `hashAlgorithm` | hashAlgorithm | `TEXT` | Algoritmo usado para la huella del registro. | No declarado | — | — | No declarado en esquema CMS |
+| `verificationQR` | verificationQR | `TEXT` | URL o contenido del QR de verificación asociado a la factura. | No declarado | — | — | No declarado en esquema CMS |
+| `digitalSignature` | digitalSignature | `TEXT` | Firma digital producida por el firmador configurado. | No declarado | — | — | No declarado en esquema CMS |
+| `generationTimestamp` | generationTimestamp | `DATETIME` | Instante de generación del registro fiscal. | No declarado | — | — | No declarado en esquema CMS |
+| `serviceIdRedeemed` | serviceIdRedeemed | `TEXT` | Servicio asociado al canje de tarjeta regalo, si aplica. | No declarado | — | — | No declarado en esquema CMS |
+| `giftCardOperation` | giftCardOperation | `TEXT` | Tipo de operación de tarjeta regalo: SALE o REDEMPTION. | No declarado | — | — | Descripción CMS: SALE, REDEMPTION |
+| `giftCardId` | giftCardId | `TEXT` | Tarjeta regalo nativa asociada a venta o canje. | No declarado | — | — | No declarado en esquema CMS |
+| `accountingSign` | accountingSign | `NUMBER` | Signo contable de la operación cuando el productor lo informa. | No declarado | — | — | No declarado en esquema CMS |
+| `lineItems` | lineItems | `OBJECT` | Detalle de líneas recibido del checkout/caja, conservado como snapshot. | No declarado | — | — | No declarado en esquema CMS |
+| `recordSource` | recordSource | `TEXT` | Sistema de origen del registro fiscal. | No declarado | — | — | No declarado en esquema CMS |
+| `desgloseDetallado` | desgloseDetallado | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `bankReconciliationReference` | bankReconciliationReference | `TEXT` | Referencia bancaria para conciliar el cobro/pago. | No declarado | — | — | No declarado en esquema CMS |
+| `vatAccrualStatus` | vatAccrualStatus | `TEXT` | Estado de devengo/aplicación de anticipo. | No declarado | — | — | No declarado en esquema CMS |
+| `linkedAdvanceId` | linkedAdvanceId | `TEXT` | Anticipo fiscal aplicado a la operación. | No declarado | — | — | No declarado en esquema CMS |
+| `article20Exempt` | article20Exempt | `BOOLEAN` | Indica exención fiscal por el artículo 20 cuando corresponda. | No declarado | — | — | No declarado en esquema CMS |
+| `cashBasisRegime` | cashBasisRegime | `BOOLEAN` | Indica aplicación del régimen especial del criterio de caja. | No declarado | — | — | No declarado en esquema CMS |
+| `nonSubjectReason` | nonSubjectReason | `TEXT` | Motivo fiscal de una operación no sujeta. | No declarado | — | — | No declarado en esquema CMS |
+| `issuerThirdPartyTaxId` | issuerThirdPartyTaxId | `TEXT` | NIF del tercero que expide la factura cuando corresponda. | No declarado | — | — | No declarado en esquema CMS |
+| `thirdPartyLegalName` | thirdPartyLegalName | `TEXT` | Razón social del tercero emisor/interviniente. | No declarado | — | — | No declarado en esquema CMS |
+| `issuedByThirdPartyOrRecipient` | issuedByThirdPartyOrRecipient | `TEXT` | Código de quién expide la factura según el contrato fiscal. | No declarado | — | — | No declarado en esquema CMS |
+| `isB2B` | isB2B | `BOOLEAN` | Indica si la operación es entre empresas/profesionales. | No declarado | — | — | No declarado en esquema CMS |
+| `issuerLegalName` | issuerLegalName | `TEXT` | Razón social del emisor obtenida de la configuración fiscal SSOT. | No declarado | — | — | No declarado en esquema CMS |
+| `correctionAmount` | correctionAmount | `NUMBER` | Importe de corrección asociado a una factura rectificativa. | No declarado | — | — | No declarado en esquema CMS |
+| `issuerInvoiceNumber` | issuerInvoiceNumber | `TEXT` | Número de factura del emisor cuando la operación lo requiere. | No declarado | — | — | No declarado en esquema CMS |
+| `previousInvoiceIssueDate` | previousInvoiceIssueDate | `DATE` | Fecha de expedición de la factura rectificada. | No declarado | — | — | No declarado en esquema CMS |
+| `previousInvoiceNumber` | previousInvoiceNumber | `TEXT` | Número de la factura rectificada. | No declarado | — | — | No declarado en esquema CMS |
+| `correctionReason` | correctionReason | `TEXT` | Motivo de la factura rectificativa. | No declarado | — | — | No declarado en esquema CMS |
+| `withholdingBase` | withholdingBase | `NUMBER` | Base sobre la que se calcula la retención. | No declarado | — | — | No declarado en esquema CMS |
+| `surchargeRate` | surchargeRate | `NUMBER` | Tipo porcentual del recargo de equivalencia. | No declarado | — | — | No declarado en esquema CMS |
+| `linkedBookingIds` | linkedBookingIds | `ARRAY_STRING` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `bookingId` | bookingId | `TEXT` | FK → CitasF2. | No | — | — | No declarado en esquema CMS |
+| `hash` | hash | `TEXT` | Hash encadenado Veri*Factu. | Sí | — | — | No declarado en esquema CMS |
+| `amount` | amount | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `taxAmount` | taxAmount | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `taxBase` | taxBase | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `numSerieFactura` | numSerieFactura | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `sequenceNumber` | sequenceNumber | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `transactionId` | transactionId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `previousRecordHash` | previousRecordHash | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `recordTimestamp` | recordTimestamp | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `schemaVersion` | schemaVersion | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `traceId` | traceId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `movementType` | movementType | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | MOVEMENT_TYPE: VENTA, VENTA_ONLINE, ANTICIPO, REEMBOLSO, DEVOLUCION, DEVOLUCION_SERVICIO, PROPINA, AJUSTE |
+| `totalAmount` | totalAmount | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `paymentMethod` | paymentMethod | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | PAYMENT_METHOD: EFECTIVO, TARJETA, BIZUM, TRANSFERENCIA, WIX_PAYMENTS |
+| `channelType` | channelType | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | CHANNEL_TYPE: ONLINE, PRESENCIAL |
+| `operationDescription` | operationDescription | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `staffResourceId` | staffResourceId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `tipoFactura` | tipoFactura | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | TIPO_FACTURA: F1, F2, F3, R1, R2, R3, R4, R5 |
+| `fechaExpedicionFactura` | fechaExpedicionFactura | `DATE` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `fechaOperacion` | fechaOperacion | `DATE` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `tipoImpositivo` | tipoImpositivo | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `recipientLegalName` | recipientLegalName | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `recipientAddress` | recipientAddress | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `payloadFiscal` | payloadFiscal | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `sistemaInformatico` | sistemaInformatico | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `estadoEnvioAEAT` | estadoEnvioAEAT | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `csvAEAT` | csvAEAT | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `fechaEnvioAEAT` | fechaEnvioAEAT | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `tipoRectificativa` | tipoRectificativa | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `previousInvoiceId` | previousInvoiceId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `claveRegimen` | claveRegimen | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `calificacionOperacion` | calificacionOperacion | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `operacionExenta` | operacionExenta | `BOOLEAN` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `inversionSujetoPasivo` | inversionSujetoPasivo | `BOOLEAN` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `surchargeAmount` | surchargeAmount | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `fiscalRole` | fiscalRole | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | FISCAL_ROLE: EMISOR, RECEPTOR |
+| `eventType` | eventType | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `thirdPartyId` | thirdPartyId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `catalogId` | catalogId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `pairToken` | pairToken | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `orderId` | orderId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `refundId` | refundId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `fiscalPeriod` | fiscalPeriod | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `accountingAmount` | accountingAmount | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `projectionStatus` | projectionStatus | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `_id` | ID | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_createdDate` | Created Date | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_updatedDate` | Updated Date | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_owner` | Owner | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+
+### PaquetesGestoria — Paquetes de Gestoria (append-only)
+
+- Origen: **CMS propio del proyecto** · Tipo `NATIVE` · ID canónico de colección `PaquetesGestoria` · ownerAppId=`no informado`.
+- Revisión: `5` · Campos: **17** · Campo de presentación: `periodType`.
+- Permisos: `read=ANYONE, insert=ADMIN, update=ADMIN, remove=ADMIN`.
+
+| Campo (key canónico) | Etiqueta Wix | Tipo de dato Wix | Descripción | Obligatorio | ID de colección referenciada | Subestructura OBJECT/ARRAY | Enum/opciones |
+|---|---|---|---|---|---|---|---|
+| `invoiceData` | Facturas snapshot | `ARRAY` | Array of immutable invoice snapshot objects. | Sí | — | Elemento OBJECT | No declarado en esquema CMS |
+| `periodType` | Tipo de periodo | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `fiscalYear` | Ejercicio fiscal | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `fiscalMonth` | Mes fiscal | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `fiscalQuarter` | Trimestre fiscal | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `packageVersion` | Version del paquete | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `summaryData` | Resumen fiscal snapshot | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `packageStatus` | Estado del paquete | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `snapshotHash` | SHA-256 snapshot | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `schemaVersion` | Version del esquema | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `source` | Origen del snapshot | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `traceId` | Trace ID | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `createdAt` | Fecha de creacion | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `_id` | ID | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_createdDate` | Created Date | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_updatedDate` | Updated Date | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_owner` | Owner | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+
+### RegistroIntegracion — REGISTRO_INTEGRACION
+
+- Origen: **CMS propio del proyecto** · Tipo `NATIVE` · ID canónico de colección `RegistroIntegracion` · ownerAppId=`no informado`.
+- Revisión: `4` · Campos: **21** · Campo de presentación: `eventId`.
+- Permisos: `read=ANYONE, insert=ADMIN, update=ADMIN, remove=ADMIN`.
+
+| Campo (key canónico) | Etiqueta Wix | Tipo de dato Wix | Descripción | Obligatorio | ID de colección referenciada | Subestructura OBJECT/ARRAY | Enum/opciones |
+|---|---|---|---|---|---|---|---|
+| `eventId` | eventId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `eventType` | eventType | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `sourceModule` | sourceModule | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `sourceCollection` | sourceCollection | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `sourceItemId` | sourceItemId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `occurredAt` | occurredAt | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `traceId` | traceId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `correlationId` | correlationId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `idempotencyKey` | idempotencyKey | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `schemaVersion` | schemaVersion | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `payload` | payload | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `payloadHash` | payloadHash | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `deliveryStatus` | deliveryStatus | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `deliveryAttempts` | deliveryAttempts | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `nextAttemptAt` | nextAttemptAt | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `deliveredAt` | deliveredAt | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `lastDeliveryError` | lastDeliveryError | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_id` | ID | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_createdDate` | Created Date | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_updatedDate` | Updated Date | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_owner` | Owner | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+
+### RegistrosHorariosStaff — REGISTROS_HORARIOS_STAFF
+
+- Origen: **CMS propio del proyecto** · Tipo `NATIVE` · ID canónico de colección `RegistrosHorariosStaff` · ownerAppId=`no informado`.
+- Revisión: `14` · Campos: **21** · Campo de presentación: `resourceId`.
+- Permisos: `read=ANYONE, insert=ADMIN, update=ADMIN, remove=ADMIN`.
+
+| Campo (key canónico) | Etiqueta Wix | Tipo de dato Wix | Descripción | Obligatorio | ID de colección referenciada | Subestructura OBJECT/ARRAY | Enum/opciones |
+|---|---|---|---|---|---|---|---|
+| `resourceId` | resourceId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `notes` | notes | `TEXT` | Obligatorio si AJUSTE. | No | — | — | No declarado en esquema CMS |
+| `memberId` | memberId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `recordedAt` | recordedAt | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `clockEventType` | clockEventType | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | CLOCK_EVENT_TYPE: ENTRADA, SALIDA, PAUSA_INICIO, PAUSA_FIN |
+| `recordType` | recordType | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | RECORD_TYPE_HORARIOS: REGULAR, AJUSTE |
+| `traceId` | traceId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `adjustmentReason` | adjustmentReason | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `signature` | signature | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `recordedTime` | recordedTime | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `dayKey` | dayKey | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `monthKey` | monthKey | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `staffName` | staffName | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `registeredBy` | registeredBy | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `registeredByMemberId` | registeredByMemberId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `deviceIpAddress` | deviceIpAddress | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `meta` | meta | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
+| `_id` | ID | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_createdDate` | Created Date | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_updatedDate` | Updated Date | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_owner` | Owner | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+
+### ServiciosCatalogo — SERVICIOS_CATALOGO
+
+- Origen: **CMS propio del proyecto** · Tipo `NATIVE` · ID canónico de colección `ServiciosCatalogo` · ownerAppId=`no informado`.
+- Revisión: `199` · Campos: **44** · Campo de presentación: `slug`.
+- Permisos: `read=ANYONE, insert=ADMIN, update=ADMIN, remove=ADMIN`.
+
+| Campo (key canónico) | Etiqueta Wix | Tipo de dato Wix | Descripción | Obligatorio | ID de colección referenciada | Subestructura OBJECT/ARRAY | Enum/opciones |
+|---|---|---|---|---|---|---|---|
+| `sessionCount` | sessionCount | `NUMBER` | Cantidad total de sesiones incluidas en el plan nativo. | No declarado | — | — | No declarado en esquema CMS |
+| `staffMembers` | staffMembers | `MULTI_REFERENCE → MapaStaff` | Profesionales asociados al servicio en Wix Bookings. La disponibilidad horaria real procede de Wix Bookings. | No declarado | `MapaStaff` | — | No declarado en esquema CMS |
+| `pricingPlanId` | pricingPlanId | `TEXT` | Identificador nativo de Wix Pricing Plans; no es un serviceId de Bookings. | No declarado | — | — | No declarado en esquema CMS |
+| `catalogEntryType` | catalogEntryType | `TEXT` | Tipo de entrada: SERVICE para servicio reservable o PRICING_PLAN para bono o plan nativo. | No declarado | — | — | CATALOG_ENTRY_TYPE: SERVICE, PRICING_PLAN |
+| `locationId` | locationId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `description` | description | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_id` | ID | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `serviceId` | serviceId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `title` | title | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `slug` | slug | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `tagLine` | tagLine | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `categoryId` | categoryId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `itemNature` | itemNature | `TEXT` | Naturaleza del servicio según la Biblia técnica. | No declarado | — | — | ITEM_NATURE: SERVICIO, PRODUCTO |
+| `sku` | sku | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `price` | price | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `currency` | currency | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `taxIncluded` | taxIncluded | `BOOLEAN` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `tipoImpositivo` | tipoImpositivo | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `calificacionOperacion` | calificacionOperacion | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `totalDuration` | totalDuration | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `phase1Duration` | phase1Duration | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `phase2Duration` | phase2Duration | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `exposureDuration` | exposureDuration | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `allowCombine` | allowCombine | `BOOLEAN` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `linkedPhases` | linkedPhases | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `location` | location | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `clientHidden` | clientHidden | `BOOLEAN` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `onlinePayment` | onlinePayment | `BOOLEAN` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `inPersonPayment` | inPersonPayment | `BOOLEAN` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `pricingModel` | pricingModel | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `depositType` | depositType | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `depositAmount` | depositAmount | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `margin` | margin | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `internalNotes` | internalNotes | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `category` | category | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `precioCosteBase` | precioCosteBase | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_createdDate` | Created Date | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `mainMedia` | mainMedia | `IMAGE` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_updatedDate` | Updated Date | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_owner` | Owner | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `recomendaciones` | recomendaciones | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `name` | name | `MULTI_REFERENCE → ComplementosCatalogo` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | `ComplementosCatalogo` | — | No declarado en esquema CMS |
+| `bookingsStaffNames` | Bookingsstaffnames | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `bookingsStaff` | Bookingsstaff | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+
+### StoreCatalog/Brands — Brands
+
+- Origen: **Wix Stores Catalog V3** · Tipo `WIX_APP` · ID canónico de colección `StoreCatalog/Brands` · ownerAppId=`215238eb-22a5-4c36-9e7b-e7c08025e04e`.
+- Revisión: `0` · Campos: **6** · Campo de presentación: `name`.
+- Permisos: `read=ANYONE, insert=ADMIN, update=ADMIN, remove=ADMIN`.
+
+| Campo (key canónico) | Etiqueta Wix | Tipo de dato Wix | Descripción | Obligatorio | ID de colección referenciada | Subestructura OBJECT/ARRAY | Enum/opciones |
+|---|---|---|---|---|---|---|---|
+| `name` | Name | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `_id` | ID | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_createdDate` | Created Date | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_updatedDate` | Updated Date | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `assignedProductsCount` | Assigned Products Count | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `revision` | Revision | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+
+### StoreCatalog/Categories — Categories
+
+- Origen: **Wix Stores Catalog V3** · Tipo `WIX_APP` · ID canónico de colección `StoreCatalog/Categories` · ownerAppId=`215238eb-22a5-4c36-9e7b-e7c08025e04e`.
+- Revisión: `0` · Campos: **17** · Campo de presentación: `_id`.
+- Permisos: `read=ANYONE, insert=ADMIN, update=ADMIN, remove=ADMIN`.
+
+| Campo (key canónico) | Etiqueta Wix | Tipo de dato Wix | Descripción | Obligatorio | ID de colección referenciada | Subestructura OBJECT/ARRAY | Enum/opciones |
+|---|---|---|---|---|---|---|---|
+| `seoData` | Seo Data | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | tags:ARRAY, settings:OBJECT | No declarado en esquema CMS |
+| `name` | Name | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `extendedFields` | Extended Fields | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | namespaces:OBJECT | No declarado en esquema CMS |
+| `visible` | Visible | `BOOLEAN` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `image` | Image | `IMAGE` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `description` | Description | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_id` | ID | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `_createdDate` | Created Date | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `breadcrumbsInfo` | Breadcrumbs Info | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | breadcrumbs:ARRAY | No declarado en esquema CMS |
+| `_updatedDate` | Updated Date | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `slug` | Slug | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `revision` | Revision | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `treeReference` | Tree Reference | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | appNamespace:TEXT, treeKey:TEXT | No declarado en esquema CMS |
+| `richContentDescription` | Rich Content Description | `RICH_CONTENT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `parentCategory` | Parent Category | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | id:TEXT, index:NUMBER | No declarado en esquema CMS |
+| `managingAppId` | Managing App ID | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `itemCounter` | Item Counter | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+
+### StoreCatalog/Info sections — Info Sections
+
+- Origen: **Wix Stores Catalog V3** · Tipo `WIX_APP` · ID canónico de colección `StoreCatalog/Info sections` · ownerAppId=`215238eb-22a5-4c36-9e7b-e7c08025e04e`.
+- Revisión: `0` · Campos: **9** · Campo de presentación: `_id`.
+- Permisos: `read=ANYONE, insert=ADMIN, update=ADMIN, remove=ADMIN`.
+
+| Campo (key canónico) | Etiqueta Wix | Tipo de dato Wix | Descripción | Obligatorio | ID de colección referenciada | Subestructura OBJECT/ARRAY | Enum/opciones |
+|---|---|---|---|---|---|---|---|
+| `description` | Description | `RICH_CONTENT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_id` | ID | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_createdDate` | Created Date | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_updatedDate` | Updated Date | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `assignedProductsCount` | Assigned Products Count | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `plainDescription` | Plain Description | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `revision` | Revision | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `title` | Title | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `uniqueName` | Unique Name | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+
+### StoreCatalog/Inventory — Inventory
+
+- Origen: **Wix Stores Catalog V3** · Tipo `WIX_APP` · ID canónico de colección `StoreCatalog/Inventory` · ownerAppId=`215238eb-22a5-4c36-9e7b-e7c08025e04e`.
+- Revisión: `0` · Campos: **17** · Campo de presentación: `_id`.
+- Permisos: `read=ANYONE, insert=ADMIN, update=ADMIN, remove=ADMIN`.
+
+| Campo (key canónico) | Etiqueta Wix | Tipo de dato Wix | Descripción | Obligatorio | ID de colección referenciada | Subestructura OBJECT/ARRAY | Enum/opciones |
+|---|---|---|---|---|---|---|---|
+| `variantId` | Variant ID | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `inStock` | In Stock | `BOOLEAN` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `quantity` | Quantity | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `stockOverrides` | Stock Overrides | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | lowStockThreshold:NUMBER, lowStock:BOOLEAN | No declarado en esquema CMS |
+| `trackQuantity` | Track Quantity | `BOOLEAN` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `extendedFields` | Extended Fields | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | namespaces:OBJECT | No declarado en esquema CMS |
+| `_id` | ID | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_createdDate` | Created Date | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `availabilityStatus` | Availability Status | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `inTransitQuantity` | In Transit Quantity | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_updatedDate` | Updated Date | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `revision` | Revision | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `locationId` | Location ID | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `productId` | Product ID | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `productV3Ref` | Product V3 Ref | `REFERENCE → StoreCatalog/Products` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | `StoreCatalog/Products` | — | No declarado en esquema CMS |
+| `preorderInfo` | Preorder Info | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | quantity:NUMBER, enabled:BOOLEAN, message:TEXT, counter:NUMBER, limit:NUMBER | No declarado en esquema CMS |
+| `product` | Product | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | name:TEXT, variantBarcode:TEXT, variantName:TEXT, brand:OBJECT, directCategoryIds:ARRAY_STRING, variantSku:TEXT, variantVisible:BOOLEAN | No declarado en esquema CMS |
+
+### StoreCatalog/Product options & modifiers — Product Options Modifiers
+
+- Origen: **Wix Stores Catalog V3** · Tipo `WIX_APP` · ID canónico de colección `StoreCatalog/Product options & modifiers` · ownerAppId=`215238eb-22a5-4c36-9e7b-e7c08025e04e`.
+- Revisión: `0` · Campos: **12** · Campo de presentación: `_id`.
+- Permisos: `read=ANYONE, insert=ADMIN, update=ADMIN, remove=ADMIN`.
+
+| Campo (key canónico) | Etiqueta Wix | Tipo de dato Wix | Descripción | Obligatorio | ID de colección referenciada | Subestructura OBJECT/ARRAY | Enum/opciones |
+|---|---|---|---|---|---|---|---|
+| `freeTextInput` | Free Text Input | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | maxCharCount:NUMBER, minCharCount:NUMBER, defaultAddedPrice:TEXT, key:TEXT, title:TEXT | No declarado en esquema CMS |
+| `name` | Name | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `choicesSettings` | Choices Settings | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | choices:ARRAY, sortOrder:TEXT | No declarado en esquema CMS |
+| `_id` | ID | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_createdDate` | Created Date | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_updatedDate` | Updated Date | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `assignedProductsCount` | Assigned Products Count | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `key` | Key | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `revision` | Revision | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `customizationType` | Customization Type | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `modifierSettings` | Modifier Settings | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | defaultMandatory:BOOLEAN | No declarado en esquema CMS |
+| `customizationRenderType` | Customization Render Type | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+
+### StoreCatalog/Products — Products
+
+- Origen: **Wix Stores Catalog V3** · Tipo `WIX_APP` · ID canónico de colección `StoreCatalog/Products` · ownerAppId=`215238eb-22a5-4c36-9e7b-e7c08025e04e`.
+- Revisión: `0` · Campos: **42** · Campo de presentación: `name`.
+- Permisos: `read=ANYONE, insert=ADMIN, update=ADMIN, remove=ADMIN`.
+
+| Campo (key canónico) | Etiqueta Wix | Tipo de dato Wix | Descripción | Obligatorio | ID de colección referenciada | Subestructura OBJECT/ARRAY | Enum/opciones |
+|---|---|---|---|---|---|---|---|
+| `inventory` | Inventory | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | availabilityStatus:TEXT, preorderStatus:TEXT, preorderAvailability:TEXT | No declarado en esquema CMS |
+| `additionalRibbons` | Additional Ribbons | `ARRAY` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | Elemento OBJECT | No declarado en esquema CMS |
+| `seoData` | Seo Data | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | tags:ARRAY, settings:OBJECT | No declarado en esquema CMS |
+| `physicalProperties` | Physical Properties | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | deliveryProfileId:TEXT, fulfillerId:TEXT, weightMeasurementUnitInfo:OBJECT, pricePerUnit:OBJECT, pricePerUnitRange:OBJECT, shippingWeightRange:OBJECT | No declarado en esquema CMS |
+| `name` | Name | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `mainCategoryV3Ref` | Main Category V3 Ref | `REFERENCE → StoreCatalog/Categories` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | `StoreCatalog/Categories` | — | No declarado en esquema CMS |
+| `extendedFields` | Extended Fields | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | namespaces:OBJECT | No declarado en esquema CMS |
+| `infoSections` | Info Sections | `ARRAY` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | Elemento OBJECT | No declarado en esquema CMS |
+| `compareAtPriceRange` | Compare At Price Range | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | minValue:OBJECT, maxValue:OBJECT | No declarado en esquema CMS |
+| `subscriptionDetails` | Subscription Details | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | subscriptions:ARRAY, allowOneTimePurchases:BOOLEAN | No declarado en esquema CMS |
+| `url` | Url | `URL` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `visible` | Visible | `BOOLEAN` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `variantSummary` | Variant Summary | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | variantCount:NUMBER, minPriceVariant:OBJECT | No declarado en esquema CMS |
+| `description` | Description | `RICH_CONTENT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_id` | ID | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `visibleInPos` | Visible In Pos | `BOOLEAN` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_createdDate` | Created Date | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `tags` | Tags | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | privateTags:OBJECT, publicTags:OBJECT | No declarado en esquema CMS |
+| `allCategoriesInfo` | All Categories Info | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | categories:ARRAY | No declarado en esquema CMS |
+| `directCategoriesInfo` | Direct Categories Info | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | categories:ARRAY | No declarado en esquema CMS |
+| `breadcrumbsInfo` | Breadcrumbs Info | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | breadcrumbs:ARRAY | No declarado en esquema CMS |
+| `_updatedDate` | Updated Date | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `slug` | Slug | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `productType` | Product Type | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `brand` | Brand | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | id:TEXT, name:TEXT | No declarado en esquema CMS |
+| `taxGroupId` | Tax Group ID | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `options` | Options | `ARRAY` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | Elemento OBJECT | No declarado en esquema CMS |
+| `plainDescription` | Plain Description | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `revision` | Revision | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `discountInfo` | Discount Info | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | discountRuleNames:ARRAY_STRING | No declarado en esquema CMS |
+| `modifiers` | Modifiers | `ARRAY` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | Elemento OBJECT | No declarado en esquema CMS |
+| `mainCategoryId` | Main Category ID | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `inventoryAppId` | Inventory App ID | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `ribbon` | Ribbon | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | id:TEXT, name:TEXT | No declarado en esquema CMS |
+| `media` | Media | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | main:OBJECT, itemsInfo:OBJECT | No declarado en esquema CMS |
+| `currency` | Currency | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `actualPriceRange` | Actual Price Range | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | minValue:OBJECT, maxValue:OBJECT | No declarado en esquema CMS |
+| `purchaseEligibility` | Purchase Eligibility | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | userCriteria:TEXT | No declarado en esquema CMS |
+| `costRange` | Cost Range | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | minValue:OBJECT, maxValue:OBJECT | No declarado en esquema CMS |
+| `variantsInfo` | Variants Info | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | variants:ARRAY | No declarado en esquema CMS |
+| `handle` | Handle | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `importId` | Import ID | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+
+### StoreCatalog/Ribbons — Ribbons
+
+- Origen: **Wix Stores Catalog V3** · Tipo `WIX_APP` · ID canónico de colección `StoreCatalog/Ribbons` · ownerAppId=`215238eb-22a5-4c36-9e7b-e7c08025e04e`.
+- Revisión: `0` · Campos: **6** · Campo de presentación: `_id`.
+- Permisos: `read=ANYONE, insert=ADMIN, update=ADMIN, remove=ADMIN`.
+
+| Campo (key canónico) | Etiqueta Wix | Tipo de dato Wix | Descripción | Obligatorio | ID de colección referenciada | Subestructura OBJECT/ARRAY | Enum/opciones |
+|---|---|---|---|---|---|---|---|
+| `name` | Name | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
+| `assignedProductCount` | Assigned Product Count | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_id` | ID | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_createdDate` | Created Date | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_updatedDate` | Updated Date | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `revision` | Revision | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+
+### StoreCatalog/Variants — Variants
+
+- Origen: **Wix Stores Catalog V3** · Tipo `WIX_APP` · ID canónico de colección `StoreCatalog/Variants` · ownerAppId=`215238eb-22a5-4c36-9e7b-e7c08025e04e`.
+- Revisión: `0` · Campos: **16** · Campo de presentación: `_id`.
+- Permisos: `read=ANYONE, insert=ADMIN, update=ADMIN, remove=ADMIN`.
+
+| Campo (key canónico) | Etiqueta Wix | Tipo de dato Wix | Descripción | Obligatorio | ID de colección referenciada | Subestructura OBJECT/ARRAY | Enum/opciones |
+|---|---|---|---|---|---|---|---|
+| `locations` | Locations | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | listed:BOOLEAN | No declarado en esquema CMS |
+| `variantId` | Variant ID | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `physicalProperties` | Physical Properties | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | weight:NUMBER, pricePerUnit:OBJECT, productDimensions:OBJECT, packageDimensions:OBJECT | No declarado en esquema CMS |
+| `optionChoices` | Option Choices | `ARRAY` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | Elemento OBJECT | No declarado en esquema CMS |
+| `sku` | Sku | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `revenueDetails` | Revenue Details | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | cost:OBJECT, profit:OBJECT, profitMargin:NUMBER | No declarado en esquema CMS |
+| `barcode` | Barcode | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `visible` | Visible | `BOOLEAN` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_id` | ID | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `price` | Price | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | actualPrice:OBJECT, compareAtPrice:OBJECT, priceAfterDiscount:OBJECT | No declarado en esquema CMS |
+| `subscriptionPricesInfo` | Subscription Prices Info | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | subscriptionPrices:ARRAY | No declarado en esquema CMS |
+| `productData` | Product Data | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | physicalProperties:OBJECT, name:TEXT, visible:BOOLEAN, visibleInPos:BOOLEAN, slug:TEXT, productType:TEXT, brand:OBJECT, revision:TEXT, mainCategoryId:TEXT, currency:TEXT, productId:TEXT, updatedDate:DATETIME, handle:TEXT | No declarado en esquema CMS |
+| `discountInfo` | Discount Info | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | discountRuleNames:ARRAY_STRING | No declarado en esquema CMS |
+| `digitalProperties` | Digital Properties | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | digitalFile:OBJECT | No declarado en esquema CMS |
+| `media` | Media | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | displayName:TEXT, mediaType:TEXT, url:URL, image:IMAGE, altText:TEXT, thumbnail:OBJECT, uploadId:TEXT, id:TEXT, video:VIDEO | No declarado en esquema CMS |
+| `inventoryStatus` | Inventory Status | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | inStock:BOOLEAN, preorderEnabled:BOOLEAN | No declarado en esquema CMS |
+
+### Stores/Collections — Collections
+
+- Origen: **Wix Stores / eCommerce** · Tipo `WIX_APP` · ID canónico de colección `Stores/Collections` · ownerAppId=`1380b703-ce81-ff05-f115-39571d94dfcd`.
+- Revisión: `0` · Campos: **5** · Campo de presentación: `name`.
+- Permisos: `read=ANYONE, insert=ADMIN, update=ADMIN, remove=ADMIN`.
+
+| Campo (key canónico) | Etiqueta Wix | Tipo de dato Wix | Descripción | Obligatorio | ID de colección referenciada | Subestructura OBJECT/ARRAY | Enum/opciones |
+|---|---|---|---|---|---|---|---|
+| `name` | Name | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `mainMedia` | Main Media | `IMAGE` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_id` | ID | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `slug` | Slug | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `categoryPageUrl` | Page Url | `PAGE_LINK` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+
+### Stores/InventoryItems — InventoryItems
+
+- Origen: **Wix Stores / eCommerce** · Tipo `WIX_APP` · ID canónico de colección `Stores/InventoryItems` · ownerAppId=`1380b703-ce81-ff05-f115-39571d94dfcd`.
+- Revisión: `0` · Campos: **6** · Campo de presentación: `_id`.
+- Permisos: `read=ADMIN, insert=ADMIN, update=ADMIN, remove=ADMIN`.
+
+| Campo (key canónico) | Etiqueta Wix | Tipo de dato Wix | Descripción | Obligatorio | ID de colección referenciada | Subestructura OBJECT/ARRAY | Enum/opciones |
+|---|---|---|---|---|---|---|---|
+| `trackQuantity` | Track Quantity | `BOOLEAN` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `externalId` | External ID | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_id` | ID | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_updatedDate` | Updated Date | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `productId` | Product ID | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `variants` | Variants | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+
+### Stores/Orders — Orders
+
+- Origen: **Wix Stores / eCommerce** · Tipo `WIX_APP` · ID canónico de colección `Stores/Orders` · ownerAppId=`1380b703-ce81-ff05-f115-39571d94dfcd`.
+- Revisión: `0` · Campos: **23** · Campo de presentación: `number`.
+- Permisos: `read=ADMIN, insert=ADMIN, update=ADMIN, remove=ADMIN`.
+
+| Campo (key canónico) | Etiqueta Wix | Tipo de dato Wix | Descripción | Obligatorio | ID de colección referenciada | Subestructura OBJECT/ARRAY | Enum/opciones |
+|---|---|---|---|---|---|---|---|
+| `number` | Number | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `cartId` | Cart Id | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `lineItems` | Line Items | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `paymentStatus` | Payment Status | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_id` | ID | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `archived` | Archived | `BOOLEAN` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `enteredBy` | Entered By | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `shippingInfo` | Shipping Info | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `activities` | Activities | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `customField` | Custom Field | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_updatedDate` | Updated Date | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `weightUnit` | Weight Unit | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `buyerNote` | Buyer Note | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_dateCreated` | Date Created | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `subscriptionInfo` | Subscription Information | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `billingInfo` | Billing Info | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `buyerInfo` | Buyer Info | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `currency` | Currency | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `buyerLanguage` | Buyer Language | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `channelInfo` | Channel Info | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `totals` | Totals | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `fulfillmentStatus` | Fulfillment Status | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `fulfillments` | Fulfillments | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+
+### Stores/Products — Products
+
+- Origen: **Wix Stores / eCommerce** · Tipo `WIX_APP` · ID canónico de colección `Stores/Products` · ownerAppId=`1380b703-ce81-ff05-f115-39571d94dfcd`.
+- Revisión: `7` · Campos: **35** · Campo de presentación: `name`.
+- Permisos: `read=ANYONE, insert=ADMIN, update=ADMIN, remove=ADMIN`.
+
+| Campo (key canónico) | Etiqueta Wix | Tipo de dato Wix | Descripción | Obligatorio | ID de colección referenciada | Subestructura OBJECT/ARRAY | Enum/opciones |
+|---|---|---|---|---|---|---|---|
+| `seoData` | SEO Data | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `inStock` | In Stock | `BOOLEAN` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `weight` | Weight | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `name` | Name | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `sku` | SKU | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `formattedDiscountedPrice` | Formatted Discounted Price | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `productOptions` | Product Options | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `mainMedia` | Main Media | `IMAGE` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `description` | Description | `RICH_TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_id` | ID | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `discountedPrice` | Discounted Price | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `formattedPrice` | Formatted Price | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `price` | Price | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `quantityInStock` | Quantity In Stock | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `collections` | Collections | `MULTI_REFERENCE → Stores/Collections` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | `Stores/Collections` | — | No declarado en esquema CMS |
+| `inventoryItem` | Inventory Item | `REFERENCE → Stores/InventoryItems` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | `Stores/InventoryItems` | — | No declarado en esquema CMS |
+| `_updatedDate` | Updated Date | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `formattedPricePerUnit` | Formatted Price Per Unit | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `slug` | Slug | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `productType` | Product Type | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `brand` | Brand | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `ribbons` | Ribbons | `ARRAY` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `pricePerUnitData` | Price Per Unit Data | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `mediaItems` | Media Items | `MEDIA_GALLERY` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `trackInventory` | Track Inventory | `BOOLEAN` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `customTextFields` | Custom Text Fields | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `pricePerUnit` | Price Per Unit | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `ribbon` | Ribbon | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `currency` | Currency | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `productPageUrl` | Product Page Url | `PAGE_LINK` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `numericId` | Numeric Id | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `manageVariants` | Manage Variants | `BOOLEAN` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `discount` | Discount | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `additionalInfoSections` | Additional Info Sections | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `createdDate` | Date Created | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+
+### Stores/Variants — Variants
+
+- Origen: **Wix Stores / eCommerce** · Tipo `WIX_APP` · ID canónico de colección `Stores/Variants` · ownerAppId=`1380b703-ce81-ff05-f115-39571d94dfcd`.
+- Revisión: `0` · Campos: **12** · Campo de presentación: `fullVariantName`.
+- Permisos: `read=ANYONE, insert=ADMIN, update=ADMIN, remove=ADMIN`.
+
+| Campo (key canónico) | Etiqueta Wix | Tipo de dato Wix | Descripción | Obligatorio | ID de colección referenciada | Subestructura OBJECT/ARRAY | Enum/opciones |
+|---|---|---|---|---|---|---|---|
+| `variantId` | Variant ID | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `stock` | Stock | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `sku` | SKU | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `choices` | Choices | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `_id` | ID | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `fullVariantName` | Full Variant Name | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `variantName` | Variant Name | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `collections` | Collections | `MULTI_REFERENCE → Stores/Collections` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | `Stores/Collections` | — | No declarado en esquema CMS |
+| `managedVariant` | Managed Variant | `BOOLEAN` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `media` | Media | `IMAGE` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `productName` | Product Name | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| `productId` | Product ID | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+
+## 4. Etiquetas CMS y significado documental
+
+El `displayName` de Wix se conserva como etiqueta en cada fila de §3. El texto `description` se copia cuando está definido. En ausencia de `description`, el documento lo declara como no configurado; la etiqueta no debe confundirse con una descripción funcional validada. Las etiquetas CMS tampoco son necesariamente los textos visibles en la web: esos pertenecen a componentes y formularios frontend.
+
+Para completar las descripciones funcionales pendientes se debe contrastar cada campo NATIVE con sus writers, readers, DTOs, validadores y flujos. En las colecciones WIX_APP, la semántica y los enums específicos deben proceder de la API oficial de la app propietaria.
+## 5. Registro de aplicaciones Wix y sus identificadores
+
+| Aplicación de origen | ownerAppId devuelto por Wix | Espacios/colecciones observados |
 |---|---|---|
-| Todas las NATIVE | `_id` | `ID` |
-| Todas las NATIVE | `_createdDate` | `Created Date` |
-| Todas las NATIVE | `_updatedDate` | `Updated Date` |
-| Todas las NATIVE | `_owner` | `Owner` |
-| `ControlOperativo` | `eventType` | `Event Type` |
-| `ControlOperativo` | `occurredAt` | `Occurred At` |
-| `ControlOperativo` | `operationDate` | `Operationdate` |
-| `MapaStaff` | `recordType` | `Tipo de registro` |
-| `MapaStaff` | `streetNumber` | `Número fiscal` |
-| `MapaStaff` | `businessDescription` | `Descripción del negocio` |
-| `MapaStaff` | `currency` | `Moneda` |
-| `MapaStaff` | `phone` | `Teléfono fiscal` |
-| `MapaStaff` | `taxId` | `NIF / VAT` |
-| `MapaStaff` | `legalName` | `Razón social / nombre legal` |
-| `MapaStaff` | `thirdPartyType` | `Tipo de tercero` |
-| `MapaStaff` | `address` | `Domicilio fiscal` |
-| `MapaStaff` | `taxRegime` | `Régimen fiscal` |
-| `MapaStaff` | `verifactuEnabled` | `Veri*Factu habilitado` |
-| `MapaStaff` | `verifactuVersion` | `Versión Veri*Factu` |
-| `MapaStaff` | `tipoUsoPosibleMultiOT` | `Uso posible de múltiples OT` |
-| `MapaStaff` | `indicadorMultiplesOT` | `Indicador de múltiples OT` |
-| `MapaStaff` | `fechaInicioVerifactu` | `Fecha de inicio Veri*Factu` |
-| `MapaStaff` | `email` | `Email` |
-| `MapaStaff` | `name` | `Nombre` |
-| `MapaStaff` | `label` | `Etiqueta` |
-| `MapaStaff` | `nif` | `NIF de contacto` |
-| `MapaStaff` | `gestorEmail` | `Email gestoría` |
-| `MapaStaff` | `gestorName` | `Nombre gestoría` |
-| `DatosFiscales` | `gestorNombre` | `Nombre gestoría (compatibilidad)` |
-| `MapaStaff` | `gestorNif` | `NIF gestoría` |
-| `MapaStaff` | `active` | `Activo` |
-| `PaquetesGestoria` | `invoiceData` | `Facturas snapshot` |
-| `PaquetesGestoria` | `periodType` | `Tipo de periodo` |
-| `PaquetesGestoria` | `fiscalYear` | `Ejercicio fiscal` |
-| `PaquetesGestoria` | `fiscalMonth` | `Mes fiscal` |
-| `PaquetesGestoria` | `fiscalQuarter` | `Trimestre fiscal` |
-| `PaquetesGestoria` | `packageVersion` | `Version del paquete` |
-| `PaquetesGestoria` | `summaryData` | `Resumen fiscal snapshot` |
-| `PaquetesGestoria` | `packageStatus` | `Estado del paquete` |
-| `PaquetesGestoria` | `snapshotHash` | `SHA-256 snapshot` |
-| `PaquetesGestoria` | `schemaVersion` | `Version del esquema` |
-| `PaquetesGestoria` | `source` | `Origen del snapshot` |
-| `PaquetesGestoria` | `traceId` | `Trace ID` |
-| `PaquetesGestoria` | `createdAt` | `Fecha de creacion` |
+| Wix Blog | `14bcded7-0066-7c35-14d7-466cb3f09103` | `Blog/Categories`, `Blog/Posts`, `Blog/Tags` |
+| Wix Bookings | `13d21c63-b5ec-5912-8397-c3a5ddb27a97` | `Bookings/Schedule`, `Bookings/Services`, `Bookings/Staff` |
+| Wix Campaign Manager | `7fdf5576-9d52-4c0a-9840-6e226f2ec415` | `CampaignManager/campaigns`, `CampaignManager/userConfig` |
+| Wix Stores / eCommerce | `1380b703-ce81-ff05-f115-39571d94dfcd` | `eCommerce/Orders`, `Stores/Collections`, `Stores/InventoryItems`, `Stores/Orders`, `Stores/Products`, `Stores/Variants` |
+| Wix Forms | `14ce1214-b278-a7e4-1373-00cebd1bef7c` | `Forms/subscribers03` |
+| Wix Marketing / Coupons | `14d7032a-0a65-5270-cca7-30f599708fed` | `Marketing/Coupons` |
+| Wix Members | `SiteMembers` | `Members/Badges`, `Members/FullData`, `Members/PrivateMembersData`, `Members/PublicData` |
+| Wix Stores Catalog V3 | `215238eb-22a5-4c36-9e7b-e7c08025e04e` | `StoreCatalog/Brands`, `StoreCatalog/Categories`, `StoreCatalog/Info sections`, `StoreCatalog/Inventory`, `StoreCatalog/Product options & modifiers`, `StoreCatalog/Products`, `StoreCatalog/Ribbons`, `StoreCatalog/Variants` |
+| Wix Locations | No informado por Wix | `Locations/Locations` |
 
-En las demás parejas key/displayName de campos NATIVE, los nombres coinciden exactamente en el corte.
-La tabla anterior no representa las etiquetas del frontend. Para documentar etiquetas visibles de la web hay que revisar cada formulario, repeater, tabla, widget y DTO que exponga el dato.
-
-## 5. Colecciones WIX_APP — inventario y propiedad
-
-Estas colecciones las crean/administran aplicaciones Wix. Se documentan para reconocer referencias, no para definir su contrato ni modificarlas desde el backend de negocio. El campo `displayField` es el campo que Wix usa para presentar el elemento en vistas de colección; no necesariamente es una etiqueta visible al público.
-
-| ID | Display name | Display field | Campos | Owner App |
-|---|---|---|---:|---|
-| `Blog/Categories` | Categories | `slug` | 11 | Wix Blog |
-| `Blog/Posts` | Posts | `slug` | 27 | Wix Blog |
-| `Blog/Tags` | Tags | `slug` | 7 | Wix Blog |
-| `Bookings/Schedule` | Schedule | `_id` | 5 | Wix Bookings |
-| `Bookings/Services` | Services | `serviceName` | 20 | Wix Bookings |
-| `Bookings/Staff` | Staff | `name` | 3 | Wix Bookings |
-| `CampaignManager/campaigns` | Campaign Manager | `campaignType` | 32 | Campaign Manager |
-| `CampaignManager/userConfig` | User Config | `addWidget` | 5 | Campaign Manager |
-| `eCommerce/Orders` | Orders | `_id` | 45 | Wix eCommerce |
-| `Forms/subscribers03` | Subscriptions | `submissionTime` | 6 | Wix Forms & Payments |
-| `Locations/Locations` | Locations | `name` | 17 | Wix Locations |
-| `Marketing/Coupons` | Coupons | `name` | 23 | Wix Marketing |
-| `Members/Badges` | Badges | `title` | 11 | Wix Members |
-| `Members/FullData` | FullData | `loginEmail` | 28 | Wix Members |
-| `Members/PrivateMembersData` | PrivateMembersData | `loginEmail` | 15 | Wix Members |
-| `Members/PublicData` | PublicData | `nickname` | 12 | Wix Members |
-| `StoreCatalog/Brands` | Brands | `name` | 6 | Wix Stores Catalog V3 |
-| `StoreCatalog/Categories` | Categories | `_id` | 17 | Wix Stores Catalog V3 |
-| `StoreCatalog/Info sections` | Info Sections | `_id` | 9 | Wix Stores Catalog V3 |
-| `StoreCatalog/Inventory` | Inventory | `_id` | 17 | Wix Stores Catalog V3 |
-| `StoreCatalog/Product options & modifiers` | Product Options Modifiers | `_id` | 12 | Wix Stores Catalog V3 |
-| `StoreCatalog/Products` | Products | `name` | 42 | Wix Stores Catalog V3 |
-| `StoreCatalog/Ribbons` | Ribbons | `_id` | 6 | Wix Stores Catalog V3 |
-| `StoreCatalog/Variants` | Variants | `_id` | 16 | Wix Stores Catalog V3 |
-| `Stores/Collections` | Collections | `name` | 5 | Wix Stores |
-| `Stores/InventoryItems` | InventoryItems | `_id` | 6 | Wix Stores |
-| `Stores/Orders` | Orders | `number` | 23 | Wix Stores |
-| `Stores/Products` | Products | `name` | 35 | Wix Stores |
-| `Stores/Variants` | Variants | `fullVariantName` | 12 | Wix Stores |
-
-**Versiones comprobadas en producción:** Wix Stores Catalog V3; Wix Invoices V1. No usar esquemas/REST de otra versión. No asumir que las colecciones `StoreCatalog/*` y `Stores/*` son intercambiables: pertenecen a espacios de datos/versiones de producto diferentes.
-
+Los IDs `ownerAppId` son identificadores de aplicación; no son IDs de colección, de elemento, de recurso Bookings, de miembro ni de producto. Para el dato en sí, la clave del campo es `key`, la colección se identifica por su `id` y una referencia tipada apunta al `referencedCollectionId` exacto. Los IDs de elementos nativos se almacenan en campos como `serviceId`, `resourceId`, `memberId`, `bookingId` o `productId`; solo se atribuyen a un sistema nativo cuando lo acredita el contrato de campo o el código.
 ## 6. Keyfields canónicos y glosario
 
 Las definiciones siguientes combinan contrato físico live y documentación/código del repositorio. Cuando un campo tiene un significado técnico exacto, se conserva ese significado; no se infiere un uso fiscal, contable o legal adicional.
@@ -633,22 +1663,38 @@ Antes de proponer un campo:
 6. Añadir/migrar solo con plan compatible, idempotente y aprobado.
 7. Nunca crear alias para ocultar divergencias ni modificar ledger histórico.
 
-## 8. Enums y valores cerrados conocidos
+## 8. Enums y opciones de respuesta
 
-Los valores se mantienen exactamente como los define el backend. Esta lista no sustituye la lectura completa de `internalConfig.js`.
+Los siguientes valores están respaldados por enums de backend o descripciones CMS. Los enums backend no son opciones configuradas en Wix CMS ni restricciones automáticas del almacenamiento.
 
-| Dominio | Keyfield | Valores canónicos observados |
-|---|---|---|
-| Tipo de catálogo | `ServiciosCatalogo.catalogEntryType` | `SERVICE`, `PRICING_PLAN` |
-| Tipo de reserva | `CitasF2.bookingType` | `SIMPLE`, `DUAL_F1`, `DUAL_F2` |
-| Estado de reserva CMS | `CitasF2.bookingStatus` | `PENDING`, `CONFIRMED`, `COMPLETED`, `CANCELED`, `REFUNDED`, `NO_SHOW` |
-| Estado de pago CMS | `CitasF2.paymentStatus` | `NOT_PAID`, `PENDING_PAYMENT`, `PENDING_LEDGER`, `PAID`, `PARTIALLY_PAID`, `REFUNDED`, `PARTIALLY_REFUNDED`, `EXEMPT`, `UNDEFINED` |
-| Tipo de registro fiscal | `MapaStaff.recordType` | `STAFF`, `GESTORIA`, `TERCERO`, `CONFIG_SISTEMA` |
-| Rol web | `MapaStaff.rolWebsite` / configuración backend | `ADMIN`, `GESTION`, `ESTILISTA` |
-| Rol Bookings | `MapaStaff.rolBookings` | `STAFF` (valor canónico documentado) |
-| Estado de caja | `CajaActual.cashRegisterStatus` | `ABIERTA`, `CERRADA` |
-| Tipo de entrada de inventario | `InventarioStockVenta.itemNature` | El enum de escritura canónico es `SERVICIO`, `PRODUCTO`; valores históricos adicionales solo se aceptan en lectura según el código. |
-| Tipo de tercero | `MapaStaff.thirdPartyType` | `CLIENTE`, `PROVEEDOR`, `STAFF`, `AAPP`, `MIXTO`, `EMISOR` |
+| Colección.campo | Fuente y valores canónicos |
+|---|---|
+| `CitasF2.bookingStatus` | CITAS_BOOKING_STATUS: PENDING, CONFIRMED, COMPLETED, CANCELED, REFUNDED, NO_SHOW |
+| `CitasF2.paymentStatus` | CITAS_PAYMENT_STATUS: NOT_PAID, PENDING_PAYMENT, PENDING_LEDGER, PAID, PARTIALLY_PAID, REFUNDED, PARTIALLY_REFUNDED, EXEMPT, UNDEFINED |
+| `CitasF2.bookingType` | BOOKING_TYPE: SIMPLE, DUAL_F1, DUAL_F2 |
+| `ControlOperativo.controlType` | CONTROL_TYPE: ALERT, COMPENSATION, DAYS_CACHE, DISPLAY_TOKEN, DUAL_CACHE, DEDUPE_KEY, LEDGER_IDEMPOTENCY, IDEMPOTENCY, SLOT_LOCK, RATE_LIMIT, SYSTEM_FLAG, WEBHOOK_CLAIM, WEBHOOK_EVENT |
+| `CajaActual.cashRegisterStatus` | CASH_REGISTER_STATUS: ABIERTA, CERRADA |
+| `CajaActual.paymentMethod` | PAYMENT_METHOD: EFECTIVO, TARJETA, BIZUM, TRANSFERENCIA, WIX_PAYMENTS |
+| `CajaActual.lastOperationPaymentMethod` | PAYMENT_METHOD: EFECTIVO, TARJETA, BIZUM, TRANSFERENCIA, WIX_PAYMENTS |
+| `CajaActual.lastOperationType` | MOVEMENT_TYPE: VENTA, VENTA_ONLINE, ANTICIPO, REEMBOLSO, DEVOLUCION, DEVOLUCION_SERVICIO, PROPINA, AJUSTE |
+| `MapaStaff.recordType` | RECORD_TYPE: STAFF, GESTORIA, TERCERO, CONFIG_SISTEMA |
+| `MapaStaff.thirdPartyType` | THIRD_PARTY_TYPE: CLIENTE, STAFF, PROVEEDOR, EMISOR |
+| `MapaStaff.rolWebsite` | ROL_WEBSITE: ADMIN, GESTION, ESTILISTA |
+| `MapaStaff.rolBookings` | Wix Bookings staff role: STAFF |
+| `MapaStaff.identityType` | Descripción CMS: STAFF_MEMBER, BUSINESS_FISCAL_IDENTITY, ACCOUNTING_FIRM |
+| `RegistrosHorariosStaff.clockEventType` | CLOCK_EVENT_TYPE: ENTRADA, SALIDA, PAUSA_INICIO, PAUSA_FIN |
+| `RegistrosHorariosStaff.recordType` | RECORD_TYPE_HORARIOS: REGULAR, AJUSTE |
+| `ServiciosCatalogo.catalogEntryType` | CATALOG_ENTRY_TYPE: SERVICE, PRICING_PLAN |
+| `ServiciosCatalogo.itemNature` | ITEM_NATURE: SERVICIO, PRODUCTO |
+| `MovimientosCaja.paymentMethod` | PAYMENT_METHOD: EFECTIVO, TARJETA, BIZUM, TRANSFERENCIA, WIX_PAYMENTS |
+| `MovimientosCaja.movementType` | MOVEMENT_TYPE: VENTA, VENTA_ONLINE, ANTICIPO, REEMBOLSO, DEVOLUCION, DEVOLUCION_SERVICIO, PROPINA, AJUSTE |
+| `MovimientosCaja.channelType` | CHANNEL_TYPE: ONLINE, PRESENCIAL |
+| `MovimientosCaja.tipoFactura` | TIPO_FACTURA: F1, F2, F3, R1, R2, R3, R4, R5 |
+| `MovimientosCaja.fiscalRole` | FISCAL_ROLE: EMISOR, RECEPTOR |
+| `MovimientosCaja.giftCardOperation` | Descripción CMS: SALE, REDEMPTION |
+| `HistoricoCierresZ.closingSource` | Descripción CMS: MANUAL, CRON |
+
+Los demás campos de texto no presentan opciones en los metadatos CMS consultados. Para Wix Apps, los enums propios deben contrastarse con el contrato oficial de la API correspondiente; no se deducen de nombres de campo.
 
 ## 9. Relaciones lógicas entre colecciones
 
