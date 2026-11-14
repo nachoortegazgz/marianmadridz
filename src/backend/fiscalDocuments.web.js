@@ -20,7 +20,7 @@ CAMBIOS v5018-IDEMPOTENT-IMMUTABLE-SNAPSHOT (respecto a v5017):
 CAMBIOS v5017-ALIGNED-DATOSFISCALES (respecto a v5016):
   ALN-DF-01: Eliminada la dependencia de BUSINESS_COLLECTIONS.GESTORES_FISCALES
              (coleccion no declarada en internalConfig v12). El origen de
-             verdad de destinatarios es BUSINESS_COLLECTIONS.MAPA_STAFF.
+             verdad de destinatarios es BUSINESS_COLLECTIONS.DATOS_FISCALES.
   ALN-DF-02: listAccountantRecipients consulta DatosFiscales y extrae
              gestores por DOS patrones tolerados en paralelo:
                A) item dedicado con recordType "GESTORIA" + campo email.
