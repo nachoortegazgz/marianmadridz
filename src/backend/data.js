@@ -824,6 +824,7 @@ export function MapaStaff_beforeInsert(item) {
     if (!type || !VALID_THIRD_PARTY_TYPES.has(type)) {
         _schemaError("thirdPartyType invalido (CLIENTE, PROVEEDOR, STAFF, AAPP, MIXTO, EMISOR)");
     }
+    assertDatosFiscales(item);
     return item;
 }
 
@@ -852,6 +853,7 @@ export function MapaStaff_beforeUpdate(item) {
             _schemaError(`${field} debe ser BOOLEAN según el esquema CMS`);
         }
     }
+    assertDatosFiscales(item);
     return item;
 }
 
