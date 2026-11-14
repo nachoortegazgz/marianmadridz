@@ -385,7 +385,7 @@ test('HOOK-DATOS-FISCALES-02 validates issuer config and gestor contact contract
   assert.doesNotThrow(() => H.DatosFiscales_beforeInsert({ ...issuer }));
   assert.throws(
     () => H.DatosFiscales_beforeInsert({ ...issuer, fechaInicioVerifactu: '01/01/2026' }),
-    /TEXT ISO YYYY-MM-DD/
+    /valid TEXT ISO YYYY-MM-DD/
   );
   assert.throws(
     () => H.DatosFiscales_beforeInsert({ ...issuer, verifactuEnabled: 'false' }),
@@ -398,6 +398,56 @@ test('HOOK-DATOS-FISCALES-02 validates issuer config and gestor contact contract
     email: 'gestoria@example.test',
     active: true,
   }));
+});
+
+test('HOOK-CAJA-01 enforces current CajaActual field types', () => {
+  const cash = {
+    _id: 'SINGLE_ITEM_ID',
+    id: 'SINGLE_ITEM_ID',
+    singletonKey: 'CAJA_PRINCIPAL',
+    cashRegisterStatus: 'SIMULACION',
+    isOpen: true,
+    sequenceCounters: { seqGlobal: 0, appliedMovementIds: [] },
+    currentSequence: 0,
+    openingAmount: 300,
+    expectedCash: 300,
+  };
+  assert.doesNotThrow(() => H.CajaActual_beforeInsert({ ...cash }));
+  assert.throws(
+    () => H.CajaActual_beforeInsert({ ...cash, sequenceCounters: '{}' }),
+    /sequenceCounters must be OBJECT/
+  );
+  assert.throws(
+    () => H.CajaActual_beforeInsert({ ...cash, openingAmount: '300' }),
+    /openingAmount must be NUMBER/
+  );
+  assert.throws(
+    () => H.CajaActual_beforeInsert({ ...cash, id: 'different-id' }),
+    /id mirror must equal CMS _id/
+  );
+  assert.throws(
+    () => H.CajaActual_beforeInsert({ ...cash, cashRegisterStatus: 'OPEN' }),
+    /cashRegisterStatus invalido/
+  );
+});
+
+test('HOOK-CAJA-02 update hook rejects a string sequenceCounters value', () => {
+  const original = {
+    _id: 'SINGLE_ITEM_ID',
+    id: 'SINGLE_ITEM_ID',
+    singletonKey: 'CAJA_PRINCIPAL',
+    cashRegisterStatus: 'SIMULACION',
+    isOpen: true,
+    sequenceCounters: { seqGlobal: 0 },
+    currentSequence: 0,
+  };
+  assert.throws(
+    () => H.CajaActual_beforeUpdate(
+      { _id: original._id, sequenceCounters: '{}' },
+      { original }
+    ),
+    /sequenceCounters must be OBJECT/
+  );
 });
 
 test('HOOK-ADDON-01 _id is canonical and addonId is only a required mirror', () => {
