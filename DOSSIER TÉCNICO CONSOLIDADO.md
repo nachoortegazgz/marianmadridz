@@ -1445,3 +1445,338 @@ No se ha creado todavía el singleton `CONFIG_SISTEMA`: falta verificar taxId, l
 El usuario declara que el código está integrado y publicado en Wix. Esta declaración se registra como **declaración del propietario**. En la consulta de GitHub de este corte, el PR #344 (feat/consolidate-fiscal-master-mapastaff-v2) figura fusionado el 2026-11-14 mediante el merge commit f3b1311eead05282e47f538afd506fe49e227141, que es el HEAD actual de main. La integración del cambio en Git está verificada. El usuario declara además que el código está publicado en Wix; no se dispone de un identificador de publicación Wix que vincule el runtime con ese SHA concreto.
 
 **Nota de ejecución:** este addendum modifica la autoridad documental y la política de trabajo. No demuestra por sí mismo que todos los hooks, WebMethods, políticas de escritura o permisos CMS del runtime Wix hayan sido modificados para permitir todas las operaciones de edición y eliminación. Esa correspondencia debe verificarse en código y en Wix antes de afirmar que la pausa está aplicada técnicamente de extremo a extremo.
+
+## Vigencia operativa — fase de desarrollo y QA (2026-11-14)
+
+**Autoridad:** el usuario/propietario es la SSOT de negocio, requisitos, prioridades, criterios de aceptación y autorizaciones. Las instrucciones expresas posteriores del usuario prevalecen sobre decisiones y restricciones documentales anteriores. La documentación oficial de Wix y de las integraciones gobierna únicamente los contratos y límites técnicos de la plataforma.
+
+**Mutabilidad CMS durante QA:** append-only e inmutabilidad están temporalmente en pausa. Se habilitan update y remove individuales y masivos para todas las colecciones CMS propias del proyecto, incluidas las históricamente tratadas como ledgers. Las operaciones masivas deben identificar explícitamente los registros por ID. No se habilitan escrituras en colecciones propiedad de Wix Apps ni se eluden autenticación, autorización/RBAC, permisos, validaciones de esquema, integridad técnica, secretos o límites de plataforma. La inserción mantiene su allowlist; los writers fiscales/contables/laborales, pagos, reembolsos, comunicaciones y efectos externos conservan sus gates funcionales independientes.
+
+**Restauración:** esta política no se revierte automáticamente. Solo el usuario puede ordenar la restauración de append-only y de las restricciones de mutación para preparar el despliegue. No publicar a producción basándose únicamente en esta excepción de QA.
+
+**Estado Git/Wix:** PR #344, PR #345 y PR #346 están integrados en main; HEAD actual b19a8f676d7be157d457588f6acf5332c2a34d32; merge del código QA PR #346: b68e4e048ce5fc1c022fc6ffc2643d5983972107. CI de PR #346: Layer 1 23 suites/296 pruebas, Layer 2 18 suites/246 pruebas, regresión completa 68 suites/627 pruebas; SDK contracts, ESLint y Gitleaks correctos. El usuario declara que la versión base anterior está publicada en Wix; la ampliación de mutaciones QA está integrada en Git pero aún no publicada en Wix. No se dispone de release Wix vinculado a SHA.
+
+**CMS maestro:** MapaStaff revisión 36, 42 campos y 5 registros (3 STAFF, 1 TERCERO, 1 GESTORIA). DatosFiscales permanece como colección legacy con un placeholder QA; su retirada requiere verificar runtime y consumidores tras publicar el backend migrado.
+
+---
+
+## Addendum de vigencia técnica — 2026-11-14
+
+Los requisitos de negocio se conservan; los estados históricos no acreditan funcionamiento actual. Prevalece [ESTADO_ACTUAL_PROYECTO.md](ESTADO_ACTUAL_PROYECTO.md) para el estado real de código, CMS y QA.
+
+El esquema live de `CajaActual` está en revisión 64 y contiene 59 campos personalizados + 4 campos de sistema (63 físicos): sesión/apertura, último ticket y conceptos, precios/impuestos, pago, trazabilidad y acumulados. `cashRegisterStatus` es el único estado de sesión; `operationDateHour:DATETIME` y los cuatro campos `opening*Amount` están definidos. Tipos y dependencias: `DICCIONARIO_DATOS_CMS.md` §3.1. El último readback previo documentaba el singleton cerrado, con saldos iniciales null y saldos actuales a cero; este estado no se ha vuelto a comprobar en el corte de revisión 64. La presencia de esos campos en CMS no acredita su persistencia desde backend: sigue pendiente el WebMethod seguro de apertura y la validación E2E de apertura, ticket, conceptos, pagos y referencias. El permiso live `read=ANYONE` está pendiente de revisión de seguridad.
+
+TEC-033 permite pruebas controladas de registros sintéticos en una rama de desarrollo. Se han eliminado dos fichajes QA explícitamente sintéticos; no se han borrado datos reales ni activado writers. El sitio Published no es un entorno de E2E aislado. **Desfase de despliegue:** el runtime Published no está acreditado con este contrato ni con esta rama. El backend/DTO actualizado existe solo en Git; no se ha desplegado. Aunque Wix Data no aplica el esquema como validación estricta de cada payload, el comportamiento del código publicado frente al esquema nuevo no se ha probado. No ejecutar operaciones de caja en live hasta completar CI, validación en QA aislado y despliegue autorizado.
+
+## Aviso de vigencia — 2026-11-11
+
+Este documento recoge necesidades y criterios de aceptación de negocio. Las etiquetas históricas "declarado", "implementado" o "verificado" no equivalen a evidencia vigente. Para saber qué existe realmente, qué está cubierto por mocks y qué requiere Wix Runtime, consultar [ESTADO_ACTUAL_PROYECTO.md](ESTADO_ACTUAL_PROYECTO.md) y la evidencia de cada prueba. El sitio Wix está actualmente **Published** y no debe tratarse como entorno QA aislado. No ejecutar pruebas que generen reservas, pagos, comunicaciones o datos de cliente sobre ese sitio.
+
+---
+
+# HOJA DE CUMPLIMIENTO — WEB MARIANMADRID.ES
+
+**Documento consolidado de requisitos, necesidades y criterios de aceptación**
+
+**Proyecto:** Sitio web marianmadrid.es — Marian Madrid Peluquería y Estética
+**Titular:** Marian Madrid (Propietaria y Directora)
+**Desarrollador:** Nacho Ortega (Arquitectura Wix & Velo)
+**Repositorio de referencia:** nachoortegazgz/marianmadridz
+**Entorno:** Wix Studio / Velo (Node.js)
+**Fecha de revisión:** 09-11-2026
+**Estado:** Requisitos conservados; estados actualizados con inspección de `main` `cad48c04` y consultas Wix read-only. Las pruebas runtime siguen pendientes.
+
+
+> **Criterio de estados (revisión 09-11-2026):** «Verificado» requiere evidencia en código, API nativa o prueba identificada. Una app Wix instalada no acredita una personalización propia. Las consultas REST/CMS de esta revisión fueron de solo lectura; no equivalen a ejecución de WebMethods, E2E ni publicación del HEAD.
+
+---
+
+## 1. Resumen ejecutivo
+
+El sitio web no debe ser un escaparate estático. Debe ser una **herramienta de gestión profesional** que:
+
+1. Gestión profesional de las reservas online de servicios de peluquería y estética simples y duales con gap de tiempo entre sus fases que libere al profesional en la agenda de reservas, permitiendole aceptar otros servicios en ese hueco de tiempo entre fases.
+2. Permita solapar servicios durante tiempos muertos (ejemplo: gap de tiempo entre fases para exposición de tintes).
+3. Posibilidad de activar y detallar cantidad de la fianza en reservas online para protejer reservas online contra citas fantasma.
+4. Cumpla estrictamente con la normativa fiscal española (Veri*factu / RD 1007/2023), laboral (RD-ley 8/2019) y de protección de datos (RGPD / AEPD).
+5. Automatice la coordinación con la gestoría (exportación CSV/Excel normalizada).
+6. Ofrezca una experiencia de cliente profesional, fiable y coherente con la marca.
+
+---
+
+## 2. Requisitos funcionales por área
+
+### 2.1. Motor de reservas inteligente (Prioridad 🔴 Crítica)
+
+| ID | Requisito | Descripción | Criterio de aceptación | Estado de verificación |
+|---|---|---|---|---|
+| RF-01 | Reserva online 24/7 | La clienta debe poder reservar sin depender del teléfono. | Flujo completo de selección de servicio, fecha, hora y confirmación funcional en producción. | PARCIAL; Wix Bookings devuelve servicios y disponibilidad en lectura. No se ha ejecutado creación de reserva, confirmación ni checkout E2E. |
+| RF-02 | Tiempos fraccionados / solapables | Un servicio con fases (ej. Babylights: 150 min configurados en CMS/Bookings al 09-11-2026) debe dividirse en fases: aplicación (staff ocupado), exposición (staff liberado, sillón ocupado), lavado/peinado (staff ocupado). | El algoritmo de disponibilidad libera la agenda durante la fase de exposición para permitir cortes rápidos o servicios cortos simultáneos. | VERIFICADO EN CÓDIGO; `reservas.web.js` y saga dual presentes. Lectura Wix: 94/94 servicios CMS↔Bookings y 24/24 vínculos F2 coherentes. E2E runtime pendiente. |
+| RF-03 | Configuración de fases por servicio | Cada servicio debe permitir configurar: duración total, minutos de aplicación, minutos de exposición, minutos de acabado. | Campos personalizados en Wix Bookings operativos y leídos correctamente por el backend. | PARCIAL; campos de fases en CMS y servicios nativos conciliados en lectura. Falta probar configuración/edición desde Wix y runtime. |
+| RF-04 | Servicios cortos compatibles/complementos | Debe existir catálogo de complementos (ejemplo: secado, manicura) reservables durante la fase de exposición. | Verificado en pruebas: reserva simultánea de tinte + corte sin conflicto de agenda. | PENDIENTE; el catálogo de complementos aparece en código, pero no se ha ejecutado la reserva simultánea de servicios en Wix QA. |
+| RF-05 | Sincronización con Google Calendar | La agenda debe sincronizarse con el calendario del salón. | Wix Bookings configurado con sincronización activa. | PENDIENTE DE VERIFICAR; Wix Bookings está instalado, pero no se ha comprobado la sincronización Google Calendar en la configuración del sitio. |
+
+### 2.2. Fianza online / Anti no-shows (Prioridad 🔴 Crítica)
+
+> **Decisión de negocio 2026-11-10:** señal/anticipo fijo de 15 € únicamente para servicios cuyo precio sea estrictamente superior a 100 €; 100 € exactos no activa el anticipo. Se descuenta del precio total. Política ordinaria: cancelación con ≥24 h → devolución íntegra del anticipo o reprogramación sin coste; reprogramación con ≥24 h → transferir íntegro el anticipo a la nueva cita; si cancela el negocio → devolución íntegra. Para menos de 24 h o inasistencia, revisión manual caso por caso; sin retención ni devolución automática hasta aprobar condiciones claras y proporcionadas. Preferencia técnica: depósito nativo Wix Bookings; no crear un motor propio. **Bloqueo P0:** al ser un anticipo, IVA se devenga al cobro (LIVA art. 75.Dos) y debe documentarse con factura (RD 1619/2012 art. 2.1). No activar hasta cerrar Veri*Factu/SIF, ledger del anticipo, saldo y rectificación de devoluciones (issue #209).
+
+
+| ID | Requisito | Descripción | Criterio de aceptación | Estado de verificación |
+|---|---|---|---|---|
+| RF-06 | Anticipo fijo de reserva para servicios > 100 € | Cobro de un anticipo fijo de 15 € en la reserva para servicios cuyo precio sea estrictamente superior a 100 €. | Servicios ≤100 €: sin anticipo obligatorio. Servicios >100 €: anticipo de 15 €, aplicado al precio total; saldo restante en el salón. | POLÍTICA APROBADA (2026-11-10); NO CONFIGURAR — BLOQUEO P0 FISCAL. 7 servicios visibles elegibles, 0 depósitos activos. No activar hasta demostrar factura/IVA del anticipo, ledger, aplicación del saldo y rectificación de devoluciones bajo SIF/Veri*Factu (issue #209). Wix nativo es preferente; no crear writer propio. |
+
+**Auditoría de servicios y depósitos nativos (Wix REST read-only, 2026-11-10):** 94/94 servicios consultados; 70 `FIXED`, 24 `NO_FEE` (auxiliares F2 ocultos), 0 `VARIED`; 0 depósitos activos. Siete servicios visibles superan 100 EUR; sus IDs, precios y configuración actual están en `docs/adr/2026-11-10-deposit-and-native-inventory.md`. Todos muestran `online=true` e `inPerson=true`; no se detecta `requireManualApproval=true`. No se ha modificado ningún servicio.
+
+| RF-07 | Pasarela de pago segura | Integración mediante Wix Payments, proveedor de pagos nativo de Wix. Los métodos concretos se limitan a los que estén disponibles y habilitados para España y esta cuenta. | Pago procesado por Wix Payments y confirmación recibida mediante el flujo nativo de Wix eCommerce/webhook. | Declarado por el propietario; activación y métodos de la cuenta pendientes de comprobación en el panel. |
+| RF-08 | Política de cancelación | Cancelación con ≥24 h: devolución íntegra del anticipo o reprogramación sin coste. Reprogramación con ≥24 h: transferir el anticipo íntegro a la nueva cita. Si cancela el negocio: devolución íntegra. Menos de 24 h/no-show: revisión manual, sin retención ni devolución automática hasta revisión jurídica. | Política Wix Bookings 1440 minutos; devolución/traslado del anticipo y webhook deben probarse en QA. | PARCIAL; 1440 minutos aparece en la política nativa. No se ha probado refund ni webhook E2E. No activar retención automática. |
+| RF-09 | Aplicación de la fianza al saldo | El depósito nativo pagado online forma parte del precio del servicio; el cliente abona únicamente el saldo pendiente en persona. | Wix Bookings muestra depósito y saldo pendiente coherentes; el pago inicial y el saldo no duplican ingresos ni IVA. | NATIVO SOPORTADO POR WIX; configuración por servicio y conciliación fiscal/ledger pendientes de QA. No implementar un segundo cobro/descuento personalizado. |
+
+### 2.3. Asistente de IA capilar (Prioridad 🟡 Media)
+
+| ID | Requisito | Descripción | Criterio de aceptación | Estado de verificación |
+|---|---|---|---|---|
+| RF-10 | Asesoramiento IA | Interfaz interactiva que orienta sobre servicios según facciones, tipo de cabello y necesidades. | Respuesta generada y mostrada al usuario. | NO OPERATIVO; `aiAgent.web.js` devuelve `AI_PROVIDER_NOT_CONFIGURED` y no genera respuestas. |
+| RF-11 | Aviso legal obligatorio | Disclaimer visible: "Presupuesto y diagnóstico orientativos sujetos a valoración capilar previa en tocador". | Texto presente en toda respuesta de la IA. | NO OPERATIVO; al no existir respuesta IA activa, no se puede acreditar el aviso legal en cada respuesta. |
+| RF-12 | Cuestionario previo obligatorio | Antes de responder, la IA debe recoger: (1) longitud del cabello, (2) tratamientos químicos previos en últimos 6 meses, (3) necesidad principal. | Los 3 campos son obligatorios y se validan antes de llamar a la API. | NO IMPLEMENTADO/NO VERIFICADO; no hay proveedor IA activo ni cuestionario ejecutable en el flujo actual. |
+| RF-13 | Prohibición de garantizar resultados | La IA no puede garantizar resultados de color sobre cabellos teñidos previamente sin prueba de mecha. | System prompt con regla no negociable; verificado con test de prompt malicioso. | NO OPERATIVO; no hay proveedor ni system prompt activo que aplique esta regla. |
+| RF-14 | Protección de API key | La clave de OpenAI/Claude debe almacenarse en `wix-secrets-backend`, nunca expuesta en cliente. | Verificado: `getSecret("OPENAI_API_KEY")` usado en backend. | NO OPERATIVO; no hay llamada a proveedor IA activa. No se acredita uso de una clave en este flujo. |
+| RF-15 | Timeout y fallback | Si la IA tarda > 9 s o devuelve JSON malformado, debe haber respuesta de fallback sin congelar la página. | `AbortController` a 9 s y try/catch de deserialización implementados. | NO OPERATIVO; el backend falla cerrado con `AI_PROVIDER_NOT_CONFIGURED`; no existe respuesta IA de fallback. |
+
+### 2.4. Tarjetas regalo con QR (Prioridad 🟡 Media)
+
+| ID | Requisito | Descripción | Criterio de aceptación | Estado de verificación |
+|---|---|---|---|---|
+| RF-16 | Emisión de tarjeta regalo | Generación de código único y registro en base de datos (`GiftCards`). | Campos: `cardCode`, `signature`, `initialBalance`, `currentBalance`, `status`. | NO IMPLEMENTADO EN CÓDIGO PROPIO. Wix Gift Cards nativo tiene 1 producto configurado y 0 tarjetas emitidas; no existe `giftCards.web.js` ni writer propio. |
+| RF-17 | Firma HMAC-SHA256 | Cada tarjeta debe llevar firma criptográfica infalsificable. | `crypto.createHmac('sha256', secret)` aplicado sobre código + importe. | NO IMPLEMENTADO EN CÓDIGO PROPIO; no se encuentra firma HMAC de tarjetas regalo en `src/`. |
+| RF-18 | Generación de QR | El voucher descargable debe incluir código QR único. | Paquete `qrcode` instalado y QR generado en backend. | NO IMPLEMENTADO EN CÓDIGO PROPIO; no se encuentra generador QR propio ni flujo de voucher personalizado. Función nativa pendiente de verificación. |
+| RF-19 | Escáner en salón | Página privada `/admin-scanner` protegida por rol para escanear QR desde móvil. | Solo admin/equipo autorizado puede acceder. | NO IMPLEMENTADO; no existe página/controlador `/admin-scanner` en `src/`. |
+| RF-20 | Canje con saldo parcial | Al escanear, leer saldo, descontar importe y actualizar estado (`ACTIVE` → `EXHAUSTED`). | Verificado: saldo insuficiente rechazado; saldo parcial actualizado. | NO IMPLEMENTADO EN CÓDIGO PROPIO; no se encuentra writer de saldo parcial/canje de tarjetas regalo. |
+| RF-21 | Prevención de fraude/duplicidad | Sanitización de código (`trim().toUpperCase()`) y comprobación atómica de saldo. | Test de manipulación de saldo con firma inválida → rechazado. | NO IMPLEMENTADO EN CÓDIGO PROPIO; no se acredita control atómico ni test de saldo de tarjetas regalo. |
+| RF-22 | Envío por email con diseño | Emisión automática por email con diseño elegante del salón. | PENDIENTE DE VERIFICAR EN WIX GIFT CARDS; la app está instalada y existe un producto, pero no se han emitido tarjetas ni probado email. |
+
+### 2.5. Comercio electrónico / La Boutique (Prioridad 🟡 Media)
+
+| ID | Requisito | Descripción | Criterio de aceptación | Estado de verificación |
+|---|---|---|---|---|
+| RF-23 | Catálogo de productos | Venta de cosmética/capilar con precios y stock. | Wix Stores configurado. | VERIFICADO NATIVO EN LECTURA; Wix Stores Catalog V3 responde, con 24 productos visibles. Checkout E2E pendiente. |
+| RF-24 | Gestión y sincronización de stock | Stock y disponibilidad comercial gestionados exclusivamente en Wix Stores Catalog V3 y sus herramientas nativas (panel/app Wix). | El checkout nativo deduce stock al pago; cancelaciones previas a fulfillment restock en Wix si procede; reembolsos solo reponen unidades devueltas y vendibles. Sin proyecciones ni movimientos custom. | MÓDULO CUSTOM RETIRADO EN PR #238; 30/30 inventory items con tracking en una ubicación; Orders Settings `ON_ORDER_PAID`. QA de checkout/cancelación/refund nativo pendiente. |
+| RF-25 | Upselling en checkout | Sugerir tratamiento hidratante exprés (+12 €) al reservar Corte de Autor; champú matizador con 10% dto. al comprar bono de mechas. | ⚠️ No declarado en código — **requiere verificación/implementación** |
+| RF-26 | Derecho de desistimiento 14 días | Excepción del Art. 103 para cosméticos desprecintados debe estar explícita en Términos y Condiciones. | ⚠️ No declarado — **requiere verificación** |
+
+### 2.6. Fidelización y recurrencia (Prioridad 🟢 Baja)
+
+| ID | Requisito | Descripción | Criterio de aceptación | Estado de verificación |
+|---|---|---|---|---|
+| RF-27 | Recordatorio WhatsApp/SMS | Mensaje automático a las 4-5 semanas de tinte/corte con enlace de reserva. | ⚠️ No declarado — **requiere implementación** |
+| RF-28 | Confirmación y recordatorio 24 h | Mensaje automático de confirmación de cita y recordatorio 24 h antes con enlace para cancelar/modificar. | ⚠️ No declarado — **requiere implementación** |
+| RF-29 | Promociones flash horas valle | Programar descuentos dinámicos (ej. 15% cortes martes 10:00-13:00). | ⚠️ No declarado — **requiere implementación** |
+| RF-30 | Bonos/suscripciones | Bono de 4 peinados mensuales, bono barba, etc. | ⚠️ No declarado — **requiere implementación** |
+
+### 2.7. Área de usuario y contenido (Prioridad 🟡 Media)
+
+| ID | Requisito | Descripción | Criterio de aceptación | Estado de verificación |
+|---|---|---|---|---|
+| RF-31 | Registro/login de clientes | Área privada para gestionar perfil, historial de citas y compras. | Wix Members configurado. | APP NATIVA INSTALADA; Wix Members Area. Rutas, permisos y flujo completo de perfil/reservas/compras pendientes de E2E. |
+| RF-32 | Blog y contenido social | Integración con Instagram, TikTok, Facebook, YouTube y sección de noticias/consejos. | Wix Blog está instalado y existe la página `/blog`; la integración con redes sociales no está verificada. |
+| RF-33 | Formulario de contacto + mapa | Formulario web, Google Maps, teléfonos y WhatsApp directos. | Wix Forms v4: 4 formularios activos. Contacto actualiza CRM; caja manual, X y fichaje no tienen trigger backend. Wix Automations v2: 0 workflows activos y 0 borradores para envíos de formularios. Ubicación de formularios pendiente de verificar en Editor. |
+| RF-34 | Catálogo de servicios estructurado | Clasificación por categorías (Básicos & Luxury, Babylights, Corte de Autor, Ritual Barba, Pack Madre e Hija) con precios claros. | VERIFICADO EN LECTURA PARCIAL; CMS y Wix Bookings contienen 94 servicios, 70 visibles y 24 ocultos. La presentación por categorías y precios en la UI publicada requiere revisión visual. |
+
+---
+
+## 3. Requisitos legales y normativos (Prioridad 🔴 Crítica)
+
+### 3.1. Fiscal — Veri*factu / RD 1007/2023 (Ley Antifraude)
+
+| ID | Requisito | Descripción | Criterio de aceptación | Estado de verificación |
+|---|---|---|---|---|
+| RL-01 | Registro de facturación simplificada inalterable | Toda venta web y cada anticipo cobrado (incluida señal de reserva) debe generar la factura/registro fiscal correspondiente, con serie, fecha, base imponible e IVA desglosado. | Serie correlativa sin saltos; anticipo y saldo vinculados sin duplicidad; rectificaciones trazables. | P0 NO VERIFICADO: el SIF/Veri*Factu no está listo; no declarar conformidad ni activar anticipos hasta cerrar issue #209. |
+| RL-02 | IVA 21% desglosado | Servicios de peluquería y cosmética tributan al 21%. Precios mostrados con IVA incluido. | Verificado matemáticamente: Babylights 89 € → Base 73,55 € + IVA 15,45 €; Corte 39 € → Base 32,23 € + IVA 6,77 €; etc. Cero desviación por redondeo. | ✅ Declarado |
+| RL-03 | Cadena de hashes SHA-256 | Cada movimiento fiscal contiene la huella del anterior (hashChain) para garantizar no alteración. | `previousRecordHash` enlazado; `hash` canónico en caja; `recordHash` en contabilidad. | ✅ Declarado (matriz CMS) |
+| RL-04 | Endpoint AEAT ValidarQR | Integración con `https://www2.agenciatributaria.gob.es/wlpl/TIKE-CONT/ValidarQR`. | ⚠️ Declarado en versión inicial; **verificar implementación real** | 🟡 Pendiente verificar |
+| RL-05 | Exportación CSV/Excel para gestoría | Archivo normalizado con columnas: Fecha, Nº Factura, Concepto, Base Imponible, % IVA, Cuota IVA, Total, Método Pago. | Delimitador `;`, decimal con `,`, UTF-8 BOM (`\uFEFF`), compatible con A3ASESOR, Contasol, Sage. | NO IMPLEMENTADO; no existe `accountingExport.web.js`, `exportService.js` ni job de exportación CSV/Excel/SharePoint en el árbol actual. |
+| RL-06 | Verificación de cuadre | Fila de totales con suma de bases, cuotas y totales. | Verificado: suma exacta al céntimo. | ✅ Declarado |
+| RL-07 | NIF emisor/destinatario | Cada factura incluye NIF del salón y NIF/datos del cliente si los solicita. | Campos `NIFEmisor`, `NIFDestinatario` en colección. | ✅ Declarado |
+
+### 3.2. Laboral — Registro de jornada RD-ley 8/2019
+
+| ID | Requisito | Descripción | Criterio de aceptación | Estado de verificación |
+|---|---|---|---|---|
+| RL-08 | Fichaje inmutable | Registro de entrada, salida y pausa sellado criptográficamente. | Firma HMAC-SHA256 por evento; registros append-only. | PARCIAL; código de jornada en backend, pero el formulario nativo no acredita conexión con el writer y ZONA STAFF mantiene fichaje deshabilitado. E2E runtime pendiente. |
+| RL-09 | No manipulación posterior | Ante inspección de trabajo, los datos no pueden haber sido alterados. | Hash chain + registro de `previousRecordHash`. | ✅ Declarado |
+| RL-10 | Registro horario staff | Colección `RegistrosHorariosStaff` con `resourceId`, `memberId`, `recordedAt`, `clockEventType`, `traceId`. | PARCIAL/BLOQUEADO; `FORM REGISTRO HORARIO` está activo, pero su `upsertContact` tiene mapping vacío y no invoca el ledger. Wix Automations v2 no devuelve workflows de envío de formularios. ZONA STAFF mantiene flags desactivados; writer/permisos/E2E pendientes. |
+
+### 3.3. RGPD / AEPD — Protección de datos
+
+| ID | Requisito | Descripción | Criterio de aceptación | Estado de verificación |
+|---|---|---|---|---|
+| RL-11 | Ficha técnica capilar y de salud | Base de datos privada (`ClientHealthAndConsent`) con alergias PPD, sensibilidad cuero cabelludo, historial de fórmulas. | Permisos `Admin Only`; no indexable por Google; no accesible por API pública. | ✅ Declarado (`gdprHealth.web.js`) |
+| RL-12 | Consentimiento expreso datos de salud | Casilla independiente, no premarcada, para tratamiento de datos de salud/bienestar. | Registro con fecha, hora e IP. | ✅ Declarado |
+| RL-13 | Consentimiento de imagen | Casilla separada para autorizar publicación de fotos "antes y después" en web y redes. | Registro con fecha, hora e IP; revocable. | ✅ Declarado |
+| RL-14 | Banner cookies AEPD | Panel con dos botones al mismo nivel: "Aceptar todas" y "Rechazar todas"; configuración granular. | Bloqueo de Meta Pixel, Google Analytics y TikTok Pixel hasta consentimiento. | PENDIENTE DE VERIFICAR CONFIGURACIÓN NATIVA; `masterPage.js` no implementa banner ni bloqueo de scripts. Debe revisarse Consent Manager y comportamiento real en el sitio publicado. |
+| RL-15 | Minimización de datos | Solo recoger datos necesarios para la finalidad. | ✅ Declarado |
+| RL-16 | Derecho de acceso/rectificación/supresión | La clienta debe poder ejercer sus derechos. | ⚠️ No declarado explícitamente — **requiere verificación** |
+
+### 3.4. Consumo — LSSI-CE y TRLGDCU
+
+| ID | Requisito | Descripción | Criterio de aceptación | Estado de verificación |
+|---|---|---|---|---|
+| RL-17 | Aviso Legal | Enlace visible en web. | ⚠️ Declarado como "marco legal básico"; **verificar contenido actualizado** | 🟡 Pendiente |
+| RL-18 | Política de Privacidad | Enlace visible en web. | ⚠️ **Verificar contenido actualizado** | 🟡 Pendiente |
+| RL-19 | Política de Cookies | Enlace visible y coherente con el banner. | ⚠️ **Verificar contenido actualizado** | 🟡 Pendiente |
+| RL-20 | Términos y Condiciones de compra | Debe incluir derecho de desistimiento 14 días y excepción Art. 103 para cosméticos desprecintados. | ⚠️ No declarado — **requiere implementación** | 🟡 Pendiente |
+| RL-21 | Precios con IVA incluido | Todo precio mostrado al consumidor debe indicar "IVA incl.". | ✅ Declarado en frontend (`reserva-online.js`) | PENDIENTE DE VERIFICAR; no existe controlador `reserva-online.js` en `src/pages/`. La lectura CMS/Bookings devuelve importes, pero no demuestra que la UI publicada indique «IVA incl.» en todos los precios. |
+
+---
+
+## 4. Requisitos técnicos y de calidad
+
+### 4.1. Arquitectura y seguridad
+
+| ID | Requisito | Descripción | Criterio de aceptación | Estado de verificación |
+|---|---|---|---|---|
+| RT-01 | Web Modules Velo | Los módulos invocables desde frontend usan `.web.js`, `webMethod` y permisos por función. | Todos los módulos backend invocables usan el contrato `.web.js` vigente. | ✅ Declarado |
+| RT-02 | Permisos por función | Público: `Permissions.Anyone` (catálogo, disponibilidad, IA). Sensible: `Permissions.Admin` (exportación fiscal, canje bonos, fichas salud). | Verificado en código declarado. | ✅ Declarado |
+| RT-03 | Secretos en `wix-secrets-backend` | Claves API y HMAC nunca en cliente. | `getSecret()` usado en backend. | ✅ Declarado |
+| RT-04 | `suppressAuth: true` en operaciones admin | Inserciones/consultas administrativas protegidas. | Aplicado en `wixData.insert/query/update` sensibles. | ✅ Declarado |
+| RT-05 | `consistentRead: true` | En consultas críticas para erradicar inconsistencias de lectura. | ⚠️ Declarado en dossier inicial; **verificar en código real** | 🟡 Pendiente |
+| RT-06 | Extractor polimórfico de precio | Soportar `service.price` como número, objeto `{ amount }` o `service.payment.rate`. | `extractServicePrice()` implementado. | NO IMPLEMENTADO COMO SE ESPECIFICA; `extractServicePrice()` no existe en `src/`. El DTO de reservas convierte `price` con `Number(...)`; no se ha acreditado compatibilidad polimórfica con `{ amount }` o `payment.rate`. |
+| RT-07 | Timeout IA | `AbortController` a 9 s. | ⚠️ Declarado en auditoría; **verificar en código real** | NO OPERATIVO; no hay proveedor IA configurado, por lo que no se ejecuta llamada con timeout. |
+| RT-08 | Fallback IA | Respuesta estructurada si falla el parseo JSON. | Objeto fallback con claves esperadas. | NO OPERATIVO; no se acredita fallback de respuesta IA porque el proveedor está deshabilitado y el backend falla cerrado. |
+| RT-09 | Prevención race condition gift cards | Sanitización + comprobación atómica de saldo. | Test de doble lectura rápida → segunda rechazada. | NO IMPLEMENTADO EN CÓDIGO PROPIO; no hay módulo Gift Cards ni saldo propio sobre el que verificar concurrencia. |
+| RT-10 | CSV UTF-8 BOM + `;` + decimal `,` | Compatibilidad con Excel Windows y software contable español. | Cuando se implemente: delimitador `;`, decimal `,`, UTF-8 BOM y pruebas de compatibilidad. | NO IMPLEMENTADO; no existe `accountingExport.web.js` ni serializador CSV de gestoría. |
+
+### 4.2. Persistencia (Wix Data Collections)
+
+| ID | Requisito | Descripción | Estado de verificación |
+|---|---|---|---|
+| RT-11 | `Bookings/Services` | Catálogo nativo Wix Bookings. | ✅ Declarado |
+| RT-12 | `PaidTransactions` | Libro inalterable de auditoría Ley Antifraude. | ✅ Declarado |
+| RT-13 | `GiftCards` | Registro de bonos, firmas y saldos. | NO IMPLEMENTADO EN CÓDIGO PROPIO; la app Wix Gift Cards está instalada, pero no existe colección/writer propio `GiftCards` en `src/`. |
+| RT-14 | `ClientHealthAndConsent` | Fichas médicas capilares confidenciales. | ✅ Declarado |
+| RT-15 | `CitasF2` | Reservas con fases duales y estados; depósito gestionado por Wix Bookings nativo. | La colección no es autoridad del cobro del depósito. Conciliación de pago/depósito pendiente de QA. |
+| RT-16 | `MovimientosCaja` | Movimientos fiscales con hash chain. | ✅ Declarado (matriz CMS) |
+| RT-17 | `MapaStaff` | Maestro mixto consultivo: STAFF, GESTORIA, TERCERO y CONFIG_SISTEMA; NIF, régimen y Veri*factu. | Migrado live; retirada de DatosFiscales pendiente de despliegue backend |
+| RT-18 | `HistoricoCierresZ` | Cierres con totales, hashes y firmas. | ✅ Declarado (matriz CMS) |
+| RT-19 | `LibroAsientosContablesDetalle` | Asientos contables con debe/haber. | ✅ Declarado (matriz CMS) |
+| RT-20 | `InventarioStockVenta` | Proyección personalizada de stock (LEGACY, no SSOT). | Módulo y writers retirados y fusionados en PR #238; no crear/actualizar maestros. Datos existentes preservados; CI offline verde, QA Wix runtime pendiente. |
+| RT-21 | `MovimientosInventario` | Histórico de movimientos personalizado (LEGACY append-only, no SSOT de stock). | No generar nuevos movimientos de stock. Hooks append-only preservan filas existentes sin editar ni borrar; su archivo/retención requiere decisión separada. |
+| RT-22 | `ControlOperativo` | Control de reintentos, alertas, deduplicación. | ✅ Declarado (matriz CMS) |
+| RT-23 | `RegistrosHorariosStaff` | Fichajes con firma y trazabilidad. | ✅ Declarado (matriz CMS) |
+| RT-24 | `MapaStaff` | Relación staff-recursos-servicios. | ✅ Declarado (matriz CMS) |
+
+### 4.3. Calidad y testing
+
+| ID | Requisito | Descripción | Criterio de aceptación | Estado de verificación |
+|---|---|---|---|---|
+| RT-25 | Parseo de módulos | Todos los módulos deben validar sintácticamente. | 32/32 módulos validados. | CI OFFLINE VERDE en PR #232, run #42671109488: 50 suites, 479 tests, 0 fallos; SDK contracts y ESLint SUCCESS. No equivale a runtime Wix. |
+| RT-26 | Integridad de importaciones | Todas las importaciones resueltas. | 524 importaciones verificadas sin errores. | ✅ Declarado — **verificar tras refactor** |
+| RT-27 | Test desglose IVA | Conciliación exacta al céntimo en todos los servicios. | 5/5 servicios verificados con 0,00 € desviación. | ✅ Declarado |
+| RT-28 | Test criptografía gift cards | Firma HMAC válida; manipulación rechazada. | Test de alteración de saldo → firma inválida. | NO IMPLEMENTADO/NO VERIFICADO; no hay HMAC de Gift Cards propio ni test de manipulación de saldo. |
+| RT-29 | Test filtro seguridad IA | Prompt malicioso no altera comportamiento. | Redirección a catálogo oficial. | NO OPERATIVO; proveedor IA no configurado. Los tests offline no acreditan un asistente activo. |
+| RT-30 | Tests antirregresión | Detección de 5 riesgos graves subsanados: precio NaN, JSON IA, race condition gift cards, CSV incompatible, RGPD sin control de roles. | PENDIENTE DE RECONCILIAR; los cinco riesgos enumerados son históricos y no están demostrados individualmente por el estado actual de CI. |
+
+---
+
+## 5. Criterios de aceptación globales
+
+El sitio se considerará **APTO PARA PRODUCCIÓN** cuando se cumplan **TODOS** los siguientes:
+
+1. **Verificación real del repositorio:** El desarrollador debe entregar el árbol completo de `src/` (`tree src` o `find src -maxdepth 3`) y demostrar que los módulos declarados existen y contienen la lógica descrita, testada, funcional y fiable. **La solución debe ser honesta, profesional, real y testada para despliegue publico. No se aceptan soluciones greenfield ni nombres inventados.**
+
+2. **Correspondencia módulo ↔ requisito:** Cada módulo del repositorio debe mapearse a los requisitos RF/RL/RT de esta hoja.
+
+3. **Tests ejecutados sobre código real:** Los tests de IVA, HMAC, IA y antirregresión deben ejecutarse contra el código del repositorio, no contra versiones ideales.
+
+4. **Cumplimiento legal verificado:**
+   - Facturación simplificada inalterable con serie correlativa.
+   - Cadena de hashes SHA-256 operativa.
+   - Exportación CSV/Excel compatible con A3/Contasol/Sage.
+   - Banner cookies AEPD con dos botones al mismo nivel.
+   - Consentimiento imagen y salud registrado con fecha/IP.
+   - Registro de jornada con firma HMAC y append-only.
+
+5. **Operativa del salón validada en sesión de pruebas presencial:**
+   - Reserva con tinte + corte simultáneo sin conflicto.
+   - Escaneo de bono regalo desde móvil.
+   - Descarga de CSV para gestoría y validación por el asesor.
+   - Flujo de fianza con pago real (entorno de pruebas).
+
+6. **Calidad técnica documentada:** El dossier de calidad debe reflejar el estado real tras cada intervención.
+
+7. **Aprobación de la propietaria:** Marian Madrid debe confirmar que la operativa en pantalla es "tan cómoda como tener las tijeras en la mano".
+
+---
+
+ADDENDUM DE ESTADO Y CRITERIOS DE ACEPTACIÓN — 2026-11-13
+
+Este addendum actualiza el estado de implementación y aceptación. Los requisitos funcionales y legales del documento siguen describiendo necesidades de negocio; un estado histórico “declarado” o un nombre de módulo no demuestra que la función esté operativa en Wix Runtime.
+
+## Estado del ecosistema
+
+- Repositorio canónico: `nachoortegazgz/marianmadridz`; HEAD de `main` consultado: `738eb78faaa48502532c83c3e4b8b53db1144950`.
+- El sitio principal Wix está Published y Velo enabled. El propietario declara que ha actualizado y publicado Wix. No se ha acreditado técnicamente que el runtime publicado corresponda exactamente a ese SHA.
+- Existe un sitio Wix QA independiente, Draft, Site ID `50b39f33-e753-4331-ab35-b2ed43dc97f7`; no se debe tratar como QA E2E certificado hasta verificar automatizaciones, notificaciones, pagos, webhooks, permisos e integraciones.
+- CMS producción: 44 colecciones (15 NATIVE, 29 WIX_APP). CMS QA: 43 (15 NATIVE, 28 WIX_APP), con paridad incompleta de colecciones Wix App.
+- Wix Stores producción utiliza Catalog V3; Wix Invoices V1.
+
+## Criterio de clasificación obligatorio
+
+Cada requisito RF/RL/RT debe clasificarse en una de estas categorías, con evidencia y fecha:
+1. **Implementado en código:** existe código identificable; no implica runtime operativo.
+2. **Verificado en CI:** suite y commit exactos, resultado y workflow identificados.
+3. **Verificado en Wix Preview/QA:** sitio, versión, caso y resultado reproducible.
+4. **Verificado en producción:** caso real autorizado y evidencia del resultado.
+5. **Declarado/documentado:** figura en documentación o configuración, pero no ha superado una prueba ejecutada.
+6. **No implementado / pendiente / no aplicable:** justificarlo; no inferir cumplimiento.
+
+No marcar como cumplido un requisito legal o de negocio únicamente por existir una colección, un campo, un módulo o una prueba mock.
+
+## Bloqueos y criterios de aceptación vigentes
+
+- Reserva/proyección: CitasF2 contiene 1 item `CONFIRMED / NOT_PAID`; la última lectura Bookings Reader V2 registrada para el mismo bookingId era `CANCELED / NOT_PAID`. Mantener P1 hasta reconciliar la lectura nativa y la proyección tras la publicación declarada.
+- Fiscal/contable/laboral: writers permanecen deshabilitados. `MapaStaff` conserva el tercero placeholder QA; falta `CONFIG_SISTEMA`. `DatosFiscales` permanece temporalmente por compatibilidad hasta publicar el backend migrado. No emitir, cobrar, exportar ni escribir ledgers hasta aprobación de asesoría y QA runtime.
+- Capa 3: SharePoint / Power Automate no están acreditados como flujo operativo live.
+- Inventario: Wix Stores Catalog V3 es la autoridad operativa; colecciones legacy personalizadas no deben convertirse en fuente de stock.
+- Entorno QA: existe un segundo sitio Wix Draft, pero no tiene paridad completa de CMS Apps y su aislamiento externo no está certificado.
+- El detalle de inventario, checklist P0–P4 y evidencia se mantiene en `ESTADO_ACTUAL_PROYECTO.md`.
+
+## Checklist mínimo antes de declarar APTO
+
+- [ ] Mapear cada RF/RL/RT a código, contrato, consumidor y prueba existente.
+- [ ] Ejecutar CI sobre el SHA exacto candidato; registrar suites, tests y workflow URLs.
+- [ ] Vincular la versión publicada de Wix al SHA o artefacto exacto; no basta el estado Published.
+- [ ] Validar en el sitio QA aislamiento de automatizaciones, emails, SMS/WhatsApp, pagos, webhooks y permisos.
+- [ ] Cerrar la divergencia Bookings ↔ CitasF2 y validar reservas simples/duales, concurrencia e idempotencia.
+- [ ] Validar privacidad, consentimientos, roles y minimización de datos en runtime.
+- [ ] Obtener aprobación de asesoría para los procesos fiscales, contables y laborales antes de habilitar escritores.
+- [ ] Validar export y archivo Capa 3 end-to-end sin retorno de datos a Capa 1.
+- [ ] Obtener aceptación operativa de la propietaria.
+
+---
+
+## Addendum de autoridad y fase QA — 2026-11-14
+
+### Jerarquía de autoridad y SSOT
+
+1. **USUARIO / PROPIETARIO DEL PROYECTO — SSOT de negocio y gobierno.** El usuario es la única fuente de verdad para objetivos, requisitos, prioridades, criterios de aceptación, decisiones funcionales y autorizaciones del proyecto. Sus instrucciones expresas prevalecen sobre cualquier regla, restricción, supuesto o estado histórico de esta documentación. Las decisiones relevantes se registran en el Decision Log para trazabilidad; el registro no sustituye ni limita la autoridad del usuario.
+2. **Documentación oficial vigente de Wix y de cada integración — autoridad técnica.** Define contratos, APIs, permisos, límites y comportamiento de plataforma. Se aplica para ejecutar la decisión del usuario de forma técnicamente válida; si una limitación oficial impide cumplirla, se informa y se propone alternativa, sin cambiar unilateralmente el requisito.
+3. **Decisiones expresas del usuario registradas en el repositorio.** Son la memoria documental de las decisiones vigentes. Si un registro antiguo contradice una instrucción posterior, prevalece la instrucción posterior del usuario.
+4. **Dossier Técnico Consolidado, Dossier de Flujos, Directrices, Necesidades Web, diccionario CMS y estado del proyecto.** Son documentación derivada y subordinada a los niveles anteriores. No pueden crear autorizaciones, bloqueos o requisitos nuevos por inferencia.
+5. **Código, configuración Wix, CMS y pruebas.** Acreditan el estado implementado, no la autoridad para redefinir requisitos. Las diferencias entre lo solicitado, documentado e implementado se registran como discrepancias verificables.
+
+### Política temporal de desarrollo y pruebas
+
+**Vigencia:** fase actual de desarrollo, depuración y QA, hasta que el usuario ordene expresamente habilitar las protecciones para el despliegue.
+
+- Queda **en pausa la política append-only** durante esta fase. Ninguna colección o registro se considerará intocable únicamente por estar etiquetado como ledger, histórico, fiscal, contable, laboral, documental o append-only.
+- Queda **en pausa toda prohibición genérica de edición o eliminación de registros**, tanto individual como masiva, cuando la única causa del bloqueo sea la inmutabilidad/append-only o una restricción temporal de QA. La edición y eliminación forman parte de las operaciones permitidas durante las pruebas.
+- No se exigirán registros rectificativos como única vía de corrección durante esta fase de QA. Esa regla se reconsiderará cuando el usuario habilite expresamente las protecciones previas al despliegue.
+- Se mantienen las validaciones de esquema y tipos, la autenticación, autorización y permisos de acceso, la protección de secretos, la separación de capas, los controles de seguridad no relacionados con la inmutabilidad y la trazabilidad técnica de las pruebas. Esta pausa no autoriza accesos anónimos ni saltarse controles de identidad.
+- No se habilitan por esta decisión writers fiscales, contables, laborales, pagos, devoluciones, comunicaciones ni automatizaciones externas que tengan gates funcionales independientes. Esos gates solo se modificarán por instrucción expresa o por una decisión técnica aprobada por el usuario.
+- La pausa es temporal y **no se revierte automáticamente**. Solo el usuario puede ordenar la restauración y habilitación de las protecciones para despliegue. Antes de una publicación productiva, el estado de las protecciones debe revisarse con el usuario y quedar expresamente autorizado.
+
+### Estado de implementación y publicación
+
+El usuario declara que el código está integrado y publicado en Wix. Esta declaración se registra como **declaración del propietario**. En la consulta de GitHub de este corte, el PR #344 (feat/consolidate-fiscal-master-mapastaff-v2) figura fusionado el 2026-11-14 mediante el merge commit f3b1311eead05282e47f538afd506fe49e227141, que es el HEAD actual de main. La integración del cambio en Git está verificada. El usuario declara además que el código está publicado en Wix; no se dispone de un identificador de publicación Wix que vincule el runtime con ese SHA concreto.
+
+**Nota de ejecución:** este addendum modifica la autoridad documental y la política de trabajo. No demuestra por sí mismo que todos los hooks, WebMethods, políticas de escritura o permisos CMS del runtime Wix hayan sido modificados para permitir todas las operaciones de edición y eliminación. Esa correspondencia debe verificarse en código y en Wix antes de afirmar que la pausa está aplicada técnicamente de extremo a extremo.
