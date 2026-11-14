@@ -1,3 +1,7 @@
+> **SSOT de entorno vigente (2026-11-14):** el único sitio del proyecto es QA: `188bed94-177c-4bc9-a9f0-35080d874f3e` (`https://www.marianmadrid.es/`). El propietario confirma que nunca ha tenido actividad real, que todos los datos son sintéticos, que el cliente de pruebas es Nacho Pitt (`nachoortegazgz@gmail.com`) y que la pasarela está desconectada. No existe otro sitio QA ni un QA externo designado. Las referencias anteriores a otros Site ID o a este sitio como producción quedan supersedidas. El estado Wix Published no altera su clasificación funcional como QA. Véase [SSOT del entorno QA](./QA-ENVIRONMENT-SSOT.md).
+
+---
+
 > **Addendum de vigencia — 2026-11-14:** esta referencia conserva el estado histórico del Site ID productivo `188bed94-177c-4bc9-a9f0-35080d874f3e`. Por decisión posterior del propietario, el destino QA es `50b39f33-e753-4331-ab35-b2ed43dc97f7`; producción no debe utilizarse para pruebas. El conector Wix de la sesión no pudo resolver el Site ID QA, por lo que el aislamiento runtime y E2E siguen pendientes. Para la decisión y plan actuales, prevalecen [PLAN_ACCION_QA.md](../../PLAN_ACCION_QA.md), [PROJECT_BASELINE.md](../../PROJECT_BASELINE.md) y [ESTADO_ACTUAL_PROYECTO.md](../../ESTADO_ACTUAL_PROYECTO.md).
 
 ---
