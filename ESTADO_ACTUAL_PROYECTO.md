@@ -1,16 +1,13 @@
 # Addendum de estado — 2026-11-14
 
-Rama de trabajo `chore/temporary-append-only-mutation-window`. Este corte actualiza el estado de la rama, no el estado publicado de Wix ni `main`.
+Rama de trabajo `chore/temporary-append-only-mutation-window`; no representa un despliegue ni una publicación.
 
-- **Mutabilidad QA:** `APPEND_ONLY_MUTATION_WINDOW.ENABLED=true` solo en esta rama. Update/remove individual está habilitado en hooks y allowlists backend para los ledgers documentados en TEC-033; bulk permanece bloqueado. No se han modificado permisos ni datos CMS live y no se ha eliminado ningún registro.
-- **Writers:** `LEDGER_WRITES_ENABLED=false`, `ACCOUNTING_LEDGER_WRITES_ENABLED=false` y `ALLOW_SIMULATION_RECORDS=false`. La ventana no habilita writers ni operaciones económicas.
-- **CajaActual:** colección `NATIVE` revisión 1 y singleton `CAJA_PRINCIPAL` cerrado. El esquema live todavía conserva `operationDate`, `openingAmount`, `voucherAmount` e `isOpen`; los campos objetivo de fecha/hora y apertura desglosada no están aplicados. Los intentos de actualización de esquema devolvieron `WDE0025`.
-- **Validación:** los cambios de código/documentación de la rama no se consideran validados por CI completo ni por Wix Runtime. No se ha publicado ni vinculado la rama a un runtime Wix.
-- **Bloqueo de despliegue:** cerrar la ventana temporal, restaurar los tests append-only, resolver CMS CajaActual y ejecutar la suite completa antes de merge/publicación.
-
-El addendum de abajo mantiene el detalle común de alcance, límites y secuencia de migración.
-
----
+- **Mutabilidad QA:** TEC-033 está habilitada solo en esta rama para update/remove individual de los ledgers enumerados; bulk sigue bloqueado. Los gates de writers fiscales/contables y simulación permanecen false.
+- **CMS live:** inventario de 42 colecciones. `CajaActual` NATIVE revisión 3, 25 campos de negocio + 4 de sistema, singleton `CAJA_PRINCIPAL` cerrado, current balances 0 y opening balances null. El índice único singleton está ACTIVE; el índice compuesto nuevo está BUILDING y el anterior DROPPING.
+- **Limpieza:** se eliminaron dos fichajes sintéticos de `RegistrosHorariosStaff` identificados con `meta.synthetic=true` y `doNotImportToProduction=true`; readback 0 registros. No se borró ningún registro económico, contable o laboral real.
+- **Colecciones:** `MovimientosCaja` 0 elementos, `LibroAsientosContablesDetalle` 0, `HistoricoCierresZ` 0, `PaquetesGestoria` 0, `ControlOperativo` 3. `MovimientosInventario` no aparece en el inventario live actual.
+- **Código:** backend/fixtures de esta rama alineados con los nombres nuevos; no existe aún WebMethod de apertura que persista saldos iniciales. CI completo, Wix Local Editor y E2E pendientes.
+- **Despliegue:** no publicar ni fusionar mientras TEC-033 esté habilitada.
 
 # ADDENDUM DE VIGENCIA — 2026-11-13 (corte live posterior a la publicación declarada)
 
