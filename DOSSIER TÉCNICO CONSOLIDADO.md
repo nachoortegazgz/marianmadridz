@@ -16,7 +16,7 @@
 
 ## Vigencia operativa — estado actual
 
-La autoridad del propietario, la política de mutabilidad del sitio aislado y los límites de efectos externos están consolidados en el addendum inicial y en TEC-037/TEC-038 de docs/DECISION-LOG.md. La rama fix/current-site-cms-contract-alignment está en HEAD a8a44cb8e75fd3c9d57fe3279a02ae47411b50a6. PR #370 está dirty (109 ahead / 57 behind main); no hay checks para el HEAD actual. Rebase y CI deben completarse antes de merge o publicación.
+La autoridad del propietario, la política de mutabilidad del sitio aislado y los límites de efectos externos están consolidados en el addendum inicial y en TEC-037/TEC-038 de docs/DECISION-LOG.md. La rama fix/current-site-cms-contract-alignment está en HEAD a8a44cb8e75fd3c9d57fe3279a02ae47411b50a6. PR #370 está dirty (historial divergente respecto a main); no hay checks para el HEAD actual. Rebase y CI deben completarse antes de merge o publicación.
 
 ## Addendum de vigencia técnica — 2026-11-14
 
