@@ -175,7 +175,7 @@ export function assertDatosFiscalesRecord(item) {
         }
     }
     if (item.fechaInicioVerifactu != null && item.fechaInicioVerifactu !== "" &&
-        !/^\\d{4}-\\d{2}-\\d{2}$/.test(String(item.fechaInicioVerifactu))) {
+        !/^\d{4}-\d{2}-\d{2}$/.test(String(item.fechaInicioVerifactu))) {
         throw new Error("SCHEMA_VIOLATION: DatosFiscales.fechaInicioVerifactu must be YYYY-MM-DD TEXT");
     }
     return true;
