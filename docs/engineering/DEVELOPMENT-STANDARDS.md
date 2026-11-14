@@ -88,7 +88,7 @@ Un workflow verde solo acredita las pruebas que ejecutó. No equivale a aceptaci
 
 **Recuperación de validadores:** PR #352 integrada en `main` como `c8091fd2df0ba836657032db1e2e7aa9df67758b`; CI PASS en `609ccc948da3e63d3fd8aa20f5e64c7649770660` (run #1054): Capa 1, Capa 2, regresión offline completa, SDK contracts, ESLint y Gitleaks. No se ha publicado en Wix.
 
-**Limpieza de inventario personalizado:** PR #353 integrada en `main` como `c16ed0b605a8d548f79158aa0dbd702666eea829`; PR #354 corrige una referencia residual de configuración y queda pendiente de CI.
+**Limpieza de inventario personalizado:** PR #353 integrada en `main` como `c16ed0b605a8d548f79158aa0dbd702666eea829`; PR #354 integrada como `fde9466552b6819980475a682dc06395b57487f0`. CI PASS en `28a11a690f0a99926921332618b6af670d45814c` (run #1068) y Gitleaks PASS (run #492).
 
 ## 5. Proceso de auditoría
 
