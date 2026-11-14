@@ -49,15 +49,9 @@ export const STAFF_CLOCKING_CONFIG = Object.freeze({
   ADJUSTMENTS_ENABLED: false,
 });
 
-// Fail-closed default: broad update/remove remains disabled until a trusted
-// server-side site-identity gate proves the executing site is the authorized QA
-// site. A frontend flag or unscoped "isolated site" constant is not isolation.
-export const ISOLATED_SITE_RECORD_MUTATIONS_ENABLED = false;
-export const APPEND_ONLY_MUTATION_WINDOW = Object.freeze({
-  ENABLED: false,
-  TEMPORARY: false,
-  RESTORE_BEFORE_REAL_OPERATIONS: true,
-});
+// No global CMS mutation override is exported. Every mutation must pass the
+// collection-specific policy; fiscal, accounting, labor and webhook ledgers
+// remain append-only in every environment.
 
 // Fail-closed production defaults until fiscal, accounting and runtime E2E
 // are certified. Simulation records are denied unless a trusted test harness
