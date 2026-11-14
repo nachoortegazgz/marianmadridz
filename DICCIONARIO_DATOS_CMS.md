@@ -6,7 +6,7 @@
 - Naturaleza declarada por el propietario: banco de pruebas aislado, sin actividad real.
 - Inventario live: 23 colecciones (15 NATIVE, 8 WIX_APP); 524 campos físicos NATIVE.
 - El manifiesto de campos, tipos, revisiones y recuentos vigente es `docs/audits/2026-11-14-current-site-cms-normalization.md`.
-- Las menciones a otros sitios, estados anteriores y comparativas de entornos que permanecen en este documento son evidencia histórica; no describen el CMS objeto de trabajo.
+- Los inventarios y addenda antiguos se conservan como trazabilidad histórica; no describen el esquema vigente ni implican la existencia de otro sitio objeto de trabajo.
 - Los registros del sitio se consideran sintéticos/de prueba; no acreditan operaciones comerciales, fiscales ni laborales reales.
 - No se ha modificado el CMS durante esta auditoría.
 
@@ -1640,10 +1640,10 @@ Las definiciones siguientes combinan contrato físico live y documentación/cód
 | `cardAmount` / `bizumAmount` / `otherAmount` | CajaActual | NUMBER | Acumulados actuales por medio de pago; no equivalen a efectivo físico. |
 | `ticketNumber` / `ticketSeries` / `ticketSequence` | CajaActual | TEXT / TEXT / NUMBER | Identificación y secuencia del último ticket. |
 | `cashMovementId` | CajaActual | TEXT | Identificador textual del movimiento asociado en `MovimientosCaja`. |
-| `taxId` | MapaStaff | TEXT | NIF/NIE/CIF/VAT-UE del tercero; validado por `assertMapaStaffFiscalIdentity`. |
-| `legalName` | MapaStaff | TEXT | Razón social/nombre legal del tercero. |
-| `recordType` | MapaStaff | TEXT | Discriminador fiscal; `RECORD_TYPE` contempla `TERCERO` y `CONFIG_SISTEMA`. |
-| `thirdPartyType` | MapaStaff | TEXT | Tipo de tercero según enum fiscal del backend. |
+| `taxId` | DatosFiscales | TEXT | NIF/NIE/CIF/VAT-UE del tercero; validado por `assertDatosFiscalesRecord`. |
+| `legalName` | DatosFiscales | TEXT | Razón social/nombre legal del tercero o emisor. |
+| `recordType` | DatosFiscales | TEXT | Discriminador fiscal: `TERCERO`, `GESTORIA`, `CONFIG_SISTEMA`. |
+| `thirdPartyType` | DatosFiscales | TEXT | Tipo de tercero según enum fiscal del backend. |
 | `numSerieFactura` | MovimientosCaja | TEXT | Número de serie/número correlativo de factura o ticket. |
 | `sequenceNumber` | MovimientosCaja | NUMBER | Secuencia numérica del ledger, alimentada desde los contadores de CajaActual. |
 | `transactionId` | MovimientosCaja | TEXT | Identidad de la transacción para idempotencia del hecho económico. |
@@ -1742,11 +1742,11 @@ Los siguientes valores están respaldados por enums de backend o descripciones C
 | `CajaActual.paymentMethod` | PAYMENT_METHOD: EFECTIVO, TARJETA, BIZUM, TRANSFERENCIA, WIX_PAYMENTS |
 | `CajaActual.lastOperationPaymentMethod` | PAYMENT_METHOD: EFECTIVO, TARJETA, BIZUM, TRANSFERENCIA, WIX_PAYMENTS |
 | `CajaActual.lastOperationType` | MOVEMENT_TYPE: VENTA, VENTA_ONLINE, ANTICIPO, REEMBOLSO, DEVOLUCION, DEVOLUCION_SERVICIO, PROPINA, AJUSTE |
-| `MapaStaff.recordType` | RECORD_TYPE: STAFF, GESTORIA, TERCERO, CONFIG_SISTEMA |
-| `MapaStaff.thirdPartyType` | THIRD_PARTY_TYPE: CLIENTE, STAFF, PROVEEDOR, EMISOR |
+| `DatosFiscales.recordType` | RECORD_TYPE: GESTORIA, TERCERO, CONFIG_SISTEMA |
+| `DatosFiscales.thirdPartyType` | THIRD_PARTY_TYPE: CLIENTE, STAFF, PROVEEDOR, EMISOR |
 | `MapaStaff.rolWebsite` | ROL_WEBSITE: ADMIN, GESTION, ESTILISTA |
 | `MapaStaff.rolBookings` | Wix Bookings staff role: STAFF |
-| `MapaStaff.identityType` | Descripción CMS: STAFF_MEMBER, BUSINESS_FISCAL_IDENTITY, ACCOUNTING_FIRM |
+
 | `RegistrosHorariosStaff.clockEventType` | CLOCK_EVENT_TYPE: ENTRADA, SALIDA, PAUSA_INICIO, PAUSA_FIN |
 | `RegistrosHorariosStaff.recordType` | RECORD_TYPE_HORARIOS: REGULAR, AJUSTE |
 | `ServiciosCatalogo.catalogEntryType` | CATALOG_ENTRY_TYPE: SERVICE, PRICING_PLAN |
@@ -1786,10 +1786,10 @@ Las relaciones de la tabla son semánticas/contractuales; solo las marcadas MULT
 
 ## 10. Permisos, inmutabilidad y límites de uso
 
-**Política temporal del sitio aislado de pruebas:** según la autorización expresa del propietario y el flag `ISOLATED_SITE_RECORD_MUTATIONS_ENABLED=true`, append-only e inmutabilidad están temporalmente en pausa para las colecciones propias del proyecto. Esta excepción no habilita mutaciones en WIX_APP ni desactiva RBAC, permisos, validaciones o gates de writers fiscales/contables/laborales. Restaurar las protecciones antes de producción solo cuando lo ordene el propietario.
+**Política temporal del sitio aislado:** según la autorización expresa del propietario y el flag `ISOLATED_SITE_RECORD_MUTATIONS_ENABLED=true`, append-only e inmutabilidad están temporalmente en pausa para las colecciones propias del proyecto. Esta excepción no habilita mutaciones en WIX_APP ni desactiva RBAC, permisos, validaciones o gates de writers fiscales/contables/laborales. Restaurar las protecciones antes de cualquier actividad real solo cuando lo ordene el propietario.
 
 - Las colecciones WIX_APP son propiedad de sus aplicaciones. No modificar directamente sus campos, tipos, datos ni permisos mediante este proyecto salvo flujo oficial aprobado.
-- Para producción, los ledgers append-only no se editan ni borran. Las rectificaciones se incorporan como nuevos registros trazables.
+- Antes de cualquier actividad real, los ledgers append-only no se editan ni borran. Las rectificaciones se incorporan como nuevos registros trazables.
 - `CajaActual` es una proyección mutable de la sesión operativa y del efectivo físico. Los acumulados de tarjeta/Bizum no son efectivo ni saldo bancario; el ledger fuente sigue siendo `MovimientosCaja`.
 - `InventarioStockVenta` y `MovimientosInventario` son legacy/históricos; no son autoridad de inventario actual.
 - `RegistrosHorariosStaff` conserva datos sensibles laborales; sus writers permanecen deshabilitados hasta completar validación de seguridad, idempotencia, concurrencia y cumplimiento.
@@ -1801,7 +1801,7 @@ Las relaciones de la tabla son semánticas/contractuales; solo las marcadas MULT
 | ID | Hallazgo | Riesgo | Acción necesaria |
 |---|---|---|---|
 | CMS-DICT-01 | Las etiquetas CMS reales no siguen de forma general N3; predominan labels iguales al key en inglés | Baja legibilidad y divergencia con el estándar | Diseñar una matriz de etiquetas propuesta; no aplicarla sin revisión y compatibilidad |
-| CMS-DICT-02 | `DatosFiscales` no aparece en el inventario live y su GET individual devuelve 404 / `WDE0025`; aún hay referencias históricas en código/documentación | Riesgo de consumidores que esperan una colección inexistente | Auditar/eliminar referencias legacy solo tras búsqueda de consumidores, tests y diff revisado; no recrear la colección por inferencia |
+| CMS-DICT-02 | `DatosFiscales` existe en el sitio actual con 28 campos y una fila placeholder; el código se alinea con ese esquema | No existe todavía configuración fiscal oficial | Mantener CONFIG_SISTEMA ausente y writers fail-closed hasta recibir datos oficiales y superar pruebas |
 | CMS-DICT-03 | `RegistroIntegracion` existe pero no pertenece a `BUSINESS_COLLECTIONS` | Posible colección sin consumidor o contrato incompleto | Verificar consumidores/writers antes de adoptarla o retirarla |
 | CMS-DICT-04 | El esquema live resume la subestructura OBJECT/ARRAY en los campos anidados que Wix devuelve en metadatos; no certifica toda la forma de payload de runtime | Contrato lógico parcial | Completar estructuras profundas contrastando DTOs, fixtures, productores/consumidores y APIs nativas |
 | CMS-DICT-05 | IDs externos guardados como TEXT no son referencias CMS físicas | Integridad referencial depende de código | Documentar sistema propietario y validar GUID/relación en backend |
@@ -1810,9 +1810,9 @@ Las relaciones de la tabla son semánticas/contractuales; solo las marcadas MULT
 ## 12. Fuentes y método
 
 ### Evidencia Wix live
-- Sitio producción: `188bed94-177c-4bc9-a9f0-35080d874f3e`.
-- Wix Data Collections API: listado live y lectura individual de las 41 colecciones (12 NATIVE y 29 WIX_APP), con campos, tipos, descripciones CMS, required, referencias tipadas, metadatos OBJECT/ARRAY, revisiones, displayField, ownerAppId y permisos.
-- Se verificaron por GET individual los IDs `DatosFiscales`, `InventarioStockVenta` y `MovimientosInventario`: HTTP 404 / `WDE0025`.
+- Sitio objeto de trabajo: `50b39f33-e753-4331-ab35-b2ed43dc97f7` (banco de pruebas aislado, sin actividad real).
+- Wix Data Collections API: listado live y lectura individual de las 23 colecciones (15 NATIVE y 8 WIX_APP), con campos, tipos, required, referencias tipadas, revisiones y metadatos disponibles.
+- DatosFiscales existe en el inventario actual; InventarioStockVenta y MovimientosInventario existen físicamente, pero sus contratos/writers están retirados.
 - El catálogo conserva las claves de campo y sus `displayName`; las descripciones se copian solo cuando Wix las declara. La ausencia de descripción no se suple con una suposición.
 - Recuentos de elementos: Data Items Count API, corte de auditoría 2026-11-13.
 - Ninguna mutación Wix durante la generación.
@@ -1921,64 +1921,37 @@ No se ha ejecutado CI completo, Wix Local Editor ni E2E en runtime. No se ha pub
 ---
 
 
-## Addendum de vigencia — consolidación fiscal en MapaStaff (2026-11-14)
+## Addendum de vigencia — contratos CMS del sitio actual (2026-11-14)
 
-Este addendum prevalece sobre las secciones históricas que describen `DatosFiscales` como maestro activo o `MapaStaff` como una colección exclusivamente de mapeo staff.
+Este addendum sustituye los addenda históricos que describían MapaStaff como maestro fiscal o DatosFiscales como colección retirada.
 
-**CMS live verificado:** `MapaStaff` revisión 36, 42 campos, 5 registros. Se añadieron al esquema los campos fiscales y de contacto que existían en `DatosFiscales`, más `recordType` y `active`. `DatosFiscales` permanece live en revisión 21 con 1 registro sintético hasta que se publique el backend migrado; su retirada aún no se ha ejecutado.
+**Esquema vigente leído en Wix Data API:** 23 colecciones (15 NATIVE y 8 WIX_APP), 524 campos NATIVE. MapaStaff tiene 18 campos/3 filas; DatosFiscales 28 campos/1 fila; ComplementosCatalogo 18 campos/36 filas; CajaActual 39 campos/1 fila; ControlOperativo 42 campos/0 filas.
 
-**Esquema de MapaStaff (42 campos físicos; 38 de negocio + 4 de sistema):**
+**MapaStaff:** exclusivamente mapeo de identidad staff. Campos nativos relevantes: staffMemberId, resourceId, scheduleId y memberId. active es BOOLEAN. No existe recordType ni hay campos fiscales. _id es la clave del elemento CMS; resourceId conserva la identidad Bookings aunque coincida con _id en las tres filas.
 
-```text
-displayName:TEXT, traceId:TEXT, staffMemberId:TEXT, scheduleId:TEXT,
-thirdPartyId:TEXT, staffName:TEXT, rolWebsite:TEXT, rolBookings:TEXT,
-memberId:TEXT, resourceId:TEXT, ServiciosCatalogo_staffMembers:MULTI_REFERENCE,
-recordType:TEXT, fechaInicioVerifactu:DATE, schemaVersion:NUMBER,
-province:TEXT, postalCode:TEXT, commercialName:TEXT, streetNumber:TEXT,
-businessDescription:TEXT, currency:TEXT, phone:TEXT, taxId:TEXT,
-legalName:TEXT, thirdPartyType:TEXT, address:TEXT, taxRegime:TEXT,
-verifactuEnabled:BOOLEAN, verifactuVersion:TEXT,
-tipoUsoPosibleMultiOT:BOOLEAN, indicadorMultiplesOT:BOOLEAN, email:TEXT,
-name:TEXT, label:TEXT, nif:TEXT, gestorEmail:TEXT, gestorName:TEXT,
-gestorNif:TEXT, active:BOOLEAN,
-_id:TEXT, _createdDate:DATETIME, _updatedDate:DATETIME, _owner:TEXT
-```
+**DatosFiscales:** maestro de terceros, gestoría y configuración fiscal. Declara recordType, taxId, legalName, thirdPartyType, address, verifactuEnabled, verifactuVersion, tipoUsoPosibleMultiOT, indicadorMultiplesOT, fechaInicioVerifactu (TEXT), gestorEmail, gestorName y gestorNombre. No declara traceId ni schemaVersion. gestorName es el keyfield canónico; gestorNombre queda retirado del contrato de código y pendiente de eliminación física.
 
-**Valores `recordType` live:**
-- `STAFF`: tres registros, conservan sus IDs y roles previos; `active=true`.
-- `TERCERO`: un registro QA sintético migrado desde `DatosFiscales` conservando su ID.
-- `GESTORIA`: un registro `NachoGest` con dirección `Calle Burgos 25`, teléfono `666724634` y email `nachoortegazgz@gmail.com`; sin `memberId`, `staffMemberId`, `resourceId` ni roles.
-- `CONFIG_SISTEMA`: no existe registro; no inferir identidad fiscal, régimen ni configuración Veri*Factu.
+**ComplementosCatalogo:** _id es el keyfield CMS canónico. addonId se conserva como espejo requerido por el esquema actual. El DTO addOnId se mantiene exclusivamente como contrato de transporte Bookings. name y description no se fusionan por tener tipos TEXT y RICH_TEXT. traceId está vacío y no tiene consumidor identificado.
 
-**Permisos live:** `itemRead=PRIVILEGED`; insert/update/remove=`CMS_EDITOR`. El backend consulta mediante la capa `@wix/data` elevada. No dar acceso público a los datos de contacto/fiscales.
+**CajaActual y ControlOperativo:** sequenceCounters es OBJECT; ticketSequence no existe. ownerToken, retryAfter y nextRetryAt no son campos del esquema vigente; traceId es el fencing token canónico.
 
-**Código en rama** `feat/consolidate-fiscal-master-mapastaff-v2`: el backend valida los cuatro tipos; `events.js` filtra `recordType=STAFF`; los lectores/escritores fiscales y destinatarios de gestoría usan `MapaStaff`. El DTO de destinatarios incorpora teléfono y dirección. No se identificó consumidor frontend directo de `listAccountantRecipients`; no se añadió una UI nueva sin requisito.
+**Código en la rama** fix/current-site-cms-contract-alignment: separación de validadores/hooks MapaStaff y DatosFiscales; lectores y escritores fiscales migrados a DatosFiscales; keyfield _id para complementos; gestorName como nombre canónico. Cambios pendientes de CI y revisión PR. No se ha mutado el CMS ni se han migrado registros.
 
-**Retirada de DatosFiscales:** mantener la colección antigua sin nuevas escrituras hasta publicar el backend migrado, comprobar hooks/WebMethods en runtime y verificar que no quedan consumidores activos. Después eliminarla y hacer readback del inventario. No eliminarla antes del despliegue.---
-
-## Addendum de autoridad y fase QA — 2026-11-14
+## Addendum de autoridad y pruebas en el sitio aislado — 2026-11-14
 
 ### Jerarquía de autoridad y SSOT
 
-1. **USUARIO / PROPIETARIO DEL PROYECTO — SSOT de negocio y gobierno.** El usuario es la única fuente de verdad para objetivos, requisitos, prioridades, criterios de aceptación, decisiones funcionales y autorizaciones del proyecto. Sus instrucciones expresas prevalecen sobre cualquier regla, restricción, supuesto o estado histórico de esta documentación. Las decisiones relevantes se registran en el Decision Log para trazabilidad; el registro no sustituye ni limita la autoridad del usuario.
-2. **Documentación oficial vigente de Wix y de cada integración — autoridad técnica.** Define contratos, APIs, permisos, límites y comportamiento de plataforma. Se aplica para ejecutar la decisión del usuario de forma técnicamente válida; si una limitación oficial impide cumplirla, se informa y se propone alternativa, sin cambiar unilateralmente el requisito.
-3. **Decisiones expresas del usuario registradas en el repositorio.** Son la memoria documental de las decisiones vigentes. Si un registro antiguo contradice una instrucción posterior, prevalece la instrucción posterior del usuario.
-4. **Dossier Técnico Consolidado, Dossier de Flujos, Directrices, Necesidades Web, diccionario CMS y estado del proyecto.** Son documentación derivada y subordinada a los niveles anteriores. No pueden crear autorizaciones, bloqueos o requisitos nuevos por inferencia.
-5. **Código, configuración Wix, CMS y pruebas.** Acreditan el estado implementado, no la autoridad para redefinir requisitos. Las diferencias entre lo solicitado, documentado e implementado se registran como discrepancias verificables.
+1. El propietario es la fuente de verdad de negocio, requisitos, prioridades, criterios de aceptación y autorizaciones.
+2. La documentación oficial vigente de Wix y de cada integración define contratos, APIs, permisos y límites técnicos.
+3. Las decisiones expresas posteriores del propietario prevalecen sobre cualquier registro histórico contradictorio.
+4. Los dossiers, directrices, necesidades web, diccionario y estado del proyecto son documentación derivada; no crean autorizaciones por inferencia.
+5. Código, configuración Wix, CMS y pruebas acreditan el estado implementado, no la autoridad para redefinir requisitos.
 
-### Política temporal de desarrollo y pruebas
+### Naturaleza y mutabilidad del sitio actual
 
-**Vigencia:** fase actual de desarrollo, depuración y pruebas, hasta que el usuario ordene expresamente habilitar las protecciones para el despliegue.
+El único sitio objeto de trabajo es 50b39f33-e753-4331-ab35-b2ed43dc97f7. Es un banco de pruebas aislado, sin actividad real, según declaración expresa del propietario. Los registros presentes se tratan como sintéticos.
 
-- Queda **en pausa la política append-only** durante esta fase. Ninguna colección o registro se considerará intocable únicamente por estar etiquetado como ledger, histórico, fiscal, contable, laboral, documental o append-only.
-- Queda **en pausa toda prohibición genérica de edición o eliminación de registros**, tanto individual como masiva, cuando la única causa del bloqueo sea la inmutabilidad/append-only o una restricción temporal de mutabilidad del sitio aislado. La edición y eliminación forman parte de las operaciones permitidas durante las pruebas.
-- No se exigirán registros rectificativos como única vía de corrección durante esta fase de pruebas en el sitio aislado. Esa regla se reconsiderará cuando el usuario habilite expresamente las protecciones previas al despliegue.
-- Se mantienen las validaciones de esquema y tipos, la autenticación, autorización y permisos de acceso, la protección de secretos, la separación de capas, los controles de seguridad no relacionados con la inmutabilidad y la trazabilidad técnica de las pruebas. Esta pausa no autoriza accesos anónimos ni saltarse controles de identidad.
-- No se habilitan por esta decisión writers fiscales, contables, laborales, pagos, devoluciones, comunicaciones ni automatizaciones externas que tengan gates funcionales independientes. Esos gates solo se modificarán por instrucción expresa o por una decisión técnica aprobada por el usuario.
-- La pausa es temporal y **no se revierte automáticamente**. Solo el usuario puede ordenar la restauración y habilitación de las protecciones para despliegue. Antes de una publicación productiva, el estado de las protecciones debe revisarse con el usuario y quedar expresamente autorizado.
+ISOLATED_SITE_RECORD_MUTATIONS_ENABLED=true permite update/remove individuales y masivos en colecciones propias incluidas en ISOLATED_SITE_MUTABLE_COLLECTIONS. Las operaciones masivas requieren IDs explícitos y un máximo de 1.000 elementos. Las colecciones WIX_APP quedan excluidas. Se mantienen autenticación, autorización/RBAC, permisos CMS, validaciones, protección de secretos, allowlists de inserción y gates funcionales de writers/efectos externos.
 
-### Estado de implementación y publicación
+La política temporal no habilita por sí misma pagos, reembolsos, facturación, fichajes, comunicaciones ni automatizaciones externas. No se han ejecutado mutaciones CMS ni publicado código Wix en esta intervención. La sincronización Editor↔Git y el SHA ejecutado por Wix siguen pendientes de acreditar.
 
-El usuario declara que el código está integrado y publicado en Wix. Esta declaración se registra como **declaración del propietario**. En la consulta de GitHub de este corte, el PR #344 (feat/consolidate-fiscal-master-mapastaff-v2) figura fusionado el 2026-11-14 mediante el merge commit f3b1311eead05282e47f538afd506fe49e227141, que es el HEAD actual de main. La integración del cambio en Git está verificada. El usuario declara además que el código está publicado en Wix; no se dispone de un identificador de publicación Wix que vincule el runtime con ese SHA concreto.
-
-**Nota de ejecución:** este addendum modifica la autoridad documental y la política de trabajo. No demuestra por sí mismo que todos los hooks, WebMethods, políticas de escritura o permisos CMS del runtime Wix hayan sido modificados para permitir todas las operaciones de edición y eliminación. Esa correspondencia debe verificarse en código y en Wix antes de afirmar que la pausa está aplicada técnicamente de extremo a extremo.
