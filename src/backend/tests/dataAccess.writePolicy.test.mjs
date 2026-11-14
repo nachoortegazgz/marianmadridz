@@ -157,7 +157,9 @@ test("single-item removal keeps ControlOperativo scoped and denies append-only l
     assert.doesNotThrow(() => assertRemoveAllowed(O.CONTROL_OPERATIVO, "token-1", T.DISPLAY_TOKEN));
     assert.doesNotThrow(() => assertRemoveAllowed(O.CONTROL_OPERATIVO, "lock-1", T.SLOT_LOCK));
     assert.doesNotThrow(() => assertRemoveAllowed(O.CONTROL_OPERATIVO, "claim-1", T.IDEMPOTENCY));
-    assert.doesNotThrow(() => assertRemoveAllowed(O.CONTROL_OPERATIVO, "event-1", T.WEBHOOK_EVENT));
+    assert.throws(() => assertRemoveAllowed(O.CONTROL_OPERATIVO, "event-1", T.WEBHOOK_EVENT), {
+        code: "CMS_REMOVE_SCOPE_DENIED",
+    });
     assert.throws(() => assertRemoveAllowed(O.CONTROL_OPERATIVO, "cache-1"), {
         code: "CMS_REMOVE_SCOPE_DENIED",
     });
