@@ -1,7 +1,7 @@
 # Estándar de desarrollo y QA — Cero deuda
 
 **Versión consolidada:** 2026-11-14  
-**Fuente:** `docs/engineering/DEVELOPMENT-STANDARDS.md` aportado por el propietario. Esta versión incorpora el estado y la nomenclatura vigente del repositorio; el archivo fuente adjunto aún no está versionado en Git.
+**Fuente:** `DIRECTRICES_DESARROLLO_CODIGO.txt` aportado por el propietario. Esta versión consolida su estándar; el archivo fuente adjunto aún no está versionado en Git.
 
 ## Objetivo
 
