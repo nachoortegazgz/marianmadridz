@@ -66,3 +66,19 @@ test("VALIDATION-FISCAL-03 supports partial DatosFiscales updates while validati
         /valid taxId/
     );
 });
+
+
+test("VALIDATION-MAPASTAFF-01 validates native staff identity fields without fiscal discriminators", () => {
+    const staff = {
+        staffMemberId: "0114748d-2806-3928-9b97-ff0d09853759",
+        resourceId: "e556070a-6d6a-402e-8422-11133033ea76",
+        scheduleId: "06af20d4-1ec3-49fa-9075-f0691dfa7fd4",
+        memberId: "e52404b1-7a72-4b99-b231-66c4dc413421",
+        active: true,
+        schemaVersion: 1,
+    };
+    assert.equal(V.assertMapaStaffRecord(staff), true);
+    assert.throws(() => V.assertMapaStaffRecord({ ...staff, scheduleId: undefined }), /scheduleId/);
+    assert.throws(() => V.assertMapaStaffRecord({ ...staff, active: "true" }), /active must be BOOLEAN/);
+    assert.throws(() => V.assertMapaStaffRecord({ ...staff, thirdPartyId: 123 }), /thirdPartyId must be TEXT/);
+});
