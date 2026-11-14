@@ -10,9 +10,9 @@
 
 **Decisión del propietario:** el Site ID `50b39f33-e753-4331-ab35-b2ed43dc97f7` se utilizará como entorno QA del proyecto con datos sintéticos y pagos simulados. El Site ID productivo `188bed94-177c-4bc9-a9f0-35080d874f3e` queda expresamente fuera de las pruebas.
 
-**Estado técnico:** el inventario CMS QA está documentado en `docs/audits/2026-11-14-current-site-cms-normalization.md` (23 colecciones: 15 NATIVE y 8 WIX_APP). La conexión Wix disponible en esta sesión no pudo resolver el ID QA y solo identificó producción. Por ello, el acceso runtime y el aislamiento de todas las integraciones no están verificados. No se han ejecutado pruebas Wix Runtime/E2E ni se ha usado producción como sustituto.
+**Estado técnico:** el inventario CMS QA está documentado en `docs/audits/2026-11-14-current-site-cms-normalization.md` (23 colecciones: 15 NATIVE y 8 WIX_APP). La conexión Wix disponible en esta sesión no pudo resolver el ID QA y solo identificó producción. Esto no cuestiona la decisión SSOT del propietario ni cambia el destino de trabajo; representa una limitación técnica del conector. El acceso runtime y el aislamiento de todas las integraciones no están verificados. No se han ejecutado pruebas Wix Runtime/E2E ni se ha usado producción como sustituto.
 
-**Trabajo permitido ahora:** auditoría de código/documentación, fixtures sintéticos, mocks offline de pagos y comunicaciones, pruebas automatizadas, CI, correcciones en ramas/PR y registro de evidencias. El adaptador de pago mock no debe realizar llamadas de red ni equivaler a una operación real.
+**Trabajo en curso:** auditoría y limpieza de código/documentación, fixtures sintéticos, mocks offline de pagos y comunicaciones, pruebas automatizadas, CI, correcciones en ramas/PR y registro de evidencias. No esperar a resolver el conector para completar H1-H3. El adaptador de pago mock no debe realizar llamadas de red ni equivaler a una operación real.
 
 **Gates:** mantener bloqueados cobros, reembolsos reales, facturación, tickets a clientes, emails/SMS/WhatsApp, gestoría, SharePoint/Power Automate, AEAT/Veri*Factu y escrituras fuera de QA. La bandera de mutaciones de QA no elimina gates funcionales independientes.
 
