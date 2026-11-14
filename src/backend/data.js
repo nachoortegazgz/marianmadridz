@@ -843,7 +843,7 @@ export function MapaStaff_beforeUpdate(item) {
     delete item.tipoTercero;
     for (const field of MAPA_STAFF_FISCAL_FORBIDDEN_FIELDS) {
         if (item[field] !== undefined && item[field] !== null) {
-            _schemaError(`Campo "${field}" no existe en el esquema físico MapaStaff`);
+            _schemaError(`Campo "${field}" no permitido en registros fiscales MapaStaff`);
         }
     }
     const taxId = _safeTrim(item.taxId);
@@ -891,7 +891,7 @@ function _assertMapaStaffVersionAndTrace(item) {
 function _applyConfigSistemaRules(item) {
     for (const field of MAPA_STAFF_FISCAL_FORBIDDEN_FIELDS) {
         if (item[field] !== undefined && item[field] !== null) {
-            _schemaError(`Campo "${field}" no existe en el esquema físico MapaStaff; use taxId/legalName y los campos declarados`);
+            _schemaError(`Campo "${field}" no permitido en registros fiscales MapaStaff; use taxId/legalName y los campos declarados`);
         }
     }
     if (!item._id) item._id = "CONFIG_SISTEMA_FISCAL";
