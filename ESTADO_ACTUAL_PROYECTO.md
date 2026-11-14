@@ -3,7 +3,7 @@
 > Este bloque prevalece sobre los estados históricos posteriores e inferiores del documento. El usuario/propietario es la SSOT de negocio y gobierno. Durante desarrollo y QA se pausa append-only y toda prohibición genérica de editar/eliminar registros, individual o masiva, hasta instrucción expresa del usuario para restaurar las protecciones antes del despliegue. Se mantienen controles de identidad, permisos, validación y seguridad no vinculados a la inmutabilidad.
 
 - **Declaración del usuario:** código integrado y publicado en Wix.
-- **Git verificado en este corte:** main=088c5338425cad93f3a370ce76ec87dbbc0eb51a; PR #344 sigue abierto, no fusionado. No equiparar la publicación declarada en Wix con el merge de GitHub.
+- **Git verificado en este corte:** main=f3b1311eead05282e47f538afd506fe49e227141; PR #344 está fusionado mediante ese SHA. La integración en Git está verificada; la publicación Wix es declarada por el usuario, sin vínculo técnico acreditado entre runtime y SHA.
 - **Runtime:** no se ha obtenido identificador de release que vincule el runtime Wix con un SHA. La declaración de publicación se conserva como declaración del propietario.
 - **Mutabilidad:** la política de proyecto permite editar/eliminar durante QA incluso registros históricamente append-only. La aplicación efectiva de la política en hooks, WebMethods, write policies y permisos CMS está pendiente de validación técnica; no afirmar que el runtime ya permite operaciones masivas o todas las mutaciones sin probarlo.
 - **Restauración:** no automática. Solo por instrucción expresa del usuario para preparar el despliegue.
