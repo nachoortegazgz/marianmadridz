@@ -6,7 +6,7 @@
 
 **Restauración:** esta política no se revierte automáticamente. Solo el usuario puede ordenar la restauración de append-only y de las restricciones de mutación para preparar el despliegue. No publicar a producción basándose únicamente en esta excepción de QA.
 
-**Estado Git/Wix:** PR #344 y PR #345 están integrados en main; merge commit de documentación c7bd27faaba833d816e77be56183257393f1aa48. El usuario declara que la versión anterior está publicada en Wix. Los cambios de esta rama habilitan la política ampliada de mutaciones y aún no están fusionados ni publicados. No se ha acreditado un release Wix por SHA.
+**Estado Git/Wix:** PR #344, PR #345 y PR #346 están integrados en main; HEAD actual b68e4e048ce5fc1c022fc6ffc2643d5983972107. CI de PR #346: Layer 1 23 suites/296 pruebas, Layer 2 18 suites/246 pruebas, regresión completa 68 suites/627 pruebas; SDK contracts, ESLint y Gitleaks correctos. El usuario declara que la versión base anterior está publicada en Wix; la ampliación de mutaciones QA está integrada en Git pero aún no publicada en Wix. No se dispone de release Wix vinculado a SHA.
 
 **CMS maestro:** MapaStaff revisión 36, 42 campos y 5 registros (3 STAFF, 1 TERCERO, 1 GESTORIA). DatosFiscales permanece como colección legacy con un placeholder QA; su retirada requiere verificar runtime y consumidores tras publicar el backend migrado.
 
@@ -892,9 +892,9 @@ La eliminación se hizo por ID individual con condición de `traceId`; readback 
 
 ### Ventana temporal TEC-033
 
-En esta rama `APPEND_ONLY_MUTATION_WINDOW.ENABLED=true`, `TEMPORARY=true`, `RESTORE_BEFORE_PRODUCTION=true`. Permite update/remove individual en `MovimientosCaja`, `LibroAsientosContablesDetalle`, `RegistrosHorariosStaff`, `MovimientosInventario`, `HistoricoCierresZ`, `PaquetesGestoria` y `ControlOperativo/WEBHOOK_EVENT`. Bulk insert/update/remove siguen bloqueados; las validaciones de inserción y los controles de autorización/tipo continúan activos. La bandera solo afecta a los hooks/políticas de esta rama; no cambia los permisos CMS ni el runtime publicado.
+**HISTÓRICO — TEC-033, sustituida por TEC-037.** El siguiente detalle describe la excepción inicial, limitada a update/remove individuales de determinados ledgers, y ya no representa la política vigente. La política actual está definida por `QA_RECORD_MUTATIONS_ENABLED=true`: update/remove individual y masivo en colecciones CMS propias, incluidos registros históricamente append-only. Las operaciones masivas requieren IDs explícitos. No se reactivan gates de inserción, writers fiscales/contables/laborales ni efectos externos.
 
-Los gates `LEDGER_WRITES_ENABLED=false`, `ACCOUNTING_LEDGER_WRITES_ENABLED=false` y `ALLOW_SIMULATION_RECORDS=false` permanecen cerrados. No publicar ni fusionar esta rama mientras la ventana esté activa. Antes de integrar: desactivar la bandera, retirar allowlists temporales, restaurar pruebas `FISCAL_VIOLATION`, ejecutar CI completo y verificar hooks en Wix Local Editor.
+La instrucción antigua de desactivar la ventana antes de fusionar o publicar queda sustituida: la política temporal está integrada en main para la fase de QA. Solo el usuario ordenará su restauración antes del despliegue. La publicación Wix de esta ampliación sigue pendiente.
 
 ### Alineación backend y estado pendiente
 
