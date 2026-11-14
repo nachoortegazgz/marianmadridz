@@ -9,7 +9,7 @@
 ## 1. Alcance y criterio de lectura
 
 Se documentan:
-- Las 14 colecciones `NATIVE` del sitio de producción, con revisión live, nombre visible CMS, campo de presentación y todos los campos físicos observados.
+- Las 13 colecciones `NATIVE` del sitio de producción, con revisión live, nombre visible CMS, campo de presentación y todos los campos físicos observados.
 - Las 29 colecciones `WIX_APP`, con nombre visible, propietario de aplicación, campo de presentación y número de campos. Sus esquemas son administrados por Wix Apps y no se redefinen aquí.
 - Los keyfields de negocio y sus significados cuando están respaldados por el esquema, `internalConfig.js`, `validation.js` o documentación técnica del repositorio.
 - Las reglas de nomenclatura que el dossier define como estándar y las diferencias reales que aparecen en CMS.
@@ -23,7 +23,7 @@ Se documentan:
 
 ## 2. Inventario de colecciones NATIVE
 
-Recuento live verificado el 2026-11-14: 43 colecciones en total (14 NATIVE y 29 WIX_APP). Los recuentos de elementos proceden de Data Items Count API.
+Recuento live verificado el 2026-11-14: 42 colecciones en total (13 NATIVE y 29 WIX_APP). Los recuentos de elementos proceden de Data Items Count API.
 
 | ID de colección | Nombre visible CMS | Revisión de esquema | Campo de presentación | Elementos | Clasificación/uso |
 |---|---|---:|---|---:|---|
@@ -57,7 +57,7 @@ Formato: `key:TYPE`. Cuando no se indica otra cosa, el `displayName` de campo ob
 
 ### 3.1 CajaActual — revisión live 64 (lectura Wix Data Collections API, 2026-11-14)
 
-<badge>Esquema físico verificado</badge> **63 campos físicos: 59 operativos personalizados + 4 campos de sistema Wix.** La revisión de colección devuelta por Wix es `64`; no debe confundirse con el número de campos.
+**Esquema físico verificado. 63 campos físicos: 59 operativos personalizados + 4 campos de sistema Wix.** La revisión de colección devuelta por Wix es `64`; no debe confundirse con el número de campos.
 
 ```text
 singletonKey:TEXT, operationDateHour:DATETIME, cashRegisterStatus:TEXT,
@@ -195,8 +195,6 @@ _id:TEXT, _createdDate:DATETIME, _updatedDate:DATETIME, _owner:TEXT
 **Contrato operativo:** `CajaActual` es una proyección mutable de la sesión y del último ticket, no un ledger append-only. `MovimientosCaja` conserva cada movimiento/ticket como fuente histórica inmutable. Las relaciones de texto como `cashMovementId` no son referencias CMS formales salvo que el esquema las declare expresamente.
 
 **Seguridad pendiente P1:** el permiso de lectura `ANYONE` debe revisarse antes de introducir datos reales de clientes o referencias de pago/fiscales. Validar lectura con identidad visitante, inspeccionar reglas backend y restringir permisos si el diseño de acceso lo exige. No se han modificado permisos en este cambio documental.
-
-### 3.2 CitasF2
 
 ### 3.2 CitasF2 — revisión 42
 
@@ -864,7 +862,7 @@ Este estado temporal contradice deliberadamente la regla ordinaria de la secció
 - Inventario live: **42 colecciones** (13 `NATIVE`, 29 `WIX_APP`). `CajaActual` es `NATIVE`, revisión **64**, con **59 campos personalizados + 4 de sistema (63 físicos)**.
 - El esquema completo, con tipos y definiciones, queda documentado en §3.1. Permisos live: `insert/update/remove=ADMIN`, `read=ANYONE`.
 - Los campos `operationDate`, `openingAmount`, `voucherAmount` e `isOpen` no existen en el esquema actual; sus sustitutos incluyen `operationDateHour`, los cuatro `opening*Amount` y `bizumAmount`.
-- Singleton único: `_id=18d8bbf8-ddd5-4ad9-8253-f2a5c285ef19`, `singletonKey=CAJA_PRINCIPAL`, `cashRegisterStatus=CERRADA`. Saldos actuales: 0 en efectivo/tarjeta/Bizum/otros. Saldos iniciales: null (no se ha abierto sesión). `operationDateHour` permanece null; no hay operación económica ni sesión abierta.
+- Estado del elemento singleton: el último readback documentado antes de esta revisión registraba `singletonKey=CAJA_PRINCIPAL` y caja cerrada. No se ha releído el elemento durante esta actualización de esquema; no se certifican aquí sus saldos ni su estado actual.
 - Índice único `CajaActual_singletonKey_unique`: ACTIVE. Índice anterior `cashRegisterStatus_operationDate`: ya no aparece en el inventario final. Índice corregido `cashRegisterStatus_operationDateHour`: ACTIVE en el readback final.
 - `MovimientosCaja`: revisión 78, 0 elementos; no modificada. `LibroAsientosContablesDetalle`: 0. `RegistrosHorariosStaff`: revisión 11, 0 tras limpieza. `HistoricoCierresZ`: 0. `PaquetesGestoria`: 0. `ControlOperativo`: 3 elementos. `MovimientosInventario` no figura en el inventario live de 42 colecciones; la fila histórica que lo describía como colección presente queda pendiente de reconciliación documental.
 
