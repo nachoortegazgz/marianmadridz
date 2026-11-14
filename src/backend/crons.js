@@ -45,7 +45,7 @@ CRON-14 (P2): Eliminación de referencia a COLLECTIONS.ALERTAS_OPERATIVAS
 FIXES HEREDADOS v5009-FISCAL-V20.1: CRON-01..CRON-06.
 PENDIENTES:
 - Mantener paridad crons.js/jobs.config mediante CRON-PARITY-01.
-- Verificar operaciones de dataAccess en CI y runtime QA.
+- Verificar operaciones de dataAccess en CI y runtime del sitio aislado.
 =============================================================================
 */
 import { query as dalQuery, getItem as dalGet, insertItem as dalInsert, updateItem as dalUpdate, bulkRemove as dalBulkRemove } from "backend/dataAccess";
