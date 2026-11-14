@@ -111,7 +111,7 @@ Los importes de los escenarios son fixtures de negocio, no transacciones ni resu
 
 ## 6. Fases y gates
 
-### H0 — Identidad y aislamiento QA
+### H0 — Identidad y aislamiento QA — BLOCKED_EXTERNAL_SIDE_EFFECTS
 - Resolver el Site ID QA en la cuenta Wix y verificar Editor, Velo, plan/apps y estado.
 - Confirmar que el dominio público y el tráfico de clientes no apuntan al entorno de prueba.
 - Auditar automatizaciones, notificaciones Bookings, Payments, Stores, Invoices, Gift Cards, webhooks, secretos y conexiones externas.
@@ -213,3 +213,13 @@ Vigente hasta nueva orden. Aplicar en todo el trabajo QA:
 ### Identidad vigente del entorno
 
 La identidad y clasificación del único sitio QA se rigen por [SSOT del entorno QA](docs/qa/QA-ENVIRONMENT-SSOT.md). Los addenda anteriores que identificaban otro sitio como QA o clasificaban este sitio como producción quedan supersedidos.
+
+
+---
+
+## Corte de hitos — 2026-11-14
+
+- **Hito de fixtures offline:** CERRADO. PR #379 integrada en main (27348a20bfb913fde43761d4c92dd46526a5e470); CI 70 suites / 644 tests PASS, SDK contracts, ESLint y Secret scanning PASS.
+- **H0 / H4 Wix Runtime:** BLOQUEADO. Lectura oficial Wix Automations V2: 150 automatizaciones, 10 activas y 140 inactivas. Las diez activas son preinstaladas y todas tienen readonly o disableStatusChange; no se pueden desactivar mediante API sin vulnerar locks.
+- **Decisión:** continuar solo offline/mock y read-only. No ejecutar flujos que disparen reservas, miembros, pagos guardados, formularios, tareas o notificaciones. Solicitar a Wix/proveedor neutralización soportada; repetir inventario y demostrar aislamiento antes de Runtime/E2E.
+- Evidencia: docs/audits/2026-11-14-qa-automations-isolation.md y docs/milestones/2026-11-14-qa-offline-fixtures-complete-runtime-isolation-blocked.md.
