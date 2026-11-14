@@ -2,6 +2,9 @@
 
 ---
 
+
+> **Validez del inventario:** los snapshots de CMS, catálogo y aplicaciones que aparecen en el cuerpo de este documento son históricos. La SSOT actual designa `188bed94-177c-4bc9-a9f0-35080d874f3e` como único QA, pero no demuestra que esos recuentos o esquemas pertenezcan al corte actual de ese Site ID. No usarlos como baseline para escrituras, migraciones o E2E hasta repetir una lectura de solo lectura contra el sitio vigente.
+
 > **Estado vigente del entorno:** el sitio `188bed94-177c-4bc9-a9f0-35080d874f3e` es el único QA. El propietario confirma que nunca ha tenido actividad real, que los datos son sintéticos y que la pasarela está desconectada. Los mocks locales no acreditan por sí solos runtime Wix ni proveedor real. Mantener sin I/O las comunicaciones, fiscalidad y operaciones de pago.
 
 > **Nota histórica supersedida:** las referencias de este pack a un QA separado o a otro Site ID ya no son operativas. La única identidad QA es `188bed94-177c-4bc9-a9f0-35080d874f3e`; el estado Wix Published no modifica su clasificación funcional. Prevalece [SSOT del entorno QA](./QA-ENVIRONMENT-SSOT.md).
