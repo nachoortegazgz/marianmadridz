@@ -2,7 +2,7 @@
 
 ---
 
-> **Nota de vigencia — 2026-11-14:** este documento conserva el resultado de CI del SHA ad15d311fec06aa3f54afe6c5f1f0f923aef9f45. No valida el HEAD actual de fix/current-site-cms-contract-alignment. PR #370 está dirty y no tiene checks asociados al HEAD actual; rebase y CI pendientes. El sitio objeto de trabajo es el banco de pruebas aislado 50b39f33-e753-4331-ab35-b2ed43dc97f7, sin actividad real.
+> **Nota de vigencia — 2026-11-14:** este documento conserva el resultado de CI del SHA ad15d311fec06aa3f54afe6c5f1f0f923aef9f45. No valida el HEAD actual de fix/current-site-cms-contract-alignment. PR #370 está dirty y no tiene checks asociados al HEAD actual; rebase y CI pendientes. El sitio objeto de trabajo en este corte histórico era una referencia anterior de entorno, hoy supersedida por el único QA `188bed94-177c-4bc9-a9f0-35080d874f3e`.
 
 # Contrato condicional de ControlOperativo — revisión del CSV sintético
 
