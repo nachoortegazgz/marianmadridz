@@ -15,9 +15,8 @@ CORRECCIONES v12.0-MINIMAL:
     CODIGO_IMPUESTO, CHANNEL_TYPE, MOVEMENT_TYPE, PAYMENT_METHOD,
     CATALOG_STATES, CASH_REGISTER_STATUS).
   VAL-04 (P2): Logger import eliminado. Validation es pura.
-  VAL-05 (P0): assertMapaStaff ELIMINADO en R2 (DUP-03: MapaStaff no existe
-    en CMS KEY FIELDS; staff.js v9 resuelve identidad via Bookings Staff API
-    y ya no consume este hook).
+  VAL-05 (P0): assertDatosFiscales valida ahora las variantes no-staff
+    del maestro mixto MapaStaff; la identidad staff sigue siendo Bookings API.
 MANTENIDO (consumidores activos verificados):
   - assertValidEnum: usado por todos los asserts y callers externos
   - assertCitasF2: consumido por data.js CitasF2_beforeInsert/beforeUpdate
@@ -150,6 +149,10 @@ export function assertDatosFiscales(item) {
     }
 
     if (item.recordType === RECORD_TYPE.GESTORIA) {
+        const email = String(item.email || item.gestorEmail || "").trim();
+        if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) {
+            throw new Error("SCHEMA_VIOLATION: MapaStaff GESTORIA requires a valid contact email");
+        }
         if (!String(item.name || item.legalName || "").trim()) {
             throw new Error("SCHEMA_VIOLATION: MapaStaff GESTORIA requires name or legalName");
         }
