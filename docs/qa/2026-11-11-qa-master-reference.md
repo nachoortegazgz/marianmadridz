@@ -73,7 +73,7 @@ La instalación de una app no demuestra que una función esté configurada, habi
 - Dos notificaciones internas de Bookings siguen ACTIVE: “Notify me when someone books one of my services” y “Notify me when I need to review a booking request”. Sus acciones son notificaciones de plataforma (`ping_platform-send_a_notification`), no WhatsApp ni email al cliente.
 - No se ejecutó ningún trigger ni se envió email, WhatsApp o SMS. Esta reauditoría no modificó configuraciones.
 
-**Consecuencia:** el sitio Published no está aislado para QA. Ocho acciones email pueden dirigirse a clientes reales si se disparan sus triggers. Las dos acciones SITE_OWNER también pueden enviar a un buzón real no validado como sink. No ejecutar eventos que alcancen estos flujos.
+**Consecuencia vigente:** el sitio es QA, pero el estado de las automatizaciones requiere verificación específica. Ocho acciones email identificadas en la auditoría histórica podrían dirigirse al contacto que dispare el trigger y dos acciones SITE_OWNER podrían enviar a un buzón no validado como sink. Aunque el propietario confirma que nunca ha existido actividad real, no ejecutar esos triggers hasta sustituirlos por sinks offline y comprobar la configuración actual.
 
 Automatizaciones email que permanecen activas:
 - Notify customer when you save their card details.
@@ -119,7 +119,7 @@ No se autoriza por esta referencia ningún envío real. Mantener bloqueado el de
 - Email y teléfono de contacto son datos potencialmente entregables: no incluirlos en Git, logs, capturas públicas ni fixtures de CI.
 - Para CI/offline, usar identificadores y direcciones reservadas `.example.test`, sin teléfono enrutable y sin datos personales reales.
 - En un sitio QA aislado, crear un único miembro/contacto sintético con datos de destino controlados y sin consentimiento de marketing por defecto.
-- No crear ni modificar el contacto en el sitio Published actual.
+- No crear ni modificar contactos reales ni disparar triggers de comunicaciones; utilizar fixtures sintéticos y sinks offline.
 - No asociar el cliente sintético a datos reales, reservas reales, pagos, documentos fiscales o históricos.
 
 El cliente QA debe poder identificarse inequívocamente como sintético en cada registro y traza; los datos de QA no deben confundirse con actividad económica real.
@@ -223,7 +223,7 @@ SharePoint será exclusivamente repositorio de evidencia. Nunca modificará ni g
 |---|---|---|
 | P0 | Sitio Wix publicado, no aislado | Bloquea E2E que genere eventos |
 | P0 | Nueve automatizaciones email no pausables en última auditoría | Bloquea triggers con posible envío |
-| P0 | Nueve automatizaciones email siguen activas y ocho pueden dirigirse al contacto que dispara el trigger | Bloquea cualquier evento que alcance esos flujos en el sitio Published |
+| P0 | Nueve automatizaciones email siguen activas y ocho pueden dirigirse al contacto que dispara el trigger | Bloquea cualquier evento que pueda alcanzar esos flujos de comunicación hasta verificar los sinks offline |
 | P0 | Sandbox de pagos no acreditado; Wix test order no es un sandbox PSP | Solo mock offline; test order manual solo para Stores/Restaurants, nunca para Bookings ni con un método de pago real |
 | P0 | CMS productivo y ledgers append-only | No insertar ni modificar datos de negocio para QA |
 | P1 | WhatsApp QA no configurado; acción nativa no soportada para reconfigurar destinatario | Solo mock hasta integración oficial |
@@ -236,7 +236,7 @@ SharePoint será exclusivamente repositorio de evidencia. Nunca modificará ni g
 - **Verificado históricamente:** auditoría de Automations del 2026-11-11 confirma 67 pausas, cuatro WhatsApp inactivas y nueve emails activos bloqueados por Wix.
 - **Verificado en tests offline:** escenario mock de evento Wix Payments descrito en `QA-SIMULATION-2026-11.md`.
 - **Declarado:** Nacho Pitt como identidad sintética QA.
-- **No verificado:** sandbox PSP; configuración y automatizaciones de una futura copia QA; envío real de email/WhatsApp; creación de contacto en el sitio QA único; runtime E2E.
+- **No verificado:** sandbox PSP; configuración y automatizaciones del sitio QA vigente; envío real de email/WhatsApp; creación de contacto sintético en el sitio QA único; runtime E2E.
 - **No ejecutado en esta actualización:** duplicación de sitio, escrituras CMS, publicación/despublicación, cambio de automatizaciones, reserva, pedido, pago, refund, email, SMS, WhatsApp, SharePoint o despliegue.
 
 ## 11. Documentos de referencia
