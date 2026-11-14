@@ -1,3 +1,5 @@
+> **Nota de vigencia — 2026-11-14:** este documento conserva el resultado de CI del SHA ad15d311fec06aa3f54afe6c5f1f0f923aef9f45. No valida el HEAD actual de fix/current-site-cms-contract-alignment. PR #370 está dirty y no tiene checks asociados al HEAD actual; rebase y CI pendientes. El sitio objeto de trabajo es el banco de pruebas aislado 50b39f33-e753-4331-ab35-b2ed43dc97f7, sin actividad real.
+
 # Contrato condicional de ControlOperativo — revisión del CSV sintético
 
 - Fecha: 2026-11-14
@@ -98,6 +100,6 @@ En el HEAD `ad15d311fec06aa3f54afe6c5f1f0f923aef9f45`:
 
 Pruebas focalizadas incluidas: claims webhook (8), hooks ControlOperativo (8), concurrencia booking/slot (42), reconciliación de pedidos (29) y sincronización de eventos nativos (24).
 
-**Pendiente fuera de CI:** no se ha ejecutado Wix Local Editor, no se ha leído el esquema live de Wix ni se ha hecho E2E contra el sitio QA. No se ha escrito en CMS live ni publicado en Wix. El resultado acredita regresión offline y contratos SDK, no runtime Wix.
+**Pendiente fuera de CI:** no se ha ejecutado Wix Local Editor, en aquella ejecución no se había leído el esquema live de Wix; la lectura vigente se documenta en docs/audits/2026-11-14-current-site-cms-normalization.md ni se ha hecho E2E contra el sitio aislado actual. No se ha escrito en CMS live ni publicado en Wix. El resultado acredita regresión offline y contratos SDK, no runtime Wix.
 
-No modificar filas reales para completar columnas vacías: las filas históricas no se backfillean en esta intervención. Las pruebas live deben usar registros sintéticos identificados y el entorno QA autorizado.
+No modificar filas reales para completar columnas vacías: las filas históricas no se backfillean en esta intervención. Las pruebas live deben usar registros sintéticos identificados y el banco de pruebas aislado.
