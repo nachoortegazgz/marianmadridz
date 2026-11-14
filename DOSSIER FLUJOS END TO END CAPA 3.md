@@ -10,56 +10,25 @@
 
 ---
 
-## Vigencia operativa — fase de desarrollo y pruebas (2026-11-14)
+## Estado operativo y de esquema — 2026-11-14
 
-**Autoridad:** el usuario/propietario es la SSOT de negocio, requisitos, prioridades, criterios de aceptación y autorizaciones. Las instrucciones expresas posteriores del usuario prevalecen sobre decisiones y restricciones documentales anteriores. La documentación oficial de Wix y de las integraciones gobierna únicamente los contratos y límites técnicos de la plataforma.
+**Sitio único:** 50b39f33-e753-4331-ab35-b2ed43dc97f7. Banco de pruebas aislado, sin actividad real, según declaración expresa del propietario. No se mantiene otro sitio como entorno de comparación.
 
-**Mutabilidad CMS durante las pruebas en el sitio aislado:** append-only e inmutabilidad están temporalmente en pausa. Se habilitan update y remove individuales y masivos para todas las colecciones CMS propias del proyecto, incluidas las históricamente tratadas como ledgers. Las operaciones masivas deben identificar explícitamente los registros por ID. No se habilitan escrituras en colecciones propiedad de Wix Apps ni se eluden autenticación, autorización/RBAC, permisos, validaciones de esquema, integridad técnica, secretos o límites de plataforma. La inserción mantiene su allowlist; los writers fiscales/contables/laborales, pagos, reembolsos, comunicaciones y efectos externos conservan sus gates funcionales independientes.
+**CMS actual:** 23 colecciones (15 NATIVE, 8 WIX_APP), 524 campos físicos NATIVE. Wix CMS conserva la autoridad transaccional. SharePoint es solo repositorio documental de evidencia; Capa 3 no modifica ni gobierna Capa 1.
 
-**Restauración:** esta política no se revierte automáticamente. Solo el usuario puede ordenar la restauración de append-only y de las restricciones de mutación para preparar el despliegue. No iniciar actividad real basándose únicamente en esta excepción temporal del sitio aislado.
+**Política temporal:** ISOLATED_SITE_RECORD_MUTATIONS_ENABLED=true permite update/remove individual y masivo en colecciones propias incluidas en ISOLATED_SITE_MUTABLE_COLLECTIONS, con IDs explícitos y límite de 1.000 elementos. Las colecciones WIX_APP quedan excluidas. Se mantienen RBAC, permisos, validaciones, secretos, allowlists de inserción y gates de writers/efectos externos. Esta ventana no habilita pagos, facturación, fichajes ni comunicaciones.
 
-**Estado Git/Wix:** PR #344–#351 están integradas en main; HEAD al inicio de la reconciliación `79b6238fe4c23206bb8e81327191ab48425e3a0d`. PR #351 introdujo una regresión al retirar validadores aún consumidos; su recuperación está en PR #352 y CI queda pendiente. La publicación del sitio está declarada/verificada como estado del sitio, pero no existe release ID que vincule runtime y SHA. No se ha publicado esta tanda.
+**Contratos CMS relevantes:**
+- MapaStaff: 18 campos, solo identidad de personal (staffMemberId, resourceId, scheduleId, memberId y active).
+- DatosFiscales: 28 campos, maestro de terceros/gestoría/configuración; no declara traceId ni schemaVersion. CONFIG_SISTEMA no existe.
+- CajaActual: 39 campos; operationDate DATE, openingAmount NUMBER, sequenceCounters OBJECT, cashRegisterStatus TEXT, isOpen BOOLEAN, id TEXT y currentSequence NUMBER. El singleton tiene cashRegisterStatus=SIMULACION e isOpen=true; el backend gobierna por cashRegisterStatus. Bizum presencial se agrega en otherAmount y el detalle permanece en MovimientosCaja.
+- ComplementosCatalogo: _id es la identidad CMS; addonId es espejo físico temporal. addOnId es contrato de transporte Bookings.
+- ControlOperativo: 42 campos, sin registros actuales; traceId es fencing token y ownerToken/retryAfter/nextRetryAt no existen.
 
-**CMS maestro:** 23 colecciones (15 NATIVE, 8 WIX_APP), 524 campos físicos NATIVE. MapaStaff tiene 18 campos y DatosFiscales 28; ambos contratos están descritos en la auditoría del sitio actual.
+**Código:** rama fix/current-site-cms-contract-alignment. Alinea maestros, hooks, validadores, fiscal consumers y proyección CajaActual con el esquema físico. CI, revisión de diff, Wix Editor y E2E sintéticos siguen pendientes.
 
----
+**Límites de ejecución:** no se han ejecutado mutaciones CMS ni migraciones de registros en esta intervención; tampoco se ha publicado código Wix. La sincronización del código Velo del Editor con Git no está acreditada.
 
-> **HISTÓRICO — superado por el addendum vigente:** Capa 3 continúa siendo diseño documental, no integración operativa certificada. Wix CMS mantiene la autoridad transaccional; SharePoint solo conserva evidencia. El estado de CMS y la política vigente del sitio aislados se describen en el addendum superior y en `DICCIONARIO_DATOS_CMS.md`.
-
-## Registro histórico — limpieza de registros sintéticos (superado por el addendum vigente)
-
-**Sitio:** `188bed94-177c-4bc9-a9f0-35080d874f3e`. **Rama de código:** `chore/temporary-append-only-mutation-window`. Este estado supersede los inventarios y addenda anteriores que contradigan estos datos.
-
-### CMS verificado tras los cambios
-
-- Inventario live: **42 colecciones** (13 `NATIVE`, 29 `WIX_APP`). `CajaActual` es `NATIVE`, revisión **64**, con **59 campos personalizados + 4 de sistema (63 físicos)**. El diccionario raíz §3.1 contiene el esquema y la definición de cada campo.
-- Política temporal: las 13 colecciones NATIVE tienen `itemRead=ANYONE`; permisos de escritura preservados. Las 29 WIX_APP conservan permisos definidos por Wix Apps (23 ANYONE, 6 restringidas). Capa 3 no obtiene permiso para leer directamente la colección ni para modificarla. La exposición de lectura es temporal, autorizada por el responsable y debe revertirse antes de despliegue.
-- El esquema incluye apertura, último ticket/conceptos, precios/impuestos, pago, trazabilidad, referencias fiscales y acumulados de sesión. Su presencia no acredita que los writers/DTOs estén implementados ni validados.
-- Estado del singleton: el último readback anterior a esta edición documentaba `CAJA_PRINCIPAL` cerrado y sin sesión abierta. El elemento no se ha releído en esta actualización; el estado y los saldos actuales quedan pendientes de readback.
-- Índice único `CajaActual_singletonKey_unique`: ACTIVE. Índice anterior `cashRegisterStatus_operationDate`: ya no aparece en el inventario final. El índice `cashRegisterStatus_operationDateHour` aparece en una captura anterior, pero operationDateHour no existe en el esquema vigente; readback/retirada del índice pendiente.
-- `MovimientosCaja`: revisión 78, 0 elementos; no modificada. `LibroAsientosContablesDetalle`: 0. `RegistrosHorariosStaff`: revisión 11, 0 tras limpieza. `HistoricoCierresZ`: 0. `PaquetesGestoria`: 0. `ControlOperativo`: 3 elementos. `MovimientosInventario` no figura en el inventario live de 42 colecciones; la fila histórica que lo describía como colección presente queda pendiente de reconciliación documental.
-
-### Registros sintéticos eliminados
-
-Se eliminaron únicamente dos filas de `RegistrosHorariosStaff`, tras releerlas y comprobar simultáneamente `meta.synthetic=true`, `meta.doNotImportToProduction=true`, `resourceId=QA_STAFF_ONLY`, `staffName=QA EMPLEADO FICTICIO` y notas que declaran que no acreditan jornada real:
-Los valores literales QA_STAFF_ONLY y QA_LIVECMS_* que siguen se conservan únicamente como evidencia histórica de los registros eliminados; no identifican otro sitio ni el nombre del entorno actual.
-
-- `1a4341a6-47be-490c-91a6-d04c8728e186` — `QA_LIVECMS_20261023_2000_TIME01_EXIT`.
-- `f325c0c8-35ba-4efc-ac45-a409ab439e61` — `QA_LIVECMS_20261023_2000_TIME01_ENTRY`.
-
-La eliminación se hizo por ID individual con condición de `traceId`; readback posterior: 0 filas restantes. Un barrido read-only de las 13 colecciones NATIVE no detectó otros candidatos con `meta.synthetic`, `doNotImportToProduction`, `runId/traceId` de prueba o `recordSource=SMOKE_TEST`. No se borró ningún fichaje real, movimiento de caja, asiento contable, cierre Z, paquete de gestoría ni registro de `ControlOperativo`. No se cambiaron permisos CMS ni se activaron writers.
-
-### Ventana temporal TEC-033
-
-**HISTÓRICO — TEC-033, sustituida por TEC-037.** El siguiente detalle describe la excepción inicial, limitada a update/remove individuales de determinados ledgers, y ya no representa la política vigente. La política actual está definida por `ISOLATED_SITE_RECORD_MUTATIONS_ENABLED=true`: update/remove individual y masivo en colecciones CMS propias, incluidos registros históricamente append-only. Las operaciones masivas requieren IDs explícitos. No se reactivan gates de inserción, writers fiscales/contables/laborales ni efectos externos.
-
-La instrucción antigua de desactivar la ventana antes de fusionar o publicar queda sustituida: la política temporal está integrada en main para la fase de pruebas. Solo el usuario ordenará su restauración antes del despliegue. La publicación Wix de esta ampliación sigue pendiente.
-
-### Alineación backend y estado pendiente
-
-En la rama fix/current-site-cms-contract-alignment, cajas.web.js usa operationDate (DATE, ISO YYYY-MM-DD), otherAmount para Bizum presencial y openingAmount como único saldo de apertura físico. El DTO no expone operationDateHour, bizumAmount ni los cuatro opening*Amount inexistentes. La apertura de sesión y la persistencia de openingAmount siguen pendientes de prueba end-to-end; la clasificación Bizum→otherAmount debe superar conciliación sintética con MovimientosCaja.
-
-No se ha ejecutado CI completo, Wix Local Editor ni E2E en runtime. No se ha publicado ni desplegado esta rama. La mutación CMS de este corte no equivale a publicar código Wix.
 
 ---
 # Dossier de flujos end-to-end — Capa 1 → Capa 3
