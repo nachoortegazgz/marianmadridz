@@ -6,6 +6,7 @@ import {
     CONTROL_OPERATIVO_NON_CANONICAL_FIELDS,
     RECORD_TYPE,
     APPEND_ONLY_MUTATION_WINDOW,
+    QA_RECORD_MUTATIONS_ENABLED,
 } from "backend/internalConfig";
 
 function _policyError(code) {
@@ -16,6 +17,12 @@ function _policyError(code) {
 
 export function assertBulkPatchAllowed(collection, modifications, conditionFilter) {
     const collectionPolicy = DATA_ACCESS_BULK_PATCH_POLICY[collection];
+    if (QA_RECORD_MUTATIONS_ENABLED) {
+        if (!_isRecord(conditionFilter) || !Array.isArray(modifications) || modifications.length === 0) {
+            throw _policyError("BULK_PATCH_POLICY_INPUT_INVALID");
+        }
+        return;
+    }
     if (!collectionPolicy) {
         throw _policyError("BULK_PATCH_POLICY_COLLECTION_DENIED");
     }
@@ -116,7 +123,14 @@ export function assertInsertAllowed(collection, item) {
 }
 
 export function assertUpdateAllowed(collection, item) {
-    if (!DATA_ACCESS_WRITE_POLICY.updateCollections.includes(collection) || !_isRecord(item)) {
+    if (!_isRecord(item) || !Object.values(BUSINESS_COLLECTIONS).includes(collection)) {
+        throw _policyError("CMS_UPDATE_COLLECTION_DENIED");
+    }
+    if (QA_RECORD_MUTATIONS_ENABLED) {
+        if (!item._id) throw _policyError("CMS_UPDATE_ID_REQUIRED");
+        return;
+    }
+    if (!DATA_ACCESS_WRITE_POLICY.updateCollections.includes(collection)) {
         throw _policyError("CMS_UPDATE_COLLECTION_DENIED");
     }
     if (APPEND_ONLY_MUTABLE_COLLECTIONS.includes(collection)) {
@@ -155,7 +169,11 @@ export function assertSaveAllowed(collection, item) {
 }
 
 export function assertRemoveAllowed(collection, id, expectedControlType) {
-    if (!DATA_ACCESS_WRITE_POLICY.removeCollections.includes(collection) || !id) {
+    if (!id || !Object.values(BUSINESS_COLLECTIONS).includes(collection)) {
+        throw _policyError("CMS_REMOVE_SCOPE_DENIED");
+    }
+    if (QA_RECORD_MUTATIONS_ENABLED) return;
+    if (!DATA_ACCESS_WRITE_POLICY.removeCollections.includes(collection)) {
         throw _policyError("CMS_REMOVE_SCOPE_DENIED");
     }
     if (collection === BUSINESS_COLLECTIONS.CONTROL_OPERATIVO) {
@@ -168,44 +186,29 @@ export function assertRemoveAllowed(collection, id, expectedControlType) {
     }
 }
 
-export function assertBulkRemoveAllowed(collection, ids, options) {
+export function assertBulkUpdateAllowed(collection, records) {
     if (
-        !DATA_ACCESS_WRITE_POLICY.bulkRemoveCollections.includes(collection) ||
+        !QA_RECORD_MUTATIONS_ENABLED ||
+        !Object.values(BUSINESS_COLLECTIONS).includes(collection) ||
+        !Array.isArray(records) ||
+        records.length === 0 ||
+        records.length > 1000 ||
+        records.some((record) => !_isRecord(record) || typeof record._id !== "string" || !record._id.trim())
+    ) {
+        throw _policyError("CMS_BULK_UPDATE_SCOPE_DENIED");
+    }
+}
+
+export function assertBulkRemoveAllowed(collection, ids) {
+    if (
+        !QA_RECORD_MUTATIONS_ENABLED ||
+        !Object.values(BUSINESS_COLLECTIONS).includes(collection) ||
         !Array.isArray(ids) ||
         ids.length === 0 ||
+        ids.length > 1000 ||
         ids.some((id) => typeof id !== "string" || !id.trim())
     ) {
         throw _policyError("CMS_BULK_REMOVE_SCOPE_DENIED");
-    }
-
-    const filter = options?.condition?.filter;
-    if (!_isRecord(filter)) throw _policyError("CMS_BULK_REMOVE_CONDITION_REQUIRED");
-    const typeClause = filter.controlType;
-    if (
-        !_isRecord(typeClause) ||
-        Object.keys(typeClause).length !== 1 ||
-        !Object.prototype.hasOwnProperty.call(typeClause, "$eq") ||
-        !DATA_ACCESS_WRITE_POLICY.purgeControlTypes.includes(typeClause.$eq)
-    ) {
-        throw _policyError("CMS_BULK_REMOVE_CONTROL_TYPE_DENIED");
-    }
-
-    const allowed = {
-        controlType: ["$eq"],
-        status: ["$eq"],
-        expiresAt: ["$lt"],
-        _createdDate: ["$lt"],
-        _updatedDate: ["$lt"],
-    };
-    for (const [field, clause] of Object.entries(filter)) {
-        if (
-            !allowed[field] ||
-            !_isRecord(clause) ||
-            Object.keys(clause).length !== 1 ||
-            !allowed[field].includes(Object.keys(clause)[0])
-        ) {
-            throw _policyError("CMS_BULK_REMOVE_FILTER_DENIED");
-        }
     }
 }
 
