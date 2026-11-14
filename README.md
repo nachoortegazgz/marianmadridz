@@ -9,7 +9,7 @@ Repositorio técnico del ecosistema digital Marian Madrid.
 
 ## Estado de entorno
 
-Por instrucción del propietario, el Site ID `50b39f33-e753-4331-ab35-b2ed43dc97f7` es el destino QA del proyecto. El inventario CMS de 2026-11-14 documenta 23 colecciones (15 propias y 8 Wix Apps). Sin embargo, la conexión Wix disponible en la sesión de auditoría no resolvió ese ID y solo identificó el sitio productivo `188bed94-177c-4bc9-a9f0-35080d874f3e`. El acceso runtime y el aislamiento efectivo de QA siguen pendientes de comprobación. **No ejecutar E2E de negocio sobre producción ni utilizar producción como fallback.**
+Por instrucción expresa del propietario (SSOT), el Site ID `50b39f33-e753-4331-ab35-b2ed43dc97f7` es el destino QA definitivo del proyecto; no se volverá a pedir confirmación ni se usará producción como alternativa. El propietario declara QA despublicado y pasarela desconectada. El inventario CMS de 2026-11-14 documenta 23 colecciones (15 propias y 8 Wix Apps). El conector Wix de esta sesión no resuelve el ID QA y solo enumera producción; es una limitación de acceso de la herramienta, no una duda sobre el destino autorizado. El aislamiento runtime sigue pendiente de evidencia directa. **No ejecutar E2E de negocio sobre producción.**
 
 Mientras se resuelve el acceso QA, continuar únicamente con pruebas offline/mock y datos sintéticos. Los mocks de pago no llaman a proveedores ni acreditan transacciones reales. No enviar comunicaciones ni datos a servicios externos.
 
