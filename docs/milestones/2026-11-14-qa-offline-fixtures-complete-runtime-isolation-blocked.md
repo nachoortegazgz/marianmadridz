@@ -44,3 +44,17 @@ Evidencia: docs/audits/2026-11-14-qa-automations-isolation.md.
 ### Decisión operativa
 
 No sortear locks, no desinstalar aplicaciones ni alterar automatizaciones preinstaladas a ciegas. Mantener pruebas offline/mock y auditorías read-only. Solicitar a Wix/proveedor el procedimiento soportado para neutralizar las automatizaciones bloqueadas. No declarar el entorno apto para Runtime/E2E hasta que exista evidencia verificable.
+
+
+## Actualización de estado — 2026-11-14
+
+### Evidencia CI y revalidación
+
+- PR #381 (diagnóstico de suite manager email sink) integrada en main: 1c4f9c3322f323bc32012c8c042eb2c47aaaed44. Workflow 43627893841: completed/success; gates Layer 1, Layer 2, regresión offline, contratos SDK y ESLint en verde.
+- PR #380 (auditoría de automatizaciones) integrada en main: e2150647e6203b5c964a0d414c5b0a5295a374fe. Secret scanning y Backend offline quality gates: success.
+- Relectura Wix Automations V2: 150 automatizaciones; 10 ACTIVE, 140 INACTIVE; las 10 activas son PREINSTALLED y todas bloqueadas por readonly y/o disableStatusChange.
+- Wix documenta que se debe detener cualquier desactivación API ante cualquiera de esos locks. No se realizaron escrituras.
+
+### Hito siguiente
+
+**CI/documentación QA: CERRADO. Aislamiento Wix Runtime/E2E: BLOQUEADO.** No iniciar Runtime/E2E que pueda disparar los diez triggers. Mantener offline/mock y read-only. La siguiente acción habilitante es obtener de Wix o de las apps propietarias un procedimiento soportado para neutralizar esas automatizaciones o un aislamiento QA equivalente, y volver a verificarlo por lectura.
