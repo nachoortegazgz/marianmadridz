@@ -17,9 +17,9 @@
 
 ## 1. Decisión ejecutiva
 
-**El sitio Wix está actualmente Published. No está acreditado como entorno QA aislado.** La consulta live de contexto Wix devuelve Published, Wix Editor, Velo habilitado, zona horaria `Europe/Madrid`, moneda EUR, Bookings instalado, Stores Catalog V3, Invoices V1, Members Area, Gift Cards, Blog y Forms & Payments.
+**El sitio Wix `188bed94-177c-4bc9-a9f0-35080d874f3e` es el único entorno QA del proyecto.** GetSiteContext devuelve Published, Wix Editor, Velo habilitado, zona horaria `Europe/Madrid`, moneda EUR, Bookings, Stores Catalog V3, Invoices V1, Members Area, Gift Cards, Blog y Forms & Payments. El propietario confirma que nunca ha tenido actividad real, que los datos son sintéticos y que la pasarela está desconectada.
 
-Por tanto, el dominio público no puede utilizarse para pruebas que creen reservas, pedidos, pagos, reembolsos, contactos o comunicaciones hasta que exista aislamiento demostrable. El hecho de que el repositorio se utilice para QA no convierte automáticamente el sitio Wix publicado en QA.
+El estado Published describe la publicación técnica del sitio, no actividad comercial real. Las pruebas con efectos externos reales permanecen prohibidas; usar mocks/sinks offline.
 
 **Recomendación preferente:** mantener `www.marianmadrid.es` intacto y crear un sitio Wix QA separado, sin dominio público ni audiencia de clientes, con configuración y credenciales independientes. La decisión vigente es utilizar `188bed94-177c-4bc9-a9f0-35080d874f3e` como único entorno QA. No se designa un sitio Wix adicional ni un QA externo. Los metadatos Published y dominio personalizado no alteran esta clasificación. Cualquier prueba con efectos externos debe utilizar mocks/sinks offline y mantenerse sin I/O real.
 
