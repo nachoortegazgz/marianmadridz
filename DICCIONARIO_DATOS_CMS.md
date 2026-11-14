@@ -8,7 +8,7 @@
 
 **Estado Git/Wix:** PR #344, PR #345 y PR #346 están integrados en main; HEAD actual b19a8f676d7be157d457588f6acf5332c2a34d32; merge del código QA PR #346: b68e4e048ce5fc1c022fc6ffc2643d5983972107. CI de PR #346: Layer 1 23 suites/296 pruebas, Layer 2 18 suites/246 pruebas, regresión completa 68 suites/627 pruebas; SDK contracts, ESLint y Gitleaks correctos. El usuario declara que la versión base anterior está publicada en Wix; la ampliación de mutaciones QA está integrada en Git pero aún no publicada en Wix. No se dispone de release Wix vinculado a SHA.
 
-**CMS maestro:** MapaStaff revisión live 105, 56 campos físicos (incluidos 4 campos de sistema). El inventario live actual no devuelve `DatosFiscales`; una consulta individual devuelve HTTP 404 / `WDE0025` (la colección no existe). El número y tipo de registros de MapaStaff no se han consultado en este corte.
+**CMS maestro:** MapaStaff revisión live 105, 56 campos físicos (52 personalizados + 4 campos de sistema). El inventario live actual no devuelve `DatosFiscales`; una consulta individual devuelve HTTP 404 / `WDE0025` (la colección no existe). El número y tipo de registros de MapaStaff no se han consultado en este corte.
 
 ---
 
@@ -1845,9 +1845,11 @@ Este estado temporal contradice deliberadamente la regla ordinaria de la secció
 
 **Sitio:** `188bed94-177c-4bc9-a9f0-35080d874f3e`. **Rama de código:** `chore/temporary-append-only-mutation-window`. Este estado supersede los inventarios y addenda anteriores que contradigan estos datos.
 
-### CMS verificado tras los cambios
+### CMS verificado tras los cambios — HISTÓRICO, sustituido por §§2–3
 
-- Inventario live: **42 colecciones** (13 `NATIVE`, 29 `WIX_APP`). `CajaActual` es `NATIVE`, revisión **64**, con **59 campos personalizados + 4 de sistema (63 físicos)**.
+> Este bloque conserva el corte anterior de 42 colecciones/revisión 64 de CajaActual. No representa el esquema live actual. La consulta completa del 2026-11-14 devuelve 41 colecciones (12 NATIVE, 29 WIX_APP), CajaActual revisión 13 y 80 campos; prevalecen §§2–3.
+
+- Inventario live histórico: **42 colecciones** (13 `NATIVE`, 29 `WIX_APP`). `CajaActual` era `NATIVE`, revisión **64**, con **59 campos personalizados + 4 de sistema (63 físicos)**.
 - **Permisos temporales:** las 13 `NATIVE` tienen `itemRead=ANYONE`; los permisos de insert/update/remove se preservaron sin cambios. En las 29 `WIX_APP`, Wix mantiene permisos definidos por las aplicaciones; 23 ya tenían lectura `ANYONE` y 6 mantienen restricciones de aplicación: `eCommerce/Orders`, `Forms/subscribers03`, `Marketing/Coupons`, `Members/PrivateMembersData`, `Stores/InventoryItems`, `Stores/Orders`. La documentación oficial indica que las colecciones de aplicaciones tienen permisos fijos.
 - El esquema completo, con tipos y definiciones, queda documentado en §3.1.
 - Los campos `operationDate`, `openingAmount`, `voucherAmount` e `isOpen` no existen en el esquema actual; sus sustitutos incluyen `operationDateHour`, los cuatro `opening*Amount` y `bizumAmount`.
