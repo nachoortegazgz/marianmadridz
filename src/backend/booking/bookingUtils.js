@@ -414,11 +414,11 @@ export async function resolveLinkedPhase2Duration(
 export function normalizeCatalogAddOn(addOn) {
     if (!addOn || typeof addOn !== "object") return null;
 
-    const addOnId = _safeTrim(
-        addOn.addonId ||
-        addOn.addOnId ||
-        addOn.id
-    );
+    const cmsId = _safeTrim(addOn._id);
+    const mirroredId = _safeTrim(addOn.addonId);
+    if (cmsId && mirroredId && cmsId !== mirroredId) return null;
+
+    const addOnId = cmsId || mirroredId || _safeTrim(addOn.addOnId || addOn.id);
 
     const name = _safeTrim(addOn.name || addOn.title);
     const price = Number(addOn.price);
