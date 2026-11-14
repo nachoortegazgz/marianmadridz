@@ -1,3 +1,7 @@
+# Addendum de vigencia CMS — 2026-11-14
+
+El esquema físico vigente de `CajaActual` es el que Wix devolvió tras su recreación (revisión 1), no el contrato objetivo descrito en cambios parciales de código. La migración de `operationDateHour`, saldos iniciales por medio de pago y `bizumAmount` continúa pendiente por respuesta `WDE0025`. Ver §16 para el detalle y la distinción entre esquema live y contrato objetivo.
+
 # Diccionario de datos CMS — Marian Madrid
 
 > **Corte de esquema:** 2026-11-13. **Entorno de referencia:** producción Wix, Site ID `188bed94-177c-4bc9-a9f0-35080d874f3e`. **Fuente del esquema:** Wix Data Collections API, lectura `GET /wix-data/v2/collections/{dataCollectionId}` por colección. **Cambios realizados en Wix durante esta documentación:** ninguno.
@@ -703,3 +707,42 @@ La rama de desarrollo `chore/temporary-append-only-mutation-window` abre tempora
 Este estado temporal contradice deliberadamente la regla ordinaria de la sección 10 solo dentro de la rama de trabajo. No se ha aplicado a Wix live ni a los permisos de las colecciones. No hay bulk update/remove. La validación de inserciones permanece activa. No utilizar para alterar o eliminar datos reales sujetos a conservación legal.
 
 **Reactivación previa a producción:** `APPEND_ONLY_MUTATION_WINDOW.ENABLED=false`; retirar ledgers de las allowlists de update/remove; restaurar tests que esperan `FISCAL_VIOLATION`; ejecutar CI completo y verificar hooks/permisos en Wix Local Editor. La publicación está bloqueada mientras esta excepción siga activa.
+
+
+## 16. Addendum — estado live y contrato objetivo CajaActual / QA temporal (2026-11-14)
+
+## Addendum de vigencia — 2026-11-14
+
+**Rama de trabajo:** `chore/temporary-append-only-mutation-window`. Este addendum describe exclusivamente el estado documental y de código de esta rama; no implica merge en `main`, despliegue Wix, publicación ni mutación CMS live.
+
+### Ventana temporal de mutabilidad para QA (TEC-033)
+
+La rama habilita temporalmente update/remove individual sobre los registros de las colecciones que el proyecto protegía como append-only: `MovimientosCaja`, `LibroAsientosContablesDetalle`, `RegistrosHorariosStaff`, `MovimientosInventario`, `HistoricoCierresZ`, `PaquetesGestoria` y `ControlOperativo` únicamente cuando `controlType=WEBHOOK_EVENT`.
+
+La habilitación está centralizada en `APPEND_ONLY_MUTATION_WINDOW` de `src/backend/internalConfig.js` (`ENABLED=true`, `TEMPORARY=true`, `RESTORE_BEFORE_PRODUCTION=true`). Los hooks de `src/backend/data.js` y las allowlists de `src/backend/dataAccessPolicy.js` están alineados con esa bandera. La validación de esquema de inserción y los controles de tipo/identidad permanecen activos. Las operaciones bulk de inserción, actualización y borrado continúan bloqueadas; la excepción se limita a operaciones individuales autorizadas por la política backend.
+
+**Límite de seguridad:** la excepción es de código en una rama de trabajo, no una dispensa legal ni una autorización para alterar datos reales. No se han cambiado permisos CMS, colecciones, registros, automatizaciones ni configuración Wix. Tampoco se ha eliminado ningún registro sintético en esta intervención. La edición desde Content Manager/Wix UI no se considera validada por esta bandera. Antes de borrar un elemento, debe acreditarse que es sintético mediante marcadores y trazabilidad inequívocos; si existe duda sobre su origen, se conserva.
+
+**Gates que siguen cerrados:** `FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED=false`, `ACCOUNTING_LEDGER_WRITES_ENABLED=false` y `ALLOW_SIMULATION_RECORDS=false`. La ventana de mutabilidad no habilita writers fiscales, contables, laborales ni pagos. No ejecutar pruebas E2E con efectos externos en el sitio Published.
+
+**Cierre obligatorio antes de integrar o publicar:** establecer `APPEND_ONLY_MUTATION_WINDOW.ENABLED=false`; retirar las allowlists temporales de update/remove; restaurar pruebas que exigen `FISCAL_VIOLATION`; ejecutar CI completo y verificar en Wix Local Editor que los hooks vuelven a bloquear update/remove. No publicar ni desplegar mientras la bandera esté habilitada.
+
+### Corrección del contrato CMS `CajaActual`
+
+La colección `CajaActual` fue recreada en Wix como `NATIVE`, revisión 1, con un índice único activo sobre `singletonKey` y un único elemento `CAJA_PRINCIPAL`. El elemento permanece `cashRegisterStatus=CERRADA`, `isOpen=false`, sin sesión abierta ni saldo inicial de apertura. `MovimientosCaja` no fue modificada.
+
+El esquema live leído tras la creación conserva todavía el contrato anterior: `operationDate:DATE`, `openingAmount:NUMBER`, `voucherAmount:NUMBER` e `isOpen:BOOLEAN`; no constan todavía `operationDateHour`, los cuatro campos de saldo inicial por medio de pago ni `bizumAmount`. Los intentos posteriores de añadir campos/actualizar la colección devolvieron `WDE0025`; por tanto, **la migración correctiva del esquema no está aplicada**. No describir los campos objetivo como existentes en Wix.
+
+Contrato objetivo aprobado para la siguiente migración controlada:
+- `operationDateHour:DATETIME`: instante de operación con fecha y hora.
+- Saldos de apertura: `openingCashAmount`, `openingCardAmount`, `openingBizumAmount`, `openingOtherAmount` (NUMBER).
+- Saldos actuales: `cashAmount`, `cardAmount`, `bizumAmount`, `otherAmount` (NUMBER).
+- `cashRegisterStatus` es el único estado de sesión; `isOpen` es redundante.
+- Retirada diferida de `operationDate`, `openingAmount`, `voucherAmount` e `isOpen` solo después de migrar todos los consumidores y validar compatibilidad.
+
+Los cuatro importes de apertura se registran al abrir una sesión real; no se deben rellenar con ceros por defecto en una caja cerrada. Los saldos actuales se inicializan desde los importes de apertura y se proyectan aplicando de forma idempotente los movimientos válidos de `MovimientosCaja`. El ledger fuente no se modifica. El código de la rama de alineación de caja todavía requiere completar el contrato de apertura, validación, DTO, conciliación y pruebas; los cambios parciales de nombres no equivalen a migración funcional.
+
+**Secuencia requerida:** (1) resolver el contrato REST Wix para añadir/actualizar campos y obtener readback; (2) revisar consumidores y tipos; (3) completar backend/DTO/validadores/tests; (4) migrar únicamente valores demostrables; (5) retirar campos legacy tras búsqueda completa y CI; (6) validar en Wix QA aislado. No publicar mientras el esquema CMS y el código no compartan el mismo contrato.
+
+---
+
