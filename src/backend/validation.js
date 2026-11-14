@@ -155,7 +155,7 @@ export function assertDatosFiscalesRecord(item, { partial = false } = {}) {
         assertValidEnum(item.recordType, RECORD_TYPE, "recordType");
     }
 
-    const retiredFields = ["traceId", "schemaVersion", "nifCif", "razonSocial", "tipoTercero"];
+    const retiredFields = ["traceId", "schemaVersion", "nifCif", "razonSocial", "tipoTercero", "gestorNombre"];
     const suppliedRetired = retiredFields.filter((field) =>
         Object.prototype.hasOwnProperty.call(item, field) && item[field] != null
     );
@@ -167,7 +167,7 @@ export function assertDatosFiscalesRecord(item, { partial = false } = {}) {
         "streetNumber", "businessDescription", "currency", "phone", "taxId",
         "legalName", "thirdPartyType", "address", "taxRegime", "verifactuVersion",
         "fechaInicioVerifactu", "email", "name", "label", "nif", "gestorEmail",
-        "gestorName", "gestorNombre", "gestorNif",
+        "gestorName", "gestorNif",
     ];
     for (const field of textFields) {
         if (item[field] != null && typeof item[field] !== "string") {
