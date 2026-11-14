@@ -455,7 +455,8 @@ async function _getBusinessTaxId(traceId) {
   // CONFIG_SISTEMA y verificar cero lecturas historical-config-read.
   // Solo lectura historica; nunca crea ni modifica configuracion.
   const historicalConfig = await withTimeout(
-    dalQuery(MAPA_STAFF_COL).eq("thirdPartyType", "EMISOR").limit(1).find(),
+    dalQuery(MAPA_STAFF_COL).eq("recordType", RECORD_TYPE.TERCERO)
+      .eq("thirdPartyType", "EMISOR").limit(1).find(),
     CMS_TIMEOUT_MS,
     "getBusinessTaxIdHistorical"
   );
