@@ -86,3 +86,14 @@ Se ha incorporado un simulador TPV sintético puro, sin persistencia ni llamadas
 - [Base maestra](PROJECT_BASELINE.md)
 - [Diccionario CMS](DICCIONARIO_DATOS_CMS.md)
 - [Auditoría del esquema y contratos](docs/audits/2026-11-14-current-site-cms-normalization.md)
+
+
+## Hito QA — 2026-11-14: fixtures alineadas y bloqueo de automatizaciones
+
+- PR #379 integrada en main: 27348a20bfb913fde43761d4c92dd46526a5e470.
+- Fixtures sintéticas alineadas con Site ID QA y cliente Nacho Pitt; correo de fixture reservado example.test.
+- CI PR #379: Layer 1 24/307 PASS; Layer 2 19/252 PASS; regresión 70/644 PASS; SDK contracts, ESLint y Secret scanning PASS.
+- Auditoría read-only Wix Automations V2: 150 automatizaciones; 10 activas, 140 inactivas, 0 archivadas. Las diez activas son PREINSTALLED y están bloqueadas por readonly y/o disableStatusChange.
+- Varias automatizaciones activas contienen acciones de email/notificación. No se desactivaron ni modificaron; no se sortearon locks.
+- **Estado Runtime/E2E: BLOCKED_EXTERNAL_SIDE_EFFECTS.** Se mantienen mocks/offline y lecturas read-only hasta neutralización soportada por Wix/proveedor y verificación posterior.
+- Evidencia: docs/audits/2026-11-14-qa-automations-isolation.md.

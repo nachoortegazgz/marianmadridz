@@ -89,3 +89,27 @@ Cada nueva ejecución añadirá un identificador único y conservará SHA, tipo 
 - **Decisión fail-closed:** no intentar APIs de CMS/runtime sobre producción ni sobre el sitio CV; no crear, duplicar, publicar, instalar apps ni cambiar configuración como sustituto implícito del QA designado.
 - **Resultado histórico:** `BLOCKED_ENVIRONMENT` por la designación anterior. Queda supersedido; la identidad QA vigente es `188bed94-177c-4bc9-a9f0-35080d874f3e`. No se declara validación runtime/E2E.
 - **Acción histórica supersedida:** ya no es necesario compartir ni designar otro sitio QA. La identidad vigente es `188bed94-177c-4bc9-a9f0-35080d874f3e`; la validación de efectos externos se limita a mocks/offline y a los gates específicos.
+
+
+## QA-FIXTURES-20261114-379 — alineación del entorno sintético
+
+- PR #379 integrada en main mediante squash: 27348a20bfb913fde43761d4c92dd46526a5e470.
+- HEAD CI: ecdf16444057d8100d89991b68b1711022bfb71a.
+- Layer 1: 24 suites / 307 tests PASS.
+- Layer 2: 19 suites / 252 tests PASS.
+- Regresión completa: 70 suites / 644 tests PASS.
+- Wix SDK Cart V2, Order Transactions, Bookings Reader V2: PASS.
+- ESLint: PASS. Secret scanning: PASS.
+- Fixtures: Site ID canónico y cliente sintético Nacho Pitt; email de fixture nacho.pitt@example.test.
+- Simuladores TPV, PSP y manager-email-sink: validación exacta del Site ID canónico, TEST, enabled y testRunId; permanecen in-memory/offline.
+- Sin cambios runtime, CMS, ledgers, configuración Wix, pagos ni comunicaciones.
+
+## QA-AUTOMATIONS-20261114-001 — auditoría read-only de automatizaciones Wix
+
+- Sitio consultado: 188bed94-177c-4bc9-a9f0-35080d874f3e.
+- Método: Wix Automations V2 Query Automations, paginación cursor, lectura únicamente.
+- Resultado: 150 automatizaciones; 10 ACTIVE, 140 INACTIVE, 0 archivadas.
+- Las diez activas son PREINSTALLED; todas tienen al menos una restricción settings.readonly o settings.disableStatusChange. Siete tienen disableStatusChange=true, cinco readonly=true, dos ambas.
+- Se identificaron acciones activas de email y notificación. No se modificó ninguna automatización ni se intentó sortear locks.
+- Resultado de aislamiento: BLOCKED_EXTERNAL_SIDE_EFFECTS. No ejecutar Runtime/E2E que dispare estos triggers hasta neutralización soportada y relectura de verificación.
+- Evidencia detallada: docs/audits/2026-11-14-qa-automations-isolation.md.
