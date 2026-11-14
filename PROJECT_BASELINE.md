@@ -10,10 +10,10 @@ Este documento describe un único sitio objeto de trabajo. No se mantiene una ma
 
 ## Addendum de decisión y estado de QA — 2026-11-14
 
-- **Decisión expresa del propietario:** utilizar el sitio `50b39f33-e753-4331-ab35-b2ed43dc97f7` como entorno QA del proyecto, con datos sintéticos y simulación de pagos. No volver a plantear como alternativa operativa el uso de producción.
+- **Decisión expresa y SSOT del propietario:** utilizar el sitio `50b39f33-e753-4331-ab35-b2ed43dc97f7` como entorno QA del proyecto, con datos sintéticos y simulación de pagos. Esta decisión es definitiva para el proyecto; no volver a solicitar confirmación ni plantear producción como alternativa.
 - **Producción separada:** `188bed94-177c-4bc9-a9f0-35080d874f3e` (`www.marianmadrid.es`) permanece fuera del alcance de QA.
-- **Discrepancia de acceso:** el inventario CMS del sitio QA está documentado en el corte 2026-11-14, pero la conexión Wix disponible en esta sesión no resolvió el Site ID QA y solo listó producción. No declarar acceso runtime ni aislamiento efectivo hasta reconciliar la conexión. No ejecutar pruebas Wix contra producción como alternativa.
-- **Continuidad de trabajo:** avanzar con pruebas offline/mock, fixtures sintéticos, auditoría estática, CI y correcciones en ramas/PR. Wix Runtime/E2E queda `BLOCKED_ENVIRONMENT` hasta que el ID QA sea resoluble.
+- **Discrepancia de acceso:** el inventario CMS del sitio QA está documentado en el corte 2026-11-14, pero la conexión Wix disponible en esta sesión no resolvió el Site ID QA y solo listó producción; esto es una limitación del conector, no una ambigüedad de autorización o de destino. No declarar acceso runtime ni aislamiento efectivo hasta reconciliar la conexión. No ejecutar pruebas Wix contra producción como alternativa.
+- **Continuidad de trabajo:** avanzar con pruebas offline/mock, fixtures sintéticos, auditoría estática, CI y correcciones en ramas/PR. Wix Runtime/E2E queda `BLOCKED_ENVIRONMENT` por limitación de acceso técnico al contexto QA; las tareas offline, de código, contratos y CI continúan sin esperar a resolverla.
 - **Pagos:** usar adaptador mock local sin red, sin PSP, sin Wix Payments y sin banco. `TEST_PAYMENT_CONFIRMED` solo es un resultado interno de simulación.
 - **Comunicaciones y gestoría:** sinks offline sin entrega. No emitir facturas/tickets reales ni invocar AEAT/Veri*Factu, SharePoint o Power Automate desde escenarios QA.
 - **Datos:** no importar PII. Emails bajo `.example.test`; no utilizar teléfonos operativos. Los datos de gestoría son fixtures internos no válidos para procesos fiscales.
