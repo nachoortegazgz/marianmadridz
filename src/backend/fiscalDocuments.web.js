@@ -23,8 +23,7 @@ CAMBIOS v5017-ALIGNED-DATOSFISCALES (respecto a v5016):
              verdad de destinatarios es BUSINESS_COLLECTIONS.MAPA_STAFF.
   ALN-DF-02: listAccountantRecipients consulta DatosFiscales y extrae
              gestores por DOS patrones tolerados en paralelo:
-               A) item dedicado con recordType "GESTOR" | "GESTORIA" |
-                  "GESTOR_FISCAL" | "ACCOUNTANT" + campo email.
+               A) item dedicado con recordType "GESTORIA" + campo email.
                B) campos embebidos gestorEmail/gestorName en cualquier
                   item (p.ej. el registro fiscal del negocio).
   ALN-DF-03: _resolveRecipientById maneja los dos patrones. Los ids del
@@ -129,13 +128,7 @@ function _accountantSendDisabledResult(traceId) {
 }
 
 // Marcadores canonicos para identificar un item dedicado a gestor.
-const GESTORIA_RECORD_TYPE_MARKERS = Object.freeze([
-  "GESTOR",
-  "GESTORIA",
-  "GESTOR_FISCAL",
-  "GESTOR-FISCAL",
-  "ACCOUNTANT",
-]);
+const GESTORIA_RECORD_TYPE_MARKERS = Object.freeze(["GESTORIA"]);
 
 // =============================================================================
 // BLOQUE 1 - HELPERS GENERALES
