@@ -1792,7 +1792,7 @@ Las relaciones de la tabla son semánticas/contractuales; solo las marcadas MULT
 
 ## 10. Permisos, inmutabilidad y límites de uso
 
-**Política temporal del sitio aislado de pruebas:** según la autorización expresa del propietario y el flag `ISOLATED_SITE_RECORD_MUTATIONS_ENABLED=true`, append-only e inmutabilidad están temporalmente en pausa para las colecciones propias del proyecto. Esta excepción no habilita mutaciones en WIX_APP ni desactiva RBAC, permisos, validaciones o gates de writers fiscales/contables/laborales. Restaurar las protecciones antes de producción solo cuando lo ordene el propietario.
+**Política vigente (addendum 2026-11-14):** la autorización histórica de pausa append-only queda suspendida en la rama QA mientras no exista identidad runtime del sitio y aislamiento verificables. ISOLATED_SITE_RECORD_MUTATIONS_ENABLED=false; los ledgers append-only se mantienen inmutables también en QA. Las rectificaciones se registran mediante nuevos registros trazables.
 
 - Las colecciones WIX_APP son propiedad de sus aplicaciones. No modificar directamente sus campos, tipos, datos ni permisos mediante este proyecto salvo flujo oficial aprobado.
 - Para producción, los ledgers append-only no se editan ni borran. Las rectificaciones se incorporan como nuevos registros trazables.
