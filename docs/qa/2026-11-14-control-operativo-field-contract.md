@@ -29,39 +29,44 @@ Los campos de una colección polimórfica no son obligatorios para todos los tip
 - `WEBHOOK_EVENT.processedAt`: el instante de procesamiento se guarda en `payload.processedAt`; no se requiere una segunda copia top-level.
 - `SLOT_LOCK.slotStart/slotEnd`: el escritor actual coordina el bloqueo mediante su clave determinista, `resourceId`, `serviceId`, `expiresAt` y metadata de `payload`; esos campos no son leídos por el flujo actual. Las tres filas del CSV muestran `payload.lockStatus=RELEASED` y `expiresAt=1970-01-01T00:00:00Z`, que es el sentinel de expiración usado al liberar el lock, no una caducidad activa.
 
-## 3. Discrepancia real: WEBHOOK_CLAIM
+## 3. Discrepancias reales y correcciones de writer
 
-En las seis filas `WEBHOOK_CLAIM`:
+### WEBHOOK_CLAIM
 
-- `expiresAt` top-level está vacío, aunque el lease es necesario para decidir si otra entrega debe esperar o recuperar el claim.
-- `attempts` top-level está vacío, aunque el proceso cuenta reintentos.
-- El código anterior guardaba ambos datos dentro de `payload` como `leaseExpiresAt` y `attempt`.
+En el CSV, `attempts` y `expiresAt` superiores aparecen vacíos, aunque el proceso necesita el contador de intentos y el lease. El código ya se había corregido para persistirlos en los campos canónicos.
 
-Esto no estaba alineado con el contrato físico disponible: `expiresAt` y `attempts` son campos canónicos de la colección; `leaseExpiresAt` y `attempt` no deben seguir siendo aliases persistidos.
+La revisión del esquema raíz revela además que `ownerToken` no pertenece a los 42 campos CMS. El fencing debe usar `traceId`, que sí es canónico y obligatorio. El código ya no escribe ni compara `ownerToken`; lo rechaza en nuevas escrituras. La compatibilidad con filas antiguas conserva únicamente el fallback de `payload.attempt` y `payload.leaseExpiresAt`, y normaliza los datos en la siguiente transición.
 
-### Corrección implementada en esta rama
+### WEBHOOK_EVENT
 
-1. El alta inicial escribe `expiresAt` y `attempts=1` top-level.
-2. La recuperación de un claim vencido lee primero `expiresAt` y, solo para compatibilidad con registros anteriores, acepta temporalmente `payload.leaseExpiresAt`.
-3. El contador se recupera desde `attempts`; como fallback de migración lee `payload.attempt`. Después lo escribe en `attempts` top-level.
-4. La recuperación elimina `attempt` y `leaseExpiresAt` del payload reescrito.
-5. Las transiciones de finalización y fallo actualizan `expiresAt` top-level con el instante terminal.
-6. La política CAS permite modificar únicamente `attempts` y `expiresAt` adicionales, manteniendo las condiciones de fencing `controlType + status + ownerToken + version`.
-7. `assertControlOperativo()` exige para `WEBHOOK_CLAIM`: `eventId`, `eventType`, estado válido, `ownerToken`, `version >= 1`, `attempts >= 1` y `expiresAt` válido.
+El CSV deja vacío el campo superior `eventType`, aunque `payload.eventType` existe. El diccionario CMS describe expresamente `eventType` como duplicado superior para consultas indexadas. El writer ahora persiste `eventType` y `processedAt` también en campos superiores, conservando las copias del payload. El hook valida ambos valores.
+
+### SLOT_LOCK de reserva
+
+El código genera `dedupeKey` con minutos epoch de inicio y fin, pero no persistía esos instantes en `slotStart` y `slotEnd`. El writer ahora los deriva de la misma clave determinista y los guarda como `Date`. No se exige ese rango para los SLOT_LOCK fiscales/contables, que no representan una cita.
+
+### IDEMPOTENCY
+
+El writer usa `pairToken` como `_id` pero no lo escribía explícitamente en el campo superior `pairToken`. Ahora persiste ambos valores con la misma identidad.
+
+### Campos que permanecen intencionadamente vacíos
+
+- `DAYS_CACHE.resourceId`: el registro representa un conjunto/hash de recursos; la ubicación y el rango están en `payload`. No se inventa un recurso único.
+- `IDEMPOTENCY.resourceId`: el resultado se conserva en `payload.result`; en operaciones duales un único recurso superior sería ambiguo.
+- `SLOT_LOCK.slotStart/slotEnd`: N/A para locks fiscales/contables; se completan para locks de reserva.
+- `operationDate` y campos no relacionados con el tipo de control: no forman parte del contrato de los seis tipos presentes en el CSV.
+- `retryAfter` y `nextRetryAt`: no existen en el esquema CMS y no se persisten.
 
 ## 4. Campos retirados o no persistibles
 
 No reintroducir por rellenado automático:
 
-- `retryAfter`: valor calculado de respuesta, no estado CMS.
-- `nextRetryAt`: sin consumidor/escritor activo acreditado en la auditoría de código.
-- `processedAt` top-level: no es necesario; los eventos lo guardan dentro de `payload`.
-- `attempt` top-level: alias singular retirado; usar `attempts`.
-- `leaseExpiresAt` top-level o dentro del payload: alias retirado; usar `expiresAt`.
+- `ownerToken`, `retryAfter`, `nextRetryAt`: no pertenecen a los 42 campos del esquema raíz y se rechazan en nuevas escrituras.
+- `attempt`: alias singular retirado; usar `attempts`.
+- `leaseExpiresAt`: alias retirado; usar `expiresAt`.
+- `processedAt` ya no se deja solo en payload para WEBHOOK_EVENT: también se escribe como DATETIME superior.
 
-El CSV contiene esos encabezados. Eso no demuestra que las columnas sigan existiendo en el esquema live: la comprobación del esquema debe hacerse contra Wix CMS, no contra los encabezados de una exportación.
-
-**Discrepancia adicional de esquema:** el CSV incluye `ownerToken` y las filas `WEBHOOK_CLAIM` tienen valores; sin embargo, el snapshot `DICCIONARIO_DATOS_CMS.md` consultado en esta revisión declara `ControlOperativo` revisión 39 / 42 campos y no enumera `ownerToken`. El código y la política CAS dependen de ese campo para el fencing. La exportación aporta evidencia de uso, pero no sustituye el readback live del esquema. Antes de probar en Wix debe confirmarse que `ownerToken` existe como campo TEXT en el entorno objetivo; no renombrarlo ni retirarlo por inferencia.
+El CSV contiene encabezados adicionales, pero no demuestra que esas columnas existan en el esquema CMS. El contrato de código se alinea con el inventario raíz; el readback del esquema live de Wix sigue siendo una validación externa pendiente.
 
 ## 5. Archivos modificados
 
