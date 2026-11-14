@@ -779,6 +779,15 @@ export async function DatosFiscales_beforeUpdate(item) {
     if (!original) _schemaError("DatosFiscales update target not found");
 
     const normalized = { ...original, ...item };
+    if (Object.prototype.hasOwnProperty.call(item, "gestorNombre")) {
+        _schemaError("DatosFiscales.gestorNombre is retired; use gestorName");
+    }
+    if (normalized.gestorNombre != null && normalized.gestorNombre !== "") {
+        if (!normalized.gestorName || normalized.gestorName !== normalized.gestorNombre) {
+            _schemaError("DatosFiscales.gestorNombre conflicts with canonical gestorName; manual review required");
+        }
+        delete normalized.gestorNombre;
+    }
     assertDatosFiscalesRecord(normalized);
     return normalized;
 }
