@@ -28,7 +28,7 @@ Detalle y evidencias: [reconciliación de baseline y recuperación de validadore
 
 > **Vigencia 2026-11-14:** prevalece el corte live de [ESTADO_ACTUAL_PROYECTO.md](ESTADO_ACTUAL_PROYECTO.md). `CajaActual` tiene el esquema live revisado (revisión 64; 59 campos personalizados + 4 de sistema); no se han abierto sesiones ni escrito movimientos. TEC-033 habilita update/remove individual solo en la rama de QA; los writers permanecen fail-closed. El WebMethod de apertura y la validación E2E siguen pendientes. No publicar esta rama.
 
-## Estado live y limpieza QA — corte 2026-11-14
+## Registro histórico — estado live y limpieza QA (superado por el addendum vigente)
 
 **Sitio:** `188bed94-177c-4bc9-a9f0-35080d874f3e`. **Rama de código:** `chore/temporary-append-only-mutation-window`. Este estado supersede los inventarios y addenda anteriores que contradigan estos datos.
 
@@ -1017,7 +1017,7 @@ CONTROL_TYPE    = { ALERT, COMPENSATION, DAYS_CACHE, DEDUPE_KEY,
 `hashSHA256(input)`, `hmacSha256Hex(key, payload)`, `hashChain(prevHash, payload)`, `timingSafeEqual(a, b)`.
 
 **`backend/validation.js`:**
-`assertValidEnum(value, enumObject, fieldName)`, `assertCitasF2(item)`, `assertDatosFiscales(item)`, `assertControlOperativo(item)`, `assertRegistrosHorariosStaff(item)`, `isValidNifOrEuVat(taxId)`. No existe validator ni writer de nuevas filas `MovimientosInventario`.
+`assertValidEnum(value, enumObject, fieldName)`, `assertCitasF2(item)`, `assertMapaStaffFiscalIdentity(item)`, `assertControlOperativo(item)`, `assertRegistrosHorariosStaff(item)`, `isValidNifOrEuVat(taxId)`. No existe validator ni writer de nuevas filas `MovimientosInventario`.
 
 ### 14.8 Catálogo de WebMethods públicos
 
