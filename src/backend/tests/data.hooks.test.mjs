@@ -388,6 +388,10 @@ test('HOOK-DATOS-FISCALES-02 validates issuer config and gestor contact contract
     /valid TEXT ISO YYYY-MM-DD/
   );
   assert.throws(
+    () => H.DatosFiscales_beforeInsert({ ...issuer, fechaInicioVerifactu: '2026-02-31' }),
+    /valid TEXT ISO YYYY-MM-DD/
+  );
+  assert.throws(
     () => H.DatosFiscales_beforeInsert({ ...issuer, verifactuEnabled: 'false' }),
     /verifactuEnabled must be BOOLEAN/
   );
