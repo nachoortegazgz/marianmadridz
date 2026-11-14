@@ -42,7 +42,7 @@ Singleton creado:
 - Nombre: `CajaActual_singletonKey_unique`
 - Campo: `singletonKey ASC`
 - Unicidad: true
-- Estado en lectura posterior: `BUILDING`
+- Estado en lectura posterior: `ACTIVE`
 
 ## 4. Verificación posterior
 
@@ -76,7 +76,7 @@ La proyección de operaciones presenciales requiere una sesión existente ABIERT
 - No se insertaron movimientos de prueba.
 - No se activaron escritores fiscales/contables, pagos ni automatizaciones.
 - No se publicó el sitio; la intervención fue exclusivamente CMS.
-- El índice único no estaba todavía activo en la última lectura.
+- El índice único está ACTIVE y protege la unicidad de singletonKey.
 
 ## 8. Estado
 
