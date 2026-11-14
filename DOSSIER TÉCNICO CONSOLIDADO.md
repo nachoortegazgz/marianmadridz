@@ -6,8 +6,8 @@
 - MapaStaff es exclusivamente el mapa de identidad de personal: staffMemberId, resourceId, scheduleId y memberId. No contiene recordType ni campos fiscales.
 - DatosFiscales es el maestro fiscal y de terceros. No declara traceId ni schemaVersion; fechaInicioVerifactu es TEXT. No existe CONFIG_SISTEMA con identidad fiscal oficial verificada.
 - ComplementosCatalogo usa _id como identidad CMS; addonId queda como espejo físico requerido por el esquema actual. addOnId se mantiene como campo de transporte Bookings.
-- La rama fix/current-site-cms-contract-alignment separa validadores/hooks, migra eventLog.js, fiscalAggregator.web.js y fiscalDocuments.web.js a DatosFiscales y actualiza pruebas/documentación.
-- La rama aún requiere CI completa, revisión del diff, PR y pruebas Wix Editor/E2E sintéticas. No se ha mutado el CMS ni se ha publicado código Wix.
+- La rama fix/current-site-cms-contract-alignment separa validadores/hooks, migra eventLog.js, fiscalAggregator.web.js y fiscalDocuments.web.js a DatosFiscales, alinea CajaActual y actualiza pruebas/documentación.
+- La rama aún requiere rebase, CI completa sobre HEAD, revisión del diff y pruebas Wix Editor/E2E sintéticas. PR #370 no es mergeable en su estado actual. No se ha mutado el CMS ni se ha publicado código Wix.
 - Wix Stores Catalog V3 sigue siendo la autoridad prevista del inventario comercial; InventarioStockVenta y MovimientosInventario permanecen como colecciones físicas legacy sin writers activos.
 - Capa 3 (SharePoint/Power Automate) sigue siendo diseño documental, no integración operativa certificada.
 
@@ -15,7 +15,7 @@
 
 ## Vigencia operativa — estado actual
 
-La autoridad del propietario, la política de mutabilidad del sitio aislado y los límites de efectos externos están consolidados en el addendum inicial y en TEC-037/TEC-038 de docs/DECISION-LOG.md. La rama actual y sus pruebas pendientes se describen en ESTADO_ACTUAL_PROYECTO.md.
+La autoridad del propietario, la política de mutabilidad del sitio aislado y los límites de efectos externos están consolidados en el addendum inicial y en TEC-037/TEC-038 de docs/DECISION-LOG.md. La rama fix/current-site-cms-contract-alignment está en HEAD a8a44cb8e75fd3c9d57fe3279a02ae47411b50a6. PR #370 está dirty (109 ahead / 57 behind main); no hay checks para el HEAD actual. Rebase y CI deben completarse antes de merge o publicación.
 
 ## Addendum de vigencia técnica — 2026-11-14
 
