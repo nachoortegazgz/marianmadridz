@@ -46,5 +46,5 @@ Rama: fix/current-site-cms-contract-alignment.
 - ISOLATED_SITE_RECORD_MUTATIONS_ENABLED=true permite update/remove individual y masivo sobre colecciones propias incluidas en ISOLATED_SITE_MUTABLE_COLLECTIONS; operaciones masivas requieren IDs explícitos y límite 1.000.
 - WIX_APP queda excluido. Se mantienen RBAC, permisos, validaciones, secretos, allowlists de inserción y gates de efectos externos.
 - No existe CONFIG_SISTEMA con identidad fiscal oficial verificada.
-- PR #370 está abierto pero `dirty` (109 commits ahead / 57 behind main). No hay checks para el HEAD actual; los últimos checks exitosos son del SHA 68a2f327 y no validan estos cambios. Rebase, CI sobre HEAD, lint, secret scanning, revisión del diff, pruebas Wix Editor y E2E sintéticas están pendientes.
+- PR #370 está abierto pero `dirty` (historial divergente respecto a main). No hay checks para el HEAD actual; los últimos checks exitosos son del SHA 68a2f327 y no validan estos cambios. Rebase, CI sobre HEAD, lint, secret scanning, revisión del diff, pruebas Wix Editor y E2E sintéticas están pendientes.
 - No se ha ejecutado una mutación CMS, migración de registros ni publicación Wix en esta intervención.
