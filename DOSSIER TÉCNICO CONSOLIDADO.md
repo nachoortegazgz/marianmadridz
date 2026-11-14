@@ -1345,3 +1345,14 @@ La SSOT de esta ventana es `APPEND_ONLY_MUTATION_WINDOW` en `src/backend/interna
 **Estado:** habilitada solo en la rama de trabajo; no publicada en Wix ni aplicada a permisos o datos live. La excepción no es una dispensa legal y no debe emplearse para alterar o borrar registros reales sujetos a obligaciones de conservación.
 
 **Gate de despliegue:** antes de cualquier publicación productiva hay que restaurar `APPEND_ONLY_MUTATION_WINDOW.ENABLED=false`, quitar los ledgers de las allowlists de update/remove, recuperar las pruebas de bloqueo, ejecutar CI y validar el bloqueo efectivo en Wix Local Editor. No considerar esta rama apta para producción mientras la ventana esté abierta.
+
+
+## Addendum — maestros MASTER DatosFiscales y MapaStaff (2026-11-14)
+
+La lectura posterior a la mutación de Wix Data API confirma `DatosFiscales` revisión 19 y `MapaStaff` revisión 24. `DatosFiscales` incorpora `commercialName`, `postalCode`, `province`, `schemaVersion` y `traceId`; `fechaInicioVerifactu` es `DATE`. `MapaStaff` incorpora `traceId`. Los registros existentes se releen tras la mutación: 1 placeholder fiscal QA y 3 mapeos de staff. El placeholder permanece separado del emisor; los tres mapeos conservan roles y referencias de identidad, con `thirdPartyId` vacío.
+
+El código de `main` alinea los hooks/validator de `DatosFiscales` con un `CONFIG_SISTEMA` que puede mantener pendientes los campos fiscales no acreditados, reserva el ID `CONFIG_SISTEMA_FISCAL`, exige `schemaVersion=1` y `traceId`, y evita que `eventLog.js` rellene `legalName` desde el nombre comercial. El writer de terceros persiste `schemaVersion` y `traceId`.
+
+No se ha creado todavía el singleton `CONFIG_SISTEMA`: falta verificar taxId, legalName y taxRegime con documentación fiscal/gestoría, y el código requiere sincronización/publicación Wix antes de insertar ese registro. Veri*Factu y los writers fiscales permanecen desactivados.
+
+**Compatibilidad pendiente:** `MapaStaff` conserva `staffMemberId`, `scheduleId`, `active`, `sourceSystem` y su relación con `ServiciosCatalogo`; el fallback actual de `events.js` consume staffMemberId/active/scheduleId. No eliminarlos hasta sustituir ese consumidor y aprobar el ADR de `active`. La unicidad memberId/resourceId solo está verificada en el snapshot, no garantizada frente a concurrencia. Campos heredados de DatosFiscales se mantienen donde contienen datos QA o tienen consumidores. No se han borrado colecciones 12–16 por falta de IDs/nombres inequívocos.
