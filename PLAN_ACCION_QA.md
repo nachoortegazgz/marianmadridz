@@ -78,6 +78,15 @@ sumaMediosLiquidados = totalOperacion
 
 No utilizar aritmética binaria de punto flotante sin estrategia de precisión/redondeo documentada. Los impuestos se validan por línea y por total, con reglas fiscales aprobadas; los mocks no certifican cumplimiento fiscal.
 
+### Implementación offline adicional — TPV (2026-11-14)
+
+- Auditoría estática: `docs/audits/2026-11-14-tpv-contract-gap-audit.md`.
+- Motor sintético aislado: `src/backend/tests/fixtures/qaTpvSimulation.mock.mjs`; no se importa desde backend runtime.
+- Contrato cubierto: líneas cantidad × PVP, base + impuesto, conciliación de total, cinco medios de pago declarados, pagos pendientes no liquidados, idempotencia y precisión de céntimos.
+- Suite: `src/backend/tests/qa.tpv-simulation.mock.test.mjs`, incluida en Layer 1.
+- El writer fiscal real continúa fail-closed. No se han cambiado enums reales, CMS, CajaActual, cierre Z ni proveedores.
+- Estado: código añadido; CI del commit que contiene estos cambios pendiente de resultado en el momento de este corte.
+
 ## 5. Escenarios mínimos
 
 | ID | Escenario | Resultado esperado |
