@@ -1,3 +1,7 @@
+# Estado operativo — actualización 2026-11-14
+
+La rama de trabajo `chore/temporary-append-only-mutation-window` contiene una ventana temporal de mutabilidad para QA (TEC-033) y documentación de la migración pendiente de `CajaActual`. Esta rama no equivale a `main`, no está publicada y no ha cambiado Wix live. Los ledgers siguen protegidos en el sitio publicado; no se han borrado registros sintéticos ni modificado permisos CMS. Consulta [ESTADO_ACTUAL_PROYECTO.md](ESTADO_ACTUAL_PROYECTO.md) para límites y gates, y [DICCIONARIO_DATOS_CMS.md](DICCIONARIO_DATOS_CMS.md) para el estado físico/objetivo de `CajaActual`.
+
 # Marian Madrid — Wix Editor + Velo
 
 > **Estado vigente 2026-11-13:** GitHub `main` en el corte PR #332: `84c06313d5d82da6952e38deab8bae271aed67cf`. Wix Site Context confirma el sitio principal **Published** y Velo enabled; el propietario declara que el código se ha actualizado y publicado. No se ha obtenido un identificador de release que vincule el runtime Wix con ese SHA. Existe un sitio Wix QA independiente en estado Draft (`50b39f33-e753-4331-ab35-b2ed43dc97f7`), pero su aislamiento y paridad CMS no están certificados. CMS producción: 44 colecciones (15 NATIVE, 29 WIX_APP); CMS QA: 43 (15 NATIVE, 28 WIX_APP). La referencia de estado, inventario y checklist es [ESTADO_ACTUAL_PROYECTO.md](ESTADO_ACTUAL_PROYECTO.md), cuyo addendum vigente prevalece sobre los estados históricos de los demás documentos.
