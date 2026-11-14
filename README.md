@@ -53,14 +53,15 @@ Repositorio canónico del sitio **Marian Madrid Peluquería y Estética** (`www.
 1. [Estado vigente consolidado](ESTADO_ACTUAL_PROYECTO.md): autoridad de continuidad, bloqueos y checklist.
 2. [Reconciliación de baseline 2026-11-14](docs/qa/2026-11-14-baseline-reconciliation.md): regresión de validadores, inventario CMS y límites de publicación.
 3. [Auditoría de retirada de inventario personalizado](docs/qa/2026-11-14-retired-inventory-contract-audit.md): evidencia de colecciones ausentes y limpieza de constantes/hooks.
-4. [Estándar de desarrollo y QA — Cero deuda](docs/engineering/DEVELOPMENT-STANDARDS.md): reglas de alias, legacy, APIs deprecated, código muerto, obsolescencia y validación.
-5. [Auditoría y migración CitasF2](docs/qa/2026-11-13-citasf2-keyfields.md): esquema físico y campos canónicos.
-6. [Adaptaciones temporales para QA](docs/qa/2026-11-13-site-qa-environment.md): entorno, permisos y límites de aislamiento.
-7. [Auditoría de persistencia CMS](docs/qa/2026-11-13-custom-cms-registration-audit.md): inventario NATIVE/WIX_APP y estado por dominio.
-8. [Referencia maestra QA del 11-11](docs/qa/2026-11-11-qa-master-reference.md): evidencia histórica de aislamiento y restricciones previas.
-9. [Dossier técnico consolidado](DOSSIER%20TÉCNICO%20CONSOLIDADO.md): arquitectura, contratos y módulos.
-10. [Flujos end-to-end Capa 3](DOSSIER%20FLUJOS%20END%20TO%20END%20CAPA%203.md): diseño documental Wix–Microsoft 365; no certifica operación.
-11. [Estado técnico histórico por dominio](docs/PROJECT-STATUS.md): evidencia hasta 2026-11-11; el estado vigente está en `ESTADO_ACTUAL_PROYECTO.md`.
+4. [Compatibilidad de plataforma Wix](docs/qa/2026-11-14-wix-platform-compatibility.md): Editor Type, Velo, versiones de Apps y límites de sincronización.
+5. [Estándar de desarrollo y QA — Cero deuda](docs/engineering/DEVELOPMENT-STANDARDS.md): reglas de alias, legacy, APIs deprecated, código muerto, obsolescencia y validación.
+6. [Auditoría y migración CitasF2](docs/qa/2026-11-13-citasf2-keyfields.md): esquema físico y campos canónicos.
+7. [Adaptaciones temporales para QA](docs/qa/2026-11-13-site-qa-environment.md): entorno, permisos y límites de aislamiento.
+8. [Auditoría de persistencia CMS](docs/qa/2026-11-13-custom-cms-registration-audit.md): inventario NATIVE/WIX_APP y estado por dominio.
+9. [Referencia maestra QA del 11-11](docs/qa/2026-11-11-qa-master-reference.md): evidencia histórica de aislamiento y restricciones previas.
+10. [Dossier técnico consolidado](DOSSIER%20TÉCNICO%20CONSOLIDADO.md): arquitectura, contratos y módulos.
+11. [Flujos end-to-end Capa 3](DOSSIER%20FLUJOS%20END%20TO%20END%20CAPA%203.md): diseño documental Wix–Microsoft 365; no certifica operación.
+12. [Estado técnico histórico por dominio](docs/PROJECT-STATUS.md): evidencia hasta 2026-11-11; el estado vigente está en `ESTADO_ACTUAL_PROYECTO.md`.
 
 El código, la configuración viva de Wix, los contratos oficiales de las APIs y las pruebas ejecutadas prevalecen sobre afirmaciones históricas. Registrar siempre fecha, rama/SHA y evidencia.
 ## Entorno de desarrollo
