@@ -1,4 +1,4 @@
-> **SSOT de entorno vigente (2026-11-14):** el único sitio del proyecto es QA: `188bed94-177c-4bc9-a9f0-35080d874f3e` (`https://www.marianmadrid.es/`). El propietario confirma que nunca ha tenido actividad real, que todos los datos son sintéticos, que el cliente de pruebas es Nacho Pitt (`nachoortegazgz@gmail.com`) y que la pasarela está desconectada. No existe otro sitio QA ni un QA externo designado. Las referencias anteriores a otros Site ID o a este sitio como producción quedan supersedidas. El estado Wix Published no altera su clasificación funcional como QA. Véase [SSOT del entorno QA](docs/qa/QA-ENVIRONMENT-SSOT.md).
+> **SSOT de entorno vigente (2026-11-14):** el único sitio del proyecto es QA: `188bed94-177c-4bc9-a9f0-35080d874f3e` (`https://www.marianmadrid.es/`). El propietario confirma que nunca ha tenido actividad real, que todos los datos son sintéticos, que el cliente de pruebas es Nacho Pitt (`nacho.pitt@example.test`) y que la pasarela está desconectada. No existe otro sitio QA ni un QA externo designado. Las referencias anteriores a otros Site ID o a este sitio como producción quedan supersedidas. El estado Wix Published no altera su clasificación funcional como QA. Véase [SSOT del entorno QA](docs/qa/QA-ENVIRONMENT-SSOT.md).
 
 ---
 
@@ -11,7 +11,7 @@
 
 ## 1. Decisión operativa
 
-Por instrucción expresa del propietario, el sitio `188bed94-177c-4bc9-a9f0-35080d874f3e` es el **único entorno QA oficial** del proyecto. Fue creado para pruebas previas al despliegue real; nunca ha tenido actividad real y no la tiene actualmente. Todos los datos son sintéticos, el cliente de prueba canónico es Nacho Pitt (`nachoortegazgz@gmail.com`) y la pasarela está desconectada. No existe otro sitio QA ni un QA externo designado.
+Por instrucción expresa del propietario, el sitio `188bed94-177c-4bc9-a9f0-35080d874f3e` es el **único entorno QA oficial** del proyecto. Fue creado para pruebas previas al despliegue real; nunca ha tenido actividad real y no la tiene actualmente. Todos los datos son sintéticos, el cliente de prueba canónico es Nacho Pitt (`nacho.pitt@example.test`) y la pasarela está desconectada. No existe otro sitio QA ni un QA externo designado.
 
 **Estado del entorno:** Wix identifica el sitio como Published y con dominio personalizado. Este es un metadato técnico de publicación; no cambia su clasificación funcional como QA ni contradice la declaración del propietario de que nunca ha existido actividad real. La identidad del entorno queda fijada por esta SSOT. Las pruebas que puedan producir efectos externos siguen usando mocks/sinks offline y requieren controles específicos.
 
@@ -174,7 +174,7 @@ Estados permitidos: `NOT_RUN`, `PASS`, `FAIL`, `BLOCKED_ENVIRONMENT`, `BLOCKED_C
 
 - Sitio QA único: `188bed94-177c-4bc9-a9f0-35080d874f3e` — `https://www.marianmadrid.es/`.
 - Finalidad y ausencia de actividad real histórica/actual: declaradas expresamente por el propietario.
-- Datos: sintéticos exclusivamente. Cliente sintético: Nacho Pitt (`nachoortegazgz@gmail.com`).
+- Datos: sintéticos exclusivamente. Cliente sintético: Nacho Pitt (`nacho.pitt@example.test`).
 - Pasarela: desconectada, según declaración del propietario.
 - Contexto Wix consultado: sitio Published, dominio personalizado, Wix Editor y Velo habilitado; apps de Bookings, Forms & Payments, Gift Cards, Hotels, Invoices V1 y Stores Catalog V3.
 - CI offline, mocks y contratos SDK: consultar los resultados asociados al SHA de cada ejecución; no extrapolar un PASS offline a runtime/E2E.
@@ -220,7 +220,7 @@ La identidad y clasificación del único sitio QA se rigen por [SSOT del entorno
 ## Corte de hitos — 2026-11-14
 
 - **Hito de fixtures offline:** CERRADO. PR #379 integrada en main (27348a20bfb913fde43761d4c92dd46526a5e470); CI 70 suites / 644 tests PASS, SDK contracts, ESLint y Secret scanning PASS.
-- **H0 / H4 Wix Runtime:** BLOQUEADO. Lectura oficial Wix Automations V2: 150 automatizaciones, 10 activas y 140 inactivas. Las diez activas son preinstaladas y todas tienen readonly o disableStatusChange; no se pueden desactivar mediante API sin vulnerar locks.
+- **H0 / H4 Wix Runtime:** BLOQUEADO. Lectura oficial Wix Automations V2: 150 automatizaciones, 7 activas y 143 inactivas. Las siete activas son preinstaladas y todas tienen readonly o disableStatusChange; no se pueden desactivar mediante API sin vulnerar locks.
 - **Decisión:** continuar solo offline/mock y read-only. No ejecutar flujos que disparen reservas, miembros, pagos guardados, formularios, tareas o notificaciones. Solicitar a Wix/proveedor neutralización soportada; repetir inventario y demostrar aislamiento antes de Runtime/E2E.
 - Evidencia: docs/audits/2026-11-14-qa-automations-isolation.md y docs/milestones/2026-11-14-qa-offline-fixtures-complete-runtime-isolation-blocked.md.
 
