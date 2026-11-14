@@ -134,7 +134,7 @@ describe("accounting ledger writer", () => {
       .sort((a, b) => new Date(a.recordTimestamp).getTime() - new Date(b.recordTimestamp).getTime());
     assert.equal(rows.length, 4);
     for (let index = 1; index < rows.length; index += 1) {
-      assert.equal(rows[index].previousRecordHash, rows[index - 1].recordHash);
+      assert.equal(rows[index].previousRecordHash, rows[index - 1].hash);
     }
   });
 });
@@ -171,7 +171,7 @@ it("ACC-LEDGER-09 rejects replay when a persisted record hash does not match its
   const first = await appendAccountingEntry(payload, "trace-acc-009");
   assert.equal(first.status, "SUCCESS");
   const rows = wixDataMock._store.get(ACCOUNTING_COL);
-  rows[0].recordHash = "f".repeat(64);
+  rows[0].hash = "f".repeat(64);
 
   const replay = await appendAccountingEntry(payload, "trace-acc-009-replay");
   assert.equal(replay.status, "ERROR");
