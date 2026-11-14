@@ -17,7 +17,7 @@
 - **Seguridad:** el estado Wix `Published` y el dominio personalizado son metadatos de publicación; no cambian la clasificación funcional del sitio como QA ni acreditan actividad real. Toda operación de prueba debe seguir siendo sintética y no producir efectos externos.
 - **No usar:** identificadores de sitios anteriores, sitios auxiliares o entornos de terceros como destino alternativo de QA. Las designaciones anteriores quedan supersedidas y no son operativas.
 
-**Estado de evidencia:** la finalidad QA, ausencia de actividad real, datos sintéticos, identidad del cliente de prueba y pasarela desconectada son declaraciones expresas del propietario. El contexto Wix confirma el Site ID, URL, estado Published y aplicaciones instaladas. La consulta oficial Wix Automations V2 confirma 150 automatizaciones: 7 ACTIVE y 143 INACTIVE; las 10 activas son preinstaladas y están bloqueadas por settings.readonly o settings.disableStatusChange, varias con acciones de email/notificación. No se ha demostrado neutralización runtime de esos efectos. Por ello, la declaración de comunicaciones desactivadas no se considera técnicamente verificada y Runtime/E2E permanece bloqueado.
+**Estado de evidencia:** la finalidad QA, ausencia de actividad real, datos sintéticos, identidad del cliente de prueba y pasarela desconectada son declaraciones expresas del propietario. El contexto Wix confirma el Site ID, URL, estado Published y aplicaciones instaladas. La consulta oficial Wix Automations V2 confirma 150 automatizaciones: 7 ACTIVE y 143 INACTIVE; las 7 activas son preinstaladas y están bloqueadas por settings.readonly o settings.disableStatusChange, varias con acciones de email/notificación. No se ha demostrado neutralización runtime de esos efectos. Por ello, la declaración de comunicaciones desactivadas no se considera técnicamente verificada y Runtime/E2E permanece bloqueado.
 
 **Regla de precedencia:** este documento es la referencia única de identidad y clasificación del entorno. Si otra documentación identifica un QA distinto, denomina este sitio producción o propone un QA externo, esa referencia queda supersedida por esta SSOT. Los informes históricos conservan su valor como evidencia de lo que se observó en su fecha, pero no definen el entorno vigente.
 
@@ -36,7 +36,7 @@ PR #379 integrada en main mediante squash commit 27348a20bfb913fde43761d4c92dd46
 
 ## Bloqueo vigente — automatizaciones Wix activas
 
-La consulta read-only de Wix Automations V2 devolvió 150 automatizaciones: 7 ACTIVE, 143 INACTIVE, 0 archivadas. Las diez activas son preinstaladas y todas están bloqueadas por settings.readonly o settings.disableStatusChange. Varias ejecutan acciones de email/notificación. No se modificó ninguna.
+La consulta read-only de Wix Automations V2 devolvió 150 automatizaciones: 7 ACTIVE, 143 INACTIVE, 0 archivadas. Las siete activas son preinstaladas y todas están bloqueadas por settings.readonly o settings.disableStatusChange. Varias ejecutan acciones de email/notificación. No se modificó ninguna.
 
 Ver auditoría read-only de automatizaciones en docs/audits/2026-11-14-qa-automations-isolation.md. Los flujos que puedan disparar esos triggers quedan bloqueados para Runtime/E2E hasta neutralización soportada por Wix/proveedor y nueva lectura de verificación. No sortear locks ni desinstalar apps a ciegas.
 
