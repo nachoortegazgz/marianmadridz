@@ -31,7 +31,7 @@ Se ha incorporado un simulador TPV sintético puro, sin persistencia ni llamadas
 
 **Decisión del propietario:** el Site ID `188bed94-177c-4bc9-a9f0-35080d874f3e` es el único entorno QA del proyecto. No existe otro sitio QA ni un QA externo designado. El cliente sintético canónico es Nacho Pitt (`nachoortegazgz@gmail.com`) y la pasarela está desconectada.
 
-**Estado técnico:** el inventario CMS QA está documentado en `docs/audits/2026-11-14-current-site-cms-normalization.md` (23 colecciones: 15 NATIVE y 8 WIX_APP). El contexto Wix disponible confirma el sitio QA designado y sus metadatos técnicos. Esto no cuestiona la decisión SSOT del propietario ni cambia el destino de trabajo; representa una limitación técnica del conector. El acceso runtime y el aislamiento de todas las integraciones no están verificados. No se han ejecutado pruebas Wix Runtime/E2E ni se ha usado producción como sustituto.
+**Estado técnico:** existe un inventario CMS histórico en `docs/audits/2026-11-14-current-site-cms-normalization.md`, pero sus 23 colecciones y esquemas no están revalidados contra el sitio QA vigente. Repetir lectura CMS de solo lectura antes de escrituras o migraciones. GetSiteContext confirma el sitio QA y sus metadatos; no certifica aislamiento de todas las integraciones ni validación runtime/E2E. No se han ejecutado pruebas Wix Runtime/E2E.
 
 **Trabajo en curso:** auditoría y limpieza de código/documentación, fixtures sintéticos, mocks offline de pagos y comunicaciones, pruebas automatizadas, CI, correcciones en ramas/PR y registro de evidencias. No esperar a resolver el conector para completar H1-H3. El adaptador de pago mock no debe realizar llamadas de red ni equivaler a una operación real.
 
