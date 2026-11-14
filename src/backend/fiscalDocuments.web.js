@@ -257,7 +257,7 @@ function _toBase64(text) {
 }
 
 // =============================================================================
-// BLOQUE 1b - HELPERS DE GESTOR (MapaStaff)
+// BLOQUE 1b - HELPERS DE GESTOR (DatosFiscales)
 // =============================================================================
 
 function _isGestorRecordType(record) {
@@ -290,9 +290,9 @@ function _extractGestorFromRecord(record) {
     return {
       id: String(record._id),
       email,
-      name: _safeTrim(record.name || record.nombre || record.gestorName || record.legalName || ""),
+      name: _safeTrim(record.name || record.gestorName || record.legalName || ""),
       label:
-        _safeTrim(record.label || record.name || record.nombre || record.gestorName || record.legalName) ||
+        _safeTrim(record.label || record.name || record.gestorName || record.legalName) ||
         email,
       nif: _safeTrim(record.nif || record.gestorNif || "") || null,
       phone: _safeTrim(record.phone || "") || null,
@@ -307,9 +307,9 @@ function _extractGestorFromRecord(record) {
     return {
       id: `${record._id}#gestor`,
       email: embeddedEmail,
-      name: _safeTrim(record.gestorName || record.gestorNombre || ""),
+      name: _safeTrim(record.gestorName || ""),
       label:
-        _safeTrim(record.gestorName || record.gestorNombre) || embeddedEmail,
+        _safeTrim(record.gestorName) || embeddedEmail,
       nif: _safeTrim(record.gestorNif) || null,
       phone: _safeTrim(record.phone || "") || null,
       address: _safeTrim(record.address || "") || null,
@@ -1044,7 +1044,7 @@ export const downloadManagerPackageVersion = webMethod(
 );
 
 // =============================================================================
-// BLOQUE 6 - DESTINATARIOS DE GESTORIA (via MapaStaff)
+// BLOQUE 6 - DESTINATARIOS DE GESTORIA (via DatosFiscales)
 // =============================================================================
 
 export const listAccountantRecipients = webMethod(
@@ -1123,9 +1123,9 @@ async function _resolveRecipientById(recipientId) {
       return {
         id: raw,
         email,
-        name: _safeTrim(record.gestorName || record.gestorNombre || ""),
+        name: _safeTrim(record.gestorName || ""),
         label:
-          _safeTrim(record.gestorName || record.gestorNombre) || email,
+          _safeTrim(record.gestorName) || email,
         nif: _safeTrim(record.gestorNif) || null,
         phone: _safeTrim(record.phone || "") || null,
         address: _safeTrim(record.address || "") || null,
@@ -1252,7 +1252,7 @@ export const sendManagerPackageToAccountant = webMethod(
           },
         };
       }
-      if (!recipient?.email) return { status: "ERROR", data: null, error: { code: "RECIPIENT_NOT_FOUND", message: "The accountant recipient is not configured in MapaStaff." } };
+      if (!recipient?.email) return { status: "ERROR", data: null, error: { code: "RECIPIENT_NOT_FOUND", message: "The accountant recipient is not configured in DatosFiscales." } };
 
       const periodType = _safeTrim(doc.periodType || "QUARTERLY").toUpperCase();
       const year = Number(doc.fiscalYear);
@@ -1352,7 +1352,7 @@ export const sendSpecificDocumentToAccountant = webMethod(
           error: {
             code: "RECIPIENT_NOT_FOUND",
             message:
-              "El destinatario no existe o no tiene email configurado en MapaStaff",
+              "El destinatario no existe o no tiene email configurado en DatosFiscales",
           },
         };
       }
