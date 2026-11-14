@@ -1160,7 +1160,7 @@ async function _dispatchEmailViaResend({
 }) {
   if (!areAllowedEmailRecipients(to)) {
     throw Object.assign(
-      new Error("Email recipient is outside the authorized QA allowlist."),
+      new Error("Email recipient is outside the configured recipient allowlist."),
       { code: "EMAIL_RECIPIENT_NOT_ALLOWED" }
     );
   }
