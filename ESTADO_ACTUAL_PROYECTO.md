@@ -17,21 +17,23 @@
 > Este bloque prevalece sobre los estados históricos posteriores e inferiores del documento. El usuario/propietario es la SSOT de negocio y gobierno. Durante desarrollo y QA se pausa append-only y toda prohibición genérica de editar/eliminar registros, individual o masiva, hasta instrucción expresa del usuario para restaurar las protecciones antes del despliegue. Se mantienen controles de identidad, permisos, validación y seguridad no vinculados a la inmutabilidad.
 
 - **Declaración del usuario:** código integrado y publicado en Wix.
-- **Git verificado en este corte:** main=c7bd27faaba833d816e77be56183257393f1aa48; PR #344 y PR #345 están fusionados. La integración en Git está verificada; la publicación Wix es declarada por el usuario, sin vínculo técnico acreditado entre runtime y SHA.
+- **Git verificado en este corte:** main=b68e4e048ce5fc1c022fc6ffc2643d5983972107; PR #344, #345 y #346 están fusionados. La ampliación QA de mutaciones está integrada en Git; su publicación Wix sigue pendiente.
 - **Runtime:** no se ha obtenido identificador de release que vincule el runtime Wix con un SHA. La declaración de publicación se conserva como declaración del propietario.
 - **Mutabilidad:** PR #346 está fusionado en main. CI completo validado: 68 suites/627 pruebas; Layer 1 296, Layer 2 246; contratos SDK, ESLint y Gitleaks correctos. La política está aplicada en el código de Git, no en el runtime Wix hasta publicación autorizada.
 - **Restauración:** no automática. Solo por instrucción expresa del usuario para preparar el despliegue.
 
-# Addendum de estado — 2026-11-14
+# Registro histórico — Addendum TEC-033 (2026-11-14)
+
+> Este bloque describe el estado anterior a TEC-037. Las restricciones de mutación individual/masiva, el alcance limitado de TEC-033 y la instrucción de no fusionar quedan sustituidos por la política QA_RECORD_MUTATIONS_ENABLED integrada en main. Los datos históricos de CMS/permisos se conservan como evidencia del corte, no como política vigente.
 
 Rama de trabajo `chore/temporary-append-only-mutation-window`; no representa un despliegue ni una publicación.
 
-- **Mutabilidad QA:** TEC-033 está habilitada solo en esta rama para update/remove individual de los ledgers enumerados; bulk sigue bloqueado. Los gates de writers fiscales/contables y simulación permanecen false.
+- **Mutabilidad en el corte histórico:** TEC-033 permitía update/remove individual en ledgers seleccionados; bulk estaba bloqueado. Estado sustituido por TEC-037, que habilita update/remove individual y masivo en CMS propias del proyecto.
 - **CMS live:** inventario de 42 colecciones (13 NATIVE y 29 WIX_APP). Política temporal autorizada: `itemRead=ANYONE` en las 13 NATIVE; permisos de escritura preservados. Las 29 WIX_APP mantienen permisos fijados por sus aplicaciones (23 ANYONE y 6 con restricciones de aplicación). La lectura pública expone potencialmente datos fiscales, contables, laborales, de clientes y de pagos. No cargar datos reales sensibles durante desarrollo. Revertir antes de despliegue. Esquema `CajaActual`: revisión 64, 59 campos personalizados + 4 de sistema; detalle en `DICCIONARIO_DATOS_CMS.md` §3.1.
 - **Limpieza:** se eliminaron dos fichajes sintéticos de `RegistrosHorariosStaff` identificados con `meta.synthetic=true` y `doNotImportToProduction=true`; readback 0 registros. No se borró ningún registro económico, contable o laboral real.
 - **Colecciones:** `MovimientosCaja` 0 elementos, `LibroAsientosContablesDetalle` 0, `HistoricoCierresZ` 0, `PaquetesGestoria` 0, `ControlOperativo` 3. `MovimientosInventario` no aparece en el inventario live actual.
 - **Código:** backend/fixtures de esta rama alineados con los nombres nuevos; no existe aún WebMethod de apertura que persista saldos iniciales. CI completo, Wix Local Editor y E2E pendientes.
-- **Despliegue:** no publicar ni fusionar mientras TEC-033 esté habilitada. **Desfase de despliegue:** el runtime Published no está acreditado con este contrato ni con esta rama. El backend/DTO actualizado existe solo en Git; no se ha desplegado. Aunque Wix Data no aplica el esquema como validación estricta de cada payload, el comportamiento del código publicado frente al esquema nuevo no se ha probado. No ejecutar operaciones de caja en live hasta completar CI, validación en QA aislado y despliegue autorizado.
+- **Despliegue en aquel corte:** no publicar ni fusionar mientras TEC-033 estuviera habilitada. Esta condición histórica quedó sustituida por TEC-037; la ampliación QA integrada en main aún no se ha publicado en Wix. **Desfase de despliegue:** el runtime Published no está acreditado con este contrato ni con esta rama. El backend/DTO actualizado existe solo en Git; no se ha desplegado. Aunque Wix Data no aplica el esquema como validación estricta de cada payload, el comportamiento del código publicado frente al esquema nuevo no se ha probado. No ejecutar operaciones de caja en live hasta completar CI, validación en QA aislado y despliegue autorizado.
 
 # ADDENDUM DE VIGENCIA — 2026-11-13 (corte live posterior a la publicación declarada)
 
