@@ -2,6 +2,9 @@
 
 ---
 
+
+> **Validez del inventario:** los snapshots de CMS, catálogo y aplicaciones que aparecen en el cuerpo de este documento son históricos. La SSOT actual designa `188bed94-177c-4bc9-a9f0-35080d874f3e` como único QA, pero no demuestra que esos recuentos o esquemas pertenezcan al corte actual de ese Site ID. No usarlos como baseline para escrituras, migraciones o E2E hasta repetir una lectura de solo lectura contra el sitio vigente.
+
 > **Estado vigente:** el único sitio QA es `188bed94-177c-4bc9-a9f0-35080d874f3e`. GetSiteContext consultado el 2026-11-14 confirma URL `https://www.marianmadrid.es/`, estado Published, dominio personalizado, Wix Editor y Velo habilitado. El propietario confirma que el sitio nunca ha tenido actividad real, que los datos son sintéticos y que la pasarela está desconectada.
 
 # Compatibilidad de plataforma Wix — corte 2026-11-14
