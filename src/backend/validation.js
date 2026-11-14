@@ -493,33 +493,3 @@ export function isExplicitSimulationLedgerRecord(item) {
         previousRecordHash === "SIMULATED_PREVIOUS_HASH" ||
         recordHash === "SIMULATED_DETAIL_HASH";
 }
-
-
-/**
- * Valida la identidad fiscal de terceros almacenados en MapaStaff.
- * No depende de una colección DatosFiscales, retirada del CMS live.
- */
-export function assertMapaStaffFiscalIdentity(item) {
-    if (!item || typeof item !== "object" || Array.isArray(item)) {
-        throw new Error("SCHEMA_VIOLATION: MapaStaff fiscal identity must be an object");
-    }
-
-    const taxId = String(item.taxId ?? "").trim();
-    const legalName = String(item.legalName ?? "").trim();
-    const thirdPartyType = String(item.thirdPartyType ?? "").trim();
-
-    if (taxId && !isValidNifOrEuVat(taxId)) {
-        throw new Error("SCHEMA_VIOLATION: MapaStaff.taxId must be valid NIF/NIE/CIF/VAT-UE");
-    }
-    if (!taxId && item.taxId !== undefined && item.taxId !== null && item.taxId !== "") {
-        throw new Error("SCHEMA_VIOLATION: MapaStaff.taxId cannot be empty");
-    }
-    if (!legalName) {
-        throw new Error("SCHEMA_VIOLATION: MapaStaff.legalName is required");
-    }
-    if (thirdPartyType && !Object.values(THIRD_PARTY_TYPE).includes(thirdPartyType.toUpperCase())) {
-        throw new Error("SCHEMA_VIOLATION: MapaStaff.thirdPartyType is invalid");
-    }
-
-    return true;
-}
