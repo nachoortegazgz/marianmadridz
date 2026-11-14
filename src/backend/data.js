@@ -10,6 +10,7 @@ STANDARDS: G10 ASCII Strict. Cero suppressAuth. Historical fields are read-only;
 */
 
 import {
+    BUSINESS_COLLECTIONS,
     CATALOG_ENTRY_TYPE,
     FISCAL_ROLE,
     MOVEMENT_HISTORICAL_READ_ALIASES,
@@ -18,7 +19,7 @@ import {
     APPEND_ONLY_MUTATION_WINDOW,
     ISOLATED_SITE_RECORD_MUTATIONS_ENABLED,
 } from "backend/internalConfig";
-import { assertCitasF2, assertControlOperativo, assertCanonicalControlFields, assertRegistrosHorariosStaff, assertMapaStaffFiscalIdentity, assertMapaStaffRecord, isValidNifOrEuVat as _isValidNifOrEuVat } from "backend/validation";
+import { assertCitasF2, assertControlOperativo, assertCanonicalControlFields, assertRegistrosHorariosStaff, assertMapaStaffRecord, assertDatosFiscalesRecord } from "backend/validation";
 import { CONSISTENCY, getItem } from "backend/dataAccess";
 
 import { logger } from "backend/logger";
@@ -226,10 +227,6 @@ const ALLOWED_Z_UPDATE_FIELDS = new Set([
 ]);
 
 const LEDGER_SCHEMA_VERSION_AEAT = "LEDGER_V5_FISCAL";
-
-const VALID_THIRD_PARTY_TYPES = new Set([
-    "CLIENTE", "PROVEEDOR", "STAFF", "AAPP", "MIXTO", "EMISOR",
-]);
 
 const VALID_ITEM_NATURES = new Set([
     "SERVICIO_PROPIO", "PRODUCTO_VENTA", "PRODUCTO_USO", "GASTO_FIJO",
@@ -746,138 +743,44 @@ function _validateServiciosCatalogoSchema(item = {}) {
 }
 
 // =============================================================================
-// BLOQUE 11 - MAESTRO MapaStaff
+// BLOQUE 11 - MapaStaff: mapping to native Wix Bookings identities
 // =============================================================================
 
 export function MapaStaff_beforeInsert(item) {
-    if (!item || typeof item !== "object") return item;
-
-    const recordTypeEarly = _safeTrim(item.recordType).toUpperCase();
-    if (recordTypeEarly === "STAFF") return assertMapaStaffRecord(item) && item;
-    if (recordTypeEarly === "GESTORIA") return assertMapaStaffRecord(item) && item;
-    if (recordTypeEarly === "CONFIG_SISTEMA") return _applyConfigSistemaRules(item);
-    if (recordTypeEarly !== "TERCERO") _schemaError("recordType invalido para MapaStaff");
-
-    // Normalize input aliases and remove them before persisting physical CMS keys.
-    if (!item.taxId && item.nifCif) item.taxId = item.nifCif;
-    if (!item.legalName && item.razonSocial) item.legalName = item.razonSocial;
-    if (!item.thirdPartyType && item.tipoTercero) item.thirdPartyType = item.tipoTercero;
-    delete item.nifCif;
-    delete item.razonSocial;
-    delete item.tipoTercero;
-
-    const taxId = _safeTrim(item.taxId);
-    if (!taxId || !_isValidNifOrEuVat(taxId)) _schemaError("taxId obligatorio y valido (espanol o VAT UE)");
-    if (!_safeTrim(item.legalName)) _schemaError("legalName obligatoria");
-    _assertMapaStaffVersionAndTrace(item);
-
-    const type = _safeTrim(item.thirdPartyType).toUpperCase();
-    if (!type || !VALID_THIRD_PARTY_TYPES.has(type)) {
-        _schemaError("thirdPartyType invalido (CLIENTE, PROVEEDOR, STAFF, AAPP, MIXTO, EMISOR)");
-    }
-    assertMapaStaffFiscalIdentity(item);
-    return item;
+    return assertMapaStaffRecord(item) && item;
 }
 
 export function MapaStaff_beforeUpdate(item) {
-    if (!item || typeof item !== "object") return item;
-    const recordType = _safeTrim(item.recordType).toUpperCase();
-    if (recordType === "STAFF" || recordType === "GESTORIA") return assertMapaStaffRecord(item) && item;
-    if (recordType === "CONFIG_SISTEMA") return _applyConfigSistemaRules(item);
-    if (recordType !== "TERCERO") _schemaError("recordType invalido para MapaStaff");
-
-    if (!item.taxId && item.nifCif) item.taxId = item.nifCif;
-    if (!item.legalName && item.razonSocial) item.legalName = item.razonSocial;
-    if (!item.thirdPartyType && item.tipoTercero) item.thirdPartyType = item.tipoTercero;
-    delete item.nifCif;
-    delete item.razonSocial;
-    delete item.tipoTercero;
-    for (const field of MAPA_STAFF_FISCAL_FORBIDDEN_FIELDS) {
-        if (item[field] !== undefined && item[field] !== null) {
-            _schemaError(`Campo "${field}" no permitido en registros fiscales MapaStaff`);
-        }
-    }
-    const taxId = _safeTrim(item.taxId);
-    if (taxId && !_isValidNifOrEuVat(taxId)) _schemaError("taxId invalido en update");
-    _assertMapaStaffVersionAndTrace(item);
-    for (const field of ["verifactuEnabled", "tipoUsoPosibleMultiOT", "indicadorMultiplesOT"]) {
-        if (item[field] !== undefined && item[field] !== null && typeof item[field] !== "boolean") {
-            _schemaError(`${field} debe ser BOOLEAN según el esquema CMS`);
-        }
-    }
-    assertMapaStaffFiscalIdentity(item);
-    return item;
+    return assertMapaStaffRecord(item, { partial: true }) && item;
 }
 
 export function MapaStaff_beforeRemove(item) {
-    if (ISOLATED_SITE_RECORD_MUTATIONS_ENABLED) return item;
+    // MapaStaff contains staff mappings only; it has no fiscal singleton.
+    return item;
+}
+
+// =============================================================================
+// BLOQUE 12 - DatosFiscales: fiscal master
+// =============================================================================
+
+export function DatosFiscales_beforeInsert(item) {
+    return assertDatosFiscalesRecord(item) && item;
+}
+
+export async function DatosFiscales_beforeUpdate(item) {
     const id = _safeTrim(item?._id);
-    const recType = _safeTrim(item?.recordType).toUpperCase();
-    if (id === "CONFIG_SISTEMA_FISCAL" || recType === "CONFIG_SISTEMA") {
-        _fiscalError("SINGLETON_PROTECTED: No se puede eliminar el singleton CONFIG_SISTEMA de MapaStaff");
-    }
-    return item;
-}
+    if (!id) _schemaError("DatosFiscales update requires _id");
 
-// =============================================================================
-// BLOQUE 14 - MAESTRO MapaStaff: singleton CONFIG_SISTEMA (SSOT V2, v5011)
-// =============================================================================
+    const original = await getItem(
+        BUSINESS_COLLECTIONS.DATOS_FISCALES,
+        id,
+        CONSISTENCY.STRONG
+    );
+    if (!original) _schemaError("DatosFiscales update target not found");
 
-const MAPA_STAFF_FISCAL_FORBIDDEN_FIELDS = [
-    "producerTaxId", "producerLegalName", "computerSystemId",
-    "installationNumber", "possibleUseMultiOT", "possibleUseOnlyVerifactu",
-    "multipleOTIndicator", "verifactuStartDate", "nifProductor",
-    "nombreRazonProductor", "idSistemaInformatico", "sistemaInformaticoNombre",
-    "numeroInstalacion", "tipoUsoPosibleSoloVerifactu", "bookingsResourceId",
-    "resourceIdBookings", "memberId", "registrationTraceId", "active",
-];
-
-function _assertMapaStaffVersionAndTrace(item) {
-    if (Number(item.schemaVersion) !== 1) {
-        _schemaError("schemaVersion debe ser 1 en MapaStaff");
-    }
-    if (!_safeTrim(item.traceId)) {
-        _schemaError("traceId obligatorio en MapaStaff");
-    }
-}
-
-function _applyConfigSistemaRules(item) {
-    for (const field of MAPA_STAFF_FISCAL_FORBIDDEN_FIELDS) {
-        if (item[field] !== undefined && item[field] !== null) {
-            _schemaError(`Campo "${field}" no permitido en registros fiscales MapaStaff; use taxId/legalName y los campos declarados`);
-        }
-    }
-    if (!item._id) item._id = "CONFIG_SISTEMA_FISCAL";
-    if (_safeTrim(item._id) !== "CONFIG_SISTEMA_FISCAL") {
-        _schemaError("CONFIG_SISTEMA debe usar el ID singleton CONFIG_SISTEMA_FISCAL");
-    }
-    const taxId = _safeTrim(item.taxId);
-    if (taxId && !_isValidNifOrEuVat(taxId)) {
-        _schemaError("taxId invalido en CONFIG_SISTEMA");
-    }
-    if (item.legalName != null && item.legalName !== "" && !_safeTrim(item.legalName)) {
-        _schemaError("legalName debe ser texto no vacio cuando se informa");
-    }
-    if (item.thirdPartyType != null && _safeTrim(item.thirdPartyType) !== "") {
-        _schemaError("CONFIG_SISTEMA no utiliza thirdPartyType; debe ser null");
-    }
-    _assertMapaStaffVersionAndTrace(item);
-    for (const field of ["verifactuEnabled", "tipoUsoPosibleMultiOT", "indicadorMultiplesOT"]) {
-        if (item[field] !== undefined && item[field] !== null && typeof item[field] !== "boolean") {
-            _schemaError(`${field} debe ser BOOLEAN según el esquema CMS`);
-        }
-    }
-    if (item.fechaInicioVerifactu != null && item.fechaInicioVerifactu !== "") {
-        const value = item.fechaInicioVerifactu instanceof Date
-            ? item.fechaInicioVerifactu.toISOString().slice(0, 10)
-            : _safeTrim(item.fechaInicioVerifactu);
-        if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(value) ||
-            Number.isNaN(Date.parse(value + "T00:00:00.000Z"))) {
-            _schemaError("fechaInicioVerifactu debe ser DATE ISO YYYY-MM-DD");
-        }
-        item.fechaInicioVerifactu = value;
-    }
-    return item;
+    const normalized = { ...original, ...item };
+    assertDatosFiscalesRecord(normalized);
+    return normalized;
 }
 
 // =============================================================================
