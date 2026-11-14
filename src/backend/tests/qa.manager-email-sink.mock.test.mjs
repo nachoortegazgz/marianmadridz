@@ -17,7 +17,7 @@ function validMessage(overrides = {}) {
   return {
     to: QA_CONFIG.sinkRecipient,
     subject: 'Paquete QA - prueba de gestoría',
-    text: 'Cliente: Cliente Prueba Uno; email: cliente.prueba.001@example.test; paquete sintético de prueba.',
+    text: 'Cliente: Nacho Pitt; email: nacho.pitt@example.test; paquete sintético de prueba.',
     traceId: 'trace-qa-manager-1',
     packageId: 'qa-package-1',
     snapshotHash: 'a'.repeat(64),
@@ -55,13 +55,13 @@ test('QA-MAIL-02 synthetic client data is delivered only to the in-memory manage
   assert.match(result.messageId, /^qa_mail_[a-f0-9]{24}$/);
 
   const [message] = sink.listMessages();
-  assert.equal(message.client.firstName, 'Cliente');
-  assert.equal(message.client.lastName, 'Prueba Uno');
-  assert.equal(message.client.email, 'cliente.prueba.001@example.test');
+  assert.equal(message.client.firstName, 'Nacho');
+  assert.equal(message.client.lastName, 'Pitt');
+  assert.equal(message.client.email, 'nacho.pitt@example.test');
   assert.equal(message.client.isSynthetic, true);
   assert.equal(message.client.sourceEnvironment, 'TEST');
   assert.equal(message.client.testRunId, QA_TEST_RUN_ID);
-  assert.match(message.text, /Cliente Prueba Uno/);
+  assert.match(message.text, /Nacho Pitt/);
   assert.match(message.text, /cliente\.prueba\.001@example\.test/);
 });
 
