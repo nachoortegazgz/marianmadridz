@@ -189,8 +189,8 @@ it("ACC-LEDGER-10 rejects a locally valid replay chain whose first hash is not a
   const rows = allRows.filter(row => row.journalEntryId === payload.journalEntryId)
     .sort((a, b) => Number(a.sequenceNumber) - Number(b.sequenceNumber));
   rows[0].previousRecordHash = "1".repeat(64);
-  rows[0].recordHash = await hashChain(rows[0].previousRecordHash, hashPayloadFromRow(rows[0]));
-  rows[1].previousRecordHash = rows[0].recordHash;
+  rows[0].hash = await hashChain(rows[0].previousRecordHash, hashPayloadFromRow(rows[0]));
+  rows[1].previousRecordHash = rows[0].hash;
   rows[1].hash = await hashChain(rows[1].previousRecordHash, hashPayloadFromRow(rows[1]));
 
   const replay = await appendAccountingEntry(payload, "trace-acc-010-replay");
