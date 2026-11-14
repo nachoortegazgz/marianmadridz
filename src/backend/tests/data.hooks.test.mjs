@@ -307,7 +307,7 @@ test('HOOK-CONTROL-01 rejects retired ControlOperativo fields on new writes', ()
 });
 
 // -----------------------------------------------------------------------------
-// DatosFiscales — schema físico CMS (rev. 10)
+// MapaStaff — schema físico CMS (rev. 10)
 // -----------------------------------------------------------------------------
 
 test('HOOK-FISCAL-CONFIG-01 CONFIG_SISTEMA accepts pending fiscal identity without inference', () => {
@@ -322,23 +322,23 @@ test('HOOK-FISCAL-CONFIG-01 CONFIG_SISTEMA accepts pending fiscal identity witho
     schemaVersion: 1,
     traceId: 'trace-config-sistema-001',
   };
-  const inserted = H.DatosFiscales_beforeInsert({ ...config });
+  const inserted = H.MapaStaff_beforeInsert({ ...config });
   assert.equal(inserted._id, 'CONFIG_SISTEMA_FISCAL');
-  assert.doesNotThrow(() => H.DatosFiscales_beforeInsert({ ...config }));
+  assert.doesNotThrow(() => H.MapaStaff_beforeInsert({ ...config }));
   assert.throws(
-    () => H.DatosFiscales_beforeInsert({ ...config, taxId: 'INVALID' }),
+    () => H.MapaStaff_beforeInsert({ ...config, taxId: 'INVALID' }),
     /taxId invalido/
   );
   assert.throws(
-    () => H.DatosFiscales_beforeInsert({ ...config, thirdPartyType: 'EMISOR' }),
+    () => H.MapaStaff_beforeInsert({ ...config, thirdPartyType: 'EMISOR' }),
     /thirdPartyType.*null/
   );
   assert.throws(
-    () => H.DatosFiscales_beforeInsert({ ...config, fechaInicioVerifactu: '01/01/2026' }),
+    () => H.MapaStaff_beforeInsert({ ...config, fechaInicioVerifactu: '01/01/2026' }),
     /DATE ISO/
   );
   assert.throws(
-    () => H.DatosFiscales_beforeInsert({ ...config, nifProductor: 'B12345678' }),
+    () => H.MapaStaff_beforeInsert({ ...config, nifProductor: 'B12345678' }),
     /no existe en el esquema físico/
   );
 });
@@ -352,13 +352,13 @@ test('HOOK-FISCAL-CONFIG-02 third-party fiscal rows require identity, schemaVers
     schemaVersion: 1,
     traceId: 'trace-tercero-001',
   };
-  assert.doesNotThrow(() => H.DatosFiscales_beforeInsert({ ...thirdParty }));
+  assert.doesNotThrow(() => H.MapaStaff_beforeInsert({ ...thirdParty }));
   assert.throws(
-    () => H.DatosFiscales_beforeInsert({ ...thirdParty, traceId: '' }),
+    () => H.MapaStaff_beforeInsert({ ...thirdParty, traceId: '' }),
     /traceId obligatorio/
   );
   assert.throws(
-    () => H.DatosFiscales_beforeInsert({ ...thirdParty, schemaVersion: 2 }),
+    () => H.MapaStaff_beforeInsert({ ...thirdParty, schemaVersion: 2 }),
     /schemaVersion debe ser 1/
   );
 });
@@ -372,7 +372,7 @@ test('HOOK-FISCAL-CONFIG-03 legacy aliases are normalized and removed before per
     schemaVersion: 1,
     traceId: 'trace-tercero-legacy-001',
   };
-  assert.doesNotThrow(() => H.DatosFiscales_beforeInsert(item));
+  assert.doesNotThrow(() => H.MapaStaff_beforeInsert(item));
   assert.equal(item.taxId, 'B12345678');
   assert.equal(item.legalName, 'Proveedor');
   assert.equal(item.thirdPartyType, 'PROVEEDOR');
