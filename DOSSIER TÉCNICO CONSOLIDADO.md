@@ -3,9 +3,10 @@
 - Sitio único de trabajo: 50b39f33-e753-4331-ab35-b2ed43dc97f7. Es un banco de pruebas aislado, sin actividad real, según declaración expresa del propietario. Los registros se tratan como sintéticos.
 - Plataforma: Wix Editor Classic + Velo. No se mantiene una comparación operativa con otro sitio.
 - CMS verificado: 23 colecciones (15 NATIVE, 8 WIX_APP), 524 campos físicos NATIVE. El manifiesto vigente está en DICCIONARIO_DATOS_CMS.md y docs/audits/2026-11-14-current-site-cms-normalization.md.
-- MapaStaff es exclusivamente el mapa de identidad de personal: staffMemberId, resourceId, scheduleId y memberId. No contiene recordType ni campos fiscales.
+- MapaStaff es exclusivamente el mapa de identidad de personal: staffMemberId, resourceId, scheduleId y memberId. thirdPartyId es TEXT opaco, no es GUID ni coincide con DatosFiscales._id y no tiene consumidor localizado. No contiene recordType ni campos fiscales.
 - DatosFiscales es el maestro fiscal y de terceros. No declara traceId ni schemaVersion; fechaInicioVerifactu es TEXT. No existe CONFIG_SISTEMA con identidad fiscal oficial verificada.
 - ComplementosCatalogo usa _id como identidad CMS; addonId queda como espejo físico requerido por el esquema actual. addOnId se mantiene como campo de transporte Bookings.
+- CajaActual: operationDate DATE, openingAmount NUMBER, sequenceCounters OBJECT; Bizum presencial se agrega en otherAmount. cashRegisterStatus=SIMULACION; isOpen=true no gobierna la sesión.
 - La rama fix/current-site-cms-contract-alignment separa validadores/hooks, migra eventLog.js, fiscalAggregator.web.js y fiscalDocuments.web.js a DatosFiscales, alinea CajaActual y actualiza pruebas/documentación.
 - La rama aún requiere rebase, CI completa sobre HEAD, revisión del diff y pruebas Wix Editor/E2E sintéticas. PR #370 no es mergeable en su estado actual. No se ha mutado el CMS ni se ha publicado código Wix.
 - Wix Stores Catalog V3 sigue siendo la autoridad prevista del inventario comercial; InventarioStockVenta y MovimientosInventario permanecen como colecciones físicas legacy sin writers activos.
