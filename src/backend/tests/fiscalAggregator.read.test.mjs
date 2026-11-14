@@ -89,7 +89,7 @@ test('TAXID-01 business tax id reads DatosFiscales CONFIG_SISTEMA taxId', async 
 
 test('TAXID-02 historical DatosFiscales EMISOR adapter returns taxId with warn when no config row', async () => {
   wixDataMock._reset();
-  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.MAPA_STAFF, [
+  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.DATOS_FISCALES, [
     { recordType: IC.RECORD_TYPE.TERCERO, thirdPartyType: 'EMISOR', taxId: 'b99999999' },
   ]);
   const warns = [];
@@ -225,7 +225,7 @@ test('FISCAL-PAYMENT-01 transfer and Wix Payments use distinct payment buckets',
 
 test('FISCAL-SMOKE-01 explicit smoke-test movements are excluded from quarterly totals', async () => {
   wixDataMock._reset();
-  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.MAPA_STAFF, [
+  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.DATOS_FISCALES, [
     { recordType: IC.RECORD_TYPE.CONFIG_SISTEMA, taxId: 'B12345674', legalName: 'Marian Madrid', thirdPartyType: 'EMISOR' },
   ]);
   wixDataMock._seed(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA, [
