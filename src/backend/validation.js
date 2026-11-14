@@ -206,7 +206,7 @@ export function assertDatosFiscalesRecord(item, { partial = false } = {}) {
 
     for (const field of ["email", "gestorEmail"]) {
         const value = String(item[field] ?? "").trim();
-        if (value && !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(value)) {
+        if (value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
             throw new Error(`SCHEMA_VIOLATION: DatosFiscales.${field} must be a valid email`);
         }
     }
@@ -235,7 +235,7 @@ export function assertDatosFiscalesRecord(item, { partial = false } = {}) {
 
     if (item.fechaInicioVerifactu != null && item.fechaInicioVerifactu !== "") {
         const date = String(item.fechaInicioVerifactu).trim();
-        if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(date) ||
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(date) ||
             Number.isNaN(Date.parse(date + "T00:00:00.000Z"))) {
             throw new Error("SCHEMA_VIOLATION: DatosFiscales.fechaInicioVerifactu must be TEXT ISO YYYY-MM-DD");
         }
