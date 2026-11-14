@@ -263,14 +263,16 @@ Para los movimientos presenciales manuales nuevos, backend asigna `recordSource=
 **Advertencia de cumplimiento:** esta excepción de desarrollo no modifica ni suspende obligaciones legales de integridad, trazabilidad y conservación de registros fiscales, contables o laborales. No usarla para alterar o eliminar registros reales sujetos a conservación.
 
 
-### TEC-035 — recreación de CajaActual (2026-11-14)
+### TEC-034 — alineación de maestros DatosFiscales y MapaStaff (2026-11-14)
 
-Se recrea en Wix CMS la colección `CajaActual` porque no aparecía en el inventario live anterior. Es `NATIVE`, revisión 1, displayName `CAJA_ACTUAL`, permisos ADMIN para lectura e inserción/actualización/borrado. Se crea un único singleton lógico `CAJA_PRINCIPAL` cerrado, con saldos y contadores a cero, `sequenceCounters={}`, fecha operativa Europe/Madrid y traceId UUID v4. No se abre sesión ni se inventa efectivo inicial.
+**CMS live, verificado por Wix Data API:**
+- `DatosFiscales` revisión 19: añadidos `commercialName`, `postalCode`, `province`, `schemaVersion` y `traceId`; `fechaInicioVerifactu` cambia a tipo `DATE` tras verificar ausencia de valores previos.
+- `MapaStaff` revisión 24: añadido `traceId`; los tres registros mantienen sus IDs y roles, se normaliza `staffName` y se vacía `thirdPartyId` donde no existía vínculo fiscal GUID explícito.
+- La fila existente de DatosFiscales sigue siendo un placeholder QA TERCERO/PROVEEDOR. No se transforma en emisor. No se crea CONFIG_SISTEMA hasta disponer de taxId, legalName y taxRegime oficiales y sincronizar/publicar el guard de backend que evita inferir identidad legal.
+- No se borraron campos heredados ni colecciones. MapaStaff conserva temporalmente staffMemberId/scheduleId/active porque events.js los consume en el fallback de proyección; active queda sujeto a ADR. La relación CMS ServiciosCatalogo_staffMembers permanece.
+- Las tres filas MapaStaff son únicas por memberId y resourceId en el snapshot, pero no existe aún garantía de unicidad frente a escrituras concurrentes; queda pendiente un mecanismo de escritura validado.
+- Los campos heredados de DatosFiscales que siguen consumidos por eventLog (tipoUsoPosibleMultiOT e indicadorMultiplesOT) no se eliminan en esta intervención.
 
-`MovimientosCaja` permanece sin cambios (revisión 78; 0 elementos en el corte). Cada ticket/movimiento sigue siendo fuente en `MovimientosCaja`; `CajaActual` solo proyecta sesión, saldos por medio y estado operativo. La proyección no debe duplicar el ledger, y su reintento se resuelve por ID fuente.
+**Código en main:** hooks y validator permiten CONFIG_SISTEMA incompleto en los campos fiscales no verificados, fijan el ID singleton CONFIG_SISTEMA_FISCAL y exigen schemaVersion/traceId. eventLog persiste schemaVersion/traceId en nuevos terceros y deja de inferir legalName desde el nombre comercial. Sin sincronización/publicación Wix en esta intervención.
 
-Se creó índice único `CajaActual_singletonKey_unique`, estado `ACTIVE` en la lectura posterior; la unicidad de `singletonKey` queda protegida por el índice CMS. Se mantienen checks backend fail-closed para detectar duplicados.
-
-**Recomendaciones registradas:** no admitir pagos mixtos hasta definir `paymentBreakdown`; no usar `lineItems` hasta validar su esquema; separar efectivo físico de tarjeta/Bizum; añadir un futuro `lastMovementId` solo como puntero y con migración coordinada; sustituir progresivamente el array potencialmente ilimitado `sequenceCounters.appliedMovementIds` por idempotencia durable indexada en `ControlOperativo`. Apertura de sesión, saldo inicial y responsables siguen pendientes de un flujo backend autorizado.
-
-No se activaron writers ni se hicieron movimientos reales; no se ejecutó Wix Local Editor/E2E ni publicación.
+**Límites:** los datos fiscales no verificados permanecen vacíos; Veri*Factu sigue desactivado; escritores fiscales/contables siguen fail-closed. Las colecciones numeradas 12–16 no se borran porque el esquema no aporta sus IDs/nombres y no hay correspondencia inequívoca con el inventario live.
