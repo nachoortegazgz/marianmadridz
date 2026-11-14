@@ -135,6 +135,16 @@ export function assertCajaActualRecord(item, { partial = false } = {}) {
     if (item.isOpen != null && typeof item.isOpen !== "boolean") {
         throw new Error("SCHEMA_VIOLATION: CajaActual.isOpen must be BOOLEAN");
     }
+    if (item.operationDate != null && item.operationDate !== "") {
+        const date = String(item.operationDate).trim();
+        const match = /^(\\d{4})-(\\d{2})-(\\d{2})$/.exec(date);
+        const [year, month, day] = match ? match.slice(1).map(Number) : [];
+        const parsed = match ? new Date(Date.UTC(year, month - 1, day)) : null;
+        if (!match || parsed.getUTCFullYear() !== year ||
+            parsed.getUTCMonth() + 1 !== month || parsed.getUTCDate() !== day) {
+            throw new Error("SCHEMA_VIOLATION: CajaActual.operationDate must be a valid DATE YYYY-MM-DD");
+        }
+    }
     if (item.sequenceCounters != null &&
         (typeof item.sequenceCounters !== "object" || Array.isArray(item.sequenceCounters))) {
         throw new Error("SCHEMA_VIOLATION: CajaActual.sequenceCounters must be OBJECT");
