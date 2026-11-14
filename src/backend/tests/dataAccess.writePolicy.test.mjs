@@ -20,10 +20,10 @@ import {
     DATA_ACCESS_WRITE_POLICY,
 } from "backend/internalConfig";
 
-test("isolated-site mutation policy enables update/remove without enabling insert", () => {
-    assert.equal(ISOLATED_SITE_RECORD_MUTATIONS_ENABLED, true);
-    assert.equal(APPEND_ONLY_MUTATION_WINDOW.ENABLED, true);
-    assert.equal(APPEND_ONLY_MUTATION_WINDOW.TEMPORARY, true);
+test("broad isolated-site mutation window is fail-closed until runtime site binding is verified", () => {
+    assert.equal(ISOLATED_SITE_RECORD_MUTATIONS_ENABLED, false);
+    assert.equal(APPEND_ONLY_MUTATION_WINDOW.ENABLED, false);
+    assert.equal(APPEND_ONLY_MUTATION_WINDOW.TEMPORARY, false);
     assert.equal(APPEND_ONLY_MUTATION_WINDOW.RESTORE_BEFORE_REAL_OPERATIONS, true);
 });
 
@@ -100,13 +100,7 @@ test("insert policy rejects unknown fiscal record types", () => {
     }), { code: "CMS_INSERT_FISCAL_RECORD_TYPE_INVALID" });
 });
 
-test("update policy allows mutable state and all append-only ledgers during temporary window", () => {
-    assert.doesNotThrow(() => assertUpdateAllowed(O.CONTROL_OPERATIVO, {
-        _id: "control-1",
-        controlType: T.COMPENSATION,
-        status: "EXECUTED",
-        payload: {},
-    }));
+test("update policy keeps operational projections mutable and append-only ledgers immutable", () => {
     assert.doesNotThrow(() => assertUpdateAllowed(C.CAJA_ACTUAL, {
         _id: "cash-current",
         sequenceCounters: {},
@@ -116,13 +110,10 @@ test("update policy allows mutable state and all append-only ledgers during temp
         bookingId: "synthetic-booking",
         bookingStatus: "CONFIRMED",
     }));
-    assert.doesNotThrow(() => assertUpdateAllowed(C.CITAS_F2, {
+    assert.throws(() => assertUpdateAllowed(C.CITAS_F2, {
         _id: "projection-1",
         bookingStatus: "CONFIRMED",
-    }));
-    assert.throws(() => assertUpdateAllowed(C.MOVIMIENTOS_CAJA, {
-        amount: 1,
-    }), { code: "CMS_UPDATE_ID_REQUIRED" });
+    }), { code: "CMS_UPDATE_BOOKING_ID_REQUIRED" });
     for (const collection of [
         C.MOVIMIENTOS_CAJA,
         C.LIBRO_ASIENTOS_CONTABLES_DETALLE,
@@ -130,19 +121,14 @@ test("update policy allows mutable state and all append-only ledgers during temp
         C.HISTORICO_CIERRES_Z,
         C.PAQUETES_GESTORIA,
     ]) {
-        assert.doesNotThrow(() => assertUpdateAllowed(collection, {
-            _id: "temporary-ledger-row",
-        }));
+        assert.throws(() => assertUpdateAllowed(collection, {
+            _id: "synthetic-ledger-row",
+        }), { code: "CMS_UPDATE_COLLECTION_DENIED" });
     }
-    assert.doesNotThrow(() => assertUpdateAllowed(O.CONTROL_OPERATIVO, {
-        _id: "webhook-1",
-        controlType: T.WEBHOOK_EVENT,
-    }));
     assert.throws(() => assertUpdateAllowed(O.CONTROL_OPERATIVO, {
         controlType: T.SYSTEM_FLAG,
     }), { code: "CMS_UPDATE_ID_REQUIRED" });
 });
-
 test("save policy is limited to DAYS_CACHE and identified CajaActual records", () => {
     assert.doesNotThrow(() => assertSaveAllowed(O.CONTROL_OPERATIVO, {
         _id: "days-cache-1",
@@ -166,7 +152,7 @@ test("save policy is limited to DAYS_CACHE and identified CajaActual records", (
     }), { code: "CMS_SAVE_CONTROL_TYPE_DENIED" });
 });
 
-test("single-item removal allows ledgers during temporary window and keeps ControlOperativo scoped", () => {
+test("single-item removal keeps ControlOperativo scoped and denies append-only ledgers", () => {
     assert.doesNotThrow(() => assertRemoveAllowed(O.CONTROL_OPERATIVO, "cache-1", T.DUAL_CACHE));
     assert.doesNotThrow(() => assertRemoveAllowed(O.CONTROL_OPERATIVO, "token-1", T.DISPLAY_TOKEN));
     assert.doesNotThrow(() => assertRemoveAllowed(O.CONTROL_OPERATIVO, "lock-1", T.SLOT_LOCK));
@@ -180,14 +166,19 @@ test("single-item removal allows ledgers during temporary window and keeps Contr
         C.HISTORICO_CIERRES_Z,
         C.PAQUETES_GESTORIA,
     ]) {
-        assert.doesNotThrow(() => assertRemoveAllowed(collection, "temporary-ledger-row"));
+        assert.throws(() => assertRemoveAllowed(collection, "synthetic-ledger-row"), {
+            code: "CMS_REMOVE_SCOPE_DENIED",
+        });
     }
 });
-
-test("bulk update/remove allow explicit IDs for all project-owned business collections", () => {
+test("bulk update/remove remain disabled while the broad mutation window is closed", () => {
     for (const collection of ISOLATED_SITE_MUTABLE_COLLECTIONS) {
-        assert.doesNotThrow(() => assertBulkUpdateAllowed(collection, [{ _id: "isolated-row-1", value: true }]));
-        assert.doesNotThrow(() => assertBulkRemoveAllowed(collection, ["isolated-row-1"]));
+        assert.throws(() => assertBulkUpdateAllowed(collection, [{ _id: "synthetic-row-1" }]), {
+            code: "CMS_BULK_UPDATE_SCOPE_DENIED",
+        });
+        assert.throws(() => assertBulkRemoveAllowed(collection, ["synthetic-row-1"]), {
+            code: "CMS_BULK_REMOVE_SCOPE_DENIED",
+        });
     }
     assert.throws(() => assertBulkUpdateAllowed(C.CAJA_ACTUAL, [{ value: true }]), {
         code: "CMS_BULK_UPDATE_SCOPE_DENIED",
@@ -195,16 +186,7 @@ test("bulk update/remove allow explicit IDs for all project-owned business colle
     assert.throws(() => assertBulkRemoveAllowed(C.CAJA_ACTUAL, []), {
         code: "CMS_BULK_REMOVE_SCOPE_DENIED",
     });
-    assert.doesNotThrow(() => assertBulkUpdateAllowed("DatosFiscales", [{ _id: "legacy-synthetic-row" }]));
-    assert.doesNotThrow(() => assertBulkRemoveAllowed("DatosFiscales", ["legacy-synthetic-row"]));
-    assert.throws(() => assertBulkUpdateAllowed("WixAppCollection", [{ _id: "isolated-row-1" }]), {
-        code: "CMS_BULK_UPDATE_SCOPE_DENIED",
-    });
-    assert.throws(() => assertBulkRemoveAllowed("WixAppCollection", ["isolated-row-1"]), {
-        code: "CMS_BULK_REMOVE_SCOPE_DENIED",
-    });
 });
-
 test("bulk insert remains disabled during isolated-site mutation window", () => {
     assert.throws(() => assertBulkMutationDisabled("BULK_INSERT"), {
         code: "CMS_BULK_INSERT_DISABLED_NO_APPROVED_CONSUMERS",
