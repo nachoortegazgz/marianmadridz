@@ -110,7 +110,7 @@ export function assertInsertAllowed(collection, item) {
     if (collection === BUSINESS_COLLECTIONS.CITAS_F2 && !item.bookingId) {
         throw _policyError("CMS_INSERT_BOOKING_ID_REQUIRED");
     }
-    if (collection === BUSINESS_COLLECTIONS.MAPA_STAFF &&
+    if (collection === BUSINESS_COLLECTIONS.DATOS_FISCALES &&
         !Object.values(RECORD_TYPE).includes(item.recordType)) {
         throw _policyError("CMS_INSERT_FISCAL_RECORD_TYPE_INVALID");
     }
