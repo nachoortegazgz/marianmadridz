@@ -6,7 +6,7 @@
 
 **Restauración:** esta política no se revierte automáticamente. Solo el usuario puede ordenar la restauración de append-only y de las restricciones de mutación para preparar el despliegue. No publicar a producción basándose únicamente en esta excepción de QA.
 
-**Estado Git/Wix:** PR #344 y PR #345 están integrados en main; merge commit de documentación c7bd27faaba833d816e77be56183257393f1aa48. El usuario declara que la versión anterior está publicada en Wix. Los cambios de esta rama habilitan la política ampliada de mutaciones y aún no están fusionados ni publicados. No se ha acreditado un release Wix por SHA.
+**Estado Git/Wix:** PR #344, PR #345 y PR #346 están integrados en main; HEAD actual b68e4e048ce5fc1c022fc6ffc2643d5983972107. CI de PR #346: Layer 1 23 suites/296 pruebas, Layer 2 18 suites/246 pruebas, regresión completa 68 suites/627 pruebas; SDK contracts, ESLint y Gitleaks correctos. El usuario declara que la versión base anterior está publicada en Wix; la ampliación de mutaciones QA está integrada en Git pero aún no publicada en Wix. No se dispone de release Wix vinculado a SHA.
 
 **CMS maestro:** MapaStaff revisión 36, 42 campos y 5 registros (3 STAFF, 1 TERCERO, 1 GESTORIA). DatosFiscales permanece como colección legacy con un placeholder QA; su retirada requiere verificar runtime y consumidores tras publicar el backend migrado.
 
@@ -14,7 +14,7 @@
 
 ## Addendum obligatorio — estado QA/CMS (2026-11-14)
 
-TEC-033 está activa únicamente en `chore/temporary-append-only-mutation-window`. No publicar ni integrar con `APPEND_ONLY_MUTATION_WINDOW.ENABLED=true`. Bulk sigue bloqueado y los writers fiscales/contables permanecen deshabilitados. Los borrados sintéticos requieren IDs explícitos, evidencia inequívoca de origen QA y readback; nunca usar filtros amplios ni eliminar registros de origen dudoso.
+**HISTÓRICO — TEC-033, sustituida por TEC-037.** Ya no se limita la mutación a update/remove individuales ni se mantiene bulk bloqueado. La política QA actual habilita update/remove individual y masivo en colecciones CMS propias, incluidos ledgers; los IDs deben ser explícitos. Se mantienen la autenticación, autorización, permisos, validaciones, allowlist de inserción y gates funcionales de writers/efectos externos. Solo el usuario ordenará restaurar append-only antes del despliegue.
 
 `CajaActual` live está en revisión 64: 59 campos personalizados + 4 campos de sistema (63 físicos), con datos de sesión, apertura, ticket/conceptos, importes/impuestos, pago, trazabilidad y saldos por medio. `cashRegisterStatus` es el único estado de sesión; `isOpen` no existe en el esquema. El permiso CMS `read=ANYONE` requiere revisión de seguridad antes de almacenar datos reales de cliente. No existe todavía WebMethod de apertura para persistir los saldos iniciales. El esquema y las dependencias por campo están en [DICCIONARIO_DATOS_CMS.md](DICCIONARIO_DATOS_CMS.md) §3.1; el estado de pruebas y despliegue está en [ESTADO_ACTUAL_PROYECTO.md](ESTADO_ACTUAL_PROYECTO.md). **Desfase de despliegue:** el runtime Published no está acreditado con este contrato ni con esta rama. El backend/DTO actualizado existe solo en Git; no se ha desplegado. Aunque Wix Data no aplica el esquema como validación estricta de cada payload, el comportamiento del código publicado frente al esquema nuevo no se ha probado. No ejecutar operaciones de caja en live hasta completar CI, validación en QA aislado y despliegue autorizado.
 
