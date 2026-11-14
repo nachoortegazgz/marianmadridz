@@ -424,6 +424,7 @@ test('CRON-CONTROL-01 purges only terminal transactions and resolved flags after
   wixDataMock._seed(C, [
     { _id: 'tx-completed-old', controlType: IC.CONTROL_TYPE.IDEMPOTENCY, status: 'COMPLETED', _updatedDate: old },
     { _id: 'tx-failed-final-old', controlType: IC.CONTROL_TYPE.IDEMPOTENCY, status: 'FAILED_FINAL', payload: { status: 'FAILED_FINAL' }, _updatedDate: old },
+    { _id: 'tx-payload-only-old', controlType: IC.CONTROL_TYPE.IDEMPOTENCY, payload: { status: 'FAILED_FINAL' }, _updatedDate: old },
     { _id: 'tx-completed-recent', controlType: IC.CONTROL_TYPE.IDEMPOTENCY, status: 'COMPLETED', _updatedDate: recent },
     { _id: 'tx-in-progress-old', controlType: IC.CONTROL_TYPE.IDEMPOTENCY, status: 'IN_PROGRESS', _updatedDate: old },
     { _id: 'tx-retryable-old', controlType: IC.CONTROL_TYPE.IDEMPOTENCY, status: 'FAILED_RETRYABLE', _updatedDate: old },
@@ -453,6 +454,7 @@ test('CRON-CONTROL-01 purges only terminal transactions and resolved flags after
     'ledger-idempotency-old',
     'tx-completed-recent',
     'tx-in-progress-old',
+    'tx-payload-only-old',
     'tx-retryable-old',
     'tx-unknown-old',
     'webhook-old',
