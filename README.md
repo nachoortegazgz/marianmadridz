@@ -55,7 +55,7 @@ Repositorio canónico del sitio **Marian Madrid Peluquería y Estética** (`www.
 7. [Referencia maestra QA del 11-11](docs/qa/2026-11-11-qa-master-reference.md): evidencia histórica de aislamiento y restricciones previas.
 8. [Dossier técnico consolidado](DOSSIER%20TÉCNICO%20CONSOLIDADO.md): arquitectura, contratos y módulos.
 9. [Flujos end-to-end Capa 3](DOSSIER%20FLUJOS%20END%20TO%20END%20CAPA%203.md): diseño documental Wix–Microsoft 365; no certifica operación.
-10. [Estado técnico por dominio](docs/PROJECT-STATUS.md): estado verificado, bloqueos y prioridades.
+10. [Estado técnico histórico por dominio](docs/PROJECT-STATUS.md): evidencia hasta 2026-11-11; el estado vigente está en `ESTADO_ACTUAL_PROYECTO.md`.
 
 El código, la configuración viva de Wix, los contratos oficiales de las APIs y las pruebas ejecutadas prevalecen sobre afirmaciones históricas. Registrar siempre fecha, rama/SHA y evidencia.
 ## Entorno de desarrollo
