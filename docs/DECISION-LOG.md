@@ -292,4 +292,42 @@ Para los movimientos presenciales manuales nuevos, backend asigna `recordSource=
 
 **Código en rama** `feat/consolidate-fiscal-master-mapastaff-v2`: constantes canónicas, validación por `recordType`, hooks CMS, upsert de terceros, lectura de configuración fiscal, destinatarios de gestoría y filtro de proyección Bookings actualizados a `MapaStaff`. Los lectores de eventos filtran `recordType=STAFF`. El DTO de destinatarios añade teléfono y dirección; no se encontró un consumidor frontend directo de `listAccountantRecipients`, por lo que no se ha inventado una UI nueva.
 
-**Pendiente:** ejecutar CI completo; revisar diff; completar documentación del esquema live; desplegar backend en Wix de forma controlada; verificar hooks y WebMethods; después retirar `DatosFiscales` y confirmar su ausencia en inventario. No se ha publicado código Wix ni se ha borrado la colección antigua en esta intervención.
+**Pendiente:** ejecutar CI completo; revisar diff; completar documentación del esquema live; desplegar backend en Wix de forma controlada; verificar hooks y WebMethods; después retirar `DatosFiscales` y confirmar su ausencia en inventario. No se ha publicado código Wix ni se ha borrado la colección antigua en esta intervención.---
+
+## Addendum de autoridad y fase QA — 2026-11-14
+
+### Jerarquía de autoridad y SSOT
+
+1. **USUARIO / PROPIETARIO DEL PROYECTO — SSOT de negocio y gobierno.** El usuario es la única fuente de verdad para objetivos, requisitos, prioridades, criterios de aceptación, decisiones funcionales y autorizaciones del proyecto. Sus instrucciones expresas prevalecen sobre cualquier regla, restricción, supuesto o estado histórico de esta documentación. Las decisiones relevantes se registran en el Decision Log para trazabilidad; el registro no sustituye ni limita la autoridad del usuario.
+2. **Documentación oficial vigente de Wix y de cada integración — autoridad técnica.** Define contratos, APIs, permisos, límites y comportamiento de plataforma. Se aplica para ejecutar la decisión del usuario de forma técnicamente válida; si una limitación oficial impide cumplirla, se informa y se propone alternativa, sin cambiar unilateralmente el requisito.
+3. **Decisiones expresas del usuario registradas en el repositorio.** Son la memoria documental de las decisiones vigentes. Si un registro antiguo contradice una instrucción posterior, prevalece la instrucción posterior del usuario.
+4. **Dossier Técnico Consolidado, Dossier de Flujos, Directrices, Necesidades Web, diccionario CMS y estado del proyecto.** Son documentación derivada y subordinada a los niveles anteriores. No pueden crear autorizaciones, bloqueos o requisitos nuevos por inferencia.
+5. **Código, configuración Wix, CMS y pruebas.** Acreditan el estado implementado, no la autoridad para redefinir requisitos. Las diferencias entre lo solicitado, documentado e implementado se registran como discrepancias verificables.
+
+### Política temporal de desarrollo y pruebas
+
+**Vigencia:** fase actual de desarrollo, depuración y QA, hasta que el usuario ordene expresamente habilitar las protecciones para el despliegue.
+
+- Queda **en pausa la política append-only** durante esta fase. Ninguna colección o registro se considerará intocable únicamente por estar etiquetado como ledger, histórico, fiscal, contable, laboral, documental o append-only.
+- Queda **en pausa toda prohibición genérica de edición o eliminación de registros**, tanto individual como masiva, cuando la única causa del bloqueo sea la inmutabilidad/append-only o una restricción temporal de QA. La edición y eliminación forman parte de las operaciones permitidas durante las pruebas.
+- No se exigirán registros rectificativos como única vía de corrección durante esta fase de QA. Esa regla se reconsiderará cuando el usuario habilite expresamente las protecciones previas al despliegue.
+- Se mantienen las validaciones de esquema y tipos, la autenticación, autorización y permisos de acceso, la protección de secretos, la separación de capas, los controles de seguridad no relacionados con la inmutabilidad y la trazabilidad técnica de las pruebas. Esta pausa no autoriza accesos anónimos ni saltarse controles de identidad.
+- No se habilitan por esta decisión writers fiscales, contables, laborales, pagos, devoluciones, comunicaciones ni automatizaciones externas que tengan gates funcionales independientes. Esos gates solo se modificarán por instrucción expresa o por una decisión técnica aprobada por el usuario.
+- La pausa es temporal y **no se revierte automáticamente**. Solo el usuario puede ordenar la restauración y habilitación de las protecciones para despliegue. Antes de una publicación productiva, el estado de las protecciones debe revisarse con el usuario y quedar expresamente autorizado.
+
+### Estado de implementación y publicación
+
+El usuario declara que el código está integrado y publicado en Wix. Esta declaración se registra como **declaración del propietario**. En la consulta de GitHub de este corte, el PR #344 (feat/consolidate-fiscal-master-mapastaff-v2) figura fusionado el 2026-11-14 mediante el merge commit f3b1311eead05282e47f538afd506fe49e227141, que es el HEAD actual de main. La integración del cambio en Git está verificada. El usuario declara además que el código está publicado en Wix; no se dispone de un identificador de publicación Wix que vincule el runtime con ese SHA concreto.
+
+**Nota de ejecución:** este addendum modifica la autoridad documental y la política de trabajo. No demuestra por sí mismo que todos los hooks, WebMethods, políticas de escritura o permisos CMS del runtime Wix hayan sido modificados para permitir todas las operaciones de edición y eliminación. Esa correspondencia debe verificarse en código y en Wix antes de afirmar que la pausa está aplicada técnicamente de extremo a extremo.
+### TEC-036 — autoridad SSOT del usuario y pausa de append-only durante QA (2026-11-14)
+
+**Decisión del usuario:** el usuario/propietario del proyecto es la SSOT de negocio y gobierno. Sus instrucciones expresas prevalecen sobre documentación histórica, decisiones anteriores y supuestos. La documentación del repositorio es derivada y debe actualizarse para reflejar las instrucciones vigentes.
+
+**Fase actual:** desarrollo, depuración y QA. Se pausa temporalmente append-only y cualquier prohibición genérica de editar o eliminar registros, individual o masiva, cuando el bloqueo derive exclusivamente de la inmutabilidad del registro o de una política append-only. La pausa permanece activa hasta que el usuario ordene expresamente restaurar/habilitar las protecciones para despliegue; no se restaura automáticamente.
+
+Se mantienen controles de autenticación, autorización, permisos, validación de datos, secretos y seguridad que no dependan de la inmutabilidad. Los gates funcionales independientes de writers fiscales/contables/laborales, pagos, devoluciones y comunicaciones no se consideran modificados por esta decisión.
+
+**Estado Git asociado:** PR #344 quedó fusionado el 2026-11-14 mediante f3b1311eead05282e47f538afd506fe49e227141 (HEAD de main en este corte). El usuario declara la publicación en Wix; no hay identificador de release que vincule el runtime con ese SHA.
+
+**Alcance de evidencia:** esta decisión establece la política documental y de trabajo. La aplicación efectiva en hooks, WebMethods, write policies y permisos CMS requiere comprobación técnica específica; no se presume por el mero cambio documental.
