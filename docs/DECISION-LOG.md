@@ -261,3 +261,16 @@ Para los movimientos presenciales manuales nuevos, backend asigna `recordSource=
 **Reversión obligatoria:** antes de cualquier despliegue productivo, establecer `APPEND_ONLY_MUTATION_WINDOW.ENABLED=false`, retirar las entradas de actualización/borrado de ledgers de `DATA_ACCESS_WRITE_POLICY`, restaurar los bloqueos de hooks y tests, ejecutar CI completo y verificar en Wix Local Editor que update/remove vuelven a bloquearse. No desplegar mientras `RESTORE_BEFORE_PRODUCTION=true` y `ENABLED=true`.
 
 **Advertencia de cumplimiento:** esta excepción de desarrollo no modifica ni suspende obligaciones legales de integridad, trazabilidad y conservación de registros fiscales, contables o laborales. No usarla para alterar o eliminar registros reales sujetos a conservación.
+
+
+### TEC-035 — recreación de CajaActual (2026-11-14)
+
+Se recrea en Wix CMS la colección `CajaActual` porque no aparecía en el inventario live anterior. Es `NATIVE`, revisión 1, displayName `CAJA_ACTUAL`, permisos ADMIN para lectura e inserción/actualización/borrado. Se crea un único singleton lógico `CAJA_PRINCIPAL` cerrado, con saldos y contadores a cero, `sequenceCounters={}`, fecha operativa Europe/Madrid y traceId UUID v4. No se abre sesión ni se inventa efectivo inicial.
+
+`MovimientosCaja` permanece sin cambios (revisión 78; 0 elementos en el corte). Cada ticket/movimiento sigue siendo fuente en `MovimientosCaja`; `CajaActual` solo proyecta sesión, saldos por medio y estado operativo. La proyección no debe duplicar el ledger, y su reintento se resuelve por ID fuente.
+
+Se creó índice único `CajaActual_singletonKey_unique`, estado `BUILDING` en la última lectura; verificar `ACTIVE` antes de tratarlo como garantía de unicidad. Se mantienen checks backend fail-closed para detectar duplicados.
+
+**Recomendaciones registradas:** no admitir pagos mixtos hasta definir `paymentBreakdown`; no usar `lineItems` hasta validar su esquema; separar efectivo físico de tarjeta/Bizum; añadir un futuro `lastMovementId` solo como puntero y con migración coordinada; sustituir progresivamente el array potencialmente ilimitado `sequenceCounters.appliedMovementIds` por idempotencia durable indexada en `ControlOperativo`. Apertura de sesión, saldo inicial y responsables siguen pendientes de un flujo backend autorizado.
+
+No se activaron writers ni se hicieron movimientos reales; no se ejecutó Wix Local Editor/E2E ni publicación.
