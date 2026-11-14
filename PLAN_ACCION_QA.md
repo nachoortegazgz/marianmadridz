@@ -193,3 +193,21 @@ Estados permitidos: `NOT_RUN`, `PASS`, `FAIL`, `BLOCKED_ENVIRONMENT`, `BLOCKED_C
 - [Fixtures y cobertura mock](docs/qa/QA-SIMULATION-2026-11.md)
 - [Inventario CMS QA](docs/audits/2026-11-14-current-site-cms-normalization.md)
 - [Referencia maestra QA histórica](docs/qa/2026-11-11-qa-master-reference.md)
+
+
+---
+
+## Regla SSOT vigente del propietario — modo desarrollo global
+
+Vigente hasta nueva orden. Aplicar en todo el trabajo QA:
+
+- Modo desarrollo global; solo registros y fixtures sintéticos. Prohibido importar o reutilizar datos reales.
+- Ninguna actividad real: reservas/pedidos, cobros/reembolsos, comunicaciones, stock o integraciones externas.
+- Veri*Factu, generación/envío fiscal y transmisiones AEAT desactivados.
+- Email, SMS, WhatsApp, SharePoint y Power Automate deben usar sinks/mocks offline sin I/O.
+- Los ledgers pueden pausarse: la opción inicial es mantener sus writers cerrados. La pausa impide nuevas inserciones; nunca habilita update/remove de registros existentes.
+- Los bloqueos de preparación fiscal en escenarios sintéticos se muestran como warnings no bloqueantes. No relajar validación de esquema, hash/trazabilidad, conciliación, autorización, idempotencia ni seguridad.
+
+### Implementación técnica y gate de seguridad
+
+**Estado: pendiente de implementación y validación.** No basta con cambiar flags en `internalConfig.js`: se han identificado rutas de checkout/writers Bookings y handlers de eventos Wix que no quedan cubiertas por el gate `FISCAL_RUNTIME_POLICY` de caja. Antes de desplegar debe existir un kill switch server-side que cubra todos los writers y efectos externos, con tests negativos por ruta. Mantener QA offline/mock mientras no se demuestre el aislamiento del Site ID QA designado. No desplegar ni publicar como parte de esta tarea.
