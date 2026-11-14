@@ -1,3 +1,7 @@
+> **SSOT de entorno vigente (2026-11-14):** el único sitio del proyecto es QA: `188bed94-177c-4bc9-a9f0-35080d874f3e` (`https://www.marianmadrid.es/`). El propietario confirma que nunca ha tenido actividad real, que todos los datos son sintéticos, que el cliente de pruebas es Nacho Pitt (`nachoortegazgz@gmail.com`) y que la pasarela está desconectada. No existe otro sitio QA ni un QA externo designado. Las referencias anteriores a otros Site ID o a este sitio como producción quedan supersedidas. El estado Wix Published no altera su clasificación funcional como QA. Véase [SSOT del entorno QA](docs/qa/QA-ENVIRONMENT-SSOT.md).
+
+---
+
 # Registro de decisiones — Marian Madrid
 
 ## Hito técnico — corrección de deployment backend (2026-11-14)
@@ -416,3 +420,10 @@ El propietario designa ahora `188bed94-177c-4bc9-a9f0-35080d874f3e` como identif
 **Decisión de seguridad:** `BLOCKED_ENVIRONMENT / PRODUCTION_SITE_DESIGNATED_AS_QA`. No ejecutar pruebas runtime, escrituras CMS, reservas sintéticas en el sitio, cambios de configuración, desconexión de pasarelas, publicación ni operaciones de verificación que puedan generar efectos. No tratar el sitio como aislado hasta disponer de evidencia técnica de aislamiento y autorización específica para intervenir sobre un sitio actualmente publicado.
 
 La regla global de desarrollo y cero actividad real sigue vigente. Para continuar las pruebas runtime se requiere un sitio QA separado/no publicado o un mecanismo de aislamiento verificable que impida efectos a clientes reales.
+
+
+## DECISIÓN QA-2026-11-14-D — sitio QA único vigente
+
+**Decisión expresa del propietario:** el Site ID `188bed94-177c-4bc9-a9f0-35080d874f3e` es el único entorno QA de Marian Madrid y se utiliza para pruebas previas al despliegue real. El sitio nunca ha tenido actividad real; los datos son sintéticos; el cliente sintético designado es Nacho Pitt (`nachoortegazgz@gmail.com`) y la pasarela está desconectada. No existe QA externo ni segundo sitio QA. Esta decisión supersede las designaciones anteriores de entorno y las descripciones de este sitio como producción. El estado Wix Published es un metadato técnico y no cambia la clasificación funcional QA.
+
+**Restricciones:** no cobros, reembolsos, comunicaciones, transmisiones fiscales ni efectos externos reales. Usar mocks/sinks offline. Mantener append-only: una pausa de writers no permite modificar ni borrar registros existentes. La ejecución runtime con efectos potenciales requiere comprobar antes la ruta concreta y mantenerla aislada.
