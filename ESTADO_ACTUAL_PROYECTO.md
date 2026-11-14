@@ -52,7 +52,7 @@
 
 ## Política de cambios
 
-- La ventana global de mutaciones QA está cerrada en la rama de trabajo (ISOLATED_SITE_RECORD_MUTATIONS_ENABLED=false). Los ledgers append-only permanecen inmutables; no hay barrera runtime por Site ID verificada.
+- Los bypasses globales de mutabilidad QA se han retirado del código. Los ledgers append-only permanecen inmutables; bulk remove queda limitado a purgas efímeras condicionadas. No hay barrera runtime por Site ID verificada.
 - Colecciones Wix Apps excluidas; autenticación, autorización, permisos, validación de esquema y gates de efectos externos permanecen activos.
 - No se ejecutan operaciones reales ni se interpretan datos sintéticos como actividad real.
 - No se modifica el CMS en esta intervención; cambios de código/documentación se integran mediante PR y CI.
