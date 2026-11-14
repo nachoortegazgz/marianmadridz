@@ -19,7 +19,7 @@
 **Política temporal:** ISOLATED_SITE_RECORD_MUTATIONS_ENABLED=true permite update/remove individual y masivo en colecciones propias incluidas en ISOLATED_SITE_MUTABLE_COLLECTIONS, con IDs explícitos y límite de 1.000 elementos. Las colecciones WIX_APP quedan excluidas. Se mantienen RBAC, permisos, validaciones, secretos, allowlists de inserción y gates de writers/efectos externos. Esta ventana no habilita pagos, facturación, fichajes ni comunicaciones.
 
 **Contratos CMS relevantes:**
-- MapaStaff: 18 campos, solo identidad de personal (staffMemberId, resourceId, scheduleId, memberId y active).
+- MapaStaff: 18 campos, solo identidad de personal (staffMemberId, resourceId, scheduleId, memberId y active). thirdPartyId es TEXT opaco y no es una FK fiscal.
 - DatosFiscales: 28 campos, maestro de terceros/gestoría/configuración; no declara traceId ni schemaVersion. CONFIG_SISTEMA no existe.
 - CajaActual: 39 campos; operationDate DATE, openingAmount NUMBER, sequenceCounters OBJECT, cashRegisterStatus TEXT, isOpen BOOLEAN, id TEXT y currentSequence NUMBER. El singleton tiene cashRegisterStatus=SIMULACION e isOpen=true; el backend gobierna por cashRegisterStatus. Bizum presencial se agrega en otherAmount y el detalle permanece en MovimientosCaja.
 - ComplementosCatalogo: _id es la identidad CMS; addonId es espejo físico temporal. addOnId es contrato de transporte Bookings.
