@@ -3,7 +3,7 @@
 - El único sitio objeto de trabajo es 50b39f33-e753-4331-ab35-b2ed43dc97f7: banco de pruebas aislado, sin actividad real, según declaración expresa del propietario.
 - Plataforma confirmada: Wix Editor Classic + Velo. No existe matriz comparativa de sitios para esta intervención.
 - CMS actual: 23 colecciones (15 NATIVE, 8 WIX_APP), 524 campos físicos NATIVE. El inventario y los tipos se detallan en DICCIONARIO_DATOS_CMS.md y docs/audits/2026-11-14-current-site-cms-normalization.md.
-- MapaStaff conserva solo el mapa de identidades de personal. DatosFiscales contiene los datos de terceros, gestoría y configuración fiscal; no declara traceId ni schemaVersion.
+- MapaStaff conserva solo el mapa de identidades de personal; thirdPartyId es TEXT opaco y no es una FK fiscal. DatosFiscales contiene los datos de terceros, gestoría y configuración fiscal; no declara traceId ni schemaVersion.
 - La rama fix/current-site-cms-contract-alignment alinea hooks, validadores, políticas y consumidores fiscales con esos contratos. PR #370 está dirty (109 commits ahead / 57 behind main), sin checks en el HEAD actual. Rebase, CI y validación Wix Editor/E2E siguen pendientes.
 - Wix CMS sigue siendo la fuente de verdad transaccional. SharePoint es exclusivamente repositorio documental de evidencia. Capa 3 no gobierna ni modifica Capa 1.
 - No se han ejecutado mutaciones CMS ni se han activado pagos, facturación, fichajes, comunicaciones o automatizaciones externas.
