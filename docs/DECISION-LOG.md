@@ -1,24 +1,14 @@
-# Registro de decisiones de negocio y arquitectura — Marian Madrid
+# Registro de decisiones — Marian Madrid
 
-## Vigencia operativa — fase de desarrollo y QA (2026-11-14)
+## Vigencia operativa — sitio aislado actual (2026-11-14)
 
-**Autoridad:** el usuario/propietario es la SSOT de negocio, requisitos, prioridades, criterios de aceptación y autorizaciones. Las instrucciones expresas posteriores del usuario prevalecen sobre decisiones y restricciones documentales anteriores. La documentación oficial de Wix y de las integraciones gobierna únicamente los contratos y límites técnicos de la plataforma.
+**Sitio único:** 50b39f33-e753-4331-ab35-b2ed43dc97f7. El propietario declara que es un banco de pruebas aislado, sin actividad real. Los registros existentes se consideran sintéticos; no se mantiene una comparación operativa con otro sitio.
 
-**Mutabilidad CMS durante QA:** append-only e inmutabilidad están temporalmente en pausa. Se habilitan update y remove individuales y masivos para todas las colecciones CMS propias del proyecto, incluidas las históricamente tratadas como ledgers. Las operaciones masivas deben identificar explícitamente los registros por ID. No se habilitan escrituras en colecciones propiedad de Wix Apps ni se eluden autenticación, autorización/RBAC, permisos, validaciones de esquema, integridad técnica, secretos o límites de plataforma. La inserción mantiene su allowlist; los writers fiscales/contables/laborales, pagos, reembolsos, comunicaciones y efectos externos conservan sus gates funcionales independientes.
+**Mutabilidad CMS:** ISOLATED_SITE_RECORD_MUTATIONS_ENABLED=true habilita temporalmente update/remove individual y masivo sobre las colecciones propias incluidas en ISOLATED_SITE_MUTABLE_COLLECTIONS. Operaciones masivas: IDs explícitos y máximo de 1.000 elementos. Las colecciones WIX_APP quedan excluidas. Se mantienen RBAC, permisos, validaciones, protección de secretos, allowlists de inserción y gates de efectos externos.
 
-**Restauración:** esta política no se revierte automáticamente. Solo el usuario puede ordenar la restauración de append-only y de las restricciones de mutación para preparar el despliegue. No publicar a producción basándose únicamente en esta excepción de QA.
+**Límites:** esta autorización no habilita writers fiscales, contables o laborales, pagos, reembolsos, comunicaciones ni automatizaciones externas. No se ha ejecutado una mutación CMS ni una publicación Wix en la intervención actual.
 
-**Estado Git/Wix:** PR #344, PR #345 y PR #346 están integrados en main; HEAD actual b19a8f676d7be157d457588f6acf5332c2a34d32; merge del código QA PR #346: b68e4e048ce5fc1c022fc6ffc2643d5983972107. CI de PR #346: Layer 1 23 suites/296 pruebas, Layer 2 18 suites/246 pruebas, regresión completa 68 suites/627 pruebas; SDK contracts, ESLint y Gitleaks correctos. El usuario declara que la versión base anterior está publicada en Wix; la ampliación de mutaciones QA está integrada en Git pero aún no publicada en Wix. No se dispone de release Wix vinculado a SHA.
-
-**CMS maestro:** MapaStaff revisión 36, 42 campos y 5 registros (3 STAFF, 1 TERCERO, 1 GESTORIA). DatosFiscales permanece como colección legacy con un placeholder QA; su retirada requiere verificar runtime y consumidores tras publicar el backend migrado.
-
----
-
-**Fecha de consolidación:** 2026-11-10  
-**Repositorio:** `nachoortegazgz/marianmadridz`  
-**Estado:** decisiones y límites documentados; no equivale a despliegue ni validación E2E.
-
-Este registro centraliza las decisiones explícitas del propietario y las decisiones técnicas adoptadas para materializarlas. Las decisiones de negocio aprobadas por el propietario se distinguen de las recomendaciones técnicas derivadas y de los asuntos sujetos a revisión legal.
+**Código:** la rama fix/current-site-cms-contract-alignment alinea MapaStaff como mapa de personal y DatosFiscales como maestro fiscal. CI, revisión de diff y pruebas Wix Editor/E2E están pendientes. La sincronización Editor↔Git no está acreditada.
 
 ## 1. Decisiones de negocio
 
