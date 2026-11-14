@@ -506,6 +506,8 @@ export const DATA_ACCESS_BULK_PATCH_POLICY = Object.freeze({
         status: Object.freeze(["SET_FIELD"]),
         ownerToken: Object.freeze(["SET_FIELD"]),
         payload: Object.freeze(["SET_FIELD"]),
+        attempts: Object.freeze(["SET_FIELD"]),
+        expiresAt: Object.freeze(["SET_FIELD"]),
         version: Object.freeze(["INCREMENT_FIELD"]),
         traceId: Object.freeze(["SET_FIELD"]),
       }),
