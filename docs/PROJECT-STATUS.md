@@ -27,7 +27,7 @@ La especificación de campos y tipos está en [la auditoría del esquema actual]
 
 La rama fix/current-site-cms-contract-alignment separa los contratos de MapaStaff y DatosFiscales, migra los lectores/escritores fiscales a DatosFiscales, usa _id como keyfield CMS canónico de ComplementosCatalogo y consolida gestorName como nombre de gestoría.
 
-HEAD actual: a8a44cb8e75fd3c9d57fe3279a02ae47411b50a6. PR #370 está abierto pero GitHub informa `dirty` (109 commits ahead, 57 behind main). No hay checks asociados al HEAD actual; los últimos checks exitosos son de 68a2f327 y no validan los cambios posteriores. Rebase y CI actual pendientes; no fusionar ni publicar.
+PR #370 está abierto pero GitHub informa `dirty` (109 commits ahead, 57 behind main). No hay checks asociados al HEAD actual; los últimos checks exitosos son de 68a2f327 y no validan los cambios posteriores. Rebase y CI actual pendientes; no fusionar ni publicar.
 
 ### Seguridad y operaciones
 
