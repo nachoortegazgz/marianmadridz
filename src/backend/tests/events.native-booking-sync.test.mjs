@@ -134,7 +134,7 @@ test("EVENT-BOOKING-CREATED-01 native creation persists a pending projection and
   assert.equal(markers.filter(row => row.controlType === IC.CONTROL_TYPE.WEBHOOK_EVENT && row.eventId === "evt-native-confirm-after-created-001").length, 1);
   const createdMarker = markers.find(row => row.eventId === "evt-native-created-001");
   assert.equal(createdMarker.eventType, "BOOKING_CREATED");
-  assert.ok(createdMarker.processedAt instanceof Date);
+  assert.ok(Number.isFinite(new Date(createdMarker.processedAt).getTime()));
   assert.equal(createdMarker.payload.eventType, createdMarker.eventType);
 });
 
