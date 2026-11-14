@@ -283,7 +283,7 @@ No marcar como cumplido un requisito legal o de negocio únicamente por existir 
 ## Bloqueos y criterios de aceptación vigentes
 
 - Reserva/proyección: CitasF2 contiene 1 item `CONFIRMED / NOT_PAID`; la última lectura Bookings Reader V2 registrada para el mismo bookingId era `CANCELED / NOT_PAID`. Mantener P1 hasta reconciliar la lectura nativa y la proyección tras la publicación declarada.
-- Fiscal/contable/laboral: writers permanecen deshabilitados. `MapaStaff` conserva el tercero placeholder QA; falta `CONFIG_SISTEMA`. `DatosFiscales` permanece temporalmente por compatibilidad hasta publicar el backend migrado. No emitir, cobrar, exportar ni escribir ledgers hasta aprobación de asesoría y QA runtime.
+- Fiscal/contable/laboral: writers permanecen deshabilitados. `MapaStaff` conserva el tercero placeholder sintético; falta `CONFIG_SISTEMA`. `DatosFiscales` permanece temporalmente por compatibilidad hasta publicar el backend migrado. No emitir, cobrar, exportar ni escribir ledgers hasta aprobación de asesoría y QA runtime.
 - Capa 3: SharePoint / Power Automate no están acreditados como flujo operativo live.
 - Inventario: Wix Stores Catalog V3 es la autoridad operativa; colecciones legacy personalizadas no deben convertirse en fuente de stock.
 - Entorno QA: existe un segundo sitio Wix Draft, pero no tiene paridad completa de CMS Apps y su aislamiento externo no está certificado.
