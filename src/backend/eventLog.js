@@ -29,7 +29,7 @@ CAMBIOS DE ALINEACION v5015-ALIGNED (respecto a v5009-FISCAL-V20.1):
           (sistemaInformaticoNombre, idSistemaInformatico,
           numeroInstalacion, tipoUsoPosibleSoloVerifactu, etc.). Se
           define COMPUTER_SYSTEM_FALLBACK local; _getFiscalSystemConfig
-          lee del singleton MapaStaff y rellena con el fallback.
+          lee del singleton DatosFiscales y rellena con el fallback.
   ALN-08: wixData.query/get/insert/save -> dalQuery/dalGet/dalInsert/
           dalSave (dataAccess v2.1).
   ALN-09: _buildFiscalPayloadSnapshot usa el resultado resuelto de
@@ -129,7 +129,7 @@ const VAT_ACCRUAL_DEVENGADO = "DEVENGADO";
 const VAT_ACCRUAL_APLICACION_ANTICIPO = "APLICACION_ANTICIPO";
 
 const MOVIMIENTOS_CAJA_COL = BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA;
-const MAPA_STAFF_COL = BUSINESS_COLLECTIONS.MAPA_STAFF;
+const DATOS_FISCALES_COL = BUSINESS_COLLECTIONS.DATOS_FISCALES;
 const SERVICIOS_CATALOGO_COL = BUSINESS_COLLECTIONS.SERVICIOS_CATALOGO;
 const HISTORICO_CIERRES_Z_COL = BUSINESS_COLLECTIONS.HISTORICO_CIERRES_Z;
 
@@ -174,18 +174,18 @@ async function _getFiscalSystemConfig(traceId) {
     }
     let config = null;
     try {
-        const res = await dalQuery(MAPA_STAFF_COL)
+        const res = await dalQuery(DATOS_FISCALES_COL)
             .eq("recordType", RECORD_TYPE.CONFIG_SISTEMA)
             .limit(1)
             .find();
         config = res?.items?.[0] || null;
     } catch (err) {
-        log.warn("No se pudo leer el singleton fiscal (MapaStaff CONFIG_SISTEMA)", {
+        log.warn("No se pudo leer el singleton fiscal (DatosFiscales CONFIG_SISTEMA)", {
             traceId, message: err?.message,
         });
     }
     _fiscalSystemCache = Object.freeze({
-        // MapaStaff no declara columnas para nombre/id del sistema ni
+        // DatosFiscales no declara columnas para nombre/id del sistema ni
         // numeroInstalacion; esos valores proceden solo del fallback tecnico.
         sistemaInformaticoNombre: COMPUTER_SYSTEM_FALLBACK.sistemaInformaticoNombre,
         idSistemaInformatico: COMPUTER_SYSTEM_FALLBACK.idSistemaInformatico,
@@ -291,11 +291,11 @@ async function _getLastCashEvent() {
 // SECCION 3 - MAESTROS
 // ============================================================================
 
-async function _upsertMapaStaff({ taxId, legalName, thirdPartyType, address }, traceId) {
+async function _upsertDatosFiscales({ taxId, legalName, thirdPartyType, address }) {
     const normalizedTaxId = _safeTrim(taxId).toUpperCase();
     if (!normalizedTaxId) return null;
 
-    const existing = await dalQuery(MAPA_STAFF_COL)
+    const existing = await dalQuery(DATOS_FISCALES_COL)
         .eq("recordType", RECORD_TYPE.TERCERO)
         .eq("taxId", normalizedTaxId)
         .limit(1)
@@ -303,10 +303,8 @@ async function _upsertMapaStaff({ taxId, legalName, thirdPartyType, address }, t
 
     if (existing?.items?.[0]) return existing.items[0];
 
-    // SSOT-KEYFIELD (Matriz MapaStaff, Apartado 1): la clave fisica de la
-    // coleccion es `address` (direccion del tercero); `contactData` no existe
-    // en el SSOT y se erradica de la escritura.
-    return await dalInsert(MAPA_STAFF_COL, {
+    // `DatosFiscales.address` is the declared TEXT field for the fiscal address.
+    return await dalInsert(DATOS_FISCALES_COL, {
         recordType: RECORD_TYPE.TERCERO,
         taxId: normalizedTaxId,
         legalName: _safeTrim(legalName).toUpperCase() || "SIN NOMBRE",
@@ -314,10 +312,6 @@ async function _upsertMapaStaff({ taxId, legalName, thirdPartyType, address }, t
         address: address == null ? null : (
             typeof address === "string" ? address : JSON.stringify(address)
         ),
-        schemaVersion: 1,
-        traceId: _safeTrim(traceId),
-        _createdDate: new Date(),
-        _updatedDate: new Date(),
     });
 }
 
@@ -340,7 +334,7 @@ async function _getServicioCatalogo(catalogId, traceId) {
 // fisicas de coleccion, por lo que no estan sujetas a HOOK-CAJA-06.
 // ============================================================================
 
-// MapaStaff.address is TEXT while MovimientosCaja.recipientAddress is
+// DatosFiscales.address is TEXT while MovimientosCaja.recipientAddress is
 // OBJECT. Parse only previously serialized object addresses; never pass TEXT
 // directly into the OBJECT CMS field.
 function _normalizeRecipientAddress(storedAddress, suppliedAddress) {
@@ -454,15 +448,15 @@ export async function registrarEventoEconomico(input) {
     // 1. Resolver tercero (nifDestinatario/nifEmisor ya canonicos tras la
     // normalizacion de entrada; los alias recipientTaxId/issuerTaxId fueron
     // promovidos por normalizeMovementKeys).
-    const thirdParty = await _upsertMapaStaff({
+    const thirdParty = await _upsertDatosFiscales({
         taxId: input.nifDestinatario || input.nifEmisor,
         legalName: input.recipientLegalName || input.issuerLegalName,
         thirdPartyType: input.thirdPartyType || (
             input.nifDestinatario ? THIRD_PARTY_TYPE.CLIENTE : THIRD_PARTY_TYPE.EMISOR
         ),
-        // SSOT-KEYFIELD (Matriz MapaStaff): clave fisica `address`.
+        // SSOT-KEYFIELD: DatosFiscales.address is the physical TEXT field.
         address: input.recipientAddress || null,
-    }, traceId);
+    });
 
     // 2. Resolver catalogo
     const catalog = await _getServicioCatalogo(input.catalogId, traceId);
