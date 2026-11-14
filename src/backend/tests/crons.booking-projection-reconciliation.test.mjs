@@ -178,7 +178,6 @@ test("CRON-BOOKING-PROJECTION-01 projects only confirmed unpaid bookings with co
 
   assert.equal((wixDataMock._store.get(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA) || []).length, 0);
   assert.equal((wixDataMock._store.get(IC.BUSINESS_COLLECTIONS.LIBRO_ASIENTOS_CONTABLES_DETALLE) || []).length, 0);
-  assert.equal((wixDataMock._store.get(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_INVENTARIO) || []).length, 0);
 });
 
 test("CRON-BOOKING-PROJECTION-02 replay is idempotent and does not duplicate projections or alerts", async () => {

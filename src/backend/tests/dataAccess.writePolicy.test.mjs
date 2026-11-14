@@ -26,6 +26,15 @@ test("QA record mutation policy enables update/remove without enabling insert", 
     assert.equal(APPEND_ONLY_MUTATION_WINDOW.RESTORE_BEFORE_PRODUCTION, true);
 });
 
+test("retired custom inventory collections are excluded from the canonical CMS allowlist", () => {
+    assert.equal(Object.hasOwn(C, "INVENTARIO_STOCK_VENTA"), false);
+    assert.equal(Object.hasOwn(C, "MOVIMIENTOS_INVENTARIO"), false);
+    assert.equal(QA_MUTABLE_COLLECTIONS.includes("InventarioStockVenta"), false);
+    assert.equal(QA_MUTABLE_COLLECTIONS.includes("MovimientosInventario"), false);
+    // DatosFiscales remains a separate, owner-authorized QA compatibility scope.
+    assert.equal(QA_MUTABLE_COLLECTIONS.includes("DatosFiscales"), true);
+});
+
 test("insert policy allows only declared collections and canonical ControlOperativo types", () => {
     assert.doesNotThrow(() => assertInsertAllowed(O.CONTROL_OPERATIVO, {
         controlType: T.WEBHOOK_EVENT,
@@ -102,7 +111,6 @@ test("update policy allows mutable state and all append-only ledgers during temp
     }), { code: "CMS_UPDATE_ID_REQUIRED" });
     for (const collection of [
         C.MOVIMIENTOS_CAJA,
-        C.MOVIMIENTOS_INVENTARIO,
         C.LIBRO_ASIENTOS_CONTABLES_DETALLE,
         C.REGISTROS_HORARIOS_STAFF,
         C.HISTORICO_CIERRES_Z,
@@ -153,7 +161,6 @@ test("single-item removal allows ledgers during temporary window and keeps Contr
     assert.doesNotThrow(() => assertRemoveAllowed(O.CONTROL_OPERATIVO, "cache-1"));
     for (const collection of [
         C.MOVIMIENTOS_CAJA,
-        C.MOVIMIENTOS_INVENTARIO,
         C.LIBRO_ASIENTOS_CONTABLES_DETALLE,
         C.REGISTROS_HORARIOS_STAFF,
         C.HISTORICO_CIERRES_Z,

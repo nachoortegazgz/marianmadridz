@@ -79,8 +79,6 @@ export const BUSINESS_COLLECTIONS = Object.freeze({
   CONTROL_OPERATIVO: "ControlOperativo",
   HISTORICO_CIERRES_Z: "HistoricoCierresZ",
   PAQUETES_GESTORIA: "PaquetesGestoria",
-  INVENTARIO_STOCK_VENTA: "InventarioStockVenta",
-  MOVIMIENTOS_INVENTARIO: "MovimientosInventario",
   LIBRO_ASIENTOS_CONTABLES_DETALLE: "LibroAsientosContablesDetalle",
   MAPA_STAFF: "MapaStaff",
   MOVIMIENTOS_CAJA: "MovimientosCaja",
@@ -88,7 +86,7 @@ export const BUSINESS_COLLECTIONS = Object.freeze({
   SERVICIOS_CATALOGO: "ServiciosCatalogo",
 });
 
-// Legacy CMS collection retained temporarily for QA cleanup/migration.
+// Legacy QA scope retained only by explicit owner authorization. CMS live returned 404 / WDE0025 on 2026-11-14; no active writer exists. review-by: 2026-11-21.
 export const QA_MUTABLE_COLLECTIONS = Object.freeze([
   ...Object.values(BUSINESS_COLLECTIONS),
   "DatosFiscales",
@@ -538,7 +536,6 @@ export const DATA_ACCESS_WRITE_POLICY = Object.freeze({
     BUSINESS_COLLECTIONS.CAJA_ACTUAL,
     BUSINESS_COLLECTIONS.CITAS_F2,
     BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA,
-    BUSINESS_COLLECTIONS.MOVIMIENTOS_INVENTARIO,
     BUSINESS_COLLECTIONS.LIBRO_ASIENTOS_CONTABLES_DETALLE,
     BUSINESS_COLLECTIONS.REGISTROS_HORARIOS_STAFF,
     BUSINESS_COLLECTIONS.HISTORICO_CIERRES_Z,

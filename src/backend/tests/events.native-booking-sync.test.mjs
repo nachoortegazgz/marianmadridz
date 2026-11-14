@@ -1119,8 +1119,6 @@ test("EVENT-ORDER-NATIVE-STOCK-10 order-created marks mixed Wix catalog orders w
   assert.ok(marker);
   assert.equal(marker.payload?.metadata?.inventoryAuthority, "WIX_CATALOG_OWNER");
   assert.equal(marker.payload?.metadata?.inventoryAction, "NO_CUSTOM_STOCK_WRITE");
-  assert.equal((wixDataMock._store.get(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_INVENTARIO) || []).length, 0);
-  assert.equal((wixDataMock._store.get(IC.BUSINESS_COLLECTIONS.INVENTARIO_STOCK_VENTA) || []).length, 0);
 });
 
 

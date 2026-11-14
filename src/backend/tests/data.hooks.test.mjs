@@ -482,11 +482,6 @@ test('HOOK-CAJA-SINGLE-01 enforces the CajaActual single-item principal', () => 
 // -----------------------------------------------------------------------------
 // Capa 2 — inventory and accounting ledgers are immutable append-only records.
 // -----------------------------------------------------------------------------
-test('HOOK-INVENTORY-LEDGER-01 temporary mutation window allows update/remove', () => {
-  assert.doesNotThrow(() => H.MovimientosInventario_beforeUpdate({ _id: 'qa-inventory-1' }));
-  assert.doesNotThrow(() => H.MovimientosInventario_beforeRemove('qa-inventory-1'));
-});
-
 test('HOOK-ACCOUNTING-LEDGER-01 temporary mutation window allows update/remove', () => {
   assert.doesNotThrow(() => H.LibroAsientosContablesDetalle_beforeUpdate({ _id: 'qa-accounting-1' }));
   assert.doesNotThrow(() => H.LibroAsientosContablesDetalle_beforeRemove('qa-accounting-1'));
