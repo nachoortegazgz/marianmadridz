@@ -1,43 +1,53 @@
 # Estado actual del proyecto — Marian Madrid
 
 **Fecha de corte:** 2026-11-14  
-**Sitio objeto de auditoría:** `50b39f33-e753-4331-ab35-b2ed43dc97f7`  
-**Naturaleza del sitio:** banco de pruebas aislado, sin actividad real, según declaración del propietario.  
+**Sitio objeto de trabajo:** 50b39f33-e753-4331-ab35-b2ed43dc97f7  
+**Naturaleza:** banco de pruebas aislado, sin actividad real, según declaración expresa del propietario.  
 **Plataforma:** Wix Editor Classic + Velo.  
-**Repositorio:** `nachoortegazgz/marianmadridz`.
+**Repositorio:** nachoortegazgz/marianmadridz.
 
-## Estado verificado
+## Estado del CMS verificado
 
-- Repositorio `main`: PR #361–#364 integradas; último merge `55c53e596455995767bede8fba87f6900ba379ac`.
-- CI offline, contratos SDK, ESLint y secret scanning de las cuatro intervenciones: PASS.
-- CMS live: 23 colecciones, 15 NATIVE y 8 WIX_APP.
-- Colecciones propias: 524 definiciones de campo; 140 registros en el corte leído.
-- Los registros existentes deben tratarse como sintéticos/de prueba; no son evidencia de operaciones reales.
-- `CajaActual.sequenceCounters` es OBJECT y su valor leído es objeto; `ticketSequence` no existe en el esquema actual.
-- `ControlOperativo.ownerToken` no existe; `traceId` es la clave canónica de fencing.
-- `MapaStaff` tiene 18 campos y 3 filas activas. No declara `recordType` ni campos fiscales; los tres registros contienen `staffMemberId`, `resourceId`, `scheduleId`, `memberId` y `active`.
-- `DatosFiscales` existe físicamente con 28 campos y un registro placeholder. No debe tratarse como identidad fiscal real.
-- `ComplementosCatalogo` tiene 36 filas; `addonId` coincide con `_id` en las 36. `name` y `description` contienen el mismo texto en las 36, con tipos TEXT y RICH_TEXT.
-- `InventarioStockVenta` y `MovimientosInventario` existen físicamente, pero son colecciones legacy sin writers activos en el código actual; no se reactiva su uso.
+- 23 colecciones: 15 NATIVE y 8 WIX_APP; 524 campos físicos en las colecciones NATIVE.
+- Los registros presentes se consideran sintéticos/de prueba; no acreditan operaciones comerciales, fiscales ni laborales reales.
+- CajaActual: 39 campos, 1 registro. sequenceCounters es OBJECT y el valor leído es objeto JSON; ticketSequence no existe. id coincide con _id en el singleton leído.
+- ControlOperativo: 42 campos, 0 registros. ownerToken, retryAfter y nextRetryAt no existen; traceId es el token de fencing canónico.
+- ComplementosCatalogo: 18 campos, 36 registros. addonId coincide con _id en 36/36; traceId está vacío. name y description coinciden en texto, pero son TEXT y RICH_TEXT.
+- MapaStaff: 18 campos, 3 registros. Contiene staffMemberId, resourceId, scheduleId, memberId y active; no declara recordType, traceId ni campos fiscales.
+- DatosFiscales: 28 campos, 1 registro placeholder. Contiene recordType, taxId, legalName, thirdPartyType, address y gestorName/gestorNombre. No declara traceId ni schemaVersion; fechaInicioVerifactu es TEXT.
+- ServiciosCatalogo: 42 campos, 95 registros (94 SERVICE y 1 PRICING_PLAN). serviceId y pricingPlanId son IDs nativos distintos de _id CMS.
+- InventarioStockVenta y MovimientosInventario existen físicamente con registros sintéticos, pero sus contratos y writers están retirados; no se reactiva inventario custom.
 
-## Bloqueos y discrepancias
+## Alineación de código en la rama actual
 
-1. El lector de eventos de personal consultaba `MapaStaff.recordType`, campo que no existe. La rama de corrección elimina ese filtro y conserva `staffMemberId` + `active`.
-2. Los hooks y validadores de `MapaStaff`, además de `eventLog.js` y `fiscalDocuments.web.js`, siguen esperando discriminadores/campos fiscales que no están en el esquema actual de `MapaStaff`. No se cambia ese flujo sin decidir y probar la fuente fiscal canónica.
-3. `DatosFiscales` no declara `traceId` ni `schemaVersion`; el contrato de sus writers debe reconciliarse antes de habilitar escrituras fiscales.
-4. `ComplementosCatalogo.addonId` es un espejo de `_id`; el código de lectura pasa a priorizar `_id` y rechazar divergencias. La columna física no se elimina en esta intervención.
-5. La sincronización del código del Editor Wix con Git no está verificada.
-6. No hay certificación E2E de runtime ni despliegue asociado a SHA.
+- Rama: fix/current-site-cms-contract-alignment.
+- internalConfig.js incorpora DatosFiscales a BUSINESS_COLLECTIONS y delimita RECORD_TYPE a los registros fiscales.
+- validation.js y data.js separan MapaStaff (identidad de personal) de DatosFiscales (maestro fiscal).
+- dataAccessPolicy.js aplica la validación de recordType a DatosFiscales, no a MapaStaff.
+- eventLog.js, fiscalAggregator.web.js y fiscalDocuments.web.js leen/escriben el maestro fiscal en DatosFiscales usando únicamente campos físicos declarados.
+- ComplementosCatalogo usa _id como identidad CMS canónica y mantiene addonId como espejo físico mientras la columna exista.
+- gestorName queda como nombre canónico; gestorNombre deja de ser consumido y solo se elimina durante una actualización si ambos valores existentes coinciden.
 
-## Política de cambios
+## Seguridad y límites operativos
 
-- Mutaciones update/remove sobre colecciones propias habilitadas por autorización expresa mediante `ISOLATED_SITE_RECORD_MUTATIONS_ENABLED=true`.
-- Colecciones Wix Apps excluidas; autenticación, autorización, permisos, validación de esquema y gates de efectos externos permanecen activos.
-- No se ejecutan operaciones reales ni se interpretan datos sintéticos como actividad real.
-- No se modifica el CMS live en esta intervención; cambios de código/documentación se someten a PR y CI.
+- ISOLATED_SITE_RECORD_MUTATIONS_ENABLED=true permite update/remove individuales y masivos sobre colecciones propias incluidas en ISOLATED_SITE_MUTABLE_COLLECTIONS.
+- Las operaciones masivas requieren IDs explícitos y un máximo de 1.000 registros.
+- Las colecciones WIX_APP quedan excluidas. Se mantienen RBAC, permisos, validaciones, secretos, allowlists de inserción y gates de writers/efectos externos.
+- Los writers fiscales, contables y laborales, los pagos, reembolsos y envíos externos permanecen fail-closed.
+- No existe registro CONFIG_SISTEMA con datos fiscales oficiales verificados.
+- No se han ejecutado mutaciones CMS, migraciones de registros ni publicación Wix durante esta intervención.
 
-## Evidencias
+## Bloqueos y validación pendiente
+
+1. Ejecutar CI completa, lint, contratos y secret scanning sobre la rama actual.
+2. Revisar el diff completo y crear PR; no integrar si falla alguna prueba.
+3. Verificar hooks y WebMethods en Wix Editor y ejecutar pruebas sintéticas controladas.
+4. Exportar el código Velo del Editor y contrastarlo con Git; la sincronización Editor↔Git no está acreditada.
+5. Revisar consumidores externos, vistas y automatizaciones antes de retirar físicamente addonId, traceId de ComplementosCatalogo, gestorNombre o CajaActual.id.
+6. No habilitar writers fiscales ni afirmar cumplimiento Veri*Factu hasta disponer de datos oficiales y validar el flujo end-to-end.
+
+## Evidencia principal
 
 - [Base maestra](PROJECT_BASELINE.md)
-- [Diccionario de datos CMS](DICCIONARIO_DATOS_CMS.md)
-- [Auditoría de esquema y contratos](docs/audits/2026-11-14-current-site-cms-normalization.md)
+- [Diccionario CMS](DICCIONARIO_DATOS_CMS.md)
+- [Auditoría del esquema y contratos](docs/audits/2026-11-14-current-site-cms-normalization.md)
