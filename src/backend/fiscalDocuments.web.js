@@ -307,9 +307,9 @@ function _extractGestorFromRecord(record) {
     return {
       id: `${record._id}#gestor`,
       email: embeddedEmail,
-      name: _safeTrim(record.gestorName || record.gestorNombre || ""),
+      name: _safeTrim(record.gestorName || ""),
       label:
-        _safeTrim(record.gestorName || record.gestorNombre) || embeddedEmail,
+        _safeTrim(record.gestorName) || embeddedEmail,
       nif: _safeTrim(record.gestorNif) || null,
       phone: _safeTrim(record.phone || "") || null,
       address: _safeTrim(record.address || "") || null,
@@ -1123,9 +1123,9 @@ async function _resolveRecipientById(recipientId) {
       return {
         id: raw,
         email,
-        name: _safeTrim(record.gestorName || record.gestorNombre || ""),
+        name: _safeTrim(record.gestorName || ""),
         label:
-          _safeTrim(record.gestorName || record.gestorNombre) || email,
+          _safeTrim(record.gestorName) || email,
         nif: _safeTrim(record.gestorNif) || null,
         phone: _safeTrim(record.phone || "") || null,
         address: _safeTrim(record.address || "") || null,
