@@ -109,6 +109,17 @@ export function assertMapaStaffRecord(item, { partial = false } = {}) {
         throw new Error("SCHEMA_VIOLATION: MapaStaff item must be an object");
     }
 
+    const textFields = [
+        "displayName", "staffMemberId", "scheduleId", "thirdPartyId",
+        "staffName", "rolWebsite", "rolBookings", "memberId", "resourceId",
+        "sourceSystem",
+    ];
+    for (const field of textFields) {
+        if (item[field] != null && typeof item[field] !== "string") {
+            throw new Error(`SCHEMA_VIOLATION: MapaStaff.${field} must be TEXT`);
+        }
+    }
+
     for (const field of ["staffMemberId", "resourceId", "scheduleId"]) {
         if (partial && !Object.prototype.hasOwnProperty.call(item, field)) continue;
         if (!isValidGuid(item[field])) {
@@ -121,11 +132,16 @@ export function assertMapaStaffRecord(item, { partial = false } = {}) {
     if (item.active != null && typeof item.active !== "boolean") {
         throw new Error("SCHEMA_VIOLATION: MapaStaff.active must be BOOLEAN");
     }
-    if (item.sortOrder != null && (!Number.isFinite(Number(item.sortOrder)) || Number(item.sortOrder) < 0)) {
+    if (item.sortOrder != null && (typeof item.sortOrder !== "number" || !Number.isFinite(item.sortOrder) || item.sortOrder < 0)) {
         throw new Error("SCHEMA_VIOLATION: MapaStaff.sortOrder must be a non-negative NUMBER");
     }
-    if (item.schemaVersion != null && (!Number.isInteger(Number(item.schemaVersion)) || Number(item.schemaVersion) < 1)) {
+    if (item.schemaVersion != null && (typeof item.schemaVersion !== "number" || !Number.isInteger(item.schemaVersion) || item.schemaVersion < 1)) {
         throw new Error("SCHEMA_VIOLATION: MapaStaff.schemaVersion must be a positive integer");
+    }
+    if (item.ServiciosCatalogo_staffMembers != null &&
+        (!Array.isArray(item.ServiciosCatalogo_staffMembers) ||
+            item.ServiciosCatalogo_staffMembers.some((id) => !isValidGuid(id)))) {
+        throw new Error("SCHEMA_VIOLATION: MapaStaff.ServiciosCatalogo_staffMembers must be an array of Wix CMS IDs");
     }
 
     const retiredFields = [
