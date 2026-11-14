@@ -81,7 +81,7 @@ test("P0-FISCAL-01 fiscal ledger writers are disabled by canonical fail-closed p
   const eventSimulationGuard = eventWriter.indexOf("FISCAL_RUNTIME_POLICY.ALLOW_SIMULATION_RECORDS !== true");
   assert.ok(eventSimulationGuard >= 0, "event writer must reject explicit simulation records");
   assert.ok(eventWriter.indexOf("isExplicitSimulationLedgerRecord(input)") > eventSimulationGuard);
-  assert.ok(eventWriter.indexOf("_upsertMapaStaff(") > eventSimulationGuard);
+  assert.ok(eventWriter.indexOf("_upsertDatosFiscales(") > eventSimulationGuard);
 });
 
 test("P0-FISCAL-02 recovery cron preserves fiscal queues while their writers are disabled", async () => {
