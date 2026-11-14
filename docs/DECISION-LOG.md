@@ -328,7 +328,7 @@ El usuario declara que el código está integrado y publicado en Wix. Esta decla
 
 **Decisión del usuario:** el usuario/propietario del proyecto es la SSOT de negocio y gobierno. Sus instrucciones expresas prevalecen sobre documentación histórica, decisiones anteriores y supuestos. La documentación del repositorio es derivada y debe actualizarse para reflejar las instrucciones vigentes.
 
-**Fase actual:** desarrollo, depuración y QA. Se pausa temporalmente append-only y cualquier prohibición genérica de editar o eliminar registros, individual o masiva, cuando el bloqueo derive exclusivamente de la inmutabilidad del registro o de una política append-only. La pausa permanece activa hasta que el usuario ordene expresamente restaurar/habilitar las protecciones para despliegue; no se restaura automáticamente.
+**Fase histórica:** desarrollo, depuración y pruebas. Se pausa temporalmente append-only y cualquier prohibición genérica de editar o eliminar registros, individual o masiva, cuando el bloqueo derive exclusivamente de la inmutabilidad del registro o de una política append-only. La pausa permanece activa hasta que el usuario ordene expresamente restaurar/habilitar las protecciones para despliegue; no se restaura automáticamente.
 
 Se mantienen controles de autenticación, autorización, permisos, validación de datos, secretos y seguridad que no dependan de la inmutabilidad. Los gates funcionales independientes de writers fiscales/contables/laborales, pagos, devoluciones y comunicaciones no se consideran modificados por esta decisión.
 
