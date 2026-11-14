@@ -48,7 +48,7 @@ test("retired custom inventory collections are excluded from the canonical CMS a
     assert.equal(Object.hasOwn(C, "MOVIMIENTOS_INVENTARIO"), false);
     assert.equal(ISOLATED_SITE_MUTABLE_COLLECTIONS.includes("InventarioStockVenta"), false);
     assert.equal(ISOLATED_SITE_MUTABLE_COLLECTIONS.includes("MovimientosInventario"), false);
-    // DatosFiscales remains a separate, owner-authorized isolated-site compatibility scope.
+    // DatosFiscales is the canonical fiscal master within the project-owned CMS scope.
     assert.equal(ISOLATED_SITE_MUTABLE_COLLECTIONS.includes("DatosFiscales"), true);
 });
 
@@ -73,17 +73,15 @@ test("insert policy allows only declared collections and canonical ControlOperat
         bookingStatus: "PENDING",
     }), { code: "CMS_INSERT_BOOKING_ID_REQUIRED" });
     assert.doesNotThrow(() => assertInsertAllowed(C.MAPA_STAFF, {
+        staffMemberId: "0114748d-2806-3928-9b97-ff0d09853759",
+        resourceId: "e556070a-6d6a-402e-8422-11133033ea76",
+        scheduleId: "06af20d4-1ec3-49fa-9075-f0691dfa7fd4",
+    }));
+    assert.doesNotThrow(() => assertInsertAllowed(C.DATOS_FISCALES, {
         recordType: RECORD_TYPE.TERCERO,
-        taxId: "X0000000X",
-    }));
-    assert.doesNotThrow(() => assertInsertAllowed(C.MAPA_STAFF, {
-        recordType: RECORD_TYPE.GESTORIA,
-        name: "NachoGest",
-        email: "gestoria@example.test",
-    }));
-    assert.doesNotThrow(() => assertInsertAllowed(C.MAPA_STAFF, {
-        recordType: RECORD_TYPE.STAFF,
-        staffMemberId: "synthetic-staff-member",
+        taxId: "12345678Z",
+        legalName: "Entidad de prueba",
+        thirdPartyType: "CLIENTE",
     }));
     assert.throws(() => assertInsertAllowed("UnknownCollection", {}), {
         code: "CMS_INSERT_COLLECTION_DENIED",
