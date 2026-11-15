@@ -4,6 +4,7 @@
 
 - `#htmlTPV.txt`: documento HTML completo para pegar en un elemento Wix HTML Component con ID `#htmlTPV`.
 - `src/public/tpvPageController.js`: controlador frontend Velo y puente validado con `public/widgetBridge.js`.
+- `src/pages/TPV.page-code.template.txt`: snippet para el archivo de página que Wix genera con el ID real.
 - `src/backend/tests/tpv-widget.contract.test.mjs`: contrato estático de seguridad del widget/controlador.
 - Página Wix sugerida: crear una página privada llamada TPV, añadir un HTML Component con ID `htmlTPV` y configurar su contenido con el documento HTML.
 
