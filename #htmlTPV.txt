@@ -29,7 +29,7 @@
 <script>
 (function(){
 "use strict";
-var state={items:[],tenders:[],sequence:0};
+var state={items:[],tenders:[],sequence:0,readyAttempts:0,contextReady:false};
 var $=function(id){return document.getElementById(id);};
 var euro=function(c){return (Number(c||0)/100).toLocaleString("es-ES",{style:"currency",currency:"EUR"});};
 var toCents=function(v){var n=Number(v);if(!Number.isFinite(n)||n<0)return null;var c=Math.round((n+Number.EPSILON)*100);return Math.abs(n*100-c)<1e-7?c:null;};
