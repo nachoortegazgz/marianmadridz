@@ -96,6 +96,9 @@ function normalizePayments(pagos, totalMinor) {
         if (importeCambioMinor > 0 && medioPago !== "EFECTIVO") {
             throw new Error("TPV_CHANGE_REQUIRES_CASH");
         }
+        if (importeCambioMinor > importeMinor) {
+            throw new Error("TPV_CHANGE_EXCEEDS_CASH_RECEIVED");
+        }
         importePagadoMinor += importeMinor;
         return Object.freeze({
             medioPago,
