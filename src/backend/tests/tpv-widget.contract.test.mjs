@@ -32,6 +32,8 @@ test("TPV HTML uses versioned messaging and browser-local ticket drafts", () => 
     assert.match(html, /send\("CATALOG_SERVICES"/);
     assert.match(html, /send\("CATALOG_STAFF"/);
     assert.match(html, /precioFormateado/);
+    assert.ok(html.includes('if(!state.contextReady&&type!=="MM_READY")return false;'));
+    assert.ok(html.includes('if($("section-catalog").classList.contains("active"))requestCatalog();'));
     assert.match(html, /window\.parent\.postMessage/);
     assert.match(html, /function announceReady/);
     assert.match(html, /e\.source!==window\.parent/);
