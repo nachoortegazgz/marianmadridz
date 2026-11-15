@@ -11,7 +11,6 @@ import {
 } from "backend/dataAccessPolicy";
 import {
     BUSINESS_COLLECTIONS as C,
-    ISOLATED_SITE_MUTABLE_COLLECTIONS,
     OPERATIONAL_COLLECTIONS as O,
     CONTROL_TYPE as T,
     RECORD_TYPE,
@@ -37,10 +36,13 @@ test("all CMS write-policy collection lists contain unique canonical strings", (
 test("retired custom inventory collections are excluded from the canonical CMS allowlist", () => {
     assert.equal(Object.hasOwn(C, "INVENTARIO_STOCK_VENTA"), false);
     assert.equal(Object.hasOwn(C, "MOVIMIENTOS_INVENTARIO"), false);
-    assert.equal(ISOLATED_SITE_MUTABLE_COLLECTIONS.includes("InventarioStockVenta"), false);
-    assert.equal(ISOLATED_SITE_MUTABLE_COLLECTIONS.includes("MovimientosInventario"), false);
-    // DatosFiscales is a canonical project-owned collection in the current site.
-    assert.equal(ISOLATED_SITE_MUTABLE_COLLECTIONS.includes(C.DATOS_FISCALES), true);
+    for (const policyName of ["insertCollections", "updateCollections", "saveCollections", "removeCollections", "bulkRemoveCollections"]) {
+        assert.equal(DATA_ACCESS_WRITE_POLICY[policyName].includes("InventarioStockVenta"), false);
+        assert.equal(DATA_ACCESS_WRITE_POLICY[policyName].includes("MovimientosInventario"), false);
+    }
+    assert.equal(DATA_ACCESS_WRITE_POLICY.insertCollections.includes(C.DATOS_FISCALES), true);
+    assert.equal(DATA_ACCESS_WRITE_POLICY.updateCollections.includes(C.DATOS_FISCALES), false);
+    assert.equal(DATA_ACCESS_WRITE_POLICY.removeCollections.includes(C.DATOS_FISCALES), false);
 });
 
 test("insert policy allows only declared collections and canonical ControlOperativo types", () => {
@@ -168,7 +170,7 @@ test("single-item removal keeps ControlOperativo scoped and denies append-only l
 });
 test("bulk update is disabled and bulk remove requires an allowlisted conditional purge", () => {
     const cutoff = new Date("2026-11-14T00:00:00.000Z");
-    for (const collection of ISOLATED_SITE_MUTABLE_COLLECTIONS) {
+    for (const collection of Object.values(C)) {
         assert.throws(() => assertBulkUpdateAllowed(collection, [{ _id: "synthetic-row-1" }]), {
             code: "CMS_BULK_UPDATE_SCOPE_DENIED",
         });
