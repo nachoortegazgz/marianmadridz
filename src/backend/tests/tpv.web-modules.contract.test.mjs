@@ -133,12 +133,12 @@ test("TPV page is wired to the shared HTML bridge and its versioned iframe proto
     assert.match(html, /m\.type==="MM_CONTEXT"/);
     assert.match(html, /send\("CASHIER_STATE"/);
     assert.match(html, /m\.type==="CASHIER_STATE_RES"/);
-    assert.match(html, /send\\("CATALOG_SERVICES"/);
-    assert.match(html, /send\\("CATALOG_STAFF"/);
-    assert.match(html, /m\\.type==="CATALOG_SERVICES_RES"/);
-    assert.match(html, /m\\.type==="CATALOG_STAFF_RES"/);
+    assert.match(html, /send\("CATALOG_SERVICES"/);
+    assert.match(html, /send\("CATALOG_STAFF"/);
+    assert.match(html, /m\.type==="CATALOG_SERVICES_RES"/);
+    assert.match(html, /m\.type==="CATALOG_STAFF_RES"/);
 
-    const inlineScript = html.match(/<script>([\\s\\S]*?)<\\/script>/)?.[1];
+    const inlineScript = html.match(/<script>([\s\S]*?)<\/script>/)?.[1];
     assert.ok(inlineScript, "TPV HTML component must contain its runtime script");
     assert.doesNotThrow(() => new Script(inlineScript));
 });
