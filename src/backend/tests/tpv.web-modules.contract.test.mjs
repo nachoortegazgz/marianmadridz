@@ -62,6 +62,10 @@ test("TPV sale draft rejects invalid tax, overpayment, unknown methods and sub-c
         /TPV_INVALID_PAYMENT_METHOD/
     );
     assert.throws(
+        () => validateSaleDraft({ ...valid, pagos: [{ medioPago: "EFECTIVO", importe: 5, importeCambio: 6 }] }),
+        /TPV_CHANGE_EXCEEDS_CASH_RECEIVED/
+    );
+    assert.throws(
         () => validateSaleDraft({
             lineas: [{
                 tipoLinea: "PRODUCTO",
