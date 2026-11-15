@@ -12,6 +12,7 @@ import { makeTraceId } from "public/mmUtils";
 
 const TPV_ALLOWED_MESSAGES = Object.freeze([
     MESSAGE_TYPES.READY,
+    MESSAGE_TYPES.CONTEXT,
     "CASHIER_STATE",
 ]);
 
