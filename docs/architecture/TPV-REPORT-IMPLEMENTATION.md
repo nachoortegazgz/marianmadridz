@@ -12,6 +12,10 @@ Esta rama incorpora los puntos de entrada backend Velo con extension `.web.js` p
 
 Todos los WebMethods requieren `Permissions.SiteMember` y validan el rol de cajero en backend cuando no delegan en `getCashierState()`. El frontend no puede enviar identidad, permisos ni actor autorizado.
 
+## Integracion pendiente
+
+Los modulos se aislan bajo `backend/tpv/` para no sobrescribir los modulos raiz `backend/tpvCaja.web.js` y `backend/tpvVentas.web.js`, que tienen consumidores existentes en el repositorio. Esos modulos raiz y los archivos de pagina no se modifican en esta entrega. La conexion con la pagina Wix y sus controles requiere confirmar el ID real de pagina y los IDs internos de los repetidores en Editor; esta rama no se considera integrada en la interfaz.
+
 ## Limites deliberados
 
 No se crean pedidos, pagos, reembolsos, movimientos de caja, sesiones, cierres X/Z, tarjetas regalo, facturas ni registros CMS. Los metodos de escritura devuelven errores explicitos `TPV_*_DISABLED`; no simulan persistencia ni pagos reales.
