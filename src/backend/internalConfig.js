@@ -73,7 +73,6 @@ export const BUSINESS_COLLECTIONS = Object.freeze({
   DATOS_FISCALES: "DatosFiscales",
   COMPLEMENTOS_CATALOGO: "ComplementosCatalogo",
   CONTROL_OPERATIVO: "ControlOperativo",
-  DATOS_FISCALES: "DatosFiscales",
   HISTORICO_CIERRES_Z: "HistoricoCierresZ",
   PAQUETES_GESTORIA: "PaquetesGestoria",
   LIBRO_ASIENTOS_CONTABLES_DETALLE: "LibroAsientosContablesDetalle",
@@ -82,11 +81,6 @@ export const BUSINESS_COLLECTIONS = Object.freeze({
   REGISTROS_HORARIOS_STAFF: "RegistrosHorariosStaff",
   SERVICIOS_CATALOGO: "ServiciosCatalogo",
 });
-
-// The fiscal identity master is a project-owned collection in the current site.
-export const ISOLATED_SITE_MUTABLE_COLLECTIONS = Object.freeze([
-  ...Object.values(BUSINESS_COLLECTIONS),
-]);
 
 // Operational lock and idempotency state is centralized in ControlOperativo.
 export const OPERATIONAL_COLLECTIONS = Object.freeze({
@@ -516,9 +510,9 @@ export const DATA_ACCESS_BULK_PATCH_POLICY = Object.freeze({
 
 
 /*
- * Isolated-site mutation policy: update/remove are enabled for project-owned collections.
- * Insert remains allowlisted; bulk insert stays disabled. Bulk update/remove
- * require explicit IDs and remain scoped to project-owned collections.
+ * Central CMS write allowlist. Append-only ledgers are excluded from update/remove;
+ * bulk update and business-collection deletion remain fail-closed. Only scoped
+ * ControlOperativo purges are permitted by the policy below.
  */
 export const DATA_ACCESS_WRITE_POLICY = Object.freeze({
   insertCollections: Object.freeze([
@@ -537,11 +531,6 @@ export const DATA_ACCESS_WRITE_POLICY = Object.freeze({
     BUSINESS_COLLECTIONS.CONTROL_OPERATIVO,
     BUSINESS_COLLECTIONS.CAJA_ACTUAL,
     BUSINESS_COLLECTIONS.CITAS_F2,
-    BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA,
-    BUSINESS_COLLECTIONS.LIBRO_ASIENTOS_CONTABLES_DETALLE,
-    BUSINESS_COLLECTIONS.REGISTROS_HORARIOS_STAFF,
-    BUSINESS_COLLECTIONS.HISTORICO_CIERRES_Z,
-    BUSINESS_COLLECTIONS.PAQUETES_GESTORIA,
   ]),
   saveCollections: Object.freeze([
     BUSINESS_COLLECTIONS.CONTROL_OPERATIVO,
@@ -549,11 +538,6 @@ export const DATA_ACCESS_WRITE_POLICY = Object.freeze({
   ]),
   removeCollections: Object.freeze([
     BUSINESS_COLLECTIONS.CONTROL_OPERATIVO,
-    BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA,
-    BUSINESS_COLLECTIONS.LIBRO_ASIENTOS_CONTABLES_DETALLE,
-    BUSINESS_COLLECTIONS.REGISTROS_HORARIOS_STAFF,
-    BUSINESS_COLLECTIONS.HISTORICO_CIERRES_Z,
-    BUSINESS_COLLECTIONS.PAQUETES_GESTORIA,
   ]),
   bulkRemoveCollections: Object.freeze([BUSINESS_COLLECTIONS.CONTROL_OPERATIVO]),
   mutableControlTypes: Object.freeze([
