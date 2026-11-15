@@ -1,4 +1,4 @@
-> **SSOT de entorno vigente (2026-11-14):** el único sitio del proyecto es QA: `188bed94-177c-4bc9-a9f0-35080d874f3e` (`https://www.marianmadrid.es/`). El propietario confirma que nunca ha tenido actividad real, que todos los datos son sintéticos, que el cliente de pruebas es Nacho Pitt (`nachoortegazgz@gmail.com`) y que la pasarela está desconectada. No existe otro sitio QA ni un QA externo designado. Las referencias anteriores a otros Site ID o a este sitio como producción quedan supersedidas. El estado Wix Published no altera su clasificación funcional como QA. Véase [SSOT del entorno QA](qa/QA-ENVIRONMENT-SSOT.md).
+> **SSOT de entorno vigente (2026-11-14):** el único sitio del proyecto es QA: `188bed94-177c-4bc9-a9f0-35080d874f3e` (`https://www.marianmadrid.es/`). El propietario confirma que nunca ha tenido actividad real, que todos los datos son sintéticos, que el cliente de pruebas es Nacho Pitt (`nacho.pitt@example.test`) y que la pasarela está desconectada. No existe otro sitio QA ni un QA externo designado. Las referencias anteriores a otros Site ID o a este sitio como producción quedan supersedidas. El estado Wix Published no altera su clasificación funcional como QA. Véase [SSOT del entorno QA](qa/QA-ENVIRONMENT-SSOT.md).
 
 ---
 
@@ -35,9 +35,9 @@ PR #370 está abierto pero GitHub informa `dirty` (historial divergente respecto
 
 ### Seguridad y operaciones
 
-- ISOLATED_SITE_RECORD_MUTATIONS_ENABLED=true está autorizado para las colecciones propias del sitio aislado.
-- Las colecciones WIX_APP permanecen fuera del alcance de mutación.
-- Se mantienen RBAC, permisos, validaciones, secretos, allowlists y gates de writers/efectos externos.
+- La decisión QA-2026-11-15-TEMP-MUTABILITY autoriza temporalmente correcciones de datos sintéticos, pero la mutabilidad no está habilitada técnicamente: la política central aún bloquea update/remove de ledgers append-only.
+- No existe una bandera global de mutabilidad; no habilitarla sin identidad de sitio verificada server-side, ADMIN-only, allowlist por colección, backup y auditoría.
+- Las colecciones WIX_APP y los claims/eventos de idempotencia permanecen protegidos.
 - Writers fiscales/contables/laborales, pagos, reembolsos y envíos externos siguen fail-closed.
 - No existe CONFIG_SISTEMA con identidad fiscal oficial verificada.
 
