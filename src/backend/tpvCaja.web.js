@@ -1,5 +1,7 @@
 import wixData from "wix-data";
 
+import { Permissions, webMethod } from "wix-web-module";
+
 export const obtenerCajaActual = webMethod(
   Permissions.SiteMember,
   async () => {
