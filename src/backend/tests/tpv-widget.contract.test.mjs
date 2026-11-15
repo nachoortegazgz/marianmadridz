@@ -9,6 +9,7 @@ test("TPV controller exposes only authenticated read-only cashier state", () => 
     assert.match(controller, /getCashierState/);
     assert.match(controller, /requireCajero/);
     assert.match(controller, /MESSAGE_TYPES\.READY/);
+    assert.match(controller, /MESSAGE_TYPES\.CONTEXT/);
     assert.match(controller, /"CASHIER_STATE"/);
     assert.doesNotMatch(
         controller,
