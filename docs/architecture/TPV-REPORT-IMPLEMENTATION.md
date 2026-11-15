@@ -31,7 +31,7 @@ La integracion anterior de la pagina estaba rota: el page code esperaba `TPV_REQ
 
 **Limite de validacion:** Wix ha confirmado el ID y la ruta de la pagina, pero la API de inventario de paginas no devuelve el arbol de componentes ni el contenido publicado del HTML Component. Por ello, el ID `#htmlTPV` y el contenido real del iframe deben comprobarse en el Editor/Preview. El sitio es de tipo Editor clasico, no Studio Two; la integracion de codigo en esta rama no equivale a guardar ni publicar el codigo en el Editor. No se ha realizado despliegue ni publicacion en Wix.
 
-Los modulos de catalogo, ventas y caja siguen aislados bajo `backend/tpv/`. Los lectores de Bookings no estan aun conectados a controles del HTML. La interfaz conserva borradores locales; no presenta todavia productos, servicios ni profesionales obtenidos en tiempo real desde los nuevos WebMethods.
+Los modulos de catalogo, ventas y caja siguen aislados bajo `backend/tpv/`. El controlador de pagina conecta los lectores de servicios y profesionales de Wix Bookings con la seccion Catálogo del HTML Component mediante mensajes permitidos y consultas autenticadas. La interfaz representa servicios visibles y sus precios con `formattedValue`, y profesionales proveedores de servicio. Estos datos son de solo lectura; no se crean reservas ni se añaden automaticamente lineas al ticket. Productos y tarjetas regalo siguen pendientes.
 
 ## Limites deliberados
 
@@ -49,7 +49,7 @@ No se crean pedidos, pagos, reembolsos, movimientos de caja, sesiones, cierres X
 
 ## Integraciones nativas
 
-- Servicios y profesionales: Wix Bookings, solo lectura en backend; pendiente de conexion a controles de interfaz.
+- Servicios y profesionales: Wix Bookings, solo lectura en backend y mostrados en la seccion Catalogo del HTML Component.
 - Productos y variantes: Wix Stores Catalog V3, pendiente de instalar/verificar el paquete SDK correspondiente.
 - Pedidos y transacciones: Wix eCommerce, no se crean ni modifican.
 - Pagos y reembolsos: proveedor conectado / Wix Payments, bloqueados.
@@ -59,9 +59,9 @@ No se crean pedidos, pagos, reembolsos, movimientos de caja, sesiones, cierres X
 
 ## Validacion
 
-La suite `tpv.web-modules.contract.test.mjs` verifica validacion economica, ausencia de escritores CMS en los WebMethods y coherencia estatica entre page code, controlador y protocolo HTML. Las pruebas offline no sustituyen la validacion en Wix Editor/Preview ni una prueba runtime del SDK Bookings.
+La suite `tpv.web-modules.contract.test.mjs` verifica validacion economica, ausencia de escritores CMS en los WebMethods, coherencia del protocolo page code/controlador/HTML, presencia de los mensajes de catalogo Bookings y sintaxis del script inline del componente. Las pruebas offline no sustituyen la validacion en Wix Editor/Preview ni una prueba runtime del SDK Bookings.
 
-La ultima ejecucion CI confirmada para el commit anterior a la conexion de pagina completo Layer 1, Layer 2, regresion offline, contratos SDK Wix Bookings/eCommerce, ESLint y secret scan. La nueva conexion de pagina requiere su propia ejecucion CI y no se considera validada hasta que finalice.
+El estado CI debe comprobarse siempre sobre el HEAD actual de la rama. La aprobacion de CI valida los gates de repositorio (regresion offline, contratos SDK y lint), pero no acredita que el HTML Component este guardado en Wix Editor ni que los lectores Bookings funcionen en runtime publicado.
 
 ## Siguiente gate
 
@@ -72,7 +72,7 @@ Antes de activar cualquier escritura o publicar:
 3. Resolver el permiso de lectura publica de `CajaActual` y `MovimientosCaja` sin romper el acceso backend autorizado; probar lectura anonima, miembro ordinario y cajero.
 4. Aprobar el modelo de datos POS separado del ledger fiscal, o aprobar expresamente una arquitectura que mantenga ambos contratos aislados.
 5. Reconciliar `netAmount`, `bizumAmount` y el periodo del resumen de pagos con el esquema y los datos live.
-6. Instalar y fijar las dependencias oficiales faltantes y conectar los lectores de catalogo a la interfaz.
+6. Instalar y fijar las dependencias oficiales de Stores y Gift Cards que falten, y conectar los lectores de productos y tarjetas regalo cuando sus contratos esten aprobados.
 7. Definir idempotencia, concurrencia, compensaciones y autorizaciones.
 8. Diseñar pruebas de integracion con pagos, automatizaciones y comunicaciones aislados.
 9. Aprobar el cambio y habilitar writers de forma independiente, con rollback y pruebas de regresion.
