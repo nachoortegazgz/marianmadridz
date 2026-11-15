@@ -1280,7 +1280,7 @@ export const sendManagerPackageToAccountant = webMethod(
       const dispatch = await _dispatchEmailViaResend({
         to: recipient.email,
         subject: `Marian Madrid - Paquete ${periodLabel}`,
-        text: lines.join("\\n"),
+        text: lines.join("\n"),
         attachments,
         traceId,
       });
