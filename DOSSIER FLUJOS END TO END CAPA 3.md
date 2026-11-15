@@ -31,7 +31,9 @@ Detalle y evidencias: [reconciliación de baseline y recuperación de validadore
 
 **Autoridad:** el usuario/propietario es la SSOT de negocio, requisitos, prioridades, criterios de aceptación y autorizaciones. Las instrucciones expresas posteriores del usuario prevalecen sobre decisiones y restricciones documentales anteriores. La documentación oficial de Wix y de las integraciones gobierna únicamente los contratos y límites técnicos de la plataforma.
 
-**Política de mutabilidad vigente (TEC-038):** los bypasses globales de update/remove y la ventana temporal append-only han sido retirados del código. Los ledgers de caja, contabilidad, fiscalidad, jornada, cierres y eventos webhook permanecen inmutables también en QA. Bulk update está deshabilitado. Bulk remove solo admite purgas de tipos efímeros/terminales en ControlOperativo, con condiciones exactas de tipo, estado y fecha; quedan excluidos WEBHOOK_EVENT, DEDUPE_KEY, LEDGER_IDEMPOTENCY y WEBHOOK_CLAIM. CajaActual solo cambia mediante el flujo backend autorizado y con movimiento fuente; no se borra.
+**Política técnica efectiva:** el código mantiene los ledgers de caja, contabilidad, fiscalidad, jornada, cierres y eventos webhook protegidos frente a update/remove. Bulk update está deshabilitado. Bulk remove solo admite purgas de tipos efímeros/terminales en ControlOperativo, con condiciones exactas de tipo, estado y fecha; quedan excluidos WEBHOOK_EVENT, DEDUPE_KEY, LEDGER_IDEMPOTENCY y WEBHOOK_CLAIM. CajaActual solo cambia mediante el flujo backend autorizado y con movimiento fuente; no se borra.
+
+**Decisión QA-2026-11-15-TEMP-MUTABILITY:** el propietario ha autorizado temporalmente la corrección de registros sintéticos, supersediendo la prohibición documental de hacerlo en QA. La excepción aún no está implementada técnicamente: no se ha acreditado una comprobación server-side del Site ID, ni una ruta de mantenimiento ADMIN-only con allowlist, backup y auditoría. Hasta cerrar esos gates, la política efectiva del código sigue siendo append-only; no ejecutar update/remove sobre ledgers.
 
 **Restauración:** esta política no se revierte automáticamente. Solo el usuario puede ordenar la restauración de append-only y de las restricciones de mutación para preparar el despliegue. No publicar a producción basándose únicamente en esta excepción de QA.
 
@@ -47,7 +49,7 @@ Detalle y evidencias: [reconciliación de baseline y recuperación de validadore
 
 **CMS actual:** 23 colecciones (15 NATIVE, 8 WIX_APP), 524 campos físicos NATIVE. Wix CMS conserva la autoridad transaccional. SharePoint es solo repositorio documental de evidencia; Capa 3 no modifica ni gobierna Capa 1.
 
-**Política temporal:** ISOLATED_SITE_RECORD_MUTATIONS_ENABLED=true permite update/remove individual y masivo en colecciones propias incluidas en ISOLATED_SITE_MUTABLE_COLLECTIONS, con IDs explícitos y límite de 1.000 elementos. Las colecciones WIX_APP quedan excluidas. Se mantienen RBAC, permisos, validaciones, secretos, allowlists de inserción y gates de writers/efectos externos. Esta ventana no habilita pagos, facturación, fichajes ni comunicaciones.
+**Estado de la excepción QA:** la mutabilidad temporal está autorizada por decisión del propietario, pero no está habilitada en el código ni en Wix CMS. No existe `ISOLATED_SITE_RECORD_MUTATIONS_ENABLED` ni `ISOLATED_SITE_MUTABLE_COLLECTIONS` en la política efectiva. No cambiar permisos ni ejecutar mutaciones hasta disponer de comprobación server-side del Site ID QA, ADMIN-only, allowlist, backup, auditoría y pruebas negativas. La autorización no habilita pagos, facturación, fichajes ni comunicaciones.
 
 **Contratos CMS relevantes:**
 - MapaStaff: 18 campos, solo identidad de personal (staffMemberId, resourceId, scheduleId, memberId y active). thirdPartyId es TEXT opaco y no es una FK fiscal.

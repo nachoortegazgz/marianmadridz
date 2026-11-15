@@ -2,7 +2,6 @@ import {
     DATA_ACCESS_BULK_PATCH_POLICY,
     DATA_ACCESS_WRITE_POLICY,
     BUSINESS_COLLECTIONS,
-    ISOLATED_SITE_MUTABLE_COLLECTIONS,
     CONTROL_TYPE,
     CONTROL_OPERATIVO_NON_CANONICAL_FIELDS,
     RECORD_TYPE,
@@ -110,10 +109,7 @@ export function assertInsertAllowed(collection, item) {
 }
 
 export function assertUpdateAllowed(collection, item) {
-    if (!_isRecord(item) || !ISOLATED_SITE_MUTABLE_COLLECTIONS.includes(collection)) {
-        throw _policyError("CMS_UPDATE_COLLECTION_DENIED");
-    }
-    if (!DATA_ACCESS_WRITE_POLICY.updateCollections.includes(collection)) {
+    if (!_isRecord(item) || !DATA_ACCESS_WRITE_POLICY.updateCollections.includes(collection)) {
         throw _policyError("CMS_UPDATE_COLLECTION_DENIED");
     }
     if (APPEND_ONLY_COLLECTIONS.includes(collection)) {
@@ -151,10 +147,7 @@ export function assertSaveAllowed(collection, item) {
 }
 
 export function assertRemoveAllowed(collection, id, expectedControlType) {
-    if (!id || !ISOLATED_SITE_MUTABLE_COLLECTIONS.includes(collection)) {
-        throw _policyError("CMS_REMOVE_SCOPE_DENIED");
-    }
-    if (!DATA_ACCESS_WRITE_POLICY.removeCollections.includes(collection)) {
+    if (!id || !DATA_ACCESS_WRITE_POLICY.removeCollections.includes(collection)) {
         throw _policyError("CMS_REMOVE_SCOPE_DENIED");
     }
     if (collection === BUSINESS_COLLECTIONS.CONTROL_OPERATIVO) {
@@ -205,7 +198,6 @@ function _hasExactKeys(value, expected) {
 export function assertBulkRemoveAllowed(collection, ids, options = {}) {
     if (
         collection !== BUSINESS_COLLECTIONS.CONTROL_OPERATIVO ||
-        !ISOLATED_SITE_MUTABLE_COLLECTIONS.includes(collection) ||
         !Array.isArray(ids) ||
         ids.length === 0 ||
         ids.length > 1000 ||
