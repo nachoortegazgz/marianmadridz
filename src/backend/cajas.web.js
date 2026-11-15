@@ -54,8 +54,6 @@ import { isExplicitSimulationLedgerRecord } from "backend/validation";
 import { buildEventLogFiscalChainPayload } from "backend/fiscalHashPayload";
 
 
-export { readInvoiceNumber, readInvoiceIssueDate };
-
 import { SECRETS } from "backend/mmSecrets";
 import { getMyStaffContext, requireCajero, rateLimiter } from "backend/security";
 import { findStaffByResourceId } from "backend/staff";
