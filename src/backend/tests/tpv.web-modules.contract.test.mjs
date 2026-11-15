@@ -105,3 +105,26 @@ test("TPV catalog reader uses native Bookings SDK and does not expose staff cont
     assert.match(catalog, /TPV_STORES_SDK_NOT_INSTALLED/);
     assert.doesNotMatch(catalog, /staff\.email|staff\.phone/);
 });
+
+test("TPV page is wired to the shared HTML bridge and its versioned iframe protocol", async () => {
+    const [page, controller, html] = await Promise.all([
+        source("../pages/TPV.yl5th.js"),
+        source("../public/tpvPageController.js"),
+        source("../../%23htmlTPV.txt"),
+    ]);
+
+    assert.match(page, /initializeTpvPage/);
+    assert.match(page, /public\/tpvPageController/);
+    assert.match(page, /initializeTpvPage\(widget\)/);
+    assert.doesNotMatch(page, /TPV_REQUEST_STATE|TPV_READY|getCashierState/);
+
+    assert.match(controller, /MESSAGE_TYPES\.READY/);
+    assert.match(controller, /MESSAGE_TYPES\.CONTEXT/);
+    assert.match(controller, /"CASHIER_STATE"/);
+    assert.match(controller, /CASHIER_STATE_RES/);
+
+    assert.match(html, /send\("MM_READY"/);
+    assert.match(html, /m\.type==="MM_CONTEXT"/);
+    assert.match(html, /send\("CASHIER_STATE"/);
+    assert.match(html, /m\.type==="CASHIER_STATE_RES"/);
+});
