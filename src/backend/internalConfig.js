@@ -546,7 +546,6 @@ export const DATA_ACCESS_WRITE_POLICY = Object.freeze({
     CONTROL_TYPE.DEDUPE_KEY,
     CONTROL_TYPE.IDEMPOTENCY,
     CONTROL_TYPE.SYSTEM_FLAG,
-    CONTROL_TYPE.WEBHOOK_EVENT,
   ]),
   removableControlTypes: Object.freeze([
     CONTROL_TYPE.DAYS_CACHE,
@@ -554,7 +553,6 @@ export const DATA_ACCESS_WRITE_POLICY = Object.freeze({
     CONTROL_TYPE.DUAL_CACHE,
     CONTROL_TYPE.IDEMPOTENCY,
     CONTROL_TYPE.SLOT_LOCK,
-    CONTROL_TYPE.WEBHOOK_EVENT,
   ]),
   purgeControlTypes: Object.freeze([
     CONTROL_TYPE.ALERT,
