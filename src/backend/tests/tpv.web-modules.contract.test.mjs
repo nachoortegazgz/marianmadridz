@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import { Script } from "node:vm";
 
 import { validateSaleDraft } from "../tpv/tpvValidation.js";
 
@@ -102,6 +103,7 @@ test("TPV catalog reader uses native Bookings SDK and does not expose staff cont
     const catalog = await source("tpv/tpvCatalogo.web.js");
     assert.match(catalog, /services\.queryServices/);
     assert.match(catalog, /staffMembers\.queryStaffMembersV2/);
+    assert.match(catalog, /formattedValue/);
     assert.match(catalog, /TPV_STORES_SDK_NOT_INSTALLED/);
     assert.doesNotMatch(catalog, /staff\.email|staff\.phone/);
 });
@@ -122,9 +124,21 @@ test("TPV page is wired to the shared HTML bridge and its versioned iframe proto
     assert.match(controller, /MESSAGE_TYPES\.CONTEXT/);
     assert.match(controller, /"CASHIER_STATE"/);
     assert.match(controller, /CASHIER_STATE_RES/);
+    assert.match(controller, /CATALOG_SERVICES/);
+    assert.match(controller, /CATALOG_STAFF/);
+    assert.match(controller, /obtenerServicios/);
+    assert.match(controller, /obtenerProfesionales/);
 
     assert.match(html, /send\("MM_READY"/);
     assert.match(html, /m\.type==="MM_CONTEXT"/);
     assert.match(html, /send\("CASHIER_STATE"/);
     assert.match(html, /m\.type==="CASHIER_STATE_RES"/);
+    assert.match(html, /send\\("CATALOG_SERVICES"/);
+    assert.match(html, /send\\("CATALOG_STAFF"/);
+    assert.match(html, /m\\.type==="CATALOG_SERVICES_RES"/);
+    assert.match(html, /m\\.type==="CATALOG_STAFF_RES"/);
+
+    const inlineScript = html.match(/<script>([\\s\\S]*?)<\\/script>/)?.[1];
+    assert.ok(inlineScript, "TPV HTML component must contain its runtime script");
+    assert.doesNotThrow(() => new Script(inlineScript));
 });
