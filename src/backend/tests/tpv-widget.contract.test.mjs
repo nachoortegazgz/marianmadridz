@@ -13,8 +13,8 @@ test("TPV controller exposes authenticated read-only cashier and Bookings catalo
     assert.match(controller, /obtenerProfesionales/);
     assert.match(cashierBackend, /requireCajero/);
     assert.match(catalogBackend, /requireCajero/);
-    assert.match(controller, /MESSAGE_TYPES\\.READY/);
-    assert.match(controller, /MESSAGE_TYPES\\.CONTEXT/);
+    assert.match(controller, /MESSAGE_TYPES\.READY/);
+    assert.match(controller, /MESSAGE_TYPES\.CONTEXT/);
     assert.match(controller, /"CASHIER_STATE"/);
     assert.match(controller, /"CATALOG_SERVICES"/);
     assert.match(controller, /"CATALOG_STAFF"/);
@@ -29,15 +29,15 @@ test("TPV HTML uses versioned messaging and browser-local ticket drafts", () => 
     assert.match(html, /CASHIER_STATE_RES/);
     assert.match(html, /CATALOG_SERVICES_RES/);
     assert.match(html, /CATALOG_STAFF_RES/);
-    assert.match(html, /send\\("CATALOG_SERVICES"/);
-    assert.match(html, /send\\("CATALOG_STAFF"/);
+    assert.match(html, /send\("CATALOG_SERVICES"/);
+    assert.match(html, /send\("CATALOG_STAFF"/);
     assert.match(html, /precioFormateado/);
-    assert.match(html, /window\\.parent\\.postMessage/);
+    assert.match(html, /window\.parent\.postMessage/);
     assert.match(html, /function announceReady/);
-    assert.match(html, /e\\.source!==window\\.parent/);
-    assert.match(html, /state\\.items/);
+    assert.match(html, /e\.source!==window\.parent/);
+    assert.match(html, /state\.items/);
     assert.match(html, /SIN COBRO/);
-    assert.doesNotMatch(html, /fetch\\s*\\(|XMLHttpRequest|wix-data|suppressAuth/i);
+    assert.doesNotMatch(html, /fetch\s*\(|XMLHttpRequest|wix-data|suppressAuth/i);
 });
 
 test("TPV mutation controls remain visibly disabled", () => {
