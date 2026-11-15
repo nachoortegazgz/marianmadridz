@@ -22,8 +22,14 @@ test("operational alerts have one centralized, deduplicated writer", () => {
   assert.doesNotMatch(nightlyJob, /dalInsert\(C,/);
 });
 
-test("audit write paths share one persistence implementation", () => {
+test("audit entry points share one normalized event handler and persistence path", () => {
   assert.match(auditSource, /async function _persistAuditRecord/);
-  assert.match(auditSource, /await _persistAuditRecord\(record\);/);
-  assert.match(auditSource, /await _persistAuditRecord\(record, "audit_insert"\);/);
+  assert.match(auditSource, /async function _logAuditEvent\\(/);
+  assert.match(auditSource, /await _persistAuditRecord\\(record, timeoutLabel\\);/);
+  assert.match(auditSource, /return _logAuditEvent\\(\\{ eventType, level, message, data, traceId, entityId, source \\}\\);/);
+  assert.match(auditSource, /timeoutLabel: "audit_insert",\\s*timeoutAlerts: true/);
+
+  const publicEntries = auditSource.slice(auditSource.indexOf("export async function logAuditEvent("));
+  assert.equal((publicEntries.match(/_normalizeLevel\\(/g) || []).length, 0);
+  assert.equal((publicEntries.match(/_buildControlOperativoRecord\\(/g) || []).length, 0);
 });
