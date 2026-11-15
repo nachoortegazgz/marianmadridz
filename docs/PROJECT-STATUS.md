@@ -52,7 +52,7 @@ PR #370 está abierto pero GitHub informa `dirty` (historial divergente respecto
 
 ## Decisiones
 
-Consultar [DECISION-LOG.md](DECISION-LOG.md). Las entradas históricas se conservan para trazabilidad; TEC-037 y TEC-038 describen la política y arquitectura vigentes.
+Consultar [DECISION-LOG.md](DECISION-LOG.md). TEC-038 describe la política técnica fail-closed actualmente implementada; QA-2026-11-15-TEMP-MUTABILITY autoriza la excepción temporal, cuya implementación segura sigue pendiente.
 
 
 > **Nota de baseline CMS:** los inventarios y recuentos CMS que acompañan este estado son snapshots históricos; no constituyen baseline vigente del Site ID `188bed94-177c-4bc9-a9f0-35080d874f3e` hasta repetir una lectura de solo lectura contra el sitio QA actual.
