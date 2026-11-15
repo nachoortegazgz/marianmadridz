@@ -20,6 +20,8 @@ test("TPV HTML uses versioned messaging and browser-local ticket drafts", () => 
     assert.match(html, /MM_READY/);
     assert.match(html, /CASHIER_STATE_RES/);
     assert.match(html, /window\.parent\.postMessage/);
+    assert.match(html, /function announceReady/);
+    assert.match(html, /e\.source!==window\.parent/);
     assert.match(html, /state\.items/);
     assert.match(html, /SIN COBRO/);
     assert.doesNotMatch(html, /fetch\s*\(|XMLHttpRequest|wix-data|suppressAuth/i);
