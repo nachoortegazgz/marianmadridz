@@ -126,6 +126,20 @@ test('FDOC-STORAGE-06 CSV output uses real line breaks and preview uses manager-
   assert.ok(preview.includes('summaryRes?.status !== "SUCCESS"'));
 });
 
+test('FDOC-DISPATCH-05 package email body uses actual newline characters', () => {
+  const handler = extractBlock(
+    'export const sendManagerPackageToAccountant = webMethod(',
+    '// BLOQUE 9 - ENVIO DE DOCUMENTO CONCRETO'
+  );
+  const joinExpression = handler.match(/text:\\s*(lines\\.join\\([^)]*\\))/);
+  assert.ok(joinExpression, 'Package email body must be assembled from its line array');
+  assert.equal(
+    vm.runInNewContext('(' + joinExpression[1] + ')', { lines: ['line one', 'line two'] }),
+    'line one\\nline two',
+    'Email body must contain actual line breaks, not literal backslash-n sequences'
+  );
+});
+
 test('FDOC-DISPATCH-03 accountant dispatch remains disabled in canonical configuration', () => {
   assert.ok(config.includes('ACCOUNTANT_SEND_ENABLED: false'));
   assert.ok(source.includes('ACCOUNTANT_SEND_ENABLED = SDK_CONFIG.EMAIL.ACCOUNTANT_SEND_ENABLED === true'));
