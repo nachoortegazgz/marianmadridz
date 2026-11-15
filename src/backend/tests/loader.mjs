@@ -9,8 +9,7 @@ SCOPE: tests only. Never imported by production code. G10 ASCII strict.
 =============================================================================
 */
 
-import { pathToFileURL } from 'node:url';
-import { fileURLToPath, pathToFileURL as p2u } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 import fs from 'node:fs';
 
@@ -371,7 +370,7 @@ export const mocks = {
 // del modulo mockeado (LH-08): webMethod necesita conocer su propio modulo
 // para construir wrappers nombrados que consulten webMethodOverrides.
 const genericStubSource = (moduleKey) => `
-import { webMethodOverrides, sdkNamespaceState } from ${JSON.stringify(p2u(path.join(BACKEND_DIR, 'tests/loader.mjs')).href)};
+import { webMethodOverrides, sdkNamespaceState } from ${JSON.stringify(pathToFileURL(path.join(BACKEND_DIR, 'tests/loader.mjs')).href)};
 const MODULE_KEY = ${JSON.stringify(moduleKey)};
 const fnProxy = new Proxy(function () {}, {
   get: (t, p) => {
@@ -709,7 +708,7 @@ export default mod.default;
    sort/pagination contract as the production adapter. */
 
 const WIX_DATA_V2_SOURCE = `
-import { wixDataMock as m } from ${JSON.stringify(p2u(path.join(BACKEND_DIR, 'tests/loader.mjs')).href.replace(/\\\\/g, '/'))};
+import { wixDataMock as m } from ${JSON.stringify(pathToFileURL(path.join(BACKEND_DIR, 'tests/loader.mjs')).href.replace(/\\\\/g, '/'))};
 
 const cmpValue = (v) => (v instanceof Date ? v.getTime() : v);
 const startsWithStr = (s, p) => String(s ?? '').startsWith(String(p));
@@ -810,7 +809,7 @@ function applyV2Sort(items, sort) {
 // (p.ej. WEBHOOK_EVENT append-only, ADR-05) bloquea el borrado real.
 // Se importa data.js de forma estatica: no hay ciclo porque data.js solo
 // importa dataAccess (resuelto aqui por este modulo), nunca @wix/data.
-import * as DATA_HOOKS from ${JSON.stringify(p2u(path.join(BACKEND_DIR, 'data.js')).href.replace(/\\\\/g, '/'))};
+import * as DATA_HOOKS from ${JSON.stringify(pathToFileURL(path.join(BACKEND_DIR, 'data.js')).href.replace(/\\\\/g, '/'))};
 
 const COLLECTION_PLAIN = {
   ControlOperativo: 'ControlOperativo',
@@ -1016,7 +1015,7 @@ export default m;
 `;
 
 const WIX_DATA_SOURCE = `
-import { wixDataMock } from ${JSON.stringify(p2u(path.join(BACKEND_DIR, 'tests/loader.mjs')).href.replace(/\\/g, '/'))};
+import { wixDataMock } from ${JSON.stringify(pathToFileURL(path.join(BACKEND_DIR, 'tests/loader.mjs')).href.replace(/\\/g, '/'))};
 // LH-26 (harness): el mock v1 delega la semantica de borrado a los hooks
 // del proyecto. La ventana temporal append-only se configura en internalConfig;
 // no duplicar aqui una politica independiente que diverja del runtime.
