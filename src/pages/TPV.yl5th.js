@@ -1,43 +1,22 @@
 /**
- * Velo page-code template for the HTML Component #htmlTPV.
- * Add this handler to the Wix page containing the HTML Component.
- * Read-only by design: getCashierState is the sole data entry point.
+ * Velo page code for the existing TPV page (#htmlTPV).
+ *
+ * The HTML iframe uses the MM_READY/MM_CONTEXT/CASHIER_STATE protocol.
+ * Keep protocol handling and backend access in the shared public controller.
+ * This page only attaches the controller to the Wix HTML Component.
  */
-import { getCashierState } from 'backend/cajas.web';
+import { initializeTpvPage } from "public/tpvPageController";
 
 $w.onReady(() => {
-    const widget = $w('#htmlTPV');
+    const widget = $w("#htmlTPV");
     if (!widget) {
-        console.error('[TPV] Missing HTML Component #htmlTPV');
+        console.error("[TPV] Missing HTML Component #htmlTPV");
         return;
     }
 
-    let requestInFlight = false;
-
-    widget.onMessage(async (event) => {
-        const message = event?.data;
-        if (!message || typeof message !== 'object' ||
-            message.type !== 'TPV_REQUEST_STATE' || message.version !== 1) {
-            return;
-        }
-        if (requestInFlight) return;
-
-        requestInFlight = true;
-        try {
-            // The backend resolves identity and role. Never accept actor,
-            // staffResourceId, amounts, collection names or permissions here.
-            const result = await getCashierState({});
-            widget.postMessage({ type: 'TPV_STATE', payload: result });
-        } catch (error) {
-            console.error('[TPV] getCashierState failed', error);
-            widget.postMessage({
-                type: 'TPV_ERROR',
-                message: 'No se pudo consultar el estado de caja.'
-            });
-        } finally {
-            requestInFlight = false;
-        }
-    });
-
-    widget.postMessage({ type: 'TPV_READY', version: 1 });
+    try {
+        initializeTpvPage(widget);
+    } catch (error) {
+        console.error("[TPV] HTML bridge initialization failed", error);
+    }
 });
