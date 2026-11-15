@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
-const html = await readFile(new URL("../../../#htmlTPV.txt", import.meta.url), "utf8");
+const html = await readFile(new URL("../../../%23htmlTPV.txt", import.meta.url), "utf8");
 const controller = await readFile(new URL("../../public/tpvPageController.js", import.meta.url), "utf8");
 
 test("TPV controller exposes only authenticated read-only cashier state", () => {
