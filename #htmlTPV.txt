@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TPV · MarianMadrid</title>
+<style>
+:root{color-scheme:dark;--bg:#101214;--panel:#191d20;--line:#30373b;--muted:#aab3b8;--text:#f4f5f5;--accent:#c9a879;--ok:#80c99a;--warn:#e8bd72}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 Arial,sans-serif}
+main{max-width:1180px;margin:auto;padding:24px}.top{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+h1{font-size:25px;margin:0}h2{font-size:15px;margin:0 0 14px}.muted{color:var(--muted)}.status{border:1px solid var(--line);padding:7px 11px;border-radius:20px;color:var(--warn)}
+button{background:var(--accent);color:#171717;border:0;border-radius:8px;padding:11px 15px;font-weight:700;cursor:pointer}button:disabled{opacity:.45;cursor:not-allowed}
+.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:20px 0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;min-width:0}
+.value{font-size:25px;font-weight:700;margin-top:8px}.small{font-size:12px;color:var(--muted)}
+.layout{display:grid;grid-template-columns:1.25fr .75fr;gap:12px}.method{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line)}.method:last-child{border:0}
+.last{display:grid;grid-template-columns:1fr 1fr;gap:10px}.last div{min-width:0}.last strong{display:block;overflow-wrap:anywhere}
+.notice{margin-top:14px;padding:12px 14px;border:1px solid #665337;background:#211d17;border-radius:9px;color:#e9d4b3}
+#feedback{min-height:20px;margin-top:12px;color:var(--muted)}
+@media(max-width:760px){main{padding:14px}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.layout{grid-template-columns:1fr}.value{font-size:21px}}
+</style>
+</head>
+<body>
+<main>
+<header class="top">
+ <div><div class="small">MARIANMADRID · OPERACIONES</div><h1>Terminal de punto de venta</h1><div class="muted">Consulta de caja y conciliación de sesión</div></div>
+ <div><span id="status" class="status">Conectando…</span> <button id="refresh" type="button">Actualizar</button></div>
+</header>
+<section class="grid" aria-label="Resumen de caja">
+ <article class="card"><div class="small">Efectivo físico · CajaActual.netAmount</div><div id="cash" class="value">—</div></article>
+ <article class="card"><div class="small">Efectivo acumulado · CajaActual.cashAmount</div><div id="cashAccum" class="value">—</div></article>
+ <article class="card"><div class="small">Tarjeta acumulada · CajaActual.cardAmount</div><div id="cardAccum" class="value">—</div></article>
+ <article class="card"><div class="small">Otros acumulados · CajaActual.otherAmount</div><div id="otherAccum" class="value">—</div></article>
+</section>
+<section class="layout">
+ <article class="card">
+  <h2>Movimientos de la sesión · fuente MovimientosCaja</h2>
+  <div class="method"><span>Efectivo</span><strong id="payCash">—</strong></div>
+  <div class="method"><span>Tarjeta</span><strong id="payCard">—</strong></div>
+  <div class="method"><span>Bizum</span><strong id="payBizum">—</strong></div>
+  <p class="small">Los importes y recuentos se calculan en backend desde movimientos fuente dentro de la ventana de sesión. No se reconstruyen desde los totales de CajaActual.</p>
+ </article>
+ <article class="card">
+  <h2>Estado de sesión</h2>
+  <div class="last">
+   <div><span class="small">Estado</span><strong id="sessionStatus">—</strong></div>
+   <div><span class="small">Operaciones del día</span><strong id="operations">—</strong></div>
+   <div><span class="small">Apertura</span><strong id="openedAt">—</strong></div>
+   <div><span class="small">Último movimiento</span><strong id="lastAt">—</strong></div>
+   <div><span class="small">Responsable apertura</span><strong id="openedBy">—</strong></div>
+   <div><span class="small">Diferencia de arqueo</span><strong id="difference">—</strong></div>
+  </div>
+ </article>
+</section>
+<section class="card" style="margin-top:12px">
+ <h2>Último movimiento registrado</h2>
+ <div class="last">
+  <div><span class="small">Referencia fuente</span><strong id="movementId">—</strong></div>
+  <div><span class="small">Concepto</span><strong id="description">—</strong></div>
+  <div><span class="small">Tipo / medio</span><strong id="movementType">—</strong></div>
+  <div><span class="small">Importe</span><strong id="amount">—</strong></div>
+  <div><span class="small">Actor</span><strong id="actor">—</strong></div>
+  <div><span class="small">Secuencia / trazabilidad</span><strong id="sequence">—</strong></div>
+ </div>
+</section>
+<div class="notice"><strong>Modo de consulta QA.</strong> Esta interfaz no cobra, no crea pedidos o reservas, no emite facturas, no escribe en MovimientosCaja ni actualiza CajaActual. Las operaciones de venta, devolución, apertura, arqueo y cierre permanecen deshabilitadas hasta certificar sus contratos y aislamiento runtime.</div>
+<div id="feedback" role="status" aria-live="polite"></div>
+</main>
+<script>
+(function(){
+ const $=id=>document.getElementById(id);
+ const money=value=>new Intl.NumberFormat('es-ES',{style:'currency',currency:'EUR'}).format(Number(value)||0);
+ const date=value=>value?new Intl.DateTimeFormat('es-ES',{dateStyle:'short',timeStyle:'short',timeZone:'Europe/Madrid'}).format(new Date(value)):'—';
+ const text=value=>value===null||value===undefined||value===''?'—':String(value);
+ function requestState(){ $('feedback').textContent='Consultando estado autorizado…'; window.parent.postMessage({type:'TPV_REQUEST_STATE',version:1},'*'); }
+ function render(response){
+  if(!response||response.status!=='SUCCESS'||!response.data){$('status').textContent='No disponible';$('feedback').textContent=response?.error?.message||'No se pudo consultar la caja.';return;}
+  const d=response.data,p=d.sessionPayments||{},last=d.lastOperation||{};
+  $('status').textContent=text(d.cashRegisterStatus);
+  $('cash').textContent=money(d.netAmount);
+  $('cashAccum').textContent=money(d.cashAmount);
+  $('cardAccum').textContent=money(d.cardAmount);
+  $('otherAccum').textContent=money(d.otherAmount);
+  $('payCash').textContent=money(p.EFECTIVO?.amount)+' · '+text(p.EFECTIVO?.ticketCount)+' mov.';
+  $('payCard').textContent=money(p.TARJETA?.amount)+' · '+text(p.TARJETA?.ticketCount)+' mov.';
+  $('payBizum').textContent=money(p.BIZUM?.amount)+' · '+text(p.BIZUM?.ticketCount)+' mov.';
+  $('sessionStatus').textContent=text(d.cashRegisterStatus);
+  $('operations').textContent=text(d.totalOperations);
+  $('openedAt').textContent=date(d.openedAt);
+  $('lastAt').textContent=date(d.lastMovementAt);
+  $('openedBy').textContent=text(d.openedByName);
+  $('difference').textContent=d.difference===null||d.difference===undefined?'—':money(d.difference);
+  $('movementId').textContent=text(last.movementId);
+  $('description').textContent=text(last.description);
+  $('movementType').textContent=[last.movementType,last.paymentMethod].filter(Boolean).join(' / ')||'—';
+  $('amount').textContent=last.amount===undefined?'—':money(last.amount);
+  $('actor').textContent=last.actor?.verificationStatus==='VERIFIED_BACKEND'?text(last.actor.displayName):'No verificado en origen';
+  $('sequence').textContent=[last.sequenceNumber,last.traceId].filter(Boolean).join(' / ')||'—';
+  $('feedback').textContent='Datos recibidos del WebMethod getCashierState.';
+ }
+ window.addEventListener('message',event=>{
+  const message=event.data;
+  if(!message||typeof message!=='object')return;
+  if(message.type==='TPV_STATE')render(message.payload);
+  if(message.type==='TPV_ERROR'){$('status').textContent='Error';$('feedback').textContent=text(message.message);}
+ });
+ $('refresh').addEventListener('click',requestState);
+ window.addEventListener('load',requestState);
+})();
+</script>
+</body>
+</html>
