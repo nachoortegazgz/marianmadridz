@@ -291,8 +291,53 @@ export async function notifyOperationalAlert(options = {}) {
 }
 
 // =============================================================================
-// REGISTRO SINCRONO NO BLOQUEANTE
+// REGISTRO DE AUDITORIA
 // =============================================================================
+
+async function _logAuditEvent({
+    eventType,
+    level,
+    message,
+    data = {},
+    traceId = null,
+    entityId = DEFAULT_ENTITY_ID,
+    source = DEFAULT_SOURCE,
+    timeoutLabel = null,
+    timeoutAlerts = false,
+}) {
+    const normalizedLevel = _normalizeLevel(level);
+    if (normalizedLevel === "ERROR" || normalizedLevel === "CRITICAL") {
+        const alertTraceId = traceId || makeTraceId("audit-error");
+        const notify = () => notifyOperationalAlert({
+            alertType: eventType,
+            severity: normalizedLevel,
+            message,
+            data,
+            traceId: alertTraceId,
+            entityId,
+            source,
+            dedupeKey: _buildAuditId(eventType, entityId, alertTraceId),
+        });
+
+        if (!timeoutAlerts) return notify();
+
+        try {
+            return await withTimeout(notify, API_TIMEOUT_MS, "audit_alert");
+        } catch (error) {
+            log.error("audit alert timed out", {
+                eventType,
+                traceId: alertTraceId,
+                errorCode: error?.code || null,
+            });
+            return { created: false, failed: true };
+        }
+    }
+
+    const record = _buildControlOperativoRecord({
+        eventType, level: normalizedLevel, message, data, traceId, entityId, source,
+    });
+    await _persistAuditRecord(record, timeoutLabel);
+}
 
 export async function logAuditEvent(
     eventType,
@@ -303,29 +348,8 @@ export async function logAuditEvent(
     entityId = DEFAULT_ENTITY_ID,
     source = DEFAULT_SOURCE
 ) {
-    const normalizedLevel = _normalizeLevel(level);
-    if (normalizedLevel === "ERROR" || normalizedLevel === "CRITICAL") {
-        const alertTraceId = traceId || makeTraceId("audit-error");
-        return notifyOperationalAlert({
-            alertType: eventType,
-            severity: normalizedLevel,
-            message,
-            data,
-            traceId: alertTraceId,
-            entityId,
-            source,
-            dedupeKey: _buildAuditId(eventType, entityId, alertTraceId),
-        });
-    }
-    const record = _buildControlOperativoRecord({
-        eventType, level: normalizedLevel, message, data, traceId, entityId, source,
-    });
-    await _persistAuditRecord(record);
+    return _logAuditEvent({ eventType, level, message, data, traceId, entityId, source });
 }
-
-// =============================================================================
-// REGISTRO CON TIMEOUT
-// =============================================================================
 
 export async function logAuditEventWithTimeout(
     eventType,
@@ -336,35 +360,9 @@ export async function logAuditEventWithTimeout(
     entityId = DEFAULT_ENTITY_ID,
     source = DEFAULT_SOURCE
 ) {
-    const normalizedLevel = _normalizeLevel(level);
-    if (normalizedLevel === "ERROR" || normalizedLevel === "CRITICAL") {
-        const alertTraceId = traceId || makeTraceId("audit-error");
-        try {
-            return await withTimeout(
-                () => notifyOperationalAlert({
-                    alertType: eventType,
-                    severity: normalizedLevel,
-                    message,
-                    data,
-                    traceId: alertTraceId,
-                    entityId,
-                    source,
-                    dedupeKey: _buildAuditId(eventType, entityId, alertTraceId),
-                }),
-                API_TIMEOUT_MS,
-                "audit_alert"
-            );
-        } catch (error) {
-            log.error("audit alert timed out", {
-                eventType,
-                traceId: alertTraceId,
-                errorCode: error?.code || null,
-            });
-            return { created: false, failed: true };
-        }
-    }
-    const record = _buildControlOperativoRecord({
-        eventType, level: normalizedLevel, message, data, traceId, entityId, source,
+    return _logAuditEvent({
+        eventType, level, message, data, traceId, entityId, source,
+        timeoutLabel: "audit_insert",
+        timeoutAlerts: true,
     });
-    await _persistAuditRecord(record, "audit_insert");
 }
