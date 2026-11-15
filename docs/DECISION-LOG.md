@@ -338,7 +338,7 @@ La propuesta anterior agrupaba STAFF, TERCERO y GESTORIA en MapaStaff. Queda des
 
 **HISTÓRICO — supersedido por TEC-038:** la autorización temporal descrita en esta decisión dejó de estar vigente. Los bypasses globales fueron retirados; no se permite reabrir append-only mediante flags. Las purgas efímeras se rigen por TEC-038.
 
-**Implementación en main:** ISOLATED_SITE_RECORD_MUTATIONS_ENABLED=true; update/remove individual y masivo para las colecciones CMS propias incluidas en ISOLATED_SITE_MUTABLE_COLLECTIONS. Las operaciones masivas requieren IDs explícitos y límite de 1.000 elementos. Las colecciones WIX_APP quedan excluidas. Se mantienen validaciones, autenticación/autorización, permisos CMS, allowlist de inserciones y gates de writers/efectos externos.
+**Implementación histórica en main (retirada por TEC-038):** ISOLATED_SITE_RECORD_MUTATIONS_ENABLED=true; update/remove individual y masivo para las colecciones CMS propias incluidas en ISOLATED_SITE_MUTABLE_COLLECTIONS. Las operaciones masivas requieren IDs explícitos y límite de 1.000 elementos. Las colecciones WIX_APP quedan excluidas. Se mantienen validaciones, autenticación/autorización, permisos CMS, allowlist de inserciones y gates de writers/efectos externos.
 
 **Límite:** la mutabilidad no habilita writers fiscales, contables o laborales, pagos, reembolsos, comunicaciones ni automatizaciones externas. La política no se restaura automáticamente; solo el propietario puede ordenar su restauración antes de cualquier actividad real.
 
