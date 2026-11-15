@@ -131,11 +131,11 @@ test('FDOC-DISPATCH-05 package email body uses actual newline characters', () =>
     'export const sendManagerPackageToAccountant = webMethod(',
     '// BLOQUE 9 - ENVIO DE DOCUMENTO CONCRETO'
   );
-  const joinExpression = handler.match(/text:\\s*(lines\\.join\\([^)]*\\))/);
+  const joinExpression = handler.match(/text:\s*(lines\.join\([^)]*\))/);
   assert.ok(joinExpression, 'Package email body must be assembled from its line array');
   assert.equal(
     vm.runInNewContext('(' + joinExpression[1] + ')', { lines: ['line one', 'line two'] }),
-    'line one\\nline two',
+    'line one\nline two',
     'Email body must contain actual line breaks, not literal backslash-n sequences'
   );
 });
