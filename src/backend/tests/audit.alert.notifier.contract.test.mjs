@@ -23,13 +23,14 @@ test("operational alerts have one centralized, deduplicated writer", () => {
 });
 
 test("audit entry points share one normalized event handler and persistence path", () => {
-  assert.match(auditSource, /async function _persistAuditRecord/);
-  assert.match(auditSource, /async function _logAuditEvent\\(/);
-  assert.match(auditSource, /await _persistAuditRecord\\(record, timeoutLabel\\);/);
-  assert.match(auditSource, /return _logAuditEvent\\(\\{ eventType, level, message, data, traceId, entityId, source \\}\\);/);
-  assert.match(auditSource, /timeoutLabel: "audit_insert",\\s*timeoutAlerts: true/);
+  assert.ok(auditSource.includes("async function _persistAuditRecord"));
+  assert.ok(auditSource.includes("async function _logAuditEvent("));
+  assert.ok(auditSource.includes("await _persistAuditRecord(record, timeoutLabel);"));
+  assert.ok(auditSource.includes("return _logAuditEvent({ eventType, level, message, data, traceId, entityId, source });"));
+  assert.ok(auditSource.includes('timeoutLabel: "audit_insert",'));
+  assert.ok(auditSource.includes("timeoutAlerts: true,"));
 
   const publicEntries = auditSource.slice(auditSource.indexOf("export async function logAuditEvent("));
-  assert.equal((publicEntries.match(/_normalizeLevel\\(/g) || []).length, 0);
-  assert.equal((publicEntries.match(/_buildControlOperativoRecord\\(/g) || []).length, 0);
+  assert.equal(publicEntries.includes("_normalizeLevel("), false);
+  assert.equal(publicEntries.includes("_buildControlOperativoRecord("), false);
 });
