@@ -122,6 +122,16 @@ test("update policy keeps operational projections mutable and append-only ledger
         controlType: T.SYSTEM_FLAG,
     }), { code: "CMS_UPDATE_ID_REQUIRED" });
 });
+test("WEBHOOK_EVENT is neither mutable nor removable", () => {
+    assert.throws(() => assertUpdateAllowed(O.CONTROL_OPERATIVO, {
+        _id: "event-1",
+        controlType: T.WEBHOOK_EVENT,
+    }), { code: "CMS_UPDATE_CONTROL_TYPE_DENIED" });
+    assert.throws(() => assertRemoveAllowed(O.CONTROL_OPERATIVO, "event-1", T.WEBHOOK_EVENT), {
+        code: "CMS_REMOVE_SCOPE_DENIED",
+    });
+});
+
 test("save policy is limited to DAYS_CACHE and identified CajaActual records", () => {
     assert.doesNotThrow(() => assertSaveAllowed(O.CONTROL_OPERATIVO, {
         _id: "days-cache-1",
