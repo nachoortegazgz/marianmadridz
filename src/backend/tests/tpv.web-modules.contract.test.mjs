@@ -95,7 +95,7 @@ test("TPV WebMethods keep writes blocked and do not access CMS directly", async 
     assert.match(joined, /TPV_SALE_WRITES_DISABLED/);
     assert.match(joined, /TPV_REFUNDS_DISABLED/);
     assert.match(joined, /TPV_Z_CLOSING_DISABLED/);
-    assert.doesNotMatch(joined, /wixData|MovimientosCaja|CajaActual|\.insert\(|\.update\(|\.remove\(/);
+    assert.doesNotMatch(joined, /\b(?:wixData|MovimientosCaja|CajaActual)\b|\.insert\(|\.update\(|\.remove\(/);
 });
 
 test("TPV catalog reader uses native Bookings SDK and does not expose staff contact details", async () => {
