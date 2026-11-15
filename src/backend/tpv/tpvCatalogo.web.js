@@ -33,6 +33,7 @@ export const obtenerServicios = webMethod(
                 oculto: service.hidden === true,
                 tipoTarifa: service.payment?.rateType || null,
                 precioFijo: service.payment?.fixed?.price?.value ?? null,
+                precioFormateado: service.payment?.fixed?.price?.formattedValue ?? null,
                 moneda: service.payment?.fixed?.price?.currency || null,
             }));
             return {
