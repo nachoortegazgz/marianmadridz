@@ -17,7 +17,7 @@ export const consultarAuditoriaTPVQA = webMethod(
             const records = await queryQaRecords(
                 TPV_QA_COLLECTIONS.AUDITORIA,
                 input.entityId ? wql.eq("entityId", String(input.entityId).slice(0, 120)) : undefined,
-                { sort: ["occurredAt DESC"], limit }
+                { sort: ["occurredAt DESC"], limit, allowTruncated: true }
             );
             return {
                 status: "SUCCESS",
