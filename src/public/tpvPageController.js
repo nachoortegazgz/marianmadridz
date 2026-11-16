@@ -41,6 +41,14 @@ function errorResult(code, message, traceId) {
     };
 }
 
+async function safeCall(operation, code, message, traceId) {
+    try {
+        return await operation();
+    } catch (_) {
+        return errorResult(code, message, traceId);
+    }
+}
+
 export function initializeTpvPage(widgetElement) {
     if (!widgetElement ||
         typeof widgetElement.onMessage !== "function" ||
@@ -71,7 +79,7 @@ export function initializeTpvPage(widgetElement) {
                 suspendedTickets: "BROWSER_SESSION_ONLY",
                 paymentReconciliation: "BROWSER_ONLY",
                 refunds: "DRAFT_ONLY",
-                giftCards: "NATIVE_APP_READER_PENDING",
+                giftCards: "READ_ONLY",
                 payments: "DISABLED",
                 orderMutations: "DISABLED",
                 bookingMutations: "DISABLED",
@@ -99,48 +107,83 @@ export function initializeTpvPage(widgetElement) {
             }
 
             if (type === "CATALOG_SERVICES") {
-                const result = await obtenerServicios({ limit: 100, offset: 0 });
+                const result = await safeCall(
+                    () => obtenerServicios({ limit: 100, offset: 0 }),
+                    "TPV_SERVICES_READ_FAILED",
+                    "No se pudieron consultar los servicios.",
+                    traceId
+                );
                 reply("CATALOG_SERVICES_RES", result, message);
                 return;
             }
 
             if (type === "CATALOG_STAFF") {
-                const result = await obtenerProfesionales({ limit: 100 });
+                const result = await safeCall(
+                    () => obtenerProfesionales({ limit: 100 }),
+                    "TPV_STAFF_READ_FAILED",
+                    "No se pudieron consultar los profesionales.",
+                    traceId
+                );
                 reply("CATALOG_STAFF_RES", result, message);
                 return;
             }
 
             if (type === "CATALOG_PRODUCTS") {
-                const result = await obtenerProductos({
-                    limit: 100,
-                    cursor: payload.cursor || null,
-                });
+                const result = await safeCall(
+                    () => obtenerProductos({
+                        limit: 100,
+                        cursor: payload.cursor || null,
+                    }),
+                    "TPV_STORES_PRODUCTS_READ_FAILED",
+                    "No se pudieron consultar los productos.",
+                    traceId
+                );
                 reply("CATALOG_PRODUCTS_RES", result, message);
                 return;
             }
 
             if (type === "PRODUCT_VARIANTS") {
-                const result = await obtenerVariantesProducto({
-                    productId: payload.productId,
-                });
+                const result = await safeCall(
+                    () => obtenerVariantesProducto({
+                        productId: payload.productId,
+                    }),
+                    "TPV_PRODUCT_VARIANTS_READ_FAILED",
+                    "No se pudieron consultar las variantes.",
+                    traceId
+                );
                 reply("PRODUCT_VARIANTS_RES", result, message);
                 return;
             }
 
             if (type === "VALIDATE_SALE_DRAFT") {
-                const result = await validarVentaBorrador(payload.sale || {});
+                const result = await safeCall(
+                    () => validarVentaBorrador(payload.sale || {}),
+                    "TPV_DRAFT_VALIDATION_FAILED",
+                    "No se pudo validar el borrador.",
+                    traceId
+                );
                 reply("VALIDATE_SALE_DRAFT_RES", result, message);
                 return;
             }
 
             if (type === "TICKET_X_PREVIEW") {
-                const result = await previsualizarTicketX();
+                const result = await safeCall(
+                    () => previsualizarTicketX(),
+                    "TPV_TICKET_X_PREVIEW_FAILED",
+                    "No se pudo consultar la vista previa X.",
+                    traceId
+                );
                 reply("TICKET_X_PREVIEW_RES", result, message);
                 return;
             }
 
             if (type === "GIFT_CARD_BALANCE") {
-                const result = await consultarTarjetaRegalo({ code: payload.code });
+                const result = await safeCall(
+                    () => consultarTarjetaRegalo({ code: payload.code }),
+                    "TPV_GIFT_CARD_LOOKUP_FAILED",
+                    "No se pudo consultar la tarjeta regalo.",
+                    traceId
+                );
                 reply("GIFT_CARD_BALANCE_RES", result, message);
                 return;
             }
