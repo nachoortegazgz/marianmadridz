@@ -59,11 +59,11 @@ Las colecciones contienen campos tipados para claves idempotentes, estados, impo
 
 Se creó un índice único sobre `idempotencyKey` en cada colección. El primer read-back devolvió `BUILDING`; una comprobación posterior confirmó los nueve índices en estado `ACTIVE`, sin fallos. Una consulta posterior de recuento verificó 0 elementos en cada colección. Según el contrato de Wix, `ACTIVE` indica que el índice está listo para uso.
 
-**Estado:** la unicidad está provisionada a nivel CMS. Esto no sustituye las pruebas de inserción duplicada y concurrencia ni resuelve la atomicidad entre colecciones. La persistencia desde la aplicación sigue deshabilitada hasta integrar el flujo en la capa central de acceso a datos y validar las compensaciones/reintentos.
+**Estado:** la unicidad está provisionada a nivel CMS. Esto no sustituye las pruebas de inserción duplicada y concurrencia ni resuelve la atomicidad entre colecciones. La persistencia desde la aplicación está implementada en la rama de trabajo y pasa por `dataAccess.js` / `dataAccessPolicy.js`. Cada inserción QA exige `idempotencyKey` y un sobre sintético (`isSynthetic=true`, `realPayment=false`, `externalSideEffects=false`). No se han insertado todavía registros QA en el CMS; la primera prueba de integración queda pendiente de CI y Preview.
 
 ## 5. Módulos TPV y persistencia QA versionados
 
-La rama `feat/tpv-web-modules-report-2026-11-15`, PR #396 (draft), contiene ahora los módulos solicitados en el informe funcional:
+La rama de integración actual es `feat/tpv-classic-persistent-qa-2026-11-16`, creada directamente desde `main` tras detectar que la rama anterior divergía y que la PR #396 estaba cerrada sin fusionar. La nueva rama contiene los módulos solicitados en el informe funcional; su PR de revisión se creará tras completar las comprobaciones estáticas:
 
 - `tpvCaja.web.js`: sesión diaria QA, lectura de caja QA y arqueo parcial.
 - `tpvVentas.web.js`: validación backend y saga de venta sintética (PREPARED → líneas/pagos → COMMITTED).
@@ -77,7 +77,7 @@ La rama `feat/tpv-web-modules-report-2026-11-15`, PR #396 (draft), contiene ahor
 - `tpvUtils.web.js`: configuración y validaciones QA expuestas.
 - `tpvQaRepository.js`, `tpvUtils.js` y `tpvCierresCore.js`: repositorio idempotente, utilidades puras y agregación reproducible.
 
-La política central `dataAccessPolicy.js` permite inserciones en `TPV_QA_*` y bloquea actualizaciones y eliminaciones. Los índices únicos `idempotencyKey` de las nueve colecciones se verificaron `ACTIVE`; el recuento CMS posterior confirmó cero elementos. Los eventos QA no se insertan en el ledger fiscal.
+La política central `dataAccessPolicy.js` permite únicamente inserciones con clave idempotente y payload sintético en `TPV_QA_*`, y bloquea actualizaciones y eliminaciones. Las consultas paginan hasta 10.000 registros y fallan cerradas si exceden ese límite. Ticket Z impide cerrar una sesión si quedan ventas en estado PREPARADA sin confirmación. Los índices únicos `idempotencyKey` de las nueve colecciones se verificaron `ACTIVE`; el recuento CMS posterior confirmó cero elementos. Los eventos QA no se insertan en el ledger fiscal.
 
 Las escrituras de ventas siguen una saga reanudable: cabecera PREPARADA, líneas, pagos y cabecera CONFIRMADA. Los informes solo agregan ventas confirmadas. Los reembolsos se serializan por venta mediante un lock compare-and-swap técnico en `ControlOperativo` (tipo `TPV_QA_REFUND_LOCK`); este lock no contiene importes ni registros de ventas. Ticket Z marca como cerrada exclusivamente la sesión QA.
 
@@ -110,7 +110,7 @@ Pruebas añadidas al repositorio:
 - Política CAS del lock de devoluciones.
 - Validaciones de claves idempotentes, métodos de pago y unidades menores.
 
-**No ejecutadas todavía:** suites Node/Vitest completas, integración real CMS, concurrencia real, duplicados, fallos parciales, Preview y roles. El último commit no tiene workflow runs ni checks asociados; no se afirma CI verde.
+**No ejecutadas todavía:** suites Node/Vitest completas, integración real CMS, concurrencia real, duplicados, fallos parciales, Preview y roles. La rama nueva aún no tiene workflow runs ni checks asociados; no se afirma CI verde. No se han ejecutado las suites Node/Vitest en este entorno.
 
 Pendiente:
 1. Ejecutar `npm run test:layer1`, la regresión completa y ESLint en CI.
@@ -124,7 +124,7 @@ Pendiente:
 
 ## 8. Estado de despliegue
 
-- No se ha fusionado PR #396.
+- PR #396 está cerrada sin fusionar; no se ha fusionado el TPV. La nueva rama aún no tiene PR.
 - No se ha publicado código TPV nuevo.
 - No se ha modificado el HTML Component, el page code ni los módulos backend en el Editor clásico; su estado live no se ha comparado ni validado.
 - No se ha conectado una pasarela de pagos.
