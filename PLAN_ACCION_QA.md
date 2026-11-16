@@ -7,7 +7,7 @@ La decisión QA-2026-11-15-TEMP-MUTABILITY supersede la regla append-only durant
 2. Implementar la excepción únicamente para ADMIN, el Site ID QA exacto y colecciones propias explícitamente revisadas; mantener cerrados los endpoints genéricos y no abrir permisos ANYONE.
 3. Excluir siempre `ControlOperativo/WEBHOOK_EVENT`, `WEBHOOK_CLAIM`, claves de deduplicación/idempotencia, colecciones `WIX_APP` y cualquier colección no revisada.
 4. Incorporar pruebas negativas de sitio distinto, usuario no ADMIN, colección fuera de allowlist, ID no sintético y concurrencia; backup/export y auditoría antes de cada operación destructiva.
-5. Mantener deshabilitados los writers comerciales/fiscales/laborales y todos los efectos externos. No ejecutar runtime E2E que pueda activar las siete automatizaciones Wix preinstaladas ACTIVE.
+5. Mantener deshabilitados los writers comerciales/fiscales/laborales y todos los efectos externos. No ejecutar runtime E2E que pueda activar las ocho automatizaciones Wix ACTIVE (siete preinstaladas bloqueadas y una app-origin programada que delega una tarea a IA de alcance no verificado).
 6. Reintroducir append-only, rectificaciones trazables y bloqueo update/remove antes de cualquier transición a actividad real.
 
 **No se han cambiado permisos CMS ni registros Wix, no se ha desplegado código y no se ha validado persistencia runtime.**
@@ -262,3 +262,12 @@ La tarea se considera abierta hasta que exista evidencia CI y validación en el 
 - Contratos corregidos: `fechaOperacion` y `workDate` como DATE `YYYY-MM-DD`; `recordedAt`/`recordedTime` como DATETIME; `cashMovementId` dentro de `desgloseDetallado` OBJECT.
 - CI run 1310: 70 suites / 644 tests PASS; Layer 1 307 PASS; Layer 2 252 PASS; SDK contracts, ESLint y Secret scanning PASS.
 - Estado: código alineado e integrado, pero writers contable/laboral siguen deshabilitados. No hay validación de persistencia runtime ni escrituras Wix. La ejecución de E2E sigue bloqueada por automatizaciones activas con acciones potenciales de notificación.
+
+## Revalidación de automatizaciones Wix — 2026-11-16
+
+- Wix Automations V2 filtrado por `configuration.status=ACTIVE`: 8 IDs; Get Automation individual confirma 8/8 ACTIVE.
+- Siete automatizaciones PREINSTALLED mantienen `disableStatusChange=true`; dos además `readonly=true`.
+- Se descubre una octava automatización app-origin: `Creación de TPV física personalizada`, ID `961f911d-8386-4e20-843e-cdf4595c24e8`, activa, trigger programado diario a 01:45, acción `Delegate to AI Custom Agent`, task ID `d56d7590-7eb7-4e4f-94ac-2ca9fa465fcf`.
+- El esquema de acción confirma delegación de una tarea de negocio a agente IA; las instrucciones y las integraciones de la tarea no se han podido leer. No se ha modificado ni desactivado por desconocerse su finalidad.
+- Estado: `BLOCKED_UNKNOWN_AUTOMATION_SIDE_EFFECTS`. No habilitar Runtime/E2E hasta revisar task e integraciones en Agent Maker y volver a consultar el estado.
+- Evidencia detallada: `docs/audits/2026-11-14-qa-automations-isolation.md`, addendum 2026-11-16.
