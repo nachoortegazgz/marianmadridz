@@ -12,7 +12,7 @@
 - Moneda EUR; zona horaria Europe/Madrid.
 - Studio Two queda fuera de alcance.
 
-La publicación del sitio y la presencia de la página en la estructura Wix no demuestran que los archivos actuales de GitHub estén sincronizados con el runtime del Editor clásico. No se ha afirmado ni ejecutado esa sincronización.
+El repositorio `nachoortegazgz/marianmadridz` contiene `wix.config.json` con el Site ID exacto `188bed94-177c-4bc9-a9f0-35080d874f3e`, `uiVersion: 15941`, los scripts `wix dev`/`wix` y la estructura Velo `src/pages`, `src/backend` y `src/public`. Esto acredita que el repositorio está configurado para el Git Integration de este sitio. Wix documenta soporte explícito para Wix Editor (Classic) y Studio. El merge de PR #399 a `main` debe sincronizar el código con el Editor; esta sincronización aún no se ha verificado mediante read-back en el panel de GitHub Integration.
 
 ## Arquitectura y fuentes de verdad
 
@@ -70,13 +70,13 @@ No reintroducir los escritores legacy: insertaban en `MovimientosCaja` y actuali
 4. Definir la emisión fiscal con Wix Invoices V1 y cumplimiento fiscal español.
 5. Probar en Preview con ADMIN, GESTION, ESTILISTA, miembro sin rol y visitante.
 6. Confirmar en Wix Dashboard que no hay proveedor de pagos conectado antes de cualquier prueba que pueda producir efectos financieros.
-7. Sincronizar el código con el Editor clásico mediante el procedimiento soportado por Wix, revisar diff y conservar reversión.
+7. Configurar el secreto `WIX_CLI_API_KEY` con el permiso indicado y ejecutar el workflow de Preview; revisar la URL y probar solo lecturas. No ejecutar `wix publish` hasta cerrar los bloqueos runtime.
 
 ## Estado de despliegue
 
 PR #397, PR #398 y PR #399 figuran fusionadas en GitHub. PR #399 aplica la frontera sintética. CI sobre su HEAD: 74 suites / 670 pruebas offline, 0 fallos; SDK contracts, ESLint y secret scanning correctos.
 
-No se ha sincronizado el page code, HTML Component ni módulos backend con Wix Classic. La página TPV aparece en un sitio publicado, pero el runtime de TPV no se considera actualizado ni validado hasta comparar y probar el código en el Editor/Preview.
+El código TPV está versionado en el repositorio conectado y el commit de PR #399 está en `main`, por lo que Wix debe reflejarlo en el Editor. No se ha ejecutado `wix preview` ni `wix publish`. La versión publicada del sitio no se considera actualizada: el Editor puede estar sincronizado sin que producción lo esté.
 
-La CLI oficial Origami de exportación/importación está documentada para Studio Two, no para el Editor clásico. Se inspeccionó la API oficial Git Code Store: requiere un `AppManagedProject` existente y especifica que un site ID o un legacy v1 Code Store project ID no lo sustituye. La llamada de solo lectura `List Projects` para este site devolvió cero proyectos (`count: 0`), por lo que no hay un `managedProjectId` aplicable. No se ha identificado un método oficial para sincronizar los archivos Velo de este Editor clásico. No se ha intentado desplegar por un mecanismo no soportado.
+La vía oficial aplicable es [Git Integration & Wix CLI for Sites](https://dev.wix.com/docs/develop-websites/articles/workspace-tools/developer-tools/git-integration-wix-cli-for-sites/about-git-integration-wix-cli-for-sites), cuyo setup incluye Wix Editor (Classic) y conexión desde el Code sidebar. El repositorio contiene la configuración de sitio correspondiente. Para crear Preview, Wix requiere Node.js v24.22.1 o superior, Wix CLI y un API key con permiso `Wix CLI for Sites - Git Integration`. Se añadió `.github/workflows/wix-tpv-preview.yml`; su ejecución más reciente terminó correctamente pero omitió la generación porque el secreto `WIX_CLI_API_KEY` no está configurado. El workflow nunca ejecuta `wix publish`. Wix advierte que Preview utiliza las HTTP functions live; las pruebas deben limitarse a carga y lecturas, sin acciones que escriban datos.
 
