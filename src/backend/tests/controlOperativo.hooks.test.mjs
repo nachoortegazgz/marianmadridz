@@ -151,6 +151,26 @@ describe("ControlOperativo hooks", () => {
     );
   });
 
+  it("accepts the scoped TPV QA refund lock as a canonical mutable control type", async () => {
+    const original = {
+      _id: "tpv-refund-lock-1",
+      ...base(CONTROL_TYPE.TPV_QA_REFUND_LOCK),
+      version: 0,
+      expiresAt: new Date(Date.now() + 60000),
+      payload: { environment: "TEST" },
+    };
+    assert.deepEqual(ControlOperativo_beforeInsert(original), original);
+    seed(original);
+    const updated = await ControlOperativo_beforeUpdate({
+      _id: original._id,
+      status: "RELEASED",
+      version: 1,
+    });
+    assert.equal(updated.controlType, CONTROL_TYPE.TPV_QA_REFUND_LOCK);
+    assert.equal(updated.status, "RELEASED");
+    assert.equal(updated.version, 1);
+  });
+
   it("keeps webhook-event records append-only during QA", async () => {
     const original = {
       _id: "event-1",
@@ -225,7 +245,7 @@ describe("ControlOperativo hooks", () => {
       "SLOT_LOCK", "WEBHOOK_CLAIM", "WEBHOOK_EVENT", "IDEMPOTENCY", "RATE_LIMIT",
       "SYSTEM_FLAG", "DEDUPE_KEY", "LEDGER_IDEMPOTENCY",
       "COMPENSATION", "ALERT", "DAYS_CACHE", "DUAL_CACHE",
-      "DISPLAY_TOKEN",
+      "DISPLAY_TOKEN", "TPV_QA_REFUND_LOCK",
     ];
     assert.deepEqual(Object.values(CONTROL_TYPE).sort(), expected.sort());
   });
