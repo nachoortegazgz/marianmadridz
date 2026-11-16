@@ -9,6 +9,7 @@ import { wql } from "backend/dataAccess";
 export const solicitarDevolucionQA = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
+        let persisted = false;
         const traceId = makeTraceId("tpv-qa-refund");
         await requireAdmin(traceId);
         assertTpvQaEnabled();
@@ -72,6 +73,7 @@ export const solicitarDevolucionQA = webMethod(
                 createdAt: new Date(),
                 payload: { sessionId: session.sessionId, allocations, actorId: staff?.memberId || "UNKNOWN", traceId },
             });
+            persisted = true;
 
             for (let index = 0; index < allocations.length; index += 1) {
                 const allocation = allocations[index];
@@ -119,7 +121,7 @@ export const solicitarDevolucionQA = webMethod(
             };
             });
         } catch (error) {
-            return { status: "ERROR", data: null, error: { code: String(error?.message || "TPV_QA_REFUND_FAILED") }, traceId };
+            return { status: "ERROR", data: null, error: { code: String(error?.message || "TPV_QA_REFUND_FAILED") }, persisted, recoverable: persisted, isSynthetic: true, realPayment: false, traceId };
         }
     }
 );
