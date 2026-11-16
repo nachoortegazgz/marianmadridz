@@ -7,8 +7,8 @@ const controller = await readFile(new URL("../../public/tpvPageController.js", i
 const cashierBackend = await readFile(new URL("../cajas.web.js", import.meta.url), "utf8");
 const catalogBackend = await readFile(new URL("../tpv/tpvCatalogo.web.js", import.meta.url), "utf8");
 
-test("TPV controller exposes authenticated read-only cashier and Bookings catalog methods", () => {
-    assert.match(controller, /obtenerCajaActual/);
+test("TPV controller exposes authenticated QA session and Bookings catalog methods", () => {
+    assert.match(controller, /obtenerSesionCajaQA/);
     assert.match(controller, /obtenerServicios/);
     assert.match(controller, /obtenerProfesionales/);
     assert.match(controller, /consultarTarjetaRegalo/);
@@ -21,7 +21,7 @@ test("TPV controller exposes authenticated read-only cashier and Bookings catalo
     assert.match(controller, /"CATALOG_STAFF"/);
     assert.doesNotMatch(
         controller,
-        /registerManualTransaction|registerZClosing|createCheckout|createOrder|createPayment|processRefund|registrarVenta|procesarDevolucion/i
+        /registerManualTransaction|registerZClosing|createCheckout|createOrder|createPayment|processRefund/i
     );
 });
 
@@ -40,7 +40,7 @@ test("TPV HTML uses versioned messaging and browser-local ticket drafts", () => 
     assert.match(html, /function announceReady/);
     assert.match(html, /e\.source!==window\.parent/);
     assert.match(html, /state\.items/);
-    assert.match(html, /MODO QA/);
+    assert.match(html, /QA PERSISTENTE/);
     assert.match(html, /Cobrar · deshabilitado/);
     assert.match(html, /Ticket Z · cierre/);
     assert.match(html, /id="section-tickets"/);
@@ -55,10 +55,10 @@ test("TPV HTML uses versioned messaging and browser-local ticket drafts", () => 
 });
 
 test("TPV mutation controls remain visibly disabled", () => {
-    for (const label of ["Cobrar · deshabilitado", "Abrir caja", "Registrar arqueo parcial", "Crear / modificar reserva", "Procesar devolución", "Emitir tarjeta regalo", "Emitir factura completa", "Emitir abono / rectificativa"]) {
+    for (const label of ["Cobrar · deshabilitado", "Crear / modificar reserva", "Emitir tarjeta regalo", "Emitir factura completa", "Emitir abono / rectificativa"]) {
         assert.ok(html.includes(label), "expected guarded UI capability: " + label);
     }
     assert.match(html, /disabled/);
-    assert.match(html, /no se envían a CMS/i);
-    assert.match(html, /browser-local|memoria de sesión/i);
+    assert.match(html, /no enviado a CMS/i);
+    assert.match(html, /memoria de sesión/i);\n    assert.match(html, /Guardar venta sintética en QA/);\n    assert.match(html, /Abrir sesión QA/);\n    assert.match(html, /Registrar arqueo parcial QA/);\n    assert.match(html, /Registrar devolución QA/);
 });
