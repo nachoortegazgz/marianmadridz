@@ -25,6 +25,8 @@ import {
     obtenerProfesionales,
     obtenerProductos,
     obtenerVariantesProducto,
+    buscarClientesTPV,
+    obtenerReservasClienteTPV,
 } from "backend/tpv/tpvCatalogo.web.js";
 import { consultarTarjetaRegalo } from "backend/tpv/tpvGiftCards.web.js";
 import { createWidgetBridge, MESSAGE_TYPES } from "public/widgetBridge";
@@ -38,6 +40,8 @@ const TPV_ALLOWED_MESSAGES = Object.freeze([
     "CATALOG_STAFF",
     "CATALOG_PRODUCTS",
     "PRODUCT_VARIANTS",
+    "CUSTOMERS_SEARCH",
+    "CUSTOMER_BOOKINGS",
     "VALIDATE_SALE_DRAFT",
     "GIFT_CARD_BALANCE",
     "QA_CONFIG",
@@ -132,6 +136,12 @@ export function initializeTpvPage(widgetElement) {
                 return;
             case "PRODUCT_VARIANTS":
                 await respond("PRODUCT_VARIANTS_RES", () => obtenerVariantesProducto({ productId: payload.productId }), "TPV_PRODUCT_VARIANTS_READ_FAILED", "No se pudieron consultar las variantes.");
+                return;
+            case "CUSTOMERS_SEARCH":
+                await respond("CUSTOMERS_SEARCH_RES", () => buscarClientesTPV({ search: payload.search }), "TPV_CUSTOMER_SEARCH_FAILED", "No se pudieron consultar los clientes.");
+                return;
+            case "CUSTOMER_BOOKINGS":
+                await respond("CUSTOMER_BOOKINGS_RES", () => obtenerReservasClienteTPV({ contactId: payload.contactId, cursor: payload.cursor }), "TPV_CUSTOMER_BOOKINGS_FAILED", "No se pudieron consultar las reservas del cliente.");
                 return;
             case "VALIDATE_SALE_DRAFT":
                 await respond("VALIDATE_SALE_DRAFT_RES", () => validarVentaBorrador(payload.sale || {}), "TPV_DRAFT_VALIDATION_FAILED", "No se pudo validar el borrador.");

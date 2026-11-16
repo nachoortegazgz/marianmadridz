@@ -1,6 +1,7 @@
 import { Permissions, webMethod } from "wix-web-module";
 import { auth } from "@wix/essentials";
 import { services, staffMembers } from "@wix/bookings";
+import { buscarContactosTPV, consultarReservasTPV } from "backend/tpv/tpvNativeReaders";
 import { catalogVersioning, productsV3 } from "@wix/stores";
 import { requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
@@ -65,6 +66,35 @@ function mapProduct(product) {
         inventario: product.inventory?.availabilityStatus || null,
     };
 }
+
+export const buscarClientesTPV = webMethod(
+    Permissions.SiteMember,
+    async (input = {}) => {
+        await requireCajero(makeTraceId("tpv-customer-search"));
+        try {
+            const search = String(input.search || "").trim().slice(0, 100);
+            if (search.length < 2) throw new Error("TPV_CUSTOMER_SEARCH_TOO_SHORT");
+            return { status: "SUCCESS", data: await buscarContactosTPV(search), error: null };
+        } catch (error) {
+            return { status: "ERROR", data: null, error: { code: String(error?.message || "TPV_CUSTOMER_SEARCH_FAILED") } };
+        }
+    }
+);
+
+export const obtenerReservasClienteTPV = webMethod(
+    Permissions.SiteMember,
+    async (input = {}) => {
+        await requireCajero(makeTraceId("tpv-customer-bookings"));
+        try {
+            const contactId = String(input.contactId || "").trim();
+            if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(contactId)) throw new Error("TPV_INVALID_CONTACT_ID");
+            const cursor = input.cursor ? String(input.cursor).slice(0, 16000) : null;
+            return { status: "SUCCESS", data: await consultarReservasTPV({ contactId, cursor }), error: null };
+        } catch (error) {
+            return { status: "ERROR", data: null, error: { code: String(error?.message || "TPV_CUSTOMER_BOOKINGS_FAILED") } };
+        }
+    }
+);
 
 export const obtenerServicios = webMethod(
     Permissions.SiteMember,

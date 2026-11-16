@@ -5,6 +5,7 @@ import { TPV_QA_COLLECTIONS, TPV_QA_RUNTIME_POLICY } from "backend/internalConfi
 import { validateSaleDraft } from "backend/tpv/tpvValidation";
 import { appendQaAudit, insertQaEvent, latestOpenQaSession, withQaSessionLock } from "backend/tpv/tpvQaRepository";
 import { assertTpvQaEnabled, makeQaId, normalizeClientIdempotencyKey } from "backend/tpv/tpvUtils";
+import { leerContactoTPV, leerReservaTPV } from "backend/tpv/tpvNativeReaders";
 
 function disabledResult(code) {
     return {
@@ -70,6 +71,11 @@ export const registrarVentaQA = webMethod(
             });
             if (sale.importePendiente !== 0 || sale.totalVenta <= 0) throw new Error("TPV_QA_SALE_MUST_BE_FULLY_PAID");
 
+            const customerContactId = String(input.customerContactId || "").trim();
+            const bookingId = String(input.bookingId || "").trim();
+            if (bookingId && !customerContactId) throw new Error("TPV_BOOKING_REQUIRES_CUSTOMER");
+            const customer = customerContactId ? await leerContactoTPV(customerContactId) : null;
+            const booking = bookingId ? await leerReservaTPV({ bookingId, contactId: customerContactId }) : null;
             const staff = await getMyStaffContext(traceId);
             const saleId = makeQaId("SALE", key);
             const createdAt = new Date();
@@ -78,7 +84,16 @@ export const registrarVentaQA = webMethod(
                 saleId,
                 ticketId: saleId,
                 professionalId: String(input.profesionalId || "").slice(0, 100) || null,
-                customerLabel: "CLIENTE ANONIMO QA",
+                customerContactId: customer?.contactId || null,
+                customerLabel: customer?.displayName || String(input.customerLabel || "").trim().slice(0, 120) || "CLIENTE ANONIMO QA",
+                bookingId: booking?.bookingId || null,
+                bookingStatus: booking?.status || null,
+                bookingPaymentStatus: booking?.paymentStatus || null,
+                bookingStartDate: booking?.startDate || null,
+                bookingEndDate: booking?.endDate || null,
+                bookingServiceId: booking?.serviceId || null,
+                bookingProfessionalId: booking?.professionalId || null,
+                bookingTitle: booking?.title || null,
                 source: "TPV_QA",
                 traceId,
             };
@@ -178,6 +193,9 @@ export const registrarVentaQA = webMethod(
                     status: committed.status,
                     total: sale.totalVenta,
                     breakdown: sale.desgloseMedios,
+                    customerContactId: commonPayload.customerContactId,
+                    customerLabel: commonPayload.customerLabel,
+                    bookingId: commonPayload.bookingId,
                     replayed,
                     persisted: true,
                     isSynthetic: true,

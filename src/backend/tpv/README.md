@@ -69,3 +69,12 @@ Ejecutar `npm test`, `npm run test:layer1` y `npm run lint` antes de sincronizar
 ## Estado de integración
 
 Los módulos y el HTML Component están versionados en la rama `feat/tpv-classic-persistent-qa-2026-11-16` (PR #397 abierta, sin fusionar). CI verificado sobre el HEAD `36fcd9c9192b888e884ace3881dbd88f9cb6a574`: 74 suites / 667 pruebas offline, 0 fallos; ESLint, contratos Wix y secret scanning correctos. No se han sincronizado al Editor clásico ni publicado. La pasarela y las operaciones fiscales permanecen deshabilitadas.
+
+
+## Integración nativa de cliente y reservas (QA)
+
+- Búsqueda de contactos con `@wix/crm` (`contactsV5.searchContacts`), limitada a 10 resultados y solo para cajeros autenticados.
+- Consulta de reservas del contacto con `@wix/bookings` (`extendedBookings.queryExtendedBookings`), por `contactDetails.contactId` y ventana móvil de ±365 días.
+- Antes de persistir una venta QA, el backend vuelve a leer el contacto y verifica que la reserva seleccionada pertenece a ese contacto. Se guarda únicamente el identificador, nombre visible y snapshot mínimo de la reserva en el payload sintético.
+- Consulta de saldo de Gift Cards con `@wix/ecom` (`giftVouchers.getGiftCard`) y permiso `ECOM.GIFT_CARD_READ`; el código se envía solo al método nativo, no se persiste ni se devuelve. Emisión, canje y reembolso siguen bloqueados.
+- No se crean ni modifican reservas, pagos, pedidos, facturas, stock ni ledgers operativos.
