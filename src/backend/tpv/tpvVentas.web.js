@@ -1,7 +1,7 @@
 import { Permissions, webMethod } from "wix-web-module";
 import { getMyStaffContext, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
-import { TPV_QA_COLLECTIONS } from "backend/internalConfig";
+import { TPV_QA_COLLECTIONS, TPV_QA_RUNTIME_POLICY } from "backend/internalConfig";
 import { validateSaleDraft } from "backend/tpv/tpvValidation";
 import { appendQaAudit, insertQaEvent, latestOpenQaSession } from "backend/tpv/tpvQaRepository";
 import { assertTpvQaEnabled, makeQaId, normalizeClientIdempotencyKey } from "backend/tpv/tpvUtils";
@@ -89,7 +89,7 @@ export const registrarVentaQA = webMethod(
                 cashierMemberId: staff?.memberId || "UNKNOWN",
                 createdAt,
                 traceId,
-                environment: "TEST",
+                environment: TPV_QA_RUNTIME_POLICY.ENVIRONMENT,
                 payload: { ...commonPayload, phase: "PREPARED" },
             });
 
