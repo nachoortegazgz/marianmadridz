@@ -173,6 +173,8 @@ test("TPV WebMethods isolate synthetic QA writes from operational ledgers", asyn
     assert.match(joined, /solicitarDevolucionQA/);
     assert.match(joined, /cerrarTicketZQA/);
     assert.match(joined, /TPV_QA_COLLECTIONS/);
+    const cashierModule = await source("tpv/tpvCaja.web.js");
+    assert.doesNotMatch(cashierModule, /backend\/cajas\.web|CajaActual|getCashierState/);
     assert.match(joined, /TPV_OPERATIONAL_SALE_WRITES_DISABLED/);
     assert.match(joined, /TPV_OPERATIONAL_REFUNDS_DISABLED/);
     assert.match(joined, /TPV_OPERATIONAL_Z_CLOSING_DISABLED/);
