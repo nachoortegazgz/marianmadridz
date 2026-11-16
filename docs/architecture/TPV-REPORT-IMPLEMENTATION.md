@@ -41,7 +41,7 @@ La antigua ruta `src/public/tpv/tpv-page.js` se eliminó en una entrega anterior
 ### Venta y catálogo
 - Selección de profesional desde Wix Bookings.
 - Identificación manual opcional del cliente o venta anónima.
-- Lectura de servicios, profesionales, productos y variantes nativas.
+- Lectura de servicios y profesionales nativos.
 - Borrador multilínea de servicios/productos y concepto manual de QA.
 - Cantidades, descuentos e impuestos declarados por línea.
 - Subtotal, descuentos, impuestos y total en EUR.
@@ -71,19 +71,18 @@ La antigua ruta `src/public/tpv/tpv-page.js` se eliminó en una entrega anterior
 ## 4. Contratos SDK verificados
 
 ### Wix Stores Catalog V3
-- Dependencia fijada en `@wix/stores@1.0.997`.
-- El sitio seleccionado confirma Catalog V3.
-- Se llama primero a `catalogVersioning.getCatalogVersion()` antes de cualquier operación de catálogo.
-- `productsV3.queryProducts` recupera productos visibles para POS con `CURRENCY` y `MIN_PRICE_VARIANT`.
-- `productsV3.getProduct` recupera variantes con `VARIANT_OPTION_CHOICE_NAMES` y `CURRENCY`.
-- Si el catálogo devuelve V1 o Stores no está instalado, el lector devuelve un error explícito; nunca ejecuta endpoints V3 contra V1.
-- Scopes documentados por Wix: `SCOPE.STORES.CATALOG_READ_LIMITED` y `SCOPE.STORES.PRODUCT_READ`. Su concesión/runtime en el sitio debe validarse en Preview.
+- El sitio seleccionado confirma Wix Stores Catalog V3 instalado.
+- El paquete SDK `@wix/stores@1.0.997` se contrastó con documentación y versión oficial, pero no se conserva en `package.json`: la ejecución CI `npm ci` detectó que faltaban 34 entradas transitivas del lockfile. No se deja un import no reproducible ni se declara el lector activo.
+- Los WebMethods `obtenerProductos` y `obtenerVariantesProducto` devuelven `TPV_STORES_SDK_INSTALL_BLOCKED` hasta que el SDK y el lockfile se instalen de forma atómica con el gestor de paquetes del proyecto.
+- No se ejecuta ningún endpoint de Catalog V3 mientras la dependencia no esté reproducible.
+- Scopes documentados por Wix para el futuro lector: `SCOPE.STORES.CATALOG_READ_LIMITED` y `SCOPE.STORES.PRODUCT_READ`.
 
 ### Wix Gift Cards
 - El sitio confirma Wix Gift Cards instalado.
 - `@wix/ecom` ya estaba fijado en `1.0.2539`.
 - `giftVouchers.getGiftCard(code)` se utiliza solo para lectura.
 - Scope documentado: `SCOPE.ECOM.READ-GIFT-CARDS`. Debe verificarse su disponibilidad efectiva en el contexto de ejecución del sitio.
+- La consulta está conectada al HTML Component; emisión, canje y reembolso siguen bloqueados.
 
 ### Wix Bookings
 - Servicios y profesionales se consultan mediante los módulos SDK ya usados por el proyecto.
