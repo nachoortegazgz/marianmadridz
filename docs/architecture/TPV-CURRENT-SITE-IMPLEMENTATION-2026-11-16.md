@@ -26,11 +26,13 @@ Se mantienen intactas estas garantías:
 
 Las lecturas históricas documentaron una configuración objetivo ADMIN/CMS_EDITOR para `CajaActual` y `MovimientosCaja` (revisiones 16 y 107). La lectura CMS posterior utilizada en la auditoría funcional devolvió revisiones distintas y permisos de lectura diferentes:
 
-| Colección | Revisión CMS más reciente observada | Lectura de colección |
-|---|---:|---|
-| `CajaActual` | 17 | `SITE_MEMBER_AUTHOR` |
-| `MovimientosCaja` | 108 | `SITE_MEMBER_AUTHOR` |
-| `ControlOperativo` | 80 | `ANYONE` |
+| Colección | Revisión | Insert | Update | Remove | Read |
+|---|---:|---|---|---|---|
+| `CajaActual` | 17 | `SITE_MEMBER` | `SITE_MEMBER_AUTHOR` | `SITE_MEMBER_AUTHOR` | `SITE_MEMBER_AUTHOR` |
+| `MovimientosCaja` | 108 | `SITE_MEMBER` | `SITE_MEMBER_AUTHOR` | `SITE_MEMBER_AUTHOR` | `SITE_MEMBER_AUTHOR` |
+| `ControlOperativo` | 80 | `ADMIN` | `ADMIN` | `ADMIN` | `ANYONE` |
+
+La lectura actual de Wix devuelve estos permisos a nivel de colección. Los permisos de items no se han vuelto a leer en esta comprobación.
 
 Los permisos de items y los valores actuales de insert/update/remove deben volver a leerse directamente antes de cualquier escritor operativo. No se ha realizado una nueva mutación de permisos en esta fase.
 
@@ -81,7 +83,7 @@ La rama de integración actual es `feat/tpv-classic-persistent-qa-2026-11-16`, c
 
 La política central `dataAccessPolicy.js` permite únicamente inserciones con clave idempotente y payload sintético en `TPV_QA_*`, y bloquea actualizaciones y eliminaciones. Las consultas paginan hasta 10.000 registros y fallan cerradas si exceden ese límite. Ticket Z impide cerrar una sesión si quedan ventas en estado PREPARADA sin confirmación. Los índices únicos `idempotencyKey` de las nueve colecciones se verificaron `ACTIVE`; el recuento CMS posterior confirmó cero elementos. Los eventos QA no se insertan en el ledger fiscal.
 
-Las escrituras de ventas siguen una saga reanudable: cabecera PREPARADA, líneas, pagos y cabecera CONFIRMADA. Los informes solo agregan ventas confirmadas. Los reembolsos se serializan por venta y, junto con ventas, movimientos, arqueos y cierres, comparten un lock compare-and-swap por sesión en `ControlOperativo` (tipos `TPV_QA_REFUND_LOCK` y `TPV_QA_SESSION_LOCK`). Los locks no contienen importes ni registros de ventas. La política central solo permite mutaciones CAS de campos acotados. Ticket Z marca como cerrada exclusivamente la sesión QA.
+Las escrituras de ventas siguen una saga reanudable: cabecera PREPARADA, líneas, pagos y cabecera CONFIRMADA. Los informes solo agregan ventas confirmadas. Los reembolsos se serializan por venta y, junto con ventas, movimientos, arqueos y cierres, comparten un lock compare-and-swap por sesión en `ControlOperativo` (tipos `TPV_QA_REFUND_LOCK` y `TPV_QA_SESSION_LOCK`). Las lecturas remotas de Contacts/Bookings y la resolución del profesional se ejecutan antes de adquirir el lock de sesión; el lock solo cubre la comprobación de sesión y las escrituras QA. Los locks no contienen importes ni registros de ventas. La política central solo permite mutaciones CAS de campos acotados. Ticket Z marca como cerrada exclusivamente la sesión QA.
 
 El controlador HTML ↔ Velo y `#htmlTPV.txt` despachan apertura de sesión QA, ventas, movimientos, arqueos, devoluciones, Ticket X/Z y auditoría. Se añadió búsqueda de contactos mediante Wix CRM Contacts V5 y consulta de reservas mediante Bookings Reader V2. Antes de persistir una venta QA, backend relee el contacto y verifica que la reserva seleccionada pertenece a ese contacto; guarda solo el identificador y el snapshot mínimo en el payload QA. La consulta de saldo de Wix Gift Cards usa `@wix/ecom` `giftVouchers.getGiftCard` con permiso de lectura; el código bruto no se persiste, devuelve ni registra. Emisión/canje/reembolso de tarjetas siguen bloqueados.
 
@@ -112,7 +114,7 @@ Pruebas añadidas al repositorio:
 - Política CAS del lock de devoluciones.
 - Validaciones de claves idempotentes, métodos de pago y unidades menores.
 
-**CI verificado sobre HEAD `49c537b1c1a1592817c1d5b82336897fe2da842c` (run 1477):** Layer 1: 28 suites / 330 pruebas, 0 fallos; Layer 2: 19 suites / 255 pruebas, 0 fallos; regresión offline completa: 74 suites / 669 pruebas, 0 fallos; ESLint correcto; secret scanning correcto; contratos SDK de Stores/eCommerce, Bookings Reader V2, CRM Contacts V5 y Gift Cards correctos. Estas pruebas son offline/estáticas y no sustituyen pruebas de runtime Wix.
+**CI verificado sobre HEAD `c7ebc1fa44c9f4eedda4b90e0c7710ef00e61c74` (run 1479):** Layer 1: 28 suites / 330 pruebas, 0 fallos; Layer 2: 19 suites / 255 pruebas, 0 fallos; regresión offline completa: 74 suites / 669 pruebas, 0 fallos; ESLint correcto; secret scanning correcto; contratos SDK de Stores/eCommerce, Bookings Reader V2, CRM Contacts V5 y Gift Cards correctos. Estas pruebas son offline/estáticas y no sustituyen pruebas de runtime Wix.
 
 Pendiente:
 1. CI completo sobre HEAD `a4dafdd8376d293606ef095f6ccc572cd5e5ecfb` verificado correctamente.

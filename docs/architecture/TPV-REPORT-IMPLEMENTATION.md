@@ -135,12 +135,13 @@ Las reservas, órdenes, cobros reales, emisión/canje de Gift Cards, facturació
 - cero elementos en las nueve colecciones.
 
 **Discrepancia CMS posterior que bloquea escritores operativos:**
-- `CajaActual`: revisión 17, lectura de colección `SITE_MEMBER_AUTHOR`;
-- `MovimientosCaja`: revisión 108, lectura de colección `SITE_MEMBER_AUTHOR`;
-- `ControlOperativo`: revisión 80, lectura `ANYONE`;
+- `CajaActual`: revisión 17; insert `SITE_MEMBER`, update/remove/read `SITE_MEMBER_AUTHOR`;
+- `MovimientosCaja`: revisión 108; insert `SITE_MEMBER`, update/remove/read `SITE_MEMBER_AUTHOR`;
+- `ControlOperativo`: revisión 80; insert/update/remove `ADMIN`, read `ANYONE`;
+- permisos de items no incluidos en la lectura actual; pendientes de consulta específica;
 - permisos de items e insert/update/remove pendientes de lectura directa y conciliación. No se han mutado permisos en esta fase.
 
-**Verificado en CI sobre HEAD `49c537b1c1a1592817c1d5b82336897fe2da842c` (run 1477):**
+**Verificado en CI sobre HEAD `c7ebc1fa44c9f4eedda4b90e0c7710ef00e61c74` (run 1479):**
 - Layer 1: 28 suites / 330 pruebas, 0 fallos;
 - Layer 2: 19 suites / 255 pruebas, 0 fallos;
 - regresión offline completa: 74 suites / 669 pruebas, 0 fallos;
