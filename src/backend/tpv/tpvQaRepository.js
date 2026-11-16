@@ -158,9 +158,9 @@ async function withQaScopedLock({
     return result;
 }
 
-export async function withQaSaleLock(saleId, traceId, operation) {
+export async function withQaSaleLock(saleId, traceId, operation, sessionId = null) {
     const lockId = makeQaRefundLockId(saleId);
-    return withQaScopedLock({
+    const executeSaleLock = () => withQaScopedLock({
         lockId,
         controlType: CONTROL_TYPE.TPV_QA_REFUND_LOCK,
         dedupePrefix: "TPV_QA_REFUND:",
@@ -170,6 +170,9 @@ export async function withQaSaleLock(saleId, traceId, operation) {
         operation,
         errorPrefix: "TPV_QA_REFUND",
     });
+    return sessionId
+        ? withQaSessionLock(sessionId, traceId, executeSaleLock)
+        : executeSaleLock();
 }
 
 export async function withQaSessionLock(sessionId, traceId, operation) {
