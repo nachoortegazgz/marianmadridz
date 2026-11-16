@@ -234,13 +234,6 @@ export async function latestOpenQaSession() {
     ) || null;
 }
 
-export async function getQaSessionEvents(sessionId) {
-    return queryQaRecords(
-        TPV_QA_COLLECTIONS.SESIONES_CAJA,
-        wql.eq("sessionId", sessionId),
-        { sort: ["_createdDate ASC"], limit: 1000 }
-    );
-}
 
 export async function getCommittedQaSales(sessionId) {
     const records = await queryQaRecords(TPV_QA_COLLECTIONS.VENTAS, undefined);
