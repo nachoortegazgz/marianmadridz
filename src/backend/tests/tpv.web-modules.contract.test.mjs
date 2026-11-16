@@ -299,3 +299,22 @@ test("QA repository paginates reads and blocks Z close while sales are incomplet
     assert.match(closures, /getPendingQaSales\(session\.sessionId\)/);
     assert.match(closures, /TPV_QA_PENDING_SALES_PREVENT_CLOSE/);
 });
+
+test("legacy TPV pages and direct operational writers are absent from the active site integration", async () => {
+    const legacyPaths = [
+        "src/pages/tpv.js",
+        "src/pages/tpvCaja.web.js",
+        "src/backend/tpvCaja.web.js",
+        "src/backend/tpvVentas.web.js",
+        "src/public/tpv/tpv-page.js",
+    ];
+    await Promise.all(legacyPaths.map((path) =>
+        assert.rejects(
+            readFile(new URL(path, repoRoot), "utf8"),
+            (error) => error?.code === "ENOENT"
+        )
+    ));
+    const activePage = await readFile(new URL("src/pages/TPV.yl5th.js", repoRoot), "utf8");
+    assert.match(activePage, /public\/tpvPageController/);
+    assert.doesNotMatch(activePage, /backend\/tpvCaja\.web|backend\/tpvVentas\.web/);
+});
