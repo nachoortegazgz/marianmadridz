@@ -1,7 +1,7 @@
 import { Permissions, webMethod } from "wix-web-module";
 import { getMyStaffContext, requireAdmin, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
-import { TPV_QA_COLLECTIONS } from "backend/internalConfig";
+import { TPV_QA_COLLECTIONS, TPV_QA_RUNTIME_POLICY } from "backend/internalConfig";
 import { appendQaAudit, insertQaEvent, latestOpenQaSession, queryQaRecords } from "backend/tpv/tpvQaRepository";
 import { buildQaSessionSummary } from "backend/tpv/tpvCierresCore";
 import { assertTpvQaEnabled, fromMinorUnits, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
@@ -149,7 +149,7 @@ export const cerrarTicketZQA = webMethod(
                     differenceReason: reason,
                     closedByMemberId: staff?.memberId || "UNKNOWN",
                 },
-                payload: { traceId, sourceEnvironment: "TEST", immutableAfterCreation: true },
+                payload: { traceId, sourceEnvironment: TPV_QA_RUNTIME_POLICY.ENVIRONMENT, immutableAfterCreation: true },
             });
             await appendQaAudit({
                 idempotencyKey: idempotencyKey + ":AUDIT",
