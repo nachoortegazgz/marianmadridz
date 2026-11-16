@@ -84,6 +84,10 @@ jobs:
         if: always()
         run: npm run verify:wix-bookings-reader-v2
 
+      - name: Verify Wix TPV native CRM and Gift Cards SDK contracts
+        if: always()
+        run: npm run verify:wix-tpv-native-sdk
+
       - name: Run ESLint
         if: always()
         run: npm run lint
