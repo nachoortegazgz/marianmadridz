@@ -13,16 +13,25 @@ import {
     stableSerialize,
     makeSyntheticPayload,
     makeQaRefundLockId,
+    makeQaSessionLockId,
 } from "backend/tpv/tpvUtils";
 
 const ALLOWED_QA_COLLECTIONS = new Set(Object.values(TPV_QA_COLLECTIONS));
 const REFUND_LOCK_TTL_MS = 300000;
 
-export async function withQaSaleLock(saleId, traceId, operation) {
+async function withQaScopedLock({
+    lockId,
+    controlType,
+    dedupePrefix,
+    scopeField,
+    scopeId,
+    traceId,
+    operation,
+    errorPrefix,
+}) {
     assertTpvQaEnabled();
-    const cleanSaleId = String(saleId || "").trim();
-    if (!cleanSaleId || typeof operation !== "function") throw new Error("TPV_QA_REFUND_LOCK_INVALID");
-    const lockId = makeQaRefundLockId(cleanSaleId);
+    const cleanScopeId = String(scopeId || "").trim();
+    if (!cleanScopeId || typeof operation !== "function") throw new Error(errorPrefix + "_INVALID");
     const collection = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
     const now = Date.now();
     const expiresAt = new Date(now + REFUND_LOCK_TTL_MS);
@@ -32,13 +41,17 @@ export async function withQaSaleLock(saleId, traceId, operation) {
     if (!record) {
         const initial = {
             _id: lockId,
-            controlType: CONTROL_TYPE.TPV_QA_REFUND_LOCK,
-            dedupeKey: "TPV_QA_REFUND:" + lockId.slice(4),
+            controlType,
+            dedupeKey: dedupePrefix + lockId.slice(4),
             traceId: String(traceId || ""),
             status: "ACTIVE",
             expiresAt,
             version: 0,
-            payload: { saleId: cleanSaleId, environment: TPV_QA_RUNTIME_POLICY.ENVIRONMENT, acquiredAt: new Date(now) },
+            payload: {
+                [scopeField]: cleanScopeId,
+                environment: TPV_QA_RUNTIME_POLICY.ENVIRONMENT,
+                acquiredAt: new Date(now),
+            },
         };
         try {
             await insertItem(collection, initial);
@@ -50,20 +63,20 @@ export async function withQaSaleLock(saleId, traceId, operation) {
     }
 
     if (record) {
-        if (record.payload?.saleId !== cleanSaleId) {
-            throw new Error("TPV_QA_REFUND_LOCK_ID_COLLISION");
+        if (record.controlType !== controlType || record.payload?.[scopeField] !== cleanScopeId) {
+            throw new Error(errorPrefix + "_ID_COLLISION");
         }
         const currentExpiry = record.expiresAt instanceof Date ? record.expiresAt : new Date(record.expiresAt || 0);
         if (record.status === "ACTIVE" && currentExpiry.getTime() > now) {
-            throw new Error("TPV_QA_REFUND_IN_PROGRESS");
+            throw new Error(errorPrefix + "_IN_PROGRESS");
         }
         if (!["ACTIVE", "RELEASED"].includes(record.status)) {
-            throw new Error("TPV_QA_REFUND_LOCK_INVALID_STATE");
+            throw new Error(errorPrefix + "_LOCK_INVALID_STATE");
         }
         const version = Number(record.version);
-        if (!Number.isInteger(version) || version < 0) throw new Error("TPV_QA_REFUND_LOCK_VERSION_INVALID");
+        if (!Number.isInteger(version) || version < 0) throw new Error(errorPrefix + "_LOCK_VERSION_INVALID");
         const condition = {
-            controlType: { $eq: CONTROL_TYPE.TPV_QA_REFUND_LOCK },
+            controlType: { $eq: controlType },
             version: { $eq: version },
             status: { $eq: record.status },
         };
@@ -72,11 +85,19 @@ export async function withQaSaleLock(saleId, traceId, operation) {
             { fieldPath: "status", action: "SET_FIELD", value: "ACTIVE" },
             { fieldPath: "expiresAt", action: "SET_FIELD", value: expiresAt },
             { fieldPath: "traceId", action: "SET_FIELD", value: String(traceId || "") },
-            { fieldPath: "payload", action: "SET_FIELD", value: { saleId: cleanSaleId, environment: "TEST", acquiredAt: new Date(now) } },
+            {
+                fieldPath: "payload",
+                action: "SET_FIELD",
+                value: {
+                    [scopeField]: cleanScopeId,
+                    environment: TPV_QA_RUNTIME_POLICY.ENVIRONMENT,
+                    acquiredAt: new Date(now),
+                },
+            },
             { fieldPath: "version", action: "INCREMENT_FIELD", value: 1 },
         ]], { condition: { filter: condition } });
         if (!Array.isArray(patched?.updatedItemIds) || !patched.updatedItemIds.includes(lockId)) {
-            throw new Error("TPV_QA_REFUND_IN_PROGRESS");
+            throw new Error(errorPrefix + "_IN_PROGRESS");
         }
         heldVersion = version + 1;
     }
@@ -92,41 +113,80 @@ export async function withQaSaleLock(saleId, traceId, operation) {
     let releaseError = null;
     try {
         const latest = await getItem(collection, lockId, CONSISTENCY.STRONG);
-        if (!latest || latest.controlType !== CONTROL_TYPE.TPV_QA_REFUND_LOCK ||
+        if (!latest || latest.controlType !== controlType ||
             latest.status !== "ACTIVE" || Number(latest.version) !== heldVersion) {
-            throw new Error("TPV_QA_REFUND_LOCK_LOST");
+            throw new Error(errorPrefix + "_LOCK_LOST");
         }
         const released = await bulkPatchItems(collection, [lockId], [[
             { fieldPath: "status", action: "SET_FIELD", value: "RELEASED" },
             { fieldPath: "expiresAt", action: "SET_FIELD", value: new Date(0) },
-            { fieldPath: "payload", action: "SET_FIELD", value: { saleId: cleanSaleId, environment: TPV_QA_RUNTIME_POLICY.ENVIRONMENT, releasedAt: new Date() } },
+            {
+                fieldPath: "payload",
+                action: "SET_FIELD",
+                value: {
+                    [scopeField]: cleanScopeId,
+                    environment: TPV_QA_RUNTIME_POLICY.ENVIRONMENT,
+                    releasedAt: new Date(),
+                },
+            },
             { fieldPath: "version", action: "INCREMENT_FIELD", value: 1 },
         ]], {
             condition: {
                 filter: {
-                    controlType: { $eq: CONTROL_TYPE.TPV_QA_REFUND_LOCK },
+                    controlType: { $eq: controlType },
                     status: { $eq: "ACTIVE" },
                     version: { $eq: heldVersion },
                 },
             },
         });
         if (!Array.isArray(released?.updatedItemIds) || !released.updatedItemIds.includes(lockId)) {
-            throw new Error("TPV_QA_REFUND_LOCK_RELEASE_FAILED");
+            throw new Error(errorPrefix + "_LOCK_RELEASE_FAILED");
         }
     } catch (error) {
         releaseError = error;
     }
 
     if (operationError && releaseError) {
-        const combined = new Error("TPV_QA_REFUND_OPERATION_AND_LOCK_RELEASE_FAILED");
+        const combined = new Error(errorPrefix + "_OPERATION_AND_LOCK_RELEASE_FAILED");
         combined.cause = operationError;
-        combined.code = "TPV_QA_REFUND_OPERATION_AND_LOCK_RELEASE_FAILED";
+        combined.code = errorPrefix + "_OPERATION_AND_LOCK_RELEASE_FAILED";
         combined.releaseError = String(releaseError?.message || releaseError);
         throw combined;
     }
     if (operationError) throw operationError;
     if (releaseError) throw releaseError;
     return result;
+}
+
+export async function withQaSaleLock(saleId, traceId, operation, sessionId = null) {
+    const lockId = makeQaRefundLockId(saleId);
+    const executeSaleLock = () => withQaScopedLock({
+        lockId,
+        controlType: CONTROL_TYPE.TPV_QA_REFUND_LOCK,
+        dedupePrefix: "TPV_QA_REFUND:",
+        scopeField: "saleId",
+        scopeId: saleId,
+        traceId,
+        operation,
+        errorPrefix: "TPV_QA_REFUND",
+    });
+    return sessionId
+        ? withQaSessionLock(sessionId, traceId, executeSaleLock)
+        : executeSaleLock();
+}
+
+export async function withQaSessionLock(sessionId, traceId, operation) {
+    const lockId = makeQaSessionLockId(sessionId);
+    return withQaScopedLock({
+        lockId,
+        controlType: CONTROL_TYPE.TPV_QA_SESSION_LOCK,
+        dedupePrefix: "TPV_QA_SESSION:",
+        scopeField: "sessionId",
+        scopeId: sessionId,
+        traceId,
+        operation,
+        errorPrefix: "TPV_QA_SESSION",
+    });
 }
 
 const VOLATILE_FIELDS = new Set([

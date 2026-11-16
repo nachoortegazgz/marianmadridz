@@ -5,6 +5,7 @@ import {
     CONTROL_TYPE,
     CONTROL_OPERATIVO_NON_CANONICAL_FIELDS,
     RECORD_TYPE,
+    TPV_QA_COLLECTIONS,
 } from "backend/internalConfig";
 
 function _policyError(code) {
@@ -75,6 +76,7 @@ const APPEND_ONLY_COLLECTIONS = Object.freeze([
     BUSINESS_COLLECTIONS.REGISTROS_HORARIOS_STAFF,
     BUSINESS_COLLECTIONS.HISTORICO_CIERRES_Z,
     BUSINESS_COLLECTIONS.PAQUETES_GESTORIA,
+    ...Object.values(TPV_QA_COLLECTIONS),
 ]);
 
 function _assertControlRecord(item, allowedTypes, errorCode, requireId = true) {
@@ -95,6 +97,19 @@ function _assertControlRecord(item, allowedTypes, errorCode, requireId = true) {
 export function assertInsertAllowed(collection, item) {
     if (!DATA_ACCESS_WRITE_POLICY.insertCollections.includes(collection) || !_isRecord(item)) {
         throw _policyError("CMS_INSERT_COLLECTION_DENIED");
+    }
+    if (Object.values(TPV_QA_COLLECTIONS).includes(collection)) {
+        const payload = item.payload;
+        if (
+            typeof item.idempotencyKey !== "string" ||
+            item.idempotencyKey.trim().length < 8 ||
+            !_isRecord(payload) ||
+            payload.isSynthetic !== true ||
+            payload.realPayment !== false ||
+            payload.externalSideEffects !== false
+        ) {
+            throw _policyError("CMS_TPV_QA_SYNTHETIC_PAYLOAD_REQUIRED");
+        }
     }
     if (collection === BUSINESS_COLLECTIONS.CONTROL_OPERATIVO) {
         _assertControlRecord(item, Object.values(CONTROL_TYPE), "CMS_INSERT_CONTROL_TYPE_INVALID", false);

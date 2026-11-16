@@ -15,7 +15,8 @@
     "@wix/secrets": "1.0.75",
     "@wix/site-location": "1.34.0",
     "@wix/site-pricing-plans": "1.35.0",
-    "@wix/site-window": "1.59.0"
+    "@wix/site-window": "1.59.0",
+    "@wix/stores": "1.0.997"
   },
   "scripts": {
     "dev": "wix dev",
@@ -26,6 +27,7 @@
     "verify:wix-ecom-cart-v2": "node scripts/verify-wix-ecom-cart-v2.mjs",
     "verify:wix-ecom-order-transactions": "node scripts/verify-wix-ecom-order-transactions.mjs",
     "wix": "wix",
-    "verify:wix-bookings-reader-v2": "node scripts/verify-wix-bookings-reader-v2.mjs"
+    "verify:wix-bookings-reader-v2": "node scripts/verify-wix-bookings-reader-v2.mjs",
+    "verify:wix-tpv-native-sdk": "node scripts/verify-wix-tpv-native-sdk.mjs"
   }
 }

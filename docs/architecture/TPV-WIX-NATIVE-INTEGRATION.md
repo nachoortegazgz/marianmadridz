@@ -1,55 +1,63 @@
 # TPV — integración con Wix nativo
 
-## Entrega inicial
+## Alcance y página actual
 
-- `#htmlTPV.txt`: documento HTML completo para pegar en un elemento Wix HTML Component con ID `#htmlTPV`.
-- `src/public/tpvPageController.js`: controlador frontend Velo y puente validado con `public/widgetBridge.js`.
-- `src/pages/TPV.page-code.template.txt`: snippet para el archivo de página que Wix genera con el ID real.
-- `src/backend/tests/tpv-widget.contract.test.mjs`: contrato estático de seguridad del widget/controlador.
-- Página Wix sugerida: crear una página privada llamada TPV, añadir un HTML Component con ID `htmlTPV` y configurar su contenido con el documento HTML.
+La TPV personalizada corresponde a la página estática Wix:
+- ID: `yl5th`
+- Título: `TPV`
+- Ruta: `/blank`
+- Page code: `src/pages/TPV.yl5th.js`
+- HTML Component: `#htmlTPV`
 
-## Responsabilidades de las apps
+La lectura oficial de páginas estáticas devolvió `published: false`; el contexto del sitio también devuelve `Status: Draft`. No se afirma que el código de esta rama esté en el runtime de Wix Classic.
 
-| Capacidad | Fuente de verdad | Papel de la TPV |
+## Arquitectura y fuentes de verdad
+
+| Capacidad | Fuente de verdad | Papel de la TPV en la fase QA |
 |---|---|---|
-| Servicios, staff, disponibilidad y reservas | Wix Bookings | Consultar; las mutaciones se delegarán en Bookings tras E2E aislado |
-| Productos, variantes, precios e inventario | Wix Stores Catalog V3 | Consultar; no crear catálogo duplicado |
-| Carrito, checkout e impuestos eCommerce | Wix eCommerce | Crear checkout mediante APIs oficiales, nunca registrar un pago ficticio |
-| Pedidos y transacciones | Wix Orders / Order Transactions | Conciliar por IDs nativos; no duplicar pedidos |
-| Captura y reembolso | Proveedor conectado / Wix Payments / Order Billing | No disponible en esta entrega; pasarela QA desconectada |
-| Tarjetas regalo | Wix Gift Cards | Consultar y canjear mediante ciclo nativo cuando se implemente |
-| Facturación | Wix Invoices + módulo fiscal propio | Relacionar invoice/order/transaction; no emitir desde la interfaz |
-| Caja y ledger interno | `CajaActual`, `MovimientosCaja`, `HistoricoCierresZ` | Solo lectura de caja; writers permanecen fail-closed |
+| Servicios, profesionales y reservas | Wix Bookings | Lectura de catálogo y consulta de reservas por contacto; no crea, modifica ni cancela reservas |
+| Productos y variantes | Wix Stores Catalog V3 | Lectura de catálogo; no actualiza stock ni crea pedidos |
+| Clientes | Wix CRM Contacts V5 | Búsqueda y lectura de contacto; persiste en venta QA solo el ID y nombre visible |
+| Pagos, pedidos y transacciones | Wix eCommerce / proveedor | Simulación QA; sin checkout, autorización, captura, pedido ni reembolso real |
+| Tarjetas regalo | Wix Gift Cards / eCommerce Gift Vouchers | Consulta de saldo nativa, solo lectura; emisión, canje y reembolso bloqueados |
+| Facturación | Wix Invoices V1 + módulo fiscal | Sin emisión fiscal; factura/abono/rectificativa bloqueados |
+| Caja y ledgers | `CajaActual`, `MovimientosCaja`, `HistoricoCierresZ`, ledgers fiscal/contable | No hay escritores TPV operativos; QA escribe solo en `TPV_QA_*` |
 
-Wix eCommerce define catálogo, carrito, checkout, pagos, pedidos y notificaciones como componentes relacionados. Bookings y Stores conectan sus catálogos al checkout eCommerce mediante integraciones nativas. La TPV no debe crear una segunda fuente de verdad.
+Wix Bookings y Stores permanecen como SSOT de sus dominios. El CMS propio solo conserva el estado transaccional QA de la TPV; no replica catálogo, reservas, tarjetas regalo ni pagos.
 
-## Integración actual
+## Integración implementada en la rama
 
-`initializeTpvPage($w("#htmlTPV"))` crea el bridge. El único WebMethod expuesto por esta entrega es `getCashierState()`, que ejecuta `requireCajero()` en backend. La UI y la conciliación de líneas/medios son borradores locales del iframe y no se persisten.
+- `src/pages/TPV.yl5th.js` inicializa `public/tpvPageController.js`.
+- El controlador despacha WebMethods de `src/backend/tpv/*.web.js`.
+- `tpvNativeReaders.js` usa Contacts V5 y Bookings Reader V2; verifica contacto y pertenencia de la reserva antes de registrar el vínculo en una venta QA.
+- `tpvGiftCards.web.js` consulta el saldo nativo con `giftVouchers.getGiftCard`; el código no se almacena, devuelve ni registra.
+- `tpvQaRepository.js` concentra las escrituras sintéticas, idempotencia y locks CAS.
+- Las lecturas remotas de Contacts/Bookings se realizan antes de adquirir el lock CAS de sesión.
+- La interfaz conserva borradores y tickets suspendidos solo en la sesión del navegador.
 
-Para conectar la página, crea un archivo de página Velo con el ID real asignado por Wix y añade:
+## Limpieza de la implementación legacy
 
-```js
-import { initializeTpvPage } from "public/tpvPageController";
+Se retiraron los siguientes archivos, demostrados sin consumidores activos:
+- `src/pages/tpv.js`
+- `src/pages/tpvCaja.web.js`
+- `src/backend/tpvCaja.web.js`
+- `src/backend/tpvVentas.web.js`
+- `src/public/tpv/tpv-page.js`
 
-$w.onReady(() => {
-    initializeTpvPage($w("#htmlTPV"));
-});
-```
+La página estática actual es `TPV` con ID `yl5th` y ruta `/blank`. La búsqueda de imports en `src/` mostró que los módulos legacy solo eran consumidos por los dos archivos legacy eliminados. Los antiguos escritores insertaban directamente en `MovimientosCaja` y actualizaban `CajaActual` sin el control centralizado actual; no deben reintroducirse.
 
-No se incluye un `src/pages/TPV.<id>.js` inventado: el sufijo lo asigna Wix al crear la página.
+## Bloqueos previos a la activación real
 
-## Gaps antes de habilitar operaciones
-
-1. Resolver aislamiento de las siete automatizaciones preinstaladas activas y demostrar que las pruebas no producen comunicaciones ni efectos externos.
-2. Verificar sincronización del código del repositorio con Wix Editor Classic.
-3. Implementar lectores SDK de Wix Stores Catalog V3 y Wix Bookings usando las versiones instaladas y contratos oficiales; no consultar CMS espejo como sustituto.
-4. Definir el flujo TPV de venta presencial: determinar si se crea un Wix Order manual o un checkout, cómo se representa el medio de pago presencial y cómo se reconcilia la transacción sin cobrar online.
-5. Alinear métodos de pago reales con el contrato del writer: `PAYMENT_METHOD` vigente no admite `TARJETAS`, `OTROS` ni `OTROS_PENDIENTE`.
-6. Corregir contrato de líneas/impuestos, cierre Z, apertura/arqueo y proyecciones de caja.
-7. Diseñar idempotencia y vínculo entre `orderId`, `transactionId`, `paymentId`, `invoiceId` y `movementId`.
-8. Mantener `LEDGER_WRITES_ENABLED=false`, `ACCOUNTING_LEDGER_WRITES_ENABLED=false` y `STAFF_CLOCKING_CONFIG.WRITES_ENABLED=false` hasta pruebas y aprobación explícita.
+1. Resolver la discrepancia CMS: `CajaActual` y `MovimientosCaja` tienen actualmente insert `SITE_MEMBER`; `ControlOperativo` permite read `ANYONE`. Auditar consumidores y permisos de items antes de cambiar permisos.
+2. Integrar el flujo de pedido/pago presencial con contratos Wix eCommerce y proveedor aprobados.
+3. Integrar inventario y devoluciones nativas de Stores.
+4. Implementar operaciones nativas de Gift Cards.
+5. Definir la emisión de tickets/facturas/abonos con Wix Invoices V1 y cumplimiento fiscal.
+6. Validar caja, conciliación bancaria, cierres y permisos de roles en Wix Preview.
+7. Mantener bloqueadas las escrituras fiscales y operativas hasta autorización explícita.
 
 ## Estado
 
-La entrega es un frontend funcional como borrador local y consulta de caja autenticada. No es una TPV transaccional certificada. No crea ventas, reservas, pedidos, pagos, facturas, gift cards ni registros CMS.
+La rama contiene una TPV QA persistente con lectura de catálogos nativos y vínculo cliente/reserva. No es todavía una TPV de producción: cobros, reembolsos reales, stock, reservas mutables, facturas, hardware y ledgers operativos siguen deshabilitados.
+
+No se ha sincronizado ni publicado esta rama en Wix Classic. Studio Two queda fuera de alcance.
