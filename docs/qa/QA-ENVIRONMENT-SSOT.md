@@ -56,3 +56,13 @@ La decisión no elimina la obligación de:
 **Tarea preproducción obligatoria:** reintroducir y probar las garantías de append-only, inmutabilidad, rectificación mediante nuevos registros, permisos mínimos, autorización backend, idempotencia, hash/trazabilidad y bloqueo de update/remove. No se autoriza despliegue real mientras esta tarea esté abierta.
 
 **Estado de implementación:** decisión SSOT registrada en esta rama; no implica que los bloqueos ya hayan sido retirados del código ni que se hayan cambiado permisos live de Wix. La implementación requiere revisión técnica y validación por colección.
+
+## Revalidación de automatizaciones — 2026-11-16
+
+La consulta Wix Automations V2 filtrada por `configuration.status = ACTIVE` y la lectura individual de cada ID confirman **8 automatizaciones activas**:
+- 7 preinstaladas, todas bloqueadas para cambio de estado (`disableStatusChange=true`); 2 además readonly.
+- 1 automatización adicional creada por una app: `Creación de TPV física personalizada` (ID `961f911d-8386-4e20-843e-cdf4595c24e8`), programada diariamente a las 01:45 y ejecutando la acción `Delegate to AI Custom Agent` con task ID `d56d7590-7eb7-4e4f-94ac-2ca9fa465fcf`.
+
+El contenido de esa tarea IA y sus integraciones no son visibles en la configuración consultada. No se modificó ni desactivó por desconocerse su finalidad. Queda como riesgo abierto `BLOCKED_UNKNOWN_AUTOMATION_SIDE_EFFECTS` hasta inspeccionar tarea e integraciones en Agent Maker. Por tanto, la declaración de comunicaciones y efectos externos desactivados sigue sin acreditación técnica suficiente y Runtime/E2E permanece bloqueado.
+
+Detalle y evidencia: `docs/audits/2026-11-14-qa-automations-isolation.md` (addendum 2026-11-16).
