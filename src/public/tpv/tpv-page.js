@@ -1,9 +1,8 @@
 import {
   obtenerCajaActual,
-  registrarVenta,
-  registrarMovimientoCaja,
-  calcularResumenCaja
-} from "backend/tpvBackend";
+  registrarMovimientoCaja
+} from "backend/tpvCaja.web";
+import { registrarVenta } from "backend/tpvVentas.web";
 
 let lineasVenta = [];
 let cajaActual = null;
