@@ -13,7 +13,7 @@ Sitio objetivo único:
 - Página TPV ID `yl5th`, ruta `/blank`.
 - Studio Two queda expresamente fuera del alcance.
 
-PR #397 y PR #398 figuran fusionadas en `main`. La rama de hardening `fix/tpv-qa-synthetic-data-boundary-2026-11-16` aplica ahora la regla SSOT de datos exclusivamente sintéticos y está pendiente de CI/revisión.
+PR #397, PR #398 y PR #399 están fusionadas en `main`. PR #399 aplica la regla SSOT de datos exclusivamente sintéticos. CI: 74 suites / 670 pruebas, 0 fallos; Layer 1, Layer 2, SDK contracts, ESLint y secret scanning correctos.
 
 ## 2. Decisión de arquitectura
 
@@ -160,7 +160,7 @@ Las ejecuciones intermedias detectaron aserciones de pruebas desactualizadas y u
 
 ## 10. Sincronización y despliegue
 
-Los módulos y la interfaz TPV están versionados en `main` tras PR #397 y #398. La rama de hardening sintético está pendiente de CI. No se ha sincronizado el page code, HTML Component ni módulos backend con el Editor clásico. Wix confirma que el sitio está Published y que la página TPV existe en `/blank`, pero no se ha verificado que el runtime contenga el código de GitHub.
+Los módulos y la interfaz TPV están versionados en `main` tras PR #397, #398 y #399. No se ha sincronizado el page code, HTML Component ni módulos backend con el Editor clásico. Wix confirma que el sitio está Published y que la página TPV existe en `/blank`, pero no se ha verificado que el runtime contenga el código de GitHub.
 
 Antes de sincronizar:
 1. verificar el último CI y revisar el diff;
