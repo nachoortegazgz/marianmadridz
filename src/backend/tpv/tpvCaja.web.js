@@ -3,7 +3,7 @@ import { getCashierState } from "backend/cajas.web.js";
 import { getMyStaffContext, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { TPV_QA_COLLECTIONS } from "backend/internalConfig";
-import { insertQaEvent, latestOpenQaSession, queryQaRecords } from "backend/tpv/tpvQaRepository";
+import { appendQaAudit, insertQaEvent, latestOpenQaSession, queryQaRecords } from "backend/tpv/tpvQaRepository";
 import { buildQaSessionSummary } from "backend/tpv/tpvCierresCore";
 import { wql } from "backend/dataAccess";
 import { assertTpvQaEnabled, fromMinorUnits, makeSyntheticPayload, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
@@ -160,6 +160,15 @@ export const registrarArqueoParcialQA = webMethod(
                     }),
                 }
             );
+            await appendQaAudit({
+                idempotencyKey: key + ":AUDIT",
+                action: "ARQUEO_PARCIAL_QA",
+                actorId: staff?.memberId || "UNKNOWN",
+                entityType: "ARQUEO_CAJA",
+                entityId: session.sessionId,
+                traceId,
+                payload: { expectedMinor, countedMinor, differenceMinor, reason },
+            });
             return {
                 status: "SUCCESS",
                 data: { movementId: item._id, difference: fromMinorUnits(differenceMinor), replayed, persisted: true, isSynthetic: true },
