@@ -25,6 +25,9 @@ export const solicitarDevolucionQA = webMethod(
             if (!original) throw new Error("TPV_QA_ORIGINAL_SALE_NOT_FOUND");
             if (original.payload?.sessionId !== session.sessionId) throw new Error("TPV_QA_REFUND_SESSION_MISMATCH");
 
+            const refundId = makeQaId("REFUND", key);
+            const currentRefunds = await queryQaRecords(TPV_QA_COLLECTIONS.REEMBOLSOS, wql.eq("saleId", saleId));
+            const currentRefund = currentRefunds.find((refund) => refund.refundId === refundId) || null;
             const originalPayments = await queryQaRecords(TPV_QA_COLLECTIONS.PAGOS, wql.eq("saleId", saleId));
             const remainingByMethod = { EFECTIVO: 0, TARJETA: 0, BIZUM: 0, OTROS: 0 };
             for (const payment of originalPayments) {
@@ -35,7 +38,7 @@ export const solicitarDevolucionQA = webMethod(
             }
             const priorRefunds = await queryQaRecords(TPV_QA_COLLECTIONS.REEMBOLSOS, wql.eq("saleId", saleId));
             for (const refund of priorRefunds) {
-                if (refund.status !== "CONFIRMADO_SINTETICO" || refund.payload?.sessionId !== session.sessionId) continue;
+                if (refund.refundId === refundId || refund.status !== "CONFIRMADO_SINTETICO" || refund.payload?.sessionId !== session.sessionId) continue;
                 const allocations = refund.payload?.allocations || [];
                 for (const allocation of allocations) {
                     if (Object.prototype.hasOwnProperty.call(remainingByMethod, allocation.paymentMethod)) {
@@ -57,7 +60,6 @@ export const solicitarDevolucionQA = webMethod(
             if (amountMinor <= 0) throw new Error("TPV_QA_REFUND_AMOUNT_INVALID");
 
             const staff = await getMyStaffContext(traceId);
-            const refundId = makeQaId("REFUND", key);
             const method = allocations.every((item) => item.paymentMethod === allocations[0].paymentMethod)
                 ? allocations[0].paymentMethod : "MIXTO";
 
