@@ -1,0 +1,82 @@
+name: Dependency security audit
+
+on:
+  pull_request:
+    paths:
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/dependency-audit.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dependency-audit-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  npm-audit:
+    name: Audit locked npm dependency graph
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.22.1
+          cache: npm
+
+      - name: Install exact lockfile without lifecycle scripts
+        run: npm ci --ignore-scripts
+
+      - name: Run npm audit and retain machine-readable report
+        id: audit
+        shell: bash
+        run: |
+          set +e
+          npm audit --json > npm-audit.json
+          audit_exit=$?
+          set -e
+          node --input-type=commonjs <<'NODE'
+          const fs = require("node:fs");
+          const report = JSON.parse(fs.readFileSync("npm-audit.json", "utf8"));
+          const counts = report.metadata?.vulnerabilities ?? {};
+          const summary = {
+            info: counts.info ?? 0,
+            low: counts.low ?? 0,
+            moderate: counts.moderate ?? 0,
+            high: counts.high ?? 0,
+            critical: counts.critical ?? 0,
+            total: counts.total ?? 0
+          };
+          console.log("npm audit summary:", JSON.stringify(summary));
+          fs.writeFileSync("npm-audit-summary.json", JSON.stringify(summary, null, 2) + "\n");
+          if (summary.high > 0 || summary.critical > 0) {
+            console.error("High or critical dependency vulnerabilities block this gate.");
+            process.exit(1);
+          }
+          if (summary.total > 0) {
+            console.warn("Low/moderate advisories recorded; review npm-audit.json before dependency updates.");
+          } else {
+            console.log("No advisories reported for the locked dependency graph.");
+          }
+          NODE
+          node_exit=$?
+          if [[ $node_exit -ne 0 ]]; then exit $node_exit; fi
+          # npm audit returns non-zero when advisories exist, so severity is evaluated above.
+          exit 0
+
+      - name: Upload audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-dependency-audit
+          path: |
+            npm-audit.json
+            npm-audit-summary.json
+          if-no-files-found: warn
+          retention-days: 30
