@@ -176,6 +176,17 @@ test("TPV WebMethods isolate synthetic QA writes from operational ledgers", asyn
     assert.doesNotMatch(cashierModule, /backend\/cajas\.web|CajaActual|getCashierState/);
     assert.match(joined, /TPV_OPERATIONAL_SALE_WRITES_DISABLED/);
     assert.match(joined, /TPV_OPERATIONAL_REFUNDS_DISABLED/);
+    const sales = await source("tpv/tpvVentas.web.js");
+    const refunds = await source("tpv/tpvDevoluciones.web.js");
+    const movements = await source("tpv/tpvMovimientos.web.js");
+    const cash = await source("tpv/tpvCaja.web.js");
+    const closures = await source("tpv/tpvCierres.web.js");
+    assert.match(sales, /withQaSessionLock\(session\.sessionId/);
+    assert.match(refunds, /withQaSaleLock\(saleId, traceId, async \(\) => \{[\s\S]*?\}, session\.sessionId\)/);
+    assert.match(movements, /withQaSessionLock\(session\.sessionId/);
+    assert.match(cash, /withQaSessionLock\(session\.sessionId/);
+    assert.match(closures, /withQaSessionLock\(session\.sessionId/);
+    assert.match(repository, /CONTROL_TYPE\.TPV_QA_SESSION_LOCK/);
     assert.doesNotMatch(joined, /registerManualTransaction|registerZClosing|createCheckout|createOrder|createPayment|processRefund/i);
 
     const repository = await source("tpv/tpvQaRepository.js");
