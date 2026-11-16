@@ -42,7 +42,7 @@ Las nueve colecciones se provisionaron en el sitio actual, con permisos restrict
 | `tpvCatalogo.web.js` | Lectura nativa de servicios/profesionales Bookings y productos/variantes Stores V3, con `auth.elevate` tras autorización backend |
 | `tpvGiftCards.web.js` | Consulta real de tarjetas regalo deshabilitada en QA; no se envían códigos ni se consultan saldos reales |
 | `tpvPagos.web.js` | Validación de pagos divididos y cambio, sin llamada a pasarela |
-| `tpvDevoluciones.web.js` | Devoluciones sintéticas parciales/totales, ADMIN y lock CAS por venta |
+| `tpvDevoluciones.web.js` | Devoluciones sintéticas parciales/totales, ADMIN y locks CAS por venta/sesión |
 | `tpvCierres.web.js` | Resumen de sesión, Ticket X no destructivo y Ticket Z QA |
 | `tpvAuditoria.web.js` | Consulta autenticada de auditoría QA |
 | `tpvPermisos.web.js` | Capacidades permitidas según contexto/rol backend |
@@ -140,12 +140,11 @@ Las reservas, órdenes, cobros reales, emisión/canje de Gift Cards, facturació
 - contratos del SDK Wix, ESLint y secret scanning correctos;
 - contratos de WebMethods, aislamiento de datos, locks CAS, UI/HTML y parseo del script inline correctos.
 
-**Pendiente de ejecutar:**
-- suites Node/Vitest completas y ESLint;
-- CI sobre el HEAD final;
+**Pendiente de ejecutar en el entorno Wix:**
+- repetición de CI tras los commits documentales más recientes (el código TPV ya superó todos los gates en el HEAD de código indicado arriba);
 - duplicados e idempotencia contra CMS real;
 - concurrencia y recuperación de locks CAS de sesión/reembolso;
-- reanudación ante fallos parciales;
+- reanudación ante fallos parciales entre colecciones;
 - Preview con roles ADMIN, GESTION, ESTILISTA, miembro y visitante anónimo.
 
 Las ejecuciones intermedias detectaron aserciones de pruebas desactualizadas y una duplicidad en el conjunto esperado de tipos; se corrigieron y la ejecución final de CI terminó correctamente.
@@ -155,7 +154,7 @@ Las ejecuciones intermedias detectaron aserciones de pruebas desactualizadas y u
 Los archivos están versionados en la rama GitHub. No se ha sincronizado el page code, el HTML Component ni los módulos backend con el Editor clásico; PR #396 está cerrada sin fusionar; PR #397 está abierta y no se ha publicado código TPV. El runtime publicado no debe considerarse actualizado por estos commits.
 
 Antes de sincronizar:
-1. ejecutar CI y revisar el diff;
+1. verificar el último CI y revisar el diff;
 2. aplicar manualmente `src/pages/TPV.yl5th.js`, `src/public/tpvPageController.js`, los módulos backend y `#htmlTPV.txt` en Wix Classic;
 3. probar Preview con roles y casos negativos;
 4. confirmar pasarela desconectada;
