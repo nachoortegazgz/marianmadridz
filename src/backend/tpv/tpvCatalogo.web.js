@@ -1,14 +1,13 @@
 import { Permissions, webMethod } from "wix-web-module";
 import { auth } from "@wix/essentials";
-import { services, staffMembers } from "@wix/bookings";
-import { buscarContactosTPV, consultarReservasTPV } from "backend/tpv/tpvNativeReaders";
+import { services } from "@wix/bookings";
 import { catalogVersioning, productsV3 } from "@wix/stores";
+import { TPV_QA_FIXTURES } from "backend/internalConfig";
 import { requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 
 const getCatalogVersionElevated = auth.elevate(catalogVersioning.getCatalogVersion);
 const queryServicesElevated = auth.elevate(services.queryServices);
-const queryStaffMembersV2Elevated = auth.elevate(staffMembers.queryStaffMembersV2);
 const queryProductsElevated = auth.elevate(productsV3.queryProducts);
 const getProductElevated = auth.elevate(productsV3.getProduct);
 
@@ -70,13 +69,40 @@ function mapProduct(product) {
 export const buscarClientesTPV = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
-        await requireCajero(makeTraceId("tpv-customer-search"));
+        const traceId = makeTraceId("tpv-customer-search");
+        await requireCajero(traceId);
         try {
-            const search = String(input.search || "").trim().slice(0, 100);
+            const search = String(input.search || "").trim().slice(0, 100).toLowerCase();
             if (search.length < 2) throw new Error("TPV_CUSTOMER_SEARCH_TOO_SHORT");
-            return { status: "SUCCESS", data: await buscarContactosTPV(search), error: null };
+            const customer = TPV_QA_FIXTURES.CUSTOMER;
+            const matches = [customer].filter((item) =>
+                item.DISPLAY_NAME.toLowerCase().includes(search) ||
+                item.EMAIL.toLowerCase().includes(search)
+            );
+            return {
+                status: "SUCCESS",
+                data: {
+                    items: matches.map((item) => ({
+                        contactId: item.ID,
+                        displayName: item.DISPLAY_NAME,
+                        email: item.EMAIL,
+                        phone: "",
+                        isSynthetic: true,
+                    })),
+                    pagingMetadata: null,
+                    syntheticOnly: true,
+                },
+                error: null,
+                traceId,
+            };
         } catch (error) {
-            return { status: "ERROR", data: null, error: { code: String(error?.message || "TPV_CUSTOMER_SEARCH_FAILED") } };
+            return {
+                status: "ERROR",
+                data: null,
+                error: { code: String(error?.message || "TPV_CUSTOMER_SEARCH_FAILED") },
+                syntheticOnly: true,
+                traceId,
+            };
         }
     }
 );
@@ -84,15 +110,24 @@ export const buscarClientesTPV = webMethod(
 export const obtenerReservasClienteTPV = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
-        await requireCajero(makeTraceId("tpv-customer-bookings"));
-        try {
-            const contactId = String(input.contactId || "").trim();
-            if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(contactId)) throw new Error("TPV_INVALID_CONTACT_ID");
-            const cursor = input.cursor ? String(input.cursor).slice(0, 16000) : null;
-            return { status: "SUCCESS", data: await consultarReservasTPV({ contactId, cursor }), error: null };
-        } catch (error) {
-            return { status: "ERROR", data: null, error: { code: String(error?.message || "TPV_CUSTOMER_BOOKINGS_FAILED") } };
+        const traceId = makeTraceId("tpv-customer-bookings");
+        await requireCajero(traceId);
+        const contactId = String(input.contactId || "").trim();
+        if (contactId !== TPV_QA_FIXTURES.CUSTOMER.ID) {
+            return {
+                status: "ERROR",
+                data: null,
+                error: { code: "TPV_QA_CUSTOMER_NOT_ALLOWED" },
+                syntheticOnly: true,
+                traceId,
+            };
         }
+        return {
+            status: "SUCCESS",
+            data: { items: [], pagingMetadata: null, syntheticOnly: true },
+            error: null,
+            traceId,
+        };
     }
 );
 
@@ -134,37 +169,25 @@ export const obtenerServicios = webMethod(
 
 export const obtenerProfesionales = webMethod(
     Permissions.SiteMember,
-    async (input = {}) => {
-        await requireCajero(makeTraceId("tpv-staff-read"));
-        try {
-            const limit = Number(input.limit ?? 100);
-            if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
-                throw new Error("TPV_INVALID_STAFF_PAGING");
-            }
-            const result = await queryStaffMembersV2Elevated({
-                query: {
-                    filter: { serviceProvider: true },
-                    cursorPaging: { limit },
-                },
-            });
-            const items = (result?.staffMembers || []).map((staff) => ({
-                profesionalId: staff._id,
-                nombre: staff.name,
-                resourceId: staff.resourceId || null,
-                esProveedorServicio: staff.serviceProvider === true,
-            }));
-            return {
-                status: "SUCCESS",
-                data: { items, pagingMetadata: result?.pagingMetadata || null },
-                error: null,
-            };
-        } catch (_) {
-            return {
-                status: "ERROR",
-                data: null,
-                error: { code: "TPV_STAFF_READ_FAILED" },
-            };
-        }
+    async () => {
+        const traceId = makeTraceId("tpv-staff-read");
+        await requireCajero(traceId);
+        return {
+            status: "SUCCESS",
+            data: {
+                items: TPV_QA_FIXTURES.STAFF.map((staff) => ({
+                    profesionalId: staff.ID,
+                    nombre: staff.DISPLAY_NAME,
+                    resourceId: staff.ID,
+                    esProveedorServicio: true,
+                    isSynthetic: true,
+                })),
+                pagingMetadata: null,
+                syntheticOnly: true,
+            },
+            error: null,
+            traceId,
+        };
     }
 );
 

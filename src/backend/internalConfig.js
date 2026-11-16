@@ -84,6 +84,19 @@ export const TPV_QA_RUNTIME_POLICY = Object.freeze({
   FISCAL_WRITES_ENABLED: false,
   CUSTOMER_NOTIFICATIONS_ENABLED: false,
   HARDWARE_ENABLED: false,
+  ACTOR_ID: "QA_ACTOR",
+});
+
+export const TPV_QA_FIXTURES = Object.freeze({
+  CUSTOMER: Object.freeze({
+    ID: "QA-CONTACT-NACHO-PITT",
+    DISPLAY_NAME: "Nacho Pitt",
+    EMAIL: "nacho.pitt@example.test",
+  }),
+  STAFF: Object.freeze([
+    Object.freeze({ ID: "QA-STAFF-01", DISPLAY_NAME: "Profesional QA 1" }),
+    Object.freeze({ ID: "QA-STAFF-02", DISPLAY_NAME: "Profesional QA 2" }),
+  ]),
 });
 
 export const CATALOG_ENTRY_TYPE = Object.freeze({

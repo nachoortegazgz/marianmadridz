@@ -1,5 +1,5 @@
 import { Permissions, webMethod } from "wix-web-module";
-import { getMyStaffContext, requireAdmin, requireCajero } from "backend/security";
+import { requireAdmin, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { TPV_QA_COLLECTIONS, TPV_QA_RUNTIME_POLICY } from "backend/internalConfig";
 import { appendQaAudit, getPendingQaSales, insertQaEvent, latestOpenQaSession, queryQaRecords, withQaSessionLock } from "backend/tpv/tpvQaRepository";
@@ -70,11 +70,10 @@ export const generarTicketXQA = webMethod(
                 payload: { traceId, readOnly: true, closesSession: false },
             });
             persisted = true;
-            const staff = await getMyStaffContext(traceId);
             await appendQaAudit({
                 idempotencyKey: key + ":AUDIT",
                 action: "TICKET_X_QA_GENERADO",
-                actorId: staff?.memberId || "UNKNOWN",
+                actorId: TPV_QA_RUNTIME_POLICY.ACTOR_ID,
                 entityType: "TICKET_X",
                 entityId: reportId,
                 traceId,
@@ -103,11 +102,10 @@ export const cerrarTicketZQA = webMethod(
                     const prior = priorClose[0];
                     const requestedCount = toMinorUnits(input.countedCash, "COUNTED_CASH");
                     if (requestedCount !== Number(prior.totals?.countedCashMinor) || String(input.differenceReason || "").trim() !== String(prior.totals?.differenceReason || "")) throw new Error("TPV_QA_IDEMPOTENCY_CONFLICT");
-                    const staff = await getMyStaffContext(traceId);
-                    await appendQaAudit({
+                            await appendQaAudit({
                         idempotencyKey: "QA_TICKET_Z:" + prior.sessionId + ":AUDIT",
                         action: "TICKET_Z_QA_CERRADO",
-                        actorId: staff?.memberId || "UNKNOWN",
+                        actorId: TPV_QA_RUNTIME_POLICY.ACTOR_ID,
                         entityType: "TICKET_Z",
                         entityId: prior.reportId,
                         traceId,
@@ -149,7 +147,6 @@ export const cerrarTicketZQA = webMethod(
 
             const existing = await queryQaRecords(TPV_QA_COLLECTIONS.TICKET_Z, wql.eq("sessionId", session.sessionId));
             if (existing.length && existing[0].closed !== true) throw new Error("TPV_QA_Z_RECORD_INVALID");
-            const staff = await getMyStaffContext(traceId);
             const idempotencyKey = "QA_TICKET_Z:" + session.sessionId;
             const reportId = "QA-Z-" + session.sessionId;
             const { item, replayed } = await insertQaEvent(TPV_QA_COLLECTIONS.TICKET_Z, idempotencyKey, {
@@ -163,7 +160,7 @@ export const cerrarTicketZQA = webMethod(
                     countedCashMinor: countedMinor,
                     differenceMinor,
                     differenceReason: reason,
-                    closedByMemberId: staff?.memberId || "UNKNOWN",
+                    closedByMemberId: TPV_QA_RUNTIME_POLICY.ACTOR_ID,
                 },
                 payload: { traceId, sourceEnvironment: TPV_QA_RUNTIME_POLICY.ENVIRONMENT, immutableAfterCreation: true },
             });
@@ -171,7 +168,7 @@ export const cerrarTicketZQA = webMethod(
             await appendQaAudit({
                 idempotencyKey: idempotencyKey + ":AUDIT",
                 action: "TICKET_Z_QA_CERRADO",
-                actorId: staff?.memberId || "UNKNOWN",
+                actorId: TPV_QA_RUNTIME_POLICY.ACTOR_ID,
                 entityType: "TICKET_Z",
                 entityId: reportId,
                 traceId,

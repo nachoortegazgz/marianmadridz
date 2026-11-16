@@ -1,7 +1,7 @@
 import { Permissions, webMethod } from "wix-web-module";
-import { getMyStaffContext, requireAdmin } from "backend/security";
+import { requireAdmin } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
-import { TPV_QA_COLLECTIONS } from "backend/internalConfig";
+import { TPV_QA_COLLECTIONS, TPV_QA_RUNTIME_POLICY } from "backend/internalConfig";
 import { appendQaAudit, insertQaEvent, latestOpenQaSession, queryQaRecords, withQaSaleLock } from "backend/tpv/tpvQaRepository";
 import { assertTpvQaEnabled, makeQaId, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
 import { wql } from "backend/dataAccess";
@@ -63,7 +63,6 @@ export const solicitarDevolucionQA = webMethod(
             const amountMinor = allocations.reduce((sum, item) => sum + item.amountMinor, 0);
             if (amountMinor <= 0) throw new Error("TPV_QA_REFUND_AMOUNT_INVALID");
 
-            const staff = await getMyStaffContext(traceId);
             const method = allocations.every((item) => item.paymentMethod === allocations[0].paymentMethod)
                 ? allocations[0].paymentMethod : "MIXTO";
 
@@ -75,7 +74,7 @@ export const solicitarDevolucionQA = webMethod(
                 reason,
                 status: "CONFIRMADO_SINTETICO",
                 createdAt: new Date(),
-                payload: { sessionId: session.sessionId, allocations, actorId: staff?.memberId || "UNKNOWN", traceId },
+                payload: { sessionId: session.sessionId, allocations, actorId: TPV_QA_RUNTIME_POLICY.ACTOR_ID, traceId },
             });
             persisted = true;
 
@@ -110,7 +109,7 @@ export const solicitarDevolucionQA = webMethod(
             await appendQaAudit({
                 idempotencyKey: key + ":AUDIT",
                 action: "DEVOLUCION_QA_CONFIRMADA",
-                actorId: staff?.memberId || "UNKNOWN",
+                actorId: TPV_QA_RUNTIME_POLICY.ACTOR_ID,
                 entityType: "DEVOLUCION",
                 entityId: refundId,
                 traceId,
