@@ -47,7 +47,7 @@ async function getStoresCatalogVersion() {
 }
 
 function mapProduct(product) {
-    const minimum = product?.variantSummary?.minPriceVariant?.actualPrice || null;
+    const minimum = product?.variantSummary?.minPriceVariant?.price?.actualPrice || null;
     const amount = minimum?.amount ?? null;
     return {
         itemId: product._id,
@@ -60,7 +60,7 @@ function mapProduct(product) {
         precioFormateado: minimum?.formattedAmount || null,
         numeroVariantes: Number(product.variantSummary?.variantCount || 0),
         requiereSeleccionVariante: Number(product.variantSummary?.variantCount || 0) > 1,
-        visibleEnPos: product.visible === true,
+        visibleEnPos: product.visibleInPos !== false,
         tipoProducto: product.productType || null,
         inventario: product.inventory?.availabilityStatus || null,
     };
@@ -175,7 +175,7 @@ export const obtenerProductos = webMethod(
                 fields: ["CURRENCY", "MIN_PRICE_VARIANT", "PLAIN_DESCRIPTION"],
             });
             const items = (result?.products || [])
-                .filter((product) => product?.visible === true)
+                .filter((product) => product?.visible === true && product?.visibleInPos !== false)
                 .map(mapProduct);
             return {
                 status: "SUCCESS",
@@ -216,7 +216,7 @@ export const obtenerVariantesProducto = webMethod(
             const product = await getProductElevated(productId, {
                 fields: ["VARIANT_OPTION_CHOICE_NAMES", "CURRENCY"],
             });
-            if (!product || product.visible !== true) {
+            if (!product || product.visible !== true || product.visibleInPos === false) {
                 return {
                     status: "ERROR",
                     data: null,
