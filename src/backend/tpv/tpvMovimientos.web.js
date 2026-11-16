@@ -1,7 +1,7 @@
 import { Permissions, webMethod } from "wix-web-module";
-import { getMyStaffContext, requireAdmin, requireCajero } from "backend/security";
+import { requireAdmin, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
-import { TPV_QA_COLLECTIONS } from "backend/internalConfig";
+import { TPV_QA_COLLECTIONS, TPV_QA_RUNTIME_POLICY } from "backend/internalConfig";
 import { insertQaEvent, latestOpenQaSession, withQaSessionLock } from "backend/tpv/tpvQaRepository";
 import { assertTpvQaEnabled, fromMinorUnits, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
 
@@ -29,7 +29,6 @@ export const registrarMovimientoCajaQA = webMethod(
             const reason = String(input.reason || "").trim();
             if (reason.length < 3 || reason.length > 500) throw new Error("TPV_QA_REASON_REQUIRED");
             const key = normalizeClientIdempotencyKey(input.idempotencyKey);
-            const staff = await getMyStaffContext(traceId);
             const { item, replayed } = await insertQaEvent(TPV_QA_COLLECTIONS.MOVIMIENTOS_CAJA, key, {
                 sessionId: session.sessionId,
                 movementType,
@@ -39,8 +38,8 @@ export const registrarMovimientoCajaQA = webMethod(
                 status: "CONFIRMADO_SINTETICO",
                 createdAt: new Date(),
                 payload: {
-                    actorId: staff?.memberId || "UNKNOWN",
-                    authorizedBy: movementType === "ENTRADA" ? null : staff?.memberId || null,
+                    actorId: TPV_QA_RUNTIME_POLICY.ACTOR_ID,
+                    authorizedBy: movementType === "ENTRADA" ? null : TPV_QA_RUNTIME_POLICY.ACTOR_ID,
                     affectsPhysicalCash: true,
                     traceId,
                 },
@@ -48,7 +47,7 @@ export const registrarMovimientoCajaQA = webMethod(
             persisted = true;
             await insertQaEvent(TPV_QA_COLLECTIONS.AUDITORIA, key + ":AUDIT", {
                 action: "MOVIMIENTO_CAJA_" + movementType,
-                actorId: staff?.memberId || "UNKNOWN",
+                actorId: TPV_QA_RUNTIME_POLICY.ACTOR_ID,
                 entityType: "MOVIMIENTO_CAJA",
                 entityId: item._id || key,
                 occurredAt: new Date(),
