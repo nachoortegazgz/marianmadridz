@@ -266,8 +266,8 @@ test("TPV page is wired to the shared HTML bridge and its versioned iframe proto
 
 
 test("QA repository paginates reads and blocks Z close while sales are incomplete", async () => {
-    const repository = read("src/backend/tpv/tpvQaRepository.js");
-    const closures = read("src/backend/tpv/tpvCierres.web.js");
+    const repository = await source("tpv/tpvQaRepository.js");
+    const closures = await source("tpv/tpvCierres.web.js");
     assert.match(repository, /while \(page\.hasNext && records\.length < maxRecords\)/);
     assert.match(repository, /export async function getPendingQaSales\(sessionId\)/);
     assert.match(closures, /getPendingQaSales\(session\.sessionId\)/);
