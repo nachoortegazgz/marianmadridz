@@ -265,7 +265,7 @@ describe("ControlOperativo hooks", () => {
       "SLOT_LOCK", "WEBHOOK_CLAIM", "WEBHOOK_EVENT", "IDEMPOTENCY", "RATE_LIMIT",
       "SYSTEM_FLAG", "DEDUPE_KEY", "LEDGER_IDEMPOTENCY",
       "COMPENSATION", "ALERT", "DAYS_CACHE", "DUAL_CACHE",
-      "DISPLAY_TOKEN", "TPV_QA_REFUND_LOCK", "TPV_QA_SESSION_LOCK", "TPV_QA_SESSION_LOCK",
+      "DISPLAY_TOKEN", "TPV_QA_REFUND_LOCK", "TPV_QA_SESSION_LOCK",
     ];
     assert.deepEqual(Object.values(CONTROL_TYPE).sort(), expected.sort());
   });
