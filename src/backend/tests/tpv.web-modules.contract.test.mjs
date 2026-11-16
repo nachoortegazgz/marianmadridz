@@ -38,6 +38,36 @@ test("TPV sale draft validates report fields and minor-unit arithmetic", () => {
     assert.equal(result.realPayment, false);
 });
 
+test("TPV cash tender subtracts change before reconciling amount applied", () => {
+    const result = validateSaleDraft({
+        lineas: [{
+            tipoLinea: "SERVICIO",
+            concepto: "Servicio con cambio",
+            cantidad: 1,
+            precioUnitario: 40,
+            descuentoImporte: 0,
+            impuestosImporte: 0,
+        }],
+        pagos: [{ medioPago: "EFECTIVO", importe: 50, importeCambio: 10 }],
+    });
+    assert.equal(result.importePagado, 40);
+    assert.equal(result.importePendiente, 0);
+    assert.equal(result.pagos[0].importeAplicado, 40);
+    assert.throws(
+        () => validateSaleDraft({
+            lineas: [{
+                tipoLinea: "SERVICIO",
+                concepto: "Cambio no efectivo",
+                cantidad: 1,
+                precioUnitario: 40,
+                impuestosImporte: 0,
+            }],
+            pagos: [{ medioPago: "TARJETA", importe: 50, importeCambio: 10 }],
+        }),
+        /TPV_CHANGE_REQUIRES_CASH/
+    );
+});
+
 test("TPV sale draft rejects invalid tax, overpayment, unknown methods and sub-cent arithmetic", () => {
     const valid = {
         lineas: [{
@@ -104,7 +134,12 @@ test("TPV catalog reader uses native Bookings SDK and does not expose staff cont
     assert.match(catalog, /services\.queryServices/);
     assert.match(catalog, /staffMembers\.queryStaffMembersV2/);
     assert.match(catalog, /formattedValue/);
-    assert.match(catalog, /TPV_STORES_SDK_NOT_INSTALLED/);
+    assert.match(catalog, /catalogVersioning\\.getCatalogVersion/);
+    assert.match(catalog, /productsV3\\.queryProducts/);
+    assert.match(catalog, /productsV3\\.getProduct/);
+    assert.match(catalog, /visibleInPos/);
+    assert.match(catalog, /TPV_STORES_CATALOG_VERSION_UNSUPPORTED/);
+    assert.match(catalog, /precioMinor/);
     assert.doesNotMatch(catalog, /staff\.email|staff\.phone/);
 });
 
@@ -128,6 +163,11 @@ test("TPV page is wired to the shared HTML bridge and its versioned iframe proto
     assert.match(controller, /CATALOG_STAFF/);
     assert.match(controller, /obtenerServicios/);
     assert.match(controller, /obtenerProfesionales/);
+    assert.match(controller, /obtenerProductos/);
+    assert.match(controller, /obtenerVariantesProducto/);
+    assert.match(controller, /validarVentaBorrador/);
+    assert.match(controller, /previsualizarTicketX/);
+    assert.match(controller, /TICKET_X_PREVIEW/);
 
     assert.match(html, /send\("MM_READY"/);
     assert.match(html, /m\.type==="MM_CONTEXT"/);
