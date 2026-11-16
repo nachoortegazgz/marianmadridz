@@ -55,15 +55,22 @@ jobs:
       - name: Run complete offline regression suite
         run: npm test
 
-      - name: Capture individual failing suite diagnostics
+      - name: Capture complete Layer 1 failure diagnostics
         if: failure()
         continue-on-error: true
         shell: bash
         run: |
-          for suite in accountingLedger.writer.offline.test.mjs crons.booking-projection-reconciliation.test.mjs dto.whitelist.test.mjs qa.manager-email-sink.mock.test.mjs reservas.web.test.mjs widget.handshake.contract.test.mjs; do
-            echo "===== Diagnostic run: ${suite} ====="
-            node --no-warnings --loader ./src/backend/tests/loader.mjs "./src/backend/tests/${suite}" || true
-          done
+          npm run test:layer1 > "$RUNNER_TEMP/layer1-diagnostics.log" 2>&1 || true
+          cat "$RUNNER_TEMP/layer1-diagnostics.log"
+
+      - name: Upload Layer 1 diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: layer1-diagnostics
+          path: ${{ runner.temp }}/layer1-diagnostics.log
+          if-no-files-found: ignore
+          retention-days: 1
 
       - name: Verify installed Wix SDK contracts
         if: always()
