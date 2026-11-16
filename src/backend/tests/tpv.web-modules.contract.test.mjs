@@ -201,6 +201,9 @@ test("TPV catalog reader uses native Bookings SDK and does not expose staff cont
     assert.match(catalog, /formattedValue/);
     assert.match(catalog, /precioMinor/);
     assert.match(catalog, /catalogVersioning\.getCatalogVersion/);
+    assert.match(catalog, /auth\.elevate\(catalogVersioning\.getCatalogVersion\)/);
+    assert.match(catalog, /auth\.elevate\(productsV3\.queryProducts\)/);
+    assert.match(catalog, /auth\.elevate\(productsV3\.getProduct\)/);
     assert.match(catalog, /productsV3\.queryProducts/);
     assert.match(catalog, /productsV3\.getProduct/);
     assert.match(catalog, /varianteId: variant\._id/);
@@ -213,6 +216,7 @@ test("TPV catalog reader uses native Bookings SDK and does not expose staff cont
 
     const giftCards = await source("tpv/tpvGiftCards.web.js");
     assert.match(giftCards, /giftVouchers\.getGiftCard/);
+    assert.match(giftCards, /auth\.elevate\(giftVouchers\.getGiftCard\)/);
     assert.match(giftCards, /requireCajero/);
     assert.match(giftCards, /obfuscatedCode/);
     assert.doesNotMatch(giftCards, /console\.(?:log|info|warn|error)|wixData|\.insert\(|\.update\(|\.remove\(/);
