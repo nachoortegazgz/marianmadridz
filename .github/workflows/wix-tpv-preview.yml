@@ -51,9 +51,17 @@ jobs:
             echo "available=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Skip preview when Wix CLI API key is not configured
+      - name: Require Wix CLI API key
         if: steps.auth.outputs.available != 'true'
-        run: echo "::notice::Preview skipped. Configure repository secret CLI_API_KEY with the Wix CLI for Sites - Git Integration permission."
+        run: |
+          echo "::error::Preview was not created. Configure repository secret CLI_API_KEY with the Wix CLI for Sites - Git Integration permission."
+          exit 1
+
+      - name: Require the approved main branch
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "::error::Run this preview workflow from the approved main branch."
+          exit 1
 
       - name: Install locked project dependencies
         if: steps.auth.outputs.available == 'true'
