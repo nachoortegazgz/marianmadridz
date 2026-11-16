@@ -119,17 +119,16 @@ export async function appendQaAudit({
 }
 
 export async function latestOpenQaSession() {
-    const events = await queryQaRecords(
+    const sessions = await queryQaRecords(
         TPV_QA_COLLECTIONS.SESIONES_CAJA,
         undefined,
         { sort: ["_createdDate DESC"], limit: 1000 }
     );
-    const latestBySession = new Map();
-    for (const event of events) {
-        if (!event.sessionId || latestBySession.has(event.sessionId)) continue;
-        latestBySession.set(event.sessionId, event);
-    }
-    return [...latestBySession.values()].find((event) => event.status === "ABIERTA") || null;
+    const closures = await queryQaRecords(TPV_QA_COLLECTIONS.TICKET_Z, undefined);
+    const closedSessionIds = new Set(closures.filter((item) => item.closed === true).map((item) => item.sessionId));
+    return sessions.find((session) =>
+        session.status === "ABIERTA" && !closedSessionIds.has(session.sessionId)
+    ) || null;
 }
 
 export async function getQaSessionEvents(sessionId) {
