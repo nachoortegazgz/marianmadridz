@@ -6,6 +6,17 @@ import { makeTraceId } from "public/mmUtils";
 
 let catalogVersionPromise = null;
 
+function toMinorUnits(value) {
+    const raw = value && typeof value === "object"
+        ? (value.amount ?? value.value ?? null)
+        : value;
+    if (raw === null || raw === undefined || raw === "") return null;
+    const amount = Number(raw);
+    if (!Number.isFinite(amount) || amount < 0) return null;
+    const minor = Math.round((amount + Number.EPSILON) * 100);
+    return Math.abs(amount * 100 - minor) <= 1e-7 ? minor : null;
+}
+
 function normalizePage(input = {}) {
     const limit = Number(input.limit ?? 100);
     const offset = Number(input.offset ?? 0);
@@ -41,6 +52,7 @@ function mapProduct(product) {
         descripcion: String(product.plainDescription || "").slice(0, 240),
         moneda: product.currency || null,
         precioMinimo: amount,
+        precioMinor: toMinorUnits(amount),
         precioFormateado: formatted,
         numeroVariantes: Number(product.variantSummary?.variantCount || 0),
         requiereSeleccionVariante: Number(product.variantSummary?.variantCount || 0) > 1,
@@ -217,6 +229,7 @@ export const obtenerVariantesProducto = webMethod(
                         .map((choice) => [choice.optionName, choice.choiceName].filter(Boolean).join(": "))
                         .join(" · ") || "Variante predeterminada",
                     precio: variant.price?.actualPrice?.amount ?? null,
+                    precioMinor: toMinorUnits(variant.price?.actualPrice?.amount),
                     precioFormateado: variant.price?.actualPrice?.formattedAmount ?? null,
                     moneda: product.currency || null,
                     disponible: variant.inventoryStatus?.inStock !== false,
