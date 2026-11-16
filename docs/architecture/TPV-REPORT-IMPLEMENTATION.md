@@ -122,8 +122,10 @@ Una sesión por día local Europe/Madrid se crea con clave idempotente determini
 - resumen, Ticket X y Ticket Z QA;
 - consulta de auditoría persistida;
 - lectores de Bookings y Stores;
-- búsqueda de contactos Wix CRM y consulta de reservas del contacto, con verificación backend del vínculo antes de registrar venta QA;
-- consulta de saldo de Gift Cards nativa, solo lectura y sin persistir el código.
+- búsqueda limitada al cliente fixture `Nacho Pitt` (`nacho.pitt@example.test`), sin consultar CRM;
+- profesionales fixture sintéticas, sin consultar Bookings Staff;
+- consulta y vinculación de reservas reales deshabilitadas;
+- consulta de saldo real de Gift Cards deshabilitada y sin transmisión de códigos.
 
 Las reservas, órdenes, cobros reales, emisión/canje de Gift Cards, facturación y operaciones fiscales permanecen bloqueadas.
 
