@@ -1,5 +1,5 @@
 import { Permissions, webMethod } from "wix-web-module";
-import { getMyStaffContext, requireCajero } from "backend/security";
+import { requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { TPV_QA_COLLECTIONS, TPV_QA_RUNTIME_POLICY } from "backend/internalConfig";
 import { appendQaAudit, insertQaEvent, latestOpenQaSession, queryQaRecords, withQaSessionLock } from "backend/tpv/tpvQaRepository";
@@ -62,7 +62,6 @@ export const abrirCajaQA = webMethod(
             const dayKey = madridDayKey();
             const sessionId = "QA-SESSION-" + dayKey;
             const idempotencyKey = "QA_SESSION_OPEN:" + dayKey;
-            const staff = await getMyStaffContext(traceId);
             const current = await latestOpenQaSession();
             if (current && current.sessionId !== sessionId) return errorResult("TPV_QA_PREVIOUS_SESSION_NOT_CLOSED");
             const alreadyClosed = await queryQaRecords(TPV_QA_COLLECTIONS.TICKET_Z, wql.eq("sessionId", sessionId));
@@ -76,7 +75,7 @@ export const abrirCajaQA = webMethod(
                     openedAt: new Date(),
                     openingCashMinor,
                     expectedCashMinor: openingCashMinor,
-                    cashierMemberId: staff?.memberId || "UNKNOWN",
+                    cashierMemberId: TPV_QA_RUNTIME_POLICY.ACTOR_ID,
                     payload: makeSyntheticPayload({
                         dayKey,
                         openingReason: String(input.reason || "Apertura de QA").slice(0, 200),
@@ -88,7 +87,7 @@ export const abrirCajaQA = webMethod(
             persisted = true;
             await insertQaEvent(TPV_QA_COLLECTIONS.AUDITORIA, idempotencyKey + ":AUDIT", {
                 action: "APERTURA_CAJA_QA",
-                actorId: staff?.memberId || "UNKNOWN",
+                actorId: TPV_QA_RUNTIME_POLICY.ACTOR_ID,
                 entityType: "SESION_CAJA",
                 entityId: sessionId,
                 occurredAt: new Date(),
@@ -140,7 +139,6 @@ export const registrarArqueoParcialQA = webMethod(
                 throw new Error("TPV_QA_COUNT_DIFFERENCE_REASON_REQUIRED");
             }
             const key = normalizeClientIdempotencyKey(input.idempotencyKey);
-            const staff = await getMyStaffContext(traceId);
             const { item, replayed } = await insertQaEvent(
                 TPV_QA_COLLECTIONS.MOVIMIENTOS_CAJA,
                 key,
@@ -156,7 +154,7 @@ export const registrarArqueoParcialQA = webMethod(
                         expectedCashMinor: expectedMinor,
                         countedCashMinor: countedMinor,
                         differenceMinor,
-                        actorId: staff?.memberId || "UNKNOWN",
+                        actorId: TPV_QA_RUNTIME_POLICY.ACTOR_ID,
                         traceId,
                     }),
                 }
@@ -165,7 +163,7 @@ export const registrarArqueoParcialQA = webMethod(
             await appendQaAudit({
                 idempotencyKey: key + ":AUDIT",
                 action: "ARQUEO_PARCIAL_QA",
-                actorId: staff?.memberId || "UNKNOWN",
+                actorId: TPV_QA_RUNTIME_POLICY.ACTOR_ID,
                 entityType: "ARQUEO_CAJA",
                 entityId: session.sessionId,
                 traceId,
