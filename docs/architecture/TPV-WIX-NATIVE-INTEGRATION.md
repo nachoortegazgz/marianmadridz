@@ -1,3 +1,7 @@
+> **ACLARACIÓN DE ESTADO — 2026-11-16:** El estado `Published` citado en apartados históricos de este documento está supersedido. GetSiteContext confirma actualmente `Draft`; no hay Preview generado ni runtime validado. La referencia vigente de implementación y estado es [TPV-CURRENT-SITE-IMPLEMENTATION-2026-11-16.md](TPV-CURRENT-SITE-IMPLEMENTATION-2026-11-16.md). La presencia de `#htmlTPV.txt` en GitHub no demuestra que el contenido esté instalado en el HTML Component del Editor: esa comprobación sigue pendiente en Wix Local Editor/Editor.
+
+---
+
 # TPV — integración con Wix nativo
 
 ## Alcance y página actual
