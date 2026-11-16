@@ -69,8 +69,8 @@ No se alteran ledgers append-only, colecciones, índices, permisos, automatizaci
 - Lectura GitHub de archivos y configuración: completada.
 - GetSiteContext Wix: completado; Draft / Editor Classic / Velo / Stores V3 / Invoices V1.
 - Búsquedas acotadas en GitHub: sin coincidencias de `TODO FIXME HACK` ni `bulkUpdateItems`; no es análisis AST exhaustivo.
-- CI de PR #409: pendiente al redactar este informe.
-- `npm test`, Layer 1, Layer 2, ESLint y `npm audit` ejecutados localmente: no ejecutados. Se incorpora un paso de auditoría reproducible al workflow existente en PR #411; resultado pendiente.
+- PR #409 integrada en main mediante `4a8ee829bc9c0a7e00040399523794d866ce5362`; CI del HEAD validó Layer 1, Layer 2, regresión completa, contratos SDK y ESLint (run `43979637997`, success); Gitleaks full-history success (run `43979637978`).
+- `npm test`, Layer 1, Layer 2, ESLint y `npm audit` ejecutados localmente: no ejecutados. PR #411 incorpora un paso `npm audit --json` fail-closed al workflow existente; ejecución `43980028822` estaba en curso al actualizar este informe. Secret scanning `43980028740`: success.
 - Wix Preview, runtime, E2E y Publish: no ejecutados.
 
 ## Criterios de salida para despliegue
