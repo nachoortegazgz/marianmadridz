@@ -77,9 +77,16 @@ export async function withQaSaleLock(saleId, traceId, operation) {
         heldVersion = version + 1;
     }
 
+    let result;
+    let operationError = null;
     try {
-        return await operation();
-    } finally {
+        result = await operation();
+    } catch (error) {
+        operationError = error;
+    }
+
+    let releaseError = null;
+    try {
         const latest = await getItem(collection, lockId, CONSISTENCY.STRONG);
         if (!latest || latest.controlType !== CONTROL_TYPE.TPV_QA_REFUND_LOCK ||
             latest.status !== "ACTIVE" || Number(latest.version) !== heldVersion) {
@@ -88,7 +95,7 @@ export async function withQaSaleLock(saleId, traceId, operation) {
         const released = await bulkPatchItems(collection, [lockId], [[
             { fieldPath: "status", action: "SET_FIELD", value: "RELEASED" },
             { fieldPath: "expiresAt", action: "SET_FIELD", value: new Date(0) },
-            { fieldPath: "payload", action: "SET_FIELD", value: { saleId: cleanSaleId, environment: "TEST", releasedAt: new Date() } },
+            { fieldPath: "payload", action: "SET_FIELD", value: { saleId: cleanSaleId, environment: TPV_QA_RUNTIME_POLICY.ENVIRONMENT, releasedAt: new Date() } },
             { fieldPath: "version", action: "INCREMENT_FIELD", value: 1 },
         ]], {
             condition: {
@@ -102,7 +109,19 @@ export async function withQaSaleLock(saleId, traceId, operation) {
         if (!Array.isArray(released?.updatedItemIds) || !released.updatedItemIds.includes(lockId)) {
             throw new Error("TPV_QA_REFUND_LOCK_RELEASE_FAILED");
         }
+    } catch (error) {
+        releaseError = error;
     }
+
+    if (operationError && releaseError) {
+        const combined = new Error("TPV_QA_REFUND_OPERATION_AND_LOCK_RELEASE_FAILED", { cause: operationError });
+        combined.code = "TPV_QA_REFUND_OPERATION_AND_LOCK_RELEASE_FAILED";
+        combined.releaseError = String(releaseError?.message || releaseError);
+        throw combined;
+    }
+    if (operationError) throw operationError;
+    if (releaseError) throw releaseError;
+    return result;
 }
 
 const VOLATILE_FIELDS = new Set([
