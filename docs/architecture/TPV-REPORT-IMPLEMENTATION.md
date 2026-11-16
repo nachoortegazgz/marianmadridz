@@ -24,7 +24,7 @@ PR: `#396` (draft; no fusionada ni desplegada).
 |---|---|
 | `src/pages/TPV.yl5th.js` | Page code de la página existente; inicializa el HTML Component. |
 | `src/public/tpvPageController.js` | Puente versionado HTML ↔ Velo y despacho de WebMethods permitidos. |
-| `#htmlTPV.txt` | Interfaz TPV con secciones de venta, catálogo, reservas, devoluciones, caja, X/Z, pagos, gift cards y auditoría. |
+| `#htmlTPV.txt` | Interfaz TPV con venta, catálogo, reservas, devoluciones, caja, arqueo por denominación, X/Z, pagos, gift cards, tickets/facturas y auditoría. |
 | `src/backend/tpv/tpvValidation.js` | Validación pura de importes en céntimos, líneas, descuentos, impuestos declarados y pagos divididos. |
 | `src/backend/tpv/tpvVentas.web.js` | Validación backend de borrador; escritores de venta y devolución bloqueados. |
 | `src/backend/tpv/tpvCaja.web.js` | Lectura autenticada de caja; escritores bloqueados. |
@@ -60,8 +60,6 @@ La antigua ruta `src/public/tpv/tpv-page.js` se eliminó en una entrega anterior
 
 ### Tickets, facturación, devoluciones, pagos y reservas
 - Secciones de ticket impreso/digital, duplicado, ticket regalo, factura simplificada/completa y abono/rectificativa. Emisión bloqueada hasta integrar Wix Invoices V1 y aprobar numeración/datos fiscales.
-
-
 - Preparación de solicitud local de devolución con referencia, importe, medio y motivo.
 - Secciones de reserva, pago y conciliación con sus responsabilidades nativas.
 - No se crean reservas, órdenes, pagos, autorizaciones, reembolsos ni liquidaciones.
@@ -75,10 +73,12 @@ La antigua ruta `src/public/tpv/tpv-page.js` se eliminó en una entrega anterior
 
 ### Wix Stores Catalog V3
 - El sitio seleccionado confirma Wix Stores Catalog V3 instalado.
-- El paquete SDK `@wix/stores@1.0.997` se contrastó con documentación y versión oficial, pero no se conserva en `package.json`: la ejecución CI `npm ci` detectó que faltaban 34 entradas transitivas del lockfile. No se deja un import no reproducible ni se declara el lector activo.
-- Los WebMethods `obtenerProductos` y `obtenerVariantesProducto` devuelven `TPV_STORES_SDK_INSTALL_BLOCKED` hasta que el SDK y el lockfile se instalen de forma atómica con el gestor de paquetes del proyecto.
-- No se ejecuta ningún endpoint de Catalog V3 mientras la dependencia no esté reproducible.
-- Scopes documentados por Wix para el futuro lector: `SCOPE.STORES.CATALOG_READ_LIMITED` y `SCOPE.STORES.PRODUCT_READ`.
+- Dependencia fijada en `@wix/stores@1.0.997`; `package.json` y `package-lock.json` están sincronizados, con las 34 dependencias transitivas requeridas.
+- Se llama primero a `catalogVersioning.getCatalogVersion()`; los valores oficiales son `V1_CATALOG`, `V3_CATALOG` y `STORES_NOT_INSTALLED`.
+- `productsV3.queryProducts` recupera productos visibles para POS con `CURRENCY`, `MIN_PRICE_VARIANT` y `PLAIN_DESCRIPTION`.
+- `productsV3.getProduct` recupera las variantes con `VARIANT_OPTION_CHOICE_NAMES` y `CURRENCY`.
+- El lector falla cerrado si la versión no es V3. El sitio seleccionado fue inspeccionado como V3; el resultado runtime todavía debe probarse en Preview.
+- Scope documentado para Query/Get Product: `WIX_STORES.PRODUCT_READ`. No se solicitan los scopes de productos no visibles ni datos comerciales.
 
 ### Wix Gift Cards
 - El sitio confirma Wix Gift Cards instalado.
