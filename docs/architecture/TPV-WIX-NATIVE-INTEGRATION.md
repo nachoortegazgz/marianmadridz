@@ -74,9 +74,9 @@ No reintroducir los escritores legacy: insertaban en `MovimientosCaja` y actuali
 
 ## Estado de despliegue
 
-PR #397 y PR #398 figuran fusionadas en GitHub. El CI posterior a la integración en `main` terminó correctamente (670 pruebas offline, 0 fallos; SDK contracts, ESLint y secret scanning correctos). La rama de hardening sintético actualiza las fronteras de datos y está pendiente de CI/revisión.
+PR #397, PR #398 y PR #399 figuran fusionadas en GitHub. PR #399 aplica la frontera sintética. CI sobre su HEAD: 74 suites / 670 pruebas offline, 0 fallos; SDK contracts, ESLint y secret scanning correctos.
 
 No se ha sincronizado el page code, HTML Component ni módulos backend con Wix Classic. La página TPV aparece en un sitio publicado, pero el runtime de TPV no se considera actualizado ni validado hasta comparar y probar el código en el Editor/Preview.
 
-La CLI oficial Origami de exportación/importación de sitio está documentada para Studio Two, no para el Editor clásico. No se ha encontrado un endpoint REST oficial soportado para subir page code Velo de Classic. Por tanto, no se ha intentado desplegar código por un mecanismo no soportado.
+La CLI oficial Origami de exportación/importación está documentada para Studio Two, no para el Editor clásico. Se inspeccionó la API oficial Git Code Store: requiere un `AppManagedProject` existente y especifica que un site ID o un legacy v1 Code Store project ID no lo sustituye. La llamada de solo lectura `List Projects` para este site devolvió cero proyectos (`count: 0`), por lo que no hay un `managedProjectId` aplicable. No se ha identificado un método oficial para sincronizar los archivos Velo de este Editor clásico. No se ha intentado desplegar por un mecanismo no soportado.
 
