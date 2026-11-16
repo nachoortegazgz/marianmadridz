@@ -5,6 +5,7 @@ import {
     CONTROL_TYPE,
     CONTROL_OPERATIVO_NON_CANONICAL_FIELDS,
     RECORD_TYPE,
+    TPV_QA_COLLECTIONS,
 } from "backend/internalConfig";
 
 function _policyError(code) {
@@ -75,6 +76,7 @@ const APPEND_ONLY_COLLECTIONS = Object.freeze([
     BUSINESS_COLLECTIONS.REGISTROS_HORARIOS_STAFF,
     BUSINESS_COLLECTIONS.HISTORICO_CIERRES_Z,
     BUSINESS_COLLECTIONS.PAQUETES_GESTORIA,
+    ...Object.values(TPV_QA_COLLECTIONS),
 ]);
 
 function _assertControlRecord(item, allowedTypes, errorCode, requireId = true) {
