@@ -22,6 +22,10 @@ export const solicitarDevolucionQA = webMethod(
             if (!session) throw new Error("TPV_QA_SESSION_NOT_OPEN");
 
             return await withQaSaleLock(saleId, traceId, async () => {
+            const activeSession = await latestOpenQaSession();
+            if (!activeSession || activeSession.sessionId !== session.sessionId) {
+                throw new Error("TPV_QA_SESSION_CLOSED");
+            }
             const sales = await queryQaRecords(TPV_QA_COLLECTIONS.VENTAS, wql.eq("saleId", saleId));
             const original = sales.find((sale) => sale.status === "CONFIRMADA_SINTETICA");
             if (!original) throw new Error("TPV_QA_ORIGINAL_SALE_NOT_FOUND");
