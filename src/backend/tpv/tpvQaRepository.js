@@ -365,21 +365,59 @@ export async function getPendingQaRefunds(sessionId) {
             ? refund.payload.allocations
             : [];
         if (allocations.length === 0) return true;
+
+        const expectedByMethod = new Map();
+        for (const allocation of allocations) {
+            const method = allocation?.paymentMethod;
+            const amountMinor = Number(allocation?.amountMinor);
+            if (!["EFECTIVO", "TARJETA", "BIZUM", "OTROS"].includes(method) ||
+                !Number.isSafeInteger(amountMinor) || amountMinor <= 0) return true;
+            const current = expectedByMethod.get(method) || { count: 0, amountMinor: 0 };
+            current.count += 1;
+            current.amountMinor += amountMinor;
+            expectedByMethod.set(method, current);
+        }
+
         const refundPayments = payments.filter((payment) =>
             payment.status === "REEMBOLSO_SINTETICO" &&
             payment.payload?.refundId === refund.refundId
         );
-        const expectedCashMovements = allocations.filter((allocation) =>
-            allocation.paymentMethod === "EFECTIVO"
-        ).length;
         const refundCashMovements = movements.filter((movement) =>
             movement.status === "CONFIRMADO_SINTETICO" &&
             movement.movementType === "DEVOLUCION_EFECTIVO" &&
             movement.payload?.refundId === refund.refundId
         );
+        const actualByMethod = new Map();
+        for (const payment of refundPayments) {
+            const method = payment.paymentMethod;
+            const amountMinor = Number(payment.amountMinor);
+            if (!Number.isSafeInteger(amountMinor) || amountMinor >= 0) return true;
+            const current = actualByMethod.get(method) || { count: 0, amountMinor: 0 };
+            current.count += 1;
+            current.amountMinor += Math.abs(amountMinor);
+            actualByMethod.set(method, current);
+        }
+
+        if (actualByMethod.size !== expectedByMethod.size) return true;
+        for (const [method, expected] of expectedByMethod) {
+            const actual = actualByMethod.get(method);
+            if (!actual || actual.count !== expected.count ||
+                actual.amountMinor !== expected.amountMinor) return true;
+        }
+
+        const expectedCash = expectedByMethod.get("EFECTIVO") || { count: 0, amountMinor: 0 };
+        const actualCashAmount = refundCashMovements.reduce((sum, movement) => {
+            const amountMinor = Number(movement.amountMinor);
+            return Number.isSafeInteger(amountMinor) && amountMinor > 0
+                ? sum + amountMinor
+                : Number.NaN;
+        }, 0);
+        const refundTotal = allocations.reduce((sum, allocation) => sum + Number(allocation.amountMinor), 0);
 
         return refundPayments.length !== allocations.length ||
-            refundCashMovements.length !== expectedCashMovements;
+            refundCashMovements.length !== expectedCash.count ||
+            actualCashAmount !== expectedCash.amountMinor ||
+            refundTotal !== Number(refund.amountMinor);
     });
 }
 
