@@ -81,7 +81,7 @@ La antigua ruta `src/public/tpv/tpv-page.js` se eliminó en una entrega anterior
 - El sitio confirma Wix Gift Cards instalado.
 - `@wix/ecom` ya estaba fijado en `1.0.2539`.
 - `giftVouchers.getGiftCard(code)` se utiliza solo para lectura.
-- Scope documentado: `SCOPE.ECOM.READ-GIFT-CARDS`. Debe verificarse su disponibilidad efectiva en el contexto de ejecución del sitio.
+- Scope documentado: `ECOM.GIFT_CARD_READ`. Debe verificarse su disponibilidad efectiva en el contexto de ejecución del sitio.
 - La consulta está conectada al HTML Component; emisión, canje y reembolso siguen bloqueados.
 
 ### Wix Bookings
