@@ -114,7 +114,8 @@ export async function withQaSaleLock(saleId, traceId, operation) {
     }
 
     if (operationError && releaseError) {
-        const combined = new Error("TPV_QA_REFUND_OPERATION_AND_LOCK_RELEASE_FAILED", { cause: operationError });
+        const combined = new Error("TPV_QA_REFUND_OPERATION_AND_LOCK_RELEASE_FAILED");
+        combined.cause = operationError;
         combined.code = "TPV_QA_REFUND_OPERATION_AND_LOCK_RELEASE_FAILED";
         combined.releaseError = String(releaseError?.message || releaseError);
         throw combined;
