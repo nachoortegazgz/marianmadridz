@@ -27,7 +27,6 @@ export const solicitarDevolucionQA = webMethod(
 
             const refundId = makeQaId("REFUND", key);
             const currentRefunds = await queryQaRecords(TPV_QA_COLLECTIONS.REEMBOLSOS, wql.eq("saleId", saleId));
-            const currentRefund = currentRefunds.find((refund) => refund.refundId === refundId) || null;
             const originalPayments = await queryQaRecords(TPV_QA_COLLECTIONS.PAGOS, wql.eq("saleId", saleId));
             const remainingByMethod = { EFECTIVO: 0, TARJETA: 0, BIZUM: 0, OTROS: 0 };
             for (const payment of originalPayments) {
