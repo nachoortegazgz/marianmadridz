@@ -62,6 +62,30 @@ export const FISCAL_RUNTIME_POLICY = Object.freeze({
   ALLOW_SIMULATION_RECORDS: false,
 });
 
+export const TPV_QA_COLLECTIONS = Object.freeze({
+  VENTAS: "TPV_QA_Ventas",
+  VENTA_LINEAS: "TPV_QA_VentaLineas",
+  PAGOS: "TPV_QA_Pagos",
+  REEMBOLSOS: "TPV_QA_Reembolsos",
+  MOVIMIENTOS_CAJA: "TPV_QA_MovimientosCaja",
+  SESIONES_CAJA: "TPV_QA_SesionesCaja",
+  TICKET_X: "TPV_QA_TicketX",
+  TICKET_Z: "TPV_QA_TicketZ",
+  AUDITORIA: "TPV_QA_Auditoria",
+});
+
+export const TPV_QA_RUNTIME_POLICY = Object.freeze({
+  ENABLED: true,
+  ENVIRONMENT: "TEST",
+  CURRENCY_CODE: "EUR",
+  TIME_ZONE: "Europe/Madrid",
+  SYNTHETIC_ONLY: true,
+  REAL_PAYMENTS_ENABLED: false,
+  FISCAL_WRITES_ENABLED: false,
+  CUSTOMER_NOTIFICATIONS_ENABLED: false,
+  HARDWARE_ENABLED: false,
+});
+
 export const CATALOG_ENTRY_TYPE = Object.freeze({
   SERVICE: "SERVICE",
   PRICING_PLAN: "PRICING_PLAN",
@@ -444,6 +468,7 @@ export const CONTROL_TYPE = Object.freeze({
   SYSTEM_FLAG: "SYSTEM_FLAG",
   WEBHOOK_CLAIM: "WEBHOOK_CLAIM",
   WEBHOOK_EVENT: "WEBHOOK_EVENT",
+  TPV_QA_REFUND_LOCK: "TPV_QA_REFUND_LOCK",
 });
 
 export const WEBHOOK_CLAIM_STATUS = Object.freeze({
@@ -505,6 +530,18 @@ export const DATA_ACCESS_BULK_PATCH_POLICY = Object.freeze({
         traceId: Object.freeze(["SET_FIELD"]),
       }),
     }),
+    [CONTROL_TYPE.TPV_QA_REFUND_LOCK]: Object.freeze({
+      requiredConditionFields: Object.freeze(["controlType", "version", "status"]),
+      anyConditionFields: Object.freeze([]),
+      allowedConditionFields: Object.freeze(["controlType", "version", "status", "expiresAt"]),
+      fields: Object.freeze({
+        status: Object.freeze(["SET_FIELD"]),
+        payload: Object.freeze(["SET_FIELD"]),
+        expiresAt: Object.freeze(["SET_FIELD"]),
+        traceId: Object.freeze(["SET_FIELD"]),
+        version: Object.freeze(["INCREMENT_FIELD"]),
+      }),
+    }),
   }),
 });
 
@@ -526,6 +563,7 @@ export const DATA_ACCESS_WRITE_POLICY = Object.freeze({
     BUSINESS_COLLECTIONS.LIBRO_ASIENTOS_CONTABLES_DETALLE,
     BUSINESS_COLLECTIONS.CAJA_ACTUAL,
     BUSINESS_COLLECTIONS.PAQUETES_GESTORIA,
+    ...Object.values(TPV_QA_COLLECTIONS),
   ]),
   updateCollections: Object.freeze([
     BUSINESS_COLLECTIONS.CONTROL_OPERATIVO,
