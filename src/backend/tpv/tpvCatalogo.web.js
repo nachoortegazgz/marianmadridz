@@ -40,7 +40,7 @@ async function getStoresCatalogVersion() {
 }
 
 function mapProduct(product) {
-    const minimum = product?.variantSummary?.minPriceVariant?.price?.actualPrice || null;
+    const minimum = product?.variantSummary?.minPriceVariant?.actualPrice || null;
     const amount = minimum?.amount ?? null;
     return {
         itemId: product._id,
@@ -165,7 +165,7 @@ export const obtenerProductos = webMethod(
                 },
             };
             const result = await productsV3.queryProducts(query, {
-                fields: ["CURRENCY", "MIN_PRICE_VARIANT"],
+                fields: ["CURRENCY", "MIN_PRICE_VARIANT", "PLAIN_DESCRIPTION"],
             });
             const items = (result?.products || [])
                 .filter((product) => product?.visible === true && product?.visibleInPos !== false)
