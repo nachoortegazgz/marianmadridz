@@ -164,7 +164,7 @@ Los módulos y la interfaz TPV están versionados en `main` tras PR #397, #398 y
 
 Siguiente fase segura:
 1. confirmar read-back del commit en GitHub Integration del Editor;
-2. configurar `WIX_CLI_API_KEY` con permiso `Wix CLI for Sites - Git Integration`;
+2. configurar `CLI_API_KEY` con permiso `Wix CLI for Sites - Git Integration`;
 3. ejecutar `.github/workflows/wix-tpv-preview.yml` para crear Preview (sin publicar);
 4. probar únicamente carga/lecturas y permisos; no ejecutar acciones que escriban;
 5. confirmar pasarela desconectada, neutralizar automatizaciones y revalidar permisos CMS;
