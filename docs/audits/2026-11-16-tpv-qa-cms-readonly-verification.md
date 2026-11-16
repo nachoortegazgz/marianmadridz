@@ -81,3 +81,8 @@ Esto es evidencia de código y tests offline, no una prueba de comportamiento en
 ## 9. Cuotas y separación de entornos
 
 Get Site Data Usage con `consistentRead=true` devuelve límite de 10 GiB de almacenamiento y 4.000 elementos por entorno; 21 colecciones de 1.000; LIVE 201 elementos / 265.822 bytes y SANDBOX 0 elementos / 0 bytes. Las nueve colecciones TPV QA están vacías en LIVE y SANDBOX. Wix documenta que SANDBOX es la copia utilizada por el Editor y Preview, con límite de elementos independiente de LIVE y almacenamiento compartido. LIVE usa el 5,03 % del límite de elementos; no hay proximidad a cuota. Una prueba limitada de persistencia podrá realizarse en Preview/SANDBOX una vez generado y verificado el Preview. No escribir directamente en LIVE por REST ni ejecutar cargas masivas.
+
+
+## 10. Reconciliación de inventario de colecciones
+
+La lectura completa de List Data Collections devuelve 50 colecciones: 21 `NATIVE` y 29 `WIX_APP`. El campo `collectionCount=21` de Site Data Usage coincide con las 21 colecciones nativas que consumen la cuota de colecciones; no es un recuento de todas las colecciones Wix App. Las nueve colecciones `TPV_QA_*` pertenecen al grupo NATIVE. No hay discrepancia entre ambas APIs.
