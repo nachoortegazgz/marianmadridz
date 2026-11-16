@@ -28,6 +28,7 @@ export const solicitarDevolucionQA = webMethod(
             const originalPayments = await queryQaRecords(TPV_QA_COLLECTIONS.PAGOS, wql.eq("saleId", saleId));
             const remainingByMethod = { EFECTIVO: 0, TARJETA: 0, BIZUM: 0, OTROS: 0 };
             for (const payment of originalPayments) {
+                if (payment.status !== "CONFIRMADO_SINTETICO") continue;
                 if (Object.prototype.hasOwnProperty.call(remainingByMethod, payment.paymentMethod)) {
                     remainingByMethod[payment.paymentMethod] += Number(payment.amountMinor || 0);
                 }
