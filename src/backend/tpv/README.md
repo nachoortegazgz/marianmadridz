@@ -68,7 +68,7 @@ Ejecutar `npm test`, `npm run test:layer1` y `npm run lint` antes de sincronizar
 
 ## Estado de integración
 
-PR #397 y PR #398 están integradas en `main`. La rama `fix/tpv-qa-synthetic-data-boundary-2026-11-16` endurece el aislamiento sintético y está pendiente de CI/revisión. No se ha sincronizado el código con Wix Classic. El sitio aparece Published, pero el runtime TPV no está verificado.
+PR #397, PR #398 y PR #399 están integradas en `main`. PR #399 aplica el aislamiento sintético y pasó 74 suites / 670 pruebas offline, 0 fallos. El repositorio está configurado para Wix Git Integration: `wix.config.json` contiene el Site ID exacto y `package.json` expone `wix dev`/`wix`. El merge a `main` debe sincronizar el Editor, pendiente de read-back. No se ha ejecutado Preview ni Publish; la versión pública no está validada.
 
 
 ## Fixtures sintéticas de cliente y profesionales (QA)
