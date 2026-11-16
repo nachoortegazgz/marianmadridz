@@ -19,8 +19,8 @@ Se mantienen intactas estas garantías:
 - No se actualizan ni borran registros append-only.
 - No se escribe directamente en `CajaActual`.
 - No se inicia ni liquida ningún pago, reserva, pedido, devolución, factura o cierre Z real.
-- `FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED` y `ACCOUNTING_LEDGER_WRITES_ENABLED` permanecen `false`.
-- `FISCAL_RUNTIME_POLICY.ALLOW_SIMULATION_RECORDS` permanece `false`; no se relaja la política fiscal global para habilitar pruebas TPV.
+- En el HEAD versionado de la rama TPV, `FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED`, `ACCOUNTING_LEDGER_WRITES_ENABLED` y `ALLOW_SIMULATION_RECORDS` permanecen `false`; no se relaja la política fiscal global para habilitar pruebas TPV.
+- **Limitación crítica:** el código de esa rama aún no se ha sincronizado con el Editor clásico. Por tanto, no se afirma que esos flags estén activos en el runtime publicado. La lectura pública CMS sí quedó cerrada; la desactivación integral de todos los escritores backend live queda pendiente de comparar y sincronizar el código del Editor.
 
 ## 3. Corrección de permisos CMS P0 aplicada
 
@@ -106,7 +106,7 @@ Pendiente:
 
 - No se ha fusionado PR #396.
 - No se ha publicado código TPV nuevo.
-- No se ha modificado el HTML Component ni el page code en el Editor clásico.
+- No se ha modificado el HTML Component, el page code ni los módulos backend en el Editor clásico; su estado live no se ha comparado ni validado.
 - No se ha conectado una pasarela de pagos.
 - No se ha activado ninguna escritura TPV.
 - No se ha intervenido en Studio Two.
