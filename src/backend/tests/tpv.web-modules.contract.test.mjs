@@ -263,3 +263,13 @@ test("TPV page is wired to the shared HTML bridge and its versioned iframe proto
     assert.ok(inlineScript, "TPV HTML component must contain its runtime script");
     assert.doesNotThrow(() => new Script(inlineScript));
 });
+
+
+test("QA repository paginates reads and blocks Z close while sales are incomplete", async () => {
+    const repository = read("src/backend/tpv/tpvQaRepository.js");
+    const closures = read("src/backend/tpv/tpvCierres.web.js");
+    assert.match(repository, /while \(page\.hasNext && records\.length < maxRecords\)/);
+    assert.match(repository, /export async function getPendingQaSales\(sessionId\)/);
+    assert.match(closures, /getPendingQaSales\(session\.sessionId\)/);
+    assert.match(closures, /TPV_QA_PENDING_SALES_PREVENT_CLOSE/);
+});
