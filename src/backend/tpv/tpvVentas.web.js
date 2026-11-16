@@ -144,7 +144,7 @@ export const registrarVentaQA = webMethod(
                 cashierMemberId: staff?.memberId || "UNKNOWN",
                 createdAt,
                 traceId,
-                environment: "TEST",
+                environment: TPV_QA_RUNTIME_POLICY.ENVIRONMENT,
                 payload: {
                     ...commonPayload,
                     phase: "COMMITTED",
