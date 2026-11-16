@@ -9,7 +9,7 @@
 - Sitio: Marian Madrid Peluquería y Estética.
 - Site ID: `188bed94-177c-4bc9-a9f0-35080d874f3e`.
 - Editor: Wix Classic Editor (Wix devuelve `Editor`); Velo habilitado.
-- Estado del sitio: `Published`, confirmado por GetSiteContext y por `published: true` en List Static Pages (2026-11-16).
+- Estado del sitio: `Draft`, confirmado por GetSiteContext el 2026-11-16 23:09 Europe/Madrid. Las referencias `Published` de versiones anteriores son históricas y no describen el estado actual.
 - Página estática TPV: ID `yl5th`, título `TPV`, ruta `/blank`.
 - Page code versionado: `src/pages/TPV.yl5th.js`.
 - HTML Component versionado: `#htmlTPV`.
