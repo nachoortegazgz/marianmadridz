@@ -1,7 +1,7 @@
 import { TPV_QA_RUNTIME_POLICY } from "backend/internalConfig";
 
 const PAYMENT_METHODS = Object.freeze(["EFECTIVO", "TARJETA", "BIZUM", "OTROS"]);
-const IDEMPOTENCY_PATTERN = /^[A-Za-z0-9:_-]{8,100}$/;
+const IDEMPOTENCY_PATTERN = /^[A-Za-z0-9:_-]{8,72}$/;
 
 export function assertTpvQaEnabled() {
     if (!TPV_QA_RUNTIME_POLICY.ENABLED ||
