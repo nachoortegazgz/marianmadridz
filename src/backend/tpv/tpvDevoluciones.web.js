@@ -3,7 +3,7 @@ import { getMyStaffContext, requireAdmin } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { TPV_QA_COLLECTIONS } from "backend/internalConfig";
 import { appendQaAudit, insertQaEvent, latestOpenQaSession, queryQaRecords } from "backend/tpv/tpvQaRepository";
-import { assertTpvQaEnabled, makeQaId, normalizeIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
+import { assertTpvQaEnabled, makeQaId, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
 import { wql } from "backend/dataAccess";
 
 export const solicitarDevolucionQA = webMethod(
@@ -13,7 +13,7 @@ export const solicitarDevolucionQA = webMethod(
         await requireAdmin(traceId);
         assertTpvQaEnabled();
         try {
-            const key = normalizeIdempotencyKey(input.idempotencyKey);
+            const key = normalizeClientIdempotencyKey(input.idempotencyKey);
             const saleId = String(input.saleId || "").trim();
             const reason = String(input.reason || "").trim();
             if (!saleId || reason.length < 3 || reason.length > 500) throw new Error("TPV_QA_REFUND_REFERENCE_AND_REASON_REQUIRED");
