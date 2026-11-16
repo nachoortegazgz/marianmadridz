@@ -60,5 +60,9 @@ test("TPV mutation controls remain visibly disabled", () => {
     }
     assert.match(html, /disabled/);
     assert.match(html, /no enviado a CMS/i);
-    assert.match(html, /memoria de sesión/i);\n    assert.match(html, /Guardar venta sintética en QA/);\n    assert.match(html, /Abrir sesión QA/);\n    assert.match(html, /Registrar arqueo parcial QA/);\n    assert.match(html, /Registrar devolución QA/);
+    assert.match(html, /memoria de sesión/i);
+    assert.match(html, /Guardar venta sintética en QA/);
+    assert.match(html, /Abrir sesión QA/);
+    assert.match(html, /Registrar arqueo parcial QA/);
+    assert.match(html, /Registrar devolución QA/);
 });
