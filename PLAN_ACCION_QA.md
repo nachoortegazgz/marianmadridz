@@ -236,7 +236,7 @@ La identidad y clasificación del único sitio QA se rigen por [SSOT del entorno
 ## Corte de hitos — 2026-11-14
 
 - **Hito de fixtures offline:** CERRADO. PR #379 integrada en main (27348a20bfb913fde43761d4c92dd46526a5e470); CI 70 suites / 644 tests PASS, SDK contracts, ESLint y Secret scanning PASS.
-- **H0 / H4 Wix Runtime:** BLOQUEADO. Lectura oficial Wix Automations V2: 150 automatizaciones, 7 activas y 143 inactivas. Las siete activas son preinstaladas y todas tienen readonly o disableStatusChange; no se pueden desactivar mediante API sin vulnerar locks.
+- **H0 / H4 Wix Runtime:** BLOQUEADO. Corte histórico del 2026-11-14: 150 automatizaciones, 7 activas y 143 inactivas. Revalidación 2026-11-16: 8 activas confirmadas por Get Automation; siete preinstaladas bloqueadas y una app-origin programada con tarea IA de alcance no verificado. No ejecutar Runtime/E2E hasta inspeccionar esta tarea y demostrar aislamiento.
 - **Decisión:** continuar solo offline/mock y read-only. No ejecutar flujos que disparen reservas, miembros, pagos guardados, formularios, tareas o notificaciones. Solicitar a Wix/proveedor neutralización soportada; repetir inventario y demostrar aislamiento antes de Runtime/E2E.
 - Evidencia: docs/audits/2026-11-14-qa-automations-isolation.md y docs/milestones/2026-11-14-qa-offline-fixtures-complete-runtime-isolation-blocked.md.
 
