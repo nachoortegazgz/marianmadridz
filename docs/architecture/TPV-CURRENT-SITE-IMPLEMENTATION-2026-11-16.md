@@ -12,7 +12,7 @@
 - Studio Two queda fuera de alcance.
 - SSOT QA: no hay actividad real declarada; los registros de prueba deben ser sintéticos; pasarela de pagos desconectada declarada por el propietario.
 
-La publicación del sitio no demuestra que los archivos actuales de GitHub estén sincronizados con el runtime del Editor clásico. El estado del runtime TPV queda pendiente de comprobación en Wix Editor/Preview.
+El repositorio `nachoortegazgz/marianmadridz` contiene `wix.config.json` con el Site ID exacto y `uiVersion: 15941`, además de scripts `wix dev`/`wix` y la estructura Velo. Está configurado para Git Integration del Editor clásico. El merge de PR #399 a `main` debe sincronizar el código con el Editor; el read-back en el panel aún está pendiente. La versión publicada sigue sin validar.
 
 ## 2. Regla de integridad
 
@@ -83,20 +83,21 @@ La rama de hardening sintético todavía necesita CI propio y revisión del diff
 
 ## 8. Bloqueos runtime y despliegue
 
-- No se ha sincronizado el page code, HTML Component ni módulos backend con Wix Classic.
+- El repositorio está enlazado al Site ID mediante `wix.config.json`; el commit de PR #399 debe estar sincronizado con el Editor, pero no se ha verificado el read-back.
+- No se ha ejecutado `wix preview` ni `wix publish`; la producción no se considera actualizada.
 - No se han ejecutado escrituras de prueba en CMS durante esta intervención.
 - No se ha probado la concurrencia/idempotencia contra CMS real.
 - No se ha validado Preview con ADMIN, GESTION, ESTILISTA, miembro ordinario y visitante.
 - La SSOT registra 7 automatizaciones Wix preinstaladas ACTIVE con acciones de email/notificación y bloqueos de cambio; aislamiento runtime de comunicaciones no acreditado. Runtime/E2E permanece bloqueado hasta neutralización soportada y read-back.
 - La desconexión de la pasarela es una declaración del propietario; debe confirmarse en Wix Dashboard antes de cualquier prueba que pueda producir efectos financieros.
 
-La CLI Origami está documentada para Studio Two, no para el Editor clásico. La API oficial Git Code Store requiere un `AppManagedProject` existente; la llamada de solo lectura `List Projects` sobre este site devolvió `count: 0`. No hay `managedProjectId` aplicable y no se ha identificado un método oficial para sincronizar los archivos Velo de este Editor clásico. No se ha intentado un despliegue por mecanismos no soportados.
+La vía soportada es [Git Integration & Wix CLI for Sites](https://dev.wix.com/docs/develop-websites/articles/workspace-tools/developer-tools/git-integration-wix-cli-for-sites/about-git-integration-wix-cli-for-sites), que incluye Wix Editor (Classic). El repositorio coincide con el Site ID y contiene la configuración CLI. El workflow `.github/workflows/wix-tpv-preview.yml` está preparado para generar Preview; la última ejecución lo omitió porque falta el secreto `WIX_CLI_API_KEY`. Para usarlo hay que crear ese secreto con permiso `Wix CLI for Sites - Git Integration`. La ejecución local no está disponible en esta sesión: el contenedor tiene Node 22.16 y no tiene el binario `wix`; Wix requiere Node 24.22.1 o superior. No se ha ejecutado Preview ni Publish.
 
 ## 9. Próximos pasos seguros
 
-1. Obtener una copia verificable del estado actual de los archivos TPV en Wix Classic.
-2. Conciliar el estado del Editor con los archivos versionados en `main` y preparar un diff mínimo.
-3. Aplicar los archivos mediante Wix Editor/Preview, guardando el estado previo para reversión.
-4. Probar roles y casos negativos en Preview sin activar comunicaciones, pagos ni escrituras fiscales.
-5. Revalidar colecciones/índices/permisos CMS.
-6. No publicar hasta cerrar los bloqueos y comprobar el runtime.
+1. Confirmar en GitHub Integration del Editor que `main` está sincronizado hasta el merge de PR #399.
+2. Configurar el secreto `WIX_CLI_API_KEY` con permiso `Wix CLI for Sites - Git Integration`.
+3. Ejecutar el workflow `Wix TPV Preview (non-production)` y revisar la URL de Preview.
+4. Probar carga y lecturas con roles; no ejecutar apertura de caja, ventas, movimientos, devoluciones ni cierres en Preview.
+5. Revalidar colecciones/índices/permisos CMS y neutralizar automatizaciones de comunicación.
+6. No ejecutar `wix publish` hasta cerrar los bloqueos y completar E2E controlado.
