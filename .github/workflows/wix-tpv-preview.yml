@@ -2,6 +2,12 @@ name: Wix TPV Preview (non-production)
 
 on:
   workflow_dispatch:
+    inputs:
+      create_preview:
+        description: 'Create a Wix preview (requires the site to have been published at least once)'
+        required: true
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -15,13 +21,17 @@ jobs:
     name: Build non-production Wix preview
     runs-on: ubuntu-latest
     timeout-minutes: 25
-    env:
-      CLI_API_KEY: ${{ secrets.CLI_API_KEY }}
     steps:
+      - name: Require the approved main branch
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "::error::Run this preview workflow from the approved main branch."
+          exit 1
+
       - name: Checkout connected Wix site repository
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.ref }}
+          ref: main
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -38,12 +48,14 @@ jobs:
             throw new Error("wix.config.json is not bound to the Marian Madrid site.");
           }
           if (!uiVersion) throw new Error("wix.config.json is missing uiVersion.");
-          process.stdout.write(`Wix site binding verified; UI version ${uiVersion}.\\n`);
+          process.stdout.write(`Wix site binding verified; UI version ${uiVersion}.\n`);
           NODE
 
       - name: Check Wix CLI API key availability
         id: auth
         shell: bash
+        env:
+          CLI_API_KEY: ${{ secrets.CLI_API_KEY }}
         run: |
           if [[ -n "${CLI_API_KEY:-}" ]]; then
             echo "available=true" >> "$GITHUB_OUTPUT"
@@ -54,13 +66,7 @@ jobs:
       - name: Require Wix CLI API key
         if: steps.auth.outputs.available != 'true'
         run: |
-          echo "::error::Preview was not created. Configure repository secret CLI_API_KEY with the Wix CLI for Sites - Git Integration permission."
-          exit 1
-
-      - name: Require the approved main branch
-        if: github.ref != 'refs/heads/main'
-        run: |
-          echo "::error::Run this preview workflow from the approved main branch."
+          echo "::error::Preview cannot authenticate. Configure repository secret CLI_API_KEY using a Wix API key with the 'Wix CLI for Sites - Git Integration' permission and access to the Marian Madrid site."
           exit 1
 
       - name: Install locked project dependencies
@@ -73,8 +79,14 @@ jobs:
 
       - name: Authenticate Wix CLI
         if: steps.auth.outputs.available == 'true'
+        env:
+          CLI_API_KEY: ${{ secrets.CLI_API_KEY }}
         run: npm run wix login -- --api-key "$CLI_API_KEY"
 
+      - name: Skip preview unless explicitly requested
+        if: steps.auth.outputs.available == 'true' && !inputs.create_preview
+        run: echo "Authentication completed. Preview skipped; enable create_preview only after the site has been published at least once."
+
       - name: Create Wix preview only (never publish)
-        if: steps.auth.outputs.available == 'true'
+        if: steps.auth.outputs.available == 'true' && inputs.create_preview
         run: npm run wix preview
