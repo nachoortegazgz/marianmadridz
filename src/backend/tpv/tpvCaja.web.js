@@ -4,6 +4,7 @@ import { getMyStaffContext, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { TPV_QA_COLLECTIONS } from "backend/internalConfig";
 import { insertQaEvent, latestOpenQaSession, queryQaRecords } from "backend/tpv/tpvQaRepository";
+import { buildQaSessionSummary } from "backend/tpv/tpvCierresCore";
 import { wql } from "backend/dataAccess";
 import { assertTpvQaEnabled, fromMinorUnits, makeSyntheticPayload, toMinorUnits } from "backend/tpv/tpvUtils";
 
@@ -32,17 +33,25 @@ export const obtenerSesionCajaQA = webMethod(
         await requireCajero(traceId);
         assertTpvQaEnabled();
         const session = await latestOpenQaSession();
+        if (!session) return { status: "SUCCESS", data: null, error: null, traceId };
+        const summary = await buildQaSessionSummary(session);
         return {
             status: "SUCCESS",
-            data: session ? {
+            data: {
                 sessionId: session.sessionId,
                 status: "ABIERTA",
                 openingCash: fromMinorUnits(Number(session.openingCashMinor || 0)),
-                expectedCash: fromMinorUnits(Number(session.expectedCashMinor || 0)),
+                expectedCash: fromMinorUnits(summary.expectedCashMinor),
+                cashAmount: fromMinorUnits(summary.cashMinor),
+                cardAmount: fromMinorUnits(summary.cardMinor),
+                bizumAmount: fromMinorUnits(summary.bizumMinor),
+                otherAmount: fromMinorUnits(summary.otherMinor),
+                totalOperations: summary.ticketCount,
                 openedAt: session.openedAt,
                 cashierMemberId: session.cashierMemberId,
                 environment: "TEST",
-            } : null,
+                isSynthetic: true,
+            },
             error: null,
             traceId,
         };
