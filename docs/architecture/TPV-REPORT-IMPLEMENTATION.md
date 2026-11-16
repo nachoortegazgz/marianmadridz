@@ -141,10 +141,10 @@ Las reservas, órdenes, cobros reales, emisión/canje de Gift Cards, facturació
 - permisos de items no incluidos en la lectura actual; pendientes de consulta específica;
 - permisos de items e insert/update/remove pendientes de lectura directa y conciliación. No se han mutado permisos en esta fase.
 
-**Verificado en CI sobre HEAD `c7ebc1fa44c9f4eedda4b90e0c7710ef00e61c74` (run 1479):**
-- Layer 1: 28 suites / 330 pruebas, 0 fallos;
+**Verificado en CI sobre HEAD `82525384c337306d99dc958e6cb17ede41eac83b` (run 1481):**
+- Layer 1: 28 suites / 331 pruebas, 0 fallos;
 - Layer 2: 19 suites / 255 pruebas, 0 fallos;
-- regresión offline completa: 74 suites / 669 pruebas, 0 fallos;
+- regresión offline completa: 74 suites / 670 pruebas, 0 fallos;
 - contratos de SDK Wix Stores/eCommerce, Bookings Reader V2, CRM Contacts V5 y Gift Cards correctos; ESLint y secret scanning correctos;
 - contratos de WebMethods, aislamiento de datos, locks CAS, UI/HTML y parseo del script inline correctos.
 

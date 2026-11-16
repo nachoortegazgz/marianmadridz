@@ -6,7 +6,7 @@
 - Site ID: `188bed94-177c-4bc9-a9f0-35080d874f3e`.
 - Dominio: `https://www.marianmadrid.es/`.
 - Editor clásico; Velo habilitado.
-- Estado devuelto por Wix en la comprobación actual: `Draft`. No se considera publicado ni se asume que el runtime público coincida con GitHub.
+- Estado devuelto por Wix: `Draft`; la API de páginas estáticas confirma `published: false`. Página TPV: ID `yl5th`, título `TPV`, ruta `/blank`, page code `src/pages/TPV.yl5th.js`. No se considera publicada ni se asume que el runtime coincida con GitHub.
 - Studio Two queda expresamente fuera de alcance.
 - Entorno declarado por el propietario: desarrollo, sin actividad real, con datos sintéticos y pasarela de pagos desconectada.
 
@@ -114,10 +114,10 @@ Pruebas añadidas al repositorio:
 - Política CAS del lock de devoluciones.
 - Validaciones de claves idempotentes, métodos de pago y unidades menores.
 
-**CI verificado sobre HEAD `c7ebc1fa44c9f4eedda4b90e0c7710ef00e61c74` (run 1479):** Layer 1: 28 suites / 330 pruebas, 0 fallos; Layer 2: 19 suites / 255 pruebas, 0 fallos; regresión offline completa: 74 suites / 669 pruebas, 0 fallos; ESLint correcto; secret scanning correcto; contratos SDK de Stores/eCommerce, Bookings Reader V2, CRM Contacts V5 y Gift Cards correctos. Estas pruebas son offline/estáticas y no sustituyen pruebas de runtime Wix.
+**CI verificado sobre HEAD `82525384c337306d99dc958e6cb17ede41eac83b` (run 1481):** Layer 1: 28 suites / 331 pruebas, 0 fallos; Layer 2: 19 suites / 255 pruebas, 0 fallos; regresión offline completa: 74 suites / 670 pruebas, 0 fallos; ESLint correcto; secret scanning correcto; contratos SDK de Stores/eCommerce, Bookings Reader V2, CRM Contacts V5 y Gift Cards correctos. Estas pruebas son offline/estáticas y no sustituyen pruebas de runtime Wix.
 
 Pendiente:
-1. CI completo sobre HEAD `a4dafdd8376d293606ef095f6ccc572cd5e5ecfb` verificado correctamente.
+1. CI completo sobre HEAD `82525384c337306d99dc958e6cb17ede41eac83b` verificado correctamente.
 2. Probar inserciones duplicadas y concurrencia del índice idempotente en CMS QA.
 3. Probar locks de sesión y reembolso en concurrencia real, CAS y recuperación tras expiración.
 4. Probar reanudación de venta y devolución ante fallo parcial entre colecciones.
@@ -130,6 +130,7 @@ Pendiente:
 
 - PR #396 está cerrada sin fusionar. PR #397 está abierta para revisión y no se ha fusionado el TPV.
 - No se ha publicado código TPV nuevo.
+- Se retiraron cinco archivos legacy sin consumidores activos: `src/pages/tpv.js`, `src/pages/tpvCaja.web.js`, `src/backend/tpvCaja.web.js`, `src/backend/tpvVentas.web.js` y `src/public/tpv/tpv-page.js`.
 - No se ha modificado el HTML Component, el page code ni los módulos backend en el Editor clásico; su estado live no se ha comparado ni validado.
 - No se ha conectado una pasarela de pagos.
 - No se ha activado ninguna escritura TPV en el runtime Wix; las escrituras QA están implementadas solo en la rama GitHub.
