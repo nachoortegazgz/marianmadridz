@@ -33,7 +33,7 @@ export async function withQaSaleLock(saleId, traceId, operation) {
         const initial = {
             _id: lockId,
             controlType: CONTROL_TYPE.TPV_QA_REFUND_LOCK,
-            dedupeKey: "TPV_QA_REFUND:" + cleanSaleId,
+            dedupeKey: "TPV_QA_REFUND:" + lockId.slice(4),
             traceId: String(traceId || ""),
             status: "ACTIVE",
             expiresAt,
@@ -50,7 +50,7 @@ export async function withQaSaleLock(saleId, traceId, operation) {
     }
 
     if (record) {
-        if (record.dedupeKey !== "TPV_QA_REFUND:" + cleanSaleId) {
+        if (record.payload?.saleId !== cleanSaleId) {
             throw new Error("TPV_QA_REFUND_LOCK_ID_COLLISION");
         }
         const currentExpiry = record.expiresAt instanceof Date ? record.expiresAt : new Date(record.expiresAt || 0);
