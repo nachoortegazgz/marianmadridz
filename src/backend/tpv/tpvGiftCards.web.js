@@ -3,6 +3,8 @@ import { giftVouchers } from "@wix/ecom";
 import { requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 
+const getGiftCardElevated = auth.elevate(giftVouchers.getGiftCard);
+
 /**
  * Read-only balance/status lookup for Wix-managed Gift Cards.
  * The card code is never logged, stored, or returned in clear text.
@@ -21,7 +23,7 @@ export const consultarTarjetaRegalo = webMethod(
         }
 
         try {
-            const response = await giftVouchers.getGiftCard(code);
+            const response = await getGiftCardElevated(code);
             const card = response?.giftCard;
             if (!card) {
                 return {
