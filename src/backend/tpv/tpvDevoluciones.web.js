@@ -119,7 +119,7 @@ export const solicitarDevolucionQA = webMethod(
                 error: null,
                 traceId,
             };
-            });
+            }, session.sessionId);
         } catch (error) {
             return { status: "ERROR", data: null, error: { code: String(error?.message || "TPV_QA_REFUND_FAILED") }, persisted, recoverable: persisted, isSynthetic: true, realPayment: false, traceId };
         }
