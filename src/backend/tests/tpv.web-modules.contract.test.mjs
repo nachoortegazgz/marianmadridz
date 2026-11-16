@@ -116,6 +116,7 @@ test("TPV WebMethods keep writes blocked and do not access CMS directly", async 
         "tpv/tpvVentas.web.js",
         "tpv/tpvCatalogo.web.js",
         "tpv/tpvReportes.web.js",
+        "tpv/tpvGiftCards.web.js",
     ];
     const contents = await Promise.all(files.map(source));
     const joined = contents.join("\n");
@@ -140,7 +141,14 @@ test("TPV catalog reader uses native Bookings SDK and does not expose staff cont
     assert.match(catalog, /visibleInPos/);
     assert.match(catalog, /TPV_STORES_CATALOG_VERSION_UNSUPPORTED/);
     assert.match(catalog, /precioMinor/);
+    assert.ok(catalog.indexOf("catalogVersioning.getCatalogVersion") < catalog.indexOf("productsV3.queryProducts"));
     assert.doesNotMatch(catalog, /staff\.email|staff\.phone/);
+
+    const giftCards = await source("tpv/tpvGiftCards.web.js");
+    assert.match(giftCards, /giftVouchers\.getGiftCard/);
+    assert.match(giftCards, /requireCajero/);
+    assert.match(giftCards, /obfuscatedCode/);
+    assert.doesNotMatch(giftCards, /console\.(?:log|info|warn|error)|wixData|\.insert\(|\.update\(|\.remove\(/);
 });
 
 test("TPV page is wired to the shared HTML bridge and its versioned iframe protocol", async () => {
@@ -168,6 +176,8 @@ test("TPV page is wired to the shared HTML bridge and its versioned iframe proto
     assert.match(controller, /validarVentaBorrador/);
     assert.match(controller, /previsualizarTicketX/);
     assert.match(controller, /TICKET_X_PREVIEW/);
+    assert.match(controller, /consultarTarjetaRegalo/);
+    assert.match(controller, /GIFT_CARD_BALANCE/);
 
     assert.match(html, /send\("MM_READY"/);
     assert.match(html, /m\.type==="MM_CONTEXT"/);
@@ -177,6 +187,9 @@ test("TPV page is wired to the shared HTML bridge and its versioned iframe proto
     assert.match(html, /send\("CATALOG_STAFF"/);
     assert.match(html, /m\.type==="CATALOG_SERVICES_RES"/);
     assert.match(html, /m\.type==="CATALOG_STAFF_RES"/);
+    assert.match(html, /GIFT_CARD_BALANCE_RES/);
+    assert.match(html, /lookupGiftCard/);
+    assert.match(html, /finalizeSynthetic/);
 
     const inlineScript = html.match(/<script>([\s\S]*?)<\/script>/)?.[1];
     assert.ok(inlineScript, "TPV HTML component must contain its runtime script");
