@@ -147,13 +147,13 @@ test("TPV catalog reader uses native Bookings SDK and does not expose staff cont
     assert.match(catalog, /staffMembers\.queryStaffMembersV2/);
     assert.match(catalog, /formattedValue/);
     assert.match(catalog, /precioMinor/);
-    assert.match(catalog, /catalogVersioning\\.getCatalogVersion/);
-    assert.match(catalog, /productsV3\\.queryProducts/);
-    assert.match(catalog, /productsV3\\.getProduct/);
+    assert.match(catalog, /catalogVersioning\.getCatalogVersion/);
+    assert.match(catalog, /productsV3\.queryProducts/);
+    assert.match(catalog, /productsV3\.getProduct/);
     assert.match(catalog, /visibleInPos/);
     assert.match(catalog, /V3_CATALOG/);
     assert.match(catalog, /precioMinor/);
-    assert.match(catalog, /from ["']@wix\\/stores["']/);
+    assert.match(catalog, /from ["']@wix\/stores["']/);
     assert.doesNotMatch(catalog, /staff\.email|staff\.phone/);
 
     const giftCards = await source("tpv/tpvGiftCards.web.js");
