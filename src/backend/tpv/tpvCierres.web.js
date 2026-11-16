@@ -2,7 +2,7 @@ import { Permissions, webMethod } from "wix-web-module";
 import { requireAdmin, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { TPV_QA_COLLECTIONS, TPV_QA_RUNTIME_POLICY } from "backend/internalConfig";
-import { appendQaAudit, getPendingQaSales, insertQaEvent, latestOpenQaSession, queryQaRecords, withQaSessionLock } from "backend/tpv/tpvQaRepository";
+import { appendQaAudit, getPendingQaRefunds, getPendingQaSales, insertQaEvent, latestOpenQaSession, queryQaRecords, withQaSessionLock } from "backend/tpv/tpvQaRepository";
 import { buildQaSessionSummary } from "backend/tpv/tpvCierresCore";
 import { assertTpvQaEnabled, fromMinorUnits, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
 import { wql } from "backend/dataAccess";
@@ -139,8 +139,13 @@ export const cerrarTicketZQA = webMethod(
             if (input.sessionId && input.sessionId !== session.sessionId) throw new Error("TPV_QA_SESSION_MISMATCH");
             const pendingSales = await getPendingQaSales(session.sessionId);
             if (pendingSales.length > 0) throw new Error("TPV_QA_PENDING_SALES_PREVENT_CLOSE");
+            const pendingRefunds = await getPendingQaRefunds(session.sessionId);
+            if (pendingRefunds.length > 0) throw new Error("TPV_QA_PENDING_REFUNDS_PREVENT_CLOSE");
             const countedMinor = toMinorUnits(input.countedCash, "COUNTED_CASH");
             const totals = await buildQaSessionSummary(session);
+            if (totals.reconciliationOk !== true) {
+                throw new Error("TPV_QA_RECONCILIATION_FAILED");
+            }
             const differenceMinor = countedMinor - totals.expectedCashMinor;
             const reason = String(input.differenceReason || "").trim();
             if (differenceMinor !== 0 && reason.length < 3) throw new Error("TPV_QA_CLOSING_DIFFERENCE_REASON_REQUIRED");
