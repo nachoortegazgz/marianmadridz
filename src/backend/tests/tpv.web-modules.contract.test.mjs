@@ -204,7 +204,7 @@ test("TPV catalog reader uses native Bookings SDK and does not expose staff cont
     assert.match(catalog, /precioMinor/);
     assert.match(catalog, /import \{ auth \} from ["']@wix\/essentials["']/);
     assert.match(catalog, /catalogVersioning\.getCatalogVersion/);
-    assert.match(catalog, /await getCatalogVersionElevated\(\)/);
+    assert.match(catalog, /catalogVersionPromise = getCatalogVersionElevated\(\)/);
     assert.doesNotMatch(catalog, /catalogVersioning\.getCatalogVersion\(\)/);
     assert.match(catalog, /auth\.elevate\(catalogVersioning\.getCatalogVersion\)/);
     assert.match(catalog, /auth\.elevate\(services\.queryServices\)/);
