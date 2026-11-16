@@ -6,7 +6,7 @@
  * authorized catalog reads, cashier state and server-side draft validation.
  * No payment, order, booking, ledger, cash-session or fiscal writer is exposed.
  */
-import { getCashierState } from "backend/cajas.web.js";
+import { obtenerCajaActual } from "backend/tpv/tpvCaja.web.js";
 import {
     obtenerServicios,
     obtenerProfesionales,
