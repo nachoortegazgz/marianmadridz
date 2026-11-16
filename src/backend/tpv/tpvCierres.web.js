@@ -2,7 +2,7 @@ import { Permissions, webMethod } from "wix-web-module";
 import { getMyStaffContext, requireAdmin, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { TPV_QA_COLLECTIONS, TPV_QA_RUNTIME_POLICY } from "backend/internalConfig";
-import { appendQaAudit, getPendingQaSales, insertQaEvent, latestOpenQaSession, queryQaRecords } from "backend/tpv/tpvQaRepository";
+import { appendQaAudit, getPendingQaSales, insertQaEvent, latestOpenQaSession, queryQaRecords, withQaSessionLock } from "backend/tpv/tpvQaRepository";
 import { buildQaSessionSummary } from "backend/tpv/tpvCierresCore";
 import { assertTpvQaEnabled, fromMinorUnits, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
 import { wql } from "backend/dataAccess";
@@ -54,6 +54,11 @@ export const generarTicketXQA = webMethod(
             const key = normalizeClientIdempotencyKey(input.idempotencyKey);
             const session = await latestOpenQaSession();
             if (!session) throw new Error("TPV_QA_SESSION_NOT_OPEN");
+            return await withQaSessionLock(session.sessionId, traceId, async () => {
+                const activeSession = await latestOpenQaSession();
+                if (!activeSession || activeSession.sessionId !== session.sessionId) {
+                    throw new Error("TPV_QA_SESSION_CLOSED");
+                }
             const totals = await buildQaSessionSummary(session);
             const reportId = "QA-X-" + session.sessionId + "-" + key.slice(0, 20);
             const { item, replayed } = await insertQaEvent(TPV_QA_COLLECTIONS.TICKET_X, key + ":TICKET_X", {
@@ -76,6 +81,7 @@ export const generarTicketXQA = webMethod(
                 payload: { sessionId: session.sessionId },
             });
             return { status: "SUCCESS", data: { reportId: item.reportId, totals, replayed, closesSession: false, isSynthetic: true }, error: null, traceId };
+            });
         } catch (error) {
             return { status: "ERROR", data: null, error: { code: String(error?.message || "TPV_QA_TICKET_X_FAILED") }, persisted, recoverable: persisted, isSynthetic: true, realPayment: false, traceId };
         }
@@ -127,6 +133,11 @@ export const cerrarTicketZQA = webMethod(
                 }
             }
             if (!session) throw new Error("TPV_QA_SESSION_NOT_OPEN");
+            return await withQaSessionLock(session.sessionId, traceId, async () => {
+                const activeSession = await latestOpenQaSession();
+                if (!activeSession || activeSession.sessionId !== session.sessionId) {
+                    throw new Error("TPV_QA_SESSION_CLOSED");
+                }
             if (input.sessionId && input.sessionId !== session.sessionId) throw new Error("TPV_QA_SESSION_MISMATCH");
             const pendingSales = await getPendingQaSales(session.sessionId);
             if (pendingSales.length > 0) throw new Error("TPV_QA_PENDING_SALES_PREVENT_CLOSE");
@@ -183,6 +194,7 @@ export const cerrarTicketZQA = webMethod(
                 error: null,
                 traceId,
             };
+            });
         } catch (error) {
             return { status: "ERROR", data: null, error: { code: String(error?.message || "TPV_QA_TICKET_Z_FAILED") }, persisted, recoverable: persisted, isSynthetic: true, realPayment: false, traceId };
         }
