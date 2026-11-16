@@ -12,7 +12,7 @@
 - Studio Two queda fuera de alcance.
 - SSOT QA: no hay actividad real declarada; los registros de prueba deben ser sintéticos; pasarela de pagos desconectada declarada por el propietario.
 
-El repositorio `nachoortegazgz/marianmadridz` contiene `wix.config.json` con el Site ID exacto y `uiVersion: 15941`, además de scripts `wix dev`/`wix` y la estructura Velo. Está configurado para Git Integration del Editor clásico. El merge de PR #399 a `main` debe sincronizar el código con el Editor; el read-back en el panel aún está pendiente. No hay versión pública activa; Preview no generado y runtime no validado.
+El repositorio `nachoortegazgz/marianmadridz` contiene `wix.config.json` con el Site ID exacto y `uiVersion: 15941`, además de scripts `wix dev`/`wix` y la estructura Velo. Está configurado para Git Integration del Editor clásico. La sincronización efectiva del HEAD de `main` con el Editor no se ha verificado mediante read-back en el panel. No hay versión pública activa; Preview no generado y runtime no validado.
 
 ## 2. Regla de integridad
 
