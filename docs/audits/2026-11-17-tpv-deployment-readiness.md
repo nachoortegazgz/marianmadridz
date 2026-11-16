@@ -30,8 +30,8 @@ La búsqueda GitHub no devolvió referencias a `bulkUpdateItems`, ni coincidenci
 
 - `src/velo.dependencies.json` no existe en el HEAD inspeccionado.
 - `.eslintrc.json` mantiene desactivada la regla `@wix/cli/no-invalid-backend-import`.
-- Consecuencia: el gate estático no verifica esa clase de importaciones backend.
-- Acción: generar/sincronizar el manifiesto mediante el flujo oficial compatible con este proyecto Wix Editor Classic y activar la regla solo después de comprobar que el manifiesto corresponde al estado real del sitio. No crear el archivo manualmente ni editar `wix.lock`.
+- Consecuencia: hay una regla de ESLint desactivada y el archivo no está presente; no se ha demostrado que `src/velo.dependencies.json` sea un requisito de este proyecto Wix Editor Classic ni que la regla dependa de él.
+- Acción: mantener la regla sin cambios hasta confirmar su alcance y requisitos en documentación/código oficial aplicables a Velo Editor Classic. No generar un manifiesto con comandos de Wix CLI for Apps: esos manifiestos pertenecen a proyectos de extensiones/app y no son equivalentes al código Velo del sitio. No editar `wix.lock`.
 
 ### P1 — Runtime y sincronización Wix no acreditados
 
@@ -70,7 +70,7 @@ No se alteran ledgers append-only, colecciones, índices, permisos, automatizaci
 - GetSiteContext Wix: completado; Draft / Editor Classic / Velo / Stores V3 / Invoices V1.
 - Búsquedas acotadas en GitHub: sin coincidencias de `TODO FIXME HACK` ni `bulkUpdateItems`; no es análisis AST exhaustivo.
 - CI de PR #409: pendiente al redactar este informe.
-- `npm test`, Layer 1, Layer 2, ESLint y `npm audit` ejecutados localmente: no ejecutados.
+- `npm test`, Layer 1, Layer 2, ESLint y `npm audit` ejecutados localmente: no ejecutados. Se incorpora un paso de auditoría reproducible al workflow existente en PR #411; resultado pendiente.
 - Wix Preview, runtime, E2E y Publish: no ejecutados.
 
 ## Criterios de salida para despliegue
