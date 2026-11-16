@@ -1,0 +1,74 @@
+import { TPV_QA_COLLECTIONS } from "backend/internalConfig";
+import {
+    getCommittedQaSales,
+    getQaCashMovements,
+    getQaPayments,
+    getQaRefunds,
+    queryQaRecords,
+} from "backend/tpv/tpvQaRepository";
+
+export async function buildQaSessionSummary(session) {
+    if (!session?.sessionId) throw new Error("TPV_QA_SESSION_REQUIRED");
+    const [sales, payments, refunds, movements, lines] = await Promise.all([
+        getCommittedQaSales(session.sessionId),
+        getQaPayments(session.sessionId),
+        getQaRefunds(session.sessionId),
+        getQaCashMovements(session.sessionId),
+        queryQaRecords(TPV_QA_COLLECTIONS.VENTA_LINEAS, undefined),
+    ]);
+
+    const totals = {
+        sessionId: session.sessionId,
+        currency: "EUR",
+        ticketCount: sales.length,
+        refundCount: refunds.length,
+        grossSalesMinor: sales.reduce((sum, sale) => sum + Number(sale.totalMinor || 0), 0),
+        discountsMinor: sales.reduce((sum, sale) => sum + Number(sale.discountMinor || 0), 0),
+        taxMinor: sales.reduce((sum, sale) => sum + Number(sale.taxMinor || 0), 0),
+        totalRefundsMinor: refunds.reduce((sum, refund) => sum + Number(refund.amountMinor || 0), 0),
+        cashMinor: 0,
+        cardMinor: 0,
+        bizumMinor: 0,
+        otherMinor: 0,
+        cashInMinor: 0,
+        cashOutMinor: 0,
+        serviceSalesMinor: 0,
+        productSalesMinor: 0,
+        openingCashMinor: Number(session.openingCashMinor || 0),
+        expectedCashMinor: 0,
+    };
+
+    for (const payment of payments) {
+        const amount = Number(payment.amountMinor || 0);
+        switch (payment.paymentMethod) {
+        case "EFECTIVO": totals.cashMinor += amount; break;
+        case "TARJETA": totals.cardMinor += amount; break;
+        case "BIZUM": totals.bizumMinor += amount; break;
+        case "OTROS": totals.otherMinor += amount; break;
+        default: throw new Error("TPV_QA_PAYMENT_METHOD_CORRUPTED");
+        }
+    }
+
+    const saleIds = new Set(sales.map((sale) => sale.saleId));
+    for (const line of lines) {
+        if (!saleIds.has(line.saleId)) continue;
+        if (line.lineType === "SERVICIO") totals.serviceSalesMinor += Number(line.totalMinor || 0);
+        if (line.lineType === "PRODUCTO") totals.productSalesMinor += Number(line.totalMinor || 0);
+    }
+
+    for (const movement of movements) {
+        if (movement.status !== "CONFIRMADO_SINTETICO") continue;
+        const amount = Number(movement.amountMinor || 0);
+        if (movement.movementType === "ENTRADA") totals.cashInMinor += amount;
+        if (movement.movementType === "SALIDA" || movement.movementType === "RETIRADA") totals.cashOutMinor += amount;
+    }
+
+    totals.netSalesMinor = totals.grossSalesMinor - totals.totalRefundsMinor;
+    totals.totalCollectedMinor = totals.cashMinor + totals.cardMinor + totals.bizumMinor + totals.otherMinor;
+    totals.expectedCashMinor = totals.openingCashMinor + totals.cashMinor + totals.cashInMinor - totals.cashOutMinor;
+    totals.reconciliationOk = totals.totalCollectedMinor === totals.netSalesMinor;
+    totals.isSynthetic = true;
+    totals.realPayment = false;
+
+    return totals;
+}
