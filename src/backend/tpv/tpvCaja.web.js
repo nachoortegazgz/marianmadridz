@@ -41,7 +41,6 @@ export const obtenerSesionCajaQA = webMethod(
                 otherAmount: fromMinorUnits(summary.otherMinor),
                 totalOperations: summary.ticketCount,
                 openedAt: session.openedAt,
-                cashierMemberId: session.cashierMemberId,
                 environment: TPV_QA_RUNTIME_POLICY.ENVIRONMENT,
                 isSynthetic: true,
             },
