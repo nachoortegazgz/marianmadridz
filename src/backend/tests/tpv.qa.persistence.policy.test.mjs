@@ -70,6 +70,20 @@ test("QA refund lock allows only scoped compare-and-swap fields", () => {
     }), /DATA_ACCESS_ERROR/);
 });
 
+test("refund lock is mutable only through its scoped compare-and-swap policy", () => {
+    const collection = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
+    assert.throws(() => assertUpdateAllowed(collection, {
+        _id: "TPVQA_REFUND_LOCK_QA-SALE-TEST",
+        controlType: CONTROL_TYPE.TPV_QA_REFUND_LOCK,
+        status: "RELEASED",
+    }), /DATA_ACCESS_ERROR/);
+    assert.throws(() => assertRemoveAllowed(
+        collection,
+        "TPVQA_REFUND_LOCK_QA-SALE-TEST",
+        CONTROL_TYPE.TPV_QA_REFUND_LOCK
+    ), /DATA_ACCESS_ERROR/);
+});
+
 test("QA policy remains synthetic and client idempotency keys are bounded", () => {
     assert.equal(TPV_QA_RUNTIME_POLICY.ENABLED, true);
     assert.equal(TPV_QA_RUNTIME_POLICY.ENVIRONMENT, "TEST");
