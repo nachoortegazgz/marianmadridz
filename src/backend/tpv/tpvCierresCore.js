@@ -1,4 +1,4 @@
-import { TPV_QA_COLLECTIONS } from "backend/internalConfig";
+import { TPV_QA_COLLECTIONS, TPV_QA_RUNTIME_POLICY } from "backend/internalConfig";
 import {
     getCommittedQaSales,
     getQaCashMovements,
@@ -19,7 +19,7 @@ export async function buildQaSessionSummary(session) {
 
     const totals = {
         sessionId: session.sessionId,
-        currency: "EUR",
+        currency: TPV_QA_RUNTIME_POLICY.CURRENCY_CODE,
         ticketCount: sales.length,
         refundCount: refunds.length,
         grossSalesMinor: sales.reduce((sum, sale) => sum + Number(sale.totalMinor || 0), 0),
