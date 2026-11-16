@@ -4,7 +4,7 @@ import { readFile } from "node:fs/promises";
 import { Script } from "node:vm";
 
 const html = await readFile(new URL("../../../%23htmlTPV.txt", import.meta.url), "utf8");
-const script = html.match(/<script>([\\s\\S]*?)<\\/script>/)?.[1];
+const script = html.match(/<script>([\s\S]*?)<\/script>/)?.[1];
 
 test("TPV HTML QA script parses and wires persistent synthetic workflows", () => {
     assert.ok(script);
@@ -15,5 +15,5 @@ test("TPV HTML QA script parses and wires persistent synthetic workflows", () =>
     assert.match(html, /Guardar venta sintética en QA/);
     assert.match(html, /TPV_QA_\*/);
     assert.match(html, /Cerrar sesión QA/);
-    assert.doesNotMatch(html, /send\\("TICKET_X_PREVIEW"/);
+    assert.doesNotMatch(html, /send\("TICKET_X_PREVIEW"/);
 });
