@@ -100,3 +100,14 @@ Evidencia CI y documentación integrada:
 **Decisión de seguridad:** no se cambió ni desactivó automáticamente la automatización porque se desconoce el alcance de la tarea y podría ser un proceso deliberado del propietario. Hasta verificar el task ID, sus instrucciones e integraciones, clasificarla como `BLOCKED_UNKNOWN_AUTOMATION_SIDE_EFFECTS`; no ejecutar pruebas que puedan solaparse con su horario ni dar por aisladas las comunicaciones/acciones externas.
 
 **Acción necesaria:** inspeccionar en Wix Agent Maker la tarea `d56d7590-7eb7-4e4f-94ac-2ca9fa465fcf`, revisar instrucciones, permisos e integraciones conectadas, y decidir si se mantiene o se pausa la automatización. Repetir Get Automation después de cualquier cambio.
+
+
+## Addendum de estado actualizado — 2026-11-16 23:09 Europe/Madrid
+
+**Revalidación de estado:** la consulta filtrada por `configuration.status=ACTIVE` devuelve ahora 7 IDs y Get Automation confirma 7/7 ACTIVE. Todas son PREINSTALLED con `disableStatusChange=true`; dos tienen además `readonly=true`. La automatización personalizada de TPV, ID `961f911d-8386-4e20-843e-cdf4595c24e8`, fue consultada por Get Automation y está `INACTIVE`, revisión 4. Esta observación posterior supersede el addendum anterior que la encontró ACTIVE (revisión 3). No se ha ejecutado PATCH ni se ha cambiado su estado en esta sesión.
+
+La tarea IA vinculada (`d56d7590-7eb7-4e4f-94ac-2ca9fa465fcf`) sigue sin contenido recuperable por la API pública documentada consultada. Se inspeccionaron List Tools Providers y List App Skills para el sitio: ambos devolvieron listas vacías; no se encontró un canal de inspección de Agent Maker por App Tools. No se confunden este ID con CMS Background Tasks ni con CRM Tasks, que son recursos distintos. Mientras la automatización esté INACTIVE, su trigger programado no es elegible para nuevas ejecuciones; no se ha ejecutado ni probado la tarea.
+
+Las siete automatizaciones activas restantes son: tarjeta guardada (email transaccional), notificación de Agent Maker (email), notificación de Aria (notificación de plataforma), confirmación de miembro (email), confirmación de suscripción (email), aviso de límite de elementos CMS (email) y reset de contraseña (email). Los escenarios que puedan activar esos eventos siguen bloqueados. En particular, no iniciar altas de miembros, suscripciones, operaciones de tarjeta, reset de contraseñas ni cargas masivas CMS.
+
+**Estado actual:** 7 ACTIVE / 1 custom TPV INACTIVE entre los ocho IDs que se revalidaron previamente. Esta frase no representa un recuento exhaustivo de todas las automatizaciones del sitio; el último método utilizado fue consulta filtrada de ACTIVE y Get individual.
