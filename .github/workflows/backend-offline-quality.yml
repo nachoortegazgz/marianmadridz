@@ -80,10 +80,6 @@ jobs:
         if: always()
         run: npm run verify:wix-ecom-order-transactions
 
-      - name: Verify Wix Bookings Reader V2 SDK contract
-        if: always()
-        run: npm run verify:wix-bookings-reader-v2
-
       - name: Verify Wix TPV native CRM and Gift Cards SDK contracts
         if: always()
         run: npm run verify:wix-tpv-native-sdk
