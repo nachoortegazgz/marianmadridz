@@ -75,6 +75,9 @@ test("refund lock is mutable only through its scoped compare-and-swap policy", (
     assert.throws(() => assertUpdateAllowed(collection, {
         _id: "TPVQA_REFUND_LOCK_QA-SALE-TEST",
         controlType: CONTROL_TYPE.TPV_QA_REFUND_LOCK,
+        dedupeKey: "TPV_QA_REFUND:QA-SALE-TEST",
+        traceId: "test",
+        version: 0,
         status: "RELEASED",
     }), /DATA_ACCESS_ERROR/);
     assert.throws(() => assertRemoveAllowed(
