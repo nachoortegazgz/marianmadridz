@@ -233,9 +233,11 @@ test("TPV catalog reader uses native Bookings SDK and does not expose staff cont
     assert.doesNotMatch(catalog, /staff\.email|staff\.phone/);
 
     const giftCards = await source("tpv/tpvGiftCards.web.js");
-    assert.match(giftCards, /TPV_GIFT_CARD_LOOKUP_DISABLED_IN_QA/);
+    assert.match(giftCards, /giftVouchers\.getGiftCard/);
+    assert.match(giftCards, /auth\.elevate/);
     assert.match(giftCards, /requireCajero/);
-    assert.doesNotMatch(giftCards, /from ["']@wix\/(?:ecom|gift-vouchers)["']|giftVouchers\./);
+    assert.match(giftCards, /readOnly: true/);
+    assert.doesNotMatch(giftCards, /insertItem|updateItem|redeemGiftCard|console\.(?:log|info|warn|error)/);
     assert.doesNotMatch(giftCards, /console\.(?:log|info|warn|error)|wixData|\.insert\(|\.update\(|\.remove\(/);
 });
 
@@ -280,7 +282,7 @@ test("TPV page is wired to the shared HTML bridge and its versioned iframe proto
     assert.match(html, /m\.type==="CATALOG_STAFF_RES"/);
     assert.match(html, /GIFT_CARD_BALANCE_RES/);
     assert.match(html, /lookupGiftCard/);
-    assert.match(html, /Consultar saldo nativo · deshabilitado en QA/);
+    assert.match(html, /Consultar saldo nativo · solo lectura/);
     assert.match(html, /finalizeSynthetic/);
 
     const inlineScript = html.match(/<script>([\s\S]*?)<\/script>/)?.[1];
