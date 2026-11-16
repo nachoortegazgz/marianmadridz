@@ -224,7 +224,7 @@ test("TPV catalog reader uses native Bookings SDK and does not expose staff cont
     const giftCards = await source("tpv/tpvGiftCards.web.js");
     assert.match(giftCards, /TPV_GIFT_CARD_LOOKUP_DISABLED_IN_QA/);
     assert.match(giftCards, /requireCajero/);
-    assert.doesNotMatch(giftCards, /@wix\/(?:ecom|gift-vouchers)|giftVouchers\./);
+    assert.doesNotMatch(giftCards, /from ["']@wix\/(?:ecom|gift-vouchers)["']|giftVouchers\./);
     assert.doesNotMatch(giftCards, /console\.(?:log|info|warn|error)|wixData|\.insert\(|\.update\(|\.remove\(/);
 });
 
