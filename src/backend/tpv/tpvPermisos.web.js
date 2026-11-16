@@ -1,5 +1,5 @@
 import { Permissions, webMethod } from "wix-web-module";
-import { getMyStaffContext, requireAdmin, requireCajero } from "backend/security";
+import { getMyStaffContext, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { assertTpvQaEnabled } from "backend/tpv/tpvUtils";
 
