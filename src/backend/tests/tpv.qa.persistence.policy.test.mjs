@@ -19,6 +19,7 @@ import {
     toMinorUnits,
     fromMinorUnits,
     makeSyntheticPayload,
+    makeQaRefundLockId,
 } from "../tpv/tpvUtils.js";
 
 test("all TPV QA collections are insert-only and cannot be updated or removed", () => {
@@ -68,6 +69,14 @@ test("QA refund lock allows only scoped compare-and-swap fields", () => {
         version: { $eq: 0 },
         status: { $eq: "ACTIVE" },
     }), /DATA_ACCESS_ERROR/);
+});
+
+test("refund lock IDs are deterministic and respect Wix CMS _id length", () => {
+    const saleId = "QA-SALE-" + "x".repeat(100);
+    const first = makeQaRefundLockId(saleId);
+    assert.equal(first, makeQaRefundLockId(saleId));
+    assert.equal(first.length, 36);
+    assert.match(first, /^TPVQ[a-f0-9]{32}$/);
 });
 
 test("refund lock is mutable only through its scoped compare-and-swap policy", () => {
