@@ -83,6 +83,11 @@ function normalizePayments(pagos, totalMinor) {
     }
 
     let importePagadoMinor = 0;
+    let efectivoRecibidoMinor = 0;
+    let cambioEntregadoMinor = 0;
+    const paymentBreakdownMinor = Object.fromEntries(
+        PAYMENT_METHODS.map((method) => [method, 0])
+    );
     const normalized = pagos.map((pago) => {
         const medioPago = String(pago?.medioPago || "").trim().toUpperCase();
         if (!PAYMENT_METHODS.includes(medioPago)) {
@@ -104,6 +109,11 @@ function normalizePayments(pagos, totalMinor) {
             throw new Error("TPV_INVALID_APPLIED_PAYMENT_AMOUNT");
         }
         importePagadoMinor += importeAplicadoMinor;
+        paymentBreakdownMinor[medioPago] += importeAplicadoMinor;
+        if (medioPago === "EFECTIVO") {
+            efectivoRecibidoMinor += importeMinor;
+            cambioEntregadoMinor += importeCambioMinor;
+        }
         return Object.freeze({
             medioPago,
             importe: importeMinor / 100,
@@ -119,6 +129,9 @@ function normalizePayments(pagos, totalMinor) {
     return {
         pagos: Object.freeze(normalized),
         importePagadoMinor,
+        efectivoRecibidoMinor,
+        cambioEntregadoMinor,
+        paymentBreakdownMinor: Object.freeze(paymentBreakdownMinor),
     };
 }
 
@@ -154,11 +167,22 @@ export function validateSaleDraft(input = {}) {
 
     const paymentResult = normalizePayments(input.pagos, totalMinor);
     const importePendienteMinor = totalMinor - paymentResult.importePagadoMinor;
+    const paymentBreakdown = Object.freeze({
+        EFECTIVO: paymentResult.paymentBreakdownMinor.EFECTIVO / 100,
+        TARJETA: paymentResult.paymentBreakdownMinor.TARJETA / 100,
+        BIZUM: paymentResult.paymentBreakdownMinor.BIZUM / 100,
+        OTROS: paymentResult.paymentBreakdownMinor.OTROS / 100,
+    });
 
     return Object.freeze({
         currency: "EUR",
         lineas,
         pagos: paymentResult.pagos,
+        desgloseMedios: paymentBreakdown,
+        efectivoRecibido: paymentResult.efectivoRecibidoMinor / 100,
+        cambioEntregado: paymentResult.cambioEntregadoMinor / 100,
+        efectivoAplicado: paymentResult.paymentBreakdownMinor.EFECTIVO / 100,
+        totalCobrado: paymentResult.importePagadoMinor / 100,
         subtotalNeto: subtotalMinor / 100,
         impuestosTotal: taxMinor / 100,
         totalVenta: totalMinor / 100,
