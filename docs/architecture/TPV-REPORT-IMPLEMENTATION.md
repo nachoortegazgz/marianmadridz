@@ -160,15 +160,14 @@ Las ejecuciones intermedias detectaron aserciones de pruebas desactualizadas y u
 
 ## 10. Sincronización y despliegue
 
-Los módulos y la interfaz TPV están versionados en `main` tras PR #397, #398 y #399. No se ha sincronizado el page code, HTML Component ni módulos backend con el Editor clásico. Wix confirma que el sitio está Published y que la página TPV existe en `/blank`, pero no se ha verificado que el runtime contenga el código de GitHub.
+Los módulos y la interfaz TPV están versionados en `main` tras PR #397, #398 y #399. `wix.config.json` enlaza el repositorio con el Site ID y el setup oficial confirma soporte para Wix Editor (Classic); el merge de PR #399 debe sincronizar el código con el Editor, pendiente de read-back. No se ha ejecutado Preview ni Publish. La versión publicada no se considera actualizada.
 
-Antes de sincronizar:
-1. verificar el último CI y revisar el diff;
-2. aplicar manualmente `src/pages/TPV.yl5th.js`, `src/public/tpvPageController.js`, los módulos backend y `#htmlTPV.txt` en Wix Classic;
-3. probar Preview con roles y casos negativos;
-4. confirmar pasarela desconectada;
-5. verificar que las operaciones de QA solo afectan a `TPV_QA_*`;
-6. mantener desactivadas las escrituras fiscales/operativas;
-7. obtener autorización expresa antes de merge o publicación.
+Siguiente fase segura:
+1. confirmar read-back del commit en GitHub Integration del Editor;
+2. configurar `WIX_CLI_API_KEY` con permiso `Wix CLI for Sites - Git Integration`;
+3. ejecutar `.github/workflows/wix-tpv-preview.yml` para crear Preview (sin publicar);
+4. probar únicamente carga/lecturas y permisos; no ejecutar acciones que escriban;
+5. confirmar pasarela desconectada, neutralizar automatizaciones y revalidar permisos CMS;
+6. mantener `wix publish` bloqueado hasta completar E2E y revisión de riesgos.
 
 Studio Two no ha sido consultado ni modificado.
