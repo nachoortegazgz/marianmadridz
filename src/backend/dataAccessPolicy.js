@@ -98,6 +98,19 @@ export function assertInsertAllowed(collection, item) {
     if (!DATA_ACCESS_WRITE_POLICY.insertCollections.includes(collection) || !_isRecord(item)) {
         throw _policyError("CMS_INSERT_COLLECTION_DENIED");
     }
+    if (Object.values(TPV_QA_COLLECTIONS).includes(collection)) {
+        const payload = item.payload;
+        if (
+            typeof item.idempotencyKey !== "string" ||
+            item.idempotencyKey.trim().length < 8 ||
+            !_isRecord(payload) ||
+            payload.isSynthetic !== true ||
+            payload.realPayment !== false ||
+            payload.externalSideEffects !== false
+        ) {
+            throw _policyError("CMS_TPV_QA_SYNTHETIC_PAYLOAD_REQUIRED");
+        }
+    }
     if (collection === BUSINESS_COLLECTIONS.CONTROL_OPERATIVO) {
         _assertControlRecord(item, Object.values(CONTROL_TYPE), "CMS_INSERT_CONTROL_TYPE_INVALID", false);
     }
