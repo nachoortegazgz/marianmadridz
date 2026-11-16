@@ -2,7 +2,7 @@ import { Permissions, webMethod } from "wix-web-module";
 import { getMyStaffContext, requireAdmin, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { TPV_QA_COLLECTIONS } from "backend/internalConfig";
-import { insertQaEvent, latestOpenQaSession } from "backend/tpv/tpvQaRepository";
+import { insertQaEvent, latestOpenQaSession, withQaSessionLock } from "backend/tpv/tpvQaRepository";
 import { assertTpvQaEnabled, fromMinorUnits, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
 
 export const registrarMovimientoCajaQA = webMethod(
@@ -18,6 +18,12 @@ export const registrarMovimientoCajaQA = webMethod(
             if (movementType !== "ENTRADA") await requireAdmin(traceId);
             const session = await latestOpenQaSession();
             if (!session) throw new Error("TPV_QA_SESSION_NOT_OPEN");
+
+            return await withQaSessionLock(session.sessionId, traceId, async () => {
+                const activeSession = await latestOpenQaSession();
+                if (!activeSession || activeSession.sessionId !== session.sessionId) {
+                    throw new Error("TPV_QA_SESSION_CLOSED");
+                }
             const amountMinor = toMinorUnits(input.amount, "CASH_MOVEMENT");
             if (amountMinor <= 0) throw new Error("TPV_QA_CASH_MOVEMENT_AMOUNT_INVALID");
             const reason = String(input.reason || "").trim();
@@ -50,6 +56,7 @@ export const registrarMovimientoCajaQA = webMethod(
                 payload: { amountMinor, reason, traceId },
             });
             return { status: "SUCCESS", data: { movementId: item._id, movementType, amount: fromMinorUnits(amountMinor), replayed, persisted: true, isSynthetic: true, realPayment: false }, error: null, traceId };
+            });
         } catch (error) {
             return { status: "ERROR", data: null, error: { code: String(error?.message || "TPV_QA_CASH_MOVEMENT_FAILED") }, persisted, recoverable: persisted, isSynthetic: true, realPayment: false, traceId };
         }
