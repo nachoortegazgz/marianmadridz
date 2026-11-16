@@ -87,8 +87,29 @@ export const cerrarTicketZQA = webMethod(
         await requireAdmin(traceId);
         assertTpvQaEnabled();
         try {
-            const session = await latestOpenQaSession();
+            let session = await latestOpenQaSession();
+            if (!session && input.sessionId) {
+                const priorClose = await queryQaRecords(TPV_QA_COLLECTIONS.TICKET_Z, wql.eq("sessionId", String(input.sessionId)));
+                if (priorClose.length) {
+                    const prior = priorClose[0];
+                    return {
+                        status: "SUCCESS",
+                        data: {
+                            reportId: prior.reportId,
+                            sessionId: prior.sessionId,
+                            closed: prior.closed === true,
+                            replayed: true,
+                            isSynthetic: true,
+                            realPayment: false,
+                            fiscalLedgerWritten: false,
+                        },
+                        error: null,
+                        traceId,
+                    };
+                }
+            }
             if (!session) throw new Error("TPV_QA_SESSION_NOT_OPEN");
+            if (input.sessionId && input.sessionId !== session.sessionId) throw new Error("TPV_QA_SESSION_MISMATCH");
             const countedMinor = toMinorUnits(input.countedCash, "COUNTED_CASH");
             const totals = await buildQaSessionSummary(session);
             const differenceMinor = countedMinor - totals.expectedCashMinor;
