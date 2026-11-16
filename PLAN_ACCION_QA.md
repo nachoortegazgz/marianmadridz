@@ -293,3 +293,10 @@ Evidencia: `docs/audits/2026-11-16-tpv-qa-cms-readonly-verification.md`.
 ### Addendum de cuota CMS y destino de persistencia — 2026-11-16 23:09 Europe/Madrid
 
 Get Site Data Usage (`consistentRead=true`) devuelve límite 4.000 elementos por entorno, LIVE 201/4.000 (5,03 %), SANDBOX 0/4.000; almacenamiento LIVE 265.822 bytes de 10 GiB y SANDBOX 0. Las nueve colecciones TPV QA están vacías en ambos entornos. Wix documenta que el Editor/Preview utiliza SANDBOX, separado de LIVE. No hay proximidad al límite de elementos; se levanta el bloqueo de cuota para una prueba pequeña en Preview SANDBOX, no para escrituras directas REST/LIVE ni cargas masivas. Evidencia y condiciones en `docs/audits/2026-11-16-tpv-qa-cms-readonly-verification.md`.
+
+
+## Evidencia adicional — identidad de sitio en backend Wix (2026-11-16)
+
+La búsqueda en documentación oficial de Wix no ha identificado una API soportada de Velo/backend que devuelva el `metaSiteId` o `siteId` del runtime que está ejecutando un WebMethod. `wix-site-backend` expone datos de General Info (nombre, teléfono, zona horaria, etc.), no una identidad GUID; `ricosSiteContext.getSiteUrl()` devuelve únicamente `baseUrl` y `published` y figura como Developer Preview. El Dynamic Site Context permite consultar sitios del usuario autenticado filtrando por un `siteId` suministrado, no acredita por sí mismo que ese ID sea el runtime caller. Por tanto, no usar dominio, nombre, URL, ID enviado por frontend ni un ID hard-coded como prueba de identidad de ejecución. Mantener fail-closed hasta disponer de una garantía de binding documentada y probada en Wix Editor/Preview.
+
+Fuentes oficiales consultadas: [Velo wix-site-backend](https://dev.wix.com/docs/velo/apis/wix-site-backend/introduction), [Get Site URL](https://dev.wix.com/docs/api-reference/assets/rich-content/site-context-v1/get-site-url), [Dynamic Site Context](https://dev.wix.com/docs/api-reference/tools/dynamic-site-context/get-dynamic-context).
