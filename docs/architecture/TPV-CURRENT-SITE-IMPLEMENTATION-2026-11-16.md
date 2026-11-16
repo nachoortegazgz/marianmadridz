@@ -6,13 +6,13 @@
 - Site ID: `188bed94-177c-4bc9-a9f0-35080d874f3e`.
 - Dominio: `https://www.marianmadrid.es/`.
 - Editor: Wix Classic Editor (GetSiteContext devuelve `Editor`); Velo habilitado.
-- Estado actual Wix: `Published`, confirmado por GetSiteContext y por `published: true` en List Static Pages.
+- Estado actual Wix: `Draft` (no publicado), confirmado por GetSiteContext el 2026-11-16 23:09 Europe/Madrid. La publicación anterior es un estado histórico.
 - Página TPV: ID `yl5th`, título `TPV`, ruta `/blank`.
 - Page code versionado: `src/pages/TPV.yl5th.js`; HTML Component: `#htmlTPV`.
 - Studio Two queda fuera de alcance.
 - SSOT QA: no hay actividad real declarada; los registros de prueba deben ser sintéticos; pasarela de pagos desconectada declarada por el propietario.
 
-El repositorio `nachoortegazgz/marianmadridz` contiene `wix.config.json` con el Site ID exacto y `uiVersion: 15941`, además de scripts `wix dev`/`wix` y la estructura Velo. Está configurado para Git Integration del Editor clásico. El merge de PR #399 a `main` debe sincronizar el código con el Editor; el read-back en el panel aún está pendiente. La versión publicada sigue sin validar.
+El repositorio `nachoortegazgz/marianmadridz` contiene `wix.config.json` con el Site ID exacto y `uiVersion: 15941`, además de scripts `wix dev`/`wix` y la estructura Velo. Está configurado para Git Integration del Editor clásico. La sincronización efectiva del HEAD de `main` con el Editor no se ha verificado mediante read-back en el panel. No hay versión pública activa; Preview no generado y runtime no validado.
 
 ## 2. Regla de integridad
 
@@ -36,7 +36,7 @@ Estos valores son evidencia histórica, no una lectura nueva de permisos a 2026-
 
 ## 4. Almacenamiento QA
 
-La auditoría histórica verificó nueve colecciones `TPV_QA_*`, nueve índices únicos `idempotencyKey` en estado `ACTIVE` y cero elementos en cada colección. No se han insertado registros en CMS durante esta intervención. La verificación de conteos/índices debe repetirse antes de runtime E2E.
+Revalidación read-only 2026-11-16 23:09: las nueve colecciones `TPV_QA_*` existen; sus permisos son ADMIN para insert/update/remove/read; cada una tiene índice único `idempotencyKey` en estado `ACTIVE`; los nueve recuentos son cero. `ControlOperativo` contiene 58 registros, pero no hay locks `TPV_QA_SESSION_LOCK` ni `TPV_QA_REFUND_LOCK`. No se han insertado registros.
 
 ## 5. Arquitectura versionada
 
@@ -84,20 +84,25 @@ PR #399 de hardening sintético está integrada en main y superó CI: 74 suites 
 ## 8. Bloqueos runtime y despliegue
 
 - El repositorio está enlazado al Site ID mediante `wix.config.json`; el commit de PR #399 debe estar sincronizado con el Editor, pero no se ha verificado el read-back.
-- No se ha ejecutado `wix preview` ni `wix publish`; la producción no se considera actualizada.
+- No se ha ejecutado `wix preview` ni `wix publish`; el sitio está Draft y no hay versión publicada.
 - No se han ejecutado escrituras de prueba en CMS durante esta intervención.
 - No se ha probado la concurrencia/idempotencia contra CMS real.
 - No se ha validado Preview con ADMIN, GESTION, ESTILISTA, miembro ordinario y visitante.
-- Revalidación Wix Automations V2 del 2026-11-16: 8 automatizaciones ACTIVE, todas confirmadas por Get Automation. Siete son PREINSTALLED y tienen `disableStatusChange=true`; una adicional de origen APPLICATION (`Creación de TPV física personalizada`) se ejecuta diariamente a las 01:45 y delega a `Delegate to AI Custom Agent` (task ID `d56d7590-7eb7-4e4f-94ac-2ca9fa465fcf`). No se conoce el contenido de la tarea ni sus integraciones; no se ha modificado. Runtime/E2E permanece bloqueado.
-- La desconexión de la pasarela es una declaración del propietario; debe confirmarse en Wix Dashboard antes de cualquier prueba que pueda producir efectos financieros.
+- Revalidación posterior: 7 automatizaciones PREINSTALLED ACTIVE, todas con `disableStatusChange=true`; dos además readonly. La automatización custom TPV (ID `961f911d-8386-4e20-843e-cdf4595c24e8`) está INACTIVE, revisión 4. Su task IA `d56d7590-7eb7-4e4f-94ac-2ca9fa465fcf` sigue sin inspección; no se ha ejecutado. Las siete preinstaladas conservan triggers de email/notificación y siguen bloqueando E2E que pueda generarlos.
+- El propietario declara que la pasarela está desconectada; no se ha verificado independientemente en Wix Dashboard. El estado del sitio Draft sí está confirmado por GetSiteContext.
 
-La vía soportada es [Git Integration & Wix CLI for Sites](https://dev.wix.com/docs/develop-websites/articles/workspace-tools/developer-tools/git-integration-wix-cli-for-sites/about-git-integration-wix-cli-for-sites), que incluye Wix Editor (Classic). El repositorio coincide con el Site ID y contiene la configuración CLI. El workflow `.github/workflows/wix-tpv-preview.yml` está preparado para generar Preview; la última ejecución lo omitió porque falta el secreto `CLI_API_KEY`. Para usarlo hay que crear ese secreto con permiso `Wix CLI for Sites - Git Integration`. La ejecución local no está disponible en esta sesión: el contenedor tiene Node 22.16 y no tiene el binario `wix`; Wix requiere Node 24.22.1 o superior. No se ha ejecutado Preview ni Publish.
+La vía soportada es [Git Integration & Wix CLI for Sites](https://dev.wix.com/docs/develop-websites/articles/workspace-tools/developer-tools/git-integration-wix-cli-for-sites/about-git-integration-wix-cli-for-sites), que incluye Wix Editor (Classic). El repositorio coincide con el Site ID y contiene la configuración CLI. El workflow `.github/workflows/wix-tpv-preview.yml` está preparado para generar Preview; la ejecución anterior al cambio de nombre no generó Preview; el estado actual de existencia del secreto `CLI_API_KEY` no puede leerse desde la integración. Para usarlo hay que crear ese secreto con permiso `Wix CLI for Sites - Git Integration`. La ejecución local no está disponible en esta sesión: el contenedor tiene Node 22.16 y no tiene el binario `wix`; Wix requiere Node 24.22.1 o superior. No se ha ejecutado Preview ni Publish.
 
 ## 9. Próximos pasos seguros
 
-1. Confirmar en GitHub Integration del Editor que `main` está sincronizado hasta el merge de PR #399.
+1. Confirmar en GitHub Integration del Editor que `main` está sincronizado hasta el commit vigente.
 2. Configurar el secreto `CLI_API_KEY` con permiso `Wix CLI for Sites - Git Integration`.
 3. Ejecutar el workflow `Wix TPV Preview (non-production)` y revisar la URL de Preview.
 4. Probar carga y lecturas con roles; no ejecutar apertura de caja, ventas, movimientos, devoluciones ni cierres en Preview.
-5. Revalidar colecciones/índices/permisos CMS y neutralizar automatizaciones de comunicación.
+5. Usar Wix Preview/SANDBOX para una prueba sintética limitada de persistencia tras validar que el runtime está en SANDBOX; evitar los triggers de las siete automatizaciones preinstaladas y no escribir por REST en LIVE.
 6. No ejecutar `wix publish` hasta cerrar los bloqueos y completar E2E controlado.
+
+
+## Addendum de cuota y aislamiento de persistencia — 2026-11-16
+
+Get Site Data Usage (`consistentRead=true`) confirma 4.000 elementos por entorno, 201 elementos en LIVE (5,03 %) y 0 en SANDBOX; almacenamiento LIVE 265.822 bytes / 10 GiB y SANDBOX 0. Las nueve colecciones TPV QA están vacías en ambos entornos. Wix documenta que Preview usa SANDBOX, separado de LIVE; el límite de elementos es por entorno y el almacenamiento se comparte. Por tanto, tras configurar `CLI_API_KEY` y generar Preview, la prueba de persistencia puede realizarse en SANDBOX con fixtures limitados, sin tocar LIVE. La pasarela sigue declarada desconectada por el propietario; no se invocará ningún proveedor de pago.

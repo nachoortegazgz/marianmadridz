@@ -66,3 +66,21 @@ La consulta Wix Automations V2 filtrada por `configuration.status = ACTIVE` y la
 El contenido de esa tarea IA y sus integraciones no son visibles en la configuración consultada. No se modificó ni desactivó por desconocerse su finalidad. Queda como riesgo abierto `BLOCKED_UNKNOWN_AUTOMATION_SIDE_EFFECTS` hasta inspeccionar tarea e integraciones en Agent Maker. Por tanto, la declaración de comunicaciones y efectos externos desactivados sigue sin acreditación técnica suficiente y Runtime/E2E permanece bloqueado.
 
 Detalle y evidencia: `docs/audits/2026-11-14-qa-automations-isolation.md` (addendum 2026-11-16).
+
+
+## Revisión operativa y CMS read-only — 2026-11-16 23:09 Europe/Madrid
+
+**Estado del sitio:** GetSiteContext confirma el Site ID canónico, Wix Editor (Classic; tipo devuelto `Editor`), Velo habilitado y estado `Draft`. El propietario confirma que el sitio está despublicado y que la pasarela de pagos está desconectada. El estado Draft corrobora que no está publicado; la desconexión del proveedor de pagos continúa siendo declaración del propietario y no se ha inspeccionado independientemente en el Dashboard.
+
+**Automatizaciones:** una nueva consulta Wix Automations V2 filtrada por `configuration.status=ACTIVE`, seguida de Get Automation individual, confirma 7/7 activas, todas PREINSTALLED y con `disableStatusChange=true`; dos también tienen `readonly=true`. La automatización de TPV personalizada (ID `961f911d-8386-4e20-843e-cdf4595c24e8`) está ahora `INACTIVE`, revisión 4, confirmada mediante Get Automation independiente. No se modificó desde esta sesión. Su tarea IA `d56d7590-7eb7-4e4f-94ac-2ca9fa465fcf` sigue sin inspección; al estar la automatización INACTIVE no es elegible para nuevos disparos de su trigger programado. Las siete preinstaladas conservan sus locks y sus posibles comunicaciones; evitar eventos de tarjeta guardada, notificación de Agent Maker/Aria, alta/confirmación de miembros, suscripción, aviso de límite CMS y reset de contraseña.
+
+**CMS TPV:** las nueve colecciones `TPV_QA_*` existen. Se verificaron sus campos y permisos: `insert/update/remove/read=ADMIN` en todas. Las nueve tienen un índice único sobre `idempotencyKey` en estado `ACTIVE`. Los nueve recuentos de elementos son cero. En `ControlOperativo` hay 58 registros, pero no existen registros `TPV_QA_SESSION_LOCK` ni `TPV_QA_REFUND_LOCK`. La capa `backend/dataAccess.js` usa `auth.elevate`; la política y los tests del repositorio limitan las colecciones QA a inserciones y reservan los cambios CAS para locks tipados. No se cambió ningún permiso, índice, colección ni elemento CMS.
+
+**Resultado:** lectura estrictamente read-only. No se insertaron ventas, sesiones, pagos simulados, devoluciones, movimientos ni cierres. El Preview de Wix no se ha generado. La cuota CMS ya está verificada; la siguiente fase será Preview con carga, autorización y lecturas, seguida de una prueba de persistencia sintética limitada en SANDBOX tras confirmar el contexto Preview. No se escribirán datos por REST directamente en LIVE ni se harán cargas masivas.
+
+Evidencia ampliada: `docs/audits/2026-11-16-tpv-qa-cms-readonly-verification.md`.
+
+
+### Cuotas CMS y separación LIVE/SANDBOX — 2026-11-16 23:09 Europe/Madrid
+
+Get Site Data Usage con `consistentRead=true` confirma: límite de almacenamiento 10 GiB; límite de elementos 4.000 por entorno; 21 colecciones de un máximo de 1.000; LIVE 201 elementos / 265.822 bytes; SANDBOX 0 elementos / 0 bytes. Las nueve colecciones `TPV_QA_*` tienen 0 elementos tanto en LIVE como en SANDBOX. LIVE representa aproximadamente el 5,03 % del límite de elementos, por lo que no hay proximidad al umbral de cuota. Wix documenta que SANDBOX es la copia separada usada por el Editor y Preview, que el límite de elementos es independiente por entorno y que el almacenamiento se comparte. En consecuencia, una prueba de persistencia TPV controlada deberá ejecutarse desde Wix Preview para escribir solo en SANDBOX; no insertar directamente por REST en LIVE. No se harán cargas masivas.
