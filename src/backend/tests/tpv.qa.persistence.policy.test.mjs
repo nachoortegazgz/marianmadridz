@@ -23,7 +23,17 @@ import {
 
 test("all TPV QA collections are insert-only and cannot be updated or removed", () => {
     for (const collection of Object.values(TPV_QA_COLLECTIONS)) {
-        assert.doesNotThrow(() => assertInsertAllowed(collection, { payload: { isSynthetic: true } }));
+        assert.doesNotThrow(() => assertInsertAllowed(collection, {
+            idempotencyKey: "qa-idempotency-key-0001",
+            payload: makeSyntheticPayload({ sample: true }),
+        }));
+        assert.throws(() => assertInsertAllowed(collection, {
+            idempotencyKey: "qa-idempotency-key-0001",
+            payload: { isSynthetic: true },
+        }), /DATA_ACCESS_ERROR/);
+        assert.throws(() => assertInsertAllowed(collection, {
+            payload: makeSyntheticPayload({ sample: true }),
+        }), /DATA_ACCESS_ERROR/);
         assert.throws(() => assertUpdateAllowed(collection, { _id: "qa-item" }), /DATA_ACCESS_ERROR/);
         assert.throws(() => assertRemoveAllowed(collection, "qa-item"), /DATA_ACCESS_ERROR/);
     }
