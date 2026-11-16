@@ -79,7 +79,7 @@ Se mantienen solo lecturas de catálogo de servicios Bookings y productos/varian
 
 PR #397, PR #398 y PR #399 están fusionadas en `main`. CI de PR #399 sobre HEAD `db2628965a28572d7e9339a8b268bd4e87fe708c`: 74 suites / 670 pruebas offline, 0 fallos; Layer 1 (28 suites / 331 pruebas), Layer 2 (19 suites / 255 pruebas), SDK contracts, ESLint y secret scanning correctos. La PR #398 tuvo una ejecución de rama fallida por aserciones desalineadas; el CI posterior pasó.
 
-La rama de hardening sintético todavía necesita CI propio y revisión del diff. Ninguna prueba offline equivale a validación runtime Wix.
+PR #399 de hardening sintético está integrada en main y superó CI: 74 suites / 670 pruebas offline, 0 fallos; Layer 1/2, SDK contracts, ESLint y secret scanning correctos. Ninguna prueba offline equivale a validación runtime Wix.
 
 ## 8. Bloqueos runtime y despliegue
 
