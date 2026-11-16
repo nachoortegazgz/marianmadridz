@@ -138,7 +138,7 @@ Antes de activar escrituras o publicar:
 1. Aplicar `src/pages/TPV.yl5th.js` y el contenido de `#htmlTPV.txt` en la página Wix `yl5th`; confirmar que el componente real se llama `#htmlTPV`.
 2. Probar el handshake HTML ↔ Velo con cajero autorizado y miembro no autorizado.
 3. Probar Bookings, Stores Catalog V3 y Gift Cards en runtime; verificar scopes.
-4. Cerrar lectura pública de `CajaActual` y `MovimientosCaja), probando anónimo, miembro ordinario y cajero.
+4. Cerrar lectura pública de `CajaActual` y `MovimientosCaja`, probando anónimo, miembro ordinario y cajero.
 5. Aprobar contratos de las nueve entidades TPV separadas y su relación con el ledger fiscal.
 6. Diseñar idempotencia, concurrencia, secuencias, compensaciones y autorizaciones.
 7. Habilitar por separado ventas, pagos, reembolsos, caja, X/Z y facturas, con pruebas de integración, reversión y autorización expresa.
