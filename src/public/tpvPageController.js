@@ -1,20 +1,31 @@
 /**
  * public/tpvPageController.js
- * Authenticated read bridge for the TPV HTML Component.
- *
- * Commercial drafts stay in the iframe. Backend calls are limited to
- * authorized catalog reads, cashier state and server-side draft validation.
- * No payment, order, booking, ledger, cash-session or fiscal writer is exposed.
+ * Versioned HTML bridge for the isolated, synthetic TPV QA workflow.
+ * No operational ledger, Wix payment gateway, fiscal API or customer notification is called.
  */
-import { obtenerCajaActual } from "backend/tpv/tpvCaja.web.js";
+import {
+    obtenerSesionCajaQA,
+    abrirCajaQA,
+    registrarArqueoParcialQA,
+} from "backend/tpv/tpvCaja.web.js";
+import { registrarMovimientoCajaQA } from "backend/tpv/tpvMovimientos.web.js";
+import { registrarVentaQA, validarVentaBorrador } from "backend/tpv/tpvVentas.web.js";
+import { validarDesglosePagosQA } from "backend/tpv/tpvPagos.web.js";
+import { solicitarDevolucionQA } from "backend/tpv/tpvDevoluciones.web.js";
+import {
+    obtenerResumenSesionQA,
+    generarTicketXQA,
+    cerrarTicketZQA,
+} from "backend/tpv/tpvCierres.web.js";
+import { consultarAuditoriaTPVQA } from "backend/tpv/tpvAuditoria.web.js";
+import { obtenerPermisosTPVQA } from "backend/tpv/tpvPermisos.web.js";
+import { obtenerConfiguracionTPVQA } from "backend/tpv/tpvUtils.web.js";
 import {
     obtenerServicios,
     obtenerProfesionales,
     obtenerProductos,
     obtenerVariantesProducto,
 } from "backend/tpv/tpvCatalogo.web.js";
-import { validarVentaBorrador } from "backend/tpv/tpvVentas.web.js";
-import { previsualizarTicketX } from "backend/tpv/tpvReportes.web.js";
 import { consultarTarjetaRegalo } from "backend/tpv/tpvGiftCards.web.js";
 import { createWidgetBridge, MESSAGE_TYPES } from "public/widgetBridge";
 import { makeTraceId } from "public/mmUtils";
@@ -28,17 +39,23 @@ const TPV_ALLOWED_MESSAGES = Object.freeze([
     "CATALOG_PRODUCTS",
     "PRODUCT_VARIANTS",
     "VALIDATE_SALE_DRAFT",
-    "TICKET_X_PREVIEW",
     "GIFT_CARD_BALANCE",
+    "QA_CONFIG",
+    "QA_PERMISSIONS",
+    "QA_SESSION_OPEN",
+    "QA_PARTIAL_COUNT",
+    "QA_CASH_MOVEMENT",
+    "QA_PAYMENT_VALIDATE",
+    "QA_SALE_REGISTER",
+    "QA_REFUND",
+    "QA_SESSION_SUMMARY",
+    "QA_TICKET_X",
+    "QA_TICKET_Z",
+    "QA_AUDIT_LIST",
 ]);
 
 function errorResult(code, message, traceId) {
-    return {
-        status: "ERROR",
-        data: null,
-        error: { code, message },
-        traceId,
-    };
+    return { status: "ERROR", data: null, error: { code, message }, traceId, persisted: false, isSynthetic: true, realPayment: false };
 }
 
 async function safeCall(operation, code, message, traceId) {
@@ -66,135 +83,101 @@ export function initializeTpvPage(widgetElement) {
 
         onContextReady: async () => ({
             component: "htmlTPV",
-            mode: "READ_ONLY_QA",
+            mode: "PERSISTENT_SYNTHETIC_QA",
             currencyCode: "EUR",
             timeZone: "Europe/Madrid",
             capabilities: {
-                cashierState: "READ_ONLY",
+                cashierState: "QA_COLLECTIONS_ONLY",
                 bookingsServices: "READ_ONLY",
                 bookingsStaff: "READ_ONLY",
                 storesProducts: "READ_ONLY",
                 storesVariants: "READ_ONLY",
-                saleDraftValidation: "BACKEND_VALIDATION_NO_PERSISTENCE",
-                suspendedTickets: "BROWSER_SESSION_ONLY",
-                paymentReconciliation: "BROWSER_ONLY",
-                refunds: "DRAFT_ONLY",
+                saleDraftValidation: "BACKEND",
+                syntheticSales: "TPV_QA_COLLECTIONS_ONLY",
+                cashMovements: "TPV_QA_COLLECTIONS_ONLY",
+                refunds: "TPV_QA_COLLECTIONS_ONLY",
+                ticketX: "QA_REPORT",
+                ticketZ: "QA_SESSION_CLOSE_ONLY",
                 giftCards: "READ_ONLY",
-                payments: "DISABLED",
+                payments: "SIMULATED_NO_GATEWAY",
                 orderMutations: "DISABLED",
                 bookingMutations: "DISABLED",
-                cashSessionMutations: "DISABLED",
+                operationalCashWrites: "DISABLED",
                 fiscalLedgerWrites: "DISABLED",
-                ticketZClosing: "DISABLED",
+                customerNotifications: "DISABLED",
+                physicalHardware: "DISABLED",
             },
         }),
 
         onWidgetMessage: async (message, reply) => {
             const type = String(message?.type || "").trim().toUpperCase();
             const payload = message?.payload || {};
+            const respond = async (responseType, operation, code, text) => {
+                const result = await safeCall(operation, code, text, traceId);
+                reply(responseType, result, message);
+            };
 
-            if (type === "CASHIER_STATE") {
-                const result = await safeCall(
-                    () => obtenerCajaActual(),
-                    "CASHIER_STATE_FAILED",
-                    "No se pudo consultar la caja.",
-                    traceId
-                );
-                reply("CASHIER_STATE_RES", result, message);
+            switch (type) {
+            case "CASHIER_STATE":
+                await respond("CASHIER_STATE_RES", () => obtenerSesionCajaQA(), "TPV_QA_SESSION_READ_FAILED", "No se pudo consultar la sesion QA.");
                 return;
-            }
-
-            if (type === "CATALOG_SERVICES") {
-                const result = await safeCall(
-                    () => obtenerServicios({ limit: 100, offset: 0 }),
-                    "TPV_SERVICES_READ_FAILED",
-                    "No se pudieron consultar los servicios.",
-                    traceId
-                );
-                reply("CATALOG_SERVICES_RES", result, message);
+            case "CATALOG_SERVICES":
+                await respond("CATALOG_SERVICES_RES", () => obtenerServicios({ limit: 100, offset: 0 }), "TPV_SERVICES_READ_FAILED", "No se pudieron consultar los servicios.");
                 return;
-            }
-
-            if (type === "CATALOG_STAFF") {
-                const result = await safeCall(
-                    () => obtenerProfesionales({ limit: 100 }),
-                    "TPV_STAFF_READ_FAILED",
-                    "No se pudieron consultar los profesionales.",
-                    traceId
-                );
-                reply("CATALOG_STAFF_RES", result, message);
+            case "CATALOG_STAFF":
+                await respond("CATALOG_STAFF_RES", () => obtenerProfesionales({ limit: 100 }), "TPV_STAFF_READ_FAILED", "No se pudieron consultar los profesionales.");
                 return;
-            }
-
-            if (type === "CATALOG_PRODUCTS") {
-                const result = await safeCall(
-                    () => obtenerProductos({
-                        limit: 100,
-                        cursor: payload.cursor || null,
-                    }),
-                    "TPV_STORES_PRODUCTS_READ_FAILED",
-                    "No se pudieron consultar los productos.",
-                    traceId
-                );
-                reply("CATALOG_PRODUCTS_RES", result, message);
+            case "CATALOG_PRODUCTS":
+                await respond("CATALOG_PRODUCTS_RES", () => obtenerProductos({ limit: 100, cursor: payload.cursor || null }), "TPV_STORES_PRODUCTS_READ_FAILED", "No se pudieron consultar los productos.");
                 return;
-            }
-
-            if (type === "PRODUCT_VARIANTS") {
-                const result = await safeCall(
-                    () => obtenerVariantesProducto({
-                        productId: payload.productId,
-                    }),
-                    "TPV_PRODUCT_VARIANTS_READ_FAILED",
-                    "No se pudieron consultar las variantes.",
-                    traceId
-                );
-                reply("PRODUCT_VARIANTS_RES", result, message);
+            case "PRODUCT_VARIANTS":
+                await respond("PRODUCT_VARIANTS_RES", () => obtenerVariantesProducto({ productId: payload.productId }), "TPV_PRODUCT_VARIANTS_READ_FAILED", "No se pudieron consultar las variantes.");
                 return;
-            }
-
-            if (type === "VALIDATE_SALE_DRAFT") {
-                const result = await safeCall(
-                    () => validarVentaBorrador(payload.sale || {}),
-                    "TPV_DRAFT_VALIDATION_FAILED",
-                    "No se pudo validar el borrador.",
-                    traceId
-                );
-                reply("VALIDATE_SALE_DRAFT_RES", result, message);
+            case "VALIDATE_SALE_DRAFT":
+                await respond("VALIDATE_SALE_DRAFT_RES", () => validarVentaBorrador(payload.sale || {}), "TPV_DRAFT_VALIDATION_FAILED", "No se pudo validar el borrador.");
                 return;
-            }
-
-            if (type === "TICKET_X_PREVIEW") {
-                const result = await safeCall(
-                    () => previsualizarTicketX(),
-                    "TPV_TICKET_X_PREVIEW_FAILED",
-                    "No se pudo consultar la vista previa X.",
-                    traceId
-                );
-                reply("TICKET_X_PREVIEW_RES", result, message);
+            case "GIFT_CARD_BALANCE":
+                await respond("GIFT_CARD_BALANCE_RES", () => consultarTarjetaRegalo({ code: payload.code }), "TPV_GIFT_CARD_LOOKUP_FAILED", "No se pudo consultar la tarjeta regalo.");
                 return;
-            }
-
-            if (type === "GIFT_CARD_BALANCE") {
-                const result = await safeCall(
-                    () => consultarTarjetaRegalo({ code: payload.code }),
-                    "TPV_GIFT_CARD_LOOKUP_FAILED",
-                    "No se pudo consultar la tarjeta regalo.",
-                    traceId
-                );
-                reply("GIFT_CARD_BALANCE_RES", result, message);
+            case "QA_CONFIG":
+                await respond("QA_CONFIG_RES", () => obtenerConfiguracionTPVQA(), "TPV_QA_CONFIG_FAILED", "No se pudo consultar la configuracion QA.");
                 return;
+            case "QA_PERMISSIONS":
+                await respond("QA_PERMISSIONS_RES", () => obtenerPermisosTPVQA(), "TPV_QA_PERMISSIONS_FAILED", "No se pudieron consultar los permisos.");
+                return;
+            case "QA_SESSION_OPEN":
+                await respond("QA_SESSION_OPEN_RES", () => abrirCajaQA(payload), "TPV_QA_SESSION_OPEN_FAILED", "No se pudo abrir la sesion QA.");
+                return;
+            case "QA_PARTIAL_COUNT":
+                await respond("QA_PARTIAL_COUNT_RES", () => registrarArqueoParcialQA(payload), "TPV_QA_PARTIAL_COUNT_FAILED", "No se pudo registrar el arqueo QA.");
+                return;
+            case "QA_CASH_MOVEMENT":
+                await respond("QA_CASH_MOVEMENT_RES", () => registrarMovimientoCajaQA(payload), "TPV_QA_CASH_MOVEMENT_FAILED", "No se pudo registrar el movimiento QA.");
+                return;
+            case "QA_PAYMENT_VALIDATE":
+                await respond("QA_PAYMENT_VALIDATE_RES", () => validarDesglosePagosQA(payload), "TPV_QA_PAYMENT_VALIDATION_FAILED", "No se pudo validar el pago simulado.");
+                return;
+            case "QA_SALE_REGISTER":
+                await respond("QA_SALE_REGISTER_RES", () => registrarVentaQA(payload), "TPV_QA_SALE_FAILED", "No se pudo registrar la venta sintetica.");
+                return;
+            case "QA_REFUND":
+                await respond("QA_REFUND_RES", () => solicitarDevolucionQA(payload), "TPV_QA_REFUND_FAILED", "No se pudo registrar la devolucion sintetica.");
+                return;
+            case "QA_SESSION_SUMMARY":
+                await respond("QA_SESSION_SUMMARY_RES", () => obtenerResumenSesionQA(payload), "TPV_QA_SUMMARY_FAILED", "No se pudo calcular el resumen QA.");
+                return;
+            case "QA_TICKET_X":
+                await respond("QA_TICKET_X_RES", () => generarTicketXQA(payload), "TPV_QA_TICKET_X_FAILED", "No se pudo generar Ticket X QA.");
+                return;
+            case "QA_TICKET_Z":
+                await respond("QA_TICKET_Z_RES", () => cerrarTicketZQA(payload), "TPV_QA_TICKET_Z_FAILED", "No se pudo cerrar Ticket Z QA.");
+                return;
+            case "QA_AUDIT_LIST":
+                await respond("QA_AUDIT_LIST_RES", () => consultarAuditoriaTPVQA(payload), "TPV_QA_AUDIT_READ_FAILED", "No se pudo consultar la auditoria QA.");
+                return;
+            default:
+                reply((type || "UNKNOWN") + "_RES", errorResult("TPV_ACTION_NOT_ALLOWED", "Accion no habilitada.", traceId), message);
             }
-
-            reply(
-                (type || "UNKNOWN") + "_RES",
-                errorResult(
-                    "TPV_ACTION_NOT_ALLOWED",
-                    "Acción no habilitada en esta entrega.",
-                    traceId
-                ),
-                message
-            );
         },
     });
 }
