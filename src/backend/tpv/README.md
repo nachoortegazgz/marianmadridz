@@ -68,7 +68,7 @@ Ejecutar `npm test`, `npm run test:layer1` y `npm run lint` antes de sincronizar
 
 ## Estado de integración
 
-PR #397 y PR #398 están integradas en `main`. La rama `fix/tpv-qa-synthetic-data-boundary-2026-11-16` endurece el aislamiento sintético y está pendiente de CI/revisión. No se ha sincronizado el código con Wix Classic. El sitio aparece Published, pero el runtime TPV no está verificado.
+PR #397, PR #398 y PR #399 están integradas en `main`. PR #399 aplica el aislamiento sintético y pasó 74 suites / 670 pruebas offline, 0 fallos. No se ha sincronizado el código con Wix Classic. El sitio aparece Published, pero el runtime TPV no está verificado.
 
 
 ## Fixtures sintéticas de cliente y profesionales (QA)
