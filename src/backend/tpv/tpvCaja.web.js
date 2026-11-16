@@ -2,7 +2,7 @@ import { Permissions, webMethod } from "wix-web-module";
 import { getCashierState } from "backend/cajas.web.js";
 import { getMyStaffContext, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
-import { TPV_QA_COLLECTIONS } from "backend/internalConfig";
+import { TPV_QA_COLLECTIONS, TPV_QA_RUNTIME_POLICY } from "backend/internalConfig";
 import { appendQaAudit, insertQaEvent, latestOpenQaSession, queryQaRecords } from "backend/tpv/tpvQaRepository";
 import { buildQaSessionSummary } from "backend/tpv/tpvCierresCore";
 import { wql } from "backend/dataAccess";
@@ -14,7 +14,7 @@ function errorResult(code) {
 
 function madridDayKey(date = new Date()) {
     const parts = new Intl.DateTimeFormat("en-CA", {
-        timeZone: "Europe/Madrid", year: "numeric", month: "2-digit", day: "2-digit",
+        timeZone: TPV_QA_RUNTIME_POLICY.TIME_ZONE, year: "numeric", month: "2-digit", day: "2-digit",
     }).formatToParts(date);
     const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
     return values.year + values.month + values.day;
@@ -49,7 +49,7 @@ export const obtenerSesionCajaQA = webMethod(
                 totalOperations: summary.ticketCount,
                 openedAt: session.openedAt,
                 cashierMemberId: session.cashierMemberId,
-                environment: "TEST",
+                environment: TPV_QA_RUNTIME_POLICY.ENVIRONMENT,
                 isSynthetic: true,
             },
             error: null,
