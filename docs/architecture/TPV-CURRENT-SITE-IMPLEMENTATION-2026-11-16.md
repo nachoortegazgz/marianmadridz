@@ -77,7 +77,7 @@ Se mantienen solo lecturas de catálogo de servicios Bookings y productos/varian
 
 ## 7. CI y validación
 
-PR #397 y PR #398 figuran fusionadas en `main`. La ejecución post-merge sobre HEAD `a8feb0f6632d493d2133d12081aff3157aea05a7` terminó correctamente: 74 suites / 670 pruebas offline, 0 fallos; Layer 1, Layer 2, SDK contracts, ESLint y secret scanning correctos. La PR #398 tuvo una ejecución de rama fallida por aserciones desalineadas; el CI posterior de `main` sí pasó.
+PR #397, PR #398 y PR #399 están fusionadas en `main`. CI de PR #399 sobre HEAD `db2628965a28572d7e9339a8b268bd4e87fe708c`: 74 suites / 670 pruebas offline, 0 fallos; Layer 1 (28 suites / 331 pruebas), Layer 2 (19 suites / 255 pruebas), SDK contracts, ESLint y secret scanning correctos. La PR #398 tuvo una ejecución de rama fallida por aserciones desalineadas; el CI posterior pasó.
 
 La rama de hardening sintético todavía necesita CI propio y revisión del diff. Ninguna prueba offline equivale a validación runtime Wix.
 
@@ -90,14 +90,13 @@ La rama de hardening sintético todavía necesita CI propio y revisión del diff
 - La SSOT registra 7 automatizaciones Wix preinstaladas ACTIVE con acciones de email/notificación y bloqueos de cambio; aislamiento runtime de comunicaciones no acreditado. Runtime/E2E permanece bloqueado hasta neutralización soportada y read-back.
 - La desconexión de la pasarela es una declaración del propietario; debe confirmarse en Wix Dashboard antes de cualquier prueba que pueda producir efectos financieros.
 
-La CLI oficial Origami documenta exportación/importación para Studio Two, no para el Editor clásico. No se ha identificado un endpoint REST oficial soportado para sincronizar código Velo de Classic. No se ha intentado un despliegue por mecanismos no soportados.
+La CLI Origami está documentada para Studio Two, no para el Editor clásico. La API oficial Git Code Store requiere un `AppManagedProject` existente; la llamada de solo lectura `List Projects` sobre este site devolvió `count: 0`. No hay `managedProjectId` aplicable y no se ha identificado un método oficial para sincronizar los archivos Velo de este Editor clásico. No se ha intentado un despliegue por mecanismos no soportados.
 
 ## 9. Próximos pasos seguros
 
-1. Terminar hardening sintético y obtener CI verde.
-2. Revisar diff y abrir PR contra `main`.
-3. Obtener copia/verificación del estado actual de los archivos en Wix Classic.
-4. Aplicar manualmente el código revisado mediante Wix Editor/Preview, guardando el estado previo para reversión.
-5. Probar roles y casos negativos en Preview sin activar comunicaciones, pagos ni escrituras fiscales.
-6. Revalidar colecciones/índices/permisos CMS.
-7. No publicar hasta cerrar los bloqueos y comprobar el runtime.
+1. Obtener una copia verificable del estado actual de los archivos TPV en Wix Classic.
+2. Conciliar el estado del Editor con los archivos versionados en `main` y preparar un diff mínimo.
+3. Aplicar los archivos mediante Wix Editor/Preview, guardando el estado previo para reversión.
+4. Probar roles y casos negativos en Preview sin activar comunicaciones, pagos ni escrituras fiscales.
+5. Revalidar colecciones/índices/permisos CMS.
+6. No publicar hasta cerrar los bloqueos y comprobar el runtime.
