@@ -2,6 +2,12 @@ name: Wix TPV Preview (non-production)
 
 on:
   workflow_dispatch:
+    inputs:
+      create_preview:
+        description: 'Create a Wix preview (requires the site to have been published at least once)'
+        required: true
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -42,7 +48,7 @@ jobs:
             throw new Error("wix.config.json is not bound to the Marian Madrid site.");
           }
           if (!uiVersion) throw new Error("wix.config.json is missing uiVersion.");
-          process.stdout.write(`Wix site binding verified; UI version ${uiVersion}.\\n`);
+          process.stdout.write(`Wix site binding verified; UI version ${uiVersion}.\n`);
           NODE
 
       - name: Check Wix CLI API key availability
@@ -77,6 +83,10 @@ jobs:
           CLI_API_KEY: ${{ secrets.CLI_API_KEY }}
         run: npm run wix login -- --api-key "$CLI_API_KEY"
 
+      - name: Skip preview unless explicitly requested
+        if: steps.auth.outputs.available == 'true' && !inputs.create_preview
+        run: echo "Authentication completed. Preview skipped; enable create_preview only after the site has been published at least once."
+
       - name: Create Wix preview only (never publish)
-        if: steps.auth.outputs.available == 'true'
+        if: steps.auth.outputs.available == 'true' && inputs.create_preview
         run: npm run wix preview
