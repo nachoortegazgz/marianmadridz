@@ -15,6 +15,7 @@ import {
 } from "backend/tpv/tpvCatalogo.web.js";
 import { validarVentaBorrador } from "backend/tpv/tpvVentas.web.js";
 import { previsualizarTicketX } from "backend/tpv/tpvReportes.web.js";
+import { consultarTarjetaRegalo } from "backend/tpv/tpvGiftCards.web.js";
 import { createWidgetBridge, MESSAGE_TYPES } from "public/widgetBridge";
 import { makeTraceId } from "public/mmUtils";
 
@@ -28,6 +29,7 @@ const TPV_ALLOWED_MESSAGES = Object.freeze([
     "PRODUCT_VARIANTS",
     "VALIDATE_SALE_DRAFT",
     "TICKET_X_PREVIEW",
+    "GIFT_CARD_BALANCE",
 ]);
 
 function errorResult(code, message, traceId) {
@@ -134,6 +136,12 @@ export function initializeTpvPage(widgetElement) {
             if (type === "TICKET_X_PREVIEW") {
                 const result = await previsualizarTicketX();
                 reply("TICKET_X_PREVIEW_RES", result, message);
+                return;
+            }
+
+            if (type === "GIFT_CARD_BALANCE") {
+                const result = await consultarTarjetaRegalo({ code: payload.code });
+                reply("GIFT_CARD_BALANCE_RES", result, message);
                 return;
             }
 
