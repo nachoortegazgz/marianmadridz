@@ -1,11 +1,10 @@
 import { Permissions, webMethod } from "wix-web-module";
-import { getMyStaffContext, requireCajero } from "backend/security";
+import { requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
-import { TPV_QA_COLLECTIONS, TPV_QA_RUNTIME_POLICY } from "backend/internalConfig";
+import { TPV_QA_COLLECTIONS, TPV_QA_FIXTURES, TPV_QA_RUNTIME_POLICY } from "backend/internalConfig";
 import { validateSaleDraft } from "backend/tpv/tpvValidation";
 import { appendQaAudit, insertQaEvent, latestOpenQaSession, withQaSessionLock } from "backend/tpv/tpvQaRepository";
 import { assertTpvQaEnabled, makeQaId, normalizeClientIdempotencyKey } from "backend/tpv/tpvUtils";
-import { leerContactoTPV, leerReservaTPV } from "backend/tpv/tpvNativeReaders";
 
 function disabledResult(code) {
     return {
@@ -67,12 +66,19 @@ export const registrarVentaQA = webMethod(
 
             const customerContactId = String(input.customerContactId || "").trim();
             const bookingId = String(input.bookingId || "").trim();
-            if (bookingId && !customerContactId) throw new Error("TPV_BOOKING_REQUIRES_CUSTOMER");
-            // External Wix reads stay outside the session lock to avoid holding
-            // the CAS lease while Contacts/Bookings APIs respond.
-            const customer = customerContactId ? await leerContactoTPV(customerContactId) : null;
-            const booking = bookingId ? await leerReservaTPV({ bookingId, contactId: customerContactId }) : null;
-            const staff = await getMyStaffContext(traceId);
+            if (bookingId) throw new Error("TPV_QA_BOOKINGS_DISABLED");
+            if (customerContactId && customerContactId !== TPV_QA_FIXTURES.CUSTOMER.ID) {
+                throw new Error("TPV_QA_CUSTOMER_NOT_ALLOWED");
+            }
+            const allowedProfessionalIds = new Set(TPV_QA_FIXTURES.STAFF.map((item) => item.ID));
+            const requestedProfessionalId = String(input.profesionalId || "").trim();
+            if (requestedProfessionalId && !allowedProfessionalIds.has(requestedProfessionalId)) {
+                throw new Error("TPV_QA_STAFF_NOT_ALLOWED");
+            }
+            if (sale.lineas.some((line) => line.profesionalId && !allowedProfessionalIds.has(line.profesionalId))) {
+                throw new Error("TPV_QA_STAFF_NOT_ALLOWED");
+            }
+            const customer = customerContactId ? TPV_QA_FIXTURES.CUSTOMER : null;
 
             return await withQaSessionLock(session.sessionId, traceId, async () => {
                 const activeSession = await latestOpenQaSession();
@@ -86,17 +92,17 @@ export const registrarVentaQA = webMethod(
                 sessionId: session.sessionId,
                 saleId,
                 ticketId: saleId,
-                professionalId: String(input.profesionalId || "").slice(0, 100) || null,
-                customerContactId: customer?.contactId || null,
-                customerLabel: customer?.displayName || String(input.customerLabel || "").trim().slice(0, 120) || "CLIENTE ANONIMO QA",
-                bookingId: booking?.bookingId || null,
-                bookingStatus: booking?.status || null,
-                bookingPaymentStatus: booking?.paymentStatus || null,
-                bookingStartDate: booking?.startDate || null,
-                bookingEndDate: booking?.endDate || null,
-                bookingServiceId: booking?.serviceId || null,
-                bookingProfessionalId: booking?.professionalId || null,
-                bookingTitle: booking?.title || null,
+                professionalId: requestedProfessionalId || null,
+                customerContactId: customer?.ID || null,
+                customerLabel: customer?.DISPLAY_NAME || "CLIENTE ANONIMO QA",
+                bookingId: null,
+                bookingStatus: null,
+                bookingPaymentStatus: null,
+                bookingStartDate: null,
+                bookingEndDate: null,
+                bookingServiceId: null,
+                bookingProfessionalId: null,
+                bookingTitle: null,
                 source: "TPV_QA",
                 traceId,
             };
@@ -111,7 +117,7 @@ export const registrarVentaQA = webMethod(
                 totalMinor: Math.round(sale.totalVenta * 100),
                 paidMinor: Math.round(sale.importePagado * 100),
                 pendingMinor: 0,
-                cashierMemberId: staff?.memberId || "UNKNOWN",
+                cashierMemberId: TPV_QA_RUNTIME_POLICY.ACTOR_ID,
                 createdAt,
                 traceId,
                 environment: TPV_QA_RUNTIME_POLICY.ENVIRONMENT,
@@ -165,7 +171,7 @@ export const registrarVentaQA = webMethod(
                 totalMinor: Math.round(sale.totalVenta * 100),
                 paidMinor: Math.round(sale.importePagado * 100),
                 pendingMinor: 0,
-                cashierMemberId: staff?.memberId || "UNKNOWN",
+                cashierMemberId: TPV_QA_RUNTIME_POLICY.ACTOR_ID,
                 createdAt,
                 traceId,
                 environment: TPV_QA_RUNTIME_POLICY.ENVIRONMENT,
@@ -181,7 +187,7 @@ export const registrarVentaQA = webMethod(
             await appendQaAudit({
                 idempotencyKey: key + ":AUDIT",
                 action: "VENTA_QA_CONFIRMADA",
-                actorId: staff?.memberId || "UNKNOWN",
+                actorId: TPV_QA_RUNTIME_POLICY.ACTOR_ID,
                 entityType: "VENTA",
                 entityId: saleId,
                 traceId,
