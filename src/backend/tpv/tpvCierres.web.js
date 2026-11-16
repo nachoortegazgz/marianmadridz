@@ -46,6 +46,7 @@ export const obtenerResumenSesionQA = webMethod(
 export const generarTicketXQA = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
+        let persisted = false;
         const traceId = makeTraceId("tpv-qa-ticket-x");
         await requireCajero(traceId);
         assertTpvQaEnabled();
@@ -63,6 +64,7 @@ export const generarTicketXQA = webMethod(
                 totals,
                 payload: { traceId, readOnly: true, closesSession: false },
             });
+            persisted = true;
             const staff = await getMyStaffContext(traceId);
             await appendQaAudit({
                 idempotencyKey: key + ":AUDIT",
@@ -75,7 +77,7 @@ export const generarTicketXQA = webMethod(
             });
             return { status: "SUCCESS", data: { reportId: item.reportId, totals, replayed, closesSession: false, isSynthetic: true }, error: null, traceId };
         } catch (error) {
-            return { status: "ERROR", data: null, error: { code: String(error?.message || "TPV_QA_TICKET_X_FAILED") }, traceId };
+            return { status: "ERROR", data: null, error: { code: String(error?.message || "TPV_QA_TICKET_X_FAILED") }, persisted, recoverable: persisted, isSynthetic: true, realPayment: false, traceId };
         }
     }
 );
@@ -83,6 +85,7 @@ export const generarTicketXQA = webMethod(
 export const cerrarTicketZQA = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
+        let persisted = false;
         const traceId = makeTraceId("tpv-qa-ticket-z");
         await requireAdmin(traceId);
         assertTpvQaEnabled();
@@ -153,6 +156,7 @@ export const cerrarTicketZQA = webMethod(
                 },
                 payload: { traceId, sourceEnvironment: TPV_QA_RUNTIME_POLICY.ENVIRONMENT, immutableAfterCreation: true },
             });
+            persisted = true;
             await appendQaAudit({
                 idempotencyKey: idempotencyKey + ":AUDIT",
                 action: "TICKET_Z_QA_CERRADO",
@@ -180,7 +184,7 @@ export const cerrarTicketZQA = webMethod(
                 traceId,
             };
         } catch (error) {
-            return { status: "ERROR", data: null, error: { code: String(error?.message || "TPV_QA_TICKET_Z_FAILED") }, traceId };
+            return { status: "ERROR", data: null, error: { code: String(error?.message || "TPV_QA_TICKET_Z_FAILED") }, persisted, recoverable: persisted, isSynthetic: true, realPayment: false, traceId };
         }
     }
 );
