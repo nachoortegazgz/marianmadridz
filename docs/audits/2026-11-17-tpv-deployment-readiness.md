@@ -47,9 +47,9 @@ La última evidencia documentada registra automatizaciones preinstaladas activas
 ### P2 — Toolchain y dependencias
 
 - `package.json` fija ESLint 8.25.0 y `@wix/eslint-plugin-cli` 1.0.2.
-- `package-lock.json` contiene dependencias transitivas marcadas deprecated.
-- Un checkpoint histórico documentó 10 vulnerabilidades moderadas en `npm audit`; no se ha ejecutado un audit actual en este trabajo.
-- Acción: ejecutar `npm audit --json` sobre el lockfile actual, atribuir cada hallazgo a dependencia directa/transitiva y evaluar compatibilidad del plugin Wix antes de actualizar ESLint. No ejecutar `npm audit fix --force` ni actualizar versiones por lote.
+- `npm audit` ejecutado en CI el 2026-11-17 informa 0 vulnerabilidades (0 info, 0 low, 0 moderate, 0 high, 0 critical) sobre 442 dependencias; artefacto `npm-dependency-audit` del run `43980095289`.
+- `npm ci` sigue emitiendo avisos de paquetes deprecated: `inflight@1.0.6`, `rimraf@3.0.2`, `@humanwhocodes/config-array@0.10.7`, `glob@7.2.3`, `@humanwhocodes/object-schema@1.2.1` y `eslint@8.25.0`.
+- Estos avisos no equivalen a vulnerabilidades de seguridad: el audit actual no reportó advisories. La actualización de ESLint y su árbol transitivo queda pendiente de comprobar compatibilidad con `@wix/eslint-plugin-cli` y repetir toda la suite; no se ejecutará `npm audit fix --force` ni una actualización masiva.
 
 ### P2 — Documentación histórica inconsistente
 
@@ -70,7 +70,7 @@ No se alteran ledgers append-only, colecciones, índices, permisos, automatizaci
 - GetSiteContext Wix: completado; Draft / Editor Classic / Velo / Stores V3 / Invoices V1.
 - Búsquedas acotadas en GitHub: sin coincidencias de `TODO FIXME HACK` ni `bulkUpdateItems`; no es análisis AST exhaustivo.
 - PR #409 integrada en main mediante `4a8ee829bc9c0a7e00040399523794d866ce5362`; CI del HEAD validó Layer 1, Layer 2, regresión completa, contratos SDK y ESLint (run `43979637997`, success); Gitleaks full-history success (run `43979637978`).
-- `npm test`, Layer 1, Layer 2, ESLint y `npm audit` ejecutados localmente: no ejecutados. PR #411 incorpora un paso `npm audit --json` fail-closed al workflow existente; ejecución `43980028822` estaba en curso al actualizar este informe. Secret scanning `43980028740`: success.
+- `npm test`, Layer 1, Layer 2, ESLint y `npm audit` ejecutados localmente: no ejecutados. PR #411 integrada en main mediante `793d253b8f6608c925ddb65a1cd2f42415ad6807`. CI del HEAD: Layer 1 PASS, Layer 2 PASS, regresión completa PASS (74 suites / 670 tests / 0 fallos), contratos SDK PASS, ESLint PASS y `npm audit` PASS (0 vulnerabilidades en 442 dependencias); run `43980095289`. Gitleaks full-history PASS; run `43980095310`.
 - Wix Preview, runtime, E2E y Publish: no ejecutados.
 
 ## Criterios de salida para despliegue
