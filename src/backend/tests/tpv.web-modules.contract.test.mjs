@@ -211,8 +211,9 @@ test("TPV catalog reader uses native Bookings SDK and does not expose staff cont
     assert.match(catalog, /productsV3\.getProduct/);
     assert.match(catalog, /varianteId: variant\._id/);
     assert.doesNotMatch(catalog, /varianteId: variant\.id/);
-    assert.match(catalog, /visibleEnPos: product\.visible === true/);
-    assert.doesNotMatch(catalog, /product\.visibleInPos/);
+    assert.match(catalog, /visibleEnPos: product\.visibleInPos !== false/);
+    assert.match(catalog, /minPriceVariant\?\.price\?\.actualPrice/);
+    assert.match(catalog, /product\.visibleInPos/);
     assert.match(catalog, /V3_CATALOG/);
     assert.match(catalog, /precioMinor/);
     assert.match(catalog, /from ["']@wix\/stores["']/);
