@@ -186,7 +186,6 @@ test("TPV WebMethods isolate synthetic QA writes from operational ledgers", asyn
     assert.match(movements, /withQaSessionLock\(session\.sessionId/);
     assert.match(cash, /withQaSessionLock\(session\.sessionId/);
     assert.match(closures, /withQaSessionLock\(session\.sessionId/);
-    assert.match(repository, /CONTROL_TYPE\.TPV_QA_SESSION_LOCK/);
     assert.doesNotMatch(joined, /registerManualTransaction|registerZClosing|createCheckout|createOrder|createPayment|processRefund/i);
 
     const repository = await source("tpv/tpvQaRepository.js");
@@ -194,6 +193,7 @@ test("TPV WebMethods isolate synthetic QA writes from operational ledgers", asyn
     assert.match(repository, /CONSISTENCY\.STRONG/);
     assert.match(repository, /requestFingerprint/);
     assert.match(repository, /TPV_QA_COLLECTIONS/);
+    assert.match(repository, /CONTROL_TYPE\.TPV_QA_SESSION_LOCK/);
     assert.doesNotMatch(repository, /updateItem\(|removeById\(|bulkUpdate\(|bulkRemove\(/);
 
     const policy = await source("dataAccessPolicy.js");
