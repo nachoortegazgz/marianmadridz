@@ -2,7 +2,7 @@ import { Permissions, webMethod } from "wix-web-module";
 import { getMyStaffContext, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { TPV_QA_COLLECTIONS, TPV_QA_RUNTIME_POLICY } from "backend/internalConfig";
-import { appendQaAudit, insertQaEvent, latestOpenQaSession, queryQaRecords } from "backend/tpv/tpvQaRepository";
+import { appendQaAudit, insertQaEvent, latestOpenQaSession, queryQaRecords, withQaSessionLock } from "backend/tpv/tpvQaRepository";
 import { buildQaSessionSummary } from "backend/tpv/tpvCierresCore";
 import { wql } from "backend/dataAccess";
 import { assertTpvQaEnabled, fromMinorUnits, makeSyntheticPayload, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
@@ -125,6 +125,12 @@ export const registrarArqueoParcialQA = webMethod(
         try {
             const session = await latestOpenQaSession();
             if (!session) return errorResult("TPV_QA_SESSION_NOT_OPEN");
+
+            return await withQaSessionLock(session.sessionId, traceId, async () => {
+                const activeSession = await latestOpenQaSession();
+                if (!activeSession || activeSession.sessionId !== session.sessionId) {
+                    throw new Error("TPV_QA_SESSION_CLOSED");
+                }
             const countedMinor = toMinorUnits(input.countedCash, "COUNTED_CASH");
             const summary = await buildQaSessionSummary(session);
             const expectedMinor = Number(summary.expectedCashMinor || 0);
@@ -171,6 +177,7 @@ export const registrarArqueoParcialQA = webMethod(
                 error: null,
                 traceId,
             };
+            });
         } catch (error) {
             return { ...errorResult(String(error?.message || "TPV_QA_PARTIAL_COUNT_FAILED")), persisted, recoverable: persisted, isSynthetic: true };
         }
