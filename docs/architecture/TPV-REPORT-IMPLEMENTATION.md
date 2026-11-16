@@ -47,7 +47,7 @@ Las nueve colecciones se provisionaron en el sitio actual, con permisos restrict
 | `tpvAuditoria.web.js` | Consulta autenticada de auditoría QA |
 | `tpvPermisos.web.js` | Capacidades permitidas según contexto/rol backend |
 | `tpvUtils.web.js` | Configuración y validaciones QA expuestas al frontend |
-| `tpvQaRepository.js` | Acceso central a colecciones QA, lectura fuerte, idempotencia y lock |
+| `tpvQaRepository.js` | Acceso central a colecciones QA, lectura fuerte, idempotencia y locks CAS de sesión/venta |
 | `tpvUtils.js` | Funciones puras para importes, claves, métodos y payload sintético |
 | `tpvCierresCore.js` | Agregación reproducible de caja, ventas, pagos y devoluciones |
 | `README.md` | Contratos, límites, inventario y pruebas de los módulos |
@@ -133,20 +133,22 @@ Las reservas, órdenes, cobros reales, emisión/canje de Gift Cards, facturació
 - nueve índices idempotentes `ACTIVE`;
 - cero elementos en las nueve colecciones.
 
-**Verificado estáticamente en esta intervención:**
-- parseo del script inline HTML;
-- parseo sintáctico de módulos backend y controlador;
-- pruebas de contrato/política añadidas al repositorio.
+**Verificado en CI sobre HEAD `36fcd9c9192b888e884ace3881dbd88f9cb6a574`:**
+- Layer 1: 28 suites / 328 pruebas, 0 fallos;
+- Layer 2: 19 suites / 255 pruebas, 0 fallos;
+- regresión offline completa: 74 suites / 667 pruebas, 0 fallos;
+- contratos del SDK Wix, ESLint y secret scanning correctos;
+- contratos de WebMethods, aislamiento de datos, locks CAS, UI/HTML y parseo del script inline correctos.
 
 **Pendiente de ejecutar:**
 - suites Node/Vitest completas y ESLint;
 - CI sobre el HEAD final;
 - duplicados e idempotencia contra CMS real;
-- concurrencia y lock CAS de reembolsos;
+- concurrencia y recuperación de locks CAS de sesión/reembolso;
 - reanudación ante fallos parciales;
 - Preview con roles ADMIN, GESTION, ESTILISTA, miembro y visitante anónimo.
 
-La primera ejecución de CI falló en Layer 1 por el test del conjunto canónico `CONTROL_TYPE`; se actualizó la prueba para incluir `TPV_QA_REFUND_LOCK`. La nueva ejecución tras los últimos cambios está pendiente. No se declara CI verde.
+Las ejecuciones intermedias detectaron aserciones de pruebas desactualizadas y una duplicidad en el conjunto esperado de tipos; se corrigieron y la ejecución final de CI terminó correctamente.
 
 ## 10. Sincronización y despliegue
 
