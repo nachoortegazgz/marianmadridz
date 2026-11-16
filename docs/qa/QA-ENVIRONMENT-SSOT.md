@@ -1,3 +1,7 @@
+> **ACLARACIÓN DE CONFLICTO — 2026-11-16:** El registro `QA-2026-11-15-TEMP-MUTABILITY` documenta una autorización de QA para update/remove de determinados ledgers sintéticos, pero entra en conflicto con el invariante arquitectónico vigente del proyecto: los ledgers append-only son inmutables y las correcciones se realizan mediante nuevos registros rectificativos trazables. No se puede tratar esa autorización documental como habilitación técnica ni como permiso para modificar/borrar ledgers. Hasta que el propietario resuelva expresamente la contradicción en las directrices maestras, prevalece el invariante de integridad: mantener fail-closed, sin bypasses globales, sin update/remove de ledgers ni de `TPV_QA_*`; las operaciones CAS tipadas de locks efímeros en `ControlOperativo` siguen siendo un mecanismo separado y limitado. `bulkUpdate` continúa deshabilitado. La identidad del Site ID en runtime Wix sigue sin acreditarse y bloquea las escrituras TPV desde Preview.
+
+---
+
 # SSOT — entorno QA único de Marian Madrid
 
 **Vigente desde:** 2026-11-14 · **Autoridad:** decisión expresa del propietario.
