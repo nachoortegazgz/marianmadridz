@@ -71,7 +71,7 @@ export function makeQaId(prefix, idempotencyKey) {
 export function makeSyntheticPayload(payload = {}) {
     return {
         ...payload,
-        sourceEnvironment: "TEST",
+        sourceEnvironment: TPV_QA_RUNTIME_POLICY.ENVIRONMENT,
         isSynthetic: true,
         realPayment: false,
         externalSideEffects: false,
