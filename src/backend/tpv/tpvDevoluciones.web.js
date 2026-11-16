@@ -20,13 +20,13 @@ export const solicitarDevolucionQA = webMethod(
             const session = await latestOpenQaSession();
             if (!session) throw new Error("TPV_QA_SESSION_NOT_OPEN");
 
-            return await withQaSaleLock(saleId, traceId, async () => {\n            const sales = await queryQaRecords(TPV_QA_COLLECTIONS.VENTAS, wql.eq("saleId", saleId));
+            return await withQaSaleLock(saleId, traceId, async () => {
+            const sales = await queryQaRecords(TPV_QA_COLLECTIONS.VENTAS, wql.eq("saleId", saleId));
             const original = sales.find((sale) => sale.status === "CONFIRMADA_SINTETICA");
             if (!original) throw new Error("TPV_QA_ORIGINAL_SALE_NOT_FOUND");
             if (original.payload?.sessionId !== session.sessionId) throw new Error("TPV_QA_REFUND_SESSION_MISMATCH");
 
             const refundId = makeQaId("REFUND", key);
-            const currentRefunds = await queryQaRecords(TPV_QA_COLLECTIONS.REEMBOLSOS, wql.eq("saleId", saleId));
             const originalPayments = await queryQaRecords(TPV_QA_COLLECTIONS.PAGOS, wql.eq("saleId", saleId));
             const remainingByMethod = { EFECTIVO: 0, TARJETA: 0, BIZUM: 0, OTROS: 0 };
             for (const payment of originalPayments) {
@@ -117,6 +117,7 @@ export const solicitarDevolucionQA = webMethod(
                 error: null,
                 traceId,
             };
+            });
         } catch (error) {
             return { status: "ERROR", data: null, error: { code: String(error?.message || "TPV_QA_REFUND_FAILED") }, traceId };
         }
