@@ -63,12 +63,13 @@ Se creó un índice único sobre `idempotencyKey` en cada colección. El primer 
 
 ## 5. Módulos TPV y persistencia QA versionados
 
-La rama de integración actual es `feat/tpv-classic-persistent-qa-2026-11-16`, creada directamente desde `main` tras detectar que la rama anterior divergía y que la PR #396 estaba cerrada sin fusionar. La nueva rama contiene los módulos solicitados en el informe funcional; su PR de revisión se creará tras completar las comprobaciones estáticas:
+La rama de integración actual es `feat/tpv-classic-persistent-qa-2026-11-16`, creada directamente desde `main` tras detectar que la rama anterior divergía y que la PR #396 estaba cerrada sin fusionar. La nueva rama contiene los módulos solicitados en el informe funcional. PR #397 está abierta para revisión, sin fusionar:
 
 - `tpvCaja.web.js`: sesión diaria QA, lectura de caja QA y arqueo parcial.
 - `tpvVentas.web.js`: validación backend y saga de venta sintética (PREPARED → líneas/pagos → COMMITTED).
 - `tpvMovimientos.web.js`: entradas, salidas y retiradas sintéticas.
-- `tpvCatalogo.web.js`: lectores de Bookings y Stores Catalog V3.
+- `tpvCatalogo.web.js`: lectores de Bookings y Stores Catalog V3 con llamadas elevadas solo después de autorización backend.
+- `tpvGiftCards.web.js`: consulta real de tarjetas regalo deshabilitada en QA; no envía códigos ni consulta saldos reales.
 - `tpvPagos.web.js`: validación de efectivo/tarjeta/Bizum/otros sin pasarela.
 - `tpvDevoluciones.web.js`: devoluciones sintéticas con autorización ADMIN y lock CAS por venta.
 - `tpvCierres.web.js`: resumen de sesión, Ticket X y Ticket Z de QA.
@@ -110,7 +111,7 @@ Pruebas añadidas al repositorio:
 - Política CAS del lock de devoluciones.
 - Validaciones de claves idempotentes, métodos de pago y unidades menores.
 
-**No ejecutadas todavía:** suites Node/Vitest completas, integración real CMS, concurrencia real, duplicados, fallos parciales, Preview y roles. La rama nueva aún no tiene workflow runs ni checks asociados; no se afirma CI verde. No se han ejecutado las suites Node/Vitest en este entorno.
+**No ejecutadas todavía:** suites Node/Vitest completas, integración real CMS, concurrencia real, duplicados, fallos parciales, Preview y roles. La primera ejecución de CI falló en Layer 1 por una prueba del conjunto canónico `CONTROL_TYPE`; se actualizó esa prueba para incorporar `TPV_QA_REFUND_LOCK`. La nueva ejecución tras los cambios posteriores está pendiente de resultado. No se afirma CI verde.
 
 Pendiente:
 1. Ejecutar `npm run test:layer1`, la regresión completa y ESLint en CI.
@@ -124,7 +125,7 @@ Pendiente:
 
 ## 8. Estado de despliegue
 
-- PR #396 está cerrada sin fusionar; no se ha fusionado el TPV. La nueva rama aún no tiene PR.
+- PR #396 está cerrada sin fusionar. PR #397 está abierta para revisión y no se ha fusionado el TPV.
 - No se ha publicado código TPV nuevo.
 - No se ha modificado el HTML Component, el page code ni los módulos backend en el Editor clásico; su estado live no se ha comparado ni validado.
 - No se ha conectado una pasarela de pagos.
