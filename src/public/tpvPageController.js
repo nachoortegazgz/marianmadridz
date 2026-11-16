@@ -1,16 +1,19 @@
 /**
  * public/tpvPageController.js
- * Frontend bridge for the TPV HTML Component.
+ * Authenticated read bridge for the TPV HTML Component.
  *
- * Exposes authenticated read-only cashier and Wix Bookings catalog methods.
- * No payment, booking, order, invoice, ledger, cash-open, or Z-close writer is
- * reachable from this controller.
+ * Commercial drafts stay in the iframe. Backend calls are limited to
+ * authorized catalog reads, cashier state and server-side draft validation.
+ * No payment, order, booking, ledger, cash-session or fiscal writer is exposed.
  */
 import { getCashierState } from "backend/cajas.web.js";
 import {
     obtenerServicios,
     obtenerProfesionales,
+    obtenerProductos,
+    obtenerVariantesProducto,
 } from "backend/tpv/tpvCatalogo.web.js";
+import { validarVentaBorrador } from "backend/tpv/tpvVentas.web.js";
 import { createWidgetBridge, MESSAGE_TYPES } from "public/widgetBridge";
 import { makeTraceId } from "public/mmUtils";
 
@@ -20,6 +23,9 @@ const TPV_ALLOWED_MESSAGES = Object.freeze([
     "CASHIER_STATE",
     "CATALOG_SERVICES",
     "CATALOG_STAFF",
+    "CATALOG_PRODUCTS",
+    "PRODUCT_VARIANTS",
+    "VALIDATE_SALE_DRAFT",
 ]);
 
 function errorResult(code, message, traceId) {
@@ -31,10 +37,6 @@ function errorResult(code, message, traceId) {
     };
 }
 
-/**
- * Call from the TPV page code with $w("#htmlTPV").
- * Configure the HTML Component with the complete contents of #htmlTPV.txt.
- */
 export function initializeTpvPage(widgetElement) {
     if (!widgetElement ||
         typeof widgetElement.onMessage !== "function" ||
@@ -57,79 +59,73 @@ export function initializeTpvPage(widgetElement) {
             timeZone: "Europe/Madrid",
             capabilities: {
                 cashierState: "READ_ONLY",
-                localTicketDraft: "BROWSER_ONLY",
-                localTenderReconciliation: "BROWSER_ONLY",
-                wixStoresCatalog: "NATIVE_APP_READER_PENDING",
-                wixBookingsServices: "READ_ONLY",
-                wixBookingsStaff: "READ_ONLY",
-                wixOrders: "NATIVE_APP_READER_PENDING",
-                wixPayments: "DISABLED",
-                wixInvoices: "NATIVE_APP_NOT_CONNECTED",
-                wixGiftCards: "NATIVE_APP_READER_PENDING",
-                bookingMutations: "DISABLED",
+                bookingsServices: "READ_ONLY",
+                bookingsStaff: "READ_ONLY",
+                storesProducts: "READ_ONLY",
+                storesVariants: "READ_ONLY",
+                saleDraftValidation: "BACKEND_VALIDATION_NO_PERSISTENCE",
+                suspendedTickets: "BROWSER_SESSION_ONLY",
+                paymentReconciliation: "BROWSER_ONLY",
+                refunds: "DRAFT_ONLY",
+                giftCards: "NATIVE_APP_READER_PENDING",
+                payments: "DISABLED",
                 orderMutations: "DISABLED",
-                paymentMutations: "DISABLED",
-                fiscalLedgerWrites: "DISABLED",
+                bookingMutations: "DISABLED",
                 cashSessionMutations: "DISABLED",
-                zClosing: "DISABLED",
+                fiscalLedgerWrites: "DISABLED",
+                ticketZClosing: "DISABLED",
             },
         }),
 
         onWidgetMessage: async (message, reply) => {
             const type = String(message?.type || "").trim().toUpperCase();
+            const payload = message?.payload || {};
 
             if (type === "CASHIER_STATE") {
                 try {
-                    // Backend resolves identity and requires the cashier role.
-                    const result = await getCashierState({ traceId });
-                    reply("CASHIER_STATE_RES", result, message);
+                    reply("CASHIER_STATE_RES", await getCashierState({ traceId }), message);
                 } catch (_) {
-                    reply(
-                        "CASHIER_STATE_RES",
-                        errorResult(
-                            "CASHIER_STATE_FAILED",
-                            "No se pudo consultar la caja.",
-                            traceId
-                        ),
-                        message
-                    );
+                    reply("CASHIER_STATE_RES", errorResult(
+                        "CASHIER_STATE_FAILED",
+                        "No se pudo consultar la caja.",
+                        traceId
+                    ), message);
                 }
                 return;
             }
 
             if (type === "CATALOG_SERVICES") {
-                try {
-                    const result = await obtenerServicios({ limit: 100, offset: 0 });
-                    reply("CATALOG_SERVICES_RES", result, message);
-                } catch (_) {
-                    reply(
-                        "CATALOG_SERVICES_RES",
-                        errorResult(
-                            "TPV_SERVICES_READ_FAILED",
-                            "No se pudieron consultar los servicios de Wix Bookings.",
-                            traceId
-                        ),
-                        message
-                    );
-                }
+                const result = await obtenerServicios({ limit: 100, offset: 0 });
+                reply("CATALOG_SERVICES_RES", result, message);
                 return;
             }
 
             if (type === "CATALOG_STAFF") {
-                try {
-                    const result = await obtenerProfesionales({ limit: 100 });
-                    reply("CATALOG_STAFF_RES", result, message);
-                } catch (_) {
-                    reply(
-                        "CATALOG_STAFF_RES",
-                        errorResult(
-                            "TPV_STAFF_READ_FAILED",
-                            "No se pudieron consultar los profesionales de Wix Bookings.",
-                            traceId
-                        ),
-                        message
-                    );
-                }
+                const result = await obtenerProfesionales({ limit: 100 });
+                reply("CATALOG_STAFF_RES", result, message);
+                return;
+            }
+
+            if (type === "CATALOG_PRODUCTS") {
+                const result = await obtenerProductos({
+                    limit: 100,
+                    cursor: payload.cursor || null,
+                });
+                reply("CATALOG_PRODUCTS_RES", result, message);
+                return;
+            }
+
+            if (type === "PRODUCT_VARIANTS") {
+                const result = await obtenerVariantesProducto({
+                    productId: payload.productId,
+                });
+                reply("PRODUCT_VARIANTS_RES", result, message);
+                return;
+            }
+
+            if (type === "VALIDATE_SALE_DRAFT") {
+                const result = await validarVentaBorrador(payload.sale || {});
+                reply("VALIDATE_SALE_DRAFT_RES", result, message);
                 return;
             }
 
