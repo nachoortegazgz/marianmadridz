@@ -6,7 +6,7 @@ import { TPV_QA_COLLECTIONS } from "backend/internalConfig";
 import { insertQaEvent, latestOpenQaSession, queryQaRecords } from "backend/tpv/tpvQaRepository";
 import { buildQaSessionSummary } from "backend/tpv/tpvCierresCore";
 import { wql } from "backend/dataAccess";
-import { assertTpvQaEnabled, fromMinorUnits, makeSyntheticPayload, toMinorUnits } from "backend/tpv/tpvUtils";
+import { assertTpvQaEnabled, fromMinorUnits, makeSyntheticPayload, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
 
 function errorResult(code) {
     return { status: "ERROR", data: null, error: { code }, persisted: false, realPayment: false };
@@ -131,13 +131,14 @@ export const registrarArqueoParcialQA = webMethod(
             const session = await latestOpenQaSession();
             if (!session) return errorResult("TPV_QA_SESSION_NOT_OPEN");
             const countedMinor = toMinorUnits(input.countedCash, "COUNTED_CASH");
-            const expectedMinor = Number(session.expectedCashMinor || 0);
+            const summary = await buildQaSessionSummary(session);
+            const expectedMinor = Number(summary.expectedCashMinor || 0);
             const differenceMinor = countedMinor - expectedMinor;
             const reason = differenceMinor === 0 ? "" : String(input.reason || "").trim();
             if (differenceMinor !== 0 && reason.length < 3) {
                 throw new Error("TPV_QA_COUNT_DIFFERENCE_REASON_REQUIRED");
             }
-            const key = String(input.idempotencyKey || "").trim();
+            const key = normalizeClientIdempotencyKey(input.idempotencyKey);
             const staff = await getMyStaffContext(traceId);
             const { item, replayed } = await insertQaEvent(
                 TPV_QA_COLLECTIONS.MOVIMIENTOS_CAJA,
