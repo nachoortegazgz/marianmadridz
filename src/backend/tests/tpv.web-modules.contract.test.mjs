@@ -69,6 +69,35 @@ test("TPV cash tender subtracts change before reconciling amount applied", () =>
     );
 });
 
+test("TPV mixed tender breakdown reconciles commercial totals separately from physical cash", () => {
+    const result = validateSaleDraft({
+        lineas: [{
+            tipoLinea: "SERVICIO",
+            concepto: "Venta mixta QA",
+            cantidad: 1,
+            precioUnitario: 100,
+            descuentoImporte: 0,
+            impuestosImporte: 0,
+        }],
+        pagos: [
+            { medioPago: "EFECTIVO", importe: 45, importeCambio: 5 },
+            { medioPago: "TARJETA", importe: 35 },
+            { medioPago: "BIZUM", importe: 25 },
+        ],
+    });
+
+    assert.equal(result.totalCobrado, 100);
+    assert.equal(result.desgloseMedios.EFECTIVO, 40);
+    assert.equal(result.desgloseMedios.TARJETA, 35);
+    assert.equal(result.desgloseMedios.BIZUM, 25);
+    assert.equal(result.desgloseMedios.OTROS, 0);
+    assert.equal(result.efectivoRecibido, 45);
+    assert.equal(result.cambioEntregado, 5);
+    assert.equal(result.efectivoAplicado, 40);
+    assert.equal(result.importePendiente, 0);
+    assert.equal(result.realPayment, false);
+});
+
 test("TPV sale draft rejects invalid tax, overpayment, unknown methods and sub-cent arithmetic", () => {
     const valid = {
         lineas: [{
