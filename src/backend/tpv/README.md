@@ -7,7 +7,7 @@ Este directorio implementa el TPV en modo QA persistente y sintético para el si
 - Toda escritura de negocio de TPV se realiza exclusivamente en las colecciones `TPV_QA_*`.
 - Las colecciones QA son append-only: el acceso central permite `insert`, pero no `update` ni `remove`.
 - La idempotencia se aplica mediante índice CMS único `idempotencyKey`, lectura fuerte previa y reconciliación del resultado de inserción concurrente.
-- Los reembolsos sintéticos se serializan por venta mediante compare-and-swap en `ControlOperativo`, tipo `TPV_QA_REFUND_LOCK`; no se utiliza como ledger ni se guardan importes de venta en esa colección.
+- Los reembolsos sintéticos se serializan por venta mediante compare-and-swap en `ControlOperativo`, tipo `TPV_QA_REFUND_LOCK`. Ventas, devoluciones, movimientos, arqueos y cierres comparten además `TPV_QA_SESSION_LOCK` para evitar carreras con Ticket Z. Los locks no son ledgers ni almacenan importes.
 - No se llama a Wix Payments, checkout, Orders, refunds, Bookings writers, Gift Card writers, hardware, notificaciones ni emisión fiscal.
 - No se escribe en `CajaActual`, `MovimientosCaja`, `HistoricoCierresZ` ni `LibroAsientosContablesDetalle`.
 - Ticket Z cierra solo la sesión QA y nunca cierra el periodo fiscal u operativo.
@@ -27,7 +27,7 @@ Este directorio implementa el TPV en modo QA persistente y sintético para el si
 | `tpvPermisos.web.js` | Capacidades QA derivadas del rol backend |
 | `tpvUtils.web.js` | Configuración y validaciones auxiliares expuestas |
 | `tpvUtils.js` | Validación pura, minor units, claves y payload sintético |
-| `tpvQaRepository.js` | Acceso central a colecciones QA, idempotencia, lectura fuerte y lock de reembolso |
+| `tpvQaRepository.js` | Acceso central a colecciones QA, idempotencia, lectura fuerte y locks CAS de sesión/venta |
 | `tpvCierresCore.js` | Agregación reproducible de ventas, pagos, devoluciones y efectivo |
 
 ## Flujo de venta
@@ -46,7 +46,7 @@ La persistencia multi-colección no es una transacción ACID. El orden preparado
 - ADMIN obligatorio.
 - Venta original debe estar confirmada y pertenecer a la sesión QA abierta.
 - Los importes por medio no pueden superar el importe original no reembolsado.
-- Un lock distribuido por venta serializa solicitudes concurrentes.
+- Un lock distribuido por sesión y otro por venta serializan solicitudes concurrentes y bloquean cambios durante Ticket Z.
 - Cabecera, pagos negativos, movimiento de efectivo y auditoría se insertan como eventos sintéticos idempotentes.
 - Nunca se llama a un proveedor externo.
 
@@ -68,4 +68,4 @@ Ejecutar `npm test`, `npm run test:layer1` y `npm run lint` antes de sincronizar
 
 ## Estado de integración
 
-Los módulos y el HTML Component están versionados en la rama `feat/tpv-web-modules-report-2026-11-15`. No se han sincronizado al Editor clásico ni publicado. La pasarela y las operaciones fiscales permanecen deshabilitadas.
+Los módulos y el HTML Component están versionados en la rama `feat/tpv-classic-persistent-qa-2026-11-16` (PR #397 abierta, sin fusionar). CI verificado sobre el HEAD `36fcd9c9192b888e884ace3881dbd88f9cb6a574`: 74 suites / 667 pruebas offline, 0 fallos; ESLint, contratos Wix y secret scanning correctos. No se han sincronizado al Editor clásico ni publicado. La pasarela y las operaciones fiscales permanecen deshabilitadas.
