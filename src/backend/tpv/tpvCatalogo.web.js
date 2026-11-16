@@ -1,7 +1,10 @@
 import { Permissions, webMethod } from "wix-web-module";
 import { services, staffMembers } from "@wix/bookings";
+import { catalogVersioning, productsV3 } from "@wix/stores";
 import { requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
+
+let catalogVersionPromise = null;
 
 function normalizePage(input = {}) {
     const limit = Number(input.limit ?? 100);
@@ -13,16 +16,47 @@ function normalizePage(input = {}) {
     return { limit, offset };
 }
 
+async function getStoresCatalogVersion() {
+    if (!catalogVersionPromise) {
+        catalogVersionPromise = catalogVersioning.getCatalogVersion()
+            .then((result) => String(result?.catalogVersion || "UNKNOWN"))
+            .catch((error) => {
+                catalogVersionPromise = null;
+                throw error;
+            });
+    }
+    return catalogVersionPromise;
+}
+
+function mapProduct(product) {
+    const minimum = product?.actualPriceRange?.minValue || null;
+    const minimumVariant = product?.variantSummary?.minPriceVariant || null;
+    const amount = minimumVariant?.price?.actualPrice?.amount ?? minimum?.amount ?? null;
+    const formatted = minimumVariant?.price?.actualPrice?.formattedAmount ??
+        minimum?.formattedAmount ?? null;
+    return {
+        itemId: product._id,
+        tipoLinea: "PRODUCTO",
+        concepto: String(product.name || "Producto"),
+        descripcion: String(product.plainDescription || "").slice(0, 240),
+        moneda: product.currency || null,
+        precioMinimo: amount,
+        precioFormateado: formatted,
+        numeroVariantes: Number(product.variantSummary?.variantCount || 0),
+        requiereSeleccionVariante: Number(product.variantSummary?.variantCount || 0) > 1,
+        visibleEnPos: product.visibleInPos !== false,
+        tipoProducto: product.productType || null,
+        inventario: product.inventory?.availabilityStatus || null,
+    };
+}
+
 export const obtenerServicios = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
         await requireCajero(makeTraceId("tpv-services-read"));
         try {
             const paging = normalizePage(input);
-            const result = await services.queryServices(
-                { paging },
-                {}
-            );
+            const result = await services.queryServices({ paging }, {});
             const items = (result?.services || []).map((service) => ({
                 itemId: service._id,
                 tipoLinea: "SERVICIO",
@@ -89,15 +123,120 @@ export const obtenerProfesionales = webMethod(
 
 export const obtenerProductos = webMethod(
     Permissions.SiteMember,
-    async () => {
-        await requireCajero(makeTraceId("tpv-products-read-block"));
-        return {
-            status: "ERROR",
-            data: null,
-            error: {
-                code: "TPV_STORES_SDK_NOT_INSTALLED",
-                message: "El lector Catalog V3 requiere instalar y fijar @wix/stores antes de activarse.",
-            },
-        };
+    async (input = {}) => {
+        await requireCajero(makeTraceId("tpv-products-read"));
+        try {
+            const version = await getStoresCatalogVersion();
+            if (version === "STORES_NOT_INSTALLED") {
+                return {
+                    status: "ERROR",
+                    data: null,
+                    error: { code: "TPV_STORES_NOT_INSTALLED" },
+                };
+            }
+            if (version !== "V3_CATALOG") {
+                return {
+                    status: "ERROR",
+                    data: { catalogVersion: version },
+                    error: {
+                        code: "TPV_STORES_CATALOG_VERSION_UNSUPPORTED",
+                        message: "Esta integración POS requiere Catalog V3; no se ejecuta una consulta V3 contra Catalog V1.",
+                    },
+                };
+            }
+            const limit = Number(input.limit ?? 100);
+            if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+                throw new Error("TPV_INVALID_PRODUCT_PAGING");
+            }
+            const query = {
+                cursorPaging: {
+                    limit,
+                    ...(input.cursor ? { cursor: String(input.cursor).slice(0, 16000) } : {}),
+                },
+            };
+            const result = await productsV3.queryProducts(query, {
+                fields: ["CURRENCY", "MIN_PRICE_VARIANT"],
+            });
+            const items = (result?.products || [])
+                .filter((product) => product?.visible === true && product?.visibleInPos !== false)
+                .map(mapProduct);
+            return {
+                status: "SUCCESS",
+                data: {
+                    catalogVersion: version,
+                    items,
+                    pagingMetadata: result?.pagingMetadata || null,
+                },
+                error: null,
+            };
+        } catch (_) {
+            return {
+                status: "ERROR",
+                data: null,
+                error: { code: "TPV_STORES_PRODUCTS_READ_FAILED" },
+            };
+        }
+    }
+);
+
+export const obtenerVariantesProducto = webMethod(
+    Permissions.SiteMember,
+    async (input = {}) => {
+        await requireCajero(makeTraceId("tpv-product-variants-read"));
+        try {
+            const productId = String(input.productId || "").trim();
+            if (!/^[a-zA-Z0-9-]{1,36}$/.test(productId)) {
+                throw new Error("TPV_INVALID_PRODUCT_ID");
+            }
+            const version = await getStoresCatalogVersion();
+            if (version !== "V3_CATALOG") {
+                return {
+                    status: "ERROR",
+                    data: { catalogVersion: version },
+                    error: { code: "TPV_STORES_CATALOG_VERSION_UNSUPPORTED" },
+                };
+            }
+            const product = await productsV3.getProduct(productId, {
+                fields: ["VARIANT_OPTION_CHOICE_NAMES", "CURRENCY"],
+            });
+            if (!product || product.visible !== true || product.visibleInPos === false) {
+                return {
+                    status: "ERROR",
+                    data: null,
+                    error: { code: "TPV_PRODUCT_NOT_AVAILABLE_IN_POS" },
+                };
+            }
+            const variants = (product.variantsInfo?.variants || [])
+                .filter((variant) => variant.visible !== false)
+                .map((variant) => ({
+                    varianteId: variant.id,
+                    sku: variant.sku || null,
+                    concepto: (variant.choices || [])
+                        .map((choice) => choice.optionChoiceNames)
+                        .filter(Boolean)
+                        .map((choice) => [choice.optionName, choice.choiceName].filter(Boolean).join(": "))
+                        .join(" · ") || "Variante predeterminada",
+                    precio: variant.price?.actualPrice?.amount ?? null,
+                    precioFormateado: variant.price?.actualPrice?.formattedAmount ?? null,
+                    moneda: product.currency || null,
+                    disponible: variant.inventoryStatus?.inStock !== false,
+                }));
+            return {
+                status: "SUCCESS",
+                data: {
+                    itemId: product._id,
+                    concepto: product.name,
+                    variantes,
+                    moneda: product.currency || null,
+                },
+                error: null,
+            };
+        } catch (_) {
+            return {
+                status: "ERROR",
+                data: null,
+                error: { code: "TPV_PRODUCT_VARIANTS_READ_FAILED" },
+            };
+        }
     }
 );
