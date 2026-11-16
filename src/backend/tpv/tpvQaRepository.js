@@ -364,6 +364,7 @@ export async function getPendingQaRefunds(sessionId) {
         const allocations = Array.isArray(refund.payload?.allocations)
             ? refund.payload.allocations
             : [];
+        if (allocations.length === 0) return true;
         const refundPayments = payments.filter((payment) =>
             payment.status === "REEMBOLSO_SINTETICO" &&
             payment.payload?.refundId === refund.refundId
