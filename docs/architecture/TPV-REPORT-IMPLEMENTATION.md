@@ -135,6 +135,15 @@ Por tanto, no se afirma que `#htmlTPV` esté actualizado en el Editor. La aplica
 
 ## 9. Validación y siguiente gate
 
+HEAD validado: `47670f16382ebc2e869fd8a4e419aecbd49b1c42`.
+- Backend offline quality gates #1410: correcto.
+- Layer 1: 26 suites, 317 tests, 0 fallos.
+- Layer 2: 19 suites, 253 tests, 0 fallos.
+- Regresión offline completa: 72 suites, 656 tests, 0 fallos.
+- Contratos SDK Wix, eCommerce Order Transactions y Bookings: correctos.
+- ESLint: correcto.
+- Secret scanning #834: correcto.
+
 Las pruebas offline verifican contratos y sintaxis, pero no sustituyen Preview/runtime.
 
 Antes de activar escrituras o publicar:
