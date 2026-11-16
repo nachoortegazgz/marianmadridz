@@ -45,6 +45,49 @@ jobs:
 
       # Focused layer gates make the acceptance status explicit. The full suite below
       # remains the canonical regression gate and covers every test file once.
+      - name: Audit locked npm dependency graph
+        id: npm-audit
+        shell: bash
+        run: |
+          set +e
+          npm audit --json > "$RUNNER_TEMP/npm-audit.json"
+          audit_exit=$?
+          set -e
+          node - "$RUNNER_TEMP/npm-audit.json" "$RUNNER_TEMP/npm-audit-summary.json" <<'NODE'
+          const fs = require("node:fs");
+          const [reportPath, summaryPath] = process.argv.slice(2);
+          const report = JSON.parse(fs.readFileSync(reportPath, "utf8"));
+          const counts = report.metadata?.vulnerabilities ?? {};
+          const summary = {
+            info: counts.info ?? 0,
+            low: counts.low ?? 0,
+            moderate: counts.moderate ?? 0,
+            high: counts.high ?? 0,
+            critical: counts.critical ?? 0,
+            total: counts.total ?? 0
+          };
+          console.log("npm audit:", JSON.stringify(summary));
+          fs.writeFileSync(summaryPath, JSON.stringify(summary, null, 2) + "\n");
+          if (summary.high > 0 || summary.critical > 0) {
+            console.error("High or critical npm advisories block this quality gate.");
+            process.exit(1);
+          }
+          if (summary.total > 0) {
+            console.warn("Low/moderate advisories require review; see the uploaded audit artifact.");
+          }
+          NODE
+
+      - name: Upload npm audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-dependency-audit
+          path: |
+            ${{ runner.temp }}/npm-audit.json
+            ${{ runner.temp }}/npm-audit-summary.json
+          if-no-files-found: warn
+          retention-days: 30
+
       - name: Run Layer 1 focused regression gate
         run: npm run test:layer1
 
