@@ -13,7 +13,7 @@ Sitio objetivo único:
 - Página TPV ID `yl5th`, ruta `/blank`.
 - Studio Two queda expresamente fuera del alcance.
 
-La rama de integración vigente es `feat/tpv-classic-persistent-qa-2026-11-16`, creada desde `main` para evitar la divergencia de la rama anterior. PR #396 está cerrada sin fusionar; la nueva PR se abrirá tras completar la revisión estática.
+La rama de integración vigente es `feat/tpv-classic-persistent-qa-2026-11-16`, creada desde `main` para evitar la divergencia de la rama anterior. PR #396 está cerrada sin fusionar. La PR #397 está abierta para revisión; no está fusionada.
 
 ## 2. Decisión de arquitectura
 
@@ -39,7 +39,8 @@ Las nueve colecciones se provisionaron en el sitio actual, con permisos restrict
 | `tpvCaja.web.js` | Apertura diaria de sesión QA, lectura de estado QA y arqueo parcial |
 | `tpvVentas.web.js` | Validación de borrador y saga de venta sintética persistente |
 | `tpvMovimientos.web.js` | Entradas, salidas y retiradas sintéticas de efectivo |
-| `tpvCatalogo.web.js` | Lectura nativa de servicios/profesionales Bookings y productos/variantes Stores V3 |
+| `tpvCatalogo.web.js` | Lectura nativa de servicios/profesionales Bookings y productos/variantes Stores V3, con `auth.elevate` tras autorización backend |
+| `tpvGiftCards.web.js` | Consulta real de tarjetas regalo deshabilitada en QA; no se envían códigos ni se consultan saldos reales |
 | `tpvPagos.web.js` | Validación de pagos divididos y cambio, sin llamada a pasarela |
 | `tpvDevoluciones.web.js` | Devoluciones sintéticas parciales/totales, ADMIN y lock CAS por venta |
 | `tpvCierres.web.js` | Resumen de sesión, Ticket X no destructivo y Ticket Z QA |
