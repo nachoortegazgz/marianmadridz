@@ -45,6 +45,7 @@ export const registrarVenta = webMethod(
 export const registrarVentaQA = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
+        let persisted = false;
         const traceId = makeTraceId("tpv-qa-sale");
         await requireCajero(traceId);
         assertTpvQaEnabled();
@@ -92,6 +93,7 @@ export const registrarVentaQA = webMethod(
                 environment: TPV_QA_RUNTIME_POLICY.ENVIRONMENT,
                 payload: { ...commonPayload, phase: "PREPARED" },
             });
+            persisted = true;
 
             for (const line of sale.lineas) {
                 const lineKey = key + ":LINE:" + String(line.lineaNumero).padStart(3, "0");
@@ -185,7 +187,8 @@ export const registrarVentaQA = webMethod(
                 status: "ERROR",
                 data: null,
                 error: { code: String(error?.message || "TPV_QA_SALE_FAILED") },
-                persisted: false,
+                persisted,
+                recoverable: persisted,
                 isSynthetic: true,
                 realPayment: false,
                 traceId,
