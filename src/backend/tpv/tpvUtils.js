@@ -76,6 +76,13 @@ export function makeQaRefundLockId(saleId) {
     return "TPVQ" + digest;
 }
 
+export function makeQaSessionLockId(sessionId) {
+    const value = String(sessionId || "").trim();
+    if (!value) throw new Error("TPV_QA_SESSION_LOCK_INVALID");
+    const digest = createHash("sha256").update(value, "utf8").digest("hex").slice(0, 32);
+    return "TPVS" + digest;
+}
+
 export function makeSyntheticPayload(payload = {}) {
     return {
         ...payload,
