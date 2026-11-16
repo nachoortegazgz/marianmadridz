@@ -1,41 +1,45 @@
 import { Permissions, webMethod } from "wix-web-module";
-import { getCashierState } from "backend/cajas.web.js";
-import { requireCajero } from "backend/security";
+import { requireCajero, requireAdmin } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
+import { latestOpenQaSession } from "backend/tpv/tpvQaRepository";
+import { buildQaSessionSummary } from "backend/tpv/tpvCierresCore";
+import { assertTpvQaEnabled } from "backend/tpv/tpvUtils";
 
 function disabledResult(code) {
     return {
         status: "ERROR",
         data: null,
-        error: {
-            code,
-            message: "La generacion y el cierre de informes TPV no estan habilitados.",
-        },
+        error: { code, message: "La generacion fiscal/operativa permanece deshabilitada." },
         persisted: false,
     };
 }
 
 export const obtenerResumenCaja = webMethod(
     Permissions.SiteMember,
-    async () => getCashierState({ traceId: makeTraceId("tpv-report-read") })
+    async () => {
+        const traceId = makeTraceId("tpv-report-qa-read");
+        await requireCajero(traceId);
+        assertTpvQaEnabled();
+        const session = await latestOpenQaSession();
+        if (!session) return { status: "SUCCESS", data: null, error: null, traceId };
+        return { status: "SUCCESS", data: await buildQaSessionSummary(session), error: null, traceId };
+    }
 );
 
 export const previsualizarTicketX = webMethod(
     Permissions.SiteMember,
     async () => {
-        const source = await getCashierState({ traceId: makeTraceId("tpv-ticket-x-preview") });
-        if (source?.status !== "SUCCESS") return source;
+        const traceId = makeTraceId("tpv-ticket-x-preview");
+        await requireCajero(traceId);
+        assertTpvQaEnabled();
+        const session = await latestOpenQaSession();
+        if (!session) return { status: "ERROR", data: null, error: { code: "TPV_QA_SESSION_NOT_OPEN" }, traceId };
+        const totals = await buildQaSessionSummary(session);
         return {
-            status: "PARTIAL",
-            data: {
-                sourceSnapshot: source.data,
-                ticketXGenerated: false,
-                readOnly: true,
-            },
-            error: {
-                code: "TPV_X_AGGREGATION_CONTRACT_PENDING",
-                message: "Falta cerrar el contrato de agregacion completo del informe X.",
-            },
+            status: "SUCCESS",
+            data: { sessionId: session.sessionId, totals, ticketXGenerated: false, readOnly: true, isSynthetic: true },
+            error: null,
+            traceId,
         };
     }
 );
@@ -43,7 +47,7 @@ export const previsualizarTicketX = webMethod(
 export const cerrarTicketZ = webMethod(
     Permissions.SiteMember,
     async () => {
-        await requireCajero(makeTraceId("tpv-ticket-z-block"));
-        return disabledResult("TPV_Z_CLOSING_DISABLED");
+        await requireAdmin(makeTraceId("tpv-ticket-z-block"));
+        return disabledResult("TPV_OPERATIONAL_Z_CLOSING_DISABLED");
     }
 );
