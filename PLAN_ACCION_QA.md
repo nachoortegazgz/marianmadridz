@@ -1,3 +1,7 @@
+> **CORRECCIÓN DE PRECEDENCIA — 2026-11-16 (TEC-038):** Esta nota supersede cualquier apartado histórico de este documento que indique que la mutabilidad temporal QA está activa o autorizada para ledgers. La política vigente mantiene append-only e inmutabilidad para ledgers de caja, contabilidad, fiscalidad, jornada, cierres, eventos webhook y las colecciones `TPV_QA_*`. No se permite update/remove de esos registros. Las únicas mutaciones operativas admitidas son las operaciones CAS tipadas y acotadas sobre locks/estados efímeros expresamente autorizados en `ControlOperativo`; no constituyen edición de ledgers. `bulkUpdate` permanece fail-closed. No reactivar bypasses ni flags de mutabilidad sin nueva decisión formal, análisis y pruebas. La verificación de identidad del Site ID en runtime Wix sigue pendiente y bloquea escrituras TPV desde Preview hasta acreditarla.
+
+---
+
 ## Actualización de ejecución — 2026-11-15: mutabilidad QA aún no implementada
 
 La decisión QA-2026-11-15-TEMP-MUTABILITY supersede la regla append-only durante el desarrollo exclusivamente en el sitio QA. La revisión de código de `main` confirma que la autorización todavía no está implementada en la capa de acceso: `src/backend/dataAccessPolicy.js` rechaza update/remove de las colecciones declaradas append-only y `bulkUpdate` permanece fail-closed. El estado correcto es **autorizado por decisión, no habilitado técnicamente**.
