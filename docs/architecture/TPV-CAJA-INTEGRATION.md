@@ -33,7 +33,7 @@ La interfaz actual no invoca esas operaciones nativas. Solo define el límite de
 
 1. Añadir un HTML Component a la página interna de TPV y asignarle el ID `htmlTPV`.
 2. Copiar el contenido de `#htmlTPV.txt` en el HTML Component.
-3. La página existente ya tiene código versionado en `src/pages/TPV.yl5th.js`. `src/pages/TPV.page-code.template.txt` es solo una plantilla para crear otra página; no sustituye el código vinculado al ID `yl5th`.
+3. La página existente utiliza el código versionado en `src/pages/TPV.yl5th.js`. No existe una plantilla `src/pages/TPV.page-code.template.txt`; no la crees ni la uses como sustituto del código vinculado al ID `yl5th`.
 4. Dar acceso a la página solo a los roles internos autorizados. La autorización efectiva sigue siendo backend.
 5. Probar con una cuenta Site Member autorizada y otra no autorizada. Confirmar que el primer caso devuelve estado y el segundo recibe error sin filtrar datos.
 

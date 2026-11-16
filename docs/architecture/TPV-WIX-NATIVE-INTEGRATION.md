@@ -9,7 +9,7 @@
 - Sitio: Marian Madrid Peluquería y Estética.
 - Site ID: `188bed94-177c-4bc9-a9f0-35080d874f3e`.
 - Editor: Wix Classic Editor (Wix devuelve `Editor`); Velo habilitado.
-- Estado del sitio: `Published`, confirmado por GetSiteContext y por `published: true` en List Static Pages (2026-11-16).
+- Estado del sitio: `Draft`, confirmado por GetSiteContext el 2026-11-16 23:09 Europe/Madrid. Las referencias `Published` de versiones anteriores son históricas y no describen el estado actual.
 - Página estática TPV: ID `yl5th`, título `TPV`, ruta `/blank`.
 - Page code versionado: `src/pages/TPV.yl5th.js`.
 - HTML Component versionado: `#htmlTPV`.
@@ -82,5 +82,5 @@ PR #397, PR #398 y PR #399 figuran fusionadas en GitHub. PR #399 aplica la front
 
 El código TPV está versionado en el repositorio conectado y el commit de PR #399 está en `main`, por lo que Wix debe reflejarlo en el Editor. No se ha ejecutado `wix preview` ni `wix publish`. La versión publicada del sitio no se considera actualizada: el Editor puede estar sincronizado sin que producción lo esté.
 
-La vía oficial aplicable es [Git Integration & Wix CLI for Sites](https://dev.wix.com/docs/develop-websites/articles/workspace-tools/developer-tools/git-integration-wix-cli-for-sites/about-git-integration-wix-cli-for-sites), cuyo setup incluye Wix Editor (Classic) y conexión desde el Code sidebar. El repositorio contiene la configuración de sitio correspondiente. Para crear Preview, Wix requiere Node.js v24.22.1 o superior, Wix CLI y un API key con permiso `Wix CLI for Sites - Git Integration`. Se añadió `.github/workflows/wix-tpv-preview.yml`; su ejecución más reciente terminó correctamente pero omitió la generación porque el secreto `CLI_API_KEY` no está configurado. El workflow nunca ejecuta `wix publish`. Wix advierte que Preview utiliza las HTTP functions live; las pruebas deben limitarse a carga y lecturas, sin acciones que escriban datos.
+La vía oficial aplicable es [Git Integration & Wix CLI for Sites](https://dev.wix.com/docs/develop-websites/articles/workspace-tools/developer-tools/git-integration-wix-cli-for-sites/about-git-integration-wix-cli-for-sites), cuyo setup incluye Wix Editor (Classic) y conexión desde el Code sidebar. El repositorio contiene la configuración de sitio correspondiente. Para crear Preview, Wix requiere Node.js v24.22.1 o superior, Wix CLI y un API key con permiso `Wix CLI for Sites - Git Integration`. Se añadió `.github/workflows/wix-tpv-preview.yml`; el workflow actual exige el secreto `CLI_API_KEY` y falla de forma explícita si falta. La disponibilidad del secreto no puede consultarse desde la integración GitHub. El workflow nunca ejecuta `wix publish`. Wix advierte que Preview utiliza las HTTP functions live; las pruebas deben limitarse a carga y lecturas, sin acciones que escriban datos.
 
