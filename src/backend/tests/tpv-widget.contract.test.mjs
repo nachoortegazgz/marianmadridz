@@ -43,11 +43,17 @@ test("TPV HTML uses versioned messaging and browser-local ticket drafts", () => 
     assert.match(html, /MODO QA/);
     assert.match(html, /Cobrar · deshabilitado/);
     assert.match(html, /Ticket Z · cierre/);
+    assert.match(html, /id="section-tickets"/);
+    assert.match(html, /Factura simplificada/);
+    assert.match(html, /Factura completa/);
+    assert.match(html, /Abono \/ rectificativa/);
+    assert.match(html, /cashDenominations/);
+    assert.match(html, /calculateDenominations/);
     assert.doesNotMatch(html, /fetch\s*\(|XMLHttpRequest|wix-data|suppressAuth/i);
 });
 
 test("TPV mutation controls remain visibly disabled", () => {
-    for (const label of ["Cobrar · deshabilitado", "Abrir caja", "Registrar arqueo parcial", "Crear / modificar reserva", "Procesar devolución", "Emitir tarjeta regalo"]) {
+    for (const label of ["Cobrar · deshabilitado", "Abrir caja", "Registrar arqueo parcial", "Crear / modificar reserva", "Procesar devolución", "Emitir tarjeta regalo", "Emitir factura completa", "Emitir abono / rectificativa"]) {
         assert.ok(html.includes(label), "expected guarded UI capability: " + label);
     }
     assert.match(html, /disabled/);
