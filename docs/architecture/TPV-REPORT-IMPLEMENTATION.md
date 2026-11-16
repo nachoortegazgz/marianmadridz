@@ -1,190 +1,163 @@
-# TPV — desarrollo e integración basada en el informe funcional de Wix
+# TPV — desarrollo basado en la auditoría funcional de Wix
 
-## 1. Fuente funcional y sitio objetivo
+## 1. Fuente funcional y alcance
 
-Fuente funcional primaria: informe Wix aportado por el usuario, `Texto pegado.txt`. Esta implementación conserva sus áreas operativas: ventas mixtas y multilínea, descuentos, impuestos declarados, profesionales/clientes, pagos divididos, anticipos, tickets suspendidos, devoluciones, gift cards, caja, arqueos, pagos electrónicos, ticket X y ticket Z.
+Fuente funcional primaria: informe Wix aportado por el propietario (`Texto pegado.txt`). Se conservan sus áreas: ventas multilínea, descuentos, impuestos declarados, profesionales/clientes, pagos divididos, tickets suspendidos, devoluciones, gift cards, caja, arqueos, pagos electrónicos, Ticket X, Ticket Z, facturación y auditoría.
 
-Sitio Wix seleccionado:
-- Nombre: Marian Madrid Peluquería y Estética.
+Sitio objetivo único:
+- Marian Madrid Peluquería y Estética.
 - Site ID: `188bed94-177c-4bc9-a9f0-35080d874f3e`.
 - Dominio: `https://www.marianmadrid.es/`.
-- Estado: publicado, Premium.
-- Editor: Editor clásico; Velo habilitado; Codegen no elegible.
-- Moneda: EUR; zona horaria: Europe/Madrid.
-- Página TPV: ID `yl5th`, ruta publicada `/blank`.
-- Apps instaladas: Wix Bookings, Wix Stores Catalog V3, Wix Gift Cards y Wix Invoices V1.
-- El segundo sitio no forma parte del alcance.
+- Wix Classic Editor con Velo habilitado.
+- Moneda EUR; zona horaria Europe/Madrid.
+- Página TPV ID `yl5th`, ruta `/blank`.
+- Studio Two queda expresamente fuera del alcance.
 
-## 2. Archivos sincronizados en la rama GitHub
+La rama de trabajo es `feat/tpv-web-modules-report-2026-11-15`, PR #396 (draft, no fusionada).
 
-Rama: `feat/tpv-web-modules-report-2026-11-15`.
-PR: `#396` (draft; no fusionada ni desplegada).
+## 2. Decisión de arquitectura
 
-| Archivo | Responsabilidad / estado |
+La auditoría funcional propone entidades operativas separadas. No se reutiliza `MovimientosCaja` como ledger TPV: en el proyecto esa colección tiene semántica de ledger fiscal canónico, con secuencia/hash y flujo de escritura fiscal.
+
+La persistencia de QA utiliza exclusivamente estas nueve colecciones separadas:
+- `TPV_QA_Ventas`
+- `TPV_QA_VentaLineas`
+- `TPV_QA_Pagos`
+- `TPV_QA_Reembolsos`
+- `TPV_QA_MovimientosCaja`
+- `TPV_QA_SesionesCaja`
+- `TPV_QA_TicketX`
+- `TPV_QA_TicketZ`
+- `TPV_QA_Auditoria`
+
+Las nueve colecciones se provisionaron en el sitio actual, con permisos restrictivos e índice único `idempotencyKey`. La comprobación CMS confirmó los nueve índices `ACTIVE` y cero elementos en todas las colecciones. No se insertaron registros de prueba.
+
+## 3. Módulos desarrollados
+
+| Módulo | Responsabilidad |
 |---|---|
-| `src/pages/TPV.yl5th.js` | Page code de la página existente; inicializa el HTML Component. |
-| `src/public/tpvPageController.js` | Puente versionado HTML ↔ Velo y despacho de WebMethods permitidos. |
-| `#htmlTPV.txt` | Interfaz TPV con venta, catálogo, reservas, devoluciones, caja, arqueo por denominación, X/Z, pagos, gift cards, tickets/facturas y auditoría. |
-| `src/backend/tpv/tpvValidation.js` | Validación pura de importes en céntimos, líneas, descuentos, impuestos declarados y pagos divididos. |
-| `src/backend/tpv/tpvVentas.web.js` | Validación backend de borrador; escritores de venta y devolución bloqueados. |
-| `src/backend/tpv/tpvCaja.web.js` | Lectura autenticada de caja; escritores bloqueados. |
-| `src/backend/tpv/tpvCatalogo.web.js` | Lectores Wix Bookings y Wix Stores Catalog V3, incluidos precios y variantes. |
-| `src/backend/tpv/tpvGiftCards.web.js` | Consulta autenticada y solo lectura del saldo/estado de Gift Cards. |
-| `src/backend/tpv/tpvReportes.web.js` | Resumen de caja y vista parcial X; cierre Z bloqueado. |
-| `src/backend/tests/tpv.web-modules.contract.test.mjs` | Contratos, validación económica y límites de escritura. |
-| `src/backend/tests/tpv-widget.contract.test.mjs` | Protocolo, UI, controles bloqueados y sintaxis del iframe. |
+| `tpvCaja.web.js` | Apertura diaria de sesión QA, lectura de estado QA y arqueo parcial |
+| `tpvVentas.web.js` | Validación de borrador y saga de venta sintética persistente |
+| `tpvMovimientos.web.js` | Entradas, salidas y retiradas sintéticas de efectivo |
+| `tpvCatalogo.web.js` | Lectura nativa de servicios/profesionales Bookings y productos/variantes Stores V3 |
+| `tpvPagos.web.js` | Validación de pagos divididos y cambio, sin llamada a pasarela |
+| `tpvDevoluciones.web.js` | Devoluciones sintéticas parciales/totales, ADMIN y lock CAS por venta |
+| `tpvCierres.web.js` | Resumen de sesión, Ticket X no destructivo y Ticket Z QA |
+| `tpvAuditoria.web.js` | Consulta autenticada de auditoría QA |
+| `tpvPermisos.web.js` | Capacidades permitidas según contexto/rol backend |
+| `tpvUtils.web.js` | Configuración y validaciones QA expuestas al frontend |
+| `tpvQaRepository.js` | Acceso central a colecciones QA, lectura fuerte, idempotencia y lock |
+| `tpvUtils.js` | Funciones puras para importes, claves, métodos y payload sintético |
+| `tpvCierresCore.js` | Agregación reproducible de caja, ventas, pagos y devoluciones |
+| `README.md` | Contratos, límites, inventario y pruebas de los módulos |
 
-La antigua ruta `src/public/tpv/tpv-page.js` se eliminó en una entrega anterior porque importaba un módulo inexistente y no tenía consumidores.
+Todos los WebMethods de mutación QA requieren miembro autenticado y validación backend de rol. Reembolsos y cierre Z requieren ADMIN. Las capacidades que devuelve el módulo de permisos son informativas; cada método vuelve a comprobar autorización en backend.
 
-## 3. Funcionalidad entregada en modo QA
+## 4. Política de datos e integridad
 
-### Venta y catálogo
-- Selección de profesional desde Wix Bookings.
-- Identificación manual opcional del cliente o venta anónima.
-- Lectura de servicios, profesionales, productos y variantes nativos.
-- Borrador multilínea de servicios/productos y concepto manual de QA.
-- Cantidades, descuentos e impuestos declarados por línea.
-- Subtotal, descuentos, impuestos y total en EUR.
-- Medios divididos: efectivo, tarjeta, Bizum y otros.
-- Cambio de efectivo y validación de importe aplicado.
-- Validación backend sin persistencia.
-- Suspensión y recuperación de tickets dentro de la sesión del navegador.
-- Registro de venta QA sintética en memoria, solo tras validación completa y cuadre. No crea venta real ni ticket fiscal.
+### Colecciones QA
+- `TPV_QA_COLLECTIONS` y `TPV_QA_RUNTIME_POLICY` centralizan nombres y configuración.
+- `dataAccessPolicy.js` permite insertar en las nueve colecciones QA.
+- Las colecciones QA son append-only: no están en las listas de update/remove.
+- No se utiliza `suppressAuth` directamente desde módulos TPV.
+- Lecturas de idempotencia usan consistencia fuerte.
+- Índice CMS único `idempotencyKey` protege frente a duplicados concurrentes.
+- La misma clave con payload distinto produce conflicto, no sobrescritura.
 
-### Caja e informes
-- Lectura autenticada del estado actual de caja.
-- Vista previa local de movimientos de efectivo y arqueo, incluido recuento por denominación.
-- Snapshot parcial de Ticket X, claramente identificado como parcial.
-- Resumen sintético X/Z de las ventas QA creadas en la sesión.
-- Cierre Z real deshabilitado.
+### Bloqueo técnico de reembolsos
+Las devoluciones de una misma venta se serializan mediante compare-and-swap en `ControlOperativo`, tipo `TPV_QA_REFUND_LOCK`, con expiración y versión. Este registro es un lock técnico, no un ledger: no almacena importes ni sustituye los eventos QA. La política CAS solo permite modificar status, expiresAt, traceId, payload y version bajo condición compare-and-swap.
 
-### Tickets, facturación, devoluciones, pagos y reservas
-- Secciones de ticket impreso/digital, duplicado, ticket regalo, factura simplificada/completa y abono/rectificativa. Emisión bloqueada hasta integrar Wix Invoices V1 y aprobar numeración/datos fiscales.
-- Preparación de solicitud local de devolución con referencia, importe, medio y motivo.
-- Secciones de reserva, pago y conciliación con sus responsabilidades nativas.
-- No se crean reservas, órdenes, pagos, autorizaciones, reembolsos ni liquidaciones.
+### Exclusiones innegociables
+No se escribe en:
+- `CajaActual`
+- `MovimientosCaja`
+- `HistoricoCierresZ`
+- `LibroAsientosContablesDetalle`
+- Colecciones fiscales, contables o laborales.
 
-### Gift Cards
-- Consulta nativa de saldo/estado con `giftVouchers.getGiftCard` desde `@wix/ecom`.
-- El código se envía solo al WebMethod, se borra del input y no se registra ni se devuelve en claro.
-- Emisión, canje, anulación y reembolso permanecen deshabilitados.
+No se ejecutan pagos, checkout, órdenes, devoluciones externas, Bookings writers, Gift Card writers, hardware, notificaciones ni emisión fiscal. La política de runtime QA fija `REAL_PAYMENTS_ENABLED=false`, `FISCAL_WRITES_ENABLED=false`, `CUSTOMER_NOTIFICATIONS_ENABLED=false` y `HARDWARE_ENABLED=false`.
 
-## 4. Contratos SDK verificados
+## 5. Flujo persistente de venta QA
 
-### Wix Stores Catalog V3
-- El sitio seleccionado confirma Wix Stores Catalog V3 instalado.
-- Dependencia fijada en `@wix/stores@1.0.997`; `package.json` y `package-lock.json` están sincronizados, con las 34 dependencias transitivas requeridas.
-- Se llama primero a `catalogVersioning.getCatalogVersion()`; los valores oficiales son `V1_CATALOG`, `V3_CATALOG` y `STORES_NOT_INSTALLED`.
-- `productsV3.queryProducts` recupera productos visibles para POS con `CURRENCY`, `MIN_PRICE_VARIANT` y `PLAIN_DESCRIPTION`; usa `pagingMetadata.cursors.next` para paginar en bloques de hasta 100.
-- `productsV3.getProduct` recupera las variantes con `VARIANT_OPTION_CHOICE_NAMES` y `CURRENCY`.
-- El lector falla cerrado si la versión no es V3. El sitio seleccionado fue inspeccionado como V3; el resultado runtime todavía debe probarse en Preview.
-- Scope documentado para Query/Get Product: `WIX_STORES.PRODUCT_READ`. No se solicitan los scopes de productos no visibles ni datos comerciales.
+1. El cajero autorizado obtiene la sesión QA abierta.
+2. El frontend envía el borrador al validador backend.
+3. El backend valida líneas, cantidades, descuentos, impuestos declarados y pagos divididos en céntimos.
+4. Se exige total pendiente cero y sesión QA abierta.
+5. Se inserta la cabecera `PREPARADA_SINTETICA`.
+6. Se insertan las líneas y los pagos simulados.
+7. Se inserta la cabecera `CONFIRMADA_SINTETICA`.
+8. Se añade evento de auditoría.
 
-### Wix Gift Cards
-- El sitio confirma Wix Gift Cards instalado.
-- `@wix/ecom` ya estaba fijado en `1.0.2539`.
-- `giftVouchers.getGiftCard(code)` se utiliza solo para lectura.
-- Scope documentado: `ECOM.GIFT_CARD_READ`. Debe verificarse su disponibilidad efectiva en el contexto de ejecución del sitio.
-- La consulta está conectada al HTML Component; emisión, canje y reembolso siguen bloqueados.
+Cada evento utiliza clave derivada de la clave cliente. Un reintento reanuda los pasos ya escritos y solo inserta los que falten. Los informes solo agregan ventas confirmadas. La escritura entre varias colecciones no es una transacción ACID; el estado PREPARADA permite detectar una operación parcial.
 
-### Wix Bookings
-- Servicios y profesionales se consultan mediante los módulos SDK ya usados por el proyecto.
-- Los precios variables no se convierten en precios de venta fijos.
-- La asignación final de staff/slot continúa perteneciendo a Wix Bookings.
+## 6. Pagos y caja QA
 
-## 5. Validación económica
+Los métodos admitidos son EFECTIVO, TARJETA, BIZUM y OTROS. Se usan unidades menores (céntimos). En efectivo:
+- `importe` es efectivo recibido.
+- `importeCambio` es cambio entregado.
+- `importeAplicado = importe - importeCambio`.
+- El impacto de caja física es el importe aplicado.
 
-Los importes se normalizan en unidades menores (céntimos). El impuesto no se infiere.
+Los pagos de tarjeta/Bizum/otros son registros simulados con proveedor `SIMULATED` y referencia `QA-NO-GATEWAY`. No se invoca Wix Payments ni un proveedor externo.
 
-En pagos en efectivo, `importe` representa el efectivo recibido y `importeCambio` el cambio entregado. La cantidad aplicada a la venta es `importe - importeCambio`. El total de pagos divididos se reconcilia usando el importe aplicado, no el efectivo bruto recibido. El cambio solo se admite en efectivo.
+Una sesión por día local Europe/Madrid se crea con clave idempotente determinista. Arqueos parciales y movimientos se insertan como eventos. Ticket X es una instantánea no destructiva. Ticket Z crea un registro de cierre de la sesión QA y no cierra caja real, periodo fiscal ni ledger.
 
-La validación devuelve `isSynthetic: true`, `persisted: false` y `realPayment: false`. El cierre de borrador QA no constituye cobro.
+## 7. Devoluciones QA
 
-## 6. Modelo de datos del informe y límites
+- Requieren ADMIN.
+- La venta original debe estar confirmada y pertenecer a la sesión QA abierta.
+- Las asignaciones por método deben coincidir con medios de pago originales y no superar el importe restante no reembolsado.
+- Un lock compare-and-swap por venta evita dos reembolsos concurrentes que excedan el saldo disponible.
+- La cabecera, los pagos negativos, los movimientos de efectivo y la auditoría se insertan idempotentemente.
+- No se llama a la API de refund de un proveedor ni se devuelve dinero real.
 
-El informe propone separar las entidades operativas:
-- `TPV_Ventas`
-- `TPV_VentaLineas`
-- `TPV_Pagos`
-- `TPV_Reembolsos`
-- `TPV_MovimientosCaja`
-- `TPV_SesionesCaja`
-- `TPV_TicketX`
-- `TPV_TicketZ`
-- `TPV_Auditoria`
+## 8. Integración frontend
 
-Estas colecciones no se han creado ni se escriben desde esta entrega. Antes de provisionarlas hay que cerrar los esquemas, índices, permisos, claves idempotentes, secuencias, concurrencia y retención.
+`src/public/tpvPageController.js` conecta el HTML Component con los WebMethods QA. El HTML `#htmlTPV.txt` incluye:
+- apertura de sesión QA;
+- validación y guardado persistente de venta sintética;
+- movimientos y arqueos parciales;
+- devoluciones sintéticas;
+- resumen, Ticket X y Ticket Z QA;
+- consulta de auditoría persistida;
+- lectores de Bookings, Stores y Gift Cards.
 
-**No se reutiliza `MovimientosCaja` como ledger operativo TPV.** En el proyecto y el sitio, `MovimientosCaja` tiene semántica de ledger fiscal canónico, con secuencia, hash, hash anterior y datos fiscales. El informe propone `TPV_MovimientosCaja` como entidad operativa separada; cualquier cambio exige contrato/ADR aprobado.
+Las reservas, órdenes, cobros reales, emisión/canje de Gift Cards, facturación y operaciones fiscales permanecen bloqueadas.
 
-## 7. Bloqueos de seguridad y esquema en Wix live
+## 9. Estado de integración y validación
 
-1. `CajaActual` y `MovimientosCaja` devolvieron permiso de lectura `ANYONE`. `CajaActual` contiene importes operativos y datos de apertura/cierre. `MovimientosCaja` devolvió cero registros en la consulta revisada, pero su esquema admite NIF, direcciones, payload fiscal, hashes y firmas. Esto es un bloqueo P0: no activar escritores ni introducir nuevos datos fiscales hasta cerrar lectura pública y probar permisos por rol.
-2. El esquema live de `CajaActual` incluye `cashRegisterStatus`, `cashAmount`, `cardAmount`, `bizumAmount`, `otherAmount`, `expectedCash`, `countedCash`, `sequenceCounters` y `ticketTotal), entre otros. No se confirmó `netAmount), aunque el backend actual conserva esa referencia y devuelve fallback cero. Debe reconciliarse antes de usar totales.
-3. `bizumAmount` y `openingBizumAmount` sí existen en el esquema live. El método de caja actual deriva Bizum desde `sessionPayments.BIZUM.amount`; debe comprobarse que ambos campos representen el mismo periodo antes de usarlos como saldo definitivo.
-4. `Permissions.SiteMember` no equivale a rol cajero. Los WebMethods usan `requireCajero()`; la lectura pública directa de CMS es un vector independiente y debe cerrarse.
-5. La lectura Gift Cards y Stores requiere comprobar los scopes documentados y el acceso real en Preview.
+**Verificado en Wix CMS:**
+- permisos de lectura pública de `CajaActual` y `MovimientosCaja` restringidos;
+- nueve colecciones QA creadas;
+- nueve índices idempotentes `ACTIVE`;
+- cero elementos en las nueve colecciones.
 
-## 8. Estado de sincronización
+**Verificado estáticamente en esta intervención:**
+- parseo del script inline HTML;
+- parseo sintáctico de módulos backend y controlador;
+- pruebas de contrato/política añadidas al repositorio.
 
-**Sincronizado:** archivos fuente y pruebas en la rama GitHub y PR #396.
+**Pendiente de ejecutar:**
+- suites Node/Vitest completas y ESLint;
+- CI sobre el HEAD final;
+- duplicados e idempotencia contra CMS real;
+- concurrencia y lock CAS de reembolsos;
+- reanudación ante fallos parciales;
+- Preview con roles ADMIN, GESTION, ESTILISTA, miembro y visitante anónimo.
 
-**No sincronizado en Wix Editor:** el sitio es Editor clásico y Codegen no es elegible. La conexión Wix disponible permite inspeccionar contexto y APIs, pero no editar el contenido del HTML Component ni guardar el page code del Editor. La API de inventario confirma página/ID/ruta, no el árbol de componentes ni el código publicado.
+El último commit consultado no tiene checks ni workflow runs asociados; no se declara CI verde.
 
-Por tanto, no se afirma que `#htmlTPV` esté actualizado en el Editor. La aplicación del page code y del contenido HTML sigue siendo una operación de Editor pendiente. No se ha publicado ni desplegado esta rama en el sitio.
+## 10. Sincronización y despliegue
 
-## 9. Validación y siguiente gate
+Los archivos están versionados en la rama GitHub. No se ha sincronizado el page code, el HTML Component ni los módulos backend con el Editor clásico; no se ha fusionado PR #396 ni publicado código TPV. El runtime publicado no debe considerarse actualizado por estos commits.
 
-HEAD validado: `47670f16382ebc2e869fd8a4e419aecbd49b1c42`.
-- Backend offline quality gates #1410: correcto.
-- Layer 1: 26 suites, 317 tests, 0 fallos.
-- Layer 2: 19 suites, 253 tests, 0 fallos.
-- Regresión offline completa: 72 suites, 656 tests, 0 fallos.
-- Contratos SDK Wix, eCommerce Order Transactions y Bookings: correctos.
-- ESLint: correcto.
-- Secret scanning #834: correcto.
+Antes de sincronizar:
+1. ejecutar CI y revisar el diff;
+2. aplicar manualmente `src/pages/TPV.yl5th.js`, `src/public/tpvPageController.js`, los módulos backend y `#htmlTPV.txt` en Wix Classic;
+3. probar Preview con roles y casos negativos;
+4. confirmar pasarela desconectada;
+5. verificar que las operaciones de QA solo afectan a `TPV_QA_*`;
+6. mantener desactivadas las escrituras fiscales/operativas;
+7. obtener autorización expresa antes de merge o publicación.
 
-Las pruebas offline verifican contratos y sintaxis, pero no sustituyen Preview/runtime.
-
-Antes de activar escrituras o publicar:
-1. Aplicar `src/pages/TPV.yl5th.js` y el contenido de `#htmlTPV.txt` en la página Wix `yl5th`; confirmar que el componente real se llama `#htmlTPV`.
-2. Probar el handshake HTML ↔ Velo con cajero autorizado y miembro no autorizado.
-3. Probar Bookings, Stores Catalog V3 y Gift Cards en runtime; verificar scopes.
-4. Cerrar lectura pública de `CajaActual` y `MovimientosCaja`, probando anónimo, miembro ordinario y cajero.
-5. Aprobar contratos de las nueve entidades TPV separadas y su relación con el ledger fiscal.
-6. Diseñar idempotencia, concurrencia, secuencias, compensaciones y autorizaciones.
-7. Habilitar por separado ventas, pagos, reembolsos, caja, X/Z y facturas, con pruebas de integración, reversión y autorización expresa.
-
-
-## 10. Correcciones y decisiones de conciliación (2026-11-16)
-
-### Corrección del puente de caja
-- src/public/tpvPageController.js recibía CASHIER_STATE llamando a getCashierState, símbolo que no estaba importado en ese módulo.
-- El controlador ahora invoca el WebMethod importado obtenerCajaActual() y normaliza el error mediante safeCall.
-- El test contractual comprueba que el puente no contiene referencias libres a getCashierState.
-
-### Desglose de pagos validado en backend
-- validateSaleDraft devuelve desgloseMedios separado para EFECTIVO, TARJETA, BIZUM y OTROS.
-- Para efectivo distingue efectivoRecibido, cambioEntregado y efectivoAplicado; el impacto de caja es el efectivo aplicado, no el importe bruto entregado.
-- totalCobrado suma los importes aplicados de todos los medios.
-- Estos valores son cálculos de borrador sintético; no son una liquidación de pasarela ni un movimiento persistido.
-- Se añadió prueba de regresión para el ejemplo mixto 40 EUR efectivo + 35 EUR tarjeta + 25 EUR Bizum, con 5 EUR de cambio sobre 45 EUR recibidos.
-
-### Contradicción que bloquea la persistencia
-El informe funcional asigna ventas, cobros y movimientos físicos a MovimientosCaja. En el código y contrato del proyecto, esa colección es además el ledger fiscal canónico: contiene secuencia y cadena hash y sus escrituras pasan por registerManualTransaction, que valida configuración fiscal, identidad, periodo y política de escritura. Actualmente FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED mantiene la escritura fiscal deshabilitada y los registros sintéticos no se admiten en el ledger operativo.
-
-Por tanto:
-- No insertar tickets QA ni movimientos sintéticos directamente en MovimientosCaja.
-- No escribir directamente en CajaActual; su proyección debe derivarse de movimientos aceptados por el flujo autorizado.
-- Antes de habilitar operaciones persistentes debe aprobarse una decisión de arquitectura: (A) venta fiscal real integrada por el flujo fiscal autorizado, con numeración, impuestos, firma y requisitos legales verificados; o (B) colecciones TPV de QA separadas y aisladas, sin efectos fiscales ni mezcla con el ledger.
-- Los movimientos de cajón no fiscales (apertura, cambio, retirada y arqueo) necesitan un contrato explícito y no deben convertirse artificialmente en facturas o ventas fiscales.
-
-### Bloqueos aún abiertos
-1. Permisos CMS ANYONE de lectura de CajaActual y MovimientosCaja: P0, pendiente de corrección y prueba de acceso anónimo/miembro/cajero.
-2. Esquemas, índices y permisos del conjunto de colecciones QA: pendientes de inspección en el sitio QA correcto. El segundo sitio Studio Two no se incorpora a esta rama sin selección explícita del sitio y su ID.
-3. Idempotencia y concurrencia: pendiente de contrato persistente atómico; una consulta previa seguida de insert no basta para garantizar unicidad.
-4. Devoluciones, pagos, movimientos de caja, asientos y cierres Z: permanecen bloqueados hasta resolver los puntos anteriores.
-5. La nueva corrección y sus pruebas necesitan CI en el nuevo HEAD; el CI exitoso del commit anterior no valida estos cambios.
-6. Sigue pendiente la prueba en Wix Preview y la aplicación manual del page code/HTML en el Editor clásico.
-
-No se han creado colecciones, cambiado permisos, escrito datos ni iniciado cobros, reembolsos, facturas o cierres.
+Studio Two no ha sido consultado ni modificado.
