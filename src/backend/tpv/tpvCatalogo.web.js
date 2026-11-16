@@ -1,4 +1,5 @@
 import { Permissions, webMethod } from "wix-web-module";
+import { auth } from "@wix/essentials";
 import { services, staffMembers } from "@wix/bookings";
 import { catalogVersioning, productsV3 } from "@wix/stores";
 import { requireCajero } from "backend/security";
@@ -35,7 +36,7 @@ function normalizePage(input = {}) {
 
 async function getStoresCatalogVersion() {
     if (!catalogVersionPromise) {
-        catalogVersionPromise = catalogVersioning.getCatalogVersion()
+        catalogVersionPromise = getCatalogVersionElevated()
             .then((result) => String(result?.catalogVersion || "UNKNOWN"))
             .catch((error) => {
                 catalogVersionPromise = null;
@@ -59,7 +60,7 @@ function mapProduct(product) {
         precioFormateado: minimum?.formattedAmount || null,
         numeroVariantes: Number(product.variantSummary?.variantCount || 0),
         requiereSeleccionVariante: Number(product.variantSummary?.variantCount || 0) > 1,
-        visibleEnPos: product.visibleInPos !== false,
+        visibleEnPos: product.visible === true,
         tipoProducto: product.productType || null,
         inventario: product.inventory?.availabilityStatus || null,
     };
@@ -174,7 +175,7 @@ export const obtenerProductos = webMethod(
                 fields: ["CURRENCY", "MIN_PRICE_VARIANT", "PLAIN_DESCRIPTION"],
             });
             const items = (result?.products || [])
-                .filter((product) => product?.visible === true && product?.visibleInPos !== false)
+                .filter((product) => product?.visible === true)
                 .map(mapProduct);
             return {
                 status: "SUCCESS",
@@ -215,7 +216,7 @@ export const obtenerVariantesProducto = webMethod(
             const product = await getProductElevated(productId, {
                 fields: ["VARIANT_OPTION_CHOICE_NAMES", "CURRENCY"],
             });
-            if (!product || product.visible !== true || product.visibleInPos === false) {
+            if (!product || product.visible !== true) {
                 return {
                     status: "ERROR",
                     data: null,
