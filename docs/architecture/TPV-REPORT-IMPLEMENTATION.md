@@ -115,7 +115,7 @@ El informe propone separar las entidades operativas:
 
 Estas colecciones no se han creado ni se escriben desde esta entrega. Antes de provisionarlas hay que cerrar los esquemas, índices, permisos, claves idempotentes, secuencias, concurrencia y retención.
 
-**No se reutiliza `MovimientosCaja) como ledger operativo TPV.** En el proyecto y el sitio, `MovimientosCaja` tiene semántica de ledger fiscal canónico, con secuencia, hash, hash anterior y datos fiscales. El informe propone `TPV_MovimientosCaja` como entidad operativa separada; cualquier cambio exige contrato/ADR aprobado.
+**No se reutiliza `MovimientosCaja` como ledger operativo TPV.** En el proyecto y el sitio, `MovimientosCaja` tiene semántica de ledger fiscal canónico, con secuencia, hash, hash anterior y datos fiscales. El informe propone `TPV_MovimientosCaja` como entidad operativa separada; cualquier cambio exige contrato/ADR aprobado.
 
 ## 7. Bloqueos de seguridad y esquema en Wix live
 
