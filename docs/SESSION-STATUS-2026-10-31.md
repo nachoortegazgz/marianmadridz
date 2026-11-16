@@ -42,7 +42,7 @@
 
 ### Wix CLI / manifiesto
 
-- Workflow `.github/workflows/wix-cli-manifest.yml` usa el secreto GitHub `CLI_API_KEY` como `WIX_CLI_API_KEY`.
+- Nota histórica: el workflow `.github/workflows/wix-cli-manifest.yml` ya no existe en `main`. El nombre canónico del secreto GitHub para Wix CLI es `CLI_API_KEY`; no debe documentarse ni usarse un alias alternativo.
 - El workflow instala Wix CLI for Sites, ejecuta `wix install --npm @wix/data` y comprueba la versión esperada de `@wix/data`.
 - **Verificado en `main` (2026-11-01):** `src/velo.dependencies.json` no existe (consulta GitHub Contents: 404). La regla ESLint `@wix/cli/no-invalid-backend-import` sigue desactivada temporalmente por esta razón.
 
