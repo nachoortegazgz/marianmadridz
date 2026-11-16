@@ -203,6 +203,8 @@ test("TPV catalog reader uses native Bookings SDK and does not expose staff cont
     assert.match(catalog, /catalogVersioning\.getCatalogVersion/);
     assert.match(catalog, /productsV3\.queryProducts/);
     assert.match(catalog, /productsV3\.getProduct/);
+    assert.match(catalog, /varianteId: variant\._id/);
+    assert.doesNotMatch(catalog, /varianteId: variant\.id/);
     assert.match(catalog, /visibleInPos/);
     assert.match(catalog, /V3_CATALOG/);
     assert.match(catalog, /precioMinor/);
