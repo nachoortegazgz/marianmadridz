@@ -542,6 +542,18 @@ export const DATA_ACCESS_BULK_PATCH_POLICY = Object.freeze({
         traceId: Object.freeze(["SET_FIELD"]),
         version: Object.freeze(["INCREMENT_FIELD"]),
       }),
+    [CONTROL_TYPE.TPV_QA_SESSION_LOCK]: Object.freeze({
+      requiredConditionFields: Object.freeze(["controlType", "version", "status"]),
+      anyConditionFields: Object.freeze([]),
+      allowedConditionFields: Object.freeze(["controlType", "version", "status", "expiresAt"]),
+      fields: Object.freeze({
+        status: Object.freeze(["SET_FIELD"]),
+        payload: Object.freeze(["SET_FIELD"]),
+        expiresAt: Object.freeze(["SET_FIELD"]),
+        traceId: Object.freeze(["SET_FIELD"]),
+        version: Object.freeze(["INCREMENT_FIELD"]),
+      }),
+    }),
     }),
   }),
 });
