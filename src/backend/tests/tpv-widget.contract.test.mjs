@@ -8,7 +8,7 @@ const cashierBackend = await readFile(new URL("../cajas.web.js", import.meta.url
 const catalogBackend = await readFile(new URL("../tpv/tpvCatalogo.web.js", import.meta.url), "utf8");
 
 test("TPV controller exposes authenticated read-only cashier and Bookings catalog methods", () => {
-    assert.match(controller, /getCashierState/);
+    assert.match(controller, /obtenerCajaActual/);
     assert.match(controller, /obtenerServicios/);
     assert.match(controller, /obtenerProfesionales/);
     assert.match(controller, /consultarTarjetaRegalo/);
