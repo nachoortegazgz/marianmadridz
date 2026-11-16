@@ -109,6 +109,9 @@ export const cerrarTicketZQA = webMethod(
                         data: {
                             reportId: prior.reportId,
                             sessionId: prior.sessionId,
+                            expectedCash: fromMinorUnits(Number(prior.totals?.expectedCashMinor || 0)),
+                            countedCash: fromMinorUnits(Number(prior.totals?.countedCashMinor || 0)),
+                            difference: fromMinorUnits(Number(prior.totals?.differenceMinor || 0)),
                             closed: prior.closed === true,
                             replayed: true,
                             isSynthetic: true,
