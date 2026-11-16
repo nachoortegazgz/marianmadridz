@@ -15,7 +15,7 @@ const suites = [
   'booking.cart-v2.checkout.test.mjs',
   'qa.payment-gateway.mock.test.mjs',
   'qa.tpv-simulation.mock.test.mjs',
-  'tpv.web-modules.contract.test.mjs',
+  'tpv.web-modules.contract.test.mjs',\n  'tpv-ui.qa-source.test.mjs',
   'tpv-widget.contract.test.mjs',
   'members.sdk.contract.test.mjs',
   'booking.members-required.contract.test.mjs',
