@@ -48,6 +48,8 @@ test("TPV HTML uses versioned messaging and browser-local ticket drafts", () => 
     assert.match(html, /Factura completa/);
     assert.match(html, /Abono \/ rectificativa/);
     assert.match(html, /cashDenominations/);
+    assert.match(html, /loadMoreProducts/);
+    assert.match(html, /function requestMoreProducts/);
     assert.match(html, /calculateDenominations/);
     assert.doesNotMatch(html, /fetch\s*\(|XMLHttpRequest|wix-data|suppressAuth/i);
 });
