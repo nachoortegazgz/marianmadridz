@@ -299,8 +299,11 @@ test("QA repository paginates reads and blocks Z close while sales are incomplet
     assert.match(repository, /while \(page\.hasNext && records\.length < maxRecords\)/);
     assert.match(repository, /export async function getPendingQaSales\(sessionId\)/);
     assert.match(repository, /export async function getPendingQaRefunds\(sessionId\)/);
-    assert.match(repository, /refundPayments\.length !== allocations\.length/);
-    assert.match(repository, /refundCashMovements\.length !== expectedCashMovements/);
+    assert.match(repository, /actualByMethod\.size !== expectedByMethod\.size/);
+    assert.match(repository, /actual\.amountMinor !== expected\.amountMinor/);
+    assert.match(repository, /refundCashMovements\.length !== expectedCash\.count/);
+    assert.match(repository, /actualCashAmount !== expectedCash\.amountMinor/);
+    assert.match(repository, /refundTotal !== Number\(refund\.amountMinor\)/);
     assert.match(closures, /getPendingQaSales\(session\.sessionId\)/);
     assert.match(closures, /TPV_QA_PENDING_SALES_PREVENT_CLOSE/);
     assert.match(closures, /getPendingQaRefunds\(session\.sessionId\)/);
