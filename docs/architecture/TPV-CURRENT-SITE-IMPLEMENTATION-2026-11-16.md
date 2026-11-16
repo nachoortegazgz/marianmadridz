@@ -71,7 +71,7 @@ La rama de integración actual es `feat/tpv-classic-persistent-qa-2026-11-16`, c
 - `tpvCatalogo.web.js`: lectores de Bookings y Stores Catalog V3 con llamadas elevadas solo después de autorización backend.
 - `tpvGiftCards.web.js`: consulta real de tarjetas regalo deshabilitada en QA; no envía códigos ni consulta saldos reales.
 - `tpvPagos.web.js`: validación de efectivo/tarjeta/Bizum/otros sin pasarela.
-- `tpvDevoluciones.web.js`: devoluciones sintéticas con autorización ADMIN y lock CAS por venta.
+- `tpvDevoluciones.web.js`: devoluciones sintéticas con autorización ADMIN y locks CAS por venta/sesión.
 - `tpvCierres.web.js`: resumen de sesión, Ticket X y Ticket Z de QA.
 - `tpvAuditoria.web.js`: consulta de auditoría QA.
 - `tpvPermisos.web.js`: capacidades derivadas del rol validado en backend.
@@ -114,9 +114,9 @@ Pruebas añadidas al repositorio:
 **CI verificado sobre HEAD `36fcd9c9192b888e884ace3881dbd88f9cb6a574`:** Layer 1: 28 suites / 328 pruebas, 0 fallos; Layer 2: 19 suites / 255 pruebas, 0 fallos; regresión offline completa: 74 suites / 667 pruebas, 0 fallos; ESLint correcto; contratos de SDK Wix y secret scanning correctos. Estas pruebas son offline/estáticas y no sustituyen pruebas de runtime. La ejecución final de CI sobre el HEAD indicado terminó correctamente. Las ejecuciones previas fallidas se debieron a aserciones de contrato de pruebas, corregidas y reejecutadas.
 
 Pendiente:
-1. Ejecutar `npm run test:layer1`, la regresión completa y ESLint en CI.
+1. Repetir CI tras los últimos commits documentales; el código TPV ya superó Layer 1, Layer 2, regresión offline y ESLint en el commit `36fcd9c9192b888e884ace3881dbd88f9cb6a574`.
 2. Probar inserciones duplicadas y concurrencia del índice idempotente en CMS QA.
-3. Probar locks de sesión y reembolso en concurrencia, CAS y recuperación tras expiración.
+3. Probar locks de sesión y reembolso en concurrencia real, CAS y recuperación tras expiración.
 4. Probar reanudación de venta y devolución ante fallo parcial entre colecciones.
 5. Aplicar manualmente `src/pages/TPV.yl5th.js`, `src/public/tpvPageController.js` y el contenido de `#htmlTPV.txt` en Wix Classic.
 6. Validar Preview con ADMIN, GESTION, ESTILISTA, miembro ordinario y visitante anónimo.
