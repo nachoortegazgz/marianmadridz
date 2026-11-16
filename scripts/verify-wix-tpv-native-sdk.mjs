@@ -1,11 +1,10 @@
 import assert from "node:assert/strict";
-import { contactsV5 } from "@wix/crm";
-import { giftVouchers } from "@wix/ecom";
-import { extendedBookings } from "@wix/bookings";
+import { services } from "@wix/bookings";
+import { catalogVersioning, productsV3 } from "@wix/stores";
 
-assert.equal(typeof contactsV5?.searchContacts, "function", "@wix/crm contactsV5.searchContacts must be exported");
-assert.equal(typeof contactsV5?.getContact, "function", "@wix/crm contactsV5.getContact must be exported");
-assert.equal(typeof giftVouchers?.getGiftCard, "function", "@wix/ecom giftVouchers.getGiftCard must be exported");
-assert.equal(typeof extendedBookings?.queryExtendedBookings, "function", "@wix/bookings extendedBookings.queryExtendedBookings must be exported");
+assert.equal(typeof services?.queryServices, "function", "@wix/bookings services.queryServices must be exported");
+assert.equal(typeof catalogVersioning?.getCatalogVersion, "function", "@wix/stores catalogVersioning.getCatalogVersion must be exported");
+assert.equal(typeof productsV3?.queryProducts, "function", "@wix/stores productsV3.queryProducts must be exported");
+assert.equal(typeof productsV3?.getProduct, "function", "@wix/stores productsV3.getProduct must be exported");
 
-process.stdout.write("Wix TPV native SDK contracts OK: Contacts V5 search/get, Bookings Reader V2 query, eCommerce Gift Cards read\n");
+process.stdout.write("Wix TPV catalog SDK contracts OK: Bookings services query, Stores Catalog V3 version/query/get\n");
