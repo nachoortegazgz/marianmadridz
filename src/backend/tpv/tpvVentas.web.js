@@ -56,12 +56,6 @@ export const registrarVentaQA = webMethod(
             if (!session) throw new Error("TPV_QA_SESSION_NOT_OPEN");
             if (input.sessionId && input.sessionId !== session.sessionId) throw new Error("TPV_QA_SESSION_MISMATCH");
 
-            return await withQaSessionLock(session.sessionId, traceId, async () => {
-                const activeSession = await latestOpenQaSession();
-                if (!activeSession || activeSession.sessionId !== session.sessionId) {
-                    throw new Error("TPV_QA_SESSION_CLOSED");
-                }
-
             const sale = validateSaleDraft({
                 lineas: input.lineas,
                 pagos: input.pagos,
@@ -74,9 +68,18 @@ export const registrarVentaQA = webMethod(
             const customerContactId = String(input.customerContactId || "").trim();
             const bookingId = String(input.bookingId || "").trim();
             if (bookingId && !customerContactId) throw new Error("TPV_BOOKING_REQUIRES_CUSTOMER");
+            // External Wix reads stay outside the session lock to avoid holding
+            // the CAS lease while Contacts/Bookings APIs respond.
             const customer = customerContactId ? await leerContactoTPV(customerContactId) : null;
             const booking = bookingId ? await leerReservaTPV({ bookingId, contactId: customerContactId }) : null;
             const staff = await getMyStaffContext(traceId);
+
+            return await withQaSessionLock(session.sessionId, traceId, async () => {
+                const activeSession = await latestOpenQaSession();
+                if (!activeSession || activeSession.sessionId !== session.sessionId) {
+                    throw new Error("TPV_QA_SESSION_CLOSED");
+                }
+
             const saleId = makeQaId("SALE", key);
             const createdAt = new Date();
             const commonPayload = {
