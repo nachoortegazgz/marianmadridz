@@ -21,7 +21,7 @@ test("TPV controller exposes authenticated read-only cashier and Bookings catalo
     assert.match(controller, /"CATALOG_STAFF"/);
     assert.doesNotMatch(
         controller,
-        /registerManualTransaction|registerZClosing|createCheckout|createOrder|createPayment|refund|registrarVenta|procesarDevolucion/i
+        /registerManualTransaction|registerZClosing|createCheckout|createOrder|createPayment|processRefund|registrarVenta|procesarDevolucion/i
     );
 });
 
