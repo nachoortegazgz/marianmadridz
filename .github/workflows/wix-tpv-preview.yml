@@ -2,9 +2,6 @@ name: Wix TPV Preview (non-production)
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - docs/tpv-classic-code-sync-eligibility-2026-11-16
 
 permissions:
   contents: read
@@ -19,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
-      WIX_CLI_API_KEY: ${{ secrets.WIX_CLI_API_KEY }}
+      CLI_API_KEY: ${{ secrets.CLI_API_KEY }}
     steps:
       - name: Checkout connected Wix site repository
         uses: actions/checkout@v4
@@ -48,7 +45,7 @@ jobs:
         id: auth
         shell: bash
         run: |
-          if [[ -n "${WIX_CLI_API_KEY:-}" ]]; then
+          if [[ -n "${CLI_API_KEY:-}" ]]; then
             echo "available=true" >> "$GITHUB_OUTPUT"
           else
             echo "available=false" >> "$GITHUB_OUTPUT"
@@ -56,7 +53,7 @@ jobs:
 
       - name: Skip preview when Wix CLI API key is not configured
         if: steps.auth.outputs.available != 'true'
-        run: echo "::notice::Preview skipped. Configure repository secret WIX_CLI_API_KEY with the Wix CLI for Sites - Git Integration permission."
+        run: echo "::notice::Preview skipped. Configure repository secret CLI_API_KEY with the Wix CLI for Sites - Git Integration permission."
 
       - name: Install locked project dependencies
         if: steps.auth.outputs.available == 'true'
@@ -68,7 +65,7 @@ jobs:
 
       - name: Authenticate Wix CLI
         if: steps.auth.outputs.available == 'true'
-        run: npm run wix login -- --api-key "$WIX_CLI_API_KEY"
+        run: npm run wix login -- --api-key "$CLI_API_KEY"
 
       - name: Create Wix preview only (never publish)
         if: steps.auth.outputs.available == 'true'

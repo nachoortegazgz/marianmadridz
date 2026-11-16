@@ -70,7 +70,7 @@ No se ha insertado ningún registro RATE_LIMIT en producción durante esta audit
 
 1. **Runtime Wix:** la suite offline simula la condición y el incremento atómico; aún falta una prueba de concurrencia real contra Wix Data en un entorno QA. La documentación oficial confirma incrementos atómicos en Bulk Patch y soporte de `condition.filter`, pero el mock no sustituye esa validación real.
 2. **Identidad anónima:** `reservas.web.js` no dispone actualmente de una IP verificable dentro de estos WebMethods; las peticiones anónimas usan una clave común `anon:noip`. Esto puede hacer que visitantes distintos compartan el límite. `processDualBooking` usa miembro/email/anon; el email recibido del cliente no es una identidad fuerte. No se debe presentar este componente como protección anti-bot por IP.
-3. **Manifiesto Velo:** `src/velo.dependencies.json` sigue pendiente de generación por Wix CLI. El workflow requiere el secreto GitHub `WIX_CLI_API_KEY`, que el conector no puede crear ni leer.
+3. **Manifiesto Velo:** `src/velo.dependencies.json` sigue pendiente de generación por Wix CLI. El workflow requiere el secreto GitHub `CLI_API_KEY`, que el conector no puede crear ni leer.
 4. **ESLint:** `@wix/cli/no-invalid-backend-import` permanece temporalmente desactivada hasta que el manifiesto exista.
 5. **Producción:** no fusionar ni publicar hasta ejecutar pruebas simples/duales, concurrencia, checkout, cancelación y compensación en Wix QA.
 

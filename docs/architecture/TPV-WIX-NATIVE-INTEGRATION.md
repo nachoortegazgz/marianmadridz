@@ -70,7 +70,7 @@ No reintroducir los escritores legacy: insertaban en `MovimientosCaja` y actuali
 4. Definir la emisión fiscal con Wix Invoices V1 y cumplimiento fiscal español.
 5. Probar en Preview con ADMIN, GESTION, ESTILISTA, miembro sin rol y visitante.
 6. Confirmar en Wix Dashboard que no hay proveedor de pagos conectado antes de cualquier prueba que pueda producir efectos financieros.
-7. Configurar el secreto `WIX_CLI_API_KEY` con el permiso indicado y ejecutar el workflow de Preview; revisar la URL y probar solo lecturas. No ejecutar `wix publish` hasta cerrar los bloqueos runtime.
+7. Configurar el secreto `CLI_API_KEY` con el permiso indicado y ejecutar el workflow de Preview; revisar la URL y probar solo lecturas. No ejecutar `wix publish` hasta cerrar los bloqueos runtime.
 
 ## Estado de despliegue
 
@@ -78,5 +78,5 @@ PR #397, PR #398 y PR #399 figuran fusionadas en GitHub. PR #399 aplica la front
 
 El código TPV está versionado en el repositorio conectado y el commit de PR #399 está en `main`, por lo que Wix debe reflejarlo en el Editor. No se ha ejecutado `wix preview` ni `wix publish`. La versión publicada del sitio no se considera actualizada: el Editor puede estar sincronizado sin que producción lo esté.
 
-La vía oficial aplicable es [Git Integration & Wix CLI for Sites](https://dev.wix.com/docs/develop-websites/articles/workspace-tools/developer-tools/git-integration-wix-cli-for-sites/about-git-integration-wix-cli-for-sites), cuyo setup incluye Wix Editor (Classic) y conexión desde el Code sidebar. El repositorio contiene la configuración de sitio correspondiente. Para crear Preview, Wix requiere Node.js v24.22.1 o superior, Wix CLI y un API key con permiso `Wix CLI for Sites - Git Integration`. Se añadió `.github/workflows/wix-tpv-preview.yml`; su ejecución más reciente terminó correctamente pero omitió la generación porque el secreto `WIX_CLI_API_KEY` no está configurado. El workflow nunca ejecuta `wix publish`. Wix advierte que Preview utiliza las HTTP functions live; las pruebas deben limitarse a carga y lecturas, sin acciones que escriban datos.
+La vía oficial aplicable es [Git Integration & Wix CLI for Sites](https://dev.wix.com/docs/develop-websites/articles/workspace-tools/developer-tools/git-integration-wix-cli-for-sites/about-git-integration-wix-cli-for-sites), cuyo setup incluye Wix Editor (Classic) y conexión desde el Code sidebar. El repositorio contiene la configuración de sitio correspondiente. Para crear Preview, Wix requiere Node.js v24.22.1 o superior, Wix CLI y un API key con permiso `Wix CLI for Sites - Git Integration`. Se añadió `.github/workflows/wix-tpv-preview.yml`; su ejecución más reciente terminó correctamente pero omitió la generación porque el secreto `CLI_API_KEY` no está configurado. El workflow nunca ejecuta `wix publish`. Wix advierte que Preview utiliza las HTTP functions live; las pruebas deben limitarse a carga y lecturas, sin acciones que escriban datos.
 

@@ -91,12 +91,12 @@ PR #399 de hardening sintético está integrada en main y superó CI: 74 suites 
 - Revalidación Wix Automations V2 del 2026-11-16: 8 automatizaciones ACTIVE, todas confirmadas por Get Automation. Siete son PREINSTALLED y tienen `disableStatusChange=true`; una adicional de origen APPLICATION (`Creación de TPV física personalizada`) se ejecuta diariamente a las 01:45 y delega a `Delegate to AI Custom Agent` (task ID `d56d7590-7eb7-4e4f-94ac-2ca9fa465fcf`). No se conoce el contenido de la tarea ni sus integraciones; no se ha modificado. Runtime/E2E permanece bloqueado.
 - La desconexión de la pasarela es una declaración del propietario; debe confirmarse en Wix Dashboard antes de cualquier prueba que pueda producir efectos financieros.
 
-La vía soportada es [Git Integration & Wix CLI for Sites](https://dev.wix.com/docs/develop-websites/articles/workspace-tools/developer-tools/git-integration-wix-cli-for-sites/about-git-integration-wix-cli-for-sites), que incluye Wix Editor (Classic). El repositorio coincide con el Site ID y contiene la configuración CLI. El workflow `.github/workflows/wix-tpv-preview.yml` está preparado para generar Preview; la última ejecución lo omitió porque falta el secreto `WIX_CLI_API_KEY`. Para usarlo hay que crear ese secreto con permiso `Wix CLI for Sites - Git Integration`. La ejecución local no está disponible en esta sesión: el contenedor tiene Node 22.16 y no tiene el binario `wix`; Wix requiere Node 24.22.1 o superior. No se ha ejecutado Preview ni Publish.
+La vía soportada es [Git Integration & Wix CLI for Sites](https://dev.wix.com/docs/develop-websites/articles/workspace-tools/developer-tools/git-integration-wix-cli-for-sites/about-git-integration-wix-cli-for-sites), que incluye Wix Editor (Classic). El repositorio coincide con el Site ID y contiene la configuración CLI. El workflow `.github/workflows/wix-tpv-preview.yml` está preparado para generar Preview; la última ejecución lo omitió porque falta el secreto `CLI_API_KEY`. Para usarlo hay que crear ese secreto con permiso `Wix CLI for Sites - Git Integration`. La ejecución local no está disponible en esta sesión: el contenedor tiene Node 22.16 y no tiene el binario `wix`; Wix requiere Node 24.22.1 o superior. No se ha ejecutado Preview ni Publish.
 
 ## 9. Próximos pasos seguros
 
 1. Confirmar en GitHub Integration del Editor que `main` está sincronizado hasta el merge de PR #399.
-2. Configurar el secreto `WIX_CLI_API_KEY` con permiso `Wix CLI for Sites - Git Integration`.
+2. Configurar el secreto `CLI_API_KEY` con permiso `Wix CLI for Sites - Git Integration`.
 3. Ejecutar el workflow `Wix TPV Preview (non-production)` y revisar la URL de Preview.
 4. Probar carga y lecturas con roles; no ejecutar apertura de caja, ventas, movimientos, devoluciones ni cierres en Preview.
 5. Revalidar colecciones/índices/permisos CMS y neutralizar automatizaciones de comunicación.
