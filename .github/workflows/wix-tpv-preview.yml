@@ -1,0 +1,75 @@
+name: Wix TPV Preview (non-production)
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - docs/tpv-classic-code-sync-eligibility-2026-11-16
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wix-tpv-preview
+  cancel-in-progress: true
+
+jobs:
+  preview:
+    name: Build non-production Wix preview
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      WIX_CLI_API_KEY: ${{ secrets.WIX_CLI_API_KEY }}
+    steps:
+      - name: Checkout connected Wix site repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.22.1
+          cache: npm
+
+      - name: Verify Wix site binding
+        run: |
+          node - <<'NODE'
+          const fs = require("node:fs");
+          const { siteId, uiVersion } = JSON.parse(fs.readFileSync("wix.config.json", "utf8"));
+          if (siteId !== "188bed94-177c-4bc9-a9f0-35080d874f3e") {
+            throw new Error("wix.config.json is not bound to the Marian Madrid site.");
+          }
+          if (!uiVersion) throw new Error("wix.config.json is missing uiVersion.");
+          process.stdout.write(`Wix site binding verified; UI version ${uiVersion}.\\n`);
+          NODE
+
+      - name: Check Wix CLI API key availability
+        id: auth
+        shell: bash
+        run: |
+          if [[ -n "${WIX_CLI_API_KEY:-}" ]]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Skip preview when Wix CLI API key is not configured
+        if: steps.auth.outputs.available != 'true'
+        run: echo "::notice::Preview skipped. Configure repository secret WIX_CLI_API_KEY with the Wix CLI for Sites - Git Integration permission."
+
+      - name: Install locked project dependencies
+        if: steps.auth.outputs.available == 'true'
+        run: npm ci
+
+      - name: Install Wix CLI for Sites
+        if: steps.auth.outputs.available == 'true'
+        run: npm install --global @wix/cli
+
+      - name: Authenticate Wix CLI
+        if: steps.auth.outputs.available == 'true'
+        run: npm run wix login -- --api-key "$WIX_CLI_API_KEY"
+
+      - name: Create Wix preview only (never publish)
+        if: steps.auth.outputs.available == 'true'
+        run: npm run wix preview
