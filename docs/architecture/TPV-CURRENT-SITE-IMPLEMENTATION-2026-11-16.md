@@ -61,20 +61,29 @@ Se creó un índice único sobre `idempotencyKey` en cada colección. El primer 
 
 **Estado:** la unicidad está provisionada a nivel CMS. Esto no sustituye las pruebas de inserción duplicada y concurrencia ni resuelve la atomicidad entre colecciones. La persistencia desde la aplicación sigue deshabilitada hasta integrar el flujo en la capa central de acceso a datos y validar las compensaciones/reintentos.
 
-## 5. Estado de la interfaz y backend versionado
+## 5. Módulos TPV y persistencia QA versionados
 
-La rama `feat/tpv-web-modules-report-2026-11-15`, PR #396 (draft), contiene:
-- Validación de borradores en backend con aritmética en céntimos.
-- Desglose de efectivo/tarjeta/Bizum/otros y cambio de efectivo.
-- Lectores autenticados Bookings y Stores Catalog V3.
-- Consulta de saldo Gift Cards en modo solo lectura.
-- Vista parcial de Ticket X.
-- Puente HTML ↔ Velo corregido para llamar a `obtenerCajaActual()`.
-- Cobro, persistencia de venta, devoluciones, movimientos de caja, apertura, arqueos, Gift Card write, facturas y cierre Z bloqueados.
+La rama `feat/tpv-web-modules-report-2026-11-15`, PR #396 (draft), contiene ahora los módulos solicitados en el informe funcional:
 
-La interfaz actual genera tickets QA solo en memoria de sesión. La persistencia sintética en las colecciones `TPV_QA_*` todavía no está conectada. No se habilitará hasta que los índices únicos estén activos, el contrato de escritura QA esté integrado con la capa central de acceso a datos y las pruebas de idempotencia/concurrencia estén ejecutadas.
+- `tpvCaja.web.js`: sesión diaria QA, lectura de caja QA y arqueo parcial.
+- `tpvVentas.web.js`: validación backend y saga de venta sintética (PREPARED → líneas/pagos → COMMITTED).
+- `tpvMovimientos.web.js`: entradas, salidas y retiradas sintéticas.
+- `tpvCatalogo.web.js`: lectores de Bookings y Stores Catalog V3.
+- `tpvPagos.web.js`: validación de efectivo/tarjeta/Bizum/otros sin pasarela.
+- `tpvDevoluciones.web.js`: devoluciones sintéticas con autorización ADMIN y lock CAS por venta.
+- `tpvCierres.web.js`: resumen de sesión, Ticket X y Ticket Z de QA.
+- `tpvAuditoria.web.js`: consulta de auditoría QA.
+- `tpvPermisos.web.js`: capacidades derivadas del rol validado en backend.
+- `tpvUtils.web.js`: configuración y validaciones QA expuestas.
+- `tpvQaRepository.js`, `tpvUtils.js` y `tpvCierresCore.js`: repositorio idempotente, utilidades puras y agregación reproducible.
 
-No se han añadido módulos WebMethod de persistencia incompletos ni alias sin consumidores. Los límites de seguridad existentes se mantienen.
+La política central `dataAccessPolicy.js` permite inserciones en `TPV_QA_*` y bloquea actualizaciones y eliminaciones. Los índices únicos `idempotencyKey` de las nueve colecciones se verificaron `ACTIVE`; el recuento CMS posterior confirmó cero elementos. Los eventos QA no se insertan en el ledger fiscal.
+
+Las escrituras de ventas siguen una saga reanudable: cabecera PREPARADA, líneas, pagos y cabecera CONFIRMADA. Los informes solo agregan ventas confirmadas. Los reembolsos se serializan por venta mediante un lock compare-and-swap técnico en `ControlOperativo` (tipo `TPV_QA_REFUND_LOCK`); este lock no contiene importes ni registros de ventas. Ticket Z marca como cerrada exclusivamente la sesión QA.
+
+El controlador HTML ↔ Velo y `#htmlTPV.txt` ya despachan apertura de sesión QA, ventas, movimientos, arqueos, devoluciones, Ticket X/Z y consulta de auditoría. El HTML se ha actualizado para presentar expresamente la persistencia sintética.
+
+**No se ha sincronizado este código con Wix Classic.** El código versionado no es todavía el runtime del sitio publicado. No se han insertado registros QA ni ejecutado pruebas financieras en el CMS.
 
 ## 6. Pasarela de pagos
 
@@ -87,20 +96,31 @@ No se han añadido módulos WebMethod de persistencia incompletos ni alias sin c
 
 Estado verificado:
 - Permisos CMS actualizados y leídos de nuevo.
-- Nueve colecciones QA creadas y vacías; recuento CMS final: 0 elementos en cada una.
-- Nueve índices únicos creados y confirmados `ACTIVE`.
+- Nueve colecciones QA creadas y vacías; recuento final: 0 elementos en cada una.
+- Nueve índices únicos de idempotencia confirmados `ACTIVE`.
 - No se ha escrito ningún dato de prueba.
 - No se han ejecutado operaciones financieras.
+- Se realizó comprobación estática de sintaxis de los módulos backend y del script inline HTML; todos compilaron en el parser JS disponible.
+
+Pruebas añadidas al repositorio:
+- Contratos de WebMethods TPV y límites de escritura.
+- Contratos del HTML Component y puente Velo.
+- Parseo del script HTML QA.
+- Política insert-only de las nueve colecciones.
+- Política CAS del lock de devoluciones.
+- Validaciones de claves idempotentes, métodos de pago y unidades menores.
+
+**No ejecutadas todavía:** suites Node/Vitest completas, integración real CMS, concurrencia real, duplicados, fallos parciales, Preview y roles. El último commit no tiene workflow runs ni checks asociados; no se afirma CI verde.
 
 Pendiente:
-1. Esperar y comprobar estado `ACTIVE` de los nueve índices.
-2. Integrar persistencia QA mediante la capa central `dataAccess.js` / `dataAccessPolicy.js`, sin `suppressAuth` directo ni acceso al ledger.
-3. Diseñar escritura idempotente y reanudable para cabecera, líneas, pagos y auditoría; una secuencia de inserts en varias colecciones no es una transacción atómica.
-4. Añadir pruebas unitarias, integración, duplicados, concurrencia y fallos parciales.
-5. Ejecutar CI en el HEAD actualizado. El commit `9733e6876f9b0cc4c830be632c5506959822719c` no tiene checks ni workflow runs asociados.
-6. Aplicar manualmente el page code `src/pages/TPV.yl5th.js` y el contenido `#htmlTPV.txt` en el Editor clásico; la integración Wix disponible no puede guardar el HTML Component ni el page code.
-7. Validar en Preview el handshake, roles, Bookings, Stores y Gift Cards.
-8. Revisar el diff, CI, reversión y autorización expresa antes de cualquier merge/despliegue.
+1. Ejecutar `npm run test:layer1`, la regresión completa y ESLint en CI.
+2. Probar inserciones duplicadas y concurrencia del índice idempotente en CMS QA.
+3. Probar el lock de reembolso en concurrencia y la recuperación de locks expirados.
+4. Probar reanudación de venta y devolución ante fallo parcial entre colecciones.
+5. Aplicar manualmente `src/pages/TPV.yl5th.js`, `src/public/tpvPageController.js` y el contenido de `#htmlTPV.txt` en Wix Classic.
+6. Validar Preview con ADMIN, GESTION, ESTILISTA, miembro ordinario y visitante anónimo.
+7. Confirmar en Wix Dashboard que la pasarela continúa desconectada antes de cualquier despliegue real.
+8. Revisar diff, CI, reversión y autorización expresa antes de merge/publicación.
 
 ## 8. Estado de despliegue
 
@@ -108,5 +128,5 @@ Pendiente:
 - No se ha publicado código TPV nuevo.
 - No se ha modificado el HTML Component, el page code ni los módulos backend en el Editor clásico; su estado live no se ha comparado ni validado.
 - No se ha conectado una pasarela de pagos.
-- No se ha activado ninguna escritura TPV.
+- No se ha activado ninguna escritura TPV en el runtime Wix; las escrituras QA están implementadas solo en la rama GitHub.
 - No se ha intervenido en Studio Two.
