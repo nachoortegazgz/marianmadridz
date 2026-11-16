@@ -120,7 +120,7 @@ Una sesión por día local Europe/Madrid se crea con clave idempotente determini
 - devoluciones sintéticas;
 - resumen, Ticket X y Ticket Z QA;
 - consulta de auditoría persistida;
-- lectores de Bookings, Stores y Gift Cards.
+- lectores de Bookings y Stores; consulta de Gift Cards deshabilitada en QA.
 
 Las reservas, órdenes, cobros reales, emisión/canje de Gift Cards, facturación y operaciones fiscales permanecen bloqueadas.
 
@@ -145,11 +145,11 @@ Las reservas, órdenes, cobros reales, emisión/canje de Gift Cards, facturació
 - reanudación ante fallos parciales;
 - Preview con roles ADMIN, GESTION, ESTILISTA, miembro y visitante anónimo.
 
-La rama nueva no tiene checks ni workflow runs asociados; no se declara CI verde. Las suites Node/Vitest no se han ejecutado en este entorno.
+La primera ejecución de CI falló en Layer 1 por el test del conjunto canónico `CONTROL_TYPE`; se actualizó la prueba para incluir `TPV_QA_REFUND_LOCK`. La nueva ejecución tras los últimos cambios está pendiente. No se declara CI verde.
 
 ## 10. Sincronización y despliegue
 
-Los archivos están versionados en la rama GitHub. No se ha sincronizado el page code, el HTML Component ni los módulos backend con el Editor clásico; no se ha fusionado PR #396 ni publicado código TPV. El runtime publicado no debe considerarse actualizado por estos commits.
+Los archivos están versionados en la rama GitHub. No se ha sincronizado el page code, el HTML Component ni los módulos backend con el Editor clásico; PR #396 está cerrada sin fusionar; PR #397 está abierta y no se ha publicado código TPV. El runtime publicado no debe considerarse actualizado por estos commits.
 
 Antes de sincronizar:
 1. ejecutar CI y revisar el diff;
