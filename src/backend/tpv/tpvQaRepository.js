@@ -184,16 +184,25 @@ export async function queryQaRecords(collection, filter, options = {}) {
     if (!ALLOWED_QA_COLLECTIONS.has(collection)) {
         throw new Error("TPV_QA_COLLECTION_NOT_ALLOWED");
     }
-    const limit = Number(options.limit || 1000);
+    const pageSize = Math.min(1000, Math.max(1, Math.floor(Number(options.limit || 1000))));
     const result = await queryItems({
         dataCollectionId: collection,
         filter,
         sort: options.sort || ["_createdDate ASC"],
-        limit,
+        limit: pageSize,
         consistency: CONSISTENCY.STRONG,
     });
-    if (result.hasNext && options.allowTruncated !== true) throw new Error("TPV_QA_QUERY_LIMIT_EXCEEDED");
-    return result.items;
+    if (options.allowTruncated === true) return result.items;
+
+    const maxRecords = Math.max(pageSize, Math.floor(Number(options.maxRecords || 10000)));
+    const records = [...result.items];
+    let page = result;
+    while (page.hasNext && records.length < maxRecords) {
+        page = await page.next();
+        records.push(...page.items);
+    }
+    if (page.hasNext) throw new Error("TPV_QA_QUERY_LIMIT_EXCEEDED");
+    return records;
 }
 
 export async function appendQaAudit({
@@ -240,6 +249,18 @@ export async function getCommittedQaSales(sessionId) {
     return records.filter((item) =>
         item.status === "CONFIRMADA_SINTETICA" &&
         item.payload?.sessionId === sessionId
+    );
+}
+
+export async function getPendingQaSales(sessionId) {
+    const records = await queryQaRecords(TPV_QA_COLLECTIONS.VENTAS, undefined);
+    const committedIds = new Set(records
+        .filter((item) => item.status === "CONFIRMADA_SINTETICA")
+        .map((item) => item.saleId));
+    return records.filter((item) =>
+        item.status === "PREPARADA_SINTETICA" &&
+        item.payload?.sessionId === sessionId &&
+        !committedIds.has(item.saleId)
     );
 }
 
