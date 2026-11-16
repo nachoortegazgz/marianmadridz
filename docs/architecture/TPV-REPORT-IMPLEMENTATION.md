@@ -75,7 +75,7 @@ La antigua ruta `src/public/tpv/tpv-page.js` se eliminó en una entrega anterior
 - El sitio seleccionado confirma Wix Stores Catalog V3 instalado.
 - Dependencia fijada en `@wix/stores@1.0.997`; `package.json` y `package-lock.json` están sincronizados, con las 34 dependencias transitivas requeridas.
 - Se llama primero a `catalogVersioning.getCatalogVersion()`; los valores oficiales son `V1_CATALOG`, `V3_CATALOG` y `STORES_NOT_INSTALLED`.
-- `productsV3.queryProducts` recupera productos visibles para POS con `CURRENCY`, `MIN_PRICE_VARIANT` y `PLAIN_DESCRIPTION`.
+- `productsV3.queryProducts` recupera productos visibles para POS con `CURRENCY`, `MIN_PRICE_VARIANT` y `PLAIN_DESCRIPTION`; usa `pagingMetadata.cursors.next` para paginar en bloques de hasta 100.
 - `productsV3.getProduct` recupera las variantes con `VARIANT_OPTION_CHOICE_NAMES` y `CURRENCY`.
 - El lector falla cerrado si la versión no es V3. El sitio seleccionado fue inspeccionado como V3; el resultado runtime todavía debe probarse en Preview.
 - Scope documentado para Query/Get Product: `WIX_STORES.PRODUCT_READ`. No se solicitan los scopes de productos no visibles ni datos comerciales.
