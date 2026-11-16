@@ -94,6 +94,16 @@ export const cerrarTicketZQA = webMethod(
                     const prior = priorClose[0];
                     const requestedCount = toMinorUnits(input.countedCash, "COUNTED_CASH");
                     if (requestedCount !== Number(prior.totals?.countedCashMinor) || String(input.differenceReason || "").trim() !== String(prior.totals?.differenceReason || "")) throw new Error("TPV_QA_IDEMPOTENCY_CONFLICT");
+                    const staff = await getMyStaffContext(traceId);
+                    await appendQaAudit({
+                        idempotencyKey: "QA_TICKET_Z:" + prior.sessionId + ":AUDIT",
+                        action: "TICKET_Z_QA_CERRADO",
+                        actorId: staff?.memberId || "UNKNOWN",
+                        entityType: "TICKET_Z",
+                        entityId: prior.reportId,
+                        traceId,
+                        payload: { sessionId: prior.sessionId, replayedClose: true },
+                    });
                     return {
                         status: "SUCCESS",
                         data: {
