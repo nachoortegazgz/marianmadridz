@@ -3,7 +3,8 @@ import { getCashierState } from "backend/cajas.web.js";
 import { getMyStaffContext, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { TPV_QA_COLLECTIONS } from "backend/internalConfig";
-import { insertQaEvent, latestOpenQaSession } from "backend/tpv/tpvQaRepository";
+import { insertQaEvent, latestOpenQaSession, queryQaRecords } from "backend/tpv/tpvQaRepository";
+import { wql } from "backend/dataAccess";
 import { assertTpvQaEnabled, fromMinorUnits, makeSyntheticPayload, toMinorUnits } from "backend/tpv/tpvUtils";
 
 function errorResult(code) {
@@ -61,9 +62,9 @@ export const abrirCajaQA = webMethod(
             const idempotencyKey = "QA_SESSION_OPEN:" + dayKey;
             const staff = await getMyStaffContext(traceId);
             const current = await latestOpenQaSession();
-            if (current && current.sessionId !== sessionId) {
-                return errorResult("TPV_QA_PREVIOUS_SESSION_NOT_CLOSED");
-            }
+            if (current && current.sessionId !== sessionId) return errorResult("TPV_QA_PREVIOUS_SESSION_NOT_CLOSED");
+            const alreadyClosed = await queryQaRecords(TPV_QA_COLLECTIONS.TICKET_Z, wql.eq("sessionId", sessionId));
+            if (alreadyClosed.some((item) => item.closed === true)) return errorResult("TPV_QA_SESSION_ALREADY_CLOSED_TODAY");
             const { item, replayed } = await insertQaEvent(
                 TPV_QA_COLLECTIONS.SESIONES_CAJA,
                 idempotencyKey,
