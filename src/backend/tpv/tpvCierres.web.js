@@ -2,7 +2,7 @@ import { Permissions, webMethod } from "wix-web-module";
 import { getMyStaffContext, requireAdmin, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { TPV_QA_COLLECTIONS, TPV_QA_RUNTIME_POLICY } from "backend/internalConfig";
-import { appendQaAudit, insertQaEvent, latestOpenQaSession, queryQaRecords } from "backend/tpv/tpvQaRepository";
+import { appendQaAudit, getPendingQaSales, insertQaEvent, latestOpenQaSession, queryQaRecords } from "backend/tpv/tpvQaRepository";
 import { buildQaSessionSummary } from "backend/tpv/tpvCierresCore";
 import { assertTpvQaEnabled, fromMinorUnits, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
 import { wql } from "backend/dataAccess";
@@ -125,6 +125,8 @@ export const cerrarTicketZQA = webMethod(
             }
             if (!session) throw new Error("TPV_QA_SESSION_NOT_OPEN");
             if (input.sessionId && input.sessionId !== session.sessionId) throw new Error("TPV_QA_SESSION_MISMATCH");
+            const pendingSales = await getPendingQaSales(session.sessionId);
+            if (pendingSales.length > 0) throw new Error("TPV_QA_PENDING_SALES_PREVENT_CLOSE");
             const countedMinor = toMinorUnits(input.countedCash, "COUNTED_CASH");
             const totals = await buildQaSessionSummary(session);
             const differenceMinor = countedMinor - totals.expectedCashMinor;
