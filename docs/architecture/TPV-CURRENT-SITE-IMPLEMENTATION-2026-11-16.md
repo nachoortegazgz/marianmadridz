@@ -82,7 +82,7 @@ La política central `dataAccessPolicy.js` permite únicamente inserciones con c
 
 Las escrituras de ventas siguen una saga reanudable: cabecera PREPARADA, líneas, pagos y cabecera CONFIRMADA. Los informes solo agregan ventas confirmadas. Los reembolsos se serializan por venta y, junto con ventas, movimientos, arqueos y cierres, comparten un lock compare-and-swap por sesión en `ControlOperativo` (tipos `TPV_QA_REFUND_LOCK` y `TPV_QA_SESSION_LOCK`). Los locks no contienen importes ni registros de ventas. La política central solo permite mutaciones CAS de campos acotados. Ticket Z marca como cerrada exclusivamente la sesión QA.
 
-El controlador HTML ↔ Velo y `#htmlTPV.txt` ya despachan apertura de sesión QA, ventas, movimientos, arqueos, devoluciones, Ticket X/Z y consulta de auditoría. El HTML se ha actualizado para presentar expresamente la persistencia sintética.
+El controlador HTML ↔ Velo y `#htmlTPV.txt` despachan apertura de sesión QA, ventas, movimientos, arqueos, devoluciones, Ticket X/Z y auditoría. Se añadió búsqueda de contactos mediante Wix CRM Contacts V5 y consulta de reservas mediante Bookings Reader V2. Antes de persistir una venta QA, backend relee el contacto y verifica que la reserva seleccionada pertenece a ese contacto; guarda solo el identificador y el snapshot mínimo en el payload QA. La consulta de saldo de Wix Gift Cards usa `@wix/ecom` `giftVouchers.getGiftCard` con permiso de lectura; el código bruto no se persiste, devuelve ni registra. Emisión/canje/reembolso de tarjetas siguen bloqueados.
 
 **No se ha sincronizado este código con Wix Classic.** El código versionado no es todavía el runtime del sitio publicado. No se han insertado registros QA ni ejecutado pruebas financieras en el CMS.
 
@@ -111,10 +111,10 @@ Pruebas añadidas al repositorio:
 - Política CAS del lock de devoluciones.
 - Validaciones de claves idempotentes, métodos de pago y unidades menores.
 
-**CI verificado sobre HEAD `36fcd9c9192b888e884ace3881dbd88f9cb6a574`:** Layer 1: 28 suites / 328 pruebas, 0 fallos; Layer 2: 19 suites / 255 pruebas, 0 fallos; regresión offline completa: 74 suites / 667 pruebas, 0 fallos; ESLint correcto; contratos de SDK Wix y secret scanning correctos. Estas pruebas son offline/estáticas y no sustituyen pruebas de runtime. La ejecución final de CI sobre el HEAD indicado terminó correctamente. Las ejecuciones previas fallidas se debieron a aserciones de contrato de pruebas, corregidas y reejecutadas.
+**CI verificado sobre HEAD `a4dafdd8376d293606ef095f6ccc572cd5e5ecfb` (run 1475):** Layer 1: 28 suites / 330 pruebas, 0 fallos; Layer 2: 19 suites / 255 pruebas, 0 fallos; regresión offline completa: 74 suites / 669 pruebas, 0 fallos; ESLint correcto; contratos SDK Wix y secret scanning correctos. Estas pruebas son offline/estáticas y no sustituyen pruebas de runtime Wix. El contrato de Bookings Reader V2 se verificó en CI; Contacts V5 y Gift Cards se contrastaron con sus esquemas oficiales y sus contratos de código.
 
 Pendiente:
-1. Repetir CI tras los últimos commits documentales; el código TPV ya superó Layer 1, Layer 2, regresión offline y ESLint en el commit `36fcd9c9192b888e884ace3881dbd88f9cb6a574`.
+1. CI completo sobre HEAD `a4dafdd8376d293606ef095f6ccc572cd5e5ecfb` verificado correctamente.
 2. Probar inserciones duplicadas y concurrencia del índice idempotente en CMS QA.
 3. Probar locks de sesión y reembolso en concurrencia real, CAS y recuperación tras expiración.
 4. Probar reanudación de venta y devolución ante fallo parcial entre colecciones.

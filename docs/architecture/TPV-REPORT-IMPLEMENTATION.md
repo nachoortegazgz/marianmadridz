@@ -121,7 +121,9 @@ Una sesión por día local Europe/Madrid se crea con clave idempotente determini
 - devoluciones sintéticas;
 - resumen, Ticket X y Ticket Z QA;
 - consulta de auditoría persistida;
-- lectores de Bookings y Stores; consulta de Gift Cards deshabilitada en QA.
+- lectores de Bookings y Stores;
+- búsqueda de contactos Wix CRM y consulta de reservas del contacto, con verificación backend del vínculo antes de registrar venta QA;
+- consulta de saldo de Gift Cards nativa, solo lectura y sin persistir el código.
 
 Las reservas, órdenes, cobros reales, emisión/canje de Gift Cards, facturación y operaciones fiscales permanecen bloqueadas.
 
@@ -133,15 +135,14 @@ Las reservas, órdenes, cobros reales, emisión/canje de Gift Cards, facturació
 - nueve índices idempotentes `ACTIVE`;
 - cero elementos en las nueve colecciones.
 
-**Verificado en CI sobre HEAD `36fcd9c9192b888e884ace3881dbd88f9cb6a574`:**
-- Layer 1: 28 suites / 328 pruebas, 0 fallos;
+**Verificado en CI sobre HEAD `a4dafdd8376d293606ef095f6ccc572cd5e5ecfb` (run 1475):**
+- Layer 1: 28 suites / 330 pruebas, 0 fallos;
 - Layer 2: 19 suites / 255 pruebas, 0 fallos;
-- regresión offline completa: 74 suites / 667 pruebas, 0 fallos;
+- regresión offline completa: 74 suites / 669 pruebas, 0 fallos;
 - contratos del SDK Wix, ESLint y secret scanning correctos;
 - contratos de WebMethods, aislamiento de datos, locks CAS, UI/HTML y parseo del script inline correctos.
 
 **Pendiente de ejecutar en el entorno Wix:**
-- repetición de CI tras los commits documentales más recientes (el código TPV ya superó todos los gates en el HEAD de código indicado arriba);
 - duplicados e idempotencia contra CMS real;
 - concurrencia y recuperación de locks CAS de sesión/reembolso;
 - reanudación ante fallos parciales entre colecciones;
