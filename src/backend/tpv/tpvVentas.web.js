@@ -3,7 +3,7 @@ import { getMyStaffContext, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { TPV_QA_COLLECTIONS, TPV_QA_RUNTIME_POLICY } from "backend/internalConfig";
 import { validateSaleDraft } from "backend/tpv/tpvValidation";
-import { appendQaAudit, insertQaEvent, latestOpenQaSession } from "backend/tpv/tpvQaRepository";
+import { appendQaAudit, insertQaEvent, latestOpenQaSession, withQaSessionLock } from "backend/tpv/tpvQaRepository";
 import { assertTpvQaEnabled, makeQaId, normalizeClientIdempotencyKey } from "backend/tpv/tpvUtils";
 
 function disabledResult(code) {
@@ -54,6 +54,12 @@ export const registrarVentaQA = webMethod(
             const session = await latestOpenQaSession();
             if (!session) throw new Error("TPV_QA_SESSION_NOT_OPEN");
             if (input.sessionId && input.sessionId !== session.sessionId) throw new Error("TPV_QA_SESSION_MISMATCH");
+
+            return await withQaSessionLock(session.sessionId, traceId, async () => {
+                const activeSession = await latestOpenQaSession();
+                if (!activeSession || activeSession.sessionId !== session.sessionId) {
+                    throw new Error("TPV_QA_SESSION_CLOSED");
+                }
 
             const sale = validateSaleDraft({
                 lineas: input.lineas,
@@ -182,6 +188,7 @@ export const registrarVentaQA = webMethod(
                 error: null,
                 traceId,
             };
+            });
         } catch (error) {
             return {
                 status: "ERROR",
