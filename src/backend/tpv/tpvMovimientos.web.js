@@ -8,6 +8,7 @@ import { assertTpvQaEnabled, fromMinorUnits, normalizeClientIdempotencyKey, toMi
 export const registrarMovimientoCajaQA = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
+        let persisted = false;
         const traceId = makeTraceId("tpv-qa-cash-movement");
         await requireCajero(traceId);
         assertTpvQaEnabled();
@@ -38,6 +39,7 @@ export const registrarMovimientoCajaQA = webMethod(
                     traceId,
                 },
             });
+            persisted = true;
             await insertQaEvent(TPV_QA_COLLECTIONS.AUDITORIA, key + ":AUDIT", {
                 action: "MOVIMIENTO_CAJA_" + movementType,
                 actorId: staff?.memberId || "UNKNOWN",
@@ -49,7 +51,7 @@ export const registrarMovimientoCajaQA = webMethod(
             });
             return { status: "SUCCESS", data: { movementId: item._id, movementType, amount: fromMinorUnits(amountMinor), replayed, persisted: true, isSynthetic: true, realPayment: false }, error: null, traceId };
         } catch (error) {
-            return { status: "ERROR", data: null, error: { code: String(error?.message || "TPV_QA_CASH_MOVEMENT_FAILED") }, traceId };
+            return { status: "ERROR", data: null, error: { code: String(error?.message || "TPV_QA_CASH_MOVEMENT_FAILED") }, persisted, recoverable: persisted, isSynthetic: true, realPayment: false, traceId };
         }
     }
 );
