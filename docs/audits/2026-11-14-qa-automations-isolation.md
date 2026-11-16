@@ -80,3 +80,23 @@ Evidencia CI y documentación integrada:
 - PR #380: merge e2150647e6203b5c964a0d414c5b0a5295a374fe; Secret scanning y Backend offline quality gates completed/success.
 
 **Conclusión sin cambios:** las automatizaciones continúan activas y bloqueadas por el propietario de la app. Runtime/E2E que pueda dispararlas sigue BLOCKED_EXTERNAL_SIDE_EFFECTS. Continuar únicamente con offline/mock y lecturas read-only hasta que Wix/proveedor habilite un procedimiento soportado o aporte aislamiento equivalente verificable.
+
+## Revalidación en vivo — 2026-11-16 (Europe/Madrid)
+
+**Método:** consulta oficial Wix Automations V2 filtrada por `configuration.status = ACTIVE`, seguida de `Get Automation` individual para cada ID devuelto. Lectura estrictamente read-only; no se modificaron estados ni configuraciones.
+
+**Resultado verificado:** 8 automatizaciones ACTIVE, con 8/8 estados confirmados mediante Get Automation:
+- 7 automatizaciones PREINSTALLED, todas con `settings.disableStatusChange=true`; 2 de ellas también tienen `settings.readonly=true`. Coinciden con siete IDs del inventario histórico de comunicaciones.
+- 1 automatización adicional de origen APPLICATION:
+  - ID: `961f911d-8386-4e20-843e-cdf4595c24e8`
+  - Nombre: `Creación de TPV física personalizada`
+  - Estado: ACTIVE; revision `3`; `readonly=false`; `disableStatusChange=false`.
+  - Trigger: `wix_automations-scheduled_trigger`, diario a las 01:45 (cron `45 1 * * *`), inicio configurado `2026-11-15T01:45:00+01:00`.
+  - Acción: `agent_maker-delegate_to_llm` / “Delegate to AI Custom Agent”, app `c5abc3eb-299c-4e3e-8aff-3c674d2ede83`, con `taskId=d56d7590-7eb7-4e4f-94ac-2ca9fa465fcf`.
+  - El esquema de acción permite delegar una tarea de negocio a un agente IA. El contenido/instrucciones de la tarea referenciada no se expone en la configuración de Automation ni se ha podido verificar mediante la API pública consultada.
+
+**Evaluación:** la cifra actual es 8 ACTIVE, no 7. El inventario previo de 10 ACTIVE (14 nov) y la cifra 7 del SSOT quedan como observaciones históricas de fechas distintas. La automatización adicional no está protegida por los locks de las siete preinstaladas y su ejecución programada puede delegar una tarea a un agente IA. No se puede afirmar qué hace ni si escribe datos o contacta terceros sin leer el contenido de la tarea y sus integraciones.
+
+**Decisión de seguridad:** no se cambió ni desactivó automáticamente la automatización porque se desconoce el alcance de la tarea y podría ser un proceso deliberado del propietario. Hasta verificar el task ID, sus instrucciones e integraciones, clasificarla como `BLOCKED_UNKNOWN_AUTOMATION_SIDE_EFFECTS`; no ejecutar pruebas que puedan solaparse con su horario ni dar por aisladas las comunicaciones/acciones externas.
+
+**Acción necesaria:** inspeccionar en Wix Agent Maker la tarea `d56d7590-7eb7-4e4f-94ac-2ca9fa465fcf`, revisar instrucciones, permisos e integraciones conectadas, y decidir si se mantiene o se pausa la automatización. Repetir Get Automation después de cualquier cambio.
