@@ -353,6 +353,35 @@ export async function getQaPayments(sessionId) {
     return records.filter((item) => item.payload?.sessionId === sessionId);
 }
 
+export async function getPendingQaRefunds(sessionId) {
+    const [refunds, payments, movements] = await Promise.all([
+        getQaRefunds(sessionId),
+        getQaPayments(sessionId),
+        getQaCashMovements(sessionId),
+    ]);
+
+    return refunds.filter((refund) => {
+        const allocations = Array.isArray(refund.payload?.allocations)
+            ? refund.payload.allocations
+            : [];
+        const refundPayments = payments.filter((payment) =>
+            payment.status === "REEMBOLSO_SINTETICO" &&
+            payment.payload?.refundId === refund.refundId
+        );
+        const expectedCashMovements = allocations.filter((allocation) =>
+            allocation.paymentMethod === "EFECTIVO"
+        ).length;
+        const refundCashMovements = movements.filter((movement) =>
+            movement.status === "CONFIRMADO_SINTETICO" &&
+            movement.movementType === "DEVOLUCION_EFECTIVO" &&
+            movement.payload?.refundId === refund.refundId
+        );
+
+        return refundPayments.length !== allocations.length ||
+            refundCashMovements.length !== expectedCashMovements;
+    });
+}
+
 export async function getQaRefunds(sessionId) {
     const records = await queryQaRecords(TPV_QA_COLLECTIONS.REEMBOLSOS, undefined);
     return records.filter((item) =>
