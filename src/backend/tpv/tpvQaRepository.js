@@ -63,7 +63,7 @@ export async function withQaSaleLock(saleId, traceId, operation) {
             version: { $eq: version },
             status: { $eq: record.status },
         };
-        if (record.status === "ACTIVE") condition.expiresAt = { $eq: record.expiresAt };
+        if (record.status === "ACTIVE") condition.expiresAt = { $eq: currentExpiry };
         const patched = await bulkPatchItems(collection, [lockId], [[
             { fieldPath: "status", action: "SET_FIELD", value: "ACTIVE" },
             { fieldPath: "expiresAt", action: "SET_FIELD", value: expiresAt },
