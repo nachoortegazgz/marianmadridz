@@ -53,11 +53,16 @@ jobs:
           npm audit --json > "$RUNNER_TEMP/npm-audit.json"
           audit_exit=$?
           set -e
-          node - "$RUNNER_TEMP/npm-audit.json" "$RUNNER_TEMP/npm-audit-summary.json" <<'NODE'
+          node - "$RUNNER_TEMP/npm-audit.json" "$RUNNER_TEMP/npm-audit-summary.json" "$audit_exit" <<'NODE'
           const fs = require("node:fs");
-          const [reportPath, summaryPath] = process.argv.slice(2);
+          const [reportPath, summaryPath, auditExitText] = process.argv.slice(2);
+          const auditExit = Number(auditExitText);
           const report = JSON.parse(fs.readFileSync(reportPath, "utf8"));
-          const counts = report.metadata?.vulnerabilities ?? {};
+          if (report.error || !report.metadata?.vulnerabilities) {
+            console.error("npm audit did not return a valid vulnerability report:", report.error ?? "missing metadata");
+            process.exit(1);
+          }
+          const counts = report.metadata.vulnerabilities;
           const summary = {
             info: counts.info ?? 0,
             low: counts.low ?? 0,
@@ -68,6 +73,10 @@ jobs:
           };
           console.log("npm audit:", JSON.stringify(summary));
           fs.writeFileSync(summaryPath, JSON.stringify(summary, null, 2) + "\n");
+          if (auditExit !== 0 && summary.total === 0) {
+            console.error("npm audit exited unsuccessfully without reporting advisories; fail closed.");
+            process.exit(1);
+          }
           if (summary.high > 0 || summary.critical > 0) {
             console.error("High or critical npm advisories block this quality gate.");
             process.exit(1);
