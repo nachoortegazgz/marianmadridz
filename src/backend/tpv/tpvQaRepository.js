@@ -18,15 +18,26 @@ const VOLATILE_FIELDS = new Set([
     "generatedAt", "confirmedAt", "recordTimestamp",
 ]);
 
+function stripVolatile(value) {
+    if (Array.isArray(value)) return value.map(stripVolatile);
+    if (!value || typeof value !== "object" || value instanceof Date) return value;
+    const result = {};
+    for (const [key, nested] of Object.entries(value)) {
+        if (VOLATILE_FIELDS.has(key) || key === "requestFingerprint") continue;
+        result[key] = stripVolatile(nested);
+    }
+    return result;
+}
+
 function fingerprintOf(record) {
     const stable = {};
     for (const [key, value] of Object.entries(record || {})) {
         if (key === "idempotencyKey" || key === "payload" || VOLATILE_FIELDS.has(key)) continue;
-        stable[key] = value;
+        stable[key] = stripVolatile(value);
     }
     return stableSerialize({
         record: stable,
-        payload: record?.payload || {},
+        payload: stripVolatile(record?.payload || {}),
     });
 }
 
