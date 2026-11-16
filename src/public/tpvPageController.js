@@ -14,6 +14,7 @@ import {
     obtenerVariantesProducto,
 } from "backend/tpv/tpvCatalogo.web.js";
 import { validarVentaBorrador } from "backend/tpv/tpvVentas.web.js";
+import { previsualizarTicketX } from "backend/tpv/tpvReportes.web.js";
 import { createWidgetBridge, MESSAGE_TYPES } from "public/widgetBridge";
 import { makeTraceId } from "public/mmUtils";
 
@@ -26,6 +27,7 @@ const TPV_ALLOWED_MESSAGES = Object.freeze([
     "CATALOG_PRODUCTS",
     "PRODUCT_VARIANTS",
     "VALIDATE_SALE_DRAFT",
+    "TICKET_X_PREVIEW",
 ]);
 
 function errorResult(code, message, traceId) {
@@ -126,6 +128,12 @@ export function initializeTpvPage(widgetElement) {
             if (type === "VALIDATE_SALE_DRAFT") {
                 const result = await validarVentaBorrador(payload.sale || {});
                 reply("VALIDATE_SALE_DRAFT_RES", result, message);
+                return;
+            }
+
+            if (type === "TICKET_X_PREVIEW") {
+                const result = await previsualizarTicketX();
+                reply("TICKET_X_PREVIEW_RES", result, message);
                 return;
             }
 
