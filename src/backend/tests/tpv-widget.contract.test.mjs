@@ -11,6 +11,7 @@ test("TPV controller exposes authenticated read-only cashier and Bookings catalo
     assert.match(controller, /getCashierState/);
     assert.match(controller, /obtenerServicios/);
     assert.match(controller, /obtenerProfesionales/);
+    assert.match(controller, /consultarTarjetaRegalo/);
     assert.match(cashierBackend, /requireCajero/);
     assert.match(catalogBackend, /requireCajero/);
     assert.match(controller, /MESSAGE_TYPES\.READY/);
@@ -29,6 +30,7 @@ test("TPV HTML uses versioned messaging and browser-local ticket drafts", () => 
     assert.match(html, /CASHIER_STATE_RES/);
     assert.match(html, /CATALOG_SERVICES_RES/);
     assert.match(html, /CATALOG_STAFF_RES/);
+    assert.match(html, /GIFT_CARD_BALANCE_RES/);
     assert.match(html, /send\("CATALOG_SERVICES"/);
     assert.match(html, /send\("CATALOG_STAFF"/);
     assert.match(html, /precioFormateado/);
