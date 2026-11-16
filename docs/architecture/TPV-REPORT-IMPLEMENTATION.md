@@ -154,3 +154,37 @@ Antes de activar escrituras o publicar:
 5. Aprobar contratos de las nueve entidades TPV separadas y su relación con el ledger fiscal.
 6. Diseñar idempotencia, concurrencia, secuencias, compensaciones y autorizaciones.
 7. Habilitar por separado ventas, pagos, reembolsos, caja, X/Z y facturas, con pruebas de integración, reversión y autorización expresa.
+
+
+## 10. Correcciones y decisiones de conciliación (2026-11-16)
+
+### Corrección del puente de caja
+- src/public/tpvPageController.js recibía CASHIER_STATE llamando a getCashierState, símbolo que no estaba importado en ese módulo.
+- El controlador ahora invoca el WebMethod importado obtenerCajaActual() y normaliza el error mediante safeCall.
+- El test contractual comprueba que el puente no contiene referencias libres a getCashierState.
+
+### Desglose de pagos validado en backend
+- validateSaleDraft devuelve desgloseMedios separado para EFECTIVO, TARJETA, BIZUM y OTROS.
+- Para efectivo distingue efectivoRecibido, cambioEntregado y efectivoAplicado; el impacto de caja es el efectivo aplicado, no el importe bruto entregado.
+- totalCobrado suma los importes aplicados de todos los medios.
+- Estos valores son cálculos de borrador sintético; no son una liquidación de pasarela ni un movimiento persistido.
+- Se añadió prueba de regresión para el ejemplo mixto 40 EUR efectivo + 35 EUR tarjeta + 25 EUR Bizum, con 5 EUR de cambio sobre 45 EUR recibidos.
+
+### Contradicción que bloquea la persistencia
+El informe funcional asigna ventas, cobros y movimientos físicos a MovimientosCaja. En el código y contrato del proyecto, esa colección es además el ledger fiscal canónico: contiene secuencia y cadena hash y sus escrituras pasan por registerManualTransaction, que valida configuración fiscal, identidad, periodo y política de escritura. Actualmente FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED mantiene la escritura fiscal deshabilitada y los registros sintéticos no se admiten en el ledger operativo.
+
+Por tanto:
+- No insertar tickets QA ni movimientos sintéticos directamente en MovimientosCaja.
+- No escribir directamente en CajaActual; su proyección debe derivarse de movimientos aceptados por el flujo autorizado.
+- Antes de habilitar operaciones persistentes debe aprobarse una decisión de arquitectura: (A) venta fiscal real integrada por el flujo fiscal autorizado, con numeración, impuestos, firma y requisitos legales verificados; o (B) colecciones TPV de QA separadas y aisladas, sin efectos fiscales ni mezcla con el ledger.
+- Los movimientos de cajón no fiscales (apertura, cambio, retirada y arqueo) necesitan un contrato explícito y no deben convertirse artificialmente en facturas o ventas fiscales.
+
+### Bloqueos aún abiertos
+1. Permisos CMS ANYONE de lectura de CajaActual y MovimientosCaja: P0, pendiente de corrección y prueba de acceso anónimo/miembro/cajero.
+2. Esquemas, índices y permisos del conjunto de colecciones QA: pendientes de inspección en el sitio QA correcto. El segundo sitio Studio Two no se incorpora a esta rama sin selección explícita del sitio y su ID.
+3. Idempotencia y concurrencia: pendiente de contrato persistente atómico; una consulta previa seguida de insert no basta para garantizar unicidad.
+4. Devoluciones, pagos, movimientos de caja, asientos y cierres Z: permanecen bloqueados hasta resolver los puntos anteriores.
+5. La nueva corrección y sus pruebas necesitan CI en el nuevo HEAD; el CI exitoso del commit anterior no valida estos cambios.
+6. Sigue pendiente la prueba en Wix Preview y la aplicación manual del page code/HTML en el Editor clásico.
+
+No se han creado colecciones, cambiado permisos, escrito datos ni iniciado cobros, reembolsos, facturas o cierres.
