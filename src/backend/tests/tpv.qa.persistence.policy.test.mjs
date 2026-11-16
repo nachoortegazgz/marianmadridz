@@ -20,6 +20,7 @@ import {
     fromMinorUnits,
     makeSyntheticPayload,
     makeQaRefundLockId,
+    makeQaSessionLockId,
 } from "../tpv/tpvUtils.js";
 
 test("all TPV QA collections are insert-only and cannot be updated or removed", () => {
@@ -94,6 +95,42 @@ test("refund lock is mutable only through its scoped compare-and-swap policy", (
         "TPVQA_REFUND_LOCK_QA-SALE-TEST",
         CONTROL_TYPE.TPV_QA_REFUND_LOCK
     ), /DATA_ACCESS_ERROR/);
+});
+
+test("QA session lock is deterministic, bounded and CAS-only", () => {
+    const sessionId = "QA-SESSION-20261116";
+    const lockId = makeQaSessionLockId(sessionId);
+    assert.equal(lockId, makeQaSessionLockId(sessionId));
+    assert.equal(lockId.length, 36);
+    assert.match(lockId, /^TPVS[a-f0-9]{32}$/);
+
+    const collection = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
+    assert.doesNotThrow(() => assertInsertAllowed(collection, {
+        _id: lockId,
+        controlType: CONTROL_TYPE.TPV_QA_SESSION_LOCK,
+        dedupeKey: "TPV_QA_SESSION:" + lockId.slice(4),
+        traceId: "test",
+        status: "ACTIVE",
+        version: 0,
+        expiresAt: new Date(),
+        payload: { sessionId, environment: "TEST" },
+    }));
+    assert.doesNotThrow(() => assertBulkPatchAllowed(collection, [
+        { fieldPath: "status", action: "SET_FIELD", value: "RELEASED" },
+        { fieldPath: "expiresAt", action: "SET_FIELD", value: new Date() },
+        { fieldPath: "payload", action: "SET_FIELD", value: { sessionId, environment: "TEST" } },
+        { fieldPath: "version", action: "INCREMENT_FIELD", value: 1 },
+    ], {
+        controlType: { $eq: CONTROL_TYPE.TPV_QA_SESSION_LOCK },
+        version: { $eq: 0 },
+        status: { $eq: "ACTIVE" },
+    }));
+    assert.throws(() => assertUpdateAllowed(collection, {
+        _id: lockId,
+        controlType: CONTROL_TYPE.TPV_QA_SESSION_LOCK,
+        status: "RELEASED",
+    }), /DATA_ACCESS_ERROR/);
+    assert.throws(() => assertRemoveAllowed(collection, lockId, CONTROL_TYPE.TPV_QA_SESSION_LOCK), /DATA_ACCESS_ERROR/);
 });
 
 test("QA policy remains synthetic and client idempotency keys are bounded", () => {
