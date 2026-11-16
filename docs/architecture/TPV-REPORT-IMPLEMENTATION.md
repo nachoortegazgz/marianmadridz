@@ -53,12 +53,15 @@ La antigua ruta `src/public/tpv/tpv-page.js` se eliminó en una entrega anterior
 
 ### Caja e informes
 - Lectura autenticada del estado actual de caja.
-- Vista previa local de movimientos de efectivo y arqueo.
+- Vista previa local de movimientos de efectivo y arqueo, incluido recuento por denominación.
 - Snapshot parcial de Ticket X, claramente identificado como parcial.
 - Resumen sintético X/Z de las ventas QA creadas en la sesión.
 - Cierre Z real deshabilitado.
 
-### Devoluciones, pagos y reservas
+### Tickets, facturación, devoluciones, pagos y reservas
+- Secciones de ticket impreso/digital, duplicado, ticket regalo, factura simplificada/completa y abono/rectificativa. Emisión bloqueada hasta integrar Wix Invoices V1 y aprobar numeración/datos fiscales.
+
+
 - Preparación de solicitud local de devolución con referencia, importe, medio y motivo.
 - Secciones de reserva, pago y conciliación con sus responsabilidades nativas.
 - No se crean reservas, órdenes, pagos, autorizaciones, reembolsos ni liquidaciones.
