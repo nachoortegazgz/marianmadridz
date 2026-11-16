@@ -3,7 +3,7 @@ import { getMyStaffContext, requireAdmin, requireCajero } from "backend/security
 import { makeTraceId } from "public/mmUtils";
 import { TPV_QA_COLLECTIONS } from "backend/internalConfig";
 import { insertQaEvent, latestOpenQaSession } from "backend/tpv/tpvQaRepository";
-import { assertTpvQaEnabled, fromMinorUnits, normalizeIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
+import { assertTpvQaEnabled, fromMinorUnits, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
 
 export const registrarMovimientoCajaQA = webMethod(
     Permissions.SiteMember,
@@ -21,7 +21,7 @@ export const registrarMovimientoCajaQA = webMethod(
             if (amountMinor <= 0) throw new Error("TPV_QA_CASH_MOVEMENT_AMOUNT_INVALID");
             const reason = String(input.reason || "").trim();
             if (reason.length < 3 || reason.length > 500) throw new Error("TPV_QA_REASON_REQUIRED");
-            const key = normalizeIdempotencyKey(input.idempotencyKey);
+            const key = normalizeClientIdempotencyKey(input.idempotencyKey);
             const staff = await getMyStaffContext(traceId);
             const { item, replayed } = await insertQaEvent(TPV_QA_COLLECTIONS.MOVIMIENTOS_CAJA, key, {
                 sessionId: session.sessionId,
