@@ -84,20 +84,25 @@ PR #399 de hardening sintético está integrada en main y superó CI: 74 suites 
 ## 8. Bloqueos runtime y despliegue
 
 - El repositorio está enlazado al Site ID mediante `wix.config.json`; el commit de PR #399 debe estar sincronizado con el Editor, pero no se ha verificado el read-back.
-- No se ha ejecutado `wix preview` ni `wix publish`; la producción no se considera actualizada.
+- No se ha ejecutado `wix preview` ni `wix publish`; el sitio está Draft y no hay versión publicada.
 - No se han ejecutado escrituras de prueba en CMS durante esta intervención.
 - No se ha probado la concurrencia/idempotencia contra CMS real.
 - No se ha validado Preview con ADMIN, GESTION, ESTILISTA, miembro ordinario y visitante.
 - Revalidación posterior: 7 automatizaciones PREINSTALLED ACTIVE, todas con `disableStatusChange=true`; dos además readonly. La automatización custom TPV (ID `961f911d-8386-4e20-843e-cdf4595c24e8`) está INACTIVE, revisión 4. Su task IA `d56d7590-7eb7-4e4f-94ac-2ca9fa465fcf` sigue sin inspección; no se ha ejecutado. Las siete preinstaladas conservan triggers de email/notificación y siguen bloqueando E2E que pueda generarlos.
 - El propietario declara que la pasarela está desconectada; no se ha verificado independientemente en Wix Dashboard. El estado del sitio Draft sí está confirmado por GetSiteContext.
 
-La vía soportada es [Git Integration & Wix CLI for Sites](https://dev.wix.com/docs/develop-websites/articles/workspace-tools/developer-tools/git-integration-wix-cli-for-sites/about-git-integration-wix-cli-for-sites), que incluye Wix Editor (Classic). El repositorio coincide con el Site ID y contiene la configuración CLI. El workflow `.github/workflows/wix-tpv-preview.yml` está preparado para generar Preview; la última ejecución lo omitió porque falta el secreto `CLI_API_KEY`. Para usarlo hay que crear ese secreto con permiso `Wix CLI for Sites - Git Integration`. La ejecución local no está disponible en esta sesión: el contenedor tiene Node 22.16 y no tiene el binario `wix`; Wix requiere Node 24.22.1 o superior. No se ha ejecutado Preview ni Publish.
+La vía soportada es [Git Integration & Wix CLI for Sites](https://dev.wix.com/docs/develop-websites/articles/workspace-tools/developer-tools/git-integration-wix-cli-for-sites/about-git-integration-wix-cli-for-sites), que incluye Wix Editor (Classic). El repositorio coincide con el Site ID y contiene la configuración CLI. El workflow `.github/workflows/wix-tpv-preview.yml` está preparado para generar Preview; la ejecución anterior al cambio de nombre no generó Preview; el estado actual de existencia del secreto `CLI_API_KEY` no puede leerse desde la integración. Para usarlo hay que crear ese secreto con permiso `Wix CLI for Sites - Git Integration`. La ejecución local no está disponible en esta sesión: el contenedor tiene Node 22.16 y no tiene el binario `wix`; Wix requiere Node 24.22.1 o superior. No se ha ejecutado Preview ni Publish.
 
 ## 9. Próximos pasos seguros
 
-1. Confirmar en GitHub Integration del Editor que `main` está sincronizado hasta el merge de PR #399.
+1. Confirmar en GitHub Integration del Editor que `main` está sincronizado hasta el commit vigente.
 2. Configurar el secreto `CLI_API_KEY` con permiso `Wix CLI for Sites - Git Integration`.
 3. Ejecutar el workflow `Wix TPV Preview (non-production)` y revisar la URL de Preview.
 4. Probar carga y lecturas con roles; no ejecutar apertura de caja, ventas, movimientos, devoluciones ni cierres en Preview.
-5. Revisar el uso global/cuota CMS por el trigger de aviso de límite; después ejecutar solo lecturas en Preview y evitar los triggers de las siete automatizaciones preinstaladas.
+5. Usar Wix Preview/SANDBOX para una prueba sintética limitada de persistencia tras validar que el runtime está en SANDBOX; evitar los triggers de las siete automatizaciones preinstaladas y no escribir por REST en LIVE.
 6. No ejecutar `wix publish` hasta cerrar los bloqueos y completar E2E controlado.
+
+
+## Addendum de cuota y aislamiento de persistencia — 2026-11-16
+
+Get Site Data Usage (`consistentRead=true`) confirma 4.000 elementos por entorno, 201 elementos en LIVE (5,03 %) y 0 en SANDBOX; almacenamiento LIVE 265.822 bytes / 10 GiB y SANDBOX 0. Las nueve colecciones TPV QA están vacías en ambos entornos. Wix documenta que Preview usa SANDBOX, separado de LIVE; el límite de elementos es por entorno y el almacenamiento se comparte. Por tanto, tras configurar `CLI_API_KEY` y generar Preview, la prueba de persistencia puede realizarse en SANDBOX con fixtures limitados, sin tocar LIVE. La pasarela sigue declarada desconectada por el propietario; no se invocará ningún proveedor de pago.
