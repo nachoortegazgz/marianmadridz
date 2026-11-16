@@ -172,7 +172,7 @@ test("TPV WebMethods isolate synthetic QA writes from operational ledgers", asyn
     assert.match(joined, /solicitarDevolucionQA/);
     assert.match(joined, /cerrarTicketZQA/);
     assert.match(joined, /TPV_QA_COLLECTIONS/);
-    assert.doesNotMatch(joined, /contactsV5|extendedBookings|giftVouchers|staffMembers|staff\\?\\.memberId/);
+    assert.doesNotMatch(joined, /contactsV5|extendedBookings|giftVouchers|staffMembers|staff\?\.memberId/);
     const cashierModule = await source("tpv/tpvCaja.web.js");
     assert.doesNotMatch(cashierModule, /backend\/cajas\.web|CajaActual|getCashierState/);
     assert.match(joined, /TPV_OPERATIONAL_SALE_WRITES_DISABLED/);
@@ -209,7 +209,9 @@ test("TPV WebMethods isolate synthetic QA writes from operational ledgers", asyn
 test("TPV catalog reader uses native Bookings SDK and does not expose staff contact details", async () => {
     const catalog = await source("tpv/tpvCatalogo.web.js");
     assert.match(catalog, /services\.queryServices/);
-    assert.match(catalog, /staffMembers\.queryStaffMembersV2/);
+    assert.match(catalog, /TPV_QA_FIXTURES\.STAFF/);
+    assert.match(catalog, /TPV_QA_FIXTURES\.CUSTOMER/);
+    assert.doesNotMatch(catalog, /contactsV5|extendedBookings|staffMembers|tpvNativeReaders/);
     assert.match(catalog, /formattedValue/);
     assert.match(catalog, /precioMinor/);
     assert.match(catalog, /import \{ auth \} from ["']@wix\/essentials["']/);
@@ -218,7 +220,6 @@ test("TPV catalog reader uses native Bookings SDK and does not expose staff cont
     assert.doesNotMatch(catalog, /catalogVersioning\.getCatalogVersion\(\)/);
     assert.match(catalog, /auth\.elevate\(catalogVersioning\.getCatalogVersion\)/);
     assert.match(catalog, /auth\.elevate\(services\.queryServices\)/);
-    assert.match(catalog, /auth\.elevate\(staffMembers\.queryStaffMembersV2\)/);
     assert.match(catalog, /auth\.elevate\(productsV3\.queryProducts\)/);
     assert.match(catalog, /auth\.elevate\(productsV3\.getProduct\)/);
     assert.match(catalog, /productsV3\.queryProducts/);
@@ -234,8 +235,8 @@ test("TPV catalog reader uses native Bookings SDK and does not expose staff cont
     assert.doesNotMatch(catalog, /staff\.email|staff\.phone/);
 
     const giftCards = await source("tpv/tpvGiftCards.web.js");
-    assert.match(giftCards, /giftVouchers\.getGiftCard/);
-    assert.match(giftCards, /auth\.elevate/);
+    assert.match(giftCards, /TPV_GIFT_CARDS_DISABLED_IN_QA/);
+    assert.doesNotMatch(giftCards, /giftVouchers|@wix\/ecom|auth\.elevate/);
     assert.match(giftCards, /requireCajero/);
     assert.match(giftCards, /syntheticOnly: true/);
     assert.doesNotMatch(giftCards, /insertItem|updateItem|redeemGiftCard|console\.(?:log|info|warn|error)/);
