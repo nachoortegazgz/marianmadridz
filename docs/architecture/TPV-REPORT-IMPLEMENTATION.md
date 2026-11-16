@@ -41,7 +41,7 @@ La antigua ruta `src/public/tpv/tpv-page.js` se eliminó en una entrega anterior
 ### Venta y catálogo
 - Selección de profesional desde Wix Bookings.
 - Identificación manual opcional del cliente o venta anónima.
-- Lectura de servicios y profesionales nativos.
+- Lectura de servicios, profesionales, productos y variantes nativos.
 - Borrador multilínea de servicios/productos y concepto manual de QA.
 - Cantidades, descuentos e impuestos declarados por línea.
 - Subtotal, descuentos, impuestos y total en EUR.
