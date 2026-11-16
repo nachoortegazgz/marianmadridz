@@ -271,3 +271,16 @@ La tarea se considera abierta hasta que exista evidencia CI y validación en el 
 - El esquema de acción confirma delegación de una tarea de negocio a agente IA; las instrucciones y las integraciones de la tarea no se han podido leer. No se ha modificado ni desactivado por desconocerse su finalidad.
 - Estado: `BLOCKED_UNKNOWN_AUTOMATION_SIDE_EFFECTS`. No habilitar Runtime/E2E hasta revisar task e integraciones en Agent Maker y volver a consultar el estado.
 - Evidencia detallada: `docs/audits/2026-11-14-qa-automations-isolation.md`, addendum 2026-11-16.
+
+
+## Addendum de ejecución — 2026-11-16 23:09 Europe/Madrid
+
+La revalidación posterior del entorno supersede el recuento intermedio de 8 automatizaciones ACTIVE del addendum anterior:
+- Wix GetSiteContext confirma el sitio en estado `Draft`, Wix Editor (Classic) y Velo habilitado. El propietario declara además pasarela desconectada; no se ha verificado el proveedor en Dashboard.
+- Wix Automations V2 devuelve 7 ACTIVE y Get Automation confirma 7/7. Las siete son PREINSTALLED y bloqueadas para cambio de estado; dos además readonly.
+- La automatización custom `Creación de TPV física personalizada` está `INACTIVE`, revisión 4. Su tarea IA permanece sin inspección, pero el trigger programado ya no es elegible para nuevos eventos. No se ha cambiado su estado.
+- Las nueve colecciones `TPV_QA_*` existen, tienen permisos ADMIN, un índice único `idempotencyKey` ACTIVE cada una y cero elementos. No hay locks TPV QA en ControlOperativo. No se han realizado escrituras.
+- Se mantiene bloqueada la ejecución de eventos que puedan disparar las siete automatizaciones de comunicación. La siguiente prueba Wix permitida será Preview con lecturas únicamente; no persistencia ni operaciones de negocio.
+- El workflow Preview utiliza el secreto exacto `CLI_API_KEY` y requiere ejecución manual tras configurar el secreto en GitHub. El workflow de calidad y secret scanning del PR #402 terminaron en success; PR #402 está integrada en main.
+
+Evidencia: `docs/audits/2026-11-16-tpv-qa-cms-readonly-verification.md`.
