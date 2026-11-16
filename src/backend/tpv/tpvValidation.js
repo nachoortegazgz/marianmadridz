@@ -99,11 +99,16 @@ function normalizePayments(pagos, totalMinor) {
         if (importeCambioMinor > importeMinor) {
             throw new Error("TPV_CHANGE_EXCEEDS_CASH_RECEIVED");
         }
-        importePagadoMinor += importeMinor;
+        const importeAplicadoMinor = importeMinor - importeCambioMinor;
+        if (importeAplicadoMinor <= 0) {
+            throw new Error("TPV_INVALID_APPLIED_PAYMENT_AMOUNT");
+        }
+        importePagadoMinor += importeAplicadoMinor;
         return Object.freeze({
             medioPago,
             importe: importeMinor / 100,
             importeCambio: importeCambioMinor / 100,
+            importeAplicado: importeAplicadoMinor / 100,
         });
     });
 
