@@ -4,6 +4,12 @@ import { catalogVersioning, productsV3 } from "@wix/stores";
 import { requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 
+const getCatalogVersionElevated = auth.elevate(catalogVersioning.getCatalogVersion);
+const queryServicesElevated = auth.elevate(services.queryServices);
+const queryStaffMembersV2Elevated = auth.elevate(staffMembers.queryStaffMembersV2);
+const queryProductsElevated = auth.elevate(productsV3.queryProducts);
+const getProductElevated = auth.elevate(productsV3.getProduct);
+
 let catalogVersionPromise = null;
 
 function toMinorUnits(value) {
@@ -65,7 +71,7 @@ export const obtenerServicios = webMethod(
         await requireCajero(makeTraceId("tpv-services-read"));
         try {
             const paging = normalizePage(input);
-            const result = await services.queryServices({ paging }, {});
+            const result = await queryServicesElevated({ paging }, {});
             const items = (result?.services || []).map((service) => ({
                 itemId: service._id,
                 tipoLinea: "SERVICIO",
@@ -104,7 +110,7 @@ export const obtenerProfesionales = webMethod(
             if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
                 throw new Error("TPV_INVALID_STAFF_PAGING");
             }
-            const result = await staffMembers.queryStaffMembersV2({
+            const result = await queryStaffMembersV2Elevated({
                 query: {
                     filter: { serviceProvider: true },
                     cursorPaging: { limit },
@@ -164,7 +170,7 @@ export const obtenerProductos = webMethod(
                     ...(input.cursor ? { cursor: String(input.cursor).slice(0, 16000) } : {}),
                 },
             };
-            const result = await productsV3.queryProducts(query, {
+            const result = await queryProductsElevated(query, {
                 fields: ["CURRENCY", "MIN_PRICE_VARIANT", "PLAIN_DESCRIPTION"],
             });
             const items = (result?.products || [])
@@ -206,7 +212,7 @@ export const obtenerVariantesProducto = webMethod(
                     error: { code: "TPV_STORES_CATALOG_VERSION_UNSUPPORTED" },
                 };
             }
-            const product = await productsV3.getProduct(productId, {
+            const product = await getProductElevated(productId, {
                 fields: ["VARIANT_OPTION_CHOICE_NAMES", "CURRENCY"],
             });
             if (!product || product.visible !== true || product.visibleInPos === false) {
