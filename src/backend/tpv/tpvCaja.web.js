@@ -1,5 +1,4 @@
 import { Permissions, webMethod } from "wix-web-module";
-import { getCashierState } from "backend/cajas.web.js";
 import { getMyStaffContext, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { TPV_QA_COLLECTIONS, TPV_QA_RUNTIME_POLICY } from "backend/internalConfig";
@@ -19,12 +18,6 @@ function madridDayKey(date = new Date()) {
     const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
     return values.year + values.month + values.day;
 }
-
-// Legacy live-state reader remains read-only. QA operations use TPV_QA_SesionesCaja only.
-export const obtenerCajaActual = webMethod(
-    Permissions.SiteMember,
-    async () => getCashierState({ traceId: makeTraceId("tpv-cash-read") })
-);
 
 export const obtenerSesionCajaQA = webMethod(
     Permissions.SiteMember,
