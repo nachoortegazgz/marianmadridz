@@ -298,8 +298,18 @@ test("QA repository paginates reads and blocks Z close while sales are incomplet
     const closures = await source("tpv/tpvCierres.web.js");
     assert.match(repository, /while \(page\.hasNext && records\.length < maxRecords\)/);
     assert.match(repository, /export async function getPendingQaSales\(sessionId\)/);
+    assert.match(repository, /export async function getPendingQaRefunds\(sessionId\)/);
+    assert.match(repository, /actualByMethod\.size !== expectedByMethod\.size/);
+    assert.match(repository, /actual\.amountMinor !== expected\.amountMinor/);
+    assert.match(repository, /refundCashMovements\.length !== expectedCash\.count/);
+    assert.match(repository, /actualCashAmount !== expectedCash\.amountMinor/);
+    assert.match(repository, /refundTotal !== Number\(refund\.amountMinor\)/);
     assert.match(closures, /getPendingQaSales\(session\.sessionId\)/);
     assert.match(closures, /TPV_QA_PENDING_SALES_PREVENT_CLOSE/);
+    assert.match(closures, /getPendingQaRefunds\(session\.sessionId\)/);
+    assert.match(closures, /TPV_QA_PENDING_REFUNDS_PREVENT_CLOSE/);
+    assert.match(closures, /totals\.reconciliationOk !== true/);
+    assert.match(closures, /TPV_QA_RECONCILIATION_FAILED/);
 });
 
 test("legacy TPV pages and direct operational writers are absent from the active site integration", async () => {

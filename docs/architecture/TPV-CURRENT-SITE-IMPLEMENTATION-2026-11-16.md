@@ -106,3 +106,15 @@ La vía soportada es [Git Integration & Wix CLI for Sites](https://dev.wix.com/d
 ## Addendum de cuota y aislamiento de persistencia — 2026-11-16
 
 Get Site Data Usage (`consistentRead=true`) confirma 4.000 elementos por entorno, 201 elementos en LIVE (5,03 %) y 0 en SANDBOX; almacenamiento LIVE 265.822 bytes / 10 GiB y SANDBOX 0. Las nueve colecciones TPV QA están vacías en ambos entornos. Wix documenta que Preview usa SANDBOX, separado de LIVE; el límite de elementos es por entorno y el almacenamiento se comparte. Por tanto, tras configurar `CLI_API_KEY` y generar Preview, la prueba de persistencia puede realizarse en SANDBOX con fixtures limitados, sin tocar LIVE. La pasarela sigue declarada desconectada por el propietario; no se invocará ningún proveedor de pago.
+
+
+## Addendum de auditoría de código y fuente HTML — 2026-11-17
+
+- Se restaura `#htmlTPV.txt` como fuente versionada de referencia del HTML Component. Dos pruebas de contrato (`tpv-widget.contract.test.mjs` y `tpv-ui.qa-source.test.mjs`) lo leen mediante la ruta URL-encoded `%23htmlTPV.txt`; su eliminación dejaba referencias rotas y hacía fallar esas pruebas antes de evaluar el contrato.
+- La restauración no demuestra que el contenido esté instalado en el componente `#htmlTPV` del Editor Classic. Esa instalación requiere read-back del Editor/Preview y permanece pendiente.
+- Se verifican contra documentación oficial las firmas SDK de Bookings `services.queryServices(query, options)`, Stores Catalog V3 `productsV3.queryProducts(query, options)` y `productsV3.getProduct(productId, options)`. El sitio informa Catalog V3 instalado.
+- No se modifica `src/pages/TPV.yl5th.js`: su responsabilidad es enlazar el componente existente con `public/tpvPageController.js`; la inicialización está correctamente separada de los WebMethods.
+- Ticket Z bloquea ahora también devoluciones QA cuyo conjunto de pagos negativos o movimientos de efectivo no esté completo y rechaza el cierre cuando `reconciliationOk` no es `true`; la verificación offline está añadida como contrato de código, pendiente de ejecución CI/runtime.
+- La conciliación de devoluciones compara ahora número e importe por medio de pago, suma total de la devolución y número/importe de movimientos de efectivo. Cualquier ausencia, exceso, importe no entero/positivo o diferencia deja la devolución pendiente y bloquea Ticket Z.
+- Las colecciones QA y sus índices/permisos se mantienen sin cambios. La verificación CMS citada en el apartado 4 es la lectura read-only documentada el 2026-11-16, no una nueva lectura ejecutada el 2026-11-17.
+- Esta corrección no habilita pagos, reservas, Gift Cards, escrituras fiscales, hardware ni notificaciones reales. No se ha ejecutado Wix Preview ni Publish.
