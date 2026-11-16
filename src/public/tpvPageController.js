@@ -94,15 +94,13 @@ export function initializeTpvPage(widgetElement) {
             const payload = message?.payload || {};
 
             if (type === "CASHIER_STATE") {
-                try {
-                    reply("CASHIER_STATE_RES", await getCashierState({ traceId }), message);
-                } catch (_) {
-                    reply("CASHIER_STATE_RES", errorResult(
-                        "CASHIER_STATE_FAILED",
-                        "No se pudo consultar la caja.",
-                        traceId
-                    ), message);
-                }
+                const result = await safeCall(
+                    () => obtenerCajaActual(),
+                    "CASHIER_STATE_FAILED",
+                    "No se pudo consultar la caja.",
+                    traceId
+                );
+                reply("CASHIER_STATE_RES", result, message);
                 return;
             }
 
