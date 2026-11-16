@@ -67,31 +67,29 @@ test("TPV mutation controls remain visibly disabled", () => {
     assert.match(html, /Registrar devolución QA/);
 });
 
-test("TPV customer and booking readers use native Wix APIs and persist verified references in QA sales", async () => {
-    const readers = await readFile(new URL("../tpv/tpvNativeReaders.js", import.meta.url), "utf8");
+test("TPV customer, staff and booking references are synthetic-only", async () => {
     const sales = await readFile(new URL("../tpv/tpvVentas.web.js", import.meta.url), "utf8");
-    assert.match(catalogBackend, /buscarClientesTPV/);
-    assert.match(catalogBackend, /obtenerReservasClienteTPV/);
-    assert.match(readers, /contactsV5\.searchContacts/);
-    assert.match(readers, /extendedBookings\.queryExtendedBookings/);
-    assert.match(readers, /contactsV5\.getContact/);
-    assert.match(readers, /contactDetails\.contactId/);
-    assert.match(sales, /leerContactoTPV/);
-    assert.match(sales, /leerReservaTPV/);
-    assert.match(sales, /customerContactId/);
-    assert.match(sales, /bookingId/);
+    assert.match(catalogBackend, /TPV_QA_FIXTURES\.CUSTOMER/);
+    assert.match(catalogBackend, /TPV_QA_FIXTURES\.STAFF/);
+    assert.match(catalogBackend, /syntheticOnly: true/);
+    assert.doesNotMatch(catalogBackend, /contactsV5|extendedBookings|staffMembers|tpvNativeReaders/);
+    assert.match(sales, /TPV_QA_CUSTOMER_NOT_ALLOWED/);
+    assert.match(sales, /TPV_QA_BOOKINGS_DISABLED/);
+    assert.match(sales, /TPV_QA_STAFF_NOT_ALLOWED/);
+    assert.doesNotMatch(sales, /leerContactoTPV|leerReservaTPV|getMyStaffContext|staff\?\.memberId/);
     assert.match(controller, /CUSTOMERS_SEARCH/);
     assert.match(controller, /CUSTOMER_BOOKINGS/);
     assert.match(html, /function renderCustomers/);
     assert.match(html, /function renderCustomerBookings/);
+    assert.match(html, /Nacho Pitt · cliente de prueba/);
 });
 
 test("TPV Gift Cards exposes read-only balance lookup without storing or returning the raw code", async () => {
     const giftBackend = await readFile(new URL("../tpv/tpvGiftCards.web.js", import.meta.url), "utf8");
-    assert.match(giftBackend, /giftVouchers\.getGiftCard/);
-    assert.match(giftBackend, /auth\.elevate/);
-    assert.match(giftBackend, /readOnly: true/);
+    assert.match(giftBackend, /TPV_GIFT_CARDS_DISABLED_IN_QA/);
+    assert.doesNotMatch(giftBackend, /giftVouchers|@wix\/ecom|auth\.elevate/);
+    assert.match(giftBackend, /syntheticOnly: true/);
     assert.doesNotMatch(giftBackend, /insertItem|updateItem|redeemGiftCard|console\.(log|error)/);
-    assert.match(html, /Consultar saldo nativo · solo lectura/);
+    assert.match(html, /Saldo real · deshabilitado en QA/);
     assert.match(html, /function renderGiftCard/);
 });
