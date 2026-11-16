@@ -150,24 +150,48 @@ test("TPV dependency manifest and npm lockfile remain synchronized", async () =>
     assert.equal(packageJson.dependencies["@wix/stores"], "1.0.997");
 });
 
-test("TPV WebMethods keep writes blocked and do not access CMS directly", async () => {
+test("TPV WebMethods isolate synthetic QA writes from operational ledgers", async () => {
     const files = [
         "tpv/tpvCaja.web.js",
         "tpv/tpvVentas.web.js",
         "tpv/tpvCatalogo.web.js",
         "tpv/tpvReportes.web.js",
         "tpv/tpvGiftCards.web.js",
+        "tpv/tpvPagos.web.js",
+        "tpv/tpvMovimientos.web.js",
+        "tpv/tpvDevoluciones.web.js",
+        "tpv/tpvCierres.web.js",
+        "tpv/tpvAuditoria.web.js",
+        "tpv/tpvPermisos.web.js",
+        "tpv/tpvUtils.web.js",
     ];
     const contents = await Promise.all(files.map(source));
     const joined = contents.join("\n");
-
     assert.match(joined, /webMethod\(\s*Permissions\.SiteMember/);
     assert.match(joined, /requireCajero/);
-    assert.match(joined, /TPV_CASH_MOVEMENT_WRITES_DISABLED/);
-    assert.match(joined, /TPV_SALE_WRITES_DISABLED/);
-    assert.match(joined, /TPV_REFUNDS_DISABLED/);
-    assert.match(joined, /TPV_Z_CLOSING_DISABLED/);
-    assert.doesNotMatch(joined, /\b(?:wixData|MovimientosCaja|CajaActual)\b|\.insert\(|\.update\(|\.remove\(/);
+    assert.match(joined, /registrarVentaQA/);
+    assert.match(joined, /solicitarDevolucionQA/);
+    assert.match(joined, /cerrarTicketZQA/);
+    assert.match(joined, /TPV_QA_COLLECTIONS/);
+    assert.match(joined, /TPV_OPERATIONAL_SALE_WRITES_DISABLED/);
+    assert.match(joined, /TPV_OPERATIONAL_REFUNDS_DISABLED/);
+    assert.match(joined, /TPV_OPERATIONAL_Z_CLOSING_DISABLED/);
+    assert.doesNotMatch(joined, /registerManualTransaction|registerZClosing|createCheckout|createOrder|createPayment|processRefund/i);
+
+    const repository = await source("tpv/tpvQaRepository.js");
+    assert.match(repository, /insertItem\(/);
+    assert.match(repository, /CONSISTENCY\.STRONG/);
+    assert.match(repository, /requestFingerprint/);
+    assert.match(repository, /TPV_QA_COLLECTIONS/);
+    assert.doesNotMatch(repository, /updateItem\(|removeById\(|bulkUpdate\(|bulkRemove\(/);
+
+    const policy = await source("dataAccessPolicy.js");
+    const config = await source("internalConfig.js");
+    assert.match(policy, /TPV_QA_COLLECTIONS/);
+    assert.match(policy, /APPEND_ONLY_COLLECTIONS/);
+    assert.match(config, /REAL_PAYMENTS_ENABLED: false/);
+    assert.match(config, /FISCAL_WRITES_ENABLED: false/);
+    assert.match(config, /SYNTHETIC_ONLY: true/);
 });
 
 test("TPV catalog reader uses native Bookings SDK and does not expose staff contact details", async () => {
