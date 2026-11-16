@@ -22,7 +22,7 @@ Consulta Wix Automations V2 filtrada por `configuration.status=ACTIVE`, seguida 
 - Automatización custom `Creación de TPV física personalizada`, ID `961f911d-8386-4e20-843e-cdf4595c24e8`: `INACTIVE`, revisión 4, confirmada por Get Automation. No se ha cambiado su estado.
 - La tarea vinculada `d56d7590-7eb7-4e4f-94ac-2ca9fa465fcf` sigue sin inspección. List Tools Providers y List App Skills devolvieron listas vacías. No se encontró API pública documentada de Agent Maker que exponga esa definición; no se confundió con CMS Background Tasks ni CRM Tasks.
 
-La automatización custom está inactiva y su trigger programado no es elegible para nuevos disparos. Las siete preinstaladas permanecen activas y bloqueadas; no ejecutar flujos de miembros, suscripciones, tarjetas guardadas, reset de contraseñas, notificaciones de agente/Aria ni cargas masivas CMS. El trigger de límite CMS aconseja comprobar primero el uso total/cuota antes de cualquier inserción de prueba.
+La automatización custom está inactiva y su trigger programado no es elegible para nuevos disparos. Las siete preinstaladas permanecen activas y bloqueadas; no ejecutar flujos de miembros, suscripciones, tarjetas guardadas, reset de contraseñas, notificaciones de agente/Aria ni cargas masivas CMS. El uso total/cuota se comprobó mediante Get Site Data Usage; LIVE utiliza el 5,03 % del límite de elementos y SANDBOX está vacío. No hay proximidad a cuota.
 
 ## 3. Colecciones CMS TPV
 
@@ -60,7 +60,7 @@ Esto es evidencia de código y tests offline, no una prueba de comportamiento en
 
 **Permitido como siguiente paso:** generar Preview después de configurar el secreto GitHub `CLI_API_KEY`; ejecutar en Preview solo carga, autorización y métodos de lectura (catálogo Bookings/Stores, configuración y permisos). No disparar eventos de miembros, tarjetas, suscripciones, notificaciones, reset de contraseña ni operaciones de negocio.
 
-**Todavía bloqueado:** escrituras sintéticas CMS, concurrencia/idempotencia runtime, devoluciones, cierres, checkout y E2E. Antes de cualquier escritura se debe revisar uso global/cuota CMS por el trigger de límite de elementos y preparar una ejecución controlada con IDs y claves sintéticas nuevas. No usar datos reales.
+**Todavía bloqueado:** escrituras sintéticas hasta disponer de Preview generado y validar que el runtime escribe en SANDBOX; concurrencia/idempotencia runtime, devoluciones, cierres, checkout y E2E. Tras el gate de Preview se permitirá una prueba de persistencia limitada con IDs y claves sintéticas nuevas. No usar datos reales ni escribir por REST en LIVE.
 
 ## 7. Acciones realizadas / no realizadas
 
