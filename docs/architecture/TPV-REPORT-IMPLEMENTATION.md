@@ -13,7 +13,7 @@ Sitio objetivo único:
 - Página TPV ID `yl5th`, ruta `/blank`.
 - Studio Two queda expresamente fuera del alcance.
 
-La rama de trabajo es `feat/tpv-web-modules-report-2026-11-15`, PR #396 (draft, no fusionada).
+La rama de integración vigente es `feat/tpv-classic-persistent-qa-2026-11-16`, creada desde `main` para evitar la divergencia de la rama anterior. PR #396 está cerrada sin fusionar; la nueva PR se abrirá tras completar la revisión estática.
 
 ## 2. Decisión de arquitectura
 
@@ -30,7 +30,7 @@ La persistencia de QA utiliza exclusivamente estas nueve colecciones separadas:
 - `TPV_QA_TicketZ`
 - `TPV_QA_Auditoria`
 
-Las nueve colecciones se provisionaron en el sitio actual, con permisos restrictivos e índice único `idempotencyKey`. La comprobación CMS confirmó los nueve índices `ACTIVE` y cero elementos en todas las colecciones. No se insertaron registros de prueba.
+Las nueve colecciones se provisionaron en el sitio actual, con permisos restrictivos e índice único `idempotencyKey`. La comprobación CMS confirmó los nueve índices `ACTIVE` y cero elementos en todas las colecciones. No se insertaron registros de prueba. El acceso de escritura de aplicación exige además clave idempotente y sobre sintético con `isSynthetic=true`, `realPayment=false` y `externalSideEffects=false`.
 
 ## 3. Módulos desarrollados
 
@@ -88,7 +88,7 @@ No se ejecutan pagos, checkout, órdenes, devoluciones externas, Bookings writer
 7. Se inserta la cabecera `CONFIRMADA_SINTETICA`.
 8. Se añade evento de auditoría.
 
-Cada evento utiliza clave derivada de la clave cliente. Un reintento reanuda los pasos ya escritos y solo inserta los que falten. Los informes solo agregan ventas confirmadas. La escritura entre varias colecciones no es una transacción ACID; el estado PREPARADA permite detectar una operación parcial.
+Cada evento utiliza clave derivada de la clave cliente. Un reintento reanuda los pasos ya escritos y solo inserta los que falten. Los informes solo agregan ventas confirmadas. Las consultas CMS recorren páginas de hasta 1.000 registros y fallan cerradas si superan 10.000; Ticket Z bloquea el cierre si detecta ventas PREPARADA sin una confirmación correspondiente. La escritura entre varias colecciones no es una transacción ACID; el estado PREPARADA permite detectar una operación parcial.
 
 ## 6. Pagos y caja QA
 
@@ -145,7 +145,7 @@ Las reservas, órdenes, cobros reales, emisión/canje de Gift Cards, facturació
 - reanudación ante fallos parciales;
 - Preview con roles ADMIN, GESTION, ESTILISTA, miembro y visitante anónimo.
 
-El último commit consultado no tiene checks ni workflow runs asociados; no se declara CI verde.
+La rama nueva no tiene checks ni workflow runs asociados; no se declara CI verde. Las suites Node/Vitest no se han ejecutado en este entorno.
 
 ## 10. Sincronización y despliegue
 
