@@ -87,11 +87,13 @@ export const cerrarTicketZQA = webMethod(
         await requireAdmin(traceId);
         assertTpvQaEnabled();
         try {
-            let session = await latestOpenQaSession();
+            const session = await latestOpenQaSession();
             if (!session && input.sessionId) {
                 const priorClose = await queryQaRecords(TPV_QA_COLLECTIONS.TICKET_Z, wql.eq("sessionId", String(input.sessionId)));
                 if (priorClose.length) {
                     const prior = priorClose[0];
+                    const requestedCount = toMinorUnits(input.countedCash, "COUNTED_CASH");
+                    if (requestedCount !== Number(prior.totals?.countedCashMinor) || String(input.differenceReason || "").trim() !== String(prior.totals?.differenceReason || "")) throw new Error("TPV_QA_IDEMPOTENCY_CONFLICT");
                     return {
                         status: "SUCCESS",
                         data: {
