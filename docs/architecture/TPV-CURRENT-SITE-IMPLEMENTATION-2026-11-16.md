@@ -6,7 +6,7 @@
 - Site ID: `188bed94-177c-4bc9-a9f0-35080d874f3e`.
 - Dominio: `https://www.marianmadrid.es/`.
 - Editor clásico; Velo habilitado.
-- El sitio aparece como publicado. Los cambios de configuración CMS realizados por API se aplican al sitio publicado.
+- Estado devuelto por Wix en la comprobación actual: `Draft`. No se considera publicado ni se asume que el runtime público coincida con GitHub.
 - Studio Two queda expresamente fuera de alcance.
 - Entorno declarado por el propietario: desarrollo, sin actividad real, con datos sintéticos y pasarela de pagos desconectada.
 
@@ -22,22 +22,23 @@ Se mantienen intactas estas garantías:
 - En el HEAD versionado de la rama TPV, `FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED`, `ACCOUNTING_LEDGER_WRITES_ENABLED` y `ALLOW_SIMULATION_RECORDS` permanecen `false`; no se relaja la política fiscal global para habilitar pruebas TPV.
 - **Limitación crítica:** el código de esa rama aún no se ha sincronizado con el Editor clásico. Por tanto, no se afirma que esos flags estén activos en el runtime publicado. La lectura pública CMS sí quedó cerrada; la desactivación integral de todos los escritores backend live queda pendiente de comparar y sincronizar el código del Editor.
 
-## 3. Corrección de permisos CMS P0 aplicada
+## 3. Discrepancia de permisos CMS detectada (P0 pendiente)
 
-Se inspeccionaron los esquemas live antes de modificar permisos. Se preservaron los campos no-sistema y los plugins existentes durante el reemplazo de permisos.
+Las lecturas históricas documentaron una configuración objetivo ADMIN/CMS_EDITOR para `CajaActual` y `MovimientosCaja` (revisiones 16 y 107). La lectura CMS posterior utilizada en la auditoría funcional devolvió revisiones distintas y permisos de lectura diferentes:
 
-| Colección | Revisión anterior | Revisión verificada | Lectura de colección | Lectura de items |
-|---|---:|---:|---|---|
-| `CajaActual` | 14 | 16 | `ADMIN` | `CMS_EDITOR` |
-| `MovimientosCaja` | 105 | 107 | `ADMIN` | `CMS_EDITOR` |
+| Colección | Revisión CMS más reciente observada | Lectura de colección |
+|---|---:|---|
+| `CajaActual` | 17 | `SITE_MEMBER_AUTHOR` |
+| `MovimientosCaja` | 108 | `SITE_MEMBER_AUTHOR` |
+| `ControlOperativo` | 80 | `ANYONE` |
 
-En ambas colecciones:
-- Permisos de colección insert/update/remove: `ADMIN`.
-- Permisos de items insert/update/remove: `CMS_EDITOR`.
-- Lectura pública `ANYONE`: eliminada en ambos niveles.
-- Sin cambios en los datos existentes.
+Los permisos de items y los valores actuales de insert/update/remove deben volver a leerse directamente antes de cualquier escritor operativo. No se ha realizado una nueva mutación de permisos en esta fase.
 
-La lectura backend de TPV continúa pasando por WebMethods autenticados y `requireCajero()`. La configuración de permisos fue leída de nuevo tras las mutaciones y coincide con los valores objetivo. Sigue pendiente la prueba runtime con visitante anónimo, miembro ordinario, cajero y administrador.
+Consecuencias:
+- No puede afirmarse que la configuración ADMIN/CMS_EDITOR previamente aplicada siga vigente.
+- La lectura `ANYONE` de `ControlOperativo` requiere auditoría de exposición de campos y payloads.
+- Los WebMethods deben seguir aplicando autorización backend; los permisos CMS no la sustituyen.
+- No se habilitarán escrituras en caja ni ledgers hasta reconciliar estos permisos con la política central.
 
 ## 4. Almacenamiento QA separado provisionado
 
@@ -111,7 +112,7 @@ Pruebas añadidas al repositorio:
 - Política CAS del lock de devoluciones.
 - Validaciones de claves idempotentes, métodos de pago y unidades menores.
 
-**CI verificado sobre HEAD `a4dafdd8376d293606ef095f6ccc572cd5e5ecfb` (run 1475):** Layer 1: 28 suites / 330 pruebas, 0 fallos; Layer 2: 19 suites / 255 pruebas, 0 fallos; regresión offline completa: 74 suites / 669 pruebas, 0 fallos; ESLint correcto; contratos SDK Wix y secret scanning correctos. Estas pruebas son offline/estáticas y no sustituyen pruebas de runtime Wix. El contrato de Bookings Reader V2 se verificó en CI; Contacts V5 y Gift Cards se contrastaron con sus esquemas oficiales y sus contratos de código.
+**CI verificado sobre HEAD `49c537b1c1a1592817c1d5b82336897fe2da842c` (run 1477):** Layer 1: 28 suites / 330 pruebas, 0 fallos; Layer 2: 19 suites / 255 pruebas, 0 fallos; regresión offline completa: 74 suites / 669 pruebas, 0 fallos; ESLint correcto; secret scanning correcto; contratos SDK de Stores/eCommerce, Bookings Reader V2, CRM Contacts V5 y Gift Cards correctos. Estas pruebas son offline/estáticas y no sustituyen pruebas de runtime Wix.
 
 Pendiente:
 1. CI completo sobre HEAD `a4dafdd8376d293606ef095f6ccc572cd5e5ecfb` verificado correctamente.

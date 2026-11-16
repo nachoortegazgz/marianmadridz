@@ -129,17 +129,22 @@ Las reservas, órdenes, cobros reales, emisión/canje de Gift Cards, facturació
 
 ## 9. Estado de integración y validación
 
-**Verificado en Wix CMS:**
-- permisos de lectura pública de `CajaActual` y `MovimientosCaja` restringidos;
+**Verificado históricamente en Wix CMS:**
 - nueve colecciones QA creadas;
 - nueve índices idempotentes `ACTIVE`;
 - cero elementos en las nueve colecciones.
 
-**Verificado en CI sobre HEAD `a4dafdd8376d293606ef095f6ccc572cd5e5ecfb` (run 1475):**
+**Discrepancia CMS posterior que bloquea escritores operativos:**
+- `CajaActual`: revisión 17, lectura de colección `SITE_MEMBER_AUTHOR`;
+- `MovimientosCaja`: revisión 108, lectura de colección `SITE_MEMBER_AUTHOR`;
+- `ControlOperativo`: revisión 80, lectura `ANYONE`;
+- permisos de items e insert/update/remove pendientes de lectura directa y conciliación. No se han mutado permisos en esta fase.
+
+**Verificado en CI sobre HEAD `49c537b1c1a1592817c1d5b82336897fe2da842c` (run 1477):**
 - Layer 1: 28 suites / 330 pruebas, 0 fallos;
 - Layer 2: 19 suites / 255 pruebas, 0 fallos;
 - regresión offline completa: 74 suites / 669 pruebas, 0 fallos;
-- contratos del SDK Wix, ESLint y secret scanning correctos;
+- contratos de SDK Wix Stores/eCommerce, Bookings Reader V2, CRM Contacts V5 y Gift Cards correctos; ESLint y secret scanning correctos;
 - contratos de WebMethods, aislamiento de datos, locks CAS, UI/HTML y parseo del script inline correctos.
 
 **Pendiente de ejecutar en el entorno Wix:**
