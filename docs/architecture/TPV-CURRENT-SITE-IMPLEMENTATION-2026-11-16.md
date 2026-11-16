@@ -59,7 +59,7 @@ Las colecciones contienen campos tipados para claves idempotentes, estados, impo
 
 Se creó un índice único sobre `idempotencyKey` en cada colección. El primer read-back devolvió `BUILDING`; una comprobación posterior confirmó los nueve índices en estado `ACTIVE`, sin fallos. Una consulta posterior de recuento verificó 0 elementos en cada colección. Según el contrato de Wix, `ACTIVE` indica que el índice está listo para uso.
 
-**Estado:** la unicidad está provisionada a nivel CMS. Esto no sustituye las pruebas de inserción duplicada y concurrencia ni resuelve la atomicidad entre colecciones. La persistencia desde la aplicación está implementada en la rama de trabajo y pasa por `dataAccess.js` / `dataAccessPolicy.js`. Cada inserción QA exige `idempotencyKey` y un sobre sintético (`isSynthetic=true`, `realPayment=false`, `externalSideEffects=false`). No se han insertado todavía registros QA en el CMS; la primera prueba de integración queda pendiente de CI y Preview.
+**Estado:** la unicidad está provisionada a nivel CMS. Esto no sustituye las pruebas de inserción duplicada y concurrencia ni resuelve la atomicidad entre colecciones. La persistencia desde la aplicación está implementada en la rama de trabajo y pasa por `dataAccess.js` / `dataAccessPolicy.js`. Cada inserción QA exige `idempotencyKey` y un sobre sintético (`isSynthetic=true`, `realPayment=false`, `externalSideEffects=false`). No se han insertado todavía registros QA en el CMS; la integración real contra CMS y Preview sigue pendiente.
 
 ## 5. Módulos TPV y persistencia QA versionados
 
@@ -80,7 +80,7 @@ La rama de integración actual es `feat/tpv-classic-persistent-qa-2026-11-16`, c
 
 La política central `dataAccessPolicy.js` permite únicamente inserciones con clave idempotente y payload sintético en `TPV_QA_*`, y bloquea actualizaciones y eliminaciones. Las consultas paginan hasta 10.000 registros y fallan cerradas si exceden ese límite. Ticket Z impide cerrar una sesión si quedan ventas en estado PREPARADA sin confirmación. Los índices únicos `idempotencyKey` de las nueve colecciones se verificaron `ACTIVE`; el recuento CMS posterior confirmó cero elementos. Los eventos QA no se insertan en el ledger fiscal.
 
-Las escrituras de ventas siguen una saga reanudable: cabecera PREPARADA, líneas, pagos y cabecera CONFIRMADA. Los informes solo agregan ventas confirmadas. Los reembolsos se serializan por venta mediante un lock compare-and-swap técnico en `ControlOperativo` (tipo `TPV_QA_REFUND_LOCK`); este lock no contiene importes ni registros de ventas. Ticket Z marca como cerrada exclusivamente la sesión QA.
+Las escrituras de ventas siguen una saga reanudable: cabecera PREPARADA, líneas, pagos y cabecera CONFIRMADA. Los informes solo agregan ventas confirmadas. Los reembolsos se serializan por venta y, junto con ventas, movimientos, arqueos y cierres, comparten un lock compare-and-swap por sesión en `ControlOperativo` (tipos `TPV_QA_REFUND_LOCK` y `TPV_QA_SESSION_LOCK`). Los locks no contienen importes ni registros de ventas. La política central solo permite mutaciones CAS de campos acotados. Ticket Z marca como cerrada exclusivamente la sesión QA.
 
 El controlador HTML ↔ Velo y `#htmlTPV.txt` ya despachan apertura de sesión QA, ventas, movimientos, arqueos, devoluciones, Ticket X/Z y consulta de auditoría. El HTML se ha actualizado para presentar expresamente la persistencia sintética.
 
@@ -111,12 +111,12 @@ Pruebas añadidas al repositorio:
 - Política CAS del lock de devoluciones.
 - Validaciones de claves idempotentes, métodos de pago y unidades menores.
 
-**No ejecutadas todavía:** suites Node/Vitest completas, integración real CMS, concurrencia real, duplicados, fallos parciales, Preview y roles. La primera ejecución de CI falló en Layer 1 por una prueba del conjunto canónico `CONTROL_TYPE`; se actualizó esa prueba para incorporar `TPV_QA_REFUND_LOCK`. La nueva ejecución tras los cambios posteriores está pendiente de resultado. No se afirma CI verde.
+**CI verificado sobre HEAD `36fcd9c9192b888e884ace3881dbd88f9cb6a574`:** Layer 1: 28 suites / 328 pruebas, 0 fallos; Layer 2: 19 suites / 255 pruebas, 0 fallos; regresión offline completa: 74 suites / 667 pruebas, 0 fallos; ESLint correcto; contratos de SDK Wix y secret scanning correctos. Estas pruebas son offline/estáticas y no sustituyen pruebas de runtime. La ejecución final de CI sobre el HEAD indicado terminó correctamente. Las ejecuciones previas fallidas se debieron a aserciones de contrato de pruebas, corregidas y reejecutadas.
 
 Pendiente:
 1. Ejecutar `npm run test:layer1`, la regresión completa y ESLint en CI.
 2. Probar inserciones duplicadas y concurrencia del índice idempotente en CMS QA.
-3. Probar el lock de reembolso en concurrencia y la recuperación de locks expirados.
+3. Probar locks de sesión y reembolso en concurrencia, CAS y recuperación tras expiración.
 4. Probar reanudación de venta y devolución ante fallo parcial entre colecciones.
 5. Aplicar manualmente `src/pages/TPV.yl5th.js`, `src/public/tpvPageController.js` y el contenido de `#htmlTPV.txt` en Wix Classic.
 6. Validar Preview con ADMIN, GESTION, ESTILISTA, miembro ordinario y visitante anónimo.
