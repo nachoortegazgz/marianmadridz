@@ -219,7 +219,7 @@ export const obtenerVariantesProducto = webMethod(
             const variantes = (product.variantsInfo?.variants || [])
                 .filter((variant) => variant.visible !== false)
                 .map((variant) => ({
-                    varianteId: variant.id,
+                    varianteId: variant._id,
                     sku: variant.sku || null,
                     concepto: (variant.choices || [])
                         .map((choice) => choice.optionChoiceNames)
