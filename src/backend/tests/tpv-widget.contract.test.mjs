@@ -91,5 +91,7 @@ test("TPV Gift Cards exposes read-only balance lookup without storing or returni
     assert.match(giftBackend, /syntheticOnly: true/);
     assert.doesNotMatch(giftBackend, /insertItem|updateItem|redeemGiftCard|console\.(log|error)/);
     assert.match(html, /Saldo real · deshabilitado en QA/);
+    assert.match(html, /id="giftCardAmount"[^>]*disabled/);
+    assert.match(html, /id="giftCardType"[^>]*disabled/);
     assert.match(html, /function renderGiftCard/);
 });
