@@ -2,7 +2,7 @@ import { Permissions, webMethod } from "wix-web-module";
 import { getMyStaffContext, requireAdmin } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { TPV_QA_COLLECTIONS } from "backend/internalConfig";
-import { appendQaAudit, insertQaEvent, latestOpenQaSession, queryQaRecords } from "backend/tpv/tpvQaRepository";
+import { appendQaAudit, insertQaEvent, latestOpenQaSession, queryQaRecords, withQaSaleLock } from "backend/tpv/tpvQaRepository";
 import { assertTpvQaEnabled, makeQaId, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
 import { wql } from "backend/dataAccess";
 
@@ -20,7 +20,7 @@ export const solicitarDevolucionQA = webMethod(
             const session = await latestOpenQaSession();
             if (!session) throw new Error("TPV_QA_SESSION_NOT_OPEN");
 
-            const sales = await queryQaRecords(TPV_QA_COLLECTIONS.VENTAS, wql.eq("saleId", saleId));
+            return await withQaSaleLock(saleId, traceId, async () => {\n            const sales = await queryQaRecords(TPV_QA_COLLECTIONS.VENTAS, wql.eq("saleId", saleId));
             const original = sales.find((sale) => sale.status === "CONFIRMADA_SINTETICA");
             if (!original) throw new Error("TPV_QA_ORIGINAL_SALE_NOT_FOUND");
             if (original.payload?.sessionId !== session.sessionId) throw new Error("TPV_QA_REFUND_SESSION_MISMATCH");
