@@ -4,7 +4,7 @@ import { makeTraceId } from "public/mmUtils";
 import { TPV_QA_COLLECTIONS } from "backend/internalConfig";
 import { validateSaleDraft } from "backend/tpv/tpvValidation";
 import { appendQaAudit, insertQaEvent, latestOpenQaSession } from "backend/tpv/tpvQaRepository";
-import { assertTpvQaEnabled, makeQaId, normalizeIdempotencyKey } from "backend/tpv/tpvUtils";
+import { assertTpvQaEnabled, makeQaId, normalizeClientIdempotencyKey } from "backend/tpv/tpvUtils";
 
 function disabledResult(code) {
     return {
@@ -49,7 +49,7 @@ export const registrarVentaQA = webMethod(
         await requireCajero(traceId);
         assertTpvQaEnabled();
         try {
-            const key = normalizeIdempotencyKey(input.idempotencyKey);
+            const key = normalizeClientIdempotencyKey(input.idempotencyKey);
             const session = await latestOpenQaSession();
             if (!session) throw new Error("TPV_QA_SESSION_NOT_OPEN");
             if (input.sessionId && input.sessionId !== session.sessionId) throw new Error("TPV_QA_SESSION_MISMATCH");
