@@ -13,7 +13,7 @@ Sitio objetivo único:
 - Página TPV ID `yl5th`, ruta `/blank`.
 - Studio Two queda expresamente fuera del alcance.
 
-La rama de integración vigente es `feat/tpv-classic-persistent-qa-2026-11-16`, creada desde `main` para evitar la divergencia de la rama anterior. PR #396 está cerrada sin fusionar. La PR #397 está abierta para revisión; no está fusionada.
+PR #397 y PR #398 figuran fusionadas en `main`. La rama de hardening `fix/tpv-qa-synthetic-data-boundary-2026-11-16` aplica ahora la regla SSOT de datos exclusivamente sintéticos y está pendiente de CI/revisión.
 
 ## 2. Decisión de arquitectura
 
@@ -39,8 +39,8 @@ Las nueve colecciones se provisionaron en el sitio actual, con permisos restrict
 | `tpvCaja.web.js` | Apertura diaria de sesión QA, lectura de estado QA y arqueo parcial |
 | `tpvVentas.web.js` | Validación de borrador y saga de venta sintética persistente |
 | `tpvMovimientos.web.js` | Entradas, salidas y retiradas sintéticas de efectivo |
-| `tpvCatalogo.web.js` | Lectura nativa de servicios/profesionales Bookings y productos/variantes Stores V3, con `auth.elevate` tras autorización backend |
-| `tpvGiftCards.web.js` | Consulta real de tarjetas regalo deshabilitada en QA; no se envían códigos ni se consultan saldos reales |
+| `tpvCatalogo.web.js` | Lectura nativa de servicios Bookings y productos/variantes Stores V3; cliente y profesionales proceden de fixtures sintéticas |
+| `tpvGiftCards.web.js` | Bloquea toda consulta de tarjetas regalo reales en QA; no recibe ni transmite códigos |
 | `tpvPagos.web.js` | Validación de pagos divididos y cambio, sin llamada a pasarela |
 | `tpvDevoluciones.web.js` | Devoluciones sintéticas parciales/totales, ADMIN y locks CAS por venta/sesión |
 | `tpvCierres.web.js` | Resumen de sesión, Ticket X no destructivo y Ticket Z QA |
@@ -145,7 +145,7 @@ Las reservas, órdenes, cobros reales, emisión/canje de Gift Cards, facturació
 - Layer 1: 28 suites / 331 pruebas, 0 fallos;
 - Layer 2: 19 suites / 255 pruebas, 0 fallos;
 - regresión offline completa: 74 suites / 670 pruebas, 0 fallos;
-- contratos de SDK Wix Stores/eCommerce, Bookings Reader V2, CRM Contacts V5 y Gift Cards correctos; ESLint y secret scanning correctos;
+- contratos de SDK Wix Stores/eCommerce y Bookings correctos; ESLint y secret scanning correctos;
 - contratos de WebMethods, aislamiento de datos, locks CAS, UI/HTML y parseo del script inline correctos.
 
 **Pendiente de ejecutar en el entorno Wix:**
@@ -158,7 +158,7 @@ Las ejecuciones intermedias detectaron aserciones de pruebas desactualizadas y u
 
 ## 10. Sincronización y despliegue
 
-Los archivos están versionados en la rama GitHub. No se ha sincronizado el page code, el HTML Component ni los módulos backend con el Editor clásico; PR #396 está cerrada sin fusionar; PR #397 está abierta y no se ha publicado código TPV. El runtime publicado no debe considerarse actualizado por estos commits.
+Los módulos y la interfaz TPV están versionados en `main` tras PR #397 y #398. La rama de hardening sintético está pendiente de CI. No se ha sincronizado el page code, HTML Component ni módulos backend con el Editor clásico. Wix confirma que el sitio está Published y que la página TPV existe en `/blank`, pero no se ha verificado que el runtime contenga el código de GitHub.
 
 Antes de sincronizar:
 1. verificar el último CI y revisar el diff;
