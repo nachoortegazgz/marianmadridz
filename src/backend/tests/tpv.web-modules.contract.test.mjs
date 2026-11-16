@@ -6,6 +6,7 @@ import { Script } from "node:vm";
 import { validateSaleDraft } from "../tpv/tpvValidation.js";
 
 const backendRoot = new URL("../", import.meta.url);
+const repoRoot = new URL("../../../", import.meta.url);
 
 async function source(path) {
     return readFile(new URL(path, backendRoot), "utf8");
@@ -110,6 +111,16 @@ test("TPV sale draft rejects invalid tax, overpayment, unknown methods and sub-c
     );
 });
 
+test("TPV dependency manifest and npm lockfile remain synchronized", async () => {
+    const packageJson = JSON.parse(await readFile(new URL("package.json", repoRoot), "utf8"));
+    const packageLock = JSON.parse(await readFile(new URL("package-lock.json", repoRoot), "utf8"));
+    assert.deepEqual(
+        packageLock.packages[""].dependencies,
+        packageJson.dependencies
+    );
+    assert.equal(packageJson.dependencies["@wix/stores"], undefined);
+});
+
 test("TPV WebMethods keep writes blocked and do not access CMS directly", async () => {
     const files = [
         "tpv/tpvCaja.web.js",
@@ -135,13 +146,9 @@ test("TPV catalog reader uses native Bookings SDK and does not expose staff cont
     assert.match(catalog, /services\.queryServices/);
     assert.match(catalog, /staffMembers\.queryStaffMembersV2/);
     assert.match(catalog, /formattedValue/);
-    assert.match(catalog, /catalogVersioning\.getCatalogVersion/);
-    assert.match(catalog, /productsV3\.queryProducts/);
-    assert.match(catalog, /productsV3\.getProduct/);
-    assert.match(catalog, /visibleInPos/);
-    assert.match(catalog, /TPV_STORES_CATALOG_VERSION_UNSUPPORTED/);
     assert.match(catalog, /precioMinor/);
-    assert.ok(catalog.indexOf("catalogVersioning.getCatalogVersion") < catalog.indexOf("productsV3.queryProducts"));
+    assert.match(catalog, /TPV_STORES_SDK_INSTALL_BLOCKED/);
+    assert.doesNotMatch(catalog, /from ["']@wix\/stores["']/);
     assert.doesNotMatch(catalog, /staff\.email|staff\.phone/);
 
     const giftCards = await source("tpv/tpvGiftCards.web.js");
