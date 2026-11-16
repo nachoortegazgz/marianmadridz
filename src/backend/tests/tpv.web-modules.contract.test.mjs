@@ -239,12 +239,12 @@ test("TPV page is wired to the shared HTML bridge and its versioned iframe proto
     assert.match(controller, /obtenerProductos/);
     assert.match(controller, /obtenerVariantesProducto/);
     assert.match(controller, /validarVentaBorrador/);
-    assert.match(controller, /previsualizarTicketX/);
-    assert.match(controller, /TICKET_X_PREVIEW/);
+    assert.match(controller, /generarTicketXQA/);
+    assert.match(controller, /QA_TICKET_X/);
     assert.match(controller, /consultarTarjetaRegalo/);
     assert.match(controller, /GIFT_CARD_BALANCE/);
-    assert.match(controller, /obtenerCajaActual/);
-    assert.match(controller, /reply\("CASHIER_STATE_RES", result, message\)/);
+    assert.match(controller, /obtenerSesionCajaQA/);
+    assert.match(controller, /reply\(responseType, result, message\)/);
     assert.doesNotMatch(controller, /\bgetCashierState\b/);
 
     assert.match(html, /send\("MM_READY"/);
