@@ -192,7 +192,7 @@ export async function queryQaRecords(collection, filter, options = {}) {
         limit,
         consistency: CONSISTENCY.STRONG,
     });
-    if (result.hasNext) throw new Error("TPV_QA_QUERY_LIMIT_EXCEEDED");
+    if (result.hasNext && options.allowTruncated !== true) throw new Error("TPV_QA_QUERY_LIMIT_EXCEEDED");
     return result.items;
 }
 
