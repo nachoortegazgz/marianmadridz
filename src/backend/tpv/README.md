@@ -68,13 +68,13 @@ Ejecutar `npm test`, `npm run test:layer1` y `npm run lint` antes de sincronizar
 
 ## Estado de integración
 
-Los módulos y el HTML Component están versionados en la rama `feat/tpv-classic-persistent-qa-2026-11-16` (PR #397 abierta, sin fusionar). CI verificado sobre el HEAD `36fcd9c9192b888e884ace3881dbd88f9cb6a574`: 74 suites / 667 pruebas offline, 0 fallos; ESLint, contratos Wix y secret scanning correctos. No se han sincronizado al Editor clásico ni publicado. La pasarela y las operaciones fiscales permanecen deshabilitadas.
+PR #397 y PR #398 están integradas en `main`. La rama `fix/tpv-qa-synthetic-data-boundary-2026-11-16` endurece el aislamiento sintético y está pendiente de CI/revisión. No se ha sincronizado el código con Wix Classic. El sitio aparece Published, pero el runtime TPV no está verificado.
 
 
 ## Fixtures sintéticas de cliente y profesionales (QA)
 
-- Búsqueda de contactos con `@wix/crm` (`contactsV5.searchContacts`), limitada a 10 resultados y solo para cajeros autenticados.
-- Consulta de reservas del contacto con `@wix/bookings` (`extendedBookings.queryExtendedBookings`), por `contactDetails.contactId` y ventana móvil de ±365 días.
-- Antes de persistir una venta QA, el backend vuelve a leer el contacto y verifica que la reserva seleccionada pertenece a ese contacto. Se guarda únicamente el identificador, nombre visible y snapshot mínimo de la reserva en el payload sintético.
-- Consulta de saldo de Gift Cards con `@wix/ecom` (`giftVouchers.getGiftCard`) y permiso `ECOM.GIFT_CARD_READ`; el código se envía solo al método nativo, no se persiste ni se devuelve. Emisión, canje y reembolso siguen bloqueados.
-- No se crean ni modifican reservas, pagos, pedidos, facturas, stock ni ledgers operativos.
+- El único cliente de prueba es `Nacho Pitt` (`nacho.pitt@example.test`), definido en `TPV_QA_FIXTURES`; no se consulta CRM ni se persisten datos de clientes reales.
+- Los profesionales proceden de fixtures sintéticas; no se consulta Bookings Staff ni se persisten IDs reales de recursos.
+- La consulta y vinculación de reservas reales está deshabilitada; la venta rechaza cualquier `bookingId`.
+- La consulta de saldo de Gift Cards reales está deshabilitada; no se envía ni persiste ningún código. Emisión, canje y reembolso siguen bloqueados.
+- Los eventos de auditoría usan el actor sintético `QA_ACTOR`; la identidad real solo se usa para autorización backend y no se persiste.
