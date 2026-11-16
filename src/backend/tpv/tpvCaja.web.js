@@ -61,6 +61,7 @@ export const obtenerSesionCajaQA = webMethod(
 export const abrirCajaQA = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
+        let persisted = false;
         const traceId = makeTraceId("tpv-qa-session-open");
         await requireCajero(traceId);
         assertTpvQaEnabled();
@@ -92,6 +93,7 @@ export const abrirCajaQA = webMethod(
                     }),
                 }
             );
+            persisted = true;
             await insertQaEvent(TPV_QA_COLLECTIONS.AUDITORIA, idempotencyKey + ":AUDIT", {
                 action: "APERTURA_CAJA_QA",
                 actorId: staff?.memberId || "UNKNOWN",
@@ -116,7 +118,7 @@ export const abrirCajaQA = webMethod(
                 traceId,
             };
         } catch (error) {
-            return errorResult(String(error?.message || "TPV_QA_SESSION_OPEN_FAILED"));
+            return { ...errorResult(String(error?.message || "TPV_QA_SESSION_OPEN_FAILED")), persisted, recoverable: persisted, isSynthetic: true };
         }
     }
 );
@@ -124,6 +126,7 @@ export const abrirCajaQA = webMethod(
 export const registrarArqueoParcialQA = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
+        let persisted = false;
         const traceId = makeTraceId("tpv-qa-partial-count");
         await requireCajero(traceId);
         assertTpvQaEnabled();
@@ -160,6 +163,7 @@ export const registrarArqueoParcialQA = webMethod(
                     }),
                 }
             );
+            persisted = true;
             await appendQaAudit({
                 idempotencyKey: key + ":AUDIT",
                 action: "ARQUEO_PARCIAL_QA",
@@ -176,7 +180,7 @@ export const registrarArqueoParcialQA = webMethod(
                 traceId,
             };
         } catch (error) {
-            return errorResult(String(error?.message || "TPV_QA_PARTIAL_COUNT_FAILED"));
+            return { ...errorResult(String(error?.message || "TPV_QA_PARTIAL_COUNT_FAILED")), persisted, recoverable: persisted, isSynthetic: true };
         }
     }
 );
