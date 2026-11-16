@@ -1,3 +1,7 @@
+> **ESTADO HISTÓRICO / GUÍA SUPERADA — 2026-11-16:** Este documento describe una integración anterior de solo lectura basada en `getCashierState()`; no es el contrato de la TPV QA persistente actual. La implementación vigente está documentada en [TPV-CURRENT-SITE-IMPLEMENTATION-2026-11-16.md](TPV-CURRENT-SITE-IMPLEMENTATION-2026-11-16.md) y [TPV-WIX-NATIVE-INTEGRATION.md](TPV-WIX-NATIVE-INTEGRATION.md). No reutilizar los pasos de instalación antiguos sin contrastarlos con esos documentos.
+
+---
+
 # TPV MarianMadrid — integración CajaActual / MovimientosCaja
 
 ## Estado de esta entrega
@@ -29,7 +33,7 @@ La interfaz actual no invoca esas operaciones nativas. Solo define el límite de
 
 1. Añadir un HTML Component a la página interna de TPV y asignarle el ID `htmlTPV`.
 2. Copiar el contenido de `#htmlTPV.txt` en el HTML Component.
-3. Incorporar el código de `src/pages/TPV.page-code.template.js` al código de la página correspondiente. El nombre del archivo es una plantilla del repositorio; no queda vinculado automáticamente a una página existente.
+3. La página existente ya tiene código versionado en `src/pages/TPV.yl5th.js`. `src/pages/TPV.page-code.template.txt` es solo una plantilla para crear otra página; no sustituye el código vinculado al ID `yl5th`.
 4. Dar acceso a la página solo a los roles internos autorizados. La autorización efectiva sigue siendo backend.
 5. Probar con una cuenta Site Member autorizada y otra no autorizada. Confirmar que el primer caso devuelve estado y el segundo recibe error sin filtrar datos.
 
