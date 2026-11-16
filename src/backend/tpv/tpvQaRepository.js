@@ -12,6 +12,7 @@ import {
     normalizeIdempotencyKey,
     stableSerialize,
     makeSyntheticPayload,
+    makeQaRefundLockId,
 } from "backend/tpv/tpvUtils";
 
 const ALLOWED_QA_COLLECTIONS = new Set(Object.values(TPV_QA_COLLECTIONS));
@@ -21,7 +22,7 @@ export async function withQaSaleLock(saleId, traceId, operation) {
     assertTpvQaEnabled();
     const cleanSaleId = String(saleId || "").trim();
     if (!cleanSaleId || typeof operation !== "function") throw new Error("TPV_QA_REFUND_LOCK_INVALID");
-    const lockId = "TPVQA_REFUND_LOCK_" + cleanSaleId.replace(/[^A-Za-z0-9_-]/g, "_").slice(0, 80);
+    const lockId = makeQaRefundLockId(cleanSaleId);
     const collection = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
     const now = Date.now();
     const expiresAt = new Date(now + REFUND_LOCK_TTL_MS);
@@ -49,6 +50,9 @@ export async function withQaSaleLock(saleId, traceId, operation) {
     }
 
     if (record) {
+        if (record.dedupeKey !== "TPV_QA_REFUND:" + cleanSaleId) {
+            throw new Error("TPV_QA_REFUND_LOCK_ID_COLLISION");
+        }
         const currentExpiry = record.expiresAt instanceof Date ? record.expiresAt : new Date(record.expiresAt || 0);
         if (record.status === "ACTIVE" && currentExpiry.getTime() > now) {
             throw new Error("TPV_QA_REFUND_IN_PROGRESS");
