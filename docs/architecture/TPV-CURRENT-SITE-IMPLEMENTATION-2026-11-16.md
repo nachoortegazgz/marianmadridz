@@ -57,9 +57,9 @@ Las colecciones contienen campos tipados para claves idempotentes, estados, impo
 
 ### Índices de idempotencia
 
-Se solicitó un índice único sobre `idempotencyKey` en cada colección. El primer read-back devolvió estado `BUILDING` para los nueve índices. Según el contrato de Wix, solo un índice `ACTIVE` está listo para uso.
+Se creó un índice único sobre `idempotencyKey` en cada colección. El primer read-back devolvió `BUILDING`; una comprobación posterior confirmó los nueve índices en estado `ACTIVE`, sin fallos. Según el contrato de Wix, `ACTIVE` indica que el índice está listo para uso.
 
-**Bloqueo actual:** no activar persistencia QA hasta que los nueve índices estén en `ACTIVE` y se valide el comportamiento de duplicado/concurrencia. Un índice `BUILDING` o `FAILED` no constituye una garantía de idempotencia.
+**Estado:** la unicidad está provisionada a nivel CMS. Esto no sustituye las pruebas de inserción duplicada y concurrencia ni resuelve la atomicidad entre colecciones. La persistencia desde la aplicación sigue deshabilitada hasta integrar el flujo en la capa central de acceso a datos y validar las compensaciones/reintentos.
 
 ## 5. Estado de la interfaz y backend versionado
 
