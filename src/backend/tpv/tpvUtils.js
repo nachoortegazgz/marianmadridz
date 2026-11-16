@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { TPV_QA_RUNTIME_POLICY } from "backend/internalConfig";
 
 const PAYMENT_METHODS = Object.freeze(["EFECTIVO", "TARJETA", "BIZUM", "OTROS"]);
@@ -66,6 +67,13 @@ export function stableSerialize(value) {
 export function makeQaId(prefix, idempotencyKey) {
     const safe = normalizeIdempotencyKey(idempotencyKey).replace(/[^A-Za-z0-9_-]/g, "-");
     return "QA-" + String(prefix || "EVENT").toUpperCase() + "-" + safe;
+}
+
+export function makeQaRefundLockId(saleId) {
+    const value = String(saleId || "").trim();
+    if (!value) throw new Error("TPV_QA_REFUND_LOCK_INVALID");
+    const digest = createHash("sha256").update(value, "utf8").digest("hex").slice(0, 32);
+    return "TPVQ" + digest;
 }
 
 export function makeSyntheticPayload(payload = {}) {
