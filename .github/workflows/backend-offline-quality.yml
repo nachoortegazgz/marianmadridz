@@ -80,7 +80,7 @@ jobs:
         if: always()
         run: npm run verify:wix-ecom-order-transactions
 
-      - name: Verify Wix TPV native CRM and Gift Cards SDK contracts
+      - name: Verify Wix TPV catalog SDK contracts
         if: always()
         run: npm run verify:wix-tpv-native-sdk
 
