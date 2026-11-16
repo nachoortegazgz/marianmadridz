@@ -18,9 +18,13 @@ export function assertTpvQaEnabled() {
 
 export function normalizeIdempotencyKey(value) {
     const key = String(value || "").trim();
-    if (!IDEMPOTENCY_PATTERN.test(key)) {
-        throw new Error("TPV_QA_IDEMPOTENCY_KEY_INVALID");
-    }
+    if (!/^[A-Za-z0-9:_-]{8,100}$/.test(key)) throw new Error("TPV_QA_IDEMPOTENCY_KEY_INVALID");
+    return key;
+}
+
+export function normalizeClientIdempotencyKey(value) {
+    const key = String(value || "").trim();
+    if (!/^[A-Za-z0-9_-]{8,72}$/.test(key)) throw new Error("TPV_QA_IDEMPOTENCY_KEY_INVALID");
     return key;
 }
 
