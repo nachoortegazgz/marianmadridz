@@ -30,8 +30,8 @@ La búsqueda GitHub no devolvió referencias a `bulkUpdateItems`, ni coincidenci
 
 - `src/velo.dependencies.json` no existe en el HEAD inspeccionado.
 - `.eslintrc.json` mantiene desactivada la regla `@wix/cli/no-invalid-backend-import`.
-- Consecuencia: el gate estático no verifica esa clase de importaciones backend.
-- Acción: generar/sincronizar el manifiesto mediante el flujo oficial compatible con este proyecto Wix Editor Classic y activar la regla solo después de comprobar que el manifiesto corresponde al estado real del sitio. No crear el archivo manualmente ni editar `wix.lock`.
+- Consecuencia: hay una regla de ESLint desactivada y el archivo no está presente; no se ha demostrado que `src/velo.dependencies.json` sea un requisito de este proyecto Wix Editor Classic ni que la regla dependa de él.
+- Acción: mantener la regla sin cambios hasta confirmar su alcance y requisitos en documentación/código oficial aplicables a Velo Editor Classic. No generar un manifiesto con comandos de Wix CLI for Apps: esos manifiestos pertenecen a proyectos de extensiones/app y no son equivalentes al código Velo del sitio. No editar `wix.lock`.
 
 ### P1 — Runtime y sincronización Wix no acreditados
 
@@ -69,8 +69,8 @@ No se alteran ledgers append-only, colecciones, índices, permisos, automatizaci
 - Lectura GitHub de archivos y configuración: completada.
 - GetSiteContext Wix: completado; Draft / Editor Classic / Velo / Stores V3 / Invoices V1.
 - Búsquedas acotadas en GitHub: sin coincidencias de `TODO FIXME HACK` ni `bulkUpdateItems`; no es análisis AST exhaustivo.
-- CI de PR #409: pendiente al redactar este informe.
-- `npm test`, Layer 1, Layer 2, ESLint y `npm audit` ejecutados localmente: no ejecutados.
+- PR #409 integrada en main mediante `4a8ee829bc9c0a7e00040399523794d866ce5362`; CI del HEAD validó Layer 1, Layer 2, regresión completa, contratos SDK y ESLint (run `43979637997`, success); Gitleaks full-history success (run `43979637978`).
+- `npm test`, Layer 1, Layer 2, ESLint y `npm audit` ejecutados localmente: no ejecutados. PR #411 incorpora un paso `npm audit --json` fail-closed al workflow existente; ejecución `43980028822` estaba en curso al actualizar este informe. Secret scanning `43980028740`: success.
 - Wix Preview, runtime, E2E y Publish: no ejecutados.
 
 ## Criterios de salida para despliegue
