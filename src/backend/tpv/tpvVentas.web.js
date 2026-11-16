@@ -71,7 +71,7 @@ export const registrarVentaQA = webMethod(
                 saleId,
                 ticketId: saleId,
                 professionalId: String(input.profesionalId || "").slice(0, 100) || null,
-                customerLabel: String(input.customerLabel || "CLIENTE ANONIMO QA").slice(0, 100),
+                customerLabel: "CLIENTE ANONIMO QA",
                 source: "TPV_QA",
                 traceId,
             };
