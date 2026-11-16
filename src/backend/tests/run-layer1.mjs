@@ -17,6 +17,7 @@ const suites = [
   'qa.tpv-simulation.mock.test.mjs',
   'tpv.web-modules.contract.test.mjs',
   'tpv-ui.qa-source.test.mjs',
+  'tpv.qa.persistence.policy.test.mjs',
   'tpv-widget.contract.test.mjs',
   'members.sdk.contract.test.mjs',
   'booking.members-required.contract.test.mjs',
