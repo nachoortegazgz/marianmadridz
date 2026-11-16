@@ -60,7 +60,7 @@ jobs:
       - name: Require Wix CLI API key
         if: steps.auth.outputs.available != 'true'
         run: |
-          echo "::error::Preview cannot authenticate. Configure repository secret CLI_API_KEY using a Wix API key with the 'Wix CLI - Git Integration' permission and access to the Marian Madrid site."
+          echo "::error::Preview cannot authenticate. Configure repository secret CLI_API_KEY using a Wix API key with the 'Wix CLI for Sites - Git Integration' permission and access to the Marian Madrid site."
           exit 1
 
       - name: Install locked project dependencies
@@ -76,10 +76,6 @@ jobs:
         env:
           CLI_API_KEY: ${{ secrets.CLI_API_KEY }}
         run: npm run wix login -- --api-key "$CLI_API_KEY"
-
-      - name: Verify Wix CLI authentication
-        if: steps.auth.outputs.available == 'true'
-        run: npm run wix whoami
 
       - name: Create Wix preview only (never publish)
         if: steps.auth.outputs.available == 'true'
