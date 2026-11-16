@@ -170,3 +170,9 @@ No se añadieron campos:
 - [Wix CMS — Data Types in Wix Data](https://dev.wix.com/docs/api-reference/business-solutions/cms/data-types-in-wix-data)
 - [Wix CMS — Data Collections API](https://dev.wix.com/docs/api-reference/business-solutions/cms/collection-management/data-collections/introduction)
 - [Wix CMS — Query Data Items](https://dev.wix.com/docs/api-reference/business-solutions/cms/data-items/query-data-items)
+
+## Addendum de aislamiento externo — 2026-11-16
+
+La revalidación posterior del Site ID QA devuelve 8 automatizaciones ACTIVE (no 7): siete PREINSTALLED bloqueadas por `disableStatusChange=true` y una automatización de origen APPLICATION, `Creación de TPV física personalizada`, programada a diario a las 01:45 y con acción `Delegate to AI Custom Agent`. El task ID es `d56d7590-7eb7-4e4f-94ac-2ca9fa465fcf`; su contenido e integraciones no se han podido verificar. Se mantiene el bloqueo de Runtime/E2E hasta inspección en Agent Maker. No se ha modificado ninguna automatización ni ejecutado tareas IA.
+
+Evidencia completa: `docs/audits/2026-11-14-qa-automations-isolation.md`, addendum 2026-11-16.

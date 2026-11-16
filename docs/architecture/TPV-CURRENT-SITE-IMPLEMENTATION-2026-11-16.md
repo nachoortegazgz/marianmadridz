@@ -79,7 +79,7 @@ Se mantienen solo lecturas de catálogo de servicios Bookings y productos/varian
 
 PR #397, PR #398 y PR #399 están fusionadas en `main`. CI de PR #399 sobre HEAD `db2628965a28572d7e9339a8b268bd4e87fe708c`: 74 suites / 670 pruebas offline, 0 fallos; Layer 1 (28 suites / 331 pruebas), Layer 2 (19 suites / 255 pruebas), SDK contracts, ESLint y secret scanning correctos. La PR #398 tuvo una ejecución de rama fallida por aserciones desalineadas; el CI posterior pasó.
 
-La rama de hardening sintético todavía necesita CI propio y revisión del diff. Ninguna prueba offline equivale a validación runtime Wix.
+PR #399 de hardening sintético está integrada en main y superó CI: 74 suites / 670 pruebas offline, 0 fallos; Layer 1/2, SDK contracts, ESLint y secret scanning correctos. Ninguna prueba offline equivale a validación runtime Wix.
 
 ## 8. Bloqueos runtime y despliegue
 
@@ -88,7 +88,7 @@ La rama de hardening sintético todavía necesita CI propio y revisión del diff
 - No se han ejecutado escrituras de prueba en CMS durante esta intervención.
 - No se ha probado la concurrencia/idempotencia contra CMS real.
 - No se ha validado Preview con ADMIN, GESTION, ESTILISTA, miembro ordinario y visitante.
-- La SSOT registra 7 automatizaciones Wix preinstaladas ACTIVE con acciones de email/notificación y bloqueos de cambio; aislamiento runtime de comunicaciones no acreditado. Runtime/E2E permanece bloqueado hasta neutralización soportada y read-back.
+- Revalidación Wix Automations V2 del 2026-11-16: 8 automatizaciones ACTIVE, todas confirmadas por Get Automation. Siete son PREINSTALLED y tienen `disableStatusChange=true`; una adicional de origen APPLICATION (`Creación de TPV física personalizada`) se ejecuta diariamente a las 01:45 y delega a `Delegate to AI Custom Agent` (task ID `d56d7590-7eb7-4e4f-94ac-2ca9fa465fcf`). No se conoce el contenido de la tarea ni sus integraciones; no se ha modificado. Runtime/E2E permanece bloqueado.
 - La desconexión de la pasarela es una declaración del propietario; debe confirmarse en Wix Dashboard antes de cualquier prueba que pueda producir efectos financieros.
 
 La vía soportada es [Git Integration & Wix CLI for Sites](https://dev.wix.com/docs/develop-websites/articles/workspace-tools/developer-tools/git-integration-wix-cli-for-sites/about-git-integration-wix-cli-for-sites), que incluye Wix Editor (Classic). El repositorio coincide con el Site ID y contiene la configuración CLI. El workflow `.github/workflows/wix-tpv-preview.yml` está preparado para generar Preview; la última ejecución lo omitió porque falta el secreto `WIX_CLI_API_KEY`. Para usarlo hay que crear ese secreto con permiso `Wix CLI for Sites - Git Integration`. La ejecución local no está disponible en esta sesión: el contenedor tiene Node 22.16 y no tiene el binario `wix`; Wix requiere Node 24.22.1 o superior. No se ha ejecutado Preview ni Publish.
