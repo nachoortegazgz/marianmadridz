@@ -6,7 +6,7 @@ import {
     queryItems,
     wql,
 } from "backend/dataAccess";
-import { TPV_QA_COLLECTIONS, CONTROL_TYPE, OPERATIONAL_COLLECTIONS } from "backend/internalConfig";
+import { TPV_QA_COLLECTIONS, TPV_QA_RUNTIME_POLICY, CONTROL_TYPE, OPERATIONAL_COLLECTIONS } from "backend/internalConfig";
 import {
     assertTpvQaEnabled,
     normalizeIdempotencyKey,
@@ -37,7 +37,7 @@ export async function withQaSaleLock(saleId, traceId, operation) {
             status: "ACTIVE",
             expiresAt,
             version: 0,
-            payload: { saleId: cleanSaleId, environment: "TEST", acquiredAt: new Date(now) },
+            payload: { saleId: cleanSaleId, environment: TPV_QA_RUNTIME_POLICY.ENVIRONMENT, acquiredAt: new Date(now) },
         };
         try {
             await insertItem(collection, initial);
