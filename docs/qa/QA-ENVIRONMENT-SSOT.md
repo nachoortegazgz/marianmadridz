@@ -76,7 +76,7 @@ Detalle y evidencia: `docs/audits/2026-11-14-qa-automations-isolation.md` (adden
 
 **CMS TPV:** las nueve colecciones `TPV_QA_*` existen. Se verificaron sus campos y permisos: `insert/update/remove/read=ADMIN` en todas. Las nueve tienen un índice único sobre `idempotencyKey` en estado `ACTIVE`. Los nueve recuentos de elementos son cero. En `ControlOperativo` hay 58 registros, pero no existen registros `TPV_QA_SESSION_LOCK` ni `TPV_QA_REFUND_LOCK`. La capa `backend/dataAccess.js` usa `auth.elevate`; la política y los tests del repositorio limitan las colecciones QA a inserciones y reservan los cambios CAS para locks tipados. No se cambió ningún permiso, índice, colección ni elemento CMS.
 
-**Resultado:** lectura estrictamente read-only. No se insertaron ventas, sesiones, pagos simulados, devoluciones, movimientos ni cierres. El Preview de Wix no se ha generado. No se autoriza aún una prueba de persistencia CMS: antes debe revisarse el uso total/cuota del CMS por el trigger preinstalado de aviso de límite de elementos, y ejecutar primero Preview con llamadas de solo lectura.
+**Resultado:** lectura estrictamente read-only. No se insertaron ventas, sesiones, pagos simulados, devoluciones, movimientos ni cierres. El Preview de Wix no se ha generado. La cuota CMS ya está verificada; la siguiente fase será Preview con carga, autorización y lecturas, seguida de una prueba de persistencia sintética limitada en SANDBOX tras confirmar el contexto Preview. No se escribirán datos por REST directamente en LIVE ni se harán cargas masivas.
 
 Evidencia ampliada: `docs/audits/2026-11-16-tpv-qa-cms-readonly-verification.md`.
 
