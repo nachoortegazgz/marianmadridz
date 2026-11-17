@@ -2,7 +2,7 @@
 
 ## Dictamen
 
-<badge>NO-GO</badge>
+**NO-GO**
 
 El sitio sigue en Draft. Hay correcciones de código con CI offline en verde, pero no se han fusionado ni instalado en Wix. Los bloqueos P0 fiscales/operativos y las validaciones runtime impiden publicar.
 
@@ -88,6 +88,8 @@ El sitio sigue en Draft. Hay correcciones de código con CI offline en verde, pe
 8. Ejecutar Preview/Publish únicamente cuando el sitio, CI y runtime estén certificados.
 
 ## Evidencia relacionada
+
+- [TEC-039, TEC-040 y TEC-041](../DECISION-LOG.md)
 
 - [Auditoría CMS y permisos](2026-11-17-cms-permissions-hardening.md)
 - [Revisión operativa live](2026-11-17-live-operational-recheck.md)
