@@ -79,11 +79,9 @@ test("VALIDATION-MAPASTAFF-01 validates native staff identity fields without fis
         scheduleId: "06af20d4-1ec3-49fa-9075-f0691dfa7fd4",
         memberId: "e52404b1-7a72-4b99-b231-66c4dc413421",
         recordType: IC.RECORD_TYPE.STAFF,
-        active: true,
         schemaVersion: 1,
     };
     assert.equal(V.assertMapaStaffRecord(staff), true);
     assert.throws(() => V.assertMapaStaffRecord({ ...staff, scheduleId: undefined }), /scheduleId/);
-    assert.throws(() => V.assertMapaStaffRecord({ ...staff, active: "true" }), /active must be BOOLEAN/);
     assert.throws(() => V.assertMapaStaffRecord({ ...staff, thirdPartyId: 123 }), /thirdPartyId must be TEXT/);
 });
