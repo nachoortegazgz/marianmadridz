@@ -254,7 +254,7 @@ function _toBase64(text) {
 function _extractGestorFromRecord(record) {
   if (!record || record.recordType !== "GESTORIA") return null;
   const email = _safeTrim(record.emailFiscal);
-  if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) return null;
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return null;
   const name = _safeTrim(record.displayName || record.legalName || "");
   return {
     id: String(record._id),
