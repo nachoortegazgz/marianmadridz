@@ -136,6 +136,14 @@ export function assertMapaStaffRecord(item, { partial = false } = {}) {
         return true;
     }
 
+    if (!partial) {
+        if (Number(item.schemaVersion) !== 1) {
+            throw new Error("SCHEMA_VIOLATION: MapaStaff fiscal records require schemaVersion=1");
+        }
+        if (!String(item.traceId || "").trim()) {
+            throw new Error("SCHEMA_VIOLATION: MapaStaff fiscal records require traceId");
+        }
+    }
     return assertMapaStaffFiscalRecord(item, { partial });
 }
 
@@ -172,6 +180,11 @@ function assertMapaStaffFiscalRecord(item, { partial = false } = {}) {
     }, "recordType");
 
     if (item.recordType === RECORD_TYPE.CONFIG_SISTEMA) {
+        const hasTaxId = item.taxId != null && String(item.taxId).trim() !== "";
+        const hasLegalName = item.legalName != null && String(item.legalName).trim() !== "";
+        if (!partial && (!hasTaxId || !hasLegalName)) {
+            throw new Error("SCHEMA_VIOLATION: MapaStaff CONFIG_SISTEMA requires taxId and legalName");
+        }
         if (item.taxId && !isValidNifOrEuVat(item.taxId)) {
             throw new Error("SCHEMA_VIOLATION: MapaStaff.taxId must be valid NIF/NIE/CIF/VAT-UE");
         }
