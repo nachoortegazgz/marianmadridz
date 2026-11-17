@@ -33,6 +33,10 @@ Los tres registros de compensación se corresponden con **dos pedidos Wix existe
 - Una compensación de pago está pendiente con `recoveryScope=UNSUPPORTED_ORDER_COMPOSITION` y `recoveryProcessor=MANUAL`.
 - Existe una fila `CitasF2` asociada: `bookingStatus=CONFIRMED`, `paymentStatus=PENDING_LEDGER`, `totalAmount=0`.
 
+### Impacto potencial en CajaActual
+
+El pedido B está pagado por `Cash` (92,45 EUR) y fue creado después de la apertura de la sesión de caja actual. Sin embargo, el singleton live mantiene `cashAmount=300`, igual a `openingCashAmount=300`, `salesCount=0` y `MovimientosCaja=0`. Si el pedido representa una operación real, el cobro no está reflejado en el ledger ni en la proyección de caja. No se debe crear un movimiento para cuadrar el saldo sin confirmar antes el soporte del TPV/caja.
+
 ## Naturaleza QA vs. operación real
 
 El propietario declara que el sitio es un entorno QA sin actividad comercial real y que los registros son sintéticos. Sin embargo, los pedidos:
