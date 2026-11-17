@@ -158,7 +158,7 @@ let _fiscalSystemCacheAt = 0;
 const FISCAL_SYSTEM_CACHE_TTL_MS =
     Number(SDK_CONFIG?.SECURITY?.SECRET_CACHE_TTL_MS) || 300000;
 
-// DatosFiscales stores BOOLEAN flags; AEAT payloads represent them as S/N.
+// MapaStaff stores BOOLEAN flags; AEAT payloads represent them as S/N.
 function _toAeatFlag(value, fallback) {
     if (typeof value === "boolean") return value ? "S" : "N";
     const normalized = _safeTrim(value).toUpperCase();
@@ -196,7 +196,7 @@ async function _getFiscalSystemConfig(traceId) {
         });
     }
     _fiscalSystemCache = Object.freeze({
-        // DatosFiscales no declara columnas para nombre/id del sistema ni
+        // MapaStaff no declara columnas para nombre/id del sistema ni
         // numeroInstalacion; esos valores proceden solo del fallback tecnico.
         sistemaInformaticoNombre: COMPUTER_SYSTEM_FALLBACK.sistemaInformaticoNombre,
         idSistemaInformatico: COMPUTER_SYSTEM_FALLBACK.idSistemaInformatico,
