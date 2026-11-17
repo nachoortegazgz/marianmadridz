@@ -57,6 +57,11 @@ Consulta live de `CajaActual`:
 - `expectedCash=300`.
 - La última actividad registrada precede a la apertura declarada. Se requiere reconciliación antes de cualquier cierre o writer; no se modificó la proyección ni se insertaron movimientos.
 
+
+Recuentos mínimos consultados en la misma sesión (Wix Data Query API, `returnTotalCount=true`): `MovimientosCaja=0`, `LibroAsientosContablesDetalle=0`, `HistoricoCierresZ=0`, `PaquetesGestoria=0`, `CitasF2=6`, `TPV_QA_Ventas=0`. No se devolvieron valores de registros en esta consulta.
+
+Seguimiento: issue P0 #416 documenta la reconciliación de las compensaciones y el singleton de caja: https://github.com/nachoortegazgz/marianmadridz/issues/416
+
 ## Automatizaciones Wix
 
 Query Automation API filtrada por `configuration.status=ACTIVE` devolvió exactamente 7 resultados, sin cursor siguiente. Se ejecutó Get Automation para cada uno y se confirmó el estado.
@@ -105,4 +110,4 @@ Dos además tienen `settings.readonly=true`. Todas contienen acciones de email o
 7. Main sigue sin protección de rama y required checks.
 8. No se ha demostrado sincronización del código con Wix Editor.
 
-No publicar ni activar writers/efectos externos hasta cerrar estos puntos con pruebas reproducibles.
+No publicar ni activar writers/efectos externos hasta cerrar estos puntos con pruebas reproducibles. La discrepancia fiscal está registrada en #415 y la reconciliación operativa en #416.
