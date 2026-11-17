@@ -100,6 +100,7 @@ import {
     CORRECTION_REASON,
     FISCAL_ROLE,
     EVENT_TYPE,
+    RECORD_TYPE,
 } from "backend/internalConfig";
 
 import { SECRETS } from "backend/mmSecrets";
@@ -656,17 +657,17 @@ async function _resolveStaffResourceFromMapaStaff(staffMemberId) {
     }
 
     const result = await dalQuery(MAPA_STAFF_COL)
+        .eq("recordType", RECORD_TYPE.STAFF)
         .eq("staffMemberId", id)
-        .eq("active", true)
         .limit(2)
         .find(STRONG_READ);
     const matches = Array.isArray(result?.items) ? result.items : [];
 
     if (matches.length === 0) {
-        return { ok: false, reason: "MAPA_STAFF_ACTIVE_MAPPING_NOT_FOUND" };
+        return { ok: false, reason: "MAPA_STAFF_MAPPING_NOT_FOUND" };
     }
     if (matches.length !== 1) {
-        return { ok: false, reason: "MAPA_STAFF_ACTIVE_MAPPING_AMBIGUOUS" };
+        return { ok: false, reason: "MAPA_STAFF_MAPPING_AMBIGUOUS" };
     }
 
     const resourceId = _safeTrim(matches[0]?.resourceId || "");
