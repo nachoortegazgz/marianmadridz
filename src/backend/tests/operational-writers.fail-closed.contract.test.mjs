@@ -122,3 +122,28 @@ test("P1-CLOCK-01 timeclock writes and adjustments remain disabled before signin
   assert.ok(adjustment.indexOf("_sealTimeclockRecord(") > adjustmentGuard);
   assert.ok(adjustment.indexOf("insert(REGISTROS_COL") > adjustmentGuard);
 });
+test("P0-CMS-02 fiscal identity consumers follow the live MapaStaff schema", async () => {
+  const [config, hooks, events, eventLog, fiscalDocuments] = await Promise.all([
+    read("internalConfig.js"),
+    read("data.js"),
+    read("events.js"),
+    read("eventLog.js"),
+    read("fiscalDocuments.web.js"),
+  ]);
+
+  assert.match(config, /MAPA_STAFF:\s*"MapaStaff"/);
+  assert.doesNotMatch(config, /DATOS_FISCALES|DatosFiscales/);
+  assert.match(hooks, /export function MapaStaff_beforeInsert/);
+  assert.match(hooks, /recordType === "CONFIG_SISTEMA"/);
+  assert.doesNotMatch(hooks, /DatosFiscales_before(Insert|Update|Remove)/);
+
+  assert.match(events, /\.eq\("recordType", RECORD_TYPE\.STAFF\)/);
+  assert.doesNotMatch(events, /\.eq\("active",\s*true\)/);
+  assert.match(eventLog, /dalQuery\(MAPA_STAFF_COL\)/);
+  assert.match(eventLog, /schemaVersion:\s*1/);
+  assert.match(eventLog, /traceId:\s*_safeTrim\(traceId\)/);
+  assert.match(fiscalDocuments, /\.eq\("recordType", "GESTORIA"\)/);
+  assert.match(fiscalDocuments, /record\.emailFiscal/);
+  assert.match(fiscalDocuments, /record\.phoneFiscal/);
+  assert.doesNotMatch(fiscalDocuments, /gestorEmail|#gestor/);
+});
