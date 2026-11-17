@@ -1039,6 +1039,59 @@ test('FLOW-CAJA-10B manual presencial writer requires an explicitly open session
   }
 });
 
+test('FLOW-CAJA-10C reopens the current session when closedAt belongs to a prior session', async () => {
+  wixDataMock._reset();
+  await seedStaff({ resourceId: GUID_ADMIN_RESOURCE });
+  setMember({ _id: GUID_MEMBER, contactId: GUID_CONTACT, loginEmail: 'marta@test.local' });
+  const { cajas } = await freshImports();
+  await setupFiscalSecrets();
+
+  const openedAt = new Date(Date.now() - 60_000);
+  const priorClosedAt = new Date(openedAt.getTime() - 60_000);
+  wixDataMock._store.set('CajaActual', [{
+    _id: 'SINGLE_ITEM_ID',
+    singletonKey: 'CAJA_PRINCIPAL',
+    cashRegisterStatus: 'ABIERTA',
+    operationDate: new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Madrid' }),
+    openedAt,
+    closedAt: priorClosedAt,
+    openingCashAmount: 100,
+    cashAmount: 100,
+    expectedCash: 100,
+    countedCash: 100,
+    difference: 0,
+    netAmount: 100,
+    cardAmount: 0,
+    bizumAmount: 0,
+    otherAmount: 0,
+    salesCount: 0,
+    sequenceCounters: '{}',
+  }]);
+
+  try {
+    const result = await cajas.registerManualTransaction({
+      totalAmount: 10,
+      paymentMethod: 'EFECTIVO',
+      channelType: 'PRESENCIAL',
+      movementType: 'VENTA',
+      transactionId: 'cash-stale-closed-at-001',
+      operationDescription: 'Venta de prueba aislada para normalización de sesión QA',
+    });
+
+    assert.equal(result.status, 'SUCCESS', JSON.stringify(result.error));
+    const cashRegister = (wixDataMock._store.get('CajaActual') || [])
+      .find((row) => row.singletonKey === 'CAJA_PRINCIPAL');
+    assert.ok(cashRegister);
+    assert.equal(cashRegister.closedAt, null);
+    assert.equal(typeof cashRegister.sequenceCounters, 'object');
+    assert.deepEqual(cashRegister.sequenceCounters.appliedMovementIds, [result.data._id]);
+    assert.equal(cashRegister.cashAmount, 110);
+    assert.equal((wixDataMock._store.get('MovimientosCaja') || []).length, 1);
+  } finally {
+    setMember(null);
+  }
+});
+
 test('FLOW-CAJA-11 simulation cash state blocks manual writes, state display and Z close', async () => {
   wixDataMock._reset();
   const operationDate = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Madrid' });
