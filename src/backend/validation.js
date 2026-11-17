@@ -126,9 +126,6 @@ export function assertMapaStaffRecord(item, { partial = false } = {}) {
         if (item.thirdPartyId != null && typeof item.thirdPartyId !== "string") {
             throw new Error("SCHEMA_VIOLATION: MapaStaff.thirdPartyId must be TEXT when supplied");
         }
-        if (item.active !== undefined && typeof item.active !== "boolean") {
-            throw new Error("SCHEMA_VIOLATION: MapaStaff.active must be BOOLEAN");
-        }
         if (item.schemaVersion !== undefined &&
             (!Number.isSafeInteger(Number(item.schemaVersion)) || Number(item.schemaVersion) < 1)) {
             throw new Error("SCHEMA_VIOLATION: MapaStaff.schemaVersion must be a positive integer");
@@ -214,8 +211,8 @@ function assertMapaStaffFiscalRecord(item, { partial = false } = {}) {
             assertValidEnum(String(item.thirdPartyType).toUpperCase(), THIRD_PARTY_TYPE, "thirdPartyType");
         }
     } else if (item.recordType === RECORD_TYPE.GESTORIA) {
-        const email = String(item.emailFiscal || item.email || item.gestorEmail || "").trim();
-        const name = String(item.legalName || item.displayName || item.name || item.gestorName || "").trim();
+        const email = String(item.emailFiscal || "").trim();
+        const name = String(item.legalName || item.displayName || "").trim();
         const hasTaxId = item.taxId != null && String(item.taxId).trim() !== "";
         if (!partial && (!hasTaxId || !name || item.thirdPartyType !== "GESTORIA")) {
             throw new Error("SCHEMA_VIOLATION: MapaStaff GESTORIA requires taxId, legalName/displayName and thirdPartyType=GESTORIA");
@@ -228,7 +225,7 @@ function assertMapaStaffFiscalRecord(item, { partial = false } = {}) {
         }
     }
 
-    for (const field of ["verifactuEnabled", "tipoUsoPosibleMultiOT", "indicadorMultiplesOT", "active"]) {
+    for (const field of ["verifactuEnabled", "tipoUsoPosibleMultiOT", "indicadorMultiplesOT"]) {
         if (item[field] !== undefined && item[field] !== null && typeof item[field] !== "boolean") {
             throw new Error(`SCHEMA_VIOLATION: MapaStaff.${field} must be BOOLEAN`);
         }
