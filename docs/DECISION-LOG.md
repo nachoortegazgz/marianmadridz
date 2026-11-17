@@ -433,14 +433,3 @@ El propietario ordena suspender temporalmente la política append-only de los le
 **Tarea obligatoria antes de producción:** reintroducir y verificar append-only/inmutabilidad, rectificaciones mediante nuevos registros, permisos mínimos, autorización backend, idempotencia, hash/trazabilidad, auditoría y bloqueo de update/remove. La publicación real queda bloqueada hasta cerrar esta tarea y sus pruebas.
 
 **Estado real:** decisión documental registrada; no acredita que el código, los permisos live de Wix o los datos hayan sido modificados. Cada colección requiere auditoría de consumidores, esquema, permisos y pruebas antes de retirar sus bloqueos.
-
-
-### TEC-040 — CajaActual: fecha de cierre por sesión y normalización segura de sequenceCounters (2026-11-17)
-
-**Decisión vigente.** `CajaActual` conserva un singleton con `cashRegisterStatus=ABIERTA`, `openedAt=2026-11-14T06:00:00Z` y `closedAt=2026-11-12T23:00:00Z`. El cierre es anterior a la apertura actual y pertenece a una sesión previa; no debe bloquear la sesión abierta actual. La fecha de cierre efectiva de una sesión solo existe cuando `closedAt >= openedAt`. Si `closedAt < openedAt` y el estado es ABIERTA, se trata como metadato histórico y se limpia a null en la siguiente actualización.
-
-El campo físico `sequenceCounters` es OBJECT, pero la lectura live devuelve el JSON string `"{}"`. Solo se normaliza si parsea a un objeto no-array; arrays, primitivas y JSON inválido siguen fallando cerrados. La normalización se realiza en hooks/proyección; no se altera el singleton live en esta intervención.
-
-**Salvaguardas:** no abrir/cerrar caja, no insertar movimientos, no recalcular saldos ni activar writers. El pedido POS pagado en efectivo de 92,45 EUR permanece pendiente de confirmar si es fixture QA o hecho económico real (issue #416). La apertura aritméticamente cuadra en 300 EUR, pero la conciliación económica sigue abierta.
-
-**Implementación:** PR #419. Tests offline de hooks y E2E añadidos. CI completa en verde (Layer 1: 331/331; Layer 2: 257/257). Runtime Wix y conciliación de los pedidos siguen pendientes.
