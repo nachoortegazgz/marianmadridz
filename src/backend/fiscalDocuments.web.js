@@ -17,18 +17,16 @@ CAMBIOS v5018-IDEMPOTENT-IMMUTABLE-SNAPSHOT (respecto a v5017):
   PKG-04: listado devuelve solo metadatos; descarga verifica snapshotHash.
   PKG-05: envio a gestoria permanece deshabilitado. Agregacion mensual pendiente.
 
-CAMBIOS v5017-ALIGNED-DATOSFISCALES (respecto a v5016):
+CAMBIOS v5019-ALIGNED-MAPASTAFF (respecto a v5016):
   ALN-DF-01: Eliminada la dependencia de BUSINESS_COLLECTIONS.GESTORES_FISCALES
              (coleccion no declarada en internalConfig v12). El origen de
-             verdad de destinatarios es BUSINESS_COLLECTIONS.DATOS_FISCALES.
-  ALN-DF-02: listAccountantRecipients consulta DatosFiscales y extrae
-             gestores por DOS patrones tolerados en paralelo:
-               A) item dedicado con recordType "GESTORIA" + campo email.
-               B) campos embebidos gestorEmail/gestorName en cualquier
-                  item (p.ej. el registro fiscal del negocio).
-  ALN-DF-03: _resolveRecipientById maneja los dos patrones. Los ids del
-             patron B viajan como `<recordId>#gestor`; los del A viajan
-             como `<recordId>` puro.
+             verdad de destinatarios es BUSINESS_COLLECTIONS.MAPA_STAFF.
+  ALN-DF-02: listAccountantRecipients consulta solo recordType=GESTORIA y
+             proyecta los campos fisicos emailFiscal, displayName, taxId,
+             phoneFiscal y address. No lee campos legacy no declarados.
+  ALN-DF-03: _resolveRecipientById acepta solo el _id del registro MapaStaff.
+             Si emailFiscal no existe o no es valido, el registro no es
+             destinatario; no se inventa ni se deriva un email.
 
 CAMBIOS v5016-ALIGNED-WITH-SEND (heredados):
   NEW-01..04: listAccountantRecipients, sendManagerPackageToAccountant,
@@ -89,7 +87,7 @@ const log = logger;
 const CMS_TIMEOUT_MS = SDK_CONFIG.TIMEOUTS.CMS_MS;
 // Manager package snapshots have their own collection; Z closings remain isolated.
 const DOCS_COL = BUSINESS_COLLECTIONS.PAQUETES_GESTORIA;
-const DATOS_FISCALES_COL = BUSINESS_COLLECTIONS.DATOS_FISCALES;
+const MAPA_STAFF_COL = BUSINESS_COLLECTIONS.MAPA_STAFF;
 const CONTROL_COL = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
 const PACKAGE_MAX_ITEM_BYTES = 450 * 1024; // Wix CMS hard limit: 500 KB per item.
 const PACKAGE_OPERATION_TTL_MS = 10 * 60 * 1000;
@@ -250,67 +248,24 @@ function _toBase64(text) {
 }
 
 // =============================================================================
-// BLOQUE 1b - HELPERS DE GESTOR (DatosFiscales)
+// BLOQUE 1b - HELPERS DE GESTOR (MapaStaff)
 // =============================================================================
 
-function _isGestorRecordType(record) {
-  if (!record || typeof record !== "object") return false;
-  const candidates = [
-    record.recordType,
-    record.tipo,
-    record.type,
-    record.categoria,
-    record.category,
-    record.role,
-    record.rol,
-  ]
-    .filter(Boolean)
-    .map((v) => String(v).trim().toUpperCase());
-  return candidates.some((v) => GESTORIA_RECORD_TYPE_MARKERS.includes(v));
-}
-
-// Extrae un destinatario de un item de DatosFiscales. Devuelve null si el
-// item no contiene datos de gestor utiles. Tolera los DOS patrones en
-// paralelo: registro dedicado (recordType=GESTOR) o campos embebidos
-// gestorEmail/gestorName en cualquier item.
 function _extractGestorFromRecord(record) {
-  if (!record || record.active === false) return null;
-
-  // Patron A: registro dedicado de gestor.
-  if (_isGestorRecordType(record)) {
-    const email = _safeTrim(record.email || record.gestorEmail);
-    if (!email) return null;
-    return {
-      id: String(record._id),
-      email,
-      name: _safeTrim(record.name || record.gestorName || record.legalName || ""),
-      label:
-        _safeTrim(record.label || record.name || record.gestorName || record.legalName) ||
-        email,
-      nif: _safeTrim(record.nif || record.gestorNif || "") || null,
-      phone: _safeTrim(record.phone || "") || null,
-      address: _safeTrim(record.address || "") || null,
-      source: "DEDICATED",
-    };
-  }
-
-  // Patron B: campos embebidos en el registro fiscal del negocio.
-  const embeddedEmail = _safeTrim(record.gestorEmail);
-  if (embeddedEmail) {
-    return {
-      id: `${record._id}#gestor`,
-      email: embeddedEmail,
-      name: _safeTrim(record.gestorName || ""),
-      label:
-        _safeTrim(record.gestorName) || embeddedEmail,
-      nif: _safeTrim(record.gestorNif) || null,
-      phone: _safeTrim(record.phone || "") || null,
-      address: _safeTrim(record.address || "") || null,
-      source: "EMBEDDED",
-    };
-  }
-
-  return null;
+  if (!record || record.recordType !== "GESTORIA") return null;
+  const email = _safeTrim(record.emailFiscal);
+  if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) return null;
+  const name = _safeTrim(record.displayName || record.legalName || "");
+  return {
+    id: String(record._id),
+    email,
+    name,
+    label: name || email,
+    nif: _safeTrim(record.taxId) || null,
+    phone: _safeTrim(record.phoneFiscal) || null,
+    address: _safeTrim(record.address) || null,
+    source: "MAPA_STAFF",
+  };
 }
 
 // =============================================================================
@@ -1037,7 +992,7 @@ export const downloadManagerPackageVersion = webMethod(
 );
 
 // =============================================================================
-// BLOQUE 6 - DESTINATARIOS DE GESTORIA (via DatosFiscales)
+// BLOQUE 6 - DESTINATARIOS DE GESTORIA (via MapaStaff)
 // =============================================================================
 
 export const listAccountantRecipients = webMethod(
@@ -1048,7 +1003,8 @@ export const listAccountantRecipients = webMethod(
       await requireMarianManager(traceId);
 
       const res = await withTimeout(
-        dalQuery(DATOS_FISCALES_COL)
+        dalQuery(MAPA_STAFF_COL)
+          .eq("recordType", "GESTORIA")
           .descending("_updatedDate")
           .limit(100)
           .find(),
@@ -1060,8 +1016,7 @@ export const listAccountantRecipients = webMethod(
       const seenEmails = new Set();
       const recipients = (res?.items || [])
         .map((record) => _extractGestorFromRecord(record))
-        .filter(Boolean)
-        .sort((a, b) => Number(b.source === "DEDICATED") - Number(a.source === "DEDICATED"));
+        .filter(Boolean);
 
       for (const gestor of recipients) {
         const emailKey = gestor.email.toLowerCase();
@@ -1094,37 +1049,15 @@ export const listAccountantRecipients = webMethod(
   }
 );
 
-// Resuelve un destinatario por id en DatosFiscales. Los ids del patron B
-// viajan como `<recordId>#gestor`; los del patron A como `<recordId>`.
+// Resuelve exclusivamente registros GESTORIA del maestro MapaStaff.
 async function _resolveRecipientById(recipientId) {
   if (!recipientId) return null;
-  const raw = String(recipientId);
-  const isEmbedded = raw.endsWith("#gestor");
-  const docId = isEmbedded ? raw.slice(0, -7) : raw;
-
   try {
     const record = await withTimeout(
-      dalGet(DATOS_FISCALES_COL, docId, "strong"),
+      dalGet(MAPA_STAFF_COL, String(recipientId), "strong"),
       CMS_TIMEOUT_MS,
       "getRecipient"
     );
-    if (!record || record.active === false) return null;
-
-    if (isEmbedded) {
-      const email = _safeTrim(record.gestorEmail);
-      if (!email) return null;
-      return {
-        id: raw,
-        email,
-        name: _safeTrim(record.gestorName || ""),
-        label:
-          _safeTrim(record.gestorName) || email,
-        nif: _safeTrim(record.gestorNif) || null,
-        phone: _safeTrim(record.phone || "") || null,
-        address: _safeTrim(record.address || "") || null,
-      };
-    }
-
     return _extractGestorFromRecord(record);
   } catch {
     return null;
@@ -1245,7 +1178,7 @@ export const sendManagerPackageToAccountant = webMethod(
           },
         };
       }
-      if (!recipient?.email) return { status: "ERROR", data: null, error: { code: "RECIPIENT_NOT_FOUND", message: "The accountant recipient is not configured in DatosFiscales." } };
+      if (!recipient?.email) return { status: "ERROR", data: null, error: { code: "RECIPIENT_NOT_FOUND", message: "The accountant recipient is not configured in MapaStaff." } };
 
       const periodType = _safeTrim(doc.periodType || "QUARTERLY").toUpperCase();
       const year = Number(doc.fiscalYear);
@@ -1345,7 +1278,7 @@ export const sendSpecificDocumentToAccountant = webMethod(
           error: {
             code: "RECIPIENT_NOT_FOUND",
             message:
-              "El destinatario no existe o no tiene email configurado en DatosFiscales",
+              "El destinatario no existe o no tiene email configurado en MapaStaff",
           },
         };
       }
