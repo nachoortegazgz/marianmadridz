@@ -89,4 +89,5 @@ jobs:
 
       - name: Create Wix preview only (never publish)
         if: steps.auth.outputs.available == 'true' && inputs.create_preview
-        run: npm run wix preview
+        shell: bash
+        run: script --quiet --return --command 'npm run wix preview' /dev/null
