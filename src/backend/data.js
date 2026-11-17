@@ -583,9 +583,39 @@ export function RegistrosHorariosStaff_beforeRemove() {
 // BLOQUE 4 - CAJA ACTUAL
 // =============================================================================
 
+function _normalizeCajaSequenceCounters(item) {
+    if (!item || typeof item !== "object" || typeof item.sequenceCounters !== "string") return item;
+    let parsed;
+    try {
+        parsed = JSON.parse(item.sequenceCounters);
+    } catch {
+        _schemaError("CajaActual.sequenceCounters debe ser un objeto JSON valido");
+    }
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        _schemaError("CajaActual.sequenceCounters debe ser un objeto JSON valido");
+    }
+    item.sequenceCounters = parsed;
+    return item;
+}
+
+function _clearStaleCajaClosedAt(item) {
+    if (_safeTrim(item?.cashRegisterStatus).toUpperCase() !== "ABIERTA" ||
+        !item?.openedAt || !item?.closedAt) return item;
+    const openedAt = item.openedAt instanceof Date ? item.openedAt : new Date(item.openedAt);
+    const closedAt = item.closedAt instanceof Date ? item.closedAt : new Date(item.closedAt);
+    if (!Number.isNaN(openedAt.getTime()) &&
+        !Number.isNaN(closedAt.getTime()) &&
+        closedAt.getTime() < openedAt.getTime()) {
+        item.closedAt = null;
+    }
+    return item;
+}
+
 export function CajaActual_beforeInsert(item) {
     if (!item || typeof item !== "object") return item;
     _normalizeCmsDateTimes(item, ["openedAt", "closedAt", "lastMovementAt"]);
+    _normalizeCajaSequenceCounters(item);
+    _clearStaleCajaClosedAt(item);
     assertCajaActualRecord(item);
     const key = _safeTrim(item.singletonKey || item._id);
     if (key !== "CAJA_PRINCIPAL") {
@@ -596,8 +626,18 @@ export function CajaActual_beforeInsert(item) {
 
 export function CajaActual_beforeUpdate(item, context) {
     _normalizeCmsDateTimes(item, ["openedAt", "closedAt", "lastMovementAt"]);
-    const previous = context?.original || {};
+    const original = context?.original || {};
+    const previous = { ...original };
+    _normalizeCajaSequenceCounters(previous);
+    _normalizeCajaSequenceCounters(item);
+    if (item.sequenceCounters === undefined && typeof original.sequenceCounters === "string") {
+        item.sequenceCounters = previous.sequenceCounters;
+    }
     const merged = { ...previous, ...item };
+    _clearStaleCajaClosedAt(merged);
+    if (merged.closedAt === null && _safeTrim(merged.cashRegisterStatus).toUpperCase() === "ABIERTA") {
+        item.closedAt = null;
+    }
     assertCajaActualRecord(merged);
     const prevSeq = { ...(previous?.sequenceCounters || {}) };
     const nextSeq = { ...((item?.sequenceCounters ?? previous?.sequenceCounters) || {}) };
