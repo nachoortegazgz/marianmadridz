@@ -111,7 +111,7 @@ export function assertMapaStaffRecord(item, { partial = false } = {}) {
     if (!item || typeof item !== "object" || Array.isArray(item)) {
         throw new Error("SCHEMA_VIOLATION: MapaStaff item must be an object");
     }
-    const recordType = String(item.recordType || "").trim().toUpperCase();
+    const recordType = String(item.recordType || "").trim();
     assertValidEnum(recordType, RECORD_TYPE, "recordType");
 
     if (recordType === RECORD_TYPE.STAFF) {
@@ -208,7 +208,7 @@ function assertMapaStaffFiscalRecord(item, { partial = false } = {}) {
             throw new Error("SCHEMA_VIOLATION: MapaStaff TERCERO legalName must be non-empty when supplied");
         }
         if (hasThirdPartyType) {
-            assertValidEnum(String(item.thirdPartyType).toUpperCase(), THIRD_PARTY_TYPE, "thirdPartyType");
+            assertValidEnum(String(item.thirdPartyType).trim(), THIRD_PARTY_TYPE, "thirdPartyType");
         }
     } else if (item.recordType === RECORD_TYPE.GESTORIA) {
         const email = String(item.emailFiscal || "").trim();
