@@ -2110,3 +2110,52 @@ Una publicación solo se certifica como correspondiente al código cuando existe
 El usuario declara que el código está integrado y publicado en Wix. Esta declaración se registra como **declaración del propietario**. En la consulta de GitHub de este corte, el PR #344 (feat/consolidate-fiscal-master-mapastaff-v2) figura fusionado el 2026-11-14 mediante el merge commit f3b1311eead05282e47f538afd506fe49e227141, que es el HEAD actual de main. La integración del cambio en Git está verificada. El usuario declara además que el código está publicado en Wix; no se dispone de un identificador de publicación Wix que vincule el runtime con ese SHA concreto.
 
 **Nota de ejecución:** este addendum modifica la autoridad documental y la política de trabajo. No demuestra por sí mismo que todos los hooks, WebMethods, políticas de escritura o permisos CMS del runtime Wix hayan sido modificados para permitir todas las operaciones de edición y eliminación. Esa correspondencia debe verificarse en código y en Wix antes de afirmar que la pausa está aplicada técnicamente de extremo a extremo.
+
+
+## Addendum de estado live — 2026-11-17
+
+Este addendum prevalece sobre cualquier snapshot anterior cuando exista contradicción con evidencia Wix live posterior.
+
+### Estado real de Wix y sincronización
+
+- Site ID: `188bed94-177c-4bc9-a9f0-35080d874f3e`; Wix Editor Classic; Velo habilitado.
+- `GetSiteContext` consultado el 2026-11-17 devuelve **Draft**. No se ha ejecutado Preview ni Publish.
+- La declaración histórica de que el código está publicado no queda acreditada por un identificador de publicación ni por read-back del SHA. Se clasifica como declaración del propietario, no como hecho verificado.
+- La integración disponible no permite leer/escribir el código fuente Velo del Editor Classic ni confirmar sincronización GitHub↔Wix.
+
+### CMS y maestro fiscal
+
+- Inventario live: 50 colecciones (21 NATIVE, 29 WIX_APP); 201 registros NATIVE en el corte consultado.
+- `DatosFiscales` no existe (Wix WDE0025).
+- `MapaStaff` es NATIVE, 43 campos, revisión 135 y 5 registros: 3 STAFF, 1 TERCERO/PROVEEDOR y 1 GESTORIA. No existe `CONFIG_SISTEMA`.
+- Contrato vigente propuesto: `MapaStaff` discriminado por `recordType` (STAFF/TERCERO/GESTORIA/CONFIG_SISTEMA). TEC-035 queda supersedida por TEC-039 y la evidencia live.
+- La fila GESTORIA no tiene `emailFiscal`; no se puede enviar documentación a gestoría hasta que se configure un correo verificado.
+- `ServiciosCatalogo` y `ComplementosCatalogo` tienen lectura/escritura CMS_EDITOR. Las 19 colecciones operativas y TPV QA tienen las cuatro acciones PRIVILEGED. Read-back confirmado.
+
+### Caja, compensaciones y pedidos POS
+
+- `ControlOperativo` mantiene 3 compensaciones FISCAL_LEDGER en PENDING_RECOVERY.
+- Las tres compensaciones se correlacionan con dos pedidos POS Wix: uno de servicio totalmente reembolsado por 18,15 EUR y otro pedido mixto pagado en efectivo por 92,45 EUR.
+- La reserva asociada a cada pedido permanece CONFIRMED/PENDING_LEDGER con totalAmount=0.
+- El pedido POS en efectivo no aparece en MovimientosCaja (0) ni en la proyección de caja (salesCount=0; cashAmount=openingCashAmount=300 EUR). El propietario declara que los datos son sintéticos, pero no hay marcador técnico que acredite la sinteticidad de estos dos pedidos.
+- `CajaActual` permanece ABIERTA. `closedAt` es anterior a `openedAt`; `sequenceCounters` se devuelve como JSON string aunque el esquema lo declara OBJECT. PR #419 prepara la corrección, sin modificar el singleton live.
+- No se han reintentado compensaciones, creado movimientos, asientos, reembolsos ni cierres.
+
+### Código, CI y despliegue
+
+- PR #418: alineación de MapaStaff/fiscal y consumidores; CI offline verde (Layer 1: 331/331; Layer 2: 256/256; Secret scanning, SDK contracts y ESLint SUCCESS).
+- PR #419: normalización de sesión de caja y sequenceCounters; CI offline verde (Layer 1: 331/331; Layer 2: 257/257; Secret scanning, SDK contracts y ESLint SUCCESS).
+- Ambos PR siguen abiertos y no fusionados. No se ha ejecutado Wix runtime ni E2E publicado.
+- `main` no tiene rulesets configurados; GET rulesets devuelve lista vacía. La integración no dispone de permisos administrativos para crear branch protection/required checks. No fusionar ni publicar hasta resolver este control.
+
+### Fiscalidad, automatizaciones y Capa 3
+
+- Writers fiscales, contables y laborales siguen deshabilitados. No existe CONFIG_SISTEMA y SIF/VERI*FACTU no está certificado.
+- Siete automatizaciones activas PREINSTALLED, bloqueadas por Wix; algunas envían emails/notificaciones. No se ejecutaron ni modificaron.
+- No está acreditado un pipeline Capa 3 completo SharePoint/Power Automate. El conector SharePoint no está instalado/conectado y no se dispone de conector Power Automate operativo.
+
+### Inmutabilidad
+
+Las instrucciones vigentes del proyecto mantienen los ledgers fiscales, contables y laborales como append-only e inmutables. Cualquier texto histórico que suspenda genéricamente append-only durante QA queda subordinado a esta regla vigente. No se borran ni sobrescriben movimientos, asientos, cierres ni evidencias; las correcciones económicas requieren nuevos registros rectificativos trazables.
+
+**Estado de publicación: NO-GO.** Bloqueos P0: issues #415 y #416. Validación runtime, protección de main, configuración legal/SIF y reconciliación económica pendientes.
