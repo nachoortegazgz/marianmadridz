@@ -4,22 +4,22 @@
 
 # Diccionario de datos CMS — Marian Madrid
 
-## Addendum vigente — sitio QA objetivo, corte 2026-11-14
+## Addendum vigente — sitio QA objetivo, corte 2026-11-17
 
-> **Aclaración de entorno — 2026-11-14:** este documento conserva un inventario CMS histórico. La designación vigente del sitio QA es `188bed94-177c-4bc9-a9f0-35080d874f3e` (`https://www.marianmadrid.es/`), pero los esquemas y recuentos de este snapshot no se han revalidado contra ese Site ID. No usarlo como baseline vigente para mutaciones sin una nueva lectura CMS. Véase [SSOT del entorno QA](docs/qa/QA-ENVIRONMENT-SSOT.md).
+> **Evidencia live:** este addendum sustituye el contrato y baseline del corte 2026-11-14 cuando exista contradicción. Se obtuvo mediante Wix Data Collections API y Wix Data Query API en modo de solo lectura.
 
+- Sitio objeto: `188bed94-177c-4bc9-a9f0-35080d874f3e`; Wix Editor Classic; estado devuelto: `Draft`.
+- Inventario live: **50 colecciones** (21 NATIVE y 29 WIX_APP); 201 registros en colecciones NATIVE en el corte consultado.
+- `DatosFiscales`, `InventarioStockVenta` y `MovimientosInventario` no existen en el CMS live (Wix devuelve `WDE0025`).
+- `MapaStaff` es una colección NATIVE de **43 campos**, revisión **135**, con 5 registros. El esquema físico incluye `recordType`, `taxId`, `legalName`, `thirdPartyType`, `taxRegime`, `fiscalIdType`, `verifactuEnabled`, `fechaInicioVerifactu`, `schemaVersion`, `traceId`, `emailFiscal`, `phoneFiscal` y las identidades nativas Wix.
+- Los cinco registros se distribuyen en `STAFF=3`, `TERCERO=1`, `GESTORIA=1`. No existe registro `CONFIG_SISTEMA`. La fila `GESTORIA` no tiene `emailFiscal`; por tanto, no es un destinatario válido para envío de gestoría. No se exportaron NIF, razones sociales, teléfonos ni direcciones.
+- **Contrato canónico vigente:** `MapaStaff` es el maestro discriminado por `recordType` para STAFF, TERCERO, GESTORIA y CONFIG_SISTEMA. La separación MapaStaff/DatosFiscales descrita en TEC-035 y en el corte 2026-11-14 queda supersedida por la evidencia física posterior del CMS.
+- `CONFIG_SISTEMA` debe ser un singleton `CONFIG_SISTEMA_FISCAL`, con NIF y razón social verificados por el titular/asesoría. No se crea hasta disponer de esos datos y certificar el modo SIF/VERI*FACTU.
+- Permisos live de `MapaStaff`: `itemRead/itemInsert/itemUpdate/itemRemove=PRIVILEGED`. Las 19 colecciones operativas/TPV QA también están en `PRIVILEGED` para las cuatro acciones. `ServiciosCatalogo` y `ComplementosCatalogo` tienen lectura/escritura `CMS_EDITOR`, evitando exponer campos internos y conservando su mantenimiento editorial.
+- Wix Stores Catalog V3 sigue siendo la fuente de verdad del inventario comercial; no reactivar colecciones legacy de inventario.
+- Los escritores fiscales, contables y laborales permanecen deshabilitados. No se ha creado, actualizado ni borrado ningún registro CMS en esta reconciliación.
 
-- Sitio objeto de auditoría: `188bed94-177c-4bc9-a9f0-35080d874f3e`.
-- Naturaleza declarada por el propietario: único entorno QA, sin actividad real.
-- Inventario del sitio actual: 23 colecciones (15 NATIVE, 8 WIX_APP); 524 campos físicos NATIVE.
-- El manifiesto de campos, tipos, revisiones, recuentos y contratos de identidad vigente es `docs/audits/2026-11-14-current-site-cms-normalization.md`.
-- Las menciones a otros sitios, estados anteriores y comparativas de entornos que permanecen en este documento son evidencia histórica; no describen el CMS objeto de trabajo.
-- Los registros del sitio se consideran sintéticos/de prueba; no acreditan operaciones comerciales, fiscales ni laborales reales.
-- Contrato actual: `MapaStaff` es exclusivamente el mapa de identidades Wix Bookings/Members; `DatosFiscales` es el maestro fiscal. Los campos no presentes en el esquema físico no se pueden exigir ni persistir desde los hooks.
-- Claves: `_id` identifica el registro CMS; `serviceId`, `pricingPlanId`, `staffMemberId`, `resourceId`, `scheduleId` y `memberId` conservan sus identidades nativas de dominio y no se sustituyen por `_id`.
-- En `ComplementosCatalogo`, `_id` es la fuente de identidad y el DTO de reserva lo proyecta como `addOnId`; la columna física `addonId` permanece hasta que su obligatoriedad CMS sea retirada de forma controlada.
-- No se ha modificado el CMS durante esta auditoría.
-
+Seguimiento: [issue #415 — reconciliación del maestro fiscal](https://github.com/nachoortegazgz/marianmadridz/issues/415) y [issue #416 — compensaciones y caja](https://github.com/nachoortegazgz/marianmadridz/issues/416).
 
 
 > **Bloque histórico:** la captura que originó los apartados siguientes corresponde a un estado/sitio anterior. No describe el CMS actual ni debe utilizarse como inventario vigente. El manifiesto del sitio actual aplicable es `docs/audits/2026-11-14-current-site-cms-normalization.md`.
