@@ -72,7 +72,7 @@ test('READ-06 fiscal aggregator prefers canonical ledger hash over historical al
 test('TAXID-01 business tax id reads MapaStaff CONFIG_SISTEMA taxId', async () => {
   wixDataMock._reset();
   wixDataMock._seed(IC.BUSINESS_COLLECTIONS.MAPA_STAFF, [
-    { recordType: IC.RECORD_TYPE.CONFIG_SISTEMA, taxId: 'B12345674', legalName: 'Marian Madrid', thirdPartyType: 'EMISOR' },
+    { recordType: IC.RECORD_TYPE.CONFIG_SISTEMA, taxId: 'B12345674', legalName: 'Marian Madrid', thirdPartyType: null, schemaVersion: 1, traceId: 'test-config-sistema' },
   ]);
   const id = await T.getBusinessTaxId('trace-taxid-1');
   assert.strictEqual(id, 'B12345674');
