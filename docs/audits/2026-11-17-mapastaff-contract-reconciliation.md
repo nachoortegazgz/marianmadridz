@@ -69,14 +69,20 @@ No se modifica Wix CMS ni ningún registro en esta rama. No se crea el singleton
 
 ## Validación
 
-Pendiente al abrir el PR:
+CI offline superada en el último SHA del PR #418:
+- Secret scanning: SUCCESS.
+- Layer 1: 28 suites, 331 tests PASS, 0 FAIL.
+- Layer 2: 19 suites, 256 tests PASS, 0 FAIL.
+- Regresión offline, contratos SDK Wix y ESLint: SUCCESS.
+- Diff revisado estáticamente; el PR sigue abierto y no se ha fusionado.
 
-- CI de Layer 1/Layer 2/regresión/SDK/ESLint/Gitleaks.
-- Inspección de diff completo.
+Pendiente:
 - Pruebas runtime Wix de hooks, lectura de catálogo fiscal, Bookings y destinatarios.
 - Confirmación de read-back del código en Wix Editor.
+- Protección de `main`/required checks antes de merge.
+- CONFIG_SISTEMA con datos legales verificados por el titular/asesoría.
 
-No se declara validación runtime en esta fase.
+No se declara validación runtime ni despliegue.
 
 ## Estado de despliegue
 
