@@ -40,6 +40,17 @@ Se aplicó `PRIVILEGED` a las cuatro acciones (`itemRead`, `itemInsert`, `itemUp
 
 Cada cambio devolvió éxito y se hizo una segunda consulta `GET /wix-data/v1/permissions?data_collection_id=<id>`; las 19 lecturas devolvieron los cuatro valores `PRIVILEGED` y `specialPermissions: []`.
 
+### Catálogos propios con campos internos
+
+Se detectó una segunda exposición en los catálogos:
+
+- `ServiciosCatalogo` tenía `itemRead=ANYONE` y contiene campos internos `margin`, `internalNotes` y `precioCosteBase`.
+- `ComplementosCatalogo` tenía `itemRead=ANYONE` y contiene clasificación fiscal/contable (`tipoImpositivo`, `codigoImpuesto`, `claveRegimen`, `cuentaContableIngreso`).
+
+Se cambió únicamente el permiso de lectura de ambas colecciones a `CMS_EDITOR`; inserción, actualización y eliminación permanecen en `CMS_EDITOR`. Read-back confirmado. Así, los editores conservan mantenimiento en Content Manager y los visitantes no pueden leer directamente los campos internos.
+
+La revisión de consumidores encontró que las páginas `Pagina de servicio 2` y `Calendario de reservas 2` llaman al WebMethod público `getServiceBySlugOrId` en `src/backend/reservas.web.js`. Ese método consulta mediante `dataAccess.js`/ `auth.elevate` y devuelve `_toPublicService`, un DTO allowlist que excluye los campos internos. La prueba `RES-DTO-01` verifica que no se expongan `margin`, `precioCosteBase`, `internalNotes` ni campos arbitrarios. No se identificó consulta CMS directa en esos page controllers. Aun así, la prueba runtime en Wix después del cambio sigue pendiente.
+
 ## Fundamento técnico
 
 - Wix Data Permissions API: https://dev.wix.com/docs/api-reference/business-solutions/cms/collection-management/data-permissions/introduction
