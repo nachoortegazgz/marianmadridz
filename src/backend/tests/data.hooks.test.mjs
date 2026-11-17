@@ -362,6 +362,44 @@ test("HOOK-MAPASTAFF-03 TERCERO and GESTORIA use live fiscal fields; email remai
   assert.throws(() => H.MapaStaff_beforeInsert({ ...accountant, emailFiscal: "invalid" }), /emailFiscal must be valid/);
 });
 
+test("HOOK-CAJA-01 normalizes JSON sequenceCounters and clears a prior-session closedAt", () => {
+  const openedAt = new Date("2026-11-14T06:00:00.000Z");
+  const priorClosedAt = new Date("2026-11-12T23:00:00.000Z");
+  const item = {
+    _id: "CAJA_PRINCIPAL",
+    singletonKey: "CAJA_PRINCIPAL",
+    cashRegisterStatus: "ABIERTA",
+    openedAt,
+  };
+  const original = {
+    ...item,
+    closedAt: priorClosedAt,
+    sequenceCounters: "{}",
+  };
+
+  H.CajaActual_beforeUpdate(item, { original });
+  assert.deepEqual(item.sequenceCounters, {});
+  assert.equal(item.closedAt, null);
+
+  const inserted = {
+    _id: "CAJA_PRINCIPAL",
+    singletonKey: "CAJA_PRINCIPAL",
+    cashRegisterStatus: "ABIERTA",
+    openedAt,
+    closedAt: priorClosedAt,
+    sequenceCounters: "{}",
+  };
+  H.CajaActual_beforeInsert(inserted);
+  assert.deepEqual(inserted.sequenceCounters, {});
+  assert.equal(inserted.closedAt, null);
+
+  assert.throws(() => H.CajaActual_beforeInsert({
+    _id: "CAJA_PRINCIPAL",
+    singletonKey: "CAJA_PRINCIPAL",
+    sequenceCounters: "not-json",
+  }), /sequenceCounters debe ser un objeto JSON valido/);
+});
+
 // -----------------------------------------------------------------------------
 // HistoricoCierresZ — CONSERVED (update restricted to signature fields)
 // -----------------------------------------------------------------------------

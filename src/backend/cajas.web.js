@@ -95,13 +95,51 @@ function _isSimulationCashRegister(cashRegister) {
     return _safeTrim(cashRegister?.cashRegisterStatus).toUpperCase() === "SIMULACION";
 }
 
+function _effectiveSessionClosedAt(cashRegister) {
+    if (!cashRegister?.closedAt) return null;
+    const closedAt = cashRegister.closedAt instanceof Date
+        ? cashRegister.closedAt
+        : new Date(cashRegister.closedAt);
+    if (Number.isNaN(closedAt.getTime())) {
+        throw new Error("CAJA_SESSION_CLOSED_AT_INVALID");
+    }
+    const openedAt = cashRegister.openedAt instanceof Date
+        ? cashRegister.openedAt
+        : new Date(cashRegister.openedAt || "");
+    if (!Number.isNaN(openedAt.getTime()) && closedAt.getTime() < openedAt.getTime()) {
+        return null;
+    }
+    return closedAt;
+}
+
 function _hasOpenCashierSession(cashRegister) {
     if (!cashRegister ||
         _safeTrim(cashRegister.cashRegisterStatus).toUpperCase() !== CASH_REGISTER_STATUS.ABIERTA) return false;
     const openedAt = cashRegister.openedAt instanceof Date
         ? cashRegister.openedAt
         : new Date(cashRegister.openedAt || "");
-    return !Number.isNaN(openedAt.getTime()) && !cashRegister.closedAt;
+    if (Number.isNaN(openedAt.getTime())) return false;
+    try {
+        return !_effectiveSessionClosedAt(cashRegister);
+    } catch {
+        return false;
+    }
+}
+
+function _normalizeSequenceCounters(value) {
+    if (value == null || value === "") return {};
+    let parsed = value;
+    if (typeof value === "string") {
+        try {
+            parsed = JSON.parse(value);
+        } catch {
+            throw new Error("CASH_REGISTER_COUNTERS_JSON_INVALID");
+        }
+    }
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        throw new Error("CASH_REGISTER_COUNTERS_JSON_INVALID");
+    }
+    return { ...parsed };
 }
 
 
@@ -1091,7 +1129,10 @@ async function _updateCajaActual(movement, traceId) {
                 throw new Error("CAJA_SESSION_OPENED_AT_REQUIRED");
             }
 
-            const sequenceCounters = { ...(cashRegister.sequenceCounters || {}) };
+            const sequenceCounters = _normalizeSequenceCounters(cashRegister.sequenceCounters);
+            cashRegister.sequenceCounters = sequenceCounters;
+            const effectiveClosedAt = _effectiveSessionClosedAt(cashRegister);
+            if (cashRegister.closedAt && !effectiveClosedAt) cashRegister.closedAt = null;
             const appliedMovementIds = Array.isArray(sequenceCounters.appliedMovementIds)
                 ? sequenceCounters.appliedMovementIds.map(String)
                 : [];
@@ -1264,10 +1305,8 @@ async function _readCashierSessionSummary(cashRegister) {
         .ne("recordSource", "SMOKE_TEST")
         .descending("sequenceNumber")
         .limit(LEDGER_PAGE_SIZE);
-    if (cashRegister.closedAt) {
-        const closedAt = cashRegister.closedAt instanceof Date ? cashRegister.closedAt : new Date(cashRegister.closedAt);
-        if (!Number.isNaN(closedAt.getTime())) query = query.lte("recordTimestamp", closedAt);
-    }
+    const effectiveClosedAt = _effectiveSessionClosedAt(cashRegister);
+    if (effectiveClosedAt) query = query.lte("recordTimestamp", effectiveClosedAt);
 
     let res = await query.find(STRONG_READ);
     const summary = {
@@ -1379,7 +1418,7 @@ export const getCashierState = webMethod(Permissions.SiteMember, async (options 
                 difference: cashRegister?.difference ?? null,
                 differenceReason: cashRegister?.differenceReason ?? null,
                 openedByName,
-                closedAt: cashRegister?.[CAJA_KEYS.CLOSED_AT] ?? null,
+                closedAt: _effectiveSessionClosedAt(cashRegister),
                 closedBy: cashRegister?.closedBy ?? null,
                 closedByName,
                 lastMovementAt: cashRegister?.[CAJA_KEYS.LAST_MOVEMENT_AT] ?? null,
