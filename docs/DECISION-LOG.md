@@ -433,3 +433,20 @@ El propietario ordena suspender temporalmente la política append-only de los le
 **Tarea obligatoria antes de producción:** reintroducir y verificar append-only/inmutabilidad, rectificaciones mediante nuevos registros, permisos mínimos, autorización backend, idempotencia, hash/trazabilidad, auditoría y bloqueo de update/remove. La publicación real queda bloqueada hasta cerrar esta tarea y sus pruebas.
 
 **Estado real:** decisión documental registrada; no acredita que el código, los permisos live de Wix o los datos hayan sido modificados. Cada colección requiere auditoría de consumidores, esquema, permisos y pruebas antes de retirar sus bloqueos.
+
+
+### TEC-039 — maestro fiscal consolidado en MapaStaff según esquema CMS live (2026-11-17)
+
+**Decisión vigente.** La lectura directa de Wix CMS del 2026-11-17 contradice el contrato separado aprobado en TEC-035: `MapaStaff` es una colección NATIVE de 43 campos con `recordType`, `taxId`, `legalName`, `thirdPartyType`, `taxRegime`, `fiscalIdType`, `verifactuEnabled`, `fechaInicioVerifactu`, `schemaVersion`, `traceId` y campos de contacto fiscal. Contiene 3 registros STAFF, 1 TERCERO y 1 GESTORIA. La colección `DatosFiscales` no existe (Wix WDE0025). No existe aún un registro CONFIG_SISTEMA.
+
+Por tanto, el maestro canónico live es `MapaStaff`, discriminado por `recordType`. TEC-035 queda supersedida por esta evidencia posterior. El snapshot de 2026-11-14 es histórico y no puede prevalecer sobre el esquema físico actual.
+
+**Límites y salvaguardas:**
+- No copiar, mover ni borrar los cinco registros existentes.
+- No inferir identidad del emisor desde STAFF, TERCERO, marca comercial ni GESTORIA.
+- CONFIG_SISTEMA solo se crea cuando NIF, razón social, sistema informático y régimen SIF estén verificados por el titular/asesoría.
+- El registro GESTORIA actual no tiene `emailFiscal`; el listado de destinatarios debe excluirlo y el envío permanece deshabilitado.
+- Las validaciones y hooks deben discriminar STAFF/TERCERO/GESTORIA/CONFIG_SISTEMA; no exigir GUIDs de Bookings a registros fiscales.
+- Los writers fiscales/contables siguen cerrados. No publicar hasta CI, pruebas runtime, conciliación de compensaciones y certificación SIF/VERI*FACTU.
+
+**Implementación en curso:** rama `fix/fiscal-master-mapastaff-live-schema-2026-11-17`. Port de cambios selectivos, no merge de la rama histórica antigua. Requiere CI y revisión de diff antes de integrar. No se ha modificado Wix runtime ni los datos CMS.
