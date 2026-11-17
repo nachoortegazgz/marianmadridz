@@ -304,13 +304,11 @@ test("HOOK-MAPASTAFF-01 validates native Wix identity keys without fiscal discri
     resourceId: "e556070a-6d6a-402e-8422-11133033ea76",
     scheduleId: "06af20d4-1ec3-49fa-9075-f0691dfa7fd4",
     memberId: "e52404b1-7a72-4b99-b231-66c4dc413421",
-    active: true,
     schemaVersion: 1,
   };
   assert.doesNotThrow(() => H.MapaStaff_beforeInsert({ ...staff }));
   assert.doesNotThrow(() => H.MapaStaff_beforeUpdate({ ...staff }));
   assert.throws(() => H.MapaStaff_beforeInsert({ ...staff, scheduleId: undefined }), /scheduleId/);
-  assert.throws(() => H.MapaStaff_beforeInsert({ ...staff, active: "true" }), /active must be BOOLEAN/);
 });
 
 test("HOOK-MAPASTAFF-02 CONFIG_SISTEMA uses the physical MapaStaff schema and protected singleton", () => {
@@ -331,7 +329,6 @@ test("HOOK-MAPASTAFF-02 CONFIG_SISTEMA uses the physical MapaStaff schema and pr
   assert.throws(() => H.MapaStaff_beforeInsert({ ...config, taxId: "INVALID" }), /taxId.*valid NIF/);
   assert.throws(() => H.MapaStaff_beforeInsert({ ...config, thirdPartyType: "EMISOR" }), /thirdPartyType.*null/);
   assert.throws(() => H.MapaStaff_beforeInsert({ ...config, fechaInicioVerifactu: "01/01/2026" }), /YYYY-MM-DD/);
-  assert.throws(() => H.MapaStaff_beforeInsert({ ...config, active: "true" }), /active must be BOOLEAN/);
   assert.throws(() => H.MapaStaff_beforeInsert({ ...config, recordType: "config_sistema" }), /recordType invalido/);
   assert.throws(() => H.MapaStaff_beforeInsert({ ...config, fechaInicioVerifactu: "   " }), /solo espacios/);
   assert.throws(() => H.MapaStaff_beforeRemove({ ...config, _id: "CONFIG_SISTEMA_FISCAL" }), /SINGLETON_PROTECTED/);
