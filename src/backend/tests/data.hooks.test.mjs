@@ -313,7 +313,7 @@ test("HOOK-MAPASTAFF-01 validates native Wix identity keys without fiscal discri
   assert.throws(() => H.MapaStaff_beforeInsert({ ...staff, active: "true" }), /active must be BOOLEAN/);
 });
 
-test("HOOK-MAPASTAFF-01 CONFIG_SISTEMA uses the physical MapaStaff schema and protected singleton", () => {
+test("HOOK-MAPASTAFF-02 CONFIG_SISTEMA uses the physical MapaStaff schema and protected singleton", () => {
   const config = {
     recordType: IC.RECORD_TYPE.CONFIG_SISTEMA,
     taxId: "B12345674",
@@ -337,7 +337,7 @@ test("HOOK-MAPASTAFF-01 CONFIG_SISTEMA uses the physical MapaStaff schema and pr
   assert.throws(() => H.MapaStaff_beforeRemove({ ...config, _id: "CONFIG_SISTEMA_FISCAL" }), /SINGLETON_PROTECTED/);
 });
 
-test("HOOK-MAPASTAFF-02 TERCERO and GESTORIA use live fiscal fields; email remains optional until configured", () => {
+test("HOOK-MAPASTAFF-03 TERCERO and GESTORIA use live fiscal fields; email remains optional until configured", () => {
   const thirdParty = {
     recordType: IC.RECORD_TYPE.TERCERO,
     taxId: "B12345674",
