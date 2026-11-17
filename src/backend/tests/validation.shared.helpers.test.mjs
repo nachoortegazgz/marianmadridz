@@ -82,6 +82,7 @@ test("VALIDATION-MAPASTAFF-01 validates native staff identity fields without fis
         schemaVersion: 1,
     };
     assert.equal(V.assertMapaStaffRecord(staff), true);
+    assert.throws(() => V.assertMapaStaffRecord({ ...staff, recordType: "staff" }), /recordType invalido/);
     assert.throws(() => V.assertMapaStaffRecord({ ...staff, scheduleId: undefined }), /scheduleId/);
     assert.throws(() => V.assertMapaStaffRecord({ ...staff, thirdPartyId: 123 }), /thirdPartyId must be TEXT/);
 });
