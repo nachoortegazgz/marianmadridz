@@ -299,6 +299,7 @@ test('HOOK-CONTROL-01 rejects retired ControlOperativo fields on new writes', ()
 // MapaStaff — physical staff mapping schema (current site)
 test("HOOK-MAPASTAFF-01 validates native Wix identity keys without fiscal discriminators", () => {
   const staff = {
+    recordType: IC.RECORD_TYPE.STAFF,
     staffMemberId: "0114748d-2806-3928-9b97-ff0d09853759",
     resourceId: "e556070a-6d6a-402e-8422-11133033ea76",
     scheduleId: "06af20d4-1ec3-49fa-9075-f0691dfa7fd4",
@@ -312,46 +313,56 @@ test("HOOK-MAPASTAFF-01 validates native Wix identity keys without fiscal discri
   assert.throws(() => H.MapaStaff_beforeInsert({ ...staff, active: "true" }), /active must be BOOLEAN/);
 });
 
-test("HOOK-DATOSFISCALES-01 CONFIG_SISTEMA uses only declared physical fields", () => {
+test("HOOK-MAPASTAFF-01 CONFIG_SISTEMA uses the physical MapaStaff schema and protected singleton", () => {
   const config = {
     recordType: IC.RECORD_TYPE.CONFIG_SISTEMA,
-    name: "Marian Madrid",
-    businessDescription: "Peluquería y estética",
-    address: "C/ Maurice Ravel 35, Local — 50012 Zaragoza",
-    email: "hola@marianmadrid.es",
+    taxId: "B12345674",
+    legalName: "Entidad fiscal de prueba",
+    displayName: "Entidad fiscal de prueba",
+    address: "Zaragoza",
     verifactuEnabled: false,
+    thirdPartyType: null,
+    schemaVersion: 1,
+    traceId: "test-config-sistema",
   };
-  const inserted = H.DatosFiscales_beforeInsert({ ...config });
+  const inserted = H.MapaStaff_beforeInsert({ ...config });
   assert.equal(inserted._id, "CONFIG_SISTEMA_FISCAL");
-  assert.doesNotThrow(() => H.DatosFiscales_beforeInsert({ ...config }));
-  assert.throws(() => H.DatosFiscales_beforeInsert({ ...config, taxId: "INVALID" }), /taxId.*valid NIF/);
-  assert.throws(() => H.DatosFiscales_beforeInsert({ ...config, thirdPartyType: "EMISOR" }), /thirdPartyType.*null/);
-  assert.throws(() => H.DatosFiscales_beforeInsert({ ...config, fechaInicioVerifactu: "01/01/2026" }), /YYYY-MM-DD/);
-  assert.throws(() => H.DatosFiscales_beforeInsert({ ...config, active: "true" }), /active must be BOOLEAN/);
-  assert.throws(() => H.DatosFiscales_beforeInsert({ ...config, recordType: "config_sistema" }), /recordType invalido/);
-  assert.throws(() => H.DatosFiscales_beforeInsert({ ...config, fechaInicioVerifactu: "   " }), /solo espacios/);
+  assert.doesNotThrow(() => H.MapaStaff_beforeInsert({ ...config }));
+  assert.throws(() => H.MapaStaff_beforeInsert({ ...config, taxId: "INVALID" }), /taxId.*valid NIF/);
+  assert.throws(() => H.MapaStaff_beforeInsert({ ...config, thirdPartyType: "EMISOR" }), /thirdPartyType.*null/);
+  assert.throws(() => H.MapaStaff_beforeInsert({ ...config, fechaInicioVerifactu: "01/01/2026" }), /YYYY-MM-DD/);
+  assert.throws(() => H.MapaStaff_beforeInsert({ ...config, active: "true" }), /active must be BOOLEAN/);
+  assert.throws(() => H.MapaStaff_beforeInsert({ ...config, recordType: "config_sistema" }), /recordType invalido/);
+  assert.throws(() => H.MapaStaff_beforeInsert({ ...config, fechaInicioVerifactu: "   " }), /solo espacios/);
+  assert.throws(() => H.MapaStaff_beforeRemove({ ...config, _id: "CONFIG_SISTEMA_FISCAL" }), /SINGLETON_PROTECTED/);
 });
 
-test("HOOK-DATOSFISCALES-02 third parties and accountant records use declared fields without trace/schemaVersion", () => {
+test("HOOK-MAPASTAFF-02 TERCERO and GESTORIA use live fiscal fields; email remains optional until configured", () => {
   const thirdParty = {
     recordType: IC.RECORD_TYPE.TERCERO,
     taxId: "B12345674",
     legalName: "Proveedor de prueba",
     thirdPartyType: "PROVEEDOR",
     address: "Zaragoza",
+    schemaVersion: 1,
+    traceId: "test-third-party",
   };
-  assert.doesNotThrow(() => H.DatosFiscales_beforeInsert({ ...thirdParty }));
+  assert.doesNotThrow(() => H.MapaStaff_beforeInsert({ ...thirdParty }));
 
   const accountant = {
     recordType: IC.RECORD_TYPE.GESTORIA,
-    name: "Gestoría de prueba",
-    gestorEmail: "gestoria@example.test",
-    gestorName: "Gestoría de prueba",
-    active: true,
+    taxId: "B12345674",
+    legalName: "Gestoría de prueba",
+    displayName: "Gestoría de prueba",
+    thirdPartyType: "GESTORIA",
+    phoneFiscal: "600000000",
+    address: "Zaragoza",
+    schemaVersion: 1,
+    traceId: "test-accountant",
   };
-  assert.doesNotThrow(() => H.DatosFiscales_beforeInsert({ ...accountant }));
-  assert.throws(() => H.DatosFiscales_beforeInsert({ ...thirdParty, taxId: "12345678A" }), /taxId/);
-  assert.throws(() => H.DatosFiscales_beforeInsert({ ...accountant, gestorEmail: "invalid" }), /valid email/);
+  assert.doesNotThrow(() => H.MapaStaff_beforeInsert({ ...accountant }));
+  assert.throws(() => H.MapaStaff_beforeInsert({ ...thirdParty, taxId: "12345678A" }), /taxId/);
+  assert.throws(() => H.MapaStaff_beforeInsert({ ...accountant, emailFiscal: "invalid" }), /emailFiscal must be valid/);
 });
 
 // -----------------------------------------------------------------------------
