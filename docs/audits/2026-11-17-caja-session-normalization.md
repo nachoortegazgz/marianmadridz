@@ -48,6 +48,6 @@ Rama: `fix/caja-stale-session-sequence-counters-2026-11-17`.
 
 ## Validación y despliegue
 
-Pendiente de CI y runtime Wix. El cambio solo permite que una sesión abierta no sea bloqueada por el cierre de una sesión anterior y que un JSON object serializado no corrompa el mapa de secuencias. No sustituye la reconciliación manual de la caja ni la confirmación de si los pedidos POS son fixtures de QA.
+CI offline superada: Layer 1, 28 suites/331 tests PASS; Layer 2, 19 suites/257 tests PASS; Secret scanning SUCCESS. Runtime Wix y read-back de código siguen pendientes. El cambio solo permite que una sesión abierta no sea bloqueada por el cierre de una sesión anterior y que un JSON object serializado no corrompa el mapa de secuencias. No sustituye la reconciliación manual de la caja ni la confirmación de si los pedidos POS son fixtures de QA.
 
 **Estado:** NO-GO hasta CI, runtime y conciliación de issue #416.
