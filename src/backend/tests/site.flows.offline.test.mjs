@@ -1071,6 +1071,7 @@ test('FLOW-CAJA-10C reopens the current session when closedAt belongs to a prior
   try {
     const result = await cajas.registerManualTransaction({
       totalAmount: 10,
+      tipoFactura: 'F2',
       paymentMethod: 'EFECTIVO',
       channelType: 'PRESENCIAL',
       movementType: 'VENTA',
