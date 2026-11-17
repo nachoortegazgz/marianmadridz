@@ -40,9 +40,9 @@ test("retired custom inventory collections are excluded from the canonical CMS a
         assert.equal(DATA_ACCESS_WRITE_POLICY[policyName].includes("InventarioStockVenta"), false);
         assert.equal(DATA_ACCESS_WRITE_POLICY[policyName].includes("MovimientosInventario"), false);
     }
-    assert.equal(DATA_ACCESS_WRITE_POLICY.insertCollections.includes(C.DATOS_FISCALES), true);
-    assert.equal(DATA_ACCESS_WRITE_POLICY.updateCollections.includes(C.DATOS_FISCALES), false);
-    assert.equal(DATA_ACCESS_WRITE_POLICY.removeCollections.includes(C.DATOS_FISCALES), false);
+    assert.equal(DATA_ACCESS_WRITE_POLICY.insertCollections.includes(C.MAPA_STAFF), true);
+    assert.equal(DATA_ACCESS_WRITE_POLICY.updateCollections.includes(C.MAPA_STAFF), false);
+    assert.equal(DATA_ACCESS_WRITE_POLICY.removeCollections.includes(C.MAPA_STAFF), false);
 });
 
 test("insert policy allows only declared collections and canonical ControlOperativo types", () => {
@@ -66,12 +66,13 @@ test("insert policy allows only declared collections and canonical ControlOperat
         bookingStatus: "PENDING",
     }), { code: "CMS_INSERT_BOOKING_ID_REQUIRED" });
     assert.doesNotThrow(() => assertInsertAllowed(C.MAPA_STAFF, {
+        recordType: RECORD_TYPE.STAFF,
         staffMemberId: "0114748d-2806-3928-9b97-ff0d09853759",
         resourceId: "e556070a-6d6a-402e-8422-11133033ea76",
         scheduleId: "06af20d4-1ec3-49fa-9075-f0691dfa7fd4",
         active: true,
     }));
-    assert.doesNotThrow(() => assertInsertAllowed(C.DATOS_FISCALES, {
+    assert.doesNotThrow(() => assertInsertAllowed(C.MAPA_STAFF, {
         recordType: RECORD_TYPE.TERCERO,
         taxId: "X0000000X",
     }));
@@ -88,9 +89,9 @@ test("insert policy allows only declared collections and canonical ControlOperat
 });
 
 test("insert policy rejects unknown fiscal record types", () => {
-    assert.throws(() => assertInsertAllowed(C.DATOS_FISCALES, {
+    assert.throws(() => assertInsertAllowed(C.MAPA_STAFF, {
         recordType: "INVOICE_LEDGER",
-    }), { code: "CMS_INSERT_FISCAL_RECORD_TYPE_INVALID" });
+    }), { code: "CMS_INSERT_MAPA_STAFF_RECORD_TYPE_INVALID" });
 });
 
 test("update policy keeps operational projections mutable and append-only ledgers immutable", () => {

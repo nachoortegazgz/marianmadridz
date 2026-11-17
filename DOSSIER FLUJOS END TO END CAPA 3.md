@@ -362,3 +362,11 @@ La última operación y los IDs fuente se reconstruyen para la lectura; todavía
 El usuario declara que el código está integrado y publicado en Wix. Esta declaración se registra como **declaración del propietario**. En la consulta de GitHub de este corte, el PR #344 (feat/consolidate-fiscal-master-mapastaff-v2) figura fusionado el 2026-11-14 mediante el merge commit f3b1311eead05282e47f538afd506fe49e227141, que es el HEAD actual de main. La integración del cambio en Git está verificada. El usuario declara además que el código está publicado en Wix; no se dispone de un identificador de publicación Wix que vincule el runtime con ese SHA concreto.
 
 **Nota de ejecución:** este addendum modifica la autoridad documental y la política de trabajo. No demuestra por sí mismo que todos los hooks, WebMethods, políticas de escritura o permisos CMS del runtime Wix hayan sido modificados para permitir todas las operaciones de edición y eliminación. Esa correspondencia debe verificarse en código y en Wix antes de afirmar que la pausa está aplicada técnicamente de extremo a extremo.
+
+## Addendum de flujos y estado live — 2026-11-17
+
+El estado live del CMS y del sitio supersede los snapshots anteriores: MapaStaff es el maestro discriminado vigente; DatosFiscales no existe; CONFIG_SISTEMA no está creado. El sitio sigue en Draft y no se ha acreditado sincronización GitHub↔Wix ni ejecución E2E runtime. La Capa 3 no dispone aún de pipeline SharePoint/Power Automate completo.
+
+La pausa histórica de append-only en QA no autoriza mutaciones de ledgers fiscales, contables o laborales; se mantiene la inmutabilidad exigida por las instrucciones vigentes del proyecto.
+
+Ver evidencia y gates actuales en [docs/audits/2026-11-17-deployment-readiness.md](docs/audits/2026-11-17-deployment-readiness.md) y [DICCIONARIO_DATOS_CMS.md](DICCIONARIO_DATOS_CMS.md).

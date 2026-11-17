@@ -17,7 +17,7 @@ import {
     normalizeMovementKeys,
     OPERATIONAL_COLLECTIONS,
 } from "backend/internalConfig";
-import { assertCitasF2, assertControlOperativo, assertCanonicalControlFields, assertRegistrosHorariosStaff, assertMapaStaffRecord, assertCajaActualRecord, assertDatosFiscalesRecord, isValidNifOrEuVat as _isValidNifOrEuVat } from "backend/validation";
+import { assertCitasF2, assertControlOperativo, assertCanonicalControlFields, assertRegistrosHorariosStaff, assertMapaStaffRecord, assertCajaActualRecord, isValidNifOrEuVat as _isValidNifOrEuVat } from "backend/validation";
 import { CONSISTENCY, getItem } from "backend/dataAccess";
 
 import { logger } from "backend/logger";
@@ -338,7 +338,7 @@ function _validateFiscalPayload(item) {
 
     if (eventType !== "CIERRE_Z") {
         if (item.thirdPartyId != null && item.thirdPartyId !== "" && !_isGuid(item.thirdPartyId)) {
-            _schemaError("thirdPartyId debe ser un GUID valido (FK DatosFiscales)");
+            _schemaError("thirdPartyId debe ser TEXT opaco; no se interpreta como FK");
         }
         // Contraparte/logistica: VENTA_LINEA/COMPRA_LINEA exigen al menos una
         // de las dos referencias operativas canonicas (producto del catalogo
@@ -727,50 +727,32 @@ function _validateServiciosCatalogoSchema(item = {}) {
 }
 
 // =============================================================================
-// MapaStaff stores only the Wix staff/member/resource mapping declared in CMS.
+// MapaStaff is the live discriminated master for STAFF, TERCERO, GESTORIA and CONFIG_SISTEMA.
 export function MapaStaff_beforeInsert(item) {
     if (!item || typeof item !== "object") return item;
+    const recordType = _safeTrim(item.recordType).toUpperCase();
+    if (recordType === "CONFIG_SISTEMA") return _applyConfigSistemaRules(item);
     assertMapaStaffRecord(item);
     return item;
 }
 
 export function MapaStaff_beforeUpdate(item) {
     if (!item || typeof item !== "object") return item;
-    assertMapaStaffRecord(item);
+    const recordType = _safeTrim(item.recordType).toUpperCase();
+    if (recordType === "CONFIG_SISTEMA") return _applyConfigSistemaRules(item);
+    assertMapaStaffRecord(item, { partial: true });
     return item;
 }
 
 export function MapaStaff_beforeRemove(item) {
-    return item;
-}
-
-// DatosFiscales is the fiscal identity/configuration master declared in CMS.
-export function DatosFiscales_beforeInsert(item) {
-    if (!item || typeof item !== "object") return item;
-    if (_safeTrim(item.recordType).toUpperCase() === "CONFIG_SISTEMA") {
-        return _applyConfigSistemaRules(item);
-    }
-    assertDatosFiscalesRecord(item);
-    return item;
-}
-
-export function DatosFiscales_beforeUpdate(item) {
-    if (!item || typeof item !== "object") return item;
-    if (_safeTrim(item.recordType).toUpperCase() === "CONFIG_SISTEMA") {
-        return _applyConfigSistemaRules(item);
-    }
-    assertDatosFiscalesRecord(item);
-    return item;
-}
-
-export function DatosFiscales_beforeRemove(item) {
-    if (_safeTrim(item?._id) === "CONFIG_SISTEMA_FISCAL") {
+    if (_safeTrim(item?._id) === "CONFIG_SISTEMA_FISCAL" ||
+        _safeTrim(item?.recordType).toUpperCase() === "CONFIG_SISTEMA") {
         _fiscalError("SINGLETON_PROTECTED: No se puede eliminar CONFIG_SISTEMA_FISCAL");
     }
     return item;
 }
 
-const DATOS_FISCALES_CONFIG_FORBIDDEN_FIELDS = [
+const MAPA_STAFF_CONFIG_FORBIDDEN_FIELDS = [
     "producerTaxId", "producerLegalName", "computerSystemId",
     "installationNumber", "possibleUseMultiOT", "possibleUseOnlyVerifactu",
     "multipleOTIndicator", "verifactuStartDate", "nifProductor",
@@ -780,9 +762,9 @@ const DATOS_FISCALES_CONFIG_FORBIDDEN_FIELDS = [
 ];
 
 function _applyConfigSistemaRules(item) {
-    for (const field of DATOS_FISCALES_CONFIG_FORBIDDEN_FIELDS) {
+    for (const field of MAPA_STAFF_CONFIG_FORBIDDEN_FIELDS) {
         if (item[field] !== undefined && item[field] !== null) {
-            _schemaError(`Campo "${field}" no permitido en DatosFiscales CONFIG_SISTEMA`);
+            _schemaError(`Campo "${field}" no permitido en MapaStaff CONFIG_SISTEMA`);
         }
     }
     if (!item._id) item._id = "CONFIG_SISTEMA_FISCAL";
@@ -792,11 +774,13 @@ function _applyConfigSistemaRules(item) {
     if (item.taxId != null) item.taxId = _safeTrim(item.taxId);
     if (item.thirdPartyType != null) item.thirdPartyType = _safeTrim(item.thirdPartyType);
     if (item.fechaInicioVerifactu != null && item.fechaInicioVerifactu !== "") {
-        const value = _safeTrim(item.fechaInicioVerifactu);
+        const value = item.fechaInicioVerifactu instanceof Date
+            ? item.fechaInicioVerifactu.toISOString().slice(0, 10)
+            : _safeTrim(item.fechaInicioVerifactu);
         if (!value) _schemaError("fechaInicioVerifactu no puede contener solo espacios");
         item.fechaInicioVerifactu = value;
     }
-    assertDatosFiscalesRecord(item);
+    assertMapaStaffRecord(item);
     return item;
 }
 

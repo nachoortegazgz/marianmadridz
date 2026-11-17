@@ -56,3 +56,12 @@ Consultar [DECISION-LOG.md](DECISION-LOG.md). TEC-038 describe la política téc
 
 
 > **Nota de baseline CMS:** los inventarios y recuentos CMS que acompañan este estado son snapshots históricos; no constituyen baseline vigente del Site ID `188bed94-177c-4bc9-a9f0-35080d874f3e` hasta repetir una lectura de solo lectura contra el sitio QA actual.
+
+
+## Addendum de estado — 2026-11-17
+
+El inventario histórico de este documento ha sido sustituido por el corte live del 2026-11-17. MapaStaff es el maestro fiscal/personas discriminado actual; DatosFiscales no existe; CONFIG_SISTEMA no existe. PR #418 y #419 tienen CI offline en verde, pero permanecen abiertas, no fusionadas y sin validar en Wix runtime. SiteContext devuelve Draft.
+
+Bloqueos P0: issues #415 (maestro fiscal/configuración) y #416 (compensaciones, pedidos POS y caja). Main carece de rulesets/required checks; no se puede modificar protección desde la integración actual. No publicar ni habilitar writers.
+
+Ver [estado completo de preparación](../docs/audits/2026-11-17-deployment-readiness.md).

@@ -2110,3 +2110,12 @@ Una publicación solo se certifica como correspondiente al código cuando existe
 El usuario declara que el código está integrado y publicado en Wix. Esta declaración se registra como **declaración del propietario**. En la consulta de GitHub de este corte, el PR #344 (feat/consolidate-fiscal-master-mapastaff-v2) figura fusionado el 2026-11-14 mediante el merge commit f3b1311eead05282e47f538afd506fe49e227141, que es el HEAD actual de main. La integración del cambio en Git está verificada. El usuario declara además que el código está publicado en Wix; no se dispone de un identificador de publicación Wix que vincule el runtime con ese SHA concreto.
 
 **Nota de ejecución:** este addendum modifica la autoridad documental y la política de trabajo. No demuestra por sí mismo que todos los hooks, WebMethods, políticas de escritura o permisos CMS del runtime Wix hayan sido modificados para permitir todas las operaciones de edición y eliminación. Esa correspondencia debe verificarse en código y en Wix antes de afirmar que la pausa está aplicada técnicamente de extremo a extremo.
+
+
+## Addendum de autoridad live — 2026-11-17
+
+El contrato físico CMS del corte 2026-11-17 supersede los snapshots anteriores de MapaStaff/DatosFiscales: `MapaStaff` tiene 43 campos y cinco registros discriminados STAFF/TERCERO/GESTORIA; `DatosFiscales` no existe y aún no existe CONFIG_SISTEMA. El sitio devuelve estado Draft; la publicación declarada anteriormente no está acreditada por read-back de SHA ni identificador de publicación.
+
+La política histórica de mutabilidad temporal de QA no autoriza mutar ledgers en esta intervención: prevalece la regla vigente del proyecto de append-only para registros fiscales, contables y laborales. No se borran ni sobrescriben registros económicos.
+
+Evidencia, decisiones y estado de PR: [docs/audits/2026-11-17-deployment-readiness.md](docs/audits/2026-11-17-deployment-readiness.md), [DICCIONARIO_DATOS_CMS.md](DICCIONARIO_DATOS_CMS.md) y [TEC-039](docs/DECISION-LOG.md).

@@ -433,3 +433,40 @@ El propietario ordena suspender temporalmente la política append-only de los le
 **Tarea obligatoria antes de producción:** reintroducir y verificar append-only/inmutabilidad, rectificaciones mediante nuevos registros, permisos mínimos, autorización backend, idempotencia, hash/trazabilidad, auditoría y bloqueo de update/remove. La publicación real queda bloqueada hasta cerrar esta tarea y sus pruebas.
 
 **Estado real:** decisión documental registrada; no acredita que el código, los permisos live de Wix o los datos hayan sido modificados. Cada colección requiere auditoría de consumidores, esquema, permisos y pruebas antes de retirar sus bloqueos.
+
+
+### TEC-039 — maestro fiscal consolidado en MapaStaff según esquema CMS live (2026-11-17)
+
+**Decisión vigente.** La lectura directa de Wix CMS del 2026-11-17 contradice el contrato separado aprobado en TEC-035: `MapaStaff` es una colección NATIVE de 43 campos con `recordType`, `taxId`, `legalName`, `thirdPartyType`, `taxRegime`, `fiscalIdType`, `verifactuEnabled`, `fechaInicioVerifactu`, `schemaVersion`, `traceId` y campos de contacto fiscal. Contiene 3 registros STAFF, 1 TERCERO y 1 GESTORIA. La colección `DatosFiscales` no existe (Wix WDE0025). No existe aún un registro CONFIG_SISTEMA.
+
+Por tanto, el maestro canónico live es `MapaStaff`, discriminado por `recordType`. TEC-035 queda supersedida por esta evidencia posterior. El snapshot de 2026-11-14 es histórico y no puede prevalecer sobre el esquema físico actual.
+
+**Límites y salvaguardas:**
+- No copiar, mover ni borrar los cinco registros existentes.
+- No inferir identidad del emisor desde STAFF, TERCERO, marca comercial ni GESTORIA.
+- CONFIG_SISTEMA solo se crea cuando NIF, razón social, sistema informático y régimen SIF estén verificados por el titular/asesoría.
+- El registro GESTORIA actual no tiene `emailFiscal`; el listado de destinatarios debe excluirlo y el envío permanece deshabilitado.
+- Las validaciones y hooks deben discriminar STAFF/TERCERO/GESTORIA/CONFIG_SISTEMA; no exigir GUIDs de Bookings a registros fiscales.
+- Los writers fiscales/contables siguen cerrados. No publicar hasta CI, pruebas runtime, conciliación de compensaciones y certificación SIF/VERI*FACTU.
+
+**Implementación en curso:** rama `fix/fiscal-master-mapastaff-live-schema-2026-11-17`. Port de cambios selectivos, no merge de la rama histórica antigua. Requiere CI y revisión de diff antes de integrar. No se ha modificado Wix runtime ni los datos CMS.
+
+
+### TEC-040 — CajaActual: fecha de cierre por sesión y normalización segura de sequenceCounters (2026-11-17)
+
+**Decisión vigente.** `CajaActual` conserva un singleton con `cashRegisterStatus=ABIERTA`, `openedAt=2026-11-14T06:00:00Z` y `closedAt=2026-11-12T23:00:00Z`. El cierre es anterior a la apertura actual y pertenece a una sesión previa; no debe bloquear la sesión abierta actual. La fecha de cierre efectiva de una sesión solo existe cuando `closedAt >= openedAt`. Si `closedAt < openedAt` y el estado es ABIERTA, se trata como metadato histórico y se limpia a null en la siguiente actualización.
+
+El campo físico `sequenceCounters` es OBJECT, pero la lectura live devuelve el JSON string `"{}"`. Solo se normaliza si parsea a un objeto no-array; arrays, primitivas y JSON inválido siguen fallando cerrados. La normalización se realiza en hooks/proyección; no se altera el singleton live en esta intervención.
+
+**Salvaguardas:** no abrir/cerrar caja, no insertar movimientos, no recalcular saldos ni activar writers. El pedido POS pagado en efectivo de 92,45 EUR permanece pendiente de confirmar si es fixture QA o hecho económico real (issue #416). La apertura aritméticamente cuadra en 300 EUR, pero la conciliación económica sigue abierta.
+
+**Implementación:** PR #419. Tests offline de hooks y E2E añadidos. CI completa en verde (Layer 1: 331/331; Layer 2: 257/257). Runtime Wix y conciliación de los pedidos siguen pendientes.
+
+
+### TEC-041 — precedencia de inmutabilidad y estado real de publicación (2026-11-17)
+
+La regla vigente del proyecto mantiene los ledgers fiscales, contables y laborales append-only e inmutables. El texto histórico de una pausa temporal de append-only durante QA no autoriza borrar, sobrescribir o reescribir dichos ledgers en esta intervención; prevalece la instrucción de proyecto vigente y las salvaguardas de integridad. Las correcciones económicas requieren registros rectificativos trazables.
+
+Asimismo, cualquier declaración histórica de publicación en Wix queda como declaración del propietario hasta disponer de evidencia de publicación y read-back del código. `GetSiteContext` del 2026-11-17 devuelve `Draft`; no se ha ejecutado Preview ni Publish ni se ha demostrado el SHA del código instalado.
+
+**Decisión:** NO-GO para despliegue hasta cerrar issues #415/#416, configurar protección de `main`, superar runtime Wix y certificar fiscalidad.

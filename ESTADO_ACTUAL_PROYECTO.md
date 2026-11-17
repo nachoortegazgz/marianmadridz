@@ -97,3 +97,16 @@ Se ha incorporado un simulador TPV sintético puro, sin persistencia ni llamadas
 - Varias automatizaciones activas contienen acciones de email/notificación. No se desactivaron ni modificaron; no se sortearon locks.
 - **Estado Runtime/E2E: BLOCKED_EXTERNAL_SIDE_EFFECTS.** Se mantienen mocks/offline y lecturas read-only hasta neutralización soportada por Wix/proveedor y verificación posterior.
 - Evidencia: docs/audits/2026-11-14-qa-automations-isolation.md.
+
+
+## Hito de auditoría live — 2026-11-17
+
+- Seguridad CMS: 21 colecciones endurecidas con read-back.
+- Maestro fiscal: PR #418, CI offline verde; MapaStaff 43 campos/5 registros, DatosFiscales ausente, CONFIG_SISTEMA ausente.
+- Caja: PR #419, CI offline verde; sesión ABIERTA con cierre anterior y sequenceCounters serializado, corrección en rama.
+- Compensaciones: 3 pendientes vinculadas a 2 pedidos POS; uno reembolsado y otro pagado en efectivo. No se ha confirmado su sinteticidad.
+- Wix: estado Draft; no Preview/Publish ni read-back de código.
+- GitHub: main sin rulesets/required checks.
+- Writers fiscales/contables/laborales deshabilitados.
+
+Ver [auditoría completa de preparación de despliegue](docs/audits/2026-11-17-deployment-readiness.md).

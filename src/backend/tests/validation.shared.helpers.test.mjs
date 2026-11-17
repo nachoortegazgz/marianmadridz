@@ -21,19 +21,23 @@ test("VALIDATION-FISCAL-01 validates Spanish NIF/NIE/CIF and EU VAT using shared
     assert.equal(V.isValidNifOrEuVat(""), false);
 });
 
-test("VALIDATION-FISCAL-02 DatosFiscales third-party validation uses the shared fiscal helper", () => {
-    assert.equal(V.assertDatosFiscalesRecord({
+test("VALIDATION-FISCAL-02 MapaStaff fiscal record types use the shared fiscal validator", () => {
+    assert.equal(V.assertMapaStaffRecord({
         recordType: "TERCERO",
         taxId: "12345678Z",
         legalName: "Entidad de prueba",
         thirdPartyType: "CLIENTE",
+        schemaVersion: 1,
+        traceId: "validation-third-party",
     }), true);
 
-    assert.throws(() => V.assertDatosFiscalesRecord({
+    assert.throws(() => V.assertMapaStaffRecord({
         recordType: "TERCERO",
         taxId: "12345678A",
         legalName: "Entidad de prueba",
         thirdPartyType: "CLIENTE",
+        schemaVersion: 1,
+        traceId: "validation-third-party-invalid",
     }), /taxId/);
 });
 
@@ -53,13 +57,13 @@ test("VALIDATION-CAJA-01 validates CajaActual object schema without MapaStaff re
     );
 });
 
-test("VALIDATION-FISCAL-03 supports partial DatosFiscales updates while validating supplied fields", () => {
-    assert.equal(V.assertDatosFiscalesRecord({
+test("VALIDATION-FISCAL-03 supports partial MapaStaff fiscal updates while validating supplied fields", () => {
+    assert.equal(V.assertMapaStaffRecord({
         recordType: "TERCERO",
         taxId: "12345678Z",
     }, { partial: true }), true);
     assert.throws(
-        () => V.assertDatosFiscalesRecord({
+        () => V.assertMapaStaffRecord({
             recordType: "TERCERO",
             taxId: "12345678A",
         }, { partial: true }),
@@ -74,11 +78,11 @@ test("VALIDATION-MAPASTAFF-01 validates native staff identity fields without fis
         resourceId: "e556070a-6d6a-402e-8422-11133033ea76",
         scheduleId: "06af20d4-1ec3-49fa-9075-f0691dfa7fd4",
         memberId: "e52404b1-7a72-4b99-b231-66c4dc413421",
-        active: true,
+        recordType: IC.RECORD_TYPE.STAFF,
         schemaVersion: 1,
     };
     assert.equal(V.assertMapaStaffRecord(staff), true);
+    assert.throws(() => V.assertMapaStaffRecord({ ...staff, recordType: "staff" }), /recordType invalido/);
     assert.throws(() => V.assertMapaStaffRecord({ ...staff, scheduleId: undefined }), /scheduleId/);
-    assert.throws(() => V.assertMapaStaffRecord({ ...staff, active: "true" }), /active must be BOOLEAN/);
     assert.throws(() => V.assertMapaStaffRecord({ ...staff, thirdPartyId: 123 }), /thirdPartyId must be TEXT/);
 });

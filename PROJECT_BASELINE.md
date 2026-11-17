@@ -123,3 +123,10 @@ Los requisitos funcionales son declaraciones de alcance, no prueba de implementa
 - Alcance: separación de contratos MapaStaff / DatosFiscales, keyfield _id para complementos, validación de tipos y actualización documental.
 - Estado: cambios en rama, pendientes de CI, revisión de diff y PR.
 - No se han ejecutado mutaciones CMS, migraciones de registros ni publicación Wix.
+
+
+## Addendum de baseline live — 2026-11-17
+
+El estado de la rama `fix/current-site-cms-contract-alignment` descrito arriba es histórico. El baseline live posterior confirma 50 colecciones (21 NATIVE/29 WIX_APP), MapaStaff 43 campos y cinco registros, DatosFiscales ausente y CONFIG_SISTEMA ausente. Las correcciones actuales están en PR #418 y #419, con CI offline en verde; no están fusionadas ni desplegadas. El sitio está Draft y no existe read-back de código Wix.
+
+Ver [auditoría de preparación de despliegue](docs/audits/2026-11-17-deployment-readiness.md) y [diccionario CMS actualizado](DICCIONARIO_DATOS_CMS.md).
