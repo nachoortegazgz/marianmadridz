@@ -17,18 +17,16 @@ CAMBIOS v5018-IDEMPOTENT-IMMUTABLE-SNAPSHOT (respecto a v5017):
   PKG-04: listado devuelve solo metadatos; descarga verifica snapshotHash.
   PKG-05: envio a gestoria permanece deshabilitado. Agregacion mensual pendiente.
 
-CAMBIOS v5017-ALIGNED-DATOSFISCALES (respecto a v5016):
+CAMBIOS v5019-ALIGNED-MAPASTAFF (respecto a v5016):
   ALN-DF-01: Eliminada la dependencia de BUSINESS_COLLECTIONS.GESTORES_FISCALES
              (coleccion no declarada en internalConfig v12). El origen de
              verdad de destinatarios es BUSINESS_COLLECTIONS.MAPA_STAFF.
-  ALN-DF-02: listAccountantRecipients consulta MapaStaff y extrae
-             gestores por DOS patrones tolerados en paralelo:
-               A) item dedicado con recordType "GESTORIA" + campo email.
-               B) campos embebidos legacy en cualquier
-                  item (p.ej. el registro fiscal del negocio).
-  ALN-DF-03: _resolveRecipientById maneja los dos patrones. Los ids del
-             patrones legacy eliminados; solo se aceptan IDs de registros dedicados
-             como `<recordId>` puro.
+  ALN-DF-02: listAccountantRecipients consulta solo recordType=GESTORIA y
+             proyecta los campos fisicos emailFiscal, displayName, taxId,
+             phoneFiscal y address. No lee campos legacy no declarados.
+  ALN-DF-03: _resolveRecipientById acepta solo el _id del registro MapaStaff.
+             Si emailFiscal no existe o no es valido, el registro no es
+             destinatario; no se inventa ni se deriva un email.
 
 CAMBIOS v5016-ALIGNED-WITH-SEND (heredados):
   NEW-01..04: listAccountantRecipients, sendManagerPackageToAccountant,
