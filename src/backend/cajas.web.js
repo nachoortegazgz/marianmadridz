@@ -133,11 +133,11 @@ function _normalizeSequenceCounters(value) {
         try {
             parsed = JSON.parse(value);
         } catch {
-            throw new Error("CAJA_SEQUENCE_COUNTERS_INVALID");
+            throw new Error("CASH_REGISTER_COUNTERS_JSON_INVALID");
         }
     }
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-        throw new Error("CAJA_SEQUENCE_COUNTERS_INVALID");
+        throw new Error("CASH_REGISTER_COUNTERS_JSON_INVALID");
     }
     return { ...parsed };
 }
