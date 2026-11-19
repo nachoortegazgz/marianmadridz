@@ -74,7 +74,7 @@ Se retiraron tras comprobar consumidores:
 
 Los diez módulos `src/backend/tpv*.web.js` de la raíz eran stubs antiguos sin consumidores activos. Los dos escritores antiguos insertaban directamente en `MovimientosCaja`/`CajaActual`; los demás exponían contratos incompletos y/o duplicados sin las políticas QA actuales. La implementación canónica está en `src/backend/tpv/` y no debe coexistir con esos aliases legacy.
 
-**Integración UI desarrollada el 2026-11-19:** el HTML implementa el contrato del widget y las acciones persistentes QA mediante el controlador. La venta guardada es una venta sintética de pruebas, no un cobro real. La suite offline debe superar los contratos antes de sincronizar; runtime Wix, instalación en `#htmlTPV`, Preview y Publish siguen pendientes.
+**Integración UI desarrollada el 2026-11-19:** el HTML implementa el contrato del widget y las acciones persistentes QA mediante el controlador. La venta guardada es una venta sintética de pruebas, no un cobro real. La CI offline del HEAD `d8a8c8f61517a44f89f0db8e0159bc159c2d2782` terminó correctamente: Layer 1 28 suites / 331 tests; Layer 2 19 suites / 258 tests; total 74 suites / 673 tests, 0 fallos; SDK contracts, ESLint y secret scanning correctos. Runtime Wix, instalación en `#htmlTPV`, Preview y Publish siguen pendientes.
 
 ## Bloqueos antes de activar operaciones reales
 
