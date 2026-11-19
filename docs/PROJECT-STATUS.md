@@ -65,3 +65,21 @@ El inventario histórico de este documento ha sido sustituido por el corte live 
 Bloqueos P0: issues #415 (maestro fiscal/configuración) y #416 (compensaciones, pedidos POS y caja). Main carece de rulesets/required checks; no se puede modificar protección desde la integración actual. No publicar ni habilitar writers.
 
 Ver [estado completo de preparación](../docs/audits/2026-11-17-deployment-readiness.md).
+
+
+---
+
+## Addendum vigente — 2026-11-19
+
+Este bloque sustituye el estado operativo de los addenda anteriores cuando exista contradicción. El documento rector es [DOSSIER TÉCNICO CONSOLIDADO.md](../DOSSIER%20T%C3%89CNICO%20CONSOLIDADO.md).
+
+- Baseline actual de `main`: `f764a209d417027f07dc31bb86aa471f2aaed834` (PR #430 integrada).
+- Wix Site Context informa **Published**, Editor Classic, Velo habilitado, EUR y Europe/Madrid. La clasificación del sitio como QA deriva de la declaración del propietario. Publicación no acredita SHA instalado ni runtime validado.
+- CI offline y secret scanning SUCCESS en runs `44602059578` y `44602059662`, respectivamente, para el SHA actual.
+- Auditoría estática: 15/15 jobs declarados tienen export en `crons.js`; un diagnóstico read-only adicional no está programado. Estado de ejecución/activación en Wix pendiente.
+- `main` sigue sin protección ni required checks. Issue #210 abierto.
+- Bloqueos P0 #415/#416 y #209 siguen abiertos. No activar escritores ni ejecutar compensaciones/cierres.
+- Inventario personalizado pendiente de retirada controlada (#237); Wix Stores Catalog V3 es la autoridad aprobada.
+- Release: **NO-GO para operación real**. Runtime, sincronización Wix y E2E no están acreditados.
+
+La auditoría detallada de jobs, riesgos operativos y secuencia mínima está en el addendum del dossier maestro del 2026-11-19.
