@@ -330,3 +330,13 @@ test("legacy TPV pages and direct operational writers are absent from the active
     assert.match(activePage, /public\/tpvPageController/);
     assert.doesNotMatch(activePage, /backend\/tpvCaja\.web|backend\/tpvVentas\.web/);
 });
+
+
+test("TPV public utility module exposes only the configuration contract consumed by the page controller", async () => {
+    const utilities = await source("tpv/tpvUtils.web.js");
+    const controller = await readFile(new URL("../public/tpvPageController.js", backendRoot), "utf8");
+    assert.match(utilities, /export const obtenerConfiguracionTPVQA = webMethod/);
+    assert.doesNotMatch(utilities, /validarImportesTPVQA|normalizePaymentMethod|toMinorUnits/);
+    assert.match(controller, /obtenerConfiguracionTPVQA/);
+    assert.doesNotMatch(controller, /validarImportesTPVQA/);
+});

@@ -2,11 +2,7 @@ import { Permissions, webMethod } from "wix-web-module";
 import { requireCajero } from "backend/security";
 import { TPV_QA_RUNTIME_POLICY } from "backend/internalConfig";
 import { makeTraceId } from "public/mmUtils";
-import {
-    assertTpvQaEnabled,
-    normalizePaymentMethod,
-    toMinorUnits,
-} from "backend/tpv/tpvUtils";
+import { assertTpvQaEnabled } from "backend/tpv/tpvUtils";
 
 export const obtenerConfiguracionTPVQA = webMethod(
     Permissions.SiteMember,
@@ -28,32 +24,5 @@ export const obtenerConfiguracionTPVQA = webMethod(
             },
             error: null,
         };
-    }
-);
-
-export const validarImportesTPVQA = webMethod(
-    Permissions.SiteMember,
-    async (input = {}) => {
-        const traceId = makeTraceId("tpv-qa-amounts");
-        await requireCajero(traceId);
-        assertTpvQaEnabled();
-        try {
-            return {
-                status: "SUCCESS",
-                data: {
-                    amountMinor: toMinorUnits(input.amount, "AMOUNT"),
-                    paymentMethod: normalizePaymentMethod(input.paymentMethod),
-                },
-                error: null,
-                traceId,
-            };
-        } catch (error) {
-            return {
-                status: "ERROR",
-                data: null,
-                error: { code: String(error?.message || "TPV_QA_VALIDATION_FAILED") },
-                traceId,
-            };
-        }
     }
 );
