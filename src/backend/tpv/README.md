@@ -1,6 +1,6 @@
 # TPV QA — módulos Velo
 
-> **Brecha de integración UI (2026-11-19):** `#htmlTPV.txt` no está alineado con este backend. Es una maqueta con catálogo/precios hardcodeados y cobros en memoria; no implementa `postMessage` ni el protocolo `MM_READY/MM_CONTEXT`. No instalar ni considerar operativa hasta cerrar la integración y superar `tpv-widget.contract.test.mjs` y `tpv-ui.qa-source.test.mjs`.
+> **Estado UI (2026-11-19):** `#htmlTPV.txt` implementa `MM_READY/MM_CONTEXT`, `postMessage`, lectura de catálogo Bookings/Stores V3 y operaciones persistentes sintéticas QA. `Cobrar`, pasarelas, facturación, Gift Cards reales, reservas, hardware y escrituras operativas siguen deshabilitados. El HTML está versionado; instalación en Wix y runtime aún no verificados.
 
 > **Backend canónico:** todos los módulos TPV Velo residen exclusivamente en `src/backend/tpv/`. No reintroducir archivos `src/backend/tpv*.web.js` en la raíz: eran stubs legacy sin consumidores activos.
 
