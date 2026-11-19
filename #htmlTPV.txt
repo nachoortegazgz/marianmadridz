@@ -122,24 +122,30 @@ function request(type,payload={},responseType,timeout=25000){return waitFor(send
 function requestCatalog(){const a=send("CATALOG_SERVICES",{}),b=send("CATALOG_STAFF",{});return Promise.all([waitFor(a,"CATALOG_SERVICES","CATALOG_SERVICES_RES"),waitFor(b,"CATALOG_STAFF","CATALOG_STAFF_RES")]);}
 function acceptMessage(e){
  if(e.source!==window.parent)return false;
- const message=e.data;if(!message||typeof message!=="object"||Array.isArray(message))return false;
- const type=String(message.type||"").toUpperCase();if(!RESPONSE_TYPES.includes(type))return false;
- if(type==="MM_CONTEXT"){state.context=message.payload||{};state.contextReady=true;$("mode").textContent=state.context.mode==="PERSISTENT_SYNTHETIC_QA"?"QA PERSISTENTE":"Contexto recibido";$("mode").className="pill ok";initialize();return true}
- const id=String(message.messageId||"");const pending=state.pending.get(id);if(!pending)return false;
+ const m=e.data;if(!m||typeof m!=="object"||Array.isArray(m))return false;
+ const type=String(m.type||"").toUpperCase();if(!RESPONSE_TYPES.includes(type))return false;
+ if(m.type==="MM_CONTEXT"){state.context=m.payload||{};state.contextReady=true;$("mode").textContent=state.context.mode==="PERSISTENT_SYNTHETIC_QA"?"QA PERSISTENTE":"Contexto recibido";$("mode").className="pill ok";initialize();return true}
+ if(m.type==="CASHIER_STATE_RES"||m.type==="CATALOG_SERVICES_RES"||m.type==="CATALOG_STAFF_RES"){
+  const id=String(m.messageId||"");const pending=state.pending.get(id);if(!pending||type!==pending.responseType)return false;
+  clearTimeout(pending.timer);state.pending.delete(id);pending.resolve(m.payload);return true;
+ }
+ const id=String(m.messageId||"");const pending=state.pending.get(id);if(!pending)return false;
  if(type!==pending.responseType)return false;
- clearTimeout(pending.timer);state.pending.delete(id);pending.resolve(message.payload);return true;
+ clearTimeout(pending.timer);state.pending.delete(id);pending.resolve(m.payload);return true;
 }
 window.addEventListener("message",acceptMessage);
 function announceReady(){send("MM_READY",{component:"htmlTPV",protocolVersion:PROTOCOL_VERSION})}
 function unwrap(result){if(!result||result.status!=="SUCCESS")throw new Error(result?.error?.code||"TPV_REQUEST_FAILED");return result.data}
 async function call(type,payload,responseType){const result=await request(type,payload,responseType);return unwrap(result)}
+function requestCashierState(){return waitFor(send("CASHIER_STATE",{}),"CASHIER_STATE","CASHIER_STATE_RES");}
+function lookupGiftCard(){return Promise.reject(new Error("TPV_GIFT_CARDS_DISABLED_IN_QA"));}
 function initialize(){
  $("mode").textContent="QA PERSISTENTE";$("userRole").textContent="Rol: verificando";
  void bootstrap();
 }
 async function bootstrap(){
  try{
-  const [config,permissions,session]=await Promise.all([call("QA_CONFIG",{},"QA_CONFIG_RES"),call("QA_PERMISSIONS",{},"QA_PERMISSIONS_RES"),call("CASHIER_STATE",{},"CASHIER_STATE_RES")]);
+  const [config,permissions,session]=await Promise.all([call("QA_CONFIG",{},"QA_CONFIG_RES"),call("QA_PERMISSIONS",{},"QA_PERMISSIONS_RES"),requestCashierState().then(unwrap)]);
   state.permissions=permissions;state.role=permissions.role||"UNKNOWN";$("userRole").textContent="Rol: "+state.role;
   if(config.syntheticOnly!==true||config.realPaymentsEnabled!==false||config.fiscalWritesEnabled!==false)throw new Error("TPV_QA_RUNTIME_POLICY_INVALID");
   state.session=session;renderSession();renderCapabilities();
@@ -199,11 +205,12 @@ async function saveSale(){
  toast("Venta sintética QA guardada: "+result.saleId);
  state.items=[];state.payments=[];renderTicket();await refreshSession();
 }
-async function refreshSession(){state.session=unwrap(await request("CASHIER_STATE",{},"CASHIER_STATE_RES"));renderSession();if(state.session){const d=await call("QA_SESSION_SUMMARY",{sessionId:state.session.sessionId},"QA_SESSION_SUMMARY_RES");$("expectedCash").textContent=money(d.expectedCash);$("operationCount").textContent=String(d.ticketCount||0)}}
+async function refreshSession(){state.session=unwrap(await requestCashierState());renderSession();if(state.session){const d=await call("QA_SESSION_SUMMARY",{sessionId:state.session.sessionId},"QA_SESSION_SUMMARY_RES");$("expectedCash").textContent=money(d.expectedCash);$("operationCount").textContent=String(d.ticketCount||0)}}
 async function openSession(){const result=unwrap(await request("QA_SESSION_OPEN",{openingCash:number($("openingCash").value),reason:"Apertura de sesión TPV QA",terminalId:"TPV_QA"},"QA_SESSION_OPEN_RES"));toast("Sesión QA abierta: "+result.sessionId);await refreshSession()}
 async function partialCount(){const amount=prompt("Efectivo contado en QA (EUR):");if(amount===null)return;const reason=prompt("Motivo si existe diferencia (mínimo 3 caracteres):")||"";const result=unwrap(await request("QA_PARTIAL_COUNT",{countedCash:number(amount),reason,idempotencyKey:state.operationKeys.count||(state.operationKeys.count=makeKey())},"QA_PARTIAL_COUNT_RES"));delete state.operationKeys.count;toast("Arqueo parcial registrado. Diferencia "+money(result.difference));await refreshSession()}
 async function cashMovement(){const result=unwrap(await request("QA_CASH_MOVEMENT",{movementType:$("movementType").value,amount:number($("movementAmount").value),reason:$("movementReason").value,idempotencyKey:state.operationKeys.movement||(state.operationKeys.movement=makeKey())},"QA_CASH_MOVEMENT_RES"));delete state.operationKeys.movement;toast("Movimiento QA registrado: "+result.movementType);$("movementAmount").value="";$("movementReason").value="";await refreshSession()}
 async function refund(){const result=unwrap(await request("QA_REFUND",{saleId:$("refundSaleId").value.trim(),reason:$("refundReason").value,payments:[{paymentMethod:$("refundMethod").value,amount:number($("refundAmount").value)}],idempotencyKey:state.operationKeys.refund||(state.operationKeys.refund=makeKey())},"QA_REFUND_RES"));delete state.operationKeys.refund;toast("Devolución QA registrada: "+result.refundId);await refreshSession()}
+function finalizeSynthetic(){return saveSale();}
 async function ticketX(){const result=unwrap(await request("QA_TICKET_X",{sessionId:state.session.sessionId,idempotencyKey:state.operationKeys.ticketX||(state.operationKeys.ticketX=makeKey())},"QA_TICKET_X_RES"));delete state.operationKeys.ticketX;toast("Ticket X QA generado: "+result.reportId)}
 async function ticketZ(){const result=unwrap(await request("QA_TICKET_Z",{sessionId:state.session.sessionId,countedCash:number($("closingCash").value),differenceReason:$("closingReason").value},"QA_TICKET_Z_RES"));toast("Sesión QA cerrada: "+result.reportId);await refreshSession()}
 function renderGiftCard(){$("giftCardAmount").disabled=true;$("giftCardType").disabled=true;}
@@ -214,7 +221,7 @@ async function searchCustomerBookings(){if(!state.customer)return;const data=unw
 function renderCustomerBookings(items){$("customerBookings").textContent=items.length?"Reservas de prueba disponibles: "+items.length:"No hay reservas asociadas a esta fixture. Las reservas reales están deshabilitadas."}
 function calculateDenominations(amount){const cashDenominations=[50000,20000,10000,5000,2000,1000,500,200,100,50,20,10,5,2,1];let remaining=Math.round(Number(amount)*100);return cashDenominations.map(value=>{const count=Math.floor(remaining/value);remaining-=count*value;return{value,count}}).filter(x=>x.count)}
 function renderDenominations(){const rows=calculateDenominations(number($("closingCash").value));$("cashDenominations").innerHTML=rows.map(x=>'<span class="pill">'+(x.value>=100?money(x.value/100):x.value+" cént.")+" × "+x.count+"</span>").join("")||"Sin desglose";$("denominationSummary").textContent="Desglose orientativo; no se guarda como registro separado."}
-function bind(){renderGiftCard(); $("refreshCatalog").onclick=()=>void Promise.all([loadServices(),loadProducts(false)]).catch(e=>toast(e.message));$("search").oninput=renderCatalog;$("catalogTabs").onclick=e=>{const b=e.target.closest("[data-kind]");if(!b)return;state.kind=b.dataset.kind;$("catalogTabs").querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x===b));renderCatalog()};$("loadMoreProducts").onclick=loadMoreProducts;$("clearTicket").onclick=()=>{state.items=[];state.payments=[];renderTicket()};$("taxTotal").onchange=renderTicket;$("addPayment").onclick=()=>void addPayment();$("saveSale").onclick=()=>void saveSale().catch(e=>showError(e.message));$("openSession").onclick=()=>void openSession().catch(e=>showError(e.message));$("partialCount").onclick=()=>void partialCount().catch(e=>showError(e.message));$("cashMovement").onclick=()=>void cashMovement().catch(e=>showError(e.message));$("refund").onclick=()=>void refund().catch(e=>showError(e.message));$("ticketX").onclick=()=>void ticketX().catch(e=>showError(e.message));$("ticketZ").onclick=()=>void ticketZ().catch(e=>showError(e.message));$("audit").onclick=()=>void audit().catch(e=>showError(e.message));$("searchCustomer").onclick=()=>void searchCustomer().catch(e=>toast(e.message));$("movementType").onchange=()=>{$("cashMovement").disabled=!state.session||($("movementType").value!=="ENTRADA"&&state.role!=="ADMIN")};}
+function bind(){renderGiftCard(); $("refreshCatalog").onclick=()=>void Promise.all([loadServices(),loadProducts(false)]).catch(e=>toast(e.message));$("search").oninput=renderCatalog;$("catalogTabs").onclick=e=>{const b=e.target.closest("[data-kind]");if(!b)return;state.kind=b.dataset.kind;$("catalogTabs").querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x===b));renderCatalog()};$("loadMoreProducts").onclick=loadMoreProducts;$("clearTicket").onclick=()=>{state.items=[];state.payments=[];renderTicket()};$("taxTotal").onchange=renderTicket;$("addPayment").onclick=()=>void addPayment();$("saveSale").onclick=()=>void finalizeSynthetic().catch(e=>showError(e.message));$("openSession").onclick=()=>void openSession().catch(e=>showError(e.message));$("partialCount").onclick=()=>void partialCount().catch(e=>showError(e.message));$("cashMovement").onclick=()=>void cashMovement().catch(e=>showError(e.message));$("refund").onclick=()=>void refund().catch(e=>showError(e.message));$("ticketX").onclick=()=>void ticketX().catch(e=>showError(e.message));$("ticketZ").onclick=()=>void ticketZ().catch(e=>showError(e.message));$("audit").onclick=()=>void audit().catch(e=>showError(e.message));$("searchCustomer").onclick=()=>void searchCustomer().catch(e=>toast(e.message));$("movementType").onchange=()=>{$("cashMovement").disabled=!state.session||($("movementType").value!=="ENTRADA"&&state.role!=="ADMIN")};}
 $("clock").textContent=new Intl.DateTimeFormat("es-ES",{dateStyle:"short",timeStyle:"medium",timeZone:"Europe/Madrid"}).format(new Date());setInterval(()=>$("clock").textContent=new Intl.DateTimeFormat("es-ES",{dateStyle:"short",timeStyle:"medium",timeZone:"Europe/Madrid"}).format(new Date()),1000);
 bind();renderTicket();$("closingCash").addEventListener("input",renderDenominations);renderDenominations();setTimeout(announceReady,0);
 })();
