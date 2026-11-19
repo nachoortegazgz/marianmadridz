@@ -2899,7 +2899,7 @@ Consulta de solo lectura de Data Permissions API:
 | RegistrosHorariosStaff | PRIVILEGED | PRIVILEGED | PRIVILEGED | 0 |
 | PaquetesGestoria | PRIVILEGED | PRIVILEGED | PRIVILEGED | 0 |
 
-La documentación Wix define `PRIVILEGED` como acceso para administradores, colaboradores o roles con permisos especiales. No se puede afirmar que CMS_EDITOR quede excluido. Los hooks `beforeUpdate/beforeRemove` bloquean las mutaciones append-only; los hooks `beforeInsert` validan el contrato, pero no realizan autorización por identidad/rol. La inserción manual desde Content Manager no queda demostrada como writer-backend-only.
+La documentación Wix establece que cada nivel incluye los niveles inferiores. `CMS_EDITOR` está por debajo de `PRIVILEGED`; por tanto, fijar `PRIVILEGED` como nivel mínimo requerido excluye al colaborador que solo tenga CMS_EDITOR y coincide con la solución propuesta en #261. No existen special permissions que lo sobreescriban. Los hooks `beforeUpdate/beforeRemove` bloquean las mutaciones append-only; los hooks `beforeInsert` validan el contrato, pero no autorizan por identidad. La política de colección restringe CMS_EDITOR, aunque no constituye una garantía de backend-writer-only frente a administradores/colaboradores privilegiados.
 
 Issue #261 sigue abierto. Requiere una prueba controlada con una identidad CMS_EDITOR en QA o una decisión explícita de endurecimiento que no rompa writers backend. No se han modificado permisos.
 
