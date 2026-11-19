@@ -1,3 +1,7 @@
+> **AVISO DE VIGENCIA — 19-11-2026:** este diccionario contiene contratos y snapshots de distintas auditorías. No asumir que sus recuentos, revisiones o campos representan el CMS live actual. El último inventario resumido disponible es del 17-11-2026 y requiere nueva lectura Wix antes de cualquier escritura, migración o cambio de esquema. Consultar [ESTADO_ACTUAL_PROYECTO.md](ESTADO_ACTUAL_PROYECTO.md) para el corte operativo.
+
+---
+
 > **SSOT de entorno vigente (2026-11-14):** el único sitio del proyecto es QA: `188bed94-177c-4bc9-a9f0-35080d874f3e` (`https://www.marianmadrid.es/`). El propietario confirma que nunca ha tenido actividad real, que todos los datos son sintéticos, que el cliente de pruebas es Nacho Pitt (`nachoortegazgz@gmail.com`) y que la pasarela está desconectada. No existe otro sitio QA ni un QA externo designado. Las referencias anteriores a otros Site ID o a este sitio como producción quedan supersedidas. El estado Wix Published no altera su clasificación funcional como QA. Véase [SSOT del entorno QA](docs/qa/QA-ENVIRONMENT-SSOT.md).
 
 ---
