@@ -1,6 +1,6 @@
 # TPV QA — módulos Velo
 
-> **Estado UI (2026-11-19):** `#htmlTPV.txt` implementa `MM_READY/MM_CONTEXT`, `postMessage`, lectura de catálogo Bookings/Stores V3 y operaciones persistentes sintéticas QA. `Cobrar`, pasarelas, facturación, Gift Cards reales, reservas, hardware y escrituras operativas siguen deshabilitados. El HTML está versionado; instalación en Wix y runtime aún no verificados.
+> **Estado UI (2026-11-19):** `#htmlTPV.txt` implementa `MM_READY/MM_CONTEXT`, `postMessage`, lectura de catálogo Bookings/Stores V3 y operaciones persistentes sintéticas QA. `Cobrar`, pasarelas, facturación, Gift Cards reales, reservas, hardware y escrituras operativas siguen deshabilitados. El HTML está versionado. CI offline en el commit `d8a8c8f61517a44f89f0db8e0159bc159c2d2782`: 74 suites / 673 tests, 0 fallos; SDK contracts, ESLint y secret scanning correctos. Instalación en Wix y runtime aún no verificados.
 
 > **Backend canónico:** todos los módulos TPV Velo residen exclusivamente en `src/backend/tpv/`. No reintroducir archivos `src/backend/tpv*.web.js` en la raíz: eran stubs legacy sin consumidores activos.
 
