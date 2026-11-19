@@ -21,7 +21,7 @@ Repositorio del sitio **Wix Editor Classic + Velo**.
 
 ## Estado resumido
 
-- Último `main` conocido antes de esta actualización documental: `eb0df0a3f798bb1cb7e3e5819eba08dfb76cd097`.
+- Último `main` conocido antes de esta actualización documental: `be10ca00211fc04b4452024aee01480af959f416`.
 - Los workflows backend offline quality gates y secret scanning pasaron en ese SHA.
 - CI offline no acredita Wix Runtime, periféricos, proveedor bancario ni E2E.
 - Último estado Wix observado: **Draft**. No existe evidencia que vincule una publicación con un SHA de GitHub.
