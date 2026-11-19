@@ -40,10 +40,10 @@
    <div class="row" style="margin-top:10px"><label class="tiny">Profesional de fixture</label><select id="professional" class="field"><option value="">Sin asignar</option></select></div>
    <div class="totals">
     <div class="row" style="justify-content:space-between"><span class="muted">Subtotal neto (QA)</span><b id="subtotal">0,00 €</b></div>
-    <div class="row" style="justify-content:space-between;margin-top:7px"><label for="taxTotal" class="muted">Impuestos introducidos manualmente (no inferidos)</label><input id="taxTotal" class="field small" type="number" min="0" step="0.01" value="0.00"></div>
+    <div class="row" style="justify-content:space-between;margin-top:7px"><label for="taxTotal" class="muted">Impuestos fiscales · deshabilitados en QA</label><input id="taxTotal" class="field small" type="number" min="0" step="0.01" value="0.00" disabled></div>
     <div class="row" style="justify-content:space-between;margin-top:9px"><span>Total de prueba</span><strong class="total" id="total">0,00 €</strong></div>
    </div>
-   <div class="notice tiny">El impuesto no se calcula ni se presenta como IVA legal. Introduce un valor solo para pruebas controladas.</div>
+   <div class="notice tiny">No se calcula ni registra IVA ni otro impuesto. El importe fiscal permanece a cero hasta disponer de reglas aprobadas.</div>
   </div>
  </div>
  <div class="panel">
