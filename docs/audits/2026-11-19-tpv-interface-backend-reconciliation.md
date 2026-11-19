@@ -57,7 +57,7 @@ No se elimina ningún módulo del directorio canónico `src/backend/tpv/`.
 - Inspección del árbol: diez módulos legacy eliminados; 16 módulos canónicos conservados.
 - HTML: comprobaciones estáticas de los mensajes requeridos, controles QA, ausencia de `fetch`/`wix-data`/`suppressAuth`, ausencia de productos hardcodeados y compilación sintáctica del script mediante V8 `new Function`: correcta.
 - El primer run CI falló dos aserciones de contrato; se corrigieron en commits posteriores.
-- CI final para el HEAD `d8a8c8f61517a44f89f0db8e0159bc159c2d2782`: Layer 1 28 suites / 331 tests; Layer 2 19 suites / 258 tests; total 74 suites / 673 tests, 0 fallos. Wix SDK contracts, TPV catalog SDK contracts, ESLint y Secret scanning: SUCCESS.
+- CI final para el HEAD `2577be15f9c58f1a638c32108ba400b99853078d`: Layer 1 28 suites / 331 tests; Layer 2 19 suites / 258 tests; total 74 suites / 673 tests, 0 fallos. Wix SDK contracts, TPV catalog SDK contracts, ESLint y Secret scanning: SUCCESS.
 - Tests locales completos: no ejecutados de forma independiente; los resultados anteriores corresponden a GitHub Actions.
 - Runtime Wix / instalación HTML Component / Preview / Publish: no ejecutados.
 
