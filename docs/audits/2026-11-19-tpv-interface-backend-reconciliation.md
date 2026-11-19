@@ -12,17 +12,17 @@ Comparar la interfaz versionada `#htmlTPV.txt`, el controlador Velo, los WebMeth
 
 ## 3. Hallazgos verificados
 
-### 3.1 Interfaz HTML
-`#htmlTPV.txt` (995 líneas, 20.154 caracteres) es una maqueta local, no un widget integrado:
-- Ocho productos/precios están hardcodeados en el HTML.
-- El usuario aparece fijado como `Administrador`.
-- El estado de caja se muestra estáticamente como abierta.
-- `pay()` incrementa variables locales en memoria y limpia el ticket; no invoca backend ni persiste una venta.
-- No contiene `postMessage`, listener de mensajes, `MM_READY` ni `MM_CONTEXT`.
-- No contiene la integración de catálogo/venta que requiere el controlador público.
-- El controlador `src/public/tpvPageController.js` sí despacha los WebMethods de QA, pero el HTML actual no implementa el protocolo que los conecta.
+### 3.1 Interfaz HTML — estado tras desarrollo
+`#htmlTPV.txt` se ha sustituido por una interfaz QA conectada al controlador público:
+- Implementa `MM_READY/MM_CONTEXT`, `postMessage`, correlación de respuestas y validación de `event.source`.
+- Lee servicios Bookings, productos/variantes Stores Catalog V3 y profesionales/cliente sintéticos mediante los mensajes existentes.
+- Implementa borrador de venta en memoria, validación backend, validación de pagos simulados y persistencia mediante `QA_SALE_REGISTER`.
+- Implementa apertura/lectura de sesión QA, movimientos sintéticos, arqueo parcial, devoluciones QA, Ticket X/Z y consulta de auditoría.
+- Los controles de cobro real, Gift Cards reales, reservas, facturación, hardware y operaciones fiscales/operativas permanecen deshabilitados.
+- No hay productos ni precios codificados en la interfaz ni identidad fija de Administrador.
+- Las claves idempotentes se conservan durante reintentos de operaciones con resultado incierto; los borradores del ticket permanecen solo en memoria de la sesión.
 
-**Conclusión:** no instalar ni usar este HTML como TPV funcional. Conservarlo versionado únicamente como maqueta hasta sustituirlo por una interfaz conectada y validada.
+**Conclusión:** la brecha de código UI queda corregida a nivel estático. La instalación del HTML en Wix y el runtime siguen pendientes.
 
 ### 3.2 Backend canónico
 La implementación activa está organizada en `src/backend/tpv/` y la consume `src/public/tpvPageController.js`. Incluye sesiones QA, ventas sintéticas, catálogo Bookings/Stores V3 de solo lectura, pagos simulados, movimientos QA, devoluciones QA, cierres X/Z, auditoría, permisos, validación, repositorio idempotente y locks CAS.
@@ -54,11 +54,11 @@ No se elimina ningún módulo del directorio canónico `src/backend/tpv/`.
 
 ## 5. Validación
 - Búsqueda GitHub de los exports legacy: sin consumidores fuera de los propios archivos.
-- Lectura completa de `#htmlTPV.txt`, `src/public/tpvPageController.js`, `src/pages/TPV.yl5th.js`, README canónico y pruebas de contrato.
-- Inspección de estructura recursiva del repositorio.
-- Tests locales: no ejecutados.
-- CI de la rama: pendiente.
+- Inspección del árbol: diez módulos legacy eliminados; 16 módulos canónicos conservados.
+- HTML: comprobaciones estáticas de los mensajes requeridos, controles QA, ausencia de `fetch`/`wix-data`/`suppressAuth`, ausencia de productos hardcodeados y compilación sintáctica del script mediante V8 `new Function`: correcta.
+- El primer run CI del commit anterior falló en dos aserciones de contrato (`m.type===MM_CONTEXT` y `e.source!==window.parent`); ambas se corrigieron en commits posteriores. No existe aún un run CI asociado al HEAD actual que confirme el arreglo.
+- Tests locales completos: no ejecutados.
 - Runtime Wix / Preview / Publish: no ejecutados.
 
 ## 6. Decisión
-Conservar el backend modular `src/backend/tpv/`, el controlador público y el page code. Eliminar los diez módulos legacy de la raíz. Mantener `#htmlTPV.txt` como maqueta bloqueada, no como interfaz operativa. La integración UI debe ser un cambio separado con contrato, pruebas y revisión antes de sincronizar con Wix.
+Conservar el backend modular `src/backend/tpv/`, el controlador público, el page code y la nueva interfaz HTML. Eliminar los diez módulos legacy de la raíz. El código UI cumple estáticamente los contratos inspeccionados, pero no se considera validado hasta ejecutar CI completo y runtime Wix. Mantener la PR Draft y no sincronizar/publicar mientras falte esa validación.
