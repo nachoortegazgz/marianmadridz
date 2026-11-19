@@ -29,7 +29,7 @@ Este directorio implementa el TPV en modo QA persistente y sintético para el si
 | `tpvCierres.web.js` | Resumen, Ticket X y cierre de sesión QA Ticket Z |
 | `tpvAuditoria.web.js` | Consulta de auditoría persistida |
 | `tpvPermisos.web.js` | Capacidades QA derivadas del rol backend |
-| `tpvUtils.web.js` | Configuración y validaciones auxiliares expuestas |
+| `tpvUtils.web.js` | Configuración QA expuesta al controlador de página (sin validadores duplicados) |
 | `tpvUtils.js` | Validación pura, minor units, claves y payload sintético |
 | `tpvQaRepository.js` | Acceso central a colecciones QA, idempotencia, lectura fuerte y locks CAS de sesión/venta |
 | `tpvCierresCore.js` | Agregación reproducible de ventas, pagos, devoluciones y efectivo |
