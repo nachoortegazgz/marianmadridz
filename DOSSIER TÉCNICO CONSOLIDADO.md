@@ -2514,3 +2514,225 @@ El contrato físico CMS del corte 2026-11-17 supersede los snapshots anteriores 
 La política histórica de mutabilidad temporal de QA no autoriza mutar ledgers en esta intervención: prevalece la regla vigente del proyecto de append-only para registros fiscales, contables y laborales. No se borran ni sobrescriben registros económicos.
 
 Evidencia, decisiones y estado de PR: [docs/audits/2026-11-17-deployment-readiness.md](docs/audits/2026-11-17-deployment-readiness.md), [DICCIONARIO_DATOS_CMS.md](DICCIONARIO_DATOS_CMS.md) y [TEC-039](docs/DECISION-LOG.md).
+
+
+---
+
+# ADENDA CANÓNICA — CONSOLIDACIÓN DE GUÍAS RAÍZ Y HARDWARE TPV
+
+**Fecha de consolidación:** 19-11-2026  
+**Autoridad:** esta adenda prevalece sobre estados operativos y guías anteriores contenidos en este dossier. Los bloques históricos se conservan como trazabilidad, no como instrucciones vigentes.
+
+## 1. Gobierno documental
+
+Este dossier es la fuente documental maestra para arquitectura, estado, decisiones, QA, TPV y plan de trabajo. El repositorio mantiene únicamente referencias técnicas especializadas que no deben duplicarse aquí:
+
+- `README.md`: índice mínimo hacia este dossier y referencias técnicas.
+- `DICCIONARIO_DATOS_CMS.md`: catálogo detallado de esquemas, campos, enums, relaciones y evidencia CMS. Sus snapshots son históricos; antes de operar se debe releer Wix live.
+- `DOSSIER FLUJOS END TO END CAPA 3.md`: diseño y trazabilidad de flujos documentales; no acredita que SharePoint o Power Automate estén implantados.
+- Código, pruebas y workflows: evidencia de implementación para el SHA correspondiente.
+
+Las antiguas guías raíz `PROJECT_BASELINE.md`, `ESTADO_ACTUAL_PROYECTO.md`, `PLAN_ACCION_QA.md`, `DIRECTRICES_DESARROLLO_CODIGO.md` y `HARDWARE_TPV.md` se consideran consolidadas en esta adenda y dejan de ser fuentes independientes.
+
+## 2. Estado operativo de referencia
+
+**Estado global: NO APTO PARA DESPLIEGUE.**
+
+- Repositorio: `nachoortegazgz/marianmadridz`.
+- Sitio Wix: `188bed94-177c-4bc9-a9f0-35080d874f3e`.
+- Plataforma: Wix Editor Classic + Velo.
+- Último SHA de `main` al consolidar: `534a8bce2e6b1e923634c49a916c61ba34dd0126`.
+- PR #424 incorporó la guía hardware; PR #425 consolidó las guías raíz y avisos de vigencia.
+- En el SHA `534a8bce`, los checks **Layer 1 and 2 QA, offline regression, SDK contract and lint** y **Gitleaks full-history scan** finalizaron en SUCCESS.
+- Estos checks no acreditan Wix Runtime, publicación, hardware físico, pagos reales ni pruebas E2E.
+- Último contexto Wix registrado: Editor Classic, Velo habilitado y estado Draft. No hay evidencia de que el SHA de GitHub esté publicado o sincronizado con Local Editor.
+- Checkout local: último estado comunicado con HEAD antiguo y `package-lock.json` modificado; no consta fast-forward verificado. La sincronización local sigue pendiente.
+- `wix.lock` mantiene una resolución de `@wix/stores@1.0.960`, distinta de `1.0.997` en `package.json` y `package-lock.json`. No editar manualmente; reconciliar mediante el flujo oficial desde el checkout conectado a Wix.
+- El último inventario CMS resumido es del 17-11-2026; no es lectura live actual.
+- Fiscalidad/SIF/VERI*FACTU, writers fiscales y conciliación de incidencias POS continúan bloqueados o pendientes de evidencia.
+
+## 3. Arquitectura y autoridad
+
+### 3.1 Sistemas de autoridad
+
+| Dominio | Autoridad |
+|---|---|
+| Datos propios del negocio | Wix CMS y backend Velo |
+| Reservas, disponibilidad y recursos | Wix Bookings mediante APIs oficiales |
+| Catálogo, variantes e inventario comercial | Wix Stores Catalog V3 mediante APIs oficiales |
+| Identidad/autorización | Backend, identidad Wix y reglas RBAC aprobadas |
+| Evidencia documental | SharePoint, cuando se implante |
+| Transporte documental | Power Automate, si se aprueba y valida |
+
+Capa 1 es transaccional; Capa 2 contiene lógica, WebMethods, validaciones, adaptadores, jobs y conciliación; Capa 3 custodia evidencia. El flujo documental permitido es unidireccional desde Capa 1/backend hacia Capa 3. Capa 3 nunca gobierna ni corrige Capa 1.
+
+### 3.2 Invariantes de ingeniería
+
+- Frontend: presentación y captura; no contiene lógica de negocio, secretos ni decisiones de autorización.
+- Backend/WebMethods: reglas, validaciones, autorización y escrituras.
+- Constantes canónicas en `internalConfig.js`; validaciones compartidas en `validation.js`.
+- Secretos en Wix Secrets Manager o almacén aprobado; nunca frontend, repositorio, logs o fixtures.
+- No escribir directamente en colecciones administradas por Wix Apps.
+- Webhooks y jobs: idempotencia, deduplicación, concurrencia segura, reintentos limitados y recuperación auditable.
+- Ledgers fiscales, contables, laborales y de caja: append-only. Rectificar mediante nuevos registros trazables; nunca borrar o sobrescribir hechos.
+- `MovimientosCaja` es histórico fuente; `CajaActual` es proyección.
+- Pedido, reserva, intento de pago, cobro confirmado y liquidación bancaria son conceptos distintos.
+
+### 3.3 Método obligatorio de cambio
+
+Antes de implementar: fijar SHA/árbol, identificar módulo y consumidores, revisar contratos/esquemas/permisos, consultar documentación oficial, definir aceptación/riesgos y diseñar cambio mínimo. Antes de eliminar símbolos: buscar consumidores, contratos externos, tests y runners; demostrar que no se rompe compatibilidad; ejecutar suites y revisar diff.
+
+Clasificar evidencia como **VERIFICADO**, **DECLARADO**, **INFERIDO** o **PENDIENTE**. CI verde solo certifica los checks realmente ejecutados en ese SHA.
+
+## 4. TPV personalizada: arquitectura física consolidada
+
+### 4.1 Topología objetivo
+
+```text
+Internet
+  |
+Router / Firewall
+  |
+LAN (Ethernet preferente) / Wi-Fi validado
+  |
+PC Windows — navegador TPV personalizada
+  | HTTPS
+Backend Velo / WebMethods
+  |
+Wix CMS
+
+PC Windows -- USB o Ethernet --> Impresora térmica ESC/POS
+                                      |
+                                Puerto drawer-kick
+                                      |
+                                  Cajón cash
+
+Terminal bancario autónomo --> Adquirente / banco
+          |
+  Confirmación manual controlada o integración certificada
+```
+
+Es una arquitectura objetivo, no una instalación probada.
+
+### 4.2 Componentes previstos y criterios de selección
+
+| Elemento | Requisito de selección | Estado |
+|---|---|---|
+| PC TPV | Windows soportado, navegador actualizado, SSD, RAM suficiente, USB y Ethernet | Modelo pendiente |
+| Red | Router/firewall estable; Ethernet preferente para periféricos | Inventario pendiente |
+| Impresora | Térmica 80 mm preferente (o ancho definido), ESC/POS documentado, driver Windows mantenido, USB/Ethernet | Modelo pendiente |
+| Cajón | Compatibilidad eléctrica y pinout con drawer-kick de impresora | Modelo pendiente |
+| Terminal bancario | Equipo homologado/provisto por adquirente; chip/PIN y contactless; API/SDK documentado si se integra | Proveedor/modelo pendiente |
+| SAI/UPS | Protección dimensionada para PC, red e impresora | Recomendado |
+| Lector de códigos | USB HID/modo teclado | Opcional |
+| Pantalla cliente | Segunda pantalla/display compatible | Opcional |
+
+No se ha aprobado marca, modelo, compra ni cableado. Verificar soporte en España, garantía, consumibles, firmware, drivers, protocolo y documentación del fabricante antes de seleccionar.
+
+### 4.3 Impresora y cajón
+
+Primera opción a evaluar: impresora ESC/POS USB o Ethernet con driver Windows mantenido. La impresión puede utilizar diálogo estándar del navegador o un agente local autorizado si el requisito operativo lo exige.
+
+El cajón se conectará al puerto drawer-kick de la impresora solo tras validar con el fabricante conector, pinout, voltaje y compatibilidad. No conectar por la mera coincidencia física RJ11/RJ12. La apertura exige una orden autorizada, trazabilidad y tratamiento de fallos; no debe producirse al cargar la página ni por una acción frontend no autenticada.
+
+### 4.4 Terminal y evidencia de pago
+
+El terminal procesa la tarjeta con el adquirente. Wix Orders, Order Transactions o un registro CMS no ejecutan por sí mismos el cargo bancario. Wix Payments no se considera integrado con el terminal físico.
+
+Separar cuatro estados/evidencias:
+1. Orden de pago creada: intención de cobro, no cargo.
+2. Confirmación del operador: evidencia manual con actor, hora y referencia.
+3. Confirmación técnica: respuesta autenticada del proveedor con identificador y estado inequívoco; solo si existe integración soportada.
+4. Liquidación bancaria: reflejo posterior del abono por el adquirente.
+
+Hasta identificar proveedor y terminal, el modo a evaluar es terminal autónomo con confirmación manual controlada. No etiquetar confirmación manual como técnica ni como liquidación. Exigir documentación oficial, soporte territorial España, sandbox, SDK/API, webhooks, idempotencia, cancelaciones y devoluciones antes de integrar.
+
+### 4.5 Conectividad local y seguridad
+
+El navegador no tiene acceso irrestricto a USB, serie o LAN. Evaluar por orden: impresión estándar, driver/spooler del fabricante, API LAN documentada y, solo si es necesario, agente local firmado y mantenido.
+
+Un agente local requiere autenticación, allowlist de comandos, protección CSRF/replay, actualización controlada, mínimo privilegio y logs sin datos de tarjeta. No exponer puertos locales a Internet ni aceptar comandos arbitrarios desde frontend. Nunca almacenar PAN completo, CVV, credenciales bancarias o secretos en Wix CMS, navegador o logs.
+
+### 4.6 Contrato económico TPV ↔ caja
+
+- Importes en céntimos enteros.
+- `CASH`: efectivo recibido menos cambio entregado; solo el neto aumenta el efectivo físico.
+- `CARD`: no incrementa el efectivo físico.
+- Mixto: componentes CASH/CARD separados, con importe, estado, referencia e idempotency key; suma exacta igual al total.
+- Pendiente, fallido o cancelado no es cobro confirmado.
+- Abrir el cajón o imprimir un ticket no acredita un pago.
+- Devoluciones/anulaciones deben referenciar el hecho original y mantener trazabilidad.
+- X es snapshot no cerrante. Z es cierre operativo inmutable con arqueo, desglose por medio, diferencias, actor, fecha y referencias fuente.
+- X/Z no son factura ni certificación SIF/VERI*FACTU.
+
+### 4.7 Selección y aceptación de hardware
+
+1. Inventariar PC, Windows, puertos, red y periféricos existentes.
+2. Obtener marca/modelo/firmware del terminal y documentación oficial de integración en España.
+3. Seleccionar impresora ESC/POS y cajón como conjunto compatible.
+4. Validar driver, impresión, corte, drawer-kick, desconexión y recuperación.
+5. Decidir terminal autónomo/manual o integración certificada.
+6. Diseñar agente local solo si el estándar soportado no cubre el requisito.
+7. Probar offline y en sandbox; no realizar cobros reales durante QA.
+8. Documentar versiones, drivers, cableado, configuración, sustitución y mantenimiento.
+
+Criterio de aceptación: cada dispositivo tiene modelo/firmware, driver/protocolo oficial, conexión reproducible, pruebas de fallo/recuperación y responsable de mantenimiento; el terminal tiene semántica de confirmación inequívoca y evita dobles cobros.
+
+## 5. Estado TPV, caja y reconciliación
+
+En el snapshot del 17-11-2026 constaban tres compensaciones `FISCAL_LEDGER/PENDING_RECOVERY` y dos pedidos POS con estados económicos que requerían conciliación. Uno aparecía reembolsado; otro pagado en efectivo sin reflejo coherente en la proyección de caja. Este dato es histórico y exige relectura live. No crear movimientos, reintentar compensaciones ni modificar ledgers por inferencia.
+
+Los writers fiscales permanecen deshabilitados; identidad fiscal/configuración no acreditadas y SIF/VERI*FACTU/AEAT no certificados. No habilitar writers ni emitir comunicaciones fiscales hasta cerrar revisión legal y técnica.
+
+## 6. Plan priorizado y gates
+
+### P0 — Integridad y baseline
+1. Releer pedidos, transacciones, movimientos y compensaciones; reconstruir pedido → pago → movimiento → ledger. No mutar por inferencia.
+2. Revalidar Site ID, estado Wix, CMS, permisos, automatizaciones, webhooks y conexiones.
+3. Preservar el cambio local de `package-lock.json`, actualizar checkout por fast-forward y comprobar árbol.
+4. Reconciliar `wix.lock` mediante flujo oficial; no editar manualmente.
+
+### P1 — TPV, caja y runtime
+1. Cerrar DTO y persistencia CASH/CARD/mixto, idempotencia, concurrencia, devoluciones y Z.
+2. Inventariar y seleccionar hardware con pruebas de drivers, periféricos y terminal.
+3. Probar Wix Runtime/Preview tras neutralizar efectos externos; autenticar WebMethods, permisos, hooks, doble envío, concurrencia y recuperación.
+
+### P2 — Fiscalidad e integraciones
+1. Confirmar identidad fiscal, series, impuestos, rectificaciones y requisitos SIF/VERI*FACTU con asesoría y fuentes oficiales.
+2. Auditar tenant M365, licencias, SharePoint, permisos, retención, DLP y Power Automate. PA-01…PA-07 son diseños, no flujos activos verificados.
+
+### P3 — Release readiness
+Resolver dependencias, probar rollback, revisar branch protection/required checks y preparar checklist con SHA, Site ID, diff, CI, autorizaciones y verificación posterior.
+
+### Gates de salida
+
+| Gate | Condición |
+|---|---|
+| G0 Integridad | Pedidos, pagos, caja y compensaciones reconciliados |
+| G1 Entorno | Site ID, CMS, permisos y automatizaciones revalidados |
+| G2 Toolchain | Checkout sincronizado, lockfiles reconciliados, flujo Wix documentado |
+| G3 TPV | Contratos y hardware probados; sin doble cobro ni movimiento |
+| G4 Runtime | WebMethods, permisos, hooks, concurrencia e idempotencia probados |
+| G5 Fiscal | Identidad, normativa, SIF/VERI*FACTU y writers validados |
+| G6 Integraciones | Capa 3 y efectos externos probados con datos sintéticos |
+| G7 Release | CI, diff, rollback, SHA/Site ID y autorización expresa |
+
+No desplegar con gates P0/P1 abiertos, tests fallidos, riesgos críticos sin mitigar o rollback no demostrado. Publish requiere autorización expresa.
+
+## 7. Prioridades de ingeniería
+
+- **P0:** integridad fiscal, seguridad crítica, pérdida/exposición de datos.
+- **P1:** reservas, pagos, caja, concurrencia, ledgers y jornada.
+- **P2:** integraciones, automatizaciones y exportaciones.
+- **P3:** rendimiento, mantenibilidad y deuda técnica.
+- **P4:** evolución aprobada.
+
+Antes de retirar código o datos: buscar consumidores en src/, páginas, tests, runners, workflows y contratos externos; revisar persistencia e historial; demostrar ausencia de dependencias; ejecutar pruebas y revisar diff. La reducción de líneas no justifica perder garantías.
+
+## 8. Autoridad y mantenimiento a partir de esta consolidación
+
+- Este dossier concentra las guías de arquitectura, estado, desarrollo, QA, plan y hardware.
+- El diccionario CMS conserva el detalle estructural especializado; no duplicar sus cientos de campos aquí.
+- El dossier Capa 1 → Capa 3 conserva el diseño detallado de flujos documentales.
+- Actualizar esta adenda cuando cambie estado, arquitectura o hardware; conservar addenda anteriores como historial.
+- Para cualquier operación live, obtener evidencia actual del sistema afectado: el documento no sustituye una lectura live.
