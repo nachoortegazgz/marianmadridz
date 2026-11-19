@@ -2736,3 +2736,63 @@ Antes de retirar código o datos: buscar consumidores en src/, páginas, tests, 
 - El dossier Capa 1 → Capa 3 conserva el diseño detallado de flujos documentales.
 - Actualizar esta adenda cuando cambie estado, arquitectura o hardware; conservar addenda anteriores como historial.
 - Para cualquier operación live, obtener evidencia actual del sistema afectado: el documento no sustituye una lectura live.
+
+
+---
+
+# Addendum de estado y auditoría de automatizaciones — 2026-11-19
+
+**Baseline verificado:** `main` = `f764a209d417027f07dc31bb86aa471f2aaed834` (commit `Chore/remove-unused-tpv-amounts-webmethod (#430)`).
+**Sitio Wix:** `188bed94-177c-4bc9-a9f0-35080d874f3e`, estado informado por Site Context: **Published**, Editor Classic, Velo habilitado, Europe/Madrid, EUR. La clasificación funcional como QA procede de la declaración del propietario; Published no acredita sincronización del código ni pruebas runtime.
+**CI sobre el SHA anterior:** Backend offline quality gates SUCCESS (run `44602059578`); Secret scanning SUCCESS (run `44602059662`). Ambos asociados exactamente al baseline indicado.
+
+## Auditoría de jobs y eventos
+
+Lectura estática de `src/backend/jobs.config`, `src/backend/crons.js`, `src/backend/events.js` y `src/backend/tests/crons.jobsConfigParity.test.mjs`:
+
+- Los 15 jobs declarados en `jobs.config` tienen una función exportada correspondiente en `crons.js`.
+- No se detectó un job declarado cuyo handler no exista.
+- Existe un export adicional, `inspectDualRescheduleJournalsReadOnly`, deliberadamente no programado; es un diagnóstico de solo lectura.
+- La prueba de paridad del repositorio verifica la correspondencia de exports y configuración.
+- `events.js` contiene handlers Wix de Bookings y eCommerce, además de helpers internos; la lectura estática no acredita que Wix tenga todos los handlers configurados ni que el código instalado coincida con GitHub.
+
+### Riesgo operativo pendiente
+
+`jobs.config` declara, entre otros, `runPendingCompensationsJob` cada hora y `verifyNightlyZClosing` diariamente. El código central mantiene `LEDGER_WRITES_ENABLED=false` y `ACCOUNTING_LEDGER_WRITES_ENABLED=false`; el procesador omite compensaciones de esos tipos mientras la política siga cerrada. No obstante, ejecuta primero recuperación de estados de pago y puede actualizar registros operativos. El job de cierre Z invoca la entrada interna de cierre, por lo que puede producir una escritura operativa si se cumplen sus condiciones.
+
+**No se ha verificado desde una API/lectura de Wix que estos jobs estén actualmente instalados, habilitados o ejecutándose en el sitio.** Tampoco se ha ejecutado ningún job durante esta auditoría. Antes de runtime E2E debe verificarse el estado efectivo de programación y su aislamiento. No activar, reintentar ni forzar compensaciones ni cierres para esta comprobación.
+
+## Estado GitHub y control de integración
+
+- `main` continúa sin protección (`protected=false` en el endpoint de rama consultado).
+- No hay required checks que impidan técnicamente un merge o push directo.
+- La integración disponible permite lectura de branch/rulesets, pero no expone una operación autorizada para configurar la protección. Issue #210 permanece abierto.
+- No se modificó código funcional, CMS, datos económicos, automatizaciones ni configuración de publicación en esta auditoría.
+
+## Incidencias abiertas que siguen bloqueando o limitando el despliegue
+
+- **#415 / #209:** configuración fiscal, identidad del emisor y SIF/VERI*FACTU pendientes.
+- **#416:** compensaciones fiscales y estado de caja pendientes de reconciliación.
+- **#210:** protección de `main` y required checks pendientes.
+- **#237:** retirada de inventario personalizado pendiente; Wix Stores Catalog V3 es la autoridad aprobada.
+- **#261:** endurecimiento de permisos de inserción en ledgers pendiente de read-back actual.
+- **#223:** persistencia del snapshot exacto de paquetes de gestoría pendiente.
+- **#290:** claims atómicos de eventos deben verificarse contra la implementación actual y runtime.
+- **#211 / #188:** campaña E2E de Bookings, Payments y área de cliente pendiente.
+- **#224:** ZONA STAFF conserva escritura deshabilitada; falta validación runtime de lectura y de contratos.
+- **#173:** Capa 3/SharePoint/Power Automate sigue siendo diseño, no integración acreditada.
+
+## Dictamen actualizado
+
+El baseline GitHub tiene CI offline y secret scanning satisfactorios. La paridad estática jobs.config ↔ crons.js está completa. Esto no demuestra cron runtime, event registration, sincronización Wix, ni operación de negocio.
+
+El sitio informa Published, pero el SHA instalado no está acreditado. Las incidencias P0 permanecen abiertas. **Estado de release: NO-GO para operación real.** Se permite continuar validación técnica aislada solo después de verificar que jobs, automatizaciones, webhooks y comunicaciones no producen efectos externos no autorizados.
+
+## Siguiente secuencia mínima
+
+1. Revalidar en Wix, solo lectura, las compensaciones, CajaActual y permisos críticos; no mutar.
+2. Confirmar la configuración efectiva de jobs, eventos y automatizaciones; identificar qué procesos están habilitados.
+3. Resolver protección de `main` con un usuario/permisos administrativos de GitHub.
+4. Alinear Local Editor y Wix con el SHA aprobado y documentar read-back.
+5. Ejecutar campaña de runtime QA aislada, comenzando por lectura y TPV sintética.
+6. Mantener writers fiscales/contables y pagos reales deshabilitados hasta superar gates legales y operativos.
