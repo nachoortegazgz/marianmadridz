@@ -87,7 +87,7 @@
  </div>
  <div class="panel" id="section-tickets">
   <div class="ph"><h2>Tickets y auditoría</h2></div>
-  <div class="pb stack"><button id="audit" class="btn">Consultar auditoría QA</button><div id="auditList" class="tiny muted"></div><label class="tiny">Efectivo contado para Ticket Z</label><input id="closingCash" class="field" type="number" min="0" step="0.01" value="0"><input id="closingReason" class="field" maxlength="500" placeholder="Motivo de diferencia (si existe)"><button id="ticketZ" class="btn danger" disabled>Cerrar sesión QA</button></div>
+  <div class="pb stack"><button id="audit" class="btn">Consultar auditoría QA</button><div id="auditList" class="tiny muted"></div><label class="tiny">Efectivo contado para Ticket Z</label><input id="closingCash" class="field" type="number" min="0" step="0.01" value="0"><div id="cashDenominations" class="denoms"></div><div id="denominationSummary" class="tiny muted"></div><input id="closingReason" class="field" maxlength="500" placeholder="Motivo de diferencia (si existe)"><button id="ticketZ" class="btn danger" disabled>Cerrar sesión QA</button></div>
  </div>
  <div class="panel">
   <div class="ph"><h2>Funciones restringidas</h2></div>
@@ -164,7 +164,7 @@ async function loadProducts(more){const cursor=more?state.productCursor:null;con
 function requestMoreProducts(){if(state.productHasMore)void loadProducts(true)}
 function loadMoreProducts(){requestMoreProducts()}
 function escapeHtml(value){return String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
-function priceLabel(item){return item.precioFormateado||item.precioMinimo!==undefined&&item.precioMinimo!==null?item.precioFormateado||money(item.precioMinimo):"Precio variable"}
+function priceLabel(item){const amount=item.precioMinimo??item.precioFijo;return item.precioFormateado||(amount!==undefined&&amount!==null?money(amount):"Precio variable")}
 function renderCatalog(){
  const term=$("search").value.trim().toLowerCase();const all=state.services.concat(state.products);
  const items=all.filter(x=>(state.kind==="TODOS"||x.tipoLinea===state.kind)&&(!term||(x.concepto+" "+(x.descripcion||"")).toLowerCase().includes(term)));
@@ -213,9 +213,10 @@ function renderCustomers(items){$("customers").innerHTML=items.length?items.map(
 async function searchCustomerBookings(){if(!state.customer)return;const data=unwrap(await request("CUSTOMER_BOOKINGS",{contactId:state.customer.contactId},"CUSTOMER_BOOKINGS_RES"));renderCustomerBookings(data.items||[])}
 function renderCustomerBookings(items){$("customerBookings").textContent=items.length?"Reservas de prueba disponibles: "+items.length:"No hay reservas asociadas a esta fixture. Las reservas reales están deshabilitadas."}
 function calculateDenominations(amount){const cashDenominations=[50000,20000,10000,5000,2000,1000,500,200,100,50,20,10,5,2,1];let remaining=Math.round(Number(amount)*100);return cashDenominations.map(value=>{const count=Math.floor(remaining/value);remaining-=count*value;return{value,count}}).filter(x=>x.count)}
+function renderDenominations(){const rows=calculateDenominations(number($("closingCash").value));$("cashDenominations").innerHTML=rows.map(x=>'<span class="pill">'+(x.value>=100?money(x.value/100):x.value+" cént.")+" × "+x.count+"</span>").join("")||"Sin desglose";$("denominationSummary").textContent="Desglose orientativo; no se guarda como registro separado."}
 function bind(){renderGiftCard(); $("refreshCatalog").onclick=()=>void Promise.all([loadServices(),loadProducts(false)]).catch(e=>toast(e.message));$("search").oninput=renderCatalog;$("catalogTabs").onclick=e=>{const b=e.target.closest("[data-kind]");if(!b)return;state.kind=b.dataset.kind;$("catalogTabs").querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x===b));renderCatalog()};$("loadMoreProducts").onclick=loadMoreProducts;$("clearTicket").onclick=()=>{state.items=[];state.payments=[];renderTicket()};$("taxTotal").onchange=renderTicket;$("addPayment").onclick=()=>void addPayment();$("saveSale").onclick=()=>void saveSale().catch(e=>showError(e.message));$("openSession").onclick=()=>void openSession().catch(e=>showError(e.message));$("partialCount").onclick=()=>void partialCount().catch(e=>showError(e.message));$("cashMovement").onclick=()=>void cashMovement().catch(e=>showError(e.message));$("refund").onclick=()=>void refund().catch(e=>showError(e.message));$("ticketX").onclick=()=>void ticketX().catch(e=>showError(e.message));$("ticketZ").onclick=()=>void ticketZ().catch(e=>showError(e.message));$("audit").onclick=()=>void audit().catch(e=>showError(e.message));$("searchCustomer").onclick=()=>void searchCustomer().catch(e=>toast(e.message));$("movementType").onchange=()=>{$("cashMovement").disabled=!state.session||($("movementType").value!=="ENTRADA"&&state.role!=="ADMIN")};}
 $("clock").textContent=new Intl.DateTimeFormat("es-ES",{dateStyle:"short",timeStyle:"medium",timeZone:"Europe/Madrid"}).format(new Date());setInterval(()=>$("clock").textContent=new Intl.DateTimeFormat("es-ES",{dateStyle:"short",timeStyle:"medium",timeZone:"Europe/Madrid"}).format(new Date()),1000);
-bind();renderTicket();$("cashDenominations")?.addEventListener("click",()=>calculateDenominations(number($("closingCash").value)));setTimeout(announceReady,0);
+bind();renderTicket();$("closingCash").addEventListener("input",renderDenominations);renderDenominations();setTimeout(announceReady,0);
 })();
 </script>
 </body>
