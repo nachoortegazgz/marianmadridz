@@ -1,3 +1,7 @@
+> **AVISO DE VIGENCIA — 19-11-2026:** este dossier describe diseño objetivo y decisiones históricas de Capa 1 → Capa 3; no acredita flujos, jobs, tenant M365, SharePoint ni Power Automate activos. El estado verificable se mantiene en [ESTADO_ACTUAL_PROYECTO.md](ESTADO_ACTUAL_PROYECTO.md) y el roadmap en [PLAN_ACCION_QA.md](PLAN_ACCION_QA.md). No ejecutar ni habilitar PA-01…PA-07 por el mero hecho de estar descritos aquí.
+
+---
+
 > **SSOT de entorno vigente (2026-11-14):** el único sitio del proyecto es QA: `188bed94-177c-4bc9-a9f0-35080d874f3e` (`https://www.marianmadrid.es/`). El propietario confirma que nunca ha tenido actividad real, que todos los datos son sintéticos, que el cliente de pruebas es Nacho Pitt (`nachoortegazgz@gmail.com`) y que la pasarela está desconectada. No existe otro sitio QA ni un QA externo designado. Las referencias anteriores a otros Site ID o a este sitio como producción quedan supersedidas. El estado Wix Published no altera su clasificación funcional como QA. Véase [SSOT del entorno QA](./QA-ENVIRONMENT-SSOT.md).
 
 ---
