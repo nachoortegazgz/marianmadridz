@@ -91,7 +91,7 @@
  </div>
  <div class="panel">
   <div class="ph"><h2>Funciones restringidas</h2></div>
-  <div class="pb stack tiny"><span>Saldo real · deshabilitado en QA</span><input id="giftCardAmount" class="field" disabled><select id="giftCardType" class="field" disabled><option>Deshabilitado</option></select><button class="btn" disabled>Consultar tarjeta regalo</button><button class="btn" disabled>Crear / modificar reserva</button><button class="btn" disabled>Emitir tarjeta regalo</button><button class="btn" disabled>Emitir factura completa</button><button class="btn" disabled>Emitir abono / rectificativa</button><span>Factura simplificada · deshabilitado</span><span>Factura completa</span><span>Abono / rectificativa</span><span class="muted">No enviado a CMS ni a servicios fiscales.</span></div>
+  <div class="pb stack tiny"><span>Saldo real · deshabilitado en QA</span><input id="giftCardAmount" class="field" disabled><select id="giftCardType" class="field" disabled><option>Deshabilitado</option></select><button class="btn" disabled>Consultar tarjeta regalo</button><button class="btn" disabled>Crear / modificar reserva</button><button class="btn" disabled>Emitir tarjeta regalo</button><button class="btn" disabled>Emitir factura completa</button><button class="btn" disabled>Emitir abono / rectificativa</button><span>Factura simplificada · deshabilitado</span><span>Ticket Z · cierre QA</span><span>Factura completa</span><span>Abono / rectificativa</span><span class="muted">No enviado a CMS ni a servicios fiscales.</span></div>
  </div>
 </aside>
 </main>
@@ -120,9 +120,9 @@ function send(type,payload={}) {
 function waitFor(id,type,responseType,timeout=25000){if(!id)return Promise.reject(new Error("WIDGET_NOT_READY"));return new Promise((resolve,reject)=>{const timer=setTimeout(()=>{state.pending.delete(id);reject(new Error("TIMEOUT_"+type))},timeout);state.pending.set(id,{resolve,reject,timer,responseType})});}
 function request(type,payload={},responseType,timeout=25000){return waitFor(send(type,payload),type,responseType,timeout);}
 function requestCatalog(){const a=send("CATALOG_SERVICES",{}),b=send("CATALOG_STAFF",{});return Promise.all([waitFor(a,"CATALOG_SERVICES","CATALOG_SERVICES_RES"),waitFor(b,"CATALOG_STAFF","CATALOG_STAFF_RES")]);}
-function acceptMessage(event){
- if(event.source!==window.parent)return false;
- const message=event.data;if(!message||typeof message!=="object"||Array.isArray(message))return false;
+function acceptMessage(e){
+ if(e.source!==window.parent)return false;
+ const message=e.data;if(!message||typeof message!=="object"||Array.isArray(message))return false;
  const type=String(message.type||"").toUpperCase();if(!RESPONSE_TYPES.includes(type))return false;
  if(type==="MM_CONTEXT"){state.context=message.payload||{};state.contextReady=true;$("mode").textContent=state.context.mode==="PERSISTENT_SYNTHETIC_QA"?"QA PERSISTENTE":"Contexto recibido";$("mode").className="pill ok";initialize();return true}
  const id=String(message.messageId||"");const pending=state.pending.get(id);if(!pending)return false;
