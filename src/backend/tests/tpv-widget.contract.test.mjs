@@ -52,6 +52,18 @@ test("TPV HTML uses versioned messaging and browser-local ticket drafts", () => 
     assert.match(html, /function requestMoreProducts/);
     assert.match(html, /calculateDenominations/);
     assert.doesNotMatch(html, /fetch\s*\(|XMLHttpRequest|wix-data|suppressAuth/i);
+    assert.match(html, /send\("CASHIER_STATE"/);
+    assert.match(html, /m\.type==="MM_CONTEXT"/);
+    assert.match(html, /m\.type==="CASHIER_STATE_RES"/);
+    assert.match(html, /send\("CATALOG_SERVICES"/);
+    assert.match(html, /send\("CATALOG_STAFF"/);
+    assert.match(html, /request\("QA_PAYMENT_VALIDATE"/);
+    assert.match(html, /function finalizeSynthetic/);
+    assert.match(html, /function lookupGiftCard/);
+    assert.match(html, /state\.operationKeys\.sale/);
+    assert.match(html, /state\.operationKeys\.refund/);
+    assert.doesNotMatch(html, /onclick="addProduct\(|Usuario:\s*Administrador/);
+
 });
 
 test("TPV mutation controls remain visibly disabled", () => {
