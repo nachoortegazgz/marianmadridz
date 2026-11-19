@@ -283,8 +283,8 @@ test("TPV page is wired to the shared HTML bridge and its versioned iframe proto
     assert.match(html, /m\.type==="CATALOG_SERVICES_RES"/);
     assert.match(html, /m\.type==="CATALOG_STAFF_RES"/);
     assert.match(html, /GIFT_CARD_BALANCE_RES/);
-    assert.match(html, /lookupGiftCard/);
-    assert.match(html, /Saldo real · deshabilitado en QA/);
+    assert.doesNotMatch(html, /function lookupGiftCard/);
+    assert.doesNotMatch(html, /giftCardAmount|giftCardType/);
     assert.match(html, /finalizeSynthetic/);
 
     const inlineScript = html.match(/<script>([\s\S]*?)<\/script>/)?.[1];

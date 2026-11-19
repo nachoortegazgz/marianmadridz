@@ -87,6 +87,9 @@ export function initializeTpvPage(widgetElement) {
 
         onContextReady: async () => ({
             component: "htmlTPV",
+            protocolVersion: 1,
+            environment: "QA",
+            syntheticOnly: true,
             mode: "PERSISTENT_SYNTHETIC_QA",
             currencyCode: "EUR",
             timeZone: "Europe/Madrid",
@@ -122,6 +125,10 @@ export function initializeTpvPage(widgetElement) {
             };
 
             switch (type) {
+            // MM_READY is the bridge handshake. createWidgetBridge publishes
+            // MM_CONTEXT after this handler; no synthetic MM_READY_RES is needed.
+            case MESSAGE_TYPES.READY:
+                return;
             case "CASHIER_STATE":
                 await respond("CASHIER_STATE_RES", () => obtenerSesionCajaQA(), "TPV_QA_SESSION_READ_FAILED", "No se pudo consultar la sesion QA.");
                 return;

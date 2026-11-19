@@ -82,3 +82,8 @@ PR #397, PR #398 y PR #399 están integradas en `main`. PR #399 aplica el aislam
 - La consulta y vinculación de reservas reales está deshabilitada; la venta rechaza cualquier `bookingId`.
 - La consulta de saldo de Gift Cards reales está deshabilitada; no se envía ni persiste ningún código. Emisión, canje y reembolso siguen bloqueados.
 - Los eventos de auditoría usan el actor sintético `QA_ACTOR`; la identidad real solo se usa para autorización backend y no se persiste.
+
+
+## Contrato del widget HTML
+
+La integración vigente entre `#htmlTPV.txt`, `src/pages/TPV.yl5th.js`, `src/public/tpvPageController.js` y estos WebMethods está documentada en [`docs/architecture/TPV-HTML-WIDGET-BRIDGE.md`](../../../docs/architecture/TPV-HTML-WIDGET-BRIDGE.md). El ID del componente Wix debe ser exactamente `htmlTPV` (sensible a mayúsculas).
