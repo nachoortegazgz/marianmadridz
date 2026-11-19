@@ -1,49 +1,49 @@
-> **SSOT de entorno vigente (2026-11-14):** el único sitio del proyecto es QA: `188bed94-177c-4bc9-a9f0-35080d874f3e` (`https://www.marianmadrid.es/`). El propietario confirma que nunca ha tenido actividad real, que todos los datos son sintéticos, que el cliente de pruebas es Nacho Pitt (`nachoortegazgz@gmail.com`) y que la pasarela está desconectada. No existe otro sitio QA ni un QA externo designado. Las referencias anteriores a otros Site ID o a este sitio como producción quedan supersedidas. El estado Wix Published no altera su clasificación funcional como QA. Véase [SSOT del entorno QA](docs/qa/QA-ENVIRONMENT-SSOT.md).
+# Marian Madrid — documentación del ecosistema Wix
 
----
+Repositorio del sitio **Wix Editor Classic + Velo**.
 
-# Marian Madrid — Wix Editor Classic + Velo
+- **Repositorio:** [nachoortegazgz/marianmadridz](https://github.com/nachoortegazgz/marianmadridz)
+- **Sitio:** [www.marianmadrid.es](https://www.marianmadrid.es/) · **Site ID:** `188bed94-177c-4bc9-a9f0-35080d874f3e`
+- **Corte:** 19-11-2026
 
-Repositorio técnico del ecosistema digital Marian Madrid.
+## Guías operativas
 
-**Sitio QA único:** `188bed94-177c-4bc9-a9f0-35080d874f3e` · [www.marianmadrid.es](https://www.marianmadrid.es/).
-**Plataforma:** Wix Editor Classic + Velo.  
-**Zona horaria / moneda:** `Europe/Madrid` / EUR.
+| Para consultar | Documento |
+|---|---|
+| Estado, bloqueos y trabajo pendiente | [ESTADO_ACTUAL_PROYECTO.md](ESTADO_ACTUAL_PROYECTO.md) |
+| Arquitectura y fuentes de verdad | [PROJECT_BASELINE.md](PROJECT_BASELINE.md) |
+| Próximas tareas y gates | [PLAN_ACCION_QA.md](PLAN_ACCION_QA.md) |
+| Reglas de ingeniería y despliegue | [DIRECTRICES_DESARROLLO_CODIGO.md](DIRECTRICES_DESARROLLO_CODIGO.md) |
+| Hardware TPV física | [HARDWARE_TPV.md](HARDWARE_TPV.md) |
+| Esquema CMS documentado | [DICCIONARIO_DATOS_CMS.md](DICCIONARIO_DATOS_CMS.md) |
+| Flujos Capa 1 → Capa 3 | [DOSSIER FLUJOS END TO END CAPA 3.md](DOSSIER%20FLUJOS%20END%20TO%20END%20CAPA%203.md) |
+| Decisiones técnicas | [docs/DECISION-LOG.md](docs/DECISION-LOG.md) |
 
-## Estado de entorno
+## Estado resumido
 
-Por instrucción expresa del propietario, `188bed94-177c-4bc9-a9f0-35080d874f3e` es el único sitio QA del proyecto. Fue creado para pruebas previas al despliegue real, nunca ha tenido actividad real y todos sus datos son sintéticos. Cliente de prueba: Nacho Pitt (`nachoortegazgz@gmail.com`). La pasarela está desconectada. No existe otro sitio QA ni un QA externo designado. El estado Wix Published es un metadato técnico y no cambia esta clasificación.
+- Último `main` conocido antes de esta actualización documental: `eb0df0a3f798bb1cb7e3e5819eba08dfb76cd097`.
+- Los workflows backend offline quality gates y secret scanning pasaron en ese SHA.
+- CI offline no acredita Wix Runtime, periféricos, proveedor bancario ni E2E.
+- Último estado Wix observado: **Draft**. No existe evidencia que vincule una publicación con un SHA de GitHub.
+- Checkout local y sincronización automática del Local Editor: pendientes.
+- La TPV física está en diseño; terminal, impresora y cajón concretos aún no están identificados.
 
-Mientras se resuelve el acceso QA, continuar únicamente con pruebas offline/mock y datos sintéticos. Los mocks de pago no llaman a proveedores ni acreditan transacciones reales. No enviar comunicaciones ni datos a servicios externos.
+## Principios esenciales
 
-## Toolchain local y CI
+1. Wix CMS propio es la fuente transaccional de datos de dominio; Bookings y Stores gobiernan sus dominios nativos mediante APIs oficiales.
+2. Los ledgers fiscales, contables, laborales y de caja son append-only. Las correcciones se registran mediante rectificaciones trazables.
+3. SharePoint es repositorio de evidencia; Capa 3 no modifica ni gobierna Capa 1.
+4. La lógica de negocio y las autorizaciones residen en backend/WebMethods.
+5. Pagos, facturación, comunicaciones y automatizaciones externas permanecen bloqueados durante QA offline.
+6. No publicar sin autorización expresa, CI verde, diff revisado, entorno validado y reversión preparada.
 
-- **Node.js:** Wix CLI for Sites requiere Node.js `24.22.1` o superior. CI fija exactamente `24.22.1`; en local se recomienda usar esa misma versión para reproducir los gates.
-- **Wix CLI for Sites:** versión fijada en CI y en el procedimiento local: `@wix/cli@1.2.14`. Instalación local: `npm install --global @wix/cli@1.2.14`. Las actualizaciones de CLI deben aprobarse mediante un cambio deliberado y validarse en CI; no usar `@latest` en workflows.
-- **GitHub Actions:** `actions/checkout@v6.0.0` y `actions/setup-node@v5.0.0` están fijadas por SHA en los workflows de calidad, Preview y secret scanning. Gitleaks también permanece fijado por SHA.
-- **Wix Preview:** el workflow `.github/workflows/wix-tpv-preview.yml` solo se inicia manualmente (`workflow_dispatch`) desde `main`. La entrada `create_preview` tiene valor predeterminado `false`; solo si se activa explícitamente ejecuta `npm run wix preview`. No se ejecuta automáticamente en push/PR y nunca ejecuta `wix publish`. Requiere el secreto GitHub `CLI_API_KEY`.
-- **Dependencias npm:** `package-lock.json` es el lockfile utilizado por `npm ci` en CI y sus dependencias raíz coinciden con `package.json`.
-- **`wix.lock`:** está versionado y su cabecera lo identifica como artefacto generado automáticamente por Yarn Plug'n'Play; no editarlo manualmente. La auditoría del 19-11-2026 detectó una discrepancia en la dependencia raíz `@wix/stores`: `package.json` y `package-lock.json` declaran `1.0.997`, mientras que `wix.lock` resuelve `1.0.960`. El pipeline npm usa `package-lock.json`; la discrepancia de `wix.lock` queda pendiente de reconciliación en el checkout local conectado a Wix, usando el flujo oficial y comprobando el diff antes de aceptar cualquier cambio. No se ha regenerado ni modificado desde GitHub.
+## Toolchain
 
-## Documentos canónicos
+- Wix CLI for Sites: `@wix/cli@1.2.14`.
+- CI: Node.js `24.22.1`.
+- `package-lock.json` es el lockfile npm utilizado por CI.
+- `wix.lock` es generado automáticamente; no editar manualmente. La discrepancia de `@wix/stores` sigue pendiente de reconciliación local.
 
-- [Plan de acción QA](PLAN_ACCION_QA.md)
-- [Directrices de desarrollo, auditoría y QA](DIRECTRICES_DESARROLLO_CODIGO.md)
-- [Base maestra del proyecto](PROJECT_BASELINE.md)
-- [Estado actual](ESTADO_ACTUAL_PROYECTO.md)
-- [Diccionario CMS](DICCIONARIO_DATOS_CMS.md)
-- [Estándar detallado de desarrollo](docs/engineering/DEVELOPMENT-STANDARDS.md)
-- [Fixtures y cobertura mock](docs/qa/QA-SIMULATION-2026-11.md)
-- [Auditoría del esquema CMS QA](docs/audits/2026-11-14-current-site-cms-normalization.md)
-- [Registro de decisiones](docs/DECISION-LOG.md)
+## Mantenimiento
 
-## Principios no negociables
-
-- Wix CMS propio es SSOT transaccional; Wix Apps se operan mediante APIs oficiales.
-- Frontend sin lógica de negocio; permisos y reglas en backend/WebMethods.
-- `internalConfig.js` centraliza constantes canónicas; `validation.js` centraliza validaciones.
-- Caja: `MovimientosCaja` es fuente histórica; `CajaActual` es proyección.
-- Pagos, emails, SMS, gestoría, AEAT y demás salidas se simulan offline durante QA.
-- No utilizar datos personales o credenciales reales en fixtures.
-- No publicar ni desplegar sin autorización expresa, CI verde, diff revisado y rollback.
-- El repositorio no demuestra por sí solo qué código está sincronizado/publicado en Wix.
+Estado cambiante: `ESTADO_ACTUAL_PROYECTO.md`. Arquitectura: `PROJECT_BASELINE.md`. Trabajo: `PLAN_ACCION_QA.md`. Reglas: `DIRECTRICES_DESARROLLO_CODIGO.md`. Hardware: `HARDWARE_TPV.md`. Los dossiers extensos conservan contexto histórico y no prevalecen sobre el estado operativo actualizado.
