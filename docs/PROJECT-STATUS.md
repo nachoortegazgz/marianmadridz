@@ -96,6 +96,6 @@ La retirada de inventario custom (#237) está completada en código; falta QA ru
 
 La API oficial de Wix devuelve 158 automatizaciones: 8 ACTIVE y 150 INACTIVE; las ocho activas son PREINSTALLED. Una automatización activa se dispara por `wix_bookings-sessions_booked` y contiene acción `triggered-emails`; destinatario pendiente de verificar. No se han modificado automatizaciones.
 
-Los permisos de MovimientosCaja, LibroAsientosContablesDetalle, HistoricoCierresZ, RegistrosHorariosStaff y PaquetesGestoria son PRIVILEGED para insert/update/remove, sin special permissions. La documentación de Wix incluye colaboradores en PRIVILEGED; por tanto, CMS_EDITOR no está demostrado como excluido. Issue #261 abierto. No se han modificado permisos.
+Los permisos de MovimientosCaja, LibroAsientosContablesDetalle, HistoricoCierresZ, RegistrosHorariosStaff y PaquetesGestoria son PRIVILEGED para insert/update/remove, sin special permissions. La jerarquía oficial sitúa CMS_EDITOR por debajo de PRIVILEGED; el nivel mínimo PRIVILEGED excluye al CMS_EDITOR sin privilegios superiores. No hay special permissions. Issue #261: configuración alineada; prueba runtime de CMS_EDITOR y de writers backend elevada pendiente. No se han modificado permisos.
 
 `CajaActual.sequenceCounters` se almacena como string JSON válido (`{}`), y el hook normaliza ese valor; no se clasifica como corrupción confirmada. Release NO-GO.
