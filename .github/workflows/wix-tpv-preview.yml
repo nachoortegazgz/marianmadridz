@@ -29,14 +29,14 @@ jobs:
           exit 1
 
       - name: Checkout connected Wix site repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
         with:
           ref: main
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
-          node-version: 24.22.1
+          node-version: "24.22.1"
           cache: npm
 
       - name: Verify Wix site binding
@@ -73,9 +73,11 @@ jobs:
         if: steps.auth.outputs.available == 'true'
         run: npm ci
 
-      - name: Install Wix CLI for Sites
+      - name: Install Wix CLI for Sites (pinned)
         if: steps.auth.outputs.available == 'true'
-        run: npm install --global @wix/cli
+        run: |
+          npm install --global @wix/cli@1.2.14
+          npm list --global @wix/cli --depth=0
 
       - name: Authenticate Wix CLI
         if: steps.auth.outputs.available == 'true'
