@@ -2796,3 +2796,72 @@ El sitio informa Published, pero el SHA instalado no está acreditado. Las incid
 4. Alinear Local Editor y Wix con el SHA aprobado y documentar read-back.
 5. Ejecutar campaña de runtime QA aislada, comenzando por lectura y TPV sintética.
 6. Mantener writers fiscales/contables y pagos reales deshabilitados hasta superar gates legales y operativos.
+
+
+---
+
+# Addendum de conciliación live P0 y revisión de incidencias — 2026-11-19
+
+**Sitio consultado:** `188bed94-177c-4bc9-a9f0-35080d874f3e`.  
+**Método:** Wix Data Items API con `consistentRead=true`, Get Order y List Transactions For Single Order. Solo lectura. No se ejecutaron escrituras ni se consultaron datos personales.
+
+## 1. Estado CMS confirmado
+
+| Colección | Recuento / estado |
+|---|---|
+| ControlOperativo | 58 registros |
+| Compensaciones FISCAL_LEDGER | 3 `PENDING_RECOVERY`, 0 intentos |
+| CajaActual | 1 singleton `ABIERTA` |
+| MovimientosCaja | 0 |
+| HistoricoCierresZ | 0 |
+| CitasF2 | 6 |
+| MapaStaff | 5 |
+
+`CajaActual`: `expectedCash=300`, `countedCash=300`, `cashAmount=300`; `openedAt=2026-11-14T06:00:00Z`; `closedAt` y `lastMovementAt=2026-11-12T23:00:00Z`. El cierre almacenado es anterior a la apertura y no cierra la sesión actual. `sequenceCounters` se almacena como string, aunque el contrato de código/documentación lo define como objeto.
+
+`CitasF2`: 2 `CONFIRMED/PENDING_LEDGER`, 1 `PENDING/NOT_PAID`, 3 `CONFIRMED/NOT_PAID`.
+
+`MapaStaff`: 3 STAFF, 1 TERCERO y 1 GESTORIA; no existe registro `CONFIG_SISTEMA`.
+
+## 2. Correlación de compensaciones con pedidos Wix
+
+### Pedido #10033 — 18,15 EUR
+- Pedido `APPROVED`, pago `FULLY_REFUNDED`.
+- Transacción de pago `REFUNDED`, 18,15 EUR.
+- Devolución solicitada y completada: 18,15 EUR; `pending=false`.
+- Método Wix: `Other Payment Method`; no inferir efectivo ni tarjeta.
+- Una reserva relacionada continúa `CONFIRMED/PENDING_LEDGER`.
+- Dos compensaciones `FISCAL_LEDGER` refieren el mismo pedido: una de tipo `ORDER` y otra `REFUND`.
+
+### Pedido #10032 — 92,45 EUR
+- Pedido `APPROVED`, pago `PAID`.
+- Método Wix: `Cash`.
+- Composición mixta: dos líneas Wix Stores Catalog V3 y una línea Wix Bookings.
+- Una reserva relacionada continúa `CONFIRMED/PENDING_LEDGER`.
+- La compensación requiere conciliación manual: `MANUAL / UNSUPPORTED_ORDER_COMPOSITION`.
+
+### Decisión de integridad
+La consulta confirma una venta en efectivo de composición mixta sin movimientos en `MovimientosCaja`, una venta totalmente reembolsada y reservas con ledger pendiente. No hay soporte suficiente para crear movimientos o asientos por inferencia. Las tres compensaciones y la sesión de caja deben permanecer intactas hasta reconstruir eventos fuente, resolver el tratamiento de pedidos mixtos y obtener decisión contable/fiscal aprobada. No reintentar ni cerrar caja.
+
+Los resultados se registraron en las incidencias #415 y #416.
+
+## 3. Revisión de incidencias de implementación
+
+- **#237 Inventario:** retirada custom ya completada en `main`. El módulo `inventario.web.js` no existe; los cuatro writers custom no aparecen en código runtime; `events.js` marca `WIX_CATALOG_OWNER / NO_CUSTOM_STOCK_WRITE`; hay pruebas negativas contra su reintroducción. Solo queda QA runtime de pedido, cancelación y refund/restock nativos, incluyendo pedido mixto Stores + Bookings. No añadir otra capa de inventario.
+- **#223 Paquetes de gestoría:** parcialmente resuelto. El snapshot trimestral se inserta create-only con claim idempotente y hash; el despacho exige snapshot persistido PREPARED y verificación de hash. El envío permanece deshabilitado. El agregador mensual aún no existe y falta un registro de despacho append-only independiente del snapshot. No activar Resend.
+- **#210 Protección de main:** sigue sin protección ni required checks. La integración GitHub disponible no expone una acción de administración para cambiar rulesets/protección; requiere un usuario con permisos administrativos del repositorio.
+
+## 4. Estado de release y próximos pasos
+
+Los datos live mantienen abiertos los bloqueos P0 #415/#416/#209. El sitio informa Published, pero el SHA instalado no está acreditado. CI y secret scanning de la actualización documental anterior (#431) terminaron SUCCESS en el merge commit `a8ae4829d1f92f8745da953cd04f7afe2c6ff221`.
+
+**Release: NO-GO para operación real.** Mantener writers fiscales/contables, envíos a gestoría, pagos reales y acciones de hardware deshabilitados.
+
+Secuencia de menor coste:
+1. Obtener aprobación/criterio de asesoría para el tratamiento de los dos pedidos y las tres compensaciones; no mutar hasta disponer de soporte.
+2. Resolver configuración fiscal del emisor y SIF.
+3. Asegurar protección de `main` mediante permisos administrativos.
+4. Verificar cron/event registration/automatizaciones efectivamente instalados en Wix.
+5. Sincronizar Wix con un SHA aprobado y ejecutar QA runtime aislado de TPV y Stores.
+6. Solo después completar E2E y gates de release.
+
