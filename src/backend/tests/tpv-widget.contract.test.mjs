@@ -67,17 +67,18 @@ test("TPV HTML uses versioned messaging and browser-local ticket drafts", () => 
 
 });
 
-test("TPV mutation controls remain visibly disabled", () => {
-    for (const label of ["Cobrar · deshabilitado", "Crear / modificar reserva", "Emitir tarjeta regalo", "Emitir factura completa", "Emitir abono / rectificativa"]) {
-        assert.ok(html.includes(label), "expected guarded UI capability: " + label);
+test("TPV controls keep unsupported commercial and fiscal capabilities disabled", () => {
+    for (const label of ["Emitir tarjeta regalo", "Consultar tarjeta regalo", "Emitir factura completa", "Emitir rectificativa"]) {
+        assert.match(html, new RegExp("<button[^>]*disabled[^>]*>" + label + "</button>"));
     }
-    assert.match(html, /disabled/);
-    assert.match(html, /no enviado a CMS/i);
-    assert.match(html, /memoria de sesión/i);
-    assert.match(html, /Guardar venta sintética en QA/);
-    assert.match(html, /Abrir sesión QA/);
-    assert.match(html, /Registrar arqueo parcial QA/);
-    assert.match(html, /Registrar devolución QA/);
+    assert.match(html, /id="taxTotal"[^>]*disabled/);
+    assert.match(html, /id="refund" class="btn danger" disabled/);
+    assert.match(html, /id="ticketX"[^>]*disabled/);
+    assert.match(html, /id="ticketZ"[^>]*disabled/);
+    assert.match(html, /id="saveSale"/);
+    assert.match(html, /id="openSession"/);
+    assert.match(html, /id="cashMovement"/);
+    assert.match(html, /id="refund"/);
 });
 test("TPV HTML request protocol is dispatched for the active widget workflows", async () => {
     const page = await readFile(new URL("../../pages/TPV.yl5th.js", import.meta.url), "utf8");
