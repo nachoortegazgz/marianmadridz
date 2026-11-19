@@ -56,9 +56,10 @@ No se elimina ningún módulo del directorio canónico `src/backend/tpv/`.
 - Búsqueda GitHub de los exports legacy: sin consumidores fuera de los propios archivos.
 - Inspección del árbol: diez módulos legacy eliminados; 16 módulos canónicos conservados.
 - HTML: comprobaciones estáticas de los mensajes requeridos, controles QA, ausencia de `fetch`/`wix-data`/`suppressAuth`, ausencia de productos hardcodeados y compilación sintáctica del script mediante V8 `new Function`: correcta.
-- El primer run CI del commit anterior falló en dos aserciones de contrato (`m.type===MM_CONTEXT` y `e.source!==window.parent`); ambas se corrigieron en commits posteriores. No existe aún un run CI asociado al HEAD actual que confirme el arreglo.
-- Tests locales completos: no ejecutados.
-- Runtime Wix / Preview / Publish: no ejecutados.
+- El primer run CI falló dos aserciones de contrato; se corrigieron en commits posteriores.
+- CI final para el HEAD `d8a8c8f61517a44f89f0db8e0159bc159c2d2782`: Layer 1 28 suites / 331 tests; Layer 2 19 suites / 258 tests; total 74 suites / 673 tests, 0 fallos. Wix SDK contracts, TPV catalog SDK contracts, ESLint y Secret scanning: SUCCESS.
+- Tests locales completos: no ejecutados de forma independiente; los resultados anteriores corresponden a GitHub Actions.
+- Runtime Wix / instalación HTML Component / Preview / Publish: no ejecutados.
 
 ## 6. Decisión
 Conservar el backend modular `src/backend/tpv/`, el controlador público, el page code y la nueva interfaz HTML. Eliminar los diez módulos legacy de la raíz. El código UI cumple estáticamente los contratos inspeccionados, pero no se considera validado hasta ejecutar CI completo y runtime Wix. Mantener la PR Draft y no sincronizar/publicar mientras falte esa validación.
