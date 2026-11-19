@@ -1,994 +1,221 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TPV Marian Madrid</title>
-
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TPV Marian Madrid · QA</title>
 <style>
-:root {
-  --primary: #8d5b68;
-  --primary-dark: #704652;
-  --soft: #f7f1f3;
-  --border: #e8dfe2;
-  --text: #30282b;
-  --muted: #817579;
-  --success: #3d8b68;
-  --danger: #b94a48;
-  --white: #ffffff;
-}
-
-* {
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-  background: #f5f6f8;
-  color: var(--text);
-  font-family: Arial, Helvetica, sans-serif;
-}
-
-button,
-input {
-  font: inherit;
-}
-
-button {
-  cursor: pointer;
-  border: 0;
-}
-
-.app {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
-
-/* CABECERA */
-
-.header {
-  min-height: 70px;
-  background: var(--white);
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 22px;
-  gap: 20px;
-}
-
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.logo {
-  width: 42px;
-  height: 42px;
-  border-radius: 12px;
-  background: var(--primary);
-  color: white;
-  display: grid;
-  place-items: center;
-  font-weight: bold;
-  font-size: 18px;
-}
-
-.brand h1 {
-  margin: 0;
-  font-size: 18px;
-}
-
-.brand span {
-  color: var(--muted);
-  font-size: 12px;
-}
-
-.header-info {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  color: var(--muted);
-  font-size: 13px;
-}
-
-.cash-status {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--success);
-  font-weight: bold;
-}
-
-.status-dot {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: var(--success);
-}
-
-.header-actions {
-  display: flex;
-  gap: 8px;
-}
-
-/* BOTONES */
-
-.btn {
-  padding: 10px 14px;
-  border-radius: 8px;
-  font-weight: bold;
-  transition: 0.2s ease;
-}
-
-.btn:hover {
-  transform: translateY(-1px);
-  filter: brightness(0.97);
-}
-
-.btn-primary {
-  background: var(--primary);
-  color: white;
-}
-
-.btn-primary:hover {
-  background: var(--primary-dark);
-}
-
-.btn-light {
-  background: var(--soft);
-  color: var(--primary-dark);
-}
-
-.btn-outline {
-  background: white;
-  color: var(--primary);
-  border: 1px solid var(--primary);
-}
-
-.btn-danger {
-  background: #fbeaea;
-  color: var(--danger);
-}
-
-.btn-success {
-  background: #e9f5ee;
-  color: var(--success);
-}
-
-/* CUERPO PRINCIPAL */
-
-.main {
-  flex: 1;
-  display: grid;
-  grid-template-columns: minmax(330px, 1fr) minmax(360px, 0.9fr) 280px;
-  gap: 16px;
-  padding: 18px;
-}
-
-/* PANELES */
-
-.panel {
-  background: var(--white);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  overflow: hidden;
-  box-shadow: 0 2px 8px rgba(50, 30, 40, 0.04);
-}
-
-.panel-header {
-  padding: 17px 18px;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.panel-header h2 {
-  margin: 0;
-  font-size: 16px;
-}
-
-.panel-body {
-  padding: 16px;
-}
-
-/* CATALOGO */
-
-.search {
-  width: 100%;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 11px 12px;
-  outline: none;
-  margin-bottom: 14px;
-}
-
-.search:focus {
-  border-color: var(--primary);
-}
-
-.categories {
-  display: flex;
-  gap: 7px;
-  flex-wrap: wrap;
-  margin-bottom: 16px;
-}
-
-.category {
-  background: var(--soft);
-  color: var(--primary-dark);
-  padding: 8px 11px;
-  border-radius: 20px;
-  font-size: 12px;
-}
-
-.category.active {
-  background: var(--primary);
-  color: white;
-}
-
-.products {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-}
-
-.product {
-  background: white;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 13px;
-  text-align: left;
-  min-height: 88px;
-}
-
-.product:hover {
-  border-color: var(--primary);
-  background: var(--soft);
-}
-
-.product strong {
-  display: block;
-  margin-bottom: 8px;
-  font-size: 13px;
-}
-
-.product span {
-  color: var(--primary);
-  font-weight: bold;
-  font-size: 14px;
-}
-
-/* TICKET */
-
-.ticket-empty {
-  color: var(--muted);
-  text-align: center;
-  padding: 35px 10px;
-  font-size: 14px;
-}
-
-.ticket-items {
-  min-height: 270px;
-  max-height: 390px;
-  overflow-y: auto;
-}
-
-.ticket-item {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 8px;
-  padding: 13px 0;
-  border-bottom: 1px solid #f0eaec;
-}
-
-.ticket-item-title {
-  font-weight: bold;
-  font-size: 13px;
-}
-
-.ticket-item-details {
-  color: var(--muted);
-  font-size: 12px;
-  margin-top: 5px;
-}
-
-.item-actions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.quantity {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.quantity button {
-  width: 24px;
-  height: 24px;
-  border-radius: 6px;
-  background: var(--soft);
-  color: var(--primary-dark);
-}
-
-.remove {
-  background: transparent;
-  color: var(--danger);
-  font-size: 17px;
-}
-
-.customer-box {
-  margin-top: 16px;
-  display: flex;
-  gap: 8px;
-}
-
-.customer-box button {
-  flex: 1;
-}
-
-.totals {
-  border-top: 1px solid var(--border);
-  margin-top: 15px;
-  padding-top: 15px;
-}
-
-.total-line {
-  display: flex;
-  justify-content: space-between;
-  margin: 8px 0;
-  color: var(--muted);
-  font-size: 14px;
-}
-
-.total-line.total {
-  color: var(--text);
-  font-size: 23px;
-  font-weight: bold;
-  margin-top: 15px;
-}
-
-.ticket-actions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  margin-top: 15px;
-}
-
-/* PAGOS */
-
-.payment-buttons {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-
-.payment-button {
-  min-height: 70px;
-  border-radius: 10px;
-  background: var(--soft);
-  color: var(--primary-dark);
-  border: 1px solid transparent;
-  font-weight: bold;
-}
-
-.payment-button:hover {
-  border-color: var(--primary);
-  background: #f1e5e9;
-}
-
-.payment-button .icon {
-  display: block;
-  font-size: 22px;
-  margin-bottom: 6px;
-}
-
-.split {
-  grid-column: span 2;
-  background: var(--primary);
-  color: white;
-}
-
-.quick-actions {
-  margin-top: 18px;
-  display: grid;
-  gap: 8px;
-}
-
-.quick-actions h3 {
-  font-size: 13px;
-  color: var(--muted);
-  margin: 0 0 3px;
-}
-
-.quick-actions button {
-  text-align: left;
-  background: white;
-  border: 1px solid var(--border);
-  padding: 11px 12px;
-  border-radius: 8px;
-  color: var(--text);
-}
-
-.quick-actions button:hover {
-  background: var(--soft);
-  color: var(--primary-dark);
-}
-
-/* RESUMEN */
-
-.summary-card {
-  background: var(--soft);
-  border-radius: 10px;
-  padding: 14px;
-  margin-bottom: 12px;
-}
-
-.summary-card h3 {
-  margin: 0 0 12px;
-  font-size: 13px;
-  color: var(--primary-dark);
-}
-
-.summary-line {
-  display: flex;
-  justify-content: space-between;
-  padding: 8px 0;
-  border-bottom: 1px solid #eadfe2;
-  font-size: 13px;
-}
-
-.summary-line:last-child {
-  border-bottom: 0;
-}
-
-.summary-value {
-  font-weight: bold;
-}
-
-.drawer-value {
-  color: var(--success);
-  font-size: 20px;
-  font-weight: bold;
-}
-
-/* AVISOS */
-
-.toast {
-  position: fixed;
-  right: 20px;
-  bottom: 20px;
-  background: #30282b;
-  color: white;
-  padding: 14px 18px;
-  border-radius: 9px;
-  opacity: 0;
-  transform: translateY(15px);
-  pointer-events: none;
-  transition: 0.25s ease;
-  z-index: 20;
-}
-
-.toast.show {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-/* RESPONSIVE */
-
-@media (max-width: 1050px) {
-  .main {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .summary-panel {
-    grid-column: span 2;
-  }
-}
-
-@media (max-width: 700px) {
-  .header {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .header-info {
-    width: 100%;
-    justify-content: space-between;
-  }
-
-  .main {
-    display: block;
-    padding: 10px;
-  }
-
-  .panel {
-    margin-bottom: 12px;
-  }
-
-  .products {
-    grid-template-columns: 1fr 1fr;
-  }
-}
+:root{color-scheme:light;--ink:#30282b;--muted:#756b70;--line:#e8dfe2;--soft:#f7f1f3;--brand:#8d5b68;--brand2:#704652;--ok:#24734d;--warn:#8b5d12;--bad:#a52f35}
+*{box-sizing:border-box}body{margin:0;background:#f5f6f8;color:var(--ink);font:14px/1.45 Arial,sans-serif}button,input,select,textarea{font:inherit}button{cursor:pointer;border:0}button:disabled{cursor:not-allowed;opacity:.48}.shell{max-width:1600px;margin:auto}.top{background:white;border-bottom:1px solid var(--line);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}.brand{display:flex;gap:12px;align-items:center}.logo{background:var(--brand);color:white;border-radius:12px;width:42px;height:42px;display:grid;place-items:center;font-weight:bold}.brand h1{font-size:18px;margin:0}.brand small{color:var(--muted)}.status{display:flex;gap:14px;align-items:center;flex-wrap:wrap}.pill{padding:5px 9px;border-radius:20px;background:#eee;color:var(--muted);font-size:12px}.pill.ok{background:#e7f3eb;color:var(--ok)}.pill.warn{background:#fff3db;color:var(--warn)}.pill.bad{background:#fae9e9;color:var(--bad)}main{padding:16px;display:grid;grid-template-columns:minmax(290px,1fr) minmax(320px,1fr) minmax(260px,.75fr);gap:14px}.panel{background:white;border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:14px}.ph{padding:13px 15px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:10px}.ph h2,.ph h3{margin:0;font-size:15px}.pb{padding:14px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.row>*{min-width:0}.field{width:100%;border:1px solid var(--line);border-radius:8px;padding:10px;background:white;color:var(--ink)}.field:focus{outline:2px solid #d8b8c1;outline-offset:1px}.field.small{max-width:120px}.btn{padding:9px 12px;border-radius:8px;background:var(--soft);color:var(--brand2);font-weight:700}.btn.primary{background:var(--brand);color:white}.btn.outline{background:white;border:1px solid var(--brand);color:var(--brand)}.btn.danger{background:#fae9e9;color:var(--bad)}.btn.block{width:100%}.muted{color:var(--muted)}.tiny{font-size:12px}.products{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;max-height:530px;overflow:auto}.product{border:1px solid var(--line);background:white;border-radius:9px;padding:11px;text-align:left;min-height:82px}.product:hover{border-color:var(--brand);background:var(--soft)}.product b{display:block;margin-bottom:6px}.product span{color:var(--brand);font-weight:bold}.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}.tab{padding:7px 10px;border-radius:18px;background:var(--soft);color:var(--brand2)}.tab.active{background:var(--brand);color:white}.item{padding:11px 0;border-bottom:1px solid #f0eaec}.item:last-child{border:0}.itemhead{display:flex;justify-content:space-between;gap:8px}.qty{display:flex;gap:5px;align-items:center}.qty button{width:25px;height:25px;border-radius:5px;background:var(--soft)}.totals{border-top:1px solid var(--line);padding-top:10px;margin-top:10px}.total{font-size:22px;font-weight:bold}.stat{padding:12px;border-radius:9px;background:var(--soft);margin-bottom:9px}.stat b{font-size:20px;display:block}.stack{display:grid;gap:8px}.hidden{display:none!important}.notice{padding:10px 12px;border-radius:8px;background:#fff3db;color:#76500e;margin:10px 0}.error{background:#fae9e9;color:var(--bad)}.success{background:#e7f3eb;color:var(--ok)}.list{max-height:220px;overflow:auto}.footer{padding:8px 16px 20px;color:var(--muted);font-size:12px}.toast{position:fixed;bottom:18px;right:18px;background:#30282b;color:white;padding:12px 16px;border-radius:9px;display:none;max-width:360px;z-index:10}.toast.show{display:block}.denoms{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.denoms button{padding:8px;background:var(--soft);border-radius:7px}@media(max-width:1050px){main{grid-template-columns:1fr 1fr}.side{grid-column:span 2}}@media(max-width:680px){main{display:block;padding:9px}.top{padding:12px}.side{grid-column:auto}.products{grid-template-columns:1fr 1fr}}
 </style>
 </head>
-
 <body>
-<div class="app">
-
-  <header class="header">
-    <div class="brand">
-      <div class="logo">MM</div>
-      <div>
-        <h1>Marian Madrid</h1>
-        <span>TPV · Peluquería y Estética</span>
-      </div>
-    </div>
-
-    <div class="header-info">
-      <div class="cash-status">
-        <span class="status-dot"></span>
-        Caja abierta
-      </div>
-      <div id="clock">--:--</div>
-      <div>Usuario: Administrador</div>
-    </div>
-
-    <div class="header-actions">
-      <button class="btn btn-light" onclick="showMessage('Nueva venta iniciada')">
-        Nueva venta
-      </button>
-      <button class="btn btn-outline" onclick="showMessage('Función de cierre preparada')">
-        Cerrar caja
-      </button>
-    </div>
-  </header>
-
-  <main class="main">
-
-    <!-- CATÁLOGO -->
-    <section class="panel">
-      <div class="panel-header">
-        <h2>Productos y servicios</h2>
-        <button class="btn btn-light" onclick="showMessage('Catálogo actualizado')">
-          Actualizar
-        </button>
-      </div>
-
-      <div class="panel-body">
-        <input
-          id="search"
-          class="search"
-          type="search"
-          placeholder="Buscar servicio o producto..."
-          oninput="filterProducts()"
-        >
-
-        <div class="categories">
-          <button class="category active">Todos</button>
-          <button class="category">Peluquería</button>
-          <button class="category">Estética</button>
-          <button class="category">Productos</button>
-        </div>
-
-        <div class="products" id="products">
-
-          <button class="product" data-name="Corte de señora" onclick="addProduct('Corte de señora', 28)">
-            <strong>Corte de señora</strong>
-            <span>28,00 €</span>
-          </button>
-
-          <button class="product" data-name="Corte de caballero" onclick="addProduct('Corte de caballero', 18)">
-            <strong>Corte de caballero</strong>
-            <span>18,00 €</span>
-          </button>
-
-          <button class="product" data-name="Coloración" onclick="addProduct('Coloración', 48)">
-            <strong>Coloración</strong>
-            <span>48,00 €</span>
-          </button>
-
-          <button class="product" data-name="Mechas" onclick="addProduct('Mechas', 65)">
-            <strong>Mechas</strong>
-            <span>65,00 €</span>
-          </button>
-
-          <button class="product" data-name="Lavado y peinado" onclick="addProduct('Lavado y peinado', 22)">
-            <strong>Lavado y peinado</strong>
-            <span>22,00 €</span>
-          </button>
-
-          <button class="product" data-name="Tratamiento capilar" onclick="addProduct('Tratamiento capilar', 35)">
-            <strong>Tratamiento capilar</strong>
-            <span>35,00 €</span>
-          </button>
-
-          <button class="product" data-name="Manicura" onclick="addProduct('Manicura', 20)">
-            <strong>Manicura</strong>
-            <span>20,00 €</span>
-          </button>
-
-          <button class="product" data-name="Producto personalizado" onclick="addProduct('Producto personalizado', 10)">
-            <strong>Producto personalizado</strong>
-            <span>10,00 €</span>
-          </button>
-
-        </div>
-      </div>
-    </section>
-
-    <!-- TICKET -->
-    <section class="panel">
-      <div class="panel-header">
-        <h2>Ticket actual</h2>
-        <span id="ticketNumber">Ticket #0001</span>
-      </div>
-
-      <div class="panel-body">
-        <div class="ticket-items" id="ticketItems">
-          <div class="ticket-empty">
-            Selecciona un producto o servicio para comenzar.
-          </div>
-        </div>
-
-        <div class="customer-box">
-          <button class="btn btn-light" onclick="showMessage('Selector de cliente abierto')">
-            Añadir cliente
-          </button>
-
-          <button class="btn btn-light" onclick="showMessage('Descuento preparado')">
-            Aplicar descuento
-          </button>
-        </div>
-
-        <div class="totals">
-          <div class="total-line">
-            <span>Subtotal</span>
-            <span id="subtotal">0,00 €</span>
-          </div>
-
-          <div class="total-line">
-            <span>Descuento</span>
-            <span id="discount">0,00 €</span>
-          </div>
-
-          <div class="total-line total">
-            <span>Total</span>
-            <span id="total">0,00 €</span>
-          </div>
-        </div>
-
-        <div class="ticket-actions">
-          <button class="btn btn-danger" onclick="clearTicket()">
-            Anular ticket
-          </button>
-
-          <button class="btn btn-light" onclick="showMessage('Ticket aparcado')">
-            Aparcar ticket
-          </button>
-        </div>
-      </div>
-    </section>
-
-    <!-- PAGOS Y OPERACIONES -->
-    <section class="panel">
-      <div class="panel-header">
-        <h2>Cobro</h2>
-      </div>
-
-      <div class="panel-body">
-        <div class="payment-buttons">
-
-          <button class="payment-button" onclick="pay('Efectivo')">
-            <span class="icon">💶</span>
-            Efectivo
-          </button>
-
-          <button class="payment-button" onclick="pay('Tarjeta')">
-            <span class="icon">💳</span>
-            Tarjeta
-          </button>
-
-          <button class="payment-button" onclick="pay('Bizum')">
-            <span class="icon">📱</span>
-            Bizum
-          </button>
-
-          <button class="payment-button" onclick="pay('PayPal')">
-            <span class="icon">🅿️</span>
-            PayPal
-          </button>
-
-          <button class="payment-button" onclick="pay('Tarjeta regalo')">
-            <span class="icon">🎁</span>
-            Tarjeta regalo
-          </button>
-
-          <button class="payment-button" onclick="pay('Bono')">
-            <span class="icon">🎫</span>
-            Bono
-          </button>
-
-          <button class="payment-button" onclick="pay('Enlace de pago')">
-            <span class="icon">🔗</span>
-            Enlace de pago
-          </button>
-
-          <button class="payment-button split" onclick="pay('Pago dividido')">
-            <span class="icon">↔️</span>
-            Pago dividido
-          </button>
-
-        </div>
-
-        <div class="quick-actions">
-          <h3>Operaciones rápidas</h3>
-
-          <button onclick="showMessage('Buscador de ventas abierto')">
-            🔎 Buscar venta
-          </button>
-
-          <button onclick="showMessage('Devoluciones abiertas')">
-            ↩️ Devoluciones
-          </button>
-
-          <button onclick="showMessage('Movimientos de caja abiertos')">
-            💰 Movimientos de caja
-          </button>
-
-          <button onclick="showMessage('Entrada o salida de efectivo')">
-            ⇄ Entrada / salida de efectivo
-          </button>
-
-          <button onclick="showMessage('Historial de tickets abierto')">
-            🧾 Historial
-          </button>
-        </div>
-      </div>
-    </section>
-
-    <!-- RESUMEN DE CAJA -->
-    <section class="panel summary-panel">
-      <div class="panel-header">
-        <h2>Resumen de caja</h2>
-        <button class="btn btn-light" onclick="showMessage('Cierre X generado')">
-          Cierre X
-        </button>
-      </div>
-
-      <div class="panel-body">
-        <div class="summary-card">
-          <h3>Total caja por medio de pago</h3>
-
-          <div class="summary-line">
-            <span>Ventas totales</span>
-            <span class="summary-value" id="salesTotal">0,00 €</span>
-          </div>
-
-          <div class="summary-line">
-            <span>Efectivo</span>
-            <span class="summary-value" id="cashTotal">0,00 €</span>
-          </div>
-
-          <div class="summary-line">
-            <span>Tarjeta</span>
-            <span class="summary-value" id="cardTotal">0,00 €</span>
-          </div>
-
-          <div class="summary-line">
-            <span>Bizum</span>
-            <span class="summary-value" id="bizumTotal">0,00 €</span>
-          </div>
-
-          <div class="summary-line">
-            <span>Otros medios</span>
-            <span class="summary-value" id="otherTotal">0,00 €</span>
-          </div>
-        </div>
-
-        <div class="summary-card">
-          <h3>Dinero físico en cajón</h3>
-          <div class="drawer-value" id="drawerTotal">0,00 €</div>
-          <small>
-            Solo aumenta con efectivo y movimientos físicos.
-          </small>
-        </div>
-
-        <button class="btn btn-primary" style="width:100%" onclick="showMessage('Cierre Z preparado')">
-          Generar cierre Z
-        </button>
-      </div>
-    </section>
-
-  </main>
+<div class="shell">
+<header class="top">
+ <div class="brand"><div class="logo">MM</div><div><h1>Marian Madrid</h1><small>TPV físico · entorno de pruebas</small></div></div>
+ <div class="status"><span id="mode" class="pill warn">Conectando…</span><span id="cashStatus" class="pill">Sesión no consultada</span><span id="userRole" class="pill">Rol pendiente</span><span id="clock"></span></div>
+</header>
+<div id="globalNotice" class="notice" role="status">QA PERSISTENTE · Las operaciones se guardan únicamente en colecciones TPV_QA_*. No hay cobros reales, facturación, reservas, notificaciones ni movimientos en la caja operativa.</div>
+<main>
+<section>
+ <div class="panel">
+  <div class="ph"><h2>Catálogo</h2><button class="btn" id="refreshCatalog">Actualizar</button></div>
+  <div class="pb">
+   <input id="search" class="field" type="search" placeholder="Buscar servicios o productos">
+   <div class="tabs" id="catalogTabs"><button class="tab active" data-kind="TODOS">Todos</button><button class="tab" data-kind="SERVICIO">Servicios</button><button class="tab" data-kind="PRODUCTO">Productos</button></div>
+   <div id="products" class="products"><p class="muted">Esperando conexión segura con Wix…</p></div>
+   <div class="row" style="margin-top:10px"><button class="btn" id="loadMoreProducts" disabled>Más productos</button><span class="tiny muted" id="catalogInfo"></span></div>
+  </div>
+ </div>
+ <div class="panel">
+  <div class="ph"><h2>Cliente de prueba</h2><span class="pill warn">Solo fixture QA</span></div>
+  <div class="pb stack"><input id="customerSearch" class="field" placeholder="Buscar cliente de prueba (mín. 2 caracteres)"><button class="btn" id="searchCustomer">Buscar</button><div id="customers" class="tiny muted">No se consulta el CRM real.</div><div id="customerBookings" class="tiny muted"></div></div>
+ </div>
+</section>
+<section>
+ <div class="panel">
+  <div class="ph"><h2>Ticket actual</h2><button class="btn" id="clearTicket">Vaciar</button></div>
+  <div class="pb">
+   <div id="ticketItems" class="list"><p class="muted">Añade conceptos del catálogo.</p></div>
+   <div class="row" style="margin-top:10px"><label class="tiny">Profesional de fixture</label><select id="professional" class="field"><option value="">Sin asignar</option></select></div>
+   <div class="totals">
+    <div class="row" style="justify-content:space-between"><span class="muted">Subtotal neto (QA)</span><b id="subtotal">0,00 €</b></div>
+    <div class="row" style="justify-content:space-between;margin-top:7px"><label for="taxTotal" class="muted">Impuestos introducidos manualmente (no inferidos)</label><input id="taxTotal" class="field small" type="number" min="0" step="0.01" value="0.00"></div>
+    <div class="row" style="justify-content:space-between;margin-top:9px"><span>Total de prueba</span><strong class="total" id="total">0,00 €</strong></div>
+   </div>
+   <div class="notice tiny">El impuesto no se calcula ni se presenta como IVA legal. Introduce un valor solo para pruebas controladas.</div>
+  </div>
+ </div>
+ <div class="panel">
+  <div class="ph"><h2>Pago simulado</h2><span class="pill warn">Sin pasarela</span></div>
+  <div class="pb stack">
+   <div class="grid"><select id="payMethod" class="field"><option value="EFECTIVO">Efectivo QA</option><option value="TARJETA">Tarjeta simulada</option><option value="BIZUM">Bizum simulado</option><option value="OTROS">Otros</option></select><input id="payAmount" class="field" type="number" min="0" step="0.01" placeholder="Importe recibido"></div>
+   <div class="grid"><input id="payChange" class="field" type="number" min="0" step="0.01" value="0" placeholder="Cambio"><button class="btn" id="addPayment">Añadir pago</button></div>
+   <div id="payments" class="tiny muted">Sin pagos añadidos.</div>
+   <div class="row"><b>Aplicado:</b><strong id="paidTotal">0,00 €</strong><span class="muted">Pendiente:</span><strong id="pendingTotal">0,00 €</strong></div>
+   <button class="btn primary block" id="saveSale">Guardar venta sintética en QA</button>
+   <button class="btn block" id="charge" disabled>Cobrar · deshabilitado</button>
+   <p class="tiny muted">La venta sintética no autoriza, captura ni mueve dinero real. El backend vuelve a validar importes, sesión y permisos.</p>
+  </div>
+ </div>
+</section>
+<aside class="side">
+ <div class="panel">
+  <div class="ph"><h2>Sesión de caja QA</h2><span class="pill warn">No operativa</span></div>
+  <div class="pb stack">
+   <div class="stat"><span class="muted tiny">Efectivo esperado QA</span><b id="expectedCash">—</b></div>
+   <div class="stat"><span class="muted tiny">Operaciones</span><b id="operationCount">—</b></div>
+   <div id="sessionDetails" class="tiny muted">Consultando sesión…</div>
+   <input id="openingCash" class="field" type="number" min="0" step="0.01" value="0" aria-label="Efectivo inicial de prueba">
+   <button class="btn primary" id="openSession" disabled>Abrir sesión QA</button>
+   <button class="btn" id="partialCount" disabled>Registrar arqueo parcial QA</button>
+   <button class="btn" id="ticketX" disabled>Ticket X · informe</button>
+  </div>
+ </div>
+ <div class="panel">
+  <div class="ph"><h2>Operaciones de caja QA</h2></div>
+  <div class="pb stack">
+   <select id="movementType" class="field"><option value="ENTRADA">Entrada</option><option value="SALIDA">Salida (ADMIN)</option><option value="RETIRADA">Retirada (ADMIN)</option></select>
+   <input id="movementAmount" class="field" type="number" min="0.01" step="0.01" placeholder="Importe">
+   <input id="movementReason" class="field" maxlength="500" placeholder="Motivo obligatorio">
+   <button class="btn" id="cashMovement" disabled>Registrar movimiento QA</button>
+  </div>
+ </div>
+ <div class="panel">
+  <div class="ph"><h2>Devolución QA</h2></div>
+  <div class="pb stack"><input id="refundSaleId" class="field" placeholder="Identificador de venta QA"><input id="refundAmount" class="field" type="number" min="0.01" step="0.01" placeholder="Importe"><select id="refundMethod" class="field"><option value="EFECTIVO">Efectivo</option><option value="TARJETA">Tarjeta</option><option value="BIZUM">Bizum</option><option value="OTROS">Otros</option></select><input id="refundReason" class="field" maxlength="500" placeholder="Motivo obligatorio"><button id="refund" class="btn danger" disabled>Registrar devolución QA (ADMIN)</button></div>
+ </div>
+ <div class="panel" id="section-tickets">
+  <div class="ph"><h2>Tickets y auditoría</h2></div>
+  <div class="pb stack"><button id="audit" class="btn">Consultar auditoría QA</button><div id="auditList" class="tiny muted"></div><label class="tiny">Efectivo contado para Ticket Z</label><input id="closingCash" class="field" type="number" min="0" step="0.01" value="0"><input id="closingReason" class="field" maxlength="500" placeholder="Motivo de diferencia (si existe)"><button id="ticketZ" class="btn danger" disabled>Cerrar sesión QA</button></div>
+ </div>
+ <div class="panel">
+  <div class="ph"><h2>Funciones restringidas</h2></div>
+  <div class="pb stack tiny"><span>Saldo real · deshabilitado en QA</span><input id="giftCardAmount" class="field" disabled><select id="giftCardType" class="field" disabled><option>Deshabilitado</option></select><button class="btn" disabled>Consultar tarjeta regalo</button><button class="btn" disabled>Crear / modificar reserva</button><button class="btn" disabled>Emitir tarjeta regalo</button><button class="btn" disabled>Emitir factura completa</button><button class="btn" disabled>Emitir abono / rectificativa</button><span>Factura simplificada · deshabilitado</span><span>Factura completa</span><span>Abono / rectificativa</span><span class="muted">No enviado a CMS ni a servicios fiscales.</span></div>
+ </div>
+</aside>
+</main>
+<div class="footer">Modo PERSISTENT_SYNTHETIC_QA · EUR · Europe/Madrid · Cobros reales, escrituras fiscales y caja operativa deshabilitados. Los borradores del ticket permanecen únicamente en memoria de sesión.</div>
 </div>
-
-<div id="toast" class="toast"></div>
-
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
 <script>
-let ticket = [];
-let caja = {
-  ventas: 0,
-  efectivo: 0,
-  tarjeta: 0,
-  bizum: 0,
-  otros: 0,
-  cajon: 0
-};
-
-function euro(value) {
-  return value.toLocaleString("es-ES", {
-    style: "currency",
-    currency: "EUR"
-  });
+(function(){
+"use strict";
+const PROTOCOL_VERSION=1;
+const RESPONSE_TYPES=["MM_CONTEXT","CASHIER_STATE_RES","CATALOG_SERVICES_RES","CATALOG_STAFF_RES","CATALOG_PRODUCTS_RES","PRODUCT_VARIANTS_RES","CUSTOMERS_SEARCH_RES","CUSTOMER_BOOKINGS_RES","VALIDATE_SALE_DRAFT_RES","GIFT_CARD_BALANCE_RES","QA_CONFIG_RES","QA_PERMISSIONS_RES","QA_SESSION_OPEN_RES","QA_PARTIAL_COUNT_RES","QA_CASH_MOVEMENT_RES","QA_PAYMENT_VALIDATE_RES","QA_SALE_REGISTER_RES","QA_REFUND_RES","QA_SESSION_SUMMARY_RES","QA_TICKET_X_RES","QA_TICKET_Z_RES","QA_AUDIT_LIST_RES"];
+const state={contextReady:false,context:null,role:"UNKNOWN",permissions:null,session:null,services:[],products:[],staff:[],productCursor:null,productHasMore:false,kind:"TODOS",items:[],payments:[],customer:null,lastSale:null,pending:new Map(),sequence:0};
+const $=id=>document.getElementById(id);
+const money=n=>new Intl.NumberFormat("es-ES",{style:"currency",currency:"EUR"}).format(Number(n)||0);
+const number=n=>Math.round((Number(n)||0)*100)/100;
+const makeKey=()=>("TPVQA_"+Date.now().toString(36)+"_"+Math.random().toString(36).slice(2,12)).replace(/[^A-Za-z0-9_-]/g,"").slice(0,72);
+function toast(message){$("toast").textContent=message;$("toast").classList.add("show");setTimeout(()=>$("toast").classList.remove("show"),3500)}
+function showError(message){$("globalNotice").className="notice error";$("globalNotice").textContent=message;toast(message)}
+function showInfo(message){$("globalNotice").className="notice";$("globalNotice").textContent=message}
+function send(type,payload={}) {
+ if(!state.contextReady&&type!=="MM_READY")return false;
+ const messageId="tpv-ui-"+Date.now().toString(36)+"-"+(++state.sequence).toString(36);
+ const message={type,payload,messageId,version:PROTOCOL_VERSION};
+ try{window.parent.postMessage(message,"*");return messageId}catch(e){showError("No se pudo enviar el mensaje al componente Wix.");return false}
 }
-
-function addProduct(name, price) {
-  const existing = ticket.find(item => item.name === name);
-
-  if (existing) {
-    existing.quantity++;
-  } else {
-    ticket.push({
-      name,
-      price,
-      quantity: 1
-    });
-  }
-
-  renderTicket();
-  showMessage(name + " añadido al ticket");
+function request(type,payload={},responseType,timeout=25000){
+ const id=send(type,payload);if(!id)return Promise.reject(new Error("WIDGET_NOT_READY"));
+ return new Promise((resolve,reject)=>{const timer=setTimeout(()=>{state.pending.delete(id);reject(new Error("TIMEOUT_"+type))},timeout);state.pending.set(id,{resolve,reject,timer,responseType})});
 }
-
-function changeQuantity(index, amount) {
-  ticket[index].quantity += amount;
-
-  if (ticket[index].quantity <= 0) {
-    ticket.splice(index, 1);
-  }
-
-  renderTicket();
+function acceptMessage(event){
+ if(event.source!==window.parent)return false;
+ const message=event.data;if(!message||typeof message!=="object"||Array.isArray(message))return false;
+ const type=String(message.type||"").toUpperCase();if(!RESPONSE_TYPES.includes(type))return false;
+ if(type==="MM_CONTEXT"){state.context=message.payload||{};state.contextReady=true;$("mode").textContent=state.context.mode==="PERSISTENT_SYNTHETIC_QA"?"QA PERSISTENTE":"Contexto recibido";$("mode").className="pill ok";initialize();return true}
+ const id=String(message.messageId||"");const pending=state.pending.get(id);if(!pending)return false;
+ if(type!==pending.responseType)return false;
+ clearTimeout(pending.timer);state.pending.delete(id);pending.resolve(message.payload);return true;
 }
-
-function removeItem(index) {
-  ticket.splice(index, 1);
-  renderTicket();
+window.addEventListener("message",acceptMessage);
+function announceReady(){send("MM_READY",{component:"htmlTPV",protocolVersion:PROTOCOL_VERSION})}
+function unwrap(result){if(!result||result.status!=="SUCCESS")throw new Error(result?.error?.code||"TPV_REQUEST_FAILED");return result.data}
+async function call(type,payload,responseType){const result=await request(type,payload,responseType);return unwrap(result)}
+function initialize(){
+ $("mode").textContent="QA PERSISTENTE";$("userRole").textContent="Rol: verificando";
+ void bootstrap();
 }
-
-function getTotal() {
-  return ticket.reduce((sum, item) => {
-    return sum + item.price * item.quantity;
-  }, 0);
+async function bootstrap(){
+ try{
+  const [config,permissions,session]=await Promise.all([call("QA_CONFIG",{},"QA_CONFIG_RES"),call("QA_PERMISSIONS",{},"QA_PERMISSIONS_RES"),call("CASHIER_STATE",{},"CASHIER_STATE_RES")]);
+  state.permissions=permissions;state.role=permissions.role||"UNKNOWN";$("userRole").textContent="Rol: "+state.role;
+  if(config.syntheticOnly!==true||config.realPaymentsEnabled!==false||config.fiscalWritesEnabled!==false)throw new Error("TPV_QA_RUNTIME_POLICY_INVALID");
+  state.session=session;renderSession();renderCapabilities();
+  await Promise.all([loadServices(),loadStaff(),loadProducts(false)]);
+  showInfo("Conectado a Wix. Entorno de pruebas persistente; no se realizan cobros reales ni escrituras operativas.");
+ }catch(error){showError("TPV bloqueado: "+error.message+". Comprueba autenticación, rol y configuración QA.");$("mode").textContent="Bloqueado";$("mode").className="pill bad"}
 }
-
-function renderTicket() {
-  const container = document.getElementById("ticketItems");
-
-  if (ticket.length === 0) {
-    container.innerHTML = `
-      <div class="ticket-empty">
-        Selecciona un producto o servicio para comenzar.
-      </div>
-    `;
-  } else {
-    container.innerHTML = ticket.map((item, index) => `
-      <div class="ticket-item">
-        <div>
-          <div class="ticket-item-title">${item.name}</div>
-          <div class="ticket-item-details">
-            ${euro(item.price)} · ${euro(item.price * item.quantity)}
-          </div>
-        </div>
-
-        <div class="item-actions">
-          <div class="quantity">
-            <button onclick="changeQuantity(${index}, -1)">−</button>
-            <strong>${item.quantity}</strong>
-            <button onclick="changeQuantity(${index}, 1)">+</button>
-          </div>
-
-          <button class="remove" onclick="removeItem(${index})">×</button>
-        </div>
-      </div>
-    `).join("");
-  }
-
-  const total = getTotal();
-
-  document.getElementById("subtotal").textContent = euro(total);
-  document.getElementById("total").textContent = euro(total);
+function renderSession(){
+ const s=state.session;$("cashStatus").textContent=s?"Sesión QA abierta":"Sesión QA cerrada";
+ $("cashStatus").className="pill "+(s?"ok":"warn");$("expectedCash").textContent=s?money(s.expectedCash):"—";
+ $("operationCount").textContent=s?String(s.totalOperations||0):"0";
+ $("sessionDetails").textContent=s?"ID "+s.sessionId+" · Inicio "+new Date(s.openedAt).toLocaleString("es-ES"):"No existe sesión abierta para hoy.";
+ $("openSession").disabled=!!s||!state.permissions?.capabilities?.openQaSession;
+ ["partialCount","ticketX","cashMovement","saveSale"].forEach(id=>$(id).disabled=!s);
+ $("refund").disabled=!s||!state.permissions?.capabilities?.requestRefund;
+ $("ticketZ").disabled=!s||!state.permissions?.capabilities?.closeQaSession;
 }
-
-function clearTicket() {
-  if (ticket.length === 0) {
-    showMessage("No hay ningún ticket para anular");
-    return;
-  }
-
-  ticket = [];
-  renderTicket();
-  showMessage("Ticket anulado");
+function renderCapabilities(){const c=state.permissions?.capabilities||{};$("openSession").disabled=!!state.session||!c.openQaSession;$("refund").disabled=!state.session||!c.requestRefund;$("ticketZ").disabled=!state.session||!c.closeQaSession}
+async function loadServices(){const d=await call("CATALOG_SERVICES",{},"CATALOG_SERVICES_RES");state.services=(d.items||[]).filter(x=>!x.oculto).map(x=>({...x,tipoLinea:"SERVICIO"}));renderCatalog()}
+async function loadStaff(){const d=await call("CATALOG_STAFF",{},"CATALOG_STAFF_RES");state.staff=d.items||[];$("professional").innerHTML='<option value="">Sin asignar</option>'+state.staff.map(s=>'<option value="'+escapeHtml(s.profesionalId)+'">'+escapeHtml(s.nombre)+'</option>').join("")}
+async function loadProducts(more){const cursor=more?state.productCursor:null;const d=await call("CATALOG_PRODUCTS",{limit:100,cursor},"CATALOG_PRODUCTS_RES");state.products=more?state.products.concat(d.items||[]):(d.items||[]);state.productCursor=d.pagingMetadata?.cursors?.next||d.pagingMetadata?.nextCursor||null;state.productHasMore=!!state.productCursor;$("loadMoreProducts").disabled=!state.productHasMore;$("catalogInfo").textContent=state.products.length+" productos";renderCatalog()}
+function requestMoreProducts(){if(state.productHasMore)void loadProducts(true)}
+function loadMoreProducts(){requestMoreProducts()}
+function escapeHtml(value){return String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function priceLabel(item){return item.precioFormateado||item.precioMinimo!==undefined&&item.precioMinimo!==null?item.precioFormateado||money(item.precioMinimo):"Precio variable"}
+function renderCatalog(){
+ const term=$("search").value.trim().toLowerCase();const all=state.services.concat(state.products);
+ const items=all.filter(x=>(state.kind==="TODOS"||x.tipoLinea===state.kind)&&(!term||(x.concepto+" "+(x.descripcion||"")).toLowerCase().includes(term)));
+ $("products").innerHTML=items.length?items.map((x,i)=>'<button class="product" data-index="'+i+'" data-kind="'+x.tipoLinea+'"><b>'+escapeHtml(x.concepto)+'</b><span>'+escapeHtml(priceLabel(x))+'</span><small class="muted" style="display:block;margin-top:5px">'+escapeHtml(x.tipoLinea==="PRODUCTO"?"Producto · catálogo Stores V3":"Servicio · Bookings")+'</small></button>').join(""):'<p class="muted">No hay resultados disponibles.</p>';
+ $("products").querySelectorAll("button").forEach((button,index)=>button.addEventListener("click",()=>{const item=items[index];if(item.tipoLinea==="PRODUCTO"&&item.requiereSeleccionVariante){void chooseVariant(item);return}addLine(item)}));
 }
-
-function pay(method) {
-  const total = getTotal();
-
-  if (total <= 0) {
-    showMessage("Añade al menos un producto o servicio");
-    return;
-  }
-
-  caja.ventas += total;
-
-  if (method === "Efectivo") {
-    caja.efectivo += total;
-    caja.cajon += total;
-  } else if (method === "Tarjeta") {
-    caja.tarjeta += total;
-  } else if (method === "Bizum") {
-    caja.bizum += total;
-  } else {
-    caja.otros += total;
-  }
-
-  ticket = [];
-  renderTicket();
-  renderCaja();
-
-  showMessage("Cobro registrado: " + method + " · " + euro(total));
+async function chooseVariant(product){try{const data=await call("PRODUCT_VARIANTS",{productId:product.itemId},"PRODUCT_VARIANTS_RES");const available=(data.variantes||[]).filter(v=>v.disponible&&v.precio!==null);if(!available.length)throw new Error("No hay variantes disponibles en POS.");const choice=prompt("Selecciona variante:\n"+available.map((v,i)=>(i+1)+". "+v.concepto+" · "+money(v.precio)).join("\n"),"1");const selected=available[Number(choice)-1];if(selected)addLine({...product,itemId:selected.varianteId,concepto:product.concepto+" · "+selected.concepto,precioMinimo:selected.precio,precioMinor:selected.precioMinor,precioFormateado:selected.precioFormateado,requiereSeleccionVariante:false})}catch(e){toast("Variantes: "+e.message)}}
+function addLine(item){const price=Number(item.precioMinimo??item.precioFijo);if(!Number.isFinite(price)||price<0){toast("El catálogo no proporciona precio fijo; no se puede añadir como importe inventado.");return}state.items.push({tipoLinea:item.tipoLinea,itemId:item.itemId,concepto:item.concepto,cantidad:1,precioUnitario:number(price),descuentoImporte:0,impuestosImporte:0,profesionalId:$("professional").value||"",stockAfectado:item.tipoLinea==="PRODUCTO"});renderTicket()}
+function totals(){const subtotal=state.items.reduce((s,x)=>s+x.cantidad*x.precioUnitario-x.descuentoImporte,0);const tax=number($("taxTotal").value);return{subtotal:number(subtotal),tax,total:number(subtotal+tax)}}
+function paymentApplied(p){return number(p.importe-p.importeCambio)}
+function renderTicket(){
+ const t=totals();$("ticketItems").innerHTML=state.items.length?state.items.map((x,i)=>'<div class="item"><div class="itemhead"><div><b>'+escapeHtml(x.concepto)+'</b><div class="tiny muted">'+money(x.precioUnitario)+' · '+escapeHtml(x.tipoLinea)+'</div></div><b>'+money(x.cantidad*x.precioUnitario)+'</b></div><div class="row" style="margin-top:6px"><div class="qty"><button data-dec="'+i+'">−</button><span>'+x.cantidad+'</span><button data-inc="'+i+'">+</button></div><button class="btn tiny" data-remove="'+i+'">Quitar</button></div></div>').join(""):'<p class="muted">Añade conceptos del catálogo.</p>';
+ $("ticketItems").querySelectorAll("[data-dec]").forEach(b=>b.onclick=()=>{const x=state.items[Number(b.dataset.dec)];x.cantidad=Math.max(0,x.cantidad-1);if(!x.cantidad)state.items.splice(Number(b.dataset.dec),1);renderTicket()});
+ $("ticketItems").querySelectorAll("[data-inc]").forEach(b=>b.onclick=()=>{state.items[Number(b.dataset.inc)].cantidad+=1;renderTicket()});
+ $("ticketItems").querySelectorAll("[data-remove]").forEach(b=>b.onclick=()=>{state.items.splice(Number(b.dataset.remove),1);renderTicket()});
+ $("subtotal").textContent=money(t.subtotal);$("total").textContent=money(t.total);renderPayments();
 }
-
-function renderCaja() {
-  document.getElementById("salesTotal").textContent = euro(caja.ventas);
-  document.getElementById("cashTotal").textContent = euro(caja.efectivo);
-  document.getElementById("cardTotal").textContent = euro(caja.tarjeta);
-  document.getElementById("bizumTotal").textContent = euro(caja.bizum);
-  document.getElementById("otherTotal").textContent = euro(caja.otros);
-  document.getElementById("drawerTotal").textContent = euro(caja.cajon);
+function renderPayments(){const t=totals(),paid=number(state.payments.reduce((s,p)=>s+paymentApplied(p),0));$("payments").innerHTML=state.payments.length?state.payments.map((p,i)=>'<div class="row" style="justify-content:space-between"><span>'+escapeHtml(p.medioPago)+' · recibido '+money(p.importe)+' · cambio '+money(p.importeCambio)+'</span><button class="btn tiny" data-pay-remove="'+i+'">Quitar</button></div>').join(""):"Sin pagos añadidos."; $("payments").querySelectorAll("[data-pay-remove]").forEach(b=>b.onclick=()=>{state.payments.splice(Number(b.dataset.payRemove),1);renderPayments()});$("paidTotal").textContent=money(paid);$("pendingTotal").textContent=money(Math.max(0,t.total-paid))}
+async function addPayment(){const amount=number($("payAmount").value),change=number($("payChange").value);if(amount<=0||change<0||change>amount){toast("Importe de pago o cambio no válido.");return}state.payments.push({medioPago:$("payMethod").value,importe:amount,importeCambio:change});$("payAmount").value="";$("payChange").value="0";renderPayments()}
+async function saveSale(){
+ if(!state.session||!state.items.length)throw new Error("Se necesita sesión QA abierta y al menos una línea.");
+ const t=totals(),paid=number(state.payments.reduce((s,p)=>s+paymentApplied(p),0));if(number(paid)!==t.total)throw new Error("El pago simulado debe cubrir exactamente el total.");
+ const lineas=state.items.map((x,i)=>({lineaNumero:i+1,tipoLinea:x.tipoLinea,itemId:x.itemId,concepto:x.concepto,cantidad:x.cantidad,precioUnitario:x.precioUnitario,descuentoImporte:x.descuentoImporte,subtotalNeto:number(x.cantidad*x.precioUnitario-x.descuentoImporte),impuestosImporte:0,totalLinea:number(x.cantidad*x.precioUnitario-x.descuentoImporte),profesionalId:x.profesionalId||null,stockAfectado:x.stockAfectado}));
+ const sale={idempotencyKey:makeKey(),sessionId:state.session.sessionId,lineas,pagos:state.payments,subtotalNeto:t.subtotal,impuestosTotal:0,totalVenta:t.total,customerContactId:state.customer?.contactId||"",profesionalId:$("professional").value||""};
+ if(t.tax!==0){sale.impuestosTotal=t.tax;throw new Error("El impuesto manual requiere asignación por línea. No se admite un impuesto agregado no conciliado.");}
+ const valid=unwrap(await request("VALIDATE_SALE_DRAFT",{sale},"VALIDATE_SALE_DRAFT_RES"));
+ if(valid.importePendiente!==0)throw new Error("El borrador conserva importe pendiente.");
+ const result=unwrap(await request("QA_SALE_REGISTER",sale,"QA_SALE_REGISTER_RES"));
+ state.lastSale={saleId:result.saleId,total:result.total,breakdown:result.breakdown||{}};
+ $("refundSaleId").value=result.saleId;$("refundAmount").value=String(result.total);$("refundMethod").value=Object.keys(result.breakdown||{}).find(k=>result.breakdown[k]>0)||"EFECTIVO";
+ toast("Venta sintética QA guardada: "+result.saleId);
+ state.items=[];state.payments=[];renderTicket();await refreshSession();
 }
-
-function filterProducts() {
-  const search = document
-    .getElementById("search")
-    .value
-    .toLowerCase();
-
-  document.querySelectorAll(".product").forEach(product => {
-    const name = product.dataset.name.toLowerCase();
-    product.style.display = name.includes(search) ? "block" : "none";
-  });
-}
-
-function showMessage(message) {
-  const toast = document.getElementById("toast");
-  toast.textContent = message;
-  toast.classList.add("show");
-
-  setTimeout(() => {
-    toast.classList.remove("show");
-  }, 2500);
-}
-
-function updateClock() {
-  const now = new Date();
-
-  document.getElementById("clock").textContent =
-    now.toLocaleTimeString("es-ES", {
-      hour: "2-digit",
-      minute: "2-digit"
-    });
-}
-
-setInterval(updateClock, 1000);
-updateClock();
-renderTicket();
-renderCaja();
+async function refreshSession(){state.session=unwrap(await request("CASHIER_STATE",{},"CASHIER_STATE_RES"));renderSession();if(state.session){const d=await call("QA_SESSION_SUMMARY",{sessionId:state.session.sessionId},"QA_SESSION_SUMMARY_RES");$("expectedCash").textContent=money(d.expectedCash);$("operationCount").textContent=String(d.ticketCount||0)}}
+async function openSession(){const result=unwrap(await request("QA_SESSION_OPEN",{openingCash:number($("openingCash").value),reason:"Apertura de sesión TPV QA",terminalId:"TPV_QA"},"QA_SESSION_OPEN_RES"));toast("Sesión QA abierta: "+result.sessionId);await refreshSession()}
+async function partialCount(){const amount=prompt("Efectivo contado en QA (EUR):");if(amount===null)return;const reason=prompt("Motivo si existe diferencia (mínimo 3 caracteres):")||"";const result=unwrap(await request("QA_PARTIAL_COUNT",{countedCash:number(amount),reason,idempotencyKey:makeKey()},"QA_PARTIAL_COUNT_RES"));toast("Arqueo parcial registrado. Diferencia "+money(result.difference));await refreshSession()}
+async function cashMovement(){const result=unwrap(await request("QA_CASH_MOVEMENT",{movementType:$("movementType").value,amount:number($("movementAmount").value),reason:$("movementReason").value,idempotencyKey:makeKey()},"QA_CASH_MOVEMENT_RES"));toast("Movimiento QA registrado: "+result.movementType);$("movementAmount").value="";$("movementReason").value="";await refreshSession()}
+async function refund(){const result=unwrap(await request("QA_REFUND",{saleId:$("refundSaleId").value.trim(),reason:$("refundReason").value,payments:[{paymentMethod:$("refundMethod").value,amount:number($("refundAmount").value)}],idempotencyKey:makeKey()},"QA_REFUND_RES"));toast("Devolución QA registrada: "+result.refundId);await refreshSession()}
+async function ticketX(){const result=unwrap(await request("QA_TICKET_X",{sessionId:state.session.sessionId,idempotencyKey:makeKey()},"QA_TICKET_X_RES"));toast("Ticket X QA generado: "+result.reportId)}
+async function ticketZ(){const result=unwrap(await request("QA_TICKET_Z",{sessionId:state.session.sessionId,countedCash:number($("closingCash").value),differenceReason:$("closingReason").value},"QA_TICKET_Z_RES"));toast("Sesión QA cerrada: "+result.reportId);await refreshSession()}
+async function audit(){const records=unwrap(await request("QA_AUDIT_LIST",{limit:30},"QA_AUDIT_LIST_RES"));$("auditList").innerHTML=(records||[]).map(x=>'<div class="item">'+escapeHtml(x.action)+' · '+escapeHtml(x.entityId)+'<br><span class="muted">'+escapeHtml(x.occurredAt||"")+'</span></div>').join("")||"Sin eventos."}
+async function searchCustomer(){const data=unwrap(await request("CUSTOMERS_SEARCH",{search:$("customerSearch").value},"CUSTOMERS_SEARCH_RES"));renderCustomers(data.items||[])}
+function renderCustomers(items){$("customers").innerHTML=items.length?items.map(c=>'<button class="btn" data-customer="'+escapeHtml(c.contactId)+'">'+escapeHtml(c.displayName)+' · cliente de prueba</button>').join(""):"No se encontraron clientes de prueba."; $("customers").querySelectorAll("[data-customer]").forEach(b=>b.onclick=()=>{state.customer=items.find(c=>c.contactId===b.dataset.customer);$("customers").textContent=state.customer.displayName+" · cliente de prueba";void searchCustomerBookings()})}
+async function searchCustomerBookings(){if(!state.customer)return;const data=unwrap(await request("CUSTOMER_BOOKINGS",{contactId:state.customer.contactId},"CUSTOMER_BOOKINGS_RES"));renderCustomerBookings(data.items||[])}
+function renderCustomerBookings(items){$("customerBookings").textContent=items.length?"Reservas de prueba disponibles: "+items.length:"No hay reservas asociadas a esta fixture. Las reservas reales están deshabilitadas."}
+function calculateDenominations(amount){const cashDenominations=[50000,20000,10000,5000,2000,1000,500,200,100,50,20,10,5,2,1];let remaining=Math.round(Number(amount)*100);return cashDenominations.map(value=>{const count=Math.floor(remaining/value);remaining-=count*value;return{value,count}}).filter(x=>x.count)}
+function bind(){ $("refreshCatalog").onclick=()=>void Promise.all([loadServices(),loadProducts(false)]).catch(e=>toast(e.message));$("search").oninput=renderCatalog;$("catalogTabs").onclick=e=>{const b=e.target.closest("[data-kind]");if(!b)return;state.kind=b.dataset.kind;$("catalogTabs").querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x===b));renderCatalog()};$("loadMoreProducts").onclick=loadMoreProducts;$("clearTicket").onclick=()=>{state.items=[];state.payments=[];renderTicket()};$("taxTotal").onchange=renderTicket;$("addPayment").onclick=()=>void addPayment();$("saveSale").onclick=()=>void saveSale().catch(e=>showError(e.message));$("openSession").onclick=()=>void openSession().catch(e=>showError(e.message));$("partialCount").onclick=()=>void partialCount().catch(e=>showError(e.message));$("cashMovement").onclick=()=>void cashMovement().catch(e=>showError(e.message));$("refund").onclick=()=>void refund().catch(e=>showError(e.message));$("ticketX").onclick=()=>void ticketX().catch(e=>showError(e.message));$("ticketZ").onclick=()=>void ticketZ().catch(e=>showError(e.message));$("audit").onclick=()=>void audit().catch(e=>showError(e.message));$("searchCustomer").onclick=()=>void searchCustomer().catch(e=>toast(e.message));$("movementType").onchange=()=>{$("cashMovement").disabled=!state.session||($("movementType").value!=="ENTRADA"&&state.role!=="ADMIN")};}
+$("clock").textContent=new Intl.DateTimeFormat("es-ES",{dateStyle:"short",timeStyle:"medium",timeZone:"Europe/Madrid"}).format(new Date());setInterval(()=>$("clock").textContent=new Intl.DateTimeFormat("es-ES",{dateStyle:"short",timeStyle:"medium",timeZone:"Europe/Madrid"}).format(new Date()),1000);
+bind();renderTicket();$("cashDenominations")?.addEventListener("click",()=>calculateDenominations(number($("closingCash").value)));setTimeout(announceReady,0);
+})();
 </script>
-
 </body>
 </html>
