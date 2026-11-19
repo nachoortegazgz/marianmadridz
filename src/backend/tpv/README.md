@@ -1,5 +1,9 @@
 # TPV QA — módulos Velo
 
+> **Brecha de integración UI (2026-11-19):** `#htmlTPV.txt` no está alineado con este backend. Es una maqueta con catálogo/precios hardcodeados y cobros en memoria; no implementa `postMessage` ni el protocolo `MM_READY/MM_CONTEXT`. No instalar ni considerar operativa hasta cerrar la integración y superar `tpv-widget.contract.test.mjs` y `tpv-ui.qa-source.test.mjs`.
+
+> **Backend canónico:** todos los módulos TPV Velo residen exclusivamente en `src/backend/tpv/`. No reintroducir archivos `src/backend/tpv*.web.js` en la raíz: eran stubs legacy sin consumidores activos.
+
 Este directorio implementa el TPV en modo QA persistente y sintético para el sitio Marian Madrid en Wix Classic.
 
 ## Límites de seguridad
