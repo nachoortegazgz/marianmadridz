@@ -79,6 +79,46 @@ test("TPV mutation controls remain visibly disabled", () => {
     assert.match(html, /Registrar arqueo parcial QA/);
     assert.match(html, /Registrar devolución QA/);
 });
+test("TPV HTML request protocol is fully dispatched and preserves the QA context handshake", async () => {
+    const page = await readFile(new URL("../../pages/TPV.yl5th.js", import.meta.url), "utf8");
+    const requests = [
+        "CASHIER_STATE",
+        "CATALOG_SERVICES",
+        "CATALOG_STAFF",
+        "CATALOG_PRODUCTS",
+        "PRODUCT_VARIANTS",
+        "CUSTOMERS_SEARCH",
+        "CUSTOMER_BOOKINGS",
+        "VALIDATE_SALE_DRAFT",
+        "GIFT_CARD_BALANCE",
+        "QA_CONFIG",
+        "QA_PERMISSIONS",
+        "QA_SESSION_OPEN",
+        "QA_PARTIAL_COUNT",
+        "QA_CASH_MOVEMENT",
+        "QA_PAYMENT_VALIDATE",
+        "QA_SALE_REGISTER",
+        "QA_REFUND",
+        "QA_SESSION_SUMMARY",
+        "QA_TICKET_X",
+        "QA_TICKET_Z",
+        "QA_AUDIT_LIST",
+    ];
+
+    assert.match(page, /\$w\("#htmlTPV"\)/);
+    assert.match(controller, /protocolVersion: 1/);
+    assert.match(controller, /environment: "QA"/);
+    assert.match(controller, /syntheticOnly: true/);
+    assert.match(controller, /case MESSAGE_TYPES\.READY:\s+return;/);
+
+    for (const type of requests) {
+        assert.ok(controller.includes('"' + type + '"'), "controller must allow " + type);
+        assert.ok(controller.includes('case "' + type + '":'), "controller must dispatch " + type);
+        assert.ok(controller.includes('"' + type + '_RES"'), "controller must return " + type + "_RES");
+        assert.ok(html.includes('"' + type + '"'), "widget must emit " + type);
+    }
+});
+
 
 test("TPV customer, staff and booking references are synthetic-only", async () => {
     const sales = await readFile(new URL("../tpv/tpvVentas.web.js", import.meta.url), "utf8");
