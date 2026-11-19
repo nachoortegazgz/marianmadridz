@@ -90,3 +90,12 @@ La auditoría detallada de jobs, riesgos operativos y secuencia mínima está en
 La revalidación consistente de Wix confirma 3 compensaciones FISCAL_LEDGER/PENDING_RECOVERY (0 intentos), CajaActual ABIERTA con 300 EUR esperados/contados, cero MovimientosCaja y cero HistoricoCierresZ, seis CitasF2 y MapaStaff con 3 STAFF, 1 TERCERO y 1 GESTORIA, sin CONFIG_SISTEMA. Pedidos asociados: #10033 totalmente reembolsado (18,15 EUR) y #10032 PAID/Cash (92,45 EUR; composición dos líneas Stores + una Bookings). No se ha mutado ningún registro. El detalle y la decisión de no reintentar están en el addendum vigente del dossier maestro y en issues #415/#416.
 
 La retirada de inventario custom (#237) está completada en código; falta QA runtime nativo. La persistencia de snapshots trimestrales (#223) está implementada con hash y create-only; agregador mensual y registro de despacho append-only pendientes. Release NO-GO.
+
+
+### Addendum live de automatizaciones y permisos — 2026-11-19
+
+La API oficial de Wix devuelve 158 automatizaciones: 8 ACTIVE y 150 INACTIVE; las ocho activas son PREINSTALLED. Una automatización activa se dispara por `wix_bookings-sessions_booked` y contiene acción `triggered-emails`; destinatario pendiente de verificar. No se han modificado automatizaciones.
+
+Los permisos de MovimientosCaja, LibroAsientosContablesDetalle, HistoricoCierresZ, RegistrosHorariosStaff y PaquetesGestoria son PRIVILEGED para insert/update/remove, sin special permissions. La documentación de Wix incluye colaboradores en PRIVILEGED; por tanto, CMS_EDITOR no está demostrado como excluido. Issue #261 abierto. No se han modificado permisos.
+
+`CajaActual.sequenceCounters` se almacena como string JSON válido (`{}`), y el hook normaliza ese valor; no se clasifica como corrupción confirmada. Release NO-GO.
