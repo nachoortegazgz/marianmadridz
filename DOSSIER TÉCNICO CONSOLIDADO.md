@@ -1,4 +1,4 @@
-> **AVISO DE VIGENCIA — 19-11-2026:** dossier técnico de contexto y trazabilidad histórica. Sus cortes, estados de CMS, permisos, ramas, Site ID, decisiones temporales y tareas no constituyen estado operativo vigente. Para el estado actual consulta [ESTADO_ACTUAL_PROYECTO.md](ESTADO_ACTUAL_PROYECTO.md); para reglas vigentes, [PROJECT_BASELINE.md](PROJECT_BASELINE.md) y [DIRECTRICES_DESARROLLO_CODIGO.md](DIRECTRICES_DESARROLLO_CODIGO.md). En caso de contradicción prevalecen la decisión más reciente del propietario, los contratos oficiales y las guías raíz actualizadas.
+> **AVISO DE VIGENCIA — 19-11-2026:** dossier técnico de contexto y trazabilidad histórica. Sus cortes, estados de CMS, permisos, ramas, Site ID, decisiones temporales y tareas no constituyen estado operativo vigente. Para el estado actual consulta este dossier, §C; para reglas vigentes, este dossier, §§B–C y este dossier, §§B y F. En caso de contradicción prevalecen la decisión más reciente del propietario, los contratos oficiales y las guías raíz actualizadas.
 
 ---
 
@@ -26,20 +26,20 @@
 | Estándares de código | [§12 Estándares](#12-estándares-de-código-y-nomenclatura) | Nomenclatura, errores, cabeceras y calidad |
 | Fiscalidad y cumplimiento | [§13 Normativa](#13-normativa-aplicable-y-estado-de-evidencia) | Evidencia legal/técnica y límites de certificación |
 | TPV y caja actual | [Addenda TPV 2026-11-19](#addendum-vigente--estado-consolidado-y-tpv-física-2026-11-19) | PC físico, tarjeta, periféricos, conciliación, X/Z |
-| Capa 3 documental | [Dossier Capa 3](DOSSIER%20FLUJOS%20END%20TO%20END%20CAPA%203.md) | Flujos Capa 1→Capa 3, SharePoint y Power Automate |
-| Ejecución QA | [Plan QA](PLAN_ACCION_QA.md) | H0–H5, escenarios, mocks, gates y evidencias |
+| Capa 3 documental | [Dossier Capa 3](docs/reference/DOSSIER-FLUJOS-CAPA-1-A-CAPA-3.md) | Flujos Capa 1→Capa 3, SharePoint y Power Automate |
+| Ejecución QA | [Plan QA](#6-plan-priorizado-y-gates) | H0–H5, escenarios, mocks, gates y evidencias |
 
-### A.2 Documentos guía raíz y su función consolidada
+### A.2 Documentos consolidados y referencias especializadas
 
 | Documento | Función que queda consolidada aquí | Fuente detallada / aplicabilidad |
 |---|---|---|
-| `DIRECTRICES_DESARROLLO_CODIGO.md` | Gobierno, arquitectura obligatoria, seguridad, ciclo de cambios, pruebas, release y prioridades | Norma operativa breve. Sus invariantes se resumen en §§B–C; el estándar ampliado está en `docs/engineering/DEVELOPMENT-STANDARDS.md`. |
-| `PROJECT_BASELINE.md` | Alcance, arquitectura, prioridades y bloqueos del proyecto | Baseline histórico con addendum 2026-11-17; no usar su lista de PR ni bloqueos como estado Git actual sin reconciliar con este dossier. |
-| `ESTADO_ACTUAL_PROYECTO.md` | Resumen ejecutivo de hitos, estado CMS, PR y bloqueos | Último hito documentado 2026-11-17; su contenido de PR #418/#419 abiertas y baseline previo está supersedido por su merge y por PR #420/#421. |
-| `PLAN_ACCION_QA.md` | Plan ejecutable H0–H5, simuladores, escenarios y gates de QA | Mantiene contenido histórico sobre mutabilidad QA. No es autoridad para permitir update/remove de ledgers; prevalecen TEC-038/TEC-041 y §C. |
-| `DICCIONARIO_DATOS_CMS.md` | Inventario de colecciones, campos, tipos, keyfields, enums, relaciones y permisos | Addendum live fechado 2026-11-17; el resto contiene snapshots históricos. No autoriza escrituras ni sustituye read-back actual. |
-| `DOSSIER FLUJOS END TO END CAPA 3.md` | Flujos de negocio, exportación documental, gestoría, SharePoint y Power Automate | Diseño y estado de implantación con último addendum 2026-11-17; no acredita pipeline Capa 3 operativo. |
-| `README.md` | Entrada del repositorio y enlaces principales | Navegación de primer nivel; este mapa es la referencia completa de contenidos. |
+| Guías de arquitectura, estado, QA y desarrollo (consolidadas) | Gobierno, arquitectura, estado, plan de trabajo, hardware, seguridad, pruebas y release | Su contenido rector está integrado en §§B–F y en la adenda canónica de esta guía. No mantener copias raíz independientes. |
+
+
+
+| `docs/reference/DICCIONARIO_DATOS_CMS.md` | Inventario de colecciones, campos, tipos, keyfields, enums, relaciones y permisos | Addendum live fechado 2026-11-17; el resto contiene snapshots históricos. No autoriza escrituras ni sustituye read-back actual. |
+| `docs/reference/DOSSIER-FLUJOS-CAPA-1-A-CAPA-3.md` | Flujos de negocio, exportación documental, gestoría, SharePoint y Power Automate | Diseño y estado de implantación con último addendum 2026-11-17; no acredita pipeline Capa 3 operativo. |
+| `README.md` | Índice mínimo del repositorio | Enlaza este dossier y las referencias especializadas. |
 | `docs/DECISION-LOG.md` | Registro cronológico de decisiones de negocio/técnicas | Fuente para rastrear BUS/TEC; aplicar la decisión posterior vigente, especialmente TEC-038 a TEC-041. |
 | `docs/qa/QA-ENVIRONMENT-SSOT.md` | Identidad única del sitio QA y clasificación funcional | Autoridad específica de entorno. La fecha de la SSOT no actualiza automáticamente snapshots CMS ni acredita aislamiento runtime. |
 | `docs/engineering/DEVELOPMENT-STANDARDS.md` | Estándar de implementación, seguridad y calidad detallado | Complementa las directrices raíz; no sustituye contratos oficiales de Wix ni evidencia CI/runtime. |
@@ -227,11 +227,11 @@ Este es un requisito funcional declarado, no evidencia de compatibilidad ni de c
 
 | Documento / afirmación histórica | Contradicción | Resolución vigente |
 |---|---|---|
-| `ESTADO_ACTUAL_PROYECTO.md` dice PR #418/#419 abiertas y no incluye #420 | Las PR #418, #419 y #420 están fusionadas; #421 actualiza el dossier | Estado de Git en §C.1 |
-| `PROJECT_BASELINE.md` y addenda anteriores usan baseline/PR #367 o #418/#419 pendientes | Main posterior incluye #418–#421 | SHA `9edae74b47cf64ecccd72aeaa3058bb4ca35d936` y §C |
-| `PLAN_ACCION_QA.md` conserva QA-2026-11-15-TEMP-MUTABILITY y una suspensión append-only | Contradice TEC-038 y TEC-041 | Ledgers append-only inmutables; no mutaciones |
-| `DOSSIER FLUJOS END TO END CAPA 3.md` tiene último estado live 2026-11-17 | No hay evidencia posterior de pipeline SharePoint/Power Automate operativo | Capa 3 sigue diseño, no E2E certificado |
-| `DICCIONARIO_DATOS_CMS.md` contiene inventarios y esquemas históricos extensos | Solo el addendum live 2026-11-17 corresponde al último corte conocido | No usar snapshots antiguos; releer CMS antes de escrituras |
+| `§C Estado consolidado del proyecto` dice PR #418/#419 abiertas y no incluye #420 | Las PR #418, #419 y #420 están fusionadas; #421 actualiza el dossier | Estado de Git en §C.1 |
+| `§§B–C Arquitectura y estado consolidado` y addenda anteriores usan baseline/PR #367 o #418/#419 pendientes | Main posterior incluye #418–#421 | SHA `9edae74b47cf64ecccd72aeaa3058bb4ca35d936` y §C |
+| `§6 Plan priorizado y gates` conserva QA-2026-11-15-TEMP-MUTABILITY y una suspensión append-only | Contradice TEC-038 y TEC-041 | Ledgers append-only inmutables; no mutaciones |
+| `docs/reference/DOSSIER-FLUJOS-CAPA-1-A-CAPA-3.md` tiene último estado live 2026-11-17 | No hay evidencia posterior de pipeline SharePoint/Power Automate operativo | Capa 3 sigue diseño, no E2E certificado |
+| `docs/reference/DICCIONARIO_DATOS_CMS.md` contiene inventarios y esquemas históricos extensos | Solo el addendum live 2026-11-17 corresponde al último corte conocido | No usar snapshots antiguos; releer CMS antes de escrituras |
 | Auditorías TPV 2026-11-17/19 se basan en SHAs previos a PR #420 | El widget y la limpieza legacy cambiaron en #420 | El estado de código actual se fija por PR #420; los hallazgos runtime siguen pendientes |
 | Documentos de integración TPV antiguos dicen que no hay UI/capacidades o usan contratos previos | PR #420 actualizó widget/backend QA, pero no instaló en Wix | Distinguir implementación Git de integración runtime |
 | El requisito del propietario indica Wix Payments y lector bancario externo | No se ha identificado terminal ni demostrado soporte presencial en España | `CARD` es el método funcional; integración de hardware y proveedor pendiente |
@@ -436,7 +436,7 @@ Detalle y evidencias: [reconciliación de baseline y recuperación de validadore
 
 ---
 
-> **HISTÓRICO — superado por el addendum vigente:** el siguiente bloque describe un corte anterior de CMS y TEC-033. El esquema live actual se encuentra en `DICCIONARIO_DATOS_CMS.md` §§2–3; la política de QA vigente es TEC-038; TEC-033/035/036/037 son antecedentes históricos y no conceden permisos de mutación.
+> **HISTÓRICO — superado por el addendum vigente:** el siguiente bloque describe un corte anterior de CMS y TEC-033. El esquema live actual se encuentra en `docs/reference/DICCIONARIO_DATOS_CMS.md` §§2–3; la política de QA vigente es TEC-038; TEC-033/035/036/037 son antecedentes históricos y no conceden permisos de mutación.
 
 ## Registro histórico — estado live y limpieza QA (superado por el addendum vigente)
 
@@ -445,7 +445,7 @@ Detalle y evidencias: [reconciliación de baseline y recuperación de validadore
 ### CMS verificado tras los cambios
 
 - Inventario live: **42 colecciones** (13 `NATIVE`, 29 `WIX_APP`). `CajaActual` es `NATIVE`, revisión **64**, con **59 campos personalizados + 4 de sistema (63 físicos)**.
-- El esquema completo y los tipos de los 59 campos están en `DICCIONARIO_DATOS_CMS.md` §3.1.
+- El esquema completo y los tipos de los 59 campos están en `docs/reference/DICCIONARIO_DATOS_CMS.md` §3.1.
 - Política temporal de lectura: `itemRead=ANYONE` en las 13 colecciones NATIVE, con los permisos de escritura conservados. Las 29 colecciones WIX_APP mantienen la política fijada por Wix Apps; 23 permiten ANYONE y 6 mantienen restricciones de aplicación.
 - Riesgo P1 explícitamente aceptado por el responsable durante desarrollo: la lectura pública puede exponer datos personales, fiscales, contables, laborales y de pagos. No introducir datos reales sensibles. Revertir restricciones antes de despliegue. `operationDate`, `openingAmount`, `voucherAmount` e `isOpen` no existen en el esquema actual.
 - Estado del singleton: el último readback anterior a esta edición documentaba `CAJA_PRINCIPAL` cerrado y sin sesión abierta. El elemento no se ha releído en esta actualización; el estado y los saldos actuales quedan pendientes de readback.
@@ -1527,7 +1527,7 @@ CONTROL_TYPE    = { ALERT, COMPENSATION, DAYS_CACHE, DEDUPE_KEY,
 
 ## Capa 3 — referencia y estado de implantación
 
-La arquitectura documental Wix → M365/SharePoint se describe exclusivamente en [DOSSIER FLUJOS END TO END CAPA 3.md](DOSSIER%20FLUJOS%20END%20TO%20END%20CAPA%203.md). No mantener copias de guías operativas ni propuestas de exportación en este dossier técnico.
+La arquitectura documental Wix → M365/SharePoint se describe exclusivamente en [Dossier Capa 1 → Capa 3](docs/reference/DOSSIER-FLUJOS-CAPA-1-A-CAPA-3.md). No mantener copias de guías operativas ni propuestas de exportación en este dossier técnico.
 
 **Estado verificado:** Capa 3 no está implantada en runtime. No existe `src/backend/exports/exportService.js` ni jobs de exportación en `jobs.config`. `fiscalDocuments.web.js` contiene un helper Resend, pero el envío a gestoría está desactivado por `SDK_CONFIG.EMAIL.ACCOUNTANT_SEND_ENABLED=false`; la creación de snapshots está bloqueada hasta completar hash canónico, límites de tamaño y versionado concurrente. La colección `PaquetesGestoria` tiene constancia de creación de esquema en la auditoría de pausa, sin segunda lectura independiente de permisos ni items.
 
@@ -1693,7 +1693,7 @@ Se trabaja sobre **`nachoortegazgz/marianmadridz`**. Los dossiers originales cit
 
 ## Addendum de estado y decisiones — 2026-11-11
 
-Este addendum actualiza el estado de las áreas que han cambiado desde la revisión histórica del dossier. Para la visión transversal y el plan priorizado, consultar también [ESTADO_ACTUAL_PROYECTO.md](ESTADO_ACTUAL_PROYECTO.md).
+Este addendum actualiza el estado de las áreas que han cambiado desde la revisión histórica del dossier. Para la visión transversal y el plan priorizado, consultar también este dossier, §C.
 
 ### Reservas nativas y proyección CitasF2
 
@@ -1776,7 +1776,7 @@ Este addendum actualiza el estado técnico operativo y prevalece sobre descripci
 | RegistrosHorariosStaff | 2 | Sintéticos QA sin HMAC; writer deshabilitado |
 | ServiciosCatalogo | 95 | 94 servicios + 1 plan |
 
-Las 29 WIX_APP se agrupan en Bookings (3), Blog (3), CampaignManager (2), Forms (1), Locations (1), Marketing (1), Members (4), StoreCatalog (8), Stores (5) y eCommerce (1). Sus IDs completos y nombres están en `ESTADO_ACTUAL_PROYECTO.md`. Son propiedad de Wix Apps y no se mutan desde esta intervención.
+Las 29 WIX_APP se agrupan en Bookings (3), Blog (3), CampaignManager (2), Forms (1), Locations (1), Marketing (1), Members (4), StoreCatalog (8), Stores (5) y eCommerce (1). Sus IDs completos y nombres están en `§C Estado consolidado del proyecto`. Son propiedad de Wix Apps y no se mutan desde esta intervención.
 
 ## Sitio QA: paridad incompleta
 
@@ -1796,7 +1796,7 @@ La lectura CMS de este sitio QA devuelve 43 colecciones (15 NATIVE, 28 WIX_APP).
 - Mantener `ACCOUNTANT_SEND_ENABLED=false`; no activar cobros, reembolsos, ledgers, cierres, fichajes ni exports reales.
 - SharePoint / Power Automate Capa 3 no está acreditado como flujo operativo live.
 - El commit documental actual `738eb78...` no tiene estados combinados ni workflow runs asociados en la consulta. Los resultados históricos de PR #330 no certifican este HEAD.
-- Pendientes P0–P4, lista de colecciones completa, diferencias QA/prod y estado de validación se mantienen centralizados en `ESTADO_ACTUAL_PROYECTO.md`.
+- Pendientes P0–P4, lista de colecciones completa, diferencias QA/prod y estado de validación se mantienen centralizados en `§C Estado consolidado del proyecto`.
 
 ### Addendum de arquitectura — TEC-032: proyección de sesión y tickets fuente (2026-11-13)
 
@@ -1808,7 +1808,7 @@ No se ha implementado ni validado este contrato en runtime en esta actualizació
 
 ### Estado histórico de código CajaActual / TEC-032 (2026-11-13)
 
-> El análisis de esquema de este addendum corresponde a un corte anterior. El CMS live actual es revisión 64 y dispone de los 59 campos descritos en `DICCIONARIO_DATOS_CMS.md` §3.1. La existencia de columnas nuevas no acredita que el código de esta rama las persista o consuma.
+> El análisis de esquema de este addendum corresponde a un corte anterior. El CMS live actual es revisión 64 y dispone de los 59 campos descritos en `docs/reference/DICCIONARIO_DATOS_CMS.md` §3.1. La existencia de columnas nuevas no acredita que el código de esta rama las persista o consuma.
 
 La rama `fix/caja-actual-last-operation-projection` adapta parcialmente los flujos:
 - El escritor manual exige canal explícito (con inferencia ONLINE limitada a `VENTA_ONLINE`/`WIX_PAYMENTS`) y resuelve el actor presencial desde `getMyStaffContext()`, sin confiar en `resourceId` del frontend.
@@ -2513,7 +2513,7 @@ El contrato físico CMS del corte 2026-11-17 supersede los snapshots anteriores 
 
 La política histórica de mutabilidad temporal de QA no autoriza mutar ledgers en esta intervención: prevalece la regla vigente del proyecto de append-only para registros fiscales, contables y laborales. No se borran ni sobrescriben registros económicos.
 
-Evidencia, decisiones y estado de PR: [docs/audits/2026-11-17-deployment-readiness.md](docs/audits/2026-11-17-deployment-readiness.md), [DICCIONARIO_DATOS_CMS.md](DICCIONARIO_DATOS_CMS.md) y [TEC-039](docs/DECISION-LOG.md).
+Evidencia, decisiones y estado de PR: [docs/audits/2026-11-17-deployment-readiness.md](docs/audits/2026-11-17-deployment-readiness.md), [Diccionario CMS](docs/reference/DICCIONARIO_DATOS_CMS.md) y [TEC-039](docs/DECISION-LOG.md).
 
 
 ---
@@ -2528,11 +2528,11 @@ Evidencia, decisiones y estado de PR: [docs/audits/2026-11-17-deployment-readine
 Este dossier es la fuente documental maestra para arquitectura, estado, decisiones, QA, TPV y plan de trabajo. El repositorio mantiene únicamente referencias técnicas especializadas que no deben duplicarse aquí:
 
 - `README.md`: índice mínimo hacia este dossier y referencias técnicas.
-- `DICCIONARIO_DATOS_CMS.md`: catálogo detallado de esquemas, campos, enums, relaciones y evidencia CMS. Sus snapshots son históricos; antes de operar se debe releer Wix live.
-- `DOSSIER FLUJOS END TO END CAPA 3.md`: diseño y trazabilidad de flujos documentales; no acredita que SharePoint o Power Automate estén implantados.
+- `docs/reference/DICCIONARIO_DATOS_CMS.md`: catálogo detallado de esquemas, campos, enums, relaciones y evidencia CMS. Sus snapshots son históricos; antes de operar se debe releer Wix live.
+- `docs/reference/DOSSIER-FLUJOS-CAPA-1-A-CAPA-3.md`: diseño y trazabilidad de flujos documentales; no acredita que SharePoint o Power Automate estén implantados.
 - Código, pruebas y workflows: evidencia de implementación para el SHA correspondiente.
 
-Las antiguas guías raíz `PROJECT_BASELINE.md`, `ESTADO_ACTUAL_PROYECTO.md`, `PLAN_ACCION_QA.md`, `DIRECTRICES_DESARROLLO_CODIGO.md` y `HARDWARE_TPV.md` se consideran consolidadas en esta adenda y dejan de ser fuentes independientes.
+Las antiguas guías raíz `§§B–C Arquitectura y estado consolidado`, `§C Estado consolidado del proyecto`, `§6 Plan priorizado y gates`, `§§B y F Gobierno, ingeniería y QA` y `§4 TPV personalizada: arquitectura física consolidada` se consideran consolidadas en esta adenda y dejan de ser fuentes independientes. El diccionario CMS y el dossier de flujos se conservan íntegros bajo `docs/reference/`, fuera de la raíz, para consulta especializada y trazabilidad.
 
 ## 2. Estado operativo de referencia
 

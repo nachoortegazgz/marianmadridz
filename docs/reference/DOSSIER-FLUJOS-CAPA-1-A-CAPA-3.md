@@ -1,3 +1,5 @@
+> Archivo reubicado desde la raíz el 19-11-2026 para mantener una única guía maestra. Se conserva íntegro como referencia técnica e histórica; sus snapshots requieren revalidación antes de usarse como estado live.
+
 > **AVISO DE VIGENCIA — 19-11-2026:** este dossier describe diseño objetivo y decisiones históricas de Capa 1 → Capa 3; no acredita flujos, jobs, tenant M365, SharePoint ni Power Automate activos. El estado verificable se mantiene en [ESTADO_ACTUAL_PROYECTO.md](ESTADO_ACTUAL_PROYECTO.md) y el roadmap en [PLAN_ACCION_QA.md](PLAN_ACCION_QA.md). No ejecutar ni habilitar PA-01…PA-07 por el mero hecho de estar descritos aquí.
 
 ---

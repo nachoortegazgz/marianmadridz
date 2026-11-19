@@ -1,3 +1,5 @@
+> Archivo reubicado desde la raíz el 19-11-2026 para mantener una única guía maestra. Se conserva íntegro como referencia técnica e histórica; sus snapshots requieren revalidación antes de usarse como estado live.
+
 > **AVISO DE VIGENCIA — 19-11-2026:** este diccionario contiene contratos y snapshots de distintas auditorías. No asumir que sus recuentos, revisiones o campos representan el CMS live actual. El último inventario resumido disponible es del 17-11-2026 y requiere nueva lectura Wix antes de cualquier escritura, migración o cambio de esquema. Consultar [ESTADO_ACTUAL_PROYECTO.md](ESTADO_ACTUAL_PROYECTO.md) para el corte operativo.
 
 ---
