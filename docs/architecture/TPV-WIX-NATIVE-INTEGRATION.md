@@ -43,7 +43,7 @@ Wix Bookings y Stores permanecen como SSOT de los catálogos que se leen. El CMS
 - `tpvGiftCards.web.js` responde `TPV_GIFT_CARDS_DISABLED_IN_QA`; no consulta `giftVouchers.getGiftCard` ni recibe códigos de tarjeta.
 - Los eventos de auditoría usan el actor sintético `QA_ACTOR`; la identidad real se utiliza únicamente en la comprobación de autorización backend y no se persiste en los registros TPV.
 - `tpvQaRepository.js` concentra escrituras QA, idempotencia y locks CAS.
-- `#htmlTPV.txt` está versionado, pero el contenido auditado el 2026-11-19 es una maqueta local: no implementa el protocolo `MM_READY/MM_CONTEXT`, no usa `postMessage`, conserva catálogo/precios hardcodeados y simula cobros solo en memoria. No está alineado con `tpvPageController.js` y no debe instalarse como interfaz operativa hasta completar la integración.
+- `#htmlTPV.txt` implementa el protocolo `MM_READY/MM_CONTEXT`, `postMessage`, catálogo Bookings/Stores V3, fixtures de cliente/profesionales y operaciones persistentes sintéticas QA a través de `tpvPageController.js`. Los cobros reales, facturación, Gift Cards reales, reservas, hardware y escrituras operativas permanecen deshabilitados. El HTML está versionado; su instalación en el HTML Component Wix y runtime siguen pendientes de verificación.
 
 ## Política de seguridad
 
@@ -74,7 +74,7 @@ Se retiraron tras comprobar consumidores:
 
 Los diez módulos `src/backend/tpv*.web.js` de la raíz eran stubs antiguos sin consumidores activos. Los dos escritores antiguos insertaban directamente en `MovimientosCaja`/`CajaActual`; los demás exponían contratos incompletos y/o duplicados sin las políticas QA actuales. La implementación canónica está en `src/backend/tpv/` y no debe coexistir con esos aliases legacy.
 
-**Discrepancia de interfaz detectada el 2026-11-19:** el HTML versionado no satisface el contrato que exigen `tpv-widget.contract.test.mjs` y `tpv-ui.qa-source.test.mjs`. El backend y el controlador se conservan; la interfaz queda bloqueada como maqueta hasta integrar el protocolo y las acciones reales QA. No afirmar que el widget funciona ni sincronizarlo con Wix mientras esta brecha permanezca.
+**Integración UI desarrollada el 2026-11-19:** el HTML implementa el contrato del widget y las acciones persistentes QA mediante el controlador. La venta guardada es una venta sintética de pruebas, no un cobro real. La suite offline debe superar los contratos antes de sincronizar; runtime Wix, instalación en `#htmlTPV`, Preview y Publish siguen pendientes.
 
 ## Bloqueos antes de activar operaciones reales
 
