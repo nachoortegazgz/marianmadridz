@@ -1,3 +1,149 @@
+# ADDENDUM VIGENTE — ESTADO CONSOLIDADO Y TPV FÍSICA (2026-11-19)
+
+> **Prevalece sobre cualquier bloque histórico o addendum anterior que lo contradiga.** Corte de repositorio verificado en GitHub el 2026-11-19. Este documento distingue requisitos aprobados, implementación en repositorio, observaciones live y validaciones pendientes. La inclusión de un requisito no significa que esté implementado, instalado en Wix ni validado en runtime.
+
+## 1. Baseline Git y cambios integrados
+
+- Repositorio: `nachoortegazgz/marianmadridz`.
+- Rama principal: `main`.
+- HEAD verificado: `501c409c046f26955ce91dd450a418255d3f2f31` (merge de PR #420, 2026-11-19).
+- PR #418 integrada: `f35b654600b459224d599d7d0b7db4e00ea3746e`; alinea el maestro y consumidores fiscales con el esquema live de `MapaStaff`.
+- PR #419 integrada: `627d97d730f5500a08dad4f5e0e287d6eeba278a`; normaliza metadatos de sesión reabierta y `sequenceCounters`.
+- PR #420 integrada: `501c409c046f26955ce91dd450a418255d3f2f31`; alinea el widget HTML físico de TPV con el backend QA y elimina diez módulos backend legacy sin consumidores demostrados. Se conservan los 16 módulos canónicos bajo `src/backend/tpv/`.
+- CI de PR #420: Backend offline quality gates PASS (run #1604) y Secret scanning PASS (run #1028). El baseline anterior reportaba 74 suites / 673 tests sin fallos; estos resultados acreditan pruebas automatizadas offline, no Wix Runtime ni E2E real.
+- El estado de `main` no acredita por sí mismo que el código esté sincronizado/instalado en Wix Editor, ni publicado. La TPV sigue siendo candidata QA hasta completar instalación, validación Wix Local Editor y pruebas de runtime autorizadas.
+
+## 2. Estado de entorno y CMS — último corte auditado
+
+- Site ID único de QA: `188bed94-177c-4bc9-a9f0-35080d874f3e`, dominio `https://www.marianmadrid.es/`, Wix Editor Classic + Velo. Se mantiene la clasificación como entorno QA según declaración del propietario; no inferir que el sitio es producción por su estado de publicación.
+- Último estado de sitio documentado en la auditoría del 2026-11-17: Draft. No se ha realizado en esta actualización una nueva lectura live de Wix para confirmar cambios posteriores.
+- Último inventario live comunicado en auditoría del 2026-11-17: 50 colecciones (21 NATIVE y 29 WIX_APP), 201 registros NATIVE en el corte consultado. No reutilizar estos recuentos como estado live actual sin nueva lectura.
+- `MapaStaff`: revisión 135, 43 campos y 5 registros en el corte de auditoría citado. PR #418 alinea código con el esquema live observado.
+- `DatosFiscales` y `CONFIG_SISTEMA`: no existían en el corte live auditado del 2026-11-17. No recrear ni asumir su existencia por menciones históricas.
+- 21 colecciones habían recibido endurecimiento de permisos con read-back en el corte de auditoría. Esto no sustituye las pruebas de autorización de WebMethods en runtime.
+- `CajaActual` y `MovimientosCaja` deben seguir tratándose conforme a TEC-038 y a sus contratos vigentes. Las observaciones de sesión/counters de la auditoría del 2026-11-17 fueron objeto de PR #419; no afirmar conciliación operativa completa sin nuevo read-back y pruebas.
+- La SSOT CMS y sus snapshots históricos no autorizan mutaciones. Antes de cualquier migración, escritura o E2E con persistencia, repetir inventario y lectura de solo lectura contra el Site ID QA.
+
+## 3. Requisito aprobado: instalación física y operación de la TPV
+
+El propietario define el escenario objetivo siguiente:
+
+- La TPV personalizada se opera desde un **PC físico conectado a Internet**.
+- La solución utiliza el ecosistema Wix y se desea utilizar **Wix Payments** como pasarela.
+- El cobro presencial con tarjeta se realiza mediante un **lector/terminal bancario externo**. Marca, modelo, adquirente, protocolo e integración técnica están temporalmente **desconocidos**.
+- Se dispone de **impresora térmica** y **cajón monedero**, conectado a la impresora y al PC.
+- El personal utiliza **dispositivos móviles con Wix Owner** para las funciones que sus permisos y las capacidades oficiales de Wix permitan.
+- La TPV personalizada es la interfaz operativa principal de caja. Se requiere conciliación con los pedidos, pagos y recibos que correspondan en Wix Dashboard, especialmente las áreas de Ventas/POS, Todos los pagos y Recibos.
+
+Este apartado recoge el requisito y la configuración física declarados por el propietario; no certifica compatibilidad de periféricos, integración de terminal, disponibilidad regional de una función Wix ni capacidad de Wix Owner para operar la caja.
+
+### 3.1 Límites técnicos y cuestiones aún no verificadas
+
+- **Wix Payments y terminal bancario son componentes distintos hasta demostrar una integración soportada.** La intención de usar Wix Payments no demuestra que el lector del banco pueda ser controlado por esa pasarela o por la TPV web.
+- No se conoce el modelo del terminal; por tanto, quedan pendientes la API/protocolo, confirmación automática del resultado, referencias de transacción, devoluciones y conciliación automatizada.
+- No asumir que el navegador puede controlar directamente el cajón monedero. La apertura requiere validar interfaz física, conexión, driver/protocolo de impresora y mecanismo de apertura soportado por el sistema operativo o middleware local.
+- La impresora térmica requiere validar modelo, driver, lenguaje de impresión, conexión y formato de ticket.
+- Wix Owner se considera canal móvil para tareas permitidas por los roles. No se presupone que exponga todas las funciones de la TPV personalizada ni que pueda abrir el cajón o controlar periféricos del PC.
+- La disponibilidad de pagos presenciales con Wix Payments y lectores integrados debe confirmarse para España y para la cuenta concreta. No inferir compatibilidad por la mera disponibilidad de Wix Payments como proveedor online.
+- No se ha ejecutado prueba física de PC, lector, impresora, cajón ni dispositivos móviles.
+
+## 4. Reglas de negocio TPV aprobadas y diseño de conciliación
+
+### 4.1 Medios de pago
+
+La TPV personalizada debe contabilizar como **pago con tarjeta** los importes cobrados mediante el lector bancario, aunque temporalmente el terminal no esté identificado.
+
+| Medio | Registro en TPV | Efecto sobre efectivo físico |
+|---|---|---|
+| Efectivo | `CASH` | Incrementa el efectivo de caja por el importe efectivamente recibido, neto del cambio entregado |
+| Tarjeta bancaria | `CARD` | No incrementa el efectivo del cajón |
+| Pago mixto | Componentes `CASH` + `CARD` | Solo el componente `CASH` afecta al saldo físico |
+| Otros medios | Solo cuando exista método de negocio aprobado y contrato vigente | Según naturaleza y evidencia; no clasificar automáticamente como efectivo |
+
+- La clasificación `CARD` es una decisión funcional aprobada; no implica que la integración automática con el lector esté implementada.
+- Mientras no exista integración verificada, el operador podrá registrar el resultado declarado del terminal únicamente mediante un flujo explícito y auditable. La confirmación manual **no equivale** a confirmación bancaria del proveedor y debe poder distinguirse de una confirmación técnica.
+- Un intento pendiente, rechazado, cancelado o abandonado no puede consolidarse como pago cobrado.
+- La conciliación posterior debe enlazar pedido, componente de pago, operador, fecha/hora, importe, medio, referencia del terminal cuando exista y evidencia bancaria. No almacenar PAN completo, CVV ni credenciales de tarjeta.
+- Los pagos mixtos se representan como componentes separados, con suma exacta en céntimos igual al total liquidado. La idempotencia debe impedir doble contabilización de reintentos.
+- El registro en Wix eCommerce/Orders y la recepción de fondos son hechos diferentes. La API de registro de pagos de órdenes no debe tratarse como pasarela que ejecuta el cargo ni como evidencia autónoma de liquidación bancaria.
+
+### 4.2 Caja, periféricos e informes
+
+La solución objetivo contempla apertura de caja y fondo inicial, cobros, cambio, pagos parciales/mixtos, devoluciones, entradas y salidas de efectivo, impresión de tickets, apertura controlada del cajón, consulta de movimientos, conciliación y cierre.
+
+- **Informe X:** fotografía informativa de la sesión; no cierra la caja ni altera los ledgers.
+- **Cierre Z:** cierre operativo de sesión con totales separados por medio de pago, efectivo contado, diferencia, responsable, fecha/hora y referencias a movimientos fuente. Debe ser inmutable y rectificable solo mediante nuevos registros trazables.
+- X/Z son informes operativos propios. No constituyen por sí mismos factura, registro fiscal reglamentario ni certificación de cumplimiento SIF/VERI*FACTU.
+- Los pagos `CARD` no forman parte del efectivo esperado del cajón. La conciliación de tarjeta se informa separadamente frente a las evidencias del terminal/adquirente.
+- Las devoluciones no se resuelven borrando o sobrescribiendo el cobro original: se registran como operaciones compensatorias trazables conforme al contrato aprobado.
+
+## 5. Integración Wix y límites de autoridad
+
+- Wix CMS continúa siendo la fuente de verdad transaccional del dominio propio; los ledgers append-only permanecen inmutables conforme a TEC-038.
+- Los pedidos y pagos de Wix deben utilizar las APIs oficiales aplicables y mantener las distinciones entre pedido, registro de pago, captura/cobro y liquidación.
+- La API `Add Payments` de Order Transactions registra información de pago asociada a una orden; no ejecuta por sí misma un cargo bancario ni mueve fondos. No utilizarla como sustituto del terminal.
+- La TPV personalizada no debe duplicar la autoridad de Wix Stores Catalog V3 para catálogo/inventario, ni inventar un ledger paralelo de pagos.
+- SharePoint permanece como repositorio de evidencia documental; no gobierna ni modifica la Capa 1.
+- Cualquier acceso móvil mediante Wix Owner debe aplicar permisos/autorización en backend. El frontend móvil no es autoridad de negocio.
+
+## 6. Estado real de implementación TPV tras PR #420
+
+**Implementado en repositorio / CI offline:**
+- Página TPV identificada por `src/pages/TPV.yl5th.js` y widget HTML `#htmlTPV` (la existencia en Git no demuestra que esté instalado en el Editor).
+- Controlador público `src/public/tpvPageController.js` y puente `src/public/widgetBridge.js`.
+- 16 módulos canónicos en `src/backend/tpv/`.
+- Widget HTML QA alineado con el backend QA mediante PR #420.
+- Eliminación de diez módulos legacy `src/backend/tpv*.web.js` sin consumidores demostrados.
+- La candidata QA mantiene desactivados impuestos/fiscalidad, cobros reales y escrituras fiscales; no autoriza operaciones reales ni despliegue.
+
+**No implementado o no demostrado:**
+- No está demostrada la instalación del widget/código en Wix Editor Classic ni su ejecución en runtime.
+- No está demostrada la conexión real del PC con impresora, cajón o terminal bancario.
+- No existe integración verificada con el terminal bancario desconocido.
+- No está demostrada la integración de los cobros `CARD` con Wix Payments ni la conciliación bancaria automatizada.
+- No se declara validada la operación desde Wix Owner.
+- No están certificados los flujos de pagos reales, reembolsos, cierres fiscales ni SIF/VERI*FACTU.
+- Los cierres X/Z y el alcance completo de caja deben contrastarse con los contratos y pruebas actuales antes de declararlos operativos.
+
+## 7. Riesgos y bloqueos prioritarios
+
+1. **P0 — Fiscalidad y cumplimiento:** mantener bloqueados writers fiscales, facturación/remisión fiscal y cualquier declaración de cumplimiento hasta completar identidad fiscal, reglas fiscales, requisitos legales y pruebas aplicables.
+2. **P1 — Integridad de caja/pagos:** no transformar operaciones históricas o de QA en movimientos reales ni reconstruir saldos sin evidencia. No reintentar compensaciones pendientes ni alterar ledgers sin diagnóstico individual y autorización.
+3. **P1 — Doble contabilización:** separar intento, confirmación manual, confirmación técnica y conciliación; usar claves idempotentes y referencias del proveedor cuando estén disponibles.
+4. **P1 — Hardware:** compatibilidad del terminal, impresora y cajón sin verificar; no automatizar apertura/cobro hasta conocer modelos, interfaces y drivers.
+5. **P2 — Permisos móviles:** verificar roles efectivos y autorización server-side; Wix Owner no concede automáticamente permisos para funciones propias.
+6. **P2 — Sincronización Wix/Git:** demostrar instalación y correspondencia entre HEAD de Git y código del Editor antes de pruebas runtime o despliegue.
+
+## 8. Próximas tareas documentales y técnicas
+
+1. Auditar el contrato real de pagos de los módulos canónicos `src/backend/tpv/`, sus consumidores, enums, esquemas CMS, writers y pruebas; confirmar cómo se modelan hoy CASH/CARD/mixto y sus estados.
+2. Actualizar contrato y pruebas para que el medio `CARD` sea explícito y no afecte al efectivo; diferenciar confirmación manual de confirmación del proveedor sin inventar estados duplicados.
+3. Auditar los flujos Wix Orders/Order Transactions/Payments/Receipts y definir la conciliación sin confundir registro de pago con cobro real.
+4. Especificar el contrato de hardware desacoplado: interfaz de terminal, impresión y apertura del cajón; dejar adaptadores reales desactivados hasta conocer modelos y protocolos.
+5. Verificar permisos y tareas disponibles desde Wix Owner para cada rol.
+6. Releer CMS, CajaActual, MovimientosCaja, ControlOperativo y órdenes/pagos QA en modo solo lectura; resolver el estado de datos/compensaciones antes de cualquier writer.
+7. Instalar/sincronizar en Wix Local Editor, ejecutar pruebas de integración y E2E exclusivamente con fixtures sintéticas y efectos externos neutralizados.
+8. Mantener el despliegue bloqueado hasta completar gates, revisión de diff, CI, plan de reversión y autorización expresa.
+
+## 9. Estado de validación de este addendum
+
+| Categoría | Estado |
+|---|---|
+| HEAD y PR #418–#420 | Verificado en GitHub |
+| CI offline de PR #420 | PASS |
+| Requisito de PC, lector bancario, impresora, cajón y móviles Wix Owner | Declarado por el propietario |
+| Clasificación funcional de lector como `CARD` | Requisito aprobado |
+| Compatibilidad de Wix Payments con el lector bancario en España | Pendiente de verificar |
+| Integración física del terminal/impresora/cajón | Pendiente |
+| Instalación y sincronización con Wix Editor | No demostrada en este corte |
+| Wix Runtime / E2E | No ejecutado ni declarado |
+| Cobros, reembolsos y writers reales | Deshabilitados/bloqueados para QA |
+| Publicación/despliegue | No autorizado por este addendum |
+
+**Regla de mantenimiento:** cada nuevo addendum debe fechar el corte, incluir SHA verificable de `main`, enlazar evidencias y distinguir cambios de código, CMS live, runtime y requisitos declarados. No borrar los bloques históricos: marcarlos como superados cuando corresponda.
+
+---
+
 > **SSOT de entorno vigente (2026-11-14):** el único sitio del proyecto es QA: `188bed94-177c-4bc9-a9f0-35080d874f3e` (`https://www.marianmadrid.es/`). El propietario confirma que nunca ha tenido actividad real, que todos los datos son sintéticos, que el cliente de pruebas es Nacho Pitt (`nachoortegazgz@gmail.com`) y que la pasarela está desconectada. No existe otro sitio QA ni un QA externo designado. Las referencias anteriores a otros Site ID o a este sitio como producción quedan supersedidas. El estado Wix Published no altera su clasificación funcional como QA. Véase [SSOT del entorno QA](docs/qa/QA-ENVIRONMENT-SSOT.md).
 
 ---
