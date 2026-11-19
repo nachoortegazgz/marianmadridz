@@ -1,3 +1,7 @@
+> **AVISO DE VIGENCIA — 19-11-2026:** dossier técnico de contexto y trazabilidad histórica. Sus cortes, estados de CMS, permisos, ramas, Site ID, decisiones temporales y tareas no constituyen estado operativo vigente. Para el estado actual consulta [ESTADO_ACTUAL_PROYECTO.md](ESTADO_ACTUAL_PROYECTO.md); para reglas vigentes, [PROJECT_BASELINE.md](PROJECT_BASELINE.md) y [DIRECTRICES_DESARROLLO_CODIGO.md](DIRECTRICES_DESARROLLO_CODIGO.md). En caso de contradicción prevalecen la decisión más reciente del propietario, los contratos oficiales y las guías raíz actualizadas.
+
+---
+
 # CONSOLIDACIÓN MAESTRA — GUÍAS, ESTADO Y MAPA DE CONTENIDOS (2026-11-19)
 
 > **Addendum de mayor precedencia documental.** Se incorpora tras la integración de PR #421. Baseline Git verificado: `main` = `9edae74b47cf64ecccd72aeaa3058bb4ca35d936`. Este bloque consolida el contenido rector de los documentos guía raíz y los documentos de arquitectura/QA relevantes. No elimina fuentes ni evidencia histórica: los documentos especializados permanecen como detalle técnico y evidencia de origen. Cuando un snapshot o instrucción histórica contradiga este addendum, prevalece el estado más reciente verificado y la decisión vigente registrada en `docs/DECISION-LOG.md`.
