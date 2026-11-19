@@ -83,3 +83,10 @@ Este bloque sustituye el estado operativo de los addenda anteriores cuando exist
 - Release: **NO-GO para operación real**. Runtime, sincronización Wix y E2E no están acreditados.
 
 La auditoría detallada de jobs, riesgos operativos y secuencia mínima está en el addendum del dossier maestro del 2026-11-19.
+
+
+### Addendum de conciliación live — 2026-11-19
+
+La revalidación consistente de Wix confirma 3 compensaciones FISCAL_LEDGER/PENDING_RECOVERY (0 intentos), CajaActual ABIERTA con 300 EUR esperados/contados, cero MovimientosCaja y cero HistoricoCierresZ, seis CitasF2 y MapaStaff con 3 STAFF, 1 TERCERO y 1 GESTORIA, sin CONFIG_SISTEMA. Pedidos asociados: #10033 totalmente reembolsado (18,15 EUR) y #10032 PAID/Cash (92,45 EUR; composición dos líneas Stores + una Bookings). No se ha mutado ningún registro. El detalle y la decisión de no reintentar están en el addendum vigente del dossier maestro y en issues #415/#416.
+
+La retirada de inventario custom (#237) está completada en código; falta QA runtime nativo. La persistencia de snapshots trimestrales (#223) está implementada con hash y create-only; agregador mensual y registro de despacho append-only pendientes. Release NO-GO.
