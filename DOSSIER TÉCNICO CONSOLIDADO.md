@@ -2865,3 +2865,54 @@ Secuencia de menor coste:
 5. Sincronizar Wix con un SHA aprobado y ejecutar QA runtime aislado de TPV y Stores.
 6. Solo después completar E2E y gates de release.
 
+
+
+---
+
+# Addendum de automatizaciones y permisos CMS — 2026-11-19
+
+**Baseline Git:** `4917fd8061520b012b6022576e8bafeafaa43ca5`.  
+**CI sobre el baseline:** Backend offline quality gates SUCCESS (run `44609325157`); Secret scanning SUCCESS (run `44609325298`).  
+**Sitio Wix:** Site Context informa Published. La sincronización del SHA instalado y la validación runtime siguen pendientes.
+
+## 1. Inventario live de automatizaciones
+
+Consulta de solo lectura mediante la API oficial Query Automations:
+- 158 automatizaciones devueltas.
+- 8 con `configuration.status=ACTIVE`.
+- 150 con `configuration.status=INACTIVE`.
+- Las 8 activas son de origen `PREINSTALLED`; no hay automatizaciones de origen `USER` activas.
+- Una activa usa trigger `wix_bookings-sessions_booked` y acción `triggered-emails`: “Notify me when someone books one of my services”. No se leyeron ni expusieron destinatarios; su destino efectivo no está verificado.
+- “Registro Contable - Pagos Recibidos” tiene origen USER y no figura entre las activas.
+
+No se modificó ni desactivó ninguna automatización. El recuento histórico de 27 activas queda sustituido por esta lectura live. Antes de E2E hay que identificar el efecto/destinatario de la automatización Booking activa y aislar comunicaciones de prueba. No desactivar en bloque automatizaciones nativas porque podrían ser funcionales para la operativa real.
+
+## 2. Permisos CMS live
+
+Consulta de solo lectura de Data Permissions API:
+
+| Colección | Insert | Update | Remove | Special permissions |
+|---|---|---|---|---:|
+| MovimientosCaja | PRIVILEGED | PRIVILEGED | PRIVILEGED | 0 |
+| LibroAsientosContablesDetalle | PRIVILEGED | PRIVILEGED | PRIVILEGED | 0 |
+| HistoricoCierresZ | PRIVILEGED | PRIVILEGED | PRIVILEGED | 0 |
+| RegistrosHorariosStaff | PRIVILEGED | PRIVILEGED | PRIVILEGED | 0 |
+| PaquetesGestoria | PRIVILEGED | PRIVILEGED | PRIVILEGED | 0 |
+
+La documentación Wix define `PRIVILEGED` como acceso para administradores, colaboradores o roles con permisos especiales. No se puede afirmar que CMS_EDITOR quede excluido. Los hooks `beforeUpdate/beforeRemove` bloquean las mutaciones append-only; los hooks `beforeInsert` validan el contrato, pero no realizan autorización por identidad/rol. La inserción manual desde Content Manager no queda demostrada como writer-backend-only.
+
+Issue #261 sigue abierto. Requiere una prueba controlada con una identidad CMS_EDITOR en QA o una decisión explícita de endurecimiento que no rompa writers backend. No se han modificado permisos.
+
+## 3. Formato de sequenceCounters
+
+`CajaActual.sequenceCounters` se devuelve como string, pero el contenido se puede parsear como objeto JSON válido vacío (`{}`). El hook de `data.js` normaliza ese formato y rechaza JSON inválido o arrays. Se clasifica como divergencia de representación física, no como corrupción confirmada. No se ha actualizado el singleton.
+
+## 4. Estado y decisión
+
+- Los bloqueos P0 #415/#416/#209 siguen abiertos y los escritores fiscales/contables permanecen deshabilitados.
+- El sitio está Published y tiene ocho automatizaciones activas; no ejecutar pruebas que disparen comunicaciones hasta aislarlas.
+- La política CMS de inserción de ledgers no está acreditada como exclusiva de backend.
+- La implementación estática de claims de webhook y su suite offline existe; falta validar entrega real Wix y side effects controlados.
+- Release: **NO-GO para operación real**.
+
+Siguiente acción mínima: validar permisos con un colaborador CMS_EDITOR aislado y confirmar el destinatario/efecto de la automatización Booking activa. Después, configurar un procedimiento de QA que suprima únicamente efectos externos identificados. No cambiar automations ni permisos sin un plan de reversión y prueba de no regresión.
