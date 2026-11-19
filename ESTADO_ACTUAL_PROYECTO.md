@@ -11,7 +11,7 @@ Este es el estado operativo de referencia. Los snapshots anteriores se conservan
 
 | Área | Estado | Evidencia / límite |
 |---|---|---|
-| GitHub `main` | Verificado al corte previo | `eb0df0a3f798bb1cb7e3e5819eba08dfb76cd097` |
+| GitHub `main` | Verificado al corte previo | `be10ca00211fc04b4452024aee01480af959f416` |
 | CI backend offline | PASS | Run `44571150941` |
 | Secret scanning | PASS | Run `44571150946` |
 | Wix Editor / Velo | Contexto histórico | Editor Classic; última lectura registrada: Draft |
