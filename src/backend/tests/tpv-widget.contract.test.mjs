@@ -62,6 +62,7 @@ test("TPV HTML uses versioned messaging and browser-local ticket drafts", () => 
     assert.match(html, /function lookupGiftCard/);
     assert.match(html, /state\.operationKeys\.sale/);
     assert.match(html, /state\.operationKeys\.refund/);
+    assert.match(html, /id="taxTotal"[^>]*disabled/);
     assert.doesNotMatch(html, /onclick="addProduct\(|Usuario:\s*Administrador/);
 
 });
