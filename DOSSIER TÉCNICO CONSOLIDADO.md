@@ -1,3 +1,248 @@
+# CONSOLIDACIÓN MAESTRA — GUÍAS, ESTADO Y MAPA DE CONTENIDOS (2026-11-19)
+
+> **Addendum de mayor precedencia documental.** Se incorpora tras la integración de PR #421. Baseline Git verificado: `main` = `9edae74b47cf64ecccd72aeaa3058bb4ca35d936`. Este bloque consolida el contenido rector de los documentos guía raíz y los documentos de arquitectura/QA relevantes. No elimina fuentes ni evidencia histórica: los documentos especializados permanecen como detalle técnico y evidencia de origen. Cuando un snapshot o instrucción histórica contradiga este addendum, prevalece el estado más reciente verificado y la decisión vigente registrada en `docs/DECISION-LOG.md`.
+
+## A. Mapa de contenidos — navegación rápida
+
+### A.1 Dentro de este dossier
+
+| Necesidad | Apartado de este dossier | Contenido |
+|---|---|---|
+| Identidad del sitio, repositorio y alcance | [§1 Identidad y contexto](#1-identidad-y-contexto-del-proyecto) | Site ID, plataforma, roles, entidades y contexto |
+| Stack, Wix CLI y límites del runtime | [§2 Stack técnico](#2-stack-técnico-y-restricciones-del-runtime) | Wix Editor Classic, Velo, SDK, herramientas y restricciones |
+| Fuente de verdad y prioridades | [§3 Principios SSOT](#3-principios-ssot-y-prioridades-de-diseño) | Autoridad de datos, integridad y anti-patrones |
+| Arquitectura y dependencias | [§4 Arquitectura](#4-arquitectura-del-sistema-y-capas) | Capas, módulos, directorios y límites |
+| Reservas y Bookings | [§5 Modelo de reservas](#5-modelo-de-reservas-simple-y-dual) | Reservas simples/duales, contratos y recuperación |
+| CMS y keyfields | [§6 Modelo CMS](#6-modelo-cms-colecciones-keyfields-e-integridad) | Colecciones propias, campos, permisos y ledgers |
+| Enums y estados | [§7 Enums](#7-enums-canónicos) | Valores persistidos y contratos canónicos |
+| Seguridad y permisos | [§8 Seguridad](#8-seguridad-identidad-y-permisos) | RBAC, WebMethods, secretos, HMAC y rate limits |
+| Integraciones Wix y externas | [§9 Integraciones](#9-integraciones-wix-y-externas) | Bookings, Stores, eCommerce, Invoices y límites |
+| Backend y WebMethods | [§10 Backend](#10-backend-módulos-webmethods-y-hooks) | Módulos, consumidores, hooks y flujos |
+| Jobs y webhooks | [§11 Jobs](#11-jobs-programados-y-webhooks) | Cron, eventos, reintentos e idempotencia |
+| Estándares de código | [§12 Estándares](#12-estándares-de-código-y-nomenclatura) | Nomenclatura, errores, cabeceras y calidad |
+| Fiscalidad y cumplimiento | [§13 Normativa](#13-normativa-aplicable-y-estado-de-evidencia) | Evidencia legal/técnica y límites de certificación |
+| TPV y caja actual | [Addenda TPV 2026-11-19](#addendum-vigente--estado-consolidado-y-tpv-física-2026-11-19) | PC físico, tarjeta, periféricos, conciliación, X/Z |
+| Capa 3 documental | [Dossier Capa 3](DOSSIER%20FLUJOS%20END%20TO%20END%20CAPA%203.md) | Flujos Capa 1→Capa 3, SharePoint y Power Automate |
+| Ejecución QA | [Plan QA](PLAN_ACCION_QA.md) | H0–H5, escenarios, mocks, gates y evidencias |
+
+### A.2 Documentos guía raíz y su función consolidada
+
+| Documento | Función que queda consolidada aquí | Fuente detallada / aplicabilidad |
+|---|---|---|
+| `DIRECTRICES_DESARROLLO_CODIGO.md` | Gobierno, arquitectura obligatoria, seguridad, ciclo de cambios, pruebas, release y prioridades | Norma operativa breve. Sus invariantes se resumen en §§B–C; el estándar ampliado está en `docs/engineering/DEVELOPMENT-STANDARDS.md`. |
+| `PROJECT_BASELINE.md` | Alcance, arquitectura, prioridades y bloqueos del proyecto | Baseline histórico con addendum 2026-11-17; no usar su lista de PR ni bloqueos como estado Git actual sin reconciliar con este dossier. |
+| `ESTADO_ACTUAL_PROYECTO.md` | Resumen ejecutivo de hitos, estado CMS, PR y bloqueos | Último hito documentado 2026-11-17; su contenido de PR #418/#419 abiertas y baseline previo está supersedido por su merge y por PR #420/#421. |
+| `PLAN_ACCION_QA.md` | Plan ejecutable H0–H5, simuladores, escenarios y gates de QA | Mantiene contenido histórico sobre mutabilidad QA. No es autoridad para permitir update/remove de ledgers; prevalecen TEC-038/TEC-041 y §C. |
+| `DICCIONARIO_DATOS_CMS.md` | Inventario de colecciones, campos, tipos, keyfields, enums, relaciones y permisos | Addendum live fechado 2026-11-17; el resto contiene snapshots históricos. No autoriza escrituras ni sustituye read-back actual. |
+| `DOSSIER FLUJOS END TO END CAPA 3.md` | Flujos de negocio, exportación documental, gestoría, SharePoint y Power Automate | Diseño y estado de implantación con último addendum 2026-11-17; no acredita pipeline Capa 3 operativo. |
+| `README.md` | Entrada del repositorio y enlaces principales | Navegación de primer nivel; este mapa es la referencia completa de contenidos. |
+| `docs/DECISION-LOG.md` | Registro cronológico de decisiones de negocio/técnicas | Fuente para rastrear BUS/TEC; aplicar la decisión posterior vigente, especialmente TEC-038 a TEC-041. |
+| `docs/qa/QA-ENVIRONMENT-SSOT.md` | Identidad única del sitio QA y clasificación funcional | Autoridad específica de entorno. La fecha de la SSOT no actualiza automáticamente snapshots CMS ni acredita aislamiento runtime. |
+| `docs/engineering/DEVELOPMENT-STANDARDS.md` | Estándar de implementación, seguridad y calidad detallado | Complementa las directrices raíz; no sustituye contratos oficiales de Wix ni evidencia CI/runtime. |
+| `docs/architecture/TPV-WIX-NATIVE-INTEGRATION.md`, `TPV-CAJA-INTEGRATION.md`, `TPV-REPORT-IMPLEMENTATION.md` | Límites de integración TPV con Wix, caja y reportes | Documentos de diseño/implementación por corte; aplicar §D y addendum TPV más reciente. |
+| `docs/audits/*`, `docs/qa/*`, `docs/milestones/*`, `docs/adr/*` | Evidencias puntuales, auditorías, decisiones arquitectónicas y runbooks | Evidencia fechada; no asumir vigencia por estar versionada. Verificar SHA, fecha, entorno y alcance antes de usarla. |
+
+### A.3 Orden de consulta recomendado
+
+1. Este addendum para el estado consolidado y el mapa.
+2. La sección temática de este dossier para la arquitectura y los contratos.
+3. El documento especializado enlazado en A.2 para el detalle de ejecución.
+4. La evidencia fechada `docs/audits/` o `docs/qa/` que respalde el hecho concreto.
+5. `docs/DECISION-LOG.md` para el origen y precedencia de la decisión.
+6. Documentación oficial Wix/integración vigente para validar APIs, permisos y comportamiento de plataforma antes de implementar.
+
+## B. Gobierno documental y arquitectura consolidada
+
+### B.1 Autoridad
+
+- El propietario define los requisitos de negocio, prioridades, aceptación y autorizaciones.
+- La documentación oficial vigente de Wix y de cada proveedor determina contratos, APIs, límites y comportamiento técnico.
+- Las decisiones expresas posteriores prevalecen sobre decisiones anteriores. El Decision Log conserva trazabilidad, no crea autoridad independiente.
+- El código, CMS, CI y runtime acreditan implementación/estado; no redefinen por sí solos los requisitos.
+- Ante contradicción: identificar fuentes, fechas, SHA, impacto y estado; no elegir silenciosamente ni inventar datos.
+- Toda afirmación se etiqueta conceptualmente como **VERIFICADO**, **DECLARADO**, **INFERIDO** o **PENDIENTE**.
+
+### B.2 Invariantes de arquitectura
+
+1. Wix CMS propio es SSOT transaccional de los datos de dominio propios.
+2. Wix Bookings gobierna servicios, disponibilidad y reservas nativas.
+3. Wix Stores Catalog V3 gobierna catálogo, variantes e inventario comercial; no recrear stock paralelo ni reactivar colecciones legacy.
+4. Las colecciones WIX_APP se gestionan mediante APIs oficiales de la aplicación propietaria, no como CMS propio.
+5. El frontend presenta y recoge interacción; reglas de negocio, validación y autorización residen en backend/WebMethods.
+6. `internalConfig.js` centraliza constantes canónicas; `validation.js` centraliza validaciones compartidas.
+7. Secretos y credenciales solo en backend/secret stores. Nunca en frontend, HTML Component, logs o fixtures.
+8. Webhooks, crons, operaciones reintentables y procesos asíncronos requieren idempotencia, fencing/concurrencia y recuperación.
+9. `MovimientosCaja` es el histórico fuente append-only; `CajaActual` es una proyección operativa y no puede alterarse sin movimiento fuente conforme al flujo autorizado.
+10. SharePoint es repositorio de evidencia documental. Capa 3 no modifica ni gobierna Capa 1.
+11. No borrar ni sobrescribir evidencia económica/fiscal/laboral; las rectificaciones deben ser nuevos registros trazables.
+
+### B.3 Proceso obligatorio de cambio
+
+Antes de programar: localizar módulo y consumidores; revisar esquemas, enums, permisos, índices y dependencias; consultar documentación oficial; definir comportamiento, riesgos y pruebas. Antes de eliminar símbolos: buscar consumidores en páginas, backend, tests, runners y workflows; comprobar contratos externos; ejecutar suites pertinentes y revisar diff.
+
+Cada cambio debe tener baseline SHA, rama delimitada, análisis de impacto, implementación mínima, pruebas, diff revisado, CI, reversión y autorización. No publicar ni desplegar con fallos, riesgos críticos abiertos o rollback no definido.
+
+### B.4 Pruebas y significado de PASS
+
+- UNIT/MOCK prueban lógica aislada; no demuestran conectividad externa.
+- SANDBOX prueba persistencia en el entorno separado de Wix cuando se acredita que se está usando.
+- WIX_RUNTIME acredita ejecución real de código en Wix.
+- E2E acredita un flujo completo dentro del alcance y entorno documentados.
+- CI verde acredita solo los jobs y pruebas ejecutados sobre el SHA correspondiente.
+- No inferir que Wix Editor, Preview o Published ejecutan el SHA de Git sin read-back o evidencia equivalente reproducible.
+
+## C. Estado consolidado del proyecto — corte 2026-11-19
+
+### C.1 Repositorio y cambios integrados
+
+- Repositorio: `nachoortegazgz/marianmadridz`.
+- `main` en el corte de esta consolidación: `9edae74b47cf64ecccd72aeaa3058bb4ca35d936`.
+- PR #418 (maestro fiscal), #419 (normalización de sesión/counters de caja), #420 (widget TPV QA y retirada de diez módulos legacy) y #421 (actualización del dossier) están integradas.
+- PR #420: Backend offline quality gates PASS, run #1604; Secret scanning PASS, run #1028. La CI descrita para la PR #420 incluye 74 suites / 673 tests sin fallos. Son resultados offline; no equivalen a runtime Wix ni pruebas físicas.
+- PR #421 fue documental: merge commit `9edae74b47cf64ecccd72aeaa3058bb4ca35d936`. No modificó código ni repitió CI de código.
+- Los 16 módulos canónicos de TPV permanecen en `src/backend/tpv/`; los diez stubs legacy de la raíz `src/backend/tpv*.web.js` se retiraron en PR #420 tras búsqueda de consumidores.
+- No hay evidencia en esta consolidación de un release que vincule el runtime Wix a `9edae74b47cf64ecccd72aeaa3058bb4ca35d936`.
+
+### C.2 Entorno Wix y sincronización
+
+- Único sitio QA designado: Site ID `188bed94-177c-4bc9-a9f0-35080d874f3e`, `https://www.marianmadrid.es/`, Wix Editor Classic + Velo.
+- El propietario declara que el sitio es exclusivamente QA y que no ha tenido actividad real; esa declaración no sustituye marcadores técnicos ni certifica aislamiento de automatizaciones/proveedores.
+- Último estado Wix observado en la auditoría de 2026-11-17: `Draft`. No se ha repetido lectura live de Wix en esta consolidación; por tanto, **estado Wix posterior al 2026-11-17: pendiente de revalidar**.
+- No está acreditado el SHA de código instalado en Wix Editor ni la sincronización efectiva GitHub↔Editor. El modo Local Editor con código ReadOnly es coherente con el flujo de Git Integration; la edición se realiza en el IDE local, pero no se ha verificado aquí la sesión CLI local ni un read-back de sincronización.
+- No se ha ejecutado Wix Preview, Publish, Wix Runtime ni E2E en este corte.
+
+### C.3 CMS, maestros y caja
+
+- Último inventario live auditado: 50 colecciones (21 NATIVE, 29 WIX_APP) y 201 registros NATIVE en el corte del 2026-11-17. Es una observación fechada, no una lectura live realizada el 2026-11-19.
+- `MapaStaff`: 43 campos, revisión 135 y 5 registros en el corte auditado; PR #418 alinea el código con el esquema observado y con los registros discriminados por `recordType`.
+- `DatosFiscales` y `CONFIG_SISTEMA` no existían en ese corte. No crear placeholders ni inferir NIF/razón social del emisor.
+- Los permisos de 21 colecciones se endurecieron con read-back en el corte auditado; pruebas runtime de WebMethods/roles siguen pendientes.
+- PR #419 corrige interpretación de `closedAt` anterior a `openedAt` como metadato de sesión previa y normaliza `sequenceCounters` solo cuando el valor serializado es un objeto JSON válido. No demuestra que el singleton live se haya reescrito ni que la caja esté conciliada.
+- Continúan como hallazgo pendiente las tres compensaciones fiscales y dos pedidos POS correlacionados en la auditoría del 2026-11-17: uno reembolsado por 18,15 EUR y otro marcado PAID/Cash por 92,45 EUR sin movimiento de caja/proyección correspondiente en ese corte. El propietario declara los datos sintéticos, pero el snapshot no contiene marcador técnico que permita clasificar cada operación individual. No crear movimientos ni reintentar compensaciones sin reconciliación documental y autorización.
+- Writers fiscales, contables y laborales permanecen deshabilitados; identidad fiscal del emisor, CONFIG_SISTEMA y SIF/VERI*FACTU no están certificados.
+
+### C.4 Prioridades y gates vigentes
+
+| Prioridad | Ámbito | Estado de salida |
+|---|---|---|
+| P0 | Integridad fiscal, seguridad crítica, pérdida/exposición de datos | Bloqueado hasta identidad/configuración fiscal verificada, controles de integridad y evidencia legal |
+| P1 | Reservas, pagos, caja, concurrencia, ledgers y jornada | Bloqueado para operaciones reales; contratos y pruebas runtime pendientes |
+| P2 | Integraciones, automatizaciones, exportaciones y Capa 3 | Diseño parcial; conectores y E2E no acreditados |
+| P3 | Rendimiento, toolchain, mantenibilidad | Mejoras selectivas; no anteponerlas a P0/P1 |
+| P4 | Evolución funcional | Solo requisitos aprobados y tras gates anteriores |
+
+**Dictamen de despliegue:** NO-GO. La integración en Git y CI offline no habilitan publicación, cobros, devoluciones, writers fiscales ni actividad real.
+
+## D. Consolidación funcional TPV y caja
+
+### D.1 Requisito físico declarado por el propietario
+
+La operación objetivo utiliza un PC físico conectado a Internet, TPV personalizada, Wix Dashboard, terminal/lector bancario externo, impresora térmica, cajón monedero conectado a impresora/PC y dispositivos móviles del personal con Wix Owner. El propietario quiere utilizar Wix Payments como pasarela; la marca/modelo del lector bancario es temporalmente desconocido.
+
+Este es un requisito funcional declarado, no evidencia de compatibilidad ni de conexión física. No asumir que Wix Payments controla el lector del banco, que un navegador abre el cajón, ni que Wix Owner puede operar los periféricos o todas las funciones propias.
+
+### D.2 Contrato de clasificación de pagos aprobado
+
+- Efectivo: `CASH`; solo el importe neto recibido afecta al efectivo físico, descontando el cambio entregado.
+- Lector bancario: `CARD`; no incrementa el efectivo del cajón.
+- Pago mixto: componentes separados `CASH` y `CARD`, sumados en céntimos y vinculados al mismo ticket/orden.
+- Otros medios: solo con enum y contrato explícitamente aprobados; no clasificar automáticamente como efectivo.
+- La clasificación `CARD` está aprobada como requisito. El terminal aún no está identificado y no existe integración bancaria verificada.
+- Hasta que exista integración, una confirmación manual del operador debe distinguirse de una confirmación técnica del proveedor. Una declaración manual no prueba autorización, captura ni liquidación bancaria.
+- Intentos pendientes, fallidos, cancelados o abandonados no son cobros confirmados. La conciliación bancaria debe apoyarse en referencia/evidencia del adquirente, importe, fecha, pedido, operador y componente de pago.
+- No almacenar PAN completo, CVV ni credenciales de tarjeta. Las claves idempotentes deben evitar contabilización duplicada por reintento.
+- Registrar un pago en Wix Orders/Order Transactions no es lo mismo que ejecutar el cargo o mover fondos. No usar una API de registro como sustituto del terminal bancario.
+
+### D.3 Caja, X/Z y periféricos
+
+- Apertura/fondo inicial, arqueo parcial, entradas/salidas, cambio, devoluciones trazables, consulta de movimientos y cierre deben ser operaciones backend autorizadas.
+- `MovimientosCaja` conserva la evidencia fuente; `CajaActual` proyecta sesión y efectivo físico.
+- Los pagos `CARD` se informan separados y no incrementan el saldo físico.
+- Informe X: lectura/snapshot no cerrante, sin modificar ledgers ni sesión.
+- Cierre Z: consolidación inmutable de sesión con importes por medio, efectivo contado, diferencias, actor, fecha/hora y referencias fuente; rectificaciones mediante nuevos registros.
+- X/Z son controles operativos internos; no constituyen por sí mismos factura, registro fiscal reglamentario ni certificación SIF/VERI*FACTU.
+- Impresora y cajón requieren identificar modelo, conexión, driver, protocolo/lenguaje de impresión y mecanismo de apertura. No dar por hecho que un HTML Component/browser controla el cajón.
+- Wix Owner es canal móvil sujeto a roles y APIs disponibles; las autorizaciones se comprueban en backend.
+
+### D.4 Estado implementado y no demostrado
+
+**Implementado en Git / CI offline:** interfaz HTML candidata QA, controlador público, puente de mensajes, page code adaptador y módulos backend canónicos TPV; ventas/movimientos/devoluciones QA y cierres X/Z simulados según el contrato del repositorio. PR #420 elimina duplicados legacy.
+
+**No demostrado:** instalación en Wix Editor, runtime, Preview, publicación, integración del lector, Wix Payments presencial, impresión térmica, apertura del cajón, operación desde Wix Owner, cobros/reembolsos reales, conciliación con banco o certificación fiscal. Las operaciones QA no equivalen a venta/cobro real.
+
+## E. Consolidación Capa 1 → Capa 3
+
+- **Capa 1:** Wix CMS propio y sistemas nativos Wix son autoridad transaccional dentro de sus dominios.
+- **Capa 2:** backend, jobs, validaciones, generación de vistas/paquetes y coordinación de procesos. No puede delegar a SharePoint autoridad sobre los datos.
+- **Capa 3:** SharePoint como repositorio de evidencia documental; Power Automate como posible orquestador documental sujeto a tenant, licencias, DLP, conexiones, permisos y diseño aprobados.
+- Dirección prevista: Wix/backend → transporte aprobado → Power Automate (si procede) → SharePoint.
+- No existen callbacks ni escrituras de retorno de Capa 3 a Capa 1.
+- Los nombres PA-01…PA-07 son diseños propuestos, no evidencia de flujos activos.
+- El pipeline SharePoint/Power Automate no está implementado ni certificado E2E en la evidencia disponible.
+- La exportación debe minimizar PII, excluir secretos y datos de tarjeta, ser versionada/idempotente, preservar integridad y tener evidencia de entrega/retención.
+- Los paquetes de gestoría, emails y exportaciones permanecen bloqueados mientras no haya destinatarios/configuración válidos, conectores y pruebas autorizadas.
+
+## F. QA, pruebas y salida a despliegue
+
+### F.1 Política QA efectiva
+
+- Continuar con auditoría estática, unit tests, integración offline, mocks deterministas y lecturas Wix read-only.
+- El mock de pagos no llama a Wix Payments, banco ni PSP y no acredita un pago.
+- No emitir facturas/tickets reales, mensajes, emails, SMS, WhatsApp, gestoría, AEAT/Veri*Factu ni exportaciones externas.
+- No ejecutar pruebas que disparen automatizaciones Wix con notificaciones sin neutralización soportada y comprobada.
+- No escribir en CMS live ni ejecutar writers de negocio por el mero hecho de que el sitio esté designado QA.
+- Mantener ledgers append-only e inmutables. La autorización histórica QA-2026-11-15-TEMP-MUTABILITY no prevalece: TEC-038 cerró los bypasses globales y TEC-041 reafirmó la inmutabilidad. No update/remove de ledgers; correcciones económicas mediante registros rectificativos trazables.
+- Las purgas efímeras de ControlOperativo solo bajo allowlist y condiciones server-side exactas; nunca para eventos, dedupe, claims o claves idempotentes.
+
+### F.2 Fases y gates
+
+| Fase | Alcance | Estado consolidado |
+|---|---|---|
+| H0 | Identidad del entorno, aislamiento de integraciones y automatizaciones | Parcial; Site ID designado, aislamiento/runtime y side-effects por revalidar |
+| H1 | Baseline Git/CMS, contratos, esquemas, consumidores | Parcial; PR #418–#420 integradas; CMS snapshot del 17-11 requiere read-back antes de mutar |
+| H2 | Permisos, seguridad, fixtures y simuladores | Offline y hardening documentados; runtime no acreditado |
+| H3 | Tests, CI, regresión, idempotencia y revisión de diff | CI PR #420 PASS; no equivale a Wix Runtime |
+| H4 | Wix Local Editor, Preview, permisos reales, E2E sintético | Pendiente |
+| H5 | Certificación del banco de pruebas y gates de preproducción | Pendiente; NO-GO |
+
+### F.3 Gates mínimos antes de publicar
+
+1. Revalidar estado Wix, Site ID, permisos, automatizaciones y canales externos en modo read-only.
+2. Demostrar sincronización Editor↔Git y correspondencia del código con un SHA concreto.
+3. Resolver las incidencias de caja/compensaciones con evidencia, sin modificar ledgers.
+4. Verificar identidad fiscal, configuración y obligaciones SIF/VERI*FACTU con asesoría/documentación oficial.
+5. Configurar protección de rama/required checks y exigir CI del SHA candidato.
+6. Instalar TPV en Wix Local Editor y validar HTML Component, controladores y permisos.
+7. Probar Wix Runtime/Preview con fixtures y efectos externos neutralizados.
+8. Identificar terminal, impresora y cajón; probar controladores/protocolos y conciliación con el adquirente.
+9. Probar roles de personal/Wix Owner, concurrencia, idempotencia, reintentos, devoluciones y cierres.
+10. Revisar privacidad, cookies, accesibilidad, precios/IVA, textos legales, rollback y autorización expresa.
+11. No ejecutar Publish ni operaciones reales hasta cerrar todos los gates P0/P1 y obtener autorización.
+
+## G. Discrepancias documentales identificadas y resolución
+
+| Documento / afirmación histórica | Contradicción | Resolución vigente |
+|---|---|---|
+| `ESTADO_ACTUAL_PROYECTO.md` dice PR #418/#419 abiertas y no incluye #420 | Las PR #418, #419 y #420 están fusionadas; #421 actualiza el dossier | Estado de Git en §C.1 |
+| `PROJECT_BASELINE.md` y addenda anteriores usan baseline/PR #367 o #418/#419 pendientes | Main posterior incluye #418–#421 | SHA `9edae74b47cf64ecccd72aeaa3058bb4ca35d936` y §C |
+| `PLAN_ACCION_QA.md` conserva QA-2026-11-15-TEMP-MUTABILITY y una suspensión append-only | Contradice TEC-038 y TEC-041 | Ledgers append-only inmutables; no mutaciones |
+| `DOSSIER FLUJOS END TO END CAPA 3.md` tiene último estado live 2026-11-17 | No hay evidencia posterior de pipeline SharePoint/Power Automate operativo | Capa 3 sigue diseño, no E2E certificado |
+| `DICCIONARIO_DATOS_CMS.md` contiene inventarios y esquemas históricos extensos | Solo el addendum live 2026-11-17 corresponde al último corte conocido | No usar snapshots antiguos; releer CMS antes de escrituras |
+| Auditorías TPV 2026-11-17/19 se basan en SHAs previos a PR #420 | El widget y la limpieza legacy cambiaron en #420 | El estado de código actual se fija por PR #420; los hallazgos runtime siguen pendientes |
+| Documentos de integración TPV antiguos dicen que no hay UI/capacidades o usan contratos previos | PR #420 actualizó widget/backend QA, pero no instaló en Wix | Distinguir implementación Git de integración runtime |
+| El requisito del propietario indica Wix Payments y lector bancario externo | No se ha identificado terminal ni demostrado soporte presencial en España | `CARD` es el método funcional; integración de hardware y proveedor pendiente |
+
+## H. Mantenimiento de la documentación
+
+- Este dossier es la vista consolidada para arquitectura, estado, riesgos y navegación.
+- Los documentos especializados no se borran: se mantienen como detalle de contrato, runbook o evidencia fechada. Cuando se actualicen, añadir addendum con fecha, SHA, fuente, alcance y estado de validación.
+- No copiar snapshots históricos al apartado de estado vigente. Los inventarios CMS deben incluir fecha/hora, Site ID, API usada, permisos, recuentos, revisión y evidencia de read-back.
+- Al integrar cada PR que afecte código, actualizar §C.1, el mapa si cambia la arquitectura y el documento especializado afectado.
+- Cada nueva afirmación de despliegue debe citar el SHA exacto y evidencia Wix equivalente. Sin ella, indicar pendiente/no demostrado.
+- No presentar este documento ni los resúmenes de los documentos guía como certificación legal, fiscal o de conformidad Wix.
+
+---
+
 # ADDENDUM VIGENTE — ESTADO CONSOLIDADO Y TPV FÍSICA (2026-11-19)
 
 > **Prevalece sobre cualquier bloque histórico o addendum anterior que lo contradiga.** Corte de repositorio verificado en GitHub el 2026-11-19. Este documento distingue requisitos aprobados, implementación en repositorio, observaciones live y validaciones pendientes. La inclusión de un requisito no significa que esté implementado, instalado en Wix ni validado en runtime.
