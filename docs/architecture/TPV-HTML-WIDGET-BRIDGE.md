@@ -73,7 +73,7 @@ Además, `MM_READY` y `MM_CONTEXT` pertenecen al handshake administrado por `pub
 
 ## Validación
 
-La prueba `src/backend/tests/tpv-widget.contract.test.mjs` verifica que cada petición funcional declarada por el widget está permitida, despachada y tiene respuesta correlacionada. La suite también debe validar el parseo del script HTML y los contratos de WebMethods.
+La versión HTML actual inicia 17 operaciones de puente: `CASHIER_STATE`, `QA_CONFIG`, `QA_PERMISSIONS`, `CATALOG_SERVICES`, `CATALOG_STAFF`, `CATALOG_PRODUCTS`, `PRODUCT_VARIANTS`, `CUSTOMERS_SEARCH`, `QA_PAYMENT_VALIDATE`, `VALIDATE_SALE_DRAFT`, `QA_SALE_REGISTER`, `QA_SESSION_SUMMARY`, `QA_SESSION_OPEN`, `QA_CASH_MOVEMENT`, `QA_REFUND`, `QA_TICKET_X` y `QA_TICKET_Z`. El controlador conserva cuatro handlers reservados que esta UI no invoca actualmente: `CUSTOMER_BOOKINGS`, `GIFT_CARD_BALANCE`, `QA_PARTIAL_COUNT` y `QA_AUDIT_LIST`. No deben contabilizarse como flujos activos ni mostrarse como capacidades disponibles. Las pruebas de contrato distinguen peticiones activas, handlers reservados y capacidades visuales deshabilitadas.
 
 **No verificado:** ID real del componente instalado en Wix, contenido efectivamente pegado en el Editor, permisos de página, Wix Preview, runtime publicado, impresora, cajón, terminal bancario y pruebas E2E. La presencia de código en GitHub no demuestra sincronización con el Editor.
 
