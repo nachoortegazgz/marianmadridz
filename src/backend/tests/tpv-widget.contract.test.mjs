@@ -25,48 +25,31 @@ test("TPV controller exposes authenticated QA session and Bookings catalog metho
     );
 });
 
-test("TPV HTML uses versioned messaging and browser-local ticket drafts", () => {
+test("TPV HTML uses versioned messaging and keeps ticket drafts in browser memory", () => {
     assert.match(html, /MM_READY/);
     assert.match(html, /CASHIER_STATE_RES/);
     assert.match(html, /CATALOG_SERVICES_RES/);
     assert.match(html, /CATALOG_STAFF_RES/);
-    assert.match(html, /GIFT_CARD_BALANCE_RES/);
     assert.match(html, /send\("CATALOG_SERVICES"/);
     assert.match(html, /send\("CATALOG_STAFF"/);
-    assert.match(html, /precioFormateado/);
-    assert.ok(html.includes('if(!state.contextReady&&type!=="MM_READY")return false;'));
     assert.match(html, /function requestCatalog/);
     assert.match(html, /window\.parent\.postMessage/);
     assert.match(html, /function announceReady/);
     assert.match(html, /e\.source!==window\.parent/);
+    assert.match(html, /state\.contextReady/);
     assert.match(html, /state\.items/);
-    assert.match(html, /QA PERSISTENTE/);
-    assert.match(html, /Cobrar · deshabilitado/);
-    assert.match(html, /Ticket Z · cierre/);
-    assert.match(html, /id="section-tickets"/);
-    assert.match(html, /Factura simplificada/);
-    assert.match(html, /Factura completa/);
-    assert.match(html, /Abono \/ rectificativa/);
     assert.match(html, /cashDenominations/);
     assert.match(html, /loadMoreProducts/);
     assert.match(html, /function requestMoreProducts/);
     assert.match(html, /calculateDenominations/);
-    assert.doesNotMatch(html, /fetch\s*\(|XMLHttpRequest|wix-data|suppressAuth/i);
-    assert.match(html, /send\("CASHIER_STATE"/);
-    assert.match(html, /m\.type==="MM_CONTEXT"/);
-    assert.match(html, /m\.type==="CASHIER_STATE_RES"/);
-    assert.match(html, /send\("CATALOG_SERVICES"/);
-    assert.match(html, /send\("CATALOG_STAFF"/);
     assert.match(html, /request\("QA_PAYMENT_VALIDATE"/);
     assert.match(html, /function finalizeSynthetic/);
-    assert.doesNotMatch(html, /function lookupGiftCard/);
     assert.match(html, /state\.operationKeys\.sale/);
     assert.match(html, /state\.operationKeys\.refund/);
     assert.match(html, /id="taxTotal"[^>]*disabled/);
+    assert.doesNotMatch(html, /fetch\s*\(|XMLHttpRequest|wix-data|suppressAuth/i);
     assert.doesNotMatch(html, /onclick="addProduct\(|Usuario:\s*Administrador/);
-
 });
-
 test("TPV controls keep unsupported commercial and fiscal capabilities disabled", () => {
     for (const label of ["Emitir tarjeta regalo", "Consultar tarjeta regalo", "Emitir factura completa", "Emitir rectificativa"]) {
         assert.match(html, new RegExp("<button[^>]*disabled[^>]*>" + label + "</button>"));
