@@ -43,7 +43,7 @@ Wix Bookings y Stores permanecen como SSOT de los catálogos que se leen. El CMS
 - `tpvGiftCards.web.js` responde `TPV_GIFT_CARDS_DISABLED_IN_QA`; no consulta `giftVouchers.getGiftCard` ni recibe códigos de tarjeta.
 - Los eventos de auditoría usan el actor sintético `QA_ACTOR`; la identidad real se utiliza únicamente en la comprobación de autorización backend y no se persiste en los registros TPV.
 - `tpvQaRepository.js` concentra escrituras QA, idempotencia y locks CAS.
-- `#htmlTPV.txt` deshabilita visualmente la consulta de saldo real y etiqueta clientes/profesionales como sintéticos.
+- `#htmlTPV.txt` implementa el protocolo `MM_READY/MM_CONTEXT`, `postMessage`, catálogo Bookings/Stores V3, fixtures de cliente/profesionales y operaciones persistentes sintéticas QA a través de `tpvPageController.js`. Los cobros reales, facturación, Gift Cards reales, reservas, hardware y escrituras operativas permanecen deshabilitados. El HTML está versionado; su instalación en el HTML Component Wix y runtime siguen pendientes de verificación.
 
 ## Política de seguridad
 
@@ -62,9 +62,19 @@ Se retiraron tras comprobar consumidores:
 - `src/pages/tpvCaja.web.js`
 - `src/backend/tpvCaja.web.js`
 - `src/backend/tpvVentas.web.js`
+- `src/backend/tpvCatalogo.web.js`
+- `src/backend/tpvCierres.web.js`
+- `src/backend/tpvDevoluciones.web.js`
+- `src/backend/tpvMovimientos.web.js`
+- `src/backend/tpvPagos.web.js`
+- `src/backend/tpvPermisos.web.js`
+- `src/backend/tpvAuditoria.web.js`
+- `src/backend/tpvUtils.web.js`
 - `src/public/tpv/tpv-page.js`
 
-No reintroducir los escritores legacy: insertaban en `MovimientosCaja` y actualizaban `CajaActual` fuera del control centralizado actual.
+Los diez módulos `src/backend/tpv*.web.js` de la raíz eran stubs antiguos sin consumidores activos. Los dos escritores antiguos insertaban directamente en `MovimientosCaja`/`CajaActual`; los demás exponían contratos incompletos y/o duplicados sin las políticas QA actuales. La implementación canónica está en `src/backend/tpv/` y no debe coexistir con esos aliases legacy.
+
+**Integración UI desarrollada el 2026-11-19:** el HTML implementa el contrato del widget y las acciones persistentes QA mediante el controlador. La venta guardada es una venta sintética de pruebas, no un cobro real. La CI offline del HEAD `d8a8c8f61517a44f89f0db8e0159bc159c2d2782` terminó correctamente: Layer 1 28 suites / 331 tests; Layer 2 19 suites / 258 tests; total 74 suites / 673 tests, 0 fallos; SDK contracts, ESLint y secret scanning correctos. Runtime Wix, instalación en `#htmlTPV`, Preview y Publish siguen pendientes.
 
 ## Bloqueos antes de activar operaciones reales
 
