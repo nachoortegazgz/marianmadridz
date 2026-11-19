@@ -43,7 +43,7 @@ Wix Bookings y Stores permanecen como SSOT de los catálogos que se leen. El CMS
 - `tpvGiftCards.web.js` responde `TPV_GIFT_CARDS_DISABLED_IN_QA`; no consulta `giftVouchers.getGiftCard` ni recibe códigos de tarjeta.
 - Los eventos de auditoría usan el actor sintético `QA_ACTOR`; la identidad real se utiliza únicamente en la comprobación de autorización backend y no se persiste en los registros TPV.
 - `tpvQaRepository.js` concentra escrituras QA, idempotencia y locks CAS.
-- `#htmlTPV.txt` deshabilita visualmente la consulta de saldo real y etiqueta clientes/profesionales como sintéticos.
+- `#htmlTPV.txt` está versionado, pero el contenido auditado el 2026-11-19 es una maqueta local: no implementa el protocolo `MM_READY/MM_CONTEXT`, no usa `postMessage`, conserva catálogo/precios hardcodeados y simula cobros solo en memoria. No está alineado con `tpvPageController.js` y no debe instalarse como interfaz operativa hasta completar la integración.
 
 ## Política de seguridad
 
@@ -62,9 +62,19 @@ Se retiraron tras comprobar consumidores:
 - `src/pages/tpvCaja.web.js`
 - `src/backend/tpvCaja.web.js`
 - `src/backend/tpvVentas.web.js`
+- `src/backend/tpvCatalogo.web.js`
+- `src/backend/tpvCierres.web.js`
+- `src/backend/tpvDevoluciones.web.js`
+- `src/backend/tpvMovimientos.web.js`
+- `src/backend/tpvPagos.web.js`
+- `src/backend/tpvPermisos.web.js`
+- `src/backend/tpvAuditoria.web.js`
+- `src/backend/tpvUtils.web.js`
 - `src/public/tpv/tpv-page.js`
 
-No reintroducir los escritores legacy: insertaban en `MovimientosCaja` y actualizaban `CajaActual` fuera del control centralizado actual.
+Los diez módulos `src/backend/tpv*.web.js` de la raíz eran stubs antiguos sin consumidores activos. Los dos escritores antiguos insertaban directamente en `MovimientosCaja`/`CajaActual`; los demás exponían contratos incompletos y/o duplicados sin las políticas QA actuales. La implementación canónica está en `src/backend/tpv/` y no debe coexistir con esos aliases legacy.
+
+**Discrepancia de interfaz detectada el 2026-11-19:** el HTML versionado no satisface el contrato que exigen `tpv-widget.contract.test.mjs` y `tpv-ui.qa-source.test.mjs`. El backend y el controlador se conservan; la interfaz queda bloqueada como maqueta hasta integrar el protocolo y las acciones reales QA. No afirmar que el widget funciona ni sincronizarlo con Wix mientras esta brecha permanezca.
 
 ## Bloqueos antes de activar operaciones reales
 
