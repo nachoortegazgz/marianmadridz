@@ -16,6 +16,15 @@ Por instrucción expresa del propietario, `188bed94-177c-4bc9-a9f0-35080d874f3e`
 
 Mientras se resuelve el acceso QA, continuar únicamente con pruebas offline/mock y datos sintéticos. Los mocks de pago no llaman a proveedores ni acreditan transacciones reales. No enviar comunicaciones ni datos a servicios externos.
 
+## Toolchain local y CI
+
+- **Node.js:** Wix CLI for Sites requiere Node.js `24.22.1` o superior. CI fija exactamente `24.22.1`; en local se recomienda usar esa misma versión para reproducir los gates.
+- **Wix CLI for Sites:** versión fijada en CI y en el procedimiento local: `@wix/cli@1.2.14`. Instalación local: `npm install --global @wix/cli@1.2.14`. Las actualizaciones de CLI deben aprobarse mediante un cambio deliberado y validarse en CI; no usar `@latest` en workflows.
+- **GitHub Actions:** `actions/checkout@v6.0.0` y `actions/setup-node@v5.0.0` están fijadas por SHA en los workflows de calidad, Preview y secret scanning. Gitleaks también permanece fijado por SHA.
+- **Wix Preview:** el workflow `.github/workflows/wix-tpv-preview.yml` solo se inicia manualmente (`workflow_dispatch`) desde `main`. La entrada `create_preview` tiene valor predeterminado `false`; solo si se activa explícitamente ejecuta `npm run wix preview`. No se ejecuta automáticamente en push/PR y nunca ejecuta `wix publish`. Requiere el secreto GitHub `CLI_API_KEY`.
+- **Dependencias npm:** `package-lock.json` es el lockfile utilizado por `npm ci` en CI y sus dependencias raíz coinciden con `package.json`.
+- **`wix.lock`:** está versionado y su cabecera lo identifica como artefacto generado automáticamente por Yarn Plug'n'Play; no editarlo manualmente. La auditoría del 19-11-2026 detectó una discrepancia en la dependencia raíz `@wix/stores`: `package.json` y `package-lock.json` declaran `1.0.997`, mientras que `wix.lock` resuelve `1.0.960`. El pipeline npm usa `package-lock.json`; la discrepancia de `wix.lock` queda pendiente de reconciliación en el checkout local conectado a Wix, usando el flujo oficial y comprobando el diff antes de aceptar cualquier cambio. No se ha regenerado ni modificado desde GitHub.
+
 ## Documentos canónicos
 
 - [Plan de acción QA](PLAN_ACCION_QA.md)
