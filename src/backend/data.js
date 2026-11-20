@@ -719,13 +719,29 @@ export function CajaActual_beforeInsert(item) {
     return item;
 }
 
-export function CajaActual_beforeUpdate(item, context) {
+export async function CajaActual_beforeUpdate(item) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) {
+        _schemaError("CajaActual beforeUpdate requiere un item valido");
+    }
+    const itemId = _safeTrim(item._id);
+    if (!itemId) _schemaError("CajaActual beforeUpdate requiere _id para recuperar el estado previo");
+
+    // Wix UpdateHookContext documents collectionName, userId and userRole;
+    // it does not provide context.original. Read the persisted item directly.
+    const persisted = await getItem(
+        BUSINESS_COLLECTIONS.CAJA_ACTUAL,
+        itemId,
+        CONSISTENCY.STRONG
+    );
+    if (!persisted || String(persisted._id || "") !== itemId) {
+        _schemaError("CajaActual beforeUpdate no pudo recuperar el estado previo");
+    }
+
     _normalizeCmsDateTimes(item, ["openedAt", "closedAt", "lastMovementAt"]);
-    const original = context?.original || {};
-    const previous = { ...original };
+    const previous = { ...persisted };
     _normalizeCajaSequenceCounters(previous);
     _normalizeCajaSequenceCounters(item);
-    if (item.sequenceCounters === undefined && typeof original.sequenceCounters === "string") {
+    if (item.sequenceCounters === undefined && typeof persisted.sequenceCounters === "string") {
         item.sequenceCounters = previous.sequenceCounters;
     }
     const merged = { ...previous, ...item };

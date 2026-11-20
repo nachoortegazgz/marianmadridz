@@ -160,7 +160,12 @@ function cajaBase() {
   };
 }
 
-test('HOOK-CMS-DATETIME-04 normalizes CajaActual DateTime fields without changing the instant', () => {
+test('HOOK-CMS-DATETIME-04 normalizes CajaActual DateTime fields without changing the instant', async () => {
+  wixDataMock._reset();
+  wixDataMock._seed('CajaActual', [{
+    _id: 'SINGLE_ITEM_ID',
+    singletonKey: 'CAJA_PRINCIPAL',
+  }]);
   const item = {
     _id: 'SINGLE_ITEM_ID',
     singletonKey: 'CAJA_PRINCIPAL',
@@ -179,14 +184,28 @@ test('HOOK-CMS-DATETIME-04 normalizes CajaActual DateTime fields without changin
     openedAt: 'not-a-date',
   }), /DATETIME/);
   const update = { _id: 'SINGLE_ITEM_ID', singletonKey: 'CAJA_PRINCIPAL', closedAt: '2026-11-11T10:00:00.000Z' };
-  H.CajaActual_beforeUpdate(update, { original: { singletonKey: 'CAJA_PRINCIPAL' } });
+  await H.CajaActual_beforeUpdate(update, { original: { singletonKey: 'IGNORED_UNTRUSTED_CONTEXT' } });
   assert.ok(update.closedAt instanceof Date);
+  wixDataMock._reset();
 });
 
-test('HOOK-CAJA-00 permits projection idempotency metadata on CajaActual principal', () => {
-  const previous = { _id: 'CAJA_PRINCIPAL', sequenceCounters: { seqGlobal: 5, appliedMovementIds: ['movement-1'] } };
-  const next = { _id: 'CAJA_PRINCIPAL', sequenceCounters: { seqGlobal: 5, appliedMovementIds: ['movement-1', 'movement-2'] } };
-  assert.strictEqual(H.CajaActual_beforeUpdate(next, { original: previous }), next);
+test('HOOK-CAJA-00 permits projection idempotency metadata on CajaActual principal', async () => {
+  wixDataMock._reset();
+  const previous = { _id: 'CAJA_PRINCIPAL', singletonKey: 'CAJA_PRINCIPAL', sequenceCounters: { seqGlobal: 5, appliedMovementIds: ['movement-1'] } };
+  const next = { _id: 'CAJA_PRINCIPAL', singletonKey: 'CAJA_PRINCIPAL', sequenceCounters: { seqGlobal: 5, appliedMovementIds: ['movement-1', 'movement-2'] } };
+  wixDataMock._seed('CajaActual', [previous]);
+  assert.strictEqual(await H.CajaActual_beforeUpdate(next), next);
+  wixDataMock._reset();
+});
+
+test('HOOK-CAJA-00 blocks update when persisted CajaActual state cannot be read', async () => {
+  wixDataMock._reset();
+  const item = { _id: 'MISSING_CAJA', singletonKey: 'CAJA_PRINCIPAL' };
+  await assert.rejects(
+    () => H.CajaActual_beforeUpdate(item, { original: { singletonKey: 'CAJA_PRINCIPAL' } }),
+    /no pudo recuperar el estado previo/
+  );
+  wixDataMock._reset();
 });
 
 test('HOOK-CAJA-01 rejects write without traceId', () => {
@@ -400,7 +419,8 @@ test("HOOK-MAPASTAFF-03 TERCERO and GESTORIA use live fiscal fields; email remai
   assert.throws(() => H.MapaStaff_beforeInsert({ ...accountant, emailFiscal: "invalid" }), /emailFiscal must be valid/);
 });
 
-test("HOOK-CAJA-01 normalizes JSON sequenceCounters and clears a prior-session closedAt", () => {
+test("HOOK-CAJA-01 normalizes JSON sequenceCounters and clears a prior-session closedAt", async () => {
+  wixDataMock._reset();
   const openedAt = new Date("2026-11-14T06:00:00.000Z");
   const priorClosedAt = new Date("2026-11-12T23:00:00.000Z");
   const item = {
@@ -414,8 +434,9 @@ test("HOOK-CAJA-01 normalizes JSON sequenceCounters and clears a prior-session c
     closedAt: priorClosedAt,
     sequenceCounters: "{}",
   };
+  wixDataMock._seed("CajaActual", [original]);
 
-  H.CajaActual_beforeUpdate(item, { original });
+  await H.CajaActual_beforeUpdate(item, { original: { cashRegisterStatus: "UNTRUSTED" } });
   assert.deepEqual(item.sequenceCounters, {});
   assert.equal(item.closedAt, null);
 
@@ -436,6 +457,7 @@ test("HOOK-CAJA-01 normalizes JSON sequenceCounters and clears a prior-session c
     singletonKey: "CAJA_PRINCIPAL",
     sequenceCounters: "not-json",
   }), /sequenceCounters debe ser un objeto JSON valido/);
+  wixDataMock._reset();
 });
 
 // -----------------------------------------------------------------------------
@@ -520,7 +542,8 @@ test('HOOK-MOCK-00 loader mock available', () => {
   assert.ok(true);
 });
 
-test('HOOK-CAJA-SINGLE-01 enforces the CajaActual single-item principal', () => {
+test('HOOK-CAJA-SINGLE-01 enforces the CajaActual single-item principal', async () => {
+  wixDataMock._reset();
   const principal = { _id: 'SINGLE_ITEM_ID', singletonKey: 'CAJA_PRINCIPAL' };
   assert.strictEqual(H.CajaActual_beforeInsert(principal), principal);
   assert.throws(
@@ -537,7 +560,9 @@ test('HOOK-CAJA-SINGLE-01 enforces the CajaActual single-item principal', () => 
     ...previous,
     sequenceCounters: { seqGlobal: 9, appliedMovementIds: ['movement-1'] },
   };
-  assert.strictEqual(H.CajaActual_beforeUpdate(next, { original: previous }), next);
+  wixDataMock._seed('CajaActual', [previous]);
+  assert.strictEqual(await H.CajaActual_beforeUpdate(next), next);
+  wixDataMock._reset();
 });
 
 
