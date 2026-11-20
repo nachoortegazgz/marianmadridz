@@ -1,0 +1,85 @@
+# Auditoría de implementación — correcciones C1–C11 y D1–D4
+
+**Fecha:** 2026-11-20  
+**Repositorio:** `nachoortegazgz/marianmadridz`  
+**Base auditada:** `d7dd23642cbe8dd901fe537d259ae93b3d0dab6e`  
+**Rama de trabajo:** `fix/p0-build-runtime-imports-2026-11-20`  
+**Alcance de esta intervención:** cambios mínimos de código y decisión de seguridad sobre el resto de la lista.  
+**Estado de despliegue:** NO-GO; no se ha publicado ni ejecutado runtime Wix.
+
+## 1. Resultado ejecutivo
+
+Se ha aplicado una corrección de código directamente justificada por el análisis estático: importar explícitamente `fetch` desde `wix-fetch` en `src/backend/cajas.web.js`, que lo utiliza en el firmador fiscal. Wix documenta ese import para Velo. La corrección no activa el firmador ni habilita escrituras fiscales.
+
+No se ha añadido `@wix/crm` a `package.json` porque el lockfile contiene 443 paquetes y no incluye ni el paquete ni los 12 módulos dependientes del SDK CRM. En este entorno no ha sido posible ejecutar `npm install` contra npm ni generar y verificar el lockfile; editar solo el manifiesto dejaría `npm ci` inconsistente. La versión `1.0.1714` aparece publicada en npm, pero eso no sustituye la generación reproducible del lockfile.
+
+## 2. Cambios aplicados
+
+### C2 — Import de Wix Fetch
+- Archivo: `src/backend/cajas.web.js`.
+- Añadido: `import { fetch } from "wix-fetch";`.
+- Se conserva intacta la lógica de timeout, circuit breaker, secretos, validación de respuesta y manejo de errores.
+- No se ha invocado el endpoint de firma ni se han realizado operaciones fiscales.
+
+**Estado:** import corregido y harness offline actualizado para exponer el export nombrado `fetch` de `wix-fetch`. La primera ejecución de CI detectó que el mock genérico del loader no exportaba nombres; el fallo era del harness, no del contrato Wix. Se añade un mock específico de `wix-fetch` basado en `globalThis.fetch` de Node exclusivamente para pruebas offline. Prueba de invocación real del firmador pendiente.
+
+## 3. Correcciones no aplicadas y motivo
+
+| ID | Decisión | Motivo / condición para continuar |
+|---|---|---|
+| C1 | Pendiente | Requiere regenerar `package-lock.json` con npm y verificar `npm ci`. La sesión no dispone de shell con acceso a registry.npmjs.org. No se edita el lock a mano ni se rompe reproducibilidad. |
+| C3 | Sin cambio de código | El workflow ya fija Node `24.22.1`. La propuesta de `engines >=24` es una mejora de política, no una corrección demostrada necesaria para CI; no se añadió sin comprobar impacto en CLI/local tooling. La suite debe volver a pasar en la PR candidata. |
+| C4 | Mantener desactivada | Historial documentado: al activarla con ESLint 8.25.0 y `@wix/eslint-plugin-cli@1.0.2`, la regla falló al cargar con `ERR_INVALID_ARG_TYPE` (run `42985830795`). Además falta `src/velo.dependencies.json`; no se crea manualmente. Requiere resolver compatibilidad oficial del plugin y el flujo Wix de manifiesto antes de activarla. |
+| C5 | No habilitar writers operativos | Activar venta/devolución real cambia el TPV de QA a sistema transaccional. Faltan entorno aislado probado, pagos y conciliación por método, contratos de ticket/fiscal, reservas asociadas, compensación y E2E. Se mantienen stubs fail-closed y los flujos sintéticos. El catálogo sí lee servicios y productos nativos; las identidades de cliente/profesional y pagos continúan sintéticos. |
+| C6 | No activar fichaje | No se habilitan flags de escritura ni se conecta UI hasta probar concurrencia por empleado/día, secuencia, idempotencia, correcciones append-only, firma, autorización y conservación legal. El UI no sustituye controles backend. |
+| C7 | Mantener gate y documentar decisión | No hay consumidor runtime y el propio código condiciona el mapeo a aprobación formal del rule set PGC. No se activa el ledger contable sin aprobación y pruebas de cuadre/rectificación. |
+| C8 | Mantener gate duro | No convertir la presencia de secretos en autorización fiscal. La existencia de endpoint/certificado no demuestra validez de firma, cumplimiento Veri*Factu, disponibilidad ni consistencia del ledger. Requiere certificación del firmador y pruebas de extremo a extremo. |
+| C9 | Conservar política QA | No retirar `syntheticOnly`, actor/test-run ni tipos sintéticos mientras no exista una frontera backend demostrada entre Sandbox y LIVE. Cambiar a capabilities dinámicas ahora podría abrir escrituras reales por una ruta de Preview/Published. |
+| C10 | No eliminar módulo | La ausencia de consumidores estáticos no descarta invocación externa por Wix Editor/bindings o integración no representada en el grafo. Se necesita comprobar bindings y contratos de plataforma antes de retirar. |
+| C11 | No eliminar webMethods | Los webMethods pueden tener consumidores por bindings del Editor no visibles en imports estáticos. No se eliminan sin inspección de bindings en Wix y búsqueda completa de referencias/tests. |
+| P3 | No realizar limpieza masiva | Quitar exports o funciones requiere grafo completo, contratos externos, tests y diff. No se mezcla una limpieza de API pública con correcciones P0 sin ejecutar suite completa. |
+| D1 | Pendiente de proceso de sincronización | Los HTML Components de Wix Classic no se consideran desplegados por modificar archivos raíz. Hace falta validar un procedimiento reproducible de sincronización en el Editor y read-back de los cinco widgets. |
+| D2 | No alterar scheduler | La paridad declarativa no prueba que el scheduler esté desplegado. Verificar cron activo tras publicación controlada; no programar reconciliación fiscal sin especificación y autorización. |
+| D3 | Parcial | Node 24.22.1 ya está fijado en CI. Se mantiene ESLint 8.25.0 por la peer dependency del plugin Wix instalado; no forzar actualización mayor incompatible. |
+| D4 | Pendiente | No se ejecutó smoke Wix Sandbox. No se crean reservas, ventas, fichajes ni cierres durante esta intervención. |
+
+## 4. Contraste de la auditoría recibida
+
+- **C2 confirmado:** el archivo utilizaba `fetch()` sin import; la documentación oficial Velo indica `import { fetch } from "wix-fetch";`.
+- **C1 confirmado parcialmente:** `staff.js` importa `contactsV5` desde `@wix/crm`; el manifiesto y lock actuales no declaran el paquete. No se modifica sin lock reproducible.
+- **C3 matizado:** workflow de CI fija explícitamente Node `24.22.1`; por tanto, el fallo bajo Node 20 no justifica por sí solo alterar el loader. La aceptación final queda condicionada al CI de esta PR.
+- **C4 confirmado como riesgo conocido:** el repositorio documenta un fallo al cargar esa regla y la ausencia del manifiesto. No reactivar a ciegas.
+- **C5 matizado:** `obtenerServicios` y `obtenerProductos` sí consultan servicios Bookings y Stores Catalog V3; no son un catálogo totalmente sintético. Se conservan identidades y operaciones QA separadas.
+- **C5–C9:** los gates no son deuda accidental; contienen controles de seguridad, integridad fiscal/laboral y separación QA/operativa. No se eliminan por conveniencia de despliegue.
+- **C10–C11/P3:** requieren inspección de bindings en Wix Editor, no solo búsqueda estática.
+
+## 5. Validación realizada
+
+- Base exacta identificada: `d7dd23642cbe8dd901fe537d259ae93b3d0dab6e`.
+- Cambio C2 aplicado mediante actualización de blob completo de `cajas.web.js`; el resto del archivo se conserva.
+- Wix Site Context consultado: sitio Marian Madrid, Editor clásico, Velo habilitado, estado Draft, Stores Catalog V3, Bookings y Gift Cards instalados.
+- Documentación oficial Wix consultada: Wix Fetch para Velo recomienda el import explícito desde `wix-fetch`.
+- CI final del commit `e5eabfbc11da52b6177853284dddc1cf7d4d31de`: **success** en Node 24.22.1. `npm ci`, npm audit (0 vulnerabilidades), Layer 1 (28 suites/334 tests), Layer 2 (19 suites/267 tests), suite completa (74 suites/692 tests), contratos SDK y ESLint pasaron. Secret Scanning también terminó correctamente. La prueba confirma el import y los contratos offline, no el runtime Wix ni la invocación real del firmador.
+- No se hicieron escrituras en Wix CMS, no se modificaron datos LIVE y no se publicó.
+
+## 6. Métrica de implementación
+
+Métrica directa sobre las 11 correcciones C1–C11:
+
+- Aplicadas en código: **1/11 = 9,1%** (C2; incluye adaptación del harness offline para el import oficial).
+- Sin cambio porque el requisito ya está cubierto por configuración existente: **1/11 = 9,1%** (C3, Node 24.22.1 fijado en CI; sujeto a CI candidato).
+- Pendientes/bloqueadas o deliberadamente conservadas: **9/11 = 81,8%**.
+
+No se declara un porcentaje global de despliegue: D1–D4 y las tareas P3 requieren validaciones distintas y no deben mezclarse con el denominador C1–C11. El 9,1% es porcentaje de correcciones de código efectivamente aplicadas, no porcentaje de preparación para producción.
+
+## 7. Próximos pasos
+
+1. Regenerar lock de C1 en un entorno con npm registry y ejecutar `npm ci`; confirmar `contactsV5` en el paquete instalado.
+2. Ejecutar CI completo de esta PR en Node 24.22.1; revisar npm audit, suites, contratos SDK y lint.
+3. Resolver la regla C4 con el flujo Wix aplicable a Velo Editor clásico, sin inventar `velo.dependencies.json`.
+4. Auditar aislamiento backend Sandbox/LIVE antes de cualquier seed o bootstrap.
+5. Aprobar por separado las decisiones de producto/legales de TPV operativo, fichaje, contabilidad y Veri*Factu.
+6. Verificar bindings HTML y scheduler en Wix Editor antes de retirar o cablear consumidores.
+7. Ejecutar smoke Sandbox con evidencia y comparar LIVE antes/después.
+
+**Conclusión:** C2 y su harness offline están corregidos y la CI completa ha pasado (74 suites/692 tests, npm audit sin vulnerabilidades). No hay base suficiente para declarar resueltos C1 ni el resto de bloqueos de despliegue. Se mantiene NO-GO para publicación y para activar writers operativos/fiscales/laborales.

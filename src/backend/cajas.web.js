@@ -11,6 +11,7 @@ STANDARDS: G10 ASCII Strict. Cero suppressAuth. WIX_PAYMENTS es el metodo online
 
 import { webMethod, Permissions } from "wix-web-module";
 import { getSecretValue } from "backend/secretAccess";
+import { fetch } from "wix-fetch";
 
 import {
     query as dalQuery,
