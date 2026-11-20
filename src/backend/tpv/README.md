@@ -88,3 +88,16 @@ PR #397, PR #398 y PR #399 están integradas en `main`. PR #399 aplica el aislam
 ## Contrato del widget HTML
 
 La integración vigente entre `#htmlTPV.txt`, `src/pages/TPV.yl5th.js`, `src/public/tpvPageController.js` y estos WebMethods está documentada en [`docs/architecture/TPV-HTML-WIDGET-BRIDGE.md`](../../../docs/architecture/TPV-HTML-WIDGET-BRIDGE.md). El ID del componente Wix debe ser exactamente `htmlTPV` (sensible a mayúsculas).
+
+
+### Datos iniciales del simulacro (insertar solo con CMS en Sandbox)
+
+La colección se ha creado vacía. Cuando Wix Editor permita editar explícitamente el entorno Sandbox, insertar estas identidades (Wix genera `_id`; no copiar IDs reales):
+
+| identityId | identityType | displayName | email |
+|---|---|---|---|
+| `QA-CUSTOMER-001` | `CUSTOMER` | Cliente Sintético 01 | `cliente01@example.test` |
+| `QA-STAFF-001` | `STAFF` | Profesional Sintético 01 | `staff01@example.test` |
+| `QA-STAFF-002` | `STAFF` | Profesional Sintético 02 | `staff02@example.test` |
+
+En las tres filas: `active=true`, `syntheticOnly=true`, `environment=SANDBOX`, `testRunId=TPVQA-DEV-20261120-01` y `metadata={}`. No añadir teléfono, NIF, dirección, `contactId`, `memberId` ni `resourceId`. El hook valida el contrato antes de aceptar la inserción.
