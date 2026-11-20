@@ -64,16 +64,6 @@ El propietario declaró que el sitio está en desarrollo y que los registros fis
 - `assertPaquetesGestoriaRecord` centralizado en `validation.js`, invocado desde DAL y hook.
 - CI PR #455: Layer 1 333/333, Layer 2 266/266, suite offline 688/688; SDK, npm audit, ESLint y secret scanning SUCCESS.
 
-### Auditoría de productores CMS — PR #454
-- Auditoría estática de ocho colecciones críticas y sus productores, DAL, hooks y rutas de escritura.
-- No se localizó bypass directo activo de `@wix/data` en los módulos backend revisados.
-- `CajaActual` requiere endurecer la política DAL de transiciones; cierre Z sigue bloqueado por `recordDomain`.
-- Informe: [cms-producer-and-bypass-audit](./2026-11-20-cms-producer-and-bypass-audit.md).
-
-### Validación central de PaquetesGestoria — PR #455
-- `assertPaquetesGestoriaRecord` centralizado en `validation.js`, invocado desde DAL y hook.
-- CI PR #455: Layer 1 333/333, Layer 2 266/266, suite offline 688/688; SDK, npm audit, ESLint y secret scanning SUCCESS.
-
 ### Ledger contable — PR #452
 - Añadido beforeInsert y validación central append-only.
 - CI de PR verde; hook Wix Sandbox pendiente.
