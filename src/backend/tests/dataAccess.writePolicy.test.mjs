@@ -172,11 +172,11 @@ test("MovimientosCaja accepts edits only for the exact active synthetic TPV test
         _id: "TPVSANDBOX_TEST_ROW",
         recordSource: "TPV_SANDBOX_SYNTHETIC",
         movementType: "SIMULATED_TPV_PAYMENT",
-        traceId: "TPVSANDBOX:" + TPV_SANDBOX_RUNTIME_POLICY.TEST_RUN_ID + ":SANDBOX-SESSION-1",
+        traceId: "TPVSANDBOX:" + TPV_SANDBOX_RUNTIME_POLICY.SANDBOX_RUN_ID + ":SANDBOX-SESSION-1",
         sequenceNumber: 0,
         hash: "a".repeat(64),
         payloadFiscal: {
-            testRunId: TPV_SANDBOX_RUNTIME_POLICY.TEST_RUN_ID,
+            sandboxRunId: TPV_SANDBOX_RUNTIME_POLICY.SANDBOX_RUN_ID,
             logicalCollection: TPV_SANDBOX_COLLECTIONS.PAGOS,
             requestFingerprint: "f".repeat(64),
             isSynthetic: true,
@@ -189,7 +189,7 @@ test("MovimientosCaja accepts edits only for the exact active synthetic TPV test
     assert.doesNotThrow(() => assertRemoveAllowed(C.MOVIMIENTOS_CAJA, item._id, undefined, item));
     assert.throws(() => assertUpdateAllowed(C.MOVIMIENTOS_CAJA, {
         ...item,
-        payloadFiscal: { ...item.payloadFiscal, testRunId: "TPVSANDBOX-DEV-20990101-OTHER" },
+        payloadFiscal: { ...item.payloadFiscal, sandboxRunId: "TPVSANDBOX-DEV-20990101-OTHER" },
     }), { code: "CMS_UPDATE_COLLECTION_DENIED" });
     assert.throws(() => assertInsertAllowed(C.MOVIMIENTOS_CAJA, {
         ...item,

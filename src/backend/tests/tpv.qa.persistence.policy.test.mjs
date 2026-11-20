@@ -35,7 +35,7 @@ test("SANDBOX runtime is fail-closed in production; offline harness explicitly e
 });
 
 test("SANDBOX writes require an exact test-run CajaActual marker and never accept a live cash singleton", () => {
-    const testRunId = TPV_SANDBOX_RUNTIME_POLICY.TEST_RUN_ID;
+    const sandboxRunId = TPV_SANDBOX_RUNTIME_POLICY.SANDBOX_RUN_ID;
     const liveCaja = {
         singletonKey: "CAJA_PRINCIPAL",
         cashRegisterStatus: "ABIERTA",
@@ -51,8 +51,8 @@ test("SANDBOX writes require an exact test-run CajaActual marker and never accep
     const sandboxBootstrap = {
         cashRegisterStatus: "CERRADA",
         snapshotSource: "TPV_SANDBOX_INITIALIZED",
-        traceId: testRunId,
-        conceptOperations: { tpvSandbox: { testRunId } },
+        traceId: sandboxRunId,
+        conceptOperations: { tpvSandbox: { sandboxRunId } },
     };
     assert.throws(
         () => assertSandboxCajaWritable(sandboxBootstrap),
@@ -63,8 +63,8 @@ test("SANDBOX writes require an exact test-run CajaActual marker and never accep
     const activeSandboxCaja = {
         cashRegisterStatus: "SIMULACION",
         snapshotSource: "TPV_SANDBOX_SYNTHETIC",
-        traceId: testRunId,
-        conceptOperations: { tpvSandbox: { testRunId } },
+        traceId: sandboxRunId,
+        conceptOperations: { tpvSandbox: { sandboxRunId } },
     };
     assert.doesNotThrow(() => assertSandboxCajaWritable(activeSandboxCaja));
     assert.throws(
@@ -83,11 +83,11 @@ test("logical TPV entities persist only as marked synthetic rows in canonical CM
         hash: "a".repeat(64),
         sequenceNumber: 0,
         transactionId: "TPVSANDBOX_TEST_ROW",
-        traceId: "TPVSANDBOX:" + TPV_SANDBOX_RUNTIME_POLICY.TEST_RUN_ID + ":SANDBOX-SESSION-TEST",
+        traceId: "TPVSANDBOX:" + TPV_SANDBOX_RUNTIME_POLICY.SANDBOX_RUN_ID + ":SANDBOX-SESSION-TEST",
         movementType: "SIMULATED_TPV_PAYMENT",
         recordSource: "TPV_SANDBOX_SYNTHETIC",
         payloadFiscal: {
-            testRunId: TPV_SANDBOX_RUNTIME_POLICY.TEST_RUN_ID,
+            sandboxRunId: TPV_SANDBOX_RUNTIME_POLICY.SANDBOX_RUN_ID,
             logicalCollection: TPV_SANDBOX_COLLECTIONS.PAGOS,
             idempotencyKey: "TPVSANDBOX-TEST-IDEMPOTENCY",
             requestFingerprint: "f".repeat(64),
@@ -102,7 +102,7 @@ test("logical TPV entities persist only as marked synthetic rows in canonical CM
     assert.doesNotThrow(() => assertRemoveAllowed("MovimientosCaja", item._id, undefined, item));
     assert.throws(() => assertUpdateAllowed("MovimientosCaja", {
         ...item,
-        payloadFiscal: { ...item.payloadFiscal, testRunId: "TPVSANDBOX-DEV-20990101-OTHER" },
+        payloadFiscal: { ...item.payloadFiscal, sandboxRunId: "TPVSANDBOX-DEV-20990101-OTHER" },
     }), /DATA_ACCESS_ERROR/);
     assert.throws(() => assertRemoveAllowed("MovimientosCaja", "real-ledger-row"), /DATA_ACCESS_ERROR/);
 

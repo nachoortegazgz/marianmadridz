@@ -76,14 +76,14 @@ function _isSyntheticTpvRecord(item) {
         item.recordSource === "TPV_SANDBOX_SYNTHETIC" &&
         String(item.movementType || "").startsWith("SIMULATED_TPV_") &&
         TPV_SANDBOX_EVENT_MOVEMENT_TYPES[item.payloadFiscal?.logicalCollection] === item.movementType &&
-        item.payloadFiscal?.testRunId === TPV_SANDBOX_RUNTIME_POLICY.TEST_RUN_ID &&
+        item.payloadFiscal?.sandboxRunId === TPV_SANDBOX_RUNTIME_POLICY.SANDBOX_RUN_ID &&
         item.payloadFiscal?.isSynthetic === true &&
         item.payloadFiscal?.realPayment === false &&
         item.payloadFiscal?.externalSideEffects === false &&
         Boolean(item.payloadFiscal?.requestFingerprint) &&
         /^[a-f0-9]{64}$/i.test(String(item.hash || "")) &&
         Number(item.sequenceNumber) === 0 &&
-        String(item.traceId || "").startsWith("TPVSANDBOX:" + TPV_SANDBOX_RUNTIME_POLICY.TEST_RUN_ID + ":");
+        String(item.traceId || "").startsWith("TPVSANDBOX:" + TPV_SANDBOX_RUNTIME_POLICY.SANDBOX_RUN_ID + ":");
 }
 
 const APPEND_ONLY_COLLECTIONS = Object.freeze([

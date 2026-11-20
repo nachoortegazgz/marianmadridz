@@ -490,11 +490,11 @@ function _isPlainRecord(value) {
 }
 
 function _isCurrentSyntheticTpvRow(value) {
-    const expectedPrefix = "TPVSANDBOX:" + TPV_SANDBOX_RUNTIME_POLICY.TEST_RUN_ID + ":";
+    const expectedPrefix = "TPVSANDBOX:" + TPV_SANDBOX_RUNTIME_POLICY.SANDBOX_RUN_ID + ":";
     return value?.recordSource === "TPV_SANDBOX_SYNTHETIC" &&
         String(value?.movementType || "").startsWith("SIMULATED_TPV_") &&
         TPV_SANDBOX_EVENT_MOVEMENT_TYPES[value?.payloadFiscal?.logicalCollection] === value.movementType &&
-        value?.payloadFiscal?.testRunId === TPV_SANDBOX_RUNTIME_POLICY.TEST_RUN_ID &&
+        value?.payloadFiscal?.sandboxRunId === TPV_SANDBOX_RUNTIME_POLICY.SANDBOX_RUN_ID &&
         value?.payloadFiscal?.isSynthetic === true &&
         value?.payloadFiscal?.realPayment === false &&
         value?.payloadFiscal?.externalSideEffects === false &&
@@ -526,7 +526,7 @@ export async function MovimientosCaja_beforeUpdate(item) {
     const logicalCollection = envelope?.logicalCollection;
     if (
         logicalCollection !== previousEnvelope?.logicalCollection ||
-        envelope?.testRunId !== previousEnvelope?.testRunId ||
+        envelope?.sandboxRunId !== previousEnvelope?.testRunId ||
         envelope?.idempotencyKey !== previousEnvelope?.idempotencyKey ||
         envelope?.isSynthetic !== true ||
         envelope?.realPayment !== false ||
@@ -565,10 +565,10 @@ export async function MovimientosCaja_beforeUpdate(item) {
     item.lineItems = { sandboxRecord: record.lineItems || [] };
     item.desgloseDetallado = {
         accountCode: "SIMULATED",
-        testRunId: TPV_SANDBOX_RUNTIME_POLICY.TEST_RUN_ID,
+        sandboxRunId: TPV_SANDBOX_RUNTIME_POLICY.SANDBOX_RUN_ID,
     };
     const hashPayload = stableSerialize({
-        testRunId: TPV_SANDBOX_RUNTIME_POLICY.TEST_RUN_ID,
+        sandboxRunId: TPV_SANDBOX_RUNTIME_POLICY.SANDBOX_RUN_ID,
         logicalCollection,
         transactionId: item.transactionId,
         traceId: item.traceId,

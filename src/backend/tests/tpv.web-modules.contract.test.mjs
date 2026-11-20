@@ -210,7 +210,7 @@ test("TPV WebMethods isolate synthetic SANDBOX writes from operational ledgers",
     assert.match(config, /SYNTHETIC_ONLY: true/);
     assert.match(config, /TPV_SANDBOX_RUNTIME_POLICY = Object\.freeze\(\{[\s\S]*?ENABLED: false/);
     assert.match(await readFile(new URL("../public/tpvPageController.js", backendRoot), "utf8"), /TPV_SANDBOX_DISABLED_UNTIL_SANDBOX_ISOLATION/);
-    assert.match(config, /TEST_RUN_ID: "TPVSANDBOX-DEV-/);
+    assert.match(config, /SANDBOX_RUN_ID: "TPVSANDBOX-DEV-/);
     assert.match(config, /TPV_SANDBOX_EVENT_MOVEMENT_TYPES/);
     for (const writer of [cash, movements, sales, closures]) {
         assert.match(writer, /requireAdmin/);
@@ -376,15 +376,15 @@ test("TPV synthetic persistence maps logical events to CajaActual and Movimiento
     assert.match(repository, /createHash\("sha256"\)/);
     assert.match(repository, /cashRegisterStatus: "SIMULACION"/);
     assert.match(repository, /_ensureCajaActualForSandbox/);
-    assert.match(repository, /TPV_SANDBOX_SANDBOX_CASH_REGISTER_NOT_SEEDED/);
+    assert.match(repository, /TPV_SANDBOX_CASH_REGISTER_NOT_SEEDED/);
     assert.match(repository, /assertSandboxCajaWritable/);
     assert.doesNotMatch(repository, /insertItem\(BUSINESS_COLLECTIONS\.CAJA_ACTUAL/);
     assert.match(utilities, /TPV_SANDBOX_INITIALIZED/);
     assert.match(utilities, /TPV_SANDBOX_SYNTHETIC/);
-    assert.match(repository, /payloadFiscal\?\.testRunId === SANDBOX_TEST_RUN_ID/);
+    assert.match(repository, /payloadFiscal\?\.sandboxRunId === SANDBOX_RUN_ID/);
     assert.match(repository, /MAX_SANDBOX_PROJECTION_EVENTS = 1000/);
     assert.match(repository, /conceptOperations\?\.tpvSandbox\?\.sessionId/);
     assert.match(repository, /updateItem\(BUSINESS_COLLECTIONS\.CAJA_ACTUAL/);
-    assert.match(config, /TEST_RUN_ID: "TPVSANDBOX-DEV-/);
+    assert.match(config, /SANDBOX_RUN_ID: "TPVSANDBOX-DEV-/);
     assert.doesNotMatch(repository, /registerManualTransaction|signFiscal|sendToAeat|createPayment|capturePayment|processRefund/i);
 });

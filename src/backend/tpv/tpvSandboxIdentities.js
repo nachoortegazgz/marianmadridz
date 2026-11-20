@@ -16,7 +16,7 @@ export async function listTpvSandboxIdentities(identityType) {
         filter: wql.and(
             wql.eq("identityType", identityType),
             wql.eq("environment", "SANDBOX"),
-            wql.eq("sandboxRunId", TPV_SANDBOX_RUNTIME_POLICY.SANDBOX_RUN_ID),
+            wql.eq("testRunId", TPV_SANDBOX_RUNTIME_POLICY.SANDBOX_RUN_ID),
             wql.eq("syntheticOnly", true),
             wql.eq("active", true)
         ),
