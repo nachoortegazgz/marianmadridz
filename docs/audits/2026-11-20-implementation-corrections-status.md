@@ -83,3 +83,16 @@ No se declara un porcentaje global de despliegue: D1–D4 y las tareas P3 requie
 7. Ejecutar smoke Sandbox con evidencia y comparar LIVE antes/después.
 
 **Conclusión:** C2 y su harness offline están corregidos y la CI completa ha pasado (74 suites/692 tests, npm audit sin vulnerabilidades). No hay base suficiente para declarar resueltos C1 ni el resto de bloqueos de despliegue. Se mantiene NO-GO para publicación y para activar writers operativos/fiscales/laborales.
+
+
+## Addendum — reconciliación de dependencias Wix/npm y CMS (2026-11-20)
+
+La inspección posterior de `wix.lock` corrige parcialmente el diagnóstico C1:
+
+- `wix.lock` contiene `@wix/crm@1.0.1636` como dependencia directa del proyecto Wix, con `@wix/auto_sdk_crm_contacts-v-5` y otros módulos CRM transitivos.
+- `package.json` y `package-lock.json` siguen sin declarar `@wix/crm`.
+- Por tanto, la dependencia no está ausente de todo el proyecto Wix; la discrepancia demostrada está entre el lock de Wix Editor/CLI y el grafo npm usado por CI. No se ha probado aún el resultado de `npm ci` con la sincronización local de Wix. No editar locks manualmente.
+
+La reconciliación CMS de solo lectura está registrada en `docs/audits/2026-11-20-live-cms-and-wix-lock-reconciliation.md`. Se observó un singleton `CajaActual` marcado `TPV_QA_SYNTHETIC`, pero `ABIERTA` y con `traceId` distinto de `TPVQA-DEV-20261120-01`; el backend actual lo rechaza por contrato. `TpvSandboxIdentities` y `MovimientosCaja` devolvieron 0 elementos en la lectura Management API. `ControlOperativo` devolvió 58 elementos, incluidos 3 `COMPENSATION/PENDING_RECOVERY`; no se modificaron.
+
+**Estado actualizado:** C1 deja de clasificarse como “paquete ausente de Wix”; queda como desalineación npm/Wix por resolver. La ejecución de Preview/Sandbox, seed de identidades y bootstrap de caja no se han realizado. NO-GO de publicación se mantiene.
