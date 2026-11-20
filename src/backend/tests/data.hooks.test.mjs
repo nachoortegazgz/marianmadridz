@@ -559,6 +559,7 @@ test('HOOK-PACKAGE-01 validates immutable accountant package snapshot inserts', 
   assert.strictEqual(H.PaquetesGestoria_beforeInsert(valid), valid);
   assert.ok(valid.createdAt instanceof Date);
   assert.strictEqual(valid.createdAt.toISOString(), '2026-11-11T20:05:00.000Z');
+  assert.throws(() => H.PaquetesGestoria_beforeInsert({ ...valid, createdAt: undefined }), /createdAt/);
   assert.throws(() => H.PaquetesGestoria_beforeInsert({ ...valid, snapshotHash: 'invalid' }), /SHA-256/);
   assert.throws(() => H.PaquetesGestoria_beforeInsert({ ...valid, fiscalMonth: 2 }), /no admite fiscalMonth/);
 });
