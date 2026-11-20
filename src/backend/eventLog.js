@@ -24,17 +24,14 @@ CAMBIOS DE ALINEACION v5015-ALIGNED (respecto a v5009-FISCAL-V20.1):
   ALN-05: MOVEMENT_TYPE.DEVOLUCION_SERVICIO y .DEVOLUCION_PRODUCTO no
           existen en v12.0. Sustituidos por MOVEMENT_TYPE.DEVOLUCION /
           MOVEMENT_TYPE.REEMBOLSO.
-  ALN-07: COMPUTER_SYSTEM v12.0 = { nombre, version, getSecretKey } (forma
-          nueva). El payload AEAT exige la nomenclatura Veri*factu
-          (sistemaInformaticoNombre, idSistemaInformatico,
-          numeroInstalacion, tipoUsoPosibleSoloVerifactu, etc.). Se
-          define COMPUTER_SYSTEM_FALLBACK local; _getFiscalSystemConfig
-          lee del singleton MapaStaff y rellena con el fallback.
+  ALN-07: La identidad del SIF y los indicadores AEAT se resuelven
+          exclusivamente desde MapaStaff CONFIG_SISTEMA. La ausencia,
+          duplicidad o incompletitud bloquea el escritor fiscal; no hay
+          fallback local ni valores derivados de la marca comercial.
   ALN-08: wixData.query/get/insert/save -> dalQuery/dalGet/dalInsert/
           dalSave (dataAccess v2.1).
-  ALN-09: _buildFiscalPayloadSnapshot usa el resultado resuelto de
-          _getFiscalSystemConfig (antes usaba COMPUTER_SYSTEM de v5009
-          directamente, quedando incompleto contra v12.0).
+  ALN-09: _buildFiscalPayloadSnapshot usa únicamente la configuración
+          SIF explícita y validada por _getFiscalSystemConfig.
 
 FIXES APLICADOS v5009-FISCAL-V20.1 (heredados):
   - V20-01..V20-04.
