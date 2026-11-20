@@ -1,25 +1,25 @@
-import { TPV_QA_COLLECTIONS, TPV_QA_RUNTIME_POLICY } from "backend/internalConfig";
+import { TPV_SANDBOX_COLLECTIONS, TPV_SANDBOX_RUNTIME_POLICY } from "backend/internalConfig";
 import {
-    getCommittedQaSales,
-    getQaCashMovements,
-    getQaPayments,
-    getQaRefunds,
-    queryQaRecords,
-} from "backend/tpv/tpvQaRepository";
+    getCommittedSandboxSales,
+    getSandboxCashMovements,
+    getSandboxPayments,
+    getSandboxRefunds,
+    querySandboxRecords,
+} from "backend/tpv/tpvSandboxRepository";
 
-export async function buildQaSessionSummary(session) {
-    if (!session?.sessionId) throw new Error("TPV_QA_SESSION_REQUIRED");
+export async function buildSandboxSessionSummary(session) {
+    if (!session?.sessionId) throw new Error("TPV_SANDBOX_SESSION_REQUIRED");
     const [sales, payments, refunds, movements, lines] = await Promise.all([
-        getCommittedQaSales(session.sessionId),
-        getQaPayments(session.sessionId),
-        getQaRefunds(session.sessionId),
-        getQaCashMovements(session.sessionId),
-        queryQaRecords(TPV_QA_COLLECTIONS.VENTA_LINEAS, undefined),
+        getCommittedSandboxSales(session.sessionId),
+        getSandboxPayments(session.sessionId),
+        getSandboxRefunds(session.sessionId),
+        getSandboxCashMovements(session.sessionId),
+        querySandboxRecords(TPV_SANDBOX_COLLECTIONS.VENTA_LINEAS, undefined),
     ]);
 
     const totals = {
         sessionId: session.sessionId,
-        currency: TPV_QA_RUNTIME_POLICY.CURRENCY_CODE,
+        currency: TPV_SANDBOX_RUNTIME_POLICY.CURRENCY_CODE,
         ticketCount: sales.length,
         refundCount: refunds.length,
         grossSalesMinor: sales.reduce((sum, sale) => sum + Number(sale.totalMinor || 0), 0),
@@ -45,7 +45,7 @@ export async function buildQaSessionSummary(session) {
         case "TARJETA": totals.cardMinor += amount; break;
         case "BIZUM": totals.bizumMinor += amount; break;
         case "OTROS": totals.otherMinor += amount; break;
-        default: throw new Error("TPV_QA_PAYMENT_METHOD_CORRUPTED");
+        default: throw new Error("TPV_SANDBOX_PAYMENT_METHOD_CORRUPTED");
         }
     }
 
