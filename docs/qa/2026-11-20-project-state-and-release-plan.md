@@ -14,7 +14,7 @@ El propietario declaró que el sitio está en desarrollo y que los datos son sin
 
 ## 2. Estado verificado del repositorio
 
-- `main` apunta a `94163f66c7c3f1513a169162726b3b8e05a21ff0` tras PR #462.
+- `main` apunta a `962aa48d892890dbe2a919cbfc9b30f883c36232` tras PR #464 (documentación). El último commit de aplicación sigue siendo `94163f66c7c3f1513a169162726b3b8e05a21ff0` tras PR #462.
 - PR #456 integrada: refresco del estado consolidado tras la auditoría CMS (`1357d770d6b786f6ecdad1c93d4d29002c00c810`).
 - PR #457 integrada: reconciliación live de CajaActual, CMS y pedidos Wix (merge documental `65983abfaad0e6ae83e2992dd410b32d2d0b0037`).
 - PR #458 integrada: importe de booking por línea nativa de pedido y actualización de dossier.
@@ -22,6 +22,8 @@ El propietario declaró que el sitio está en desarrollo y que los datos son sin
 - PR #460 integrada: DTO de caja alineado con openingCashAmount.
 - PR #461 integrada: diccionario CMS actualizado y prevalencia de inmutabilidad append-only de ledgers.
 - PR #462 integrada: DTO Jornada derivado de openedAt; elimina escritura del campo operationDate ausente (`94163f66c7c3f1513a169162726b3b8e05a21ff0`). CI SUCCESS: Layer 1 333/333, Layer 2 266/266, suite offline 688/688; SDK, npm audit, ESLint y secret scanning SUCCESS.
+- PR #463 integrada: documentación del daykey y contrato de caja actualizado.
+- PR #464 integrada: ADR CajaActual revalidada con esquema live y contratos oficiales de hooks Wix; sigue pendiente aprobación de implementación.
 - PR #460 integrada: DTO de caja alineado con openingCashAmount (`1c3afcea4194e524dc2c67ab102581a4876e90f2`). CI SUCCESS: Layer 1 333/333, Layer 2 266/266, suite offline 688/688; SDK, npm audit, ESLint y secret scanning SUCCESS.
 - PR #453 integrada: consolidación documental (`9aa92a9ef7408ab9b431694463ca1ffe2dedacfa`).
 - PR #454 integrada: auditoría de productores y bypasses CMS (`06766afbcdf7f8d32d34ccbb3f1ff68a242f8bca`).
@@ -196,6 +198,6 @@ Siguiente intervención recomendada: **cerrar H-01 de `CajaActual`** definiendo 
 - ControlOperativo devuelve 0 registros ALERT; el cron reconcileMissingConfirmedBookingProjections está declarado cada hora en los minutos 15 y 45 y debería generar revisión para bookings pagados, pero su ejecución runtime no está acreditada.
 - Issue #441 actualizada: guard POS integrado en código, E2E Sandbox pendiente. Issue #416 actualizada con correlación nativa y decisión de no mutar datos.
 - ADR-CASH-REGISTER-SESSION-CONTROL revalidada el 20/11: permanece PROPUESTA TÉCNICA sin aprobación de implementación. Wix no documenta context.original en UpdateHookContext; H-01 requiere recuperar el estado previo en backend/DAL y definir transiciones antes de modificar.
-- No se realizaron escrituras Wix, reintentos, cierres, cambios de pagos ni publicación.
+- No se realizaron escrituras Wix, reintentos, cierres, cambios de pagos ni publicación. Consulta GitHub 20/11: 0 PR abiertas.
 
 **Prioridad inmediata:** conciliación manual de #10033 refund vs booking y #10032 POS Cash mixto; mantener CajaActual sin cierre/ajuste. Después cerrar H-01 de transiciones CajaActual, acreditar el runtime cron y preparar un singleton TPV QA aislado. Writers fiscales/contables siguen deshabilitados; NO-GO.
