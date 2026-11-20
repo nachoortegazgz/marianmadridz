@@ -492,8 +492,15 @@ export function assertRegistrosHorariosStaff(item) {
             throw new Error(`SCHEMA_VIOLATION: RegistrosHorariosStaff requires ${field}`);
         }
     }
-    if (!item.workDate || Number.isNaN(new Date(item.workDate).getTime())) {
-        throw new Error("SCHEMA_VIOLATION: RegistrosHorariosStaff requires a valid workDate");
+    if (!_isValidDateOnly(item.workDate)) {
+        throw new Error("SCHEMA_VIOLATION: RegistrosHorariosStaff requires DATE workDate");
+    }
+    const workDateKey = item.workDate instanceof Date ? item.workDate.toISOString().slice(0, 10) : String(item.workDate);
+    if (String(item.dayKey || "") !== workDateKey) {
+        throw new Error("SCHEMA_VIOLATION: RegistrosHorariosStaff dayKey must match workDate");
+    }
+    if (!/^\d{4}-\d{2}$/.test(String(item.monthKey || "")) || String(item.monthKey) !== workDateKey.slice(0, 7)) {
+        throw new Error("SCHEMA_VIOLATION: RegistrosHorariosStaff monthKey must match workDate");
     }
     if (!/^[a-f0-9]{64}$/i.test(String(item.recordHash ?? "").trim())) {
         throw new Error("SCHEMA_VIOLATION: RegistrosHorariosStaff requires a 64-character recordHash");
@@ -502,14 +509,9 @@ export function assertRegistrosHorariosStaff(item) {
     assertValidEnum(item.clockEventType, CLOCK_EVENT_TYPE, "clockEventType");
     assertValidEnum(item.recordType, RECORD_TYPE_HORARIOS, "recordType");
 
-    if (!item.recordedAt) {
-        throw new Error("SCHEMA_VIOLATION: RegistrosHorariosStaff requires recordedAt");
-    }
-    if (!item.dayKey || !String(item.dayKey).trim()) {
-        throw new Error("SCHEMA_VIOLATION: RegistrosHorariosStaff requires dayKey");
-    }
-    if (!item.monthKey || !String(item.monthKey).trim()) {
-        throw new Error("SCHEMA_VIOLATION: RegistrosHorariosStaff requires monthKey");
+    const recordedAt = item.recordedAt instanceof Date ? item.recordedAt : new Date(item.recordedAt);
+    if (!item.recordedAt || Number.isNaN(recordedAt.getTime())) {
+        throw new Error("SCHEMA_VIOLATION: RegistrosHorariosStaff requires valid DATETIME recordedAt");
     }
     if (!item.traceId || !String(item.traceId).trim()) {
         throw new Error("SCHEMA_VIOLATION: RegistrosHorariosStaff requires traceId");
