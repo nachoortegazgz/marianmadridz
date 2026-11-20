@@ -87,3 +87,10 @@ La versión HTML actual inicia 17 operaciones de puente: `CASHIER_STATE`, `QA_CO
 6. Probar denegación con usuario no autorizado.
 7. Solo después ejecutar operaciones QA sintéticas en una sesión de prueba. No ejecutar cobros, fiscalidad, ni escrituras operativas.
 8. Registrar resultados, logs y SHA desplegado. No publicar sin autorización explícita y sin gates aprobados.
+
+
+## Nota de vigencia — 2026-11-20
+
+La tabla de mensajes y WebMethods anterior documenta una iteración legacy de TPV QA (sufijos `QA` y colecciones lógicas `TPV_QA_*`). No debe utilizarse como contrato actual sin reconciliarla con `src/public/tpvPageController.js`, `src/pages/TPV.yl5th.js`, `#htmlTPV.txt` y los módulos actuales `src/backend/tpv/*.web.js`. El contrato vigente usa WebMethods con nombres neutros (por ejemplo, `inicializarCaja`, `abrirCaja`, `registrarVenta`, `registrarMovimientoCaja`, `solicitarDevolucion`, `generarTicketX`, `cerrarTicketZ`) y el repositorio TPV Sandbox proyecta eventos lógicos sobre colecciones CMS nativas `CajaActual`, `MovimientosCaja` y locks en `ControlOperativo`. Los nombres `SANDBOX_LOGICAL_*` son aliases internos, no IDs de colecciones físicas.
+
+La lista exacta de mensajes activos, respuestas, payloads y handlers reservados debe regenerarse desde el código actual antes de instalar/cambiar el HTML en Wix. No se ha verificado el contenido pegado en el Editor, el ID real del componente, Wix Preview ni E2E. Mantener el procedimiento de instalación como runbook pendiente, no como prueba de funcionamiento.
