@@ -384,6 +384,14 @@ async function _writeCajaProjection(collection, record, eventId) {
     return next;
 }
 
+function _shouldProject(collection, record) {
+    if (collection === TPV_QA_COLLECTIONS.PAGOS ||
+        collection === TPV_QA_COLLECTIONS.MOVIMIENTOS_CAJA ||
+        collection === TPV_QA_COLLECTIONS.TICKET_Z) return true;
+    return collection === TPV_QA_COLLECTIONS.VENTAS &&
+        record?.status === "CONFIRMADA_SINTETICA";
+}
+
 function _sessionCajaPatch(caja, record, fingerprint) {
     const openedAt = record.openedAt instanceof Date ? record.openedAt : new Date(record.openedAt || Date.now());
     const openingCash = Number(record.openingCashMinor || 0) / 100;
@@ -557,7 +565,7 @@ export async function insertQaEvent(collection, idempotencyKey, data) {
     const existing = await findByIdempotencyKey(collection, key);
     if (existing) {
         const replay = assertSameRequest(existing, fingerprint);
-        if (collection !== TPV_QA_COLLECTIONS.AUDITORIA) {
+        if (_shouldProject(collection, existing)) {
             await _writeCajaProjection(collection, existing, existing._id);
         }
         return replay;
@@ -571,7 +579,7 @@ export async function insertQaEvent(collection, idempotencyKey, data) {
         const winner = await findByIdempotencyKey(collection, key);
         if (!winner) throw error;
         const replay = assertSameRequest(winner, fingerprint);
-        if (collection !== TPV_QA_COLLECTIONS.AUDITORIA) {
+        if (_shouldProject(collection, winner)) {
             await _writeCajaProjection(collection, winner, winner._id);
         }
         return replay;
@@ -583,7 +591,7 @@ export async function insertQaEvent(collection, idempotencyKey, data) {
         _createdDate: saved?._createdDate || new Date(),
         _updatedDate: saved?._updatedDate || new Date(),
     });
-    if (collection !== TPV_QA_COLLECTIONS.AUDITORIA) {
+    if (_shouldProject(collection, record)) {
         await _writeCajaProjection(collection, record, item._id);
     }
     return { item, replayed: false };
