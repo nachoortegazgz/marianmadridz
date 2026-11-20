@@ -62,9 +62,6 @@ export const abrirCajaQA = webMethod(
             const dayKey = madridDayKey();
             const sessionId = "QA-SESSION-" + dayKey;
             return await withQaSessionLock(sessionId, traceId, async () => {
-                const openingCashMinor = toMinorUnits(input.openingCash, "OPENING_CASH");
-                const dayKey = madridDayKey();
-                const sessionId = "QA-SESSION-" + dayKey;
                 const idempotencyKey = "QA_SESSION_OPEN:" + dayKey;
                 const current = await latestOpenQaSession();
                 if (current && current.sessionId !== sessionId) return errorResult("TPV_QA_PREVIOUS_SESSION_NOT_CLOSED");
