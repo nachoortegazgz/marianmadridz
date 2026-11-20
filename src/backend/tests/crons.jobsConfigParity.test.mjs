@@ -189,6 +189,7 @@ test('CRON-FISCAL-RECOVERY-03 paid-order recovery requires the original EventLog
   assert.match(cajas, /recoveryScope:\s*p\.recoveryScope\s*\|\|\s*null/);
   assert.match(cron, /recoveryProcessor === "EVENT_LOG_ORDER"/);
   assert.match(cron, /payload\.recoveryScope === "BOOKINGS_ONLY"/);
+  assert.match(cron, /fiscalPayload\.sourceChannelType === "WEB"/);
   assert.match(cron, /fiscalPayload\.tipoFactura/);
   assert.match(cron, /Array\.isArray\(fiscalPayload\.breakdown\)/);
   assert.match(cron, /\^\\d\{4\}-\\d\{2\}-\\d\{2\}\$/);
