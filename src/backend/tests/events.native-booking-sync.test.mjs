@@ -79,6 +79,24 @@ function bookingConfirmedEvent(eventId, booking) {
   };
 }
 
+function syntheticFiscalSystemConfig() {
+  return {
+    _id: "CONFIG_SISTEMA_FISCAL",
+    recordType: IC.RECORD_TYPE.CONFIG_SISTEMA,
+    sistemaInformaticoNombre: "SIF sintético de pruebas",
+    idSistemaInformatico: "SYNTHETIC-SIF-001",
+    verifactuVersion: "TEST-ONLY-1.0",
+    numeroInstalacion: "TEST-1",
+    tipoUsoPosibleSoloVerifactu: false,
+    tipoUsoPosibleMultiOT: true,
+    indicadorMultiplesOT: true,
+    taxId: "B12345674",
+    legalName: "Titular sintético de pruebas",
+    fechaInicioVerifactu: "2027-07-01",
+    thirdPartyType: null,
+  };
+}
+
 function seedCajaPrincipal() {
   const operationDate = new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Madrid" });
   wixDataMock._seed(IC.BUSINESS_COLLECTIONS.CAJA_ACTUAL, [{
@@ -529,16 +547,19 @@ test("EVENT-PAYMENT-09 official Wix eCommerce paid event appends WIX_PAYMENTS le
   const secretState = globalThis.__mmSecretsState || (globalThis.__mmSecretsState = { _map: {}, _default: "mock-secret" });
   secretState._map.FISCAL_NIF_EMISOR = "B12345674";
 
-  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.MAPA_STAFF, [{
-    _id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
-    recordType: "TERCERO",
-    taxId: "B12345674",
-    legalName: "MARIAN MADRID",
-    thirdPartyType: "EMISOR",
-    address: null,
-    schemaVersion: 1,
-    traceId: "native-booking-sync-fiscal-fixture",
-  }]);
+  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.MAPA_STAFF, [
+    syntheticFiscalSystemConfig(),
+    {
+      _id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+      recordType: "TERCERO",
+      taxId: "B12345674",
+      legalName: "MARIAN MADRID",
+      thirdPartyType: "EMISOR",
+      address: null,
+      schemaVersion: 1,
+      traceId: "native-booking-sync-fiscal-fixture",
+    },
+  ]);
 
   wixDataMock._seed("CitasF2", [
     seedCita({
@@ -676,14 +697,17 @@ test("EVENT-REFUND-01 defers incomplete refunds, records successful terminal amo
 
   const secretState = globalThis.__mmSecretsState || (globalThis.__mmSecretsState = { _map: {}, _default: "mock-secret" });
   secretState._map.FISCAL_NIF_EMISOR = "B12345674";
-  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.MAPA_STAFF, [{
-    _id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
-    recordType: "TERCERO",
-    taxId: "B12345674",
-    legalName: "MARIAN MADRID",
-    thirdPartyType: "EMISOR",
-    address: null,
-  }]);
+  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.MAPA_STAFF, [
+    syntheticFiscalSystemConfig(),
+    {
+      _id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+      recordType: "TERCERO",
+      taxId: "B12345674",
+      legalName: "MARIAN MADRID",
+      thirdPartyType: "EMISOR",
+      address: null,
+    },
+  ]);
   wixDataMock._seed("CitasF2", [seedCita({
     bookingStatus: "PENDING",
     paymentStatus: "PENDING_PAYMENT",
