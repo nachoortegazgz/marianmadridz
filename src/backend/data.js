@@ -20,7 +20,7 @@ import {
     TPV_QA_RUNTIME_POLICY,
     TPV_QA_EVENT_MOVEMENT_TYPES,
 } from "backend/internalConfig";
-import { assertCitasF2, assertCitasF2Insert, assertControlOperativo, assertCanonicalControlFields, assertRegistrosHorariosStaff, assertMapaStaffRecord, assertCajaActualRecord, assertHistoricoCierresZ, assertMovimientosCajaRequiredFields, isValidNifOrEuVat as _isValidNifOrEuVat } from "backend/validation";
+import { assertCitasF2, assertCitasF2Insert, assertControlOperativo, assertCanonicalControlFields, assertRegistrosHorariosStaff, assertMapaStaffRecord, assertCajaActualRecord, assertHistoricoCierresZ, assertMovimientosCajaRequiredFields, assertAccountingLedgerRecord, isValidNifOrEuVat as _isValidNifOrEuVat } from "backend/validation";
 import { CONSISTENCY, getItem } from "backend/dataAccess";
 import { stableSerialize } from "backend/tpv/tpvUtils";
 
@@ -588,6 +588,13 @@ export async function MovimientosCaja_beforeRemove(itemId) {
         : null;
     if (_isCurrentSyntheticTpvRow(previous)) return itemId;
     _fiscalError("Borrado de MovimientosCaja prohibido salvo filas TPV QA sintéticas del test-run activo.");
+}
+
+export function LibroAsientosContablesDetalle_beforeInsert(item) {
+    if (!item || typeof item !== "object") return item;
+    _normalizeCmsDateTime(item, "recordTimestamp");
+    assertAccountingLedgerRecord(item);
+    return item;
 }
 
 export function LibroAsientosContablesDetalle_beforeUpdate() {
