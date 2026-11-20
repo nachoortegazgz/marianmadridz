@@ -36,7 +36,9 @@ test('CMS-CONTROL-01 slot lock persists only physical ControlOperativo columns',
   assert.equal(lock.payload.lockOwnerId, 'execution-owner');
   assert.ok(lock.payload.lockToken);
   assert.ok(lock.payload.acquiredAt instanceof Date);
-  for (const field of ['lockOwnerId', 'lockToken', 'acquiredAt']) {
+  assert.ok(lock.payload.slotStart instanceof Date);
+  assert.ok(lock.payload.slotEnd instanceof Date);
+  for (const field of ['lockOwnerId', 'lockToken', 'acquiredAt', 'slotStart', 'slotEnd']) {
     assert.ok(!(field in lock), `${field} is not a physical ControlOperativo column`);
   }
 });
