@@ -170,7 +170,7 @@ test("CRON-BOOKING-PROJECTION-01 projects only confirmed unpaid bookings with co
   assert.equal(marker.payload.metadata.bookingId, CONFIRMED_VALID.id);
   assert.ok(marker.traceId);
 
-  const alerts = controls.filter(row => row.eventType);
+  const alerts = controls.filter(row => row.controlType === IC.CONTROL_TYPE.ALERT && row.eventType);
   assert.equal(alerts.length, 3);
   assert.ok(alerts.some(row => row.eventType === "BOOKING_PROJECTION_RECONCILIATION_REQUIRED"));
   assert.ok(alerts.some(row => row.eventType === "BOOKING_PAID_PROJECTION_REVIEW_REQUIRED"));
@@ -191,7 +191,7 @@ test("CRON-BOOKING-PROJECTION-02 replay is idempotent and does not duplicate pro
   const firstRows = wixDataMock._store.get(IC.BUSINESS_COLLECTIONS.CITAS_F2) || [];
   const firstControls = wixDataMock._store.get(IC.OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO) || [];
   const firstProjectionCount = firstRows.filter(row => row.bookingId === CONFIRMED_VALID.id).length;
-  const firstAlertCount = firstControls.filter(row => row.eventType).length;
+  const firstAlertCount = firstControls.filter(row => row.controlType === IC.CONTROL_TYPE.ALERT && row.eventType).length;
 
   readerCalls = [];
   confirmedPage = 0;
@@ -201,7 +201,7 @@ test("CRON-BOOKING-PROJECTION-02 replay is idempotent and does not duplicate pro
   assert.equal(replay.reconciled, 0);
   assert.equal(replay.skipped, 2);
   assert.equal(rowsAfterReplay.filter(row => row.bookingId === CONFIRMED_VALID.id).length, firstProjectionCount);
-  assert.equal(controlsAfterReplay.filter(row => row.eventType).length, firstAlertCount);
+  assert.equal(controlsAfterReplay.filter(row => row.controlType === IC.CONTROL_TYPE.ALERT && row.eventType).length, firstAlertCount);
 });
 
 test("CRON-BOOKING-PROJECTION-03 rejects malformed native booking identifiers", async () => {
