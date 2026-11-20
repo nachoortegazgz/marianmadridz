@@ -176,10 +176,10 @@ test("TPV WebMethods isolate synthetic SANDBOX writes from operational ledgers",
     const cashierModule = await source("tpv/tpvCaja.web.js");
     assert.doesNotMatch(cashierModule, /backend\/cajas\.web|CajaActual|getCashierState/);
     assert.match(joined, /TPV_OPERATIONAL_REFUNDS_DISABLED/);
+    const sales = await source("tpv/tpvVentas.web.js");
     assert.match(sales, /realPayment: false/);
     assert.match(sales, /fiscalLedgerWritten: false/);
     assert.match(sales, /TPV_SANDBOX_SALE_MUST_BE_FULLY_PAID/);
-    const sales = await source("tpv/tpvVentas.web.js");
     const refunds = await source("tpv/tpvDevoluciones.web.js");
     const movements = await source("tpv/tpvMovimientos.web.js");
     const cash = await source("tpv/tpvCaja.web.js");
@@ -281,7 +281,7 @@ test("TPV page is wired to the shared HTML bridge and its versioned iframe proto
     assert.doesNotMatch(page, /TPV_REQUEST_STATE|TPV_READY|getCashierState/);
 
     assert.match(controller, /MESSAGE_TYPES\.READY/);
-    assert.match(controller, /MESSAGE_TYPES\.CONTEXT/);
+    assert.match(controller, /onContextReady:/);
     assert.match(controller, /"CASHIER_STATE"/);
     assert.match(controller, /CASHIER_STATE_RES/);
     assert.match(controller, /CATALOG_SERVICES/);
