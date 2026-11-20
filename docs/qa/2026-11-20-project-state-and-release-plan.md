@@ -276,7 +276,7 @@ Referencias oficiales:
 - [SDK incrementField](https://dev.wix.com/docs/sdk/data-items-sdk/data/items/wix-data-patch/increment-field)
 - [REST Patch Data Item](https://dev.wix.com/docs/api-reference/business-solutions/cms/data-items/patch-data-item)
 
-El sitio Marian Madrid sigue en estado Draft según el contexto Wix consultado. La PR #468 está abierta; CI se encuentra en ejecución y no se ha fusionado. No se han realizado cambios runtime ni escrituras CMS.
+El sitio Marian Madrid sigue en estado Draft según el contexto Wix consultado. La PR #468 se fusionó en `main` mediante `6f97878d7e33082ce1f51fd84729df5533d762aa`; sus dos workflows finalizaron SUCCESS. Esta nota histórica queda supersedida por el addendum siguiente. No se han realizado cambios runtime ni escrituras CMS.
 
 
 ## 9. Addendum — verificación de CajaActual NATIVE y Bulk Patch — 2026-11-20
