@@ -40,7 +40,7 @@ Las cantidades se procesan como céntimos enteros y la divisa está limitada a E
 
 **Límite de idempotencia:** como no hay persistencia, el simulador solo produce referencias deterministas y fingerprint. No garantiza deduplicación durable entre solicitudes ni acumulación de reembolsos. El repositorio que eventualmente persista estos eventos debe aplicar unicidad/CAS, reconciliación de reintentos y límite acumulado de reembolso.
 
-Todas las respuestas incluyen explícitamente `providerCalled=false`, `realPayment=false`, `persisted=false` y `externalSideEffects=false`.
+Todas las respuestas incluyen explícitamente `environment=SIMULATOR`, `dataPlane=NO_CMS_ACCESS`, `providerCalled=false`, `realPayment=false`, `persisted=false` y `externalSideEffects=false`. No se atribuye el contexto de ejecución al data plane Sandbox de Wix.
 
 ## Riesgos y controles
 
