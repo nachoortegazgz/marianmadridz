@@ -62,7 +62,7 @@ test("TPV controls keep unsupported commercial and fiscal capabilities disabled"
     assert.match(html, /id="refund" class="btn danger" disabled/);
     assert.match(html, /id="ticketX"[^>]*disabled/);
     assert.match(html, /id="ticketZ"[^>]*disabled/);
-    assert.match(html, /state\.context\?\.environment!=="QA"\|\|state\.context\?\.previewOnly!==true/);
+    assert.match(html, /state\.context\?\.environment!=="SANDBOX"\|\|state\.context\?\.previewOnly!==true/);
     assert.match(html, /!c\.issueTicketX/);
     assert.match(html, /!c\.registerCashMovement/);
     assert.match(html, /!c\.createSyntheticSale/);
