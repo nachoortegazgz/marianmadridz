@@ -4,7 +4,7 @@ Fecha de corte: 2026-11-20
 Repositorio: `nachoortegazgz/marianmadridz`  
 Rama: `main`  
 Site ID: `188bed94-177c-4bc9-a9f0-35080d874f3e`  
-Último SHA verificado: `7672bac4b4207ba87c9688fa34f38752a253ae86`
+Último SHA de aplicación antes de esta actualización documental: `1357d770d6b786f6ecdad1c93d4d29002c00c810`
 
 ## 1. Dictamen ejecutivo
 
@@ -14,7 +14,8 @@ El propietario declaró que el sitio está en desarrollo y que los registros fis
 
 ## 2. Estado verificado del repositorio
 
-- `main` apunta a `7672bac4b4207ba87c9688fa34f38752a253ae86`.
+- `main` apuntaba a `1357d770d6b786f6ecdad1c93d4d29002c00c810` al iniciar esta actualización documental.
+- PR #456 integrada: refresco del estado consolidado tras la auditoría CMS (`1357d770d6b786f6ecdad1c93d4d29002c00c810`).
 - PR #453 integrada: consolidación documental (`9aa92a9ef7408ab9b431694463ca1ffe2dedacfa`).
 - PR #454 integrada: auditoría de productores y bypasses CMS (`06766afbcdf7f8d32d34ccbb3f1ff68a242f8bca`).
 - PR #455 integrada: validación central de `PaquetesGestoria` (`7672bac4b4207ba87c9688fa34f38752a253ae86`).
@@ -167,10 +168,23 @@ No declarar GO hasta que:
 ## 7. Límites de esta consolidación
 
 - Los estados de PR, merge SHA, workflow #44667244690 y branch protection se consultaron directamente en GitHub.
-- Los hallazgos CMS y runtime citados proceden de auditorías read-only anteriores documentadas en issues e informes; no se repitieron todas las consultas Wix durante esta actualización.
-- No se ejecutó código local, Wix Preview, Wix Sandbox ni operaciones CMS.
+- Se repitieron consultas Wix read-only el 20/11/2026: SiteContext Draft, esquemas/revisiones, permisos, singleton CajaActual, compensaciones, pedidos eCommerce, transacciones y bookings nativos. El detalle está en [reconciliación live 20/11](./2026-11-20-live-caja-schema-and-reconciliation.md).
+- No se ejecutó código local, Wix Preview ni pruebas en Wix Sandbox; no se realizaron escrituras CMS.
 - No se habilitó ningún writer, no se enviaron pagos, no se remitieron datos AEAT y no se publicó el sitio.
 
 ## 8. Punto de continuación
 
 Siguiente intervención recomendada: **cerrar H-01 de `CajaActual`** definiendo transiciones válidas y endureciendo la frontera DAL sin romper los productores de caja y TPV QA. En paralelo, priorizar la conciliación P0 de las tres compensaciones y CajaActual; después ejecutar pruebas de hooks/permisos en Sandbox. Mantener cierre Z y writers fiscales bloqueados.
+
+
+## 9. Addendum live Wix — 2026-11-20
+
+- SiteContext confirma estado Draft; no publicado.
+- CajaActual cambió de esquema el 17/11: revisión 18, 81 campos. La auditoría del 14/11 queda histórica/supersedida como contrato físico vigente.
+- Singleton CajaActual: ABIERTA, apertura/efectivo/esperado/contado 300 EUR; closedAt y lastMovementAt anteriores a openedAt; traceId vacío; sequenceCounters almacenado como texto pese a schema OBJECT. No cumple marcadores del sandbox TPV QA.
+- ControlOperativo: 58 elementos, tres compensaciones FISCAL_LEDGER/PENDING_RECOVERY con attempts=0. MovimientosCaja, HistoricoCierresZ y LibroAsientosContablesDetalle permanecen en cero.
+- Pedidos POS #10033 y #10032 continúan vinculados a las compensaciones. Los bookings nativos se leen CONFIRMED/PAID, mientras sus proyecciones CitasF2 siguen CONFIRMED/PENDING_LEDGER/totalAmount=0. #10033 además está FULLY_REFUNDED en eCommerce.
+- Issue #441 actualizada: guard POS integrado en código, E2E Sandbox pendiente. Issue #416 actualizada con correlación nativa y decisión de no mutar datos.
+- No se realizaron escrituras Wix, reintentos, cierres, cambios de pagos ni publicación.
+
+**Prioridad inmediata:** conciliación manual de #10033 refund vs booking y #10032 POS Cash mixto; mantener CajaActual sin cierre/ajuste. Después alinear DTO/diccionario con el esquema live y preparar un singleton TPV QA aislado. Writers fiscales/contables siguen deshabilitados; NO-GO.
