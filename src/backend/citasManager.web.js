@@ -1500,10 +1500,10 @@ async function _createDualRescheduleJournal(identity, pairToken, traceId, payloa
         _id: identity.journalId,
         controlType: CONTROL_TYPE.SYSTEM_FLAG,
         dedupeKey: identity.dedupeKey,
-        pairToken: _safeTrim(pairToken),
         version: 0,
         payload: {
             ...payload,
+            pairToken: _safeTrim(pairToken),
             operationType: "DUAL_RESCHEDULE",
             operationHash: identity.operationHash,
             status: DUAL_RESCHEDULE_STATUS.IN_PROGRESS,
