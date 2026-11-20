@@ -13,7 +13,7 @@ test("VALIDATION-ENUM-01 accepts canonical enum values and rejects unknown value
 });
 
 test("VALIDATION-MAPA-01 rejects incomplete MapaStaff insert records", () => {
-    assert.throws(() => V.assertMapaStaffRecord({}), /MAPA_STAFF|MapaStaff/);
+    assert.throws(() => V.assertMapaStaffRecord({}), /recordType invalido/);
 });
 
 test("VALIDATION-MOVEMENT-01 validates required movement enums before any side effect", () => {
