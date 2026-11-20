@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import vm from "node:vm";
@@ -22,10 +22,8 @@ const serviceHtml = read("#htmlWidgetCustomService.txt");
 const confirmationHtml = read("#html2.txt");
 const calendarHtml = read("#html1.txt");
 const adminHtml = read("#htmlAdmin.txt");
-const onlyStaffHtml = read("#htmlOnlyStaff.txt");
 const bridge = read("src/public/widgetBridge.js");
 const adminPage = read("src/pages/ZONA MARIAN.gn7mx.js");
-const staffPage = read("src/pages/ZONA STAFF.mvf3f.js");
 const calendarPage = read("src/pages/Calendario de reservas 2.q39h6.js");
 const cashierBackend = read("src/backend/cajas.web.js");
 
@@ -34,7 +32,6 @@ test("HTML component snapshots contain syntactically valid JavaScript", () => {
     ["service widget", serviceHtml],
     ["booking calendar", calendarHtml],
     ["admin widget", adminHtml],
-    ["staff widget", onlyStaffHtml],
   ]) {
     for (const [index, source] of extractInlineScripts(html, label).entries()) {
       assert.doesNotThrow(
@@ -119,12 +116,6 @@ test("confirmation navigation uses canonical URL constants re-exported by mmUtil
 });
 
 
-test("staff widget has no navigation to unimplemented or unrelated routes", () => {
-  assert.doesNotMatch(staffPage, /MESSAGE_TYPES\.NAV|location\.to|URLS/);
-  assert.doesNotMatch(onlyStaffHtml, /MM_NAV|btnOpenCalendar|STAFF_CALENDAR|POS_CHECKOUT|CAJA_ACTUAL/);
-});
-
-
 test("booking privacy navigation targets the published Privacidad y Cookies route", () => {
   assert.match(bridge, /PRIVACY_POLICY: "\/politica-privacidad-texto"/);
   assert.match(calendarPage, /URLS\?\.PRIVACY_POLICY[\s\S]*?\/politica-privacidad-texto/);
@@ -155,35 +146,6 @@ test("admin widget actions are explicitly allowlisted and match implemented page
   }
 });
 
-test("staff widget exposes only authorized read-only state, history and hours panels", () => {
-  const allowlist = staffPage.match(/allowedTypes:\s*\[([\s\S]*?)\]/);
-  assert.ok(allowlist, "staff page must declare an explicit message allowlist");
-  assert.match(allowlist[1], /MESSAGE_TYPES\.READY/);
-  assert.match(allowlist[1], /MESSAGE_TYPES\.CONTEXT/);
-  for (const type of ["GET_STATE", "GET_HISTORY", "HOURS_CALC"]) {
-    assert.ok(allowlist[1].includes('"' + type + '"'), type + " must be allowed");
-  }
-  assert.doesNotMatch(allowlist[1], /NAV|CLOCK|ADJUSTMENT|TPV_TX|CASHIER_STATE|X_COUNT|Z_CLOSING|INVENTORY_/);
-  assert.match(staffPage, /enableStateQuery:\s*hasStaffContext/);
-  assert.match(staffPage, /enableHistory:\s*hasStaffContext/);
-  assert.match(staffPage, /enableHoursCalculation:\s*hasStaffContext/);
-  assert.match(onlyStaffHtml, /contextData\.isAuthorized !== true/);
-  assert.match(onlyStaffHtml, /statePanel\.style\.display\s*=\s*enableStateQuery/);
-  assert.match(onlyStaffHtml, /historyPanel\.style\.display\s*=\s*enableHistory/);
-  assert.match(onlyStaffHtml, /hoursPanel\.style\.display\s*=\s*enableHoursCalculation/);
-  assert.doesNotMatch(onlyStaffHtml, /enableClocking|enableCashier|cashPanel|TPV_TX|CASHIER_STATE|btnOpenCalendar|btnEntrada|btnAdjSubmit|btnSupplierPayment|btnXCount|btnZClosing/);
-  assert.doesNotMatch(staffPage, /location\.to|URLS|\/pos-checkout|\/caja-actual|\/mi-calendario/);
-});
-
-test("staff and Marian zones keep separate operational responsibilities", () => {
-  assert.match(adminPage, /requireMarianManager|isMarianManager/);
-  assert.doesNotMatch(adminPage, /getEstadoJornada|getHistorialFichajes|calcularHorasTrabajadas/);
-  assert.match(staffPage, /getEstadoJornada/);
-  assert.match(staffPage, /getHistorialFichajes/);
-  assert.match(staffPage, /calcularHorasTrabajadas/);
-  assert.doesNotMatch(staffPage, /getCashierState|registerZClosing|getQuarterlyTaxSummary/);
-});
-
 test("cashier DTO is consumed only by the Marian manager panel", () => {
   assert.match(cashierBackend, /netAmount:/);
   assert.match(cashierBackend, /totalOperations,/);
@@ -198,7 +160,6 @@ test("cashier DTO is consumed only by the Marian manager panel", () => {
   assert.match(adminHtml, /op\.hash/);
   assert.match(adminHtml, /op\.previousRecordHash/);
   assert.match(adminHtml, /op\.traceId/);
-  assert.doesNotMatch(onlyStaffHtml, /cashPanel|cashier|TPV|MovimientosCaja/);
 });
 
 test("admin widget no longer exposes discarded staff management or business status flow", () => {
@@ -218,8 +179,6 @@ test("admin fallback hides unsupported capabilities and ticket output uses text 
   assert.doesNotMatch(adminHtml, /cashierMode|enableClocking|enableInventory|enableHoursCalculation/);
   assert.doesNotMatch(adminPage, /isMarianManager: true|isAdmin: access\.isAdmin|isCajero: access\.isCajero/);
   assert.doesNotMatch(adminHtml, /cashTicket\.innerHTML\s*=/);
-  assert.doesNotMatch(onlyStaffHtml, /ticketBox\.innerHTML\s*=/);
-  assert.doesNotMatch(onlyStaffHtml, /hoursResult\.innerHTML\s*=/);
 });
 
 
@@ -231,27 +190,8 @@ test("admin cashier session remains readable when closed; Z close is guarded unl
 });
 
 
-test("staff page maps only read-only timeclock queries and excludes nonexistent Wix routes", () => {
-  const allowlist = staffPage.match(/allowedTypes:\s*\[([\s\S]*?)\]/);
-  assert.ok(allowlist, "staff page must declare an explicit message allowlist");
-  for (const type of ["GET_STATE", "GET_HISTORY", "HOURS_CALC"]) {
-    assert.ok(allowlist[1].includes('"' + type + '"'), type + " must be allowed");
-    assert.match(staffPage, new RegExp('type === "' + type + '"'));
-  }
-  assert.match(staffPage, /getMyStaffContext/);
-  assert.match(staffPage, /getHistorialFichajes/);
-  assert.match(staffPage, /calcularHorasTrabajadas/);
-  assert.doesNotMatch(staffPage, /\/pos-checkout|\/caja-actual|\/mi-calendario|MESSAGE_TYPES\.NAV/);
-  assert.doesNotMatch(allowlist[1], /CLOCK|ADJUSTMENT|TPV_TX|X_COUNT|Z_CLOSING/);
-  assert.match(onlyStaffHtml, /integrityStatus === 'UNVERIFIED'[\s\S]*NO VERIFICADO/);
-  assert.match(onlyStaffHtml, /sequenceStatus === 'INVALID'[\s\S]*SECUENCIA INVÁLIDA/);
-  assert.match(onlyStaffHtml, /Jornadas abiertas:[\s\S]*el tiempo en curso no se incluye/);
-});
 
-
-test("staff widget has no unresolved literal DOM selectors", () => {
-  const referencedIds = Array.from(onlyStaffHtml.matchAll(/\$\('([^']+)'\)/g), (match) => match[1]);
-  const declaredIds = new Set(Array.from(onlyStaffHtml.matchAll(/\bid=["']([^"']+)["']/g), (match) => match[1]));
-  const missingIds = [...new Set(referencedIds)].filter((id) => !declaredIds.has(id));
-  assert.deepEqual(missingIds, []);
+test("ONLYSTAFF page source and HTML widget are retired", () => {
+  assert.equal(existsSync(join(root, "src/pages/ZONA STAFF.mvf3f.js")), false);
+  assert.equal(existsSync(join(root, "#htmlOnlyStaff.txt")), false);
 });
