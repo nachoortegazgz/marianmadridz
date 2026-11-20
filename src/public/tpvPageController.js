@@ -1,26 +1,41 @@
 /**
  * public/tpvPageController.js
- * Versioned HTML bridge for the isolated, synthetic TPV SANDBOX workflow.
- * No operational ledger, Wix payment gateway, fiscal API or customer notification is called.
+ * TPV sobre las colecciones reales del sitio.
+ *
+ * Las colecciones utilizadas las determina el backend:
+ * CajaActual
+ * MovimientosCaja
+ * HistoricoCierresZ
+ * ControlOperativo
  */
+
 import {
-    obtenerSesionCajaSANDBOX,
-    inicializarCajaSANDBOX,
-    abrirCajaSANDBOX,
-    registrarArqueoParcialSANDBOX,
+    obtenerSesionCaja,
+    inicializarCaja,
+    abrirCaja,
+    registrarArqueoParcial,
 } from "backend/tpv/tpvCaja.web.js";
-import { registrarMovimientoCajaSANDBOX } from "backend/tpv/tpvMovimientos.web.js";
-import { registrarVentaSANDBOX, validarVentaBorrador } from "backend/tpv/tpvVentas.web.js";
-import { validarDesglosePagosSANDBOX } from "backend/tpv/tpvPagos.web.js";
-import { solicitarDevolucionSANDBOX } from "backend/tpv/tpvDevoluciones.web.js";
+
+import { registrarMovimientoCaja } from "backend/tpv/tpvMovimientos.web.js";
+
 import {
-    obtenerResumenSesionSANDBOX,
-    generarTicketXSANDBOX,
-    cerrarTicketZSANDBOX,
+    registrarVenta,
+    validarVentaBorrador,
+} from "backend/tpv/tpvVentas.web.js";
+
+import { validarDesglosePagos } from "backend/tpv/tpvPagos.web.js";
+import { solicitarDevolucion } from "backend/tpv/tpvDevoluciones.web.js";
+
+import {
+    obtenerResumenSesion,
+    generarTicketX,
+    cerrarTicketZ,
 } from "backend/tpv/tpvCierres.web.js";
-import { consultarAuditoriaTPVSANDBOX } from "backend/tpv/tpvAuditoria.web.js";
-import { obtenerPermisosTPVSANDBOX } from "backend/tpv/tpvPermisos.web.js";
-import { obtenerConfiguracionTPVSANDBOX } from "backend/tpv/tpvUtils.web.js";
+
+import { consultarAuditoriaTPV } from "backend/tpv/tpvAuditoria.web.js";
+import { obtenerPermisosTPV } from "backend/tpv/tpvPermisos.web.js";
+import { obtenerConfiguracionTPV } from "backend/tpv/tpvUtils.web.js";
+
 import {
     obtenerServicios,
     obtenerProfesionales,
@@ -29,13 +44,13 @@ import {
     buscarClientesTPV,
     obtenerReservasClienteTPV,
 } from "backend/tpv/tpvCatalogo.web.js";
+
 import { consultarTarjetaRegalo } from "backend/tpv/tpvGiftCards.web.js";
 import { createWidgetBridge, MESSAGE_TYPES } from "public/widgetBridge";
 import { makeTraceId } from "public/mmUtils";
 
-const TPV_ALLOWED_MESSAGES = Object.freeze([
+const ALLOWED_MESSAGES = Object.freeze([
     MESSAGE_TYPES.READY,
-    MESSAGE_TYPES.CONTEXT,
     "CASHIER_STATE",
     "CATALOG_SERVICES",
     "CATALOG_STAFF",
@@ -45,36 +60,67 @@ const TPV_ALLOWED_MESSAGES = Object.freeze([
     "CUSTOMER_BOOKINGS",
     "VALIDATE_SALE_DRAFT",
     "GIFT_CARD_BALANCE",
-    "SANDBOX_CONFIG",
-    "SANDBOX_PERMISSIONS",
-    "SANDBOX_SESSION_OPEN",
-    "SANDBOX_PARTIAL_COUNT",
-    "SANDBOX_CASH_MOVEMENT",
-    "SANDBOX_PAYMENT_VALIDATE",
-    "SANDBOX_SALE_REGISTER",
-    "SANDBOX_REFUND",
-    "SANDBOX_SESSION_SUMMARY",
-    "SANDBOX_TICKET_X",
-    "SANDBOX_TICKET_Z",
-    "SANDBOX_AUDIT_LIST",
+    "CONFIG",
+    "PERMISSIONS",
+    "SESSION_OPEN",
+    "PARTIAL_COUNT",
+    "CASH_MOVEMENT",
+    "PAYMENT_VALIDATE",
+    "SALE_REGISTER",
+    "REFUND",
+    "SESSION_SUMMARY",
+    "TICKET_X",
+    "TICKET_Z",
+    "AUDIT_LIST",
 ]);
 
-function errorResult(code, message, traceId) {
-    return { status: "ERROR", data: null, error: { code, message }, traceId, persisted: false, isSynthetic: true, realPayment: false };
+function success(data, traceId) {
+    return {
+        status: "SUCCESS",
+        data,
+        traceId,
+        persisted: true,
+    };
 }
 
-async function safeCall(operation, code, message, traceId) {
+function failure(code, message, traceId) {
+    return {
+        status: "ERROR",
+        data: null,
+        error: { code, message },
+        traceId,
+        persisted: false,
+    };
+}
+
+async function run(operation, code, message, traceId) {
     try {
-        return await operation();
-    } catch (_) {
-        return errorResult(code, message, traceId);
+        const result = await operation();
+
+        if (
+            result &&
+            typeof result === "object" &&
+            typeof result.status === "string"
+        ) {
+            return result;
+        }
+
+        return success(result, traceId);
+    } catch (error) {
+        return failure(
+            code,
+            error?.message || message,
+            traceId
+        );
     }
 }
 
 export function initializeTpvPage(widgetElement) {
-    if (!widgetElement ||
+    if (
+        !widgetElement ||
         typeof widgetElement.onMessage !== "function" ||
-        typeof widgetElement.postMessage !== "function") {
+        typeof widgetElement.postMessage !== "function"
+    ) {
         throw new TypeError("TPV_HTML_COMPONENT_REQUIRED");
     }
 
@@ -83,130 +129,278 @@ export function initializeTpvPage(widgetElement) {
     return createWidgetBridge(widgetElement, {
         slug: "tpv",
         traceId,
-        allowedTypes: TPV_ALLOWED_MESSAGES,
+        allowedTypes: ALLOWED_MESSAGES,
         allowOpaqueOrigin: true,
 
         onContextReady: async () => {
-            const bootstrap = await safeCall(
-                () => inicializarCajaSANDBOX(),
-                "TPV_SANDBOX_BOOTSTRAP_FAILED",
-                "No se pudo inicializar el entorno Sandbox.",
+            const result = await run(
+                () => inicializarCaja(),
+                "TPV_INITIALIZATION_FAILED",
+                "No se pudo inicializar la caja.",
                 traceId
             );
-            const sandboxReady = bootstrap.status === "SUCCESS";
+
             return {
                 component: "htmlTPV",
                 protocolVersion: 1,
-                environment: sandboxReady ? "SANDBOX" : "UNAVAILABLE",
-                syntheticOnly: true,
-                sandboxReady,
-                previewOnly: sandboxReady,
-                sandboxInitialized: bootstrap.data?.initialized === true,
-                mode: sandboxReady ? "SYNTHETIC_SANDBOX" : "UNAVAILABLE",
+                ready: result.status === "SUCCESS",
                 currencyCode: "EUR",
                 timeZone: "Europe/Madrid",
                 capabilities: {
-                    cashierState: "CAJA_ACTUAL_SIMULACION",
-                    bookingsServices: "READ_ONLY",
-                    bookingsStaff: "READ_ONLY",
-                    storesProducts: "READ_ONLY",
-                    storesVariants: "READ_ONLY",
-                    saleDraftValidation: "BACKEND",
-                    syntheticSales: sandboxReady ? "MOVIMIENTOS_CAJA_SYNTHETIC" : "DISABLED",
-                    cashMovements: sandboxReady ? "MOVIMIENTOS_CAJA_SYNTHETIC" : "DISABLED",
-                    refunds: sandboxReady ? "MOVIMIENTOS_CAJA_SYNTHETIC" : "DISABLED",
-                    ticketX: "SANDBOX_REPORT",
-                    ticketZ: "SANDBOX_SESSION_CLOSE_ONLY",
-                    giftCards: "READ_ONLY",
-                    payments: "SIMULATED_NO_GATEWAY",
-                    orderMutations: "DISABLED",
-                    bookingMutations: "DISABLED",
-                    operationalCashWrites: sandboxReady ? "SYNTHETIC_ONLY" : "DISABLED",
-                    fiscalLedgerWrites: "DISABLED",
-                    customerNotifications: "DISABLED",
-                    physicalHardware: "DISABLED",
+                    cashierState: "AVAILABLE",
+                    catalog: "READ_ONLY",
+                    customers: "READ_ONLY",
+                    sales: "ENABLED",
+                    payments: "VALIDATED",
+                    refunds: "ENABLED",
+                    cashMovements: "ENABLED",
+                    ticketX: "ENABLED",
+                    ticketZ: "ENABLED",
+                    audit: "READ_ONLY",
+                    fiscalWrites: "DISABLED",
+                    externalPaymentGateway: "DISABLED",
                 },
             };
         },
 
         onWidgetMessage: async (message, reply) => {
-            const type = String(message?.type || "").trim().toUpperCase();
+            const type = String(message?.type || "")
+                .trim()
+                .toUpperCase();
+
             const payload = message?.payload || {};
-            const respond = async (responseType, operation, code, text) => {
-                const result = await safeCall(operation, code, text, traceId);
+
+            const respond = async (
+                responseType,
+                operation,
+                code,
+                text
+            ) => {
+                const result = await run(
+                    operation,
+                    code,
+                    text,
+                    traceId
+                );
+
                 reply(responseType, result, message);
             };
 
             switch (type) {
-            // MM_READY is the bridge handshake. createWidgetBridge publishes
-            // MM_CONTEXT after this handler; no synthetic MM_READY_RES is needed.
             case MESSAGE_TYPES.READY:
                 return;
+
             case "CASHIER_STATE":
-                await respond("CASHIER_STATE_RES", () => obtenerSesionCajaSANDBOX(), "TPV_SANDBOX_SESSION_READ_FAILED", "No se pudo consultar la sesion SANDBOX.");
+                await respond(
+                    "CASHIER_STATE_RES",
+                    () => obtenerSesionCaja(),
+                    "TPV_SESSION_READ_FAILED",
+                    "No se pudo consultar la caja."
+                );
                 return;
+
             case "CATALOG_SERVICES":
-                await respond("CATALOG_SERVICES_RES", () => obtenerServicios({ limit: 100, offset: 0 }), "TPV_SERVICES_READ_FAILED", "No se pudieron consultar los servicios.");
+                await respond(
+                    "CATALOG_SERVICES_RES",
+                    () => obtenerServicios({ limit: 100, offset: 0 }),
+                    "TPV_SERVICES_READ_FAILED",
+                    "No se pudieron consultar los servicios."
+                );
                 return;
+
             case "CATALOG_STAFF":
-                await respond("CATALOG_STAFF_RES", () => obtenerProfesionales({ limit: 100 }), "TPV_STAFF_READ_FAILED", "No se pudieron consultar los profesionales.");
+                await respond(
+                    "CATALOG_STAFF_RES",
+                    () => obtenerProfesionales({ limit: 100 }),
+                    "TPV_STAFF_READ_FAILED",
+                    "No se pudieron consultar los profesionales."
+                );
                 return;
+
             case "CATALOG_PRODUCTS":
-                await respond("CATALOG_PRODUCTS_RES", () => obtenerProductos({ limit: 100, cursor: payload.cursor || null }), "TPV_STORES_PRODUCTS_READ_FAILED", "No se pudieron consultar los productos.");
+                await respond(
+                    "CATALOG_PRODUCTS_RES",
+                    () => obtenerProductos({
+                        limit: 100,
+                        cursor: payload.cursor || null,
+                    }),
+                    "TPV_PRODUCTS_READ_FAILED",
+                    "No se pudieron consultar los productos."
+                );
                 return;
+
             case "PRODUCT_VARIANTS":
-                await respond("PRODUCT_VARIANTS_RES", () => obtenerVariantesProducto({ productId: payload.productId }), "TPV_PRODUCT_VARIANTS_READ_FAILED", "No se pudieron consultar las variantes.");
+                await respond(
+                    "PRODUCT_VARIANTS_RES",
+                    () => obtenerVariantesProducto({
+                        productId: payload.productId,
+                    }),
+                    "TPV_VARIANTS_READ_FAILED",
+                    "No se pudieron consultar las variantes."
+                );
                 return;
+
             case "CUSTOMERS_SEARCH":
-                await respond("CUSTOMERS_SEARCH_RES", () => buscarClientesTPV({ search: payload.search }), "TPV_CUSTOMER_SEARCH_FAILED", "No se pudieron consultar los clientes.");
+                await respond(
+                    "CUSTOMERS_SEARCH_RES",
+                    () => buscarClientesTPV({
+                        search: payload.search,
+                    }),
+                    "TPV_CUSTOMERS_READ_FAILED",
+                    "No se pudieron consultar los clientes."
+                );
                 return;
+
             case "CUSTOMER_BOOKINGS":
-                await respond("CUSTOMER_BOOKINGS_RES", () => obtenerReservasClienteTPV({ contactId: payload.contactId, cursor: payload.cursor }), "TPV_CUSTOMER_BOOKINGS_FAILED", "No se pudieron consultar las reservas del cliente.");
+                await respond(
+                    "CUSTOMER_BOOKINGS_RES",
+                    () => obtenerReservasClienteTPV({
+                        contactId: payload.contactId,
+                        cursor: payload.cursor || null,
+                    }),
+                    "TPV_BOOKINGS_READ_FAILED",
+                    "No se pudieron consultar las reservas."
+                );
                 return;
+
             case "VALIDATE_SALE_DRAFT":
-                await respond("VALIDATE_SALE_DRAFT_RES", () => validarVentaBorrador(payload.sale || {}), "TPV_DRAFT_VALIDATION_FAILED", "No se pudo validar el borrador.");
+                await respond(
+                    "VALIDATE_SALE_DRAFT_RES",
+                    () => validarVentaBorrador(payload.sale || {}),
+                    "TPV_SALE_VALIDATION_FAILED",
+                    "No se pudo validar la venta."
+                );
                 return;
+
             case "GIFT_CARD_BALANCE":
-                await respond("GIFT_CARD_BALANCE_RES", () => consultarTarjetaRegalo({ code: payload.code }), "TPV_GIFT_CARD_LOOKUP_FAILED", "No se pudo consultar la tarjeta regalo.");
+                await respond(
+                    "GIFT_CARD_BALANCE_RES",
+                    () => consultarTarjetaRegalo({
+                        code: payload.code,
+                    }),
+                    "TPV_GIFT_CARD_READ_FAILED",
+                    "No se pudo consultar la tarjeta regalo."
+                );
                 return;
-            case "SANDBOX_CONFIG":
-                await respond("SANDBOX_CONFIG_RES", () => obtenerConfiguracionTPVSANDBOX(), "TPV_SANDBOX_CONFIG_FAILED", "No se pudo consultar la configuracion SANDBOX.");
+
+            case "CONFIG":
+                await respond(
+                    "CONFIG_RES",
+                    () => obtenerConfiguracionTPV(),
+                    "TPV_CONFIG_READ_FAILED",
+                    "No se pudo consultar la configuración."
+                );
                 return;
-            case "SANDBOX_PERMISSIONS":
-                await respond("SANDBOX_PERMISSIONS_RES", () => obtenerPermisosTPVSANDBOX(), "TPV_SANDBOX_PERMISSIONS_FAILED", "No se pudieron consultar los permisos.");
+
+            case "PERMISSIONS":
+                await respond(
+                    "PERMISSIONS_RES",
+                    () => obtenerPermisosTPV(),
+                    "TPV_PERMISSIONS_READ_FAILED",
+                    "No se pudieron consultar los permisos."
+                );
                 return;
-            case "SANDBOX_SESSION_OPEN":
-                await respond("SANDBOX_SESSION_OPEN_RES", () => abrirCajaSANDBOX(payload), "TPV_SANDBOX_SESSION_OPEN_FAILED", "No se pudo abrir la sesion SANDBOX.");
+
+            case "SESSION_OPEN":
+                await respond(
+                    "SESSION_OPEN_RES",
+                    () => abrirCaja(payload),
+                    "TPV_SESSION_OPEN_FAILED",
+                    "No se pudo abrir la caja."
+                );
                 return;
-            case "SANDBOX_PARTIAL_COUNT":
-                await respond("SANDBOX_PARTIAL_COUNT_RES", () => registrarArqueoParcialSANDBOX(payload), "TPV_SANDBOX_PARTIAL_COUNT_FAILED", "No se pudo registrar el arqueo SANDBOX.");
+
+            case "PARTIAL_COUNT":
+                await respond(
+                    "PARTIAL_COUNT_RES",
+                    () => registrarArqueoParcial(payload),
+                    "TPV_PARTIAL_COUNT_FAILED",
+                    "No se pudo registrar el control parcial."
+                );
                 return;
-            case "SANDBOX_CASH_MOVEMENT":
-                await respond("SANDBOX_CASH_MOVEMENT_RES", () => registrarMovimientoCajaSANDBOX(payload), "TPV_SANDBOX_CASH_MOVEMENT_FAILED", "No se pudo registrar el movimiento SANDBOX.");
+
+            case "CASH_MOVEMENT":
+                await respond(
+                    "CASH_MOVEMENT_RES",
+                    () => registrarMovimientoCaja(payload),
+                    "TPV_CASH_MOVEMENT_FAILED",
+                    "No se pudo registrar el movimiento."
+                );
                 return;
-            case "SANDBOX_PAYMENT_VALIDATE":
-                await respond("SANDBOX_PAYMENT_VALIDATE_RES", () => validarDesglosePagosSANDBOX(payload), "TPV_SANDBOX_PAYMENT_VALIDATION_FAILED", "No se pudo validar el pago simulado.");
+
+            case "PAYMENT_VALIDATE":
+                await respond(
+                    "PAYMENT_VALIDATE_RES",
+                    () => validarDesglosePagos(payload),
+                    "TPV_PAYMENT_VALIDATE_FAILED",
+                    "No se pudo validar el pago."
+                );
                 return;
-            case "SANDBOX_SALE_REGISTER":
-                await respond("SANDBOX_SALE_REGISTER_RES", () => registrarVentaSANDBOX(payload), "TPV_SANDBOX_SALE_FAILED", "No se pudo registrar la venta sintetica.");
+
+            case "SALE_REGISTER":
+                await respond(
+                    "SALE_REGISTER_RES",
+                    () => registrarVenta(payload),
+                    "TPV_SALE_REGISTER_FAILED",
+                    "No se pudo registrar la venta."
+                );
                 return;
-            case "SANDBOX_REFUND":
-                await respond("SANDBOX_REFUND_RES", () => solicitarDevolucionSANDBOX(payload), "TPV_SANDBOX_REFUND_FAILED", "No se pudo registrar la devolucion sintetica.");
+
+            case "REFUND":
+                await respond(
+                    "REFUND_RES",
+                    () => solicitarDevolucion(payload),
+                    "TPV_REFUND_FAILED",
+                    "No se pudo registrar la devolución."
+                );
                 return;
-            case "SANDBOX_SESSION_SUMMARY":
-                await respond("SANDBOX_SESSION_SUMMARY_RES", () => obtenerResumenSesionSANDBOX(payload), "TPV_SANDBOX_SUMMARY_FAILED", "No se pudo calcular el resumen SANDBOX.");
+
+            case "SESSION_SUMMARY":
+                await respond(
+                    "SESSION_SUMMARY_RES",
+                    () => obtenerResumenSesion(payload),
+                    "TPV_SUMMARY_FAILED",
+                    "No se pudo obtener el resumen."
+                );
                 return;
-            case "SANDBOX_TICKET_X":
-                await respond("SANDBOX_TICKET_X_RES", () => generarTicketXSANDBOX(payload), "TPV_SANDBOX_TICKET_X_FAILED", "No se pudo generar Ticket X SANDBOX.");
+
+            case "TICKET_X":
+                await respond(
+                    "TICKET_X_RES",
+                    () => generarTicketX(payload),
+                    "TPV_TICKET_X_FAILED",
+                    "No se pudo generar el control X."
+                );
                 return;
-            case "SANDBOX_TICKET_Z":
-                await respond("SANDBOX_TICKET_Z_RES", () => cerrarTicketZSANDBOX(payload), "TPV_SANDBOX_TICKET_Z_FAILED", "No se pudo cerrar Ticket Z SANDBOX.");
+
+            case "TICKET_Z":
+                await respond(
+                    "TICKET_Z_RES",
+                    () => cerrarTicketZ(payload),
+                    "TPV_TICKET_Z_FAILED",
+                    "No se pudo cerrar la caja."
+                );
                 return;
-            case "SANDBOX_AUDIT_LIST":
-                await respond("SANDBOX_AUDIT_LIST_RES", () => consultarAuditoriaTPVSANDBOX(payload), "TPV_SANDBOX_AUDIT_READ_FAILED", "No se pudo consultar la auditoria SANDBOX.");
+
+            case "AUDIT_LIST":
+                await respond(
+                    "AUDIT_LIST_RES",
+                    () => consultarAuditoriaTPV(payload),
+                    "TPV_AUDIT_READ_FAILED",
+                    "No se pudo consultar la auditoría."
+                );
                 return;
+
             default:
-                reply((type || "UNKNOWN") + "_RES", errorResult("TPV_ACTION_NOT_ALLOWED", "Accion no habilitada.", traceId), message);
+                reply(
+                    `${type || "UNKNOWN"}_RES`,
+                    failure(
+                        "TPV_ACTION_NOT_ALLOWED",
+                        "Acción no habilitada.",
+                        traceId
+                    ),
+                    message
+                );
             }
         },
     });
