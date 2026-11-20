@@ -142,6 +142,7 @@ test("MovimientosCaja accepts edits only for the exact active synthetic TPV test
     };
     assert.doesNotThrow(() => assertInsertAllowed(C.MOVIMIENTOS_CAJA, item));
     assert.doesNotThrow(() => assertUpdateAllowed(C.MOVIMIENTOS_CAJA, item));
+    assert.doesNotThrow(() => assertRemoveAllowed(C.MOVIMIENTOS_CAJA, item._id, undefined, item));
     assert.throws(() => assertUpdateAllowed(C.MOVIMIENTOS_CAJA, {
         ...item,
         payloadFiscal: { ...item.payloadFiscal, testRunId: "TPVQA-DEV-20990101-OTHER" },
