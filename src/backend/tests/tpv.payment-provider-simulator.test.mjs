@@ -9,6 +9,8 @@ test("approved payment returns deterministic captured synthetic transaction", ()
     const first = simulateGatewayPayment(input);
     const replay = simulateGatewayPayment(input);
     assert.equal(first.status, "CAPTURED");
+    assert.equal(first.environment, "SIMULATOR");
+    assert.equal(first.dataPlane, "NO_CMS_ACCESS");
     assert.equal(first.transactionId, replay.transactionId);
     assert.equal(first.requestFingerprint, replay.requestFingerprint);
     assert.equal(first.amountMinor, 2550);
