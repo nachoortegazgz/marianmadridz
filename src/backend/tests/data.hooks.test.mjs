@@ -544,3 +544,28 @@ test('HOOK-PACKAGE-03 preserves immutable gestoría package snapshots', () => {
   assert.throws(() => H.PaquetesGestoria_beforeUpdate({ _id: 'synthetic-package-1' }), /append-only/);
   assert.throws(() => H.PaquetesGestoria_beforeRemove('synthetic-package-1'), /append-only/);
 });
+
+test('HOOK-CAJA-04 allows edit and removal only for the active synthetic TPV test-run row', async () => {
+  const runId = IC.TPV_QA_RUNTIME_POLICY.TEST_RUN_ID;
+  const row = {
+    _id: 'TPVQA_HOOK_TEST_ROW',
+    hash: 'a'.repeat(64),
+    sequenceNumber: 0,
+    transactionId: 'TPVQA_HOOK_TEST_ROW',
+    traceId: 'TPVQA:' + runId + ':QA-SESSION-TEST',
+    movementType: 'SIMULATED_TPV_PAYMENT',
+    recordSource: 'TPV_QA_SYNTHETIC',
+    payloadFiscal: {
+      testRunId: runId,
+      requestFingerprint: 'f'.repeat(64),
+      isSynthetic: true,
+      realPayment: false,
+      externalSideEffects: false,
+    },
+  };
+  wixDataMock._reset();
+  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA, [row]);
+  const updated = await H.MovimientosCaja_beforeUpdate({ ...row, totalAmount: 1 });
+  assert.equal(updated.totalAmount, 1);
+  assert.equal(await H.MovimientosCaja_beforeRemove(row._id), row._id);
+});
