@@ -207,18 +207,6 @@ function stripVolatile(value) {
     return result;
 }
 
-function fingerprintOf(record) {
-    const stable = {};
-    for (const [key, value] of Object.entries(record || {})) {
-        if (key === "idempotencyKey" || key === "payload" || VOLATILE_FIELDS.has(key)) continue;
-        stable[key] = stripVolatile(value);
-    }
-    return stableSerialize({
-        record: stable,
-        payload: stripVolatile(record?.payload || {}),
-    });
-}
-
 const QA_LEDGER_SOURCE = "TPV_QA_SYNTHETIC";
 const QA_GENESIS_HASH = "0".repeat(64);
 const QA_COLLECTION_MOVEMENT_TYPE = Object.freeze({
