@@ -77,6 +77,10 @@ function _isSyntheticTpvRecord(item) {
         item.payloadFiscal?.testRunId === TPV_QA_RUNTIME_POLICY.TEST_RUN_ID &&
         item.payloadFiscal?.isSynthetic === true &&
         item.payloadFiscal?.realPayment === false &&
+        item.payloadFiscal?.externalSideEffects === false &&
+        Boolean(item.payloadFiscal?.requestFingerprint) &&
+        /^[a-f0-9]{64}$/i.test(String(item.hash || "")) &&
+        Number(item.sequenceNumber) === 0 &&
         String(item.traceId || "").startsWith("TPVQA:" + TPV_QA_RUNTIME_POLICY.TEST_RUN_ID + ":");
 }
 
@@ -108,21 +112,9 @@ export function assertInsertAllowed(collection, item) {
         throw _policyError("CMS_INSERT_COLLECTION_DENIED");
     }
     if (collection === BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA &&
-        item.recordSource === "TPV_QA_SYNTHETIC") {
+        (item.recordSource === "TPV_QA_SYNTHETIC" || String(item.movementType || "").startsWith("SIMULATED_TPV_"))) {
         const payload = item.payloadFiscal;
-        const expectedTracePrefix = "TPVQA:" + TPV_QA_RUNTIME_POLICY.TEST_RUN_ID + ":";
-        if (
-            !String(item.movementType || "").startsWith("SIMULATED_TPV_") ||
-            !_isRecord(payload) ||
-            payload.testRunId !== TPV_QA_RUNTIME_POLICY.TEST_RUN_ID ||
-            payload.isSynthetic !== true ||
-            payload.realPayment !== false ||
-            payload.externalSideEffects !== false ||
-            !String(item.traceId || "").startsWith(expectedTracePrefix) ||
-            !payload.requestFingerprint ||
-            !/^[a-f0-9]{64}$/i.test(String(item.hash || "")) ||
-            Number(item.sequenceNumber) !== 0
-        ) {
+        if (!_isSyntheticTpvRecord(item)) {
             throw _policyError("CMS_TPV_QA_SYNTHETIC_LEDGER_CONTRACT_INVALID");
         }
     }
