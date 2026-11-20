@@ -208,6 +208,7 @@ test("TPV WebMethods isolate synthetic QA writes from operational ledgers", asyn
     assert.match(config, /REAL_PAYMENTS_ENABLED: false/);
     assert.match(config, /FISCAL_WRITES_ENABLED: false/);
     assert.match(config, /SYNTHETIC_ONLY: true/);
+    assert.match(config, /TPV_QA_RUNTIME_POLICY = Object\.freeze\(\{[\s\S]*?ENABLED: false/);
     assert.match(await readFile(new URL("../public/tpvPageController.js", backendRoot), "utf8"), /wixWindowFrontend\.viewMode !== "Preview"/);
     assert.match(config, /TEST_RUN_ID: "TPVQA-DEV-/);
     assert.match(config, /TPV_QA_EVENT_MOVEMENT_TYPES/);
