@@ -247,6 +247,16 @@ function assertMapaStaffFiscalRecord(item, { partial = false } = {}) {
 // CONTROL OPERATIVO
 // =============================================================================
 
+const CONTROL_OPERATIVO_PHYSICAL_FIELDS = new Set([
+    "_id", "_createdDate", "_updatedDate", "_owner", "_revision",
+    "eventType", "controlType", "dedupeKey", "traceId", "status",
+    "eventId", "expiresAt", "bookingId", "resourceId", "serviceId",
+    "dateYmd", "attempts", "surface", "requesterKey", "requestCount",
+    "windowStart", "payload", "version", "heartbeatAt", "ownerToken",
+    "transactionId", "orderId", "refundId", "kind", "processedAt",
+    "operationDescription", "lastError", "totalAmount",
+]);
+
 export function assertCanonicalControlFields(item) {
     if (!item || typeof item !== "object" || Array.isArray(item)) {
         throw new Error("SCHEMA_VIOLATION: ControlOperativo item must be an object");
@@ -257,6 +267,14 @@ export function assertCanonicalControlFields(item) {
     if (rejected.length) {
         throw new Error(
             `SCHEMA_VIOLATION: ControlOperativo fields not allowed: ${rejected.join(", ")}`
+        );
+    }
+    const unknown = Object.keys(item).filter((field) =>
+        !CONTROL_OPERATIVO_PHYSICAL_FIELDS.has(field)
+    );
+    if (unknown.length) {
+        throw new Error(
+            `SCHEMA_VIOLATION: ControlOperativo fields absent from live CMS schema: ${unknown.join(", ")}`
         );
     }
     return true;
