@@ -27,6 +27,7 @@ function base(controlType) {
     dedupeKey: `${controlType}:unit-test-key`,
     status: CONTROL_STATUS.ACTIVE,
     traceId: "trace-unit-001",
+    payload: {},
   };
 }
 
@@ -36,6 +37,20 @@ function seed(record) {
 }
 
 describe("ControlOperativo hooks", () => {
+  it("rejects missing, null, array and primitive payloads required by live CMS schema", () => {
+    for (const payload of [undefined, null, [], "not-an-object", 1]) {
+      const candidate = { ...base(CONTROL_TYPE.SLOT_LOCK), resourceId: RESOURCE_ID,
+        expiresAt: new Date(Date.now() + 60000), payload };
+      assert.throws(
+        () => ControlOperativo_beforeInsert(candidate),
+        /payload OBJECT/
+      );
+    }
+    const valid = { ...base(CONTROL_TYPE.SLOT_LOCK), resourceId: RESOURCE_ID,
+      expiresAt: new Date(Date.now() + 60000), payload: {} };
+    assert.equal(ControlOperativo_beforeInsert(valid), valid);
+  });
+
   it("validates inserts and all type-specific required fields", () => {
     const validLock = {
       ...base(CONTROL_TYPE.SLOT_LOCK),
