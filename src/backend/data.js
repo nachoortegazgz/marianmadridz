@@ -475,11 +475,9 @@ export function MovimientosCaja_beforeInsert(item) {
     return item;
 }
 
-export function MovimientosCaja_beforeUpdate(item, context) {
-    const previous = context?.previous || context?.original || {};
+function _isCurrentSyntheticTpvRow(value) {
     const expectedPrefix = "TPVQA:" + TPV_QA_RUNTIME_POLICY.TEST_RUN_ID + ":";
-    const isSyntheticTestRow = (value) =>
-        value?.recordSource === "TPV_QA_SYNTHETIC" &&
+    return value?.recordSource === "TPV_QA_SYNTHETIC" &&
         String(value?.movementType || "").startsWith("SIMULATED_TPV_") &&
         value?.payloadFiscal?.testRunId === TPV_QA_RUNTIME_POLICY.TEST_RUN_ID &&
         value?.payloadFiscal?.isSynthetic === true &&
@@ -489,12 +487,22 @@ export function MovimientosCaja_beforeUpdate(item, context) {
         /^[a-f0-9]{64}$/i.test(String(value?.hash || "")) &&
         Number(value?.sequenceNumber) === 0 &&
         String(value?.traceId || "").startsWith(expectedPrefix);
-    if (isSyntheticTestRow(item) && isSyntheticTestRow(previous)) return item;
+}
+
+export async function MovimientosCaja_beforeUpdate(item) {
+    const previous = item?._id
+        ? await getItem(BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA, item._id, CONSISTENCY.STRONG)
+        : null;
+    if (_isCurrentSyntheticTpvRow(item) && _isCurrentSyntheticTpvRow(previous)) return item;
     _fiscalError("Modificacion de MovimientosCaja prohibida: solo se admite editar un registro TPV QA del test-run activo.");
 }
 
-export function MovimientosCaja_beforeRemove() {
-    _fiscalError("Borrado de MovimientosCaja prohibido por normativa fiscal");
+export async function MovimientosCaja_beforeRemove(itemId) {
+    const previous = itemId
+        ? await getItem(BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA, itemId, CONSISTENCY.STRONG)
+        : null;
+    if (_isCurrentSyntheticTpvRow(previous)) return itemId;
+    _fiscalError("Borrado de MovimientosCaja prohibido salvo filas TPV QA sintéticas del test-run activo.");
 }
 
 export function LibroAsientosContablesDetalle_beforeUpdate() {
