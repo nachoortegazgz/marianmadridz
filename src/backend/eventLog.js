@@ -67,7 +67,7 @@ import {
 } from "backend/internalConfig";
 
 import { readFiscalPayload, readMovementField, readMovementHash } from "backend/data";
-import { isExplicitSimulationLedgerRecord } from "backend/validation";
+import { isExplicitSimulationLedgerRecord, assertFiscalMovementInputEnums } from "backend/validation";
 
 import { hashChain } from "backend/securityEngine";
 import { buildEventLogFiscalChainPayload } from "backend/fiscalHashPayload";
@@ -471,6 +471,23 @@ export async function registrarEventoEconomico(input) {
     // local — el objeto del caller NO se muta. Despues de esta linea todo el
     // motor trabaja SOLO con claves canonicas; ningun alias alcanza al doc.
     input = normalizeMovementKeys({ ...input });
+    input.movementType = _safeTrim(input.movementType).toUpperCase();
+    input.paymentMethod = _safeTrim(input.paymentMethod).toUpperCase();
+    input.channelType = _safeTrim(input.channelType).toUpperCase();
+    input.tipoFactura = _safeTrim(input.tipoFactura).toUpperCase() || TIPO_FACTURA.F1;
+    try {
+        assertFiscalMovementInputEnums(input);
+    } catch (error) {
+        return {
+            status: "ERROR",
+            data: null,
+            error: {
+                code: "FISCAL_MOVEMENT_INPUT_INVALID",
+                message: error?.message || "Movimiento fiscal inválido",
+                traceId,
+            },
+        };
+    }
 
     const ts = new Date();
 
