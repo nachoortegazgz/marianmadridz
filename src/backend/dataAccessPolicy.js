@@ -5,6 +5,7 @@ import {
     CONTROL_TYPE,
     CONTROL_OPERATIVO_NON_CANONICAL_FIELDS,
     RECORD_TYPE,
+    TPV_QA_RUNTIME_POLICY,
     TPV_QA_COLLECTIONS,
 } from "backend/internalConfig";
 
@@ -70,13 +71,22 @@ function _isRecord(value) {
     return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
+function _isSyntheticTpvRecord(item) {
+    return _isRecord(item) &&
+        item.recordSource === "TPV_QA_SYNTHETIC" &&
+        String(item.movementType || "").startsWith("SIMULATED_TPV_") &&
+        item.payloadFiscal?.testRunId === TPV_QA_RUNTIME_POLICY.TEST_RUN_ID &&
+        item.payloadFiscal?.isSynthetic === true &&
+        item.payloadFiscal?.realPayment === false &&
+        String(item.traceId || "").startsWith("TPVQA:" + TPV_QA_RUNTIME_POLICY.TEST_RUN_ID + ":");
+}
+
 const APPEND_ONLY_COLLECTIONS = Object.freeze([
     BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA,
     BUSINESS_COLLECTIONS.LIBRO_ASIENTOS_CONTABLES_DETALLE,
     BUSINESS_COLLECTIONS.REGISTROS_HORARIOS_STAFF,
     BUSINESS_COLLECTIONS.HISTORICO_CIERRES_Z,
     BUSINESS_COLLECTIONS.PAQUETES_GESTORIA,
-    ...Object.values(TPV_QA_COLLECTIONS),
 ]);
 
 function _assertControlRecord(item, allowedTypes, errorCode, requireId = true) {
@@ -98,17 +108,22 @@ export function assertInsertAllowed(collection, item) {
     if (!DATA_ACCESS_WRITE_POLICY.insertCollections.includes(collection) || !_isRecord(item)) {
         throw _policyError("CMS_INSERT_COLLECTION_DENIED");
     }
-    if (Object.values(TPV_QA_COLLECTIONS).includes(collection)) {
-        const payload = item.payload;
+    if (collection === BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA &&
+        item.recordSource === "TPV_QA_SYNTHETIC") {
+        const payload = item.payloadFiscal;
+        const expectedTracePrefix = "TPVQA:" + TPV_QA_RUNTIME_POLICY.TEST_RUN_ID + ":";
         if (
-            typeof item.idempotencyKey !== "string" ||
-            item.idempotencyKey.trim().length < 8 ||
+            !String(item.movementType || "").startsWith("SIMULATED_TPV_") ||
             !_isRecord(payload) ||
+            payload.testRunId !== TPV_QA_RUNTIME_POLICY.TEST_RUN_ID ||
             payload.isSynthetic !== true ||
             payload.realPayment !== false ||
-            payload.externalSideEffects !== false
+            payload.externalSideEffects !== false ||
+            !String(item.traceId || "").startsWith(expectedTracePrefix) ||
+            !/^[a-f0-9]{64}$/i.test(String(item.hash || "")) ||
+            Number(item.sequenceNumber) !== 0
         ) {
-            throw _policyError("CMS_TPV_QA_SYNTHETIC_PAYLOAD_REQUIRED");
+            throw _policyError("CMS_TPV_QA_SYNTHETIC_LEDGER_CONTRACT_INVALID");
         }
     }
     if (collection === BUSINESS_COLLECTIONS.CONTROL_OPERATIVO) {
@@ -127,6 +142,8 @@ export function assertUpdateAllowed(collection, item) {
     if (!_isRecord(item) || !DATA_ACCESS_WRITE_POLICY.updateCollections.includes(collection)) {
         throw _policyError("CMS_UPDATE_COLLECTION_DENIED");
     }
+    if (collection === BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA &&
+        _isSyntheticTpvRecord(item)) return;
     if (APPEND_ONLY_COLLECTIONS.includes(collection)) {
         throw _policyError("CMS_UPDATE_COLLECTION_DENIED");
     }
