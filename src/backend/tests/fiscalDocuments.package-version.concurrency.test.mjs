@@ -228,3 +228,31 @@ test('FDOC-STORAGE-07 every recovered or newly inserted snapshot is hash-verifie
   );
   assert.ok(handler.includes('if (!(await _verifyPackageSnapshot(saved)))'));
 });
+
+
+test('FDOC-UI-01 monthly prepared packages display month identity, not a fabricated quarter', () => {
+  const displayId = source.slice(
+    source.indexOf('function _formatPackageDisplayId(doc) {'),
+    source.indexOf('function _invoiceValue(', source.indexOf('function _formatPackageDisplayId(doc) {'))
+  );
+  assert.ok(displayId.includes('periodType').valueOf());
+  assert.ok(displayId.includes('fiscalMonth'));
+  assert.ok(displayId.includes('_M'));
+  assert.ok(displayId.includes('return null'));
+  const periodLabel = source.slice(
+    source.indexOf('function _formatPackagePeriodLabel(doc) {'),
+    source.indexOf('function _invoiceValue(', source.indexOf('function _formatPackagePeriodLabel(doc) {'))
+  );
+  assert.ok(periodLabel.includes('`\u0024{String(month).padStart(2, "0")}/\u0024{year}`'));
+  const prepared = extractBlock(
+    'export const getPreparedManagerPackages = webMethod(',
+    '// =============================================================================\\n// BLOQUE 5 - DESCARGAR VERSION'
+  );
+  assert.ok(prepared.includes('_formatPackageDisplayId(doc)'));
+  assert.ok(prepared.includes('_formatPackagePeriodLabel(doc)'));
+  const download = extractBlock(
+    'export const downloadManagerPackageVersion = webMethod(',
+    '// =============================================================================\\n// BLOQUE 6 - DESTINATARIOS'
+  );
+  assert.ok(download.includes('_formatPackageDisplayId(doc)'));
+});
