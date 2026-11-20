@@ -156,3 +156,10 @@ La lectura de Management API no es una prueba del dataset Sandbox de Preview. No
 - No se han realizado escrituras CMS, sincronización Sandbox→Live, publicación ni despliegue.
 
 **Estado de salida:** CI post-merge del commit `566a819...` aprobado (75 suites / 704 tests, 0 fallos); Wix Preview, bootstrap, identidades y E2E siguen pendientes. Mantener NO-GO de publicación hasta validar el recorrido en el sitio y demostrar que LIVE no cambia.
+
+
+## Addendum — endurecimiento de bootstrap antes de release
+
+El bootstrap del TPV se ha convertido en una operación de solo lectura. `initializeSandboxCaja()` falla si no existe un singleton presembrado y valida el marcador exacto; `seedSandboxIdentities()` exige las seis identidades preexistentes y nunca inserta filas. Se elimina así la ruta de creación automática de datos sintéticos cuando una llamada llegue a la colección Online del sitio publicado.
+
+La precondición manual se realiza exclusivamente desde el CMS Sandbox del Editor. No usar Wix Management API para sembrar datos, no sincronizar Sandbox→Online y no tratar las colecciones de Wix Apps como aisladas. Este cambio no demuestra por sí mismo el aislamiento runtime ni completa la aceptación E2E. Mantener NO-GO de publicación hasta ejecutar Preview y comprobar datos LIVE antes/después.
