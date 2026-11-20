@@ -2,12 +2,12 @@
 
 ## 1. Estado
 
-**Main:** 96b2b73687b5373484caf625026c4b46a3911680.  
-**CI offline:** PASS (regresión, capas 1 y 2, SDK, ESLint).  
-**Gitleaks:** PASS.  
-**PR #510:** fusionada; retira el disparo automático para evitar reintentos contra el 404.  
+**Main:** a231e5c0c2e9ccafff7c3e81a62dfad669c5d85e.  
+**CI offline:** PASS post-merge PR #512 (Layer 1, Layer 2, suite completa, npm audit, contratos SDK Wix/eCommerce/TPV, ESLint).  
+**Gitleaks:** PASS post-merge PR #512.  
+**PR #510:** fusionada; retira el disparo automático para evitar reintentos contra el 404. **PR #512:** fusionada; añade simulador sintético de proveedor, fixture de identidades y ADR.  
 **Workflow Preview:** manual opt-in, desactivado por defecto.  
-**Hito online:** NO ALCANZADO. No existe URL de Preview ni informe Playwright PASS.
+**Hito online:** NO ALCANZADO. No existe URL de Preview ni informe Playwright PASS. La CI offline de main sí está validada.
 
 | Control | Estado |
 |---|---|
@@ -78,7 +78,7 @@ Una vez disponible el entorno:
 - solo después diseñar pruebas transaccionales contra el sitio independiente y fixtures sintéticas.
 
 **Release:** NO-GO para publicación y transacciones.  
-**Online smoke:** preparado en código, bloqueado por el estado de despliegue Wix.
+**Online smoke:** preparado en código, bloqueado por el estado de despliegue Wix. **Simulador PSP:** integrado y probado offline; no es Wix Payments Sandbox.
 
 ## 6. Decisión posterior — permanecer en el sitio actual (2026-11-20)
 
