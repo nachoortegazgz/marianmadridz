@@ -6,7 +6,7 @@ import { appendSandboxAudit, insertSandboxEvent, latestOpenSandboxSession, query
 import { assertTpvSandboxEnabled, makeSandboxId, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
 import { wql } from "backend/dataAccess";
 
-export const solicitarDevolucionSANDBOX = webMethod(
+export const solicitarDevolucion = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
         let persisted = false;
