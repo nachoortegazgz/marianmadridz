@@ -561,6 +561,9 @@ test('HOOK-CAJA-04 allows edit and removal only for the active synthetic TPV tes
     payloadFiscal: {
       testRunId: runId,
       requestFingerprint: 'f'.repeat(64),
+      logicalCollection: IC.TPV_QA_COLLECTIONS.PAGOS,
+      idempotencyKey: 'QA-PAYMENT-1',
+      qaRecord: { amountMinor: 5000, paymentMethod: 'EFECTIVO' },
       isSynthetic: true,
       realPayment: false,
       externalSideEffects: false,
