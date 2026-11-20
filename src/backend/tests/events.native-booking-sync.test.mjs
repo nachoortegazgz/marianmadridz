@@ -81,7 +81,7 @@ function bookingConfirmedEvent(eventId, booking) {
 
 function syntheticFiscalSystemConfig() {
   return {
-    _id: "synthetic-fiscal-system-config",
+    _id: "CONFIG_SISTEMA_FISCAL",
     recordType: IC.RECORD_TYPE.CONFIG_SISTEMA,
     sistemaInformaticoNombre: "SIF sintético de pruebas",
     idSistemaInformatico: "SYNTHETIC-SIF-001",
