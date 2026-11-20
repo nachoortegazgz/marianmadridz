@@ -272,11 +272,6 @@ function _virtualRecord(item) {
     };
 }
 
-async function _ensureCajaActualForSandbox() {
-    const caja = await _getCajaActual();
-    if (!caja) throw new Error("TPV_SANDBOX_CASH_REGISTER_NOT_SEEDED");
-    return caja;
-}
 
 export async function seedSandboxIdentities() {
     assertTpvSandboxEnabled();
