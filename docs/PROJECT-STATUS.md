@@ -99,3 +99,29 @@ La API oficial de Wix devuelve 158 automatizaciones: 8 ACTIVE y 150 INACTIVE; la
 Los permisos de MovimientosCaja, LibroAsientosContablesDetalle, HistoricoCierresZ, RegistrosHorariosStaff y PaquetesGestoria son PRIVILEGED para insert/update/remove, sin special permissions. La jerarquía oficial sitúa CMS_EDITOR por debajo de PRIVILEGED; el nivel mínimo PRIVILEGED excluye al CMS_EDITOR sin privilegios superiores. No hay special permissions. Issue #261: configuración alineada; prueba runtime de CMS_EDITOR y de writers backend elevada pendiente. No se han modificado permisos.
 
 `CajaActual.sequenceCounters` se almacena como string JSON válido (`{}`), y el hook normaliza ese valor; no se clasifica como corrupción confirmada. Release NO-GO.
+
+
+---
+
+## Addendum live — 2026-11-20 (prevalece sobre los snapshots anteriores)
+
+La consulta actual de Wix Site Context devuelve **Draft** para el Site ID 188bed94-177c-4bc9-a9f0-35080d874f3e. Este es el estado observado ahora; las menciones anteriores a Published no son vigentes.
+
+### CMS live
+- CajaActual: revisión 18, 81 campos, 1 singleton. Esquema actualizado el 17/11/2026. Incluye openingCashAmount, openingCardAmount, openingBizumAmount, openingOtherAmount, bizumAmount y operationDateHour.
+- MovimientosCaja: revisión 109, 113 campos, 0 elementos.
+- HistoricoCierresZ: revisión 44, 66 campos, 0 elementos.
+- ControlOperativo: revisión 93, 32 campos, 58 elementos; 3 compensaciones FISCAL_LEDGER/PENDING_RECOVERY, attempts=0.
+- CitasF2: revisión 60, 29 campos, 6 elementos.
+- LibroAsientosContablesDetalle: revisión 9, 103 campos, 0 elementos.
+- Las seis colecciones consultadas devuelven permisos ADMIN para read/insert/update/remove.
+
+### CajaActual
+El singleton sigue ABIERTA con openingCashAmount/cashAmount/expectedCash/countedCash=300 EUR, difference=0, snapshotSource=APERTURA_CAJA y traceId vacío. closedAt y lastMovementAt (12/11) son anteriores a openedAt (14/11). sequenceCounters está persistido como texto JSON aunque el esquema declara OBJECT. No se ha cerrado ni modificado.
+
+### Pedidos y reservas vinculados
+- Pedido #10033: POS, APPROVED/FULLY_REFUNDED, 18,15 EUR; booking nativo CONFIRMED/PAID, mientras CitasF2 continúa CONFIRMED/PENDING_LEDGER y totalAmount=0.
+- Pedido #10032: POS, APPROVED/PAID, 92,45 EUR, Cash, composición mixta Stores+Bookings; booking nativo CONFIRMED/PAID, mientras CitasF2 continúa CONFIRMED/PENDING_LEDGER y totalAmount=0.
+- Las tres compensaciones históricas siguen pendientes; no se reintentan ni modifican. Véase issue #416 y [reconciliación live 20/11](qa/2026-11-20-live-caja-schema-and-reconciliation.md).
+
+El detalle de esquema, permisos, evidencia nativa, riesgos y límites de validación está en [reconciliación live de CajaActual y reservas](qa/2026-11-20-live-caja-schema-and-reconciliation.md). No se han ejecutado escrituras Wix, reintentos, cierres ni publicación. Writers fiscales/contables siguen deshabilitados; release **NO-GO**.
