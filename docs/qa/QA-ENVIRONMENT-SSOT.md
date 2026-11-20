@@ -93,3 +93,6 @@ Get Site Data Usage con `consistentRead=true` confirma: límite de almacenamient
 ## Addendum 2026-11-20 — ejecución persistente TPV
 
 El propietario confirma expresamente que todos los registros contables/fiscales actuales son sintéticos y editables y que el sitio se reseteará antes del despliegue real. Se autoriza el test-run TPV persistente sobre `CajaActual` y `MovimientosCaja`, limitado por marcador `TPV_QA_SYNTHETIC`, prefijo `SIMULATED_TPV_*` y `testRunId` del backend. La implementación exige ADMIN y bloquea operaciones desde la vista publicada (wixWindowFrontend.viewMode distinto de Preview). La prueba debe ejecutarse en Preview con Sandbox CMS habilitado. No se autorizan efectos en Wix Apps, pagos, firma fiscal, AEAT, comunicaciones ni hardware. Los ledgers ajenos al test-run permanecen protegidos. El reset integral y la restauración de append-only son obligatorios antes del despliegue.
+
+
+**Edición controlada:** el dato lógico editable reside en `payloadFiscal.qaRecord`. El hook `MovimientosCaja_beforeUpdate` protege identidad, testRunId, tipo lógico y secuencia; recalcula los campos derivados y la huella SHA-256 QA al guardar. No se editan manualmente los marcadores ni la cadena fiscal.
