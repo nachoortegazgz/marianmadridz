@@ -569,7 +569,7 @@ test('HOOK-ACCOUNTING-LEDGER-01 validates complete inserts and preserves append-
   assert.throws(() => H.LibroAsientosContablesDetalle_beforeInsert({ ...valid, hash: 'invalid' }), /SHA-256/);
   assert.throws(() => H.LibroAsientosContablesDetalle_beforeInsert({ ...valid, desgloseDetallado: { ...valid.desgloseDetallado, creditAmount: 1 } }), /debit\/credit/);
   assert.throws(() => H.LibroAsientosContablesDetalle_beforeInsert({ ...valid, desgloseDetallado: { ...valid.desgloseDetallado, accountCode: 'bad' } }), /accountCode/);
-  assert.throws(() => H.LibroAsientosContablesDetalle_beforeInsert(({ journalEntryId, ...rest }) => rest)(valid), /requires journalEntryId/);
+  assert.throws(() => H.LibroAsientosContablesDetalle_beforeInsert((({ journalEntryId, ...rest }) => rest)(valid)), /requires journalEntryId/);
   assert.throws(() => H.LibroAsientosContablesDetalle_beforeUpdate({ _id: 'synthetic-accounting-1' }), /append-only/);
   assert.throws(() => H.LibroAsientosContablesDetalle_beforeRemove('synthetic-accounting-1'), /append-only/);
 });
