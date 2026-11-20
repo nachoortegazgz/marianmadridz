@@ -137,6 +137,36 @@ function _formatDocumentId(year, quarter, version = 1) {
   return `DOC_GESTORIA_${year}_T${quarter}_PAQUETE_GESTORIA_V${vStr}`;
 }
 
+function _formatPackageDisplayId(doc) {
+  const year = Number(doc?.fiscalYear);
+  const version = String(doc?.packageVersion ?? 1).padStart(4, "0");
+  if (_safeTrim(doc?.periodType).toUpperCase() === "MONTHLY") {
+    const sourceId = String(doc?.inventoryClosingId || doc?._id || "");
+    const match = /_M(0[1-9]|1[0-2])_/.exec(sourceId);
+    const month = Number(doc?.fiscalMonth ?? (match ? match[1] : NaN));
+    if (!Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12) return null;
+    return `DOC_GESTORIA_${year}_M${String(month).padStart(2, "0")}_PAQUETE_GESTORIA_V${version}`;
+  }
+  if (!Number.isInteger(year) || !Number.isInteger(Number(doc?.fiscalQuarter))) return null;
+  return _formatDocumentId(year, Number(doc.fiscalQuarter), doc.packageVersion);
+}
+
+function _formatPackagePeriodLabel(doc) {
+  const year = Number(doc?.fiscalYear);
+  if (_safeTrim(doc?.periodType).toUpperCase() === "MONTHLY") {
+    const sourceId = String(doc?.inventoryClosingId || doc?._id || "");
+    const match = /_M(0[1-9]|1[0-2])_/.exec(sourceId);
+    const month = Number(doc?.fiscalMonth ?? (match ? match[1] : NaN));
+    return Number.isInteger(year) && Number.isInteger(month) && month >= 1 && month <= 12
+      ? `${String(month).padStart(2, "0")}/${year}`
+      : `MES NO DEFINIDO/${Number.isInteger(year) ? year : "?"}`;
+  }
+  const quarter = Number(doc?.fiscalQuarter);
+  return Number.isInteger(year) && Number.isInteger(quarter) && quarter >= 1 && quarter <= 4
+    ? `T${quarter}/${year}`
+    : `TRIMESTRE NO DEFINIDO/${Number.isInteger(year) ? year : "?"}`;
+}
+
 function _uuidV8FromHash(hashHex) {
   const normalized = String(hashHex || "").replace(/[^a-f0-9]/gi, "").toLowerCase();
   if (normalized.length < 32) {
@@ -890,9 +920,9 @@ export const getPreparedManagerPackages = webMethod(
       );
       const items = (res?.items || []).map((doc) => ({
         id: doc._id,
-        displayId: _formatDocumentId(doc.fiscalYear, doc.fiscalQuarter, doc.packageVersion),
+        displayId: _formatPackageDisplayId(doc),
         periodType: doc.periodType,
-        periodLabel: `T${doc.fiscalQuarter}/${doc.fiscalYear}`,
+        periodLabel: _formatPackagePeriodLabel(doc),
         fiscalYear: doc.fiscalYear,
         fiscalQuarter: doc.fiscalQuarter,
         packageVersion: doc.packageVersion,
@@ -973,7 +1003,7 @@ export const downloadManagerPackageVersion = webMethod(
         status: "SUCCESS",
         data: {
           documentId,
-          displayId: _formatDocumentId(doc.fiscalYear, doc.fiscalQuarter, doc.packageVersion),
+          displayId: _formatPackageDisplayId(doc),
           csvContent,
           summaryText,
           invoiceCount: invoices.length,
