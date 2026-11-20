@@ -1485,21 +1485,6 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
         }
         const closedBy = _safeTrim(closingActor?.resourceId || options?.closedBy);
         const recordDomain = _safeTrim(options?.recordDomain);
-        if (!_looksLikeGuid(closedBy) || !recordDomain) {
-            return {
-                status: "ERROR",
-                data: null,
-                error: {
-                    code: "Z_CLOSING_REQUIRED_FIELDS_UNRESOLVED",
-                    message: "El cierre requiere closedBy (resourceId válido) y recordDomain aprobado; no se asignan valores por defecto.",
-                    missing: [
-                        ...(!_looksLikeGuid(closedBy) ? ["closedBy"] : []),
-                        ...(!recordDomain ? ["recordDomain"] : []),
-                    ],
-                },
-                traceId,
-            };
-        }
 
         ledgerLock = await acquireFiscalLedgerLock(traceId);
         await assertFiscalLedgerLock(ledgerLock);
@@ -1673,6 +1658,22 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
                 traceId,
                 lastError: signErr?.message || "FISCAL_SIGN_FAIL",
             });
+        }
+
+        if (!_looksLikeGuid(closedBy) || !recordDomain) {
+            return {
+                status: "ERROR",
+                data: null,
+                error: {
+                    code: "Z_CLOSING_REQUIRED_FIELDS_UNRESOLVED",
+                    message: "El cierre requiere closedBy (resourceId válido) y recordDomain aprobado; no se asignan valores por defecto.",
+                    missing: [
+                        ...(!_looksLikeGuid(closedBy) ? ["closedBy"] : []),
+                        ...(!recordDomain ? ["recordDomain"] : []),
+                    ],
+                },
+                traceId,
+            };
         }
 
         const zRecord = {
