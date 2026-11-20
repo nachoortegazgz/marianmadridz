@@ -287,7 +287,7 @@ async function _getCajaActual() {
 
 function _sessionFromCaja(caja) {
     if (!caja || caja.snapshotSource !== QA_LEDGER_SOURCE || caja.traceId !== QA_TEST_RUN_ID) return null;
-    const sessionId = String(caja.lastOperationId || "").trim();
+    const sessionId = String(caja.conceptOperations?.tpvQa?.sessionId || "").trim();
     if (!sessionId) throw new Error("TPV_QA_SESSION_ID_MISSING");
     const openedAt = caja.openedAt instanceof Date ? caja.openedAt : new Date(caja.openedAt || 0);
     const closedAt = caja.closedAt ? (caja.closedAt instanceof Date ? caja.closedAt : new Date(caja.closedAt)) : null;
@@ -329,8 +329,8 @@ async function _writeCajaProjection(collection, record, eventId) {
     if (eventId && appliedIds.includes(eventId)) return caja;
     const now = new Date();
     const next = { ...caja, _updatedDate: now };
-    const sessionId = String(record.sessionId || record.payload?.sessionId || caja.lastOperationId || "");
-    next.lastOperationId = sessionId;
+    const sessionId = String(record.sessionId || record.payload?.sessionId || caja.conceptOperations?.tpvQa?.sessionId || "");
+    next.lastOperationId = eventId || caja.lastOperationId;
     next.lastOperationAt = now;
     next.lastOperationStatus = "SIMULATED";
     next.traceId = QA_TEST_RUN_ID;
@@ -405,7 +405,7 @@ function _sessionCajaPatch(caja, record, fingerprint) {
         salesCount: 0,
         snapshotSource: QA_LEDGER_SOURCE,
         traceId: QA_TEST_RUN_ID,
-        lastOperationId: record.sessionId,
+        lastOperationId: "TPVQA_SESSION_OPEN:" + record.sessionId,
         lastOperationType: "TPV_QA_SESSION_OPEN",
         lastOperationAmount: openingCash,
         lastOperationPaymentMethod: "EFECTIVO",
@@ -413,7 +413,7 @@ function _sessionCajaPatch(caja, record, fingerprint) {
         lastOperationStatus: "SIMULATED",
         conceptOperations: {
             ...(caja.conceptOperations && typeof caja.conceptOperations === "object" ? caja.conceptOperations : {}),
-            tpvQa: { testRunId: QA_TEST_RUN_ID, requestFingerprint: fingerprint, openedAt },
+            tpvQa: { testRunId: QA_TEST_RUN_ID, sessionId: record.sessionId, requestFingerprint: fingerprint, openedAt, appliedMovementIds: [] },
         },
         _updatedDate: new Date(),
     };
