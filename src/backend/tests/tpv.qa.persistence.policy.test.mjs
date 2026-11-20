@@ -333,7 +333,7 @@ test("every exported TPV WebMethod has an explicit runtime policy classification
 
         for (const [methodName, errorCode] of Object.entries(policy.disabled || {})) {
             const block = getWebMethodSource(source, methodName);
-            assert.match(block, new RegExp("disabledResult\\(\\"" + errorCode + "\\"\\)"), methodName + " must remain fail-closed");
+            assert.ok(block.includes('disabledResult("' + errorCode + '")'), methodName + " must remain fail-closed");
             assert.doesNotMatch(block, writeOperations, methodName + " must not reach a writer");
         }
     }
@@ -343,6 +343,6 @@ function getWebMethodSource(source, methodName) {
     const declaration = "export const " + methodName + " = webMethod(";
     const start = source.indexOf(declaration);
     assert.notEqual(start, -1, "Missing WebMethod " + methodName);
-    const nextExport = source.indexOf("\\nexport const ", start + declaration.length);
+    const nextExport = source.indexOf("\nexport const ", start + declaration.length);
     return source.slice(start, nextExport < 0 ? source.length : nextExport);
 }
