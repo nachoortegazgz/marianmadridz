@@ -2,6 +2,8 @@
 
 > **Estado UI (2026-11-20):** `#htmlTPV.txt` implementa `MM_READY/MM_CONTEXT`, `postMessage`, catálogo Bookings/Stores V3 y operaciones sintéticas. Clientes/profesionales se leen desde `TpvSandboxIdentities` (esquema creado, filas Sandbox pendientes). `Cobrar`, pasarelas, facturación, Gift Cards reales, reservas, hardware y escrituras operativas siguen deshabilitados. CI post-merge en `ecee48f84f05a87d680639b8fec6ddb7da953009`: 74 suites / 692 tests, 0 fallos; npm audit sin advisories, contratos SDK, ESLint y Gitleaks correctos. Wix Preview/E2E, bootstrap de caja Sandbox y aislamiento backend frente a Published siguen pendientes; no publicar.
 
+> **Estado CI post-merge (HEAD base `6e8386bab15b94b1a2f334bcf4ac1bf1ded51edf`, 2026-11-20):** run `44703822699` (Layer 1/2, regresión offline, contratos SDK y ESLint) y run `44703822792` (Gitleaks full-history) completados en SUCCESS. El recuento de 74 suites / 692 tests corresponde al commit de implementación `ecee48f84f05a87d680639b8fec6ddb7da953009`; no se extrapola un nuevo recuento a los runs post-merge. El detalle de estado, bloqueos y plan de continuidad está en [relevo de sesión TPV Sandbox](../../../docs/qa/2026-11-20-tpv-sandbox-session-handoff.md).
+
 > **Backend canónico:** todos los módulos TPV Velo residen exclusivamente en `src/backend/tpv/`. No reintroducir archivos `src/backend/tpv*.web.js` en la raíz: eran stubs legacy sin consumidores activos.
 
 Este directorio implementa el TPV en modo QA persistente y sintético para el sitio Marian Madrid en Wix Classic.
