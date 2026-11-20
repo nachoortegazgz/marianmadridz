@@ -27,7 +27,7 @@
 
 1. `validation.js`: `assertHistoricoCierresZ` valida los doce campos físicos requeridos, incluidos DATE válidos, números finitos y textos no vacíos.
 2. `dataAccess.insertItem` aplica validación central antes de la escritura elevada para `ControlOperativo`, `CitasF2`, `RegistrosHorariosStaff`, `MapaStaff`, `CajaActual`, `MovimientosCaja` y `HistoricoCierresZ`; los hooks `data.js` mantienen una segunda barrera. El hook `HistoricoCierresZ_beforeInsert` exige el contrato completo; `MovimientosCaja_beforeInsert` exige todos los campos físicos; Complementos exige `taxIncluded`; PaquetesGestoria exige `createdAt`.
-3. `cajas.web.js::_registerZClosing`: el objeto de cierre ahora incluye closeDate, fiscalPeriod, totales fiscales, closedBy y recordDomain; si no hay resourceId de responsable o recordDomain explícito, falla antes del lock/insert.
+3. `cajas.web.js::_registerZClosing`: el objeto de cierre ahora incluye closeDate, fiscalPeriod, totales fiscales, closedBy y recordDomain; valida el responsable y dominio tras comprobar integridad y antes de llamar al firmador o crear recovery/insert. La ruta pública ignora recordDomain enviado por el navegador; solo caller backend de confianza puede proporcionarlo.
 4. `eventLog.js`: elimina el segundo insert incompleto en HistoricoCierresZ; rechaza `eventType=CIERRE_Z` por esta vía; normaliza y valida movementType/paymentMethod/channelType/tipoFactura antes de crear terceros o insertar movimientos, y deja de asumir `channelType=POS`.
 5. Pruebas offline ampliadas para campos obligatorios, tipos, fechas, enum de canal, fecha de paquete, taxIncluded y cierre Z.
 
