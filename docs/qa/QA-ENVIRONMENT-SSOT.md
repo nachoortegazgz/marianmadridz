@@ -140,3 +140,8 @@ Esta sección es el estado operativo vigente y **supersede** los addenda histór
 ## Resultado de contrato backend offline — PR #486
 
 El test contractual que enumera los WebMethods QA protegidos y comprueba el orden guard/repositorio quedó integrado en PR #486, commit `5ef81ff132f4cbff594387a60e4446bc5dada171`. CI del head: 74 suites / 693 tests PASS, Layer 1 335/335, Layer 2 267/267, npm audit 0 vulnerabilidades, SDK contracts, ESLint y secret scanning PASS. Esta evidencia valida el contrato estático/offline; no certifica Wix Runtime ni el aislamiento de Preview/Published. La política canónica sigue `ENABLED=false`.
+
+
+## PR #488 — cobertura completa de WebMethods TPV
+
+Integrada en `main` (`75c4428fea45795d4337011c389ac909f0aa6e03`). Contrato automatizado clasifica todos los WebMethods exportados TPV revisados: guard backend, solo lectura/validación o writer operativo deshabilitado. CI offline quality gates y secret scanning SUCCESS (runs `44727911850`, `44727911591`); capas 1/2, suite completa, SDK contracts, eCommerce/TPV contracts y ESLint PASS. No acredita Wix Runtime ni data-plane isolation. TPV QA sigue deshabilitado.
