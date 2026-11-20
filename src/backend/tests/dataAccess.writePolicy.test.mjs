@@ -9,6 +9,7 @@ import {
     assertBulkUpdateAllowed,
     assertBulkMutationDisabled,
 } from "backend/dataAccessPolicy";
+import { insertItem } from "backend/dataAccess";
 import {
     BUSINESS_COLLECTIONS as C,
     OPERATIONAL_COLLECTIONS as O,
@@ -33,6 +34,17 @@ test("all CMS write-policy collection lists contain unique canonical strings", (
             `${policyName} must not contain duplicate collection IDs`
         );
     }
+});
+
+test("dataAccess validates physical required fields before elevated CMS inserts", () => {
+    assert.throws(() => insertItem(C.MOVIMIENTOS_CAJA, {}), /MovimientosCaja requires/);
+    assert.throws(() => insertItem(C.HISTORICO_CIERRES_Z, {}), /HistoricoCierresZ requires/);
+    assert.throws(() => insertItem(C.CONTROL_OPERATIVO, {
+        controlType: T.ALERT,
+        dedupeKey: "ALERT:missing-payload",
+        traceId: "trace-missing-payload",
+        payload: [],
+    }), /payload OBJECT/);
 });
 
 test("retired custom inventory collections are excluded from the canonical CMS allowlist", () => {
