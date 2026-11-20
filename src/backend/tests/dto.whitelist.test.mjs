@@ -220,7 +220,7 @@ test('DTO-09 anonymous credential issuance is idempotent and reuses the one-time
   list.push({
     _id: `DT_${tokenHash}`, controlType: 'DISPLAY_TOKEN',
     bookingId: DTO_GUID_1, tokenHash, expiresAt: new Date(Date.now() + 60000),
-    attempts: 0, maxAttempts: 3, consumedAt: null,
+    attempts: 0, payload: { maxAttempts: 3 }, consumedAt: null,
   });
 
   const first = await RW.generateDisplayToken({ bookingId: DTO_GUID_1, confirmationToken: priorCredential });
