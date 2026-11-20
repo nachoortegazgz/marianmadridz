@@ -164,6 +164,17 @@ export function assertHistoricoCierresZ(item) {
     return true;
 }
 
+export function assertFiscalMovementInputEnums(item) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) {
+        throw new Error("SCHEMA_VIOLATION: fiscal movement input must be an object");
+    }
+    assertValidEnum(item.movementType, MOVEMENT_TYPE, "movementType");
+    assertValidEnum(item.paymentMethod, PAYMENT_METHOD, "paymentMethod");
+    assertValidEnum(item.channelType, CHANNEL_TYPE, "channelType");
+    assertValidEnum(item.tipoFactura || TIPO_FACTURA.F1, TIPO_FACTURA, "tipoFactura");
+    return true;
+}
+
 export function assertMovimientosCajaRequiredFields(item) {
     if (!item || typeof item !== "object" || Array.isArray(item)) {
         throw new Error("SCHEMA_VIOLATION: MovimientosCaja item must be an object");
