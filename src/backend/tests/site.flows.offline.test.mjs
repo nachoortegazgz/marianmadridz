@@ -399,6 +399,9 @@ test('FLOW-CAJA-01 flujo continuo: venta EFECTIVO -> caja incrementada -> cierre
   });
   assert.strictEqual(publicZ.status, 'ERROR');
   assert.strictEqual(publicZ.error.code, 'Z_CLOSING_REQUIRED_FIELDS_UNRESOLVED');
+  assert.equal((wixDataMock._store.get('HistoricoCierresZ') || []).some((row) => row._id === `Z_${diaKey}`), false);
+  assert.equal((wixDataMock._store.get('ControlOperativo') || []).some((row) => row.transactionId === `Z_${diaKey}`), false,
+    'un cierre sin dominio no debe crear compensación ni recovery');
 
   // El writer interno de pruebas puede recibir el dominio sintético explícito.
   const z = await cajas.registerZClosingInternal(diaKey, { recordDomain: 'CASH_REGISTER', closedBy: GUID_ADMIN_RESOURCE, traceId: 'flow-caja-z-manual-test' });
