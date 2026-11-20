@@ -89,10 +89,10 @@ export function initializeTpvPage(widgetElement) {
         onContextReady: async () => ({
             component: "htmlTPV",
             protocolVersion: 1,
-            environment: wixWindowFrontend.viewMode === "Preview" ? "QA" : "DISABLED",
+            environment: wixWindowFrontend.viewMode === "Preview" ? "SANDBOX" : "DISABLED",
             syntheticOnly: true,
             previewOnly: true,
-            mode: wixWindowFrontend.viewMode === "Preview" ? "PERSISTENT_SYNTHETIC_QA" : "PREVIEW_ONLY",
+            mode: wixWindowFrontend.viewMode === "Preview" ? "PERSISTENT_SYNTHETIC_SANDBOX" : "PREVIEW_ONLY",
             currencyCode: "EUR",
             timeZone: "Europe/Madrid",
             capabilities: {
