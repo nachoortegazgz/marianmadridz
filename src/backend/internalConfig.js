@@ -45,7 +45,7 @@ export const STAFF_DEFAULT_NAME = "STAFF";
 // idempotencia, serialización por empleado/día y transiciones concurrentes.
 // El UI disabled no es una barrera de seguridad para WebMethods públicos.
 export const STAFF_CLOCKING_CONFIG = Object.freeze({
-  WRITES_ENABLED: true,
+  WRITES_ENABLED: false,
   ADJUSTMENTS_ENABLED: false,
 });
 
