@@ -399,6 +399,8 @@ Referencias:
 
 ## 13. Revalidación del contrato Wix bulkPatch y elegibilidad de CajaActual — 2026-11-20
 
+> Esta sección supersede los bloqueos de elegibilidad de colección recogidos en la sección 12: la consulta live posterior confirmó `collectionType=NATIVE`. No supersede los bloqueos de hook, semántica de condición, concurrencia runtime ni migración de escritores.
+
 ### Evidencia CMS directa
 - Consulta read-only a `GET /data/v2/collections/CajaActual` en el sitio Marian Madrid: `collectionType=NATIVE`, `id=CajaActual`, `revision=18`.
 - La enumeración oficial Wix define `NATIVE` como colección creada por el usuario y `WIX_APP` como colección creada por una app Wix. Por tanto, CajaActual sí cumple el requisito de tipo de colección para usar Patch/Bulk Patch; este bloqueo anterior queda resuelto.
