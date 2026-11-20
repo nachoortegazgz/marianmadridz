@@ -572,21 +572,29 @@ export async function insertQaEvent(collection, idempotencyKey, data) {
     }
 
     const ledgerItem = _buildSyntheticLedgerItem(collection, key, record, fingerprint);
+    let saved;
     try {
-        const saved = await insertItem(BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA, ledgerItem);
-        const item = _virtualRecord({
-            ...ledgerItem,
-            _id: saved?._id || ledgerItem._id,
-            _createdDate: saved?._createdDate || new Date(),
-            _updatedDate: saved?._updatedDate || new Date(),
-        });
-        if (collection !== TPV_QA_COLLECTIONS.AUDITORIA) await _writeCajaProjection(collection, record, item._id);
-        return { item, replayed: false };
+        saved = await insertItem(BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA, ledgerItem);
     } catch (error) {
         const winner = await findByIdempotencyKey(collection, key);
-        if (winner) return assertSameRequest(winner, fingerprint);
-        throw error;
+        if (!winner) throw error;
+        const replay = assertSameRequest(winner, fingerprint);
+        if (collection !== TPV_QA_COLLECTIONS.AUDITORIA) {
+            await _writeCajaProjection(collection, winner, winner._id);
+        }
+        return replay;
     }
+
+    const item = _virtualRecord({
+        ...ledgerItem,
+        _id: saved?._id || ledgerItem._id,
+        _createdDate: saved?._createdDate || new Date(),
+        _updatedDate: saved?._updatedDate || new Date(),
+    });
+    if (collection !== TPV_QA_COLLECTIONS.AUDITORIA) {
+        await _writeCajaProjection(collection, record, item._id);
+    }
+    return { item, replayed: false };
 }
 
 export async function queryQaRecords(collection, filter, options = {}) {
