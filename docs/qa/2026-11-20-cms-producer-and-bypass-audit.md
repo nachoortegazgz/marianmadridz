@@ -14,20 +14,21 @@ Auditoría estática de los productores de escritura, la capa de acceso elevado 
 - `LibroAsientosContablesDetalle`
 
 Repositorio: `nachoortegazgz/marianmadridz`  
-Base inspeccionada: `main` — `9aa92a9ef7408ab9b431694463ca1ffe2dedacfa`.\n\nSeguimiento de correcciones: PR #455 integrada en `main` mediante `7672bac4b4207ba87c9688fa34f38752a253ae86`.
+Base inspeccionada: `main` — `9aa92a9ef7408ab9b431694463ca1ffe2dedacfa`.
 
-La revisión se limita al código fuente disponible en GitHub y a búsquedas estáticas. No se ejecutaron pruebas, no se accedió a Wix Runtime y no se realizaron escrituras CMS.
+Seguimiento de correcciones: PR #455 integrada en `main` mediante `7672bac4b4207ba87c9688fa34f38752a253ae86`.
+
+La auditoría inicial se limitó al código fuente disponible en GitHub y a búsquedas estáticas. No se accedió a Wix Runtime ni se realizaron escrituras CMS. La corrección posterior de PaquetesGestoria se validó mediante CI de PR #455.
 
 ## 2. Resultado ejecutivo
 
 1. **No se ha localizado un bypass activo de la capa DAL mediante importación directa de `@wix/data` o `wix-data` en los módulos backend de negocio.** La importación de `@wix/data` localizada en código de aplicación está en `src/backend/dataAccess.js`; el loader de tests contiene adaptadores/mocks. Las operaciones elevadas se concentran en esa DAL.
 2. **Las escrituras de los ledgers fiscal, contable y laboral permanecen fail-closed por sus WebMethods/políticas actuales.** `LEDGER_WRITES_ENABLED=false`, `ACCOUNTING_LEDGER_WRITES_ENABLED=false` y `STAFF_CLOCKING_CONFIG.WRITES_ENABLED/ADJUSTMENTS_ENABLED=false`.
 3. **Los hooks de Wix son una segunda barrera efectiva en el diseño actual:** la DAL llama a `auth.elevate(items.insert)` sin opciones de supresión y no expone `suppressHooks`. Wix documenta que los hooks se ejecutan con las operaciones Data API salvo que se supriman expresamente.
-4. Se identifican **dos brechas de arquitectura que deben corregirse antes de habilitar escritores**:
-   - La política DAL de `CajaActual` permite `update` y `save` con la mera comprobación de `_id`; el hook comprueba estructura, pero no gobierna una máquina de estados, actor/origen o transiciones autorizadas.
-   - La validación de `PaquetesGestoria` está implementada dentro de `data.js`, no en `validation.js`, y `dataAccess.insertItem` no invoca un validador de dominio específico para esa colección. Actualmente depende del hook como única validación de dominio en el servidor.
-5. La ruta pública de cierre Z asigna `recordDomain=""`; la ruta interna exige que el caller aporte un valor explícito. No existe un valor canónico aprobado, por lo que el contrato debe continuar bloqueando el cierre.
-6. No se propone ni ejecuta ningún cambio funcional en esta auditoría. Las brechas requieren definir contratos y mapear las transiciones válidas antes de endurecer la DAL sin romper flujos legítimos.
+4. Se identificó una brecha de arquitectura aún abierta: la política DAL de `CajaActual` permite `update` y `save` con la mera comprobación de `_id`; el hook comprueba estructura, pero no gobierna una máquina de estados, actor/origen o transiciones autorizadas.
+5. La brecha de `PaquetesGestoria` quedó corregida mediante PR #455: el contrato puro está centralizado en `validation.js`, se invoca desde `dataAccess.insertItem` y se reutiliza desde el hook físico.
+6. La ruta pública de cierre Z asigna `recordDomain=""`; la ruta interna exige que el caller aporte un valor explícito. No existe un valor canónico aprobado, por lo que el contrato debe continuar bloqueando el cierre.
+7. La auditoría no modificó registros CMS ni habilitó writers. La corrección de PaquetesGestoria se integró separadamente y superó CI offline.
 
 ## 3. Inventario de productores y controles
 
@@ -60,7 +61,9 @@ La revisión se limita al código fuente disponible en GitHub y a búsquedas est
 
 ### H-02 — Validación de PaquetesGestoria no centralizada
 
-**Severidad:** P2 — mantenibilidad y consistencia contractual.
+<badge>RESUELTO — PR #455</badge>
+
+**Severidad original:** P2 — mantenibilidad y consistencia contractual.
 
 **Evidencia:**
 - `src/backend/data.js::PaquetesGestoria_beforeInsert` contiene validación de fecha, periodo, versión, estructura, hash, trazabilidad y estado PREPARED.
@@ -71,7 +74,9 @@ La revisión se limita al código fuente disponible en GitHub y a búsquedas est
 
 **Impacto:** la integridad de dominio depende del hook como única validación de servidor para el alta. El patrón no es homogéneo con CitasF2, caja, cierres y ledger contable, que también invocan validadores desde la DAL.
 
-**Resolución integrada:** `assertPaquetesGestoriaRecord` se trasladó a `validation.js`, `dataAccess.insertItem` lo ejecuta antes de la inserción elevada y `PaquetesGestoria_beforeInsert` reutiliza el mismo contrato tras normalizar `createdAt`.\n\n**Evidencia:** PR #455 (`7672bac4b4207ba87c9688fa34f38752a253ae86`). CI PR #455: Layer 1 333/333, Layer 2 266/266, suite offline 688/688; SDK contracts, npm audit (0 advisories), ESLint y Secret scanning SUCCESS. No se ejecutó Wix Runtime.
+**Resolución integrada:** `assertPaquetesGestoriaRecord` se trasladó a `validation.js`, `dataAccess.insertItem` lo ejecuta antes de la inserción elevada y `PaquetesGestoria_beforeInsert` reutiliza el mismo contrato tras normalizar `createdAt`.
+
+**Evidencia:** PR #455 (`7672bac4b4207ba87c9688fa34f38752a253ae86`). CI PR #455: Layer 1 333/333, Layer 2 266/266, suite offline 688/688; SDK contracts, npm audit (0 advisories), ESLint y Secret scanning SUCCESS. No se ejecutó Wix Runtime.
 
 ### H-03 — Cierre Z sin identidad de dominio aprobada
 
@@ -116,8 +121,10 @@ Fuentes oficiales:
 - Productores: `cajas.web.js`, `eventLog.js`, `fiscalDocuments.web.js`, `horario.web.js`, `booking/bookingCore.js`, `events.js`, `tpv/tpvQaRepository.js`, `accountingLedger.js`, `crons.js`.
 - Suites presentes en el repositorio: `data.hooks.test.mjs`, `dataAccess.removeById.test.mjs`, `operational-writers.fail-closed.contract.test.mjs`, pruebas de caja/TPV, reservas y ledger.
 
-**No ejecutado en esta intervención:**
+**No ejecutado durante la auditoría estática inicial:**
 - Vitest / suite offline.
+
+**Ejecutado posteriormente para la corrección H-02 (PR #455):** Layer 1 333/333, Layer 2 266/266, suite offline 688/688; SDK contracts, npm audit (0 advisories), ESLint y secret scanning SUCCESS.
 - Wix Local Editor / Preview / Sandbox.
 - Pruebas de identidad CMS_EDITOR.
 - Pruebas de concurrencia en Wix Runtime.
