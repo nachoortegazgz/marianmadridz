@@ -1,5 +1,5 @@
 import { Permissions, webMethod } from "wix-web-module";
-import { requireCajero } from "backend/security";
+import { requireAdmin, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { TPV_QA_COLLECTIONS, TPV_QA_RUNTIME_POLICY } from "backend/internalConfig";
 import { appendQaAudit, insertQaEvent, latestOpenQaSession, queryQaRecords, withQaSessionLock } from "backend/tpv/tpvQaRepository";
@@ -55,7 +55,7 @@ export const abrirCajaQA = webMethod(
     async (input = {}) => {
         let persisted = false;
         const traceId = makeTraceId("tpv-qa-session-open");
-        await requireCajero(traceId);
+        await requireAdmin(traceId);
         assertTpvQaEnabled();
         try {
             const openingCashMinor = toMinorUnits(input.openingCash, "OPENING_CASH");
@@ -119,7 +119,7 @@ export const registrarArqueoParcialQA = webMethod(
     async (input = {}) => {
         let persisted = false;
         const traceId = makeTraceId("tpv-qa-partial-count");
-        await requireCajero(traceId);
+        await requireAdmin(traceId);
         assertTpvQaEnabled();
         try {
             const session = await latestOpenQaSession();
