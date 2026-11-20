@@ -1,104 +1,70 @@
 # Preparación para pruebas online — 2026-11-20
 
-## 1. Objetivo y estado
+## 1. Estado
 
-Preparar una ruta reproducible para comprobar online la versión integrada en Wix, sin publicar el sitio ni ejecutar operaciones transaccionales.
+**Main:** bcb5a1d6467bcd0f7a0cf1b28a5c03dbbb226479.  
+**CI offline:** PASS (regresión, capas 1 y 2, SDK, ESLint).  
+**Gitleaks:** PASS.  
+**Workflow Preview:** manual opt-in, desactivado por defecto; no se reintenta automáticamente mientras Wix no resuelva el pipeline.  
+**Hito online:** NO ALCANZADO. No existe URL de Preview ni informe Playwright PASS.
 
-**Main verificado:** commit 20a6813f221006eeda8c96fa3393800dd738127b.  
-**CI offline de main:** PASS (regresión, capas 1 y 2, contratos SDK, ESLint).  
-**Gitleaks de main:** PASS.  
-**PR actual:** #509, selección explícita de source remote para Wix Preview; pendiente de CI.  
-**Hito online:** NO ALCANZADO. Todavía no existe URL de Preview confirmada ni informe Playwright PASS.
+## 2. Evidencia de Wix
 
-## 2. Evidencia verificada
-
-- Site ID canónico: 188bed94-177c-4bc9-a9f0-35080d874f3e.
+- Site ID: 188bed94-177c-4bc9-a9f0-35080d874f3e.
 - UI version: 15941.
-- Wix CLI for Sites 1.2.14 instalado correctamente en GitHub Actions.
-- Node.js 24.22.1.
-- El secreto CLI_API_KEY existe y autentica correctamente la cuenta Wix.
-- La ayuda real de Wix CLI 1.2.14 muestra el flag: --source <local|remote>.
-- El comando interactivo llegó a seleccionar "Latest commit from the default branch".
-- Wix respondió después con HTTP 404 y código PUBLISH_PIPELINE_TASK_NOT_FOUND para el deployment ID 50062c24-e0ce-43f0-b137-a316e038822a.
-- Request ID Wix: 1795210056.90712984612811479.
-- No se obtuvo URL wix.to.
-- No se ejecutó wix publish, no se modificó CMS, no se enviaron formularios y no se crearon registros.
+- Wix CLI for Sites 1.2.14 y Node 24.22.1 instalados correctamente.
+- CLI_API_KEY existe y la autenticación Wix funciona.
+- El Site Context devuelve estado Draft.
+- La ayuda real del CLI incluye --source <local|remote>.
+- El primer intento interactivo llegó a seleccionar Latest commit from the default branch y falló al consultar la tarea de despliegue.
+- El segundo intento, usando explícitamente --source remote, reprodujo el mismo fallo:
+  - HTTP 404.
+  - Código PUBLISH_PIPELINE_TASK_NOT_FOUND.
+  - Deployment ID: 320d133e-284c-46f3-9fe8-edd96cf8274d.
+  - Request ID: 1795210627.56413478193221476.
+  - Endpoint: GET https://editor.wix.com/_api/editor-deployments/v1/deployments/pipeline/320d133e-284c-46f3-9fe8-edd96cf8274d.
+- No se obtuvo URL wix.to. Playwright no llegó a ejecutarse.
 
-El estado Draft del Site Context y la disponibilidad de una URL pública no bastan por sí solos para demostrar que existe una tarea de despliegue Preview válida. La respuesta 404 demuestra que Wix no pudo resolver la tarea asociada al deployment ID utilizado en ese intento. La causa exacta del estado del pipeline sigue pendiente de confirmación por Wix.
+El estado Draft y el error indican que Wix no tiene una tarea de pipeline resoluble para este intento. No permiten afirmar por sí solos si nunca hubo una publicación o si el registro de despliegue está obsoleto/corrupto. La URL pública del dominio tampoco demuestra que exista un pipeline CLI válido para este Site ID.
 
-## 3. Cambios implementados en main
+## 3. Cambios integrados
 
-- PR #503: contratos y dossier inicial de preparación online.
-- PR #504: workflow de Preview y smoke Playwright de solo lectura.
-- PR #505: timeout y revisión de la interacción CLI.
-- PR #506: prueba de ejecución no interactiva; descartada después porque la CLI Velo requiere raw TTY.
-- PR #507 y #508: diagnóstico del TTY y automatización temporal; el driver PTY se retira en PR #509 tras descubrir el flag oficial --source remote.
+- Workflow manual opt-in en .github/workflows/wix-tpv-preview.yml.
+- Site ID/UI version validados.
+- CLI y Node fijados.
+- Source remoto explícito mediante npm run wix preview -- --source remote.
+- Nunca se ejecuta wix publish.
+- Smoke Playwright 1.65.1 aislado de las dependencias del sitio.
+- El smoke solo navega; bloquea métodos no seguros y rutas API dinámicas conocidas, no pulsa controles ni envía formularios.
+- El informe no guarda mensajes que puedan contener datos personales.
+- El driver PTY temporal se eliminó al comprobar que --source remote permite evitar el selector interactivo.
 
-### Workflow
+Se retiró el disparo automático workflow_run para no repetir una llamada Wix que devuelve el mismo 404. El workflow queda disponible manualmente, con create_preview=false por defecto, cuando el requisito externo esté resuelto.
 
-.github/workflows/wix-tpv-preview.yml:
+## 4. Límites de seguridad
 
-- Ejecución manual opt-in, con create_preview=false por defecto.
-- Ejecución automática tras éxito del workflow Backend offline quality gates en main.
-- Checkout exclusivo de main y validación del Site ID/UI version.
-- Requiere CLI_API_KEY y npm ci.
-- Instala Wix CLI for Sites 1.2.14.
-- Usa explícitamente npm run wix preview -- --source remote para seleccionar el origen remoto sin interacción TTY.
-- Nunca ejecuta wix publish.
-- Si Wix devuelve una URL wix.to, ejecuta el smoke Playwright.
-- Timeout de 10 minutos para el comando Preview.
+Wix Preview CLI no equivale a un Wix Test Site ni garantiza aislamiento de colecciones. Las HTTP Functions pueden ejecutarse en versión LIVE. El smoke no prueba operaciones de backend, permisos, Apps nativas ni persistencia.
 
-### Smoke Playwright
+No se ha:
+- publicado el sitio;
+- modificado CMS o Wix Apps;
+- creado reservas, ventas, pagos, devoluciones, tickets, facturas o fichajes;
+- escrito ledgers;
+- enviado formularios ni notificaciones;
+- ejecutado hardware ni pagos reales.
 
-scripts/wix-preview-smoke.mjs:
+## 5. Condición pendiente para alcanzar el hito
 
-- Playwright 1.65.1 instalado globalmente en el runner, fuera de las dependencias runtime del sitio.
-- Rechaza hosts que no pertenezcan a infraestructura Wix Preview.
-- Bloquea métodos HTTP distintos de GET, HEAD y OPTIONS.
-- Bloquea además rutas dinámicas conocidas: _api, _functions, _serverless, api y graphql.
-- No pulsa botones, no rellena campos y no envía formularios.
-- Comprueba HTTP del documento principal, body renderizado y host final.
-- Registra únicamente contadores y hosts; no almacena texto de errores que pudiera contener datos personales.
-- No certifica lógica de negocio, HTTP Functions, permisos ni aislamiento de datos.
+Hace falta una infraestructura Wix que pueda crear un Preview sin tocar producción. Las rutas viables son:
 
-Playwright no se añade a package.json ni package-lock.json: permanece aislado del runtime Wix.
+1. **Recomendada: sitio Wix independiente de pruebas**, con las Apps necesarias, colecciones propias, datos sintéticos y permisos de QA. Evita publicar el sitio principal y evita que las colecciones de producción se compartan.
+2. Resolver con Wix el pipeline del sitio actual o autorizar una publicación inicial controlada si Wix confirma que es el prerrequisito. No se ejecutará sin autorización específica.
 
-## 4. Límites de seguridad y alcance
+Una vez disponible el entorno:
+- crear URL Preview;
+- ejecutar smoke Playwright;
+- validar que el informe sea PASS;
+- solo después diseñar pruebas transaccionales contra el sitio independiente y fixtures sintéticas.
 
-Wix documenta que el Preview CLI:
-- No es un Test Site ni aparece en Release Manager.
-- Utiliza las versiones LIVE de las HTTP Functions.
-- No sirve para probar cambios de HTTP Functions.
-- Requiere que el sitio haya sido publicado previamente.
-
-El smoke no ejecuta operaciones de negocio. Aunque bloquea métodos no seguros y rutas API conocidas, no constituye una garantía universal contra efectos secundarios implementados incorrectamente en endpoints GET. Por eso no se hacen pruebas de formularios, sesiones autenticadas, reservas, TPV ni datos de negocio.
-
-**Prohibido en este hito:**
-- Publicar para desbloquear Preview sin autorización específica.
-- Crear, modificar o cancelar reservas.
-- Ventas, pagos, devoluciones, tickets, facturas o cierres TPV.
-- Fichajes, ledgers contables/fiscales o escrituras CMS.
-- Mutaciones en Wix Apps.
-- Pruebas de permisos por rol usando el Preview Admin.
-
-## 5. Condiciones para declarar el hito online
-
-1. PR #509 supera CI offline y Gitleaks.
-2. Main integra el flag --source remote.
-3. Wix CLI devuelve una URL Preview válida para el commit de main.
-4. Playwright ejecuta el smoke y el informe termina PASS.
-5. Se verifica que no hubo publicación ni interacciones/transacciones.
-6. El informe de Actions conserva el resultado, SHA y host del Preview.
-
-Si Wix vuelve a devolver PUBLISH_PIPELINE_TASK_NOT_FOUND, el bloqueo será de la infraestructura/estado de despliegue de Wix, no del código del smoke. No se intentará publicar automáticamente. Se requerirá confirmar con Wix la tarea de despliegue o utilizar Preview del Editor/local como alternativa de UI.
-
-## 6. Siguiente actuación
-
-- Integrar PR #509 solo tras CI PASS.
-- Dejar que el workflow de main pruebe una vez el source remote explícito.
-- Si el Preview se crea, ejecutar y revisar el informe Playwright.
-- Si Wix devuelve el mismo 404, detener reintentos automáticos y documentar el bloqueo externo. No publicar el sitio para sortearlo.
-- Para pruebas transaccionales reales, preparar un sitio Wix independiente con Apps y datos sintéticos, sin usar el Preview CLI como si fuera una base de datos aislada.
-
-**Release:** NO-GO para publicación y operaciones transaccionales.  
-**Online smoke:** pendiente de URL Preview y ejecución Playwright verificadas.
+**Release:** NO-GO para publicación y transacciones.  
+**Online smoke:** preparado en código, bloqueado por el estado de despliegue Wix.
