@@ -1483,8 +1483,12 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
         if (!cleanDiaKey) {
             return { status: "ERROR", data: null, error: { code: "INVALID_DATE", message: "Fecha invalida" } };
         }
-        const closedBy = _safeTrim(closingActor?.resourceId || options?.closedBy);
-        const recordDomain = _safeTrim(options?.recordDomain);
+        const closedBy = authorizeCashier
+            ? _safeTrim(closingActor?.resourceId)
+            : _safeTrim(options?.closedBy);
+        // The public cashier method never trusts recordDomain supplied by the browser.
+        // Only trusted backend callers may provide the approved domain explicitly.
+        const recordDomain = authorizeCashier ? "" : _safeTrim(options?.recordDomain);
 
         ledgerLock = await acquireFiscalLedgerLock(traceId);
         await assertFiscalLedgerLock(ledgerLock);
