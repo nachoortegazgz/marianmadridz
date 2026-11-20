@@ -34,7 +34,7 @@ export const validarVentaBorrador = webMethod(
 
 // The legacy writer is intentionally blocked. Only registrarVenta writes,
 // and it can write exclusively to TPV_QA_* collections.
-export const registrarVenta = webMethod(
+export const registrarVentaOperativaDeshabilitada = webMethod(
     Permissions.SiteMember,
     async () => {
         await requireCajero(makeTraceId("tpv-sale-write-block"));
