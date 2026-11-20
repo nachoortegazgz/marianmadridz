@@ -151,7 +151,7 @@ La lectura de Management API no es una prueba del dataset Sandbox de Preview. No
 - PR #497 corrigió el indicador de persistencia de resultados de lectura del controlador; ambos workflows de PR finalizaron en SUCCESS. Los workflows post-merge del SHA `566a819...` finalizaron en SUCCESS: calidad offline `44777610050` y Gitleaks `44777610037`. La suite offline registró 75 suites / 704 tests, 0 fallos.
 - `tpvSandboxRepository.js` comprueba el marcador de `CajaActual` antes de insertar eventos sintéticos: una caja existente debe ser `TPV_SANDBOX_INITIALIZED` (solo bootstrap) o `TPV_SANDBOX_SYNTHETIC` con el `SANDBOX_RUN_ID` exacto. Los eventos posteriores vuelven a comprobar la caja antes de insertar en `MovimientosCaja`.
 - Esta comprobación es una defensa por estado de datos, no una API oficial de detección del entorno Preview. La separación efectiva depende de que Wix Data enrute las llamadas ejecutadas desde Preview a CMS Sandbox. El singleton LIVE observado no satisface el marcador sintético y debe permanecer intacto.
-- `inicializarCaja` realiza el bootstrap de caja y, después, el seed de identidades, ambos con autorización ADMIN. El código existe; no se ha ejecutado en runtime ni se han creado filas de identidad.
+- En el estado de código de este addendum, `inicializarCaja` consulta el singleton y verifica las identidades; el bootstrap y el seed no crean datos automáticamente. La presemilla debe hacerse manualmente desde CMS Sandbox.
 - La suite offline incorpora una prueba contractual que exige comprobar el marcador de `CajaActual` antes de insertar el singleton durante bootstrap y antes de insertar eventos.
 - No se han realizado escrituras CMS, sincronización Sandbox→Live, publicación ni despliegue.
 
