@@ -170,7 +170,7 @@ test("CRON-BOOKING-PROJECTION-01 projects only confirmed unpaid bookings with co
   assert.equal(marker.payload.metadata.bookingId, CONFIRMED_VALID.id);
   assert.ok(marker.traceId);
 
-  const alerts = controls.filter(row => row.alertType);
+  const alerts = controls.filter(row => row.eventType);
   assert.equal(alerts.length, 3);
   assert.ok(alerts.some(row => row.alertType === "BOOKING_PROJECTION_RECONCILIATION_REQUIRED"));
   assert.ok(alerts.some(row => row.alertType === "BOOKING_PAID_PROJECTION_REVIEW_REQUIRED"));
