@@ -9,7 +9,8 @@ export function assertTpvQaEnabled() {
         TPV_QA_RUNTIME_POLICY.REAL_PAYMENTS_ENABLED !== false ||
         TPV_QA_RUNTIME_POLICY.FISCAL_WRITES_ENABLED !== false ||
         TPV_QA_RUNTIME_POLICY.CUSTOMER_NOTIFICATIONS_ENABLED !== false ||
-        TPV_QA_RUNTIME_POLICY.HARDWARE_ENABLED !== false) {
+        TPV_QA_RUNTIME_POLICY.HARDWARE_ENABLED !== false ||
+        !/^TPVQA-DEV-[0-9]{8}-[A-Z0-9-]+$/.test(String(TPV_QA_RUNTIME_POLICY.TEST_RUN_ID || ""))) {
         throw new Error("TPV_QA_RUNTIME_POLICY_INVALID");
     }
     return true;
