@@ -330,3 +330,68 @@ La documentación oficial de Wix para [beforeUpdate](https://dev.wix.com/docs/ve
 PR #466 sustituye esa dependencia por una lectura backend del elemento persistido mediante `getItem(BUSINESS_COLLECTIONS.CAJA_ACTUAL, item._id, CONSISTENCY.STRONG)`. La actualización falla de forma cerrada si falta el ID o la lectura no devuelve el mismo elemento. Los tests offline cubren recuperación correcta, ausencia del elemento y el hecho de que `context.original` no es autoridad.
 
 **Alcance limitado:** esta corrección no aprueba ni implementa la matriz de transiciones H-01, no resuelve concurrencia general entre todos los escritores y no autoriza la modificación del singleton LIVE actual. Se requiere completar el contrato de transición y validar hooks/identidad en Wix Sandbox antes de modificar el estado operativo.
+
+
+## 15. Revalidación H-01 sobre HEAD 19079bd6 — 2026-11-20
+
+### Evidencia directa del código
+En el HEAD `19079bd6b2cfde80b5758160b5ec060c0a49bd7b` se reexaminaron:
+- `src/backend/dataAccessPolicy.js`: `assertUpdateAllowed(CAJA_ACTUAL, item)` solo exige `_id`; `assertSaveAllowed(CAJA_ACTUAL, item)` también solo exige `_id`.
+- `src/backend/dataAccess.js`: `updateItem(collection, item)` valida la política y delega en `elevatedUpdate(collection, item)`, sin predicado de versión.
+- `src/backend/cajas.web.js`: `_updateCajaActual` lee el singleton, calcula saldos y `sequenceCounters`, y después ejecuta `dalUpdate(CAJA_ACTUAL_COL, cashRegister)`. Los reintentos del bucle no constituyen compare-and-swap.
+- `src/backend/tests/data.hooks.test.mjs`: los tests de CajaActual cubren lectura del estado anterior, ignorar `context.original` y fallo cerrado cuando no se recupera el registro. No prueban concurrencia de escritores.
+
+### Consecuencia
+La corrección PR #466 resuelve el origen del estado anterior del hook, pero no serializa writers. Una lectura fuerte seguida de un update completo sigue dejando una ventana de carrera. Dos productores pueden leer la misma versión y sobrescribir acumulados o metadatos del otro.
+
+### Decisión
+H-01 continúa abierto. No añadir una comparación read-then-write y denominarla CAS; tampoco cambiar `update` por `patch` sin revisar consumidores, hooks y semántica de reemplazo/patch del SDK. Antes de cambiar runtime se debe seleccionar y probar un mecanismo de exclusión/CAS soportado por Wix, inventariar todos los productores y fijar la matriz de transiciones y campos mutables.
+
+### Criterios de aceptación obligatorios
+1. Un único contrato backend para apertura, cierre, movimientos y proyección.
+2. Autorización backend por capacidad/identidad; el frontend no decide rol, estado ni versión.
+3. Cada mutación comprueba la transición permitida y preserva campos no relacionados.
+4. Dos writers concurrentes con movimientos distintos producen ambos efectos una sola vez.
+5. Reintento del mismo movimiento no duplica saldo ni operaciones.
+6. Fallo entre ledger y proyección produce compensación trazable sin reintento ciego.
+7. Wix Sandbox/Preview confirma comportamiento de hooks y permisos antes de cualquier cambio operativo.
+
+### No-go y límites
+No se ha ejecutado Wix Runtime ni una prueba de concurrencia real en esta intervención. No se han modificado registros CMS, singleton CajaActual, compensaciones, ledgers, permisos o secretos. Producción continúa bloqueada. La documentación oficial de `beforeUpdate` y de Wix Data hooks no promete atomicidad de lectura seguida de escritura; no debe inferirse.
+
+
+## 16. Candidato de serialización descubierto en SDK Wix — 2026-11-20
+
+La revalidación posterior de documentación oficial identifica una primitiva que merece un spike controlado antes de cerrar H-01:
+
+- La dependencia del repositorio es `@wix/data@1.0.527`.
+- El módulo DAL ya importa `items` desde `@wix/data` y eleva operaciones con `auth.elevate`.
+- El SDK documenta `items.patch(collectionId, itemId)`, refinadores `setField`, `incrementField`, `appendToArray` y ejecución `.run({ condition })`.
+- El filtro condicional se construye con `items.filter().eq(...)`. La operación solo aplica si el elemento satisface la condición.
+- La documentación REST de Patch Data Item declara también `condition`; Patch admite modificaciones parciales y `INCREMENT_FIELD`.
+- La documentación especifica una limitación: Patch solo está disponible para colecciones creadas por usuarios Wix; no para colecciones de aplicaciones Wix. Por tanto, hay que confirmar que `CajaActual` pertenece a la primera categoría antes de implementarlo.
+
+Referencias:
+- [SDK items.patch](https://dev.wix.com/docs/sdk/data-items-sdk/data/items/patch)
+- [SDK incrementField](https://dev.wix.com/docs/sdk/data-items-sdk/data/items/wix-data-patch/increment-field)
+- [REST Patch Data Item](https://dev.wix.com/docs/api-reference/business-solutions/cms/data-items/patch-data-item)
+- [REST Bulk Patch Data Items](https://dev.wix.com/docs/api-reference/business-solutions/cms/data-items/bulk-patch-data-items)
+
+### Diseño candidato (no implementado ni validado)
+1. Utilizar `sequenceCounters.seqGlobal` como versión monotónica, siempre que el esquema y los datos de Sandbox confirmen que `sequenceCounters` es OBJECT y `seqGlobal` es numérico.
+2. Leer el singleton y preparar modificaciones parciales: incrementos atómicos de saldos/contadores, append del identificador de movimiento y set de los metadatos de última operación.
+3. Ejecutar `items.patch(...).run({ condition: items.filter().eq("sequenceCounters.seqGlobal", expectedVersion) })`; para TPV QA añadir también las condiciones de `snapshotSource` y `traceId` exactos.
+4. Si la condición no coincide, releer y recalcular desde el estado nuevo; no reutilizar el delta ni el snapshot antiguo. Si la respuesta no permite distinguir de forma inequívoca conflicto de condición y fallo incierto, detener y reconciliar.
+5. Mantener idempotencia: antes de proyectar comprobar el ID aplicado y usar `appendToArray` condicionado por la versión; una repetición debe devolver ya aplicado sin incrementar.
+6. Migrar también apertura, cierre Z, proyección QA y cualquier otro productor de CajaActual al mismo contrato. No dejar escritores con `update/save` completo en paralelo.
+7. Confirmar el comportamiento de `beforeUpdate` cuando el cambio llega como patch (forma del item que recibe el hook, normalización y preservación de campos); no suprimir hooks como workaround.
+8. Probar en Wix Sandbox dos writers simultáneos, mismo movimiento repetido, movimientos diferentes, conflicto de versión, timeout con resultado incierto y reentrega. Verificar que no se pierden incrementos ni se duplica el movimiento.
+
+### Bloqueos antes de implementación
+- Confirmar tipo/propiedad de la colección `CajaActual` (user-created vs Wix app collection).
+- Confirmar que `items.patch` y `items.filter` están disponibles y sus tipos exactos en `@wix/data@1.0.527` instalado.
+- Confirmar condición sobre el campo anidado `sequenceCounters.seqGlobal` y el resultado devuelto cuando no coincide.
+- Confirmar que el hook de CajaActual recibe un item compatible con su contrato durante Patch.
+- Verificar que todos los escritores están migrados en una única PR coordinada.
+
+**Decisión actual:** este es el candidato preferente para el spike H-01, pero no se declara CAS probado ni se cambia el writer hasta superar los bloqueos anteriores. La documentación confirma condición y patch atómico de campos; la garantía efectiva para este singleton depende de la elegibilidad de la colección, el filtro, el hook y el runtime real.

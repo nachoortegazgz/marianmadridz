@@ -211,3 +211,69 @@ Siguiente intervención recomendada: **cerrar H-01 de `CajaActual`** definiendo 
 - PR CI passed: Layer 1, Layer 2, full offline regression suite, Wix SDK contracts, eCommerce/TPV SDK contracts, ESLint and secret scanning.
 - This correction fixes previous-state retrieval only. It does **not** complete H-01 transition authorization, concurrent compare-and-swap for all CajaActual mutations, reconciliation of the current LIVE singleton, or Wix Preview/Sandbox E2E.
 - No Wix CMS records, permissions, secrets, fiscal writers or publication state were changed. Production remains NO-GO.
+
+
+## 11. Addendum de revalidación de H-01 y control de cambios — 2026-11-20
+
+### Baseline Git verificado
+- Rama base: `main`.
+- HEAD verificado: `19079bd6b2cfde80b5758160b5ec060c0a49bd7b`.
+- El commit padre es `22a74ff4a594cf6f8d742c34c18527c6438a1719`; el HEAD documenta la corrección acotada de `CajaActual_beforeUpdate`.
+- La API de GitHub devuelve `protected=false`, `protection.enabled=false`, enforcement de checks `off` y lista de checks requeridos vacía.
+- La consulta de status del HEAD no acredita un conjunto de checks CI ejecutados sobre ese commit. Los resultados de PR anteriores son evidencia de esas PR, no del HEAD actual.
+
+### Evidencia de código revalidada en HEAD
+Archivos inspeccionados:
+- `src/backend/dataAccessPolicy.js`
+- `src/backend/dataAccess.js`
+- `src/backend/cajas.web.js`
+- `src/backend/tests/data.hooks.test.mjs`
+
+Hallazgos:
+1. `assertUpdateAllowed(CAJA_ACTUAL, item)` exige `_id`, pero no compara el estado persistido, la versión esperada, el actor ni una transición permitida.
+2. `assertSaveAllowed(CAJA_ACTUAL, item)` exige `_id`; no define por sí mismo una matriz de campos mutables.
+3. `updateItem()` ejecuta `elevatedUpdate(collection, item)`; no pasa un predicado de versión/estado.
+4. `_updateCajaActual()` lee el singleton, calcula una proyección sobre el snapshot leído y llama a `dalUpdate(CAJA_ACTUAL_COL, cashRegister)`. El bucle de reintentos ante error de escritura no demuestra CAS ni evita que dos escritores sobrescriban actualizaciones calculadas desde el mismo snapshot.
+5. Los tests de hooks verifican recuperación del estado previo y fallo cerrado si falta, pero no prueban dos escritores concurrentes en Wix Runtime.
+
+### Decisión de ingeniería
+No introducir una guarda basada únicamente en lectura fuerte dentro de `beforeUpdate`: el hook se ejecuta antes de la actualización y la lectura previa no convierte el write posterior en una operación atómica. Tampoco añadir una whitelist genérica sin inventariar todos los productores y sus campos, porque puede bloquear productores legítimos o conservar la falsa impresión de control de concurrencia.
+
+El cierre de H-01 requiere:
+- Inventario completo de todos los productores y operaciones de CajaActual (update/save/bulk update y hooks).
+- Contrato único de transición ABIERTA/CERRADA/SIMULACION, identidad/autorización backend y campos mutables por operación.
+- Mecanismo de exclusión/CAS cuya atomicidad esté documentada por Wix para el endpoint/SDK realmente usado. No asumir que `consistentRead: true` es CAS.
+- Prueba concurrente con dos movimientos diferentes y reentrega idempotente: ambos deben reflejarse exactamente una vez, sin pérdida ni doble aplicación.
+- Pruebas de fallo intermedio y recuperación de compensación.
+- Wix Sandbox/Preview para validar el contrato real antes de tocar datos operativos.
+
+### Estado de seguridad y despliegue
+- No se cambió código de runtime en esta intervención porque la evidencia disponible no demuestra un mecanismo CAS/lock atómico adecuado para reemplazar el writer actual. Un cambio especulativo en el hook o DAL aumentaría el riesgo.
+- No se realizaron escrituras CMS, mutaciones de singleton, reintentos de compensaciones, cambios de permisos/secretos ni publicación.
+- Producción: **NO-GO**. TPV Sandbox E2E, reconciliación de las tres compensaciones, modelo fiscal/SIF y control de rama siguen abiertos.
+- Esta revalidación es estática y documental; no equivale a tests ejecutados ni a una validación de Wix Runtime.
+
+### Referencias oficiales Wix
+- [Wix Data beforeUpdate](https://dev.wix.com/docs/velo/apis/wix-data/hooks/before-update): el hook recibe el elemento y UpdateHookContext; la documentación consultada no define `context.original`.
+- [Wix Data hooks](https://dev.wix.com/docs/develop-websites/articles/databases/wix-data/hooks/about-data-hooks): los hooks interceptan operaciones Data API/CMS, pero no describen por ello un mecanismo de compare-and-swap.
+- [Update Data Item](https://dev.wix.com/docs/api-reference/business-solutions/cms/data-items/update-data-item) y [Patch Data Item](https://dev.wix.com/docs/api-reference/business-solutions/cms/data-items/patch-data-item): revisar el contrato del endpoint elegido antes de diseñar cualquier reemplazo de update.
+
+
+## 12. Candidato SDK para resolver concurrencia de CajaActual — 2026-11-20
+
+La revisión de documentación Wix SDK ha identificado `items.patch(...).run({ condition })` como candidato para una actualización condicional. La dependencia del proyecto es `@wix/data@1.0.527`. El SDK documenta filtros `items.filter().eq()`, `incrementField()`, `appendToArray()` y `setField()`; la documentación REST describe `condition` y modificaciones aritméticas atómicas.
+
+Esto permite diseñar un control optimista condicionado por `sequenceCounters.seqGlobal`, con incrementos de saldo y append del ID de movimiento en la misma operación. No se ha implementado ni se declara CAS validado.
+
+Bloqueos:
+- Wix documenta que Patch no funciona en colecciones de aplicaciones Wix. Falta confirmar que la colección física `CajaActual` es elegible.
+- Falta probar el filtro sobre el campo anidado `sequenceCounters.seqGlobal`, la respuesta de condición no coincidente y el hook `CajaActual_beforeUpdate` bajo Patch.
+- Los productores actuales incluyen el writer normal de `cajas.web.js`, cierre Z mediante `saveItem`, y las proyecciones/sesiones QA de `tpvQaRepository.js`. Deben migrarse coordinadamente para evitar escritores no serializados.
+- Requiere pruebas Wix Sandbox con writers concurrentes y reintentos idempotentes.
+
+Referencias oficiales:
+- [SDK items.patch](https://dev.wix.com/docs/sdk/data-items-sdk/data/items/patch)
+- [SDK incrementField](https://dev.wix.com/docs/sdk/data-items-sdk/data/items/wix-data-patch/increment-field)
+- [REST Patch Data Item](https://dev.wix.com/docs/api-reference/business-solutions/cms/data-items/patch-data-item)
+
+El sitio Marian Madrid sigue en estado Draft según el contexto Wix consultado. La PR #468 está abierta; CI se encuentra en ejecución y no se ha fusionado. No se han realizado cambios runtime ni escrituras CMS.
