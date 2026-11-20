@@ -14,7 +14,10 @@ El propietario declaró que el sitio está en desarrollo y que los registros fis
 
 ## 2. Estado verificado del repositorio
 
-- `main` apunta a `7672bac4b4207ba87c9688fa34f38752a253ae86`.\n- PR #453 integrada: consolidación documental (`9aa92a9ef7408ab9b431694463ca1ffe2dedacfa`).\n- PR #454 integrada: auditoría de productores y bypasses CMS (`06766afbcdf7f8d32d34ccbb3f1ff68a242f8bca`).\n- PR #455 integrada: validación central de `PaquetesGestoria` (`7672bac4b4207ba87c9688fa34f38752a253ae86`).
+- `main` apunta a `7672bac4b4207ba87c9688fa34f38752a253ae86`.
+- PR #453 integrada: consolidación documental (`9aa92a9ef7408ab9b431694463ca1ffe2dedacfa`).
+- PR #454 integrada: auditoría de productores y bypasses CMS (`06766afbcdf7f8d32d34ccbb3f1ff68a242f8bca`).
+- PR #455 integrada: validación central de `PaquetesGestoria` (`7672bac4b4207ba87c9688fa34f38752a253ae86`).
 - PR #450 integrada: `11e6cefd838cfd8f18301ddff534e2edd8849743`.
 - PR #451 integrada: `bdbdb2467294c781bfc090cd8429d7c060413d15`.
 - PR #452 integrada: `5cfbecd6849c56d162f0d20a11b620eb2bea0c54`.
@@ -51,7 +54,27 @@ El propietario declaró que el sitio está en desarrollo y que los registros fis
 - Se bloquean rutas de cierre Z sin `recordDomain` y responsable de sistema aprobados.
 - No se han habilitado writers.
 
-### Auditoría de productores CMS — PR #454\n- Auditoría estática de ocho colecciones críticas y sus productores, DAL, hooks y rutas de escritura.\n- No se localizó bypass directo activo de `@wix/data` en los módulos backend revisados.\n- `CajaActual` requiere endurecer la política DAL de transiciones; cierre Z sigue bloqueado por `recordDomain`.\n- Informe: [cms-producer-and-bypass-audit](./2026-11-20-cms-producer-and-bypass-audit.md).\n\n### Validación central de PaquetesGestoria — PR #455\n- `assertPaquetesGestoriaRecord` centralizado en `validation.js`, invocado desde DAL y hook.\n- CI PR #455: Layer 1 333/333, Layer 2 266/266, suite offline 688/688; SDK, npm audit, ESLint y secret scanning SUCCESS.\n\n### Ledger contable — PR #452
+### Auditoría de productores CMS — PR #454
+- Auditoría estática de ocho colecciones críticas y sus productores, DAL, hooks y rutas de escritura.
+- No se localizó bypass directo activo de `@wix/data` en los módulos backend revisados.
+- `CajaActual` requiere endurecer la política DAL de transiciones; cierre Z sigue bloqueado por `recordDomain`.
+- Informe: [cms-producer-and-bypass-audit](./2026-11-20-cms-producer-and-bypass-audit.md).
+
+### Validación central de PaquetesGestoria — PR #455
+- `assertPaquetesGestoriaRecord` centralizado en `validation.js`, invocado desde DAL y hook.
+- CI PR #455: Layer 1 333/333, Layer 2 266/266, suite offline 688/688; SDK, npm audit, ESLint y secret scanning SUCCESS.
+
+### Auditoría de productores CMS — PR #454
+- Auditoría estática de ocho colecciones críticas y sus productores, DAL, hooks y rutas de escritura.
+- No se localizó bypass directo activo de `@wix/data` en los módulos backend revisados.
+- `CajaActual` requiere endurecer la política DAL de transiciones; cierre Z sigue bloqueado por `recordDomain`.
+- Informe: [cms-producer-and-bypass-audit](./2026-11-20-cms-producer-and-bypass-audit.md).
+
+### Validación central de PaquetesGestoria — PR #455
+- `assertPaquetesGestoriaRecord` centralizado en `validation.js`, invocado desde DAL y hook.
+- CI PR #455: Layer 1 333/333, Layer 2 266/266, suite offline 688/688; SDK, npm audit, ESLint y secret scanning SUCCESS.
+
+### Ledger contable — PR #452
 - Añadido beforeInsert y validación central append-only.
 - CI de PR verde; hook Wix Sandbox pendiente.
 - Hash validado por formato, no recomputado por el hook.
