@@ -1,46 +1,46 @@
-# TPV QA — módulos Velo
+# TPV SANDBOX — módulos Velo
 
 > **Estado UI (2026-11-20):** `#htmlTPV.txt` implementa `MM_READY/MM_CONTEXT`, `postMessage`, catálogo Bookings/Stores V3 y operaciones sintéticas. Clientes/profesionales se leen desde `TpvSandboxIdentities` (esquema creado, filas Sandbox pendientes). `Cobrar`, pasarelas, facturación, Gift Cards reales, reservas, hardware y escrituras operativas siguen deshabilitados. CI post-merge en `ecee48f84f05a87d680639b8fec6ddb7da953009`: 74 suites / 692 tests, 0 fallos; npm audit sin advisories, contratos SDK, ESLint y Gitleaks correctos. Wix Preview/E2E, bootstrap de caja Sandbox y aislamiento backend frente a Published siguen pendientes; no publicar.
 
-> **Estado CI post-merge (HEAD base `6e8386bab15b94b1a2f334bcf4ac1bf1ded51edf`, 2026-11-20):** run `44703822699` (Layer 1/2, regresión offline, contratos SDK y ESLint) y run `44703822792` (Gitleaks full-history) completados en SUCCESS. El recuento de 74 suites / 692 tests corresponde al commit de implementación `ecee48f84f05a87d680639b8fec6ddb7da953009`; no se extrapola un nuevo recuento a los runs post-merge. El detalle de estado, bloqueos y plan de continuidad está en [relevo de sesión TPV Sandbox](../../../docs/qa/2026-11-20-tpv-sandbox-session-handoff.md).
+> **Estado CI post-merge (HEAD base `6e8386bab15b94b1a2f334bcf4ac1bf1ded51edf`, 2026-11-20):** run `44703822699` (Layer 1/2, regresión offline, contratos SDK y ESLint) y run `44703822792` (Gitleaks full-history) completados en SUCCESS. El recuento de 74 suites / 692 tests corresponde al commit de implementación `ecee48f84f05a87d680639b8fec6ddb7da953009`; no se extrapola un nuevo recuento a los runs post-merge. El detalle de estado, bloqueos y plan de continuidad está en [relevo de sesión TPV Sandbox](../../../docs/sandbox/2026-11-20-tpv-sandbox-session-handoff.md).
 
 > **Backend canónico:** todos los módulos TPV Velo residen exclusivamente en `src/backend/tpv/`. No reintroducir archivos `src/backend/tpv*.web.js` en la raíz: eran stubs legacy sin consumidores activos.
 
-Este directorio implementa el TPV en modo QA persistente y sintético para el sitio Marian Madrid en Wix Classic.
+Este directorio implementa el TPV en modo SANDBOX persistente y sintético para el sitio Marian Madrid en Wix Classic.
 
 ## Límites de seguridad
 
-- Los eventos TPV sintéticos se persisten como filas marcadas en `MovimientosCaja`; `CajaActual` conserva la proyección de la sesión Sandbox. `TPV_QA_COLLECTIONS` son claves lógicas internas, no colecciones físicas.
-- `MovimientosCaja` conserva su contrato de ledger: las filas sintéticas se distinguen por `recordSource=TPV_QA_SYNTHETIC`, `movementType=SIMULATED_TPV_*`, `testRunId`, hash QA y secuencia fiscal cero. Los ledgers fiscal/contable y `HistoricoCierresZ` no reciben escrituras TPV.
+- Los eventos TPV sintéticos se persisten como filas marcadas en `MovimientosCaja`; `CajaActual` conserva la proyección de la sesión Sandbox. `TPV_SANDBOX_COLLECTIONS` son claves lógicas internas, no colecciones físicas.
+- `MovimientosCaja` conserva su contrato de ledger: las filas sintéticas se distinguen por `recordSource=TPV_SANDBOX_SYNTHETIC`, `movementType=SIMULATED_TPV_*`, `testRunId`, hash SANDBOX y secuencia fiscal cero. Los ledgers fiscal/contable y `HistoricoCierresZ` no reciben escrituras TPV.
 - La idempotencia se aplica mediante índice CMS único `idempotencyKey`, lectura fuerte previa y reconciliación del resultado de inserción concurrente.
-- Los reembolsos sintéticos se serializan por venta mediante compare-and-swap en `ControlOperativo`, tipo `TPV_QA_REFUND_LOCK`. Ventas, devoluciones, movimientos, arqueos y cierres comparten además `TPV_QA_SESSION_LOCK` para evitar carreras con Ticket Z. Los locks no son ledgers ni almacenan importes.
+- Los reembolsos sintéticos se serializan por venta mediante compare-and-swap en `ControlOperativo`, tipo `TPV_SANDBOX_REFUND_LOCK`. Ventas, devoluciones, movimientos, arqueos y cierres comparten además `TPV_SANDBOX_SESSION_LOCK` para evitar carreras con Ticket Z. Los locks no son ledgers ni almacenan importes.
 - Clientes y profesionales se consultan exclusivamente en `TpvSandboxIdentities`; no se consultan CRM, Members, Bookings Staff, reservas ni saldos de Gift Cards. No se llama a Wix Payments, checkout, Orders, refunds, Bookings writers, Gift Card writers, hardware, notificaciones ni emisión fiscal.
 - `CajaActual` solo se actualiza como proyección backend de la sesión sintética. No se escribe en `HistoricoCierresZ` ni `LibroAsientosContablesDetalle`.
-- Ticket Z cierra solo la sesión QA y nunca cierra el periodo fiscal u operativo.
+- Ticket Z cierra solo la sesión SANDBOX y nunca cierra el periodo fiscal u operativo.
 
 ## Inventario
 
 | Módulo | Responsabilidad |
 |---|---|
-| `tpvCaja.web.js` | Apertura diaria QA, lectura de sesión y arqueo parcial |
+| `tpvCaja.web.js` | Apertura diaria SANDBOX, lectura de sesión y arqueo parcial |
 | `tpvVentas.web.js` | Validación y persistencia idempotente de venta sintética |
 | `tpvMovimientos.web.js` | Entradas, salidas y retiradas sintéticas |
 | `tpvCatalogo.web.js` | Lectura nativa de servicios Bookings y Stores Catalog V3; clientes/profesionales solo desde `TpvSandboxIdentities` |
 | `tpvPagos.web.js` | Validación de medios mixtos sin pasarela |
 | `tpvDevoluciones.web.js` | Reembolso sintético parcial/total, con autorización ADMIN y lock por venta |
-| `tpvCierres.web.js` | Resumen, Ticket X y cierre de sesión QA Ticket Z |
+| `tpvCierres.web.js` | Resumen, Ticket X y cierre de sesión SANDBOX Ticket Z |
 | `tpvAuditoria.web.js` | Consulta de auditoría persistida |
-| `tpvPermisos.web.js` | Capacidades QA derivadas del rol backend |
-| `tpvUtils.web.js` | Configuración QA expuesta al controlador de página (sin validadores duplicados) |
+| `tpvPermisos.web.js` | Capacidades SANDBOX derivadas del rol backend |
+| `tpvUtils.web.js` | Configuración SANDBOX expuesta al controlador de página (sin validadores duplicados) |
 | `tpvUtils.js` | Validación pura, minor units, claves y payload sintético |
-| `tpvQaRepository.js` | Adaptador lógico sobre `MovimientosCaja`/`CajaActual`, idempotencia, lectura fuerte y locks CAS de sesión/venta |
+| `tpvSandboxRepository.js` | Adaptador lógico sobre `MovimientosCaja`/`CajaActual`, idempotencia, lectura fuerte y locks CAS de sesión/venta |
 | `tpvCierresCore.js` | Agregación reproducible de ventas, pagos, devoluciones y efectivo |
 
 ## Flujo de venta
 
-1. El miembro con rol cajero solicita la sesión QA abierta.
+1. El miembro con rol cajero solicita la sesión SANDBOX abierta.
 2. La interfaz prepara y valida el borrador en backend.
-3. `registrarVentaQA` exige una sesión abierta y pago completamente cuadrado; valida cliente/profesionales contra identidades sintéticas activas.
+3. `registrarVentaSANDBOX` exige una sesión abierta y pago completamente cuadrado; valida cliente/profesionales contra identidades sintéticas activas.
 4. Persiste eventos lógicos `PREPARADA`, líneas, pagos y `CONFIRMADA_SINTETICA` en `MovimientosCaja`, con marcador sintético y secuencia fiscal cero.
 5. Cada evento utiliza una clave idempotente derivada de la clave cliente; un reintento continúa los pasos pendientes sin duplicar los existentes.
 6. Se registra auditoría. No se inicia una autorización, captura, orden ni movimiento fiscal.
@@ -50,7 +50,7 @@ La persistencia multi-colección no es una transacción ACID. El orden preparado
 ## Flujo de reembolso
 
 - ADMIN obligatorio.
-- Venta original debe estar confirmada y pertenecer a la sesión QA abierta.
+- Venta original debe estar confirmada y pertenecer a la sesión SANDBOX abierta.
 - Los importes por medio no pueden superar el importe original no reembolsado.
 - Un lock distribuido por sesión y otro por venta serializan solicitudes concurrentes y bloquean cambios durante Ticket Z.
 - Cabecera, pagos negativos, movimiento de efectivo y auditoría se insertan como eventos sintéticos idempotentes.
@@ -67,8 +67,8 @@ La persistencia multi-colección no es una transacción ACID. El orden preparado
 
 - `tpv.web-modules.contract.test.mjs`
 - `tpv-widget.contract.test.mjs`
-- `tpv-ui.qa-source.test.mjs`
-- `tpv.qa.persistence.policy.test.mjs`
+- `tpv-ui.sandbox-source.test.mjs`
+- `tpv.sandbox.persistence.policy.test.mjs`
 
 Ejecutar `npm test`, `npm run test:layer1` y `npm run lint` antes de sincronizar con Wix Classic. No declarar validación runtime hasta ejecutar Preview con los roles ADMIN, GESTION, ESTILISTA y miembro sin rol.
 
@@ -84,7 +84,7 @@ PR #397, PR #398 y PR #399 están integradas en `main`. PR #399 aplica el aislam
 - Los registros son append-only; la identidad no se reutiliza como `contactId`, `memberId` o `resourceId` de Wix. La vinculación con reservas reales sigue deshabilitada y la venta rechaza cualquier `bookingId`.
 - El esquema CMS está creado; la carga de filas sintéticas debe hacerse desde el entorno Sandbox de Wix, nunca mediante la API REST de gestión que no acredita selección de Sandbox.
 - La consulta de saldo de Gift Cards reales está deshabilitada; no se envía ni persiste ningún código. Emisión, canje y reembolso siguen bloqueados.
-- Los eventos de auditoría usan el actor sintético `QA_ACTOR`; la identidad real solo se usa para autorización backend y no se persiste.
+- Los eventos de auditoría usan el actor sintético `SANDBOX_ACTOR`; la identidad real solo se usa para autorización backend y no se persiste.
 
 
 ## Contrato del widget HTML
@@ -98,8 +98,8 @@ La colección se ha creado vacía. Cuando Wix Editor permita editar explícitame
 
 | identityId | identityType | displayName | email |
 |---|---|---|---|
-| `QA-CUSTOMER-001` | `CUSTOMER` | Cliente Sintético 01 | `cliente01@example.test` |
-| `QA-STAFF-001` | `STAFF` | Profesional Sintético 01 | `staff01@example.test` |
-| `QA-STAFF-002` | `STAFF` | Profesional Sintético 02 | `staff02@example.test` |
+| `SANDBOX-CUSTOMER-001` | `CUSTOMER` | Cliente Sintético 01 | `cliente01@example.test` |
+| `SANDBOX-STAFF-001` | `STAFF` | Profesional Sintético 01 | `staff01@example.test` |
+| `SANDBOX-STAFF-002` | `STAFF` | Profesional Sintético 02 | `staff02@example.test` |
 
-En las tres filas: `active=true`, `syntheticOnly=true`, `environment=SANDBOX`, `testRunId=TPVQA-DEV-20261120-01` y `metadata={}`. No añadir teléfono, NIF, dirección, `contactId`, `memberId` ni `resourceId`. El hook valida el contrato antes de aceptar la inserción.
+En las tres filas: `active=true`, `syntheticOnly=true`, `environment=SANDBOX`, `testRunId=TPVSANDBOX-DEV-20261120-01` y `metadata={}`. No añadir teléfono, NIF, dirección, `contactId`, `memberId` ni `resourceId`. El hook valida el contrato antes de aceptar la inserción.
