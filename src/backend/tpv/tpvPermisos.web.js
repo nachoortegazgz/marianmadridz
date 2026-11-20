@@ -4,7 +4,7 @@ import { makeTraceId } from "public/mmUtils";
 import { TPV_QA_RUNTIME_POLICY } from "backend/internalConfig";
 import { assertTpvQaEnabled } from "backend/tpv/tpvUtils";
 
-export const obtenerPermisosTPVQA = webMethod(
+export const obtenerPermisosTPV = webMethod(
     Permissions.SiteMember,
     async () => {
         assertTpvQaEnabled();
