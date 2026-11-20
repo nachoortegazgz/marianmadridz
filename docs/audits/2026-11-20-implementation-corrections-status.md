@@ -123,3 +123,12 @@ La tabla vigente de uso CMS está en `docs/audits/2026-11-20-wix-live-sandbox-us
 El TPV QA permanece deshabilitado en configuración canónica. No se hicieron seeds, bootstrap, mutaciones CMS, pagos, escrituras de ledger ni publicación. La existencia de Sandbox no acredita el aislamiento de cada WebMethod.
 
 **Decisión:** NO-GO para publicación/despliegue. La métrica de CI offline no equivale a preparación global para producción. Esta auditoría separa las correcciones aplicadas de las tareas bloqueadas y evita asignar un porcentaje de preparación sin denominador verificable.
+
+
+## Addendum PR #486 — contrato fail-closed y CI
+
+PR #486 integrada en `main` con commit `5ef81ff132f4cbff594387a60e4446bc5dada171`. Añade una prueba contractual que enumera los WebMethods TPV QA protegidos y verifica que el guard backend antecede a los accesos al repositorio identificados.
+
+CI del head `46aac82fa264387b5571ef3f6fc9d513072a2eb0`: Backend offline quality gates SUCCESS (run `44727128060`); Secret scanning SUCCESS (run `44727128076`). `npm ci` PASS; `npm audit` 0 vulnerabilidades; Layer 1 28 suites / 335 tests; Layer 2 19 suites / 267 tests; suite completa 74 suites / 693 tests; SDK contracts y ESLint PASS.
+
+Los logs muestran warnings de dependencias deprecadas y ESLint 8.25.0 fuera de soporte. Se mantienen sin cambios hasta validar compatibilidad con el plugin Wix. La nueva prueba es offline y no prueba Wix Preview/Published ni el aislamiento real del data plane. La configuración TPV sigue fail-closed; no se hicieron escrituras CMS ni publicación.
