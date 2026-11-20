@@ -11,6 +11,7 @@ import {
 import { TPV_QA_COLLECTIONS, TPV_QA_EVENT_MOVEMENT_TYPES, TPV_QA_RUNTIME_POLICY, CONTROL_TYPE, OPERATIONAL_COLLECTIONS, BUSINESS_COLLECTIONS, SINGLETONS } from "backend/internalConfig";
 import {
     assertTpvQaEnabled,
+    assertQaCajaWritable,
     normalizeIdempotencyKey,
     stableSerialize,
     makeSyntheticPayload,
@@ -178,6 +179,8 @@ export async function withQaSaleLock(saleId, traceId, operation, sessionId = nul
 }
 
 export async function withQaSessionLock(sessionId, traceId, operation) {
+    const caja = await _ensureCajaActualForQa();
+    assertQaCajaWritable(caja, { allowBootstrap: true });
     const lockId = makeQaSessionLockId(sessionId);
     return withQaScopedLock({
         lockId,
@@ -268,47 +271,8 @@ function _virtualRecord(item) {
 }
 
 async function _ensureCajaActualForQa() {
-    let caja = await _getCajaActual();
-    if (caja) return caja;
-    const initial = {
-        _id: "SINGLE_ITEM_ID",
-        singletonKey: SINGLETONS.CAJA_PRINCIPAL,
-        cashRegisterStatus: "CERRADA",
-        openedAt: null,
-        closedAt: null,
-        openingCashAmount: 0,
-        openingCardAmount: 0,
-        openingBizumAmount: 0,
-        openingOtherAmount: 0,
-        cashAmount: 0,
-        cardAmount: 0,
-        bizumAmount: 0,
-        otherAmount: 0,
-        expectedCash: 0,
-        countedCash: 0,
-        difference: 0,
-        salesCount: 0,
-        ticketSequence: 0,
-        sequenceCounters: {},
-        snapshotSource: "TPV_QA_SANDBOX_INITIALIZED",
-        traceId: QA_TEST_RUN_ID,
-        conceptOperations: {
-            tpvQa: {
-                testRunId: QA_TEST_RUN_ID,
-                initializedAt: new Date(),
-                appliedMovementIds: [],
-            },
-        },
-    };
-    try {
-        await insertItem(BUSINESS_COLLECTIONS.CAJA_ACTUAL, initial);
-    } catch (error) {
-        caja = await _getCajaActual();
-        if (!caja) throw error;
-        return caja;
-    }
-    caja = await _getCajaActual();
-    if (!caja) throw new Error("TPV_QA_CASH_REGISTER_INIT_FAILED");
+    const caja = await _getCajaActual();
+    if (!caja) throw new Error("TPV_QA_SANDBOX_CASH_REGISTER_NOT_SEEDED");
     return caja;
 }
 
@@ -586,9 +550,10 @@ export async function insertQaEvent(collection, idempotencyKey, data) {
     const fingerprint = _fingerprintOf(record);
 
     if (collection === TPV_QA_COLLECTIONS.SESIONES_CAJA) {
+        const caja = await _ensureCajaActualForQa();
+        assertQaCajaWritable(caja, { allowBootstrap: true });
         const existing = await findByIdempotencyKey(collection, key);
         if (existing?.sessionId === record.sessionId) return assertSameRequest(existing, fingerprint);
-        const caja = await _ensureCajaActualForQa();
         if (caja.snapshotSource === QA_LEDGER_SOURCE && !caja.closedAt) {
             throw new Error("TPV_QA_PREVIOUS_SESSION_NOT_CLOSED");
         }
@@ -597,6 +562,8 @@ export async function insertQaEvent(collection, idempotencyKey, data) {
         return { item: _sessionFromCaja(saved), replayed: false };
     }
 
+    const caja = await _getCajaActual();
+    assertQaCajaWritable(caja);
     const existing = await findByIdempotencyKey(collection, key);
     if (existing) {
         const replay = assertSameRequest(existing, fingerprint);
