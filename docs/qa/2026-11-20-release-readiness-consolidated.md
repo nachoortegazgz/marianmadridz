@@ -141,3 +141,12 @@ No se proporciona porcentaje global de preparación: mezclar CI offline, documen
 - No se modificaron módulos runtime, flags, CMS, permisos, secretos ni publicación. `TPV_QA_RUNTIME_POLICY.ENABLED=false` se mantiene.
 
 **Release gate permanece NO-GO.**
+
+## Addendum PR #490 — presentación de paquetes mensuales
+
+- PR #490 integrada en `main`: `a7cf9fc24e760bdf87b0a1df839dd3888ce462b6`.
+- Corregido el listado y la descarga de paquetes: un paquete `MONTHLY` muestra `MM/YYYY` e identificador `DOC_GESTORIA_{year}_M{month}_PAQUETE_GESTORIA_V{version}`; no se reutiliza el formato `T{quarter}`. Se mantiene el formato trimestral existente y se representan los periodos incompletos sin inventar valores.
+- CI de PR #490: Backend offline quality gates SUCCESS (run `44730611443`); Secret scanning SUCCESS (run `44730611433`). Layer 1: 28 suites / 336 tests; Layer 2: 19 suites / 268 tests; regresión completa: 74 suites / 695 tests; SDK contracts y ESLint PASS.
+- Sin mutaciones Wix/CMS ni efectos externos. Sin prueba runtime de gestoría o envío Resend; `ACCOUNTANT_SEND_ENABLED=false` se conserva.
+
+**Release gate sin cambios: NO-GO.**

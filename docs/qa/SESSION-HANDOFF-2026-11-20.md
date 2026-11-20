@@ -200,3 +200,15 @@ El handoff histórico de las secciones 1–10 refleja cortes anteriores. Para el
 - Se clasifica cada WebMethod exportado en módulos TPV revisados: guard QA backend, read-only/validación o writer legacy fail-closed. Añadir una nueva exportación sin política rompe el test.
 - CI SUCCESS: backend offline quality gates `44727911850`; secret scanning `44727911591`. Layer 1/2, regresión completa, SDK, eCommerce/TPV SDK y ESLint PASS.
 - No es Wix E2E; no prueba permisos efectivos ni aislamiento Sandbox/Live. No se cambió runtime, CMS ni flags. TPV persistente continúa deshabilitado.
+
+
+## 14. Cierre PR #490 — corrección de presentación de paquetes mensuales
+
+- PR #490 integrada mediante squash: `a7cf9fc24e760bdf87b0a1df839dd3888ce462b6`; `main` verificado idéntico al commit.
+- Corregido `getPreparedManagerPackages()`: los snapshots `MONTHLY` ya no se muestran como trimestres. El identificador mensual usa `fiscalMonth` (o fallback histórico `_Mmm_`), y la etiqueta es `MM/YYYY`. Periodos inválidos no se inventan; quedan explícitamente marcados como incompletos.
+- La descarga devuelve el mismo identificador de presentación coherente. El formato trimestral previo se conserva.
+- CI sobre head `ef13ec629583fba5db7dbe93d6c7bdff54e8ed19`: Backend offline quality gates SUCCESS run `44730611443`; Secret scanning SUCCESS run `44730611433`.
+- Resultados: `npm ci` PASS; `npm audit` no bloqueó; Layer 1 28 suites / 336 tests; Layer 2 19 suites / 268 tests; regresión completa 74 suites / 695 tests; contratos SDK Wix, eCommerce/TPV y ESLint PASS.
+- No se modificaron CMS, snapshots, ledgers, permisos, secretos, envíos ni configuración de Wix. No se ejecutó Wix Runtime/E2E ni publicación.
+
+**Main verificado:** `a7cf9fc24e760bdf87b0a1df839dd3888ce462b6`. El estado global sigue NO-GO para publicación por bloqueos de entorno, conciliación y fiscalidad; esta corrección mejora un flujo documental, no certifica el ecosistema.
