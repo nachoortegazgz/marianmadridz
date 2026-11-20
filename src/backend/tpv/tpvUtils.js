@@ -16,6 +16,24 @@ export function assertTpvQaEnabled() {
     return true;
 }
 
+export function assertQaCajaWritable(caja, { allowBootstrap = false } = {}) {
+    const testRunId = TPV_QA_RUNTIME_POLICY.TEST_RUN_ID;
+    const qaState = caja?.conceptOperations?.tpvQa;
+    const bootstrap = allowBootstrap === true &&
+        caja?.snapshotSource === "TPV_QA_SANDBOX_INITIALIZED" &&
+        caja?.cashRegisterStatus === "CERRADA" &&
+        caja?.traceId === testRunId &&
+        qaState?.testRunId === testRunId;
+    const synthetic = caja?.snapshotSource === "TPV_QA_SYNTHETIC" &&
+        caja?.cashRegisterStatus === "SIMULACION" &&
+        caja?.traceId === testRunId &&
+        qaState?.testRunId === testRunId;
+    if (!bootstrap && !synthetic) {
+        throw new Error("TPV_QA_CASH_REGISTER_NOT_IN_TEST_MODE");
+    }
+    return true;
+}
+
 export function normalizeIdempotencyKey(value) {
     const key = String(value || "").trim();
     if (!/^[A-Za-z0-9:_-]{8,100}$/.test(key)) throw new Error("TPV_QA_IDEMPOTENCY_KEY_INVALID");
