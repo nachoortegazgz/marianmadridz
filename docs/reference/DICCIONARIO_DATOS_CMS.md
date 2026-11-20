@@ -1996,3 +1996,8 @@ La política temporal no habilita por sí misma pagos, reembolsos, facturación,
 
 
 > **Nota de procedencia del inventario CMS:** la designación del sitio como QA no transfiere automáticamente a este sitio los snapshots CMS de inventarios anteriores. Los recuentos, esquemas y ejemplos históricos de este documento se conservan como evidencia documental, pero no se consideran baseline vigente del Site ID `188bed94-177c-4bc9-a9f0-35080d874f3e` hasta repetir una lectura de solo lectura contra ese sitio. No realizar escrituras ni migraciones basándose únicamente en esos snapshots.
+
+
+## Addendum TEC-042 — excepción acotada de TPV sintético (2026-11-20)
+
+La regla append-only de `MovimientosCaja` permanece vigente para todo movimiento real y para cualquier registro que no esté marcado. Excepción exclusiva de desarrollo: el test-run TPV puede insertar y editar/eliminar filas con `recordSource=TPV_QA_SYNTHETIC`, `movementType=SIMULATED_TPV_*`, `payloadFiscal.testRunId` igual al test-run backend activo, `sequenceNumber=0` y hash QA válido. Se exige ADMIN y Preview; fuera de Preview el widget bloquea operaciones. La excepción no se extiende a `LibroAsientosContablesDetalle`, `HistoricoCierresZ`, `RegistrosHorariosStaff`, `WEBHOOK_EVENT` ni colecciones Wix Apps. Restablecer append-only y resetear datos antes del despliegue real.
