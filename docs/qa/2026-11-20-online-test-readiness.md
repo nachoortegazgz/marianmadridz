@@ -47,6 +47,8 @@ Playwright no se añade a package.json ni a package-lock.json: es tooling aislad
 
 La CLI Wix usa Ink y requiere un terminal en modo raw; la ejecución directa sin TTY falla con 'Raw mode is not supported'. El workflow inspecciona primero los flags de ayuda y, para la ruta interactiva, crea un pseudo-TTY, espera 3 segundos a que se inicialice el selector y envía Enter a la opción predeterminada de latest main. El paso tiene timeout de 10 minutos.
 
+La interacción con el selector de Wix se realiza mediante un driver Python de biblioteca estándar (pty): espera al texto del prompt documentado y envía Enter solo cuando detecta la opción Latest commit from origin/main. Si el selector no aparece en 120 segundos o el comando supera 9 minutos, finaliza sin seleccionar otra fuente.
+
 ## 4. Alcance de las pruebas online
 
 **Permitido en este hito:**
