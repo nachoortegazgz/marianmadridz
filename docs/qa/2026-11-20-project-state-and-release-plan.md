@@ -257,3 +257,23 @@ El cierre de H-01 requiere:
 - [Wix Data beforeUpdate](https://dev.wix.com/docs/velo/apis/wix-data/hooks/before-update): el hook recibe el elemento y UpdateHookContext; la documentación consultada no define `context.original`.
 - [Wix Data hooks](https://dev.wix.com/docs/develop-websites/articles/databases/wix-data/hooks/about-data-hooks): los hooks interceptan operaciones Data API/CMS, pero no describen por ello un mecanismo de compare-and-swap.
 - [Update Data Item](https://dev.wix.com/docs/api-reference/business-solutions/cms/data-items/update-data-item) y [Patch Data Item](https://dev.wix.com/docs/api-reference/business-solutions/cms/data-items/patch-data-item): revisar el contrato del endpoint elegido antes de diseñar cualquier reemplazo de update.
+
+
+## 12. Candidato SDK para resolver concurrencia de CajaActual — 2026-11-20
+
+La revisión de documentación Wix SDK ha identificado `items.patch(...).run({ condition })` como candidato para una actualización condicional. La dependencia del proyecto es `@wix/data@1.0.527`. El SDK documenta filtros `items.filter().eq()`, `incrementField()`, `appendToArray()` y `setField()`; la documentación REST describe `condition` y modificaciones aritméticas atómicas.
+
+Esto permite diseñar un control optimista condicionado por `sequenceCounters.seqGlobal`, con incrementos de saldo y append del ID de movimiento en la misma operación. No se ha implementado ni se declara CAS validado.
+
+Bloqueos:
+- Wix documenta que Patch no funciona en colecciones de aplicaciones Wix. Falta confirmar que la colección física `CajaActual` es elegible.
+- Falta probar el filtro sobre el campo anidado `sequenceCounters.seqGlobal`, la respuesta de condición no coincidente y el hook `CajaActual_beforeUpdate` bajo Patch.
+- Los productores actuales incluyen el writer normal de `cajas.web.js`, cierre Z mediante `saveItem`, y las proyecciones/sesiones QA de `tpvQaRepository.js`. Deben migrarse coordinadamente para evitar escritores no serializados.
+- Requiere pruebas Wix Sandbox con writers concurrentes y reintentos idempotentes.
+
+Referencias oficiales:
+- [SDK items.patch](https://dev.wix.com/docs/sdk/data-items-sdk/data/items/patch)
+- [SDK incrementField](https://dev.wix.com/docs/sdk/data-items-sdk/data/items/wix-data-patch/increment-field)
+- [REST Patch Data Item](https://dev.wix.com/docs/api-reference/business-solutions/cms/data-items/patch-data-item)
+
+El sitio Marian Madrid sigue en estado Draft según el contexto Wix consultado. La PR #468 está abierta; CI se encuentra en ejecución y no se ha fusionado. No se han realizado cambios runtime ni escrituras CMS.
