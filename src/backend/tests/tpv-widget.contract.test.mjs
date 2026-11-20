@@ -7,7 +7,7 @@ const controller = await readFile(new URL("../../public/tpvPageController.js", i
 const cashierBackend = await readFile(new URL("../cajas.web.js", import.meta.url), "utf8");
 const catalogBackend = await readFile(new URL("../tpv/tpvCatalogo.web.js", import.meta.url), "utf8");
 
-test("TPV controller exposes authenticated QA session and Bookings catalog methods", () => {
+test("TPV controller exposes authenticated QA session and Bookings catalog methods", async () => {
     assert.match(controller, /obtenerSesionCajaQA/);
     assert.match(controller, /obtenerServicios/);
     assert.match(controller, /obtenerProfesionales/);
