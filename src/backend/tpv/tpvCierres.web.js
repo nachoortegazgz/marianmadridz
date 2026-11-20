@@ -7,7 +7,7 @@ import { buildSandboxSessionSummary } from "backend/tpv/tpvCierresCore";
 import { assertTpvSandboxEnabled, fromMinorUnits, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
 import { wql } from "backend/dataAccess";
 
-export const obtenerResumenSesionSANDBOX = webMethod(
+export const obtenerResumenSesion = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
         const traceId = makeTraceId("tpv-sandbox-summary");
@@ -43,7 +43,7 @@ export const obtenerResumenSesionSANDBOX = webMethod(
     }
 );
 
-export const generarTicketXSANDBOX = webMethod(
+export const generarTicketX = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
         let persisted = false;
@@ -87,7 +87,7 @@ export const generarTicketXSANDBOX = webMethod(
     }
 );
 
-export const cerrarTicketZSANDBOX = webMethod(
+export const cerrarTicketZ = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
         let persisted = false;
@@ -148,7 +148,7 @@ export const cerrarTicketZSANDBOX = webMethod(
             }
             const differenceMinor = countedMinor - totals.expectedCashMinor;
             const reason = String(input.differenceReason || "").trim();
-            if (differenceMinor !== 0 && reason.length < 3) throw new Error("TPV_SANDBOX_CLOSING_DIFFERENCE_REASON_REQUIRED");
+            if (differenceMinor !== 0 && reason.length < 3) throw new Error("TPV_SANDBOX_COUNT_DIFFERENCE_REASON_REQUIRED");
 
             const existing = await querySandboxRecords(TPV_SANDBOX_COLLECTIONS.TICKET_Z, wql.eq("sessionId", session.sessionId));
             if (existing.length && existing[0].closed !== true) throw new Error("TPV_SANDBOX_Z_RECORD_INVALID");

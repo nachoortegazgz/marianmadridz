@@ -3,7 +3,7 @@ import { requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { assertTpvSandboxEnabled, normalizePaymentMethod, toMinorUnits } from "backend/tpv/tpvUtils";
 
-export const validarDesglosePagosSANDBOX = webMethod(
+export const validarDesglosePagos = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
         const traceId = makeTraceId("tpv-sandbox-payment-validation");

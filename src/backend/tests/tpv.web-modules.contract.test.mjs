@@ -168,16 +168,18 @@ test("TPV WebMethods isolate synthetic SANDBOX writes from operational ledgers",
     const joined = contents.join("\n");
     assert.match(joined, /webMethod\(\s*Permissions\.SiteMember/);
     assert.match(joined, /requireCajero/);
-    assert.match(joined, /registrarVentaSANDBOX/);
-    assert.match(joined, /solicitarDevolucionSANDBOX/);
-    assert.match(joined, /cerrarTicketZSANDBOX/);
+    assert.match(joined, /registrarVenta/);
+    assert.match(joined, /solicitarDevolucion/);
+    assert.match(joined, /cerrarTicketZ/);
     assert.match(joined, /TPV_SANDBOX_COLLECTIONS/);
     assert.doesNotMatch(joined, /contactsV5|extendedBookings|giftVouchers|staffMembers|staff\?\.memberId/);
     const cashierModule = await source("tpv/tpvCaja.web.js");
     assert.doesNotMatch(cashierModule, /backend\/cajas\.web|CajaActual|getCashierState/);
-    assert.match(joined, /TPV_OPERATIONAL_SALE_WRITES_DISABLED/);
     assert.match(joined, /TPV_OPERATIONAL_REFUNDS_DISABLED/);
     const sales = await source("tpv/tpvVentas.web.js");
+    assert.match(sales, /realPayment: false/);
+    assert.match(sales, /fiscalLedgerWritten: false/);
+    assert.match(sales, /TPV_SANDBOX_SALE_MUST_BE_FULLY_PAID/);
     const refunds = await source("tpv/tpvDevoluciones.web.js");
     const movements = await source("tpv/tpvMovimientos.web.js");
     const cash = await source("tpv/tpvCaja.web.js");
@@ -209,7 +211,7 @@ test("TPV WebMethods isolate synthetic SANDBOX writes from operational ledgers",
     assert.match(config, /FISCAL_WRITES_ENABLED: false/);
     assert.match(config, /SYNTHETIC_ONLY: true/);
     assert.match(config, /TPV_SANDBOX_RUNTIME_POLICY = Object\.freeze\(\{[\s\S]*?ENABLED: true/);
-    assert.match(await readFile(new URL("../public/tpvPageController.js", backendRoot), "utf8"), /inicializarCajaSANDBOX/);
+    assert.match(await readFile(new URL("../public/tpvPageController.js", backendRoot), "utf8"), /inicializarCaja/);
     assert.match(await readFile(new URL("../public/tpvPageController.js", backendRoot), "utf8"), /sandboxReady/);
     assert.match(config, /SANDBOX_RUN_ID: "TPVSANDBOX-DEV-/);
     assert.match(config, /TPV_SANDBOX_EVENT_MOVEMENT_TYPES/);
@@ -279,7 +281,7 @@ test("TPV page is wired to the shared HTML bridge and its versioned iframe proto
     assert.doesNotMatch(page, /TPV_REQUEST_STATE|TPV_READY|getCashierState/);
 
     assert.match(controller, /MESSAGE_TYPES\.READY/);
-    assert.match(controller, /MESSAGE_TYPES\.CONTEXT/);
+    assert.match(controller, /onContextReady:/);
     assert.match(controller, /"CASHIER_STATE"/);
     assert.match(controller, /CASHIER_STATE_RES/);
     assert.match(controller, /CATALOG_SERVICES/);
@@ -289,11 +291,11 @@ test("TPV page is wired to the shared HTML bridge and its versioned iframe proto
     assert.match(controller, /obtenerProductos/);
     assert.match(controller, /obtenerVariantesProducto/);
     assert.match(controller, /validarVentaBorrador/);
-    assert.match(controller, /generarTicketXSANDBOX/);
+    assert.match(controller, /generarTicketX/);
     assert.match(controller, /SANDBOX_TICKET_X/);
     assert.match(controller, /consultarTarjetaRegalo/);
     assert.match(controller, /GIFT_CARD_BALANCE/);
-    assert.match(controller, /obtenerSesionCajaSANDBOX/);
+    assert.match(controller, /obtenerSesionCaja/);
     assert.match(controller, /reply\(responseType, result, message\)/);
     assert.doesNotMatch(controller, /\bgetCashierState\b/);
 
@@ -358,9 +360,9 @@ test("legacy TPV pages and direct operational writers are absent from the active
 test("TPV public utility module exposes only the configuration contract consumed by the page controller", async () => {
     const utilities = await source("tpv/tpvUtils.web.js");
     const controller = await readFile(new URL("../public/tpvPageController.js", backendRoot), "utf8");
-    assert.match(utilities, /export const obtenerConfiguracionTPVSANDBOX = webMethod/);
+    assert.match(utilities, /export const obtenerConfiguracionTPV = webMethod/);
     assert.doesNotMatch(utilities, /validarImportesTPVSANDBOX|normalizePaymentMethod|toMinorUnits/);
-    assert.match(controller, /obtenerConfiguracionTPVSANDBOX/);
+    assert.match(controller, /obtenerConfiguracionTPV/);
     assert.doesNotMatch(controller, /validarImportesTPVSANDBOX/);
 });
 

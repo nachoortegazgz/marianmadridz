@@ -27,23 +27,13 @@ export const validarVentaBorrador = webMethod(
             return {
                 status: "ERROR",
                 data: null,
-                error: { code: String(error?.message || "TPV_SALE_VALIDATION_FAILED"), message: "El borrador no supera las validaciones." },
+                error: { code: "TPV_SALE_VALIDATION_FAILED", reasonCode: String(error?.message || "TPV_SALE_VALIDATION_FAILED"), message: "El borrador no supera las validaciones." },
             };
         }
     }
 );
 
-// The legacy writer is intentionally blocked. registrarVentaSANDBOX writes only
-// synthetic logical events through MovimientosCaja and CajaActual projection.
 export const registrarVenta = webMethod(
-    Permissions.SiteMember,
-    async () => {
-        await requireCajero(makeTraceId("tpv-sale-write-block"));
-        return disabledResult("TPV_OPERATIONAL_SALE_WRITES_DISABLED");
-    }
-);
-
-export const registrarVentaSANDBOX = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
         let persisted = false;

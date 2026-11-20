@@ -5,7 +5,7 @@ import { TPV_SANDBOX_COLLECTIONS, TPV_SANDBOX_RUNTIME_POLICY } from "backend/int
 import { insertSandboxEvent, latestOpenSandboxSession, withSandboxSessionLock } from "backend/tpv/tpvSandboxRepository";
 import { assertTpvSandboxEnabled, fromMinorUnits, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
 
-export const registrarMovimientoCajaSANDBOX = webMethod(
+export const registrarMovimientoCaja = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
         let persisted = false;

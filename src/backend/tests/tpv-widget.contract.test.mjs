@@ -8,7 +8,7 @@ const cashierBackend = await readFile(new URL("../cajas.web.js", import.meta.url
 const catalogBackend = await readFile(new URL("../tpv/tpvCatalogo.web.js", import.meta.url), "utf8");
 
 test("TPV controller exposes authenticated SANDBOX session and Bookings catalog methods", async () => {
-    assert.match(controller, /obtenerSesionCajaSANDBOX/);
+    assert.match(controller, /obtenerSesionCaja/);
     assert.match(controller, /obtenerServicios/);
     assert.match(controller, /obtenerProfesionales/);
     assert.match(controller, /consultarTarjetaRegalo/);
@@ -19,7 +19,7 @@ test("TPV controller exposes authenticated SANDBOX session and Bookings catalog 
         assert.match(permissions, new RegExp(capability + ": isAdmin"));
     }
     assert.match(controller, /MESSAGE_TYPES\.READY/);
-    assert.match(controller, /MESSAGE_TYPES\.CONTEXT/);
+    assert.match(controller, /onContextReady:/);
     assert.match(controller, /"CASHIER_STATE"/);
     assert.match(controller, /"CATALOG_SERVICES"/);
     assert.match(controller, /"CATALOG_STAFF"/);
@@ -79,7 +79,7 @@ test("TPV HTML request protocol is dispatched for the active widget workflows", 
     assert.match(controller, /protocolVersion: 1/);
     assert.match(controller, /environment: sandboxReady \? "SANDBOX" : "UNAVAILABLE"/);
     assert.match(controller, /sandboxReady/);
-    assert.match(controller, /inicializarCajaSANDBOX/);
+    assert.match(controller, /inicializarCaja/);
     assert.match(controller, /sandboxReady/);
     assert.match(controller, /syntheticOnly: true/);
     assert.match(controller, /case MESSAGE_TYPES\.READY:\s+return;/);
