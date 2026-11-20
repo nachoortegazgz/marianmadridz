@@ -1081,6 +1081,16 @@ export async function load(url, context, nextLoad) {
       .replace("ALLOW_SIMULATION_RECORDS: false", "ALLOW_SIMULATION_RECORDS: true");
     return { format: "module", source, shortCircuit: true };
   }
+  if (url === 'mock:wix-fetch') {
+    // Velo exposes fetch as a named export from wix-fetch. Node's offline
+    // harness uses the native fetch implementation only as a test adapter;
+    // production code still imports the Wix module.
+    return {
+      format: 'module',
+      source: 'export const fetch = (...args) => globalThis.fetch(...args);\\nexport default fetch;\\n',
+      shortCircuit: true,
+    };
+  }
   if (url.startsWith('mock:wix-data') || url === 'mock:@wix/data' || url === 'mock:@wix/essentials') {
     // @wix/data (API v2, usado por dataAccess.js) -> adaptador v2 sobre el
     // mismo store del mock. 'wix-data' (builder legacy v1) -> mock clasico.
