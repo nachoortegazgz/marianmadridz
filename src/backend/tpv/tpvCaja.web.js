@@ -2,7 +2,7 @@ import { Permissions, webMethod } from "wix-web-module";
 import { requireAdmin, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { TPV_SANDBOX_COLLECTIONS, TPV_SANDBOX_RUNTIME_POLICY } from "backend/internalConfig";
-import { appendSandboxAudit, insertSandboxEvent, latestOpenSandboxSession, querySandboxRecords, withSandboxSessionLock } from "backend/tpv/tpvSandboxRepository";
+import { appendSandboxAudit, initializeSandboxCaja, insertSandboxEvent, latestOpenSandboxSession, querySandboxRecords, withSandboxSessionLock } from "backend/tpv/tpvSandboxRepository";
 import { buildSandboxSessionSummary } from "backend/tpv/tpvCierresCore";
 import { wql } from "backend/dataAccess";
 import { assertTpvSandboxEnabled, fromMinorUnits, makeSyntheticPayload, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
@@ -18,6 +18,41 @@ function madridDayKey(date = new Date()) {
     const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
     return values.year + values.month + values.day;
 }
+
+export const inicializarCajaSANDBOX = webMethod(
+    Permissions.SiteMember,
+    async () => {
+        const traceId = makeTraceId("tpv-sandbox-bootstrap");
+        await requireAdmin(traceId);
+        assertTpvSandboxEnabled();
+        try {
+            const result = await initializeSandboxCaja();
+            return {
+                status: "SUCCESS",
+                data: {
+                    sandboxReady: true,
+                    initialized: result.created,
+                    cashRegisterStatus: result.item.cashRegisterStatus,
+                    snapshotSource: result.item.snapshotSource,
+                },
+                error: null,
+                traceId,
+                isSynthetic: true,
+                realPayment: false,
+            };
+        } catch (error) {
+            return {
+                status: "ERROR",
+                data: null,
+                error: { code: String(error?.message || "TPV_SANDBOX_BOOTSTRAP_FAILED") },
+                traceId,
+                persisted: false,
+                isSynthetic: true,
+                realPayment: false,
+            };
+        }
+    }
+);
 
 export const obtenerSesionCajaSANDBOX = webMethod(
     Permissions.SiteMember,

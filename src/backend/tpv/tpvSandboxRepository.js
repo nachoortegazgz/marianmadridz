@@ -276,6 +276,43 @@ async function _ensureCajaActualForSandbox() {
     return caja;
 }
 
+export async function initializeSandboxCaja() {
+    assertTpvSandboxEnabled();
+    const existing = await _getCajaActual();
+    if (existing) {
+        assertSandboxCajaWritable(existing, { allowBootstrap: true });
+        return { item: existing, created: false };
+    }
+
+    const seed = {
+        _id: SINGLETONS.CAJA_ACTUAL_ITEM_ID,
+        singletonKey: SINGLETONS.CAJA_PRINCIPAL,
+        cashRegisterStatus: "CERRADA",
+        snapshotSource: "TPV_SANDBOX_INITIALIZED",
+        traceId: SANDBOX_RUN_ID,
+        sequenceCounters: { appliedMovementIds: [] },
+        conceptOperations: {
+            tpvSandbox: {
+                sandboxRunId: SANDBOX_RUN_ID,
+                sessionId: null,
+                appliedMovementIds: [],
+            },
+        },
+    };
+
+    try {
+        const item = await insertItem(BUSINESS_COLLECTIONS.CAJA_ACTUAL, seed);
+        assertSandboxCajaWritable(item, { allowBootstrap: true });
+        return { item, created: true };
+    } catch (error) {
+        // Concurrent initializers may race on the fixed singleton _id.
+        const current = await _getCajaActual();
+        if (!current) throw error;
+        assertSandboxCajaWritable(current, { allowBootstrap: true });
+        return { item: current, created: false };
+    }
+}
+
 async function _getCajaActual() {
     const result = await queryItems({
         dataCollectionId: BUSINESS_COLLECTIONS.CAJA_ACTUAL,

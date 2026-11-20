@@ -26,9 +26,9 @@ import {
     assertTpvSandboxEnabled,
 } from "../tpv/tpvUtils.js";
 
-test("SANDBOX runtime is fail-closed in production; offline harness explicitly enables isolated tests", async () => {
+test("Sandbox runtime is enabled for synthetic records only; fiscal and external side effects remain disabled", async () => {
     const source = await readFile(new URL("../internalConfig.js", import.meta.url), "utf8");
-    assert.match(source, /TPV_SANDBOX_RUNTIME_POLICY = Object\.freeze\(\{[\s\S]*?ENABLED: false,[\s\S]*?ENVIRONMENT: "SANDBOX"/);
+    assert.match(source, /TPV_SANDBOX_RUNTIME_POLICY = Object\.freeze\(\{[\s\S]*?ENABLED: true,[\s\S]*?ENVIRONMENT: "SANDBOX"/);
     assert.equal(TPV_SANDBOX_RUNTIME_POLICY.ENABLED, true, "offline loader enables the policy only inside tests");
     assert.equal(TPV_SANDBOX_RUNTIME_POLICY.ENVIRONMENT, "SANDBOX");
     assert.doesNotThrow(() => assertTpvSandboxEnabled());

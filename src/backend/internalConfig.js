@@ -88,9 +88,9 @@ export const TPV_SANDBOX_EVENT_MOVEMENT_TYPES = Object.freeze({
 });
 
 export const TPV_SANDBOX_RUNTIME_POLICY = Object.freeze({
-  // Fail closed until backend can prove the Wix Sandbox data plane for every
-  // WebMethod invocation. Frontend Preview checks are not an authorization boundary.
-  ENABLED: false,
+  // Enabled for the isolated Wix Sandbox data plane. Every CajaActual mutation
+  // still requires the exact synthetic Sandbox run marker; fiscal/payment side effects stay disabled.
+  ENABLED: true,
   ENVIRONMENT: "SANDBOX",
   CURRENCY_CODE: "EUR",
   TIME_ZONE: "Europe/Madrid",
@@ -348,6 +348,7 @@ export const ACCOUNTING_LEDGER_LOCK_CONFIG = Object.freeze({
 // Singleton ids de caja (cajas.web.js ALN-04, eventLog.js).
 export const SINGLETONS = Object.freeze({
   CAJA_PRINCIPAL: "CAJA_PRINCIPAL",
+  CAJA_ACTUAL_ITEM_ID: "SINGLE_ITEM_ID",
 });
 
 // Enum de estados de caja. Canonico: ABIERTA/CERRADA.

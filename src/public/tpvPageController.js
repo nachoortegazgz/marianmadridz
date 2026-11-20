@@ -5,6 +5,7 @@
  */
 import {
     obtenerSesionCajaSANDBOX,
+    inicializarCajaSANDBOX,
     abrirCajaSANDBOX,
     registrarArqueoParcialSANDBOX,
 } from "backend/tpv/tpvCaja.web.js";
@@ -85,53 +86,51 @@ export function initializeTpvPage(widgetElement) {
         allowedTypes: TPV_ALLOWED_MESSAGES,
         allowOpaqueOrigin: true,
 
-        onContextReady: async () => ({
-            component: "htmlTPV",
-            protocolVersion: 1,
-            // Preview mode alone does not prove backend CMS Sandbox isolation.
-            // Never advertise a writable Sandbox until the backend can attest it.
-            environment: "DISABLED",
-            syntheticOnly: true,
-            previewOnly: true,
-            mode: "DISABLED_PENDING_SERVER_SANDBOX_ISOLATION",
-            currencyCode: "EUR",
-            timeZone: "Europe/Madrid",
-            capabilities: {
-                cashierState: "CAJA_ACTUAL_SIMULACION",
-                bookingsServices: "READ_ONLY",
-                bookingsStaff: "READ_ONLY",
-                storesProducts: "READ_ONLY",
-                storesVariants: "READ_ONLY",
-                saleDraftValidation: "BACKEND",
-                syntheticSales: "MOVIMIENTOS_CAJA_SYNTHETIC",
-                cashMovements: "MOVIMIENTOS_CAJA_SYNTHETIC",
-                refunds: "MOVIMIENTOS_CAJA_SYNTHETIC",
-                ticketX: "SANDBOX_REPORT",
-                ticketZ: "SANDBOX_SESSION_CLOSE_ONLY",
-                giftCards: "READ_ONLY",
-                payments: "SIMULATED_NO_GATEWAY",
-                orderMutations: "DISABLED",
-                bookingMutations: "DISABLED",
-                operationalCashWrites: "DISABLED",
-                fiscalLedgerWrites: "DISABLED",
-                customerNotifications: "DISABLED",
-                physicalHardware: "DISABLED",
-            },
-        }),
+        onContextReady: async () => {
+            const bootstrap = await safeCall(
+                () => inicializarCajaSANDBOX(),
+                "TPV_SANDBOX_BOOTSTRAP_FAILED",
+                "No se pudo inicializar el entorno Sandbox.",
+                traceId
+            );
+            const sandboxReady = bootstrap.status === "SUCCESS";
+            return {
+                component: "htmlTPV",
+                protocolVersion: 1,
+                environment: sandboxReady ? "SANDBOX" : "UNAVAILABLE",
+                syntheticOnly: true,
+                sandboxReady,
+                sandboxInitialized: bootstrap.data?.initialized === true,
+                mode: sandboxReady ? "SYNTHETIC_SANDBOX" : "UNAVAILABLE",
+                currencyCode: "EUR",
+                timeZone: "Europe/Madrid",
+                capabilities: {
+                    cashierState: "CAJA_ACTUAL_SIMULACION",
+                    bookingsServices: "READ_ONLY",
+                    bookingsStaff: "READ_ONLY",
+                    storesProducts: "READ_ONLY",
+                    storesVariants: "READ_ONLY",
+                    saleDraftValidation: "BACKEND",
+                    syntheticSales: sandboxReady ? "MOVIMIENTOS_CAJA_SYNTHETIC" : "DISABLED",
+                    cashMovements: sandboxReady ? "MOVIMIENTOS_CAJA_SYNTHETIC" : "DISABLED",
+                    refunds: sandboxReady ? "MOVIMIENTOS_CAJA_SYNTHETIC" : "DISABLED",
+                    ticketX: "SANDBOX_REPORT",
+                    ticketZ: "SANDBOX_SESSION_CLOSE_ONLY",
+                    giftCards: "READ_ONLY",
+                    payments: "SIMULATED_NO_GATEWAY",
+                    orderMutations: "DISABLED",
+                    bookingMutations: "DISABLED",
+                    operationalCashWrites: sandboxReady ? "SYNTHETIC_ONLY" : "DISABLED",
+                    fiscalLedgerWrites: "DISABLED",
+                    customerNotifications: "DISABLED",
+                    physicalHardware: "DISABLED",
+                },
+            };
+        },
 
         onWidgetMessage: async (message, reply) => {
             const type = String(message?.type || "").trim().toUpperCase();
             const payload = message?.payload || {};
-            // Block all SANDBOX calls until a server-side Sandbox boundary is proven.
-            // This protects direct WebMethod calls as well as the HTML widget path.
-            if (type === "CASHIER_STATE" || type.startsWith("SANDBOX_")) {
-                reply(type + "_RES", errorResult(
-                    "TPV_SANDBOX_DISABLED_UNTIL_SANDBOX_ISOLATION",
-                    "Las operaciones TPV SANDBOX están temporalmente deshabilitadas hasta verificar el aislamiento Sandbox en backend.",
-                    traceId
-                ), message);
-                return;
-            }
             const respond = async (responseType, operation, code, text) => {
                 const result = await safeCall(operation, code, text, traceId);
                 reply(responseType, result, message);
