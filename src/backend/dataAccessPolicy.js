@@ -6,7 +6,6 @@ import {
     CONTROL_OPERATIVO_NON_CANONICAL_FIELDS,
     RECORD_TYPE,
     TPV_QA_RUNTIME_POLICY,
-    TPV_QA_COLLECTIONS,
 } from "backend/internalConfig";
 
 function _policyError(code) {
@@ -120,6 +119,7 @@ export function assertInsertAllowed(collection, item) {
             payload.realPayment !== false ||
             payload.externalSideEffects !== false ||
             !String(item.traceId || "").startsWith(expectedTracePrefix) ||
+            !payload.requestFingerprint ||
             !/^[a-f0-9]{64}$/i.test(String(item.hash || "")) ||
             Number(item.sequenceNumber) !== 0
         ) {
