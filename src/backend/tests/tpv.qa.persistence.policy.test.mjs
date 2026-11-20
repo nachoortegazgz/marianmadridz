@@ -345,3 +345,23 @@ function getWebMethodSource(source, methodName) {
     const nextExport = source.indexOf("\nexport const ", start + declaration.length);
     return source.slice(start, nextExport < 0 ? source.length : nextExport);
 }
+
+
+test("Sandbox repository rejects an unmarked CajaActual before any event insert", async () => {
+    const repository = await readFile(new URL("../tpv/tpvSandboxRepository.js", import.meta.url), "utf8");
+    const initializeStart = repository.indexOf("export async function initializeSandboxCaja(");
+    const initializeEnd = repository.indexOf("\nasync function _getCajaActual", initializeStart);
+    assert.notEqual(initializeStart, -1);
+    assert.notEqual(initializeEnd, -1);
+    const initializeBlock = repository.slice(initializeStart, initializeEnd);
+    assert.match(initializeBlock, /if \(existing\) \{[\s\S]*?assertSandboxCajaWritable\(existing, \{ allowBootstrap: true \}\)/);
+    assert.ok(initializeBlock.indexOf("assertSandboxCajaWritable(existing") < initializeBlock.indexOf("await insertItem("));
+
+    const insertStart = repository.indexOf("export async function insertSandboxEvent(");
+    const insertEnd = repository.indexOf("\nexport async function querySandboxRecords", insertStart);
+    assert.notEqual(insertStart, -1);
+    assert.notEqual(insertEnd, -1);
+    const insertBlock = repository.slice(insertStart, insertEnd);
+    assert.match(insertBlock, /const caja = await _getCajaActual\(\);\s*assertSandboxCajaWritable\(caja\);/);
+    assert.ok(insertBlock.indexOf("assertSandboxCajaWritable(caja)") < insertBlock.indexOf("await insertItem("));
+});
