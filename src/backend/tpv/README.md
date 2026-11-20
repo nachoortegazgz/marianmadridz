@@ -112,3 +112,5 @@ El controlador del widget solicita `inicializarCajaSANDBOX` al completar el hand
 La apertura de sesión y los eventos posteriores requieren el marcador `TPV_SANDBOX_INITIALIZED` o `TPV_SANDBOX_SYNTHETIC` y el `SANDBOX_RUN_ID` exacto. Pagos reales, escrituras fiscales, notificaciones, hardware y mutaciones de Bookings/Stores permanecen deshabilitados.
 
 El arranque es repetible: los cajeros autorizados pueden consultar un marcador Sandbox ya inicializado; únicamente un administrador puede crear el singleton inicial cuando no existe. Una fila Online con un origen/run ID diferente se rechaza sin modificación.
+
+Las pruebas contractuales mantienen sus rutas históricas para que el workflow de regresión existente las ejecute; su contenido valida los contratos Sandbox actuales.
