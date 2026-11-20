@@ -393,7 +393,7 @@ test('FLOW-CAJA-01 flujo continuo: venta EFECTIVO -> caja incrementada -> cierre
 
   // Paso 3: cierre Z del dia de la operacion
   const diaKey = mov.invoiceIssueDate || new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Madrid' });
-  const z = await cajas.registerZClosing(diaKey, { recordDomain: 'CASH_REGISTER' });
+  const z = await cajas.registerZClosingInternal(diaKey, { recordDomain: 'CASH_REGISTER', closedBy: GUID_ADMIN_RESOURCE, traceId: 'flow-caja-z-manual-test' });
   assert.strictEqual(z.status, 'SUCCESS', JSON.stringify(z.error));
   assert.ok(z.data._id.startsWith('Z_'));
   const closedState = await cajas.getCashierState({});
@@ -402,7 +402,7 @@ test('FLOW-CAJA-01 flujo continuo: venta EFECTIVO -> caja incrementada -> cierre
   assert.equal(closedState.data.closedByName, 'Marta');
 
   // Paso 3b: segundo cierre Z mismo dia => Z_ALREADY_CLOSED (invariantismo)
-  const z2 = await cajas.registerZClosing(diaKey, { recordDomain: 'CASH_REGISTER' });
+  const z2 = await cajas.registerZClosingInternal(diaKey, { recordDomain: 'CASH_REGISTER', closedBy: GUID_ADMIN_RESOURCE, traceId: 'flow-caja-z-duplicate-test' });
   assert.strictEqual(z2.status, 'ERROR');
   assert.strictEqual(z2.error.code, 'Z_ALREADY_CLOSED');
 
@@ -433,7 +433,7 @@ test('FLOW-CAJA-01 flujo continuo: venta EFECTIVO -> caja incrementada -> cierre
     traceId: 'trace-qa-historic-close-2020',
   });
   wixDataMock._store.set('MovimientosCaja', movCol);
-  const zOld = await cajas.registerZClosing(diaCerrado, { recordDomain: 'CASH_REGISTER' });
+  const zOld = await cajas.registerZClosingInternal(diaCerrado, { recordDomain: 'CASH_REGISTER', closedBy: GUID_ADMIN_RESOURCE, traceId: 'flow-caja-z-old-test' });
   assert.strictEqual(zOld.status, 'SUCCESS', JSON.stringify(zOld.error));
   // AUDIT-TEST-PURITY: transaccion con transactionId PROPIO. La primera version
   // del test reutilizaba 'offline-tx-0001' y la capa de idempotencia devolvia el
