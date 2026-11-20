@@ -1,4 +1,4 @@
-# TPV SANDBOX — módulos Velo
+> **Estado actualizado (2026-11-20, main a231e5c):** PR #512 integrada. El simulador de proveedor sintético y fixture de identidades están versionados. CI post-merge SUCCESS: Layer 1, Layer 2, regresión offline completa, auditoría npm, contratos SDK Wix/eCommerce/TPV, ESLint y Gitleaks. No hay evidencia de Preview, preseed ejecutado ni E2E runtime. No publicar ni declarar listo el TPV hasta obtener esa evidencia.
 
 > **Estado actualizado (2026-11-20, main 566a819):** PR #496 normalizó los contratos WebMethod y PR #497 corrigió el encabezado arquitectónico del controlador y el indicador `persisted` de respuestas de lectura. Los workflows del PR #497 y los dos workflows post-merge del commit `566a819719d945e690f85836f91a424afb9d959f` finalizaron en SUCCESS (runs `44777610050` y `44777610037`). La suite offline registró 75 suites / 704 tests, 0 fallos. La persistencia sintética usa `tpvSandboxRepository.js` sobre CMS nativo y comprueba los marcadores de `CajaActual` antes de escribir. No hay evidencia de ejecución Wix Preview, seed de identidades ni E2E runtime. No publicar ni declarar listo el TPV hasta obtener esa evidencia.
 
