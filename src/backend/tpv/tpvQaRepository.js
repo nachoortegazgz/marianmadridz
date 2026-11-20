@@ -280,7 +280,7 @@ async function _ensureCajaActualForQa() {
     let caja = await _getCajaActual();
     if (caja) return caja;
     const initial = {
-        _id: SINGLETONS.CAJA_PRINCIPAL,
+        _id: "SINGLE_ITEM_ID",
         singletonKey: SINGLETONS.CAJA_PRINCIPAL,
         cashRegisterStatus: "CERRADA",
         openedAt: null,
