@@ -375,7 +375,7 @@ test("Sandbox bootstrap is read-only and requires pre-seeded Sandbox records", a
 test("TPV locks validate the pre-seeded Sandbox CajaActual before accessing ControlOperativo", async () => {
     const repository = await readFile(new URL("../tpv/tpvSandboxRepository.js", import.meta.url), "utf8");
     const helperStart = repository.indexOf("async function _ensureCajaActualForSandbox(");
-    const helperEnd = repository.indexOf("\nexport async function seedSandboxIdentities", helperStart);
+    const helperEnd = repository.indexOf("\n}\n", helperStart) + 2;
     const lockStart = repository.indexOf("async function withSandboxScopedLock(");
     const lockEnd = repository.indexOf("\nexport async function withSandboxSaleLock", lockStart);
     assert.notEqual(helperStart, -1);
