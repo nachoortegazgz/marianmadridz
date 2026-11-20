@@ -66,8 +66,8 @@ import {
     normalizeMovementKeys,
 } from "backend/internalConfig";
 
-import { readInvoiceNumber, readInvoiceIssueDate, readFiscalPayload, readMovementField, readMovementHash, readInvoiceType } from "backend/data";
-import { isExplicitSimulationLedgerRecord } from "backend/validation";
+import { readFiscalPayload, readMovementField, readMovementHash } from "backend/data";
+import { isExplicitSimulationLedgerRecord, assertMovimientosCajaRequiredFields } from "backend/validation";
 
 import { hashChain } from "backend/securityEngine";
 import { buildEventLogFiscalChainPayload } from "backend/fiscalHashPayload";
@@ -431,6 +431,17 @@ function _buildFiscalPayloadSnapshot({
 
 export async function registrarEventoEconomico(input) {
     const traceId = _safeTrim(input?.traceId) || makeTraceId("evento");
+    if (_safeTrim(input?.eventType).toUpperCase() === EVENT_TYPE.CIERRE_Z) {
+        return {
+            status: "ERROR",
+            data: null,
+            error: {
+                code: "Z_CLOSING_REQUIRES_CANONICAL_WRITER",
+                message: "Los cierres Z solo pueden registrarse mediante el escritor de HistoricoCierresZ.",
+                traceId,
+            },
+        };
+    }
     if (FISCAL_RUNTIME_POLICY.ALLOW_SIMULATION_RECORDS !== true && isExplicitSimulationLedgerRecord(input)) {
         return {
             status: "ERROR",
@@ -630,7 +641,7 @@ export async function registrarEventoEconomico(input) {
         movementType: _safeTrim(input.movementType),
         eventType: _safeTrim(input.eventType),
         paymentMethod: _safeTrim(input.paymentMethod),
-        channelType: _safeTrim(input.channelType) || "POS",
+        channelType: _safeTrim(input.channelType).toUpperCase(),
 
         // MATRIZ v15 (decision de usuario): amount y totalAmount COEXISTEN
         // como claves canonicas propias hasta cerrar el ADR de la formula
@@ -763,6 +774,7 @@ export async function registrarEventoEconomico(input) {
     try {
         // Fencing check immediately before the append-only write.
         await assertFiscalLedgerLock(ledgerLock);
+        assertMovimientosCajaRequiredFields(doc);
         cabecera = await dalInsert(MOVIMIENTOS_CAJA_COL, doc);
     } catch (err) {
         // A rejected insert can be an uncertain network outcome. Resolve by
@@ -904,45 +916,7 @@ export async function registrarEventoEconomico(input) {
 
 async function _proyectarSegunTipoEvento(cabecera, traceId) {
     if (cabecera.eventType === EVENT_TYPE.CIERRE_Z) {
-        await _proyectarCierreZ(cabecera, traceId);
-    }
-}
-
-async function _proyectarCierreZ(cabecera, traceId) {
-    // Persist only fields declared in the physical HistoricoCierresZ schema.
-    // Fiscal detail not represented by dedicated columns stays in OBJECT fields.
-    try {
-        const zCloseDate = readInvoiceIssueDate(cabecera);
-        const fiscalPayload = readFiscalPayload(cabecera) || {};
-        await dalInsert(HISTORICO_CIERRES_Z_COL, {
-            _id: `Z_${zCloseDate}`,
-            closeDate: zCloseDate,
-            operationDate: zCloseDate,
-            closingSource: "MOVIMIENTOS_CAJA_EVENT",
-            totalesMedioPago: fiscalPayload.saldosPorMetodo || {},
-            taxTypeBreakdown: fiscalPayload.desglosePorTipoImpositivo || [],
-            movementTypeBreakdown: fiscalPayload.desglosePorTipoOperacion || [],
-            summaryData: {
-                sourceEventId: cabecera._id,
-                breakdownByRegime: fiscalPayload.desglosePorRegimen || [],
-                verifactuSummary: fiscalPayload.resumenVerifactu || {},
-            },
-            invoiceData: {
-                numSerieFactura: readInvoiceNumber(cabecera),
-                tipoFactura: readInvoiceType(cabecera),
-                fechaExpedicionFactura: zCloseDate,
-            },
-            estadoEnvioAEAT: "PENDIENTE",
-            traceId,
-            _createdDate: new Date(),
-        });
-    } catch (err) {
-        const msg = String(err?.message || "");
-        if (msg.includes("WDE0123") || msg.includes("Duplicated") || msg.includes("already exists")) {
-            log.info("CierreZ ya existe (idempotente)", { traceId, fecha: readInvoiceIssueDate(cabecera) });
-            return;
-        }
-        throw err;
+        throw new Error("Z_CLOSING_REQUIRES_CANONICAL_WRITER");
     }
 }
 // ============================================================================
