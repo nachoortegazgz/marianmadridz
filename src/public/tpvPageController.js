@@ -119,7 +119,7 @@ export function initializeTpvPage(widgetElement) {
 
             switch (type) {
             case "CASHIER_STATE":
-                await respond("CASHIER_STATE_RES", () => obtenerSesionCaja(), "TPV_QA_SESSION_READ_FAILED", "No se pudo consultar la sesion QA.");
+                await respond("CASHIER_STATE_RES", () => obtenerSesionCaja(), "TPV_QA_SESSION_READ_FAILED", "No se pudo consultar la sesión Sandbox.");
                 return;
             case "CATALOG_SERVICES":
                 await respond("CATALOG_SERVICES_RES", () => obtenerServicios({ limit: 100, offset: 0 }), "TPV_SERVICES_READ_FAILED", "No se pudieron consultar los servicios.");
@@ -140,19 +140,19 @@ export function initializeTpvPage(widgetElement) {
                 await respond("GIFT_CARD_BALANCE_RES", () => consultarTarjetaRegalo({ code: payload.code }), "TPV_GIFT_CARD_LOOKUP_FAILED", "No se pudo consultar la tarjeta regalo.");
                 return;
             case "CONFIG":
-                await respond("CONFIG_RES", () => obtenerConfiguracionTPV(), "TPV_CONFIG_FAILED", "No se pudo consultar la configuracion QA.");
+                await respond("CONFIG_RES", () => obtenerConfiguracionTPV(), "TPV_CONFIG_FAILED", "No se pudo consultar la configuración Sandbox.");
                 return;
             case "PERMISSIONS":
                 await respond("PERMISSIONS_RES", () => obtenerPermisosTPV(), "TPV_PERMISSIONS_FAILED", "No se pudieron consultar los permisos.");
                 return;
             case "SESSION_OPEN":
-                await respond("SESSION_OPEN_RES", () => abrirCaja(payload), "TPV_SESSION_OPEN_FAILED", "No se pudo abrir la sesion QA.");
+                await respond("SESSION_OPEN_RES", () => abrirCaja(payload), "TPV_SESSION_OPEN_FAILED", "No se pudo abrir la sesión Sandbox.");
                 return;
             case "PARTIAL_COUNT":
-                await respond("PARTIAL_COUNT_RES", () => registrarArqueoParcial(payload), "TPV_PARTIAL_COUNT_FAILED", "No se pudo registrar el arqueo QA.");
+                await respond("PARTIAL_COUNT_RES", () => registrarArqueoParcial(payload), "TPV_PARTIAL_COUNT_FAILED", "No se pudo registrar el arqueo Sandbox.");
                 return;
             case "CASH_MOVEMENT":
-                await respond("CASH_MOVEMENT_RES", () => registrarMovimientoCaja(payload), "TPV_CASH_MOVEMENT_FAILED", "No se pudo registrar el movimiento QA.");
+                await respond("CASH_MOVEMENT_RES", () => registrarMovimientoCaja(payload), "TPV_CASH_MOVEMENT_FAILED", "No se pudo registrar el movimiento Sandbox.");
                 return;
             case "PAYMENT_VALIDATE":
                 await respond("PAYMENT_VALIDATE_RES", () => validarDesglosePagos(payload), "TPV_QA_PAYMENT_VALIDATION_FAILED", "No se pudo validar el pago simulado.");
@@ -164,16 +164,16 @@ export function initializeTpvPage(widgetElement) {
                 await respond("REFUND_RES", () => solicitarDevolucion(payload), "TPV_REFUND_FAILED", "No se pudo registrar la devolucion sintetica.");
                 return;
             case "SESSION_SUMMARY":
-                await respond("SESSION_SUMMARY_RES", () => obtenerResumenSesion(payload), "TPV_QA_SUMMARY_FAILED", "No se pudo calcular el resumen QA.");
+                await respond("SESSION_SUMMARY_RES", () => obtenerResumenSesion(payload), "TPV_QA_SUMMARY_FAILED", "No se pudo calcular el resumen Sandbox.");
                 return;
             case "TICKET_X":
-                await respond("TICKET_X_RES", () => generarTicketX(payload), "TPV_TICKET_X_FAILED", "No se pudo generar Ticket X QA.");
+                await respond("TICKET_X_RES", () => generarTicketX(payload), "TPV_TICKET_X_FAILED", "No se pudo generar Ticket X Sandbox.");
                 return;
             case "TICKET_Z":
-                await respond("TICKET_Z_RES", () => cerrarTicketZ(payload), "TPV_TICKET_Z_FAILED", "No se pudo cerrar Ticket Z QA.");
+                await respond("TICKET_Z_RES", () => cerrarTicketZ(payload), "TPV_TICKET_Z_FAILED", "No se pudo cerrar Ticket Z Sandbox.");
                 return;
             case "AUDIT_LIST":
-                await respond("AUDIT_LIST_RES", () => consultarAuditoriaTPV(payload), "TPV_QA_AUDIT_READ_FAILED", "No se pudo consultar la auditoria QA.");
+                await respond("AUDIT_LIST_RES", () => consultarAuditoriaTPV(payload), "TPV_QA_AUDIT_READ_FAILED", "No se pudo consultar la auditoría Sandbox.");
                 return;
             default:
                 reply((type || "UNKNOWN") + "_RES", errorResult("TPV_ACTION_NOT_ALLOWED", "Accion no habilitada.", traceId), message);
