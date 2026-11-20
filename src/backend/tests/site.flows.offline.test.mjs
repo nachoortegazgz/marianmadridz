@@ -99,14 +99,14 @@ function setMember(member) {
   mocks.members._current = member;
 }
 
-function seedCajaPrincipal() {
+function seedCajaPrincipal(openedAt = new Date(Date.now() - 60_000)) {
   const rows = wixDataMock._store.get('CajaActual') || [];
   if (rows.some((row) => row.singletonKey === 'CAJA_PRINCIPAL')) return;
   wixDataMock._store.set('CajaActual', [{
     _id: 'SINGLE_ITEM_ID',
     singletonKey: 'CAJA_PRINCIPAL',
     cashRegisterStatus: 'ABIERTA',
-    openedAt: new Date(Date.now() - 60_000),
+    openedAt,
     openedBy: GUID_ADMIN_RESOURCE,
     openingCashAmount: 300,
     cashAmount: 300,
@@ -310,7 +310,7 @@ test('FLOW-HOR-04 manager timeclock adjustments remain fail-closed until append-
 
 test('FLOW-CAJA-01 flujo continuo: venta EFECTIVO -> caja incrementada -> cierre Z -> hash-chain integra', async () => {
   wixDataMock._reset();
-  seedCajaPrincipal();
+  seedCajaPrincipal(new Date("2026-11-06T23:30:00.000Z"));
   await seedStaff({ resourceId: GUID_ADMIN_RESOURCE });
   setMember({ _id: GUID_MEMBER, contactId: GUID_CONTACT, loginEmail: 'marta@test.local' });
   const { cajas } = await freshImports();
@@ -381,6 +381,7 @@ test('FLOW-CAJA-01 flujo continuo: venta EFECTIVO -> caja incrementada -> cierre
     openedAt.toLocaleDateString('sv-SE', { timeZone: 'Europe/Madrid' }),
     'Jornada is derived from the physical session opening timestamp',
   );
+  assert.strictEqual(state.data.operationDate, '2026-11-07', 'UTC timestamp is rendered as the correct Europe/Madrid session day');
   assert.strictEqual((wixDataMock._store.get('CajaActual') || [])[0].operationDate, undefined,
     'CajaActual does not persist the absent operationDate field');
   assert.ok((state.data.totalOperations ?? 0) >= 1, 'operaciones contabilizadas: ' + JSON.stringify(state.data));
