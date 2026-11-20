@@ -308,7 +308,6 @@ export function _normalizePersistedMeta(meta) {
         return {};
     }
 }
-export { _normalizePersistedMeta as normalizePersistedMeta };
 
 // =============================================================================
 // BLOCK 3 - UTILIDADES
