@@ -464,7 +464,8 @@ test("HOOK-CAJA-01 normalizes JSON sequenceCounters and clears a prior-session c
 // HistoricoCierresZ — CONSERVED (update restricted to signature fields)
 // -----------------------------------------------------------------------------
 
-test('HOOK-CIERREZ-01 insert needs traceId; updates are restricted to recovery fields and removal is blocked', () => {
+test('HOOK-CIERREZ-01 insert needs traceId; updates use persisted strong state and allow recovery fields only', async () => {
+  wixDataMock._reset();
   assert.throws(() => H.HistoricoCierresZ_beforeInsert({}), /traceId/);
   const closing = {
     traceId: 't1',
@@ -487,13 +488,36 @@ test('HOOK-CIERREZ-01 insert needs traceId; updates are restricted to recovery f
   assert.throws(() => H.HistoricoCierresZ_beforeInsert({ ...closing, recordDomain: '' }), /recordDomain/);
   assert.throws(() => H.HistoricoCierresZ_beforeInsert({ ...closing, totalCash: '121' }), /totalCash/);
   for (const field of ['closedAt', 'verifiedAt', 'sentAt']) assert.ok(closing[field] instanceof Date);
-  assert.doesNotThrow(() => H.HistoricoCierresZ_beforeUpdate({
-    _id: 'x', closingSignature: 'sig', csvAEAT: 'csv',
-  }));
-  assert.throws(() => H.HistoricoCierresZ_beforeUpdate({
-    _id: 'x', totalImporte: 999,
-  }), /append-only/);
+
+  const persisted = {
+    ...closing,
+    _id: 'Z_2026-11-11',
+    closingSignature: '',
+    closingSignatureStatus: 'PENDING_SIGNATURE',
+    csvAEAT: null,
+    approverUser: null,
+  };
+  wixDataMock._seed('HistoricoCierresZ', [persisted]);
+  const recoveryUpdate = {
+    ...persisted,
+    closingSignature: 'signature-recovered',
+    closingSignatureStatus: 'SIGNED',
+    verifiedAt: new Date('2026-11-11T20:05:00.000Z'),
+    approverUser: 'authorized-recovery',
+  };
+  assert.strictEqual(await H.HistoricoCierresZ_beforeUpdate(recoveryUpdate), recoveryUpdate);
+
+  const illegalUpdate = { ...persisted, totalCash: 999 };
+  await assert.rejects(
+    () => H.HistoricoCierresZ_beforeUpdate(illegalUpdate),
+    /append-only/
+  );
+  await assert.rejects(
+    () => H.HistoricoCierresZ_beforeUpdate({ _id: 'Z_MISSING', closingSignature: 'x' }),
+    /no pudo recuperar el estado previo/
+  );
   assert.throws(() => H.HistoricoCierresZ_beforeRemove('x'), /append-only/);
+  wixDataMock._reset();
 });
 
 // -----------------------------------------------------------------------------

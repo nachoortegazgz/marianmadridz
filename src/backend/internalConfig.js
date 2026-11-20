@@ -755,18 +755,14 @@ export const CLOCK_RECORD_SOURCE = Object.freeze({
 
 export const TIMECLOCK_SCHEMA_VERSION = "1";
 
-// Campos logicos de booking normalizados (bookingCore.js / bookingSaga.js /
-// citasManager.web.js / events.js).
-// SSOT-KEYFIELD-01 (2026-10-20, Matriz CitasF2 Apartado 2): la clave canonica
-// del estado interno en CitasF2 es "bookingStatus"; "status" queda ERRADICADO
-// como alias historical a eliminar. Se anade CASH_MOVEMENT_ID (FK MovimientosCaja)
-// y ORDER_ID, consumidos por citasManager.web.js via BOOKING_FIELDS.
-// v14: miembros CASH_MOVEMENT_ID y ORDER_ID erradicados (0 consumidores
-// verificados por grep; el SSOT Apartado 1 los documenta como campos de
-// coleccion, pero ningun writer/reader del codigo activo los referencia).
-// MATRIZ v15 Bloque 2 (campos eliminados del CMS CitasF2): staffResourceId,
-// startDate y endDate quedan ERRADICADOS del contrato (duplicaban resourceId,
-// slotStart y slotEnd). En CitasF2 solo existe resourceId.
+// Logical booking field identifiers consumed by bookingCore.js,
+// citasManager.web.js and events.js. CASH_MOVEMENT_ID and ORDER_ID remain
+// active writer/reader fields; do not remove them based on the superseded v14
+// note below. Their physical CMS presence must be confirmed from the current
+// collection schema before claiming Wix Runtime compatibility.
+// SSOT-KEYFIELD-01: bookingStatus is canonical; status is not an alias.
+// MATRIZ v15: staffResourceId, startDate and endDate are retired; resourceId,
+// slotStart and slotEnd are the canonical fields.
 export const BOOKING_FIELDS = Object.freeze({
   BOOKING_ID: "bookingId",
   BOOKING_TYPE: "bookingType",
