@@ -147,7 +147,7 @@ function _formatPackageDisplayId(doc) {
     if (!Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12) return null;
     return `DOC_GESTORIA_${year}_M${String(month).padStart(2, "0")}_PAQUETE_GESTORIA_V${version}`;
   }
-  if (!Number.isInteger(year) || !Number.isInteger(Number(doc?.fiscalQuarter))) return null;
+  if (!Number.isInteger(year) || !Number.isInteger(Number(doc?.fiscalQuarter)) || Number(doc.fiscalQuarter) < 1 || Number(doc.fiscalQuarter) > 4) return null;
   return _formatDocumentId(year, Number(doc.fiscalQuarter), doc.packageVersion);
 }
 
