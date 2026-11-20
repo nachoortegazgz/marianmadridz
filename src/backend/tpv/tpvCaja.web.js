@@ -2,7 +2,7 @@ import { Permissions, webMethod } from "wix-web-module";
 import { requireAdmin, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { TPV_SANDBOX_COLLECTIONS, TPV_SANDBOX_RUNTIME_POLICY } from "backend/internalConfig";
-import { appendSandboxAudit, initializeSandboxCaja, insertSandboxEvent, latestOpenSandboxSession, querySandboxRecords, withSandboxSessionLock } from "backend/tpv/tpvSandboxRepository";
+import { appendSandboxAudit, initializeSandboxCaja, seedSandboxIdentities, insertSandboxEvent, latestOpenSandboxSession, querySandboxRecords, withSandboxSessionLock } from "backend/tpv/tpvSandboxRepository";
 import { buildSandboxSessionSummary } from "backend/tpv/tpvCierresCore";
 import { wql } from "backend/dataAccess";
 import { assertTpvSandboxEnabled, fromMinorUnits, makeSyntheticPayload, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
@@ -27,11 +27,14 @@ export const inicializarCajaSANDBOX = webMethod(
         assertTpvSandboxEnabled();
         try {
             const result = await initializeSandboxCaja({ authorizeCreate: () => requireAdmin(traceId) });
+            const identities = await seedSandboxIdentities({ authorizeCreate: () => requireAdmin(traceId) });
             return {
                 status: "SUCCESS",
                 data: {
                     sandboxReady: true,
                     initialized: result.created,
+                    identitiesCreated: identities.created,
+                    identitiesTotal: identities.total,
                     cashRegisterStatus: result.item.cashRegisterStatus,
                     snapshotSource: result.item.snapshotSource,
                 },

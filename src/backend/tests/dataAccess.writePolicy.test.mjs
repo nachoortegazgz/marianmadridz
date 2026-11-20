@@ -167,6 +167,34 @@ test("update policy keeps operational projections mutable and append-only ledger
         controlType: T.SYSTEM_FLAG,
     }), { code: "CMS_UPDATE_ID_REQUIRED" });
 });
+test("TpvSandboxIdentities accepts only exact-run synthetic Sandbox identities and remains append-only", () => {
+    const identity = {
+        _id: "SANDBOX-CUSTOMER-01",
+        identityId: "SANDBOX-CUSTOMER-01",
+        identityType: "CUSTOMER",
+        displayName: "Cliente Sintético 01",
+        email: "cliente01@example.test",
+        active: true,
+        syntheticOnly: true,
+        environment: "SANDBOX",
+        testRunId: TPV_SANDBOX_RUNTIME_POLICY.SANDBOX_RUN_ID,
+        metadata: {},
+    };
+    assert.doesNotThrow(() => assertInsertAllowed(C.TPV_SANDBOX_IDENTITIES, identity));
+    assert.throws(() => assertInsertAllowed(C.TPV_SANDBOX_IDENTITIES, {
+        ...identity, environment: "LIVE",
+    }), { code: "CMS_TPV_SANDBOX_IDENTITY_CONTRACT_INVALID" });
+    assert.throws(() => assertInsertAllowed(C.TPV_SANDBOX_IDENTITIES, {
+        ...identity, testRunId: "TPVSANDBOX-DEV-20990101-OTHER",
+    }), { code: "CMS_TPV_SANDBOX_IDENTITY_CONTRACT_INVALID" });
+    assert.throws(() => insertItem(C.TPV_SANDBOX_IDENTITIES, {
+        ...identity, identityId: "INVALID-CUSTOMER",
+    }), /SCHEMA_VIOLATION/);
+    assert.throws(() => assertUpdateAllowed(C.TPV_SANDBOX_IDENTITIES, {
+        ...identity, _id: identity._id,
+    }), { code: "CMS_UPDATE_COLLECTION_DENIED" });
+});
+
 test("MovimientosCaja accepts edits only for the exact active synthetic TPV test run", () => {
     const item = {
         _id: "TPVSANDBOX_TEST_ROW",

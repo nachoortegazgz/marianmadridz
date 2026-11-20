@@ -8,7 +8,8 @@ import {
     queryItems,
     wql,
 } from "backend/dataAccess";
-import { TPV_SANDBOX_COLLECTIONS, TPV_SANDBOX_EVENT_MOVEMENT_TYPES, TPV_SANDBOX_RUNTIME_POLICY, CONTROL_TYPE, OPERATIONAL_COLLECTIONS, BUSINESS_COLLECTIONS, SINGLETONS } from "backend/internalConfig";
+import { TPV_SANDBOX_COLLECTIONS, TPV_SANDBOX_EVENT_MOVEMENT_TYPES, TPV_SANDBOX_RUNTIME_POLICY, TPV_SANDBOX_IDENTITY_TYPES, CONTROL_TYPE, OPERATIONAL_COLLECTIONS, BUSINESS_COLLECTIONS, SINGLETONS } from "backend/internalConfig";
+import { listTpvSandboxIdentities } from "backend/tpv/tpvSandboxIdentities";
 import {
     assertTpvSandboxEnabled,
     assertSandboxCajaWritable,
@@ -274,6 +275,73 @@ async function _ensureCajaActualForSandbox() {
     const caja = await _getCajaActual();
     if (!caja) throw new Error("TPV_SANDBOX_CASH_REGISTER_NOT_SEEDED");
     return caja;
+}
+
+export async function seedSandboxIdentities({ authorizeCreate } = {}) {
+    assertTpvSandboxEnabled();
+    const definitions = [
+        ...Array.from({ length: 3 }, (_, index) => {
+            const suffix = String(index + 1).padStart(2, "0");
+            return {
+                _id: "SANDBOX-CUSTOMER-" + suffix,
+                identityId: "SANDBOX-CUSTOMER-" + suffix,
+                identityType: TPV_SANDBOX_IDENTITY_TYPES.CUSTOMER,
+                displayName: "Cliente Sintético " + suffix,
+                email: "cliente" + suffix + "@example.test",
+            };
+        }),
+        ...Array.from({ length: 3 }, (_, index) => {
+            const suffix = String(index + 1).padStart(2, "0");
+            return {
+                _id: "SANDBOX-STAFF-" + suffix,
+                identityId: "SANDBOX-STAFF-" + suffix,
+                identityType: TPV_SANDBOX_IDENTITY_TYPES.STAFF,
+                displayName: "Profesional Sintético " + suffix,
+                email: "profesional" + suffix + "@example.test",
+            };
+        }),
+    ];
+    const readExisting = async () => {
+        const [customers, staff] = await Promise.all([
+            listTpvSandboxIdentities(TPV_SANDBOX_IDENTITY_TYPES.CUSTOMER),
+            listTpvSandboxIdentities(TPV_SANDBOX_IDENTITY_TYPES.STAFF),
+        ]);
+        return new Map([...customers, ...staff].map((item) => [item.identityId, item]));
+    };
+
+    let existing = await readExisting();
+    let missing = definitions.filter((item) => !existing.has(item.identityId));
+    if (!missing.length) return { created: 0, total: definitions.length };
+    if (typeof authorizeCreate !== "function") {
+        throw new Error("TPV_SANDBOX_IDENTITIES_BOOTSTRAP_ADMIN_REQUIRED");
+    }
+    await authorizeCreate();
+    existing = await readExisting();
+    missing = definitions.filter((item) => !existing.has(item.identityId));
+
+    let created = 0;
+    for (const definition of missing) {
+        const item = {
+            ...definition,
+            active: true,
+            syntheticOnly: true,
+            environment: TPV_SANDBOX_RUNTIME_POLICY.ENVIRONMENT,
+            testRunId: TPV_SANDBOX_RUNTIME_POLICY.SANDBOX_RUN_ID,
+            metadata: {},
+        };
+        try {
+            await insertItem(BUSINESS_COLLECTIONS.TPV_SANDBOX_IDENTITIES, item);
+            created += 1;
+        } catch (error) {
+            const afterConflict = await readExisting();
+            if (!afterConflict.has(definition.identityId)) throw error;
+        }
+    }
+    const finalItems = await readExisting();
+    if (definitions.some((item) => !finalItems.has(item.identityId))) {
+        throw new Error("TPV_SANDBOX_IDENTITIES_BOOTSTRAP_INCOMPLETE");
+    }
+    return { created, total: finalItems.size };
 }
 
 export async function initializeSandboxCaja({ authorizeCreate } = {}) {

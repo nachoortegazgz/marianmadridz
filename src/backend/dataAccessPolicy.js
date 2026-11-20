@@ -119,6 +119,12 @@ export function assertInsertAllowed(collection, item) {
             throw _policyError("CMS_TPV_SANDBOX_SYNTHETIC_LEDGER_CONTRACT_INVALID");
         }
     }
+    if (collection === BUSINESS_COLLECTIONS.TPV_SANDBOX_IDENTITIES &&
+        (item.syntheticOnly !== true ||
+         item.environment !== "SANDBOX" ||
+         item.testRunId !== TPV_SANDBOX_RUNTIME_POLICY.SANDBOX_RUN_ID)) {
+        throw _policyError("CMS_TPV_SANDBOX_IDENTITY_CONTRACT_INVALID");
+    }
     if (collection === BUSINESS_COLLECTIONS.CONTROL_OPERATIVO) {
         _assertControlRecord(item, Object.values(CONTROL_TYPE), "CMS_INSERT_CONTROL_TYPE_INVALID", false);
     }
