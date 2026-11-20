@@ -1,0 +1,8 @@
+[
+  {"identityId":"SANDBOX-CUSTOMER-01","identityType":"CUSTOMER","displayName":"Cliente Sintético 01","email":"cliente01@example.test","active":true,"syntheticOnly":true,"environment":"SANDBOX","testRunId":"TPVSANDBOX-DEV-20261120-01","metadata":{}},
+  {"identityId":"SANDBOX-CUSTOMER-02","identityType":"CUSTOMER","displayName":"Cliente Sintético 02","email":"cliente02@example.test","active":true,"syntheticOnly":true,"environment":"SANDBOX","testRunId":"TPVSANDBOX-DEV-20261120-01","metadata":{}},
+  {"identityId":"SANDBOX-CUSTOMER-03","identityType":"CUSTOMER","displayName":"Cliente Sintético 03","email":"cliente03@example.test","active":true,"syntheticOnly":true,"environment":"SANDBOX","testRunId":"TPVSANDBOX-DEV-20261120-01","metadata":{}},
+  {"identityId":"SANDBOX-STAFF-01","identityType":"STAFF","displayName":"Profesional Sintético 01","email":"profesional01@example.test","active":true,"syntheticOnly":true,"environment":"SANDBOX","testRunId":"TPVSANDBOX-DEV-20261120-01","metadata":{}},
+  {"identityId":"SANDBOX-STAFF-02","identityType":"STAFF","displayName":"Profesional Sintético 02","email":"profesional02@example.test","active":true,"syntheticOnly":true,"environment":"SANDBOX","testRunId":"TPVSANDBOX-DEV-20261120-01","metadata":{}},
+  {"identityId":"SANDBOX-STAFF-03","identityType":"STAFF","displayName":"Profesional Sintético 03","email":"profesional03@example.test","active":true,"syntheticOnly":true,"environment":"SANDBOX","testRunId":"TPVSANDBOX-DEV-20261120-01","metadata":{}}
+]
