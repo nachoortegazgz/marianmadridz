@@ -1,34 +1,34 @@
 import { Permissions, webMethod } from "wix-web-module";
 import { requireAdmin } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
-import { TPV_QA_COLLECTIONS, TPV_QA_RUNTIME_POLICY } from "backend/internalConfig";
-import { insertQaEvent, latestOpenQaSession, withQaSessionLock } from "backend/tpv/tpvQaRepository";
-import { assertTpvQaEnabled, fromMinorUnits, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
+import { TPV_SANDBOX_COLLECTIONS, TPV_SANDBOX_RUNTIME_POLICY } from "backend/internalConfig";
+import { insertSandboxEvent, latestOpenSandboxSession, withSandboxSessionLock } from "backend/tpv/tpvSandboxRepository";
+import { assertTpvSandboxEnabled, fromMinorUnits, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
 
-export const registrarMovimientoCajaQA = webMethod(
+export const registrarMovimientoCajaSANDBOX = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
         let persisted = false;
-        const traceId = makeTraceId("tpv-qa-cash-movement");
+        const traceId = makeTraceId("tpv-sandbox-cash-movement");
         await requireAdmin(traceId);
-        assertTpvQaEnabled();
+        assertTpvSandboxEnabled();
         try {
             const movementType = String(input.movementType || "").trim().toUpperCase();
-            if (!["ENTRADA", "SALIDA", "RETIRADA"].includes(movementType)) throw new Error("TPV_QA_CASH_MOVEMENT_TYPE_INVALID");
-            const session = await latestOpenQaSession();
-            if (!session) throw new Error("TPV_QA_SESSION_NOT_OPEN");
+            if (!["ENTRADA", "SALIDA", "RETIRADA"].includes(movementType)) throw new Error("TPV_SANDBOX_CASH_MOVEMENT_TYPE_INVALID");
+            const session = await latestOpenSandboxSession();
+            if (!session) throw new Error("TPV_SANDBOX_SESSION_NOT_OPEN");
 
-            return await withQaSessionLock(session.sessionId, traceId, async () => {
-                const activeSession = await latestOpenQaSession();
+            return await withSandboxSessionLock(session.sessionId, traceId, async () => {
+                const activeSession = await latestOpenSandboxSession();
                 if (!activeSession || activeSession.sessionId !== session.sessionId) {
-                    throw new Error("TPV_QA_SESSION_CLOSED");
+                    throw new Error("TPV_SANDBOX_SESSION_CLOSED");
                 }
             const amountMinor = toMinorUnits(input.amount, "CASH_MOVEMENT");
-            if (amountMinor <= 0) throw new Error("TPV_QA_CASH_MOVEMENT_AMOUNT_INVALID");
+            if (amountMinor <= 0) throw new Error("TPV_SANDBOX_CASH_MOVEMENT_AMOUNT_INVALID");
             const reason = String(input.reason || "").trim();
-            if (reason.length < 3 || reason.length > 500) throw new Error("TPV_QA_REASON_REQUIRED");
+            if (reason.length < 3 || reason.length > 500) throw new Error("TPV_SANDBOX_REASON_REQUIRED");
             const key = normalizeClientIdempotencyKey(input.idempotencyKey);
-            const { item, replayed } = await insertQaEvent(TPV_QA_COLLECTIONS.MOVIMIENTOS_CAJA, key, {
+            const { item, replayed } = await insertSandboxEvent(TPV_SANDBOX_COLLECTIONS.MOVIMIENTOS_CAJA, key, {
                 sessionId: session.sessionId,
                 movementType,
                 amountMinor,
@@ -37,26 +37,26 @@ export const registrarMovimientoCajaQA = webMethod(
                 status: "CONFIRMADO_SINTETICO",
                 createdAt: new Date(),
                 payload: {
-                    actorId: TPV_QA_RUNTIME_POLICY.ACTOR_ID,
-                    authorizedBy: movementType === "ENTRADA" ? null : TPV_QA_RUNTIME_POLICY.ACTOR_ID,
+                    actorId: TPV_SANDBOX_RUNTIME_POLICY.ACTOR_ID,
+                    authorizedBy: movementType === "ENTRADA" ? null : TPV_SANDBOX_RUNTIME_POLICY.ACTOR_ID,
                     affectsPhysicalCash: true,
                     traceId,
                 },
             });
             persisted = true;
-            await insertQaEvent(TPV_QA_COLLECTIONS.AUDITORIA, key + ":AUDIT", {
+            await insertSandboxEvent(TPV_SANDBOX_COLLECTIONS.AUDITORIA, key + ":AUDIT", {
                 action: "MOVIMIENTO_CAJA_" + movementType,
-                actorId: TPV_QA_RUNTIME_POLICY.ACTOR_ID,
+                actorId: TPV_SANDBOX_RUNTIME_POLICY.ACTOR_ID,
                 entityType: "MOVIMIENTO_CAJA",
                 entityId: item._id || key,
                 occurredAt: new Date(),
-                source: "TPV_QA_WEB_METHOD",
+                source: "TPV_SANDBOX_WEB_METHOD",
                 payload: { amountMinor, reason, traceId },
             });
             return { status: "SUCCESS", data: { movementId: item._id, movementType, amount: fromMinorUnits(amountMinor), replayed, persisted: true, isSynthetic: true, realPayment: false }, error: null, traceId };
             });
         } catch (error) {
-            return { status: "ERROR", data: null, error: { code: String(error?.message || "TPV_QA_CASH_MOVEMENT_FAILED") }, persisted, recoverable: persisted, isSynthetic: true, realPayment: false, traceId };
+            return { status: "ERROR", data: null, error: { code: String(error?.message || "TPV_SANDBOX_CASH_MOVEMENT_FAILED") }, persisted, recoverable: persisted, isSynthetic: true, realPayment: false, traceId };
         }
     }
 );

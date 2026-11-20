@@ -17,8 +17,8 @@ import {
     MOVEMENT_HISTORICAL_READ_ALIASES,
     normalizeMovementKeys,
     OPERATIONAL_COLLECTIONS,
-    TPV_QA_RUNTIME_POLICY,
-    TPV_QA_EVENT_MOVEMENT_TYPES,
+    TPV_SANDBOX_RUNTIME_POLICY,
+    TPV_SANDBOX_EVENT_MOVEMENT_TYPES,
 } from "backend/internalConfig";
 import { assertCitasF2, assertCitasF2Insert, assertControlOperativo, assertCanonicalControlFields, assertRegistrosHorariosStaff, assertMapaStaffRecord, assertCajaActualRecord, assertHistoricoCierresZ, assertMovimientosCajaRequiredFields, assertAccountingLedgerRecord, assertPaquetesGestoriaRecord, assertTpvSandboxIdentity, isValidNifOrEuVat as _isValidNifOrEuVat } from "backend/validation";
 import { CONSISTENCY, getItem } from "backend/dataAccess";
@@ -417,7 +417,7 @@ export function MovimientosCaja_beforeInsert(item) {
     if (!ledgerHash) {
         _schemaError("hash obligatorio (cadena SHA-256 de integridad del asiento)");
     }
-    if (item.recordSource === "TPV_QA_SYNTHETIC" ||
+    if (item.recordSource === "TPV_SANDBOX_SYNTHETIC" ||
         String(item.movementType || "").startsWith("SIMULATED_TPV_")) {
         if (!_isCurrentSyntheticTpvRow(item)) {
             _schemaError("Evento TPV sintético no cumple el contrato del test-run activo.");
@@ -490,11 +490,11 @@ function _isPlainRecord(value) {
 }
 
 function _isCurrentSyntheticTpvRow(value) {
-    const expectedPrefix = "TPVQA:" + TPV_QA_RUNTIME_POLICY.TEST_RUN_ID + ":";
-    return value?.recordSource === "TPV_QA_SYNTHETIC" &&
+    const expectedPrefix = "TPVSANDBOX:" + TPV_SANDBOX_RUNTIME_POLICY.SANDBOX_RUN_ID + ":";
+    return value?.recordSource === "TPV_SANDBOX_SYNTHETIC" &&
         String(value?.movementType || "").startsWith("SIMULATED_TPV_") &&
-        TPV_QA_EVENT_MOVEMENT_TYPES[value?.payloadFiscal?.logicalCollection] === value.movementType &&
-        value?.payloadFiscal?.testRunId === TPV_QA_RUNTIME_POLICY.TEST_RUN_ID &&
+        TPV_SANDBOX_EVENT_MOVEMENT_TYPES[value?.payloadFiscal?.logicalCollection] === value.movementType &&
+        value?.payloadFiscal?.sandboxRunId === TPV_SANDBOX_RUNTIME_POLICY.SANDBOX_RUN_ID &&
         value?.payloadFiscal?.isSynthetic === true &&
         value?.payloadFiscal?.realPayment === false &&
         value?.payloadFiscal?.externalSideEffects === false &&
@@ -509,7 +509,7 @@ export async function MovimientosCaja_beforeUpdate(item) {
         ? await getItem(BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA, item._id, CONSISTENCY.STRONG)
         : null;
     if (!_isCurrentSyntheticTpvRow(item) || !_isCurrentSyntheticTpvRow(previous)) {
-        _fiscalError("Modificacion de MovimientosCaja prohibida: solo se admite editar un registro TPV QA del test-run activo.");
+        _fiscalError("Modificacion de MovimientosCaja prohibida: solo se admite editar un registro TPV SANDBOX del test-run activo.");
     }
 
     const immutableFields = [
@@ -518,7 +518,7 @@ export async function MovimientosCaja_beforeUpdate(item) {
         "numSerieFactura", "tipoFactura",
     ];
     if (immutableFields.some((field) => item[field] !== previous[field])) {
-        _fiscalError("Identidad del registro TPV QA inmutable.");
+        _fiscalError("Identidad del registro TPV SANDBOX inmutable.");
     }
 
     const envelope = item.payloadFiscal;
@@ -526,18 +526,18 @@ export async function MovimientosCaja_beforeUpdate(item) {
     const logicalCollection = envelope?.logicalCollection;
     if (
         logicalCollection !== previousEnvelope?.logicalCollection ||
-        envelope?.testRunId !== previousEnvelope?.testRunId ||
+        envelope?.sandboxRunId !== previousEnvelope?.sandboxRunId ||
         envelope?.idempotencyKey !== previousEnvelope?.idempotencyKey ||
         envelope?.isSynthetic !== true ||
         envelope?.realPayment !== false ||
         envelope?.externalSideEffects !== false ||
-        item.movementType !== TPV_QA_EVENT_MOVEMENT_TYPES[logicalCollection] ||
-        !_isPlainRecord(envelope?.qaRecord)
+        item.movementType !== TPV_SANDBOX_EVENT_MOVEMENT_TYPES[logicalCollection] ||
+        !_isPlainRecord(envelope?.sandboxRecord)
     ) {
-        _fiscalError("Payload lógico TPV QA no editable o incoherente.");
+        _fiscalError("Payload lógico TPV SANDBOX no editable o incoherente.");
     }
 
-    const record = envelope.qaRecord;
+    const record = envelope.sandboxRecord;
     const rawAmountMinor = Number(
         record.totalMinor || record.amountMinor || record.paidMinor || record.countedCashMinor || 0
     );
@@ -548,7 +548,7 @@ export async function MovimientosCaja_beforeUpdate(item) {
     const timestamp = timestampValue instanceof Date ? timestampValue : new Date(timestampValue);
     if (Number.isNaN(timestamp.getTime())) _fiscalError("Fecha sintética TPV inválida.");
     const dateYmd = timestamp.toLocaleDateString("en-CA", {
-        timeZone: TPV_QA_RUNTIME_POLICY.TIME_ZONE,
+        timeZone: TPV_SANDBOX_RUNTIME_POLICY.TIME_ZONE,
     });
 
     item.recordTimestamp = timestamp;
@@ -560,15 +560,15 @@ export async function MovimientosCaja_beforeUpdate(item) {
     item.taxAmount = Number(record.taxMinor || record.taxAmountMinor || 0) / 100;
     item.paymentMethod = String(record.paymentMethod || "OTROS").toUpperCase();
     item.channelType = String(record.channelType || "PRESENCIAL").toUpperCase();
-    item.operationDescription = "SIMULATED TPV QA " + logicalCollection;
-    item.staffResourceId = String(record.staffResourceId || TPV_QA_RUNTIME_POLICY.ACTOR_ID);
-    item.lineItems = { qaRecord: record.lineItems || [] };
+    item.operationDescription = "SIMULATED TPV SANDBOX " + logicalCollection;
+    item.staffResourceId = String(record.staffResourceId || TPV_SANDBOX_RUNTIME_POLICY.ACTOR_ID);
+    item.lineItems = { sandboxRecord: record.lineItems || [] };
     item.desgloseDetallado = {
         accountCode: "SIMULATED",
-        testRunId: TPV_QA_RUNTIME_POLICY.TEST_RUN_ID,
+        sandboxRunId: TPV_SANDBOX_RUNTIME_POLICY.SANDBOX_RUN_ID,
     };
     const hashPayload = stableSerialize({
-        testRunId: TPV_QA_RUNTIME_POLICY.TEST_RUN_ID,
+        sandboxRunId: TPV_SANDBOX_RUNTIME_POLICY.SANDBOX_RUN_ID,
         logicalCollection,
         transactionId: item.transactionId,
         traceId: item.traceId,
@@ -587,7 +587,7 @@ export async function MovimientosCaja_beforeRemove(itemId) {
         ? await getItem(BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA, itemId, CONSISTENCY.STRONG)
         : null;
     if (_isCurrentSyntheticTpvRow(previous)) return itemId;
-    _fiscalError("Borrado de MovimientosCaja prohibido salvo filas TPV QA sintéticas del test-run activo.");
+    _fiscalError("Borrado de MovimientosCaja prohibido salvo filas TPV SANDBOX sintéticas del test-run activo.");
 }
 
 export function LibroAsientosContablesDetalle_beforeInsert(item) {

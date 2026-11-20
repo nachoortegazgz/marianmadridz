@@ -6,18 +6,18 @@ import { Script } from "node:vm";
 const html = await readFile(new URL("../../../%23htmlTPV.txt", import.meta.url), "utf8");
 const script = html.match(/<script>([\s\S]*?)<\/script>/)?.[1];
 
-test("TPV HTML QA script parses and wires the active synthetic workflows", () => {
+test("TPV HTML SANDBOX script parses and wires the active synthetic workflows", () => {
     assert.ok(script);
     assert.doesNotThrow(() => new Script(script));
 
     for (const message of [
-        "QA_SESSION_OPEN",
-        "QA_SALE_REGISTER",
-        "QA_CASH_MOVEMENT",
-        "QA_REFUND",
-        "QA_TICKET_X",
-        "QA_TICKET_Z",
-        "QA_PAYMENT_VALIDATE",
+        "SANDBOX_SESSION_OPEN",
+        "SANDBOX_SALE_REGISTER",
+        "SANDBOX_CASH_MOVEMENT",
+        "SANDBOX_REFUND",
+        "SANDBOX_TICKET_X",
+        "SANDBOX_TICKET_Z",
+        "SANDBOX_PAYMENT_VALIDATE",
         "VALIDATE_SALE_DRAFT",
     ]) {
         assert.ok(script.includes(message), "missing active workflow message " + message);

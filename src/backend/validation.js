@@ -28,7 +28,7 @@ import {
     MOVEMENT_TYPE,
     PAYMENT_METHOD,
     TIPO_FACTURA,
-    TPV_QA_RUNTIME_POLICY,
+    TPV_SANDBOX_RUNTIME_POLICY,
 } from "backend/internalConfig";
 
 // =============================================================================
@@ -318,7 +318,7 @@ export function assertMovimientosCajaRequiredFields(item) {
         !/^[a-f0-9]{64}$/i.test(String(item.previousRecordHash || ""))) {
         throw new Error("SCHEMA_VIOLATION: MovimientosCaja requires SHA-256 hash chain fields");
     }
-    if (item.recordSource !== "TPV_QA_SYNTHETIC") {
+    if (item.recordSource !== "TPV_SANDBOX_SYNTHETIC") {
         assertValidEnum(item.movementType, MOVEMENT_TYPE, "movementType");
         assertValidEnum(item.paymentMethod, PAYMENT_METHOD, "paymentMethod");
         assertValidEnum(item.channelType, CHANNEL_TYPE, "channelType");
@@ -385,7 +385,7 @@ export function assertTpvSandboxIdentity(item) {
     const identityType = String(item.identityType || "").trim().toUpperCase();
     const identityId = String(item.identityId || "").trim();
     const displayName = String(item.displayName || "").trim();
-    const expectedPrefix = identityType === "CUSTOMER" ? "QA-CUSTOMER-" : "QA-STAFF-";
+    const expectedPrefix = identityType === "CUSTOMER" ? "SANDBOX-CUSTOMER-" : "SANDBOX-STAFF-";
     const expectedNamePrefix = identityType === "CUSTOMER" ? "Cliente Sintético " : "Profesional Sintético ";
     if (!["CUSTOMER", "STAFF"].includes(identityType) ||
         item.identityType !== identityType ||
@@ -398,7 +398,7 @@ export function assertTpvSandboxIdentity(item) {
         throw new Error("SCHEMA_VIOLATION: TpvSandboxIdentities displayName invalid");
     }
     if (item.active !== true || item.syntheticOnly !== true || item.environment !== "SANDBOX" ||
-        item.testRunId !== TPV_QA_RUNTIME_POLICY.TEST_RUN_ID) {
+        item.testRunId !== TPV_SANDBOX_RUNTIME_POLICY.SANDBOX_RUN_ID) {
         throw new Error("SCHEMA_VIOLATION: TpvSandboxIdentities must belong to the active synthetic Sandbox test-run");
     }
     if (identityType === "CUSTOMER" && !/^[^\s@]+@example\.test$/i.test(String(item.email || ""))) {

@@ -7,15 +7,15 @@ const controller = await readFile(new URL("../../public/tpvPageController.js", i
 const cashierBackend = await readFile(new URL("../cajas.web.js", import.meta.url), "utf8");
 const catalogBackend = await readFile(new URL("../tpv/tpvCatalogo.web.js", import.meta.url), "utf8");
 
-test("TPV controller exposes authenticated QA session and Bookings catalog methods", async () => {
-    assert.match(controller, /obtenerSesionCajaQA/);
+test("TPV controller exposes authenticated SANDBOX session and Bookings catalog methods", async () => {
+    assert.match(controller, /obtenerSesionCajaSANDBOX/);
     assert.match(controller, /obtenerServicios/);
     assert.match(controller, /obtenerProfesionales/);
     assert.match(controller, /consultarTarjetaRegalo/);
     assert.match(cashierBackend, /requireCajero/);
     assert.match(catalogBackend, /requireCajero/);
     const permissions = await readFile(new URL("../tpv/tpvPermisos.web.js", import.meta.url), "utf8");
-    for (const capability of ["createSyntheticSale", "openQaSession", "registerCashMovement", "requestRefund", "closeQaSession", "issueTicketX", "issueTicketZ"]) {
+    for (const capability of ["createSyntheticSale", "openSandboxSession", "registerCashMovement", "requestRefund", "closeSandboxSession", "issueTicketX", "issueTicketZ"]) {
         assert.match(permissions, new RegExp(capability + ": isAdmin"));
     }
     assert.match(controller, /MESSAGE_TYPES\.READY/);
@@ -46,7 +46,7 @@ test("TPV HTML uses versioned messaging and keeps ticket drafts in browser memor
     assert.match(html, /loadMoreProducts/);
     assert.match(html, /function requestMoreProducts/);
     assert.match(html, /calculateDenominations/);
-    assert.match(html, /request\("QA_PAYMENT_VALIDATE"/);
+    assert.match(html, /request\("SANDBOX_PAYMENT_VALIDATE"/);
     assert.match(html, /function finalizeSynthetic/);
     assert.match(html, /state\.operationKeys\.sale/);
     assert.match(html, /state\.operationKeys\.refund/);
@@ -74,11 +74,13 @@ test("TPV controls keep unsupported commercial and fiscal capabilities disabled"
 });
 test("TPV HTML request protocol is dispatched for the active widget workflows", async () => {
     const page = await readFile(new URL("../../pages/TPV.yl5th.js", import.meta.url), "utf8");
-    const requests = ["CASHIER_STATE", "QA_CONFIG", "QA_PERMISSIONS", "CATALOG_SERVICES", "CATALOG_STAFF", "CATALOG_PRODUCTS", "PRODUCT_VARIANTS", "CUSTOMERS_SEARCH", "QA_PAYMENT_VALIDATE", "VALIDATE_SALE_DRAFT", "QA_SALE_REGISTER", "QA_SESSION_SUMMARY", "QA_SESSION_OPEN", "QA_CASH_MOVEMENT", "QA_REFUND", "QA_TICKET_X", "QA_TICKET_Z"];
+    const requests = ["CASHIER_STATE", "SANDBOX_CONFIG", "SANDBOX_PERMISSIONS", "CATALOG_SERVICES", "CATALOG_STAFF", "CATALOG_PRODUCTS", "PRODUCT_VARIANTS", "CUSTOMERS_SEARCH", "SANDBOX_PAYMENT_VALIDATE", "VALIDATE_SALE_DRAFT", "SANDBOX_SALE_REGISTER", "SANDBOX_SESSION_SUMMARY", "SANDBOX_SESSION_OPEN", "SANDBOX_CASH_MOVEMENT", "SANDBOX_REFUND", "SANDBOX_TICKET_X", "SANDBOX_TICKET_Z"];
     assert.match(page, /\$w\("#htmlTPV"\)/);
     assert.match(controller, /protocolVersion: 1/);
-    assert.match(controller, /environment: "DISABLED"/);
-    assert.match(controller, /TPV_QA_DISABLED_UNTIL_SANDBOX_ISOLATION/);
+    assert.match(controller, /environment: sandboxReady \? "SANDBOX" : "UNAVAILABLE"/);
+    assert.match(controller, /sandboxReady/);
+    assert.match(controller, /inicializarCajaSANDBOX/);
+    assert.match(controller, /sandboxReady/);
     assert.match(controller, /syntheticOnly: true/);
     assert.match(controller, /case MESSAGE_TYPES\.READY:\s+return;/);
     for (const type of requests) {
@@ -87,21 +89,21 @@ test("TPV HTML request protocol is dispatched for the active widget workflows", 
         assert.ok(controller.includes('"' + type + '_RES"'), "controller must return " + type + "_RES");
         assert.ok(html.includes('"' + type + '"'), "widget must request " + type);
     }
-    for (const type of ["QA_AUDIT_LIST", "QA_PARTIAL_COUNT", "CUSTOMER_BOOKINGS", "GIFT_CARD_BALANCE"]) {
+    for (const type of ["SANDBOX_AUDIT_LIST", "SANDBOX_PARTIAL_COUNT", "CUSTOMER_BOOKINGS", "GIFT_CARD_BALANCE"]) {
         assert.ok(controller.includes('"' + type + '"' ), "controller retains reserved handler " + type);
     }
 });
 
 test("TPV customer, staff and booking references are synthetic-only", async () => {
     const sales = await readFile(new URL("../tpv/tpvVentas.web.js", import.meta.url), "utf8");
-    assert.match(catalogBackend, /listTpvSandboxIdentities\(TPV_QA_IDENTITY_TYPES\.CUSTOMER\)/);
-    assert.match(catalogBackend, /listTpvSandboxIdentities\(TPV_QA_IDENTITY_TYPES\.STAFF\)/);
-    assert.doesNotMatch(catalogBackend, /TPV_QA_FIXTURES/);
+    assert.match(catalogBackend, /listTpvSandboxIdentities\(TPV_SANDBOX_IDENTITY_TYPES\.CUSTOMER\)/);
+    assert.match(catalogBackend, /listTpvSandboxIdentities\(TPV_SANDBOX_IDENTITY_TYPES\.STAFF\)/);
+    assert.doesNotMatch(catalogBackend, /TPV_SANDBOX_FIXTURES/);
     assert.match(catalogBackend, /syntheticOnly: true/);
     assert.doesNotMatch(catalogBackend, /contactsV5|extendedBookings|staffMembers|tpvNativeReaders/);
-    assert.match(sales, /TPV_QA_CUSTOMER_NOT_ALLOWED/);
-    assert.match(sales, /TPV_QA_BOOKINGS_DISABLED/);
-    assert.match(sales, /TPV_QA_STAFF_NOT_ALLOWED/);
+    assert.match(sales, /TPV_SANDBOX_CUSTOMER_NOT_ALLOWED/);
+    assert.match(sales, /TPV_SANDBOX_BOOKINGS_DISABLED/);
+    assert.match(sales, /TPV_SANDBOX_STAFF_NOT_ALLOWED/);
     assert.doesNotMatch(sales, /leerContactoTPV|leerReservaTPV|getMyStaffContext|staff\?\.memberId/);
     assert.match(controller, /CUSTOMERS_SEARCH/);
     assert.match(controller, /CUSTOMER_BOOKINGS/);
@@ -113,11 +115,11 @@ test("TPV customer, staff and booking references are synthetic-only", async () =
 
 test("TPV Gift Cards exposes read-only balance lookup without storing or returning the raw code", async () => {
     const giftBackend = await readFile(new URL("../tpv/tpvGiftCards.web.js", import.meta.url), "utf8");
-    assert.match(giftBackend, /TPV_GIFT_CARDS_DISABLED_IN_QA/);
+    assert.match(giftBackend, /TPV_GIFT_CARDS_DISABLED_IN_SANDBOX/);
     assert.doesNotMatch(giftBackend, /giftVouchers|@wix\/ecom|auth\.elevate/);
     assert.match(giftBackend, /syntheticOnly: true/);
     assert.doesNotMatch(giftBackend, /insertItem|updateItem|redeemGiftCard|console\.(log|error)/);
-    assert.doesNotMatch(html, /Saldo real · deshabilitado en QA/);
+    assert.doesNotMatch(html, /Saldo real · deshabilitado en SANDBOX/);
     assert.doesNotMatch(html, /id="giftCardAmount"/);
     assert.doesNotMatch(html, /id="giftCardType"/);
     assert.doesNotMatch(html, /function renderGiftCard/);

@@ -99,7 +99,7 @@ test('HOOK-CMS-DATETIME-03 normalizes timeclock recordedAt', () => {
   const item = {
     resourceId: 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeee0001',
     memberId: 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeee0002',
-    recordId: 'clock-record-qa-001',
+    recordId: 'clock-record-sandbox-001',
     clockEventType: IC.CLOCK_EVENT_TYPE.ENTRADA,
     recordType: IC.RECORD_TYPE_HORARIOS.REGULAR,
     source: IC.CLOCK_RECORD_SOURCE.WIX_WEB_METHOD,
@@ -140,9 +140,9 @@ function cajaBase() {
     movementType: IC.MOVEMENT_TYPE.VENTA,
     amount: 100,
     totalAmount: 100,
-    numSerieFactura: 'FAC-QA-0001',
+    numSerieFactura: 'FAC-SANDBOX-0001',
     sequenceNumber: 1,
-    transactionId: 'TX-QA-0001',
+    transactionId: 'TX-SANDBOX-0001',
     previousRecordHash: 'b'.repeat(64),
     recordTimestamp: new Date('2026-11-20T10:00:00.000Z'),
     schemaVersion: 'LEDGER_V5_FISCAL',
@@ -530,7 +530,7 @@ test('HOOK-CLOCK-01 insert requires canonical fields and HMAC signature', () => 
   const base = {
     resourceId: 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeee0001',
     memberId: 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeee0002',
-    recordId: 'clock-record-qa-002',
+    recordId: 'clock-record-sandbox-002',
     source: IC.CLOCK_RECORD_SOURCE.WIX_WEB_METHOD,
     workDate: '2026-11-12',
     timeZone: IC.SDK_CONFIG.TZ,
@@ -596,9 +596,9 @@ test('HOOK-CAJA-SINGLE-01 enforces the CajaActual single-item principal', async 
 test('HOOK-ACCOUNTING-LEDGER-01 validates complete inserts and preserves append-only integrity', () => {
   const valid = {
     _id: 'ACC_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
-    journalEntryId: 'ACC-QA-ENTRY-001',
+    journalEntryId: 'ACC-SANDBOX-ENTRY-001',
     recordTimestamp: '2026-11-20T10:00:00.000Z',
-    operationDescription: 'Asiento QA sintético',
+    operationDescription: 'Asiento SANDBOX sintético',
     sequenceNumber: 1,
     movementType: 'MOVIMIENTO_CAJA',
     recordSource: 'MovimientosCaja',
@@ -696,28 +696,28 @@ test('HOOK-CITAS-INSERT-01 enforces all physical required booking fields', () =>
 });
 
 test('HOOK-ADDON-01 requires the physical taxIncluded boolean', () => {
-  const valid = { _id: 'addon-qa-1', addonId: 'addon-qa-1', sku: 'ADDON-QA-1', taxIncluded: false };
+  const valid = { _id: 'addon-sandbox-1', addonId: 'addon-sandbox-1', sku: 'ADDON-SANDBOX-1', taxIncluded: false };
   assert.strictEqual(H.ComplementosCatalogo_beforeInsert({ ...valid }).taxIncluded, false);
   assert.throws(() => H.ComplementosCatalogo_beforeInsert({ ...valid, taxIncluded: undefined }), /taxIncluded/);
   assert.throws(() => H.ComplementosCatalogo_beforeInsert({ ...valid, taxIncluded: 'false' }), /taxIncluded/);
 });
 
 test('HOOK-CAJA-04 allows edit and removal only for the active synthetic TPV test-run row', async () => {
-  const runId = IC.TPV_QA_RUNTIME_POLICY.TEST_RUN_ID;
+  const runId = IC.TPV_SANDBOX_RUNTIME_POLICY.SANDBOX_RUN_ID;
   const row = {
-    _id: 'TPVQA_HOOK_TEST_ROW',
+    _id: 'TPVSANDBOX_HOOK_TEST_ROW',
     hash: 'a'.repeat(64),
     sequenceNumber: 0,
-    transactionId: 'TPVQA_HOOK_TEST_ROW',
-    traceId: 'TPVQA:' + runId + ':QA-SESSION-TEST',
+    transactionId: 'TPVSANDBOX_HOOK_TEST_ROW',
+    traceId: 'TPVSANDBOX:' + runId + ':SANDBOX-SESSION-TEST',
     movementType: 'SIMULATED_TPV_PAYMENT',
-    recordSource: 'TPV_QA_SYNTHETIC',
+    recordSource: 'TPV_SANDBOX_SYNTHETIC',
     payloadFiscal: {
-      testRunId: runId,
+      sandboxRunId: runId,
       requestFingerprint: 'f'.repeat(64),
-      logicalCollection: IC.TPV_QA_COLLECTIONS.PAGOS,
-      idempotencyKey: 'QA-PAYMENT-1',
-      qaRecord: { amountMinor: 5000, paymentMethod: 'EFECTIVO' },
+      logicalCollection: IC.TPV_SANDBOX_COLLECTIONS.PAGOS,
+      idempotencyKey: 'SANDBOX-PAYMENT-1',
+      sandboxRecord: { amountMinor: 5000, paymentMethod: 'EFECTIVO' },
       isSynthetic: true,
       realPayment: false,
       externalSideEffects: false,
@@ -729,7 +729,7 @@ test('HOOK-CAJA-04 allows edit and removal only for the active synthetic TPV tes
     ...row,
     payloadFiscal: {
       ...row.payloadFiscal,
-      qaRecord: { ...row.payloadFiscal.qaRecord, amountMinor: 7500 },
+      sandboxRecord: { ...row.payloadFiscal.sandboxRecord, amountMinor: 7500 },
     },
   });
   assert.equal(updated.totalAmount, 75);
