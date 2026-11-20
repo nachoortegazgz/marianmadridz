@@ -15,10 +15,11 @@ No se habilitan escritores fiscales/contables, fichajes, pagos ni cierres. No se
 ### Snapshot CMS read-only (20/11/2026)
 
 Consulta directa Wix Data API, sin mutaciones:
-- `CajaActual`: 1 fila. Estado `ABIERTA`; `openedAt=2026-11-14T06:00:00Z`; `closedAt=2026-11-12T23:00:00Z` (anterior a la apertura); `cashAmount=300`, `expectedCash=300`, `difference=0`; `sequenceCounters` llega como texto JSON, no como OBJECT.
+- `CajaActual`: 1 fila. Estado `ABIERTA`; `openedAt=2026-11-14T06:00:00Z`; `closedAt=2026-11-12T23:00:00Z` (anterior a la apertura); `cashAmount=300`, `expectedCash=300`, `difference=0`; `sequenceCounters` llega como texto JSON aunque el esquema CMS declara `OBJECT`.
 - `CitasF2`: 6 filas (no 60); el esquema físico confirma `cashMovementId TEXT` y `orderId TEXT`.
 - `HistoricoCierresZ`: 0 filas.
-- `MovimientosCaja`: 0 filas. Por tanto no hay movimientos históricos que permitan probar ausencia de `recordTimestamp`; el riesgo de BUG-NEW-03 queda limitado a productores/filas futuras y no se puede afirmar que exista una fila defectuosa.
+- `MovimientosCaja`: 0 filas; el esquema declara `recordTimestamp DATETIME required`. No hay movimientos históricos que permitan probar ausencia del campo; el riesgo de BUG-NEW-03 queda limitado a productores/filas futuras y no se puede afirmar que exista una fila defectuosa.
+- `HistoricoCierresZ`: el esquema declara `recordDomain TEXT required` y `closedBy TEXT required`; no hay filas para comprobar valores históricos.
 - Contexto Wix del sitio: estado `Draft`; no se acredita publicación del código actual.
 
 
