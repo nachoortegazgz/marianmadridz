@@ -5,7 +5,7 @@ import { TPV_QA_COLLECTIONS } from "backend/internalConfig";
 import { insertQaEvent, latestOpenQaSession } from "backend/tpv/tpvQaRepository";
 import { assertTpvQaEnabled, fromMinorUnits, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
 
-export const registrarMovimientoCajaQA = webMethod(
+export const registrarMovimientoCaja = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
         const traceId = makeTraceId("tpv-qa-cash-movement");
@@ -13,12 +13,12 @@ export const registrarMovimientoCajaQA = webMethod(
         assertTpvQaEnabled();
         try {
             const movementType = String(input.movementType || "").trim().toUpperCase();
-            if (!["ENTRADA", "SALIDA", "RETIRADA"].includes(movementType)) throw new Error("TPV_QA_CASH_MOVEMENT_TYPE_INVALID");
+            if (!["ENTRADA", "SALIDA", "RETIRADA"].includes(movementType)) throw new Error("TPV_CASH_MOVEMENT_TYPE_INVALID");
             if (movementType !== "ENTRADA") await requireAdmin(traceId);
             const session = await latestOpenQaSession();
             if (!session) throw new Error("TPV_QA_SESSION_NOT_OPEN");
             const amountMinor = toMinorUnits(input.amount, "CASH_MOVEMENT");
-            if (amountMinor <= 0) throw new Error("TPV_QA_CASH_MOVEMENT_AMOUNT_INVALID");
+            if (amountMinor <= 0) throw new Error("TPV_CASH_MOVEMENT_AMOUNT_INVALID");
             const reason = String(input.reason || "").trim();
             if (reason.length < 3 || reason.length > 500) throw new Error("TPV_QA_REASON_REQUIRED");
             const key = normalizeClientIdempotencyKey(input.idempotencyKey);
@@ -49,7 +49,7 @@ export const registrarMovimientoCajaQA = webMethod(
             });
             return { status: "SUCCESS", data: { movementId: item._id, movementType, amount: fromMinorUnits(amountMinor), replayed, persisted: true, isSynthetic: true, realPayment: false }, error: null, traceId };
         } catch (error) {
-            return { status: "ERROR", data: null, error: { code: String(error?.message || "TPV_QA_CASH_MOVEMENT_FAILED") }, traceId };
+            return { status: "ERROR", data: null, error: { code: String(error?.message || "TPV_CASH_MOVEMENT_FAILED") }, traceId };
         }
     }
 );
