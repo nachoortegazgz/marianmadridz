@@ -280,7 +280,7 @@ test("every exported TPV WebMethod has an explicit runtime policy classification
             guarded: ["obtenerResumenSesion", "generarTicketX", "cerrarTicketZ"],
         },
         "tpvPagos.web.js": {
-            guarded: ["validarDesglosePagos"],
+            guarded: ["validarDesglosePagos", "simularPasarelaPago", "simularReembolsoPasarela"],
         },
         "tpvUtils.web.js": {
             guarded: ["obtenerConfiguracionTPV"],

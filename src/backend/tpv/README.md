@@ -26,7 +26,7 @@ Este directorio implementa el TPV en modo SANDBOX persistente y sintético para 
 | `tpvVentas.web.js` | Validación y persistencia idempotente de venta sintética |
 | `tpvMovimientos.web.js` | Entradas, salidas y retiradas sintéticas |
 | `tpvCatalogo.web.js` | Lectura nativa de servicios Bookings y Stores Catalog V3; clientes/profesionales solo desde `TpvSandboxIdentities` |
-| `tpvPagos.web.js` | Validación de medios mixtos sin pasarela |
+| `tpvPagos.web.js` | Validación de medios mixtos y WebMethods de simulación de proveedor, sin llamadas externas |
 | `tpvDevoluciones.web.js` | Reembolso sintético parcial/total, con autorización ADMIN y lock por venta |
 | `tpvCierres.web.js` | Resumen, Ticket X y cierre de sesión SANDBOX Ticket Z |
 | `tpvAuditoria.web.js` | Consulta de auditoría persistida |
@@ -153,3 +153,29 @@ PR #500 está fusionada en `main`: commit `6da7cdf0d815ad2e1833f5bd56b5950aff2af
 Validación pre-merge del HEAD `306816dff20d62e4ec3fda87e25fb050c155bb96`: Layer 1 28 suites/339 tests PASS; Layer 2 19 suites/268 tests PASS; suite completa 75 suites/706 tests PASS; contratos Wix SDK, eCommerce Order Transactions, TPV Catalog y ESLint PASS; Gitleaks PASS (runs `44781808680` y `44781808524`). CI post-merge para `6da7cdf0...` está en curso en los runs `44781982497` y `44781982392`; no declararlo aprobado hasta que ambos finalicen SUCCESS.
 
 La corrección es una barrera de código por estado de datos; no identifica de forma contractual Preview frente a Published. No equivale a prueba de aislamiento runtime ni a aceptación E2E. Wix Preview, prueba negativa Published, concurrencia H-01, permisos efectivos, efectos externos, comparación LIVE antes/después y reset preproducción siguen pendientes. Sitio Wix observado en Draft. **NO-GO de publicación.**
+
+
+## Simulador de proveedor de pagos — decisión 2026-11-20
+
+`tpvPaymentSimulator.js` implementa un adaptador determinista, puro y sin efectos secundarios para ensayar contratos semejantes a los de una pasarela. Los WebMethods `simularPasarelaPago` y `simularReembolsoPasarela` exigen sesión de miembro y rol cajero en backend.
+
+Escenarios: pago CAPTURED, AUTHORIZED, DECLINED, REQUIRES_ACTION y PENDING; reembolso REFUNDED, DECLINED y PENDING. Solo EUR; importes en céntimos enteros. Las referencias son deterministas por clave idempotente y la huella SHA-256 permite detectar una clave reutilizada con contenido distinto. Todas las respuestas declaran environment=SIMULATOR, dataPlane=NO_CMS_ACCESS, providerCalled=false, realPayment=false, persisted=false y externalSideEffects=false. El simulador no afirma estar ejecutándose en el data plane Sandbox de Wix.
+
+**Límite explícito:** es un simulador de contrato local del backend; NO es el modo de pruebas oficial de Wix Payments, no autoriza tarjetas de prueba reales y no crea transacciones en Wix eCommerce. No prueba webhooks del proveedor, 3DS real, settlement, conciliación bancaria ni comportamiento del SDK del PSP. La repetición es determinista, pero no constituye idempotencia durable entre solicitudes porque el simulador no persiste estado. Cualquier futura persistencia debe aplicar índice único/CAS y reconciliación de reintentos antes de afirmar idempotencia efectiva.
+
+La simulación de reembolso no mantiene un acumulado. El llamador debe comprobar contra eventos sintéticos append-only que el total reembolsado no supera el pago original. No se deben llamar APIs de Wix Payments, checkout, Orders ni endpoints de refund desde este adaptador.
+
+## Fixture de identidades sintéticas
+
+docs/qa/fixtures/tpv-sandbox-identities.json contiene seis registros que cumplen assertTpvSandboxIdentity: tres clientes y tres profesionales, todos con correo @example.test, syntheticOnly=true, environment=SANDBOX, active=true y el SANDBOX_RUN_ID actual.
+
+El fixture es para importación manual desde CMS > Sandbox únicamente después de comprobar visualmente que el Editor está en Sandbox. No importar mediante Management API ni sincronizar Sandbox → Online. Los registros no son miembros Wix ni contactos CRM y no se deben convertir en memberId, contactId o resourceId.
+
+## Decisiones de entorno y release
+
+- Se mantiene el sitio actual; no se crea otro sitio ni se publica el principal.
+- No se crean cuentas reales Wix Members para representar personas sintéticas.
+- Las colecciones propias CMS pueden aislarse mediante Sandbox cuando el toggle está habilitado y el código se ejecuta en Preview. Las colecciones de Wix Apps siguen conectadas a Live.
+- El simulador no necesita escribir CMS ni usar colecciones de Apps; por eso es utilizable en pruebas unitarias/offline sin riesgo financiero.
+- Las escrituras persistentes TPV siguen sujetas al gate de entorno aislado y al preseed manual de identidades y CajaActual. No inferir aislamiento por environment=SANDBOX en una constante.
+- No usar Wix Payments real ni ejecutar pruebas de checkout/captura/reembolso hasta disponer de un modo de prueba oficial habilitado en Dashboard y de un procedimiento de prueba documentado por Wix.

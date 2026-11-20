@@ -2,6 +2,7 @@ import { Permissions, webMethod } from "wix-web-module";
 import { requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { assertTpvSandboxEnabled, normalizePaymentMethod, toMinorUnits } from "backend/tpv/tpvUtils";
+import { simulateGatewayPayment, simulateGatewayRefund } from "backend/tpv/tpvPaymentSimulator";
 
 export const validarDesglosePagos = webMethod(
     Permissions.SiteMember,
@@ -43,6 +44,46 @@ export const validarDesglosePagos = webMethod(
             };
         } catch (error) {
             return { status: "ERROR", data: null, error: { code: String(error?.message || "TPV_SANDBOX_PAYMENT_VALIDATION_FAILED") }, traceId };
+        }
+    }
+);
+
+export const simularPasarelaPago = webMethod(
+    Permissions.SiteMember,
+    async (input = {}) => {
+        const traceId = makeTraceId("tpv-sandbox-gateway-payment");
+        await requireCajero(traceId);
+        assertTpvSandboxEnabled();
+        try {
+            const data = simulateGatewayPayment(input);
+            return { status: "SUCCESS", data: { ...data, traceId }, error: null, traceId };
+        } catch (error) {
+            return {
+                status: "ERROR",
+                data: null,
+                error: { code: String(error?.message || "TPV_PAYMENT_SIMULATOR_FAILED") },
+                traceId,
+            };
+        }
+    }
+);
+
+export const simularReembolsoPasarela = webMethod(
+    Permissions.SiteMember,
+    async (input = {}) => {
+        const traceId = makeTraceId("tpv-sandbox-gateway-refund");
+        await requireCajero(traceId);
+        assertTpvSandboxEnabled();
+        try {
+            const data = simulateGatewayRefund(input);
+            return { status: "SUCCESS", data: { ...data, traceId }, error: null, traceId };
+        } catch (error) {
+            return {
+                status: "ERROR",
+                data: null,
+                error: { code: String(error?.message || "TPV_PAYMENT_REFUND_SIMULATOR_FAILED") },
+                traceId,
+            };
         }
     }
 );
