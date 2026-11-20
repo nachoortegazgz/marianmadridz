@@ -141,7 +141,7 @@ test("VALIDATION-TPV-IDENTITY-01 accepts only synthetic Sandbox customer and sta
         metadata: {},
     };
     assert.equal(V.assertTpvSandboxIdentity(base), true);
-    assert.throws(() => V.assertTpvSandboxIdentity({ ...base, environment: "LIVE" }), /SANDBOX/);
+    assert.throws(() => V.assertTpvSandboxIdentity({ ...base, environment: "LIVE" }), /Sandbox/);
     assert.throws(() => V.assertTpvSandboxIdentity({ ...base, syntheticOnly: false }), /synthetic Sandbox/);
     assert.throws(() => V.assertTpvSandboxIdentity({ ...base, email: "cliente@real.es" }), /example.test/);
     assert.throws(() => V.assertTpvSandboxIdentity({ ...base, phone: "+34600000000" }), /cannot store real contact/);
