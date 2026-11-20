@@ -25,8 +25,8 @@ assert.ok(["http:", "https:"].includes(startUrl.protocol), "Preview URL must use
 assert.ok(allowedHost(startUrl.hostname), "Initial URL must be a Wix Preview host, never a custom/live domain");
 
 const blockedRequests = [];
-const pageErrors = [];
-const consoleErrors = [];
+let pageErrorCount = 0;
+let consoleErrorCount = 0;
 let browser;
 
 try {
@@ -34,21 +34,24 @@ try {
     const context = await browser.newContext({ serviceWorkers: "block" });
     const page = await context.newPage();
 
-    page.on("pageerror", (error) => pageErrors.push(error.message));
+    page.on("pageerror", () => pageErrorCount += 1);
     page.on("console", (message) => {
-        if (message.type() === "error") consoleErrors.push(message.text());
+        if (message.type() === "error") consoleErrorCount += 1;
     });
 
     // Prevent every non-read HTTP request from reaching Wix or a third party.
     await page.route("**/*", async (route) => {
         const method = route.request().method().toUpperCase();
-        if (["GET", "HEAD", "OPTIONS"].includes(method)) {
+        const requestUrl = new URL(route.request().url());
+        const dynamicApiPath = /\/(?:_api|_functions|_serverless|api|graphql)(?:\/|$)/i.test(requestUrl.pathname);
+        if (["GET", "HEAD", "OPTIONS"].includes(method) && !dynamicApiPath) {
             await route.continue();
             return;
         }
         blockedRequests.push({
             method,
-            host: new URL(route.request().url()).hostname,
+            host: requestUrl.hostname,
+            category: dynamicApiPath ? "dynamic-api" : "non-read-method",
         });
         await route.abort("blockedbyclient");
     });
@@ -72,13 +75,11 @@ try {
         result: "PASS",
         httpStatus: response.status(),
         finalHost: finalUrl.hostname,
-        title: await page.title(),
+        titleLength: (await page.title()).length,
         renderedTextLength: bodyText.length,
-        blockedNonReadRequests: blockedRequests,
-        pageErrorCount: pageErrors.length,
-        pageErrors: pageErrors.slice(0, 20),
-        consoleErrorCount: consoleErrors.length,
-        consoleErrors: consoleErrors.slice(0, 20),
+        blockedRequests,
+        pageErrorCount,
+        consoleErrorCount,
         interactionsPerformed: 0,
         formsSubmitted: 0,
         timestamp: new Date().toISOString(),
@@ -93,8 +94,8 @@ try {
         result: "FAIL",
         error: error instanceof Error ? error.message : String(error),
         blockedNonReadRequests: blockedRequests,
-        pageErrors: pageErrors.slice(0, 20),
-        consoleErrors: consoleErrors.slice(0, 20),
+        pageErrorCount,
+        consoleErrorCount,
         interactionsPerformed: 0,
         formsSubmitted: 0,
         timestamp: new Date().toISOString(),
