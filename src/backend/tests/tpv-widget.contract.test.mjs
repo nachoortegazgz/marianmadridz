@@ -127,5 +127,5 @@ test("TPV Gift Cards exposes read-only balance lookup without storing or returni
 
 
 test("TPV controller never marks unwrapped read results as persisted", () => {
-    assert.match(controller, /function success\(data, traceId\) \{[\s\S]*?persisted: false/);
+    assert.match(controller, /function success\(data, traceId\) \{[^}]*persisted: false/s);
 });
