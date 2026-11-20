@@ -222,6 +222,12 @@ test("MovimientosCaja transaction IDs are unique across logical TPV event collec
     assert.equal(legacyId, makeLegacySandboxTransactionId(key));
 });
 
+test("legacy transaction IDs remain discoverable for same-collection idempotent retries", async () => {
+    const repository = await readFile(new URL("../tpv/tpvSandboxRepository.js", import.meta.url), "utf8");
+    assert.match(repository, /const transactionIds = \[\s*_testTransactionId\(collection, key\),\s*makeLegacySandboxTransactionId\(key\),\s*\]/);
+    assert.match(repository, /for \(const transactionId of uniqueTransactionIds\)/);
+});
+
 test("SANDBOX policy remains synthetic and client idempotency keys are bounded", () => {
     assert.equal(TPV_SANDBOX_RUNTIME_POLICY.ENABLED, true, "offline test harness override");
     assert.equal(TPV_SANDBOX_RUNTIME_POLICY.ENVIRONMENT, "SANDBOX");
