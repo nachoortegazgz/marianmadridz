@@ -195,7 +195,7 @@ describe("ControlOperativo hooks", () => {
       ...base(CONTROL_TYPE.TPV_QA_REFUND_LOCK),
       version: 0,
       expiresAt: new Date(Date.now() + 60000),
-      payload: { environment: "TEST" },
+      payload: { environment: "SANDBOX" },
     };
     assert.deepEqual(ControlOperativo_beforeInsert(original), original);
     seed(original);
@@ -215,7 +215,7 @@ describe("ControlOperativo hooks", () => {
       ...base(CONTROL_TYPE.TPV_QA_SESSION_LOCK),
       version: 0,
       expiresAt: new Date(Date.now() + 60000),
-      payload: { sessionId: "QA-SESSION-20261116", environment: "TEST" },
+      payload: { sessionId: "QA-SESSION-20261116", environment: "SANDBOX" },
     };
     assert.deepEqual(ControlOperativo_beforeInsert(original), original);
     seed(original);
