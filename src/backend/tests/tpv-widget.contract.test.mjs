@@ -79,7 +79,8 @@ test("TPV HTML request protocol is dispatched for the active widget workflows", 
     assert.match(controller, /protocolVersion: 1/);
     assert.match(controller, /environment: sandboxReady \? "SANDBOX" : "UNAVAILABLE"/);
     assert.match(controller, /sandboxReady/);
-    assert.match(controller, /TPV_SANDBOX_DISABLED_UNTIL_SANDBOX_ISOLATION/);
+    assert.match(controller, /inicializarCajaSANDBOX/);
+    assert.match(controller, /sandboxReady/);
     assert.match(controller, /syntheticOnly: true/);
     assert.match(controller, /case MESSAGE_TYPES\.READY:\s+return;/);
     for (const type of requests) {

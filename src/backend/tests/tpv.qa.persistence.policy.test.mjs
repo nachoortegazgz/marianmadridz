@@ -227,7 +227,7 @@ test("SANDBOX policy remains synthetic and client idempotency keys are bounded",
 
 test("every exposed TPV SANDBOX WebMethod fails closed before repository access", async () => {
     const protectedMethods = [
-        ["tpvCaja.web.js", ["obtenerSesionCajaSANDBOX", "abrirCajaSANDBOX", "registrarArqueoParcialSANDBOX"]],
+        ["tpvCaja.web.js", ["inicializarCajaSANDBOX", "obtenerSesionCajaSANDBOX", "abrirCajaSANDBOX", "registrarArqueoParcialSANDBOX"]],
         ["tpvMovimientos.web.js", ["registrarMovimientoCajaSANDBOX"]],
         ["tpvVentas.web.js", ["registrarVentaSANDBOX"]],
         ["tpvDevoluciones.web.js", ["solicitarDevolucionSANDBOX"]],
@@ -261,7 +261,7 @@ test("every exposed TPV SANDBOX WebMethod fails closed before repository access"
 test("every exported TPV WebMethod has an explicit runtime policy classification", async () => {
     const policies = {
         "tpvCaja.web.js": {
-            guarded: ["obtenerSesionCajaSANDBOX", "abrirCajaSANDBOX", "registrarArqueoParcialSANDBOX"],
+            guarded: ["inicializarCajaSANDBOX", "obtenerSesionCajaSANDBOX", "abrirCajaSANDBOX", "registrarArqueoParcialSANDBOX"],
         },
         "tpvMovimientos.web.js": {
             guarded: ["registrarMovimientoCajaSANDBOX"],

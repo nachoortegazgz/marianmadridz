@@ -100,6 +100,7 @@ export function initializeTpvPage(widgetElement) {
                 environment: sandboxReady ? "SANDBOX" : "UNAVAILABLE",
                 syntheticOnly: true,
                 sandboxReady,
+                previewOnly: sandboxReady,
                 sandboxInitialized: bootstrap.data?.initialized === true,
                 mode: sandboxReady ? "SYNTHETIC_SANDBOX" : "UNAVAILABLE",
                 currencyCode: "EUR",
