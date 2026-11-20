@@ -3,49 +3,66 @@
 ## Alcance y método
 
 - Sitio Wix: `188bed94-177c-4bc9-a9f0-35080d874f3e`.
-- Consulta de solo lectura a `GET /data/v2/collections/{collectionId}` para diez colecciones de negocio, más ControlOperativo auditada en revisión separada.
-- Comparación de campos físicos `required` contra productores, validadores y hooks en `src/backend/`.
-- No se insertaron, actualizaron ni eliminaron elementos CMS. No se ejecutaron escritores fiscales, contables, laborales ni de caja. El sitio sigue en Draft.
-- Estado: **esquemas live verificados; código integrado en main mediante PR #451; CI completo verde (Layer 1 333/333, Layer 2 266/266, suite offline 687/687, SDK, npm audit, ESLint y secret scanning); runtime Wix/Preview y E2E Sandbox pendientes**.
+- Consultas read-only de esquemas físicos y comparación con productores, validadores y hooks bajo `src/backend/`.
+- No se insertaron, actualizaron ni eliminaron elementos CMS como parte de esta auditoría.
+- No se ejecutaron escritores fiscales, contables, laborales ni de caja.
+- Esta auditoría de código/esquema no certifica ejecución Wix Runtime.
 
 ## Resultado por colección
 
-| Colección | Revisión / campos | Campos físicos obligatorios | Productor y conclusión |
-|---|---:|---|---|
-| `CajaActual` | 18 / 81 | Ninguno | Singleton actualizado por proyecciones de caja; no se encontró un productor de inserción ordinaria en los módulos auditados. `assertCajaActualRecord` valida el tipo OBJECT de `sequenceCounters`. |
-| `CitasF2` | 60 / 29 | `slotStart`, `slotEnd`, `totalAmount`, `bookingId`, `traceId`, `bookingType`, `bookingStatus`, `paymentStatus`, `serviceId`, `resourceId`, `dateYmd` | `bookingCore.js::_persistBooking` exige IDs, fechas, scheduleId y traceId; construye los once campos requeridos. `assertCitasF2Insert` verifica los once campos en dataAccess y hook antes de aceptar la inserción. Los consumidores de eventos/sagas pasan por ese escritor. |
-| `ComplementosCatalogo` | 142 / 18 | `sku`, `taxIncluded`, `addonId` | No se localizó productor backend de altas. El hook validaba sku/addonId, pero aceptaba `taxIncluded` ausente pese a ser obligatorio. Corregido: ahora exige BOOLEAN, incluido `false` como valor válido. |
-| `HistoricoCierresZ` | 44 / 66 | `closeDate`, `fiscalPeriod`, `totalTaxAmount`, `totalTaxBase`, `totalOnline`, `totalBizum`, `totalCard`, `totalCash`, `closedBy`, `recordDomain`, `operationDate`, `traceId` | Hallazgo P1: dos escritores tenían contratos incompletos y colisionaban en `Z_<fecha>`. Corregido el escritor canónico para construir los campos determinables y exigir `closedBy`/`recordDomain`; el proyector duplicado de EventLog deja de insertar y CIERRE_Z queda bloqueado en esa ruta. Pendiente decisión de dominio para `recordDomain`; no se inventa valor. |
-| `PaquetesGestoria` | 8 / 17 | `invoiceData`, `periodType`, `fiscalYear`, `packageVersion`, `summaryData`, `packageStatus`, `snapshotHash`, `schemaVersion`, `source`, `traceId`, `createdAt` | `fiscalDocuments.web.js` construye los campos obligatorios. El hook ya validaba estructura/hash/periodo/estado, pero no exigía `createdAt`; corregido. |
-| `LibroAsientosContablesDetalle` | 9 / 103 | Ninguno | `accountingLedger.js::appendAccountingEntry` genera asiento append-only con identidad, importes, desglose, hash y traceId; no hay obligatoriedad física declarada en el esquema live. |
-| `MapaStaff` | 135 / 43 | Ninguno | Hooks discriminan STAFF/TERCERO/GESTORIA y validan identidad fiscal. La configuración SIF sigue bloqueada: campos requeridos por el escritor fiscal no existen en el esquema físico, y el fallback fue retirado en PR #447. |
-| `MovimientosCaja` | 109 / 113 | `hash`, `amount`, `numSerieFactura`, `sequenceNumber`, `transactionId`, `previousRecordHash`, `recordTimestamp`, `schemaVersion`, `traceId`, `movementType`, `totalAmount`, `paymentMethod`, `channelType`, `operationDescription`, `staffResourceId`, `tipoFactura`, `fechaExpedicionFactura`, `tipoImpositivo`, `fiscalPeriod` | Los dos productores principales son `cajas.web.js` y `eventLog.js`. El hook no comprobaba de forma común todos los campos físicos requeridos. Corregido: validador común exige campos, tipos, fechas, hashes y enums canónicos; los registros TPV QA sintéticos conservan su excepción de enums, no de integridad estructural. EventLog deja de inventar `channelType=POS` y valida el contrato antes del insert. |
-| `RegistrosHorariosStaff` | 2 / 47 | `resourceId`, `memberId`, `recordId`, `clockEventType`, `recordType`, `source`, `recordedAt`, `workDate`, `dayKey`, `monthKey`, `timeZone`, `recordHash`, `schemaVersion`, `traceId` | `horario.web.js` sella identidad, fechas, claves de periodo, hash, versión y traceId; `assertRegistrosHorariosStaff` exige los campos, DATETIME/DATE válidos, coherencia dayKey/monthKey y HMAC. Writer sigue deshabilitado por política. |
-| `ServiciosCatalogo` | 203 / 44 | Ninguno | No se localizó productor de inserción backend; se consume como catálogo. |
+| Colección | Campos físicos obligatorios | Conclusión |
+|---|---|---|
+| `CajaActual` | Ninguno | Singleton y proyecciones protegidas por contrato de dominio; validar en Sandbox. |
+| `CitasF2` | `slotStart`, `slotEnd`, `totalAmount`, `bookingId`, `traceId`, `bookingType`, `bookingStatus`, `paymentStatus`, `serviceId`, `resourceId`, `dateYmd` | El escritor canónico y las barreras de inserción exigen los once campos. E2E Wix pendiente. |
+| `ComplementosCatalogo` | `sku`, `taxIncluded`, `addonId` | El hook exige ahora también `taxIncluded` BOOLEAN; `false` es válido. |
+| `HistoricoCierresZ` | `closeDate`, `fiscalPeriod`, `totalTaxAmount`, `totalTaxBase`, `totalOnline`, `totalBizum`, `totalCard`, `totalCash`, `closedBy`, `recordDomain`, `operationDate`, `traceId` | El contrato se valida antes de insertar. `recordDomain` carece de valor canónico aprobado; las rutas que no pueden suministrarlo permanecen bloqueadas. |
+| `PaquetesGestoria` | `invoiceData`, `periodType`, `fiscalYear`, `packageVersion`, `summaryData`, `packageStatus`, `snapshotHash`, `schemaVersion`, `source`, `traceId`, `createdAt` | El hook exige estructura, hash, periodo, estado y `createdAt`. El flujo de envío/snapshot exacto sigue pendiente (#223). |
+| `LibroAsientosContablesDetalle` | Ninguno | PR #452 añade validación de dominio central y hook beforeInsert. CI verde; Wix Sandbox pendiente. |
+| `MapaStaff` | Ninguno | Tipos STAFF/TERCERO/GESTORIA protegidos. La configuración SIF no está completa ni existe singleton CONFIG_SISTEMA verificado. |
+| `MovimientosCaja` | `hash`, `amount`, `numSerieFactura`, `sequenceNumber`, `transactionId`, `previousRecordHash`, `recordTimestamp`, `schemaVersion`, `traceId`, `movementType`, `totalAmount`, `paymentMethod`, `channelType`, `operationDescription`, `staffResourceId`, `tipoFactura`, `fechaExpedicionFactura`, `tipoImpositivo`, `fiscalPeriod` | Validación común reforzada. Las filas sintéticas TPV mantienen excepción de enums, no de integridad estructural. Runtime pendiente. |
+| `RegistrosHorariosStaff` | `resourceId`, `memberId`, `recordId`, `clockEventType`, `recordType`, `source`, `recordedAt`, `workDate`, `dayKey`, `monthKey`, `timeZone`, `recordHash`, `schemaVersion`, `traceId` | Contrato de campos, fechas, claves de periodo y HMAC reforzado. Writer continúa deshabilitado por política. |
+| `ServiciosCatalogo` | Ninguno | Consumido como catálogo; no se localizó productor de inserción backend en el alcance auditado. |
+| `ControlOperativo` | `controlType`, `dedupeKey`, `traceId`, `payload` | PR #450 integrada: allowlist de columnas físicas, payload OBJECT requerido y contratos específicos por controlType. Históricos terminales se conservan; no se normalizan mediante mutaciones. |
 
-## Correcciones incluidas en esta rama
+## Correcciones integradas
 
-1. `validation.js`: `assertHistoricoCierresZ` valida los doce campos físicos requeridos, incluidos DATE válidos, números finitos y textos no vacíos.
-2. `dataAccess.insertItem` aplica validación central antes de la escritura elevada para `ControlOperativo`, `CitasF2`, `RegistrosHorariosStaff`, `MapaStaff`, `CajaActual`, `MovimientosCaja` y `HistoricoCierresZ`; los hooks `data.js` mantienen una segunda barrera. El hook `HistoricoCierresZ_beforeInsert` exige el contrato completo; `MovimientosCaja_beforeInsert` exige todos los campos físicos; Complementos exige `taxIncluded`; PaquetesGestoria exige `createdAt`.
-3. `cajas.web.js::_registerZClosing`: el objeto de cierre ahora incluye closeDate, fiscalPeriod, totales fiscales, closedBy y recordDomain; valida el responsable y dominio tras comprobar integridad y antes de llamar al firmador o crear recovery/insert. La ruta pública ignora recordDomain enviado por el navegador; solo caller backend de confianza puede proporcionarlo.
-4. `eventLog.js`: elimina el segundo insert incompleto en HistoricoCierresZ; rechaza `eventType=CIERRE_Z` por esta vía; normaliza y valida movementType/paymentMethod/channelType/tipoFactura antes de crear terceros o insertar movimientos, y deja de asumir `channelType=POS`.
-5. Pruebas offline ampliadas para campos obligatorios, tipos, fechas, enum de canal, fecha de paquete, taxIncluded y cierre Z.
+### PR #450 — ControlOperativo
+Merge commit: `11e6cefd838cfd8f18301ddff534e2edd8849743`.
+
+- Exige `payload` como objeto no nulo.
+- Rechaza campos raíz no declarados en el esquema físico.
+- Alinea DISPLAY_TOKEN, LEDGER_IDEMPOTENCY, COMPENSATION, SLOT_LOCK, SYSTEM_FLAG y ALERT con columnas físicas/payload.
+- Conserva registros históricos terminales sin migraciones destructivas.
+
+### PR #451 — contratos de inserción CMS
+Merge commit: `bdbdb2467294c781bfc090cd8429d7c060413d15`.
+
+- Refuerza validadores centrales y hooks para las colecciones auditadas.
+- Corrige contratos de ComplementosCatalogo, PaquetesGestoria, HistoricoCierresZ y MovimientosCaja.
+- Retira la ruta duplicada de inserción CIERRE_Z en EventLog.
+- Bloquea rutas Z que carecen de `recordDomain`/identidad aprobados en vez de inventar valores.
+- CI de PR: Layer 1 333/333, Layer 2 266/266, suite offline 687/687; SDK, npm audit, ESLint y secret scanning SUCCESS.
+
+### PR #452 — ledger contable append-only
+Merge commit: `5cfbecd6849c56d162f0d20a11b620eb2bea0c54`.
+
+- Añade `assertAccountingLedgerRecord`, validación previa en `dataAccess.insertItem` y hook `LibroAsientosContablesDetalle_beforeInsert`.
+- CI workflow #44667244690 completado SUCCESS sobre head `940a6cf9fadb85ed414963eff2cfd1b28c82ed67`.
+- Informe detallado: [accounting-ledger-insert-guard](./2026-11-20-accounting-ledger-insert-guard.md).
 
 ## Bloqueos y límites
 
-- `recordDomain` no tiene enum ni valor canónico documentado en el repositorio. El escritor Z no acepta un valor por defecto. Se requiere decisión de dominio antes de habilitar cierres. Los valores `CASH_REGISTER` usados en tests son fixtures sintéticos, no una aprobación del dominio de producción.
-- El comando de interfaz Z_CLOSING y el cron actual no suministran `recordDomain` ni una identidad de sistema `closedBy`; ambos quedan bloqueados por el backend hasta resolver el contrato. No se debe cambiar la interfaz para aceptar un valor libre del usuario.
-- Consulta Wix read-only adicional: `MovimientosCaja(eventType=CIERRE_Z)` devolvió 0 registros y `HistoricoCierresZ` devolvió 0 registros. La retirada del proyector duplicado no afecta cierres históricos existentes en el corte auditado.
-- `closedBy` se deriva del resourceId del responsable autenticado; el cron interno debe aportar una identidad de sistema aprobada si se quiere permitir cierre sin cajero.
-- `FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED=false`; ningún cambio de esta rama habilita escrituras.
-- El hook Wix debe probarse en Sandbox con identidad y permisos reales; los tests offline no demuestran que Wix ejecute hooks en el runtime.
-- No se certifica la integridad de los registros históricos ni la conformidad VERI*FACTU por esta auditoría de contratos.
+- `recordDomain` no tiene enum/valor canónico aprobado. No aceptar valor libre desde navegador ni activar cierre Z/cron hasta decidir el contrato.
+- El cron requiere identidad de sistema aprobada si debe cerrar sin cajero.
+- `FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED=false`; no se habilitan escritores.
+- La configuración SIF sigue incompleta; PR #447 eliminó el fallback inseguro, pero no acredita conformidad VERI*FACTU.
+- Las pruebas offline no demuestran que Wix ejecute hooks en runtime ni que los permisos reales sean correctos.
+- No se certifica la integridad de los registros históricos ni la conformidad fiscal por esta auditoría.
 
-## Relación con PRs
+## Próximos pasos
 
-- PR #450: contrato ControlOperativo alineado con esquema live revisión 93; merge commit `11e6cefd838cfd8f18301ddff534e2edd8849743`.
-- PR #451: correcciones integradas en `main` mediante squash commit `bdbdb2467294c781bfc090cd8429d7c060413d15`. CI PR verde: Layer 1 333/333, Layer 2 266/266, suite offline 687/687; contratos SDK, npm audit, ESLint y secret scanning SUCCESS. El workflow PR no se repitió sobre el SHA de merge; no se afirma un segundo CI post-merge.
-
-## Hallazgo adicional — ledger contable
-
-En la revisión ampliada del 20-11-2026 se detectó que `LibroAsientosContablesDetalle` tenía hooks append-only para update/remove, pero carecía de `beforeInsert`. Aunque Wix no marca campos required en su esquema físico, el escritor `accountingLedger.js::appendAccountingEntry` genera un contrato de dominio estricto. La corrección se propone en PR #452: validación central previa a escritura elevada y hook CMS `LibroAsientosContablesDetalle_beforeInsert`. Ver `docs/qa/2026-11-20-accounting-ledger-insert-guard.md`. La PR sigue pendiente de CI y revisión; no se considera integrada.
+1. Completar E2E Sandbox de hooks y productores por colección.
+2. Verificar permisos con identidad CMS_EDITOR y backend autorizado (#261).
+3. Resolver `recordDomain`/identidad de cierre Z antes de reactivar esa ruta.
+4. Completar snapshot persistido y versionado de Gestoría (#223).
+5. Auditar escritores, bypasses y consumidores restantes antes de habilitar cualquier writer.
