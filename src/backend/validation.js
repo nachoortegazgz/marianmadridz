@@ -183,9 +183,8 @@ export function assertAccountingLedgerRecord(item) {
         String(item.documentId).length > 128) {
         throw new Error("SCHEMA_VIOLATION: LibroAsientosContablesDetalle text field exceeds its contract");
     }
-    const timestamp = item.recordTimestamp instanceof Date ? item.recordTimestamp : new Date(item.recordTimestamp);
-    if (!item.recordTimestamp || Number.isNaN(timestamp.getTime())) {
-        throw new Error("SCHEMA_VIOLATION: LibroAsientosContablesDetalle requires valid DATETIME recordTimestamp");
+    if (!(item.recordTimestamp instanceof Date) || Number.isNaN(item.recordTimestamp.getTime())) {
+        throw new Error("SCHEMA_VIOLATION: LibroAsientosContablesDetalle requires DATETIME recordTimestamp");
     }
     if (!_isValidDateOnly(item.fechaOperacion) ||
         !/^\d{4}-\d{2}$/.test(String(item.fiscalPeriod)) ||
