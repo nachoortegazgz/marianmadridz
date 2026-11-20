@@ -4,7 +4,7 @@ Fecha de corte: 2026-11-20
 Repositorio: `nachoortegazgz/marianmadridz`  
 Rama: `main`  
 Site ID: `188bed94-177c-4bc9-a9f0-35080d874f3e`  
-Último SHA de aplicación antes de esta actualización documental: `1357d770d6b786f6ecdad1c93d4d29002c00c810`
+Último SHA de aplicación verificado: `1c3afcea4194e524dc2c67ab102581a4876e90f2`
 
 ## 1. Dictamen ejecutivo
 
@@ -14,9 +14,12 @@ El propietario declaró que el sitio está en desarrollo y que los registros fis
 
 ## 2. Estado verificado del repositorio
 
-- `main` apuntaba a `1357d770d6b786f6ecdad1c93d4d29002c00c810` al iniciar esta actualización documental.
+- `main` apunta a `1c3afcea4194e524dc2c67ab102581a4876e90f2` tras PR #460.
 - PR #456 integrada: refresco del estado consolidado tras la auditoría CMS (`1357d770d6b786f6ecdad1c93d4d29002c00c810`).
 - PR #457 integrada: reconciliación live de CajaActual, CMS y pedidos Wix (merge documental `65983abfaad0e6ae83e2992dd410b32d2d0b0037`).
+- PR #458 integrada: importe de booking por línea nativa de pedido y actualización de dossier.
+- PR #459 integrada: ausencia de ALERT persistidas y ejecución runtime del cron de bookings no acreditada.
+- PR #460 integrada: DTO de caja alineado con openingCashAmount (`1c3afcea4194e524dc2c67ab102581a4876e90f2`). CI SUCCESS: Layer 1 333/333, Layer 2 266/266, suite offline 688/688; SDK, npm audit, ESLint y secret scanning SUCCESS.
 - PR #453 integrada: consolidación documental (`9aa92a9ef7408ab9b431694463ca1ffe2dedacfa`).
 - PR #454 integrada: auditoría de productores y bypasses CMS (`06766afbcdf7f8d32d34ccbb3f1ff68a242f8bca`).
 - PR #455 integrada: validación central de `PaquetesGestoria` (`7672bac4b4207ba87c9688fa34f38752a253ae86`).
@@ -182,6 +185,7 @@ Siguiente intervención recomendada: **cerrar H-01 de `CajaActual`** definiendo 
 
 - SiteContext confirma estado Draft; no publicado.
 - CajaActual cambió de esquema el 17/11: revisión 18, 81 campos. La auditoría del 14/11 queda histórica/supersedida como contrato físico vigente.
+- PR #460 corrigió getCashierState para devolver openingCashAmount desde el campo físico; los fixtures offline usan el mismo contrato. El endurecimiento de transiciones CajaActual (H-01) sigue pendiente.
 - Singleton CajaActual: ABIERTA, apertura/efectivo/esperado/contado 300 EUR; closedAt y lastMovementAt anteriores a openedAt; traceId vacío; sequenceCounters almacenado como texto pese a schema OBJECT. No cumple marcadores del sandbox TPV QA.
 - ControlOperativo: 58 elementos, tres compensaciones FISCAL_LEDGER/PENDING_RECOVERY con attempts=0. MovimientosCaja, HistoricoCierresZ y LibroAsientosContablesDetalle permanecen en cero.
 - Pedidos POS #10033 y #10032 continúan vinculados a las compensaciones. Los bookings nativos se leen CONFIRMED/PAID, mientras sus proyecciones CitasF2 siguen CONFIRMED/PENDING_LEDGER/totalAmount=0. #10033 además está FULLY_REFUNDED en eCommerce.
