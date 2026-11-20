@@ -36,6 +36,8 @@ test("WIX-PREVIEW-03 preview requires Wix CLI credentials, locked dependencies a
 test("WIX-PREVIEW-04 workflow creates a Preview only and never publishes", async () => {
     const workflow = await readFile(workflowUrl, "utf8");
     assert.match(workflow, /npm run wix preview/);
+    assert.ok(workflow.includes("timeout-minutes: 10"));
+    assert.ok(workflow.includes("printf '\\r'"));
     assert.doesNotMatch(workflow, /npm run wix publish|\bwix publish\b/i);
 });
 
