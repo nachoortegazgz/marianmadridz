@@ -1483,6 +1483,23 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
         if (!cleanDiaKey) {
             return { status: "ERROR", data: null, error: { code: "INVALID_DATE", message: "Fecha invalida" } };
         }
+        const closedBy = _safeTrim(closingActor?.resourceId || options?.closedBy);
+        const recordDomain = _safeTrim(options?.recordDomain);
+        if (!_looksLikeGuid(closedBy) || !recordDomain) {
+            return {
+                status: "ERROR",
+                data: null,
+                error: {
+                    code: "Z_CLOSING_REQUIRED_FIELDS_UNRESOLVED",
+                    message: "El cierre requiere closedBy (resourceId válido) y recordDomain aprobado; no se asignan valores por defecto.",
+                    missing: [
+                        ...(!_looksLikeGuid(closedBy) ? ["closedBy"] : []),
+                        ...(!recordDomain ? ["recordDomain"] : []),
+                    ],
+                },
+                traceId,
+            };
+        }
 
         ledgerLock = await acquireFiscalLedgerLock(traceId);
         await assertFiscalLedgerLock(ledgerLock);
@@ -1660,7 +1677,13 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
 
         const zRecord = {
             _id: `Z_${cleanDiaKey}`,
+            closeDate: cleanDiaKey,
             operationDate: cleanDiaKey,
+            fiscalPeriod: cleanDiaKey.slice(0, 7),
+            totalTaxAmount: _roundMoney(netTaxAmount),
+            totalTaxBase: _roundMoney(netTaxableAmount),
+            closedBy,
+            recordDomain,
             closingStatus: "CERRADO",
             consolidatedTotalAmount,
             grossSalesTotal: _roundMoney(grossSalesTotal),
@@ -1687,7 +1710,7 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
             closingHash,
             closingSignature,
             closingSignatureStatus,
-            closingSource: "CRON",
+            closingSource: authorizeCashier ? "MANUAL" : "CRON",
             closingSchemaVersion: LEDGER_SCHEMA_VERSION,
             timeZone: SDK_CONFIG.TZ,
             closedAt: new Date(),
