@@ -685,7 +685,7 @@ test('CRON-ORDER-CREATED-01 reconciles Bookings, Stores and mixed catalog orders
   assert.equal(replay.skipped, 3);
   const rowsAfterReplay = wixDataMock._store.get(IC.OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO) || [];
   assert.equal(rowsAfterReplay.filter(row => row.payload?.eventType === 'ORDER_CREATED_RECONCILED').length, 3);
-  assert.equal(rowsAfterReplay.filter(row => row.alertType === 'ORDER_CREATED_RECONCILIATION_REQUIRED').length, 1);
+  assert.equal(rowsAfterReplay.filter(row => row.eventType === 'ORDER_CREATED_RECONCILIATION_REQUIRED').length, 1);
 
   delete mocks.sdk['@wix/ecom::orders'];
 });
@@ -769,7 +769,7 @@ test('CRON-FISCAL-ALERT-02 keeps fiscal alerts OPEN when the chain audit reprodu
   wixDataMock._seed(C, [{
     _id: 'legacy-fiscal-chain-alert',
     controlType: IC.CONTROL_TYPE.ALERT,
-    alertType: 'FISCAL_CHAIN_CORRUPTED',
+    eventType: 'FISCAL_CHAIN_CORRUPTED',
     status: IC.CONTROL_STATUS.OPEN,
     dedupeKey: 'legacy-fiscal-chain-alert',
     traceId: 'trace-original-fiscal-alert',
@@ -800,7 +800,7 @@ test('CRON-FISCAL-ALERT-03 does not resolve a historical fiscal alert from an em
   wixDataMock._seed(C, [{
     _id: 'legacy-fiscal-chain-alert',
     controlType: IC.CONTROL_TYPE.ALERT,
-    alertType: 'FISCAL_CHAIN_CORRUPTED',
+    eventType: 'FISCAL_CHAIN_CORRUPTED',
     status: IC.CONTROL_STATUS.OPEN,
     dedupeKey: 'legacy-fiscal-chain-alert',
     traceId: 'trace-original-fiscal-alert',
@@ -824,7 +824,7 @@ test('CRON-FISCAL-ALERT-04 keeps fiscal alerts OPEN when stored movement content
   wixDataMock._seed(C, [{
     _id: 'legacy-fiscal-chain-alert',
     controlType: IC.CONTROL_TYPE.ALERT,
-    alertType: 'FISCAL_CHAIN_CORRUPTED',
+    eventType: 'FISCAL_CHAIN_CORRUPTED',
     status: IC.CONTROL_STATUS.OPEN,
     dedupeKey: 'legacy-fiscal-chain-alert',
     traceId: 'trace-original-fiscal-alert',
@@ -853,7 +853,7 @@ test('CRON-FISCAL-ALERT-05 verifies ONLINE EventLog movements with the EventLog 
   wixDataMock._seed(C, [{
     _id: 'legacy-fiscal-chain-alert',
     controlType: IC.CONTROL_TYPE.ALERT,
-    alertType: 'FISCAL_CHAIN_CORRUPTED',
+    eventType: 'FISCAL_CHAIN_CORRUPTED',
     status: IC.CONTROL_STATUS.OPEN,
     dedupeKey: 'legacy-fiscal-chain-alert',
     traceId: 'trace-original-fiscal-alert',
