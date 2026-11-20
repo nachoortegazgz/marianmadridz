@@ -2002,61 +2002,9 @@ export function _extractResourceIdsFromSlot(slot) {
     return getResourceIdsFromSlot(slot, STAFF_RESOURCE_TYPE_ID);
 }
 
-// =============================================================================
-// BLOQUE 16 - PROYECCION SLOTS
-// =============================================================================
-export function _projectCertifiedSlot(slot, resourceId) {
-    const normalized = normalizeAvailabilitySlot(slot);
-    if (!normalized) return null;
-    const serviceId = _safeTrim(normalized.serviceId);
-    if (!serviceId || !_looksLikeGuid(serviceId)) return null;
-    const resourceCandidate =
-        normalized.resource && typeof normalized.resource === "object"
-            ? normalized.resource
-            : {};
-    const resourceIdClean = _safeTrim(
-        resourceId || normalized.resourceId || resourceCandidate._id
-    );
-    if (!resourceIdClean || !_looksLikeGuid(resourceIdClean)) return null;
-    const localStartDate = normalized.localStartDate;
-    const localEndDate = normalized.localEndDate;
-    if (!localStartDate || !localEndDate) return null;
-    const startDateUtc = getUtcDateFromMadridLocal(localStartDate);
-    const endDateUtc = getUtcDateFromMadridLocal(localEndDate);
-    if (
-        !startDateUtc ||
-        !endDateUtc ||
-        endDateUtc.getTime() <= startDateUtc.getTime()
-    ) {
-        return null;
-    }
-    const slotLocation =
-        normalized.location && typeof normalized.location === "object"
-            ? normalized.location
-            : {};
-    const location = _resolveWriteLocation(slotLocation, null);
-    if (!location) return null;
-    const nestedSlot = normalized.slot && typeof normalized.slot === "object" ? normalized.slot : {};
-    return {
-        serviceId: serviceId,
-        resourceId: resourceIdClean,
-        scheduleId: _safeTrim(normalized.scheduleId || nestedSlot.scheduleId),
-        localStartDate: localStartDate,
-        localEndDate: localEndDate,
-        startDate: startDateUtc,
-        endDate: endDateUtc,
-        bookable: normalized.bookable === true,
-        availableResources: _extractResourceIdsFromSlot(normalized),
-        timezone: _safeTrim(SDK_CONFIG && SDK_CONFIG.TZ) || "Europe/Madrid",
-        /* WIX-V2-ID-04: `location` conserva el shape SDK `{ _id, locationType }`. */
-        locationId: location._id,
-        locationName: _safeTrim(slotLocation.name),
-        formattedAddress: _safeTrim(slotLocation.formattedAddress),
-    };
-}
 
 // =============================================================================
-// BLOQUE 17 - PAIR TOKEN CANONICO
+// BLOQUE 16 - PAIR TOKEN CANONICO
 // =============================================================================
 export { _buildPairFingerprint, _buildPairTokenDeterministic };
 

@@ -115,10 +115,3 @@ export function makeSyntheticPayload(payload = {}) {
     };
 }
 
-export function validateReason(value) {
-    const reason = String(value || "").trim();
-    if (reason.length < 3 || reason.length > 500) {
-        throw new Error("TPV_SANDBOX_REASON_REQUIRED");
-    }
-    return reason;
-}
