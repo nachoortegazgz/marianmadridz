@@ -860,14 +860,14 @@ export function _buildSlotLockControl(slotClave, lockOwnerId, ttlMs, serviceId) 
         dedupeKey: String(slotClave),
         serviceId: resolvedServiceId,
         resourceId,
-        ...(slotRange || {}),
         expiresAt: new Date(
             now.getTime() + (Number.isFinite(ttl) && ttl > 0 ? ttl : MUTEX_TTL_MS)
         ),
         heartbeatAt: now,
         version: 0,
-        // lockOwnerId, lockToken and acquiredAt are payload metadata, not CMS columns.
+        // Slot range and lock metadata are payload; they are not physical CMS columns.
         payload: {
+            ...(slotRange || {}),
             lockOwnerId: String(lockOwnerId || ""),
             lockToken: _generateUUID(),
             acquiredAt: now,
