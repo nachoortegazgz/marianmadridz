@@ -2,11 +2,21 @@
 
 ## 1. Estado
 
-**Main:** bcb5a1d6467bcd0f7a0cf1b28a5c03dbbb226479.  
+**Main:** 96b2b73687b5373484caf625026c4b46a3911680.  
 **CI offline:** PASS (regresión, capas 1 y 2, SDK, ESLint).  
 **Gitleaks:** PASS.  
-**Workflow Preview:** manual opt-in, desactivado por defecto; no se reintenta automáticamente mientras Wix no resuelva el pipeline.  
+**PR #510:** fusionada; retira el disparo automático para evitar reintentos contra el 404.  
+**Workflow Preview:** manual opt-in, desactivado por defecto.  
 **Hito online:** NO ALCANZADO. No existe URL de Preview ni informe Playwright PASS.
+
+| Control | Estado |
+|---|---|
+| CI offline + regresión | PASS |
+| Gitleaks | PASS |
+| Autenticación Wix CLI | PASS |
+| Creación Wix Preview | FAIL — 404 |
+| Smoke Playwright | No ejecutado |
+| E2E transaccional | Bloqueado por falta de entorno aislado |
 
 ## 2. Evidencia de Wix
 
@@ -22,6 +32,7 @@
   - Código PUBLISH_PIPELINE_TASK_NOT_FOUND.
   - Deployment ID: 320d133e-284c-46f3-9fe8-edd96cf8274d.
   - Request ID: 1795210627.56413478193221476.
+- Primer intento interactivo: deployment ID 50062c24-e0ce-43f0-b137-a316e038822a; Request ID 1795210056.90712984612811479; mismo código 404.
   - Endpoint: GET https://editor.wix.com/_api/editor-deployments/v1/deployments/pipeline/320d133e-284c-46f3-9fe8-edd96cf8274d.
 - No se obtuvo URL wix.to. Playwright no llegó a ejecutarse.
 
