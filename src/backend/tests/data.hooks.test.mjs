@@ -201,9 +201,9 @@ test('HOOK-CMS-DATETIME-05 normalizes MovimientosCaja DateTime fields only', () 
   }), /DATETIME/);
 });
 
-test('HOOK-CAJA-03 preserves append-only integrity for cash movements', () => {
-  assert.throws(() => H.MovimientosCaja_beforeUpdate({ _id: 'synthetic-caja-1' }), /append-only/);
-  assert.throws(() => H.MovimientosCaja_beforeRemove('synthetic-caja-1'), /Borrado de MovimientosCaja/);
+test('HOOK-CAJA-03 preserves append-only integrity for non-TPV synthetic cash movements', async () => {
+  await assert.rejects(() => H.MovimientosCaja_beforeUpdate({ _id: 'synthetic-caja-1' }), /Modificacion de MovimientosCaja/);
+  await assert.rejects(() => H.MovimientosCaja_beforeRemove('synthetic-caja-1'), /Borrado de MovimientosCaja/);
 });
 
 test('HOOK-CAJA-05 rejects write without hash (ledger integrity)', () => {
