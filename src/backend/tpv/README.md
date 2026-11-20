@@ -179,3 +179,13 @@ El fixture es para importación manual desde CMS > Sandbox únicamente después 
 - El simulador no necesita escribir CMS ni usar colecciones de Apps; por eso es utilizable en pruebas unitarias/offline sin riesgo financiero.
 - Las escrituras persistentes TPV siguen sujetas al gate de entorno aislado y al preseed manual de identidades y CajaActual. No inferir aislamiento por environment=SANDBOX en una constante.
 - No usar Wix Payments real ni ejecutar pruebas de checkout/captura/reembolso hasta disponer de un modo de prueba oficial habilitado en Dashboard y de un procedimiento de prueba documentado por Wix.
+
+## Índice único de MovimientosCaja y arqueos SANDBOX
+
+La colección física `MovimientosCaja` mantiene el índice `transactionId_unique` (`unique=true`). No se elimina: es una garantía de unicidad del ledger. Los eventos lógicos del TPV comparten esta colección física, por lo que el identificador CMS debe estar namespaced por `logicalCollection` además del `SANDBOX_RUN_ID` y la clave de idempotencia.
+
+`makeSandboxTransactionId(collection, key)` genera el `transactionId` y el `_id` determinista con el ámbito completo. La búsqueda de idempotencia también consulta el identificador histórico anterior (sin namespace) para reconocer reintentos ya persistidos; no migra, modifica ni elimina filas históricas. La clave de idempotencia sigue siendo estable dentro de la misma colección lógica.
+
+La inspección read-only del 2026-11-20 confirmó el índice único sobre `transactionId`; no hay índice único de usuario sobre `traceId`, `operationType`, `singletonKey` o `posTransactionId`. La consulta CMS devolvió un registro sintético de prueba sin `transactionId`, por lo que no se identificó un valor histórico duplicado concreto. La causa de colisión se atribuye al espacio de nombres incompleto del generador, no a una fila concreta demostrada.
+
+La corrección de código no autoriza a repetir el arqueo en LIVE ni a modificar la configuración de índices. La validación runtime del arqueo, cierre de `CajaActual` y diferencia cero requiere Sandbox aislado, sesión y singleton presembrados y ejecución E2E autorizada. No se considera superada por pruebas unitarias/offline.
