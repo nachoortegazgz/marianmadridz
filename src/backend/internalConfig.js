@@ -49,9 +49,9 @@ export const STAFF_CLOCKING_CONFIG = Object.freeze({
   ADJUSTMENTS_ENABLED: false,
 });
 
-// No global CMS mutation override is exported. Every mutation must pass the
-// collection-specific policy; fiscal, accounting, labor and webhook ledgers
-// remain append-only in every environment.
+// No global CMS mutation override is exported. Only records carrying the exact
+// active synthetic TPV test-run marker may be edited; all other fiscal,
+// accounting, labor and webhook records remain append-only.
 
 // Fail-closed real-operation defaults until fiscal, accounting and runtime E2E
 // are certified. Simulation records are denied unless a trusted test harness
