@@ -98,11 +98,14 @@ La colección se ha creado vacía. Cuando Wix Editor permita editar explícitame
 
 | identityId | identityType | displayName | email |
 |---|---|---|---|
-| `SANDBOX-CUSTOMER-001` | `CUSTOMER` | Cliente Sintético 01 | `cliente01@example.test` |
-| `SANDBOX-STAFF-001` | `STAFF` | Profesional Sintético 01 | `staff01@example.test` |
-| `SANDBOX-STAFF-002` | `STAFF` | Profesional Sintético 02 | `staff02@example.test` |
+| `SANDBOX-CUSTOMER-01` | `CUSTOMER` | Cliente Sintético 01 | `cliente01@example.test` |
+| `SANDBOX-CUSTOMER-02` | `CUSTOMER` | Cliente Sintético 02 | `cliente02@example.test` |
+| `SANDBOX-CUSTOMER-03` | `CUSTOMER` | Cliente Sintético 03 | `cliente03@example.test` |
+| `SANDBOX-STAFF-01` | `STAFF` | Profesional Sintético 01 | `staff01@example.test` |
+| `SANDBOX-STAFF-02` | `STAFF` | Profesional Sintético 02 | `staff02@example.test` |
+| `SANDBOX-STAFF-03` | `STAFF` | Profesional Sintético 03 | `staff03@example.test` |
 
-En las tres filas: `active=true`, `syntheticOnly=true`, `environment=SANDBOX`, `testRunId=TPVSANDBOX-DEV-20261120-01` y `metadata={}`. No añadir teléfono, NIF, dirección, `contactId`, `memberId` ni `resourceId`. El hook valida el contrato antes de aceptar la inserción.
+En las seis filas: `active=true`, `syntheticOnly=true`, `environment=SANDBOX`, `testRunId=TPVSANDBOX-DEV-20261120-01` y `metadata={}`. No añadir teléfono, NIF, dirección, `contactId`, `memberId` ni `resourceId`. El hook valida el contrato antes de aceptar la inserción.
 
 
 ## Runtime Sandbox y arranque de caja
@@ -131,3 +134,14 @@ Los WebMethods de TPV no crean automáticamente el singleton `CajaActual` ni fil
 Antes de ejecutar TPV en Preview, un administrador debe crear manualmente en el CMS **Sandbox** el singleton `CAJA_PRINCIPAL` con `_id=SINGLE_ITEM_ID`, `cashRegisterStatus=CERRADA`, `snapshotSource=TPV_SANDBOX_INITIALIZED`, `traceId=TPVSANDBOX-DEV-20261120-01`, `sequenceCounters={ appliedMovementIds: [] }` y `conceptOperations.tpvSandbox.sandboxRunId=TPVSANDBOX-DEV-20261120-01`. Debe crear también las seis identidades sintéticas descritas en `tpvSandboxIdentities.js`, con `environment=SANDBOX`, `syntheticOnly=true`, `testRunId` igual al run ID activo y correos `@example.test`.
 
 No sincronizar estas colecciones Sandbox a Online. Las colecciones de Wix Apps no están aisladas por Sandbox; el TPV debe seguir sin mutar colecciones de Bookings, Stores, Payments o Gift Cards. Esta precondición reduce el riesgo de bootstrap en LIVE, pero no sustituye la prueba E2E de Preview ni una auditoría de permisos del sitio publicado.
+
+
+## Estado consolidado del código — 2026-11-20 (PR #499)
+
+El HEAD de referencia incorpora PR #496, #497, #498 y #499. La última integración es `cfe1d0c37a9464cb63aea9d31873071eecb10d9f`. En ese commit, CI post-merge terminó SUCCESS: Layer 1 28 suites/338 tests, Layer 2 19 suites/268 tests, regresión completa 75 suites/705 tests, contratos Wix SDK/eCommerce/TPV, ESLint y Gitleaks.
+
+El bootstrap y la verificación de identidades son read-only: no crean automáticamente `CajaActual` ni `TpvSandboxIdentities`. La presemilla manual requiere una caja con `_id=SINGLE_ITEM_ID`, `singletonKey=CAJA_PRINCIPAL`, `cashRegisterStatus=CERRADA`, `snapshotSource=TPV_SANDBOX_INITIALIZED`, `traceId=TPVSANDBOX-DEV-20261120-01`, `sequenceCounters` como objeto y `conceptOperations.tpvSandbox.sandboxRunId` igual al run ID; más las seis identidades anteriores. No ejecutar la presemilla hasta confirmar el CMS Sandbox en el Editor.
+
+Esta rama añade un preflight read-only común antes de leer o escribir locks en `ControlOperativo`: debe existir `CajaActual` y cumplir el marcador/run ID permitido antes de adquirir cualquier lock de sesión o devolución. La prueba contractual correspondiente se incorpora a la suite. Está pendiente de CI y merge; no es todavía código integrado en `main`.
+
+No hay evidencia de Wix Preview E2E, runtime publicado, permisos efectivos por rol ni sincronización del código Editor/Git. El sitio Wix se observó en Draft. Mantener NO-GO de publicación.

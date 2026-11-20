@@ -190,3 +190,14 @@ Esta consolidación registra evidencia de repositorio, declaración del propieta
 - [Wix — Site Data Usage API](https://dev.wix.com/docs/api-reference/business-solutions/cms/operations/site-data-usage/introduction)
 - [Decisión de persistencia TPV, Issue #435](./2026-11-20-tpv-sandbox-persistence-decision.md)
 - [SSOT de entorno QA](../qa/QA-ENVIRONMENT-SSOT.md)
+
+
+## Addendum de estado posterior a PR #499 — 2026-11-20
+
+El estado de `main` queda actualizado en SHA `cfe1d0c37a9464cb63aea9d31873071eecb10d9f`. PR #496–#499 están integradas. CI post-merge quality y Gitleaks finalizaron SUCCESS (runs `44780145944`, `44780145900`): 75 suites/705 tests, 0 fallos; Layer 1 338/338, Layer 2 268/268, SDK contracts y ESLint PASS.
+
+PR #499 hace read-only el bootstrap: no crea automáticamente el singleton ni las seis identidades. La presemilla requerida está documentada en `src/backend/tpv/README.md`. La lectura read-only más reciente documentada no demuestra las identidades presembradas ni una invocación WebMethod en Sandbox.
+
+La revisión posterior detectó una ruta adicional que debe cerrarse: los locks de `ControlOperativo` deben validar primero el marcador de `CajaActual`. La rama `fix/tpv-sandbox-lock-preflight-and-docs` añade ese preflight y una prueba contractual; pendiente de CI y merge. No considerar el hallazgo resuelto en `main` hasta la integración.
+
+El sitio Wix se observa en Draft. No se ha ejecutado Preview E2E, prueba negativa Published, comparación LIVE antes/después, validación de permisos efectivos, ni reset sintético preproducción. Mantener **NO-GO**.

@@ -370,3 +370,32 @@ test("Sandbox bootstrap is read-only and requires pre-seeded Sandbox records", a
     assert.match(insertBlock, /const caja = await _getCajaActual\(\);\s*assertSandboxCajaWritable\(caja\);/);
     assert.ok(insertBlock.indexOf("assertSandboxCajaWritable(caja)") < insertBlock.indexOf("await insertItem("));
 });
+
+
+test("TPV locks validate the pre-seeded Sandbox CajaActual before accessing ControlOperativo", async () => {
+    const repository = await readFile(new URL("../tpv/tpvSandboxRepository.js", import.meta.url), "utf8");
+    const helperStart = repository.indexOf("async function _ensureCajaActualForSandbox(");
+    const helperEnd = repository.indexOf("\n}\n", helperStart) + 2;
+    const lockStart = repository.indexOf("async function withSandboxScopedLock(");
+    const lockEnd = repository.indexOf("\nexport async function withSandboxSaleLock", lockStart);
+    assert.notEqual(helperStart, -1);
+    assert.notEqual(helperEnd, -1);
+    assert.notEqual(lockStart, -1);
+    assert.notEqual(lockEnd, -1);
+
+    const helper = repository.slice(helperStart, helperEnd);
+    assert.match(helper, /const caja = await _getCajaActual\(\)/);
+    assert.match(helper, /TPV_SANDBOX_CASH_REGISTER_NOT_SEEDED/);
+    assert.match(helper, /assertSandboxCajaWritable\(caja, \{ allowBootstrap: true \}\)/);
+
+    const lock = repository.slice(lockStart, lockEnd);
+    const preflight = lock.indexOf("await _ensureCajaActualForSandbox()");
+    const firstControlAccess = Math.min(
+        ...["getItem(", "insertItem(", "bulkPatchItems("].map((token) => {
+            const index = lock.indexOf(token);
+            return index < 0 ? Number.POSITIVE_INFINITY : index;
+        })
+    );
+    assert.notEqual(preflight, -1);
+    assert.ok(preflight < firstControlAccess, "CajaActual marker must be checked before ControlOperativo locks");
+});

@@ -34,6 +34,7 @@ async function withSandboxScopedLock({
     errorPrefix,
 }) {
     assertTpvSandboxEnabled();
+    await _ensureCajaActualForSandbox();
     const cleanScopeId = String(scopeId || "").trim();
     if (!cleanScopeId || typeof operation !== "function") throw new Error(errorPrefix + "_INVALID");
     const collection = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
@@ -271,11 +272,6 @@ function _virtualRecord(item) {
     };
 }
 
-async function _ensureCajaActualForSandbox() {
-    const caja = await _getCajaActual();
-    if (!caja) throw new Error("TPV_SANDBOX_CASH_REGISTER_NOT_SEEDED");
-    return caja;
-}
 
 export async function seedSandboxIdentities() {
     assertTpvSandboxEnabled();
@@ -312,6 +308,13 @@ async function _getCajaActual() {
     });
     if (result.items.length > 1) throw new Error("TPV_SANDBOX_CASH_REGISTER_SINGLETON_DUPLICATE");
     return result.items[0] || null;
+}
+
+async function _ensureCajaActualForSandbox() {
+    const caja = await _getCajaActual();
+    if (!caja) throw new Error("TPV_SANDBOX_CASH_REGISTER_NOT_SEEDED");
+    assertSandboxCajaWritable(caja, { allowBootstrap: true });
+    return caja;
 }
 
 function _sessionFromCaja(caja) {

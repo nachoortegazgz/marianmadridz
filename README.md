@@ -26,3 +26,8 @@ Es la única guía operativa en la raíz. En caso de discrepancia, prevalecen su
 - CI offline no equivale a Wix Runtime, E2E, validación fiscal ni pruebas de hardware.
 - No publicar ni ejecutar operaciones económicas sin autorización y gates aprobados.
 - El código funcional, pruebas y workflows permanecen en sus directorios técnicos.
+
+
+## Estado de release vigente — 2026-11-20
+
+El estado operativo más reciente está en [docs/PROJECT-STATUS.md](docs/PROJECT-STATUS.md) y el handoff TPV en [docs/qa/2026-11-20-tpv-sandbox-session-handoff.md](docs/qa/2026-11-20-tpv-sandbox-session-handoff.md). HEAD de referencia tras PR #499: `cfe1d0c37a9464cb63aea9d31873071eecb10d9f`; CI offline post-merge: 75 suites/705 tests, 0 fallos; Gitleaks PASS. Wix Site Context observado como Draft. Preview E2E, aislamiento por invocación, concurrencia runtime y aceptación global pendientes. Publicación: **NO-GO**.

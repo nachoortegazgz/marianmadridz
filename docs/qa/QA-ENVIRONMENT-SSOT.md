@@ -145,3 +145,8 @@ El test contractual que enumera los WebMethods QA protegidos y comprueba el orde
 ## PR #488 — cobertura completa de WebMethods TPV
 
 Integrada en `main` (`75c4428fea45795d4337011c389ac909f0aa6e03`). Contrato automatizado clasifica todos los WebMethods exportados TPV revisados: guard backend, solo lectura/validación o writer operativo deshabilitado. CI offline quality gates y secret scanning SUCCESS (runs `44727911850`, `44727911591`); capas 1/2, suite completa, SDK contracts, eCommerce/TPV contracts y ESLint PASS. No acredita Wix Runtime ni data-plane isolation. TPV QA sigue deshabilitado.
+
+
+### Aclaración de separación entre TPV_QA histórico y TPV_SANDBOX vigente — 2026-11-20
+
+Las secciones anteriores que declaran `TPV_QA_RUNTIME_POLICY.ENABLED=false` describen la ruta legacy `TPV_QA_*` y sus WebMethods con sufijo QA. No deben interpretarse como la configuración actual del TPV Sandbox implementado en `src/backend/tpv/`. El código actual utiliza `TPV_SANDBOX_RUNTIME_POLICY.ENABLED=true`, nombres de WebMethods neutros, marcadores de caja y run ID estático. Esta habilitación de código no equivale a certificación de aislamiento runtime: las escrituras siguen condicionadas al marcador de `CajaActual`, pero es obligatorio probar el data plane por invocación antes de considerar seguro Preview/Published. Mantener los writers externos deshabilitados y NO-GO de publicación hasta la aceptación E2E descrita en el handoff vigente.

@@ -2932,3 +2932,16 @@ TEC-038/TEC-041 siguen siendo la política general de inmutabilidad. La única e
 ---
 
 > **DIRECTRIZ SUPERSEDENTE DEL PROPIETARIO — 2026-11-20:** Este dossier es documentación derivada y editable. Cualquier instrucción histórica aquí contenida que impida simulacros completos con registros sintéticos, persistencia QA o limpieza preproducción queda supersedida por [la directriz global del propietario](docs/PROJECT-OWNER-DIRECTIVE-2026-11-20.md). El propietario declara que el sitio no ha tenido actividad real y que todos los registros son sintéticos; autoriza pruebas completas para validar procesos y depurar. No se debe interpretar la mención histórica de “no escribir CMS live” o “append-only también en QA” como prohibición general de ensayos sintéticos. Las operaciones siguen requiriendo implementación y validación técnica, autorización backend, control de efectos externos, cumplimiento legal y APIs oficiales. El reset preproducción será controlado y verificable. Los estados de CI/runtime/deploy de este dossier conservan fecha y valor histórico, no se actualizan por esta directriz.
+
+
+---
+
+## Addendum de estado del repositorio — 2026-11-20 (posterior a PR #499)
+
+**HEAD main:** `cfe1d0c37a9464cb63aea9d31873071eecb10d9f`. PR #496, #497, #498 y #499 integradas. CI post-merge: Layer 1 28/28 suites y 338/338 tests; Layer 2 19/19 suites y 268/268 tests; suite completa 75/75 suites y 705/705 tests; Wix SDK, eCommerce Order Transactions, TPV Catalog, ESLint y Gitleaks SUCCESS. Esta evidencia es offline y no certifica runtime Wix.
+
+El TPV actual usa `TPV_SANDBOX_RUNTIME_POLICY` (`ENABLED=true`, `ENVIRONMENT=SANDBOX`, run ID `TPVSANDBOX-DEV-20261120-01`) y WebMethods con nombres neutros. No confundirlo con la ruta legacy `TPV_QA_*` descrita en addenda históricos. Los aliases `SANDBOX_LOGICAL_*` se proyectan sobre `CajaActual`, `MovimientosCaja` y `ControlOperativo`; no son colecciones físicas aisladas. Wix Apps tampoco quedan aisladas por Sandbox CMS.
+
+PR #499 convirtió bootstrap y verificación de identidades en operaciones read-only. Requiere presemilla manual de singleton marcado y seis identidades sintéticas en CMS Sandbox. Una rama posterior, aún pendiente de CI/merge, añade validación de CajaActual antes de acceder a locks ControlOperativo. No afirmar que esta corrección adicional esté en main hasta integrarla.
+
+**NO-GO de publicación:** falta Wix Preview E2E, prueba negativa Published/direct WebMethod, prueba de concurrencia/atomicidad runtime de todos los escritores CajaActual (H-01), comparación LIVE antes/después, permisos por rol, aislamiento de automatizaciones, ciclo de vida del test-run, reset preproducción y rollback. El sitio Wix está en Draft. No modificar CajaActual LIVE, compensaciones PENDING_RECOVERY ni pedidos #10032/#10033.
