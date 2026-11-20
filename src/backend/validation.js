@@ -24,6 +24,10 @@ import {
     normalizeBookingType,
     isDualBookingType,
     CONTROL_OPERATIVO_NON_CANONICAL_FIELDS,
+    CHANNEL_TYPE,
+    MOVEMENT_TYPE,
+    PAYMENT_METHOD,
+    TIPO_FACTURA,
 } from "backend/internalConfig";
 
 // =============================================================================
@@ -94,6 +98,80 @@ export function assertCitasF2(item) {
         }
     }
 
+    return true;
+}
+
+// =============================================================================
+// COLECCIONES FISCALES: CONTRATOS DE INSERCION FISICOS
+// =============================================================================
+
+function _isValidDateOnly(value) {
+    if (value instanceof Date) return !Number.isNaN(value.getTime());
+    if (typeof value !== "string" || !/^\\d{4}-\\d{2}-\\d{2}$/.test(value)) return false;
+    const date = new Date(`${value}T00:00:00.000Z`);
+    return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
+export function assertHistoricoCierresZ(item) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) {
+        throw new Error("SCHEMA_VIOLATION: HistoricoCierresZ item must be an object");
+    }
+    for (const field of ["fiscalPeriod", "closedBy", "recordDomain", "traceId"]) {
+        if (!String(item[field] ?? "").trim()) {
+            throw new Error(`SCHEMA_VIOLATION: HistoricoCierresZ requires ${field}`);
+        }
+    }
+    for (const field of ["closeDate", "operationDate"]) {
+        if (!_isValidDateOnly(item[field])) {
+            throw new Error(`SCHEMA_VIOLATION: HistoricoCierresZ requires valid DATE ${field}`);
+        }
+    }
+    for (const field of [
+        "totalTaxAmount", "totalTaxBase", "totalOnline",
+        "totalBizum", "totalCard", "totalCash",
+    ]) {
+        if (typeof item[field] !== "number" || !Number.isFinite(item[field])) {
+            throw new Error(`SCHEMA_VIOLATION: HistoricoCierresZ requires finite NUMBER ${field}`);
+        }
+    }
+    return true;
+}
+
+export function assertMovimientosCajaRequiredFields(item) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) {
+        throw new Error("SCHEMA_VIOLATION: MovimientosCaja item must be an object");
+    }
+    const textFields = [
+        "numSerieFactura", "transactionId", "previousRecordHash", "schemaVersion",
+        "traceId", "movementType", "paymentMethod", "channelType",
+        "operationDescription", "staffResourceId", "tipoFactura", "fiscalPeriod",
+    ];
+    for (const field of textFields) {
+        if (!String(item[field] ?? "").trim()) {
+            throw new Error(`SCHEMA_VIOLATION: MovimientosCaja requires ${field}`);
+        }
+    }
+    for (const field of ["amount", "sequenceNumber", "totalAmount", "tipoImpositivo"]) {
+        if (typeof item[field] !== "number" || !Number.isFinite(item[field])) {
+            throw new Error(`SCHEMA_VIOLATION: MovimientosCaja requires finite NUMBER ${field}`);
+        }
+    }
+    if (!(item.recordTimestamp instanceof Date) || Number.isNaN(item.recordTimestamp.getTime())) {
+        throw new Error("SCHEMA_VIOLATION: MovimientosCaja requires DATETIME recordTimestamp");
+    }
+    if (!_isValidDateOnly(item.fechaExpedicionFactura)) {
+        throw new Error("SCHEMA_VIOLATION: MovimientosCaja requires DATE fechaExpedicionFactura");
+    }
+    if (!/^[a-f0-9]{64}$/i.test(String(item.hash || "")) ||
+        !/^[a-f0-9]{64}$/i.test(String(item.previousRecordHash || ""))) {
+        throw new Error("SCHEMA_VIOLATION: MovimientosCaja requires SHA-256 hash chain fields");
+    }
+    if (item.recordSource !== "TPV_QA_SYNTHETIC") {
+        assertValidEnum(item.movementType, MOVEMENT_TYPE, "movementType");
+        assertValidEnum(item.paymentMethod, PAYMENT_METHOD, "paymentMethod");
+        assertValidEnum(item.channelType, CHANNEL_TYPE, "channelType");
+        assertValidEnum(item.tipoFactura, TIPO_FACTURA, "tipoFactura");
+    }
     return true;
 }
 
