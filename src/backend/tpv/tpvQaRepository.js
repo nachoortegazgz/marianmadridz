@@ -275,7 +275,8 @@ function _virtualRecord(item) {
         _createdDate: item._createdDate,
         _updatedDate: item._updatedDate,
         idempotencyKey: envelope.idempotencyKey,
-        payload: record.payload && typeof record.payload === "object" ? record.payload : {},
+        payload: { ...(record.payload && typeof record.payload === "object" ? record.payload : {}), requestFingerprint: envelope.requestFingerprint },
+        payloadFiscal: envelope,
         recordSource: item.recordSource,
         movementType: item.movementType,
         traceId: item.traceId,
@@ -310,6 +311,8 @@ function _sessionFromCaja(caja) {
         closedAt,
         openingCashMinor: Math.round(Number(caja.openingCashAmount || 0) * 100),
         cashierMemberId: caja.openedBy || TPV_QA_RUNTIME_POLICY.ACTOR_ID,
+        conceptOperations: caja.conceptOperations,
+        payloadFiscal: { requestFingerprint: caja.conceptOperations?.tpvQa?.requestFingerprint },
         payload: makeSyntheticPayload({
             testRunId: QA_TEST_RUN_ID,
             dayKey: openedAt.toISOString().slice(0, 10).replace(/-/g, ""),
@@ -322,12 +325,20 @@ function _sessionFromCaja(caja) {
     };
 }
 
-async function _writeCajaProjection(collection, record) {
+async function _writeCajaProjection(collection, record, eventId) {
     const caja = await _getCajaActual();
     if (!caja) throw new Error("TPV_QA_CASH_REGISTER_NOT_FOUND");
     if (caja.snapshotSource !== QA_LEDGER_SOURCE || caja.traceId !== QA_TEST_RUN_ID) {
         throw new Error("TPV_QA_CASH_REGISTER_NOT_IN_TEST_MODE");
     }
+    const conceptOperations = caja.conceptOperations && typeof caja.conceptOperations === "object"
+        ? { ...caja.conceptOperations }
+        : {};
+    const qaState = conceptOperations.tpvQa && typeof conceptOperations.tpvQa === "object"
+        ? { ...conceptOperations.tpvQa }
+        : {};
+    const appliedIds = Array.isArray(qaState.appliedMovementIds) ? qaState.appliedMovementIds : [];
+    if (eventId && appliedIds.includes(eventId)) return caja;
     const now = new Date();
     const next = { ...caja, _updatedDate: now };
     const sessionId = String(record.sessionId || record.payload?.sessionId || caja.lastOperationId || "");
@@ -373,6 +384,10 @@ async function _writeCajaProjection(collection, record) {
     } else {
         next.lastOperationType = "TPV_QA_" + String(collection).replace(/^QA_/, "");
     }
+    qaState.appliedMovementIds = eventId ? [...appliedIds, eventId].slice(-500) : appliedIds;
+    qaState.lastProjectedAt = now;
+    conceptOperations.tpvQa = qaState;
+    next.conceptOperations = conceptOperations;
     await updateItem(BUSINESS_COLLECTIONS.CAJA_ACTUAL, next);
     return next;
 }
@@ -548,7 +563,13 @@ export async function insertQaEvent(collection, idempotencyKey, data) {
     }
 
     const existing = await findByIdempotencyKey(collection, key);
-    if (existing) return assertSameRequest(existing, fingerprint);
+    if (existing) {
+        const replay = assertSameRequest(existing, fingerprint);
+        if (collection !== TPV_QA_COLLECTIONS.AUDITORIA) {
+            await _writeCajaProjection(collection, existing, existing._id);
+        }
+        return replay;
+    }
 
     const ledgerItem = _buildSyntheticLedgerItem(collection, key, record, fingerprint);
     try {
@@ -559,7 +580,7 @@ export async function insertQaEvent(collection, idempotencyKey, data) {
             _createdDate: saved?._createdDate || new Date(),
             _updatedDate: saved?._updatedDate || new Date(),
         });
-        if (collection !== TPV_QA_COLLECTIONS.AUDITORIA) await _writeCajaProjection(collection, record);
+        if (collection !== TPV_QA_COLLECTIONS.AUDITORIA) await _writeCajaProjection(collection, record, item._id);
         return { item, replayed: false };
     } catch (error) {
         const winner = await findByIdempotencyKey(collection, key);
