@@ -132,7 +132,7 @@ test("VALIDATION-TPV-IDENTITY-01 accepts only synthetic Sandbox customer and sta
     const base = {
         identityId: "QA-CUSTOMER-001",
         identityType: "CUSTOMER",
-        displayName: "Cliente Sintetico Uno",
+        displayName: "Cliente Sintético 01",
         email: "cliente.qa@example.test",
         active: true,
         syntheticOnly: true,
@@ -144,12 +144,14 @@ test("VALIDATION-TPV-IDENTITY-01 accepts only synthetic Sandbox customer and sta
     assert.throws(() => V.assertTpvSandboxIdentity({ ...base, environment: "LIVE" }), /Sandbox/);
     assert.throws(() => V.assertTpvSandboxIdentity({ ...base, syntheticOnly: false }), /synthetic Sandbox/);
     assert.throws(() => V.assertTpvSandboxIdentity({ ...base, email: "cliente@real.es" }), /example.test/);
-    assert.throws(() => V.assertTpvSandboxIdentity({ ...base, phone: "+34600000000" }), /cannot store real contact/);
+    assert.throws(() => V.assertTpvSandboxIdentity({ ...base, phone: "+34600000000" }), /unsupported fields/);
+    assert.throws(() => V.assertTpvSandboxIdentity({ ...base, metadata: { externalId: "real-id" } }), /empty OBJECT/);
+    assert.throws(() => V.assertTpvSandboxIdentity({ ...base, displayName: "Nombre Real" }), /displayName/);
     assert.equal(V.assertTpvSandboxIdentity({
         ...base,
         identityId: "QA-STAFF-001",
         identityType: "STAFF",
-        displayName: "Profesional Sintetico Uno",
+        displayName: "Profesional Sintético 01",
         email: "staff.qa@example.test",
     }), true);
 });
