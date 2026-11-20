@@ -329,7 +329,6 @@ async function _writeCajaProjection(collection, record, eventId) {
     if (eventId && appliedIds.includes(eventId)) return caja;
     const now = new Date();
     const next = { ...caja, _updatedDate: now };
-    const sessionId = String(record.sessionId || record.payload?.sessionId || caja.conceptOperations?.tpvQa?.sessionId || "");
     next.lastOperationId = eventId || caja.lastOperationId;
     next.lastOperationAt = now;
     next.lastOperationStatus = "SIMULATED";
