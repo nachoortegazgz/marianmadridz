@@ -6,7 +6,7 @@ import { queryQaRecords } from "backend/tpv/tpvQaRepository";
 import { assertTpvQaEnabled } from "backend/tpv/tpvUtils";
 import { wql } from "backend/dataAccess";
 
-export const consultarAuditoriaTPVQA = webMethod(
+export const consultarAuditoriaTPV = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
         const traceId = makeTraceId("tpv-qa-audit-read");
