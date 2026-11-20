@@ -122,3 +122,20 @@ No se añaden requisitos globales a `status`, `expiresAt`, `resourceId` ni otros
 ## 8. Criterio de cierre
 
 La rama solo podrá integrarse cuando CI supere pruebas de validación. La colección live no se ha modificado. La validación runtime, los legacy terminales y las tres compensaciones permanecen abiertos. No habilitar escritores fiscales/contables ni publicar como consecuencia de esta auditoría.
+
+
+## 9. Seguimiento de CI y auditoría de productores — 20/11/2026
+
+La primera ejecución de CI tras exigir `payload` detectó tres fallos en `reservas.web.test.mjs`. La traza reproducible mostraba que `reservas.web.js::_generateDisplayToken()` insertaba `DISPLAY_TOKEN` sin `payload` y escribía `maxAttempts` en raíz, aunque ese campo no existe en el esquema físico de revisión 93.
+
+Correcciones aplicadas en esta rama:
+- `DISPLAY_TOKEN`: `payload.maxAttempts` pasa a ser el almacenamiento canónico; el consumidor lee ese valor y usa el límite configurado como fallback para credenciales antiguas. Se valida `bookingId`, `attempts >= 0`, `expiresAt` y `payload.maxAttempts >= 1`.
+- `LEDGER_IDEMPOTENCY`: la reserva creada desde `cajas.web.js` ahora incluye `payload` objeto, con fecha de reserva y transactionId. El transactionId continúa en su campo físico raíz.
+- `IDEMPOTENCY` de `bookingCore.js`: se elimina `pairToken` raíz no declarado; el identificador estable ya es `_id` y la deduplicación queda en `dedupeKey`.
+- `SYSTEM_FLAG`: los diarios de reprogramación dual conservan `pairToken` dentro de `payload`, no como campo raíz no declarado.
+- `SYSTEM_FLAG` de cancelación dual: los metadatos de clasificación pasan a `eventType` (campo físico) y `severity/message` dentro de `payload`.
+- `ALERT`: el tipo de alerta se expone mediante `eventType` (campo físico); los metadatos no físicos `alertType`, `severity`, `message` y `operationDate` dejan de escribirse en raíz. Los crons consultan por `eventType`.
+
+Se han actualizado pruebas de tokenización, hooks, reconciliación y alertas. Estas modificaciones son de código y pruebas; no se han escrito datos Wix ni se han migrado registros históricos.
+
+**Pendiente de validar:** la nueva revisión de CI debe demostrar que los productores y consumidores actualizados mantienen los contratos; después se requiere revisión del diff y una prueba runtime controlada en Sandbox. La auditoría de código ha detectado que el diccionario CMS histórico y algunos contratos anteriores describían campos raíz que ya no figuran en revisión 93. No se deben recrear esos campos en Wix sin una decisión explícita de modelo; la alineación actual se hace con el esquema físico observado.
