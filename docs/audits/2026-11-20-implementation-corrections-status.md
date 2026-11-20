@@ -137,3 +137,36 @@ Los logs muestran warnings de dependencias deprecadas y ESLint 8.25.0 fuera de s
 ## Addendum PR #488 — clasificación de endpoints TPV
 
 PR #488 integrada (`75c4428fea45795d4337011c389ac909f0aa6e03`). Añade un contrato de clasificación de todas las exportaciones WebMethod TPV revisadas, separando operaciones protegidas por guard backend, endpoints read-only/validación y writers operativos fail-closed. CI backend offline y secret scanning SUCCESS (runs `44727911850`, `44727911591`); capas 1/2, regresión completa, SDK contracts, eCommerce/TPV SDK y ESLint PASS. La prueba no equivale a Wix Runtime/E2E. No hay cambios de runtime/CMS ni publicación; TPV QA permanece deshabilitado.
+
+
+## 8. Revalidación y remediación incremental — 2026-11-20
+
+### Estado comprobado del HEAD anterior
+
+- HEAD de partida: `6370040a54ed489e861137ebcc73f542028bbfb1`.
+- Backend offline quality run `44782144468`: SUCCESS; instalación `npm ci`, Layer 1, Layer 2, suite completa, contratos SDK y ESLint completados.
+- Gitleaks run `44782144128`: SUCCESS.
+- El estado CI valida el repositorio offline, no Wix Runtime, Preview ni publicación.
+- Site Context: Editor clásico, Velo habilitado, estado Draft; Bookings, Stores Catalog V3, Gift Cards, Members e Invoices V1 instalados.
+
+### Dependencia CRM — decisión revisada
+
+`src/backend/staff.js` importa `contactsV5` desde `@wix/crm`. La dependencia está declarada en `wix.lock` como `@wix/crm@1.0.1636`, pero no en `package.json` ni `package-lock.json`. El workflow de CI ejecuta `npm ci` correctamente con el grafo npm actual y los tests offline proporcionan un mock específico CRM. Esto demuestra que C1 no es un fallo actual de instalación/CI; queda una discrepancia entre el grafo gestionado por Wix y el grafo npm de CI. No añadir una dependencia ni fabricar un lock npm sin ejecutar el flujo oficial de sincronización Wix/CLI en el workspace del proyecto. La prueba de import en runtime Wix sigue pendiente.
+
+### Limpieza de símbolos internos sin consumidores
+
+Se revisó la búsqueda de referencias en el repositorio completo sobre el HEAD de partida. Se eliminan en esta rama únicamente:
+
+- `src/backend/booking/bookingCore.js`: `_projectCertifiedSlot`; la búsqueda solo encontró su definición/export. No es WebMethod ni contrato de binding.
+- `src/backend/tpv/tpvUtils.js`: `validateReason`; la búsqueda solo encontró su definición/export.
+- `src/backend/booking/bookingSaga.js`: alias `normalizePersistedMeta`; se conserva `_normalizePersistedMeta`, utilizado internamente por el propio módulo y por pruebas.
+
+Se conservan `_buildLockKeys` y otros aliases con consumidores demostrados. No se modifican contratos WebMethod, CMS, datos, políticas Sandbox, ledgers ni permisos.
+
+### Validación de esta rama
+
+- Los cambios anteriores son refactorizaciones internas sin cambio de comportamiento esperado.
+- La suite de regresión y ESLint deben ejecutarse en CI sobre esta rama antes de integrar.
+- No se ha ejecutado Wix Preview/E2E ni se han realizado escrituras CMS.
+- Despliegue permanece NO-GO hasta cerrar los gates runtime, seguridad, concurrencia y publicación.
+
