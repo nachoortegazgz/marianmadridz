@@ -106,3 +106,22 @@ test("EVENT-ORDER-NATIVE-STOCK-03 stable payment and order-update handlers route
     assert.doesNotMatch(source, /export async function wixEcom_onOrderRefunded/);
     assert.doesNotMatch(source, /export async function wixEcom_onOrderTransactionsUpdated/);
 });
+
+
+test("FISCAL-P0-POS-CHANNEL-01 payment and refund handlers fail closed unless native Wix channel is WEB", () => {
+    assert.match(source, /async function _resolveVerifiedOrderChannel\(order, orderId, traceId\)/);
+    assert.match(source, /getOrderElevated\(orderId\)/);
+    assert.match(source, /channelType !== "WEB"/);
+    assert.match(source, /_routeNonWebOrderToManualReview\(/);
+    const paymentStart = source.indexOf("async function _handleWixEcom_onOrderPaymentStatusUpdated");
+    const processorStart = source.indexOf("// WIX ECOMMERCE TRANSACTION PROCESSORS", paymentStart);
+    const paymentHandler = source.slice(paymentStart, processorStart);
+    assert.ok(paymentStart >= 0 && processorStart > paymentStart);
+    assert.ok(paymentHandler.indexOf("_resolveVerifiedOrderChannel") < paymentHandler.indexOf("processOrderRefundTransactions"));
+    assert.ok(paymentHandler.indexOf("_resolveVerifiedOrderChannel") < paymentHandler.indexOf("registrarEventoEconomico(fiscalPayload)"));
+    const orderUpdatedStart = source.indexOf("async function _handleWixEcom_onOrderUpdated", processorStart);
+    const cancelStart = source.indexOf("// WEBHOOK: ORDER CANCELED", orderUpdatedStart);
+    const orderUpdatedHandler = source.slice(orderUpdatedStart, cancelStart);
+    assert.ok(orderUpdatedHandler.indexOf("_resolveVerifiedOrderChannel") < orderUpdatedHandler.indexOf("processOrderRefundTransactions"));
+    assert.match(paymentHandler, /sourceChannelType,/);
+});
