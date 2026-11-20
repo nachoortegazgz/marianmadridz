@@ -40,7 +40,7 @@ Este directorio implementa el TPV en modo SANDBOX persistente y sintético para 
 
 1. El miembro con rol cajero solicita la sesión SANDBOX abierta.
 2. La interfaz prepara y valida el borrador en backend.
-3. `registrarVentaSANDBOX` exige una sesión abierta y pago completamente cuadrado; valida cliente/profesionales contra identidades sintéticas activas.
+3. `registrarVenta` exige una sesión abierta y pago completamente cuadrado; valida cliente/profesionales contra identidades sintéticas activas.
 4. Persiste eventos lógicos `PREPARADA`, líneas, pagos y `CONFIRMADA_SINTETICA` en `MovimientosCaja`, con marcador sintético y secuencia fiscal cero.
 5. Cada evento utiliza una clave idempotente derivada de la clave cliente; un reintento continúa los pasos pendientes sin duplicar los existentes.
 6. Se registra auditoría. No se inicia una autorización, captura, orden ni movimiento fiscal.
@@ -107,7 +107,7 @@ En las tres filas: `active=true`, `syntheticOnly=true`, `environment=SANDBOX`, `
 
 ## Runtime Sandbox y arranque de caja
 
-El controlador del widget solicita `inicializarCajaSANDBOX` al completar el handshake. El WebMethod exige administrador y delega en `initializeSandboxCaja`, que consulta primero el singleton `CajaActual` en el data plane seleccionado por Wix. Solo crea el marcador inicial si no existe ningún singleton; si encuentra un registro con otro origen o run ID, falla sin actualizarlo. La inserción usa el ID canónico `SINGLE_ITEM_ID` y `singletonKey = CAJA_PRINCIPAL`, con `sequenceCounters` como objeto.
+El controlador del widget solicita `inicializarCaja` al completar el handshake. El WebMethod exige administrador y delega en `initializeSandboxCaja`, que consulta primero el singleton `CajaActual` en el data plane seleccionado por Wix. Solo crea el marcador inicial si no existe ningún singleton; si encuentra un registro con otro origen o run ID, falla sin actualizarlo. La inserción usa el ID canónico `SINGLE_ITEM_ID` y `singletonKey = CAJA_PRINCIPAL`, con `sequenceCounters` como objeto.
 
 La apertura de sesión y los eventos posteriores requieren el marcador `TPV_SANDBOX_INITIALIZED` o `TPV_SANDBOX_SYNTHETIC` y el `SANDBOX_RUN_ID` exacto. Pagos reales, escrituras fiscales, notificaciones, hardware y mutaciones de Bookings/Stores permanecen deshabilitados.
 
