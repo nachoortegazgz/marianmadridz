@@ -104,7 +104,7 @@ function seedCajaPrincipal() {
     singletonKey: "CAJA_PRINCIPAL",
     cashRegisterStatus: "ABIERTA",
     operationDate,
-    openingAmount: 300,
+    openingCashAmount: 300,
     cashAmount: 300,
     totalInAmount: 300,
     expectedCash: 300,
