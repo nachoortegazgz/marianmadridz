@@ -75,11 +75,12 @@ Ejecutar `npm test`, `npm run test:layer1` y `npm run lint` antes de sincronizar
 PR #397, PR #398 y PR #399 están integradas en `main`. PR #399 aplica el aislamiento sintético y pasó 74 suites / 670 pruebas offline, 0 fallos. El repositorio está configurado para Wix Git Integration: `wix.config.json` contiene el Site ID exacto y `package.json` expone `wix dev`/`wix`. El merge a `main` debe sincronizar el Editor, pendiente de read-back. No se ha ejecutado Preview ni Publish; la versión pública no está validada.
 
 
-## Fixtures sintéticas de cliente y profesionales (QA)
+## Identidades sintéticas de Sandbox
 
-- El único cliente de prueba es `Nacho Pitt` (`nacho.pitt@example.test`), definido en `TPV_QA_FIXTURES`; no se consulta CRM ni se persisten datos de clientes reales.
-- Los profesionales proceden de fixtures sintéticas; no se consulta Bookings Staff ni se persisten IDs reales de recursos.
-- La consulta y vinculación de reservas reales está deshabilitada; la venta rechaza cualquier `bookingId`.
+- Clientes y profesionales se leen exclusivamente desde `TpvSandboxIdentities`; no se consultan CRM, Members ni Bookings Staff para resolver identidades TPV.
+- La colección CMS tiene permisos ADMIN para lectura/escritura y sus hooks validan `identityType`, ID sintético, `environment=SANDBOX`, `syntheticOnly=true`, `testRunId` activo y correo `@example.test`. No admite teléfono, NIF, dirección ni IDs nativos.
+- Los registros son append-only; la identidad no se reutiliza como `contactId`, `memberId` o `resourceId` de Wix. La vinculación con reservas reales sigue deshabilitada y la venta rechaza cualquier `bookingId`.
+- El esquema CMS está creado; la carga de filas sintéticas debe hacerse desde el entorno Sandbox de Wix, nunca mediante la API REST de gestión que no acredita selección de Sandbox.
 - La consulta de saldo de Gift Cards reales está deshabilitada; no se envía ni persiste ningún código. Emisión, canje y reembolso siguen bloqueados.
 - Los eventos de auditoría usan el actor sintético `QA_ACTOR`; la identidad real solo se usa para autorización backend y no se persiste.
 
