@@ -1,12 +1,8 @@
 /**
  * public/tpvPageController.js
- * TPV sobre las colecciones reales del sitio.
- *
- * Las colecciones utilizadas las determina el backend:
- * CajaActual
- * MovimientosCaja
- * HistoricoCierresZ
- * ControlOperativo
+ * Controlador del widget TPV.
+ * La persistencia sintética y sus colecciones lógicas se resuelven exclusivamente
+ * en backend/tpv/tpvSandboxRepository.js; este módulo solo enruta mensajes.
  */
 
 import {
@@ -91,7 +87,7 @@ function success(data, traceId) {
         status: "SUCCESS",
         data,
         traceId,
-        persisted: true,
+        persisted: false,
     };
 }
 
