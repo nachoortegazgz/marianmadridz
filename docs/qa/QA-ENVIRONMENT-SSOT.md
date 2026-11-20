@@ -135,3 +135,8 @@ Esta sección es el estado operativo vigente y **supersede** los addenda histór
 - No hay prueba Wix Preview/Published E2E, ni certificación de aislamiento de invocaciones directas, ni seed de identidades, ni bootstrap de caja.
 
 **Release gate:** NO-GO para TPV persistente, publicación y despliegue productivo. La reactivación exige una señal backend verificable del data plane o un sitio/tenant Sandbox físicamente separado, prueba negativa de invocación desde Published, comparación LIVE antes/después, E2E y reversión probada. No utilizar el contador de uso como sustituto de esa prueba.
+
+
+## Resultado de contrato backend offline — PR #486
+
+El test contractual que enumera los WebMethods QA protegidos y comprueba el orden guard/repositorio quedó integrado en PR #486, commit `5ef81ff132f4cbff594387a60e4446bc5dada171`. CI del head: 74 suites / 693 tests PASS, Layer 1 335/335, Layer 2 267/267, npm audit 0 vulnerabilidades, SDK contracts, ESLint y secret scanning PASS. Esta evidencia valida el contrato estático/offline; no certifica Wix Runtime ni el aislamiento de Preview/Published. La política canónica sigue `ENABLED=false`.

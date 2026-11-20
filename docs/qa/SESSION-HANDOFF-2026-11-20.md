@@ -181,3 +181,14 @@ El handoff histórico de las secciones 1–10 refleja cortes anteriores. Para el
 - CajaActual LIVE observado: un singleton con estado/marcadores incompatibles con el test-run vigente; no tocar sin reconciliación. Tres `COMPENSATION/PENDING_RECOVERY` en ControlOperativo siguen pendientes y sin mutación.
 
 **Próximo paso de código:** contrato automatizado que compruebe que cada WebMethod QA expuesto ejecuta el guard backend antes de cualquier acceso al repositorio. La prueba será offline y no se presentará como certificación de Wix Runtime.
+
+
+## 12. Cierre PR #486 — contrato backend y estado consolidado
+
+- PR #486 fusionada: `5ef81ff132f4cbff594387a60e4446bc5dada171`.
+- Contrato offline de WebMethods QA integrado y CI SUCCESS: run `44727128060`; secret scanning SUCCESS: `44727128076`.
+- Resultados: npm ci PASS; npm audit 0 vulnerabilidades; Layer 1 28 suites / 335 tests; Layer 2 19 suites / 267 tests; total 74 suites / 693 tests; SDK contracts y ESLint PASS.
+- El nuevo contrato cubre el orden guard backend/repositorio en la lista de métodos QA explícitamente declarada. No prueba invocaciones Wix ni la selección del data plane.
+- Logs de CI advierten dependencias obsoletas y ESLint 8.25.0 sin soporte. No actualizar sin validar compatibilidad del plugin Wix.
+- Main confirmado: `5ef81ff132f4cbff594387a60e4446bc5dada171`.
+- Release continúa NO-GO; TPV QA runtime deshabilitado y sin escrituras Wix.
