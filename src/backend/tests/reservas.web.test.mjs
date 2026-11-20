@@ -1657,6 +1657,13 @@ test('RES-DISPLAY-06 token is single-use: replay after success is rejected', asy
   const bid = GUID_OK;
   await seedConfirmedBooking(bid);
   const token = await issueDisplayToken(bid);
+  const persistedToken = (wixDataMock._store.get(CONTROL_COL) || [])
+    .find((row) => row.controlType === 'DISPLAY_TOKEN');
+  assert.ok(persistedToken, 'DISPLAY_TOKEN record must be persisted');
+  assert.equal(typeof persistedToken.payload, 'object');
+  assert.equal(persistedToken.payload.maxAttempts, IC.DISPLAY_TOKEN_CONFIG.MAX_ATTEMPTS);
+  assert.equal(Object.hasOwn(persistedToken, 'maxAttempts'), false,
+    'maxAttempts is not a physical ControlOperativo root field');
   const first = await RW.getConfirmedBookingForDisplay({ displayToken: token });
   assert.strictEqual(first.ok, true);
   const replay = await RW.getConfirmedBookingForDisplay({ displayToken: token });
