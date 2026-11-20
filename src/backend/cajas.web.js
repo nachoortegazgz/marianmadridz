@@ -198,7 +198,6 @@ const STRONG_READ = Object.freeze({ consistencyMode: "strong" });
 // CajaActual keys are canonical and shared by sequence and register projections.
 const CAJA_KEYS = Object.freeze({
     SINGLETON_KEY: "singletonKey",
-    OPERATION_DATE: "operationDate",
     STATUS: "cashRegisterStatus",
     TOTAL: "netAmount",
     CASH: "cashAmount",
@@ -215,10 +214,11 @@ const CAJA_KEYS = Object.freeze({
 // HELPERS
 // ============================================================================
 
-function _toWixDateOnly(value) {
-    const date = value instanceof Date ? value : new Date(value);
-    if (Number.isNaN(date.getTime())) throw new Error("CAJA_OPERATION_DATE_INVALID");
-    return date.toISOString().slice(0, 10);
+function _getSessionDayKey(openedAt) {
+    if (!openedAt) return null;
+    const date = openedAt instanceof Date ? openedAt : new Date(openedAt);
+    if (Number.isNaN(date.getTime())) return null;
+    return date.toLocaleDateString("sv-SE", { timeZone: SDK_CONFIG.TZ });
 }
 
 function _normalizeLinkedBookingIds(value) {
@@ -1172,7 +1172,6 @@ async function _updateCajaActual(movement, traceId) {
             cashRegister[CAJA_KEYS.LAST_MOVEMENT_AT] = sourceTimestamp;
             cashRegister.traceId = _safeTrim(movement.traceId) || traceId;
             cashRegister.staffResourceId = _safeTrim(movement.staffResourceId) || null;
-            cashRegister[CAJA_KEYS.OPERATION_DATE] = _toWixDateOnly(movement?.operationDate || sourceTimestamp);
             cashRegister._updatedDate = new Date();
 
             try {
@@ -1409,7 +1408,7 @@ export const getCashierState = webMethod(Permissions.SiteMember, async (options 
             data: {
                 _id: cashRegister?._id || CASH_REGISTER_ID,
                 singletonKey: cashRegister?.[CAJA_KEYS.SINGLETON_KEY] || SINGLETONS.CAJA_PRINCIPAL,
-                operationDate: cashRegister?.[CAJA_KEYS.OPERATION_DATE] ?? null,
+                operationDate: _getSessionDayKey(cashRegister?.[CAJA_KEYS.OPENED_AT]),
                 cashRegisterStatus: cashRegister?.[CAJA_KEYS.STATUS] || CASH_REGISTER_STATUS.CERRADA,
                 netAmount: cashRegister?.[CAJA_KEYS.TOTAL] ?? 0,
                 cashAmount: cashRegister?.[CAJA_KEYS.CASH] ?? 0,
