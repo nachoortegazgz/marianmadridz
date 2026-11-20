@@ -275,6 +275,11 @@ export function assertControlOperativo(item) {
     if (!item.traceId || !String(item.traceId).trim()) {
         throw new Error("SCHEMA_VIOLATION: ControlOperativo requires traceId");
     }
+    // The live Wix schema marks payload as required OBJECT. Enforce that
+    // physical contract in backend hooks, not only in the CMS editor.
+    if (!item.payload || typeof item.payload !== "object" || Array.isArray(item.payload)) {
+        throw new Error("SCHEMA_VIOLATION: ControlOperativo requires payload OBJECT");
+    }
 
     // WEBHOOK_EVENT: eventType y processedAt también se duplican en campos CMS indexables.
     if (item.controlType === CONTROL_TYPE.WEBHOOK_EVENT) {
