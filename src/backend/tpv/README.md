@@ -103,3 +103,10 @@ La colección se ha creado vacía. Cuando Wix Editor permita editar explícitame
 | `SANDBOX-STAFF-002` | `STAFF` | Profesional Sintético 02 | `staff02@example.test` |
 
 En las tres filas: `active=true`, `syntheticOnly=true`, `environment=SANDBOX`, `testRunId=TPVSANDBOX-DEV-20261120-01` y `metadata={}`. No añadir teléfono, NIF, dirección, `contactId`, `memberId` ni `resourceId`. El hook valida el contrato antes de aceptar la inserción.
+
+
+## Runtime Sandbox y arranque de caja
+
+El controlador del widget solicita `inicializarCajaSANDBOX` al completar el handshake. El WebMethod exige administrador y delega en `initializeSandboxCaja`, que consulta primero el singleton `CajaActual` en el data plane seleccionado por Wix. Solo crea el marcador inicial si no existe ningún singleton; si encuentra un registro con otro origen o run ID, falla sin actualizarlo. La inserción usa el ID canónico `SINGLE_ITEM_ID` y `singletonKey = CAJA_PRINCIPAL`, con `sequenceCounters` como objeto.
+
+La apertura de sesión y los eventos posteriores requieren el marcador `TPV_SANDBOX_INITIALIZED` o `TPV_SANDBOX_SYNTHETIC` y el `SANDBOX_RUN_ID` exacto. Pagos reales, escrituras fiscales, notificaciones, hardware y mutaciones de Bookings/Stores permanecen deshabilitados.
