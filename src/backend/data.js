@@ -20,7 +20,7 @@ import {
     TPV_QA_RUNTIME_POLICY,
     TPV_QA_EVENT_MOVEMENT_TYPES,
 } from "backend/internalConfig";
-import { assertCitasF2, assertCitasF2Insert, assertControlOperativo, assertCanonicalControlFields, assertRegistrosHorariosStaff, assertMapaStaffRecord, assertCajaActualRecord, assertHistoricoCierresZ, assertMovimientosCajaRequiredFields, assertAccountingLedgerRecord, assertPaquetesGestoriaRecord, isValidNifOrEuVat as _isValidNifOrEuVat } from "backend/validation";
+import { assertCitasF2, assertCitasF2Insert, assertControlOperativo, assertCanonicalControlFields, assertRegistrosHorariosStaff, assertMapaStaffRecord, assertCajaActualRecord, assertHistoricoCierresZ, assertMovimientosCajaRequiredFields, assertAccountingLedgerRecord, assertPaquetesGestoriaRecord, assertTpvSandboxIdentity, isValidNifOrEuVat as _isValidNifOrEuVat } from "backend/validation";
 import { CONSISTENCY, getItem } from "backend/dataAccess";
 import { stableSerialize } from "backend/tpv/tpvUtils";
 
@@ -721,6 +721,22 @@ function _clearStaleCajaClosedAt(item) {
         item.closedAt = null;
     }
     return item;
+}
+
+export function TpvSandboxIdentities_beforeInsert(item) {
+    assertTpvSandboxIdentity(item);
+    if (item.createdAt !== undefined && item.createdAt !== null) {
+        _normalizeCmsDateTime(item, "createdAt");
+    }
+    return item;
+}
+
+export function TpvSandboxIdentities_beforeUpdate() {
+    throw new Error("TPV_SANDBOX_IDENTITIES_APPEND_ONLY");
+}
+
+export function TpvSandboxIdentities_beforeRemove() {
+    throw new Error("TPV_SANDBOX_IDENTITIES_APPEND_ONLY");
 }
 
 export function CajaActual_beforeInsert(item) {
