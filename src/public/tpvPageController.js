@@ -4,22 +4,22 @@
  * No operational ledger, Wix payment gateway, fiscal API or customer notification is called.
  */
 import {
-    obtenerSesionCajaQA,
-    abrirCajaQA,
-    registrarArqueoParcialQA,
+    obtenerSesionCaja,
+    abrirCaja,
+    registrarArqueoParcial,
 } from "backend/tpv/tpvCaja.web.js";
-import { registrarMovimientoCajaQA } from "backend/tpv/tpvMovimientos.web.js";
-import { registrarVentaQA, validarVentaBorrador } from "backend/tpv/tpvVentas.web.js";
-import { validarDesglosePagosQA } from "backend/tpv/tpvPagos.web.js";
-import { solicitarDevolucionQA } from "backend/tpv/tpvDevoluciones.web.js";
+import { registrarMovimientoCaja } from "backend/tpv/tpvMovimientos.web.js";
+import { registrarVenta, validarVentaBorrador } from "backend/tpv/tpvVentas.web.js";
+import { validarDesglosePagos } from "backend/tpv/tpvPagos.web.js";
+import { solicitarDevolucion } from "backend/tpv/tpvDevoluciones.web.js";
 import {
-    obtenerResumenSesionQA,
-    generarTicketXQA,
-    cerrarTicketZQA,
+    obtenerResumenSesion,
+    generarTicketX,
+    cerrarTicketZ,
 } from "backend/tpv/tpvCierres.web.js";
-import { consultarAuditoriaTPVQA } from "backend/tpv/tpvAuditoria.web.js";
-import { obtenerPermisosTPVQA } from "backend/tpv/tpvPermisos.web.js";
-import { obtenerConfiguracionTPVQA } from "backend/tpv/tpvUtils.web.js";
+import { consultarAuditoriaTPV } from "backend/tpv/tpvAuditoria.web.js";
+import { obtenerPermisosTPV } from "backend/tpv/tpvPermisos.web.js";
+import { obtenerConfiguracionTPV } from "backend/tpv/tpvUtils.web.js";
 import {
     obtenerServicios,
     obtenerProfesionales,
@@ -40,18 +40,18 @@ const TPV_ALLOWED_MESSAGES = Object.freeze([
     "PRODUCT_VARIANTS",
     "VALIDATE_SALE_DRAFT",
     "GIFT_CARD_BALANCE",
-    "QA_CONFIG",
-    "QA_PERMISSIONS",
-    "QA_SESSION_OPEN",
-    "QA_PARTIAL_COUNT",
-    "QA_CASH_MOVEMENT",
-    "QA_PAYMENT_VALIDATE",
-    "QA_SALE_REGISTER",
-    "QA_REFUND",
-    "QA_SESSION_SUMMARY",
-    "QA_TICKET_X",
-    "QA_TICKET_Z",
-    "QA_AUDIT_LIST",
+    "CONFIG",
+    "PERMISSIONS",
+    "SESSION_OPEN",
+    "PARTIAL_COUNT",
+    "CASH_MOVEMENT",
+    "PAYMENT_VALIDATE",
+    "SALE_REGISTER",
+    "REFUND",
+    "SESSION_SUMMARY",
+    "TICKET_X",
+    "TICKET_Z",
+    "AUDIT_LIST",
 ]);
 
 function errorResult(code, message, traceId) {
@@ -119,7 +119,7 @@ export function initializeTpvPage(widgetElement) {
 
             switch (type) {
             case "CASHIER_STATE":
-                await respond("CASHIER_STATE_RES", () => obtenerSesionCajaQA(), "TPV_QA_SESSION_READ_FAILED", "No se pudo consultar la sesion QA.");
+                await respond("CASHIER_STATE_RES", () => obtenerSesionCaja(), "TPV_QA_SESSION_READ_FAILED", "No se pudo consultar la sesion QA.");
                 return;
             case "CATALOG_SERVICES":
                 await respond("CATALOG_SERVICES_RES", () => obtenerServicios({ limit: 100, offset: 0 }), "TPV_SERVICES_READ_FAILED", "No se pudieron consultar los servicios.");
@@ -139,41 +139,41 @@ export function initializeTpvPage(widgetElement) {
             case "GIFT_CARD_BALANCE":
                 await respond("GIFT_CARD_BALANCE_RES", () => consultarTarjetaRegalo({ code: payload.code }), "TPV_GIFT_CARD_LOOKUP_FAILED", "No se pudo consultar la tarjeta regalo.");
                 return;
-            case "QA_CONFIG":
-                await respond("QA_CONFIG_RES", () => obtenerConfiguracionTPVQA(), "TPV_QA_CONFIG_FAILED", "No se pudo consultar la configuracion QA.");
+            case "CONFIG":
+                await respond("CONFIG_RES", () => obtenerConfiguracionTPV(), "TPV_CONFIG_FAILED", "No se pudo consultar la configuracion QA.");
                 return;
-            case "QA_PERMISSIONS":
-                await respond("QA_PERMISSIONS_RES", () => obtenerPermisosTPVQA(), "TPV_QA_PERMISSIONS_FAILED", "No se pudieron consultar los permisos.");
+            case "PERMISSIONS":
+                await respond("PERMISSIONS_RES", () => obtenerPermisosTPV(), "TPV_PERMISSIONS_FAILED", "No se pudieron consultar los permisos.");
                 return;
-            case "QA_SESSION_OPEN":
-                await respond("QA_SESSION_OPEN_RES", () => abrirCajaQA(payload), "TPV_QA_SESSION_OPEN_FAILED", "No se pudo abrir la sesion QA.");
+            case "SESSION_OPEN":
+                await respond("SESSION_OPEN_RES", () => abrirCaja(payload), "TPV_SESSION_OPEN_FAILED", "No se pudo abrir la sesion QA.");
                 return;
-            case "QA_PARTIAL_COUNT":
-                await respond("QA_PARTIAL_COUNT_RES", () => registrarArqueoParcialQA(payload), "TPV_QA_PARTIAL_COUNT_FAILED", "No se pudo registrar el arqueo QA.");
+            case "PARTIAL_COUNT":
+                await respond("PARTIAL_COUNT_RES", () => registrarArqueoParcial(payload), "TPV_PARTIAL_COUNT_FAILED", "No se pudo registrar el arqueo QA.");
                 return;
-            case "QA_CASH_MOVEMENT":
-                await respond("QA_CASH_MOVEMENT_RES", () => registrarMovimientoCajaQA(payload), "TPV_QA_CASH_MOVEMENT_FAILED", "No se pudo registrar el movimiento QA.");
+            case "CASH_MOVEMENT":
+                await respond("CASH_MOVEMENT_RES", () => registrarMovimientoCaja(payload), "TPV_CASH_MOVEMENT_FAILED", "No se pudo registrar el movimiento QA.");
                 return;
-            case "QA_PAYMENT_VALIDATE":
-                await respond("QA_PAYMENT_VALIDATE_RES", () => validarDesglosePagosQA(payload), "TPV_QA_PAYMENT_VALIDATION_FAILED", "No se pudo validar el pago simulado.");
+            case "PAYMENT_VALIDATE":
+                await respond("PAYMENT_VALIDATE_RES", () => validarDesglosePagos(payload), "TPV_QA_PAYMENT_VALIDATION_FAILED", "No se pudo validar el pago simulado.");
                 return;
-            case "QA_SALE_REGISTER":
-                await respond("QA_SALE_REGISTER_RES", () => registrarVentaQA(payload), "TPV_QA_SALE_FAILED", "No se pudo registrar la venta sintetica.");
+            case "SALE_REGISTER":
+                await respond("SALE_REGISTER_RES", () => registrarVenta(payload), "TPV_QA_SALE_FAILED", "No se pudo registrar la venta sintetica.");
                 return;
-            case "QA_REFUND":
-                await respond("QA_REFUND_RES", () => solicitarDevolucionQA(payload), "TPV_QA_REFUND_FAILED", "No se pudo registrar la devolucion sintetica.");
+            case "REFUND":
+                await respond("REFUND_RES", () => solicitarDevolucion(payload), "TPV_REFUND_FAILED", "No se pudo registrar la devolucion sintetica.");
                 return;
-            case "QA_SESSION_SUMMARY":
-                await respond("QA_SESSION_SUMMARY_RES", () => obtenerResumenSesionQA(payload), "TPV_QA_SUMMARY_FAILED", "No se pudo calcular el resumen QA.");
+            case "SESSION_SUMMARY":
+                await respond("SESSION_SUMMARY_RES", () => obtenerResumenSesion(payload), "TPV_QA_SUMMARY_FAILED", "No se pudo calcular el resumen QA.");
                 return;
-            case "QA_TICKET_X":
-                await respond("QA_TICKET_X_RES", () => generarTicketXQA(payload), "TPV_QA_TICKET_X_FAILED", "No se pudo generar Ticket X QA.");
+            case "TICKET_X":
+                await respond("TICKET_X_RES", () => generarTicketX(payload), "TPV_TICKET_X_FAILED", "No se pudo generar Ticket X QA.");
                 return;
-            case "QA_TICKET_Z":
-                await respond("QA_TICKET_Z_RES", () => cerrarTicketZQA(payload), "TPV_QA_TICKET_Z_FAILED", "No se pudo cerrar Ticket Z QA.");
+            case "TICKET_Z":
+                await respond("TICKET_Z_RES", () => cerrarTicketZ(payload), "TPV_TICKET_Z_FAILED", "No se pudo cerrar Ticket Z QA.");
                 return;
-            case "QA_AUDIT_LIST":
-                await respond("QA_AUDIT_LIST_RES", () => consultarAuditoriaTPVQA(payload), "TPV_QA_AUDIT_READ_FAILED", "No se pudo consultar la auditoria QA.");
+            case "AUDIT_LIST":
+                await respond("AUDIT_LIST_RES", () => consultarAuditoriaTPV(payload), "TPV_QA_AUDIT_READ_FAILED", "No se pudo consultar la auditoria QA.");
                 return;
             default:
                 reply((type || "UNKNOWN") + "_RES", errorResult("TPV_ACTION_NOT_ALLOWED", "Accion no habilitada.", traceId), message);
