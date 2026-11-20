@@ -102,12 +102,10 @@ function setMember(member) {
 function seedCajaPrincipal() {
   const rows = wixDataMock._store.get('CajaActual') || [];
   if (rows.some((row) => row.singletonKey === 'CAJA_PRINCIPAL')) return;
-  const operationDate = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Madrid' });
   wixDataMock._store.set('CajaActual', [{
     _id: 'SINGLE_ITEM_ID',
     singletonKey: 'CAJA_PRINCIPAL',
     cashRegisterStatus: 'ABIERTA',
-    operationDate,
     openedAt: new Date(Date.now() - 60_000),
     openedBy: GUID_ADMIN_RESOURCE,
     openingCashAmount: 300,
@@ -377,6 +375,14 @@ test('FLOW-CAJA-01 flujo continuo: venta EFECTIVO -> caja incrementada -> cierre
   assert.strictEqual(state.status, 'SUCCESS');
   assert.strictEqual(state.data.openingCashAmount, 300, 'DTO reads the physical openingCashAmount field');
   assert.strictEqual(state.data.openingAmount, undefined, 'stale non-physical DTO alias is not exposed');
+  const openedAt = (wixDataMock._store.get('CajaActual') || [])[0].openedAt;
+  assert.strictEqual(
+    state.data.operationDate,
+    openedAt.toLocaleDateString('sv-SE', { timeZone: 'Europe/Madrid' }),
+    'Jornada is derived from the physical session opening timestamp',
+  );
+  assert.strictEqual((wixDataMock._store.get('CajaActual') || [])[0].operationDate, undefined,
+    'CajaActual does not persist the absent operationDate field');
   assert.ok((state.data.totalOperations ?? 0) >= 1, 'operaciones contabilizadas: ' + JSON.stringify(state.data));
   assert.ok(state.data.lastOperation?.movementId === mov._id, 'última operación referencia el movimiento original');
   assert.deepStrictEqual(state.data.lastOperation.sourceMovementIds, [mov._id]);
@@ -870,7 +876,6 @@ test('FLOW-CAJA-06 CajaActual resolves singletonKey when Wix assigned a differen
     _id: 'SINGLE_ITEM_ID',
     singletonKey: 'CAJA_PRINCIPAL',
     cashRegisterStatus: 'ABIERTA',
-    operationDate: '2026-11-06',
     openingCashAmount: 300,
     cashAmount: 300,
     netAmount: 300,
@@ -1067,7 +1072,6 @@ test('FLOW-CAJA-10C reopens the current session when closedAt belongs to a prior
     _id: 'SINGLE_ITEM_ID',
     singletonKey: 'CAJA_PRINCIPAL',
     cashRegisterStatus: 'ABIERTA',
-    operationDate: new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Madrid' }),
     openedAt,
     closedAt: priorClosedAt,
     openingCashAmount: 100,
