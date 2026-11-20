@@ -19,7 +19,7 @@ test("TPV controller exposes authenticated SANDBOX session and Bookings catalog 
         assert.match(permissions, new RegExp(capability + ": isAdmin"));
     }
     assert.match(controller, /MESSAGE_TYPES\.READY/);
-    assert.match(controller, /MESSAGE_TYPES\.CONTEXT/);
+    assert.match(controller, /onContextReady:/);
     assert.match(controller, /"CASHIER_STATE"/);
     assert.match(controller, /"CATALOG_SERVICES"/);
     assert.match(controller, /"CATALOG_STAFF"/);
