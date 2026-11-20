@@ -324,6 +324,7 @@ export async function getItem(collection, id, consistency) {
 }
 
 export function insertItem(collection, item) {
+    assertInsertAllowed(collection, item);
     if (collection === BUSINESS_COLLECTIONS.CONTROL_OPERATIVO) {
         assertControlOperativo(item);
         assertCanonicalControlFields(item);
@@ -340,7 +341,6 @@ export function insertItem(collection, item) {
     } else if (collection === BUSINESS_COLLECTIONS.HISTORICO_CIERRES_Z) {
         assertHistoricoCierresZ(item);
     }
-    assertInsertAllowed(collection, item);
     return elevatedInsert(collection, item);
 }
 
