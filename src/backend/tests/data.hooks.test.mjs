@@ -264,11 +264,12 @@ test('HOOK-CMS-DATETIME-06 normalizes ControlOperativo DateTime fields', () => {
     dedupeKey: 'IDEMPOTENCY:synthetic-date',
     traceId: 'trace-control-datetime',
     expiresAt: '2026-11-12T12:00:00.000Z',
-    occurredAt: '2026-11-12T11:00:00.000Z',
-    operationDate: '2026-11-12T11:00:00.000Z',
+    windowStart: '2026-11-12T11:00:00.000Z',
+    processedAt: '2026-11-12T11:00:00.000Z',
+    payload: {},
   };
   H.ControlOperativo_beforeInsert(item);
-  for (const field of ['expiresAt', 'occurredAt', 'operationDate']) assert.ok(item[field] instanceof Date);
+  for (const field of ['expiresAt', 'windowStart', 'processedAt']) assert.ok(item[field] instanceof Date);
   assert.throws(() => H.ControlOperativo_beforeInsert({
     controlType: 'IDEMPOTENCY',
     dedupeKey: 'IDEMPOTENCY:synthetic-date-invalid',
