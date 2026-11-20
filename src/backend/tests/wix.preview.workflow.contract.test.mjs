@@ -37,7 +37,10 @@ test("WIX-PREVIEW-04 workflow creates a Preview only and never publishes", async
     const workflow = await readFile(workflowUrl, "utf8");
     assert.match(workflow, /npm run wix preview/);
     assert.ok(workflow.includes("timeout-minutes: 10"));
-    assert.doesNotMatch(workflow, /script --quiet|printf/);
+    assert.match(workflow, /npm run wix preview -- --help/);
+    assert.match(workflow, /script --quiet --return/);
+    assert.ok(workflow.includes("sleep 3"));
+    assert.ok(workflow.includes("printf '\\r'"));
     assert.doesNotMatch(workflow, /npm run wix publish|\bwix publish\b/i);
 });
 
