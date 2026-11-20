@@ -165,8 +165,9 @@ function _toFiscalStartDateText(value) {
 }
 
 function _buildFiscalSystemConfig(config) {
-    if (!config || _safeTrim(config.recordType).toUpperCase() !== RECORD_TYPE.CONFIG_SISTEMA) {
-        throw new Error("FISCAL_CONFIG_MISSING: falta MapaStaff CONFIG_SISTEMA");
+    if (!config || _safeTrim(config.recordType).toUpperCase() !== RECORD_TYPE.CONFIG_SISTEMA ||
+        _safeTrim(config._id) !== "CONFIG_SISTEMA_FISCAL") {
+        throw new Error("FISCAL_CONFIG_MISSING: falta el singleton MapaStaff CONFIG_SISTEMA_FISCAL");
     }
 
     const resolved = {
