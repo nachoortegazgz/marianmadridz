@@ -3,7 +3,7 @@ import { requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { assertTpvQaEnabled, normalizePaymentMethod, toMinorUnits } from "backend/tpv/tpvUtils";
 
-export const validarDesglosePagosQA = webMethod(
+export const validarDesglosePagos = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
         const traceId = makeTraceId("tpv-qa-payment-validation");
