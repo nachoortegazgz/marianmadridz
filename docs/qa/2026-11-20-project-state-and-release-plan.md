@@ -4,7 +4,7 @@ Fecha de corte: 2026-11-20
 Repositorio: `nachoortegazgz/marianmadridz`  
 Rama: `main`  
 Site ID: `188bed94-177c-4bc9-a9f0-35080d874f3e`  
-Último SHA verificado: `5cfbecd6849c56d162f0d20a11b620eb2bea0c54`
+Último SHA verificado: `7672bac4b4207ba87c9688fa34f38752a253ae86`
 
 ## 1. Dictamen ejecutivo
 
@@ -14,14 +14,14 @@ El propietario declaró que el sitio está en desarrollo y que los registros fis
 
 ## 2. Estado verificado del repositorio
 
-- `main` apunta a `5cfbecd6849c56d162f0d20a11b620eb2bea0c54`.
+- `main` apunta a `7672bac4b4207ba87c9688fa34f38752a253ae86`.\n- PR #453 integrada: consolidación documental (`9aa92a9ef7408ab9b431694463ca1ffe2dedacfa`).\n- PR #454 integrada: auditoría de productores y bypasses CMS (`06766afbcdf7f8d32d34ccbb3f1ff68a242f8bca`).\n- PR #455 integrada: validación central de `PaquetesGestoria` (`7672bac4b4207ba87c9688fa34f38752a253ae86`).
 - PR #450 integrada: `11e6cefd838cfd8f18301ddff534e2edd8849743`.
 - PR #451 integrada: `bdbdb2467294c781bfc090cd8429d7c060413d15`.
 - PR #452 integrada: `5cfbecd6849c56d162f0d20a11b620eb2bea0c54`.
 - PR #452 workflow #44667244690: completed / success sobre head `940a6cf9fadb85ed414963eff2cfd1b28c82ed67`; job agregado de Layer 1/2, regresión offline, contratos SDK y lint: SUCCESS.
-- No se encontraron PR abiertas en la consulta realizada.
+- No se encontraron PR abiertas en la consulta posterior a PR #455.
 - La rama `main` continúa sin protección: API de branch devuelve `protected=false`, `protection.enabled=false`, checks obligatorios desactivados. La integración no dispone de permiso administrativo para corregirlo.
-- La última consulta de status checks para el merge SHA no devolvió statuses asociados. No debe confundirse el CI de la PR con un CI post-merge.
+- La consulta de status checks del merge SHA no devolvió statuses asociados. PR #455 sí superó CI: Layer 1 333/333, Layer 2 266/266, suite offline 688/688, SDK contracts, npm audit (0 advisories), ESLint y secret scanning SUCCESS. No se declara workflow post-merge.
 - No se ha ejecutado Wix Local Editor, Preview ni E2E desde esta sesión. No se declara sincronización local/runtime verificada.
 
 ## 3. Hitos integrados
@@ -51,7 +51,7 @@ El propietario declaró que el sitio está en desarrollo y que los registros fis
 - Se bloquean rutas de cierre Z sin `recordDomain` y responsable de sistema aprobados.
 - No se han habilitado writers.
 
-### Ledger contable — PR #452
+### Auditoría de productores CMS — PR #454\n- Auditoría estática de ocho colecciones críticas y sus productores, DAL, hooks y rutas de escritura.\n- No se localizó bypass directo activo de `@wix/data` en los módulos backend revisados.\n- `CajaActual` requiere endurecer la política DAL de transiciones; cierre Z sigue bloqueado por `recordDomain`.\n- Informe: [cms-producer-and-bypass-audit](./2026-11-20-cms-producer-and-bypass-audit.md).\n\n### Validación central de PaquetesGestoria — PR #455\n- `assertPaquetesGestoriaRecord` centralizado en `validation.js`, invocado desde DAL y hook.\n- CI PR #455: Layer 1 333/333, Layer 2 266/266, suite offline 688/688; SDK, npm audit, ESLint y secret scanning SUCCESS.\n\n### Ledger contable — PR #452
 - Añadido beforeInsert y validación central append-only.
 - CI de PR verde; hook Wix Sandbox pendiente.
 - Hash validado por formato, no recomputado por el hook.
@@ -113,7 +113,7 @@ La consulta actual identificó 19 issues abiertas. El estado resumido siguiente 
 4. Confirmar que no existen PR abiertas y reconciliar todas las issues.
 
 ### P0-B — Integridad y conciliación
-1. Auditar todos los productores de inserción de ledgers y colecciones sensibles, incluidos bypasses de hooks.
+1. Auditoría estática de productores y bypasses CMS completada (PR #454); falta E2E de hooks/permisos en Sandbox y endurecer `CajaActual`.
 2. Reconciliar las tres compensaciones pendientes y CajaActual sin reintentos ciegos.
 3. Completar prueba de atomicidad/idempotencia de webhooks.
 4. Probar beforeInsert/update/remove y permisos en Sandbox con identidad adecuada.
@@ -160,4 +160,4 @@ No declarar GO hasta que:
 
 ## 8. Punto de continuación
 
-Siguiente intervención recomendada: **auditoría de todos los productores y bypasses de inserción CMS**, comenzando por `MovimientosCaja`, `HistoricoCierresZ`, `PaquetesGestoria`, `RegistrosHorariosStaff` y `CitasF2`. Después ejecutar P0 de conciliación y pruebas de hooks en Sandbox. Evitar nuevas funcionalidades hasta cerrar esas garantías.
+Siguiente intervención recomendada: **cerrar H-01 de `CajaActual`** definiendo transiciones válidas y endureciendo la frontera DAL sin romper los productores de caja y TPV QA. En paralelo, priorizar la conciliación P0 de las tres compensaciones y CajaActual; después ejecutar pruebas de hooks/permisos en Sandbox. Mantener cierre Z y writers fiscales bloqueados.
