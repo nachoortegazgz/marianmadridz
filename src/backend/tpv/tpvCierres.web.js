@@ -7,7 +7,7 @@ import { buildQaSessionSummary } from "backend/tpv/tpvCierresCore";
 import { assertTpvQaEnabled, fromMinorUnits, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
 import { wql } from "backend/dataAccess";
 
-export const obtenerResumenSesionQA = webMethod(
+export const obtenerResumenSesion = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
         const traceId = makeTraceId("tpv-qa-summary");
@@ -43,7 +43,7 @@ export const obtenerResumenSesionQA = webMethod(
     }
 );
 
-export const generarTicketXQA = webMethod(
+export const generarTicketX = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
         const traceId = makeTraceId("tpv-qa-ticket-x");
@@ -75,12 +75,12 @@ export const generarTicketXQA = webMethod(
             });
             return { status: "SUCCESS", data: { reportId: item.reportId, totals, replayed, closesSession: false, isSynthetic: true }, error: null, traceId };
         } catch (error) {
-            return { status: "ERROR", data: null, error: { code: String(error?.message || "TPV_QA_TICKET_X_FAILED") }, traceId };
+            return { status: "ERROR", data: null, error: { code: String(error?.message || "TPV_TICKET_X_FAILED") }, traceId };
         }
     }
 );
 
-export const cerrarTicketZQA = webMethod(
+export const cerrarTicketZ = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
         const traceId = makeTraceId("tpv-qa-ticket-z");
@@ -96,7 +96,7 @@ export const cerrarTicketZQA = webMethod(
                     if (requestedCount !== Number(prior.totals?.countedCashMinor) || String(input.differenceReason || "").trim() !== String(prior.totals?.differenceReason || "")) throw new Error("TPV_QA_IDEMPOTENCY_CONFLICT");
                     const staff = await getMyStaffContext(traceId);
                     await appendQaAudit({
-                        idempotencyKey: "QA_TICKET_Z:" + prior.sessionId + ":AUDIT",
+                        idempotencyKey: "TICKET_Z:" + prior.sessionId + ":AUDIT",
                         action: "TICKET_Z_QA_CERRADO",
                         actorId: staff?.memberId || "UNKNOWN",
                         entityType: "TICKET_Z",
@@ -134,7 +134,7 @@ export const cerrarTicketZQA = webMethod(
             const existing = await queryQaRecords(TPV_QA_COLLECTIONS.TICKET_Z, wql.eq("sessionId", session.sessionId));
             if (existing.length && existing[0].closed !== true) throw new Error("TPV_QA_Z_RECORD_INVALID");
             const staff = await getMyStaffContext(traceId);
-            const idempotencyKey = "QA_TICKET_Z:" + session.sessionId;
+            const idempotencyKey = "TICKET_Z:" + session.sessionId;
             const reportId = "QA-Z-" + session.sessionId;
             const { item, replayed } = await insertQaEvent(TPV_QA_COLLECTIONS.TICKET_Z, idempotencyKey, {
                 sessionId: session.sessionId,
@@ -178,7 +178,7 @@ export const cerrarTicketZQA = webMethod(
                 traceId,
             };
         } catch (error) {
-            return { status: "ERROR", data: null, error: { code: String(error?.message || "TPV_QA_TICKET_Z_FAILED") }, traceId };
+            return { status: "ERROR", data: null, error: { code: String(error?.message || "TPV_TICKET_Z_FAILED") }, traceId };
         }
     }
 );
