@@ -220,6 +220,7 @@ const QA_COLLECTION_MOVEMENT_TYPE = Object.freeze({
     [TPV_QA_COLLECTIONS.AUDITORIA]: "SIMULATED_TPV_AUDIT",
 });
 const QA_TEST_RUN_ID = TPV_QA_RUNTIME_POLICY.TEST_RUN_ID;
+const MAX_QA_PROJECTION_EVENTS = 1000;
 
 function _assertLogicalCollection(collection) {
     if (!ALLOWED_QA_COLLECTIONS.has(collection)) throw new Error("TPV_QA_COLLECTION_NOT_ALLOWED");
@@ -327,6 +328,9 @@ async function _writeCajaProjection(collection, record, eventId) {
         : {};
     const appliedIds = Array.isArray(qaState.appliedMovementIds) ? qaState.appliedMovementIds : [];
     if (eventId && appliedIds.includes(eventId)) return caja;
+    if (eventId && appliedIds.length >= MAX_QA_PROJECTION_EVENTS) {
+        throw new Error("TPV_QA_PROJECTION_IDEMPOTENCY_LIMIT");
+    }
     const now = new Date();
     const next = { ...caja, _updatedDate: now };
     next.lastOperationId = eventId || caja.lastOperationId;
@@ -371,7 +375,7 @@ async function _writeCajaProjection(collection, record, eventId) {
     } else {
         next.lastOperationType = "TPV_QA_" + String(collection).replace(/^QA_/, "");
     }
-    qaState.appliedMovementIds = eventId ? [...appliedIds, eventId].slice(-500) : appliedIds;
+    qaState.appliedMovementIds = eventId ? [...appliedIds, eventId] : appliedIds;
     qaState.lastProjectedAt = now;
     conceptOperations.tpvQa = qaState;
     next.conceptOperations = conceptOperations;
@@ -605,13 +609,17 @@ export async function queryQaRecords(collection, filter, options = {}) {
         limit: pageSize,
         consistency: CONSISTENCY.STRONG,
     });
-    const records = result.items.map(_virtualRecord).filter((item) => _matchesFilter(item, filter));
+    const records = result.items.map(_virtualRecord).filter((item) =>
+        item.payloadFiscal?.testRunId === QA_TEST_RUN_ID && _matchesFilter(item, filter)
+    );
     if (options.allowTruncated === true) return records;
     const maxRecords = Math.max(pageSize, Math.floor(Number(options.maxRecords || 10000)));
     let page = result;
     while (page.hasNext && records.length < maxRecords) {
         page = await page.next();
-        records.push(...page.items.map(_virtualRecord).filter((item) => _matchesFilter(item, filter)));
+        records.push(...page.items.map(_virtualRecord).filter((item) =>
+            item.payloadFiscal?.testRunId === QA_TEST_RUN_ID && _matchesFilter(item, filter)
+        ));
     }
     if (page.hasNext) throw new Error("TPV_QA_QUERY_LIMIT_EXCEEDED");
     if (Array.isArray(options.sort) && options.sort.length) {
