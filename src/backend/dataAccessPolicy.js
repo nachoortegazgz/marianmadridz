@@ -170,9 +170,12 @@ export function assertSaveAllowed(collection, item) {
     }
 }
 
-export function assertRemoveAllowed(collection, id, expectedControlType) {
+export function assertRemoveAllowed(collection, id, expectedControlType, existingItem) {
     if (!id || !DATA_ACCESS_WRITE_POLICY.removeCollections.includes(collection)) {
         throw _policyError("CMS_REMOVE_SCOPE_DENIED");
+    }
+    if (collection === BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA && _isSyntheticTpvRecord(existingItem)) {
+        return;
     }
     if (collection === BUSINESS_COLLECTIONS.CONTROL_OPERATIVO) {
         if (!DATA_ACCESS_WRITE_POLICY.removableControlTypes.includes(expectedControlType) ||
