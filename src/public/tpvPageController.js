@@ -30,7 +30,6 @@ import {
 } from "backend/tpv/tpvCatalogo.web.js";
 import { consultarTarjetaRegalo } from "backend/tpv/tpvGiftCards.web.js";
 import { createWidgetBridge, MESSAGE_TYPES } from "public/widgetBridge";
-import wixWindowFrontend from "wix-window-frontend";
 import { makeTraceId } from "public/mmUtils";
 
 const TPV_ALLOWED_MESSAGES = Object.freeze([
@@ -89,10 +88,12 @@ export function initializeTpvPage(widgetElement) {
         onContextReady: async () => ({
             component: "htmlTPV",
             protocolVersion: 1,
-            environment: wixWindowFrontend.viewMode === "Preview" ? "SANDBOX" : "DISABLED",
+            // Preview mode alone does not prove backend CMS Sandbox isolation.
+            // Never advertise a writable Sandbox until the backend can attest it.
+            environment: "DISABLED",
             syntheticOnly: true,
             previewOnly: true,
-            mode: wixWindowFrontend.viewMode === "Preview" ? "PERSISTENT_SYNTHETIC_SANDBOX" : "PREVIEW_ONLY",
+            mode: "DISABLED_PENDING_SERVER_SANDBOX_ISOLATION",
             currencyCode: "EUR",
             timeZone: "Europe/Madrid",
             capabilities: {
@@ -121,8 +122,14 @@ export function initializeTpvPage(widgetElement) {
         onWidgetMessage: async (message, reply) => {
             const type = String(message?.type || "").trim().toUpperCase();
             const payload = message?.payload || {};
-            if (wixWindowFrontend.viewMode !== "Preview" && (type === "CASHIER_STATE" || type.startsWith("QA_"))) {
-                reply(type + "_RES", errorResult("TPV_QA_PREVIEW_ONLY", "Las operaciones TPV sintéticas solo están disponibles en Preview con Sandbox.", traceId), message);
+            // Block all QA calls until a server-side Sandbox boundary is proven.
+            // This protects direct WebMethod calls as well as the HTML widget path.
+            if (type === "CASHIER_STATE" || type.startsWith("QA_")) {
+                reply(type + "_RES", errorResult(
+                    "TPV_QA_DISABLED_UNTIL_SANDBOX_ISOLATION",
+                    "Las operaciones TPV QA están temporalmente deshabilitadas hasta verificar el aislamiento Sandbox en backend.",
+                    traceId
+                ), message);
                 return;
             }
             const respond = async (responseType, operation, code, text) => {
