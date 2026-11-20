@@ -1,13 +1,10 @@
 import { BUSINESS_COLLECTIONS, TPV_QA_IDENTITY_TYPES, TPV_QA_RUNTIME_POLICY } from "backend/internalConfig";
 import { CONSISTENCY, queryItems, wql } from "backend/dataAccess";
+import { assertTpvSandboxIdentity } from "backend/validation";
 
 function isEligibleIdentity(item, identityType) {
-    return item?.identityType === identityType &&
-        item?.environment === "SANDBOX" &&
-        item?.testRunId === TPV_QA_RUNTIME_POLICY.TEST_RUN_ID &&
-        item?.syntheticOnly === true &&
-        item?.active === true &&
-        typeof item?.identityId === "string";
+    assertTpvSandboxIdentity(item);
+    return item.identityType === identityType;
 }
 
 export async function listTpvSandboxIdentities(identityType) {
