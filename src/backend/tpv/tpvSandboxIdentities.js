@@ -32,6 +32,8 @@ export async function listTpvSandboxIdentities(identityType) {
     if (items.some((item) => !isEligibleIdentity(item, identityType))) {
         throw new Error("TPV_QA_IDENTITY_CONTRACT_INVALID");
     }
+    const ids = items.map((item) => item.identityId);
+    if (new Set(ids).size !== ids.length) throw new Error("TPV_QA_IDENTITY_DUPLICATE");
     return items;
 }
 
