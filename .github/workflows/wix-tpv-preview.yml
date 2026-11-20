@@ -75,15 +75,21 @@ jobs:
           CLI_API_KEY: ${{ secrets.CLI_API_KEY }}
         run: npm run wix login -- --api-key "$CLI_API_KEY"
 
+      - name: Inspect Wix Preview CLI options
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run wix preview -- --help 2>&1 | tee "$RUNNER_TEMP/wix-preview-help.log"
+
       - name: Create Wix preview from latest main commit (never publish)
         id: wix-preview
         shell: bash
         timeout-minutes: 10
         run: |
           set -euo pipefail
-          # Wix documents direct CLI invocation in GitHub Actions. CI mode avoids
-          # pseudo-TTY prompts and uses the connected repository's default branch.
-          npm run wix preview 2>&1 | tee "$RUNNER_TEMP/wix-preview.log"
+          # Ink-based Wix CLI requires a raw-mode TTY. Wait for the source selector
+          # to initialize, then accept its default latest-main option.
+          { sleep 3; printf '\r' || exit 0; } | script --quiet --return --command 'npm run wix preview' "$RUNNER_TEMP/wix-preview.typescript" | tee "$RUNNER_TEMP/wix-preview.log"
           preview_url="$(grep -Eo 'https?://wix\.to/[[:alnum:]]+' "$RUNNER_TEMP/wix-preview.log" | tail -n 1 || true)"
           if [[ -z "$preview_url" ]]; then
             echo "::error::Wix CLI completed without exposing a recognized wix.to preview URL."
