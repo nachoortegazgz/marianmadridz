@@ -506,6 +506,7 @@ typeof fiscalPayload === "object" &&
 fiscalPayload.eventType === "VENTA_LINEA" &&
 fiscalPayload.movementType === "VENTA_ONLINE" &&
 fiscalPayload.paymentMethod === "WIX_PAYMENTS" &&
+fiscalPayload.sourceChannelType === "WEB" &&
 ["F1", "F2"].includes(fiscalPayload.tipoFactura) &&
 payload.recoveryScope === "BOOKINGS_ONLY" &&
 Number.isFinite(amount) && amount > 0 &&
