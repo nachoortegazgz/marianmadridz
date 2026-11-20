@@ -588,6 +588,27 @@ test('HOOK-PACKAGE-03 preserves immutable gestoría package snapshots', () => {
   assert.throws(() => H.PaquetesGestoria_beforeRemove('synthetic-package-1'), /append-only/);
 });
 
+test('HOOK-CITAS-INSERT-01 enforces all physical required booking fields', () => {
+  const valid = {
+    _id: 'e556070a-6d6a-402e-8422-11133033ea76',
+    bookingId: 'e556070a-6d6a-402e-8422-11133033ea76',
+    scheduleId: 'e556070a-6d6a-402e-8422-11133033ea76',
+    serviceId: 'e556070a-6d6a-402e-8422-11133033ea76',
+    resourceId: 'e556070a-6d6a-402e-8422-11133033ea76',
+    slotStart: new Date('2026-11-20T10:00:00.000Z'),
+    slotEnd: new Date('2026-11-20T11:00:00.000Z'),
+    totalAmount: 100,
+    dateYmd: '2026-11-20',
+    bookingType: Object.values(IC.BOOKING_TYPE)[0],
+    bookingStatus: Object.values(IC.CITAS_BOOKING_STATUS)[0],
+    paymentStatus: Object.values(IC.CITAS_PAYMENT_STATUS)[0],
+    traceId: 'trace-citas-insert-001',
+  };
+  assert.doesNotThrow(() => H.CitasF2_beforeInsert({ ...valid }));
+  assert.throws(() => H.CitasF2_beforeInsert({ ...valid, slotStart: undefined }), /slotStart/);
+  assert.throws(() => H.CitasF2_beforeInsert({ ...valid, totalAmount: '100' }), /totalAmount/);
+});
+
 test('HOOK-ADDON-01 requires the physical taxIncluded boolean', () => {
   const valid = { _id: 'addon-qa-1', addonId: 'addon-qa-1', sku: 'ADDON-QA-1', taxIncluded: false };
   assert.strictEqual(H.ComplementosCatalogo_beforeInsert({ ...valid }).taxIncluded, false);
