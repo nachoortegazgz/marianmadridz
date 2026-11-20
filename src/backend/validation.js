@@ -172,8 +172,8 @@ export function assertAccountingLedgerRecord(item) {
         "_id", "journalEntryId", "operationDescription", "movementType",
         "recordSource", "documentId", "fiscalPeriod", "traceId",
     ]) {
-        if (!String(item[field] ?? "").trim()) {
-            throw new Error(`SCHEMA_VIOLATION: LibroAsientosContablesDetalle requires ${field}`);
+        if (typeof item[field] !== "string" || !item[field].trim()) {
+            throw new Error(`SCHEMA_VIOLATION: LibroAsientosContablesDetalle requires TEXT ${field}`);
         }
     }
     if (String(item.journalEntryId).length > 128 ||
@@ -204,7 +204,7 @@ export function assertAccountingLedgerRecord(item) {
     }
     const detail = item.desgloseDetallado;
     if (!detail || typeof detail !== "object" || Array.isArray(detail) ||
-        !/^\d{6}$/.test(String(detail.accountCode || ""))) {
+        typeof detail.accountCode !== "string" || !/^\d{6}$/.test(detail.accountCode)) {
         throw new Error("SCHEMA_VIOLATION: LibroAsientosContablesDetalle requires desgloseDetallado.accountCode");
     }
     const debit = detail.debitAmount;
