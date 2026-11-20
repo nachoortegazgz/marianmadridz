@@ -2001,3 +2001,10 @@ La política temporal no habilita por sí misma pagos, reembolsos, facturación,
 ## Addendum TEC-042 — excepción acotada de TPV sintético (2026-11-20)
 
 La regla append-only de `MovimientosCaja` permanece vigente para todo movimiento real y para cualquier registro que no esté marcado. Excepción exclusiva de desarrollo: el test-run TPV puede insertar y editar/eliminar filas con `recordSource=TPV_QA_SYNTHETIC`, `movementType=SIMULATED_TPV_*`, `payloadFiscal.testRunId` igual al test-run backend activo, `sequenceNumber=0` y hash QA válido. Se exige ADMIN y Preview; fuera de Preview el widget bloquea operaciones. La excepción no se extiende a `LibroAsientosContablesDetalle`, `HistoricoCierresZ`, `RegistrosHorariosStaff`, `WEBHOOK_EVENT` ni colecciones Wix Apps. Restablecer append-only y resetear datos antes del despliegue real.
+
+
+---
+
+## Addendum de precedencia — datos sintéticos de desarrollo (2026-11-20)
+
+Este diccionario describe esquemas y observaciones CMS; no gobierna la autorización de pruebas ni puede imponer una prohibición general de escritura, edición o eliminación de registros sintéticos. La directriz vigente del propietario autoriza simulacros completos y persistentes con datos sintéticos en el sitio de desarrollo, así como su reset controlado antes del uso real: [Directriz del propietario](../PROJECT-OWNER-DIRECTIVE-2026-11-20.md). Las políticas históricas de append-only/inmutabilidad en QA quedan supersedidas en cuanto pretendan impedir los ensayos autorizados. La autorización no acredita que una ruta concreta esté implementada: validar contratos, permisos, autorización backend, idempotencia y APIs oficiales antes de usarla. Mantener protegidos los efectos externos y cumplir las obligaciones legales aplicables.
