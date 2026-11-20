@@ -227,15 +227,15 @@ test("SANDBOX policy remains synthetic and client idempotency keys are bounded",
 
 test("every exposed TPV SANDBOX WebMethod fails closed before repository access", async () => {
     const protectedMethods = [
-        ["tpvCaja.web.js", ["inicializarCajaSANDBOX", "obtenerSesionCajaSANDBOX", "abrirCajaSANDBOX", "registrarArqueoParcialSANDBOX"]],
-        ["tpvMovimientos.web.js", ["registrarMovimientoCajaSANDBOX"]],
-        ["tpvVentas.web.js", ["registrarVentaSANDBOX"]],
-        ["tpvDevoluciones.web.js", ["solicitarDevolucionSANDBOX"]],
-        ["tpvCierres.web.js", ["obtenerResumenSesionSANDBOX", "generarTicketXSANDBOX", "cerrarTicketZSANDBOX"]],
-        ["tpvPagos.web.js", ["validarDesglosePagosSANDBOX"]],
-        ["tpvUtils.web.js", ["obtenerConfiguracionTPVSANDBOX"]],
-        ["tpvPermisos.web.js", ["obtenerPermisosTPVSANDBOX"]],
-        ["tpvAuditoria.web.js", ["consultarAuditoriaTPVSANDBOX"]],
+        ["tpvCaja.web.js", ["inicializarCaja", "obtenerSesionCaja", "abrirCaja", "registrarArqueoParcial"]],
+        ["tpvMovimientos.web.js", ["registrarMovimientoCaja"]],
+        ["tpvVentas.web.js", ["registrarVenta"]],
+        ["tpvDevoluciones.web.js", ["solicitarDevolucion"]],
+        ["tpvCierres.web.js", ["obtenerResumenSesion", "generarTicketX", "cerrarTicketZ"]],
+        ["tpvPagos.web.js", ["validarDesglosePagos"]],
+        ["tpvUtils.web.js", ["obtenerConfiguracionTPV"]],
+        ["tpvPermisos.web.js", ["obtenerPermisosTPV"]],
+        ["tpvAuditoria.web.js", ["consultarAuditoriaTPV"]],
         ["tpvGiftCards.web.js", ["consultarTarjetaRegalo"]],
     ];
     const repositoryAccess = /(?:latestOpenSandboxSession|insertSandboxEvent|appendSandboxAudit|querySandboxRecords|withSandboxSessionLock|withSandboxSaleLock|listTpvSandboxIdentities|getTpvSandboxIdentity|wql\.)/;
@@ -261,13 +261,13 @@ test("every exposed TPV SANDBOX WebMethod fails closed before repository access"
 test("every exported TPV WebMethod has an explicit runtime policy classification", async () => {
     const policies = {
         "tpvCaja.web.js": {
-            guarded: ["inicializarCajaSANDBOX", "obtenerSesionCajaSANDBOX", "abrirCajaSANDBOX", "registrarArqueoParcialSANDBOX"],
+            guarded: ["inicializarCaja", "obtenerSesionCaja", "abrirCaja", "registrarArqueoParcial"],
         },
         "tpvMovimientos.web.js": {
-            guarded: ["registrarMovimientoCajaSANDBOX"],
+            guarded: ["registrarMovimientoCaja"],
         },
         "tpvVentas.web.js": {
-            guarded: ["registrarVentaSANDBOX"],
+            guarded: ["registrarVenta"],
             readOnly: ["validarVentaBorrador"],
             disabled: {
                 registrarVenta: "TPV_OPERATIONAL_SALE_WRITES_DISABLED",
@@ -275,22 +275,22 @@ test("every exported TPV WebMethod has an explicit runtime policy classification
             },
         },
         "tpvDevoluciones.web.js": {
-            guarded: ["solicitarDevolucionSANDBOX"],
+            guarded: ["solicitarDevolucion"],
         },
         "tpvCierres.web.js": {
-            guarded: ["obtenerResumenSesionSANDBOX", "generarTicketXSANDBOX", "cerrarTicketZSANDBOX"],
+            guarded: ["obtenerResumenSesion", "generarTicketX", "cerrarTicketZ"],
         },
         "tpvPagos.web.js": {
-            guarded: ["validarDesglosePagosSANDBOX"],
+            guarded: ["validarDesglosePagos"],
         },
         "tpvUtils.web.js": {
-            guarded: ["obtenerConfiguracionTPVSANDBOX"],
+            guarded: ["obtenerConfiguracionTPV"],
         },
         "tpvPermisos.web.js": {
-            guarded: ["obtenerPermisosTPVSANDBOX"],
+            guarded: ["obtenerPermisosTPV"],
         },
         "tpvAuditoria.web.js": {
-            guarded: ["consultarAuditoriaTPVSANDBOX"],
+            guarded: ["consultarAuditoriaTPV"],
         },
         "tpvGiftCards.web.js": {
             guarded: ["consultarTarjetaRegalo"],
