@@ -1872,6 +1872,59 @@ async function _handleWixEcom_onOrderCreated(eventPayload) {
     }
 }
 
+// Resolve the native Wix sales channel before any fiscal sale or refund path.
+// Only WEB is eligible for the online EventLog writer; missing/unknown channels fail closed.
+async function _resolveVerifiedOrderChannel(order, orderId, traceId) {
+    let resolvedOrder = order && typeof order === "object" ? order : {};
+    let channelType = _safeTrim(resolvedOrder?.channelInfo?.type).toUpperCase();
+    if (!channelType) {
+        const response = await withTimeout(
+            () => getOrderElevated(orderId),
+            API_TIMEOUT_MS,
+            "ecomOrderChannel:getOrder"
+        );
+        const nativeOrder = response?.order || response;
+        const nativeOrderId = _safeTrim(nativeOrder?.id || nativeOrder?._id);
+        if (!nativeOrder || nativeOrderId !== orderId) {
+            throw new Error("ECOM_NATIVE_ORDER_CHANNEL_IDENTITY_UNVERIFIED");
+        }
+        resolvedOrder = { ...resolvedOrder, ...nativeOrder };
+        channelType = _safeTrim(nativeOrder?.channelInfo?.type).toUpperCase();
+    }
+    return { order: resolvedOrder, channelType: channelType || "UNVERIFIED" };
+}
+
+async function _routeNonWebOrderToManualReview({ order, orderId, channelType, eventId, eventType, traceId }) {
+    const alert = await notifyOperationalAlert({
+        alertType: "ECOM_NON_WEB_ORDER_FISCAL_REVIEW_REQUIRED",
+        severity: "CRITICAL",
+        message: "Native Wix order channel is not verified as WEB; automatic online fiscal sale/refund processing was blocked.",
+        data: {
+            orderId,
+            sourceChannelType: channelType || "UNVERIFIED",
+            paymentStatus: _safeTrim(order?.paymentStatus).toUpperCase() || "UNKNOWN",
+            currency: _safeTrim(order?.currency).toUpperCase() || null,
+            lineItemCount: Array.isArray(order?.lineItems) ? order.lineItems.length : 0,
+            eventType,
+            reasonCode: channelType === "UNVERIFIED" ? "ORDER_CHANNEL_UNVERIFIED" : "NON_WEB_ORDER_CHANNEL",
+        },
+        traceId,
+        entityId: orderId,
+        source: "backend/events.js",
+        dedupeKey: `ECOM_NON_WEB_ORDER_${orderId}`,
+    });
+    if (alert?.failed) throw new Error("ECOM_NON_WEB_ORDER_REVIEW_ALERT_PERSISTENCE_FAILED");
+    if (eventId) {
+        await markEventAsProcessed(eventId, eventType, traceId, {
+            orderId,
+            sourceChannelType: channelType || "UNVERIFIED",
+            fiscalStatus: "MANUAL_REVIEW_REQUIRED",
+            automaticFiscalWrite: false,
+        });
+    }
+    return { status: "OK", orderId, fiscalStatus: "MANUAL_REVIEW_REQUIRED", sourceChannelType: channelType || "UNVERIFIED" };
+}
+
 // ============================================================================
 // WEBHOOK: ORDER PAYMENT STATUS UPDATED
 // ============================================================================
@@ -1922,6 +1975,20 @@ async function _handleWixEcom_onOrderPaymentStatusUpdated(eventPayload) {
                 eventId,
             });
             return { status: "OK" };
+        }
+
+        const channelResolution = await _resolveVerifiedOrderChannel(order, orderId, traceId);
+        order = channelResolution.order;
+        const sourceChannelType = channelResolution.channelType;
+        if (sourceChannelType !== "WEB") {
+            return await _routeNonWebOrderToManualReview({
+                order,
+                orderId,
+                channelType: sourceChannelType,
+                eventId,
+                eventType: "ORDER_PAYMENT_STATUS_UPDATED",
+                traceId,
+            });
         }
 
         const paymentStatusRaw = order.paymentStatus || "";
@@ -2110,6 +2177,7 @@ async function _handleWixEcom_onOrderPaymentStatusUpdated(eventPayload) {
                 // ALN-06: WIX_PAYMENTS es el canonico v12.0.
                 paymentMethod: LEDGER_PAYMENT_METHOD_ONLINE,
                 channelType: "ONLINE",
+                sourceChannelType,
                 resourceId: "online",
                 totalAmount: finalLedgerAmount,
                 taxBase: fiscalTaxData.taxBase,
@@ -2596,7 +2664,20 @@ async function _handleWixEcom_onOrderUpdated(eventPayload) {
             return { status: "OK", duplicate: true };
         }
 
-        const refundResult = await processOrderRefundTransactions(orderId, order?.currency, traceId);
+        const channelResolution = await _resolveVerifiedOrderChannel(order, orderId, traceId);
+        const verifiedOrder = channelResolution.order;
+        if (channelResolution.channelType !== "WEB") {
+            return await _routeNonWebOrderToManualReview({
+                order: verifiedOrder,
+                orderId,
+                channelType: channelResolution.channelType,
+                eventId,
+                eventType: "ORDER_UPDATED",
+                traceId,
+            });
+        }
+
+        const refundResult = await processOrderRefundTransactions(orderId, verifiedOrder?.currency, traceId);
         await markEventAsProcessed(eventId, "ORDER_REFUND_ORDER_UPDATED");
         return { status: "OK", orderId, ...refundResult };
     } catch (error) {
