@@ -164,6 +164,70 @@ export function assertHistoricoCierresZ(item) {
     return true;
 }
 
+export function assertAccountingLedgerRecord(item) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) {
+        throw new Error("SCHEMA_VIOLATION: LibroAsientosContablesDetalle item must be an object");
+    }
+    for (const field of [
+        "_id", "journalEntryId", "operationDescription", "movementType",
+        "recordSource", "documentId", "fiscalPeriod", "traceId",
+    ]) {
+        if (!String(item[field] ?? "").trim()) {
+            throw new Error(`SCHEMA_VIOLATION: LibroAsientosContablesDetalle requires ${field}`);
+        }
+    }
+    if (String(item.journalEntryId).length > 128 ||
+        String(item.operationDescription).length > 250 ||
+        String(item.movementType).length > 50 ||
+        String(item.recordSource).length > 100 ||
+        String(item.documentId).length > 128) {
+        throw new Error("SCHEMA_VIOLATION: LibroAsientosContablesDetalle text field exceeds its contract");
+    }
+    const timestamp = item.recordTimestamp instanceof Date ? item.recordTimestamp : new Date(item.recordTimestamp);
+    if (!item.recordTimestamp || Number.isNaN(timestamp.getTime())) {
+        throw new Error("SCHEMA_VIOLATION: LibroAsientosContablesDetalle requires valid DATETIME recordTimestamp");
+    }
+    if (!_isValidDateOnly(item.fechaOperacion) ||
+        !/^\\d{4}-\\d{2}$/.test(String(item.fiscalPeriod)) ||
+        String(item.fechaOperacion instanceof Date ? item.fechaOperacion.toISOString().slice(0, 10) : item.fechaOperacion).slice(0, 7) !== String(item.fiscalPeriod)) {
+        throw new Error("SCHEMA_VIOLATION: LibroAsientosContablesDetalle requires matching fechaOperacion/fiscalPeriod");
+    }
+    if (!Number.isSafeInteger(item.sequenceNumber) || item.sequenceNumber < 1) {
+        throw new Error("SCHEMA_VIOLATION: LibroAsientosContablesDetalle requires positive sequenceNumber");
+    }
+    for (const field of ["amount", "accountingAmount", "accountingSign"]) {
+        if (typeof item[field] !== "number" || !Number.isFinite(item[field])) {
+            throw new Error(`SCHEMA_VIOLATION: LibroAsientosContablesDetalle requires finite NUMBER ${field}`);
+        }
+    }
+    if (item.amount <= 0 || ![1, -1].includes(item.accountingSign)) {
+        throw new Error("SCHEMA_VIOLATION: LibroAsientosContablesDetalle amount/accountingSign invalid");
+    }
+    const detail = item.desgloseDetallado;
+    if (!detail || typeof detail !== "object" || Array.isArray(detail) ||
+        !/^\\d{6}$/.test(String(detail.accountCode || ""))) {
+        throw new Error("SCHEMA_VIOLATION: LibroAsientosContablesDetalle requires desgloseDetallado.accountCode");
+    }
+    const debit = detail.debitAmount;
+    const credit = detail.creditAmount;
+    if (typeof debit !== "number" || !Number.isFinite(debit) || debit < 0 ||
+        typeof credit !== "number" || !Number.isFinite(credit) || credit < 0 ||
+        (debit > 0 && credit > 0) || (debit === 0 && credit === 0) ||
+        Math.abs(item.amount - Math.max(debit, credit)) > 0.009 ||
+        Math.abs(item.accountingAmount - (debit - credit)) > 0.009 ||
+        item.accountingSign !== (debit > 0 ? 1 : -1)) {
+        throw new Error("SCHEMA_VIOLATION: LibroAsientosContablesDetalle debit/credit projection invalid");
+    }
+    if (!/^[a-f0-9]{64}$/i.test(String(item.hash || "")) ||
+        !/^[a-f0-9]{64}$/i.test(String(item.previousRecordHash || ""))) {
+        throw new Error("SCHEMA_VIOLATION: LibroAsientosContablesDetalle requires SHA-256 chain hashes");
+    }
+    if (detail.cashMovementId != null && typeof detail.cashMovementId !== "string") {
+        throw new Error("SCHEMA_VIOLATION: LibroAsientosContablesDetalle.cashMovementId must be TEXT");
+    }
+    return true;
+}
+
 export function assertFiscalMovementInputEnums(item) {
     if (!item || typeof item !== "object" || Array.isArray(item)) {
         throw new Error("SCHEMA_VIOLATION: fiscal movement input must be an object");
