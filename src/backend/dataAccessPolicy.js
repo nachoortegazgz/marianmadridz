@@ -6,6 +6,7 @@ import {
     CONTROL_OPERATIVO_NON_CANONICAL_FIELDS,
     RECORD_TYPE,
     TPV_QA_RUNTIME_POLICY,
+    TPV_QA_EVENT_MOVEMENT_TYPES,
 } from "backend/internalConfig";
 
 function _policyError(code) {
@@ -74,6 +75,7 @@ function _isSyntheticTpvRecord(item) {
     return _isRecord(item) &&
         item.recordSource === "TPV_QA_SYNTHETIC" &&
         String(item.movementType || "").startsWith("SIMULATED_TPV_") &&
+        TPV_QA_EVENT_MOVEMENT_TYPES[item.payloadFiscal?.logicalCollection] === item.movementType &&
         item.payloadFiscal?.testRunId === TPV_QA_RUNTIME_POLICY.TEST_RUN_ID &&
         item.payloadFiscal?.isSynthetic === true &&
         item.payloadFiscal?.realPayment === false &&
