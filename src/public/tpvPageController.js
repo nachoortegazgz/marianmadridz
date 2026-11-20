@@ -30,6 +30,7 @@ import {
 } from "backend/tpv/tpvCatalogo.web.js";
 import { consultarTarjetaRegalo } from "backend/tpv/tpvGiftCards.web.js";
 import { createWidgetBridge, MESSAGE_TYPES } from "public/widgetBridge";
+import wixWindowFrontend from "wix-window-frontend";
 import { makeTraceId } from "public/mmUtils";
 
 const TPV_ALLOWED_MESSAGES = Object.freeze([
@@ -88,9 +89,10 @@ export function initializeTpvPage(widgetElement) {
         onContextReady: async () => ({
             component: "htmlTPV",
             protocolVersion: 1,
-            environment: "QA",
+            environment: wixWindowFrontend.viewMode === "Preview" ? "QA" : "DISABLED",
             syntheticOnly: true,
-            mode: "PERSISTENT_SYNTHETIC_QA",
+            previewOnly: true,
+            mode: wixWindowFrontend.viewMode === "Preview" ? "PERSISTENT_SYNTHETIC_QA" : "PREVIEW_ONLY",
             currencyCode: "EUR",
             timeZone: "Europe/Madrid",
             capabilities: {
@@ -119,6 +121,10 @@ export function initializeTpvPage(widgetElement) {
         onWidgetMessage: async (message, reply) => {
             const type = String(message?.type || "").trim().toUpperCase();
             const payload = message?.payload || {};
+            if (wixWindowFrontend.viewMode !== "Preview" && (type === "CASHIER_STATE" || type.startsWith("QA_"))) {
+                reply(type + "_RES", errorResult("TPV_QA_PREVIEW_ONLY", "Las operaciones TPV sintéticas solo están disponibles en Preview con Sandbox.", traceId), message);
+                return;
+            }
             const respond = async (responseType, operation, code, text) => {
                 const result = await safeCall(operation, code, text, traceId);
                 reply(responseType, result, message);
