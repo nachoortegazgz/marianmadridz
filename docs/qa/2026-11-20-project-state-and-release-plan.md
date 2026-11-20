@@ -169,7 +169,7 @@ No declarar GO hasta que:
 
 - Los estados de PR, merge SHA, workflow #44667244690 y branch protection se consultaron directamente en GitHub.
 - Se repitieron consultas Wix read-only el 20/11/2026: SiteContext Draft, esquemas/revisiones, permisos, singleton CajaActual, compensaciones, pedidos eCommerce, transacciones y bookings nativos. El detalle está en [reconciliación live 20/11](./2026-11-20-live-caja-schema-and-reconciliation.md).
-- No se ejecutó código local, Wix Preview, Wix Sandbox ni operaciones CMS.
+- No se ejecutó código local, Wix Preview ni pruebas en Wix Sandbox; no se realizaron escrituras CMS.
 - No se habilitó ningún writer, no se enviaron pagos, no se remitieron datos AEAT y no se publicó el sitio.
 
 ## 8. Punto de continuación
