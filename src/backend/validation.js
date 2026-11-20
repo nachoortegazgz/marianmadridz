@@ -408,7 +408,7 @@ export function assertTpvSandboxIdentity(item) {
         throw new Error("SCHEMA_VIOLATION: TpvSandboxIdentities metadata must be an OBJECT");
     }
     for (const forbidden of ["phone", "taxId", "address", "contactId", "memberId", "resourceId", "bookingsResourceId"]) {
-        if (item[forbidden] !== undefined && item[forbidden] !== null && item[forbidden] !== "") {
+        if (Object.prototype.hasOwnProperty.call(item, forbidden)) {
             throw new Error("SCHEMA_VIOLATION: TpvSandboxIdentities cannot store real contact/resource identifiers");
         }
     }
