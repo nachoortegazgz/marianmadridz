@@ -171,7 +171,8 @@ export function assertPaquetesGestoriaRecord(item) {
     const createdAt = item.createdAt instanceof Date
         ? item.createdAt
         : new Date(item.createdAt);
-    if (!item.createdAt || Number.isNaN(createdAt.getTime())) {
+    if (item.createdAt === undefined || item.createdAt === null ||
+        item.createdAt === "" || Number.isNaN(createdAt.getTime())) {
         throw new Error("SCHEMA_VIOLATION: createdAt obligatorio y válido en PaquetesGestoria");
     }
     const periodType = String(item.periodType ?? "").trim().toUpperCase();
