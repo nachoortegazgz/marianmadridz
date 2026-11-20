@@ -276,6 +276,51 @@ function _virtualRecord(item) {
     };
 }
 
+async function _ensureCajaActualForQa() {
+    let caja = await _getCajaActual();
+    if (caja) return caja;
+    const initial = {
+        _id: SINGLETONS.CAJA_PRINCIPAL,
+        singletonKey: SINGLETONS.CAJA_PRINCIPAL,
+        cashRegisterStatus: "CERRADA",
+        openedAt: null,
+        closedAt: null,
+        openingCashAmount: 0,
+        openingCardAmount: 0,
+        openingBizumAmount: 0,
+        openingOtherAmount: 0,
+        cashAmount: 0,
+        cardAmount: 0,
+        bizumAmount: 0,
+        otherAmount: 0,
+        expectedCash: 0,
+        countedCash: 0,
+        difference: 0,
+        salesCount: 0,
+        ticketSequence: 0,
+        sequenceCounters: {},
+        snapshotSource: "TPV_QA_SANDBOX_INITIALIZED",
+        traceId: QA_TEST_RUN_ID,
+        conceptOperations: {
+            tpvQa: {
+                testRunId: QA_TEST_RUN_ID,
+                initializedAt: new Date(),
+                appliedMovementIds: [],
+            },
+        },
+    };
+    try {
+        await insertItem(BUSINESS_COLLECTIONS.CAJA_ACTUAL, initial);
+    } catch (error) {
+        caja = await _getCajaActual();
+        if (!caja) throw error;
+        return caja;
+    }
+    caja = await _getCajaActual();
+    if (!caja) throw new Error("TPV_QA_CASH_REGISTER_INIT_FAILED");
+    return caja;
+}
+
 async function _getCajaActual() {
     const result = await queryItems({
         dataCollectionId: BUSINESS_COLLECTIONS.CAJA_ACTUAL,
@@ -552,8 +597,7 @@ export async function insertQaEvent(collection, idempotencyKey, data) {
     if (collection === TPV_QA_COLLECTIONS.SESIONES_CAJA) {
         const existing = await findByIdempotencyKey(collection, key);
         if (existing?.sessionId === record.sessionId) return assertSameRequest(existing, fingerprint);
-        const caja = await _getCajaActual();
-        if (!caja) throw new Error("TPV_QA_CASH_REGISTER_NOT_FOUND");
+        const caja = await _ensureCajaActualForQa();
         if (caja.snapshotSource === QA_LEDGER_SOURCE && !caja.closedAt) {
             throw new Error("TPV_QA_PREVIOUS_SESSION_NOT_CLOSED");
         }
