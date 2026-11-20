@@ -45,3 +45,7 @@
 
 - PR #450: contrato ControlOperativo alineado con esquema live revisión 93; merge commit `11e6cefd838cfd8f18301ddff534e2edd8849743`.
 - PR #451: correcciones integradas en `main` mediante squash commit `bdbdb2467294c781bfc090cd8429d7c060413d15`. CI PR verde: Layer 1 333/333, Layer 2 266/266, suite offline 687/687; contratos SDK, npm audit, ESLint y secret scanning SUCCESS. El workflow PR no se repitió sobre el SHA de merge; no se afirma un segundo CI post-merge.
+
+## Hallazgo adicional — ledger contable
+
+En la revisión ampliada del 20-11-2026 se detectó que `LibroAsientosContablesDetalle` tenía hooks append-only para update/remove, pero carecía de `beforeInsert`. Aunque Wix no marca campos required en su esquema físico, el escritor `accountingLedger.js::appendAccountingEntry` genera un contrato de dominio estricto. La corrección se propone en PR #452: validación central previa a escritura elevada y hook CMS `LibroAsientosContablesDetalle_beforeInsert`. Ver `docs/qa/2026-11-20-accounting-ledger-insert-guard.md`. La PR sigue pendiente de CI y revisión; no se considera integrada.
