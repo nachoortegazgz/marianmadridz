@@ -131,6 +131,7 @@ La primera ejecución de CI tras exigir `payload` detectó tres fallos en `reser
 Correcciones aplicadas en esta rama:
 - `DISPLAY_TOKEN`: `payload.maxAttempts` pasa a ser el almacenamiento canónico; el consumidor lee ese valor y usa el límite configurado como fallback para credenciales antiguas. Se valida `bookingId`, `attempts >= 0`, `expiresAt` y `payload.maxAttempts >= 1`.
 - `LEDGER_IDEMPOTENCY`: la reserva creada desde `cajas.web.js` ahora incluye `payload` objeto, con fecha de reserva y transactionId. El transactionId continúa en su campo físico raíz.
+- `COMPENSATION` de `bookingSaga.js`: se sustituye el campo raíz no declarado `compensationKind` por el campo físico `kind`; `revision` permanece dentro de `payload`.
 - `IDEMPOTENCY` de `bookingCore.js`: se elimina `pairToken` raíz no declarado; el identificador estable ya es `_id` y la deduplicación queda en `dedupeKey`.
 - `SYSTEM_FLAG`: los diarios de reprogramación dual y las marcas de inconsistencia conservan `pairToken` dentro de `payload`, no como campo raíz no declarado.
 - `SLOT_LOCK` de reservas: `slotStart` y `slotEnd` se conservan dentro de `payload`; no son columnas físicas en revisión 93. Los locks fiscales/contables no requieren rango de cita.
