@@ -45,7 +45,7 @@ export const STAFF_DEFAULT_NAME = "STAFF";
 // idempotencia, serialización por empleado/día y transiciones concurrentes.
 // El UI disabled no es una barrera de seguridad para WebMethods públicos.
 export const STAFF_CLOCKING_CONFIG = Object.freeze({
-  WRITES_ENABLED: false,
+  WRITES_ENABLED: true,
   ADJUSTMENTS_ENABLED: false,
 });
 
@@ -64,30 +64,30 @@ export const FISCAL_RUNTIME_POLICY = Object.freeze({
 
 // Logical event types only; these values are NOT Wix CMS collection IDs.
 // The repository adapter persists them in MovimientosCaja; sessions use CajaActual.
-export const TPV_QA_COLLECTIONS = Object.freeze({
-  VENTAS: "QA_LOGICAL_VENTAS",
-  VENTA_LINEAS: "QA_LOGICAL_VENTA_LINEAS",
-  PAGOS: "QA_LOGICAL_PAGOS",
-  REEMBOLSOS: "QA_LOGICAL_REEMBOLSOS",
-  MOVIMIENTOS_CAJA: "QA_LOGICAL_MOVIMIENTOS_CAJA",
-  SESIONES_CAJA: "QA_LOGICAL_SESIONES_CAJA",
-  TICKET_X: "QA_LOGICAL_TICKET_X",
-  TICKET_Z: "QA_LOGICAL_TICKET_Z",
-  AUDITORIA: "QA_LOGICAL_AUDITORIA",
+export const TPV_SANDBOX_COLLECTIONS = Object.freeze({
+  VENTAS: "SANDBOX_LOGICAL_VENTAS",
+  VENTA_LINEAS: "SANDBOX_LOGICAL_VENTA_LINEAS",
+  PAGOS: "SANDBOX_LOGICAL_PAGOS",
+  REEMBOLSOS: "SANDBOX_LOGICAL_REEMBOLSOS",
+  MOVIMIENTOS_CAJA: "SANDBOX_LOGICAL_MOVIMIENTOS_CAJA",
+  SESIONES_CAJA: "SANDBOX_LOGICAL_SESIONES_CAJA",
+  TICKET_X: "SANDBOX_LOGICAL_TICKET_X",
+  TICKET_Z: "SANDBOX_LOGICAL_TICKET_Z",
+  AUDITORIA: "SANDBOX_LOGICAL_AUDITORIA",
 });
 
-export const TPV_QA_EVENT_MOVEMENT_TYPES = Object.freeze({
-  [TPV_QA_COLLECTIONS.VENTAS]: "SIMULATED_TPV_SALE",
-  [TPV_QA_COLLECTIONS.VENTA_LINEAS]: "SIMULATED_TPV_SALE_LINE",
-  [TPV_QA_COLLECTIONS.PAGOS]: "SIMULATED_TPV_PAYMENT",
-  [TPV_QA_COLLECTIONS.REEMBOLSOS]: "SIMULATED_TPV_REFUND",
-  [TPV_QA_COLLECTIONS.MOVIMIENTOS_CAJA]: "SIMULATED_TPV_CASH_MOVEMENT",
-  [TPV_QA_COLLECTIONS.TICKET_X]: "SIMULATED_TPV_TICKET_X",
-  [TPV_QA_COLLECTIONS.TICKET_Z]: "SIMULATED_TPV_TICKET_Z",
-  [TPV_QA_COLLECTIONS.AUDITORIA]: "SIMULATED_TPV_AUDIT",
+export const TPV_SANDBOX_EVENT_MOVEMENT_TYPES = Object.freeze({
+  [TPV_SANDBOX_COLLECTIONS.VENTAS]: "SIMULATED_TPV_SALE",
+  [TPV_SANDBOX_COLLECTIONS.VENTA_LINEAS]: "SIMULATED_TPV_SALE_LINE",
+  [TPV_SANDBOX_COLLECTIONS.PAGOS]: "SIMULATED_TPV_PAYMENT",
+  [TPV_SANDBOX_COLLECTIONS.REEMBOLSOS]: "SIMULATED_TPV_REFUND",
+  [TPV_SANDBOX_COLLECTIONS.MOVIMIENTOS_CAJA]: "SIMULATED_TPV_CASH_MOVEMENT",
+  [TPV_SANDBOX_COLLECTIONS.TICKET_X]: "SIMULATED_TPV_TICKET_X",
+  [TPV_SANDBOX_COLLECTIONS.TICKET_Z]: "SIMULATED_TPV_TICKET_Z",
+  [TPV_SANDBOX_COLLECTIONS.AUDITORIA]: "SIMULATED_TPV_AUDIT",
 });
 
-export const TPV_QA_RUNTIME_POLICY = Object.freeze({
+export const TPV_SANDBOX_RUNTIME_POLICY = Object.freeze({
   // Fail closed until backend can prove the Wix Sandbox data plane for every
   // WebMethod invocation. Frontend Preview checks are not an authorization boundary.
   ENABLED: false,
@@ -99,11 +99,11 @@ export const TPV_QA_RUNTIME_POLICY = Object.freeze({
   FISCAL_WRITES_ENABLED: false,
   CUSTOMER_NOTIFICATIONS_ENABLED: false,
   HARDWARE_ENABLED: false,
-  ACTOR_ID: "QA_ACTOR",
-  TEST_RUN_ID: "TPVQA-DEV-20261120-01",
+  ACTOR_ID: "SANDBOX_ACTOR",
+  SANDBOX_RUN_ID: "TPVSANDBOX-DEV-20261120-01",
 });
 
-export const TPV_QA_IDENTITY_TYPES = Object.freeze({
+export const TPV_SANDBOX_IDENTITY_TYPES = Object.freeze({
   CUSTOMER: "CUSTOMER",
   STAFF: "STAFF",
 });
@@ -491,8 +491,8 @@ export const CONTROL_TYPE = Object.freeze({
   SYSTEM_FLAG: "SYSTEM_FLAG",
   WEBHOOK_CLAIM: "WEBHOOK_CLAIM",
   WEBHOOK_EVENT: "WEBHOOK_EVENT",
-  TPV_QA_REFUND_LOCK: "TPV_QA_REFUND_LOCK",
-  TPV_QA_SESSION_LOCK: "TPV_QA_SESSION_LOCK",
+  TPV_SANDBOX_REFUND_LOCK: "TPV_SANDBOX_REFUND_LOCK",
+  TPV_SANDBOX_SESSION_LOCK: "TPV_SANDBOX_SESSION_LOCK",
 });
 
 export const WEBHOOK_CLAIM_STATUS = Object.freeze({
@@ -554,7 +554,7 @@ export const DATA_ACCESS_BULK_PATCH_POLICY = Object.freeze({
         traceId: Object.freeze(["SET_FIELD"]),
       }),
     }),
-    [CONTROL_TYPE.TPV_QA_REFUND_LOCK]: Object.freeze({
+    [CONTROL_TYPE.TPV_SANDBOX_REFUND_LOCK]: Object.freeze({
       requiredConditionFields: Object.freeze(["controlType", "version", "status"]),
       anyConditionFields: Object.freeze([]),
       allowedConditionFields: Object.freeze(["controlType", "version", "status", "expiresAt"]),
@@ -566,7 +566,7 @@ export const DATA_ACCESS_BULK_PATCH_POLICY = Object.freeze({
         version: Object.freeze(["INCREMENT_FIELD"]),
       }),
     }),
-    [CONTROL_TYPE.TPV_QA_SESSION_LOCK]: Object.freeze({
+    [CONTROL_TYPE.TPV_SANDBOX_SESSION_LOCK]: Object.freeze({
       requiredConditionFields: Object.freeze(["controlType", "version", "status"]),
       anyConditionFields: Object.freeze([]),
       allowedConditionFields: Object.freeze(["controlType", "version", "status", "expiresAt"]),
