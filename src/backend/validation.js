@@ -388,8 +388,7 @@ export function assertTpvSandboxIdentity(item) {
     const expectedPrefix = identityType === "CUSTOMER" ? "QA-CUSTOMER-" : "QA-STAFF-";
     if (!["CUSTOMER", "STAFF"].includes(identityType) ||
         !identityId.startsWith(expectedPrefix) ||
-        !/^[A-Z0-9-]{12,48}$/.test(identityId) ||
-        String(item._id || "") !== identityId) {
+        !/^[A-Z0-9-]{12,48}$/.test(identityId)) {
         throw new Error("SCHEMA_VIOLATION: TpvSandboxIdentities identity key/type invalid");
     }
     if (!displayName || displayName.length > 120) {
