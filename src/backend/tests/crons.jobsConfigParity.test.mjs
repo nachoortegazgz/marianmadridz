@@ -243,7 +243,7 @@ test('CRON-PAYMENT-RECOVERY-01 repairs CitasF2 from the existing paid ORDER move
     controlType: IC.CONTROL_TYPE.ALERT,
     dedupeKey: 'test:payment-recovery-alert',
     traceId: 'trace-payment-recovery-alert',
-    alertType: 'PAYMENT_STATE_UPDATE_REQUIRED',
+    eventType: 'PAYMENT_STATE_UPDATE_REQUIRED',
     status: IC.CONTROL_STATUS.OPEN,
     payload: {
       eventType: 'PAYMENT_STATE_UPDATE_REQUIRED',
@@ -403,7 +403,7 @@ test('CRON-Z-01 verifyNightlyZClosing is idempotent when the day is already clos
   ]);
   await CR.verifyNightlyZClosing();
   const alerts = (wixDataMock._store.get(IC.OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO) || [])
-    .filter((r) => r.alertType);
+    .filter((r) => r.eventType);
   assert.deepStrictEqual(alerts, [], 'must NOT raise an alert when the day is verifiably closed');
 });
 
