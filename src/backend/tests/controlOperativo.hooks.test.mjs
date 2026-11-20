@@ -37,6 +37,16 @@ function seed(record) {
 }
 
 describe("ControlOperativo hooks", () => {
+  it("rejects root fields absent from the live Wix schema", () => {
+    for (const field of ["pairToken", "maxAttempts", "alertType", "severity", "message", "operationDate"]) {
+      const candidate = { ...base(CONTROL_TYPE.SYSTEM_FLAG), [field]: "legacy-root-field" };
+      assert.throws(
+        () => ControlOperativo_beforeInsert(candidate),
+        /absent from live CMS schema/
+      );
+    }
+  });
+
   it("rejects missing, null, array and primitive payloads required by live CMS schema", () => {
     for (const payload of [undefined, null, [], "not-an-object", 1]) {
       const candidate = { ...base(CONTROL_TYPE.SLOT_LOCK), resourceId: RESOURCE_ID,
