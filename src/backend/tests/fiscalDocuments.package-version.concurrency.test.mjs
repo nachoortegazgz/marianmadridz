@@ -228,3 +228,33 @@ test('FDOC-STORAGE-07 every recovered or newly inserted snapshot is hash-verifie
   );
   assert.ok(handler.includes('if (!(await _verifyPackageSnapshot(saved)))'));
 });
+
+
+test('FDOC-UI-01 monthly prepared packages display month identity, not a fabricated quarter', () => {
+  const displayStart = source.indexOf('function _formatPackageDisplayId(doc) {');
+  const labelStart = source.indexOf('function _formatPackagePeriodLabel(doc) {');
+  const uuidStart = source.indexOf('function _uuidV8FromHash(hashHex) {');
+  assert.ok(displayStart >= 0 && labelStart > displayStart && uuidStart > labelStart);
+  const displaySource = source.slice(displayStart, labelStart).trim();
+  const labelSource = source.slice(labelStart, uuidStart).trim();
+  const dependencies = {
+    _safeTrim: (value) => String(value ?? '').trim(),
+    _formatDocumentId: (year, quarter, version = 1) =>
+      `DOC_GESTORIA_${year}_T${quarter}_PAQUETE_GESTORIA_V${String(version).padStart(4, '0')}`,
+  };
+  const formatId = vm.runInNewContext('(' + displaySource + ')', dependencies);
+  const formatLabel = vm.runInNewContext('(' + labelSource + ')', dependencies);
+  const monthly = { periodType: 'MONTHLY', fiscalYear: 2026, fiscalMonth: 3, packageVersion: 2 };
+  assert.equal(formatId(monthly), 'DOC_GESTORIA_2026_M03_PAQUETE_GESTORIA_V0002');
+  assert.equal(formatLabel(monthly), '03/2026');
+  assert.equal(formatId({ ...monthly, fiscalMonth: 13 }), null);
+  assert.equal(formatLabel({ ...monthly, fiscalMonth: 13 }), 'MES NO DEFINIDO/2026');
+  const quarterly = { periodType: 'QUARTERLY', fiscalYear: 2026, fiscalQuarter: 2, packageVersion: 4 };
+  assert.equal(formatId(quarterly), 'DOC_GESTORIA_2026_T2_PAQUETE_GESTORIA_V0004');
+  assert.equal(formatLabel(quarterly), 'T2/2026');
+
+  assert.ok(source.includes('displayId: _formatPackageDisplayId(doc)'));
+  assert.ok(source.includes('periodLabel: _formatPackagePeriodLabel(doc)'));
+  assert.ok(source.includes('displayId: _formatPackageDisplayId(doc),'));
+
+});
