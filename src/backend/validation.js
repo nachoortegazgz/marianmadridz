@@ -101,6 +101,33 @@ export function assertCitasF2(item) {
     return true;
 }
 
+export function assertCitasF2Insert(item) {
+    assertCitasF2(item);
+    for (const field of ["serviceId", "resourceId"]) {
+        if (!isValidGuid(item[field])) {
+            throw new Error(`SCHEMA_VIOLATION: CitasF2 requires valid GUID ${field}`);
+        }
+    }
+    for (const field of ["slotStart", "slotEnd"]) {
+        const date = item[field] instanceof Date ? item[field] : new Date(item[field]);
+        if (!item[field] || Number.isNaN(date.getTime())) {
+            throw new Error(`SCHEMA_VIOLATION: CitasF2 requires valid DATETIME ${field}`);
+        }
+    }
+    const start = item.slotStart instanceof Date ? item.slotStart : new Date(item.slotStart);
+    const finish = item.slotEnd instanceof Date ? item.slotEnd : new Date(item.slotEnd);
+    if (finish.getTime() <= start.getTime()) {
+        throw new Error("SCHEMA_VIOLATION: CitasF2 slotEnd must be after slotStart");
+    }
+    if (typeof item.totalAmount !== "number" || !Number.isFinite(item.totalAmount) || item.totalAmount < 0) {
+        throw new Error("SCHEMA_VIOLATION: CitasF2 requires finite totalAmount >= 0");
+    }
+    if (!_isValidDateOnly(item.dateYmd)) {
+        throw new Error("SCHEMA_VIOLATION: CitasF2 requires DATE dateYmd");
+    }
+    return true;
+}
+
 // =============================================================================
 // COLECCIONES FISCALES: CONTRATOS DE INSERCION FISICOS
 // =============================================================================
