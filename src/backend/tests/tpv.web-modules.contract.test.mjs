@@ -355,7 +355,7 @@ test("TPV synthetic persistence maps logical events to CajaActual and Movimiento
     const repository = await source("tpv/tpvQaRepository.js");
     const config = await source("internalConfig.js");
     assert.match(repository, /QA_LEDGER_SOURCE = "TPV_QA_SYNTHETIC"/);
-    assert.match(repository, /SIMULATED_TPV_/);
+    assert.match(config, /SIMULATED_TPV_/);
     assert.match(repository, /sequenceNumber: 0/);
     assert.match(repository, /cmsMovementType: item\.movementType/);
     assert.doesNotMatch(repository, /movementType: item\.movementType/);
