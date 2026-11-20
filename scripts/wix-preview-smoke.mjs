@@ -9,7 +9,7 @@ assert.ok(previewUrl, "WIX_PREVIEW_URL is required");
 assert.ok(moduleRoot, "PLAYWRIGHT_MODULE_ROOT is required");
 assert.ok(reportPath, "WIX_SMOKE_REPORT is required");
 
-const require = createRequire(`${moduleRoot}/wix-preview-smoke-loader.cjs`);
+const require = createRequire(`${moduleRoot}/@playwright/test/index.js`);
 const { chromium } = require("playwright");
 
 const allowedHost = (hostname) =>
