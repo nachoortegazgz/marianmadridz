@@ -114,3 +114,16 @@ No se añade agenda de citas en ZONA STAFF ni supervisión de fichajes en ZONA M
 El cambio afecta únicamente al fallback interno de resolución de calendario cuando un slot no aporta `scheduleId`. Los slots que ya aportan el identificador nativo mantienen prioridad y no se reescriben. La reversión consiste en revertir el commit de la rama si CI detecta incompatibilidad; no requiere ni autoriza modificar datos históricos o configuración de Wix.
 
 **Estado:** implementación integrada en `main`; CI offline, contratos SDK y lint aprobados. El cambio NO está publicado en Wix y NO está certificado en runtime. Para cerrar el hito de producción es necesario preparar un entorno compatible con Wix CLI for Sites (Node.js >=24.22.1), confirmar la vinculación GitHub del sitio, reconciliar `wix.lock` mediante el flujo soportado sin actualizar dependencias innecesarias, ejecutar Local Editor y `wix preview`, y solo entonces publicar el commit de `main` con `wix publish` y realizar E2E aislado.
+
+
+## 7. Retirada posterior de ZONA STAFF / ONLYSTAFF
+
+**Fecha:** 2026-11-20  
+**Cambio:** retirada solicitada de la interfaz de autoservicio laboral ONLYSTAFF.
+
+- Se elimina el controlador Velo `src/pages/ZONA STAFF.mvf3f.js` y el widget `#htmlOnlyStaff.txt`.
+- Se eliminan del contrato offline las pruebas específicas de esa interfaz y se añade una aserción de ausencia de ambos artefactos.
+- Se conservan `horario.web.js`, las colecciones y los registros laborales: no se borran datos ni se retiran mecanismos backend de integridad sin auditar sus consumidores y obligaciones de conservación.
+- La eliminación del código no equivale a eliminar la página estática del Wix Editor Classic. La API pública documentada consultada no ofrece una operación para borrar páginas estáticas; la página con ruta histórica `/onlystaff` debe eliminarse desde el Administrador de páginas del Editor y comprobarse en Preview/publicación.
+
+**Validación:** pendiente de CI para el commit de retirada y de comprobación visual en Wix Editor. No se han modificado datos CMS ni publicado el sitio.
