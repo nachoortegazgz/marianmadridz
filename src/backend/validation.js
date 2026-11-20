@@ -317,6 +317,23 @@ export function assertControlOperativo(item) {
         }
     }
 
+    // DISPLAY_TOKEN stores its policy metadata inside the required OBJECT payload.
+    if (item.controlType === CONTROL_TYPE.DISPLAY_TOKEN) {
+        if (!item.bookingId || !String(item.bookingId).trim()) {
+            throw new Error("SCHEMA_VIOLATION: DISPLAY_TOKEN requires bookingId");
+        }
+        if (!Number.isSafeInteger(Number(item.attempts)) || Number(item.attempts) < 0) {
+            throw new Error("SCHEMA_VIOLATION: DISPLAY_TOKEN requires attempts >= 0");
+        }
+        const expiresAt = new Date(item.expiresAt);
+        if (!item.expiresAt || Number.isNaN(expiresAt.getTime())) {
+            throw new Error("SCHEMA_VIOLATION: DISPLAY_TOKEN requires a valid expiresAt date");
+        }
+        if (!Number.isSafeInteger(Number(item.payload.maxAttempts)) || Number(item.payload.maxAttempts) < 1) {
+            throw new Error("SCHEMA_VIOLATION: DISPLAY_TOKEN payload requires maxAttempts >= 1");
+        }
+    }
+
     // SLOT_LOCK requiere resourceId + expiresAt
     if (item.controlType === CONTROL_TYPE.SLOT_LOCK) {
         if (!isValidGuid(item.resourceId)) {
