@@ -117,3 +117,15 @@ No se proporciona porcentaje global de preparación: mezclar CI offline, documen
 - Wix Site Data Usage API: https://dev.wix.com/docs/api-reference/business-solutions/cms/operations/site-data-usage/introduction
 - Wix CLI preview: https://dev.wix.com/docs/wix-cli/cli-for-headless/command-reference/project-commands/preview
 - Dossiers y evidencias del repositorio: `docs/qa/QA-ENVIRONMENT-SSOT.md`, `docs/audits/2026-11-20-wix-live-sandbox-usage.md`, `docs/audits/2026-11-20-live-cms-and-wix-lock-reconciliation.md`.
+
+
+## Addendum de cierre PR #486 — 2026-11-20
+
+- PR #486 integrada en `main`: `5ef81ff132f4cbff594387a60e4446bc5dada171`.
+- Se añadió el test contractual `every exposed TPV QA WebMethod fails closed before repository access`, que enumera los WebMethods QA y comprueba que `assertTpvQaEnabled()` se ejecuta antes de las llamadas de repositorio contempladas.
+- CI del head de PR `46aac82fa264387b5571ef3f6fc9d513072a2eb0`: Backend offline quality gates SUCCESS (run `44727128060`) y Secret scanning SUCCESS (run `44727128076`).
+- `npm ci` correcto; `npm audit`: 0 vulnerabilidades; Layer 1: 28 suites / 335 tests; Layer 2: 19 suites / 267 tests; regresión offline completa: 74 suites / 693 tests; SDK contracts y ESLint PASS.
+- Los logs siguen mostrando avisos de dependencias obsoletas y ESLint 8.25.0 fuera de soporte. No se actualizó la toolchain por riesgo de incompatibilidad con el plugin Wix; requiere una intervención separada con matriz de compatibilidad.
+- La prueba es estática/offline y no sustituye una invocación real de Wix Preview/Published. No se habilitó TPV QA persistente, no hubo escrituras CMS, ni seed/bootstrap ni publicación.
+
+**Estado de release sin cambios:** NO-GO. El commit de merge actualiza el repositorio y la documentación; no certifica Wix Runtime ni habilita producción.
