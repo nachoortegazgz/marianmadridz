@@ -2,82 +2,92 @@
 
 ## 1. Objetivo y estado
 
-Preparar el repositorio para validar el sitio Wix mediante Preview y, posteriormente, automatización de navegador, sin modificar CMS ni activar operaciones externas.
+Preparar y ejecutar un smoke online reproducible del código integrado en Wix, sin publicar ni realizar mutaciones transaccionales.
 
-**Estado:** preparación parcial implementada; pruebas online no ejecutadas.  
-**Baseline:** main tras PR #502, commit `03f5cb34d3a5c3e3cf3c27ef934940db3d85f5a1`.  
-**Rama de preparación:** `qa/online-test-readiness-2026-11-20`.
+**Estado de código:** PR #503 integrada en main, commit 78f840f72af276d68110ed29b9294be74e519b72; CI posterior a merge PASS.  
+**Preparación de smoke online:** rama qa/online-preview-smoke-2026-11-20; pendiente de CI, credencial Wix y ejecución del Preview.  
+**Sitio:** 188bed94-177c-4bc9-a9f0-35080d874f3e, UI version 15941.
 
-## 2. Evidencia del entorno
+## 2. Evidencia y corrección de diagnóstico
 
-- Wix Site Context devuelve Marian Madrid, Editor clásico, Velo habilitado y estado **Draft**.
-- `wix.config.json` identifica el Site ID `188bed94-177c-4bc9-a9f0-35080d874f3e` y UI version `15941`.
-- `package.json` ofrece `wix dev`; el workflow de Preview instala Wix CLI for Sites `1.2.14`, Node `24.22.1`, ejecuta `npm ci` y exige `CLI_API_KEY`.
-- El workflow `.github/workflows/wix-tpv-preview.yml` solo se ejecuta manualmente, exige `main`, tiene `create_preview=false` por defecto y no contiene publicación.
-- El workflow declara que la creación de Wix Preview requiere que el sitio se haya publicado al menos una vez. El Site Context actual figura Draft; por tanto, la creación de Preview vía ese workflow está bloqueada hasta resolver ese prerrequisito de Wix.
-- No hay Playwright ni `@playwright/test` en el manifiesto npm actual ni en el lockfile. El dossier técnico menciona Vitest, pero el runner real configurado es Node.js `node:test` mediante `run-all.mjs`; no se atribuye cobertura a Vitest sin evidencia.
+- Wix Site Context devuelve el sitio en estado administrativo **Draft**.
+- La URL pública https://www.marianmadrid.es/ responde y muestra una versión publicada del sitio. Por tanto, el estado Draft del contexto no demuestra que nunca haya existido una publicación; la precondición histórica de wix preview debe considerarse potencialmente satisfecha y confirmarse ejecutando el comando.
+- La documentación oficial de Wix CLI for Sites indica que wix preview requiere que el sitio se haya publicado previamente, permite elegir el código del branch por defecto o local y genera una URL compartible.
+- La documentación oficial advierte que el Preview CLI utiliza las versiones LIVE de las HTTP Functions del sitio. No sirve para probar cambios de HTTP Functions.
+- Wix recomienda GitHub Actions para automatizar despliegues Preview y exige una API key con permiso Wix CLI for Sites - Git Integration, almacenada como secreto CLI_API_KEY.
+- Node.js 24.22.1 o superior es el requisito oficial actual de Wix CLI for Sites. El workflow fija 24.22.1; Wix CLI queda fijado en 1.2.14.
 
-## 3. Cambios preparados en esta rama
+## 3. Cambios preparados
 
-Se añade `src/backend/tests/wix.preview.workflow.contract.test.mjs`, descubierto automáticamente por el runner canónico `npm test`. La suite protege estos contratos:
+### Workflow
 
-1. Preview solo manual y desactivado por defecto.
-2. Restricción a la rama `main` y Site ID canónico.
-3. Credencial Wix CLI requerida, instalación npm reproducible y versiones fijadas.
-4. Ejecución exclusiva de `wix preview`, sin publicación.
-5. No declarar Playwright instalado hasta que manifiesto y lockfile estén sincronizados.
+.github/workflows/wix-tpv-preview.yml:
 
-No se modifica `package.json`, `package-lock.json`, `wix.lock`, código de negocio, configuración CMS, datos, permisos ni secretos.
+- Mantiene la ejecución manual opt-in con create_preview=false.
+- Añade ejecución automática tras finalizar con éxito Backend offline quality gates en main.
+- Hace checkout de main y valida Site ID/UI version.
+- Exige CLI_API_KEY; no expone el secreto en logs.
+- Ejecuta npm ci, instala CLI fijado, autentica y ejecuta únicamente wix preview.
+- Nunca ejecuta wix publish.
+- Captura la URL de Preview y ejecuta un smoke de navegador de solo lectura.
+- Conserva un artefacto JSON de diagnóstico con retención de 3 días.
 
-## 4. Por qué Playwright no se instala todavía
+### Smoke Playwright
 
-Añadir únicamente `@playwright/test` al manifiesto sin generar el lockfile mediante npm sería una modificación incompleta y rompería la reproducibilidad de `npm ci`. Tampoco se introduce una instalación dinámica no bloqueada dentro de GitHub Actions. La incorporación debe hacerse en un workspace con Node `24.22.1`, registry npm accesible y checkout sincronizado:
+scripts/wix-preview-smoke.mjs:
 
-- `npm install --save-dev --save-exact @playwright/test`
-- verificar el diff de `package.json` y `package-lock.json`
-- `npm ci`
-- `npx playwright install --with-deps chromium` en el runner de CI
-- suite inicial de navegación/lecturas con URL de Preview configurada como variable/secret y sin credenciales de producción.
+- Usa Playwright Test/Browser versión 1.65.1 instalado globalmente en el runner, fuera de las dependencias runtime del sitio.
+- Solo permite hosts de Preview de Wix; rechaza dominios personalizados/live.
+- Bloquea en el navegador toda petición HTTP que no sea GET, HEAD u OPTIONS antes de que llegue a la red.
+- No pulsa botones, no rellena campos y no envía formularios.
+- Comprueba respuesta HTTP del documento principal, carga del body y host final.
+- Registra errores JavaScript/console y peticiones bloqueadas como diagnóstico; no certifica lógica de negocio ni backend.
 
-La versión debe fijarse exactamente y validarse con CI; no se introduce una versión inventada en este cambio.
+Playwright no se añade a package.json ni a package-lock.json: es tooling aislado del runtime Wix. La versión directa queda fijada en el workflow.
 
-## 5. Gates antes de E2E online
+## 4. Alcance de las pruebas online
 
-### Gate A — Wix Preview
-- Resolver el prerrequisito de publicación inicial del sitio o utilizar el Preview de Editor que Wix habilite para el estado Draft.
-- Confirmar que `CLI_API_KEY` existe en GitHub y tiene solo el permiso Wix CLI for Sites - Git Integration y acceso al sitio correcto.
-- Ejecutar el workflow manualmente con `create_preview=true` únicamente cuando el prerrequisito esté satisfecho.
-- Guardar URL, SHA de código y hora del Preview; confirmar que corresponde al commit probado.
+**Permitido en este hito:**
+- Abrir el Preview generado desde el último commit de main.
+- Verificar respuesta del documento, render básico y errores de navegador.
+- Capturar diagnóstico sin datos personales.
 
-### Gate B — seguridad de ejecución
-- Preview no demuestra aislamiento absoluto: revisar el comportamiento de HTTP functions y colecciones de Wix Apps.
-- Mantener los tests iniciales en lectura/navegación. No crear reservas, ventas, pagos, devoluciones, facturas, fichajes ni cierres.
-- Confirmar que automatizaciones con efectos de correo/notificación no se disparan en las rutas probadas.
-- No usar el rol Admin que Preview asigna para certificar permisos de miembros, profesionales o visitantes.
+**Fuera de alcance y bloqueado:**
+- Envío de formularios.
+- Crear/modificar/cancelar reservas.
+- Ventas, pagos, devoluciones, facturas, fichajes o cierres TPV.
+- Escrituras CMS o Wix Apps.
+- Probar cambios de HTTP Functions mediante el Preview CLI.
+- Certificar permisos por rol: el Preview no demuestra el comportamiento de todos los roles.
+- Cualquier publicación del sitio.
 
-### Gate C — E2E Playwright
-- Incorporar Playwright con lock reproducible.
-- Configurar URL de prueba por variable protegida, nunca hardcodeada.
-- Ejecutar smoke de carga, consola, errores de red, navegación, formularios no enviados y widgets HTML.
-- No automatizar submits ni mutaciones hasta disponer de un sitio Wix independiente y fixtures sintéticas controladas.
-- Subir reportes/trazas como artefactos privados con retención corta; excluir cookies, tokens y datos personales.
+El Preview CLI no es un Wix Test Site ni garantiza aislamiento de colecciones. Las HTTP Functions se ejecutan en su versión LIVE. No se considera un entorno transaccional aislado.
 
-### Gate D — integración transaccional
-Requiere sitio Wix independiente con las Apps necesarias, usuarios sintéticos, CMS y permisos preparados. Solo entonces se diseñarán E2E para reservas, TPV y ledger; concurrencia/idempotencia deben verificarse contra runtime y no mediante mocks.
+## 5. Condiciones de aceptación
 
-## 6. Riesgos y decisiones
+1. PR de preparación fusionada solo con CI offline y Gitleaks PASS.
+2. Workflow Preview ejecutado en main y CLI autenticado correctamente.
+3. Wix devuelve URL de Preview correspondiente al commit de main.
+4. Smoke Playwright termina PASS y sube el informe.
+5. Se confirma que no hubo publicación, formularios enviados ni peticiones no-GET transmitidas.
+6. El informe conserva SHA/ejecución y URL del Preview en los logs de Actions.
 
-- **P0:** no probar mutaciones de Wix Apps en Preview del sitio actual; sus colecciones pueden ser LIVE.
-- **P0:** no activar pagos, fiscalidad, fichaje ni ledgers reales.
-- **P1:** el Preview Admin no acredita autorización efectiva por rol.
-- **P1:** no publicar para desbloquear Preview sin evaluación de release y autorización específica.
-- **P2:** Playwright no está instalado; no se declara E2E browser coverage.
-- Los workflows offline siguen siendo gates de código, no evidencia de runtime.
+**Estado del hito:** preparación de código y automatización; el hito online solo se declara alcanzado cuando los puntos 2–5 están verificados.
+
+## 6. Riesgos y límites
+
+- Si CLI_API_KEY falta o carece del permiso Wix CLI for Sites - Git Integration, la creación del Preview falla de forma cerrada.
+- Si Wix no reconoce publicación previa, el workflow falla sin publicar.
+- Si el CLI cambia su salida y no emite una URL wix.to, el workflow falla en vez de inventar una URL.
+- Bloquear POST/PUT/PATCH/DELETE puede impedir que componentes dinámicos terminen de cargar; esto es intencional para priorizar no mutar datos.
+- Un smoke PASS no certifica reservas, TPV, HTTP Functions, CMS, permisos, aislamiento Sandbox/LIVE ni Apps nativas.
+- Las colecciones de Wix Apps no quedan aisladas por el mero hecho de usar Preview.
 
 ## 7. Validación y despliegue
 
-La suite nueva se debe validar en GitHub Actions antes de integrar. En esta sesión no se ejecutó el runner local, Wix CLI, Preview ni navegador. No se han realizado escrituras Wix ni publicación.
+No se han ejecutado mutaciones Wix, no se ha publicado el sitio y no se han creado registros sintéticos. El Preview CLI sube una instantánea de código a Wix para probarla, pero no publica el sitio.
 
-**Criterio de aceptación de esta fase:** PR con CI backend offline y Gitleaks en SUCCESS; suite contractual nueva incluida en `npm test`. Esto solo valida la protección del workflow, no las pruebas online.
+El workflow está diseñado para ejecutarse tras el CI offline exitoso en main; si el secret está configurado y Wix acepta la publicación previa, crea Preview y ejecuta el smoke automáticamente.
 
-**Estado de release:** NO-GO para publicación y para operaciones transaccionales online.
+**Release:** NO-GO para publicación y para pruebas transaccionales.  
+**Online smoke:** pendiente de ejecución real en Wix Preview.
