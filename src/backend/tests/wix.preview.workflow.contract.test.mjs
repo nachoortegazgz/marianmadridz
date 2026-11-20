@@ -15,7 +15,7 @@ test("WIX-PREVIEW-01 preview workflow is manual and defaults to no preview creat
 
 test("WIX-PREVIEW-02 preview is restricted to main and the configured Marian Madrid site", async () => {
     const workflow = await readFile(workflowUrl, "utf8");
-    assert.match(workflow, /github\.ref !== 'refs\/heads\/main'/);
+    assert.match(workflow, /github\.ref\s*!=\s*['"]refs\/heads\/main['"]/);
     assert.match(workflow, /188bed94-177c-4bc9-a9f0-35080d874f3e/);
     assert.match(workflow, /if \(!uiVersion\)/);
 });
