@@ -482,10 +482,9 @@ async function _compensateCreatedBookings(createdBookings, traceId, pairToken) {
                     dedupeKey: compDedupeKey,
                     bookingId: String(bookingId),
                     serviceId: _safeTrim(booking && booking.serviceId),
-                    compensationKind: COMPENSATION_KIND.CANCEL_BOOKING,
+                    kind: COMPENSATION_KIND.CANCEL_BOOKING,
                     status: "PENDING",
                     attempts: 0,
-                    revision: revisionForQueue,
                     payload: {
                         compensationKind: COMPENSATION_KIND.CANCEL_BOOKING,
                         serviceId: _safeTrim(booking && booking.serviceId),
