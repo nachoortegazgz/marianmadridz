@@ -1,3 +1,7 @@
+> **VIGENCIA — 2026-11-20:** este documento conserva el diseño histórico basado en nueve colecciones `TPV_QA_*`, ya eliminadas y no utilizadas. Queda supersedido por TEC-042 y por `docs/audits/2026-11-20-tpv-sandbox-persistence-decision.md`: las entidades QA son tipos lógicos persistidos como eventos sintéticos en `MovimientosCaja` y la sesión/proyección en `CajaActual`. Solo las filas marcadas `TPV_QA_SYNTHETIC`/`SIMULATED_TPV_*` del test-run activo son editables; no se activa el writer fiscal real. Validación runtime Preview/Sandbox pendiente.
+
+---
+
 # TPV — desarrollo basado en la auditoría funcional de Wix
 
 ## 1. Fuente funcional y alcance
