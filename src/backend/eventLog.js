@@ -67,7 +67,7 @@ import {
 } from "backend/internalConfig";
 
 import { readFiscalPayload, readMovementField, readMovementHash } from "backend/data";
-import { isExplicitSimulationLedgerRecord, assertMovimientosCajaRequiredFields } from "backend/validation";
+import { isExplicitSimulationLedgerRecord } from "backend/validation";
 
 import { hashChain } from "backend/securityEngine";
 import { buildEventLogFiscalChainPayload } from "backend/fiscalHashPayload";
@@ -773,7 +773,6 @@ export async function registrarEventoEconomico(input) {
     try {
         // Fencing check immediately before the append-only write.
         await assertFiscalLedgerLock(ledgerLock);
-        assertMovimientosCajaRequiredFields(doc);
         cabecera = await dalInsert(MOVIMIENTOS_CAJA_COL, doc);
     } catch (err) {
         // A rejected insert can be an uncertain network outcome. Resolve by
