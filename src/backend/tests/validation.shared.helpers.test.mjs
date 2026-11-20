@@ -61,6 +61,27 @@ test("VALIDATION-FISCAL-02 MapaStaff fiscal record types use the shared fiscal v
 });
 
 
+test("VALIDATION-PACKAGE-01 validates accountant package snapshots centrally", () => {
+    const valid = {
+        periodType: "QUARTERLY",
+        fiscalYear: 2026,
+        fiscalQuarter: 1,
+        packageVersion: 1,
+        summaryData: { totalOperaciones: 1 },
+        invoiceData: [{ invoiceNumber: "F-1" }],
+        packageStatus: "PREPARED",
+        createdAt: "2026-11-11T20:05:00.000Z",
+        snapshotHash: "a".repeat(64),
+        schemaVersion: "1.0",
+        source: "FISCAL_AGGREGATOR",
+        traceId: "trace-package-validation-1",
+    };
+    assert.equal(V.assertPaquetesGestoriaRecord(valid), true);
+    assert.throws(() => V.assertPaquetesGestoriaRecord({ ...valid, createdAt: "invalid" }), /createdAt/);
+    assert.throws(() => V.assertPaquetesGestoriaRecord({ ...valid, fiscalMonth: 2 }), /no admite fiscalMonth/);
+    assert.throws(() => V.assertPaquetesGestoriaRecord({ ...valid, packageStatus: "SENT" }), /PREPARED/);
+});
+
 test("VALIDATION-CAJA-01 validates CajaActual object schema without MapaStaff requirements", () => {
     assert.equal(V.assertCajaActualRecord({
         singletonKey: "CAJA_PRINCIPAL",

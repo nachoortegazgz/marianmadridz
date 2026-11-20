@@ -20,7 +20,7 @@ import {
     TPV_QA_RUNTIME_POLICY,
     TPV_QA_EVENT_MOVEMENT_TYPES,
 } from "backend/internalConfig";
-import { assertCitasF2, assertCitasF2Insert, assertControlOperativo, assertCanonicalControlFields, assertRegistrosHorariosStaff, assertMapaStaffRecord, assertCajaActualRecord, assertHistoricoCierresZ, assertMovimientosCajaRequiredFields, assertAccountingLedgerRecord, isValidNifOrEuVat as _isValidNifOrEuVat } from "backend/validation";
+import { assertCitasF2, assertCitasF2Insert, assertControlOperativo, assertCanonicalControlFields, assertRegistrosHorariosStaff, assertMapaStaffRecord, assertCajaActualRecord, assertHistoricoCierresZ, assertMovimientosCajaRequiredFields, assertAccountingLedgerRecord, assertPaquetesGestoriaRecord, isValidNifOrEuVat as _isValidNifOrEuVat } from "backend/validation";
 import { CONSISTENCY, getItem } from "backend/dataAccess";
 import { stableSerialize } from "backend/tpv/tpvUtils";
 
@@ -640,38 +640,13 @@ export function HistoricoCierresZ_beforeRemove() {
 // PaquetesGestoria is a dedicated immutable snapshot store. Dispatch state is
 // never written back into a package; every package is a new append-only item.
 export function PaquetesGestoria_beforeInsert(item) {
-    if (!item || typeof item !== "object") _schemaError("PaquetesGestoria item invalido");
+    if (!item || typeof item !== "object" || Array.isArray(item)) {
+        _schemaError("PaquetesGestoria item invalido");
+    }
     _normalizeCmsDateTime(item, "createdAt");
-    if (!(item.createdAt instanceof Date) || Number.isNaN(item.createdAt.getTime())) {
-        _schemaError("createdAt obligatorio y válido en PaquetesGestoria");
-    }
-    const periodType = _safeTrim(item.periodType).toUpperCase();
-    const year = Number(item.fiscalYear);
-    const month = item.fiscalMonth == null ? null : Number(item.fiscalMonth);
-    const quarter = item.fiscalQuarter == null ? null : Number(item.fiscalQuarter);
-    if (!["MONTHLY", "QUARTERLY"].includes(periodType)) _schemaError("periodType debe ser MONTHLY o QUARTERLY");
-    if (!Number.isInteger(year) || year < 2000 || year > 9999) _schemaError("fiscalYear invalido");
-    if (periodType === "MONTHLY" && (!Number.isInteger(month) || month < 1 || month > 12 || quarter != null)) {
-        _schemaError("Paquete mensual requiere fiscalMonth 1-12 y no admite fiscalQuarter");
-    }
-    if (periodType === "QUARTERLY" && (!Number.isInteger(quarter) || quarter < 1 || quarter > 4 || month != null)) {
-        _schemaError("Paquete trimestral requiere fiscalQuarter 1-4 y no admite fiscalMonth");
-    }
-    if (!Number.isInteger(Number(item.packageVersion)) || Number(item.packageVersion) < 1) {
-        _schemaError("packageVersion debe ser entero positivo");
-    }
-    if (!item.summaryData || typeof item.summaryData !== "object" || Array.isArray(item.summaryData)) {
-        _schemaError("summaryData debe ser un objeto");
-    }
-    if (!Array.isArray(item.invoiceData)) _schemaError("invoiceData debe ser un array");
-    if (!/^[a-f0-9]{64}$/i.test(_safeTrim(item.snapshotHash))) _schemaError("snapshotHash debe ser SHA-256 hexadecimal");
-    if (!_safeTrim(item.schemaVersion) || !_safeTrim(item.source) || !_safeTrim(item.traceId)) {
-        _schemaError("schemaVersion, source y traceId son obligatorios");
-    }
-    if (_safeTrim(item.packageStatus) !== "PREPARED") _schemaError("packageStatus inicial debe ser PREPARED");
+    assertPaquetesGestoriaRecord(item);
     return item;
 }
-
 export function PaquetesGestoria_beforeUpdate() {
     _fiscalError("Modificacion de PaquetesGestoria prohibida: snapshot append-only");
 }

@@ -42,6 +42,19 @@ test("all CMS write-policy collection lists contain unique canonical strings", (
 test("dataAccess validates physical required fields before elevated CMS inserts", () => {
     assert.throws(() => insertItem(C.MOVIMIENTOS_CAJA, {}), /MovimientosCaja requires/);
     assert.throws(() => insertItem(C.HISTORICO_CIERRES_Z, {}), /HistoricoCierresZ requires/);
+    assert.throws(() => insertItem(C.PAQUETES_GESTORIA, {
+        periodType: "QUARTERLY",
+        fiscalYear: 2026,
+        fiscalQuarter: 1,
+        packageVersion: 1,
+        summaryData: {},
+        invoiceData: [],
+        packageStatus: "PREPARED",
+        snapshotHash: "a".repeat(64),
+        schemaVersion: "1.0",
+        source: "FISCAL_AGGREGATOR",
+        traceId: "trace-package-dal-missing-createdAt",
+    }), /createdAt/);
     assert.throws(() => insertItem(C.CITAS_F2, {
         bookingId: "e556070a-6d6a-402e-8422-11133033ea76",
         scheduleId: "e556070a-6d6a-402e-8422-11133033ea76",
