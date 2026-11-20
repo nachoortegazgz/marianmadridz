@@ -1,4 +1,4 @@
-> **ACLARACIÓN DE CONFLICTO — 2026-11-16:** El registro `QA-2026-11-15-TEMP-MUTABILITY` documenta una autorización de QA para update/remove de determinados ledgers sintéticos, pero entra en conflicto con el invariante arquitectónico vigente del proyecto: los ledgers append-only son inmutables y las correcciones se realizan mediante nuevos registros rectificativos trazables. No se puede tratar esa autorización documental como habilitación técnica ni como permiso para modificar/borrar ledgers. Hasta que el propietario resuelva expresamente la contradicción en las directrices maestras, prevalece el invariante de integridad: mantener fail-closed, sin bypasses globales, sin update/remove de ledgers ni de `TPV_QA_*`; las operaciones CAS tipadas de locks efímeros en `ControlOperativo` siguen siendo un mecanismo separado y limitado. `bulkUpdate` continúa deshabilitado. La identidad del Site ID en runtime Wix sigue sin acreditarse y bloquea las escrituras TPV desde Preview.
+> **DIRECTRIZ VIGENTE DEL PROPIETARIO — 2026-11-20:** el sitio completo es un entorno de desarrollo y pruebas sin actividad real; todos los registros son sintéticos y se autoriza su uso para simulacros completos, persistencia, depuración y validación funcional. Los registros sintéticos se retirarán mediante reset preproducción controlado antes del uso real. La autorización funcional no acredita por sí sola que APIs, permisos o writers estén habilitados ni elimina controles de seguridad, normativa legal o contratos oficiales. La directriz completa y su jerarquía de autoridad constan en [Directriz del propietario — desarrollo, pruebas y objetivos finales](../PROJECT-OWNER-DIRECTIVE-2026-11-20.md).
 
 ---
 
@@ -96,3 +96,10 @@ El propietario confirma expresamente que todos los registros contables/fiscales 
 
 
 **Edición controlada:** el dato lógico editable reside en `payloadFiscal.qaRecord`. El hook `MovimientosCaja_beforeUpdate` protege identidad, testRunId, tipo lógico y secuencia; recalcula los campos derivados y la huella SHA-256 QA al guardar. No se editan manualmente los marcadores ni la cadena fiscal.
+
+
+## Addendum vigente — directriz global de desarrollo y simulacros (2026-11-20)
+
+La declaración del propietario cubre el sitio completo y no solo TPV. Todos los registros existentes y futuros de QA son sintéticos; se autorizan simulacros completos y persistentes con registros para verificar funcionalidad y depurar. Antes del uso real se realizará reset controlado y verificable de datos sintéticos. Esta instrucción supersede cualquier limitación documental anterior que impida genéricamente crear registros sintéticos o completar simulacros. Se mantienen gates legales, seguridad, autorización backend, aislamiento de efectos externos y uso de APIs oficiales. El detalle vinculante está en [Directriz del propietario](../PROJECT-OWNER-DIRECTIVE-2026-11-20.md).
+
+**Evidencia:** declaración expresa del propietario. No acredita por sí sola el aislamiento de automatizaciones, pasarelas, notificaciones ni el entorno Sandbox/Preview. Runtime/E2E podrá avanzar tras comprobar y controlar esos efectos para el flujo concreto; no se bloquea de forma genérica la prueba funcional si existe un método sintético/offline seguro.
