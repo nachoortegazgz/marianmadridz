@@ -132,3 +132,13 @@ Confirmar que los scripts existen en `package.json` antes de ejecutar. Las prueb
 | Publicación | NO-GO |
 
 **Criterio de salida:** solo declarar listo cuando exista evidencia runtime de aislamiento, datos Sandbox sintéticos, pruebas E2E completas, comparación LIVE sin cambios, CI verde y reversión segura.
+
+## Addendum de reconciliación — 2026-11-20
+
+La lectura read-only más reciente de Wix CMS Management API actualiza el snapshot anterior. Véase `docs/audits/2026-11-20-live-cms-and-wix-lock-reconciliation.md`.
+
+Conteos observados: `CajaActual=1`, `MovimientosCaja=0`, `TpvSandboxIdentities=0`, `ControlOperativo=58`, `HistoricoCierresZ=0`.
+
+El único `CajaActual` consultado está marcado `snapshotSource=TPV_QA_SYNTHETIC`, pero permanece `ABIERTA`, `openedBy=TPV_SANDBOX_SYSTEM`, con `traceId=TPV-SANDBOX-OPEN-mwopb42y-u1bz4asy` y `sequenceCounters={}`. No coincide con el test-run vigente `TPVQA-DEV-20261120-01` ni con el contrato `SIMULACION`/bootstrap cerrado de `assertQaCajaWritable()`. El backend debe rechazarlo. **No reutilizar, cerrar, corregir ni sobrescribir este singleton.**
+
+La lectura de Management API no es una prueba del dataset Sandbox de Preview. No se han realizado escrituras. El aislamiento y el bootstrap Sandbox siguen pendientes; la publicación permanece NO-GO.
