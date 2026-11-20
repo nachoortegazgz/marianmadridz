@@ -4,10 +4,14 @@ on:
   workflow_dispatch:
     inputs:
       create_preview:
-        description: 'Create a Wix preview (requires the site to have been published at least once)'
+        description: 'Create a Wix preview from main (read-only browser smoke only)'
         required: true
         type: boolean
         default: false
+  workflow_run:
+    workflows: ["Backend offline quality gates"]
+    types: [completed]
+    branches: [main]
 
 permissions:
   contents: read
@@ -18,17 +22,14 @@ concurrency:
 
 jobs:
   preview:
-    name: Build non-production Wix preview
+    name: Create Wix Preview and run read-only browser smoke
+    if: >-
+      (github.event_name == 'workflow_dispatch' && inputs.create_preview == true && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 35
     steps:
-      - name: Require the approved main branch
-        if: github.ref != 'refs/heads/main'
-        run: |
-          echo "::error::Run this preview workflow from the approved main branch."
-          exit 1
-
-      - name: Checkout connected Wix site repository
+      - name: Checkout approved main branch
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
         with:
           ref: main
@@ -48,48 +49,68 @@ jobs:
             throw new Error("wix.config.json is not bound to the Marian Madrid site.");
           }
           if (!uiVersion) throw new Error("wix.config.json is missing uiVersion.");
-          process.stdout.write(`Wix site binding verified; UI version ${uiVersion}.\n`);
+          process.stdout.write("Wix site binding verified; UI version " + uiVersion + ".\n");
           NODE
 
-      - name: Check Wix CLI API key availability
-        id: auth
+      - name: Require Wix CLI API key
         shell: bash
         env:
           CLI_API_KEY: ${{ secrets.CLI_API_KEY }}
         run: |
-          if [[ -n "${CLI_API_KEY:-}" ]]; then
-            echo "available=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "available=false" >> "$GITHUB_OUTPUT"
+          if [[ -z "${CLI_API_KEY:-}" ]]; then
+            echo "::error::Configure repository secret CLI_API_KEY with the Wix CLI for Sites - Git Integration permission and access to the Marian Madrid site."
+            exit 1
           fi
 
-      - name: Require Wix CLI API key
-        if: steps.auth.outputs.available != 'true'
-        run: |
-          echo "::error::Preview cannot authenticate. Configure repository secret CLI_API_KEY using a Wix API key with the 'Wix CLI for Sites - Git Integration' permission and access to the Marian Madrid site."
-          exit 1
-
       - name: Install locked project dependencies
-        if: steps.auth.outputs.available == 'true'
         run: npm ci
 
       - name: Install Wix CLI for Sites (pinned)
-        if: steps.auth.outputs.available == 'true'
         run: |
           npm install --global @wix/cli@1.2.14
           npm list --global @wix/cli --depth=0
 
       - name: Authenticate Wix CLI
-        if: steps.auth.outputs.available == 'true'
         env:
           CLI_API_KEY: ${{ secrets.CLI_API_KEY }}
         run: npm run wix login -- --api-key "$CLI_API_KEY"
 
-      - name: Skip preview unless explicitly requested
-        if: steps.auth.outputs.available == 'true' && !inputs.create_preview
-        run: echo "Authentication completed. Preview skipped; enable create_preview only after the site has been published at least once."
-
-      - name: Create Wix preview only (never publish)
-        if: steps.auth.outputs.available == 'true' && inputs.create_preview
+      - name: Create Wix preview from latest main commit (never publish)
+        id: wix-preview
         shell: bash
-        run: script --quiet --return --command 'npm run wix preview' /dev/null
+        run: |
+          set -euo pipefail
+          # The CLI prompts for the preview source. The first/default option is
+          # "Latest commit from origin/main"; newline accepts only that selection.
+          printf '\n' | script --quiet --return --command 'npm run wix preview' "$RUNNER_TEMP/wix-preview.typescript" | tee "$RUNNER_TEMP/wix-preview.log"
+          preview_url="$(grep -Eo 'https?://wix\.to/[[:alnum:]]+' "$RUNNER_TEMP/wix-preview.log" | tail -n 1 || true)"
+          if [[ -z "$preview_url" ]]; then
+            echo "::error::Wix CLI completed without exposing a recognized wix.to preview URL."
+            exit 1
+          fi
+          echo "preview_url=$preview_url" >> "$GITHUB_OUTPUT"
+          echo "Created non-publishing Wix Preview: $preview_url"
+
+      - name: Install isolated Playwright runner (pinned)
+        run: |
+          npm install --global @playwright/test@1.65.1
+          playwright --version
+          playwright install --with-deps chromium
+
+      - name: Run read-only browser smoke
+        env:
+          WIX_PREVIEW_URL: ${{ steps.wix-preview.outputs.preview_url }}
+          WIX_SMOKE_REPORT: ${{ runner.temp }}/wix-preview-smoke.json
+        shell: bash
+        run: |
+          export PLAYWRIGHT_MODULE_ROOT="$(npm root --global)"
+          node scripts/wix-preview-smoke.mjs
+
+      - name: Upload read-only smoke report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: wix-preview-readonly-smoke
+          path: ${{ runner.temp }}/wix-preview-smoke.json
+          if-no-files-found: warn
+          retention-days: 3
