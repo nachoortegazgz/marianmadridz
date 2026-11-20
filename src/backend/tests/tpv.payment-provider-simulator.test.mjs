@@ -1,5 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import { assertTpvSandboxIdentity } from "../validation.js";
 import { simulateGatewayPayment, simulateGatewayRefund } from "../tpv/tpvPaymentSimulator.js";
 
 test("approved payment returns deterministic captured synthetic transaction", () => {
@@ -65,4 +67,13 @@ test("refund rejects foreign transaction references and amounts over original", 
     assert.throws(() => simulateGatewayRefund({
         originalTransactionId: payment.transactionId, originalAmount: 10, refundAmount: 10.01, idempotencyKey: "REFUND-CASE-0003",
     }), /REFUND_AMOUNT_INVALID/);
+});
+
+test("synthetic identity fixture contains six records accepted by the canonical validator", async () => {
+    const fixtureUrl = new URL("../../../docs/qa/fixtures/tpv-sandbox-identities.json", import.meta.url);
+    const identities = JSON.parse(await readFile(fixtureUrl, "utf8"));
+    assert.equal(identities.length, 6);
+    assert.equal(identities.filter((item) => item.identityType === "CUSTOMER").length, 3);
+    assert.equal(identities.filter((item) => item.identityType === "STAFF").length, 3);
+    for (const identity of identities) assert.equal(assertTpvSandboxIdentity(identity), true);
 });
