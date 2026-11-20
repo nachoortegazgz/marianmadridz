@@ -65,7 +65,14 @@ function runSyntheticBusinessDay() {
     const commitFixture = (fixture) => {
         const { key, sale } = validateFixture(fixture);
         if (processed.has(key)) {
-            events.push({ type: "SALE_REPLAY", key, saleId: fixture.id, duplicate: true });
+            events.push(makeSyntheticPayload({
+                type: "SALE_REPLAY",
+                key,
+                saleId: fixture.id,
+                duplicate: true,
+                testRunId: RUN_ID,
+                persisted: false,
+            }));
             return;
         }
         const event = makeSyntheticPayload({
