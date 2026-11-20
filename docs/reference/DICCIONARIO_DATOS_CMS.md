@@ -4,7 +4,7 @@
 
 ---
 
-> **SSOT de entorno vigente (2026-11-14):** el único sitio del proyecto es QA: `188bed94-177c-4bc9-a9f0-35080d874f3e` (`https://www.marianmadrid.es/`). El propietario confirma que nunca ha tenido actividad real, que todos los datos son sintéticos, que el cliente de pruebas es Nacho Pitt (`nachoortegazgz@gmail.com`) y que la pasarela está desconectada. No existe otro sitio QA ni un QA externo designado. Las referencias anteriores a otros Site ID o a este sitio como producción quedan supersedidas. El estado Wix Published no altera su clasificación funcional como QA. Véase [SSOT del entorno QA](docs/qa/QA-ENVIRONMENT-SSOT.md).
+> **SSOT del entorno QA (declaración del propietario):** el único sitio del proyecto es QA: `188bed94-177c-4bc9-a9f0-35080d874f3e`. El propietario declara que no ha tenido actividad real y que los datos son sintéticos. Wix Site Context devuelve actualmente Draft (20/11/2026); la mención Published del snapshot del 14/11 es histórica. Véase [SSOT del entorno QA](docs/qa/QA-ENVIRONMENT-SSOT.md) y la [reconciliación live 20/11](../qa/2026-11-20-live-caja-schema-and-reconciliation.md).
 
 ---
 
@@ -1622,17 +1622,17 @@ Las definiciones siguientes combinan contrato físico live y documentación/cód
 |---|---|---|---|
 | `singletonKey` | CajaActual | TEXT | Clave que identifica el registro singleton de la sesión/caja; valor canónico documentado `CAJA_PRINCIPAL`. |
 | `sequenceCounters` | CajaActual | OBJECT | Contadores de secuencia utilizados por el ledger; no editar manualmente. |
-| `operationDate` | CajaActual | DATE | Fecha de referencia operativa de la caja. |
-| `openingAmount` | CajaActual | NUMBER | Saldo de apertura; se mantiene separado de expectedCash aunque coincidan en la fila sintética actual. |
+| `operationDateHour` | CajaActual | DATETIME | Marca temporal física de operación; semántica funcional del campo pendiente de contrato. |
+| `openingCashAmount` | CajaActual | NUMBER | Saldo inicial de efectivo según el esquema físico live. |
 | `cashAmount` | CajaActual | NUMBER | Importe de efectivo físico reflejado en la caja. |
 | `expectedCash` | CajaActual | NUMBER | Efectivo esperado según movimientos físicos registrados. |
 | `countedCash` | CajaActual | NUMBER | Efectivo contado físicamente en el arqueo. |
 | `difference` / `differenceReason` | CajaActual | NUMBER / TEXT | Diferencia de arqueo y explicación asociada. |
 | `cashRegisterStatus` | CajaActual | TEXT | Estado canónico de la caja. El sitio aislado usa `SIMULACION`; el código trata ese sentinel de forma explícita. |
-| `cardAmount` / `otherAmount` / `voucherAmount` | CajaActual | NUMBER | Acumulados por concepto; no equivalen a efectivo físico ni prueban un desglose de Bizum. |
-| `currentSequence` | CajaActual | NUMBER | Campo físico presente; no se localizó consumidor activo en src/. Candidato a retirada tras revisar contratos externos. |
-| `id` | CajaActual | TEXT | Espejo físico de `_id` en el singleton leído; el keyfield CMS sigue siendo `_id`. |
-| `isOpen` | CajaActual | BOOLEAN | Campo físico no canónico; el singleton actual tiene isOpen=true y cashRegisterStatus=SIMULACION. El backend gobierna por cashRegisterStatus. |
+| `cardAmount` / `otherAmount` / `bizumAmount` | CajaActual | NUMBER | Acumulados por medio según el esquema físico live; la proyección cajas.web.js sigue agregando Bizum en otherAmount por contrato. |
+
+
+
 | `taxId` | DatosFiscales | TEXT | NIF/NIE/CIF/VAT-UE del tercero; validado por `assertDatosFiscalesRecord`. |
 | `legalName` | DatosFiscales | TEXT | Razón social/nombre legal del tercero o emisor. |
 | `recordType` | DatosFiscales | TEXT | Discriminador fiscal: `TERCERO`, `GESTORIA`, `CONFIG_SISTEMA`. |
@@ -1836,7 +1836,7 @@ Actualizar este diccionario cuando cambie cualquiera de estos elementos:
 
 Cada actualización debe incluir fecha/corte, sitio, revisión CMS, evidencia de lectura, diff de código, consumidores afectados, pruebas y PR. No modificar Wix CMS como parte de una actualización documental.
 
-## 14. Contrato vigente CajaActual y MovimientosCaja — 2026-11-14
+## 14. Snapshot histórico CajaActual y MovimientosCaja — 2026-11-14 (superseded 2026-11-20)
 
 El esquema físico vigente de CajaActual es revisión 1 con 39 campos. El manifiesto completo y la evidencia están en docs/audits/2026-11-14-cajaactual-live-schema-audit.md.
 
@@ -1862,7 +1862,7 @@ El propietario autorizó una ventana temporal en el único sitio objeto de traba
 - La ventana no habilita pagos, reembolsos, facturación, fichajes, comunicaciones ni automatizaciones externas.
 - No se han ejecutado mutaciones CMS ni migraciones de registros en esta intervención.
 
-## 16. Estado vigente del único sitio — 2026-11-14
+## 16. Estado histórico del único sitio — 2026-11-14 (superseded 2026-11-20)
 
 **Sitio:** 188bed94-177c-4bc9-a9f0-35080d874f3e.  
 **Plataforma:** Wix Editor Classic + Velo.  
@@ -1876,7 +1876,7 @@ El propietario autorizó una ventana temporal en el único sitio objeto de traba
 
 **Política vigente tras TEC-038:** los bypasses globales y APPEND_ONLY_MUTATION_WINDOW se han retirado del código. Los ledgers no deben entrar en allowlists de update/remove. La purga de datos efímeros se restringe por tipo/estado/fecha en ControlOperativo. Antes de publicación: CI completo, sitio QA accesible y aislamiento runtime verificado.
 
-## Addendum de vigencia — contratos CMS del sitio actual (2026-11-14)
+## Addendum histórico — contratos CMS del sitio actual (2026-11-14; superseded 2026-11-20)
 
 Este addendum sustituye los addenda históricos que describían MapaStaff como maestro fiscal o DatosFiscales como colección retirada.
 
@@ -1905,7 +1905,7 @@ La eliminación se hizo por ID individual con condición de `traceId`; readback 
 
 La instrucción antigua de desactivar la ventana antes de fusionar o publicar queda sustituida: la política temporal está integrada en main para la fase de pruebas en el sitio aislado. Solo el usuario ordenará su restauración antes del despliegue. La publicación Wix de esta ampliación sigue pendiente.
 
-### Alineación backend y estado pendiente
+### Alineación backend — snapshot histórico de rama (14/11; superseded by main 20/11)
 
 En esta rama, `cajas.web.js` y sus fixtures usan `operationDateHour`, `bizumAmount` y los cuatro campos `opening*Amount`; se ha retirado la comprobación redundante de `isOpen`. El DTO expone los cuatro saldos iniciales. **No existe todavía un WebMethod de apertura de sesión que persista esos cuatro importes**; por tanto permanecen null y la funcionalidad de apertura/saldos iniciales no está validada end-to-end. La proyección actual no se considera completa para `otherAmount` hasta probar su clasificación y conciliación desde `MovimientosCaja`.
 
@@ -1982,3 +1982,20 @@ La regla append-only de `MovimientosCaja` permanece vigente para todo movimiento
 ## Addendum de precedencia — datos sintéticos de desarrollo (2026-11-20)
 
 Este diccionario describe esquemas y observaciones CMS; no gobierna la autorización de pruebas ni puede imponer una prohibición general de escritura, edición o eliminación de registros sintéticos. La directriz vigente del propietario autoriza simulacros completos y persistentes con datos sintéticos en el sitio de desarrollo, así como su reset controlado antes del uso real: [Directriz del propietario](../PROJECT-OWNER-DIRECTIVE-2026-11-20.md). Las políticas históricas de append-only/inmutabilidad en QA quedan supersedidas en cuanto pretendan impedir los ensayos autorizados. La autorización no acredita que una ruta concreta esté implementada: validar contratos, permisos, autorización backend, idempotencia y APIs oficiales antes de usarla. Mantener protegidos los efectos externos y cumplir las obligaciones legales aplicables.
+
+
+## 19. Contrato live CajaActual y conciliación — 2026-11-20
+
+**Evidencia Wix:** colección CajaActual revisión 18, 81 campos, actualizada el 17/11/2026; un singleton. El esquema físico contiene operationDateHour DATETIME, openingCashAmount NUMBER, openingCardAmount NUMBER, openingBizumAmount NUMBER, openingOtherAmount NUMBER, bizumAmount NUMBER, cashAmount NUMBER, cardAmount NUMBER, otherAmount NUMBER, expectedCash NUMBER, countedCash NUMBER, difference NUMBER, sequenceCounters OBJECT, snapshotSource TEXT, traceId TEXT y cashRegisterStatus TEXT.
+
+**Campos ausentes del esquema actual:** operationDate, openingAmount, voucherAmount, currentSequence, id e isOpen. No escribirlos como campos raíz de CajaActual. La fotografía del 14/11 queda histórica.
+
+**Código integrado:** PR #460 alinea el DTO getCashierState con openingCashAmount y actualiza fixtures. El comentario de Bizum aclara que la proyección de cajas.web.js agrega Bizum en otherAmount aunque exista bizumAmount físico. CI PR #460: Layer 1 333/333, Layer 2 266/266, suite offline 688/688; SDK, npm audit, ESLint y secret scanning SUCCESS.
+
+**Desalineación pendiente P2:** cajas.web.js todavía lee/escribe operationDate, que no existe en el esquema físico. La colección declara operationDateHour DATETIME, pero no está aprobado si el DTO Jornada debe derivarse de openedAt, lastMovementAt u operationDateHour. No sustituir el campo a ciegas. #htmlAdmin muestra state.operationDate; el singleton live no devuelve operationDate. Resolver el contrato y añadir prueba de zona horaria antes de modificar.
+
+**Estado live del singleton:** ABIERTA; openedAt=2026-11-14T06:00:00Z; closedAt=2026-11-12T23:00:00Z; lastMovementAt=2026-11-12T23:00:00Z; openingCashAmount/cashAmount/expectedCash/countedCash=300 EUR; difference=0; snapshotSource=APERTURA_CAJA; traceId vacío; sequenceCounters se devuelve como cadena JSON aunque el tipo físico es OBJECT. No se ha mutado.
+
+**Estado relacionado:** ControlOperativo tiene 58 elementos y 3 compensaciones pendientes; no hay registros ALERT. MovimientosCaja, HistoricoCierresZ y LibroAsientosContablesDetalle tienen 0 elementos. Los bookings nativos asociados a los pedidos #10032/#10033 están CONFIRMED/PAID; las proyecciones CitasF2 siguen PENDING_LEDGER y amountReconciliationRequired=true. Véase [reconciliación live 20/11](../qa/2026-11-20-live-caja-schema-and-reconciliation.md).
+
+Wix Site Context devuelve Draft. No se han realizado escrituras Wix, reintentos, cierres ni publicación. Los writers fiscales y contables siguen deshabilitados; release NO-GO.
