@@ -60,6 +60,18 @@ const ALLOWED_MESSAGES = Object.freeze([
     "CUSTOMER_BOOKINGS",
     "VALIDATE_SALE_DRAFT",
     "GIFT_CARD_BALANCE",
+    "SANDBOX_CONFIG",
+    "SANDBOX_PERMISSIONS",
+    "SANDBOX_SESSION_OPEN",
+    "SANDBOX_PARTIAL_COUNT",
+    "SANDBOX_CASH_MOVEMENT",
+    "SANDBOX_PAYMENT_VALIDATE",
+    "SANDBOX_SALE_REGISTER",
+    "SANDBOX_REFUND",
+    "SANDBOX_SESSION_SUMMARY",
+    "SANDBOX_TICKET_X",
+    "SANDBOX_TICKET_Z",
+    "SANDBOX_AUDIT_LIST",
     "CONFIG",
     "PERMISSIONS",
     "SESSION_OPEN",
@@ -140,10 +152,18 @@ export function initializeTpvPage(widgetElement) {
                 traceId
             );
 
+            const sandboxReady = result.status === "SUCCESS";
             return {
                 component: "htmlTPV",
                 protocolVersion: 1,
-                ready: result.status === "SUCCESS",
+                ready: sandboxReady,
+                environment: sandboxReady ? "SANDBOX" : "UNAVAILABLE",
+                previewOnly: true,
+                syntheticOnly: true,
+                realPaymentsEnabled: false,
+                fiscalWritesEnabled: false,
+                customerNotificationsEnabled: false,
+                hardwareEnabled: false,
                 currencyCode: "EUR",
                 timeZone: "Europe/Madrid",
                 capabilities: {
@@ -283,108 +303,120 @@ export function initializeTpvPage(widgetElement) {
                 );
                 return;
 
+            case "SANDBOX_CONFIG":
             case "CONFIG":
                 await respond(
-                    "CONFIG_RES",
+                    type === "SANDBOX_CONFIG" ? "SANDBOX_CONFIG_RES" : "CONFIG_RES",
                     () => obtenerConfiguracionTPV(),
                     "TPV_CONFIG_READ_FAILED",
                     "No se pudo consultar la configuración."
                 );
                 return;
 
+            case "SANDBOX_PERMISSIONS":
             case "PERMISSIONS":
                 await respond(
-                    "PERMISSIONS_RES",
+                    type === "SANDBOX_PERMISSIONS" ? "SANDBOX_PERMISSIONS_RES" : "PERMISSIONS_RES",
                     () => obtenerPermisosTPV(),
                     "TPV_PERMISSIONS_READ_FAILED",
                     "No se pudieron consultar los permisos."
                 );
                 return;
 
+            case "SANDBOX_SESSION_OPEN":
             case "SESSION_OPEN":
                 await respond(
-                    "SESSION_OPEN_RES",
+                    type === "SANDBOX_SESSION_OPEN" ? "SANDBOX_SESSION_OPEN_RES" : "SESSION_OPEN_RES",
                     () => abrirCaja(payload),
                     "TPV_SESSION_OPEN_FAILED",
                     "No se pudo abrir la caja."
                 );
                 return;
 
+            case "SANDBOX_PARTIAL_COUNT":
             case "PARTIAL_COUNT":
                 await respond(
-                    "PARTIAL_COUNT_RES",
+                    type === "SANDBOX_PARTIAL_COUNT" ? "SANDBOX_PARTIAL_COUNT_RES" : "PARTIAL_COUNT_RES",
                     () => registrarArqueoParcial(payload),
                     "TPV_PARTIAL_COUNT_FAILED",
                     "No se pudo registrar el control parcial."
                 );
                 return;
 
+            case "SANDBOX_CASH_MOVEMENT":
             case "CASH_MOVEMENT":
                 await respond(
-                    "CASH_MOVEMENT_RES",
+                    type === "SANDBOX_CASH_MOVEMENT" ? "SANDBOX_CASH_MOVEMENT_RES" : "CASH_MOVEMENT_RES",
                     () => registrarMovimientoCaja(payload),
                     "TPV_CASH_MOVEMENT_FAILED",
                     "No se pudo registrar el movimiento."
                 );
                 return;
 
+            case "SANDBOX_PAYMENT_VALIDATE":
             case "PAYMENT_VALIDATE":
                 await respond(
-                    "PAYMENT_VALIDATE_RES",
+                    type === "SANDBOX_PAYMENT_VALIDATE" ? "SANDBOX_PAYMENT_VALIDATE_RES" : "PAYMENT_VALIDATE_RES",
                     () => validarDesglosePagos(payload),
                     "TPV_PAYMENT_VALIDATE_FAILED",
                     "No se pudo validar el pago."
                 );
                 return;
 
+            case "SANDBOX_SALE_REGISTER":
             case "SALE_REGISTER":
                 await respond(
-                    "SALE_REGISTER_RES",
+                    type === "SANDBOX_SALE_REGISTER" ? "SANDBOX_SALE_REGISTER_RES" : "SALE_REGISTER_RES",
                     () => registrarVenta(payload),
                     "TPV_SALE_REGISTER_FAILED",
                     "No se pudo registrar la venta."
                 );
                 return;
 
+            case "SANDBOX_REFUND":
             case "REFUND":
                 await respond(
-                    "REFUND_RES",
+                    type === "SANDBOX_REFUND" ? "SANDBOX_REFUND_RES" : "REFUND_RES",
                     () => solicitarDevolucion(payload),
                     "TPV_REFUND_FAILED",
                     "No se pudo registrar la devolución."
                 );
                 return;
 
+            case "SANDBOX_SESSION_SUMMARY":
             case "SESSION_SUMMARY":
                 await respond(
-                    "SESSION_SUMMARY_RES",
+                    type === "SANDBOX_SESSION_SUMMARY" ? "SANDBOX_SESSION_SUMMARY_RES" : "SESSION_SUMMARY_RES",
                     () => obtenerResumenSesion(payload),
                     "TPV_SUMMARY_FAILED",
                     "No se pudo obtener el resumen."
                 );
                 return;
 
+            case "SANDBOX_TICKET_X":
             case "TICKET_X":
                 await respond(
-                    "TICKET_X_RES",
+                    type === "SANDBOX_TICKET_X" ? "SANDBOX_TICKET_X_RES" : "TICKET_X_RES",
                     () => generarTicketX(payload),
                     "TPV_TICKET_X_FAILED",
                     "No se pudo generar el control X."
                 );
                 return;
 
+            case "SANDBOX_TICKET_Z":
             case "TICKET_Z":
                 await respond(
-                    "TICKET_Z_RES",
+                    type === "SANDBOX_TICKET_Z" ? "SANDBOX_TICKET_Z_RES" : "TICKET_Z_RES",
                     () => cerrarTicketZ(payload),
                     "TPV_TICKET_Z_FAILED",
                     "No se pudo cerrar la caja."
                 );
                 return;
 
+            case "SANDBOX_AUDIT_LIST":
             case "AUDIT_LIST":
                 await respond(
-                    "AUDIT_LIST_RES",
+                    type === "SANDBOX_AUDIT_LIST" ? "SANDBOX_AUDIT_LIST_RES" : "AUDIT_LIST_RES",
                     () => consultarAuditoriaTPV(payload),
                     "TPV_AUDIT_READ_FAILED",
                     "No se pudo consultar la auditoría."
