@@ -47,6 +47,12 @@ test('HOOK-CITAS-01 validates canonical enums, traceId and pairToken', () => {
     bookingType: 'SIMPLE',
     bookingStatus: 'PENDING',
     paymentStatus: 'NOT_PAID',
+    serviceId: '33333333-3333-4333-8333-333333333333',
+    resourceId: '44444444-4444-4444-8444-444444444444',
+    slotStart: new Date('2026-11-12T08:30:00.000Z'),
+    slotEnd: new Date('2026-11-12T09:00:00.000Z'),
+    totalAmount: 100,
+    dateYmd: '2026-11-12',
     traceId: 'trace-citas-001',
   };
   assert.doesNotThrow(() => H.CitasF2_beforeInsert({ ...valid }));
@@ -70,6 +76,10 @@ test('HOOK-CMS-DATETIME-01 normalizes all CitasF2 DateTime fields to Date object
     bookingType: 'SIMPLE',
     bookingStatus: 'PENDING',
     paymentStatus: 'NOT_PAID',
+    serviceId: '33333333-3333-4333-8333-333333333333',
+    resourceId: '44444444-4444-4444-8444-444444444444',
+    totalAmount: 100,
+    dateYmd: '2026-11-12',
     traceId: 'trace-citas-datetime',
     slotStart: '2026-11-12T08:30:00.000Z',
     slotEnd: '2026-11-12T09:00:00.000Z',
@@ -127,11 +137,25 @@ test('HOOK-APPEND-02 retired blocked-collection hooks are gone (ADR-02)', () => 
 function cajaBase() {
   return {
     eventType: IC.EVENT_TYPE ? Object.values(IC.EVENT_TYPE)[0] : 'VENTA_LINEA',
-    movementType: Object.values(IC.MOVEMENT_TYPE)[0],
+    movementType: IC.MOVEMENT_TYPE.VENTA,
+    amount: 100,
     totalAmount: 100,
-    thirdPartyId: null,
+    numSerieFactura: 'FAC-QA-0001',
+    sequenceNumber: 1,
+    transactionId: 'TX-QA-0001',
+    previousRecordHash: 'b'.repeat(64),
+    recordTimestamp: new Date('2026-11-20T10:00:00.000Z'),
     schemaVersion: 'LEDGER_V5_FISCAL',
     traceId: 'trace-caja-001',
+    paymentMethod: IC.PAYMENT_METHOD.EFECTIVO,
+    channelType: IC.CHANNEL_TYPE.PRESENCIAL,
+    operationDescription: 'Synthetic hook contract fixture',
+    staffResourceId: 'CAJA_LOCAL',
+    tipoFactura: IC.TIPO_FACTURA.F2,
+    fechaExpedicionFactura: '2026-11-20',
+    tipoImpositivo: 0.21,
+    fiscalPeriod: '2026-11',
+    thirdPartyId: null,
     hash: 'a'.repeat(64),
   };
 }
@@ -225,6 +249,16 @@ test('HOOK-CAJA-06 normalizes legacy recordHash alias to canonical hash', () => 
   assert.doesNotThrow(() => H.MovimientosCaja_beforeInsert(item));
   assert.equal(item.hash, 'b'.repeat(64));
   assert.ok(!("recordHash" in item), "el alias 'recordHash' debe eliminarse del documento");
+});
+
+test('HOOK-CAJA-08 enforces all physical required fields and channel enum', () => {
+  const valid = cajaBase();
+  assert.doesNotThrow(() => H.MovimientosCaja_beforeInsert({ ...valid }));
+  for (const field of ['numSerieFactura', 'transactionId', 'previousRecordHash', 'paymentMethod', 'channelType', 'operationDescription', 'staffResourceId', 'tipoFactura', 'fechaExpedicionFactura', 'fiscalPeriod']) {
+    const invalid = { ...valid, [field]: '' };
+    assert.throws(() => H.MovimientosCaja_beforeInsert(invalid), new RegExp(field));
+  }
+  assert.throws(() => H.MovimientosCaja_beforeInsert({ ...valid, channelType: 'POS' }), /channelType/);
 });
 
 test('HOOK-CAJA-07 persists exact CMS field IDs and OBJECT payloads', () => {
@@ -412,11 +446,24 @@ test('HOOK-CIERREZ-01 insert needs traceId; updates are restricted to recovery f
   assert.throws(() => H.HistoricoCierresZ_beforeInsert({}), /traceId/);
   const closing = {
     traceId: 't1',
+    closeDate: '2026-11-11',
+    operationDate: '2026-11-11',
+    fiscalPeriod: '2026-11',
+    totalTaxAmount: 21,
+    totalTaxBase: 100,
+    totalOnline: 0,
+    totalBizum: 0,
+    totalCard: 0,
+    totalCash: 121,
+    closedBy: 'e556070a-6d6a-402e-8422-11133033ea76',
+    recordDomain: 'CASH_REGISTER',
     closedAt: '2026-11-11T20:00:00.000Z',
     verifiedAt: '2026-11-11T20:01:00.000Z',
     sentAt: '2026-11-11T20:02:00.000Z',
   };
   H.HistoricoCierresZ_beforeInsert(closing);
+  assert.throws(() => H.HistoricoCierresZ_beforeInsert({ ...closing, recordDomain: '' }), /recordDomain/);
+  assert.throws(() => H.HistoricoCierresZ_beforeInsert({ ...closing, totalCash: '121' }), /totalCash/);
   for (const field of ['closedAt', 'verifiedAt', 'sentAt']) assert.ok(closing[field] instanceof Date);
   assert.doesNotThrow(() => H.HistoricoCierresZ_beforeUpdate({
     _id: 'x', closingSignature: 'sig', csvAEAT: 'csv',
@@ -522,6 +569,7 @@ test('HOOK-PACKAGE-01 validates immutable accountant package snapshot inserts', 
   assert.strictEqual(H.PaquetesGestoria_beforeInsert(valid), valid);
   assert.ok(valid.createdAt instanceof Date);
   assert.strictEqual(valid.createdAt.toISOString(), '2026-11-11T20:05:00.000Z');
+  assert.throws(() => H.PaquetesGestoria_beforeInsert({ ...valid, createdAt: undefined }), /createdAt/);
   assert.throws(() => H.PaquetesGestoria_beforeInsert({ ...valid, snapshotHash: 'invalid' }), /SHA-256/);
   assert.throws(() => H.PaquetesGestoria_beforeInsert({ ...valid, fiscalMonth: 2 }), /no admite fiscalMonth/);
 });
@@ -535,6 +583,7 @@ test('HOOK-PACKAGE-02 monthly package requires month and forbids quarter', () =>
     summaryData: {},
     invoiceData: [],
     packageStatus: 'PREPARED',
+    createdAt: '2026-11-20T10:00:00.000Z',
     snapshotHash: 'b'.repeat(64),
     schemaVersion: '1.0',
     source: 'FISCAL_AGGREGATOR',
@@ -547,6 +596,34 @@ test('HOOK-PACKAGE-02 monthly package requires month and forbids quarter', () =>
 test('HOOK-PACKAGE-03 preserves immutable gestoría package snapshots', () => {
   assert.throws(() => H.PaquetesGestoria_beforeUpdate({ _id: 'synthetic-package-1' }), /append-only/);
   assert.throws(() => H.PaquetesGestoria_beforeRemove('synthetic-package-1'), /append-only/);
+});
+
+test('HOOK-CITAS-INSERT-01 enforces all physical required booking fields', () => {
+  const valid = {
+    _id: 'e556070a-6d6a-402e-8422-11133033ea76',
+    bookingId: 'e556070a-6d6a-402e-8422-11133033ea76',
+    scheduleId: 'e556070a-6d6a-402e-8422-11133033ea76',
+    serviceId: 'e556070a-6d6a-402e-8422-11133033ea76',
+    resourceId: 'e556070a-6d6a-402e-8422-11133033ea76',
+    slotStart: new Date('2026-11-20T10:00:00.000Z'),
+    slotEnd: new Date('2026-11-20T11:00:00.000Z'),
+    totalAmount: 100,
+    dateYmd: '2026-11-20',
+    bookingType: Object.values(IC.BOOKING_TYPE)[0],
+    bookingStatus: Object.values(IC.CITAS_BOOKING_STATUS)[0],
+    paymentStatus: Object.values(IC.CITAS_PAYMENT_STATUS)[0],
+    traceId: 'trace-citas-insert-001',
+  };
+  assert.doesNotThrow(() => H.CitasF2_beforeInsert({ ...valid }));
+  assert.throws(() => H.CitasF2_beforeInsert({ ...valid, slotStart: undefined }), /slotStart/);
+  assert.throws(() => H.CitasF2_beforeInsert({ ...valid, totalAmount: '100' }), /totalAmount/);
+});
+
+test('HOOK-ADDON-01 requires the physical taxIncluded boolean', () => {
+  const valid = { _id: 'addon-qa-1', addonId: 'addon-qa-1', sku: 'ADDON-QA-1', taxIncluded: false };
+  assert.strictEqual(H.ComplementosCatalogo_beforeInsert({ ...valid }).taxIncluded, false);
+  assert.throws(() => H.ComplementosCatalogo_beforeInsert({ ...valid, taxIncluded: undefined }), /taxIncluded/);
+  assert.throws(() => H.ComplementosCatalogo_beforeInsert({ ...valid, taxIncluded: 'false' }), /taxIncluded/);
 });
 
 test('HOOK-CAJA-04 allows edit and removal only for the active synthetic TPV test-run row', async () => {

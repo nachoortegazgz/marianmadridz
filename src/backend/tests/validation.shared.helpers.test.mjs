@@ -12,6 +12,25 @@ test("VALIDATION-ENUM-01 accepts canonical enum values and rejects unknown value
     );
 });
 
+test("VALIDATION-MAPA-01 rejects incomplete MapaStaff insert records", () => {
+    assert.throws(() => V.assertMapaStaffRecord({}), /recordType invalido/);
+});
+
+test("VALIDATION-MOVEMENT-01 validates required movement enums before any side effect", () => {
+    assert.equal(V.assertFiscalMovementInputEnums({
+        movementType: IC.MOVEMENT_TYPE.VENTA,
+        paymentMethod: IC.PAYMENT_METHOD.EFECTIVO,
+        channelType: IC.CHANNEL_TYPE.PRESENCIAL,
+        tipoFactura: IC.TIPO_FACTURA.F2,
+    }), true);
+    assert.throws(() => V.assertFiscalMovementInputEnums({
+        movementType: IC.MOVEMENT_TYPE.VENTA,
+        paymentMethod: IC.PAYMENT_METHOD.EFECTIVO,
+        channelType: "POS",
+        tipoFactura: IC.TIPO_FACTURA.F2,
+    }), /channelType invalido/);
+});
+
 test("VALIDATION-FISCAL-01 validates Spanish NIF/NIE/CIF and EU VAT using shared helper", () => {
     assert.equal(V.isValidNifOrEuVat("12345678Z"), true);
     assert.equal(V.isValidNifOrEuVat("X1234567L"), true);

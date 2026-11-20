@@ -10,6 +10,17 @@ STANDARDS: G10 ASCII Strict. Sin suppressAuth. Acceso CMS centralizado
 
 import { items } from "@wix/data";
 import { auth } from "@wix/essentials";
+import { BUSINESS_COLLECTIONS } from "backend/internalConfig";
+import {
+    assertControlOperativo,
+    assertCanonicalControlFields,
+    assertCitasF2Insert,
+    assertRegistrosHorariosStaff,
+    assertMapaStaffRecord,
+    assertCajaActualRecord,
+    assertHistoricoCierresZ,
+    assertMovimientosCajaRequiredFields,
+} from "backend/validation";
 import {
     assertBulkPatchAllowed,
     assertInsertAllowed,
@@ -314,6 +325,22 @@ export async function getItem(collection, id, consistency) {
 
 export function insertItem(collection, item) {
     assertInsertAllowed(collection, item);
+    if (collection === BUSINESS_COLLECTIONS.CONTROL_OPERATIVO) {
+        assertControlOperativo(item);
+        assertCanonicalControlFields(item);
+    } else if (collection === BUSINESS_COLLECTIONS.CITAS_F2) {
+        assertCitasF2Insert(item);
+    } else if (collection === BUSINESS_COLLECTIONS.REGISTROS_HORARIOS_STAFF) {
+        assertRegistrosHorariosStaff(item);
+    } else if (collection === BUSINESS_COLLECTIONS.MAPA_STAFF) {
+        assertMapaStaffRecord(item);
+    } else if (collection === BUSINESS_COLLECTIONS.CAJA_ACTUAL) {
+        assertCajaActualRecord(item);
+    } else if (collection === BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA) {
+        assertMovimientosCajaRequiredFields(item);
+    } else if (collection === BUSINESS_COLLECTIONS.HISTORICO_CIERRES_Z) {
+        assertHistoricoCierresZ(item);
+    }
     return elevatedInsert(collection, item);
 }
 

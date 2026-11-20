@@ -1483,6 +1483,12 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
         if (!cleanDiaKey) {
             return { status: "ERROR", data: null, error: { code: "INVALID_DATE", message: "Fecha invalida" } };
         }
+        const closedBy = authorizeCashier
+            ? _safeTrim(closingActor?.resourceId)
+            : _safeTrim(options?.closedBy);
+        // The public cashier method never trusts recordDomain supplied by the browser.
+        // Only trusted backend callers may provide the approved domain explicitly.
+        const recordDomain = authorizeCashier ? "" : _safeTrim(options?.recordDomain);
 
         ledgerLock = await acquireFiscalLedgerLock(traceId);
         await assertFiscalLedgerLock(ledgerLock);
@@ -1624,6 +1630,23 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
             return { status: "ERROR", data: null, error: { code: "INTEGRITY_VIOLATION", message: "Hash chain integrity violation detected. Cannot close." } };
         }
 
+        const hasValidClosedBy = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(closedBy);
+        if (!hasValidClosedBy || !recordDomain) {
+            return {
+                status: "ERROR",
+                data: null,
+                error: {
+                    code: "Z_CLOSING_REQUIRED_FIELDS_UNRESOLVED",
+                    message: "El cierre requiere closedBy (resourceId válido) y recordDomain aprobado; no se asignan valores por defecto.",
+                    missing: [
+                        ...(!hasValidClosedBy ? ["closedBy"] : []),
+                        ...(!recordDomain ? ["recordDomain"] : []),
+                    ],
+                },
+                traceId,
+            };
+        }
+
         const firstMovement = allMovements[0];
         const lastMovement = allMovements[allMovements.length - 1];
         const closingPayload = _stableSerialize({
@@ -1660,7 +1683,13 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
 
         const zRecord = {
             _id: `Z_${cleanDiaKey}`,
+            closeDate: cleanDiaKey,
             operationDate: cleanDiaKey,
+            fiscalPeriod: cleanDiaKey.slice(0, 7),
+            totalTaxAmount: _roundMoney(netTaxAmount),
+            totalTaxBase: _roundMoney(netTaxableAmount),
+            closedBy,
+            recordDomain,
             closingStatus: "CERRADO",
             consolidatedTotalAmount,
             grossSalesTotal: _roundMoney(grossSalesTotal),
@@ -1687,7 +1716,7 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
             closingHash,
             closingSignature,
             closingSignatureStatus,
-            closingSource: "CRON",
+            closingSource: authorizeCashier ? "MANUAL" : "CRON",
             closingSchemaVersion: LEDGER_SCHEMA_VERSION,
             timeZone: SDK_CONFIG.TZ,
             closedAt: new Date(),
@@ -1721,7 +1750,7 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
         if (cashRegister) {
             cashRegister.cashRegisterStatus = CASH_REGISTER_STATUS.CERRADA;
             cashRegister.closedAt = saved?.closedAt instanceof Date ? saved.closedAt : new Date();
-            cashRegister.closedBy = closingActor?.resourceId || "SYSTEM";
+            cashRegister.closedBy = closedBy;
             cashRegister._updatedDate = new Date();
             await dalSave(CAJA_ACTUAL_COL, cashRegister);
         }
