@@ -24,8 +24,8 @@ El repositorio `nachoortegazgz/marianmadridz` contiene `wix.config.json` con el 
 |---|---|---|
 | Servicios | Wix Bookings | Lectura de catálogo; sin escritores de reservas |
 | Productos y variantes | Wix Stores Catalog V3 | Lectura de catálogo; sin cambios de stock ni pedidos |
-| Clientes | Fixture sintética central en `TPV_QA_FIXTURES` | Solo cliente de prueba `Nacho Pitt` / `nacho.pitt@example.test`; no consulta CRM |
-| Profesionales | Fixture sintética central en `TPV_QA_FIXTURES` | Solo identificadores y nombres sintéticos; no consulta staff real |
+| Clientes | `TpvSandboxIdentities` (CMS propio) | Solo identidades sintéticas `CUSTOMER`, sin CRM/Members ni datos personales reales |
+| Profesionales | `TpvSandboxIdentities` (CMS propio) | Solo identidades sintéticas `STAFF`; sin IDs ni consultas de Bookings Staff |
 | Reservas | Wix Bookings | Consulta y vinculación deshabilitadas en QA |
 | Pagos, pedidos y transacciones | Wix eCommerce / proveedor | Simulación sintética; sin checkout, autorización, captura, pedido ni reembolso real |
 | Tarjetas regalo | Wix Gift Cards | Consulta de saldo real, emisión, canje y reembolso deshabilitados en QA |
@@ -38,11 +38,12 @@ Wix Bookings y Stores permanecen como SSOT de los catálogos que se leen. El CMS
 
 - `src/pages/TPV.yl5th.js` inicializa `public/tpvPageController.js`.
 - El controlador despacha WebMethods de `src/backend/tpv/*.web.js`.
-- `tpvCatalogo.web.js` consulta servicios Bookings y productos/variantes Stores V3. Profesionales y cliente proceden de fixtures sintéticas.
-- `tpvVentas.web.js` rechaza IDs de clientes/profesionales ajenos a las fixtures y rechaza cualquier `bookingId`; no consulta CRM ni Bookings Reader.
+- `tpvCatalogo.web.js` consulta servicios Bookings y productos/variantes Stores V3. Clientes y profesionales proceden exclusivamente de `TpvSandboxIdentities`, filtrada por `SANDBOX`, `syntheticOnly` y `testRunId`.
+- `tpvVentas.web.js` valida los IDs contra `TpvSandboxIdentities` y rechaza cualquier `bookingId`; no consulta CRM ni Bookings Reader.
 - `tpvGiftCards.web.js` responde `TPV_GIFT_CARDS_DISABLED_IN_QA`; no consulta `giftVouchers.getGiftCard` ni recibe códigos de tarjeta.
 - Los eventos de auditoría usan el actor sintético `QA_ACTOR`; la identidad real se utiliza únicamente en la comprobación de autorización backend y no se persiste en los registros TPV.
-- `tpvQaRepository.js` concentra escrituras QA, idempotencia y locks CAS.
+- `tpvQaRepository.js` concentra escrituras QA, idempotencia y locks CAS; los eventos sintéticos se persisten en `MovimientosCaja` y `CajaActual` conserva la proyección de caja. `TPV_QA_COLLECTIONS` son claves lógicas internas, no colecciones físicas.
+- `TpvSandboxIdentities` es una excepción autorizada de colección propia solo para identidades sintéticas; su esquema tiene permisos ADMIN y hooks append-only. Sus filas aún deben cargarse desde Wix Sandbox.
 - `#htmlTPV.txt` implementa el protocolo `MM_READY/MM_CONTEXT`, `postMessage`, catálogo Bookings/Stores V3, fixtures de cliente/profesionales y operaciones persistentes sintéticas QA a través de `tpvPageController.js`. Los cobros reales, facturación, Gift Cards reales, reservas, hardware y escrituras operativas permanecen deshabilitados. El HTML está versionado; su instalación en el HTML Component Wix y runtime siguen pendientes de verificación.
 
 ## Política de seguridad
@@ -52,7 +53,7 @@ Wix Bookings y Stores permanecen como SSOT de los catálogos que se leen. El CMS
 - La interfaz no es una barrera de seguridad: cada WebMethod vuelve a comprobar permisos.
 - No se llama a Payments, checkout, Orders, refunds, Bookings writers, Gift Card writers, hardware, notificaciones ni emisión fiscal.
 - No se escribe en `CajaActual`, `MovimientosCaja`, `HistoricoCierresZ` ni `LibroAsientosContablesDetalle`.
-- Las escrituras QA se limitan a las nueve colecciones `TPV_QA_*` y siguen las claves idempotentes y los controles de concurrencia definidos por el repositorio.
+- Las escrituras de eventos QA se limitan a `MovimientosCaja` con marcadores `TPV_QA_SYNTHETIC` y `SIMULATED_TPV_*`; `CajaActual` recibe exclusivamente la proyección backend. No existen colecciones físicas `TPV_QA_*`.
 - El identificador de auditoría persistido es `QA_ACTOR`, nunca el ID real del miembro.
 
 ## Limpieza legacy
