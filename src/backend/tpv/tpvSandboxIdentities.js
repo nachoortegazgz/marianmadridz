@@ -7,8 +7,7 @@ function isEligibleIdentity(item, identityType) {
         item?.testRunId === TPV_QA_RUNTIME_POLICY.TEST_RUN_ID &&
         item?.syntheticOnly === true &&
         item?.active === true &&
-        typeof item?.identityId === "string" &&
-        item._id === item.identityId;
+        typeof item?.identityId === "string";
 }
 
 export async function listTpvSandboxIdentities(identityType) {
