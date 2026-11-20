@@ -68,7 +68,7 @@ export async function withQaSaleLock(saleId, traceId, operation) {
             { fieldPath: "status", action: "SET_FIELD", value: "ACTIVE" },
             { fieldPath: "expiresAt", action: "SET_FIELD", value: expiresAt },
             { fieldPath: "traceId", action: "SET_FIELD", value: String(traceId || "") },
-            { fieldPath: "payload", action: "SET_FIELD", value: { saleId: cleanSaleId, environment: "TEST", acquiredAt: new Date(now) } },
+            { fieldPath: "payload", action: "SET_FIELD", value: { saleId: cleanSaleId, environment: TPV_QA_RUNTIME_POLICY.ENVIRONMENT, acquiredAt: new Date(now) } },
             { fieldPath: "version", action: "INCREMENT_FIELD", value: 1 },
         ]], { condition: { filter: condition } });
         if (!Array.isArray(patched?.updatedItemIds) || !patched.updatedItemIds.includes(lockId)) {
@@ -88,7 +88,7 @@ export async function withQaSaleLock(saleId, traceId, operation) {
         const released = await bulkPatchItems(collection, [lockId], [[
             { fieldPath: "status", action: "SET_FIELD", value: "RELEASED" },
             { fieldPath: "expiresAt", action: "SET_FIELD", value: new Date(0) },
-            { fieldPath: "payload", action: "SET_FIELD", value: { saleId: cleanSaleId, environment: "TEST", releasedAt: new Date() } },
+            { fieldPath: "payload", action: "SET_FIELD", value: { saleId: cleanSaleId, environment: TPV_QA_RUNTIME_POLICY.ENVIRONMENT, releasedAt: new Date() } },
             { fieldPath: "version", action: "INCREMENT_FIELD", value: 1 },
         ]], {
             condition: {
