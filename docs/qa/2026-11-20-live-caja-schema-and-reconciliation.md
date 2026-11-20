@@ -135,7 +135,7 @@ Esta corrección protege nuevos eventos. **No repara ni reintenta las tres compe
 7. Ejecutar E2E de hooks, pagos y caja solo en Sandbox inequívocamente aislado.
 8. Mantener writers fiscales/contables deshabilitados y NO-GO producción.
 
-## 8. Límites de validación
+## 9. Límites de validación
 
 Verificado mediante lectura Wix: esquema, permisos, recuentos, estado del singleton, compensaciones, pedidos, transacciones y bookings nativos.
 
