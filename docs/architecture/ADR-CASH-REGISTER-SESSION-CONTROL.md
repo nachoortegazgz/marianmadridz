@@ -1,6 +1,6 @@
 # ADR — Sesión operativa de CajaActual y autorización de apertura/cierre
 
-> **Revalidación 20/11/2026:** el snapshot CMS del 11/11 y las referencias a SIMULACION son históricos. El singleton live ahora está ABIERTA, con fechas incoherentes y sin marcadores QA. Véase la sección 13 y la [reconciliación live 20/11](../qa/2026-11-20-live-caja-schema-and-reconciliation.md). La propuesta sigue pendiente de aprobación de implementación.
+> **Revalidación 20/11/2026:** el snapshot CMS del 11/11 y las referencias a SIMULACION son históricos. El singleton live ahora está ABIERTA, con fechas incoherentes y sin marcadores QA. Véase la sección 13 y la [reconciliación live 20/11](../qa/2026-11-20-live-caja-schema-and-reconciliation.md). PR #466 corrigió `CajaActual_beforeUpdate` para recuperar el estado previo mediante `getItem()` con consistencia fuerte, sin depender de `context.original` no documentado por Wix. La propuesta sigue pendiente de aprobación de implementación; H-01 (transiciones, autorización, concurrencia y E2E) permanece abierto.
 
 - **Estado:** PROPUESTA TÉCNICA — pendiente de aprobación de implementación
 - **Fecha:** 2026-11-11
@@ -321,3 +321,12 @@ En cierres Z ejecutados por un miembro autorizado, `CajaActual.closedBy` conserv
 ### 13.4 Estado de decisión
 
 Esta revalidación no aprueba la implementación del ADR. Permanecen pendientes: transición formal ABIERTA/CERRADA, autorización específica de operador, apertura explícita, cierre Z con contrato CMS completo, precedencia manual/cron, aislamiento del singleton y pruebas de concurrencia/runtime. No se han modificado datos, permisos ni ledgers.
+
+
+## 14. Revalidación del contrato beforeUpdate — 2026-11-20
+
+La documentación oficial de Wix para [beforeUpdate](https://dev.wix.com/docs/velo/apis/wix-data/hooks/before-update) documenta el contexto con `collectionName`, `userId` y `userRole`; no documenta `context.original`. La implementación anterior dependía de esa propiedad para reconstruir el estado previo de `CajaActual`.
+
+PR #466 sustituye esa dependencia por una lectura backend del elemento persistido mediante `getItem(BUSINESS_COLLECTIONS.CAJA_ACTUAL, item._id, CONSISTENCY.STRONG)`. La actualización falla de forma cerrada si falta el ID o la lectura no devuelve el mismo elemento. Los tests offline cubren recuperación correcta, ausencia del elemento y el hecho de que `context.original` no es autoridad.
+
+**Alcance limitado:** esta corrección no aprueba ni implementa la matriz de transiciones H-01, no resuelve concurrencia general entre todos los escritores y no autoriza la modificación del singleton LIVE actual. Se requiere completar el contrato de transición y validar hooks/identidad en Wix Sandbox antes de modificar el estado operativo.

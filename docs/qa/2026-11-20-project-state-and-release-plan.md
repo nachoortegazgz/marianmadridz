@@ -201,3 +201,13 @@ Siguiente intervención recomendada: **cerrar H-01 de `CajaActual`** definiendo 
 - No se realizaron escrituras Wix, reintentos, cierres, cambios de pagos ni publicación. Consulta GitHub 20/11: 0 PR abiertas.
 
 **Prioridad inmediata:** conciliación manual de #10033 refund vs booking y #10032 POS Cash mixto; mantener CajaActual sin cierre/ajuste. Después cerrar H-01 de transiciones CajaActual, acreditar el runtime cron y preparar un singleton TPV QA aislado. Writers fiscales/contables siguen deshabilitados; NO-GO.
+
+
+## 10. Addendum — CajaActual beforeUpdate contract correction (2026-11-20)
+
+- PR #466 merged into `main`: `22a74ff4a594cf6f8d742c34c18527c6438a1719`.
+- `CajaActual_beforeUpdate` no longer depends on `context.original`. It reads the persisted singleton through `getItem(CajaActual, _id, CONSISTENCY.STRONG)` and fails closed if the previous item cannot be retrieved.
+- Offline hook tests now seed the persisted record, verify that an undocumented `context.original` is ignored, and assert failure when the persisted item is missing.
+- PR CI passed: Layer 1, Layer 2, full offline regression suite, Wix SDK contracts, eCommerce/TPV SDK contracts, ESLint and secret scanning.
+- This correction fixes previous-state retrieval only. It does **not** complete H-01 transition authorization, concurrent compare-and-swap for all CajaActual mutations, reconciliation of the current LIVE singleton, or Wix Preview/Sandbox E2E.
+- No Wix CMS records, permissions, secrets, fiscal writers or publication state were changed. Production remains NO-GO.
