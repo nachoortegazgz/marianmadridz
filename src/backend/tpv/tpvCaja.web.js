@@ -26,7 +26,7 @@ export const obtenerCajaActual = webMethod(
     async () => getCashierState({ traceId: makeTraceId("tpv-cash-read") })
 );
 
-export const obtenerSesionCajaQA = webMethod(
+export const obtenerSesionCaja = webMethod(
     Permissions.SiteMember,
     async () => {
         const traceId = makeTraceId("tpv-qa-session-read");
@@ -58,7 +58,7 @@ export const obtenerSesionCajaQA = webMethod(
     }
 );
 
-export const abrirCajaQA = webMethod(
+export const abrirCaja = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
         const traceId = makeTraceId("tpv-qa-session-open");
@@ -68,7 +68,7 @@ export const abrirCajaQA = webMethod(
             const openingCashMinor = toMinorUnits(input.openingCash, "OPENING_CASH");
             const dayKey = madridDayKey();
             const sessionId = "QA-SESSION-" + dayKey;
-            const idempotencyKey = "QA_SESSION_OPEN:" + dayKey;
+            const idempotencyKey = "SESSION_OPEN:" + dayKey;
             const staff = await getMyStaffContext(traceId);
             const current = await latestOpenQaSession();
             if (current && current.sessionId !== sessionId) return errorResult("TPV_QA_PREVIOUS_SESSION_NOT_CLOSED");
@@ -116,12 +116,12 @@ export const abrirCajaQA = webMethod(
                 traceId,
             };
         } catch (error) {
-            return errorResult(String(error?.message || "TPV_QA_SESSION_OPEN_FAILED"));
+            return errorResult(String(error?.message || "TPV_SESSION_OPEN_FAILED"));
         }
     }
 );
 
-export const registrarArqueoParcialQA = webMethod(
+export const registrarArqueoParcial = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
         const traceId = makeTraceId("tpv-qa-partial-count");
@@ -176,7 +176,7 @@ export const registrarArqueoParcialQA = webMethod(
                 traceId,
             };
         } catch (error) {
-            return errorResult(String(error?.message || "TPV_QA_PARTIAL_COUNT_FAILED"));
+            return errorResult(String(error?.message || "TPV_PARTIAL_COUNT_FAILED"));
         }
     }
 );
