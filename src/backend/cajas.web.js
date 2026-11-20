@@ -1660,7 +1660,8 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
             });
         }
 
-        if (!_looksLikeGuid(closedBy) || !recordDomain) {
+        const hasValidClosedBy = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(closedBy);
+        if (!hasValidClosedBy || !recordDomain) {
             return {
                 status: "ERROR",
                 data: null,
@@ -1668,7 +1669,7 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
                     code: "Z_CLOSING_REQUIRED_FIELDS_UNRESOLVED",
                     message: "El cierre requiere closedBy (resourceId válido) y recordDomain aprobado; no se asignan valores por defecto.",
                     missing: [
-                        ...(!_looksLikeGuid(closedBy) ? ["closedBy"] : []),
+                        ...(!hasValidClosedBy ? ["closedBy"] : []),
                         ...(!recordDomain ? ["recordDomain"] : []),
                     ],
                 },
