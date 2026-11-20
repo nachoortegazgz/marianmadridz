@@ -45,7 +45,7 @@ scripts/wix-preview-smoke.mjs:
 
 Playwright no se añade a package.json ni a package-lock.json: es tooling aislado del runtime Wix. La versión directa queda fijada en el workflow.
 
-La automatización utiliza la invocación directa de wix preview documentada por Wix para GitHub Actions, sin pseudo-TTY; el paso tiene un timeout de 10 minutos para fallar de forma acotada si la CLI o Wix no responden.
+La CLI Wix usa Ink y requiere un terminal en modo raw; la ejecución directa sin TTY falla con 'Raw mode is not supported'. El workflow inspecciona primero los flags de ayuda y, para la ruta interactiva, crea un pseudo-TTY, espera 3 segundos a que se inicialice el selector y envía Enter a la opción predeterminada de latest main. El paso tiene timeout de 10 minutos.
 
 ## 4. Alcance de las pruebas online
 
