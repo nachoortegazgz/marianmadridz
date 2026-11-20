@@ -140,36 +140,25 @@ const PROYECCION_BATCH_LIMIT = 25;
 const PROYECCION_TIMEOUT_MS = Number(SDK_CONFIG?.TIMEOUTS?.API_MS) || 15000;
 
 // ============================================================================
-// ALN-07: COMPUTER_SYSTEM (fallback local con nomenclatura Veri*factu)
+// ALN-07: CONFIGURACION FISCAL CANONICA — FAIL CLOSED
 // ============================================================================
-
-const COMPUTER_SYSTEM_FALLBACK = Object.freeze({
-    sistemaInformaticoNombre: "Wix Bookings - Marian Madrid CMS",
-    idSistemaInformatico: "",
-    version: "v5015-ALIGNED",
-    numeroInstalacion: "1",
-    tipoUsoPosibleSoloVerifactu: "N",
-    tipoUsoPosibleMultiOT: "S",
-    indicadorMultiplesOT: "S",
-});
 
 let _fiscalSystemCache = null;
 let _fiscalSystemCacheAt = 0;
 const FISCAL_SYSTEM_CACHE_TTL_MS =
     Number(SDK_CONFIG?.SECURITY?.SECRET_CACHE_TTL_MS) || 300000;
 
-// MapaStaff stores BOOLEAN flags; AEAT payloads represent them as S/N.
-function _toAeatFlag(value, fallback) {
+function _toAeatFlag(value) {
     if (typeof value === "boolean") return value ? "S" : "N";
     const normalized = _safeTrim(value).toUpperCase();
     if (["S", "SI", "TRUE", "1"].includes(normalized)) return "S";
     if (["N", "NO", "FALSE", "0"].includes(normalized)) return "N";
-    return fallback;
+    return null;
 }
 
 function _toFiscalStartDateText(value) {
     const date = _safeTrim(value);
-    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+    const match = /^(\\d{4})-(\\d{2})-(\\d{2})$/.exec(date);
     if (!match) return null;
     const [year, month, day] = match.slice(1).map(Number);
     const parsed = new Date(Date.UTC(year, month - 1, day));
@@ -178,47 +167,66 @@ function _toFiscalStartDateText(value) {
         parsed.getUTCDate() === day ? date : null;
 }
 
+function _buildFiscalSystemConfig(config) {
+    if (!config || _safeTrim(config.recordType).toUpperCase() !== RECORD_TYPE.CONFIG_SISTEMA) {
+        throw new Error("FISCAL_CONFIG_MISSING: falta MapaStaff CONFIG_SISTEMA");
+    }
+
+    const resolved = {
+        sistemaInformaticoNombre: _safeTrim(config.sistemaInformaticoNombre),
+        idSistemaInformatico: _safeTrim(config.idSistemaInformatico),
+        version: _safeTrim(config.verifactuVersion),
+        numeroInstalacion: _safeTrim(config.numeroInstalacion),
+        tipoUsoPosibleSoloVerifactu: _toAeatFlag(config.tipoUsoPosibleSoloVerifactu),
+        tipoUsoPosibleMultiOT: _toAeatFlag(config.tipoUsoPosibleMultiOT),
+        indicadorMultiplesOT: _toAeatFlag(config.indicadorMultiplesOT),
+        nifProductor: _safeTrim(config.taxId).toUpperCase(),
+        nombreRazonProductor: _safeTrim(config.legalName),
+        fechaInicioVerifactu: _toFiscalStartDateText(config.fechaInicioVerifactu),
+    };
+    const missing = Object.entries(resolved)
+        .filter(([, value]) => value === "" || value === null)
+        .map(([key]) => key);
+    if (missing.length) {
+        throw new Error(
+            `FISCAL_CONFIG_INCOMPLETE: MapaStaff CONFIG_SISTEMA carece de campos verificados: ${missing.join(", ")}`
+        );
+    }
+    return Object.freeze(resolved);
+}
+
 async function _getFiscalSystemConfig(traceId) {
     const now = Date.now();
     if (_fiscalSystemCache && now - _fiscalSystemCacheAt < FISCAL_SYSTEM_CACHE_TTL_MS) {
         return _fiscalSystemCache;
     }
-    let config = null;
+
+    let res;
     try {
-        const res = await dalQuery(MAPA_STAFF_COL)
+        res = await dalQuery(MAPA_STAFF_COL)
             .eq("recordType", RECORD_TYPE.CONFIG_SISTEMA)
-            .limit(1)
-            .find();
-        config = res?.items?.[0] || null;
+            .limit(2)
+            .find({ consistencyMode: "strong" });
     } catch (err) {
-        log.warn("No se pudo leer el singleton fiscal (MapaStaff CONFIG_SISTEMA)", {
+        log.error("FISCAL_CONFIG_READ_FAILED", {
             traceId, message: err?.message,
         });
+        throw new Error("FISCAL_CONFIG_READ_FAILED: no se pudo verificar MapaStaff CONFIG_SISTEMA");
     }
-    _fiscalSystemCache = Object.freeze({
-        // MapaStaff no declara columnas para nombre/id del sistema ni
-        // numeroInstalacion; esos valores proceden solo del fallback tecnico.
-        sistemaInformaticoNombre: COMPUTER_SYSTEM_FALLBACK.sistemaInformaticoNombre,
-        idSistemaInformatico: COMPUTER_SYSTEM_FALLBACK.idSistemaInformatico,
-        version: _safeTrim(config?.verifactuVersion) || COMPUTER_SYSTEM_FALLBACK.version,
-        numeroInstalacion: COMPUTER_SYSTEM_FALLBACK.numeroInstalacion,
-        tipoUsoPosibleSoloVerifactu: COMPUTER_SYSTEM_FALLBACK.tipoUsoPosibleSoloVerifactu,
-        tipoUsoPosibleMultiOT: _toAeatFlag(
-            config?.tipoUsoPosibleMultiOT,
-            COMPUTER_SYSTEM_FALLBACK.tipoUsoPosibleMultiOT
-        ),
-        indicadorMultiplesOT: _toAeatFlag(
-            config?.indicadorMultiplesOT,
-            COMPUTER_SYSTEM_FALLBACK.indicadorMultiplesOT
-        ),
-        nifProductor: _safeTrim(config?.taxId),
-        // Legal identity must come from the verified MapaStaff CONFIG_SISTEMA record.
-        // Never infer the fiscal legal name from the commercial brand or site label.
-        nombreRazonProductor: _safeTrim(config?.legalName),
-        fechaInicioVerifactu: _toFiscalStartDateText(config?.fechaInicioVerifactu),
-    });
+
+    const items = res?.items || [];
+    if (items.length !== 1) {
+        throw new Error(
+            items.length === 0
+                ? "FISCAL_CONFIG_MISSING: falta MapaStaff CONFIG_SISTEMA"
+                : "FISCAL_CONFIG_NOT_UNIQUE: existe más de un MapaStaff CONFIG_SISTEMA"
+        );
+    }
+
+    const resolved = _buildFiscalSystemConfig(items[0]);
+    _fiscalSystemCache = resolved;
     _fiscalSystemCacheAt = now;
-    return _fiscalSystemCache;
+    return resolved;
 }
 
 // ============================================================================
@@ -1034,6 +1042,7 @@ export const __test__ = {
     normalizeAccountingAmount,
     normalizeLinkedBookingIds,
     isCancellationRectification,
+    buildFiscalSystemConfig: _buildFiscalSystemConfig,
 };
 
 export default {
