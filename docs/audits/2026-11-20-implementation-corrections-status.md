@@ -96,3 +96,30 @@ La inspección posterior de `wix.lock` corrige parcialmente el diagnóstico C1:
 La reconciliación CMS de solo lectura está registrada en `docs/audits/2026-11-20-live-cms-and-wix-lock-reconciliation.md`. Se observó un singleton `CajaActual` marcado `TPV_QA_SYNTHETIC`, pero `ABIERTA` y con `traceId` distinto de `TPVQA-DEV-20261120-01`; el backend actual lo rechaza por contrato. `TpvSandboxIdentities` y `MovimientosCaja` devolvieron 0 elementos en la lectura Management API. `ControlOperativo` devolvió 58 elementos, incluidos 3 `COMPENSATION/PENDING_RECOVERY`; no se modificaron.
 
 **Estado actualizado:** C1 deja de clasificarse como “paquete ausente de Wix”; queda como desalineación npm/Wix por resolver. La ejecución de Preview/Sandbox, seed de identidades y bootstrap de caja no se han realizado. NO-GO de publicación se mantiene.
+
+
+## Addendum de estado posterior a PR #484/#485 — 2026-11-20
+
+**Baseline:** `main=470ea256d2af88bc62465788cd67e40d84f1a001` antes de esta PR.
+
+### Cambios integrados desde el informe original
+- PR #482: import nombrado `fetch` desde `wix-fetch` y adaptación del loader offline. Merge `520e99b87caedfc6323e1f27f5638a0053774eb9`. CI completo comunicado para el head final de PR: 74 suites / 692 tests, npm audit 0 vulnerabilidades, ESLint, SDK contracts y secret scanning PASS.
+- PR #483: corrige el diagnóstico C1: `@wix/crm@1.0.1636` sí aparece en `wix.lock`, pero no en `package.json` / `package-lock.json`. Merge `a801405f77dddfe8fcfe76a825be47e656aa542c`. Es una desalineación Wix/npm; la regeneración npm sigue pendiente.
+- PR #484: runtime TPV fail-closed; `TPV_QA_RUNTIME_POLICY.ENABLED=false`, el helper backend rechaza con `TPV_QA_DISABLED_UNTIL_SANDBOX_ISOLATION` y el widget no anuncia Sandbox. Merge `03a67652d87298855aec70d43b2ac44fa5024994`. Backend offline quality gates y secret scanning SUCCESS (runs `44726194437`, `44726194440`).
+- PR #485: documenta el snapshot de Site Data Usage API LIVE/SANDBOX. Merge `470ea256d2af88bc62465788cd67e40d84f1a001`. La evidencia API confirma uso por entorno, no el contexto de una invocación WebMethod.
+
+### Estado de C1–C11 corregido
+- C2 aplicado y CI validada en PR #482.
+- C1 no se clasifica como paquete ausente de Wix: queda pendiente alinear el grafo npm reproducible y verificar `npm ci` con las dependencias sincronizadas por Wix.
+- C3 Node 24.22.1 ya cubierto por CI; no requiere cambio probado.
+- C4 sigue desactivada por incompatibilidad observada del plugin y falta de manifiesto oficial verificado.
+- C5–C9 permanecen cerradas por seguridad/integridad o sin evidencia de entorno: writers operativos, fichaje, ledger contable, ledger fiscal y activación QA persistente.
+- C10–C11 y P3 requieren inspección de bindings Wix Editor y referencias externas antes de retirar símbolos.
+- D1–D4 siguen pendientes: sincronización HTML components, scheduler real, compatibilidad tooling y smoke Wix Sandbox.
+
+### Estado actual de entorno y despliegue
+La tabla vigente de uso CMS está en `docs/audits/2026-11-20-wix-live-sandbox-usage.md`. Totales observados: LIVE 201 elementos / 264.970 bytes; SANDBOX 107 / 204.766 bytes. SANDBOX tiene una fila CajaActual y cero filas en MovimientosCaja, TpvSandboxIdentities, ControlOperativo e HistoricoCierresZ. El singleton no ha sido leído por esta API y no se ha probado la invocación runtime.
+
+El TPV QA permanece deshabilitado en configuración canónica. No se hicieron seeds, bootstrap, mutaciones CMS, pagos, escrituras de ledger ni publicación. La existencia de Sandbox no acredita el aislamiento de cada WebMethod.
+
+**Decisión:** NO-GO para publicación/despliegue. La métrica de CI offline no equivale a preparación global para producción. Esta auditoría separa las correcciones aplicadas de las tareas bloqueadas y evita asignar un porcentaje de preparación sin denominador verificable.

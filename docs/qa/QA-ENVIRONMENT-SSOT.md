@@ -118,3 +118,20 @@ Hasta que se demuestre mediante contrato oficial y pruebas runtime una frontera 
 - Pagos reales, writers fiscales/contables/laborales, notificaciones y hardware permanecen deshabilitados.
 
 Esta decisión prevalece sobre la instrucción anterior de ejecutar el flujo persistente en Preview hasta que se demuestre el aislamiento. No se modifican CMS ni el singleton `CajaActual`. Para reactivar QA persistente se requiere prueba positiva desde Preview y negativa desde Published, con verificación antes/después de las colecciones LIVE.
+
+
+## Consolidación vigente — 2026-11-20
+
+Esta sección es el estado operativo vigente y **supersede** los addenda históricos anteriores cuando exista contradicción, en particular la autorización histórica de persistencia TPV desde Preview de la sección "Addendum 2026-11-20 — ejecución persistente TPV".
+
+- TPV QA persistente está deshabilitado en runtime: `TPV_QA_RUNTIME_POLICY.ENABLED=false`.
+- Todos los WebMethods TPV protegidos deben ejecutar `assertTpvQaEnabled()` antes de acceder al repositorio. La protección se está reforzando con un contrato automatizado que enumera los métodos publicados.
+- El bloqueo no impide pruebas unitarias/offline con datos sintéticos en el harness aislado; esa habilitación no cambia la configuración canónica ni habilita Wix Runtime.
+- Wix Site Data Usage API confirmó dos almacenes con uso distinto: LIVE 201 elementos / 264.970 bytes; SANDBOX 107 elementos / 204.766 bytes. Estos datos son un snapshot de uso, no acreditan el contexto de una invocación WebMethod.
+- En SANDBOX: `CajaActual=1`, `MovimientosCaja=0`, `TpvSandboxIdentities=0`, `ControlOperativo=0`, `HistoricoCierresZ=0`. El contenido/ID del singleton Sandbox no se ha inspeccionado mediante esta API.
+- En LIVE: `CajaActual=1`, `MovimientosCaja=0`, `TpvSandboxIdentities=0`, `ControlOperativo=58`, `HistoricoCierresZ=0`. No se han hecho escrituras ni sincronización Sandbox → Live.
+- El singleton CajaActual observado en la consulta CMS read-only anterior tiene marcadores contradictorios con el test-run vigente y no debe reutilizarse, cerrarse ni corregirse como parte de QA.
+- Las tres filas `COMPENSATION/PENDING_RECOVERY` permanecen sin tocar y requieren conciliación independiente.
+- No hay prueba Wix Preview/Published E2E, ni certificación de aislamiento de invocaciones directas, ni seed de identidades, ni bootstrap de caja.
+
+**Release gate:** NO-GO para TPV persistente, publicación y despliegue productivo. La reactivación exige una señal backend verificable del data plane o un sitio/tenant Sandbox físicamente separado, prueba negativa de invocación desde Published, comparación LIVE antes/después, E2E y reversión probada. No utilizar el contador de uso como sustituto de esa prueba.

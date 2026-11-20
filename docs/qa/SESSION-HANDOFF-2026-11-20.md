@@ -165,3 +165,19 @@ Revalidar el estado actual de cada issue antes de actualizarla/cerrarla; la list
 - Issue #471 permanece abierta.
 - Issue #210 permanece abierta: `main` sigue sin protección/ruleset ni checks obligatorios.
 - Producción continúa **NO-GO**. No publicar ni sincronizar datos hasta completar Sandbox, E2E, H-01, conciliaciones P0, revisión fiscal/legal y demás gates del informe #434.
+
+
+## 11. Reconciliación de cierre — PR #482–#485
+
+El handoff histórico de las secciones 1–10 refleja cortes anteriores. Para el estado vigente, prevalecen este addendum y `docs/qa/QA-ENVIRONMENT-SSOT.md`.
+
+- PR #482 integrada: commit `520e99b87caedfc6323e1f27f5638a0053774eb9`; C2 corrige el import de `wix-fetch`; CI completa 74 suites / 692 tests en el head final y secret scanning.
+- PR #483 integrada: commit `a801405f77dddfe8fcfe76a825be47e656aa542c`; C1 queda descrita como desalineación Wix/npm, no ausencia global del paquete.
+- PR #484 integrada: commit `03a67652d87298855aec70d43b2ac44fa5024994`; fail-closed TPV persistente, sin escrituras Wix. Runs de CI `44726194437` y `44726194440` SUCCESS.
+- PR #485 integrada: commit `470ea256d2af88bc62465788cd67e40d84f1a001`; snapshot read-only de uso LIVE/SANDBOX.
+- El snapshot más reciente informa LIVE 201 elementos y SANDBOX 107. Sustituye el snapshot anterior que informaba SANDBOX 0. Los contadores no acreditan el contexto de ejecución de WebMethods.
+- `TPV_QA_RUNTIME_POLICY.ENABLED=false` sigue siendo la configuración canónica. No restaurar `true` basándose únicamente en Preview o en la existencia de almacén Sandbox.
+- No se han creado clientes/profesionales sintéticos, no se ha inicializado caja, no se ha ejecutado E2E en Wix ni se ha publicado.
+- CajaActual LIVE observado: un singleton con estado/marcadores incompatibles con el test-run vigente; no tocar sin reconciliación. Tres `COMPENSATION/PENDING_RECOVERY` en ControlOperativo siguen pendientes y sin mutación.
+
+**Próximo paso de código:** contrato automatizado que compruebe que cada WebMethod QA expuesto ejecuta el guard backend antes de cualquier acceso al repositorio. La prueba será offline y no se presentará como certificación de Wix Runtime.
