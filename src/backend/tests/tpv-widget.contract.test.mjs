@@ -68,7 +68,8 @@ test("TPV HTML request protocol is dispatched for the active widget workflows", 
     const requests = ["CASHIER_STATE", "QA_CONFIG", "QA_PERMISSIONS", "CATALOG_SERVICES", "CATALOG_STAFF", "CATALOG_PRODUCTS", "PRODUCT_VARIANTS", "CUSTOMERS_SEARCH", "QA_PAYMENT_VALIDATE", "VALIDATE_SALE_DRAFT", "QA_SALE_REGISTER", "QA_SESSION_SUMMARY", "QA_SESSION_OPEN", "QA_CASH_MOVEMENT", "QA_REFUND", "QA_TICKET_X", "QA_TICKET_Z"];
     assert.match(page, /\$w\("#htmlTPV"\)/);
     assert.match(controller, /protocolVersion: 1/);
-    assert.match(controller, /environment: "QA"/);
+    assert.match(controller, /environment: wixWindowFrontend\.viewMode === "Preview" \? "QA" : "DISABLED"/);
+    assert.match(controller, /wixWindowFrontend\.viewMode !== "Preview"/);
     assert.match(controller, /syntheticOnly: true/);
     assert.match(controller, /case MESSAGE_TYPES\.READY:\s+return;/);
     for (const type of requests) {
