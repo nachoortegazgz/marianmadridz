@@ -2945,3 +2945,12 @@ El TPV actual usa `TPV_SANDBOX_RUNTIME_POLICY` (`ENABLED=true`, `ENVIRONMENT=SAN
 PR #499 convirtió bootstrap y verificación de identidades en operaciones read-only. Requiere presemilla manual de singleton marcado y seis identidades sintéticas en CMS Sandbox. Una rama posterior, aún pendiente de CI/merge, añade validación de CajaActual antes de acceder a locks ControlOperativo. No afirmar que esta corrección adicional esté en main hasta integrarla.
 
 **NO-GO de publicación:** falta Wix Preview E2E, prueba negativa Published/direct WebMethod, prueba de concurrencia/atomicidad runtime de todos los escritores CajaActual (H-01), comparación LIVE antes/después, permisos por rol, aislamiento de automatizaciones, ciclo de vida del test-run, reset preproducción y rollback. El sitio Wix está en Draft. No modificar CajaActual LIVE, compensaciones PENDING_RECOVERY ni pedidos #10032/#10033.
+
+
+## Addendum posterior a PR #500 — 2026-11-20
+
+PR #500 está fusionada en `main`: commit `6da7cdf0d815ad2e1833f5bd56b5950aff2afb3e`. La corrección consolida el helper `_ensureCajaActualForSandbox()` para validar existencia y marcador/run ID de `CajaActual` y ejecuta ese preflight antes de cualquier lectura/escritura de locks en `ControlOperativo`. Se añade una prueba contractual específica.
+
+Validación pre-merge del HEAD `306816dff20d62e4ec3fda87e25fb050c155bb96`: Layer 1 28 suites/339 tests PASS; Layer 2 19 suites/268 tests PASS; suite completa 75 suites/706 tests PASS; contratos Wix SDK, eCommerce Order Transactions, TPV Catalog y ESLint PASS; Gitleaks PASS (runs `44781808680` y `44781808524`). CI post-merge para `6da7cdf0...` está en curso en los runs `44781982497` y `44781982392`; no declararlo aprobado hasta que ambos finalicen SUCCESS.
+
+La corrección es una barrera de código por estado de datos; no identifica de forma contractual Preview frente a Published. No equivale a prueba de aislamiento runtime ni a aceptación E2E. Wix Preview, prueba negativa Published, concurrencia H-01, permisos efectivos, efectos externos, comparación LIVE antes/después y reset preproducción siguen pendientes. Sitio Wix observado en Draft. **NO-GO de publicación.**
