@@ -110,3 +110,5 @@ En las tres filas: `active=true`, `syntheticOnly=true`, `environment=SANDBOX`, `
 El controlador del widget solicita `inicializarCajaSANDBOX` al completar el handshake. El WebMethod exige administrador y delega en `initializeSandboxCaja`, que consulta primero el singleton `CajaActual` en el data plane seleccionado por Wix. Solo crea el marcador inicial si no existe ningún singleton; si encuentra un registro con otro origen o run ID, falla sin actualizarlo. La inserción usa el ID canónico `SINGLE_ITEM_ID` y `singletonKey = CAJA_PRINCIPAL`, con `sequenceCounters` como objeto.
 
 La apertura de sesión y los eventos posteriores requieren el marcador `TPV_SANDBOX_INITIALIZED` o `TPV_SANDBOX_SYNTHETIC` y el `SANDBOX_RUN_ID` exacto. Pagos reales, escrituras fiscales, notificaciones, hardware y mutaciones de Bookings/Stores permanecen deshabilitados.
+
+El arranque es repetible: los cajeros autorizados pueden consultar un marcador Sandbox ya inicializado; únicamente un administrador puede crear el singleton inicial cuando no existe. Una fila Online con un origen/run ID diferente se rechaza sin modificación.
