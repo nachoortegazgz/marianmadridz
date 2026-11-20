@@ -107,18 +107,27 @@ En las tres filas: `active=true`, `syntheticOnly=true`, `environment=SANDBOX`, `
 
 ## Runtime Sandbox y arranque de caja
 
-El controlador del widget solicita `inicializarCaja` al completar el handshake. El WebMethod exige administrador y delega en `initializeSandboxCaja`, que consulta primero el singleton `CajaActual` en el data plane seleccionado por Wix. Solo crea el marcador inicial si no existe ningún singleton; si encuentra un registro con otro origen o run ID, falla sin actualizarlo. La inserción usa el ID canónico `SINGLE_ITEM_ID` y `singletonKey = CAJA_PRINCIPAL`, con `sequenceCounters` como objeto.
+El controlador del widget solicita `inicializarCaja` al completar el handshake. El WebMethod exige sesión autorizada y delega en `initializeSandboxCaja`, que consulta el singleton `CajaActual` en el data plane seleccionado por Wix. No lo crea ni lo actualiza: si falta o no cumple el marcador de Sandbox, falla sin escribir.
 
 La apertura de sesión y los eventos posteriores requieren el marcador `TPV_SANDBOX_INITIALIZED` o `TPV_SANDBOX_SYNTHETIC` y el `SANDBOX_RUN_ID` exacto. Pagos reales, escrituras fiscales, notificaciones, hardware y mutaciones de Bookings/Stores permanecen deshabilitados.
 
-El arranque es repetible: los cajeros autorizados pueden consultar un marcador Sandbox ya inicializado; únicamente un administrador puede crear el singleton inicial cuando no existe. Una fila Online con un origen/run ID diferente se rechaza sin modificación.
+El preflight es repetible y de solo lectura: los cajeros autorizados pueden consultar un marcador Sandbox ya inicializado. La preparación del singleton y de las identidades se realiza manualmente desde CMS Sandbox; una fila Online con un origen/run ID diferente se rechaza sin modificación.
 
 Las pruebas contractuales mantienen sus rutas históricas para que el workflow de regresión existente las ejecute; su contenido valida los contratos Sandbox actuales.
 
 El contexto del widget anuncia `environment: SANDBOX` y `previewOnly: true` únicamente cuando el WebMethod confirma el marcador del singleton. Si el marcador no coincide, el widget recibe `UNAVAILABLE` y no habilita capacidades operativas.
 
-El bootstrap también crea, solo en ese mismo data plane y bajo autorización de administrador, tres clientes y tres profesionales sintéticos (`example.test`). Los IDs son deterministas, las altas son idempotentes y append-only, y las identidades quedan ligadas al `SANDBOX_RUN_ID` activo.
+El código no crea identidades. `inicializarCaja` solo verifica que existan las seis identidades sintéticas presembradas y que correspondan al `SANDBOX_RUN_ID` activo; si falta alguna, falla sin escribir.
 
 El acceso elevado a `TpvSandboxIdentities` está limitado a altas sintéticas del `SANDBOX_RUN_ID` vigente; la colección permanece append-only. La escritura de fichajes reales continúa cerrada mientras no se validen sus garantías de idempotencia y concurrencia.
 
 La validación de identidades y las pruebas usan `SANDBOX_RUN_ID` como marcador de ejecución; `testRunId` se conserva únicamente como nombre del campo físico CMS de `TpvSandboxIdentities`.
+
+
+## Release gate — preseed obligatorio, bootstrap de solo lectura
+
+Los WebMethods de TPV no crean automáticamente el singleton `CajaActual` ni filas de `TpvSandboxIdentities`. Esta decisión evita que una llamada accidental desde el sitio publicado convierta una colección CMS Online vacía en un conjunto de datos sintéticos en LIVE. `inicializarCaja` ahora verifica únicamente los marcadores existentes; el seed valida que existan las seis identidades requeridas y no inserta ninguna.
+
+Antes de ejecutar TPV en Preview, un administrador debe crear manualmente en el CMS **Sandbox** el singleton `CAJA_PRINCIPAL` con `_id=SINGLE_ITEM_ID`, `cashRegisterStatus=CERRADA`, `snapshotSource=TPV_SANDBOX_INITIALIZED`, `traceId=TPVSANDBOX-DEV-20261120-01`, `sequenceCounters={ appliedMovementIds: [] }` y `conceptOperations.tpvSandbox.sandboxRunId=TPVSANDBOX-DEV-20261120-01`. Debe crear también las seis identidades sintéticas descritas en `tpvSandboxIdentities.js`, con `environment=SANDBOX`, `syntheticOnly=true`, `testRunId` igual al run ID activo y correos `@example.test`.
+
+No sincronizar estas colecciones Sandbox a Online. Las colecciones de Wix Apps no están aisladas por Sandbox; el TPV debe seguir sin mutar colecciones de Bookings, Stores, Payments o Gift Cards. Esta precondición reduce el riesgo de bootstrap en LIVE, pero no sustituye la prueba E2E de Preview ni una auditoría de permisos del sitio publicado.

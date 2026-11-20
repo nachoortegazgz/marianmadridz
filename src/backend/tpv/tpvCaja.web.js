@@ -26,8 +26,8 @@ export const inicializarCaja = webMethod(
         await requireCajero(traceId);
         assertTpvSandboxEnabled();
         try {
-            const result = await initializeSandboxCaja({ authorizeCreate: () => requireAdmin(traceId) });
-            const identities = await seedSandboxIdentities({ authorizeCreate: () => requireAdmin(traceId) });
+            const result = await initializeSandboxCaja();
+            const identities = await seedSandboxIdentities();
             return {
                 status: "SUCCESS",
                 data: {

@@ -151,8 +151,15 @@ La lectura de Management API no es una prueba del dataset Sandbox de Preview. No
 - PR #497 corrigió el indicador de persistencia de resultados de lectura del controlador; ambos workflows de PR finalizaron en SUCCESS. Los workflows post-merge del SHA `566a819...` finalizaron en SUCCESS: calidad offline `44777610050` y Gitleaks `44777610037`. La suite offline registró 75 suites / 704 tests, 0 fallos.
 - `tpvSandboxRepository.js` comprueba el marcador de `CajaActual` antes de insertar eventos sintéticos: una caja existente debe ser `TPV_SANDBOX_INITIALIZED` (solo bootstrap) o `TPV_SANDBOX_SYNTHETIC` con el `SANDBOX_RUN_ID` exacto. Los eventos posteriores vuelven a comprobar la caja antes de insertar en `MovimientosCaja`.
 - Esta comprobación es una defensa por estado de datos, no una API oficial de detección del entorno Preview. La separación efectiva depende de que Wix Data enrute las llamadas ejecutadas desde Preview a CMS Sandbox. El singleton LIVE observado no satisface el marcador sintético y debe permanecer intacto.
-- `inicializarCaja` realiza el bootstrap de caja y, después, el seed de identidades, ambos con autorización ADMIN. El código existe; no se ha ejecutado en runtime ni se han creado filas de identidad.
+- En el estado de código de este addendum, `inicializarCaja` consulta el singleton y verifica las identidades; el bootstrap y el seed no crean datos automáticamente. La presemilla debe hacerse manualmente desde CMS Sandbox.
 - La suite offline incorpora una prueba contractual que exige comprobar el marcador de `CajaActual` antes de insertar el singleton durante bootstrap y antes de insertar eventos.
 - No se han realizado escrituras CMS, sincronización Sandbox→Live, publicación ni despliegue.
 
 **Estado de salida:** CI post-merge del commit `566a819...` aprobado (75 suites / 704 tests, 0 fallos); Wix Preview, bootstrap, identidades y E2E siguen pendientes. Mantener NO-GO de publicación hasta validar el recorrido en el sitio y demostrar que LIVE no cambia.
+
+
+## Addendum — endurecimiento de bootstrap antes de release
+
+El bootstrap del TPV se ha convertido en una operación de solo lectura. `initializeSandboxCaja()` falla si no existe un singleton presembrado y valida el marcador exacto; `seedSandboxIdentities()` exige las seis identidades preexistentes y nunca inserta filas. Se elimina así la ruta de creación automática de datos sintéticos cuando una llamada llegue a la colección Online del sitio publicado.
+
+La precondición manual se realiza exclusivamente desde el CMS Sandbox del Editor. No usar Wix Management API para sembrar datos, no sincronizar Sandbox→Online y no tratar las colecciones de Wix Apps como aisladas. Este cambio no demuestra por sí mismo el aislamiento runtime ni completa la aceptación E2E. Mantener NO-GO de publicación hasta ejecutar Preview y comprobar datos LIVE antes/después.
