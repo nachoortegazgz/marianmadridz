@@ -330,3 +330,31 @@ La documentación oficial de Wix para [beforeUpdate](https://dev.wix.com/docs/ve
 PR #466 sustituye esa dependencia por una lectura backend del elemento persistido mediante `getItem(BUSINESS_COLLECTIONS.CAJA_ACTUAL, item._id, CONSISTENCY.STRONG)`. La actualización falla de forma cerrada si falta el ID o la lectura no devuelve el mismo elemento. Los tests offline cubren recuperación correcta, ausencia del elemento y el hecho de que `context.original` no es autoridad.
 
 **Alcance limitado:** esta corrección no aprueba ni implementa la matriz de transiciones H-01, no resuelve concurrencia general entre todos los escritores y no autoriza la modificación del singleton LIVE actual. Se requiere completar el contrato de transición y validar hooks/identidad en Wix Sandbox antes de modificar el estado operativo.
+
+
+## 15. Revalidación H-01 sobre HEAD 19079bd6 — 2026-11-20
+
+### Evidencia directa del código
+En el HEAD `19079bd6b2cfde80b5758160b5ec060c0a49bd7b` se reexaminaron:
+- `src/backend/dataAccessPolicy.js`: `assertUpdateAllowed(CAJA_ACTUAL, item)` solo exige `_id`; `assertSaveAllowed(CAJA_ACTUAL, item)` también solo exige `_id`.
+- `src/backend/dataAccess.js`: `updateItem(collection, item)` valida la política y delega en `elevatedUpdate(collection, item)`, sin predicado de versión.
+- `src/backend/cajas.web.js`: `_updateCajaActual` lee el singleton, calcula saldos y `sequenceCounters`, y después ejecuta `dalUpdate(CAJA_ACTUAL_COL, cashRegister)`. Los reintentos del bucle no constituyen compare-and-swap.
+- `src/backend/tests/data.hooks.test.mjs`: los tests de CajaActual cubren lectura del estado anterior, ignorar `context.original` y fallo cerrado cuando no se recupera el registro. No prueban concurrencia de escritores.
+
+### Consecuencia
+La corrección PR #466 resuelve el origen del estado anterior del hook, pero no serializa writers. Una lectura fuerte seguida de un update completo sigue dejando una ventana de carrera. Dos productores pueden leer la misma versión y sobrescribir acumulados o metadatos del otro.
+
+### Decisión
+H-01 continúa abierto. No añadir una comparación read-then-write y denominarla CAS; tampoco cambiar `update` por `patch` sin revisar consumidores, hooks y semántica de reemplazo/patch del SDK. Antes de cambiar runtime se debe seleccionar y probar un mecanismo de exclusión/CAS soportado por Wix, inventariar todos los productores y fijar la matriz de transiciones y campos mutables.
+
+### Criterios de aceptación obligatorios
+1. Un único contrato backend para apertura, cierre, movimientos y proyección.
+2. Autorización backend por capacidad/identidad; el frontend no decide rol, estado ni versión.
+3. Cada mutación comprueba la transición permitida y preserva campos no relacionados.
+4. Dos writers concurrentes con movimientos distintos producen ambos efectos una sola vez.
+5. Reintento del mismo movimiento no duplica saldo ni operaciones.
+6. Fallo entre ledger y proyección produce compensación trazable sin reintento ciego.
+7. Wix Sandbox/Preview confirma comportamiento de hooks y permisos antes de cualquier cambio operativo.
+
+### No-go y límites
+No se ha ejecutado Wix Runtime ni una prueba de concurrencia real en esta intervención. No se han modificado registros CMS, singleton CajaActual, compensaciones, ledgers, permisos o secretos. Producción continúa bloqueada. La documentación oficial de `beforeUpdate` y de Wix Data hooks no promete atomicidad de lectura seguida de escritura; no debe inferirse.
