@@ -28,6 +28,7 @@ import {
     MOVEMENT_TYPE,
     PAYMENT_METHOD,
     TIPO_FACTURA,
+    TPV_QA_RUNTIME_POLICY,
 } from "backend/internalConfig";
 
 // =============================================================================
@@ -377,6 +378,44 @@ export function assertMapaStaffRecord(item, { partial = false } = {}) {
  * CajaActual mirrors the current physical CMS schema. The sequenceCounters
  * field is OBJECT; accepting a JSON string would silently corrupt projections.
  */
+export function assertTpvSandboxIdentity(item) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) {
+        throw new Error("SCHEMA_VIOLATION: TpvSandboxIdentities item must be an object");
+    }
+    const identityType = String(item.identityType || "").trim().toUpperCase();
+    const identityId = String(item.identityId || "").trim();
+    const displayName = String(item.displayName || "").trim();
+    const expectedPrefix = identityType === "CUSTOMER" ? "QA-CUSTOMER-" : "QA-STAFF-";
+    if (!["CUSTOMER", "STAFF"].includes(identityType) ||
+        !identityId.startsWith(expectedPrefix) ||
+        !/^[A-Z0-9-]{12,48}$/.test(identityId) ||
+        String(item._id || "") !== identityId) {
+        throw new Error("SCHEMA_VIOLATION: TpvSandboxIdentities identity key/type invalid");
+    }
+    if (!displayName || displayName.length > 120) {
+        throw new Error("SCHEMA_VIOLATION: TpvSandboxIdentities displayName invalid");
+    }
+    if (item.active !== true || item.syntheticOnly !== true || item.environment !== "SANDBOX" ||
+        item.testRunId !== TPV_QA_RUNTIME_POLICY.TEST_RUN_ID) {
+        throw new Error("SCHEMA_VIOLATION: TpvSandboxIdentities must belong to the active synthetic Sandbox test-run");
+    }
+    if (identityType === "CUSTOMER" && !/^[^\\s@]+@example\\.test$/i.test(String(item.email || ""))) {
+        throw new Error("SCHEMA_VIOLATION: TpvSandboxIdentities customer email must use example.test");
+    }
+    if (identityType === "STAFF" && item.email && !/^[^\\s@]+@example\\.test$/i.test(String(item.email))) {
+        throw new Error("SCHEMA_VIOLATION: TpvSandboxIdentities staff email must use example.test");
+    }
+    if (item.metadata !== undefined && (!item.metadata || typeof item.metadata !== "object" || Array.isArray(item.metadata))) {
+        throw new Error("SCHEMA_VIOLATION: TpvSandboxIdentities metadata must be an OBJECT");
+    }
+    for (const forbidden of ["phone", "taxId", "address", "contactId", "memberId", "resourceId", "bookingsResourceId"]) {
+        if (item[forbidden] !== undefined && item[forbidden] !== null && item[forbidden] !== "") {
+            throw new Error("SCHEMA_VIOLATION: TpvSandboxIdentities cannot store real contact/resource identifiers");
+        }
+    }
+    return true;
+}
+
 export function assertCajaActualRecord(item) {
     if (!item || typeof item !== "object" || Array.isArray(item)) {
         throw new Error("SCHEMA_VIOLATION: CajaActual item must be an object");
