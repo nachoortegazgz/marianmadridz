@@ -23,21 +23,39 @@ import {
     makeQaSessionLockId,
 } from "../tpv/tpvUtils.js";
 
-test("all TPV QA collections are insert-only and cannot be updated or removed", () => {
-    for (const collection of Object.values(TPV_QA_COLLECTIONS)) {
-        assert.doesNotThrow(() => assertInsertAllowed(collection, {
-            idempotencyKey: "qa-idempotency-key-0001",
-            payload: makeSyntheticPayload({ sample: true }),
-        }));
-        assert.throws(() => assertInsertAllowed(collection, {
-            idempotencyKey: "qa-idempotency-key-0001",
-            payload: { isSynthetic: true },
-        }), /DATA_ACCESS_ERROR/);
-        assert.throws(() => assertInsertAllowed(collection, {
-            payload: makeSyntheticPayload({ sample: true }),
-        }), /DATA_ACCESS_ERROR/);
-        assert.throws(() => assertUpdateAllowed(collection, { _id: "qa-item" }), /DATA_ACCESS_ERROR/);
-        assert.throws(() => assertRemoveAllowed(collection, "qa-item"), /DATA_ACCESS_ERROR/);
+test("logical TPV entities persist only as marked synthetic rows in canonical CMS", () => {
+    const logicalTypes = Object.values(TPV_QA_COLLECTIONS);
+    assert.equal(new Set(logicalTypes).size, logicalTypes.length);
+    assert.ok(logicalTypes.every((value) => value.startsWith("QA_LOGICAL_")));
+
+    const item = {
+        _id: "TPVQA_TEST_ROW",
+        hash: "a".repeat(64),
+        sequenceNumber: 0,
+        transactionId: "TPVQA_TEST_ROW",
+        traceId: "TPVQA:" + TPV_QA_RUNTIME_POLICY.TEST_RUN_ID + ":QA-SESSION-TEST",
+        movementType: "SIMULATED_TPV_PAYMENT",
+        recordSource: "TPV_QA_SYNTHETIC",
+        payloadFiscal: {
+            testRunId: TPV_QA_RUNTIME_POLICY.TEST_RUN_ID,
+            requestFingerprint: "f".repeat(64),
+            isSynthetic: true,
+            realPayment: false,
+            externalSideEffects: false,
+        },
+    };
+
+    assert.doesNotThrow(() => assertInsertAllowed("MovimientosCaja", item));
+    assert.doesNotThrow(() => assertUpdateAllowed("MovimientosCaja", item));
+    assert.doesNotThrow(() => assertRemoveAllowed("MovimientosCaja", item._id, undefined, item));
+    assert.throws(() => assertUpdateAllowed("MovimientosCaja", {
+        ...item,
+        payloadFiscal: { ...item.payloadFiscal, testRunId: "TPVQA-DEV-20990101-OTHER" },
+    }), /DATA_ACCESS_ERROR/);
+    assert.throws(() => assertRemoveAllowed("MovimientosCaja", "real-ledger-row"), /DATA_ACCESS_ERROR/);
+
+    for (const logicalType of logicalTypes) {
+        assert.throws(() => assertInsertAllowed(logicalType, item), /DATA_ACCESS_ERROR/);
     }
 });
 
