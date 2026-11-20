@@ -375,8 +375,8 @@ export function assertMapaStaffRecord(item, { partial = false } = {}) {
 }
 
 /**
- * CajaActual mirrors the current physical CMS schema. The sequenceCounters
- * field is OBJECT; accepting a JSON string would silently corrupt projections.
+ * TpvSandboxIdentities stores synthetic-only customer and staff projections.
+ * It must never contain Wix CRM, Bookings or personal identity references.
  */
 export function assertTpvSandboxIdentity(item) {
     if (!item || typeof item !== "object" || Array.isArray(item)) {
