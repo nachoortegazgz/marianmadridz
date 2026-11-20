@@ -101,16 +101,9 @@ export const TPV_QA_RUNTIME_POLICY = Object.freeze({
   TEST_RUN_ID: "TPVQA-DEV-20261120-01",
 });
 
-export const TPV_QA_FIXTURES = Object.freeze({
-  CUSTOMER: Object.freeze({
-    ID: "QA-CONTACT-NACHO-PITT",
-    DISPLAY_NAME: "Nacho Pitt",
-    EMAIL: "nacho.pitt@example.test",
-  }),
-  STAFF: Object.freeze([
-    Object.freeze({ ID: "QA-STAFF-01", DISPLAY_NAME: "Profesional QA 1" }),
-    Object.freeze({ ID: "QA-STAFF-02", DISPLAY_NAME: "Profesional QA 2" }),
-  ]),
+export const TPV_QA_IDENTITY_TYPES = Object.freeze({
+  CUSTOMER: "CUSTOMER",
+  STAFF: "STAFF",
 });
 
 export const CATALOG_ENTRY_TYPE = Object.freeze({
@@ -130,6 +123,7 @@ export const BUSINESS_COLLECTIONS = Object.freeze({
   MOVIMIENTOS_CAJA: "MovimientosCaja",
   REGISTROS_HORARIOS_STAFF: "RegistrosHorariosStaff",
   SERVICIOS_CATALOGO: "ServiciosCatalogo",
+  TPV_SANDBOX_IDENTITIES: "TpvSandboxIdentities",
 });
 
 // Operational lock and idempotency state is centralized in ControlOperativo.
