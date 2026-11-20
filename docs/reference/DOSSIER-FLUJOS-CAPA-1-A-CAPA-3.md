@@ -376,3 +376,8 @@ El estado live del CMS y del sitio supersede los snapshots anteriores: MapaStaff
 La pausa histórica de append-only en QA no autoriza mutaciones de ledgers fiscales, contables o laborales; se mantiene la inmutabilidad exigida por las instrucciones vigentes del proyecto.
 
 Ver evidencia y gates actuales en [docs/audits/2026-11-17-deployment-readiness.md](docs/audits/2026-11-17-deployment-readiness.md) y [DICCIONARIO_DATOS_CMS.md](DICCIONARIO_DATOS_CMS.md).
+
+
+## Addendum TEC-042 — TPV QA sintético (2026-11-20)
+
+El flujo TPV de desarrollo no crea colecciones `TPV_QA_*`. La sesión se proyecta en `CajaActual` y las ventas, pagos, devoluciones, arqueos y tickets sintéticos se registran como eventos `SIMULATED_TPV_*` en `MovimientosCaja`, identificados por `recordSource=TPV_QA_SYNTHETIC` y testRunId. El writer fiscal real, secuencia fiscal, firma, AEAT y cualquier efecto externo permanecen deshabilitados. Los métodos de escritura requieren ADMIN y la UI solo habilita operaciones en Preview. Esta excepción no altera otros ledgers ni colecciones Wix Apps. Reset integral y restauración de append-only obligatorios antes de producción. E2E Preview/Sandbox pendiente.
