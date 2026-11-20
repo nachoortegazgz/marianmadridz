@@ -148,7 +148,7 @@ export const cerrarTicketZ = webMethod(
             }
             const differenceMinor = countedMinor - totals.expectedCashMinor;
             const reason = String(input.differenceReason || "").trim();
-            if (differenceMinor !== 0 && reason.length < 3) throw new Error("TPV_SANDBOX_CLOSING_DIFFERENCE_REASON_REQUIRED");
+            if (differenceMinor !== 0 && reason.length < 3) throw new Error("TPV_SANDBOX_COUNT_DIFFERENCE_REASON_REQUIRED");
 
             const existing = await querySandboxRecords(TPV_SANDBOX_COLLECTIONS.TICKET_Z, wql.eq("sessionId", session.sessionId));
             if (existing.length && existing[0].closed !== true) throw new Error("TPV_SANDBOX_Z_RECORD_INVALID");
