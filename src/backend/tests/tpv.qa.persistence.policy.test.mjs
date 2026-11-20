@@ -256,3 +256,93 @@ test("every exposed TPV QA WebMethod fails closed before repository access", asy
         }
     }
 });
+
+
+test("every exported TPV WebMethod has an explicit runtime policy classification", async () => {
+    const policies = {
+        "tpvCaja.web.js": {
+            guarded: ["obtenerSesionCajaQA", "abrirCajaQA", "registrarArqueoParcialQA"],
+        },
+        "tpvMovimientos.web.js": {
+            guarded: ["registrarMovimientoCajaQA"],
+        },
+        "tpvVentas.web.js": {
+            guarded: ["registrarVentaQA"],
+            readOnly: ["validarVentaBorrador"],
+            disabled: {
+                registrarVenta: "TPV_OPERATIONAL_SALE_WRITES_DISABLED",
+                procesarDevolucion: "TPV_OPERATIONAL_REFUNDS_DISABLED",
+            },
+        },
+        "tpvDevoluciones.web.js": {
+            guarded: ["solicitarDevolucionQA"],
+        },
+        "tpvCierres.web.js": {
+            guarded: ["obtenerResumenSesionQA", "generarTicketXQA", "cerrarTicketZQA"],
+        },
+        "tpvPagos.web.js": {
+            guarded: ["validarDesglosePagosQA"],
+        },
+        "tpvUtils.web.js": {
+            guarded: ["obtenerConfiguracionTPVQA"],
+        },
+        "tpvPermisos.web.js": {
+            guarded: ["obtenerPermisosTPVQA"],
+        },
+        "tpvAuditoria.web.js": {
+            guarded: ["consultarAuditoriaTPVQA"],
+        },
+        "tpvGiftCards.web.js": {
+            guarded: ["consultarTarjetaRegalo"],
+        },
+        "tpvCatalogo.web.js": {
+            readOnly: [
+                "buscarClientesTPV",
+                "obtenerReservasClienteTPV",
+                "obtenerServicios",
+                "obtenerProfesionales",
+                "obtenerProductos",
+                "obtenerVariantesProducto",
+            ],
+        },
+    };
+    const writeOperations = /(?:insertItem|updateItem|saveItem|removeItem|bulkPatchItems|bulkRemoveItems|insertQaEvent|appendQaAudit|registerManualTransaction|\.insert\(|\.update\(|\.remove\(|\.bulkPatch\()/;
+
+    for (const [fileName, policy] of Object.entries(policies)) {
+        const source = await readFile(new URL("../tpv/" + fileName, import.meta.url), "utf8");
+        const expected = [
+            ...(policy.guarded || []),
+            ...(policy.readOnly || []),
+            ...Object.keys(policy.disabled || {}),
+        ].sort();
+        const exported = Array.from(source.matchAll(/^export const (\w+) = webMethod\(/gm), (match) => match[1]).sort();
+        assert.deepEqual(exported, expected, fileName + " must classify every exported WebMethod exactly once");
+
+        for (const methodName of policy.guarded || []) {
+            const block = getWebMethodSource(source, methodName);
+            const guard = block.indexOf("assertTpvQaEnabled()");
+            assert.notEqual(guard, -1, methodName + " must use the backend QA gate");
+            const firstWrite = block.search(writeOperations);
+            assert.ok(firstWrite < 0 || guard < firstWrite, methodName + " must gate before writes");
+        }
+
+        for (const methodName of policy.readOnly || []) {
+            const block = getWebMethodSource(source, methodName);
+            assert.doesNotMatch(block, writeOperations, methodName + " is classified read-only and must not write");
+        }
+
+        for (const [methodName, errorCode] of Object.entries(policy.disabled || {})) {
+            const block = getWebMethodSource(source, methodName);
+            assert.ok(block.includes('disabledResult("' + errorCode + '")'), methodName + " must remain fail-closed");
+            assert.doesNotMatch(block, writeOperations, methodName + " must not reach a writer");
+        }
+    }
+});
+
+function getWebMethodSource(source, methodName) {
+    const declaration = "export const " + methodName + " = webMethod(";
+    const start = source.indexOf(declaration);
+    assert.notEqual(start, -1, "Missing WebMethod " + methodName);
+    const nextExport = source.indexOf("\nexport const ", start + declaration.length);
+    return source.slice(start, nextExport < 0 ? source.length : nextExport);
+}
