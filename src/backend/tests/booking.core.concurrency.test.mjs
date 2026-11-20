@@ -309,8 +309,10 @@ test('BCORE-GAP-01 same professional can be locked for a simple booking inside a
   assert.strictEqual(rows.find((row) => row.dedupeKey === gapKey).serviceId, SVC);
   for (const row of rows) {
     const parts = row.dedupeKey.split("_");
-    assert.equal(row.slotStart.getTime(), Number(parts[3]) * 60000);
-    assert.equal(row.slotEnd.getTime(), Number(parts[4]) * 60000);
+    assert.equal(row.payload.slotStart.getTime(), Number(parts[3]) * 60000);
+    assert.equal(row.payload.slotEnd.getTime(), Number(parts[4]) * 60000);
+    assert.equal(Object.hasOwn(row, "slotStart"), false);
+    assert.equal(Object.hasOwn(row, "slotEnd"), false);
   }
 });
 
@@ -326,7 +328,8 @@ test('BCORE-TX-01 first init creates IN_PROGRESS transaction (isNew)', async () 
   const row = (wixDataMock._store.get(CONTROL) || []).find((r) => r._id === 'pt-new-1');
   assert.ok(row, 'fila TX persistida con _id = pairToken');
   assert.strictEqual(row.controlType, IC.CONTROL_TYPE.IDEMPOTENCY);
-  assert.equal(row.pairToken, "pt-new-1");
+  assert.equal(row._id, "pt-new-1");
+  assert.equal(Object.hasOwn(row, "pairToken"), false);
   // The canonical lease field is the CMS DATETIME expiresAt, never the
   // retired leaseExpiresAt/leasesExpireAt variants.
   assert.ok(row.expiresAt instanceof Date, 'IDEMPOTENCY expiry must be persisted as Date in expiresAt');
