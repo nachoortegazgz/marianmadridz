@@ -91,7 +91,7 @@ Se incorporan en la rama de trabajo:
 - Pruebas unitarias y contractuales para los escenarios y las fronteras de seguridad.
 - ADR con decisiones, riesgos, limitaciones y condiciones de release.
 
-El simulador **no es Wix Payments Sandbox**: no llama a Wix Payments, no crea Orders ni transacciones eCommerce, no genera webhooks y no liquida fondos. Su idempotencia es determinista por clave y fingerprint, no durable porque no persiste estado. La gestión acumulada de reembolsos corresponde al consumidor persistente, que debe aplicar unicidad/CAS y límites append-only.
+El simulador **no es Wix Payments Sandbox**: identifica sus respuestas como environment=SIMULATOR y dataPlane=NO_CMS_ACCESS; no atribuye su ejecución al data plane CMS Sandbox de Wix. No llama a Wix Payments, no crea Orders ni transacciones eCommerce, no genera webhooks y no liquida fondos. Su idempotencia es determinista por clave y fingerprint, no durable porque no persiste estado. La gestión acumulada de reembolsos corresponde al consumidor persistente, que debe aplicar unicidad/CAS y límites append-only.
 
 El fixture no crea miembros Wix ni contactos CRM. La importación queda pendiente de una operación manual dentro del panel CMS con Sandbox verificado; no se ejecuta mediante REST/Management API y no se sincroniza a Online.
 
