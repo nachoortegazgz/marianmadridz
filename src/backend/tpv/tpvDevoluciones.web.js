@@ -6,7 +6,7 @@ import { appendQaAudit, insertQaEvent, latestOpenQaSession, queryQaRecords, with
 import { assertTpvQaEnabled, makeQaId, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
 import { wql } from "backend/dataAccess";
 
-export const solicitarDevolucionQA = webMethod(
+export const solicitarDevolucion = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
         const traceId = makeTraceId("tpv-qa-refund");
@@ -16,7 +16,7 @@ export const solicitarDevolucionQA = webMethod(
             const key = normalizeClientIdempotencyKey(input.idempotencyKey);
             const saleId = String(input.saleId || "").trim();
             const reason = String(input.reason || "").trim();
-            if (!saleId || reason.length < 3 || reason.length > 500) throw new Error("TPV_QA_REFUND_REFERENCE_AND_REASON_REQUIRED");
+            if (!saleId || reason.length < 3 || reason.length > 500) throw new Error("TPV_REFUND_REFERENCE_AND_REASON_REQUIRED");
             const session = await latestOpenQaSession();
             if (!session) throw new Error("TPV_QA_SESSION_NOT_OPEN");
 
@@ -24,7 +24,7 @@ export const solicitarDevolucionQA = webMethod(
             const sales = await queryQaRecords(TPV_QA_COLLECTIONS.VENTAS, wql.eq("saleId", saleId));
             const original = sales.find((sale) => sale.status === "CONFIRMADA_SINTETICA");
             if (!original) throw new Error("TPV_QA_ORIGINAL_SALE_NOT_FOUND");
-            if (original.payload?.sessionId !== session.sessionId) throw new Error("TPV_QA_REFUND_SESSION_MISMATCH");
+            if (original.payload?.sessionId !== session.sessionId) throw new Error("TPV_REFUND_SESSION_MISMATCH");
 
             const refundId = makeQaId("REFUND", key);
             const originalPayments = await queryQaRecords(TPV_QA_COLLECTIONS.PAGOS, wql.eq("saleId", saleId));
@@ -46,17 +46,17 @@ export const solicitarDevolucionQA = webMethod(
                 }
             }
 
-            if (!Array.isArray(input.payments) || input.payments.length === 0) throw new Error("TPV_QA_REFUND_PAYMENTS_REQUIRED");
+            if (!Array.isArray(input.payments) || input.payments.length === 0) throw new Error("TPV_REFUND_PAYMENTS_REQUIRED");
             const allocations = input.payments.map((payment) => {
                 const method = String(payment.paymentMethod || "").trim().toUpperCase();
-                if (!Object.prototype.hasOwnProperty.call(remainingByMethod, method)) throw new Error("TPV_QA_REFUND_METHOD_INVALID");
+                if (!Object.prototype.hasOwnProperty.call(remainingByMethod, method)) throw new Error("TPV_REFUND_METHOD_INVALID");
                 const amountMinor = toMinorUnits(payment.amount, "REFUND_AMOUNT");
-                if (amountMinor <= 0 || amountMinor > remainingByMethod[method]) throw new Error("TPV_QA_REFUND_EXCEEDS_REMAINING");
+                if (amountMinor <= 0 || amountMinor > remainingByMethod[method]) throw new Error("TPV_REFUND_EXCEEDS_REMAINING");
                 remainingByMethod[method] -= amountMinor;
                 return { paymentMethod: method, amountMinor };
             });
             const amountMinor = allocations.reduce((sum, item) => sum + item.amountMinor, 0);
-            if (amountMinor <= 0) throw new Error("TPV_QA_REFUND_AMOUNT_INVALID");
+            if (amountMinor <= 0) throw new Error("TPV_REFUND_AMOUNT_INVALID");
 
             const staff = await getMyStaffContext(traceId);
             const method = allocations.every((item) => item.paymentMethod === allocations[0].paymentMethod)
@@ -119,7 +119,7 @@ export const solicitarDevolucionQA = webMethod(
             };
             });
         } catch (error) {
-            return { status: "ERROR", data: null, error: { code: String(error?.message || "TPV_QA_REFUND_FAILED") }, traceId };
+            return { status: "ERROR", data: null, error: { code: String(error?.message || "TPV_REFUND_FAILED") }, traceId };
         }
     }
 );
