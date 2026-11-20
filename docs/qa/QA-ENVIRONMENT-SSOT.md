@@ -120,7 +120,7 @@ Hasta que se demuestre mediante contrato oficial y pruebas runtime una frontera 
 Esta decisión prevalece sobre la instrucción anterior de ejecutar el flujo persistente en Preview hasta que se demuestre el aislamiento. No se modifican CMS ni el singleton `CajaActual`. Para reactivar QA persistente se requiere prueba positiva desde Preview y negativa desde Published, con verificación antes/después de las colecciones LIVE.
 
 
-## Consolidación vigente — 2026-11-20 12:xx Europe/Madrid
+## Consolidación vigente — 2026-11-20
 
 Esta sección es el estado operativo vigente y **supersede** los addenda históricos anteriores cuando exista contradicción, en particular la autorización histórica de persistencia TPV desde Preview de la sección "Addendum 2026-11-20 — ejecución persistente TPV".
 
