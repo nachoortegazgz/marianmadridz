@@ -158,7 +158,7 @@ function _toAeatFlag(value) {
 
 function _toFiscalStartDateText(value) {
     const date = _safeTrim(value);
-    const match = /^(\\d{4})-(\\d{2})-(\\d{2})$/.exec(date);
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
     if (!match) return null;
     const [year, month, day] = match.slice(1).map(Number);
     const parsed = new Date(Date.UTC(year, month - 1, day));
