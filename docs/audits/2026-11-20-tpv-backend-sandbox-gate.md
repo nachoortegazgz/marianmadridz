@@ -50,3 +50,34 @@ Reactivation requires:
 5. Complete TPV E2E and regression, plus rollback evidence.
 
 No synthetic seed or cash bootstrap should be attempted against the current site until the first condition is satisfied.
+## Addendum — contrato oficial de Sandbox en Preview (2026-11-20)
+
+### Documentación oficial contrastada
+
+La documentación vigente de Wix aclara el comportamiento de los datos en Preview:
+
+- El Sandbox CMS es **opcional y está deshabilitado por defecto**. Debe habilitarse desde CMS > Manage > More Actions > Advanced Settings > Sandbox.
+- Con Sandbox habilitado, las interacciones de Preview con colecciones CMS propias usan la versión Sandbox; sus cambios persisten en Sandbox y no pasan a Live salvo sincronización explícita.
+- Las colecciones de Wix Apps no tienen versión Sandbox: en Preview siguen usando Live y los cambios realizados sobre ellas se reflejan en el sitio publicado.
+- La Site Data Usage API informa uso LIVE/SANDBOX por colección, pero sus contadores no certifican por sí solos que el toggle Sandbox esté actualmente habilitado ni demuestran qué almacén utilizó una invocación concreta.
+
+Fuentes oficiales:
+- Velo — About Testing Your Code in Preview Mode: https://dev.wix.com/docs/develop-websites/articles/workspace-tools/testing-monitoring/testing-troubleshooting/about-testing-your-code-in-preview-mode
+- Wix Help Center — CMS: Accessing and Syncing Your Sandbox and Live Collections: https://support.wix.com/en/article/cms-accessing-and-syncing-your-sandbox-and-live-collections
+- Wix Site Data Usage API: https://dev.wix.com/docs/api-reference/business-solutions/cms/operations/site-data-usage/introduction
+
+### Consecuencia para Marian Madrid
+
+1. Las colecciones propias CajaActual, MovimientosCaja, ControlOperativo, HistoricoCierresZ y TpvSandboxIdentities solo constituyen un banco de pruebas separado si Sandbox está habilitado para el sitio y las operaciones se ejecutan realmente en Preview.
+2. Los lectores de catálogo de Bookings y Stores (obtenerServicios, obtenerProductos, obtenerVariantesProducto) consultan aplicaciones Wix; no deben considerarse aislados por el Sandbox CMS. Se mantienen estrictamente read-only.
+3. Los 107 elementos/204.766 bytes de uso SANDBOX observados en la consulta previa son evidencia de uso registrado, pero no sustituyen la comprobación actual del toggle ni una prueba funcional de lectura desde Preview.
+4. No se habilita TPV_QA_RUNTIME_POLICY.ENABLED, no se crean identidades ni se inicializa CajaActual hasta verificar en el Editor que Sandbox está habilitado, comprobar permisos/esquemas de las colecciones propias y realizar una prueba de lectura de entorno desde una invocación real de Preview.
+5. La sincronización Sandbox → Live es una operación separada, potencialmente irreversible en sus efectos sobre los elementos coincidentes. No se utilizará como mecanismo de despliegue de datos de QA.
+
+### Estado de esta aclaración
+
+- **Verificado documentalmente:** Preview utiliza Sandbox para colecciones CMS propias cuando Sandbox está habilitado; Wix App Collections continúan en Live.
+- **Verificado por API anteriormente:** hay uso de datos en ambos entornos.
+- **Pendiente de comprobar en el sitio:** estado actual del toggle Sandbox y permisos por colección.
+- **Pendiente de ejecutar:** lectura backend desde Editor Preview y prueba negativa equivalente en contexto publicado/direct-WebMethod.
+- **Decisión:** se mantiene el gate fail-closed. Esta aclaración reduce la incertidumbre del diseño, pero no autoriza escrituras ni cambia la decisión NO-GO.
