@@ -488,3 +488,6 @@ Asimismo, cualquier declaración histórica de publicación en Wix queda como de
 **Reversión/preproducción:** conservar evidencias hasta cerrar QA; retirar los datos de test-run por marcador/ID o mediante el reset integral aprobado; después restablecer el bloqueo de update/remove para `MovimientosCaja` y verificar append-only antes de cualquier despliegue real. Esta decisión no habilita publicación ni cambia los gates fiscales reales.
 
 **Estado de implementación:** PR #439 en revisión; CI offline y Preview/Sandbox E2E pendientes de cierre. No se han escrito datos CMS ni desplegado este cambio.
+
+
+**Edición controlada:** el dato lógico editable reside en `payloadFiscal.qaRecord`. El hook `MovimientosCaja_beforeUpdate` protege identidad, testRunId, tipo lógico y secuencia; recalcula los campos derivados y la huella SHA-256 QA al guardar. No se editan manualmente los marcadores ni la cadena fiscal.
