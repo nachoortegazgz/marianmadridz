@@ -394,7 +394,7 @@ export function assertTpvSandboxIdentity(item) {
         throw new Error("SCHEMA_VIOLATION: TpvSandboxIdentities identity key/type invalid");
     }
     if (!displayName.startsWith(expectedNamePrefix) ||
-        !/^\\d{2}$/.test(displayName.slice(expectedNamePrefix.length))) {
+        !/^\d{2}$/.test(displayName.slice(expectedNamePrefix.length))) {
         throw new Error("SCHEMA_VIOLATION: TpvSandboxIdentities displayName invalid");
     }
     if (item.active !== true || item.syntheticOnly !== true || item.environment !== "SANDBOX" ||
