@@ -1678,8 +1678,8 @@ async function _markDualPairInconsistent(pairToken, reason, traceId, error) {
         await dalInsert(CONTROL_COL, {
             controlType: CONTROL_TYPE.SYSTEM_FLAG,
             dedupeKey,
-            pairToken: _safeTrim(pairToken),
             payload: {
+                pairToken: _safeTrim(pairToken),
                 reason,
                 traceId: _safeTrim(traceId),
                 error: error?.message || String(error || ""),
