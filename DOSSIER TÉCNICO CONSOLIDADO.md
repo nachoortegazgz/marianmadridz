@@ -2926,3 +2926,8 @@ TEC-038/TEC-041 siguen siendo la política general de inmutabilidad. La única e
 
 
 **Edición controlada:** el dato lógico editable reside en `payloadFiscal.qaRecord`. El hook `MovimientosCaja_beforeUpdate` protege identidad, testRunId, tipo lógico y secuencia; recalcula los campos derivados y la huella SHA-256 QA al guardar. No se editan manualmente los marcadores ni la cadena fiscal.
+
+
+---
+
+> **DIRECTRIZ SUPERSEDENTE DEL PROPIETARIO — 2026-11-20:** Este dossier es documentación derivada y editable. Cualquier instrucción histórica aquí contenida que impida simulacros completos con registros sintéticos, persistencia QA o limpieza preproducción queda supersedida por [la directriz global del propietario](docs/PROJECT-OWNER-DIRECTIVE-2026-11-20.md). El propietario declara que el sitio no ha tenido actividad real y que todos los registros son sintéticos; autoriza pruebas completas para validar procesos y depurar. No se debe interpretar la mención histórica de “no escribir CMS live” o “append-only también en QA” como prohibición general de ensayos sintéticos. Las operaciones siguen requiriendo implementación y validación técnica, autorización backend, control de efectos externos, cumplimiento legal y APIs oficiales. El reset preproducción será controlado y verificable. Los estados de CI/runtime/deploy de este dossier conservan fecha y valor histórico, no se actualizan por esta directriz.
