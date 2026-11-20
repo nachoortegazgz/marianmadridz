@@ -129,3 +129,41 @@ El singleton sigue ABIERTA con openingCashAmount/cashAmount/expectedCash/counted
 PR #460 corrigió el DTO getCashierState para leer openingCashAmount desde el campo físico; PR #462 eliminó la escritura del campo ausente operationDate y deriva el daykey de Jornada desde openedAt en Europe/Madrid. El campo físico operationDateHour permanece sin uso hasta aprobar su semántica. Ambas PR superaron CI: Layer 1 333/333, Layer 2 266/266, suite offline 688/688, contratos SDK, npm audit, ESLint y secret scanning SUCCESS.
 
 El detalle de esquema, permisos, evidencia nativa, riesgos y límites de validación está en [reconciliación live de CajaActual y reservas](qa/2026-11-20-live-caja-schema-and-reconciliation.md). No se han ejecutado escrituras Wix, reintentos, cierres ni publicación. Writers fiscales/contables siguen deshabilitados; release **NO-GO**.
+
+
+## Addendum vigente — 2026-11-20, HEAD main cfe1d0c
+
+Este bloque prevalece sobre los snapshots y addenda TPV anteriores cuando exista contradicción.
+
+### Repositorio y CI
+- HEAD de `main`: `cfe1d0c37a9464cb63aea9d31873071eecb10d9f` (PR #499 fusionada).
+- PR #496, #497, #498 y #499 integradas.
+- CI post-merge para este SHA: Backend offline quality SUCCESS (run `44780145944`) y Gitleaks SUCCESS (run `44780145900`).
+- Evidencia: Layer 1 28 suites/338 tests; Layer 2 19 suites/268 tests; total 75 suites/705 tests, 0 fallos; contratos Wix SDK, eCommerce Order Transactions y TPV Catalog, ESLint y Gitleaks PASS.
+- Esta evidencia es offline/estática. No acredita Wix Runtime, Preview E2E, permisos efectivos ni despliegue.
+
+### Contrato TPV Sandbox vigente
+- Configuración canónica actual: `TPV_SANDBOX_RUNTIME_POLICY.ENABLED=true`, `ENVIRONMENT=SANDBOX`, `SYNTHETIC_ONLY=true`, pagos reales, escrituras fiscales, notificaciones y hardware deshabilitados; run ID `TPVSANDBOX-DEV-20261120-01`.
+- No confundir esta implementación con la ruta histórica `TPV_QA_RUNTIME_POLICY` / WebMethods con sufijo QA. La documentación antigua de esa ruta se conserva como historial, no como contrato actual del TPV Sandbox.
+- Los WebMethods actuales usan nombres neutros y exigen autorización backend y `assertTpvSandboxEnabled()`. Las etiquetas `environment` / `previewOnly` no prueban por sí solas qué data plane atiende la llamada.
+- Las colecciones `SANDBOX_LOGICAL_*` son aliases lógicos, no colecciones físicas nuevas: el repositorio proyecta eventos en `MovimientosCaja`, estado de sesión/proyección en `CajaActual` y locks en `ControlOperativo`. Wix Apps no quedan aisladas por CMS Sandbox.
+- PR #499 convirtió el bootstrap de caja y la comprobación de las seis identidades en read-only. La aplicación exige presemilla manual en CMS Sandbox; no crea singleton ni identidades automáticamente.
+
+### Precondiciones sintéticas
+- Caja: `_id=SINGLE_ITEM_ID`, `singletonKey=CAJA_PRINCIPAL`, `cashRegisterStatus=CERRADA`, `snapshotSource=TPV_SANDBOX_INITIALIZED`, `traceId=TPVSANDBOX-DEV-20261120-01`, `sequenceCounters` objeto y `conceptOperations.tpvSandbox.sandboxRunId` coincidente.
+- Identidades: tres clientes y tres profesionales, IDs `SANDBOX-CUSTOMER-01..03` y `SANDBOX-STAFF-01..03`, `environment=SANDBOX`, `syntheticOnly=true`, `active=true`, `testRunId` igual al run ID y correos `@example.test`. No añadir PII ni referencias de CRM/Bookings/Members.
+- Última lectura read-only documentada: `TpvSandboxIdentities=0` en ambos data planes. No se ha demostrado que la presemilla exista ni se ha ejecutado.
+
+### Corrección adicional en revisión
+La revisión del repositorio identificó que los locks de `ControlOperativo` deben validar el marcador de `CajaActual` antes de cualquier acceso. La rama `fix/tpv-sandbox-lock-preflight-and-docs` incorpora un helper read-only común, el preflight previo a los locks y una prueba contractual. Está pendiente de CI/merge; no atribuir esta corrección a `main` hasta su integración.
+
+### Riesgos y límites no resueltos
+- `SANDBOX_RUN_ID` es estático; no existe ciclo de vida/rotación de test-run validado.
+- No se ha ejecutado Wix Preview E2E ni prueba negativa desde Published/direct WebMethod.
+- No hay prueba de concurrencia/atomicidad en Wix Runtime para todos los escritores de `CajaActual` (H-01).
+- No se ha ejecutado comparación de datos LIVE antes/después de una jornada TPV.
+- Permisos efectivos por rol, efectos de automatizaciones y Wix Apps, reset sintético preproducción y rollback permanecen pendientes.
+- Site Context observado: Draft. No se ha publicado ni acreditado la sincronización del código con Wix Editor.
+
+### Decisión
+CI offline de `main` en el SHA indicado: PASS. Integridad runtime, E2E y readiness global: NO VERIFICADOS. Publicación/despliegue: **NO-GO**. No tocar singleton LIVE, tres compensaciones `PENDING_RECOVERY`, pedidos #10032/#10033 ni ledgers. No sincronizar Sandbox→Online.
