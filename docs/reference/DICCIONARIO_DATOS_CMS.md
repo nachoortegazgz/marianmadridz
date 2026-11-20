@@ -1624,6 +1624,9 @@ Las definiciones siguientes combinan contrato físico live y documentación/cód
 | `sequenceCounters` | CajaActual | OBJECT | Contadores de secuencia utilizados por el ledger; no editar manualmente. |
 | `operationDateHour` | CajaActual | DATETIME | Marca temporal física de operación; semántica funcional del campo pendiente de contrato. |
 | `openingCashAmount` | CajaActual | NUMBER | Saldo inicial de efectivo según el esquema físico live. |
+| `openingCardAmount` | CajaActual | NUMBER | Saldo inicial de tarjeta según el esquema físico live. |
+| `openingBizumAmount` | CajaActual | NUMBER | Saldo inicial Bizum según el esquema físico live. |
+| `openingOtherAmount` | CajaActual | NUMBER | Saldo inicial de otros medios según el esquema físico live. |
 | `cashAmount` | CajaActual | NUMBER | Importe de efectivo físico reflejado en la caja. |
 | `expectedCash` | CajaActual | NUMBER | Efectivo esperado según movimientos físicos registrados. |
 | `countedCash` | CajaActual | NUMBER | Efectivo contado físicamente en el arqueo. |
@@ -1990,7 +1993,7 @@ Este diccionario describe esquemas y observaciones CMS; no gobierna la autorizac
 
 **Evidencia Wix:** colección CajaActual revisión 18, 81 campos, actualizada el 17/11/2026; un singleton. El esquema físico contiene operationDateHour DATETIME, openingCashAmount NUMBER, openingCardAmount NUMBER, openingBizumAmount NUMBER, openingOtherAmount NUMBER, bizumAmount NUMBER, cashAmount NUMBER, cardAmount NUMBER, otherAmount NUMBER, expectedCash NUMBER, countedCash NUMBER, difference NUMBER, sequenceCounters OBJECT, snapshotSource TEXT, traceId TEXT y cashRegisterStatus TEXT.
 
-**Campos ausentes del esquema actual:** operationDate, openingAmount, voucherAmount, currentSequence, id e isOpen. No escribirlos como campos raíz de CajaActual. La fotografía del 14/11 queda histórica.
+**Campos ausentes del esquema actual:** operationDate, openingAmount, voucherAmount, currentSequence, id e isOpen. El item live no devuelve operationDate; cajas.web.js conserva una lectura/escritura legacy de ese campo (P2) y no debe tratarse como dato físico fiable. openingAmount fue corregido en PR #460; los demás nombres ausentes no deben añadirse como campos raíz sin contrato. La fotografía del 14/11 queda histórica.
 
 **Código integrado:** PR #460 alinea el DTO getCashierState con openingCashAmount y actualiza fixtures. El comentario de Bizum aclara que la proyección de cajas.web.js agrega Bizum en otherAmount aunque exista bizumAmount físico. CI PR #460: Layer 1 333/333, Layer 2 266/266, suite offline 688/688; SDK, npm audit, ESLint y secret scanning SUCCESS.
 
