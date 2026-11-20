@@ -16,6 +16,7 @@ import {
     MOVEMENT_HISTORICAL_READ_ALIASES,
     normalizeMovementKeys,
     OPERATIONAL_COLLECTIONS,
+    TPV_QA_RUNTIME_POLICY,
 } from "backend/internalConfig";
 import { assertCitasF2, assertControlOperativo, assertCanonicalControlFields, assertRegistrosHorariosStaff, assertMapaStaffRecord, assertCajaActualRecord, isValidNifOrEuVat as _isValidNifOrEuVat } from "backend/validation";
 import { CONSISTENCY, getItem } from "backend/dataAccess";
@@ -474,8 +475,18 @@ export function MovimientosCaja_beforeInsert(item) {
     return item;
 }
 
-export function MovimientosCaja_beforeUpdate() {
-    _fiscalError("Modificacion de MovimientosCaja prohibida por normativa fiscal (append-only). Use eventType=AJUSTE.");
+export function MovimientosCaja_beforeUpdate(item, context) {
+    const previous = context?.previous || context?.original || {};
+    const expectedPrefix = "TPVQA:" + TPV_QA_RUNTIME_POLICY.TEST_RUN_ID + ":";
+    const isSyntheticTestRow = (value) =>
+        value?.recordSource === "TPV_QA_SYNTHETIC" &&
+        String(value?.movementType || "").startsWith("SIMULATED_TPV_") &&
+        value?.payloadFiscal?.testRunId === TPV_QA_RUNTIME_POLICY.TEST_RUN_ID &&
+        value?.payloadFiscal?.isSynthetic === true &&
+        value?.payloadFiscal?.realPayment === false &&
+        String(value?.traceId || "").startsWith(expectedPrefix);
+    if (isSyntheticTestRow(item) && isSyntheticTestRow(previous)) return item;
+    _fiscalError("Modificacion de MovimientosCaja prohibida: solo se admite editar un registro TPV QA del test-run activo.");
 }
 
 export function MovimientosCaja_beforeRemove() {
