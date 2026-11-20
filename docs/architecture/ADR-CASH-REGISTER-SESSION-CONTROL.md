@@ -1,5 +1,7 @@
 # ADR — Sesión operativa de CajaActual y autorización de apertura/cierre
 
+> **Revalidación 20/11/2026:** el snapshot CMS del 11/11 y las referencias a SIMULACION son históricos. El singleton live ahora está ABIERTA, con fechas incoherentes y sin marcadores QA. Véase la sección 13 y la [reconciliación live 20/11](../qa/2026-11-20-live-caja-schema-and-reconciliation.md). La propuesta sigue pendiente de aprobación de implementación.
+
 - **Estado:** PROPUESTA TÉCNICA — pendiente de aprobación de implementación
 - **Fecha:** 2026-11-11
 - **Repositorio base:** `main` en `0acbca199966234e24d319a9b575bcc115762f1c`
@@ -28,7 +30,7 @@ Definir el contrato seguro para convertir `CajaActual` en una proyección operat
 | `src/pages/ZONA MARIAN.gn7mx.js` | El acceso a ZONA MARIAN exige `isMarianManager === true`. | No se debe rebajar este control. La operativa autorizada de caja debe integrarse en ZONA STAFF o una superficie separada con permisos mínimos. |
 | `src/backend/data.js` | `CajaActual_beforeUpdate` no impone transiciones ni responsables; `HistoricoCierresZ_beforeUpdate` es append-only salvo recuperación de firma/verificación. | Las garantías deben residir en WebMethods/backend y en los contratos de persistencia; los hooks actuales no son una barrera de autorización suficiente. |
 
-### 2.1 Esquema CMS live — consulta de solo lectura (2026-11-11)
+### 2.1 Snapshot histórico de esquema CMS — 2026-11-11 (superseded 2026-11-20)
 
 La API oficial de Data Collections devuelve estos esquemas y permisos efectivos:
 
@@ -41,7 +43,7 @@ La API oficial de Data Collections devuelve estos esquemas y permisos efectivos:
 
 **Hallazgo de contrato P1 — Z:** el objeto `zRecord` construido en `_registerZClosing()` no incluye al menos los campos CMS obligatorios `closeDate`, `totalTaxAmount`, `totalTaxBase`, `closedBy` y `recordDomain`; usa `netTaxAmount` y `netTaxableAmount` en lugar de los dos nombres requeridos. El proyector `eventLog.js::_proyectarCierreZ()` tampoco incluye todos los campos obligatorios de la colección. Ambos caminos construyen el mismo ID determinista `Z_<fecha>` con payloads distintos: `_registerZClosing()` y `_proyectarCierreZ()`. Si ambos se ejecutan para el mismo día, existe riesgo de colisión/idempotencia ambigua; además, `_assertPeriodNotClosed()` trata la mera existencia del ID como periodo cerrado. La inspección estática confirma la discrepancia; el resultado real de inserción en runtime Wix no se ha ejecutado en esta fase. No declarar el cierre Z operativo hasta reconciliar los dos writers, su ownership del ID, los campos obligatorios y las pruebas runtime.
 
-La consulta live confirmó una fila en `CajaActual` con `cashRegisterStatus=SIMULACION`, `openingAmount=300`, `cashAmount=300`, `expectedCash=300`, `countedCash=0`, y ninguna fila en `HistoricoCierresZ`. La fila simulada permanece intacta.
+La consulta live del 11/11 confirmó entonces una fila `SIMULACION`. Ese estado ya no describe el singleton actual: la relectura del 20/11 devuelve `ABIERTA`, `snapshotSource=APERTURA_CAJA`, `traceId` vacío y fechas inconsistentes. No modificar el singleton; detalle en sección 13.
 
 
 ## 3. Identidades autorizadas
@@ -108,7 +110,7 @@ No deben registrarse como venta ni como ajuste genérico por conveniencia.
 
 ### 6.3 Saldo de arranque y registros existentes
 
-La fila live de `CajaActual` se encuentra en `SIMULACION` y contiene 300 EUR. Está bloqueada por código y no se considera saldo operativo. No se cambia a `ABIERTA` ni `CERRADA`, no se borra y no se reescribe hasta definir una retirada/aislamiento trazable. Tampoco se reconstruye un saldo inicial a partir de los movimientos fiscales sin conciliación. El esquema ya contiene los campos de efectivo inicial/esperado/contado/diferencia; no se añaden campos duplicados a `CajaActual`.
+**Snapshot histórico 11/11:** el singleton estaba en `SIMULACION`. **Estado live 20/11:** `ABIERTA`, `snapshotSource=APERTURA_CAJA`, `traceId` vacío, `openedAt=2026-11-14T06:00:00Z`, `closedAt=2026-11-12T23:00:00Z`, `lastMovementAt=2026-11-12T23:00:00Z`, importes de apertura/efectivo/esperado/contado 300 EUR y difference 0. No hay movimientos ni cierres Z. No se considera sandbox ni sesión reconciliada; no se cierra, reabre, borra ni reescribe hasta aprobar el plan de conciliación/aislamiento.
 
 ### 6.4 Terminal e IP
 
@@ -135,12 +137,12 @@ La fila live de `CajaActual` se encuentra en `SIMULACION` y contiene 300 EUR. Es
 - [x] Andrea y Alba autorizadas para apertura/cierre, sin elevar su rol global.
 - [x] Identidades de recurso contrastadas con `MapaStaff`.
 - [x] Código de seguridad, writer, proyector, cierre Z, cron, hooks y superficies frontend inspeccionados.
-- [x] Bloqueos de estado SIMULACION y ausencia de campos de arqueo identificados.
+- [x] Bloqueo del snapshot histórico SIMULACION identificado (11/11).\n- [x] Estado live revalidado el 20/11: ABIERTA, snapshotSource APERTURA_CAJA, traceId vacío, fechas incoherentes; no es sandbox TPV.
 - [x] No se han modificado datos, permisos CMS ni ledgers.
 
 ### Hito 1 — Contrato de sesión y esquema (siguiente gate)
-- [x] Consultar esquemas live de `CajaActual`, `MovimientosCaja`, `HistoricoCierresZ` y `ControlOperativo` (revisiones 48/76/36/27); permisos ADMIN en las cuatro colecciones.
-- [x] Confirmar que `CajaActual` ya contiene campos de apertura/cierre y arqueo físico.
+- [x] Consulta histórica 11/11: revisiones 48/76/36/27.\n- [x] Relectura live 20/11: CajaActual rev18/81 campos; MovimientosCaja rev109/113; HistoricoCierresZ rev44/66; ControlOperativo rev93/32; permisos ADMIN en las cuatro.
+- [x] Confirmar esquema actual: openingCashAmount, openingCardAmount, openingBizumAmount, openingOtherAmount, bizumAmount, expectedCash, countedCash y difference; DTO alineado por PR #460/462.
 - [x] Detectar discrepancia entre campos CMS obligatorios de `HistoricoCierresZ` y los dos writers actuales; runtime insert pendiente.
 - [ ] Completar el inventario de todos los consumidores del cierre/hash y probar ambos writers en entorno aislado.
 - [ ] Decidir si cierre físico se incorpora a `HistoricoCierresZ` o se separa.
@@ -173,7 +175,7 @@ La fila live de `CajaActual` se encuentra en `SIMULACION` y contiene 300 EUR. Es
 ## 9. Criterios de no-go
 
 No habilitar la caja ni desplegar mientras:
-- el singleton live siga en estado `SIMULACION` sin retirada/aislamiento controlado;
+- el singleton live no esté conciliado: estado ABIERTA con snapshotSource APERTURA_CAJA, traceId vacío, fechas openedAt/closedAt incoherentes y sin marcador TPV_QA_SANDBOX_INITIALIZED/TPV_QA_SYNTHETIC;
 - la apertura pueda producirse implícitamente;
 - no esté definido el saldo físico de arranque;
 - el cierre manual y el cron puedan competir sin precedencia idempotente;
@@ -185,7 +187,7 @@ No habilitar la caja ni desplegar mientras:
 - **Verificado:** inspección estática de los archivos citados en `main` y consulta read-only previa del CMS live.
 - **Documentado:** autorización explícita de Andrea y Alba para abrir/cerrar.
 - **Inferido:** no se infiere autorización para cobros, devoluciones, pagos, ajustes ni acceso fiscal.
-- **Verificado:** consulta read-only del esquema CMS live (revisiones 48/76/36/27) y de la fila actual de `CajaActual` / ausencia de filas Z; discrepancia de campos obligatorios Z detectada por comparación estática.
+- **Verificado:** consulta read-only del esquema CMS live 20/11 (revisiones 18/109/44/93) y del singleton CajaActual; no hay movimientos ni cierres Z. Discrepancia de campos obligatorios Z sigue detectada por comparación estática.
 - **Pendiente:** CI de este PR documental; prueba runtime del insert Z; inventario completo de consumidores/hash; contrato de sesión, decisión cierre físico/fiscal, retirada de `SIMULACION`, runtime QA y despliegue.
 - **Cambios en CMS:** ninguno.
 - **Cambios en Wix publicado:** ninguno.
@@ -245,7 +247,7 @@ La rama `fix/caja-actual-last-operation-projection` incorpora una primera alinea
 
 1. El escritor manual requiere `channelType` explícito, salvo la inferencia controlada `ONLINE` para `VENTA_ONLINE`/`WIX_PAYMENTS`. Para `PRESENCIAL`, el actor se obtiene con `getMyStaffContext()`; el `resourceId` recibido del navegador no se usa como identidad ni para rate limiting.
 2. El proyector acepta `EFECTIVO`, `TARJETA` y `BIZUM` solo en `PRESENCIAL` y con sesión existente `ABIERTA` y `openedAt` válido. No crea ni reabre `CajaActual`. Si la sesión no existe/no está abierta/es simulada, la proyección queda pendiente y genera una compensación para reconciliación.
-3. `cashAmount` y `netAmount` conservan el efectivo físico; `cardAmount` y `voucherAmount` acumulan tarjeta y Bizum respectivamente. Los reembolsos mantienen el signo del `accountingAmount` del movimiento fuente. Los pagos online/transferencias no incrementan la sesión física.
+3. `cashAmount` y `netAmount` conservan el efectivo físico; `cardAmount` y `otherAmount` acumulan tarjeta/Bizum según el contrato actual de esta proyección; el esquema live también declara `bizumAmount`, pero `cajas.web.js` no lo usa como bucket de esta proyección. Los reembolsos mantienen el signo del `accountingAmount` del movimiento fuente. Los pagos online/transferencias no incrementan la sesión física.
 4. `getCashierState()` devuelve un resumen de sesión calculado desde `MovimientosCaja` en el intervalo `openedAt`–`closedAt`, con número e importe neto por medio, más `lastOperation` y `sourceMovementIds`. El actor visible se resuelve desde `staffResourceId` mediante Bookings Staff API. Huellas y timestamps se leen del movimiento original; no se generan valores retrospectivos.
 5. El cierre Z manual guarda `closedBy` en `CajaActual` desde la identidad backend. El panel `#htmlAdmin.txt` representa efectivo físico, acumulados de efectivo/tarjeta/Bizum, responsables/horas de sesión y huellas de la última operación.
 
@@ -291,3 +293,31 @@ En cierres Z ejecutados por un miembro autorizado, `CajaActual.closedBy` conserv
 ## 9. Addendum — TPV sintético en desarrollo (2026-11-20)
 
 `CajaActual` sigue siendo el singleton/proyección de sesión. Durante el test-run autorizado se identifica con `snapshotSource=TPV_QA_SYNTHETIC` y `cashRegisterStatus=SIMULACION`. `MovimientosCaja` sigue siendo append-only para movimientos reales; la única excepción de desarrollo son eventos `SIMULATED_TPV_*` marcados con `recordSource=TPV_QA_SYNTHETIC` y testRunId backend. Estos eventos no consumen secuencia/hash fiscal real, no invocan firmador/AEAT y quedan excluidos de la cadena y agregaciones fiscales. Las filas del test-run pueden editarse/eliminarse de forma selectiva; el resto permanece inmutable. Preview/Sandbox E2E pendiente.
+
+
+## 13. Revalidación técnica live — 2026-11-20
+
+### 13.1 Esquema y datos físicos actuales
+
+- CajaActual: revisión 18, 81 campos, actualizada 17/11; openingCashAmount, openingCardAmount, openingBizumAmount, openingOtherAmount, bizumAmount, operationDateHour (DATETIME), cashAmount, cardAmount, otherAmount, expectedCash, countedCash, difference, sequenceCounters (OBJECT), snapshotSource, traceId y cashRegisterStatus.
+- MovimientosCaja: revisión 109, 113 campos, 0 registros.
+- HistoricoCierresZ: revisión 44, 66 campos, 0 registros.
+- ControlOperativo: revisión 93, 32 campos, 58 registros; 3 compensaciones PENDING_RECOVERY, attempts=0.
+- El singleton CajaActual está ABIERTA; openedAt 14/11, closedAt y lastMovementAt 12/11; openingCashAmount/cashAmount/expectedCash/countedCash=300 EUR; difference=0; snapshotSource=APERTURA_CAJA; traceId vacío; sequenceCounters se devuelve como texto JSON aunque el tipo físico es OBJECT.
+- El sitio devuelve Draft. El singleton no tiene los marcadores QA exigidos por TPV QA y no debe usarse como sandbox.
+
+### 13.2 Cambios de código ya integrados
+
+- PR #460: DTO de caja lee openingCashAmount; comentario Bizum alineado con el esquema físico y la semántica actual de otherAmount.
+- PR #462: elimina la escritura del campo raíz operationDate, ausente del esquema; el DTO de presentación deriva el daykey de openedAt en Europe/Madrid. operationDateHour sigue en el esquema, pero su semántica no está aprobada y no se usa como sustituto.
+- Ambas PRs superaron CI offline: Layer 1 333/333, Layer 2 266/266, suite 688/688; SDK contracts, npm audit, ESLint y secret scanning SUCCESS. No se ejecutó Wix Runtime.
+
+### 13.3 Contrato oficial de hooks y actualizaciones Wix
+
+- Wix documenta que beforeUpdate recibe el item y un UpdateHookContext; el ejemplo oficial de contexto expone collectionName, userId y userRole. No documenta una propiedad context.original. El hook CajaActual_beforeUpdate no debe depender de context.original para recuperar el estado anterior; la comparación de transiciones requiere lectura server-side del item existente o un contrato DAL explícito.
+- Wix Update Data Item reemplaza el payload completo; los campos omitidos se pierden. Patch Data Item modifica solo los campos declarados. El DAL actual usa update (replace), por lo que cada consumidor debe enviar el item completo y preservar campos no relacionados. Cualquier migración a patch requiere pruebas y revisión de hooks/contratos.
+- Referencias oficiales: [Velo beforeUpdate hook](https://dev.wix.com/docs/velo/apis/wix-data/hooks/before-update), [Update Data Item](https://dev.wix.com/docs/api-reference/business-solutions/cms/data-items/update-data-item), [Patch Data Item](https://dev.wix.com/docs/api-reference/business-solutions/cms/data-items/patch-data-item).
+
+### 13.4 Estado de decisión
+
+Esta revalidación no aprueba la implementación del ADR. Permanecen pendientes: transición formal ABIERTA/CERRADA, autorización específica de operador, apertura explícita, cierre Z con contrato CMS completo, precedencia manual/cron, aislamiento del singleton y pruebas de concurrencia/runtime. No se han modificado datos, permisos ni ledgers.
