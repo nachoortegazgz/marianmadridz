@@ -61,6 +61,11 @@ test("P0-FISCAL-01 fiscal ledger writers are disabled by canonical fail-closed p
     "legalName must not be inferred from the commercial brand");
 
   const eventWriter = eventLog.slice(eventStart);
+  const zEventGuard = eventWriter.indexOf('if (_safeTrim(input?.eventType).toUpperCase() === EVENT_TYPE.CIERRE_Z)');
+  assert.ok(zEventGuard >= 0, "EventLog must reject the duplicate/incomplete CIERRE_Z projection before any ledger work");
+  assert.match(eventWriter.slice(zEventGuard), /Z_CLOSING_REQUIRES_CANONICAL_WRITER/);
+  assert.doesNotMatch(eventLog, /dalInsert\\(HISTORICO_CIERRES_Z_COL/,
+    "EventLog must not create a second Z closing row");
   const eventGuard = eventWriter.indexOf("FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED !== true");
   assert.ok(eventGuard >= 0, "native event/refund fiscal writer must fail closed");
   for (const operation of ["_upsertMapaStaff(", "acquireFiscalLedgerLock(", "dalInsert(MOVIMIENTOS_CAJA_COL"]) {
