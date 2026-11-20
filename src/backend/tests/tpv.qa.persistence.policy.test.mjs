@@ -247,7 +247,7 @@ test("every exposed TPV QA WebMethod fails closed before repository access", asy
             const declaration = "export const " + methodName + " = webMethod(";
             const start = source.indexOf(declaration);
             assert.notEqual(start, -1, fileName + " must expose " + methodName);
-            const nextExport = source.indexOf("\\nexport const ", start + declaration.length);
+            const nextExport = source.indexOf("\nexport const ", start + declaration.length);
             const block = source.slice(start, nextExport < 0 ? source.length : nextExport);
             const guard = block.indexOf("assertTpvQaEnabled()");
             assert.notEqual(guard, -1, methodName + " must execute the server-side QA gate");
