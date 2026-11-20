@@ -98,12 +98,10 @@ function syntheticFiscalSystemConfig() {
 }
 
 function seedCajaPrincipal() {
-  const operationDate = new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Madrid" });
   wixDataMock._seed(IC.BUSINESS_COLLECTIONS.CAJA_ACTUAL, [{
     _id: "SINGLE_ITEM_ID",
     singletonKey: "CAJA_PRINCIPAL",
     cashRegisterStatus: "ABIERTA",
-    operationDate,
     openingCashAmount: 300,
     cashAmount: 300,
     totalInAmount: 300,
