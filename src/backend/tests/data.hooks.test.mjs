@@ -566,6 +566,8 @@ test('HOOK-ACCOUNTING-LEDGER-01 validates complete inserts and preserves append-
   };
   const normalized = H.LibroAsientosContablesDetalle_beforeInsert({ ...valid, desgloseDetallado: { ...valid.desgloseDetallado } });
   assert.ok(normalized.recordTimestamp instanceof Date);
+  assert.throws(() => H.LibroAsientosContablesDetalle_beforeInsert(null), /item invalido/);
+  assert.throws(() => H.LibroAsientosContablesDetalle_beforeInsert([]), /item invalido/);
   assert.throws(() => H.LibroAsientosContablesDetalle_beforeInsert({ ...valid, hash: 'invalid' }), /SHA-256/);
   assert.throws(() => H.LibroAsientosContablesDetalle_beforeInsert({ ...valid, desgloseDetallado: { ...valid.desgloseDetallado, creditAmount: 1 } }), /debit\/credit/);
   assert.throws(() => H.LibroAsientosContablesDetalle_beforeInsert({ ...valid, desgloseDetallado: { ...valid.desgloseDetallado, accountCode: 'bad' } }), /accountCode/);
