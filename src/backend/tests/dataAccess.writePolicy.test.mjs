@@ -39,6 +39,9 @@ test("all CMS write-policy collection lists contain unique canonical strings", (
 test("dataAccess validates physical required fields before elevated CMS inserts", () => {
     assert.throws(() => insertItem(C.MOVIMIENTOS_CAJA, {}), /MovimientosCaja requires/);
     assert.throws(() => insertItem(C.HISTORICO_CIERRES_Z, {}), /HistoricoCierresZ requires/);
+    assert.throws(() => insertItem(C.CITAS_F2, {}), /CitasF2 requires/);
+    assert.throws(() => insertItem(C.REGISTROS_HORARIOS_STAFF, {}), /RegistrosHorariosStaff requires/);
+    assert.throws(() => insertItem(C.MAPA_STAFF, {}), /MapaStaff/);
     assert.throws(() => insertItem(C.CONTROL_OPERATIVO, {
         controlType: T.ALERT,
         dedupeKey: "ALERT:missing-payload",
