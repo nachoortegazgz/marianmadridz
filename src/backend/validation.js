@@ -188,7 +188,7 @@ export function assertAccountingLedgerRecord(item) {
         throw new Error("SCHEMA_VIOLATION: LibroAsientosContablesDetalle requires valid DATETIME recordTimestamp");
     }
     if (!_isValidDateOnly(item.fechaOperacion) ||
-        !/^\\d{4}-\\d{2}$/.test(String(item.fiscalPeriod)) ||
+        !/^\d{4}-\d{2}$/.test(String(item.fiscalPeriod)) ||
         String(item.fechaOperacion instanceof Date ? item.fechaOperacion.toISOString().slice(0, 10) : item.fechaOperacion).slice(0, 7) !== String(item.fiscalPeriod)) {
         throw new Error("SCHEMA_VIOLATION: LibroAsientosContablesDetalle requires matching fechaOperacion/fiscalPeriod");
     }
@@ -205,7 +205,7 @@ export function assertAccountingLedgerRecord(item) {
     }
     const detail = item.desgloseDetallado;
     if (!detail || typeof detail !== "object" || Array.isArray(detail) ||
-        !/^\\d{6}$/.test(String(detail.accountCode || ""))) {
+        !/^\d{6}$/.test(String(detail.accountCode || ""))) {
         throw new Error("SCHEMA_VIOLATION: LibroAsientosContablesDetalle requires desgloseDetallado.accountCode");
     }
     const debit = detail.debitAmount;
