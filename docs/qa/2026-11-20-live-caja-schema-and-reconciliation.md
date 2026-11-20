@@ -38,6 +38,7 @@ Esto **sustituye la fotografía de 14/11**, que indicaba que openingCashAmount, 
 
 - src/backend/tpv/tpvQaRepository.js lee openingCashAmount, coherente con el esquema live.
 - PR #460 corrigió src/backend/cajas.web.js: el DTO getCashierState ahora devuelve openingCashAmount desde CAJA_KEYS.OPENING_CASH; no expone el alias openingAmount, que no existe en el esquema físico.
+- PR #462 eliminó la escritura del campo raíz operationDate (ausente del esquema) y conserva operationDate como valor de presentación derivado de openedAt en Europe/Madrid; no usa operationDateHour porque su semántica no está aprobada. CI PR #462: Layer 1 333/333, Layer 2 266/266, suite offline 688/688; SDK, npm audit, ESLint y secret scanning SUCCESS.
 - PR #460 corrigió el comentario obsoleto: la proyección de caja agrega Bizum en otherAmount por contrato, aunque el esquema físico también declara bizumAmount.
 - La proyección de caja de cajas.web.js sigue usando otherAmount para el bucket no efectivo y su documentación anterior explica que Bizum se agrega ahí. tpvCaja.web.js devuelve bizumAmount como agregado de la lectura TPV. No se cambia esta semántica sin una decisión funcional explícita.
 - La búsqueda estática no encontró consumo frontend del antiguo openingAmount. PR #460 alineó el DTO con el esquema físico y actualizó los fixtures; el HTML de ZONA MARIAN no consume el campo antiguo.
@@ -132,7 +133,7 @@ Esta corrección protege nuevos eventos. **No repara ni reintenta las tres compe
 2. Resolver manualmente la divergencia pedido #10033 reembolsado / booking CONFIRMED-PAID.
 3. Definir tratamiento del pedido #10032 POS Cash mixto Stores+Bookings.
 4. Mantener CajaActual sin cierre ni ajuste; no crear movimientos ni asientos para cuadrar.
-5. Actualizar el contrato/diccionario de CajaActual desde el esquema live del 17/11 y revisar el DTO openingAmount.
+5. Mantener alineado el diccionario con el esquema live; PR #460/462 corrigieron openingCashAmount y el daykey de sesión. La semántica de operationDateHour sigue pendiente y no se utiliza.
 6. Preparar un singleton TPV QA independiente con marcadores exactos, después de verificar el proceso de reset/seed y el aislamiento.
 7. Ejecutar E2E de hooks, pagos y caja solo en Sandbox inequívocamente aislado.
 8. Mantener writers fiscales/contables deshabilitados y NO-GO producción.
