@@ -202,8 +202,11 @@ test('HOOK-CMS-DATETIME-05 normalizes MovimientosCaja DateTime fields only', () 
 });
 
 test('HOOK-CAJA-03 preserves append-only integrity for non-TPV synthetic cash movements', async () => {
-  await assert.rejects(() => H.MovimientosCaja_beforeUpdate({ _id: 'synthetic-caja-1' }), /Modificacion de MovimientosCaja/);
-  await assert.rejects(() => H.MovimientosCaja_beforeRemove('synthetic-caja-1'), /Borrado de MovimientosCaja/);
+  wixDataMock._reset();
+  const row = { _id: 'cash-movement-real', movementType: 'VENTA', recordSource: 'INTERNAL', traceId: 'real-ledger', sequenceNumber: 1 };
+  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA, [row]);
+  await assert.rejects(() => H.MovimientosCaja_beforeUpdate({ ...row, totalAmount: 99 }), /Modificacion de MovimientosCaja/);
+  await assert.rejects(() => H.MovimientosCaja_beforeRemove(row._id), /Borrado de MovimientosCaja/);
 });
 
 test('HOOK-CAJA-05 rejects write without hash (ledger integrity)', () => {
