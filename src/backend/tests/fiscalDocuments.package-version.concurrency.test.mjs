@@ -235,7 +235,7 @@ test('FDOC-UI-01 monthly prepared packages display month identity, not a fabrica
     source.indexOf('function _formatPackageDisplayId(doc) {'),
     source.indexOf('function _invoiceValue(', source.indexOf('function _formatPackageDisplayId(doc) {'))
   );
-  assert.ok(displayId.includes('periodType').valueOf());
+  assert.ok(displayId.includes('periodType'));
   assert.ok(displayId.includes('fiscalMonth'));
   assert.ok(displayId.includes('_M'));
   assert.ok(displayId.includes('return null'));
