@@ -78,11 +78,12 @@ jobs:
       - name: Create Wix preview from latest main commit (never publish)
         id: wix-preview
         shell: bash
+        timeout-minutes: 10
         run: |
           set -euo pipefail
           # The CLI prompts for the preview source. The first/default option is
-          # "Latest commit from origin/main"; newline accepts only that selection.
-          printf '\n' | script --quiet --return --command 'npm run wix preview' "$RUNNER_TEMP/wix-preview.typescript" | tee "$RUNNER_TEMP/wix-preview.log"
+          # "Latest commit from origin/main"; carriage return accepts that selection.
+          printf '\r' | script --quiet --return --command 'npm run wix preview' "$RUNNER_TEMP/wix-preview.typescript" | tee "$RUNNER_TEMP/wix-preview.log"
           preview_url="$(grep -Eo 'https?://wix\.to/[[:alnum:]]+' "$RUNNER_TEMP/wix-preview.log" | tail -n 1 || true)"
           if [[ -z "$preview_url" ]]; then
             echo "::error::Wix CLI completed without exposing a recognized wix.to preview URL."
