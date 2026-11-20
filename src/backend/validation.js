@@ -164,6 +164,55 @@ export function assertHistoricoCierresZ(item) {
     return true;
 }
 
+export function assertPaquetesGestoriaRecord(item) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) {
+        throw new Error("SCHEMA_VIOLATION: PaquetesGestoria item invalido");
+    }
+    const createdAt = item.createdAt instanceof Date
+        ? item.createdAt
+        : new Date(item.createdAt);
+    if (!item.createdAt || Number.isNaN(createdAt.getTime())) {
+        throw new Error("SCHEMA_VIOLATION: createdAt obligatorio y válido en PaquetesGestoria");
+    }
+    const periodType = String(item.periodType ?? "").trim().toUpperCase();
+    const year = Number(item.fiscalYear);
+    const month = item.fiscalMonth == null ? null : Number(item.fiscalMonth);
+    const quarter = item.fiscalQuarter == null ? null : Number(item.fiscalQuarter);
+    if (!["MONTHLY", "QUARTERLY"].includes(periodType)) {
+        throw new Error("SCHEMA_VIOLATION: periodType debe ser MONTHLY o QUARTERLY");
+    }
+    if (!Number.isInteger(year) || year < 2000 || year > 9999) {
+        throw new Error("SCHEMA_VIOLATION: fiscalYear invalido");
+    }
+    if (periodType === "MONTHLY" && (!Number.isInteger(month) || month < 1 || month > 12 || quarter != null)) {
+        throw new Error("SCHEMA_VIOLATION: Paquete mensual requiere fiscalMonth 1-12 y no admite fiscalQuarter");
+    }
+    if (periodType === "QUARTERLY" && (!Number.isInteger(quarter) || quarter < 1 || quarter > 4 || month != null)) {
+        throw new Error("SCHEMA_VIOLATION: Paquete trimestral requiere fiscalQuarter 1-4 y no admite fiscalMonth");
+    }
+    if (!Number.isInteger(Number(item.packageVersion)) || Number(item.packageVersion) < 1) {
+        throw new Error("SCHEMA_VIOLATION: packageVersion debe ser entero positivo");
+    }
+    if (!item.summaryData || typeof item.summaryData !== "object" || Array.isArray(item.summaryData)) {
+        throw new Error("SCHEMA_VIOLATION: summaryData debe ser un objeto");
+    }
+    if (!Array.isArray(item.invoiceData)) {
+        throw new Error("SCHEMA_VIOLATION: invoiceData debe ser un array");
+    }
+    if (!/^[a-f0-9]{64}$/i.test(String(item.snapshotHash ?? "").trim())) {
+        throw new Error("SCHEMA_VIOLATION: snapshotHash debe ser SHA-256 hexadecimal");
+    }
+    if (!String(item.schemaVersion ?? "").trim() ||
+        !String(item.source ?? "").trim() ||
+        !String(item.traceId ?? "").trim()) {
+        throw new Error("SCHEMA_VIOLATION: schemaVersion, source y traceId son obligatorios");
+    }
+    if (String(item.packageStatus ?? "").trim() !== "PREPARED") {
+        throw new Error("SCHEMA_VIOLATION: packageStatus inicial debe ser PREPARED");
+    }
+    return true;
+}
+
 export function assertAccountingLedgerRecord(item) {
     if (!item || typeof item !== "object" || Array.isArray(item)) {
         throw new Error("SCHEMA_VIOLATION: LibroAsientosContablesDetalle item must be an object");
