@@ -196,6 +196,8 @@ test("TPV WebMethods isolate synthetic QA writes from operational ledgers", asyn
     assert.match(repository, /TPV_QA_COLLECTIONS/);
     assert.match(repository, /CONTROL_TYPE\.TPV_QA_SESSION_LOCK/);
     assert.match(repository, /updateItem\(BUSINESS_COLLECTIONS\.CAJA_ACTUAL/);
+    const cashier = await source("tpv/tpvCaja.web.js");
+    assert.match(cashier, /withQaSessionLock\(sessionId, traceId/);
     assert.doesNotMatch(repository, /removeById\(|bulkUpdate\(|bulkRemove\(/);
 
     const policy = await source("dataAccessPolicy.js");
@@ -359,6 +361,8 @@ test("TPV synthetic persistence maps logical events to CajaActual and Movimiento
     assert.match(repository, /previousRecordHash: QA_GENESIS_HASH/);
     assert.match(repository, /createHash\("sha256"\)/);
     assert.match(repository, /cashRegisterStatus: "SIMULACION"/);
+    assert.match(repository, /_ensureCajaActualForQa/);
+    assert.match(repository, /TPV_QA_SANDBOX_INITIALIZED/);
     assert.match(repository, /payloadFiscal\?\.testRunId === QA_TEST_RUN_ID/);
     assert.match(repository, /MAX_QA_PROJECTION_EVENTS = 1000/);
     assert.match(repository, /conceptOperations\?\.tpvQa\?\.sessionId/);
