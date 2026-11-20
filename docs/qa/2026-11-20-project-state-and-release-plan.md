@@ -287,3 +287,8 @@ El sitio Marian Madrid sigue en estado Draft según el contexto Wix consultado. 
 - Inventario de writers CajaActual revalidado: `cajas.web.js` proyección por update y cierre Z por save; `fiscalLedgerLock.js` reserva/liberación de secuencia por update; `tpvQaRepository.js` proyección y sesión QA por update. Todos deben migrarse coordinadamente.
 - La documentación consultada no acredita que `CajaActual_beforeUpdate` se ejecute con payload compatible durante Bulk Patch, ni resuelve la semántica de condición no coincidente. Requiere prueba aislada Wix Sandbox.
 - No se realizaron escrituras CMS ni mutaciones del singleton. No se modificó código runtime ni se publicó el sitio. H-01 sigue abierto y producción permanece NO-GO.
+
+
+## 10. Punto de continuación y traspaso — 2026-11-20
+
+El estado consolidado para la próxima sesión está en [SESSION-HANDOFF-2026-11-20.md](./SESSION-HANDOFF-2026-11-20.md). Ese documento prevalece sobre notas históricas de este informe en lo relativo a HEAD, PRs, CI, estado de Wix y descubrimiento CMS NATIVE.
