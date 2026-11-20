@@ -5,8 +5,8 @@ import {
     CONTROL_TYPE,
     CONTROL_OPERATIVO_NON_CANONICAL_FIELDS,
     RECORD_TYPE,
-    TPV_QA_RUNTIME_POLICY,
-    TPV_QA_EVENT_MOVEMENT_TYPES,
+    TPV_SANDBOX_RUNTIME_POLICY,
+    TPV_SANDBOX_EVENT_MOVEMENT_TYPES,
 } from "backend/internalConfig";
 
 function _policyError(code) {
@@ -73,17 +73,17 @@ function _isRecord(value) {
 
 function _isSyntheticTpvRecord(item) {
     return _isRecord(item) &&
-        item.recordSource === "TPV_QA_SYNTHETIC" &&
+        item.recordSource === "TPV_SANDBOX_SYNTHETIC" &&
         String(item.movementType || "").startsWith("SIMULATED_TPV_") &&
-        TPV_QA_EVENT_MOVEMENT_TYPES[item.payloadFiscal?.logicalCollection] === item.movementType &&
-        item.payloadFiscal?.testRunId === TPV_QA_RUNTIME_POLICY.TEST_RUN_ID &&
+        TPV_SANDBOX_EVENT_MOVEMENT_TYPES[item.payloadFiscal?.logicalCollection] === item.movementType &&
+        item.payloadFiscal?.testRunId === TPV_SANDBOX_RUNTIME_POLICY.TEST_RUN_ID &&
         item.payloadFiscal?.isSynthetic === true &&
         item.payloadFiscal?.realPayment === false &&
         item.payloadFiscal?.externalSideEffects === false &&
         Boolean(item.payloadFiscal?.requestFingerprint) &&
         /^[a-f0-9]{64}$/i.test(String(item.hash || "")) &&
         Number(item.sequenceNumber) === 0 &&
-        String(item.traceId || "").startsWith("TPVQA:" + TPV_QA_RUNTIME_POLICY.TEST_RUN_ID + ":");
+        String(item.traceId || "").startsWith("TPVSANDBOX:" + TPV_SANDBOX_RUNTIME_POLICY.TEST_RUN_ID + ":");
 }
 
 const APPEND_ONLY_COLLECTIONS = Object.freeze([
@@ -114,9 +114,9 @@ export function assertInsertAllowed(collection, item) {
         throw _policyError("CMS_INSERT_COLLECTION_DENIED");
     }
     if (collection === BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA &&
-        (item.recordSource === "TPV_QA_SYNTHETIC" || String(item.movementType || "").startsWith("SIMULATED_TPV_"))) {
+        (item.recordSource === "TPV_SANDBOX_SYNTHETIC" || String(item.movementType || "").startsWith("SIMULATED_TPV_"))) {
         if (!_isSyntheticTpvRecord(item)) {
-            throw _policyError("CMS_TPV_QA_SYNTHETIC_LEDGER_CONTRACT_INVALID");
+            throw _policyError("CMS_TPV_SANDBOX_SYNTHETIC_LEDGER_CONTRACT_INVALID");
         }
     }
     if (collection === BUSINESS_COLLECTIONS.CONTROL_OPERATIVO) {

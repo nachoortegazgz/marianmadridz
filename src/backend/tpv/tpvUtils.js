@@ -23,7 +23,7 @@ export function assertSandboxCajaWritable(caja, { allowBootstrap = false } = {})
     const sandboxRunId = TPV_SANDBOX_RUNTIME_POLICY.SANDBOX_RUN_ID;
     const sandboxState = caja?.conceptOperations?.tpvSandbox;
     const bootstrap = allowBootstrap === true &&
-        caja?.snapshotSource === "TPV_SANDBOX_SANDBOX_INITIALIZED" &&
+        caja?.snapshotSource === "TPV_SANDBOX_INITIALIZED" &&
         caja?.cashRegisterStatus === "CERRADA" &&
         caja?.traceId === sandboxRunId &&
         sandboxState?.sandboxRunId === sandboxRunId;
@@ -88,7 +88,7 @@ export function stableSerialize(value) {
 
 export function makeSandboxId(prefix, idempotencyKey) {
     const safe = normalizeIdempotencyKey(idempotencyKey).replace(/[^A-Za-z0-9_-]/g, "-");
-    return "QA-" + String(prefix || "EVENT").toUpperCase() + "-" + safe;
+    return "SANDBOX-" + String(prefix || "EVENT").toUpperCase() + "-" + safe;
 }
 
 export function makeSandboxRefundLockId(saleId) {

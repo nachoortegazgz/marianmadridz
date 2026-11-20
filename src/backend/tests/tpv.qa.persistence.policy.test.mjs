@@ -8,8 +8,8 @@ import {
     assertRemoveAllowed,
 } from "../dataAccessPolicy.js";
 import {
-    TPV_QA_COLLECTIONS,
-    TPV_QA_RUNTIME_POLICY,
+    TPV_SANDBOX_COLLECTIONS,
+    TPV_SANDBOX_RUNTIME_POLICY,
     CONTROL_TYPE,
     OPERATIONAL_COLLECTIONS,
 } from "../internalConfig.js";
@@ -20,22 +20,22 @@ import {
     toMinorUnits,
     fromMinorUnits,
     makeSyntheticPayload,
-    makeQaRefundLockId,
-    makeQaSessionLockId,
-    assertQaCajaWritable,
-    assertTpvQaEnabled,
+    makeSandboxRefundLockId,
+    makeSandboxSessionLockId,
+    assertSandboxCajaWritable,
+    assertTpvSandboxEnabled,
 } from "../tpv/tpvUtils.js";
 
-test("QA runtime is fail-closed in production; offline harness explicitly enables isolated tests", async () => {
+test("SANDBOX runtime is fail-closed in production; offline harness explicitly enables isolated tests", async () => {
     const source = await readFile(new URL("../internalConfig.js", import.meta.url), "utf8");
-    assert.match(source, /TPV_QA_RUNTIME_POLICY = Object\.freeze\(\{[\s\S]*?ENABLED: false,[\s\S]*?ENVIRONMENT: "SANDBOX"/);
-    assert.equal(TPV_QA_RUNTIME_POLICY.ENABLED, true, "offline loader enables the policy only inside tests");
-    assert.equal(TPV_QA_RUNTIME_POLICY.ENVIRONMENT, "SANDBOX");
-    assert.doesNotThrow(() => assertTpvQaEnabled());
+    assert.match(source, /TPV_SANDBOX_RUNTIME_POLICY = Object\.freeze\(\{[\s\S]*?ENABLED: false,[\s\S]*?ENVIRONMENT: "SANDBOX"/);
+    assert.equal(TPV_SANDBOX_RUNTIME_POLICY.ENABLED, true, "offline loader enables the policy only inside tests");
+    assert.equal(TPV_SANDBOX_RUNTIME_POLICY.ENVIRONMENT, "SANDBOX");
+    assert.doesNotThrow(() => assertTpvSandboxEnabled());
 });
 
-test("QA writes require an exact test-run CajaActual marker and never accept a live cash singleton", () => {
-    const testRunId = TPV_QA_RUNTIME_POLICY.TEST_RUN_ID;
+test("SANDBOX writes require an exact test-run CajaActual marker and never accept a live cash singleton", () => {
+    const testRunId = TPV_SANDBOX_RUNTIME_POLICY.TEST_RUN_ID;
     const liveCaja = {
         singletonKey: "CAJA_PRINCIPAL",
         cashRegisterStatus: "ABIERTA",
@@ -44,52 +44,52 @@ test("QA writes require an exact test-run CajaActual marker and never accept a l
         conceptOperations: {},
     };
     assert.throws(
-        () => assertQaCajaWritable(liveCaja, { allowBootstrap: true }),
-        /TPV_QA_CASH_REGISTER_NOT_IN_TEST_MODE/
+        () => assertSandboxCajaWritable(liveCaja, { allowBootstrap: true }),
+        /TPV_SANDBOX_CASH_REGISTER_NOT_IN_TEST_MODE/
     );
 
     const sandboxBootstrap = {
         cashRegisterStatus: "CERRADA",
-        snapshotSource: "TPV_QA_SANDBOX_INITIALIZED",
+        snapshotSource: "TPV_SANDBOX_INITIALIZED",
         traceId: testRunId,
-        conceptOperations: { tpvQa: { testRunId } },
+        conceptOperations: { tpvSandbox: { testRunId } },
     };
     assert.throws(
-        () => assertQaCajaWritable(sandboxBootstrap),
-        /TPV_QA_CASH_REGISTER_NOT_IN_TEST_MODE/
+        () => assertSandboxCajaWritable(sandboxBootstrap),
+        /TPV_SANDBOX_CASH_REGISTER_NOT_IN_TEST_MODE/
     );
-    assert.doesNotThrow(() => assertQaCajaWritable(sandboxBootstrap, { allowBootstrap: true }));
+    assert.doesNotThrow(() => assertSandboxCajaWritable(sandboxBootstrap, { allowBootstrap: true }));
 
-    const activeQaCaja = {
+    const activeSandboxCaja = {
         cashRegisterStatus: "SIMULACION",
-        snapshotSource: "TPV_QA_SYNTHETIC",
+        snapshotSource: "TPV_SANDBOX_SYNTHETIC",
         traceId: testRunId,
-        conceptOperations: { tpvQa: { testRunId } },
+        conceptOperations: { tpvSandbox: { testRunId } },
     };
-    assert.doesNotThrow(() => assertQaCajaWritable(activeQaCaja));
+    assert.doesNotThrow(() => assertSandboxCajaWritable(activeSandboxCaja));
     assert.throws(
-        () => assertQaCajaWritable({ ...activeQaCaja, traceId: "OTHER_TEST_RUN" }),
-        /TPV_QA_CASH_REGISTER_NOT_IN_TEST_MODE/
+        () => assertSandboxCajaWritable({ ...activeSandboxCaja, traceId: "OTHER_TEST_RUN" }),
+        /TPV_SANDBOX_CASH_REGISTER_NOT_IN_TEST_MODE/
     );
 });
 
 test("logical TPV entities persist only as marked synthetic rows in canonical CMS", () => {
-    const logicalTypes = Object.values(TPV_QA_COLLECTIONS);
+    const logicalTypes = Object.values(TPV_SANDBOX_COLLECTIONS);
     assert.equal(new Set(logicalTypes).size, logicalTypes.length);
-    assert.ok(logicalTypes.every((value) => value.startsWith("QA_LOGICAL_")));
+    assert.ok(logicalTypes.every((value) => value.startsWith("SANDBOX_LOGICAL_")));
 
     const item = {
-        _id: "TPVQA_TEST_ROW",
+        _id: "TPVSANDBOX_TEST_ROW",
         hash: "a".repeat(64),
         sequenceNumber: 0,
-        transactionId: "TPVQA_TEST_ROW",
-        traceId: "TPVQA:" + TPV_QA_RUNTIME_POLICY.TEST_RUN_ID + ":QA-SESSION-TEST",
+        transactionId: "TPVSANDBOX_TEST_ROW",
+        traceId: "TPVSANDBOX:" + TPV_SANDBOX_RUNTIME_POLICY.TEST_RUN_ID + ":SANDBOX-SESSION-TEST",
         movementType: "SIMULATED_TPV_PAYMENT",
-        recordSource: "TPV_QA_SYNTHETIC",
+        recordSource: "TPV_SANDBOX_SYNTHETIC",
         payloadFiscal: {
-            testRunId: TPV_QA_RUNTIME_POLICY.TEST_RUN_ID,
-            logicalCollection: TPV_QA_COLLECTIONS.PAGOS,
-            idempotencyKey: "TPVQA-TEST-IDEMPOTENCY",
+            testRunId: TPV_SANDBOX_RUNTIME_POLICY.TEST_RUN_ID,
+            logicalCollection: TPV_SANDBOX_COLLECTIONS.PAGOS,
+            idempotencyKey: "TPVSANDBOX-TEST-IDEMPOTENCY",
             requestFingerprint: "f".repeat(64),
             isSynthetic: true,
             realPayment: false,
@@ -102,7 +102,7 @@ test("logical TPV entities persist only as marked synthetic rows in canonical CM
     assert.doesNotThrow(() => assertRemoveAllowed("MovimientosCaja", item._id, undefined, item));
     assert.throws(() => assertUpdateAllowed("MovimientosCaja", {
         ...item,
-        payloadFiscal: { ...item.payloadFiscal, testRunId: "TPVQA-DEV-20990101-OTHER" },
+        payloadFiscal: { ...item.payloadFiscal, testRunId: "TPVSANDBOX-DEV-20990101-OTHER" },
     }), /DATA_ACCESS_ERROR/);
     assert.throws(() => assertRemoveAllowed("MovimientosCaja", "real-ledger-row"), /DATA_ACCESS_ERROR/);
 
@@ -111,12 +111,12 @@ test("logical TPV entities persist only as marked synthetic rows in canonical CM
     }
 });
 
-test("QA refund lock allows only scoped compare-and-swap fields", () => {
+test("SANDBOX refund lock allows only scoped compare-and-swap fields", () => {
     const collection = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
     assert.doesNotThrow(() => assertInsertAllowed(collection, {
-        _id: "TPVQA_REFUND_LOCK_QA-SALE-TEST",
-        controlType: CONTROL_TYPE.TPV_QA_REFUND_LOCK,
-        dedupeKey: "TPV_QA_REFUND:QA-SALE-TEST",
+        _id: "TPVSANDBOX_REFUND_LOCK_SANDBOX-SALE-TEST",
+        controlType: CONTROL_TYPE.TPV_SANDBOX_REFUND_LOCK,
+        dedupeKey: "TPV_SANDBOX_REFUND:SANDBOX-SALE-TEST",
         traceId: "test",
         status: "ACTIVE",
         version: 0,
@@ -129,23 +129,23 @@ test("QA refund lock allows only scoped compare-and-swap fields", () => {
         { fieldPath: "payload", action: "SET_FIELD", value: { environment: "SANDBOX" } },
         { fieldPath: "version", action: "INCREMENT_FIELD", value: 1 },
     ], {
-        controlType: { $eq: CONTROL_TYPE.TPV_QA_REFUND_LOCK },
+        controlType: { $eq: CONTROL_TYPE.TPV_SANDBOX_REFUND_LOCK },
         version: { $eq: 0 },
         status: { $eq: "ACTIVE" },
     }));
     assert.throws(() => assertBulkPatchAllowed(collection, [
         { fieldPath: "payloadJson", action: "SET_FIELD", value: "{}" },
     ], {
-        controlType: { $eq: CONTROL_TYPE.TPV_QA_REFUND_LOCK },
+        controlType: { $eq: CONTROL_TYPE.TPV_SANDBOX_REFUND_LOCK },
         version: { $eq: 0 },
         status: { $eq: "ACTIVE" },
     }), /DATA_ACCESS_ERROR/);
 });
 
 test("refund lock IDs are deterministic and respect Wix CMS _id length", () => {
-    const saleId = "QA-SALE-" + "x".repeat(100);
-    const first = makeQaRefundLockId(saleId);
-    assert.equal(first, makeQaRefundLockId(saleId));
+    const saleId = "SANDBOX-SALE-" + "x".repeat(100);
+    const first = makeSandboxRefundLockId(saleId);
+    assert.equal(first, makeSandboxRefundLockId(saleId));
     assert.equal(first.length, 36);
     assert.match(first, /^TPVQ[a-f0-9]{32}$/);
 });
@@ -153,32 +153,32 @@ test("refund lock IDs are deterministic and respect Wix CMS _id length", () => {
 test("refund lock is mutable only through its scoped compare-and-swap policy", () => {
     const collection = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
     assert.throws(() => assertUpdateAllowed(collection, {
-        _id: "TPVQA_REFUND_LOCK_QA-SALE-TEST",
-        controlType: CONTROL_TYPE.TPV_QA_REFUND_LOCK,
-        dedupeKey: "TPV_QA_REFUND:QA-SALE-TEST",
+        _id: "TPVSANDBOX_REFUND_LOCK_SANDBOX-SALE-TEST",
+        controlType: CONTROL_TYPE.TPV_SANDBOX_REFUND_LOCK,
+        dedupeKey: "TPV_SANDBOX_REFUND:SANDBOX-SALE-TEST",
         traceId: "test",
         version: 0,
         status: "RELEASED",
     }), /DATA_ACCESS_ERROR/);
     assert.throws(() => assertRemoveAllowed(
         collection,
-        "TPVQA_REFUND_LOCK_QA-SALE-TEST",
-        CONTROL_TYPE.TPV_QA_REFUND_LOCK
+        "TPVSANDBOX_REFUND_LOCK_SANDBOX-SALE-TEST",
+        CONTROL_TYPE.TPV_SANDBOX_REFUND_LOCK
     ), /DATA_ACCESS_ERROR/);
 });
 
-test("QA session lock is deterministic, bounded and CAS-only", () => {
-    const sessionId = "QA-SESSION-20261116";
-    const lockId = makeQaSessionLockId(sessionId);
-    assert.equal(lockId, makeQaSessionLockId(sessionId));
+test("SANDBOX session lock is deterministic, bounded and CAS-only", () => {
+    const sessionId = "SANDBOX-SESSION-20261116";
+    const lockId = makeSandboxSessionLockId(sessionId);
+    assert.equal(lockId, makeSandboxSessionLockId(sessionId));
     assert.equal(lockId.length, 36);
     assert.match(lockId, /^TPVS[a-f0-9]{32}$/);
 
     const collection = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
     assert.doesNotThrow(() => assertInsertAllowed(collection, {
         _id: lockId,
-        controlType: CONTROL_TYPE.TPV_QA_SESSION_LOCK,
-        dedupeKey: "TPV_QA_SESSION:" + lockId.slice(4),
+        controlType: CONTROL_TYPE.TPV_SANDBOX_SESSION_LOCK,
+        dedupeKey: "TPV_SANDBOX_SESSION:" + lockId.slice(4),
         traceId: "test",
         status: "ACTIVE",
         version: 0,
@@ -191,33 +191,33 @@ test("QA session lock is deterministic, bounded and CAS-only", () => {
         { fieldPath: "payload", action: "SET_FIELD", value: { sessionId, environment: "SANDBOX" } },
         { fieldPath: "version", action: "INCREMENT_FIELD", value: 1 },
     ], {
-        controlType: { $eq: CONTROL_TYPE.TPV_QA_SESSION_LOCK },
+        controlType: { $eq: CONTROL_TYPE.TPV_SANDBOX_SESSION_LOCK },
         version: { $eq: 0 },
         status: { $eq: "ACTIVE" },
     }));
     assert.throws(() => assertUpdateAllowed(collection, {
         _id: lockId,
-        controlType: CONTROL_TYPE.TPV_QA_SESSION_LOCK,
+        controlType: CONTROL_TYPE.TPV_SANDBOX_SESSION_LOCK,
         status: "RELEASED",
     }), /DATA_ACCESS_ERROR/);
-    assert.throws(() => assertRemoveAllowed(collection, lockId, CONTROL_TYPE.TPV_QA_SESSION_LOCK), /DATA_ACCESS_ERROR/);
+    assert.throws(() => assertRemoveAllowed(collection, lockId, CONTROL_TYPE.TPV_SANDBOX_SESSION_LOCK), /DATA_ACCESS_ERROR/);
 });
 
-test("QA policy remains synthetic and client idempotency keys are bounded", () => {
-    assert.equal(TPV_QA_RUNTIME_POLICY.ENABLED, true, "offline test harness override");
-    assert.equal(TPV_QA_RUNTIME_POLICY.ENVIRONMENT, "SANDBOX");
-    assert.equal(TPV_QA_RUNTIME_POLICY.SYNTHETIC_ONLY, true);
-    assert.equal(TPV_QA_RUNTIME_POLICY.REAL_PAYMENTS_ENABLED, false);
-    assert.equal(TPV_QA_RUNTIME_POLICY.FISCAL_WRITES_ENABLED, false);
-    assert.equal(TPV_QA_RUNTIME_POLICY.CUSTOMER_NOTIFICATIONS_ENABLED, false);
-    assert.equal(TPV_QA_RUNTIME_POLICY.HARDWARE_ENABLED, false);
-    assert.equal(normalizeClientIdempotencyKey("qa-client-key-0001"), "qa-client-key-0001");
-    assert.throws(() => normalizeClientIdempotencyKey("short"), /TPV_QA_IDEMPOTENCY_KEY_INVALID/);
-    assert.equal(normalizeIdempotencyKey("qa-client-key-0001:PAYMENT:001"), "qa-client-key-0001:PAYMENT:001");
+test("SANDBOX policy remains synthetic and client idempotency keys are bounded", () => {
+    assert.equal(TPV_SANDBOX_RUNTIME_POLICY.ENABLED, true, "offline test harness override");
+    assert.equal(TPV_SANDBOX_RUNTIME_POLICY.ENVIRONMENT, "SANDBOX");
+    assert.equal(TPV_SANDBOX_RUNTIME_POLICY.SYNTHETIC_ONLY, true);
+    assert.equal(TPV_SANDBOX_RUNTIME_POLICY.REAL_PAYMENTS_ENABLED, false);
+    assert.equal(TPV_SANDBOX_RUNTIME_POLICY.FISCAL_WRITES_ENABLED, false);
+    assert.equal(TPV_SANDBOX_RUNTIME_POLICY.CUSTOMER_NOTIFICATIONS_ENABLED, false);
+    assert.equal(TPV_SANDBOX_RUNTIME_POLICY.HARDWARE_ENABLED, false);
+    assert.equal(normalizeClientIdempotencyKey("sandbox-client-key-0001"), "sandbox-client-key-0001");
+    assert.throws(() => normalizeClientIdempotencyKey("short"), /TPV_SANDBOX_IDEMPOTENCY_KEY_INVALID/);
+    assert.equal(normalizeIdempotencyKey("sandbox-client-key-0001:PAYMENT:001"), "sandbox-client-key-0001:PAYMENT:001");
     assert.equal(normalizePaymentMethod("bizum"), "BIZUM");
     assert.equal(toMinorUnits(12.34), 1234);
     assert.equal(fromMinorUnits(1234), 12.34);
-    assert.throws(() => toMinorUnits(12.345), /TPV_QA_INVALID_PRECISION/);
+    assert.throws(() => toMinorUnits(12.345), /TPV_SANDBOX_INVALID_PRECISION/);
     const payload = makeSyntheticPayload({ sample: true });
     assert.equal(payload.isSynthetic, true);
     assert.equal(payload.realPayment, false);
@@ -225,32 +225,32 @@ test("QA policy remains synthetic and client idempotency keys are bounded", () =
 });
 
 
-test("every exposed TPV QA WebMethod fails closed before repository access", async () => {
+test("every exposed TPV SANDBOX WebMethod fails closed before repository access", async () => {
     const protectedMethods = [
-        ["tpvCaja.web.js", ["obtenerSesionCajaQA", "abrirCajaQA", "registrarArqueoParcialQA"]],
-        ["tpvMovimientos.web.js", ["registrarMovimientoCajaQA"]],
-        ["tpvVentas.web.js", ["registrarVentaQA"]],
-        ["tpvDevoluciones.web.js", ["solicitarDevolucionQA"]],
-        ["tpvCierres.web.js", ["obtenerResumenSesionQA", "generarTicketXQA", "cerrarTicketZQA"]],
-        ["tpvPagos.web.js", ["validarDesglosePagosQA"]],
-        ["tpvUtils.web.js", ["obtenerConfiguracionTPVQA"]],
-        ["tpvPermisos.web.js", ["obtenerPermisosTPVQA"]],
-        ["tpvAuditoria.web.js", ["consultarAuditoriaTPVQA"]],
+        ["tpvCaja.web.js", ["obtenerSesionCajaSANDBOX", "abrirCajaSANDBOX", "registrarArqueoParcialSANDBOX"]],
+        ["tpvMovimientos.web.js", ["registrarMovimientoCajaSANDBOX"]],
+        ["tpvVentas.web.js", ["registrarVentaSANDBOX"]],
+        ["tpvDevoluciones.web.js", ["solicitarDevolucionSANDBOX"]],
+        ["tpvCierres.web.js", ["obtenerResumenSesionSANDBOX", "generarTicketXSANDBOX", "cerrarTicketZSANDBOX"]],
+        ["tpvPagos.web.js", ["validarDesglosePagosSANDBOX"]],
+        ["tpvUtils.web.js", ["obtenerConfiguracionTPVSANDBOX"]],
+        ["tpvPermisos.web.js", ["obtenerPermisosTPVSANDBOX"]],
+        ["tpvAuditoria.web.js", ["consultarAuditoriaTPVSANDBOX"]],
         ["tpvGiftCards.web.js", ["consultarTarjetaRegalo"]],
     ];
-    const repositoryAccess = /(?:latestOpenQaSession|insertQaEvent|appendQaAudit|queryQaRecords|withQaSessionLock|withQaSaleLock|listTpvSandboxIdentities|getTpvSandboxIdentity|wql\.)/;
+    const repositoryAccess = /(?:latestOpenSandboxSession|insertSandboxEvent|appendSandboxAudit|querySandboxRecords|withSandboxSessionLock|withSandboxSaleLock|listTpvSandboxIdentities|getTpvSandboxIdentity|wql\.)/;
 
     for (const [fileName, methodNames] of protectedMethods) {
         const source = await readFile(new URL("../tpv/" + fileName, import.meta.url), "utf8");
-        assert.match(source, /assertTpvQaEnabled/, fileName + " must import/use the canonical QA gate");
+        assert.match(source, /assertTpvSandboxEnabled/, fileName + " must import/use the canonical SANDBOX gate");
         for (const methodName of methodNames) {
             const declaration = "export const " + methodName + " = webMethod(";
             const start = source.indexOf(declaration);
             assert.notEqual(start, -1, fileName + " must expose " + methodName);
             const nextExport = source.indexOf("\nexport const ", start + declaration.length);
             const block = source.slice(start, nextExport < 0 ? source.length : nextExport);
-            const guard = block.indexOf("assertTpvQaEnabled()");
-            assert.notEqual(guard, -1, methodName + " must execute the server-side QA gate");
+            const guard = block.indexOf("assertTpvSandboxEnabled()");
+            assert.notEqual(guard, -1, methodName + " must execute the server-side SANDBOX gate");
             const access = block.search(repositoryAccess);
             assert.ok(access < 0 || guard < access, methodName + " must gate before repository access");
         }
@@ -261,13 +261,13 @@ test("every exposed TPV QA WebMethod fails closed before repository access", asy
 test("every exported TPV WebMethod has an explicit runtime policy classification", async () => {
     const policies = {
         "tpvCaja.web.js": {
-            guarded: ["obtenerSesionCajaQA", "abrirCajaQA", "registrarArqueoParcialQA"],
+            guarded: ["obtenerSesionCajaSANDBOX", "abrirCajaSANDBOX", "registrarArqueoParcialSANDBOX"],
         },
         "tpvMovimientos.web.js": {
-            guarded: ["registrarMovimientoCajaQA"],
+            guarded: ["registrarMovimientoCajaSANDBOX"],
         },
         "tpvVentas.web.js": {
-            guarded: ["registrarVentaQA"],
+            guarded: ["registrarVentaSANDBOX"],
             readOnly: ["validarVentaBorrador"],
             disabled: {
                 registrarVenta: "TPV_OPERATIONAL_SALE_WRITES_DISABLED",
@@ -275,22 +275,22 @@ test("every exported TPV WebMethod has an explicit runtime policy classification
             },
         },
         "tpvDevoluciones.web.js": {
-            guarded: ["solicitarDevolucionQA"],
+            guarded: ["solicitarDevolucionSANDBOX"],
         },
         "tpvCierres.web.js": {
-            guarded: ["obtenerResumenSesionQA", "generarTicketXQA", "cerrarTicketZQA"],
+            guarded: ["obtenerResumenSesionSANDBOX", "generarTicketXSANDBOX", "cerrarTicketZSANDBOX"],
         },
         "tpvPagos.web.js": {
-            guarded: ["validarDesglosePagosQA"],
+            guarded: ["validarDesglosePagosSANDBOX"],
         },
         "tpvUtils.web.js": {
-            guarded: ["obtenerConfiguracionTPVQA"],
+            guarded: ["obtenerConfiguracionTPVSANDBOX"],
         },
         "tpvPermisos.web.js": {
-            guarded: ["obtenerPermisosTPVQA"],
+            guarded: ["obtenerPermisosTPVSANDBOX"],
         },
         "tpvAuditoria.web.js": {
-            guarded: ["consultarAuditoriaTPVQA"],
+            guarded: ["consultarAuditoriaTPVSANDBOX"],
         },
         "tpvGiftCards.web.js": {
             guarded: ["consultarTarjetaRegalo"],
@@ -306,7 +306,7 @@ test("every exported TPV WebMethod has an explicit runtime policy classification
             ],
         },
     };
-    const writeOperations = /(?:insertItem|updateItem|saveItem|removeItem|bulkPatchItems|bulkRemoveItems|insertQaEvent|appendQaAudit|registerManualTransaction|\.insert\(|\.update\(|\.remove\(|\.bulkPatch\()/;
+    const writeOperations = /(?:insertItem|updateItem|saveItem|removeItem|bulkPatchItems|bulkRemoveItems|insertSandboxEvent|appendSandboxAudit|registerManualTransaction|\.insert\(|\.update\(|\.remove\(|\.bulkPatch\()/;
 
     for (const [fileName, policy] of Object.entries(policies)) {
         const source = await readFile(new URL("../tpv/" + fileName, import.meta.url), "utf8");
@@ -320,8 +320,8 @@ test("every exported TPV WebMethod has an explicit runtime policy classification
 
         for (const methodName of policy.guarded || []) {
             const block = getWebMethodSource(source, methodName);
-            const guard = block.indexOf("assertTpvQaEnabled()");
-            assert.notEqual(guard, -1, methodName + " must use the backend QA gate");
+            const guard = block.indexOf("assertTpvSandboxEnabled()");
+            assert.notEqual(guard, -1, methodName + " must use the backend SANDBOX gate");
             const firstWrite = block.search(writeOperations);
             assert.ok(firstWrite < 0 || guard < firstWrite, methodName + " must gate before writes");
         }

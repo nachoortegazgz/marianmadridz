@@ -1,35 +1,35 @@
 import { Permissions, webMethod } from "wix-web-module";
 import { getMyStaffContext, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
-import { TPV_QA_RUNTIME_POLICY } from "backend/internalConfig";
-import { assertTpvQaEnabled } from "backend/tpv/tpvUtils";
+import { TPV_SANDBOX_RUNTIME_POLICY } from "backend/internalConfig";
+import { assertTpvSandboxEnabled } from "backend/tpv/tpvUtils";
 
-export const obtenerPermisosTPVQA = webMethod(
+export const obtenerPermisosTPVSANDBOX = webMethod(
     Permissions.SiteMember,
     async () => {
-        assertTpvQaEnabled();
-        const traceId = makeTraceId("tpv-qa-permissions");
+        assertTpvSandboxEnabled();
+        const traceId = makeTraceId("tpv-sandbox-permissions");
         await requireCajero(traceId);
         const staff = await getMyStaffContext(traceId);
         const isAdmin = staff?.rolWebsite === "ADMIN";
         return {
             status: "SUCCESS",
             data: {
-                environment: TPV_QA_RUNTIME_POLICY.ENVIRONMENT,
+                environment: TPV_SANDBOX_RUNTIME_POLICY.ENVIRONMENT,
                 role: staff?.rolWebsite || "UNKNOWN",
                 capabilities: {
                     read: true,
                     createSyntheticSale: isAdmin,
-                    openQaSession: isAdmin,
+                    openSandboxSession: isAdmin,
                     registerCashMovement: isAdmin,
                     requestRefund: isAdmin,
-                    closeQaSession: isAdmin,
+                    closeSandboxSession: isAdmin,
                     issueTicketX: isAdmin,
                     issueTicketZ: isAdmin,
-                    realPayments: TPV_QA_RUNTIME_POLICY.REAL_PAYMENTS_ENABLED,
-                    fiscalWrites: TPV_QA_RUNTIME_POLICY.FISCAL_WRITES_ENABLED,
-                    customerNotifications: TPV_QA_RUNTIME_POLICY.CUSTOMER_NOTIFICATIONS_ENABLED,
-                    physicalHardware: TPV_QA_RUNTIME_POLICY.HARDWARE_ENABLED,
+                    realPayments: TPV_SANDBOX_RUNTIME_POLICY.REAL_PAYMENTS_ENABLED,
+                    fiscalWrites: TPV_SANDBOX_RUNTIME_POLICY.FISCAL_WRITES_ENABLED,
+                    customerNotifications: TPV_SANDBOX_RUNTIME_POLICY.CUSTOMER_NOTIFICATIONS_ENABLED,
+                    physicalHardware: TPV_SANDBOX_RUNTIME_POLICY.HARDWARE_ENABLED,
                 },
             },
             error: null,

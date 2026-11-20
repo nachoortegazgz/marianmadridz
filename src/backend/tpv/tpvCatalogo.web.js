@@ -2,7 +2,7 @@ import { Permissions, webMethod } from "wix-web-module";
 import { auth } from "@wix/essentials";
 import { services } from "@wix/bookings";
 import { catalogVersioning, productsV3 } from "@wix/stores";
-import { TPV_QA_IDENTITY_TYPES } from "backend/internalConfig";
+import { TPV_SANDBOX_IDENTITY_TYPES } from "backend/internalConfig";
 import { listTpvSandboxIdentities, getTpvSandboxIdentity } from "backend/tpv/tpvSandboxIdentities";
 import { requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
@@ -75,7 +75,7 @@ export const buscarClientesTPV = webMethod(
         try {
             const search = String(input.search || "").trim().slice(0, 100).toLowerCase();
             if (search.length < 2) throw new Error("TPV_CUSTOMER_SEARCH_TOO_SHORT");
-            const customers = await listTpvSandboxIdentities(TPV_QA_IDENTITY_TYPES.CUSTOMER);
+            const customers = await listTpvSandboxIdentities(TPV_SANDBOX_IDENTITY_TYPES.CUSTOMER);
             const matches = customers.filter((item) =>
                 item.displayName.toLowerCase().includes(search) ||
                 String(item.email || "").toLowerCase().includes(search)
@@ -114,12 +114,12 @@ export const obtenerReservasClienteTPV = webMethod(
         const traceId = makeTraceId("tpv-customer-bookings");
         await requireCajero(traceId);
         const contactId = String(input.contactId || "").trim();
-        const customer = await getTpvSandboxIdentity(contactId, TPV_QA_IDENTITY_TYPES.CUSTOMER);
+        const customer = await getTpvSandboxIdentity(contactId, TPV_SANDBOX_IDENTITY_TYPES.CUSTOMER);
         if (!customer) {
             return {
                 status: "ERROR",
                 data: null,
-                error: { code: "TPV_QA_CUSTOMER_NOT_ALLOWED" },
+                error: { code: "TPV_SANDBOX_CUSTOMER_NOT_ALLOWED" },
                 syntheticOnly: true,
                 traceId,
             };
@@ -177,7 +177,7 @@ export const obtenerProfesionales = webMethod(
         return {
             status: "SUCCESS",
             data: {
-                items: (await listTpvSandboxIdentities(TPV_QA_IDENTITY_TYPES.STAFF)).map((staff) => ({
+                items: (await listTpvSandboxIdentities(TPV_SANDBOX_IDENTITY_TYPES.STAFF)).map((staff) => ({
                     profesionalId: staff.identityId,
                     nombre: staff.displayName,
                     resourceId: staff.identityId,

@@ -7,7 +7,7 @@ import { buildSandboxSessionSummary } from "backend/tpv/tpvCierresCore";
 import { assertTpvSandboxEnabled, fromMinorUnits, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
 import { wql } from "backend/dataAccess";
 
-export const obtenerResumenSesionQA = webMethod(
+export const obtenerResumenSesionSANDBOX = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
         const traceId = makeTraceId("tpv-sandbox-summary");
@@ -43,7 +43,7 @@ export const obtenerResumenSesionQA = webMethod(
     }
 );
 
-export const generarTicketXQA = webMethod(
+export const generarTicketXSANDBOX = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
         let persisted = false;
@@ -60,7 +60,7 @@ export const generarTicketXQA = webMethod(
                     throw new Error("TPV_SANDBOX_SESSION_CLOSED");
                 }
             const totals = await buildSandboxSessionSummary(session);
-            const reportId = "QA-X-" + session.sessionId + "-" + key.slice(0, 20);
+            const reportId = "SANDBOX-X-" + session.sessionId + "-" + key.slice(0, 20);
             const { item, replayed } = await insertSandboxEvent(TPV_SANDBOX_COLLECTIONS.TICKET_X, key + ":TICKET_X", {
                 sessionId: session.sessionId,
                 reportId,
@@ -87,7 +87,7 @@ export const generarTicketXQA = webMethod(
     }
 );
 
-export const cerrarTicketZQA = webMethod(
+export const cerrarTicketZSANDBOX = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
         let persisted = false;
@@ -153,7 +153,7 @@ export const cerrarTicketZQA = webMethod(
             const existing = await querySandboxRecords(TPV_SANDBOX_COLLECTIONS.TICKET_Z, wql.eq("sessionId", session.sessionId));
             if (existing.length && existing[0].closed !== true) throw new Error("TPV_SANDBOX_Z_RECORD_INVALID");
             const idempotencyKey = "SANDBOX_TICKET_Z:" + session.sessionId;
-            const reportId = "QA-Z-" + session.sessionId;
+            const reportId = "SANDBOX-Z-" + session.sessionId;
             const { item, replayed } = await insertSandboxEvent(TPV_SANDBOX_COLLECTIONS.TICKET_Z, idempotencyKey, {
                 sessionId: session.sessionId,
                 reportId,

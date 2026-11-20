@@ -17,7 +17,7 @@ test("TPV sale draft validates report fields and minor-unit arithmetic", () => {
         lineas: [{
             tipoLinea: "SERVICIO",
             itemId: "service-1",
-            concepto: "Servicio QA",
+            concepto: "Servicio SANDBOX",
             cantidad: 1,
             precioUnitario: 100,
             descuentoImporte: 10,
@@ -73,7 +73,7 @@ test("TPV mixed tender breakdown reconciles commercial totals separately from ph
     const result = validateSaleDraft({
         lineas: [{
             tipoLinea: "SERVICIO",
-            concepto: "Venta mixta QA",
+            concepto: "Venta mixta SANDBOX",
             cantidad: 1,
             precioUnitario: 100,
             descuentoImporte: 0,
@@ -102,7 +102,7 @@ test("TPV sale draft rejects invalid tax, overpayment, unknown methods and sub-c
     const valid = {
         lineas: [{
             tipoLinea: "PRODUCTO",
-            concepto: "Producto QA",
+            concepto: "Producto SANDBOX",
             cantidad: 1,
             precioUnitario: 10,
             descuentoImporte: 0,
@@ -150,7 +150,7 @@ test("TPV dependency manifest and npm lockfile remain synchronized", async () =>
     assert.equal(packageJson.dependencies["@wix/stores"], "1.0.997");
 });
 
-test("TPV WebMethods isolate synthetic QA writes from operational ledgers", async () => {
+test("TPV WebMethods isolate synthetic SANDBOX writes from operational ledgers", async () => {
     const files = [
         "tpv/tpvCaja.web.js",
         "tpv/tpvVentas.web.js",
@@ -168,10 +168,10 @@ test("TPV WebMethods isolate synthetic QA writes from operational ledgers", asyn
     const joined = contents.join("\n");
     assert.match(joined, /webMethod\(\s*Permissions\.SiteMember/);
     assert.match(joined, /requireCajero/);
-    assert.match(joined, /registrarVentaQA/);
-    assert.match(joined, /solicitarDevolucionQA/);
-    assert.match(joined, /cerrarTicketZQA/);
-    assert.match(joined, /TPV_QA_COLLECTIONS/);
+    assert.match(joined, /registrarVentaSANDBOX/);
+    assert.match(joined, /solicitarDevolucionSANDBOX/);
+    assert.match(joined, /cerrarTicketZSANDBOX/);
+    assert.match(joined, /TPV_SANDBOX_COLLECTIONS/);
     assert.doesNotMatch(joined, /contactsV5|extendedBookings|giftVouchers|staffMembers|staff\?\.memberId/);
     const cashierModule = await source("tpv/tpvCaja.web.js");
     assert.doesNotMatch(cashierModule, /backend\/cajas\.web|CajaActual|getCashierState/);
@@ -182,36 +182,36 @@ test("TPV WebMethods isolate synthetic QA writes from operational ledgers", asyn
     const movements = await source("tpv/tpvMovimientos.web.js");
     const cash = await source("tpv/tpvCaja.web.js");
     const closures = await source("tpv/tpvCierres.web.js");
-    assert.match(sales, /withQaSessionLock\(session\.sessionId/);
-    assert.match(refunds, /withQaSaleLock\(saleId, traceId, async \(\) => \{[\s\S]*?\}, session\.sessionId\)/);
-    assert.match(movements, /withQaSessionLock\(session\.sessionId/);
-    assert.match(cash, /withQaSessionLock\(session\.sessionId/);
-    assert.match(closures, /withQaSessionLock\(session\.sessionId/);
+    assert.match(sales, /withSandboxSessionLock\(session\.sessionId/);
+    assert.match(refunds, /withSandboxSaleLock\(saleId, traceId, async \(\) => \{[\s\S]*?\}, session\.sessionId\)/);
+    assert.match(movements, /withSandboxSessionLock\(session\.sessionId/);
+    assert.match(cash, /withSandboxSessionLock\(session\.sessionId/);
+    assert.match(closures, /withSandboxSessionLock\(session\.sessionId/);
     assert.doesNotMatch(joined, /registerManualTransaction|registerZClosing|createCheckout|createOrder|createPayment|processRefund/i);
 
-    const repository = await source("tpv/tpvQaRepository.js");
+    const repository = await source("tpv/tpvSandboxRepository.js");
     assert.match(repository, /insertItem\(/);
     assert.match(repository, /CONSISTENCY\.STRONG/);
     assert.match(repository, /requestFingerprint/);
-    assert.match(repository, /TPV_QA_COLLECTIONS/);
-    assert.match(repository, /CONTROL_TYPE\.TPV_QA_SESSION_LOCK/);
+    assert.match(repository, /TPV_SANDBOX_COLLECTIONS/);
+    assert.match(repository, /CONTROL_TYPE\.TPV_SANDBOX_SESSION_LOCK/);
     assert.match(repository, /updateItem\(BUSINESS_COLLECTIONS\.CAJA_ACTUAL/);
     const cashier = await source("tpv/tpvCaja.web.js");
-    assert.match(cashier, /withQaSessionLock\(sessionId, traceId/);
+    assert.match(cashier, /withSandboxSessionLock\(sessionId, traceId/);
     assert.doesNotMatch(repository, /removeById\(|bulkUpdate\(|bulkRemove\(/);
 
     const policy = await source("dataAccessPolicy.js");
     const config = await source("internalConfig.js");
-    assert.match(policy, /TPV_QA_RUNTIME_POLICY/);
-    assert.match(policy, /TPV_QA_SYNTHETIC/);
+    assert.match(policy, /TPV_SANDBOX_RUNTIME_POLICY/);
+    assert.match(policy, /TPV_SANDBOX_SYNTHETIC/);
     assert.match(policy, /APPEND_ONLY_COLLECTIONS/);
     assert.match(config, /REAL_PAYMENTS_ENABLED: false/);
     assert.match(config, /FISCAL_WRITES_ENABLED: false/);
     assert.match(config, /SYNTHETIC_ONLY: true/);
-    assert.match(config, /TPV_QA_RUNTIME_POLICY = Object\.freeze\(\{[\s\S]*?ENABLED: false/);
-    assert.match(await readFile(new URL("../public/tpvPageController.js", backendRoot), "utf8"), /TPV_QA_DISABLED_UNTIL_SANDBOX_ISOLATION/);
-    assert.match(config, /TEST_RUN_ID: "TPVQA-DEV-/);
-    assert.match(config, /TPV_QA_EVENT_MOVEMENT_TYPES/);
+    assert.match(config, /TPV_SANDBOX_RUNTIME_POLICY = Object\.freeze\(\{[\s\S]*?ENABLED: false/);
+    assert.match(await readFile(new URL("../public/tpvPageController.js", backendRoot), "utf8"), /TPV_SANDBOX_DISABLED_UNTIL_SANDBOX_ISOLATION/);
+    assert.match(config, /TEST_RUN_ID: "TPVSANDBOX-DEV-/);
+    assert.match(config, /TPV_SANDBOX_EVENT_MOVEMENT_TYPES/);
     for (const writer of [cash, movements, sales, closures]) {
         assert.match(writer, /requireAdmin/);
     }
@@ -220,9 +220,9 @@ test("TPV WebMethods isolate synthetic QA writes from operational ledgers", asyn
 test("TPV catalog reader uses native Bookings SDK and does not expose staff contact details", async () => {
     const catalog = await source("tpv/tpvCatalogo.web.js");
     assert.match(catalog, /services\.queryServices/);
-    assert.match(catalog, /listTpvSandboxIdentities\(TPV_QA_IDENTITY_TYPES\.STAFF\)/);
-    assert.match(catalog, /listTpvSandboxIdentities\(TPV_QA_IDENTITY_TYPES\.CUSTOMER\)/);
-    assert.doesNotMatch(catalog, /TPV_QA_FIXTURES/);
+    assert.match(catalog, /listTpvSandboxIdentities\(TPV_SANDBOX_IDENTITY_TYPES\.STAFF\)/);
+    assert.match(catalog, /listTpvSandboxIdentities\(TPV_SANDBOX_IDENTITY_TYPES\.CUSTOMER\)/);
+    assert.doesNotMatch(catalog, /TPV_SANDBOX_FIXTURES/);
     const identities = await source("tpv/tpvSandboxIdentities.js");
     assert.match(identities, /BUSINESS_COLLECTIONS\.TPV_SANDBOX_IDENTITIES/);
     assert.match(identities, /CONSISTENCY\.STRONG/);
@@ -257,7 +257,7 @@ test("TPV catalog reader uses native Bookings SDK and does not expose staff cont
     assert.doesNotMatch(catalog, /staff\.email|staff\.phone/);
 
     const giftCards = await source("tpv/tpvGiftCards.web.js");
-    assert.match(giftCards, /TPV_GIFT_CARDS_DISABLED_IN_QA/);
+    assert.match(giftCards, /TPV_GIFT_CARDS_DISABLED_IN_SANDBOX/);
     assert.doesNotMatch(giftCards, /giftVouchers|@wix\/ecom|auth\.elevate/);
     assert.match(giftCards, /requireCajero/);
     assert.match(giftCards, /syntheticOnly: true/);
@@ -288,11 +288,11 @@ test("TPV page is wired to the shared HTML bridge and its versioned iframe proto
     assert.match(controller, /obtenerProductos/);
     assert.match(controller, /obtenerVariantesProducto/);
     assert.match(controller, /validarVentaBorrador/);
-    assert.match(controller, /generarTicketXQA/);
-    assert.match(controller, /QA_TICKET_X/);
+    assert.match(controller, /generarTicketXSANDBOX/);
+    assert.match(controller, /SANDBOX_TICKET_X/);
     assert.match(controller, /consultarTarjetaRegalo/);
     assert.match(controller, /GIFT_CARD_BALANCE/);
-    assert.match(controller, /obtenerSesionCajaQA/);
+    assert.match(controller, /obtenerSesionCajaSANDBOX/);
     assert.match(controller, /reply\(responseType, result, message\)/);
     assert.doesNotMatch(controller, /\bgetCashierState\b/);
 
@@ -315,23 +315,23 @@ test("TPV page is wired to the shared HTML bridge and its versioned iframe proto
 });
 
 
-test("QA repository paginates reads and blocks Z close while sales are incomplete", async () => {
-    const repository = await source("tpv/tpvQaRepository.js");
+test("SANDBOX repository paginates reads and blocks Z close while sales are incomplete", async () => {
+    const repository = await source("tpv/tpvSandboxRepository.js");
     const closures = await source("tpv/tpvCierres.web.js");
     assert.match(repository, /while \(page\.hasNext && records\.length < maxRecords\)/);
-    assert.match(repository, /export async function getPendingQaSales\(sessionId\)/);
-    assert.match(repository, /export async function getPendingQaRefunds\(sessionId\)/);
+    assert.match(repository, /export async function getPendingSandboxSales\(sessionId\)/);
+    assert.match(repository, /export async function getPendingSandboxRefunds\(sessionId\)/);
     assert.match(repository, /actualByMethod\.size !== expectedByMethod\.size/);
     assert.match(repository, /actual\.amountMinor !== expected\.amountMinor/);
     assert.match(repository, /refundCashMovements\.length !== expectedCash\.count/);
     assert.match(repository, /actualCashAmount !== expectedCash\.amountMinor/);
     assert.match(repository, /refundTotal !== Number\(refund\.amountMinor\)/);
-    assert.match(closures, /getPendingQaSales\(session\.sessionId\)/);
-    assert.match(closures, /TPV_QA_PENDING_SALES_PREVENT_CLOSE/);
-    assert.match(closures, /getPendingQaRefunds\(session\.sessionId\)/);
-    assert.match(closures, /TPV_QA_PENDING_REFUNDS_PREVENT_CLOSE/);
+    assert.match(closures, /getPendingSandboxSales\(session\.sessionId\)/);
+    assert.match(closures, /TPV_SANDBOX_PENDING_SALES_PREVENT_CLOSE/);
+    assert.match(closures, /getPendingSandboxRefunds\(session\.sessionId\)/);
+    assert.match(closures, /TPV_SANDBOX_PENDING_REFUNDS_PREVENT_CLOSE/);
     assert.match(closures, /totals\.reconciliationOk !== true/);
-    assert.match(closures, /TPV_QA_RECONCILIATION_FAILED/);
+    assert.match(closures, /TPV_SANDBOX_RECONCILIATION_FAILED/);
 });
 
 test("legacy TPV pages and direct operational writers are absent from the active site integration", async () => {
@@ -357,34 +357,34 @@ test("legacy TPV pages and direct operational writers are absent from the active
 test("TPV public utility module exposes only the configuration contract consumed by the page controller", async () => {
     const utilities = await source("tpv/tpvUtils.web.js");
     const controller = await readFile(new URL("../public/tpvPageController.js", backendRoot), "utf8");
-    assert.match(utilities, /export const obtenerConfiguracionTPVQA = webMethod/);
-    assert.doesNotMatch(utilities, /validarImportesTPVQA|normalizePaymentMethod|toMinorUnits/);
-    assert.match(controller, /obtenerConfiguracionTPVQA/);
-    assert.doesNotMatch(controller, /validarImportesTPVQA/);
+    assert.match(utilities, /export const obtenerConfiguracionTPVSANDBOX = webMethod/);
+    assert.doesNotMatch(utilities, /validarImportesTPVSANDBOX|normalizePaymentMethod|toMinorUnits/);
+    assert.match(controller, /obtenerConfiguracionTPVSANDBOX/);
+    assert.doesNotMatch(controller, /validarImportesTPVSANDBOX/);
 });
 
 test("TPV synthetic persistence maps logical events to CajaActual and MovimientosCaja without fiscal side effects", async () => {
-    const repository = await source("tpv/tpvQaRepository.js");
+    const repository = await source("tpv/tpvSandboxRepository.js");
     const config = await source("internalConfig.js");
     const utilities = await source("tpv/tpvUtils.js");
-    assert.match(repository, /QA_LEDGER_SOURCE = "TPV_QA_SYNTHETIC"/);
+    assert.match(repository, /SANDBOX_LEDGER_SOURCE = "TPV_SANDBOX_SYNTHETIC"/);
     assert.match(config, /SIMULATED_TPV_/);
     assert.match(repository, /sequenceNumber: 0/);
     assert.match(repository, /cmsMovementType: item\.movementType/);
     assert.doesNotMatch(repository, /movementType: item\.movementType/);
-    assert.match(repository, /previousRecordHash: QA_GENESIS_HASH/);
+    assert.match(repository, /previousRecordHash: SANDBOX_GENESIS_HASH/);
     assert.match(repository, /createHash\("sha256"\)/);
     assert.match(repository, /cashRegisterStatus: "SIMULACION"/);
-    assert.match(repository, /_ensureCajaActualForQa/);
-    assert.match(repository, /TPV_QA_SANDBOX_CASH_REGISTER_NOT_SEEDED/);
-    assert.match(repository, /assertQaCajaWritable/);
+    assert.match(repository, /_ensureCajaActualForSandbox/);
+    assert.match(repository, /TPV_SANDBOX_SANDBOX_CASH_REGISTER_NOT_SEEDED/);
+    assert.match(repository, /assertSandboxCajaWritable/);
     assert.doesNotMatch(repository, /insertItem\(BUSINESS_COLLECTIONS\.CAJA_ACTUAL/);
-    assert.match(utilities, /TPV_QA_SANDBOX_INITIALIZED/);
-    assert.match(utilities, /TPV_QA_SYNTHETIC/);
-    assert.match(repository, /payloadFiscal\?\.testRunId === QA_TEST_RUN_ID/);
-    assert.match(repository, /MAX_QA_PROJECTION_EVENTS = 1000/);
-    assert.match(repository, /conceptOperations\?\.tpvQa\?\.sessionId/);
+    assert.match(utilities, /TPV_SANDBOX_INITIALIZED/);
+    assert.match(utilities, /TPV_SANDBOX_SYNTHETIC/);
+    assert.match(repository, /payloadFiscal\?\.testRunId === SANDBOX_TEST_RUN_ID/);
+    assert.match(repository, /MAX_SANDBOX_PROJECTION_EVENTS = 1000/);
+    assert.match(repository, /conceptOperations\?\.tpvSandbox\?\.sessionId/);
     assert.match(repository, /updateItem\(BUSINESS_COLLECTIONS\.CAJA_ACTUAL/);
-    assert.match(config, /TEST_RUN_ID: "TPVQA-DEV-/);
+    assert.match(config, /TEST_RUN_ID: "TPVSANDBOX-DEV-/);
     assert.doesNotMatch(repository, /registerManualTransaction|signFiscal|sendToAeat|createPayment|capturePayment|processRefund/i);
 });

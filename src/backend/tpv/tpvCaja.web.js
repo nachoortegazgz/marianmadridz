@@ -19,7 +19,7 @@ function madridDayKey(date = new Date()) {
     return values.year + values.month + values.day;
 }
 
-export const obtenerSesionCajaQA = webMethod(
+export const obtenerSesionCajaSANDBOX = webMethod(
     Permissions.SiteMember,
     async () => {
         const traceId = makeTraceId("tpv-sandbox-session-read");
@@ -50,7 +50,7 @@ export const obtenerSesionCajaQA = webMethod(
     }
 );
 
-export const abrirCajaQA = webMethod(
+export const abrirCajaSANDBOX = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
         let persisted = false;
@@ -60,7 +60,7 @@ export const abrirCajaQA = webMethod(
         try {
             const openingCashMinor = toMinorUnits(input.openingCash, "OPENING_CASH");
             const dayKey = madridDayKey();
-            const sessionId = "QA-SESSION-" + dayKey;
+            const sessionId = "SANDBOX-SESSION-" + dayKey;
             return await withSandboxSessionLock(sessionId, traceId, async () => {
                 const idempotencyKey = "SANDBOX_SESSION_OPEN:" + dayKey;
                 const current = await latestOpenSandboxSession();
@@ -79,7 +79,7 @@ export const abrirCajaQA = webMethod(
                         cashierMemberId: TPV_SANDBOX_RUNTIME_POLICY.ACTOR_ID,
                         payload: makeSyntheticPayload({
                             dayKey,
-                            openingReason: String(input.reason || "Apertura de QA").slice(0, 200),
+                            openingReason: String(input.reason || "Apertura de SANDBOX").slice(0, 200),
                             traceId,
                             terminalId: String(input.terminalId || "TPV_SANDBOX").slice(0, 80),
                         }),
@@ -87,7 +87,7 @@ export const abrirCajaQA = webMethod(
                 );
                 persisted = true;
                 await insertSandboxEvent(TPV_SANDBOX_COLLECTIONS.AUDITORIA, idempotencyKey + ":AUDIT", {
-                    action: "APERTURA_CAJA_QA",
+                    action: "APERTURA_CAJA_SANDBOX",
                     actorId: TPV_SANDBOX_RUNTIME_POLICY.ACTOR_ID,
                     entityType: "SESION_CAJA",
                     entityId: sessionId,
@@ -117,7 +117,7 @@ export const abrirCajaQA = webMethod(
     }
 );
 
-export const registrarArqueoParcialQA = webMethod(
+export const registrarArqueoParcialSANDBOX = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
         let persisted = false;
@@ -165,7 +165,7 @@ export const registrarArqueoParcialQA = webMethod(
             persisted = true;
             await appendSandboxAudit({
                 idempotencyKey: key + ":AUDIT",
-                action: "ARQUEO_PARCIAL_QA",
+                action: "ARQUEO_PARCIAL_SANDBOX",
                 actorId: TPV_SANDBOX_RUNTIME_POLICY.ACTOR_ID,
                 entityType: "ARQUEO_CAJA",
                 entityId: session.sessionId,

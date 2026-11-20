@@ -33,7 +33,7 @@ export const validarVentaBorrador = webMethod(
     }
 );
 
-// The legacy writer is intentionally blocked. registrarVentaQA writes only
+// The legacy writer is intentionally blocked. registrarVentaSANDBOX writes only
 // synthetic logical events through MovimientosCaja and CajaActual projection.
 export const registrarVenta = webMethod(
     Permissions.SiteMember,
@@ -43,7 +43,7 @@ export const registrarVenta = webMethod(
     }
 );
 
-export const registrarVentaQA = webMethod(
+export const registrarVentaSANDBOX = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
         let persisted = false;
@@ -96,7 +96,7 @@ export const registrarVentaQA = webMethod(
                 ticketId: saleId,
                 professionalId: requestedProfessionalId || null,
                 customerContactId: customer?.identityId || null,
-                customerLabel: customer?.displayName || "CLIENTE ANONIMO QA",
+                customerLabel: customer?.displayName || "CLIENTE ANONIMO SANDBOX",
                 bookingId: null,
                 bookingStatus: null,
                 bookingPaymentStatus: null,
@@ -157,7 +157,7 @@ export const registrarVentaQA = webMethod(
                     changeMinor: Math.round(payment.importeCambio * 100),
                     status: "CONFIRMADO_SINTETICO",
                     provider: "SIMULATED",
-                    gatewayReference: "QA-NO-GATEWAY",
+                    gatewayReference: "SANDBOX-NO-GATEWAY",
                     createdAt,
                     payload: { ...commonPayload, paymentIndex: index + 1, traceId },
                 });

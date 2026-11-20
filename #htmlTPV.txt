@@ -431,7 +431,7 @@ dialog::backdrop{background:rgba(26,26,26,.4)}
 (function(){
 "use strict";
 const PROTOCOL_VERSION=1;
-const RESPONSE_TYPES=["MM_CONTEXT","CASHIER_STATE_RES","CATALOG_SERVICES_RES","CATALOG_STAFF_RES","CATALOG_PRODUCTS_RES","PRODUCT_VARIANTS_RES","CUSTOMERS_SEARCH_RES","CUSTOMER_BOOKINGS_RES","VALIDATE_SALE_DRAFT_RES","GIFT_CARD_BALANCE_RES","QA_CONFIG_RES","QA_PERMISSIONS_RES","QA_SESSION_OPEN_RES","QA_PARTIAL_COUNT_RES","QA_CASH_MOVEMENT_RES","QA_PAYMENT_VALIDATE_RES","QA_SALE_REGISTER_RES","QA_REFUND_RES","QA_SESSION_SUMMARY_RES","QA_TICKET_X_RES","QA_TICKET_Z_RES","QA_AUDIT_LIST_RES"];
+const RESPONSE_TYPES=["MM_CONTEXT","CASHIER_STATE_RES","CATALOG_SERVICES_RES","CATALOG_STAFF_RES","CATALOG_PRODUCTS_RES","PRODUCT_VARIANTS_RES","CUSTOMERS_SEARCH_RES","CUSTOMER_BOOKINGS_RES","VALIDATE_SALE_DRAFT_RES","GIFT_CARD_BALANCE_RES","SANDBOX_CONFIG_RES","SANDBOX_PERMISSIONS_RES","SANDBOX_SESSION_OPEN_RES","SANDBOX_PARTIAL_COUNT_RES","SANDBOX_CASH_MOVEMENT_RES","SANDBOX_PAYMENT_VALIDATE_RES","SANDBOX_SALE_REGISTER_RES","SANDBOX_REFUND_RES","SANDBOX_SESSION_SUMMARY_RES","SANDBOX_TICKET_X_RES","SANDBOX_TICKET_Z_RES","SANDBOX_AUDIT_LIST_RES"];
 const state={contextReady:false,context:null,role:"UNKNOWN",permissions:null,session:null,operator:null,staff:[],services:[],products:[],productCursor:null,productHasMore:false,kind:"SERVICIO",workflow:"cobros",items:[],payments:[],customer:null,lastSale:null,pending:new Map(),operationKeys:{},sequence:0};
 const $=id=>document.getElementById(id);
 const money=n=>new Intl.NumberFormat("es-ES",{style:"currency",currency:"EUR"}).format(Number(n)||0);
@@ -468,8 +468,8 @@ function requestCashierState(){return waitFor(send("CASHIER_STATE",{}),"CASHIER_
 function initialize(){$("userRole").textContent="Rol: verificando";void bootstrap()}
 async function bootstrap(){
  try{
-  if(state.context?.environment!=="SANDBOX"||state.context?.previewOnly!==true)throw new Error("TPV_QA_PREVIEW_ONLY");
-  const [config,permissions,session]=await Promise.all([call("QA_CONFIG",{},"QA_CONFIG_RES"),call("QA_PERMISSIONS",{},"QA_PERMISSIONS_RES"),requestCashierState().then(unwrap)]);
+  if(state.context?.environment!=="SANDBOX"||state.context?.previewOnly!==true)throw new Error("TPV_SANDBOX_PREVIEW_ONLY");
+  const [config,permissions,session]=await Promise.all([call("SANDBOX_CONFIG",{},"SANDBOX_CONFIG_RES"),call("SANDBOX_PERMISSIONS",{},"SANDBOX_PERMISSIONS_RES"),requestCashierState().then(unwrap)]);
   state.permissions=permissions;state.role=permissions.role||"UNKNOWN";$("userRole").textContent="Rol: "+state.role;
   if(config.syntheticOnly!==true||config.realPaymentsEnabled!==false||config.fiscalWritesEnabled!==false)throw new Error("RUNTIME_POLICY_INVALID");
   state.session=session;renderSession();renderCapabilities();
@@ -491,14 +491,14 @@ function renderSession(){
  $("sessionOpenedDisplay").textContent=s?new Date(s.openedAt).toLocaleString("es-ES"):"—";
  $("expectedCash").textContent=s?money(s.expectedCash):"—";
  $("operationCount").textContent=s?String(s.totalOperations||0):"0";
- $("openSession").disabled=!!s||!state.permissions?.capabilities?.openQaSession;
+ $("openSession").disabled=!!s||!state.permissions?.capabilities?.openSandboxSession;
  ["ticketX","cashMovement","saveSale"].forEach(id=>$(id).disabled=!s);
- $("ticketZ").disabled=!s||!state.permissions?.capabilities?.closeQaSession;
+ $("ticketZ").disabled=!s||!state.permissions?.capabilities?.closeSandboxSession;
  $("refund").disabled=!s||!state.permissions?.capabilities?.requestRefund;
  document.querySelectorAll('.wf-btn[data-wf="x"],.wf-btn[data-wf="z"]').forEach(b=>b.disabled=!s);
  renderDenominations();
 }
-function renderCapabilities(){const c=state.permissions?.capabilities||{};const preview=state.context?.environment==="SANDBOX"&&state.context?.previewOnly===true;$("openSession").disabled=!preview||!!state.session||!c.openQaSession;$("saveSale").disabled=!preview||!state.session||!c.createSyntheticSale;$("cashMovement").disabled=!preview||!state.session||!c.registerCashMovement;$("refund").disabled=!preview||!state.session||!c.requestRefund;$("ticketX").disabled=!preview||!state.session||!c.issueTicketX;$("ticketZ").disabled=!preview||!state.session||!c.issueTicketZ}
+function renderCapabilities(){const c=state.permissions?.capabilities||{};const preview=state.context?.environment==="SANDBOX"&&state.context?.previewOnly===true;$("openSession").disabled=!preview||!!state.session||!c.openSandboxSession;$("saveSale").disabled=!preview||!state.session||!c.createSyntheticSale;$("cashMovement").disabled=!preview||!state.session||!c.registerCashMovement;$("refund").disabled=!preview||!state.session||!c.requestRefund;$("ticketX").disabled=!preview||!state.session||!c.issueTicketX;$("ticketZ").disabled=!preview||!state.session||!c.issueTicketZ}
 
 /* WORKFLOW */
 function setWorkflow(name){
@@ -674,7 +674,7 @@ async function partialX(){
  const idempotencyKey=state.operationKeys.ticketX||(state.operationKeys.ticketX=makeKey());
  let result;
  try{
-  result=unwrap(await request("QA_TICKET_X",{sessionId:state.session.sessionId,countedCash,differenceReason:$("closingReason").value.trim(),operatorId:state.operator?.profesionalId||null,idempotencyKey},"QA_TICKET_X_RES"));
+  result=unwrap(await request("SANDBOX_TICKET_X",{sessionId:state.session.sessionId,countedCash,differenceReason:$("closingReason").value.trim(),operatorId:state.operator?.profesionalId||null,idempotencyKey},"SANDBOX_TICKET_X_RES"));
  }catch(e){delete state.operationKeys.ticketX;throw e}
  delete state.operationKeys.ticketX;
  toast("Control parcial X generado: "+result.reportId);
@@ -695,7 +695,7 @@ async function closingZ(){
  const idempotencyKey=state.operationKeys.ticketZ||(state.operationKeys.ticketZ=makeKey());
  let result;
  try{
-  result=unwrap(await request("QA_TICKET_Z",{sessionId:state.session.sessionId,countedCash,differenceReason:reason,nextOpeningCash:nextOpening,operatorId:state.operator?.profesionalId||null,idempotencyKey},"QA_TICKET_Z_RES"));
+  result=unwrap(await request("SANDBOX_TICKET_Z",{sessionId:state.session.sessionId,countedCash,differenceReason:reason,nextOpeningCash:nextOpening,operatorId:state.operator?.profesionalId||null,idempotencyKey},"SANDBOX_TICKET_Z_RES"));
  }catch(e){delete state.operationKeys.ticketZ;throw e}
  delete state.operationKeys.ticketZ;
  toast("Cierre Z completado: "+result.reportId);
@@ -711,10 +711,10 @@ async function saveSale(){
  const lineas=state.items.map((x,i)=>({lineaNumero:i+1,tipoLinea:x.tipoLinea,itemId:x.itemId,concepto:x.concepto,cantidad:x.cantidad,precioUnitario:x.precioUnitario,descuentoImporte:x.descuentoImporte,subtotalNeto:number(x.cantidad*x.precioUnitario-x.descuentoImporte),impuestosImporte:0,totalLinea:number(x.cantidad*x.precioUnitario-x.descuentoImporte),profesionalId:state.operator?.profesionalId||null,stockAfectado:x.stockAfectado}));
  const sale={idempotencyKey:state.operationKeys.sale||(state.operationKeys.sale=makeKey()),sessionId:state.session.sessionId,lineas,pagos:state.payments,subtotalNeto:t.subtotal,impuestosTotal:0,totalVenta:t.total,customerContactId:state.customer?.contactId||"",operatorId:state.operator?.profesionalId||null};
  if(t.tax!==0){sale.impuestosTotal=t.tax;throw new Error("El impuesto manual requiere asignación por línea.")}
- unwrap(await request("QA_PAYMENT_VALIDATE",{total:t.total,payments:state.payments},"QA_PAYMENT_VALIDATE_RES"));
+ unwrap(await request("SANDBOX_PAYMENT_VALIDATE",{total:t.total,payments:state.payments},"SANDBOX_PAYMENT_VALIDATE_RES"));
  const valid=unwrap(await request("VALIDATE_SALE_DRAFT",{sale},"VALIDATE_SALE_DRAFT_RES"));
  if(valid.importePendiente!==0)throw new Error("El borrador conserva importe pendiente.");
- const result=unwrap(await request("QA_SALE_REGISTER",sale,"QA_SALE_REGISTER_RES"));
+ const result=unwrap(await request("SANDBOX_SALE_REGISTER",sale,"SANDBOX_SALE_REGISTER_RES"));
  state.lastSale={saleId:result.saleId,total:result.total,breakdown:result.breakdown||{}};delete state.operationKeys.sale;
  const firstMethod=Object.keys(result.breakdown||{}).find(k=>result.breakdown[k]>0)||"EFECTIVO";
  $("refundReceiptId").value=result.saleId;
@@ -728,7 +728,7 @@ async function refreshSession(){
  state.session=unwrap(await requestCashierState());
  renderSession();
  if(state.session){
-  const d=await call("QA_SESSION_SUMMARY",{sessionId:state.session.sessionId},"QA_SESSION_SUMMARY_RES");
+  const d=await call("SANDBOX_SESSION_SUMMARY",{sessionId:state.session.sessionId},"SANDBOX_SESSION_SUMMARY_RES");
   $("expectedCash").textContent=money(d.expectedCash);
   $("operationCount").textContent=String(d.ticketCount||0);
  }
@@ -737,11 +737,11 @@ async function refreshSession(){
 async function openSession(){
  const payload={openingCash:number($("openingCash").value),reason:"Apertura de sesión",terminalId:"TPV"};
  if(state.operator?.profesionalId)payload.operatorId=state.operator.profesionalId;
- const result=unwrap(await request("QA_SESSION_OPEN",payload,"QA_SESSION_OPEN_RES"));
+ const result=unwrap(await request("SANDBOX_SESSION_OPEN",payload,"SANDBOX_SESSION_OPEN_RES"));
  toast("Sesión abierta: "+result.sessionId);
  await refreshSession();
 }
-async function cashMovement(){const result=unwrap(await request("QA_CASH_MOVEMENT",{movementType:$("movementType").value,amount:number($("movementAmount").value),reason:$("movementReason").value,operatorId:state.operator?.profesionalId||null,idempotencyKey:state.operationKeys.movement||(state.operationKeys.movement=makeKey())},"QA_CASH_MOVEMENT_RES"));delete state.operationKeys.movement;toast("Movimiento registrado: "+result.movementType);$("movementAmount").value="";$("movementReason").value="";await refreshSession()}
+async function cashMovement(){const result=unwrap(await request("SANDBOX_CASH_MOVEMENT",{movementType:$("movementType").value,amount:number($("movementAmount").value),reason:$("movementReason").value,operatorId:state.operator?.profesionalId||null,idempotencyKey:state.operationKeys.movement||(state.operationKeys.movement=makeKey())},"SANDBOX_CASH_MOVEMENT_RES"));delete state.operationKeys.movement;toast("Movimiento registrado: "+result.movementType);$("movementAmount").value="";$("movementReason").value="";await refreshSession()}
 async function refund(){
  const receiptId=$("refundReceiptId").value.trim();
  const receiptDate=$("refundReceiptDate").value;
@@ -751,14 +751,14 @@ async function refund(){
  if(!receiptDate){toast("Indica la fecha del recibo.");return}
  if(amount<=0){toast("Indica un importe de devolución válido.");return}
  if(reason.length<3){toast("Indica un motivo (mín. 3 caracteres).");return}
- const result=unwrap(await request("QA_REFUND",{
+ const result=unwrap(await request("SANDBOX_REFUND",{
    saleId:receiptId,
    receiptDate,
    reason,
    payments:[{paymentMethod:$("refundMethod").value,amount}],
    operatorId:state.operator?.profesionalId||null,
    idempotencyKey:state.operationKeys.refund||(state.operationKeys.refund=makeKey())
- },"QA_REFUND_RES"));
+ },"SANDBOX_REFUND_RES"));
  delete state.operationKeys.refund;
  toast("Devolución registrada: "+result.refundId);
  await refreshSession();
