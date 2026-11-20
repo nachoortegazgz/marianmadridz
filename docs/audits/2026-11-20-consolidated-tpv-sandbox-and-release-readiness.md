@@ -201,3 +201,12 @@ PR #499 hace read-only el bootstrap: no crea automáticamente el singleton ni la
 La revisión posterior detectó una ruta adicional que debe cerrarse: los locks de `ControlOperativo` deben validar primero el marcador de `CajaActual`. La rama `fix/tpv-sandbox-lock-preflight-and-docs` añade ese preflight y una prueba contractual; pendiente de CI y merge. No considerar el hallazgo resuelto en `main` hasta la integración.
 
 El sitio Wix se observa en Draft. No se ha ejecutado Preview E2E, prueba negativa Published, comparación LIVE antes/después, validación de permisos efectivos, ni reset sintético preproducción. Mantener **NO-GO**.
+
+
+## Addendum posterior a PR #500 — 2026-11-20
+
+PR #500 está fusionada en `main`: commit `6da7cdf0d815ad2e1833f5bd56b5950aff2afb3e`. La corrección consolida el helper `_ensureCajaActualForSandbox()` para validar existencia y marcador/run ID de `CajaActual` y ejecuta ese preflight antes de cualquier lectura/escritura de locks en `ControlOperativo`. Se añade una prueba contractual específica.
+
+Validación pre-merge del HEAD `306816dff20d62e4ec3fda87e25fb050c155bb96`: Layer 1 28 suites/339 tests PASS; Layer 2 19 suites/268 tests PASS; suite completa 75 suites/706 tests PASS; contratos Wix SDK, eCommerce Order Transactions, TPV Catalog y ESLint PASS; Gitleaks PASS (runs `44781808680` y `44781808524`). CI post-merge para `6da7cdf0...` está en curso en los runs `44781982497` y `44781982392`; no declararlo aprobado hasta que ambos finalicen SUCCESS.
+
+La corrección es una barrera de código por estado de datos; no identifica de forma contractual Preview frente a Published. No equivale a prueba de aislamiento runtime ni a aceptación E2E. Wix Preview, prueba negativa Published, concurrencia H-01, permisos efectivos, efectos externos, comparación LIVE antes/después y reset preproducción siguen pendientes. Sitio Wix observado en Draft. **NO-GO de publicación.**
