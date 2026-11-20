@@ -39,7 +39,19 @@ test("all CMS write-policy collection lists contain unique canonical strings", (
 test("dataAccess validates physical required fields before elevated CMS inserts", () => {
     assert.throws(() => insertItem(C.MOVIMIENTOS_CAJA, {}), /MovimientosCaja requires/);
     assert.throws(() => insertItem(C.HISTORICO_CIERRES_Z, {}), /HistoricoCierresZ requires/);
-    assert.throws(() => insertItem(C.CITAS_F2, {}), /bookingStatus/);
+    assert.throws(() => insertItem(C.CITAS_F2, {
+        bookingId: "e556070a-6d6a-402e-8422-11133033ea76",
+        scheduleId: "e556070a-6d6a-402e-8422-11133033ea76",
+        serviceId: "e556070a-6d6a-402e-8422-11133033ea76",
+        resourceId: "e556070a-6d6a-402e-8422-11133033ea76",
+        bookingType: Object.values(IC.BOOKING_TYPE)[0],
+        bookingStatus: Object.values(IC.CITAS_BOOKING_STATUS)[0],
+        paymentStatus: Object.values(IC.CITAS_PAYMENT_STATUS)[0],
+        slotEnd: new Date("2026-11-20T11:00:00.000Z"),
+        totalAmount: 100,
+        dateYmd: "2026-11-20",
+        traceId: "trace-insert-contract",
+    }), /slotStart/);
     assert.throws(() => insertItem(C.REGISTROS_HORARIOS_STAFF, {}), /RegistrosHorariosStaff requires/);
     assert.throws(() => insertItem(C.MAPA_STAFF, {}), /MAPA_STAFF|MapaStaff/);
     assert.throws(() => insertItem(C.CONTROL_OPERATIVO, {
