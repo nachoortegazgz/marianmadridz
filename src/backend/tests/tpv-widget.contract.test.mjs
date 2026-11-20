@@ -66,6 +66,7 @@ test("TPV controls keep unsupported commercial and fiscal capabilities disabled"
     assert.match(html, /!c\.issueTicketX/);
     assert.match(html, /!c\.registerCashMovement/);
     assert.match(html, /!c\.createSyntheticSale/);
+    assert.match(html, /renderSession\(\);\s*renderCapabilities\(\);\s*if\(state\.session\)/);
     assert.match(html, /id="saveSale"/);
     assert.match(html, /id="openSession"/);
     assert.match(html, /id="cashMovement"/);
