@@ -223,3 +223,36 @@ test("QA policy remains synthetic and client idempotency keys are bounded", () =
     assert.equal(payload.realPayment, false);
     assert.equal(payload.externalSideEffects, false);
 });
+
+
+test("every exposed TPV QA WebMethod fails closed before repository access", async () => {
+    const protectedMethods = [
+        ["tpvCaja.web.js", ["obtenerSesionCajaQA", "abrirCajaQA", "registrarArqueoParcialQA"]],
+        ["tpvMovimientos.web.js", ["registrarMovimientoCajaQA"]],
+        ["tpvVentas.web.js", ["registrarVentaQA"]],
+        ["tpvDevoluciones.web.js", ["solicitarDevolucionQA"]],
+        ["tpvCierres.web.js", ["obtenerResumenSesionQA", "generarTicketXQA", "cerrarTicketZQA"]],
+        ["tpvPagos.web.js", ["validarDesglosePagosQA"]],
+        ["tpvUtils.web.js", ["obtenerConfiguracionTPVQA"]],
+        ["tpvPermisos.web.js", ["obtenerPermisosTPVQA"]],
+        ["tpvAuditoria.web.js", ["consultarAuditoriaTPVQA"]],
+        ["tpvGiftCards.web.js", ["consultarTarjetaRegalo"]],
+    ];
+    const repositoryAccess = /(?:latestOpenQaSession|insertQaEvent|appendQaAudit|queryQaRecords|withQaSessionLock|withQaSaleLock|listTpvSandboxIdentities|getTpvSandboxIdentity|wql\.)/;
+
+    for (const [fileName, methodNames] of protectedMethods) {
+        const source = await readFile(new URL("../tpv/" + fileName, import.meta.url), "utf8");
+        assert.match(source, /assertTpvQaEnabled/, fileName + " must import/use the canonical QA gate");
+        for (const methodName of methodNames) {
+            const declaration = "export const " + methodName + " = webMethod(";
+            const start = source.indexOf(declaration);
+            assert.notEqual(start, -1, fileName + " must expose " + methodName);
+            const nextExport = source.indexOf("\\nexport const ", start + declaration.length);
+            const block = source.slice(start, nextExport < 0 ? source.length : nextExport);
+            const guard = block.indexOf("assertTpvQaEnabled()");
+            assert.notEqual(guard, -1, methodName + " must execute the server-side QA gate");
+            const access = block.search(repositoryAccess);
+            assert.ok(access < 0 || guard < access, methodName + " must gate before repository access");
+        }
+    }
+});
