@@ -135,8 +135,8 @@ Revalidar el estado actual de cada issue antes de actualizarla/cerrarla; la list
 - La cabeza final de PR #469 (`55e4094e8b364fafde835a47458a193e3d64e531`) superó ambos workflows: Backend offline quality gates run `44682687922` SUCCESS y Secret scanning run `44682687501` SUCCESS.
 - El merge commit no presenta workflows asociados en la consulta; la evidencia CI corresponde a la cabeza de PR antes del merge.
 - Documentos integrados en main: ADR sección 13, actualización del plan QA y este handoff.
-- No se integró código runtime. No hubo escrituras CMS, cambios de permisos, mutaciones de CajaActual, pagos, ledgers ni publicación.
-- Próximo punto de trabajo: H-01 spike Sandbox/contrato Bulk Patch + hooks; no abrir implementación de writers hasta demostrar el comportamiento.
+- En el corte anterior a PR #472 no se integró código runtime. No hubo escrituras CMS, cambios de permisos, mutaciones de CajaActual, pagos, ledgers ni publicación.
+- Próximo punto de trabajo en ese corte: H-01 spike Sandbox/contrato Bulk Patch + hooks; no abrir implementación de writers hasta demostrar el comportamiento.
 
 ## 10. Revalidación TPV Sandbox — 20-11-2026
 
