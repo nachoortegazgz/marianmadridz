@@ -33,8 +33,8 @@ export const validarVentaBorrador = webMethod(
     }
 );
 
-// The legacy writer is intentionally blocked. Only registrarVentaQA writes,
-// and it can write exclusively to TPV_QA_* collections.
+// The legacy writer is intentionally blocked. registrarVentaQA writes only
+// synthetic logical events through MovimientosCaja and CajaActual projection.
 export const registrarVenta = webMethod(
     Permissions.SiteMember,
     async () => {
