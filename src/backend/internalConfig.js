@@ -81,7 +81,7 @@ export const TPV_QA_COLLECTIONS = Object.freeze({
 
 export const TPV_QA_RUNTIME_POLICY = Object.freeze({
   ENABLED: true,
-  ENVIRONMENT: "TEST",
+  ENVIRONMENT: "SANDBOX",
   CURRENCY_CODE: "EUR",
   TIME_ZONE: "Europe/Madrid",
   SYNTHETIC_ONLY: true,
