@@ -73,6 +73,9 @@ test("P0-FISCAL-01 fiscal ledger writers are disabled by canonical fail-closed p
     assert.ok(index > eventGuard, "event fiscal guard must precede " + operation);
   }
   assert.match(eventWriter.slice(eventGuard), /FISCAL_LEDGER_WRITES_DISABLED/);
+  assert.match(eventWriter, /channelType: _safeTrim\(input\.channelType\)\.toUpperCase\(\)/);
+  assert.doesNotMatch(eventWriter, /channelType: _safeTrim\(input\.channelType\) \|\| ["']POS["']/);
+  assert.match(eventWriter, /assertMovimientosCajaRequiredFields\(doc\)/);
 
   const accountingStart = accounting.indexOf("export async function appendAccountingEntry");
   const accountingWriter = accounting.slice(accountingStart);
