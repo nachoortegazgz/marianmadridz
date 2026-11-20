@@ -2,7 +2,7 @@
 
 ## Alcance y estado
 
-El directorio implementa el TPV de pruebas en modo Sandbox sintético. Los WebMethods de escritura persisten eventos de prueba en colecciones aisladas `TPV_QA_*`; las operaciones de cobro real, checkout, órdenes, reembolsos de proveedor, emisión fiscal, notificaciones y hardware no están habilitadas.
+El directorio implementa el TPV en entorno `SANDBOX`, con persistencia sintética y sin efectos externos. `QA` identifica internamente la familia de colecciones aisladas; no es el valor del entorno. Los WebMethods de escritura persisten eventos de prueba en colecciones aisladas `TPV_QA_*`; las operaciones de cobro real, checkout, órdenes, reembolsos de proveedor, emisión fiscal, notificaciones y hardware no están habilitadas.
 
 La configuración canónica está en `backend/internalConfig.js` (`TPV_QA_COLLECTIONS` y `TPV_QA_RUNTIME_POLICY`). No sustituir estos nombres lógicos por colecciones operativas. Las colecciones Wix de Apps nativas permanecen bajo su propio ciclo de vida y no forman parte del repositorio TPV.
 
