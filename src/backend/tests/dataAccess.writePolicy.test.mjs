@@ -15,6 +15,7 @@ import {
     CONTROL_TYPE as T,
     RECORD_TYPE,
     DATA_ACCESS_WRITE_POLICY,
+    TPV_QA_RUNTIME_POLICY,
 } from "backend/internalConfig";
 
 test("all CMS write-policy collection lists contain unique canonical strings", () => {
@@ -123,6 +124,39 @@ test("update policy keeps operational projections mutable and append-only ledger
         controlType: T.SYSTEM_FLAG,
     }), { code: "CMS_UPDATE_ID_REQUIRED" });
 });
+test("MovimientosCaja accepts edits only for the exact active synthetic TPV test run", () => {
+    const item = {
+        _id: "TPVQA_TEST_ROW",
+        recordSource: "TPV_QA_SYNTHETIC",
+        movementType: "SIMULATED_TPV_PAYMENT",
+        traceId: "TPVQA:" + TPV_QA_RUNTIME_POLICY.TEST_RUN_ID + ":QA-SESSION-1",
+        sequenceNumber: 0,
+        hash: "a".repeat(64),
+        payloadFiscal: {
+            testRunId: TPV_QA_RUNTIME_POLICY.TEST_RUN_ID,
+            requestFingerprint: "f".repeat(64),
+            isSynthetic: true,
+            realPayment: false,
+            externalSideEffects: false,
+        },
+    };
+    assert.doesNotThrow(() => assertInsertAllowed(C.MOVIMIENTOS_CAJA, item));
+    assert.doesNotThrow(() => assertUpdateAllowed(C.MOVIMIENTOS_CAJA, item));
+    assert.throws(() => assertUpdateAllowed(C.MOVIMIENTOS_CAJA, {
+        ...item,
+        payloadFiscal: { ...item.payloadFiscal, testRunId: "TPVQA-DEV-20990101-OTHER" },
+    }), { code: "CMS_UPDATE_COLLECTION_DENIED" });
+    assert.throws(() => assertInsertAllowed(C.MOVIMIENTOS_CAJA, {
+        ...item,
+        payloadFiscal: { ...item.payloadFiscal, externalSideEffects: true },
+    }), { code: "CMS_TPV_QA_SYNTHETIC_LEDGER_CONTRACT_INVALID" });
+    assert.throws(() => assertUpdateAllowed(C.MOVIMIENTOS_CAJA, {
+        _id: "real-ledger-row",
+        movementType: "VENTA",
+        recordSource: "INTERNAL",
+    }), { code: "CMS_UPDATE_COLLECTION_DENIED" });
+});
+
 test("WEBHOOK_EVENT is neither mutable nor removable", () => {
     assert.throws(() => assertUpdateAllowed(O.CONTROL_OPERATIVO, {
         _id: "event-1",
