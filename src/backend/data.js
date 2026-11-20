@@ -17,6 +17,7 @@ import {
     normalizeMovementKeys,
     OPERATIONAL_COLLECTIONS,
     TPV_QA_RUNTIME_POLICY,
+    TPV_QA_EVENT_MOVEMENT_TYPES,
 } from "backend/internalConfig";
 import { assertCitasF2, assertControlOperativo, assertCanonicalControlFields, assertRegistrosHorariosStaff, assertMapaStaffRecord, assertCajaActualRecord, isValidNifOrEuVat as _isValidNifOrEuVat } from "backend/validation";
 import { CONSISTENCY, getItem } from "backend/dataAccess";
@@ -493,8 +494,78 @@ export async function MovimientosCaja_beforeUpdate(item) {
     const previous = item?._id
         ? await getItem(BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA, item._id, CONSISTENCY.STRONG)
         : null;
-    if (_isCurrentSyntheticTpvRow(item) && _isCurrentSyntheticTpvRow(previous)) return item;
-    _fiscalError("Modificacion de MovimientosCaja prohibida: solo se admite editar un registro TPV QA del test-run activo.");
+    if (!_isCurrentSyntheticTpvRow(item) || !_isCurrentSyntheticTpvRow(previous)) {
+        _fiscalError("Modificacion de MovimientosCaja prohibida: solo se admite editar un registro TPV QA del test-run activo.");
+    }
+
+    const immutableFields = [
+        "_id", "recordSource", "movementType", "traceId", "transactionId",
+        "sequenceNumber", "previousRecordHash", "schemaVersion",
+        "numSerieFactura", "tipoFactura",
+    ];
+    if (immutableFields.some((field) => item[field] !== previous[field])) {
+        _fiscalError("Identidad del registro TPV QA inmutable.");
+    }
+
+    const envelope = item.payloadFiscal;
+    const previousEnvelope = previous.payloadFiscal;
+    const logicalCollection = envelope?.logicalCollection;
+    if (
+        logicalCollection !== previousEnvelope?.logicalCollection ||
+        envelope?.testRunId !== previousEnvelope?.testRunId ||
+        envelope?.idempotencyKey !== previousEnvelope?.idempotencyKey ||
+        envelope?.isSynthetic !== true ||
+        envelope?.realPayment !== false ||
+        envelope?.externalSideEffects !== false ||
+        item.movementType !== TPV_QA_EVENT_MOVEMENT_TYPES[logicalCollection] ||
+        !_isRecord(envelope?.qaRecord)
+    ) {
+        _fiscalError("Payload lógico TPV QA no editable o incoherente.");
+    }
+
+    const record = envelope.qaRecord;
+    const rawAmountMinor = Number(
+        record.totalMinor || record.amountMinor || record.paidMinor || record.countedCashMinor || 0
+    );
+    if (!Number.isSafeInteger(rawAmountMinor)) {
+        _fiscalError("Importe sintético TPV inválido.");
+    }
+    const timestampValue = record.createdAt || record.generatedAt || record.occurredAt || new Date();
+    const timestamp = timestampValue instanceof Date ? timestampValue : new Date(timestampValue);
+    if (Number.isNaN(timestamp.getTime())) _fiscalError("Fecha sintética TPV inválida.");
+    const dateYmd = timestamp.toLocaleDateString("en-CA", {
+        timeZone: TPV_QA_RUNTIME_POLICY.TIME_ZONE,
+    });
+
+    item.recordTimestamp = timestamp;
+    item.fechaExpedicionFactura = dateYmd;
+    item.fiscalPeriod = dateYmd.slice(0, 7);
+    item.totalAmount = rawAmountMinor / 100;
+    item.amount = rawAmountMinor / 100;
+    item.taxBase = Number(record.taxBaseMinor || 0) / 100;
+    item.taxAmount = Number(record.taxMinor || record.taxAmountMinor || 0) / 100;
+    item.paymentMethod = String(record.paymentMethod || "OTROS").toUpperCase();
+    item.channelType = String(record.channelType || "PRESENCIAL").toUpperCase();
+    item.operationDescription = "SIMULATED TPV QA " + logicalCollection;
+    item.staffResourceId = String(record.staffResourceId || TPV_QA_RUNTIME_POLICY.ACTOR_ID);
+    item.lineItems = { qaRecord: record.lineItems || [] };
+    item.desgloseDetallado = {
+        accountCode: "SIMULATED",
+        testRunId: TPV_QA_RUNTIME_POLICY.TEST_RUN_ID,
+    };
+    const hashPayload = stableSerialize({
+        testRunId: TPV_QA_RUNTIME_POLICY.TEST_RUN_ID,
+        logicalCollection,
+        transactionId: item.transactionId,
+        traceId: item.traceId,
+        record,
+    });
+    item.hash = createHash("sha256").update(hashPayload).digest("hex");
+    item.payloadFiscal = {
+        ...envelope,
+        requestFingerprint: stableSerialize(record),
+    };
+    return item;
 }
 
 export async function MovimientosCaja_beforeRemove(itemId) {
