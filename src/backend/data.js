@@ -20,7 +20,7 @@ import {
     TPV_QA_RUNTIME_POLICY,
     TPV_QA_EVENT_MOVEMENT_TYPES,
 } from "backend/internalConfig";
-import { assertCitasF2, assertControlOperativo, assertCanonicalControlFields, assertRegistrosHorariosStaff, assertMapaStaffRecord, assertCajaActualRecord, isValidNifOrEuVat as _isValidNifOrEuVat } from "backend/validation";
+import { assertCitasF2, assertControlOperativo, assertCanonicalControlFields, assertRegistrosHorariosStaff, assertMapaStaffRecord, assertCajaActualRecord, assertHistoricoCierresZ, assertMovimientosCajaRequiredFields, isValidNifOrEuVat as _isValidNifOrEuVat } from "backend/validation";
 import { CONSISTENCY, getItem } from "backend/dataAccess";
 import { stableSerialize } from "backend/tpv/tpvUtils";
 
@@ -480,6 +480,7 @@ export function MovimientosCaja_beforeInsert(item) {
     }
 
     _normalizeMovimientosCajaObjectFields(item);
+    assertMovimientosCajaRequiredFields(item);
     _normalizeMovimientosCajaPhysicalFields(item, true);
     return item;
 }
@@ -604,7 +605,7 @@ export function LibroAsientosContablesDetalle_beforeRemove() {
 export function HistoricoCierresZ_beforeInsert(item) {
     if (!item || typeof item !== "object") return item;
     _normalizeCmsDateTimes(item, ["closedAt", "verifiedAt", "sentAt"]);
-    if (!_safeTrim(item.traceId)) _schemaError("traceId obligatorio en HistoricoCierresZ (trazabilidad del cierre)");
+    assertHistoricoCierresZ(item);
     return item;
 }
 
@@ -632,6 +633,9 @@ export function HistoricoCierresZ_beforeRemove() {
 export function PaquetesGestoria_beforeInsert(item) {
     if (!item || typeof item !== "object") _schemaError("PaquetesGestoria item invalido");
     _normalizeCmsDateTime(item, "createdAt");
+    if (!(item.createdAt instanceof Date) || Number.isNaN(item.createdAt.getTime())) {
+        _schemaError("createdAt obligatorio y válido en PaquetesGestoria");
+    }
     const periodType = _safeTrim(item.periodType).toUpperCase();
     const year = Number(item.fiscalYear);
     const month = item.fiscalMonth == null ? null : Number(item.fiscalMonth);
@@ -1085,8 +1089,8 @@ function _validateComplementosCatalogo(item) {
         (typeof item.durationMinutes !== "number" || !Number.isFinite(item.durationMinutes) || item.durationMinutes < 0)) {
         _schemaError("durationMinutes debe ser NUMBER finito no negativo en ComplementosCatalogo");
     }
-    if (item.taxIncluded !== undefined && typeof item.taxIncluded !== "boolean") {
-        _schemaError("taxIncluded debe ser BOOLEAN en ComplementosCatalogo");
+    if (typeof item.taxIncluded !== "boolean") {
+        _schemaError("taxIncluded obligatorio y BOOLEAN en ComplementosCatalogo");
     }
     if (item.tipoImpositivo !== undefined &&
         (typeof item.tipoImpositivo !== "number" || !Number.isFinite(item.tipoImpositivo) ||
