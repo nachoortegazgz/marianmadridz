@@ -1999,22 +1999,10 @@ export const getMovimientoByBooking = webMethod(
                 items = exact.items || [];
             }
 
-            if (items.length === 0) {
-                const all = await dalQuery(MOVIMIENTOS_CAJA_COL)
-                    .contains("linkedBookingIds", cleanId)
-                    .limit(20)
-                    .find();
-                items = (all.items || []).filter((m) => {
-                    const raw = m.linkedBookingIds;
-                    if (typeof raw === "string") {
-                        return raw.split(",").map((s) => s.trim()).includes(cleanId);
-                    }
-                    if (Array.isArray(raw)) {
-                        return raw.map(String).includes(cleanId);
-                    }
-                    return false;
-                });
-            }
+            // The CMS field is ARRAY_STRING. hasSome handles canonical arrays;
+            // eq retains exact-match compatibility for historical scalar rows.
+            // Do not use contains(): Wix Data contains() is for String/Reference,
+            // not array fields, and substring matching could return false positives.
 
             // Simulation-marked rows are historical synthetic evidence, never a fiscal receipt.
             items = items.filter((movement) => !isExplicitSimulationLedgerRecord(movement));

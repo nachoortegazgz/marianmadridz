@@ -12,6 +12,12 @@ test("CASH-RECEIPT-01 simulated movements cannot be returned as fiscal receipts"
   assert.match(handler, /items\s*=\s*items\.filter\(\(movement\)\s*=>\s*!isExplicitSimulationLedgerRecord\(movement\)\)/);
 });
 
+test("CASH-BOOKING-03 booking lookup uses supported exact array/string operators", () => {
+  assert.match(handler, /\.hasSome\(["']linkedBookingIds["']/);
+  assert.match(handler, /\.eq\(["']linkedBookingIds["']/);
+  assert.doesNotMatch(handler, /\.contains\(["']linkedBookingIds["']/);
+});
+
 test("CASH-HEAD-02 cash and fiscal heads ignore explicit simulated movements", () => {
   const eventLog = readFileSync(new URL("../eventLog.js", import.meta.url), "utf8");
   const lastCashEventStart = eventLog.indexOf("async function _getLastCashEvent");
