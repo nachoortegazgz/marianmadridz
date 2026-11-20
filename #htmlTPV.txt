@@ -468,7 +468,7 @@ function requestCashierState(){return waitFor(send("CASHIER_STATE",{}),"CASHIER_
 function initialize(){$("userRole").textContent="Rol: verificando";void bootstrap()}
 async function bootstrap(){
  try{
-  if(state.context?.environment!=="QA"||state.context?.previewOnly!==true)throw new Error("TPV_QA_PREVIEW_ONLY");
+  if(state.context?.environment!=="SANDBOX"||state.context?.previewOnly!==true)throw new Error("TPV_QA_PREVIEW_ONLY");
   const [config,permissions,session]=await Promise.all([call("QA_CONFIG",{},"QA_CONFIG_RES"),call("QA_PERMISSIONS",{},"QA_PERMISSIONS_RES"),requestCashierState().then(unwrap)]);
   state.permissions=permissions;state.role=permissions.role||"UNKNOWN";$("userRole").textContent="Rol: "+state.role;
   if(config.syntheticOnly!==true||config.realPaymentsEnabled!==false||config.fiscalWritesEnabled!==false)throw new Error("RUNTIME_POLICY_INVALID");
@@ -498,7 +498,7 @@ function renderSession(){
  document.querySelectorAll('.wf-btn[data-wf="x"],.wf-btn[data-wf="z"]').forEach(b=>b.disabled=!s);
  renderDenominations();
 }
-function renderCapabilities(){const c=state.permissions?.capabilities||{};const preview=state.context?.environment==="QA"&&state.context?.previewOnly===true;$("openSession").disabled=!preview||!!state.session||!c.openQaSession;$("saveSale").disabled=!preview||!state.session||!c.createSyntheticSale;$("cashMovement").disabled=!preview||!state.session||!c.registerCashMovement;$("refund").disabled=!preview||!state.session||!c.requestRefund;$("ticketX").disabled=!preview||!state.session||!c.issueTicketX;$("ticketZ").disabled=!preview||!state.session||!c.issueTicketZ}
+function renderCapabilities(){const c=state.permissions?.capabilities||{};const preview=state.context?.environment==="SANDBOX"&&state.context?.previewOnly===true;$("openSession").disabled=!preview||!!state.session||!c.openQaSession;$("saveSale").disabled=!preview||!state.session||!c.createSyntheticSale;$("cashMovement").disabled=!preview||!state.session||!c.registerCashMovement;$("refund").disabled=!preview||!state.session||!c.requestRefund;$("ticketX").disabled=!preview||!state.session||!c.issueTicketX;$("ticketZ").disabled=!preview||!state.session||!c.issueTicketZ}
 
 /* WORKFLOW */
 function setWorkflow(name){
