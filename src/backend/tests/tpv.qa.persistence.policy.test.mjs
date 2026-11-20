@@ -270,7 +270,6 @@ test("every exported TPV WebMethod has an explicit runtime policy classification
             guarded: ["registrarVenta"],
             readOnly: ["validarVentaBorrador"],
             disabled: {
-                registrarVenta: "TPV_OPERATIONAL_SALE_WRITES_DISABLED",
                 procesarDevolucion: "TPV_OPERATIONAL_REFUNDS_DISABLED",
             },
         },
