@@ -20,7 +20,7 @@ import {
     TPV_QA_RUNTIME_POLICY,
     TPV_QA_EVENT_MOVEMENT_TYPES,
 } from "backend/internalConfig";
-import { assertCitasF2, assertControlOperativo, assertCanonicalControlFields, assertRegistrosHorariosStaff, assertMapaStaffRecord, assertCajaActualRecord, assertHistoricoCierresZ, assertMovimientosCajaRequiredFields, isValidNifOrEuVat as _isValidNifOrEuVat } from "backend/validation";
+import { assertCitasF2, assertCitasF2Insert, assertControlOperativo, assertCanonicalControlFields, assertRegistrosHorariosStaff, assertMapaStaffRecord, assertCajaActualRecord, assertHistoricoCierresZ, assertMovimientosCajaRequiredFields, isValidNifOrEuVat as _isValidNifOrEuVat } from "backend/validation";
 import { CONSISTENCY, getItem } from "backend/dataAccess";
 import { stableSerialize } from "backend/tpv/tpvUtils";
 
@@ -1017,12 +1017,13 @@ export async function ControlOperativo_beforeRemove(itemId) {
 // Keep the SSOT structural guard at the CMS boundary as a second barrier to
 // the booking saga's point-of-use validation. Wix binds hooks to the physical
 // collection ID (not its display name); the current site uses the canonical CitasF2 ID.
-function _validateCitasF2Write(item) {
+function _validateCitasF2Write(item, { insert = false } = {}) {
     _normalizeCmsDateTimes(item, [
         "slotStart", "slotEnd",
         "privacyNoticeAcceptedAt", "invoicingDate",
     ]);
-    assertCitasF2(item);
+    if (insert) assertCitasF2Insert(item);
+    else assertCitasF2(item);
     return item;
 }
 
@@ -1032,7 +1033,7 @@ function _blockCitasF2Remove() {
 
 // Production/historical collection ID.
 export function CitasF2_beforeInsert(item) {
-    return _validateCitasF2Write(item);
+    return _validateCitasF2Write(item, { insert: true });
 }
 
 export function CitasF2_beforeUpdate(item) {
