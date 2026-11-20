@@ -391,8 +391,16 @@ test('FLOW-CAJA-01 flujo continuo: venta EFECTIVO -> caja incrementada -> cierre
   assert.strictEqual(failedState.status, 'ERROR', 'ledger read failure must fail closed');
   wixDataMock._findErrors.delete('MovimientosCaja');
 
-  // Paso 3: cierre Z del dia de la operacion
+  // Paso 3: la interfaz pública no puede imponer recordDomain libre desde el navegador.
   const diaKey = mov.invoiceIssueDate || new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Madrid' });
+  const publicZ = await cajas.registerZClosing(diaKey, {
+    recordDomain: 'CASH_REGISTER',
+    closedBy: GUID_ADMIN_RESOURCE,
+  });
+  assert.strictEqual(publicZ.status, 'ERROR');
+  assert.strictEqual(publicZ.error.code, 'Z_CLOSING_REQUIRED_FIELDS_UNRESOLVED');
+
+  // El writer interno de pruebas puede recibir el dominio sintético explícito.
   const z = await cajas.registerZClosingInternal(diaKey, { recordDomain: 'CASH_REGISTER', closedBy: GUID_ADMIN_RESOURCE, traceId: 'flow-caja-z-manual-test' });
   assert.strictEqual(z.status, 'SUCCESS', JSON.stringify(z.error));
   assert.ok(z.data._id.startsWith('Z_'));
