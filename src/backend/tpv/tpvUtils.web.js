@@ -4,7 +4,7 @@ import { TPV_SANDBOX_RUNTIME_POLICY } from "backend/internalConfig";
 import { makeTraceId } from "public/mmUtils";
 import { assertTpvSandboxEnabled } from "backend/tpv/tpvUtils";
 
-export const obtenerConfiguracionTPVSANDBOX = webMethod(
+export const obtenerConfiguracionTPV = webMethod(
     Permissions.SiteMember,
     async () => {
         const traceId = makeTraceId("tpv-sandbox-config");
