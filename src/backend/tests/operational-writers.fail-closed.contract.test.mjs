@@ -74,6 +74,10 @@ test("P0-FISCAL-01 fiscal ledger writers are disabled by canonical fail-closed p
   }
   assert.match(eventWriter.slice(eventGuard), /FISCAL_LEDGER_WRITES_DISABLED/);
   assert.match(eventWriter, /channelType: _safeTrim\(input\.channelType\)\.toUpperCase\(\)/);
+  const inputEnumGuard = eventWriter.indexOf("assertFiscalMovementInputEnums(input)");
+  const thirdPartyInsert = eventWriter.indexOf("_upsertMapaStaff({");
+  assert.ok(inputEnumGuard >= 0 && thirdPartyInsert > inputEnumGuard,
+    "movement enums must be validated before third-party CMS side effects");
   assert.doesNotMatch(eventWriter, /channelType: _safeTrim\(input\.channelType\) \|\| ["']POS["']/);
   const dataAccess = await read("dataAccess.js");
   assert.match(dataAccess, /collection === BUSINESS_COLLECTIONS\.MOVIMIENTOS_CAJA\) \{\s*assertMovimientosCajaRequiredFields\(item\)/);
