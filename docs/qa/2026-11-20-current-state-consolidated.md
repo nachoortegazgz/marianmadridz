@@ -42,9 +42,14 @@ Escenario: tres ventas (76,23 EUR; 39,33 EUR; 30,13 EUR), devolución sintética
 
 La prueba reutiliza `validateSaleDraft()` y helpers sintéticos del backend, con eventos en memoria. El replay idempotente se modela con un Map de prueba, no con el repositorio CMS. Por tanto no certifica locks, atomicidad, concurrencia ni persistencia.
 
-Estado de CI al corte de este documento:
-- Secret scanning para el HEAD `fb1f89a...`: SUCCESS, run `44733984841`.
-- Backend offline quality gates: en ejecución, run `44733984865`. No declarar PASS hasta que concluya sobre este mismo HEAD.
+Estado de CI completado sobre el HEAD `f69caa865040dde8e23d4997d83703ebe3f30b68`:
+- Backend offline quality gates: SUCCESS, run `44734144555`.
+- Secret scanning: SUCCESS, run `44734144522`.
+- Layer 1: 28 suites / 336 tests, 0 fallos.
+- Layer 2: 19 suites / 268 tests, 0 fallos.
+- Regresión completa: 75 suites / 702 tests, 0 fallos.
+- `npm audit`: 0 vulnerabilidades reportadas.
+- Contratos SDK Wix, contratos eCommerce/TPV Catalog V3 y ESLint: PASS.
 - No hay ejecución Wix Runtime ni E2E asociada a esta PR.
 
 ## 4. Configuración y límites de seguridad TPV
