@@ -16,6 +16,7 @@ import {
     RECORD_TYPE,
     DATA_ACCESS_WRITE_POLICY,
     TPV_QA_RUNTIME_POLICY,
+    TPV_QA_COLLECTIONS,
 } from "backend/internalConfig";
 
 test("all CMS write-policy collection lists contain unique canonical strings", () => {
@@ -134,6 +135,7 @@ test("MovimientosCaja accepts edits only for the exact active synthetic TPV test
         hash: "a".repeat(64),
         payloadFiscal: {
             testRunId: TPV_QA_RUNTIME_POLICY.TEST_RUN_ID,
+            logicalCollection: TPV_QA_COLLECTIONS.PAGOS,
             requestFingerprint: "f".repeat(64),
             isSynthetic: true,
             realPayment: false,
