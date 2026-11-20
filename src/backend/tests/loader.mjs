@@ -1076,6 +1076,7 @@ export async function load(url, context, nextLoad) {
   const internalConfigUrl = pathToFileURL(path.join(BACKEND_DIR, "internalConfig.js")).href;
   if (url === internalConfigUrl) {
     const source = fs.readFileSync(path.join(BACKEND_DIR, "internalConfig.js"), "utf8")
+      .replace('  ENABLED: false,\n  ENVIRONMENT: "SANDBOX"', '  ENABLED: true,\n  ENVIRONMENT: "SANDBOX"') // Offline harness only; production config remains fail-closed.
       .replace("LEDGER_WRITES_ENABLED: false", "LEDGER_WRITES_ENABLED: true")
       .replace("ACCOUNTING_LEDGER_WRITES_ENABLED: false", "ACCOUNTING_LEDGER_WRITES_ENABLED: true")
       .replace("ALLOW_SIMULATION_RECORDS: false", "ALLOW_SIMULATION_RECORDS: true");

@@ -88,7 +88,9 @@ export const TPV_QA_EVENT_MOVEMENT_TYPES = Object.freeze({
 });
 
 export const TPV_QA_RUNTIME_POLICY = Object.freeze({
-  ENABLED: true,
+  // Fail closed until backend can prove the Wix Sandbox data plane for every
+  // WebMethod invocation. Frontend Preview checks are not an authorization boundary.
+  ENABLED: false,
   ENVIRONMENT: "SANDBOX",
   CURRENCY_CODE: "EUR",
   TIME_ZONE: "Europe/Madrid",

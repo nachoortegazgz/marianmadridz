@@ -103,3 +103,18 @@ El propietario confirma expresamente que todos los registros contables/fiscales 
 La declaración del propietario cubre el sitio completo y no solo TPV. Todos los registros existentes y futuros de QA son sintéticos; se autorizan simulacros completos y persistentes con registros para verificar funcionalidad y depurar. Antes del uso real se realizará reset controlado y verificable de datos sintéticos. Esta instrucción supersede cualquier limitación documental anterior que impida genéricamente crear registros sintéticos o completar simulacros. Se mantienen gates legales, seguridad, autorización backend, aislamiento de efectos externos y uso de APIs oficiales. El detalle vinculante está en [Directriz del propietario](../PROJECT-OWNER-DIRECTIVE-2026-11-20.md).
 
 **Evidencia:** declaración expresa del propietario. No acredita por sí sola el aislamiento de automatizaciones, pasarelas, notificaciones ni el entorno Sandbox/Preview. Runtime/E2E podrá avanzar tras comprobar y controlar esos efectos para el flujo concreto; no se bloquea de forma genérica la prueba funcional si existe un método sintético/offline seguro.
+
+
+## Addendum de seguridad P0 — 2026-11-20
+
+La afirmación histórica de que el control frontend `wixWindowFrontend.viewMode !== "Preview"` bloquea las escrituras desde Published no constituye una autorización backend. Un WebMethod puede invocarse directamente y no debe confiar en un valor de vista suministrado o comprobado en frontend.
+
+Hasta que se demuestre mediante contrato oficial y pruebas runtime una frontera backend que garantice el almacén Sandbox en cada invocación, el TPV QA persistente queda deshabilitado en configuración canónica:
+
+- `TPV_QA_RUNTIME_POLICY.ENABLED=false`.
+- `assertTpvQaEnabled()` rechaza con `TPV_QA_DISABLED_UNTIL_SANDBOX_ISOLATION`.
+- El controlador HTML no anuncia `environment=SANDBOX` y rechaza las operaciones `CASHIER_STATE` / `QA_*`.
+- El loader offline puede activar la política exclusivamente dentro de pruebas Node; no cambia el archivo canónico ni el runtime Wix.
+- Pagos reales, writers fiscales/contables/laborales, notificaciones y hardware permanecen deshabilitados.
+
+Esta decisión prevalece sobre la instrucción anterior de ejecutar el flujo persistente en Preview hasta que se demuestre el aislamiento. No se modifican CMS ni el singleton `CajaActual`. Para reactivar QA persistente se requiere prueba positiva desde Preview y negativa desde Published, con verificación antes/después de las colecciones LIVE.

@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import {
     assertBulkPatchAllowed,
     assertInsertAllowed,
@@ -25,7 +26,10 @@ import {
     assertTpvQaEnabled,
 } from "../tpv/tpvUtils.js";
 
-test("QA persistence is pinned to the Wix SANDBOX environment", () => {
+test("QA runtime is fail-closed in production; offline harness explicitly enables isolated tests", async () => {
+    const source = await readFile(new URL("../internalConfig.js", import.meta.url), "utf8");
+    assert.match(source, /TPV_QA_RUNTIME_POLICY = Object\.freeze\(\{[\s\S]*?ENABLED: false,[\s\S]*?ENVIRONMENT: "SANDBOX"/);
+    assert.equal(TPV_QA_RUNTIME_POLICY.ENABLED, true, "offline loader enables the policy only inside tests");
     assert.equal(TPV_QA_RUNTIME_POLICY.ENVIRONMENT, "SANDBOX");
     assert.doesNotThrow(() => assertTpvQaEnabled());
 });
@@ -200,7 +204,7 @@ test("QA session lock is deterministic, bounded and CAS-only", () => {
 });
 
 test("QA policy remains synthetic and client idempotency keys are bounded", () => {
-    assert.equal(TPV_QA_RUNTIME_POLICY.ENABLED, true);
+    assert.equal(TPV_QA_RUNTIME_POLICY.ENABLED, true, "offline test harness override");
     assert.equal(TPV_QA_RUNTIME_POLICY.ENVIRONMENT, "SANDBOX");
     assert.equal(TPV_QA_RUNTIME_POLICY.SYNTHETIC_ONLY, true);
     assert.equal(TPV_QA_RUNTIME_POLICY.REAL_PAYMENTS_ENABLED, false);
