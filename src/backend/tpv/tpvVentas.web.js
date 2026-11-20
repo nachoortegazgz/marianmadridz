@@ -32,7 +32,7 @@ export const validarVentaBorrador = webMethod(
     }
 );
 
-// The legacy writer is intentionally blocked. Only registrarVentaQA writes,
+// The legacy writer is intentionally blocked. Only registrarVenta writes,
 // and it can write exclusively to TPV_QA_* collections.
 export const registrarVenta = webMethod(
     Permissions.SiteMember,
@@ -42,7 +42,7 @@ export const registrarVenta = webMethod(
     }
 );
 
-export const registrarVentaQA = webMethod(
+export const registrarVenta = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
         const traceId = makeTraceId("tpv-qa-sale");
