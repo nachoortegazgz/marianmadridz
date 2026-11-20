@@ -62,11 +62,11 @@ function validateFixture(fixture) {
 function runSyntheticBusinessDay() {
     const processed = new Map();
     const events = [];
-    for (const fixture of saleFixtures) {
+    const commitFixture = (fixture) => {
         const { key, sale } = validateFixture(fixture);
         if (processed.has(key)) {
             events.push({ type: "SALE_REPLAY", key, saleId: fixture.id, duplicate: true });
-            continue;
+            return;
         }
         const event = makeSyntheticPayload({
             eventId: fixture.id,
@@ -84,7 +84,10 @@ function runSyntheticBusinessDay() {
         });
         processed.set(key, event);
         events.push(event);
-    }
+    };
+    for (const fixture of saleFixtures) commitFixture(fixture);
+    // Replay the first request with the same key to exercise the in-memory dedupe path.
+    commitFixture(saleFixtures[0]);
 
     const refund = makeSyntheticPayload({
         eventId: "QA-REFUND-DAY01-001",
@@ -169,6 +172,7 @@ test("replay of the same idempotency key does not duplicate the simulated sale",
     assert.ok(day.processed.has(replay.key));
     assert.equal(day.processed.size, 3);
     assert.equal(day.totals.totalSalesMinor, 14569);
+    assert.equal(day.events.filter((event) => event.type === "SALE_REPLAY" && event.duplicate).length, 1);
 });
 
 test("invalid amount, overpayment and partial tender are handled explicitly", () => {
