@@ -195,15 +195,21 @@ test("TPV WebMethods isolate synthetic QA writes from operational ledgers", asyn
     assert.match(repository, /requestFingerprint/);
     assert.match(repository, /TPV_QA_COLLECTIONS/);
     assert.match(repository, /CONTROL_TYPE\.TPV_QA_SESSION_LOCK/);
-    assert.doesNotMatch(repository, /updateItem\(|removeById\(|bulkUpdate\(|bulkRemove\(/);
+    assert.match(repository, /updateItem\(BUSINESS_COLLECTIONS\.CAJA_ACTUAL/);
+    assert.doesNotMatch(repository, /removeById\(|bulkUpdate\(|bulkRemove\(/);
 
     const policy = await source("dataAccessPolicy.js");
     const config = await source("internalConfig.js");
-    assert.match(policy, /TPV_QA_COLLECTIONS/);
+    assert.match(policy, /TPV_QA_RUNTIME_POLICY/);
+    assert.match(policy, /TPV_QA_SYNTHETIC/);
     assert.match(policy, /APPEND_ONLY_COLLECTIONS/);
     assert.match(config, /REAL_PAYMENTS_ENABLED: false/);
     assert.match(config, /FISCAL_WRITES_ENABLED: false/);
     assert.match(config, /SYNTHETIC_ONLY: true/);
+    assert.match(config, /TEST_RUN_ID: "TPVQA-DEV-/);
+    for (const writer of [cash, movements, sales, closures]) {
+        assert.match(writer, /requireAdmin/);
+    }
 });
 
 test("TPV catalog reader uses native Bookings SDK and does not expose staff contact details", async () => {
