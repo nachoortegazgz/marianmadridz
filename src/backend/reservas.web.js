@@ -2234,7 +2234,7 @@ async function _generateDisplayToken(bookingId, traceId, serviceId) {
             serviceId: _looksLikeGuid(serviceId) ? _safeTrim(serviceId) : undefined,
             expiresAt,
             attempts: 0,
-            maxAttempts: DISPLAY_TOKEN_CONFIG.MAX_ATTEMPTS,
+            payload: { maxAttempts: DISPLAY_TOKEN_CONFIG.MAX_ATTEMPTS },
             traceId,
         });
         return token;
@@ -2256,7 +2256,8 @@ async function _validateAndConsumeDisplayToken(token, traceId) {
         if (!record) return { valid: false, reason: "TOKEN_NOT_FOUND" };
         const expiresAtMs = new Date(record.expiresAt).getTime();
         if (!Number.isFinite(expiresAtMs) || expiresAtMs <= Date.now()) return { valid: false, reason: "TOKEN_EXPIRED" };
-        if (record.attempts >= record.maxAttempts) return { valid: false, reason: "TOKEN_MAX_ATTEMPTS_EXCEEDED" };
+        const maxAttempts = Number(record.payload?.maxAttempts) || DISPLAY_TOKEN_CONFIG.MAX_ATTEMPTS;
+        if (Number(record.attempts) >= maxAttempts) return { valid: false, reason: "TOKEN_MAX_ATTEMPTS_EXCEEDED" };
         const consumed = await _consumeDisplayToken(tokenId, traceId);
         if (!consumed) return { valid: false, reason: "TOKEN_ALREADY_CONSUMED" };
         return { valid: true, bookingId: record.bookingId, tokenId };
@@ -2388,7 +2389,7 @@ export const generateDisplayToken = webMethod(
                 );
                 priorCredentialExpiresAtMs = new Date(priorCredentialRecord?.expiresAt || 0).getTime();
                 const attempts = Number(priorCredentialRecord?.attempts ?? 0);
-                const configuredMaxAttempts = Number(priorCredentialRecord?.maxAttempts);
+                const configuredMaxAttempts = Number(priorCredentialRecord?.payload?.maxAttempts);
                 priorCredentialMaxAttempts = Number.isInteger(configuredMaxAttempts) && configuredMaxAttempts > 0
                     ? configuredMaxAttempts
                     : DISPLAY_TOKEN_CONFIG.MAX_ATTEMPTS;
