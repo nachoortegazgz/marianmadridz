@@ -20,6 +20,7 @@ import {
     assertCajaActualRecord,
     assertHistoricoCierresZ,
     assertMovimientosCajaRequiredFields,
+    assertAccountingLedgerRecord,
 } from "backend/validation";
 import {
     assertBulkPatchAllowed,
@@ -340,6 +341,8 @@ export function insertItem(collection, item) {
         assertMovimientosCajaRequiredFields(item);
     } else if (collection === BUSINESS_COLLECTIONS.HISTORICO_CIERRES_Z) {
         assertHistoricoCierresZ(item);
+    } else if (collection === BUSINESS_COLLECTIONS.LIBRO_ASIENTOS_CONTABLES_DETALLE) {
+        assertAccountingLedgerRecord(item);
     }
     return elevatedInsert(collection, item);
 }
