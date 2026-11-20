@@ -14,6 +14,10 @@ test("TPV controller exposes authenticated QA session and Bookings catalog metho
     assert.match(controller, /consultarTarjetaRegalo/);
     assert.match(cashierBackend, /requireCajero/);
     assert.match(catalogBackend, /requireCajero/);
+    const permissions = await readFile(new URL("../tpv/tpvPermisos.web.js", import.meta.url), "utf8");
+    for (const capability of ["createSyntheticSale", "openQaSession", "registerCashMovement", "requestRefund", "closeQaSession", "issueTicketX", "issueTicketZ"]) {
+        assert.match(permissions, new RegExp(capability + ": isAdmin"));
+    }
     assert.match(controller, /MESSAGE_TYPES\.READY/);
     assert.match(controller, /MESSAGE_TYPES\.CONTEXT/);
     assert.match(controller, /"CASHIER_STATE"/);
@@ -58,6 +62,10 @@ test("TPV controls keep unsupported commercial and fiscal capabilities disabled"
     assert.match(html, /id="refund" class="btn danger" disabled/);
     assert.match(html, /id="ticketX"[^>]*disabled/);
     assert.match(html, /id="ticketZ"[^>]*disabled/);
+    assert.match(html, /state\.context\?\.environment!=="QA"\|\|state\.context\?\.previewOnly!==true/);
+    assert.match(html, /!c\.issueTicketX/);
+    assert.match(html, /!c\.registerCashMovement/);
+    assert.match(html, /!c\.createSyntheticSale/);
     assert.match(html, /id="saveSale"/);
     assert.match(html, /id="openSession"/);
     assert.match(html, /id="cashMovement"/);
