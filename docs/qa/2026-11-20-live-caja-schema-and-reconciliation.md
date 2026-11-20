@@ -113,7 +113,18 @@ PR #445 está integrada en main (merge 6e34ba0e501e6b11fbc17921b10c9cf231d6b82a)
 
 Esta corrección protege nuevos eventos. **No repara ni reintenta las tres compensaciones históricas**, que siguen bajo issue #416. La issue #441 queda abierta para E2E en Wix Sandbox y verificación de alerta/revisión.
 
-## 7. Decisión y trabajo pendiente
+## 7. Alertado de reservas pagadas y ejecución cron
+
+- Query ControlOperativo por controlType=ALERT devuelve 0 registros.
+- WEBHOOK_EVENT devuelve 13 registros COMPLETED, incluidos los dos BOOKING_CONFIRMED vinculados a estas reservas.
+- COMPENSATION devuelve 3 registros PENDING_RECOVERY.
+- src/backend/jobs.config declara reconcileMissingConfirmedBookingProjections con cronExpression 15,45 * * * *; src/backend/crons.js lo exporta.
+- El código excluye bookings nativos PAID/PARTIALLY_PAID/REFUNDED de la proyección automática y solicita BOOKING_PAID_PROJECTION_REVIEW_REQUIRED mediante notifyOperationalAlert.
+- No se ha obtenido evidencia de ejecución runtime del cron. El sitio está Draft y no hay alertas persistidas; esto no demuestra un fallo del código ni que el job se haya ejecutado.
+
+**Decisión:** no ejecutar el cron manualmente en el sitio actual ni crear alertas/ledgers a mano. Primero acreditar la versión instalada y el entorno; después probar el job en Sandbox aislado con bookings sintéticos, comprobar la alerta deduplicada y mantener writers fiscales bloqueados.
+
+## 8. Decisión y trabajo pendiente
 
 1. Mantener las tres compensaciones sin cambios; no reintentar, marcar como completadas ni borrar.
 2. Resolver manualmente la divergencia pedido #10033 reembolsado / booking CONFIRMED-PAID.
@@ -124,7 +135,7 @@ Esta corrección protege nuevos eventos. **No repara ni reintenta las tres compe
 7. Ejecutar E2E de hooks, pagos y caja solo en Sandbox inequívocamente aislado.
 8. Mantener writers fiscales/contables deshabilitados y NO-GO producción.
 
-## 8. Límites de validación
+## 9. Límites de validación
 
 Verificado mediante lectura Wix: esquema, permisos, recuentos, estado del singleton, compensaciones, pedidos, transacciones y bookings nativos.
 
