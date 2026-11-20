@@ -18,6 +18,9 @@ import {
     DATA_ACCESS_WRITE_POLICY,
     TPV_QA_RUNTIME_POLICY,
     TPV_QA_COLLECTIONS,
+    BOOKING_TYPE,
+    CITAS_BOOKING_STATUS,
+    CITAS_PAYMENT_STATUS,
 } from "backend/internalConfig";
 
 test("all CMS write-policy collection lists contain unique canonical strings", () => {
@@ -44,9 +47,9 @@ test("dataAccess validates physical required fields before elevated CMS inserts"
         scheduleId: "e556070a-6d6a-402e-8422-11133033ea76",
         serviceId: "e556070a-6d6a-402e-8422-11133033ea76",
         resourceId: "e556070a-6d6a-402e-8422-11133033ea76",
-        bookingType: Object.values(IC.BOOKING_TYPE)[0],
-        bookingStatus: Object.values(IC.CITAS_BOOKING_STATUS)[0],
-        paymentStatus: Object.values(IC.CITAS_PAYMENT_STATUS)[0],
+        bookingType: Object.values(BOOKING_TYPE)[0],
+        bookingStatus: Object.values(CITAS_BOOKING_STATUS)[0],
+        paymentStatus: Object.values(CITAS_PAYMENT_STATUS)[0],
         slotEnd: new Date("2026-11-20T11:00:00.000Z"),
         totalAmount: 100,
         dateYmd: "2026-11-20",
