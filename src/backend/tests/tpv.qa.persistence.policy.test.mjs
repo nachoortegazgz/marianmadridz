@@ -351,7 +351,7 @@ test("Sandbox bootstrap is read-only and requires pre-seeded Sandbox records", a
     const repository = await readFile(new URL("../tpv/tpvSandboxRepository.js", import.meta.url), "utf8");
     const initializeStart = repository.indexOf("export async function initializeSandboxCaja(");
     const identitiesStart = repository.indexOf("export async function seedSandboxIdentities(");
-    const getCajaStart = repository.indexOf("\\nasync function _getCajaActual", initializeStart);
+    const getCajaStart = repository.indexOf("async function _getCajaActual", initializeStart);
     assert.notEqual(initializeStart, -1);
     assert.notEqual(identitiesStart, -1);
     assert.notEqual(getCajaStart, -1);
@@ -363,7 +363,7 @@ test("Sandbox bootstrap is read-only and requires pre-seeded Sandbox records", a
     assert.doesNotMatch(identitiesBlock, /insertItem\(|authorizeCreate/);
 
     const insertStart = repository.indexOf("export async function insertSandboxEvent(");
-    const insertEnd = repository.indexOf("\\nexport async function querySandboxRecords", insertStart);
+    const insertEnd = repository.indexOf("export async function querySandboxRecords", insertStart);
     assert.notEqual(insertStart, -1);
     assert.notEqual(insertEnd, -1);
     const insertBlock = repository.slice(insertStart, insertEnd);
