@@ -2,6 +2,7 @@
 
 **Repositorio:** `nachoortegazgz/marianmadridz`  
 **Baseline de main:** `1f6e73a6f5384f401fc7cf35a0d1ed08245072bc` (integración PR #474)  
+**Integración del addendum/corrección:** PR #475, merge SHA `7332a42f9d3f7ab2e8fc59b58fded339269270d7`  
 **Rama de corrección:** `fix/bug-audit-2026-11-20-followup`  
 **Alcance:** contraste del informe aportado con `src/backend/`, pruebas offline y documentación de arquitectura.  
 **Naturaleza:** auditoría estática y contractual, con lectura de estado de automatizaciones en Wix; no acredita publicación de código ni Wix Runtime. **Site Context Wix (20/11/2026): estado Draft, Editor clásico, Velo habilitado.**
@@ -31,7 +32,7 @@ Consulta directa Wix Data API, sin mutaciones:
 PR #474 integrada mediante squash. Merge commit: `1f6e73a6f5384f401fc7cf35a0d1ed08245072bc`. Se eliminó `contains()` para el campo `ARRAY_STRING`; permanecen `hasSome()` y `eq()` como lectura exacta de compatibilidad. La prueba contractual impide reintroducir el operador incompatible. Ambos checks de CI del head de la PR terminaron en SUCCESS (Gitleaks y QA offline/regresión/SDK/lint). Wix Runtime no ejecutado.
 
 ### BUG-NEW-07 — `HistoricoCierresZ_beforeUpdate` dependía de `context.previous/original`
-**Estado: CORREGIDO EN ESTA RAMA; CI PENDIENTE.**
+**Estado: CORREGIDO E INTEGRADO EN MAIN (PR #475).**
 
 Archivo: `src/backend/data.js`.
 
@@ -42,7 +43,7 @@ El hook ahora:
 4. Compara los campos mediante `stableSerialize`.
 5. Permite únicamente cambios reales en los campos de firma/verificación de `ALLOWED_Z_UPDATE_FIELDS`.
 
-Se amplió `src/backend/tests/data.hooks.test.mjs` para cubrir recuperación permitida, mutación económica rechazada y ausencia del registro previo. No se ha ejecutado aún el runner en este entorno; se espera CI.
+Se amplió `src/backend/tests/data.hooks.test.mjs` para cubrir recuperación permitida, mutación económica rechazada y ausencia del registro previo. CI pre-merge de GitHub terminó SUCCESS en QA offline/regresión/SDK/lint y Gitleaks. No se ejecutó Wix Runtime.
 
 ### BUG-NEW-08 — comentario contradictorio de `BOOKING_FIELDS`
 **Estado: COMENTARIO CORREGIDO EN ESTA RAMA; esquema físico verificado.**
@@ -91,9 +92,10 @@ No se deben eliminar `CASH_MOVEMENT_ID` ni `ORDER_ID`: existen consumidores acti
 ## 6. Validación de esta rama
 
 - Inspección estática de los módulos y consumidores: realizada.
-- Prueba añadida para BUG-NEW-07: pendiente de CI.
-- Corrección de comentario BUG-NEW-08: diff pendiente de revisión CI.
+- Prueba añadida para BUG-NEW-07: CI pre-merge SUCCESS.
+- Corrección de comentario BUG-NEW-08: incluida en PR #475, CI pre-merge SUCCESS.
 - Wix Runtime y CMS Sandbox: no ejecutados. Site Context informa estado Draft; no se ejecutó Published E2E ni se acredita código desplegado en sitio.
+- PR #475 integrada en `main`; SHA final de integración: `7332a42f9d3f7ab2e8fc59b58fded339269270d7`.
 - Cambios de datos Wix: ninguno.
 
 ## 7. Reversión y documentación
