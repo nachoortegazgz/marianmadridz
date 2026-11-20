@@ -491,3 +491,18 @@ Asimismo, cualquier declaración histórica de publicación en Wix queda como de
 
 
 **Edición controlada:** el dato lógico editable reside en `payloadFiscal.qaRecord`. El hook `MovimientosCaja_beforeUpdate` protege identidad, testRunId, tipo lógico y secuencia; recalcula los campos derivados y la huella SHA-256 QA al guardar. No se editan manualmente los marcadores ni la cadena fiscal.
+
+
+---
+
+## DIRECTRIZ DEL PROPIETARIO — desarrollo global, datos sintéticos y objetivos finales (2026-11-20)
+
+**Estado: VIGENTE.** La directriz completa está en [docs/PROJECT-OWNER-DIRECTIVE-2026-11-20.md](PROJECT-OWNER-DIRECTIVE-2026-11-20.md).
+
+El propietario confirma que el sitio fue creado como base de pruebas, no ha tenido actividad real y todos sus registros son sintéticos. Autoriza simulacros completos y persistentes con registros para comprobar procesos y depurar errores. Los registros sintéticos se eliminarán mediante reset preproducción controlado antes del uso real.
+
+Esta decisión es global para el sitio y supersede cualquier restricción documental anterior que impida genéricamente crear, editar o eliminar registros sintéticos de prueba. Los textos históricos se conservan como evidencia, pero no gobiernan el alcance vigente. La autorización no declara habilitados técnicamente todos los writers ni elimina los requisitos de autenticación, autorización server-side, validación, trazabilidad, idempotencia, seguridad, normativa española o contratos oficiales Wix/integraciones. Los efectos externos y operaciones reales siguen fuera del alcance de QA.
+
+**Objetivos finales de referencia:** funcionalidades requeridas por Marian Madrid; SDK Wix v2 o versión oficial vigente recomendada; cero APIs deprecated; mínimo código necesario; alineación con documentación oficial; cumplimiento legal vigente en España; calidad, seguridad, integridad y pruebas E2E; reset sintético preproducción verificable.
+
+**Interpretación de TEC-042:** su alcance TPV específico se mantiene como diseño/implementación técnica, pero cualquier frase que limite la autorización de simulacros al TPV o impida simulacros sintéticos en otros módulos queda supersedida por esta directriz global. La afirmación de estado de PR #439 se considera histórica; el estado actual de integración se documenta en el checkpoint técnico más reciente, no en este antecedente.
