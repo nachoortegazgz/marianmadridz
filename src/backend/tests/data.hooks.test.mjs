@@ -544,7 +544,34 @@ test('HOOK-CAJA-SINGLE-01 enforces the CajaActual single-item principal', () => 
 // -----------------------------------------------------------------------------
 // Capa 2 — inventory and accounting ledgers are immutable append-only records.
 // -----------------------------------------------------------------------------
-test('HOOK-ACCOUNTING-LEDGER-01 preserves append-only integrity', () => {
+test('HOOK-ACCOUNTING-LEDGER-01 validates complete inserts and preserves append-only integrity', () => {
+  const valid = {
+    _id: 'ACC_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+    journalEntryId: 'ACC-QA-ENTRY-001',
+    recordTimestamp: '2026-11-20T10:00:00.000Z',
+    operationDescription: 'Asiento QA sintético',
+    sequenceNumber: 1,
+    movementType: 'MOVIMIENTO_CAJA',
+    recordSource: 'MovimientosCaja',
+    documentId: 'source-document-001',
+    fechaOperacion: '2026-11-20',
+    fiscalPeriod: '2026-11',
+    amount: 121,
+    accountingAmount: 121,
+    accountingSign: 1,
+    desgloseDetallado: { accountCode: '000001', debitAmount: 121, creditAmount: 0 },
+    previousRecordHash: '0'.repeat(64),
+    hash: 'a'.repeat(64),
+    traceId: 'trace-accounting-hook-001',
+  };
+  const normalized = H.LibroAsientosContablesDetalle_beforeInsert({ ...valid, desgloseDetallado: { ...valid.desgloseDetallado } });
+  assert.ok(normalized.recordTimestamp instanceof Date);
+  assert.throws(() => H.LibroAsientosContablesDetalle_beforeInsert(null), /item invalido/);
+  assert.throws(() => H.LibroAsientosContablesDetalle_beforeInsert([]), /item invalido/);
+  assert.throws(() => H.LibroAsientosContablesDetalle_beforeInsert({ ...valid, hash: 'invalid' }), /SHA-256/);
+  assert.throws(() => H.LibroAsientosContablesDetalle_beforeInsert({ ...valid, desgloseDetallado: { ...valid.desgloseDetallado, creditAmount: 1 } }), /debit\/credit/);
+  assert.throws(() => H.LibroAsientosContablesDetalle_beforeInsert({ ...valid, desgloseDetallado: { ...valid.desgloseDetallado, accountCode: 'bad' } }), /accountCode/);
+  assert.throws(() => H.LibroAsientosContablesDetalle_beforeInsert((({ journalEntryId, ...rest }) => rest)(valid)), /requires TEXT journalEntryId/);
   assert.throws(() => H.LibroAsientosContablesDetalle_beforeUpdate({ _id: 'synthetic-accounting-1' }), /append-only/);
   assert.throws(() => H.LibroAsientosContablesDetalle_beforeRemove('synthetic-accounting-1'), /append-only/);
 });
