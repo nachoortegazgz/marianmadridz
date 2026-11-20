@@ -957,7 +957,7 @@ async function _resolveVerifiedFiscalChainAlerts(chainResult, traceId) {
     for (const alert of alerts) {
         if (
             alert?.controlType !== CONTROL_TYPE.ALERT ||
-            alert?.alertType !== "FISCAL_CHAIN_CORRUPTED" ||
+            alert?.eventType !== "FISCAL_CHAIN_CORRUPTED" ||
             alert?.status !== CONTROL_STATUS.OPEN ||
             !alert?._id
         ) continue;
