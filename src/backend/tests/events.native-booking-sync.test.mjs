@@ -10,6 +10,22 @@ mocks.sdk["@wix/ecom::orderTransactions"] = {
     orderTransactions: { ...activeOrderTransactions, orderId },
   }),
 };
+// The production handler resolves channelInfo from the authoritative native order
+// whenever the event snapshot omits it. Existing synthetic orders represent WEB
+// checkout unless a test explicitly supplies another native channel.
+mocks.sdk["@wix/ecom::orders"] = {
+  getOrder: async (orderId) => {
+    if (!activeOrder || activeOrder._id !== orderId) {
+      throw new Error("SYNTHETIC_NATIVE_ORDER_NOT_FOUND");
+    }
+    return {
+      order: {
+        ...activeOrder,
+        channelInfo: activeOrder.channelInfo || { type: "WEB" },
+      },
+    };
+  },
+};
 
 const events = await import("backend/events.js");
 
