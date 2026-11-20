@@ -399,10 +399,10 @@ export function assertTpvSandboxIdentity(item) {
         item.testRunId !== TPV_QA_RUNTIME_POLICY.TEST_RUN_ID) {
         throw new Error("SCHEMA_VIOLATION: TpvSandboxIdentities must belong to the active synthetic Sandbox test-run");
     }
-    if (identityType === "CUSTOMER" && !/^[^\\s@]+@example\\.test$/i.test(String(item.email || ""))) {
+    if (identityType === "CUSTOMER" && !/^[^\s@]+@example\.test$/i.test(String(item.email || ""))) {
         throw new Error("SCHEMA_VIOLATION: TpvSandboxIdentities customer email must use example.test");
     }
-    if (identityType === "STAFF" && item.email && !/^[^\\s@]+@example\\.test$/i.test(String(item.email))) {
+    if (identityType === "STAFF" && item.email && !/^[^\s@]+@example\.test$/i.test(String(item.email))) {
         throw new Error("SCHEMA_VIOLATION: TpvSandboxIdentities staff email must use example.test");
     }
     if (item.metadata !== undefined && (!item.metadata || typeof item.metadata !== "object" || Array.isArray(item.metadata))) {
