@@ -354,6 +354,8 @@ test("TPV synthetic persistence maps logical events to CajaActual and Movimiento
     assert.match(repository, /QA_LEDGER_SOURCE = "TPV_QA_SYNTHETIC"/);
     assert.match(repository, /SIMULATED_TPV_/);
     assert.match(repository, /sequenceNumber: 0/);
+    assert.match(repository, /cmsMovementType: item\.movementType/);
+    assert.doesNotMatch(repository, /movementType: item\.movementType/);
     assert.match(repository, /previousRecordHash: QA_GENESIS_HASH/);
     assert.match(repository, /createHash\("sha256"\)/);
     assert.match(repository, /cashRegisterStatus: "SIMULACION"/);
