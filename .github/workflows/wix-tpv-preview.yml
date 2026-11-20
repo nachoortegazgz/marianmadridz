@@ -57,7 +57,7 @@ jobs:
         env:
           CLI_API_KEY: ${{ secrets.CLI_API_KEY }}
         run: |
-          if [[ -z "\${CLI_API_KEY:-}" ]]; then
+          if [[ -z "${CLI_API_KEY:-}" ]]; then
             echo "::error::Configure repository secret CLI_API_KEY with the Wix CLI for Sites - Git Integration permission and access to the Marian Madrid site."
             exit 1
           fi
