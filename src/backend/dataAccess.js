@@ -10,6 +10,13 @@ STANDARDS: G10 ASCII Strict. Sin suppressAuth. Acceso CMS centralizado
 
 import { items } from "@wix/data";
 import { auth } from "@wix/essentials";
+import { BUSINESS_COLLECTIONS } from "backend/internalConfig";
+import {
+    assertControlOperativo,
+    assertCanonicalControlFields,
+    assertHistoricoCierresZ,
+    assertMovimientosCajaRequiredFields,
+} from "backend/validation";
 import {
     assertBulkPatchAllowed,
     assertInsertAllowed,
@@ -313,6 +320,14 @@ export async function getItem(collection, id, consistency) {
 }
 
 export function insertItem(collection, item) {
+    if (collection === BUSINESS_COLLECTIONS.CONTROL_OPERATIVO) {
+        assertControlOperativo(item);
+        assertCanonicalControlFields(item);
+    } else if (collection === BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA) {
+        assertMovimientosCajaRequiredFields(item);
+    } else if (collection === BUSINESS_COLLECTIONS.HISTORICO_CIERRES_Z) {
+        assertHistoricoCierresZ(item);
+    }
     assertInsertAllowed(collection, item);
     return elevatedInsert(collection, item);
 }
