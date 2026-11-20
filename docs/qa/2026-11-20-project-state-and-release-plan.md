@@ -16,6 +16,7 @@ El propietario declaró que el sitio está en desarrollo y que los registros fis
 
 - `main` apuntaba a `1357d770d6b786f6ecdad1c93d4d29002c00c810` al iniciar esta actualización documental.
 - PR #456 integrada: refresco del estado consolidado tras la auditoría CMS (`1357d770d6b786f6ecdad1c93d4d29002c00c810`).
+- PR #457 integrada: reconciliación live de CajaActual, CMS y pedidos Wix (merge documental `65983abfaad0e6ae83e2992dd410b32d2d0b0037`).
 - PR #453 integrada: consolidación documental (`9aa92a9ef7408ab9b431694463ca1ffe2dedacfa`).
 - PR #454 integrada: auditoría de productores y bypasses CMS (`06766afbcdf7f8d32d34ccbb3f1ff68a242f8bca`).
 - PR #455 integrada: validación central de `PaquetesGestoria` (`7672bac4b4207ba87c9688fa34f38752a253ae86`).
@@ -184,6 +185,7 @@ Siguiente intervención recomendada: **cerrar H-01 de `CajaActual`** definiendo 
 - Singleton CajaActual: ABIERTA, apertura/efectivo/esperado/contado 300 EUR; closedAt y lastMovementAt anteriores a openedAt; traceId vacío; sequenceCounters almacenado como texto pese a schema OBJECT. No cumple marcadores del sandbox TPV QA.
 - ControlOperativo: 58 elementos, tres compensaciones FISCAL_LEDGER/PENDING_RECOVERY con attempts=0. MovimientosCaja, HistoricoCierresZ y LibroAsientosContablesDetalle permanecen en cero.
 - Pedidos POS #10033 y #10032 continúan vinculados a las compensaciones. Los bookings nativos se leen CONFIRMED/PAID, mientras sus proyecciones CitasF2 siguen CONFIRMED/PENDING_LEDGER/totalAmount=0. #10033 además está FULLY_REFUNDED en eCommerce.
+- Los dos pedidos POS contienen una línea Wix Bookings de 18,15 EUR brutos (15,00 + 3,15 IVA), correlacionada por appId y catalogItemId con cada booking. CitasF2 sigue en totalAmount=0 y amountReconciliationRequired=true; no se actualiza sin aprobar el contrato de precedencia y tratamiento fiscal.
 - Issue #441 actualizada: guard POS integrado en código, E2E Sandbox pendiente. Issue #416 actualizada con correlación nativa y decisión de no mutar datos.
 - No se realizaron escrituras Wix, reintentos, cierres, cambios de pagos ni publicación.
 

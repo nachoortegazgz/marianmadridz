@@ -98,6 +98,15 @@ Existe divergencia entre pedido totalmente reembolsado y booking todavía confir
 
 La composición mixta exige tratamiento manual; no debe pasar por un mapper fiscal de venta online ni generar movimientos para cuadrar caja.
 
+### Importe de reserva en las líneas nativas del pedido
+
+En ambos pedidos se localizó una línea Wix Bookings cuyo appId corresponde a Bookings y cuyo catalogItemId coincide con el bookingId nativo:
+
+- Pedido #10033 / booking b18337da-2326-46fc-89c0-1843b6be0730: precio 15,00 EUR + IVA 3,15 EUR = total de línea 18,15 EUR.
+- Pedido #10032 / booking f137c63a-f704-461e-91bc-3295e853c67d: precio 15,00 EUR + IVA 3,15 EUR = total de línea 18,15 EUR. Las otras dos líneas del pedido son productos Stores y permanecen separadas.
+
+Las dos filas CitasF2 mantienen amountSource=NOT_EXPOSED_BY_BOOKINGS, amountReconciliationRequired=true, nativePhasePairUnknown=true y selectedPaymentOption=UNDEFINED; los bookings nativos consultados ahora devuelven CONFIRMED/PAID y selectedPaymentOption=ONLINE. La línea de pedido es una fuente nativa candidata para reconciliar el importe bruto por booking, correlacionada por appId + catalogItemId; no se actualiza CitasF2 ni se genera ledger hasta aprobar precedencia, tratamiento de impuestos y relación de pago POS.
+
 ## 6. Relación con la corrección del webhook POS
 
 PR #445 está integrada en main (merge 6e34ba0e501e6b11fbc17921b10c9cf231d6b82a). El código actual resuelve el canal nativo antes de procesar PAID/REFUNDED y solo permite writers online para channelInfo.type=WEB; el cron exige sourceChannelType=WEB.
