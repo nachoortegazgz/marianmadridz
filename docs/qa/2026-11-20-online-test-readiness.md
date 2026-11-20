@@ -79,3 +79,20 @@ Una vez disponible el entorno:
 
 **Release:** NO-GO para publicación y transacciones.  
 **Online smoke:** preparado en código, bloqueado por el estado de despliegue Wix.
+
+## 6. Decisión posterior — permanecer en el sitio actual (2026-11-20)
+
+El usuario ha descartado crear un segundo sitio. Se mantiene el Site ID actual; no se publica ni se cambia el estado de despliegue.
+
+Se incorporan en la rama de trabajo:
+- Simulador local y sin efectos secundarios de proveedor de pago, con escenarios de autorización/captura/rechazo/acción adicional/pendiente y reembolso.
+- WebMethods protegidos por autenticación y rol cajero backend.
+- Fixture JSON de tres clientes y tres profesionales sintéticos, con emails `@example.test`, preparado para validación/importación manual en CMS Sandbox.
+- Pruebas unitarias y contractuales para los escenarios y las fronteras de seguridad.
+- ADR con decisiones, riesgos, limitaciones y condiciones de release.
+
+El simulador **no es Wix Payments Sandbox**: no llama a Wix Payments, no crea Orders ni transacciones eCommerce, no genera webhooks y no liquida fondos. Su idempotencia es determinista por clave y fingerprint, no durable porque no persiste estado. La gestión acumulada de reembolsos corresponde al consumidor persistente, que debe aplicar unicidad/CAS y límites append-only.
+
+El fixture no crea miembros Wix ni contactos CRM. La importación queda pendiente de una operación manual dentro del panel CMS con Sandbox verificado; no se ejecuta mediante REST/Management API y no se sincroniza a Online.
+
+**No cambia el estado del hito online:** el error de pipeline Preview permanece; no hay URL Preview ni smoke Playwright ejecutado. La CI de la nueva rama aún debe completarse. No se han hecho escrituras CMS ni operaciones financieras.
