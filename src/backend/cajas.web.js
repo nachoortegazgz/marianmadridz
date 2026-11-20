@@ -1630,6 +1630,23 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
             return { status: "ERROR", data: null, error: { code: "INTEGRITY_VIOLATION", message: "Hash chain integrity violation detected. Cannot close." } };
         }
 
+        const hasValidClosedBy = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(closedBy);
+        if (!hasValidClosedBy || !recordDomain) {
+            return {
+                status: "ERROR",
+                data: null,
+                error: {
+                    code: "Z_CLOSING_REQUIRED_FIELDS_UNRESOLVED",
+                    message: "El cierre requiere closedBy (resourceId válido) y recordDomain aprobado; no se asignan valores por defecto.",
+                    missing: [
+                        ...(!hasValidClosedBy ? ["closedBy"] : []),
+                        ...(!recordDomain ? ["recordDomain"] : []),
+                    ],
+                },
+                traceId,
+            };
+        }
+
         const firstMovement = allMovements[0];
         const lastMovement = allMovements[allMovements.length - 1];
         const closingPayload = _stableSerialize({
@@ -1662,23 +1679,6 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
                 traceId,
                 lastError: signErr?.message || "FISCAL_SIGN_FAIL",
             });
-        }
-
-        const hasValidClosedBy = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(closedBy);
-        if (!hasValidClosedBy || !recordDomain) {
-            return {
-                status: "ERROR",
-                data: null,
-                error: {
-                    code: "Z_CLOSING_REQUIRED_FIELDS_UNRESOLVED",
-                    message: "El cierre requiere closedBy (resourceId válido) y recordDomain aprobado; no se asignan valores por defecto.",
-                    missing: [
-                        ...(!hasValidClosedBy ? ["closedBy"] : []),
-                        ...(!recordDomain ? ["recordDomain"] : []),
-                    ],
-                },
-                traceId,
-            };
         }
 
         const zRecord = {
