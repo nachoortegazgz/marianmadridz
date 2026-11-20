@@ -6,7 +6,7 @@
 - Consulta de solo lectura a `GET /data/v2/collections/{collectionId}` para diez colecciones de negocio, más ControlOperativo auditada en revisión separada.
 - Comparación de campos físicos `required` contra productores, validadores y hooks en `src/backend/`.
 - No se insertaron, actualizaron ni eliminaron elementos CMS. No se ejecutaron escritores fiscales, contables, laborales ni de caja. El sitio sigue en Draft.
-- Estado: **esquema live verificado; revisión de código realizada; CI de esta rama pendiente; runtime Wix no ejecutado**.
+- Estado: **esquemas live verificados; código integrado en main mediante PR #451; CI completo verde (Layer 1 333/333, Layer 2 266/266, suite offline 687/687, SDK, npm audit, ESLint y secret scanning); runtime Wix/Preview y E2E Sandbox pendientes**.
 
 ## Resultado por colección
 
@@ -44,4 +44,4 @@
 ## Relación con PRs
 
 - PR #450: contrato ControlOperativo alineado con esquema live revisión 93; merge commit `11e6cefd838cfd8f18301ddff534e2edd8849743`.
-- Esta rama: correcciones de contratos de las colecciones restantes; pendiente CI, revisión y PR.
+- PR #451: correcciones integradas en `main` mediante squash commit `bdbdb2467294c781bfc090cd8429d7c060413d15`. CI PR verde: Layer 1 333/333, Layer 2 266/266, suite offline 687/687; contratos SDK, npm audit, ESLint y secret scanning SUCCESS. El workflow PR no se repitió sobre el SHA de merge; no se afirma un segundo CI post-merge.
