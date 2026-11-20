@@ -38,9 +38,10 @@ test("WIX-PREVIEW-04 workflow creates a Preview only and never publishes", async
     assert.match(workflow, /npm run wix preview/);
     assert.ok(workflow.includes("timeout-minutes: 10"));
     assert.match(workflow, /npm run wix preview -- --help/);
-    assert.match(workflow, /script --quiet --return/);
-    assert.ok(workflow.includes("sleep 3"));
-    assert.ok(workflow.includes("printf '\\r'"));
+    assert.match(workflow, /python3 scripts\\/wix-preview-tty\\.py/);
+    assert.match(workflow, /python3 -m py_compile scripts\\/wix-preview-tty\\.py/);
+    assert.ok(workflow.includes("timeout-minutes: 10"));
+    assert.doesNotMatch(workflow, /script --quiet|printf/);
     assert.doesNotMatch(workflow, /npm run wix publish|\bwix publish\b/i);
 });
 
@@ -52,6 +53,15 @@ test("WIX-PREVIEW-05 Playwright remains isolated from the Wix site's runtime dep
     const workflow = await readFile(workflowUrl, "utf8");
     assert.match(workflow, /@playwright\/test@1\.65\.1/);
     assert.match(workflow, /node scripts\/wix-preview-smoke\.mjs/);
+});
+
+test("WIX-PREVIEW-07 TTY driver selects only the documented latest-main source", async () => {
+    const driver = await readFile(ptyDriverUrl, "utf8");
+    assert.match(driver, /pty\\.fork\\(\\)/);
+    assert.match(driver, /What would you like to preview\\?/);
+    assert.match(driver, /Latest commit from origin\\/main/);
+    assert.ok(driver.includes('os.write(master_fd, b"\\\\r")'));
+    assert.match(driver, /PROMPT_TIMEOUT_SECONDS/);
 });
 
 test("WIX-PREVIEW-06 browser smoke blocks non-read HTTP methods and never submits forms", async () => {
