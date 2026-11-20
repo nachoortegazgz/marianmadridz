@@ -116,7 +116,7 @@ export function assertHistoricoCierresZ(item) {
     if (!item || typeof item !== "object" || Array.isArray(item)) {
         throw new Error("SCHEMA_VIOLATION: HistoricoCierresZ item must be an object");
     }
-    for (const field of ["fiscalPeriod", "closedBy", "recordDomain", "traceId"]) {
+    for (const field of ["traceId", "fiscalPeriod", "closedBy", "recordDomain"]) {
         if (!String(item[field] ?? "").trim()) {
             throw new Error(`SCHEMA_VIOLATION: HistoricoCierresZ requires ${field}`);
         }
