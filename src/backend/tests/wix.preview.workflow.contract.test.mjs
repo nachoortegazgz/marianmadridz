@@ -11,9 +11,7 @@ test("WIX-PREVIEW-01 preview workflow is manual by request or follows successful
     const workflow = await readFile(workflowUrl, "utf8");
     assert.match(workflow, /workflow_dispatch:/);
     assert.match(workflow, /create_preview:[\s\S]*?type: boolean[\s\S]*?default: false/);
-    assert.match(workflow, /workflow_run:[\s\S]*?workflows: \["Backend offline quality gates"\][\s\S]*?branches: \[main\]/);
-    assert.match(workflow, /github\.event\.workflow_run\.conclusion == 'success'/);
-    assert.match(workflow, /github\.event\.workflow_run\.head_branch == 'main'/);
+    assert.doesNotMatch(workflow, /^\s{2}workflow_run:/m);
     assert.doesNotMatch(workflow, /^\s{2}(push|pull_request):/m);
 });
 
