@@ -497,7 +497,7 @@ Asimismo, cualquier declaración histórica de publicación en Wix queda como de
 
 ## DIRECTRIZ DEL PROPIETARIO — desarrollo global, datos sintéticos y objetivos finales (2026-11-20)
 
-**Estado: VIGENTE.** La directriz completa está en [docs/PROJECT-OWNER-DIRECTIVE-2026-11-20.md](PROJECT-OWNER-DIRECTIVE-2026-11-20.md).
+**Estado: VIGENTE.** La directriz completa está en [docs/PROJECT-OWNER-DIRECTIVE-2026-11-20.md](docs/PROJECT-OWNER-DIRECTIVE-2026-11-20.md).
 
 El propietario confirma que el sitio fue creado como base de pruebas, no ha tenido actividad real y todos sus registros son sintéticos. Autoriza simulacros completos y persistentes con registros para comprobar procesos y depurar errores. Los registros sintéticos se eliminarán mediante reset preproducción controlado antes del uso real.
 
