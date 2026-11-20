@@ -170,3 +170,51 @@ Se conservan `_buildLockKeys` y otros aliases con consumidores demostrados. No s
 - No se ha ejecutado Wix Preview/E2E ni se han realizado escrituras CMS.
 - Despliegue permanece NO-GO hasta cerrar los gates runtime, seguridad, concurrencia y publicación.
 
+
+
+## 9. Estado final de PR #501 — 2026-11-20
+
+### Integración y CI
+- PR #501: https://github.com/nachoortegazgz/marianmadridz/pull/501
+- Merge squash en `main`: `f8872925a126282b76aa9220667356832ca7f113`.
+- Head validado antes del merge: `275689cbf0a7485c62094a72fa097a5b478fdaa9`.
+- Backend offline quality run `44792419726`: SUCCESS. Incluye `npm ci`, auditoría del grafo npm, Layer 1, Layer 2, regresión offline completa, contratos Wix SDK, contratos eCommerce Order Transactions, contratos TPV Catalog y ESLint.
+- Secret scanning run `44792419470`: SUCCESS.
+- No se dispone de evidencia de un workflow post-merge separado asociado al SHA de merge; la validación acreditada corresponde al head de PR que fue integrado sin cambios.
+
+### Correcciones incorporadas
+- Retirado `_projectCertifiedSlot` de `src/backend/booking/bookingCore.js`; búsqueda global del repositorio encontró solo su definición/export.
+- Retirado `validateReason` de `src/backend/tpv/tpvUtils.js`; búsqueda global encontró solo su definición/export.
+- Retirado el alias `normalizePersistedMeta` de `src/backend/booking/bookingSaga.js`; se conserva `_normalizePersistedMeta`, que mantiene consumidores internos y pruebas.
+- Conservados aliases y contratos con consumidores demostrados, incluido `_buildLockKeys`.
+- Actualizada esta auditoría para registrar el estado y las limitaciones.
+
+### Checklist externo — estado consolidado
+
+| ID / grupo | Estado | Evidencia / condición |
+|---|---|---|
+| C1 CRM | Pendiente de sincronización reproducible Wix/npm | `@wix/crm@1.0.1636` existe en `wix.lock`; no se añade manualmente al lock npm. Requiere workspace Wix CLI/Editor y CI. |
+| C2 Wix Fetch | Aplicado previamente | PR #482; import explícito `fetch` desde `wix-fetch`; CI offline validada. |
+| C3 Node | Cubierto por CI | Node `24.22.1`; sin cambio adicional. |
+| C4 ESLint Wix | Bloqueado | Regla no reactivada por incompatibilidad histórica del plugin; requiere solución oficial reproducible. |
+| C5 TPV operativo | Cerrado deliberadamente | No habilitar ventas/devoluciones/pagos reales sin gates de entorno, pagos, conciliación, fiscalidad y E2E. |
+| C6 Fichaje | Cerrado deliberadamente | Writers, UI y flags permanecen protegidos hasta probar permisos, concurrencia, idempotencia, rectificación y conservación. |
+| C7 Ledger contable | Pendiente de aprobación | Rule set PGC y pruebas de cuadre/rectificación. |
+| C8 Ledger fiscal | Cerrado deliberadamente | Presencia de secretos no autoriza escrituras; requiere SIF, firma y E2E certificados. |
+| C9 Frontera Sandbox/LIVE | Pendiente de prueba runtime | Mantener fail-closed; Preview/Sandbox y Published/Online no probados por invocación real. |
+| C10 módulos internos | Parcialmente aplicado | Tres símbolos sin consumidores retirados por PR #501; el resto requiere comprobar bindings externos. |
+| C11 WebMethods | Pendiente de bindings | No retirar ni alterar contratos sin inspección en Editor y pruebas de consumidores. |
+| D1 HTML Components | Pendiente | Sin read-back verificable de widgets sincronizados desde Wix Editor. |
+| D2 scheduler | Pendiente | No hay evidencia de cron activo ni de ejecución controlada en entorno correspondiente. |
+| D3 tooling | Parcial | Node CI fijado; ESLint/plugin Wix requiere resolución de compatibilidad. |
+| D4 smoke Sandbox | Pendiente | No ejecutar hasta demostrar aislamiento del data plane y preparar fixture sintético no destructivo. |
+| Seguridad CMS / writers | Pendiente | Auditoría de permisos efectivos y todos los writers, sin escrituras LIVE. |
+| Concurrencia / idempotencia | Pendiente | Pruebas runtime Wix, locks y recuperación; CI offline no las sustituye. |
+| SharePoint / Entra ID | Pendiente | Verificar scopes y permisos efectivos; SharePoint solo evidencia documental. |
+| Preview E2E / publicación | NO-GO | Site Context sigue Draft; no se ha publicado ni validado E2E. |
+
+### Límites de esta validación
+- CI SUCCESS valida el código del head de PR en entorno offline; no demuestra Wix Runtime, permisos efectivos, HTML Components, scheduler, Sandbox/Online data plane, integraciones externas ni publicación.
+- No se realizaron escrituras CMS, seeds, cambios de datos LIVE, operaciones de TPV, pagos ni cambios fiscales/laborales.
+- No se modificó la configuración de entorno ni se abrieron writers.
+- Estado de despliegue: NO-GO hasta completar los gates runtime, seguridad, concurrencia, legalidad y autorización de publicación.
