@@ -37,10 +37,12 @@ Esto **sustituye la fotografía de 14/11**, que indicaba que openingCashAmount, 
 ### Desalineación localizada en código
 
 - src/backend/tpv/tpvQaRepository.js lee openingCashAmount, coherente con el esquema live.
-- src/backend/cajas.web.js construye un campo de DTO openingAmount leyendo cashRegister.openingAmount, que no existe en el esquema físico actual.
-- cajas.web.js conserva un comentario que afirma que CajaActual no tiene campo Bizum; el esquema live sí declara bizumAmount.
+- PR #460 corrigió src/backend/cajas.web.js: el DTO getCashierState ahora devuelve openingCashAmount desde CAJA_KEYS.OPENING_CASH; no expone el alias openingAmount, que no existe en el esquema físico.
+- PR #460 corrigió el comentario obsoleto: la proyección de caja agrega Bizum en otherAmount por contrato, aunque el esquema físico también declara bizumAmount.
 - La proyección de caja de cajas.web.js sigue usando otherAmount para el bucket no efectivo y su documentación anterior explica que Bizum se agrega ahí. tpvCaja.web.js devuelve bizumAmount como agregado de la lectura TPV. No se cambia esta semántica sin una decisión funcional explícita.
-- La búsqueda estática encontró que src/pages/ZONA MARIAN.gn7mx.js pasa el DTO a #htmlAdmin.txt; el HTML muestra el efectivo físico, pero no se encontró consumo de openingAmount. No se elimina el campo sin revisar contratos externos.
+- La búsqueda estática no encontró consumo frontend del antiguo openingAmount. PR #460 alineó el DTO con el esquema físico y actualizó los fixtures; el HTML de ZONA MARIAN no consume el campo antiguo.
+
+**Corrección de código posterior a la lectura live:** PR #460 integrada en main (1c3afcea4194e524dc2c67ab102581a4876e90f2). getCashierState devuelve openingCashAmount y los fixtures offline usan el nombre físico. CI PR #460: Layer 1 333/333, Layer 2 266/266, suite offline 688/688; contratos SDK, npm audit sin advisories, ESLint y secret scanning SUCCESS. No se ha ejecutado Wix Runtime.
 
 ## 4. Estado live del singleton
 
