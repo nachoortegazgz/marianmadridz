@@ -142,6 +142,14 @@ El HEAD de referencia incorpora PR #496, #497, #498 y #499. La última integraci
 
 El bootstrap y la verificación de identidades son read-only: no crean automáticamente `CajaActual` ni `TpvSandboxIdentities`. La presemilla manual requiere una caja con `_id=SINGLE_ITEM_ID`, `singletonKey=CAJA_PRINCIPAL`, `cashRegisterStatus=CERRADA`, `snapshotSource=TPV_SANDBOX_INITIALIZED`, `traceId=TPVSANDBOX-DEV-20261120-01`, `sequenceCounters` como objeto y `conceptOperations.tpvSandbox.sandboxRunId` igual al run ID; más las seis identidades anteriores. No ejecutar la presemilla hasta confirmar el CMS Sandbox en el Editor.
 
-Esta rama añade un preflight read-only común antes de leer o escribir locks en `ControlOperativo`: debe existir `CajaActual` y cumplir el marcador/run ID permitido antes de adquirir cualquier lock de sesión o devolución. La prueba contractual correspondiente se incorpora a la suite. Está pendiente de CI y merge; no es todavía código integrado en `main`.
+PR #500 integrada en main (`6da7cdf0d815ad2e1833f5bd56b5950aff2afb3e`) añade un preflight read-only común antes de leer o escribir locks en `ControlOperativo`: debe existir `CajaActual` y cumplir el marcador/run ID permitido antes de adquirir cualquier lock de sesión o devolución. La prueba contractual correspondiente pasó CI pre-merge; CI post-merge queda pendiente al corte de este addendum.
 
 No hay evidencia de Wix Preview E2E, runtime publicado, permisos efectivos por rol ni sincronización del código Editor/Git. El sitio Wix se observó en Draft. Mantener NO-GO de publicación.
+
+## Addendum posterior a PR #500 — 2026-11-20
+
+PR #500 está fusionada en `main`: commit `6da7cdf0d815ad2e1833f5bd56b5950aff2afb3e`. La corrección consolida el helper `_ensureCajaActualForSandbox()` para validar existencia y marcador/run ID de `CajaActual` y ejecuta ese preflight antes de cualquier lectura/escritura de locks en `ControlOperativo`. Se añade una prueba contractual específica.
+
+Validación pre-merge del HEAD `306816dff20d62e4ec3fda87e25fb050c155bb96`: Layer 1 28 suites/339 tests PASS; Layer 2 19 suites/268 tests PASS; suite completa 75 suites/706 tests PASS; contratos Wix SDK, eCommerce Order Transactions, TPV Catalog y ESLint PASS; Gitleaks PASS (runs `44781808680` y `44781808524`). CI post-merge para `6da7cdf0...` está en curso en los runs `44781982497` y `44781982392`; no declararlo aprobado hasta que ambos finalicen SUCCESS.
+
+La corrección es una barrera de código por estado de datos; no identifica de forma contractual Preview frente a Published. No equivale a prueba de aislamiento runtime ni a aceptación E2E. Wix Preview, prueba negativa Published, concurrencia H-01, permisos efectivos, efectos externos, comparación LIVE antes/después y reset preproducción siguen pendientes. Sitio Wix observado en Draft. **NO-GO de publicación.**
