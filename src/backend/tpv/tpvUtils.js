@@ -3,7 +3,10 @@ import { TPV_QA_RUNTIME_POLICY } from "backend/internalConfig";
 
 const PAYMENT_METHODS = Object.freeze(["EFECTIVO", "TARJETA", "BIZUM", "OTROS"]);
 export function assertTpvQaEnabled() {
-    if (!TPV_QA_RUNTIME_POLICY.ENABLED ||
+    if (TPV_QA_RUNTIME_POLICY.ENABLED !== true) {
+        throw new Error("TPV_QA_DISABLED_UNTIL_SANDBOX_ISOLATION");
+    }
+    if (
         TPV_QA_RUNTIME_POLICY.ENVIRONMENT !== "SANDBOX" ||
         TPV_QA_RUNTIME_POLICY.SYNTHETIC_ONLY !== true ||
         TPV_QA_RUNTIME_POLICY.REAL_PAYMENTS_ENABLED !== false ||
