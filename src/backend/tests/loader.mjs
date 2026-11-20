@@ -1087,7 +1087,7 @@ export async function load(url, context, nextLoad) {
     // production code still imports the Wix module.
     return {
       format: 'module',
-      source: 'export const fetch = (...args) => globalThis.fetch(...args);\\nexport default fetch;\\n',
+      source: 'export const fetch = (...args) => globalThis.fetch(...args);\nexport default fetch;\n',
       shortCircuit: true,
     };
   }
