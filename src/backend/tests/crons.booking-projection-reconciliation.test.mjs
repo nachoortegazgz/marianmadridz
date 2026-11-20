@@ -172,7 +172,7 @@ test("CRON-BOOKING-PROJECTION-01 projects only confirmed unpaid bookings with co
 
   const alerts = controls.filter(row => row.eventType);
   assert.equal(alerts.length, 3);
-  assert.ok(alerts.some(row => row.alertType === "BOOKING_PROJECTION_RECONCILIATION_REQUIRED"));
+  assert.ok(alerts.some(row => row.eventType === "BOOKING_PROJECTION_RECONCILIATION_REQUIRED"));
   assert.ok(alerts.some(row => row.alertType === "BOOKING_PAID_PROJECTION_REVIEW_REQUIRED"));
   assert.ok(alerts.some(row => row.alertType === "CANCELED_PAID_BOOKING_FINANCIAL_REVIEW_REQUIRED"));
 
