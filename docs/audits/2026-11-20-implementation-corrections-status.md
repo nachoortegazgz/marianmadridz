@@ -21,7 +21,7 @@ No se ha añadido `@wix/crm` a `package.json` porque el lockfile contiene 443 pa
 - Se conserva intacta la lógica de timeout, circuit breaker, secretos, validación de respuesta y manejo de errores.
 - No se ha invocado el endpoint de firma ni se han realizado operaciones fiscales.
 
-**Estado:** código corregido; prueba runtime del firmador pendiente.
+**Estado:** import corregido y harness offline actualizado para exponer el export nombrado `fetch` de `wix-fetch`. La primera ejecución de CI detectó que el mock genérico del loader no exportaba nombres; el fallo era del harness, no del contrato Wix. Se añade un mock específico de `wix-fetch` basado en `globalThis.fetch` de Node exclusivamente para pruebas offline. Prueba de invocación real del firmador pendiente.
 
 ## 3. Correcciones no aplicadas y motivo
 
@@ -59,14 +59,14 @@ No se ha añadido `@wix/crm` a `package.json` porque el lockfile contiene 443 pa
 - Cambio C2 aplicado mediante actualización de blob completo de `cajas.web.js`; el resto del archivo se conserva.
 - Wix Site Context consultado: sitio Marian Madrid, Editor clásico, Velo habilitado, estado Draft, Stores Catalog V3, Bookings y Gift Cards instalados.
 - Documentación oficial Wix consultada: Wix Fetch para Velo recomienda el import explícito desde `wix-fetch`.
-- No se ejecutó `npm ci`, tests, lint ni Wix Preview en esta sesión. La validación automática queda delegada al CI de la PR.
+- CI inicial ejecutado en Node 24.22.1: `npm ci`, auditoría de dependencias, contratos SDK y ESLint pasaron; Layer 1 falló por ausencia del export nombrado en el mock genérico de `wix-fetch` (6 suites no llegaron a instanciar). Se corrigió el loader de pruebas en un commit posterior; CI debe repetirse para confirmar la reparación. No se ejecutó Wix Preview ni runtime del firmador.
 - No se hicieron escrituras en Wix CMS, no se modificaron datos LIVE y no se publicó.
 
 ## 6. Métrica de implementación
 
 Métrica directa sobre las 11 correcciones C1–C11:
 
-- Aplicadas en código: **1/11 = 9,1%** (C2).
+- Aplicadas en código: **1/11 = 9,1%** (C2; incluye adaptación del harness offline para el import oficial).
 - Sin cambio porque el requisito ya está cubierto por configuración existente: **1/11 = 9,1%** (C3, Node 24.22.1 fijado en CI; sujeto a CI candidato).
 - Pendientes/bloqueadas o deliberadamente conservadas: **9/11 = 81,8%**.
 
@@ -82,4 +82,4 @@ No se declara un porcentaje global de despliegue: D1–D4 y las tareas P3 requie
 6. Verificar bindings HTML y scheduler en Wix Editor antes de retirar o cablear consumidores.
 7. Ejecutar smoke Sandbox con evidencia y comparar LIVE antes/después.
 
-**Conclusión:** C2 queda corregida en código. No hay base suficiente para declarar resueltos C1 ni el resto de bloqueos de despliegue. Se mantiene NO-GO para publicación y para activar writers operativos/fiscales/laborales.
+**Conclusión:** C2 está corregida en el backend y se ha corregido el mock offline que impedía cargar el módulo. La validación CI posterior al cambio sigue pendiente. No hay base suficiente para declarar resueltos C1 ni el resto de bloqueos de despliegue. Se mantiene NO-GO para publicación y para activar writers operativos/fiscales/laborales.
