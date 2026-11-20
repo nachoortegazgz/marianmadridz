@@ -1,7 +1,8 @@
 import { Permissions, webMethod } from "wix-web-module";
 import { requireAdmin, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
-import { TPV_QA_COLLECTIONS, TPV_QA_FIXTURES, TPV_QA_RUNTIME_POLICY } from "backend/internalConfig";
+import { TPV_QA_COLLECTIONS, TPV_QA_IDENTITY_TYPES, TPV_QA_RUNTIME_POLICY } from "backend/internalConfig";
+import { listTpvSandboxIdentities, getTpvSandboxIdentity } from "backend/tpv/tpvSandboxIdentities";
 import { validateSaleDraft } from "backend/tpv/tpvValidation";
 import { appendQaAudit, insertQaEvent, latestOpenQaSession, withQaSessionLock } from "backend/tpv/tpvQaRepository";
 import { assertTpvQaEnabled, makeQaId, normalizeClientIdempotencyKey } from "backend/tpv/tpvUtils";
@@ -67,10 +68,12 @@ export const registrarVentaQA = webMethod(
             const customerContactId = String(input.customerContactId || "").trim();
             const bookingId = String(input.bookingId || "").trim();
             if (bookingId) throw new Error("TPV_QA_BOOKINGS_DISABLED");
-            if (customerContactId && customerContactId !== TPV_QA_FIXTURES.CUSTOMER.ID) {
-                throw new Error("TPV_QA_CUSTOMER_NOT_ALLOWED");
-            }
-            const allowedProfessionalIds = new Set(TPV_QA_FIXTURES.STAFF.map((item) => item.ID));
+            const customer = customerContactId
+                ? await getTpvSandboxIdentity(customerContactId, TPV_QA_IDENTITY_TYPES.CUSTOMER)
+                : null;
+            if (customerContactId && !customer) throw new Error("TPV_QA_CUSTOMER_NOT_ALLOWED");
+            const staffIdentities = await listTpvSandboxIdentities(TPV_QA_IDENTITY_TYPES.STAFF);
+            const allowedProfessionalIds = new Set(staffIdentities.map((item) => item.identityId));
             const requestedProfessionalId = String(input.profesionalId || "").trim();
             if (requestedProfessionalId && !allowedProfessionalIds.has(requestedProfessionalId)) {
                 throw new Error("TPV_QA_STAFF_NOT_ALLOWED");
@@ -78,7 +81,6 @@ export const registrarVentaQA = webMethod(
             if (sale.lineas.some((line) => line.profesionalId && !allowedProfessionalIds.has(line.profesionalId))) {
                 throw new Error("TPV_QA_STAFF_NOT_ALLOWED");
             }
-            const customer = customerContactId ? TPV_QA_FIXTURES.CUSTOMER : null;
 
             return await withQaSessionLock(session.sessionId, traceId, async () => {
                 const activeSession = await latestOpenQaSession();
@@ -93,8 +95,8 @@ export const registrarVentaQA = webMethod(
                 saleId,
                 ticketId: saleId,
                 professionalId: requestedProfessionalId || null,
-                customerContactId: customer?.ID || null,
-                customerLabel: customer?.DISPLAY_NAME || "CLIENTE ANONIMO QA",
+                customerContactId: customer?.identityId || null,
+                customerLabel: customer?.displayName || "CLIENTE ANONIMO QA",
                 bookingId: null,
                 bookingStatus: null,
                 bookingPaymentStatus: null,
