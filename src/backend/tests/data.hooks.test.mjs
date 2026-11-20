@@ -47,6 +47,12 @@ test('HOOK-CITAS-01 validates canonical enums, traceId and pairToken', () => {
     bookingType: 'SIMPLE',
     bookingStatus: 'PENDING',
     paymentStatus: 'NOT_PAID',
+    serviceId: '33333333-3333-4333-8333-333333333333',
+    resourceId: '44444444-4444-4444-8444-444444444444',
+    slotStart: new Date('2026-11-12T08:30:00.000Z'),
+    slotEnd: new Date('2026-11-12T09:00:00.000Z'),
+    totalAmount: 100,
+    dateYmd: '2026-11-12',
     traceId: 'trace-citas-001',
   };
   assert.doesNotThrow(() => H.CitasF2_beforeInsert({ ...valid }));
@@ -70,6 +76,10 @@ test('HOOK-CMS-DATETIME-01 normalizes all CitasF2 DateTime fields to Date object
     bookingType: 'SIMPLE',
     bookingStatus: 'PENDING',
     paymentStatus: 'NOT_PAID',
+    serviceId: '33333333-3333-4333-8333-333333333333',
+    resourceId: '44444444-4444-4444-8444-444444444444',
+    totalAmount: 100,
+    dateYmd: '2026-11-12',
     traceId: 'trace-citas-datetime',
     slotStart: '2026-11-12T08:30:00.000Z',
     slotEnd: '2026-11-12T09:00:00.000Z',
