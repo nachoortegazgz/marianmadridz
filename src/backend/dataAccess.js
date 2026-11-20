@@ -14,6 +14,10 @@ import { BUSINESS_COLLECTIONS } from "backend/internalConfig";
 import {
     assertControlOperativo,
     assertCanonicalControlFields,
+    assertCitasF2Insert,
+    assertRegistrosHorariosStaff,
+    assertMapaStaffRecord,
+    assertCajaActualRecord,
     assertHistoricoCierresZ,
     assertMovimientosCajaRequiredFields,
 } from "backend/validation";
@@ -323,6 +327,14 @@ export function insertItem(collection, item) {
     if (collection === BUSINESS_COLLECTIONS.CONTROL_OPERATIVO) {
         assertControlOperativo(item);
         assertCanonicalControlFields(item);
+    } else if (collection === BUSINESS_COLLECTIONS.CITAS_F2) {
+        assertCitasF2Insert(item);
+    } else if (collection === BUSINESS_COLLECTIONS.REGISTROS_HORARIOS_STAFF) {
+        assertRegistrosHorariosStaff(item);
+    } else if (collection === BUSINESS_COLLECTIONS.MAPA_STAFF) {
+        assertMapaStaffRecord(item);
+    } else if (collection === BUSINESS_COLLECTIONS.CAJA_ACTUAL) {
+        assertCajaActualRecord(item);
     } else if (collection === BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA) {
         assertMovimientosCajaRequiredFields(item);
     } else if (collection === BUSINESS_COLLECTIONS.HISTORICO_CIERRES_Z) {
