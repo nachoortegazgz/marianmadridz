@@ -120,3 +120,5 @@ El contexto del widget anuncia `environment: SANDBOX` y `previewOnly: true` úni
 El bootstrap también crea, solo en ese mismo data plane y bajo autorización de administrador, tres clientes y tres profesionales sintéticos (`example.test`). Los IDs son deterministas, las altas son idempotentes y append-only, y las identidades quedan ligadas al `SANDBOX_RUN_ID` activo.
 
 El acceso elevado a `TpvSandboxIdentities` está limitado a altas sintéticas del `SANDBOX_RUN_ID` vigente; la colección permanece append-only. La escritura de fichajes reales continúa cerrada mientras no se validen sus garantías de idempotencia y concurrencia.
+
+La validación de identidades y las pruebas usan `SANDBOX_RUN_ID` como marcador de ejecución; `testRunId` se conserva únicamente como nombre del campo físico CMS de `TpvSandboxIdentities`.
