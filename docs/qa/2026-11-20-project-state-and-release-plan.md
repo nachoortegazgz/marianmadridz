@@ -14,7 +14,8 @@ El propietario declaró que el sitio está en desarrollo y que los registros fis
 
 ## 2. Estado verificado del repositorio
 
-- `main` apuntaba a `1357d770d6b786f6ecdad1c93d4d29002c00c810` al iniciar esta actualización documental.\n- PR #456 integrada: refresco del estado consolidado tras la auditoría CMS (`1357d770d6b786f6ecdad1c93d4d29002c00c810`).
+- `main` apuntaba a `1357d770d6b786f6ecdad1c93d4d29002c00c810` al iniciar esta actualización documental.
+- PR #456 integrada: refresco del estado consolidado tras la auditoría CMS (`1357d770d6b786f6ecdad1c93d4d29002c00c810`).
 - PR #453 integrada: consolidación documental (`9aa92a9ef7408ab9b431694463ca1ffe2dedacfa`).
 - PR #454 integrada: auditoría de productores y bypasses CMS (`06766afbcdf7f8d32d34ccbb3f1ff68a242f8bca`).
 - PR #455 integrada: validación central de `PaquetesGestoria` (`7672bac4b4207ba87c9688fa34f38752a253ae86`).
