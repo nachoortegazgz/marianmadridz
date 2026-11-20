@@ -347,18 +347,23 @@ function getWebMethodSource(source, methodName) {
 }
 
 
-test("Sandbox repository rejects an unmarked CajaActual before any event insert", async () => {
+test("Sandbox bootstrap is read-only and requires pre-seeded Sandbox records", async () => {
     const repository = await readFile(new URL("../tpv/tpvSandboxRepository.js", import.meta.url), "utf8");
     const initializeStart = repository.indexOf("export async function initializeSandboxCaja(");
-    const initializeEnd = repository.indexOf("\nasync function _getCajaActual", initializeStart);
+    const identitiesStart = repository.indexOf("export async function seedSandboxIdentities(");
+    const getCajaStart = repository.indexOf("\\nasync function _getCajaActual", initializeStart);
     assert.notEqual(initializeStart, -1);
-    assert.notEqual(initializeEnd, -1);
-    const initializeBlock = repository.slice(initializeStart, initializeEnd);
-    assert.match(initializeBlock, /if \(existing\) \{[\s\S]*?assertSandboxCajaWritable\(existing, \{ allowBootstrap: true \}\)/);
-    assert.ok(initializeBlock.indexOf("assertSandboxCajaWritable(existing") < initializeBlock.indexOf("await insertItem("));
+    assert.notEqual(identitiesStart, -1);
+    assert.notEqual(getCajaStart, -1);
+    const initializeBlock = repository.slice(initializeStart, getCajaStart);
+    const identitiesBlock = repository.slice(identitiesStart, initializeStart);
+    assert.match(initializeBlock, /if \(!existing\) throw new Error\("TPV_SANDBOX_CASH_REGISTER_NOT_PRESEEDED"\)/);
+    assert.doesNotMatch(initializeBlock, /insertItem\(|authorizeCreate/);
+    assert.match(identitiesBlock, /TPV_SANDBOX_IDENTITIES_NOT_PRESEEDED/);
+    assert.doesNotMatch(identitiesBlock, /insertItem\(|authorizeCreate/);
 
     const insertStart = repository.indexOf("export async function insertSandboxEvent(");
-    const insertEnd = repository.indexOf("\nexport async function querySandboxRecords", insertStart);
+    const insertEnd = repository.indexOf("\\nexport async function querySandboxRecords", insertStart);
     assert.notEqual(insertStart, -1);
     assert.notEqual(insertEnd, -1);
     const insertBlock = repository.slice(insertStart, insertEnd);
