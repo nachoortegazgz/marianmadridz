@@ -135,5 +135,33 @@ Revalidar el estado actual de cada issue antes de actualizarla/cerrarla; la list
 - La cabeza final de PR #469 (`55e4094e8b364fafde835a47458a193e3d64e531`) superó ambos workflows: Backend offline quality gates run `44682687922` SUCCESS y Secret scanning run `44682687501` SUCCESS.
 - El merge commit no presenta workflows asociados en la consulta; la evidencia CI corresponde a la cabeza de PR antes del merge.
 - Documentos integrados en main: ADR sección 13, actualización del plan QA y este handoff.
-- No se integró código runtime. No hubo escrituras CMS, cambios de permisos, mutaciones de CajaActual, pagos, ledgers ni publicación.
-- Próximo punto de trabajo: H-01 spike Sandbox/contrato Bulk Patch + hooks; no abrir implementación de writers hasta demostrar el comportamiento.
+- En el corte anterior a PR #472 no se integró código runtime. No hubo escrituras CMS, cambios de permisos, mutaciones de CajaActual, pagos, ledgers ni publicación.
+- Próximo punto de trabajo en ese corte: H-01 spike Sandbox/contrato Bulk Patch + hooks; no abrir implementación de writers hasta demostrar el comportamiento.
+
+## 10. Revalidación TPV Sandbox — 20-11-2026
+
+### Baseline GitHub
+- PR #472 integrada en `main`: `6a31adf30774479dd1c0c6417187860726ea4f08`.
+- Cambio: `TPV_QA_RUNTIME_POLICY.ENVIRONMENT = "SANDBOX"`; `assertTpvQaEnabled()` valida esa constante.
+- Tests `Backend offline quality gates` y `Secret scanning` del head de PR #472 finalizaron SUCCESS.
+- No hubo escrituras Wix, cambios de colecciones, datos, permisos ni sincronización Sandbox → Live.
+
+### Contrato Wix Preview/Sandbox
+- Site context confirma Wix Editor clásico y Velo habilitado.
+- Documentación oficial Wix Help Center, actualizada 2026-11-12, confirma que Sandbox es opcional y está deshabilitado por defecto en sitios nuevos. Preview solo utiliza la copia Sandbox cuando el toggle CMS está habilitado.
+- La API de gestión/metadata consultada no demuestra el estado actual del toggle de este sitio.
+- Antes de persistir pruebas TPV, el propietario debe habilitar Sandbox en CMS > Your Collections > Manage > More Actions > Advanced Settings > Sandbox y confirmar que las colecciones muestran la pestaña "Sandbox Collection".
+- Prohibido sincronizar Sandbox → Live durante QA.
+
+### Estado TPV
+- Sin colecciones nuevas; se reutilizan las copias Sandbox de `CajaActual`, `MovimientosCaja` y `ControlOperativo`.
+- El backend mantiene los marcadores `TPV_QA_SANDBOX_INITIALIZED` / `TPV_QA_SYNTHETIC`, `testRunId` y los controles de autorización.
+- `withQaSessionLock` realiza preflight de `CajaActual` antes de escribir locks en `ControlOperativo`; `insertQaEvent` comprueba el marcador antes de persistir eventos.
+- `registerManualTransaction()` no se invoca desde la ruta QA; los writers fiscales y contables continúan deshabilitados.
+- Actor fijo `QA_ACTOR` sigue pendiente de sustituir por identidad autenticada de miembro/staff.
+- Wix Preview/Local Editor E2E, prueba de invocación directa de WebMethods desde Live, concurrencia/idempotencia y conciliación siguen pendientes. CI offline no acredita estos contratos.
+
+### Release gate
+- Issue #471 permanece abierta.
+- Issue #210 permanece abierta: `main` sigue sin protección/ruleset ni checks obligatorios.
+- Producción continúa **NO-GO**. No publicar ni sincronizar datos hasta completar Sandbox, E2E, H-01, conciliaciones P0, revisión fiscal/legal y demás gates del informe #434.
