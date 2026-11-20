@@ -1888,7 +1888,9 @@ async function _resolveVerifiedOrderChannel(order, orderId, traceId) {
         if (!nativeOrder || nativeOrderId !== orderId) {
             throw new Error("ECOM_NATIVE_ORDER_CHANNEL_IDENTITY_UNVERIFIED");
         }
-        resolvedOrder = { ...resolvedOrder, ...nativeOrder };
+        // The event carries the current payment/refund state; enrich only the
+        // missing channel from the authoritative order read, not stale order fields.
+        resolvedOrder = { ...resolvedOrder, channelInfo: nativeOrder?.channelInfo };
         channelType = _safeTrim(nativeOrder?.channelInfo?.type).toUpperCase();
     }
     return { order: resolvedOrder, channelType: channelType || "UNVERIFIED" };
