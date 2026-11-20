@@ -1965,7 +1965,7 @@ async function _handleWixEcom_onOrderPaymentStatusUpdated(eventPayload) {
             event?.actionEvent?.body?.orderId ||
             ""
         ).trim();
-        const order = {
+        let order = {
             ...orderSource,
             _id: orderSource?._id || orderSource?.id || orderId,
         };
