@@ -18,6 +18,8 @@ import {
     makeSyntheticPayload,
     makeSandboxRefundLockId,
     makeSandboxSessionLockId,
+    makeSandboxTransactionId,
+    makeLegacySandboxTransactionId,
 } from "backend/tpv/tpvUtils";
 
 const ALLOWED_SANDBOX_COLLECTIONS = new Set(Object.values(TPV_SANDBOX_COLLECTIONS));
@@ -234,8 +236,8 @@ function _fingerprintOf(record) {
     });
 }
 
-function _testTransactionId(key) {
-    return "TPVSANDBOX_" + createHash("sha256").update(SANDBOX_RUN_ID + ":" + key).digest("hex");
+function _testTransactionId(collection, key) {
+    return makeSandboxTransactionId(collection, key);
 }
 
 function _eventAmount(record) {
@@ -470,18 +472,26 @@ async function findByIdempotencyKey(collection, key) {
     }
     const movementType = TPV_SANDBOX_EVENT_MOVEMENT_TYPES[collection];
     if (!movementType) throw new Error("TPV_SANDBOX_COLLECTION_NOT_ALLOWED");
-    const result = await queryItems({
-        dataCollectionId: BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA,
-        filter: wql.and(
-            wql.eq("recordSource", SANDBOX_LEDGER_SOURCE),
-            wql.eq("movementType", movementType),
-            wql.eq("transactionId", _testTransactionId(key))
-        ),
-        limit: 2,
-        consistency: CONSISTENCY.STRONG,
-    });
-    if (result.items.length > 1) throw new Error("TPV_SANDBOX_IDEMPOTENCY_INDEX_VIOLATION");
-    return result.items[0] ? _virtualRecord(result.items[0]) : null;
+    const transactionIds = [
+        _testTransactionId(collection, key),
+        makeLegacySandboxTransactionId(key),
+    ];
+    const uniqueTransactionIds = [...new Set(transactionIds)];
+    for (const transactionId of uniqueTransactionIds) {
+        const result = await queryItems({
+            dataCollectionId: BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA,
+            filter: wql.and(
+                wql.eq("recordSource", SANDBOX_LEDGER_SOURCE),
+                wql.eq("movementType", movementType),
+                wql.eq("transactionId", transactionId)
+            ),
+            limit: 2,
+            consistency: CONSISTENCY.STRONG,
+        });
+        if (result.items.length > 1) throw new Error("TPV_SANDBOX_IDEMPOTENCY_INDEX_VIOLATION");
+        if (result.items[0]) return _virtualRecord(result.items[0]);
+    }
+    return null;
 }
 
 function assertSameRequest(existing, fingerprint) {
@@ -499,7 +509,7 @@ function _buildSyntheticLedgerItem(collection, key, record, fingerprint) {
     const timestamp = now instanceof Date ? now : new Date(now);
     if (Number.isNaN(timestamp.getTime())) throw new Error("TPV_SANDBOX_RECORD_TIMESTAMP_INVALID");
     const dateYmd = timestamp.toLocaleDateString("en-CA", { timeZone: TPV_SANDBOX_RUNTIME_POLICY.TIME_ZONE });
-    const transactionId = _testTransactionId(key);
+    const transactionId = _testTransactionId(collection, key);
     const amount = _eventAmount(record);
     const traceId = "TPVSANDBOX:" + SANDBOX_RUN_ID + ":" + String(record.sessionId || record.payload?.sessionId || "GLOBAL");
     const envelope = {
