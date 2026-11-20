@@ -354,7 +354,7 @@ test("Sandbox repository rejects an unmarked CajaActual before any event insert"
     assert.notEqual(initializeStart, -1);
     assert.notEqual(initializeEnd, -1);
     const initializeBlock = repository.slice(initializeStart, initializeEnd);
-    assert.match(initializeBlock, /if \\(existing\\) \\{[\\s\\S]*?assertSandboxCajaWritable\\(existing, \\{ allowBootstrap: true \\}\\)/);
+    assert.match(initializeBlock, /if \(existing\) \{[\s\S]*?assertSandboxCajaWritable\(existing, \{ allowBootstrap: true \}\)/);
     assert.ok(initializeBlock.indexOf("assertSandboxCajaWritable(existing") < initializeBlock.indexOf("await insertItem("));
 
     const insertStart = repository.indexOf("export async function insertSandboxEvent(");
@@ -362,6 +362,6 @@ test("Sandbox repository rejects an unmarked CajaActual before any event insert"
     assert.notEqual(insertStart, -1);
     assert.notEqual(insertEnd, -1);
     const insertBlock = repository.slice(insertStart, insertEnd);
-    assert.match(insertBlock, /const caja = await _getCajaActual\\(\\);\\s*assertSandboxCajaWritable\\(caja\\);/);
+    assert.match(insertBlock, /const caja = await _getCajaActual\(\);\s*assertSandboxCajaWritable\(caja\);/);
     assert.ok(insertBlock.indexOf("assertSandboxCajaWritable(caja)") < insertBlock.indexOf("await insertItem("));
 });
