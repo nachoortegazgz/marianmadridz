@@ -49,9 +49,9 @@ export const STAFF_CLOCKING_CONFIG = Object.freeze({
   ADJUSTMENTS_ENABLED: false,
 });
 
-// No global CMS mutation override is exported. Every mutation must pass the
-// collection-specific policy; fiscal, accounting, labor and webhook ledgers
-// remain append-only in every environment.
+// No global CMS mutation override is exported. Only records carrying the exact
+// active synthetic TPV test-run marker may be edited; all other fiscal,
+// accounting, labor and webhook records remain append-only.
 
 // Fail-closed real-operation defaults until fiscal, accounting and runtime E2E
 // are certified. Simulation records are denied unless a trusted test harness
@@ -62,6 +62,8 @@ export const FISCAL_RUNTIME_POLICY = Object.freeze({
   ALLOW_SIMULATION_RECORDS: false,
 });
 
+// Logical event types only; these values are NOT Wix CMS collection IDs.
+// The repository adapter persists them in MovimientosCaja; sessions use CajaActual.
 export const TPV_QA_COLLECTIONS = Object.freeze({
   VENTAS: "QA_LOGICAL_VENTAS",
   VENTA_LINEAS: "QA_LOGICAL_VENTA_LINEAS",
@@ -72,6 +74,17 @@ export const TPV_QA_COLLECTIONS = Object.freeze({
   TICKET_X: "QA_LOGICAL_TICKET_X",
   TICKET_Z: "QA_LOGICAL_TICKET_Z",
   AUDITORIA: "QA_LOGICAL_AUDITORIA",
+});
+
+export const TPV_QA_EVENT_MOVEMENT_TYPES = Object.freeze({
+  [TPV_QA_COLLECTIONS.VENTAS]: "SIMULATED_TPV_SALE",
+  [TPV_QA_COLLECTIONS.VENTA_LINEAS]: "SIMULATED_TPV_SALE_LINE",
+  [TPV_QA_COLLECTIONS.PAGOS]: "SIMULATED_TPV_PAYMENT",
+  [TPV_QA_COLLECTIONS.REEMBOLSOS]: "SIMULATED_TPV_REFUND",
+  [TPV_QA_COLLECTIONS.MOVIMIENTOS_CAJA]: "SIMULATED_TPV_CASH_MOVEMENT",
+  [TPV_QA_COLLECTIONS.TICKET_X]: "SIMULATED_TPV_TICKET_X",
+  [TPV_QA_COLLECTIONS.TICKET_Z]: "SIMULATED_TPV_TICKET_Z",
+  [TPV_QA_COLLECTIONS.AUDITORIA]: "SIMULATED_TPV_AUDIT",
 });
 
 export const TPV_QA_RUNTIME_POLICY = Object.freeze({
@@ -601,6 +614,7 @@ export const DATA_ACCESS_WRITE_POLICY = Object.freeze({
     BUSINESS_COLLECTIONS.CAJA_ACTUAL,
   ]),
   removeCollections: Object.freeze([
+    BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA,
     BUSINESS_COLLECTIONS.CONTROL_OPERATIVO,
   ]),
   bulkRemoveCollections: Object.freeze([BUSINESS_COLLECTIONS.CONTROL_OPERATIVO]),

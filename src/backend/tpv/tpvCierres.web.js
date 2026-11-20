@@ -48,7 +48,7 @@ export const generarTicketXQA = webMethod(
     async (input = {}) => {
         let persisted = false;
         const traceId = makeTraceId("tpv-qa-ticket-x");
-        await requireCajero(traceId);
+        await requireAdmin(traceId);
         assertTpvQaEnabled();
         try {
             const key = normalizeClientIdempotencyKey(input.idempotencyKey);

@@ -195,15 +195,25 @@ test("TPV WebMethods isolate synthetic QA writes from operational ledgers", asyn
     assert.match(repository, /requestFingerprint/);
     assert.match(repository, /TPV_QA_COLLECTIONS/);
     assert.match(repository, /CONTROL_TYPE\.TPV_QA_SESSION_LOCK/);
-    assert.doesNotMatch(repository, /updateItem\(|removeById\(|bulkUpdate\(|bulkRemove\(/);
+    assert.match(repository, /updateItem\(BUSINESS_COLLECTIONS\.CAJA_ACTUAL/);
+    const cashier = await source("tpv/tpvCaja.web.js");
+    assert.match(cashier, /withQaSessionLock\(sessionId, traceId/);
+    assert.doesNotMatch(repository, /removeById\(|bulkUpdate\(|bulkRemove\(/);
 
     const policy = await source("dataAccessPolicy.js");
     const config = await source("internalConfig.js");
-    assert.match(policy, /TPV_QA_COLLECTIONS/);
+    assert.match(policy, /TPV_QA_RUNTIME_POLICY/);
+    assert.match(policy, /TPV_QA_SYNTHETIC/);
     assert.match(policy, /APPEND_ONLY_COLLECTIONS/);
     assert.match(config, /REAL_PAYMENTS_ENABLED: false/);
     assert.match(config, /FISCAL_WRITES_ENABLED: false/);
     assert.match(config, /SYNTHETIC_ONLY: true/);
+    assert.match(await readFile(new URL("../public/tpvPageController.js", backendRoot), "utf8"), /wixWindowFrontend\.viewMode !== "Preview"/);
+    assert.match(config, /TEST_RUN_ID: "TPVQA-DEV-/);
+    assert.match(config, /TPV_QA_EVENT_MOVEMENT_TYPES/);
+    for (const writer of [cash, movements, sales, closures]) {
+        assert.match(writer, /requireAdmin/);
+    }
 });
 
 test("TPV catalog reader uses native Bookings SDK and does not expose staff contact details", async () => {
@@ -339,4 +349,25 @@ test("TPV public utility module exposes only the configuration contract consumed
     assert.doesNotMatch(utilities, /validarImportesTPVQA|normalizePaymentMethod|toMinorUnits/);
     assert.match(controller, /obtenerConfiguracionTPVQA/);
     assert.doesNotMatch(controller, /validarImportesTPVQA/);
+});
+
+test("TPV synthetic persistence maps logical events to CajaActual and MovimientosCaja without fiscal side effects", async () => {
+    const repository = await source("tpv/tpvQaRepository.js");
+    const config = await source("internalConfig.js");
+    assert.match(repository, /QA_LEDGER_SOURCE = "TPV_QA_SYNTHETIC"/);
+    assert.match(config, /SIMULATED_TPV_/);
+    assert.match(repository, /sequenceNumber: 0/);
+    assert.match(repository, /cmsMovementType: item\.movementType/);
+    assert.doesNotMatch(repository, /movementType: item\.movementType/);
+    assert.match(repository, /previousRecordHash: QA_GENESIS_HASH/);
+    assert.match(repository, /createHash\("sha256"\)/);
+    assert.match(repository, /cashRegisterStatus: "SIMULACION"/);
+    assert.match(repository, /_ensureCajaActualForQa/);
+    assert.match(repository, /TPV_QA_SANDBOX_INITIALIZED/);
+    assert.match(repository, /payloadFiscal\?\.testRunId === QA_TEST_RUN_ID/);
+    assert.match(repository, /MAX_QA_PROJECTION_EVENTS = 1000/);
+    assert.match(repository, /conceptOperations\?\.tpvQa\?\.sessionId/);
+    assert.match(repository, /updateItem\(BUSINESS_COLLECTIONS\.CAJA_ACTUAL/);
+    assert.match(config, /TEST_RUN_ID: "TPVQA-DEV-/);
+    assert.doesNotMatch(repository, /registerManualTransaction|signFiscal|sendToAeat|createPayment|capturePayment|processRefund/i);
 });

@@ -470,3 +470,24 @@ La regla vigente del proyecto mantiene los ledgers fiscales, contables y laboral
 Asimismo, cualquier declaración histórica de publicación en Wix queda como declaración del propietario hasta disponer de evidencia de publicación y read-back del código. `GetSiteContext` del 2026-11-17 devuelve `Draft`; no se ha ejecutado Preview ni Publish ni se ha demostrado el SHA del código instalado.
 
 **Decisión:** NO-GO para despliegue hasta cerrar issues #415/#416, configurar protección de `main`, superar runtime Wix y certificar fiscalidad.
+
+
+## TEC-042 — Persistencia sintética TPV acotada al entorno Preview (2026-11-20)
+
+**Decisión:** el propietario confirma que el sitio `188bed94-177c-4bc9-a9f0-35080d874f3e` está en desarrollo/pruebas, que los registros contables y fiscales actuales son sintéticos/editables y que el sitio se reseteará antes del despliegue real. Se autoriza ejecutar pruebas persistentes de TPV con registros sintéticos en las colecciones CMS existentes, sin crear colecciones `TPV_QA_*`.
+
+**Alcance técnico limitado:**
+- `CajaActual` conserva el singleton/proyección y se marca `cashRegisterStatus=SIMULACION` y `snapshotSource=TPV_QA_SYNTHETIC` durante el test-run.
+- `MovimientosCaja` admite únicamente filas `recordSource=TPV_QA_SYNTHETIC`, `movementType=SIMULATED_TPV_*`, `testRunId` exacto, hash QA independiente y `sequenceNumber=0`. Estas filas no consumen secuencia fiscal, no usan firma/QR AEAT y quedan excluidas de los lectores y agregadores fiscales.
+- Update/remove se permiten solo sobre filas sintéticas que cumplan el marcador y pertenezcan al test-run activo. El resto de `MovimientosCaja` y todos los demás ledgers mantienen TEC-038/TEC-041 (append-only).
+- WebMethods de escritura requieren ADMIN. El widget solo habilita operaciones en Preview; fuera de Preview bloquea los mensajes QA.
+- No se permiten pagos/capturas/reembolsos reales, mutaciones Wix Bookings/Stores/Orders/Gift Cards, inventario, AEAT, firmador fiscal, notificaciones ni hardware.
+
+**Precondiciones de prueba:** Sandbox CMS debe estar habilitado y validado desde Wix Preview/Local Editor. La API de gestión no acredita ni selecciona Sandbox. Se preservan los datos existentes sin marcador hasta que se identifiquen dentro de un test-run.
+
+**Reversión/preproducción:** conservar evidencias hasta cerrar QA; retirar los datos de test-run por marcador/ID o mediante el reset integral aprobado; después restablecer el bloqueo de update/remove para `MovimientosCaja` y verificar append-only antes de cualquier despliegue real. Esta decisión no habilita publicación ni cambia los gates fiscales reales.
+
+**Estado de implementación:** PR #439 en revisión; CI offline y Preview/Sandbox E2E pendientes de cierre. No se han escrito datos CMS ni desplegado este cambio.
+
+
+**Edición controlada:** el dato lógico editable reside en `payloadFiscal.qaRecord`. El hook `MovimientosCaja_beforeUpdate` protege identidad, testRunId, tipo lógico y secuencia; recalcula los campos derivados y la huella SHA-256 QA al guardar. No se editan manualmente los marcadores ni la cadena fiscal.

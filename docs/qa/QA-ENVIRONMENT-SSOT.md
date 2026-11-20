@@ -88,3 +88,11 @@ Evidencia ampliada: `docs/audits/2026-11-16-tpv-qa-cms-readonly-verification.md`
 ### Cuotas CMS y separación LIVE/SANDBOX — 2026-11-16 23:09 Europe/Madrid
 
 Get Site Data Usage con `consistentRead=true` confirma: límite de almacenamiento 10 GiB; límite de elementos 4.000 por entorno; 21 colecciones de un máximo de 1.000; LIVE 201 elementos / 265.822 bytes; SANDBOX 0 elementos / 0 bytes. Las nueve colecciones `TPV_QA_*` tienen 0 elementos tanto en LIVE como en SANDBOX. LIVE representa aproximadamente el 5,03 % del límite de elementos, por lo que no hay proximidad al umbral de cuota. Wix documenta que SANDBOX es la copia separada usada por el Editor y Preview, que el límite de elementos es independiente por entorno y que el almacenamiento se comparte. En consecuencia, una prueba de persistencia TPV controlada deberá ejecutarse desde Wix Preview para escribir solo en SANDBOX; no insertar directamente por REST en LIVE. No se harán cargas masivas.
+
+
+## Addendum 2026-11-20 — ejecución persistente TPV
+
+El propietario confirma expresamente que todos los registros contables/fiscales actuales son sintéticos y editables y que el sitio se reseteará antes del despliegue real. Se autoriza el test-run TPV persistente sobre `CajaActual` y `MovimientosCaja`, limitado por marcador `TPV_QA_SYNTHETIC`, prefijo `SIMULATED_TPV_*` y `testRunId` del backend. La implementación exige ADMIN y bloquea operaciones desde la vista publicada (wixWindowFrontend.viewMode distinto de Preview). La prueba debe ejecutarse en Preview con Sandbox CMS habilitado. No se autorizan efectos en Wix Apps, pagos, firma fiscal, AEAT, comunicaciones ni hardware. Los ledgers ajenos al test-run permanecen protegidos. El reset integral y la restauración de append-only son obligatorios antes del despliegue.
+
+
+**Edición controlada:** el dato lógico editable reside en `payloadFiscal.qaRecord`. El hook `MovimientosCaja_beforeUpdate` protege identidad, testRunId, tipo lógico y secuencia; recalcula los campos derivados y la huella SHA-256 QA al guardar. No se editan manualmente los marcadores ni la cadena fiscal.

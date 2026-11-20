@@ -201,9 +201,12 @@ test('HOOK-CMS-DATETIME-05 normalizes MovimientosCaja DateTime fields only', () 
   }), /DATETIME/);
 });
 
-test('HOOK-CAJA-03 preserves append-only integrity for cash movements', () => {
-  assert.throws(() => H.MovimientosCaja_beforeUpdate({ _id: 'synthetic-caja-1' }), /append-only/);
-  assert.throws(() => H.MovimientosCaja_beforeRemove('synthetic-caja-1'), /Borrado de MovimientosCaja/);
+test('HOOK-CAJA-03 preserves append-only integrity for non-TPV synthetic cash movements', async () => {
+  wixDataMock._reset();
+  const row = { _id: 'cash-movement-real', movementType: 'VENTA', recordSource: 'INTERNAL', traceId: 'real-ledger', sequenceNumber: 1 };
+  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA, [row]);
+  await assert.rejects(() => H.MovimientosCaja_beforeUpdate({ ...row, totalAmount: 99 }), /Modificacion de MovimientosCaja/);
+  await assert.rejects(() => H.MovimientosCaja_beforeRemove(row._id), /Borrado de MovimientosCaja/);
 });
 
 test('HOOK-CAJA-05 rejects write without hash (ledger integrity)', () => {
@@ -543,4 +546,40 @@ test('HOOK-PACKAGE-02 monthly package requires month and forbids quarter', () =>
 test('HOOK-PACKAGE-03 preserves immutable gestoría package snapshots', () => {
   assert.throws(() => H.PaquetesGestoria_beforeUpdate({ _id: 'synthetic-package-1' }), /append-only/);
   assert.throws(() => H.PaquetesGestoria_beforeRemove('synthetic-package-1'), /append-only/);
+});
+
+test('HOOK-CAJA-04 allows edit and removal only for the active synthetic TPV test-run row', async () => {
+  const runId = IC.TPV_QA_RUNTIME_POLICY.TEST_RUN_ID;
+  const row = {
+    _id: 'TPVQA_HOOK_TEST_ROW',
+    hash: 'a'.repeat(64),
+    sequenceNumber: 0,
+    transactionId: 'TPVQA_HOOK_TEST_ROW',
+    traceId: 'TPVQA:' + runId + ':QA-SESSION-TEST',
+    movementType: 'SIMULATED_TPV_PAYMENT',
+    recordSource: 'TPV_QA_SYNTHETIC',
+    payloadFiscal: {
+      testRunId: runId,
+      requestFingerprint: 'f'.repeat(64),
+      logicalCollection: IC.TPV_QA_COLLECTIONS.PAGOS,
+      idempotencyKey: 'QA-PAYMENT-1',
+      qaRecord: { amountMinor: 5000, paymentMethod: 'EFECTIVO' },
+      isSynthetic: true,
+      realPayment: false,
+      externalSideEffects: false,
+    },
+  };
+  wixDataMock._reset();
+  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA, [row]);
+  const updated = await H.MovimientosCaja_beforeUpdate({
+    ...row,
+    payloadFiscal: {
+      ...row.payloadFiscal,
+      qaRecord: { ...row.payloadFiscal.qaRecord, amountMinor: 7500 },
+    },
+  });
+  assert.equal(updated.totalAmount, 75);
+  assert.notEqual(updated.hash, row.hash);
+  assert.equal(updated.sequenceNumber, 0);
+  assert.equal(await H.MovimientosCaja_beforeRemove(row._id), row._id);
 });

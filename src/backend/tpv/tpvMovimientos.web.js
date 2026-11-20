@@ -1,5 +1,5 @@
 import { Permissions, webMethod } from "wix-web-module";
-import { requireAdmin, requireCajero } from "backend/security";
+import { requireAdmin } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { TPV_QA_COLLECTIONS, TPV_QA_RUNTIME_POLICY } from "backend/internalConfig";
 import { insertQaEvent, latestOpenQaSession, withQaSessionLock } from "backend/tpv/tpvQaRepository";
@@ -10,12 +10,11 @@ export const registrarMovimientoCajaQA = webMethod(
     async (input = {}) => {
         let persisted = false;
         const traceId = makeTraceId("tpv-qa-cash-movement");
-        await requireCajero(traceId);
+        await requireAdmin(traceId);
         assertTpvQaEnabled();
         try {
             const movementType = String(input.movementType || "").trim().toUpperCase();
             if (!["ENTRADA", "SALIDA", "RETIRADA"].includes(movementType)) throw new Error("TPV_QA_CASH_MOVEMENT_TYPE_INVALID");
-            if (movementType !== "ENTRADA") await requireAdmin(traceId);
             const session = await latestOpenQaSession();
             if (!session) throw new Error("TPV_QA_SESSION_NOT_OPEN");
 

@@ -1,7 +1,7 @@
 /*
 =============================================================================
 MODULE: backend/data.js
-VERSION: v5016-CANONICAL-READ
+VERSION: v5017-SYNTHETIC-TPV-EDIT
 REPO: https://github.com/nachoortegazgz/marianmadridz.git
 RESPONSIBILITY: Política temporal de mutación del sitio aislado y validación
                 estricta de esquemas CMS.
@@ -9,6 +9,7 @@ STANDARDS: G10 ASCII Strict. Cero suppressAuth. Historical fields are read-only;
 =============================================================================
 */
 
+import { createHash } from "node:crypto";
 import {
     BUSINESS_COLLECTIONS,
     CATALOG_ENTRY_TYPE,
@@ -17,9 +18,11 @@ import {
     normalizeMovementKeys,
     OPERATIONAL_COLLECTIONS,
     TPV_QA_RUNTIME_POLICY,
+    TPV_QA_EVENT_MOVEMENT_TYPES,
 } from "backend/internalConfig";
 import { assertCitasF2, assertControlOperativo, assertCanonicalControlFields, assertRegistrosHorariosStaff, assertMapaStaffRecord, assertCajaActualRecord, isValidNifOrEuVat as _isValidNifOrEuVat } from "backend/validation";
 import { CONSISTENCY, getItem } from "backend/dataAccess";
+import { stableSerialize } from "backend/tpv/tpvUtils";
 
 import { logger } from "backend/logger";
 
@@ -414,6 +417,12 @@ export function MovimientosCaja_beforeInsert(item) {
     if (!ledgerHash) {
         _schemaError("hash obligatorio (cadena SHA-256 de integridad del asiento)");
     }
+    if (item.recordSource === "TPV_QA_SYNTHETIC" ||
+        String(item.movementType || "").startsWith("SIMULATED_TPV_")) {
+        if (!_isCurrentSyntheticTpvRow(item)) {
+            _schemaError("Evento TPV sintético no cumple el contrato del test-run activo.");
+        }
+    }
 
     const taxId = readRecipientTaxId(item);
     if (taxId && !_isValidNifOrEuVat(taxId)) {
@@ -475,22 +484,109 @@ export function MovimientosCaja_beforeInsert(item) {
     return item;
 }
 
-export function MovimientosCaja_beforeUpdate(item, context) {
-    const previous = context?.previous || context?.original || {};
+function _isPlainRecord(value) {
+    return Boolean(value) && typeof value === "object" && !Array.isArray(value) && !(value instanceof Date);
+}
+
+function _isCurrentSyntheticTpvRow(value) {
     const expectedPrefix = "TPVQA:" + TPV_QA_RUNTIME_POLICY.TEST_RUN_ID + ":";
-    const isSyntheticTestRow = (value) =>
-        value?.recordSource === "TPV_QA_SYNTHETIC" &&
+    return value?.recordSource === "TPV_QA_SYNTHETIC" &&
         String(value?.movementType || "").startsWith("SIMULATED_TPV_") &&
+        TPV_QA_EVENT_MOVEMENT_TYPES[value?.payloadFiscal?.logicalCollection] === value.movementType &&
         value?.payloadFiscal?.testRunId === TPV_QA_RUNTIME_POLICY.TEST_RUN_ID &&
         value?.payloadFiscal?.isSynthetic === true &&
         value?.payloadFiscal?.realPayment === false &&
+        value?.payloadFiscal?.externalSideEffects === false &&
+        Boolean(value?.payloadFiscal?.requestFingerprint) &&
+        /^[a-f0-9]{64}$/i.test(String(value?.hash || "")) &&
+        Number(value?.sequenceNumber) === 0 &&
         String(value?.traceId || "").startsWith(expectedPrefix);
-    if (isSyntheticTestRow(item) && isSyntheticTestRow(previous)) return item;
-    _fiscalError("Modificacion de MovimientosCaja prohibida: solo se admite editar un registro TPV QA del test-run activo.");
 }
 
-export function MovimientosCaja_beforeRemove() {
-    _fiscalError("Borrado de MovimientosCaja prohibido por normativa fiscal");
+export async function MovimientosCaja_beforeUpdate(item) {
+    const previous = item?._id
+        ? await getItem(BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA, item._id, CONSISTENCY.STRONG)
+        : null;
+    if (!_isCurrentSyntheticTpvRow(item) || !_isCurrentSyntheticTpvRow(previous)) {
+        _fiscalError("Modificacion de MovimientosCaja prohibida: solo se admite editar un registro TPV QA del test-run activo.");
+    }
+
+    const immutableFields = [
+        "_id", "recordSource", "movementType", "traceId", "transactionId",
+        "sequenceNumber", "previousRecordHash", "schemaVersion",
+        "numSerieFactura", "tipoFactura",
+    ];
+    if (immutableFields.some((field) => item[field] !== previous[field])) {
+        _fiscalError("Identidad del registro TPV QA inmutable.");
+    }
+
+    const envelope = item.payloadFiscal;
+    const previousEnvelope = previous.payloadFiscal;
+    const logicalCollection = envelope?.logicalCollection;
+    if (
+        logicalCollection !== previousEnvelope?.logicalCollection ||
+        envelope?.testRunId !== previousEnvelope?.testRunId ||
+        envelope?.idempotencyKey !== previousEnvelope?.idempotencyKey ||
+        envelope?.isSynthetic !== true ||
+        envelope?.realPayment !== false ||
+        envelope?.externalSideEffects !== false ||
+        item.movementType !== TPV_QA_EVENT_MOVEMENT_TYPES[logicalCollection] ||
+        !_isPlainRecord(envelope?.qaRecord)
+    ) {
+        _fiscalError("Payload lógico TPV QA no editable o incoherente.");
+    }
+
+    const record = envelope.qaRecord;
+    const rawAmountMinor = Number(
+        record.totalMinor || record.amountMinor || record.paidMinor || record.countedCashMinor || 0
+    );
+    if (!Number.isSafeInteger(rawAmountMinor)) {
+        _fiscalError("Importe sintético TPV inválido.");
+    }
+    const timestampValue = record.createdAt || record.generatedAt || record.occurredAt || new Date();
+    const timestamp = timestampValue instanceof Date ? timestampValue : new Date(timestampValue);
+    if (Number.isNaN(timestamp.getTime())) _fiscalError("Fecha sintética TPV inválida.");
+    const dateYmd = timestamp.toLocaleDateString("en-CA", {
+        timeZone: TPV_QA_RUNTIME_POLICY.TIME_ZONE,
+    });
+
+    item.recordTimestamp = timestamp;
+    item.fechaExpedicionFactura = dateYmd;
+    item.fiscalPeriod = dateYmd.slice(0, 7);
+    item.totalAmount = rawAmountMinor / 100;
+    item.amount = rawAmountMinor / 100;
+    item.taxBase = Number(record.taxBaseMinor || 0) / 100;
+    item.taxAmount = Number(record.taxMinor || record.taxAmountMinor || 0) / 100;
+    item.paymentMethod = String(record.paymentMethod || "OTROS").toUpperCase();
+    item.channelType = String(record.channelType || "PRESENCIAL").toUpperCase();
+    item.operationDescription = "SIMULATED TPV QA " + logicalCollection;
+    item.staffResourceId = String(record.staffResourceId || TPV_QA_RUNTIME_POLICY.ACTOR_ID);
+    item.lineItems = { qaRecord: record.lineItems || [] };
+    item.desgloseDetallado = {
+        accountCode: "SIMULATED",
+        testRunId: TPV_QA_RUNTIME_POLICY.TEST_RUN_ID,
+    };
+    const hashPayload = stableSerialize({
+        testRunId: TPV_QA_RUNTIME_POLICY.TEST_RUN_ID,
+        logicalCollection,
+        transactionId: item.transactionId,
+        traceId: item.traceId,
+        record,
+    });
+    item.hash = createHash("sha256").update(hashPayload).digest("hex");
+    item.payloadFiscal = {
+        ...envelope,
+        requestFingerprint: stableSerialize(record),
+    };
+    return item;
+}
+
+export async function MovimientosCaja_beforeRemove(itemId) {
+    const previous = itemId
+        ? await getItem(BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA, itemId, CONSISTENCY.STRONG)
+        : null;
+    if (_isCurrentSyntheticTpvRow(previous)) return itemId;
+    _fiscalError("Borrado de MovimientosCaja prohibido salvo filas TPV QA sintéticas del test-run activo.");
 }
 
 export function LibroAsientosContablesDetalle_beforeUpdate() {

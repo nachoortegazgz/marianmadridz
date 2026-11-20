@@ -286,3 +286,8 @@ En cierres Z ejecutados por un miembro autorizado, `CajaActual.closedBy` conserv
 8. Recomendación adicional: valorar `lastMovementId` como puntero escalar a la última fuente, no como copia de la operación. Solo introducirlo en una migración coordinada de CMS + backend + DTO + tests.
 
 **Gates:** no se han habilitado writers, no se ha activado Veri*Factu, no se ha ejecutado venta, reserva, pago, cierre Z ni automatización. La colección creada no abre la caja por sí misma. El código backend ya espera el singleton `CAJA_PRINCIPAL`; el flujo de apertura continúa pendiente. No se ha validado runtime en Wix Local Editor ni E2E publicado.
+
+
+## 9. Addendum — TPV sintético en desarrollo (2026-11-20)
+
+`CajaActual` sigue siendo el singleton/proyección de sesión. Durante el test-run autorizado se identifica con `snapshotSource=TPV_QA_SYNTHETIC` y `cashRegisterStatus=SIMULACION`. `MovimientosCaja` sigue siendo append-only para movimientos reales; la única excepción de desarrollo son eventos `SIMULATED_TPV_*` marcados con `recordSource=TPV_QA_SYNTHETIC` y testRunId backend. Estos eventos no consumen secuencia/hash fiscal real, no invocan firmador/AEAT y quedan excluidos de la cadena y agregaciones fiscales. Las filas del test-run pueden editarse/eliminarse de forma selectiva; el resto permanece inmutable. Preview/Sandbox E2E pendiente.

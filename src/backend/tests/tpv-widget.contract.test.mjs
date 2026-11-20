@@ -7,13 +7,17 @@ const controller = await readFile(new URL("../../public/tpvPageController.js", i
 const cashierBackend = await readFile(new URL("../cajas.web.js", import.meta.url), "utf8");
 const catalogBackend = await readFile(new URL("../tpv/tpvCatalogo.web.js", import.meta.url), "utf8");
 
-test("TPV controller exposes authenticated QA session and Bookings catalog methods", () => {
+test("TPV controller exposes authenticated QA session and Bookings catalog methods", async () => {
     assert.match(controller, /obtenerSesionCajaQA/);
     assert.match(controller, /obtenerServicios/);
     assert.match(controller, /obtenerProfesionales/);
     assert.match(controller, /consultarTarjetaRegalo/);
     assert.match(cashierBackend, /requireCajero/);
     assert.match(catalogBackend, /requireCajero/);
+    const permissions = await readFile(new URL("../tpv/tpvPermisos.web.js", import.meta.url), "utf8");
+    for (const capability of ["createSyntheticSale", "openQaSession", "registerCashMovement", "requestRefund", "closeQaSession", "issueTicketX", "issueTicketZ"]) {
+        assert.match(permissions, new RegExp(capability + ": isAdmin"));
+    }
     assert.match(controller, /MESSAGE_TYPES\.READY/);
     assert.match(controller, /MESSAGE_TYPES\.CONTEXT/);
     assert.match(controller, /"CASHIER_STATE"/);
@@ -58,6 +62,11 @@ test("TPV controls keep unsupported commercial and fiscal capabilities disabled"
     assert.match(html, /id="refund" class="btn danger" disabled/);
     assert.match(html, /id="ticketX"[^>]*disabled/);
     assert.match(html, /id="ticketZ"[^>]*disabled/);
+    assert.match(html, /state\.context\?\.environment!=="QA"\|\|state\.context\?\.previewOnly!==true/);
+    assert.match(html, /!c\.issueTicketX/);
+    assert.match(html, /!c\.registerCashMovement/);
+    assert.match(html, /!c\.createSyntheticSale/);
+    assert.match(html, /state\.session=session;renderSession\(\);renderCapabilities\(\);/);
     assert.match(html, /id="saveSale"/);
     assert.match(html, /id="openSession"/);
     assert.match(html, /id="cashMovement"/);
@@ -68,7 +77,8 @@ test("TPV HTML request protocol is dispatched for the active widget workflows", 
     const requests = ["CASHIER_STATE", "QA_CONFIG", "QA_PERMISSIONS", "CATALOG_SERVICES", "CATALOG_STAFF", "CATALOG_PRODUCTS", "PRODUCT_VARIANTS", "CUSTOMERS_SEARCH", "QA_PAYMENT_VALIDATE", "VALIDATE_SALE_DRAFT", "QA_SALE_REGISTER", "QA_SESSION_SUMMARY", "QA_SESSION_OPEN", "QA_CASH_MOVEMENT", "QA_REFUND", "QA_TICKET_X", "QA_TICKET_Z"];
     assert.match(page, /\$w\("#htmlTPV"\)/);
     assert.match(controller, /protocolVersion: 1/);
-    assert.match(controller, /environment: "QA"/);
+    assert.match(controller, /environment: wixWindowFrontend\.viewMode === "Preview" \? "QA" : "DISABLED"/);
+    assert.match(controller, /wixWindowFrontend\.viewMode !== "Preview"/);
     assert.match(controller, /syntheticOnly: true/);
     assert.match(controller, /case MESSAGE_TYPES\.READY:\s+return;/);
     for (const type of requests) {

@@ -332,26 +332,25 @@ export async function removeById(collection, idOrItem, options = {}) {
         ? idOrItem._id || idOrItem.id
         : idOrItem;
     const expectedControlType = options.expectedControlType;
-
     if (!id) throw dataAccessError("REMOVE_ID_REQUIRED");
-    assertRemoveAllowed(collection, id, expectedControlType);
 
     const existing = await getItem(collection, id, CONSISTENCY.STRONG);
     if (!existing) throw dataAccessError("REMOVE_TARGET_NOT_FOUND");
-    if (existing.controlType !== expectedControlType) {
+    assertRemoveAllowed(collection, id, expectedControlType, existing);
+    if (collection === "ControlOperativo" && existing.controlType !== expectedControlType) {
         throw dataAccessError("REMOVE_CONTROL_TYPE_MISMATCH");
     }
 
-    // The condition is evaluated by Wix as part of the delete operation.
-    // The strong read above provides an explicit fail-closed type check; it is
-    // not the concurrency guarantee. The conditional bulk remove prevents a
-    // type change between that read and the actual deletion from being erased.
+    const filter = collection === "MovimientosCaja"
+        ? {
+            recordSource: { $eq: existing.recordSource },
+            movementType: { $eq: existing.movementType },
+            traceId: { $eq: existing.traceId },
+            transactionId: { $eq: existing.transactionId },
+        }
+        : { controlType: { $eq: expectedControlType } };
     const result = await elevatedBulkRemove(collection, [id], {
-        condition: {
-            filter: {
-                controlType: { $eq: expectedControlType },
-            },
-        },
+        condition: { filter },
     });
     const removed = Array.isArray(result?.removedItemIds)
         ? result.removedItemIds.includes(id)
@@ -361,7 +360,6 @@ export async function removeById(collection, idOrItem, options = {}) {
                 entry?.itemMetadata?.success === true
             );
     if (!removed) throw dataAccessError("REMOVE_CONDITION_NOT_MET");
-
     return { _id: id };
 }
 

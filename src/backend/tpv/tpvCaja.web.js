@@ -1,5 +1,5 @@
 import { Permissions, webMethod } from "wix-web-module";
-import { requireCajero } from "backend/security";
+import { requireAdmin, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { TPV_QA_COLLECTIONS, TPV_QA_RUNTIME_POLICY } from "backend/internalConfig";
 import { appendQaAudit, insertQaEvent, latestOpenQaSession, queryQaRecords, withQaSessionLock } from "backend/tpv/tpvQaRepository";
@@ -55,59 +55,62 @@ export const abrirCajaQA = webMethod(
     async (input = {}) => {
         let persisted = false;
         const traceId = makeTraceId("tpv-qa-session-open");
-        await requireCajero(traceId);
+        await requireAdmin(traceId);
         assertTpvQaEnabled();
         try {
             const openingCashMinor = toMinorUnits(input.openingCash, "OPENING_CASH");
             const dayKey = madridDayKey();
             const sessionId = "QA-SESSION-" + dayKey;
-            const idempotencyKey = "QA_SESSION_OPEN:" + dayKey;
-            const current = await latestOpenQaSession();
-            if (current && current.sessionId !== sessionId) return errorResult("TPV_QA_PREVIOUS_SESSION_NOT_CLOSED");
-            const alreadyClosed = await queryQaRecords(TPV_QA_COLLECTIONS.TICKET_Z, wql.eq("sessionId", sessionId));
-            if (alreadyClosed.some((item) => item.closed === true)) return errorResult("TPV_QA_SESSION_ALREADY_CLOSED_TODAY");
-            const { item, replayed } = await insertQaEvent(
-                TPV_QA_COLLECTIONS.SESIONES_CAJA,
-                idempotencyKey,
-                {
-                    sessionId,
-                    status: "ABIERTA",
-                    openedAt: new Date(),
-                    openingCashMinor,
-                    expectedCashMinor: openingCashMinor,
-                    cashierMemberId: TPV_QA_RUNTIME_POLICY.ACTOR_ID,
-                    payload: makeSyntheticPayload({
-                        dayKey,
-                        openingReason: String(input.reason || "Apertura de QA").slice(0, 200),
-                        traceId,
-                        terminalId: String(input.terminalId || "TPV_QA").slice(0, 80),
-                    }),
-                }
-            );
-            persisted = true;
-            await insertQaEvent(TPV_QA_COLLECTIONS.AUDITORIA, idempotencyKey + ":AUDIT", {
-                action: "APERTURA_CAJA_QA",
-                actorId: TPV_QA_RUNTIME_POLICY.ACTOR_ID,
-                entityType: "SESION_CAJA",
-                entityId: sessionId,
-                occurredAt: new Date(),
-                source: "TPV_QA_WEB_METHOD",
-                payload: makeSyntheticPayload({ traceId, replayed }),
+            return await withQaSessionLock(sessionId, traceId, async () => {
+                const idempotencyKey = "QA_SESSION_OPEN:" + dayKey;
+                const current = await latestOpenQaSession();
+                if (current && current.sessionId !== sessionId) return errorResult("TPV_QA_PREVIOUS_SESSION_NOT_CLOSED");
+                const alreadyClosed = await queryQaRecords(TPV_QA_COLLECTIONS.TICKET_Z, wql.eq("sessionId", sessionId));
+                if (alreadyClosed.some((item) => item.closed === true)) return errorResult("TPV_QA_SESSION_ALREADY_CLOSED_TODAY");
+                const { item, replayed } = await insertQaEvent(
+                    TPV_QA_COLLECTIONS.SESIONES_CAJA,
+                    idempotencyKey,
+                    {
+                        sessionId,
+                        status: "ABIERTA",
+                        openedAt: new Date(),
+                        openingCashMinor,
+                        expectedCashMinor: openingCashMinor,
+                        cashierMemberId: TPV_QA_RUNTIME_POLICY.ACTOR_ID,
+                        payload: makeSyntheticPayload({
+                            dayKey,
+                            openingReason: String(input.reason || "Apertura de QA").slice(0, 200),
+                            traceId,
+                            terminalId: String(input.terminalId || "TPV_QA").slice(0, 80),
+                        }),
+                    }
+                );
+                persisted = true;
+                await insertQaEvent(TPV_QA_COLLECTIONS.AUDITORIA, idempotencyKey + ":AUDIT", {
+                    action: "APERTURA_CAJA_QA",
+                    actorId: TPV_QA_RUNTIME_POLICY.ACTOR_ID,
+                    entityType: "SESION_CAJA",
+                    entityId: sessionId,
+                    occurredAt: new Date(),
+                    source: "TPV_QA_WEB_METHOD",
+                    payload: makeSyntheticPayload({ traceId, replayed }),
+                });
+                return {
+                    status: "SUCCESS",
+                    data: {
+                        sessionId: item.sessionId,
+                        status: item.status,
+                        openingCash: fromMinorUnits(openingCashMinor),
+                        replayed,
+                        persisted: true,
+                        isSynthetic: true,
+                        realPayment: false,
+                    },
+                    error: null,
+                    traceId,
+                };
             });
-            return {
-                status: "SUCCESS",
-                data: {
-                    sessionId: item.sessionId,
-                    status: item.status,
-                    openingCash: fromMinorUnits(openingCashMinor),
-                    replayed,
-                    persisted: true,
-                    isSynthetic: true,
-                    realPayment: false,
-                },
-                error: null,
-                traceId,
-            };
+
         } catch (error) {
             return { ...errorResult(String(error?.message || "TPV_QA_SESSION_OPEN_FAILED")), persisted, recoverable: persisted, isSynthetic: true };
         }
@@ -119,7 +122,7 @@ export const registrarArqueoParcialQA = webMethod(
     async (input = {}) => {
         let persisted = false;
         const traceId = makeTraceId("tpv-qa-partial-count");
-        await requireCajero(traceId);
+        await requireAdmin(traceId);
         assertTpvQaEnabled();
         try {
             const session = await latestOpenQaSession();

@@ -1,5 +1,5 @@
 import { Permissions, webMethod } from "wix-web-module";
-import { requireCajero } from "backend/security";
+import { requireAdmin, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { TPV_QA_COLLECTIONS, TPV_QA_FIXTURES, TPV_QA_RUNTIME_POLICY } from "backend/internalConfig";
 import { validateSaleDraft } from "backend/tpv/tpvValidation";
@@ -47,7 +47,7 @@ export const registrarVentaQA = webMethod(
     async (input = {}) => {
         let persisted = false;
         const traceId = makeTraceId("tpv-qa-sale");
-        await requireCajero(traceId);
+        await requireAdmin(traceId);
         assertTpvQaEnabled();
         try {
             const key = normalizeClientIdempotencyKey(input.idempotencyKey);
