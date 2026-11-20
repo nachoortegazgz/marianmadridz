@@ -113,7 +113,6 @@ export function assertInsertAllowed(collection, item) {
     }
     if (collection === BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA &&
         (item.recordSource === "TPV_QA_SYNTHETIC" || String(item.movementType || "").startsWith("SIMULATED_TPV_"))) {
-        const payload = item.payloadFiscal;
         if (!_isSyntheticTpvRecord(item)) {
             throw _policyError("CMS_TPV_QA_SYNTHETIC_LEDGER_CONTRACT_INVALID");
         }
