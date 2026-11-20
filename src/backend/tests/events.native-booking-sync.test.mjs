@@ -549,14 +549,16 @@ test("EVENT-PAYMENT-09 official Wix eCommerce paid event appends WIX_PAYMENTS le
 
   wixDataMock._seed(IC.BUSINESS_COLLECTIONS.MAPA_STAFF, [
     syntheticFiscalSystemConfig(),
-    _id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
-    recordType: "TERCERO",
-    taxId: "B12345674",
-    legalName: "MARIAN MADRID",
-    thirdPartyType: "EMISOR",
-    address: null,
-    schemaVersion: 1,
-    traceId: "native-booking-sync-fiscal-fixture",
+    {
+      _id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+      recordType: "TERCERO",
+      taxId: "B12345674",
+      legalName: "MARIAN MADRID",
+      thirdPartyType: "EMISOR",
+      address: null,
+      schemaVersion: 1,
+      traceId: "native-booking-sync-fiscal-fixture",
+    },
   ]);
 
   wixDataMock._seed("CitasF2", [
@@ -697,12 +699,14 @@ test("EVENT-REFUND-01 defers incomplete refunds, records successful terminal amo
   secretState._map.FISCAL_NIF_EMISOR = "B12345674";
   wixDataMock._seed(IC.BUSINESS_COLLECTIONS.MAPA_STAFF, [
     syntheticFiscalSystemConfig(),
-    _id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
-    recordType: "TERCERO",
-    taxId: "B12345674",
-    legalName: "MARIAN MADRID",
-    thirdPartyType: "EMISOR",
-    address: null,
+    {
+      _id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+      recordType: "TERCERO",
+      taxId: "B12345674",
+      legalName: "MARIAN MADRID",
+      thirdPartyType: "EMISOR",
+      address: null,
+    },
   ]);
   wixDataMock._seed("CitasF2", [seedCita({
     bookingStatus: "PENDING",
