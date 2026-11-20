@@ -62,7 +62,7 @@ test("TPV controls keep unsupported commercial and fiscal capabilities disabled"
     assert.match(html, /id="refund" class="btn danger" disabled/);
     assert.match(html, /id="ticketX"[^>]*disabled/);
     assert.match(html, /id="ticketZ"[^>]*disabled/);
-    assert.match(html, /state\.context\?\.environment!=="QA"\|\|state\.context\?\.previewOnly!==true/);
+    assert.match(html, /state\.context\?\.environment!=="SANDBOX"\|\|state\.context\?\.previewOnly!==true/);
     assert.match(html, /!c\.issueTicketX/);
     assert.match(html, /!c\.registerCashMovement/);
     assert.match(html, /!c\.createSyntheticSale/);
@@ -77,7 +77,7 @@ test("TPV HTML request protocol is dispatched for the active widget workflows", 
     const requests = ["CASHIER_STATE", "QA_CONFIG", "QA_PERMISSIONS", "CATALOG_SERVICES", "CATALOG_STAFF", "CATALOG_PRODUCTS", "PRODUCT_VARIANTS", "CUSTOMERS_SEARCH", "QA_PAYMENT_VALIDATE", "VALIDATE_SALE_DRAFT", "QA_SALE_REGISTER", "QA_SESSION_SUMMARY", "QA_SESSION_OPEN", "QA_CASH_MOVEMENT", "QA_REFUND", "QA_TICKET_X", "QA_TICKET_Z"];
     assert.match(page, /\$w\("#htmlTPV"\)/);
     assert.match(controller, /protocolVersion: 1/);
-    assert.match(controller, /environment: wixWindowFrontend\.viewMode === "Preview" \? "QA" : "DISABLED"/);
+    assert.match(controller, /environment: wixWindowFrontend\.viewMode === "Preview" \? "SANDBOX" : "DISABLED"/);
     assert.match(controller, /wixWindowFrontend\.viewMode !== "Preview"/);
     assert.match(controller, /syntheticOnly: true/);
     assert.match(controller, /case MESSAGE_TYPES\.READY:\s+return;/);

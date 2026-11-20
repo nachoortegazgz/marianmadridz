@@ -31,7 +31,7 @@ El page code activo es `src/pages/TPV.yl5th.js`; inicializa el controlador y no 
 1. El widget emite `MM_READY` con `version: 1`, `messageId` y `payload.component = "htmlTPV"`.
 2. `createWidgetBridge` valida origen, versión, tipo y tamaño del mensaje.
 3. El controlador no genera una respuesta artificial para `MM_READY`; el bridge publica `MM_CONTEXT` tras completar el handshake.
-4. El contexto comunica `protocolVersion: 1`, `environment: "QA"` y `syntheticOnly: true`. El widget marca `contextReady` y arranca su bootstrap.
+4. El contexto comunica `protocolVersion: 1`, `environment: "SANDBOX"` y `syntheticOnly: true`. El widget marca `contextReady` y arranca su bootstrap.
 5. El widget consulta configuración y permisos de nuevo mediante WebMethods; el contexto no sustituye la autorización backend.
 
 ## Contrato de mensajes
