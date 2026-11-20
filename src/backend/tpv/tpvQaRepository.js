@@ -8,7 +8,7 @@ import {
     queryItems,
     wql,
 } from "backend/dataAccess";
-import { TPV_QA_COLLECTIONS, TPV_QA_RUNTIME_POLICY, CONTROL_TYPE, OPERATIONAL_COLLECTIONS, BUSINESS_COLLECTIONS, SINGLETONS } from "backend/internalConfig";
+import { TPV_QA_COLLECTIONS, TPV_QA_EVENT_MOVEMENT_TYPES, TPV_QA_RUNTIME_POLICY, CONTROL_TYPE, OPERATIONAL_COLLECTIONS, BUSINESS_COLLECTIONS, SINGLETONS } from "backend/internalConfig";
 import {
     assertTpvQaEnabled,
     normalizeIdempotencyKey,
@@ -209,16 +209,7 @@ function stripVolatile(value) {
 
 const QA_LEDGER_SOURCE = "TPV_QA_SYNTHETIC";
 const QA_GENESIS_HASH = "0".repeat(64);
-const QA_COLLECTION_MOVEMENT_TYPE = Object.freeze({
-    [TPV_QA_COLLECTIONS.VENTAS]: "SIMULATED_TPV_SALE",
-    [TPV_QA_COLLECTIONS.VENTA_LINEAS]: "SIMULATED_TPV_SALE_LINE",
-    [TPV_QA_COLLECTIONS.PAGOS]: "SIMULATED_TPV_PAYMENT",
-    [TPV_QA_COLLECTIONS.REEMBOLSOS]: "SIMULATED_TPV_REFUND",
-    [TPV_QA_COLLECTIONS.MOVIMIENTOS_CAJA]: "SIMULATED_TPV_CASH_MOVEMENT",
-    [TPV_QA_COLLECTIONS.TICKET_X]: "SIMULATED_TPV_TICKET_X",
-    [TPV_QA_COLLECTIONS.TICKET_Z]: "SIMULATED_TPV_TICKET_Z",
-    [TPV_QA_COLLECTIONS.AUDITORIA]: "SIMULATED_TPV_AUDIT",
-});
+
 const QA_TEST_RUN_ID = TPV_QA_RUNTIME_POLICY.TEST_RUN_ID;
 const MAX_QA_PROJECTION_EVENTS = 1000;
 
@@ -483,7 +474,7 @@ async function findByIdempotencyKey(collection, key) {
         const session = _sessionFromCaja(caja);
         return session && session.sessionId ? session : null;
     }
-    const movementType = QA_COLLECTION_MOVEMENT_TYPE[collection];
+    const movementType = TPV_QA_EVENT_MOVEMENT_TYPES[collection];
     if (!movementType) throw new Error("TPV_QA_COLLECTION_NOT_ALLOWED");
     const result = await queryItems({
         dataCollectionId: BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA,
@@ -508,7 +499,7 @@ function assertSameRequest(existing, fingerprint) {
 }
 
 function _buildSyntheticLedgerItem(collection, key, record, fingerprint) {
-    const movementType = QA_COLLECTION_MOVEMENT_TYPE[collection];
+    const movementType = TPV_QA_EVENT_MOVEMENT_TYPES[collection];
     if (!movementType) throw new Error("TPV_QA_COLLECTION_NOT_ALLOWED");
     const now = record.createdAt || record.generatedAt || record.occurredAt || new Date();
     const timestamp = now instanceof Date ? now : new Date(now);
@@ -649,7 +640,7 @@ export async function queryQaRecords(collection, filter, options = {}) {
         const sessions = session ? [session] : [];
         return sessions.filter((item) => _matchesFilter(item, filter));
     }
-    const movementType = QA_COLLECTION_MOVEMENT_TYPE[collection];
+    const movementType = TPV_QA_EVENT_MOVEMENT_TYPES[collection];
     if (!movementType) throw new Error("TPV_QA_COLLECTION_NOT_ALLOWED");
     const pageSize = Math.min(1000, Math.max(1, Math.floor(Number(options.limit || 1000))));
     const result = await queryItems({
