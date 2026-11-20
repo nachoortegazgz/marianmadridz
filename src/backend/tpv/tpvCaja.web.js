@@ -19,7 +19,7 @@ function madridDayKey(date = new Date()) {
     return values.year + values.month + values.day;
 }
 
-export const inicializarCajaSANDBOX = webMethod(
+export const inicializarCaja = webMethod(
     Permissions.SiteMember,
     async () => {
         const traceId = makeTraceId("tpv-sandbox-bootstrap");
@@ -57,7 +57,7 @@ export const inicializarCajaSANDBOX = webMethod(
     }
 );
 
-export const obtenerSesionCajaSANDBOX = webMethod(
+export const obtenerSesionCaja = webMethod(
     Permissions.SiteMember,
     async () => {
         const traceId = makeTraceId("tpv-sandbox-session-read");
@@ -88,7 +88,7 @@ export const obtenerSesionCajaSANDBOX = webMethod(
     }
 );
 
-export const abrirCajaSANDBOX = webMethod(
+export const abrirCaja = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
         let persisted = false;
@@ -155,7 +155,7 @@ export const abrirCajaSANDBOX = webMethod(
     }
 );
 
-export const registrarArqueoParcialSANDBOX = webMethod(
+export const registrarArqueoParcial = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
         let persisted = false;
