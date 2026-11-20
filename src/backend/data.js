@@ -526,7 +526,7 @@ export async function MovimientosCaja_beforeUpdate(item) {
     const logicalCollection = envelope?.logicalCollection;
     if (
         logicalCollection !== previousEnvelope?.logicalCollection ||
-        envelope?.sandboxRunId !== previousEnvelope?.testRunId ||
+        envelope?.sandboxRunId !== previousEnvelope?.sandboxRunId ||
         envelope?.idempotencyKey !== previousEnvelope?.idempotencyKey ||
         envelope?.isSynthetic !== true ||
         envelope?.realPayment !== false ||
