@@ -8,7 +8,7 @@ import {
     toMinorUnits,
 } from "backend/tpv/tpvUtils";
 
-export const obtenerConfiguracionTPVQA = webMethod(
+export const obtenerConfiguracionTPV = webMethod(
     Permissions.SiteMember,
     async () => {
         const traceId = makeTraceId("tpv-qa-config");
@@ -31,7 +31,7 @@ export const obtenerConfiguracionTPVQA = webMethod(
     }
 );
 
-export const validarImportesTPVQA = webMethod(
+export const validarImportesTPV = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
         const traceId = makeTraceId("tpv-qa-amounts");
