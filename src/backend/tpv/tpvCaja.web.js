@@ -1,11 +1,11 @@
 import { Permissions, webMethod } from "wix-web-module";
 import { requireAdmin, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
-import { TPV_QA_COLLECTIONS, TPV_QA_RUNTIME_POLICY } from "backend/internalConfig";
-import { appendQaAudit, insertQaEvent, latestOpenQaSession, queryQaRecords, withQaSessionLock } from "backend/tpv/tpvQaRepository";
-import { buildQaSessionSummary } from "backend/tpv/tpvCierresCore";
+import { TPV_SANDBOX_COLLECTIONS, TPV_SANDBOX_RUNTIME_POLICY } from "backend/internalConfig";
+import { appendSandboxAudit, insertSandboxEvent, latestOpenSandboxSession, querySandboxRecords, withSandboxSessionLock } from "backend/tpv/tpvSandboxRepository";
+import { buildSandboxSessionSummary } from "backend/tpv/tpvCierresCore";
 import { wql } from "backend/dataAccess";
-import { assertTpvQaEnabled, fromMinorUnits, makeSyntheticPayload, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
+import { assertTpvSandboxEnabled, fromMinorUnits, makeSyntheticPayload, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
 
 function errorResult(code) {
     return { status: "ERROR", data: null, error: { code }, persisted: false, realPayment: false };
@@ -13,7 +13,7 @@ function errorResult(code) {
 
 function madridDayKey(date = new Date()) {
     const parts = new Intl.DateTimeFormat("en-CA", {
-        timeZone: TPV_QA_RUNTIME_POLICY.TIME_ZONE, year: "numeric", month: "2-digit", day: "2-digit",
+        timeZone: TPV_SANDBOX_RUNTIME_POLICY.TIME_ZONE, year: "numeric", month: "2-digit", day: "2-digit",
     }).formatToParts(date);
     const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
     return values.year + values.month + values.day;
@@ -22,12 +22,12 @@ function madridDayKey(date = new Date()) {
 export const obtenerSesionCajaQA = webMethod(
     Permissions.SiteMember,
     async () => {
-        const traceId = makeTraceId("tpv-qa-session-read");
+        const traceId = makeTraceId("tpv-sandbox-session-read");
         await requireCajero(traceId);
-        assertTpvQaEnabled();
-        const session = await latestOpenQaSession();
+        assertTpvSandboxEnabled();
+        const session = await latestOpenSandboxSession();
         if (!session) return { status: "SUCCESS", data: null, error: null, traceId };
-        const summary = await buildQaSessionSummary(session);
+        const summary = await buildSandboxSessionSummary(session);
         return {
             status: "SUCCESS",
             data: {
@@ -41,7 +41,7 @@ export const obtenerSesionCajaQA = webMethod(
                 otherAmount: fromMinorUnits(summary.otherMinor),
                 totalOperations: summary.ticketCount,
                 openedAt: session.openedAt,
-                environment: TPV_QA_RUNTIME_POLICY.ENVIRONMENT,
+                environment: TPV_SANDBOX_RUNTIME_POLICY.ENVIRONMENT,
                 isSynthetic: true,
             },
             error: null,
@@ -54,21 +54,21 @@ export const abrirCajaQA = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
         let persisted = false;
-        const traceId = makeTraceId("tpv-qa-session-open");
+        const traceId = makeTraceId("tpv-sandbox-session-open");
         await requireAdmin(traceId);
-        assertTpvQaEnabled();
+        assertTpvSandboxEnabled();
         try {
             const openingCashMinor = toMinorUnits(input.openingCash, "OPENING_CASH");
             const dayKey = madridDayKey();
             const sessionId = "QA-SESSION-" + dayKey;
-            return await withQaSessionLock(sessionId, traceId, async () => {
-                const idempotencyKey = "QA_SESSION_OPEN:" + dayKey;
-                const current = await latestOpenQaSession();
-                if (current && current.sessionId !== sessionId) return errorResult("TPV_QA_PREVIOUS_SESSION_NOT_CLOSED");
-                const alreadyClosed = await queryQaRecords(TPV_QA_COLLECTIONS.TICKET_Z, wql.eq("sessionId", sessionId));
-                if (alreadyClosed.some((item) => item.closed === true)) return errorResult("TPV_QA_SESSION_ALREADY_CLOSED_TODAY");
-                const { item, replayed } = await insertQaEvent(
-                    TPV_QA_COLLECTIONS.SESIONES_CAJA,
+            return await withSandboxSessionLock(sessionId, traceId, async () => {
+                const idempotencyKey = "SANDBOX_SESSION_OPEN:" + dayKey;
+                const current = await latestOpenSandboxSession();
+                if (current && current.sessionId !== sessionId) return errorResult("TPV_SANDBOX_PREVIOUS_SESSION_NOT_CLOSED");
+                const alreadyClosed = await querySandboxRecords(TPV_SANDBOX_COLLECTIONS.TICKET_Z, wql.eq("sessionId", sessionId));
+                if (alreadyClosed.some((item) => item.closed === true)) return errorResult("TPV_SANDBOX_SESSION_ALREADY_CLOSED_TODAY");
+                const { item, replayed } = await insertSandboxEvent(
+                    TPV_SANDBOX_COLLECTIONS.SESIONES_CAJA,
                     idempotencyKey,
                     {
                         sessionId,
@@ -76,23 +76,23 @@ export const abrirCajaQA = webMethod(
                         openedAt: new Date(),
                         openingCashMinor,
                         expectedCashMinor: openingCashMinor,
-                        cashierMemberId: TPV_QA_RUNTIME_POLICY.ACTOR_ID,
+                        cashierMemberId: TPV_SANDBOX_RUNTIME_POLICY.ACTOR_ID,
                         payload: makeSyntheticPayload({
                             dayKey,
                             openingReason: String(input.reason || "Apertura de QA").slice(0, 200),
                             traceId,
-                            terminalId: String(input.terminalId || "TPV_QA").slice(0, 80),
+                            terminalId: String(input.terminalId || "TPV_SANDBOX").slice(0, 80),
                         }),
                     }
                 );
                 persisted = true;
-                await insertQaEvent(TPV_QA_COLLECTIONS.AUDITORIA, idempotencyKey + ":AUDIT", {
+                await insertSandboxEvent(TPV_SANDBOX_COLLECTIONS.AUDITORIA, idempotencyKey + ":AUDIT", {
                     action: "APERTURA_CAJA_QA",
-                    actorId: TPV_QA_RUNTIME_POLICY.ACTOR_ID,
+                    actorId: TPV_SANDBOX_RUNTIME_POLICY.ACTOR_ID,
                     entityType: "SESION_CAJA",
                     entityId: sessionId,
                     occurredAt: new Date(),
-                    source: "TPV_QA_WEB_METHOD",
+                    source: "TPV_SANDBOX_WEB_METHOD",
                     payload: makeSyntheticPayload({ traceId, replayed }),
                 });
                 return {
@@ -112,7 +112,7 @@ export const abrirCajaQA = webMethod(
             });
 
         } catch (error) {
-            return { ...errorResult(String(error?.message || "TPV_QA_SESSION_OPEN_FAILED")), persisted, recoverable: persisted, isSynthetic: true };
+            return { ...errorResult(String(error?.message || "TPV_SANDBOX_SESSION_OPEN_FAILED")), persisted, recoverable: persisted, isSynthetic: true };
         }
     }
 );
@@ -121,29 +121,29 @@ export const registrarArqueoParcialQA = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
         let persisted = false;
-        const traceId = makeTraceId("tpv-qa-partial-count");
+        const traceId = makeTraceId("tpv-sandbox-partial-count");
         await requireAdmin(traceId);
-        assertTpvQaEnabled();
+        assertTpvSandboxEnabled();
         try {
-            const session = await latestOpenQaSession();
-            if (!session) return errorResult("TPV_QA_SESSION_NOT_OPEN");
+            const session = await latestOpenSandboxSession();
+            if (!session) return errorResult("TPV_SANDBOX_SESSION_NOT_OPEN");
 
-            return await withQaSessionLock(session.sessionId, traceId, async () => {
-                const activeSession = await latestOpenQaSession();
+            return await withSandboxSessionLock(session.sessionId, traceId, async () => {
+                const activeSession = await latestOpenSandboxSession();
                 if (!activeSession || activeSession.sessionId !== session.sessionId) {
-                    throw new Error("TPV_QA_SESSION_CLOSED");
+                    throw new Error("TPV_SANDBOX_SESSION_CLOSED");
                 }
             const countedMinor = toMinorUnits(input.countedCash, "COUNTED_CASH");
-            const summary = await buildQaSessionSummary(session);
+            const summary = await buildSandboxSessionSummary(session);
             const expectedMinor = Number(summary.expectedCashMinor || 0);
             const differenceMinor = countedMinor - expectedMinor;
             const reason = differenceMinor === 0 ? "" : String(input.reason || "").trim();
             if (differenceMinor !== 0 && reason.length < 3) {
-                throw new Error("TPV_QA_COUNT_DIFFERENCE_REASON_REQUIRED");
+                throw new Error("TPV_SANDBOX_COUNT_DIFFERENCE_REASON_REQUIRED");
             }
             const key = normalizeClientIdempotencyKey(input.idempotencyKey);
-            const { item, replayed } = await insertQaEvent(
-                TPV_QA_COLLECTIONS.MOVIMIENTOS_CAJA,
+            const { item, replayed } = await insertSandboxEvent(
+                TPV_SANDBOX_COLLECTIONS.MOVIMIENTOS_CAJA,
                 key,
                 {
                     sessionId: session.sessionId,
@@ -157,16 +157,16 @@ export const registrarArqueoParcialQA = webMethod(
                         expectedCashMinor: expectedMinor,
                         countedCashMinor: countedMinor,
                         differenceMinor,
-                        actorId: TPV_QA_RUNTIME_POLICY.ACTOR_ID,
+                        actorId: TPV_SANDBOX_RUNTIME_POLICY.ACTOR_ID,
                         traceId,
                     }),
                 }
             );
             persisted = true;
-            await appendQaAudit({
+            await appendSandboxAudit({
                 idempotencyKey: key + ":AUDIT",
                 action: "ARQUEO_PARCIAL_QA",
-                actorId: TPV_QA_RUNTIME_POLICY.ACTOR_ID,
+                actorId: TPV_SANDBOX_RUNTIME_POLICY.ACTOR_ID,
                 entityType: "ARQUEO_CAJA",
                 entityId: session.sessionId,
                 traceId,
@@ -180,7 +180,7 @@ export const registrarArqueoParcialQA = webMethod(
             };
             });
         } catch (error) {
-            return { ...errorResult(String(error?.message || "TPV_QA_PARTIAL_COUNT_FAILED")), persisted, recoverable: persisted, isSynthetic: true };
+            return { ...errorResult(String(error?.message || "TPV_SANDBOX_PARTIAL_COUNT_FAILED")), persisted, recoverable: persisted, isSynthetic: true };
         }
     }
 );
