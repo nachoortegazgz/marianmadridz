@@ -132,3 +132,8 @@ PR #486 integrada en `main` con commit `5ef81ff132f4cbff594387a60e4446bc5dada171
 CI del head `46aac82fa264387b5571ef3f6fc9d513072a2eb0`: Backend offline quality gates SUCCESS (run `44727128060`); Secret scanning SUCCESS (run `44727128076`). `npm ci` PASS; `npm audit` 0 vulnerabilidades; Layer 1 28 suites / 335 tests; Layer 2 19 suites / 267 tests; suite completa 74 suites / 693 tests; SDK contracts y ESLint PASS.
 
 Los logs muestran warnings de dependencias deprecadas y ESLint 8.25.0 fuera de soporte. Se mantienen sin cambios hasta validar compatibilidad con el plugin Wix. La nueva prueba es offline y no prueba Wix Preview/Published ni el aislamiento real del data plane. La configuración TPV sigue fail-closed; no se hicieron escrituras CMS ni publicación.
+
+
+## Addendum PR #488 — clasificación de endpoints TPV
+
+PR #488 integrada (`75c4428fea45795d4337011c389ac909f0aa6e03`). Añade un contrato de clasificación de todas las exportaciones WebMethod TPV revisadas, separando operaciones protegidas por guard backend, endpoints read-only/validación y writers operativos fail-closed. CI backend offline y secret scanning SUCCESS (runs `44727911850`, `44727911591`); capas 1/2, regresión completa, SDK contracts, eCommerce/TPV SDK y ESLint PASS. La prueba no equivale a Wix Runtime/E2E. No hay cambios de runtime/CMS ni publicación; TPV QA permanece deshabilitado.

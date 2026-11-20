@@ -129,3 +129,15 @@ No se proporciona porcentaje global de preparación: mezclar CI offline, documen
 - La prueba es estática/offline y no sustituye una invocación real de Wix Preview/Published. No se habilitó TPV QA persistente, no hubo escrituras CMS, ni seed/bootstrap ni publicación.
 
 **Estado de release sin cambios:** NO-GO. El commit de merge actualiza el repositorio y la documentación; no certifica Wix Runtime ni habilita producción.
+
+
+## Addendum PR #488 — cobertura de políticas de WebMethods TPV
+
+- PR #488 integrada en main: `75c4428fea45795d4337011c389ac909f0aa6e03`.
+- La prueba `every exported TPV WebMethod has an explicit runtime policy classification` clasifica todos los WebMethods exportados de los módulos TPV revisados como backend-gated, read-only/pure validation o writer operativo fail-closed. Un método nuevo sin clasificación hace fallar el contrato.
+- Incluye los endpoints de catálogo (`buscarClientesTPV`, `obtenerReservasClienteTPV`, `obtenerServicios`, `obtenerProfesionales`, `obtenerProductos`, `obtenerVariantesProducto`), la validación de borrador y los writers operativos legacy bloqueados.
+- CI de PR #488: Backend offline quality gates SUCCESS (run `44727911850`); Secret scanning SUCCESS (run `44727911591`). Layer 1, Layer 2, regresión offline completa, contratos SDK, contratos eCommerce/TPV y ESLint finalizaron correctamente.
+- La cobertura es estática/offline. No prueba permisos Wix efectivos, Wix Preview/Published, llamadas a Wix Apps ni el aislamiento del data plane.
+- No se modificaron módulos runtime, flags, CMS, permisos, secretos ni publicación. `TPV_QA_RUNTIME_POLICY.ENABLED=false` se mantiene.
+
+**Release gate permanece NO-GO.**

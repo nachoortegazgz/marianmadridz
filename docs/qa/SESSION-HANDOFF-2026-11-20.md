@@ -192,3 +192,11 @@ El handoff histórico de las secciones 1–10 refleja cortes anteriores. Para el
 - Logs de CI advierten dependencias obsoletas y ESLint 8.25.0 sin soporte. No actualizar sin validar compatibilidad del plugin Wix.
 - Main confirmado: `5ef81ff132f4cbff594387a60e4446bc5dada171`.
 - Release continúa NO-GO; TPV QA runtime deshabilitado y sin escrituras Wix.
+
+
+## 13. Cierre PR #488 — clasificación de WebMethods TPV
+
+- PR #488 fusionada: `75c4428fea45795d4337011c389ac909f0aa6e03`.
+- Se clasifica cada WebMethod exportado en módulos TPV revisados: guard QA backend, read-only/validación o writer legacy fail-closed. Añadir una nueva exportación sin política rompe el test.
+- CI SUCCESS: backend offline quality gates `44727911850`; secret scanning `44727911591`. Layer 1/2, regresión completa, SDK, eCommerce/TPV SDK y ESLint PASS.
+- No es Wix E2E; no prueba permisos efectivos ni aislamiento Sandbox/Live. No se cambió runtime, CMS ni flags. TPV persistente continúa deshabilitado.
