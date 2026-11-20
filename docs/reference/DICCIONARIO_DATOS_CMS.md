@@ -1983,6 +1983,8 @@ La regla append-only de `MovimientosCaja` permanece vigente para todo movimiento
 
 Este diccionario describe esquemas y observaciones CMS; no gobierna la autorización de pruebas ni puede imponer una prohibición general de escritura, edición o eliminación de registros sintéticos. La directriz vigente del propietario autoriza simulacros completos y persistentes con datos sintéticos en el sitio de desarrollo, así como su reset controlado antes del uso real: [Directriz del propietario](../PROJECT-OWNER-DIRECTIVE-2026-11-20.md). Las políticas históricas de append-only/inmutabilidad en QA quedan supersedidas en cuanto pretendan impedir los ensayos autorizados. La autorización no acredita que una ruta concreta esté implementada: validar contratos, permisos, autorización backend, idempotencia y APIs oficiales antes de usarla. Mantener protegidos los efectos externos y cumplir las obligaciones legales aplicables.
 
+**Límite de integridad prevalente:** esta directriz no autoriza UPDATE/REMOVE de ledgers fiscales, contables o laborales append-only, ni altera la obligación de corregirlos mediante nuevos registros rectificativos. Los simulacros pueden insertar registros sintéticos por rutas controladas; no se reescriben ni borran asientos, movimientos fiscales, fichajes firmados o cierres. Cualquier reset previo a producción debe respetar esta inmutabilidad y contar con un procedimiento aprobado de segregación/retirada del entorno de pruebas.
+
 
 ## 19. Contrato live CajaActual y conciliación — 2026-11-20
 
