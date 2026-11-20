@@ -61,7 +61,7 @@ La auditoría inicial se limitó al código fuente disponible en GitHub y a bús
 
 ### H-02 — Validación de PaquetesGestoria no centralizada
 
-<badge>RESUELTO — PR #455</badge>
+**Estado: RESUELTO — PR #455.**
 
 **Severidad original:** P2 — mantenibilidad y consistencia contractual.
 
