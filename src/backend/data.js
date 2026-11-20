@@ -484,6 +484,10 @@ export function MovimientosCaja_beforeUpdate(item, context) {
         value?.payloadFiscal?.testRunId === TPV_QA_RUNTIME_POLICY.TEST_RUN_ID &&
         value?.payloadFiscal?.isSynthetic === true &&
         value?.payloadFiscal?.realPayment === false &&
+        value?.payloadFiscal?.externalSideEffects === false &&
+        Boolean(value?.payloadFiscal?.requestFingerprint) &&
+        /^[a-f0-9]{64}$/i.test(String(value?.hash || "")) &&
+        Number(value?.sequenceNumber) === 0 &&
         String(value?.traceId || "").startsWith(expectedPrefix);
     if (isSyntheticTestRow(item) && isSyntheticTestRow(previous)) return item;
     _fiscalError("Modificacion de MovimientosCaja prohibida: solo se admite editar un registro TPV QA del test-run activo.");
