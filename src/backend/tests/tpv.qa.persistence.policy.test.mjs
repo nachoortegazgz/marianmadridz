@@ -22,6 +22,8 @@ import {
     makeSyntheticPayload,
     makeSandboxRefundLockId,
     makeSandboxSessionLockId,
+    makeSandboxTransactionId,
+    makeLegacySandboxTransactionId,
     assertSandboxCajaWritable,
     assertTpvSandboxEnabled,
 } from "../tpv/tpvUtils.js";
@@ -202,6 +204,30 @@ test("SANDBOX session lock is deterministic, bounded and CAS-only", () => {
     }), /DATA_ACCESS_ERROR/);
     assert.throws(() => assertRemoveAllowed(collection, lockId, CONTROL_TYPE.TPV_SANDBOX_SESSION_LOCK), /DATA_ACCESS_ERROR/);
 });
+
+test("MovimientosCaja transaction IDs are unique across logical TPV event collections", () => {
+    const key = "sandbox-arqueo-reintento-0001";
+    const cashCountId = makeSandboxTransactionId(TPV_SANDBOX_COLLECTIONS.MOVIMIENTOS_CAJA, key);
+    const ticketId = makeSandboxTransactionId(TPV_SANDBOX_COLLECTIONS.TICKET_Z, key);
+    const auditId = makeSandboxTransactionId(TPV_SANDBOX_COLLECTIONS.AUDITORIA, key);
+
+    assert.match(cashCountId, /^TPVSANDBOX_[a-f0-9]{64}$/);
+    assert.notEqual(cashCountId, ticketId);
+    assert.notEqual(cashCountId, auditId);
+    assert.notEqual(ticketId, auditId);
+    assert.equal(cashCountId, makeSandboxTransactionId(TPV_SANDBOX_COLLECTIONS.MOVIMIENTOS_CAJA, key));
+    assert.equal(
+        makeLegacySandboxTransactionId(key),
+        "TPVSANDBOX_" + (awaitlessLegacyDigest(key))
+    );
+});
+
+function awaitlessLegacyDigest(key) {
+    const { createHash } = require("node:crypto");
+    return createHash("sha256")
+        .update(TPV_SANDBOX_RUNTIME_POLICY.SANDBOX_RUN_ID + ":" + key, "utf8")
+        .digest("hex");
+}
 
 test("SANDBOX policy remains synthetic and client idempotency keys are bounded", () => {
     assert.equal(TPV_SANDBOX_RUNTIME_POLICY.ENABLED, true, "offline test harness override");
