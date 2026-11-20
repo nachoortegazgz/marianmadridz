@@ -195,6 +195,7 @@ Siguiente intervención recomendada: **cerrar H-01 de `CajaActual`** definiendo 
 - Los dos pedidos POS contienen una línea Wix Bookings de 18,15 EUR brutos (15,00 + 3,15 IVA), correlacionada por appId y catalogItemId con cada booking. CitasF2 sigue en totalAmount=0 y amountReconciliationRequired=true; no se actualiza sin aprobar el contrato de precedencia y tratamiento fiscal.
 - ControlOperativo devuelve 0 registros ALERT; el cron reconcileMissingConfirmedBookingProjections está declarado cada hora en los minutos 15 y 45 y debería generar revisión para bookings pagados, pero su ejecución runtime no está acreditada.
 - Issue #441 actualizada: guard POS integrado en código, E2E Sandbox pendiente. Issue #416 actualizada con correlación nativa y decisión de no mutar datos.
+- ADR-CASH-REGISTER-SESSION-CONTROL revalidada el 20/11: permanece PROPUESTA TÉCNICA sin aprobación de implementación. Wix no documenta context.original en UpdateHookContext; H-01 requiere recuperar el estado previo en backend/DAL y definir transiciones antes de modificar.
 - No se realizaron escrituras Wix, reintentos, cierres, cambios de pagos ni publicación.
 
 **Prioridad inmediata:** conciliación manual de #10033 refund vs booking y #10032 POS Cash mixto; mantener CajaActual sin cierre/ajuste. Después cerrar H-01 de transiciones CajaActual, acreditar el runtime cron y preparar un singleton TPV QA aislado. Writers fiscales/contables siguen deshabilitados; NO-GO.
