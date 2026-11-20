@@ -39,7 +39,7 @@ test("QA refund lock allows only scoped compare-and-swap fields", () => {
         status: "ACTIVE",
         version: 0,
         expiresAt: new Date(),
-        payload: { environment: "TEST" },
+        payload: { environment: "SANDBOX" },
     }));
     assert.doesNotThrow(() => assertBulkPatchAllowed(collection, [
         { fieldPath: "status", action: "SET_FIELD", value: "RELEASED" },
@@ -62,7 +62,7 @@ test("QA refund lock allows only scoped compare-and-swap fields", () => {
 
 test("QA policy remains synthetic and client idempotency keys are bounded", () => {
     assert.equal(TPV_QA_RUNTIME_POLICY.ENABLED, true);
-    assert.equal(TPV_QA_RUNTIME_POLICY.ENVIRONMENT, "TEST");
+    assert.equal(TPV_QA_RUNTIME_POLICY.ENVIRONMENT, "SANDBOX");
     assert.equal(TPV_QA_RUNTIME_POLICY.SYNTHETIC_ONLY, true);
     assert.equal(TPV_QA_RUNTIME_POLICY.REAL_PAYMENTS_ENABLED, false);
     assert.equal(TPV_QA_RUNTIME_POLICY.FISCAL_WRITES_ENABLED, false);
