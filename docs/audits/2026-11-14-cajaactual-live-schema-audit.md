@@ -6,6 +6,8 @@
 
 # Auditoría de esquema live — CajaActual
 
+> **AVISO DE VIGENCIA (20/11/2026):** Este documento es una fotografía histórica del esquema observado el 14/11/2026. El esquema físico de CajaActual fue actualizado el 17/11/2026. La lectura live más reciente confirma revisión 18 y 81 campos, incluidos openingCashAmount, openingCardAmount, openingBizumAmount, openingOtherAmount, bizumAmount y operationDateHour. No usar esta auditoría como contrato vigente. Véase [reconciliación live 20/11](../qa/2026-11-20-live-caja-schema-and-reconciliation.md).
+
 **Fecha de lectura:** 2026-11-14  
 **Sitio:** `188bed94-177c-4bc9-a9f0-35080d874f3e` (entorno QA único, sin actividad real según declaración del propietario).  
 **Fuente:** Wix Data Collections API, GET /data/v2/collections/CajaActual.  
