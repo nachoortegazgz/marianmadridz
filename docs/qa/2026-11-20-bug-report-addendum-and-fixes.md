@@ -12,6 +12,16 @@ Se ha integrado BUG-14 en main tras CI verde. En esta rama se corrige BUG-NEW-07
 
 No se habilitan escritores fiscales/contables, fichajes, pagos ni cierres. No se modifica CMS, CajaActual LIVE, reservas, automatizaciones ni registros históricos.
 
+### Snapshot CMS read-only (20/11/2026)
+
+Consulta directa Wix Data API, sin mutaciones:
+- `CajaActual`: 1 fila. Estado `ABIERTA`; `openedAt=2026-11-14T06:00:00Z`; `closedAt=2026-11-12T23:00:00Z` (anterior a la apertura); `cashAmount=300`, `expectedCash=300`, `difference=0`; `sequenceCounters` llega como texto JSON, no como OBJECT.
+- `CitasF2`: 6 filas (no 60); el esquema físico confirma `cashMovementId TEXT` y `orderId TEXT`.
+- `HistoricoCierresZ`: 0 filas.
+- `MovimientosCaja`: 0 filas. Por tanto no hay movimientos históricos que permitan probar ausencia de `recordTimestamp`; el riesgo de BUG-NEW-03 queda limitado a productores/filas futuras y no se puede afirmar que exista una fila defectuosa.
+- Contexto Wix del sitio: estado `Draft`; no se acredita publicación del código actual.
+
+
 ## 2. Correcciones implementadas
 
 ### BUG-14 — consulta `contains(linkedBookingIds)`
@@ -34,9 +44,9 @@ El hook ahora:
 Se amplió `src/backend/tests/data.hooks.test.mjs` para cubrir recuperación permitida, mutación económica rechazada y ausencia del registro previo. No se ha ejecutado aún el runner en este entorno; se espera CI.
 
 ### BUG-NEW-08 — comentario contradictorio de `BOOKING_FIELDS`
-**Estado: COMENTARIO CORREGIDO EN ESTA RAMA; contrato físico pendiente.**
+**Estado: COMENTARIO CORREGIDO EN ESTA RAMA; esquema físico verificado.**
 
-No se deben eliminar `CASH_MOVEMENT_ID` ni `ORDER_ID`: existen consumidores activos en `bookingCore.js` y `citasManager.web.js`, y writers de eventos. Se sustituyó el comentario que afirmaba erradicación por otro que refleja su uso actual y advierte que la presencia física de los campos debe comprobarse en el esquema Wix vigente. No se alteraron los nombres ni los payloads.
+No se deben eliminar `CASH_MOVEMENT_ID` ni `ORDER_ID`: existen consumidores activos en `bookingCore.js` y `citasManager.web.js`, y writers de eventos. Se sustituyó el comentario que afirmaba erradicación por otro que refleja su uso actual. La lectura del esquema físico Wix confirma ambos campos como TEXT en CitasF2. No se alteraron los nombres ni los payloads.
 
 ## 3. Revisión crítica de los nuevos hallazgos del informe
 
@@ -44,7 +54,7 @@ No se deben eliminar `CASH_MOVEMENT_ID` ni `ORDER_ID`: existen consumidores acti
 |---|---|---|
 | BUG-NEW-01 `recordDomain=""` | El defecto lógico existe: la ruta pública asigna cadena vacía y la validación exige valor. Pero documentación y contrato CMS confirman que no hay valor canónico aprobado; el bloqueo es deliberado. Además, `LEDGER_WRITES_ENABLED=false` detiene la ruta antes de llegar a esa validación. | No sustituir por `SDK_CONFIG.LOCATION_ID` ni inventar un dominio. Mantener NO-GO hasta aprobar semántica, origen y valor de `recordDomain`. No clasificar como regresión accidental. |
 | BUG-NEW-02 sesión presencial | No se encontró `openCashierSession` ni `closeCashierSession` como WebMethods en `cajas.web.js`. El ADR de sesión sigue como propuesta pendiente; identifica capacidades de apertura/cierre y autorización aún no implementadas. | Brecha funcional P1 confirmada. No crear métodos sin aprobar el contrato de roles, transición, concurrencia, arqueo y E2E. |
-| BUG-NEW-03 `recordTimestamp` | El writer fiscal construye `recordTimestamp: generatedAt`; el hook normaliza y valida el campo. Eso cubre escrituras nuevas, no acredita todos los registros históricos ni todos los productores/recuperadores. | No usar `_createdDate` como timestamp sustitutivo: no representa necesariamente el instante económico. Pendiente inventario read-only de filas y productores. |
+| BUG-NEW-03 `recordTimestamp` | Writer fiscal asigna `generatedAt`; hook normaliza/valida. La consulta CMS actual devuelve 0 filas en MovimientosCaja, por lo que no existen históricos que inspeccionar en esta colección. | No usar `_createdDate` como sustituto. Sin filas no se reproduce un fallo; revisar cualquier nuevo productor antes de habilitar escritores. |
 | BUG-NEW-04 allowlist de `MovimientosCaja` | La política DAL permite update/remove de la colección para la excepción TPV QA. Los hooks recuperan el estado previo fuerte y rechazan filas que no sean sintéticas del test-run activo. La cobertura offline no prueba el hook físico publicado ni comportamiento con `suppressHooks=false` en Wix. | Mantener el alcance mínimo actual; no ampliar. Pendiente prueba Wix Sandbox de rechazo de fila real y aceptación exclusiva de fila sintética autorizada. |
 | BUG-NEW-05 `DATOS_FISCALES` eliminado | El estado actual de `internalConfig.js` no declara `BUSINESS_COLLECTIONS.DATOS_FISCALES`; tampoco hay referencias activas a `DATOS_FISCALES`/ `DatosFiscales` en los módulos backend examinados. La prueba `operational-writers.fail-closed.contract.test.mjs` exige su ausencia y comprueba hooks/configuración en `MapaStaff`. | Hallazgo del informe obsoleto/no reproducido en HEAD actual. No restaurar el alias ni la colección. La configuración SIF real sigue sin estar certificada. |
 | BUG-NEW-06 regex `closedBy` | El patrón acepta UUID con versiones 1–8 y variantes RFC 8/9/a/b. El ejemplo del informe con versión 1 y variante 9 sí cumple el patrón. No se aportó un `resourceId` real rechazado. | No hay fallo reproducible. Mantener pendiente solo si aparece un ID real no aceptado; no cambiar validación a ciegas. |
@@ -53,8 +63,8 @@ No se deben eliminar `CASH_MOVEMENT_ID` ni `ORDER_ID`: existen consumidores acti
 ## 4. Revisión de bugs anteriores
 
 - **BUG-01 y BUG-04:** flags fiscales y de fichajes deshabilitados. Son controles fail-closed deliberados, no cambios a realizar en esta fase.
-- **BUG-02:** proyección Bookings → CitasF2 y alertas de recuperación siguen sin E2E acreditado. No se puede atribuir causa raíz solo con el informe.
-- **BUG-03:** la etiqueta SIMULACION no debe considerarse estado actual sin nueva lectura. La auditoría live de 20/11 documenta una sesión ABIERTA con incoherencias de fechas/esquema. No resetear ni cerrar la caja desde código.
+- **BUG-02:** CitasF2 contiene 6 filas según lectura CMS actual; la proyección y las alertas de recuperación siguen sin E2E acreditado. No se puede atribuir causa raíz solo con el informe.
+- **BUG-03:** lectura CMS actual confirma singleton ABIERTA, no SIMULACION, pero con `closedAt` anterior a `openedAt` y `sequenceCounters` como string aunque el esquema exige OBJECT. Mantener P0/H-01 abierto; no resetear ni cerrar la caja desde código.
 - **BUG-05/06:** remitente Resend no se cambia sin verificar dominio y remitente autorizados; envío a gestoría permanece deshabilitado.
 - **BUG-08:** sincronización ServiciosCatalogo/Bookings nativo no acreditada.
 - **BUG-09:** consulta Wix API solo lectura el 20/11/2026: 158 automatizaciones distintas; 7 ACTIVE y 151 INACTIVE. Las 7 activas son PREINSTALLED y sus triggers son guardado de tarjeta, notificación de agente, asistente, confirmación/reset de miembros, confirmación de suscripción y aviso de límite CMS; ninguna de las 7 usa un trigger de Wix Bookings. El dato de 9 activas del informe no coincide con la lectura actual. No se inspeccionó ni alteró destinatario/contenido de emails; no desactivar automatizaciones sin identificar impacto.
