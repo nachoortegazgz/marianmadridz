@@ -165,6 +165,7 @@ function _buildControlOperativoRecord({
         controlType: CONTROL_TYPE.ALERT,
         dedupeKey: auditId,
         resourceId: safeEntityId,
+        eventType: safeEventType,
         status,
         payload: {
             eventType: safeEventType,
@@ -236,10 +237,7 @@ function _buildOperationalAlertRecord({
         _id: id,
         dedupeKey: id,
         status: CONTROL_STATUS.OPEN,
-        alertType: record.payload.eventType,
-        severity: safeSeverity === "WARNING" ? "WARN" : safeSeverity,
-        message: record.payload.message,
-        ...(operationDate ? { operationDate: String(operationDate) } : {}),
+        ...(operationDate ? { payload: { ...record.payload, operationDate: String(operationDate) } } : {}),
     };
 }
 
