@@ -33,7 +33,8 @@
 
 ## Bloqueos y límites
 
-- `recordDomain` no tiene enum ni valor canónico documentado en el repositorio. El escritor Z no acepta un valor por defecto. Se requiere decisión de dominio antes de habilitar cierres.
+- `recordDomain` no tiene enum ni valor canónico documentado en el repositorio. El escritor Z no acepta un valor por defecto. Se requiere decisión de dominio antes de habilitar cierres. Los valores `CASH_REGISTER` usados en tests son fixtures sintéticos, no una aprobación del dominio de producción.
+- El comando de interfaz Z_CLOSING y el cron actual no suministran `recordDomain` ni una identidad de sistema `closedBy`; ambos quedan bloqueados por el backend hasta resolver el contrato. No se debe cambiar la interfaz para aceptar un valor libre del usuario.
 - Consulta Wix read-only adicional: `MovimientosCaja(eventType=CIERRE_Z)` devolvió 0 registros y `HistoricoCierresZ` devolvió 0 registros. La retirada del proyector duplicado no afecta cierres históricos existentes en el corte auditado.
 - `closedBy` se deriva del resourceId del responsable autenticado; el cron interno debe aportar una identidad de sistema aprobada si se quiere permitir cierre sin cajero.
 - `FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED=false`; ningún cambio de esta rama habilita escrituras.
