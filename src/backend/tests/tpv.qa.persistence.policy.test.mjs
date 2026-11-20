@@ -21,7 +21,47 @@ import {
     makeSyntheticPayload,
     makeQaRefundLockId,
     makeQaSessionLockId,
+    assertQaCajaWritable,
 } from "../tpv/tpvUtils.js";
+
+test("QA writes require an exact test-run CajaActual marker and never accept a live cash singleton", () => {
+    const testRunId = TPV_QA_RUNTIME_POLICY.TEST_RUN_ID;
+    const liveCaja = {
+        singletonKey: "CAJA_PRINCIPAL",
+        cashRegisterStatus: "ABIERTA",
+        snapshotSource: "APERTURA_CAJA",
+        traceId: "",
+        conceptOperations: {},
+    };
+    assert.throws(
+        () => assertQaCajaWritable(liveCaja, { allowBootstrap: true }),
+        /TPV_QA_CASH_REGISTER_NOT_IN_TEST_MODE/
+    );
+
+    const sandboxBootstrap = {
+        cashRegisterStatus: "CERRADA",
+        snapshotSource: "TPV_QA_SANDBOX_INITIALIZED",
+        traceId: testRunId,
+        conceptOperations: { tpvQa: { testRunId } },
+    };
+    assert.throws(
+        () => assertQaCajaWritable(sandboxBootstrap),
+        /TPV_QA_CASH_REGISTER_NOT_IN_TEST_MODE/
+    );
+    assert.doesNotThrow(() => assertQaCajaWritable(sandboxBootstrap, { allowBootstrap: true }));
+
+    const activeQaCaja = {
+        cashRegisterStatus: "SIMULACION",
+        snapshotSource: "TPV_QA_SYNTHETIC",
+        traceId: testRunId,
+        conceptOperations: { tpvQa: { testRunId } },
+    };
+    assert.doesNotThrow(() => assertQaCajaWritable(activeQaCaja));
+    assert.throws(
+        () => assertQaCajaWritable({ ...activeQaCaja, traceId: "OTHER_TEST_RUN" }),
+        /TPV_QA_CASH_REGISTER_NOT_IN_TEST_MODE/
+    );
+});
 
 test("logical TPV entities persist only as marked synthetic rows in canonical CMS", () => {
     const logicalTypes = Object.values(TPV_QA_COLLECTIONS);

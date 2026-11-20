@@ -354,6 +354,7 @@ test("TPV public utility module exposes only the configuration contract consumed
 test("TPV synthetic persistence maps logical events to CajaActual and MovimientosCaja without fiscal side effects", async () => {
     const repository = await source("tpv/tpvQaRepository.js");
     const config = await source("internalConfig.js");
+    const utilities = await source("tpv/tpvUtils.js");
     assert.match(repository, /QA_LEDGER_SOURCE = "TPV_QA_SYNTHETIC"/);
     assert.match(config, /SIMULATED_TPV_/);
     assert.match(repository, /sequenceNumber: 0/);
@@ -363,7 +364,11 @@ test("TPV synthetic persistence maps logical events to CajaActual and Movimiento
     assert.match(repository, /createHash\("sha256"\)/);
     assert.match(repository, /cashRegisterStatus: "SIMULACION"/);
     assert.match(repository, /_ensureCajaActualForQa/);
-    assert.match(repository, /TPV_QA_SANDBOX_INITIALIZED/);
+    assert.match(repository, /TPV_QA_SANDBOX_CASH_REGISTER_NOT_SEEDED/);
+    assert.match(repository, /assertQaCajaWritable/);
+    assert.doesNotMatch(repository, /insertItem\(BUSINESS_COLLECTIONS\.CAJA_ACTUAL/);
+    assert.match(utilities, /TPV_QA_SANDBOX_INITIALIZED/);
+    assert.match(utilities, /TPV_QA_SYNTHETIC/);
     assert.match(repository, /payloadFiscal\?\.testRunId === QA_TEST_RUN_ID/);
     assert.match(repository, /MAX_QA_PROJECTION_EVENTS = 1000/);
     assert.match(repository, /conceptOperations\?\.tpvQa\?\.sessionId/);
