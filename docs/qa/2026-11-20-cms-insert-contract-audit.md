@@ -34,6 +34,7 @@
 ## Bloqueos y límites
 
 - `recordDomain` no tiene enum ni valor canónico documentado en el repositorio. El escritor Z no acepta un valor por defecto. Se requiere decisión de dominio antes de habilitar cierres.
+- Consulta Wix read-only adicional: `MovimientosCaja(eventType=CIERRE_Z)` devolvió 0 registros y `HistoricoCierresZ` devolvió 0 registros. La retirada del proyector duplicado no afecta cierres históricos existentes en el corte auditado.
 - `closedBy` se deriva del resourceId del responsable autenticado; el cron interno debe aportar una identidad de sistema aprobada si se quiere permitir cierre sin cajero.
 - `FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED=false`; ningún cambio de esta rama habilita escrituras.
 - El hook Wix debe probarse en Sandbox con identidad y permisos reales; los tests offline no demuestran que Wix ejecute hooks en el runtime.
