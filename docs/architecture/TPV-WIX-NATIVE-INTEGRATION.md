@@ -30,7 +30,7 @@ El repositorio `nachoortegazgz/marianmadridz` contiene `wix.config.json` con el 
 | Pagos, pedidos y transacciones | Wix eCommerce / proveedor | Simulación sintética; sin checkout, autorización, captura, pedido ni reembolso real |
 | Tarjetas regalo | Wix Gift Cards | Consulta de saldo real, emisión, canje y reembolso deshabilitados en QA |
 | Facturación | Wix Invoices V1 + módulo fiscal | Sin emisión fiscal; factura/abono/rectificativa bloqueados |
-| Caja y ledgers | `CajaActual`, `MovimientosCaja`, `HistoricoCierresZ`, ledgers fiscal/contable | Sin escritores TPV operativos; persistencia QA solo en `TPV_QA_*` |
+| Caja y ledgers | `CajaActual`, `MovimientosCaja`, `HistoricoCierresZ`, ledgers fiscal/contable | Eventos sintéticos en `MovimientosCaja` y proyección de sesión en `CajaActual`; sin escritores fiscales/contables |
 
 Wix Bookings y Stores permanecen como SSOT de los catálogos que se leen. El CMS propio conserva exclusivamente el estado transaccional sintético de TPV. No se copian contactos, miembros, reservas, tarjetas regalo, pedidos ni pagos reales.
 
@@ -44,7 +44,7 @@ Wix Bookings y Stores permanecen como SSOT de los catálogos que se leen. El CMS
 - Los eventos de auditoría usan el actor sintético `QA_ACTOR`; la identidad real se utiliza únicamente en la comprobación de autorización backend y no se persiste en los registros TPV.
 - `tpvQaRepository.js` concentra escrituras QA, idempotencia y locks CAS; los eventos sintéticos se persisten en `MovimientosCaja` y `CajaActual` conserva la proyección de caja. `TPV_QA_COLLECTIONS` son claves lógicas internas, no colecciones físicas.
 - `TpvSandboxIdentities` es una excepción autorizada de colección propia solo para identidades sintéticas; su esquema tiene permisos ADMIN y hooks append-only. Sus filas aún deben cargarse desde Wix Sandbox.
-- `#htmlTPV.txt` implementa el protocolo `MM_READY/MM_CONTEXT`, `postMessage`, catálogo Bookings/Stores V3, fixtures de cliente/profesionales y operaciones persistentes sintéticas QA a través de `tpvPageController.js`. Los cobros reales, facturación, Gift Cards reales, reservas, hardware y escrituras operativas permanecen deshabilitados. El HTML está versionado; su instalación en el HTML Component Wix y runtime siguen pendientes de verificación.
+- `#htmlTPV.txt` implementa el protocolo `MM_READY/MM_CONTEXT`, `postMessage`, catálogo Bookings/Stores V3, identidades sintéticas desde `TpvSandboxIdentities` y operaciones persistentes QA a través de `tpvPageController.js`. Los cobros reales, facturación, Gift Cards reales, reservas, hardware y escrituras operativas permanecen deshabilitados. El HTML está versionado; su instalación en el HTML Component Wix y runtime siguen pendientes de verificación.
 
 ## Política de seguridad
 
@@ -52,7 +52,7 @@ Wix Bookings y Stores permanecen como SSOT de los catálogos que se leen. El CMS
 - Reembolsos sintéticos y Ticket Z requieren ADMIN.
 - La interfaz no es una barrera de seguridad: cada WebMethod vuelve a comprobar permisos.
 - No se llama a Payments, checkout, Orders, refunds, Bookings writers, Gift Card writers, hardware, notificaciones ni emisión fiscal.
-- No se escribe en `CajaActual`, `MovimientosCaja`, `HistoricoCierresZ` ni `LibroAsientosContablesDetalle`.
+- `CajaActual` se actualiza únicamente como proyección backend de la sesión sintética. No se escribe en `HistoricoCierresZ` ni `LibroAsientosContablesDetalle`.
 - Las escrituras de eventos QA se limitan a `MovimientosCaja` con marcadores `TPV_QA_SYNTHETIC` y `SIMULATED_TPV_*`; `CajaActual` recibe exclusivamente la proyección backend. No existen colecciones físicas `TPV_QA_*`.
 - El identificador de auditoría persistido es `QA_ACTOR`, nunca el ID real del miembro.
 
