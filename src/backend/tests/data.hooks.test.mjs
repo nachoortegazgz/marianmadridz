@@ -565,7 +565,15 @@ test('HOOK-CAJA-04 allows edit and removal only for the active synthetic TPV tes
   };
   wixDataMock._reset();
   wixDataMock._seed(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA, [row]);
-  const updated = await H.MovimientosCaja_beforeUpdate({ ...row, totalAmount: 1 });
-  assert.equal(updated.totalAmount, 1);
+  const updated = await H.MovimientosCaja_beforeUpdate({
+    ...row,
+    payloadFiscal: {
+      ...row.payloadFiscal,
+      qaRecord: { ...row.payloadFiscal.qaRecord, amountMinor: 7500 },
+    },
+  });
+  assert.equal(updated.totalAmount, 75);
+  assert.notEqual(updated.hash, row.hash);
+  assert.equal(updated.sequenceNumber, 0);
   assert.equal(await H.MovimientosCaja_beforeRemove(row._id), row._id);
 });
