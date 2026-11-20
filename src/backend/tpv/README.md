@@ -118,3 +118,5 @@ Las pruebas contractuales mantienen sus rutas históricas para que el workflow d
 El contexto del widget anuncia `environment: SANDBOX` y `previewOnly: true` únicamente cuando el WebMethod confirma el marcador del singleton. Si el marcador no coincide, el widget recibe `UNAVAILABLE` y no habilita capacidades operativas.
 
 El bootstrap también crea, solo en ese mismo data plane y bajo autorización de administrador, tres clientes y tres profesionales sintéticos (`example.test`). Los IDs son deterministas, las altas son idempotentes y append-only, y las identidades quedan ligadas al `SANDBOX_RUN_ID` activo.
+
+El acceso elevado a `TpvSandboxIdentities` está limitado a altas sintéticas del `SANDBOX_RUN_ID` vigente; la colección permanece append-only. La escritura de fichajes reales continúa cerrada mientras no se validen sus garantías de idempotencia y concurrencia.
