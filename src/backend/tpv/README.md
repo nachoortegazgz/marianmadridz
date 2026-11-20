@@ -8,12 +8,12 @@ Este directorio implementa el TPV en modo QA persistente y sintético para el si
 
 ## Límites de seguridad
 
-- Toda escritura de negocio de TPV se realiza exclusivamente en las colecciones `TPV_QA_*`.
-- Las colecciones QA son append-only: el acceso central permite `insert`, pero no `update` ni `remove`.
+- Los eventos TPV sintéticos se persisten como filas marcadas en `MovimientosCaja`; `CajaActual` conserva la proyección de la sesión Sandbox. `TPV_QA_COLLECTIONS` son claves lógicas internas, no colecciones físicas.
+- `MovimientosCaja` conserva su contrato de ledger: las filas sintéticas se distinguen por `recordSource=TPV_QA_SYNTHETIC`, `movementType=SIMULATED_TPV_*`, `testRunId`, hash QA y secuencia fiscal cero. Los ledgers fiscal/contable y `HistoricoCierresZ` no reciben escrituras TPV.
 - La idempotencia se aplica mediante índice CMS único `idempotencyKey`, lectura fuerte previa y reconciliación del resultado de inserción concurrente.
 - Los reembolsos sintéticos se serializan por venta mediante compare-and-swap en `ControlOperativo`, tipo `TPV_QA_REFUND_LOCK`. Ventas, devoluciones, movimientos, arqueos y cierres comparten además `TPV_QA_SESSION_LOCK` para evitar carreras con Ticket Z. Los locks no son ledgers ni almacenan importes.
-- No se consultan contactos, miembros, reservas, staff real ni saldos de Gift Cards. No se llama a Wix Payments, checkout, Orders, refunds, Bookings writers, Gift Card writers, hardware, notificaciones ni emisión fiscal.
-- No se escribe en `CajaActual`, `MovimientosCaja`, `HistoricoCierresZ` ni `LibroAsientosContablesDetalle`.
+- Clientes y profesionales se consultan exclusivamente en `TpvSandboxIdentities`; no se consultan CRM, Members, Bookings Staff, reservas ni saldos de Gift Cards. No se llama a Wix Payments, checkout, Orders, refunds, Bookings writers, Gift Card writers, hardware, notificaciones ni emisión fiscal.
+- `CajaActual` solo se actualiza como proyección backend de la sesión sintética. No se escribe en `HistoricoCierresZ` ni `LibroAsientosContablesDetalle`.
 - Ticket Z cierra solo la sesión QA y nunca cierra el periodo fiscal u operativo.
 
 ## Inventario
@@ -23,7 +23,7 @@ Este directorio implementa el TPV en modo QA persistente y sintético para el si
 | `tpvCaja.web.js` | Apertura diaria QA, lectura de sesión y arqueo parcial |
 | `tpvVentas.web.js` | Validación y persistencia idempotente de venta sintética |
 | `tpvMovimientos.web.js` | Entradas, salidas y retiradas sintéticas |
-| `tpvCatalogo.web.js` | Lectura nativa de servicios Bookings y Stores Catalog V3; cliente y profesionales solo desde fixtures sintéticas |
+| `tpvCatalogo.web.js` | Lectura nativa de servicios Bookings y Stores Catalog V3; clientes/profesionales solo desde `TpvSandboxIdentities` |
 | `tpvPagos.web.js` | Validación de medios mixtos sin pasarela |
 | `tpvDevoluciones.web.js` | Reembolso sintético parcial/total, con autorización ADMIN y lock por venta |
 | `tpvCierres.web.js` | Resumen, Ticket X y cierre de sesión QA Ticket Z |
@@ -31,15 +31,15 @@ Este directorio implementa el TPV en modo QA persistente y sintético para el si
 | `tpvPermisos.web.js` | Capacidades QA derivadas del rol backend |
 | `tpvUtils.web.js` | Configuración QA expuesta al controlador de página (sin validadores duplicados) |
 | `tpvUtils.js` | Validación pura, minor units, claves y payload sintético |
-| `tpvQaRepository.js` | Acceso central a colecciones QA, idempotencia, lectura fuerte y locks CAS de sesión/venta |
+| `tpvQaRepository.js` | Adaptador lógico sobre `MovimientosCaja`/`CajaActual`, idempotencia, lectura fuerte y locks CAS de sesión/venta |
 | `tpvCierresCore.js` | Agregación reproducible de ventas, pagos, devoluciones y efectivo |
 
 ## Flujo de venta
 
 1. El miembro con rol cajero solicita la sesión QA abierta.
 2. La interfaz prepara y valida el borrador en backend.
-3. `registrarVentaQA` exige una sesión abierta y pago completamente cuadrado.
-4. Inserta evento `PREPARADA`, líneas, pagos y evento `CONFIRMADA_SINTETICA`.
+3. `registrarVentaQA` exige una sesión abierta y pago completamente cuadrado; valida cliente/profesionales contra identidades sintéticas activas.
+4. Persiste eventos lógicos `PREPARADA`, líneas, pagos y `CONFIRMADA_SINTETICA` en `MovimientosCaja`, con marcador sintético y secuencia fiscal cero.
 5. Cada evento utiliza una clave idempotente derivada de la clave cliente; un reintento continúa los pasos pendientes sin duplicar los existentes.
 6. Se registra auditoría. No se inicia una autorización, captura, orden ni movimiento fiscal.
 
