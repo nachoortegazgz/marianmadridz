@@ -1,7 +1,7 @@
 /*
 =============================================================================
 MODULE: backend/data.js
-VERSION: v5016-CANONICAL-READ
+VERSION: v5017-SYNTHETIC-TPV-EDIT
 REPO: https://github.com/nachoortegazgz/marianmadridz.git
 RESPONSIBILITY: Política temporal de mutación del sitio aislado y validación
                 estricta de esquemas CMS.
