@@ -208,6 +208,7 @@ const CAJA_KEYS = Object.freeze({
     OPENED_AT: "openedAt",
     CLOSED_AT: "closedAt",
     LAST_MOVEMENT_AT: "lastMovementAt",
+    OPENING_CASH: "openingCashAmount",
 });
 
 // ============================================================================
@@ -1082,8 +1083,8 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
 // SSOT Apartado 4 (CajaActual): claves canonicas cashAmount/cardAmount/...;
 // los campos de saldo usan la semantica "acumulado del periodo abierto", no
 // "saldo contable". Claves historical (cashBalance, cardBalance...) eliminadas:
-// CajaActual no tiene hook de normalizacion y cualquier lector debe usar
-// estas constantes como unica fuente.
+// Wix hooks normalizan fechas y sequenceCounters, no aliases de saldos; los
+// lectores y escritores de esta proyección usan exclusivamente estas claves.
 
 // CajaActual's singletonKey is the logical identity. Wix may assign a
 // different physical _id to the collection's singleton item, so never use
@@ -1153,8 +1154,10 @@ async function _updateCajaActual(movement, traceId) {
 
             cashRegister[amountField] = _roundMoney((Number(cashRegister[amountField]) || 0) + amount);
             // Only cash changes the expected physical drawer balance. Card
-            // and Bizum update card/other buckets, never physical cash.
-            // Method detail remains in MovimientosCaja; CajaActual has no Bizum field.
+            // and Bizum never change physical cash. This cashier projection
+            // deliberately aggregates Bizum into otherAmount; the physical CMS
+            // schema also declares bizumAmount, but this writer does not use it.
+            // Method detail remains in MovimientosCaja.
             if (method === PAYMENT_METHOD.EFECTIVO) {
                 cashRegister.expectedCash = _roundMoney(Number(cashRegister[CAJA_KEYS.CASH]) || 0);
             }
@@ -1416,7 +1419,7 @@ export const getCashierState = webMethod(Permissions.SiteMember, async (options 
                 totalOperations,
                 openedAt: cashRegister?.[CAJA_KEYS.OPENED_AT] ?? null,
                 openedBy: cashRegister?.openedBy ?? null,
-                openingAmount: cashRegister?.openingAmount ?? null,
+                openingCashAmount: cashRegister?.[CAJA_KEYS.OPENING_CASH] ?? null,
                 expectedCash: cashRegister?.expectedCash ?? null,
                 countedCash: cashRegister?.countedCash ?? null,
                 difference: cashRegister?.difference ?? null,
