@@ -2,7 +2,8 @@ import { Permissions, webMethod } from "wix-web-module";
 import { auth } from "@wix/essentials";
 import { services } from "@wix/bookings";
 import { catalogVersioning, productsV3 } from "@wix/stores";
-import { TPV_QA_FIXTURES } from "backend/internalConfig";
+import { TPV_QA_IDENTITY_TYPES } from "backend/internalConfig";
+import { listTpvSandboxIdentities, getTpvSandboxIdentity } from "backend/tpv/tpvSandboxIdentities";
 import { requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 
@@ -74,18 +75,18 @@ export const buscarClientesTPV = webMethod(
         try {
             const search = String(input.search || "").trim().slice(0, 100).toLowerCase();
             if (search.length < 2) throw new Error("TPV_CUSTOMER_SEARCH_TOO_SHORT");
-            const customer = TPV_QA_FIXTURES.CUSTOMER;
-            const matches = [customer].filter((item) =>
-                item.DISPLAY_NAME.toLowerCase().includes(search) ||
-                item.EMAIL.toLowerCase().includes(search)
+            const customers = await listTpvSandboxIdentities(TPV_QA_IDENTITY_TYPES.CUSTOMER);
+            const matches = customers.filter((item) =>
+                item.displayName.toLowerCase().includes(search) ||
+                String(item.email || "").toLowerCase().includes(search)
             );
             return {
                 status: "SUCCESS",
                 data: {
                     items: matches.map((item) => ({
-                        contactId: item.ID,
-                        displayName: item.DISPLAY_NAME,
-                        email: item.EMAIL,
+                        contactId: item.identityId,
+                        displayName: item.displayName,
+                        email: item.email || "",
                         phone: "",
                         isSynthetic: true,
                     })),
@@ -113,7 +114,8 @@ export const obtenerReservasClienteTPV = webMethod(
         const traceId = makeTraceId("tpv-customer-bookings");
         await requireCajero(traceId);
         const contactId = String(input.contactId || "").trim();
-        if (contactId !== TPV_QA_FIXTURES.CUSTOMER.ID) {
+        const customer = await getTpvSandboxIdentity(contactId, TPV_QA_IDENTITY_TYPES.CUSTOMER);
+        if (!customer) {
             return {
                 status: "ERROR",
                 data: null,
@@ -175,10 +177,10 @@ export const obtenerProfesionales = webMethod(
         return {
             status: "SUCCESS",
             data: {
-                items: TPV_QA_FIXTURES.STAFF.map((staff) => ({
-                    profesionalId: staff.ID,
-                    nombre: staff.DISPLAY_NAME,
-                    resourceId: staff.ID,
+                items: (await listTpvSandboxIdentities(TPV_QA_IDENTITY_TYPES.STAFF)).map((staff) => ({
+                    profesionalId: staff.identityId,
+                    nombre: staff.displayName,
+                    resourceId: staff.identityId,
                     esProveedorServicio: true,
                     isSynthetic: true,
                 })),

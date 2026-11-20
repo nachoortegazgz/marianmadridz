@@ -94,8 +94,9 @@ test("TPV HTML request protocol is dispatched for the active widget workflows", 
 
 test("TPV customer, staff and booking references are synthetic-only", async () => {
     const sales = await readFile(new URL("../tpv/tpvVentas.web.js", import.meta.url), "utf8");
-    assert.match(catalogBackend, /TPV_QA_FIXTURES\.CUSTOMER/);
-    assert.match(catalogBackend, /TPV_QA_FIXTURES\.STAFF/);
+    assert.match(catalogBackend, /listTpvSandboxIdentities\(TPV_QA_IDENTITY_TYPES\.CUSTOMER\)/);
+    assert.match(catalogBackend, /listTpvSandboxIdentities\(TPV_QA_IDENTITY_TYPES\.STAFF\)/);
+    assert.doesNotMatch(catalogBackend, /TPV_QA_FIXTURES/);
     assert.match(catalogBackend, /syntheticOnly: true/);
     assert.doesNotMatch(catalogBackend, /contactsV5|extendedBookings|staffMembers|tpvNativeReaders/);
     assert.match(sales, /TPV_QA_CUSTOMER_NOT_ALLOWED/);

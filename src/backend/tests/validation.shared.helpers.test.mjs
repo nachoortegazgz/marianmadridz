@@ -126,3 +126,32 @@ test("VALIDATION-MAPASTAFF-01 validates native staff identity fields without fis
     assert.throws(() => V.assertMapaStaffRecord({ ...staff, scheduleId: undefined }), /scheduleId/);
     assert.throws(() => V.assertMapaStaffRecord({ ...staff, thirdPartyId: 123 }), /thirdPartyId must be TEXT/);
 });
+
+
+test("VALIDATION-TPV-IDENTITY-01 accepts only synthetic Sandbox customer and staff records", () => {
+    const base = {
+        identityId: "QA-CUSTOMER-001",
+        identityType: "CUSTOMER",
+        displayName: "Cliente Sintético 01",
+        email: "cliente.qa@example.test",
+        active: true,
+        syntheticOnly: true,
+        environment: "SANDBOX",
+        testRunId: IC.TPV_QA_RUNTIME_POLICY.TEST_RUN_ID,
+        metadata: {},
+    };
+    assert.equal(V.assertTpvSandboxIdentity(base), true);
+    assert.throws(() => V.assertTpvSandboxIdentity({ ...base, environment: "LIVE" }), /Sandbox/);
+    assert.throws(() => V.assertTpvSandboxIdentity({ ...base, syntheticOnly: false }), /synthetic Sandbox/);
+    assert.throws(() => V.assertTpvSandboxIdentity({ ...base, email: "cliente@real.es" }), /example.test/);
+    assert.throws(() => V.assertTpvSandboxIdentity({ ...base, phone: "+34600000000" }), /unsupported fields/);
+    assert.throws(() => V.assertTpvSandboxIdentity({ ...base, metadata: { externalId: "real-id" } }), /empty OBJECT/);
+    assert.throws(() => V.assertTpvSandboxIdentity({ ...base, displayName: "Nombre Real" }), /displayName/);
+    assert.equal(V.assertTpvSandboxIdentity({
+        ...base,
+        identityId: "QA-STAFF-001",
+        identityType: "STAFF",
+        displayName: "Profesional Sintético 01",
+        email: "staff.qa@example.test",
+    }), true);
+});

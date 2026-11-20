@@ -219,8 +219,19 @@ test("TPV WebMethods isolate synthetic QA writes from operational ledgers", asyn
 test("TPV catalog reader uses native Bookings SDK and does not expose staff contact details", async () => {
     const catalog = await source("tpv/tpvCatalogo.web.js");
     assert.match(catalog, /services\.queryServices/);
-    assert.match(catalog, /TPV_QA_FIXTURES\.STAFF/);
-    assert.match(catalog, /TPV_QA_FIXTURES\.CUSTOMER/);
+    assert.match(catalog, /listTpvSandboxIdentities\(TPV_QA_IDENTITY_TYPES\.STAFF\)/);
+    assert.match(catalog, /listTpvSandboxIdentities\(TPV_QA_IDENTITY_TYPES\.CUSTOMER\)/);
+    assert.doesNotMatch(catalog, /TPV_QA_FIXTURES/);
+    const identities = await source("tpv/tpvSandboxIdentities.js");
+    assert.match(identities, /BUSINESS_COLLECTIONS\.TPV_SANDBOX_IDENTITIES/);
+    assert.match(identities, /CONSISTENCY\.STRONG/);
+    assert.match(identities, /syntheticOnly/);
+    assert.match(identities, /testRunId/);
+    const validation = await source("validation.js");
+    assert.match(validation, /assertTpvSandboxIdentity/);
+    const hooks = await source("data.js");
+    assert.match(hooks, /TpvSandboxIdentities_beforeInsert/);
+    assert.match(hooks, /TPV_SANDBOX_IDENTITIES_APPEND_ONLY/);
     assert.doesNotMatch(catalog, /contactsV5|extendedBookings|staffMembers|tpvNativeReaders/);
     assert.match(catalog, /formattedValue/);
     assert.match(catalog, /precioMinor/);
