@@ -417,6 +417,12 @@ export function MovimientosCaja_beforeInsert(item) {
     if (!ledgerHash) {
         _schemaError("hash obligatorio (cadena SHA-256 de integridad del asiento)");
     }
+    if (item.recordSource === "TPV_QA_SYNTHETIC" ||
+        String(item.movementType || "").startsWith("SIMULATED_TPV_")) {
+        if (!_isCurrentSyntheticTpvRow(item)) {
+            _schemaError("Evento TPV sintético no cumple el contrato del test-run activo.");
+        }
+    }
 
     const taxId = readRecipientTaxId(item);
     if (taxId && !_isValidNifOrEuVat(taxId)) {
