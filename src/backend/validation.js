@@ -386,12 +386,15 @@ export function assertTpvSandboxIdentity(item) {
     const identityId = String(item.identityId || "").trim();
     const displayName = String(item.displayName || "").trim();
     const expectedPrefix = identityType === "CUSTOMER" ? "QA-CUSTOMER-" : "QA-STAFF-";
+    const expectedNamePrefix = identityType === "CUSTOMER" ? "Cliente Sintético " : "Profesional Sintético ";
     if (!["CUSTOMER", "STAFF"].includes(identityType) ||
+        item.identityType !== identityType ||
         !identityId.startsWith(expectedPrefix) ||
         !/^[A-Z0-9-]{12,48}$/.test(identityId)) {
         throw new Error("SCHEMA_VIOLATION: TpvSandboxIdentities identity key/type invalid");
     }
-    if (!displayName || displayName.length > 120) {
+    if (!displayName.startsWith(expectedNamePrefix) ||
+        !/^\\d{2}$/.test(displayName.slice(expectedNamePrefix.length))) {
         throw new Error("SCHEMA_VIOLATION: TpvSandboxIdentities displayName invalid");
     }
     if (item.active !== true || item.syntheticOnly !== true || item.environment !== "SANDBOX" ||
@@ -404,13 +407,13 @@ export function assertTpvSandboxIdentity(item) {
     if (identityType === "STAFF" && item.email && !/^[^\s@]+@example\.test$/i.test(String(item.email))) {
         throw new Error("SCHEMA_VIOLATION: TpvSandboxIdentities staff email must use example.test");
     }
-    if (item.metadata !== undefined && (!item.metadata || typeof item.metadata !== "object" || Array.isArray(item.metadata))) {
-        throw new Error("SCHEMA_VIOLATION: TpvSandboxIdentities metadata must be an OBJECT");
+    if (item.metadata !== undefined && (!item.metadata || typeof item.metadata !== "object" || Array.isArray(item.metadata) || Object.keys(item.metadata).length !== 0)) {
+        throw new Error("SCHEMA_VIOLATION: TpvSandboxIdentities metadata must be an empty OBJECT");
     }
-    for (const forbidden of ["phone", "taxId", "address", "contactId", "memberId", "resourceId", "bookingsResourceId"]) {
-        if (Object.prototype.hasOwnProperty.call(item, forbidden)) {
-            throw new Error("SCHEMA_VIOLATION: TpvSandboxIdentities cannot store real contact/resource identifiers");
-        }
+    const allowedFields = new Set(["_id", "_createdDate", "_updatedDate", "_owner", "identityId", "identityType", "displayName", "email", "active", "syntheticOnly", "environment", "testRunId", "createdAt", "metadata"]);
+    const unknownFields = Object.keys(item).filter((field) => !allowedFields.has(field));
+    if (unknownFields.length) {
+        throw new Error("SCHEMA_VIOLATION: TpvSandboxIdentities contains unsupported fields");
     }
     return true;
 }
