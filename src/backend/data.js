@@ -591,7 +591,9 @@ export async function MovimientosCaja_beforeRemove(itemId) {
 }
 
 export function LibroAsientosContablesDetalle_beforeInsert(item) {
-    if (!item || typeof item !== "object") return item;
+    if (!item || typeof item !== "object" || Array.isArray(item)) {
+        _schemaError("LibroAsientosContablesDetalle item invalido");
+    }
     _normalizeCmsDateTime(item, "recordTimestamp");
     assertAccountingLedgerRecord(item);
     return item;
