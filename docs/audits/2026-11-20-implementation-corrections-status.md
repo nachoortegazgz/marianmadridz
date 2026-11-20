@@ -59,7 +59,7 @@ No se ha añadido `@wix/crm` a `package.json` porque el lockfile contiene 443 pa
 - Cambio C2 aplicado mediante actualización de blob completo de `cajas.web.js`; el resto del archivo se conserva.
 - Wix Site Context consultado: sitio Marian Madrid, Editor clásico, Velo habilitado, estado Draft, Stores Catalog V3, Bookings y Gift Cards instalados.
 - Documentación oficial Wix consultada: Wix Fetch para Velo recomienda el import explícito desde `wix-fetch`.
-- CI inicial ejecutado en Node 24.22.1: `npm ci`, auditoría de dependencias, contratos SDK y ESLint pasaron; Layer 1 falló por ausencia del export nombrado en el mock genérico de `wix-fetch` (6 suites no llegaron a instanciar). Se corrigió el loader de pruebas en un commit posterior; CI debe repetirse para confirmar la reparación. No se ejecutó Wix Preview ni runtime del firmador.
+- CI final del commit `e5eabfbc11da52b6177853284dddc1cf7d4d31de`: **success** en Node 24.22.1. `npm ci`, npm audit (0 vulnerabilidades), Layer 1 (28 suites/334 tests), Layer 2 (19 suites/267 tests), suite completa (74 suites/692 tests), contratos SDK y ESLint pasaron. Secret Scanning también terminó correctamente. La prueba confirma el import y los contratos offline, no el runtime Wix ni la invocación real del firmador.
 - No se hicieron escrituras en Wix CMS, no se modificaron datos LIVE y no se publicó.
 
 ## 6. Métrica de implementación
@@ -82,4 +82,4 @@ No se declara un porcentaje global de despliegue: D1–D4 y las tareas P3 requie
 6. Verificar bindings HTML y scheduler en Wix Editor antes de retirar o cablear consumidores.
 7. Ejecutar smoke Sandbox con evidencia y comparar LIVE antes/después.
 
-**Conclusión:** C2 está corregida en el backend y se ha corregido el mock offline que impedía cargar el módulo. La validación CI posterior al cambio sigue pendiente. No hay base suficiente para declarar resueltos C1 ni el resto de bloqueos de despliegue. Se mantiene NO-GO para publicación y para activar writers operativos/fiscales/laborales.
+**Conclusión:** C2 y su harness offline están corregidos y la CI completa ha pasado (74 suites/692 tests, npm audit sin vulnerabilidades). No hay base suficiente para declarar resueltos C1 ni el resto de bloqueos de despliegue. Se mantiene NO-GO para publicación y para activar writers operativos/fiscales/laborales.
