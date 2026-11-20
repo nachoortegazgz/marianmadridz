@@ -81,9 +81,9 @@ jobs:
         timeout-minutes: 10
         run: |
           set -euo pipefail
-          # The CLI prompts for the preview source. The first/default option is
-          # "Latest commit from origin/main"; carriage return accepts that selection.
-          printf '\r' | script --quiet --return --command 'npm run wix preview' "$RUNNER_TEMP/wix-preview.typescript" | tee "$RUNNER_TEMP/wix-preview.log"
+          # Wix documents direct CLI invocation in GitHub Actions. CI mode avoids
+          # pseudo-TTY prompts and uses the connected repository's default branch.
+          npm run wix preview 2>&1 | tee "$RUNNER_TEMP/wix-preview.log"
           preview_url="$(grep -Eo 'https?://wix\.to/[[:alnum:]]+' "$RUNNER_TEMP/wix-preview.log" | tail -n 1 || true)"
           if [[ -z "$preview_url" ]]; then
             echo "::error::Wix CLI completed without exposing a recognized wix.to preview URL."
