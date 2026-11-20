@@ -276,12 +276,21 @@ async function _ensureCajaActualForSandbox() {
     return caja;
 }
 
-export async function initializeSandboxCaja() {
+export async function initializeSandboxCaja({ authorizeCreate } = {}) {
     assertTpvSandboxEnabled();
     const existing = await _getCajaActual();
     if (existing) {
         assertSandboxCajaWritable(existing, { allowBootstrap: true });
         return { item: existing, created: false };
+    }
+    if (typeof authorizeCreate !== "function") {
+        throw new Error("TPV_SANDBOX_BOOTSTRAP_ADMIN_REQUIRED");
+    }
+    await authorizeCreate();
+    const current = await _getCajaActual();
+    if (current) {
+        assertSandboxCajaWritable(current, { allowBootstrap: true });
+        return { item: current, created: false };
     }
 
     const seed = {

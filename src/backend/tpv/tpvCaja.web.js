@@ -23,10 +23,10 @@ export const inicializarCajaSANDBOX = webMethod(
     Permissions.SiteMember,
     async () => {
         const traceId = makeTraceId("tpv-sandbox-bootstrap");
-        await requireAdmin(traceId);
+        await requireCajero(traceId);
         assertTpvSandboxEnabled();
         try {
-            const result = await initializeSandboxCaja();
+            const result = await initializeSandboxCaja({ authorizeCreate: () => requireAdmin(traceId) });
             return {
                 status: "SUCCESS",
                 data: {
