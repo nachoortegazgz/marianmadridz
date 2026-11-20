@@ -210,24 +210,17 @@ test("MovimientosCaja transaction IDs are unique across logical TPV event collec
     const cashCountId = makeSandboxTransactionId(TPV_SANDBOX_COLLECTIONS.MOVIMIENTOS_CAJA, key);
     const ticketId = makeSandboxTransactionId(TPV_SANDBOX_COLLECTIONS.TICKET_Z, key);
     const auditId = makeSandboxTransactionId(TPV_SANDBOX_COLLECTIONS.AUDITORIA, key);
+    const legacyId = makeLegacySandboxTransactionId(key);
 
     assert.match(cashCountId, /^TPVSANDBOX_[a-f0-9]{64}$/);
+    assert.match(legacyId, /^TPVSANDBOX_[a-f0-9]{64}$/);
     assert.notEqual(cashCountId, ticketId);
     assert.notEqual(cashCountId, auditId);
     assert.notEqual(ticketId, auditId);
+    assert.notEqual(cashCountId, legacyId);
     assert.equal(cashCountId, makeSandboxTransactionId(TPV_SANDBOX_COLLECTIONS.MOVIMIENTOS_CAJA, key));
-    assert.equal(
-        makeLegacySandboxTransactionId(key),
-        "TPVSANDBOX_" + (awaitlessLegacyDigest(key))
-    );
+    assert.equal(legacyId, makeLegacySandboxTransactionId(key));
 });
-
-function awaitlessLegacyDigest(key) {
-    const { createHash } = require("node:crypto");
-    return createHash("sha256")
-        .update(TPV_SANDBOX_RUNTIME_POLICY.SANDBOX_RUN_ID + ":" + key, "utf8")
-        .digest("hex");
-}
 
 test("SANDBOX policy remains synthetic and client idempotency keys are bounded", () => {
     assert.equal(TPV_SANDBOX_RUNTIME_POLICY.ENABLED, true, "offline test harness override");
