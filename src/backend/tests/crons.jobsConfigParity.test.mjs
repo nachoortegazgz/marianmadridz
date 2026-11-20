@@ -243,7 +243,7 @@ test('CRON-PAYMENT-RECOVERY-01 repairs CitasF2 from the existing paid ORDER move
     controlType: IC.CONTROL_TYPE.ALERT,
     dedupeKey: 'test:payment-recovery-alert',
     traceId: 'trace-payment-recovery-alert',
-    alertType: 'PAYMENT_STATE_UPDATE_REQUIRED',
+    eventType: 'PAYMENT_STATE_UPDATE_REQUIRED',
     status: IC.CONTROL_STATUS.OPEN,
     payload: {
       eventType: 'PAYMENT_STATE_UPDATE_REQUIRED',
@@ -403,7 +403,7 @@ test('CRON-Z-01 verifyNightlyZClosing is idempotent when the day is already clos
   ]);
   await CR.verifyNightlyZClosing();
   const alerts = (wixDataMock._store.get(IC.OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO) || [])
-    .filter((r) => r.alertType);
+    .filter((r) => r.eventType);
   assert.deepStrictEqual(alerts, [], 'must NOT raise an alert when the day is verifiably closed');
 });
 
@@ -413,7 +413,7 @@ test('CRON-Z-02 verifyNightlyZClosing raises MANUAL_REQUIRED alert when no close
   // The cron records a deduplicated WARN alert without throwing.
   await CR.verifyNightlyZClosing();
   const alerts = (wixDataMock._store.get(IC.OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO) || [])
-    .filter((r) => r.alertType === 'NIGHTLY_Z_CLOSING_MANUAL_REQUIRED');
+    .filter((r) => r.eventType === 'NIGHTLY_Z_CLOSING_MANUAL_REQUIRED');
   assert.strictEqual(alerts.length, 1, 'exactly one deduped manual-required alert expected');
 });
 
@@ -667,7 +667,7 @@ test('CRON-ORDER-CREATED-01 reconciles Bookings, Stores and mixed catalog orders
   );
   const alerts = rows.filter(row =>
     row.controlType === IC.CONTROL_TYPE.ALERT &&
-    row.alertType === 'ORDER_CREATED_RECONCILIATION_REQUIRED'
+    row.eventType === 'ORDER_CREATED_RECONCILIATION_REQUIRED'
   );
   assert.equal(markers.length, 3);
   assert.equal(alerts.length, 1);
@@ -685,7 +685,7 @@ test('CRON-ORDER-CREATED-01 reconciles Bookings, Stores and mixed catalog orders
   assert.equal(replay.skipped, 3);
   const rowsAfterReplay = wixDataMock._store.get(IC.OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO) || [];
   assert.equal(rowsAfterReplay.filter(row => row.payload?.eventType === 'ORDER_CREATED_RECONCILED').length, 3);
-  assert.equal(rowsAfterReplay.filter(row => row.alertType === 'ORDER_CREATED_RECONCILIATION_REQUIRED').length, 1);
+  assert.equal(rowsAfterReplay.filter(row => row.eventType === 'ORDER_CREATED_RECONCILIATION_REQUIRED').length, 1);
 
   delete mocks.sdk['@wix/ecom::orders'];
 });
@@ -735,7 +735,7 @@ test('CRON-FISCAL-ALERT-01 resolves an old fiscal alert only after a complete cl
   wixDataMock._seed(C, [{
     _id: 'legacy-fiscal-chain-alert',
     controlType: IC.CONTROL_TYPE.ALERT,
-    alertType: 'FISCAL_CHAIN_CORRUPTED',
+    eventType: 'FISCAL_CHAIN_CORRUPTED',
     status: IC.CONTROL_STATUS.OPEN,
     dedupeKey: 'legacy-fiscal-chain-alert',
     traceId: 'trace-original-fiscal-alert',
@@ -769,7 +769,7 @@ test('CRON-FISCAL-ALERT-02 keeps fiscal alerts OPEN when the chain audit reprodu
   wixDataMock._seed(C, [{
     _id: 'legacy-fiscal-chain-alert',
     controlType: IC.CONTROL_TYPE.ALERT,
-    alertType: 'FISCAL_CHAIN_CORRUPTED',
+    eventType: 'FISCAL_CHAIN_CORRUPTED',
     status: IC.CONTROL_STATUS.OPEN,
     dedupeKey: 'legacy-fiscal-chain-alert',
     traceId: 'trace-original-fiscal-alert',
@@ -800,7 +800,7 @@ test('CRON-FISCAL-ALERT-03 does not resolve a historical fiscal alert from an em
   wixDataMock._seed(C, [{
     _id: 'legacy-fiscal-chain-alert',
     controlType: IC.CONTROL_TYPE.ALERT,
-    alertType: 'FISCAL_CHAIN_CORRUPTED',
+    eventType: 'FISCAL_CHAIN_CORRUPTED',
     status: IC.CONTROL_STATUS.OPEN,
     dedupeKey: 'legacy-fiscal-chain-alert',
     traceId: 'trace-original-fiscal-alert',
@@ -824,7 +824,7 @@ test('CRON-FISCAL-ALERT-04 keeps fiscal alerts OPEN when stored movement content
   wixDataMock._seed(C, [{
     _id: 'legacy-fiscal-chain-alert',
     controlType: IC.CONTROL_TYPE.ALERT,
-    alertType: 'FISCAL_CHAIN_CORRUPTED',
+    eventType: 'FISCAL_CHAIN_CORRUPTED',
     status: IC.CONTROL_STATUS.OPEN,
     dedupeKey: 'legacy-fiscal-chain-alert',
     traceId: 'trace-original-fiscal-alert',
@@ -842,7 +842,7 @@ test('CRON-FISCAL-ALERT-04 keeps fiscal alerts OPEN when stored movement content
     .find(row => row._id === 'legacy-fiscal-chain-alert');
   assert.equal(alert.status, IC.CONTROL_STATUS.OPEN);
   const newFiscalAlert = (wixDataMock._store.get(C) || [])
-    .find(row => row._id !== 'legacy-fiscal-chain-alert' && row.alertType === 'FISCAL_CHAIN_CORRUPTED');
+    .find(row => row._id !== 'legacy-fiscal-chain-alert' && row.eventType === 'FISCAL_CHAIN_CORRUPTED');
   assert.ok(newFiscalAlert, 'a content hash mismatch must emit a fiscal integrity alert');
 });
 
@@ -853,7 +853,7 @@ test('CRON-FISCAL-ALERT-05 verifies ONLINE EventLog movements with the EventLog 
   wixDataMock._seed(C, [{
     _id: 'legacy-fiscal-chain-alert',
     controlType: IC.CONTROL_TYPE.ALERT,
-    alertType: 'FISCAL_CHAIN_CORRUPTED',
+    eventType: 'FISCAL_CHAIN_CORRUPTED',
     status: IC.CONTROL_STATUS.OPEN,
     dedupeKey: 'legacy-fiscal-chain-alert',
     traceId: 'trace-original-fiscal-alert',

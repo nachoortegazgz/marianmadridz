@@ -1362,13 +1362,13 @@ async function _upsertDualCancellationFlag(pairToken, traceId, triggerBookingId,
         controlType: CONTROL_TYPE.SYSTEM_FLAG,
         dedupeKey: `DUAL_CANCELLATION_${token}`,
         status,
-        alertType: "DUAL_BOOKING_CANCELLATION_MISMATCH",
-        severity: resolved ? "INFO" : "ERROR",
-        message: resolved
-            ? "Ambas fases de la reserva dual y su estado fiscal estan conciliados."
-            : "La reserva dual o su rectificacion fiscal requiere conciliacion manual.",
+        eventType: "DUAL_BOOKING_CANCELLATION_MISMATCH",
         payload: {
             pairToken: token,
+            severity: resolved ? "INFO" : "ERROR",
+            message: resolved
+                ? "Ambas fases de la reserva dual y su estado fiscal estan conciliados."
+                : "La reserva dual o su rectificacion fiscal requiere conciliacion manual.",
             fiscalStatus,
             bookingIds,
             bookingStatuses: rows.map((row) => ({

@@ -949,6 +949,10 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
                     transactionId,
                     dedupeKey: transactionId,
                     status: "RESERVED",
+                    payload: {
+                        reservedAt: new Date().toISOString(),
+                        transactionId,
+                    },
                     traceId,
                     _createdDate: new Date(),
                 });

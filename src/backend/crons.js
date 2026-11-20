@@ -647,7 +647,7 @@ async function _recoverPendingPaymentStateAlerts(batchSize, traceId) {
     const summary = { recovered: 0, failed: 0, manualRequired: 0, errors: [] };
     const alerts = await dalQuery(OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO)
         .eq("controlType", CONTROL_TYPE.ALERT)
-        .eq("alertType", "PAYMENT_STATE_UPDATE_REQUIRED")
+        .eq("eventType", "PAYMENT_STATE_UPDATE_REQUIRED")
         .eq("status", CONTROL_STATUS.OPEN)
         .ascending("_createdDate")
         .limit(batchSize)
@@ -941,7 +941,7 @@ async function _resolveVerifiedFiscalChainAlerts(chainResult, traceId) {
 
     const response = await dalQuery(OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO)
         .eq("controlType", CONTROL_TYPE.ALERT)
-        .eq("alertType", "FISCAL_CHAIN_CORRUPTED")
+        .eq("eventType", "FISCAL_CHAIN_CORRUPTED")
         .eq("status", CONTROL_STATUS.OPEN)
         .limit(100)
         .find({ consistencyMode: "strong" });
@@ -957,7 +957,7 @@ async function _resolveVerifiedFiscalChainAlerts(chainResult, traceId) {
     for (const alert of alerts) {
         if (
             alert?.controlType !== CONTROL_TYPE.ALERT ||
-            alert?.alertType !== "FISCAL_CHAIN_CORRUPTED" ||
+            alert?.eventType !== "FISCAL_CHAIN_CORRUPTED" ||
             alert?.status !== CONTROL_STATUS.OPEN ||
             !alert?._id
         ) continue;

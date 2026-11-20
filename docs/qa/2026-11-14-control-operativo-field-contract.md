@@ -2,6 +2,8 @@
 
 ---
 
+> **Aviso de vigencia (2026-11-20):** este informe se elaboró con el inventario histórico de revisión 39/42 campos y un CSV sintético. Para el esquema físico vigente prevalece `docs/qa/2026-11-20-control-operativo-live-audit.md` y la revisión Wix 93 (32 campos). En particular, `slotStart`/`slotEnd`, `pairToken`, `maxAttempts`, `alertType`, `severity`, `message` y `operationDate` ya no son columnas físicas de ControlOperativo; el código actual conserva la información específica dentro de `payload` y usa `eventType` para clasificación indexable.
+
 > **Nota de vigencia — 2026-11-14:** este documento conserva el resultado de CI del SHA ad15d311fec06aa3f54afe6c5f1f0f923aef9f45. No valida el HEAD actual de fix/current-site-cms-contract-alignment. PR #370 está dirty y no tiene checks asociados al HEAD actual; rebase y CI pendientes. El sitio objeto de trabajo en este corte histórico era una referencia anterior de entorno, hoy supersedida por el único QA `188bed94-177c-4bc9-a9f0-35080d874f3e`.
 
 # Contrato condicional de ControlOperativo — revisión del CSV sintético

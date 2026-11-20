@@ -922,7 +922,7 @@ test("EVENT-BOOKING-RESCHEDULE-01 native reschedule updates only the affected Ci
   assert.equal(f2.pairToken, PAIR_TOKEN);
 
   const alerts = (wixDataMock._store.get("ControlOperativo") || []).filter(
-    row => row.alertType === "DUAL_BOOKING_NATIVE_RESCHEDULE_MISMATCH"
+    row => row.eventType === "DUAL_BOOKING_NATIVE_RESCHEDULE_MISMATCH"
   );
   assert.equal(alerts.length, 1);
   assert.equal(alerts[0].status, "OPEN");
@@ -977,7 +977,7 @@ test("EVENT-BOOKING-RESCHEDULE-02 duplicate native reschedule event is idempoten
   assert.equal(result.status, "OK", JSON.stringify(result));
   assert.equal(result.updated, false);
   assert.equal((wixDataMock._store.get("ControlOperativo") || []).filter(
-    row => row.alertType === "DUAL_BOOKING_NATIVE_RESCHEDULE_MISMATCH"
+    row => row.eventType === "DUAL_BOOKING_NATIVE_RESCHEDULE_MISMATCH"
   ).length, 1);
 });
 
@@ -1336,5 +1336,5 @@ test("FISCAL-P0-POS-01 POS paid and refunded orders never reach online fiscal wr
   assert.equal(refundResult.fiscalStatus, "MANUAL_REVIEW_REQUIRED");
   assert.equal((wixDataMock._store.get(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA) || []).length, 0);
   const controls = wixDataMock._store.get(IC.OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO) || [];
-  assert.ok(controls.some(row => row.alertType === "ECOM_NON_WEB_ORDER_FISCAL_REVIEW_REQUIRED"));
+  assert.ok(controls.some(row => row.eventType === "ECOM_NON_WEB_ORDER_FISCAL_REVIEW_REQUIRED"));
 });

@@ -447,96 +447,70 @@ Cuando existe `description`, se copia el texto Wix. Cuando no existe, se declara
 
 ### ControlOperativo — CONTROL_OPERATIVO
 
-- Origen: **CMS propio del proyecto** · Tipo `NATIVE` · ID canónico de colección `ControlOperativo` · ownerAppId=`no informado`.
-- Revisión: `39` · Campos: **42** · Campo de presentación: `controlType`.
-- Permisos: `read=ANYONE, insert=ADMIN, update=ADMIN, remove=ADMIN`.
+- Origen: **CMS propio del proyecto** · Tipo `NATIVE` · ID canónico `ControlOperativo`.
+- Snapshot físico Wix verificado en lectura live el **2026-11-20**: revisión **93**, **32 campos** (28 de negocio y 4 de sistema). Este snapshot sustituye el inventario histórico de revisión 39/42 campos que sigue apareciendo en documentación/exportaciones anteriores.
+- Permisos revalidados el 2026-11-20: `itemRead`, `itemInsert`, `itemUpdate` e `itemRemove` = `PRIVILEGED`. La prueba con identidad colaborador distinta del propietario sigue pendiente.
+- Campos obligatorios declarados por el esquema Wix: `controlType`, `dedupeKey`, `traceId`, `payload`.
 
-| Campo (key canónico) | Etiqueta Wix | Tipo de dato Wix | Descripción | Obligatorio | ID de colección referenciada | Subestructura OBJECT/ARRAY | Enum/opciones |
-|---|---|---|---|---|---|---|---|
-| `eventType` | Event Type | `TEXT` | Canonical Wix Bookings or eCommerce event type. Duplicates payload.eventType for indexed operational queries. | No declarado | — | — | No declarado en esquema CMS |
-| `occurredAt` | Occurred At | `DATETIME` | Source event occurrence timestamp. Distinct from _createdDate and payload.processedAt. | No declarado | — | — | No declarado en esquema CMS |
-| `controlType` | controlType | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | CONTROL_TYPE: ALERT, COMPENSATION, DAYS_CACHE, DISPLAY_TOKEN, DUAL_CACHE, DEDUPE_KEY, LEDGER_IDEMPOTENCY, IDEMPOTENCY, SLOT_LOCK, RATE_LIMIT, SYSTEM_FLAG, WEBHOOK_CLAIM, WEBHOOK_EVENT |
-| `dedupeKey` | dedupeKey | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
-| `traceId` | traceId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | Sí | — | — | No declarado en esquema CMS |
-| `status` | status | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
-| `eventId` | eventId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
-| `expiresAt` | expiresAt | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
-| `bookingId` | bookingId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
-| `pairToken` | pairToken | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
-| `resourceId` | resourceId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
-| `serviceId` | serviceId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
-| `slotStart` | slotStart | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
-| `slotEnd` | slotEnd | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
-| `dateYmd` | dateYmd | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
-| `transactionId` | transactionId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
-| `orderId` | orderId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
-| `refundId` | refundId | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
-| `kind` | kind | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
-| `attempts` | attempts | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
-| `maxAttempts` | maxAttempts | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
-| `lastError` | lastError | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
-| `totalAmount` | totalAmount | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
-| `operationDescription` | operationDescription | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
-| `severity` | severity | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
-| `alertType` | alertType | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
-| `message` | message | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
-| `surface` | surface | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
-| `requesterKey` | requesterKey | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
-| `requestCount` | requestCount | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
-| `windowStart` | windowStart | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
-| `payload` | payload | `OBJECT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
-| `version` | version | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
-| `processedAt` | processedAt | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No | — | — | No declarado en esquema CMS |
-| `_id` | ID | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
-| `_createdDate` | Created Date | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
-| `_updatedDate` | Updated Date | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
-| `_owner` | Owner | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
-| `heartbeatAt` | heartbeatAt | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
-| `operationDate` | Operationdate | `DATETIME` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
-| `revision` | revision | `NUMBER` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
-| `compensationKind` | compensationKind | `TEXT` | No hay descripción funcional configurada en Wix CMS. Se conserva la etiqueta visible, sin inferir reglas de negocio. | No declarado | — | — | No declarado en esquema CMS |
+| Campo físico | Tipo Wix | Obligatorio |
+|---|---|---:|
+| `eventType` | TEXT | No |
+| `controlType` | TEXT | Sí |
+| `dedupeKey` | TEXT | Sí |
+| `traceId` | TEXT | Sí |
+| `status` | TEXT | No |
+| `eventId` | TEXT | No |
+| `expiresAt` | DATETIME | No |
+| `bookingId` | TEXT | No |
+| `resourceId` | TEXT | No |
+| `serviceId` | TEXT | No |
+| `dateYmd` | TEXT | No |
+| `attempts` | NUMBER | No |
+| `surface` | TEXT | No |
+| `requesterKey` | TEXT | No |
+| `requestCount` | NUMBER | No |
+| `windowStart` | DATETIME | No |
+| `payload` | OBJECT | **Sí** |
+| `version` | NUMBER | No |
+| `heartbeatAt` | DATETIME | No |
+| `ownerToken` | TEXT | No |
+| `transactionId` | TEXT | No |
+| `orderId` | TEXT | No |
+| `refundId` | TEXT | No |
+| `kind` | TEXT | No |
+| `processedAt` | DATETIME | No |
+| `operationDescription` | TEXT | No |
+| `lastError` | TEXT | No |
+| `totalAmount` | NUMBER | No |
+| `_id` | TEXT | Sistema |
+| `_createdDate` | DATETIME | Sistema |
+| `_updatedDate` | DATETIME | Sistema |
+| `_owner` | TEXT | Sistema |
 
-#### Aplicabilidad de campos por `controlType` — revisión del CSV sintético (2026-11-14)
+**No pertenecen al esquema físico de revisión 93**: `pairToken`, `slotStart`, `slotEnd`, `maxAttempts`, `severity`, `alertType`, `message`, `occurredAt`, `operationDate`, `revision` y `compensationKind`. No se deben escribir como campos raíz ni recrear en Wix sin una decisión de modelo. Los datos específicos se conservan dentro de `payload`; `eventType` es el campo físico indexable para clasificación de alertas/eventos. `ownerToken` sí permanece en el esquema físico, pero el código canónico no debe escribirlo; seis claims terminales históricos lo conservan y no se mutan.
 
-Este inventario de 42 campos es el contrato físico de referencia del repositorio. La exportación CSV aportada contiene además encabezados que no pertenecen a este esquema. No se deben recrear campos CMS por el mero hecho de aparecer en una exportación.
+**Invariantes comunes de escritura**
+- Todo registro nuevo lleva `controlType`, `dedupeKey`, `traceId` y `payload` como objeto JSON no nulo (no array ni primitivo).
+- Los campos raíz se limitan al esquema físico anterior. Los datos no indexables específicos del proceso viven en `payload`.
+- No se exigen globalmente `status`, `expiresAt`, `resourceId` ni `bookingId`: su obligatoriedad depende del `controlType`.
+- `WEBHOOK_EVENT` es append-only. Los seis registros históricos sin `eventType`/ `processedAt` raíz se conservan sin rectificación.
+- Los seis `WEBHOOK_CLAIM` históricos `COMPLETED` que conservan `ownerToken` y carecen de `attempts`/`expiresAt` raíz son legacy terminal; no reactivar ni migrar automáticamente.
 
-**Convención de celdas vacías**
+**Contratos condicionales verificados en código**
+- `WEBHOOK_EVENT`: `eventId`, `eventType`, `processedAt`, `payload`, `dedupeKey`, `traceId`.
+- `WEBHOOK_CLAIM`: `eventId`, `eventType`, `status`, `version >= 1`, `attempts >= 1`, `expiresAt`, `payload`.
+- `SLOT_LOCK`: `resourceId` GUID, `expiresAt`, `payload`; `version`/ `heartbeatAt` cuando usa renovación CAS.
+- `DISPLAY_TOKEN`: `bookingId`, `attempts >= 0`, `expiresAt`; `payload.maxAttempts >= 1`.
+- `RATE_LIMIT`: `requesterKey`, `surface`, `requestCount`, `windowStart`, `expiresAt`, `version`, `payload`.
+- `ALERT` y `SYSTEM_FLAG`: clasificación mediante `eventType` cuando aplica; detalles, severidad, mensajes y metadatos dentro de `payload`.
+- `COMPENSATION`, `DAYS_CACHE`, `DUAL_CACHE`, `IDEMPOTENCY`, `DEDUPE_KEY`, `LEDGER_IDEMPOTENCY` y locks TPV: `payload` es obligatorio; el resto de campos depende de su productor y de su estado. Los tipos sin filas en el snapshot live no se consideran runtime validados solo por disponer de código.
 
-- `N/A` es una anotación de auditoría/exportación: significa que el campo no aplica a ese tipo de control.
-- En Wix CMS se conserva el campo ausente o `null` según el contrato del writer. Nunca se escribe el texto `N/A` en un campo `DATETIME`, `NUMBER` u `OBJECT`, ni se usa como sustituto de un dato.
-- Un campo aplicable que debería tener valor y está vacío es un defecto de persistencia, no un N/A.
-- No se añaden valores ficticios para completar visualmente una fila.
-
-**Campos comunes**
-
-| Campo | Regla |
-|---|---|
-| `controlType` | Obligatorio; discriminador del registro. |
-| `dedupeKey` | Obligatorio; identidad idempotente/determinista del control. |
-| `traceId` | Obligatorio; correlación y, en `WEBHOOK_CLAIM`, token canónico de fencing CAS. |
-| `payload` | Contenedor estructurado de datos específicos; no sustituye los campos superiores expresamente definidos para consulta/indexación. |
-
-**Matriz para los tipos presentes en el CSV**
-
-| controlType | Campos superiores aplicables | Vacíos intencionados / N/A en exportación |
-|---|---|---|
-| `IDEMPOTENCY` | `pairToken`, `serviceId`, `expiresAt`, `heartbeatAt`, `attempts`, `payload`; `bookingId` cuando la operación ya identifica una reserva. | `operationDate`, `slotStart`, `slotEnd`, `resourceId` superior cuando el resultado vive en `payload.result` y puede representar una reserva dual; campos de rate limit, webhook y alertas. |
-| `RATE_LIMIT` | `requesterKey`, `surface`, `requestCount`, `windowStart`, `version`, `status`, `expiresAt`, `payload`. | `bookingId`, `resourceId`, `serviceId`, `slotStart`, `slotEnd`, `eventId`, `eventType`, `processedAt`, campos fiscales/compensación. `retryAfter` y `nextRetryAt` no pertenecen al esquema. |
-| `DAYS_CACHE` | `serviceId`, `dateYmd` (clave de mes `YYYY-MM`), `expiresAt`, `payload`. | `resourceId` superior: la clave representa un conjunto/hash de recursos; la ubicación y el rango se conservan en `payload`. También son N/A los campos de transacción, rate limit, webhook y alertas. |
-| `WEBHOOK_CLAIM` | `eventId`, `eventType`, `status`, `traceId`, `version`, `attempts`, `expiresAt`, `payload`. `serviceId` es condicional si el productor lo conoce y el contrato del evento lo requiere. | `ownerToken`, `attempt` y `leaseExpiresAt` son nombres retirados/no canónicos; no se escriben. `slotStart`, `slotEnd`, `operationDate`, importes y campos de rate limit son N/A. |
-| `WEBHOOK_EVENT` | `eventId`, `eventType`, `status`, `traceId`, `expiresAt`, `processedAt`, `payload`; `serviceId` solo si metadata aporta un GUID válido. `eventType` y `processedAt` se duplican en `payload` para consulta indexada y trazabilidad. | `bookingId`, `resourceId`, `slotStart`, `slotEnd`, `operationDate`, campos de rate limit y de transacción salvo que un contrato específico los incorpore. |
-| `SLOT_LOCK` de reserva | `resourceId`, `serviceId`, `slotStart`, `slotEnd`, `expiresAt`, `heartbeatAt`, `version`, `payload`. Los instantes se derivan de los minutos epoch codificados en `dedupeKey`. | Campos de webhook, rate limit, transacción y alertas. En locks fiscales/contables (también `SLOT_LOCK`), `slotStart` y `slotEnd` son N/A porque no bloquean una cita concreta. |
-
-**Discrepancias del CSV y tratamiento**
-
-- `ownerToken`, `retryAfter` y `nextRetryAt` no están entre los 42 campos del inventario CMS. `ownerToken` se sustituye por el campo canónico `traceId` para fencing; los otros dos no se persisten.
-- `attempt` y `leaseExpiresAt` no son campos canónicos. Los intentos se guardan en `attempts` y el lease en `expiresAt`.
-- En las filas `WEBHOOK_EVENT`, el CSV deja vacío el campo superior `eventType` aunque existe `payload.eventType`. El writer debe duplicar `eventType` arriba; también persistirá `processedAt` como `DATETIME` superior, manteniendo la copia ISO en payload.
-- En las filas de `SLOT_LOCK` de reserva, `slotStart` y `slotEnd` se pueden recuperar de forma exacta desde la clave determinista. El writer debe persistirlos como `DATETIME`; no deben quedar vacíos.
-- En las transacciones `IDEMPOTENCY`, `pairToken` es campo superior y coincide con la identidad del control; debe persistirse explícitamente.
-- El valor `1970-01-01T00:00:00Z` en un `SLOT_LOCK` liberado es el sentinel terminal observado en el CSV; no se reemplaza por N/A ni por la fecha actual.
-
-**Límite de alcance:** esta matriz cubre los seis tipos que aparecen en el CSV sintético. No define la aplicabilidad de `ALERT`, `COMPENSATION`, `DISPLAY_TOKEN`, `DUAL_CACHE`, `DEDUPE_KEY`, `LEDGER_IDEMPOTENCY` ni `SYSTEM_FLAG` sin revisar sus writers y consumidores.
+**Evidencia de cobertura live — 2026-11-20**
+- 58/58 registros recuperados con lectura consistente.
+- Tipos presentes: `WEBHOOK_EVENT` (13), `WEBHOOK_CLAIM` (31), `COMPENSATION` (3), `DAYS_CACHE` (3), `SLOT_LOCK` (3), `IDEMPOTENCY` (2), `RATE_LIMIT` (3).
+- Ocho tipos sin filas en el corte: `ALERT`, `DISPLAY_TOKEN`, `DUAL_CACHE`, `DEDUPE_KEY`, `LEDGER_IDEMPOTENCY`, `SYSTEM_FLAG`, `TPV_QA_REFUND_LOCK`, `TPV_QA_SESSION_LOCK`.
+- Las tres compensaciones permanecen `PENDING_RECOVERY`; no se reintentaron ni modificaron.
+- Informe detallado: `docs/qa/2026-11-20-control-operativo-live-audit.md`.
 
 ### eCommerce/Orders — Orders
 

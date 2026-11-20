@@ -27,6 +27,7 @@ function base(controlType) {
     dedupeKey: `${controlType}:unit-test-key`,
     status: CONTROL_STATUS.ACTIVE,
     traceId: "trace-unit-001",
+    payload: {},
   };
 }
 
@@ -36,6 +37,30 @@ function seed(record) {
 }
 
 describe("ControlOperativo hooks", () => {
+  it("rejects root fields absent from the live Wix schema", () => {
+    for (const field of ["pairToken", "maxAttempts", "alertType", "severity", "message", "operationDate"]) {
+      const candidate = { ...base(CONTROL_TYPE.SYSTEM_FLAG), [field]: "legacy-root-field" };
+      assert.throws(
+        () => ControlOperativo_beforeInsert(candidate),
+        /absent from live CMS schema/
+      );
+    }
+  });
+
+  it("rejects missing, null, array and primitive payloads required by live CMS schema", () => {
+    for (const payload of [undefined, null, [], "not-an-object", 1]) {
+      const candidate = { ...base(CONTROL_TYPE.SLOT_LOCK), resourceId: RESOURCE_ID,
+        expiresAt: new Date(Date.now() + 60000), payload };
+      assert.throws(
+        () => ControlOperativo_beforeInsert(candidate),
+        /payload OBJECT/
+      );
+    }
+    const valid = { ...base(CONTROL_TYPE.SLOT_LOCK), resourceId: RESOURCE_ID,
+      expiresAt: new Date(Date.now() + 60000), payload: {} };
+    assert.equal(ControlOperativo_beforeInsert(valid), valid);
+  });
+
   it("validates inserts and all type-specific required fields", () => {
     const validLock = {
       ...base(CONTROL_TYPE.SLOT_LOCK),
@@ -43,6 +68,19 @@ describe("ControlOperativo hooks", () => {
       expiresAt: new Date(Date.now() + 60000),
     };
     assert.deepEqual(ControlOperativo_beforeInsert(validLock), validLock);
+
+    const validDisplayToken = {
+      ...base(CONTROL_TYPE.DISPLAY_TOKEN),
+      bookingId: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+      attempts: 0,
+      expiresAt: new Date(Date.now() + 60000),
+      payload: { maxAttempts: 3 },
+    };
+    assert.deepEqual(ControlOperativo_beforeInsert(validDisplayToken), validDisplayToken);
+    assert.throws(
+      () => ControlOperativo_beforeInsert({ ...validDisplayToken, payload: {} }),
+      /maxAttempts/
+    );
 
     const validClaim = {
       ...base(CONTROL_TYPE.WEBHOOK_CLAIM),

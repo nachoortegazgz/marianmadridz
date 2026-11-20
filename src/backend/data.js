@@ -951,8 +951,7 @@ export function readControlPayload(doc) {
 
 export function ControlOperativo_beforeInsert(item) {
     _normalizeCmsDateTimes(item, [
-        "occurredAt", "expiresAt", "slotStart", "slotEnd",
-        "windowStart", "processedAt", "heartbeatAt", "operationDate",
+        "expiresAt", "windowStart", "processedAt", "heartbeatAt",
     ]);
     assertCanonicalControlFields(item);
     // Insert recibe el registro completo: proteger el discriminador y los
@@ -978,8 +977,7 @@ export async function ControlOperativo_beforeUpdate(item) {
 
     const normalized = { ...original, ...item };
     _normalizeCmsDateTimes(normalized, [
-        "occurredAt", "expiresAt", "slotStart", "slotEnd",
-        "windowStart", "processedAt", "heartbeatAt", "operationDate",
+        "expiresAt", "windowStart", "processedAt", "heartbeatAt",
     ]);
     assertCanonicalControlFields(normalized);
     if (normalized.controlType !== original.controlType) {

@@ -141,7 +141,7 @@ test('DUAL-CANCEL-01 one canceled phase does not refund a paid dual booking and 
   const ledgerRows = wixDataMock._store.get(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA) || [];
   assert.equal(ledgerRows.some((row) => row.movementType === IC.MOVEMENT_TYPE.REEMBOLSO), false);
   const flag = (wixDataMock._store.get(CONTROL_COLLECTION) || []).find((row) =>
-    row.alertType === 'DUAL_BOOKING_CANCELLATION_MISMATCH'
+    row.eventType === 'DUAL_BOOKING_CANCELLATION_MISMATCH'
   );
   assert.equal(flag.status, 'REPAIR_REQUIRED');
   assert.deepEqual(flag.payload.bookingIds.sort(), [f1, f2].sort());
@@ -189,7 +189,7 @@ test('DUAL-CANCEL-02 the second phase resolves the pair and uses a stable pair-l
   assert.equal(buildCancellationRectificationTransactionId(pairToken, f2), `RECT-PAIR-${pairToken}`);
   assert.equal(buildCancellationRectificationTransactionId(null, f2), `RECT-${f2}`);
   const flag = (wixDataMock._store.get(CONTROL_COLLECTION) || []).find((row) =>
-    row.alertType === 'DUAL_BOOKING_CANCELLATION_MISMATCH'
+    row.eventType === 'DUAL_BOOKING_CANCELLATION_MISMATCH'
   );
   assert.equal(flag.status, 'RESOLVED');
   assert.equal(flag.payload.fiscalStatus, 'NOT_REQUIRED');
