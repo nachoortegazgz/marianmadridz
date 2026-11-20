@@ -618,13 +618,30 @@ export function HistoricoCierresZ_beforeInsert(item) {
     return item;
 }
 
-export function HistoricoCierresZ_beforeUpdate(item, context) {
+export async function HistoricoCierresZ_beforeUpdate(item) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) {
+        _schemaError("HistoricoCierresZ beforeUpdate requiere un item valido");
+    }
+    const itemId = _safeTrim(item._id);
+    if (!itemId) {
+        _schemaError("HistoricoCierresZ beforeUpdate requiere _id para recuperar el estado previo");
+    }
+
+    // Wix UpdateHookContext does not guarantee previous/original snapshots.
+    // Compare against the persisted fiscal record using a strong read.
+    const persisted = await getItem(
+        BUSINESS_COLLECTIONS.HISTORICO_CIERRES_Z,
+        itemId,
+        CONSISTENCY.STRONG
+    );
+    if (!persisted || String(persisted._id || "") !== itemId) {
+        _fiscalError("HistoricoCierresZ beforeUpdate no pudo recuperar el estado previo");
+    }
+
     _normalizeCmsDateTime(item, "verifiedAt");
-    const previous = context?.previous || context?.original || {};
-    const hasSnapshot = Boolean(context && (context.previous || context.original));
-    const changes = Object.keys(item || {})
+    const changes = Object.keys(item)
         .filter((key) => key !== "_id")
-        .filter((key) => !hasSnapshot || String(previous[key]) !== String(item[key]));
+        .filter((key) => stableSerialize(persisted[key]) !== stableSerialize(item[key]));
 
     const onlySignatureFields = changes.every((key) => ALLOWED_Z_UPDATE_FIELDS.has(key));
     if (!onlySignatureFields) {
