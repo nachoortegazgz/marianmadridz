@@ -110,7 +110,7 @@ function seedCajaPrincipal() {
     operationDate,
     openedAt: new Date(Date.now() - 60_000),
     openedBy: GUID_ADMIN_RESOURCE,
-    openingAmount: 300,
+    openingCashAmount: 300,
     cashAmount: 300,
     netAmount: 300,
     totalInAmount: 300,
@@ -375,6 +375,8 @@ test('FLOW-CAJA-01 flujo continuo: venta EFECTIVO -> caja incrementada -> cierre
   // Paso 2: getCashierState refleja la operacion (flujo continuo sobre CajaActual)
   const state = await cajas.getCashierState({});
   assert.strictEqual(state.status, 'SUCCESS');
+  assert.strictEqual(state.data.openingCashAmount, 300, 'DTO reads the physical openingCashAmount field');
+  assert.strictEqual(state.data.openingAmount, undefined, 'stale non-physical DTO alias is not exposed');
   assert.ok((state.data.totalOperations ?? 0) >= 1, 'operaciones contabilizadas: ' + JSON.stringify(state.data));
   assert.ok(state.data.lastOperation?.movementId === mov._id, 'última operación referencia el movimiento original');
   assert.deepStrictEqual(state.data.lastOperation.sourceMovementIds, [mov._id]);
@@ -869,7 +871,7 @@ test('FLOW-CAJA-06 CajaActual resolves singletonKey when Wix assigned a differen
     singletonKey: 'CAJA_PRINCIPAL',
     cashRegisterStatus: 'ABIERTA',
     operationDate: '2026-11-06',
-    openingAmount: 300,
+    openingCashAmount: 300,
     cashAmount: 300,
     netAmount: 300,
     totalInAmount: 300,
@@ -964,7 +966,7 @@ test('FLOW-CAJA-07 devoluciones y reembolsos reducen caja y conservan cadena fis
       cashRegisterStatus: 'ABIERTA',
       operationDate: '2026-11-06',
       openedAt: new Date(Date.now() - 60_000),
-      openingAmount: 100,
+      openingCashAmount: 100,
       cashAmount: 100,
       totalInAmount: 100,
       netAmount: 100,
