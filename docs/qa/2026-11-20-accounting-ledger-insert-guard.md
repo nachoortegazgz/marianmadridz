@@ -34,3 +34,9 @@ La ausencia del hook dejaba la integridad del insert dependiente del escritor y 
 3. Update y remove siguen rechazados.
 4. CI completa verde.
 5. Wix Sandbox valida el hook real sin tocar datos contables reales.
+
+## Referencias oficiales Wix
+
+- [Wix Data — beforeInsert](https://dev.wix.com/docs/velo/apis/wix-data/hooks/before-insert): el hook se ejecuta antes de insert y un error/rechazo bloquea la inserción.
+- [Wix Data — About Data Hooks](https://dev.wix.com/docs/develop-websites/articles/databases/wix-data/hooks/about-data-hooks): los hooks se ejecutan en interacciones CMS/API, salvo que una operación backend suprima explícitamente hooks mediante opciones.
+- [Wix Data — insert](https://dev.wix.com/docs/velo/apis/wix-data/insert): insert dispara beforeInsert/afterInsert; las opciones backend pueden suprimir hooks. La ruta central del proyecto usa `auth.elevate(items.insert)` sin opciones de supresión.
