@@ -6,7 +6,6 @@ const workflowUrl = new URL("../../../.github/workflows/wix-tpv-preview.yml", im
 const packageUrl = new URL("../../../package.json", import.meta.url);
 const lockUrl = new URL("../../../package-lock.json", import.meta.url);
 const smokeUrl = new URL("../../../scripts/wix-preview-smoke.mjs", import.meta.url);
-const ptyDriverUrl = new URL("../../../scripts/wix-preview-tty.py", import.meta.url);
 
 test("WIX-PREVIEW-01 preview workflow is manual by request or follows successful main quality CI", async () => {
     const workflow = await readFile(workflowUrl, "utf8");
@@ -34,14 +33,12 @@ test("WIX-PREVIEW-03 preview requires Wix CLI credentials, locked dependencies a
     assert.match(workflow, /node-version: ["']24\.22\.1["']/);
 });
 
-test("WIX-PREVIEW-04 workflow creates a Preview only and never publishes", async () => {
+test("WIX-PREVIEW-04 workflow selects remote main source, creates Preview only and never publishes", async () => {
     const workflow = await readFile(workflowUrl, "utf8");
-    assert.match(workflow, /npm run wix preview -- --help/);
-    assert.match(workflow, /python3 scripts\/wix-preview-tty\.py/);
-    assert.match(workflow, /python3 -m py_compile scripts\/wix-preview-tty\.py/);
+    assert.match(workflow, /npm run wix preview -- --source remote/);
     assert.ok(workflow.includes("timeout-minutes: 10"));
-    assert.doesNotMatch(workflow, /script --quiet|printf/);
     assert.doesNotMatch(workflow, /npm run wix publish|\bwix publish\b/i);
+    assert.doesNotMatch(workflow, /pty|script --quiet|printf|wix preview -- --help/i);
 });
 
 test("WIX-PREVIEW-05 Playwright remains isolated from the Wix site's runtime dependency graph", async () => {
@@ -59,13 +56,4 @@ test("WIX-PREVIEW-06 browser smoke blocks non-read HTTP methods and never submit
     assert.match(smoke, /blockedbyclient/);
     assert.match(smoke, /GET.*HEAD.*OPTIONS/s);
     assert.doesNotMatch(smoke, /\.click\(|\.fill\(|\.submit\(/);
-});
-
-test("WIX-PREVIEW-07 TTY driver selects only the documented latest-main source", async () => {
-    const driver = await readFile(ptyDriverUrl, "utf8");
-    assert.match(driver, /pty\.fork\(\)/);
-    assert.match(driver, /What would you like to preview\?/);
-    assert.match(driver, /Latest commit from origin\/main/);
-    assert.ok(driver.includes('os.write(master_fd, b"\\r")'));
-    assert.match(driver, /PROMPT_TIMEOUT_SECONDS/);
 });
