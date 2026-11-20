@@ -1336,5 +1336,5 @@ test("FISCAL-P0-POS-01 POS paid and refunded orders never reach online fiscal wr
   assert.equal(refundResult.fiscalStatus, "MANUAL_REVIEW_REQUIRED");
   assert.equal((wixDataMock._store.get(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA) || []).length, 0);
   const controls = wixDataMock._store.get(IC.OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO) || [];
-  assert.ok(controls.some(row => row.alertType === "ECOM_NON_WEB_ORDER_FISCAL_REVIEW_REQUIRED"));
+  assert.ok(controls.some(row => row.eventType === "ECOM_NON_WEB_ORDER_FISCAL_REVIEW_REQUIRED"));
 });
