@@ -132,7 +132,9 @@ Correcciones aplicadas en esta rama:
 - `DISPLAY_TOKEN`: `payload.maxAttempts` pasa a ser el almacenamiento canónico; el consumidor lee ese valor y usa el límite configurado como fallback para credenciales antiguas. Se valida `bookingId`, `attempts >= 0`, `expiresAt` y `payload.maxAttempts >= 1`.
 - `LEDGER_IDEMPOTENCY`: la reserva creada desde `cajas.web.js` ahora incluye `payload` objeto, con fecha de reserva y transactionId. El transactionId continúa en su campo físico raíz.
 - `IDEMPOTENCY` de `bookingCore.js`: se elimina `pairToken` raíz no declarado; el identificador estable ya es `_id` y la deduplicación queda en `dedupeKey`.
-- `SYSTEM_FLAG`: los diarios de reprogramación dual conservan `pairToken` dentro de `payload`, no como campo raíz no declarado.
+- `SYSTEM_FLAG`: los diarios de reprogramación dual y las marcas de inconsistencia conservan `pairToken` dentro de `payload`, no como campo raíz no declarado.
+- `SLOT_LOCK` de reservas: `slotStart` y `slotEnd` se conservan dentro de `payload`; no son columnas físicas en revisión 93. Los locks fiscales/contables no requieren rango de cita.
+- `assertCanonicalControlFields` aplica ahora una allowlist de las 28 columnas de negocio y los metadatos de sistema Wix; rechaza nuevos campos raíz no declarados. La normalización de fechas del hook se limita a las columnas DATETIME físicas.
 - `SYSTEM_FLAG` de cancelación dual: los metadatos de clasificación pasan a `eventType` (campo físico) y `severity/message` dentro de `payload`.
 - `ALERT`: el tipo de alerta se expone mediante `eventType` (campo físico); los metadatos no físicos `alertType`, `severity`, `message` y `operationDate` dejan de escribirse en raíz. Los crons consultan por `eventType`.
 
