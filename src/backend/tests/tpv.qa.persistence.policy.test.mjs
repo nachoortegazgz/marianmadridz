@@ -22,7 +22,13 @@ import {
     makeQaRefundLockId,
     makeQaSessionLockId,
     assertQaCajaWritable,
+    assertTpvQaEnabled,
 } from "../tpv/tpvUtils.js";
+
+test("QA persistence is pinned to the Wix SANDBOX environment", () => {
+    assert.equal(TPV_QA_RUNTIME_POLICY.ENVIRONMENT, "SANDBOX");
+    assert.doesNotThrow(() => assertTpvQaEnabled());
+});
 
 test("QA writes require an exact test-run CajaActual marker and never accept a live cash singleton", () => {
     const testRunId = TPV_QA_RUNTIME_POLICY.TEST_RUN_ID;
@@ -111,12 +117,12 @@ test("QA refund lock allows only scoped compare-and-swap fields", () => {
         status: "ACTIVE",
         version: 0,
         expiresAt: new Date(),
-        payload: { environment: "TEST" },
+        payload: { environment: "SANDBOX" },
     }));
     assert.doesNotThrow(() => assertBulkPatchAllowed(collection, [
         { fieldPath: "status", action: "SET_FIELD", value: "RELEASED" },
         { fieldPath: "expiresAt", action: "SET_FIELD", value: new Date() },
-        { fieldPath: "payload", action: "SET_FIELD", value: { environment: "TEST" } },
+        { fieldPath: "payload", action: "SET_FIELD", value: { environment: "SANDBOX" } },
         { fieldPath: "version", action: "INCREMENT_FIELD", value: 1 },
     ], {
         controlType: { $eq: CONTROL_TYPE.TPV_QA_REFUND_LOCK },
@@ -173,12 +179,12 @@ test("QA session lock is deterministic, bounded and CAS-only", () => {
         status: "ACTIVE",
         version: 0,
         expiresAt: new Date(),
-        payload: { sessionId, environment: "TEST" },
+        payload: { sessionId, environment: "SANDBOX" },
     }));
     assert.doesNotThrow(() => assertBulkPatchAllowed(collection, [
         { fieldPath: "status", action: "SET_FIELD", value: "RELEASED" },
         { fieldPath: "expiresAt", action: "SET_FIELD", value: new Date() },
-        { fieldPath: "payload", action: "SET_FIELD", value: { sessionId, environment: "TEST" } },
+        { fieldPath: "payload", action: "SET_FIELD", value: { sessionId, environment: "SANDBOX" } },
         { fieldPath: "version", action: "INCREMENT_FIELD", value: 1 },
     ], {
         controlType: { $eq: CONTROL_TYPE.TPV_QA_SESSION_LOCK },
@@ -195,7 +201,7 @@ test("QA session lock is deterministic, bounded and CAS-only", () => {
 
 test("QA policy remains synthetic and client idempotency keys are bounded", () => {
     assert.equal(TPV_QA_RUNTIME_POLICY.ENABLED, true);
-    assert.equal(TPV_QA_RUNTIME_POLICY.ENVIRONMENT, "TEST");
+    assert.equal(TPV_QA_RUNTIME_POLICY.ENVIRONMENT, "SANDBOX");
     assert.equal(TPV_QA_RUNTIME_POLICY.SYNTHETIC_ONLY, true);
     assert.equal(TPV_QA_RUNTIME_POLICY.REAL_PAYMENTS_ENABLED, false);
     assert.equal(TPV_QA_RUNTIME_POLICY.FISCAL_WRITES_ENABLED, false);
