@@ -189,7 +189,7 @@ test('DUAL-CANCEL-02 the second phase resolves the pair and uses a stable pair-l
   assert.equal(buildCancellationRectificationTransactionId(pairToken, f2), `RECT-PAIR-${pairToken}`);
   assert.equal(buildCancellationRectificationTransactionId(null, f2), `RECT-${f2}`);
   const flag = (wixDataMock._store.get(CONTROL_COLLECTION) || []).find((row) =>
-    row.alertType === 'DUAL_BOOKING_CANCELLATION_MISMATCH'
+    row.eventType === 'DUAL_BOOKING_CANCELLATION_MISMATCH'
   );
   assert.equal(flag.status, 'RESOLVED');
   assert.equal(flag.payload.fiscalStatus, 'NOT_REQUIRED');
