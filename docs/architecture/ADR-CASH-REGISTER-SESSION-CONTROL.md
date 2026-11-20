@@ -395,3 +395,46 @@ Referencias:
 - Verificar que todos los escritores están migrados en una única PR coordinada.
 
 **Decisión actual:** este es el candidato preferente para el spike H-01, pero no se declara CAS probado ni se cambia el writer hasta superar los bloqueos anteriores. La documentación confirma condición y patch atómico de campos; la garantía efectiva para este singleton depende de la elegibilidad de la colección, el filtro, el hook y el runtime real.
+
+
+## 13. Revalidación del contrato Wix bulkPatch y elegibilidad de CajaActual — 2026-11-20
+
+> Esta sección supersede los bloqueos de elegibilidad de colección recogidos en la sección 12: la consulta live posterior confirmó `collectionType=NATIVE`. No supersede los bloqueos de hook, semántica de condición, concurrencia runtime ni migración de escritores.
+
+### Evidencia CMS directa
+- Consulta read-only a `GET /data/v2/collections/CajaActual` en el sitio Marian Madrid: `collectionType=NATIVE`, `id=CajaActual`, `revision=18`.
+- La enumeración oficial Wix define `NATIVE` como colección creada por el usuario y `WIX_APP` como colección creada por una app Wix. Por tanto, CajaActual sí cumple el requisito de tipo de colección para usar Patch/Bulk Patch; este bloqueo anterior queda resuelto.
+- El esquema devuelve `sequenceCounters: OBJECT`, además de `singletonKey`, `snapshotSource`, `traceId` y los campos de proyección. No se ha leído ni modificado el contenido del singleton en esta consulta.
+
+### Contrato SDK confirmado y alcance real
+- La documentación SDK de `@wix/data` confirma `items.bulkPatch(dataCollectionId, itemIds, fieldModifications, options)`, acciones `SET_FIELD`, `INCREMENT_FIELD`, `APPEND_TO_ARRAY`, `REMOVE_FIELD` y `REMOVE_FROM_ARRAY`, y `options.condition.filter`.
+- Wix documenta que los incrementos se aplican atómicamente en servidor y que la condición filtra qué elementos reciben las modificaciones. La operación dispara el evento `Data Item Updated` por cada elemento patchado.
+- El repositorio ya contiene `bulkPatchItems()` y una allowlist restrictiva `DATA_ACCESS_BULK_PATCH_POLICY`, actualmente limitada a tipos concretos de `ControlOperativo`. No existe aún una política autorizada para `CajaActual`; no se debe ampliar la allowlist de forma genérica.
+- El método REST/SDK permite `suppressHooks` en opciones de backend, pero la documentación consultada de `CajaActual_beforeUpdate` solo especifica que el hook se dispara antes de una operación `update()`. No queda demostrado en la documentación consultada que el flujo Bulk Patch invoque el hook con un payload compatible. Esto requiere prueba controlada en Sandbox antes de depender del hook como barrera de validación.
+
+### Inventario ampliado de escritores que deben coordinarse
+1. `src/backend/cajas.web.js::_updateCajaActual`: `dalUpdate(CAJA_ACTUAL_COL, cashRegister)` para proyectar movimientos.
+2. `src/backend/cajas.web.js` cierre Z: `dalSave(CAJA_ACTUAL_COL, cashRegister)` para actualizar estado de sesión.
+3. `src/backend/fiscalLedgerLock.js`: asignación de secuencias global/anual y liberación/compensación de secuencia mediante `dalUpdate(CASH_COL, ...)`.
+4. `src/backend/tpv/tpvQaRepository.js::_writeCajaProjection`: `updateItem(CAJA_ACTUAL, next)` para proyección QA.
+5. `src/backend/tpv/tpvQaRepository.js` alta/cambio de sesión QA: `updateItem(CAJA_ACTUAL, updated)`.
+
+La migración debe cubrir todos estos escritores en una sola intervención coordinada. Mantener un solo writer con reemplazo completo anularía la garantía de concurrencia del resto.
+
+### Decisión técnica actualizada
+- El candidato principal pasa a ser `items.bulkPatch()` con condición explícita sobre el estado/versionado leído y modificaciones parciales atómicas. No se recomienda basar el control en retries sobre `updateItem()` ni en una lectura fuerte aislada.
+- No se aprueba todavía la implementación: faltan confirmar con prueba Sandbox (a) semántica de condición no coincidente y resultados por elemento, (b) soporte del filtro para los campos elegidos, (c) ejecución/forma de hooks, (d) preservación de los invariantes del objeto OBJECT `sequenceCounters`, y (e) reintentos seguros ante timeout incierto.
+- La prueba debe cubrir dos movimientos concurrentes distintos, repetición del mismo movimiento, colisión de secuencia fiscal, rollback de reserva solo bajo lock, fallo/timeout tras commit y relectura fuerte de reconciliación. No usar registros operativos existentes como fixture de prueba.
+
+### Estado de la intervención
+- Verificado: tipo de colección NATIVE y esquema OBJECT mediante API Wix read-only.
+- Verificado documentalmente: SDK Bulk Patch, condición, modificaciones atómicas y evento Data Item Updated.
+- Verificado en código: bulkPatch DAL existente para ControlOperativo; writers CajaActual aún usan update/save completos.
+- Pendiente: hook bajo Bulk Patch, respuesta de condición fallida, concurrencia runtime y migración coordinada.
+- No se realizaron escrituras CMS, cambios de permisos, cambios runtime ni publicación. Producción permanece NO-GO.
+
+### Referencias oficiales Wix
+- [Get Data Collection](https://dev.wix.com/docs/api-reference/business-solutions/cms/collection-management/data-collections/get-data-collection)
+- [Bulk Patch Data Items — SDK](https://dev.wix.com/docs/api-reference/business-solutions/cms/data-items/bulk-patch-data-items?apiView=SDK)
+- [Bulk Patch Data Items — REST](https://dev.wix.com/docs/api-reference/business-solutions/cms/data-items/bulk-patch-data-items)
+- [Velo beforeUpdate hook](https://dev.wix.com/docs/velo/apis/wix-data/hooks/before-update)
