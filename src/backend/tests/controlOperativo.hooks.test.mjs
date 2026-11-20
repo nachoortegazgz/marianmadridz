@@ -59,6 +59,19 @@ describe("ControlOperativo hooks", () => {
     };
     assert.deepEqual(ControlOperativo_beforeInsert(validLock), validLock);
 
+    const validDisplayToken = {
+      ...base(CONTROL_TYPE.DISPLAY_TOKEN),
+      bookingId: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+      attempts: 0,
+      expiresAt: new Date(Date.now() + 60000),
+      payload: { maxAttempts: 3 },
+    };
+    assert.deepEqual(ControlOperativo_beforeInsert(validDisplayToken), validDisplayToken);
+    assert.throws(
+      () => ControlOperativo_beforeInsert({ ...validDisplayToken, payload: {} }),
+      /maxAttempts/
+    );
+
     const validClaim = {
       ...base(CONTROL_TYPE.WEBHOOK_CLAIM),
       eventId: "wix-event-001",
