@@ -277,3 +277,13 @@ Referencias oficiales:
 - [REST Patch Data Item](https://dev.wix.com/docs/api-reference/business-solutions/cms/data-items/patch-data-item)
 
 El sitio Marian Madrid sigue en estado Draft según el contexto Wix consultado. La PR #468 está abierta; CI se encuentra en ejecución y no se ha fusionado. No se han realizado cambios runtime ni escrituras CMS.
+
+
+## 9. Addendum — verificación de CajaActual NATIVE y Bulk Patch — 2026-11-20
+
+- Wix CMS read-only: `CajaActual` devuelve `collectionType=NATIVE`, revisión 18 y `sequenceCounters: OBJECT`. Según la enumeración oficial Wix, NATIVE significa colección creada por el usuario; ya no aplica el bloqueo de elegibilidad que impedía usar Patch sobre Wix App Collections.
+- SDK oficial `@wix/data`: `items.bulkPatch()` admite `condition.filter` y modificaciones atómicas `INCREMENT_FIELD`, además de `SET_FIELD` y `APPEND_TO_ARRAY`. La documentación indica que se dispara el evento Data Item Updated.
+- El repositorio ya contiene una abstracción DAL `bulkPatchItems()` con allowlist para determinados tipos de `ControlOperativo`; la política todavía no autoriza `CajaActual`.
+- Inventario de writers CajaActual revalidado: `cajas.web.js` proyección por update y cierre Z por save; `fiscalLedgerLock.js` reserva/liberación de secuencia por update; `tpvQaRepository.js` proyección y sesión QA por update. Todos deben migrarse coordinadamente.
+- La documentación consultada no acredita que `CajaActual_beforeUpdate` se ejecute con payload compatible durante Bulk Patch, ni resuelve la semántica de condición no coincidente. Requiere prueba aislada Wix Sandbox.
+- No se realizaron escrituras CMS ni mutaciones del singleton. No se modificó código runtime ni se publicó el sitio. H-01 sigue abierto y producción permanece NO-GO.
