@@ -4,7 +4,7 @@
 **Baseline de main:** `1f6e73a6f5384f401fc7cf35a0d1ed08245072bc` (integración PR #474)  
 **Rama de corrección:** `fix/bug-audit-2026-11-20-followup`  
 **Alcance:** contraste del informe aportado con `src/backend/`, pruebas offline y documentación de arquitectura.  
-**Naturaleza:** auditoría estática y contractual; no acredita publicación ni Wix Runtime.
+**Naturaleza:** auditoría estática y contractual, con lectura de estado de automatizaciones en Wix; no acredita publicación de código ni Wix Runtime. **Site Context Wix (20/11/2026): estado Draft, Editor clásico, Velo habilitado.**
 
 ## 1. Resultado ejecutivo
 
@@ -57,7 +57,7 @@ No se deben eliminar `CASH_MOVEMENT_ID` ni `ORDER_ID`: existen consumidores acti
 - **BUG-03:** la etiqueta SIMULACION no debe considerarse estado actual sin nueva lectura. La auditoría live de 20/11 documenta una sesión ABIERTA con incoherencias de fechas/esquema. No resetear ni cerrar la caja desde código.
 - **BUG-05/06:** remitente Resend no se cambia sin verificar dominio y remitente autorizados; envío a gestoría permanece deshabilitado.
 - **BUG-08:** sincronización ServiciosCatalogo/Bookings nativo no acreditada.
-- **BUG-09:** documentación del proyecto registra 158 automatizaciones: 8 ACTIVE y 150 INACTIVE, siendo las 8 activas PREINSTALLED. El dato de 9 activas del informe debe actualizarse; no desactivar automatizaciones sin identificar impacto y destinatarios.
+- **BUG-09:** consulta Wix API solo lectura el 20/11/2026: 158 automatizaciones distintas; 7 ACTIVE y 151 INACTIVE. Las 7 activas son PREINSTALLED y sus triggers son guardado de tarjeta, notificación de agente, asistente, confirmación/reset de miembros, confirmación de suscripción y aviso de límite CMS; ninguna de las 7 usa un trigger de Wix Bookings. El dato de 9 activas del informe no coincide con la lectura actual. No se inspeccionó ni alteró destinatario/contenido de emails; no desactivar automatizaciones sin identificar impacto.
 - **BUG-12:** mantener rechazo de datos fiscales incompletos; no inferir base/cuota de fianzas.
 - **BUG-13:** la lectura de aliases en cierre Z deduplica por `_id` mediante `seenIds`; no se ha demostrado duplicación efectiva. Mantener compatibilidad histórica hasta reconciliar los campos CMS.
 - **BUG-15:** no purgar `LEDGER_IDEMPOTENCY`; la retención protege contra repetición de operaciones económicas.
@@ -82,7 +82,7 @@ No se deben eliminar `CASH_MOVEMENT_ID` ni `ORDER_ID`: existen consumidores acti
 - Inspección estática de los módulos y consumidores: realizada.
 - Prueba añadida para BUG-NEW-07: pendiente de CI.
 - Corrección de comentario BUG-NEW-08: diff pendiente de revisión CI.
-- Wix Runtime, CMS Sandbox y Published E2E: no ejecutados.
+- Wix Runtime y CMS Sandbox: no ejecutados. Site Context informa estado Draft; no se ejecutó Published E2E ni se acredita código desplegado en sitio.
 - Cambios de datos Wix: ninguno.
 
 ## 7. Reversión y documentación
