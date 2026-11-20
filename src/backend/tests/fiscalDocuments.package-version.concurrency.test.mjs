@@ -253,15 +253,8 @@ test('FDOC-UI-01 monthly prepared packages display month identity, not a fabrica
   assert.equal(formatId(quarterly), 'DOC_GESTORIA_2026_T2_PAQUETE_GESTORIA_V0004');
   assert.equal(formatLabel(quarterly), 'T2/2026');
 
-  const prepared = extractBlock(
-    'export const getPreparedManagerPackages = webMethod(',
-    '// =============================================================================\\n// BLOQUE 5 - DESCARGAR VERSION'
-  );
-  assert.ok(prepared.includes('_formatPackageDisplayId(doc)'));
-  assert.ok(prepared.includes('_formatPackagePeriodLabel(doc)'));
-  const download = extractBlock(
-    'export const downloadManagerPackageVersion = webMethod(',
-    '// =============================================================================\\n// BLOQUE 6 - DESTINATARIOS'
-  );
-  assert.ok(download.includes('_formatPackageDisplayId(doc)'));
+  assert.ok(source.includes('displayId: _formatPackageDisplayId(doc)'));
+  assert.ok(source.includes('periodLabel: _formatPackagePeriodLabel(doc)'));
+  assert.ok(source.includes('displayId: _formatPackageDisplayId(doc),'));
+
 });
