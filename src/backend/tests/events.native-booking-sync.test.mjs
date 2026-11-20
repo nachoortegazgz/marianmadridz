@@ -1260,3 +1260,57 @@ test("EVENT-PAYMENT-11 pending and failed PSP outcomes never create fiscal movem
     assert.equal(cita.paymentStatus, "PENDING_PAYMENT", paymentStatus + " must not mark the booking paid");
   }
 });
+
+
+test("FISCAL-P0-POS-01 POS paid and refunded orders never reach online fiscal writers", async () => {
+  const orderId = "77777777-7777-4777-8777-777777777777";
+  for (const [index, paymentStatus] of ["PAID", "PARTIALLY_REFUNDED"].entries()) {
+    wixDataMock._reset();
+    const order = {
+      _id: orderId,
+      paymentStatus,
+      currency: "EUR",
+      channelInfo: { type: "POS" },
+      lineItems: [{
+        catalogReference: {
+          appId: IC.WIX_CATALOG_APP_IDS.BOOKINGS,
+          catalogItemId: BOOKING_ID,
+        },
+        quantity: 1,
+      }],
+    };
+    activeOrder = order;
+    activeOrderTransactions = {
+      orderId,
+      payments: [],
+      refunds: [{ id: "pos-refund-" + index, transactions: [{ refundStatus: "SUCCEEDED" }] }],
+    };
+
+    const event = {
+      metadata: { id: "pos-channel-event-" + index },
+      data: { order, previousPaymentStatus: "PAID" },
+    };
+    const result = await events.wixEcom_onOrderPaymentStatusUpdated(event);
+    assert.equal(result.fiscalStatus, "MANUAL_REVIEW_REQUIRED");
+    assert.equal(result.sourceChannelType, "POS");
+    assert.equal((wixDataMock._store.get(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA) || []).length, 0);
+  }
+
+  wixDataMock._reset();
+  const refundedPosOrder = {
+    _id: orderId,
+    paymentStatus: "FULLY_REFUNDED",
+    currency: "EUR",
+    channelInfo: { type: "POS" },
+    lineItems: [],
+  };
+  activeOrder = refundedPosOrder;
+  const refundResult = await events.wixEcom_onOrderUpdated({
+    metadata: { id: "pos-order-updated-refund-event" },
+    data: { order: refundedPosOrder },
+  });
+  assert.equal(refundResult.fiscalStatus, "MANUAL_REVIEW_REQUIRED");
+  assert.equal((wixDataMock._store.get(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA) || []).length, 0);
+  const controls = wixDataMock._store.get(IC.OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO) || [];
+  assert.ok(controls.some(row => row.alertType === "ECOM_NON_WEB_ORDER_FISCAL_REVIEW_REQUIRED"));
+});
