@@ -122,3 +122,12 @@ El bootstrap también crea, solo en ese mismo data plane y bajo autorización de
 El acceso elevado a `TpvSandboxIdentities` está limitado a altas sintéticas del `SANDBOX_RUN_ID` vigente; la colección permanece append-only. La escritura de fichajes reales continúa cerrada mientras no se validen sus garantías de idempotencia y concurrencia.
 
 La validación de identidades y las pruebas usan `SANDBOX_RUN_ID` como marcador de ejecución; `testRunId` se conserva únicamente como nombre del campo físico CMS de `TpvSandboxIdentities`.
+
+
+## Release gate — preseed obligatorio, bootstrap de solo lectura
+
+Los WebMethods de TPV no crean automáticamente el singleton `CajaActual` ni filas de `TpvSandboxIdentities`. Esta decisión evita que una llamada accidental desde el sitio publicado convierta una colección CMS Online vacía en un conjunto de datos sintéticos en LIVE. `inicializarCaja` ahora verifica únicamente los marcadores existentes; el seed valida que existan las seis identidades requeridas y no inserta ninguna.
+
+Antes de ejecutar TPV en Preview, un administrador debe crear manualmente en el CMS **Sandbox** el singleton `CAJA_PRINCIPAL` con `_id=SINGLE_ITEM_ID`, `cashRegisterStatus=CERRADA`, `snapshotSource=TPV_SANDBOX_INITIALIZED`, `traceId=TPVSANDBOX-DEV-20261120-01`, `sequenceCounters={ appliedMovementIds: [] }` y `conceptOperations.tpvSandbox.sandboxRunId=TPVSANDBOX-DEV-20261120-01`. Debe crear también las seis identidades sintéticas descritas en `tpvSandboxIdentities.js`, con `environment=SANDBOX`, `syntheticOnly=true`, `testRunId` igual al run ID activo y correos `@example.test`.
+
+No sincronizar estas colecciones Sandbox a Online. Las colecciones de Wix Apps no están aisladas por Sandbox; el TPV debe seguir sin mutar colecciones de Bookings, Stores, Payments o Gift Cards. Esta precondición reduce el riesgo de bootstrap en LIVE, pero no sustituye la prueba E2E de Preview ni una auditoría de permisos del sitio publicado.
