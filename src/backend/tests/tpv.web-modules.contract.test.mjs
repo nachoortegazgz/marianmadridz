@@ -357,6 +357,8 @@ test("TPV synthetic persistence maps logical events to CajaActual and Movimiento
     assert.match(repository, /previousRecordHash: QA_GENESIS_HASH/);
     assert.match(repository, /createHash\("sha256"\)/);
     assert.match(repository, /cashRegisterStatus: "SIMULACION"/);
+    assert.match(repository, /payloadFiscal\?\.testRunId === QA_TEST_RUN_ID/);
+    assert.match(repository, /MAX_QA_PROJECTION_EVENTS = 1000/);
     assert.match(repository, /conceptOperations\?\.tpvQa\?\.sessionId/);
     assert.match(repository, /updateItem\(BUSINESS_COLLECTIONS\.CAJA_ACTUAL/);
     assert.match(config, /TEST_RUN_ID: "TPVQA-DEV-/);
