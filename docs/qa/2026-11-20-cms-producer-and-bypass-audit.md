@@ -14,7 +14,7 @@ Auditoría estática de los productores de escritura, la capa de acceso elevado 
 - `LibroAsientosContablesDetalle`
 
 Repositorio: `nachoortegazgz/marianmadridz`  
-Base inspeccionada: `main` — `9aa92a9ef7408ab9b431694463ca1ffe2dedacfa`.
+Base inspeccionada: `main` — `9aa92a9ef7408ab9b431694463ca1ffe2dedacfa`.\n\nSeguimiento de correcciones: PR #455 integrada en `main` mediante `7672bac4b4207ba87c9688fa34f38752a253ae86`.
 
 La revisión se limita al código fuente disponible en GitHub y a búsquedas estáticas. No se ejecutaron pruebas, no se accedió a Wix Runtime y no se realizaron escrituras CMS.
 
@@ -35,7 +35,7 @@ La revisión se limita al código fuente disponible en GitHub y a búsquedas est
 |---|---|---|---|
 | `MovimientosCaja` | `cajas.web.js::registerManualTransaction`; `eventLog.js::registrarEventoEconomico`; `tpv/tpvQaRepository.js::insertQaEvent` | Los writers fiscales comprueban `LEDGER_WRITES_ENABLED`; el writer TPV genera un registro sintético con testRunId, fingerprint, hash, secuencia cero y origen QA; DAL aplica política de inserción y el hook valida/normaliza. | Writers fiscales bloqueados. Writer QA limitado por marcadores. |
 | `HistoricoCierresZ` | `cajas.web.js::_registerZClosing` | Comprueba autorización cuando es público, política fiscal fail-closed, lock/fencing, lectura de duplicado, validación DAL y hook append-only. | Bloqueado por política y por `recordDomain` sin contrato aprobado. |
-| `PaquetesGestoria` | `fiscalDocuments.web.js::createManagerPackageVersion` | Inserción create-only con ID/versionado, hash, límite de tamaño, claim idempotente y hook que exige estructura/periodo/estado PREPARED; update/remove bloqueados por hook y política. | Snapshot preparado separado del despacho externo; despacho sigue deshabilitado. Validación central pendiente. |
+| `PaquetesGestoria` | `fiscalDocuments.web.js::createManagerPackageVersion` | Inserción create-only con ID/versionado, hash, límite de tamaño, claim idempotente; validador central `assertPaquetesGestoriaRecord` en DAL y hook; update/remove bloqueados. | Validación central integrada en PR #455; despacho sigue deshabilitado; Wix Runtime pendiente. |
 | `RegistrosHorariosStaff` | `horario.web.js::registrarFichaje`; `registrarAjusteHorario` | Ambos WebMethods comprueban flags deshabilitados antes de insertar; la DAL y el hook validan campos, fechas y firma; update/remove bloqueados. | Writers deshabilitados. |
 | `CitasF2` | `booking/bookingCore.js::_persistBooking`; reconciliación de eventos en `events.js` | `bookingCore` usa alias de `dalInsert`/`dalUpdate`, no un insert SDK directo; validación de dominio en DAL y hook; remove bloqueado. Es una proyección mutable, no un ledger append-only. | Productor controlado por backend; E2E Wix pendiente. |
 | `CajaActual` | `cajas.web.js::_updateCajaActual` y cierre Z; `tpv/tpvQaRepository.js` para proyección QA | Hook valida estructura y singleton. El repositorio QA comprueba origen, testRunId y estado sintético antes de mutar. La política DAL de update/save no valida una transición de dominio completa. | Brecha P1 de defensa en profundidad. |
@@ -71,7 +71,7 @@ La revisión se limita al código fuente disponible en GitHub y a búsquedas est
 
 **Impacto:** la integridad de dominio depende del hook como única validación de servidor para el alta. El patrón no es homogéneo con CitasF2, caja, cierres y ledger contable, que también invocan validadores desde la DAL.
 
-**Recomendación:** trasladar el contrato puro a `validation.js`, invocarlo desde `dataAccess.insertItem` y reutilizarlo desde el hook físico. Mantener un único contrato y pruebas unitarias de payload válido/inválido, sin duplicar reglas.
+**Resolución integrada:** `assertPaquetesGestoriaRecord` se trasladó a `validation.js`, `dataAccess.insertItem` lo ejecuta antes de la inserción elevada y `PaquetesGestoria_beforeInsert` reutiliza el mismo contrato tras normalizar `createdAt`.\n\n**Evidencia:** PR #455 (`7672bac4b4207ba87c9688fa34f38752a253ae86`). CI PR #455: Layer 1 333/333, Layer 2 266/266, suite offline 688/688; SDK contracts, npm audit (0 advisories), ESLint y Secret scanning SUCCESS. No se ejecutó Wix Runtime.
 
 ### H-03 — Cierre Z sin identidad de dominio aprobada
 
@@ -128,7 +128,7 @@ La consulta de estados combinados del commit base no devolvió checks asociados.
 ## 7. Plan de corrección mínimo
 
 1. **P1 — CajaActual:** inventariar y especificar transiciones legítimas y campos mutables por operación. Después endurecer la DAL con tests de aceptación y regresión de proyección de caja/TPV QA.
-2. **P2 — PaquetesGestoria:** extraer el validador a `validation.js`, invocarlo desde DAL y hook, añadir pruebas puras y de integración mock.
+2. **P2 — PaquetesGestoria:** RESUELTO en PR #455. Mantener regresión offline y completar prueba de hook en Wix Sandbox.
 3. **P0 — Cierre Z:** mantener fail-closed hasta aprobar `recordDomain` y la identidad de cron; después probar el contrato en Sandbox sin datos reales.
 4. **P1 — permisos:** ejecutar E2E con identidad CMS_EDITOR y comprobar denegación de escrituras directas, conservando los WebMethods backend autorizados.
 5. **P0/P1 — Runtime:** repetir pruebas de hooks, idempotencia y concurrencia en un entorno Wix Sandbox inequívocamente aislado.
