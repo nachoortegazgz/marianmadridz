@@ -38,6 +38,8 @@ test("logical TPV entities persist only as marked synthetic rows in canonical CM
         recordSource: "TPV_QA_SYNTHETIC",
         payloadFiscal: {
             testRunId: TPV_QA_RUNTIME_POLICY.TEST_RUN_ID,
+            logicalCollection: TPV_QA_COLLECTIONS.PAGOS,
+            idempotencyKey: "TPVQA-TEST-IDEMPOTENCY",
             requestFingerprint: "f".repeat(64),
             isSynthetic: true,
             realPayment: false,
