@@ -9,6 +9,7 @@ STANDARDS: G10 ASCII Strict. Cero suppressAuth. Historical fields are read-only;
 =============================================================================
 */
 
+import { createHash } from "node:crypto";
 import {
     BUSINESS_COLLECTIONS,
     CATALOG_ENTRY_TYPE,
@@ -21,6 +22,7 @@ import {
 } from "backend/internalConfig";
 import { assertCitasF2, assertControlOperativo, assertCanonicalControlFields, assertRegistrosHorariosStaff, assertMapaStaffRecord, assertCajaActualRecord, isValidNifOrEuVat as _isValidNifOrEuVat } from "backend/validation";
 import { CONSISTENCY, getItem } from "backend/dataAccess";
+import { stableSerialize } from "backend/tpv/tpvUtils";
 
 import { logger } from "backend/logger";
 
@@ -476,6 +478,10 @@ export function MovimientosCaja_beforeInsert(item) {
     return item;
 }
 
+function _isPlainRecord(value) {
+    return Boolean(value) && typeof value === "object" && !Array.isArray(value) && !(value instanceof Date);
+}
+
 function _isCurrentSyntheticTpvRow(value) {
     const expectedPrefix = "TPVQA:" + TPV_QA_RUNTIME_POLICY.TEST_RUN_ID + ":";
     return value?.recordSource === "TPV_QA_SYNTHETIC" &&
@@ -518,7 +524,7 @@ export async function MovimientosCaja_beforeUpdate(item) {
         envelope?.realPayment !== false ||
         envelope?.externalSideEffects !== false ||
         item.movementType !== TPV_QA_EVENT_MOVEMENT_TYPES[logicalCollection] ||
-        !_isRecord(envelope?.qaRecord)
+        !_isPlainRecord(envelope?.qaRecord)
     ) {
         _fiscalError("Payload lógico TPV QA no editable o incoherente.");
     }
