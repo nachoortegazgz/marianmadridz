@@ -212,3 +212,69 @@ CI offline de `main`: **PASS**. Integridad runtime, aislamiento, E2E y conciliac
 ### Corrección de baseline Git — 2026-11-21
 - PR #517 integró únicamente documentación mediante commit `10c15c56d2ff3e605d3cec3da0ca717b426bd280`; el baseline funcional TPV permanece en `6bf263502c58fa28bd13f7db848553c18b34a323` (PR #516).
 - Checks pre-merge de PR #517: calidad offline y Gitleaks SUCCESS. Los workflows post-merge del commit documental deben consultarse por SHA antes de cerrar la evidencia CI final.
+
+
+---
+
+## Addendum vigente — auditoría Wix y plan maestro 2026-11-21
+
+**HEAD main:** `e75aec5d28dcb8560fe75dbd04d5eae95957c3d8`.  
+**Baseline funcional TPV:** PR #516, `6bf263502c58fa28bd13f7db848553c18b34a323`.  
+**CI post-merge en HEAD:** backend offline quality gates run `44867151597` SUCCESS; secret scanning run `44867151605` SUCCESS.  
+**Estado Wix:** Editor Classic, Velo habilitado, Published. Clasificación funcional QA por directriz del propietario.  
+**Release:** NO-GO.
+
+### Hallazgos actuales
+- 42 colecciones CMS (13 NATIVE / 29 WIX_APP).
+- Site Data Usage API: LIVE 203 elementos / 266.227 bytes; SANDBOX 109 / 206.023 bytes.
+- CajaActual 1/1; MovimientosCaja 2/2; TpvSandboxIdentities 0/0; ControlOperativo 58/0; CitasF2 6/6; ServiciosCatalogo 95/95; MapaStaff 5/5.
+- CajaActual LIVE ABIERTA sin marcador TPV Sandbox: source MOVIMIENTOS_CAJA_RECONCILIADOS, traceId 0, cash 320 EUR, expected 320 EUR, counted 0 EUR, difference 0 EUR.
+- Dos movimientos LIVE (25 EUR CARD y 20 EUR CASH) sin contrato completo de ledger sintético. No modificarlos.
+- Tres registros FISCAL_LEDGER/PENDING_RECOVERY en ControlOperativo, attempts=0; no reintentar.
+- Ocho automatizaciones ACTIVE confirmadas de 159: siete preinstaladas con bloqueo de cambio de estado y una aplicación LLM programada `Configuración de control laboral`, aún sin inspección completa de tarea/efectos.
+- Accessibility scan `aae3b411-81ff-4309-a767-6301164cb483` en curso; 121 descubiertas, 0 procesadas, 51 fallidas, 70 pendientes en el último polling.
+- `main` devuelve `protected=false`; SHA instalado en Wix no acreditado.
+- PR #495 sigue abierta/no mergeable; no integrar sin revisión del diff.
+
+### Documentos rectores actualizados
+- [Plan maestro de ejecución](MASTER-EXECUTION-PLAN.md).
+- [Auditoría Wix read-only 2026-11-21](audits/2026-11-21-wix-site-readonly-baseline.md).
+- [SSOT de entorno QA](qa/QA-ENVIRONMENT-SSOT.md).
+- [Relevo de sesión](qa/SESSION-HANDOFF-2026-11-21.md).
+
+### Decisión
+Completar primero contención de efectos externos, conciliación read-only, inspección de Sandbox desde Editor y garantías compartidas de CajaActual. Solo entonces ejecutar TPV E2E. No ejecutar operaciones económicas, notificaciones ni writers fiscales/contables/laborales reales. No publicar.
+
+
+### SEO y accesibilidad — resultado final del scan
+- Google Search Console Get Site Readiness: `READY`; no se modificó la configuración SEO. Esto no acredita indexación o ranking.
+- Scan full-site `aae3b411-81ff-4309-a767-6301164cb483`: PARTIALLY_COMPLETED, 121/121 páginas fallidas, 0 procesadas, código `ACCESSIBILITY_SCAN_FAILURE_CODE_ANALYSIS_FAILED`, mensaje `This page could not be checked.`, 0 findings. Las páginas enumeradas usan el host wixsite.com. Diagnosticar origen antes de volver a escanear; no declarar WCAG aprobado.
+
+
+### Nuevos bloqueos de auditoría Wix
+- [#520](https://github.com/nachoortegazgz/marianmadridz/issues/520) P0: inspección y contención de 8 automatizaciones ACTIVE, incluida una tarea LLM programada.
+- [#521](https://github.com/nachoortegazgz/marianmadridz/issues/521) P1: scan de accesibilidad falló en 121/121 páginas; URL personalizada no scan-eligible.
+- GSC Site Readiness: READY. No se modificó configuración SEO.
+
+
+### Catálogo Bookings — nuevo hallazgo #522
+- Wix Bookings V2: 94 servicios APPOINTMENT, 70 visibles/24 ocultos, 94 onlineBooking habilitados.
+- ServiciosCatalogo: 94 SERVICE + 1 PRICING_PLAN; los 94 IDs están mapeados sin huérfanos ni duplicados; precios/monedas de los 70 fijos y visibilidad coinciden.
+- Discrepancias de canal: 16 CMS onlinePayment=true con Bookings payment.options.online=false; 8 CMS inPersonPayment=false con Bookings payment.options.inPerson=true. Seguimiento [#522](https://github.com/nachoortegazgz/marianmadridz/issues/522). No modificar servicios hasta confirmar SSOT de negocio.
+
+
+### Personal y catálogo Bookings — resultado positivo
+- 94/94 servicios de Bookings V2 están mapeados en ServiciosCatalogo; 70 precios fijos/monedas y visibilidad coinciden; 0 huérfanos/duplicados.
+- 3 staff providers nativos; sus resourceId y staffMemberId coinciden con los tres registros STAFF de MapaStaff y con STAFF.IDS en internalConfig. Las dos filas adicionales son GESTORIA y TERCERO/EMPRESA.
+- 94 servicios tienen schedule, form, categoría y staff asignado. Esto acredita coherencia estática de catálogo/personal, no disponibilidad runtime.
+
+
+### Reservas — nuevo hallazgo #523
+- CitasF2: 6 filas (5 CONFIRMED, 1 PENDING).
+- Los seis bookingId existen en Bookings Reader V2 y los seis están CANCELED nativamente.
+- No hay marcadores BOOKING_CANCELED correlacionados en ControlOperativo. Seguimiento [#523](https://github.com/nachoortegazgz/marianmadridz/issues/523). No recrear ni reconfirmar reservas.
+
+
+### Inventario global Bookings V2 — hallazgo #523
+- 353 reservas nativas: 352 CANCELED y 1 CONFIRMED; sin CREATED/PENDING/DECLINED/WAITING_LIST.
+- La única CONFIRMED inicia el 18/09/2026 y no tiene proyección CitasF2; estado de asistencia pendiente de consultar. No cancelarla ni reconfirmarla automáticamente.
