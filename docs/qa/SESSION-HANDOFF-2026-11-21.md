@@ -2,7 +2,8 @@
 **Fecha de corte:** 2026-11-21  
 **Repositorio:** `nachoortegazgz/marianmadridz`  
 **Rama de referencia:** `main`  
-**HEAD verificado:** `6bf263502c58fa28bd13f7db848553c18b34a323`  
+**HEAD de main al cierre documental:** `10c15c56d2ff3e605d3cec3da0ca717b426bd280` (merge documental PR #517)  
+**Baseline de código TPV:** `6bf263502c58fa28bd13f7db848553c18b34a323` (merge PR #516)  
 **PR integrada:** [#516 — refactor(tpv): align widget handshake and backend test contracts](https://github.com/nachoortegazgz/marianmadridz/pull/516)  
 **Sitio Wix:** `188bed94-177c-4bc9-a9f0-35080d874f3e`  
 **Release:** **NO-GO**. No publicar ni ejecutar operaciones de escritura hasta superar los gates indicados.
@@ -11,7 +12,7 @@
 
 ## 1. Baseline y control de cambios
 
-- El HEAD actual de `main` es `6bf263502c58fa28bd13f7db848553c18b34a323`; sustituye el baseline anterior `106ec75`.
+- El baseline de código TPV en `main` es `6bf263502c58fa28bd13f7db848553c18b34a323`; sustituye el baseline anterior `106ec75`. El HEAD posterior de `main` es `10c15c56d2ff3e605d3cec3da0ca717b426bd280`, que solo integra esta consolidación documental mediante PR #517.
 - PR #516 quedó fusionada el 2026-11-21 a las 03:24:32 UTC. Merge commit: `6bf263502c58fa28bd13f7db848553c18b34a323`.
 - La rama `main` existe y el repositorio concede permisos de lectura/escritura a la integración. La API de GitHub devuelve `protected=false`: no hay protección de rama acreditada.
 - CI post-merge del SHA actual:
@@ -123,3 +124,12 @@ El texto recibido en el contexto de esta sesión está truncado después del enc
 - `docs/qa/2026-11-20-live-caja-schema-and-reconciliation.md`
 
 **Conclusión:** el código y la documentación del contrato TPV están integrados hasta PR #516 y los gates offline del merge están verdes. El estado operativo no está validado: precondiciones CMS, aislamiento del data plane, runtime Preview, E2E y conciliación completa del smoke siguen pendientes. Mantener **NO-GO**.
+
+
+## 10. Consolidación documental integrada — PR #517
+
+- PR #517 se fusionó mediante squash el 2026-11-21; commit de documentación: `10c15c56d2ff3e605d3cec3da0ca717b426bd280`.
+- PR #517 añadió este relevo y el addendum de `docs/PROJECT-STATUS.md`; no modificó código funcional, CMS ni configuración Wix.
+- Checks pre-merge: Backend offline quality gates y Gitleaks SUCCESS en el SHA `dac880c5bdcf2ad0c3a0dec59ca799728b4bb6f9`.
+- Los checks post-merge de `10c15c56...` se lanzaron tras la integración; consultar su resultado antes de declarar el último commit documental validado.
+- Por tanto, el baseline funcional TPV sigue siendo PR #516 / `6bf263502c58fa28bd13f7db848553c18b34a323`, mientras que el HEAD actual de Git `main` incluye además el commit documental #517.
