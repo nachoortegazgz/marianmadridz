@@ -51,7 +51,7 @@ Los doce nombres exportados requeridos son:
 | `obtenerResumenCaja` | `tpvCierres.web.js` | Obtener resumen de sesión |
 | `obtenerMovimientosCaja` | `tpvMovimientos.web.js` | Consultar movimientos de caja sintéticos |
 
-`obtenerConfiguracionTPV` es el WebMethod adicional de contexto y no sustituye ninguno de los doce nombres anteriores.
+`obtenerConfiguracionTPV` es el WebMethod adicional de contexto y no sustituye ninguno de los doce nombres anteriores. El controlador importa cada módulo WebMethod con el sufijo Wix `.web` (por ejemplo, `backend/tpv/tpvCaja.web`); no debe importar módulos backend privados sin ese sufijo.
 
 Los WebMethods devuelven el sobre `{ status, data, error }`. El controlador reenvía ese sobre sin anidarlo dentro de otro `data`.
 
