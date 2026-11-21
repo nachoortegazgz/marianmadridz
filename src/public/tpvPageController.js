@@ -5,7 +5,7 @@
  */
 import { createWidgetBridge, MESSAGE_TYPES, PROTOCOL_VERSION } from "public/widgetBridge";
 import { obtenerEstadoCaja, abrirSesionCaja } from "backend/tpv/tpvCaja";
-import { obtenerServicios, obtenerProductos, obtenerStaff, buscarClientesTPV } from "backend/tpv/tpvCatalogo";
+import { obtenerServicios, obtenerProductos, obtenerStaff, obtenerVariantesProducto, buscarClientesTPV } from "backend/tpv/tpvCatalogo";
 import { registrarVenta } from "backend/tpv/tpvVentas";
 import { registrarMovimientoCaja, obtenerMovimientosCaja } from "backend/tpv/tpvMovimientos";
 import { registrarDevolucion } from "backend/tpv/tpvDevoluciones";
@@ -17,6 +17,7 @@ const REQUEST_TYPES = Object.freeze([
     "SESSION_OPEN",
     "CATALOG_SERVICES",
     "CATALOG_PRODUCTS",
+    "CATALOG_VARIANTS",
     "CATALOG_STAFF",
     "CUSTOMERS_SEARCH",
     "SALE_REGISTER",
@@ -96,6 +97,9 @@ async function dispatch(message) {
                 cursor: payload.cursor ? String(payload.cursor).slice(0, 16000) : null,
             });
 
+        case "CATALOG_VARIANTS":
+            return obtenerVariantesProducto({ productId: String(payload.productId || "") });
+
         case "CATALOG_STAFF":
             return obtenerStaff();
 
@@ -119,6 +123,7 @@ async function dispatch(message) {
                 lineas: lineItems.map((line) => ({
                     tipoLinea: String(line.tipoLinea || "").toUpperCase(),
                     itemId: line.itemId || null,
+                    varianteId: line.varianteId || null,
                     concepto: String(line.concepto || ""),
                     cantidad: numeric(line.cantidad, "QUANTITY", { allowZero: false }),
                     precioUnitario: numeric(line.precioUnitario, "UNIT_PRICE"),
