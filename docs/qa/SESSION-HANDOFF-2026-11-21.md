@@ -167,3 +167,7 @@ El estado anterior de automatizaciones y CMS queda actualizado por [la auditorí
 ### Reservas — conciliación de estados
 - CitasF2 tiene seis filas (5 CONFIRMED, 1 PENDING); los seis bookingId existen en Bookings Reader V2 y están CANCELED nativamente.
 - No hay markers BOOKING_CANCELED correlacionados en ControlOperativo. Seguimiento #523. No recrear ni reconfirmar reservas; revisar event delivery y reconciliar proyección.
+
+
+### Bookings Reader V2 — inventario global
+353 reservas nativas: 352 CANCELED y una CONFIRMED histórica (2026-09-18T12:00Z) sin proyección CitasF2; asistencia pendiente. Seguimiento #523. No cancelar ni reconfirmar.
