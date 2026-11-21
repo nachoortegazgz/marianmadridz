@@ -242,3 +242,14 @@ Se siguió el esquema oficial de Run Accessibility Scan: para una página Wix es
 ## 18. Wix Stores Catalog V3 — inventario read-only
 
 Query Products V3 devuelve 24 productos: todos `PHYSICAL`, visibles, moneda EUR y `inventory.availabilityStatus=IN_STOCK`. No hay precios ausentes en `actualPriceRange`; el rango global es 9,95–38,50 EUR. Distribución de variantes: 22 productos con una variante, uno con dos y uno con seis. No se consultó ni modificó inventario por SKU, pedidos ni transacciones; este resumen no valida checkout ni cobro.
+
+
+## 19. Escritores CajaActual — revisión estática de concurrencia
+
+Revisión estática de `cajas.web.js`, `eventLog.js`, `events.js` y `tpvSandboxRepository.js`:
+- `_updateCajaActual` hace read-modify-full-update con `dalUpdate` y reintenta hasta cuatro veces; no incorpora CAS/revision en el helper ni adquiere por sí mismo el lock fiscal.
+- El writer manual protege la ruta normal con `acquireFiscalLedgerLock`, pero su preflight idempotente llama a la proyección antes de adquirir el lock.
+- `events.js` tiene un camino de recuperación de ledger existente que llama `updateCajaActualFromMovement` antes de `registrarEventoEconomico`; no se ha demostrado que comparta el lock fiscal.
+- TPV usa lock de sesión propio en `ControlOperativo`, distinto del lock fiscal.
+
+Esto no demuestra un lost update ocurrido, pero sí que la serialización no está garantizada en todos los call paths. Seguimiento P0 [#525](https://github.com/nachoortegazgz/marianmadridz/issues/525). No ejecutar pruebas concurrentes en LIVE ni modificar datos; definir lock/CAS común y pruebas aisladas.
