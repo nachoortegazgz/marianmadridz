@@ -48,7 +48,7 @@ function normalizeLine(line, index) {
     }
 
     const tipoLinea = String(line.tipoLinea || "").trim().toUpperCase();
-    if (!["SERVICIO", "PRODUCTO"].includes(tipoLinea)) {
+    if (!["SERVICIO", "PRODUCTO", "PERSONALIZADA"].includes(tipoLinea)) {
         throw new Error("TPV_INVALID_LINE_TYPE");
     }
 
