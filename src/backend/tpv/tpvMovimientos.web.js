@@ -2,9 +2,8 @@ import { Permissions, webMethod } from "wix-web-module";
 import { requireAdmin, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { TPV_SANDBOX_COLLECTIONS, TPV_SANDBOX_RUNTIME_POLICY } from "backend/internalConfig";
-import { insertSandboxEvent, latestOpenSandboxSession, querySandboxRecords, withSandboxSessionLock } from "backend/tpv/tpvSandboxRepository";
+import { insertSandboxEvent, latestOpenSandboxSession, querySandboxLedgerRecords, withSandboxSessionLock } from "backend/tpv/tpvSandboxRepository";
 import { assertTpvSandboxEnabled, fromMinorUnits, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
-import { wql } from "backend/dataAccess";
 
 export const registrarMovimientoCaja = webMethod(
     Permissions.SiteMember,
@@ -71,29 +70,67 @@ export const obtenerMovimientosCaja = webMethod(
         assertTpvSandboxEnabled();
         try {
             const limit = Number(input.limit ?? 50);
-            if (!Number.isInteger(limit) || limit < 1 || limit > 100) throw new Error("TPV_INVALID_MOVEMENTS_LIMIT");
+            if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+                throw new Error("TPV_INVALID_MOVEMENTS_LIMIT");
+            }
             const sessionId = String(input.sessionId || "").trim();
-            const records = await querySandboxRecords(
-                TPV_SANDBOX_COLLECTIONS.MOVIMIENTOS_CAJA,
-                sessionId ? wql.eq("sessionId", sessionId) : undefined,
-                { sort: ["_createdDate DESC"], limit: 1000, maxRecords: 1000 }
-            );
+            const ledger = await querySandboxLedgerRecords({ limit: 1000 });
+            const visibleTypes = new Set([
+                "SIMULATED_TPV_SALE",
+                "SIMULATED_TPV_CASH_MOVEMENT",
+                "SIMULATED_TPV_REFUND",
+                "SIMULATED_TPV_TICKET_X",
+                "SIMULATED_TPV_TICKET_Z",
+            ]);
+            const items = ledger.records
+                .filter((record) => {
+                    const sourceType = String(record.cmsMovementType || "");
+                    if (!visibleTypes.has(sourceType)) return false;
+                    if (sourceType === "SIMULATED_TPV_SALE" && record.status !== "CONFIRMADA_SINTETICA") return false;
+                    const recordSessionId = String(record.sessionId || record.payload?.sessionId || "");
+                    return !sessionId || recordSessionId === sessionId;
+                })
+                .map((record) => {
+                    const amountMinor = Number.isSafeInteger(Number(record.amountMinor))
+                        ? Number(record.amountMinor)
+                        : Number.isSafeInteger(Number(record.totalMinor))
+                            ? Number(record.totalMinor)
+                            : null;
+                    const sourceType = String(record.cmsMovementType || "");
+                    const movementType = sourceType === "SIMULATED_TPV_SALE"
+                        ? "VENTA"
+                        : sourceType === "SIMULATED_TPV_REFUND"
+                            ? "DEVOLUCION"
+                            : sourceType === "SIMULATED_TPV_TICKET_X"
+                                ? "CONTROL_X"
+                                : sourceType === "SIMULATED_TPV_TICKET_Z"
+                                    ? "CIERRE_Z"
+                                    : String(record.movementType || "MOVIMIENTO_CAJA");
+                    return {
+                        movementId: record._id,
+                        sessionId: record.sessionId || record.payload?.sessionId || null,
+                        movementType,
+                        sourceType,
+                        amount: amountMinor === null ? null : fromMinorUnits(amountMinor),
+                        paymentMethod: record.paymentMethod || null,
+                        reason: record.reason || record.totals?.differenceReason || "",
+                        reference: record.saleId || record.refundId || record.reportId || record._id,
+                        status: record.status || null,
+                        createdAt: record.createdAt || record.generatedAt || record._createdDate || null,
+                        totals: record.totals || null,
+                        currency: record.currency || "EUR",
+                        isSynthetic: true,
+                        persisted: true,
+                    };
+                })
+                .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+                .slice(0, limit);
             return {
                 status: "SUCCESS",
                 data: {
-                    items: records.slice(0, limit).map((record) => ({
-                        movementId: record._id,
-                        sessionId: record.sessionId || null,
-                        movementType: record.movementType || null,
-                        amount: fromMinorUnits(Number(record.amountMinor || 0)),
-                        paymentMethod: record.paymentMethod || null,
-                        reason: record.reason || "",
-                        status: record.status || null,
-                        createdAt: record.createdAt || record.generatedAt || record._createdDate || null,
-                        isSynthetic: true,
-                        persisted: true,
-                    })),
+                    items,
                     syntheticOnly: true,
+                    truncated: ledger.hasMore,
                 },
                 error: null,
                 traceId,
