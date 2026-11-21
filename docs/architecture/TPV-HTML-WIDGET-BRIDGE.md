@@ -116,7 +116,7 @@ Cada solicitud se responde con el mismo `messageId` y el sufijo `_RES`.
 
 ### Identidad de colecciones
 
-Los únicos IDs físicos de CMS para la caja son `CajaActual`, `MovimientosCaja` y `ControlOperativo`. El repositorio TPV ya los resuelve mediante `BUSINESS_COLLECTIONS.CAJA_ACTUAL`, `BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA` y `OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO`. Los valores `SANDBOX_LOGICAL_*` son discriminadores internos de evento dentro de `MovimientosCaja`, no nombres de colecciones Wix ni tablas paralelas. No se deben crear colecciones con esos nombres.
+Los únicos IDs físicos de CMS para la caja son `CajaActual`, `MovimientosCaja` y `ControlOperativo`. `cashRegisterStatus=SIMULACION` se conserva como estado de proyección de prueba reconocido por los módulos transversales de caja; no es una comprobación booleana de entorno ni un nombre de colección. No sustituirlo por `ABIERTA`, porque `src/backend/cajas.web.js` utiliza ese sentinel para evitar que una sesión de prueba se trate como operativa. El repositorio TPV ya los resuelve mediante `BUSINESS_COLLECTIONS.CAJA_ACTUAL`, `BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA` y `OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO`. Los valores `SANDBOX_LOGICAL_*` son discriminadores internos de evento dentro de `MovimientosCaja`, no nombres de colecciones Wix ni tablas paralelas. No se deben crear colecciones con esos nombres.
 
 ### Alcance real de las integraciones nativas
 
