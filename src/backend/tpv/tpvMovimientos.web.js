@@ -77,7 +77,7 @@ export const obtenerMovimientosCaja = webMethod(
             const records = await querySandboxRecords(
                 TPV_SANDBOX_COLLECTIONS.MOVIMIENTOS_CAJA,
                 sessionId ? wql.eq("sessionId", sessionId) : undefined,
-                { sort: ["createdAt DESC"], limit: 1000, maxRecords: 1000 }
+                { sort: ["_createdDate DESC"], limit: 1000, maxRecords: 1000 }
             );
             return {
                 status: "SUCCESS",
@@ -90,7 +90,7 @@ export const obtenerMovimientosCaja = webMethod(
                         paymentMethod: record.paymentMethod || null,
                         reason: record.reason || "",
                         status: record.status || null,
-                        createdAt: record.createdAt || record.generatedAt || null,
+                        createdAt: record.createdAt || record.generatedAt || record._createdDate || null,
                         isSynthetic: true,
                         persisted: true,
                     })),
