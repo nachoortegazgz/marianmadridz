@@ -165,6 +165,8 @@ Acciones:
 
 **Objetivo:** usar la autoridad nativa Wix sin inventario o checkout paralelo.
 
+**Baseline Stores V3:** 24 productos físicos, todos visibles, EUR e IN_STOCK; 22 con una variante, uno con dos y uno con seis; precios 9,95–38,50 EUR. Es una lectura de catálogo, no una prueba de checkout, inventario por variante ni pagos.
+
 Acciones:
 - Catalog V3 como autoridad de productos, variantes e inventario.
 - Validar catálogo, precios, stock, categorías, cesta, checkout, pedidos y devoluciones en modo de prueba soportado.
