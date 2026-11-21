@@ -4,7 +4,7 @@ import { makeTraceId } from "public/mmUtils";
 import { TPV_SANDBOX_COLLECTIONS, TPV_SANDBOX_RUNTIME_POLICY } from "backend/internalConfig";
 import { appendSandboxAudit, getPendingSandboxRefunds, getPendingSandboxSales, insertSandboxEvent, latestOpenSandboxSession, querySandboxRecords, withSandboxSessionLock } from "backend/tpv/tpvSandboxRepository";
 import { buildSandboxSessionSummary } from "backend/tpv/tpvCierresCore";
-import { assertTpvSandboxEnabled, fromMinorUnits, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
+import { fromMinorUnits, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
 import { wql } from "backend/dataAccess";
 
 export const obtenerResumenCaja = webMethod(
@@ -12,7 +12,7 @@ export const obtenerResumenCaja = webMethod(
     async (input = {}) => {
         const traceId = makeTraceId("tpv-sandbox-summary");
         await requireCajero(traceId);
-        assertTpvSandboxEnabled();
+
         try {
             const session = await latestOpenSandboxSession();
             if (!session) throw new Error("TPV_SANDBOX_SESSION_NOT_OPEN");
@@ -49,7 +49,7 @@ export const generarControlX = webMethod(
         let persisted = false;
         const traceId = makeTraceId("tpv-sandbox-ticket-x");
         await requireAdmin(traceId);
-        assertTpvSandboxEnabled();
+
         try {
             const key = normalizeClientIdempotencyKey(input.idempotencyKey);
             const session = await latestOpenSandboxSession();
@@ -94,7 +94,7 @@ export const generarCierreZ = webMethod(
         let persisted = false;
         const traceId = makeTraceId("tpv-sandbox-ticket-z");
         await requireAdmin(traceId);
-        assertTpvSandboxEnabled();
+
         try {
             const session = await latestOpenSandboxSession();
             if (!session && input.sessionId) {
