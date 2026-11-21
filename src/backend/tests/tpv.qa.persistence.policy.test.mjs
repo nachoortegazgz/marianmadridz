@@ -252,11 +252,11 @@ test("SANDBOX policy remains synthetic and client idempotency keys are bounded",
 
 test("every exposed TPV SANDBOX WebMethod fails closed before repository access", async () => {
     const protectedMethods = [
-        ["tpvCaja.web.js", ["inicializarCaja", "obtenerSesionCaja", "abrirCaja", "registrarArqueoParcial"]],
-        ["tpvMovimientos.web.js", ["registrarMovimientoCaja"]],
+        ["tpvCaja.web.js", ["inicializarCaja", "obtenerEstadoCaja", "abrirSesionCaja", "registrarArqueoParcial"]],
+        ["tpvMovimientos.web.js", ["registrarMovimientoCaja", "obtenerMovimientosCaja"]],
         ["tpvVentas.web.js", ["registrarVenta"]],
-        ["tpvDevoluciones.web.js", ["solicitarDevolucion"]],
-        ["tpvCierres.web.js", ["obtenerResumenSesion", "generarTicketX", "cerrarTicketZ"]],
+        ["tpvDevoluciones.web.js", ["registrarDevolucion"]],
+        ["tpvCierres.web.js", ["obtenerResumenCaja", "generarControlX", "generarCierreZ"]],
         ["tpvPagos.web.js", ["validarDesglosePagos"]],
         ["tpvUtils.web.js", ["obtenerConfiguracionTPV"]],
         ["tpvPermisos.web.js", ["obtenerPermisosTPV"]],
@@ -286,10 +286,11 @@ test("every exposed TPV SANDBOX WebMethod fails closed before repository access"
 test("every exported TPV WebMethod has an explicit runtime policy classification", async () => {
     const policies = {
         "tpvCaja.web.js": {
-            guarded: ["inicializarCaja", "obtenerSesionCaja", "abrirCaja", "registrarArqueoParcial"],
+            guarded: ["inicializarCaja", "obtenerEstadoCaja", "abrirSesionCaja", "registrarArqueoParcial"],
         },
         "tpvMovimientos.web.js": {
             guarded: ["registrarMovimientoCaja"],
+            readOnly: ["obtenerMovimientosCaja"],
         },
         "tpvVentas.web.js": {
             guarded: ["registrarVenta"],
@@ -299,10 +300,10 @@ test("every exported TPV WebMethod has an explicit runtime policy classification
             },
         },
         "tpvDevoluciones.web.js": {
-            guarded: ["solicitarDevolucion"],
+            guarded: ["registrarDevolucion"],
         },
         "tpvCierres.web.js": {
-            guarded: ["obtenerResumenSesion", "generarTicketX", "cerrarTicketZ"],
+            guarded: ["obtenerResumenCaja", "generarControlX", "generarCierreZ"],
         },
         "tpvPagos.web.js": {
             guarded: ["validarDesglosePagos", "simularPasarelaPago", "simularReembolsoPasarela"],
@@ -324,7 +325,7 @@ test("every exported TPV WebMethod has an explicit runtime policy classification
                 "buscarClientesTPV",
                 "obtenerReservasClienteTPV",
                 "obtenerServicios",
-                "obtenerProfesionales",
+                "obtenerStaff",
                 "obtenerProductos",
                 "obtenerVariantesProducto",
             ],
