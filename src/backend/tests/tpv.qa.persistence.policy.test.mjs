@@ -22,6 +22,8 @@ import {
     makeSyntheticPayload,
     makeSandboxRefundLockId,
     makeSandboxSessionLockId,
+    makeSandboxTransactionId,
+    makeLegacySandboxTransactionId,
     assertSandboxCajaWritable,
     assertTpvSandboxEnabled,
 } from "../tpv/tpvUtils.js";
@@ -201,6 +203,29 @@ test("SANDBOX session lock is deterministic, bounded and CAS-only", () => {
         status: "RELEASED",
     }), /DATA_ACCESS_ERROR/);
     assert.throws(() => assertRemoveAllowed(collection, lockId, CONTROL_TYPE.TPV_SANDBOX_SESSION_LOCK), /DATA_ACCESS_ERROR/);
+});
+
+test("MovimientosCaja transaction IDs are unique across logical TPV event collections", () => {
+    const key = "sandbox-arqueo-reintento-0001";
+    const cashCountId = makeSandboxTransactionId(TPV_SANDBOX_COLLECTIONS.MOVIMIENTOS_CAJA, key);
+    const ticketId = makeSandboxTransactionId(TPV_SANDBOX_COLLECTIONS.TICKET_Z, key);
+    const auditId = makeSandboxTransactionId(TPV_SANDBOX_COLLECTIONS.AUDITORIA, key);
+    const legacyId = makeLegacySandboxTransactionId(key);
+
+    assert.match(cashCountId, /^TPVSANDBOX_[a-f0-9]{64}$/);
+    assert.match(legacyId, /^TPVSANDBOX_[a-f0-9]{64}$/);
+    assert.notEqual(cashCountId, ticketId);
+    assert.notEqual(cashCountId, auditId);
+    assert.notEqual(ticketId, auditId);
+    assert.notEqual(cashCountId, legacyId);
+    assert.equal(cashCountId, makeSandboxTransactionId(TPV_SANDBOX_COLLECTIONS.MOVIMIENTOS_CAJA, key));
+    assert.equal(legacyId, makeLegacySandboxTransactionId(key));
+});
+
+test("legacy transaction IDs remain discoverable for same-collection idempotent retries", async () => {
+    const repository = await readFile(new URL("../tpv/tpvSandboxRepository.js", import.meta.url), "utf8");
+    assert.match(repository, /const transactionIds = \[\s*_testTransactionId\(collection, key\),\s*makeLegacySandboxTransactionId\(key\),\s*\]/);
+    assert.match(repository, /for \(const transactionId of uniqueTransactionIds\)/);
 });
 
 test("SANDBOX policy remains synthetic and client idempotency keys are bounded", () => {

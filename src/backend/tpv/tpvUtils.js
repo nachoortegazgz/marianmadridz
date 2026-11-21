@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { TPV_SANDBOX_RUNTIME_POLICY } from "backend/internalConfig";
+import { TPV_SANDBOX_COLLECTIONS, TPV_SANDBOX_RUNTIME_POLICY } from "backend/internalConfig";
 
 const PAYMENT_METHODS = Object.freeze(["EFECTIVO", "TARJETA", "BIZUM", "OTROS"]);
 export function assertTpvSandboxEnabled() {
@@ -35,6 +35,25 @@ export function assertSandboxCajaWritable(caja, { allowBootstrap = false } = {})
         throw new Error("TPV_SANDBOX_CASH_REGISTER_NOT_IN_TEST_MODE");
     }
     return true;
+}
+
+export function makeSandboxTransactionId(collection, idempotencyKey) {
+    if (!Object.values(TPV_SANDBOX_COLLECTIONS).includes(collection)) {
+        throw new Error("TPV_SANDBOX_COLLECTION_NOT_ALLOWED");
+    }
+    const key = normalizeIdempotencyKey(idempotencyKey);
+    const digest = createHash("sha256")
+        .update(TPV_SANDBOX_RUNTIME_POLICY.SANDBOX_RUN_ID + ":" + collection + ":" + key, "utf8")
+        .digest("hex");
+    return "TPVSANDBOX_" + digest;
+}
+
+export function makeLegacySandboxTransactionId(idempotencyKey) {
+    const key = normalizeIdempotencyKey(idempotencyKey);
+    const digest = createHash("sha256")
+        .update(TPV_SANDBOX_RUNTIME_POLICY.SANDBOX_RUN_ID + ":" + key, "utf8")
+        .digest("hex");
+    return "TPVSANDBOX_" + digest;
 }
 
 export function normalizeIdempotencyKey(value) {
