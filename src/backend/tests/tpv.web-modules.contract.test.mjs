@@ -323,16 +323,16 @@ test("TPV page is wired to the native POS widget bridge and canonical backend ex
     assert.match(controller, /obtenerConfiguracionTPV/);
     assert.match(bridge, /widgetElement\.onMessage/);
     assert.match(bridge, /widgetElement\.postMessage/);
-    assert.match(html, /send\("MM_READY"/);
+    assert.match(html, /call\("MM_READY"/);
     assert.match(html, /m\.type==="MM_CONTEXT"/);
     assert.match(html, /environment!=="SANDBOX"/);
-    assert.match(html, /send\("CASHIER_STATE"/);
-    assert.match(html, /send\("CUSTOMERS_SEARCH"/);
-    assert.match(html, /send\("SALE_REGISTER"/);
-    assert.match(html, /send\("CASH_MOVEMENT"/);
-    assert.match(html, /send\("REFUND"/);
-    assert.match(html, /send\("TICKET_X"/);
-    assert.match(html, /send\("TICKET_Z"/);
+    assert.match(html, /call\("CASHIER_STATE"/);
+    assert.match(html, /call\("CUSTOMERS_SEARCH"/);
+    assert.match(html, /call\("SALE_REGISTER"/);
+    assert.match(html, /call\("CASH_MOVEMENT"/);
+    assert.match(html, /call\("REFUND"/);
+    assert.match(html, /call\("TICKET_X"/);
+    assert.match(html, /call\("TICKET_Z"/);
 });
  
 test("SANDBOX repository paginates reads and blocks Z close while sales are incomplete", async () => {
