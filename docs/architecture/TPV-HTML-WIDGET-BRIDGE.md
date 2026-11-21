@@ -65,7 +65,7 @@ Cada solicitud se responde con el mismo `messageId` y el sufijo `_RES`.
 | `SESSION_OPEN` | `SESSION_OPEN_RES` | `abrirSesionCaja` |
 | `CATALOG_SERVICES` | `CATALOG_SERVICES_RES` | `obtenerServicios` |
 | `CATALOG_PRODUCTS` | `CATALOG_PRODUCTS_RES` | `obtenerProductos` |
-| `CATALOG_STAFF` | `CATALOG_STAFF_RES` | `obtenerStaff` |
+| `CATALOG_STAFF` | `CATALOG_STAFF_RES` | `obtenerStaff` |\n| `CUSTOMERS_SEARCH` | `CUSTOMERS_SEARCH_RES` | `buscarClientesTPV` (consulta adicional de identidades sintéticas) |
 | `SALE_REGISTER` | `SALE_REGISTER_RES` | `registrarVenta` |
 | `CASH_MOVEMENT` | `CASH_MOVEMENT_RES` | `registrarMovimientoCaja` |
 | `REFUND` | `REFUND_RES` | `registrarDevolucion` |
@@ -77,7 +77,7 @@ Cada solicitud se responde con el mismo `messageId` y el sufijo `_RES`.
 ## 5. Conciliación de botones y DTOs
 
 - **Abrir caja:** envía `openingCash` y `terminalId`; backend exige rol autorizado y sesión válida.
-- **Operador:** se elige entre identidades sintéticas devueltas por `CATALOG_STAFF`; el ID se envía como `profesionalId` al registrar la venta.
+- **Operador:** se elige entre identidades sintéticas devueltas por `CATALOG_STAFF`; el ID se envía como `profesionalId` al registrar la venta.\n- **Cliente:** el botón busca identidades sintéticas mediante `buscarClientesTPV`; se envía `customerContactId` y el backend vuelve a validar que pertenece al conjunto Sandbox.
 - **Catálogo:** servicios y productos provienen de las APIs nativas de Bookings y Stores. La paginación de productos usa cursor; servicios usan paginación por offset.
 - **Guardar venta:** el controlador transforma `lineItems/payments/subtotal/tax/total` al DTO backend `lineas/pagos/subtotalNeto/impuestosTotal/totalVenta`. Cada pago se convierte a `medioPago/importe/importeCambio`. El HTML conserva una clave idempotente por operación y sesión en `sessionStorage` (con fallback en memoria); el controlador la valida y la pasa al WebMethod. El `messageId` queda como fallback de correlación, no como sustituto de la clave estable.
 - **Tarifa personalizada:** se representa como línea `PERSONALIZADA`, conservando concepto e importe; no se finge un ID de catálogo.
