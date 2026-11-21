@@ -234,3 +234,7 @@ El escaneo individual de Inicio por `pageId=cjg9` falló sin resultados (HTTP 42
 
 ### CajaActual — revisión estática de concurrencia
 El helper `_updateCajaActual` hace read-modify-full-update y reintentos, sin CAS/lock interno. El writer normal adquiere lock fiscal, pero hay caminos preflight y recuperación webhook sin evidencia del mismo lock; TPV usa lock de sesión distinto. Issue #525 P0; no probar concurrencia en LIVE.
+
+
+### Eventos Bookings — markers en ControlOperativo
+La distribución de `payload.eventType` es BOOKING_CREATED=12, BOOKING_CONFIRMED=10, BOOKING_RESCHEDULED=2 y BOOKING_CANCELED=0. El handler está exportado y tiene pruebas offline; el delivery en Wix Runtime y el SHA instalado siguen pendientes.
