@@ -323,6 +323,27 @@ test("TPV catalog reader uses native Bookings SDK and does not expose staff cont
     assert.doesNotMatch(giftCards, /console\.(?:log|info|warn|error)|wixData|\.insert\(|\.update\(|\.remove\(/);
 });
 
+test("TPV controller imports the exact canonical WebMethods from their owning modules", async () => {
+    const controller = await readFile(new URL("../public/tpvPageController.js", backendRoot), "utf8");
+    const contracts = {
+        "tpvCaja.web.js": ["obtenerEstadoCaja", "abrirSesionCaja"],
+        "tpvCatalogo.web.js": ["obtenerServicios", "obtenerProductos", "obtenerStaff"],
+        "tpvVentas.web.js": ["registrarVenta"],
+        "tpvMovimientos.web.js": ["registrarMovimientoCaja", "obtenerMovimientosCaja"],
+        "tpvDevoluciones.web.js": ["registrarDevolucion"],
+        "tpvCierres.web.js": ["generarControlX", "generarCierreZ", "obtenerResumenCaja"],
+    };
+    for (const [fileName, names] of Object.entries(contracts)) {
+        const moduleSource = await source("tpv/" + fileName);
+        for (const name of names) {
+            assert.match(moduleSource, new RegExp("export const " + name + " = webMethod\\("), fileName + " must export " + name);
+            assert.match(controller, new RegExp("\\b" + name + "\\b"), "page controller must consume " + name);
+        }
+        const moduleName = fileName.replace(/\\.web\\.js$/, ".web");
+        assert.ok(controller.includes('from "backend/tpv/' + moduleName + '"'), "controller must import " + moduleName);
+    }
+});
+
 test("TPV page is wired to the native POS widget bridge and canonical backend exports", async () => {
     const [page, controller, html, bridge] = await Promise.all([
         source("../pages/TPV.yl5th.js"),
