@@ -218,3 +218,7 @@ Wix Bookings V2 devuelve 3 proveedores de servicio; sus resourceId y staffMember
 
 ### Reservas — divergencia de estado
 Los seis bookingId de CitasF2 existen en Bookings Reader V2 y están CANCELED nativamente, pero CitasF2 conserva cinco CONFIRMED y una PENDING. No hay markers BOOKING_CANCELED para esos IDs en ControlOperativo. Issue #523; revisar delivery del evento y reconciliar proyección sin tocar el estado nativo.
+
+
+### Bookings Reader V2 — inventario global
+353 reservas nativas: 352 CANCELED y una CONFIRMED (inicio 2026-09-18T12:00Z) sin proyección CitasF2. Estado de asistencia no consultado. Seguimiento #523; no modificar reserva.
