@@ -2,12 +2,11 @@ import { Permissions, webMethod } from "wix-web-module";
 import { getMyStaffContext, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { TPV_SANDBOX_RUNTIME_POLICY } from "backend/internalConfig";
-import { assertTpvSandboxEnabled } from "backend/tpv/tpvUtils";
 
 export const obtenerPermisosTPV = webMethod(
     Permissions.SiteMember,
     async () => {
-        assertTpvSandboxEnabled();
+
         const traceId = makeTraceId("tpv-sandbox-permissions");
         await requireCajero(traceId);
         const staff = await getMyStaffContext(traceId);
