@@ -357,11 +357,12 @@ test("TPV page is wired to the native POS widget bridge and canonical backend ex
     assert.match(html, /call\("CASHIER_STATE"/);
     assert.match(html, /call\("CUSTOMERS_SEARCH"/);
     assert.match(html, /call\("CATALOG_VARIANTS"/);
-    assert.match(html, /call\("SALE_REGISTER"/);
-    assert.match(html, /call\("CASH_MOVEMENT"/);
-    assert.match(html, /call\("REFUND"/);
-    assert.match(html, /call\("TICKET_X"/);
-    assert.match(html, /call\("TICKET_Z"/);
+    assert.match(html, /keyedAction\("SALE","SALE_REGISTER"/);
+    assert.match(html, /keyedAction\("CASH_IN","CASH_MOVEMENT"/);
+    assert.match(html, /keyedAction("CASH_OUT","CASH_MOVEMENT"/);
+    assert.match(html, /keyedAction\("REFUND","REFUND"/);
+    assert.match(html, /keyedAction\("TICKET_X","TICKET_X"/);
+    assert.match(html, /action\("TICKET_Z"/);
 });
  
 test("SANDBOX repository paginates reads and blocks Z close while sales are incomplete", async () => {
