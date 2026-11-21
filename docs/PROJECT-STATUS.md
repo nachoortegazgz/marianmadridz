@@ -261,3 +261,9 @@ Completar primero contención de efectos externos, conciliación read-only, insp
 - Wix Bookings V2: 94 servicios APPOINTMENT, 70 visibles/24 ocultos, 94 onlineBooking habilitados.
 - ServiciosCatalogo: 94 SERVICE + 1 PRICING_PLAN; los 94 IDs están mapeados sin huérfanos ni duplicados; precios/monedas de los 70 fijos y visibilidad coinciden.
 - Discrepancias de canal: 16 CMS onlinePayment=true con Bookings payment.options.online=false; 8 CMS inPersonPayment=false con Bookings payment.options.inPerson=true. Seguimiento [#522](https://github.com/nachoortegazgz/marianmadridz/issues/522). No modificar servicios hasta confirmar SSOT de negocio.
+
+
+### Personal y catálogo Bookings — resultado positivo
+- 94/94 servicios de Bookings V2 están mapeados en ServiciosCatalogo; 70 precios fijos/monedas y visibilidad coinciden; 0 huérfanos/duplicados.
+- 3 staff providers nativos; sus resourceId y staffMemberId coinciden con los tres registros STAFF de MapaStaff y con STAFF.IDS en internalConfig. Las dos filas adicionales son GESTORIA y TERCERO/EMPRESA.
+- 94 servicios tienen schedule, form, categoría y staff asignado. Esto acredita coherencia estática de catálogo/personal, no disponibilidad runtime.
