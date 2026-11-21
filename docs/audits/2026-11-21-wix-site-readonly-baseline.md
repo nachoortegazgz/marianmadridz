@@ -201,3 +201,16 @@ Consulta oficial de Query Services V2 y CMS Items:
 - 8 servicios: `ServiciosCatalogo.inPersonPayment=false`, pero `Bookings.payment.options.inPerson=true`.
 
 Código: `reservas.web.js::_mapServiceImport2ToUX` construye ambos flags desde `ServiciosCatalogo`; `bookingSaga.js` decide el canal con esos flags y envía `selectedPaymentOption=ONLINE/OFFLINE`. La resolución del servicio no contrasta esos flags con `Bookings Services V2.payment.options`. Esto puede ofrecer ONLINE para servicios nativos que lo rechazan; la restricción de pago presencial puede ser una política de negocio más estricta, pero debe confirmarse. No modificar los servicios nativos ni CMS hasta resolver la autoridad del campo. Seguimiento: [#522](https://github.com/nachoortegazgz/marianmadridz/issues/522).
+
+
+## 14. Personal Bookings V2 ↔ MapaStaff
+
+Consulta read-only de Query Staff Members V2 y `MapaStaff`:
+- Wix Bookings devuelve 3 staff members, los 3 `serviceProvider=true`.
+- Los tres `resourceId` nativos coinciden exactamente con `STAFF.IDS` de `internalConfig.js`.
+- Los tres `staffMemberId` y `resourceId` coinciden con los campos correspondientes de los tres registros `recordType=STAFF` en `MapaStaff`.
+- Los roles Website están mapeados como ADMIN, ESTILISTA y ESTILISTA; los tres tienen `rolBookings=STAFF`.
+- Las otras dos filas de `MapaStaff` son `GESTORIA` y `TERCERO/EMPRESA`, no staff de Bookings.
+- Los 94 servicios Bookings tienen schedule, form, category y staffMemberIds; no se encontraron servicios sin asignación de staff.
+
+Resultado: el mapeo de identidades de personal entre Bookings V2, MapaStaff e internalConfig está alineado en los tres proveedores de servicio. Esto no sustituye las pruebas runtime de permisos/horarios ni valida que las reservas puedan completarse.
