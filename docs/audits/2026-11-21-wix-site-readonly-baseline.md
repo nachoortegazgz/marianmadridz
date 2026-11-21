@@ -178,3 +178,13 @@ No declarar el sitio accesible ni limpio. Se recuperaron los 121 resúmenes de p
 ## 10. SEO — Google Search Console readiness
 
 La consulta oficial `Get Site Readiness` devuelve `status=READY` y `blockingReason=UNKNOWN_BLOCKING_REASON`. Esto confirma que la conexión/propiedad de Google Search Console está lista según el endpoint de Wix; no demuestra indexación, rendimiento orgánico ni corrección de metadatos. No se realizaron cambios SEO.
+
+
+## 11. Scan individual de la URL pública
+
+Se intentó aislar el fallo con un scan de una sola página para `https://www.marianmadrid.es/`. Wix respondió HTTP 428 / `FAILED_PRECONDITION`, código `SCAN_TARGET_NOT_AVAILABLE`, descripción `page URL is not scan-eligible`. No se creó un scan. Esto confirma que la URL del dominio personalizado no es aceptada como target por el servicio en este contexto; no demuestra que la página pública esté caída. Revisar pageId, dominio primario y elegibilidad del sitio Editor Classic con documentación/soporte Wix antes de repetir.
+
+## 12. Nuevos issues de seguimiento
+
+- [#520 — Contener y auditar las 8 automatizaciones Wix ACTIVE antes de QA E2E](https://github.com/nachoortegazgz/marianmadridz/issues/520) (P0).
+- [#521 — Investigar fallo del escaneo de accesibilidad Wix en las 121 páginas](https://github.com/nachoortegazgz/marianmadridz/issues/521) (P1).
