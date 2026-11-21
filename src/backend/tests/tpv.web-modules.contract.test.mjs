@@ -39,6 +39,23 @@ test("TPV sale draft validates report fields and minor-unit arithmetic", () => {
     assert.equal(result.realPayment, false);
 });
 
+test("TPV custom tariff lines remain explicitly typed and validated", () => {
+    const result = validateSaleDraft({
+        lineas: [{
+            tipoLinea: "PERSONALIZADA",
+            concepto: "Tarifa especial acordada",
+            cantidad: 1,
+            precioUnitario: 25,
+            descuentoImporte: 0,
+            impuestosImporte: 0,
+        }],
+        pagos: [{ medioPago: "EFECTIVO", importe: 25 }],
+    });
+    assert.equal(result.lineas[0].tipoLinea, "PERSONALIZADA");
+    assert.equal(result.totalVenta, 25);
+    assert.equal(result.importePendiente, 0);
+});
+
 test("TPV cash tender subtracts change before reconciling amount applied", () => {
     const result = validateSaleDraft({
         lineas: [{
