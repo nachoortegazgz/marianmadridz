@@ -63,12 +63,13 @@ test("SANDBOX writes require an exact test-run CajaActual marker and never accep
     assert.doesNotThrow(() => assertSandboxCajaWritable(sandboxBootstrap, { allowBootstrap: true }));
 
     const activeSandboxCaja = {
-        cashRegisterStatus: "SIMULACION",
+        cashRegisterStatus: "ABIERTA",
         snapshotSource: "TPV_SANDBOX_SYNTHETIC",
         traceId: sandboxRunId,
         conceptOperations: { tpvSandbox: { sandboxRunId } },
     };
     assert.doesNotThrow(() => assertSandboxCajaWritable(activeSandboxCaja));
+    assert.doesNotThrow(() => assertSandboxCajaWritable({ ...activeSandboxCaja, cashRegisterStatus: "CERRADA" }));
     assert.throws(
         () => assertSandboxCajaWritable({ ...activeSandboxCaja, traceId: "OTHER_TEST_RUN" }),
         /TPV_SANDBOX_CASH_REGISTER_NOT_IN_TEST_MODE/
