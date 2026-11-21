@@ -371,7 +371,7 @@ async function _writeCajaProjection(collection, record, eventId) {
     next.lastOperationStatus = "SIMULATED";
     next.traceId = SANDBOX_RUN_ID;
     next.snapshotSource = SANDBOX_LEDGER_SOURCE;
-    next.cashRegisterStatus = "SIMULACION";
+    next.cashRegisterStatus = collection === TPV_SANDBOX_COLLECTIONS.TICKET_Z ? "CERRADA" : "ABIERTA";
 
     if (collection === TPV_SANDBOX_COLLECTIONS.VENTAS && record.status === "CONFIRMADA_SINTETICA") {
         next.salesCount = Number(caja.salesCount || 0) + 1;
@@ -429,7 +429,7 @@ function _sessionCajaPatch(caja, record, fingerprint) {
     const openingCash = Number(record.openingCashMinor || 0) / 100;
     return {
         ...caja,
-        cashRegisterStatus: "SIMULACION",
+        cashRegisterStatus: "ABIERTA",
         openedAt,
         closedAt: null,
         openedBy: TPV_SANDBOX_RUNTIME_POLICY.ACTOR_ID,
