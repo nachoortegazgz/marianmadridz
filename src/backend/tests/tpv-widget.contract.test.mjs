@@ -55,7 +55,7 @@ test("TPV controller dispatches the messages emitted by the POS widget", async (
         assert.ok(html.includes(type + "_RES"), "HTML widget must receive " + type + "_RES");
     }
     assert.match(controller, /reply\(message\.type \+ "_RES", result, message\)/);
-    assert.match(controller, /idempotencyKey\(message\)/);
+    assert.match(controller, /idempotencyKey\(message, payload\)/);
     assert.match(controller, /lineTaxMinor !== declaredTaxMinor/);
 });
 
