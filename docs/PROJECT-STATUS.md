@@ -244,3 +244,8 @@ CI offline de `main`: **PASS**. Integridad runtime, aislamiento, E2E y conciliac
 
 ### Decisión
 Completar primero contención de efectos externos, conciliación read-only, inspección de Sandbox desde Editor y garantías compartidas de CajaActual. Solo entonces ejecutar TPV E2E. No ejecutar operaciones económicas, notificaciones ni writers fiscales/contables/laborales reales. No publicar.
+
+
+### SEO y accesibilidad — resultado final del scan
+- Google Search Console Get Site Readiness: `READY`; no se modificó la configuración SEO. Esto no acredita indexación o ranking.
+- Scan full-site `aae3b411-81ff-4309-a767-6301164cb483`: PARTIALLY_COMPLETED, 121/121 páginas fallidas, 0 procesadas, código `ACCESSIBILITY_SCAN_FAILURE_CODE_ANALYSIS_FAILED`, mensaje `This page could not be checked.`, 0 findings. Las páginas enumeradas usan el host wixsite.com. Diagnosticar origen antes de volver a escanear; no declarar WCAG aprobado.
