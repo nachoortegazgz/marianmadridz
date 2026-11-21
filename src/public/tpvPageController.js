@@ -134,7 +134,7 @@ async function dispatch(message) {
  */
 export function initializeTpvPage(widget) {
     return createWidgetBridge(widget, {
-        allowedTypes: [MESSAGE_TYPES.READY, ...REQUEST_TYPES],
+        allowedTypes: [MESSAGE_TYPES.READY, MESSAGE_TYPES.CONTEXT, ...REQUEST_TYPES],
         allowOpaqueOrigin: true,
         onContextReady: async () => ({
             component: "htmlTPV",
