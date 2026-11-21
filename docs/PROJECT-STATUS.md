@@ -278,3 +278,7 @@ Completar primero contención de efectos externos, conciliación read-only, insp
 ### Inventario global Bookings V2 — hallazgo #523
 - 353 reservas nativas: 352 CANCELED y 1 CONFIRMED; sin CREATED/PENDING/DECLINED/WAITING_LIST.
 - La única CONFIRMED inicia el 18/09/2026 y no tiene proyección CitasF2; estado de asistencia pendiente de consultar. No cancelarla ni reconfirmarla automáticamente.
+
+
+### Accesibilidad — prueba adicional por pageId
+El scan individual de Inicio con `pageId=cjg9` también terminó FAILED (1 descubierta, 0 procesadas, 1 fallida); page summaries devuelve HTTP 428 `SCAN_RESULTS_NOT_AVAILABLE`. El problema persiste usando pageId, no solo URL personalizada. Issue #521 actualizado.
