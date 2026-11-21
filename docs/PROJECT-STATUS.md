@@ -273,3 +273,8 @@ Completar primero contención de efectos externos, conciliación read-only, insp
 - CitasF2: 6 filas (5 CONFIRMED, 1 PENDING).
 - Los seis bookingId existen en Bookings Reader V2 y los seis están CANCELED nativamente.
 - No hay marcadores BOOKING_CANCELED correlacionados en ControlOperativo. Seguimiento [#523](https://github.com/nachoortegazgz/marianmadridz/issues/523). No recrear ni reconfirmar reservas.
+
+
+### Inventario global Bookings V2 — hallazgo #523
+- 353 reservas nativas: 352 CANCELED y 1 CONFIRMED; sin CREATED/PENDING/DECLINED/WAITING_LIST.
+- La única CONFIRMED inicia el 18/09/2026 y no tiene proyección CitasF2; estado de asistencia pendiente de consultar. No cancelarla ni reconfirmarla automáticamente.
