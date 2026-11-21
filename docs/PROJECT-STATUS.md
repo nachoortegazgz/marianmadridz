@@ -249,3 +249,9 @@ Completar primero contención de efectos externos, conciliación read-only, insp
 ### SEO y accesibilidad — resultado final del scan
 - Google Search Console Get Site Readiness: `READY`; no se modificó la configuración SEO. Esto no acredita indexación o ranking.
 - Scan full-site `aae3b411-81ff-4309-a767-6301164cb483`: PARTIALLY_COMPLETED, 121/121 páginas fallidas, 0 procesadas, código `ACCESSIBILITY_SCAN_FAILURE_CODE_ANALYSIS_FAILED`, mensaje `This page could not be checked.`, 0 findings. Las páginas enumeradas usan el host wixsite.com. Diagnosticar origen antes de volver a escanear; no declarar WCAG aprobado.
+
+
+### Nuevos bloqueos de auditoría Wix
+- [#520](https://github.com/nachoortegazgz/marianmadridz/issues/520) P0: inspección y contención de 8 automatizaciones ACTIVE, incluida una tarea LLM programada.
+- [#521](https://github.com/nachoortegazgz/marianmadridz/issues/521) P1: scan de accesibilidad falló en 121/121 páginas; URL personalizada no scan-eligible.
+- GSC Site Readiness: READY. No se modificó configuración SEO.
