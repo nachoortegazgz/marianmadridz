@@ -80,7 +80,7 @@ Cada solicitud se responde con el mismo `messageId` y el sufijo `_RES`.
 
 - **Abrir caja:** envía `openingCash` y `terminalId`; backend exige rol autorizado y sesión válida.
 - **Operador:** se elige entre identidades sintéticas devueltas por `CATALOG_STAFF`; el ID se envía como `profesionalId` al registrar la venta.
-- **Cliente:** el botón busca identidades sintéticas mediante `buscarClientesTPV`; se envía `customerContactId` y el backend vuelve a validar que pertenece al conjunto Sandbox.
+- **Cliente:** el botón busca identidades sintéticas mediante `buscarClientesTPV`; se envía `customerIdentityId`/ y el backend vuelve a validar que pertenece al conjunto Sandbox.
 - **Catálogo:** servicios y productos provienen de las APIs nativas de Bookings y Stores. La paginación de productos usa cursor; servicios usan paginación por offset. Los productos con variantes consultan `obtenerVariantesProducto`; se guarda `varianteId` en la línea y se utiliza el precio de la variante elegida, no el mínimo del producto.
 - **Guardar venta:** el controlador transforma `lineItems/payments/subtotal/tax/total` al DTO backend `lineas/pagos/subtotalNeto/impuestosTotal/totalVenta`. Cada pago se convierte a `medioPago/importe/importeCambio`. El HTML conserva una clave idempotente por operación y sesión en `sessionStorage` (con fallback en memoria); el controlador la valida y la pasa al WebMethod. El `messageId` queda como fallback de correlación, no como sustituto de la clave estable.
 - **Tarifa personalizada:** se representa como línea `PERSONALIZADA`, conservando concepto e importe; no se finge un ID de catálogo.
