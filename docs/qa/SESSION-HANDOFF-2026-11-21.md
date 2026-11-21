@@ -162,3 +162,8 @@ El estado anterior de automatizaciones y CMS queda actualizado por [la auditorí
 - 94 servicios Bookings V2 ↔ 94 SERVICE en ServiciosCatalogo; 1 fila adicional PRICING_PLAN. Sin serviceId huérfanos ni duplicados.
 - 3 staff providers nativos coinciden por staffMemberId/resourceId con los tres registros STAFF de MapaStaff y con STAFF.IDS; dos registros restantes de MapaStaff son GESTORIA y TERCERO/EMPRESA.
 - 94 servicios tienen schedule, form, categoría y staff asignado. Checkout sigue bloqueado por discrepancias de payment options (#522) y falta E2E.
+
+
+### Reservas — conciliación de estados
+- CitasF2 tiene seis filas (5 CONFIRMED, 1 PENDING); los seis bookingId existen en Bookings Reader V2 y están CANCELED nativamente.
+- No hay markers BOOKING_CANCELED correlacionados en ControlOperativo. Seguimiento #523. No recrear ni reconfirmar reservas; revisar event delivery y reconciliar proyección.
