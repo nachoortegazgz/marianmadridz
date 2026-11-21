@@ -179,3 +179,7 @@ El scan individual de Inicio con pageId Wix `cjg9` también terminó FAILED (1 d
 
 ### Tienda — inventario nativo
 Stores Catalog V3: 24 productos físicos, visibles, EUR e IN_STOCK; 22 con una variante, uno con dos y uno con seis; rango 9,95–38,50 EUR. Sin checkout ni escrituras.
+
+
+### CajaActual — nuevo bloqueo P0
+Revisión estática confirma que `_updateCajaActual` no impone CAS/lock propio y hay call paths de proyección preflight/recuperación sin evidencia del lock fiscal compartido; TPV usa lock de sesión distinto. Seguimiento #525. No ejecutar concurrencia en LIVE.
