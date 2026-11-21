@@ -147,6 +147,8 @@ Acciones:
 
 **Objetivo:** completar los flujos Bookings y área privada sin atribuir reservas al propietario por error.
 
+**Bloqueo adicional #523:** los seis bookingId de CitasF2 existen en Bookings V2 y los seis están CANCELED nativamente, mientras CitasF2 muestra cinco CONFIRMED y uno PENDING. No hay markers BOOKING_CANCELED correlacionados en ControlOperativo. Resolver la proyección y el delivery de eventos antes de E2E.
+
 **Estado de catálogo y personal:** 94/94 serviceId del catálogo custom mapean con Bookings V2; 70 precios fijos y monedas, visibilidad y 3 staff/resource IDs coinciden con MapaStaff e internalConfig. Los 94 servicios tienen schedule, form, categoría y staff asignado. **Bloqueo #522:** 16 flags onlinePayment permiten ONLINE cuando Bookings V2 lo deshabilita; 8 flags inPersonPayment son más restrictivos que Wix. Resolver la política por servicio antes de checkout E2E.
 
 Acciones:
