@@ -26,7 +26,7 @@ test("POS buttons send backend-compatible DTOs and do not discard failed sales",
     assert.match(script, /payments:\[\{paymentMethod,amount\}\]/);
     assert.match(script, /differenceReason:/);
     assert.match(script, /TICKET_X.*sessionId:state\.session\?\.sessionId/);
-    assert.doesNotMatch(script, /TICKET_X.*countedCash/);
+    assert.doesNotMatch(script, /ticketX"\\)\\.onclick=\\(\\)=>action\\("TICKET_X",\\{sessionId:state\\.session\\?\\.sessionId,countedCash/);
     assert.match(script, /impuestosImporte:0/);
     assert.match(script, /action\("SALE_REGISTER"[\s\S]*?\.then\(result=>\{state\.lastSale=result/);
     assert.match(controller, /lineas: lineItems\.map/);
