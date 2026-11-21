@@ -5,7 +5,7 @@
  */
 import { createWidgetBridge, MESSAGE_TYPES, PROTOCOL_VERSION } from "public/widgetBridge";
 import { obtenerEstadoCaja, abrirSesionCaja } from "backend/tpv/tpvCaja";
-import { obtenerServicios, obtenerProductos, obtenerStaff } from "backend/tpv/tpvCatalogo";
+import { obtenerServicios, obtenerProductos, obtenerStaff, buscarClientesTPV } from "backend/tpv/tpvCatalogo";
 import { registrarVenta } from "backend/tpv/tpvVentas";
 import { registrarMovimientoCaja, obtenerMovimientosCaja } from "backend/tpv/tpvMovimientos";
 import { registrarDevolucion } from "backend/tpv/tpvDevoluciones";
@@ -18,6 +18,7 @@ const REQUEST_TYPES = Object.freeze([
     "CATALOG_SERVICES",
     "CATALOG_PRODUCTS",
     "CATALOG_STAFF",
+    "CUSTOMERS_SEARCH",
     "SALE_REGISTER",
     "CASH_MOVEMENT",
     "REFUND",
@@ -97,6 +98,9 @@ async function dispatch(message) {
 
         case "CATALOG_STAFF":
             return obtenerStaff();
+
+        case "CUSTOMERS_SEARCH":
+            return buscarClientesTPV({ search: String(payload.search || "").trim() });
 
         case "SALE_REGISTER": {
             const lineItems = Array.isArray(payload.lineItems) ? payload.lineItems : [];
