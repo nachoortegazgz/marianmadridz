@@ -2,7 +2,7 @@
 **Fecha de corte:** 2026-11-21  
 **Repositorio:** `nachoortegazgz/marianmadridz`  
 **Rama de referencia:** `main`  
-**HEAD de main al cierre documental:** `10c15c56d2ff3e605d3cec3da0ca717b426bd280` (merge documental PR #517)  
+**HEAD de main al corte actual:** `e75aec5d28dcb8560fe75dbd04d5eae95957c3d8` (merge documental PR #518)  
 **Baseline de código TPV:** `6bf263502c58fa28bd13f7db848553c18b34a323` (merge PR #516)  
 **PR integrada:** [#516 — refactor(tpv): align widget handshake and backend test contracts](https://github.com/nachoortegazgz/marianmadridz/pull/516)  
 **Sitio Wix:** `188bed94-177c-4bc9-a9f0-35080d874f3e`  
@@ -133,3 +133,20 @@ El texto recibido en el contexto de esta sesión está truncado después del enc
 - Checks pre-merge: Backend offline quality gates y Gitleaks SUCCESS en el SHA `dac880c5bdcf2ad0c3a0dec59ca799728b4bb6f9`.
 - Los checks post-merge de `10c15c56...` se lanzaron tras la integración; consultar su resultado antes de declarar el último commit documental validado.
 - Por tanto, el baseline funcional TPV sigue siendo PR #516 / `6bf263502c58fa28bd13f7db848553c18b34a323`, mientras que el HEAD actual de Git `main` incluye además el commit documental #517.
+
+
+## 11. Reauditoría Wix read-only — 2026-11-21
+
+El estado anterior de automatizaciones y CMS queda actualizado por [la auditoría read-only 2026-11-21](../audits/2026-11-21-wix-site-readonly-baseline.md) y el [plan maestro](../MASTER-EXECUTION-PLAN.md).
+
+- HEAD actual de `main`: `e75aec5d28dcb8560fe75dbd04d5eae95957c3d8`; baseline funcional TPV sigue en PR #516 / `6bf263502c58fa28bd13f7db848553c18b34a323`.
+- CI post-merge en HEAD: Backend offline quality gates run `44867151597` SUCCESS; Secret scanning run `44867151605` SUCCESS.
+- Wix confirma Editor Classic, Velo habilitado y Published. La clasificación QA continúa por directriz expresa del propietario; el SHA instalado en Wix no está acreditado.
+- CMS: 42 colecciones (13 NATIVE / 29 WIX_APP). Site Data Usage: LIVE 203 items / 266.227 bytes; SANDBOX 109 / 206.023 bytes. CajaActual 1/1; MovimientosCaja 2/2; TpvSandboxIdentities 0/0; ControlOperativo 58/0.
+- CajaActual LIVE sigue ABIERTA con source MOVIMIENTOS_CAJA_RECONCILIADOS y traceId 0, no apta para TPV Sandbox. Los dos movimientos LIVE (25 CARD, 20 CASH) carecen del contrato sintético completo. No corregir ni borrar.
+- Hay tres FISCAL_LEDGER/PENDING_RECOVERY sin intentos; no reintentar.
+- Se confirmaron 8 automatizaciones ACTIVE de 159. Siete preinstaladas tienen status change bloqueado. Una automatización de aplicación, `Configuración de control laboral`, usa trigger programado y acción LLM; tarea y efectos pendientes de inspección. No ejecutar pruebas que puedan disparar automatizaciones.
+- Accessibility scan `aae3b411-81ff-4309-a767-6301164cb483` sigue RUNNING; 121 páginas descubiertas, 0 procesadas, 51 fallidas, 70 pendientes. Seguir consultando ese mismo ID.
+- `main` no está protegida. PR #495 sigue abierta y no mergeable.
+
+**Siguiente secuencia:** F0 contención de automatizaciones y confirmación de SHA Wix; F1 inspección Sandbox y conciliación de caja/compensaciones; F2 garantías compartidas de CajaActual; F3 TPV E2E. Mantener NO-GO hasta completar las pruebas reales y el reset preproducción.
