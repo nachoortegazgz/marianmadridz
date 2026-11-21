@@ -7,7 +7,7 @@ import { buildSandboxSessionSummary } from "backend/tpv/tpvCierresCore";
 import { assertTpvSandboxEnabled, fromMinorUnits, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
 import { wql } from "backend/dataAccess";
 
-export const obtenerResumenSesion = webMethod(
+export const obtenerResumenCaja = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
         const traceId = makeTraceId("tpv-sandbox-summary");
@@ -43,7 +43,7 @@ export const obtenerResumenSesion = webMethod(
     }
 );
 
-export const generarTicketX = webMethod(
+export const generarControlX = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
         let persisted = false;
@@ -87,7 +87,7 @@ export const generarTicketX = webMethod(
     }
 );
 
-export const cerrarTicketZ = webMethod(
+export const generarCierreZ = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
         let persisted = false;
