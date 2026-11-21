@@ -1,7 +1,7 @@
 import { Permissions, webMethod } from "wix-web-module";
 import { requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
-import { assertTpvSandboxEnabled, normalizePaymentMethod, toMinorUnits } from "backend/tpv/tpvUtils";
+import { normalizePaymentMethod, toMinorUnits } from "backend/tpv/tpvUtils";
 import { simulateGatewayPayment, simulateGatewayRefund } from "backend/tpv/tpvPaymentSimulator";
 
 export const validarDesglosePagos = webMethod(
@@ -9,7 +9,7 @@ export const validarDesglosePagos = webMethod(
     async (input = {}) => {
         const traceId = makeTraceId("tpv-sandbox-payment-validation");
         await requireCajero(traceId);
-        assertTpvSandboxEnabled();
+
         try {
             if (!Array.isArray(input.payments) || input.payments.length === 0) {
                 throw new Error("TPV_SANDBOX_PAYMENTS_REQUIRED");
@@ -53,7 +53,7 @@ export const simularPasarelaPago = webMethod(
     async (input = {}) => {
         const traceId = makeTraceId("tpv-sandbox-gateway-payment");
         await requireCajero(traceId);
-        assertTpvSandboxEnabled();
+
         try {
             const data = simulateGatewayPayment(input);
             return { status: "SUCCESS", data: { ...data, traceId }, error: null, traceId };
@@ -73,7 +73,7 @@ export const simularReembolsoPasarela = webMethod(
     async (input = {}) => {
         const traceId = makeTraceId("tpv-sandbox-gateway-refund");
         await requireCajero(traceId);
-        assertTpvSandboxEnabled();
+
         try {
             const data = simulateGatewayRefund(input);
             return { status: "SUCCESS", data: { ...data, traceId }, error: null, traceId };

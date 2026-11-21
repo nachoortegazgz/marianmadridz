@@ -5,7 +5,7 @@ import { TPV_SANDBOX_COLLECTIONS, TPV_SANDBOX_IDENTITY_TYPES, TPV_SANDBOX_RUNTIM
 import { listTpvSandboxIdentities, getTpvSandboxIdentity } from "backend/tpv/tpvSandboxIdentities";
 import { validateSaleDraft } from "backend/tpv/tpvValidation";
 import { appendSandboxAudit, insertSandboxEvent, latestOpenSandboxSession, withSandboxSessionLock } from "backend/tpv/tpvSandboxRepository";
-import { assertTpvSandboxEnabled, makeSandboxId, normalizeClientIdempotencyKey } from "backend/tpv/tpvUtils";
+import { makeSandboxId, normalizeClientIdempotencyKey } from "backend/tpv/tpvUtils";
 
 function disabledResult(code) {
     return {
@@ -39,7 +39,7 @@ export const registrarVenta = webMethod(
         let persisted = false;
         const traceId = makeTraceId("tpv-sandbox-sale");
         await requireAdmin(traceId);
-        assertTpvSandboxEnabled();
+
         try {
             const key = normalizeClientIdempotencyKey(input.idempotencyKey);
             const session = await latestOpenSandboxSession();
@@ -55,13 +55,13 @@ export const registrarVenta = webMethod(
             });
             if (sale.importePendiente !== 0 || sale.totalVenta <= 0) throw new Error("TPV_SANDBOX_SALE_MUST_BE_FULLY_PAID");
 
-            const customerContactId = String(input.customerContactId || "").trim();
+            const customerIdentityId = String(input.customerIdentityId || "").trim();
             const bookingId = String(input.bookingId || "").trim();
             if (bookingId) throw new Error("TPV_SANDBOX_BOOKINGS_DISABLED");
-            const customer = customerContactId
-                ? await getTpvSandboxIdentity(customerContactId, TPV_SANDBOX_IDENTITY_TYPES.CUSTOMER)
+            const customer = customerIdentityId
+                ? await getTpvSandboxIdentity(customerIdentityId, TPV_SANDBOX_IDENTITY_TYPES.CUSTOMER)
                 : null;
-            if (customerContactId && !customer) throw new Error("TPV_SANDBOX_CUSTOMER_NOT_ALLOWED");
+            if (customerIdentityId && !customer) throw new Error("TPV_SANDBOX_CUSTOMER_NOT_ALLOWED");
             const staffIdentities = await listTpvSandboxIdentities(TPV_SANDBOX_IDENTITY_TYPES.STAFF);
             const allowedProfessionalIds = new Set(staffIdentities.map((item) => item.identityId));
             const requestedProfessionalId = String(input.profesionalId || "").trim();
@@ -85,7 +85,7 @@ export const registrarVenta = webMethod(
                 saleId,
                 ticketId: saleId,
                 professionalId: requestedProfessionalId || null,
-                customerContactId: customer?.identityId || null,
+                customerIdentityId: customer?.identityId || null,
                 customerLabel: customer?.displayName || "CLIENTE ANONIMO SANDBOX",
                 bookingId: null,
                 bookingStatus: null,
@@ -194,7 +194,7 @@ export const registrarVenta = webMethod(
                     status: committed.status,
                     total: sale.totalVenta,
                     breakdown: sale.desgloseMedios,
-                    customerContactId: commonPayload.customerContactId,
+                    customerIdentityId: commonPayload.customerIdentityId,
                     customerLabel: commonPayload.customerLabel,
                     bookingId: commonPayload.bookingId,
                     replayed,

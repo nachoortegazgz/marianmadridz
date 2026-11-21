@@ -39,7 +39,8 @@ test("TPV controller imports all twelve canonical backend WebMethod names", asyn
     }
     assert.equal(Object.values(modules).flat().length, 12);
     assert.match(controller, /obtenerConfiguracionTPV/);
-    assert.match(controller, /environment: config\.status === "SUCCESS" \? config\.data\?\.environment : "UNAVAILABLE"/);
+    assert.match(controller, /currency: config.status === "SUCCESS"/);
+    assert.doesNotMatch(controller, /environment:|previewOnly:|syntheticOnly:/);
 });
 
 test("TPV controller dispatches the messages emitted by the POS widget", async () => {
@@ -67,7 +68,11 @@ test("TPV widget keeps all writes synthetic and does not implement a second paym
     assert.match(config, /SYNTHETIC_ONLY: true/);
     assert.match(config, /REAL_PAYMENTS_ENABLED: false/);
     assert.match(config, /FISCAL_WRITES_ENABLED: false/);
-    assert.match(html, /m\.payload\?\.data\?\.environment!=="SANDBOX"/);
+    assert.doesNotMatch(html, /environment|previewOnly|syntheticOnly|realPaymentsEnabled|fiscalWritesEnabled/);
+    assert.match(html, /m\.payload\?\.status!=="SUCCESS"/);
+    assert.match(html, /textContent="TPV"/);
+    assert.match(html, /customerIdentityId/);
+    assert.doesNotMatch(html, /customerContactId/);
     assert.match(html, /id="tax"[^>]*disabled/);
     assert.doesNotMatch(html, /fetch\s*\(|XMLHttpRequest|wix-data|suppressAuth/i);
     assert.doesNotMatch(html, /createPayment|capturePayment|processRefund/i);

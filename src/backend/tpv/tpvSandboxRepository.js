@@ -11,7 +11,7 @@ import {
 import { TPV_SANDBOX_COLLECTIONS, TPV_SANDBOX_EVENT_MOVEMENT_TYPES, TPV_SANDBOX_RUNTIME_POLICY, TPV_SANDBOX_IDENTITY_TYPES, CONTROL_TYPE, OPERATIONAL_COLLECTIONS, BUSINESS_COLLECTIONS, SINGLETONS } from "backend/internalConfig";
 import { listTpvSandboxIdentities } from "backend/tpv/tpvSandboxIdentities";
 import {
-    assertTpvSandboxEnabled,
+
     assertSandboxCajaWritable,
     normalizeIdempotencyKey,
     stableSerialize,
@@ -35,7 +35,7 @@ async function withSandboxScopedLock({
     operation,
     errorPrefix,
 }) {
-    assertTpvSandboxEnabled();
+
     await _ensureCajaActualForSandbox();
     const cleanScopeId = String(scopeId || "").trim();
     if (!cleanScopeId || typeof operation !== "function") throw new Error(errorPrefix + "_INVALID");
@@ -276,7 +276,7 @@ function _virtualRecord(item) {
 
 
 export async function seedSandboxIdentities() {
-    assertTpvSandboxEnabled();
+
     const requiredIds = [
         ...Array.from({ length: 3 }, (_, index) => "SANDBOX-CUSTOMER-" + String(index + 1).padStart(2, "0")),
         ...Array.from({ length: 3 }, (_, index) => "SANDBOX-STAFF-" + String(index + 1).padStart(2, "0")),
@@ -294,7 +294,7 @@ export async function seedSandboxIdentities() {
 }
 
 export async function initializeSandboxCaja() {
-    assertTpvSandboxEnabled();
+
     const existing = await _getCajaActual();
     if (!existing) throw new Error("TPV_SANDBOX_CASH_REGISTER_NOT_PRESEEDED");
     assertSandboxCajaWritable(existing, { allowBootstrap: true });
@@ -583,7 +583,7 @@ function _matchesFilter(record, filter) {
 }
 
 export async function insertSandboxEvent(collection, idempotencyKey, data) {
-    assertTpvSandboxEnabled();
+
     _assertLogicalCollection(collection);
     const key = normalizeIdempotencyKey(idempotencyKey);
     const record = { ...data };
@@ -640,7 +640,7 @@ export async function insertSandboxEvent(collection, idempotencyKey, data) {
 }
 
 export async function querySandboxRecords(collection, filter, options = {}) {
-    assertTpvSandboxEnabled();
+
     _assertLogicalCollection(collection);
     if (collection === TPV_SANDBOX_COLLECTIONS.SESIONES_CAJA) {
         const session = _sessionFromCaja(await _getCajaActual());
@@ -686,7 +686,7 @@ export async function querySandboxRecords(collection, filter, options = {}) {
 }
 
 export async function querySandboxLedgerRecords(options = {}) {
-    assertTpvSandboxEnabled();
+
     const limit = Number(options.limit ?? 100);
     if (!Number.isInteger(limit) || limit < 1 || limit > 1000) {
         throw new Error("TPV_SANDBOX_LEDGER_INVALID_LIMIT");

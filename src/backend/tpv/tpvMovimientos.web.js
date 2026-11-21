@@ -3,7 +3,7 @@ import { requireAdmin, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { TPV_SANDBOX_COLLECTIONS, TPV_SANDBOX_RUNTIME_POLICY } from "backend/internalConfig";
 import { insertSandboxEvent, latestOpenSandboxSession, querySandboxLedgerRecords, withSandboxSessionLock } from "backend/tpv/tpvSandboxRepository";
-import { assertTpvSandboxEnabled, fromMinorUnits, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
+import { fromMinorUnits, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
 
 const TPV_LEDGER_DISPLAY_TYPES = Object.freeze({
     SIMULATED_TPV_SALE: "VENTA",
@@ -19,7 +19,7 @@ export const registrarMovimientoCaja = webMethod(
         let persisted = false;
         const traceId = makeTraceId("tpv-sandbox-cash-movement");
         await requireAdmin(traceId);
-        assertTpvSandboxEnabled();
+
         try {
             const movementType = String(input.movementType || "").trim().toUpperCase();
             if (!["ENTRADA", "SALIDA", "RETIRADA"].includes(movementType)) throw new Error("TPV_SANDBOX_CASH_MOVEMENT_TYPE_INVALID");
@@ -75,7 +75,7 @@ export const obtenerMovimientosCaja = webMethod(
     async (input = {}) => {
         const traceId = makeTraceId("tpv-sandbox-cash-movements-read");
         await requireCajero(traceId);
-        assertTpvSandboxEnabled();
+
         try {
             const limit = Number(input.limit ?? 50);
             if (!Number.isInteger(limit) || limit < 1 || limit > 100) {

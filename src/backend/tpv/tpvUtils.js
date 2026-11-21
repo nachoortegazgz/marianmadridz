@@ -2,23 +2,6 @@ import { createHash } from "node:crypto";
 import { TPV_SANDBOX_COLLECTIONS, TPV_SANDBOX_RUNTIME_POLICY } from "backend/internalConfig";
 
 const PAYMENT_METHODS = Object.freeze(["EFECTIVO", "TARJETA", "BIZUM", "OTROS"]);
-export function assertTpvSandboxEnabled() {
-    if (TPV_SANDBOX_RUNTIME_POLICY.ENABLED !== true) {
-        throw new Error("TPV_SANDBOX_DISABLED_UNTIL_SANDBOX_ISOLATION");
-    }
-    if (
-        TPV_SANDBOX_RUNTIME_POLICY.ENVIRONMENT !== "SANDBOX" ||
-        TPV_SANDBOX_RUNTIME_POLICY.SYNTHETIC_ONLY !== true ||
-        TPV_SANDBOX_RUNTIME_POLICY.REAL_PAYMENTS_ENABLED !== false ||
-        TPV_SANDBOX_RUNTIME_POLICY.FISCAL_WRITES_ENABLED !== false ||
-        TPV_SANDBOX_RUNTIME_POLICY.CUSTOMER_NOTIFICATIONS_ENABLED !== false ||
-        TPV_SANDBOX_RUNTIME_POLICY.HARDWARE_ENABLED !== false ||
-        !/^TPVSANDBOX-DEV-[0-9]{8}-[A-Z0-9-]+$/.test(String(TPV_SANDBOX_RUNTIME_POLICY.SANDBOX_RUN_ID || ""))) {
-        throw new Error("TPV_SANDBOX_RUNTIME_POLICY_INVALID");
-    }
-    return true;
-}
-
 export function assertSandboxCajaWritable(caja, { allowBootstrap = false } = {}) {
     const sandboxRunId = TPV_SANDBOX_RUNTIME_POLICY.SANDBOX_RUN_ID;
     const sandboxState = caja?.conceptOperations?.tpvSandbox;

@@ -211,12 +211,12 @@ El controlador `src/public/tpvPageController.js` usa `createWidgetBridge` y reen
 
 `obtenerEstadoCaja`, `abrirSesionCaja`, `obtenerServicios`, `obtenerProductos`, `obtenerStaff`, `registrarVenta`, `registrarMovimientoCaja`, `registrarDevolucion`, `generarControlX`, `generarCierreZ`, `obtenerResumenCaja`, `obtenerMovimientosCaja`.
 
-La configuración se obtiene adicionalmente mediante `obtenerConfiguracionTPV`; la UI solo permite continuar con `environment=SANDBOX`. La apertura, escritura, devolución y cierre mantienen las autorizaciones backend existentes. Las operaciones de escritura (apertura, venta, movimiento, devolución y X/Z) conservan el `requireAdmin` vigente; elegir un operador sintético solo atribuye la operación y no concede permisos. Las consultas usan `requireCajero`.
+La configuración se obtiene adicionalmente mediante `obtenerConfiguracionTPV`; el handshake valida acceso y contexto funcional, sin comprobar etiquetas de entorno ni flags true/false. La apertura, escritura, devolución y cierre mantienen las autorizaciones backend existentes. Las operaciones de escritura (apertura, venta, movimiento, devolución y X/Z) conservan el `requireAdmin` vigente; elegir un operador sintético solo atribuye la operación y no concede permisos. Las consultas usan `requireCajero`.
 
 Conciliación de botones:
 - El controlador traduce el DTO HTML `lineItems/payments/subtotal/tax/total` al DTO backend `lineas/pagos/subtotalNeto/impuestosTotal/totalVenta`.
 - `PERSONALIZADA` se conserva como tipo de línea propio; no se falsea como servicio de catálogo.
-- Los productos con variantes consultan `obtenerVariantesProducto` y conservan `varianteId` y precio elegido en la línea sintética. El botón Cliente consulta identidades sintéticas mediante `buscarClientesTPV` y la venta envía `customerContactId`, que el backend valida de nuevo. La devolución requiere una asignación explícita por medio de pago original.
+- Los productos con variantes consultan `obtenerVariantesProducto` y conservan `varianteId` y precio elegido en la línea sintética. El botón Cliente consulta identidades sintéticas mediante `buscarClientesTPV` y la venta envía `customerIdentityId`, que el backend valida de nuevo. La devolución requiere una asignación explícita por medio de pago original.
 - Control X es informativo y no solicita efectivo contado; Cierre Z recibe efectivo contado y motivo de diferencia.
 - Las mutaciones usan claves estables por operación y sesión conservadas en `sessionStorage` (fallback en memoria); el controlador valida su formato. El `messageId` sirve para correlación y como fallback de idempotencia.
 - El campo global de impuestos permanece bloqueado hasta mapear las reglas Wix por línea. No se prorratea ni se inventa un tipo impositivo.
@@ -227,3 +227,10 @@ El listado `obtenerMovimientosCaja` consulta el ledger físico `MovimientosCaja`
 
 
 No se descuenta inventario ni se escribe en Stores durante la simulación.
+
+
+## Correspondencia funcional consolidada del widget
+
+El HTML Component consume el contrato documentado en `docs/architecture/TPV-HTML-WIDGET-BRIDGE.md`. Los IDs físicos son `CajaActual`, `MovimientosCaja` y `ControlOperativo`; `SANDBOX_LOGICAL_*` son discriminadores de eventos internos, no colecciones. Bookings y Stores V3 se usan solo para lectura del catálogo. No se crea pedido eCommerce, no se ejecuta pago/refund nativo, ni se modifica inventario. Clientes y operadores proceden de `TpvSandboxIdentities`, no de Wix Contacts ni Wix Staff.
+
+El handshake `MM_CONTEXT` confirma autorización y contexto funcional, sin inspeccionar variables de entorno o flags sintéticos. Los WebMethods conservan autorización de backend, validación de DTO, idempotencia y locks CAS. La persistencia escribe eventos en `MovimientosCaja`, proyecta estado en `CajaActual` y coordina concurrencia mediante `ControlOperativo`.

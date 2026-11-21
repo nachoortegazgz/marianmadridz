@@ -1,7 +1,6 @@
 import { Permissions, webMethod } from "wix-web-module";
 import { requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
-import { assertTpvSandboxEnabled } from "backend/tpv/tpvUtils";
 
 /**
  * Real Wix Gift Cards are intentionally inaccessible in the synthetic SANDBOX
@@ -12,7 +11,7 @@ export const consultarTarjetaRegalo = webMethod(
     async () => {
         const traceId = makeTraceId("tpv-gift-card-block");
         await requireCajero(traceId);
-        assertTpvSandboxEnabled();
+
         return {
             status: "ERROR",
             data: null,

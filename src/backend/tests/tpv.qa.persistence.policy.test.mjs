@@ -25,7 +25,7 @@ import {
     makeSandboxTransactionId,
     makeLegacySandboxTransactionId,
     assertSandboxCajaWritable,
-    assertTpvSandboxEnabled,
+
 } from "../tpv/tpvUtils.js";
 
 test("Sandbox runtime is enabled for synthetic records only; fiscal and external side effects remain disabled", async () => {
@@ -33,7 +33,7 @@ test("Sandbox runtime is enabled for synthetic records only; fiscal and external
     assert.match(source, /TPV_SANDBOX_RUNTIME_POLICY = Object\.freeze\(\{[\s\S]*?ENABLED: true,[\s\S]*?ENVIRONMENT: "SANDBOX"/);
     assert.equal(TPV_SANDBOX_RUNTIME_POLICY.ENABLED, true, "offline loader enables the policy only inside tests");
     assert.equal(TPV_SANDBOX_RUNTIME_POLICY.ENVIRONMENT, "SANDBOX");
-    assert.doesNotThrow(() => assertTpvSandboxEnabled());
+
 });
 
 test("SANDBOX writes require an exact test-run CajaActual marker and never accept a live cash singleton", () => {
@@ -250,7 +250,7 @@ test("SANDBOX policy remains synthetic and client idempotency keys are bounded",
 });
 
 
-test("every exposed TPV SANDBOX WebMethod fails closed before repository access", async () => {
+test("every exposed TPV WebMethod checks backend role authorization before repository access", async () => {
     const protectedMethods = [
         ["tpvCaja.web.js", ["inicializarCaja", "obtenerEstadoCaja", "abrirSesionCaja", "registrarArqueoParcial"]],
         ["tpvMovimientos.web.js", ["registrarMovimientoCaja", "obtenerMovimientosCaja"]],
@@ -267,17 +267,17 @@ test("every exposed TPV SANDBOX WebMethod fails closed before repository access"
 
     for (const [fileName, methodNames] of protectedMethods) {
         const source = await readFile(new URL("../tpv/" + fileName, import.meta.url), "utf8");
-        assert.match(source, /assertTpvSandboxEnabled/, fileName + " must import/use the canonical SANDBOX gate");
+        assert.match(source, /require(?:Admin|Cajero)/, fileName + " must retain backend role authorization");
         for (const methodName of methodNames) {
             const declaration = "export const " + methodName + " = webMethod(";
             const start = source.indexOf(declaration);
             assert.notEqual(start, -1, fileName + " must expose " + methodName);
             const nextExport = source.indexOf("\nexport const ", start + declaration.length);
             const block = source.slice(start, nextExport < 0 ? source.length : nextExport);
-            const guard = block.indexOf("assertTpvSandboxEnabled()");
-            assert.notEqual(guard, -1, methodName + " must execute the server-side SANDBOX gate");
+            const authorization = block.search(/await require(?:Admin|Cajero)\(/);
+            assert.notEqual(authorization, -1, methodName + " must authorize on the server");
             const access = block.search(repositoryAccess);
-            assert.ok(access < 0 || guard < access, methodName + " must gate before repository access");
+            assert.ok(access < 0 || authorization < access, methodName + " must authorize before repository access");
         }
     }
 });
@@ -345,10 +345,10 @@ test("every exported TPV WebMethod has an explicit runtime policy classification
 
         for (const methodName of policy.guarded || []) {
             const block = getWebMethodSource(source, methodName);
-            const guard = block.indexOf("assertTpvSandboxEnabled()");
-            assert.notEqual(guard, -1, methodName + " must use the backend SANDBOX gate");
+            const authorization = block.search(/await require(?:Admin|Cajero)\(/);
+            assert.notEqual(authorization, -1, methodName + " must authorize on the backend");
             const firstWrite = block.search(writeOperations);
-            assert.ok(firstWrite < 0 || guard < firstWrite, methodName + " must gate before writes");
+            assert.ok(firstWrite < 0 || authorization < firstWrite, methodName + " must authorize before writes");
         }
 
         for (const methodName of policy.readOnly || []) {
