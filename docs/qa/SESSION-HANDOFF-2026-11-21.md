@@ -187,3 +187,7 @@ Revisión estática confirma que `_updateCajaActual` no impone CAS/lock propio y
 
 ### Eventos Bookings — actualización de evidencia
 ControlOperativo contiene 12 BOOKING_CREATED, 10 BOOKING_CONFIRMED, 2 BOOKING_RESCHEDULED y cero BOOKING_CANCELED. El handler está exportado y probado offline; falta verificar archivo instalado y delivery en Runtime. Issue #523.
+
+
+### Exposición pública de reservas — P0 #526
+Wix Published; 70 servicios visibles permiten booking online e in-person; todos los 94 servicios tienen onlineBooking.enabled=true. Ocho automatizaciones ACTIVE. El estado de conexión de Wix Payments no se ha verificado por API. Confirmar intención de negocio antes de dejar reservas públicas abiertas durante QA; no se cambió configuración.
