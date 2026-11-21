@@ -110,9 +110,9 @@ No se habilitan por este cambio cobros reales, devoluciones reales, facturas, no
 
 ## 8. Validación y pendientes
 
-**Verificado en repositorio:** nombres de WebMethods, mapeo de mensajes, DTOs, control de impuestos por línea, uso del bridge compartido y guardas Sandbox.
+**Verificado en repositorio y CI (commit `e790f7ed361e822fbbca1de8298456a80172b9e1`):** Layer 1 28 suites/343 tests; Layer 2 19 suites/268 tests; regresión offline completa 77 suites/724 tests, 0 fallos; contratos SDK Wix eCommerce/TPV y ESLint correctos. Backend offline quality gates: run `44858255145` SUCCESS. Gitleaks: run `44858255191` SUCCESS. Los contratos estáticos confirman las doce exportaciones y sus imports `.web`.
 
-**Pendiente de ejecutar:** suite CI completa, Wix Local Editor, Preview, permisos con roles reales, disponibilidad de catálogo real en el sitio, preseed de `CajaActual`, ventas/devoluciones/cierres E2E y verificación de que el HTML fuente está instalado en el componente Wix.
+**Pendiente de ejecutar:** Wix Local Editor, Preview, permisos con roles reales, disponibilidad de catálogo real en el sitio, preseed de `CajaActual`/identidades, ventas/devoluciones/cierres E2E y verificación de que el HTML fuente está instalado en el componente Wix. La CI offline no acredita ejecución runtime ni separación efectiva Sandbox/Live.
 
 El código versionado no demuestra por sí solo sincronización del Editor ni ejecución runtime. No publicar ni ejecutar operaciones LIVE como parte de esta corrección.
 
