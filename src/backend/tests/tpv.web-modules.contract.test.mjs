@@ -169,8 +169,8 @@ test("TPV WebMethods isolate synthetic SANDBOX writes from operational ledgers",
     assert.match(joined, /webMethod\(\s*Permissions\.SiteMember/);
     assert.match(joined, /requireCajero/);
     assert.match(joined, /registrarVenta/);
-    assert.match(joined, /solicitarDevolucion/);
-    assert.match(joined, /cerrarTicketZ/);
+    assert.match(joined, /registrarDevolucion/);
+    assert.match(joined, /generarCierreZ/);
     assert.match(joined, /TPV_SANDBOX_COLLECTIONS/);
     assert.doesNotMatch(joined, /contactsV5|extendedBookings|giftVouchers|staffMembers|staff\?\.memberId/);
     const cashierModule = await source("tpv/tpvCaja.web.js");
