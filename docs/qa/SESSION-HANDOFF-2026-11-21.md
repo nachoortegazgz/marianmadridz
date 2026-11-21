@@ -146,7 +146,7 @@ El estado anterior de automatizaciones y CMS queda actualizado por [la auditorí
 - CajaActual LIVE sigue ABIERTA con source MOVIMIENTOS_CAJA_RECONCILIADOS y traceId 0, no apta para TPV Sandbox. Los dos movimientos LIVE (25 CARD, 20 CASH) carecen del contrato sintético completo. No corregir ni borrar.
 - Hay tres FISCAL_LEDGER/PENDING_RECOVERY sin intentos; no reintentar.
 - Se confirmaron 8 automatizaciones ACTIVE de 159. Siete preinstaladas tienen status change bloqueado. Una automatización de aplicación, `Configuración de control laboral`, usa trigger programado y acción LLM; tarea y efectos pendientes de inspección. No ejecutar pruebas que puedan disparar automatizaciones.
-- Accessibility scan `aae3b411-81ff-4309-a767-6301164cb483` sigue RUNNING; 121 páginas descubiertas, 0 procesadas, 51 fallidas, 70 pendientes. Seguir consultando ese mismo ID.
+- Accessibility scan `aae3b411-81ff-4309-a767-6301164cb483` terminó PARTIALLY_COMPLETED; 121 páginas descubiertas, 0 procesadas, 121 fallidas con ANALYSIS_FAILED y 0 findings. Las URLs usan wixsite.com; causa pendiente. Google Search Console readiness devuelve READY.
 - `main` no está protegida. PR #495 sigue abierta y no mergeable.
 
 **Siguiente secuencia:** F0 contención de automatizaciones y confirmación de SHA Wix; F1 inspección Sandbox y conciliación de caja/compensaciones; F2 garantías compartidas de CajaActual; F3 TPV E2E. Mantener NO-GO hasta completar las pruebas reales y el reset preproducción.
