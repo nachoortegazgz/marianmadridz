@@ -150,3 +150,9 @@ El estado anterior de automatizaciones y CMS queda actualizado por [la auditorí
 - `main` no está protegida. PR #495 sigue abierta y no mergeable.
 
 **Siguiente secuencia:** F0 contención de automatizaciones y confirmación de SHA Wix; F1 inspección Sandbox y conciliación de caja/compensaciones; F2 garantías compartidas de CajaActual; F3 TPV E2E. Mantener NO-GO hasta completar las pruebas reales y el reset preproducción.
+
+
+### Issues creados tras la reauditoría
+- #520 P0 — contener y auditar las ocho automatizaciones Wix ACTIVE antes de QA E2E.
+- #521 P1 — investigar la falla de Accessibility Scans API en 121 páginas y la no elegibilidad del dominio público como target.
+- GSC Site Readiness devolvió READY; no se modificó configuración SEO.
