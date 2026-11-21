@@ -227,3 +227,10 @@ El listado `obtenerMovimientosCaja` consulta el ledger físico `MovimientosCaja`
 
 
 No se descuenta inventario ni se escribe en Stores durante la simulación.
+
+
+## Correspondencia funcional consolidada del widget
+
+El HTML Component consume el contrato documentado en `docs/architecture/TPV-HTML-WIDGET-BRIDGE.md`. Los IDs físicos son `CajaActual`, `MovimientosCaja` y `ControlOperativo`; `SANDBOX_LOGICAL_*` son discriminadores de eventos internos, no colecciones. Bookings y Stores V3 se usan solo para lectura del catálogo. No se crea pedido eCommerce, no se ejecuta pago/refund nativo, ni se modifica inventario. Clientes y operadores proceden de `TpvSandboxIdentities`, no de Wix Contacts ni Wix Staff.
+
+El handshake `MM_CONTEXT` confirma autorización y contexto funcional, sin inspeccionar variables de entorno o flags sintéticos. Los WebMethods conservan autorización de backend, validación de DTO, idempotencia y locks CAS. La persistencia escribe eventos en `MovimientosCaja`, proyecta estado en `CajaActual` y coordina concurrencia mediante `ControlOperativo`.
