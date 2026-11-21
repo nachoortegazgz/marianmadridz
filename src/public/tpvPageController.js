@@ -54,7 +54,7 @@ function numeric(value, field, { allowZero = true } = {}) {
     if (!Number.isFinite(number) || number < 0 || (!allowZero && number === 0)) {
         throw new Error("TPV_INVALID_" + field);
     }
-    return Math.round((number + Number.EPSILON) * 100) / 100;
+    return number;
 }
 
 function idempotencyKey(message, payload = {}) {
