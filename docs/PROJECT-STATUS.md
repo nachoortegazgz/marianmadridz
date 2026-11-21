@@ -288,3 +288,8 @@ El scan individual de Inicio con `pageId=cjg9` también terminó FAILED (1 descu
 - 24 productos físicos, 24 visibles, todos EUR e IN_STOCK.
 - 22 productos con una variante, uno con dos y uno con seis; precios 9,95–38,50 EUR; sin precio ausente en actualPriceRange.
 - No se ejecutó checkout ni se modificó stock/pedidos.
+
+
+### Integridad de CajaActual — nuevo bloqueo P0 #525
+- Revisión estática detecta read-modify-full-update sin CAS/lock dentro de `_updateCajaActual`, y rutas de proyección preflight/recuperación sin evidencia de lock fiscal compartido.
+- TPV usa lock de sesión distinto. No se ha demostrado lost update en runtime, pero la garantía compartida no está acreditada. Seguimiento [#525](https://github.com/nachoortegazgz/marianmadridz/issues/525).
