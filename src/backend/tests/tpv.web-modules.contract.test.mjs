@@ -267,7 +267,8 @@ test("TPV WebMethods isolate synthetic SANDBOX writes from operational ledgers",
     assert.match(config, /SYNTHETIC_ONLY: true/);
     assert.match(config, /TPV_SANDBOX_RUNTIME_POLICY = Object\.freeze\(\{[\s\S]*?ENABLED: true/);
     assert.match(await readFile(new URL("../public/tpvPageController.js", backendRoot), "utf8"), /obtenerConfiguracionTPV/);
-    assert.match(await readFile(new URL("../public/tpvPageController.js", backendRoot), "utf8"), /previewOnly: true/);
+    const controller = await readFile(new URL("../public/tpvPageController.js", backendRoot), "utf8");
+    assert.doesNotMatch(controller, /environment:|previewOnly:|syntheticOnly:|realPaymentsEnabled:|fiscalWritesEnabled:/);
     assert.match(config, /SANDBOX_RUN_ID: "TPVSANDBOX-DEV-/);
     assert.match(config, /TPV_SANDBOX_EVENT_MOVEMENT_TYPES/);
     for (const writer of [cash, movements, sales, closures]) {
