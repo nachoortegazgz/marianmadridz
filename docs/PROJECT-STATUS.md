@@ -293,3 +293,7 @@ El scan individual de Inicio con `pageId=cjg9` también terminó FAILED (1 descu
 ### Integridad de CajaActual — nuevo bloqueo P0 #525
 - Revisión estática detecta read-modify-full-update sin CAS/lock dentro de `_updateCajaActual`, y rutas de proyección preflight/recuperación sin evidencia de lock fiscal compartido.
 - TPV usa lock de sesión distinto. No se ha demostrado lost update en runtime, pero la garantía compartida no está acreditada. Seguimiento [#525](https://github.com/nachoortegazgz/marianmadridz/issues/525).
+
+
+### Booking webhook markers — evidencia refinada
+ControlOperativo (58 filas): BOOKING_CREATED=12, BOOKING_CONFIRMED=10, BOOKING_RESCHEDULED=2, BOOKING_CANCELED=0. El handler de cancelación está exportado y probado offline; falta demostrar que events.js esté instalado y que Wix Runtime entregue los eventos. Seguimiento #523.
