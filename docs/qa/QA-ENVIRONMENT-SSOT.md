@@ -191,8 +191,12 @@ ControlOperativo mantiene tres registros FISCAL_LEDGER/PENDING_RECOVERY con atte
 
 ### TPV y accesibilidad
 - TpvSandboxIdentities está vacía en LIVE y SANDBOX; el código exige seis identidades sintéticas presembradas.
-- Scan full-site de accesibilidad `aae3b411-81ff-4309-a767-6301164cb483`: RUNNING; 121 páginas descubiertas, 0 procesadas, 51 fallidas y 70 pendientes en el último polling. No declarar accesibilidad validada. Continuar con el mismo scan ID; no iniciar otro.
+- Scan full-site `aae3b411-81ff-4309-a767-6301164cb483`: PARTIALLY_COMPLETED; 121 páginas descubiertas, 0 procesadas, 121 fallidas con `ANALYSIS_FAILED`, 0 findings. Todas las URLs enumeradas usan el host wixsite.com. No declarar accesibilidad validada; diagnosticar el origen antes de otro scan.
 - Scan anterior del 11/11 terminó PARTIALLY_COMPLETED con 122 páginas descubiertas, 0 procesadas y 122 fallidas.
 
 ### Decisión de seguridad
 La autorización de simulacros sintéticos no permite disparar automatizaciones desconocidas ni efectos externos. Mantener NO-GO para E2E persistente hasta inspeccionar la tarea LLM, revisar automatizaciones de email/notificación, demostrar el data plane Preview/Sandbox y conciliar CajaActual/MovimientosCaja. No tocar históricos ni compensaciones.
+
+
+### SEO — Google Search Console
+Get Site Readiness devolvió `READY` el 2026-11-21. Es una señal de conexión/verificación del sitio; no certifica indexación ni rendimiento. No se modificó configuración SEO.
