@@ -176,3 +176,34 @@ PR #500 está fusionada en `main`: commit `6da7cdf0d815ad2e1833f5bd56b5950aff2af
 Validación pre-merge del HEAD `306816dff20d62e4ec3fda87e25fb050c155bb96`: Layer 1 28 suites/339 tests PASS; Layer 2 19 suites/268 tests PASS; suite completa 75 suites/706 tests PASS; contratos Wix SDK, eCommerce Order Transactions, TPV Catalog y ESLint PASS; Gitleaks PASS (runs `44781808680` y `44781808524`). CI post-merge para `6da7cdf0...` está en curso en los runs `44781982497` y `44781982392`; no declararlo aprobado hasta que ambos finalicen SUCCESS.
 
 La corrección es una barrera de código por estado de datos; no identifica de forma contractual Preview frente a Published. No equivale a prueba de aislamiento runtime ni a aceptación E2E. Wix Preview, prueba negativa Published, concurrencia H-01, permisos efectivos, efectos externos, comparación LIVE antes/después y reset preproducción siguen pendientes. Sitio Wix observado en Draft. **NO-GO de publicación.**
+
+
+---
+
+## Addendum vigente — 2026-11-21 (PR #516 / relevo TPV)
+
+Este addendum prevalece sobre el corte anterior del 20/11 para el estado del repositorio y del código TPV. El relevo operativo completo está en [SESSION-HANDOFF-2026-11-21.md](qa/SESSION-HANDOFF-2026-11-21.md).
+
+### Repositorio y CI
+- `main` HEAD: `6bf263502c58fa28bd13f7db848553c18b34a323`, merge de PR #516.
+- Backend offline quality gates: run `44860968238` SUCCESS.
+- Secret scanning: run `44860968226` SUCCESS.
+- Layer 1, Layer 2, regresión offline, contratos Wix SDK/eCommerce/TPV y ESLint finalizaron SUCCESS. No se añade recuento de tests porque no se extrajo de los logs.
+- GitHub devuelve `protected=false` para `main`; branch protection/required checks no están acreditados.
+
+### Contrato TPV integrado
+- PR #516 alinea `#htmlTPV`, `src/public/tpvPageController.js` y WebMethods de `src/backend/tpv/`.
+- El handshake ya no transporta flags estáticos de entorno; la configuración de contexto entrega EUR y Europe/Madrid.
+- La identidad sintética de cliente usa `customerIdentityId`, no `customerContactId`.
+- Bookings y Stores Catalog V3 se consultan para catálogo. No se invocan pagos/reembolsos reales, pedidos eCommerce, inventario, hardware ni emisión fiscal.
+- Persistencia lógica: `CajaActual` (proyección), `MovimientosCaja` (ledger append-only) y `ControlOperativo` (locks/idempotencia). `SANDBOX_LOGICAL_*` no son colecciones físicas.
+- Se retiró `assertTpvSandboxEnabled()`; se mantienen autorización backend y guardas por marcador/run ID de CajaActual. Estas guardas no demuestran por sí mismas el enrutamiento de Preview a CMS Sandbox.
+
+### Datos y runtime
+- La descripción de PR #516 recoge una lectura CMS read-only con CajaActual ABIERTA y `snapshotSource=TPV_FUNCTIONAL_TEST`, un movimiento de MovimientosCaja incompleto para el contrato TPV y cero filas en TpvSandboxIdentities.
+- No reconstruir ni sobrescribir los registros existentes. La presemilla Sandbox y la verificación de las seis identidades siguen pendientes.
+- Wix Preview E2E, prueba negativa Published, aislamiento Sandbox/Online, concurrencia runtime, comparación Online antes/después y SHA instalado en Editor no están acreditados.
+- El informe smoke comunicado el 21/11 es PARCIAL; el texto disponible solo permite registrar efectivo 320 EUR, esperado 320 EUR, diferencia declarada 0 EUR, tarjeta 25 EUR y tickets 45 EUR. El informe completo y su conciliación por medios siguen pendientes.
+
+### Decisión
+CI offline de `main`: **PASS**. Integridad runtime, aislamiento, E2E y conciliación completa: **NO VERIFICADOS**. Publicación/despliegue: **NO-GO**. No tocar caja Online, ledgers históricos, compensaciones pendientes ni pedidos #10032/#10033. No sincronizar Sandbox → Online.
