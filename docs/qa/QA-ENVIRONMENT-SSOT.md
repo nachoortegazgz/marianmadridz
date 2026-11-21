@@ -150,3 +150,49 @@ Integrada en `main` (`75c4428fea45795d4337011c389ac909f0aa6e03`). Contrato autom
 ### Aclaración de separación entre TPV_QA histórico y TPV_SANDBOX vigente — 2026-11-20
 
 Las secciones anteriores que declaran `TPV_QA_RUNTIME_POLICY.ENABLED=false` describen la ruta legacy `TPV_QA_*` y sus WebMethods con sufijo QA. No deben interpretarse como la configuración actual del TPV Sandbox implementado en `src/backend/tpv/`. El código actual utiliza `TPV_SANDBOX_RUNTIME_POLICY.ENABLED=true`, nombres de WebMethods neutros, marcadores de caja y run ID estático. Esta habilitación de código no equivale a certificación de aislamiento runtime: las escrituras siguen condicionadas al marcador de `CajaActual`, pero es obligatorio probar el data plane por invocación antes de considerar seguro Preview/Published. Mantener los writers externos deshabilitados y NO-GO de publicación hasta la aceptación E2E descrita en el handoff vigente.
+
+
+---
+
+## Addendum de evidencia Wix — reauditoría read-only 2026-11-21
+
+Este bloque actualiza la evidencia operativa sin cambiar la clasificación funcional del sitio como QA. Prevalece sobre los snapshots anteriores de automatizaciones y uso CMS.
+
+### Contexto y baseline
+- GetSiteContext confirma Wix Editor Classic, Velo habilitado y estado Wix **Published**. El propietario mantiene la clasificación funcional del sitio como entorno único QA; Published es metadato y no prueba actividad real ni autoriza efectos externos.
+- GitHub `main` HEAD: `e75aec5d28dcb8560fe75dbd04d5eae95957c3d8`. CI post-merge: Backend offline quality gates run `44867151597` SUCCESS y Secret scanning run `44867151605` SUCCESS.
+- `main` no está protegida (`protected=false`). No hay required checks acreditados.
+- El SHA de código instalado en Wix Editor/Published no está verificado.
+
+### Wix Automations — nuevo inventario vigente
+Consulta Automations V2 read-only del 2026-11-21:
+- 159 automatizaciones consultadas.
+- 8 con estado ACTIVE confirmado individualmente mediante Get Automation.
+- 7 son PREINSTALLED y todas tienen `settings.disableStatusChange=true`. Incluyen seis acciones de correo y una notificación de plataforma; no sortear sus locks ni desinstalar apps para neutralizarlas.
+- Una es de origen APPLICATION: `Configuración de control laboral`, ID `6e80b403-4903-4c5a-bfb7-d3b40ed014be`, revisión 4, ACTIVE. Trigger programado `wix_automations-scheduled_trigger`, `startDate=2026-11-21T05:00:00+01:00`; acción `agent_maker-delegate_to_llm`, taskId `83527028-12e2-4462-9baf-4e2ec25db63c`. La acción está marcada permanent/read-only; el estado no está bloqueado (`disableStatusChange=false`). No se ha inspeccionado el contenido de la tarea ni el historial de ejecución; no se ejecutó ni modificó.
+- Los E2E que puedan disparar automatizaciones, registros de miembros, tarjetas, reservas, emails o notificaciones siguen bloqueados hasta conocer y contener sus efectos. No declarar neutralizadas las comunicaciones.
+
+### CMS LIVE/SANDBOX — Site Data Usage API
+Consulta oficial con `consistentRead=true`, 2026-11-21:
+- LIVE: 203 elementos / 266.227 bytes.
+- SANDBOX: 109 elementos / 206.023 bytes.
+- 13 colecciones NATIVE y 29 WIX_APP en el inventario CMS (42 en total).
+- CajaActual: 1 LIVE / 1 SANDBOX.
+- MovimientosCaja: 2 LIVE / 2 SANDBOX.
+- TpvSandboxIdentities: 0 / 0.
+- ControlOperativo: 58 LIVE / 0 SANDBOX.
+- CitasF2: 6 / 6; ServiciosCatalogo: 95 / 95; MapaStaff: 5 / 5.
+- El API de uso no expone IDs ni contenido de elementos y no acredita qué data plane utiliza una invocación WebMethod. Los dos elementos de MovimientosCaja SANDBOX no se han inspeccionado desde el Editor. No sincronizar Sandbox → Online.
+
+### Caja y movimientos LIVE
+La lectura CMS Management API read-only devuelve CajaActual ABIERTA, apertura 300 EUR, cashAmount/expectedCash 320 EUR, countedCash 0 EUR, difference 0 EUR, snapshotSource `MOVIMIENTOS_CAJA_RECONCILIADOS`, traceId `0`, lastOperationType `RECONCILIATION_CORRECTION`. No cumple el marcador Sandbox del TPV.
+MovimientosCaja LIVE contiene dos filas (25 EUR CARD y 20 EUR CASH, traceId `0`) sin los marcadores/campos de ledger sintético que espera el repositorio TPV. La aritmética 300 + 20 = 320 y 25 de tarjeta = 45 de tickets coincide con el smoke parcial, pero no certifica el contrato de ledger. No modificar estos registros.
+ControlOperativo mantiene tres registros FISCAL_LEDGER/PENDING_RECOVERY con attempts=0; uno informa ORIGINAL_ORDER_LEDGER_MISSING. No reintentar ni borrar.
+
+### TPV y accesibilidad
+- TpvSandboxIdentities está vacía en LIVE y SANDBOX; el código exige seis identidades sintéticas presembradas.
+- Scan full-site de accesibilidad `aae3b411-81ff-4309-a767-6301164cb483`: RUNNING; 121 páginas descubiertas, 0 procesadas, 51 fallidas y 70 pendientes en el último polling. No declarar accesibilidad validada. Continuar con el mismo scan ID; no iniciar otro.
+- Scan anterior del 11/11 terminó PARTIALLY_COMPLETED con 122 páginas descubiertas, 0 procesadas y 122 fallidas.
+
+### Decisión de seguridad
+La autorización de simulacros sintéticos no permite disparar automatizaciones desconocidas ni efectos externos. Mantener NO-GO para E2E persistente hasta inspeccionar la tarea LLM, revisar automatizaciones de email/notificación, demostrar el data plane Preview/Sandbox y conciliar CajaActual/MovimientosCaja. No tocar históricos ni compensaciones.
