@@ -54,6 +54,7 @@ export const generarControlX = webMethod(
             const key = normalizeClientIdempotencyKey(input.idempotencyKey);
             const session = await latestOpenSandboxSession();
             if (!session) throw new Error("TPV_SANDBOX_SESSION_NOT_OPEN");
+            if (input.sessionId && input.sessionId !== session.sessionId) throw new Error("TPV_SANDBOX_SESSION_MISMATCH");
             return await withSandboxSessionLock(session.sessionId, traceId, async () => {
                 const activeSession = await latestOpenSandboxSession();
                 if (!activeSession || activeSession.sessionId !== session.sessionId) {
