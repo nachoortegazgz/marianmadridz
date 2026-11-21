@@ -183,3 +183,7 @@ Stores Catalog V3: 24 productos físicos, visibles, EUR e IN_STOCK; 22 con una v
 
 ### CajaActual — nuevo bloqueo P0
 Revisión estática confirma que `_updateCajaActual` no impone CAS/lock propio y hay call paths de proyección preflight/recuperación sin evidencia del lock fiscal compartido; TPV usa lock de sesión distinto. Seguimiento #525. No ejecutar concurrencia en LIVE.
+
+
+### Eventos Bookings — actualización de evidencia
+ControlOperativo contiene 12 BOOKING_CREATED, 10 BOOKING_CONFIRMED, 2 BOOKING_RESCHEDULED y cero BOOKING_CANCELED. El handler está exportado y probado offline; falta verificar archivo instalado y delivery en Runtime. Issue #523.
