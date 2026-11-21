@@ -1,9 +1,10 @@
 import { Permissions, webMethod } from "wix-web-module";
-import { requireAdmin } from "backend/security";
+import { requireAdmin, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { TPV_SANDBOX_COLLECTIONS, TPV_SANDBOX_RUNTIME_POLICY } from "backend/internalConfig";
-import { insertSandboxEvent, latestOpenSandboxSession, withSandboxSessionLock } from "backend/tpv/tpvSandboxRepository";
+import { insertSandboxEvent, latestOpenSandboxSession, querySandboxRecords, withSandboxSessionLock } from "backend/tpv/tpvSandboxRepository";
 import { assertTpvSandboxEnabled, fromMinorUnits, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
+import { wql } from "backend/dataAccess";
 
 export const registrarMovimientoCaja = webMethod(
     Permissions.SiteMember,
@@ -57,6 +58,52 @@ export const registrarMovimientoCaja = webMethod(
             });
         } catch (error) {
             return { status: "ERROR", data: null, error: { code: String(error?.message || "TPV_SANDBOX_CASH_MOVEMENT_FAILED") }, persisted, recoverable: persisted, isSynthetic: true, realPayment: false, traceId };
+        }
+    }
+);
+
+
+export const obtenerMovimientosCaja = webMethod(
+    Permissions.SiteMember,
+    async (input = {}) => {
+        const traceId = makeTraceId("tpv-sandbox-cash-movements-read");
+        await requireCajero(traceId);
+        assertTpvSandboxEnabled();
+        try {
+            const limit = Math.min(100, Math.max(1, Math.floor(Number(input.limit || 50))));
+            const sessionId = String(input.sessionId || "").trim();
+            const records = await querySandboxRecords(
+                TPV_SANDBOX_COLLECTIONS.MOVIMIENTOS_CAJA,
+                sessionId ? wql.eq("sessionId", sessionId) : undefined,
+                { sort: ["createdAt DESC"], limit, allowTruncated: true }
+            );
+            return {
+                status: "SUCCESS",
+                data: {
+                    items: records.map((record) => ({
+                        movementId: record._id,
+                        sessionId: record.sessionId || null,
+                        movementType: record.movementType || null,
+                        amount: fromMinorUnits(Number(record.amountMinor || 0)),
+                        paymentMethod: record.paymentMethod || null,
+                        reason: record.reason || "",
+                        status: record.status || null,
+                        createdAt: record.createdAt || record.generatedAt || null,
+                        isSynthetic: true,
+                        persisted: true,
+                    })),
+                    syntheticOnly: true,
+                },
+                error: null,
+                traceId,
+            };
+        } catch (error) {
+            return {
+                status: "ERROR",
+                data: null,
+                error: { code: String(error?.message || "TPV_SANDBOX_CASH_MOVEMENTS_READ_FAILED") },
+                traceId,
+            };
         }
     }
 );
