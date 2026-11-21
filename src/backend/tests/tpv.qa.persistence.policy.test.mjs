@@ -263,7 +263,7 @@ test("every exposed TPV SANDBOX WebMethod fails closed before repository access"
         ["tpvAuditoria.web.js", ["consultarAuditoriaTPV"]],
         ["tpvGiftCards.web.js", ["consultarTarjetaRegalo"]],
     ];
-    const repositoryAccess = /(?:latestOpenSandboxSession|insertSandboxEvent|appendSandboxAudit|querySandboxRecords|withSandboxSessionLock|withSandboxSaleLock|listTpvSandboxIdentities|getTpvSandboxIdentity|wql\.)/;
+    const repositoryAccess = /(?:latestOpenSandboxSession|insertSandboxEvent|appendSandboxAudit|querySandboxRecords|querySandboxLedgerRecords|withSandboxSessionLock|withSandboxSaleLock|listTpvSandboxIdentities|getTpvSandboxIdentity|wql\.)/;
 
     for (const [fileName, methodNames] of protectedMethods) {
         const source = await readFile(new URL("../tpv/" + fileName, import.meta.url), "utf8");
