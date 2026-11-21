@@ -282,3 +282,9 @@ Completar primero contención de efectos externos, conciliación read-only, insp
 
 ### Accesibilidad — prueba adicional por pageId
 El scan individual de Inicio con `pageId=cjg9` también terminó FAILED (1 descubierta, 0 procesadas, 1 fallida); page summaries devuelve HTTP 428 `SCAN_RESULTS_NOT_AVAILABLE`. El problema persiste usando pageId, no solo URL personalizada. Issue #521 actualizado.
+
+
+### Stores Catalog V3 — lectura de catálogo
+- 24 productos físicos, 24 visibles, todos EUR e IN_STOCK.
+- 22 productos con una variante, uno con dos y uno con seis; precios 9,95–38,50 EUR; sin precio ausente en actualPriceRange.
+- No se ejecutó checkout ni se modificó stock/pedidos.
