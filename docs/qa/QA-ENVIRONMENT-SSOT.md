@@ -230,3 +230,7 @@ El escaneo individual de Inicio por `pageId=cjg9` falló sin resultados (HTTP 42
 
 ### Wix Stores Catalog V3 — baseline read-only
 24 productos físicos; todos visibles, EUR e IN_STOCK. Variantes: 22×1, 1×2, 1×6. Rango de precio 9,95–38,50 EUR. No se probaron pedidos ni checkout.
+
+
+### CajaActual — revisión estática de concurrencia
+El helper `_updateCajaActual` hace read-modify-full-update y reintentos, sin CAS/lock interno. El writer normal adquiere lock fiscal, pero hay caminos preflight y recuperación webhook sin evidencia del mismo lock; TPV usa lock de sesión distinto. Issue #525 P0; no probar concurrencia en LIVE.
