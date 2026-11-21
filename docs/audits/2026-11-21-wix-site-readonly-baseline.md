@@ -214,3 +214,15 @@ Consulta read-only de Query Staff Members V2 y `MapaStaff`:
 - Los 94 servicios Bookings tienen schedule, form, category y staffMemberIds; no se encontraron servicios sin asignación de staff.
 
 Resultado: el mapeo de identidades de personal entre Bookings V2, MapaStaff e internalConfig está alineado en los tres proveedores de servicio. Esto no sustituye las pruebas runtime de permisos/horarios ni valida que las reservas puedan completarse.
+
+
+## 15. CitasF2 ↔ Bookings Reader V2 — estados divergentes
+
+Consulta read-only de CitasF2 y Count Extended Bookings:
+- CitasF2 contiene seis filas: cinco con `bookingStatus=CONFIRMED` y una `PENDING`.
+- Los seis `bookingId` existen en Bookings Reader V2 (un registro por ID).
+- Los seis bookings nativos están `CANCELED`: total filtrado por los seis IDs = 6; CANCELED=6, CONFIRMED=0, PENDING=0.
+- No se encontraron marcadores `BOOKING_CANCELED` en los 58 registros actuales de ControlOperativo para esos IDs.
+- El handler `events.js::_handleWixBookingsV2_onBookingCanceled` contiene la actualización de CitasF2 a `CANCELED`, pero el estado actual demuestra que esos seis casos no están proyectados de forma coherente. No demuestra por sí solo por qué no se procesó el evento.
+
+Riesgo: CitasF2 puede presentar reservas canceladas como activas. No recrear, reconfirmar ni modificar reservas nativas. Investigar historial de eventos, configuración del handler y reconciliar proyecciones con Bookings Reader V2. Seguimiento [#523](https://github.com/nachoortegazgz/marianmadridz/issues/523).
