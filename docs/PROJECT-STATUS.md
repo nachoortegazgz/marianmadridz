@@ -185,7 +185,7 @@ La corrección es una barrera de código por estado de datos; no identifica de f
 Este addendum prevalece sobre el corte anterior del 20/11 para el estado del repositorio y del código TPV. El relevo operativo completo está en [SESSION-HANDOFF-2026-11-21.md](qa/SESSION-HANDOFF-2026-11-21.md).
 
 ### Repositorio y CI
-- `main` HEAD: `6bf263502c58fa28bd13f7db848553c18b34a323`, merge de PR #516.
+- Baseline de código TPV en `main`: `6bf263502c58fa28bd13f7db848553c18b34a323`, merge de PR #516. HEAD de `main` al cierre documental: `10c15c56d2ff3e605d3cec3da0ca717b426bd280`, merge documental de PR #517.
 - Backend offline quality gates: run `44860968238` SUCCESS.
 - Secret scanning: run `44860968226` SUCCESS.
 - Layer 1, Layer 2, regresión offline, contratos Wix SDK/eCommerce/TPV y ESLint finalizaron SUCCESS. No se añade recuento de tests porque no se extrajo de los logs.
@@ -207,3 +207,8 @@ Este addendum prevalece sobre el corte anterior del 20/11 para el estado del rep
 
 ### Decisión
 CI offline de `main`: **PASS**. Integridad runtime, aislamiento, E2E y conciliación completa: **NO VERIFICADOS**. Publicación/despliegue: **NO-GO**. No tocar caja Online, ledgers históricos, compensaciones pendientes ni pedidos #10032/#10033. No sincronizar Sandbox → Online.
+
+
+### Corrección de baseline Git — 2026-11-21
+- PR #517 integró únicamente documentación mediante commit `10c15c56d2ff3e605d3cec3da0ca717b426bd280`; el baseline funcional TPV permanece en `6bf263502c58fa28bd13f7db848553c18b34a323` (PR #516).
+- Checks pre-merge de PR #517: calidad offline y Gitleaks SUCCESS. Los workflows post-merge del commit documental deben consultarse por SHA antes de cerrar la evidencia CI final.
