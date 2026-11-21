@@ -267,3 +267,9 @@ Completar primero contención de efectos externos, conciliación read-only, insp
 - 94/94 servicios de Bookings V2 están mapeados en ServiciosCatalogo; 70 precios fijos/monedas y visibilidad coinciden; 0 huérfanos/duplicados.
 - 3 staff providers nativos; sus resourceId y staffMemberId coinciden con los tres registros STAFF de MapaStaff y con STAFF.IDS en internalConfig. Las dos filas adicionales son GESTORIA y TERCERO/EMPRESA.
 - 94 servicios tienen schedule, form, categoría y staff asignado. Esto acredita coherencia estática de catálogo/personal, no disponibilidad runtime.
+
+
+### Reservas — nuevo hallazgo #523
+- CitasF2: 6 filas (5 CONFIRMED, 1 PENDING).
+- Los seis bookingId existen en Bookings Reader V2 y los seis están CANCELED nativamente.
+- No hay marcadores BOOKING_CANCELED correlacionados en ControlOperativo. Seguimiento [#523](https://github.com/nachoortegazgz/marianmadridz/issues/523). No recrear ni reconfirmar reservas.
