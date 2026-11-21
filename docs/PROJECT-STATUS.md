@@ -278,3 +278,22 @@ Completar primero contención de efectos externos, conciliación read-only, insp
 ### Inventario global Bookings V2 — hallazgo #523
 - 353 reservas nativas: 352 CANCELED y 1 CONFIRMED; sin CREATED/PENDING/DECLINED/WAITING_LIST.
 - La única CONFIRMED inicia el 18/09/2026 y no tiene proyección CitasF2; estado de asistencia pendiente de consultar. No cancelarla ni reconfirmarla automáticamente.
+
+
+### Accesibilidad — prueba adicional por pageId
+El scan individual de Inicio con `pageId=cjg9` también terminó FAILED (1 descubierta, 0 procesadas, 1 fallida); page summaries devuelve HTTP 428 `SCAN_RESULTS_NOT_AVAILABLE`. El problema persiste usando pageId, no solo URL personalizada. Issue #521 actualizado.
+
+
+### Stores Catalog V3 — lectura de catálogo
+- 24 productos físicos, 24 visibles, todos EUR e IN_STOCK.
+- 22 productos con una variante, uno con dos y uno con seis; precios 9,95–38,50 EUR; sin precio ausente en actualPriceRange.
+- No se ejecutó checkout ni se modificó stock/pedidos.
+
+
+### Integridad de CajaActual — nuevo bloqueo P0 #525
+- Revisión estática detecta read-modify-full-update sin CAS/lock dentro de `_updateCajaActual`, y rutas de proyección preflight/recuperación sin evidencia de lock fiscal compartido.
+- TPV usa lock de sesión distinto. No se ha demostrado lost update en runtime, pero la garantía compartida no está acreditada. Seguimiento [#525](https://github.com/nachoortegazgz/marianmadridz/issues/525).
+
+
+### Booking webhook markers — evidencia refinada
+ControlOperativo (58 filas): BOOKING_CREATED=12, BOOKING_CONFIRMED=10, BOOKING_RESCHEDULED=2, BOOKING_CANCELED=0. El handler de cancelación está exportado y probado offline; falta demostrar que events.js esté instalado y que Wix Runtime entregue los eventos. Seguimiento #523.

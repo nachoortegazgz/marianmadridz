@@ -222,3 +222,19 @@ Los seis bookingId de CitasF2 existen en Bookings Reader V2 y están CANCELED na
 
 ### Bookings Reader V2 — inventario global
 353 reservas nativas: 352 CANCELED y una CONFIRMED (inicio 2026-09-18T12:00Z) sin proyección CitasF2. Estado de asistencia no consultado. Seguimiento #523; no modificar reserva.
+
+
+### Accesibilidad — pageId
+El escaneo individual de Inicio por `pageId=cjg9` falló sin resultados (HTTP 428 `SCAN_RESULTS_NOT_AVAILABLE`). Se mantiene desconocido el estado WCAG; seguir issue #521 y usar revisión manual alternativa.
+
+
+### Wix Stores Catalog V3 — baseline read-only
+24 productos físicos; todos visibles, EUR e IN_STOCK. Variantes: 22×1, 1×2, 1×6. Rango de precio 9,95–38,50 EUR. No se probaron pedidos ni checkout.
+
+
+### CajaActual — revisión estática de concurrencia
+El helper `_updateCajaActual` hace read-modify-full-update y reintentos, sin CAS/lock interno. El writer normal adquiere lock fiscal, pero hay caminos preflight y recuperación webhook sin evidencia del mismo lock; TPV usa lock de sesión distinto. Issue #525 P0; no probar concurrencia en LIVE.
+
+
+### Eventos Bookings — markers en ControlOperativo
+La distribución de `payload.eventType` es BOOKING_CREATED=12, BOOKING_CONFIRMED=10, BOOKING_RESCHEDULED=2 y BOOKING_CANCELED=0. El handler está exportado y tiene pruebas offline; el delivery en Wix Runtime y el SHA instalado siguen pendientes.
