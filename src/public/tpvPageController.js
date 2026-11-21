@@ -207,13 +207,8 @@ export function initializeTpvPage(widget) {
                 data: {
                     component: "htmlTPV",
                     protocolVersion: PROTOCOL_VERSION,
-                    environment: config.status === "SUCCESS" ? config.data?.environment : "UNAVAILABLE",
-                    previewOnly: true,
-                    syntheticOnly: true,
-                    realPaymentsEnabled: false,
-                    fiscalWritesEnabled: false,
-                    notificationsEnabled: false,
-                    hardwareEnabled: false,
+                    currency: config.status === "SUCCESS" ? config.data?.currency : null,
+                    timeZone: config.status === "SUCCESS" ? config.data?.timeZone : null,
                 },
                 error: config.error || null,
             };
