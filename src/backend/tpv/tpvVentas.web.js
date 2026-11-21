@@ -5,7 +5,7 @@ import { TPV_SANDBOX_COLLECTIONS, TPV_SANDBOX_IDENTITY_TYPES, TPV_SANDBOX_RUNTIM
 import { listTpvSandboxIdentities, getTpvSandboxIdentity } from "backend/tpv/tpvSandboxIdentities";
 import { validateSaleDraft } from "backend/tpv/tpvValidation";
 import { appendSandboxAudit, insertSandboxEvent, latestOpenSandboxSession, withSandboxSessionLock } from "backend/tpv/tpvSandboxRepository";
-import { assertTpvSandboxEnabled, makeSandboxId, normalizeClientIdempotencyKey } from "backend/tpv/tpvUtils";
+import { makeSandboxId, normalizeClientIdempotencyKey } from "backend/tpv/tpvUtils";
 
 function disabledResult(code) {
     return {
@@ -39,7 +39,7 @@ export const registrarVenta = webMethod(
         let persisted = false;
         const traceId = makeTraceId("tpv-sandbox-sale");
         await requireAdmin(traceId);
-        assertTpvSandboxEnabled();
+
         try {
             const key = normalizeClientIdempotencyKey(input.idempotencyKey);
             const session = await latestOpenSandboxSession();
