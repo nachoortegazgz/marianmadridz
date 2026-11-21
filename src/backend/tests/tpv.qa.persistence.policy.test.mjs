@@ -260,7 +260,7 @@ test("every exposed TPV SANDBOX WebMethod fails closed before repository access"
         ["tpvPagos.web.js", ["validarDesglosePagos"]],
         ["tpvUtils.web.js", ["obtenerConfiguracionTPV"]],
         ["tpvPermisos.web.js", ["obtenerPermisosTPV"]],
-        ["tpvAuditoria.web.js", ["consultarAuditoriaTPV"]],
+        ["tpvAuditoria.web.js", ["obtenerMovimientosCaja"]],
         ["tpvGiftCards.web.js", ["consultarTarjetaRegalo"]],
     ];
     const repositoryAccess = /(?:latestOpenSandboxSession|insertSandboxEvent|appendSandboxAudit|querySandboxRecords|querySandboxLedgerRecords|withSandboxSessionLock|withSandboxSaleLock|listTpvSandboxIdentities|getTpvSandboxIdentity|wql\.)/;
@@ -315,7 +315,7 @@ test("every exported TPV WebMethod has an explicit runtime policy classification
             guarded: ["obtenerPermisosTPV"],
         },
         "tpvAuditoria.web.js": {
-            guarded: ["consultarAuditoriaTPV"],
+            guarded: ["obtenerMovimientosCaja"],
         },
         "tpvGiftCards.web.js": {
             guarded: ["consultarTarjetaRegalo"],
