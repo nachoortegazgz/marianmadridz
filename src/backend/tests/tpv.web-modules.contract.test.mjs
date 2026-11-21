@@ -55,6 +55,33 @@ test("TPV custom tariff lines remain explicitly typed and validated", () => {
     assert.equal(result.importePendiente, 0);
 });
 
+test("TPV product variant identity is retained and restricted to product lines", () => {
+    const product = validateSaleDraft({
+        lineas: [{
+            tipoLinea: "PRODUCTO",
+            itemId: "product-123",
+            varianteId: "variant-123",
+            concepto: "Producto · Talla M",
+            cantidad: 1,
+            precioUnitario: 20,
+            impuestosImporte: 0,
+        }],
+        pagos: [{ medioPago: "EFECTIVO", importe: 20 }],
+    });
+    assert.equal(product.lineas[0].varianteId, "variant-123");
+    assert.throws(() => validateSaleDraft({
+        lineas: [{
+            tipoLinea: "SERVICIO",
+            varianteId: "variant-123",
+            concepto: "Servicio",
+            cantidad: 1,
+            precioUnitario: 20,
+            impuestosImporte: 0,
+        }],
+        pagos: [{ medioPago: "EFECTIVO", importe: 20 }],
+    }), /TPV_VARIANT_ONLY_FOR_PRODUCTS/);
+});
+
 test("TPV cash tender subtracts change before reconciling amount applied", () => {
     const result = validateSaleDraft({
         lineas: [{
@@ -311,6 +338,7 @@ test("TPV page is wired to the native POS widget bridge and canonical backend ex
     assert.match(controller, /abrirSesionCaja/);
     assert.match(controller, /obtenerServicios/);
     assert.match(controller, /obtenerProductos/);
+    assert.match(controller, /obtenerVariantesProducto/);
     assert.match(controller, /obtenerStaff/);
     assert.match(controller, /buscarClientesTPV/);
     assert.match(controller, /registrarVenta/);
@@ -328,6 +356,7 @@ test("TPV page is wired to the native POS widget bridge and canonical backend ex
     assert.match(html, /environment!=="SANDBOX"/);
     assert.match(html, /call\("CASHIER_STATE"/);
     assert.match(html, /call\("CUSTOMERS_SEARCH"/);
+    assert.match(html, /call\("CATALOG_VARIANTS"/);
     assert.match(html, /call\("SALE_REGISTER"/);
     assert.match(html, /call\("CASH_MOVEMENT"/);
     assert.match(html, /call\("REFUND"/);
