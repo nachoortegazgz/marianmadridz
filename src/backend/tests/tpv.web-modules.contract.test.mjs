@@ -417,6 +417,7 @@ test("TPV synthetic persistence maps logical events to CajaActual and Movimiento
     const repository = await source("tpv/tpvSandboxRepository.js");
     const config = await source("internalConfig.js");
     const utilities = await source("tpv/tpvUtils.js");
+    const movements = await source("tpv/tpvMovimientos.web.js");
     assert.match(repository, /SANDBOX_LEDGER_SOURCE = "TPV_SANDBOX_SYNTHETIC"/);
     assert.match(config, /SIMULATED_TPV_/);
     assert.match(repository, /sequenceNumber: 0/);
@@ -433,6 +434,12 @@ test("TPV synthetic persistence maps logical events to CajaActual and Movimiento
     assert.doesNotMatch(repository, /insertItem\(BUSINESS_COLLECTIONS\.CAJA_ACTUAL, seed\)/);
     assert.match(utilities, /TPV_SANDBOX_INITIALIZED/);
     assert.match(utilities, /TPV_SANDBOX_SYNTHETIC/);
+    assert.match(repository, /export async function querySandboxLedgerRecords\(/);
+    assert.match(repository, /dataCollectionId: BUSINESS_COLLECTIONS\.MOVIMIENTOS_CAJA/);
+    assert.match(repository, /sort: \["recordTimestamp DESC"\]/);
+    assert.match(movements, /querySandboxLedgerRecords\(\{ limit: 1000 \}\)/);
+    assert.match(movements, /SIMULATED_TPV_SALE/);
+    assert.match(movements, /SIMULATED_TPV_REFUND/);
     assert.match(repository, /payloadFiscal\?\.sandboxRunId === SANDBOX_RUN_ID/);
     assert.match(repository, /MAX_SANDBOX_PROJECTION_EVENTS = 1000/);
     assert.match(repository, /conceptOperations\?\.tpvSandbox\?\.sessionId/);
