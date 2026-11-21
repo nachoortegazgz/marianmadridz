@@ -3,7 +3,6 @@ import { requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { TPV_SANDBOX_COLLECTIONS } from "backend/internalConfig";
 import { querySandboxRecords } from "backend/tpv/tpvSandboxRepository";
-import { assertTpvSandboxEnabled } from "backend/tpv/tpvUtils";
 import { wql } from "backend/dataAccess";
 
 export const obtenerMovimientosCaja = webMethod(
@@ -11,7 +10,7 @@ export const obtenerMovimientosCaja = webMethod(
     async (input = {}) => {
         const traceId = makeTraceId("tpv-sandbox-audit-read");
         await requireCajero(traceId);
-        assertTpvSandboxEnabled();
+
         try {
             const limit = Math.min(100, Math.max(1, Math.floor(Number(input.limit || 50))));
             const records = await querySandboxRecords(
