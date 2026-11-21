@@ -11,7 +11,7 @@ export function assertSandboxCajaWritable(caja, { allowBootstrap = false } = {})
         caja?.traceId === sandboxRunId &&
         sandboxState?.sandboxRunId === sandboxRunId;
     const synthetic = caja?.snapshotSource === "TPV_SANDBOX_SYNTHETIC" &&
-        ["ABIERTA", "CERRADA"].includes(caja?.cashRegisterStatus) &&
+        caja?.cashRegisterStatus === "SIMULACION" &&
         caja?.traceId === sandboxRunId &&
         sandboxState?.sandboxRunId === sandboxRunId;
     if (!bootstrap && !synthetic) {
