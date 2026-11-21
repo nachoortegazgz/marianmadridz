@@ -200,3 +200,7 @@ La autorización de simulacros sintéticos no permite disparar automatizaciones 
 
 ### SEO — Google Search Console
 Get Site Readiness devolvió `READY` el 2026-11-21. Es una señal de conexión/verificación del sitio; no certifica indexación ni rendimiento. No se modificó configuración SEO.
+
+
+### Diagnóstico adicional del scan
+El scan individual de `https://www.marianmadrid.es/` devolvió HTTP 428 `SCAN_TARGET_NOT_AVAILABLE` / `page URL is not scan-eligible`; no se creó un scan. Seguimiento: issue #521. No inferir fallo de la web pública a partir de la elegibilidad del scan.
