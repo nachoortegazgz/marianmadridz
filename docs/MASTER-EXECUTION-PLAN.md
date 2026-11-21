@@ -74,7 +74,7 @@ Principios obligatorios:
 - Dos movimientos LIVE: 25 EUR CARD y 20 EUR CASH, `traceId=0`; no muestran el contrato sintético completo.
 - Tres compensaciones `FISCAL_LEDGER/PENDING_RECOVERY`, `attempts=0`.
 - Ocho automatizaciones ACTIVE; siete preinstaladas bloqueadas y una automatización de aplicación programada que delega en un agente LLM, pendiente de inspección de tarea/efectos.
-- Accessibility scan full-site en curso: 121 páginas descubiertas, 0 procesadas, 51 fallidas y 70 pendientes en el último polling.
+- Accessibility scan full-site terminó PARTIALLY_COMPLETED: 121 páginas descubiertas, 0 procesadas, 121 fallidas, todas con ANALYSIS_FAILED / “This page could not be checked”; 0 findings. URLs enumeradas bajo wixsite.com, causa pendiente. Google Search Console Get Site Readiness: READY.
 - El código actual importa `wix-web-module` en 21 archivos; la documentación SDK actual muestra `@wix/web-methods`. La compatibilidad con Editor Classic debe verificarse antes de una migración masiva.
 - Los escritores de CajaActual necesitan una demostración única de serialización/CAS entre módulos; el helper normal de proyección usa lectura + actualización de elemento completo con reintentos.
 
