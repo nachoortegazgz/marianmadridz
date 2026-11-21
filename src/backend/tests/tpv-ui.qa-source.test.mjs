@@ -33,7 +33,7 @@ test("POS buttons send backend-compatible DTOs and do not discard failed sales",
     assert.match(controller, /pagos: payments\.map/);
     assert.match(controller, /medioPago:/);
     assert.match(controller, /importeCambio:/);
-    assert.match(controller, /differenceReason:/);
+    assert.match(controller, /differenceReason:/);\n    assert.match(script, /function keyedAction/);\n    assert.match(script, /sessionStorage\.setItem\("mmTPVOperationKeys"/);\n    assert.match(script, /operationScope\(kind\)/);
 });
 
 test("taxes remain locked until Wix POS tax rules are mapped to per-line tax amounts", async () => {
