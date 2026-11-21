@@ -226,3 +226,9 @@ Consulta read-only de CitasF2 y Count Extended Bookings:
 - El handler `events.js::_handleWixBookingsV2_onBookingCanceled` contiene la actualización de CitasF2 a `CANCELED`, pero el estado actual demuestra que esos seis casos no están proyectados de forma coherente. No demuestra por sí solo por qué no se procesó el evento.
 
 Riesgo: CitasF2 puede presentar reservas canceladas como activas. No recrear, reconfirmar ni modificar reservas nativas. Investigar historial de eventos, configuración del handler y reconciliar proyecciones con Bookings Reader V2. Seguimiento [#523](https://github.com/nachoortegazgz/marianmadridz/issues/523).
+
+
+## 16. Inventario global Bookings Reader V2
+
+Count Extended Bookings read-only devuelve 353 reservas nativas: 352 `CANCELED`, 1 `CONFIRMED`, 0 `PENDING`, 0 `CREATED`, 0 `DECLINED`, 0 `WAITING_LIST`.
+La única reserva nativa `CONFIRMED` tiene inicio `2026-09-18T12:00:00Z` y no tiene fila en CitasF2. No se consultó su información de contacto ni asistencia. Determinar si es un dato histórico/sintético de otra vía y si falta su proyección o registro de asistencia. No cancelarla ni reconfirmarla automáticamente. Se incorpora a [#523](https://github.com/nachoortegazgz/marianmadridz/issues/523).
