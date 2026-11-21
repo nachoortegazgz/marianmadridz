@@ -210,3 +210,7 @@ El scan individual de `https://www.marianmadrid.es/` devolvió HTTP 428 `SCAN_TA
 - 94 servicios nativos APPOINTMENT; 70 visibles y 24 ocultos; todos con onlineBooking.enabled=true.
 - 94/94 serviceId coinciden con ServiciosCatalogo (94 SERVICE + 1 PRICING_PLAN); 0 faltantes/huérfanos/duplicados. Precio/moneda de 70 fijos y visibilidad coinciden.
 - Discrepancias: 16 CMS onlinePayment=true frente a Bookings payment.options.online=false; 8 CMS inPersonPayment=false frente a Bookings payment.options.inPerson=true. Issue #522. No ejecutar checkout ni mutar hasta confirmar la autoridad de negocio.
+
+
+### Personal Bookings — verificación read-only
+Wix Bookings V2 devuelve 3 proveedores de servicio; sus resourceId y staffMemberId coinciden con los tres registros STAFF de MapaStaff y con STAFF.IDS. Las otras dos filas de MapaStaff son GESTORIA y TERCERO/EMPRESA. Los 94 servicios tienen schedule, form, categoría y staffMemberIds. Pendientes permisos efectivos y disponibilidad en Preview.
