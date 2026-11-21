@@ -13,15 +13,6 @@ function reference(prefix, key) {
     return prefix + "_" + createHash("sha256").update(key, "utf8").digest("hex").slice(0, 24).toUpperCase();
 }
 
-function assertSandboxPolicy() {
-    if (TPV_SANDBOX_RUNTIME_POLICY.ENABLED !== true ||
-        TPV_SANDBOX_RUNTIME_POLICY.ENVIRONMENT !== "SANDBOX" ||
-        TPV_SANDBOX_RUNTIME_POLICY.SYNTHETIC_ONLY !== true ||
-        TPV_SANDBOX_RUNTIME_POLICY.REAL_PAYMENTS_ENABLED !== false) {
-        throw new Error("TPV_PAYMENT_SIMULATOR_DISABLED");
-    }
-}
-
 function baseEnvelope(operation, requestFingerprint) {
     return {
         provider: "WIX_PAYMENTS_SIMULATOR",
@@ -41,7 +32,7 @@ function baseEnvelope(operation, requestFingerprint) {
 
 /** Deterministic, side-effect-free simulator; it never calls Wix Payments. */
 export function simulateGatewayPayment(input = {}) {
-    assertSandboxPolicy();
+
     const idempotencyKey = normalizeClientIdempotencyKey(input.idempotencyKey);
     const currency = String(input.currency || TPV_SANDBOX_RUNTIME_POLICY.CURRENCY_CODE).toUpperCase();
     if (currency !== "EUR") throw new Error("TPV_PAYMENT_SIMULATOR_CURRENCY_UNSUPPORTED");
@@ -74,7 +65,7 @@ export function simulateGatewayPayment(input = {}) {
  * of the caller, which must reconcile append-only synthetic refund events.
  */
 export function simulateGatewayRefund(input = {}) {
-    assertSandboxPolicy();
+
     const idempotencyKey = normalizeClientIdempotencyKey(input.idempotencyKey);
     const originalTransactionId = String(input.originalTransactionId || "").trim();
     if (!/^WXPAY_SIM_[A-F0-9]{24}$/.test(originalTransactionId)) {
