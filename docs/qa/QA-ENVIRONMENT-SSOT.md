@@ -204,3 +204,9 @@ Get Site Readiness devolvió `READY` el 2026-11-21. Es una señal de conexión/v
 
 ### Diagnóstico adicional del scan
 El scan individual de `https://www.marianmadrid.es/` devolvió HTTP 428 `SCAN_TARGET_NOT_AVAILABLE` / `page URL is not scan-eligible`; no se creó un scan. Seguimiento: issue #521. No inferir fallo de la web pública a partir de la elegibilidad del scan.
+
+
+### Wix Bookings V2 — conciliación read-only
+- 94 servicios nativos APPOINTMENT; 70 visibles y 24 ocultos; todos con onlineBooking.enabled=true.
+- 94/94 serviceId coinciden con ServiciosCatalogo (94 SERVICE + 1 PRICING_PLAN); 0 faltantes/huérfanos/duplicados. Precio/moneda de 70 fijos y visibilidad coinciden.
+- Discrepancias: 16 CMS onlinePayment=true frente a Bookings payment.options.online=false; 8 CMS inPersonPayment=false frente a Bookings payment.options.inPerson=true. Issue #522. No ejecutar checkout ni mutar hasta confirmar la autoridad de negocio.
