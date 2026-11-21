@@ -114,6 +114,8 @@ Acciones:
 
 **Objetivo:** conciliar los datos existentes y asegurar los escritores.
 
+**Bloqueo P0 #525:** `_updateCajaActual` es read-modify-full-update con reintentos, pero el helper no impone CAS/lock. Existen caminos de proyección preflight y de recuperación de webhook que no acreditan el mismo lock fiscal; TPV usa lock de sesión distinto. Unificar la serialización antes de E2E concurrente.
+
 Acciones:
 - Leer en paralelo LIVE y SANDBOX, con evidencia separada.
 - Inspeccionar el singleton CajaActual y los dos movimientos de cada data plane desde el contexto correcto.
@@ -243,7 +245,7 @@ Acciones:
 | Prioridad | Bloque | Issues de referencia | Gate |
 |---|---|---|---|
 | P0 | Automatizaciones/efectos externos | SSOT QA; auditoría Automations | F0 |
-| P0 | Caja, ledger y compensaciones | #416, H-01, #434, #441 | F1 |
+| P0 | Caja, ledger y compensaciones | #416, #525, H-01, #434, #441 | F1 |
 | P0 | Fiscalidad y cumplimiento | #209, #415 | F5 |
 | P1 | TPV Sandbox | #435, #495 (revisar, no integrar ciegamente) | F2 |
 | P1 | Webhooks e idempotencia | #290, #159, #164 | F1/F6 |
