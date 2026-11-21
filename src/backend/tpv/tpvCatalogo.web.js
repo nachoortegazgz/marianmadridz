@@ -84,7 +84,7 @@ export const buscarClientesTPV = webMethod(
                 status: "SUCCESS",
                 data: {
                     items: matches.map((item) => ({
-                        contactId: item.identityId,
+                        identityId: item.identityId,
                         displayName: item.displayName,
                         email: item.email || "",
                         phone: "",
