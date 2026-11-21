@@ -297,3 +297,9 @@ El scan individual de Inicio con `pageId=cjg9` también terminó FAILED (1 descu
 
 ### Booking webhook markers — evidencia refinada
 ControlOperativo (58 filas): BOOKING_CREATED=12, BOOKING_CONFIRMED=10, BOOKING_RESCHEDULED=2, BOOKING_CANCELED=0. El handler de cancelación está exportado y probado offline; falta demostrar que events.js esté instalado y que Wix Runtime entregue los eventos. Seguimiento #523.
+
+
+### Exposición pública de reservas — nuevo bloqueo P0 #526
+- Sitio Published; 70 servicios visibles con `onlineBooking.enabled=true` y pagos ONLINE/IN_PERSON permitidos tanto por CMS como por Bookings V2.
+- El canal IN_PERSON puede permitir reservas sin pago online. Ocho automatizaciones ACTIVE pueden disparar notificaciones.
+- Confirmar si se deben aceptar reservas públicas durante QA. No se deshabilitó ni restringió el sitio sin decisión del propietario.

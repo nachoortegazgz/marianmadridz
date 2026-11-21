@@ -238,3 +238,7 @@ El helper `_updateCajaActual` hace read-modify-full-update y reintentos, sin CAS
 
 ### Eventos Bookings — markers en ControlOperativo
 La distribución de `payload.eventType` es BOOKING_CREATED=12, BOOKING_CONFIRMED=10, BOOKING_RESCHEDULED=2 y BOOKING_CANCELED=0. El handler está exportado y tiene pruebas offline; el delivery en Wix Runtime y el SHA instalado siguen pendientes.
+
+
+### Exposición pública — decisión pendiente
+Sitio Published; 70 servicios visibles y bookeables, ambos canales ONLINE/IN_PERSON permitidos, con 8 automatizaciones ACTIVE. El estado de conexión Wix Payments no está verificado por API read-only. Issue #526 P0: confirmar si las reservas públicas deben permanecer habilitadas durante QA o aplicar contención reversible.

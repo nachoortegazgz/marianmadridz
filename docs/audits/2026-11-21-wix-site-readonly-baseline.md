@@ -265,3 +265,10 @@ La consulta de ControlOperativo se repitió siguiendo el contrato de `events.js`
 - 14 filas sin tipo de evento clasificado (resto incluye otros controles).
 
 El handler `wixBookingsV2_onBookingCanceled` está exportado en `events.js` y tiene pruebas offline en `events.booking-canceled.integrity.test.mjs`. La ausencia de markers CANCELED junto a la divergencia CitasF2/Bookings indica que el runtime instalado no acredita la entrega/procesamiento de esos eventos históricos. Verificar SHA/registro de `events.js` y delivery en Wix; no reinyectar eventos ni mutar proyecciones sin evidencia. Seguimiento #523.
+
+
+## 21. Exposición pública de reservas — decisión P0
+
+GetSiteContext confirma estado Wix `Published`. La consulta de Bookings V2 confirma 94 servicios, 70 visibles y 24 ocultos; los 94 tienen `onlineBooking.enabled=true`. Los 70 servicios visibles permiten ONLINE e IN_PERSON tanto en `ServiciosCatalogo` como en `Bookings.payment.options`. Por tanto, el sitio está técnicamente expuesto a que visitantes públicos creen reservas en los 70 servicios visibles; el canal presencial puede permitir reserva sin un cobro online.
+
+Wix Payments está instalado, pero no se ha podido verificar la conexión mediante una API de lectura disponible; la desconexión se mantiene como declaración del propietario, no evidencia independiente. Ocho automatizaciones ACTIVE pueden producir notificaciones. La exposición pública contradice la clasificación QA sin actividad real si no se pretende recibir reservas. No se ha deshabilitado la reserva ni restringido el sitio porque afecta a la disponibilidad comercial. Decisión requerida: mantener reservas públicas o aplicar contención temporal soportada y reversible. Seguimiento [#526](https://github.com/nachoortegazgz/marianmadridz/issues/526).
