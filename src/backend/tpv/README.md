@@ -211,7 +211,7 @@ El controlador `src/public/tpvPageController.js` usa `createWidgetBridge` y reen
 
 `obtenerEstadoCaja`, `abrirSesionCaja`, `obtenerServicios`, `obtenerProductos`, `obtenerStaff`, `registrarVenta`, `registrarMovimientoCaja`, `registrarDevolucion`, `generarControlX`, `generarCierreZ`, `obtenerResumenCaja`, `obtenerMovimientosCaja`.
 
-La configuración se obtiene adicionalmente mediante `obtenerConfiguracionTPV`; la UI solo permite continuar con `environment=SANDBOX`. La apertura, escritura, devolución y cierre mantienen las autorizaciones backend existentes. Las operaciones de escritura (apertura, venta, movimiento, devolución y X/Z) conservan el `requireAdmin` vigente; elegir un operador sintético solo atribuye la operación y no concede permisos. Las consultas usan `requireCajero`.
+La configuración se obtiene adicionalmente mediante `obtenerConfiguracionTPV`; el handshake valida acceso y contexto funcional, sin comprobar etiquetas de entorno ni flags true/false. La apertura, escritura, devolución y cierre mantienen las autorizaciones backend existentes. Las operaciones de escritura (apertura, venta, movimiento, devolución y X/Z) conservan el `requireAdmin` vigente; elegir un operador sintético solo atribuye la operación y no concede permisos. Las consultas usan `requireCajero`.
 
 Conciliación de botones:
 - El controlador traduce el DTO HTML `lineItems/payments/subtotal/tax/total` al DTO backend `lineas/pagos/subtotalNeto/impuestosTotal/totalVenta`.
