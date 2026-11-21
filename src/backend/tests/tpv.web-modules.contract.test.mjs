@@ -281,6 +281,10 @@ test("TPV catalog reader uses native Bookings SDK and does not expose staff cont
     assert.match(catalog, /services\.queryServices/);
     assert.match(catalog, /listTpvSandboxIdentities\(TPV_SANDBOX_IDENTITY_TYPES\.STAFF\)/);
     assert.match(catalog, /listTpvSandboxIdentities\(TPV_SANDBOX_IDENTITY_TYPES\.CUSTOMER\)/);
+    assert.match(catalog, /identityId: item\.identityId/);
+    assert.doesNotMatch(catalog, /contactId: item\.identityId/);
+    assert.match(await source("tpv/tpvVentas.web.js"), /customerIdentityId/);
+    assert.doesNotMatch(await source("tpv/tpvVentas.web.js"), /customerContactId/);
     assert.doesNotMatch(catalog, /TPV_SANDBOX_FIXTURES/);
     const identities = await source("tpv/tpvSandboxIdentities.js");
     assert.match(identities, /BUSINESS_COLLECTIONS\.TPV_SANDBOX_IDENTITIES/);
@@ -379,6 +383,8 @@ test("TPV page is wired to the native POS widget bridge and canonical backend ex
     assert.match(html, /m\.payload\?\.status!=="SUCCESS"/);
     assert.match(html, /call\("CASHIER_STATE"/);
     assert.match(html, /call\("CUSTOMERS_SEARCH"/);
+    assert.match(html, /customerIdentityId/);
+    assert.doesNotMatch(html, /customerContactId/);
     assert.match(html, /call\("CATALOG_VARIANTS"/);
     assert.match(html, /keyedAction\("SALE","SALE_REGISTER"/);
     assert.match(html, /keyedAction\("CASH_IN","CASH_MOVEMENT"/);
