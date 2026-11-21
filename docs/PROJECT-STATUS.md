@@ -255,3 +255,9 @@ Completar primero contención de efectos externos, conciliación read-only, insp
 - [#520](https://github.com/nachoortegazgz/marianmadridz/issues/520) P0: inspección y contención de 8 automatizaciones ACTIVE, incluida una tarea LLM programada.
 - [#521](https://github.com/nachoortegazgz/marianmadridz/issues/521) P1: scan de accesibilidad falló en 121/121 páginas; URL personalizada no scan-eligible.
 - GSC Site Readiness: READY. No se modificó configuración SEO.
+
+
+### Catálogo Bookings — nuevo hallazgo #522
+- Wix Bookings V2: 94 servicios APPOINTMENT, 70 visibles/24 ocultos, 94 onlineBooking habilitados.
+- ServiciosCatalogo: 94 SERVICE + 1 PRICING_PLAN; los 94 IDs están mapeados sin huérfanos ni duplicados; precios/monedas de los 70 fijos y visibilidad coinciden.
+- Discrepancias de canal: 16 CMS onlinePayment=true con Bookings payment.options.online=false; 8 CMS inPersonPayment=false con Bookings payment.options.inPerson=true. Seguimiento [#522](https://github.com/nachoortegazgz/marianmadridz/issues/522). No modificar servicios hasta confirmar SSOT de negocio.
