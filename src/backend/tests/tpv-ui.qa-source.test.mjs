@@ -43,5 +43,6 @@ test("taxes remain locked until Wix POS tax rules are mapped to per-line tax amo
     const html = await read("%23htmlTPV.txt");
     assert.match(html, /id="tax"[^>]*disabled/);
     assert.match(html, /Impuestos \(reglas Wix pendientes\)/);
-    assert.match(html, /lineTaxMinor !== declaredTaxMinor/);
+    const controller = await read("src/public/tpvPageController.js");
+    assert.match(controller, /lineTaxMinor !== declaredTaxMinor/);
 });
