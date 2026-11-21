@@ -226,3 +226,7 @@ Los seis bookingId de CitasF2 existen en Bookings Reader V2 y están CANCELED na
 
 ### Accesibilidad — pageId
 El escaneo individual de Inicio por `pageId=cjg9` falló sin resultados (HTTP 428 `SCAN_RESULTS_NOT_AVAILABLE`). Se mantiene desconocido el estado WCAG; seguir issue #521 y usar revisión manual alternativa.
+
+
+### Wix Stores Catalog V3 — baseline read-only
+24 productos físicos; todos visibles, EUR e IN_STOCK. Variantes: 22×1, 1×2, 1×6. Rango de precio 9,95–38,50 EUR. No se probaron pedidos ni checkout.
