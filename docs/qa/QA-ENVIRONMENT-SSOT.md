@@ -222,3 +222,7 @@ Los seis bookingId de CitasF2 existen en Bookings Reader V2 y están CANCELED na
 
 ### Bookings Reader V2 — inventario global
 353 reservas nativas: 352 CANCELED y una CONFIRMED (inicio 2026-09-18T12:00Z) sin proyección CitasF2. Estado de asistencia no consultado. Seguimiento #523; no modificar reserva.
+
+
+### Accesibilidad — pageId
+El escaneo individual de Inicio por `pageId=cjg9` falló sin resultados (HTTP 428 `SCAN_RESULTS_NOT_AVAILABLE`). Se mantiene desconocido el estado WCAG; seguir issue #521 y usar revisión manual alternativa.
