@@ -232,3 +232,8 @@ Riesgo: CitasF2 puede presentar reservas canceladas como activas. No recrear, re
 
 Count Extended Bookings read-only devuelve 353 reservas nativas: 352 `CANCELED`, 1 `CONFIRMED`, 0 `PENDING`, 0 `CREATED`, 0 `DECLINED`, 0 `WAITING_LIST`.
 La única reserva nativa `CONFIRMED` tiene inicio `2026-09-18T12:00:00Z` y no tiene fila en CitasF2. No se consultó su información de contacto ni asistencia. Determinar si es un dato histórico/sintético de otra vía y si falta su proyección o registro de asistencia. No cancelarla ni reconfirmarla automáticamente. Se incorpora a [#523](https://github.com/nachoortegazgz/marianmadridz/issues/523).
+
+
+## 17. Scan individual de Inicio mediante pageId
+
+Se siguió el esquema oficial de Run Accessibility Scan: para una página Wix estática se utilizó `targetType=PAGE` y `page.pageId=cjg9` (Inicio), recuperado de los page summaries del scan full-site. El scan individual `a167faa3-4b5c-4f94-81d5-c0f0d496a2ae` terminó `ACCESSIBILITY_SCAN_STATUS_FAILED`: 1 descubierta, 0 procesadas, 1 fallida. La consulta de page summaries devolvió HTTP 428 `SCAN_RESULTS_NOT_AVAILABLE` sin resultados utilizables. El fallo persiste incluso con el identificador Wix correcto; no es solo un problema de dominio personalizado. Seguimiento [#521](https://github.com/nachoortegazgz/marianmadridz/issues/521).
