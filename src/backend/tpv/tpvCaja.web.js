@@ -5,7 +5,7 @@ import { TPV_SANDBOX_COLLECTIONS, TPV_SANDBOX_RUNTIME_POLICY } from "backend/int
 import { appendSandboxAudit, initializeSandboxCaja, seedSandboxIdentities, insertSandboxEvent, latestOpenSandboxSession, querySandboxRecords, withSandboxSessionLock } from "backend/tpv/tpvSandboxRepository";
 import { buildSandboxSessionSummary } from "backend/tpv/tpvCierresCore";
 import { wql } from "backend/dataAccess";
-import { assertTpvSandboxEnabled, fromMinorUnits, makeSyntheticPayload, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
+import { fromMinorUnits, makeSyntheticPayload, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
 
 function errorResult(code) {
     return { status: "ERROR", data: null, error: { code }, persisted: false, realPayment: false };
@@ -24,7 +24,7 @@ export const inicializarCaja = webMethod(
     async () => {
         const traceId = makeTraceId("tpv-sandbox-bootstrap");
         await requireCajero(traceId);
-        assertTpvSandboxEnabled();
+
         try {
             const result = await initializeSandboxCaja();
             const identities = await seedSandboxIdentities();
@@ -62,7 +62,7 @@ export const obtenerEstadoCaja = webMethod(
     async () => {
         const traceId = makeTraceId("tpv-sandbox-session-read");
         await requireCajero(traceId);
-        assertTpvSandboxEnabled();
+
         const session = await latestOpenSandboxSession();
         if (!session) return { status: "SUCCESS", data: null, error: null, traceId };
         const summary = await buildSandboxSessionSummary(session);
@@ -94,7 +94,7 @@ export const abrirSesionCaja = webMethod(
         let persisted = false;
         const traceId = makeTraceId("tpv-sandbox-session-open");
         await requireAdmin(traceId);
-        assertTpvSandboxEnabled();
+
         try {
             const openingCashMinor = toMinorUnits(input.openingCash, "OPENING_CASH");
             const dayKey = madridDayKey();
@@ -161,7 +161,7 @@ export const registrarArqueoParcial = webMethod(
         let persisted = false;
         const traceId = makeTraceId("tpv-sandbox-partial-count");
         await requireAdmin(traceId);
-        assertTpvSandboxEnabled();
+
         try {
             const session = await latestOpenSandboxSession();
             if (!session) return errorResult("TPV_SANDBOX_SESSION_NOT_OPEN");
