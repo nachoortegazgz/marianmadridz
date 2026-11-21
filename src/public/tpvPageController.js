@@ -141,7 +141,7 @@ async function dispatch(message) {
                 impuestosTotal: numeric(payload.tax, "TAX"),
                 totalVenta: numeric(payload.total, "TOTAL"),
                 profesionalId: payload.profesionalId || null,
-                customerContactId: payload.customerContactId || null,
+                customerIdentityId: payload.customerIdentityId || null,
             });
         }
 
