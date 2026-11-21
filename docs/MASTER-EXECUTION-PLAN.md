@@ -100,6 +100,8 @@ Ninguna fase posterior puede compensar un gate anterior fallido.
 
 **Objetivo:** saber qué está ejecutándose y evitar que las pruebas disparen acciones no controladas.
 
+**Bloqueo P0 #526:** el sitio está Published y 70 servicios visibles tienen reservas online habilitadas y ambos métodos de pago permitidos. Confirmar si el negocio quiere reservas públicas durante QA. Si no, aplicar contención reversible antes de probar.
+
 Acciones:
 - Mantener un único SHA de referencia y comprobar CI.
 - Confirmar sincronización Git ↔ Wix Editor y read-back de archivos/widgets.
@@ -244,7 +246,8 @@ Acciones:
 
 | Prioridad | Bloque | Issues de referencia | Gate |
 |---|---|---|---|
-| P0 | Automatizaciones/efectos externos | SSOT QA; auditoría Automations | F0 |
+| P0 | Automatizaciones/efectos externos | #520, SSOT QA; auditoría Automations | F0 |
+| P0 | Exposición pública de reservas | #526 | F0 |
 | P0 | Caja, ledger y compensaciones | #416, #525, H-01, #434, #441 | F1 |
 | P0 | Fiscalidad y cumplimiento | #209, #415 | F5 |
 | P1 | TPV Sandbox | #435, #495 (revisar, no integrar ciegamente) | F2 |
