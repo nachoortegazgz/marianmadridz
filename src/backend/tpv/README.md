@@ -18,6 +18,12 @@ Este directorio implementa el TPV en modo SANDBOX persistente y sintético para 
 - `CajaActual` solo se actualiza como proyección backend de la sesión sintética. No se escribe en `HistoricoCierresZ` ni `LibroAsientosContablesDetalle`.
 - Ticket Z cierra solo la sesión SANDBOX y nunca cierra el periodo fiscal u operativo.
 
+## Contrato del controlador TPV
+
+El controlador de página consume los doce WebMethods canónicos documentados en `docs/architecture/TPV-HTML-WIDGET-BRIDGE.md`. Los imports desde frontend deben usar los módulos públicos Wix con sufijo `.web` (por ejemplo, `backend/tpv/tpvVentas.web`). No se deben importar desde frontend repositorios, validadores ni helpers privados del directorio `/tpv`.
+
+Los métodos auxiliares `buscarClientesTPV`, `obtenerVariantesProducto` y `obtenerConfiguracionTPV` soportan respectivamente la selección de cliente sintético, la elección de variante del catálogo nativo y el handshake de entorno. Otros WebMethods de pagos, permisos, gift cards y auditoría permanecen aislados: no se conectan a botones mientras el diseño no exponga esos flujos. La lista de doce exportaciones del controlador no implica eliminar esos contratos auxiliares ni los consumidores internos existentes.
+
 ## Inventario
 
 | Módulo | Responsabilidad |
