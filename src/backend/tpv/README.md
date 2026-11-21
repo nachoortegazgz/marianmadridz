@@ -189,3 +189,30 @@ La colección física `MovimientosCaja` mantiene el índice `transactionId_uniqu
 La inspección read-only del 2026-11-20 confirmó el índice único sobre `transactionId`; no hay índice único de usuario sobre `traceId`, `operationType`, `singletonKey` o `posTransactionId`. La consulta CMS devolvió un registro sintético de prueba sin `transactionId`, por lo que no se identificó un valor histórico duplicado concreto. La causa de colisión se atribuye al espacio de nombres incompleto del generador, no a una fila concreta demostrada.
 
 La corrección de código no autoriza a repetir el arqueo en LIVE ni a modificar la configuración de índices. La validación runtime del arqueo, cierre de `CajaActual` y diferencia cero requiere Sandbox aislado, sesión y singleton presembrados y ejecución E2E autorizada. No se considera superada por pruebas unitarias/offline.
+
+
+## Contrato TPV POS nativo + extensiones Marian Madrid
+
+La interfaz `#htmlTPV` sigue el modelo operativo del POS nativo de Wix Dashboard, añadiendo funciones propias sin duplicar las fuentes nativas:
+- Servicios: Wix Bookings `services.queryServices`.
+- Productos: Wix Stores Catalog V3, filtrados por visibilidad POS.
+- Personal: identidades sintéticas Sandbox propias, no Wix Members ni contactos CRM.
+- Operaciones extendidas: sesión, venta sintética, movimientos, devolución, X/Z, resumen y movimientos.
+
+El controlador `src/public/tpvPageController.js` usa `createWidgetBridge` y reenvía los sobres WebMethod `{status,data,error}` sin doble anidamiento. El contrato de exportaciones exigido es:
+
+`obtenerEstadoCaja`, `abrirSesionCaja`, `obtenerServicios`, `obtenerProductos`, `obtenerStaff`, `registrarVenta`, `registrarMovimientoCaja`, `registrarDevolucion`, `generarControlX`, `generarCierreZ`, `obtenerResumenCaja`, `obtenerMovimientosCaja`.
+
+La configuración se obtiene adicionalmente mediante `obtenerConfiguracionTPV`; la UI solo permite continuar con `environment=SANDBOX`. La apertura, escritura, devolución y cierre mantienen las autorizaciones backend existentes.
+
+Conciliación de botones:
+- El controlador traduce el DTO HTML `lineItems/payments/subtotal/tax/total` al DTO backend `lineas/pagos/subtotalNeto/impuestosTotal/totalVenta`.
+- `PERSONALIZADA` se conserva como tipo de línea propio; no se falsea como servicio de catálogo.
+- La devolución requiere una asignación explícita por medio de pago original.
+- Control X es informativo y no solicita efectivo contado; Cierre Z recibe efectivo contado y motivo de diferencia.
+- Las operaciones idempotentes usan el `messageId` validado del puente como base de clave de solicitud.
+- El campo global de impuestos permanece bloqueado hasta mapear las reglas Wix por línea. No se prorratea ni se inventa un tipo impositivo.
+
+El listado `obtenerMovimientosCaja` consulta los eventos lógicos de movimientos y no debe confundirse con `consultarAuditoriaTPV`, que representa auditoría de acciones. La colección física sigue siendo `MovimientosCaja`; `SANDBOX_LOGICAL_*` son namespaces lógicos internos.
+
+**Límite:** la TPV personalizada sigue siendo Sandbox sintético. No activa Wix Payments, checkout, captura, reembolso real, emisión fiscal ni hardware. El uso de APIs nativas de catálogo no convierte las escrituras de caja en operaciones LIVE. La validación de Wix Preview/E2E queda pendiente.
