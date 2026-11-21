@@ -70,7 +70,9 @@ export const obtenerMovimientosCaja = webMethod(
         await requireCajero(traceId);
         assertTpvSandboxEnabled();
         try {
-            const limit = Math.min(100, Math.max(1, Math.floor(Number(input.limit || 50))));
+            const requestedLimit = Number(input.limit ?? 50);
+            if (!Number.isInteger(requestedLimit) || requestedLimit < 1 || requestedLimit > 100) throw new Error("TPV_INVALID_MOVEMENTS_LIMIT");
+            const limit = requestedLimit;
             const sessionId = String(input.sessionId || "").trim();
             const records = await querySandboxRecords(
                 TPV_SANDBOX_COLLECTIONS.MOVIMIENTOS_CAJA,
