@@ -14,15 +14,14 @@ export const obtenerPermisosTPV = webMethod(
         return {
             status: "SUCCESS",
             data: {
-                environment: TPV_SANDBOX_RUNTIME_POLICY.ENVIRONMENT,
                 role: staff?.rolWebsite || "UNKNOWN",
                 capabilities: {
                     read: true,
-                    createSyntheticSale: isAdmin,
-                    openSandboxSession: isAdmin,
+                    createSale: isAdmin,
+                    openSession: isAdmin,
                     registerCashMovement: isAdmin,
                     requestRefund: isAdmin,
-                    closeSandboxSession: isAdmin,
+                    closeSession: isAdmin,
                     issueTicketX: isAdmin,
                     issueTicketZ: isAdmin,
                     realPayments: TPV_SANDBOX_RUNTIME_POLICY.REAL_PAYMENTS_ENABLED,
