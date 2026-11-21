@@ -39,7 +39,8 @@ test("TPV controller imports all twelve canonical backend WebMethod names", asyn
     }
     assert.equal(Object.values(modules).flat().length, 12);
     assert.match(controller, /obtenerConfiguracionTPV/);
-    assert.match(controller, /environment: config\.status === "SUCCESS" \? config\.data\?\.environment : "UNAVAILABLE"/);
+    assert.match(controller, /currency: config.status === "SUCCESS"/);
+    assert.doesNotMatch(controller, /environment:|previewOnly:|syntheticOnly:/);
 });
 
 test("TPV controller dispatches the messages emitted by the POS widget", async () => {
