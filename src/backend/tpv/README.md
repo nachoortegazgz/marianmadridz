@@ -213,7 +213,7 @@ Conciliación de botones:
 - Las mutaciones usan claves estables por operación y sesión conservadas en `sessionStorage` (fallback en memoria); el controlador valida su formato. El `messageId` sirve para correlación y como fallback de idempotencia.
 - El campo global de impuestos permanece bloqueado hasta mapear las reglas Wix por línea. No se prorratea ni se inventa un tipo impositivo.
 
-El listado `obtenerMovimientosCaja` consulta los eventos lógicos de movimientos y no debe confundirse con `consultarAuditoriaTPV`, que representa auditoría de acciones. La colección física sigue siendo `MovimientosCaja`; `SANDBOX_LOGICAL_*` son namespaces lógicos internos.
+El listado `obtenerMovimientosCaja` consulta el ledger físico `MovimientosCaja` y filtra `recordSource` + `SANDBOX_RUN_ID`; muestra ventas confirmadas, movimientos, devoluciones y X/Z. No debe confundirse con `consultarAuditoriaTPV`, que representa auditoría de acciones. La colección física sigue siendo `MovimientosCaja`; `SANDBOX_LOGICAL_*` son namespaces lógicos internos.
 
 **Límite:** la TPV personalizada sigue siendo Sandbox sintético. No activa Wix Payments, checkout, captura, reembolso real, emisión fiscal ni hardware. El uso de APIs nativas de catálogo no convierte las escrituras de caja en operaciones LIVE. La validación de Wix Preview/E2E queda pendiente.
 
