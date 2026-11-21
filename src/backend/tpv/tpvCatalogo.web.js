@@ -88,10 +88,8 @@ export const buscarClientesTPV = webMethod(
                         displayName: item.displayName,
                         email: item.email || "",
                         phone: "",
-                        isSynthetic: true,
                     })),
                     pagingMetadata: null,
-                    syntheticOnly: true,
                 },
                 error: null,
                 traceId,
@@ -101,7 +99,6 @@ export const buscarClientesTPV = webMethod(
                 status: "ERROR",
                 data: null,
                 error: { code: String(error?.message || "TPV_CUSTOMER_SEARCH_FAILED") },
-                syntheticOnly: true,
                 traceId,
             };
         }
@@ -113,8 +110,8 @@ export const obtenerReservasClienteTPV = webMethod(
     async (input = {}) => {
         const traceId = makeTraceId("tpv-customer-bookings");
         await requireCajero(traceId);
-        const contactId = String(input.contactId || "").trim();
-        const customer = await getTpvSandboxIdentity(contactId, TPV_SANDBOX_IDENTITY_TYPES.CUSTOMER);
+        const identityId = String(input.identityId || "").trim();
+        const customer = await getTpvSandboxIdentity(identityId, TPV_SANDBOX_IDENTITY_TYPES.CUSTOMER);
         if (!customer) {
             return {
                 status: "ERROR",
@@ -126,7 +123,7 @@ export const obtenerReservasClienteTPV = webMethod(
         }
         return {
             status: "SUCCESS",
-            data: { items: [], pagingMetadata: null, syntheticOnly: true },
+            data: { items: [], pagingMetadata: null },
             error: null,
             traceId,
         };
