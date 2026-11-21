@@ -175,3 +175,7 @@ El estado anterior de automatizaciones y CMS queda actualizado por [la auditorí
 
 ### Accesibilidad — diagnóstico pageId
 El scan individual de Inicio con pageId Wix `cjg9` también terminó FAILED (1 descubierta, 0 procesadas, 1 fallida) y los resultados devolvieron `SCAN_RESULTS_NOT_AVAILABLE` HTTP 428. El fallo no se limita al dominio personalizado. Issue #521 actualizado.
+
+
+### Tienda — inventario nativo
+Stores Catalog V3: 24 productos físicos, visibles, EUR e IN_STOCK; 22 con una variante, uno con dos y uno con seis; rango 9,95–38,50 EUR. Sin checkout ni escrituras.
