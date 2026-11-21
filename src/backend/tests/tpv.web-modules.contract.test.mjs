@@ -223,8 +223,10 @@ test("TPV WebMethods isolate synthetic SANDBOX writes from operational ledgers",
     assert.match(config, /FISCAL_WRITES_ENABLED: false/);
     assert.match(config, /SYNTHETIC_ONLY: true/);
     assert.match(config, /TPV_SANDBOX_RUNTIME_POLICY = Object\.freeze\(\{[\s\S]*?ENABLED: true/);
-    assert.match(await readFile(new URL("../public/tpvPageController.js", backendRoot), "utf8"), /inicializarCaja/);
-    assert.match(await readFile(new URL("../public/tpvPageController.js", backendRoot), "utf8"), /sandboxReady/);
+    const controllerSource = await readFile(new URL("../public/tpvPageController.js", backendRoot), "utf8");
+    for (const method of ["obtenerEstadoCaja", "abrirSesionCaja", "obtenerServicios", "obtenerProductos", "obtenerStaff", "registrarVenta", "registrarMovimientoCaja", "registrarDevolucion", "generarControlX", "generarCierreZ", "obtenerResumenCaja", "obtenerMovimientosCaja"]) assert.ok(controllerSource.includes(method));
+    assert.match(controllerSource, /environment: "SANDBOX"/);
+    assert.doesNotMatch(controllerSource, /environment: "LIVE"/);
     assert.match(config, /SANDBOX_RUN_ID: "TPVSANDBOX-DEV-/);
     assert.match(config, /TPV_SANDBOX_EVENT_MOVEMENT_TYPES/);
     for (const writer of [cash, movements, sales, closures]) {
@@ -292,37 +294,24 @@ test("TPV page is wired to the shared HTML bridge and its versioned iframe proto
     assert.match(page, /initializeTpvPage\(widget\)/);
     assert.doesNotMatch(page, /TPV_REQUEST_STATE|TPV_READY|getCashierState/);
 
-    assert.match(controller, /MESSAGE_TYPES\.READY/);
+    assert.match(controller, /createWidgetBridge/);
+    assert.match(controller, /MESSAGE_TYPES\\.READY/);
     assert.match(controller, /onContextReady:/);
-    assert.match(controller, /"CASHIER_STATE"/);
-    assert.match(controller, /CASHIER_STATE_RES/);
-    assert.match(controller, /CATALOG_SERVICES/);
-    assert.match(controller, /CATALOG_STAFF/);
-    assert.match(controller, /obtenerServicios/);
-    assert.match(controller, /obtenerProfesionales/);
-    assert.match(controller, /obtenerProductos/);
-    assert.match(controller, /obtenerVariantesProducto/);
-    assert.match(controller, /validarVentaBorrador/);
-    assert.match(controller, /generarTicketX/);
-    assert.match(controller, /SANDBOX_TICKET_X/);
-    assert.match(controller, /consultarTarjetaRegalo/);
-    assert.match(controller, /GIFT_CARD_BALANCE/);
-    assert.match(controller, /obtenerSesionCaja/);
-    assert.match(controller, /reply\(responseType, result, message\)/);
-    assert.doesNotMatch(controller, /\bgetCashierState\b/);
+    assert.match(controller, /environment: "SANDBOX"/);
+    assert.match(controller, /syntheticOnly: true/);
+    for (const type of ["CASHIER_STATE", "SESSION_OPEN", "CATALOG_SERVICES", "CATALOG_PRODUCTS", "CATALOG_STAFF", "SALE_REGISTER", "CASH_MOVEMENT", "REFUND", "TICKET_X", "TICKET_Z", "SESSION_SUMMARY", "AUDIT_LIST"]) assert.ok(controller.includes(type));
+    for (const method of ["obtenerEstadoCaja", "abrirSesionCaja", "obtenerServicios", "obtenerProductos", "obtenerStaff", "registrarVenta", "registrarMovimientoCaja", "registrarDevolucion", "generarControlX", "generarCierreZ", "obtenerResumenCaja", "obtenerMovimientosCaja"]) assert.ok(controller.includes(method));
+    assert.match(controller, /reply\\(responseType, result, message\\)/);
+    assert.doesNotMatch(controller, /environment: ["']LIVE["']/);
+    assert.doesNotMatch(controller, /ALLOWED_ORIGIN = ["']\\*["']/);
 
-    assert.match(html, /send\("MM_READY"/);
-    assert.match(html, /m\.type==="MM_CONTEXT"/);
-    assert.match(html, /send\("CASHIER_STATE"/);
-    assert.match(html, /m\.type==="CASHIER_STATE_RES"/);
-    assert.match(html, /send\("CATALOG_SERVICES"/);
-    assert.match(html, /send\("CATALOG_STAFF"/);
-    assert.match(html, /m\.type==="CATALOG_SERVICES_RES"/);
-    assert.match(html, /m\.type==="CATALOG_STAFF_RES"/);
-    assert.match(html, /GIFT_CARD_BALANCE_RES/);
-    assert.doesNotMatch(html, /function lookupGiftCard/);
-    assert.doesNotMatch(html, /giftCardAmount|giftCardType/);
-    assert.match(html, /finalizeSynthetic/);
+    assert.match(html, /send\\("MM_READY"/);
+    assert.match(html, /m\\.type==="MM_CONTEXT"/);
+    for (const type of ["CASHIER_STATE", "SESSION_OPEN", "CATALOG_SERVICES", "CATALOG_PRODUCTS", "CATALOG_STAFF", "SALE_REGISTER", "CASH_MOVEMENT", "REFUND", "TICKET_X", "TICKET_Z", "SESSION_SUMMARY", "AUDIT_LIST"]) assert.ok(html.includes('send("' + type + '"'));
+    assert.match(html, /data-tax/);
+    assert.match(html, /taxTotal/);
+    assert.match(html, /payments:\\[\\{paymentMethod,amount\\}\\]/);
+    assert.match(html, /state\\.lastSale=result/);
 
     const inlineScript = html.match(/<script>([\s\S]*?)<\/script>/)?.[1];
     assert.ok(inlineScript, "TPV HTML component must contain its runtime script");
