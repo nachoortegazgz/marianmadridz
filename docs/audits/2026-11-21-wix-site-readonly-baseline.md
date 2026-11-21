@@ -253,3 +253,15 @@ Revisión estática de `cajas.web.js`, `eventLog.js`, `events.js` y `tpvSandboxR
 - TPV usa lock de sesión propio en `ControlOperativo`, distinto del lock fiscal.
 
 Esto no demuestra un lost update ocurrido, pero sí que la serialización no está garantizada en todos los call paths. Seguimiento P0 [#525](https://github.com/nachoortegazgz/marianmadridz/issues/525). No ejecutar pruebas concurrentes en LIVE ni modificar datos; definir lock/CAS común y pruebas aisladas.
+
+
+## 20. Webhook booking markers — corrección de la consulta
+
+La consulta de ControlOperativo se repitió siguiendo el contrato de `events.js`: el tipo de evento se almacena en `payload.eventType`, no necesariamente en el campo raíz. Distribución de 58 filas:
+- `BOOKING_CREATED`: 12
+- `BOOKING_CONFIRMED`: 10
+- `BOOKING_RESCHEDULED`: 2
+- `BOOKING_CANCELED`: 0
+- 14 filas sin tipo de evento clasificado (resto incluye otros controles).
+
+El handler `wixBookingsV2_onBookingCanceled` está exportado en `events.js` y tiene pruebas offline en `events.booking-canceled.integrity.test.mjs`. La ausencia de markers CANCELED junto a la divergencia CitasF2/Bookings indica que el runtime instalado no acredita la entrega/procesamiento de esos eventos históricos. Verificar SHA/registro de `events.js` y delivery en Wix; no reinyectar eventos ni mutar proyecciones sin evidencia. Seguimiento #523.
