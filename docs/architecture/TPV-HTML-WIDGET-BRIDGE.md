@@ -118,3 +118,6 @@ El código versionado no demuestra por sí solo sincronización del Editor ni ej
 
 
 Las operaciones de escritura (apertura, venta, movimiento, devolución y X/Z) conservan el `requireAdmin` vigente; elegir un operador sintético solo atribuye la operación y no concede permisos. Las consultas usan `requireCajero`.
+
+
+No se descuenta inventario ni se escribe en Stores durante la simulación.
