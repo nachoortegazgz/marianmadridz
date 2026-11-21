@@ -210,7 +210,7 @@ Conciliación de botones:
 - `PERSONALIZADA` se conserva como tipo de línea propio; no se falsea como servicio de catálogo.
 - La devolución requiere una asignación explícita por medio de pago original.
 - Control X es informativo y no solicita efectivo contado; Cierre Z recibe efectivo contado y motivo de diferencia.
-- Las operaciones idempotentes usan el `messageId` validado del puente como base de clave de solicitud.
+- Las mutaciones usan claves estables por operación y sesión conservadas en `sessionStorage` (fallback en memoria); el controlador valida su formato. El `messageId` sirve para correlación y como fallback de idempotencia.
 - El campo global de impuestos permanece bloqueado hasta mapear las reglas Wix por línea. No se prorratea ni se inventa un tipo impositivo.
 
 El listado `obtenerMovimientosCaja` consulta los eventos lógicos de movimientos y no debe confundirse con `consultarAuditoriaTPV`, que representa auditoría de acciones. La colección física sigue siendo `MovimientosCaja`; `SANDBOX_LOGICAL_*` son namespaces lógicos internos.
