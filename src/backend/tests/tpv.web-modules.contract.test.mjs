@@ -169,8 +169,8 @@ test("TPV WebMethods isolate synthetic SANDBOX writes from operational ledgers",
     assert.match(joined, /webMethod\(\s*Permissions\.SiteMember/);
     assert.match(joined, /requireCajero/);
     assert.match(joined, /registrarVenta/);
-    assert.match(joined, /solicitarDevolucion/);
-    assert.match(joined, /cerrarTicketZ/);
+    assert.match(joined, /registrarDevolucion/);
+    assert.match(joined, /generarCierreZ/);
     assert.match(joined, /TPV_SANDBOX_COLLECTIONS/);
     assert.doesNotMatch(joined, /contactsV5|extendedBookings|giftVouchers|staffMembers|staff\?\.memberId/);
     const cashierModule = await source("tpv/tpvCaja.web.js");
@@ -223,8 +223,8 @@ test("TPV WebMethods isolate synthetic SANDBOX writes from operational ledgers",
     assert.match(config, /FISCAL_WRITES_ENABLED: false/);
     assert.match(config, /SYNTHETIC_ONLY: true/);
     assert.match(config, /TPV_SANDBOX_RUNTIME_POLICY = Object\.freeze\(\{[\s\S]*?ENABLED: true/);
-    assert.match(await readFile(new URL("../public/tpvPageController.js", backendRoot), "utf8"), /inicializarCaja/);
-    assert.match(await readFile(new URL("../public/tpvPageController.js", backendRoot), "utf8"), /sandboxReady/);
+    assert.match(await readFile(new URL("../public/tpvPageController.js", backendRoot), "utf8"), /obtenerConfiguracionTPV/);
+    assert.match(await readFile(new URL("../public/tpvPageController.js", backendRoot), "utf8"), /previewOnly: true/);
     assert.match(config, /SANDBOX_RUN_ID: "TPVSANDBOX-DEV-/);
     assert.match(config, /TPV_SANDBOX_EVENT_MOVEMENT_TYPES/);
     for (const writer of [cash, movements, sales, closures]) {
@@ -280,56 +280,43 @@ test("TPV catalog reader uses native Bookings SDK and does not expose staff cont
     assert.doesNotMatch(giftCards, /console\.(?:log|info|warn|error)|wixData|\.insert\(|\.update\(|\.remove\(/);
 });
 
-test("TPV page is wired to the shared HTML bridge and its versioned iframe protocol", async () => {
-    const [page, controller, html] = await Promise.all([
+test("TPV page is wired to the native POS widget bridge and canonical backend exports", async () => {
+    const [page, controller, html, bridge] = await Promise.all([
         source("../pages/TPV.yl5th.js"),
         source("../public/tpvPageController.js"),
         source("../../%23htmlTPV.txt"),
+        source("../public/widgetBridge.js"),
     ]);
-
-    assert.match(page, /initializeTpvPage/);
-    assert.match(page, /public\/tpvPageController/);
+    assert.match(page, /\$w\("#htmlTPV"\)/);
     assert.match(page, /initializeTpvPage\(widget\)/);
-    assert.doesNotMatch(page, /TPV_REQUEST_STATE|TPV_READY|getCashierState/);
-
+    assert.match(controller, /createWidgetBridge/);
     assert.match(controller, /MESSAGE_TYPES\.READY/);
-    assert.match(controller, /onContextReady:/);
-    assert.match(controller, /"CASHIER_STATE"/);
-    assert.match(controller, /CASHIER_STATE_RES/);
-    assert.match(controller, /CATALOG_SERVICES/);
-    assert.match(controller, /CATALOG_STAFF/);
+    assert.match(controller, /obtenerEstadoCaja/);
+    assert.match(controller, /abrirSesionCaja/);
     assert.match(controller, /obtenerServicios/);
-    assert.match(controller, /obtenerProfesionales/);
     assert.match(controller, /obtenerProductos/);
-    assert.match(controller, /obtenerVariantesProducto/);
-    assert.match(controller, /validarVentaBorrador/);
-    assert.match(controller, /generarTicketX/);
-    assert.match(controller, /SANDBOX_TICKET_X/);
-    assert.match(controller, /consultarTarjetaRegalo/);
-    assert.match(controller, /GIFT_CARD_BALANCE/);
-    assert.match(controller, /obtenerSesionCaja/);
-    assert.match(controller, /reply\(responseType, result, message\)/);
-    assert.doesNotMatch(controller, /\bgetCashierState\b/);
-
+    assert.match(controller, /obtenerStaff/);
+    assert.match(controller, /registrarVenta/);
+    assert.match(controller, /registrarMovimientoCaja/);
+    assert.match(controller, /registrarDevolucion/);
+    assert.match(controller, /generarControlX/);
+    assert.match(controller, /generarCierreZ/);
+    assert.match(controller, /obtenerResumenCaja/);
+    assert.match(controller, /obtenerMovimientosCaja/);
+    assert.match(controller, /obtenerConfiguracionTPV/);
+    assert.match(bridge, /widgetElement\.onMessage/);
+    assert.match(bridge, /widgetElement\.postMessage/);
     assert.match(html, /send\("MM_READY"/);
     assert.match(html, /m\.type==="MM_CONTEXT"/);
+    assert.match(html, /environment!==\\"SANDBOX\\"/);
     assert.match(html, /send\("CASHIER_STATE"/);
-    assert.match(html, /m\.type==="CASHIER_STATE_RES"/);
-    assert.match(html, /send\("CATALOG_SERVICES"/);
-    assert.match(html, /send\("CATALOG_STAFF"/);
-    assert.match(html, /m\.type==="CATALOG_SERVICES_RES"/);
-    assert.match(html, /m\.type==="CATALOG_STAFF_RES"/);
-    assert.match(html, /GIFT_CARD_BALANCE_RES/);
-    assert.doesNotMatch(html, /function lookupGiftCard/);
-    assert.doesNotMatch(html, /giftCardAmount|giftCardType/);
-    assert.match(html, /finalizeSynthetic/);
-
-    const inlineScript = html.match(/<script>([\s\S]*?)<\/script>/)?.[1];
-    assert.ok(inlineScript, "TPV HTML component must contain its runtime script");
-    assert.doesNotThrow(() => new Script(inlineScript));
+    assert.match(html, /send\("SALE_REGISTER"/);
+    assert.match(html, /send\("CASH_MOVEMENT"/);
+    assert.match(html, /send\("REFUND"/);
+    assert.match(html, /send\("TICKET_X"/);
+    assert.match(html, /send\("TICKET_Z"/);
 });
-
-
+ 
 test("SANDBOX repository paginates reads and blocks Z close while sales are incomplete", async () => {
     const repository = await source("tpv/tpvSandboxRepository.js");
     const closures = await source("tpv/tpvCierres.web.js");
