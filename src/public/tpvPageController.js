@@ -4,13 +4,13 @@
  * All business rules and persistence remain in authenticated backend WebMethods.
  */
 import { createWidgetBridge, MESSAGE_TYPES, PROTOCOL_VERSION } from "public/widgetBridge";
-import { obtenerEstadoCaja, abrirSesionCaja } from "backend/tpv/tpvCaja";
-import { obtenerServicios, obtenerProductos, obtenerStaff, obtenerVariantesProducto, buscarClientesTPV } from "backend/tpv/tpvCatalogo";
-import { registrarVenta } from "backend/tpv/tpvVentas";
-import { registrarMovimientoCaja, obtenerMovimientosCaja } from "backend/tpv/tpvMovimientos";
-import { registrarDevolucion } from "backend/tpv/tpvDevoluciones";
-import { generarControlX, generarCierreZ, obtenerResumenCaja } from "backend/tpv/tpvCierres";
-import { obtenerConfiguracionTPV } from "backend/tpv/tpvUtils";
+import { obtenerEstadoCaja, abrirSesionCaja } from "backend/tpv/tpvCaja.web";
+import { obtenerServicios, obtenerProductos, obtenerStaff, obtenerVariantesProducto, buscarClientesTPV } from "backend/tpv/tpvCatalogo.web";
+import { registrarVenta } from "backend/tpv/tpvVentas.web";
+import { registrarMovimientoCaja, obtenerMovimientosCaja } from "backend/tpv/tpvMovimientos.web";
+import { registrarDevolucion } from "backend/tpv/tpvDevoluciones.web";
+import { generarControlX, generarCierreZ, obtenerResumenCaja } from "backend/tpv/tpvCierres.web";
+import { obtenerConfiguracionTPV } from "backend/tpv/tpvUtils.web";
 
 const REQUEST_TYPES = Object.freeze([
     "CASHIER_STATE",
