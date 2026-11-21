@@ -397,6 +397,7 @@ test("SANDBOX repository paginates reads and blocks Z close while sales are inco
     assert.match(repository, /refundCashMovements\.length !== expectedCash\.count/);
     assert.match(repository, /actualCashAmount !== expectedCash\.amountMinor/);
     assert.match(repository, /refundTotal !== Number\(refund\.amountMinor\)/);
+    assert.match(closures, /input\.sessionId && input\.sessionId !== session\.sessionId/);
     assert.match(closures, /getPendingSandboxSales\(session\.sessionId\)/);
     assert.match(closures, /TPV_SANDBOX_PENDING_SALES_PREVENT_CLOSE/);
     assert.match(closures, /getPendingSandboxRefunds\(session\.sessionId\)/);
