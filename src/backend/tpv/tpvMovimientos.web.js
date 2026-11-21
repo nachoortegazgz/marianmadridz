@@ -5,6 +5,14 @@ import { TPV_SANDBOX_COLLECTIONS, TPV_SANDBOX_RUNTIME_POLICY } from "backend/int
 import { insertSandboxEvent, latestOpenSandboxSession, querySandboxLedgerRecords, withSandboxSessionLock } from "backend/tpv/tpvSandboxRepository";
 import { assertTpvSandboxEnabled, fromMinorUnits, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
 
+const TPV_LEDGER_DISPLAY_TYPES = Object.freeze({
+    SIMULATED_TPV_SALE: "VENTA",
+    SIMULATED_TPV_CASH_MOVEMENT: null,
+    SIMULATED_TPV_REFUND: "DEVOLUCION",
+    SIMULATED_TPV_TICKET_X: "CONTROL_X",
+    SIMULATED_TPV_TICKET_Z: "CIERRE_Z",
+});
+
 export const registrarMovimientoCaja = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
@@ -75,13 +83,7 @@ export const obtenerMovimientosCaja = webMethod(
             }
             const sessionId = String(input.sessionId || "").trim();
             const ledger = await querySandboxLedgerRecords({ limit: 1000 });
-            const visibleTypes = new Set([
-                "SIMULATED_TPV_SALE",
-                "SIMULATED_TPV_CASH_MOVEMENT",
-                "SIMULATED_TPV_REFUND",
-                "SIMULATED_TPV_TICKET_X",
-                "SIMULATED_TPV_TICKET_Z",
-            ]);
+            const visibleTypes = new Set(Object.keys(TPV_LEDGER_DISPLAY_TYPES));
             const items = ledger.records
                 .filter((record) => {
                     const sourceType = String(record.cmsMovementType || "");
@@ -91,21 +93,14 @@ export const obtenerMovimientosCaja = webMethod(
                     return !sessionId || recordSessionId === sessionId;
                 })
                 .map((record) => {
-                    const amountMinor = Number.isSafeInteger(Number(record.amountMinor))
-                        ? Number(record.amountMinor)
-                        : Number.isSafeInteger(Number(record.totalMinor))
-                            ? Number(record.totalMinor)
-                            : null;
+                    let amountMinor = null;
+                    if (record.amountMinor !== undefined && record.amountMinor !== null && Number.isSafeInteger(Number(record.amountMinor))) {
+                        amountMinor = Number(record.amountMinor);
+                    } else if (record.totalMinor !== undefined && record.totalMinor !== null && Number.isSafeInteger(Number(record.totalMinor))) {
+                        amountMinor = Number(record.totalMinor);
+                    }
                     const sourceType = String(record.cmsMovementType || "");
-                    const movementType = sourceType === "SIMULATED_TPV_SALE"
-                        ? "VENTA"
-                        : sourceType === "SIMULATED_TPV_REFUND"
-                            ? "DEVOLUCION"
-                            : sourceType === "SIMULATED_TPV_TICKET_X"
-                                ? "CONTROL_X"
-                                : sourceType === "SIMULATED_TPV_TICKET_Z"
-                                    ? "CIERRE_Z"
-                                    : String(record.movementType || "MOVIMIENTO_CAJA");
+                    const movementType = TPV_LEDGER_DISPLAY_TYPES[sourceType] || String(record.movementType || "MOVIMIENTO_CAJA");
                     return {
                         movementId: record._id,
                         sessionId: record.sessionId || record.payload?.sessionId || null,
