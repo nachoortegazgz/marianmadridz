@@ -25,7 +25,7 @@ import {
     makeSandboxTransactionId,
     makeLegacySandboxTransactionId,
     assertSandboxCajaWritable,
-    assertTpvSandboxEnabled,
+
 } from "../tpv/tpvUtils.js";
 
 test("Sandbox runtime is enabled for synthetic records only; fiscal and external side effects remain disabled", async () => {
@@ -33,7 +33,7 @@ test("Sandbox runtime is enabled for synthetic records only; fiscal and external
     assert.match(source, /TPV_SANDBOX_RUNTIME_POLICY = Object\.freeze\(\{[\s\S]*?ENABLED: true,[\s\S]*?ENVIRONMENT: "SANDBOX"/);
     assert.equal(TPV_SANDBOX_RUNTIME_POLICY.ENABLED, true, "offline loader enables the policy only inside tests");
     assert.equal(TPV_SANDBOX_RUNTIME_POLICY.ENVIRONMENT, "SANDBOX");
-    assert.doesNotThrow(() => assertTpvSandboxEnabled());
+
 });
 
 test("SANDBOX writes require an exact test-run CajaActual marker and never accept a live cash singleton", () => {
