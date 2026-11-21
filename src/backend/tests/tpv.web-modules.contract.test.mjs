@@ -323,7 +323,7 @@ test("TPV page is wired to the native POS widget bridge and canonical backend ex
     assert.match(controller, /obtenerConfiguracionTPV/);
     assert.match(bridge, /widgetElement\.onMessage/);
     assert.match(bridge, /widgetElement\.postMessage/);
-    assert.match(html, /call\("MM_READY"/);
+    assert.match(html, /send\("MM_READY"/);
     assert.match(html, /m\.type==="MM_CONTEXT"/);
     assert.match(html, /environment!=="SANDBOX"/);
     assert.match(html, /call\("CASHIER_STATE"/);
