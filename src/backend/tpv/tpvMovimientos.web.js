@@ -1,9 +1,17 @@
 import { Permissions, webMethod } from "wix-web-module";
-import { requireAdmin } from "backend/security";
+import { requireAdmin, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { TPV_SANDBOX_COLLECTIONS, TPV_SANDBOX_RUNTIME_POLICY } from "backend/internalConfig";
-import { insertSandboxEvent, latestOpenSandboxSession, withSandboxSessionLock } from "backend/tpv/tpvSandboxRepository";
+import { insertSandboxEvent, latestOpenSandboxSession, querySandboxLedgerRecords, withSandboxSessionLock } from "backend/tpv/tpvSandboxRepository";
 import { assertTpvSandboxEnabled, fromMinorUnits, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
+
+const TPV_LEDGER_DISPLAY_TYPES = Object.freeze({
+    SIMULATED_TPV_SALE: "VENTA",
+    SIMULATED_TPV_CASH_MOVEMENT: null,
+    SIMULATED_TPV_REFUND: "DEVOLUCION",
+    SIMULATED_TPV_TICKET_X: "CONTROL_X",
+    SIMULATED_TPV_TICKET_Z: "CIERRE_Z",
+});
 
 export const registrarMovimientoCaja = webMethod(
     Permissions.SiteMember,
@@ -57,6 +65,78 @@ export const registrarMovimientoCaja = webMethod(
             });
         } catch (error) {
             return { status: "ERROR", data: null, error: { code: String(error?.message || "TPV_SANDBOX_CASH_MOVEMENT_FAILED") }, persisted, recoverable: persisted, isSynthetic: true, realPayment: false, traceId };
+        }
+    }
+);
+
+
+export const obtenerMovimientosCaja = webMethod(
+    Permissions.SiteMember,
+    async (input = {}) => {
+        const traceId = makeTraceId("tpv-sandbox-cash-movements-read");
+        await requireCajero(traceId);
+        assertTpvSandboxEnabled();
+        try {
+            const limit = Number(input.limit ?? 50);
+            if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+                throw new Error("TPV_INVALID_MOVEMENTS_LIMIT");
+            }
+            const sessionId = String(input.sessionId || "").trim();
+            const ledger = await querySandboxLedgerRecords({ limit: 1000 });
+            const visibleTypes = new Set(Object.keys(TPV_LEDGER_DISPLAY_TYPES));
+            const items = ledger.records
+                .filter((record) => {
+                    const sourceType = String(record.cmsMovementType || "");
+                    if (!visibleTypes.has(sourceType)) return false;
+                    if (sourceType === "SIMULATED_TPV_SALE" && record.status !== "CONFIRMADA_SINTETICA") return false;
+                    const recordSessionId = String(record.sessionId || record.payload?.sessionId || "");
+                    return !sessionId || recordSessionId === sessionId;
+                })
+                .map((record) => {
+                    let amountMinor = null;
+                    if (record.amountMinor !== undefined && record.amountMinor !== null && Number.isSafeInteger(Number(record.amountMinor))) {
+                        amountMinor = Number(record.amountMinor);
+                    } else if (record.totalMinor !== undefined && record.totalMinor !== null && Number.isSafeInteger(Number(record.totalMinor))) {
+                        amountMinor = Number(record.totalMinor);
+                    }
+                    const sourceType = String(record.cmsMovementType || "");
+                    const movementType = TPV_LEDGER_DISPLAY_TYPES[sourceType] || String(record.movementType || "MOVIMIENTO_CAJA");
+                    return {
+                        movementId: record._id,
+                        sessionId: record.sessionId || record.payload?.sessionId || null,
+                        movementType,
+                        sourceType,
+                        amount: amountMinor === null ? null : fromMinorUnits(amountMinor),
+                        paymentMethod: record.paymentMethod || null,
+                        reason: record.reason || record.totals?.differenceReason || "",
+                        reference: record.saleId || record.refundId || record.reportId || record._id,
+                        status: record.status || null,
+                        createdAt: record.createdAt || record.generatedAt || record._createdDate || null,
+                        totals: record.totals || null,
+                        currency: record.currency || "EUR",
+                        isSynthetic: true,
+                        persisted: true,
+                    };
+                })
+                .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+                .slice(0, limit);
+            return {
+                status: "SUCCESS",
+                data: {
+                    items,
+                    syntheticOnly: true,
+                    truncated: ledger.hasMore,
+                },
+                error: null,
+                traceId,
+            };
+        } catch (error) {
+            return {
+                status: "ERROR",
+                data: null,
+                error: { code: String(error?.message || "TPV_SANDBOX_CASH_MOVEMENTS_READ_FAILED") },
+                traceId,
+            };
         }
     }
 );

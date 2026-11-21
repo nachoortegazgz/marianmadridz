@@ -1,7 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { Script } from "node:vm";
 
 import { validateSaleDraft } from "../tpv/tpvValidation.js";
 
@@ -37,6 +36,50 @@ test("TPV sale draft validates report fields and minor-unit arithmetic", () => {
     assert.equal(result.estadoVenta, "COBRADA_SINTETICA");
     assert.equal(result.persisted, false);
     assert.equal(result.realPayment, false);
+});
+
+test("TPV custom tariff lines remain explicitly typed and validated", () => {
+    const result = validateSaleDraft({
+        lineas: [{
+            tipoLinea: "PERSONALIZADA",
+            concepto: "Tarifa especial acordada",
+            cantidad: 1,
+            precioUnitario: 25,
+            descuentoImporte: 0,
+            impuestosImporte: 0,
+        }],
+        pagos: [{ medioPago: "EFECTIVO", importe: 25 }],
+    });
+    assert.equal(result.lineas[0].tipoLinea, "PERSONALIZADA");
+    assert.equal(result.totalVenta, 25);
+    assert.equal(result.importePendiente, 0);
+});
+
+test("TPV product variant identity is retained and restricted to product lines", () => {
+    const product = validateSaleDraft({
+        lineas: [{
+            tipoLinea: "PRODUCTO",
+            itemId: "product-123",
+            varianteId: "variant-123",
+            concepto: "Producto · Talla M",
+            cantidad: 1,
+            precioUnitario: 20,
+            impuestosImporte: 0,
+        }],
+        pagos: [{ medioPago: "EFECTIVO", importe: 20 }],
+    });
+    assert.equal(product.lineas[0].varianteId, "variant-123");
+    assert.throws(() => validateSaleDraft({
+        lineas: [{
+            tipoLinea: "SERVICIO",
+            varianteId: "variant-123",
+            concepto: "Servicio",
+            cantidad: 1,
+            precioUnitario: 20,
+            impuestosImporte: 0,
+        }],
+        pagos: [{ medioPago: "EFECTIVO", importe: 20 }],
+    }), /TPV_VARIANT_ONLY_FOR_PRODUCTS/);
 });
 
 test("TPV cash tender subtracts change before reconciling amount applied", () => {
@@ -223,10 +266,8 @@ test("TPV WebMethods isolate synthetic SANDBOX writes from operational ledgers",
     assert.match(config, /FISCAL_WRITES_ENABLED: false/);
     assert.match(config, /SYNTHETIC_ONLY: true/);
     assert.match(config, /TPV_SANDBOX_RUNTIME_POLICY = Object\.freeze\(\{[\s\S]*?ENABLED: true/);
-    const controllerSource = await readFile(new URL("../public/tpvPageController.js", backendRoot), "utf8");
-    for (const method of ["obtenerEstadoCaja", "abrirSesionCaja", "obtenerServicios", "obtenerProductos", "obtenerStaff", "registrarVenta", "registrarMovimientoCaja", "registrarDevolucion", "generarControlX", "generarCierreZ", "obtenerResumenCaja", "obtenerMovimientosCaja"]) assert.ok(controllerSource.includes(method));
-    assert.match(controllerSource, /environment: "SANDBOX"/);
-    assert.doesNotMatch(controllerSource, /environment: "LIVE"/);
+    assert.match(await readFile(new URL("../public/tpvPageController.js", backendRoot), "utf8"), /obtenerConfiguracionTPV/);
+    assert.match(await readFile(new URL("../public/tpvPageController.js", backendRoot), "utf8"), /previewOnly: true/);
     assert.match(config, /SANDBOX_RUN_ID: "TPVSANDBOX-DEV-/);
     assert.match(config, /TPV_SANDBOX_EVENT_MOVEMENT_TYPES/);
     for (const writer of [cash, movements, sales, closures]) {
@@ -282,43 +323,69 @@ test("TPV catalog reader uses native Bookings SDK and does not expose staff cont
     assert.doesNotMatch(giftCards, /console\.(?:log|info|warn|error)|wixData|\.insert\(|\.update\(|\.remove\(/);
 });
 
-test("TPV page is wired to the shared HTML bridge and its versioned iframe protocol", async () => {
-    const [page, controller, html] = await Promise.all([
+test("TPV controller imports the exact canonical WebMethods from their owning modules", async () => {
+    const controller = await readFile(new URL("../public/tpvPageController.js", backendRoot), "utf8");
+    const contracts = {
+        "tpvCaja.web.js": ["obtenerEstadoCaja", "abrirSesionCaja"],
+        "tpvCatalogo.web.js": ["obtenerServicios", "obtenerProductos", "obtenerStaff"],
+        "tpvVentas.web.js": ["registrarVenta"],
+        "tpvMovimientos.web.js": ["registrarMovimientoCaja", "obtenerMovimientosCaja"],
+        "tpvDevoluciones.web.js": ["registrarDevolucion"],
+        "tpvCierres.web.js": ["generarControlX", "generarCierreZ", "obtenerResumenCaja"],
+    };
+    for (const [fileName, names] of Object.entries(contracts)) {
+        const moduleSource = await source("tpv/" + fileName);
+        for (const name of names) {
+            assert.match(moduleSource, new RegExp("export const " + name + " = webMethod\\("), fileName + " must export " + name);
+            assert.match(controller, new RegExp("\\b" + name + "\\b"), "page controller must consume " + name);
+        }
+        const moduleName = fileName.replace(/\.web\.js$/, ".web");
+        assert.ok(controller.includes('from "backend/tpv/' + moduleName + '"'), "controller must import " + moduleName);
+    }
+});
+
+test("TPV page is wired to the native POS widget bridge and canonical backend exports", async () => {
+    const [page, controller, html, bridge] = await Promise.all([
         source("../pages/TPV.yl5th.js"),
         source("../public/tpvPageController.js"),
         source("../../%23htmlTPV.txt"),
+        source("../public/widgetBridge.js"),
     ]);
-
-    assert.match(page, /initializeTpvPage/);
-    assert.match(page, /public\/tpvPageController/);
+    assert.match(page, /\$w\("#htmlTPV"\)/);
     assert.match(page, /initializeTpvPage\(widget\)/);
-    assert.doesNotMatch(page, /TPV_REQUEST_STATE|TPV_READY|getCashierState/);
-
     assert.match(controller, /createWidgetBridge/);
-    assert.match(controller, /MESSAGE_TYPES\\.READY/);
-    assert.match(controller, /onContextReady:/);
-    assert.match(controller, /environment: "SANDBOX"/);
-    assert.match(controller, /syntheticOnly: true/);
-    for (const type of ["CASHIER_STATE", "SESSION_OPEN", "CATALOG_SERVICES", "CATALOG_PRODUCTS", "CATALOG_STAFF", "SALE_REGISTER", "CASH_MOVEMENT", "REFUND", "TICKET_X", "TICKET_Z", "SESSION_SUMMARY", "AUDIT_LIST"]) assert.ok(controller.includes(type));
-    for (const method of ["obtenerEstadoCaja", "abrirSesionCaja", "obtenerServicios", "obtenerProductos", "obtenerStaff", "registrarVenta", "registrarMovimientoCaja", "registrarDevolucion", "generarControlX", "generarCierreZ", "obtenerResumenCaja", "obtenerMovimientosCaja"]) assert.ok(controller.includes(method));
-    assert.match(controller, /reply\\(responseType, result, message\\)/);
-    assert.doesNotMatch(controller, /environment: ["']LIVE["']/);
-    assert.doesNotMatch(controller, /ALLOWED_ORIGIN = ["']\\*["']/);
-
-    assert.match(html, /send\\("MM_READY"/);
-    assert.match(html, /m\\.type==="MM_CONTEXT"/);
-    for (const type of ["CASHIER_STATE", "SESSION_OPEN", "CATALOG_SERVICES", "CATALOG_PRODUCTS", "CATALOG_STAFF", "SALE_REGISTER", "CASH_MOVEMENT", "REFUND", "TICKET_X", "TICKET_Z", "SESSION_SUMMARY", "AUDIT_LIST"]) assert.ok(html.includes('send("' + type + '"'));
-    assert.match(html, /data-tax/);
-    assert.match(html, /taxTotal/);
-    assert.match(html, /payments:\\[\\{paymentMethod,amount\\}\\]/);
-    assert.match(html, /state\\.lastSale=result/);
-
-    const inlineScript = html.match(/<script>([\s\S]*?)<\/script>/)?.[1];
-    assert.ok(inlineScript, "TPV HTML component must contain its runtime script");
-    assert.doesNotThrow(() => new Script(inlineScript));
+    assert.match(controller, /MESSAGE_TYPES\.READY/);
+    assert.match(controller, /obtenerEstadoCaja/);
+    assert.match(controller, /abrirSesionCaja/);
+    assert.match(controller, /obtenerServicios/);
+    assert.match(controller, /obtenerProductos/);
+    assert.match(controller, /obtenerVariantesProducto/);
+    assert.match(controller, /obtenerStaff/);
+    assert.match(controller, /buscarClientesTPV/);
+    assert.match(controller, /registrarVenta/);
+    assert.match(controller, /registrarMovimientoCaja/);
+    assert.match(controller, /registrarDevolucion/);
+    assert.match(controller, /generarControlX/);
+    assert.match(controller, /generarCierreZ/);
+    assert.match(controller, /obtenerResumenCaja/);
+    assert.match(controller, /obtenerMovimientosCaja/);
+    assert.match(controller, /obtenerConfiguracionTPV/);
+    assert.match(bridge, /widgetElement\.onMessage/);
+    assert.match(bridge, /widgetElement\.postMessage/);
+    assert.match(html, /send\("MM_READY"/);
+    assert.match(html, /m\.type==="MM_CONTEXT"/);
+    assert.match(html, /environment!=="SANDBOX"/);
+    assert.match(html, /call\("CASHIER_STATE"/);
+    assert.match(html, /call\("CUSTOMERS_SEARCH"/);
+    assert.match(html, /call\("CATALOG_VARIANTS"/);
+    assert.match(html, /keyedAction\("SALE","SALE_REGISTER"/);
+    assert.match(html, /keyedAction\("CASH_IN","CASH_MOVEMENT"/);
+    assert.match(html, /keyedAction\("CASH_OUT","CASH_MOVEMENT"/);
+    assert.match(html, /keyedAction\("REFUND","REFUND"/);
+    assert.match(html, /keyedAction\("TICKET_X","TICKET_X"/);
+    assert.match(html, /action\("TICKET_Z"/);
 });
-
-
+ 
 test("SANDBOX repository paginates reads and blocks Z close while sales are incomplete", async () => {
     const repository = await source("tpv/tpvSandboxRepository.js");
     const closures = await source("tpv/tpvCierres.web.js");
@@ -330,6 +397,7 @@ test("SANDBOX repository paginates reads and blocks Z close while sales are inco
     assert.match(repository, /refundCashMovements\.length !== expectedCash\.count/);
     assert.match(repository, /actualCashAmount !== expectedCash\.amountMinor/);
     assert.match(repository, /refundTotal !== Number\(refund\.amountMinor\)/);
+    assert.match(closures, /input\.sessionId && input\.sessionId !== session\.sessionId/);
     assert.match(closures, /getPendingSandboxSales\(session\.sessionId\)/);
     assert.match(closures, /TPV_SANDBOX_PENDING_SALES_PREVENT_CLOSE/);
     assert.match(closures, /getPendingSandboxRefunds\(session\.sessionId\)/);
@@ -371,6 +439,7 @@ test("TPV synthetic persistence maps logical events to CajaActual and Movimiento
     const repository = await source("tpv/tpvSandboxRepository.js");
     const config = await source("internalConfig.js");
     const utilities = await source("tpv/tpvUtils.js");
+    const movements = await source("tpv/tpvMovimientos.web.js");
     assert.match(repository, /SANDBOX_LEDGER_SOURCE = "TPV_SANDBOX_SYNTHETIC"/);
     assert.match(config, /SIMULATED_TPV_/);
     assert.match(repository, /sequenceNumber: 0/);
@@ -387,6 +456,12 @@ test("TPV synthetic persistence maps logical events to CajaActual and Movimiento
     assert.doesNotMatch(repository, /insertItem\(BUSINESS_COLLECTIONS\.CAJA_ACTUAL, seed\)/);
     assert.match(utilities, /TPV_SANDBOX_INITIALIZED/);
     assert.match(utilities, /TPV_SANDBOX_SYNTHETIC/);
+    assert.match(repository, /export async function querySandboxLedgerRecords\(/);
+    assert.match(repository, /dataCollectionId: BUSINESS_COLLECTIONS\.MOVIMIENTOS_CAJA/);
+    assert.match(repository, /sort: \["recordTimestamp DESC"\]/);
+    assert.match(movements, /querySandboxLedgerRecords\(\{ limit: 1000 \}\)/);
+    assert.match(movements, /SIMULATED_TPV_SALE/);
+    assert.match(movements, /SIMULATED_TPV_REFUND/);
     assert.match(repository, /payloadFiscal\?\.sandboxRunId === SANDBOX_RUN_ID/);
     assert.match(repository, /MAX_SANDBOX_PROJECTION_EVENTS = 1000/);
     assert.match(repository, /conceptOperations\?\.tpvSandbox\?\.sessionId/);

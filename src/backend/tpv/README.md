@@ -1,3 +1,5 @@
+> **Estado de rama TPV (2026-11-21):** PR #514 `fix/tpv-native-pos-contract-alignment` sigue abierto en revisión; no está integrado en `main`. Commit validado `e790f7ed361e822fbbca1de8298456a80172b9e1`: Layer 1 343 tests, Layer 2 268 tests y suite offline completa 724 tests/77 suites, 0 fallos; contratos SDK y ESLint correctos; Gitleaks SUCCESS. La validación Wix Editor/Preview y E2E runtime siguen pendientes. No publicar ni desplegar hasta completar esas pruebas.
+
 > **Estado actualizado (2026-11-20, main a231e5c):** PR #512 integrada. El simulador de proveedor sintético y fixture de identidades están versionados. CI post-merge SUCCESS: Layer 1, Layer 2, regresión offline completa, auditoría npm, contratos SDK Wix/eCommerce/TPV, ESLint y Gitleaks. No hay evidencia de Preview, preseed ejecutado ni E2E runtime. No publicar ni declarar listo el TPV hasta obtener esa evidencia.
 
 > **Estado actualizado (2026-11-20, main 566a819):** PR #496 normalizó los contratos WebMethod y PR #497 corrigió el encabezado arquitectónico del controlador y el indicador `persisted` de respuestas de lectura. Los workflows del PR #497 y los dos workflows post-merge del commit `566a819719d945e690f85836f91a424afb9d959f` finalizaron en SUCCESS (runs `44777610050` y `44777610037`). La suite offline registró 75 suites / 704 tests, 0 fallos. La persistencia sintética usa `tpvSandboxRepository.js` sobre CMS nativo y comprueba los marcadores de `CajaActual` antes de escribir. No hay evidencia de ejecución Wix Preview, seed de identidades ni E2E runtime. No publicar ni declarar listo el TPV hasta obtener esa evidencia.
@@ -17,6 +19,12 @@ Este directorio implementa el TPV en modo SANDBOX persistente y sintético para 
 - Clientes y profesionales se consultan exclusivamente en `TpvSandboxIdentities`; no se consultan CRM, Members, Bookings Staff, reservas ni saldos de Gift Cards. No se llama a Wix Payments, checkout, Orders, refunds, Bookings writers, Gift Card writers, hardware, notificaciones ni emisión fiscal.
 - `CajaActual` solo se actualiza como proyección backend de la sesión sintética. No se escribe en `HistoricoCierresZ` ni `LibroAsientosContablesDetalle`.
 - Ticket Z cierra solo la sesión SANDBOX y nunca cierra el periodo fiscal u operativo.
+
+## Contrato del controlador TPV
+
+El controlador de página consume los doce WebMethods canónicos documentados en `docs/architecture/TPV-HTML-WIDGET-BRIDGE.md`. Los imports desde frontend deben usar los módulos públicos Wix con sufijo `.web` (por ejemplo, `backend/tpv/tpvVentas.web`). No se deben importar desde frontend repositorios, validadores ni helpers privados del directorio `/tpv`.
+
+Los métodos auxiliares `buscarClientesTPV`, `obtenerVariantesProducto` y `obtenerConfiguracionTPV` soportan respectivamente la selección de cliente sintético, la elección de variante del catálogo nativo y el handshake de entorno. Otros WebMethods de pagos, permisos, gift cards y auditoría permanecen aislados: no se conectan a botones mientras el diseño no exponga esos flujos. La lista de doce exportaciones del controlador no implica eliminar esos contratos auxiliares ni los consumidores internos existentes.
 
 ## Inventario
 
@@ -189,3 +197,33 @@ La colección física `MovimientosCaja` mantiene el índice `transactionId_uniqu
 La inspección read-only del 2026-11-20 confirmó el índice único sobre `transactionId`; no hay índice único de usuario sobre `traceId`, `operationType`, `singletonKey` o `posTransactionId`. La consulta CMS devolvió un registro sintético de prueba sin `transactionId`, por lo que no se identificó un valor histórico duplicado concreto. La causa de colisión se atribuye al espacio de nombres incompleto del generador, no a una fila concreta demostrada.
 
 La corrección de código no autoriza a repetir el arqueo en LIVE ni a modificar la configuración de índices. La validación runtime del arqueo, cierre de `CajaActual` y diferencia cero requiere Sandbox aislado, sesión y singleton presembrados y ejecución E2E autorizada. No se considera superada por pruebas unitarias/offline.
+
+
+## Contrato TPV POS nativo + extensiones Marian Madrid
+
+La interfaz `#htmlTPV` sigue el modelo operativo del POS nativo de Wix Dashboard, añadiendo funciones propias sin duplicar las fuentes nativas:
+- Servicios: Wix Bookings `services.queryServices`.
+- Productos: Wix Stores Catalog V3, filtrados por visibilidad POS.
+- Personal: identidades sintéticas Sandbox propias, no Wix Members ni contactos CRM.
+- Operaciones extendidas: sesión, venta sintética, movimientos, devolución, X/Z, resumen y movimientos.
+
+El controlador `src/public/tpvPageController.js` usa `createWidgetBridge` y reenvía los sobres WebMethod `{status,data,error}` sin doble anidamiento. El contrato de exportaciones exigido es:
+
+`obtenerEstadoCaja`, `abrirSesionCaja`, `obtenerServicios`, `obtenerProductos`, `obtenerStaff`, `registrarVenta`, `registrarMovimientoCaja`, `registrarDevolucion`, `generarControlX`, `generarCierreZ`, `obtenerResumenCaja`, `obtenerMovimientosCaja`.
+
+La configuración se obtiene adicionalmente mediante `obtenerConfiguracionTPV`; la UI solo permite continuar con `environment=SANDBOX`. La apertura, escritura, devolución y cierre mantienen las autorizaciones backend existentes. Las operaciones de escritura (apertura, venta, movimiento, devolución y X/Z) conservan el `requireAdmin` vigente; elegir un operador sintético solo atribuye la operación y no concede permisos. Las consultas usan `requireCajero`.
+
+Conciliación de botones:
+- El controlador traduce el DTO HTML `lineItems/payments/subtotal/tax/total` al DTO backend `lineas/pagos/subtotalNeto/impuestosTotal/totalVenta`.
+- `PERSONALIZADA` se conserva como tipo de línea propio; no se falsea como servicio de catálogo.
+- Los productos con variantes consultan `obtenerVariantesProducto` y conservan `varianteId` y precio elegido en la línea sintética. El botón Cliente consulta identidades sintéticas mediante `buscarClientesTPV` y la venta envía `customerContactId`, que el backend valida de nuevo. La devolución requiere una asignación explícita por medio de pago original.
+- Control X es informativo y no solicita efectivo contado; Cierre Z recibe efectivo contado y motivo de diferencia.
+- Las mutaciones usan claves estables por operación y sesión conservadas en `sessionStorage` (fallback en memoria); el controlador valida su formato. El `messageId` sirve para correlación y como fallback de idempotencia.
+- El campo global de impuestos permanece bloqueado hasta mapear las reglas Wix por línea. No se prorratea ni se inventa un tipo impositivo.
+
+El listado `obtenerMovimientosCaja` consulta el ledger físico `MovimientosCaja` y filtra `recordSource` + `SANDBOX_RUN_ID`; muestra ventas confirmadas, movimientos, devoluciones y X/Z. No debe confundirse con `consultarAuditoriaTPV`, que representa auditoría de acciones. La colección física sigue siendo `MovimientosCaja`; `SANDBOX_LOGICAL_*` son namespaces lógicos internos.
+
+**Límite:** la TPV personalizada sigue siendo Sandbox sintético. No activa Wix Payments, checkout, captura, reembolso real, emisión fiscal ni hardware. El uso de APIs nativas de catálogo no convierte las escrituras de caja en operaciones LIVE. La validación de Wix Preview/E2E queda pendiente.
+
+
+No se descuenta inventario ni se escribe en Stores durante la simulación.

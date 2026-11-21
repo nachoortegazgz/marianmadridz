@@ -253,7 +253,7 @@ test("SANDBOX policy remains synthetic and client idempotency keys are bounded",
 test("every exposed TPV SANDBOX WebMethod fails closed before repository access", async () => {
     const protectedMethods = [
         ["tpvCaja.web.js", ["inicializarCaja", "obtenerEstadoCaja", "abrirSesionCaja", "registrarArqueoParcial"]],
-        ["tpvMovimientos.web.js", ["registrarMovimientoCaja"]],
+        ["tpvMovimientos.web.js", ["registrarMovimientoCaja", "obtenerMovimientosCaja"]],
         ["tpvVentas.web.js", ["registrarVenta"]],
         ["tpvDevoluciones.web.js", ["registrarDevolucion"]],
         ["tpvCierres.web.js", ["obtenerResumenCaja", "generarControlX", "generarCierreZ"]],
@@ -263,7 +263,7 @@ test("every exposed TPV SANDBOX WebMethod fails closed before repository access"
         ["tpvAuditoria.web.js", ["obtenerMovimientosCaja"]],
         ["tpvGiftCards.web.js", ["consultarTarjetaRegalo"]],
     ];
-    const repositoryAccess = /(?:latestOpenSandboxSession|insertSandboxEvent|appendSandboxAudit|querySandboxRecords|withSandboxSessionLock|withSandboxSaleLock|listTpvSandboxIdentities|getTpvSandboxIdentity|wql\.)/;
+    const repositoryAccess = /(?:latestOpenSandboxSession|insertSandboxEvent|appendSandboxAudit|querySandboxRecords|querySandboxLedgerRecords|withSandboxSessionLock|withSandboxSaleLock|listTpvSandboxIdentities|getTpvSandboxIdentity|wql\.)/;
 
     for (const [fileName, methodNames] of protectedMethods) {
         const source = await readFile(new URL("../tpv/" + fileName, import.meta.url), "utf8");
@@ -290,6 +290,7 @@ test("every exported TPV WebMethod has an explicit runtime policy classification
         },
         "tpvMovimientos.web.js": {
             guarded: ["registrarMovimientoCaja"],
+            readOnly: ["obtenerMovimientosCaja"],
         },
         "tpvVentas.web.js": {
             guarded: ["registrarVenta"],

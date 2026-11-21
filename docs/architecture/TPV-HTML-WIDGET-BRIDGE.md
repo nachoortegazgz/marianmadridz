@@ -1,43 +1,73 @@
-# Integración del widget HTML TPV — contrato vigente
+# TPV Marian Madrid — contrato vigente HTML / Velo / backend
 
-**Revisión:** 2026-11-21  
-**Repositorio:** `nachoortegazgz/marianmadridz`  
-**Estado:** contrato de código alineado; instalación en Wix Editor y pruebas runtime pendientes.
+**Estado:** contrato de código en revisión; validación Wix Runtime pendiente.  
+**Página:** `src/pages/TPV.yl5th.js` · **HTML Component:** `#htmlTPV` · **HTML fuente:** `#htmlTPV.txt`  
+**Controlador:** `src/public/tpvPageController.js` · **Puente:** `src/public/widgetBridge.js`
 
-## Arquitectura
+## 1. Modelo funcional
 
-```text
-#htmlTPV.txt (#htmlTPV)
-  ↕ postMessage / MM_READY / MM_CONTEXT / mensajes de operación
-src/pages/TPV.yl5th.js
-  ↓ initializeTpvPage(widget)
-src/public/tpvPageController.js
-  ↓ createWidgetBridge()
-WebMethods de src/backend/tpv/*.web.js
-  ↓
-tpvSandboxRepository.js / Wix Bookings / Stores Catalog V3
-```
+La interfaz toma como referencia operativa la página POS nativa de Wix Dashboard y añade controles propios de Marian Madrid. No crea un catálogo, una pasarela de pagos ni un ledger alternativos.
 
-El page code solo conecta el HTML Component existente. El controlador es transporte y adaptación DTO; no contiene reglas de autorización ni persistencia. El backend mantiene validación, permisos, idempotencia, locks y escrituras.
+- **Wix Bookings:** lectura de servicios mediante `services.queryServices`.
+- **Wix Stores:** lectura de productos y variantes mediante Stores Catalog V3; se respeta `visibleInPos`.
+- **Personal:** en el entorno Sandbox se consultan identidades sintéticas propias; no se convierten en Wix Members, contactos CRM ni staff nativo.
+- **Operaciones extendidas:** apertura/estado de sesión, venta sintética, movimientos, devolución sintética, Control X, Cierre Z, resumen y consulta de movimientos.
+- **Pagos:** la interfaz registra únicamente métodos y cantidades sintéticos. No llama a Wix Payments, checkout, Orders ni a una pasarela real.
+- **Fiscalidad:** no se emiten facturas ni se escriben ledgers fiscales.
 
-## Identidad del componente y handshake
+La interfaz custom no sustituye ni duplica el proceso nativo de cobro de Wix POS.
 
-- El ID del componente debe ser exactamente `htmlTPV`.
-- `TPV.yl5th.js` importa `initializeTpvPage` desde `public/tpvPageController`.
-- El HTML emite `MM_READY`; `createWidgetBridge` valida versión, tipo, tamaño y origen y responde con `MM_CONTEXT`.
-- El contexto declara `environment: "SANDBOX"`, `syntheticOnly: true`, `realPaymentsEnabled: false` y `fiscalWritesEnabled: false`.
-- El contexto no concede permisos. Cada WebMethod vuelve a comprobar Site Member y rol en backend.
-- Se permite origen opaco porque los HTML Components Wix pueden usar iframes sandboxed; se mantienen las restantes validaciones del bridge.
+## 2. Transporte y seguridad
 
-## Contrato de operaciones
+`src/pages/TPV.yl5th.js` adjunta `initializeTpvPage(widget)` al componente existente `$w("#htmlTPV")`.
 
-| Petición HTML | Respuesta | WebMethod exportado |
+El controlador usa `createWidgetBridge` para:
+- validar mensajes, versión, tamaño y correlación;
+- usar `onMessage/postMessage` del HTML Component;
+- admitir el origen opaco propio del iframe Wix sin desactivar la validación de orígenes no opacos;
+- gestionar `MM_READY` / `MM_CONTEXT`;
+- delegar toda operación de negocio a WebMethods backend.
+
+No se utiliza `postMessage(..., "*")` desde el controlador. El HTML no accede a CMS, backend ni APIs Wix directamente.
+
+El contexto se obtiene mediante `obtenerConfiguracionTPV`. La UI solo habilita el flujo si el backend confirma `environment="SANDBOX"`; el contexto indica `previewOnly=true`, `syntheticOnly=true` y capacidades externas deshabilitadas.
+
+## 3. Contrato exacto de WebMethods
+
+Los doce nombres exportados requeridos son:
+
+| Exportación backend | Módulo | Responsabilidad |
+|---|---|---|
+| `obtenerEstadoCaja` | `tpvCaja.web.js` | Leer sesión Sandbox abierta |
+| `abrirSesionCaja` | `tpvCaja.web.js` | Abrir sesión sintética, con autorización backend |
+| `obtenerServicios` | `tpvCatalogo.web.js` | Consultar catálogo de Bookings |
+| `obtenerProductos` | `tpvCatalogo.web.js` | Consultar Stores Catalog V3 |
+| `obtenerStaff` | `tpvCatalogo.web.js` | Leer identidades sintéticas de personal |
+| `registrarVenta` | `tpvVentas.web.js` | Persistir venta sintética idempotente |
+| `registrarMovimientoCaja` | `tpvMovimientos.web.js` | Persistir entrada/salida sintética |
+| `registrarDevolucion` | `tpvDevoluciones.web.js` | Registrar devolución sintética por método original |
+| `generarControlX` | `tpvCierres.web.js` | Generar informe X sin cerrar sesión |
+| `generarCierreZ` | `tpvCierres.web.js` | Conciliar efectivo y cerrar sesión Sandbox |
+| `obtenerResumenCaja` | `tpvCierres.web.js` | Obtener resumen de sesión |
+| `obtenerMovimientosCaja` | `tpvMovimientos.web.js` | Consultar movimientos de caja sintéticos |
+
+`obtenerConfiguracionTPV` es el WebMethod adicional de contexto y no sustituye ninguno de los doce nombres anteriores. El controlador importa cada módulo WebMethod con el sufijo Wix `.web` (por ejemplo, `backend/tpv/tpvCaja.web`); no debe importar módulos backend privados sin ese sufijo.
+
+Los WebMethods devuelven el sobre `{ status, data, error }`. El controlador reenvía ese sobre sin anidarlo dentro de otro `data`.
+
+## 4. Mensajes activos
+
+Cada solicitud se responde con el mismo `messageId` y el sufijo `_RES`.
+
+| Mensaje HTML | Respuesta | Backend |
 |---|---|---|
 | `CASHIER_STATE` | `CASHIER_STATE_RES` | `obtenerEstadoCaja` |
 | `SESSION_OPEN` | `SESSION_OPEN_RES` | `abrirSesionCaja` |
 | `CATALOG_SERVICES` | `CATALOG_SERVICES_RES` | `obtenerServicios` |
 | `CATALOG_PRODUCTS` | `CATALOG_PRODUCTS_RES` | `obtenerProductos` |
+| `CATALOG_VARIANTS` | `CATALOG_VARIANTS_RES` | `obtenerVariantesProducto` (consulta adicional de variantes) |
 | `CATALOG_STAFF` | `CATALOG_STAFF_RES` | `obtenerStaff` |
+| `CUSTOMERS_SEARCH` | `CUSTOMERS_SEARCH_RES` | `buscarClientesTPV` (consulta adicional de identidades sintéticas) |
 | `SALE_REGISTER` | `SALE_REGISTER_RES` | `registrarVenta` |
 | `CASH_MOVEMENT` | `CASH_MOVEMENT_RES` | `registrarMovimientoCaja` |
 | `REFUND` | `REFUND_RES` | `registrarDevolucion` |
@@ -46,52 +76,48 @@ El page code solo conecta el HTML Component existente. El controlador es transpo
 | `SESSION_SUMMARY` | `SESSION_SUMMARY_RES` | `obtenerResumenCaja` |
 | `AUDIT_LIST` | `AUDIT_LIST_RES` | `obtenerMovimientosCaja` |
 
-Estos son los doce nombres públicos requeridos por el controlador. Los WebMethods se encuentran en:
-- `tpvCaja.web.js`: estado y apertura.
-- `tpvCatalogo.web.js`: servicios, productos y personal sintético.
-- `tpvVentas.web.js`: venta sintética.
-- `tpvMovimientos.web.js`: movimientos de efectivo.
-- `tpvDevoluciones.web.js`: devolución sintética.
-- `tpvCierres.web.js`: resumen y tickets X/Z.
-- `tpvAuditoria.web.js`: consulta de movimientos/auditoría.
+## 5. Conciliación de botones y DTOs
 
-## Adaptación de DTO
+- **Abrir caja:** envía `openingCash` y `terminalId`; backend exige rol autorizado y sesión válida.
+- **Operador:** se elige entre identidades sintéticas devueltas por `CATALOG_STAFF`; el ID se envía como `profesionalId` al registrar la venta.
+- **Cliente:** el botón busca identidades sintéticas mediante `buscarClientesTPV`; se envía `customerContactId` y el backend vuelve a validar que pertenece al conjunto Sandbox.
+- **Catálogo:** servicios y productos provienen de las APIs nativas de Bookings y Stores. La paginación de productos usa cursor; servicios usan paginación por offset. Los productos con variantes consultan `obtenerVariantesProducto`; se guarda `varianteId` en la línea y se utiliza el precio de la variante elegida, no el mínimo del producto.
+- **Guardar venta:** el controlador transforma `lineItems/payments/subtotal/tax/total` al DTO backend `lineas/pagos/subtotalNeto/impuestosTotal/totalVenta`. Cada pago se convierte a `medioPago/importe/importeCambio`. El HTML conserva una clave idempotente por operación y sesión en `sessionStorage` (con fallback en memoria); el controlador la valida y la pasa al WebMethod. El `messageId` queda como fallback de correlación, no como sustituto de la clave estable.
+- **Tarifa personalizada:** se representa como línea `PERSONALIZADA`, conservando concepto e importe; no se finge un ID de catálogo.
+- **Impuestos:** el campo global queda deshabilitado hasta mapear y verificar las reglas fiscales de Wix por línea. El controlador rechaza discrepancias entre impuestos por línea y total declarado; no distribuye impuestos por estimación.
+- **Entrada/salida:** requiere importe positivo y motivo; el backend genera clave idempotente y exige autorización.
+- **Devolución:** envía `saleId`, motivo y asignación explícita `payments[{ paymentMethod, amount }]`. No se infiere el método original.
+- **Control X:** no solicita efectivo contado y no cierra sesión.
+- **Cierre Z:** solicita efectivo contado y motivo si existe diferencia; no utiliza `nextOpeningCash`.
+- **Resumen y movimientos:** consultas separadas; `AUDIT_LIST` devuelve movimientos de caja, no el ledger de auditoría de seguridad.
+- **Imprimir último ticket:** actualmente invoca la impresión del navegador; no representa una integración verificada con impresora fiscal o hardware POS.
 
-- La UI conserva `lineItems` y `payments`; el controlador los adapta al contrato backend `lineas` y `pagos`, incluyendo `medioPago`, `importe` e `importeCambio`.
-- Los impuestos se declaran por línea en `impuestosImporte`; el controlador no calcula ni distribuye impuestos.
-- El identificador de mensaje se utiliza como clave de idempotencia de las operaciones que la requieren, salvo que el cliente proporcione una clave explícita.
-- La devolución envía asignaciones `payments: [{ paymentMethod, amount }]`; el backend contrasta cada medio e importe con los pagos originales y el saldo reembolsable.
-- El cierre Z recibe `sessionId`, `countedCash` y `differenceReason`. No se inicia automáticamente una sesión siguiente.
-- El widget conserva el borrador y los pagos hasta recibir confirmación de venta.
+## 6. Persistencia y colecciones
 
-## Colecciones físicas y persistencia
+`TPV_SANDBOX_COLLECTIONS` contiene nombres lógicos internos, no IDs de colecciones físicas. La persistencia actual proyecta eventos sintéticos sobre:
+- `MovimientosCaja`: ledger append-only de eventos sintéticos.
+- `CajaActual`: proyección operativa de la sesión, protegida por marcador Sandbox y preseed.
+- `ControlOperativo`: locks compare-and-swap de sesión/devolución.
+- colección propia de identidades Sandbox: clientes y personal sintéticos.
 
-Los nombres `TPV_SANDBOX_COLLECTIONS.*` son tipos lógicos de evento, no IDs de colecciones CMS.
+No se modifica la estructura ni se elimina el índice único `transactionId_unique`. Las correcciones de eventos persistidos requieren nuevos registros trazables, nunca reescritura histórica.
 
-| Función | Colección física |
-|---|---|
-| Proyección de sesión activa | `CajaActual` |
-| Eventos sintéticos de ventas, líneas, pagos, devoluciones, movimientos, tickets y auditoría | `MovimientosCaja` |
-| Locks e idempotencia operativa | `ControlOperativo` |
-| Identidades sintéticas de clientes y profesionales | `TpvSandboxIdentities` |
+## 7. Límites de entorno
 
-Los eventos lógicos se guardan en `MovimientosCaja` como filas marcadas con `recordSource=TPV_SANDBOX_SYNTHETIC`, `movementType=SIMULATED_TPV_*` y metadatos del `SANDBOX_RUN_ID`. `CajaActual` solo recibe la proyección sintética protegida por el repositorio. No se crean colecciones físicas `SANDBOX_LOGICAL_*`.
+La configuración vigente del backend declara `ENVIRONMENT="SANDBOX"`, `SYNTHETIC_ONLY=true`, pagos reales deshabilitados y escrituras fiscales deshabilitadas. No se transforma este contrato a LIVE renombrando métodos ni cambiando etiquetas.
 
-El catálogo de servicios se lee mediante Wix Bookings; los productos se leen mediante Stores Catalog V3. Los profesionales proceden de `TpvSandboxIdentities`, no de una colección nativa de Wix Staff ni de datos de contacto privados.
+No se habilitan por este cambio cobros reales, devoluciones reales, facturas, notificaciones, hardware ni sincronización de colecciones Wix Apps. Las colecciones de Wix Apps no heredan el aislamiento de Sandbox CMS.
 
-## Límites de seguridad
+## 8. Validación y pendientes
 
-- `TPV_SANDBOX_RUNTIME_POLICY` mantiene `ENVIRONMENT: "SANDBOX"`, `SYNTHETIC_ONLY: true`, pagos reales deshabilitados y escrituras fiscales deshabilitadas.
-- La apertura, venta, movimiento, devolución, arqueos y cierres requieren autorización backend; las operaciones de escritura requieren rol ADMIN según sus WebMethods.
-- Los pagos son simulados; no se llama a pasarela ni se captura dinero.
-- Las devoluciones son registros sintéticos, no reembolsos bancarios.
-- No se escriben `HistoricoCierresZ`, libros contables ni ledgers fiscales desde este flujo.
-- No cambiar el entorno a LIVE ni utilizar datos reales para validar esta interfaz.
+**Verificado en repositorio y CI (commit `e790f7ed361e822fbbca1de8298456a80172b9e1`):** Layer 1 28 suites/343 tests; Layer 2 19 suites/268 tests; regresión offline completa 77 suites/724 tests, 0 fallos; contratos SDK Wix eCommerce/TPV y ESLint correctos. Backend offline quality gates: run `44858255145` SUCCESS. Gitleaks: run `44858255191` SUCCESS. Los contratos estáticos confirman las doce exportaciones y sus imports `.web`.
 
-## Validación y estado
+**Pendiente de ejecutar:** Wix Local Editor, Preview, permisos con roles reales, disponibilidad de catálogo real en el sitio, preseed de `CajaActual`/identidades, ventas/devoluciones/cierres E2E y verificación de que el HTML fuente está instalado en el componente Wix. La CI offline no acredita ejecución runtime ni separación efectiva Sandbox/Live.
 
-**Verificable en repositorio:** nombres de exportación, importaciones, mensajes, adaptación de DTO, sintaxis del script HTML y mapeo de colecciones.
+El código versionado no demuestra por sí solo sincronización del Editor ni ejecución runtime. No publicar ni ejecutar operaciones LIVE como parte de esta corrección.
 
-**Pendiente de ejecución:** CI del cambio, instalación/read-back del HTML Component en Wix Editor, permisos efectivos, Preview, lectura de catálogos en el sitio, apertura/venta/movimiento/devolución/cierre en Sandbox y comprobación de que LIVE permanece intacto.
 
-La presencia del código en GitHub no demuestra que esté instalado en Wix Editor ni que el runtime haya ejecutado las operaciones. No publicar ni ejecutar operaciones sobre LIVE como parte de esta corrección.
+Las operaciones de escritura (apertura, venta, movimiento, devolución y X/Z) conservan el `requireAdmin` vigente; elegir un operador sintético solo atribuye la operación y no concede permisos. Las consultas usan `requireCajero`.
+
+
+No se descuenta inventario ni se escribe en Stores durante la simulación.
