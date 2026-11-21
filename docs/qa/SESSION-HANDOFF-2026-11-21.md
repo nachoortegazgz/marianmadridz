@@ -156,3 +156,9 @@ El estado anterior de automatizaciones y CMS queda actualizado por [la auditorí
 - #520 P0 — contener y auditar las ocho automatizaciones Wix ACTIVE antes de QA E2E.
 - #521 P1 — investigar la falla de Accessibility Scans API en 121 páginas y la no elegibilidad del dominio público como target.
 - GSC Site Readiness devolvió READY; no se modificó configuración SEO.
+
+
+### Bookings y personal — conciliación adicional
+- 94 servicios Bookings V2 ↔ 94 SERVICE en ServiciosCatalogo; 1 fila adicional PRICING_PLAN. Sin serviceId huérfanos ni duplicados.
+- 3 staff providers nativos coinciden por staffMemberId/resourceId con los tres registros STAFF de MapaStaff y con STAFF.IDS; dos registros restantes de MapaStaff son GESTORIA y TERCERO/EMPRESA.
+- 94 servicios tienen schedule, form, categoría y staff asignado. Checkout sigue bloqueado por discrepancias de payment options (#522) y falta E2E.
