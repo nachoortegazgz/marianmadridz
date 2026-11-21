@@ -237,3 +237,8 @@ La única reserva nativa `CONFIRMED` tiene inicio `2026-09-18T12:00:00Z` y no ti
 ## 17. Scan individual de Inicio mediante pageId
 
 Se siguió el esquema oficial de Run Accessibility Scan: para una página Wix estática se utilizó `targetType=PAGE` y `page.pageId=cjg9` (Inicio), recuperado de los page summaries del scan full-site. El scan individual `a167faa3-4b5c-4f94-81d5-c0f0d496a2ae` terminó `ACCESSIBILITY_SCAN_STATUS_FAILED`: 1 descubierta, 0 procesadas, 1 fallida. La consulta de page summaries devolvió HTTP 428 `SCAN_RESULTS_NOT_AVAILABLE` sin resultados utilizables. El fallo persiste incluso con el identificador Wix correcto; no es solo un problema de dominio personalizado. Seguimiento [#521](https://github.com/nachoortegazgz/marianmadridz/issues/521).
+
+
+## 18. Wix Stores Catalog V3 — inventario read-only
+
+Query Products V3 devuelve 24 productos: todos `PHYSICAL`, visibles, moneda EUR y `inventory.availabilityStatus=IN_STOCK`. No hay precios ausentes en `actualPriceRange`; el rango global es 9,95–38,50 EUR. Distribución de variantes: 22 productos con una variante, uno con dos y uno con seis. No se consultó ni modificó inventario por SKU, pedidos ni transacciones; este resumen no valida checkout ni cobro.
