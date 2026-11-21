@@ -171,3 +171,7 @@ El estado anterior de automatizaciones y CMS queda actualizado por [la auditorí
 
 ### Bookings Reader V2 — inventario global
 353 reservas nativas: 352 CANCELED y una CONFIRMED histórica (2026-09-18T12:00Z) sin proyección CitasF2; asistencia pendiente. Seguimiento #523. No cancelar ni reconfirmar.
+
+
+### Accesibilidad — diagnóstico pageId
+El scan individual de Inicio con pageId Wix `cjg9` también terminó FAILED (1 descubierta, 0 procesadas, 1 fallida) y los resultados devolvieron `SCAN_RESULTS_NOT_AVAILABLE` HTTP 428. El fallo no se limita al dominio personalizado. Issue #521 actualizado.
