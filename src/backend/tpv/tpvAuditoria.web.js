@@ -6,7 +6,7 @@ import { querySandboxRecords } from "backend/tpv/tpvSandboxRepository";
 import { assertTpvSandboxEnabled } from "backend/tpv/tpvUtils";
 import { wql } from "backend/dataAccess";
 
-export const consultarAuditoriaTPV = webMethod(
+export const obtenerMovimientosCaja = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
         const traceId = makeTraceId("tpv-sandbox-audit-read");
