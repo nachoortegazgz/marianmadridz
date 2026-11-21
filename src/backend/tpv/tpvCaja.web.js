@@ -57,7 +57,7 @@ export const inicializarCaja = webMethod(
     }
 );
 
-export const obtenerSesionCaja = webMethod(
+export const obtenerEstadoCaja = webMethod(
     Permissions.SiteMember,
     async () => {
         const traceId = makeTraceId("tpv-sandbox-session-read");
@@ -88,7 +88,7 @@ export const obtenerSesionCaja = webMethod(
     }
 );
 
-export const abrirCaja = webMethod(
+export const abrirSesionCaja = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
         let persisted = false;

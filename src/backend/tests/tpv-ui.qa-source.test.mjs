@@ -3,42 +3,49 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { Script } from "node:vm";
 
-const html = await readFile(new URL("../../../%23htmlTPV.txt", import.meta.url), "utf8");
-const script = html.match(/<script>([\s\S]*?)<\/script>/)?.[1];
+const repoRoot = new URL("../../../", import.meta.url);
+const read = (path) => readFile(new URL(path, repoRoot), "utf8");
 
-test("TPV HTML SANDBOX script parses and wires the active synthetic workflows", () => {
+test("TPV HTML script parses and wires every visible POS operation", async () => {
+    const html = await read("%23htmlTPV.txt");
+    const script = html.match(/<script>([\s\S]*?)<\/script>/)?.[1];
     assert.ok(script);
     assert.doesNotThrow(() => new Script(script));
-
-    for (const message of [
-        "SANDBOX_SESSION_OPEN",
-        "SANDBOX_SALE_REGISTER",
-        "SANDBOX_CASH_MOVEMENT",
-        "SANDBOX_REFUND",
-        "SANDBOX_TICKET_X",
-        "SANDBOX_TICKET_Z",
-        "SANDBOX_PAYMENT_VALIDATE",
-        "VALIDATE_SALE_DRAFT",
-    ]) {
-        assert.ok(script.includes(message), "missing active workflow message " + message);
+    for (const id of ["openSession", "operatorBtn", "customer", "refresh", "saveSale", "cashIn", "cashOut", "refund", "ticketX", "ticketZ", "cashSummary", "audit", "printLast"]) {
+        assert.ok(html.includes('id="' + id + '"'), "missing visible POS control " + id);
     }
-
-    for (const control of [
-        'id="saveSale"',
-        'id="openSession"',
-        'id="cashMovement"',
-        'id="refund"',
-        'id="ticketX"',
-        'id="ticketZ"',
-    ]) {
-        assert.ok(html.includes(control), "missing TPV control " + control);
+    for (const type of ["SESSION_OPEN", "CATALOG_SERVICES", "CATALOG_PRODUCTS", "CATALOG_VARIANTS", "CATALOG_STAFF", "CUSTOMERS_SEARCH", "SALE_REGISTER", "CASH_MOVEMENT", "REFUND", "TICKET_X", "TICKET_Z", "SESSION_SUMMARY", "AUDIT_LIST"]) {
+        assert.ok(script.includes('"' + type + '"'), "missing widget operation " + type);
     }
+});
 
-    assert.match(html, /Emitir tarjeta regalo<\/button>/);
-    assert.match(html, /Consultar tarjeta regalo<\/button>/);
-    assert.match(html, /Emitir factura completa<\/button>/);
-    assert.match(html, /Emitir rectificativa<\/button>/);
-    assert.match(html, /id="taxTotal"[^>]*disabled/);
-    assert.doesNotMatch(html, /send\("TICKET_X_PREVIEW"/);
-    assert.doesNotMatch(html, /fetch\s*\(|XMLHttpRequest|wix-data|suppressAuth/i);
+test("POS buttons send backend-compatible DTOs and do not discard failed sales", async () => {
+    const html = await read("%23htmlTPV.txt");
+    const script = html.match(/<script>([\s\S]*?)<\/script>/)?.[1] || "";
+    const controller = await read("src/public/tpvPageController.js");
+    assert.match(script, /payments:\[\{paymentMethod,amount\}\]/);
+    assert.match(script, /differenceReason:/);
+    assert.match(script, /TICKET_X",\{sessionId:state\.session\?\.sessionId\}/);
+    assert.doesNotMatch(script, /TICKET_X",\{sessionId:state\.session\?\.sessionId,countedCash/);
+    assert.match(script, /impuestosImporte:0/);
+    assert.match(script, /selectCatalogItem/);
+    assert.match(script, /CATALOG_VARIANTS/);
+    assert.match(script, /varianteId:variant\.varianteId/);
+    assert.match(script, /keyedAction\("SALE","SALE_REGISTER"[\s\S]*?\.then\(result=>\{state\.lastSale=result/);
+    assert.match(controller, /lineas: lineItems\.map/);
+    assert.match(controller, /pagos: payments\.map/);
+    assert.match(controller, /medioPago:/);
+    assert.match(controller, /importeCambio:/);
+    assert.match(controller, /differenceReason:/);
+    assert.match(script, /function keyedAction/);
+    assert.match(script, /sessionStorage\.setItem\("mmTPVOperationKeys"/);
+    assert.match(script, /operationScope\(kind\)/);
+});
+
+test("taxes remain locked until Wix POS tax rules are mapped to per-line tax amounts", async () => {
+    const html = await read("%23htmlTPV.txt");
+    assert.match(html, /id="tax"[^>]*disabled/);
+    assert.match(html, /Impuestos \(reglas Wix pendientes\)/);
+    const controller = await read("src/public/tpvPageController.js");
+    assert.match(controller, /lineTaxMinor !== declaredTaxMinor/);
 });

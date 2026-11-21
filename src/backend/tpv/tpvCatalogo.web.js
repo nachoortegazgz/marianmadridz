@@ -169,7 +169,7 @@ export const obtenerServicios = webMethod(
     }
 );
 
-export const obtenerProfesionales = webMethod(
+export const obtenerStaff = webMethod(
     Permissions.SiteMember,
     async () => {
         const traceId = makeTraceId("tpv-staff-read");

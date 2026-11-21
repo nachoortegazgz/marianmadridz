@@ -685,6 +685,25 @@ export async function querySandboxRecords(collection, filter, options = {}) {
     return records;
 }
 
+export async function querySandboxLedgerRecords(options = {}) {
+    assertTpvSandboxEnabled();
+    const limit = Number(options.limit ?? 100);
+    if (!Number.isInteger(limit) || limit < 1 || limit > 1000) {
+        throw new Error("TPV_SANDBOX_LEDGER_INVALID_LIMIT");
+    }
+    const result = await queryItems({
+        dataCollectionId: BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA,
+        filter: wql.eq("recordSource", SANDBOX_LEDGER_SOURCE),
+        sort: ["recordTimestamp DESC"],
+        limit,
+        consistency: CONSISTENCY.STRONG,
+    });
+    const records = result.items
+        .map(_virtualRecord)
+        .filter((item) => item.payloadFiscal?.sandboxRunId === SANDBOX_RUN_ID);
+    return { records, hasMore: result.hasNext === true };
+}
+
 export async function appendSandboxAudit({
     idempotencyKey,
     action,
