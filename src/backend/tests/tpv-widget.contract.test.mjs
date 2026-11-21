@@ -45,7 +45,7 @@ test("TPV controller dispatches the messages emitted by the POS widget", async (
     const controller = await source("src/public/tpvPageController.js");
     const html = await source("%23htmlTPV.txt");
     const types = [
-        "CASHIER_STATE", "SESSION_OPEN", "CATALOG_SERVICES", "CATALOG_PRODUCTS",
+        "CASHIER_STATE", "SESSION_OPEN", "CATALOG_SERVICES", "CATALOG_PRODUCTS", "CATALOG_VARIANTS",
         "CATALOG_STAFF", "CUSTOMERS_SEARCH", "SALE_REGISTER", "CASH_MOVEMENT", "REFUND",
         "TICKET_X", "TICKET_Z", "SESSION_SUMMARY", "AUDIT_LIST",
     ];
