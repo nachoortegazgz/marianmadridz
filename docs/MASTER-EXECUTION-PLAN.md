@@ -147,7 +147,7 @@ Acciones:
 
 **Objetivo:** completar los flujos Bookings y área privada sin atribuir reservas al propietario por error.
 
-**Bloqueo actual #522:** 94/94 IDs del catálogo custom mapean con Bookings V2 y precio/moneda/visibilidad son coherentes, pero 16 flags onlinePayment permiten ONLINE cuando Bookings V2 lo deshabilita y 8 flags inPersonPayment restringen un canal que Bookings permite. Resolver la autoridad y política por servicio antes de activar checkout E2E.
+**Estado de catálogo y personal:** 94/94 serviceId del catálogo custom mapean con Bookings V2; 70 precios fijos y monedas, visibilidad y 3 staff/resource IDs coinciden con MapaStaff e internalConfig. Los 94 servicios tienen schedule, form, categoría y staff asignado. **Bloqueo #522:** 16 flags onlinePayment permiten ONLINE cuando Bookings V2 lo deshabilita; 8 flags inPersonPayment son más restrictivos que Wix. Resolver la política por servicio antes de checkout E2E.
 
 Acciones:
 - Auditar servicios, horarios, personal, recursos, Time Slots V2, reglas de reserva y políticas de cancelación.
