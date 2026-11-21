@@ -30,7 +30,7 @@ El controlador usa `createWidgetBridge` para:
 
 No se utiliza `postMessage(..., "*")` desde el controlador. El HTML no accede a CMS, backend ni APIs Wix directamente.
 
-El contexto se obtiene mediante `obtenerConfiguracionTPV`. La UI solo habilita el flujo si el backend confirma `environment="SANDBOX"`; el contexto indica `previewOnly=true`, `syntheticOnly=true` y capacidades externas deshabilitadas.
+El contexto se obtiene mediante `obtenerConfiguracionTPV` y confirma únicamente acceso autorizado, moneda y zona horaria. La interfaz no inspecciona etiquetas de entorno ni flags booleanos para habilitar el flujo. El aislamiento de datos lo proporciona el data plane Sandbox seleccionado en Wix; las autorizaciones siguen aplicándose en backend.
 
 ## 3. Contrato exacto de WebMethods
 
@@ -51,7 +51,7 @@ Los doce nombres exportados requeridos son:
 | `obtenerResumenCaja` | `tpvCierres.web.js` | Obtener resumen de sesión |
 | `obtenerMovimientosCaja` | `tpvMovimientos.web.js` | Consultar movimientos de caja sintéticos |
 
-`obtenerConfiguracionTPV` es el WebMethod adicional de contexto y no sustituye ninguno de los doce nombres anteriores. El controlador importa cada módulo WebMethod con el sufijo Wix `.web` (por ejemplo, `backend/tpv/tpvCaja.web`); no debe importar módulos backend privados sin ese sufijo.
+`obtenerConfiguracionTPV` es el WebMethod adicional de contexto funcional (moneda y zona horaria) y no sustituye ninguno de los doce nombres anteriores. El controlador importa cada módulo WebMethod con el sufijo Wix `.web` (por ejemplo, `backend/tpv/tpvCaja.web`); no debe importar módulos backend privados sin ese sufijo.
 
 Los WebMethods devuelven el sobre `{ status, data, error }`. El controlador reenvía ese sobre sin anidarlo dentro de otro `data`.
 
@@ -94,7 +94,7 @@ Cada solicitud se responde con el mismo `messageId` y el sufijo `_RES`.
 
 ## 6. Persistencia y colecciones
 
-`TPV_SANDBOX_COLLECTIONS` contiene nombres lógicos internos, no IDs de colecciones físicas. La persistencia actual proyecta eventos sintéticos sobre:
+`TPV_SANDBOX_COLLECTIONS` contiene tipos de evento internos, no IDs ni nombres de colecciones físicas. La persistencia actual proyecta eventos sintéticos sobre:
 - `MovimientosCaja`: ledger append-only de eventos sintéticos.
 - `CajaActual`: proyección operativa de la sesión, protegida por marcador Sandbox y preseed.
 - `ControlOperativo`: locks compare-and-swap de sesión/devolución.
@@ -104,7 +104,7 @@ No se modifica la estructura ni se elimina el índice único `transactionId_uniq
 
 ## 7. Límites de entorno
 
-La configuración vigente del backend declara `ENVIRONMENT="SANDBOX"`, `SYNTHETIC_ONLY=true`, pagos reales deshabilitados y escrituras fiscales deshabilitadas. No se transforma este contrato a LIVE renombrando métodos ni cambiando etiquetas.
+El HTML Component no contiene verificaciones de `environment`, `previewOnly` ni flags sintéticos true/false. Las pruebas se ejecutan en el data plane Sandbox seleccionado en Wix. Los registros generados siguen siendo registros de prueba y no activan operaciones de cobro, facturación ni efectos externos.
 
 No se habilitan por este cambio cobros reales, devoluciones reales, facturas, notificaciones, hardware ni sincronización de colecciones Wix Apps. Las colecciones de Wix Apps no heredan el aislamiento de Sandbox CMS.
 
