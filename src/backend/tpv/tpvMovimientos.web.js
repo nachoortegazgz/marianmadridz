@@ -75,12 +75,12 @@ export const obtenerMovimientosCaja = webMethod(
             const records = await querySandboxRecords(
                 TPV_SANDBOX_COLLECTIONS.MOVIMIENTOS_CAJA,
                 sessionId ? wql.eq("sessionId", sessionId) : undefined,
-                { sort: ["createdAt DESC"], limit, allowTruncated: true }
+                { sort: ["createdAt DESC"], limit: 1000, maxRecords: 1000 }
             );
             return {
                 status: "SUCCESS",
                 data: {
-                    items: records.map((record) => ({
+                    items: records.slice(0, limit).map((record) => ({
                         movementId: record._id,
                         sessionId: record.sessionId || null,
                         movementType: record.movementType || null,
