@@ -3,7 +3,7 @@ import { requireAdmin } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { TPV_SANDBOX_COLLECTIONS, TPV_SANDBOX_RUNTIME_POLICY } from "backend/internalConfig";
 import { appendSandboxAudit, insertSandboxEvent, latestOpenSandboxSession, querySandboxRecords, withSandboxSaleLock } from "backend/tpv/tpvSandboxRepository";
-import { assertTpvSandboxEnabled, makeSandboxId, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
+import { makeSandboxId, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
 import { wql } from "backend/dataAccess";
 
 export const registrarDevolucion = webMethod(
@@ -12,7 +12,7 @@ export const registrarDevolucion = webMethod(
         let persisted = false;
         const traceId = makeTraceId("tpv-sandbox-refund");
         await requireAdmin(traceId);
-        assertTpvSandboxEnabled();
+
         try {
             const key = normalizeClientIdempotencyKey(input.idempotencyKey);
             const saleId = String(input.saleId || "").trim();
