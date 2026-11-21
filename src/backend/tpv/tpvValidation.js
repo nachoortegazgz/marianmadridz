@@ -65,7 +65,7 @@ function normalizeLine(line, index) {
         lineaNumero: index + 1,
         tipoLinea,
         itemId: line.itemId ? String(line.itemId) : null,
-        varianteId,
+        ...(varianteId ? { varianteId } : {}),
         concepto,
         cantidad: quantity,
         precioUnitario: unitMinor / 100,
